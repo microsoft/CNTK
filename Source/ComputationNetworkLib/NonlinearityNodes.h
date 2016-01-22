@@ -365,9 +365,14 @@ template class LogSoftmaxNode<double>;
 
 // -----------------------------------------------------------------------
 // GMMLogLikelihoodNode (unnormedPrior, means, logStdDevs, features) -- GMM log LL over input vector(s)
+// calculates the log likelihood of a feature given parameters of a Gaussian mixture model (GMM) with shared diagonal variance
+//  - unnormedPrior: mix weights, #rows = #mixture components
+//  - means: means, all mix means concatenated  (i.e. dim = feature dim x prior dim)
+//  - logStdDevs: std deviations, pooled across mix (i.e. same dim as features)
+// UnnormedPrior, means, and logStdDevs can be either a single column or one per sample, e.g.
+// when parameters are computed by other nodes.
 // -----------------------------------------------------------------------
 
-//calculates: the log likelihood of a feature given GMM parameters
 template <class ElemType>
 class GMMLogLikelihoodNode : public ComputationNode<ElemType>, public NumInputs<4>
 {
@@ -388,7 +393,7 @@ public:
     virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
     {
         // get the right slice
-        const size_t colsPrior = Input(0)->GetNumCols();
+        const size_t colsPrior = Input(0)->GetSampleMatrixNumCols();
 
         Matrix<ElemType> sliceGradientValue = DataFor(*m_gradient, fr);
         Matrix<ElemType> slicePosterior = DataFor(*m_posterior, fr);
@@ -402,7 +407,7 @@ public:
             else
             {
                 Matrix<ElemType> sliceUnnormedPriorGradient = Input(0)->GradientFor(fr);
-                Matrix<ElemType> slicePrior = DataFor(*m_prior, fr);
+                Matrix<ElemType> slicePrior = DataFor(*m_prior, fr);    // TODO: use the right MBLayout, then we won't need the special case
                 BackpropToUnnormedPrior(sliceUnnormedPriorGradient, sliceGradientValue, slicePrior, slicePosterior, *m_temp);
             }
         }
@@ -458,8 +463,8 @@ public:
         return false;
     }
 
-    /*TODO: merge with call site*/ void BackpropToUnnormedPrior(Matrix<ElemType>& unnormedPriorGradientValues, const Matrix<ElemType>& gradientValues,
-                                                                const Matrix<ElemType>& prior, const Matrix<ElemType>& posterior, Matrix<ElemType>& temp)
+    void BackpropToUnnormedPrior(Matrix<ElemType>& unnormedPriorGradientValues, const Matrix<ElemType>& gradientValues,
+                                 const Matrix<ElemType>& prior, const Matrix<ElemType>& posterior, Matrix<ElemType>& temp)
     {
         temp.AssignDifferenceOf(posterior, prior);
         temp.RowElementMultiplyWith(gradientValues);
@@ -471,8 +476,8 @@ public:
             RuntimeError("GMMLogLikelihoodNode: UnnormedPrior should either have same number of columns as the features or have only one column.");
     }
 
-    /*TODO: merge with call site*/ void BackpropToMean(Matrix<ElemType>& meanGradientValues, const Matrix<ElemType>& gradientValues, const Matrix<ElemType>& normedDeviationVectors,
-                                                       Matrix<ElemType>& posterior, Matrix<ElemType>& temp)
+    void BackpropToMean(Matrix<ElemType>& meanGradientValues, const Matrix<ElemType>& gradientValues, const Matrix<ElemType>& normedDeviationVectors,
+                        Matrix<ElemType>& posterior, Matrix<ElemType>& temp)
     {
         size_t numComponent = posterior.GetNumRows();
         size_t numSamples = posterior.GetNumCols();
@@ -497,8 +502,8 @@ public:
             RuntimeError("GMMLogLikelihoodNode: stddev should either have same number of columns as the features or have only one column.");
     }
 
-    /*TODO: merge with call site*/ void BackpropToLogStddev(Matrix<ElemType>& logStddevGradientValues, const Matrix<ElemType>& gradientValues, const Matrix<ElemType>& normedDeviation,
-                                                            const Matrix<ElemType>& posterior, Matrix<ElemType>& temp)
+    void BackpropToLogStddev(Matrix<ElemType>& logStddevGradientValues, const Matrix<ElemType>& gradientValues, const Matrix<ElemType>& normedDeviation,
+                             const Matrix<ElemType>& posterior, Matrix<ElemType>& temp)
     {
         size_t numComponent = posterior.GetNumRows();
         size_t numSamples = posterior.GetNumCols();
@@ -514,8 +519,8 @@ public:
             RuntimeError("GMMLogLikelihoodNode: stddev should either have same number of columns as the features or have only one column.");
     }
 
-    /*TODO: merge with call site*/ void BackpropToFeature(Matrix<ElemType>& featureGradientValues, const Matrix<ElemType>& gradientValues, const Matrix<ElemType>& normedDeviationVectors,
-                                                          Matrix<ElemType>& posterior, Matrix<ElemType>& temp)
+    void BackpropToFeature(Matrix<ElemType>& featureGradientValues, const Matrix<ElemType>& gradientValues, const Matrix<ElemType>& normedDeviationVectors,
+                           Matrix<ElemType>& posterior, Matrix<ElemType>& temp)
     {
         size_t numComponent = posterior.GetNumRows();
         size_t numSamples = posterior.GetNumCols();
@@ -539,10 +544,10 @@ public:
     {
         Base::UpdateFunctionMBSize();
 
-        size_t numCols = Input(3)->GetNumCols();
-        size_t numComponents = Input(0)->GetNumRows();
-        size_t colsPrior = Input(0)->GetNumCols();
-        size_t featureSize = Input(3)->GetNumRows();
+        size_t numCols = Input(3)->GetSampleMatrixNumCols();
+        size_t numComponents = Input(0)->GetSampleMatrixNumRows();
+        size_t colsPrior = Input(0)->GetSampleMatrixNumCols();  // may be 1
+        size_t featureSize = Input(3)->GetSampleMatrixNumRows();
 
         m_prior->Resize(numComponents, colsPrior);
         m_stddev->Resize(numComponents, colsPrior);
@@ -551,22 +556,13 @@ public:
         m_posterior->Resize(numComponents, numCols);
     }
 
-    //input0=unnormedPrior, input1=mean, input2=logstddev, input3=feature
-    void ForwardPropMap() // TODO: This is a stop-gap; in most cases, we should just be able to delete this (but need to review one by one)
-    {
-        // all internal matrices will be automatically resized since all of them are assigned to a value so no resize is needed here.
-        ForwardPropS(Value(), Input(0)->Value(), Input(1)->Value(), Input(2)->Value(), Input(3)->Value(),
-                     *m_prior, *m_stddev, *m_normedDeviationVectors, *m_normedDeviation, *m_posterior, *m_temp);
-    }
-
-    //input0=unnormedPrior, input1=mean, input2=logstddev, input3=feature
+    // input0=unnormedPrior, input1=mean, input2=logstddev, input3=feature
     virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
     {
-        //if (fr.IsAllFrames()) { ForwardPropMap(); return; }
-        size_t colsPrior = Input(0)->GetNumCols();
-        size_t numSamples = Input(3)->GetNumCols();
+        size_t colsPrior = Input(0)->GetSampleMatrixNumCols();
+        size_t numSamples = Input(3)->GetSampleMatrixNumCols();
 
-        //get the right slice
+        // get the right slice
         Matrix<ElemType> sliceOutputValue = ValueFor(fr);
         Matrix<ElemType> sliceFeature = Input(3)->ValueFor(fr);
         Matrix<ElemType> sliceNormedDeviation = DataFor(*m_normedDeviation, fr);
@@ -675,20 +671,16 @@ public:
         Base::Validate(isFinalValidationPass);
         InferMBLayoutFromInputsForStandardCase();
 
-        size_t rows[4], cols[4];
+        size_t rows[4];
         for (int i = 0; i < 4; i++)
-        {
-            rows[i] = Input(i)->GetNumRows();
-            cols[i] = Input(i)->GetNumCols();
-        }
+            rows[i] = Input(i)->GetSampleMatrixNumRows();
 
         if (isFinalValidationPass)
         {
-            if (cols[0] != cols[1] || cols[0] != cols[2])
-                LogicError("GMMLogLikelihoodNode: UnnormedPrior (first input), mean (second input), and logStddev (third input) should have same number of columns.");
-
-            if (cols[0] != 1 && cols[0] != cols[3])
-                LogicError("GMMLogLikelihoodNode: UnnormedPrior (first input) should either have same number of columns as the features (fourth input) or have only one column.");
+            if (!Input(3)->HasMBLayout())
+                InvalidArgument("GMMLogLikelihoodNode: Features must be a minibatch.");
+            if (Input(0)->GetMBLayout() != Input(1)->GetMBLayout() || Input(0)->GetMBLayout() != Input(2)->GetMBLayout())
+                InvalidArgument("GMMLogLikelihoodNode: First three arguments must have the same MBLayout (which may be none).");
 
             if (rows[0] != rows[2])
                 LogicError("GMMLogLikelihoodNode: UnnormedPrior (first input) should have same dimension as logStddev (third input), i.e., all dimensions in each Gaussian component share the same stddev.");
@@ -697,7 +689,7 @@ public:
                 LogicError("GMMLogLikelihoodNode: the number of rows in mean (second input) should equal rows(unnormedPrior(first input) * rows(feature(fourth input)).");
         }
 
-        SetDims(TensorShape(1), cols[3]);
+        SetDims(TensorShape(1), true);
     }
 
     virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override

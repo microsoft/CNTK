@@ -57,7 +57,7 @@ public:
 
     virtual void UpdateFunctionMBSize() override
     {
-        m_leftMinusRight->Resize(Input(0)->GetNumRows(), Input(0)->GetNumCols());
+        m_leftMinusRight->Resize(Input(0)->Value());
     }
 
     virtual void /*ComputationNodeNonLooping::*/ ForwardPropNonLooping() override
@@ -66,7 +66,7 @@ public:
         m_leftMinusRight->AssignDifferenceOf(Input(0)->ValueFor(fr), Input(1)->ValueFor(fr));
         MaskMissingColumnsToZero(*m_leftMinusRight, Input(0)->GetMBLayout(), fr); // we are fine since it will only be called with full minibatch.
         ElemType v = m_leftMinusRight->FrobeniusNorm();
-        VerifyDims(1, 1);
+        Value().VerifySize(1, 1);
         Value().SetValue(v * v / 2);
 #if NANCHECK
         Value().HasNan("SquareError");
@@ -177,8 +177,8 @@ public:
 
     virtual void UpdateFunctionMBSize() override
     {
-        m_logSoftmaxOfRight->Resize(Input(1)->GetNumRows(), Input(1)->GetNumCols());
-        m_softmaxOfRight->Resize(m_logSoftmaxOfRight->GetNumRows(), m_logSoftmaxOfRight->GetNumCols());
+        m_logSoftmaxOfRight->Resize(Input(1)->Value());
+        m_softmaxOfRight->Resize(*m_logSoftmaxOfRight);
     }
 
     virtual void /*ComputationNodeNonLooping::*/ ForwardPropNonLooping() override //-sum(left_i * log(softmax_i(right)))
@@ -295,8 +295,8 @@ public:
 
     virtual void UpdateFunctionMBSize() override
     {
-        m_logOfRight->Resize(Input(1)->GetNumRows(), Input(1)->GetNumCols());
-        m_leftDivRight->Resize(Input(1)->GetNumRows(), Input(1)->GetNumCols());
+        m_logOfRight->Resize(Input(1)->Value());
+        m_leftDivRight->Resize(Input(1)->Value());
     }
 
     //-sum(left_i * log(right_i))
@@ -407,13 +407,13 @@ public:
 
     virtual void UpdateFunctionMBSize() override
     {
-        m_gradientOfL1Norm->Resize(Input(0)->GetNumRows(), Input(0)->GetNumCols());
+        m_gradientOfL1Norm->Resize(Input(0)->Value());
     }
 
     virtual void /*ComputationNodeNonLooping::*/ ForwardPropNonLooping() override
     {
         FrameRange fr(Input(0)->GetMBLayout());
-        VerifyDims(1, 1);
+        Value().VerifySize(1, 1);
         Value().SetValue(Input(0)->MaskedValueFor(fr).MatrixNorm1());
 #if NANCHECK
         Value().HasNan("MatrixL1Reg");
@@ -495,7 +495,7 @@ public:
     virtual void /*ComputationNodeNonLooping::*/ ForwardPropNonLooping() override
     {
         FrameRange fr(Input(0)->GetMBLayout());
-        VerifyDims(1, 1);
+        Value().VerifySize(1, 1);
         Value().SetValue(Input(0)->MaskedValueFor(fr).FrobeniusNorm());
 #if NANCHECK
         Value().HasNan("MatrixL2Reg");
@@ -512,7 +512,14 @@ template class MatrixL2RegNode<float>;
 template class MatrixL2RegNode<double>;
 
 // -----------------------------------------------------------------------
-/// NoiseContrastiveEstimationNode (labels, input, inputWeights, biasWeights)
+// NoiseContrastiveEstimationNode (labels, input, inputWeights, biasWeights)
+//  -labels: label in dense matrix in [4 x T]
+//           the first row is the word index, the second row is the class index, the third row is the first word index of the class
+//           the last row is the first word index of the next class
+//  - input: hidden layer activity to the node in [hdsize x T]. for a simple rnn, this is the hidden layer activty
+//  - inputWeights: weight matrix in [hdsize x vocab_size], for speed-up, as per word matrix can be simply obtained as column slice
+//  - biasWeights: clsprob in dense matrix in [nbr_cls x T]. this is the output from logsoftmax node for the log-posterior probabilty of class given observations
+// */
 // BUGBUG: This node has not been converted to memshare conventions.
 // -----------------------------------------------------------------------
 
@@ -596,9 +603,9 @@ public:
         //                                                                              samples+probs                   hidden                  embedding
         //Input(inputIndex)->GradientFor(fr).AssignNCEDerivative(m_ncePrediction, Input(0)->ValueFor(fr), Input(1)->ValueFor(fr), Input(2)->Value(), inputIndex);
         if (inputIndex >= 2)
-            Input(inputIndex)->Gradient().AssignNCEDerivative(m_ncePrediction, Input(0)->ValueFor(fr), Input(1)->ValueFor(fr), Input(2)->Value(), inputIndex);
+            Input(inputIndex)->Gradient().AssignNCEDerivative(m_ncePrediction, Input(0)->ValueFor(fr), Input(1)->ValueFor(fr), Input(2)->ValueAsMatrix(), inputIndex);
         else
-            Input(inputIndex)->GradientFor(fr).AssignNCEDerivative(m_ncePrediction, Input(0)->ValueFor(fr), Input(1)->ValueFor(fr), Input(2)->Value(), inputIndex);
+            Input(inputIndex)->GradientFor(fr).AssignNCEDerivative(m_ncePrediction, Input(0)->ValueFor(fr), Input(1)->ValueFor(fr), Input(2)->ValueAsMatrix(), inputIndex);
     }
 
     virtual bool OutputUsedInComputingInputNodesGradients() const override
@@ -634,11 +641,11 @@ public:
         FrameRange fr(Input(0)->GetMBLayout());
         if (Input(0)->HasMBLayout() && Input(0)->GetMBLayout()->HasGaps())
             LogicError("%ls %ls operation does not handle multiple parallel sequences with gaps correctly. Contact fseide@microsoft.com if you have a need and a test case.", NodeName().c_str(), OperationName().c_str());
-        //Input(0)->MaskMissingValueColumnsToZero(fr);
+
         int positive = 0, negative = 0;
-        if (Input(0)->GetNumRows() == 1)
+        if (Input(0)->GetSampleLayout().GetNumElements() == 1)
         {
-            for (int i = 0; i < Input(0)->GetNumCols(); i++) // BUGBUG: Loops must be over frames, not columns. Columns may contain gaps.
+            for (int i = 0; i < Input(0)->Value().GetNumCols(); i++) // BUGBUG: Loops must be over frames, not columns. Columns may contain gaps.
             {
                 if (Input(0)->Value()(0, i) > 0)
                     positive++;
@@ -647,38 +654,30 @@ public:
             }
             assert(positive * negative == 0);
         }
-        if (m_evalMode == NCEEvalMode::Softmax || (Input(0)->GetNumRows() == 1 && positive > 0))
+        if (m_evalMode == NCEEvalMode::Softmax || (Input(0)->GetSampleLayout().GetNumElements() == 1 && positive > 0))
         {
             // evaluation uses softmax
-            m_logSoftmax.AssignProductOf(Input(1)->Value(), true, Input(2)->Value(), false);
+            m_logSoftmax.AssignProductOf(Input(1)->Value(), true, Input(2)->ValueAsMatrix(), false);
             m_logSoftmax += Input(3)->Value();
             m_logSoftmax.InplaceLogSoftmax(false);
             MaskMissingColumnsToZero(m_logSoftmax, Input(1)->GetMBLayout(), fr); // TODO: is this the right way to neutralize gaps?
             Value().AssignSoftmaxSum(Input(0)->Value(), m_logSoftmax);
         }
-        else if (m_evalMode == NCEEvalMode::Unnormalized || (Input(0)->GetNumRows() == 1 && negative > 0))
+        else if (m_evalMode == NCEEvalMode::Unnormalized || (Input(0)->GetSampleLayout().GetNumElements() == 1 && negative > 0))
         {
             // TODO: are we treating gaps correctly here?
-            Value().AssignNceUnnormalizedEval(Input(0)->Value(), Input(1)->Value(), Input(2)->Value(), Input(3)->Value());
+            Value().AssignNceUnnormalizedEval(Input(0)->Value(), Input(1)->Value(), Input(2)->ValueAsMatrix(), Input(3)->Value());
         }
         else
         {
             // TODO: are we treating gaps correctly here?
             // training criterion uses NCE
             //likelihood                                         samples+probs                        hidden                       embedding            bias
-            Value().AssignNoiseContrastiveEstimation(Input(0)->Value(), Input(1)->Value(), Input(2)->Value(), Input(3)->Value(), m_ncePrediction);
+            Value().AssignNoiseContrastiveEstimation(Input(0)->Value(), Input(1)->Value(), Input(2)->ValueAsMatrix(), Input(3)->Value(), m_ncePrediction);
         }
         m_needRecomputeGradientToSoftmaxInput = true;
     }
 
-    /**
-        Inputs: [0] label in dense matrix in [4 x T]
-        the first row is the word index, the second row is the class index, the third row is the first word index of the class
-        the last row is the first word index of the next class
-        [1] hidden layer activity to the node in [hdsize x T]. for a simple rnn, this is the hidden layer activty
-        [2] weight matrix in [hdsize x vocab_size], for speed-up, as per word matrix can be simply obtained as column slice
-        [3] clsprob in dense matrix in [nbr_cls x T]. this is the output from logsoftmax node for the log-posterior probabilty of class given observations
-        */
     virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
     {
         Base::Validate(isFinalValidationPass);
@@ -688,14 +687,13 @@ public:
             LogicError("NoiseContrastiveEstimationNode criterion requires the first input to be the label.");
         if (isFinalValidationPass)
         {
-            if (!(Input(1)->GetNumRows() == Input(2)->GetNumRows())) // input and matrix can be timed
+            if (Input(1)->GetSampleMatrixNumRows() != Input(2)->GetAsMatrixNumRows())
                 LogicError("The Matrix dimension for observation and weight in the NoiseContrastiveEstimationNode operation does not match.");
-            if (!(Input(0)->GetNumCols() == Input(1)->GetNumCols())) // label and input same obs numbers
-                LogicError("The Matrix dimension for label and observation in the NoiseContrastiveEstimationNode operation does not match.");
+            if (!Input(0)->HasMBLayout() || !Input(1)->HasMBLayout() || Input(2)->HasMBLayout() || !Input(3)->HasMBLayout())
+                LogicError("%ls %ls operation requires inputs 0, 1, and 3 to be a minibatch, and input 2 to be a matrix.", NodeName().c_str(), OperationName().c_str());
         }
 
-        //cerr << Input(3)->GetNumCols() << "\t" << Input(0)->GetNumCols() << endl;
-        SetDims(TensorShape(1), 1);
+        SetDims(TensorShape(1), false);
     }
 
 protected:
@@ -719,16 +717,15 @@ template class NoiseContrastiveEstimationNode<float>;
 template class NoiseContrastiveEstimationNode<double>;
 
 // -----------------------------------------------------------------------
-/// ClassBasedCrossEntropyWithSoftmaxNode (labels(.,t), input(.,t), inputweights, clsProbBeforeSoftmax(.,t))
-// Inputs:
-// Input(0) [4 x T] label in dense matrix in
-//           (0,t) the first row is the word index
-//           (1,t) the second row is the class index
-//           (2,t) the third row is the first word index of the class
-//           (3,t) the last row is the first word index of the next class
-// Input(1) [hdsize x T] hidden layer activation to the node in. for a simple rnn, this is the hidden layer activty
-// Input(2) [hdsize x vocab_size] weight matrix in, for speed-up, as per word matrix can be simply obtained as column slice
-// Input(3) [nbr_cls x T] clsprob in dense matrix in. this input, if applied softmax on, is the posterior probabilty of class given observations
+// ClassBasedCrossEntropyWithSoftmaxNode (labeldata(.,t), inputdata(.,t), embeddingMatrix, clsProbBeforeSoftmaxData(.,t))
+//  - Input(0) [4 x T] label in dense matrix in
+//              (0,t) the first row is the word index
+//              (1,t) the second row is the class index
+//              (2,t) the third row is the first word index of the class
+//              (3,t) the last row is the first word index of the next class
+//  - Input(1) [hdsize x T] hidden layer activation to the node in. for a simple rnn, this is the hidden layer activty
+//  - Input(2) [hdsize x vocab_size] weight matrix in, for speed-up, as per word matrix can be simply obtained as column slice
+//  - Input(3) [nbr_cls x T] clsprob in dense matrix in. This input, if applied softmax on, is the posterior probabilty of class given observations
 // -----------------------------------------------------------------------
 
 // calculates: -sum(left_i * log(softmax_i(right))) for class given history and for word given history
@@ -743,6 +740,12 @@ class ClassBasedCrossEntropyWithSoftmaxNode : public ComputationNodeNonLooping /
         return L"ClassBasedCrossEntropyWithSoftmax";
     }
 
+    // our inputs
+    static const size_t LABELDATA = 0;
+    static const size_t INPUTDATA = 1;
+    static const size_t EMBEDDINGMATRIX = 2;
+    static const size_t CLASSPROBINDATA = 3;
+
 public:
     DeclareConstructorFromConfigWithNumInputs(ClassBasedCrossEntropyWithSoftmaxNode);
     ClassBasedCrossEntropyWithSoftmaxNode(DEVICEID_TYPE deviceId, const wstring& name)
@@ -755,9 +758,7 @@ public:
     {
     }
 
-    /**
-        compute gradients to input observations, the weights to the observations, and the class log posterior probabilites
-        */
+    // compute gradients to input observations, the weights to the observations, and the class log posterior probabilites
     virtual void BackpropToNonLooping(size_t inputIndex) override
     {
         // this should never be called for input[0], which is controlled through the needGradient flag
@@ -769,45 +770,44 @@ public:
         Matrix<ElemType> grd_t;
         Matrix<ElemType> grd_to_wgt_t;
 
-        const size_t nT = Input(0)->GetNumTimeSteps();
-        const size_t nS = Input(0)->GetNumParallelSequences();
+        const size_t nT = Input(LABELDATA)->GetNumTimeSteps();
+        const size_t nS = Input(LABELDATA)->GetNumParallelSequences();
         size_t sz = 0; // iterate over the packed concatenated class-conditioned prob vectors
         for (size_t s = 0; s < nS; s++)
             for (size_t t = 0; t < nT; t++)
             {
-                FrameRange fr = FrameRange(Input(0)->GetMBLayout(), t).Sequence(s);
+                FrameRange fr = FrameRange(Input(LABELDATA)->GetMBLayout(), t).Sequence(s);
 
-                //if (Input(0)->GetMBLayout()->IsGap(s, t))  // skip gaps        --TODO: use FrameRange version of Is()
-                if (Input(0)->GetMBLayout()->IsGap(fr)) // skip gaps
+                if (Input(LABELDATA)->GetMBLayout()->IsGap(fr)) // skip gaps
                     continue;
 
-                Matrix<ElemType> lbl_t = Input(0)->ValueFor(fr);
+                Matrix<ElemType> lbl_t = Input(LABELDATA)->ValueFor(fr);
                 size_t c_t = (size_t) lbl_t(1, 0);
                 size_t lft_bnd = (size_t) lbl_t(2, 0); // index of first word belonging to current word token's class
                 size_t rgt_bnd = (size_t) lbl_t(3, 0); // and end of that range
                 size_t nbr_wrd = (rgt_bnd - lft_bnd);  // number of words in the class
 
                 // compute prb - 1 and prb
-                Matrix<ElemType> weightForClass = Input(2)->Value().ColumnSlice(lft_bnd, nbr_wrd);
-                Matrix<ElemType> obs = Input(1)->ValueFor(fr); // hidden activation vector for current word token
+                Matrix<ElemType> weightForClass = Input(EMBEDDINGMATRIX)->ValueAsMatrix().ColumnSlice(lft_bnd, nbr_wrd);
+                Matrix<ElemType> obs = Input(INPUTDATA)->ValueFor(fr); // hidden activation vector for current word token
                 Matrix<ElemType> grd_to_soft_max_input = m_grdToSoftMaxInput.ColumnSlice(sz, nbr_wrd);
-                Matrix<ElemType> grd_to_cls_prob = DataWithMBLayoutFor(m_clsLogSoftmax, fr, Input(3)->GetMBLayout());
+                Matrix<ElemType> grd_to_cls_prob = DataWithMBLayoutFor(m_clsLogSoftmax, fr, Input(CLASSPROBINDATA)->GetMBLayout());
 
                 switch (inputIndex)
                 {
                 case 1:
                     // gradient to input
-                    grd_t = Input(1)->GradientFor(fr);
+                    grd_t = Input(INPUTDATA)->GradientFor(fr);
                     Matrix<ElemType>::MultiplyAndAdd(weightForClass, false, grd_to_soft_max_input, true, grd_t);
                     break;
                 case 2:
                     // gradient to input weight
-                    grd_to_wgt_t = Input(2)->Gradient().ColumnSlice(lft_bnd, nbr_wrd);
+                    grd_to_wgt_t = Input(EMBEDDINGMATRIX)->GradientAsMatrix().ColumnSlice(lft_bnd, nbr_wrd);
                     Matrix<ElemType>::MultiplyAndAdd(obs, false, grd_to_soft_max_input, false, grd_to_wgt_t);
                     break;
                 case 3:
-                    grd_t = Input(3)->GradientFor(fr);
-                    grd_t.SetValue(DataWithMBLayoutFor(m_clsSoftmax, fr, Input(3)->GetMBLayout()));
+                    grd_t = Input(CLASSPROBINDATA)->GradientFor(fr);
+                    grd_t.SetValue(DataWithMBLayoutFor(m_clsSoftmax, fr, Input(CLASSPROBINDATA)->GetMBLayout()));
                     ComputeCEPartialToSoftmaxInputs(grd_t, Gradient(), c_t);
                     break;
                 }
@@ -822,6 +822,7 @@ public:
     }
 
 private:
+
     void ComputeCEPartialToSoftmaxInputs(Matrix<ElemType>& inputGradientValues, Matrix<ElemType>& gradientValues, size_t y_t)
     {
         Matrix<ElemType>::MinusOneAt(inputGradientValues, y_t);
@@ -835,19 +836,19 @@ private:
         {
             m_grdToSoftMaxInput.Resize(1, m_totalNbrWords); // buffer that contains a concatenation of class-conditional values
 
-            const size_t nT = Input(0)->GetNumTimeSteps();
-            const size_t nS = Input(0)->GetNumParallelSequences();
+            const size_t nT = Input(LABELDATA)->GetNumTimeSteps();
+            const size_t nS = Input(LABELDATA)->GetNumParallelSequences();
             size_t sz = 0; // iterate over the packed concatenated class-conditioned prob vectors
             for (size_t s = 0; s < nS; s++)
                 for (size_t t = 0; t < nT; t++)
                 {
-                    FrameRange fr = FrameRange(Input(0)->GetMBLayout(), t).Sequence(s);
+                    FrameRange fr = FrameRange(Input(LABELDATA)->GetMBLayout(), t).Sequence(s);
 
-                    //if (Input(0)->GetMBLayout()->IsGap(s, t))  // skip gaps
-                    if (Input(0)->GetMBLayout()->IsGap(fr)) // skip gaps
+                    //if (Input(LABELDATA)->GetMBLayout()->IsGap(s, t))  // skip gaps
+                    if (Input(LABELDATA)->GetMBLayout()->IsGap(fr)) // skip gaps
                         continue;
 
-                    Matrix<ElemType> lbl_t = Input(0)->ValueFor(fr);
+                    Matrix<ElemType> lbl_t = Input(LABELDATA)->ValueFor(fr);
                     size_t y_t = (size_t) lbl_t(0, 0);     // word index
                     size_t lft_bnd = (size_t) lbl_t(2, 0); // index of first word belonging to current word token's class
                     size_t rgt_bnd = (size_t) lbl_t(3, 0); // and end of that range
@@ -868,43 +869,43 @@ private:
     }
 
 public:
+
     virtual void UpdateFunctionMBSize() override
     {
-        // TODO (this does not really break it since for full matrices, class Matrix will resize by itself)
+        // TODO: Resize temp matrices here (not doing so does not really fail since for full matrices, class Matrix will resize by itself)
     }
 
     // -sum(left_i * log(softmax_i(right)))
     virtual void /*ComputationNodeNonLooping::*/ ForwardPropNonLooping() override
     {
-        if (Input(0)->Value().GetDeviceId() != CPUDEVICE)
+        if (Input(LABELDATA)->Value().GetDeviceId() != CPUDEVICE)
             LogicError("ClassBasedCrossEntropyWithSoftmax (ForwardPropNonLooping()): The label matrix is not using CPU device. This will make computation slow, even though the label data is probably saved on GPU. Because of the external loop over time with explicit class id retrieved from the label matrix, the computation will be very slow if the label matrix is saved on GPU. However, this is only a constraint for label matrix and other matrices such as data are suggested to reside on GPU. ");
+        // TODO: Get the label matrix into location=Both state.
 
-        // (the below is left-over from refactoring)
-        Matrix<ElemType>& functionValues = Value();
+        auto & functionValues = Value();
 
-        const size_t hdSize = Input(1)->GetNumRows(); // hdSize
-        assert(m_nbrCls == Input(3)->GetNumRows());
+        const size_t hdSize = Input(INPUTDATA)->GetSampleMatrixNumRows(); // hdSize
+        assert(m_nbrCls == Input(CLASSPROBINDATA)->GetSampleMatrixNumRows());
 
         // compute the class posteriors
-        m_clsLogSoftmax = Input(3)->Value();
+        m_clsLogSoftmax = Input(CLASSPROBINDATA)->Value();
         m_clsLogSoftmax.InplaceLogSoftmax(true);   // log
         m_clsSoftmax.AssignExpOf(m_clsLogSoftmax); // non-log
 
         // create a large workspace to contain all class-conditioned probs concatenated
         // 'sz' is the offset into that vector. We will iterate over these vectors at a few places. Always use this same boilerplate code.
         // TODO: should we pull this iteration into an iterator, to reduce the code dup?
-        const size_t nT = Input(0)->GetNumTimeSteps();
-        const size_t nS = Input(0)->GetNumParallelSequences();
+        const size_t nT = Input(LABELDATA)->GetNumTimeSteps();
+        const size_t nS = Input(LABELDATA)->GetNumParallelSequences();
         size_t sz = 0;
         for (size_t s = 0; s < nS; s++)
             for (size_t t = 0; t < nT; t++)
             {
-                FrameRange fr = FrameRange(Input(0)->GetMBLayout(), t).Sequence(s);
-                //if (Input(0)->GetMBLayout()->IsGap(s, t))  // skip gaps
-                if (Input(0)->GetMBLayout()->IsGap(fr)) // skip gaps
+                FrameRange fr = FrameRange(Input(LABELDATA)->GetMBLayout(), t).Sequence(s);
+                if (Input(LABELDATA)->GetMBLayout()->IsGap(fr)) // skip gaps
                     continue;
 
-                const Matrix<ElemType>& lbl_t = Input(0)->ValueFor(fr);
+                const Matrix<ElemType>& lbl_t = Input(LABELDATA)->ValueFor(fr);
                 size_t lft_bnd = (size_t) lbl_t(2, 0);
                 size_t rgt_bnd = (size_t) lbl_t(3, 0);
                 size_t nbr_wrd = (rgt_bnd - lft_bnd); // number of words in the class
@@ -925,12 +926,11 @@ public:
         for (size_t s = 0; s < nS; s++)
             for (size_t t = 0; t < nT; t++)
             {
-                FrameRange fr = FrameRange(Input(0)->GetMBLayout(), t).Sequence(s);
-                //if (Input(0)->GetMBLayout()->IsGap(s, t))  // skip gaps
-                if (Input(0)->GetMBLayout()->IsGap(fr)) // skip gaps
+                FrameRange fr = FrameRange(Input(LABELDATA)->GetMBLayout(), t).Sequence(s);
+                if (Input(LABELDATA)->GetMBLayout()->IsGap(fr)) // skip gaps
                     continue;
 
-                const Matrix<ElemType>& lbl_t = Input(0)->ValueFor(fr);
+                const Matrix<ElemType>& lbl_t = Input(LABELDATA)->ValueFor(fr);
                 size_t y_t = (size_t) lbl_t(0, 0);     // current word token index
                 size_t c_t = (size_t) lbl_t(1, 0);     // current word token's class index
                 size_t lft_bnd = (size_t) lbl_t(2, 0); // index of first word belonging to current word token's class
@@ -940,13 +940,13 @@ public:
                 // now get views of various arrays that correspond to the index range of words belonging to this class
 
                 // get hidden vectors for the words in this class
-                Matrix<ElemType> weightForClass = Input(2)->Value().ColumnSlice(lft_bnd, nbr_wrd); // [hdSize x nbr_wrd]
+                Matrix<ElemType> weightForClass = Input(EMBEDDINGMATRIX)->ValueAsMatrix().ColumnSlice(lft_bnd, nbr_wrd); // [hdSize x nbr_wrd]
 
                 // buffer to hold the class-conditional distribution
-                Matrix<ElemType> softMax_t = m_softMax.ColumnSlice(sz, nbr_wrd);
+                Matrix<ElemType> softMax_t = m_softMax.ColumnSlice(sz, nbr_wrd);        // TODO: declare these outside of the loop to avoid the malloc
                 Matrix<ElemType> logSoftMax_t = m_logSoftmax.ColumnSlice(sz, nbr_wrd);
 
-                Matrix<ElemType> obs = Input(1)->ValueFor(fr); // hidden activation vector for current word token
+                Matrix<ElemType> obs = Input(INPUTDATA)->ValueFor(fr); // hidden activation vector for current word token
 
                 // multiply hidden activation with weight matrix (the slice of the weight matrix for the range of class members)
                 // TODO: can we use 'true' here instead? Above transposition hack won't work with row slices. 'obs' not used elsewhere
@@ -986,21 +986,19 @@ public:
         Base::Validate(isFinalValidationPass);
         m_pMBLayout = nullptr; // this node does not hold mini-batch data
 
-        if (Input(0)->OperationName() != OperationNameOf(InputValue)) // TODO: but why could that label not be post-processed through another node?
-            LogicError("ClassBasedCrossEntropyWithSoftmaxNode criterion requires the first input to be the label.");
         if (isFinalValidationPass)
         {
-            if (Input(0)->GetNumRows() != 4) // label needs to be 4 rows
-                LogicError("The label in the ClassBasedCrossEntropyWithSoftmaxNode operation needs to be 4 rows.");
-            if (Input(1)->GetNumRows() != Input(2)->GetNumRows()) // input and matrix can be timed
-                LogicError("The Matrix<ElemType>  dimension for observation and weight in the ClassBasedCrossEntropyWithSoftmaxNode operation does not match.");
-            if (Input(0)->GetMBLayout() != Input(1)->GetMBLayout() || Input(0)->GetMBLayout() != Input(3)->GetMBLayout())
+            if (Input(LABELDATA)->GetSampleMatrixNumRows() != 4) // label data needs to have 4 rows
+                LogicError("The label data in the ClassBasedCrossEntropyWithSoftmax operation must have 4 rows.");
+            if (Input(INPUTDATA)->GetSampleMatrixNumRows() != Input(EMBEDDINGMATRIX)->GetAsMatrixNumRows()) // input and matrix can be timed
+                LogicError("The matrix dimension for observation and weight in the ClassBasedCrossEntropyWithSoftmax operation does not match.");
+            if (Input(LABELDATA)->GetMBLayout() != Input(INPUTDATA)->GetMBLayout() || Input(LABELDATA)->GetMBLayout() != Input(CLASSPROBINDATA)->GetMBLayout())
                 InvalidArgument("%ls %ls operation requires that the layouts of inputs 0 (label), 1 (hidden activation), and 3 (log softmax) match.", NodeName().c_str(), OperationName().c_str());
         }
 
-        SetDims(TensorShape(1), 1);
+        SetDims(TensorShape(1), false);
 
-        m_nbrCls = Input(3)->GetNumRows();
+        m_nbrCls = Input(CLASSPROBINDATA)->GetSampleMatrixNumRows();
     }
 
 protected:
@@ -1025,10 +1023,10 @@ template class ClassBasedCrossEntropyWithSoftmaxNode<double>;
 
 // -----------------------------------------------------------------------
 // CRFNode (labels, position_dependent_scores, transition_scores)
-//  - labels : output label vector of [0:T-1]
-//  - position_dependent_scores [?] : score from position dependent node,
+//  - labels: output label vector of [0:T-1]
+//  - position_dependent_scores [0:T-1]: score from position dependent node,
 //    in the R-CRF case, it is the RNN output score before softmax
-//  - transition scores [?] : score from the transition node,
+//  - transition scores: square transition matrix,  --TODO: log?
 //    in the R-CRF case, it is the transition probability between labels
 // BUGBUG: This node cannot operate with truncated BPTT, but does not detect it. It also does not handle gaps or test boundary flags.
 // -----------------------------------------------------------------------
@@ -1072,8 +1070,8 @@ public:
     virtual void /*ComputationNodeNonLooping::*/ ForwardPropNonLooping() override
     {
         FrameRange fr(Input(0)->GetMBLayout());
-        size_t nrow = Input(0)->GetNumRows();
-        size_t ncol = Input(0)->GetNumCols();
+        size_t nrow = Input(0)->Value().GetNumRows();
+        size_t ncol = Input(0)->Value().GetNumCols();
 
         mAlpha.Resize(nrow, ncol);
         mBeta.Resize(nrow, ncol);
@@ -1088,7 +1086,7 @@ public:
         for (size_t i = 0; i < nS; i++) // process parallel sequences one by one  --BUGBUG: We should loop over individual sequences.
         {
             FrameRange sequenceRange = fr.Sequence(i); // FrameRange to select one sequence
-            // BUGBUG: This ^^ is neither supported nor correct, since this code does not handle gaps or start/end flags
+            // BUGBUG: This ^^ is neither supported nor correct, since this code does not handle gaps or start/end flags.
             ForwardPropS(
                 DataWithMBLayoutFor(mPostProb, sequenceRange, Input(0)->GetMBLayout()),
                 DataWithMBLayoutFor(mAlpha, sequenceRange, Input(0)->GetMBLayout()),
@@ -1096,7 +1094,7 @@ public:
                 funcVal,
                 Input(0)->ValueFor(sequenceRange),
                 Input(1)->ValueFor(sequenceRange),
-                Input(2)->Value(), mStartLbl,
+                Input(2)->ValueAsMatrix(), mStartLbl,
                 mEndLbl);
 
             Value() += funcVal; // aggregate over sequences
@@ -1122,11 +1120,11 @@ public:
             for (size_t i = 0; i < nS; i++) // process all sequences one by one
             {
                 FrameRange sequenceRange = fr.Sequence(i); // FrameRange to select one sequence
-                auto gradient = Input(2)->GradientFor(fr);
+                auto & gradient = Input(2)->GradientAsMatrix();
                 TransGrdCompute(Input(0)->ValueFor(sequenceRange),
                                 DataWithMBLayoutFor(mAlpha, sequenceRange, Input(0)->GetMBLayout()),
                                 DataWithMBLayoutFor(mBeta, sequenceRange, Input(0)->GetMBLayout()),
-                                Input(2)->ValueFor(fr),
+                                Input(2)->ValueAsMatrix(),
                                 gradient,
                                 mStartLbl, 1);
             }
@@ -1287,15 +1285,16 @@ public:
         m_pMBLayout = nullptr; // this node does not hold mini-batch data
 
         if (isFinalValidationPass)
-            if (!(Input(1)->GetNumRows() == Input(2)->GetNumRows() && // position dependent and pair scores have same number of labels
-                  Input(0)->GetNumRows() == Input(1)->GetNumRows() &&
-                  Input(0)->GetNumCols() == Input(1)->GetNumCols() && // position dependent and pair scores have the same observation numbers
-                  Input(2)->GetNumCols() == Input(2)->GetNumRows()))
+            if (!(Input(1)->GetSampleMatrixNumRows() == Input(2)->GetAsMatrixNumRows() && // position dependent and pair scores have same number of labels
+                  Input(0)->GetSampleMatrixNumRows() == Input(1)->GetSampleMatrixNumRows() &&
+                  Input(0)->HasMBLayout() && Input(0)->GetMBLayout() == Input(1)->GetMBLayout() &&
+                  //Input(0)->GetNumCols() == Input(1)->GetNumCols() && // position dependent and pair scores have the same observation numbers
+                  Input(2)->GetAsMatrixNumCols() == Input(2)->GetAsMatrixNumRows()))
             {
                 LogicError("The Matrix dimension in the CRFNode operation does not match.");
             }
 
-        SetDims(TensorShape(1), 1);
+        SetDims(TensorShape(1), false);
     }
 
     virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
@@ -1323,10 +1322,10 @@ private:
 
 // -----------------------------------------------------------------------
 /// SequenceWithSoftmaxNode (label, prediction, loglikelihood)
-// word-lattice based sequence training criterion
-// BUGBUG: Likely not very useful since it uses an MS-proprietary lattice-archive format
-//         that requires Frank's DBN.exe tool to create. The inner C++ code for conversion
-//         is in this repo (latticearchive.h), but not the outer main program.
+// word-lattice based sequence training criterion, using a Microsoft-proprietary lattice format
+// This node is likely not very useful for external use since it uses an MS-proprietary lattice-archive format
+// that requires Frank's DBN.exe tool to create. The inner C++ code for converting HTK lattices
+// into this format is in this repo (latticearchive.h), but not the outer main program.
 // -----------------------------------------------------------------------
 
 template <class ElemType>
@@ -1436,7 +1435,7 @@ public:
         m_softmaxOfRight->InplaceExp();
 
         m_gammaFromLattice->SwitchToMatrixType(m_softmaxOfRight->GetMatrixType(), m_softmaxOfRight->GetFormat(), false);
-        m_gammaFromLattice->Resize(m_softmaxOfRight->GetNumRows(), m_softmaxOfRight->GetNumCols());
+        m_gammaFromLattice->Resize(*m_softmaxOfRight);
         m_gammaCalculator.calgammaformb(Value(), m_lattices, Input(2)->Value() /*log LLs*/,
                                         Input(0)->Value() /*labels*/, *m_gammaFromLattice,
                                         m_uids, m_boundaries, Input(1)->GetNumParallelSequences(),
@@ -1459,15 +1458,16 @@ public:
             LogicError("SequenceWithSoftmaxNode criterion requires the first input to be the label.");
 
         if (isFinalValidationPass)
-            if (!(Input(0)->GetNumRows() == Input(1)->GetNumRows() && //match size
-                  Input(1)->GetNumRows() == Input(2)->GetNumRows() &&
-                  Input(0)->GetNumCols() == Input(1)->GetNumCols() &&
-                  Input(1)->GetNumCols() == Input(2)->GetNumCols()))
+            if (!(Input(0)->GetSampleMatrixNumRows() == Input(1)->GetSampleMatrixNumRows() && //match size
+                  Input(1)->GetSampleMatrixNumRows() == Input(2)->GetSampleMatrixNumRows() &&
+                  Input(0)->HasMBLayout() &&
+                  Input(0)->GetMBLayout() == Input(1)->GetMBLayout() &&
+                  Input(0)->GetMBLayout() == Input(2)->GetMBLayout()))
             {
                 LogicError("The Matrix dimension in the SequenceWithSoftmaxNode operation does not match.");
             }
 
-        SetDims(TensorShape(1), 1);
+        SetDims(TensorShape(1), false);
 
         m_gammatime = 0;
         m_partialtime = 0;
@@ -1623,7 +1623,7 @@ public:
         m_temp->AssignDifferenceOf(Input(0)->ValueFor(fr), *m_classZeroLabels); // TODO: need a slice for m_classZeroLabels?
 
         // Multiply the vector by the Input(2)->Value()
-        if (m_inputs.size() == 3)                                            // without weight
+        if (m_inputs.size() == 3)                                            // with weight
             m_temp->AssignElementProductOf(*m_temp, Input(2)->ValueFor(fr)); // TODO: is Input(2) minibatch data? Confirm
 
         // divide class by p (class 1) or (1-p) (class 0)
@@ -1640,12 +1640,12 @@ public:
 
     virtual void UpdateFunctionMBSize() override
     {
-        m_classZeroLabels->Resize(Input(0)->GetNumRows(), Input(0)->GetNumCols());
-        m_result->Resize(Input(0)->GetNumRows(), Input(0)->GetNumCols());
-        m_temp->Resize(Input(0)->GetNumRows(), Input(0)->GetNumCols());
+        m_classZeroLabels->Resize(Input(0)->Value());
+        m_result->Resize(Input(0)->Value());
+        m_temp->Resize(Input(0)->Value());
     }
 
-    //-sum(left * log(right) + (1-left)*log(1-right)) (optionally * weight)
+    // -sum(left * log(right) + (1-left)*log(1-right)) (optionally * weight)
     virtual void /*ComputationNodeNonLooping::*/ ForwardPropNonLooping() override
     {
         FrameRange fr(Input(0)->GetMBLayout());
@@ -1695,19 +1695,16 @@ public:
         /* Note that this is the same as ValidateInferBinaryInputDims, but done for the 3rd child if it exists */
         if (m_inputs.size() == 3)
         {
-            auto in = Input(2);
+            auto weights = Input(2);
             auto other = Input(1);
             // borrow any unset dimension on one input from the other input
-            size_t rows = in->GetNumRows() == 0 ? other->GetNumRows() /*borrow from peer*/ : in->GetNumRows() /*keep as is*/;
-            size_t cols = (!in->HasMBLayout() && in->GetNumCols() == 0) ? other->GetNumCols() /*borrow from peer*/ : in->GetNumCols() /*keep as is*/;
-
-            ValidateInferInputDims(2, rows, cols);
+            weights->ValidateInferInputDimsFrom(other->GetSampleLayout());
 
             if (isFinalValidationPass &&
-                !(Input(0)->GetNumRows() == Input(2)->GetNumRows() &&
-                  (Input(0)->HasMBLayout() || (Input(0)->GetNumCols() == Input(2)->GetNumCols()))))
+                !(Input(0)->GetSampleMatrixNumRows() == Input(2)->GetSampleMatrixNumRows() &&
+                 (Input(0)->GetMBLayout() == Input(2)->GetMBLayout() || !Input(0)->HasMBLayout() || !Input(0)->HasMBLayout())))
             {
-                LogicError("The Matrix dimensions of the second argument in the %ls %ls operation do not match.", NodeName().c_str(), OperationName().c_str());
+                LogicError("The Matrix dimensions of the second argument weights the %ls %ls operation do not match.", NodeName().c_str(), OperationName().c_str());
             }
         }
     }

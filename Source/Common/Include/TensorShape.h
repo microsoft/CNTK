@@ -383,12 +383,11 @@ public:
     {
         return m_dims == other.m_dims;
     }
+    bool operator!=(const TensorShape& other) const { return !operator==(other); }  // duh!
 
     // verify that this refers to a dense matrix (no strides)
     void VerifyIsDense() const
     {
-        if (m_offset != 0)
-            LogicError("TensorShape: A dense TensorShape expected. Offset %d not allowed.", (int) m_offset);
         for (size_t k = 0; k < m_dims.size(); k++) // (TODO: we can save one multiplication here)
         {
             ptrdiff_t stride = k > 0 ? m_strides[k - 1] * (ptrdiff_t) m_dims[k - 1] : 1;
@@ -620,6 +619,19 @@ public:
             m_dims[k] = bounds.second[k] - bounds.first[k];
         }
         return *this;
+    }
+
+    // compare two TensorShapes, whether they are compatible, considering padding and broadcasting
+    bool IsElementwiseCompatibleWith(const TensorShape & other) const
+    {
+        for (size_t i = 0; i < m_dims.size(); i++)
+        {
+            size_t dim = m_dims[i];
+            size_t otherDim = i < other.size() ? other[i] : 1;
+            if (dim != otherDim && dim != 1 && otherDim != 1)   // dims mismatch, and neither is broadcasting
+                return false;
+        }
+        return true;
     }
 
     // pretty-printing. Returns tensor dims in the form "I x J x K".

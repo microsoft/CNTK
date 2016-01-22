@@ -52,7 +52,7 @@ static bool SetGradientToScalarOne(ComputationNodeBasePtr nodep)
     bool hasMatchingType = (node != nullptr);
     if (hasMatchingType)
     {
-        node->VerifyDims(1, 1);
+        node->Value().VerifySize(1, 1);
         node->Gradient().Resize(1, 1);
         node->Gradient().SetValue((ElemType) 1.0);
     }
@@ -432,7 +432,6 @@ void ComputationNetwork::CompileNetwork()
     // :)
 
     // STEP: Some final details.
-    FixupInputMinibatchSize(); // post-fix MB sizes in InputValues(). Will not be needed with next-gen reader.
     ResetEvalTimeStamps();     // invalidate all m_value fields. Really belongs into StartEvaluateMinibatchLoop()
 
     fprintf(stderr, "\nPost-processing network complete.\n");
@@ -612,7 +611,7 @@ void ComputationNetwork::ValidateSubNetwork(const ComputationNodeBasePtr& rootNo
     for (auto& node : nodes)
     {
         // nodes must output non-zero dimensional data, otherwise assume user error
-        if (node->GetNumRows() == 0 && (node->GetMBLayout() || node->GetNumCols() == 0))
+        if (node->GetSampleLayout().GetNumElements() == 0)
             RuntimeError("%ls operation has 0 elements", node->NodeName().c_str());
     }
     fprintf(stderr, "\n\n");
@@ -631,6 +630,12 @@ void ComputationNetwork::ValidateSubNetwork(const ComputationNodeBasePtr& rootNo
         //    fprintf(stderr, "    %ls\n", node->NodeName().c_str());
         //fprintf(stderr, "\n\n");
     }
+}
+
+// helper to discover dimension changes
+static pair<TensorShape, bool> GetDims(const ComputationNodeBasePtr & node)
+{
+    return make_pair(node->GetSampleLayout(), node->HasMBLayout());
 }
 
 void ComputationNetwork::ValidateNodes(list<ComputationNodeBasePtr> nodes, bool isFinalValidationPass, size_t& todo)
@@ -655,15 +660,15 @@ void ComputationNetwork::ValidateNodes(list<ComputationNodeBasePtr> nodes, bool 
             // got at least one child: it makes sense to call Validate()
             // keep state
             MBLayoutPtr oldMBLayoutPtr = node->GetMBLayout();
-            auto dim = node->GetDims();
-            vector<pair<size_t, size_t>> childDims;
+            auto dim = GetDims(node);
+            vector<pair<TensorShape, bool>> childDims;
             for (auto& child : children)
-                childDims.push_back(child->GetDims());
+                childDims.push_back(GetDims(child));
             auto sampleLayout = node->GetSampleLayout();
             // We do call validate(final) as many times as needed, since stuff may have changed underneath.
             node->PrintSelfBeforeValidation();
             node->Validate(isFinalValidationPass /*final*/); // all nodes have been visited: do verification instead of just inference
-            fprintf(stderr, " -> [%lu [%s], %s%lu]", node->GetNumRows(), string(node->GetSampleLayout()).c_str(), node->HasMBLayout() ? "MBSize " : "", node->GetNumCols());
+            fprintf(stderr, " -> [%s%s]", string(node->GetSampleLayout()).c_str(), node->HasMBLayout() ? " x *" : "");
             node->m_visited = true;
             // also take the opportunity to propagate m_needsGradient
             auto needsGradient = node->m_needsGradient;
@@ -672,10 +677,10 @@ void ComputationNetwork::ValidateNodes(list<ComputationNodeBasePtr> nodes, bool 
             // check state --node will be valid if all nodes have been visited and node has not been updated
             bool unchanged = true;
             unchanged &= (oldMBLayoutPtr == node->GetMBLayout());
-            unchanged &= (dim == node->GetDims());
-            vector<pair<size_t, size_t>> newChildDims;
+            unchanged &= (dim == GetDims(node));
+            vector<pair<TensorShape, bool>> newChildDims;
             for (auto& child : children)
-                newChildDims.push_back(child->GetDims());
+                newChildDims.push_back(GetDims(child));
             unchanged &= (childDims == newChildDims);
             unchanged &= (sampleLayout == node->GetSampleLayout());
             unchanged &= (needsGradient == node->m_needsGradient);

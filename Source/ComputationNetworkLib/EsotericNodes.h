@@ -697,7 +697,7 @@ template <class ElemType>
             {
                 size_t rows = Input(index)->GetNumRows() == 0 ? Input(1 - index)->GetNumRows() : Input(index)->GetNumRows();
                 size_t cols = Input(index)->GetNumCols() == 0 ? Input(1 - index)->GetNumCols() : Input(index)->GetNumCols();
-                ValidateInferInputDims(index, rows, cols);
+                ValidateInferInputDimsFrom(index, rows, cols);
             }
 
             size_t rows0 = Input(0)->GetNumRows(), cols0 = Input(0)->GetNumCols();
@@ -1092,15 +1092,15 @@ class DummyCriterionNode : public ComputationNodeNonLooping /*ComputationNode*/<
                 LogicError("DummyCriterionNode criterion requires the first input to be computed derivatives.");
             if (isFinalValidationPass)
             {
-                if (Input(0)->GetNumRows() != 1)
-                LogicError("DummyCriterionNode criterion requires the first input to have dimension 1.");
-                if (Input(0)->GetNumRows() == 0 || Input(1)->GetNumRows() == 0 || Input(2)->GetNumRows() == 0)
+                if (Input(0)->GetSampleMatrixNumRows() != 1)
+                    LogicError("DummyCriterionNode criterion requires the first input to have dimension 1.");
+                if (Input(0)->GetSampleMatrixNumRows() == 0 || Input(1)->GetSampleMatrixNumRows() == 0 || Input(2)->GetSampleMatrixNumRows() == 0)
                     LogicError("DummyCriterionNode operation: one of the operands has 0 elements.");
-                if (Input(1)->GetNumRows() != Input(2)->GetNumRows())
+                if (Input(1)->GetSampleMatrixNumRows() != Input(2)->GetSampleMatrixNumRows())
                 LogicError("The Matrix dimension in the DummyCriterionNode operation does not match.");
             }
 
-            SetDims(TensorShape(1), 1);
+            SetDims(TensorShape(1), false);
         }
     };
 
@@ -1293,10 +1293,10 @@ class SequenceDecoderNode : public ComputationNodeNonLooping /*ComputationNode*/
             InferMBLayoutFromInputsForStandardCase();
 
             if (isFinalValidationPass)
-            if (!(Input(1)->GetNumRows() == Input(2)->GetNumRows() && // position dependent and pair scores have same number of labels
-                    Input(0)->GetNumRows() == Input(1)->GetNumRows() &&
-                    Input(0)->GetNumCols() == Input(1)->GetNumCols() && // position dependent and pair scores have the same observation numbers
-                    Input(2)->GetNumCols() == Input(2)->GetNumRows()))
+                if (!(Input(1)->GetSampleMatrixNumRows() == Input(2)->GetSampleMatrixNumRows() && // position dependent and pair scores have same number of labels
+                    Input(0)->GetSampleMatrixNumRows() == Input(1)->GetSampleMatrixNumRows() &&
+                    Input(0)->GetSampleMatrixNumCols() == Input(1)->GetSampleMatrixNumCols() && // position dependent and pair scores have the same observation numbers
+                    Input(2)->GetSampleMatrixNumCols() == Input(2)->GetSampleMatrixNumRows()))
                 {
                     LogicError("The Matrix<ElemType>  dimension in the SequenceDecoderNode operation does not match.");
                 }
@@ -1380,8 +1380,8 @@ template <class ElemType>
 
                     //BackpropToLeft1(sliceInput1Value, Input(0)->Gradient(), sliceOutputGrad);
 
-                    size_t r = Input(0)->GetNumRows();
-                size_t T1 = Input(0)->GetNumCols() / GetNumParallelSequences(); // TODO: if T1 == GetNumTimeSteps() then we can simplify code below.
+                    size_t r = Input(0)->GetSampleMatrixNumRows();
+                    size_t T1 = Input(0)->GetSampleMatrixNumCols() / GetNumParallelSequences(); // TODO: if T1 == GetNumTimeSteps() then we can simplify code below.
                     Matrix<ElemType> mTmp1(r, T1, sliceInput1Value.GetDeviceId());
 
                     // process sequence by sequence
@@ -1408,8 +1408,8 @@ template <class ElemType>
                     // process sequence by sequence
                     for (size_t k = 0; k < GetNumParallelSequences(); k++)
                     {
-                        size_t r = Input(0)->GetNumRows();
-                    size_t T1 = Input(0)->GetNumCols() / GetNumParallelSequences(); // TODO: if T1 == GetNumTimeSteps() then we can simplify code below.
+                        size_t r = Input(0)->GetSampleMatrixNumRows();
+                        size_t T1 = Input(0)->GetSampleMatrixNumCols() / GetNumParallelSequences(); // TODO: if T1 == GetNumTimeSteps() then we can simplify code below.
                         Matrix<ElemType> mTmp1(r, T1, sliceOutputGrad.GetDeviceId());
                         for (size_t t = 0; t < T1; t++)
                         {
@@ -1430,8 +1430,8 @@ template <class ElemType>
 
                     for (size_t k = 0; k < GetNumParallelSequences(); k++)
                     {
-                        size_t d = Input(1)->GetNumRows();
-                        size_t T1 = Input(0)->GetNumRows() / GetNumParallelSequences();
+                        size_t d = Input(1)->GetSampleMatrixNumRows();
+                        size_t T1 = Input(0)->GetSampleMatrixNumRows() / GetNumParallelSequences();
                         Matrix<ElemType> mTmp1(sliceInput1Value.GetDeviceId());
                         mTmp1.Resize(d, T1);
                         Matrix<ElemType> mTmp2 = sliceInput1Value.ColumnSlice(k, 1);
@@ -1453,8 +1453,8 @@ template <class ElemType>
 
                     for (size_t k = 0; k < GetNumParallelSequences(); k++)
                     {
-                        size_t d = Input(1)->GetNumRows();
-                        size_t T1 = Input(0)->GetNumRows() / GetNumParallelSequences();
+                        size_t d = Input(1)->GetSampleMatrixNumRows();
+                        size_t T1 = Input(0)->GetSampleMatrixNumRows() / GetNumParallelSequences();
 
                         Matrix<ElemType> mTmp0(sliceOutputGrad.GetDeviceId());
                         mTmp0.Resize(1, d);
@@ -1532,14 +1532,14 @@ template <class ElemType>
 
     virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
         {
-            size_t rows0 = Input(0)->GetNumRows(), cols1 = Input(1)->GetNumCols();
+            size_t rows0 = Input(0)->GetSampleMatrixNumRows();
             Matrix<ElemType> sliceInput1Value = Input(1)->ValueFor(fr);
             UpdateStride(sliceInput1Value);
 
             if (m_strideDim == 0)
-                SetDims(TensorShape(rows0 / GetNumParallelSequences()), cols1);
+                SetDims(TensorShape(rows0 / GetNumParallelSequences()), HasMBLayout());
             else
-                SetDims(Input(0)->GetSampleLayout(), cols1);
+                SetDims(Input(0)->GetSampleLayout(), HasMBLayout());
 
             Matrix<ElemType> sliceOutputValue = ValueFor(fr);
 
@@ -1637,15 +1637,15 @@ template <class ElemType>
             //if (Input(2)->m_needGradient)        // disabled because this is a flag that belongs to Network. Node should simply not propagate anything into it
             //    RuntimeError("StrideTimes: No gradient update should be on input(2).");
 
-            size_t rows0 = Input(0)->GetNumRows(), cols0 = Input(0)->GetNumCols();
-            size_t rows1 = Input(1)->GetNumRows(), cols1 = Input(1)->GetNumCols();
+            size_t rows0 = Input(0)->GetSampleMatrixNumRows(), cols0 = Input(0)->GetSampleMatrixNumCols();
+            size_t rows1 = Input(1)->GetSampleMatrixNumRows();
 
             if (m_strideDim == 0) // by row
             {
                 if (isFinalValidationPass && rows1 != cols0)
                 RuntimeError("The Matrix dimension in the StrideTimes operation in dim %d does not match for cols %d in A and rows %d in B.", (int) m_strideDim, (int) cols0, (int) rows1);
                 size_t T1 = rows0 / m_stride;
-                SetDims(TensorShape(T1), cols1);
+                SetDims(TensorShape(T1), HasMBLayout());
                 //after multiplication the structure is lost
             }
 
@@ -1653,7 +1653,7 @@ template <class ElemType>
             {
                 if (isFinalValidationPass && cols0 != rows1 * m_stride)
                 RuntimeError("The Matrix dimension in the StrideTimes operation in dim %d does not match for cols %d in A and row number %d in B.", (int) m_strideDim, (int) cols0, (int) rows1);
-                SetDims(TensorShape(rows0), cols1);
+                SetDims(TensorShape(rows0), HasMBLayout());
                 //after multiplication the structure is lost
             }
         }
@@ -1680,10 +1680,10 @@ template <class ElemType>
         return L"PairNetwork";
     }
 
-        void Init(size_t row_size, size_t col_size)
+        void Init(size_t row_size, size_t /*col_size*/)
         {
             CreateMatrixIfNull(m_value);
-            SetDims(TensorShape(row_size), col_size);
+            SetDims(TensorShape(row_size), HasMBLayout());
             UpdateFunctionValuesSize();
         }
 
@@ -1720,7 +1720,7 @@ template <class ElemType>
             BackpropToMap(inputIndex);
             return;
         }                                                // TODO: remove these one by one
-            assert(GetNumRows() == Gradient().GetNumRows()); // original used m_value->GetNumRows() for loop dimension
+        assert(GetSampleMatrixNumRows() == Gradient().GetNumRows()); // original used m_value->GetNumRows() for loop dimension
             assert(m_pMBLayout);
 
             Matrix<ElemType> mTmp = Input(inputIndex)->GradientFor(fr);
@@ -1747,11 +1747,7 @@ template <class ElemType>
             Base::Validate(isFinalValidationPass);
             InferMBLayoutFromInputsForStandardCase();
 
-            size_t rows0 = Input(0)->GetNumRows(), cols0 = Input(0)->GetNumCols();
-            if (rows0 > 0 && cols0 > 0) // TODO: is this check needed?
-                SetDims(Input(0));
-            else
-                SetDims(Input(0)->GetSampleLayout(), 0);
+            SetDims(Input(0));
         }
     };
 
@@ -1787,13 +1783,13 @@ template <class ElemType>
             if (inputIndex > 1)
                 InvalidArgument("Parallel operation only takes two input.");
             ComputationNodePtr child = Input(inputIndex);
-            size_t startidx = (inputIndex == 0) ? 0 : Input(0)->GetNumRows();
-            size_t nrows = child->GetNumRows();
+            size_t startidx = (inputIndex == 0) ? 0 : Input(0)->GetSampleMatrixNumRows();
+            size_t nrows = child->GetSampleMatrixNumRows();
 
             // TODO: why is this needed? If it is, it should be solved more centrally.
-            if (child->Gradient().GetNumRows() != child->GetNumRows() || child->Gradient().GetNumCols() != GetNumCols())
+            if (child->Gradient().GetNumRows() != child->GetSampleMatrixNumRows() || child->Gradient().GetNumCols() != GetSampleMatrixNumCols())
             {
-                child->Gradient().Resize(child->GetNumRows(), child->GetNumCols());
+                child->Gradient().Resize(child->GetSampleMatrixNumRows(), child->GetSampleMatrixNumCols());
                 child->Gradient().SetValue(0);
             }
 
@@ -1851,21 +1847,13 @@ template <class ElemType>
             Base::Validate(isFinalValidationPass);
             InferMBLayoutFromInputsForStandardCase();
 
-            size_t rows1, cols1;
-            rows1 = Input(1)->GetNumRows();
-            cols1 = Input(1)->GetNumCols();
+            size_t rows1 = Input(1)->GetSampleMatrixNumRows();
 
-            size_t rows0, cols0;
-            rows0 = Input(0)->GetNumRows();
-            cols0 = Input(0)->GetNumCols();
-
-            if (isFinalValidationPass && cols0 != cols1)
-                LogicError("ParallelNode: column dimension mismatched!");
+            size_t rows0 = Input(0)->GetSampleMatrixNumRows();
 
             size_t rows = rows0 + rows1;
-            size_t cols = cols0;
 
-            SetDims(TensorShape(rows), cols);
+            SetDims(TensorShape(rows), HasMBLayout());
             m_sampleLayout = GetInputSampleLayout(0);
             // BUGBUG: Inconsistent with 'rows'
         }
@@ -2072,14 +2060,14 @@ class LSTMNode : public ComputationNodeNonLooping /*ComputationNode*/<ElemType>,
             if (inputIndex > 4)
                 InvalidArgument("LSTM operation only takes five inputs.");
 
-            size_t nT = Input(0)->GetNumCols();
-            size_t inputDim = Input(0)->GetNumRows();
-            size_t outputDim = Input(1)->GetNumRows();
+            size_t nT = Input(0)->GetSampleMatrixNumCols();
+            size_t inputDim = Input(0)->GetSampleMatrixNumRows();
+            size_t outputDim = Input(1)->GetSampleMatrixNumRows();
 
             if (m_GradientComputed == false)
             {
-                if (GetNumCols() != Gradient().GetNumCols() ||
-                    GetNumRows() != Gradient().GetNumRows())
+                if (GetSampleMatrixNumCols() != Gradient().GetNumCols() ||
+                    GetSampleMatrixNumRows() != Gradient().GetNumRows())
                 {
                     RuntimeError("LSTMNode::GradientValue size doesn't match to the function value size");
                 }
@@ -2087,13 +2075,13 @@ class LSTMNode : public ComputationNodeNonLooping /*ComputationNode*/<ElemType>,
                 // reset gradients
             grdToObs.Resize(inputDim, nT);
             grdToObs.SetValue(0);
-            grdToInputGate.Resize(Input(1)->GetNumRows(), Input(1)->GetNumCols());
+            grdToInputGate.Resize(Input(1)->GetSampleMatrixNumRows(), Input(1)->GetSampleMatrixNumCols());
             grdToInputGate.SetValue(0);
-            grdToForgetGate.Resize(Input(2)->GetNumRows(), Input(2)->GetNumCols());
+            grdToForgetGate.Resize(Input(2)->GetSampleMatrixNumRows(), Input(2)->GetSampleMatrixNumCols());
             grdToForgetGate.SetValue(0);
-            grdToOutputGate.Resize(Input(3)->GetNumRows(), Input(3)->GetNumCols());
+            grdToOutputGate.Resize(Input(3)->GetSampleMatrixNumRows(), Input(3)->GetSampleMatrixNumCols());
             grdToOutputGate.SetValue(0);
-            grdToCellWgt.Resize(Input(4)->GetNumRows(), Input(4)->GetNumCols());
+            grdToCellWgt.Resize(Input(4)->GetSampleMatrixNumRows(), Input(4)->GetSampleMatrixNumCols());
             grdToCellWgt.SetValue(0);
 
                 Matrix<ElemType> slicePrevOutput(m_deviceId), slicePrevState(m_deviceId);
@@ -2422,7 +2410,7 @@ class LSTMNode : public ComputationNodeNonLooping /*ComputationNode*/<ElemType>,
             LogicError("GetSegInfo: stream id %d is larger than the number of streams %d", (int) streamid, (int) GetNumParallelSequences());
 
             Matrix<float> thisCol; // BUGBUG: These flags no longer exist. This code is no longer functional.
-            //size_t nT = Input(0)->GetNumCols();
+            //size_t nT = Input(0)->GetSampleMatrixNumCols();
             //if (t >= nT)
             //    LogicError("GetSegInfo: time %d times is larger than the total number of observations %d", (int)t, (int)nT);
             //int utt_t = (int)t / GetNumParallelSequences();
@@ -2436,8 +2424,8 @@ class LSTMNode : public ComputationNodeNonLooping /*ComputationNode*/<ElemType>,
         */
         void SaveLastStateActity()
         {
-            size_t nT = Input(0)->GetNumCols();
-            size_t outputDim = Input(1)->GetNumRows();
+            size_t nT = Input(0)->GetSampleMatrixNumCols();
+            size_t outputDim = Input(1)->GetSampleMatrixNumRows();
             
             // save the hidden activities and output for the next minibatch
             mLastOutput.Resize(outputDim, GetNumParallelSequences());
@@ -2459,8 +2447,8 @@ class LSTMNode : public ComputationNodeNonLooping /*ComputationNode*/<ElemType>,
 
     virtual void /*ComputationNodeNonLooping::*/ ForwardPropNonLooping() override
         {
-            size_t nT = Input(0)->GetNumCols();
-            size_t outputDim = Input(1)->GetNumRows();
+            size_t nT = Input(0)->GetSampleMatrixNumCols();
+            size_t outputDim = Input(1)->GetSampleMatrixNumRows();
 
             {
                 SetDims1(outputDim, nT);
@@ -2799,44 +2787,44 @@ class LSTMNode : public ComputationNodeNonLooping /*ComputationNode*/<ElemType>,
                 LogicError("LSTM validation: need to have learnable parameters ");
 #endif
 
-            //if (Input(0)->GetNumRows() == 0)
+            //if (Input(0)->GetSampleMatrixNumRows() == 0)
             //    LogicError("LSTM validation: input size is zero!");
 
-            //if (Input(1)->GetNumRows() == 0 ||
-            //    Input(2)->GetNumRows() == 0 ||
-            //    Input(3)->GetNumRows() == 0 ||
-            //    Input(4)->GetNumRows() == 0)
+            //if (Input(1)->GetSampleMatrixNumRows() == 0 ||
+            //    Input(2)->GetSampleMatrixNumRows() == 0 ||
+            //    Input(3)->GetSampleMatrixNumRows() == 0 ||
+            //    Input(4)->GetSampleMatrixNumRows() == 0)
             //    LogicError("LSTM validation : parameter size is zero!");
 
-            size_t nindim = Input(0)->GetNumRows();
-            size_t noutdim = Input(1)->GetNumRows();
-            size_t nT = Input(0)->GetNumCols();
+            size_t nindim = Input(0)->GetSampleMatrixNumRows();
+            size_t noutdim = Input(1)->GetSampleMatrixNumRows();
+            //size_t nT = Input(0)->GetSampleMatrixNumCols();
             size_t nCol = nindim + noutdim + 2;
             if (isFinalValidationPass)
             {
-                if (Input(1)->GetNumCols() != nCol)
+                if (Input(1)->GetSampleMatrixNumCols() != nCol)
                 {
                     LogicError("LSTM validation : dimension mismatched between child and inputGate");
                 }
-                if (Input(2)->GetNumCols() != nCol)
+                if (Input(2)->GetSampleMatrixNumCols() != nCol)
                 {
                     LogicError("LSTM validation : dimension mismatched between child and forgetGate");
                 }
-                if (Input(3)->GetNumCols() != nCol)
+                if (Input(3)->GetSampleMatrixNumCols() != nCol)
                 {
                     LogicError("LSTM validation : dimension mismatched between child and outputGate");
                 }
 
-                if (noutdim != Input(2)->GetNumRows() ||
-                    noutdim != Input(3)->GetNumRows() ||
-                    noutdim != Input(4)->GetNumRows())
+                if (noutdim != Input(2)->GetSampleMatrixNumRows() ||
+                    noutdim != Input(3)->GetSampleMatrixNumRows() ||
+                    noutdim != Input(4)->GetSampleMatrixNumRows())
                 {
                     LogicError("LSTM validation: output dimension mismatched!");
                 }
             }
 
-            SetDims(TensorShape(noutdim), nT);
-        Value().SetValue(NAN); // set to this extrem value so, if anything wrong in later procedure, problems can be easily spotted.
+            SetDims(TensorShape(noutdim), true);
+            Value().SetValue(NAN); // set to this extrem value so, if anything wrong in later procedure, problems can be easily spotted.
         }
 
         bool UnitTest()
@@ -2901,7 +2889,7 @@ class LSTMNode : public ComputationNodeNonLooping /*ComputationNode*/<ElemType>,
                 Gradient().SetValue(1.0);
                 for (size_t i = 0; i < 5; i++)
                 {
-                    Input(i)->Gradient().Resize(Input(i)->GetNumRows(), Input(i)->GetNumCols());
+                    Input(i)->Gradient().Resize(Input(i)->GetSampleMatrixNumRows(), Input(i)->GetSampleMatrixNumCols());
                     Input(i)->Gradient().SetValue(0);
                 }
                 for (size_t i = 0; i < 5; i++)

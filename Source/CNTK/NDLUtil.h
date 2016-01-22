@@ -31,12 +31,6 @@ public:
     {
     }
 
-    // FixupInputMinibatchSize - go through all the inputs and make sure they have a consistent minibatch size
-    void FixupInputMinibatchSize()
-    {
-        m_net->FixupInputMinibatchSize();
-    }
-
     // ProcessNDLConfig - Process the NDL script from a configuration string value
     // config - configuration string containing script
     void ProcessNDLConfig(const ConfigValue& config, bool fullValidate = false)
@@ -105,10 +99,7 @@ public:
         SynchronousNodeEvaluator<ElemType> ndlEvaluator(m_net);
         NDLNode<ElemType>* lastNode = script->Evaluate(ndlEvaluator, L"", ndlPass, skipThrough);
         if (ndlPass == ndlPassResolve)
-        {
             SetOutputNodes(script);
-            FixupInputMinibatchSize();
-        }
         return lastNode;
     }
 
