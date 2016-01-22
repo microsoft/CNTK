@@ -457,21 +457,12 @@ void ComputationNetwork::GetNodesRequiringX(list<ComputationNodeBasePtr>& nodesR
     nodesRequiringX.unique();
 }
 
-//return list of nodes that require precomputation and not precomputed yet.
+// return list of nodes that require precomputation and not precomputed yet
 list<ComputationNodeBasePtr> ComputationNetwork::GetNodesRequiringPreComputation(const ComputationNodeBasePtr& rootNode, bool checkComputed)
 {
     list<ComputationNodeBasePtr> nodesRequiringX;
     GetNodesRequiringX<PreComputedNodeBase<float>>(nodesRequiringX, rootNode, checkComputed);
     GetNodesRequiringX<PreComputedNodeBase<double>>(nodesRequiringX, rootNode, checkComputed);
-    return nodesRequiringX;
-}
-
-//return list of nodes that require batch mode and not precomputed yet.
-list<ComputationNodeBasePtr> ComputationNetwork::GetNodesRequiringBatchMode(const ComputationNodeBasePtr& rootNode, bool checkComputed)
-{
-    list<ComputationNodeBasePtr> nodesRequiringX;
-    GetNodesRequiringX<BatchModeNode<float>>(nodesRequiringX, rootNode, checkComputed);
-    GetNodesRequiringX<BatchModeNode<double>>(nodesRequiringX, rootNode, checkComputed);
     return nodesRequiringX;
 }
 
