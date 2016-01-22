@@ -251,7 +251,7 @@ private:
         frTo = fr.Sequence(toSeqInfo.s); // clip to this one sequence only
         if (frTo.IsAllFrames())          // whole batch: narrow to the boundary range
         {
-            auto steps = std::min((size_t) abs(m_fromOffset), toSeqInfo.GetNumTimeSteps());
+            auto steps = min((size_t) abs(m_fromOffset), toSeqInfo.GetNumTimeSteps());
             frTo = frTo.WithTimeStep(m_fromOffset < 0 ? toSeqInfo.tBegin : toSeqInfo.tEnd - steps).WithTimeRange(steps); // all frames to be filled in this sequence
             LogicError("This code path has never been tested.");                                                         // remove this once we have
         }

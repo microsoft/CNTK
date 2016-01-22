@@ -10,7 +10,8 @@
 #include <vector>
 #include <stdint.h>
 #ifdef _WIN32
-#include <Windows.h>
+#define NOMINMAX
+#include "Windows.h"
 #endif
 #ifdef __unix__
 #include <unistd.h>

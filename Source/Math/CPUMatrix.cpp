@@ -22,7 +22,8 @@
 #include <iostream>
 #include <algorithm>
 #ifdef _WIN32
-#include <Windows.h>
+#define NOMINMAX
+#include "Windows.h"
 #else
 #ifndef max
 #define max(a, b) (((a) > (b)) ? (a) : (b))
@@ -2399,18 +2400,18 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignSqrtOf(const CPUMatrix<ElemType>
 #pragma omp parallel for
     for (long j = 0; j < n; j++)
     {
-        //four-way unrolling
+        // four-way unrolling
         for (long i = 0; i < (m & ~3); i += 4)
         {
-            us(i, j) = sqrt(max(0, a(i, j)));
-            us(i + 1, j) = sqrt(max(0, a(i + 1, j)));
-            us(i + 2, j) = sqrt(max(0, a(i + 2, j)));
-            us(i + 3, j) = sqrt(max(0, a(i + 3, j)));
+            us(i, j)     = sqrt(max((ElemType)0, a(i, j)));
+            us(i + 1, j) = sqrt(max((ElemType)0, a(i + 1, j)));
+            us(i + 2, j) = sqrt(max((ElemType)0, a(i + 2, j)));
+            us(i + 3, j) = sqrt(max((ElemType)0, a(i + 3, j)));
         }
-        //handle remaining stuffs
+        // remaining
         for (long i = m & ~3; i < m; i++)
         {
-            us(i, j) = sqrt(max(0, a(i, j)));
+            us(i, j) = sqrt(max((ElemType)0, a(i, j)));
         }
     }
 
@@ -3706,16 +3707,16 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignPackedConvolutionInput(const CPU
             long x0 = 0, y0 = 0, x1 = 0, y1 = 0;
             if (zeroPadding)
             {
-                x0 = (long) max(0, ceil((x - (ElemType) kernelHeight + 1.0f + halfKernelHeight) / (ElemType) verticalSubsample)); //row : first wrow in which x is in
+                x0 = (long) max((ElemType)0, ceil((x - (ElemType)kernelHeight + 1.0f + halfKernelHeight) / (ElemType)verticalSubsample)); //row : first wrow in which x is in
                 x1 = (long) (x + halfKernelHeight - x0 * verticalSubsample);                                                      //first posxInKernel
-                y0 = (long) max(0, ceil((y - (ElemType) kernelWidth + 1.0f + halfKernelWidth) / (ElemType) horizontalSubsample)); //col : first wcol in which y is in
+                y0 = (long) max((ElemType)0, ceil((y - (ElemType)kernelWidth + 1.0f + halfKernelWidth) / (ElemType)horizontalSubsample)); //col : first wcol in which y is in
                 y1 = (long) (y + halfKernelWidth - y0 * horizontalSubsample);                                                     //first posyInKernel
             }
             else
             {
-                x0 = (long) max(0, ceil((x - (ElemType) kernelHeight + 1) / (ElemType) verticalSubsample));  //row : first wrow in which x is in
+                x0 = (long) max((ElemType)0, ceil((x - (ElemType)kernelHeight + 1) / (ElemType)verticalSubsample));  //row : first wrow in which x is in
                 x1 = (long) (x - x0 * verticalSubsample);                                                    //first posxInKernel
-                y0 = (long) max(0, ceil((y - (ElemType) kernelWidth + 1) / (ElemType) horizontalSubsample)); //col : first wcol in which y is in
+                y0 = (long) max((ElemType)0, ceil((y - (ElemType)kernelWidth + 1) / (ElemType)horizontalSubsample)); //col : first wcol in which y is in
                 y1 = (long) (y - y0 * horizontalSubsample);                                                  //first posyInKernel
             }
 
@@ -3776,16 +3777,16 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::UnpackConvolutionInput(CPUMatrix<ElemT
             long x0 = 0, y0 = 0, x1 = 0, y1 = 0;
             if (zeroPadding)
             {
-                x0 = (long) max(0, ceil((x - (ElemType) kernelHeight + 1.0f + halfKernelHeight) / (ElemType) verticalSubsample)); //row : first wrow in which x is in
+                x0 = (long) max((ElemType)0, ceil((x - (ElemType) kernelHeight + 1.0f + halfKernelHeight) / (ElemType) verticalSubsample)); //row : first wrow in which x is in
                 x1 = (long) (x + halfKernelHeight - x0 * verticalSubsample);                                                      //first posxInKernel
-                y0 = (long) max(0, ceil((y - (ElemType) kernelWidth + 1.0f + halfKernelWidth) / (ElemType) horizontalSubsample)); //col : first wcol in which y is in
+                y0 = (long) max((ElemType)0, ceil((y - (ElemType) kernelWidth + 1.0f + halfKernelWidth) / (ElemType) horizontalSubsample)); //col : first wcol in which y is in
                 y1 = (long) (y + halfKernelWidth - y0 * horizontalSubsample);                                                     //first posyInKernel
             }
             else
             {
-                x0 = (long) max(0, ceil((x - (ElemType) kernelHeight + 1) / (ElemType) verticalSubsample));  //row : first wrow in which x is in
+                x0 = (long) max((ElemType)0, ceil((x - (ElemType) kernelHeight + 1) / (ElemType) verticalSubsample));  //row : first wrow in which x is in
                 x1 = (long) (x - x0 * verticalSubsample);                                                    //first posxInKernel
-                y0 = (long) max(0, ceil((y - (ElemType) kernelWidth + 1) / (ElemType) horizontalSubsample)); //col : first wcol in which y is in
+                y0 = (long) max((ElemType)0, ceil((y - (ElemType) kernelWidth + 1) / (ElemType) horizontalSubsample)); //col : first wcol in which y is in
                 y1 = (long) (y - y0 * horizontalSubsample);                                                  //first posyInKernel
             }
 
@@ -3891,9 +3892,9 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AddMaxPoolingGradient(const CPUMatrix<
             const long x = (long) (nXC / channels);                            //row in input
             const long c = (long) (nXC % channels);                            //channel
 
-            long startOutX = (long) max(0, ceil((x - (ElemType) windowHeight + 1) / (ElemType) verticalSubsample));          //inclusive start
+            long startOutX = (long) max((ElemType)0, ceil((x - (ElemType) windowHeight + 1) / (ElemType) verticalSubsample));          //inclusive start
             long endOutX = (long) ((x / verticalSubsample < outputHeight - 1) ? x / verticalSubsample : outputHeight - 1);   //inclusive end
-            long startOutY = (long) max(0, ceil((y - (ElemType) windowWidth + 1) / (ElemType) horizontalSubsample));         //inclusive start
+            long startOutY = (long) max((ElemType)0, ceil((y - (ElemType) windowWidth + 1) / (ElemType) horizontalSubsample));         //inclusive start
             long endOutY = (long) ((y / horizontalSubsample < outputWidth - 1) ? y / horizontalSubsample : outputWidth - 1); //inclusive end
 
             ElemType inputValue = inputBatch(inputIndexWithinSample, sample);
@@ -3986,9 +3987,9 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AddAveragePoolingGradient(const CPUMat
             const long x = nXC / (long) channels;                              //row in input
             const long c = nXC % (long) channels;                              //channel
 
-            long startOutX = (long) max(0, ceil((x - (ElemType) windowHeight + 1) / (ElemType) verticalSubsample));               //inclusive start
+            long startOutX = (long) max((ElemType)0, ceil((x - (ElemType) windowHeight + 1) / (ElemType) verticalSubsample));               //inclusive start
             long endOutX = (long) ((x / verticalSubsample < outputHeight - 1) ? x / (long) verticalSubsample : outputHeight - 1); //inclusive end
-            long startOutY = (long) max(0, ceil((y - (ElemType) windowWidth + 1) / (ElemType) horizontalSubsample));              //inclusive start
+            long startOutY = (long) max((ElemType)0, ceil((y - (ElemType) windowWidth + 1) / (ElemType) horizontalSubsample));              //inclusive start
             long endOutY = (long) ((y / horizontalSubsample < outputWidth - 1) ? y / horizontalSubsample : outputWidth - 1);      //inclusive end
 
             for (long outY = startOutY; outY <= endOutY; outY++)

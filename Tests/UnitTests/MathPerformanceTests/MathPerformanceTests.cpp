@@ -5,7 +5,8 @@
 // MathPerformanceTests.cpp : Defines the entry point for the console application.
 //
 #include "stdafx.h"
-#include <Windows.h>
+#define NOMINMAX
+#include "Windows.h"
 #include <chrono>
 #include <iostream>
 #include <vector>

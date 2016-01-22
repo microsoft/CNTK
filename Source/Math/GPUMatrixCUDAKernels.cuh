@@ -1739,16 +1739,16 @@ __global__ void _assignPackedConvolutionInput(ElemType* packedMatrix, const Elem
         const CUDA_LONG halfKernelWidth = kernelWidth / 2;
         const CUDA_LONG halfKernelHeight = kernelHeight / 2;
 
-        x0 = max(0.0f, ceil((x - (ElemType) kernelHeight + 1.0f + halfKernelHeight) / (ElemType) verticalSubsample)); //row : first wrow in which x is in
+        x0 = max((ElemType)0.0f, ceil((x - (ElemType) kernelHeight + 1.0f + halfKernelHeight) / (ElemType) verticalSubsample)); //row : first wrow in which x is in
         x1 = x + halfKernelHeight - x0 * verticalSubsample;                                                           //first posxInKernel
-        y0 = max(0.0f, ceil((y - (ElemType) kernelWidth + 1.0f + halfKernelWidth) / (ElemType) horizontalSubsample)); //col : first wcol in which y is in
+        y0 = max((ElemType)0.0f, ceil((y - (ElemType) kernelWidth + 1.0f + halfKernelWidth) / (ElemType) horizontalSubsample)); //col : first wcol in which y is in
         y1 = y + halfKernelWidth - y0 * horizontalSubsample;                                                          //first posyInKernel
     }
     else
     {
-        x0 = max(0.0f, ceil((x - (ElemType) kernelHeight + 1) / (ElemType) verticalSubsample));  //row : first wrow in which x is in
+        x0 = max((ElemType)0.0f, ceil((x - (ElemType) kernelHeight + 1) / (ElemType) verticalSubsample));  //row : first wrow in which x is in
         x1 = x - x0 * verticalSubsample;                                                         //first posxInKernel
-        y0 = max(0.0f, ceil((y - (ElemType) kernelWidth + 1) / (ElemType) horizontalSubsample)); //col : first wcol in which y is in
+        y0 = max((ElemType)0.0f, ceil((y - (ElemType) kernelWidth + 1) / (ElemType) horizontalSubsample)); //col : first wcol in which y is in
         y1 = y - y0 * horizontalSubsample;                                                       //first posyInKernel
     }
 

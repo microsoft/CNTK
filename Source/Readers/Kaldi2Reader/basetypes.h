@@ -31,7 +31,8 @@
 #include <mutex>
 #include <memory>
 #ifdef _WIN32
-#include <windows.h> // for CRITICAL_SECTION and Unicode conversion functions   --TODO: is there a portable alternative?
+#define NOMINMAX
+#include "Windows.h" // for CRITICAL_SECTION and Unicode conversion functions   --TODO: is there a portable alternative?
 #endif
 #if __unix__
 #include <strings.h>

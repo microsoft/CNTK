@@ -14,7 +14,7 @@
 #include "NonlinearityNodes.h"
 #include "ConvolutionalNodes.h"
 #include "RecurrentNodes.h"
-#include "CompositeComputationNodes.h"
+#include "PreComputeNodes.h"
 
 #pragma warning(disable : 4189) // (we have lots of unused variables to show how variables can be set up)
 

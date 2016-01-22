@@ -169,10 +169,10 @@
     <ClInclude Include="..\Common\Include\ScriptableObjects.h" />
     <ClInclude Include="..\Common\Include\Sequences.h" />
     <ClInclude Include="..\Common\Include\TimerUtility.h" />
+    <ClInclude Include="..\ComputationNetworkLib\PreComputeNodes.h" />
     <ClInclude Include="..\Math\CUDAPageLockedMemAllocator.h" />
     <ClInclude Include="..\Math\Matrix.h" />
     <ClInclude Include="..\Math\QuantizedMatrix.h" />
-    <ClInclude Include="..\ComputationNetworkLib\CompositeComputationNodes.h" />
     <ClInclude Include="..\ComputationNetworkLib\ComputationNetwork.h" />
     <ClInclude Include="..\ComputationNetworkLib\ComputationNode.h" />
     <ClInclude Include="..\ComputationNetworkLib\ConvolutionalNodes.h" />

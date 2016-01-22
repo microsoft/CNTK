@@ -6,8 +6,6 @@
 
 #include "Basics.h"
 #include "ComputationNetwork.h"
-#include "NonlinearityNodes.h"         // for DropoutNode
-#include "CompositeComputationNodes.h" // for PrecomputeNode
 #include "SimpleEvaluator.h"
 #include "DataReader.h"
 #include "ScriptableObjects.h"

@@ -8,7 +8,8 @@
 #pragma once
 
 #ifndef __unix__
-#include <Windows.h>
+#define NOMINMAX
+#include "Windows.h"
 #include "pplhelpers.h"
 
 #endif

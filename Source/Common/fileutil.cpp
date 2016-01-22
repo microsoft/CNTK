@@ -29,6 +29,7 @@
 #include <stdint.h>
 #include <assert.h>
 #ifdef _WIN32
+#define NOMINMAX
 #include "Windows.h" // for FILETIME
 #endif
 #include <algorithm> // for std::find

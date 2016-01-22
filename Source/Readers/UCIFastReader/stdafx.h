@@ -11,9 +11,22 @@
 #include "Platform.h"
 #include "targetver.h"
 #ifdef __WINDOWS__
-#include "windows.h"
+#define NOMINMAX
+#include "Windows.h"
 #endif
+
+// standard C stuff
 #include <stdio.h>
+#include <memory.h>
 #include <math.h>
 
-// TODO: reference additional headers your program requires here
+// standard C++ stuff
+#include <string>
+#include <vector>
+#include <map>
+#include <set>
+#include <queue>
+#include <memory>
+#include <chrono>
+#include <algorithm>
+#include <iostream>
