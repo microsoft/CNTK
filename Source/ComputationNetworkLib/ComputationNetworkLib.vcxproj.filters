@@ -66,12 +66,6 @@
     <ClInclude Include="..\Common\Include\BestGpu.h">
       <Filter>Common\Include</Filter>
     </ClInclude>
-    <ClInclude Include="EvaluationCriterionNodes.h">
-      <Filter>Nodes</Filter>
-    </ClInclude>
-    <ClInclude Include="TrainingCriterionNodes.h">
-      <Filter>Nodes</Filter>
-    </ClInclude>
     <ClInclude Include="NonlinearityNodes.h">
       <Filter>Nodes</Filter>
     </ClInclude>
@@ -121,6 +115,12 @@
       <Filter>Nodes</Filter>
     </ClInclude>
     <ClInclude Include="PreComputeNodes.h">
+      <Filter>Nodes</Filter>
+    </ClInclude>
+    <ClInclude Include="EvaluationNodes.h">
+      <Filter>Nodes</Filter>
+    </ClInclude>
+    <ClInclude Include="TrainingNodes.h">
       <Filter>Nodes</Filter>
     </ClInclude>
   </ItemGroup>

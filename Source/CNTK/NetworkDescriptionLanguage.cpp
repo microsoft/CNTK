@@ -16,9 +16,9 @@
 #include "RecurrentNodes.h"
 #include "ReshapingNodes.h"
 #include "SpecialPurposeNodes.h"
-#include "TrainingCriterionNodes.h"
+#include "TrainingNodes.h"
 #include "PreComputeNodes.h"
-#include "EvaluationCriterionNodes.h"
+#include "EvaluationNodes.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 

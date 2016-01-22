@@ -17,9 +17,9 @@
 #include "ConvolutionalNodes.h"
 #include "RecurrentNodes.h"
 #include "ReshapingNodes.h"
-#include "TrainingCriterionNodes.h"
 #include "PreComputeNodes.h"
-#include "EvaluationCriterionNodes.h"
+#include "TrainingNodes.h"
+#include "EvaluationNodes.h"
 #include "SpecialPurposeNodes.h"
 
 #include <string>
@@ -33,7 +33,7 @@ template <class ElemType, class... _Types>
 static shared_ptr<ComputationNode<ElemType>> CreateStandardNode(const std::wstring& nodeType, _Types&&... _Args)
 {
     // please keep this table sorted
-    if (nodeType == OperationNameOf(CRFNode))                              return New<CRFNode<ElemType>>(forward<_Types>(_Args)...);
+    if      (nodeType == OperationNameOf(CRFNode))                              return New<CRFNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(ClassBasedCrossEntropyWithSoftmaxNode))return New<ClassBasedCrossEntropyWithSoftmaxNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(CosDistanceNode))                      return New<CosDistanceNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(CosDistanceWithNegativeSamplesNode))   return New<CosDistanceWithNegativeSamplesNode<ElemType>>(forward<_Types>(_Args)...);

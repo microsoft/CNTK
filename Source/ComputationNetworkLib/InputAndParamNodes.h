@@ -9,6 +9,7 @@
 #include "ScriptableObjects.h"
 #include "Matrix.h"
 #include "File.h" // for LoadMatrixFromTextFile()
+
 #include <unordered_set>
 #include <map>
 #include <string>
@@ -18,9 +19,6 @@
 #include <memory>
 #include <algorithm>
 #include <assert.h>
-#include <atomic>
-#include <sstream>
-#include <iostream>
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 

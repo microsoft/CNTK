@@ -9,7 +9,7 @@
 #include "ComputationNode.h"
 #include "ComputationNetwork.h"
 #include "InputAndParamNodes.h"
-#include "ConvolutionalNodes.h"
+#include "TrainingNodes.h"
 #include <string>
 #include <vector>
 #include <list>

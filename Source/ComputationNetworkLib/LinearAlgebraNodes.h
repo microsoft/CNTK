@@ -20,9 +20,6 @@
 #include <algorithm>
 #include <utility>
 #include <assert.h>
-#include <atomic>
-#include <sstream>
-#include <iostream>
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 

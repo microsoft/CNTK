@@ -66,12 +66,6 @@
     <ClInclude Include="..\Common\Include\BestGpu.h">
       <Filter>Common\Include</Filter>
     </ClInclude>
-    <ClInclude Include="..\ComputationNetworkLib\EvaluationCriterionNodes.h">
-      <Filter>from ComputationNetworkLib\Nodes</Filter>
-    </ClInclude>
-    <ClInclude Include="..\ComputationNetworkLib\TrainingCriterionNodes.h">
-      <Filter>from ComputationNetworkLib\Nodes</Filter>
-    </ClInclude>
     <ClInclude Include="..\ComputationNetworkLib\NonlinearityNodes.h">
       <Filter>from ComputationNetworkLib\Nodes</Filter>
     </ClInclude>
@@ -136,6 +130,12 @@
       <Filter>Parallelization</Filter>
     </ClInclude>
     <ClInclude Include="..\ComputationNetworkLib\PreComputeNodes.h">
+      <Filter>from ComputationNetworkLib\Nodes</Filter>
+    </ClInclude>
+    <ClInclude Include="..\ComputationNetworkLib\EvaluationNodes.h">
+      <Filter>from ComputationNetworkLib\Nodes</Filter>
+    </ClInclude>
+    <ClInclude Include="..\ComputationNetworkLib\TrainingNodes.h">
       <Filter>from ComputationNetworkLib\Nodes</Filter>
     </ClInclude>
   </ItemGroup>
