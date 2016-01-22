@@ -256,7 +256,7 @@ public:
             learnableNodes.push_back(*nodeIter);
 
         std::list<Matrix<ElemType>> smoothedGradients;
-#if 0   // No longer functional due to lack of GetNumCols().
+#if 0 // No longer functional due to lack of GetNumCols().
         for (auto nodeIter = learnableNodes.begin(); nodeIter != learnableNodes.end(); nodeIter++)
         {
             ComputationNodePtr node = dynamic_pointer_cast<ComputationNode<ElemType>>(*nodeIter);
@@ -556,7 +556,7 @@ public:
         }
 
         std::list<Matrix<ElemType>> smoothedGradients;
-#if 0   // No longer functional due to lack of GetNumCols().
+#if 0 // No longer functional due to lack of GetNumCols().
         for (auto nodeIter = learnableNodes.begin(); nodeIter != learnableNodes.end(); nodeIter++)
         {
             ComputationNodePtr node = dynamic_pointer_cast<ComputationNode<ElemType>>(*nodeIter);

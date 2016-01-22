@@ -115,7 +115,7 @@ void ComputationNodeBase::ValidateBinaryReduce(bool isFinalValidationPass)
     m_pMBLayout = nullptr; // this node does not hold mini-batch data
     ValidateInferBinaryInputDims();
     if (isFinalValidationPass &&
-        !(Input(0)->GetSampleLayout().IsElementwiseCompatibleWith(Input(1)->GetSampleLayout()) &&   // TODO: Do we need broadcasting for these cases?
+        !(Input(0)->GetSampleLayout().IsElementwiseCompatibleWith(Input(1)->GetSampleLayout()) && // TODO: Do we need broadcasting for these cases?
           (Input(0)->GetMBLayout() == Input(1)->GetMBLayout() || !Input(0)->HasMBLayout() || !Input(1)->HasMBLayout())))
         LogicError("The Matrix dimensions or MB layout in the %ls %ls operation do not match.", NodeName().c_str(), OperationName().c_str());
     SetDims(TensorShape(1), false);
@@ -143,19 +143,19 @@ void ComputationNodeBase::ValidateInferBinaryInputDims()
 
 // in case of an error, we just back out, and leave it to outside code to detect errors
 template <class ElemType>
-void ComputationNode<ElemType>::ValidateInferInputDimsFrom(const TensorShape & otherShape)
+void ComputationNode<ElemType>::ValidateInferInputDimsFrom(const TensorShape& otherShape)
 {
-    if (OperationName() != OperationNameOf(LearnableParameter))   // only infer LearnableParameters (we can't propagate further)
+    if (OperationName() != OperationNameOf(LearnableParameter)) // only infer LearnableParameters (we can't propagate further)
         return;
 
     // see where we stand with our shape
     bool hasMissingDims = m_sampleLayout.GetRank() == 0 || m_sampleLayout.GetNumElements() == 0;
-    if (!hasMissingDims)        // all there--nothing to infer
+    if (!hasMissingDims) // all there--nothing to infer
         return;
 
     // infer at least one dimension
     if (otherShape.GetRank() == 0 || otherShape.GetNumElements() == 0)
-        return;// LogicError("ValidateInferInputDimsFrom: Inferred dimensions must not be empty.");
+        return; // LogicError("ValidateInferInputDimsFrom: Inferred dimensions must not be empty.");
 
     // if no dimensions have been set at all, copy otherShape
     // Don't verify dimensions in this case, because the node may have explicitly been defined as a vector of 0 elements.
@@ -164,10 +164,10 @@ void ComputationNode<ElemType>::ValidateInferInputDimsFrom(const TensorShape & o
         hasAnyDim |= dim != 0;
     if (!hasAnyDim)
         m_sampleLayout = otherShape;
-    else if (hasMissingDims)    // we got a pre-existing shape: If it has zeroes, we fill them in from otherShape
+    else if (hasMissingDims) // we got a pre-existing shape: If it has zeroes, we fill them in from otherShape
     {
         if (m_sampleLayout.GetRank() != 0 && m_sampleLayout.GetRank() != otherShape.GetRank())
-            return;// LogicError("ValidateInferInputDimsFrom: Inferred dimensions must match in rank.");
+            return; // LogicError("ValidateInferInputDimsFrom: Inferred dimensions must match in rank.");
         SmallVector<size_t> newDims = m_sampleLayout.GetDims();
         for (size_t i = 0; i < m_sampleLayout.GetRank(); i++)
             if (newDims[i] == 0)

@@ -3639,11 +3639,11 @@ void CPUMatrix<ElemType>::Print(const char* matrixName, size_t rowFirst, size_t 
             fprintf(stderr, "...\t");
         for (size_t j = colFirst; j <= colLast; j++)
             fprintf(stderr, "%.10f\t", us(i, j));
-        if (colLast < GetNumCols()-1)
+        if (colLast < GetNumCols() - 1)
             fprintf(stderr, "...\t");
         fprintf(stderr, "\n");
     }
-    if (rowLast < GetNumRows()-1)
+    if (rowLast < GetNumRows() - 1)
         fprintf(stderr, "...\n");
 }
 

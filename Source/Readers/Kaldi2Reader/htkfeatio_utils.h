@@ -37,6 +37,4 @@ inline std::string trimmed(std::string str)
         str.erase(found + 1);
 
     return str;
-}
-}
-}
+} } }

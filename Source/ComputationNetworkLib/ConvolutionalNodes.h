@@ -159,12 +159,12 @@ public:
         assert(m_convEng != nullptr);
         if (inputIndex == 0) // derivative with respect to the weight matrix
         {
-            auto & grad = Input(0)->GradientAsMatrix();
+            auto& grad = Input(0)->GradientAsMatrix();
             m_convEng->BackwardFilter(*m_outT, sliceOutputGrad, *m_inT, sliceInput1Value, *m_convDesc, *m_filterT, grad, fr.IsAllFrames(), *m_tempMatrix);
         }
         else if (inputIndex == 1) // derivative with respect to the input feature
         {
-            auto & input0 = Input(0)->ValueAsMatrix();
+            auto& input0 = Input(0)->ValueAsMatrix();
             auto sliceInput1Grad = Input(1)->GradientFor(fr);
             m_convEng->BackwardData(*m_outT, sliceOutputGrad, *m_filterT, input0, *m_convDesc, *m_inT, sliceInput1Grad, *m_tempMatrix);
         }
@@ -507,7 +507,7 @@ protected:
 // See #define of 'UsingComputationNodeMembersBoilerplate' for more explanation.
 #define UsingPoolingNodeBaseMembers         \
     UsingComputationNodeMembersBoilerplate; \
-                                            \
+    \
 protected:                                  \
     using Base::m_factory;                  \
     using Base::m_poolDesc;                 \
@@ -517,7 +517,7 @@ protected:                                  \
     using Base::m_verticalSubsample;        \
     using Base::m_inputSizePerSample;       \
     using Base::m_outputSizePerSample;      \
-                                            \
+    \
 public:
 
 // -----------------------------------------------------------------------

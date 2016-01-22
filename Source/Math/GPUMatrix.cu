@@ -108,7 +108,7 @@ const char* CudaErrString<curandStatus>(curandStatus)
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
-template<typename AllocatedElemType>
+template <typename AllocatedElemType>
 AllocatedElemType* TracingGPUMemoryAllocator::Allocate(int deviceId, size_t numRows, size_t numCols)
 {
     AllocatedElemType* deviceBufferPtr = AllocateNoTrace<AllocatedElemType>(deviceId, numRows * numCols);
@@ -116,14 +116,14 @@ AllocatedElemType* TracingGPUMemoryAllocator::Allocate(int deviceId, size_t numR
     if (IsTraceEnabled())
     {
         auto freeAndTotalMemory = GetFreeAndTotalMemoryInMBs(deviceId);
-        fprintf(stderr, "Allocated Matrix<%s> (Rows = %d, Cols = %d) buffer on DeviceId = %d, DeviceBufferPointer = %p; GPU Memory Free = %d MB of %d MB\n", typeid(AllocatedElemType).name(), (int)numRows, (int)numCols, (int)deviceId, (void*)deviceBufferPtr, (int)freeAndTotalMemory.first, (int)freeAndTotalMemory.second);
+        fprintf(stderr, "Allocated Matrix<%s> (Rows = %d, Cols = %d) buffer on DeviceId = %d, DeviceBufferPointer = %p; GPU Memory Free = %d MB of %d MB\n", typeid(AllocatedElemType).name(), (int) numRows, (int) numCols, (int) deviceId, (void*) deviceBufferPtr, (int) freeAndTotalMemory.first, (int) freeAndTotalMemory.second);
         Microsoft::MSR::CNTK::DebugUtil::PrintCallStack();
     }
 
     return deviceBufferPtr;
 }
 
-template<typename AllocatedElemType>
+template <typename AllocatedElemType>
 AllocatedElemType* TracingGPUMemoryAllocator::Allocate(int deviceId, size_t numElements)
 {
     AllocatedElemType* deviceBufferPtr = AllocateNoTrace<AllocatedElemType>(deviceId, numElements);
@@ -131,37 +131,37 @@ AllocatedElemType* TracingGPUMemoryAllocator::Allocate(int deviceId, size_t numE
     if (IsTraceEnabled())
     {
         auto freeAndTotalMemory = GetFreeAndTotalMemoryInMBs(deviceId);
-        fprintf(stderr, "Allocated array<%s> (NumElements = %d) on DeviceId = %d, DeviceBufferPointer = %p; GPU Memory Free = %d MB of %d MB\n", typeid(AllocatedElemType).name(), (int)numElements, (int)deviceId, (void*)deviceBufferPtr, (int)freeAndTotalMemory.first, (int)freeAndTotalMemory.second);
+        fprintf(stderr, "Allocated array<%s> (NumElements = %d) on DeviceId = %d, DeviceBufferPointer = %p; GPU Memory Free = %d MB of %d MB\n", typeid(AllocatedElemType).name(), (int) numElements, (int) deviceId, (void*) deviceBufferPtr, (int) freeAndTotalMemory.first, (int) freeAndTotalMemory.second);
         Microsoft::MSR::CNTK::DebugUtil::PrintCallStack();
     }
 
     return deviceBufferPtr;
 }
 
-template<typename AllocatedElemType>
+template <typename AllocatedElemType>
 void TracingGPUMemoryAllocator::Free(int deviceId, AllocatedElemType* bufferPtr, bool ignoreCUDARetCode /*= false*/)
 {
     PrepareDevice(deviceId);
     if (ignoreCUDARetCode)
-        cudaFree((void*)bufferPtr);
+        cudaFree((void*) bufferPtr);
     else
-        CUDA_CALL(cudaFree((void*)bufferPtr));
+        CUDA_CALL(cudaFree((void*) bufferPtr));
 
     if (IsTraceEnabled())
     {
         auto freeAndTotalMemory = GetFreeAndTotalMemoryInMBs(deviceId);
-        fprintf(stderr, "Freed buffer<%s> DeviceBufferPointer = %p on DeviceId = %d; GPU Memory Free = %d MB of %d MB\n", typeid(AllocatedElemType).name(), (void*)bufferPtr, (int)deviceId, (int)freeAndTotalMemory.first, (int)freeAndTotalMemory.second);
+        fprintf(stderr, "Freed buffer<%s> DeviceBufferPointer = %p on DeviceId = %d; GPU Memory Free = %d MB of %d MB\n", typeid(AllocatedElemType).name(), (void*) bufferPtr, (int) deviceId, (int) freeAndTotalMemory.first, (int) freeAndTotalMemory.second);
         Microsoft::MSR::CNTK::DebugUtil::PrintCallStack();
     }
 }
 
-template<typename AllocatedElemType>
+template <typename AllocatedElemType>
 AllocatedElemType* TracingGPUMemoryAllocator::AllocateNoTrace(int deviceId, size_t numElements)
 {
     AllocatedElemType* deviceBufferPtr;
 
     PrepareDevice(deviceId);
-    CUDA_CALL(cudaMalloc((void**)&deviceBufferPtr, sizeof(AllocatedElemType) * numElements));
+    CUDA_CALL(cudaMalloc((void**) &deviceBufferPtr, sizeof(AllocatedElemType) * numElements));
 
     return deviceBufferPtr;
 }
@@ -173,11 +173,11 @@ std::pair<size_t, size_t> TracingGPUMemoryAllocator::GetFreeAndTotalMemoryInMBs(
     size_t free, total;
     auto result = cudaMemGetInfo(&free, &total);
     if (result != cudaSuccess)
-        return { size_t(0), size_t(0) };
+        return {size_t(0), size_t(0)};
     else
     {
         size_t numBytesPerMB = 1 << 20;
-        return { free / numBytesPerMB, total / numBytesPerMB};
+        return {free / numBytesPerMB, total / numBytesPerMB};
     }
 }
 
@@ -607,8 +607,8 @@ void GPUMatrix<ElemType>::Clear()
     {
         if (m_computeDevice >= 0)
         {
-            // BUG: We do not check the CUDA return code for cudaFree here since this may get called 
-            // during processExit when cudaFree will fail. The destruction of CUDA objects during 
+            // BUG: We do not check the CUDA return code for cudaFree here since this may get called
+            // during processExit when cudaFree will fail. The destruction of CUDA objects during
             // process exit must be avoided
             TracingGPUMemoryAllocator::Free<ElemType>(m_computeDevice, m_pArray, true /*ignoreCUDARetCode*/);
             m_pArray = NULL;
@@ -5004,7 +5004,6 @@ template void TracingGPUMemoryAllocator::Free<size_t>(int, size_t*, bool);
 template void TracingGPUMemoryAllocator::Free<char>(int, char*, bool);
 template void TracingGPUMemoryAllocator::Free<float>(int, float*, bool);
 template void TracingGPUMemoryAllocator::Free<double>(int, double*, bool);
-
 }
 }
 }

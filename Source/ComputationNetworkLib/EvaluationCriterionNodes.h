@@ -130,5 +130,4 @@ private:
 
 template class ErrorPredictionNode<float>;
 template class ErrorPredictionNode<double>;
-
 } } }

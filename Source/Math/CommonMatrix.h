@@ -49,18 +49,17 @@ public:
     static void SetTraceLevel(int traceLevel);
     static bool IsTraceEnabled();
 
-    template<typename AllocatedElemType>
+    template <typename AllocatedElemType>
     static AllocatedElemType* Allocate(int deviceId, size_t numRows, size_t numCols);
 
-    template<typename AllocatedElemType>
+    template <typename AllocatedElemType>
     static AllocatedElemType* Allocate(int deviceId, size_t numElements);
 
-    template<typename AllocatedElemType>
+    template <typename AllocatedElemType>
     static void Free(int deviceId, AllocatedElemType* bufferPtr, bool ignoreCUDARetCode = false);
 
 private:
-
-    template<typename AllocatedElemType>
+    template <typename AllocatedElemType>
     static AllocatedElemType* AllocateNoTrace(int deviceId, size_t numElements);
 
     static std::pair<size_t, size_t> GetFreeAndTotalMemoryInMBs(int deviceId);
@@ -161,7 +160,7 @@ enum ElementWiseOperator
     Macro(ElementwiseProductWithTanhDerivativeFromOutput);            \
     Macro(ElementwiseProductWithLinearRectifierDerivativeFromOutput); \
     Macro(ElementwiseProductWithLogDerivativeFromOutput);             \
-    Macro(ElementwiseProductWithCosDerivative);                       \
+    Macro(ElementwiseProductWithCosDerivative); \
 //Macro(Index);
 
 #define ForAllTernaryOps(Macro) \
