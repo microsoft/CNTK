@@ -1931,7 +1931,7 @@ protected:                                                                      
     using Base::CreateUniqId;                                                                                                                            \
     using Base::GetNumInputs;                                                                                                                            \
     using Base::ZeroGradientsOfInputs;                                                                                                                   \
-    using Base::VerifyDims;                                                                                                                              \
+    using Base::VerifyDims; using Base::VerifyDataSize;                                                                                                                              \
     using Base::ConstOnes;                                                                                                                               \
     using Base::DetermineElementwiseTensorRank;                                                                                                          \
     using Base::GetSampleLayout;                                                                                                                         \
