@@ -139,7 +139,7 @@ Yu Zhang, Geoffrey Zweig
 \end_layout
 
 \begin_layout Date
-MSR-TR-2014-112 (DRAFT v0.9: Nov 30, 2015)
+MSR-TR-2014-112 (DRAFT v1.0: Jan 21, 2016)
 \end_layout
 
 \begin_layout Standard
@@ -202,9 +202,18 @@ filename "CNTKBook_CNTK_Adv_Chapter.lyx"
 \end_layout
 
 \begin_layout Standard
+\begin_inset Note Comment
+status open
+
+\begin_layout Plain Layout
 \begin_inset CommandInset include
 LatexCommand include
 filename "CNTKBook_CNTK_Programmer_Chapter.lyx"
+
+\end_inset
+
+
+\end_layout
 
 \end_inset
 
