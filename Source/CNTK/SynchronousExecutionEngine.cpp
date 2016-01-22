@@ -346,7 +346,7 @@ void SynchronousNodeEvaluator<ElemType>::Evaluate(NDLNode<ElemType>* node, const
     else if (cnNodeType == OperationNameOf(ConvolutionNode))
     {
         if (parameter.size() != 7)
-            RuntimeError("%ls should have 7 fixed parameters[weightNodeName, inputValueNodeName, kernelWidth, kernelHeight, outputChannels,horizontalSubsample, verticalSubsample] and two optional parameters [zeroPadding = [false|yourvalue], maxTempMemSizeInSamples = [0|yourvalue]].", cnNodeType.c_str());
+            RuntimeError("%ls should have 7 fixed parameters[weightNodeName, inputValueNodeName, kernelWidth, kernelHeight, outputChannels,horizontalSubsample, verticalSubsample] and two optional parameters [zeroPadding = [false|yourvalue], maxTempMemSizeInSamples = [0|yourvalue], imageLayout = "HWC"|"cudnn"].", cnNodeType.c_str());
 
         // setup the parameter position of children so we can hook them up later
         nodeParamCount = 2;
@@ -378,7 +378,7 @@ void SynchronousNodeEvaluator<ElemType>::Evaluate(NDLNode<ElemType>* node, const
     else if (cnNodeType == OperationNameOf(MaxPoolingNode))
     {
         if (parameter.size() != 5)
-            RuntimeError("%ls should have 5 parameters[inputValueNodeName, windowWidth, windowHeight, horizontalSubsample, verticalSubsample].", cnNodeType.c_str());
+            RuntimeError("%ls should have 5 parameters[inputValueNodeName, windowWidth, windowHeight, horizontalSubsample, verticalSubsample, imageLayout = "HWC"|"cudnn"].", cnNodeType.c_str());
 
         // setup the parameter position of children so we can hook them up later
         nodeParamCount = 1;
@@ -406,7 +406,7 @@ void SynchronousNodeEvaluator<ElemType>::Evaluate(NDLNode<ElemType>* node, const
     else if (cnNodeType == OperationNameOf(AveragePoolingNode))
     {
         if (parameter.size() != 5)
-            RuntimeError("%ls should have 5 parameters[inputValueNodeName, windowWidth, windowHeight, horizontalSubsample, verticalSubsample].", cnNodeType.c_str());
+            RuntimeError("%ls should have 5 parameters[inputValueNodeName, windowWidth, windowHeight, horizontalSubsample, verticalSubsample, imageLayout = "HWC"|"cudnn"].", cnNodeType.c_str());
 
         // setup the parameter position of children so we can hook them up later
         nodeParamCount = 1;
