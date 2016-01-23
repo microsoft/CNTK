@@ -38,7 +38,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         //  - GetMinibatch() --fills the inputMatrices
         //  - SetActualMiniBatchSizeFromFeatures()  --tells Network to resize the nodes' buffers
         //  - CopyMBLayoutTo()   --copies the MBLayout from Reader to Network
-        //  - VerifyActualNumParallelSequences()  --(refactoring left-over) verify that MBLayout is consistent with #parallel sequences
         // with the special twist that in presence of parallelization, there is some decimation involved.
 
         bool wasDataRead = trainSetDataReader.GetMinibatch(inputMatrices); // fill in the minibatch data into the Input nodes' buffers directly

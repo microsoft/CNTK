@@ -1439,23 +1439,6 @@ protected:
 
 public:
 
-    // these are used to export hidden state activations
-    virtual bool GetHistory(Matrix<ElemType>&, bool)
-    {
-        return false;
-    }
-    virtual void SetHistory(const Matrix<ElemType>&)
-    {
-    }
-
-    // these two are used to pass gradients from future minibatch
-    virtual void GetErrorsToPreviousMinibatch(Matrix<ElemType>&)
-    {
-    }
-    virtual void SetErrorsFromFutureMinibatch(Matrix<ElemType>&)
-    {
-    }
-
     // -----------------------------------------------------------------------
     // miscellaneous
     // -----------------------------------------------------------------------
