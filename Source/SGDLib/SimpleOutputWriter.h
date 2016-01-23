@@ -79,10 +79,6 @@ public:
             ComputationNetwork::BumpEvalTimeStamp(featureNodes);
             ComputationNetwork::BumpEvalTimeStamp(labelNodes);
 
-            // size_t actualMBSize = m_net->SetActualMiniBatchSizeFromFeatures();
-            // dataReader.CopyMBLayoutTo(m_net->GetMBLayoutPtr());
-            // m_net->VerifyActualNumParallelSequences(dataReader.GetNumParallelSequences());
-
             for (int i = 0; i < outputNodes.size(); i++)
             {
                 m_net->ForwardProp(outputNodes[i]);

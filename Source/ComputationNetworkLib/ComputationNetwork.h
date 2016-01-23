@@ -71,22 +71,12 @@ public:
         m_deviceId = EnforceOneGPUOnly(m_deviceId); // see EnforceOneGPUOnly() for comment on what this is
     }
 
-    DEVICEID_TYPE GetDeviceId() const
-    {
-        return m_deviceId;
-    }
+    DEVICEID_TYPE GetDeviceId() const { return m_deviceId; }
 
     // -----------------------------------------------------------------------
-    // serialization
+    // (de-)serialization
     // -----------------------------------------------------------------------
 
-    void Save(const std::wstring& fileName, const FileOptions fileFormat = FileOptions::fileOptionsBinary) const;
-    void SaveEdited(const std::wstring& fileName, const FileOptions fileFormat = FileOptions::fileOptionsBinary);
-
-private:
-    void SaveToFileImpl(const std::wstring& fileName, const FileOptions fileFormat) const;
-
-public:
     template <class ElemType>
     void ReadPersistableParameters(File& fstream, bool create);
     // reload node content only, e.g. used by SGD::Train() when going back to an older model that had better training objective
@@ -120,6 +110,15 @@ public:
         net->Load<ElemType>(fileName, FileOptions::fileOptionsBinary, bAllowNoCriterionNode, anotherNetwork);
         return net;
     }
+
+    void Save(const std::wstring& fileName, const FileOptions fileFormat = FileOptions::fileOptionsBinary) const;
+    void SaveEdited(const std::wstring& fileName, const FileOptions fileFormat = FileOptions::fileOptionsBinary);
+
+private:
+
+    void SaveToFileImpl(const std::wstring& fileName, const FileOptions fileFormat) const;
+
+public:
 
     // -----------------------------------------------------------------------
     // evaluation
@@ -261,28 +260,8 @@ public:
     // -----------------------------------------------------------------------
 
     // Note: this is also used to copy MBLayouts into our existing MBLayout instance, which is a somewhat questionable design.
-    const MBLayoutPtr& GetMBLayoutPtr()
-    {
-        return m_pMBLayout;
-    }
-
-    size_t GetNumParallelSequences() const
-    {
-        return m_pMBLayout->GetNumParallelSequences();
-    }
-
-    // temporary function: Call this after CopyMBLayoutTo(evalnet->GetMBLayoutPtr()) to ensure everything is consistent as expected
-    // It is actually called after every CopyMBLayoutTo() in the entire system (except for multi-reader CopyMBLayoutTo() itself).
-    // Remove this function after a few weeks of not firing.
-    void VerifyActualNumParallelSequences(const size_t expectedNumSeq)
-    {
-        size_t actualNumSeq = GetNumParallelSequences();
-        if (actualNumSeq != expectedNumSeq)
-        {
-            LogicError("VerifyActualNumParallelSequences: Number of parallel sequences in MBLayout (%d) not matching expected value (%d).",
-                       (int) actualNumSeq, (int) expectedNumSeq);
-        }
-    }
+    const MBLayoutPtr& GetMBLayoutPtr() { return m_pMBLayout; }
+    size_t GetNumParallelSequences() const { return m_pMBLayout->GetNumParallelSequences(); }
 
     // determine the actual MB size from the feature nodes
     // This returns max number of columns over the feature nodes.
@@ -580,45 +559,13 @@ public:
     template <class ElemType>
     void PerformSVDecomposition(const map<wstring, float>& SVDConfig, size_t AlignedSize);
 
-public:
     // -----------------------------------------------------------------------
-    // evaluation: legacy
+    // construction
     // -----------------------------------------------------------------------
-
-    // the following two are only called from FindBestPath() and FindbestPathWithVariableLength()
-    // This code is currently not in use.
-    // TODO: make these templated on <ElemType> locally
-    template <class ElemType>
-    void GetHistory(map<wstring, Matrix<ElemType>>& history, bool bLastTime = false)
-    {
-        // put all node info first
-        Matrix<ElemType> hist;
-        for (auto nodeIter = m_nameToNodeMap.begin(); nodeIter != m_nameToNodeMap.end(); nodeIter++)
-        {
-            shared_ptr<ComputationNode<ElemType>> nodePtr = dynamic_pointer_cast<ComputationNode<ElemType>>(nodeIter->second);
-            if (nodePtr && nodePtr->GetHistory(hist, bLastTime))
-                history[nodeIter->first] = hist;
-        }
-    };
-
-    template <class ElemType>
-    void SetHistory(map<wstring, Matrix<ElemType>>& history)
-    {
-        // put all node info first
-        for (auto nodeIter = m_nameToNodeMap.begin(); nodeIter != m_nameToNodeMap.end(); nodeIter++)
-        {
-            shared_ptr<ComputationNode<ElemType>> nodePtr = dynamic_pointer_cast<ComputationNode<ElemType>>(nodeIter->second);
-            if (nodePtr && history.find(nodeIter->first) != history.end())
-                nodePtr->SetHistory(history[nodeIter->first]);
-        }
-    };
 
 protected:
-// -----------------------------------------------------------------------
-// construction
-// -----------------------------------------------------------------------
 
-// Copy constructor, should never be called.
+    // Copy constructor, should never be called.
 #pragma warning(push)
 #pragma warning(disable : 4702) // this function is flagged but unclear why
     ComputationNetwork(const ComputationNetwork& /*deepCopyFrom*/)

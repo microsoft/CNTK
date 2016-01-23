@@ -868,7 +868,6 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
             {
                 size_t actualMBSize2 = refNet->DetermineActualMBSizeFromFeatures();
                 refNet->GetMBLayoutPtr()->CopyFrom(net->GetMBLayoutPtr()); // TODO: This is UNTESTED (before this was missing, seemingly inconsistently)
-                refNet->VerifyActualNumParallelSequences(trainSetDataReader->GetNumParallelSequences());
 
                 if (actualMBSize2 != actualMBSize)
                     LogicError("TrainOneEpoch: refNet has different MB size than main net??");
@@ -1017,7 +1016,6 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
         }
 
         // aggregation by model averaging
-        // TODO: this does not happen each MB, does it?
         if (useModelAveraging)
         {
             // Determine if any samples were processed across any of the ranks
@@ -1223,91 +1221,8 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
 }
 
 // -----------------------------------------------------------------------
-// sub-routines and helpers follow below
+// subroutines and helpers follow below
 // -----------------------------------------------------------------------
-
-#if 0
-    // TODO: per discussion with Dong Yu, Guoguo Chen, and Yu Zhang, this function can be removed.
-    template<class ElemType>
-    void SGD<ElemType>::SequenceTrain(IComputationNetBuilder<ElemType>* netBuilder, wstring origModelFileName,
-                       IDataReader<ElemType>* trainSetDataReader, IDataReader<ElemType>* validationSetDataReader,
-                       const DEVICEID_TYPE deviceId, const bool makeMode)
-    {
-        if (netBuilder == nullptr || origModelFileName == L"" || trainSetDataReader == nullptr)
-        {
-            InvalidArgument("netBuilder, origModel and trainSetDataReader should not be null.");
-        }
-
-        int startEpoch = DetermineStartEpoch(makeMode);
-        if (startEpoch == m_maxEpochs)
-        {
-            fprintf(stderr, "No further training is necessary.\n");
-            return;
-        }
-
-        // Initializes the model from original model.
-        // TODO: Comment what this does!
-        auto origNet = make_shared<ComputationNetwork>(deviceId);
-        ComputationNetworkPtr sequenceNet =
-            (startEpoch < 0) ? netBuilder->BuildNetworkFromDescription() : origNet;
-        std::vector<ComputationNodeBasePtr> addedFeatureNodes;
-        std::vector<ComputationNodeBasePtr> replacedCriterionNodes;
-        if (startEpoch < 0)
-        {
-            // Loads models.
-            origNet->Load<ElemType>(origModelFileName);
-
-            // Processes feature nodes.
-            std::vector<ComputationNodeBasePtr> & sequenceFeatureNodes = sequenceNet->FeatureNodes();
-            for (size_t i = 0; i < sequenceFeatureNodes.size(); ++i)
-            {
-                if (!origNet->NodeNameExists(sequenceFeatureNodes[i]->NodeName()))
-                {
-                    addedFeatureNodes.push_back(sequenceFeatureNodes[i]);
-                    origNet->AddFeatureNode(sequenceFeatureNodes[i]);
-                }
-            }
-
-            // Processes criterion nodes.
-            auto & origCriterionNodes = GetTrainCriterionNodes(origNet);
-            auto & sequenceCriterionNodes = GetTrainCriterionNodes(sequenceNet);
-            if (origCriterionNodes.size() == 0 || sequenceCriterionNodes.size() == 0)
-            {
-                RuntimeError("Training criterion node does not exist.");
-            }
-            replacedCriterionNodes.push_back(origCriterionNodes[0]);
-            origNet->ReplaceFinalCriterionNode(origCriterionNodes[0]->NodeName(), sequenceCriterionNodes[0]);
-            origNet->ResetEvalTimeStamps();
-        }
-
-        wstring modelFileName = GetModelNameForEpoch(int(startEpoch) - 1);
-        if (startEpoch >= 0)
-        {
-            fprintf(stderr, "Starting from checkpoint. Load Network From File %ls.\n", modelFileName.c_str());
-        }
-        else
-        {
-            fprintf(stderr, "Load Network From the original model file %ls.\n", origModelFileName.c_str());
-        }
-        ComputationNetworkPtr net = (startEpoch < 0) ? origNet : ComputationNetwork::CreateFromFile<ElemType>(deviceId, modelFileName);
-
-        startEpoch = max(startEpoch, 0);
-
-        TrainOrAdaptModel(startEpoch, net, net, nullptr, trainSetDataReader, validationSetDataReader);
-
-        // Handles deletions carefully here.
-        // TODO: This is no longer needed since we own our networks and deal with shared_ptrs now.
-        if (startEpoch < 0)
-        {
-            for (size_t i = 0; i < addedFeatureNodes.size(); ++i)
-            {
-                origNet->RemoveFeatureNode(addedFeatureNodes[i]);
-            }
-            auto & origCriterionNodes = GetTrainCriterionNodes(origNet);
-            origNet->ReplaceFinalCriterionNode(origCriterionNodes[0]->NodeName(), replacedCriterionNodes[0]);
-        }
-    }
-#endif
 
 static double MomentumPerMB(double momentumPerSample, size_t minibatchSize)
 {
@@ -1344,7 +1259,8 @@ std::vector<ComputationNodeBasePtr>& SGD<ElemType>::GetEvalCriterionNodes(Comput
         return net->EvaluationNodes();
 }
 
-// return true if precomputation is executed.
+// execute PreComputeNodes
+// Returns true if precomputation was executed.
 template <class ElemType>
 bool SGD<ElemType>::PreCompute(ComputationNetworkPtr net,
                                IDataReader<ElemType>* trainSetDataReader,
@@ -1580,60 +1496,6 @@ double SGD<ElemType>::SearchForBestLearnRate(ComputationNetworkPtr net,
     return bestLearnRatePerSample;
 }
 
-template <class ElemType>
-void SGD<ElemType>::TrainOneMiniEpochAndReloadModel(ComputationNetworkPtr net,
-                                                    ComputationNetworkPtr refNet,
-                                                    const ComputationNodeBasePtr& refNode, const int epochNumber,
-                                                    const size_t epochSize, IDataReader<ElemType>* trainSetDataReader,
-                                                    const double learnRatePerSample,
-                                                    const size_t minibatchSize,
-                                                    const std::vector<ComputationNodeBasePtr>& featureNodes,
-                                                    const std::vector<ComputationNodeBasePtr>& labelNodes,
-                                                    const std::vector<ComputationNodeBasePtr>& criterionNodes,
-                                                    const std::vector<ComputationNodeBasePtr>& evaluationNodes,
-                                                    std::map<std::wstring, Matrix<ElemType>*>* inputMatrices,
-                                                    const std::list<ComputationNodeBasePtr>& learnableNodes,
-                                                    std::list<Matrix<ElemType>>& smoothedGradients,
-                                                    /*out*/ double& epochCriterion,
-                                                    /*out*/ std::vector<double>& epochEvalErrors,
-                                                    /*out*/ size_t& totalSamplesSeen,
-                                                    std::string prefixMsg)
-{
-    TrainOneEpoch(net, refNet, refNode, epochNumber, epochSize,
-                  trainSetDataReader, learnRatePerSample, minibatchSize, featureNodes,
-                  labelNodes, criterionNodes, evaluationNodes,
-                  inputMatrices, learnableNodes, smoothedGradients,
-                  /*out*/ epochCriterion, /*out*/ epochEvalErrors, /*out*/ totalSamplesSeen,
-                  prefixMsg);
-
-    fprintf(stderr, "Finished Mini-Epoch For LearnRate Selection: TrainLossPerSample = %.8g;", epochCriterion);
-
-    if (epochEvalErrors.size() == 1)
-        fprintf(stderr, "EvalErrPerSample = %.8g; AvgLearningRatePerSample = %.8g\n", epochEvalErrors[0], learnRatePerSample);
-    else
-    {
-        fprintf(stderr, "EvalErrPerSample ");
-        for (size_t i = 0; i < epochEvalErrors.size(); i++)
-        {
-            fprintf(stderr, "[%lu] = %.8g; ", i, epochEvalErrors[i]);
-        }
-        fprintf(stderr, "AvgLearningRatePerSample = %.8g\n", learnRatePerSample);
-    }
-
-    int baseModelEpoch = epochNumber - 1;
-    net->RereadPersistableParameters<ElemType>(GetModelNameForEpoch(baseModelEpoch));
-
-    double dummyLearnRate;
-    double dummtPrevCriterion;
-    size_t dummyMinibatchSize = 0;
-    LoadCheckPointInfo(baseModelEpoch,
-                       /*out*/ totalSamplesSeen,
-                       /*out*/ dummyLearnRate,
-                       smoothedGradients,
-                       /*out*/ dummtPrevCriterion,
-                       /*out*/ dummyMinibatchSize);
-}
-
 // AdaptiveMinibatchSizing() -- choose the largest feasible minibatch size
 // This is necessary for data-parallel operation. The aim is to minimize model updates, and hence bandwidth
 // This implements
@@ -1843,6 +1705,61 @@ size_t SGD<ElemType>::SearchForBestMinibatchSize(ComputationNetworkPtr net,
     return lastTriedTrialMinibatchSize;
 }
 
+// run training over a small subset of an epoch, for purpose of automatic LR and MB-size tuning
+template <class ElemType>
+void SGD<ElemType>::TrainOneMiniEpochAndReloadModel(ComputationNetworkPtr net,
+                                                    ComputationNetworkPtr refNet,
+                                                    const ComputationNodeBasePtr& refNode, const int epochNumber,
+                                                    const size_t epochSize, IDataReader<ElemType>* trainSetDataReader,
+                                                    const double learnRatePerSample,
+                                                    const size_t minibatchSize,
+                                                    const std::vector<ComputationNodeBasePtr>& featureNodes,
+                                                    const std::vector<ComputationNodeBasePtr>& labelNodes,
+                                                    const std::vector<ComputationNodeBasePtr>& criterionNodes,
+                                                    const std::vector<ComputationNodeBasePtr>& evaluationNodes,
+                                                    std::map<std::wstring, Matrix<ElemType>*>* inputMatrices,
+                                                    const std::list<ComputationNodeBasePtr>& learnableNodes,
+                                                    std::list<Matrix<ElemType>>& smoothedGradients,
+                                                    /*out*/ double& epochCriterion,
+                                                    /*out*/ std::vector<double>& epochEvalErrors,
+                                                    /*out*/ size_t& totalSamplesSeen,
+                                                    std::string prefixMsg)
+{
+    TrainOneEpoch(net, refNet, refNode, epochNumber, epochSize,
+                  trainSetDataReader, learnRatePerSample, minibatchSize, featureNodes,
+                  labelNodes, criterionNodes, evaluationNodes,
+                  inputMatrices, learnableNodes, smoothedGradients,
+                  /*out*/ epochCriterion, /*out*/ epochEvalErrors, /*out*/ totalSamplesSeen,
+                  prefixMsg);
+
+    fprintf(stderr, "Finished Mini-Epoch For LearnRate Selection: TrainLossPerSample = %.8g;", epochCriterion);
+
+    if (epochEvalErrors.size() == 1)
+        fprintf(stderr, "EvalErrPerSample = %.8g; AvgLearningRatePerSample = %.8g\n", epochEvalErrors[0], learnRatePerSample);
+    else
+    {
+        fprintf(stderr, "EvalErrPerSample ");
+        for (size_t i = 0; i < epochEvalErrors.size(); i++)
+        {
+            fprintf(stderr, "[%lu] = %.8g; ", i, epochEvalErrors[i]);
+        }
+        fprintf(stderr, "AvgLearningRatePerSample = %.8g\n", learnRatePerSample);
+    }
+
+    int baseModelEpoch = epochNumber - 1;
+    net->RereadPersistableParameters<ElemType>(GetModelNameForEpoch(baseModelEpoch));
+
+    double dummyLearnRate;
+    double dummtPrevCriterion;
+    size_t dummyMinibatchSize = 0;
+    LoadCheckPointInfo(baseModelEpoch,
+                       /*out*/ totalSamplesSeen,
+                       /*out*/ dummyLearnRate,
+                       smoothedGradients,
+                       /*out*/ dummtPrevCriterion,
+                       /*out*/ dummyMinibatchSize);
+}
+
 // Attemps to compute the error signal for the whole utterance, which will
 // be fed to the neural network as features. Currently it is a workaround
 // for the two-forward-pass sequence and ctc training, which allows
@@ -1866,16 +1783,15 @@ void SGD<ElemType>::AttemptUtteranceDerivativeFeatures(ComputationNetworkPtr net
         if (outputNodes.empty())
             LogicError("no output node was found.");
 
-        // net->SetActualMiniBatchSizeFromFeatures();
         trainSetDataReader->CopyMBLayoutTo(net->GetMBLayoutPtr());
-        net->VerifyActualNumParallelSequences(trainSetDataReader->GetNumParallelSequences());
-        net->ForwardProp(outputNodes[0]); // Only evaluate the first output
+        net->ForwardProp(outputNodes[0]); // only evaluate the first output
         trainSetDataReader->SetNetOutput(uttInfo,
                                          dynamic_pointer_cast<ComputationNode<ElemType>>(outputNodes[0])->Value(),
                                          pMBLayout);
     }
 }
 
+// helper for pretty printing
 static string GeneratePaddedFloatOrExpFormat(int padSize, int precision, double value)
 {
     char format[16];
