@@ -22,8 +22,6 @@
 #include <algorithm>
 #include <assert.h>
 #include <atomic>
-#include <sstream>
-#include <iostream>
 
 #define DEFAULT_HIDDEN_ACTIVATION 0.1
 
@@ -32,7 +30,7 @@
 // version number to control how to read and write
 #define CNTK_MODEL_VERSION_1 1
 #define CNTK_MODEL_VERSION_2 2
-#define CURRENT_CNTK_MODEL_VERSION 2
+#define CURRENT_CNTK_MODEL_VERSION CNTK_MODEL_VERSION_2
 
 extern bool g_shareNodeValueMatrices;
 
@@ -123,13 +121,7 @@ protected:
 //  This interface allows to Export and Import state from elsewhere, e.g. for sub-minibatching.
 // =======================================================================
 
-class INodeState : public std::enable_shared_from_this<INodeState>
-{
-public:
-    virtual ~INodeState()
-    {
-    }
-};
+class INodeState : public std::enable_shared_from_this<INodeState> { public: virtual ~INodeState() { } };
 
 struct /*interface*/ IStatefulNode
 {
@@ -163,34 +155,25 @@ struct ComputationNetworkOwnedNodeState
         other.m_needsGradient = m_needsGradient;
     }
 
-    bool IsPartOfLoop() const
-    {
-        return m_isPartOfLoop;
-    }
+    bool IsPartOfLoop() const { return m_isPartOfLoop; }
 
-    virtual void MarkValueNonSharable()
-    {
-        m_valueSharable = false;
-    }
-    virtual void MarkValueSharable()
-    {
-        m_valueSharable = true;
-    }
-    bool isValueSharable() const
-    {
-        return m_valueSharable;
-    }
+    virtual void MarkValueNonSharable() { m_valueSharable = false; }
+    virtual void MarkValueSharable() { m_valueSharable = true; }
+    bool isValueSharable() const { return m_valueSharable; }
 
 protected:                // TODO: should be fully encapsulated here
+
     bool m_needsGradient; // true if this node or any children need a gradient to be computed (for own consumption or propagation to somewhere in the child tree)
 
     bool m_valueSharable; // a flag is needed for memory share.
                           // If it is false (e.g., learnableParameters/InputValue and those nodes are solely induced by learnableParameters),
                           // it will never be released to memory pool
 private:
+
     bool m_isPartOfLoop; // true if this loop is part of a recurrent loop
 
 protected:
+
     // owned by FormRecurrentLoops() and stuff it calls, only used from inside there (FormRecurrentLoops() calls PurgeStateForFormingRecurrentLoops() at its end to make that super-clear)
     void PurgeStateForFormingRecurrentLoops()
     {
@@ -252,7 +235,7 @@ public:
 
     int64_t CreateUniqId() const
     {
-        return /*1 +*/ atomic_fetch_add(&s_timeStampCounter, (unsigned long long int) 1);
+        return atomic_fetch_add(&s_timeStampCounter, (unsigned long long int) 1);
     }
 
 private:
@@ -276,6 +259,10 @@ class ComputationNodeBase : public IComputationNode,
     // note: enable_shared_from_this<> allows to create a shared_ptr from a raw pointer to this that is correctly aware of all other shared_ptrs (same ref count)
 public:
     typedef shared_ptr<ComputationNodeBase> ComputationNodeBasePtr;
+
+    // -----------------------------------------------------------------------
+    // constructors, copying, (de-)serialization
+    // -----------------------------------------------------------------------
 
     ComputationNodeBase(DEVICEID_TYPE deviceId, const wstring& name)
         : m_deviceId(deviceId), m_outputNeededDuringBackprop(true), m_parameterUpdateRequired(false), m_gradientInitialized(false), m_nodeName(name == L"" ? CreateUniqNodeName() : name)
@@ -306,14 +293,7 @@ public:
         }
     }
 
-    virtual ComputationNodeBasePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) = 0;
-
-    DEVICEID_TYPE GetDeviceId() const { return m_deviceId; }
-
-    virtual void Save(File& fstream) const
-    {
-        fstream << OperationName() << NodeName();
-    }
+    virtual ComputationNodeBasePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) = 0;   // (called on here implemented by ComputationNode<ElemType>
 
     virtual void Load(File& /*fstream*/, size_t /*modelVersion*/)
     {
@@ -321,7 +301,42 @@ public:
         // base class has nothing to load
     }
 
-    // dimensions
+    virtual void Save(File& fstream) const
+    {
+        fstream << OperationName() << NodeName();
+    }
+
+    std::wstring CreateUniqNodeName() const
+    {
+#ifdef USE_GUID_AS_NAME
+        UUID uuid;
+        ZeroMemory(&uuid, sizeof(UUID));
+        std::wstring name;
+
+        UuidCreate(&uuid);
+        WCHAR* szUuid = nullptr;
+        if (UuidToStringW(&uuid, (RPC_WSTR*) &szUuid) != RPC_S_OK)
+            RuntimeError("Failed to craete unique node name.");
+        else
+        {
+            name = szUuid;
+            RpcStringFreeW((RPC_WSTR*) &szUuid);
+        }
+#else
+        int64_t id = CreateUniqId();
+        std::wstring base = L"AutoName";
+        std::wstringstream sstm;
+        sstm << base.c_str() << id;
+        std::wstring name = sstm.str();
+//msra::strfun::wstrprintf name(L"%s%d", L"AutoName", id);
+#endif
+
+        return name;
+    }
+
+    // -----------------------------------------------------------------------
+    // dimensions of the value held by this node
+    // -----------------------------------------------------------------------
 
     // The value of a node is a tensor in one of two variants:
     //
@@ -361,9 +376,10 @@ public:
     //     - This only matters for sparse matrices, which cannot easily be Reshaped().
     //       For those, we keep the underlying storage identical to the semantic meaning.
 
-    // interpretation as a set of samples
+    // accessor to sample layout
     const TensorShape& GetSampleLayout() const { return m_sampleLayout; }
     bool HasSampleLayout() const { return m_sampleLayout.GetRank() != 1; } // does it have a layout that is not just a vector?
+    const TensorShape& GetInputSampleLayout(const size_t index) const { return m_inputs[index]->GetSampleLayout(); }
 
     // interpretation as sample matrix (each column is a sample, individual sample tensor dimensions do not matter for the operation)
     size_t GetSampleMatrixNumRows() const
@@ -392,7 +408,6 @@ private:
         else if (m_sampleLayout.GetRank() < 1 || m_sampleLayout.GetRank() > 2) // note: scalars are not stored as tensors of rank 0, but rather as 1-dim vectors. TODO: clean this up some day
             LogicError("CheckTensorIsMatrix: Sample is not a column vector or matrix (1D or 2D tensor).");
     }
-
 public:
     size_t GetAsMatrixNumRows() const
     {
@@ -405,7 +420,7 @@ public:
         return m_sampleLayout.GetRank() > 1 ? m_sampleLayout[1] : 1; // a column vector is also a Matrix
     }
 
-    // set dimensions of the node
+    // setting/updating the dimensions of the node
     // The MBLayout must be set first, and 'isMinibatch' will be checked against it.
     void SetDims(const TensorShape& sampleLayout, bool isMinibatch)
     {
@@ -423,6 +438,7 @@ public:
     void SetDims1(size_t rows, size_t cols) { SetDims(TensorShape(rows, cols), false); }
     size_t GetNumCols1() const { return GetSampleMatrixNumCols(); } // dummy
 
+    // checking the dimensions of the node
     virtual void NotifyFunctionValuesMBSizeModified() = 0;
     void VerifyDims(const TensorShape& shape, bool isMinibatch)
     {
@@ -439,7 +455,38 @@ public:
         VerifyDims(node->GetSampleLayout(), node->HasMBLayout());
     }
 
-    TensorShape GetTensorShape(size_t rank) const; // form the actual tensor that describes the full object
+    // MBLayout (minibatch structure)
+    void LinkToMBLayout(MBLayoutPtr pMBLayout)
+    {
+        m_pMBLayout = pMBLayout;
+    }
+    const MBLayoutPtr& GetMBLayout() const { return m_pMBLayout; }
+    bool HasMBLayout() const { return !!m_pMBLayout; }
+
+protected: public: // ...the following should be protected, but nodes inquire about their children, requiring public access
+
+    size_t GetNumParallelSequences() const
+    {
+#if 1
+        if (!m_pMBLayout) // TODO: temporary workaround to Check_t() calls which call this. TODO: Delete the first arg from Check_t() after memshare merge.
+            return SIZE_MAX;
+#endif
+        return m_pMBLayout->GetNumParallelSequences();
+    }
+
+    // get our current number of time steps for this node
+    // This inquires the MB layout.
+    size_t GetNumTimeSteps() const
+    {
+        if (!m_pMBLayout)
+            LogicError("GetNumTimeSteps: invalid to call on a node without MB layout"); // since it has no notion of time
+        return m_pMBLayout->GetNumTimeSteps();
+    }
+
+public:
+
+    // forming the actual tensor that describes the full object
+    TensorShape GetTensorShape(size_t rank) const;
 
 protected:
 
@@ -448,41 +495,19 @@ protected:
 
 public:
 
-    // access to element(0,0) without having to type-cast
-    virtual double Get00Element() const = 0;
+    // -----------------------------------------------------------------------
+    // inputs
+    // -----------------------------------------------------------------------
 
-    // validation
-    // This is overridden by every node. This base class just checks for unconnected and empty inputs. Overrides must call their base version first.
-    virtual void Validate(bool isFinalValidationPass) // main base validation function
-    {
-        // check for NULL pointers
-        for (size_t i = 0; i < m_inputs.size(); i++)
-        {
-            if (!m_inputs[i])
-                RuntimeError("Validate: Input [%d] of %ls node '%ls' is empty (NULL, not connected).", (int) i, OperationName().c_str(), NodeName().c_str());
-        }
-        // check for empty inputs
-        if (isFinalValidationPass)
-        {
-            for (const auto& child : m_inputs)
-                if (child->GetSampleMatrixNumRows() == 0)
-                    RuntimeError("%ls %ls operation: input %ls %ls has 0 elements.", NodeName().c_str(), OperationName().c_str(), child->NodeName().c_str(), child->OperationName().c_str());
-        }
-    }
+    // access an input
+    const ComputationNodeBasePtr& Input(size_t index) const { return m_inputs[index]; }
 
-protected:
+    // access all inputs (use this for range-based for loops)
+    const std::vector<ComputationNodeBasePtr>& GetInputs() const { return m_inputs; }
+    const size_t GetNumInputs() const { return m_inputs.size(); }
+    bool IsLeaf() const { return GetNumInputs() == 0; }
 
-    // helper functions for common cases
-    void ValidateUnaryMap(bool isFinalValidationPass);
-    void ValidateUnaryReduce(bool isFinalValidationPass);
-    void ValidateInferBinaryInputDims();
-    void ValidateBinaryZip(bool isFinalValidationPass, bool allowMultiples);
-    void ValidateBinaryReduce(bool isFinalValidationPass);
-
-public:
-
-    virtual bool UnitTest() { return true; }
-
+    // attaching/detaching inputs
     virtual void AttachInputs(const std::vector<ComputationNodeBasePtr>& inputs) = 0;
     // convenience versions that take individual arguments
     void AttachInputs(const ComputationNodeBasePtr& singleInput)
@@ -515,6 +540,8 @@ public:
         m_inputs.clear();
     }
 
+    virtual void SetInput(const size_t childIndex, const ComputationNodeBasePtr& node) = 0;
+
     // helper for the factory function for ComputationNodes
     static vector<ComputationNodeBasePtr> GetInputsFromConfig(const ScriptableObjects::IConfigRecordPtr configp)
     {
@@ -538,12 +565,9 @@ public:
         return inputs;
     }
 
-    const std::vector<ComputationNodeBasePtr>& GetInputs() const { return m_inputs; }
-
-    const ComputationNodeBasePtr& Input(size_t index) const { return m_inputs[index]; }
-
-    // return true if the node's value should be computed before the normal training. e.g., mean and invStd of input features.
-    virtual bool /*IComputationNode::*/ RequiresPreCompute() const { return false; }
+    // -----------------------------------------------------------------------
+    // miscellaneous
+    // -----------------------------------------------------------------------
 
     // casting helpers
     template <typename N>
@@ -560,43 +584,7 @@ public:
         return dynamic_cast<N*>(this) != nullptr;
     }
 
-    /*HasName::*/ void SetName(const std::wstring& newName) // also for use by ExperimentalNetworkBuilder
-    {
-        m_nodeName = newName;
-        fprintf(stderr, "Node --> %ls = %ls\n", NodeName().c_str(), OperationName().c_str()), fflush(stderr);
-    }
-
-    void LinkToMBLayout(MBLayoutPtr pMBLayout)
-    {
-        m_pMBLayout = pMBLayout;
-    }
-    const MBLayoutPtr& GetMBLayout() const { return m_pMBLayout; }
-    bool HasMBLayout() const { return !!m_pMBLayout; }
-
-    std::wstring GetName() const { return m_nodeName; }
-
-protected:
-public: // ...the following should be protected, but nodes inquire about their children, requiring public access
-
-    size_t GetNumParallelSequences() const
-    {
-#if 1
-        if (!m_pMBLayout) // TODO: temporary workaround to Check_t() calls which call this. TODO: Delete the first arg from Check_t() after memshare merge.
-            return SIZE_MAX;
-#endif
-        return m_pMBLayout->GetNumParallelSequences();
-    }
-
-    // get our current number of time steps for this node
-    // This inquires the MB layout.
-    size_t GetNumTimeSteps() const
-    {
-        if (!m_pMBLayout)
-            LogicError("GetNumTimeSteps: invalid to call on a node without MB layout"); // since it has no notion of time
-        return m_pMBLayout->GetNumTimeSteps();
-    }
-
-public:
+    virtual bool UnitTest() { return true; }
 
     // implemented by ComputationNode<ElemType>
     // for debugging purpose
@@ -634,92 +622,34 @@ public:
         }
     }
 
-    const std::wstring& NodeName() const { return m_nodeName; }
-    void SetNodeName(const std::wstring& nodeName) { m_nodeName = nodeName; }
+    // -----------------------------------------------------------------------
+    // accessors
+    // -----------------------------------------------------------------------
 
-    bool& NeedGradient() { return m_needsGradient; }
+    DEVICEID_TYPE GetDeviceId() const { return m_deviceId; }
+
+    // helper to access to element(0,0) without having to type-cast
+    virtual double Get00Element() const = 0;
+
+    // TODO: two sets of functions, choose one
+    const std::wstring& NodeName() const { return m_nodeName; }
+    std::wstring GetName() const { return m_nodeName; }
+    void SetNodeName(const std::wstring& nodeName) { m_nodeName = nodeName; }
+    /*HasName::*/ void SetName(const std::wstring& newName) override // also for use by ExperimentalNetworkBuilder
+    {
+        m_nodeName = newName;
+        fprintf(stderr, "Node --> %ls = %ls\n", NodeName().c_str(), OperationName().c_str()), fflush(stderr);
+    }
+
+    const bool&/*TODO: should be bool by value*/ NeedGradient() { return m_needsGradient; }
 
     void SetParameterUpdateRequired(bool f) { m_parameterUpdateRequired = f; }
     bool IsParameterUpdateRequired() const { return m_parameterUpdateRequired; }
 
-    void SetOutputNeededDuringBackprop(bool f)
-    {
-        m_outputNeededDuringBackprop = f;
-    }
-    bool IsOutputNeededDuringBackprop() const
-    {
-        return !g_shareNodeValueMatrices || m_outputNeededDuringBackprop;
-    }
+    // return true if the node's value should be computed before the normal training. e.g., mean and invStd of input features.
+    virtual bool /*IComputationNode::*/ RequiresPreCompute() const { return false; }
 
-    const size_t GetNumInputs() const { return m_inputs.size(); }
-    bool IsLeaf() const { return GetNumInputs() == 0; }
-
-    virtual void SetInput(const size_t childIndex, const ComputationNodeBasePtr& node) = 0;
-
-    // masking
-    // overridden by <ElemType> variant only
-    virtual void MaskMissingValueColumnsToZero(const FrameRange&) = 0;
-    virtual void MaskMissingGradientColumnsToZero(const FrameRange&) = 0;
-    virtual void InvalidateMissingValueColumns(const FrameRange&) = 0;
-    virtual void InvalidateMissingGradientColumns(const FrameRange&) = 0;
-
-    virtual void ZeroGradientsOfInputs() = 0;
-
-    virtual void /*IComputationNode::*/ BeginForwardProp() override // called before first iteration step of ForwardProp()
-    {
-#ifdef TRACK_GAP_NANS
-        fprintf(stderr, "BeginForwardProp: %ls %ls operation\n", NodeName().c_str(), OperationName().c_str());
-#endif
-    }
-    virtual void /*IComputationNode::*/ EndForwardProp() override // called after last iteration step of ForwardProp()
-    {
-#ifdef TRACK_GAP_NANS
-        fprintf(stderr, "EndForwardProp: %ls %ls operation\n", NodeName().c_str(), OperationName().c_str());
-#endif
-    }
-    // TODO: the following two are not really utilized yet other than printing trace information
-    virtual void /*IComputationNode::*/ BeginBackprop() override // called before first iteration step of ComputeGradient()
-    {
-#ifdef TRACK_GAP_NANS
-        fprintf(stderr, "BeginBackprop: %ls %ls operation\n", NodeName().c_str(), OperationName().c_str());
-#endif
-    }
-    virtual void /*IComputationNode::*/ EndBackprop() override // called after last iteration step of ComputeGradient()
-    {
-#ifdef TRACK_GAP_NANS
-        fprintf(stderr, "EndBackprop: %ls %ls operation\n", NodeName().c_str(), OperationName().c_str());
-#endif
-    }
-
-    // Is the output value of the computation node needed for computing
-    // gradients of any of the input nodes
-    // Base-class version makes conservative assumption that it is. Override if not.
-    virtual bool OutputUsedInComputingInputNodesGradients() const
-    {
-        return true;
-    }
-
-    // Is the output value of the specified  input node needed for computing
-    // gradients of any of the input nodes
-    // Base-class version makes conservative assumption that it is. Override if not.
-    virtual bool InputUsedInComputingInputNodesGradients(size_t childIndex) const
-    {
-        UNREFERENCED_PARAMETER(childIndex);
-        return true;
-    }
-
-public:
-    virtual void ValidateInferInputDimsFrom(const TensorShape&) = 0;
-
-protected:
-    const TensorShape& GetInputSampleLayout(const size_t index) const
-    {
-        return m_inputs[index]->GetSampleLayout();
-    }
-
-    void InferMBLayoutFromInputsForStandardCase();
-
-public:
+#if 0
     bool IsEqualTo(const ComputationNodeBasePtr& other) const // this will be used to determine whehter two nodes are the same
     {
         if (OperationName() != other->OperationName() || m_inputs.size() != other->m_inputs.size())
@@ -737,6 +667,120 @@ public:
 
         return true;
     }
+#endif
+
+    // -----------------------------------------------------------------------
+    // masking
+    // -----------------------------------------------------------------------
+
+    // overridden by <ElemType> variant only
+    virtual void MaskMissingValueColumnsToZero(const FrameRange&) = 0;
+    virtual void MaskMissingGradientColumnsToZero(const FrameRange&) = 0;
+    virtual void InvalidateMissingValueColumns(const FrameRange&) = 0;
+    virtual void InvalidateMissingGradientColumns(const FrameRange&) = 0;
+
+    virtual void ZeroGradientsOfInputs() = 0;
+
+    // -----------------------------------------------------------------------
+    // validation
+    // -----------------------------------------------------------------------
+
+    // This is overridden by every node. This base class just checks for unconnected and empty inputs. Overrides must call their base version first.
+    virtual void Validate(bool isFinalValidationPass) // main base validation function
+    {
+        // check for NULL pointers
+        for (size_t i = 0; i < m_inputs.size(); i++)
+        {
+            if (!m_inputs[i])
+                RuntimeError("Validate: Input [%d] of %ls node '%ls' is empty (NULL, not connected).", (int) i, OperationName().c_str(), NodeName().c_str());
+        }
+        // check for empty inputs
+        if (isFinalValidationPass)
+        {
+            for (const auto& child : m_inputs)
+                if (child->GetSampleMatrixNumRows() == 0)
+                    RuntimeError("%ls %ls operation: input %ls %ls has 0 elements.", NodeName().c_str(), OperationName().c_str(), child->NodeName().c_str(), child->OperationName().c_str());
+        }
+    }
+
+protected:
+
+    // helper functions for common cases
+    void ValidateUnaryMap(bool isFinalValidationPass);
+    void ValidateUnaryReduce(bool isFinalValidationPass);
+    void ValidateInferBinaryInputDims();
+    void ValidateBinaryZip(bool isFinalValidationPass, bool allowMultiples);
+    void ValidateBinaryReduce(bool isFinalValidationPass);
+    void InferMBLayoutFromInputsForStandardCase();
+    virtual void ValidateInferInputDimsFrom(const TensorShape&) = 0;    // (implemented by ComputationNode<ElemType>
+
+public:
+
+    // -----------------------------------------------------------------------
+    // forward prop, backprop
+    // -----------------------------------------------------------------------
+
+    virtual void /*IComputationNode::*/ BeginForwardProp() override // called before first iteration step of ForwardProp()
+    {
+#ifdef TRACK_GAP_NANS
+        fprintf(stderr, "BeginForwardProp: %ls %ls operation\n", NodeName().c_str(), OperationName().c_str());
+#endif
+    }
+    virtual void /*IComputationNode::*/ EndForwardProp() override // called after last iteration step of ForwardProp()
+    {
+#ifdef TRACK_GAP_NANS
+        fprintf(stderr, "EndForwardProp: %ls %ls operation\n", NodeName().c_str(), OperationName().c_str());
+#endif
+    }
+    virtual void /*IComputationNode::*/ BeginBackprop() override // called before first iteration step of ComputeGradient()
+    {
+#ifdef TRACK_GAP_NANS
+        fprintf(stderr, "BeginBackprop: %ls %ls operation\n", NodeName().c_str(), OperationName().c_str());
+#endif
+    }
+    virtual void /*IComputationNode::*/ EndBackprop() override // called after last iteration step of ComputeGradient()
+    {
+#ifdef TRACK_GAP_NANS
+        fprintf(stderr, "EndBackprop: %ls %ls operation\n", NodeName().c_str(), OperationName().c_str());
+#endif
+    }
+
+    // check whether a node is up-to-date w.r.t. its children, for lazy evaluation
+    // If this returns false, node must be evaluated to update m_value.
+    // BUGBUG: The function name is incorrect. It also returns 'true' if a child has the same time stamp (not older).
+    // This is virtual because it is overridden by traversal nodes.
+    virtual bool IsOutputOlderThanInputs() const
+    {
+        // TODO: use range-based for
+        for (size_t i = 0; i < GetNumInputs(); i++)
+        {
+            if (IsOlderThan(*m_inputs[i]))
+                return true;
+        }
+
+        return false;
+    }
+
+    // -----------------------------------------------------------------------
+    // memory sharing
+    // -----------------------------------------------------------------------
+
+    // Is the output value of the computation node needed for computing
+    // gradients of any of the input nodes
+    // Base-class version makes conservative assumption that it is. Override if not.
+    virtual bool OutputUsedInComputingInputNodesGradients() const { return true; }
+
+    // Is the output value of the specified  input node needed for computing
+    // gradients of any of the input nodes
+    // Base-class version makes conservative assumption that it is. Override if not.
+    virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const { return true; }
+
+    void SetOutputNeededDuringBackprop(bool f) { m_outputNeededDuringBackprop = f; }
+    bool IsOutputNeededDuringBackprop() const { return !g_shareNodeValueMatrices || m_outputNeededDuringBackprop; }
+
+    // -----------------------------------------------------------------------
+    // helpers for network traversal
+    // -----------------------------------------------------------------------
 
     // determine enumeration order for everything needed to evaluate this node (and its children)
     // This creates a list such that children are evaluated before their parents.
@@ -760,6 +804,7 @@ public:
     }
 
 private:
+
     // Recursive part of EnumerateNodes().
     void EnumerateNodesRec(std::unordered_set<ComputationNodeBasePtr>& visited, std::list<ComputationNodeBasePtr>& result) /*const*/ // const not working due to shared_from_this()
     {
@@ -778,82 +823,11 @@ private:
     }
 
 public:
-    // check whether a node is up-to-date w.r.t. its children, for lazy evaluation
-    // If this returns false, node must be evaluated to update m_value.
-    // BUGBUG: The function name is incorrect. It also returns 'true' if a child has the same time stamp (not older).
-    // This is virtual because it is overridden by traversal nodes.
-    virtual bool IsOutputOlderThanInputs() const
-    {
-        // TODO: use range-based for
-        for (size_t i = 0; i < GetNumInputs(); i++)
-        {
-            if (IsOlderThan(*m_inputs[i]))
-                return true;
-        }
 
-        return false;
-    }
-
+    // helper for topology plot: enumerate arcs that can be reached starting from the current node's children
     typedef std::pair<ComputationNodeBasePtr, ComputationNodeBasePtr> ComputationArc;
-    // [1/13/2015 erw] add to enumerate all the edges
-    // enumerate arcs that can be reached starting from the current node's children
-    // [in/out] visited record already visited nodes
     // TODO: This should be a method of ComputationNetwork, not ComputationNode.
-    void EnumerateArcs(std::unordered_set<ComputationNodeBasePtr>& visited, std::list<ComputationArc>& arcs)
-    {
-        std::list<ComputationNodeBasePtr> tovisit;
-
-        if (visited.find(shared_from_this()) == visited.end()) // only do when this node has not been visited before
-        {
-            tovisit.push_back(shared_from_this());
-
-            while (!tovisit.empty())
-            {
-                ComputationNodeBasePtr curNode = tovisit.front();
-                tovisit.pop_front();
-
-                if (visited.find(curNode) == visited.end())
-                {
-                    for (size_t i = 0; i < curNode->m_inputs.size(); i++)
-                    {
-                        arcs.push_back(ComputationArc(curNode, curNode->m_inputs[i]));
-
-                        if (visited.find(curNode->m_inputs[i]) == visited.end()) // this children has not been visited before
-                            tovisit.push_front(curNode->m_inputs[i]);            // going to visit each of the children
-                    }
-                    visited.insert(curNode);
-                }
-            }
-        }
-    }
-
-    std::wstring CreateUniqNodeName() const
-    {
-#ifdef USE_GUID_AS_NAME
-        UUID uuid;
-        ZeroMemory(&uuid, sizeof(UUID));
-        std::wstring name;
-
-        UuidCreate(&uuid);
-        WCHAR* szUuid = nullptr;
-        if (UuidToStringW(&uuid, (RPC_WSTR*) &szUuid) != RPC_S_OK)
-            RuntimeError("Failed to craete unique node name.");
-        else
-        {
-            name = szUuid;
-            RpcStringFreeW((RPC_WSTR*) &szUuid);
-        }
-#else
-        int64_t id = CreateUniqId();
-        std::wstring base = L"AutoName";
-        std::wstringstream sstm;
-        sstm << base.c_str() << id;
-        std::wstring name = sstm.str();
-//msra::strfun::wstrprintf name(L"%s%d", L"AutoName", id);
-#endif
-
-        return name;
-    }
+    void EnumerateArcs(std::unordered_set<ComputationNodeBasePtr>& visited, std::list<ComputationArc>& arcs);
 
 protected:
     DEVICEID_TYPE m_deviceId; // CPU=-1, >=0 GPU
@@ -1098,7 +1072,7 @@ public:
     {
     }
 
-    void ValidateInferInputDimsFrom(const TensorShape& otherShape);
+    void ValidateInferInputDimsFrom(const TensorShape& otherShape) override final;
 
 public:
     static void MaskMissingColumnsToZero(Matrix<ElemType>& matrixToBeMasked, const MBLayoutPtr& pMBLayout, const FrameRange& fr)
@@ -1189,23 +1163,11 @@ public:
         m_inputs[childIndex] = node;
     }
 
-    const Matrix<ElemType>& Value() const
-    {
-        return *m_value;
-    }
-    Matrix<ElemType>& Value()
-    {
-        return *m_value;
-    }
+    const Matrix<ElemType>& Value() const { return *m_value; }
+    Matrix<ElemType>&       Value()       { return *m_value; }
 
-    const Matrix<ElemType>& Gradient() const
-    {
-        return *m_gradient;
-    }
-    Matrix<ElemType>& Gradient()
-    {
-        return *m_gradient;
-    }
+    const Matrix<ElemType>& Gradient() const { return *m_gradient; }
+    Matrix<ElemType>&       Gradient()       { return *m_gradient; }
 
 private:
     // map a tensor to a matrix
@@ -1806,97 +1768,97 @@ struct IRecurrentNode
     \
 protected:                                                                                                                                               \
     typedef shared_ptr<ComputationNode<ElemType>> ComputationNodePtr;                                                                                    \
-    using Base::m_deviceId;                                                                                                                              \
-    using Base::shared_from_this;                                                                                                                        \
-    using Base::GetDeviceId;                                                                                                                             \
-    using Base::SetDims;                                                                                                                                 \
-    using Base::SetDims1;                                                                                                                                \
-    using Base::GetSampleMatrixNumRows;                                                                                                                  \
-    using Base::GetSampleMatrixNumCols;                                                                                                                  \
-    using Base::GetAsMatrixNumRows;                                                                                                                      \
-    using Base::GetAsMatrixNumCols;                                                                                                                      \
-    using Base::GetTensorShape;                                                                                                                          \
-    using Base::UpdateFunctionValuesSize;                                                                                                                \
-    using Base::LoadValue;                                                                                                                               \
-    using Base::m_pMBLayout;                                                                                                                             \
-    using Base::GetNumTimeSteps;                                                                                                                         \
-    using Base::GetNumParallelSequences;                                                                                                                 \
-    using Base::MaskMissingColumnsToZero;                                                                                                                \
-    using Base::MaskMissingValueColumnsToZero;                                                                                                           \
-    using Base::MaskMissingGradientColumnsToZero;                                                                                                        \
-    using Base::InvalidateMissingValueColumns;                                                                                                           \
-    using Base::InvalidateMissingGradientColumns;                                                                                                        \
-    using Base::DataFor;                                                                                                                                 \
-    using Base::ValueFor;                                                                                                                                \
-    using Base::GradientAsMatrix;                                                                                                                        \
-    using Base::Gradient;                                                                                                                                \
-    using Base::GradientFor;                                                                                                                             \
-    using Base::MaskedValueFor;                                                                                                                          \
-    using Base::MaskedGradientFor;                                                                                                                       \
-    using Base::DataTensorFor;                                                                                                                           \
-    using Base::ValueTensorFor;                                                                                                                          \
-    using Base::GradientTensorFor;                                                                                                                       \
-    using Base::ForwardProp;                                                                                                                             \
+    /*using Base::IsEqualTo;                                                                                                                               */ \
     using Base::BackpropTo;                                                                                                                              \
-    using Base::m_inputs;                                                                                                                                \
-    using Base::m_value;                                                                                                                                 \
-    using Base::m_gradient;                                                                                                                              \
-    using Base::m_sampleLayout;                                                                                                                          \
-    using Base::m_parameterUpdateRequired;                                                                                                               \
-    using Base::m_nodeName;                                                                                                                              \
-    using Base::CreateMatrixIfNull;                                                                                                                      \
-    using Base::RequestMatrixFromPool;                                                                                                                   \
-    using Base::ReleaseMatrixToPool;                                                                                                                     \
-    using Base::CreateUniqId;                                                                                                                            \
-    using Base::GetNumInputs;                                                                                                                            \
-    using Base::ZeroGradientsOfInputs;                                                                                                                   \
-    using Base::VerifyDims;                                                                                                                              \
-    using Base::VerifyDataSize;                                                                                                                          \
     using Base::ConstOnes;                                                                                                                               \
-    using Base::DetermineElementwiseTensorRank;                                                                                                          \
-    using Base::GetSampleLayout;                                                                                                                         \
-    using Base::GetInputSampleLayout;                                                                                                                    \
-    using Base::InferMBLayoutFromInputsForStandardCase;                                                                                                  \
     using Base::CopyTo;                                                                                                                                  \
+    using Base::CreateMatrixIfNull;                                                                                                                      \
+    using Base::CreateUniqId;                                                                                                                            \
     using Base::CreateUniqNodeName;                                                                                                                      \
+    using Base::DataFor;                                                                                                                                 \
+    using Base::DataTensorFor;                                                                                                                           \
     using Base::DetachInputs;                                                                                                                            \
-    using Base::GetInputsFromConfig;                                                                                                                     \
+    using Base::DetermineElementwiseTensorRank;                                                                                                          \
     using Base::DumpNodeInfo;                                                                                                                            \
     using Base::EnumerateNodes;                                                                                                                          \
-    using Base::HasMBLayout;                                                                                                                             \
+    using Base::ForwardProp;                                                                                                                             \
+    using Base::GetAsMatrixNumCols;                                                                                                                      \
+    using Base::GetAsMatrixNumRows;                                                                                                                      \
+    using Base::GetDeviceId;                                                                                                                             \
+    using Base::GetInputSampleLayout;                                                                                                                    \
+    using Base::GetInputsFromConfig;                                                                                                                     \
     using Base::GetMBLayout;                                                                                                                             \
-    using Base::LinkToMBLayout;                                                                                                                          \
+    using Base::GetNumInputs;                                                                                                                            \
+    using Base::GetNumParallelSequences;                                                                                                                 \
+    using Base::GetNumTimeSteps;                                                                                                                         \
+    using Base::GetSampleLayout;                                                                                                                         \
+    using Base::GetSampleMatrixNumCols;                                                                                                                  \
+    using Base::GetSampleMatrixNumRows;                                                                                                                  \
+    using Base::GetTensorShape;                                                                                                                          \
+    using Base::Gradient;                                                                                                                                \
+    using Base::GradientAsMatrix;                                                                                                                        \
+    using Base::GradientFor;                                                                                                                             \
+    using Base::GradientTensorFor;                                                                                                                       \
+    using Base::HasMBLayout;                                                                                                                             \
+    using Base::InferMBLayoutFromInputsForStandardCase;                                                                                                  \
     using Base::Input;                                                                                                                                   \
-    using Base::SetInput;                                                                                                                                \
-    using Base::IsEqualTo;                                                                                                                               \
-    using Base::IsOutputOlderThanInputs;                                                                                                                 \
+    using Base::InputUsedInComputingInputNodesGradients;                                                                                                 \
+    using Base::InvalidateMissingGradientColumns;                                                                                                        \
+    using Base::InvalidateMissingValueColumns;                                                                                                           \
     using Base::IsLeaf;                                                                                                                                  \
-    using Base::SetParameterUpdateRequired;                                                                                                              \
+    using Base::IsOutputOlderThanInputs;                                                                                                                 \
+    using Base::LinkToMBLayout;                                                                                                                          \
     using Base::Load;                                                                                                                                    \
+    using Base::LoadValue;                                                                                                                               \
+    using Base::MaskMissingColumnsToZero;                                                                                                                \
+    using Base::MaskMissingGradientColumnsToZero;                                                                                                        \
+    using Base::MaskMissingValueColumnsToZero;                                                                                                           \
+    using Base::MaskedGradientFor;                                                                                                                       \
+    using Base::MaskedValueFor;                                                                                                                          \
+    using Base::OutputUsedInComputingInputNodesGradients;                                                                                                \
     using Base::PrintNodeValuesToFile;                                                                                                                   \
     using Base::PrintSelfBeforeValidation;                                                                                                               \
-    using Base::Save;                                                                                                                                    \
-    using Base::UpdateFunctionMBSize;                                                                                                                    \
-    using Base::RequestMatricesBeforeForwardProp;                                                                                                        \
-    using Base::ReleaseMatricesAfterForwardProp;                                                                                                         \
-    using Base::RequestMatricesBeforeBackprop;                                                                                                           \
     using Base::ReleaseMatricesAfterBackprop;                                                                                                            \
-    using Base::InputUsedInComputingInputNodesGradients;                                                                                                 \
-    using Base::OutputUsedInComputingInputNodesGradients;                                                                                                \
-    using Base::m_valueSharable;                                                                                                                         \
+    using Base::ReleaseMatricesAfterForwardProp;                                                                                                         \
+    using Base::ReleaseMatrixToPool;                                                                                                                     \
+    using Base::RequestMatricesBeforeBackprop;                                                                                                           \
+    using Base::RequestMatricesBeforeForwardProp;                                                                                                        \
+    using Base::RequestMatrixFromPool;                                                                                                                   \
+    using Base::Save;                                                                                                                                    \
+    using Base::SetDims1;                                                                                                                                \
+    using Base::SetDims;                                                                                                                                 \
+    using Base::SetInput;                                                                                                                                \
+    using Base::SetParameterUpdateRequired;                                                                                                              \
+    using Base::UpdateFunctionMBSize;                                                                                                                    \
+    using Base::UpdateFunctionValuesSize;                                                                                                                \
     using Base::Validate;                                                                                                                                \
-    using Base::ValidateUnaryMap;                                                                                                                        \
-    using Base::ValidateBinaryZip;                                                                                                                       \
-    using Base::ValidateUnaryReduce;                                                                                                                     \
     using Base::ValidateBinaryReduce;                                                                                                                    \
+    using Base::ValidateBinaryZip;                                                                                                                       \
     using Base::ValidateInferBinaryInputDims;                                                                                                            \
     using Base::ValidateInferInputDimsFrom;                                                                                                              \
+    using Base::ValidateUnaryMap;                                                                                                                        \
+    using Base::ValidateUnaryReduce;                                                                                                                     \
+    using Base::ValueFor;                                                                                                                                \
+    using Base::ValueTensorFor;                                                                                                                          \
+    using Base::VerifyDataSize;                                                                                                                          \
+    using Base::VerifyDims;                                                                                                                              \
+    using Base::ZeroGradientsOfInputs;                                                                                                                   \
+    using Base::m_deviceId;                                                                                                                              \
+    using Base::m_gradient;                                                                                                                              \
+    using Base::m_inputs;                                                                                                                                \
+    using Base::m_nodeName;                                                                                                                              \
+    using Base::m_pMBLayout;                                                                                                                             \
+    using Base::m_parameterUpdateRequired;                                                                                                               \
+    using Base::m_sampleLayout;                                                                                                                          \
+    using Base::m_value;                                                                                                                                 \
+    using Base::m_valueSharable;                                                                                                                         \
+    using Base::shared_from_this;                                                                                                                        \
     \
 public:                                                                                                                                                  \
-    using Base::RequiresPreCompute;                                                                                                                      \
     using Base::AttachInputs;                                                                                                                            \
     using Base::CreateGradientMatrixIfNull;                                                                                                              \
     using Base::NodeName;                                                                                                                                \
+    using Base::RequiresPreCompute;                                                                                                                      \
     using Base::ValueAsMatrix;                                                                                                                           \
     using Base::Value;
 
