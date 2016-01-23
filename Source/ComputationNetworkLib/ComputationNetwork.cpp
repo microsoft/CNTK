@@ -860,6 +860,36 @@ void ComputationNetwork::PlotNetworkTopology(const wstring outputFile) //  [1/13
     DescribeNetworkUsingDot(arcs, outputFile);
 }
 
+// enumerate all arcs that can be reached starting from the current node's children
+// [in/out] visited record already visited nodes
+void ComputationNodeBase::EnumerateArcs(std::unordered_set<ComputationNodeBasePtr>& visited, std::list<ComputationArc>& arcs)
+{
+    std::list<ComputationNodeBasePtr> tovisit;
+
+    if (visited.find(shared_from_this()) == visited.end()) // only do when this node has not been visited before
+    {
+        tovisit.push_back(shared_from_this());
+
+        while (!tovisit.empty())
+        {
+            ComputationNodeBasePtr curNode = tovisit.front();
+            tovisit.pop_front();
+
+            if (visited.find(curNode) == visited.end())
+            {
+                for (size_t i = 0; i < curNode->m_inputs.size(); i++)
+                {
+                    arcs.push_back(ComputationArc(curNode, curNode->m_inputs[i]));
+
+                    if (visited.find(curNode->m_inputs[i]) == visited.end()) // this children has not been visited before
+                        tovisit.push_front(curNode->m_inputs[i]);            // going to visit each of the children
+                }
+                visited.insert(curNode);
+            }
+        }
+    }
+}
+
 // -----------------------------------------------------------------------
 // specialized operations
 // -----------------------------------------------------------------------
