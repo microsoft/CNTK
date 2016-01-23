@@ -962,66 +962,6 @@ public:
         }
     }
 
-#if 0
-    // special function for DBN
-    // this += hsum(other) * weight
-    void addallcolumnsweighted (const ssematrixbase & other, float weight)
-    {
-        auto & us = *this;
-        assert (rows() == other.rows() && cols() == 1);
-        foreach_coord (i, t, other)
-            us(i,0) += other(i,t) * weight; // TODO: SSE version (very easy)
-    }
-
-    // special function for DBN
-    // this += x * y
-    // This is based on a code copy of matprod_mtm. See there for comments.
-    void addmatprodweighted_mtm (const ssematrixbase & Mt, const ssematrixbase & V, const float weight)
-    {
-        addmatprodweighted_mtm (Mt, 0, Mt.cols(), V, weight);
-    }
-
-    void parallel_addmatprodweighted_mtm (const ssematrixbase & Mt, const ssematrixbase & V, const float weight)
-    {
-#if 0
-        cores;
-        addmatprodweighted_mtm (Mt, 0, Mt.cols(), V, weight);
-#else
-        msra::parallel::foreach_index_block (Mt.cols(), Mt.cols(), 1, [&] (size_t i0, size_t i1)
-        {
-            addmatprodweighted_mtm (Mt, i0, i1, V, weight);
-        });
-#endif
-    }
-
-    void addmatprodweighted_mtm (const ssematrixbase & Mt, size_t i0/*first row in M*/, size_t i1/*end row in M*/, const ssematrixbase & V, const float weight)
-    {
-        auto & us = *this;
-        assert (V.rows() == Mt.rows());     // remember: Mt is the transpose of M
-        assert (us.rows() == Mt.cols());
-        assert (us.cols() == V.cols());
-        assert (i0 < i1 && i1 <= Mt.cols());// remember that cols of Mt are the rows of M
-
-        // for (size_t i = 0; i < Mt.cols(); i++)// remember that cols of Mt are the rows of M
-        for (size_t i = i0; i < i1; i++)    // remember that cols of Mt are the rows of M
-        {
-            size_t j0 = V.cols() & ~3;
-            for (size_t j = 0; j < j0; j += 4)
-            {
-#if 1
-                const_array_ref<float> row (&Mt.col(i)[0], Mt.colstride);
-                const_array_ref<float> cols4 (&V.col(j)[0], 4 * V.colstride);
-                array_ref<float> usij (&us(i,j), 4 * us.colstride - i + 1);
-
-                dotprod4 (row, cols4, V.colstride, usij, us.colstride, true, 1.0f, weight);
-#endif
-            }
-            for (size_t j = j0; j < V.cols(); j++)
-                dotprod (Mt.col(i), V.col(j), us(i,j), true, 1.0f, weight);
-        }
-    }
-#endif
-
 #if 1
     // to = this'
     void transpose(ssematrixbase &to) const
@@ -1129,16 +1069,6 @@ public:
 #endif
     }
 
-#if 0 // untested leftover:
-    void checktranspose (ssematrixbase & V) const
-    {
-        auto & U = *this;
-        assert (U.cols() == V.rows() && U.rows() == V.cols());
-        foreach_coord (i, j, U)
-            if (U(i,j) != V(j,i))
-                LogicError("checktranspose: post-condition check failed--you got it wrong, man!");
-    }
-#endif
 #else // futile attempts to speed it up --the imul don't matter (is SSE so slow?)
     // to = this'
     void transpose(ssematrixbase &to) const
@@ -1683,16 +1613,6 @@ public:
     {
         printmatf(name, *this);
     }
-
-#if 0
-    // creating the transpose of a matrix
-    ssematrix transpose() const
-    {
-        auto & us = *this;
-        return ssematrix (cols(), rows(), [&] (size_t i, size_t j) { return us(j,i); };
-    }
-
-#endif
 };
 
 // diagnostics helper to track down

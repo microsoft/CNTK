@@ -47,21 +47,6 @@ template <class ElemType>
 TensorView<ElemType>::TensorView(const TensorView<ElemType>& other, const TensorShape& shape)
     : m_sob(other.m_sob.AsReference()), m_shape(shape)
 {
-#if 0 // disabled since now we use slices, for which this check is no longer correct
-        // for now we enforce that tensor dimensions match dimensions of the underlying matrix storage object
-        // This is for sanity checks. In the future, it may appropriate to reduce this check to just checking the total number of elements, to allow abuses.
-        // TODO: Use the multipliers instead?
-        size_t i;
-        size_t rowDim = 1;
-        for (i = 0; i < m_shape.size() && rowDim < m_sob.GetNumRows(); i++)
-            rowDim *= m_shape[i];
-        // first i dimensions match matrix row dimension
-        size_t colDim = 1;
-        for (; i < m_shape.size(); i++)
-            colDim *= m_shape[i];
-        if (rowDim != m_sob.GetNumRows() || colDim != m_sob.GetNumCols())
-            LogicError("TensorView: Tensor dimensions %s do not match storage-object dims %d x %d", string(m_shape).c_str(), (int)m_sob.GetNumRows(), (int)m_sob.GetNumCols());
-#endif
 }
 
 // -------------------------------------------------------------------

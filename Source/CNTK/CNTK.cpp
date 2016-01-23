@@ -175,11 +175,7 @@ void DoCommands(const ConfigParameters& config)
         // determine the action to perform, and do it
         for (int j = 0; j < action.size(); j++)
         {
-            if (action[j] == "train" || action[j] == "trainRNN"
-#if 0
-                || action[j] == "trainSequence" || action[j] == "trainSequenceRNN"
-#endif
-                )
+            if (action[j] == "train" || action[j] == "trainRNN")
             {
                 wstring modelPath = commandParams("modelPath");
                 std::wcerr << "CNTKModelPath: " << modelPath << endl;
@@ -221,15 +217,6 @@ void DoCommands(const ConfigParameters& config)
                 std::cerr << "CNTKCommandTrainEnd: " + command[i] << endl;
                 fullEpochsOffset += GetMaxEpochs(commandParams);
             }
-#if 0
-            else if (action[j] == "trainSequence" || action[j] == "trainSequenceRNN")
-            {
-                std::cerr << "CNTKCommandTrainBegin: " + command[i] << endl;
-                DoSequenceTrain<ElemType>(commandParams);
-                std::cerr << "CNTKCommandTrainEnd: " + command[i] << endl;
-                fullEpochsOffset += GetMaxEpochs(commandParams);
-            }
-#endif
             else if (action[j] == "adapt")
             {
                 DoAdapt<ElemType>(commandParams);
@@ -291,16 +278,8 @@ void DoCommands(const ConfigParameters& config)
 
 std::string TimeDateStamp()
 {
-#if 0 // "safe" version for Windows, not needed it seems
-    __time64_t localtime;
-
-    _time64(&localtime);// get current time and date
-    struct tm now;
-    _localtime64_s(&now, &localtime);  // convert
-#else
     time_t t = time(NULL);
     struct tm now = *localtime(&t);
-#endif
     char buf[30];
     sprintf(buf, "%04d/%02d/%02d %02d:%02d:%02d", now.tm_year + 1900, now.tm_mon + 1, now.tm_mday, now.tm_hour, now.tm_min, now.tm_sec);
     return buf;

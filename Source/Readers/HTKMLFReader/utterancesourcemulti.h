@@ -714,30 +714,6 @@ private:
             ::swap(v[i], v[irand]);
         }
     }
-#if 0
-    template<typename VECTOR> static void randomshuffle(std::vector<VECTOR &> v, size_t randomseed)
-    {
-        foreach_index(j, v)
-        {
-           if (v[j].size() > RAND_MAX * (size_t) RAND_MAX)
-            RuntimeError("randomshuffle: too large set: need to change to different random generator!");
-        }
-        srand ((unsigned int) randomseed);
-
-        foreach_index (i, v[0])
-        {
-           // pick a random location
-            const size_t irand = msra::dbn::rand (0, v[0].size());
-
-            foreach_index(j, v){
-            // swap element i with it
-                if (irand == (size_t) i)
-                    continue;
-                ::swap (v[j][i], v[j][irand]);
-            }
-        }
-    }
-#endif // 0
     static void checkoverflow(size_t fieldval, size_t targetval, const char *fieldname)
     {
         if (fieldval != targetval)

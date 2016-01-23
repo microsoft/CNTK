@@ -5,8 +5,6 @@
 // latticearchive.h -- managing lattice archives
 //
 
-#if 0
-#endif
 #pragma once
 
 #undef HACK_IN_SILENCE  // [v-hansu] hack to simulate DEL in the lattice
@@ -449,18 +447,6 @@ public:
         align.swap(newalign);
         edges.shrink_to_fit(); // [v-hansu] might be useful when RAM is out of use
         align.shrink_to_fit();
-
-#if 0 // [v-hansu]   to dump lattice for checking
-        static size_t countdump = 0;
-        FILE *f = fopen ("lattice", "a");
-        foreach_index (j, edges)
-            fprintf (f, "S=%d\tE=%d\tunused=%d\n", edges[j].S, edges[j].E, edges[j].unused);
-        countdump++;
-        fflush(f);
-        fclose(f);
-        if (countdump == 10)
-            exit(0);
-#endif
     }
     // go back from V2 format to edges and align, so old code can still run
     // This will go away one we updated all code to use the new data structures.
@@ -995,12 +981,6 @@ public:
             // map align ids to user's symmap  --the lattice gets updated in place here
             foreach_index (k, align)
                 align[k].updateunit(idmap); // updates itself
-#if 0                                       // TODO: this is not complete. Enable once we move to more compact5 data structure.
-            // showstats();
-            // version 1 is outdated  --we build the compact version now
-            // TODO: once all is converted, edges() will become a local variable here
-            buildedgegroupstorage();
-#endif
         }
         else if (version == 2)
         {

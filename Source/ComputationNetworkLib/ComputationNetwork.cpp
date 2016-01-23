@@ -367,38 +367,6 @@ void ComputationNetwork::Read(const wstring& fileName, const FileOptions fileFor
 // node construction
 // -----------------------------------------------------------------------
 
-#if 0 // This function is not used. Is there value to keep it? Maybe a librarified CNTK could use this to poke into InputValues?
-    ComputationNodeBasePtr ComputationNetwork::SetNodeValue(const wstring & nodeName, const double value)
-    {
-        ComputationNodeBasePtr pNode = GetNodeFromName(nodeName);
-
-        // TODO: this is a bit ugly, but does SetNodeValue() really belong here?
-        if (IsNodePtr<LearnableParameter<float>>(pNode))
-            AsNodePtr<LearnableParameter<float>>(pNode)->Value().SetValue((float)value);
-        else if (IsNodePtr<LearnableParameter<double>>(pNode))
-            AsNodePtr<LearnableParameter<double>>(pNode)->Value().SetValue((double)value);
-        else if (pNode->RequiresPreCompute())
-        {
-            if (IsNodePtr<PreComputedNodeBase<float>>(pNode))
-            {
-                auto preComputedNode = AsNodePtr<PreComputedNodeBase<float>>(pNode);
-                preComputedNode->Value().SetValue((float)value);
-                preComputedNode->MarkComputed(true);
-            }
-            else
-            {
-                auto preComputedNode = AsNodePtr<PreComputedNodeBase<double>>(pNode);
-                preComputedNode->Value().SetValue((double)value);
-                preComputedNode->MarkComputed(true);
-            }
-        }
-        else
-            LogicError("Only values of learnable parameters and precomputed nodes can be set.");
-
-        return pNode;
-    }
-#endif
-
 // non-static version needed because it accesses m_randomSeedOffset
 // Excessively used by SimpleNetworkBuilder, but always after CreateLearnableParameter(), so we should really absorb it there
 template <class ElemType>

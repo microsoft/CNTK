@@ -383,8 +383,8 @@ public:
         m_var.HasNan("InvStdDev-m_var");
 #endif
 
-#if 0 // BUGBUG: This is the correct version, but it will break test cases, so do this later. MeanNode does it right already.
-            m_numSamples += Input(0)->GetMBLayout()->GetActualNumSamples();
+#if 0   // BUGBUG: This is the correct version, but it will break test cases, so do this later. MeanNode does it right already.
+        m_numSamples += Input(0)->GetMBLayout()->GetActualNumSamples();
 #else
         m_numSamples += Input(0)->Value().GetNumCols(); // BUGBUG: Should be -> GetActualNumSamples().
 #endif
