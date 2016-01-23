@@ -93,9 +93,6 @@ ComputationNetwork::ComputationNetwork(const IConfigRecordPtr configp)
                 EvaluationNodes().push_back(node); // eval*
             else if (tag == L"output")
                 OutputNodes().push_back(node);
-#if 0 // deprecated
-                else if (tag == L"pair")                            PairNodes().push_back(node);           // TODO: I made this up; the original code in SynchronousExecutionEngine did not have this
-#endif
             else if (!tag.empty())
                 RuntimeError("ComputationNetwork: unknown tag '%ls'", tag.c_str());
             // TODO: are there nodes without tag? Where do they go?

@@ -612,24 +612,6 @@ public:
         return false;
     }
 
-#if 0 // TODO: delete this. Seems copy-paste leftover?
-        /*TODO: merge with call site*/void BackpropToRight(const Matrix<ElemType>& inputFunctionValues, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues)
-        {
-            Matrix<ElemType>::MultiplyAndAdd(inputFunctionValues, false, gradientValues, true, inputGradientValues);
-        }
-
-        /*TODO: merge with call site*/void BackpropToLeft(const Matrix<ElemType>& obs, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues)
-        {
-            Matrix<ElemType>::MultiplyAndAdd(obs, false, gradientValues, false, inputGradientValues);
-        }
-
-        static void WINAPI ComputeCEPartialToSoftmaxInputs(Matrix<ElemType>& inputGradientValues, Matrix<ElemType>& gradientValues, size_t y_t)
-        {
-            Matrix<ElemType>::MinusOneAt(inputGradientValues, y_t);
-            Matrix<ElemType>::Scale(gradientValues, inputGradientValues);
-        }
-#endif
-
     virtual void UpdateFunctionMBSize() override
     {
         // TODO (this does not really break it since for full matrices, class Matrix will resize by itself)

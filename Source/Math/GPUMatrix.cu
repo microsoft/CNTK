@@ -887,66 +887,8 @@ GPUMatrix<ElemType> GPUMatrix<ElemType>::Diagonal() const
 
     return diag;
 }
-#if 0
-    // stack the columns in inputMatrices (starting from sliceStartCol for sliceNumCols columns) and assign it to [this] object.
-    template<class ElemType>
-    GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignRowStackValuesOf(const std::vector<const GPUMatrix<ElemType>*>& inputMatrices, const size_t sliceStartCol, const size_t sliceNumCols)
-    {
-        if (sliceNumCols == 0)
-            LogicError("AssignRowStackValuesOf: sliceNumCols should > 0.");
 
-        size_t totalRows = 0;
-        size_t* startRowIndeces = new size_t[inputMatrices.size()+1];
-        ElemType ** bufferPointersInInputMatrices = new ElemType*[inputMatrices.size()];
-
-        startRowIndeces[0] = 0;
-
-        for (int i = 0; i < inputMatrices.size(); i++)
-        {
-            const GPUMatrix<ElemType>& a = *inputMatrices[i];
-            if (a.IsEmpty())
-                LogicError("AssignRowStackValuesOf: input matrix (%d) is empty.", i);
-
-            if (a.GetNumCols() < sliceStartCol + sliceNumCols)
-                LogicError("AssignRowStackValuesOf: input matrix (%d) GetNumCols() < sliceStartCol + sliceNumCols.", i);
-
-            totalRows += a.GetNumRows();
-            startRowIndeces[i + 1] = startRowIndeces[i] + a.GetNumRows();
-
-            bufferPointersInInputMatrices[i] = a.m_pArray + a.LocateColumn(sliceStartCol);
-        }
-
-        Resize(totalRows, sliceNumCols);
-
-        PrepareDevice();
-
-        ElemType** bufferPointersInGPU = NULL;
-        CUDA_CALL(cudaMalloc((void***)&bufferPointersInGPU, inputMatrices.size()*sizeof(ElemType*)));
-        CUDA_CALL(cudaMemcpy(bufferPointersInGPU, bufferPointersInInputMatrices, inputMatrices.size()*sizeof(ElemType*), cudaMemcpyHostToDevice));
-        delete[] bufferPointersInInputMatrices;
-
-        size_t* startRowIndecesInGPU = NULL;
-        CUDA_CALL(cudaMalloc((void**)&startRowIndecesInGPU, (1+inputMatrices.size())*sizeof(size_t)));
-        CUDA_CALL(cudaMemcpy(startRowIndecesInGPU, startRowIndeces, (1+inputMatrices.size())*sizeof(size_t), cudaMemcpyHostToDevice));
-        delete[] startRowIndeces;
-
-        CUDA_LONG N = (CUDA_LONG)GetNumElements();
-        int blocksPerGrid = (int)ceil(1.0*N / GridDim::maxThreadsPerBlock);
-        cudaEvent_t done = nullptr;
-        if (do_sync)    CUDA_CALL(cudaEventCreate(&done));
-        _assignRowStackValuesOf<ElemType> << <blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream >> >(m_pArray, bufferPointersInGPU, startRowIndecesInGPU, (CUDA_LONG) inputMatrices.size(), N, (CUDA_LONG)GetNumRows(), (CUDA_LONG)GetNumCols());
-        if (do_sync)    CUDA_CALL(cudaEventRecord(done));
-        if (do_sync)    CUDA_CALL(cudaEventSynchronize(done));
-        if (do_sync)    CUDA_CALL(cudaEventDestroy(done));
-
-        CUDA_CALL(cudaFree(bufferPointersInGPU));
-        CUDA_CALL(cudaFree(startRowIndecesInGPU));
-
-        return *this;
-    }
-#endif
-
-/// c = c - 1.0 for a specific position
+// c = c - 1.0 for a specific position
 template <class ElemType>
 void GPUMatrix<ElemType>::MinusOneAt(GPUMatrix<ElemType>& c, const size_t position)
 {
@@ -2166,10 +2108,9 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignSigmoidOf(const GPUMatrix<ElemTy
     cudaEvent_t done = nullptr;
     if (do_sync)
         CUDA_CALL(cudaEventCreate(&done));
-// _elementWIseSigmoidOnCuda has an implementation that avoids possible overflow errors, but is slightly slower and may have an accuracy regression.
-// We have a new implementation that is non-branching (yay!) that Frank will check in.
+    // _elementWIseSigmoidOnCuda has an implementation that avoids possible overflow errors, but has a slight accuracy regression.
 #if 0
-        _elementWiseSigmoidOnCuda<<<blocksPerGrid, threadsPerBlock, 0, t_stream>>>(a.m_pArray, m_pArray, N);
+    _elementWiseSigmoidOnCuda<<<blocksPerGrid, threadsPerBlock, 0, t_stream>>>(a.m_pArray, m_pArray, N);
 #else
     _assignSigmoidOf<<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(a.m_pArray, m_pArray, N);
 #endif

@@ -1151,21 +1151,6 @@ __global__ void _assignColumnwiseHardmaxOf(
     }
 }
 
-#if 0
-template<class ElemType>
-__global__ void _inplaceTruncateBottom(
-    ElemType* a,
-    const ElemType threshold,
-    const CUDA_LONG N)
-{
-    CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
-    if (id>=N)
-        return;
-    if (a[id]<threshold)
-        a[id]=threshold;
-}
-#endif
-
 template <class ElemType>
 __global__ void _assignTruncateBottom(
     ElemType* us,
@@ -1176,21 +1161,6 @@ __global__ void _assignTruncateBottom(
     CALCULATE_ELEMENTWISE_INDEX_OR_EXIT(id, N);
     us[id] = a[id] < threshold ? threshold : a[id];
 }
-
-#if 0
-template<class ElemType>
-__global__ void _inplaceTruncateTop(
-    ElemType* a,
-    const ElemType threshold,
-    const CUDA_LONG N)
-{
-    CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
-    if (id>=N)
-        return;
-    if (a[id]>threshold)
-        a[id]=threshold;
-}
-#endif
 
 template <class ElemType>
 __global__ void _assignTruncateTop(

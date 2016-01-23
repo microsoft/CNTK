@@ -898,22 +898,6 @@ public:
         }
     }
 
-#if 0
-    virtual void UpdateFunctionMBSize() override
-    {
-        size_t rows = Input(0)->GetNumRows(), cols = Input(0)->GetNumCols();
-        size_t newCols = cols * rows / m_numTargetRows;
-        if (!m_pMBLayout)
-        {
-#if 0
-                VerifyDims(m_numTargetRows, newCols);
-#endif
-        }
-        else
-            SetNumCols(newCols);
-    }
-#endif
-
     // TODO: Clarify/resolve the semantic overlap between BeginForwardProp() and UpdateFunctionMBSize().
     virtual void /*IComputationNode::*/ BeginForwardProp() override
     {

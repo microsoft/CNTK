@@ -2,9 +2,6 @@
 //
 // F. Seide, V-hansu
 
-#if 0 // [v-hansu] set aside codes with log
-#endif
-
 #undef DIRECT_MODE // [v-hansu] use the direct formula for smbr mode, proven makes no difference
 
 #include <cuda_runtime_api.h>

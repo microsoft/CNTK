@@ -303,14 +303,9 @@ public:
                IDataReader<ElemType>* trainSetDataReader,
                IDataReader<ElemType>* validationSetDataReader,
                const DEVICEID_TYPE deviceID, const bool makeMode = true);
-#if 0
-    // TODO: per discussion with Dong Yu, Guoguo Chen, and Yu Zhang, this function can be removed.
-    void SequenceTrain(IComputationNetBuilder<ElemType>* netBuilder, wstring origModelFileName,
-                       IDataReader<ElemType>* trainSetDataReader, IDataReader<ElemType>* validationSetDataReader,
-                       const DEVICEID_TYPE deviceID, const bool makeMode = true);
-#endif
 
 protected:
+
     std::vector<ComputationNodeBasePtr>& GetTrainCriterionNodes(ComputationNetworkPtr net);
     std::vector<ComputationNodeBasePtr>& GetEvalCriterionNodes(ComputationNetworkPtr net);
 
@@ -321,6 +316,7 @@ protected:
                            IDataReader<ElemType>* validationSetDataReader);
 
 protected:
+
     // return true if precomputation is executed.
     bool PreCompute(ComputationNetworkPtr net,
                     IDataReader<ElemType>* trainSetDataReader,

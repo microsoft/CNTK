@@ -1559,9 +1559,7 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildNetworkFromDbnFile(co
     if (layerType == "perceptron") // complete network
     {
         m_net->RenameNode(output, L"HLast");
-#if 0
-            assert(numLayers + 1 == m_layerSizes.size());
-#endif
+
         Matrix<ElemType> priorVals = ReadMatrixFromDbnFile(fstream, std::string("Pu"));
         assert(priorVals.GetNumCols() == 1 && priorVals.GetNumRows() == m_outputLayerSize);
 
