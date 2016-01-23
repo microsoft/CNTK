@@ -113,7 +113,7 @@ private:
     size_t m_numCols;
     size_t m_numBits;
 
-    //number of bytes in a quantized column
+    // number of bytes in a quantized column
     size_t m_qColSize;
 
     template <typename T>

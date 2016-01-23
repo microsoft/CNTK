@@ -259,4 +259,4 @@ unique_ptr<T> make_unique(Args &&... args)
 
 #endif // !_MSC_VER
 
-#endif //__PLATFORM_H
+#endif // __PLATFORM_H

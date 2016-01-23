@@ -316,8 +316,8 @@ bool BinaryReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemType
         size_t size = rows * dataSize * actualmbsize;
         size_t index = epochStartSample * section->GetElementsPerRecord();
         ElemType* data = (ElemType*) section->EnsureElements(index, size);
-        //ElemType* data = section->GetElement<ElemType>(epochStartSample*section->GetElementsPerRecord());
-        //data = (ElemType*)section->EnsureMapped(data, size);
+        // ElemType* data = section->GetElement<ElemType>(epochStartSample*section->GetElementsPerRecord());
+        // data = (ElemType*)section->EnsureMapped(data, size);
 
         // make sure that the data is as expected
         if (!!(section->GetFlags() & flagAuxilarySection) || section->GetElementSize() != sizeof(ElemType))

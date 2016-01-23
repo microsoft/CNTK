@@ -169,13 +169,13 @@
     <ClInclude Include="..\Common\Include\ScriptableObjects.h" />
     <ClInclude Include="..\Common\Include\Sequences.h" />
     <ClInclude Include="..\Common\Include\TimerUtility.h" />
+    <ClInclude Include="..\ComputationNetworkLib\EvaluationNodes.h" />
+    <ClInclude Include="..\ComputationNetworkLib\TrainingNodes.h" />
     <ClInclude Include="..\Math\CPUMatrix.h" />
     <ClInclude Include="..\Math\Matrix.h" />
     <ClInclude Include="..\ComputationNetworkLib\CompositeComputationNodes.h" />
     <ClInclude Include="..\ComputationNetworkLib\MatrixPool.h" />
     <ClInclude Include="..\SGDLib\DataReaderHelpers.h" />
-    <ClInclude Include="..\SGDLib\IComputationNetBuilder.h" />
-    <ClInclude Include="..\SGDLib\MultiNetworksSGD.h" />
     <ClInclude Include="..\SGDLib\SGD.h" />
     <ClInclude Include="..\SGDLib\SimpleEvaluator.h" />
     <ClInclude Include="..\SGDLib\SimpleOutputWriter.h" />
@@ -183,7 +183,6 @@
     <ClInclude Include="..\ComputationNetworkLib\ComputationNetworkBuilder.h" />
     <ClInclude Include="..\ComputationNetworkLib\ComputationNode.h" />
     <ClInclude Include="..\ComputationNetworkLib\ConvolutionalNodes.h" />
-    <ClInclude Include="..\ComputationNetworkLib\EvaluationCriterionNodes.h" />
     <ClInclude Include="BrainScript\BrainScriptEvaluator.h" />
     <ClInclude Include="BrainScript\BrainScriptParser.h" />
     <ClInclude Include="IExecutionEngine.h" />
@@ -199,7 +198,6 @@
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="SynchronousExecutionEngine.h" />
     <ClInclude Include="targetver.h" />
-    <ClInclude Include="..\ComputationNetworkLib\TrainingCriterionNodes.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\Common\Config.cpp">

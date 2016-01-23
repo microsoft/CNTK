@@ -306,7 +306,7 @@ struct latticefunctionskernels
         return bitsasfloat(old);
     }
 #else // this code does not work because (assumed != old) will not compare correctly in case of NaNs
-    //same pattern as atomicAdd(), but performing the log-add operation instead
+    // same pattern as atomicAdd(), but performing the log-add operation instead
     template <typename FLOAT>
     static __device__ FLOAT atomicLogAdd(FLOAT *address, FLOAT val)
     {
@@ -348,12 +348,12 @@ struct latticefunctionskernels
         thisvector[j] = value;
     }
 
-    //zhaorui
+    // zhaorui
     static inline __device__ float getlogtransp(lr3transP transP, int from, int to)
     {
-        /*if (from < -1 || from >= transP.MAXSTATES || to > transP.MAXSTATES) 
+        /*if (from < -1 || from >= transP.MAXSTATES || to > transP.MAXSTATES)
         {
-            //printf("from: %d to: %d\n", from, to);
+            // printf("from: %d to: %d\n", from, to);
             return LOGZERO;
         }*/
         return transP.loga[from + 1][to];
@@ -404,13 +404,13 @@ struct latticefunctionskernels
             const size_t te = ts + numframes; // end time of current unit
 
             size_t state1step0to1 = te; // inflection point from state 0 to 1, record in state 1
-                                        //size_t state1stepm1to1 = te;
+                                        // size_t state1stepm1to1 = te;
             size_t state2step0to1 = te; // inflection point from state 0 to 1, record in state 2
-            //size_t state2stepm1to1 = te;                    // inflection point from state 0 to 1, record in state 2
+            // size_t state2stepm1to1 = te;                    // inflection point from state 0 to 1, record in state 2
             size_t state2step1to2 = te; // inflection point from state 1 to 2, record in state 2
             size_t state2step0to2 = te;
 
-            //now we only support transition from -1 to 0 or 2 for sil
+            // now we only support transition from -1 to 0 or 2 for sil
             float pathscore0 = fwscore; // log pp in state 0
             float pathscore1 = fwscore; // log pp in state 1
             float pathscore2 = fwscore; // log pp in state 2
@@ -418,20 +418,20 @@ struct latticefunctionskernels
             // first frame
             if (ts != te) // for t = ts, initialization
             {
-                /*    if (isSil)                                                              //for sil, -1 to 2 and -1 to 0 is permitted
+                /*    if (isSil)                                                              // for sil, -1 to 2 and -1 to 0 is permitted
                 {
-                    pathscore0 += getlogtransp(transP,-1,0) + logLLs(senoneid0,ts); 
-                    pathscore2 += getlogtransp(transP,-1,2) + logLLs(senoneid2,ts);      
+                    pathscore0 += getlogtransp(transP,-1,0) + logLLs(senoneid0,ts);
+                    pathscore2 += getlogtransp(transP,-1,2) + logLLs(senoneid2,ts);
                 }
-                else                                                                    //for others, only -1 to 0 is permitted
+                else                                                                    // for others, only -1 to 0 is permitted
                 {
-                    pathscore0 += getlogtransp(transP, -1, 0) + logLLs(senoneid0, ts);                                
-                    pathscore1 += getlogtransp(transP, -1, 1) + logLLs(senoneid1, ts);                                
+                    pathscore0 += getlogtransp(transP, -1, 0) + logLLs(senoneid0, ts);
+                    pathscore1 += getlogtransp(transP, -1, 1) + logLLs(senoneid1, ts);
 
                 }*/
                 pathscore2 += getlogtransp(transP, -1, 2) + logLLs(senoneid2, ts);
                 pathscore1 += getlogtransp(transP, -1, 1) + logLLs(senoneid1, ts);
-                //state1stepm1to1 = ts;
+                // state1stepm1to1 = ts;
                 pathscore0 += getlogtransp(transP, -1, 0) + logLLs(senoneid0, ts);
             }
 
@@ -441,7 +441,7 @@ struct latticefunctionskernels
             size_t backptroffset = backptroffsets[j]; // we make use of backptrstorage in backptroffsets[j] for viterbi of ergodic model (silence)
 
             bpmatrixref backptrmatrix(&backptrstorage[backptroffset], hmm.MAXSTATES, numframes);
-            //subsequent frames
+            // subsequent frames
             for (size_t t = ts + 1; t < te; t++)
             {
                 if (!isSp)
@@ -455,13 +455,13 @@ struct latticefunctionskernels
                     {
                         pathscore2 = pathscore12;
                         state2step0to1 = state1step0to1; // record the inflection point
-                                                         //state2stepm1to1 = state1stepm1to1;
+                                                         // state2stepm1to1 = state1stepm1to1;
                         state2step1to2 = t;              // record the inflection point
                         state2step0to2 = te;
                         if (isSil)
                             backptrmatrix(2, t - ts - 1) = 1;
                     }
-                    //if (isSil)                                                                  // only silence have path from 0 to 2
+                    // if (isSil)                                                                  // only silence have path from 0 to 2
                     {
                         const float pathscore02 = pathscore0 + getlogtransp(transP, 0, 2); // log pp from state 0 to 2
                         if (pathscore02 >= pathscore2)                                     // if state 0->2
@@ -483,7 +483,7 @@ struct latticefunctionskernels
                     {
                         pathscore1 = pathscore01;
                         state1step0to1 = t; // record the inflection point
-                                            //state1stepm1to1 = te;
+                                            // state1stepm1to1 = te;
                         if (isSil)
                             backptrmatrix(1, t - ts - 1) = 0;
                     }
@@ -537,10 +537,10 @@ struct latticefunctionskernels
             else if (isSp)
             {
                 pathscore2 = pathscore0 + getlogtransp(transP, 0, 1); // sp model, from 0 to 1
-                //printf(" sp, %f\n", pathscore2);
+                // printf(" sp, %f\n", pathscore2);
             }
 
-            else if (isSil) //for sil, the exit state can be 0 or 2.
+            else if (isSil) // for sil, the exit state can be 0 or 2.
             {
                 const float pathscore03 = pathscore0 + getlogtransp(transP, 0, 3);
                 pathscore2 += getlogtransp(transP, 2, 3);
@@ -558,7 +558,7 @@ struct latticefunctionskernels
 
             if (!isSil)
             {
-                if (state2step0to2 < te) //from 0 to 2
+                if (state2step0to2 < te) // from 0 to 2
                 {
                     state2step0to2 += alignindex - ts;
                     for (size_t t = alignindex; t < alignindex + numframes; t++) // set the final alignment
@@ -571,7 +571,7 @@ struct latticefunctionskernels
                         alignresult[t] = (unsigned short) senoneid;
                     }
                 }
-                else //from 1 to 2
+                else // from 1 to 2
                 {
                     state2step0to1 += alignindex - ts; // convert to align measure
                     state2step1to2 += alignindex - ts;
@@ -592,12 +592,12 @@ struct latticefunctionskernels
             {
                 size_t lastpointer = 2;
                 const float pathscore03 = pathscore0 + getlogtransp(transP, 0, 3);
-                if (pathscore03 >= pathscore2) //exit state is 0
+                if (pathscore03 >= pathscore2) // exit state is 0
                 {
                     alignresult[alignindex + numframes - 1] = (unsigned short) senoneid0;
                     lastpointer = 0;
                 }
-                else //exit state is 2
+                else // exit state is 2
                     alignresult[alignindex + numframes - 1] = (unsigned short) senoneid2;
 
                 for (size_t t = alignindex + numframes - 2; (t + 1) > alignindex; t--) // set the final alignment
@@ -666,7 +666,7 @@ struct latticefunctionskernels
         // edge info
         const edgeinfowithscores &e = edges[j];
         double edgescore = (e.l * lmf + wp + edgeacscores[j]) / amf; // note: edgeacscores[j] == LOGZERO if edge was pruned
-        //zhaorui to deal with the abnormal score for sent start.
+        // zhaorui to deal with the abnormal score for sent start.
         if (e.l < -200.0f)
             edgescore = (0.0 * lmf + wp + edgeacscores[j]) / amf;
         const bool boostmmi = (boostingfactor != 0.0f);
@@ -770,7 +770,7 @@ struct latticefunctionskernels
         // edge info
         const edgeinfowithscores &e = edges[j];
         double edgescore = (e.l * lmf + wp + edgeacscores[j]) / amf;
-        //zhaorui to deal with the abnormal score for sent start.
+        // zhaorui to deal with the abnormal score for sent start.
         if (e.l < -200.0f)
             edgescore = (0.0 * lmf + wp + edgeacscores[j]) / amf;
         if (boostmmi)

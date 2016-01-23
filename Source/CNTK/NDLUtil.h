@@ -110,7 +110,7 @@ public:
     {
         NDLNode<ElemType>* nodeArray = script->FindSymbol(symbolName);
         bool valid = m_net->FeatureNodes().size() > 0; // see if it's already valid
-        if (!valid && nodeArray)                       //otherwise, see if we found a symbol
+        if (!valid && nodeArray)                       // otherwise, see if we found a symbol
         {
             NDLType outputType = nodeArray->GetType();
             // accept either an array of nodes, or a single node
@@ -165,7 +165,7 @@ public:
         CheckOutputNodes(script, "FeatureNodes", m_net->FeatureNodes());
         CheckOutputNodes(script, "LabelNodes", m_net->LabelNodes());
         CheckOutputNodes(script, "CriterionNodes", m_net->FinalCriterionNodes());
-        CheckOutputNodes(script, "CriteriaNodes", m_net->FinalCriterionNodes()); //legacy
+        CheckOutputNodes(script, "CriteriaNodes", m_net->FinalCriterionNodes()); // legacy
         CheckOutputNodes(script, "EvalNodes", m_net->EvaluationNodes());
         CheckOutputNodes(script, "OutputNodes", m_net->OutputNodes());
     }

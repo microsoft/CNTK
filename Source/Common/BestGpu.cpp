@@ -34,15 +34,17 @@ int bestGPUDummy = 42; // put something into this CPP, as to avoid a linker warn
 // CUDA-C includes
 #include <cuda.h>
 #ifdef __WINDOWS__
-#include <windows.h>
+#define NOMINMAX
+#include "Windows.h"
 #include <Delayimp.h>
 #include <Shlobj.h>
 #define PATH_DELIMITER '\\'
 #elif defined(__UNIX__)
 #define PATH_DELIMITER '/'
-#endif //__WINDOWS__
+#endif // __WINDOWS__
 #include <stdio.h>
 #include <string.h>
+#include <algorithm>
 
 #include <memory>
 #include "CrossProcessMutex.h"
@@ -362,7 +364,7 @@ std::vector<int> BestGpu::GetDevices(int number, BestGpuFlags p_bestFlags)
 
     // if they want all devices give them eveything we have
     if (number == AllDevices)
-        number = max(m_deviceCount, 1);
+        number = std::max(m_deviceCount, 1);
     else if (number == RequeryDevices)
     {
         number = m_lastCount;

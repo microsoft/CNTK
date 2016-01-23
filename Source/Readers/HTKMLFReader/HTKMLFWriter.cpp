@@ -114,7 +114,7 @@ template <class ElemType>
 bool HTKMLFWriter<ElemType>::SaveData(size_t /*recordStart*/, const std::map<std::wstring, void*, nocase_compare>& matrices, size_t /*numRecords*/, size_t /*datasetSize*/, size_t /*byteVariableSized*/)
 {
 
-    //std::map<std::wstring, void*, nocase_compare>::iterator iter;
+    // std::map<std::wstring, void*, nocase_compare>::iterator iter;
     if (outputFileIndex >= outputFiles[0].size())
         RuntimeError("index for output scp file out of range...");
 

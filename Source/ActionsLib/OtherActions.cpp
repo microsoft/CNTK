@@ -12,22 +12,9 @@
 #include "Actions.h"
 #include "ComputationNetwork.h"
 #include "ComputationNode.h"
-#include "DataReader.h"
-#include "DataWriter.h"
-#include "SimpleNetworkBuilder.h"
-#include "NDLNetworkBuilder.h"
-#include "SynchronousExecutionEngine.h"
-#include "ModelEditLanguage.h"
-#include "SGD.h"
 #include "Config.h"
-#include "MultiNetworksSGD.h"
-#include "SimpleEvaluator.h"
-#include "SimpleOutputWriter.h"
-#include "MultiNetworksEvaluator.h"
-#include "BestGpu.h"
 #include "ScriptableObjects.h"
 #include "BrainScriptEvaluator.h"
-#include "BrainScriptParser.h"
 
 #include <string>
 #include <chrono>
@@ -271,7 +258,7 @@ void DoWriteWordAndClassInfo(const ConfigParameters& config)
     Matrix<ElemType> wrd2cls(deviceId);
     Matrix<ElemType> cls2idx(deviceId);
 
-    //FILE *fp = fopen(inputFile.c_str(), "rt");
+    // FILE *fp = fopen(inputFile.c_str(), "rt");
     ifstream fp(inputFile.c_str());
     if (!fp)
     {
@@ -284,15 +271,15 @@ void DoWriteWordAndClassInfo(const ConfigParameters& config)
     }
     std::unordered_map<string, double> v_count;
 
-    /// get line
+    // get line
     string str;
     vector<string> vstr;
     long long prevClsIdx = -1;
     string token;
     while (getline(fp, str))
     {
-        str.erase(0, str.find_first_not_of(' ')); //prefixing spaces
-        str.erase(str.find_last_not_of(' ') + 1); //surfixing spaces
+        str.erase(0, str.find_first_not_of(' ')); // prefixing spaces
+        str.erase(str.find_last_not_of(' ') + 1); // surfixing spaces
         int sposition = str.find("</s> ");
         int eposition = str.find(" </s>");
         if (sposition == str.npos)
@@ -435,7 +422,7 @@ void DoWriteWordAndClassInfo(const ConfigParameters& config)
         long long clsIdx = nbrCls > 0 ? m_class[i] : 0;
         if (nbrCls > 0 && clsIdx != prevClsIdx)
         {
-            cls2idx(clsIdx, 0) = (ElemType) i; /// the left boundary of clsIdx
+            cls2idx(clsIdx, 0) = (ElemType) i; // the left boundary of clsIdx
             prevClsIdx = m_class[i];
         }
         ofvocab << "     " << i << "\t     " << m_count[i] << "\t" << m_words[i] << "\t" << clsIdx << std::endl;
@@ -444,7 +431,7 @@ void DoWriteWordAndClassInfo(const ConfigParameters& config)
     ofvocab.close();
     if (nbrCls > 0)
     {
-        /// write the outputs
+        // write the outputs
         msra::files::make_intermediate_dirs(s2ws(outputWord2Cls));
         ofstream ofp(outputWord2Cls.c_str());
         if (!ofp)
@@ -487,9 +474,9 @@ void DoTopologyPlot(const ConfigParameters& config)
     // e.g. "d:\Tools\graphviz\bin\dot.exe -Tpng -x <IN> -o<OUT>"
     //              where <IN> and <OUT> are two special placeholders
 
-    //========================================
+    // ========================================
     // Sec. 1 option check
-    //========================================
+    // ========================================
     if (outdot.empty())
     {
         outdot = modelPath + L".dot";

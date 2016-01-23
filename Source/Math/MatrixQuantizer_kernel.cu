@@ -171,7 +171,7 @@ __global__ void _QuantizeStripjOneQWord(
     // get data pointers to the quantized column
     auto& qCol = *(Microsoft::MSR::CNTK::QuantizedColumn<ElemType>*) &qMat[qColSize * j];
 
-    //and quantizer
+    // and quantizer
     const Microsoft::MSR::CNTK::ColumnQuantizer<ElemType> q(ldNbits, qCol.lower, qCol.upper);
 
     // quantize one QWord to qCol[iQWord]
@@ -230,7 +230,7 @@ void _QuantizeMatrix(
     dim3 mvgriddim, mvblockdim;
     // using specialized CUDA code (not shared with CPU) for collated memory access
     // each thread column computes 'warpsize' elements
-    mvgriddim = (unsigned int) nCol; //column number
+    mvgriddim = (unsigned int) nCol; // column number
     mvblockdim = REDUCTION_BLOCK_SIZE;
 
     if (zeroThresholdFor1Bit)

@@ -75,7 +75,7 @@ public:
     {
         return m_data;
     }
-    //performs shallow copy only
+    // performs shallow copy only
     void ShallowCopyFrom(ElemType* newVal, int newValsDevceId);
 };
 
@@ -140,9 +140,9 @@ public:
     GPUMatrix(const size_t numRows, const size_t numCols, int deviceId);
     GPUMatrix(const size_t numRows, const size_t numCols, int deviceId, ElemType* pArray, const size_t matrixFlags = matrixFlagNormal);
     GPUMatrix(const GPUMatrix<ElemType>& deepCopyFrom);
-    GPUMatrix<ElemType>& operator=(const GPUMatrix<ElemType>& deepCopyFrom); //assignment operator, deep copy
+    GPUMatrix<ElemType>& operator=(const GPUMatrix<ElemType>& deepCopyFrom); // assignment operator, deep copy
     GPUMatrix(GPUMatrix<ElemType>&& moveFrom);
-    GPUMatrix<ElemType>& operator=(GPUMatrix<ElemType>&& moveFrom); //move assignment operator, shallow copy
+    GPUMatrix<ElemType>& operator=(GPUMatrix<ElemType>&& moveFrom); // move assignment operator, shallow copy
     ~GPUMatrix(void);
 
     static void SetDevice(DEVICEID_TYPE deviceId);
@@ -151,8 +151,8 @@ public:
     DEVICEID_TYPE PrepareDevice(DEVICEID_TYPE deviceId = -1) const;
 
     static cublasHandle_t GetCublasHandle(int computeDevice = -1);
-    ElemType* CopyToArray() const;                                              //allocated by the callee but need to be deleted by the caller
-    size_t CopyToArray(ElemType*& arrayCopyTo, size_t& currentArraySize) const; //allocated by the callee but need to be deleted by the caller
+    ElemType* CopyToArray() const;                                              // allocated by the callee but need to be deleted by the caller
+    size_t CopyToArray(ElemType*& arrayCopyTo, size_t& currentArraySize) const; // allocated by the callee but need to be deleted by the caller
     void CopySection(size_t numRows, size_t numCols, ElemType* dst, size_t colStride) const;
 
     void ChangeDeviceTo(DEVICEID_TYPE to_id);
@@ -180,7 +180,7 @@ public:
     ElemType RmsProp(GPUMatrix<ElemType>& gradients, ElemType RMS_GAMMA, ElemType RMS_WGT_INC, ElemType RMS_WGT_MAX, ElemType RMS_WGT_DEC, ElemType RMS_WGT_MIN, const bool needAveMultiplier);
 
     void Reshape(const size_t numRows, const size_t numCols);
-    void Resize(const size_t numRows, const size_t numCols, bool growOnly = true); //by default we only reallocate if need to grow
+    void Resize(const size_t numRows, const size_t numCols, bool growOnly = true); // by default we only reallocate if need to grow
 
     ElemType& operator()(const size_t /*row*/, const size_t /*col*/)
     {
@@ -193,7 +193,7 @@ public:
     ElemType Get00Element() const;
 
     void SetValue(const ElemType v);
-    void SetValue(const ElemType* d_v); //d_v is pointer to the the value in GPU memory
+    void SetValue(const ElemType* d_v); // d_v is pointer to the the value in GPU memory
     void SetColumn(const ElemType* colPointer, size_t colInd);
     void SetColumn(const GPUMatrix<ElemType>& valMat, size_t colInd);
 
@@ -238,8 +238,8 @@ public:
     GPUMatrix<ElemType>& operator/=(ElemType alpha);
     GPUMatrix<ElemType> operator/(ElemType alpha) const;
 
-    GPUMatrix<ElemType>& operator^=(ElemType alpha);     //element-wise power
-    GPUMatrix<ElemType> operator^(ElemType alpha) const; //element-wise power
+    GPUMatrix<ElemType>& operator^=(ElemType alpha);     // element-wise power
+    GPUMatrix<ElemType> operator^(ElemType alpha) const; // element-wise power
     GPUMatrix<ElemType>& AssignElementPowerOf(const GPUMatrix<ElemType>& a, const ElemType power);
 
     GPUMatrix<ElemType>& ElementMultiplyWith(const GPUMatrix<ElemType>& a);
@@ -276,7 +276,7 @@ public:
     GPUMatrix<ElemType>& InplaceHardmax(const bool isColWise);
     GPUMatrix<ElemType>& AssignHardmaxOf(const GPUMatrix<ElemType>& a, const bool isColWise);
 
-    //sequence training
+    // sequence training
     GPUMatrix<ElemType>& DropFrame(const GPUMatrix<ElemType>& label, const GPUMatrix<ElemType>& gamma, const ElemType& threshhold);
     GPUMatrix<ElemType>& AssignSequenceError(const ElemType hsmoothingWeight, const GPUMatrix<ElemType>& label, const GPUMatrix<ElemType>& dnnoutput, const GPUMatrix<ElemType>& gamma, ElemType alpha);
 
@@ -308,8 +308,8 @@ public:
     GPUMatrix<ElemType>& SetToZeroIfAbsLessThan(const ElemType threshold);
 
     DeviceBoundNumber<ElemType> Sum_AsDeviceBoundNum() const;
-    ElemType SumOfAbsElements() const; //sum of all abs(elements)
-    ElemType SumOfElements() const;    //sum of all elements
+    ElemType SumOfAbsElements() const; // sum of all abs(elements)
+    ElemType SumOfElements() const;    // sum of all elements
     GPUMatrix<ElemType>& AssignSumOfElements(const GPUMatrix<ElemType>& a);
 
     ElemType Max() const;
@@ -337,7 +337,7 @@ public:
 
     ElemType MatrixNormInf() const;
     ElemType MatrixNorm1() const;
-    ElemType MatrixNorm0() const; //number of non-zero elemets
+    ElemType MatrixNorm0() const; // number of non-zero elemets
     GPUMatrix<ElemType>& AssignSignOf(const GPUMatrix<ElemType>& a);
     GPUMatrix<ElemType>& AddSignOf(const GPUMatrix<ElemType>& a);
 
@@ -345,7 +345,7 @@ public:
     GPUMatrix<ElemType>& AssignRowSliceValuesOf(const GPUMatrix<ElemType>& a, const size_t startIndex, const size_t numRows);
     GPUMatrix<ElemType>& AddToRowSliceValuesOf(const GPUMatrix<ElemType>& a, const size_t startIndex, const size_t numRows);
     GPUMatrix<ElemType>& AddWithRowSliceValuesOf(const GPUMatrix<ElemType>& a, const size_t startIndex, const size_t numRows);
-    //GPUMatrix<ElemType>&  AssignRowStackValuesOf(const std::vector<const GPUMatrix<ElemType>*>& inputMatrices, const size_t sliceStartCol, const size_t sliceNumCols);
+    // GPUMatrix<ElemType>&  AssignRowStackValuesOf(const std::vector<const GPUMatrix<ElemType>*>& inputMatrices, const size_t sliceStartCol, const size_t sliceNumCols);
 
     GPUMatrix<ElemType>& AssignRepeatOf(const GPUMatrix<ElemType>& a, const size_t numRowRepeats, const size_t numColRepeats);
     GPUMatrix<ElemType>& AddToRowRepeatValuesOf(const GPUMatrix<ElemType>& a, const size_t numRowRepeats);
@@ -368,10 +368,10 @@ public:
     void AssignSoftmaxSum(const GPUMatrix<ElemType>& a, GPUMatrix<ElemType>& softmax);
 
     void Print(const char* matrixName, size_t rowStart, size_t rowEnd, size_t colStart, size_t colEnd) const;
-    void Print(const char* matrixName = NULL) const; //print whole matrix. can be expensive
+    void Print(const char* matrixName = NULL) const; // print whole matrix. can be expensive
 
-    void ReadFromFile(FILE* f, const char* matrixName); //matrixName is used to verify that correct matrix is read.
-    void WriteToFile(FILE* f, const char* matrixName);  //matrixName is used to verify that correct matrix is read.
+    void ReadFromFile(FILE* f, const char* matrixName); // matrixName is used to verify that correct matrix is read.
+    void WriteToFile(FILE* f, const char* matrixName);  // matrixName is used to verify that correct matrix is read.
 
     GPUMatrix<ElemType>& AssignPackedConvolutionInput(const GPUMatrix<ElemType>& inputSubBatch,
                                                       const size_t inputWidth, const size_t inputHeight, const size_t inputChannels,
@@ -403,7 +403,7 @@ public:
                                                    const size_t windowWidth, const size_t windowHeight, const size_t horizontalSubsample, const size_t verticalSubsample);
 
 public:
-    //static BLAS functions
+    // static BLAS functions
     static void MultiplyAndWeightedAdd(ElemType alpha, const GPUMatrix<ElemType>& a, const bool transposeA, const GPUMatrix<ElemType>& b, const bool transposeB, ElemType beta, GPUMatrix<ElemType>& c);
     static void MultiplyAndAdd(const GPUMatrix<ElemType>& a, const bool transposeA, const GPUMatrix<ElemType>& b, const bool transposeB, GPUMatrix<ElemType>& c);
     static void Multiply(const GPUMatrix<ElemType>& a, const bool transposeA, const GPUMatrix<ElemType>& b, const bool transposeB, GPUMatrix<ElemType>& c);
@@ -419,11 +419,11 @@ public:
 
     static void AddElementToElement(const GPUMatrix<ElemType>& a, const size_t ai, const size_t aj, GPUMatrix<ElemType>& c, const size_t ci, const size_t cj);
 
-    /// minus one at a specific position
+    // minus one at a specific position
     static void MinusOneAt(GPUMatrix<ElemType>& c, const size_t position);
 
     static void Scale(ElemType alpha, const GPUMatrix<ElemType>& a, GPUMatrix<ElemType>& c);
-    static void Scale(GPUMatrix<ElemType>& alpha, GPUMatrix<ElemType>& a); //In this case matrix alpha must be 1x1
+    static void Scale(GPUMatrix<ElemType>& alpha, GPUMatrix<ElemType>& a); // In this case matrix alpha must be 1x1
     static void Scale(ElemType alpha, GPUMatrix<ElemType>& a);
     static void InnerProduct(const GPUMatrix<ElemType>& a, const GPUMatrix<ElemType>& b, GPUMatrix<ElemType>& c, const bool isColWise);
     static ElemType InnerProductOfMatrices(const GPUMatrix<ElemType>& a, const GPUMatrix<ElemType>& b);
@@ -478,7 +478,7 @@ public:
                                     const GPUMatrix<ElemType>& beta,
                                     const GPUMatrix<ElemType>& pair_scores,
                                     GPUMatrix<ElemType>& grd,
-                                    const int startLbl, /// the time 0 start symbol in the output layer
+                                    const int startLbl, // the time 0 start symbol in the output layer
                                     const int shift);
 
 public:
@@ -501,7 +501,7 @@ public:
         delete[] d_array;
         us.m_matrixName = new wchar_t[matrixName.length() + 1];
         wmemcpy(us.m_matrixName, matrixName.c_str(), matrixName.length() + 1);
-        //us.m_matrixName = matrixName;
+        // us.m_matrixName = matrixName;
         return stream;
     }
     friend File& operator<<(File& stream, const GPUMatrix<ElemType>& us)

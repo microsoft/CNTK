@@ -16,8 +16,23 @@
 #include "targetver.h"
 #define WIN32_LEAN_AND_MEAN // Exclude rarely-used stuff from Windows headers
 // Windows Header Files:
-#include <windows.h>
+#define NOMINMAX
+#include "Windows.h"
 #include <objbase.h>
 #endif
 
-// TODO: reference additional headers your program requires here
+// standard C stuff
+#include <stdio.h>
+#include <memory.h>
+#include <math.h>
+
+// standard C++ stuff
+#include <string>
+#include <vector>
+#include <map>
+#include <set>
+#include <queue>
+#include <memory>
+#include <chrono>
+#include <algorithm>
+#include <iostream>

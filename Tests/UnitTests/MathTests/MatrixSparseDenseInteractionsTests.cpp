@@ -22,7 +22,7 @@ BOOST_AUTO_TEST_SUITE(GPUMatrixSuite)
 
 BOOST_FIXTURE_TEST_CASE(MatrixChangeModesBetweenDenseAndSparse, RandomSeedFixture)
 {
-    //This test should fail if you don't have CUDA GPU
+    // This test should fail if you don't have CUDA GPU
     Matrix<float> mA;
     mA.AssignTruncateBottomOf(Matrix<float>::RandomUniform(dim1, dim2, -3.0f, 0.1f, IncrementCounter()), 0);
 
@@ -41,7 +41,7 @@ BOOST_FIXTURE_TEST_CASE(MatrixChangeModesBetweenDenseAndSparse, RandomSeedFixtur
 
 BOOST_FIXTURE_TEST_CASE(MatrixSparseTimesDense, RandomSeedFixture)
 {
-    //DENSE
+    // DENSE
     Matrix<float> mAdense;
     mAdense.AssignTruncateBottomOf(Matrix<float>::RandomUniform(dim1, dim2, -3.0f, 0.1f, IncrementCounter()), 0);
 
@@ -49,7 +49,7 @@ BOOST_FIXTURE_TEST_CASE(MatrixSparseTimesDense, RandomSeedFixture)
     Matrix<float> mAsparse(mAdense);
     mAsparse.SwitchToMatrixType(MatrixType::SPARSE, matrixFormatSparseCSR, true);
 
-    //DENSE
+    // DENSE
     Matrix<float> mB = Matrix<float>::RandomGaussian(dim2, dim3, 1.0f, 4.0f, IncrementCounter());
     Matrix<float> mC = Matrix<float>::RandomGaussian(dim1, dim3, 1.0f, 2.0f, IncrementCounter());
     Matrix<float> mD(mC);
@@ -180,13 +180,13 @@ BOOST_FIXTURE_TEST_CASE(MatrixSparseTimesSparse, RandomSeedFixture)
     BOOST_CHECK(mCsparse.IsEqualTo(mCdense, c_epsilonFloatE4));
 
     // TODO: as soon as beta != 0.0 the 'MultiplyAndWeightedAdd' fails with stack overflow (also in the first test 5 lines above)
-    //alpha = 2.4f;
-    //beta = 3.4f;
-    //mCsparse.SwitchToMatrixType(MatrixType::SPARSE, matrixFormatSparseCSR, true);
-    //Matrix<float>::MultiplyAndWeightedAdd(alpha, mAdense, transposeA, mBdense, transposeB, beta, mCdense);
-    //Matrix<float>::MultiplyAndWeightedAdd(alpha, mAsparse, transposeA, mBsparse, transposeB, beta, mCsparse);
-    //mCsparse.SwitchToMatrixType(MatrixType::DENSE, matrixFormatDense, true);
-    //BOOST_CHECK(mCsparse.IsEqualTo(mCdense, c_epsilonFloatE4));
+    // alpha = 2.4f;
+    // beta = 3.4f;
+    // mCsparse.SwitchToMatrixType(MatrixType::SPARSE, matrixFormatSparseCSR, true);
+    // Matrix<float>::MultiplyAndWeightedAdd(alpha, mAdense, transposeA, mBdense, transposeB, beta, mCdense);
+    // Matrix<float>::MultiplyAndWeightedAdd(alpha, mAsparse, transposeA, mBsparse, transposeB, beta, mCsparse);
+    // mCsparse.SwitchToMatrixType(MatrixType::DENSE, matrixFormatDense, true);
+    // BOOST_CHECK(mCsparse.IsEqualTo(mCdense, c_epsilonFloatE4));
 }
 
 BOOST_FIXTURE_TEST_CASE(MatrixSparsePlusSparse, RandomSeedFixture)

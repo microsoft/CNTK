@@ -459,7 +459,7 @@ static bool islogzero(FLOAT v)
                 LogicError("invalid backpointer resulting in state index out of range");
 
             int bp = (int) backpointers(j, t); // save the backpointer before overwriting it (gammas and backpointers are aliases of each other)
-                                               //thisedgealignmentsj[t] = (unsigned short)hmm.getsenoneid(j - js);
+                                               // thisedgealignmentsj[t] = (unsigned short)hmm.getsenoneid(j - js);
             if (!returnsenoneids)              // return binary gammas (for MMI; this mode is compatible with softalignmode)
                 for (size_t i = js; i < je; i++)
                     loggammas(i, t) = ((int) i == j) ? 0.0f : LOGZERO;
@@ -897,7 +897,7 @@ void lattice::forwardbackwardalign(parallelstate &parallelstate,
     if (parallelstate.enabled())
         parallelforwardbackwardalign(parallelstate, hset, logLLs, edgeacscores, thisedgealignments, thisbackpointers);
 
-    //zhaorui align to reference mlf
+    // zhaorui align to reference mlf
     if (bounds.size() > 0)
     {
         size_t framenum = bounds.size();
@@ -923,7 +923,7 @@ void lattice::forwardbackwardalign(parallelstate &parallelstate,
                 t++;
             te = t;
 
-            //make one phone unit
+            // make one phone unit
             size_t phoneid = bounds[ts] - 1;
             refunits[0].unit = phoneid;
             refunits[0].frames = te - ts;
@@ -932,7 +932,7 @@ void lattice::forwardbackwardalign(parallelstate &parallelstate,
             littlematrixheap refmatrixheap(1); // for abcs
             refabcs = &refmatrixheap.newmatrix(edgestates, te - ts + 2);
             const auto edgeLLs = msra::math::ssematrixstriperef<msra::math::ssematrixbase>(const_cast<msra::math::ssematrixbase &>(logLLs), ts, te - ts);
-            //do alignment
+            // do alignment
             alignedge((const_array_ref<aligninfo>) refunits, hset, edgeLLs, *refabcs, 0, true, refedgealignmentsj);
 
             for (t = ts; t < te; t++)
@@ -948,7 +948,7 @@ void lattice::forwardbackwardalign(parallelstate &parallelstate,
 
     // Phase 4: alignment or forwardbackward on CPU for non parallel mode or verification
 
-    if (!parallelstate.enabled() || cpuverification) //non parallel mode or verification
+    if (!parallelstate.enabled() || cpuverification) // non parallel mode or verification
     {
         edgeacscores.resize(edges.size());
         std::vector<float> edgeacscoresgpu;
@@ -1082,7 +1082,7 @@ void lattice::mmierrorsignal(parallelstate &parallelstate, double minlogpp, cons
         auto &loggammas = *abcs[j];
 
         const float edgelogP = (float) logpps[j];
-        //if (islogzero (edgelogP))               // we had a 0 prob
+        // if (islogzero (edgelogP))               // we had a 0 prob
         //    continue;
 
         // accumulate this edge's gamma matrix into target posteriors
@@ -1100,7 +1100,7 @@ void lattice::mmierrorsignal(parallelstate &parallelstate, double minlogpp, cons
             for (size_t t = ts; t < te; t++)
             {
                 const size_t tutt = t + tedge; // time index w.r.t. utterance
-                //double logsum = LOGZERO;         // [v-hansu] check code for mmi; search this comment to see all related codes
+                // double logsum = LOGZERO;         // [v-hansu] check code for mmi; search this comment to see all related codes
                 for (size_t i = 0; i < n; i++)
                 {
                     const size_t j = js + i;             // state index for this unit in matrix
@@ -1375,7 +1375,7 @@ double lattice::forwardbackward(parallelstate &parallelstate, const msra::math::
     // allocate alpha/beta/gamma matrices (all are sharing the same memory in-place)
     std::vector<msra::math::ssematrixbase *> abcs;
     std::vector<float> edgeacscores; // [edge index] acoustic scores
-    //funcation call for forwardbackward on edge level
+    // funcation call for forwardbackward on edge level
     forwardbackwardalign(parallelstate, hset, softalignstates, minlogpp, origlogpps, abcs, matrixheap, sMBRmode /*returnsenoneids*/, edgeacscores, logLLs, thisedgealignments, thisbackpointers, uids, bounds);
 
 // PHASE 2: lattice-level forward backward
@@ -1400,7 +1400,7 @@ double lattice::forwardbackward(parallelstate &parallelstate, const msra::math::
         totalfwscore = forwardbackwardlattice(edgeacscores, parallelstate, logpps, logalphas, logbetas, lmf, wp, amf, boostingfactor, returnEframescorrect, (const_array_ref<size_t> &) uids, thisedgealignments, logEframescorrect, Eframescorrectbuf, logEframescorrecttotal);
         if (sMBRmode && !returnEframescorrect)
             logEframescorrecttotal = forwardbackwardlatticesMBR(edgeacscores, hset, logalphas, logbetas, lmf, wp, amf, (const_array_ref<size_t> &) uids, thisedgealignments, Eframescorrectbuf);
-        //^^ BUGBUG not tested
+        // ^^ BUGBUG not tested
     }
     else
         totalfwscore = bestpathlattice(edgeacscores, logpps, lmf, wp, amf);
@@ -1419,7 +1419,7 @@ double lattice::forwardbackward(parallelstate &parallelstate, const msra::math::
 
     const size_t numframes = logLLs.cols();
     assert(numframes == info.numframes);
-    //fprintf (stderr, "forwardbackward: total forward score %.6f (%d frames)\n", totalfwscore, (int) numframes);   // for now--while we are debugging the GPU port
+    // fprintf (stderr, "forwardbackward: total forward score %.6f (%d frames)\n", totalfwscore, (int) numframes);   // for now--while we are debugging the GPU port
 
     // MMI mode
     if (!sMBRmode)

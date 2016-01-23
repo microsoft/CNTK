@@ -30,24 +30,22 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
 #define MAX_DEPTH 20
 
-enum RNNTYPE
+// the standard network kinds that can be built with SimpleNetworkBuilder
+enum StandardNetworkKind
 {
-    SIMPLENET = 0, /// no recurrent connections
-    SIMPLERNN = 1,
-    LSTM = 2,
-    DEEPRNN = 4,
-    CLASSLM = 8,
-    LBLM = 16,
-    LSTMENCODER = 18,
-    NPLM = 32,
-    CLASSLSTM = 64,
-    NCELSTM = 128,
-    CLSTM = 256,
-    RCRF = 512,
-    UNIDIRECTIONALLSTM = 19,
-    BIDIRECTIONALLSTM = 20,
-    ALIGNMENTSIMILARITYGENERATOR = 21,
-    ALIGNMENTSIMILARITYGFORWARDDECODER = 22
+    // basic
+    FFDNNKind                  = 0,     // basic feed-forward
+    RNNKind                    = 1,     // basic RNN
+    LSTMKind                   = 2,     // basic LSTM
+    // class-based
+    ClassEntropyRNNKind        = 8,     // class-based RNN
+    ClassLSTMNetworkKind       = 64,    // class-based LSTM
+    // advanced
+    LogBilinearNetworkKind     = 16,    // log-bilinear model for language modeling
+    DNNLMNetworkKind           = 32,    // DNN-based LM
+    NCELSTMNetworkKind         = 128,   // NCE LSTM
+    ConditionalLSTMNetworkKind = 256,   // conditional LM for text generation
+    CRFLSTMNetworkKind         = 512,   // sequential LSTM
 };
 
 enum class TrainingCriterion : int // TODO: camel-case these
@@ -85,7 +83,7 @@ protected:
     typedef shared_ptr<ComputationNode<ElemType>> ComputationNodePtr;
 
 private:
-    SimpleNetworkBuilder() //disable default constructor from being called
+    SimpleNetworkBuilder() // disable default constructor from being called
     {
     }
 
@@ -152,9 +150,9 @@ public:
 
         ConfigArray sSizes = config("streamSizes", "");
         m_streamSizes = sSizes;
-        sSizes = config("lookupTableOrderSizes", ""); /// this allows having a multiple streams of inputs with
-        /// different lookuptable order sizes. the older one lookupTableOrder is still kept to have backward
-        /// support.
+        sSizes = config("lookupTableOrderSizes", ""); // this allows having a multiple streams of inputs with
+        // different lookuptable order sizes. the older one lookupTableOrder is still kept to have backward
+        // support.
         m_lookupTabelOrderSizes = sSizes;
 
         m_labelEmbeddingSize = config("labelEmbeddingSize", "10");
@@ -170,39 +168,25 @@ public:
 
         stringargvector strType = str_rnnType;
         if (std::find(strType.begin(), strType.end(), L"SIMPLENET") != strType.end())
-            m_rnnType = SIMPLENET;
+            m_standardNetworkKind = FFDNNKind;
         else if (std::find(strType.begin(), strType.end(), L"SIMPLERNN") != strType.end())
-            m_rnnType = SIMPLERNN;
+            m_standardNetworkKind = RNNKind;
         else if (std::find(strType.begin(), strType.end(), L"LSTM") != strType.end())
-            m_rnnType = LSTM;
-        else if (std::find(strType.begin(), strType.end(), L"DEEPRNN") != strType.end())
-            m_rnnType = DEEPRNN;
+            m_standardNetworkKind = LSTMKind;
         else if (std::find(strType.begin(), strType.end(), L"CLASSLM") != strType.end())
-            m_rnnType = CLASSLM;
+            m_standardNetworkKind = ClassEntropyRNNKind;
         else if (std::find(strType.begin(), strType.end(), L"LBLM") != strType.end())
-            m_rnnType = LBLM;
+            m_standardNetworkKind = LogBilinearNetworkKind;
         else if (std::find(strType.begin(), strType.end(), L"NPLM") != strType.end())
-            m_rnnType = NPLM;
+            m_standardNetworkKind = DNNLMNetworkKind;
         else if (std::find(strType.begin(), strType.end(), L"CLASSLSTM") != strType.end())
-            m_rnnType = CLASSLSTM;
+            m_standardNetworkKind = ClassLSTMNetworkKind;
         else if (std::find(strType.begin(), strType.end(), L"NCELSTM") != strType.end())
-            m_rnnType = NCELSTM;
+            m_standardNetworkKind = NCELSTMNetworkKind;
         else if (std::find(strType.begin(), strType.end(), L"CLSTM") != strType.end())
-            m_rnnType = CLSTM;
+            m_standardNetworkKind = ConditionalLSTMNetworkKind;
         else if (std::find(strType.begin(), strType.end(), L"CRF") != strType.end())
-            m_rnnType = RCRF;
-        else if (std::find(strType.begin(), strType.end(), L"LSTMENCODER") != strType.end())
-            m_rnnType = LSTMENCODER;
-        else if (std::find(strType.begin(), strType.end(), L"TRANSDUCER") != strType.end() ||
-                 std::find(strType.begin(), strType.end(), L"UNIDIRECTIONALLSTMWITHPASTPREDICTION") != strType.end())
-            m_rnnType = UNIDIRECTIONALLSTM;
-        else if (std::find(strType.begin(), strType.end(), L"JOINTCONDITIONALBILSTMSTREAMS") != strType.end() ||
-                 std::find(strType.begin(), strType.end(), L"BIDIRECTIONALLSTMWITHPASTPREDICTION") != strType.end())
-            m_rnnType = BIDIRECTIONALLSTM;
-        else if (std::find(strType.begin(), strType.end(), L"ALIGNMENTSIMILARITYGENERATOR") != strType.end())
-            m_rnnType = ALIGNMENTSIMILARITYGENERATOR;
-        else if (std::find(strType.begin(), strType.end(), L"ALIGNMENTSIMILARITYGFORWARDDECODER") != strType.end())
-            m_rnnType = ALIGNMENTSIMILARITYGFORWARDDECODER;
+            m_standardNetworkKind = CRFLSTMNetworkKind;
         else
             InvalidArgument("InitRecurrentConfig: unknown value for rnnType parameter '%ls'", strType[0].c_str());
     }
@@ -243,7 +227,7 @@ public:
         m_cls2index = config("cls2index", "");
         m_vocabSize = (int) config("vocabSize", "-1");
         m_nbrCls = (int) config("nbrClass", "-1");
-        nce_noises = (int) config("noise_number", "-1"); //nce noise
+        nce_noises = (int) config("noise_number", "-1"); // nce noise
 
         Init(layers, trainingCriterion, evalCriterion, outputLayerSize,
              nonlinearFunctions, addDropoutNodes,
@@ -255,55 +239,30 @@ public:
     }
 
     ComputationNetworkPtr BuildNetworkFromDescription();
-    ComputationNetworkPtr BuildNetworkFromDescription(ComputationNetwork* encoderNet); // legacy support of deprecated sequence-to-sequence implementation
 
     ComputationNetworkPtr BuildNetworkFromDbnFile(const std::wstring& dbnModelFileName); // legacy support for fseide's Microsoft-internal tool "DBN.exe"
 
-    RNNTYPE RnnType()
-    {
-        return m_rnnType;
-    }
-
 protected:
-    ComputationNetworkPtr BuildSimpleDNN();
 
-    ComputationNetworkPtr BuildSimpleRNN();
-
-    ComputationNetworkPtr BuildClassEntropyNetwork();
-
-    ComputationNodePtr BuildLSTMComponent(unsigned long& randomSeed, size_t iLayer, size_t inputDim, size_t outputDim, ComputationNodePtr input);
-
-    ComputationNodePtr BuildLSTMNodeComponent(ULONG& randomSeed, size_t iLayer, size_t inputDim, size_t outputDim, ComputationNodePtr input);
-
-    ComputationNodePtr BuildLSTMComponentWithMultiInputs(ULONG& randomSeed, size_t iLayer, const vector<size_t>& inputDim, size_t outputDim, const vector<ComputationNodePtr>& inputObs, bool inputWeightSparse = false);
-
-    ComputationNodePtr BuildDirectConnect(unsigned long& randomSeed, size_t iLayer, size_t inputDim, size_t outputDim, ComputationNodePtr input, ComputationNodePtr toNode);
-
+    ComputationNetworkPtr BuildFFDNNFromDescription();
+    ComputationNetworkPtr BuildRNNFromDescription();
+    ComputationNetworkPtr BuildClassEntropyRNNFromDescription();
     ComputationNetworkPtr BuildLogBilinearNetworkFromDescription();
-
-    ComputationNetworkPtr BuildNeuralProbNetworkFromDescription();
-
+    ComputationNetworkPtr BuildDNNLMNetworkFromDescription();
     ComputationNetworkPtr BuildLSTMNetworkFromDescription();
-
-    ComputationNetworkPtr BuildSeqTrnLSTMNetworkFromDescription();
-
-    ComputationNetworkPtr BuildLSTMEncoderNetworkFromDescription();
-
-    ComputationNetworkPtr BuildUnidirectionalLSTMNetworksFromDescription();
-
-    ComputationNetworkPtr BuildBiDirectionalLSTMNetworksFromDescription();
-
-    ComputationNetworkPtr BuildCLASSLSTMNetworkFromDescription();
-
+#ifdef COMING_SOON
+    ComputationNetworkPtr BuildCRFLSTMNetworkFromDescription();
+#endif
+    ComputationNetworkPtr BuildClassLSTMNetworkFromDescription();
     ComputationNetworkPtr BuildConditionalLSTMNetworkFromDescription();
-
     ComputationNetworkPtr BuildNCELSTMNetworkFromDescription();
 
-    ComputationNetworkPtr BuildAlignmentForwardDecoderNetworkFromDescription(ComputationNetwork* encoderNet);
+    // mulitply used components
+    ComputationNodePtr BuildLSTMComponent(unsigned long& randomSeed, size_t iLayer, size_t inputDim, size_t outputDim, ComputationNodePtr input);
+    ComputationNodePtr BuildLSTMNodeComponent(ULONG& randomSeed, size_t iLayer, size_t inputDim, size_t outputDim, ComputationNodePtr input);
+    ComputationNodePtr BuildDirectConnect(unsigned long& randomSeed, size_t iLayer, size_t inputDim, size_t outputDim, ComputationNodePtr input, ComputationNodePtr toNode);
 
-    ComputationNetworkPtr BuildAlignmentDecoderNetworkFromDescription(ComputationNetwork* encoderNet);
-
-    //layer is 0 based
+    // layer is 0 based
     ComputationNodePtr ApplyNonlinearFunction(ComputationNodePtr input, const size_t layer, const std::wstring nodeName = L"");
     ComputationNodePtr AddTrainAndEvalCriterionNodes(ComputationNodePtr input, ComputationNodePtr label, ComputationNodePtr matrix = nullptr, const std::wstring trainNodeName = L"", const std::wstring evalNodeName = L"", ComputationNodePtr clspostprob = nullptr, ComputationNodePtr trans = nullptr);
 
@@ -322,7 +281,7 @@ protected:
         std::string name;
         if (!CheckDbnTag(fstream, "BMAT"))
             RuntimeError("Error reading DBN file - did not find expected tag BMAT\n");
-        //fstream.GetMarker(FileMarker::fileMarkerBeginSection, "BMAT");
+        // fstream.GetMarker(FileMarker::fileMarkerBeginSection, "BMAT");
         fstream >> name >> numRows >> numCols;
         if (name != expectedName)
         {
@@ -339,18 +298,18 @@ protected:
         Matrix<ElemType> mat(numRows, numCols, m_deviceId);
 
         // dbn operates on row vectors not column vectors. x*W + b, so need to read in as W'
-        //ElemType* d_array = new ElemType[numRows*numCols];
+        // ElemType* d_array = new ElemType[numRows*numCols];
         float tmp;
         for (long i = 0; i < numRows; i++)
             for (long j = 0; j < numCols; j++)
             {
                 fstream >> tmp;
                 mat(i, j) = tmp;
-                //d_array[i] = (ElemType)tmp;
+                // d_array[i] = (ElemType)tmp;
             }
         if (!CheckDbnTag(fstream, "EMAT"))
             RuntimeError("Error reading DBN file - did not find expected tag EMAT\n");
-        //fstream.GetMarker(FileMarker::fileMarkerBeginSection, "EMAT");
+        // fstream.GetMarker(FileMarker::fileMarkerBeginSection, "EMAT");
 
         return mat;
     }
@@ -374,14 +333,14 @@ protected:
     TrainingCriterion m_trainCriterion;
     EvalCriterion m_evalCriterion;
 
-    intargvector m_directConnect; /// connect those layers directly in a sequence order
-    /// for example: 1:2:3 will connect 1 to 2 and then 2 to 3
+    intargvector m_directConnect; // connect those layers directly in a sequence order
+    // for example: 1:2:3 will connect 1 to 2 and then 2 to 3
 
-    /// recurrent network
+    // recurrent network
     intargvector m_recurrentLayers;
     float m_defaultHiddenActivity;
-    RNNTYPE m_rnnType;
-    int m_maOrder; /// MA model order
+    StandardNetworkKind m_standardNetworkKind;
+    int m_maOrder; // MA model order
 
     bool m_constForgetGateValue;
     bool m_constInputGateValue;
@@ -391,18 +350,18 @@ protected:
     ElemType m_inputGateInitVal;
     ElemType m_outputGateInitVal;
 
-    intargvector m_streamSizes;           /// for multiple stream data
-    intargvector m_lookupTabelOrderSizes; /// each stream has its own projection, so need to provide with the lookup table order size for each stream
+    intargvector m_streamSizes;           // for multiple stream data
+    intargvector m_lookupTabelOrderSizes; // each stream has its own projection, so need to provide with the lookup table order size for each stream
 
     int m_lookupTableOrder;
     int m_labelEmbeddingSize;
 
-    /// these are the file names for word 2 class mapping and class to word index mapping
-    /// these are used for class-based language modeling
+    // these are the file names for word 2 class mapping and class to word index mapping
+    // these are used for class-based language modeling
     string m_cls2index;
     string m_word2class;
-    int m_nbrCls;    /// number of classes
-    int m_vocabSize; /// vocabulary size
+    int m_nbrCls;    // number of classes
+    int m_vocabSize; // vocabulary size
     int nce_noises;
 
     bool m_sparse_input;

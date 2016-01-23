@@ -248,7 +248,7 @@ public:
             // set up the various engines and descriptor objects
             // REVIEW alexeyk: is there a better place to create engines?
             assert(m_factory);
-            //if (m_factory == nullptr)
+            // if (m_factory == nullptr)
             //    m_factory = ConvolutionEngineFactory<ElemType>::Create(m_deviceId, ConvolutionEngineFactory<ElemType>::EngineType::Auto, m_imageLayoutKind);
             // TODO: This seems to expose too much internal knowlegde of the engine to the ConvolutionNode().
             //       Why not just pass everything to the engine creator, and get one object that holds everything.
@@ -291,14 +291,14 @@ public:
         m_maxTempMemSizeInSamples = maxTempMemSizeInSamples;
     }
 
-    //request matrices needed to do node function value evaluation
+    // request matrices needed to do node function value evaluation
     void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool) override
     {
         Base::RequestMatricesBeforeForwardProp(matrixPool);
         RequestMatrixFromPool(m_tempMatrix, matrixPool);
     }
 
-    //release gradient and temp matrices that no longer needed after all the children's gradients are computed.
+    // release gradient and temp matrices that no longer needed after all the children's gradients are computed.
     void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool) override
     {
         Base::ReleaseMatricesAfterBackprop(matrixPool);
@@ -460,7 +460,7 @@ public:
             // set up various engines and descriptor objects
             // REVIEW alexeyk: is there a better place to create engines?
             assert(m_factory);
-            //if (m_factory == nullptr)
+            // if (m_factory == nullptr)
             //    m_factory = ConvolutionEngineFactory<ElemType>::Create(m_deviceId, ConvolutionEngineFactory<ElemType>::EngineType::Auto, m_imageLayoutKind);
             if (m_poolEng == nullptr)
                 m_poolEng = m_factory->CreatePoolEngine(m_deviceId);
@@ -598,305 +598,4 @@ public:
 template class AveragePoolingNode<float>;
 template class AveragePoolingNode<double>;
 
-// -----------------------------------------------------------------------
-// BatchNormalizationNode (...)  --TODO: document inputs
-// -----------------------------------------------------------------------
-
-// Implements batch normalization technique as described in:
-// Batch Normalization: Accelerating Deep Network Training by Reducing Internal Covariate Shift [S. Ioffe, C. Szegedy]
-// http://arxiv.org/abs/1502.03167
-// REVIEW alexeyk: is this a right header for this node? It's not really limited to only convolutional nodes.
-template <class ElemType>
-class BatchNormalizationNode : public ComputationNode<ElemType>, public NumInputs<5>
-{
-    typedef ComputationNode<ElemType> Base;
-    UsingComputationNodeMembersBoilerplate;
-    static const std::wstring TypeName()
-    {
-        return L"BatchNormalization";
-    }
-
-public:
-    BatchNormalizationNode(DEVICEID_TYPE deviceId, const wstring& name)
-        : Base(deviceId, name), m_eval(false), m_spatial(false), m_expAvgFactor(0), m_mbCount(0), m_imageLayoutKind(ImageLayoutKind::CHW)
-    {
-    }
-    BatchNormalizationNode(DEVICEID_TYPE deviceId, const wstring& name, bool eval, bool spatial, double expAvgFactor, ImageLayoutKind imageLayoutKind)
-        : Base(deviceId, name), m_eval(eval), m_spatial(spatial), m_expAvgFactor(expAvgFactor), m_imageLayoutKind(imageLayoutKind), m_mbCount(0)
-    {
-    }
-    BatchNormalizationNode(const ScriptableObjects::IConfigRecordPtr configp)
-        : BatchNormalizationNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"eval"), configp->Get(L"spatial"), configp->Get(L"expAvgFactor"),
-                                 ImageLayoutKindFrom(configp->Get(L"imageLayout")))
-    {
-        AttachInputs(configp, this->GetExpectedNumInputs());
-    }
-
-    void Save(File& fstream) const override
-    {
-        Base::Save(fstream);
-        fstream << m_version.VerWrittenCur() << m_version.VerReadableCur();
-
-        fstream << m_eval;
-        fstream << m_spatial;
-        fstream << m_expAvgFactor;
-        fstream << (int32_t) m_imageLayoutKind;
-        fstream << m_mbCount;
-    }
-
-    void Load(File& fstream, size_t modelVersion) override
-    {
-        Base::Load(fstream, modelVersion);
-
-        // Read and check version.
-        // REVIEW alexeyk: extract version checking so it can be re-used in other places.
-        // BUGBUG: We must serialize m_inputLayout.
-        int32_t verWritten;
-        int32_t verReadable;
-        fstream >> verWritten >> verReadable;
-
-        if (verReadable > verWritten)
-            RuntimeError("Corrupt model file.");
-        if (verWritten < m_version.VerWeCanReadBack())
-            RuntimeError("Model is too old.");
-        if (verReadable > m_version.VerWrittenCur())
-            RuntimeError("Model is too new.");
-
-        fstream >> m_eval;
-        fstream >> m_spatial;
-        fstream >> m_expAvgFactor;
-        if (verWritten >= 0x00010002)
-        {
-            fstream >> m_imageLayoutKind;
-            fstream >> m_mbCount;
-        }
-    }
-
-    void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
-    {
-        Base::CopyTo(nodeP, newName, flags);
-        if (flags & CopyNodeFlags::copyNodeValue)
-        {
-            auto node = dynamic_pointer_cast<BatchNormalizationNode<ElemType>>(nodeP);
-            assert(node != nullptr);
-
-            node->m_eval = m_eval;
-            node->m_spatial = m_spatial;
-            node->m_expAvgFactor = m_expAvgFactor;
-        }
-    }
-
-    void BackpropTo(const size_t inputIndex, const FrameRange& fr) override
-    {
-        if (m_eval)
-            LogicError("BatchNormalization does not compute derivatives in inference mode.");
-
-        if (inputIndex == 0) // derivative with respect to the input.
-        {
-            auto sliceOutputGrad = GradientFor(fr);
-            auto sliceInputValue = Input(0)->ValueFor(fr);
-            const Matrix<ElemType>& scale = Input(1)->Value();
-            const Matrix<ElemType>& bias = Input(2)->Value();
-
-            size_t batchSize = sliceInputValue.GetNumCols();
-            m_inT->setN(batchSize);
-            assert(m_convEng != nullptr);
-
-            auto sliceInputGrad = Input(0)->GradientFor(fr);
-            m_dScale->Resize(scale);
-            m_dBias->Resize(bias);
-            // Compute all derivatives in one step. Save derivatives with respect to scale and bias in temp matrices.
-            m_convEng->BackwardNormalizeBatch(*m_inT, sliceInputValue, sliceOutputGrad, sliceInputGrad, *m_scaleBiasT, scale, m_spatial,
-                                              *m_saveMean, *m_saveInvStdDev, *m_dScale, *m_dBias);
-        }
-        else if (inputIndex == 1) // derivative with respect to the scale
-        {
-            // Derivative with respect to the scale was precomputed during input derivative computation.
-            Matrix<ElemType>& grad = Input(1)->Gradient();
-            grad.SetValue(grad.GetNumRows(), grad.GetNumCols(), grad.GetDeviceId(), m_dScale->BufferPointer());
-        }
-        else if (inputIndex == 2) // derivative with respect to the bias
-        {
-            // Derivative with respect to the bias was precomputed during input derivative computation.
-            Matrix<ElemType>& grad = Input(2)->Gradient();
-            grad.SetValue(grad.GetNumRows(), grad.GetNumCols(), grad.GetDeviceId(), m_dBias->BufferPointer());
-        }
-        // No derivatives with respect to running mean and InvStdDev.
-    }
-
-    virtual bool OutputUsedInComputingInputNodesGradients() const override
-    {
-        // The BatchNormalizationNode does not require its output value for computing
-        // the gradients of its input nodes
-        return false;
-    }
-
-    void ForwardProp(const FrameRange& fr) override
-    {
-        Matrix<ElemType> sliceInputValue = Input(0)->ValueFor(fr);
-
-        const Matrix<ElemType>& scale = Input(1)->Value();
-        const Matrix<ElemType>& bias = Input(2)->Value();
-        Matrix<ElemType>& runMean = Input(3)->Value();
-        Matrix<ElemType>& runInvStdDev = Input(4)->Value();
-        assert(scale.GetNumRows() == bias.GetNumRows());
-        assert(scale.GetNumCols() == bias.GetNumCols());
-        assert(runMean.GetNumRows() == scale.GetNumRows());
-        assert(runMean.GetNumCols() == scale.GetNumCols());
-        assert(runMean.GetNumRows() == runInvStdDev.GetNumRows());
-        assert(runMean.GetNumCols() == runInvStdDev.GetNumCols());
-
-        Matrix<ElemType> sliceOutputValue = ValueFor(fr);
-
-        size_t batchSize = sliceInputValue.GetNumCols();
-        m_inT->setN(batchSize);
-        assert(m_convEng != nullptr);
-#if NANCHECK
-        sliceInputValue.HasNan("BatchNormalization-input");
-#endif
-        if (m_eval)
-            m_convEng->NormalizeBatchInference(*m_inT, sliceInputValue, *m_scaleBiasT, scale, bias, m_spatial, runMean, runInvStdDev, sliceOutputValue);
-        else
-        {
-            // REVIEW alexeyk: hack, use m_expAvgFactor <= 0 to compute CMA.
-            double expAvgFactor = (m_expAvgFactor > 0) ? m_expAvgFactor : (1.0 / (1.0 + m_mbCount));
-
-            if (m_saveMean->GetNumElements() != runMean.GetNumElements())
-                m_saveMean->Resize(runMean.GetNumRows(), runMean.GetNumCols());
-            if (m_saveInvStdDev->GetNumElements() != runMean.GetNumElements())
-                m_saveInvStdDev->Resize(runMean.GetNumRows(), runMean.GetNumCols());
-
-            m_convEng->NormalizeBatch(*m_inT, sliceInputValue, *m_scaleBiasT, scale, bias, m_spatial, expAvgFactor, runMean, runInvStdDev,
-                                      sliceOutputValue, *m_saveMean, *m_saveInvStdDev);
-
-            m_mbCount++;
-        }
-#if NANCHECK
-        sliceOutputValue.HasNan("BatchNormalization-output");
-        runMean.HasNan("BatchNormalization-runMean");
-        runInvStdDev.HasNan("BatchNormalization-runInvStdDev");
-        m_saveMean->HasNan("BatchNormalization-saveMean");
-        m_saveInvStdDev->HasNan("BatchNormalization-saveInvStdDev");
-#endif
-    }
-
-    void Validate(bool isFinalValidationPass) override
-    {
-        Base::Validate(isFinalValidationPass);
-        InferMBLayoutFromInputsForStandardCase();
-
-        SetDims(Input(0));
-
-        if (isFinalValidationPass)
-        {
-            auto shape = GetSampleLayout();
-
-            if (m_factory == nullptr)
-                m_factory = ConvolutionEngineFactory<ElemType>::Create(m_deviceId, ConvolutionEngineFactory<ElemType>::EngineType::Auto, m_imageLayoutKind);
-            if (m_convEng == nullptr)
-                m_convEng = m_factory->CreateConvEngine(m_deviceId, 0);
-            if (m_spatial)
-            {
-                auto dims = ImageDimensions(shape, m_imageLayoutKind);
-                if (m_inT == nullptr)
-                    m_inT = m_factory->CreateTensor(dims.m_width, dims.m_height, dims.m_numChannels, 1);
-                if (m_scaleBiasT == nullptr)
-                    m_scaleBiasT = m_factory->CreateTensor(1, 1, dims.m_numChannels, 1);
-            }
-            else
-            {
-                if (m_inT == nullptr)
-                    m_inT = m_factory->CreateTensor(shape.GetNumElements(), 1, 1, 1);
-                if (m_scaleBiasT == nullptr)
-                    m_scaleBiasT = m_factory->CreateTensor(shape.GetNumElements(), 1, 1, 1);
-            }
-        }
-    }
-
-    void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool) override
-    {
-        Base::RequestMatricesBeforeForwardProp(matrixPool);
-        if (!m_eval)
-        {
-            RequestMatrixFromPool(m_saveMean, matrixPool);
-            RequestMatrixFromPool(m_saveInvStdDev, matrixPool);
-        }
-    }
-
-    void RequestMatricesBeforeBackprop(MatrixPool& matrixPool) override
-    {
-        Base::RequestMatricesBeforeBackprop(matrixPool);
-        if (!m_eval)
-        {
-            RequestMatrixFromPool(m_dScale, matrixPool);
-            RequestMatrixFromPool(m_dBias, matrixPool);
-        }
-    }
-
-    void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool) override
-    {
-        Base::ReleaseMatricesAfterBackprop(matrixPool);
-        if (!m_eval)
-        {
-            ReleaseMatrixToPool(m_saveMean, matrixPool);
-            ReleaseMatrixToPool(m_saveInvStdDev, matrixPool);
-            ReleaseMatrixToPool(m_dScale, matrixPool);
-            ReleaseMatrixToPool(m_dBias, matrixPool);
-        }
-    }
-
-    void SetEvalMode(bool bnEvalMode)
-    {
-        m_eval = bnEvalMode;
-    }
-
-private:
-    struct VersionInfo
-    {
-        //int32_t VerWrittenCur() const     { return 0x00010001; } // Initial
-        int32_t VerWrittenCur() const
-        {
-            return 0x00010002;
-        } // Added m_imageLayoutKind and m_mbCount
-        int32_t VerReadableCur() const
-        {
-            return 0x00010002;
-        }
-        int32_t VerWeCanReadBack() const
-        {
-            return 0x00010001;
-        }
-    };
-    VersionInfo m_version;
-
-private:
-    // Determines whether to use training or inference(evaluation) mode.
-    bool m_eval;
-    // Determines whether to use per-activation (used after non-convolutional layers like fully connected)
-    // or spatial (used after convolutional layers).
-    bool m_spatial;
-    // Smoothing factor.
-    double m_expAvgFactor;
-    // Layout (e.g. CHW).
-    ImageLayoutKind m_imageLayoutKind;
-    // Minibatch count, used to compute cumulative moving average.
-    size_t m_mbCount;
-
-    // Stores pre-computed on forward pass mean values that are used in gradient computation.
-    shared_ptr<Matrix<ElemType>> m_saveMean;
-    // Stores pre-computed on forward pass InvStdDev values that are used in gradient computation.
-    shared_ptr<Matrix<ElemType>> m_saveInvStdDev;
-    // Stores scale derivatives
-    shared_ptr<Matrix<ElemType>> m_dScale;
-    // Stores bias derivatives.
-    shared_ptr<Matrix<ElemType>> m_dBias;
-
-    std::unique_ptr<ConvolutionEngineFactory<ElemType>> m_factory;
-    std::unique_ptr<ConvolutionEngine<ElemType>> m_convEng;
-    std::unique_ptr<ConvolutionTensor4D> m_inT;
-    std::unique_ptr<ConvolutionTensor4D> m_scaleBiasT;
-};
-
-template class BatchNormalizationNode<float>;
-template class BatchNormalizationNode<double>;
 } } }

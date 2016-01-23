@@ -323,7 +323,7 @@ void MatrixQuantizerGPU<ElemType>::UnquantizeAsync(QuantizedMatrix<ElemType>& in
         SyncAssignCompleteEvent(GetComputeStream());
     }
 
-    //do the actually unquantization
+    // do the actually unquantization
     _UnquantizeMatrix(inQMatrixGPU.GetArray(), inQMatrixGPU.GetSize(),
                       outMatrix.BufferPointer(), outMatrix.GetNumRows(), outMatrix.GetNumCols(),
                       nBits, add, GetComputeStream());

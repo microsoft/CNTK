@@ -148,12 +148,12 @@ public:
             exceptionptr = badallocexceptionptr;
         }
     }
-    //void join()
-    //{
+    // void join()
+    // {
     //    check();
     //    wait();
     //    check_for_exception();    // (check() not sufficient because it would fail since thread is gone)
-    //}
+    // }
     ~simplethread() throw()
     {
         // wait until it shuts down

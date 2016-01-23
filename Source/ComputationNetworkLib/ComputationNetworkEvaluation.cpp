@@ -492,68 +492,6 @@ void ComputationNetwork::DetermineSetOfAllRoots()
 // validation
 // -----------------------------------------------------------------------
 
-#if 0
-    // ValidateNetwork() - Validate the entire network
-    // This calls ValidateNetowrk(Node) for all output nodes.
-    // This is used after loading or for dumping the network.
-    void ComputationNetwork::ValidateNetwork(bool allowFragment, const bool bAllowNoCriterion)
-    {
-        // currently only validates nodes, we should validate everything we can
-        if (FeatureNodes().size() == 0 && !allowFragment)
-            RuntimeError("No Feature nodes specified");
-
-#if 1 // If it is not done here, it will causea crash. But it really only belongs into StartEvaluationMinibatchLoop()
-        // TODO: allocation does not belong here. This is called e.g. after loading. Memory should be allocated only when actually evaluating.
-        // TODO: move into StartEvaluateMinibatchLoop(), but that is called for output nodes individually--can the process handle that?
-        AllocateAllEvalMatrices(EvaluationNodes(), OutputNodes(), FinalCriterionNodes());
-#endif
-        // first give criteria nodes as root node
-        if (FinalCriterionNodes().size() > 0)
-        {
-            for (ComputationNodeBasePtr & node : FinalCriterionNodes())
-            {
-                if (!allowFragment)
-                    FormRecurrentLoops(node);
-#ifdef _DEBUG
-                PrintComputationTree(node, false);
-#endif
-                //SetActualMiniBatchSizeFromFeatures();
-                ValidateSubNetwork(node);
-            }
-        }
-        else if (bAllowNoCriterion == true)
-        {
-            // do nothing
-        }
-        else if (!allowFragment)
-            RuntimeError("No Criterion nodes specified");
-
-        // now output nodes
-        if (OutputNodes().size() > 0)
-        {
-            for (ComputationNodeBasePtr node : OutputNodes())
-            {
-                if (!allowFragment)
-                    FormRecurrentLoops(node);
-                ValidateSubNetwork(node);
-            }
-        }
-        else if (!allowFragment)
-            RuntimeError("No Output nodes specified");
-
-        // now evaluation nodes
-        if (EvaluationNodes().size() > 0)
-        {
-            for (ComputationNodeBasePtr node : EvaluationNodes())
-            {
-                if (!allowFragment)
-                    FormRecurrentLoops(node);
-                ValidateSubNetwork(node);
-            }
-        }
-    }
-#endif
-
 // validate sub-network needed to evalute a specific output node
 // This calls Validate() on every node in evaluation order (allowing to propagate things forwards through the net).
 // This is called lazily but once only per node until next ClearCache().
@@ -626,9 +564,9 @@ void ComputationNetwork::ValidateSubNetwork(const ComputationNodeBasePtr& rootNo
     if (!nonDefaultNodes.empty())
     {
         fprintf(stderr, "%d out of %d nodes do not share the minibatch layout with the input data.\n", (int) nonDefaultNodes.size(), (int) nodes.size());
-        //for (auto node : nonDefaultNodes)
+        // for (auto node : nonDefaultNodes)
         //    fprintf(stderr, "    %ls\n", node->NodeName().c_str());
-        //fprintf(stderr, "\n\n");
+        // fprintf(stderr, "\n\n");
     }
 }
 
@@ -696,37 +634,6 @@ void ComputationNetwork::ValidateNodes(list<ComputationNodeBasePtr> nodes, bool 
             todo++;
     }
 }
-
-#if 0
-    // prepare to compute with the subnetwork that this rootNode depends on, including
-    //  - auto-detecting recurrent loops
-    //  - collect input and learnable nodes
-    //  - calling Validate() on all nodes lazily, which sizes all matrices (column dimensions get updated to MB size)
-    // Done lazily, called for every minibatch's invocation of EvaluateNode(), but memoizing which nodes were done already.
-    // BUGBUG? Lazy triggers on the root node. I.e. for two different root nodes (training, eval), it validates twice.
-    void ComputationNetwork::BuildAndValidateSubNetwork(const ComputationNodeBasePtr rootNode)
-    {
-        bool inserted = m_built.insert(rootNode).second;  // remember we built it
-        if (!inserted)
-            return;                                             // already done
-
-        // detect recurrent loops for this root node
-        // TODO: not nice--why not always call this in ValidateSubNetwork() only?
-        FormRecurrentLoops(rootNode);
-
-        // for the m_inputValues and m_learnableParameters sets for this rootNode
-        CollectInputAndLearnableParameters(rootNode);
-
-        // validate the rootNode and all nodes it depends on, in evaluation order
-        ValidateSubNetwork(rootNode);
-    }
-
-    // tests whether BuildAndValidateSubNetwork() was called
-    bool ComputationNetwork::BuiltAndValidatedSubNetwork(const ComputationNodeBasePtr & rootNode)
-    {
-        return m_built.find(rootNode) != m_built.end();
-    }
-#endif
 
 // -----------------------------------------------------------------------
 // memory allocation
@@ -884,8 +791,8 @@ void ComputationNetwork::AllocateAllMatrices(const std::vector<ComputationNodeBa
         else
         {
             nodeIter->RequestMatricesBeforeForwardProp(m_matrixPool);
-            //we only release matrices for the children since the root node's informatioin will be used and should not be shared
-            //with others
+            // we only release matrices for the children since the root node's informatioin will be used and should not be shared
+            // with others
             ReleaseMatricesAfterEvalForChildren(nodeIter, parentCount);
         }
     }
@@ -894,7 +801,7 @@ void ComputationNetwork::AllocateAllMatrices(const std::vector<ComputationNodeBa
     {
         std::list<ComputationNodeBasePtr>& backPropNodes = GetEvalOrder(trainRootNode);
 
-        //now, simulate the gradient computation order to determine how to allocate matrices
+        // now, simulate the gradient computation order to determine how to allocate matrices
         set<ComputationNodeBasePtr> completedGradient;
 
         // we need to call it here since we always compute gradients for children and root node is not children of other node

@@ -35,7 +35,7 @@ private:
                                 // this is used to prevent CUDA out-of memory errors
 
     vector<size_t> m_numFramesToProcess; // [seq index] number of frames available (left to return) in each parallel sequence
-    vector<size_t> m_switchFrame;        /// TODO: something like the position where a new sequence starts; still supported?
+    vector<size_t> m_switchFrame;        // TODO: something like the position where a new sequence starts; still supported?
     vector<size_t> m_numValidFrames;     // [seq index] valid #frames in each parallel sequence. Frames (s, t) with t >= m_numValidFrames[s] are NoInput.
     vector<size_t> m_extraSeqsPerMB;
     size_t m_extraNumSeqs;
@@ -61,7 +61,7 @@ private:
     std::vector<std::shared_ptr<ElemType>> m_labelsBufferMultiIO;
     std::vector<size_t> m_labelsBufferAllocatedMultiIO;
 
-    //for lattice uids and phoneboundaries
+    // for lattice uids and phoneboundaries
     std::vector<shared_ptr<const msra::dbn::latticepair>> m_latticeBufferMultiUtt;
     std::vector<std::vector<size_t>> m_labelsIDBufferMultiUtt;
     std::vector<std::vector<size_t>> m_phoneboundaryIDBufferMultiUtt;
@@ -69,7 +69,7 @@ private:
     std::vector<std::vector<size_t>> m_extraLabelsIDBufferMultiUtt;
     std::vector<std::vector<size_t>> m_extraPhoneboundaryIDBufferMultiUtt;
 
-    //hmm
+    // hmm
     msra::asr::simplesenonehmm m_hset;
 
     std::map<std::wstring, size_t> m_featureNameToIdMap;
@@ -132,10 +132,10 @@ private:
 public:
     MBLayoutPtr m_pMBLayout;
 
-    /// by default it is false
-    /// if true, reader will set to ((int) MinibatchPackingFlags::None) for time positions that are orignally correspond to ((int) MinibatchPackingFlags::SequenceStart)
-    /// set to true so that a current minibatch can uses state activities from the previous minibatch.
-    /// default will have truncated BPTT, which only does BPTT inside a minibatch
+    // by default it is false
+    // if true, reader will set to ((int) MinibatchPackingFlags::None) for time positions that are orignally correspond to ((int) MinibatchPackingFlags::SequenceStart)
+    // set to true so that a current minibatch can uses state activities from the previous minibatch.
+    // default will have truncated BPTT, which only does BPTT inside a minibatch
     bool mIgnoreSentenceBeginTag;
     // TODO: this ^^ does not seem to belong here.
 

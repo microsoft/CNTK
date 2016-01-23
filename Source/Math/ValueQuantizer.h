@@ -157,13 +157,13 @@ public:
         return u ? val1 : val0;
     }
 
-    //how many bits we are quanatizing to
+    // how many bits we are quanatizing to
     cudasharedcode size_t NBits() const
     {
         return Nbits;
     }
 
-    //max value of quantize value; 2^Nbits
+    // max value of quantize value; 2^Nbits
     cudasharedcode QWordVal QuanRangeEnd() const
     {
         return rangeend;
