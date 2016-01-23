@@ -2,12 +2,12 @@
 // Copyright (c) Microsoft. All rights reserved.
 // Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
 //
-//helpful macros
+// helpful macros
 // TODO: the file's name is too general to be included from outside; MathHelpers.h?
 
-//iterators
-//
-#pragma once
+//#pragma once
+
+// iterators
 #undef foreach_row
 #undef foreach_column
 #undef foreach_coord
@@ -19,5 +19,5 @@
         for (long _i = 0; _i < (_m).GetNumRows(); _i++)
 #define foreach_row_in_submat(_i, _istart, _iend, _m) for (long _i = _istart; _i < min(_iend, (_m).GetNumRows()); _i++)
 
-//this functions returns the index of the first column element in the columnwise array representing matrix with _numRows rows
+// this functions returns the index of the first column element in the columnwise array representing matrix with _numRows rows
 #define column_s_ind_colwisem(_colNum, _numRows) ((_numRows) * (_colNum))

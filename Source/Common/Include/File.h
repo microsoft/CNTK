@@ -10,7 +10,8 @@
 #include <vector>
 #include <stdint.h>
 #ifdef _WIN32
-#include <Windows.h>
+#define NOMINMAX
+#include "Windows.h"
 #endif
 #ifdef __unix__
 #include <unistd.h>
@@ -88,7 +89,7 @@ static void attempt(const FUNCTION& body)
 {
     static const int retries = 5;
     attempt<FUNCTION>(retries, body);
-    //msra::util::attempt<FUNCTION> (retries, body);
+    // msra::util::attempt<FUNCTION> (retries, body);
 }
 
 class File

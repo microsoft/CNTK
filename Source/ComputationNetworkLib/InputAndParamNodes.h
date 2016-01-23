@@ -9,6 +9,7 @@
 #include "ScriptableObjects.h"
 #include "Matrix.h"
 #include "File.h" // for LoadMatrixFromTextFile()
+
 #include <unordered_set>
 #include <map>
 #include <string>
@@ -18,9 +19,6 @@
 #include <memory>
 #include <algorithm>
 #include <assert.h>
-#include <atomic>
-#include <sstream>
-#include <iostream>
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -127,7 +125,7 @@ public:
                     const ElemType initValueScale,
                     bool initOnCPUOnly) // if true then always init on CPU, making initialization consistent across both (for testing)
     {
-        //fprintf(stderr, "%d x %d: %d  %ls\n", (int)GetNumRows(), (int)GetNumCols(), (int)randomSeed, NodeName().c_str());
+        // fprintf(stderr, "%d x %d: %d  %ls\n", (int)GetNumRows(), (int)GetNumCols(), (int)randomSeed, NodeName().c_str());
 
         // the random seed offset is set via the "randomSeedOffset" parameter in config
         if (initOnCPUOnly)
@@ -532,7 +530,7 @@ public:
 
             ForwardProp(FrameRange(m_pMBLayout));
 
-            /// check with expected values
+            // check with expected values
             Value().TransferFromDeviceToDevice(m_deviceId, CPUDEVICE, true);
             if (!ISCLOSE(Value()(0, 0), 1.0, EPSILON) ||
                 !ISCLOSE(Value()(0, 1), 2.0, EPSILON) ||
@@ -552,7 +550,7 @@ public:
                 BackpropTo(i, FrameRange(m_pMBLayout));
 
             // check with expected values
-            if (!ISCLOSE(Input(1)->Gradient()(0, 0), 2, EPSILON)    /// bi
+            if (!ISCLOSE(Input(1)->Gradient()(0, 0), 2, EPSILON)    // bi
                 || !ISCLOSE(Input(1)->Gradient()(0, 1), 2, EPSILON) // Wxi
                 || !ISCLOSE(Input(1)->Gradient()(1, 0), 2, EPSILON) // Whi
                 || !ISCLOSE(Input(1)->Gradient()(2, 1), 2, EPSILON) // Wci

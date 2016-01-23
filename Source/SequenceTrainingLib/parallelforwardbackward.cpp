@@ -286,7 +286,7 @@ static double emulateforwardbackwardlattice(const size_t* batchsizeforward, cons
     if (returnEframescorrect)
         logEframescorrecttotal = logaccbetas.front() - totalbwscore;
 
-#if 1 //check for matching
+#if 1 // check for matching
     double difffwbw = totalfwscore - totalbwscore;
     double absdifffwbw = difffwbw > 0 ? difffwbw : 0 - difffwbw;
 
@@ -567,11 +567,11 @@ struct parallelstateimpl
 #endif
 
         // LLs
-        //zhaorui
+        // zhaorui
         /*cudalogLLs->allocate (logLLs.rows(), logLLs.cols());
             cudalogLLs->assign(0, logLLs.rows(), 0, logLLs.cols(), &logLLs(0,0), logLLs.getcolstride(), true);  // doing this last with 'true' so we can measure time better; maybe remove later*/
     }
-    //template<class ElemType>
+    // template<class ElemType>
     void setloglls(const Microsoft::MSR::CNTK::Matrix<float>& loglls)
     {
         *cudalogLLs = loglls;
@@ -691,7 +691,7 @@ lattice::parallelstate::~parallelstate()
 void lattice::parallelstate::entercomputation(const msra::asr::simplesenonehmm& hset, const mbrclassdefinition mbrclassdef)
 {
     pimpl->cachehset(hset, mbrclassdef);
-} // pass models in (to GPU) //TODO: rethink the naming of this function
+} // pass models in (to GPU) // TODO: rethink the naming of this function
 void lattice::parallelstate::copyalignments(edgealignments& edgealignments)
 {
     pimpl->copyalignments(edgealignments);
@@ -781,7 +781,7 @@ double lattice::parallelforwardbackwardlattice(parallelstate& parallelstate, con
                                                std::vector<double>& logalphas, std::vector<double>& logbetas, const bool returnEframescorrect,
                                                const_array_ref<size_t>& uids, std::vector<double>& logEframescorrect,
                                                std::vector<double>& Eframescorrectbuf, double& logEframescorrecttotal) const
-{                                     //^^ TODO: remove this
+{                                     // ^^ TODO: remove this
     vector<size_t> batchsizeforward;  // record the batch size that exclude the data dependency for forward
     vector<size_t> batchsizebackward; // record the batch size that exclude the data dependency for backward
 
@@ -890,8 +890,8 @@ void lattice::parallelsMBRerrorsignal(parallelstate& parallelstate, const edgeal
                                       const double logEframescorrecttotal, msra::math::ssematrixbase& errorsignal, msra::math::ssematrixbase& errorsignalneg) const
 {
     /*  time measurement for CUDA
-            cudaerrorcopyto:        3.058592 ms 
-            cudaerrorsignalsync:    0.356998 ms 
+            cudaerrorcopyto:        3.058592 ms
+            cudaerrorsignalsync:    0.356998 ms
             cudaerrorcopyback:      8.983703 ms  */
 
     /*  time measurement for emulation
@@ -936,7 +936,7 @@ void lattice::parallelmmierrorsignal(parallelstate& parallelstate, const edgeali
         latticefunctions->mmierrorsignal(*parallelstate->alignresult.get(), *parallelstate->alignoffsetsgpu.get(), *parallelstate->edgesgpu.get(),
                                          *parallelstate->nodesgpu.get(), *parallelstate->logppsgpu.get(), *parallelstate->errorsignalgpu.get());
 
-        //parallelstate->errorsignalgpu->fetch (0, errorsignal.rows(), 0, errorsignal.cols(), &errorsignal(0, 0), errorsignal.getcolstride(), true);
+        // parallelstate->errorsignalgpu->fetch (0, errorsignal.rows(), 0, errorsignal.cols(), &errorsignal(0, 0), errorsignal.getcolstride(), true);
     }
     else
     {

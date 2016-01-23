@@ -237,7 +237,7 @@ public:
     }
 
     // this returns the map directly (read-only) and will lazily initialize it for a given seed
-    const std::vector<INDEXTYPE>& operator()(size_t seed) //throw()
+    const std::vector<INDEXTYPE>& operator()(size_t seed) // throw()
     {
         // if wrong seed then lazily recache the sequence
         if (seed != currentseed)

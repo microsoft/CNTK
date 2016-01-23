@@ -56,7 +56,7 @@ void *mallocbytes(size_t nelem, size_t sz)
     {
         try
         {
-            //fprintf (stderr, "mallocbytes: allocating %d elements of size %d, %d bytes\n", (int) nelem, (int) sz, (int) (nelem * sz));        // comment out by [v-hansu] to get rid out annoying output
+            // fprintf (stderr, "mallocbytes: allocating %d elements of size %d, %d bytes\n", (int) nelem, (int) sz, (int) (nelem * sz));        // comment out by [v-hansu] to get rid out annoying output
             void *p;
             cudaMalloc(&p, nelem * sz) || "cudaMalloc failed";
             return p;

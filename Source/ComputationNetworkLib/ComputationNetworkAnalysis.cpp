@@ -93,7 +93,7 @@ void ComputationNetwork::FormRecurrentLoops(const ComputationNodeBasePtr& rootNo
             {
                 if (node->Input(i)->m_loopId == node->m_loopId && GetRecurrenceSteppingDirection(node) == 0)
                 {
-                    //assert(node->Input(i)->m_indexInLoop == 0);                    // No. It seems this variable really counts the number of parents.
+                    // assert(node->Input(i)->m_indexInLoop == 0);                    // No. It seems this variable really counts the number of parents.
                     node->Input(i)->m_indexInLoop++; // BUGBUG: this is bumping up the m_indexInLoop, but I don't think it is initialized anywhere other than PurgeStateForFormingRecurrentLoops(). i-1?
                 }
             }
@@ -183,7 +183,6 @@ static int DetermineLoopDirection(const std::vector<ComputationNodeBasePtr>& nes
 // This sets index, lowLink, m_visited, and m_inStack.
 void ComputationNetwork::DetermineSCCs(const ComputationNodeBasePtr& rootNode)
 {
-    // notice that this graph including graphs from a parent networks if two or more networks are connected via PairNetworkNode
     list<ComputationNodeBasePtr> sccStack;
     size_t index = 0;
     size_t loopId = 0; // BUGBUG: I think this is currently buggy in an edge case, and not needed (use m_allSEQNodes.size() instead).
@@ -217,20 +216,17 @@ void ComputationNetwork::DetermineSCCsR(ComputationNodeBasePtr cur,
     sccStack.push_back(cur);
     cur->m_inStack = true;
 
-    if (cur->OperationName() != L"PairNetwork") // PairNetwork is the connection from another network, so ignore its children (they are part of the other network)
+    // set m_minIndex to min over m_lowLinks of children
+    for (int i = 0; i < cur->GetNumInputs(); i++)
     {
-        // set m_minIndex to min over m_lowLinks of children
-        for (int i = 0; i < cur->GetNumInputs(); i++)
+        if (!cur->Input(i)->m_visited)
         {
-            if (!cur->Input(i)->m_visited)
-            {
-                DetermineSCCsR(cur->Input(i), sccStack, index, loopId);
-                cur->m_minIndex = min(cur->m_minIndex, cur->Input(i)->m_minIndex);
-            }
-            else if (cur->Input(i)->m_inStack)
-            {
-                cur->m_minIndex = min(cur->m_minIndex, cur->Input(i)->m_minIndex);
-            }
+            DetermineSCCsR(cur->Input(i), sccStack, index, loopId);
+            cur->m_minIndex = min(cur->m_minIndex, cur->Input(i)->m_minIndex);
+        }
+        else if (cur->Input(i)->m_inStack)
+        {
+            cur->m_minIndex = min(cur->m_minIndex, cur->Input(i)->m_minIndex);
         }
     }
 
@@ -239,13 +235,8 @@ void ComputationNetwork::DetermineSCCsR(ComputationNodeBasePtr cur,
     {
         // gather the list of all nodes in this loop
         vector<ComputationNodeBasePtr> nestedNodes;
-// TODO: build array first in a local array. Only if succeeds, then construct the node off it.
-#if 1
+        // TODO: build array first in a local array. Only if succeeds, then construct the node off it.
         SEQTraversalFlowControlNode rInfo(m_allSEQNodes.size() /*loopId*/, cur);
-// Note: Don't fix anything here, latest master has changes here already except needs to add 'size_t loopId = m_allSEQNodes.size()'
-#else // BUGBUG: loopId must be shared across multiple invocations of this from different roots. The above accomplishes this.
-        SEQTraversalFlowControlNode rInfo(loopId, cur);
-#endif
         for (;;)
         {
             ComputationNodeBasePtr w = sccStack.back();
@@ -416,4 +407,5 @@ static int DetermineLoopDirection(const std::vector<ComputationNodeBasePtr>& nes
     // BUGBUG: Multiple recurrence dimensions not yet supported beyond this point.
     return steppingDirection;
 }
+
 } } }

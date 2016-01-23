@@ -4,10 +4,10 @@
 //
 #pragma once
 
-//The basic idea of this implementation is learned from Brian Guenter <bguenter@microsoft.com>
-
+#include "Basics.h"
 #include "ComputationNode.h"
-#include "TrainingCriterionNodes.h"
+#include "InputAndParamNodes.h"
+#include "Matrix.h"
 
 #include <map>
 #include <string>
@@ -15,8 +15,8 @@
 #include <list>
 #include <iostream>
 
-//this file will contain computation nodes that require several atomic computation.
-//composite nodes can save memory, computation, or both
+// this file will contain computation nodes that require several atomic computation.
+
 namespace Microsoft { namespace MSR { namespace CNTK {
 
 // -----------------------------------------------------------------------
@@ -138,9 +138,9 @@ class MeanInvStdDevNodeBase : public PreComputedNodeBase<ElemType>, public NumIn
 {
     typedef PreComputedNodeBase<ElemType> Base;
     UsingPreComputedNodeMembers;
-    //static const std::wstring TypeName() { return L"MeanInvStdDev (base)"; }
+    // static const std::wstring TypeName() { return L"MeanInvStdDev (base)"; }
 public:
-    //DeclareConstructorFromConfigWithNumInputs(MeanInvStdDevNodeBase);
+    // DeclareConstructorFromConfigWithNumInputs(MeanInvStdDevNodeBase);
     MeanInvStdDevNodeBase(DEVICEID_TYPE deviceId, const wstring& name)
         : PreComputedNodeBase<ElemType>(deviceId, name),
           m_numSamples(SIZE_MAX)
@@ -181,7 +181,7 @@ public:
 
     virtual void BackpropToNonLooping(size_t /*inputIndex*/) override
     {
-        //LogicError("Mean operation should not be involved in the gradient calculation.");
+        // LogicError("Mean operation should not be involved in the gradient calculation.");
     }
 
     virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
@@ -383,8 +383,8 @@ public:
         m_var.HasNan("InvStdDev-m_var");
 #endif
 
-#if 0 // BUGBUG: This is the correct version, but it will break test cases, so do this later. MeanNode does it right already.
-            m_numSamples += Input(0)->GetMBLayout()->GetActualNumSamples();
+#if 0   // BUGBUG: This is the correct version, but it will break test cases, so do this later. MeanNode does it right already.
+        m_numSamples += Input(0)->GetMBLayout()->GetActualNumSamples();
 #else
         m_numSamples += Input(0)->Value().GetNumCols(); // BUGBUG: Should be -> GetActualNumSamples().
 #endif
@@ -541,7 +541,7 @@ public:
         InvalidArgument("PerDimMeanVarDeNormalizationNode should only be called in the evaluation stage.");
     }
 
-    //(feature-mean).*InvStdDev
+    // (feature-mean).*InvStdDev
     virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
     {
         // only feature (input0) and output needs to be sliced
@@ -565,12 +565,12 @@ public:
         input1.HasNan("PerDimMeanVarDeNormalization-input1");
         input2.HasNan("PerDimMeanVarDeNormalization-input2");
 #endif
-        //functionValues.AssignDifferenceOf(input0, input1);
-        //functionValues.ColumnElementMultiplyWith(input2);
-        //functionValues.AssignDifferenceOf(input0, input0);
-        //functionValues += input2;
-        //functionValues.ElementInverse();
-        //functionValues.ElementMultiplyWith(input0);
+        // functionValues.AssignDifferenceOf(input0, input1);
+        // functionValues.ColumnElementMultiplyWith(input2);
+        // functionValues.AssignDifferenceOf(input0, input0);
+        // functionValues += input2;
+        // functionValues.ElementInverse();
+        // functionValues.ElementMultiplyWith(input0);
         functionValues.SetValue(input0);
         functionValues.ColumnElementDivideBy(input2);
         functionValues += input1;
@@ -627,256 +627,4 @@ public:
 template class PerDimMeanVarDeNormalizationNode<float>;
 template class PerDimMeanVarDeNormalizationNode<double>;
 
-// -----------------------------------------------------------------------
-// BatchModeNode
-// -----------------------------------------------------------------------
-
-/**
-    BatchModeNode is a derivative of ComputationNode.
-    It additionally check if needs to process data in batch before processing its parent
-    This is used in case of beam search decoding. Batchmode node must be processed before other nodes.
-    It differs from PreComputeNode in that precompute done is done before the entire corpus.
-    This is done before forward computation of all nodes.
-    */
-template <class ElemType>
-class BatchModeNode : public ComputationNodeNonLooping /*ComputationNode*/<ElemType>
-{
-    // all nodes require precomputation should derive from this class
-    typedef ComputationNodeNonLooping<ElemType> Base;
-    UsingComputationNodeMembers;
-
-public:
-    //virtual ComputationNodeBase * NewThis(DEVICEID_TYPE deviceId, const wstring & name) = 0;
-    //DeclareConstructorFromConfigWithNumInputs(BatchModeNode);
-    BatchModeNode(DEVICEID_TYPE deviceId, const wstring& name)
-        : Base(deviceId, name),
-          m_memory(deviceId)
-    {
-    }
-
-    virtual bool HasComputed() const = 0;
-    virtual void MarkComputed(const bool hasComputed) = 0;
-
-    virtual void Save(File& fstream) const override
-    {
-        Base::Save(fstream);
-        fstream << m_hasComputed;
-        fstream << Value();
-    }
-
-    virtual void Load(File& fstream, size_t modelVersion) override
-    {
-        Base::Load(fstream, modelVersion);
-        fstream >> m_hasComputed;
-        LoadValue(fstream);
-    }
-
-    virtual void DumpNodeInfo(const bool printValues, File& fstream) const override
-    {
-        Base::DumpNodeInfo(printValues, fstream);
-
-        const size_t BUFLEN = 4096;
-        WCHAR str[BUFLEN];
-        swprintf(str, BUFLEN, L"[%s%s]  ", string(GetSampleLayout()).c_str(), HasMBLayout() ? " x *" : "");
-        fstream << wstring(str);
-        swprintf(str, BUFLEN, L"HasComputed=%ls", HasComputed() ? L"true" : L"false");
-        fstream << wstring(str);
-
-        PrintNodeValuesToFile(printValues, fstream);
-    }
-
-protected:
-    Matrix<ElemType> m_memory; // the memory of input or output
-    bool m_hasComputed;
-};
-
-// add this at the start of each derived class, to get access to the members of ComputationNode
-// See #define of 'UsingComputationNodeMembersBoilerplate' for more explanation.
-#define UsingBatchModeNodeMembers           \
-    UsingComputationNodeMembersBoilerplate; \
-    \
-protected:                                  \
-    using Base::m_memory;                   \
-    using Base::m_hasComputed;              \
-    \
-public:                                     \
-    using Base::HasComputed;                \
-    using Base::MarkComputed
-
-// -----------------------------------------------------------------------
-// TimeReverseNode (input)
-// BUGBUG: This must actually implement reversing the layout.
-// Challenge: This reverses the layout. If we time-reverse back, we'd reverse the layout again.
-// We will get the original layout. Unfortunately, it is not the same layout pointer.
-// To turn it back to the same layout pointer, insert a ReconcileMBLayout node.
-// -----------------------------------------------------------------------
-
-/**
-    Developed by Kaisheng Yao.
-    This node is used in the following work
-    K. Yao and G. Zweig, "Sequence-to-Sequence Neural Net Models for Grapheme-to-Phoneme Conversion", submitted to INTERSPEECH 2015
-    */
-template <class ElemType>
-class TimeReverseNode : public BatchModeNode<ElemType>, public NumInputs<1>
-{
-    typedef BatchModeNode<ElemType> Base;
-    UsingBatchModeNodeMembers;
-    static const std::wstring TypeName()
-    {
-        return L"TimeReverse";
-    }
-
-public:
-    DeclareConstructorFromConfigWithNumInputs(TimeReverseNode);
-    TimeReverseNode(DEVICEID_TYPE deviceId, const wstring& name)
-        : BatchModeNode<ElemType>(deviceId, name)
-    {
-    }
-
-    virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
-    {
-        Base::CopyTo(nodeP, newName, flags);
-        if (flags & CopyNodeFlags::copyNodeValue)
-        {
-            auto node = dynamic_pointer_cast<TimeReverseNode<ElemType>>(nodeP);
-            // TODO: m_memory is never used inside this class, just assigned. Can it not be assigned?
-            node->m_memory = m_memory;
-        }
-    }
-
-    virtual bool HasComputed() const
-    {
-        return m_hasComputed;
-    }
-    virtual void MarkComputed(const bool hasComputed)
-    {
-        m_hasComputed = hasComputed;
-    }
-
-    virtual void BackpropToNonLooping(size_t inputIndex) override
-    {
-        assert(inputIndex == 0);
-        inputIndex;
-        VerifyDims(Input(0));
-
-        size_t nT = GetNumTimeSteps();
-        for (size_t t = 0; t < nT; t++)
-        {
-            Matrix<ElemType> g = GradientFor(FrameRange(GetMBLayout(), t));
-            Matrix<ElemType> ig = Input(0)->GradientFor(FrameRange(Input(0)->GetMBLayout(), nT - 1 - t));
-            ig += g;
-        }
-    }
-
-    virtual bool OutputUsedInComputingInputNodesGradients() const override
-    {
-        // The TimeReverseNode does not require its output value for computing
-        // the gradients of its input nodes
-        return false;
-    }
-
-    virtual bool InputUsedInComputingInputNodesGradients(size_t childIndex) const override
-    {
-        // The TimeReverseNode does not require any of it's input's values for computing
-        // the gradients of its input nodes
-        UNREFERENCED_PARAMETER(childIndex);
-        return false;
-    }
-
-    virtual void /*ComputationNodeNonLooping::*/ ForwardPropNonLooping() override
-    {
-        // BUGBUG: We must flip the layout, too.
-        if (GetNumParallelSequences() != 1)
-            LogicError("%ls %ls operation not implemented for multiple parallel sequences. It does not flip the layout either. I.e. only works for a single utterance.", NodeName().c_str(), OperationName().c_str());
-        if (!m_hasComputed)
-        {
-            // this assumes this reverse node is called once, so it can set, instead add to, the function values
-            SetDims(Input(0));
-            UpdateFunctionValuesSize();
-
-            size_t nT = GetNumTimeSteps();
-            for (size_t t = 0; t < nT; t++)
-            {
-                Matrix<ElemType> v = Input(0)->ValueFor(FrameRange(Input(0)->GetMBLayout(), t));
-                ValueFor(FrameRange(GetMBLayout(), nT - 1 - t)).SetValue(v);
-            }
-
-#if NANCHECK
-            Value().HasNan("TimeReverse");
-#endif
-#if DUMPOUTPUT
-            Value().Print("TimeReverseNode");
-#endif
-
-            m_memory.SetValue(Value());
-        }
-        // TODO: don't need to set m_hasCompute? Or what is it for?
-    }
-
-    virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
-    {
-        Base::Validate(isFinalValidationPass);
-        InferMBLayoutFromInputsForStandardCase();
-        if (isFinalValidationPass && !m_pMBLayout)
-            RuntimeError("%ls %ls operation makes no sense without a MB layout.", NodeName().c_str(), OperationName().c_str());
-
-        SetDims(Input(0));
-    }
-
-public:
-    bool UnitTest()
-    {
-        size_t nT = 3;
-        size_t nInput = 3;
-        size_t nOutput = nInput;
-
-        Input(0)->SetDims1(nInput, nT);
-        Input(0)->UpdateFunctionValuesSize();
-        Input(0)->Value().SetValue(0);
-        Input(0)->Value()(0, 0) = 1;
-        Input(0)->Value()(0, 1) = 2;
-        Input(0)->Value()(0, 2) = 3;
-        SetDims1(nOutput, nT);
-        UpdateFunctionValuesSize();
-        Input(0)->Value().TransferToDeviceIfNotThere(m_deviceId, true);
-        ForwardProp(FrameRange(m_pMBLayout));
-
-        /// check with expected values
-        if (!ISCLOSE(Value()(0, 0), 3, EPSILON) ||
-            !ISCLOSE(Value()(0, 1), 2, EPSILON) ||
-            !ISCLOSE(Value()(0, 2), 1, EPSILON))
-        {
-            return false;
-        }
-
-        Value().TransferToDeviceIfNotThere(m_deviceId, true);
-
-        Input(0)->Gradient().Resize(nOutput, nT);
-        Input(0)->Gradient().SetValue(1.0);
-        Gradient().Resize(nOutput, nT);
-        Gradient().SetValue(0);
-        Gradient()(0, 0) = 1;
-        Gradient()(0, 1) = 2;
-        Gradient()(0, 2) = 3;
-        Gradient().TransferToDeviceIfNotThere(m_deviceId, true);
-
-        BackpropTo(0, FrameRange(m_pMBLayout));
-
-        /// check with expected values
-        if (!ISCLOSE(Input(0)->Gradient()(0, 0), 4, EPSILON) ||
-            !ISCLOSE(Input(0)->Gradient()(0, 1), 3, EPSILON) ||
-            !ISCLOSE(Input(0)->Gradient()(0, 2), 2, EPSILON))
-        {
-            return false;
-        }
-
-        Input(0)->Gradient().TransferToDeviceIfNotThere(m_deviceId, true);
-        Gradient().TransferToDeviceIfNotThere(m_deviceId, true);
-
-        return true;
-    }
-};
-
-template class TimeReverseNode<float>;
-template class TimeReverseNode<double>;
 } } }

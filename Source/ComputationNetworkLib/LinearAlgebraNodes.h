@@ -20,13 +20,8 @@
 #include <algorithm>
 #include <utility>
 #include <assert.h>
-#include <atomic>
-#include <sstream>
-#include <iostream>
 
 namespace Microsoft { namespace MSR { namespace CNTK {
-
-#ifdef ENABLE_TENSORVIEW
 
 // -----------------------------------------------------------------------
 // PlusNode (summand1, summand2)
@@ -51,7 +46,6 @@ public:
 
     virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
     {
-        //static int c = 0; if (c++ == 0) { fprintf(stderr, "#PLUSBP#\n"); }
         size_t rank = DetermineElementwiseTensorRank();
         auto gradient = GradientTensorFor(rank, fr);
         auto inputGradient = Input(inputIndex)->GradientTensorFor(rank, fr.AllowBroadcast());
@@ -65,7 +59,7 @@ public:
 
     virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
     {
-        //static int c = 0; if (c++ == 0) { fprintf(stderr, "#PLUS#\n"); }
+        // static int c = 0; if (c++ == 0) { fprintf(stderr, "#PLUS#\n"); }
         size_t rank = DetermineElementwiseTensorRank();
         auto result = ValueTensorFor(rank, fr);
         auto input0 = Input(0)->ValueTensorFor(rank, fr.AllowBroadcast());
@@ -114,7 +108,6 @@ public:
 
     virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
     {
-        //static int c = 0; if (c++ == 0) { fprintf(stderr,"#MINUS#\n"); }
         size_t rank = DetermineElementwiseTensorRank();
         auto result = ValueTensorFor(rank, fr);
         auto input0 = Input(0)->ValueTensorFor(rank, fr.AllowBroadcast());
@@ -125,8 +118,6 @@ public:
 
 template class MinusNode<float>;
 template class MinusNode<double>;
-
-#endif // ENABLE_TENSORVIEW
 
 // -----------------------------------------------------------------------
 // NegateNode (input)
@@ -340,7 +331,6 @@ template class TimesNode<double>;
 // -----------------------------------------------------------------------
 // TransposeTimesNode (A', B)
 // right operand and output can have MB layout, while left operand cannot
-// TODO: merge with TimesNode
 // -----------------------------------------------------------------------
 
 template <class ElemType>
@@ -364,11 +354,8 @@ public:
 template class TransposeTimesNode<float>;
 template class TransposeTimesNode<double>;
 
-#ifdef ENABLE_TENSORVIEW
-
 // -----------------------------------------------------------------------
 // ElementTimesNode (factor1, factor2)
-//
 // This allows broadcasting, and can thus also scale with a row, a column, or a scalar.
 // -----------------------------------------------------------------------
 
@@ -412,7 +399,6 @@ public:
 
     virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
     {
-        //static int c = 0; if (c++ == 0) { fprintf(stderr,"#ETIMES#\n"); }
         size_t rank = DetermineElementwiseTensorRank();
         auto result = ValueTensorFor(rank, fr);
         auto input0 = Input(0)->ValueTensorFor(rank, fr.AllowBroadcast());
@@ -423,8 +409,6 @@ public:
 
 template class ElementTimesNode<float>;
 template class ElementTimesNode<double>;
-
-#endif // ENABLE_TENSORVIEW
 
 // -----------------------------------------------------------------------
 // DiagTimesNode (vector representing the diagonal of a square matrix, data)
@@ -529,7 +513,7 @@ public:
             *node->m_rightGradient = *m_rightGradient;
         }
     }
-    //request matrices that are needed for gradient computation
+    // request matrices that are needed for gradient computation
     virtual void RequestMatricesBeforeBackprop(MatrixPool& matrixPool)
     {
         Base::RequestMatricesBeforeBackprop(matrixPool);
@@ -537,7 +521,7 @@ public:
         RequestMatrixFromPool(m_rightGradient, matrixPool);
     }
 
-    //release gradient and temp matrices that no longer needed after all the children's gradients are computed.
+    // release gradient and temp matrices that no longer needed after all the children's gradients are computed.
     virtual void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool)
     {
         Base::ReleaseMatricesAfterBackprop(matrixPool);
@@ -678,6 +662,8 @@ public:
 template class SumColumnElementsNode<float>;
 template class SumColumnElementsNode<double>;
 
+#ifdef COMING_SOON  // known bug in backprop; generalize to tensor
+
 // -----------------------------------------------------------------------
 // TransposeNode (input matrix)
 // TODO: extend towards tensor transpose (swap 2 dimensions, incl. time)
@@ -766,87 +752,7 @@ public:
 template class TransposeNode<float>;
 template class TransposeNode<double>;
 
-// -----------------------------------------------------------------------
-// DiagonalNode -- extract diagonal elements of a square matrix into a row vector
-// -----------------------------------------------------------------------
-
-template <class ElemType>
-class DiagonalNode : public ComputationNodeNonLooping<ElemType>, public NumInputs<1>
-{
-    typedef ComputationNodeNonLooping<ElemType> Base;
-    UsingComputationNodeMembersBoilerplate;
-    static const std::wstring TypeName()
-    {
-        return L"Diagonal";
-    }
-
-public:
-    DeclareConstructorFromConfigWithNumInputs(DiagonalNode);
-    DiagonalNode(DEVICEID_TYPE deviceId, const wstring& name)
-        : Base(deviceId, name)
-    {
-    }
-
-    virtual void Validate(bool isFinalValidationPass) override
-    {
-        Base::Validate(isFinalValidationPass);
-        m_pMBLayout = nullptr;
-
-        if (isFinalValidationPass && Input(0)->HasMBLayout())
-            InvalidArgument("%ls %ls operation cannot operate on minibatch data (which have a layout)", NodeName().c_str(), OperationName().c_str());
-
-        size_t dim = Input(0)->GetAsMatrixNumCols();
-        if (isFinalValidationPass && dim != Input(0)->GetAsMatrixNumRows())
-            InvalidArgument("%ls %ls operation requires a square matrix as its input.", NodeName().c_str(), OperationName().c_str());
-
-        if (Input(0)->HasSampleLayout())
-            fprintf(stderr, "WARNING: Diagonal operation cannot inherit image size information from its child. Image size info is lost.\n");
-
-        SetDims(TensorShape(1, dim), false);
-    }
-
-    virtual void /*ComputationNodeNonLooping::*/ ForwardPropNonLooping() override
-    {
-        Input(0)->ValueAsMatrix().AssignDiagonalValuesTo(ValueAsMatrix()); // TODO: use tensor lib; this is a stride operation
-#if NANCHECK
-        Value().HasNan("Diagonal");
 #endif
-    }
-
-    virtual void /*ComputationNodeNonLooping::*/ BackpropToNonLooping(size_t /*inputIndex*/) override
-    {
-        auto& inputGradientValues = Input(0)->GradientAsMatrix();
-        auto& gradientValues = GradientAsMatrix();
-
-        // BUGBUG: This should use the memshare mechanism.
-        // TODO: use tensor lib, then this will be easy, no memsharing needed
-        Matrix<ElemType> diag(gradientValues.GetNumRows(), gradientValues.GetNumCols(), gradientValues.GetDeviceId());
-        diag = gradientValues;
-        diag.Resize(gradientValues.GetNumCols(), 1);
-
-        inputGradientValues.SetValue(0);
-        // BUGBUG: Must *add* to gradient!
-        inputGradientValues.SetDiagonalValue(diag);
-    }
-
-    virtual bool OutputUsedInComputingInputNodesGradients() const override
-    {
-        // The DiagonalNode does not require its output value for computing
-        // the gradients of its input nodes
-        return false;
-    }
-
-    virtual bool InputUsedInComputingInputNodesGradients(size_t childIndex) const override
-    {
-        // The DiagonalNode does not require any of it's input's values for computing
-        // the gradients of its input nodes
-        UNREFERENCED_PARAMETER(childIndex);
-        return false;
-    }
-};
-
-template class DiagonalNode<float>;
-template class DiagonalNode<double>;
 
 // -----------------------------------------------------------------------
 // CosDistanceNode (left, right)
@@ -936,7 +842,7 @@ public:
             *node->m_temp = *m_temp;
         }
     }
-    //request matrices needed to do node function value evaluation
+    // request matrices needed to do node function value evaluation
     virtual void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool)
     {
         Base::RequestMatricesBeforeForwardProp(matrixPool);
@@ -944,7 +850,7 @@ public:
         RequestMatrixFromPool(m_invNorm1, matrixPool);
     }
 
-    //request matrices that are needed for gradient computation
+    // request matrices that are needed for gradient computation
     virtual void RequestMatricesBeforeBackprop(MatrixPool& matrixPool)
     {
         Base::RequestMatricesBeforeBackprop(matrixPool);
@@ -953,7 +859,7 @@ public:
         RequestMatrixFromPool(m_temp, matrixPool);
     }
 
-    //release gradient and temp matrices that no longer needed after all the children's gradients are computed.
+    // release gradient and temp matrices that no longer needed after all the children's gradients are computed.
     virtual void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool)
     {
         Base::ReleaseMatricesAfterBackprop(matrixPool);
@@ -1003,14 +909,14 @@ public:
     {
         Matrix<ElemType> sliceOutputGrad = GradientFor(fr);
 
-        if (inputIndex == 0) //left derivative
+        if (inputIndex == 0) // left derivative
         {
             Matrix<ElemType> sliceInput0Grad = Input(0)->GradientFor(fr);
             Matrix<ElemType> sliceInput1Value = Input(1)->ValueFor(fr);
 
             sliceInput0Grad.AddColumnReshapeProductOf(sliceOutputGrad, sliceInput1Value, false);
         }
-        else //right derivative
+        else // right derivative
         {
             Matrix<ElemType> sliceInput0Value = Input(0)->ValueFor(fr);
             Matrix<ElemType> sliceInput1Grad = Input(1)->GradientFor(fr);
@@ -1136,7 +1042,7 @@ public:
         }
         else // right part
         {
-            invNormSquare.AssignElementProductOf(invNorm1, invNorm1); //this matrix should be save and unchanged. It should not be changed
+            invNormSquare.AssignElementProductOf(invNorm1, invNorm1); // this matrix should be save and unchanged. It should not be changed
 
             for (long m = 0; m < negNumber + 1; m++)
             {
@@ -1167,7 +1073,7 @@ public:
                     size_t currshift = (m + shift - 1) % numCols;
                     size_t reverseshift = numCols - currshift;
 
-                    leftTerm.AssignElementProductOfWithShift(invNormSquare, temp, reverseshift); //use leftTerm as a temp variable here
+                    leftTerm.AssignElementProductOfWithShift(invNormSquare, temp, reverseshift); // use leftTerm as a temp variable here
 
                     Matrix<ElemType>::ConductRowElementMultiplyWithShift(leftTerm, in1, rightTerm, 0, true);
 
@@ -1254,7 +1160,7 @@ public:
             *node->m_temp = *m_temp;
         }
     }
-    //request matrices needed to do node function value evaluation
+    // request matrices needed to do node function value evaluation
     virtual void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool)
     {
         Base::RequestMatricesBeforeForwardProp(matrixPool);
@@ -1264,7 +1170,7 @@ public:
         RequestMatrixFromPool(m_rightTerm, matrixPool);
     }
 
-    //request matrices that are needed for gradient computation
+    // request matrices that are needed for gradient computation
     virtual void RequestMatricesBeforeBackprop(MatrixPool& matrixPool)
     {
         Base::RequestMatricesBeforeBackprop(matrixPool);
@@ -1272,7 +1178,7 @@ public:
         RequestMatrixFromPool(m_temp, matrixPool);
     }
 
-    //release gradient and temp matrices that no longer needed after all the children's gradients are computed.
+    // release gradient and temp matrices that no longer needed after all the children's gradients are computed.
     virtual void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool)
     {
         Base::ReleaseMatricesAfterBackprop(matrixPool);

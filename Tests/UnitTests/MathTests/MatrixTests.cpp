@@ -40,7 +40,7 @@ BOOST_FIXTURE_TEST_CASE(MatrixConstructors, RandomSeedFixture)
 
 BOOST_FIXTURE_TEST_CASE(MatrixMoveTest1, RandomSeedFixture)
 {
-    //no moves required
+    // no moves required
     SingleMatrix a;
     SingleMatrix b;
     b.Resize(50, 100);
@@ -59,7 +59,7 @@ BOOST_FIXTURE_TEST_CASE(MatrixMoveTest1, RandomSeedFixture)
 
 BOOST_FIXTURE_TEST_CASE(MatrixMoveTest2, RandomSeedFixture)
 {
-    //potentially a move is required
+    // potentially a move is required
     SingleMatrix a;
     SingleMatrix b;
     b.Resize(50, 100);
@@ -68,7 +68,7 @@ BOOST_FIXTURE_TEST_CASE(MatrixMoveTest2, RandomSeedFixture)
     BOOST_CHECK_EQUAL(a.GetDeviceId(), 0);
     BOOST_CHECK_EQUAL(b.GetDeviceId(), 0);
 
-    b(12, 13) = 14; //this will move whole matrix B from GPU to CPU
+    b(12, 13) = 14; // this will move whole matrix B from GPU to CPU
     BOOST_CHECK_EQUAL(b.GetDeviceId(), -1);
 
     std::swap(a, b); // this will not only swap A and B but will put them to their preferred device (GPU if present)
@@ -82,7 +82,7 @@ BOOST_FIXTURE_TEST_CASE(MatrixMoveTest2, RandomSeedFixture)
 
 BOOST_FIXTURE_TEST_CASE(MatrixDeepCopy, RandomSeedFixture)
 {
-    //This is deep copy, not move
+    // This is deep copy, not move
     SingleMatrix a;
     SingleMatrix b;
 
@@ -220,7 +220,7 @@ BOOST_FIXTURE_TEST_CASE(MatrixInitRandomUniformSeed, RandomSeedFixture)
 
 BOOST_FIXTURE_TEST_CASE(MatrixSetValueMethods, RandomSeedFixture)
 {
-    //void SetValue(const ElemType v);
+    // void SetValue(const ElemType v);
     SingleMatrix a(32, 12, AUTOPLACEMATRIX);
     BOOST_CHECK_EQUAL(32, a.GetNumRows());
     BOOST_CHECK_EQUAL(12, a.GetNumCols());
@@ -232,7 +232,7 @@ BOOST_FIXTURE_TEST_CASE(MatrixSetValueMethods, RandomSeedFixture)
         BOOST_CHECK_EQUAL(v, a(i, j));
     }
 
-    //void SetValue(const Matrix<ElemType>& deepCopyFrom);
+    // void SetValue(const Matrix<ElemType>& deepCopyFrom);
     SingleMatrix b;
     b.SetValue(a);
     foreach_coord (i, j, b)
@@ -240,7 +240,7 @@ BOOST_FIXTURE_TEST_CASE(MatrixSetValueMethods, RandomSeedFixture)
         BOOST_CHECK_EQUAL(v, b(i, j));
     }
 
-    //void SetValue(const size_t numRows, const size_t numCols, ElemType *pArray, const bool srcIsColMajor);
+    // void SetValue(const size_t numRows, const size_t numCols, ElemType *pArray, const bool srcIsColMajor);
     std::array<float, 7> arrVector = {123.0f, 0.23f, -22.0f, 63.0f, 43.42f, 324.3f, 99912.0f};
 
     float *arr = arrVector.data();
@@ -261,7 +261,7 @@ BOOST_FIXTURE_TEST_CASE(MatrixSetValueMethods, RandomSeedFixture)
         BOOST_CHECK_EQUAL(arr[i], bbbb(i, 3));
     }
 
-    //void SetDiagonalValue(const ElemType v);
+    // void SetDiagonalValue(const ElemType v);
     SingleMatrix c(4, 4, AUTOPLACEMATRIX);
     const float val = -0.00332f;
     c.SetDiagonalValue(val);
@@ -273,7 +273,7 @@ BOOST_FIXTURE_TEST_CASE(MatrixSetValueMethods, RandomSeedFixture)
             BOOST_CHECK_EQUAL(0, c(i, j));
     }
 
-    //void SetDiagonalValue(const Matrix<ElemType>& vector);
+    // void SetDiagonalValue(const Matrix<ElemType>& vector);
     SingleMatrix d(4, 1, AUTOPLACEMATRIX);
     const float val1 = 43.324f;
     d.SetValue(val1);
@@ -397,7 +397,7 @@ BOOST_FIXTURE_TEST_CASE(MatrixMultiAndDiv, RandomSeedFixture)
     m2(2, 2) = 135;
     BOOST_CHECK(m3.IsEqualTo(m2));
 
-    //Multiplications of arbitrary matrix with 1x1 matrix
+    // Multiplications of arbitrary matrix with 1x1 matrix
 
     SingleMatrix a(2, 3, AUTOPLACEMATRIX);
     a(0, 0) = 1;
@@ -718,7 +718,7 @@ BOOST_FIXTURE_TEST_CASE(MatrixColumnElementMultiply, RandomSeedFixture)
 
 BOOST_FIXTURE_TEST_CASE(MatrixAssignXOf, RandomSeedFixture)
 {
-    //AssignDifferenceOf
+    // AssignDifferenceOf
     Matrix<float> a = Matrix<float>::RandomUniform(429, 1024, 5, 32, IncrementCounter());
     Matrix<float> b = Matrix<float>::RandomUniform(429, 1024, 5, 32, IncrementCounter());
     Matrix<float> c;
@@ -747,16 +747,16 @@ BOOST_FIXTURE_TEST_CASE(MatrixAssignXOf, RandomSeedFixture)
     {
         BOOST_CHECK_EQUAL(c(i, j), 1 - a(i, j));
     }
-    //
+    // 
 
-    //AssignElementProductOf
+    // AssignElementProductOf
     c.AssignElementProductOf(a, b);
     foreach_coord (i, j, c)
     {
         BOOST_CHECK_EQUAL(c(i, j), a(i, j) * b(i, j));
     }
 
-    //AddElementProductOf
+    // AddElementProductOf
     Matrix<float> c_copy(c);
     c.AddElementProductOf(a, b);
     foreach_coord (i, j, c)
@@ -764,7 +764,7 @@ BOOST_FIXTURE_TEST_CASE(MatrixAssignXOf, RandomSeedFixture)
         BOOST_CHECK_EQUAL(c(i, j), c_copy(i, j) + a(i, j) * b(i, j));
     }
 
-    //AssignSigmoidOf
+    // AssignSigmoidOf
     CPUMatrix<float> ac = CPUMatrix<float>::RandomUniform(429, 1024, 5, 32, IncrementCounter());
     CPUMatrix<float> bc = CPUMatrix<float>::RandomUniform(429, 1024, -5, 12, IncrementCounter());
     Matrix<float> d(ac.GetNumRows(), ac.GetNumCols(), ac.GetArray(), matrixFlagNormal);
@@ -776,7 +776,7 @@ BOOST_FIXTURE_TEST_CASE(MatrixAssignXOf, RandomSeedFixture)
         BOOST_CHECK_LT(fabs(ac(i, j) - d(i, j)), c_epsilonFloatE5);
     }
 
-    //AssignSignOf
+    // AssignSignOf
     Matrix<float> m1 = Matrix<float>::RandomUniform(42, 12, -5, 12, IncrementCounter());
     Matrix<float> m2(4, 5, AUTOPLACEMATRIX);
     m2.AssignSignOf(m1);
@@ -797,7 +797,7 @@ BOOST_FIXTURE_TEST_CASE(MatrixAssignXOf, RandomSeedFixture)
         BOOST_CHECK_EQUAL(m4(i, j) + SIGNUMZ(v), m3(i, j));
     }
 
-    //AssignTruncateBottom and Top
+    // AssignTruncateBottom and Top
     Matrix<float> m5(2, 2, AUTOPLACEMATRIX);
     m5(0, 0) = 1;
     m5(0, 1) = 2;

@@ -14,10 +14,10 @@
 #include "ConvolutionalNodes.h"
 #include "RecurrentNodes.h"
 #include "ReshapingNodes.h"
-#include "TrainingCriterionNodes.h"
-#include "CompositeComputationNodes.h"
-#include "EvaluationCriterionNodes.h"
-#include "EsotericNodes.h"
+#include "TrainingNodes.h"
+#include "PreComputeNodes.h"
+#include "EvaluationNodes.h"
+#include "SpecialPurposeNodes.h"
 #include "MPIWrapper.h" // TODO: does not belong here
 #include <string>
 #include <vector>
@@ -104,14 +104,14 @@ void ComputationNetwork::SaveToFileImpl(const wstring& fileName, const FileOptio
     File fstream(fileName, fileFormat | FileOptions::fileOptionsWrite);
     fstream.PutMarker(FileMarker::fileMarkerBeginSection, L"BCN");
 
-    //model version
+    // model version
     fstream.PutMarker(FileMarker::fileMarkerBeginSection, L"BVersion");
     fstream << (size_t) CURRENT_CNTK_MODEL_VERSION;
     fstream.PutMarker(FileMarker::fileMarkerEndSection, L"EVersion");
 
     fstream << (size_t) m_nameToNodeMap.size();
 
-    //put all node info first
+    // put all node info first
     fstream.PutMarker(FileMarker::fileMarkerBeginSection, L"BNodeList");
     for (auto nodeIter = m_nameToNodeMap.begin(); nodeIter != m_nameToNodeMap.end(); nodeIter++)
     {
@@ -121,7 +121,7 @@ void ComputationNetwork::SaveToFileImpl(const wstring& fileName, const FileOptio
 
     fstream.PutMarker(FileMarker::fileMarkerEndSection, L"ENodeList");
 
-    //put relationship
+    // put relationship
     fstream.PutMarker(FileMarker::fileMarkerBeginSection, L"BRelation");
     for (auto nodeIter = m_nameToNodeMap.begin(); nodeIter != m_nameToNodeMap.end(); nodeIter++)
     {
@@ -311,7 +311,7 @@ void ComputationNetwork::Read(const wstring& fileName, const FileOptions fileFor
 
             if (!fstream.TryGetMarker(FileMarker::fileMarkerEndSection, L"ECriteriaNodes" /*legacy*/))
             {
-                fstream.GetMarker(FileMarker::fileMarkerEndSection, L"ECriterionNodes"); //check legacy first so err msg will use new name
+                fstream.GetMarker(FileMarker::fileMarkerEndSection, L"ECriterionNodes"); // check legacy first so err msg will use new name
             }
         }
 
@@ -367,38 +367,6 @@ void ComputationNetwork::Read(const wstring& fileName, const FileOptions fileFor
 // node construction
 // -----------------------------------------------------------------------
 
-#if 0 // This function is not used. Is there value to keep it? Maybe a librarified CNTK could use this to poke into InputValues?
-    ComputationNodeBasePtr ComputationNetwork::SetNodeValue(const wstring & nodeName, const double value)
-    {
-        ComputationNodeBasePtr pNode = GetNodeFromName(nodeName);
-
-        // TODO: this is a bit ugly, but does SetNodeValue() really belong here?
-        if (IsNodePtr<LearnableParameter<float>>(pNode))
-            AsNodePtr<LearnableParameter<float>>(pNode)->Value().SetValue((float)value);
-        else if (IsNodePtr<LearnableParameter<double>>(pNode))
-            AsNodePtr<LearnableParameter<double>>(pNode)->Value().SetValue((double)value);
-        else if (pNode->RequiresPreCompute())
-        {
-            if (IsNodePtr<PreComputedNodeBase<float>>(pNode))
-            {
-                auto preComputedNode = AsNodePtr<PreComputedNodeBase<float>>(pNode);
-                preComputedNode->Value().SetValue((float)value);
-                preComputedNode->MarkComputed(true);
-            }
-            else
-            {
-                auto preComputedNode = AsNodePtr<PreComputedNodeBase<double>>(pNode);
-                preComputedNode->Value().SetValue((double)value);
-                preComputedNode->MarkComputed(true);
-            }
-        }
-        else
-            LogicError("Only values of learnable parameters and precomputed nodes can be set.");
-
-        return pNode;
-    }
-#endif
-
 // non-static version needed because it accesses m_randomSeedOffset
 // Excessively used by SimpleNetworkBuilder, but always after CreateLearnableParameter(), so we should really absorb it there
 template <class ElemType>
@@ -418,7 +386,9 @@ bool ComputationNetwork::IsTypicalCriterionNode(ComputationNodeBasePtr nodePtr)
         nodePtr->OperationName() == OperationNameOf(CrossEntropyNode) ||
         nodePtr->OperationName() == OperationNameOf(ClassBasedCrossEntropyWithSoftmaxNode) ||
         nodePtr->OperationName() == OperationNameOf(ErrorPredictionNode) ||
+#ifdef COMING_SOON
         nodePtr->OperationName() == OperationNameOf(CRFNode) ||
+#endif
         nodePtr->OperationName() == OperationNameOf(DummyCriterionNode))
         return true;
 
@@ -457,21 +427,12 @@ void ComputationNetwork::GetNodesRequiringX(list<ComputationNodeBasePtr>& nodesR
     nodesRequiringX.unique();
 }
 
-//return list of nodes that require precomputation and not precomputed yet.
+// return list of nodes that require precomputation and not precomputed yet
 list<ComputationNodeBasePtr> ComputationNetwork::GetNodesRequiringPreComputation(const ComputationNodeBasePtr& rootNode, bool checkComputed)
 {
     list<ComputationNodeBasePtr> nodesRequiringX;
     GetNodesRequiringX<PreComputedNodeBase<float>>(nodesRequiringX, rootNode, checkComputed);
     GetNodesRequiringX<PreComputedNodeBase<double>>(nodesRequiringX, rootNode, checkComputed);
-    return nodesRequiringX;
-}
-
-//return list of nodes that require batch mode and not precomputed yet.
-list<ComputationNodeBasePtr> ComputationNetwork::GetNodesRequiringBatchMode(const ComputationNodeBasePtr& rootNode, bool checkComputed)
-{
-    list<ComputationNodeBasePtr> nodesRequiringX;
-    GetNodesRequiringX<BatchModeNode<float>>(nodesRequiringX, rootNode, checkComputed);
-    GetNodesRequiringX<BatchModeNode<double>>(nodesRequiringX, rootNode, checkComputed);
     return nodesRequiringX;
 }
 
@@ -610,7 +571,7 @@ bool ComputationNetwork::UnitTest(bool allowFragment)
         {
             if (!allowFragment)
                 FormRecurrentLoops(node);
-            //this->SetActualMiniBatchSizeFromFeatures();
+            // this->SetActualMiniBatchSizeFromFeatures();
             if (!UnitTest(node))
                 vErrors.push_back(node->NodeName().c_str());
         }
@@ -734,9 +695,9 @@ void ComputationNetwork::DescribeNetworkUsingDot(list<ComputationArc>& arcs,
     fstream << "strict digraph {\n";
     fstream << "rankdir = BT ;  \n";
 
-    //////////////////////////////////////////////////////////////////////////
+    // ////////////////////////////////////////////////////////////////////////
     //    special nodes
-    //////////////////////////////////////////////////////////////////////////
+    // ////////////////////////////////////////////////////////////////////////
     fstream << L"// special nodes \n";
 
     // learnable parameters:
@@ -756,9 +717,9 @@ void ComputationNetwork::DescribeNetworkUsingDot(list<ComputationArc>& arcs,
     // normal nodes
     fstream << dotcfg.m_normalNodeStyle << L"\n";
 
-    //////////////////////////////////////////////////////////////////////////
+    // ////////////////////////////////////////////////////////////////////////
     //    add labels for each node
-    //////////////////////////////////////////////////////////////////////////
+    // ////////////////////////////////////////////////////////////////////////
     fstream << L"\n// add labels and operation name\n";
     wstring line;
     for (const auto& x : allnodes)
@@ -770,9 +731,9 @@ void ComputationNetwork::DescribeNetworkUsingDot(list<ComputationArc>& arcs,
         fstream << line;
     }
 
-    //////////////////////////////////////////////////////////////////////////
+    // ////////////////////////////////////////////////////////////////////////
     //    sub-graph
-    //////////////////////////////////////////////////////////////////////////
+    // ////////////////////////////////////////////////////////////////////////
     // subgraph source
     fstream << L"subgraph {\n";
     fstream << L"\t\t rank=source ; ";
@@ -796,9 +757,9 @@ void ComputationNetwork::DescribeNetworkUsingDot(list<ComputationArc>& arcs,
 
     fstream << line << L"\n}\n";
 
-    //////////////////////////////////////////////////////////////////////////
+    // ////////////////////////////////////////////////////////////////////////
     //    specify arc connections
-    //////////////////////////////////////////////////////////////////////////
+    // ////////////////////////////////////////////////////////////////////////
     for (auto x = arcs.begin(); x != arcs.end(); x++)
     {
         ComputationNodeBasePtr src = (*x).first;
@@ -844,11 +805,11 @@ void ComputationNetwork::DescribeNetworkUsingDot(list<ComputationArc>& arcs,
 void ComputationNetwork::PlotNetworkTopology(const wstring outputFile) //  [1/13/2015 erw] plot network topology using dot language
 {
     VerifyIsCompiled("PlotNetworkTopology");
-    //ValidateNetwork(false, true);
+    // ValidateNetwork(false, true);
 
-    //////////////////////////////////////////////////////////////////////////
+    // ////////////////////////////////////////////////////////////////////////
     //    step 1.        get all the arcs in the network
-    //////////////////////////////////////////////////////////////////////////
+    // ////////////////////////////////////////////////////////////////////////
     unordered_set<ComputationNodeBasePtr> visited;
     list<ComputationArc> arcs;
 
@@ -861,10 +822,40 @@ void ComputationNetwork::PlotNetworkTopology(const wstring outputFile) //  [1/13
             group[i]->EnumerateArcs(visited, arcs);
     }
 
-    //////////////////////////////////////////////////////////////////////////
+    // ////////////////////////////////////////////////////////////////////////
     //    step 2.        output dot description
-    //////////////////////////////////////////////////////////////////////////
+    // ////////////////////////////////////////////////////////////////////////
     DescribeNetworkUsingDot(arcs, outputFile);
+}
+
+// enumerate all arcs that can be reached starting from the current node's children
+// [in/out] visited record already visited nodes
+void ComputationNodeBase::EnumerateArcs(std::unordered_set<ComputationNodeBasePtr>& visited, std::list<ComputationArc>& arcs)
+{
+    std::list<ComputationNodeBasePtr> tovisit;
+
+    if (visited.find(shared_from_this()) == visited.end()) // only do when this node has not been visited before
+    {
+        tovisit.push_back(shared_from_this());
+
+        while (!tovisit.empty())
+        {
+            ComputationNodeBasePtr curNode = tovisit.front();
+            tovisit.pop_front();
+
+            if (visited.find(curNode) == visited.end())
+            {
+                for (size_t i = 0; i < curNode->m_inputs.size(); i++)
+                {
+                    arcs.push_back(ComputationArc(curNode, curNode->m_inputs[i]));
+
+                    if (visited.find(curNode->m_inputs[i]) == visited.end()) // this children has not been visited before
+                        tovisit.push_front(curNode->m_inputs[i]);            // going to visit each of the children
+                }
+                visited.insert(curNode);
+            }
+        }
+    }
 }
 
 // -----------------------------------------------------------------------

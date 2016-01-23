@@ -560,7 +560,7 @@ private:
     vector<SectionFile*> m_secFiles;
     std::map<std::wstring, Section*, nocase_compare> m_sections;
 
-    /** 
+    /**
     for reading one line per file, i.e., a file has only one line of data
     */
     bool mOneLinePerFile;

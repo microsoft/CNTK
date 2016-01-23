@@ -98,7 +98,7 @@ public:
             // figure out the dimension of the data
             std::wstring val = iter->first;
             size_t rows = (*m_dimensions)[val];
-            //size_t count = rows*numRecords;
+            // size_t count = rows*numRecords;
 
             // find the output matrix we want to fill
             const std::map<std::wstring, void*, nocase_compare>::const_iterator iterIn = matrices.find(val);

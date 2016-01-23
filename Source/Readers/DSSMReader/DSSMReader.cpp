@@ -36,8 +36,8 @@ std::string ws2s(const std::wstring& wstr)
 template <class ElemType>
 size_t DSSMReader<ElemType>::RandomizeSweep(size_t mbStartSample)
 {
-    //size_t randomRangePerEpoch = (m_epochSize+m_randomizeRange-1)/m_randomizeRange;
-    //return m_epoch*randomRangePerEpoch + epochSample/m_randomizeRange;
+    // size_t randomRangePerEpoch = (m_epochSize+m_randomizeRange-1)/m_randomizeRange;
+    // return m_epoch*randomRangePerEpoch + epochSample/m_randomizeRange;
     return mbStartSample / m_randomizeRange;
 }
 
@@ -343,11 +343,11 @@ bool DSSMReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemType>*
     featuresD.Resize(dssm_docInput.numRows, actualMBSize);
     */
 
-    //fprintf(stderr, "featuresQ\n");
+    // fprintf(stderr, "featuresQ\n");
     dssm_queryInput.Next_Batch(featuresQ, m_readNextSample, actualMBSize, read_order);
-    //fprintf(stderr, "\n\n\nfeaturesD\n");
+    // fprintf(stderr, "\n\n\nfeaturesD\n");
     dssm_docInput.Next_Batch(featuresD, m_readNextSample, actualMBSize, read_order);
-    //fprintf(stderr, "\n\n\n\n\n");
+    // fprintf(stderr, "\n\n\n\n\n");
     m_readNextSample += actualMBSize;
     /*
                 featuresQ.Print("featuresQ");
@@ -381,7 +381,7 @@ bool DSSMReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemType>*
     featuresQ.TransferFromDeviceToDevice(featuresQ.GetDeviceId(), -1);
     featuresQ.SwitchToMatrixType(MatrixType::DENSE, MatrixFormat::matrixFormatDense);
     featuresQ.Print("featuresQ");
-    
+
     featuresD.TransferFromDeviceToDevice(featuresD.GetDeviceId(), -1);
     featuresD.SwitchToMatrixType(MatrixType::DENSE, MatrixFormat::matrixFormatDense);
     featuresD.Print("featuresD");
@@ -455,7 +455,7 @@ bool DSSMReader<ElemType>::DataEnd(EndDataType endDataType)
         assert(false);
         break;
     case endDataEpoch:
-        //ret = (m_mbStartSample / m_epochSize < m_epoch);
+        // ret = (m_mbStartSample / m_epochSize < m_epoch);
         ret = (m_readNextSample >= m_totalSamples);
         break;
     case endDataSet:
@@ -508,13 +508,13 @@ void DSSM_BinaryInput<ElemType>::Init(wstring fileName, size_t dim)
                                   LODWORD(0),
                                   sizeof(int64_t) * 2 + sizeof(int32_t));
 
-    //cout << "After mapviewoffile" << endl;
+    // cout << "After mapviewoffile" << endl;
 
     memcpy(&numRows, header_buffer, sizeof(int64_t));
     memcpy(&numCols, (char*) header_buffer + sizeof(int64_t), sizeof(int32_t));
     memcpy(&totalNNz, (char*) header_buffer + sizeof(int64_t) + sizeof(int32_t), sizeof(int64_t));
 
-    //cout << "After gotvalues" << endl;
+    // cout << "After gotvalues" << endl;
     int64_t base_offset = sizeof(int64_t) * 2 + sizeof(int32_t);
 
     int64_t offsets_padding = base_offset % sysGran;
@@ -564,9 +564,9 @@ bool DSSM_BinaryInput<ElemType>::SetupEpoch(size_t minibatchSize)
         values = (ElemType*) malloc(sizeof(ElemType) * MAX_BUFFER * minibatchSize);
         colIndices = (int32_t*) malloc(sizeof(int32_t) * (minibatchSize + 1));
         rowIndices = (int32_t*) malloc(sizeof(int32_t) * MAX_BUFFER * minibatchSize);
-        //fprintf(stderr, "values  size: %d",sizeof(ElemType)*MAX_BUFFER*minibatchSize);
-        //fprintf(stderr, "colindi size: %d",sizeof(int32_t)*MAX_BUFFER*(1+minibatchSize));
-        //fprintf(stderr, "rowindi size: %d",sizeof(int32_t)*MAX_BUFFER*minibatchSize);
+        // fprintf(stderr, "values  size: %d",sizeof(ElemType)*MAX_BUFFER*minibatchSize);
+        // fprintf(stderr, "colindi size: %d",sizeof(int32_t)*MAX_BUFFER*(1+minibatchSize));
+        // fprintf(stderr, "rowindi size: %d",sizeof(int32_t)*MAX_BUFFER*minibatchSize);
     }
     if (minibatchSize > mbSize)
     {
@@ -587,13 +587,13 @@ bool DSSM_BinaryInput<ElemType>::Next_Batch(Matrix<ElemType>& matrices, size_t c
 
     for (int c = 0; c < numToRead; c++, cur++)
     {
-        //int64_t cur_offset = offsets[ordering[cur]];
+        // int64_t cur_offset = offsets[ordering[cur]];
         int64_t cur_offset = offsets[cur];
-        //int64_t cur_offset = offsets[ordering[c]];
-        //int32_t nnz;
+        // int64_t cur_offset = offsets[ordering[c]];
+        // int32_t nnz;
         colIndices[c] = cur_index;
         int32_t nnz = *(int32_t*) ((char*) data_buffer + cur_offset);
-        //memcpy(&nnz, (char*)data_buffer + cur_offset, sizeof(int32_t));
+        // memcpy(&nnz, (char*)data_buffer + cur_offset, sizeof(int32_t));
         memcpy(values + cur_index, (char*) data_buffer + cur_offset + sizeof(int32_t), sizeof(ElemType) * nnz);
         memcpy(rowIndices + cur_index, (char*) data_buffer + cur_offset + sizeof(int32_t) + sizeof(ElemType) * nnz, sizeof(int32_t) * nnz);
         /**
@@ -601,7 +601,7 @@ bool DSSM_BinaryInput<ElemType>::Next_Batch(Matrix<ElemType>& matrices, size_t c
         for (int i = 0; i < nnz; i++)
         {
             fprintf(stderr, "%d:%.f ", rowIndices[cur_index+i], values[cur_index+i]);
-            //matrices.SetValue(rowIndices[cur_index + i], c, values[cur_index + i]);
+            // matrices.SetValue(rowIndices[cur_index + i], c, values[cur_index + i]);
         }
         fprintf(stderr, "\n");
         **/
@@ -634,8 +634,8 @@ bool DSSM_BinaryInput<ElemType>::Next_Batch(Matrix<ElemType>& matrices, size_t c
         */
 
     matrices.SetMatrixFromCSCFormat(colIndices, rowIndices, values, cur_index, m_dim, numToRead);
-    //matrices.Print("actual values");
-    //exit(1);
+    // matrices.Print("actual values");
+    // exit(1);
     /*
     matrices.SwitchToMatrixType(MatrixType::DENSE, MatrixFormat::matrixFormatDense);
     matrices.Print("featuresQ");

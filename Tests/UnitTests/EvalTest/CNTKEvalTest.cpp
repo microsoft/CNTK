@@ -18,7 +18,7 @@ void DoCommand(const ConfigParameters& configRoot)
 
     ConfigArray minibatchSize = config("minibatchSize", "256");
     intargvector mbSizeArr = minibatchSize;
-    size_t mbSize = 20000; //mbSizeArr[0];
+    size_t mbSize = 20000; // mbSizeArr[0];
     size_t epochSize = config("epochSize", "0");
     if (epochSize == 0)
     {
@@ -72,14 +72,14 @@ int wmain(int argc, wchar_t* argv[])
         wstring logpath = config("stderr", L"");
         ConfigArray command = config("command", "train");
 
-        //dump config info
+        // dump config info
         fprintf(stderr, "command: ");
         for (int i = 0; i < command.size(); i++)
         {
             fprintf(stderr, "%s ", command[i].c_str());
         }
 
-        //run commands
+        // run commands
         std::string type = config("precision", "float");
         // accept old precision key for backward compatibility
         if (config.Exists("type"))

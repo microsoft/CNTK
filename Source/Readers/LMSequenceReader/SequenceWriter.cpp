@@ -48,7 +48,7 @@ void LMSequenceWriter<ElemType>::InitFromConfig(const ConfigRecordType& writerCo
         int iN = thisOutput(L"nbest", 1);
         nBests[outputNames[i]] = iN;
         wstring fname = thisOutput(L"token");
-        /// read unk sybol
+        // read unk sybol
         mUnk[outputNames[i]] = writerConfig(L"unk", "<unk>");
 
         SequenceReader<ElemType>::ReadClassInfo(fname, class_size,

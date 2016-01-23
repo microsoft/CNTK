@@ -39,7 +39,7 @@ BOOST_FIXTURE_TEST_CASE(CPUMatrixFileWriteRead, RandomSeedFixture)
 
 BOOST_FIXTURE_TEST_CASE(MatrixFileWriteRead, RandomSeedFixture)
 {
-    //Test Matrix in Dense mode
+    // Test Matrix in Dense mode
     Matrix<float> matrix = Matrix<float>::RandomUniform(43, 10, -26.3f, 30.2f, IncrementCounter());
     Matrix<float> matrixCopy = matrix;
 
@@ -54,7 +54,7 @@ BOOST_FIXTURE_TEST_CASE(MatrixFileWriteRead, RandomSeedFixture)
 
     BOOST_CHECK(matrixRead.IsEqualTo(matrixCopy, c_epsilonFloatE5));
 
-    //Test Matrix in Sparse mode
+    // Test Matrix in Sparse mode
     Matrix<float> matrixSparse = Matrix<float>::RandomUniform(43, 10, -26.3f, 30.2f, IncrementCounter());
     Matrix<float> matrixSparseCopy = matrixSparse;
 

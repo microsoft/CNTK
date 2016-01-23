@@ -66,15 +66,6 @@
     <ClInclude Include="..\Common\Include\BestGpu.h">
       <Filter>Common\Include</Filter>
     </ClInclude>
-    <ClInclude Include="..\ComputationNetworkLib\CompositeComputationNodes.h">
-      <Filter>from ComputationNetworkLib\Nodes</Filter>
-    </ClInclude>
-    <ClInclude Include="..\ComputationNetworkLib\EvaluationCriterionNodes.h">
-      <Filter>from ComputationNetworkLib\Nodes</Filter>
-    </ClInclude>
-    <ClInclude Include="..\ComputationNetworkLib\TrainingCriterionNodes.h">
-      <Filter>from ComputationNetworkLib\Nodes</Filter>
-    </ClInclude>
     <ClInclude Include="..\ComputationNetworkLib\NonlinearityNodes.h">
       <Filter>from ComputationNetworkLib\Nodes</Filter>
     </ClInclude>
@@ -126,12 +117,6 @@
     <ClInclude Include="DataReaderHelpers.h">
       <Filter>Data Reading</Filter>
     </ClInclude>
-    <ClInclude Include="MultiNetworksSGD.h">
-      <Filter>MultiNetworks</Filter>
-    </ClInclude>
-    <ClInclude Include="MultiNetworksEvaluator.h">
-      <Filter>MultiNetworks</Filter>
-    </ClInclude>
     <ClInclude Include="..\Common\Include\Sequences.h">
       <Filter>Common\Include</Filter>
     </ClInclude>
@@ -141,11 +126,17 @@
     <ClInclude Include="..\Common\Include\Config.h">
       <Filter>Common\Include</Filter>
     </ClInclude>
-    <ClInclude Include="IComputationNetBuilder.h">
-      <Filter>MultiNetworks</Filter>
-    </ClInclude>
     <ClInclude Include="SimpleDistGradAggregator.h">
       <Filter>Parallelization</Filter>
+    </ClInclude>
+    <ClInclude Include="..\ComputationNetworkLib\PreComputeNodes.h">
+      <Filter>from ComputationNetworkLib\Nodes</Filter>
+    </ClInclude>
+    <ClInclude Include="..\ComputationNetworkLib\EvaluationNodes.h">
+      <Filter>from ComputationNetworkLib\Nodes</Filter>
+    </ClInclude>
+    <ClInclude Include="..\ComputationNetworkLib\TrainingNodes.h">
+      <Filter>from ComputationNetworkLib\Nodes</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -184,9 +175,6 @@
     </Filter>
     <Filter Include="Data Reading">
       <UniqueIdentifier>{b866d513-7bd0-497c-98c2-f62dbcd4cde4}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="MultiNetworks">
-      <UniqueIdentifier>{ae1eea3c-d77f-46ec-bf4f-1cd093a295e8}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
 </Project>

@@ -5,8 +5,6 @@
 // latticearchive.h -- managing lattice archives
 //
 
-#if 0
-#endif
 #pragma once
 
 #undef HACK_IN_SILENCE  // [v-hansu] hack to simulate DEL in the lattice
@@ -62,7 +60,7 @@ class littlematrixheap;
 enum mbrclassdefinition // used to identify definition of class in minimum bayesian risk
 {
     senone = 1, // senone is default, which means no mapping; sMBR
-    //monophonestate = 2,
+    // monophonestate = 2,
     monophone = 3, // pMBR?
 };
 // ===========================================================================
@@ -89,7 +87,7 @@ class lattice
     };
     header_v1_v2 info;                           // information about the lattice
     static const unsigned int NOEDGE = 0xffffff; // 24 bits
-    //static_assert (sizeof (nodeinfo) == 8, "unexpected size of nodeeinfo"); // note: int64_t required to allow going across 32-bit boundary
+    // static_assert (sizeof (nodeinfo) == 8, "unexpected size of nodeeinfo"); // note: int64_t required to allow going across 32-bit boundary
     // ensure type size as these are expected to be of this size in the files we read
     static_assert(sizeof(nodeinfo) == 2, "unexpected size of nodeeinfo"); // note: int64_t required to allow going across 32-bit boundary
     static_assert(sizeof(edgeinfowithscores) == 16, "unexpected size of edgeinfowithscores");
@@ -179,7 +177,7 @@ class lattice
         if (diff != 0)
             return diff;
         diff = (int) e1.E - (int) e2.E;
-        //if (diff != 0)
+        // if (diff != 0)
         return diff;
     }
     // lattice sort order --algorithms assume lattices are sorted by E, then by S
@@ -449,18 +447,6 @@ public:
         align.swap(newalign);
         edges.shrink_to_fit(); // [v-hansu] might be useful when RAM is out of use
         align.shrink_to_fit();
-
-#if 0 // [v-hansu]   to dump lattice for checking
-        static size_t countdump = 0;
-        FILE *f = fopen ("lattice", "a");
-        foreach_index (j, edges)
-            fprintf (f, "S=%d\tE=%d\tunused=%d\n", edges[j].S, edges[j].E, edges[j].unused);
-        countdump++;
-        fflush(f);
-        fclose(f);
-        if (countdump == 10)
-            exit(0);
-#endif
     }
     // go back from V2 format to edges and align, so old code can still run
     // This will go away one we updated all code to use the new data structures.
@@ -517,7 +503,7 @@ public:
                 align.push_back(ai);
             }
         }
-        //fprintf (stderr, "rebuildedges: %d edges reconstructed to %d alignment tokens\n", edges.size(), align.size());    // [v-hansu] comment out because it takes up most of the log
+        // fprintf (stderr, "rebuildedges: %d edges reconstructed to %d alignment tokens\n", edges.size(), align.size());    // [v-hansu] comment out because it takes up most of the log
         align.shrink_to_fit(); // free up unused memory (since we need it!!)
         // now get rid of the V2 data altogether
         uniquededgedatatokens.clear();
@@ -890,7 +876,7 @@ public:
     void dump(FILE* f, const HMMLOOKUPFUNCTION& gethmmname) const // dump a lattice in HTK-like format
     {
         fprintf(f, "N=%lu L=%lu\n", nodes.size(), edges.size());
-        //foreach_index (i, nodes)
+        // foreach_index (i, nodes)
         //    fprintf (f, "I=%d\tt=%.2f\n", i, nodes[i].t * 0.01f);
         foreach_index (j, edges)
         {
@@ -995,12 +981,6 @@ public:
             // map align ids to user's symmap  --the lattice gets updated in place here
             foreach_index (k, align)
                 align[k].updateunit(idmap); // updates itself
-#if 0                                       // TODO: this is not complete. Enable once we move to more compact5 data structure.
-            //showstats();
-            // version 1 is outdated  --we build the compact version now
-            // TODO: once all is converted, edges() will become a local variable here
-            buildedgegroupstorage();
-#endif
         }
         else if (version == 2)
         {
@@ -1075,7 +1055,7 @@ public:
             {
                 // fprintf (stderr, "fread: inconsistent spunit id in file %d vs. expected %d; due to erroneous heuristic\n", info.impliedspunitid, spunit);    // [v-hansu] comment out becaues it takes up most of the log
                 // it's actually OK, we can live with this, since we only decompress and then move on without any assumptions
-                //RuntimeError("fread: mismatching /sp/ units");
+                // RuntimeError("fread: mismatching /sp/ units");
             }
             // reconstruct old lattice format from this   --TODO: remove once we change to new data representation
             rebuildedges(info.impliedspunitid != spunit /*to be able to read somewhat broken V2 lattice archives*/);
@@ -1111,7 +1091,7 @@ public:
         const size_t getsilunitid();
         void getedgeacscores(std::vector<float>& edgeacscores);
         void getedgealignments(std::vector<unsigned short>& edgealignments);
-        //to work with CNTK's GPU memory
+        // to work with CNTK's GPU memory
         void setdevice(size_t DeviceId);
         size_t getdevice();
         void release(bool cpumode);
@@ -1236,7 +1216,7 @@ class archive
     std::unordered_map<std::wstring, latticeref> toc; // [key] -> (file, offset)  --table of content (.toc file)
 public:
     // construct = open the archive
-    //archive() : currentarchiveindex (SIZE_MAX) {}
+    // archive() : currentarchiveindex (SIZE_MAX) {}
     void setverbosity(int veb) const
     {
         verbosity = veb;

@@ -161,55 +161,6 @@ void SynchronousNodeEvaluator<ElemType>::Evaluate(NDLNode<ElemType>* node, const
                 RuntimeError("'init' must be one of the values of [ uniform | gaussian | fixedValue ]");
         }
     }
-#if 0 // not functional at present
-        else if (OperationNameOf(SparseLearnableParameter) == cnNodeType)
-        {
-            if (parameter.size() < 1 || parameter.size() > 2)
-                RuntimeError("%ls should have 1 or 2 parameters[rows, [cols=1]] plus other optional parameters (needGradient=[true|false], init=[uniform|gaussian|fixedvalue], initValueScale=[1|float], value=[0|float]).", cnNodeType.c_str());
-
-            if (pass == ndlPassInitial)
-            {
-                // evaluate only scalar parameters
-                vector<void*> params = EvaluateParameters(node, baseName, 0, parameter.size(), pass);
-                size_t rows = ((NDLNode<ElemType>*)params[0])->GetScalar();
-                size_t cols = params.size() > 1 ? ((NDLNode<ElemType>*)params[1])->GetScalar() : 1;
-
-                bool needGradient = node->GetOptionalParameter("needGradient", "true");
-
-                nodePtr = builder.CreateSparseLearnableParameter(name, rows, cols);
-
-                nodePtr->SetParameterUpdateRequired(needGradient);
-            }
-            else if (pass == ndlPassFinal)
-            {
-                static int randomSeed = 1;
-                wstring initString = node->GetOptionalParameter("init", "uniform");
-                ElemType initValueScale = node->GetOptionalParameter("initValueScale", "1");
-                ElemType value = node->GetOptionalParameter("value", "0");
-                
-                if (!_wcsicmp(initString.c_str(), L"fixedValue"))
-                    nodePtr->Value().SetValue(value);
-                else if (!_wcsicmp(initString.c_str(), L"uniform"))
-                    m_net->InitLearnableParameters(nodePtr, true, randomSeed++, initValueScale);
-                else if (!_wcsicmp(initString.c_str(), L"gaussian"))
-                    m_net->InitLearnableParameters(nodePtr, false, randomSeed++, initValueScale);
-                else if (!_wcsicmp(initString.c_str(), L"fromFile"))
-                {
-                    std::string initFromFilePath = node->GetOptionalParameter("initFromFilePath", "");
-                    if (initFromFilePath == "")
-                        RuntimeError("initFromFilePath must be set when using \"fromFile\" initialization method");
-                    if(initFromFilePath[0] == '\"' && initFromFilePath[initFromFilePath.size()-1] == '\"')
-                        // remove the opening and closing double quotes
-                        initFromFilePath = initFromFilePath.substr(1, initFromFilePath.size()-2);
-                    if(!fexists(initFromFilePath))
-                        RuntimeError("File pointed to by initFromFilePath does not exist: %s", initFromFilePath.c_str());
-                    dynamic_pointer_cast<SparseLearnableParameter<ElemType>>(nodePtr)->InitFromFile(msra::strfun::utf16(initFromFilePath));
-                }
-                else
-                    RuntimeError("init must be one of the values of [ uniform | gaussian | fixedValue ]");
-            }
-        }
-#endif
     else if (cnNodeType == L"Constant")
     {
         if (parameter.size() != 1)
@@ -305,7 +256,7 @@ void SynchronousNodeEvaluator<ElemType>::Evaluate(NDLNode<ElemType>* node, const
             size_t img_channels = node->GetOptionalParameter("imageChannels", "0");
 
             bool needGradient = node->GetOptionalParameter("needGradient", "false");
-            nodePtr = builder.DeprecatedReshape(NULL, num_rows, ImageDimensions::AsTensorShape(img_width, img_height, img_channels, ImageLayoutKind::HWC /*legacy*/), name); // BUGBUG: use a tensor descriptor instead
+            nodePtr = builder.LegacyReshape(NULL, num_rows, ImageDimensions::AsTensorShape(img_width, img_height, img_channels, ImageLayoutKind::HWC /*legacy*/), name); // BUGBUG: use a tensor descriptor instead
             nodePtr->SetParameterUpdateRequired(needGradient);
         }
     }
@@ -327,7 +278,7 @@ void SynchronousNodeEvaluator<ElemType>::Evaluate(NDLNode<ElemType>* node, const
             // if we have three parameters the second is columns
             // ignore legacy size_t cols = parameter.size() > 2 ? ((NDLNode<ElemType>*)params[1])->GetScalar() : 1;
 
-            //bool needGradient = node->GetOptionalParameter("needGradient", "false");  // TODO: what's this for?
+            // bool needGradient = node->GetOptionalParameter("needGradient", "false");  // TODO: what's this for?
             float defaultHiddenActivity = node->GetOptionalParameter("defaultHiddenActivity", "0.1"); // TODO: parameter should be called 'defaultHiddenActivation'
 
             // for backward compatibility we check 'timeStep' first
@@ -340,7 +291,7 @@ void SynchronousNodeEvaluator<ElemType>::Evaluate(NDLNode<ElemType>* node, const
             else
                 nodePtr = builder.FutureValue(NULL, defaultHiddenActivity, rows, timeStep, name);
 
-            //nodePtr->SetParameterUpdateRequired(needGradient);    // TODO: what's this for?
+            // nodePtr->SetParameterUpdateRequired(needGradient);    // TODO: what's this for?
         }
     }
     else if (cnNodeType == OperationNameOf(ConvolutionNode))
@@ -479,7 +430,7 @@ void SynchronousNodeEvaluator<ElemType>::Evaluate(NDLNode<ElemType>* node, const
     {
         std::vector<void*> inputs = EvaluateParameters(node, baseName, nodeParamStart, nodeParamCount, pass);
 
-        if (cnNodeType == OperationNameOf(RowStackNode)) //support variable length inputs
+        if (cnNodeType == OperationNameOf(RowStackNode)) // support variable length inputs
         {
             std::vector<ComputationNodeBasePtr> inputNodes;
             inputNodes.resize(inputs.size());
