@@ -467,7 +467,7 @@ public:
                     // check/fuse dimensions
                     if (isFinalValidationPass && dim != dims[k] && dim != 1 && dims[k] != 1)
                         InvalidArgument("%ls %ls operation: Conflicting dimension %d between %ls %ls operation (%d) and other(s) (%d)",
-                                        NodeName().c_str(), OperationName().c_str(), (int)k, Input(i)->NodeName().c_str(), Input(i)->OperationName(), (int)dim, (int)dims[k]);
+                                        NodeName().c_str(), OperationName().c_str(), (int)k, Input(i)->NodeName().c_str(), Input(i)->OperationName().c_str(), (int)dim, (int)dims[k]);
                     if (dims[k] == 1)   // broadcast
                         dims[k] = dim;
                 }

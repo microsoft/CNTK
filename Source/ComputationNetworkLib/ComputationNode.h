@@ -1724,6 +1724,7 @@ protected:                                                                      
     using Base::GetSampleMatrixNumCols;                                                                                                                  \
     using Base::GetSampleMatrixNumRows;                                                                                                                  \
     using Base::GetTensorShape;                                                                                                                          \
+    using Base::GetTensorSliceFor;                                                                                                                       \
     using Base::Gradient;                                                                                                                                \
     using Base::GradientAsMatrix;                                                                                                                        \
     using Base::GradientFor;                                                                                                                             \
