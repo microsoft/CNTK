@@ -339,7 +339,8 @@ public:
 
         // RowSlice cannot slice tensors.
         // TODO: Create a TensorSlice operation, or just Slice.
-        if (isFinalValidationPass && Input(0)->HasSampleLayout() && !Input(0)->GetSampleLayout().IsVectorStoredAsImage() // legacy
+        if (isFinalValidationPass && !Input(0)->GetSampleLayout().IsColumnVector()
+            && !Input(0)->GetSampleLayout().IsVectorStoredAsImage() // legacy
             )
             RuntimeError("%ls %ls operation: Input must be a vector, tensor shape [%s] not allowed.", NodeName().c_str(), OperationName().c_str(), string(Input(0)->GetSampleLayout()).c_str());
         SetDims(TensorShape(m_sliceHeight), HasMBLayout());
@@ -355,6 +356,8 @@ template class RowSliceNode<double>;
 // -----------------------------------------------------------------------
 // RowStackNode (input0, input1, ...)
 // stacks multiple inputs on top of each other
+// The inputs will be spliced w.r.t. their first tensor dimension (the "row" dimension).
+// TODO: This is very close to the planned SpliceNode (just make m_spliceDim configurable) except for splicing along time.
 // -----------------------------------------------------------------------
 
 template <class ElemType>
@@ -366,6 +369,8 @@ class RowStackNode : public ComputationNode<ElemType> // note: not deriving from
     {
         return L"RowStack";
     }
+
+    static const size_t m_spliceDim = 0;    // tensor dimension according to which to stack  --TODO: Make this a parameter.
 
 public:
     DeclareConstructorFromConfig(RowStackNode);
@@ -380,35 +385,49 @@ public:
         if (flags & CopyNodeFlags::copyNodeChildren)
         {
             auto node = dynamic_pointer_cast<RowStackNode<ElemType>>(nodeP);
-            node->m_startRowIndices = m_startRowIndices;
+            node->m_firstIndices = m_firstIndices;
+        }
+    }
+
+private:
+
+    // changes the result slice (which includes all stacked inputs) to the stripe that matches where one of the inputs goes
+    TensorShape NarrowToStripe(const TensorShape & resultSlice, size_t inputIndex)
+    {
+        auto resultSubSlice = resultSlice;
+        resultSubSlice.NarrowTo(m_spliceDim, m_firstIndices[inputIndex], m_firstIndices[inputIndex + 1]);
+        return resultSubSlice;
+    }
+
+public:
+
+    virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
+    {
+        size_t rank = DetermineElementwiseTensorRank();
+        let outputSlice = GetTensorSliceFor(rank, fr); // tensor slice that represents the entire output for FrameRange
+
+        for (size_t inputIndex = 0; inputIndex < GetNumInputs(); inputIndex++)
+        {
+            let input = Input(inputIndex)->ValueTensorFor(rank, fr.AllowBroadcast());
+            let outputSubSlice = NarrowToStripe(outputSlice, inputIndex);
+            auto output = TensorView<ElemType>(Value(), outputSubSlice);
+            output.AssignCopyOf(input);
         }
     }
 
     virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
     {
-        Input(inputIndex)->GradientFor(fr).AddWithRowSliceValuesOf(GradientFor(fr), m_startRowIndices[inputIndex], Input(inputIndex)->GetSampleMatrixNumRows());
+        size_t rank = DetermineElementwiseTensorRank();
+        let outputSlice = GetTensorSliceFor(rank, fr); // tensor slice that represents the entire output for FrameRange
+
+        auto inputGrad = Input(inputIndex)->GradientTensorFor(rank, fr.AllowBroadcast());
+        let outputSubSlice = NarrowToStripe(outputSlice, inputIndex);
+        let outputGrad = TensorView<ElemType>(Gradient(), outputSubSlice);
+        inputGrad.AddCopyOf(outputGrad);
     }
 
-    virtual bool OutputUsedInComputingInputNodesGradients() const override
-    {
-        // The RowStackNode does not require its output value for computing
-        // the gradients of its input nodes
-        return false;
-    }
-
-    virtual bool InputUsedInComputingInputNodesGradients(size_t childIndex) const override
-    {
-        // The RowStackNode does not require any of it's input's values for computing
-        // the gradients of its input nodes
-        UNREFERENCED_PARAMETER(childIndex);
-        return false;
-    }
-
-    virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
-    {
-        for (size_t inputIndex = 0; inputIndex < GetNumInputs(); inputIndex++)
-            ValueFor(fr).AssignToRowSliceValuesOf(Input(inputIndex)->ValueFor(fr), m_startRowIndices[inputIndex], Input(inputIndex)->GetSampleMatrixNumRows());
-    }
+    virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }
+    virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override { return false; }
 
     virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
     {
@@ -417,45 +436,49 @@ public:
 
         // we must fuse all tensor shapes
         // All dimensions but the last must be the same. (In a future version, we should be able to stack along any given dimension.)
-        // Note that trailing ones may be stripped/broadcasting, so we must first pad.
-        SmallVector<size_t> dims = Input(0)->GetSampleLayout().GetDims();
-        size_t maxRank = 0; // TODO: very similar to DetermineElementwiseTensorRank() except that that one also includes the output
-        for (int i = 0; i < GetNumInputs(); i++)
-            if (maxRank < GetInputSampleLayout(i).GetRank())
-                maxRank = GetInputSampleLayout(i).GetRank();
-        dims.resize(maxRank - 1, 1); // pad and/or strip trailing dimension
 
-        // count totalRows and form m_startRowIndices[] array, which is the cumulative sum of matrix heights
-        m_startRowIndices.resize(GetNumInputs());
-        size_t totalRows = 0;
-        size_t totalTrailingDim = 0; // last tensor dimension is what gets stacked up
+        // determine maximum rank (we can stack tensors with lower rank, which will have their dimensions paded to max automatically)
+        size_t maxRank = m_spliceDim + 1; // spliceDim may exceed all of them, which will create a new dimension, e.g. stacking column vectors into a matrix
+        for (int i = 0; i < GetNumInputs(); i++)
+            if (maxRank < Input(i)->GetSampleLayout().GetRank())
+                maxRank = Input(i)->GetSampleLayout().GetRank();
+
+        // the following loop does multiple things:
+        //  - count total dimension along m_spliceDim, and form associated m_firstIndices[] array
+        //  - verify all other dimension's compatibility (we allow broadcasting)
+        auto dims = Input(0)->GetSampleLayout().PadRank(maxRank).GetDims(); // dimensions padded to max rank; start with dims of first input
+        dims[m_spliceDim] = 0;                                              // this dimension is created, while all others are verified for consistency
+        m_firstIndices.assign(1, 0);                                        // accumulative splice dimension; start with 0
         for (int i = 0; i < GetNumInputs(); i++)
         {
-            m_startRowIndices[i] = totalRows;
-            totalRows += Input(i)->GetSampleMatrixNumRows();
-            SmallVector<size_t> thisDims = Input(i)->GetSampleLayout().GetDims();
-            thisDims.resize(maxRank, 1);         // pad and/or strip trailing dimension
-            totalTrailingDim += thisDims.back(); // count total trailing dimensions (that's what we have after stacking)
-            thisDims.resize(maxRank - 1);        // verify that dimensions match
-            if (dims != thisDims)
-                InvalidArgument("%ls %ls operation: Incompatible tensor dimension [%s] for input %ls %ls",
-                                NodeName().c_str(), OperationName().c_str(), std::string(Input(i)->GetSampleLayout()).c_str(),
-                                Input(i)->NodeName().c_str(), Input(i)->OperationName().c_str());
+            // check/fuse dims and accumulate the spliced dimension
+            let & shape = Input(i)->GetSampleLayout();
+            for (size_t k = 0; k < maxRank; k++)
+            {
+                size_t dim = shape.GetDimPadded(k);
+                if (k == m_spliceDim)
+                {
+                    // accumulate the spliced dimension
+                    dims[m_spliceDim] += dim;
+                    m_firstIndices.push_back(dims[m_spliceDim]);    // and remember it
+                }
+                else
+                {
+                    // check/fuse dimensions
+                    if (isFinalValidationPass && dim != dims[k] && dim != 1 && dims[k] != 1)
+                        InvalidArgument("%ls %ls operation: Conflicting dimension %d between %ls %ls operation (%d) and other(s) (%d)",
+                                        NodeName().c_str(), OperationName().c_str(), (int)k, Input(i)->NodeName().c_str(), Input(i)->OperationName(), (int)dim, (int)dims[k]);
+                    if (dims[k] == 1)   // broadcast
+                        dims[k] = dim;
+                }
+            }
         }
 
-        // warn that this node will destroy the image size information from the child
-        if (Input(0)->HasSampleLayout())
-            fprintf(stderr, "WARNING: RowStack operation cannot inherit image size information from its child. Image size info is lost.\n");
-
-        dims.push_back(totalTrailingDim);
         SetDims(TensorShape(dims), HasMBLayout());
-
-        if (totalRows != GetSampleMatrixNumRows())
-            LogicError("%ls RowStack operation: Tensor shapes of inputs were not compatible after all?", NodeName().c_str());
     }
 
 private:
-    std::vector<size_t> m_startRowIndices; // start row number in the stacked matrix of each input (child) (cumsum of matrix heights)
+    std::vector<size_t> m_firstIndices;  // start row number in the stacked matrix of each input (child) (cumsum of matrix heights); plus one final entry that equals the total dimension
 };
 
 template class RowStackNode<float>;

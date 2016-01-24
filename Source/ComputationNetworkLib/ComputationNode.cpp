@@ -55,10 +55,11 @@ void ComputationNodeBase::ValidateUnaryMap(bool isFinalValidationPass)
     InferMBLayoutFromInputsForStandardCase();
     SetDims(Input(0));
 }
+
 // binary zip operation, e.g. Plus
-// If allowScaling then one can be a sub-dimension of the other (if layout then only for rows, otherwise for cols, too).
+// If allowBroadcast then one can be a sub-dimension of the other (if layout then only for rows, otherwise for cols, too).
 // This also helpfully resizes the children if not yet sized.
-void ComputationNodeBase::ValidateBinaryZip(bool isFinalValidationPass, bool allowMultiples)
+void ComputationNodeBase::ValidateBinaryZip(bool isFinalValidationPass, bool allowBroadcast)
 {
     assert(m_inputs.size() == 2);
     ComputationNodeBase::Validate(isFinalValidationPass);
@@ -84,6 +85,7 @@ void ComputationNodeBase::ValidateBinaryZip(bool isFinalValidationPass, bool all
     for (size_t k = 0; k < shape1.GetRank(); k++)
     {
         size_t dim1 = shape1[k];
+        // BUGBUG: We must consider the allowBroadcast flag here.
         if (dims[k] == 1)                                  // is [0] broadcasting?
             dims[k] = dim1;                                // then use dimension we broadcast to
         else if (dim1 == 1)                                // if [1] is broadcasting
