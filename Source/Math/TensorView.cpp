@@ -78,7 +78,7 @@ static void PrepareTensorOperands(array<TensorShape, N> shapes, array<size_t, N>
             dims = shapes[i].GetRank();
     for (size_t i = 0; i < N; i++)
         if (shapes[i].GetRank() < dims)
-            shapes[i].PadInPlace(dims);
+            shapes[i].PadRankInPlace(dims);
     // all shapes[] now have the same rank
 
     // determine operation shape (max over all dimensions)

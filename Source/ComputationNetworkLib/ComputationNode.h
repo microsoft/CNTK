@@ -620,7 +620,7 @@ protected:
     void ValidateUnaryMap(bool isFinalValidationPass);
     void ValidateUnaryReduce(bool isFinalValidationPass);
     void ValidateInferBinaryInputDims();
-    void ValidateBinaryZip(bool isFinalValidationPass, bool allowMultiples);
+    void ValidateBinaryZip(bool isFinalValidationPass, bool allowBroadcast);
     void ValidateBinaryReduce(bool isFinalValidationPass);
     void InferMBLayoutFromInputsForStandardCase();
     virtual void ValidateInferInputDimsFrom(const TensorShape&) = 0;    // (implemented by ComputationNode<ElemType>
@@ -1876,7 +1876,7 @@ public:
 
     virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
     {
-        ValidateBinaryZip(isFinalValidationPass, true /*allowMultiples*/);
+        ValidateBinaryZip(isFinalValidationPass, true /*allowBroadcast*/);
     }
 };
 
