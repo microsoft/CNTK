@@ -1,13 +1,12 @@
 //
-// <copyright file="SparsePCReader.cpp" company="Microsoft">
-//     Copyright (c) Microsoft Corporation.  All rights reserved.
-// </copyright>
+// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
 //
 // SparsePCReader.cpp : Defines the Sparse Parallel Corpus reader.
 //
 
 #include "stdafx.h"
-#define DATAREADER_EXPORTS  // creating the exports here
+#define DATAREADER_EXPORTS // creating the exports here
 #include "DataReader.h"
 #include "SparsePCReader.h"
 #ifdef LEAKDETECT
@@ -16,10 +15,16 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
-DWORD HIDWORD(size_t size) {return size>>32;}
-DWORD LODWORD(size_t size) { return size & 0xFFFFFFFF; }
+DWORD HIDWORD(size_t size)
+{
+    return size >> 32;
+}
+DWORD LODWORD(size_t size)
+{
+    return size & 0xFFFFFFFF;
+}
 
-template<class ElemType>
+template <class ElemType>
 SparsePCReader<ElemType>::~SparsePCReader()
 {
     if (m_filemap != NULL)
@@ -58,7 +63,7 @@ SparsePCReader<ElemType>::~SparsePCReader()
     }
 }
 
-template<class ElemType>
+template <class ElemType>
 void SparsePCReader<ElemType>::Destroy()
 {
     delete this;
@@ -66,28 +71,27 @@ void SparsePCReader<ElemType>::Destroy()
 
 // Init - Reader Initialize for multiple data sets
 // config - [in] configuration parameters for the datareader
-template<class ElemType>
-template<class ConfigRecordType>
-void SparsePCReader<ElemType>::InitFromConfig(const ConfigRecordType & readerConfig)
+template <class ElemType>
+template <class ConfigRecordType>
+void SparsePCReader<ElemType>::InitFromConfig(const ConfigRecordType& readerConfig)
 {
     // Sparse PC reader considers every consecutive N rows to be part of a single block.
     // This is used later to compute the corss-entropy with softmax per block.
     // Default value is 1 to indicate all rows are independent.
-    m_microBatchSize = readerConfig(L"microbatchSize", (size_t)1);
+    m_microBatchSize = readerConfig(L"microbatchSize", (size_t) 1);
 
     m_miniBatchSize = 0;
     m_traceLevel = readerConfig(L"traceLevel", 0);
-    m_maxReadData = readerConfig(L"maxReadData", (size_t)0);
+    m_maxReadData = readerConfig(L"maxReadData", (size_t) 0);
     m_doGradientCheck = readerConfig(L"gradientCheck", false);
     m_returnDense = readerConfig(L"returnDense", false);
-    m_sparsenessFactor = readerConfig(L"sparsenessFactor", (size_t)50); // We don't expect more than one in 50 input positions to have non-zero values
-    m_verificationCode = (int32_t)readerConfig(L"verificationCode", (size_t)0);
-    m_reshapeInputToRowSize = readerConfig(L"reshapeInputToRowSize", (size_t)0);
+    m_sparsenessFactor = readerConfig(L"sparsenessFactor", (size_t) 50); // We don't expect more than one in 50 input positions to have non-zero values
+    m_verificationCode = (int32_t) readerConfig(L"verificationCode", (size_t) 0);
 
     std::vector<std::wstring> featureNames;
     std::vector<std::wstring> labelNames;
 
-    m_file = (const wstring &)readerConfig(L"file");
+    m_file = (const wstring&) readerConfig(L"file");
 
     // Determine the names of the features and lables sections in the config file.
     // features - [in,out] a vector of feature name strings
@@ -123,7 +127,7 @@ void SparsePCReader<ElemType>::InitFromConfig(const ConfigRecordType & readerCon
     }
 
     m_hndl = CreateFile(m_file.c_str(), GENERIC_READ,
-        FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+                        FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
     if (m_hndl == INVALID_HANDLE_VALUE)
     {
         char message[256];
@@ -131,21 +135,21 @@ void SparsePCReader<ElemType>::InitFromConfig(const ConfigRecordType & readerCon
         RuntimeError(message);
     }
 
-    GetFileSizeEx(m_hndl, (PLARGE_INTEGER)&m_filePositionMax);
+    GetFileSizeEx(m_hndl, (PLARGE_INTEGER) &m_filePositionMax);
     m_filemap = CreateFileMapping(m_hndl, NULL, PAGE_READONLY, 0, 0, NULL);
 
-    m_dataBuffer = (char*)MapViewOfFile(m_filemap,
-        FILE_MAP_READ,
-        HIDWORD(0),
-        LODWORD(0),
-        0);
+    m_dataBuffer = (char*) MapViewOfFile(m_filemap,
+                                         FILE_MAP_READ,
+                                         HIDWORD(0),
+                                         LODWORD(0),
+                                         0);
 }
 
-//StartMinibatchLoop - Startup a minibatch loop 
+//StartMinibatchLoop - Startup a minibatch loop
 // mbSize - [in] size of the minibatch (number of Samples, etc.)
 // epoch - [in] epoch number for this loop --ignored
 // requestedEpochSamples - [in] number of samples to randomize --ignored
-template<class ElemType>
+template <class ElemType>
 void SparsePCReader<ElemType>::StartMinibatchLoop(size_t mbSize, size_t /*epoch*/, size_t /*requestedEpochSamples*/)
 {
     if (m_values[0] == NULL || m_miniBatchSize != mbSize)
@@ -162,10 +166,10 @@ void SparsePCReader<ElemType>::StartMinibatchLoop(size_t mbSize, size_t /*epoch*
                 free(m_labelsBuffer);
             }
 
-            m_values[i] = (ElemType*)malloc(sizeof(ElemType)* m_dims[i] * m_miniBatchSize / m_sparsenessFactor);
-            m_rowIndices[i] = (int32_t*)malloc(sizeof(int32_t)* m_dims[i] * m_miniBatchSize / m_sparsenessFactor);
-            m_colIndices[i] = (int32_t*)malloc(sizeof(int32_t)* (m_miniBatchSize + 1));
-            m_labelsBuffer = (ElemType*)malloc(sizeof(ElemType)* m_miniBatchSize);
+            m_values[i] = (ElemType*) malloc(sizeof(ElemType) * m_dims[i] * m_miniBatchSize / m_sparsenessFactor);
+            m_rowIndices[i] = (int32_t*) malloc(sizeof(int32_t) * m_dims[i] * m_miniBatchSize / m_sparsenessFactor);
+            m_colIndices[i] = (int32_t*) malloc(sizeof(int32_t) * (m_miniBatchSize + 1));
+            m_labelsBuffer = (ElemType*) malloc(sizeof(ElemType) * m_miniBatchSize);
         }
     }
 
@@ -174,10 +178,10 @@ void SparsePCReader<ElemType>::StartMinibatchLoop(size_t mbSize, size_t /*epoch*
 }
 
 // GetMinibatch - Get the next minibatch (features and labels)
-// matrices - [in] a map with named matrix types (i.e. 'features', 'labels') mapped to the corresponing matrix, 
-//             [out] each matrix resized if necessary containing data. 
+// matrices - [in] a map with named matrix types (i.e. 'features', 'labels') mapped to the corresponding matrix,
+//             [out] each matrix resized if necessary containing data.
 // returns - true if there are more minibatches, false if no more minibatchs remain
-template<class ElemType>
+template <class ElemType>
 bool SparsePCReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemType>*>& matrices)
 {
     // get out if they didn't call StartMinibatchLoop() first
@@ -191,16 +195,16 @@ bool SparsePCReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemTy
     if (m_currOffset >= m_filePositionMax)
         return false;
 
-    Matrix<ElemType>* labels = nullptr;     // labels to return, or NULL if no labels in matrix set
+    Matrix<ElemType>* labels = nullptr; // labels to return, or NULL if no labels in matrix set
     auto labelEntry = matrices.find(m_labelName);
     if (labelEntry != matrices.end())
     {
         labels = labelEntry->second;
 
         if (labels->GetNumRows() != 1)
-            RuntimeError("SparsePCReader only supports single label value per column but the network expected %d.", (int)labels->GetNumRows());
+            RuntimeError("SparsePCReader only supports single label value per column but the network expected %d.", (int) labels->GetNumRows());
     }
-    
+
     std::vector<int32_t> currIndex = std::vector<int32_t>(m_featureCount);
     for (int i = 0; i < m_featureCount; i++)
     {
@@ -215,7 +219,7 @@ bool SparsePCReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemTy
         {
             m_colIndices[i][j] = currIndex[i];
 
-            int32_t nnz = *(int32_t*)((char*)m_dataBuffer + m_currOffset);
+            int32_t nnz = *(int32_t*) ((char*) m_dataBuffer + m_currOffset);
             m_currOffset += sizeof(int32_t);
 
             if (nnz > m_dims[i] / m_sparsenessFactor)
@@ -223,22 +227,22 @@ bool SparsePCReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemTy
                 RuntimeError("Input data is too dense - not enough memory allocated");
             }
 
-            memcpy(m_values[i] + currIndex[i], (char*)m_dataBuffer + m_currOffset, sizeof(ElemType)*nnz);
-            m_currOffset += (sizeof(ElemType)*nnz);
+            memcpy(m_values[i] + currIndex[i], (char*) m_dataBuffer + m_currOffset, sizeof(ElemType) * nnz);
+            m_currOffset += (sizeof(ElemType) * nnz);
 
-            memcpy(m_rowIndices[i] + currIndex[i], (char*)m_dataBuffer + m_currOffset, sizeof(int32_t)*nnz);
-            m_currOffset += (sizeof(int32_t)*nnz);
+            memcpy(m_rowIndices[i] + currIndex[i], (char*) m_dataBuffer + m_currOffset, sizeof(int32_t) * nnz);
+            m_currOffset += (sizeof(int32_t) * nnz);
 
             currIndex[i] += nnz;
         }
 
-        ElemType label = *(ElemType*)((char*)m_dataBuffer + m_currOffset);
+        ElemType label = *(ElemType*) ((char*) m_dataBuffer + m_currOffset);
         m_labelsBuffer[j] = label;
         m_currOffset += sizeof(ElemType);
 
         if (m_verificationCode != 0)
         {
-            int32_t verifCode = *(int32_t*)((char*)m_dataBuffer + m_currOffset);
+            int32_t verifCode = *(int32_t*) ((char*) m_dataBuffer + m_currOffset);
 
             if (verifCode != m_verificationCode)
             {
@@ -261,14 +265,6 @@ bool SparsePCReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemTy
         features.SetMatrixFromCSCFormat(m_colIndices[i], m_rowIndices[i], m_values[i], currIndex[i], m_dims[i], j);
     }
 
-    if (m_reshapeInputToRowSize != 0)
-    {
-        for (int i = 0; i < m_featureCount; i++)
-        {
-            (*matrices[m_featureNames[i]]).Reshape(m_reshapeInputToRowSize, m_dims[i] * j / m_reshapeInputToRowSize);
-        }
-    }
-
     if (m_returnDense || m_doGradientCheck)
     {
         for (int i = 0; i < m_featureCount; i++)
@@ -280,7 +276,7 @@ bool SparsePCReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemTy
     if (labels)
     {
         labels->Resize(1, j);
-        labels->SetValue((ElemType)0);
+        labels->SetValue((ElemType) 0);
         labels->SetValue(1, j, labels->GetDeviceId(), m_labelsBuffer, 0);
     }
 
@@ -294,7 +290,7 @@ bool SparsePCReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemTy
     return true;
 }
 
-template<class ElemType>
+template <class ElemType>
 bool SparsePCReader<ElemType>::DataEnd(EndDataType endDataType)
 {
     bool ret = false;
@@ -309,7 +305,7 @@ bool SparsePCReader<ElemType>::DataEnd(EndDataType endDataType)
     case endDataSet:
         ret = (m_currOffset >= m_filePositionMax);
         break;
-    case endDataSentence:  // for fast reader each minibatch is considered a "sentence", so always true --huh?
+    case endDataSentence: // for fast reader each minibatch is considered a "sentence", so always true --huh?
         ret = true;
         break;
     }
@@ -317,18 +313,18 @@ bool SparsePCReader<ElemType>::DataEnd(EndDataType endDataType)
     return ret;
 }
 
-// GetLabelMapping - Gets the label mapping from integer index to label type 
-// returns - a map from numeric datatype to native label type 
-template<class ElemType>
+// GetLabelMapping - Gets the label mapping from integer index to label type
+// returns - a map from numeric datatype to native label type
+template <class ElemType>
 const std::map<typename IDataReader<ElemType>::LabelIdType, typename IDataReader<ElemType>::LabelType>& SparsePCReader<ElemType>::GetLabelMapping(const std::wstring& /*sectionName*/)
 {
     return m_mapIdToLabel;
 }
 
-// SetLabelMapping - Sets the label mapping from integer index to label 
+// SetLabelMapping - Sets the label mapping from integer index to label
 // labelMapping - mapping table from label values to IDs (must be 0-n)
-// note: for tasks with labels, the mapping table must be the same between a training run and a testing run 
-template<class ElemType>
+// note: for tasks with labels, the mapping table must be the same between a training run and a testing run
+template <class ElemType>
 void SparsePCReader<ElemType>::SetLabelMapping(const std::wstring& /*sectionName*/, const std::map<typename IDataReader<ElemType>::LabelIdType, typename LabelType>& labelMapping)
 {
     m_mapIdToLabel = labelMapping;
@@ -340,6 +336,6 @@ void SparsePCReader<ElemType>::SetLabelMapping(const std::wstring& /*sectionName
 }
 
 // instantiate all the combinations we expect to be used
-template class SparsePCReader<double>; 
+template class SparsePCReader<double>;
 template class SparsePCReader<float>;
-}}}
+} } }

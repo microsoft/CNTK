@@ -1,17 +1,13 @@
 //
-// <copyright file="SGD.h" company="Microsoft">
-//     Copyright (c) Microsoft Corporation.  All rights reserved.
-// </copyright>
+// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
 //
 #pragma once
 
 #include "Basics.h"
 #include "ComputationNetwork.h"
-#include "NonlinearityNodes.h"          // for DropoutNode
-#include "CompositeComputationNodes.h"  // for PrecomputeNode
 #include "SimpleEvaluator.h"
 #include "DataReader.h"
-#include "IComputationNetBuilder.h"
 #include "ScriptableObjects.h"
 #include <vector>
 #include <string>
@@ -23,7 +19,7 @@
 #include "Profiler.h"
 #include "MultiversoWrapper.h"
 
-using namespace std;    // ugh! TODO: get rid of this from .h files!!!
+using namespace std; // ugh! TODO: get rid of this from .h files!!!
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -100,19 +96,20 @@ struct GradientUpdateInfo
 
 struct SGDParams : public ScriptableObjects::Object
 {
-    template<class ConfigRecord>    // (needed for default value of m_gradientBits)
+    template <class ConfigRecord> // (needed for default value of m_gradientBits)
     SGDParams(const ConfigRecord& configSGD, size_t sizeofElemType);
 
     SGDParams(const ScriptableObjects::IConfigRecordPtr configp);
 
-    //SGDParams(SGDParams&&) = default; // (does not compile in VS 2013; not critical)
+    // SGDParams(SGDParams&&) = default; // (does not compile in VS 2013; not critical)
 
 protected:
     // learning rate per sample provided outside
     floatargvector m_learningRatesParam;
-    intargvector m_learningRatesSpecifiedForMBSize;       // 1 for per sample, m_mbSize[] for per MB
+    intargvector m_learningRatesSpecifiedForMBSize; // 1 for per sample, m_mbSize[] for per MB
     floatargvector m_momentumParam;
     intargvector m_momentumSpecifiedForMBSize;
+    bool m_useNesterovMomentum;
 
     // Determine the MB size used for mapping a given learning-rate or momentum parameter to a per-sample value.
     // MB size is the number of samples across all time steps and parallel sequences.
@@ -123,8 +120,8 @@ protected:
     size_t FixUpEffectiveMBSize(size_t specifiedMBSize, size_t numParallelSequences) const
     {
         // remedy the bug that truncation size is incorrectly passed as MB size
-        if (m_truncated && specifiedMBSize > 1)         // currently only happens in this mode
-            specifiedMBSize *= numParallelSequences;    // assume 'specifiedMBSize' refers to truncation size
+        if (m_truncated && specifiedMBSize > 1)      // currently only happens in this mode
+            specifiedMBSize *= numParallelSequences; // assume 'specifiedMBSize' refers to truncation size
         // end bug post-fix
         // TODO: This ^^ should go away once SGD gets fixed to take the truncation size as a parameter.
 
@@ -133,21 +130,21 @@ protected:
 
     // helpers to convert learning rates to per-sample values used in the actual algorithms
     // 'numParallelSequences' must be specified because of the definitional MB-size bug in SGD mentioned above, and should go away once that is sorted out.
-    double GetLearningRatePerSample(size_t epoch/*BUGBUG workaround:*/, size_t numParallelSequences) const
+    double GetLearningRatePerSample(size_t epoch /*BUGBUG workaround:*/, size_t numParallelSequences) const
     {
         return m_learningRatesParam[epoch] / FixUpEffectiveMBSize(m_learningRatesSpecifiedForMBSize[epoch], numParallelSequences);
     }
-    double GetMomentumPerSample(size_t epoch/*BUGBUG workaround:*/, size_t numParallelSequences) const
+    double GetMomentumPerSample(size_t epoch /*BUGBUG workaround:*/, size_t numParallelSequences) const
     {
         return pow(m_momentumParam[epoch], 1.0 / FixUpEffectiveMBSize(m_momentumSpecifiedForMBSize[epoch], numParallelSequences));
     }
 
     // only true when the user specify LearningRatePerMB and the number of parallel utterances in Reader > 1
-    //bool m_needToNormalizeLRByParallUtterance;          // TODO: should go away
-    //bool m_needToNormalizeMomentumByParallUtterance;
+    // bool m_needToNormalizeLRByParallUtterance;          // TODO: should go away
+    // bool m_needToNormalizeMomentumByParallUtterance;
 
     intargvector m_mbSize;
-    bool m_truncated;           // do BPTT
+    bool m_truncated; // do BPTT
     // BUGBUG: The 'Truncated' option is duplicated in the reader and must be set to the same there (e.g. by defining in the config on an outer enclosing level, like current samples).
     //         We really should only read it in SGD and pass it ourselves on to the Reader, instead of it being a Reader parameter.
     // BUGBUG: If m_truncated, then m_mbSize is interpreted as truncation length; the actual MB size is a combination of that and the #parallel sequences specified in the reader.
@@ -159,7 +156,11 @@ protected:
     // To mitigate this issue, we adopt the sub-minibatch implementation, where 
     // each m_mbSize[epoch] is divided by a few sub-minibatch of which size will be no more than m_maxSamplesInRAM
     // a forward-backward is performed for each sub-minibathch; a model update is performed after each minibatch 
-
+    size_t m_numSubminiBatches;
+    // alternative method to specify how to split minibatches into subminibatches
+    // default is 1, which means no subminibatch is used
+    // if m_maxTempMemSizeInSamples = SIZE_MAX (which means users do not specify the option) and m_numSubminiBatches > 1
+    // we divide one minibatch to m_numSubminiBatches subMinibatches
 
     // the number of samples in each epoch (0 means, use all the samples in each epoch).
     size_t m_epochSize;
@@ -229,7 +230,7 @@ protected:
     // 0: No sync perfomance stats
     // 1: Show stats on every sync 
     // n > 1: Show stats after every n sync
-    int  m_syncStatsTrace;
+    int m_syncStatsTrace;
 
     // Data parallel SGD training parameters
     int m_numGradientBits;
@@ -255,9 +256,15 @@ protected:
     double m_hSmoothingWeight;
     double m_frameDropThresh;
     bool m_doReferenceAlign;
+    double m_seqGammarCalcAMF;
+    double m_seqGammarCalcLMF;
+    double m_seqGammarCalcWP;
+    double m_seqGammarCalcbMMIFactor;
+    bool m_seqGammarCalcUsesMBR;
 };
 
-template<class ElemType> class IDistGradAggregator;
+template <class ElemType>
+class IDistGradAggregator;
 
 // -----------------------------------------------------------------------
 // class SGD
@@ -265,7 +272,7 @@ template<class ElemType> class IDistGradAggregator;
 
 // TODO: make this independent of ElemType. Then these repeated dynamic_pointer_casts will go away
 // TODO: why is this a class, and not just a procedure? Then we wouldn't have to include the massive header
-template<class ElemType>
+template <class ElemType>
 class SGD : public SGDParams
 {
 protected:
@@ -274,15 +281,15 @@ protected:
 
 public:
     // constructor from old CNTK config. This is a function template that is also used to get the config from Scripting.
-    template<class ConfigRecordType>
-    SGD(const ConfigRecordType & configSGD) :
-        SGDParams(configSGD, sizeof(ElemType)),
+    template <class ConfigRecordType>
+    SGD(const ConfigRecordType& configSGD)
+        : SGDParams(configSGD, sizeof(ElemType)),
         // TODO: The next few do not belong into SGD any more than the network or reader we operate on. Either move network and reader in here, or move these out.
-        m_modelPath((const wstring &)configSGD(L"modelPath")),
+          m_modelPath((const wstring&) configSGD(L"modelPath")),
         m_keepCheckPointFiles(configSGD(L"keepCheckPointFiles", false)),
-        //m_validateAfterModelReloading(configSGD(L"validateAfterModelReloading", true)),
-        m_trainCriterionNodeName((const wstring &)configSGD(L"trainCriterionNodeName", L"")),
-        m_evalCriterionNodeName((const wstring &)configSGD(L"evalCriterionNodeName", L"")),
+          // m_validateAfterModelReloading(configSGD(L"validateAfterModelReloading", true)),
+          m_trainCriterionNodeName((const wstring&) configSGD(L"trainCriterionNodeName", L"")),
+          m_evalCriterionNodeName((const wstring&) configSGD(L"evalCriterionNodeName", L"")),
         m_prevChosenMinibatchSize(0),
         m_lastFinishedEpochTrainLoss(0.0),
         m_distGradAgg(nullptr),
@@ -293,9 +300,10 @@ public:
     // note: This must be in the header, as we cannot properly specialize this constructor in the CPP to make sure all versions are generated.
 
     // constructor from Scripting
-    SGD(const ScriptableObjects::IConfigRecordPtr configp) :
-        SGD(*configp)
-    { }
+    SGD(const ScriptableObjects::IConfigRecordPtr configp)
+        : SGD(*configp)
+    {
+    }
 
     void Train(function<ComputationNetworkPtr(DEVICEID_TYPE)> createNetworkFn, DEVICEID_TYPE deviceId,
                IDataReader<ElemType>* trainSetDataReader,
@@ -305,16 +313,11 @@ public:
                IDataReader<ElemType>* trainSetDataReader,
                IDataReader<ElemType>* validationSetDataReader,
                const DEVICEID_TYPE deviceID, const bool makeMode = true);
-#if 0
-    // TODO: per discussion with Dong Yu, Guoguo Chen, and Yu Zhang, this function can be removed.
-    void SequenceTrain(IComputationNetBuilder<ElemType>* netBuilder, wstring origModelFileName,
-                       IDataReader<ElemType>* trainSetDataReader, IDataReader<ElemType>* validationSetDataReader,
-                       const DEVICEID_TYPE deviceID, const bool makeMode = true);
-#endif
 
 protected:
-    std::vector<ComputationNodeBasePtr> & GetTrainCriterionNodes(ComputationNetworkPtr net);
-    std::vector<ComputationNodeBasePtr> & GetEvalCriterionNodes(ComputationNetworkPtr net);
+
+    std::vector<ComputationNodeBasePtr>& GetTrainCriterionNodes(ComputationNetworkPtr net);
+    std::vector<ComputationNodeBasePtr>& GetEvalCriterionNodes(ComputationNetworkPtr net);
 
     void TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
                            ComputationNetworkPtr refNet,
@@ -323,11 +326,12 @@ protected:
                            IDataReader<ElemType>* validationSetDataReader);
 
 protected:
+
     // return true if precomputation is executed.
     bool PreCompute(ComputationNetworkPtr net,
                     IDataReader<ElemType>* trainSetDataReader,
-                    std::vector<ComputationNodeBasePtr> & featureNodes,
-                    std::vector<ComputationNodeBasePtr> & labelNodes,
+                    std::vector<ComputationNodeBasePtr>& featureNodes,
+                    std::vector<ComputationNodeBasePtr>& labelNodes,
                     std::map<std::wstring, Matrix<ElemType>*>* inputMatrices);
 
     // return a reasonable initial learning rate based on the initial mbsize
@@ -336,12 +340,12 @@ protected:
                                   const ComputationNodeBasePtr& refNode, const int epochNumber,
                                   const double curLearnRate,
                                   IDataReader<ElemType>* trainSetDataReader,
-                                  const std::vector<ComputationNodeBasePtr> & featureNodes,
-                                  const std::vector<ComputationNodeBasePtr> & labelNodes,
-                                  const std::vector<ComputationNodeBasePtr> & criterionNodes,
-                                  const std::vector<ComputationNodeBasePtr> & evaluationNodes,
+                                  const std::vector<ComputationNodeBasePtr>& featureNodes,
+                                  const std::vector<ComputationNodeBasePtr>& labelNodes,
+                                  const std::vector<ComputationNodeBasePtr>& criterionNodes,
+                                  const std::vector<ComputationNodeBasePtr>& evaluationNodes,
                                   std::map<std::wstring, Matrix<ElemType>*>* inputMatrices,
-                                  const std::list<ComputationNodeBasePtr> & learnableNodes,
+                                  const std::list<ComputationNodeBasePtr>& learnableNodes,
                                   std::list<Matrix<ElemType>>& smoothedGradients,
                                   const bool learnRateInitialized,
                                   const double largestPrevLearnRatePerSample);
@@ -352,12 +356,12 @@ protected:
                                          const size_t epochSize, IDataReader<ElemType>* trainSetDataReader,
                                          const double learnRatePerSample,
                                          const size_t minibatchSize,
-                                         const std::vector<ComputationNodeBasePtr> & featureNodes,
-                                         const std::vector<ComputationNodeBasePtr> & labelNodes,
-                                         const std::vector<ComputationNodeBasePtr> & criterionNodes,
-                                         const std::vector<ComputationNodeBasePtr> & evaluationNodes,
+                                         const std::vector<ComputationNodeBasePtr>& featureNodes,
+                                         const std::vector<ComputationNodeBasePtr>& labelNodes,
+                                         const std::vector<ComputationNodeBasePtr>& criterionNodes,
+                                         const std::vector<ComputationNodeBasePtr>& evaluationNodes,
                                          std::map<std::wstring, Matrix<ElemType>*>* inputMatrices,
-                                         const std::list<ComputationNodeBasePtr> & learnableNodes,
+                                         const std::list<ComputationNodeBasePtr>& learnableNodes,
                                          std::list<Matrix<ElemType>>& smoothedGradients,
                                          /*out*/ double& epochCriterion,
                                          /*out*/ std::vector<double>& epochEvalErrors,
@@ -372,12 +376,12 @@ protected:
                                    IDataReader<ElemType>* trainSetDataReader,
                                    const double learnRatePerSample,
                                    const size_t initialMinibatchSize,
-                                   const std::vector<ComputationNodeBasePtr> & featureNodes,
-                                   const std::vector<ComputationNodeBasePtr> & labelNodes,
-                                   const std::vector<ComputationNodeBasePtr> & criterionNodes,
-                                   const std::vector<ComputationNodeBasePtr> & evaluationNodes,
+                                   const std::vector<ComputationNodeBasePtr>& featureNodes,
+                                   const std::vector<ComputationNodeBasePtr>& labelNodes,
+                                   const std::vector<ComputationNodeBasePtr>& criterionNodes,
+                                   const std::vector<ComputationNodeBasePtr>& evaluationNodes,
                                    std::map<std::wstring, Matrix<ElemType>*>* inputMatrices,
-                                   const std::list<ComputationNodeBasePtr> & learnableNodes,
+                                   const std::list<ComputationNodeBasePtr>& learnableNodes,
                                    std::list<Matrix<ElemType>>& smoothedGradients,
                                    const double learningRateAdjustmentFactor);
 
@@ -390,12 +394,12 @@ protected:
                                       const size_t numFramesToUseInSearch,
                                       IDataReader<ElemType>* trainSetDataReader,
                                       const double learnRatePerSample,
-                                      const std::vector<ComputationNodeBasePtr> & featureNodes,
-                                      const std::vector<ComputationNodeBasePtr> & labelNodes,
-                                      const std::vector<ComputationNodeBasePtr> & criterionNodes,
-                                      const std::vector<ComputationNodeBasePtr> & evaluationNodes,
+                                      const std::vector<ComputationNodeBasePtr>& featureNodes,
+                                      const std::vector<ComputationNodeBasePtr>& labelNodes,
+                                      const std::vector<ComputationNodeBasePtr>& criterionNodes,
+                                      const std::vector<ComputationNodeBasePtr>& evaluationNodes,
                                       std::map<std::wstring, Matrix<ElemType>*>* inputMatrices,
-                                      const std::list<ComputationNodeBasePtr> & learnableNodes,
+                                      const std::list<ComputationNodeBasePtr>& learnableNodes,
                                       std::list<Matrix<ElemType>>& smoothedGradients,
                                       const size_t minMinibatchSize, const size_t maxMinibatchSize);
 
@@ -406,7 +410,7 @@ protected:
     // TODO: move the two-forward-pass support out of the reader.
     void AttemptUtteranceDerivativeFeatures(ComputationNetworkPtr net,
                                             IDataReader<ElemType>* trainSetDataReader,
-                                            const std::vector<ComputationNodeBasePtr> & featureNodes,
+                                            const std::vector<ComputationNodeBasePtr>& featureNodes,
                                             std::map<std::wstring, Matrix<ElemType>*>* inputMatrices);
 
     size_t TrainOneEpoch(ComputationNetworkPtr net,
@@ -417,12 +421,12 @@ protected:
                          IDataReader<ElemType>* trainSetDataReader,
                          const double learnRatePerSample,
                          size_t tunedMBSize,
-                         const std::vector<ComputationNodeBasePtr> & featureNodes,
-                         const std::vector<ComputationNodeBasePtr> & labelNodes,
-                         const std::vector<ComputationNodeBasePtr> & criterionNodes,
-                         const std::vector<ComputationNodeBasePtr> & evaluationNodes,
+                         const std::vector<ComputationNodeBasePtr>& featureNodes,
+                         const std::vector<ComputationNodeBasePtr>& labelNodes,
+                         const std::vector<ComputationNodeBasePtr>& criterionNodes,
+                         const std::vector<ComputationNodeBasePtr>& evaluationNodes,
                          std::map<std::wstring, Matrix<ElemType>*>* inputMatrices,
-                         const std::list<ComputationNodeBasePtr> & learnableNodes,
+                         const std::list<ComputationNodeBasePtr>& learnableNodes,
                          std::list<Matrix<ElemType>>& smoothedGradients,
                          /*out*/ double& epochCriterion,
                          /*out*/ std::vector<double>& epochEvalErrors,
@@ -446,7 +450,8 @@ public:
                                size_t actualMBSize,
                                const double L2RegWeight,
                                const double L1RegWeight,
-                               const bool needAveMultiplier);
+                               const bool needAveMultiplier,
+                               const bool useNesterovMomentum);
 
 protected:
     // UpdateWeights - update the weights in
@@ -456,7 +461,8 @@ protected:
                        const double momentumPerSample,
                        const size_t actualMBSize,
                        const double L2RegWeight, const double L1RegWeight,
-                       const bool needAveMultiplier) const;
+                       const bool needAveMultiplier,
+                       const bool useNesterovMomentum) const;
 
     void ClipGradient(Matrix<ElemType>& gradient, const size_t actualMBSize) const;
 
@@ -479,22 +485,27 @@ protected:
     // return -1 if nothing exists
     int DetermineStartEpoch(const bool makeMode);
 
-    GradientsUpdateType GradUpdateType() const { return m_gradType.mType; }
-    double GradientUpdateNoiseStd() const { return m_gradType.mGaussianNoiseInjectStd; }
+    GradientsUpdateType GradUpdateType() const
+    {
+        return m_gradType.mType;
+    }
+    double GradientUpdateNoiseStd() const
+    {
+        return m_gradType.mGaussianNoiseInjectStd;
+    }
 
 public:
-
 #define EPSILON 1e-5
 
     bool GradientCheck(ComputationNetworkPtr net,
-                       const std::vector<ComputationNodeBasePtr> & criterionNodes,
-                       const std::list<ComputationNodeBasePtr> & learnableNodes,
+                       const std::vector<ComputationNodeBasePtr>& criterionNodes,
+                       const std::list<ComputationNodeBasePtr>& learnableNodes,
                        int npos);
 
 protected:
     wstring m_modelPath;
     bool m_keepCheckPointFiles;
-    //bool m_validateAfterModelReloading; // TODO: remove this. Why would one not validate a model?
+    // bool m_validateAfterModelReloading; // TODO: remove this. Why would one not validate a model?
 
     wstring m_trainCriterionNodeName;
     wstring m_evalCriterionNodeName;
@@ -510,5 +521,4 @@ private:
 	MultiversoWrapper<ElemType>* m_multiverso;
 	bool m_multiversoBarrier;
 };
-
-}}}
+} } }

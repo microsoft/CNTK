@@ -4,8 +4,15 @@
 
 #include "Basics.h"
 #include "SGD.h"
+#include "NonlinearityNodes.h"          // for DropoutNode
+#include "PreComputeNodes.h"            // for PrecomputeNode
+#include "SpecialPurposeNodes.h"        // for SequenceWithSoftmaxNode
 #include "DataReaderHelpers.h"
+#include "MatrixQuantizerImpl.h"
+#ifdef QUANTIZED_GRADIENT_AGGREGATION
 #include "AllReduceDistGradAggregator.h"
+#endif
+#include "SimpleDistGradAggregator.h"
 #include "ProgressTracing.h"
 
 #include <map>
@@ -19,16 +26,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // class SGD
     // =======================================================================
 
-    template SGD<float >::SGD(const ConfigParameters &);
-    template SGD<double>::SGD(const ConfigParameters &);
-    template SGD<float >::SGD(const ScriptableObjects::IConfigRecord &);
-    template SGD<double>::SGD(const ScriptableObjects::IConfigRecord &);
+template SGD<float>::SGD(const ConfigParameters&);
+template SGD<double>::SGD(const ConfigParameters&);
+template SGD<float>::SGD(const ScriptableObjects::IConfigRecord&);
+template SGD<double>::SGD(const ScriptableObjects::IConfigRecord&);
 
     // -----------------------------------------------------------------------
     // Train() -- perform a multi-epoch training end-to-end with checkpointing
     // -----------------------------------------------------------------------
 
-    template<class ElemType>
+template <class ElemType>
     void SGD<ElemType>::Train(function<ComputationNetworkPtr(DEVICEID_TYPE)> createNetworkFn, DEVICEID_TYPE deviceId,
                               IDataReader<ElemType>* trainSetDataReader,
                               IDataReader<ElemType>* validationSetDataReader,
@@ -53,7 +60,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (net->GetDeviceId() < 0)
             fprintf(stderr, "\nSGD using CPU.\n");
         else
-            fprintf(stderr, "\nSGD using GPU %d.\n", (int)net->GetDeviceId());
+        fprintf(stderr, "\nSGD using GPU %d.\n", (int) net->GetDeviceId());
 
         // TODO: BUGBUG: if not starting from checkpoint, need to synchronize initial model
         // strategy should be to run the initializer above on mpiRank==0, and then broadcast parameters.
@@ -68,7 +75,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // Adapt() -- similar to Train(), but for purpose of adapting
     // -----------------------------------------------------------------------
 
-    template<class ElemType>
+template <class ElemType>
     void SGD<ElemType>::Adapt(wstring origModelFileName, wstring refNodeName,
                               IDataReader<ElemType>* trainSetDataReader,
                               IDataReader<ElemType>* validationSetDataReader,
@@ -122,19 +129,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     static double MomentumPerMB(double momentumPerSample, size_t minibatchSize);
 
-    template<class ElemType>
+template <class ElemType>
     void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
                                           ComputationNetworkPtr refNet,
                                           ComputationNodeBasePtr refNode,
                                           IDataReader<ElemType>* trainSetDataReader,
                                           IDataReader<ElemType>* validationSetDataReader)
     {
-        auto & featureNodes = net->FeatureNodes();
-        auto & labelNodes = net->LabelNodes();
-        auto & criterionNodes = GetTrainCriterionNodes(net);
+    auto& featureNodes = net->FeatureNodes();
+    auto& labelNodes = net->LabelNodes();
+    auto& criterionNodes = GetTrainCriterionNodes(net);
 
         fprintf(stderr, "\nTraining criterion node(s):\n");
-        for (const auto & node : criterionNodes)
+    for (const auto& node : criterionNodes)
             fprintf(stderr, "\t%ls = %ls\n", node->NodeName().c_str(), node->OperationName().c_str());
 
         // determine evaluationNodes from GetEvalCriterionNodes(), ensuring each criterion is only logged once
@@ -142,16 +149,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             auto originalEvaluationNodes = GetEvalCriterionNodes(net);
             set<ComputationNodeBasePtr> criteriaLogged; // set to make sure we don't double-log criteria
-            for (const auto & node : criterionNodes)
+        for (const auto& node : criterionNodes)
                 criteriaLogged.insert(node);
-            for (const auto & node : originalEvaluationNodes)
+        for (const auto& node : originalEvaluationNodes)
                 if (criteriaLogged.insert(node).second)
                     evaluationNodes.push_back(node);
 
             if (!evaluationNodes.empty())
             {
                 fprintf(stderr, "\nEvaluation criterion node(s):\n");
-                for (const auto & node : evaluationNodes)
+            for (const auto& node : evaluationNodes)
                     fprintf(stderr, "\t%ls = %ls\n", node->NodeName().c_str(), node->OperationName().c_str());
             }
         }
@@ -171,23 +178,23 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         std::map<std::wstring, Matrix<ElemType>*>* inputMatrices = new std::map<std::wstring, Matrix<ElemType>*>();
         for (size_t pass = 0; pass < 2; pass++)
         {
-            auto & nodes = (pass == 0) ? featureNodes : labelNodes;
+        auto& nodes = (pass == 0) ? featureNodes : labelNodes;
             for (size_t i = 0; i < nodes.size(); i++)
             {
-                auto & node = nodes[i];
-                auto * functionValues = &dynamic_pointer_cast<ComputationNode<ElemType>>(node)->Value();
+            auto& node = nodes[i];
+            auto* functionValues = &dynamic_pointer_cast<ComputationNode<ElemType>>(node)->Value();
                 assert(functionValues->GetNumCols() == net->GetMBLayoutPtr()->GetNumTimeSteps());
                 (*inputMatrices)[node->NodeName()] = functionValues;
             }
         }
 
-        //get hmm file for sequence training
+    // get hmm file for sequence training
         bool isSequenceTrainingCriterion = (criterionNodes[0]->OperationName() == L"SequenceWithSoftmax");
         if (isSequenceTrainingCriterion)
         {
-            //SequenceWithSoftmaxNode<ElemType>* node = static_cast<SequenceWithSoftmaxNode<ElemType>*>(criterionNodes[0]);
+        // SequenceWithSoftmaxNode<ElemType>* node = static_cast<SequenceWithSoftmaxNode<ElemType>*>(criterionNodes[0]);
             auto node = dynamic_pointer_cast<SequenceWithSoftmaxNode<ElemType>>(criterionNodes[0]);
-            auto  hmm = node->gethmm();
+        auto hmm = node->gethmm();
             trainSetDataReader->GetHmmData(hmm);
         }
 
@@ -208,22 +215,23 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 refFeatureNodes[i] = refNet->GetNodeFromName(featureNodes[i]->NodeName());
                 refNet->ChangeNode(featureNodes[i]->NodeName(), featureNodes[i]);
             }
+        refNet->InvalidateCompiledNetwork(); // prepare to re-compile
             refNet->CompileNetwork();
 
             // allocate memory for forward computation
-            refNet->AllocateAllMatrices({ refNode }, {}, nullptr);
+        refNet->AllocateAllMatrices({refNode}, {}, nullptr);
         }
 
         // initializing weights and gradient holder
         // only one criterion so far TODO: support multiple ones?
-        auto & learnableNodes = net->LearnableParameterNodes(criterionNodes[0]);
+    auto& learnableNodes = net->LearnableParameterNodes(criterionNodes[0]);
         std::list<Matrix<ElemType>> smoothedGradients;
 
         for (auto nodeIter = learnableNodes.begin(); nodeIter != learnableNodes.end(); nodeIter++)
         {
             ComputationNodePtr node = dynamic_pointer_cast<ComputationNode<ElemType>>(*nodeIter);
-            smoothedGradients.push_back(Matrix<ElemType>(node->GetNumRows(),
-                                                         node->GetNumCols(),
+        smoothedGradients.push_back(Matrix<ElemType>(node->Value().GetNumRows(),
+                                                     node->Value().GetNumCols(),
                                                          net->GetDeviceId()));
         }
 
@@ -254,7 +262,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             InitDistGradAgg(evaluationNodes.size(), m_traceLevel);
         }
-        //precompute mean and invStdDev nodes and save initial model
+    // precompute mean and invStdDev nodes and save initial model
         if (PreCompute(net, trainSetDataReader, featureNodes, labelNodes, inputMatrices) || startEpoch == 0)
         {
             // Synchronize all ranks before writing the model to ensure that 
@@ -303,7 +311,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // likewise for sequence training parameters
         if (isSequenceTrainingCriterion)
         {
-            ComputationNetwork::SetSeqParam<ElemType>(net, criterionNodes[0], m_hSmoothingWeight, m_frameDropThresh, m_doReferenceAlign);
+        ComputationNetwork::SetSeqParam<ElemType>(net, criterionNodes[0], m_hSmoothingWeight, m_frameDropThresh, m_doReferenceAlign,
+                                                  m_seqGammarCalcAMF, m_seqGammarCalcLMF, m_seqGammarCalcWP, m_seqGammarCalcbMMIFactor, m_seqGammarCalcUsesMBR);
         }
 
 		//Multiverso Warpper for ASGD logic init
@@ -321,7 +330,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 		}
 
         // --- MAIN EPOCH LOOP
-        for (int i = startEpoch; i < (int)m_maxEpochs; i++) // TODO: why is this an int, and not a size_t?
+    for (int i = startEpoch; i < (int) m_maxEpochs; i++) // TODO: why is this an int, and not a size_t?
         {
             // Synchronize all ranks before proceeding to ensure that 
             // rank 0 has finished writing the previous model file
@@ -349,7 +358,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (m_autoLearnRateSearchType == LearningRateSearchAlgorithm::None || i < m_learningRatesParam.size())
             {
                 // BUGBUG: GetNumParallelSequences() returns 1 under certain situations; it seems when restarting from checkpoint
-                learnRatePerSample = GetLearningRatePerSample(i/*BUGBUG workaround:*/, trainSetDataReader->GetNumParallelSequences());
+            learnRatePerSample = GetLearningRatePerSample(i /*BUGBUG workaround:*/, trainSetDataReader->GetNumParallelSequences());
             }
             else if (m_autoLearnRateSearchType == LearningRateSearchAlgorithm::SearchBeforeEpoch)
             {
@@ -417,9 +426,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 chosenMinibatchSize = m_mbSize[i];
             }
 
-            actualMinibatchSize = FixUpEffectiveMBSize(chosenMinibatchSize/*BUGBUG workaround:*/, trainSetDataReader->GetNumParallelSequences());
+        actualMinibatchSize = FixUpEffectiveMBSize(chosenMinibatchSize /*BUGBUG workaround:*/, trainSetDataReader->GetNumParallelSequences());
 
-            double momentumPerSample = GetMomentumPerSample(i/*BUGBUG workaround:*/, trainSetDataReader->GetNumParallelSequences());
+        double momentumPerSample = GetMomentumPerSample(i /*BUGBUG workaround:*/, trainSetDataReader->GetNumParallelSequences());
             // time constant = number of samples after which a contribution has been reduced to e^-1
             double momentumAsTimeConstant = momentumPerSample == 0.0 ? 0.0
                                           : momentumPerSample >= 1.0 ? 0.0
@@ -459,12 +468,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     "Finished Epoch[%2d of %d]: [Training Set] TrainLossPerSample = %.8g; ",
                     i + 1, (int) m_maxEpochs, epochCriterion);
             m_lastFinishedEpochTrainLoss = epochCriterion;
-            if (epochEvalErrors.size() == 0)    // no eval criterion, only train criterion itself
+        if (epochEvalErrors.size() == 0) // no eval criterion, only train criterion itself
             {
                 fprintf(stderr,
                         "AvgLearningRatePerSample = %.8g; EpochTime=%.6g\n",
                         learnRatePerSample, epochTime);
-
             }
             else if (epochEvalErrors.size() == 1)
             {
@@ -536,6 +544,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if ((m_parallelizationMethod == ParallelizationMethod::ModelAveragingSGD) && (g_mpi->NumNodesInUse() > 1))
             {
                 g_mpi->Bcast(&epochCriterion, 1, g_mpi->MainNodeRank());
+            g_mpi->Bcast(&lrControlCriterion, 1, g_mpi->MainNodeRank());
             }
 
             bool loadedPrevModel = false;
@@ -547,7 +556,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             else
             {
                 avgCriterion = ((epochsSinceLastLearnRateAdjust - 1 - epochsNotCountedInAvgCriterion) *
-                                avgCriterion + lrControlCriterion) /
+                                avgCriterion +
+                            lrControlCriterion) /
                                 (epochsSinceLastLearnRateAdjust - epochsNotCountedInAvgCriterion);
             }
 
@@ -560,7 +570,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     {
                         auto bestModelPath = GetModelNameForEpoch(i - m_learnRateAdjustInterval);
                         fprintf(stderr, "Loading previous model with best training-criterion value: %ls.\n", bestModelPath.c_str());
-                        net->ReloadPersistableParameters<ElemType>(bestModelPath);
+                    net->RereadPersistableParameters<ElemType>(bestModelPath);
                         LoadCheckPointInfo(i - m_learnRateAdjustInterval,
                                            /*out*/ totalSamplesSeen,
                                            /*out*/ learnRatePerSample,
@@ -703,7 +713,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     static string GeneratePaddedFloatOrExpFormat(int padSize, int precision, double value);
 
-    template<class ElemType>
+template <class ElemType>
     size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                                         ComputationNetworkPtr refNet,
                                         const ComputationNodeBasePtr& refNode,
@@ -712,19 +722,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                         IDataReader<ElemType>* trainSetDataReader,
                                         const double learnRatePerSample,
                                         size_t tunedMBSize,
-                                        const std::vector<ComputationNodeBasePtr> & featureNodes,
-                                        const std::vector<ComputationNodeBasePtr> & labelNodes,
-                                        const std::vector<ComputationNodeBasePtr> & criterionNodes,
-                                        const std::vector<ComputationNodeBasePtr> & evaluationNodes,
-                                        std::map<std::wstring, Matrix<ElemType>*>* inputMatrices,  // TODO: why is this a pointer?
-                                        const std::list<ComputationNodeBasePtr> & learnableNodes,
+                                    const std::vector<ComputationNodeBasePtr>& featureNodes,
+                                    const std::vector<ComputationNodeBasePtr>& labelNodes,
+                                    const std::vector<ComputationNodeBasePtr>& criterionNodes,
+                                    const std::vector<ComputationNodeBasePtr>& evaluationNodes,
+                                    std::map<std::wstring, Matrix<ElemType>*>* inputMatrices, // TODO: why is this a pointer?
+                                    const std::list<ComputationNodeBasePtr>& learnableNodes,
                                         std::list<Matrix<ElemType>>& smoothedGradients,
                                         /*out*/ double& epochCriterion,
                                         /*out*/ std::vector<double>& epochEvalErrors,
                                         /*out*/ size_t& totalSamplesSeen,
                                         std::string prefixMsg)
     {
-        double totalTimeInMBs = 0;  // use double since timer has sub-microsecond time resolution
+    double totalTimeInMBs = 0; // use double since timer has sub-microsecond time resolution
         double epochCriterionLastMBs = 0;
 
         int numSamplesLastMBs = 0;
@@ -755,8 +765,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // MA-related variables
         size_t nSamplesSinceLastModelSync = 0;
         size_t nSynced = 0; 
-        float  nSecondsOnMASync = 0; 
-        float  nSecondsSinceLastMAPerfReport = 0;
+    float nSecondsOnMASync = 0;
+    float nSecondsSinceLastMAPerfReport = 0;
 
         std::vector<Matrix<ElemType>*> learnParamsGradients;
         if (useGradientAggregation)
@@ -794,13 +804,20 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // Sub-minibatching is used if a single minibatch is too large to fit into GPU RAM.
         DataReaderHelpers::SubminibatchDispatcher<ElemType> smbDispatcher;
         size_t numSubminibatchesNeeded = 0; 
-        if (m_maxSamplesInRAM < SIZE_MAX)   // user-specified maximum number of samples that fit into GPU RAM; or 0 if not enabled
+    if (m_maxSamplesInRAM < SIZE_MAX || m_numSubminiBatches > 1) // user-specified maximum number of samples that fit into GPU RAM; or 0 if not enabled
+    {
+        if (m_maxSamplesInRAM < SIZE_MAX)
         {
             // into how many pieces would we need to break the minibatch?
             // TODO: The following calculation relies on the ill-devised definition of "minibatch" of the current truncated BPTT implementation. Adapt this once fixed.
             size_t numParallelSequences = trainSetDataReader->GetNumParallelSequences();
             size_t estimatedMBSize = tunedMBSize * numParallelSequences; 
-            numSubminibatchesNeeded = (size_t)std::ceil((float)estimatedMBSize / m_maxSamplesInRAM);             
+            numSubminibatchesNeeded = (size_t) std::ceil((float) estimatedMBSize / m_maxSamplesInRAM);
+        }
+        if (m_numSubminiBatches > 1)
+        {
+            numSubminibatchesNeeded = m_numSubminiBatches;
+        }
         }
         // this is non-trivial, we need a manager object to handle this
         if (numSubminibatchesNeeded > 1)
@@ -818,7 +835,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (useGradientAggregation)
         {
             fprintf(stderr, ", DataParallelSGD training (MyRank = %d, NumNodes = %d, NumGradientBits = %d)",
-                    (int)g_mpi->CurrentNodeRank(), (int)g_mpi->NumNodesInUse(), (int)m_numGradientBits);
+                (int) g_mpi->CurrentNodeRank(), (int) g_mpi->NumNodesInUse(), (int) m_numGradientBits);
             if (m_bufferedAsyncGradientAggregation)
             {
                 fprintf(stderr, ", BufferedAsyncGradientAggregation is ENABLED");
@@ -830,14 +847,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
         if (numSubminibatchesNeeded > 1)
         {
-            fprintf(stderr, ", with maximum %d samples in RAM", (int)m_maxSamplesInRAM);
+        if (m_maxSamplesInRAM < SIZE_MAX)
+            fprintf(stderr, ", with maximum %d samples in RAM", (int) m_maxSamplesInRAM);
+        else
+            fprintf(stderr, ", with %d subminibatch", (int) numSubminibatchesNeeded);
         }
         fprintf(stderr, ".\n");
 
 		double readTime = 0, computeTime = 0, commTime = 0;
 		Timer timer, readTimer, computeTimer, commTimer;
 
-		timer.Start();
+        timer.Start();
 		readTimer.Start();
 
         // --- MAIN MINIBATCH LOOP
@@ -859,14 +879,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 				fprintf(stderr, "Go!\n");
 			}
 
-            if (!wasDataRead && (!useDistributedMBReading || noMoreSamplesToProcess))   // in case of distributed reading, we do a few more loops until all ranks have completed
-                break;  // end of epoch
+			if (!wasDataRead && (!useDistributedMBReading || noMoreSamplesToProcess)) // in case of distributed reading, we do a few more loops until all ranks have completed
+				break;
 
             // Note: If !wasDataRead then the data that GetMinibatchIntoNetwork() was supposed to full in are undefined.
             // Must not touch them.
 
             if (!wasDataRead)
-                actualMBSize = 0;   // (undefined if !wasDataRead)
+            actualMBSize = 0; // (undefined if !wasDataRead)
 
 			readTimer.Stop();
 			readTime += readTimer.ElapsedSeconds();
@@ -891,19 +911,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 // TODO: currently we only support one node for regularization
                 if (m_needAdaptRegularization && m_adaptationRegType == AdaptationRegType::KL && refNode)
                 {
-#if 0               // TODO: where does refNet get its features from?
-                    refNet->ResizeAllFeatureNodes(actualMBSize);
-#endif
-                    //size_t actualMBSize2 = refNet->SetActualMiniBatchSizeFromFeatures();
                     size_t actualMBSize2 = refNet->DetermineActualMBSizeFromFeatures();
-                    refNet->GetMBLayoutPtr()->CopyFrom(net->GetMBLayoutPtr());       // TODO: This is UNTESTED (before this was missing, seemingly inconsistently)
-                    refNet->VerifyActualNumParallelSequences(trainSetDataReader->GetNumParallelSequences());
+                refNet->GetMBLayoutPtr()->CopyFrom(net->GetMBLayoutPtr()); // TODO: This is UNTESTED (before this was missing, seemingly inconsistently)
 
                     if (actualMBSize2 != actualMBSize)
                         LogicError("TrainOneEpoch: refNet has different MB size than main net??");
 
                     refNet->ForwardProp(refNode);
-                    Matrix<ElemType>::ScaleAndAdd((ElemType)m_adaptationRegWeight,
+                Matrix<ElemType>::ScaleAndAdd((ElemType) m_adaptationRegWeight,
                                                   dynamic_pointer_cast<ComputationNode<ElemType>>(refNode)->Value(),
                                                   (ElemType)(1.0 - m_adaptationRegWeight),
                                                   dynamic_pointer_cast<ComputationNode<ElemType>>(labelNodes[0])->Value());
@@ -918,7 +933,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 {
                     if (actualNumSubminibatches > 1)
                     {
-                        smbDispatcher.GetSubMinibatchToNet(ismb);   // get sub-minibatch from full-size one
+                    smbDispatcher.GetSubMinibatchToNet(ismb); // get sub-minibatch from full-size one
                         ComputationNetwork::BumpEvalTimeStamp(featureNodes);
                         ComputationNetwork::BumpEvalTimeStamp(labelNodes);
                     }
@@ -929,7 +944,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                     // compute eval node first since when gradient is computed the forward function values
                     // may be changed and need to be recomputed when gradient and function value share the same matrix
-                    net->ForwardProp(evaluationNodes);    // the bulk of this evaluation is reused in ComputeGradient() below
+                net->ForwardProp(evaluationNodes); // the bulk of this evaluation is reused in ComputeGradient() below
 
                     // ===========================================================
                     // forward prop for training criterion
@@ -941,13 +956,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     // backprop
                     // ===========================================================
 
-                    if (learnRatePerSample > 0.01 * m_minLearnRate)         // only compute gradient when learning rate is large enough
+                if (learnRatePerSample > 0.01 * m_minLearnRate) // only compute gradient when learning rate is large enough
                         net->Backprop(criterionNodes[0]);
 
                     // house-keeping for sub-minibatching
                     if (actualNumSubminibatches > 1)
-                        smbDispatcher.DoneWithCurrentSubMinibatch(ismb);    // page state out
-                } // end sub-minibatch loop
+                    smbDispatcher.DoneWithCurrentSubMinibatch(ismb); // page state out
+            }                                                        // end sub-minibatch loop
                 if (actualNumSubminibatches > 1)
                     smbDispatcher.DoneWithCurrentMinibatch(); 
             } // if (actualMBSize > 0)
@@ -1009,13 +1024,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 for (size_t i = 0; i < evaluationNodes.size(); i++)
                     m_gradHeader->evalErrors[i] = actualMBSize > 0 ? evaluationNodes[i]->Get00Element() : 0.0;
 
-                bool samplesProcessed = m_distGradAgg->AggregateGradients(learnParamsGradients, m_gradHeader, m_numGradientBits, epochNumber);
+            bool samplesProcessed = m_distGradAgg->AggregateGradients(learnParamsGradients, m_gradHeader, epochNumber);
                 noMoreSamplesToProcess = !samplesProcessed;
 
                 aggregateNumSamples = m_gradHeader->numSamples;
                 aggregateNumSamplesWithLabel = m_gradHeader->numSamplesWithLabel;
                 epochCriterion += m_gradHeader->criterion;
-                for (size_t i = 0; i<epochEvalErrors.size(); i++)
+            for (size_t i = 0; i < epochEvalErrors.size(); i++)
                     epochEvalErrors[i] += m_gradHeader->evalErrors[i];
             }
 			computeTimer.Stop();
@@ -1035,9 +1050,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                             LogicError("%ls %ls operation has NaNs in smoothedGradient.", node->NodeName().c_str(), node->OperationName().c_str());
 #endif
                         UpdateWeights(node, smoothedGradient, learnRatePerSample,
-                                      GetMomentumPerSample(epochNumber/*BUGBUG workaround:*/, net->GetMBLayoutPtr()->GetNumParallelSequences()), aggregateNumSamples,
+                                  GetMomentumPerSample(epochNumber /*BUGBUG workaround:*/, net->GetMBLayoutPtr()->GetNumParallelSequences()), aggregateNumSamples,
                                       m_L2RegWeight, m_L1RegWeight,
-                                      m_needAveMultiplier);
+                                  m_needAveMultiplier, m_useNesterovMomentum);
 #ifdef _DEBUG
                         if (dynamic_pointer_cast<ComputationNode<ElemType>>(node)->Value().HasNan("TrainOneEpoch/UpdateWeights(): "))
                             LogicError("%ls %ls operation has NaNs in functionValues after parameter update.", node->NodeName().c_str(), node->OperationName().c_str());
@@ -1048,7 +1063,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
 			commTimer.Start();
             // aggregation by model averaging
-            // TODO: this does not happen each MB, does it?
             if (useModelAveraging)
             {
                 // Determine if any samples were processed across any of the ranks
@@ -1082,7 +1096,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                             if (nSynced % m_syncStatsTrace == 0)
                             {
                                 fprintf(stderr, "\t\t-----(model averaging stats) %d-th sync, %8.2f seconds since last report, %5.2f seconds on communication\n",
-                                        (int)nSynced, nSecondsSinceLastMAPerfReport, nSecondsOnMASync);
+                                    (int) nSynced, nSecondsSinceLastMAPerfReport, nSecondsOnMASync);
                                 nSecondsOnMASync = 0; 
                                 nSecondsSinceLastMAPerfReport = 0; 
                             }
@@ -1098,7 +1112,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 				if (useDistributedMBReading)
 				{
 					noMoreSamplesToProcess = !wasDataRead;
-				}
+            }
 
 				size_t processedSamples = 0;
 				if (nSamplesSinceLastModelSync >= m_nFramesBetweenASGDSync)
@@ -1146,9 +1160,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     int mbProgNumPrecision = 2;
                     if (m_maxComputedEpochSize != 0)
                     {
-                        double numMBPerEpoch = (double)m_maxComputedEpochSize / (double)tunedMBSize;
-                        mbProg = (double)numMBsRun / numMBPerEpoch;
-                        mbProgNumPrecision = (int)ceil(log10(numMBPerEpoch / (double)m_numMBsToShowResult));
+                    double numMBPerEpoch = (double) m_maxComputedEpochSize / (double) tunedMBSize;
+                    mbProg = (double) numMBsRun / numMBPerEpoch;
+                    mbProgNumPrecision = (int) ceil(log10(numMBPerEpoch / (double) m_numMBsToShowResult));
                         mbProgNumPrecision = max(mbProgNumPrecision - 2, 2);
                     }
                     wasProgressPrinted = ProgressTracing::TraceProgressPercentage(epochNumber, mbProg, false);
@@ -1235,10 +1249,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         // --- END MAIN MINIBATCH LOOP
 
-        if (useModelAveraging && (g_mpi->NumNodesInUse() > 1) )
+    if (useModelAveraging && (g_mpi->NumNodesInUse() > 1))
         {
             // may not be synced after epoch finished, so do the sync here 
-            int residualSampels = (int)nSamplesSinceLastModelSync;
+        int residualSampels = (int) nSamplesSinceLastModelSync;
             g_mpi->AllReduce(&residualSampels, 1);
             totalSamplesSeen += residualSampels; 
             totalEpochSamples += residualSampels;
@@ -1262,7 +1276,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             // with parallelization, we have them in regular variables
             epochCriterion /= float(totalEpochSamples);
-            for (size_t i = 0; i< epochEvalErrors.size(); i++)
+        for (size_t i = 0; i < epochEvalErrors.size(); i++)
             {
                 epochEvalErrors[i] /= totalEpochSamples;
             }
@@ -1291,91 +1305,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     // -----------------------------------------------------------------------
-    // sub-routines and helpers follow below
+// subroutines and helpers follow below
     // -----------------------------------------------------------------------
-
-#if 0
-    // TODO: per discussion with Dong Yu, Guoguo Chen, and Yu Zhang, this function can be removed.
-    template<class ElemType>
-    void SGD<ElemType>::SequenceTrain(IComputationNetBuilder<ElemType>* netBuilder, wstring origModelFileName,
-                       IDataReader<ElemType>* trainSetDataReader, IDataReader<ElemType>* validationSetDataReader,
-                       const DEVICEID_TYPE deviceId, const bool makeMode)
-    {
-        if (netBuilder == nullptr || origModelFileName == L"" || trainSetDataReader == nullptr)
-        {
-            InvalidArgument("netBuilder, origModel and trainSetDataReader should not be null.");
-        }
-
-        int startEpoch = DetermineStartEpoch(makeMode);
-        if (startEpoch == m_maxEpochs)
-        {
-            fprintf(stderr, "No further training is necessary.\n");
-            return;
-        }
-
-        // Initializes the model from original model.
-        // TODO: Comment what this does!
-        auto origNet = make_shared<ComputationNetwork>(deviceId);
-        ComputationNetworkPtr sequenceNet = 
-            (startEpoch < 0) ? netBuilder->BuildNetworkFromDescription() : origNet;
-        std::vector<ComputationNodeBasePtr> addedFeatureNodes;
-        std::vector<ComputationNodeBasePtr> replacedCriterionNodes;
-        if (startEpoch < 0)
-        {
-            // Loads models.
-            origNet->Load<ElemType>(origModelFileName);
-
-            // Processes feature nodes.
-            std::vector<ComputationNodeBasePtr> & sequenceFeatureNodes = sequenceNet->FeatureNodes();
-            for (size_t i = 0; i < sequenceFeatureNodes.size(); ++i)
-            {
-                if (!origNet->NodeNameExists(sequenceFeatureNodes[i]->NodeName()))
-                {
-                    addedFeatureNodes.push_back(sequenceFeatureNodes[i]);
-                    origNet->AddFeatureNode(sequenceFeatureNodes[i]);
-                }
-            }
-
-            // Processes criterion nodes.
-            auto & origCriterionNodes = GetTrainCriterionNodes(origNet);
-            auto & sequenceCriterionNodes = GetTrainCriterionNodes(sequenceNet);
-            if (origCriterionNodes.size() == 0 || sequenceCriterionNodes.size() == 0)
-            {
-                RuntimeError("Training criterion node does not exist.");
-            }
-            replacedCriterionNodes.push_back(origCriterionNodes[0]);
-            origNet->ReplaceFinalCriterionNode(origCriterionNodes[0]->NodeName(), sequenceCriterionNodes[0]);
-            origNet->ResetEvalTimeStamps();
-        }
-
-        wstring modelFileName = GetModelNameForEpoch(int(startEpoch) - 1);
-        if (startEpoch >= 0)
-        {
-            fprintf(stderr, "Starting from checkpoint. Load Network From File %ls.\n", modelFileName.c_str());
-        }
-        else
-        {
-            fprintf(stderr, "Load Network From the original model file %ls.\n", origModelFileName.c_str());
-        }
-        ComputationNetworkPtr net = (startEpoch < 0) ? origNet : ComputationNetwork::CreateFromFile<ElemType>(deviceId, modelFileName);
-
-        startEpoch = max(startEpoch, 0);
-
-        TrainOrAdaptModel(startEpoch, net, net, nullptr, trainSetDataReader, validationSetDataReader);
-
-        // Handles deletions carefully here.
-        // TODO: This is no longer needed since we own our networks and deal with shared_ptrs now.
-        if (startEpoch < 0)
-        {
-            for (size_t i = 0; i < addedFeatureNodes.size(); ++i)
-            {
-                origNet->RemoveFeatureNode(addedFeatureNodes[i]);
-            }
-            auto & origCriterionNodes = GetTrainCriterionNodes(origNet);
-            origNet->ReplaceFinalCriterionNode(origCriterionNodes[0]->NodeName(), replacedCriterionNodes[0]);
-        }
-    }
-#endif
 
     static double MomentumPerMB(double momentumPerSample, size_t minibatchSize)
     {
@@ -1388,8 +1319,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     static map<ComputationNetworkPtr, vector<ComputationNodeBasePtr>> tmpCriterionNodeSets;
     // TODO: test this, then remove this comment
 
-    template<class ElemType>
-    std::vector<ComputationNodeBasePtr> & SGD<ElemType>::GetTrainCriterionNodes(ComputationNetworkPtr net)
+template <class ElemType>
+std::vector<ComputationNodeBasePtr>& SGD<ElemType>::GetTrainCriterionNodes(ComputationNetworkPtr net)
     {
         if (!m_trainCriterionNodeName.empty())
         {
@@ -1400,8 +1331,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return net->FinalCriterionNodes();
     }
 
-    template<class ElemType>
-    std::vector<ComputationNodeBasePtr> & SGD<ElemType>::GetEvalCriterionNodes(ComputationNetworkPtr net)
+template <class ElemType>
+std::vector<ComputationNodeBasePtr>& SGD<ElemType>::GetEvalCriterionNodes(ComputationNetworkPtr net)
     {
         if (!m_evalCriterionNodeName.empty())
         {
@@ -1412,15 +1343,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return net->EvaluationNodes();
     }
 
-    // return true if precomputation is executed.
-    template<class ElemType>
+// execute PreComputeNodes
+// Returns true if precomputation was executed.
+template <class ElemType>
     bool SGD<ElemType>::PreCompute(ComputationNetworkPtr net,
                     IDataReader<ElemType>* trainSetDataReader,
-                    std::vector<ComputationNodeBasePtr> & featureNodes,
-                    std::vector<ComputationNodeBasePtr> & labelNodes,
+                               std::vector<ComputationNodeBasePtr>& featureNodes,
+                               std::vector<ComputationNodeBasePtr>& labelNodes,
                     std::map<std::wstring, Matrix<ElemType>*>* inputMatrices)
     {
-        std::list<ComputationNodeBasePtr> nodes = net->GetNodesRequiringPreComputation();    // this tests all HasComputed() flags
+    std::list<ComputationNodeBasePtr> nodes = net->GetNodesRequiringPreComputation(); // this tests all HasComputed() flags
 
         if (nodes.size() == 0)
         {
@@ -1431,27 +1363,30 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         fprintf(stderr, "\nPrecomputing --> %lu PreCompute nodes found.\n\n", nodes.size());
         for (auto nodeIter = nodes.begin(); nodeIter != nodes.end(); nodeIter++)
         {
-            auto node = static_pointer_cast<PreComputedNode<ElemType>>(*nodeIter);
+        auto node = static_pointer_cast<PreComputedNodeBase<ElemType>>(*nodeIter);
             fprintf(stderr, "\tNodeName: %ls\n", (node->NodeName()).c_str());
         }
 
-        //compute
-        //trainSetDataReader->StartMinibatchLoop(m_mbSize[0],  0 , requestDataSize);
+    // compute
+    // trainSetDataReader->StartMinibatchLoop(m_mbSize[0],  0 , requestDataSize);
         // trainSetDataReader->StartMinibatchLoop(m_mbSize[0],  0 , m_epochSize); // only based on one epoch
         // [1/12/2015 erw] to support large dataset, we usually partition whole dataset into several epoch's,
         // so we need to use all the data to do precomputing
-        if (m_useAllDataForPreComputedNode)     // using all the data
+    if (m_useAllDataForPreComputedNode) // using all the data
             trainSetDataReader->StartMinibatchLoop(m_mbSize[0], 0);
-        else                                    // using only one epoch
+    else // using only one epoch
             trainSetDataReader->StartMinibatchLoop(m_mbSize[0], 0, m_epochSize);
         net->StartEvaluateMinibatchLoop(nodes);
 
         // initialize
         for (auto nodeIter = nodes.begin(); nodeIter != nodes.end(); nodeIter++)
         {
-            auto node = static_pointer_cast<PreComputedNode<ElemType>>(*nodeIter);
-            node->MarkComputed(false/*begin accumulating*/);
+        auto node = static_pointer_cast<PreComputedNodeBase<ElemType>>(*nodeIter);
+        node->MarkComputed(false /*begin accumulating*/);
         }
+
+    const size_t numIterationsBeforePrintingProgress = 100;
+    size_t numItersSinceLastPrintOfProgress = 0;
         size_t actualMBSizeDummy;
         while (DataReaderHelpers::GetMinibatchIntoNetwork(*trainSetDataReader, net, nullptr, false, false, *inputMatrices, actualMBSizeDummy))
         {
@@ -1460,12 +1395,24 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             ComputationNetwork::BumpEvalTimeStamp(labelNodes);
 
             net->ForwardProp(nodes);
+
+        if (ProgressTracing::IsEnabled())
+        {
+            numItersSinceLastPrintOfProgress++;
+            if (numItersSinceLastPrintOfProgress >= numIterationsBeforePrintingProgress)
+            {
+                // TODO: For now just print 0.0 instead of calculating actual progress
+                printf("PROGRESS: %.2f%%\n", 0.0f);
+                numItersSinceLastPrintOfProgress = 0;
+            }
         }
+        }
+
         // finalize
         for (auto nodeIter = nodes.begin(); nodeIter != nodes.end(); nodeIter++)
         {
-            auto node = static_pointer_cast<PreComputedNode<ElemType>>(*nodeIter);
-            node->MarkComputed(true/*done accumulating*/);
+        auto node = static_pointer_cast<PreComputedNodeBase<ElemType>>(*nodeIter);
+        node->MarkComputed(true /*done accumulating*/);
         }
         fprintf(stderr, "\nPrecomputing --> Completed.\n\n");
 
@@ -1473,18 +1420,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     // return a reasonable initial learning rate based on the initial mbsize
-    template<class ElemType>
+template <class ElemType>
     double SGD<ElemType>::SearchForBestLearnRate(ComputationNetworkPtr net,
                                                  ComputationNetworkPtr refNet,
                                                  const ComputationNodeBasePtr& refNode, const int epochNumber,
                                                  const double curLearnRate,
                                                  IDataReader<ElemType>* trainSetDataReader,
-                                                 const std::vector<ComputationNodeBasePtr> & featureNodes,
-                                                 const std::vector<ComputationNodeBasePtr> & labelNodes,
-                                                 const std::vector<ComputationNodeBasePtr> & criterionNodes,
-                                                 const std::vector<ComputationNodeBasePtr> & evaluationNodes,
+                                             const std::vector<ComputationNodeBasePtr>& featureNodes,
+                                             const std::vector<ComputationNodeBasePtr>& labelNodes,
+                                             const std::vector<ComputationNodeBasePtr>& criterionNodes,
+                                             const std::vector<ComputationNodeBasePtr>& evaluationNodes,
                                                  std::map<std::wstring, Matrix<ElemType>*>* inputMatrices,
-                                                 const std::list<ComputationNodeBasePtr> & learnableNodes,
+                                             const std::list<ComputationNodeBasePtr>& learnableNodes,
                                                  std::list<Matrix<ElemType>>& smoothedGradients,
                                                  const bool learnRateInitialized,
                                                  const double largestPrevLearnRatePerSample)
@@ -1506,7 +1453,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         double baseCriterion;
 
         double minLearnRate = m_minLearnRate * 0.3f;
-        double learnRatePerSample = 1.0f / 8.0f / 0.618f / sqrt((double)m_mbSize[epochNumber]);
+    double learnRatePerSample = 1.0f / 8.0f / 0.618f / sqrt((double) m_mbSize[epochNumber]);
 
         if (learnRateInitialized && largestPrevLearnRatePerSample > 0)
         {
@@ -1515,7 +1462,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         int baseModelEpoch = epochNumber - 1;
-        net->ReloadPersistableParameters<ElemType>(GetModelNameForEpoch(baseModelEpoch));
+    net->RereadPersistableParameters<ElemType>(GetModelNameForEpoch(baseModelEpoch));
 
         double learnRate = learnRatePerSample;
         size_t dummyMinibatchSize = 0;
@@ -1544,7 +1491,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             double ratio = 0.3;
 
             if (m_epochSize != requestDataSize)
-                ratio = pow(((double)numFramesToUseInSearch) / m_epochSize, 1.0f / 2);
+            ratio = pow(((double) numFramesToUseInSearch) / m_epochSize, 1.0f / 2);
 
             baseCriterion = max(ratio * prevCriterion + (1 - ratio) * baseCriterion, baseCriterion);
         }
@@ -1565,7 +1512,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         bestLearnRatePerSample = learnRatePerSample;
 
-        //grid search for the first m_numBestSearchEpoch  epochs
+    // grid search for the first m_numBestSearchEpoch  epochs
         if (epochNumber < m_numBestSearchEpoch)
         {
             double leftLearnRatePerSample = 0.01 / m_mbSize[epochNumber];
@@ -1624,8 +1571,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 }
             }
 
-            bestLearnRatePerSample = (leftCriterion < rightCriterion) ? leftLearnRatePerSample :
-                                                                        rightLearnRatePerSample;
+        bestLearnRatePerSample = (leftCriterion < rightCriterion) ? leftLearnRatePerSample : rightLearnRatePerSample;
         }
 
         fprintf(stderr, "Best Learn Rate Per Sample for Epoch[%d] = %.10g  baseCriterion=%.10g\n",
@@ -1634,67 +1580,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         return bestLearnRatePerSample;
     }
 
-    template<class ElemType>
-    void SGD<ElemType>::TrainOneMiniEpochAndReloadModel(ComputationNetworkPtr net,
-                                                        ComputationNetworkPtr refNet,
-                                                        const ComputationNodeBasePtr& refNode, const int epochNumber,
-                                                        const size_t epochSize, IDataReader<ElemType>* trainSetDataReader,
-                                                        const double learnRatePerSample,
-                                                        const size_t minibatchSize,
-                                                        const std::vector<ComputationNodeBasePtr> & featureNodes,
-                                                        const std::vector<ComputationNodeBasePtr> & labelNodes,
-                                                        const std::vector<ComputationNodeBasePtr> & criterionNodes,
-                                                        const std::vector<ComputationNodeBasePtr> & evaluationNodes,
-                                                        std::map<std::wstring, Matrix<ElemType>*>* inputMatrices,
-                                                        const std::list<ComputationNodeBasePtr> & learnableNodes,
-                                                        std::list<Matrix<ElemType>>& smoothedGradients,
-                                                        /*out*/ double& epochCriterion,
-                                                        /*out*/ std::vector<double>& epochEvalErrors,
-                                                        /*out*/ size_t& totalSamplesSeen,
-                                                        std::string prefixMsg)
-    {
-        TrainOneEpoch(net, refNet, refNode, epochNumber, epochSize,
-                      trainSetDataReader, learnRatePerSample, minibatchSize, featureNodes,
-                      labelNodes, criterionNodes, evaluationNodes,
-                      inputMatrices, learnableNodes, smoothedGradients,
-                      /*out*/ epochCriterion, /*out*/ epochEvalErrors, /*out*/ totalSamplesSeen,
-                      prefixMsg);
-
-        fprintf(stderr, "Finished Mini-Epoch For LearnRate Selection: TrainLossPerSample = %.8g;", epochCriterion);
-
-        if (epochEvalErrors.size() == 1)
-            fprintf(stderr, "EvalErrPerSample = %.8g; AvgLearningRatePerSample = %.8g\n", epochEvalErrors[0], learnRatePerSample);
-        else
-        {
-            fprintf(stderr, "EvalErrPerSample ");
-            for (size_t i = 0; i < epochEvalErrors.size(); i++)
-            {
-                fprintf(stderr, "[%lu] = %.8g; ", i, epochEvalErrors[i]);
-            }
-            fprintf(stderr, "AvgLearningRatePerSample = %.8g\n", learnRatePerSample);
-        }
-
-        int baseModelEpoch = epochNumber - 1;
-        net->ReloadPersistableParameters<ElemType>(GetModelNameForEpoch(baseModelEpoch));
-
-        double dummyLearnRate;
-        double dummtPrevCriterion;
-        size_t dummyMinibatchSize = 0;
-        LoadCheckPointInfo(baseModelEpoch,
-                           /*out*/ totalSamplesSeen,
-                           /*out*/ dummyLearnRate,
-                           smoothedGradients,
-                           /*out*/ dummtPrevCriterion,
-                           /*out*/ dummyMinibatchSize);
-    }
-
     // AdaptiveMinibatchSizing() -- choose the largest feasible minibatch size
     // This is necessary for data-parallel operation. The aim is to minimize model updates, and hence bandwidth
     // This implements
     //    F. Seide, H. Fu, J. Droppo, G. Li, and D. Yu:
     //    "On Parallelizability of Stochastic Gradient Descent for Speech DNNs"
     //    In Proc. ICASSP 2014.
-    template<class ElemType>
+template <class ElemType>
     size_t SGD<ElemType>::AdaptiveMinibatchSizing(ComputationNetworkPtr net,
                                                   ComputationNetworkPtr refNet,
                                                   const ComputationNodeBasePtr& refNode,
@@ -1703,12 +1595,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                                   IDataReader<ElemType>* trainSetDataReader,
                                                   const double learnRatePerSample,
                                                   const size_t initialMinibatchSize,
-                                                  const std::vector<ComputationNodeBasePtr> & featureNodes,
-                                                  const std::vector<ComputationNodeBasePtr> & labelNodes,
-                                                  const std::vector<ComputationNodeBasePtr> & criterionNodes,
-                                                  const std::vector<ComputationNodeBasePtr> & evaluationNodes,
+                                              const std::vector<ComputationNodeBasePtr>& featureNodes,
+                                              const std::vector<ComputationNodeBasePtr>& labelNodes,
+                                              const std::vector<ComputationNodeBasePtr>& criterionNodes,
+                                              const std::vector<ComputationNodeBasePtr>& evaluationNodes,
                                                   std::map<std::wstring, Matrix<ElemType>*>* inputMatrices,
-                                                  const std::list<ComputationNodeBasePtr> & learnableNodes,
+                                              const std::list<ComputationNodeBasePtr>& learnableNodes,
                                                   std::list<Matrix<ElemType>>& smoothedGradients,
                                                   const double learningRateAdjustmentFactor)
     {
@@ -1718,7 +1610,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // do some pre-adjustment based on LR
         // Basically we assume that the LR for epoch 1 is safe for mbsize.
         // If LR control led to a smaller LR, then we can safely increase the lower bound of the MB size.
-        double learningRateChangeSoFar = GetLearningRatePerSample(epochNumber/*BUGBUG workaround:*/, trainSetDataReader->GetNumParallelSequences()) / GetLearningRatePerSample(0/*BUGBUG workaround:*/, trainSetDataReader->GetNumParallelSequences());
+    double learningRateChangeSoFar = GetLearningRatePerSample(epochNumber /*BUGBUG workaround:*/, trainSetDataReader->GetNumParallelSequences()) / GetLearningRatePerSample(0 /*BUGBUG workaround:*/, trainSetDataReader->GetNumParallelSequences());
         learningRateChangeSoFar *= learningRateAdjustmentFactor;
 
         // increasing by the full factor is found to be too aggressive; sqrt() seems more robust
@@ -1735,7 +1627,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             // newly started training: any previous MB size stored in the model is to be ignored
             fprintf(stderr, "before epoch .2, previous minibatchSize %zd is "
-                    "considered invalid -> resetting\n", m_prevChosenMinibatchSize);
+                        "considered invalid -> resetting\n",
+                m_prevChosenMinibatchSize);
             m_prevChosenMinibatchSize = 0;
         }
 
@@ -1770,7 +1663,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 assert(m_prevChosenMinibatchSize >= chosenMinibatchSize);
 
                 fprintf(stderr, "AdaptiveMinibatchSearch: Limiting maxMinibatchSize to "
-                        "previous minibatchSize %zd*2\n", m_prevChosenMinibatchSize);
+                            "previous minibatchSize %zd*2\n",
+                    m_prevChosenMinibatchSize);
                 maxMinibatchSize = min(maxMinibatchSize, m_prevChosenMinibatchSize * 2);
             }
 
@@ -1798,7 +1692,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     // uses a small percentage of training data of minibatch to
     // speculatively train with various MB sizes; then picks the best
-    template<class ElemType>
+template <class ElemType>
     size_t SGD<ElemType>::SearchForBestMinibatchSize(ComputationNetworkPtr net,
                                                      ComputationNetworkPtr refNet,
                                                      const ComputationNodeBasePtr& refNode,
@@ -1806,12 +1700,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                                      const size_t numFramesToUseInSearch,
                                                      IDataReader<ElemType>* trainSetDataReader,
                                                      const double learnRatePerSample,
-                                                     const std::vector<ComputationNodeBasePtr> & featureNodes,
-                                                     const std::vector<ComputationNodeBasePtr> & labelNodes,
-                                                     const std::vector<ComputationNodeBasePtr> & criterionNodes,
-                                                     const std::vector<ComputationNodeBasePtr> & evaluationNodes,
+                                                 const std::vector<ComputationNodeBasePtr>& featureNodes,
+                                                 const std::vector<ComputationNodeBasePtr>& labelNodes,
+                                                 const std::vector<ComputationNodeBasePtr>& criterionNodes,
+                                                 const std::vector<ComputationNodeBasePtr>& evaluationNodes,
                                                      std::map<std::wstring, Matrix<ElemType>*>* inputMatrices,
-                                                     const std::list<ComputationNodeBasePtr> & learnableNodes,
+                                                 const std::list<ComputationNodeBasePtr>& learnableNodes,
                                                      std::list<Matrix<ElemType>>& smoothedGradients,
                                                      const size_t minMinibatchSize, const size_t maxMinibatchSize)
     {
@@ -1830,7 +1724,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         size_t lastTriedTrialMinibatchSize = 0;
         double lastTriedTrialEpochCriterion = 0;
-        for (float trialMinibatchSizeFloat = (float)minMinibatchSize;
+    for (float trialMinibatchSizeFloat = (float) minMinibatchSize;
              trialMinibatchSizeFloat <= maxMinibatchSize;
              trialMinibatchSizeFloat *= minibatchSizeTuningFactor)
         {
@@ -1854,8 +1748,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                             learnableNodes, smoothedGradients,
                                             /*out*/ epochCriterion, /*out*/ epochEvalErrors,
                                             /*out*/ totalSamplesSeen,
-                                            isFirstIteration ? "BaseAdaptiveMinibatchSearch:" :
-                                                               "AdaptiveMinibatchSearch:");
+                                        isFirstIteration ? "BaseAdaptiveMinibatchSearch:" : "AdaptiveMinibatchSearch:");
 
             if (isFirstIteration)
             {
@@ -1869,7 +1762,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 fprintf(stderr, "AdaptiveMinibatchSearch: Computed BaseCriterion %.10g\n", baseCriterion);
             }
             else if (!std::isnan(epochCriterion) &&
-                     (epochCriterion > (baseCriterion *  (1.0 + ( m_minibatchSearchCriterionErrorMargin / 100.0)))))
+                 (epochCriterion > (baseCriterion * (1.0 + (m_minibatchSearchCriterionErrorMargin / 100.0)))))
             {
                 // As soon as we see the Criterion (a measure of error) start to get larger than the
                 // Criterion we started with, we stop.
@@ -1893,19 +1786,73 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 "EpochCriterion = %.10g vs BaseCriterion = %.10g\n\n",
                 (int) lastTriedTrialMinibatchSize, lastTriedTrialEpochCriterion, baseCriterion);
 
-
         return lastTriedTrialMinibatchSize;
     }
+
+// run training over a small subset of an epoch, for purpose of automatic LR and MB-size tuning
+template <class ElemType>
+void SGD<ElemType>::TrainOneMiniEpochAndReloadModel(ComputationNetworkPtr net,
+                                                    ComputationNetworkPtr refNet,
+                                                    const ComputationNodeBasePtr& refNode, const int epochNumber,
+                                                    const size_t epochSize, IDataReader<ElemType>* trainSetDataReader,
+                                                    const double learnRatePerSample,
+                                                    const size_t minibatchSize,
+                                                    const std::vector<ComputationNodeBasePtr>& featureNodes,
+                                                    const std::vector<ComputationNodeBasePtr>& labelNodes,
+                                                    const std::vector<ComputationNodeBasePtr>& criterionNodes,
+                                                    const std::vector<ComputationNodeBasePtr>& evaluationNodes,
+                                                    std::map<std::wstring, Matrix<ElemType>*>* inputMatrices,
+                                                    const std::list<ComputationNodeBasePtr>& learnableNodes,
+                                                    std::list<Matrix<ElemType>>& smoothedGradients,
+                                                    /*out*/ double& epochCriterion,
+                                                    /*out*/ std::vector<double>& epochEvalErrors,
+                                                    /*out*/ size_t& totalSamplesSeen,
+                                                    std::string prefixMsg)
+{
+    TrainOneEpoch(net, refNet, refNode, epochNumber, epochSize,
+                  trainSetDataReader, learnRatePerSample, minibatchSize, featureNodes,
+                  labelNodes, criterionNodes, evaluationNodes,
+                  inputMatrices, learnableNodes, smoothedGradients,
+                  /*out*/ epochCriterion, /*out*/ epochEvalErrors, /*out*/ totalSamplesSeen,
+                  prefixMsg);
+
+    fprintf(stderr, "Finished Mini-Epoch For LearnRate Selection: TrainLossPerSample = %.8g;", epochCriterion);
+
+    if (epochEvalErrors.size() == 1)
+        fprintf(stderr, "EvalErrPerSample = %.8g; AvgLearningRatePerSample = %.8g\n", epochEvalErrors[0], learnRatePerSample);
+    else
+    {
+        fprintf(stderr, "EvalErrPerSample ");
+        for (size_t i = 0; i < epochEvalErrors.size(); i++)
+        {
+            fprintf(stderr, "[%lu] = %.8g; ", i, epochEvalErrors[i]);
+        }
+        fprintf(stderr, "AvgLearningRatePerSample = %.8g\n", learnRatePerSample);
+    }
+
+    int baseModelEpoch = epochNumber - 1;
+    net->RereadPersistableParameters<ElemType>(GetModelNameForEpoch(baseModelEpoch));
+
+    double dummyLearnRate;
+    double dummtPrevCriterion;
+    size_t dummyMinibatchSize = 0;
+    LoadCheckPointInfo(baseModelEpoch,
+                       /*out*/ totalSamplesSeen,
+                       /*out*/ dummyLearnRate,
+                       smoothedGradients,
+                       /*out*/ dummtPrevCriterion,
+                       /*out*/ dummyMinibatchSize);
+}
 
     // Attemps to compute the error signal for the whole utterance, which will
     // be fed to the neural network as features. Currently it is a workaround
     // for the two-forward-pass sequence and ctc training, which allows
     // processing more utterances at the same time. Only used in Kaldi2Reader.
     // TODO: move the two-forward-pass support out of the reader.
-    template<class ElemType>
+template <class ElemType>
     void SGD<ElemType>::AttemptUtteranceDerivativeFeatures(ComputationNetworkPtr net,
                                                            IDataReader<ElemType>* trainSetDataReader,
-                                                           const std::vector<ComputationNodeBasePtr> & featureNodes,
+                                                       const std::vector<ComputationNodeBasePtr>& featureNodes,
                                                            std::map<std::wstring, Matrix<ElemType>*>* inputMatrices)
     {
         assert(trainSetDataReader != NULL);
@@ -1916,20 +1863,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             ComputationNetwork::BumpEvalTimeStamp(featureNodes);
 
-            auto & outputNodes = net->OutputNodes();
+        auto& outputNodes = net->OutputNodes();
             if (outputNodes.empty())
                 LogicError("no output node was found.");
 
-            //net->SetActualMiniBatchSizeFromFeatures();
             trainSetDataReader->CopyMBLayoutTo(net->GetMBLayoutPtr());
-            net->VerifyActualNumParallelSequences(trainSetDataReader->GetNumParallelSequences());
-            net->ForwardProp(outputNodes[0]);   // Only evaluate the first output
+        net->ForwardProp(outputNodes[0]); // only evaluate the first output
             trainSetDataReader->SetNetOutput(uttInfo,
                                              dynamic_pointer_cast<ComputationNode<ElemType>>(outputNodes[0])->Value(),
                                              pMBLayout);
         }
     }
 
+// helper for pretty printing
     static string GeneratePaddedFloatOrExpFormat(int padSize, int precision, double value)
     {
         char format[16];
@@ -1950,8 +1896,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         return format;
     }
 
-    template<class ElemType>
-    int SGD<ElemType>::SGDTrace(FILE *__restrict __stream, const char *__restrict __format, ...)
+template <class ElemType>
+int SGD<ElemType>::SGDTrace(FILE* __restrict __stream, const char* __restrict __format, ...)
     {
         int result = 0;
         if (m_traceLevel > 0)
@@ -1964,15 +1910,24 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         return result;
     }
 
-    template<class ElemType>
+template <class ElemType>
     void SGD<ElemType>::InitDistGradAgg(int numEvalNodes, int traceLevel)
     {
         if (m_parallelizationMethod == ParallelizationMethod::DataParallelSGD)
         {
             if (m_distGradAgg == nullptr)
             {
-                m_distGradAgg = new AllReduceDistGradAggregator<ElemType>(g_mpi, m_zeroThresholdFor1Bit, true /*useQuantizationForSelfStripe*/, m_bufferedAsyncGradientAggregation, traceLevel, m_syncStatsTrace);
+#ifdef QUANTIZED_GRADIENT_AGGREGATION
+            m_distGradAgg = new AllReduceDistGradAggregator<ElemType>(g_mpi, m_numGradientBits, m_zeroThresholdFor1Bit, true /*useQuantizationForSelfStripe*/, m_bufferedAsyncGradientAggregation, traceLevel, m_syncStatsTrace);
+#else
+            if (m_numGradientBits != (8 * sizeof(ElemType)))
+            {
+                RuntimeError("Gradient quantization is unsupported in CNTK binaries built without quantized gradient aggregation support!");
             }
+
+            m_distGradAgg = new SimpleDistGradAggregator<ElemType>(g_mpi, m_bufferedAsyncGradientAggregation, m_syncStatsTrace);
+#endif // !QUANTIZED_GRADIENT_AGGREGATION
+        }
 
             if (m_gradHeader == nullptr)
             {
@@ -1981,18 +1936,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
     }
 
-    template<class ElemType>
+template <class ElemType>
     bool SGD<ElemType>::ModelAveragingProcessing(size_t nSamplesSinceLastSync, const std::list<ComputationNodeBasePtr>& learnableNodes, size_t& nProcessedFrames,
                                   float& SecondsSinceLastSyncFinished, float& SecondsSpentOnSync)
     {
-        //////////////////////////////////////////////////////////////////////////
+    // ////////////////////////////////////////////////////////////////////////
         // the current strategy is that after each minibatch, we will sync between processors 
         // to decide whether a sync need to be performed. This is definitely not optimal, 
         // which we will fix it later. 
 
         // TODO: the way we handle timer is not very good 
-        //////////////////////////////////////////////////////////////////////////
-        static bool first = true ; 
+    // ////////////////////////////////////////////////////////////////////////
+    static bool first = true;
         static Timer MAtimer;
         if (first)
         {
@@ -2000,22 +1955,22 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             first = false; 
         }
        
-        char bNeedToSync = (char)0; // use char for bool 
+    char bNeedToSync = (char) 0; // use char for bool
         if (g_mpi->IsMainNode() && nSamplesSinceLastSync >= m_nFramesBetweenMASync)
         {
             // only the main node can decide whether a sync need to be performed 
-            bNeedToSync = (char)1; 
+        bNeedToSync = (char) 1;
         }
         g_mpi->Bcast(&bNeedToSync, 1, g_mpi->MainNodeRank());
         if (bNeedToSync)
         {
             MAtimer.Stop();
             double elapsedsec = MAtimer.ElapsedSeconds(); 
-            SecondsSinceLastSyncFinished = first ?  0  : (float) elapsedsec  ;
+        SecondsSinceLastSyncFinished = first ? 0 : (float) elapsedsec;
             MAtimer.Start();
-            nProcessedFrames = ModelAveragingSync((int)nSamplesSinceLastSync, learnableNodes);
+        nProcessedFrames = ModelAveragingSync((int) nSamplesSinceLastSync, learnableNodes);
             MAtimer.Stop();
-            SecondsSpentOnSync = (float)MAtimer.ElapsedSeconds();
+        SecondsSpentOnSync = (float) MAtimer.ElapsedSeconds();
             
             MAtimer.Start();
         }
@@ -2027,7 +1982,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         return true; 
     }
 
-    template<class ElemType>
+template <class ElemType>
     size_t SGD<ElemType>::ModelAveragingSync(int nSamplesSinceLastSync, const std::list<ComputationNodeBasePtr>& learnableNodes)
     {
         if (g_mpi->NumNodesInUse() <= 1)
@@ -2035,11 +1990,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return nSamplesSinceLastSync; 
         }
 
-        //========================================
+    // ========================================
         // Sec. 1 calculate factor
-        //========================================
+    // ========================================
         float factor = 0; 
-        int   nTotalSamples = nSamplesSinceLastSync; 
+    int nTotalSamples = nSamplesSinceLastSync;
         g_mpi->AllReduce(&nTotalSamples, 1);
         if (nTotalSamples <= 0)
         {
@@ -2051,7 +2006,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             factor = (nSamplesSinceLastSync + 0.0f) / nTotalSamples; 
         }
 
-        //========================================
+    // ========================================
         // Sec. 2 sync models based on factor 
         // Note: this is suboptimal at the moment: 
         //       we do the averaging for each node in a sequence manner, i.e., 
@@ -2060,7 +2015,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         //          (node1) GPU ->  CPU  ->  MPI_AllReduce
         //          (node2)         GPU  ->  CPU            -> MPI_AllReduce
         //          (node3)                  GPU            -> CPU              -> MPI_AllReduce
-        //========================================
+    // ========================================
         for (auto iter = learnableNodes.begin(); iter != learnableNodes.end(); iter++)
         {
             ComputationNodeBasePtr pNode = *iter; 
@@ -2072,13 +2027,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Matrix<ElemType>::Scale(factor, mat);
             // 2. send weight matrix over MPI nodes; 
             ElemType* px = mat.CopyToArray(); 
-            size_t    nx = mat.GetNumElements(); 
+        size_t nx = mat.GetNumElements();
 
             // 3. inplace sum 
             g_mpi->AllReduce(px, nx);
             mat.SetValue(mat.GetNumRows(), mat.GetNumCols(), mat.GetDeviceId(), px);
             // 4. clean up 
-            delete []px; 
+        delete[] px;
         }
 
         return nTotalSamples; 
@@ -2087,7 +2042,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 // public:
     // UpdateWeightsS - static version of UpdateWeights()
     // not static since it wants to access protected methods on the SGD object
-    template<class ElemType>
+template <class ElemType>
     /*static*/ void SGD<ElemType>::UpdateWeightsS(const SGD<ElemType>* sgd, Matrix<ElemType>& functionValues,
                                Matrix<ElemType>& gradientValues,
                                Matrix<ElemType>& smoothedGradient,
@@ -2096,7 +2051,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                size_t actualMBSize,
                                const double L2RegWeight,
                                const double L1RegWeight,
-                               const bool needAveMultiplier)
+                                              const bool needAveMultiplier,
+                                              const bool useNesterovMomentum)
     {
         // we use simple linear (instead of log linear) scaling here
         const double momentum = MomentumPerMB(momentumPerSample, actualMBSize);
@@ -2112,19 +2068,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // make actualMBSize is a valid value
         assert(actualMBSize > 0);
 
-        //clipping gradients to prevent outliers
+    // clipping gradients to prevent outliers
         sgd->ClipGradient(gradientValues, actualMBSize);
 
         GradientsUpdateType adpType = sgd->GradUpdateType();
         double noiseStd = sgd->GradientUpdateNoiseStd();
-        Matrix<ElemType> sgdUpdateNoise((DEVICEID_TYPE)functionValues.GetDeviceId());
+    Matrix<ElemType> sgdUpdateNoise((DEVICEID_TYPE) functionValues.GetDeviceId());
         if (noiseStd > 0)
         {
             // get the gradient structure since gradient is sparse
             sgdUpdateNoise.SetValue(gradientValues);
 
             // reset its value to random
-            sgdUpdateNoise.SetGaussianRandomValue(0, (ElemType)noiseStd);
+        sgdUpdateNoise.SetGaussianRandomValue(0, (ElemType) noiseStd);
         }
 
         // L2 regularizer
@@ -2137,26 +2093,26 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (adpType == GradientsUpdateType::None)
         {
             smoothedGradient.NormalGrad(gradientValues, functionValues,
-                                        (ElemType)learnRatePerSample, (ElemType)momentum);
+                                    (ElemType) learnRatePerSample, (ElemType) momentum, useNesterovMomentum);
         }
         else if (adpType == GradientsUpdateType::AdaGrad ||
                 (adpType == GradientsUpdateType::RmsProp && gradientValues.GetMatrixType() == MatrixType::SPARSE) ||
                 (adpType == GradientsUpdateType::FSAdaGrad && gradientValues.GetMatrixType() == MatrixType::SPARSE))
         {
-            //rmsprop for sparse is not implemented yet, delegate it with adagrad
+        // rmsprop for sparse is not implemented yet, delegate it with adagrad
 
             double aveMultiplier = smoothedGradient.Adagrad(gradientValues, needAveMultiplier);
             Matrix<ElemType>::ScaleAndAdd((ElemType)(-learnRatePerSample / aveMultiplier), gradientValues, functionValues);
         }
         else if (adpType == GradientsUpdateType::FSAdaGrad)
         {
-            smoothedGradient.FSAdagrad(actualMBSize, gradientValues, functionValues, (ElemType)learnRatePerSample, (ElemType)momentum);
+        smoothedGradient.FSAdagrad(actualMBSize, gradientValues, functionValues, (ElemType) learnRatePerSample, (ElemType) momentum);
         }
         else if (adpType == GradientsUpdateType::RmsProp)
         {
-            double aveMultiplier = smoothedGradient.RmsProp(gradientValues, (ElemType)sgd->m_rpi.gamma,
-                                                            (ElemType)sgd->m_rpi.inc, (ElemType)sgd->m_rpi.max,
-                                                            (ElemType)sgd->m_rpi.dec, (ElemType)sgd->m_rpi.min, needAveMultiplier);
+        double aveMultiplier = smoothedGradient.RmsProp(gradientValues, (ElemType) sgd->m_rpi.gamma,
+                                                        (ElemType) sgd->m_rpi.inc, (ElemType) sgd->m_rpi.max,
+                                                        (ElemType) sgd->m_rpi.dec, (ElemType) sgd->m_rpi.min, needAveMultiplier);
             Matrix<ElemType>::ScaleAndAdd((ElemType)(-learnRatePerSample / aveMultiplier), gradientValues, functionValues);
         }
 
@@ -2180,14 +2136,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 // protected:
 
     // UpdateWeights - update the weights in
-    template<class ElemType>
+template <class ElemType>
     void SGD<ElemType>::UpdateWeights(const ComputationNodeBasePtr& node,
                        Matrix<ElemType>& smoothedGradient,
                        const double learnRatePerSample,
                        const double momentumPerSample,
                        const size_t actualMBSize,
                        const double L2RegWeight, const double L1RegWeight,
-                       const bool needAveMultiplier) const
+                                  const bool needAveMultiplier,
+                                  const bool useNesterovMomentum) const
     {
 #if DUMPOUTPUT
         fprintf(stderr, "Update_%ls\n", node->NodeName().c_str());
@@ -2198,11 +2155,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         UpdateWeightsS(this, dynamic_pointer_cast<ComputationNode<ElemType>>(node)->Value(), dynamic_pointer_cast<ComputationNode<ElemType>>(node)->Gradient(),
                        smoothedGradient, learnRatePerSample, momentumPerSample,
                        actualMBSize, L2RegWeight, L1RegWeight,
-                       needAveMultiplier);
+                   needAveMultiplier, m_useNesterovMomentum);
         node->BumpEvalTimeStamp();
     }
 
-    template<class ElemType>
+template <class ElemType>
     void SGD<ElemType>::ClipGradient(Matrix<ElemType>& gradient, const size_t actualMBSize) const
     {
         if (m_clippingThresholdPerSample != std::numeric_limits<double>::infinity())
@@ -2217,13 +2174,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 if (gradientNorm > maxGradientPerMB)
                 {
                     double normFactor = maxGradientPerMB / gradientNorm;
-                    gradient *= (ElemType)normFactor;
+                gradient *= (ElemType) normFactor;
                 }
             }
         }
     }
 
-    template<class ElemType>
+template <class ElemType>
     void SGD<ElemType>::SaveCheckPointInfo(const size_t epoch, const size_t totalSamplesSeen,
                             const double learnRatePerSample,
                             const std::list<Matrix<ElemType>>& smoothedGradients,
@@ -2271,7 +2228,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
     }
 
-    template<class ElemType>
+template <class ElemType>
     bool SGD<ElemType>::LoadCheckPointInfo(const size_t epochNumber,
                             /*out*/ size_t& totalSamplesSeen,
                             /*out*/ double& learnRatePerSample,
@@ -2318,13 +2275,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         return true;
     }
 
-    template<class ElemType>
+template <class ElemType>
     wstring SGD<ElemType>::GetCheckPointFileNameForEpoch(const int epoch)
     {
         return GetModelNameForEpoch(epoch) + L".ckp";
     }
 
-    template<class ElemType>
+template <class ElemType>
     wstring SGD<ElemType>::GetModelNameForEpoch(const int epoch, bool bLastModel)
     {
         int epoch1Base = epoch + 1;
@@ -2334,14 +2291,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
         else
         {
-            wstring w = msra::strfun::wstrprintf(L"%ls.%d", m_modelPath.c_str(), (int)epoch1Base);
+        wstring w = msra::strfun::wstrprintf(L"%ls.%d", m_modelPath.c_str(), (int) epoch1Base);
             return w;
         }
-
     }
 
     // return -1 if nothing exists
-    template<class ElemType> // TODO: needed?
+template <class ElemType> // TODO: needed?
     int SGD<ElemType>::DetermineStartEpoch(const bool makeMode)
     {
         if (!makeMode)
@@ -2376,10 +2332,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #define EPSILON 1e-5
 
     // this probes the automatic gradient computation with random inputs
-    template<class ElemType>
+template <class ElemType>
     bool SGD<ElemType>::GradientCheck(ComputationNetworkPtr net,
-                                      const std::vector<ComputationNodeBasePtr> & criterionNodes,
-                                      const std::list<ComputationNodeBasePtr> & learnableNodes,
+                                  const std::vector<ComputationNodeBasePtr>& criterionNodes,
+                                  const std::list<ComputationNodeBasePtr>& learnableNodes,
                                       int npos)
     {
         vector<string> errMsgs;
@@ -2392,11 +2348,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             ComputationNodePtr node = dynamic_pointer_cast<ComputationNode<ElemType>>(*nodeIter);
             char wstrtmp[2048];
 
-            for (size_t itry = 0; itry < min((size_t)50, node->Value().GetNumElements()); itry++)
+        for (size_t itry = 0; itry < min((size_t) 50, node->Value().GetNumElements()); itry++)
             {
-                /// no support to sparse matrix yet
-                int irow = (int) fmod(rand(), node->GetNumRows() - 1);
-                int icol = (int) fmod(rand(), node->GetNumCols() - 1);
+            // no support to sparse matrix yet
+            int irow = (int) fmod(rand(), node->Gradient().GetNumRows() - 1);
+            int icol = (int) fmod(rand(), node->Gradient().GetNumCols() - 1);
                 irow = max(0, irow);
                 icol = max(0, icol);
 
@@ -2415,8 +2371,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     break;
                 }
 
-                //double mbEvalCri =
-                //criterionNode should be a scalar
+            // double mbEvalCri =
+            // criterionNode should be a scalar
                 // TODO: why is this value not used?
                 criterionNodes[npos]->Get00Element();
                 double eGradErr = node->Gradient()(irow, icol);
@@ -2425,16 +2381,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 double ePos = eOrg + EPSILON;
                 double eNeg = eOrg - EPSILON;
 
-                node->Value()(irow, icol) = (ElemType)ePos;
+            node->Value()(irow, icol) = (ElemType) ePos;
                 node->Value().TransferToDeviceIfNotThere(net->GetDeviceId(), true);
 
                 node->BumpEvalTimeStamp();
                 net->ForwardProp(criterionNodes[npos]);
-                //criterionNode should be a scalar
+            // criterionNode should be a scalar
 
                 double mbEvalCriPos = criterionNodes[npos]->Get00Element(); // TODO: make Get00Element() a function of ComputationNodeBase
 
-                node->Value()(irow, icol) = (ElemType)eNeg;
+            node->Value()(irow, icol) = (ElemType) eNeg;
                 node->Value().TransferToDeviceIfNotThere(net->GetDeviceId(), true);
 
                 node->BumpEvalTimeStamp();
@@ -2444,7 +2400,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 double mbEvalCriNeg = criterionNodes[npos]->Get00Element();
 
                 // back to its original parameter value
-                node->Value()(irow, icol) = (ElemType)eOrg;
+            node->Value()(irow, icol) = (ElemType) eOrg;
                 node->Value().TransferToDeviceIfNotThere(net->GetDeviceId(), true);
 
                 // check if they are consistent
@@ -2452,7 +2408,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 double threshold = pow(10.0,
                                        max(0.0,
                                            ceil(log10(min(fabs(eGradErr),
-                                                          fabs(eGradNum))))) - (int)m_gradientCheckSigDigit);
+                                                      fabs(eGradNum))))) -
+                                       (int) m_gradientCheckSigDigit);
                 double diff = fabs(eGradErr - eGradNum);
                 bool wrong = (std::isnan(diff) || diff > threshold);
                 if (wrong)
@@ -2476,7 +2433,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // class SGDParams
     // =======================================================================
 
-    static AdaptationRegType ParseAdaptationRegType(const wstring & s)
+static AdaptationRegType ParseAdaptationRegType(const wstring& s)
     {
         if (!_wcsicmp(s.c_str(), L"") || !_wcsicmp(s.c_str(), L"none"))
             return AdaptationRegType::None;
@@ -2486,7 +2443,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             InvalidArgument("ParseAdaptationRegType: Invalid Adaptation Regularization Type. Valid values are (none | kl)");
         }
 
-    static GradientsUpdateType ParseGradUpdateType(const wstring & s)
+static GradientsUpdateType ParseGradUpdateType(const wstring& s)
     {
         if (!_wcsicmp(s.c_str(), L"") || !_wcsicmp(s.c_str(), L"none") || !_wcsicmp(s.c_str(), L"normal") || !_wcsicmp(s.c_str(), L"simple"))
             return GradientsUpdateType::None;
@@ -2500,7 +2457,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             InvalidArgument("ParseGradUpdateType: Invalid Gradient Updating Type. Valid values are (none | adagrad | rmsProp | fsAdagrad )");
     }
 
-    static ParallelizationMethod ParseParallelizationMethod(const wstring & s)
+static ParallelizationMethod ParseParallelizationMethod(const wstring& s)
     {
         if (!_wcsicmp(s.c_str(), L"") || !_wcsicmp(s.c_str(), L"none"))
             return ParallelizationMethod::None;
@@ -2510,18 +2467,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return ParallelizationMethod::ModelAveragingSGD;
 		else if (!_wcsicmp(s.c_str(), L"DataParallelASGD"))
 			return ParallelizationMethod::DataParallelASGD;
-		else
+        else
 			InvalidArgument("ParseParallelizationMethod: Invalid Parallelization Method. Valid values are (none | dataParallelSGD | modelAveragingSGD| dataParallelASGD)");
     }
 
-    static LearningRateSearchAlgorithm ParseLearningRateSearchType(const wstring & s)
+static LearningRateSearchAlgorithm ParseLearningRateSearchType(const wstring& s)
     {
         // TODO: why allow so many variants?
         if (!_wcsicmp(s.c_str(), L"false") || !_wcsicmp(s.c_str(), L"none"))
             return LearningRateSearchAlgorithm::None;
-        else if (!_wcsicmp(s.c_str(), L"searchBeforeEpoch") || !_wcsicmp(s.c_str(), L"beforeEpoch"/*legacy, deprecated*/) || !_wcsicmp(s.c_str(), L"before"/*legacy, deprecated*/))
+    else if (!_wcsicmp(s.c_str(), L"searchBeforeEpoch") || !_wcsicmp(s.c_str(), L"beforeEpoch" /*legacy, deprecated*/) || !_wcsicmp(s.c_str(), L"before" /*legacy, deprecated*/))
             return LearningRateSearchAlgorithm::SearchBeforeEpoch;
-        else if (!_wcsicmp(s.c_str(), L"adjustAfterEpoch") || !_wcsicmp(s.c_str(), L"afterEpoch"/*legacy, deprecated*/) || !_wcsicmp(s.c_str(), L"after"/*legacy, deprecated*/))
+    else if (!_wcsicmp(s.c_str(), L"adjustAfterEpoch") || !_wcsicmp(s.c_str(), L"afterEpoch" /*legacy, deprecated*/) || !_wcsicmp(s.c_str(), L"after" /*legacy, deprecated*/))
             return LearningRateSearchAlgorithm::AdjustAfterEpoch;
         else
             InvalidArgument("autoAdjustLR: Invalid learning rate search type. Valid values are (none | searchBeforeEpoch | adjustAfterEpoch)");
@@ -2549,42 +2506,43 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         string executionEngineValue = configSGD(L"executionEngine", "synchronous");
 
         // AutoAdjust Parameters
-        const ConfigRecordType & configAALR(configSGD(L"AutoAdjust", ConfigRecordType::Record()));
+    const ConfigRecordType& configAALR(configSGD(L"AutoAdjust", ConfigRecordType::Record()));
         m_autoLearnRateSearchType = ParseLearningRateSearchType(configAALR(L"autoAdjustLR", L"None"));
-        m_reduceLearnRateIfImproveLessThan =   configAALR(L"reduceLearnRateIfImproveLessThan",   0.0);
-        m_continueReduce =                     configAALR(L"continueReduce",                     false);
-        m_learnRateAdjustInterval =            configAALR(L"learnRateAdjustInterval",            (size_t)1);
-        m_learnRateAdjustInterval = max((size_t)1, m_learnRateAdjustInterval);  //minimum interval is 1 epoch
+    m_reduceLearnRateIfImproveLessThan = configAALR(L"reduceLearnRateIfImproveLessThan", 0.0);
+    m_continueReduce = configAALR(L"continueReduce", false);
+    m_learnRateAdjustInterval = configAALR(L"learnRateAdjustInterval", (size_t) 1);
+    m_learnRateAdjustInterval = max((size_t) 1, m_learnRateAdjustInterval); // minimum interval is 1 epoch
         m_learnRateDecreaseFactor = configAALR(L"learnRateDecreaseFactor", 0.618);
         m_increaseLearnRateIfImproveMoreThan = configAALR(L"increaseLearnRateIfImproveMoreThan", numeric_limits<double>::infinity());
-        m_learnRateIncreaseFactor =            configAALR(L"learnRateIncreaseFactor",            1.382);
+    m_learnRateIncreaseFactor = configAALR(L"learnRateIncreaseFactor", 1.382);
 
         // AutoAdjust Auto Adjust Minibatch Parameters
-        m_autoAdjustMinibatch =                 configAALR(L"autoAdjustMinibatch",                 false);
-        m_minibatchSizeTuningFrequency =        configAALR(L"minibatchSizeTuningFrequency",        (size_t)1);
-        m_minibatchSizeTuningMax =              configAALR(L"minibatchSizeTuningMax",              (size_t)1048576);
-        m_minibatchSearchCriterionErrorMargin = configAALR(L"minibatchSearchCriterionErrorMargin", (size_t)1);
+    m_autoAdjustMinibatch = configAALR(L"autoAdjustMinibatch", false);
+    m_minibatchSizeTuningFrequency = configAALR(L"minibatchSizeTuningFrequency", (size_t) 1);
+    m_minibatchSizeTuningMax = configAALR(L"minibatchSizeTuningMax", (size_t) 1048576);
+    m_minibatchSearchCriterionErrorMargin = configAALR(L"minibatchSearchCriterionErrorMargin", (size_t) 1);
 
         // the number of minibatches used to search
         // the learning rate. Its typically set to 10-20% of
         // the total minibatches in an epoch.
-        m_numMiniBatch4LRSearch = configAALR(L"numMiniBatch4LRSearch", ConfigRecordType::Array(intargvector(vector<int>{ 500 })));
+    m_numMiniBatch4LRSearch = configAALR(L"numMiniBatch4LRSearch", ConfigRecordType::Array(intargvector(vector<int>{500})));
 
-        m_numPrevLearnRates =           configAALR(L"numPrevLearnRates",           (size_t)5);
-        m_numBestSearchEpoch =          configAALR(L"numBestSearchEpoch",          (size_t)1);
-        m_loadBestModel =               configAALR(L"loadBestModel",               true);
+    m_numPrevLearnRates = configAALR(L"numPrevLearnRates", (size_t) 5);
+    m_numBestSearchEpoch = configAALR(L"numBestSearchEpoch", (size_t) 1);
+    m_loadBestModel = configAALR(L"loadBestModel", true);
         m_useCVSetControlLRIfCVExists = configAALR(L"UseCVSetControlLRIfCVExists", true);
-        m_useEvalCriterionControlLR =   configAALR(L"UseEvalCriterionControlLR",   false);
+    m_useEvalCriterionControlLR = configAALR(L"UseEvalCriterionControlLR", false);
 
         // TODO: mbSize and truncated should be specified differently for truncated BPTT:
         //       mbSize = total number of samples after which a model update should happen
         //       truncated = truncation length
-        m_mbSize = configSGD(L"minibatchSize", ConfigRecordType::Array(intargvector(vector<int>{ 256 })));
+    m_mbSize = configSGD(L"minibatchSize", ConfigRecordType::Array(intargvector(vector<int>{256})));
         m_truncated = configSGD(L"truncated", false);
-        m_maxSamplesInRAM = configSGD(L"maxSamplesInRAM", (size_t)SIZE_MAX);
+    m_maxSamplesInRAM = configSGD(L"maxSamplesInRAM", (size_t) SIZE_MAX);
+    m_numSubminiBatches = configSGD(L"numSubminibatches", (size_t) 1);
 
         // the number of samples in each epoch (0 means, use all the samples in each epoch).
-        m_epochSize = configSGD(L"epochSize", (size_t)0);
+    m_epochSize = configSGD(L"epochSize", (size_t) 0);
         // the number of samples in each epoch (0 means, use all the samples in each epoch).
         if (m_epochSize == 0)
             m_epochSize = requestDataSize;
@@ -2598,25 +2556,31 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // We use 'momentumAsTimeConstant' to specify the time constant of the low-pass filter that momentum really is.
         // To convert a typical per-MB momentum value of 'm' used with a MB size of 'N', use momentumAsTimeConstant = -N/ln(m).
         // For the common configuration of momentum 0.9 at MB size of 256, that is momentumAsTimeConstant = 2429.8.
-        floatargvector momentumPerMB          = configSGD(L"momentumPerMB", ConfigRecordType::Array(floatargvector()));
-        floatargvector momentumPerSample      = configSGD(L"momentumPerSample", ConfigRecordType::Array(floatargvector()));
+    floatargvector momentumPerMB = configSGD(L"momentumPerMB", ConfigRecordType::Array(floatargvector()));
+    floatargvector momentumPerSample = configSGD(L"momentumPerSample", ConfigRecordType::Array(floatargvector()));
         floatargvector momentumAsTimeConstant = configSGD(L"momentumAsTimeConstant", ConfigRecordType::Array(floatargvector()));
+    bool useNesterovMomentum = configSGD(L"useNAG", false);
 
-        m_maxTempMemSizeInSamplesForCNN = configSGD(L"maxTempMemSizeInSamplesForCNN", (size_t)0);
+    m_maxTempMemSizeInSamplesForCNN = configSGD(L"maxTempMemSizeInSamplesForCNN", (size_t) 0);
 
-        m_traceLevel =          configSGD(L"traceLevel",          (int)0);
-        m_numMBsToShowResult =  configSGD(L"numMBsToShowResult",  (size_t)10);
-        m_numMBsToCUDAProfile = configSGD(L"numMBsToCUDAProfile", (size_t)0);
+    m_traceLevel = configSGD(L"traceLevel", (int) 0);
+    m_numMBsToShowResult = configSGD(L"numMBsToShowResult", (size_t) 10);
+    m_numMBsToCUDAProfile = configSGD(L"numMBsToCUDAProfile", (size_t) 0);
 
         m_gradientClippingWithTruncation = configSGD(L"gradientClippingWithTruncation", true);
-        m_clippingThresholdPerSample =     configSGD(L"clippingThresholdPerSample",     numeric_limits<double>::infinity());
+    m_clippingThresholdPerSample = configSGD(L"clippingThresholdPerSample", numeric_limits<double>::infinity());
 
         // sequence-training parameters
         m_hSmoothingWeight = configSGD(L"hSmoothingWeight", 0.95);
-        m_frameDropThresh =  configSGD(L"frameDropThresh",  1e-10);
+    m_frameDropThresh = configSGD(L"frameDropThresh", 1e-10);
         m_doReferenceAlign = configSGD(L"doReferenceAlign", false);
+    m_seqGammarCalcUsesMBR = configSGD(L"seqGammarUsesMBR", false);
+    m_seqGammarCalcAMF = configSGD(L"seqGammarAMF", 14.0);
+    m_seqGammarCalcLMF = configSGD(L"seqGammarLMF", 14.0);
+    m_seqGammarCalcbMMIFactor = configSGD(L"seqGammarBMMIFactor", 0.0);
+    m_seqGammarCalcWP = configSGD(L"seqGammarWordPen", 0.0);
 
-        m_dropoutRates = configSGD(L"dropoutRate", ConfigRecordType::Array(floatargvector(vector<float>{ 0.0f })));
+    m_dropoutRates = configSGD(L"dropoutRate", ConfigRecordType::Array(floatargvector(vector<float>{0.0f})));
 
         GradientsUpdateType gradUpdateType = ParseGradUpdateType(configSGD(L"gradUpdateType", L"None"));
         double gaussianNoiseInjecStd = configSGD(L"gaussianNoiseInjectStd", 0.0);
@@ -2624,18 +2588,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         m_gradType.mGaussianNoiseInjectStd = (float) gaussianNoiseInjecStd;
 
         // extract RMSProp parameters from config, if they exist. Default to reasonable values.
-        m_rpi.dec =   configSGD(L"rms_wgt_dec", 0.75);
-        m_rpi.inc =   configSGD(L"rms_wgt_inc", 1.2);
-        m_rpi.min =   configSGD(L"rms_wgt_min", 0.1);
-        m_rpi.max =   configSGD(L"rms_wgt_max", 10.0);
-        m_rpi.gamma = configSGD(L"rms_gamma",   0.99);
+    m_rpi.dec = configSGD(L"rms_wgt_dec", 0.75);
+    m_rpi.inc = configSGD(L"rms_wgt_inc", 1.2);
+    m_rpi.min = configSGD(L"rms_wgt_min", 0.1);
+    m_rpi.max = configSGD(L"rms_wgt_max", 10.0);
+    m_rpi.gamma = configSGD(L"rms_gamma", 0.99);
 
         m_needAveMultiplier = configSGD(L"normWithAveMultiplier", true);
-        m_L2RegWeight =       configSGD(L"L2RegWeight", 0.0);
-        m_L1RegWeight =       configSGD(L"L1RegWeight", 0.0);
+    m_L2RegWeight = configSGD(L"L2RegWeight", 0.0);
+    m_L1RegWeight = configSGD(L"L1RegWeight", 0.0);
 
-        /// for backward support. future setup should use gradUpdateType=AdaGrad, instead of
-        /// useAdagrad=true
+    // for backward support. future setup should use gradUpdateType=AdaGrad, instead of
+    // useAdagrad=true
         bool useAdagrad = configSGD(L"useAdagrad", false);
         if (useAdagrad)
         {
@@ -2646,9 +2610,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         m_adaptationRegType = ParseAdaptationRegType(configSGD(L"adaptationRegType", L"None"));
         m_adaptationRegWeight = configSGD(L"adaptationRegWeight", 0.0);
 
-        /// gradient check setup
-        m_doGradientCheck =       configSGD(L"gradientcheck", false);
-        m_gradientCheckSigDigit = configSGD(L"sigFigs",       6.0); // TODO: why is this a double?
+    // gradient check setup
+    m_doGradientCheck = configSGD(L"gradientcheck", false);
+    m_gradientCheckSigDigit = configSGD(L"sigFigs", 6.0); // TODO: why is this a double?
 
         if (m_doGradientCheck && sizeofElemType != sizeof(double))
         {
@@ -2682,18 +2646,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_learningRatesParam = learningRatesPerSample;
             m_learningRatesSpecifiedForMBSize = intargvector(L"1");
         }
-        else if (learningRatesPerMB.size() > 0)     // this actually means per specified minibatch size
+    else if (learningRatesPerMB.size() > 0) // this actually means per specified minibatch size
         {
             m_learningRatesParam = learningRatesPerMB;
             m_learningRatesSpecifiedForMBSize = m_mbSize;
         }
 
-        if ((int)(momentumPerSample.size() > 0) + (int)(momentumPerMB.size() > 0) + (int)(momentumAsTimeConstant.size() > 0) > 1)
+    if ((int) (momentumPerSample.size() > 0) + (int) (momentumPerMB.size() > 0) + (int) (momentumAsTimeConstant.size() > 0) > 1)
         {
             InvalidArgument("You specified more than one of momentumPerSample, momentumPerMB, and momentumAsTimeConstant. Please only specify one.");
         }
 
-        if (momentumPerSample.size() > 0)         // note: noone would ever use this; use momentumAsTimeConstant instead
+    if (momentumPerSample.size() > 0) // note: noone would ever use this; use momentumAsTimeConstant instead
         {
             m_momentumParam = momentumPerSample;
             m_momentumSpecifiedForMBSize = intargvector(L"1");
@@ -2705,7 +2669,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 double momTC = momentumAsTimeConstant[i];
                 double momPS = momTC == 0.0 ? 0 : exp(-1.0 / momTC);
-                momentumPerSampleVec.push_back((float)momPS);
+            momentumPerSampleVec.push_back((float) momPS);
             }
             m_momentumParam = momentumPerSampleVec;
             m_momentumSpecifiedForMBSize = intargvector(L"1");
@@ -2715,11 +2679,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_momentumParam = momentumPerMB;
             m_momentumSpecifiedForMBSize = m_mbSize;
         }
-        else    // default: momentumPerMB = 0.9 per MB
+    else // default: momentumPerMB = 0.9 per MB
         {
             m_momentumParam = floatargvector(L"0.9");
             m_momentumSpecifiedForMBSize = m_mbSize;
         }
+    m_useNesterovMomentum = useNesterovMomentum;
+
         for (int i = 0; i < m_momentumParam.size(); i++)
         {
             if (m_momentumParam[i] >= 1.0 || m_momentumParam[i] < 0.0)
@@ -2767,15 +2733,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         if ((g_mpi != nullptr) && configSGD.Exists(L"ParallelTrain"))
         {
-            const ConfigRecordType & configParallelTrain(configSGD(L"ParallelTrain", ConfigRecordType::Record()));
+        const ConfigRecordType& configParallelTrain(configSGD(L"ParallelTrain", ConfigRecordType::Record()));
             m_parallelizationMethod = ParseParallelizationMethod(configParallelTrain(L"parallelizationMethod", L"none"));
-            m_parallelizationStartEpochNum = configParallelTrain(L"parallelizationStartEpoch", (int)1) - 1;  // Epoch numbers internally are 0 based
+        m_parallelizationStartEpochNum = configParallelTrain(L"parallelizationStartEpoch", (int) 1) - 1; // Epoch numbers internally are 0 based
             m_enableDistributedMBReading = configParallelTrain(L"distributedMBReading", false);
-            m_syncStatsTrace = configParallelTrain(L"syncPerfStats", (int)0);
+        m_syncStatsTrace = configParallelTrain(L"syncPerfStats", (int) 0);
 
             if (configParallelTrain.Exists(L"DataParallelSGD"))
             {
-                const ConfigRecordType & configDataParallelSGD(configParallelTrain(L"DataParallelSGD", ConfigRecordType::Record()));
+            const ConfigRecordType& configDataParallelSGD(configParallelTrain(L"DataParallelSGD", ConfigRecordType::Record()));
                 size_t defaultGradientBits = 8 * sizeofElemType;
                 m_numGradientBits = configDataParallelSGD(L"gradientBits", defaultGradientBits);
                 m_zeroThresholdFor1Bit = configDataParallelSGD(L"useZeroThresholdFor1BitQuantization", true);
@@ -2786,10 +2752,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 }
             }
 
-            if (configParallelTrain.Exists(L"ModelAveragingSGD") )
+        if (configParallelTrain.Exists(L"ModelAveragingSGD"))
             {
-                const ConfigRecordType & configMASGD(configParallelTrain(L"ModelAveragingSGD", ConfigRecordType::Record()));
-                m_nFramesBetweenMASync = configMASGD(L"syncFrequencyInFrames", (size_t)40000);
+            const ConfigRecordType& configMASGD(configParallelTrain(L"ModelAveragingSGD", ConfigRecordType::Record()));
+            m_nFramesBetweenMASync = configMASGD(L"syncFrequencyInFrames", (size_t) 40000);
             }
 
 			if (configParallelTrain.Exists(L"DataParallelASGD"))
@@ -2821,11 +2787,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             RuntimeError("invalid value '%ls' for 'precision', must be 'float' or 'double'", precision.c_str());
     }
 
-    SGDParams::SGDParams(const ScriptableObjects::IConfigRecordPtr configp) :
-        SGDParams(*configp, GetSizeOfPrecision(configp))
-    { }
+SGDParams::SGDParams(const ScriptableObjects::IConfigRecordPtr configp)
+    : SGDParams(*configp, GetSizeOfPrecision(configp))
+{
+}
 
     // register SGD<> with the ScriptableObject system
     ScriptableObjects::ConfigurableRuntimeTypeRegister::AddFloatDouble<SGD<float>, SGD<double>> registerSGDOptimizer(L"SGDOptimizer");
-
-}}}
+} } }

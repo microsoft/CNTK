@@ -167,7 +167,6 @@ $RECYCLE.BIN/
 # Mac desktop service store files
 .DS_Store
 
-*.lyx~
 *.bak
 
 bin/
@@ -175,14 +174,12 @@ LOG
 *.log
 core	
 *.lyx#
+*.lyx#
+*.lyx~
 
-# =========================
 # prebuild file 
-# =========================
 Source/CNTK/buildinfo.h
 Source/CNTK/buildinfo.h$$
-MachineLearning/CNTK/buildinfo.h
-MachineLearning/CNTK/buildinfo.h$$
 
-
-*.lyx#
+# Unit test output
+Tests/UnitTests/ReaderTests/Control/*_Output.txt

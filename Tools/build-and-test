@@ -23,7 +23,7 @@ case $key in
     echo "  -b|--build-only - just build, do not run"
     echo "  -f|--flavors <flavor1:flavor2...> - which flavor to build/run (by default $FLAVORS)"
     echo "  -t|--targets <target1:target2...> - which target to run (by default $TARGETS)"
-    echo "                                      On Linux: if 'cpu' is included, also do CPU-only builds"
+    echo "                                      On Windows CPU-only builds currently are not performed"
     echo "  -cb|--clean-build - clean up the enlistment binaries before build"
     echo "  -rnd|--random-output-suffix - add random suffix to output directory"
     echo "  -o|--output-directory <output_dir> - specify output directory to use (by default those will be in <cntk_root>.run-<operating_system>)"
@@ -97,8 +97,8 @@ if [[ $OS == "Windows_NT" && $OSTYPE == "cygwin" ]]; then
         exit 1
     fi
 elif [[ $OSTYPE == "linux-gnu" ]]; then
-    DEBUG_DIR=build/debug
-    RELEASE_DIR=build/release
+    DEBUG_DIR=build/$TARGET/debug
+    RELEASE_DIR=build/$TARGET/release
     PREFIX_DIR=
     # Make sure no dependencies on current directory
     BIN_NAME=bin/cntk
@@ -185,17 +185,23 @@ if [[ $BUILD == 1 ]]; then
                 if [[ $CLEAN_BEFORE == 1 ]]; then
                     msbuild.exe /property:Configuration=$FLAVOR /t:Clean 1>&6 2>&7 || exit $?
                 fi
-                msbuild.exe /property:Configuration=$FLAVOR /m 1>&6 2>&7 || exit $?
+                if [[ $TARGET == "1bitsgd" ]]; then
+                    msbuild.exe /property:Configuration=$FLAVOR /property:CNTK_ENABLE_1BitSGD=true /m 1>&6 2>&7 || exit $?
+                else
+                    msbuild.exe /property:Configuration=$FLAVOR /m 1>&6 2>&7 || exit $?
+                fi
             else
+                OneBitSGDOPT=no
+                BUILD_DIR=build/$TARGET/$FLAVOR
                 if [[ $TARGET == "cpu" ]]; then
                     CUDAOPT=no
-                    BUILD_DIR=build/cpu/$FLAVOR
                 else
                     CUDAOPT=yes
-                    BUILD_DIR=build/$FLAVOR
-                    # TODO should be build/$TARGET/$FLAVOR, but need to make changes elsewhere
+                    if [[ $TARGET == "1bitsgd" ]]; then
+                        OneBitSGDOPT=yes
+                    fi
                 fi
-                ./configure --with-build-top=$BUILD_DIR --with-acml=$ACML_PATH --with-buildtype=$FLAVOR --cuda=$CUDAOPT
+                ./configure --with-build-top=$BUILD_DIR --with-acml=$ACML_PATH --with-buildtype=$FLAVOR --cuda=$CUDAOPT --1bitsgd=$OneBitSGDOPT
                 if [[ $CLEAN_BEFORE == 1 ]]; then
                     make -C $BUILD_DIR -f $MAKEFILE clean 1>&6 2>&7 || exit $?
                 fi
@@ -218,18 +224,19 @@ if [[ $RUN == 1 ]]; then
 
     for TARGET in "${targetArray[@]}"
     do
+        TARGET_DEVICE=
         # These sed scripts are simply toggling DeviceNumber argument in the config file
         # If it is set to Auto, it will pick GPU over CPU. At -1 CPU is selected.
         if [[ $TARGET == cpu ]]; then
+            TARGET_DEVICE=CPU
             sed -i -e 's/^deviceId.*/deviceId=-1/g' $CONF_FILE || exit $?
         else
+            TARGET_DEVICE=GPU
             sed -i -e 's/^deviceId.*/deviceId=Auto/g' $CONF_FILE || exit $?
         fi
 
         for FLAVOR in "${flavorArray[@]}"
         do
-            # TODO on Linux, for target CPU also run CPU-only tests
-
             if [[ $FLAVOR == "debug" ]]; then
                 FLAVOR_DIR="$DEBUG_DIR"
             else
@@ -261,8 +268,8 @@ if [[ $RUN == 1 ]]; then
             chmod a+r $RUN_FILE.*
 
             # Check if execution was successful
-            grep -q "Using ${TARGET^^}" "$OUT_FILE" || {
-                echo "============ ERROR: Run output (in $OUT_FILE) did not contain information about target device ($TARGET) ============"
+            grep -q "Using ${TARGET_DEVICE^^}" "$OUT_FILE" || {
+                echo "============ ERROR: Run output (in $OUT_FILE) did not contain information about target device ($TARGET_DEVICE) ============"
                 exit 1
             }
 
@@ -285,8 +292,10 @@ if [[ $CLEAN_AFTER == 1 ]]; then
         if [[ $OS == "Windows_NT" ]]; then
             msbuild.exe /property:Configuration=$FLAVOR /t:clean 1>&6 2>&7 || exit $?
         else
-            # TODO needs -C added; clean for all targets
-            make BUILDTYPE=$FLAVOR -f $MAKEFILE clean 1>&6 2>&7 || exit $?
+            for TARGET in "${targetArray[@]}"
+            do
+                make -C $BUILD_DIR -f $MAKEFILE clean 1>&6 2>&7 || exit $?
+            done
         fi
     done
     rm -rf $OUTPUT_DIR

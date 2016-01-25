@@ -1,14 +1,13 @@
 //
-// <copyright file="DataReader.h" company="Microsoft">
-//     Copyright (c) Microsoft Corporation.  All rights reserved.
-// </copyright>
+// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
 //
 #pragma once
 
-// The following ifdef block is the standard way of creating macros which make exporting 
+// The following ifdef block is the standard way of creating macros which make exporting
 // from a DLL simpler. All files within this DLL are compiled with the DATAREADER_EXPORTS
 // symbol defined on the command line. This symbol should not be defined on any project
-// that uses this DLL. This way any other project whose source files include this file see 
+// that uses this DLL. This way any other project whose source files include this file see
 // DATAREADER_API functions as being imported from a DLL, whereas this DLL sees symbols
 // defined with this macro as being exported.
 #ifdef _WIN32
@@ -33,12 +32,16 @@
 
 // forward-declare these lattice-related types to avoid having to include and pollute everything with lattice-related headers
 namespace msra { namespace dbn {
-    class latticepair;
-    class latticesource;
-}}
+
+class latticepair;
+class latticesource;
+}
+}
 namespace msra { namespace asr {
-    class simplesenonehmm;
-}}
+
+class simplesenonehmm;
+}
+}
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -55,29 +58,32 @@ const size_t requestDataSize = randomizeAuto;
 
 enum EndDataType
 {
-    endDataNull, // null values
-    endDataEpoch, // end of epoch
-    endDataSet, // end of dataset
+    endDataNull,     // null values
+    endDataEpoch,    // end of epoch
+    endDataSet,      // end of dataset
     endDataSentence, // end of sentence
 };
 
 // Data Reader interface
 // implemented by DataReader and underlying classes
-template<class ElemType>
+template <class ElemType>
 class DATAREADER_API IDataReader
 {
 public:
     typedef std::string LabelType;
     typedef unsigned int LabelIdType;
     unsigned m_seed;
-    size_t   mRequestedNumParallelSequences;  // number of desired parallel sequences in each minibatch
+    size_t mRequestedNumParallelSequences; // number of desired parallel sequences in each minibatch
 
-    virtual void Init(const ConfigParameters & config) = 0;
-    virtual void Init(const ScriptableObjects::IConfigRecord & config) = 0;
+    virtual void Init(const ConfigParameters& config) = 0;
+    virtual void Init(const ScriptableObjects::IConfigRecord& config) = 0;
     virtual void Destroy() = 0;
-    virtual void StartMinibatchLoop(size_t mbSize, size_t epoch, size_t requestedEpochSamples=requestDataSize) = 0;
+    virtual void StartMinibatchLoop(size_t mbSize, size_t epoch, size_t requestedEpochSamples = requestDataSize) = 0;
 
-    virtual bool SupportsDistributedMBRead() const { return false; };
+    virtual bool SupportsDistributedMBRead() const
+    {
+        return false;
+    };
     virtual void StartDistributedMinibatchLoop(size_t mbSize, size_t epoch, size_t subsetNum, size_t numSubsets, size_t requestedEpochSamples = requestDataSize)
     {
         if (SupportsDistributedMBRead() || (numSubsets != 1) || (subsetNum != 0))
@@ -89,23 +95,67 @@ public:
     }
 
     virtual bool GetMinibatch(std::map<std::wstring, Matrix<ElemType>*>& matrices) = 0;
-    virtual bool GetMinibatch4SE(std::vector<shared_ptr<const msra::dbn::latticepair>> & /*latticeinput*/, vector<size_t> &/*uids*/, vector<size_t> &/*boundaries*/, vector<size_t> &/*extrauttmap*/) { NOT_IMPLEMENTED; };
-    virtual bool GetHmmData(msra::asr::simplesenonehmm * /*hmm*/) { NOT_IMPLEMENTED; };
-    virtual size_t GetNumParallelSequences() = 0; 
-    virtual int GetSentenceEndIdFromOutputLabel() { return -1; }
-    virtual void SetNumParallelSequences(const size_t sz) { mRequestedNumParallelSequences = sz; }
-    virtual bool RequireSentenceSeg() const { return false; }
-    virtual const std::map<LabelIdType, LabelType>& GetLabelMapping(const std::wstring&) { NOT_IMPLEMENTED; }
-    virtual void SetLabelMapping(const std::wstring&, const std::map<LabelIdType, LabelType>&) { NOT_IMPLEMENTED; }
-    virtual bool GetData(const std::wstring&, size_t, void*, size_t&, size_t) { NOT_IMPLEMENTED; }
-    virtual bool DataEnd(EndDataType) { NOT_IMPLEMENTED; }
-    virtual void CopyMBLayoutTo(MBLayoutPtr) { NOT_IMPLEMENTED; }
-    virtual void SetRandomSeed(unsigned seed = 0) { m_seed = seed; }
-    virtual bool GetProposalObs(std::map<std::wstring, Matrix<ElemType>*>*, const size_t, vector<size_t>&) { return false; }
-    virtual void InitProposals(std::map<std::wstring, Matrix<ElemType>*>*) { }
-    virtual bool CanReadFor(wstring /* nodeName */) { return false; }
+    virtual bool GetMinibatch4SE(std::vector<shared_ptr<const msra::dbn::latticepair>>& /*latticeinput*/, vector<size_t>& /*uids*/, vector<size_t>& /*boundaries*/, vector<size_t>& /*extrauttmap*/)
+    {
+        NOT_IMPLEMENTED;
+    };
+    virtual bool GetHmmData(msra::asr::simplesenonehmm* /*hmm*/)
+    {
+        NOT_IMPLEMENTED;
+    };
+    virtual size_t GetNumParallelSequences() = 0;
+    virtual int GetSentenceEndIdFromOutputLabel()
+    {
+        return -1;
+    }
+    virtual void SetNumParallelSequences(const size_t sz)
+    {
+        mRequestedNumParallelSequences = sz;
+    }
+    virtual bool RequireSentenceSeg() const
+    {
+        return false;
+    }
+    virtual const std::map<LabelIdType, LabelType>& GetLabelMapping(const std::wstring&)
+    {
+        NOT_IMPLEMENTED;
+    }
+    virtual void SetLabelMapping(const std::wstring&, const std::map<LabelIdType, LabelType>&)
+    {
+        NOT_IMPLEMENTED;
+    }
+    virtual bool GetData(const std::wstring&, size_t, void*, size_t&, size_t)
+    {
+        NOT_IMPLEMENTED;
+    }
+    virtual bool DataEnd(EndDataType)
+    {
+        NOT_IMPLEMENTED;
+    }
+    virtual void CopyMBLayoutTo(MBLayoutPtr)
+    {
+        NOT_IMPLEMENTED;
+    }
+    virtual void SetRandomSeed(unsigned seed = 0)
+    {
+        m_seed = seed;
+    }
+    virtual bool GetProposalObs(std::map<std::wstring, Matrix<ElemType>*>*, const size_t, vector<size_t>&)
+    {
+        return false;
+    }
+    virtual void InitProposals(std::map<std::wstring, Matrix<ElemType>*>*)
+    {
+    }
+    virtual bool CanReadFor(wstring /* nodeName */)
+    {
+        return false;
+    }
 
-    bool GetFrame(std::map<std::wstring, Matrix<ElemType>*>& /*matrices*/, const size_t /*tidx*/, vector<size_t>& /*history*/) { NOT_IMPLEMENTED; }
+    bool GetFrame(std::map<std::wstring, Matrix<ElemType>*>& /*matrices*/, const size_t /*tidx*/, vector<size_t>& /*history*/)
+    {
+        NOT_IMPLEMENTED;
+    }
 
     // Workaround for the two-forward-pass sequence and ctc training, which
     // allows processing more utterances at the same time. Only used in
@@ -135,7 +185,7 @@ public:
 // GetReader - get a reader type from the DLL
 // since we have 2 reader types based on template parameters, exposes 2 exports
 // could be done directly the templated name, but that requires mangled C++ names
-template<class ElemType>
+template <class ElemType>
 void DATAREADER_API GetReader(IDataReader<ElemType>** preader);
 extern "C" DATAREADER_API void GetReaderF(IDataReader<float>** preader);
 extern "C" DATAREADER_API void GetReaderD(IDataReader<double>** preader);
@@ -143,41 +193,49 @@ extern "C" DATAREADER_API void GetReaderD(IDataReader<double>** preader);
 // Data Reader class
 // interface for clients of the Data Reader
 // mirrors the IDataReader interface, except the Init method is private (use the constructor)
-template<class ElemType>
-class DataReader: public IDataReader<ElemType>, protected Plugin, public ScriptableObjects::Object
+template <class ElemType>
+class DataReader : public IDataReader<ElemType>, protected Plugin, public ScriptableObjects::Object
 {
     typedef typename IDataReader<ElemType>::LabelType LabelType;
     typedef typename IDataReader<ElemType>::LabelIdType LabelIdType;
+
 private:
-    vector<wstring> m_ioNames;                              // TODO: why are these needed, why not loop over m_dataReaders?
-    map<wstring, IDataReader<ElemType> *> m_dataReaders;    // readers
+    vector<wstring> m_ioNames;                          // TODO: why are these needed, why not loop over m_dataReaders?
+    map<wstring, IDataReader<ElemType>*> m_dataReaders; // readers
 
     // Init - Reader Initialize for multiple data sets
     // config - [in] configuration parameters for the datareader
     // Sample format below for UCIReader:
-    //# Parameter values for the reader
-    //reader=[
+    // # Parameter values for the reader
+    // reader=[
     //  # reader to use
-    //  readerType=UCIFastReader
-    //  miniBatchMode=Partial
+    //  readerType="UCIFastReader"
+    //  miniBatchMode="partial"
     //  randomize=None
     //  features=[
     //    dim=784
     //    start=1
-    //    file=c:\speech\mnist\mnist_test.txt
+    //    file="c:\speech\mnist\mnist_test.txt"
     //  ]
     //  labels=[
     //    dim=1
     //      start=0
-    //      file=c:\speech\mnist\mnist_test.txt
-    //      labelMappingFile=c:\speech\mnist\labels.txt
+    //      file="c:\speech\mnist\mnist_test.txt"
+    //      labelMappingFile="c:\speech\mnist\labels.txt"
     //      labelDim=10
-    //      labelType=Category
+    //      labelType="category"
     //  ]
     //]
-    template<class ConfigRecordType> void InitFromConfig(const ConfigRecordType &);
-    virtual void Init(const ConfigParameters & config) override { InitFromConfig(config); }
-    virtual void Init(const ScriptableObjects::IConfigRecord & config) override { InitFromConfig(config); }
+    template <class ConfigRecordType>
+    void InitFromConfig(const ConfigRecordType&);
+    virtual void Init(const ConfigParameters& config) override
+    {
+        InitFromConfig(config);
+    }
+    virtual void Init(const ScriptableObjects::IConfigRecord& config) override
+    {
+        InitFromConfig(config);
+    }
 
     // Destroy - cleanup and remove this class
     // NOTE: this destroys the object, and it can't be used past this point.
@@ -187,15 +245,16 @@ private:
 public:
     // DataReader Constructor
     // config - [in] configuration parameters for the datareader
-    template<class ConfigRecordType>
+    template <class ConfigRecordType>
     DataReader(const ConfigRecordType& config);
     // constructor from Scripting
-    DataReader(const ScriptableObjects::IConfigRecordPtr configp) :
-        DataReader(*configp)
-    { }
+    DataReader(const ScriptableObjects::IConfigRecordPtr configp)
+        : DataReader(*configp)
+    {
+    }
     virtual ~DataReader();
 
-    //StartMinibatchLoop - Startup a minibatch loop 
+    // StartMinibatchLoop - Startup a minibatch loop
     // mbSize - [in] size of the minibatch (number of frames, etc.)
     // epoch - [in] epoch number for this loop
     // requestedEpochSamples - [in] number of samples to randomize, defaults to requestDataSize which uses the number of samples there are in the dataset
@@ -205,27 +264,27 @@ public:
     virtual void StartDistributedMinibatchLoop(size_t mbSize, size_t epoch, size_t subsetNum, size_t numSubsets, size_t requestedEpochSamples = requestDataSize) override;
 
     // GetMinibatch - Get the next minibatch (features and labels)
-    // matrices - [in] a map with named matrix types (i.e. 'features', 'labels') mapped to the corresponing matrix, 
-    //             [out] each matrix resized if necessary containing data. 
+    // matrices - [in] a map with named matrix types (i.e. 'features', 'labels') mapped to the corresponding matrix,
+    //             [out] each matrix resized if necessary containing data.
     // returns - true if there are more minibatches, false if no more minibatchs remain
     virtual bool GetMinibatch(std::map<std::wstring, Matrix<ElemType>*>& matrices);
-    virtual bool GetMinibatch4SE(std::vector<shared_ptr<const msra::dbn::latticepair>> & latticeinput, vector<size_t> &uids, vector<size_t> &boundaries, vector<size_t> &extrauttmap);
-    virtual bool GetHmmData(msra::asr::simplesenonehmm * hmm);
+    virtual bool GetMinibatch4SE(std::vector<shared_ptr<const msra::dbn::latticepair>>& latticeinput, vector<size_t>& uids, vector<size_t>& boundaries, vector<size_t>& extrauttmap);
+    virtual bool GetHmmData(msra::asr::simplesenonehmm* hmm);
 
     size_t GetNumParallelSequences();
     int GetSentenceEndIdFromOutputLabel();
     bool RequireSentenceSeg() const override;
 
-    // GetLabelMapping - Gets the label mapping from integer index to label type 
-    // returns - a map from numeric datatype to native label type 
+    // GetLabelMapping - Gets the label mapping from integer index to label type
+    // returns - a map from numeric datatype to native label type
     virtual const std::map<LabelIdType, LabelType>& GetLabelMapping(const std::wstring& sectionName);
 
-    // SetLabelMapping - Sets the label mapping from integer index to label 
+    // SetLabelMapping - Sets the label mapping from integer index to label
     // labelMapping - mapping table from label values to IDs (must be 0-n)
-    // note: for tasks with labels, the mapping table must be the same between a training run and a testing run 
+    // note: for tasks with labels, the mapping table must be the same between a training run and a testing run
     virtual void SetLabelMapping(const std::wstring& sectionName, const std::map<LabelIdType, LabelType>& labelMapping);
 
-    // GetData - Gets metadata from the specified section (into CPU memory) 
+    // GetData - Gets metadata from the specified section (into CPU memory)
     // sectionName - section name to retrieve data from
     // numRecords - number of records to read
     // data - pointer to data buffer, if NULL, dataBufferSize will be set to size of required buffer to accomidate request
@@ -257,7 +316,5 @@ public:
 
     bool GetProposalObs(std::map<std::wstring, Matrix<ElemType>*>*, const size_t, vector<size_t>&);
     void InitProposals(std::map<std::wstring, Matrix<ElemType>*>* matrices);
-
 };
-
-}}}
+} } }

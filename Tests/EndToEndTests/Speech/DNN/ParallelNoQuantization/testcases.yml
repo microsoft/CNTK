@@ -1,9 +1,9 @@
 dataDir: ../../Data
 tags:
      # running on every BVT job in 'P' (Speech) leg in Debug-GPU and Release-CPU configurations:
-     - bvt-p  (flavor=='debug') ^ (device=='cpu')
+     - bvt-p  ((build_sku == 'gpu') or (build_sku == '1bitsgd')) and ((flavor=='debug') ^ (device=='cpu'))
      # running unconditionally on every Nightly job in 'P' leg
-     - nightly-p
+     - nightly-p ((build_sku == 'gpu') or (build_sku == '1bitsgd'))
 
 testCases:
   Must train epochs in exactly same order and parameters for each MPI Rank:

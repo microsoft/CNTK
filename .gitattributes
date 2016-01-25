@@ -1,2 +1,88 @@
+.gitattributes text
+.gitignore text
+
+.clang-format text
+
+*.md text
+*.txt text
+*.html text
+*.lyx text
+*.bib text
+KaldiReaderReadme text
+Readme text
+
+*.bat text
+*.py text
+*.pl text
+*.sh text eol=lf
+build-and-test text eol=lf
+configure text eol=lf
+generate_build_info text eol=lf
 run-test text eol=lf
 run-test-common text eol=lf
+
+Makefile text
+*.sln text
+*.vcxproj text
+*.vcxproj.filters text
+*.vssettings text
+*.csproj text
+
+*.h text
+*.cpp text
+*.cc text
+*.cu text
+*.cuh text
+
+*.cs text
+
+*.yml text
+
+*.config text
+*.cntk text
+*.bs text
+*.ndl text
+*.mel text
+*.xml text
+*.m text
+*.mlf text
+*.scp text
+*.list text
+
+*.log text
+
+# Speech data
+mean.363 text
+var.363 text
+prior.132 text
+
+# AMI-specific
+Results text
+40fbank.conf text
+80fbank.conf text
+
+# SLU-specific
+atis.*.simple
+
+# TIMIT-specific
+*.fbank24_zda text
+TIMIT*.100 text
+TIMIT*.20 text
+TIMIT*.arpa text
+TIMIT*.cntk text
+TIMIT*.dnn_map text
+TIMIT*.fbank text
+TIMIT*.fullpath text
+TIMIT*.lookahead text
+TIMIT*.rnn text
+TIMIT*.statelist text
+TIMIT*.tfsa text
+TIMIT*.transitions text
+
+# Binary extensions:
+*.vsdm binary
+*.pdf binary
+*.png binary
+*.docx binary
+*.chunk binary
+*.pptx binary

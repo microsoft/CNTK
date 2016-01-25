@@ -33,6 +33,16 @@ if "%cuda_path%" == "" (
         echo #define _CUDA_PATH_    "%cuda_path:\=\\%" >> buildinfo.h$$
     )
 
+if not "%cudnn_path%" == "" (
+    echo #define _CUDNN_PATH_  "%cudnn_path:\=\\%" >> buildinfo.h$$
+    ) 
+
+if not "%cub_path%" == "" (
+    echo #define _CUB_PATH_  "%cub_path:\=\\%" >> buildinfo.h$$
+    ) 
+
+
+
 echo #endif >> buildinfo.h$$
 
 ::: update file only if it changed (otherwise CNTK.cpp will get rebuilt each time)

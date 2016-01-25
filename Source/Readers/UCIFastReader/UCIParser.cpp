@@ -1,9 +1,8 @@
+//
+// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
+//
 // UCIParser.cpp : Parses the UCI format using a custom state machine (for speed)
-//
-//
-// <copyright file="UCIParser.cpp" company="Microsoft">
-//     Copyright (c) Microsoft Corporation.  All rights reserved.
-// </copyright>
 //
 
 #include "stdafx.h"
@@ -22,20 +21,20 @@
 template <typename NumType, typename LabelType>
 void UCIParser<NumType, LabelType>::SetState(int value, ParseState m_current_state, ParseState next_state)
 {
-    DWORD ul = (DWORD)next_state;
-    int range_shift = ((int)m_current_state) << 8;
-    m_stateTable[range_shift+value] = ul;
+    DWORD ul = (DWORD) next_state;
+    int range_shift = ((int) m_current_state) << 8;
+    m_stateTable[range_shift + value] = ul;
 }
 
 // SetStateRange - set states transitions for a range of values
 template <typename NumType, typename LabelType>
 void UCIParser<NumType, LabelType>::SetStateRange(int value1, int value2, ParseState m_current_state, ParseState next_state)
 {
-    DWORD ul = (DWORD)next_state;
-    int range_shift = ((int)m_current_state) << 8;
+    DWORD ul = (DWORD) next_state;
+    int range_shift = ((int) m_current_state) << 8;
     for (int value = value1; value <= value2; value++)
     {
-        m_stateTable[range_shift+value] = ul;
+        m_stateTable[range_shift + value] = ul;
     }
 }
 
@@ -44,11 +43,11 @@ void UCIParser<NumType, LabelType>::SetStateRange(int value1, int value2, ParseS
 template <typename NumType, typename LabelType>
 void UCIParser<NumType, LabelType>::SetupStateTables()
 {
-    //=========================
+    // =========================
     // STATE = WHITESPACE
-    //=========================
+    // =========================
 
-    SetStateRange(0,255, Whitespace, Label);
+    SetStateRange(0, 255, Whitespace, Label);
     SetStateRange('0', '9', Whitespace, WholeNumber);
     SetState('-', Whitespace, Sign);
     SetState('+', Whitespace, Sign);
@@ -58,24 +57,24 @@ void UCIParser<NumType, LabelType>::SetupStateTables()
     SetState('\r', Whitespace, Whitespace);
     SetState('\n', Whitespace, EndOfLine);
 
-    //=========================
+    // =========================
     // STATE = NEGATIVE_SIGN
-    //=========================
+    // =========================
 
-    SetStateRange( 0, 255, Sign, Label);
-    SetStateRange( '0', '9', Sign, WholeNumber);
+    SetStateRange(0, 255, Sign, Label);
+    SetStateRange('0', '9', Sign, WholeNumber);
     // whitespace
     SetState(' ', Sign, Whitespace);
     SetState('\t', Sign, Whitespace);
     SetState('\r', Sign, Whitespace);
     SetState('\n', Sign, EndOfLine);
 
-    //=========================
+    // =========================
     // STATE = NUMBER
-    //=========================
+    // =========================
 
-    SetStateRange( 0, 255, WholeNumber, Label);
-    SetStateRange( '0', '9', WholeNumber, WholeNumber);
+    SetStateRange(0, 255, WholeNumber, Label);
+    SetStateRange('0', '9', WholeNumber, WholeNumber);
     SetState('.', WholeNumber, Period);
     SetState('e', WholeNumber, TheLetterE);
     SetState('E', WholeNumber, TheLetterE);
@@ -85,9 +84,9 @@ void UCIParser<NumType, LabelType>::SetupStateTables()
     SetState('\r', WholeNumber, Whitespace);
     SetState('\n', WholeNumber, EndOfLine);
 
-    //=========================
+    // =========================
     // STATE = PERIOD
-    //=========================
+    // =========================
 
     SetStateRange(0, 255, Period, Label);
     SetStateRange('0', '9', Period, Remainder);
@@ -97,9 +96,9 @@ void UCIParser<NumType, LabelType>::SetupStateTables()
     SetState('\r', Period, Whitespace);
     SetState('\n', Period, EndOfLine);
 
-    //=========================
+    // =========================
     // STATE = REMAINDER
-    //=========================
+    // =========================
 
     SetStateRange(0, 255, Remainder, Label);
     SetStateRange('0', '9', Remainder, Remainder);
@@ -111,9 +110,9 @@ void UCIParser<NumType, LabelType>::SetupStateTables()
     SetState('\r', Remainder, Whitespace);
     SetState('\n', Remainder, EndOfLine);
 
-    //=========================
+    // =========================
     // STATE = THE_LETTER_E
-    //=========================
+    // =========================
 
     SetStateRange(0, 255, TheLetterE, Label);
     SetStateRange('0', '9', TheLetterE, Exponent);
@@ -125,9 +124,9 @@ void UCIParser<NumType, LabelType>::SetupStateTables()
     SetState('\r', TheLetterE, Whitespace);
     SetState('\n', TheLetterE, EndOfLine);
 
-    //=========================
+    // =========================
     // STATE = EXPONENT_NEGATIVE_SIGN
-    //=========================
+    // =========================
 
     SetStateRange(0, 255, ExponentSign, Label);
     SetStateRange('0', '9', ExponentSign, Exponent);
@@ -137,9 +136,9 @@ void UCIParser<NumType, LabelType>::SetupStateTables()
     SetState('\r', ExponentSign, Whitespace);
     SetState('\n', ExponentSign, EndOfLine);
 
-    //=========================
+    // =========================
     // STATE = EXPONENT
-    //=========================
+    // =========================
 
     SetStateRange(0, 255, Exponent, Label);
     SetStateRange('0', '9', Exponent, Exponent);
@@ -149,22 +148,21 @@ void UCIParser<NumType, LabelType>::SetupStateTables()
     SetState('\r', Exponent, Whitespace);
     SetState('\n', Exponent, EndOfLine);
 
-    //=========================
+    // =========================
     // STATE = END_OF_LINE
-    //=========================
+    // =========================
     SetStateRange(0, 255, EndOfLine, Label);
-    SetStateRange( '0', '9', EndOfLine, WholeNumber);
-    SetState( '-', EndOfLine, Sign);
-    SetState( '\n', EndOfLine, EndOfLine);
+    SetStateRange('0', '9', EndOfLine, WholeNumber);
+    SetState('-', EndOfLine, Sign);
+    SetState('\n', EndOfLine, EndOfLine);
     // whitespace
     SetState(' ', EndOfLine, Whitespace);
     SetState('\t', EndOfLine, Whitespace);
     SetState('\r', EndOfLine, Whitespace);
 
-
-    //=========================
+    // =========================
     // STATE = LABEL
-    //=========================
+    // =========================
     SetStateRange(0, 255, Label, Label);
     SetState('\n', Label, EndOfLine);
     // whitespace
@@ -172,19 +170,18 @@ void UCIParser<NumType, LabelType>::SetupStateTables()
     SetState('\t', Label, Whitespace);
     SetState('\r', Label, Whitespace);
 
-    //=========================
+    // =========================
     // STATE = LINE_COUNT_EOL
-    //=========================
+    // =========================
     SetStateRange(0, 255, LineCountEOL, LineCountOther);
-    SetState( '\n', LineCountEOL, LineCountEOL);
+    SetState('\n', LineCountEOL, LineCountEOL);
 
-    //=========================
+    // =========================
     // STATE = LINE_COUNT_OTHER
-    //=========================
+    // =========================
     SetStateRange(0, 255, LineCountOther, LineCountOther);
     SetState('\n', LineCountOther, LineCountEOL);
 }
-
 
 // reset all line state variables
 template <typename NumType, typename LabelType>
@@ -214,7 +211,7 @@ template <typename NumType, typename LabelType>
 void UCIParser<NumType, LabelType>::PrepareStartPosition(size_t position)
 {
     m_current_state = Whitespace;
-    m_byteCounter = position;  // must come before PrepareStartLine...
+    m_byteCounter = position; // must come before PrepareStartLine...
     m_bufferStart = position;
 
     // prepare state machine for new number and new line
@@ -257,10 +254,10 @@ template <typename NumType, typename LabelType>
 void UCIParser<NumType, LabelType>::DoneWithLabel()
 {
     // if we haven't set the max yet, use the current byte Counter
-    if (m_spaceDelimitedMax <= m_spaceDelimitedStart) 
+    if (m_spaceDelimitedMax <= m_spaceDelimitedStart)
         m_spaceDelimitedMax = m_byteCounter;
     {
-        std::string label((LPCSTR)&m_fileBuffer[m_spaceDelimitedStart-m_bufferStart], m_spaceDelimitedMax-m_spaceDelimitedStart);
+        std::string label((LPCSTR) &m_fileBuffer[m_spaceDelimitedStart - m_bufferStart], m_spaceDelimitedMax - m_spaceDelimitedStart);
         fprintf(stderr, "\n** String found in numeric-only file: %s\n", label.c_str());
         m_labelsConvertedThisLine++;
         m_elementsConvertedThisLine++;
@@ -279,7 +276,7 @@ void UCIParser<NumType, LabelType>::DoneWithValue()
         NumType FinalResult = 0;
         if (m_current_state == Exponent)
         {
-            FinalResult = (NumType)(m_partialResult*pow(10.0,m_exponentMultiplier * m_builtUpNumber));
+            FinalResult = (NumType)(m_partialResult * pow(10.0, m_exponentMultiplier * m_builtUpNumber));
         }
         else if (m_divider != 0)
         {
@@ -287,18 +284,18 @@ void UCIParser<NumType, LabelType>::DoneWithValue()
         }
         else
         {
-            FinalResult = (NumType)m_builtUpNumber;
+            FinalResult = (NumType) m_builtUpNumber;
         }
 
-        FinalResult = (NumType)(FinalResult*m_wholeNumberMultiplier);
+        FinalResult = (NumType)(FinalResult * m_wholeNumberMultiplier);
 
         // if it's a label, store in label location instead of number location
         int index = m_elementsConvertedThisLine;
-        bool stored=false;
+        bool stored = false;
         if (m_startLabels <= index && index < m_startLabels + m_dimLabels)
         {
             StoreLabel(FinalResult);
-            stored=true;
+            stored = true;
         }
         if (m_startFeatures <= index && index < m_startFeatures + m_dimFeatures)
         {
@@ -307,7 +304,7 @@ void UCIParser<NumType, LabelType>::DoneWithValue()
             m_numbersConvertedThisLine++;
             m_elementsConvertedThisLine++;
             m_lastLabelIsString = false;
-            stored=true;
+            stored = true;
         }
         // if we haven't stored anything we need to skip the current symbol, so increment
         if (!stored)
@@ -323,7 +320,7 @@ void UCIParser<NumType, LabelType>::DoneWithValue()
 template <typename NumType, typename LabelType>
 void UCIParser<NumType, LabelType>::StoreLabel(NumType value)
 {
-    m_labels->push_back((LabelType)value);
+    m_labels->push_back((LabelType) value);
     m_totalNumbersConverted++;
     m_numbersConvertedThisLine++;
     m_elementsConvertedThisLine++;
@@ -338,7 +335,7 @@ void UCIParser<NumType, LabelType>::StoreLastLabel()
     assert(!m_lastLabelIsString); // file format error, last label was a string...
     NumType value = m_numbers->back();
     m_numbers->pop_back();
-    m_labels->push_back((LabelType)value);
+    m_labels->push_back((LabelType) value);
 }
 
 // ParseInit - Initialize a parse of a file
@@ -366,9 +363,9 @@ void UCIParser<NumType, LabelType>::ParseInit(LPCWSTR fileName, size_t startFeat
     if (m_pFile != NULL)
         UCIParser<NumType, LabelType>::~UCIParser();
 
-    errno_t err = _wfopen_s( &m_pFile, fileName, L"rb" );
+    errno_t err = _wfopen_s(&m_pFile, fileName, L"rb");
     if (err)
-        RuntimeError("UCIParser::ParseInit - error opening file"); 
+        RuntimeError("UCIParser::ParseInit - error opening file");
     int rc = _fseeki64(m_pFile, 0, SEEK_END);
     if (rc)
         RuntimeError("UCIParser::ParseInit - error seeking in file");
@@ -402,7 +399,7 @@ void UCIParser<NumType, LabelType>::SetFilePosition(int64_t position)
 
     // setup state machine to start at this position
     PrepareStartPosition(position);
-    
+
     // read in the first buffer of data from this position,  first buffer is expected to be read after a reposition
     UpdateBuffer();
 
@@ -415,10 +412,10 @@ template <typename NumType, typename LabelType>
 bool UCIParser<NumType, LabelType>::HasMoreData()
 {
     long long byteCounter = m_byteCounter;
-    size_t bufferIndex = m_byteCounter-m_bufferStart;
+    size_t bufferIndex = m_byteCounter - m_bufferStart;
 
     // test without moving parser state
-    for (;byteCounter < m_fileSize; byteCounter++, bufferIndex++)
+    for (; byteCounter < m_fileSize; byteCounter++, bufferIndex++)
     {
         // if we reach the end of the buffer, just assume we have more data
         // won't be right 100% of the time, but close enough
@@ -426,7 +423,7 @@ bool UCIParser<NumType, LabelType>::HasMoreData()
             return true;
 
         char ch = m_fileBuffer[bufferIndex];
-        ParseState nextState = (ParseState)m_stateTable[(Whitespace<<8)+ch];
+        ParseState nextState = (ParseState) m_stateTable[(Whitespace << 8) + ch];
         if (!(nextState == Whitespace || nextState == EndOfLine))
             return true;
     }
@@ -439,17 +436,17 @@ template <typename NumType, typename LabelType>
 size_t UCIParser<NumType, LabelType>::UpdateBuffer()
 {
     // state machine might want to look back this far, so copy to beginning
-    size_t saveBytes = m_byteCounter-m_spaceDelimitedStart;
+    size_t saveBytes = m_byteCounter - m_spaceDelimitedStart;
     assert(saveBytes < m_bufferSize);
     if (saveBytes)
     {
-        memcpy_s(m_fileBuffer, m_bufferSize, &m_fileBuffer[m_byteCounter-m_bufferStart-saveBytes], saveBytes);
-        m_bufferStart = m_byteCounter-saveBytes;
+        memcpy_s(m_fileBuffer, m_bufferSize, &m_fileBuffer[m_byteCounter - m_bufferStart - saveBytes], saveBytes);
+        m_bufferStart = m_byteCounter - saveBytes;
     }
 
     // read the next block
-    size_t bytesToRead = min(m_bufferSize, m_fileSize-m_bufferStart)-saveBytes;
-    size_t bytesRead = fread(m_fileBuffer+saveBytes, 1, bytesToRead, m_pFile);
+    size_t bytesToRead = min(m_bufferSize, m_fileSize - m_bufferStart) - saveBytes;
+    size_t bytesRead = fread(m_fileBuffer + saveBytes, 1, bytesToRead, m_pFile);
     if (bytesRead == 0 && ferror(m_pFile))
         RuntimeError("UCIParser::UpdateBuffer - error reading file");
     return bytesRead;
@@ -497,23 +494,23 @@ long UCIParser<NumType, LabelType>::Parse(size_t recordsRequested, std::vector<N
     m_numbers = numbers;
     m_labels = labels;
 
-    long TickStart = GetTickCount( );
+    long TickStart = GetTickCount();
     long recordCount = 0;
-    size_t bufferIndex = m_byteCounter-m_bufferStart;
+    size_t bufferIndex = m_byteCounter - m_bufferStart;
     while (m_byteCounter < m_fileSize && recordCount < recordsRequested)
     {
         // check to see if we need to update the buffer
         if (bufferIndex >= m_bufferSize)
         {
             UpdateBuffer();
-            bufferIndex = m_byteCounter-m_bufferStart;
+            bufferIndex = m_byteCounter - m_bufferStart;
         }
 
         char ch = m_fileBuffer[bufferIndex];
 
-        ParseState nextState = (ParseState)m_stateTable[(m_current_state<<8)+ch];
+        ParseState nextState = (ParseState) m_stateTable[(m_current_state << 8) + ch];
 
-        if( nextState <= Exponent )
+        if (nextState <= Exponent)
         {
             m_builtUpNumber = m_builtUpNumber * 10 + (ch - '0');
             // if we are in the decimal portion of a number increase the divider
@@ -542,7 +539,7 @@ long UCIParser<NumType, LabelType>::Parse(size_t recordsRequested, std::vector<N
                 case WholeNumber:
                     // could be followed by a remainder, or an exponent
                     if (nextState != TheLetterE)
-                        if( nextState != Period)
+                        if (nextState != Period)
                             DoneWithValue();
                     if (nextState == Period)
                     {
@@ -594,7 +591,7 @@ long UCIParser<NumType, LabelType>::Parse(size_t recordsRequested, std::vector<N
             case Whitespace:
                 m_spaceDelimitedMax = m_byteCounter;
                 // hit whitespace and nobody processed anything, so add as label
-                //if (m_elementsConvertedThisLine == elementsProcessed)
+                // if (m_elementsConvertedThisLine == elementsProcessed)
                 //    DoneWithLabel();
                 break;
             case EndOfLine:
@@ -602,17 +599,17 @@ long UCIParser<NumType, LabelType>::Parse(size_t recordsRequested, std::vector<N
                 {
                     m_spaceDelimitedMax = m_byteCounter;
                     // hit whitespace and nobody processed anything, so add as label
-                    //if (m_elementsConvertedThisLine == elementsProcessed)
+                    // if (m_elementsConvertedThisLine == elementsProcessed)
                     //    DoneWithLabel();
                 }
-                // process the label at the end of a line
-                //if (m_labelMode == LabelLast && m_labels != NULL)
-                //{
-                //    StoreLastLabel();
-                //}
-                // intentional fall-through
+            // process the label at the end of a line
+            // if (m_labelMode == LabelLast && m_labels != NULL)
+            // {
+            //    StoreLastLabel();
+            // }
+            // intentional fall-through
             case LineCountEOL:
-                recordCount++;  // done with another record
+                recordCount++; // done with another record
                 if (m_traceLevel > 1)
                 {
                     // print progress dots
@@ -649,12 +646,12 @@ long UCIParser<NumType, LabelType>::Parse(size_t recordsRequested, std::vector<N
         bufferIndex++;
     } // while 1
 
-    long TickStop = GetTickCount( );
+    long TickStop = GetTickCount();
 
     long TickDelta = TickStop - TickStart;
 
     if (m_traceLevel > 2)
-        fprintf(stderr, "\n%ld ms, %ld numbers parsed\n\n", TickDelta, m_totalNumbersConverted );
+        fprintf(stderr, "\n%ld ms, %ld numbers parsed\n\n", TickDelta, m_totalNumbersConverted);
     return recordCount;
 }
 
@@ -665,7 +662,7 @@ void UCIParser<float, std::string>::StoreLabel(float /*finalResult*/)
     // for LabelFirst, Max will not be set yet, but the current byte counter is the Max, so set it
     if (m_spaceDelimitedMax <= m_spaceDelimitedStart)
         m_spaceDelimitedMax = m_byteCounter;
-    std::string label((LPCSTR)&m_fileBuffer[m_spaceDelimitedStart-m_bufferStart], m_spaceDelimitedMax-m_spaceDelimitedStart);
+    std::string label((LPCSTR) &m_fileBuffer[m_spaceDelimitedStart - m_bufferStart], m_spaceDelimitedMax - m_spaceDelimitedStart);
     m_labels->push_back(move(label));
     m_labelsConvertedThisLine++;
     m_elementsConvertedThisLine++;
@@ -677,7 +674,7 @@ template <>
 void UCIParser<float, std::string>::DoneWithLabel()
 {
     if (m_labels != NULL)
-        StoreLabel(0);  // store the string label
+        StoreLabel(0); // store the string label
     PrepareStartNumber();
 }
 
@@ -704,8 +701,8 @@ void UCIParser<double, std::string>::StoreLabel(double /*finalResult*/)
 {
     // for LabelFirst, Max will not be set yet, but the current byte counter is the Max, so set it
     if (m_spaceDelimitedMax <= m_spaceDelimitedStart)
-        m_spaceDelimitedMax = m_byteCounter; 
-    std::string label((LPCSTR)&m_fileBuffer[m_spaceDelimitedStart-m_bufferStart], m_spaceDelimitedMax-m_spaceDelimitedStart);
+        m_spaceDelimitedMax = m_byteCounter;
+    std::string label((LPCSTR) &m_fileBuffer[m_spaceDelimitedStart - m_bufferStart], m_spaceDelimitedMax - m_spaceDelimitedStart);
     m_labels->push_back(move(label));
     m_labelsConvertedThisLine++;
     m_elementsConvertedThisLine++;
@@ -717,7 +714,7 @@ template <>
 void UCIParser<double, std::string>::DoneWithLabel()
 {
     if (m_labels != NULL)
-        StoreLabel(0);  // store the string label
+        StoreLabel(0); // store the string label
     PrepareStartNumber();
 }
 
@@ -737,26 +734,25 @@ void UCIParser<double, std::string>::StoreLastLabel()
 }
 
 #ifdef STANDALONE
-int wmain(int argc, wchar_t* argv[])
+int wmain(int argc, wchar_t *argv[])
 {
     UCIParser<double, int> parser;
     std::vector<double> values;
-    values.reserve(784000*6);
+    values.reserve(784000 * 6);
     std::vector<int> labels;
     labels.reserve(60000);
     parser.ParseInit(L"c:\\speech\\mnist\\mnist_train.txt", LabelFirst);
-    //parser.ParseInit("c:\\speech\\parseTest.txt", LabelNone);
+    // parser.ParseInit("c:\\speech\\parseTest.txt", LabelNone);
     int records = 0;
     do
     {
         int recordsRead = parser.Parse(10000, &values, &labels);
         if (recordsRead < 10000)
-            parser.SetFilePosition(0);  // go around again
+            parser.SetFilePosition(0); // go around again
         records += recordsRead;
         values.clear();
         labels.clear();
-    }
-    while (records < 150000);
+    } while (records < 150000);
     return records;
 }
 #endif
@@ -768,4 +764,3 @@ template class UCIParser<float, std::string>;
 template class UCIParser<double, int>;
 template class UCIParser<double, double>;
 template class UCIParser<double, std::string>;
-

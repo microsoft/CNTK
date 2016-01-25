@@ -170,41 +170,6 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "DoublePrecision", "DoublePr
 		Tests\EndToEndTests\ParallelTraining\NoQuantization\DoublePrecision\testcases.yml = Tests\EndToEndTests\ParallelTraining\NoQuantization\DoublePrecision\testcases.yml
 	EndProjectSection
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "KaldiReader", "KaldiReader", "{3E9C89B1-C045-4F42-92B2-F9FFFFC2DBD4}"
-	ProjectSection(SolutionItems) = preProject
-		Source\Readers\KaldiReader\basetypes.h = Source\Readers\KaldiReader\basetypes.h
-		Source\Readers\KaldiReader\basetypes.old.h = Source\Readers\KaldiReader\basetypes.old.h
-		Source\Readers\KaldiReader\biggrowablevectors.h = Source\Readers\KaldiReader\biggrowablevectors.h
-		Source\Readers\KaldiReader\chunkevalsource.h = Source\Readers\KaldiReader\chunkevalsource.h
-		Source\Readers\KaldiReader\DataReader.cpp = Source\Readers\KaldiReader\DataReader.cpp
-		Source\Readers\KaldiReader\DataWriter.cpp = Source\Readers\KaldiReader\DataWriter.cpp
-		Source\Readers\KaldiReader\dllmain.cpp = Source\Readers\KaldiReader\dllmain.cpp
-		Source\Readers\KaldiReader\fileutil.cpp = Source\Readers\KaldiReader\fileutil.cpp
-		Source\Readers\KaldiReader\fileutil.h = Source\Readers\KaldiReader\fileutil.h
-		Source\Readers\KaldiReader\fileutil.old.h = Source\Readers\KaldiReader\fileutil.old.h
-		Source\Readers\KaldiReader\htkfeatio.h = Source\Readers\KaldiReader\htkfeatio.h
-		Source\Readers\KaldiReader\HTKMLFReader.cpp = Source\Readers\KaldiReader\HTKMLFReader.cpp
-		Source\Readers\KaldiReader\HTKMLFReader.h = Source\Readers\KaldiReader\HTKMLFReader.h
-		Source\Readers\KaldiReader\HTKMLFWriter.cpp = Source\Readers\KaldiReader\HTKMLFWriter.cpp
-		Source\Readers\KaldiReader\HTKMLFWriter.h = Source\Readers\KaldiReader\HTKMLFWriter.h
-		Source\Readers\KaldiReader\latticearchive.cpp = Source\Readers\KaldiReader\latticearchive.cpp
-		Source\Readers\KaldiReader\minibatchiterator.h = Source\Readers\KaldiReader\minibatchiterator.h
-		Source\Readers\KaldiReader\minibatchsourcehelpers.h = Source\Readers\KaldiReader\minibatchsourcehelpers.h
-		Source\Readers\KaldiReader\msra_mgram.h = Source\Readers\KaldiReader\msra_mgram.h
-		Source\Readers\KaldiReader\numahelpers.h = Source\Readers\KaldiReader\numahelpers.h
-		Source\Readers\KaldiReader\pplhelpers.h = Source\Readers\KaldiReader\pplhelpers.h
-		Source\Readers\KaldiReader\readaheadsource.h = Source\Readers\KaldiReader\readaheadsource.h
-		Source\Readers\KaldiReader\rollingwindowsource.h = Source\Readers\KaldiReader\rollingwindowsource.h
-		Source\Readers\KaldiReader\simplethread.h = Source\Readers\KaldiReader\simplethread.h
-		Source\Readers\KaldiReader\ssefloat4.h = Source\Readers\KaldiReader\ssefloat4.h
-		Source\Readers\KaldiReader\ssematrix.h = Source\Readers\KaldiReader\ssematrix.h
-		Source\Readers\KaldiReader\stdafx.cpp = Source\Readers\KaldiReader\stdafx.cpp
-		Source\Readers\KaldiReader\stdafx.h = Source\Readers\KaldiReader\stdafx.h
-		Source\Readers\KaldiReader\targetver.h = Source\Readers\KaldiReader\targetver.h
-		Source\Readers\KaldiReader\utterancesource.h = Source\Readers\KaldiReader\utterancesource.h
-		Source\Readers\KaldiReader\utterancesourcemulti.h = Source\Readers\KaldiReader\utterancesourcemulti.h
-	EndProjectSection
-EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Kaldi2Reader", "Kaldi2Reader", "{C70E1572-20FF-496C-A0A9-10AA6755A07C}"
 	ProjectSection(SolutionItems) = preProject
 		Source\Readers\Kaldi2Reader\basetypes.h = Source\Readers\Kaldi2Reader\basetypes.h
@@ -386,9 +351,6 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Examples", "Examples", "{47
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Image", "Image", "{9BDFA4BE-790E-408F-915B-5979BB5078C6}"
-	ProjectSection(SolutionItems) = preProject
-		Examples\Image\README.md = Examples\Image\README.md
-	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Speech", "Speech", "{3CE841C0-02E5-46DB-B401-6F8784880173}"
 EndProject
@@ -533,6 +495,12 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "CIFAR-10", "CIFAR-10", "{77
 		Examples\Image\Miscellaneous\CIFAR-10\02_BatchNormConv.config = Examples\Image\Miscellaneous\CIFAR-10\02_BatchNormConv.config
 		Examples\Image\Miscellaneous\CIFAR-10\02_BatchNormConv.mel = Examples\Image\Miscellaneous\CIFAR-10\02_BatchNormConv.mel
 		Examples\Image\Miscellaneous\CIFAR-10\02_BatchNormConv.ndl = Examples\Image\Miscellaneous\CIFAR-10\02_BatchNormConv.ndl
+		Examples\Image\Miscellaneous\CIFAR-10\03_ProjWeightsGen.py = Examples\Image\Miscellaneous\CIFAR-10\03_ProjWeightsGen.py
+		Examples\Image\Miscellaneous\CIFAR-10\03_ResNet.config = Examples\Image\Miscellaneous\CIFAR-10\03_ResNet.config
+		Examples\Image\Miscellaneous\CIFAR-10\03_ResNet.mel = Examples\Image\Miscellaneous\CIFAR-10\03_ResNet.mel
+		Examples\Image\Miscellaneous\CIFAR-10\03_ResNet.ndl = Examples\Image\Miscellaneous\CIFAR-10\03_ResNet.ndl
+		Examples\Image\Miscellaneous\CIFAR-10\16to32.txt = Examples\Image\Miscellaneous\CIFAR-10\16to32.txt
+		Examples\Image\Miscellaneous\CIFAR-10\32to64.txt = Examples\Image\Miscellaneous\CIFAR-10\32to64.txt
 		Examples\Image\Miscellaneous\CIFAR-10\CIFAR_convert.py = Examples\Image\Miscellaneous\CIFAR-10\CIFAR_convert.py
 		Examples\Image\Miscellaneous\CIFAR-10\labelsmap.txt = Examples\Image\Miscellaneous\CIFAR-10\labelsmap.txt
 		Examples\Image\Miscellaneous\CIFAR-10\Macros.ndl = Examples\Image\Miscellaneous\CIFAR-10\Macros.ndl
@@ -558,6 +526,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "VGG", "VGG", "{BC0D6DFF-80C
 		Examples\Image\Miscellaneous\ImageNet\VGG\VGG_A.ndl = Examples\Image\Miscellaneous\ImageNet\VGG\VGG_A.ndl
 		Examples\Image\Miscellaneous\ImageNet\VGG\VGG_E.config = Examples\Image\Miscellaneous\ImageNet\VGG\VGG_E.config
 		Examples\Image\Miscellaneous\ImageNet\VGG\VGG_E.ndl = Examples\Image\Miscellaneous\ImageNet\VGG\VGG_E.ndl
+		Examples\Image\Miscellaneous\ImageNet\VGG\VGG_E_BN.config = Examples\Image\Miscellaneous\ImageNet\VGG\VGG_E_BN.config
+		Examples\Image\Miscellaneous\ImageNet\VGG\VGG_E_BN.ndl = Examples\Image\Miscellaneous\ImageNet\VGG\VGG_E_BN.ndl
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Other", "Other", "{CCD56F12-BA17-4753-B5EE-4995FE682995}"
@@ -609,11 +579,6 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "TIMIT", "TIMIT", "{FB65FA58
 		Examples\Speech\Miscellaneous\TIMIT\config\README.txt = Examples\Speech\Miscellaneous\TIMIT\config\README.txt
 	EndProjectSection
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "G2P", "G2P", "{7FC6C635-D664-4244-9804-962165C3B037}"
-	ProjectSection(SolutionItems) = preProject
-		Examples\Speech\Miscellaneous\G2P\README.txt = Examples\Speech\Miscellaneous\G2P\README.txt
-	EndProjectSection
-EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "cntk_config", "cntk_config", "{439F8840-309E-4B7F-BCEC-196E0EADE949}"
 	ProjectSection(SolutionItems) = preProject
 		Examples\Speech\Miscellaneous\AMI\cntk_config\40fbank.conf = Examples\Speech\Miscellaneous\AMI\cntk_config\40fbank.conf
@@ -642,18 +607,6 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "cntk_config", "cntk_config"
 		Examples\Speech\Miscellaneous\AMI\cntk_config\lstmp-8layer.ndl = Examples\Speech\Miscellaneous\AMI\cntk_config\lstmp-8layer.ndl
 		Examples\Speech\Miscellaneous\AMI\cntk_config\lstmp-smbr.mel = Examples\Speech\Miscellaneous\AMI\cntk_config\lstmp-smbr.mel
 		Examples\Speech\Miscellaneous\AMI\cntk_config\PACRnn.txt = Examples\Speech\Miscellaneous\AMI\cntk_config\PACRnn.txt
-	EndProjectSection
-EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "setups", "setups", "{654756BA-9A00-4225-A2BF-BA4547801848}"
-	ProjectSection(SolutionItems) = preProject
-		Examples\Speech\Miscellaneous\G2P\setups\bilstm.config = Examples\Speech\Miscellaneous\G2P\setups\bilstm.config
-		Examples\Speech\Miscellaneous\G2P\setups\bilstm.indstreams.joint.conditional.config = Examples\Speech\Miscellaneous\G2P\setups\bilstm.indstreams.joint.conditional.config
-		Examples\Speech\Miscellaneous\G2P\setups\bilstm.ndl.config = Examples\Speech\Miscellaneous\G2P\setups\bilstm.ndl.config
-		Examples\Speech\Miscellaneous\G2P\setups\global.lstm.config = Examples\Speech\Miscellaneous\G2P\setups\global.lstm.config
-		Examples\Speech\Miscellaneous\G2P\setups\lstm.2streams.lw7.conditional.mb100.fw6.config = Examples\Speech\Miscellaneous\G2P\setups\lstm.2streams.lw7.conditional.mb100.fw6.config
-		Examples\Speech\Miscellaneous\G2P\setups\lstm.2streams.mb100.noemb.config = Examples\Speech\Miscellaneous\G2P\setups\lstm.2streams.mb100.noemb.config
-		Examples\Speech\Miscellaneous\G2P\setups\lstm.ndl = Examples\Speech\Miscellaneous\G2P\setups\lstm.ndl
-		Examples\Speech\Miscellaneous\G2P\setups\s2s.mpd.rnd.hiddenstate.2nets.500.100mb.2layers.config = Examples\Speech\Miscellaneous\G2P\setups\s2s.mpd.rnd.hiddenstate.2nets.500.100mb.2layers.config
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "config", "config", "{1C7D222F-E17B-444F-A18C-6205DEEF27BA}"
@@ -705,11 +658,6 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Config", "Config", "{850008
 		Examples\Text\PennTreebank\Config\rnn.config = Examples\Text\PennTreebank\Config\rnn.config
 	EndProjectSection
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "News", "News", "{52556781-2778-4BA0-9A0C-1FA0C92B3896}"
-	ProjectSection(SolutionItems) = preProject
-		Examples\Text\Miscellaneous\News\README.txt = Examples\Text\Miscellaneous\News\README.txt
-	EndProjectSection
-EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "SLU", "SLU", "{E6DC3B7D-303D-4A54-B040-D8DCF8C56E17}"
 	ProjectSection(SolutionItems) = preProject
 		Examples\Text\Miscellaneous\SLU\lstmNDL.txt = Examples\Text\Miscellaneous\SLU\lstmNDL.txt
@@ -718,39 +666,23 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "SLU", "SLU", "{E6DC3B7D-303
 		Examples\Text\Miscellaneous\SLU\rnnluModelEditor.txt = Examples\Text\Miscellaneous\SLU\rnnluModelEditor.txt
 	EndProjectSection
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "SMT", "SMT", "{AED49E07-AC6B-4EE0-81AC-A572ABCA0518}"
-	ProjectSection(SolutionItems) = preProject
-		Examples\Text\Miscellaneous\SMT\README.txt = Examples\Text\Miscellaneous\SMT\README.txt
-	EndProjectSection
-EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "setups", "setups", "{906E41CB-F603-4E83-98D8-4F77350124BC}"
-	ProjectSection(SolutionItems) = preProject
-		Examples\Text\Miscellaneous\News\setups\global.config = Examples\Text\Miscellaneous\News\setups\global.config
-		Examples\Text\Miscellaneous\News\setups\global.s2s.config = Examples\Text\Miscellaneous\News\setups\global.s2s.config
-		Examples\Text\Miscellaneous\News\setups\lstmlm.gpu.classlm.2stream.config = Examples\Text\Miscellaneous\News\setups\lstmlm.gpu.classlm.2stream.config
-		Examples\Text\Miscellaneous\News\setups\lstmlm.gpu.classlm.config = Examples\Text\Miscellaneous\News\setups\lstmlm.gpu.classlm.config
-		Examples\Text\Miscellaneous\News\setups\lstmlm.gpu.classlm.config.txt = Examples\Text\Miscellaneous\News\setups\lstmlm.gpu.classlm.config.txt
-		Examples\Text\Miscellaneous\News\setups\lstmlm.gpu.nce.config.txt = Examples\Text\Miscellaneous\News\setups\lstmlm.gpu.nce.config.txt
-		Examples\Text\Miscellaneous\News\setups\s2s.class.alignment.config = Examples\Text\Miscellaneous\News\setups\s2s.class.alignment.config
-	EndProjectSection
-EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "setups", "setups", "{7734DDA6-5997-4F43-BC99-DF0495DA5D1D}"
-	ProjectSection(SolutionItems) = preProject
-		Examples\Text\Miscellaneous\SMT\setups\global.config = Examples\Text\Miscellaneous\SMT\setups\global.config
-		Examples\Text\Miscellaneous\SMT\setups\global.cs-en.config = Examples\Text\Miscellaneous\SMT\setups\global.cs-en.config
-		Examples\Text\Miscellaneous\SMT\setups\global.local.config = Examples\Text\Miscellaneous\SMT\setups\global.local.config
-		Examples\Text\Miscellaneous\SMT\setups\s2s.2layers.config = Examples\Text\Miscellaneous\SMT\setups\s2s.2layers.config
-		Examples\Text\Miscellaneous\SMT\setups\s2s.class.alignment.config = Examples\Text\Miscellaneous\SMT\setups\s2s.class.alignment.config
-		Examples\Text\Miscellaneous\SMT\setups\s2s.class.config = Examples\Text\Miscellaneous\SMT\setups\s2s.class.config
-		Examples\Text\Miscellaneous\SMT\setups\s2sfb.class.alignment.config = Examples\Text\Miscellaneous\SMT\setups\s2sfb.class.alignment.config
-	EndProjectSection
-EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tools", "Tools", "{83BFF5BF-D054-4B3E-9769-B00BA707F116}"
 	ProjectSection(SolutionItems) = preProject
 		Tools\build-and-test = Tools\build-and-test
 		Tools\generate_build_info = Tools\generate_build_info
 		Tools\msvc_collect_coverage.py = Tools\msvc_collect_coverage.py
 		Tools\run_boost_unit_tests.py = Tools\run_boost_unit_tests.py
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "ResNet", "ResNet", "{06D2C644-AE5F-4C30-A1F6-C78E2845AAB1}"
+	ProjectSection(SolutionItems) = preProject
+		Examples\Image\Miscellaneous\ImageNet\ResNet\add_top5_layer.mel = Examples\Image\Miscellaneous\ImageNet\ResNet\add_top5_layer.mel
+		Examples\Image\Miscellaneous\ImageNet\ResNet\Macros.ndl = Examples\Image\Miscellaneous\ImageNet\ResNet\Macros.ndl
+		Examples\Image\Miscellaneous\ImageNet\ResNet\ProjWeightsGen.py = Examples\Image\Miscellaneous\ImageNet\ResNet\ProjWeightsGen.py
+		Examples\Image\Miscellaneous\ImageNet\ResNet\ResNet_152.config = Examples\Image\Miscellaneous\ImageNet\ResNet\ResNet_152.config
+		Examples\Image\Miscellaneous\ImageNet\ResNet\ResNet_152.ndl = Examples\Image\Miscellaneous\ImageNet\ResNet\ResNet_152.ndl
+		Examples\Image\Miscellaneous\ImageNet\ResNet\ResNet_34.config = Examples\Image\Miscellaneous\ImageNet\ResNet\ResNet_34.config
+		Examples\Image\Miscellaneous\ImageNet\ResNet\ResNet_34.ndl = Examples\Image\Miscellaneous\ImageNet\ResNet\ResNet_34.ndl
 	EndProjectSection
 EndProject
 Global
@@ -867,7 +799,6 @@ Global
 		{B6725C9F-A6D2-4269-9B74-7888A90F7884} = {5E666C53-2D82-49C9-9127-3FDDC321C741}
 		{B27DD434-EECD-4EE0-A03B-1150EB87258E} = {B6725C9F-A6D2-4269-9B74-7888A90F7884}
 		{A4884465-CFBB-4A64-A9DE-690E1A63EF7E} = {B6725C9F-A6D2-4269-9B74-7888A90F7884}
-		{3E9C89B1-C045-4F42-92B2-F9FFFFC2DBD4} = {33EBFE78-A1A8-4961-8938-92A271941F94}
 		{C70E1572-20FF-496C-A0A9-10AA6755A07C} = {33EBFE78-A1A8-4961-8938-92A271941F94}
 		{EAD17188-072C-4726-B840-A769C36DAD1B} = {DD043083-71A4-409A-AA91-F9C548DCF7EC}
 		{88F85A64-105D-4CDA-8199-B7A312FC8A27} = {19EE975B-232D-49F0-94C7-6F1C6424FB53}
@@ -928,18 +859,13 @@ Global
 		{6FCDB701-C23D-4BD7-BD48-12D46DC51084} = {EDA80B25-B181-4F70-844E-FBB41D40EA34}
 		{0D0056B3-7068-4FC9-AFCF-DD1E78D4CCBC} = {BF1A621D-528B-4B84-AAFC-EF1455FC6830}
 		{FB65FA58-C47B-4A49-9566-40FD5D75FC59} = {BF1A621D-528B-4B84-AAFC-EF1455FC6830}
-		{7FC6C635-D664-4244-9804-962165C3B037} = {BF1A621D-528B-4B84-AAFC-EF1455FC6830}
 		{439F8840-309E-4B7F-BCEC-196E0EADE949} = {0D0056B3-7068-4FC9-AFCF-DD1E78D4CCBC}
-		{654756BA-9A00-4225-A2BF-BA4547801848} = {7FC6C635-D664-4244-9804-962165C3B037}
 		{1C7D222F-E17B-444F-A18C-6205DEEF27BA} = {FB65FA58-C47B-4A49-9566-40FD5D75FC59}
 		{5ED4F5DC-E016-4E10-BACD-6A760A0CDE89} = {FB65FA58-C47B-4A49-9566-40FD5D75FC59}
 		{35CFD8E3-7206-4243-AB5C-AAF610109A5C} = {FB65FA58-C47B-4A49-9566-40FD5D75FC59}
 		{6F4125B5-220F-4FB7-B6C4-85A966A0268C} = {97AAB0C8-D553-49CB-A539-004FCD7FD59F}
 		{850008BC-36B0-4A0A-BD0C-B6D5C2184227} = {6F4125B5-220F-4FB7-B6C4-85A966A0268C}
-		{52556781-2778-4BA0-9A0C-1FA0C92B3896} = {8C128B1D-87E0-4643-AB93-2581589AE425}
 		{E6DC3B7D-303D-4A54-B040-D8DCF8C56E17} = {8C128B1D-87E0-4643-AB93-2581589AE425}
-		{AED49E07-AC6B-4EE0-81AC-A572ABCA0518} = {8C128B1D-87E0-4643-AB93-2581589AE425}
-		{906E41CB-F603-4E83-98D8-4F77350124BC} = {52556781-2778-4BA0-9A0C-1FA0C92B3896}
-		{7734DDA6-5997-4F43-BC99-DF0495DA5D1D} = {AED49E07-AC6B-4EE0-81AC-A572ABCA0518}
+		{06D2C644-AE5F-4C30-A1F6-C78E2845AAB1} = {EF710C5A-E616-442A-889D-C997D39AF2E1}
 	EndGlobalSection
 EndGlobal
