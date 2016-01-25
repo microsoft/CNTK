@@ -9,7 +9,8 @@
 
 #ifdef WIN32 // --- Windows version
 
-#include <Windows.h> // for HANDLE
+#define NOMINMAX
+#include "Windows.h" // for HANDLE
 
 class CrossProcessMutex
 {

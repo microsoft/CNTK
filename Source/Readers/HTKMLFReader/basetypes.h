@@ -31,7 +31,8 @@
 #include <mutex>
 #include <memory>
 #ifdef _WIN32
-#include <windows.h> // for CRITICAL_SECTION and Unicode conversion functions   --TODO: is there a portable alternative?
+#define NOMINMAX
+#include "Windows.h" // for CRITICAL_SECTION and Unicode conversion functions   --TODO: is there a portable alternative?
 #endif
 #if __unix__
 #include <strings.h>
@@ -129,7 +130,7 @@ class fixed_vector
 #endif
     }
     // ... TODO: when I make this public, LinearTransform.h acts totally up but I cannot see where it comes from.
-    //fixed_vector (const fixed_vector & other) : n (0), p (NULL) { *this = other; }
+    // fixed_vector (const fixed_vector & other) : n (0), p (NULL) { *this = other; }
 public:
     fixed_vector()
         : n(0), p(NULL)
@@ -381,8 +382,8 @@ public:
         m_rLock.Unlock();
     };
 };
-};
-}; // namespace
+
+}; }; // namespace
 
 // ----------------------------------------------------------------------------
 // frequently missing utility functions
@@ -433,8 +434,8 @@ static void attempt(int retries, const FUNCTION &body)
         }
     }
 }
-};
-}; // namespace
+
+}; }; // namespace
 
 template <class S>
 static inline void ZeroStruct(S &s)
@@ -442,21 +443,6 @@ static inline void ZeroStruct(S &s)
     memset(&s, 0, sizeof(s));
 }
 
-// ----------------------------------------------------------------------------
-// machine dependent
-// ----------------------------------------------------------------------------
-
 using namespace msra::basetypes; // for compatibility
-
-//#pragma warning (pop)
-
-// why is this in basetypes.h?
-#if 0
-template<class F>
-static inline bool comparator(const pair<int, F>& l, const pair<int, F>& r)
-{
-    return l.second > r.second;
-}
-#endif
 
 #endif // _BASETYPES_

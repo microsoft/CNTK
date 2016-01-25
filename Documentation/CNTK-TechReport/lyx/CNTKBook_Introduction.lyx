@@ -191,14 +191,24 @@ reference "chap:CNTK_Adv"
 
 \end_inset
 
-), and how to extend CNTK (Chapter 
+)
+\begin_inset Note Comment
+status open
+
+\begin_layout Plain Layout
+, and how to extend CNTK (Chapter 
 \begin_inset CommandInset ref
 LatexCommand ref
 reference "chap:CNTK_Programmer"
 
 \end_inset
 
-).
+)
+\end_layout
+
+\end_inset
+
+.
  Chapter 
 \begin_inset CommandInset ref
 LatexCommand ref

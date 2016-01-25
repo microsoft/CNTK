@@ -6,9 +6,10 @@
 #include "DataReader.h"
 #include "ComputationNetwork.h"
 #include "MPIWrapper.h"
+#include "SpecialPurposeNodes.h"        // for SequenceWithSoftmaxNode
 #include <string>
 #include <map>
-#include "TrainingCriterionNodes.h"
+#include <set>
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -37,23 +38,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         //  - GetMinibatch() --fills the inputMatrices
         //  - SetActualMiniBatchSizeFromFeatures()  --tells Network to resize the nodes' buffers
         //  - CopyMBLayoutTo()   --copies the MBLayout from Reader to Network
-        //  - VerifyActualNumParallelSequences()  --(refactoring left-over) verify that MBLayout is consistent with #parallel sequences
         // with the special twist that in presence of parallelization, there is some decimation involved.
 
         bool wasDataRead = trainSetDataReader.GetMinibatch(inputMatrices); // fill in the minibatch data into the Input nodes' buffers directly
         // If this returns false, the matrices may contain garbage or not sized to 0 columns.
         // On the other hand, if it returns a 0-column matrix, that would be a perfectly cromulent minibatch (in case of data parallelism with distributed reading).
 
-        // reader will have resized input node's m_value directly. Nodes must be notified to do necessary internal state updates from that.
-        net->NotifyInputNodesFunctionValuesMBSizeModified();
-
-        if (wasDataRead)
-            trainSetDataReader.CopyMBLayoutTo(pMBLayout); // get layout meta-data
-
-#if 0 // (this test is wrong... I think)
-            if (net->DetermineActualMBSizeFromFeatures() == 0)
-                wasDataRead = false;
-#endif
+        // if no data read then we are done
+        if (!wasDataRead)
+            return false;
 
         // get some additional information when doing sequence training
         // TODO: This should not need to be called in case of wasDataRead == false, since in that case, returned values are invalid.
@@ -68,19 +61,28 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             trainSetDataReader.GetMinibatch4SE(*latticeinput, *uids, *boundaries, *extrauttmap);
         }
 
-        // if no data read then we are done
-        if (!wasDataRead)
-            return false;
+        // get layout meta-data
+        trainSetDataReader.CopyMBLayoutTo(pMBLayout);
 
         // decimate if needed. Decimation happens in-place.
         if (!useDistributedMBReading && useParallelTrain)
-        {
             DecimateMinibatch(inputMatrices, g_mpi->NumNodesInUse(), g_mpi->CurrentNodeRank(), net->GetMBLayoutPtr());
-            net->NotifyInputNodesFunctionValuesMBSizeModified(); // #matrix columns changes
-        }
+
+        // reader will have resized input node's m_value directly. Nodes must be notified to do necessary internal state updates from that.
+        // TODO: This is a stopgap. SGD will at some point change from sets of matrices to sets of nodes. Then this will become much simpler.
+        std::set<Matrix<ElemType>*> matrices;
+        for (const auto& iter : inputMatrices)
+            matrices.insert(iter.second);
+        for (auto& node : net->FeatureNodes())
+            if (matrices.find(&node->As<ComputationNode<ElemType>>()->Value()) != matrices.end())
+                node->NotifyFunctionValuesMBSizeModified();
+        for (auto& node : net->LabelNodes())
+            if (matrices.find(&node->As<ComputationNode<ElemType>>()->Value()) != matrices.end())
+                node->NotifyFunctionValuesMBSizeModified();
 
         // get MB size and tell Network to update its nodes' buffers based on what's in the input matrices
         // Note: Decimation may have reduced this to 0 frames. We still must return 'true'.
+        // BUGBUG: This has a definitional problem once we support multiple feature streams with different lenghts.
         actualMBSize = net->DetermineActualMBSizeFromFeatures();
 
         return true;
@@ -90,7 +92,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // DecimateMinibatch - decimate minibatch for parallelization
     // -------------------------------------------------------------------
     // non-inplace decimation , to be used in subminibatch implementation
-    // return [st, en) parallel sequence which has been selected after decimation
+    // returns a subset of parallel sequences
     template <class ElemType>
     static pair<size_t, size_t> DecimateMinibatch(const std::map<std::wstring, Matrix<ElemType>*> MB,     // input matrices
                                                   std::map<std::wstring, Matrix<ElemType>*>& decimatedMB, // output decimated matrices.
@@ -156,7 +158,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     // in-place decimation, for use with data-parallel processing
-    // return [st, en) parallell sequence which has been selected after decimation
+    // returns a subset of parallel sequences
     template <class ElemType>
     static pair<size_t, size_t> DecimateMinibatch(std::map<std::wstring, Matrix<ElemType>*>& mb, // matrix to be decimated
                                                   int numprocs, int rank,                        // rank info
@@ -494,7 +496,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     seqRange);
             }
 
-            //m_NetInputMatrixPtr = decimatedMatrices;
+            // m_NetInputMatrixPtr = decimatedMatrices;
             for (auto& x : decimatedMatrices)
             {
                 wstring name = x.first;
@@ -567,14 +569,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             // also revert net.m_MBLayoutPtr
             m_NetMBLayoutPtr->CopyFrom(m_MBLayoutCache);
 
-            //m_NetCriterionNodes[0]->Value().SetValue((ElemType)0);
+            // m_NetCriterionNodes[0]->Value().SetValue((ElemType)0);
             Matrix<ElemType>::AddElementToElement(*m_NetCriterionAccumulator, 0, 0,
                                                   m_NetCriterionNodes[0]->Value(), 0, 0);
             m_NetCriterionAccumulator->SetValue((ElemType) 0);
 
             for (size_t i = 0; i < m_NetEvaluationNodes.size(); i++)
             {
-                //m_NetEvaluationNodes[i]->Value().SetValue((ElemType)0);
+                // m_NetEvaluationNodes[i]->Value().SetValue((ElemType)0);
                 Matrix<ElemType>::AddElementToElement(*m_NetEvaluationAccumulator, 0, i,
                                                       m_NetEvaluationNodes[i]->Value(), 0, 0);
             }

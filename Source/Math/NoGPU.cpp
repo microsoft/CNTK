@@ -8,6 +8,7 @@
 
 #ifdef CPUONLY
 
+#include "CommonMatrix.h"
 #include "GPUMatrix.h"
 #include "GPUSparseMatrix.h"
 #include "MatrixQuantizerGPU.h"
@@ -133,7 +134,7 @@ void GPUSparseMatrix<ElemType>::ResizeAsAndCopyIndexFrom(const GPUSparseMatrix<E
 template <class ElemType>
 void GPUSparseMatrix<ElemType>::Resize(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve, const MatrixFormat matrixFormat, const bool growOnly, bool keepExistingValues)
 {
-} //matrix format will affect the size to allocate
+} // matrix format will affect the size to allocate
 template <class ElemType>
 void GPUSparseMatrix<ElemType>::Resize(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve, const bool growOnly, bool keepExistingValues)
 {
@@ -737,7 +738,7 @@ void GPUMatrix<ElemType>::SetDevice(DEVICEID_TYPE deviceId){};
 // GetBestGPUDeviceId - Get the best GPU DeviceId, based on cuda information
 //  TODO: should be replaced by BestGpu class instead, it's much better
 template <class ElemType>
-int GPUMatrix<ElemType>::GetBestGPUDeviceId() //returns -1 if no GPUs can be used
+int GPUMatrix<ElemType>::GetBestGPUDeviceId() // returns -1 if no GPUs can be used
 {
     return EnforceOneGPUOnly(-1); // CPU
 }
@@ -949,7 +950,7 @@ void GPUMatrix<ElemType>::SetValue(const ElemType v)
 }
 
 template <class ElemType>
-void GPUMatrix<ElemType>::SetValue(const ElemType* d_v) //d_v is pointer to the the value in GPU memory
+void GPUMatrix<ElemType>::SetValue(const ElemType* d_v) // d_v is pointer to the the value in GPU memory
 {
 }
 
@@ -1864,7 +1865,7 @@ void GPUMatrix<ElemType>::Scale(GPUMatrix<ElemType>& /*alpha*/, GPUMatrix<ElemTy
 {
 }
 
-template <class ElemType> //c = alpha * a
+template <class ElemType> // c = alpha * a
 void GPUMatrix<ElemType>::Scale(ElemType alpha, const GPUMatrix<ElemType>& /*a*/, GPUMatrix<ElemType>& c)
 {
 }

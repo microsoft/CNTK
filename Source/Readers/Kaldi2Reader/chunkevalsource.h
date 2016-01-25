@@ -218,14 +218,14 @@ public:
 
             frames.reserve(chunksize * 2);
             framesmulti.push_back(frames);
-            //framesmulti[i].reserve (chunksize * 2);
+            // framesmulti[i].reserve (chunksize * 2);
 
             thisfeat.resize(vdims[i], chunksize);
             feat.push_back(thisfeat);
 
             outpaths.push_back(std::vector<std::wstring>());
             sampperiods.push_back(std::vector<unsigned int>());
-            //feat[i].resize(vdims[i],chunksize); // initialize to size chunksize
+            // feat[i].resize(vdims[i],chunksize); // initialize to size chunksize
         }
     }
 
@@ -337,13 +337,13 @@ public:
 
             frames.reserve(chunksize * 2);
             framesMulti.push_back(frames);
-            //framesmulti[i].reserve (chunksize * 2);
+            // framesmulti[i].reserve (chunksize * 2);
 
             thisfeat.resize(vdims[i], chunksize);
             feat.push_back(thisfeat);
 
             sampPeriods.push_back(std::vector<unsigned int>());
-            //feat[i].resize(vdims[i],chunksize); // initialize to size chunksize
+            // feat[i].resize(vdims[i],chunksize); // initialize to size chunksize
         }
     }
 
@@ -386,7 +386,7 @@ public:
                 rightextent = rightcontext[i];
             }
 
-            //msra::dbn::augmentneighbors(framesMulti[i], boundaryFlags, 0, leftcontext[i], rightcontext[i],)
+            // msra::dbn::augmentneighbors(framesMulti[i], boundaryFlags, 0, leftcontext[i], rightcontext[i],)
             msra::dbn::augmentneighbors(framesMulti[i], boundaryFlags, leftextent, rightextent, 0, framesInBlock, feat[i]);
         }
         minibatchReady = true;

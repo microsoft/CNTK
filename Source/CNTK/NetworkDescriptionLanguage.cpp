@@ -15,10 +15,12 @@
 #include "ConvolutionalNodes.h"
 #include "RecurrentNodes.h"
 #include "ReshapingNodes.h"
-#include "EsotericNodes.h"
-#include "TrainingCriterionNodes.h"
-#include "CompositeComputationNodes.h"
-#include "EvaluationCriterionNodes.h"
+#include "SpecialPurposeNodes.h"
+#include "TrainingNodes.h"
+#include "PreComputeNodes.h"
+#include "EvaluationNodes.h"
+
+using namespace std;
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -87,11 +89,11 @@ NDLNode<ElemType>::NDLNode(const NDLNode<ElemType>& copyMe)
     m_name = copyMe.m_name;               // value on the left of the equals
     m_value = copyMe.m_value;             // value on the right of the equals (CN node name, or value)
     m_parent = copyMe.m_parent;           // parent script
-    m_type = copyMe.m_type;               //type of node
+    m_type = copyMe.m_type;               // type of node
     m_paramString = copyMe.m_paramString; // parameter of a function/array
     m_paramMacro = copyMe.m_paramMacro;   // parameter of a macro (the variables used in the macro definition)
     // don't copy over the parameters, they will be reparsed after the copy
-    //m_parameters = copyMe.m_parameters; // copy over the parameters straight
+    // m_parameters = copyMe.m_parameters; // copy over the parameters straight
 
     m_eval = nullptr; // pointer to an arbitrary eval structure
     // script for macro calls, need to expand the macro for each call
@@ -146,152 +148,85 @@ NDLPass& operator++(NDLPass& ndlPass)
 template <typename ElemType>
 bool CheckFunction(std::string& p_nodeType, bool* allowUndeterminedVariable)
 {
-    std::wstring nodeType = msra::strfun::utf16(p_nodeType);
-    bool ret = false;
     if (allowUndeterminedVariable)
         *allowUndeterminedVariable = true; // be default we allow undetermined variables
-    if (EqualInsensitive(nodeType, OperationNameOf(InputValue), L"Input"))
-        ret = true;
-    else if (EqualInsensitive(nodeType, OperationNameOf(SparseInputValue), L"SparseInput"))
-        ret = true;
-    else if (EqualInsensitive(nodeType, OperationNameOf(LearnableParameter), L"Parameter"))
-        ret = true;
-    else if (EqualInsensitive(nodeType, L"ImageParameter"))
-        ret = true;
-    //else if (EqualInsensitive(nodeType, OperationNameOf(SparseLearnableParameter), L"SparseParameter"))
-    //    ret = true;
-    else if (EqualInsensitive(nodeType, L"Constant", L"Const"))
-        ret = true;
-    else if (EqualInsensitive(nodeType, L"ImageInput", L"Image"))
-        ret = true;
-    else if (EqualInsensitive(nodeType, L"SparseImageInput", L"SparseImage"))
-        ret = true;
-    else if (EqualInsensitive(nodeType, OperationNameOf(SumElementsNode)))
-        ret = true;
-    else if (EqualInsensitive(nodeType, OperationNameOf(SumColumnElementsNode)))
-        ret = true;
-    else if (EqualInsensitive(nodeType, L"Scale"))
-        ret = true;
-    else if (EqualInsensitive(nodeType, OperationNameOf(TransposeNode)))
-        ret = true;
-    else if (EqualInsensitive(nodeType, OperationNameOf(TimesNode)))
-        ret = true;
-    else if (EqualInsensitive(nodeType, OperationNameOf(TransposeTimesNode)))
-        ret = true;
-    else if (EqualInsensitive(nodeType, OperationNameOf(StrideTimesNode)))
-        ret = true;
-    else if (EqualInsensitive(nodeType, OperationNameOf(ElementTimesNode)))
-        ret = true;
-    else if (EqualInsensitive(nodeType, L"RowElementTimes"))
-        ret = true;
-    else if (EqualInsensitive(nodeType, L"ColumnElementTimes"))
-        ret = true;
-    else if (EqualInsensitive(nodeType, OperationNameOf(DiagTimesNode)))
-        ret = true;
-    else if (EqualInsensitive(nodeType, OperationNameOf(CosDistanceNode), L"CosDist"))
-        ret = true;
-    else if (EqualInsensitive(nodeType, OperationNameOf(KhatriRaoProductNode), L"ColumnwiseCrossProduct"))
-        ret = true;
-    else if (EqualInsensitive(nodeType, OperationNameOf(PlusNode)))
-        ret = true;
-    else if (EqualInsensitive(nodeType, OperationNameOf(MinusNode)))
-        ret = true;
-    else if (EqualInsensitive(nodeType, OperationNameOf(NegateNode)))
-        ret = true;
-    else if (EqualInsensitive(nodeType, OperationNameOf(RectifiedLinearNode), L"ReLU"))
-        ret = true;
-    else if (EqualInsensitive(nodeType, OperationNameOf(SigmoidNode)))
-        ret = true;
-    else if (EqualInsensitive(nodeType, OperationNameOf(TanhNode)))
-        ret = true;
-    else if (EqualInsensitive(nodeType, OperationNameOf(ExpNode)))
-        ret = true;
-    else if (EqualInsensitive(nodeType, OperationNameOf(LogNode)))
-        ret = true;
-    else if (EqualInsensitive(nodeType, OperationNameOf(CosineNode), L"Cos"))
-        ret = true;
-    else if (EqualInsensitive(nodeType, OperationNameOf(HardmaxNode)))
-        ret = true;
-    else if (EqualInsensitive(nodeType, OperationNameOf(SoftmaxNode)))
-        ret = true;
-    else if (EqualInsensitive(nodeType, OperationNameOf(LogSoftmaxNode)))
-        ret = true;
-    else if (EqualInsensitive(nodeType, OperationNameOf(SquareErrorNode), L"SE"))
-        ret = true;
-    else if (EqualInsensitive(nodeType, OperationNameOf(LogisticNode), L"Logistic"))
-        ret = true;
-    else if (EqualInsensitive(nodeType, OperationNameOf(CrossEntropyWithSoftmaxNode), L"CEWithSM"))
-        ret = true;
-    else if (EqualInsensitive(nodeType, OperationNameOf(SequenceWithSoftmaxNode), L"SEWithSM"))
-        ret = true;
-    else if (EqualInsensitive(nodeType, OperationNameOf(CrossEntropyNode)))
-        ret = true;
-    else if (EqualInsensitive(nodeType, OperationNameOf(ClassBasedCrossEntropyWithSoftmaxNode), L"CBCEWithSM"))
-        ret = true;
-    else if (EqualInsensitive(nodeType, OperationNameOf(MatrixL1RegNode), L"L1Reg"))
-        ret = true;
-    else if (EqualInsensitive(nodeType, OperationNameOf(MatrixL2RegNode), L"L2Reg"))
-        ret = true;
-    else if (EqualInsensitive(nodeType, OperationNameOf(PerDimMeanVarNormalizationNode), L"PerDimMVNorm"))
-        ret = true;
-    else if (EqualInsensitive(nodeType, OperationNameOf(PerDimMeanVarDeNormalizationNode), L"PerDimMVDeNorm"))
-        ret = true;
-    else if (EqualInsensitive(nodeType, OperationNameOf(ErrorPredictionNode), L"ClassificationError"))
-        ret = true;
-    else if (EqualInsensitive(nodeType, OperationNameOf(DropoutNode)))
-        ret = true;
-    else if (EqualInsensitive(nodeType, OperationNameOf(ReshapeNode)))
-        ret = true;
-    else if (EqualInsensitive(nodeType, OperationNameOf(RowRepeatNode)))
-        ret = true;
-    else if (EqualInsensitive(nodeType, OperationNameOf(DiagonalNode)))
-        ret = true;
-    else if (EqualInsensitive(nodeType, OperationNameOf(MeanNode)))
-        ret = true;
-    else if (EqualInsensitive(nodeType, OperationNameOf(InvStdDevNode)))
-        ret = true;
-    else if (EqualInsensitive(nodeType, OperationNameOf(ConvolutionNode), L"Convolve"))
-        ret = true;
-    else if (EqualInsensitive(nodeType, OperationNameOf(MaxPoolingNode)))
-        ret = true;
-    else if (EqualInsensitive(nodeType, OperationNameOf(AveragePoolingNode)))
-        ret = true;
-    else if (EqualInsensitive(nodeType, OperationNameOf(PastValueNode), L"Delay"))
-        ret = true;
-    else if (EqualInsensitive(nodeType, OperationNameOf(FutureValueNode)))
-        ret = true;
-    else if (EqualInsensitive(nodeType, OperationNameOf(RowSliceNode)))
-        ret = true;
-    else if (EqualInsensitive(nodeType, OperationNameOf(RowStackNode)))
-        ret = true;
-    else if (EqualInsensitive(nodeType, OperationNameOf(LookupTableNode)))
-        ret = true;
-    else if (EqualInsensitive(nodeType, OperationNameOf(GMMLogLikelihoodNode), L"GMMLL"))
-        ret = true;
-    else if (EqualInsensitive(nodeType, OperationNameOf(CosDistanceWithNegativeSamplesNode), L"CosWithNegSamples"))
-        ret = true;
-    else if (EqualInsensitive(nodeType, OperationNameOf(TimeReverseNode), L"TimeReverse"))
-        ret = true;
-    else if (EqualInsensitive(nodeType, OperationNameOf(CRFNode), L"CRF"))
-        ret = true;
-    else if (EqualInsensitive(nodeType, OperationNameOf(DummyCriterionNode), L"DummyCriterion"))
-        ret = true;
-    else if (EqualInsensitive(nodeType, OperationNameOf(ParallelNode), L"Parallel"))
-        ret = true;
-    else if (EqualInsensitive(nodeType, OperationNameOf(LSTMNode), L"LSTM"))
-        ret = true;
-    else if (EqualInsensitive(nodeType, OperationNameOf(PairNetworkNode), L"PairNetwork"))
-        ret = true;
-    else if (EqualInsensitive(nodeType, OperationNameOf(StrideTimesNode), L"StrideTimes"))
-        ret = true;
-    else if (EqualInsensitive(nodeType, OperationNameOf(BatchNormalizationNode)))
-        ret = true;
+
+    wstring nodeType = msra::strfun::utf16(p_nodeType);
+    bool ret = false;
+    if (EqualInsensitive(nodeType, OperationNameOf(AveragePoolingNode))) ret = true;
+    else if (EqualInsensitive(nodeType, OperationNameOf(BatchNormalizationNode))) ret = true;
+#ifdef COMING_SOON
+    else if (EqualInsensitive(nodeType, OperationNameOf(CRFNode), L"CRF")) ret = true;
+#endif
+    else if (EqualInsensitive(nodeType, OperationNameOf(ClassBasedCrossEntropyWithSoftmaxNode), L"CBCEWithSM")) ret = true;
+    else if (EqualInsensitive(nodeType, OperationNameOf(ConvolutionNode), L"Convolve")) ret = true;
+    else if (EqualInsensitive(nodeType, OperationNameOf(CosDistanceNode), L"CosDist")) ret = true;
+    else if (EqualInsensitive(nodeType, OperationNameOf(CosDistanceWithNegativeSamplesNode), L"CosWithNegSamples")) ret = true;
+    else if (EqualInsensitive(nodeType, OperationNameOf(CosineNode), L"Cos")) ret = true;
+    else if (EqualInsensitive(nodeType, OperationNameOf(CrossEntropyNode))) ret = true;
+    else if (EqualInsensitive(nodeType, OperationNameOf(CrossEntropyWithSoftmaxNode), L"CEWithSM")) ret = true;
+    else if (EqualInsensitive(nodeType, OperationNameOf(DiagTimesNode))) ret = true;
+    else if (EqualInsensitive(nodeType, OperationNameOf(DiagonalNode))) ret = true;
+    else if (EqualInsensitive(nodeType, OperationNameOf(DropoutNode))) ret = true;
+    else if (EqualInsensitive(nodeType, OperationNameOf(DummyCriterionNode), L"DummyCriterion")) ret = true;
+    else if (EqualInsensitive(nodeType, OperationNameOf(ElementTimesNode))) ret = true;
+    else if (EqualInsensitive(nodeType, OperationNameOf(ErrorPredictionNode), L"ClassificationError")) ret = true;
+    else if (EqualInsensitive(nodeType, OperationNameOf(ExpNode))) ret = true;
+    else if (EqualInsensitive(nodeType, OperationNameOf(FutureValueNode))) ret = true;
+#ifdef COMING_SOON
+    else if (EqualInsensitive(nodeType, OperationNameOf(GMMLogLikelihoodNode), L"GMMLL")) ret = true;
+#endif
+    else if (EqualInsensitive(nodeType, OperationNameOf(HardmaxNode))) ret = true;
+    else if (EqualInsensitive(nodeType, OperationNameOf(InputValue), L"Input")) ret = true;
+    else if (EqualInsensitive(nodeType, OperationNameOf(InvStdDevNode))) ret = true;
+    else if (EqualInsensitive(nodeType, OperationNameOf(KhatriRaoProductNode), L"ColumnwiseCrossProduct")) ret = true;
+    else if (EqualInsensitive(nodeType, OperationNameOf(LearnableParameter), L"Parameter")) ret = true;
+    else if (EqualInsensitive(nodeType, OperationNameOf(LogNode))) ret = true;
+    else if (EqualInsensitive(nodeType, OperationNameOf(LogSoftmaxNode))) ret = true;
+    else if (EqualInsensitive(nodeType, OperationNameOf(LogisticNode), L"Logistic")) ret = true;
+    else if (EqualInsensitive(nodeType, OperationNameOf(LookupTableNode))) ret = true;
+    else if (EqualInsensitive(nodeType, OperationNameOf(MatrixL1RegNode), L"L1Reg")) ret = true;
+    else if (EqualInsensitive(nodeType, OperationNameOf(MatrixL2RegNode), L"L2Reg")) ret = true;
+    else if (EqualInsensitive(nodeType, OperationNameOf(MaxPoolingNode))) ret = true;
+    else if (EqualInsensitive(nodeType, OperationNameOf(MeanNode))) ret = true;
+    else if (EqualInsensitive(nodeType, OperationNameOf(MinusNode))) ret = true;
+    else if (EqualInsensitive(nodeType, OperationNameOf(NegateNode))) ret = true;
+    else if (EqualInsensitive(nodeType, OperationNameOf(PastValueNode), L"Delay")) ret = true;
+    else if (EqualInsensitive(nodeType, OperationNameOf(PerDimMeanVarDeNormalizationNode), L"PerDimMVDeNorm")) ret = true;
+    else if (EqualInsensitive(nodeType, OperationNameOf(PerDimMeanVarNormalizationNode), L"PerDimMVNorm")) ret = true;
+    else if (EqualInsensitive(nodeType, OperationNameOf(PlusNode))) ret = true;
+    else if (EqualInsensitive(nodeType, OperationNameOf(RectifiedLinearNode), L"ReLU")) ret = true;
+    else if (EqualInsensitive(nodeType, OperationNameOf(ReshapeNode))) ret = true;
+    else if (EqualInsensitive(nodeType, OperationNameOf(RowRepeatNode))) ret = true;
+    else if (EqualInsensitive(nodeType, OperationNameOf(RowSliceNode))) ret = true;
+    else if (EqualInsensitive(nodeType, OperationNameOf(RowStackNode))) ret = true;
+#ifdef COMING_SOON
+    else if (EqualInsensitive(nodeType, OperationNameOf(SequenceDecoderNode), L"SEWithSM")) ret = true;
+#endif
+    else if (EqualInsensitive(nodeType, OperationNameOf(SequenceWithSoftmaxNode), L"SEWithSM")) ret = true;
+    else if (EqualInsensitive(nodeType, OperationNameOf(SigmoidNode))) ret = true;
+    else if (EqualInsensitive(nodeType, OperationNameOf(SoftmaxNode))) ret = true;
+    else if (EqualInsensitive(nodeType, OperationNameOf(SparseInputValue), L"SparseInput")) ret = true;
+    else if (EqualInsensitive(nodeType, OperationNameOf(SquareErrorNode), L"SE")) ret = true;
+    else if (EqualInsensitive(nodeType, OperationNameOf(SumColumnElementsNode))) ret = true;
+    else if (EqualInsensitive(nodeType, OperationNameOf(SumElementsNode))) ret = true;
+    else if (EqualInsensitive(nodeType, OperationNameOf(TanhNode))) ret = true;
+    else if (EqualInsensitive(nodeType, OperationNameOf(TimesNode))) ret = true;
+#ifdef COMING_SOON
+    else if (EqualInsensitive(nodeType, OperationNameOf(TransposeNode))) ret = true;
+#endif
+    else if (EqualInsensitive(nodeType, OperationNameOf(TransposeTimesNode))) ret = true;
+    else if (EqualInsensitive(nodeType, L"ColumnElementTimes")) ret = true;
+    else if (EqualInsensitive(nodeType, L"Constant", L"Const")) ret = true;
+    else if (EqualInsensitive(nodeType, L"ImageInput", L"Image")) ret = true;
+    else if (EqualInsensitive(nodeType, L"ImageParameter")) ret = true;
+    else if (EqualInsensitive(nodeType, L"RowElementTimes")) ret = true;
+    else if (EqualInsensitive(nodeType, L"Scale")) ret = true;
+    else if (EqualInsensitive(nodeType, L"SparseImageInput", L"SparseImage")) ret = true;
 
     // return the actual node name in the parameter if we found something
     if (ret)
-    {
         p_nodeType = msra::strfun::utf8(nodeType);
-    }
     return ret;
 }
 

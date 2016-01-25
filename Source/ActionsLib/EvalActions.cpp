@@ -14,20 +14,12 @@
 #include "ComputationNode.h"
 #include "DataReader.h"
 #include "DataWriter.h"
-#include "SimpleNetworkBuilder.h"
-#include "NDLNetworkBuilder.h"
-#include "SynchronousExecutionEngine.h"
-#include "ModelEditLanguage.h"
-#include "SGD.h"
 #include "Config.h"
-#include "MultiNetworksSGD.h"
 #include "SimpleEvaluator.h"
 #include "SimpleOutputWriter.h"
-#include "MultiNetworksEvaluator.h"
 #include "BestGpu.h"
 #include "ScriptableObjects.h"
 #include "BrainScriptEvaluator.h"
-#include "BrainScriptParser.h"
 
 #include <string>
 #include <chrono>
@@ -82,7 +74,7 @@ static void DoEvalBase(const ConfigParameters& config, IDataReader<ElemType>& re
 template <typename ElemType>
 void DoEval(const ConfigParameters& config)
 {
-    //test
+    // test
     ConfigParameters readerConfig(config(L"reader"));
     readerConfig.Insert("traceLevel", config(L"traceLevel", "0"));
 
@@ -101,7 +93,7 @@ template void DoEval<float>(const ConfigParameters& config);
 template <typename ElemType>
 void DoCrossValidate(const ConfigParameters& config)
 {
-    //test
+    // test
     ConfigParameters readerConfig(config(L"reader"));
     readerConfig.Insert("traceLevel", config(L"traceLevel", "0"));
 
@@ -164,7 +156,7 @@ void DoCrossValidate(const ConfigParameters& config)
         ::Sleep(1000 * sleepSecondsBetweenRuns);
     }
 
-    //find best model
+    // find best model
     if (cvErrorResults.size() == 0)
     {
         LogicError("No model is evaluated.");
@@ -212,7 +204,7 @@ void DoWriteOutput(const ConfigParameters& config)
 {
     ConfigParameters readerConfig(config(L"reader"));
     readerConfig.Insert("traceLevel", config(L"traceLevel", "0"));
-    readerConfig.Insert("randomize", "None"); //we don't want randomization when output results
+    readerConfig.Insert("randomize", "None"); // we don't want randomization when output results
 
     DataReader<ElemType> testDataReader(readerConfig);
 
@@ -250,7 +242,7 @@ void DoWriteOutput(const ConfigParameters& config)
         wstring outputPath = config(L"outputPath"); // crashes if no default given?
         writer.WriteOutput(testDataReader, mbSize[0], outputPath, outputNodeNamesVector, epochSize);
     }
-    //writer.WriteOutput(testDataReader, mbSize[0], testDataWriter, outputNodeNamesVector, epochSize);
+    // writer.WriteOutput(testDataReader, mbSize[0], testDataWriter, outputNodeNamesVector, epochSize);
 }
 
 template void DoWriteOutput<float>(const ConfigParameters& config);

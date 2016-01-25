@@ -43,9 +43,9 @@ void UCIParser<NumType, LabelType>::SetStateRange(int value1, int value2, ParseS
 template <typename NumType, typename LabelType>
 void UCIParser<NumType, LabelType>::SetupStateTables()
 {
-    //=========================
+    // =========================
     // STATE = WHITESPACE
-    //=========================
+    // =========================
 
     SetStateRange(0, 255, Whitespace, Label);
     SetStateRange('0', '9', Whitespace, WholeNumber);
@@ -57,9 +57,9 @@ void UCIParser<NumType, LabelType>::SetupStateTables()
     SetState('\r', Whitespace, Whitespace);
     SetState('\n', Whitespace, EndOfLine);
 
-    //=========================
+    // =========================
     // STATE = NEGATIVE_SIGN
-    //=========================
+    // =========================
 
     SetStateRange(0, 255, Sign, Label);
     SetStateRange('0', '9', Sign, WholeNumber);
@@ -69,9 +69,9 @@ void UCIParser<NumType, LabelType>::SetupStateTables()
     SetState('\r', Sign, Whitespace);
     SetState('\n', Sign, EndOfLine);
 
-    //=========================
+    // =========================
     // STATE = NUMBER
-    //=========================
+    // =========================
 
     SetStateRange(0, 255, WholeNumber, Label);
     SetStateRange('0', '9', WholeNumber, WholeNumber);
@@ -84,9 +84,9 @@ void UCIParser<NumType, LabelType>::SetupStateTables()
     SetState('\r', WholeNumber, Whitespace);
     SetState('\n', WholeNumber, EndOfLine);
 
-    //=========================
+    // =========================
     // STATE = PERIOD
-    //=========================
+    // =========================
 
     SetStateRange(0, 255, Period, Label);
     SetStateRange('0', '9', Period, Remainder);
@@ -96,9 +96,9 @@ void UCIParser<NumType, LabelType>::SetupStateTables()
     SetState('\r', Period, Whitespace);
     SetState('\n', Period, EndOfLine);
 
-    //=========================
+    // =========================
     // STATE = REMAINDER
-    //=========================
+    // =========================
 
     SetStateRange(0, 255, Remainder, Label);
     SetStateRange('0', '9', Remainder, Remainder);
@@ -110,9 +110,9 @@ void UCIParser<NumType, LabelType>::SetupStateTables()
     SetState('\r', Remainder, Whitespace);
     SetState('\n', Remainder, EndOfLine);
 
-    //=========================
+    // =========================
     // STATE = THE_LETTER_E
-    //=========================
+    // =========================
 
     SetStateRange(0, 255, TheLetterE, Label);
     SetStateRange('0', '9', TheLetterE, Exponent);
@@ -124,9 +124,9 @@ void UCIParser<NumType, LabelType>::SetupStateTables()
     SetState('\r', TheLetterE, Whitespace);
     SetState('\n', TheLetterE, EndOfLine);
 
-    //=========================
+    // =========================
     // STATE = EXPONENT_NEGATIVE_SIGN
-    //=========================
+    // =========================
 
     SetStateRange(0, 255, ExponentSign, Label);
     SetStateRange('0', '9', ExponentSign, Exponent);
@@ -136,9 +136,9 @@ void UCIParser<NumType, LabelType>::SetupStateTables()
     SetState('\r', ExponentSign, Whitespace);
     SetState('\n', ExponentSign, EndOfLine);
 
-    //=========================
+    // =========================
     // STATE = EXPONENT
-    //=========================
+    // =========================
 
     SetStateRange(0, 255, Exponent, Label);
     SetStateRange('0', '9', Exponent, Exponent);
@@ -148,9 +148,9 @@ void UCIParser<NumType, LabelType>::SetupStateTables()
     SetState('\r', Exponent, Whitespace);
     SetState('\n', Exponent, EndOfLine);
 
-    //=========================
+    // =========================
     // STATE = END_OF_LINE
-    //=========================
+    // =========================
     SetStateRange(0, 255, EndOfLine, Label);
     SetStateRange('0', '9', EndOfLine, WholeNumber);
     SetState('-', EndOfLine, Sign);
@@ -160,9 +160,9 @@ void UCIParser<NumType, LabelType>::SetupStateTables()
     SetState('\t', EndOfLine, Whitespace);
     SetState('\r', EndOfLine, Whitespace);
 
-    //=========================
+    // =========================
     // STATE = LABEL
-    //=========================
+    // =========================
     SetStateRange(0, 255, Label, Label);
     SetState('\n', Label, EndOfLine);
     // whitespace
@@ -170,15 +170,15 @@ void UCIParser<NumType, LabelType>::SetupStateTables()
     SetState('\t', Label, Whitespace);
     SetState('\r', Label, Whitespace);
 
-    //=========================
+    // =========================
     // STATE = LINE_COUNT_EOL
-    //=========================
+    // =========================
     SetStateRange(0, 255, LineCountEOL, LineCountOther);
     SetState('\n', LineCountEOL, LineCountEOL);
 
-    //=========================
+    // =========================
     // STATE = LINE_COUNT_OTHER
-    //=========================
+    // =========================
     SetStateRange(0, 255, LineCountOther, LineCountOther);
     SetState('\n', LineCountOther, LineCountEOL);
 }
@@ -591,7 +591,7 @@ long UCIParser<NumType, LabelType>::Parse(size_t recordsRequested, std::vector<N
             case Whitespace:
                 m_spaceDelimitedMax = m_byteCounter;
                 // hit whitespace and nobody processed anything, so add as label
-                //if (m_elementsConvertedThisLine == elementsProcessed)
+                // if (m_elementsConvertedThisLine == elementsProcessed)
                 //    DoneWithLabel();
                 break;
             case EndOfLine:
@@ -599,14 +599,14 @@ long UCIParser<NumType, LabelType>::Parse(size_t recordsRequested, std::vector<N
                 {
                     m_spaceDelimitedMax = m_byteCounter;
                     // hit whitespace and nobody processed anything, so add as label
-                    //if (m_elementsConvertedThisLine == elementsProcessed)
+                    // if (m_elementsConvertedThisLine == elementsProcessed)
                     //    DoneWithLabel();
                 }
             // process the label at the end of a line
-            //if (m_labelMode == LabelLast && m_labels != NULL)
-            //{
+            // if (m_labelMode == LabelLast && m_labels != NULL)
+            // {
             //    StoreLastLabel();
-            //}
+            // }
             // intentional fall-through
             case LineCountEOL:
                 recordCount++; // done with another record
@@ -742,7 +742,7 @@ int wmain(int argc, wchar_t *argv[])
     std::vector<int> labels;
     labels.reserve(60000);
     parser.ParseInit(L"c:\\speech\\mnist\\mnist_train.txt", LabelFirst);
-    //parser.ParseInit("c:\\speech\\parseTest.txt", LabelNone);
+    // parser.ParseInit("c:\\speech\\parseTest.txt", LabelNone);
     int records = 0;
     do
     {

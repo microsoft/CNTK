@@ -10,6 +10,7 @@
 
 #include "Basics.h"
 #include "DebugUtil.h"
+#include <algorithm>
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -42,7 +43,7 @@ void DebugUtil::PrintCallStack()
     symbolInfo = (SYMBOL_INFO*) calloc(sizeof(SYMBOL_INFO) + 256 * sizeof(char), 1);
     symbolInfo->MaxNameLen = 255;
     symbolInfo->SizeOfStruct = sizeof(SYMBOL_INFO);
-    frames = min(frames, MAX_CALL_STACK_DEPTH);
+    frames = std::min(frames, MAX_CALL_STACK_DEPTH);
 
     std::cerr << std::endl
               << "[CALL STACK]" << std::endl;
@@ -136,6 +137,4 @@ void DebugUtil::PrintCallStack()
     free(symbolList);
 #endif
 }
-}
-}
-}
+} } }

@@ -9,6 +9,7 @@
 #include "ScriptableObjects.h"
 #include "Matrix.h"
 #include "File.h" // for LoadMatrixFromTextFile()
+
 #include <unordered_set>
 #include <map>
 #include <string>
@@ -18,9 +19,6 @@
 #include <memory>
 #include <algorithm>
 #include <assert.h>
-#include <atomic>
-#include <sstream>
-#include <iostream>
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -46,24 +44,14 @@ public:
     {
         m_parameterUpdateRequired = true;
         this->m_valueSharable = false;
-        SetDims(TensorShape(), 0);
     }
     LearnableParameter(DEVICEID_TYPE deviceId, const wstring& name, const TensorShape& shape)
         : Base(deviceId, name)
     {
         m_parameterUpdateRequired = true;
         CreateMatrixIfNull(m_value);
-        this->m_valueSharable = false;
-        // for now we split off the trailing dimension into the matrix column dimension
-        // TODO: This is for compat, but is is inconsistent. Decide what a sample layout means for a node without MBLayout w.r.t. non-tensor ops.
-        auto dims = shape.GetDims();
-        size_t cols = 1;
-        if (dims.size() > 1)
-        {
-            cols = dims.back();
-            dims.resize(dims.size() - 1);
-        }
-        SetDims(TensorShape(dims), cols);
+        m_valueSharable = false;
+        SetDims(shape, false);
         UpdateFunctionValuesSize(); // this allocates the matrix
         Value().SetValue(0);
     }
@@ -104,7 +92,7 @@ public:
     {
         Base::Save(fstream);
         fstream << m_parameterUpdateRequired;
-        fstream << (size_t) 0 /*#rows in a legacy file format*/ << GetNumCols();
+        fstream << (size_t) 0 /*#rows in a legacy file format*/ << (size_t) 0 /*#cols in a legacy file format*/;
         m_sampleLayout.Save(fstream);
         fstream << Value();
     }
@@ -119,11 +107,16 @@ public:
 
         TensorShape sampleLayout;
         if (rows != 0) // legacy file format
-            sampleLayout = TensorShape(rows);
+            sampleLayout = TensorShape(rows, cols);
         else
+        {
             sampleLayout.Load(fstream, /*acceptLegacyFormat=*/true);
+            if (cols > 1) // in some legacy format, last tensor dimension was split off as an explicit column dimension
+                sampleLayout.AppendInPlace(sampleLayout.GetRank(), cols);
+        }
         LoadValue(fstream);
-        SetDims(sampleLayout, cols); // note: call this after LoadValue() since LoadValue() overwrites m_sampleLayout
+        SetDims(sampleLayout, false); // note: call this after LoadValue() since LoadValue() overwrites m_sampleLayout
+        VerifyDataSize(Value());      // sanity check
     }
 
     // initialize with random numbers
@@ -132,25 +125,30 @@ public:
                     const ElemType initValueScale,
                     bool initOnCPUOnly) // if true then always init on CPU, making initialization consistent across both (for testing)
     {
-        size_t inputSize = GetNumCols();
-        //fprintf(stderr, "%d x %d: %d  %ls\n", (int)GetNumRows(), (int)GetNumCols(), (int)randomSeed, NodeName().c_str());
+        // fprintf(stderr, "%d x %d: %d  %ls\n", (int)GetNumRows(), (int)GetNumCols(), (int)randomSeed, NodeName().c_str());
 
         // the random seed offset is set via the "randomSeedOffset" parameter in config
         if (initOnCPUOnly)
-            m_value->TransferToDeviceIfNotThereAndNotAutoPlace(CPUDEVICE, true);
+            Value().TransferToDeviceIfNotThereAndNotAutoPlace(CPUDEVICE, true);
+#if 1 // this more complex version is needed to repro test cases generated with an older version
+        auto& value = GetSampleLayout().GetRank() > 2 ? Value() : ValueAsMatrix();
+#else
+        auto& value = Value();
+#endif
         if (uniformInit)
         {
-            // TODO: move these crazy extra factors out from here and into NDL, and make them visible in BS
+            // TODO: move these hidden extra factors out from here and into NDL, and make them visible in BS
             ElemType randRange = 0.05f * initValueScale;
-            Value().SetUniformRandomValue(-randRange, randRange, randomSeed);
+            value.SetUniformRandomValue(-randRange, randRange, randomSeed);
         }
         else
         {
+            size_t inputSize = GetAsMatrixNumCols();
             ElemType randInitstd = 0.2f * initValueScale / sqrt(ElemType(inputSize));
-            Value().SetGaussianRandomValue(0, randInitstd, randomSeed);
+            value.SetGaussianRandomValue(0, randInitstd, randomSeed);
         }
         if (initOnCPUOnly)
-            m_value->TransferToDeviceIfNotThereAndNotAutoPlace(m_deviceId, true);
+            Value().TransferToDeviceIfNotThereAndNotAutoPlace(m_deviceId, true);
     }
 
     // initialize by reading a matrix from a text file
@@ -162,6 +160,7 @@ public:
         Value().SetValue(numRows, numCols, m_deviceId, array.data(), matrixFlagNormal);
     }
 
+    // TODO: share code with InitFromFile()
     void ReviseFromFile(const std::wstring& reviseFromFilePath)
     {
         size_t numRows = 0;
@@ -202,7 +201,7 @@ public:
         Base::DumpNodeInfo(printValues, fstream);
 
         char str[4096];
-        sprintf(str, "[%lu,%lu]  ", GetNumRows(), GetNumCols());
+        sprintf(str, "[%lu,%lu]  ", GetAsMatrixNumRows(), GetAsMatrixNumCols());
         fstream << string(str);
         sprintf(str, "NeedGradient=%s", m_parameterUpdateRequired ? "true" : "false"); // TODO: update NDL to accept a better matching name as well
         fstream << string(str);
@@ -210,46 +209,6 @@ public:
         PrintNodeValuesToFile(printValues, fstream);
     }
 };
-
-#if 0
-    // -----------------------------------------------------------------------
-    // SparseLearnableParameter (/*no input*/)
-    // -----------------------------------------------------------------------
-
-    // WARNING: Don't use SparseLearnableParameter yet since the current version assumes the parameter is dense instead of sparse
-    // WARNING: After the right implementation is put here we need to turn it on in NetworkDescriptionLangauge.cpp
-    template<class ElemType>
-    class SparseLearnableParameter : public LearnableParameter<ElemType>
-    {
-        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
-        static const std::wstring TypeName() { return L"SparseLearnableParameter"; }
-    public:
-        DeclareConstructorFromConfigWithNumInputs(SparseLearnableParameter);
-        SparseLearnableParameter(DEVICEID_TYPE deviceId, const wstring & name) :
-            LearnableParameter<ElemType>(deviceId, name)
-        {
-            CreateMatrixIfNull(m_gradient);
-            m_gradient->SwitchToMatrixType(MatrixType::SPARSE, matrixFormatSparseBlockCol, false);
-        }
-        SparseLearnableParameter(DEVICEID_TYPE deviceId, const wstring & name, size_t rows, size_t cols, size_t size) :
-            LearnableParameter<ElemType>(deviceId, name, rows, cols)
-        {
-            CreateMatrixIfNull(m_gradient);
-            m_gradient->SwitchToMatrixType(MatrixType::SPARSE, matrixFormatSparseBlockCol, false);
-            m_gradient->Resize(rows, cols, size);
-        }
-
-        virtual void Load(File& fstream, size_t modelVersion) override
-        {
-            LearnableParameter<ElemType>::Load(fstream, modelVersion);
-            CreateMatrixIfNull(m_gradient);
-            m_gradient->Resize(GetNumRows(), GetNumCols());
-        }
-    };
-
-    template class SparseLearnableParameter<float>; 
-    template class SparseLearnableParameter<double>;
-#endif
 
 // -----------------------------------------------------------------------
 // InputValueBase (/*no input*/)
@@ -271,8 +230,8 @@ class InputValueBase : public ComputationNode<ElemType>, public NumInputs<0>
         if (isSparse)
             ConvertToSparseMatrix();
 
-        SetDims(sampleLayout, 0);
-        UpdateFunctionValuesSize(); // we must allocate the matrix so that the readers get objects with valid row dimensions (some readers expect that)
+        SetDims(sampleLayout, HasMBLayout()); // also called when reloading a file. Then we have an MBLayout, otherwise not yet
+        UpdateFunctionValuesSize();           // we must allocate the matrix so that the readers get objects with valid row dimensions (some readers expect that)
         m_parameterUpdateRequired = false;
         this->m_valueSharable = false;
     }
@@ -306,9 +265,9 @@ public:
     virtual void Save(File& fstream) const override
     {
         Base::Save(fstream);
-        size_t rows = GetNumRows(); // using explicitly typed variables to be 100% symmetrical to Load()
-        size_t colsDummy = 0;       // This should not be saved. InputValues always are minibatches.
-        fstream << rows << colsDummy;
+        size_t rowsDummy = 0; // compat with old file format
+        size_t colsDummy = 0;
+        fstream << rowsDummy << colsDummy;
         m_sampleLayout.Save(fstream);
     }
 
@@ -321,7 +280,7 @@ public:
         TensorShape sampleLayout;
         sampleLayout.Load(fstream, /*acceptLegacyFormat=*/true);
         // some older files may have inconsistent tensor information
-        if (rows != sampleLayout.GetNumElements())
+        if (rows != 0 /*old file*/ && rows != sampleLayout.GetNumElements() /*even older file*/)
         {
             fprintf(stderr, "WARNING: %ls InputValue has inconsistent serialized sample layout %s vs. number of rows %d. Resetting sample layout to vector.\n",
                     NodeName().c_str(), string(sampleLayout).c_str(), (int) rows);
@@ -333,8 +292,10 @@ public:
     // InputValue must not resize its inputs because that might destroy it. It should already have the correct size.
     virtual void UpdateFunctionMBSize() override
     {
-        if (!m_pMBLayout) // if no layout, this node contains parameters independent of MB size, don't resize
-            VerifyDims(GetNumRows(), m_pMBLayout->GetNumCols());
+        // don't touch our values
+        // But take the opportunity for an additional check. Why not.
+        if (Value().GetNumRows() != GetSampleLayout().GetNumElements())
+            LogicError("UpdateFunctionMBSize: m_value not matching m_sampleLayout");
     }
 
     virtual void /*ComputationNode::*/ ForwardProp(const FrameRange&) override
@@ -342,15 +303,13 @@ public:
     }
     virtual void /*ComputationNode::*/ BackpropTo(const size_t /*inputIndex*/, const FrameRange&)
     {
+        LogicError("InputValueBase::BackpropTo() should never be called.");
     }
 
     virtual void DumpNodeInfo(const bool printValues, File& fstream) const override
     {
         Base::DumpNodeInfo(printValues, fstream);
-
-        char str[4096];
-        sprintf(str, "[%lu,%lu]", GetNumRows(), GetNumCols());
-        fstream << string(str); // TODO: string(.) necessary?
+        fstream << "[" << string(GetSampleLayout()) << "]";
     }
 
 private:
@@ -468,14 +427,14 @@ public:
             Matrix<ElemType> sliceInput1Value = Input(1)->MaskedValueFor(t);
             Matrix<ElemType> sliceOutputGrad = MaskedGradientFor(t);
 
-            BackpropToLeft(sliceInput1Value, Input(0)->Gradient(), sliceOutputGrad);
+            BackpropToLeft(sliceInput1Value, Input(0)->GradientAsMatrix(), sliceOutputGrad);
         }
         else if (inputIndex == 1) // right derivative (input)
         {
             Matrix<ElemType> sliceInput1Grad = Input(1)->GradientFor(t);
             Matrix<ElemType> sliceOutputGrad = GradientFor(t);
 
-            BackpropToRight(Input(0)->Value(), sliceInput1Grad, sliceOutputGrad);
+            BackpropToRight(Input(0)->ValueAsMatrix(), sliceInput1Grad, sliceOutputGrad);
         }
     }
 
@@ -513,16 +472,16 @@ public:
     {
         // input0 is the weight (each column is an embedding of one word), input 1 contains m_bnrLooked words in each column (sample)
         Matrix<ElemType> functionValues = ValueFor(t);
-        const Matrix<ElemType>& input0 = Input(0)->Value();
+        const Matrix<ElemType>& input0 = Input(0)->ValueAsMatrix();
         Matrix<ElemType> input1 = Input(1)->ValueFor(t);
 
         size_t rows1 = input1.GetNumRows(), cols1 = input1.GetNumCols();
         size_t cols0 = input0.GetNumCols();
 
-        if (rows1 % cols0 != 0)
-            LogicError("LookupTableNode: rows of input 1 and cols of input 0 are not modular. e.g., rows1 = 0.9 cols and this is not allowed. Check feature reader and network definition. This usually happens when the feature dimension is not specified as that in the network definition of look-up-table dimension size.");
-
         int wordsInEachSample = rows1 / cols0;
+
+        if (cols0 * wordsInEachSample != rows1)
+            LogicError("LookupTableNode: rows of input 1 is not a multiple of cols of input 0. This usually happens when the feature dimension is not specified as that in the network definition of look-up-table dimension size.");
 
         auto input1Reshaped = input1.Reshaped(rows1 / wordsInEachSample, cols1 * wordsInEachSample);
 
@@ -535,13 +494,15 @@ public:
         Base::Validate(isFinalValidationPass);
         InferMBLayoutFromInputsForStandardCase();
 
-        if (isFinalValidationPass && Input(1)->GetNumRows() % Input(0)->GetNumCols() != 0)
+        if (isFinalValidationPass && !HasMBLayout())
+            InvalidArgument("%ls %ls operation can only operate on minibatches.", NodeName().c_str(), OperationName().c_str());
+        if (isFinalValidationPass && Input(1)->GetSampleMatrixNumRows() % Input(0)->GetAsMatrixNumCols() != 0)
             InvalidArgument("Mismatched dimension. Rows in input1 must be multiples of cols in input0.");
 
-        int wordsInEachSample = Input(1)->GetNumRows() / Input(0)->GetNumCols();
+        size_t wordsInEachSample = Input(1)->GetSampleMatrixNumRows() / Input(0)->GetAsMatrixNumCols() /*note: can never be 0*/;
 
         // TODO: Should this add a tensor dimension?
-        SetDims(TensorShape(Input(0)->GetNumRows() * wordsInEachSample), Input(1)->GetNumCols());
+        SetDims(TensorShape(Input(0)->GetAsMatrixNumRows() * wordsInEachSample), true);
     }
 
     bool UnitTest()
@@ -569,7 +530,7 @@ public:
 
             ForwardProp(FrameRange(m_pMBLayout));
 
-            /// check with expected values
+            // check with expected values
             Value().TransferFromDeviceToDevice(m_deviceId, CPUDEVICE, true);
             if (!ISCLOSE(Value()(0, 0), 1.0, EPSILON) ||
                 !ISCLOSE(Value()(0, 1), 2.0, EPSILON) ||
@@ -582,14 +543,14 @@ public:
             Gradient().SetValue(1.0);
             for (size_t i = 0; i < 2; i++)
             {
-                Input(i)->Gradient().Resize(Input(i)->GetNumRows(), Input(i)->GetNumCols());
+                Input(i)->Gradient().Resize(Input(i)->Value().GetNumRows(), Input(i)->Value().GetNumCols());
                 Input(i)->Gradient().SetValue(0);
             }
             for (size_t i = 0; i < 2; i++)
                 BackpropTo(i, FrameRange(m_pMBLayout));
 
             // check with expected values
-            if (!ISCLOSE(Input(1)->Gradient()(0, 0), 2, EPSILON)    /// bi
+            if (!ISCLOSE(Input(1)->Gradient()(0, 0), 2, EPSILON)    // bi
                 || !ISCLOSE(Input(1)->Gradient()(0, 1), 2, EPSILON) // Wxi
                 || !ISCLOSE(Input(1)->Gradient()(1, 0), 2, EPSILON) // Whi
                 || !ISCLOSE(Input(1)->Gradient()(2, 1), 2, EPSILON) // Wci

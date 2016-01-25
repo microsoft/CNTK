@@ -138,7 +138,7 @@ public:
     std::vector<int> senoneid2transPindex; // or -1 if ambiguous
     std::vector<int> senoneid2stateindex;  // 0..2, or -1 if ambiguous
 
-    //zhaorui load from file, add a null construct function
+    // zhaorui load from file, add a null construct function
     simplesenonehmm()
     {
     }

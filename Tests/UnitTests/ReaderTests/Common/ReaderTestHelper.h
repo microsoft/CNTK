@@ -266,6 +266,4 @@ struct ReaderFixture
     }
 };
 }
-}
-}
-}
+} } }

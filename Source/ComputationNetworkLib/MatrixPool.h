@@ -26,7 +26,7 @@ class MatrixPool
     vector<shared_ptr<Matrix<ElemType>>>& GetReleasedMatrices();
 
 public:
-    //release here means the matrix can be put back and shared by others
+    // release here means the matrix can be put back and shared by others
     template <class ElemType>
     void Release(shared_ptr<Matrix<ElemType>> freeMatrix)
     {

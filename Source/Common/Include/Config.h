@@ -112,13 +112,10 @@ public:
     {
     }
 
-// it auto-casts to the common types
-// Note: This is meant to read out a parameter once to assign it, instead of over again.
+    // it auto-casts to the common types
+    // Note: This is meant to read out a parameter once to assign it, instead of over again.
 #if 0
-    operator std::string() const
-    {
-        return *this;
-    } // TODO: does not seem to work
+    operator std::string() const { return *this; } // TODO: does not seem to work
 #endif
 
     operator const char*() const
@@ -282,7 +279,7 @@ public:
         // TODO: do we want to allow accept non-empty strings and non-0 numerical values as 'true'?
     }
 
-    //ReplaceAppend - replace an existing value with another value, or append if it appears to be a "set" type
+    // ReplaceAppend - replace an existing value with another value, or append if it appears to be a "set" type
     ConfigValue& ReplaceAppend(const std::string& configValue)
     {
         static const std::string openBraces = "[";
@@ -714,7 +711,7 @@ public:
         Parse(configString);
     }
 
-    //private:
+    // private:
     // copy and move constructors
     ConfigParameters(const ConfigParameters& configValue)
         : ConfigParser(configValue)

@@ -15,7 +15,8 @@
 #include <stdint.h>
 #include <locale>
 #ifdef _WIN32
-#include <Windows.h>
+#define NOMINMAX
+#include "Windows.h"
 #endif
 #ifdef __unix__
 #include <unistd.h>
@@ -80,8 +81,8 @@ void File::Init(const wchar_t* filename, int fileOptions)
         else
             options += L"t";
         // I attempted to use the translated characterset modes, but encountered strange errors
-        //options += L"t, ccs=";
-        //options += (fileOptions & fileOptionsUnicode)?L"UNICODE":L"UTF-8";
+        // options += L"t, ccs=";
+        // options += (fileOptions & fileOptionsUnicode)?L"UNICODE":L"UTF-8";
     }
     // add sequential flag to allocate big read buffer
     if (fileOptions & fileOptionsSequential)
@@ -675,7 +676,7 @@ bool File::TryGetMarker(FileMarker marker, const std::wstring& section)
     }
     catch (...)
     {
-        //eat
+        // eat
     }
     SetPosition(pos);
     return false;

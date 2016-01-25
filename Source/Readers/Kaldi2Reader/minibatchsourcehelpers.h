@@ -236,7 +236,7 @@ public:
     }
 
     // this returns the map directly (read-only) and will lazily initialize it for a given seed
-    const std::vector<INDEXTYPE>& operator()(size_t seed) //throw()
+    const std::vector<INDEXTYPE>& operator()(size_t seed) // throw()
     {
         // if wrong seed then lazily recache the sequence
         if (seed != currentseed)
@@ -306,6 +306,6 @@ public:
 };
 
 //typedef unsigned short CLASSIDTYPE; // type to store state ids; don't use size_t --saves HUGE amounts of RAM
-typedef unsigned int CLASSIDTYPE; //mseltzer - change to unsigned int for untied context-dependent phones
+typedef unsigned int CLASSIDTYPE; // mseltzer - change to unsigned int for untied context-dependent phones
 };
 };
