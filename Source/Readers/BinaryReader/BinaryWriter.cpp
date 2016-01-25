@@ -439,4 +439,4 @@ void BinaryWriter<ElemType>::SaveMapping(std::wstring saveId, const std::map<typ
 // instantiate all the combinations we expect to be used
 template class BinaryWriter<double>;
 template class BinaryWriter<float>;
-} } }
+} } }

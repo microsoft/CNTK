@@ -304,4 +304,4 @@ void TrimQuotes(std::string& str)
     if (str.front() == '"' && str.back() == '"')
         str = str.substr(1, str.size() - 2);
 }
-} } }
+} } }
