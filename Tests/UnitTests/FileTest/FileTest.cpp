@@ -236,4 +236,4 @@ File& operator>>(File& stream, FileTest& test)
     stream.GetMarker(fileMarkerEndSection, string("endFileTest"));
     return stream;
 }
-} } }
+} } }

@@ -58,4 +58,4 @@ public:
     virtual void Destroy();
     virtual void ResetState();
 };
-} } }
+} } }
