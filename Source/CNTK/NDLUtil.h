@@ -173,4 +173,4 @@ public:
 
 template class NDLUtil<float>;
 template class NDLUtil<double>;
-} } }
+} } }

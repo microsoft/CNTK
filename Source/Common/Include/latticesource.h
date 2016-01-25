@@ -76,4 +76,4 @@ public:
         denlattices.setverbosity(veb);
     }
 };
-} }
+} }
