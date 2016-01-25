@@ -1403,4 +1403,4 @@ bool SectionStats::AccumulateData(ElemType* dataSource, size_t numRecords, size_
     // done with data
     return false;
 }
-} } }
+} } }
