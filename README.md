@@ -27,4 +27,4 @@ Amit Agarwal, Eldar Akchurin, Chris Basoglu, Guoguo Chen, Scott Cyphers, Jasha D
 
 ## Disclaimer 
 
-CNTK is in active use at Microsoft and constantly evolving. There will be bugs in places.
+CNTK is in active use at Microsoft and constantly evolving. There will be bugs.
