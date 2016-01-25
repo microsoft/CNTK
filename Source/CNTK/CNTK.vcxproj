@@ -173,7 +173,7 @@
     <ClInclude Include="..\ComputationNetworkLib\TrainingNodes.h" />
     <ClInclude Include="..\Math\CPUMatrix.h" />
     <ClInclude Include="..\Math\Matrix.h" />
-    <ClInclude Include="..\ComputationNetworkLib\CompositeComputationNodes.h" />
+    <ClInclude Include="..\ComputationNetworkLib\PreComputeNodes.h" />
     <ClInclude Include="..\ComputationNetworkLib\MatrixPool.h" />
     <ClInclude Include="..\SGDLib\DataReaderHelpers.h" />
     <ClInclude Include="..\SGDLib\SGD.h" />

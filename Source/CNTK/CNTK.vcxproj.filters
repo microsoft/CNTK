@@ -157,7 +157,7 @@
     <ClInclude Include="..\ComputationNetworkLib\MatrixPool.h">
       <Filter>from ComputationNetworkLib\Network</Filter>
     </ClInclude>
-    <ClInclude Include="..\ComputationNetworkLib\CompositeComputationNodes.h">
+    <ClInclude Include="..\ComputationNetworkLib\PreComputeNodes.h">
       <Filter>from ComputationNetworkLib\Nodes</Filter>
     </ClInclude>
     <ClInclude Include="..\ComputationNetworkLib\ComputationNode.h">
