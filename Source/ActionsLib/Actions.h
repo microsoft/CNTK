@@ -43,16 +43,6 @@ void DoWriteWordAndClassInfo(const ConfigParameters& config);
 template <typename ElemType>
 void DoTopologyPlot(const ConfigParameters& config);
 
-// deprecated (EsotericActions.cp)
+// special purpose (EsotericActions.cp)
 template <typename ElemType>
 void DoConvertFromDbn(const ConfigParameters& config);
-template <typename ElemType>
-void DoEvalUnroll(const ConfigParameters& config);
-template <typename ElemType>
-void DoEncoderDecoder(const ConfigParameters& config);
-template <typename ElemType>
-void DoBidirectionEncoderDecoder(const ConfigParameters& config);
-template <typename ElemType>
-void DoEvalEncodingBeamSearchDecoding(const ConfigParameters& config);
-template <typename ElemType>
-void DoBeamSearchDecoding(const ConfigParameters& config);

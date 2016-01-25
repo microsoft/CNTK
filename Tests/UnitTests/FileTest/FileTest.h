@@ -39,6 +39,4 @@ public:
 // operator overloading
 File& operator>>(File& stream, FileTest& test);
 File& operator<<(File& stream, FileTest& test);
-}
-}
-}
+} } }

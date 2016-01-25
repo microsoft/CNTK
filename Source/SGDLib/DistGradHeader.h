@@ -25,7 +25,7 @@ public:
         delete[]((char*) header);
     }
 
-    //aggregate header information
+    // aggregate header information
     void Aggregate(DistGradHeader* other, bool add = false)
     {
         if (other->numEvalNode != numEvalNode)

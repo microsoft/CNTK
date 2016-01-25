@@ -581,7 +581,7 @@ template <class ElemType>
 typename CuDnnConvolutionEngineFactory<ElemType>::Tensor4DPtr CuDnnConvolutionEngineFactory<ElemType>::CreateTensor(size_t w, size_t h, size_t c, size_t n)
 {
     // REVIEW alexeyk: assert fires in GCC but not in VC++.
-    //static_assert(false, "cuDNN engine currently supports only single and double precision tensors.");
+    // static_assert(false, "cuDNN engine currently supports only single and double precision tensors.");
 }
 template <>
 typename CuDnnConvolutionEngineFactory<float>::Tensor4DPtr CuDnnConvolutionEngineFactory<float>::CreateTensor(size_t w, size_t h, size_t c, size_t n)
@@ -598,7 +598,7 @@ template <class ElemType>
 typename CuDnnConvolutionEngineFactory<ElemType>::FilterPtr CuDnnConvolutionEngineFactory<ElemType>::CreateFilter(size_t w, size_t h, size_t c, size_t k)
 {
     // REVIEW alexeyk: assert fires in GCC but not in VC++.
-    //static_assert(false, "cuDNN engine currently supports only single and double precision filters.");
+    // static_assert(false, "cuDNN engine currently supports only single and double precision filters.");
 }
 template <>
 typename CuDnnConvolutionEngineFactory<float>::FilterPtr CuDnnConvolutionEngineFactory<float>::CreateFilter(size_t w, size_t h, size_t c, size_t k)

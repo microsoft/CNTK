@@ -143,7 +143,7 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
         {
             cn->Read<ElemType>(params[1]);
             for (auto node : cn->FeatureNodes())
-                node->SetDims(TensorShape(node->GetNumRows()), 0); // pre-tensorlib InputValues had incorrect tensor dimensions
+                node->SetDims(TensorShape(node->GetSampleMatrixNumRows()), node->HasMBLayout()); // pre-tensorlib InputValues had incorrect tensor dimensions
             cn->CompileNetwork();
         }
         else

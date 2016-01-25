@@ -163,7 +163,7 @@ private:
     std::string m_name;            // value on the left of the equals
     ConfigValue m_value;           // value on the right of the equals (CN node name, or value)
     NDLScript<ElemType>* m_parent; // parent script
-    NDLType m_type;                //type of node
+    NDLType m_type;                // type of node
     ConfigArray m_paramString;     // parameter of a function/array
     ConfigArray m_paramMacro;      // parameter of a macro (the variables used in the macro definition)
     vector<NDLNode*> m_parameters; // parameters as nodes/array elements
@@ -202,7 +202,7 @@ private:
     // copy constructor, creates a new disconnected copy of this node for macro expansion
     NDLNode(const NDLNode& copyMe);
 
-    NDLNode& operator=(NDLNode& /*copyMe*/) //this is just a place holder implementation which is not functioning but prevent callers to use it.
+    NDLNode& operator=(NDLNode& /*copyMe*/) // this is just a place holder implementation which is not functioning but prevent callers to use it.
     {
         LogicError("'NDLNode& operator=(NDLNode& copyMe)' should never be called.");
     }
@@ -403,7 +403,7 @@ public:
                     m_script->AddSymbol(paramName, nodeParam);
                     continue;
                 }
-                //else assign the value below
+                // else assign the value below
             }
 
             // assign the parameter symbols in the script we will call with the values passed to the call
@@ -445,7 +445,7 @@ private:
     std::map<std::string, NDLNode<ElemType>*, nocase_compare> m_symbols; // symbol table
     NDLNode<ElemType>* m_macroNode;                                      // set when interpretting a macro definition
     bool m_noDefinitions;                                                // no definitions can be made in this script, interpret all macro/function names as calls
-    static NDLScript<ElemType> s_global;                                 //("global"); // global script for storing macros and global nodes
+    static NDLScript<ElemType> s_global;                                 // ("global"); // global script for storing macros and global nodes
     std::vector<NDLNode<ElemType>*> m_children;                          // child nodes. Note that m_script nodes may not be children of this object, they include macro nodes
     ComputationNetworkPtr m_cn;                                          // computation network to use for backup symbol lookup. Used for MEL where NDL and network nodes are mixed
     bool m_definingMacro;                                                // currently defining a macro, flag to determine if we are defining or interpretting a macro call
@@ -615,7 +615,7 @@ public:
     // returns - node this symbol references
     NDLNode<ElemType>* FindSymbol(const std::string& symbol, bool searchForDotNames = true)
     {
-        auto found = m_symbols.find(symbol); //search symbol directly first
+        auto found = m_symbols.find(symbol); // search symbol directly first
         if (found != m_symbols.end())
             return found->second;
 
@@ -1075,7 +1075,7 @@ public:
             AddSymbol(key, ndlNode);
 
             ndlNode->SetName(key);
-            if (newNode) //only need to add nodes that are new (not renames)
+            if (newNode) // only need to add nodes that are new (not renames)
             {
                 m_script.push_back(ndlNode);
             }

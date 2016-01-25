@@ -383,12 +383,14 @@ public:
     {
         return m_dims == other.m_dims;
     }
+    bool operator!=(const TensorShape& other) const
+    {
+        return !operator==(other);
+    } // duh!
 
     // verify that this refers to a dense matrix (no strides)
     void VerifyIsDense() const
     {
-        if (m_offset != 0)
-            LogicError("TensorShape: A dense TensorShape expected. Offset %d not allowed.", (int) m_offset);
         for (size_t k = 0; k < m_dims.size(); k++) // (TODO: we can save one multiplication here)
         {
             ptrdiff_t stride = k > 0 ? m_strides[k - 1] * (ptrdiff_t) m_dims[k - 1] : 1;
@@ -438,14 +440,9 @@ public:
     }
 
     // accessors
-    size_t GetDim(size_t k) const
-    {
-        return m_dims[k];
-    }
-    size_t GetRank() const
-    {
-        return m_dims.size();
-    }
+    size_t GetDim(size_t k) const { return m_dims[k]; }
+    size_t GetDimPadded(size_t k) const { return k < GetRank() ? GetDim(k) : 1; }   // like GetDim() but return 1 for extra (out of bounds) dimensions
+    size_t GetRank() const { return m_dims.size(); }
     size_t GetNumElements() const
     {
         if (m_dims.empty())
@@ -465,24 +462,20 @@ public:
     }
 
     // vector-like accessors
-    size_t operator[](size_t k) const
-    {
-        return GetDim(k);
-    }
-    size_t size() const
-    {
-        return GetRank();
-    }
+    size_t operator[](size_t k) const { return GetDim(k); }
+    size_t size() const { return GetRank(); }
 
-    const SmallVector<size_t>& GetDims() const
-    {
-        return m_dims;
-    } // get all, e.g. for logging or for constructing derived tensors with edited dimensions
-    const SmallVector<ptrdiff_t>& GetStrides() const
-    {
-        return m_strides;
-    }
+    const SmallVector<size_t>& GetDims() const { return m_dims; } // get all, e.g. for logging or for constructing derived tensors with edited dimensions
+    const SmallVector<ptrdiff_t>& GetStrides() const { return m_strides; }
 
+    // test whether the tensor represents a column vector (but allowing added broadcasting dimensions)
+    bool IsColumnVector() const
+    {
+        for (size_t k = 1; k < size(); k++)
+            if (m_dims[k] != 1)
+                return false;
+        return true;
+    }
     // legacy helper function for RowSliceNode. Will go away.
     bool IsVectorStoredAsImage() const
     {
@@ -578,22 +571,29 @@ public:
                 m_strides[k] = 0;
         return *this;
     }
-    TensorShape& PadInPlace(size_t numDims) // append singleton dimensions
+    TensorShape& PadRankInPlace(size_t desiredRank) // append singleton dimensions
     {
         VerifyIsDense();
-        if (numDims < GetRank())
+        if (desiredRank < GetRank())
             LogicError("Pad() cannot drop a shorten the dimensions.");
         else
-            while (GetRank() < numDims)
+            while (GetRank() < desiredRank)
             {
                 m_strides.push_back(GetRank() > 0 ? m_strides.back() * (ptrdiff_t) m_dims.back() : 1);
                 m_dims.push_back(1);
             }
         return *this;
     }
+    TensorShape PadRank(size_t desiredRank) const // append singleton dimensions
+    {
+        // TODO: simplify to: return TensorShape(*this).PadRankInPlace(desiredRank);
+        TensorShape result(*this);
+        result.PadRankInPlace(desiredRank);
+        return result;
+    }
     TensorShape& AppendInPlace(size_t rank, size_t newDim) // concatenate one new dimension at position 'rank'
     {
-        PadInPlace(rank);
+        PadRankInPlace(rank);
         // TODO: How to do this right in case of arbitrary strides? Compute the new stride based on m_allocation or something? Is it even possible? Or do we need to guard?
         m_strides.push_back(GetRank() > 0 ? m_strides.back() * (ptrdiff_t) m_dims.back() : 1);
         m_dims.push_back(newDim);
@@ -606,20 +606,39 @@ public:
         result.AppendInPlace(rank, newDim);
         return result;
     }
+    // narrow a dimension k to given bounds [begin, end), done in-place
+    TensorShape& NarrowTo(size_t k, size_t begin, size_t end)
+    {
+        if (k >= size())
+            LogicError("NarrowTo: Index out of bounds.");
+        if (end <= begin || end > m_dims[k])
+            LogicError("NarrowTo: Invalid bounds parameter, dimensions must be at least one.");
+        m_offset += m_strides[k] * begin;
+        m_dims[k] = end - begin;
+        return *this;
+    }
+    // narrow all dimensions to two given bounds vectors, done in-place
     template <class DimensionVector>
     TensorShape& NarrowTo(const std::pair<DimensionVector, DimensionVector>& bounds /*begin[], end[]*/)
     {
         if (size() != bounds.first.size() || size() != bounds.second.size())
-            LogicError("NarrowedTo: Bounds parameter must have same rank as tensor.");
+            LogicError("NarrowTo: Bounds parameter must have same rank as tensor.");
         for (size_t k = 0; k < size(); k++)
-            if (bounds.second[k] <= bounds.first[k] || (size_t) bounds.second[k] > m_dims[k])
-                LogicError("NarrowedTo: Invalid bounds parameter, dimensions must be at least one.");
-        for (size_t k = 0; k < size(); k++)
-        {
-            m_offset += m_strides[k] * bounds.first[k];
-            m_dims[k] = bounds.second[k] - bounds.first[k];
-        }
+            NarrowTo(k, (size_t)bounds.first[k], (size_t)bounds.second[k]);
         return *this;
+    }
+
+    // compare two TensorShapes, whether they are compatible, considering padding and broadcasting
+    bool IsElementwiseCompatibleWith(const TensorShape& other) const
+    {
+        for (size_t i = 0; i < m_dims.size(); i++)
+        {
+            size_t dim = m_dims[i];
+            size_t otherDim = i < other.size() ? other[i] : 1;
+            if (dim != otherDim && dim != 1 && otherDim != 1) // dims mismatch, and neither is broadcasting
+                return false;
+        }
+        return true;
     }
 
     // pretty-printing. Returns tensor dims in the form "I x J x K".

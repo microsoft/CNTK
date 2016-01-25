@@ -61,8 +61,8 @@ public:
     ConvolutionTensor4D(const ConvolutionTensor4D&) = delete;
     ConvolutionTensor4D& operator=(const ConvolutionTensor4D&) = delete;
     // REVIEW alexeyk: Have to implement move ctor explicitly as VS2013 does not support default move ctors.
-    //ConvolutionTensor4D(ConvolutionTensor4D&&);
-    //ConvolutionTensor4D& operator=(ConvolutionTensor4D&&);
+    // ConvolutionTensor4D(ConvolutionTensor4D&&);
+    // ConvolutionTensor4D& operator=(ConvolutionTensor4D&&);
 
 private:
     size_t m_w;
@@ -314,7 +314,7 @@ public:
     virtual ConvDescPtr CreateConvDescriptor(const Tensor4D& inT, const Filter& filterT,
                                              size_t wStride, size_t hStride, bool padding) = 0;
     virtual PoolDescPtr CreatePoolDescriptor(PoolDesc::PoolKind kind, size_t w, size_t h, size_t wStride, size_t hStride, size_t wPad, size_t hPad) = 0;
-    //virtual Tensor4DPtr CreateLrnDescriptor() = 0;
+    // virtual Tensor4DPtr CreateLrnDescriptor() = 0;
 
     virtual ConvEnginePtr CreateConvEngine(DEVICEID_TYPE deviceId, size_t maxTempMemSizeInSamples) = 0;
     virtual PoolEnginePtr CreatePoolEngine(DEVICEID_TYPE deviceId) = 0;

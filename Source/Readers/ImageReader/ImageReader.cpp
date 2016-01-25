@@ -34,7 +34,7 @@ class ITransform
 {
 public:
     virtual void Init(const ConfigParameters& config) = 0;
-    //virtual void Init(const ScriptableObjects::IConfigRecord & config) = 0;
+    // virtual void Init(const ScriptableObjects::IConfigRecord & config) = 0;
     virtual void Apply(cv::Mat& mat) = 0;
 
     ITransform(){};
@@ -92,7 +92,7 @@ public:
     {
         InitFromConfig(config);
     }
-    //virtual void Init(const ScriptableObjects::IConfigRecord & config) override { InitFromConfig(config); }
+    // virtual void Init(const ScriptableObjects::IConfigRecord & config) override { InitFromConfig(config); }
 
     void Apply(cv::Mat& mat)
     {
@@ -249,7 +249,7 @@ public:
     {
         InitFromConfig(config);
     }
-    //virtual void Init(const ScriptableObjects::IConfigRecord & config) override { InitFromConfig(config); }
+    // virtual void Init(const ScriptableObjects::IConfigRecord & config) override { InitFromConfig(config); }
 
     void Apply(cv::Mat& mat)
     {
@@ -324,7 +324,7 @@ public:
     {
         InitFromConfig(config);
     }
-    //virtual void Init(const ScriptableObjects::IConfigRecord & config) override { InitFromConfig(config); }
+    // virtual void Init(const ScriptableObjects::IConfigRecord & config) override { InitFromConfig(config); }
 
     void Apply(cv::Mat& mat)
     {

@@ -2,9 +2,6 @@
 //
 // F. Seide, V-hansu
 
-#if 0 // [v-hansu] set aside codes with log
-#endif
-
 #undef DIRECT_MODE // [v-hansu] use the direct formula for smbr mode, proven makes no difference
 
 #include <cuda_runtime_api.h>
@@ -19,7 +16,8 @@
 #include <stdexcept>
 
 #ifdef _WIN32
-#include <windows.h> // for timer
+#define NOMINMAX
+#include "Windows.h" // for timer
 #endif
 
 #if __unix__
@@ -104,8 +102,8 @@ void latticefunctionsops::edgealignment(const vectorref<lrhmmdef> &hmms, const v
     dim3 t(32, 8);
     const size_t tpb = t.x * t.y;
     dim3 b((unsigned int) ((numedges + tpb - 1) / tpb));
-    //cudaarrayref<float> logLLsarray;        // TODO: pass this in, of course
-    //passtextureref texref (logLLstex, logLLsarray);    // use the same name as that global texref one, so it will match the name inside the kernel
+    // cudaarrayref<float> logLLsarray;        // TODO: pass this in, of course
+    // passtextureref texref (logLLstex, logLLsarray);    // use the same name as that global texref one, so it will match the name inside the kernel
     edgealignmentj<<<b, t, 0, /*GetCurrentStream()*/ cudaStreamDefault>>>(hmms, transPs, spalignunitid, silalignunitid, logLLs, nodes, edges, aligns, alignoffsets, backptrstorage, backptroffsets, alignresult, edgeacscores);
     checklaunch("edgealignment");
 }

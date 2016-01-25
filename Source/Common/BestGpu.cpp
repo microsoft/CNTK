@@ -34,15 +34,17 @@ int bestGPUDummy = 42; // put something into this CPP, as to avoid a linker warn
 // CUDA-C includes
 #include <cuda.h>
 #ifdef __WINDOWS__
-#include <windows.h>
+#define NOMINMAX
+#include "Windows.h"
 #include <Delayimp.h>
 #include <Shlobj.h>
 #define PATH_DELIMITER '\\'
 #elif defined(__UNIX__)
 #define PATH_DELIMITER '/'
-#endif //__WINDOWS__
+#endif // __WINDOWS__
 #include <stdio.h>
 #include <string.h>
+#include <algorithm>
 
 #include <memory>
 #include "CrossProcessMutex.h"
@@ -262,16 +264,10 @@ void BestGpu::Init()
     if (m_initialized)
         return;
 
-    //get the count of objects
-    cudaError_t err =
-        cudaGetDeviceCount(&m_deviceCount);
-    // TODO: use CUDA_CALL here
+    // get the count of objects
+    cudaError_t err = cudaGetDeviceCount(&m_deviceCount);
     if (err != cudaSuccess)
-    {
-        const char* errmsg = cudaGetErrorString(err);
-        fprintf(stderr, "!!!!!!!!CUDA EXCEPTION: %s\n", errmsg);
-        RuntimeError("%s", errmsg);
-    }
+        m_deviceCount = 0; // if this fails, we have no GPUs
 
     ProcessorData pdEmpty = {0};
     for (int i = 0; i < m_deviceCount; i++)
@@ -368,7 +364,7 @@ std::vector<int> BestGpu::GetDevices(int number, BestGpuFlags p_bestFlags)
 
     // if they want all devices give them eveything we have
     if (number == AllDevices)
-        number = max(m_deviceCount, 1);
+        number = std::max(m_deviceCount, 1);
     else if (number == RequeryDevices)
     {
         number = m_lastCount;

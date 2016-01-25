@@ -5,7 +5,8 @@
 // MathPerformanceTests.cpp : Defines the entry point for the console application.
 //
 #include "stdafx.h"
-#include <Windows.h>
+#define NOMINMAX
+#include "Windows.h"
 #include <chrono>
 #include <iostream>
 #include <vector>
@@ -25,11 +26,11 @@ void SetToInitStateValueForResetSeg(const Matrix<ElemType>& sentenceBegin,
 
     assert(nStream == sentenceBegin.GetNumRows());
 
-    /// only set state to init state value for segmentation = 0, and -1
-    /// e.g., -1 0 1 -> 0 0 1 -> 0 0 -1 -> 1 1 0
+    // only set state to init state value for segmentation = 0, and -1
+    // e.g., -1 0 1 -> 0 0 1 -> 0 0 -1 -> 1 1 0
 
     Matrix<ElemType> colPos(sentenceBegin.GetDeviceId());
-    colPos.SetValue(sentenceBegin);                                                     /// -1 0 1
+    colPos.SetValue(sentenceBegin);                                                     // -1 0 1
     colPos.InplaceTruncateBottom(1 << 0 /*(int)MinibatchPackingFlags::SequenceStart*/); // TODO: these flags no longer exist, this test probably no longer applies
     Matrix<ElemType>::Scale((ElemType) -1.0, colPos);
     colPos += 0; // (int)MinibatchPackingFlags::None; // TODO: these flags no longer exist, this test probably no longer applies
@@ -37,8 +38,8 @@ void SetToInitStateValueForResetSeg(const Matrix<ElemType>& sentenceBegin,
     Matrix<ElemType> ones(sentenceBegin.GetDeviceId());
     ones.Resize(nStateRow, nStream);
     ones.SetValue((ElemType) 1);
-    /// add default state value if it is for reset
-    Matrix<ElemType>::MultiplyAndWeightedAdd(initStateValue, ones, false, colSeg, false, 1.0, newprevstate); /// += [0 initStateValue 0 ]
+    // add default state value if it is for reset
+    Matrix<ElemType>::MultiplyAndWeightedAdd(initStateValue, ones, false, colSeg, false, 1.0, newprevstate); // += [0 initStateValue 0 ]
 }
 
 template <class ElemType>
@@ -106,7 +107,7 @@ void oldRNNForwardPropSRP(const size_t timeIdxInSeq, const int delay, const bool
     int d = iPastIndex;
     if (d < 0)
         d = (int) functionValues.Mod((float) iPastIndex, (float) pastActivity.GetNumCols());
-    /// this can point to the past activity of the previous mninibatch
+    // this can point to the past activity of the previous mninibatch
 
     Matrix<ElemType> out = functionValues.ColumnSlice(timeIdxInSeq * mNbr + indexInBatch, 1);
     Matrix<ElemType> inp((DEVICEID_TYPE) functionValues.GetDeviceId());
@@ -229,7 +230,7 @@ void AddMultiplyAndInplaceSigmoidTest(int n, int k, int m)
     CPUMatrix<ElemType> C(n, m);
     auto t_start = clock();
     C = A * B + D;
-    //C.InplaceSigmoid();
+    // C.InplaceSigmoid();
     auto t_end = clock();
     std::cout << "CPU Matrix in: " << 1.0 * (t_end - t_start) / CLOCKS_PER_SEC << " seconds" << endl;
     std::cout << n << " " << k << " " << m << endl;
@@ -244,7 +245,7 @@ void AddMultiplyAndInplaceSigmoidTest(int n, int k, int m)
     Matrix<ElemType> CG((size_t) n, (size_t) m);
     auto t_startG = clock();
     CG = AG * BG + DG;
-    //CG.InplaceSigmoid();
+    // CG.InplaceSigmoid();
     auto t_endG = clock();
     std::cout << "Matrix in: " << 1.0 * (t_endG - t_startG) / CLOCKS_PER_SEC << " seconds" << endl;
 }
@@ -405,7 +406,7 @@ void MandSTest(int count, int devId)
     auto t_startG = clock();
     for (int i = 0; i < count; ++i)
     {
-        //Matrix<ElemType>::MultiplyAndWeightedAdd(arr[i],A,false,B,false,3.2*arr[i],C);
+        // Matrix<ElemType>::MultiplyAndWeightedAdd(arr[i],A,false,B,false,3.2*arr[i],C);
         C += (A * arr[i]) * (B * (arr[i] * 2.3));
     }
     auto t_endG = clock();
@@ -422,7 +423,7 @@ void MandSTest(int count, int devId)
     for (int i = 0; i < count; ++i)
     {
         CPUMatrix<ElemType>::MultiplyAndWeightedAdd(arr[i], AC, false, BC, false, 3.2 * arr[i], CC);
-        //CC+=(arr[i]*AC)*((arr[i]*2.3)*BC);
+        // CC+=(arr[i]*AC)*((arr[i]*2.3)*BC);
     }
     auto t_endC = clock();
     double valMC = 1.0 * (t_endC - t_startC) / (CLOCKS_PER_SEC * count);
@@ -442,7 +443,7 @@ int wmain()
 
     TestOldRnnForwardPropSRP<float>();
 
-    //MandSTest<float>(100, 2);
+    // MandSTest<float>(100, 2);
 
     /*cout<<endl<<"********************Matrix SquareMultiplyAndWeightedAdd10TimesAvg TEST********************"<<endl;
     SquareMultiplyAndAdd10TimesAvgTest<float>(4096,10);

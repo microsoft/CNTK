@@ -55,10 +55,11 @@ void ComputationNodeBase::ValidateUnaryMap(bool isFinalValidationPass)
     InferMBLayoutFromInputsForStandardCase();
     SetDims(Input(0));
 }
+
 // binary zip operation, e.g. Plus
-// If allowScaling then one can be a sub-dimension of the other (if layout then only for rows, otherwise for cols, too).
+// If allowBroadcast then one can be a sub-dimension of the other (if layout then only for rows, otherwise for cols, too).
 // This also helpfully resizes the children if not yet sized.
-void ComputationNodeBase::ValidateBinaryZip(bool isFinalValidationPass, bool allowMultiples)
+void ComputationNodeBase::ValidateBinaryZip(bool isFinalValidationPass, bool allowBroadcast)
 {
     assert(m_inputs.size() == 2);
     ComputationNodeBase::Validate(isFinalValidationPass);
@@ -66,21 +67,11 @@ void ComputationNodeBase::ValidateBinaryZip(bool isFinalValidationPass, bool all
 
     ValidateInferBinaryInputDims();
 
-    size_t rows0 = Input(0)->GetNumRows(), cols0 = Input(0)->GetNumCols();
-    size_t rows1 = Input(1)->GetNumRows(), cols1 = Input(1)->GetNumCols();
-
-#if 1 //ndef ENABLE_TENSORVIEW
-    // TODO: This test will go away once we switch to full tensor lib.
-    if (isFinalValidationPass && !((rows0 == rows1 && (Input(0)->GetMBLayout() == Input(1)->GetMBLayout() || cols0 == cols1)) ||                                                               // matching size (obvious case)
-                                   (allowMultiples && (rows0 == 1 || rows1 == 1) && (Input(0)->GetMBLayout() == Input(1)->GetMBLayout() || cols0 == cols1)) ||                                 // one is row vec
-                                   (allowMultiples && ((!HasMBLayout() && cols0 > cols1 && cols0 % cols1 == 0) || (cols0 == 1 && rows1 % rows0 == 0) || (cols1 == 1 && rows0 % rows1 == 0))))) // TODO: ^^ I don't understand the asymmetry of this last one
+    if (isFinalValidationPass &&
+        Input(0)->GetMBLayout() != Input(1)->GetMBLayout() && Input(0)->HasMBLayout() && Input(1)->HasMBLayout())
     {
-        LogicError("The Matrix dimensions in the %ls %ls operation do not match.", NodeName().c_str(), OperationName().c_str());
+        LogicError("MB layouts in the %ls %ls operation do not match.", NodeName().c_str(), OperationName().c_str());
     }
-#else
-    rows0;
-    rows1;
-#endif
 
     // result has tensor shape with dimensions being the max over both
     let shape0 = GetInputSampleLayout(0);
@@ -94,6 +85,7 @@ void ComputationNodeBase::ValidateBinaryZip(bool isFinalValidationPass, bool all
     for (size_t k = 0; k < shape1.GetRank(); k++)
     {
         size_t dim1 = shape1[k];
+        // BUGBUG: We must consider the allowBroadcast flag here.
         if (dims[k] == 1)                                  // is [0] broadcasting?
             dims[k] = dim1;                                // then use dimension we broadcast to
         else if (dim1 == 1)                                // if [1] is broadcasting
@@ -103,16 +95,18 @@ void ComputationNodeBase::ValidateBinaryZip(bool isFinalValidationPass, bool all
                             NodeName().c_str(), OperationName().c_str(), string(shape0).c_str(), string(shape1).c_str());
     }
 
-    SetDims(TensorShape(dims), GetMBLayout() ? GetMBLayout()->GetNumCols() : max(cols0, cols1));
+    SetDims(TensorShape(dims), HasMBLayout());
 }
+
 // unary reduce-to-(1,1) operation, e.g. MatrixL1RegNode
 void ComputationNodeBase::ValidateUnaryReduce(bool isFinalValidationPass)
 {
     assert(m_inputs.size() == 1);
     ComputationNodeBase::Validate(isFinalValidationPass);
     m_pMBLayout = nullptr; // this node does not hold mini-batch data
-    SetDims(TensorShape(1), 1);
+    SetDims(TensorShape(1), false);
 }
+
 // binary reduce-to-(1,1) operation, e.g. CrossEntropyWithSoftmaxNode
 // Currently only called by criterion nodes.
 // This function also infers child LearnableParameters. In case you wonder why this is needed for criterion nodes, there are edge cases, e.g. a
@@ -123,15 +117,16 @@ void ComputationNodeBase::ValidateBinaryReduce(bool isFinalValidationPass)
     m_pMBLayout = nullptr; // this node does not hold mini-batch data
     ValidateInferBinaryInputDims();
     if (isFinalValidationPass &&
-        !(Input(0)->GetNumRows() == Input(1)->GetNumRows() &&
-          (Input(0)->HasMBLayout() || (Input(0)->GetNumCols() == Input(1)->GetNumCols()))))
-        LogicError("The Matrix dimensions in the %ls %ls operation do not match.", NodeName().c_str(), OperationName().c_str());
-    SetDims(TensorShape(1), 1);
+        !(Input(0)->GetSampleLayout().IsElementwiseCompatibleWith(Input(1)->GetSampleLayout()) && // TODO: Do we need broadcasting for these cases?
+          (Input(0)->GetMBLayout() == Input(1)->GetMBLayout() || !Input(0)->HasMBLayout() || !Input(1)->HasMBLayout())))
+        LogicError("The Matrix dimensions or MB layout in the %ls %ls operation do not match.", NodeName().c_str(), OperationName().c_str());
+    SetDims(TensorShape(1), false);
 }
+
 // helper function for validation
-// In bad cases of convolution, dimensions are quite complex to know.
-// This is a feature that allows a node to help resizing its input node to the expected value.
-// TODO: This is shaky by design.
+// In complex cases of convolution, dimensions are quite difficult for a user to know/derive.
+// This is a feature that allows a node to help resizing its input node to the expected value
+// iff that input must be a learnable parameter.
 void ComputationNodeBase::ValidateInferBinaryInputDims()
 {
     // limited inference of children dimensions
@@ -144,27 +139,44 @@ void ComputationNodeBase::ValidateInferBinaryInputDims()
         auto in = Input(index);
         auto other = Input(1 - index);
         // borrow any unset dimension on one input from the other input
-        size_t rows = in->GetNumRows() == 0 ? other->GetNumRows() /*borrow from peer*/ : in->GetNumRows() /*keep as is*/;
-        size_t cols = (!in->HasMBLayout() && in->GetNumCols() == 0) ? other->GetNumCols() /*borrow from peer*/ : in->GetNumCols() /*keep as is*/;
-        ValidateInferInputDims(index, rows, cols);
+        in->ValidateInferInputDimsFrom(other->GetSampleLayout());
     }
 }
-// BUGBUG: Change this to take a TensorShape.
+
+// in case of an error, we just back out, and leave it to outside code to detect errors
 template <class ElemType>
-void ComputationNode<ElemType>::ValidateInferInputDims(size_t i, size_t rows, size_t cols) //override final
+void ComputationNode<ElemType>::ValidateInferInputDimsFrom(const TensorShape& otherShape)
 {
-    if (Input(i)->OperationName() == OperationNameOf(LearnableParameter) && Input(i)->GetNumRows() == 0)
+    if (OperationName() != OperationNameOf(LearnableParameter)) // only infer LearnableParameters (we can't propagate further)
+        return;
+
+    // see where we stand with our shape
+    bool hasMissingDims = m_sampleLayout.GetRank() == 0 || m_sampleLayout.GetNumElements() == 0;
+    if (!hasMissingDims) // all there--nothing to infer
+        return;
+
+    // infer at least one dimension
+    if (otherShape.GetRank() == 0 || otherShape.GetNumElements() == 0)
+        return; // LogicError("ValidateInferInputDimsFrom: Inferred dimensions must not be empty.");
+
+    // if no dimensions have been set at all, copy otherShape
+    // Don't verify dimensions in this case, because the node may have explicitly been defined as a vector of 0 elements.
+    bool hasAnyDim = false;
+    for (auto dim : m_sampleLayout.GetDims())
+        hasAnyDim |= dim != 0;
+    if (!hasAnyDim)
+        m_sampleLayout = otherShape;
+    else if (hasMissingDims) // we got a pre-existing shape: If it has zeroes, we fill them in from otherShape
     {
-        if (rows == 0 || cols == 0)
-            LogicError("ValidateInferInputDims: Inferred matrix must not be empty.");
-        Input(i)->SetDims(rows == Input(i)->GetNumRows() ? Input(i)->GetSampleLayout() : TensorShape(rows), cols);
-        // BUGBUG: This will loose tensor shape.
-        Input(i)->Validate(true); // validate it properly
-        // BUGBUG: ^^ Validate() calls are under the control of ValidateSubNetwork(). E.g. it checks whether something has changed & re-validates until there is no change. If we validate here, the change goes unnoticed.
-        // big BUGBUG: This should do random initialization as requested by user in the first place.
-        Input(i)->Value().SetValue(0);
-        fprintf(stderr, "ValidateInferInputDims: %ls %ls operation inferred, resized to (%d x %d), and (incorrectly) initialized to 0.\n", Input(i)->NodeName().c_str(), Input(i)->OperationName().c_str(), (int) rows, (int) cols);
+        if (m_sampleLayout.GetRank() != 0 && m_sampleLayout.GetRank() != otherShape.GetRank())
+            return; // LogicError("ValidateInferInputDimsFrom: Inferred dimensions must match in rank.");
+        SmallVector<size_t> newDims = m_sampleLayout.GetDims();
+        for (size_t i = 0; i < m_sampleLayout.GetRank(); i++)
+            if (newDims[i] == 0)
+                newDims[i] = otherShape[i];
+        m_sampleLayout = TensorShape(newDims);
     }
+    fprintf(stderr, "Tensor shape of %ls %ls operation was inferred as [%s].\n", NodeName().c_str(), OperationName().c_str(), string(m_sampleLayout).c_str());
 }
 
 // -----------------------------------------------------------------------
@@ -180,8 +192,6 @@ size_t ComputationNodeBase::DetermineElementwiseTensorRank() const
     for (size_t i = 0; i < GetNumInputs(); i++)
     {
         size_t rank = Input(i)->GetSampleLayout().GetRank();
-        if (!HasMBLayout()) // no MBLayout: last dim is column dimension
-            rank++;
         if (maxRank < rank)
             maxRank = rank;
     }
@@ -192,12 +202,13 @@ size_t ComputationNodeBase::DetermineElementwiseTensorRank() const
 TensorShape ComputationNodeBase::GetTensorShape(size_t rank) const
 {
     // If we have an MB layout then add the necessary dimensions. If we have none, then absorb the column dimension.
-    TensorShape tensorShape = GetSampleLayout(); // TODO: Can this tensor arbitrary strides? In case it came out of a Slice, Reshape, or Transpose op in-place
-    if (!HasMBLayout())
-        tensorShape.AppendInPlace(tensorShape.GetRank(), GetNumCols()); //  last dim is column dimension
-    // TODO: This is not nice! Instead, if no MBLayout then have sample layout explain whole matrix.
-    else
-        tensorShape.AppendInPlace(rank, GetMBLayout()->GetNumParallelSequences()).AppendInPlace(rank + 1, GetMBLayout()->GetNumTimeSteps());
+    TensorShape tensorShape = GetSampleLayout(); // TODO: Can this tensor have arbitrary strides? In case it came out of a Slice, Reshape, or Transpose op in-place
+    if (HasMBLayout())
+    {
+        size_t i = rank;
+        tensorShape.AppendInPlace(i++, GetMBLayout()->GetNumParallelSequences());
+        tensorShape.AppendInPlace(i++, GetMBLayout()->GetNumTimeSteps());
+    }
     return tensorShape;
 }
 

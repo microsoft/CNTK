@@ -36,9 +36,9 @@ class biggrowablevectorarray : public growablevectorbase<msra::dbn::matrix>
     msra::dbn::matrix *newblock() const
     {
         // we stripe the data across NUMA nodes as to not fill up one node with the feature data
-        //msra::numa::overridenode ((int) msra::numa::getmostspaciousnumanode());
+        // msra::numa::overridenode ((int) msra::numa::getmostspaciousnumanode());
         msra::dbn::matrix *res = new msra::dbn::matrix(m, elementsperblock);
-        //msra::numa::overridenode (-1);  // note: we really should reset it also in case of failure
+        // msra::numa::overridenode (-1);  // note: we really should reset it also in case of failure
         return res;
     }
 
@@ -62,9 +62,9 @@ class biggrowablevectorarray : public growablevectorbase<msra::dbn::matrix>
                 fclose(ftry);
         }
 
-        /* 
-                code below to cycle through a-z appended to file name is no longer necessary 
-                since caller guarantees unique file names via HTKMLFReader 
+        /*
+                code below to cycle through a-z appended to file name is no longer necessary
+                since caller guarantees unique file names via HTKMLFReader
                 and we want the pagepath logged to the user to be the actual one used by the code
 
             // try to open the pagepath from a to z
@@ -261,7 +261,7 @@ class minibatchframesourcemulti : public minibatchsource
     size_t featdim;
     size_t maxvdim;
     // cache
-    //std::vector<biggrowablevectorarray> frames;
+    // std::vector<biggrowablevectorarray> frames;
     std::vector<unique_ptr<biggrowablevectorarray>> pframes; // [t][i] all features concatenated
     std::vector<char> boundaryflags;                         // [t] -1 for first and +1 for last frame, 0 else (for augmentneighbors())
     std::vector<std::vector<CLASSIDTYPE>> classids;          // [t] the state that the frame belongs to

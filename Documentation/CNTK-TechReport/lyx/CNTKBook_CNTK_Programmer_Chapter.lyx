@@ -2330,7 +2330,7 @@ void DoCommand(const ConfigParameters& config)
 
 \begin_layout Plain Layout
 
-        //get the configuration parameters that match the command
+        // get the configuration parameters that match the command
 \end_layout
 
 \begin_layout Plain Layout
@@ -3207,7 +3207,7 @@ unctionValues().GetNumCols());
 
 \begin_layout Plain Layout
 
-    //left Node must be a scalar             
+    // left Node must be a scalar             
 \end_layout
 
 \begin_layout Plain Layout
@@ -3420,12 +3420,12 @@ virtual void BackpropTo(const size_t inputIndex)
 
 \begin_layout Plain Layout
 
-    //left Node must be a scalar             
+    // left Node must be a scalar             
 \end_layout
 
 \begin_layout Plain Layout
 
-    if (inputIndex == 0)  //left derivative
+    if (inputIndex == 0)  // left derivative
 \end_layout
 
 \begin_layout Plain Layout
@@ -3504,12 +3504,12 @@ Seq)
 
 \begin_layout Plain Layout
 
-    //left Node must be a scalar             
+    // left Node must be a scalar             
 \end_layout
 
 \begin_layout Plain Layout
 
-    if (inputIndex == 0)  //left derivative             
+    if (inputIndex == 0)  // left derivative             
 \end_layout
 
 \begin_layout Plain Layout
@@ -3863,7 +3863,7 @@ ComputationNodePtr CreateComputationNode(const std::wstring nodeType, const
 
 \begin_layout Plain Layout
 
-    //other node types
+    // other node types
 \end_layout
 
 \begin_layout Plain Layout
@@ -3927,7 +3927,7 @@ ComputationNode<ElemType>* CreateNodeFromFile(const std::wstring nodeType,
 
 \begin_layout Plain Layout
 
-    //other node types
+    // other node types
 \end_layout
 
 \begin_layout Plain Layout
@@ -3943,7 +3943,7 @@ ComputationNode<ElemType>* CreateNodeFromFile(const std::wstring nodeType,
 
 \begin_layout Plain Layout
 
-    //other node types
+    // other node types
 \end_layout
 
 \begin_layout Plain Layout
@@ -4103,7 +4103,7 @@ bool CheckFunction(std::string& p_nodeType, bool* allowUndeterminedVariable)
 
 \begin_layout Plain Layout
 
-    //other node types    
+    // other node types    
 \end_layout
 
 \begin_layout Plain Layout
@@ -4118,7 +4118,7 @@ bool CheckFunction(std::string& p_nodeType, bool* allowUndeterminedVariable)
 
 \begin_layout Plain Layout
 
-    //other node types and codes
+    // other node types and codes
 \end_layout
 
 \begin_layout Plain Layout
@@ -4632,7 +4632,7 @@ while (trainSetDataReader->GetMinibatch(inputMatrices))
 
 \begin_layout Plain Layout
 
-    //update the time stamp of the input nodes for re-evaluation
+    // update the time stamp of the input nodes for re-evaluation
 \end_layout
 
 \begin_layout Plain Layout

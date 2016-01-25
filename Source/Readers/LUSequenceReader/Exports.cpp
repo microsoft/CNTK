@@ -28,6 +28,4 @@ extern "C" DATAREADER_API void GetReaderD(IDataReader<double>** preader)
 {
     GetReader(preader);
 }
-}
-}
-}
+} } }

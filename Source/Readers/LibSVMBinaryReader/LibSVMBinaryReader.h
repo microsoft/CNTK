@@ -61,7 +61,7 @@ class BinaryMatrix
 public:
     BinaryMatrix(wstring name, int deviceID, size_t numRows, size_t numCols)
         : m_matrixName(name), m_deviceID(deviceID), m_maxNumRows(numRows), m_numRows(0), m_maxNumCols(numCols), m_values(nullptr){};
-    //BinaryMatrix(wstring name, size_t numRows, size_t numCols) : m_matrixName(name), m_maxNumRows(numRows), m_numRows(0), m_maxNumCols(numCols), m_values(nullptr) {};
+    // BinaryMatrix(wstring name, size_t numRows, size_t numCols) : m_matrixName(name), m_maxNumRows(numRows), m_numRows(0), m_maxNumCols(numCols), m_values(nullptr) {};
     virtual void Clear() = 0;
     virtual void Dispose() = 0;
     virtual void Fill(Matrix<ElemType>*) = 0;
@@ -91,7 +91,7 @@ class DenseBinaryMatrix : public BinaryMatrix<ElemType>
 {
 public:
     DenseBinaryMatrix(wstring name, int deviceID, size_t numRows, size_t numCols);
-    //DenseBinaryMatrix(wstring name, size_t numRows, size_t numCols);
+    // DenseBinaryMatrix(wstring name, size_t numRows, size_t numCols);
     virtual void Clear();
     virtual void Dispose();
     virtual void Fill(Matrix<ElemType>* matrix) override;
@@ -122,7 +122,7 @@ class SparseBinaryMatrix : public BinaryMatrix<ElemType>
 {
 public:
     SparseBinaryMatrix(wstring name, int deviceID, size_t numRows, size_t numCols);
-    //SparseBinaryMatrix(wstring name, size_t numRows, size_t numCols);
+    // SparseBinaryMatrix(wstring name, size_t numRows, size_t numCols);
     virtual void Clear();
     virtual void Dispose();
     virtual void Fill(Matrix<ElemType>* matrix) override;
@@ -153,7 +153,7 @@ public:
     void StartDistributedMinibatchLoop(size_t mbSize, size_t subsetNum, size_t numSubsets);
     void ReadMinibatches(size_t* read_order, size_t numToRead);
     size_t ReadMinibatch(void* data_buffer, std::map<std::wstring, shared_ptr<BinaryMatrix<ElemType>>>& matrices);
-    //void GetMinibatch(std::map<std::wstring, Matrix<ElemType>*>& matrices);
+    // void GetMinibatch(std::map<std::wstring, Matrix<ElemType>*>& matrices);
     size_t FillMatrices(std::map<std::wstring, shared_ptr<BinaryMatrix<ElemType>>>& matrices);
     size_t GetMBSize()
     {
@@ -165,7 +165,7 @@ public:
     }
     void Shuffle();
     shared_ptr<BinaryMatrix<ElemType>> CreateMatrix(std::wstring matName, int deviceId);
-    //shared_ptr<BinaryMatrix<ElemType>> CreateMatrix(std::wstring matName);
+    // shared_ptr<BinaryMatrix<ElemType>> CreateMatrix(std::wstring matName);
     virtual bool DataEnd(EndDataType endDataType);
 
 private:
@@ -277,7 +277,7 @@ public:
         pMBLayout->CopyFrom(m_pMBLayout);
     };
 
-    //virtual bool DataEnd(EndDataType endDataType);
+    // virtual bool DataEnd(EndDataType endDataType);
 
     size_t NumberSlicesInEachRecurrentIter()
     {

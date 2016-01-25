@@ -40,7 +40,7 @@ enum MatrixType
 class MATH_API MatrixBase
 {
 protected:
-    //virtual ~MatrixBase() { };
+    // virtual ~MatrixBase() { };
     // TODO: currently this causes link errors when building DLLs
 };
 
@@ -70,16 +70,16 @@ private:
     mutable GPUSparseMatrix<ElemType>* m_GPUSparseMatrix;
     mutable CPUSparseMatrix<ElemType>* m_CPUSparseMatrix;
     mutable MatrixType m_matrixType;
-    mutable CurrentDataLocation m_currentDataLocation; //Indicates which matrix is current
+    mutable CurrentDataLocation m_currentDataLocation; // Indicates which matrix is current
     mutable DEVICEID_TYPE m_preferredDeviceId;
 
     mutable size_t m_numTimesDeviceChanged;
     mutable size_t m_numTimesMatrixTypeChanged;
     mutable int m_devicesTransferedTo[2]; // TODO: what is this for? Seems only diagnostics
 
-    //Moves matrix from device id_from to device with id_to. This method doesn't change preferred device Id
+    // Moves matrix from device id_from to device with id_to. This method doesn't change preferred device Id
     void _transferFromDeviceToDevice(int id_from, int id_to, bool ismoved = true, bool emptyTransfer = false) const;
-    //Moves matrix from current device to device with id_to. This method doesn't change preferred device Id
+    // Moves matrix from current device to device with id_to. This method doesn't change preferred device Id
     void _transferToDevice(int id_to, bool ismoved = true, bool emptyTransfer = false) const;
     static void DecideAndMoveToRightDevice(const Matrix<ElemType>& a, const Matrix<ElemType>& b);
     static void DecideAndMoveToRightDevice(const Matrix<ElemType>& a, const Matrix<ElemType>& b, const Matrix<ElemType>& c);
@@ -87,21 +87,21 @@ private:
     static void CopyElementsFromDenseToSparse(CPUMatrix<ElemType>& from, CPUSparseMatrix<ElemType>& dest);
 
 public:
-    //Constructors, destructors and other static matrix builders
-    //Each constructor can take deviceId as parameter.
-    //If deviceId<0 then the matrix will be based in RAM (CPUMatrix)
-    //Elseif deviceId>=0 and <AUTOPLACEMATRIX, then the matrix will be based on GPU with specified deviceId
-    //Else (default) if deviceId=AUTOPLACEMATRIX, the class will try to place itself on the best GPU, if fails it will go to CPU
-    //The default behaiviour should be deviceId=AUTOPLACEMATRIX
+    // Constructors, destructors and other static matrix builders
+    // Each constructor can take deviceId as parameter.
+    // If deviceId<0 then the matrix will be based in RAM (CPUMatrix)
+    // Elseif deviceId>=0 and <AUTOPLACEMATRIX, then the matrix will be based on GPU with specified deviceId
+    // Else (default) if deviceId=AUTOPLACEMATRIX, the class will try to place itself on the best GPU, if fails it will go to CPU
+    // The default behaiviour should be deviceId=AUTOPLACEMATRIX
     Matrix(DEVICEID_TYPE deviceId = AUTOPLACEMATRIX);
     Matrix(BaseMatrix<ElemType>* baseMatrix, ElemType* pArray, DEVICEID_TYPE deviceId);                                     // constructor for setting Matrix from a base matrix (externally managed butter pArray)
-    Matrix(FILE* f, const char* matrixName, DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const MatrixType matrixType = DENSE); //matrixName is used to verify that correct matrix is read.
+    Matrix(FILE* f, const char* matrixName, DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const MatrixType matrixType = DENSE); // matrixName is used to verify that correct matrix is read.
     Matrix(const size_t numRows, const size_t numCols, DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const MatrixType matrixType = DENSE, const MatrixFormat matrixFormat = matrixFormatDense);
     Matrix(const size_t numRows, const size_t numCols, ElemType* pArray, const size_t matrixFlags = matrixFlagNormal, DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const size_t nnz = 0);
-    Matrix(const Matrix<ElemType>& deepCopyFrom, DEVICEID_TYPE deviceId = AUTOPLACEMATRIX); //copy constructor, deep copy
-    Matrix<ElemType>& operator=(const Matrix<ElemType>& deepCopyFrom);                      //assignment operator, deep copy
-    Matrix(Matrix<ElemType>&& moveFrom);                                                    //move constructor, shallow copy
-    Matrix<ElemType>& operator=(Matrix<ElemType>&& moveFrom);                               //move coment operator, shallow copy
+    Matrix(const Matrix<ElemType>& deepCopyFrom, DEVICEID_TYPE deviceId = AUTOPLACEMATRIX); // copy constructor, deep copy
+    Matrix<ElemType>& operator=(const Matrix<ElemType>& deepCopyFrom);                      // assignment operator, deep copy
+    Matrix(Matrix<ElemType>&& moveFrom);                                                    // move constructor, shallow copy
+    Matrix<ElemType>& operator=(Matrix<ElemType>&& moveFrom);                               // move coment operator, shallow copy
 
     static Matrix<ElemType> Ones(const size_t rows, const size_t cols, DEVICEID_TYPE deviceId = AUTOPLACEMATRIX);
     static Matrix<ElemType> Zeros(const size_t rows, const size_t cols, DEVICEID_TYPE deviceId = AUTOPLACEMATRIX);
@@ -117,10 +117,10 @@ public:
     ~Matrix();
 
 private:
-    Matrix(const MatrixFlags matrixFlags, const MatrixType matrixType, const MatrixFormat matrixFormat, DEVICEID_TYPE deviceID); //only used internally to initialize a blank matrix
-    Matrix(const MatrixFlags matrixFlags, const MatrixType matrixType, DEVICEID_TYPE deviceID);                                  //only used internally to initialize a blank matrix
-    Matrix(const MatrixFlags matrixFlags, DEVICEID_TYPE deviceID);                                                               //only used internally to initialize a blank matrix
-    void Init(DEVICEID_TYPE deviceID);                                                                                           //only used internally to initialize a blank matrix
+    Matrix(const MatrixFlags matrixFlags, const MatrixType matrixType, const MatrixFormat matrixFormat, DEVICEID_TYPE deviceID); // only used internally to initialize a blank matrix
+    Matrix(const MatrixFlags matrixFlags, const MatrixType matrixType, DEVICEID_TYPE deviceID);                                  // only used internally to initialize a blank matrix
+    Matrix(const MatrixFlags matrixFlags, DEVICEID_TYPE deviceID);                                                               // only used internally to initialize a blank matrix
+    void Init(DEVICEID_TYPE deviceID);                                                                                           // only used internally to initialize a blank matrix
     void SetDataLocation(CurrentDataLocation location, MatrixType type = UNDETERMINED) const;
 
 public:
@@ -136,26 +136,26 @@ public:
     {
         return m_baseMatrix->OwnBuffer();
     }
-    int GetDeviceId() const; //-1 if CPU, otherwise GPU CUDA device id
+    int GetDeviceId() const; // -1 if CPU, otherwise GPU CUDA device id
     DEVICEID_TYPE GetPreferredDeviceId() const
     {
         return m_preferredDeviceId;
-    }; //-1 if CPU, otherwise GPU CUDA device id
+    }; // -1 if CPU, otherwise GPU CUDA device id
     void SetPreferredDeviceId(DEVICEID_TYPE preferredDeviceId)
     {
         m_preferredDeviceId = preferredDeviceId;
     }
-    //Moves matrix from device id_from to device with id_to.
-    //If emptyTransfer=true, then no data is ever moved, just corresponding GPU/CPU matrices are deleted and then created using empty constructor
+    // Moves matrix from device id_from to device with id_to.
+    // If emptyTransfer=true, then no data is ever moved, just corresponding GPU/CPU matrices are deleted and then created using empty constructor
     void TransferFromDeviceToDevice(int id_from, int id_to, bool ismoved = false, /*if false then keep source and set location to BOTH*/ bool emptyTransfer = false, bool updatePreferredDevice = true) const;
-    //Same as TransferFromDeviceToDevice() but moves only if it is currently not on the target device
+    // Same as TransferFromDeviceToDevice() but moves only if it is currently not on the target device
     void TransferToDeviceIfNotThere(int id_to, bool ismoved = false, bool emptyTransfer = false, bool updatePreferredDevice = true) const;
     void TransferToDeviceIfNotThereAndNotAutoPlace(int id_to, bool ismoved = false, bool emptyTransfer = false, bool updatePreferredDevice = true) const;
     CurrentDataLocation GetCurrentMatrixLocation() const
     {
         return m_currentDataLocation;
     };
-    void SwitchToMatrixType(MatrixType newMatrixType, MatrixFormat newMatrixFormat, bool keepValues); //sets matrix type between dense and sparse
+    void SwitchToMatrixType(MatrixType newMatrixType, MatrixFormat newMatrixFormat, bool keepValues); // sets matrix type between dense and sparse
     size_t GetNumRows() const;
     size_t GetNumCols() const;
     size_t GetNumElements() const;
@@ -170,8 +170,8 @@ public:
     ElemType* BufferPointer() const;
     size_t NzCount() const;
 
-    ElemType* CopyToArray() const;                                              //allocated by the callee but need to be deleted by the caller
-    size_t CopyToArray(ElemType*& arrayCopyTo, size_t& currentArraySize) const; //allocated by the callee but need to be deleted by the caller
+    ElemType* CopyToArray() const;                                              // allocated by the callee but need to be deleted by the caller
+    size_t CopyToArray(ElemType*& arrayCopyTo, size_t& currentArraySize) const; // allocated by the callee but need to be deleted by the caller
     // colStride specifies leading dimension of dst.
     // REVIEW alexeyk: GPU version copies from device to host only, implement all versions (device <-> host).
     void CopySection(size_t numRows, size_t numCols, ElemType* dst, size_t colStride) const;
@@ -199,7 +199,7 @@ public:
     void FSAdagrad(size_t mbSize, Matrix<ElemType>& gradients, Matrix<ElemType>& functionValues, const ElemType learnRatePerSample, const ElemType momentum);
     ElemType RmsProp(Matrix<ElemType>& gradients, ElemType RMS_GAMMA, ElemType RMS_WGT_INC, ElemType RMS_WGT_MAX, ElemType RMS_WGT_DEC, ElemType RMS_WGT_MIN, const bool needAveMultiplier);
 
-    void Resize(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve = 10000, bool growOnly = true); //by default we only reallocate if need to grow
+    void Resize(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve = 10000, bool growOnly = true); // by default we only reallocate if need to grow
     void Resize(const Matrix<ElemType>& other)
     {
         Resize(other.GetNumRows(), other.GetNumCols());
@@ -305,8 +305,8 @@ public:
     Matrix<ElemType>& operator/=(ElemType alpha);
     Matrix<ElemType> operator/(ElemType alpha) const;
 
-    Matrix<ElemType>& operator^=(ElemType alpha);     //element-wise power
-    Matrix<ElemType> operator^(ElemType alpha) const; //element-wise power
+    Matrix<ElemType>& operator^=(ElemType alpha);     // element-wise power
+    Matrix<ElemType> operator^(ElemType alpha) const; // element-wise power
     Matrix<ElemType>& AssignElementPowerOf(const Matrix<ElemType>& a, const ElemType power);
 
     Matrix<ElemType>& ElementMultiplyWith(const Matrix<ElemType>& a);
@@ -343,7 +343,7 @@ public:
     Matrix<ElemType>& InplaceHardmax(const bool isColWise);
     Matrix<ElemType>& AssignHardmaxOf(const Matrix<ElemType>& a, const bool isColWise);
 
-    //sequence training
+    // sequence training
     Matrix<ElemType>& DropFrame(const Matrix<ElemType>& label, const Matrix<ElemType>& gamma, const ElemType& threshhold);
     Matrix<ElemType>& AssignSequenceError(const ElemType hsmoothingWeight, const Matrix<ElemType>& label, const Matrix<ElemType>& dnnoutput, const Matrix<ElemType>& gamma, ElemType alpha);
     Matrix<ElemType>& InplaceSqrt();
@@ -378,8 +378,8 @@ public:
     Matrix<ElemType>& SetToZeroIfAbsLessThan(const ElemType threshold);
 
     DeviceBoundNumber<ElemType> Sum_AsDeviceBoundNum() const;
-    ElemType SumOfAbsElements() const; //sum of all abs(elements)
-    ElemType SumOfElements() const;    //sum of all elements
+    ElemType SumOfAbsElements() const; // sum of all abs(elements)
+    ElemType SumOfElements() const;    // sum of all elements
     Matrix<ElemType>& AssignSumOfElements(const Matrix<ElemType>& a);
 
     ElemType LogAddSumOfElements() const;
@@ -388,7 +388,7 @@ public:
     Matrix<ElemType>& AssignRowSliceValuesOf(const Matrix<ElemType>& a, const size_t startIndex, const size_t numRows);
     Matrix<ElemType>& AddToRowSliceValuesOf(const Matrix<ElemType>& a, const size_t startIndex, const size_t numRows);
     Matrix<ElemType>& AddWithRowSliceValuesOf(const Matrix<ElemType>& a, const size_t startIndex, const size_t numRows);
-    //Matrix<ElemType>&  AssignRowStackValuesOf(const std::vector<const Matrix<ElemType>*>& inputMatrices, const size_t sliceStartCol, const size_t sliceNumCols);
+    // Matrix<ElemType>&  AssignRowStackValuesOf(const std::vector<const Matrix<ElemType>*>& inputMatrices, const size_t sliceStartCol, const size_t sliceNumCols);
 
     Matrix<ElemType>& AssignRepeatOf(const Matrix<ElemType>& a, const size_t numRowRepeats, const size_t numColRepeats);
     Matrix<ElemType>& AddToRowRepeatValuesOf(const Matrix<ElemType>& a, const size_t numRepeats);
@@ -421,7 +421,7 @@ public:
 
     ElemType MatrixNormInf() const;
     ElemType MatrixNorm1() const;
-    ElemType MatrixNorm0() const; //number of non-zero elemets
+    ElemType MatrixNorm0() const; // number of non-zero elemets
     Matrix<ElemType>& AssignSignOf(const Matrix<ElemType>& a);
     Matrix<ElemType>& AddSignOf(const Matrix<ElemType>& a);
     void VectorMax(Matrix<ElemType>& maxIndexes, Matrix<ElemType>& maxValues, const bool isColWise) const;
@@ -430,13 +430,13 @@ public:
 
     Matrix<ElemType>& AssignNumOfDiff(const Matrix<ElemType>& a, const Matrix<ElemType>& b, bool searchInCol = false);
 
-    Matrix<ElemType>& AssignInnerProductOfMatrices(const Matrix<ElemType>& a, const Matrix<ElemType>& b); //this method will resize(1,1) first
+    Matrix<ElemType>& AssignInnerProductOfMatrices(const Matrix<ElemType>& a, const Matrix<ElemType>& b); // this method will resize(1,1) first
 
     bool HasNan(const char* name) const;
     size_t CountNanInf() const;
 
-    void Print(const char* matrixName, size_t rowStart, size_t rowEnd, size_t colStart, size_t colEnd) const;
-    void Print(const char* matrixName = nullptr) const; //print whole matrix. can be expensive
+    void Print(const char* matrixName, size_t rowFirst, size_t rowLast, size_t colFirst, size_t colLast) const;
+    void Print(const char* matrixName = nullptr) const; // print whole matrix. can be expensive
 
     Matrix<ElemType>& AssignPackedConvolutionInput(const Matrix<ElemType>& inputSubBatch,
                                                    const size_t inputWidth, const size_t inputHeight, const size_t inputChannels,
@@ -476,7 +476,7 @@ public:
 public:
     static DEVICEID_TYPE GetBestGPUDeviceId();
 
-    //static BLAS functions
+    // static BLAS functions
 
     // singular value decomposition of A as A = U*SIGMA*VT
     static void SVD(const Matrix<ElemType>& A, Matrix<ElemType>& SIGMA, Matrix<ElemType>& U, Matrix<ElemType>& VT, Matrix<ElemType>& W);
@@ -496,12 +496,12 @@ public:
     static void AssignScaledDifference(const Matrix<ElemType>& alpha, const Matrix<ElemType>& a, const Matrix<ElemType>& b, Matrix<ElemType>& c);
 
     static void AddElementToElement(const Matrix<ElemType>& a, const size_t ai, const size_t aj, Matrix<ElemType>& c, const size_t ci, const size_t cj);
-    //static void AddLogElementToElement(const Matrix<ElemType>& a, const size_t ai, const size_t aj, Matrix<ElemType>& c, const size_t ci, const size_t cj);
+    // static void AddLogElementToElement(const Matrix<ElemType>& a, const size_t ai, const size_t aj, Matrix<ElemType>& c, const size_t ci, const size_t cj);
     static void AssignElementToElement(const Matrix<ElemType>& a, const size_t ai, const size_t aj, Matrix<ElemType>& c, const size_t ci, const size_t cj);
     static void MinusOneAt(Matrix<ElemType>& c, const size_t position);
 
     static void Scale(ElemType alpha, Matrix<ElemType>& a);
-    static void Scale(const Matrix<ElemType>& alpha, Matrix<ElemType>& a); //In this case Matrix alpha must be 1x1
+    static void Scale(const Matrix<ElemType>& alpha, Matrix<ElemType>& a); // In this case Matrix alpha must be 1x1
     static void Scale(ElemType alpha, const Matrix<ElemType>& a, Matrix<ElemType>& c);
     static void InnerProduct(const Matrix<ElemType>& a, const Matrix<ElemType>& b, Matrix<ElemType>& c, const bool isColWise);
     static ElemType InnerProductOfMatrices(const Matrix<ElemType>& a, const Matrix<ElemType>& b);
@@ -548,7 +548,7 @@ public:
                                     const Matrix<ElemType>& beta,
                                     const Matrix<ElemType>& pair_scores,
                                     Matrix<ElemType>& grd,
-                                    const int startLbl, /// the time 0 start symbol in the output layer
+                                    const int startLbl, // the time 0 start symbol in the output layer
                                     const int shift);
 
     template <typename T>

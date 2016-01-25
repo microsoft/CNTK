@@ -157,7 +157,7 @@
     <ClInclude Include="..\ComputationNetworkLib\MatrixPool.h">
       <Filter>from ComputationNetworkLib\Network</Filter>
     </ClInclude>
-    <ClInclude Include="..\ComputationNetworkLib\CompositeComputationNodes.h">
+    <ClInclude Include="..\ComputationNetworkLib\PreComputeNodes.h">
       <Filter>from ComputationNetworkLib\Nodes</Filter>
     </ClInclude>
     <ClInclude Include="..\ComputationNetworkLib\ComputationNode.h">
@@ -175,20 +175,11 @@
     <ClInclude Include="..\SGDLib\DataReaderHelpers.h">
       <Filter>from ComputationNetworkLib\Network</Filter>
     </ClInclude>
-    <ClInclude Include="..\SGDLib\IComputationNetBuilder.h">
-      <Filter>from ComputationNetworkLib\Network</Filter>
-    </ClInclude>
-    <ClInclude Include="..\ComputationNetworkLib\EvaluationCriterionNodes.h">
-      <Filter>from ComputationNetworkLib\Nodes</Filter>
-    </ClInclude>
     <ClInclude Include="..\ComputationNetworkLib\InputAndParamNodes.h">
       <Filter>from ComputationNetworkLib\Nodes</Filter>
     </ClInclude>
     <ClInclude Include="..\ComputationNetworkLib\LinearAlgebraNodes.h">
       <Filter>from ComputationNetworkLib\Nodes</Filter>
-    </ClInclude>
-    <ClInclude Include="..\SGDLib\MultiNetworksSGD.h">
-      <Filter>from ComputationNetworkLib\Network</Filter>
     </ClInclude>
     <ClInclude Include="..\ComputationNetworkLib\NonlinearityNodes.h">
       <Filter>from ComputationNetworkLib\Nodes</Filter>
@@ -196,7 +187,10 @@
     <ClInclude Include="..\ComputationNetworkLib\RecurrentNodes.h">
       <Filter>from ComputationNetworkLib\Nodes</Filter>
     </ClInclude>
-    <ClInclude Include="..\ComputationNetworkLib\TrainingCriterionNodes.h">
+    <ClInclude Include="..\ComputationNetworkLib\EvaluationNodes.h">
+      <Filter>from ComputationNetworkLib\Nodes</Filter>
+    </ClInclude>
+    <ClInclude Include="..\ComputationNetworkLib\TrainingNodes.h">
       <Filter>from ComputationNetworkLib\Nodes</Filter>
     </ClInclude>
   </ItemGroup>
