@@ -1,0 +1,84 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClInclude Include="BlockRandomizer.h">
+      <Filter>Randomizers</Filter>
+    </ClInclude>
+    <ClInclude Include="NoRandomizer.h">
+      <Filter>Randomizers</Filter>
+    </ClInclude>
+    <ClInclude Include="CudaMemoryProvider.h">
+      <Filter>MemoryProviders</Filter>
+    </ClInclude>
+    <ClInclude Include="HeapMemoryProvider.h">
+      <Filter>MemoryProviders</Filter>
+    </ClInclude>
+    <ClInclude Include="ReaderShim.h">
+      <Filter>Utils</Filter>
+    </ClInclude>
+    <ClInclude Include="Reader.h">
+      <Filter>Interfaces</Filter>
+    </ClInclude>
+    <ClInclude Include="DataDeserializer.h">
+      <Filter>Interfaces</Filter>
+    </ClInclude>
+    <ClInclude Include="MemoryProvider.h">
+      <Filter>Interfaces</Filter>
+    </ClInclude>
+    <ClInclude Include="Transformer.h">
+      <Filter>Interfaces</Filter>
+    </ClInclude>
+    <ClInclude Include="ElementTypeUtils.h">
+      <Filter>Utils</Filter>
+    </ClInclude>
+    <ClInclude Include="StringUtils.h">
+      <Filter>Utils</Filter>
+    </ClInclude>
+    <ClInclude Include="TransformerBase.h">
+      <Filter>Transformers</Filter>
+    </ClInclude>
+    <ClInclude Include="DataDeserializerBase.h">
+      <Filter>Deserializers</Filter>
+    </ClInclude>
+    <ClInclude Include="SampleModePacker.h">
+      <Filter>Packers</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="BlockRandomizer.cpp">
+      <Filter>Randomizers</Filter>
+    </ClCompile>
+    <ClCompile Include="NoRandomizer.cpp">
+      <Filter>Randomizers</Filter>
+    </ClCompile>
+    <ClCompile Include="ReaderShim.cpp">
+      <Filter>Utils</Filter>
+    </ClCompile>
+    <ClCompile Include="SampleModePacker.cpp">
+      <Filter>Packers</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="Interfaces">
+      <UniqueIdentifier>{0a7ac112-ad49-4d5e-83d8-a7640b199568}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Randomizers">
+      <UniqueIdentifier>{0e2c2f22-20f2-42c1-a5d1-d9ac7a4bd33a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Packers">
+      <UniqueIdentifier>{b7203d1c-fd6e-40de-9680-ba4042ce7c7f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="MemoryProviders">
+      <UniqueIdentifier>{6ada575c-9f2c-476f-8c97-8617e1ecd01a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Utils">
+      <UniqueIdentifier>{3cd09e43-18cb-48ad-a5f7-89553c063d8c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Deserializers">
+      <UniqueIdentifier>{2f73a66b-9551-41c4-91c5-cf51537b9feb}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Transformers">
+      <UniqueIdentifier>{90d4b51b-73ae-47f5-9a9e-97ef287dcead}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>
