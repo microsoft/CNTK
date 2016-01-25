@@ -57,7 +57,7 @@ endif
 CXX = mpic++
 
 SOURCEDIR:= Source
-INCLUDEPATH:= $(addprefix $(SOURCEDIR)/, Common/Include Math CNTK ActionsLib ComputationNetworkLib SGDLib SequenceTrainingLib CNTK/BrainScript)
+INCLUDEPATH:= $(addprefix $(SOURCEDIR)/, Common/Include Math CNTK ActionsLib ComputationNetworkLib SGDLib SequenceTrainingLib CNTK/BrainScript Readers/Reader)
 CPPFLAGS:= -D_POSIX_SOURCE -D_XOPEN_SOURCE=600 -D__USE_XOPEN2K
 CXXFLAGS:= -msse3 -std=c++0x -std=c++11 -fopenmp -fpermissive -fPIC -Werror -fcheck-new
 LIBPATH:=
@@ -211,6 +211,12 @@ $(BUILDINFO): $(GENBUILD)
 ########################################
 
 # Define all sources that need to be built
+READER_SRC =\
+	$(SOURCEDIR)/Readers/Reader/SampleModePacker.cpp \
+	$(SOURCEDIR)/Readers/Reader/BlockRandomizer.cpp \
+	$(SOURCEDIR)/Readers/Reader/NoRandomizer.cpp \
+	$(SOURCEDIR)/Readers/Reader/ReaderShim.cpp \
+
 COMMON_SRC =\
 	$(SOURCEDIR)/Common/Config.cpp \
 	$(SOURCEDIR)/Common/DataReader.cpp \
@@ -249,6 +255,7 @@ MATH_SRC +=\
 endif
 
 MATH_SRC+=$(COMMON_SRC)
+MATH_SRC+=$(READER_SRC)
 
 MATH_OBJ := $(patsubst %.cu, $(OBJDIR)/%.o, $(patsubst %.cpp, $(OBJDIR)/%.o, $(MATH_SRC)))
 
@@ -443,6 +450,32 @@ INCLUDEPATH += $(OPENCV_PATH)/include
 LIBPATH += $(OPENCV_PATH)/lib $(OPENCV_PATH)/release/lib
 
 $(IMAGEREADER): $(IMAGEREADER_OBJ) | $(CNTKMATH_LIB)
+	@echo $(SEPARATOR)
+	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(LIBPATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH)) -o $@ $^ -l$(CNTKMATH) -lopencv_core -lopencv_imgproc -lopencv_imgcodecs
+endif
+
+########################################
+# NewImageReader plugin
+########################################
+
+ifdef OPENCV_PATH
+NEWIMAGEREADER_SRC =\
+	$(SOURCEDIR)/Readers/NewImageReader/Exports.cpp \
+	$(SOURCEDIR)/Readers/NewImageReader/ImageConfigHelper.cpp \
+	$(SOURCEDIR)/Readers/NewImageReader/ImageDataDeserializer.cpp \
+	$(SOURCEDIR)/Readers/NewImageReader/ImageTransformers.cpp \
+	$(SOURCEDIR)/Readers/NewImageReader/ImageReader.cpp \
+
+NEWIMAGEREADER_OBJ := $(patsubst %.cpp, $(OBJDIR)/%.o, $(NEWIMAGEREADER_SRC))
+
+NEWIMAGEREADER:=$(LIBDIR)/NewImageReader.so
+ALL += $(NEWIMAGEREADER)
+SRC+=$(NEWIMAGEREADER_SRC)
+
+INCLUDEPATH += $(OPENCV_PATH)/include
+LIBPATH += $(OPENCV_PATH)/release/lib
+
+$(NEWIMAGEREADER): $(NEWIMAGEREADER_OBJ) | $(CNTKMATH_LIB)
 	@echo $(SEPARATOR)
 	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(LIBPATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH)) -o $@ $^ -l$(CNTKMATH) -lopencv_core -lopencv_imgproc -lopencv_imgcodecs
 endif
