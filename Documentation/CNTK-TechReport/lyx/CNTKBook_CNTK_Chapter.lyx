@@ -1771,7 +1771,7 @@ numMiniBatch4LRSearch
 : the number of minibatches used to search the minibatch size when in adaptive
  minibatch size mode.
  Default value is 500.
- It's typically set to 10-20% of the total minibatches in an epoch this is
+ It's typically set to 10-20% of the total minibatches in an epoch. This is
  shared with the search for learning rate in SearchBeforeEpoch mode.
  
 \end_layout
@@ -1792,8 +1792,8 @@ autoAdjustMinibatch
 \end_inset
 
 : enable or disable whether minibatch size is adaptively adjusted.
- Default value is false.Adaptive minibatch sizing will begin on epochs starting
- after user minibatch sizes expcitilyspecified are complete.
+ Default value is false. Adaptive minibatch sizing will begin on epochs starting
+ after user minibatch sizes explicitly specified are complete.
   For example if the userspecifed minibatchSize=256:1024, then 256 and 1024are
  used in the first 2 Epochs and adaptive minibatchsizing is used afterwards
  
