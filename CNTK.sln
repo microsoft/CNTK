@@ -33,7 +33,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tutorial", "Tutorial", "{98
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "CNTK-TechReport", "CNTK-TechReport", "{EA67F51F-1FE8-462D-9F3E-01161685AD59}"
 	ProjectSection(SolutionItems) = preProject
-		Documentation\CNTK-TechReport\lyx\CNTKBook-20151201.pdf = Documentation\CNTK-TechReport\lyx\CNTKBook-20151201.pdf
+		Documentation\CNTK-TechReport\lyx\CNTKBook-20160121.pdf = Documentation\CNTK-TechReport\lyx\CNTKBook-20160121.pdf
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Documents", "Documents", "{DE1A06BA-EC5C-4E0D-BCA8-3EA555310C58}"
@@ -499,11 +499,14 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "CIFAR-10", "CIFAR-10", "{77
 		Examples\Image\Miscellaneous\CIFAR-10\03_ResNet.config = Examples\Image\Miscellaneous\CIFAR-10\03_ResNet.config
 		Examples\Image\Miscellaneous\CIFAR-10\03_ResNet.mel = Examples\Image\Miscellaneous\CIFAR-10\03_ResNet.mel
 		Examples\Image\Miscellaneous\CIFAR-10\03_ResNet.ndl = Examples\Image\Miscellaneous\CIFAR-10\03_ResNet.ndl
+		Examples\Image\Miscellaneous\CIFAR-10\04_ResNet_56.config = Examples\Image\Miscellaneous\CIFAR-10\04_ResNet_56.config
+		Examples\Image\Miscellaneous\CIFAR-10\04_ResNet_56.ndl = Examples\Image\Miscellaneous\CIFAR-10\04_ResNet_56.ndl
 		Examples\Image\Miscellaneous\CIFAR-10\16to32.txt = Examples\Image\Miscellaneous\CIFAR-10\16to32.txt
 		Examples\Image\Miscellaneous\CIFAR-10\32to64.txt = Examples\Image\Miscellaneous\CIFAR-10\32to64.txt
 		Examples\Image\Miscellaneous\CIFAR-10\CIFAR_convert.py = Examples\Image\Miscellaneous\CIFAR-10\CIFAR_convert.py
-		Examples\Image\Miscellaneous\CIFAR-10\labelsmap.txt = Examples\Image\Miscellaneous\CIFAR-10\labelsmap.txt
+		Examples\Image\Miscellaneous\CIFAR-10\CifarConverter.py = Examples\Image\Miscellaneous\CIFAR-10\CifarConverter.py
 		Examples\Image\Miscellaneous\CIFAR-10\Macros.ndl = Examples\Image\Miscellaneous\CIFAR-10\Macros.ndl
+		Examples\Image\Miscellaneous\CIFAR-10\labelsmap.txt = Examples\Image\Miscellaneous\CIFAR-10\labelsmap.txt
 		Examples\Image\Miscellaneous\CIFAR-10\readme.txt = Examples\Image\Miscellaneous\CIFAR-10\readme.txt
 	EndProjectSection
 EndProject
@@ -676,13 +679,15 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tools", "Tools", "{83BFF5BF
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "ResNet", "ResNet", "{06D2C644-AE5F-4C30-A1F6-C78E2845AAB1}"
 	ProjectSection(SolutionItems) = preProject
-		Examples\Image\Miscellaneous\ImageNet\ResNet\add_top5_layer.mel = Examples\Image\Miscellaneous\ImageNet\ResNet\add_top5_layer.mel
 		Examples\Image\Miscellaneous\ImageNet\ResNet\Macros.ndl = Examples\Image\Miscellaneous\ImageNet\ResNet\Macros.ndl
 		Examples\Image\Miscellaneous\ImageNet\ResNet\ProjWeightsGen.py = Examples\Image\Miscellaneous\ImageNet\ResNet\ProjWeightsGen.py
 		Examples\Image\Miscellaneous\ImageNet\ResNet\ResNet_152.config = Examples\Image\Miscellaneous\ImageNet\ResNet\ResNet_152.config
 		Examples\Image\Miscellaneous\ImageNet\ResNet\ResNet_152.ndl = Examples\Image\Miscellaneous\ImageNet\ResNet\ResNet_152.ndl
 		Examples\Image\Miscellaneous\ImageNet\ResNet\ResNet_34.config = Examples\Image\Miscellaneous\ImageNet\ResNet\ResNet_34.config
 		Examples\Image\Miscellaneous\ImageNet\ResNet\ResNet_34.ndl = Examples\Image\Miscellaneous\ImageNet\ResNet\ResNet_34.ndl
+		Examples\Image\Miscellaneous\ImageNet\ResNet\ResNet_50.config = Examples\Image\Miscellaneous\ImageNet\ResNet\ResNet_50.config
+		Examples\Image\Miscellaneous\ImageNet\ResNet\ResNet_50.ndl = Examples\Image\Miscellaneous\ImageNet\ResNet\ResNet_50.ndl
+		Examples\Image\Miscellaneous\ImageNet\ResNet\create_eval_model.mel = Examples\Image\Miscellaneous\ImageNet\ResNet\create_eval_model.mel
 	EndProjectSection
 EndProject
 Global
