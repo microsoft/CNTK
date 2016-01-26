@@ -1,8 +1,11 @@
 dataDir: ../../../../../../Examples/Text/PennTreebank/Data
 
 tags:
-     # TODO: create new leg for Example-related e2e tests?
+    # part of examples as e2e tests (use TestDriver.py -t examples)
      - examples (flavor=='release') and (device=='gpu')
+    # running every Nightly job in 'P' leg
+    # currently commented out due to long runtime (> 10 minutes)
+    # - nightly-p (flavor=='release') and (device=='gpu')
 
 testCases:
   CNTK Run must be completed:
