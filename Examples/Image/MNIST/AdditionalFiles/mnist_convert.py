@@ -7,9 +7,9 @@ import struct
 import numpy as np
 
 def loadData(src, cimg):
-    print 'Downloading ' + src
+    print ('Downloading ' + src)
     gzfname, h = urllib.urlretrieve(src, './delete.me')
-    print 'Done.'
+    print ('Done.')
     try:
         with gzip.open(gzfname) as gz:
             n = struct.unpack('I', gz.read(4))
