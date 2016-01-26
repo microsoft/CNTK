@@ -3186,7 +3186,7 @@ s().GetNumCols() != 1)
 
 \begin_layout Plain Layout
 
-        throw std::logic_error("The left value of ScaleNode must be a scarlar
+        throw std::logic_error("The left value of ScaleNode must be a scalar
  value.");
 \end_layout
 

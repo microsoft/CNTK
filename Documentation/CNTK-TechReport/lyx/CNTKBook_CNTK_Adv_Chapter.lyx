@@ -705,7 +705,7 @@ After defining the network, it’s important to let CNTK know what the special
  It also needs to know the default output nodes, evaluation nodes and training
  criteria nodes.
  Note here the specification of the nodes that require special handling
- (NodesReqMultiSeqHandling) when the network is evalauted or trained with
+ (NodesReqMultiSeqHandling) when the network is evaluated or trained with
  multiple sequences, e.g., when the network itself is an RNN or the model
  is trained with the sequence-level criterion.
  Since in these cases multiple sequences will be stitched together to improve
@@ -2233,7 +2233,7 @@ RowStack
 \end_layout
 
 \begin_layout Standard
-Concatnate rows of input matrices to form a bigger matrix.
+Concatenate rows of input matrices to form a bigger matrix.
  The resulting matrix is a sumof(rows) by m1.cols matrix.
  It supports variable-length input.
  The syntax is
@@ -2898,11 +2898,11 @@ labels - the ground truth labels.
  The first row is the ground truth output id.
  The second row is the ground truth class id.
  The third and fourth rows are the start (inclusive) and end (exclusive)
- output ids corresponding to the ground trueth class id.
+ output ids corresponding to the ground truth class id.
 \end_layout
 
 \begin_layout Itemize
-mainInputInfo - contains the main information to make the classfication
+mainInputInfo - contains the main information to make the classification
  decision.
  It's an inputDim by T matrix.
  In language model, inputDim is often the hidden layer size.
@@ -4422,7 +4422,7 @@ To integrate this new layer into the model, the inputs and outputs of the
  After the copy any node whose connected nodes were not copied will have
  those connections set to an invalid value.
  These need to be fixed in order to have a valid model.
- Before a model can be saved CNTK first checkes to see if all nodes are
+ Before a model can be saved CNTK first checks to see if all nodes are
  correctly connected.
 \end_layout
 
