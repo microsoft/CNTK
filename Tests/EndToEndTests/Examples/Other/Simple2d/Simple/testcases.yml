@@ -1,8 +1,10 @@
 dataDir: ../../../../../../Examples/Other/Simple2d/Data
 
 tags:
-     # TODO: create new leg for Example-related e2e tests?
-     - examples (flavor=='debug') & (device=='cpu')
+    # part of examples as e2e tests (use TestDriver.py -t examples)
+     - examples 
+    # running every Nightly job in 'P' leg
+    # - nightly-p 
 
 testCases:
   CNTK Run must be completed:

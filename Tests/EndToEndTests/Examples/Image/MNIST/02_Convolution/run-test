@@ -6,5 +6,5 @@ ConfigDir=$TEST_DIR/../../../../../../Examples/Image/MNIST/Config
 CleanDataDir=$(cygpath -aw $DataDir)
 
 # cntkrun <CNTK config file name> <additional CNTK args>
-cntkrun 02_Convolution.config "train=[reader=[file=$CleanDataDir/Train.txt]] test=[reader=[file=$CleanDataDir/Test.txt]] train=[SGD=[maxEpochs=1]]  train=[reader=[randomize=none]]" || exit $?
+cntkrun 02_Convolution.config "train=[reader=[file=$CleanDataDir/Train.txt]] test=[reader=[file=$CleanDataDir/Test.txt]] train=[SGD=[maxEpochs=1]] train=[SGD=[epochSize=128]]  train=[reader=[randomize=none]]" || exit $?
 
