@@ -172,7 +172,8 @@ ifeq ("$(BUILDTYPE)","release")
     GENCODE_FLAGS := $(GENCODE_SM20) $(GENCODE_SM30) $(GENCODE_SM35) $(GENCODE_SM50)
   endif
 
-  CXXFLAGS += -O4
+  CXXFLAGS += -g -O4
+  LDFLAGS += -rdynamic
   CPPFLAGS += -DNDEBUG
   CUFLAGS += -O3 -use_fast_math -lineinfo $(GENCODE_FLAGS)
 endif
