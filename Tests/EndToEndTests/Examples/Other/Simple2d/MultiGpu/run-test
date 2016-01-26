@@ -5,5 +5,5 @@
 ConfigDir=$TEST_DIR/../../../../../../Examples/Other/Simple2d/Config
 
 # cntkrun <CNTK config file name> <additional CNTK args>
-cntkrun Multigpu.config "Simple_Demo_Train=[SGD=[maxEpochs=1]] Simple_Demo_Train=[SGD=[epochSize=100]] Simple_Demo_Train=[reader=[randomize=none]]" || exit $?
+cntkrun Multigpu.config "Multigpu_Demo_Train=[SGD=[maxEpochs=1]] Multigpu_Demo_Train=[SGD=[epochSize=100]] Multigpu_Demo_Train=[reader=[randomize=none]]" || exit $?
 
