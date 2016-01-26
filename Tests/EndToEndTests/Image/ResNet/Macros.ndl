@@ -1,0 +1,101 @@
+ConvBNLayerW(W, inp, outMap, kW, kH, hStride, vStride, bValue, scValue, expAvg)
+{
+    b = Parameter(outMap, 1, init = fixedValue, value = bValue)
+    sc = Parameter(outMap, 1, init = fixedValue, value = scValue)
+    m = Parameter(outMap, 1, init = fixedValue, value = 0, needGradient = false)
+    isd = Parameter(outMap, 1, init = fixedValue, value = 0, needGradient = false)
+    
+    c = Convolution(W, inp, kW, kH, outMap, hStride, vStride, zeroPadding = true, imageLayout = "cudnn")
+    y = BatchNormalization(c, sc, b, m, isd, eval = false, spatial = true, expAvgFactor = expAvg, imageLayout = "cudnn")
+}
+
+ConvBNLayer(inp, outMap, inWCount, kW, kH, hStride, vStride, wScale, bValue, scValue, expAvg)
+{
+    W = Parameter(outMap, inWCount, init = Gaussian, initValueScale = wScale)
+    c = ConvBNLayerW(W, inp, outMap, kW, kH, hStride, vStride, bValue, scValue, expAvg)
+}
+
+ConvBNReLULayer(inp, outMap, inWCount, kW, kH, hStride, vStride, wScale, bValue, scValue, expAvg)
+{
+    c = ConvBNLayer(inp, outMap, inWCount, kW, kH, hStride, vStride, wScale, bValue, scValue, expAvg)
+    y = RectifiedLinear(c)
+}
+
+# Standard building block for ResNet with identity shortcut (option A).
+ResNetNode2A(inp, outMap, inWCount, kW, kH, wScale, bValue, scValue)
+{
+    # First convolution layer.
+    c1 = ConvBNReLULayer(inp, outMap, inWCount, kW, kH, 1, 1, wScale, bValue, scValue, expAvg)
+    # Second convolution layer, no ReLU.
+    c2 = ConvBNLayer(c1, outMap, inWCount, kW, kH, 1, 1, wScale, bValue, scValue, expAvg)
+    # Identity shortcut.
+    p = Plus(c2, inp)
+    y = RectifiedLinear(p)
+}
+
+# Standard building block for ResNet with padding (option A).
+ResNetNode2AInc(inp, outMap, inWCount, wCount, kW, kH, wScale, bValue, scValue, expAvg, Wproj)
+{
+    # First convolution layer.
+    c1 = ConvBNReLULayer(inp, outMap, inWCount, kW, kH, 2, 2, wScale, bValue, scValue, expAvg)
+    # Second convolution layer, no ReLU.
+    c2 = ConvBNLayer(c1, outMap, wCount, kW, kH, 1, 1, wScale, bValue, scValue, expAvg)
+    
+    # Projection convolution layer.
+    c_proj = ConvBNLayerW(Wproj, inp, outMap, 1, 1, 2, 2, bValue, scValue, expAvg)
+    
+    p = Plus(c2, c_proj)
+    y2 = RectifiedLinear(p)
+}
+
+# Bottleneck building block for ResNet.
+ResNetNode3A(inp, inMap, convMap, outMap, convWCount, wScale, bValue, scValue, expAvg)
+{
+    # 1x1 reducing convolution.
+    c1 = ConvBNReLULayer(inp, convMap, inMap, 1, 1, 1, 1, wScale, bValue, scValue, expAvg)
+    # 3x3 convolution.
+    c2 = ConvBNReLULayer(c1, convMap, convWCount, 3, 3, 1, 1, wScale, bValue, scValue, expAvg)
+    # 1x1 expanding convolution, no ReLU.
+    c3 = ConvBNLayer(c2, outMap, convMap, 1, 1, 1, 1, wScale, bValue, scValue, expAvg)
+    
+    p = Plus(c3, inp)
+    y = RectifiedLinear(p)
+}
+
+ResNetNode3AInc(inp, inMap, convMap, outMap, convWCount, wScale, bValue, scValue, expAvg, wProj, projStride)
+{
+    # 1x1 reducing convolution.
+    c1 = ConvBNReLULayer(inp, convMap, inMap, 1, 1, projStride, projStride, wScale, bValue, scValue, expAvg)
+    # 3x3 convolution.
+    c2 = ConvBNReLULayer(c1, convMap, convWCount, 3, 3, 1, 1, wScale, bValue, scValue, expAvg)
+    # 1x1 expanding convolution, no ReLU.
+    c3 = ConvBNLayer(c2, outMap, convMap, 1, 1, 1, 1, wScale, bValue, scValue, expAvg)
+    # Input-to-output mapping convolution.
+    c_proj = ConvBNLayerW(wProj, inp, outMap, 1, 1, projStride, projStride, wScale, bValue, scValue, expAvg)
+    
+    p = Plus(c3, c_proj)
+    y = RectifiedLinear(p)
+}
+
+ResNetNode3BInc(inp, inMap, convMap, outMap, convWCount, wScale, bValue, scValue, expAvg, projStride)
+{
+    # 1x1 reducing convolution.
+    c1 = ConvBNReLULayer(inp, convMap, inMap, 1, 1, projStride, projStride, wScale, bValue, scValue, expAvg)
+    # 3x3 convolution.
+    c2 = ConvBNReLULayer(c1, convMap, convWCount, 3, 3, 1, 1, wScale, bValue, scValue, expAvg)
+    # 1x1 expanding convolution, no ReLU.
+    c3 = ConvBNLayer(c2, outMap, convMap, 1, 1, 1, 1, wScale, bValue, scValue, expAvg)
+    # Input-to-output mapping convolution.
+    c_proj = ConvBNLayer(inp, outMap, inMap, 1, 1, projStride, projStride, wScale, bValue, scValue, expAvg)
+    
+    p = Plus(c3, c_proj)
+    y = RectifiedLinear(p)
+}
+
+DnnLayer(hiddenDim, labelDim, x, wScale, bValue)
+{
+    W = Parameter(labelDim, hiddenDim, init = Gaussian, initValueScale = wScale)
+    b = Parameter(labelDim, init = fixedValue, value = bValue)
+    t = Times(W, x)
+    z = Plus(t, b)
+}
