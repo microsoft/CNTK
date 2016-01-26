@@ -1,0 +1,32 @@
+#!/bin/bash
+
+. $TEST_ROOT_DIR/run-test-common
+
+# This test uses a large dataset which is not part of the CNTK repository itself
+# We use the dataset from an external location specified using an environment variable
+if [[ "$CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY" == "" || ! -d "$CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY" ]]; then
+  echo 'This test uses external data that is not part of the CNTK repository. Environment variable CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY must be set to point to the external test data location'
+  exit 1
+fi
+
+if [ "$OS" == "Windows_NT" ]; then
+    DataSourceDir=`cygpath -au $CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY`/Image/ResNet/Data/v0
+else
+    DataSourceDir=$CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY/Image/ResNet/Data/v0
+fi
+
+# Copy the test data to the test run directory
+echo 'Copying test data to local directory'
+DataDir=$TEST_RUN_DIR/TestData
+mkdir $DataDir
+cp -R $DataSourceDir/* $DataDir || exit $?
+
+# cntkrun <CNTK config file name> <additional CNTK args>
+cntkrun AlexNet.config 
+ExitCode=$?
+
+# Delete the test data
+#rm -rf $DataDir
+
+exit $ExitCode
+
