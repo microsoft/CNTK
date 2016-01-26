@@ -487,7 +487,7 @@ std::unique_ptr<ConvolutionEngineFactory<ElemType>> ConvolutionEngineFactory<Ele
         return std::make_unique<DefaultConvolutionEngineFactory<ElemType>>();
     }
 
-    RuntimeError("Not supported convolution engine type: %d.", engType);
+    RuntimeError("Not supported convolution engine type: %d.", (int)engType);
 }
 
 template class ConvolutionEngineFactory<float>;
