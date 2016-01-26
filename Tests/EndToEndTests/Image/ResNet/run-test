@@ -15,6 +15,9 @@ else
     DataSourceDir=$CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY/Image/ResNet/Data/v0
 fi
 
+# Delete the test data
+rm -rf $DataDir
+
 # Copy the test data to the test run directory
 echo 'Copying test data to local directory'
 DataDir=$TEST_RUN_DIR/TestData
@@ -22,11 +25,8 @@ mkdir $DataDir
 cp -R $DataSourceDir/* $DataDir || exit $?
 
 # cntkrun <CNTK config file name> <additional CNTK args>
-cntkrun AlexNet.config 
+cntkrun ResNet_34.config 
 ExitCode=$?
-
-# Delete the test data
-rm -rf $DataDir
 
 exit $ExitCode
 
