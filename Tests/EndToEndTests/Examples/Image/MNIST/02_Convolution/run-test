@@ -3,7 +3,11 @@
 . $TEST_ROOT_DIR/run-test-common
 
 ConfigDir=$TEST_DIR/../../../../../../Examples/Image/MNIST/Config
-CleanDataDir=$(cygpath -aw $DataDir)
+if [ "$OS" == "Windows_NT" ]; then
+  CleanDataDir=$(cygpath -aw $DataDir)
+else
+  CleanDataDir=$DataDir
+fi
 
 # cntkrun <CNTK config file name> <additional CNTK args>
 cntkrun 02_Convolution.config "train=[reader=[file=$CleanDataDir/Train.txt]] test=[reader=[file=$CleanDataDir/Test.txt]] train=[SGD=[maxEpochs=1]] train=[SGD=[epochSize=128]]  train=[reader=[randomize=none]]" || exit $?
