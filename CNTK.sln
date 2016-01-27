@@ -693,6 +693,9 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Extensibility", "Extensibility", "{60F87E25-BC87-4782-8E20-1621AAEBB113}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "EvalWrapper", "Source\Extensibility\EvalWrapper\EvalWrapper.vcxproj", "{EF766CAE-9CB1-494C-9153-0030631A6340}"
+	ProjectSection(ProjectDependencies) = postProject
+		{482999D1-B7E2-466E-9F8D-2119F93EAFD9} = {482999D1-B7E2-466E-9F8D-2119F93EAFD9}
+	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CSEvalClient", "Source\Extensibility\CSEvalClient\CSEvalClient.csproj", "{41E11A59-62B2-4927-A4F8-F40B1B612C6C}"
 EndProject
