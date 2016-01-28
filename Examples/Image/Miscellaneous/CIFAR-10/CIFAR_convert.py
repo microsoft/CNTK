@@ -32,7 +32,7 @@ def readBatch(src, outFmt):
             feat[:, 1::3] = g
             feat[:, 2::3] = b
         else:
-            print 'Format not supported: ' + outFmt
+            print ('Format not supported: ' + outFmt)
             usage()
             sys.exit(1)
     return np.hstack((np.reshape(d['labels'], (len(d['labels']), 1)), feat))
