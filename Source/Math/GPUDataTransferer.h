@@ -7,10 +7,22 @@
 #include <vector>
 #include <memory>
 
+#ifdef _WIN32
+#ifndef MATH_API
+#ifdef MATH_EXPORTS
+#define MATH_API __declspec(dllexport)
+#else
+#define MATH_API __declspec(dllimport)
+#endif
+#endif /* MATH_API */
+#else  // no DLLs in Linux
+#define MATH_API
+#endif
+
 namespace Microsoft { namespace MSR { namespace CNTK {
 
 template <class ElemType>
-class GPUDataTransferer
+class MATH_API GPUDataTransferer
 {
 public:
     GPUDataTransferer(int deviceId, bool useConcurrentStreams);
