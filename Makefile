@@ -382,6 +382,26 @@ $(LIBSVMBINARYREADER): $(LIBSVMBINARYREADER_OBJ) | $(CNTKMATH_LIB)
 
 
 ########################################
+# SparsePCReader plugin
+########################################
+
+SPARSEPCREADER_SRC =\
+	$(SOURCEDIR)/Readers/SparsePCReader/Exports.cpp \
+	$(SOURCEDIR)/Readers/SparsePCReader/SparsePCReader.cpp \
+
+LIBSPARSEPCREADER_OBJ := $(patsubst %.cpp, $(OBJDIR)/%.o, $(LIBSPARCEPCREADER_SRC))
+
+LIBSPARSEPCREADER:=$(LIBDIR)/LibSparsePCReader.so
+ALL += $(LIBSPARSEPCREADER)
+SRC+=$(LIBSPARSEPCREADER_SRC)
+
+$(LIBSPARSEPCREADER): $(LIBSPARSEPCREADER_OBJ) | $(CNTKMATH_LIB)
+	@echo $(SEPARATOR)
+	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(LIBPATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH)) -o $@ $^ -l$(CNTKMATH)
+
+
+
+########################################
 # Kaldi plugins
 ########################################
 
