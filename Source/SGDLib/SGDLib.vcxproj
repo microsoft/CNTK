@@ -70,6 +70,7 @@
   <PropertyGroup>
     <IncludePath>..\SequenceTrainingLib;..\ComputationNetworkLib;..\Math;..\Common\Include;..\CNTK\BrainScript;..\..\DataReader\HTKMLFReader;$(MSMPI_INC);$(VCInstallDir)include;$(WindowsSDK_IncludePath)</IncludePath>
     <IncludePath Condition="'$(CNTK_ENABLE_1BitSGD)'=='true'">..\1BitSGD;$(IncludePath)</IncludePath>
+    <IncludePath Condition="'$(CNTK_ENABLE_ASGD)'=='true'">..\Multiverso\include;$(IncludePath)</IncludePath>
     <LibraryPath>$(MSMPI_LIB64);$(SolutionDir)$(Platform)\$(Configuration);$(SolutionDir)..\Common\lib;$(VCInstallDir)lib\amd64;$(WindowsSDK_LibraryPath_x64)</LibraryPath>
     <CustomBuildAfterTargets>Build</CustomBuildAfterTargets>
     <IntDir>$(Platform)\$(Configuration)\$(ProjectName)\</IntDir>
@@ -125,11 +126,13 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug_CpuOnly|x64'">
     <ClCompile>
       <PreprocessorDefinitions>CPUONLY;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories></AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>
+      </AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <DelayLoadDLLs>Math.dll</DelayLoadDLLs>
-      <AdditionalLibraryDirectories></AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>
+      </AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64' Or '$(Configuration)|$(Platform)'=='Release_CpuOnly|x64'">
@@ -179,11 +182,13 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release_CpuOnly|x64'">
     <ClCompile>
       <PreprocessorDefinitions>CPUONLY;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories></AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>
+      </AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <DelayLoadDLLs>Math.dll</DelayLoadDLLs>
-      <AdditionalLibraryDirectories></AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>
+      </AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="$(UsesCuda)">
@@ -198,6 +203,7 @@
     <ClInclude Include="..\Common\Include\BestGpu.h" />
     <ClInclude Include="..\Common\Include\Config.h" />
     <ClInclude Include="..\Common\Include\DataReader.h" />
+    <ClInclude Include="..\Common\Include\MultiversoWrapper.h" />
     <ClInclude Include="..\Common\Include\TensorShape.h" />
     <ClInclude Include="..\Common\Include\DataWriter.h" />
     <ClInclude Include="..\Common\Include\File.h" />

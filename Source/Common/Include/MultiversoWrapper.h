@@ -1,8 +1,7 @@
 #pragma once
 
 // This uses Multiverso.h which requires 
-// the header files in ..\..\Multiverso\include
-// and the lib files in ..\..\Multiverso\x64
+// the header files in ..\Multiverso\include
 #include "multiverso.h"
 #pragma comment(lib, "Multiverso.lib")
 
