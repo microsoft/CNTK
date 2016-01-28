@@ -4662,6 +4662,9 @@ template<class ElemType>
 			CUDA_CALL(cudaMalloc((void **)&gpuuttmap, uttnum*sizeof(size_t)));
 			CUDA_CALL(cudaMemcpy(gpuuttmap, uttMap.data(), uttnum*sizeof(size_t), cudaMemcpyHostToDevice));
 
+            ElemType *gpuscores;
+            CUDA_CALL(cudaMalloc((void **)&gpuscores, uttnum*sizeof(ElemType)));
+
 			cudaEvent_t done = nullptr;
 			if (do_sync)    CUDA_CALL(cudaEventCreate(&done));
 			dim3 thread_tail(DEFAULT_THREAD_PER_DIM, DEFAULT_THREAD_PER_DIM);
@@ -4681,17 +4684,36 @@ template<class ElemType>
 					gpuframenum, gpubeginframe, gpuphonenum, samplesInRecurrentStep, uttnum, t,  maxphonenum, totalphonenum);
 			}
 
-			_assigntotalscore_m << <uttnum, 1, 0, t_stream >> > (beta.m_pArray, totalscore, uttnum, gpuuttmap, gpubeginframe, samplesInRecurrentStep, maxphonenum);
+            _assigntotalscore_m << <uttnum, 1, 0, t_stream >> > (beta.m_pArray, gpuscores, uttnum, gpuuttmap, gpubeginframe, samplesInRecurrentStep, maxphonenum);
 			
 			dim3 block_tail_2((uttnum + DEFAULT_THREAD_PER_DIM - 1) / DEFAULT_THREAD_PER_DIM, (maxframenum + DEFAULT_THREAD_PER_DIM - 1) / DEFAULT_THREAD_PER_DIM);
 			
 			_assignCTCScore_m << < block_tail_2, thread_tail, 0, t_stream >> >(m_pArray, prob.m_pArray, alpha.m_pArray, beta.m_pArray, phoneseq.m_pArray, uttnum, gpuuttmap,
 				gpubeginframe, gpuphonenum, gpuframenum, samplesInRecurrentStep, maxframenum*samplesInRecurrentStep, maxphonenum, totalphonenum);
 			_assigntotaluttscore_m << <1, 1, 0, t_stream >> > (beta.m_pArray, totalscore, uttnum, gpuuttmap, gpubeginframe, samplesInRecurrentStep, maxphonenum);
+
+            ElemType *scores;
+            scores = (ElemType*) malloc(sizeof(ElemType)*uttnum);
+            CUDA_CALL(cudaMemcpyAsync(scores, gpuscores, sizeof(ElemType) * uttnum,  cudaMemcpyDeviceToHost, t_stream));
+            
+
+            size_t totalframenum = 0;
+            
+
+            for (size_t utt = 0; utt < uttFrameNum.size(); utt++)
+            {
+                totalframenum += uttFrameNum[utt];
+                totalscore += scores[utt];
+            }
+
+            totalscore /= totalframenum;
+            free(scores);
 			CUDA_CALL(cudaFree(gpuframenum));
 			CUDA_CALL(cudaFree(gpuphonenum));
 			CUDA_CALL(cudaFree(gpubeginframe));
 			CUDA_CALL(cudaFree(gpuuttmap));
+            CUDA_CALL(cudaFree(gpuscores));
+
 			if (do_sync)    CUDA_CALL(cudaEventRecord(done));
 			if (do_sync)    CUDA_CALL(cudaEventSynchronize(done));
 			if (do_sync)    CUDA_CALL(cudaEventDestroy(done));

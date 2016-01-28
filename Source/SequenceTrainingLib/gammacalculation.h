@@ -488,11 +488,10 @@ public:
         functionValues.AssignCTCScore_m(prob, alpha, beta, matrixphoneseqs, finalscore, extrauttmap, uttBeginFrame,
             uttFrameNum, uttPhoneNum, samplesInRecurrentStep, mbsize, true);
         rowsum.Resize(1, samplesInRecurrentStep*mbsize);
-
         //finalscore += -1 * beta.Get00Element();
         //alpha.Print("alpha");
-        ElemType ftemp = -1 * beta.Get00Element() / uttFrameNum[0];
-        if (ftemp > 100)
+        //ElemType ftemp = -1 * beta.Get00Element() / uttFrameNum[0];
+        if (finalscore > 100)
         {
             //prob.Print("prob", 0, 44, 0, 8);
             //alpha.Print("alpha", 0, 44, 0, 8);
@@ -504,7 +503,7 @@ public:
             beta.Print("beta");
             functionValues.Print("gamma");
         }
-        fprintf(stderr, "totalscore: %f\n", ftemp);
+        fprintf(stderr, "totalscore: %f\n", finalscore);
 
 
         functionValues.VectorSum(functionValues, rowsum, true);
@@ -512,7 +511,7 @@ public:
         functionValues.RowElementDivideBy(rowsum);
 
         finalscore += -1 * beta.Get00Element();
-        functionvalue(0, 0) = finalscore;
+        functionvalue(0, 0) = -finalscore*numrows*numcols;
     }
 private:
     // Helper methods for copying between ssematrix objects and CNTK matrices
@@ -647,4 +646,5 @@ private:
     size_t m_intermediateCUDACopyBufferSize;
 };
 } }
+
 

@@ -165,6 +165,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
 #endif
 
+
         return pair<size_t, size_t>(st, en);
     }
 
@@ -596,3 +597,4 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     };
 };
 } } }
+

@@ -5518,7 +5518,7 @@ __global__ void _assignCTCScore_m(
 
 template<class ElemType>
 __global__ void _assigntotalscore_m(ElemType *Betascore,
-	ElemType & totalscore,
+    ElemType *totalscore,
 	const size_t uttNum,
 	const size_t *uttmap,
 	const size_t *uttbeginframe,
@@ -5531,8 +5531,9 @@ __global__ void _assigntotalscore_m(ElemType *Betascore,
 	if (uttid < uttNum)
 	{		
 		LONG64 alphaid_0 = (uttbeginframe[uttid] * samplesInRecurrentStep + uttmap[uttid]) * maxphonenum;
+
 		Betascore[alphaid_0] = logaddk(Betascore[alphaid_0 + 1], Betascore[alphaid_0 + 2]);
-		//totalscore += Betascore[alphaid_0];
+		totalscore[uttid] = Betascore[alphaid_0];
 	}
 }
 
