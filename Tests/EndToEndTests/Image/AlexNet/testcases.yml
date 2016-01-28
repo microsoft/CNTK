@@ -1,9 +1,9 @@
 dataDir: ../../Data
 tags:
      # running on every BVT job in 'I' (Image) leg:
-     - bvt-i  (build_sku == 'gpu') and (device=='gpu')
+     - bvt-i  (build_sku == 'gpu') and (device=='gpu') and (os='windows')
      # running every Nightly job in 'I' leg
-     - nightly-i (build_sku == 'gpu') and (device=='gpu')
+     - nightly-i (build_sku == 'gpu') and (device=='gpu') and (os='windows')
 
 testCases:
   CNTK Run must be completed:
@@ -20,7 +20,7 @@ testCases:
     patterns:
       - ^Finished Epoch[{{integer}} of {{integer}}]
       - TrainLossPerSample = {{float,tolerance=.1%}}
-      - EvalErrPerSample = {{float,tolerance=.1%}}
+      - EvalErrPerSample = {{float,tolerance=.2%}}
       - AvgLearningRatePerSample = {{float,tolerance=0.001%}}
 
   Per-minibatch training results must match:
