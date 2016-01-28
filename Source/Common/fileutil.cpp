@@ -413,10 +413,23 @@ void fprintfOrDie(FILE* f, const char* fmt, ...)
 void fflushOrDie(FILE* f)
 {
     int rc = fflush(f);
+
     if (rc != 0)
     {
         RuntimeError("error flushing to file: %s", strerror(errno));
     }
+
+#ifndef _WIN32
+    int fd = fileno(f);
+
+    if (fd == -1)
+    {
+        RuntimeError("unable to convert file handle to file descriptor: %s", strerror(errno));
+    }
+
+    // Ensure that all data is synced before returning from this function
+    fsync(fd);
+#endif
 }
 
 // ----------------------------------------------------------------------------
