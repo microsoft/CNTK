@@ -1,4 +1,4 @@
-// SGD.cpp -- implements SGD with all bells and whistles, parallelization, randomizatiom, etc.
+// SGD.cpp -- implements SGD with all bells and whistles, parallelization, randomization, etc.
 
 #define _CRT_SECURE_NO_WARNINGS // "secure" CRT not available on all platforms  --add this at the top of all CPP files that give "function or variable may be unsafe" warnings
 
@@ -41,7 +41,7 @@ void SGD<ElemType>::Train(function<ComputationNetworkPtr(DEVICEID_TYPE)> createN
                           IDataReader<ElemType>* validationSetDataReader,
                           const bool makeMode)
 {
-    // determine which epoch to start with, including recoveing a checkpoint if any and 'makeMode' enabled
+    // determine which epoch to start with, including recovering a checkpoint if any and 'makeMode' enabled
     int startEpoch = DetermineStartEpoch(makeMode);
     if (startEpoch == m_maxEpochs)
     {
@@ -151,6 +151,7 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
         set<ComputationNodeBasePtr> criteriaLogged; // set to make sure we don't double-log criteria
         for (const auto& node : criterionNodes)
             criteriaLogged.insert(node);
+
         for (const auto& node : originalEvaluationNodes)
             if (criteriaLogged.insert(node).second)
                 evaluationNodes.push_back(node);
@@ -1103,6 +1104,8 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
             }
             else
             {
+                wasProgressPrinted = ProgressTracing::TraceProgressPercentage(epochNumber, 0.0, false);
+
                 string formatString = "%s Epoch[%2d of %d]-Minibatch[%4d-%4d]: SamplesSeen = %d; TrainLossPerSample = " +
                                       GeneratePaddedFloatOrExpFormat(11, 8, trainLossPerSample) + "; ";
                 SGDTrace(stderr, formatString.c_str(),
