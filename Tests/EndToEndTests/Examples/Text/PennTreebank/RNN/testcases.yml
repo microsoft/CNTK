@@ -1,11 +1,10 @@
 dataDir: ../../../../../../Examples/Text/PennTreebank/Data
 
 tags:
-    # part of examples as e2e tests (use TestDriver.py -t examples)
-     - examples (flavor=='release') and (device=='gpu')
-    # running every Nightly job in 'P' leg
-    # currently commented out due to long runtime (> 10 minutes)
-    # - nightly-p (flavor=='release') and (device=='gpu')
+    # running on every BVT job in 'E' (Examples) leg
+    - bvt-e ((flavor=='debug') ^ (device=='cpu')) 
+    # running every Nightly job in 'E' (Examples) leg
+    - nightly-e
 
 testCases:
   CNTK Run must be completed:
