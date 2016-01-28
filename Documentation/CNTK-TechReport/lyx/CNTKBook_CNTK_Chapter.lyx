@@ -965,7 +965,7 @@ CLASSLSTM
 
 : the class-based long short-term memory neural network.
  It uses sparse input, sparse parameter and sparse output.
- This is often uesd for language modeling tasks.
+ This is often used for language modeling tasks.
 \end_layout
 
 \end_deeper
@@ -1768,10 +1768,10 @@ numMiniBatch4LRSearch
 
 \end_inset
 
-: the number of minibatches used to search the minibatch size whenin adaptive
+: the number of minibatches used to search the minibatch size when in adaptive
  minibatch size mode.
  Default value is 500.
- It's typically set to 10-20% of the total minibatches in an epochthis is
+ It's typically set to 10-20% of the total minibatches in an epoch. This is
  shared with the search for learning rate in SearchBeforeEpoch mode.
  
 \end_layout
@@ -1792,10 +1792,10 @@ autoAdjustMinibatch
 \end_inset
 
 : enable or disable whether minibatch size is adaptively adjusted.
- Default value is false.Adapative minibatch sizing will begin on epochs starting
- after user minbatch sizes expcitilyspecified are complete.
+ Default value is false. Adaptive minibatch sizing will begin on epochs starting
+ after user minibatch sizes explicitly specified are complete.
   For example if the userspecifed minibatchSize=256:1024, then 256 and 1024are
- used in the first 2 Epochs and adaptive minibatchsizing is used aferwards
+ used in the first 2 Epochs and adaptive minibatchsizing is used afterwards
  
 \end_layout
 
@@ -1814,7 +1814,7 @@ minibatchSizeTuningFrequency
 
 \end_inset
 
-: The number of epochs to skip, on a periodic basis, beforedynamically adjusting
+: The number of epochs to skip, on a periodic basis, before dynamically adjusting
  the minibatch size.
  Default value is 1.
  
@@ -1835,7 +1835,7 @@ minibatchSizeTuningMax
 
 \end_inset
 
-: The maximum size allowed for anadaptively adjusted minibatch size.
+: The maximum size allowed for an adaptively adjusted minibatch size.
  Default value is 1048576.
  
 \end_layout
@@ -2669,10 +2669,10 @@ rollingWindow
 
  option reads in all feature files and stores them on disk in one large
  temporary binary file.
- The data is randomized by running a large rollowing window over the data
+ The data is randomized by running a large rolling window over the data
  in this file and randomizing the data within the window.
  This method produces more thorough randomization of the data but requires
- a large temprorary file written to disk.
+ a large temporary file written to disk.
  The other option is 
 \begin_inset Quotes eld
 \end_inset
@@ -2798,14 +2798,14 @@ labels
 \end_inset
 
  are the default names used by the SimpleNetworkBuilder but if the network
- is designed using the Network Descrition Language (NDL), then any names
+ is designed using the Network Description Language (NDL), then any names
  can be used, as long as they each have a corresponding node in the network.
 \end_layout
 
 \begin_layout Standard
 To specify continuous-valued features, e.g.
  MFCC's or log mel filterbank coefficients, the following parameters should
- be included in the a confguration block:
+ be included in the a configuration block:
 \end_layout
 
 \begin_layout Itemize
@@ -3378,7 +3378,7 @@ nbruttsineachrecurrentiter
  The reader arranges same-length input sentences, up to the specified limit,
  into each minibatch.
  For recurrent networks, trainer resets hidden layer activities only at
- the begining of sentences.
+ the beginning of sentences.
  Activities of hidden layers are carried over to the next minibatch if an
  end of sentence is not reached.
  Using multiple sentences in a minibatch can speed up training processes.
@@ -3425,7 +3425,7 @@ wordclass
  This is used for class-based language modeling.
  An example of the class information is below.
  The first column is the word index.
- The second column is the number of occurances, the third column is the
+ The second column is the number of occurrences, the third column is the
  word, and the last column is the class id of the word.
  
 \begin_inset listings
@@ -3795,7 +3795,7 @@ nbrUttsInEachRecurrentIter
  The reader arranges same-length input sentences, up to the specified limit,
  into each minibatch.
  For recurrent networks, trainer resets hidden layer activities only at
- the begining of sentences.
+ the beginning of sentences.
  Activities of hidden layers are carried over to the next minibatch if an
  end of sentence is not reached.
  Using multiple sentences in a minibatch can speed up training processes.
@@ -4999,7 +4999,7 @@ section
 \end_inset
 
  – the encoderReader and decoderReader are the readers for encoder and decoder.
- Similary for encoderCVReader and decoderCVReader for validation set.
+ Similarly for encoderCVReader and decoderCVReader for validation set.
  
 \end_layout
 
@@ -5365,7 +5365,7 @@ deviceId
 
 \begin_layout Standard
 CNTK supports CPU and GPU computation.
- Users can determine what device to use by setting the deviceId papameter.
+ Users can determine what device to use by setting the deviceId parameter.
  The possible values are
 \end_layout
 
@@ -5509,7 +5509,7 @@ traceLevel=0 # larger values mean more output
 
 The default value is 0 and specifies minimal output.
  The higher the number the more output can be expected.
- Currently 0 (limited output), 1 (medium ouput) and 2 (verbose output) are
+ Currently 0 (limited output), 1 (medium output) and 2 (verbose output) are
  the only values supported.
 \end_layout
 
