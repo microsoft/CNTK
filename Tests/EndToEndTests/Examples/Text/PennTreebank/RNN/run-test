@@ -5,5 +5,5 @@
 ConfigDir=$TEST_DIR/../../../../../../Examples/Text/PennTreebank/Config
 
 # cntkrun <CNTK config file name> <additional CNTK args>
-cntkrun rnn.config "train=[SGD=[maxEpochs=1]] train=[epochSize=4096]]" || exit $?
+cntkrun rnn.config "train=[SGD=[maxEpochs=1]] train=[epochSize=2048]] trainFile=ptb.small.train.txt validFile=ptb.small.valid.txt testFile=ptb.small.test.txt confVocabSize=1000" || exit $?
 
