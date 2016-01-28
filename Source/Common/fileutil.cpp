@@ -419,7 +419,6 @@ void fflushOrDie(FILE* f)
         RuntimeError("error flushing to file: %s", strerror(errno));
     }
 
-#ifndef _WIN32
     int fd = fileno(f);
 
     if (fd == -1)
@@ -428,7 +427,18 @@ void fflushOrDie(FILE* f)
     }
 
     // Ensure that all data is synced before returning from this function
-    fsync(fd);
+#ifdef _WIN32
+    if (!FlushFileBuffers((HANDLE)_get_osfhandle(fd)))
+    {
+        RuntimeError("error syncing to file: %d", (int) ::GetLastError());
+    }
+#else
+    rc = fsync(fd);
+
+    if (rc != 0)
+    {
+        RuntimeError("error syncing to file: %s", strerror(errno));
+    }
 #endif
 }
 
