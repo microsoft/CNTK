@@ -1,10 +1,10 @@
 dataDir: ../../../../Image/Data
 
 tags:
-    # part of examples as e2e tests (use TestDriver.py -t examples)
-     - examples 
-    # running every Nightly job in 'P' leg
-    # - nightly-p 
+    # running on every BVT job in 'E' (Examples) leg
+    - bvt-e ((flavor=='debug') ^ (device=='cpu')) 
+    # running every Nightly job in 'E' (Examples) leg
+    - nightly-e
 
 testCases:
   CNTK Run must be completed:

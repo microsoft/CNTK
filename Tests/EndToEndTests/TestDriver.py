@@ -234,8 +234,11 @@ class Test:
       os.environ["MPI_BINARY"] = os.path.join(os.environ["MSMPI_BIN"], "mpiexec.exe")
     else:
       tempPath = os.path.join(args.build_location, flavor, "bin", "cntk")
-      if not os.path.isfile(tempPath) and tempPath.find("/build/gpu/") >= 0:
-        tempPath = tempPath.replace("/build/gpu/", "/build/")
+      if not os.path.isfile(tempPath):
+        for bsku in ["/build/gpu/", "/build/cpu/", "/build/1bitsgd/"]:
+          if tempPath.find(bsku) >= 0:
+            tempPath = tempPath.replace(bsku, "/build/")
+            break
       os.environ["TEST_CNTK_BINARY"] = tempPath
       os.environ["MPI_BINARY"] = "mpiexec"
     os.environ["TEST_DIR"] = self.testDir

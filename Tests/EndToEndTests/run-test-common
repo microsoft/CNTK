@@ -24,6 +24,7 @@ MPIMode=0
 MPIArgs=
 
 DeleteExistingModels=1
+DeleteModelsAfterTest=1
 
 # Helper function to print and run a command
 run()
@@ -75,7 +76,7 @@ cntkrun()
     CNTKArgs="$CNTKArgs stderr=$RunDir/$LogFileName"
   fi
 
-  modelsDir=$TEST_RUN_DIR/models
+  modelsDir=$TEST_RUN_DIR/Models
   if [[ $DeleteExistingModels == 1 ]]; then
     [ -d $modelsDir ] && rm -rf $modelsDir
   fi
@@ -85,6 +86,9 @@ cntkrun()
     run "$BinaryPath" $CNTKArgs
   else
     run "$MPI_BINARY" $MPIArgs $BinaryPath $CNTKArgs
+  fi
+  if [[ $DeleteModelsAfterTest == 1 ]]; then
+    [ -d $modelsDir ] && rm -rf $modelsDir
   fi
 
   return $?
