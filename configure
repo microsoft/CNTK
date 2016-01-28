@@ -44,6 +44,9 @@ mathlib=
 default_use_1bitsgd=no
 enable_1bitsgd=$default_use_1bitsgd
 
+default_use_asgd=no
+enable_asgd=$default_use_asgd
+
 # List from best to worst choice
 default_path_list="/usr /usr/local /opt /opt/local"
 
@@ -172,6 +175,7 @@ function show_help ()
     echo "  --with-build-top=directory build directory $(show_default $build_top)"
     echo "  --add directory add directory to library search path"
     echo "  --1bitsgd[=(yes|no)] use 1Bit SGD $(show_default $(default_use_1bitsgd))"
+	echo "  --asgd[=(yes|no)] use asgd powered by Multiverso $(show_default $(default_use_asgd))"
     echo "  --cuda[=(yes|no)] use cuda GPU $(show_default $(default_use_cuda))"
     echo "  --with-cuda[=directory] $(show_default $(find_cuda))"
     echo "  --with-cub[=directory] $(show_default $(find_cub))"
@@ -223,6 +227,17 @@ do
                 enable_1bitsgd=$optarg
             else
                 echo "Invalid value for --1bitsgd $optarg"
+                show_help
+                exit
+            fi
+            ;;
+
+		--asgd*)
+            if test x$optarg = xyes || test x$optarg = xno
+            then
+                enable_asgd=$optarg
+            else
+                echo "Invalid value for --asgd $optarg"
                 show_help
                 exit
             fi
@@ -545,6 +560,9 @@ if test x$opencv_path != x ; then
 fi
 if test $enable_1bitsgd = yes ; then
     echo CNTK_ENABLE_1BitSGD=true >> $config
+fi
+if test $enable_asgd = yes ; then
+    echo CNTK_ENABLE_ASGD=true >> $config
 fi
 
 # If we are not in the configure directory, generate a trampoline Makefile
