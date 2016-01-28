@@ -298,14 +298,32 @@ public:
         fstream << m_startIndex << m_sliceHeight;
     }
 
+private:
+
+    // determine the tensor shape that represents slice of the input that we are taking
+    TensorShape GetInputSlice(size_t rank, const FrameRange & fr) const
+    {
+        auto inputSlice = Input(0)->GetTensorSliceFor(rank, fr);    // input must be narrowed down
+        inputSlice.NarrowTo(0, m_startIndex, m_startIndex + m_sliceHeight);
+        return inputSlice;
+    }
+
+public:
+
     virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
     {
-        ValueFor(fr).AssignRowSliceValuesOf(Input(0)->ValueFor(fr), m_startIndex, m_sliceHeight);
+        size_t rank = DetermineElementwiseTensorRank();
+        auto output =                                ValueTensorFor(rank,         fr);
+        let   input = TensorView<ElemType>(Input(0)->Value(), GetInputSlice(rank, fr.AllowBroadcast()));
+        output.AssignCopyOf(input);
     }
 
     virtual void /*ComputationNode::*/ BackpropTo(const size_t /*inputIndex*/, const FrameRange& fr) override
     {
-        Input(0)->GradientFor(fr).AddToRowSliceValuesOf(GradientFor(fr), m_startIndex, m_sliceHeight);
+        size_t rank = DetermineElementwiseTensorRank();
+        let outputGrad =                                GradientTensorFor(rank,         fr);
+        auto inputGrad = TensorView<ElemType>(Input(0)->Gradient(), GetInputSlice(rank, fr));
+        inputGrad.AddCopyOf(outputGrad);
     }
 
     virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }
@@ -316,16 +334,14 @@ public:
         Base::Validate(isFinalValidationPass);
         InferMBLayoutFromInputsForStandardCase();
 
-        if (isFinalValidationPass && Input(0)->GetSampleMatrixNumRows() < m_startIndex + m_sliceHeight)
-            RuntimeError("%ls %ls operation: m_startIndex + m_sliceHeight exceeds number of rows in the input.", NodeName().c_str(), OperationName().c_str());
+        auto sampleLayout = Input(0)->GetSampleLayout();
+        if (isFinalValidationPass && sampleLayout[0] < m_startIndex + m_sliceHeight)
+            RuntimeError("%ls %ls operation: m_startIndex + m_sliceHeight (%d) exceeds number of rows in the input ([%s]).", NodeName().c_str(), OperationName().c_str(), (int)(m_startIndex + m_sliceHeight), string(sampleLayout).c_str());
 
-        // RowSlice cannot slice tensors.
-        // TODO: Create a TensorSlice operation, or just Slice.
-        if (isFinalValidationPass && !Input(0)->GetSampleLayout().IsColumnVector()
-            && !Input(0)->GetSampleLayout().IsVectorStoredAsImage() // legacy
-            )
-            RuntimeError("%ls %ls operation: Input must be a vector, tensor shape [%s] not allowed.", NodeName().c_str(), OperationName().c_str(), string(Input(0)->GetSampleLayout()).c_str());
-        SetDims(TensorShape(m_sliceHeight), HasMBLayout());
+        if (sampleLayout[0] >= m_startIndex + m_sliceHeight)    // (this guards against failing an out-of-bounds error if not isFinalValidationPass)
+            sampleLayout.NarrowTo(0, m_startIndex, m_startIndex + m_sliceHeight);
+
+        SetDims(TensorShape(sampleLayout.GetDims()), HasMBLayout());
     }
 
 private:
