@@ -469,8 +469,12 @@ void HTKMLFReader<ElemType>::PrepareForTrainingOrTesting(const ConfigRecordType&
         // construct all the parameters we don't need, but need to be passed to the constructor...
         std::pair<std::vector<wstring>, std::vector<wstring>> latticetocs;
         std::unordered_map<std::string, size_t> modelsymmap;
-        m_lattices = new msra::dbn::latticesource(latticetocs, modelsymmap);
-
+        
+        // Note, we are actually not using <m_lattices>, the only reason we
+        // kept it was because it was required by
+        // <minibatchutterancesourcemulti>.
+        m_lattices = new msra::dbn::latticesource(latticetocs, modelsymmap, L"");
+        
         // now get the frame source. This has better randomization and doesn't create temp files
         m_frameSource = new msra::dbn::minibatchutterancesourcemulti(
             scriptpaths, infilesmulti, labelsmulti, m_featDims, m_labelDims,
