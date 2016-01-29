@@ -12,7 +12,7 @@
 #ifdef LEAKDETECT
 #include <vld.h> // leak detection
 #endif
-#ifndef __WINDOWS__
+#ifndef SPARSE_PCREADER_USE_WINDOWS_API
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include <stdio.h>
@@ -33,7 +33,7 @@ DWORD LODWORD(size_t size)
 template <class ElemType>
 SparsePCReader<ElemType>::~SparsePCReader()
 {
-#if __WINDOWS__
+#ifdef SPARSE_PCREADER_USE_WINDOWS_API
     if (m_filemap != NULL)
     {
         UnmapViewOfFile(m_filemap);
@@ -136,12 +136,12 @@ void SparsePCReader<ElemType>::InitFromConfig(const ConfigRecordType& readerConf
         m_dims[i] = featureConfig("dim");
     }
 
-#ifdef __WINDOWS__
+#ifdef SPARSE_PCREADER_USE_WINDOWS_API
     m_hndl = CreateFile(m_file.c_str(), GENERIC_READ,
                         FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
     if (m_hndl == INVALID_HANDLE_VALUE)
     {
-        RuntimeError(("Unable to Open/Create file %ls, error %x", m_file.c_str(), GetLastError());
+        RuntimeError("Unable to Open/Create file %ls, error %x", m_file.c_str(), GetLastError());
     }
 
     GetFileSizeEx(m_hndl, (PLARGE_INTEGER) &m_filePositionMax);

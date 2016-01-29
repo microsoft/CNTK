@@ -12,6 +12,12 @@
 #include <string>
 #include <map>
 #include <vector>
+
+// Windows or Posix? Originally the reader was done only for Windows. Keep it this way for now when running on Windows.
+#ifdef __WINDOWS__
+#define SPARSE_PCREADER_USE_WINDOWS_API 1
+#endif
+
 namespace Microsoft { namespace MSR { namespace CNTK {
 
 template <class ElemType>
@@ -40,7 +46,7 @@ private:
     ElemType* m_labelsBuffer;
     MBLayoutPtr m_pMBLayout;
 
-#ifdef __WINDOWS__
+#ifdef SPARSE_PCREADER_USE_WINDOWS_API
     HANDLE m_hndl;
     HANDLE m_filemap;
 #else
