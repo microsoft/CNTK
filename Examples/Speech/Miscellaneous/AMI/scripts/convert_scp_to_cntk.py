@@ -5,7 +5,7 @@ import string
 import os
 
 def usage():
-    print 'convert_scp_to_cntk.py -in [fea_list] [label_list]'
+    print ('convert_scp_to_cntk.py -in [fea_list] [label_list]')
 
 def createDir(d):
     if not os.path.isdir(d):
@@ -27,5 +27,5 @@ else:
         labs = [x.rstrip() for x in fr]
         fr.close()
         lenLab = len(labs)-1
-        print line + "[0,"+str(lenLab)+"]"
+        print (line + "[0,"+str(lenLab)+"]")
         frnum = frnum + 1
