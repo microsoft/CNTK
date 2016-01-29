@@ -80,12 +80,6 @@ all : buildall
 # Set up basic nvcc options and add CUDA targets from above
 CUFLAGS = -std=c++11 -D_POSIX_SOURCE -D_XOPEN_SOURCE=600 -D__USE_XOPEN2K -m 64
 
-ifndef NO_USE_MULTIVERSO
-INCLUDEPATH += Multiverso/include
-LIBPATH += Multiverso/x64/$(BUILDTYPE)
-LIBS += -lmultiverso -lzmq -lyaml-cpp
-endif
-
 ifdef CUDA_PATH
   ifndef GDK_PATH
     $(info defaulting GDK_PATH to /usr)
@@ -444,6 +438,16 @@ ifeq ("$(CNTK_ENABLE_1BitSGD)","true")
   INCLUDEPATH += $(SOURCEDIR)/1BitSGD
 
   CPPFLAGS += -DQUANTIZED_GRADIENT_AGGREGATION
+endif
+
+########################################
+# ASGD(multiverso) setup
+########################################
+
+ifeq ("$(CNTK_ENABLE_ASGD)","true")
+  INCLUDEPATH += $(SOURCEDIR)/Multiverso/include
+  LIBPATH += $(SOURCEDIR)/Multiverso/x64/$(BUILDTYPE)
+  LIBS += -lmultiverso -lzmq -lyaml-cpp
 endif
 
 ########################################
