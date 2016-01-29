@@ -10,9 +10,9 @@ if [[ "$CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY" == "" || ! -d "$CNTK_EXTERNAL_T
 fi
 
 if [ "$OS" == "Windows_NT" ]; then
-    DataSourceDir=`cygpath -au $CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY`/Image/ResNet/Data/v0
+    DataSourceDir=`cygpath -au $CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY`/private/Image/ResNet/Data/v0
 else
-    DataSourceDir=$CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY/Image/ResNet/Data/v0
+    DataSourceDir=$CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY/private/Image/ResNet/Data/v0
 fi
 
 # Copy the test data to the test run directory
