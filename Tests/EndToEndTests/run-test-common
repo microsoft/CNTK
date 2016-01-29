@@ -24,7 +24,7 @@ MPIMode=0
 MPIArgs=
 
 DeleteExistingModels=1
-DeleteModelsAfterTest=1
+DeleteModelsAfterTest=0
 
 # Helper function to print and run a command
 run()
