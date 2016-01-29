@@ -183,7 +183,9 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
         {
             auto& node = nodes[i];
             auto* functionValues = &dynamic_pointer_cast<ComputationNode<ElemType>>(node)->Value();
-            assert(functionValues->GetNumCols() == net->GetMBLayoutPtr()->GetNumTimeSteps());
+            // TODO: in Jenkins, this fails for all Samples, at least CPU, Debug, Linux, while it works when running locally
+            if (functionValues->GetNumCols() != net->GetMBLayoutPtr()->GetNumTimeSteps())
+                LogicError("TrainOrAdaptModel: %ls %ls operation has inconsistent matrix width %d vs. MBLayout width %d", node->NodeName().c_str(), node->OperationName().c_str(), (int)functionValues->GetNumCols(), (int)net->GetMBLayoutPtr()->GetNumTimeSteps());
             (*inputMatrices)[node->NodeName()] = functionValues;
         }
     }
