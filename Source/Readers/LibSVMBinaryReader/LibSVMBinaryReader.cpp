@@ -240,7 +240,7 @@ SparseBinaryInput<ElemType>::~SparseBinaryInput()
 }
 
 template <class ElemType>
-void SparseBinaryInput<ElemType>::Init(std::map<std::wstring, std::wstring> rename)
+void SparseBinaryInput<ElemType>::Init(std::map<std::wstring, std::wstring> rename )
 {
 
     size_t base_offset = 0;
@@ -496,6 +496,7 @@ shared_ptr<BinaryMatrix<ElemType>> SparseBinaryInput<ElemType>::CreateMatrix(std
 template <class ElemType>
 void SparseBinaryInput<ElemType>::ReadMinibatches(size_t* read_order, size_t numToRead)
 {
+    clock_t read_timer;
 #if DEBUG
     marker_series series(L"Read Minibatches");
     // diagnostic::span span(series, L"Reading Data");
@@ -527,7 +528,15 @@ void SparseBinaryInput<ElemType>::ReadMinibatches(size_t* read_order, size_t num
 #if DEBUG
         series.write_flag(_T("reading."));
 #endif
+        if (m_debugLevel > 2) {
+            read_timer = clock();
+        }
         m_inFile.read((char*) data_buffer, readSize);
+        if (m_debugLevel > 2) {
+            read_timer = clock() - read_timer;
+            fprintf(stderr, "read: %d\t%lu\n", read_timer, readSize);
+        }
+
         m_dataToConsume.push(data_buffer);
 //fprintf(stderr, "done reading data %ld\n", c);
 #if DEBUG
@@ -690,6 +699,8 @@ void LibSVMBinaryReader<ElemType>::InitFromConfig(const ConfigRecordType& reader
     m_dataInput = make_shared<SparseBinaryInput<ElemType>>(file);
     m_dataInput->Init(rename);
 
+    m_debugLevel = (size_t)readerConfig(L"debugLevel", 0);
+    m_dataInput->SetDebugLevel(m_debugLevel);
     m_mbSize = (size_t) readerConfig(L"minibatch", 0);
     if (m_mbSize > 0)
     {
@@ -784,6 +795,7 @@ void LibSVMBinaryReader<ElemType>::DoDSSMMatrix(Matrix<ElemType>& mat, size_t ac
 template <class ElemType>
 bool LibSVMBinaryReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemType>*>& matrices)
 {
+    clock_t mb_timer;
 //timer = clock();
 #if DEBUG
     span minibatch_span(*reader_series, 1, L"Get Minibatch: %ld", cur_read);
@@ -800,17 +812,20 @@ bool LibSVMBinaryReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<El
                                                         return m_dataInput->FillMatrices(m_dataMatrices);
                                                     });
         }
-//fprintf(stderr, "before get.\n");
-//timer = clock();
 #if DEBUG
         reader_series->write_flag(_T("before get."));
 #endif
+        if (m_debugLevel > 2) {
+            mb_timer = clock();
+        }
         actualMBSize = m_pendingAsyncGetMinibatch.get();
+        if (m_debugLevel > 2) {
+            mb_timer = clock() - mb_timer;
+            fprintf(stderr, "async: %d\n", mb_timer);
+        }
 #if DEBUG
         reader_series->write_flag(_T("after get."));
 #endif
-        // timer = clock() - timer;
-        // fprintf(stderr, "done get\tIt took me %d clicks (%f seconds).\n", timer, ((float)timer) / CLOCKS_PER_SEC);
 
         if (actualMBSize == 0)
         {

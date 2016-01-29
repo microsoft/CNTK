@@ -154,6 +154,7 @@ public:
     void ReadMinibatches(size_t* read_order, size_t numToRead);
     size_t ReadMinibatch(void* data_buffer, std::map<std::wstring, shared_ptr<BinaryMatrix<ElemType>>>& matrices);
     // void GetMinibatch(std::map<std::wstring, Matrix<ElemType>*>& matrices);
+    void SetDebugLevel(size_t level) { m_debugLevel = level; }
     size_t FillMatrices(std::map<std::wstring, shared_ptr<BinaryMatrix<ElemType>>>& matrices);
     size_t GetMBSize()
     {
@@ -212,6 +213,7 @@ private:
 
     int32_t m_tempValuesSize;
     void* m_tempValues;
+    size_t m_debugLevel;
 
     RandomOrdering m_randomordering; // randomizing class
     std::mt19937_64 m_randomEngine;
@@ -312,6 +314,8 @@ private:
     size_t m_requestedEpochSize; // size of an epoch
 
     size_t m_epoch; // which epoch are we on
+
+    size_t m_debugLevel;
 
     bool m_partialMinibatch; // a partial minibatch is allowed
 
