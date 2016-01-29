@@ -179,14 +179,11 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
     for (size_t pass = 0; pass < 2; pass++)
     {
         auto& nodes = (pass == 0) ? featureNodes : labelNodes;
-        for (size_t i = 0; i < nodes.size(); i++)
+        for (const auto & node : nodes)
         {
-            auto& node = nodes[i];
-            auto* functionValues = &dynamic_pointer_cast<ComputationNode<ElemType>>(node)->Value();
-            // TODO: in Jenkins, this fails for all Samples, at least CPU, Debug, Linux, while it works when running locally
-            if (functionValues->GetNumCols() != net->GetMBLayoutPtr()->GetNumTimeSteps())
-                LogicError("TrainOrAdaptModel: %ls %ls operation has inconsistent matrix width %d vs. MBLayout width %d", node->NodeName().c_str(), node->OperationName().c_str(), (int)functionValues->GetNumCols(), (int)net->GetMBLayoutPtr()->GetNumTimeSteps());
-            (*inputMatrices)[node->NodeName()] = functionValues;
+            if (node->GetSampleMatrixNumCols() != node->GetMBLayout()->GetNumTimeSteps())
+                LogicError("TrainOrAdaptModel: %ls %ls operation has inconsistent sample matrix width %d vs. MBLayout width %d", node->NodeName().c_str(), node->OperationName().c_str(), (int)node->GetSampleMatrixNumCols(), (int)node->GetMBLayout()->GetNumTimeSteps());
+            (*inputMatrices)[node->NodeName()] = &dynamic_pointer_cast<ComputationNode<ElemType>>(node)->Value();
         }
     }
 

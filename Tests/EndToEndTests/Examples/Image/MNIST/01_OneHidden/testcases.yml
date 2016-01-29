@@ -4,7 +4,7 @@ tags:
     # running on every BVT job in 'P' (Parallel) leg
     - bvt-p ((flavor=='debug') ^ (device=='cpu')) 
     # running every Nightly job in 'P' (Parallel) leg
-    #- nightly-p
+    - nightly-p
 
 testCases:
   CNTK Run must be completed:
