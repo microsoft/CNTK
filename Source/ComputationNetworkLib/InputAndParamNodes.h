@@ -196,17 +196,20 @@ public:
         m_pMBLayout = nullptr; // this node does not hold mini-batch data
     }
 
-    virtual void DumpNodeInfo(const bool printValues, File& fstream) const override
+    virtual void DumpNodeInfo(const bool printValues, const bool printMetadata, File& fstream) const override
     {
-        Base::DumpNodeInfo(printValues, fstream);
+        if (printMetadata)
+        {
+            Base::DumpNodeInfo(printValues, printMetadata, fstream);
 
-        char str[4096];
-        sprintf(str, "[%lu,%lu]  ", GetAsMatrixNumRows(), GetAsMatrixNumCols());
-        fstream << string(str);
-        sprintf(str, "NeedGradient=%s", m_parameterUpdateRequired ? "true" : "false"); // TODO: update NDL to accept a better matching name as well
-        fstream << string(str);
+            char str[4096];
+            sprintf(str, "[%lu,%lu]  ", GetAsMatrixNumRows(), GetAsMatrixNumCols());
+            fstream << string(str);
+            sprintf(str, "NeedGradient=%s", m_parameterUpdateRequired ? "true" : "false"); // TODO: update NDL to accept a better matching name as well
+            fstream << string(str);
+        }
 
-        PrintNodeValuesToFile(printValues, fstream);
+        PrintNodeValuesToFile(printValues, printMetadata, fstream);
     }
 };
 
@@ -306,10 +309,13 @@ public:
         LogicError("InputValueBase::BackpropTo() should never be called.");
     }
 
-    virtual void DumpNodeInfo(const bool printValues, File& fstream) const override
+    virtual void DumpNodeInfo(const bool printValues, const bool printMetadata, File& fstream) const override
     {
-        Base::DumpNodeInfo(printValues, fstream);
-        fstream << "[" << string(GetSampleLayout()) << "]";
+        Base::DumpNodeInfo(printValues, printMetadata, fstream);
+        if (printMetadata)
+        {
+            fstream << "[" << string(GetSampleLayout()) << "]";
+        }
     }
 
 private:
