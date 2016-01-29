@@ -54,67 +54,67 @@
     <Text Include="Data\UCIFastReaderSimpleDataLoop_Train.txt">
       <Filter>Data</Filter>
     </Text>
-    <Text Include="Config\HTKMLFReaderSimpleDataLoop1_Config.txt">
+    <Text Include="Config\HTKMLFReaderSimpleDataLoop1_Config.cntk">
       <Filter>Config</Filter>
     </Text>
-    <Text Include="Config\HTKMLFReaderSimpleDataLoop2_Config.txt">
+    <Text Include="Config\HTKMLFReaderSimpleDataLoop2_Config.cntk">
       <Filter>Config</Filter>
     </Text>
-    <Text Include="Config\HTKMLFReaderSimpleDataLoop3_Config.txt">
+    <Text Include="Config\HTKMLFReaderSimpleDataLoop3_Config.cntk">
       <Filter>Config</Filter>
     </Text>
-    <Text Include="Config\HTKMLFReaderSimpleDataLoop4_Config.txt">
+    <Text Include="Config\HTKMLFReaderSimpleDataLoop4_Config.cntk">
       <Filter>Config</Filter>
     </Text>
-    <Text Include="Config\HTKMLFReaderSimpleDataLoop5_Config.txt">
+    <Text Include="Config\HTKMLFReaderSimpleDataLoop5_Config.cntk">
       <Filter>Config</Filter>
     </Text>
-    <Text Include="Config\HTKMLFReaderSimpleDataLoop6_Config.txt">
+    <Text Include="Config\HTKMLFReaderSimpleDataLoop6_Config.cntk">
       <Filter>Config</Filter>
     </Text>
-    <Text Include="Config\HTKMLFReaderSimpleDataLoop7_Config.txt">
+    <Text Include="Config\HTKMLFReaderSimpleDataLoop7_Config.cntk">
       <Filter>Config</Filter>
     </Text>
-    <Text Include="Config\HTKMLFReaderSimpleDataLoop8_Config.txt">
+    <Text Include="Config\HTKMLFReaderSimpleDataLoop8_Config.cntk">
       <Filter>Config</Filter>
     </Text>
-    <Text Include="Config\HTKMLFReaderSimpleDataLoop9_Config.txt">
+    <Text Include="Config\HTKMLFReaderSimpleDataLoop9_Config.cntk">
       <Filter>Config</Filter>
     </Text>
-    <Text Include="Config\HTKMLFReaderSimpleDataLoop10_Config.txt">
+    <Text Include="Config\HTKMLFReaderSimpleDataLoop10_Config.cntk">
       <Filter>Config</Filter>
     </Text>
-    <Text Include="Config\HTKMLFReaderSimpleDataLoop11_Config.txt">
+    <Text Include="Config\HTKMLFReaderSimpleDataLoop11_Config.cntk">
       <Filter>Config</Filter>
     </Text>
-    <Text Include="Config\HTKMLFReaderSimpleDataLoop12_Config.txt">
+    <Text Include="Config\HTKMLFReaderSimpleDataLoop12_Config.cntk">
       <Filter>Config</Filter>
     </Text>
-    <Text Include="Config\HTKMLFReaderSimpleDataLoop13_Config.txt">
+    <Text Include="Config\HTKMLFReaderSimpleDataLoop13_Config.cntk">
       <Filter>Config</Filter>
     </Text>
-    <Text Include="Config\HTKMLFReaderSimpleDataLoop14_Config.txt">
+    <Text Include="Config\HTKMLFReaderSimpleDataLoop14_Config.cntk">
       <Filter>Config</Filter>
     </Text>
-    <Text Include="Config\HTKMLFReaderSimpleDataLoop16_Config.txt">
+    <Text Include="Config\HTKMLFReaderSimpleDataLoop16_Config.cntk">
       <Filter>Config</Filter>
     </Text>
-    <Text Include="Config\HTKMLFReaderSimpleDataLoop17_Config.txt">
+    <Text Include="Config\HTKMLFReaderSimpleDataLoop17_Config.cntk">
       <Filter>Config</Filter>
     </Text>
-    <Text Include="Config\HTKMLFReaderSimpleDataLoop19_Config.txt">
+    <Text Include="Config\HTKMLFReaderSimpleDataLoop19_Config.cntk">
       <Filter>Config</Filter>
     </Text>
-    <Text Include="Config\HTKMLFReaderSimpleDataLoop20_Config.txt">
+    <Text Include="Config\HTKMLFReaderSimpleDataLoop20_Config.cntk">
       <Filter>Config</Filter>
     </Text>
-    <Text Include="Config\HTKMLFReaderSimpleDataLoop21_Config.txt">
+    <Text Include="Config\HTKMLFReaderSimpleDataLoop21_Config.cntk">
       <Filter>Config</Filter>
     </Text>
-    <Text Include="Config\HTKMLFReaderSimpleDataLoop22_Config.txt">
+    <Text Include="Config\HTKMLFReaderSimpleDataLoop22_Config.cntk">
       <Filter>Config</Filter>
     </Text>
-    <Text Include="Config\UCIFastReaderSimpleDataLoop_Config.txt">
+    <Text Include="Config\UCIFastReaderSimpleDataLoop_Config.cntk">
       <Filter>Config</Filter>
     </Text>
     <Text Include="Control\HTKMLFReaderSimpleDataLoop1_5_11_Control.txt">

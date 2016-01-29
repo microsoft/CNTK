@@ -834,7 +834,7 @@ status open
 
 \begin_layout Plain Layout
 
-cntk configFile=Simple.config 
+cntk configFile=Simple.cntk 
 \end_layout
 
 \end_inset
@@ -853,7 +853,7 @@ status open
 
 \begin_layout Plain Layout
 
-cntk configFile=Simple.config 
+cntk configFile=Simple.cntk 
 \end_layout
 
 \end_inset

@@ -1,5 +1,5 @@
 # This is a configuration for parallel training of a simple feed-forward neural network using data-parallel SGD.
-# The configuration is identical to the Simple.config except for the few additional parallelism related options.
+# The configuration is identical to the Simple.cntk except for the few additional parallelism related options.
 
 # Parameters can be overwritten on the command line
 # for example: cntk configFile=myConfigFile RootDir=../.. 
