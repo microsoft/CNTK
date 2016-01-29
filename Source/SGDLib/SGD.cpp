@@ -180,11 +180,7 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
     {
         auto& nodes = (pass == 0) ? featureNodes : labelNodes;
         for (const auto & node : nodes)
-        {
-            if (node->GetSampleMatrixNumCols() != node->GetMBLayout()->GetNumTimeSteps())
-                LogicError("TrainOrAdaptModel: %ls %ls operation has inconsistent sample matrix width %d vs. MBLayout width %d", node->NodeName().c_str(), node->OperationName().c_str(), (int)node->GetSampleMatrixNumCols(), (int)node->GetMBLayout()->GetNumTimeSteps());
             (*inputMatrices)[node->NodeName()] = &dynamic_pointer_cast<ComputationNode<ElemType>>(node)->Value();
-        }
     }
 
     // get hmm file for sequence training
