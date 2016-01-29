@@ -5,7 +5,7 @@ import string
 import os
 
 def usage():
-    print 'MapLabels.py -in [list file] -out_dir [out dir] -mapping [mapping file]'
+    print ('MapLabels.py -in [list file] -out_dir [out dir] -mapping [mapping file]')
 
 def createDir(d):
     if not os.path.isdir(d):
@@ -32,5 +32,5 @@ else:
     for line in lablines:
         linenew = line.split('.')
         tmp = linenew[0].split('/')
-        print tmp[-1] + "=" + my_dict[tmp[-1]]
+        print (tmp[-1] + "=" + my_dict[tmp[-1]])
 
