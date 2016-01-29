@@ -1,10 +1,10 @@
 dataDir: ../../../../../../Examples/Other/Simple2d/Data
 
 tags:
-    # running on every BVT job in 'E' (Examples) leg
-    - bvt-e ((flavor=='debug') ^ (device=='cpu')) 
-    # running every Nightly job in 'E' (Examples) leg
-    - nightly-e
+    # running on every BVT job in 'P' (Parallel) leg
+    #- bvt-p ((flavor=='debug') ^ (device=='cpu')) 
+    # running every Nightly job in 'P' (Parallel) leg
+    #- nightly-p
 
 testCases:
   CNTK Run must be completed:
