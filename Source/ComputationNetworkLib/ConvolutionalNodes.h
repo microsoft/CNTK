@@ -121,7 +121,7 @@ public:
         fstream >> outputChannels >> imageLayoutKind;
         m_imageLayoutKind = (ImageLayoutKind) imageLayoutKind;
         m_outputChannels = outputChannels;
-        SetDims(ImageDimensions::AsTensorShape(1, 1, m_outputChannels, m_imageLayoutKind), 0); // TODO: needed?
+        SetDims(ImageDimensions::AsTensorShape(1, 1, m_outputChannels, m_imageLayoutKind), HasMBLayout()); // TODO: needed?
         fstream >> m_zeroPadding >> m_maxTempMemSizeInSamples;
         m_factory = ConvolutionEngineFactory<ElemType>::Create(GetDeviceId(), ConvolutionEngineFactory<ElemType>::EngineType::Auto, m_imageLayoutKind);
     }
