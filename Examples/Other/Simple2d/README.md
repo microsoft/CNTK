@@ -7,7 +7,7 @@
 |Purpose  |Showcase how to train a simple CNTK network (CPU and GPU) and how to use it for scoring (decoding)
 |Network  |SimpleNetworkBuilder, 2 hidden layers with 50 sigmoid nodes each, cross entropy with softmax
 |Training |Stochastic gradient descent with momentum
-|Comments |There are two config files: Simple.config uses a single CPU or GPU, Multigpu.config uses data-parallel SGD for training on multiple GPUs
+|Comments |There are two config files: Simple.cntk uses a single CPU or GPU, Multigpu.cntk uses data-parallel SGD for training on multiple GPUs
 
 ## Running the example
 
@@ -31,12 +31,12 @@ or prefix the call to the cntk executable with the corresponding folder.
 
 Run the example from the Simple2d/Data folder using:
 
-`cntk configFile=../Config/Simple.config`
+`cntk configFile=../Config/Simple.cntk`
 
 or run from any folder and specify the Data folder as the `currentDirectory`, 
 e.g. running from the Simple2d folder using:
 
-`cntk configFile=Config/Simple.config currentDirectory=Data`
+`cntk configFile=Config/Simple.cntk currentDirectory=Data`
 
 The output folder will be created inside Simple2d/.
 
@@ -51,7 +51,7 @@ __It is therefore recommended to generally use `ConfigDir` and `ModelDir` in all
 To run on CPU set `deviceId = -1`, to run on GPU set deviceId to "auto" or a specific value >= 0.
 
 Both config files are nearly identical. 
-Multigpu.config has some additional parameters for parallel training (see parallelTrain in the file).
+Multigpu.cntk has some additional parameters for parallel training (see parallelTrain in the file).
 Both files define the following three commands: train, test and output. 
 By default only train and test are executed:
 

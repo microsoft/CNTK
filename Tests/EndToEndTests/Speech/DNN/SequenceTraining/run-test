@@ -21,7 +21,7 @@ mkdir $DataDir
 cp -R $DataSourceDir/* $DataDir || exit $?
 
 # cntkrun <CNTK config file name> <additional CNTK args>
-cntkrun cntk_sequence.config 
+cntkrun cntk_sequence.cntk 
 ExitCode=$?
 
 # Delete the test data
