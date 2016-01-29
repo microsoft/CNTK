@@ -413,10 +413,33 @@ void fprintfOrDie(FILE* f, const char* fmt, ...)
 void fflushOrDie(FILE* f)
 {
     int rc = fflush(f);
+
     if (rc != 0)
     {
         RuntimeError("error flushing to file: %s", strerror(errno));
     }
+
+    int fd = fileno(f);
+
+    if (fd == -1)
+    {
+        RuntimeError("unable to convert file handle to file descriptor: %s", strerror(errno));
+    }
+
+    // Ensure that all data is synced before returning from this function
+#ifdef _WIN32
+    if (!FlushFileBuffers((HANDLE)_get_osfhandle(fd)))
+    {
+        RuntimeError("error syncing to file: %d", (int) ::GetLastError());
+    }
+#else
+    rc = fsync(fd);
+
+    if (rc != 0)
+    {
+        RuntimeError("error syncing to file: %s", strerror(errno));
+    }
+#endif
 }
 
 // ----------------------------------------------------------------------------

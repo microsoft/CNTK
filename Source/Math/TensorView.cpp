@@ -36,17 +36,19 @@ using namespace std;
 // construction
 // -------------------------------------------------------------------
 
-// cast a matrix as a TensorView
+// main constructor (all constructors except the default one route through this)
 template <class ElemType>
-TensorView<ElemType>::TensorView(const Matrix<ElemType>& sob)
-    : m_sob(sob.AsReference()), m_shape(TensorShape(array<size_t, 2>{sob.GetNumRows(), sob.GetNumCols()}))
+TensorView<ElemType>::TensorView(const Matrix<ElemType>& sob, const TensorShape& shape)
+    : m_sob(sob.AsReference()), m_shape(shape)
 {
-}
-// reshape a TensorView
-template <class ElemType>
-TensorView<ElemType>::TensorView(const TensorView<ElemType>& other, const TensorShape& shape)
-    : m_sob(other.m_sob.AsReference()), m_shape(shape)
-{
+#ifdef _DEBUG
+    // check bounds of TensorShape against underlying storage object
+    // This is useful to detect errors like passing a matrix from the wrong input.
+    const auto r = shape.GetLocationRange();
+    const auto n = m_sob.GetNumElements();
+    if (r.first < 0 || (size_t)r.second > n)
+        LogicError("TensorView: Shape bounds [%d,%d) exceed bounds of underlying storage object [0,%d).", (int) r.first, (int) r.second, (int) n);
+#endif
 }
 
 // -------------------------------------------------------------------

@@ -37,6 +37,10 @@ Using full BrainScript configuration
 
 COMMAND:     --cd $(SolutionDir)Tests\EndToEndTests\Speech\Data  -f $(SolutionDir)Tests\EndToEndTests\Speech\LSTM\lstm.bs  -D stderr='$(SolutionDir)Tests\EndToEndTests\Speech\RunDir\LSTM\FullUtterance\models\cntkSpeech.dnn.log'  -D RunDir='$(SolutionDir)Tests\EndToEndTests\Speech\RunDir\LSTM\FullUtterance'  -D NdlDir='$(SolutionDir)Tests\EndToEndTests\Speech\LSTM'  -D DataDir='.'  -D DeviceId='Auto'  -D Truncated=false  -D speechTrain=[reader=[nbruttsineachrecurrentiter=1];SGD=[epochSize=2560;maxEpochs=2;numMBsToShowResult=1]]  -D makeMode=false
 
+--- Speech\AN4:
+
+COMMAND:    configFile=$(SolutionDir)Examples\Speech\AN4\Config\LSTM-NDL.config  currentDirectory=$(SolutionDir)Examples\Speech\AN4\Data  RunDir=$(SolutionDir)Examples\RunDir\Speech\AN4  DataDir=$(SolutionDir)Examples\Speech\AN4\Data  ConfigDir=$(SolutionDir)Examples\Speech\AN4\Config  OutputDir=$(SolutionDir)Examples\RunDir\Speech\AN4  stderr=$(SolutionDir)Examples\RunDir\Speech\AN4\cntkSpeech.dnn.log  DeviceId=auto  speechTrain=[SGD=[maxEpochs=1]]  speechTrain=[SGD=[epochSize=64]]  parallelTrain=false  makeMode=false
+
 --- Speech\DiscriminativePreTraining:  --currently fails with MEL error 'Parameter name could not be resolved 'HL2.y'
 
 COMMAND:     currentDirectory=$(SolutionDir)Tests\EndToEndTests\Speech\Data  configFile=..\DNN\DiscriminativePreTraining\cntk_dpt.config  stderr=$(SolutionDir)Tests\EndToEndTests\Speech\RunDir\DNN\DiscriminativePreTraining\models\cntkSpeech.dnn.log  ConfigDir=$(SolutionDir)Tests\EndToEndTests\Speech\DNN\DiscriminativePreTraining  RunDir=..\RunDir\DNN\DiscriminativePreTraining  DataDir=.  DeviceId=auto  makeMode=false
