@@ -15,7 +15,7 @@
 
 // Windows or Posix? Originally the reader was done only for Windows. Keep it this way for now when running on Windows.
 #ifdef __WINDOWS__
-#define SPARSE_PCREADER_USE_WINDOWS_API 1
+#define SPARSE_PCREADER_USE_WINDOWS_API
 #endif
 
 namespace Microsoft { namespace MSR { namespace CNTK {
