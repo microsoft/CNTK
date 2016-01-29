@@ -568,7 +568,7 @@ public:
         // create a variable of each type just to call the proper templated version
         FARPROC entryPoint = GetProcAddress(m_hModule, proc.c_str());
         if (entryPoint == nullptr)
-			RuntimeError("Symbol '%s' not found in plugin %s", proc.c_str(), m_dllName.c_str());
+            RuntimeError("Symbol '%s' not found in plugin %s", proc.c_str(), m_dllName.c_str());
         return entryPoint;
     }
     ~Plugin()
