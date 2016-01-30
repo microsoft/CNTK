@@ -58,7 +58,7 @@ __declspec_noreturn static inline void ThrowFormatted(const char* format, ...)
     va_start(args, format);
     vsprintf(buffer, format, args);
 #ifdef _DEBUG // print this to log before throwing, so we can see what the error is
-    fprintf(stderr, "About to throw exception '%s'\n", buffer);
+    fprintf(stderr, "\nAbout to throw exception '%s'\n", buffer);
 #endif
     Microsoft::MSR::CNTK::DebugUtil::PrintCallStack();
     throw E(buffer);
