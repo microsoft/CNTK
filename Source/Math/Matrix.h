@@ -91,7 +91,7 @@ public:
     // Each constructor can take deviceId as parameter.
     // If deviceId<0 then the matrix will be based in RAM (CPUMatrix)
     // Elseif deviceId>=0 then the matrix will be based on GPU with specified deviceId
-    Matrix(DEVICEID_TYPE deviceId);
+    explicit Matrix(DEVICEID_TYPE deviceId);
     Matrix(BaseMatrix<ElemType>* baseMatrix, ElemType* pArray, DEVICEID_TYPE deviceId);                                     // constructor for setting Matrix from a base matrix (externally managed butter pArray)
     Matrix(FILE* f, const char* matrixName, DEVICEID_TYPE deviceId, const MatrixType matrixType = DENSE); // matrixName is used to verify that correct matrix is read.
     Matrix(const size_t numRows, const size_t numCols, DEVICEID_TYPE deviceId, const MatrixType matrixType = DENSE, const MatrixFormat matrixFormat = matrixFormatDense);

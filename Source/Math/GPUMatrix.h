@@ -135,7 +135,7 @@ private:
     void ReleaseWorkspace(std::unique_ptr<GPUMatrix<ElemType>> src) const;
 
 public:
-    GPUMatrix(int deviceId);
+    explicit GPUMatrix(int deviceId);
     GPUMatrix(FILE* f, const char* matrixName, int deviceId);
     GPUMatrix(const size_t numRows, const size_t numCols, int deviceId);
     GPUMatrix(const size_t numRows, const size_t numCols, int deviceId, ElemType* pArray, const size_t matrixFlags = matrixFlagNormal);
