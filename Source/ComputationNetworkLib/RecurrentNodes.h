@@ -292,7 +292,7 @@ public:
         size_t t = fr.t();
         int t_delayed = (int) (t + direction * m_timeStep); // this might end up outside the current window
 
-        Matrix<ElemType> inp; // ((DEVICEID_TYPE)m_value.GetDeviceId());
+        Matrix<ElemType> inp((DEVICEID_TYPE)m_value->GetDeviceId());
 
         // if any sequence at this time step has a boundary flag, then process one by one
         // TODO: Would there be an efficiency gain from grouping consecutive sequences with identical flags?

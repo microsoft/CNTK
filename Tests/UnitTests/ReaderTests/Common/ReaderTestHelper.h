@@ -233,14 +233,14 @@ struct ReaderFixture
 
         for (auto i = 0; i < numFeatureFiles; i++)
         {
-            features.push_back(new Matrix<ElemType>());
+            features.push_back(new Matrix<ElemType>(0));
             wstring name = numFeatureFiles > 1 ? L"features" + std::to_wstring(i + 1) : L"features";
             map.insert(std::pair<wstring, Matrix<ElemType>*>(name, features[i]));
         }
 
         for (auto i = 0; i < numLabelFiles; i++)
         {
-            labels.push_back(new Matrix<ElemType>());
+            labels.push_back(new Matrix<ElemType>(0));
             wstring name = numLabelFiles > 1 ? L"labels" + std::to_wstring(i + 1) : L"labels";
             map.insert(std::pair<wstring, Matrix<ElemType>*>(name, labels[i]));
         }

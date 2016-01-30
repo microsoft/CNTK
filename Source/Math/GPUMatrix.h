@@ -146,7 +146,6 @@ public:
     ~GPUMatrix(void);
 
     static void SetDevice(DEVICEID_TYPE deviceId);
-    static DEVICEID_TYPE GetBestGPUDeviceId();
     int GetComputeDeviceId() const;
     DEVICEID_TYPE PrepareDevice(DEVICEID_TYPE deviceId = -1) const;
 
@@ -538,7 +537,7 @@ static void CudaCall(ERRTYPE retCode, const char* exprString, const char* libNam
         try
         {
             const char* hostname = getenv("COMPUTERNAME"); // TODO: This is the easy way for Windows; likely different on Linux.
-            Microsoft::MSR::CNTK::RuntimeError("%s failure %d: %s ; GPU=%d ; hostname=%s ; expr=%s", libName, (int) retCode, CudaErrString(retCode), Microsoft::MSR::CNTK::GPUMatrix<float>::GetBestGPUDeviceId(), hostname ? hostname : "?", exprString);
+            Microsoft::MSR::CNTK::RuntimeError("%s failure %d: %s ; GPU=%d ; hostname=%s ; expr=%s", libName, (int)retCode, CudaErrString(retCode), GetSelectedDeviceId(), hostname ? hostname : "?", exprString);
         }
         catch (const std::exception& e) // catch, log, and rethrow since CUDA code sometimes hangs in destruction, so we'd never get to see the error
         {

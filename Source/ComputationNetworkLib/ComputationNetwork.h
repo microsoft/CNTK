@@ -65,10 +65,7 @@ public:
 
     void SetDeviceId(DEVICEID_TYPE deviceId)
     {
-        if (deviceId == AUTOPLACEMATRIX)
-            deviceId = Matrix<float>::GetBestGPUDeviceId();
         m_deviceId = deviceId;
-        m_deviceId = EnforceOneGPUOnly(m_deviceId); // see EnforceOneGPUOnly() for comment on what this is
     }
 
     DEVICEID_TYPE GetDeviceId() const { return m_deviceId; }
