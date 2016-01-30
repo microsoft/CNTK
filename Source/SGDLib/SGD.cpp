@@ -1082,7 +1082,7 @@ template <class ElemType>
             numMBsRun++;
 
             totalTimeInMBs += timer.ElapsedSeconds();
-            numSamplesLastMBs += useModelAveraging ? int(actualMBSize) : int(aggregateNumSamplesWithLabel);
+            numSamplesLastMBs += useModelAveraging ? int(numSamplesWithLabel) : int(aggregateNumSamplesWithLabel);
 
             if (numMBsRun % m_numMBsToShowResult == 0)
             {
