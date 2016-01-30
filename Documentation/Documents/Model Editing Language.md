@@ -677,7 +677,7 @@ The acceptable propertyNames and propertyValues are as follows:
 PropertyName | Description | PropertyValue
 ---|---|---
 ComputeGradient / NeedsGradient | A flag that determines if a node participates in gradient calculations. Applies to Parameter nodes | true / false
-Feature | Sets the ndoe as a featuer input. Applies to Input nodes | true / false
+Feature | Sets the node as a feature input. Applies to Input nodes | true / false
 Label | Set the node as a label input. Applies to Input nodes | true / false
 FinalCriterion / Criteria | Sets the node as one of the Criteria nodes of the network | true / false
 Evaluation / Eval | Set the node as one of the evaluation nodes | true / false

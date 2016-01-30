@@ -2145,33 +2145,33 @@ typename CuDnnConvolutionEngineFactory<ElemType>::Tensor4DPtr CuDnnConvolutionEn
 template <class ElemType>
 typename CuDnnConvolutionEngineFactory<ElemType>::FilterPtr CuDnnConvolutionEngineFactory<ElemType>::CreateFilter(size_t, size_t, size_t, size_t)
 {
-    RuntimeError("The code is compiled without CPUONLY macro.");
+    RuntimeError("The code is compiled with CPUONLY macro.");
 }
 
 template <class ElemType>
 typename CuDnnConvolutionEngineFactory<ElemType>::ConvDescPtr CuDnnConvolutionEngineFactory<ElemType>::CreateConvDescriptor(
     const Tensor4D&, const Filter&, size_t, size_t, bool)
 {
-    RuntimeError("The code is compiled without CPUONLY macro.");
+    RuntimeError("The code is compiled with CPUONLY macro.");
 }
 
 template <class ElemType>
 typename CuDnnConvolutionEngineFactory<ElemType>::PoolDescPtr CuDnnConvolutionEngineFactory<ElemType>::CreatePoolDescriptor(
     typename PoolDesc::PoolKind, size_t, size_t, size_t, size_t, size_t, size_t)
 {
-    RuntimeError("The code is compiled without CPUONLY macro.");
+    RuntimeError("The code is compiled with CPUONLY macro.");
 }
 
 template <class ElemType>
 typename CuDnnConvolutionEngineFactory<ElemType>::ConvEnginePtr CuDnnConvolutionEngineFactory<ElemType>::CreateConvEngine(DEVICEID_TYPE, size_t)
 {
-    RuntimeError("The code is compiled without CPUONLY macro.");
+    RuntimeError("The code is compiled with CPUONLY macro.");
 }
 
 template <class ElemType>
 typename CuDnnConvolutionEngineFactory<ElemType>::PoolEnginePtr CuDnnConvolutionEngineFactory<ElemType>::CreatePoolEngine(DEVICEID_TYPE)
 {
-    RuntimeError("The code is compiled without CPUONLY macro.");
+    RuntimeError("The code is compiled with CPUONLY macro.");
 }
 
 template <class ElemType>

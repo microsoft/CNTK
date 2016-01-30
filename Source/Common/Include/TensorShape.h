@@ -501,6 +501,22 @@ public:
         return (size_t) location;
     }
 
+    // get begin and end location (first offset after last element), for validation purposes
+    pair<ptrdiff_t, ptrdiff_t> GetLocationRange() const
+    {
+        auto result = make_pair(m_offset, m_offset);
+        for (size_t k = 0; k < size(); k++)
+        {
+            ptrdiff_t step = (ptrdiff_t)(m_dims[k] - 1) * m_strides[k];
+            if (m_strides[k] > 0) // strides may be negative
+                result.second += step;
+            else
+                result.first += step;
+        }
+        result.second++;    // max --> end
+        return result;
+    }
+
     // helpers for tensor operations
     bool CanFlatten(size_t k) const // can dims k and k-1 be flattened into a single vector? (do they form a matrix without stride)
     {

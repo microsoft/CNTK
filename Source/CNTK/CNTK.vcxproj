@@ -32,14 +32,6 @@
   </Choose>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{E6F26F9A-FF64-4F0A-B749-CD309EE357EE}</ProjectGuid>
-    <SccProjectName>
-    </SccProjectName>
-    <SccAuxPath>
-    </SccAuxPath>
-    <SccLocalPath>
-    </SccLocalPath>
-    <SccProvider>
-    </SccProvider>
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>CNTK</RootNamespace>
     <ProjectName>CNTK</ProjectName>
@@ -69,15 +61,15 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64' Or '$(Configuration)|$(Platform)'=='Debug_CpuOnly|x64'">
     <LinkIncremental>true</LinkIncremental>
-    <IncludePath>..\ActionsLib;..\SequenceTrainingLib;..\SGDLib;..\ComputationNetworkLib;..\Math;..\Common\Include;..\CNTK\BrainScript;..\..\DataReader\HTKMLFReader;C:\Program Files (x86)\Microsoft SDKs\MPI\Include;$(VCInstallDir)include;$(WindowsSDK_IncludePath);</IncludePath>
-    <LibraryPath>C:\Program Files (x86)\Microsoft SDKs\MPI\Lib\x64;$(SolutionDir)$(Platform)\$(Configuration);$(SolutionDir)..\Common\lib;$(VCInstallDir)lib\amd64;$(WindowsSDK_LibraryPath_x64)</LibraryPath>
+    <IncludePath>..\ActionsLib;..\SequenceTrainingLib;..\SGDLib;..\ComputationNetworkLib;..\Math;..\Common\Include;..\CNTK\BrainScript;..\..\DataReader\HTKMLFReader;$(MSMPI_INC);$(VCInstallDir)include;$(WindowsSDK_IncludePath);</IncludePath>
+    <LibraryPath>$(MSMPI_LIB64);$(SolutionDir)$(Platform)\$(Configuration);$(SolutionDir)..\Common\lib;$(VCInstallDir)lib\amd64;$(WindowsSDK_LibraryPath_x64)</LibraryPath>
     <CustomBuildAfterTargets>Build</CustomBuildAfterTargets>
     <IntDir>$(Platform)\$(Configuration)\$(ProjectName)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64' Or '$(Configuration)|$(Platform)'=='Release_CpuOnly|x64'">
     <LinkIncremental>false</LinkIncremental>
-    <IncludePath>..\ActionsLib;..\SequenceTrainingLib;..\SGDLib;..\ComputationNetworkLib;..\Math;..\Common\Include;..\CNTK\BrainScript;..\..\DataReader\HTKMLFReader;C:\Program Files (x86)\Microsoft SDKs\MPI\Include;$(VCInstallDir)include;$(WindowsSDK_IncludePath);</IncludePath>
-    <LibraryPath>C:\Program Files (x86)\Microsoft SDKs\MPI\Lib\x64;$(SolutionDir)$(Platform)\$(Configuration);$(SolutionDir)..\Common\lib;$(VCInstallDir)lib\amd64;$(WindowsSDK_LibraryPath_x64)</LibraryPath>
+    <IncludePath>..\ActionsLib;..\SequenceTrainingLib;..\SGDLib;..\ComputationNetworkLib;..\Math;..\Common\Include;..\CNTK\BrainScript;..\..\DataReader\HTKMLFReader;$(MSMPI_INC);$(VCInstallDir)include;$(WindowsSDK_IncludePath);</IncludePath>
+    <LibraryPath>$(MSMPI_LIB64);$(SolutionDir)$(Platform)\$(Configuration);$(SolutionDir)..\Common\lib;$(VCInstallDir)lib\amd64;$(WindowsSDK_LibraryPath_x64)</LibraryPath>
     <CustomBuildAfterTargets>Build</CustomBuildAfterTargets>
     <ExecutablePath>$(ExecutablePath)</ExecutablePath>
     <IntDir>$(Platform)\$(Configuration)\$(ProjectName)\</IntDir>

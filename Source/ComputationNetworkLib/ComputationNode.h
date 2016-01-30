@@ -81,7 +81,7 @@ struct /*interface*/ IComputationNode
     virtual void BackpropTo(const size_t inputIndex, const FrameRange&) = 0; // backprop gradient into one of the inputs
     virtual void EndBackprop() = 0;                                          // called after last iteration step of ComputeGradient()
 
-    // --- these are meant to be overridden by ControlFlowNodes
+    // --- this is meant to be overridden by ControlFlowNodes
 
     virtual void Backprop(const FrameRange& fr, bool childrenInThisLoop, bool childrenInOuterLoop) = 0;
 
@@ -491,9 +491,10 @@ public:
 protected:
 
     size_t DetermineElementwiseTensorRank() const;                          // determine tensor rank when considering all inputs with padding
-    TensorShape GetTensorSliceFor(size_t rank, const FrameRange& fr) const; // form tensor shape of the slice referenced by FrameRange
 
 public:
+
+    TensorShape GetTensorSliceFor(size_t rank, const FrameRange& fr) const; // form tensor shape of the slice referenced by FrameRange. Public since nodes may call it for their inputs.
 
     // -----------------------------------------------------------------------
     // inputs

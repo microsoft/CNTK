@@ -22,14 +22,6 @@
     <ProjectGuid>{33D2FD22-DEF2-4507-A58A-368F641AEBE5}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>HTKMLFReader</RootNamespace>
-    <SccProjectName>
-    </SccProjectName>
-    <SccAuxPath>
-    </SccAuxPath>
-    <SccLocalPath>
-    </SccLocalPath>
-    <SccProvider>
-    </SccProvider>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64' Or '$(Configuration)|$(Platform)'=='Debug_CpuOnly|x64'" Label="Configuration">

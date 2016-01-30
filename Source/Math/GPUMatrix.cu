@@ -94,10 +94,23 @@ const char* CudaErrString<cudaError_t>(cudaError_t x)
     return cudaGetErrorString(x);
 }
 template <>
-const char* CudaErrString<cublasStatus_t>(cublasStatus_t)
+const char* CudaErrString<cublasStatus_t>(cublasStatus_t e)
 {
     cudaDeviceSynchronize();
-    return "(see cublas_api.h & look for cublasStatus_t or CUBLAS_STATUS_xxx)";
+    switch (e)
+    {
+    case CUBLAS_STATUS_SUCCESS:          return "CUBLAS_STATUS_SUCCESS";
+    case CUBLAS_STATUS_NOT_INITIALIZED:  return "CUBLAS_STATUS_NOT_INITIALIZED";
+    case CUBLAS_STATUS_ALLOC_FAILED:     return "CUBLAS_STATUS_ALLOC_FAILED";
+    case CUBLAS_STATUS_INVALID_VALUE:    return "CUBLAS_STATUS_INVALID_VALUE";
+    case CUBLAS_STATUS_ARCH_MISMATCH:    return "CUBLAS_STATUS_ARCH_MISMATCH";
+    case CUBLAS_STATUS_MAPPING_ERROR:    return "CUBLAS_STATUS_MAPPING_ERROR";
+    case CUBLAS_STATUS_EXECUTION_FAILED: return "CUBLAS_STATUS_EXECUTION_FAILED";
+    case CUBLAS_STATUS_INTERNAL_ERROR:   return "CUBLAS_STATUS_INTERNAL_ERROR";
+    case CUBLAS_STATUS_NOT_SUPPORTED:    return "CUBLAS_STATUS_NOT_SUPPORTED";
+    case CUBLAS_STATUS_LICENSE_ERROR:    return "CUBLAS_STATUS_LICENSE_ERROR";
+    default:                             return "(look for CUBLAS_STATUS_xxx in cublas_api.h)";
+    }
 }
 template <>
 const char* CudaErrString<curandStatus>(curandStatus)
@@ -111,13 +124,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 template <typename AllocatedElemType>
 AllocatedElemType* TracingGPUMemoryAllocator::Allocate(int deviceId, size_t numRows, size_t numCols)
 {
+    if (IsTraceEnabled())
+    {
+        auto freeAndTotalMemory = GetFreeAndTotalMemoryInMBs(deviceId);
+        fprintf(stderr, "Allocating Matrix<%s> (Rows = %d, Cols = %d) buffer on DeviceId = %d; GPU Memory Free = %d MB of %d MB\n", typeid(AllocatedElemType).name(), (int)numRows, (int)numCols, (int)deviceId, (int)freeAndTotalMemory.first, (int)freeAndTotalMemory.second);
+        Microsoft::MSR::CNTK::DebugUtil::PrintCallStack();
+    }
+
     AllocatedElemType* deviceBufferPtr = AllocateNoTrace<AllocatedElemType>(deviceId, numRows * numCols);
 
     if (IsTraceEnabled())
     {
-        auto freeAndTotalMemory = GetFreeAndTotalMemoryInMBs(deviceId);
-        fprintf(stderr, "Allocated Matrix<%s> (Rows = %d, Cols = %d) buffer on DeviceId = %d, DeviceBufferPointer = %p; GPU Memory Free = %d MB of %d MB\n", typeid(AllocatedElemType).name(), (int) numRows, (int) numCols, (int) deviceId, (void*) deviceBufferPtr, (int) freeAndTotalMemory.first, (int) freeAndTotalMemory.second);
-        Microsoft::MSR::CNTK::DebugUtil::PrintCallStack();
+        fprintf(stderr, "Allocated DeviceBufferPointer = %p\n", (void*) deviceBufferPtr);
     }
 
     return deviceBufferPtr;
@@ -126,13 +144,18 @@ AllocatedElemType* TracingGPUMemoryAllocator::Allocate(int deviceId, size_t numR
 template <typename AllocatedElemType>
 AllocatedElemType* TracingGPUMemoryAllocator::Allocate(int deviceId, size_t numElements)
 {
+    if (IsTraceEnabled())
+    {
+        auto freeAndTotalMemory = GetFreeAndTotalMemoryInMBs(deviceId);
+        fprintf(stderr, "Allocating array<%s> (NumElements = %d) on DeviceId = %d; GPU Memory Free = %d MB of %d MB\n", typeid(AllocatedElemType).name(), (int)numElements, (int)deviceId, (int)freeAndTotalMemory.first, (int)freeAndTotalMemory.second);
+        Microsoft::MSR::CNTK::DebugUtil::PrintCallStack();
+    }
+
     AllocatedElemType* deviceBufferPtr = AllocateNoTrace<AllocatedElemType>(deviceId, numElements);
 
     if (IsTraceEnabled())
     {
-        auto freeAndTotalMemory = GetFreeAndTotalMemoryInMBs(deviceId);
-        fprintf(stderr, "Allocated array<%s> (NumElements = %d) on DeviceId = %d, DeviceBufferPointer = %p; GPU Memory Free = %d MB of %d MB\n", typeid(AllocatedElemType).name(), (int) numElements, (int) deviceId, (void*) deviceBufferPtr, (int) freeAndTotalMemory.first, (int) freeAndTotalMemory.second);
-        Microsoft::MSR::CNTK::DebugUtil::PrintCallStack();
+        fprintf(stderr, "Allocated DeviceBufferPointer = %p\n", (void*)deviceBufferPtr);
     }
 
     return deviceBufferPtr;

@@ -20,14 +20,6 @@
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{482999D1-B7E2-466E-9F8D-2119F93EAFD9}</ProjectGuid>
-    <SccProjectName>
-    </SccProjectName>
-    <SccAuxPath>
-    </SccAuxPath>
-    <SccLocalPath>
-    </SccLocalPath>
-    <SccProvider>
-    </SccProvider>
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>EvalDll</RootNamespace>
     <ProjectName>EvalDll</ProjectName>
@@ -70,15 +62,15 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64' Or '$(Configuration)|$(Platform)'=='Debug_CpuOnly|x64'">
     <LinkIncremental>true</LinkIncremental>
-    <IncludePath>..\SGDLib;..\ComputationNetworkLib;..\SequenceTrainingLib;..\Math;..\Common\Include;..\CNTK\BrainScript;C:\Program Files (x86)\Microsoft SDKs\MPI\Include;$(VCInstallDir)include;$(WindowsSDK_IncludePath)</IncludePath>
-    <LibraryPath>..\ComputationNetworkLib;..\Math;C:\Program Files (x86)\Microsoft SDKs\MPI\Lib\x64;$(VCInstallDir)lib\amd64;$(WindowsSDK_LibraryPath_x64);$(Platform);$(SolutionDir)$(Platform)\$(Configuration)\</LibraryPath>
+    <IncludePath>..\SGDLib;..\ComputationNetworkLib;..\SequenceTrainingLib;..\Math;..\Common\Include;..\CNTK\BrainScript;$(MSMPI_INC);$(VCInstallDir)include;$(WindowsSDK_IncludePath)</IncludePath>
+    <LibraryPath>..\ComputationNetworkLib;..\Math;$(MSMPI_LIB64);$(VCInstallDir)lib\amd64;$(WindowsSDK_LibraryPath_x64);$(Platform);$(SolutionDir)$(Platform)\$(Configuration)\</LibraryPath>
     <IntDir>$(Platform)\$(Configuration)\$(ProjectName)\</IntDir>
     <TargetName>EvalDll</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64' Or '$(Configuration)|$(Platform)'=='Release_CpuOnly|x64'">
     <LinkIncremental>false</LinkIncremental>
-    <IncludePath>..\SGDLib;..\ComputationNetworkLib;..\SequenceTrainingLib;..\Math;..\Common\Include;..\CNTK\BrainScript;C:\Program Files (x86)\Microsoft SDKs\MPI\Include;$(CUDA_PATH)\include;$(VCInstallDir)include;$(WindowsSDK_IncludePath)</IncludePath>
-    <LibraryPath>..\ComputationNetworkLib;..\Math;C:\Program Files (x86)\Microsoft SDKs\MPI\Lib\x64;$(CUDA_PATH)\lib\$(Platform);$(VCInstallDir)lib\amd64;$(WindowsSDK_LibraryPath_x64);$(Platform);$(SolutionDir)$(Platform)\$(Configuration)\</LibraryPath>
+    <IncludePath>..\SGDLib;..\ComputationNetworkLib;..\SequenceTrainingLib;..\Math;..\Common\Include;..\CNTK\BrainScript;$(MSMPI_INC);$(CUDA_PATH)\include;$(VCInstallDir)include;$(WindowsSDK_IncludePath)</IncludePath>
+    <LibraryPath>..\ComputationNetworkLib;..\Math;$(MSMPI_LIB64);$(CUDA_PATH)\lib\$(Platform);$(VCInstallDir)lib\amd64;$(WindowsSDK_LibraryPath_x64);$(Platform);$(SolutionDir)$(Platform)\$(Configuration)\</LibraryPath>
     <IntDir>$(Platform)\$(Configuration)\$(ProjectName)\</IntDir>
     <TargetName>EvalDll</TargetName>
   </PropertyGroup>
