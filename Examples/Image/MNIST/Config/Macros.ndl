@@ -20,3 +20,5 @@ ConvReLULayer(inp, outMap, inWCount, kW, kH, hStride, vStride, wScale, bValue) =
     convPlusB = Plus(conv, convB);
     act = RectifiedLinear(convPlusB);
 ]
+
+# BUGBUG: need to re-add DnnBNSigmoidLayer macro
