@@ -863,8 +863,9 @@ template <class ElemType>
             if (!wasDataRead)
             actualMBSize = 0; // (undefined if !wasDataRead)
 
-            nSamplesSinceLastModelSync += actualMBSize;
-
+            // for progress and statistics, we should only count frames that are not gaps
+            size_t numSamplesWithLabel = wasDataRead ? net->GetNumSamplesWithLabel(actualMBSize) : 0;
+            nSamplesSinceLastModelSync += numSamplesWithLabel;
             // node data was changed
             // TODO: move this to that function as well--just tired to pass everything as arguments
             // TODO: We should do this right after the GetMinibatch() call, since that's where these changed.
@@ -939,9 +940,6 @@ template <class ElemType>
                 if (actualNumSubminibatches > 1)
                     smbDispatcher.DoneWithCurrentMinibatch(); 
             } // if (actualMBSize > 0)
-
-            // for progress and statistics, we should only count frames that are not gaps
-            size_t numSamplesWithLabel = wasDataRead ? net->GetNumSamplesWithLabel(actualMBSize) : 0;
 
             // Sum of actualMBSize across all nodes when using parallel training
             size_t aggregateNumSamples = actualMBSize;
