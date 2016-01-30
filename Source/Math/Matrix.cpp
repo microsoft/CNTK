@@ -164,17 +164,6 @@
         }                                                                                                                             \
     }
 
-static DEVICEID_TYPE s_selectedDeviceId = DEVICEID_NOTYETDETERMINED;
-void MATH_API SetSelectedDeviceId(DEVICEID_TYPE deviceId)
-{
-    s_selectedDeviceId = deviceId;
-}
-
-DEVICEID_TYPE MATH_API GetSelectedDeviceId()
-{
-    return s_selectedDeviceId;
-}
-
 namespace Microsoft { namespace MSR { namespace CNTK {
 
 #pragma region Constructors, destructors and other static matrix builders

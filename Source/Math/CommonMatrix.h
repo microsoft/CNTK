@@ -35,9 +35,6 @@
 #define GPUSPARSE_INDEX_TYPE int // cuSparse only supports int array indexes
 #define CPUSPARSE_INDEX_TYPE int // to be consistent with cuSparse but limited the possible size of the matrix.
 
-void MATH_API SetSelectedDeviceId(DEVICEID_TYPE deviceId);
-DEVICEID_TYPE MATH_API GetSelectedDeviceId();
-
 namespace Microsoft { namespace MSR { namespace CNTK {
 
 class MATH_API TracingGPUMemoryAllocator

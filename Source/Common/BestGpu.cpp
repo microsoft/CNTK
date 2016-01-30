@@ -130,11 +130,11 @@ private:
 static DEVICEID_TYPE SelectDevice(DEVICEID_TYPE deviceId, bool bLockGPU)
 {
     // This can only be called with the same parameter.
-    
-    if (GetSelectedDeviceId() == DEVICEID_NOTYETDETERMINED)
-        SetSelectedDeviceId(deviceId);
-    else if (GetSelectedDeviceId() != deviceId)
-        InvalidArgument("SelectDevice: Attempted to change device selection from %d to %d (%d means 'auto').", (int)GetSelectedDeviceId(), (int)deviceId, (int)DEVICEID_AUTO);
+    static DEVICEID_TYPE selectedDeviceId = DEVICEID_NOTYETDETERMINED;
+    if (selectedDeviceId == DEVICEID_NOTYETDETERMINED)
+        selectedDeviceId = deviceId;
+    else if (selectedDeviceId != deviceId)
+        InvalidArgument("SelectDevice: Attempted to change device selection from %d to %d (%d means 'auto').", (int)selectedDeviceId, (int)deviceId, (int)DEVICEID_AUTO);
 
     if (deviceId == DEVICEID_AUTO)
     {
