@@ -208,7 +208,7 @@ std::pair<size_t, size_t> TracingGPUMemoryAllocator::GetFreeAndTotalMemoryInMBs(
 // deviceId - the device on which the operation will take place
 void PrepareDevice(DEVICEID_TYPE deviceId)
 {
-    static DEVICEID_TYPE currentDevice = AUTOPLACEMATRIX; // set to anything valid
+    static DEVICEID_TYPE currentDevice = DEVICEID_NOTYETDETERMINED;
     // and if we last set the device to be this device we are good
     if (deviceId == currentDevice)
         return;
@@ -267,80 +267,11 @@ cublasHandle_t _initCUBLAS(int devId)
     return cuHandle;
 }
 
-// GetBestGPUDeviceId - Get the best GPU DeviceId, based on cuda information
-// Returns -1 if no GPUs can be used.
-//  TODO: should be replaced by BestGpu class instead, it's much better
-static DEVICEID_TYPE SelectBestGPUDeviceId() // this is an internal version that is wrapped by GPUMatrix<ElemType>::GetBestGPUDeviceId() below
-{
-    // currently there is little point in giving out different device IDs each time ask for a matrix,
-    // we really want them all on the same device eventually
-    static int chosenDeviceId = AUTOPLACEMATRIX;
-    if (chosenDeviceId != AUTOPLACEMATRIX)
-        return chosenDeviceId;
-#ifdef __WINDOWS__
-    __try
-#endif
-    {
-        // stash previous device state
-        // if there was one on entry:
-        int nPrevDev = -1;
-        cudaError_t ePrevDev = cudaGetDevice(&nPrevDev);
-
-        int deviceCount = -1;
-        cudaError_t error_id = cudaGetDeviceCount(&deviceCount);
-        if (error_id != cudaSuccess || deviceCount == 0)
-        {
-            return -1;
-        }
-
-        int setDev = -1;
-        int curDev = 0;
-        CUDA_LONG curPower = 0;
-        for (DEVICEID_TYPE dev = 0; dev < deviceCount; ++dev)
-        {
-            CUDA_CALL(cudaSetDevice(dev));
-            setDev = dev;
-            cudaDeviceProp deviceProp;
-            cudaGetDeviceProperties(&deviceProp, dev);
-            int power = _ConvertSMVer2Cores(deviceProp.major, deviceProp.minor) * deviceProp.multiProcessorCount;
-            // CUDA_LONG power = _GetFreeMemoryOnCUDADevice(dev);
-            if (power > curPower)
-            {
-                curPower = power;
-                curDev = dev;
-            }
-        }
-
-        if (nPrevDev >= 0 && ePrevDev == cudaSuccess &&
-            setDev >= 0 && setDev != nPrevDev)
-        {
-            // restore current context to the one we entered with
-            // if there was one the caller might want unchanged.
-            cudaSetDevice(nPrevDev);
-        }
-        chosenDeviceId = curDev;
-        return curDev;
-    }
-#ifdef __WINDOWS__
-    __except (1)
-    {
-        return -1; // CPU
-    }
-#endif
-}
-
 template <class ElemType>
 void GPUMatrix<ElemType>::SetDevice(DEVICEID_TYPE deviceId)
 {
     assert(deviceId >= 0);
     CUDA_CALL(cudaSetDevice(deviceId));
-}
-
-template <class ElemType>
-/*static*/ DEVICEID_TYPE GPUMatrix<ElemType>::GetBestGPUDeviceId() // returns -1 if no GPUs can be used
-{
-    // route the result through EnforceOneGPUOnly() which only lets the first choice through (see comment there)
-    return EnforceOneGPUOnly(SelectBestGPUDeviceId());
 }
 
 // PrepareDevice - Setup the correct cuda context for an operation
@@ -4948,7 +4879,6 @@ template void GPUMatrix<char>::ChangeDeviceTo(int);
 template void GPUMatrix<char>::Resize(size_t, size_t, bool);
 
 template GPUMatrix<char>::~GPUMatrix();
-template DEVICEID_TYPE GPUMatrix<char>::GetBestGPUDeviceId();
 template GPUMatrix<char> GPUMatrix<char>::ColumnSlice(size_t startColumn, size_t numCols) const;
 template GPUMatrix<char>& GPUMatrix<char>::operator=(GPUMatrix<char>&&);
 template GPUMatrix<char>::GPUMatrix(int);

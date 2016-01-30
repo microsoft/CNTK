@@ -37,10 +37,6 @@ public:
         : m_sob(other.m_sob.AsReference()), m_shape(shape)
     {
     }
-    // empty constructor
-    TensorView()
-    {
-    }
     // copy constructor
     TensorView(const TensorView<ElemType>& other)
         : m_sob(other.m_sob.AsReference()), m_shape(other.m_shape)
