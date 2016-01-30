@@ -754,7 +754,7 @@ static inline ImageLayoutKind ImageLayoutKindFrom(const wstring& s)
 }
 
 // interpret TensorShape as an image descriptor
-// considering that we support two ways of storingimages
+// considering that we support two ways of storing images
 struct ImageDimensions
 {
     size_t m_width, m_height, m_numChannels;

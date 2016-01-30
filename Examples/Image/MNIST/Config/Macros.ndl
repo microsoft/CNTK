@@ -15,17 +15,8 @@ DNNLayer(inDim, outDim, x, parmScale) = [
 
 ConvReLULayer(inp, outMap, inWCount, kW, kH, hStride, vStride, wScale, bValue) = [
     convW = Parameter(outMap, inWCount, init="uniform", initValueScale=wScale)
-    convB = Parameter(outMap, 1,        init="fixedValue", value=bValue)
-    conv = Convolution(convW, inp, kW, kH, outMap, hStride, vStride, zeroPadding=false)
+    convB = ImageParameter(1, 1, outMap,     init="fixedValue", value=bValue, imageLayout=$imageLayout$)
+    conv = Convolution(convW, inp, kW, kH, outMap, hStride, vStride, zeroPadding=false, imageLayout=$imageLayout$)
     convPlusB = Plus(conv, convB);
     act = RectifiedLinear(convPlusB);
-]
-
-BatchNorm(dim, x, scaleInit, biasInit) = [
-    m = Mean(x)
-    isd = InvStdDev(x)
-    norm = ColumnElementTimes(Minus(x, m), isd)
-    sc = Parameter(dim, 1, init="uniform", initValueScale=scaleInit)
-    b  = Parameter(dim, 1, init="uniform", initValueScale=biasInit)
-    bn_norm = Plus(ColumnElementTimes(norm, sc), b)
 ]
