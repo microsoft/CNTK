@@ -20,14 +20,6 @@
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{928ABD1B-4D3B-4017-AEF1-0FA1B4467513}</ProjectGuid>
-    <SccProjectName>
-    </SccProjectName>
-    <SccAuxPath>
-    </SccAuxPath>
-    <SccLocalPath>
-    </SccLocalPath>
-    <SccProvider>
-    </SccProvider>
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>CNTK</RootNamespace>
     <ProjectName>ComputationNetworkLib</ProjectName>

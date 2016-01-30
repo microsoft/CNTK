@@ -20,14 +20,6 @@
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{1D5787D4-52E4-45DB-951B-82F220EE0C6A}</ProjectGuid>
-    <SccProjectName>
-    </SccProjectName>
-    <SccAuxPath>
-    </SccAuxPath>
-    <SccLocalPath>
-    </SccLocalPath>
-    <SccProvider>
-    </SccProvider>
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>UCIReader</RootNamespace>
   </PropertyGroup>
