@@ -73,17 +73,20 @@ public:
         // Note: This loses the sample layout, but that is recovered by Validate().
     }
 
-    virtual void DumpNodeInfo(const bool printValues, File& fstream) const override
+    virtual void DumpNodeInfo(const bool printValues, const bool printMetadata, File& fstream) const override
     {
-        Base::DumpNodeInfo(printValues, fstream);
+        Base::DumpNodeInfo(printValues, printMetadata, fstream);
 
-        char str[4096];
-        sprintf(str, "[%s]  ", string(GetSampleLayout()).c_str());
-        fstream << string(str);
-        sprintf(str, "HasComputed=%ls", HasComputed() ? L"true" : L"false");
-        fstream << string(str);
+        if (printMetadata)
+        {
+            char str[4096];
+            sprintf(str, "[%s]  ", string(GetSampleLayout()).c_str());
+            fstream << string(str);
+            sprintf(str, "HasComputed=%ls", HasComputed() ? L"true" : L"false");
+            fstream << string(str);
+        }
 
-        PrintNodeValuesToFile(printValues, fstream);
+        PrintNodeValuesToFile(printValues, printMetadata, fstream);
     }
 
     virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
