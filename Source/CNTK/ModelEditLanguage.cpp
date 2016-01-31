@@ -264,7 +264,7 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
         {
             NetNdl<ElemType>* netNdl = &found->second;
             ProcessNDLScript(netNdl, ndlPassAll, true);
-            found->second.cn->DumpAllNodesToFile(includeData, fileName);
+            found->second.cn->DumpAllNodesToFile(includeData, true, fileName);
         }
     }
     else if (EqualInsensitive(name, "DumpNode"))
@@ -280,7 +280,7 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
         NetNdl<ElemType>* netNdl;
         vector<ComputationNodeBasePtr> nodes = FindSymbols(params[0], netNdl);
         ProcessNDLScript(netNdl, ndlPassAll);
-        netNdl->cn->DumpNodeInfoToFile(nodes, includeData, fileName);
+        netNdl->cn->DumpNodeInfoToFile(nodes, includeData, true, fileName);
     }
     else if (EqualInsensitive(name, "CopyNode", "Copy"))
     {
