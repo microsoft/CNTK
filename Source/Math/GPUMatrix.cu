@@ -194,14 +194,10 @@ std::pair<size_t, size_t> TracingGPUMemoryAllocator::GetFreeAndTotalMemoryInMBs(
     PrepareDevice(deviceId);
 
     size_t free, total;
-    auto result = cudaMemGetInfo(&free, &total);
-    if (result != cudaSuccess)
-        return {size_t(0), size_t(0)};
-    else
-    {
-        size_t numBytesPerMB = 1 << 20;
-        return {free / numBytesPerMB, total / numBytesPerMB};
-    }
+    CUDA_CALL(cudaMemGetInfo(&free, &total));
+
+    size_t numBytesPerMB = 1 << 20;
+    return {free / numBytesPerMB, total / numBytesPerMB};
 }
 
 // PrepareDevice - Setup the correct cuda context for an operation
