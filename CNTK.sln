@@ -703,6 +703,60 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CSEvalClient", "Source\Exte
 		{EF766CAE-9CB1-494C-9153-0030631A6340} = {EF766CAE-9CB1-494C-9153-0030631A6340}
 	EndProjectSection
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Examples", "Examples", "{BD46CE02-3740-4526-80F6-CC7973B953E5}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Image", "Image", "{FC7E7EC7-6E6A-4518-81C6-DA60451C657A}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Other", "Other", "{CEADE942-4077-4577-ACF9-41C04388DDC0}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Speech", "Speech", "{FB7AF7B9-6BEA-459F-94D9-94D53916D2B6}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Text", "Text", "{439BE0E0-FABE-403D-BF2C-A41FB8A60616}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "MNIST", "MNIST", "{63C6816D-66BF-487E-B541-094142C8272B}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "02_Convolution", "02_Convolution", "{6F1D0CE1-0F18-4B4C-9581-1F2146C8D300}"
+	ProjectSection(SolutionItems) = preProject
+		Tests\EndToEndTests\Examples\Image\MNIST\02_Convolution\baseline.linux.debug.cpu.txt = Tests\EndToEndTests\Examples\Image\MNIST\02_Convolution\baseline.linux.debug.cpu.txt
+		Tests\EndToEndTests\Examples\Image\MNIST\02_Convolution\baseline.linux.debug.gpu.txt = Tests\EndToEndTests\Examples\Image\MNIST\02_Convolution\baseline.linux.debug.gpu.txt
+		Tests\EndToEndTests\Examples\Image\MNIST\02_Convolution\baseline.linux.release.cpu.txt = Tests\EndToEndTests\Examples\Image\MNIST\02_Convolution\baseline.linux.release.cpu.txt
+		Tests\EndToEndTests\Examples\Image\MNIST\02_Convolution\baseline.linux.release.gpu.txt = Tests\EndToEndTests\Examples\Image\MNIST\02_Convolution\baseline.linux.release.gpu.txt
+		Tests\EndToEndTests\Examples\Image\MNIST\02_Convolution\baseline.windows.debug.cpu.txt = Tests\EndToEndTests\Examples\Image\MNIST\02_Convolution\baseline.windows.debug.cpu.txt
+		Tests\EndToEndTests\Examples\Image\MNIST\02_Convolution\baseline.windows.debug.gpu.txt = Tests\EndToEndTests\Examples\Image\MNIST\02_Convolution\baseline.windows.debug.gpu.txt
+		Tests\EndToEndTests\Examples\Image\MNIST\02_Convolution\baseline.windows.release.cpu.txt = Tests\EndToEndTests\Examples\Image\MNIST\02_Convolution\baseline.windows.release.cpu.txt
+		Tests\EndToEndTests\Examples\Image\MNIST\02_Convolution\baseline.windows.release.gpu.txt = Tests\EndToEndTests\Examples\Image\MNIST\02_Convolution\baseline.windows.release.gpu.txt
+		Tests\EndToEndTests\Examples\Image\MNIST\02_Convolution\run-test = Tests\EndToEndTests\Examples\Image\MNIST\02_Convolution\run-test
+		Tests\EndToEndTests\Examples\Image\MNIST\02_Convolution\testcases.yml = Tests\EndToEndTests\Examples\Image\MNIST\02_Convolution\testcases.yml
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "01_OneHidden", "01_OneHidden", "{A0B366FE-2EEA-4E32-9AED-12C46409C30C}"
+	ProjectSection(SolutionItems) = preProject
+		Tests\EndToEndTests\Examples\Image\MNIST\01_OneHidden\baseline.linux.debug.cpu.txt = Tests\EndToEndTests\Examples\Image\MNIST\01_OneHidden\baseline.linux.debug.cpu.txt
+		Tests\EndToEndTests\Examples\Image\MNIST\01_OneHidden\baseline.linux.debug.gpu.txt = Tests\EndToEndTests\Examples\Image\MNIST\01_OneHidden\baseline.linux.debug.gpu.txt
+		Tests\EndToEndTests\Examples\Image\MNIST\01_OneHidden\baseline.linux.release.cpu.txt = Tests\EndToEndTests\Examples\Image\MNIST\01_OneHidden\baseline.linux.release.cpu.txt
+		Tests\EndToEndTests\Examples\Image\MNIST\01_OneHidden\baseline.linux.release.gpu.txt = Tests\EndToEndTests\Examples\Image\MNIST\01_OneHidden\baseline.linux.release.gpu.txt
+		Tests\EndToEndTests\Examples\Image\MNIST\01_OneHidden\baseline.windows.debug.cpu.txt = Tests\EndToEndTests\Examples\Image\MNIST\01_OneHidden\baseline.windows.debug.cpu.txt
+		Tests\EndToEndTests\Examples\Image\MNIST\01_OneHidden\baseline.windows.debug.gpu.txt = Tests\EndToEndTests\Examples\Image\MNIST\01_OneHidden\baseline.windows.debug.gpu.txt
+		Tests\EndToEndTests\Examples\Image\MNIST\01_OneHidden\baseline.windows.release.cpu.txt = Tests\EndToEndTests\Examples\Image\MNIST\01_OneHidden\baseline.windows.release.cpu.txt
+		Tests\EndToEndTests\Examples\Image\MNIST\01_OneHidden\baseline.windows.release.gpu.txt = Tests\EndToEndTests\Examples\Image\MNIST\01_OneHidden\baseline.windows.release.gpu.txt
+		Tests\EndToEndTests\Examples\Image\MNIST\01_OneHidden\run-test = Tests\EndToEndTests\Examples\Image\MNIST\01_OneHidden\run-test
+		Tests\EndToEndTests\Examples\Image\MNIST\01_OneHidden\testcases.yml = Tests\EndToEndTests\Examples\Image\MNIST\01_OneHidden\testcases.yml
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "03_ConvBatchNorm", "03_ConvBatchNorm", "{BD783D50-47E2-485F-BDAF-29BD40D84645}"
+	ProjectSection(SolutionItems) = preProject
+		Tests\EndToEndTests\Examples\Image\MNIST\03_ConvBatchNorm\baseline.linux.debug.cpu.txt = Tests\EndToEndTests\Examples\Image\MNIST\03_ConvBatchNorm\baseline.linux.debug.cpu.txt
+		Tests\EndToEndTests\Examples\Image\MNIST\03_ConvBatchNorm\baseline.linux.debug.gpu.txt = Tests\EndToEndTests\Examples\Image\MNIST\03_ConvBatchNorm\baseline.linux.debug.gpu.txt
+		Tests\EndToEndTests\Examples\Image\MNIST\03_ConvBatchNorm\baseline.linux.release.cpu.txt = Tests\EndToEndTests\Examples\Image\MNIST\03_ConvBatchNorm\baseline.linux.release.cpu.txt
+		Tests\EndToEndTests\Examples\Image\MNIST\03_ConvBatchNorm\baseline.linux.release.gpu.txt = Tests\EndToEndTests\Examples\Image\MNIST\03_ConvBatchNorm\baseline.linux.release.gpu.txt
+		Tests\EndToEndTests\Examples\Image\MNIST\03_ConvBatchNorm\baseline.windows.debug.cpu.txt = Tests\EndToEndTests\Examples\Image\MNIST\03_ConvBatchNorm\baseline.windows.debug.cpu.txt
+		Tests\EndToEndTests\Examples\Image\MNIST\03_ConvBatchNorm\baseline.windows.debug.gpu.txt = Tests\EndToEndTests\Examples\Image\MNIST\03_ConvBatchNorm\baseline.windows.debug.gpu.txt
+		Tests\EndToEndTests\Examples\Image\MNIST\03_ConvBatchNorm\baseline.windows.release.cpu.txt = Tests\EndToEndTests\Examples\Image\MNIST\03_ConvBatchNorm\baseline.windows.release.cpu.txt
+		Tests\EndToEndTests\Examples\Image\MNIST\03_ConvBatchNorm\baseline.windows.release.gpu.txt = Tests\EndToEndTests\Examples\Image\MNIST\03_ConvBatchNorm\baseline.windows.release.gpu.txt
+		Tests\EndToEndTests\Examples\Image\MNIST\03_ConvBatchNorm\run-test = Tests\EndToEndTests\Examples\Image\MNIST\03_ConvBatchNorm\run-test
+		Tests\EndToEndTests\Examples\Image\MNIST\03_ConvBatchNorm\testcases.yml = Tests\EndToEndTests\Examples\Image\MNIST\03_ConvBatchNorm\testcases.yml
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug_CpuOnly|x64 = Debug_CpuOnly|x64
@@ -987,5 +1041,14 @@ Global
 		{06D2C644-AE5F-4C30-A1F6-C78E2845AAB1} = {EF710C5A-E616-442A-889D-C997D39AF2E1}
 		{EF766CAE-9CB1-494C-9153-0030631A6340} = {60F87E25-BC87-4782-8E20-1621AAEBB113}
 		{41E11A59-62B2-4927-A4F8-F40B1B612C6C} = {60F87E25-BC87-4782-8E20-1621AAEBB113}
+		{BD46CE02-3740-4526-80F6-CC7973B953E5} = {6E565B48-1923-49CE-9787-9BBB9D96F4C5}
+		{FC7E7EC7-6E6A-4518-81C6-DA60451C657A} = {BD46CE02-3740-4526-80F6-CC7973B953E5}
+		{CEADE942-4077-4577-ACF9-41C04388DDC0} = {BD46CE02-3740-4526-80F6-CC7973B953E5}
+		{FB7AF7B9-6BEA-459F-94D9-94D53916D2B6} = {BD46CE02-3740-4526-80F6-CC7973B953E5}
+		{439BE0E0-FABE-403D-BF2C-A41FB8A60616} = {BD46CE02-3740-4526-80F6-CC7973B953E5}
+		{63C6816D-66BF-487E-B541-094142C8272B} = {FC7E7EC7-6E6A-4518-81C6-DA60451C657A}
+		{6F1D0CE1-0F18-4B4C-9581-1F2146C8D300} = {63C6816D-66BF-487E-B541-094142C8272B}
+		{A0B366FE-2EEA-4E32-9AED-12C46409C30C} = {63C6816D-66BF-487E-B541-094142C8272B}
+		{BD783D50-47E2-485F-BDAF-29BD40D84645} = {63C6816D-66BF-487E-B541-094142C8272B}
 	EndGlobalSection
 EndGlobal

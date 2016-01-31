@@ -179,13 +179,8 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
     for (size_t pass = 0; pass < 2; pass++)
     {
         auto& nodes = (pass == 0) ? featureNodes : labelNodes;
-        for (size_t i = 0; i < nodes.size(); i++)
-        {
-            auto& node = nodes[i];
-            auto* functionValues = &dynamic_pointer_cast<ComputationNode<ElemType>>(node)->Value();
-            assert(functionValues->GetNumCols() == net->GetMBLayoutPtr()->GetNumTimeSteps());
-            (*inputMatrices)[node->NodeName()] = functionValues;
-        }
+        for (const auto & node : nodes)
+            (*inputMatrices)[node->NodeName()] = &dynamic_pointer_cast<ComputationNode<ElemType>>(node)->Value();
     }
 
     // get hmm file for sequence training

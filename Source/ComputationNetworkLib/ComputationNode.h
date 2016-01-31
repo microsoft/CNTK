@@ -903,7 +903,7 @@ public:
         Base::CopyTo(nodeP, newName, flags);
         if (flags & CopyNodeFlags::copyNodeValue)
         {
-            auto node = UpCast(nodeP);
+            auto node = DownCast(nodeP);
             *node->m_value = *m_value;
             if (m_gradient)
                 *node->m_gradient = *m_gradient;
@@ -980,7 +980,7 @@ public:
         m_inputs.resize(inputs.size());
         for (size_t i = 0; i < m_inputs.size(); i++)
             if (inputs[i])
-                m_inputs[i] = UpCast(inputs[i]); // (UpCast() checks the type; the assignment then downcasts it again)
+                m_inputs[i] = DownCast(inputs[i]); // (DownCast() checks the type; the assignment then downcasts it again)
             else
                 m_inputs[i] = nullptr; // during network creation, nullpts are possible
     }
@@ -1013,7 +1013,7 @@ protected:
     }
 
     // up-cast to make life easier
-    static ComputationNodePtr UpCast(ComputationNodeBasePtr inode)
+    static ComputationNodePtr DownCast(ComputationNodeBasePtr inode)
     {
         ComputationNodePtr node = dynamic_pointer_cast<ComputationNode<ElemType>>(inode);
         if (!node)
@@ -1025,12 +1025,12 @@ protected:
     {
         if (inputIndex >= m_inputs.size())
             LogicError("Inputs: inputIndex %d is out of range for %ls %ls operation.", (int) inputIndex, NodeName().c_str(), OperationName().c_str());
-        return UpCast(m_inputs[inputIndex]);
+        return DownCast(m_inputs[inputIndex]);
     }
 
     void /*ComputationNodeBase::*/ SetInput(const size_t childIndex, const ComputationNodeBasePtr& inode) override
     {
-        const ComputationNodePtr node = UpCast(inode);
+        const ComputationNodePtr node = DownCast(inode);
 
         // require first nodes specified before the second to avoid null nodes condition.
         if (childIndex > m_inputs.size())

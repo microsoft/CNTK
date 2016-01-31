@@ -198,20 +198,6 @@ public:
 #endif
     }
 
-    // BUGBUG: Should not be here. Use PlusNode and m_sampleLayout.  TODO: Bad naming:'output' is actually an 'input'
-    void AddBias(const Matrix<ElemType>& output, const Matrix<ElemType>& bias, Matrix<ElemType>& dst)
-    {
-        assert(m_convEng != nullptr);
-        m_convEng->AddBias(*m_outT, output, *m_biasT, bias, dst);
-    }
-
-    void BackwardBias(const Matrix<ElemType>& srcGrad, Matrix<ElemType>& biasGrad)
-    {
-        assert(m_convEng != nullptr);
-        m_convEng->BackwardBias(*m_outT, srcGrad, *m_biasT, biasGrad);
-    }
-
-    // note: this also infers dimensions from chilren
     void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
     {
         Base::Validate(isFinalValidationPass);
@@ -224,11 +210,11 @@ public:
             InvalidArgument("%ls %ls operation requires that input width be >= kernelWidth and input height >= kernelHeight.", NodeName().c_str(), OperationName().c_str());
 
         // determine output tensor shape
-        const int kernelWidthCenter = m_zeroPadding ? m_kernelWidth % 2 : m_kernelWidth;
+        const int kernelWidthCenter  = m_zeroPadding ? m_kernelWidth  % 2 : m_kernelWidth;
         const int kernelHeightCenter = m_zeroPadding ? m_kernelHeight % 2 : m_kernelHeight;
         auto outDims = ImageDimensions(
-            (inDims.m_width - kernelWidthCenter) / m_horizontalSubsample + 1,
-            (inDims.m_height - kernelHeightCenter) / m_verticalSubsample + 1,
+            (inDims.m_width  - kernelWidthCenter)  / m_horizontalSubsample + 1,
+            (inDims.m_height - kernelHeightCenter) / m_verticalSubsample   + 1,
             m_outputChannels);
 
         size_t weightCols = m_kernelWidth * m_kernelHeight * inDims.m_numChannels;
