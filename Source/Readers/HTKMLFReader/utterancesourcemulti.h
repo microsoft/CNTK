@@ -188,6 +188,8 @@ class minibatchutterancesourcemulti : public minibatchsource
     };
     std::vector<std::vector<utterancechunkdata>> allchunks;           // set of utterances organized in chunks, referred to by an iterator (not an index)
     std::vector<unique_ptr<biggrowablevector<CLASSIDTYPE>>> classids; // [classidsbegin+t] concatenation of all state sequences
+
+    bool generatePhoneBoundaries;
     std::vector<unique_ptr<biggrowablevector<HMMIDTYPE>>> phoneboundaries;
     bool issupervised() const
     {
@@ -360,6 +362,9 @@ class minibatchutterancesourcemulti : public minibatchsource
     template <class UTTREF>
     std::vector<shiftedvector<biggrowablevector<HMMIDTYPE>>> getphonebound(const UTTREF &uttref) // return sub-vector of classids[] for a given utterance
     {
+        if (!generatePhoneBoundaries)
+            LogicError("getphonebound: generation of phone boundaries is not enabled for this utterance source!");
+
         std::vector<shiftedvector<biggrowablevector<HMMIDTYPE>>> allphoneboundaries;
         allphoneboundaries.empty();
 
@@ -389,7 +394,7 @@ public:
     minibatchutterancesourcemulti(const std::vector<std::vector<wstring>> &infiles, const std::vector<map<wstring, std::vector<msra::asr::htkmlfentry>>> &labels,
                                   std::vector<size_t> vdim, std::vector<size_t> udim, std::vector<size_t> leftcontext, std::vector<size_t> rightcontext, size_t randomizationrange,
                                   const latticesource &lattices, const map<wstring, msra::lattices::lattice::htkmlfwordsequence> &allwordtranscripts, const bool framemode)
-        : vdim(vdim), leftcontext(leftcontext), rightcontext(rightcontext), sampperiod(0), featdim(0), randomizationrange(randomizationrange), currentsweep(SIZE_MAX), lattices(lattices), allwordtranscripts(allwordtranscripts), framemode(framemode), chunksinram(0), timegetbatch(0), verbosity(2)
+                                  : vdim(vdim), leftcontext(leftcontext), rightcontext(rightcontext), sampperiod(0), featdim(0), randomizationrange(randomizationrange), currentsweep(SIZE_MAX), lattices(lattices), allwordtranscripts(allwordtranscripts), framemode(framemode), chunksinram(0), timegetbatch(0), verbosity(2), generatePhoneBoundaries(!lattices.empty())
     // [v-hansu] change framemode (lattices.empty()) into framemode (false) to run utterance mode without lattice
     // you also need to change another line, search : [v-hansu] comment out to run utterance mode without lattice
     {
@@ -418,7 +423,9 @@ public:
         foreach_index (i, labels)
         {
             classids.push_back(unique_ptr<biggrowablevector<CLASSIDTYPE>>(new biggrowablevector<CLASSIDTYPE>()));
-            phoneboundaries.push_back(unique_ptr<biggrowablevector<HMMIDTYPE>>(new biggrowablevector<HMMIDTYPE>()));
+            if (generatePhoneBoundaries)
+                phoneboundaries.push_back(unique_ptr<biggrowablevector<HMMIDTYPE>>(new biggrowablevector<HMMIDTYPE>()));
+
             // std::pair<std::vector<wstring>,std::vector<wstring>> latticetocs;
             // std::unordered_map<std::string,size_t> modelsymmap;
             // lattices.push_back(shared_ptr<latticesource>(new latticesource(latticetocs, modelsymmap)));
@@ -596,10 +603,13 @@ public:
                                         for (size_t t = e.firstframe; t < e.firstframe + e.numframes; t++)
                                         {
                                             classids[j]->push_back(e.classid);
-                                            if (e.phonestart != 0 && t == e.firstframe)
-                                                phoneboundaries[j]->push_back((HMMIDTYPE) e.phonestart);
-                                            else
-                                                phoneboundaries[j]->push_back((HMMIDTYPE) 0);
+                                            if (generatePhoneBoundaries)
+                                            {
+                                                if (e.phonestart != 0 && t == e.firstframe)
+                                                    phoneboundaries[j]->push_back((HMMIDTYPE)e.phonestart);
+                                                else
+                                                    phoneboundaries[j]->push_back((HMMIDTYPE)0);
+                                            }
                                         }
                                         numclasses[j] = max(numclasses[j], (size_t)(1u + e.classid));
                                         counts[j].resize(numclasses[j], 0);
@@ -607,7 +617,8 @@ public:
                                     }
 
                                     classids[j]->push_back((CLASSIDTYPE) -1);      // append a boundary marker marker for checking
-                                    phoneboundaries[j]->push_back((HMMIDTYPE) -1); // append a boundary marker marker for checking
+                                    if (generatePhoneBoundaries)
+                                        phoneboundaries[j]->push_back((HMMIDTYPE) -1); // append a boundary marker marker for checking
 
                                     if (!labels[j].empty() && classids[j]->size() != _totalframes + utteranceset.size())
                                         LogicError("minibatchutterancesource: label duration inconsistent with feature file in MLF label set: %ls", key.c_str());
@@ -1239,7 +1250,8 @@ public:
             // resize feat and uids
             feat.resize(vdim.size());
             uids.resize(classids.size());
-            phoneboundaries.resize(classids.size());
+            if (generatePhoneBoundaries)
+                phoneboundaries.resize(classids.size());
             sentendmark.resize(vdim.size());
             assert(feat.size() == vdim.size());
             assert(feat.size() == randomizedchunks.size());
@@ -1254,12 +1266,14 @@ public:
                         if (issupervised()) // empty means unsupervised training -> return empty uids
                         {
                             uids[j].resize(tspos);
-                            phoneboundaries[j].resize(tspos);
+                            if (generatePhoneBoundaries)
+                                phoneboundaries[j].resize(tspos);
                         }
                         else
                         {
                             uids[i].clear();
-                            phoneboundaries[i].clear();
+                            if (generatePhoneBoundaries)
+                                phoneboundaries[i].clear();
                         }
                         latticepairs.clear(); // will push_back() below
                         transcripts.clear();
@@ -1314,7 +1328,9 @@ public:
                     if (i == 0)
                     {
                         auto uttclassids = getclassids(uttref);
-                        auto uttphoneboudaries = getphonebound(uttref);
+                        std::vector<shiftedvector<biggrowablevector<HMMIDTYPE>>> uttphoneboudaries;
+                        if (generatePhoneBoundaries)
+                            uttphoneboudaries = getphonebound(uttref);
                         foreach_index (j, uttclassids)
                         {
                             for (size_t t = 0; t < n; t++) // t = time index into source utterance
@@ -1322,7 +1338,8 @@ public:
                                 if (issupervised())
                                 {
                                     uids[j][t + tspos] = uttclassids[j][t];
-                                    phoneboundaries[j][t + tspos] = uttphoneboudaries[j][t];
+                                    if (generatePhoneBoundaries)
+                                        phoneboundaries[j][t + tspos] = uttphoneboudaries[j][t];
                                 }
                             }
 
