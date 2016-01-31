@@ -4,7 +4,7 @@ This folder contains demos and examples to get started with CNTK.
 The examples are structured by topic into Image, Speech, Text and Other.
 The individual folders contain on the first level at least one self-contained example,
 which cover different types of networks including FF, CNN, RNN and LSTM.
-Further examples for for each category are provided in the corresponding Miscellaneous subfolder.
+Further examples for each category are provided in the corresponding Miscellaneous subfolder.
 Each folder contains a Readme file that explains how to run the example on Windows and Linux. 
 How to run the examples on Philly (https://philly) is explained in the Philly portal wiki 
 (Philly is an internal GPU cluster for Microsoft production runs).

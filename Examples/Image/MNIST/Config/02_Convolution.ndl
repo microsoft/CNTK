@@ -9,7 +9,7 @@ ndlMnistMacros = [
     imageH = 28
     labelDim = 10
 
-    features = ImageInput(imageW, imageH, 1)
+    features = ImageInput(imageW, imageH, 1, imageLayout=$imageLayout$)
     featScale = Const(0.00390625)
     featScaled = Scale(featScale, features)
     labels = Input(labelDim)
@@ -31,7 +31,7 @@ DNN=[
     pool1H = 2
     pool1hStride = 2
     pool1vStride = 2
-    pool1 = MaxPooling(conv1_act, pool1W, pool1H, pool1hStride, pool1vStride)
+    pool1 = MaxPooling(conv1_act, pool1W, pool1H, pool1hStride, pool1vStride, imageLayout=$imageLayout$)
 
     # conv2
     kW2 = 5
@@ -48,7 +48,7 @@ DNN=[
     pool2H = 2
     pool2hStride = 2
     pool2vStride = 2
-    pool2 = MaxPooling(conv2_act, pool2W, pool2H, pool2hStride, pool2vStride)
+    pool2 = MaxPooling(conv2_act, pool2W, pool2H, pool2hStride, pool2vStride, imageLayout=$imageLayout$)
 
     h1Dim = 128
     # DNNSigmoidLayer and DNNLayer are defined in Macros.ndl
