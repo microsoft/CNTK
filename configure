@@ -1,7 +1,7 @@
 #!/bin/bash
 
 configure=$0
-build_top=$PWD
+build_top="$PWD"
 
 have_cuda=no
 cuda_path=
@@ -45,14 +45,14 @@ default_use_1bitsgd=no
 enable_1bitsgd=$default_use_1bitsgd
 
 # List from best to worst choice
-default_path_list="/usr /usr/local /opt /opt/local"
+default_path_list="/usr:/usr/local:/opt:/opt/local"
 
 # List from best to worst choice
 default_acmls="acml5.3.1/ifort64_mp"
 default_mkls=""
 
 # NOTE: Will get compilation errors with cuda-6.0
-default_cudas="cuda-7.5 cuda-7.0 cuda-6.5"
+default_cudas="cuda-7.5:cuda-7.0:cuda-6.5"
 default_kaldis="kaldi-trunk"
 default_gdks=". gdk/usr"
 default_cubs="cub-1.4.1"
@@ -61,14 +61,14 @@ default_opencvs="opencv-3.0.0"
 
 function default_paths ()
 {
-    echo $build_top $HOME $default_path_list
+    echo "$build_top:$HOME:$default_path_list"
 }
 
 # $1 is directory
 # $2 is file that must be present
 function check_dir ()
 {
-    if test -e $1/$2
+    if test -e "$1/$2"
     then
         echo yes
     else
@@ -80,17 +80,17 @@ function check_dir ()
 # $2 is some file that must exist in $1
 function find_dir ()
 {
-    for tail in $1
+    (IFS=":"; for tail in "$1"
     do
         for head in $(default_paths)
         do
-            if test x$(check_dir "$head/$tail" $2) = xyes
+            if test x$(check_dir "$head/$tail" "$2") = xyes
             then
                 echo $head/$tail
                 return 0
             fi
         done
-    done
+    done)
 }
 
 function find_acml ()
@@ -135,17 +135,21 @@ function find_opencv ()
 function is_hardlinked ()
 {
     r=no
-    if test -e $1 && test -e $2
+    if test -e "$1" && test -e "$2"
     then
         r=yes
-        [ "`stat -c '%i' $1`" != "`stat -c '%i' $2`" ] && r=no
+        if [ "$(uname -s)" = "Darwin" ]; then
+            [ "$(stat -f '%i' "$1")" != "$(stat -f '%i' "$2")" ] && r=no
+        else
+            [ "$(stat -c '%i' "$1")" != "$(stat -c '%i' "$2")" ] && r=no
+        fi
     fi
     echo $r
 }
 
 function default_use_cuda () 
 {
-    if test x$(find_cuda) = x || test x$(find_gdk) = x
+    if test x"$(find_cuda)" = x || test x"$(find_gdk)" = x
     then
         echo no
     else
@@ -156,7 +160,7 @@ enable_cuda=$(default_use_cuda)
 
 function show_default () 
 {
-    if test x$1 = x
+    if test x"$1" = x
     then
         echo "(no default)"
     else
@@ -169,9 +173,9 @@ function show_help ()
     echo "Usage: configure [options]"
     echo "Options:"
     echo "  -h|--help this help"
-    echo "  --with-build-top=directory build directory $(show_default $build_top)"
+    echo "  --with-build-top=directory build directory $(show_default "$build_top")"
     echo "  --add directory add directory to library search path"
-    echo "  --1bitsgd[=(yes|no)] use 1Bit SGD $(show_default $(default_use_1bitsgd))"
+    echo "  --1bitsgd[=(yes|no)] use 1Bit SGD $(show_default $default_use_1bitsgd)"
     echo "  --cuda[=(yes|no)] use cuda GPU $(show_default $(default_use_cuda))"
     echo "  --with-cuda[=directory] $(show_default $(find_cuda))"
     echo "  --with-cub[=directory] $(show_default $(find_cub))"
@@ -183,10 +187,10 @@ function show_help ()
     echo "  --with-kaldi[=directory] $(show_default $(find_kaldi))"
     echo "  --with-opencv[=directory] $(show_default $(find_opencv))"
     echo "Libraries search path:"
-    for head in $(default_paths)
+    (IFS=":"; for head in $(default_paths)
     do
         echo "    $head"
-    done
+    done)
 }
 
 while [[ $# > 0 ]]
@@ -204,18 +208,18 @@ do
             exit 1
             ;;
         --with-build-top*)
-            if test x$optarg != x
+            if test x"$optarg" != x
             then
-                build_top=$optarg
-                mkdir -p $build_top
+                build_top="$optarg"
+                mkdir -p "$build_top"
             fi
             ;;
         --add*)
-            if test x$optarg = x
+            if test x"$optarg" = x
             then
-                shift ; optarg=$1
+                shift ; optarg="$1"
             fi
-            default_path_list="$optarg $default_path_list"
+            default_path_list="$optarg:$default_path_list"
             ;;
         --1bitsgd*)
             if test x$optarg = xyes || test x$optarg = xno
@@ -242,19 +246,19 @@ do
         --with-cuda*)
             have_cuda=yes
             enable_cuda=yes
-            if test x$optarg = x
+            if test x"$optarg" = x
             then
-                cuda_path=$(find_cuda)
-                if test x$cuda_path = x
+                cuda_path="$(find_cuda)"
+                if test x"$cuda_path" = x
                 then
                     echo "Cannot find cuda directory."
                     echo "Please specify a value for --with-cuda"
                     exit 1
                 fi
             else
-                if test $(check_dir $optarg $cuda_check) = yes
+                if test $(check_dir "$optarg" $cuda_check) = yes
                 then
-                    cuda_path=$optarg
+                    cuda_path="$optarg"
                 else
                     echo "Invalid cuda directory $optarg"
                     exit 1
@@ -263,10 +267,10 @@ do
             ;;
         --with-cub*)
             have_cub=yes
-            if test x$optarg = x
+            if test x"$optarg" = x
             then
-                cub_path=$(find_cub)
-                if test x$cub_path = x
+                cub_path="$(find_cub)"
+                if test x"$cub_path" = x
                 then
                     echo "Cannot find NVIDIA CUB directory."
                     echo "Please specify a value for --with-cub"
@@ -274,9 +278,9 @@ do
                     exit 1
                 fi
             else
-                if test $(check_dir $optarg $cub_check) = yes
+                if test $(check_dir "$optarg" $cub_check) = yes
                 then
-                    cub_path=$optarg
+                    cub_path="$optarg"
                 else
                     echo "Invalid CUB directory $optarg"
                     exit 1
@@ -285,19 +289,19 @@ do
             ;;
         --with-gdk*)
             have_gdk=yes
-            if test x$optarg = x
+            if test x"$optarg" = x
             then
-                gdk_path=$(find_gdk)
-                if test x$gdk_path = x
+                gdk_path="$(find_gdk)"
+                if test x"$gdk_path" = x
                 then
                     echo "Cannot find gdk directory."
                     echo "Please specify a value for --with-gdk"
                     exit 1
                 fi
             else
-                if test $(check_dir $optarg $gdk_check) = yes
+                if test $(check_dir "$optarg" $gdk_check) = yes
                 then
-                    gdk_path=$optarg
+                    gdk_path="$optarg"
                 else
                     echo "Invalid gdk directory $optarg"
                     exit 1
@@ -306,19 +310,19 @@ do
             ;;
         --with-cudnn*)
             have_cudnn=yes
-            if test x$optarg = x
+            if test x"$optarg" = x
             then
-                cudnn_path=$(find_cudnn)
-                if test x$cudnn_path = x
+                cudnn_path="$(find_cudnn)"
+                if test x"$cudnn_path" = x
                 then
                     echo "Cannot find NVIDIA cuDNN directory."
                     echo "Please specify a value for --with-cudnn"
                     exit 1
                 fi
             else
-                if test $(check_dir $optarg $cudnn_check) = yes
+                if test $(check_dir "$optarg" $cudnn_check) = yes
                 then
-                    cudnn_path=$optarg
+                    cudnn_path="$optarg"
                 else
                     echo "Invalid cuDNN directory $optarg"
                     exit 1
@@ -328,19 +332,19 @@ do
         --with-acml*)
             have_acml=yes
             mathlib=acml
-            if test x$optarg = x
+            if test x"$optarg" = x
             then
-                acml_path=$(find_acml)
-                if test x$acml_path = x
+                acml_path="$(find_acml)"
+                if test x"$acml_path" = x
                 then
                     echo "Cannot fine acml directory"
                     echo "Please specify a value for --with-acml"
                     exit 1
                 fi
             else
-                if test $(check_dir $optarg $acml_check) = yes
+                if test $(check_dir "$optarg" $acml_check) = yes
                 then
-                    acml_path=$optarg
+                    acml_path="$optarg"
                 else
                     echo "Invalid acml directory $optarg"
                     exit 1
@@ -350,19 +354,19 @@ do
         --with-mkl*)
             have_mkl=yes
             mathlib=mkl
-            if test x$optarg = x
+            if test x"$optarg" = x
             then
-                mkl_path=$(find_mkl)
-                if test x$mkl_path = x
+                mkl_path="$(find_mkl)"
+                if test x"$mkl_path" = x
                 then
                     echo "Cannot fine mkl directory"
                     echo "Please specify a value for --with-mkl"
                     exit 1
                 fi
             else
-                if test $(check_dir $optarg $mkl_check) = yes
+                if test $(check_dir "$optarg" $mkl_check) = yes
                 then
-                    mkl_path=$optarg
+                    mkl_path="$optarg"
                 else
                     echo "Invalid mkl directory $optarg"
                     exit 1
@@ -383,19 +387,19 @@ do
             ;;
         --with-kaldi*)
             have_kaldi=yes
-            if test x$optarg = x
+            if test x"$optarg" = x
             then
-                kaldi_path=$(find_kaldi)
-                if test x$kaldi_path = x
+                kaldi_path="$(find_kaldi)"
+                if test x"$kaldi_path" = x
                 then
                     echo "Cannot find kaldi directory"
                     echo "Please specify a value for --with-kaldi"
                     exit 1
                 fi
             else
-                if test $(check_dir $optarg $kaldi_check)
+                if test $(check_dir "$optarg" $kaldi_check)
                 then
-                    kaldi_path=$optarg
+                    kaldi_path="$optarg"
                 else
                     echo "Invalid kaldi directory $optarg"
                     exit 1
@@ -404,10 +408,10 @@ do
             ;;
         --with-opencv*)
             have_opencv=yes
-            if test x$optarg = x
+            if test x"$optarg" = x
             then
-                opencv_path=$(find_opencv)
-                if test x$opencv_path = x
+                opencv_path="$(find_opencv)"
+                if test x"$opencv_path" = x
                 then
                     echo "Cannot find OpenCV directory."
                     echo "Please specify a value for --with-opencv"
@@ -415,9 +419,9 @@ do
                     exit 1
                 fi
             else
-                if test $(check_dir $optarg $opencv_check) = yes
+                if test $(check_dir "$optarg" $opencv_check) = yes
                 then
-                    opencv_path=$optarg
+                    opencv_path="$optarg"
                 else
                     echo "Invalid OpenCV directory $optarg"
                     exit 1
@@ -441,11 +445,11 @@ fi
 # If no math library was specified, search for acml and then mkl
 if test x$have_acml = xno && test x$have_mkl = xno
 then
-    acml_path=$(find_acml)
-    if test x$acml_path = x
+    acml_path="$(find_acml)"
+    if test x"$acml_path" = x
     then
-        mkl_path=$(find_mkl)
-        if test x$mkl_path = x
+        mkl_path="$(find_mkl)"
+        if test x"$mkl_path" = x
         then
             echo "Cannot find a CPU math library."
             echo "Please specify --with-acml or --with-mkl with a path."
@@ -461,8 +465,8 @@ fi
 # If no cuda library specified, search for one
 if test x$enable_cuda = xyes && test x$cuda_path = x
 then
-    cuda_path=$(find_cuda)
-    if test x$cuda_path = x ; then
+    cuda_path="$(find_cuda)"
+    if test x"$cuda_path" = x ; then
         echo Cannot locate a cuda directory
         echo GPU will be disabled
         enable_cuda=no
@@ -473,8 +477,8 @@ fi
 
 if test $enable_cuda = yes && test x$gdk_path = x
 then
-    gdk_path=$(find_gdk)
-    if test x$gdk_path = x ; then
+    gdk_path="$(find_gdk)"
+    if test x"$gdk_path" = x ; then
         echo Cannot locate a gdk directory
         echo GPU will be disabled
         enable_cuda=no
@@ -485,8 +489,8 @@ fi
 
 if test $enable_cuda = yes && test x$cub_path = x
 then
-    cub_path=$(find_cub)
-    if test x$cub_path = x ; then
+    cub_path="$(find_cub)"
+    if test x"$cub_path" = x ; then
         echo Cannot locate NVIDIA CUB directory
         echo GPU will be disabled
         echo NVIDIA CUB can be downloaded from https://github.com/NVlabs/cub/archive/1.4.1.zip, extract the archive to /usr/local
@@ -498,8 +502,8 @@ fi
 
 if test $enable_cuda = yes && test x$cudnn_path = x
 then
-    cudnn_path=$(find_cudnn)
-    if test x$cudnn_path = x ; then
+    cudnn_path="$(find_cudnn)"
+    if test x"$cudnn_path" = x ; then
         echo Cannot locate NVIDIA cuDNN directory
         echo CNTK will use default convolution engine.
     else
@@ -507,10 +511,10 @@ then
     fi
 fi
 
-if test x$opencv_path = x
+if test x"$opencv_path" = x
 then
-    opencv_path=$(find_opencv)
-    if test x$opencv_path = x ; then
+    opencv_path="$(find_opencv)"
+    if test x"$opencv_path" = x ; then
         echo Cannot locate OpenCV 3.0.0 directory
         echo ImageReader will NOT be built.
     else
@@ -518,48 +522,47 @@ then
     fi
 fi
 
-config=$build_top/Config.make
+config="$build_top/Config.make"
 echo Generating $config
-echo "#Configuration file for cntk" > $config
-echo BUILDTYPE=$buildtype >> $config
-echo MATHLIB=$mathlib >> $config
+echo "#Configuration file for cntk" > "$config"
+echo BUILDTYPE=$buildtype >> "$config"
+echo MATHLIB=$mathlib >> "$config"
 case $mathlib in
     acml)
-        echo ACML_PATH=$acml_path >> $config
+        echo ACML_PATH=\"$acml_path\" >> "$config"
         ;;
     mkl)
-        echo MKL_PATH=$mkl_path >> $config
+        echo MKL_PATH=\"$mkl_path\" >> "$config"
         ;;
 esac
 if test $enable_cuda = yes ; then
-    echo CUDA_PATH=$cuda_path >> $config
-    echo GDK_PATH=$gdk_path >> $config
-    echo CUB_PATH=$cub_path >> $config
-    echo CUDNN_PATH=$cudnn_path >> $config
+    echo CUDA_PATH=\"$cuda_path\" >> "$config"
+    echo GDK_PATH=\"$gdk_path\" >> "$config"
+    echo CUB_PATH=\"$cub_path\" >> "$config"
+    echo CUDNN_PATH=\"$cudnn_path\" >> "$config"
 fi
 if test x$kaldi_path != x ; then
-    echo KALDI_PATH=$kaldi_path >> $config
+    echo KALDI_PATH=\"$kaldi_path\" >> "$config"
 fi
 if test x$opencv_path != x ; then
-    echo OPENCV_PATH=$opencv_path >> $config
+    echo OPENCV_PATH=\"$opencv_path\" >> "$config"
 fi
 if test $enable_1bitsgd = yes ; then
     echo CNTK_ENABLE_1BitSGD=true >> $config
 fi
 
 # If we are not in the configure directory, generate a trampoline Makefile
-makefile=$build_top/Makefile
+makefile="$build_top/Makefile"
 if test $(is_hardlinked "$configure" "$build_top/configure") = no
 then
     echo Generating $makefile
-    realconf=`readlink -f $configure`
-    dir=`dirname $realconf`
-    echo "#Generate Makefile" > $makefile
-    echo dir=$dir >> $makefile
-    echo BUILD_TOP=$build_top >> $makefile
-    echo >> $makefile
-    echo all clean : >> $makefile
-    printf '\t$(MAKE) -C $(dir) BUILD_TOP=$(BUILD_TOP) $@\n' >> $makefile
+    dir=$(cd "$(dirname "$configure")"; pwd -P)
+    echo "#Generate Makefile" > "$makefile"
+    echo dir=\"$dir\" >> "$makefile"
+    echo BUILD_TOP=\"$build_top\" >> "$makefile"
+    echo >> "$makefile"
+    echo all clean : >> "$makefile"
+    printf '\t$(MAKE) -C $(dir) BUILD_TOP=$(BUILD_TOP) $@\n' >> "$makefile"
 fi
 echo run 
 echo '>make -j all'
