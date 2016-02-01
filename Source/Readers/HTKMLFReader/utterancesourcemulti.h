@@ -245,7 +245,14 @@ class minibatchutterancesourcemulti : public minibatchsource
     struct utteranceref                               // describes the underlying random utterance associated with an utterance position
     {
         size_t chunkindex;     // lives in this chunk (index into randomizedchunks[])
-        size_t utteranceindex; // utterance index in that chunk
+    private:
+        size_t m_utteranceindex; // utterance index in that chunk
+    public:
+        size_t utteranceindex() const
+        {
+            return m_utteranceindex;
+        }
+
         size_t numframes;      // (cached since we cannot directly access the underlying data from here)
         size_t globalts;       // start frame in global space after randomization (for mapping frame index to utterance position)
         size_t globalte() const
@@ -253,13 +260,13 @@ class minibatchutterancesourcemulti : public minibatchsource
             return globalts + numframes;
         } // end frame
         utteranceref(size_t chunkindex, size_t utteranceindex)
-            : chunkindex(chunkindex), utteranceindex(utteranceindex), globalts(SIZE_MAX), numframes(0)
+            : chunkindex(chunkindex), m_utteranceindex(utteranceindex), globalts(SIZE_MAX), numframes(0)
         {
         }
         void swap(utteranceref &other) // used in randomization
         {
             ::swap(chunkindex, other.chunkindex);
-            ::swap(utteranceindex, other.utteranceindex);
+            ::swap(m_utteranceindex, other.m_utteranceindex);
             assert(globalts == SIZE_MAX && other.globalts == SIZE_MAX && numframes == 0 && other.numframes == 0); // can only swap before assigning these
         }
     };
@@ -288,25 +295,73 @@ class minibatchutterancesourcemulti : public minibatchsource
     std::vector<positionchunkwindow> positionchunkwindows; // [utterance position] -> [windowbegin, windowend) for controlling paging
 
     // frame-level randomization layered on top of utterance chunking (randomized, where randomization is cached)
+    #pragma pack(push)
+    #pragma pack(1)
     struct frameref
     {
         unsigned short chunkindex;     // lives in this chunk (index into randomizedchunks[])
-        unsigned short utteranceindex; // utterance index in that chunk
-        static const size_t maxutterancesperchunk = 65535;
-        unsigned short frameindex; // frame index within the utterance
-        static const size_t maxframesperutterance = 65535;
-        frameref(size_t ci, size_t ui, size_t fi)
-            : chunkindex((unsigned short) ci), utteranceindex((unsigned short) ui), frameindex((unsigned short) fi)
+
+    private:
+        // The utterance index and frame index are stored in a byte array
+        // with the first NUM_UTTERANCE_INDEX_BITS bits being the utterance index 
+        // and the remaining being the frame index
+        static const unsigned int NUM_STORAGE_BYTES = 3;
+        static const unsigned int NUM_UTTERANCE_INDEX_BITS = 12;
+        static const unsigned int NUM_FRAME_INDEX_BITS = (NUM_STORAGE_BYTES * 8) - NUM_UTTERANCE_INDEX_BITS;
+
+        unsigned char m_buffer[NUM_STORAGE_BYTES];
+        static_assert(NUM_STORAGE_BYTES <= sizeof(unsigned int), "Number of storage bytes in a frameref should not exceed sizeof(unsigned int)");
+        unsigned int fullvalue() const
         {
-            if (ci == chunkindex && ui == utteranceindex && fi == frameindex)
-                return;
-            LogicError("frameref: bit fields too small");
+            unsigned int fullValue = m_buffer[0];
+            for (int i = 1; i < NUM_STORAGE_BYTES; ++i)
+            {
+                fullValue = (fullValue << 8) + m_buffer[i];
+            }
+
+            return fullValue;
         }
-        frameref()
-            : chunkindex(0), utteranceindex(0), frameindex(0)
+    public:
+        static const size_t maxutterancesperchunk = (1 << NUM_UTTERANCE_INDEX_BITS) - 1;
+        static const size_t maxframesperutterance = (1 << NUM_FRAME_INDEX_BITS) - 1;
+
+        // utterance index in that chunk
+        unsigned short utteranceindex() const
         {
+            return (unsigned short)(fullvalue() >> NUM_FRAME_INDEX_BITS);
+        }
+
+        // frame index within the utterance
+        unsigned short frameindex() const
+        {
+            return (unsigned short)(fullvalue() & ((1U << NUM_FRAME_INDEX_BITS) - 1));
+        }
+
+        frameref(size_t ci, size_t ui, size_t fi)
+            : chunkindex((unsigned short) ci)
+        {
+            if ((ui <= maxutterancesperchunk) && (fi <= maxframesperutterance))
+            {
+                unsigned int fullValue = (unsigned int)ui;
+                fullValue = (fullValue << NUM_FRAME_INDEX_BITS) + (unsigned int)fi;
+                for (int i = NUM_STORAGE_BYTES - 1; i >=0; --i)
+                {
+                    m_buffer[i] = fullValue & ((1U << 8) - 1);
+                    fullValue = fullValue >> 8;
+                }
+            }
+            else
+                LogicError("frameref: bit fields too small");
+        }
+
+        frameref()
+            : chunkindex(0)
+        {
+            for (int i = 0; i < NUM_STORAGE_BYTES; ++i)
+                m_buffer[i] = 0;
         }
     };
+    #pragma pack(pop)
     biggrowablevector<frameref> randomizedframerefs; // [globalt-sweepts] -> (chunk, utt, frame) lookup table for randomized frames  --this can be REALLY big!
 
     // TODO: this may go away if we store classids directly in the utterance data
@@ -349,8 +404,8 @@ class minibatchutterancesourcemulti : public minibatchsource
         }
         const auto &chunk = randomizedchunks[0][uttref.chunkindex];
         const auto &chunkdata = chunk.getchunkdata();
-        const size_t classidsbegin = chunkdata.getclassidsbegin(uttref.utteranceindex); // index of first state label in global concatenated classids[] array
-        const size_t n = chunkdata.numframes(uttref.utteranceindex);
+        const size_t classidsbegin = chunkdata.getclassidsbegin(uttref.utteranceindex()); // index of first state label in global concatenated classids[] array
+        const size_t n = chunkdata.numframes(uttref.utteranceindex());
         foreach_index (i, classids)
         {
             if ((*classids[i])[classidsbegin + n] != (CLASSIDTYPE) -1)
@@ -376,8 +431,8 @@ class minibatchutterancesourcemulti : public minibatchsource
         }
         const auto &chunk = randomizedchunks[0][uttref.chunkindex];
         const auto &chunkdata = chunk.getchunkdata();
-        const size_t classidsbegin = chunkdata.getclassidsbegin(uttref.utteranceindex); // index of first state label in global concatenated classids[] array
-        const size_t n = chunkdata.numframes(uttref.utteranceindex);
+        const size_t classidsbegin = chunkdata.getclassidsbegin(uttref.utteranceindex()); // index of first state label in global concatenated classids[] array
+        const size_t n = chunkdata.numframes(uttref.utteranceindex());
         foreach_index (i, phoneboundaries)
         {
             if ((*phoneboundaries[i])[classidsbegin + n] != (HMMIDTYPE) -1)
@@ -921,7 +976,7 @@ private:
             {
                 auto &uttref = randomizedutterancerefs[i];
                 uttref.globalts = t;
-                uttref.numframes = randomizedchunks[0][uttref.chunkindex].getchunkdata().numframes(uttref.utteranceindex);
+                uttref.numframes = randomizedchunks[0][uttref.chunkindex].getchunkdata().numframes(uttref.utteranceindex());
                 t = uttref.globalte();
             }
             assert(t == sweepts + _totalframes);
@@ -966,21 +1021,15 @@ private:
             // Later we will randomize those as well.
             foreach_index (i, randomizedchunks[0])
             {
-                frameref.chunkindex = (unsigned short) i;
-                checkoverflow(frameref.chunkindex, i, "frameref::chunkindex");
                 const auto &chunk = randomizedchunks[0][i];
                 const auto &chunkdata = chunk.getchunkdata();
                 const size_t numutt = chunkdata.numutterances();
                 for (size_t k = 0; k < numutt; k++)
                 {
-                    frameref.utteranceindex = (short) k;
-                    checkoverflow(frameref.utteranceindex, k, "frameref::utteranceindex");
                     const size_t n = chunkdata.numframes(k);
                     for (size_t m = 0; m < n; m++)
                     {
-                        frameref.frameindex = (short) m;
-                        checkoverflow(frameref.frameindex, m, "frameref::utteranceindex");
-                        randomizedframerefs[t] = frameref; // hopefully this is a memory copy, not a bit-wise assignment! If not, then code it explicitly
+                        randomizedframerefs[t] = {(size_t)i, k, m}; // hopefully this is a memory copy, not a bit-wise assignment! If not, then code it explicitly
                         ttochunk[t] = (unsigned short) i;
                         checkoverflow(ttochunk[t], i, "ttochunk[]");
                         t++;
@@ -1300,11 +1349,11 @@ public:
                     const auto &chunk = randomizedchunks[i][uttref.chunkindex];
                     const auto &chunkdata = chunk.getchunkdata();
                     assert((numsubsets > 1) || (uttref.globalts == globalts + tspos));
-                    auto uttframes = chunkdata.getutteranceframes(uttref.utteranceindex);
+                    auto uttframes = chunkdata.getutteranceframes(uttref.utteranceindex());
                     matrixasvectorofvectors uttframevectors(uttframes); // (wrapper that allows m[j].size() and m[j][i] as required by augmentneighbors())
                     n = uttframevectors.size();
                     sentendmark[i].push_back(n + tspos);
-                    assert(n == uttframes.cols() && uttref.numframes == n && chunkdata.numframes(uttref.utteranceindex) == n);
+                    assert(n == uttframes.cols() && uttref.numframes == n && chunkdata.numframes(uttref.utteranceindex()) == n);
 
                     // copy the frames and class labels
                     for (size_t t = 0; t < n; t++) // t = time index into source utterance
@@ -1345,7 +1394,7 @@ public:
 
                             if (!this->lattices.empty())
                             {
-                                auto latticepair = chunkdata.getutterancelattice(uttref.utteranceindex);
+                                auto latticepair = chunkdata.getutterancelattice(uttref.utteranceindex());
                                 latticepairs.push_back(latticepair);
                                 // look up reference
                                 const auto &key = latticepair->getkey();
@@ -1450,14 +1499,14 @@ public:
                 {
                     const auto &chunk = randomizedchunks[i][frameref.chunkindex];
                     const auto &chunkdata = chunk.getchunkdata();
-                    auto uttframes = chunkdata.getutteranceframes(frameref.utteranceindex);
+                    auto uttframes = chunkdata.getutteranceframes(frameref.utteranceindex());
                     matrixasvectorofvectors uttframevectors(uttframes); // (wrapper that allows m[.].size() and m[.][.] as required by augmentneighbors())
                     const size_t n = uttframevectors.size();
-                    assert(n == uttframes.cols() && chunkdata.numframes(frameref.utteranceindex) == n);
+                    assert(n == uttframes.cols() && chunkdata.numframes(frameref.utteranceindex()) == n);
                     n;
 
                     // copy frame and class labels
-                    const size_t t = frameref.frameindex;
+                    const size_t t = frameref.frameindex();
 
                     size_t leftextent, rightextent;
                     // page in the needed range of frames
