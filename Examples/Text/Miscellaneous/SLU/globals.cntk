@@ -1,0 +1,7 @@
+WorkDir=D:\data\atis
+DataDir=$WorkDir$
+ConfigDir=$WorkDir$\config
+NdlDir=$ConfigDir$
+ExpDir=c:\temp\exp\atis
+OutDir=$ExpDir$\output
+DeviceNumber=0

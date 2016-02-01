@@ -8,7 +8,7 @@ Instances=4
 NumCPUThreads=$(threadsPerInstance $Instances)
 
 # cntkmpirun <MPI args> <CNTK config file name> <additional CNTK args>
-cntkmpirun "-n $Instances" SimpleMultiGPU.config "numCPUThreads=$NumCPUThreads precision=double SimpleMultiGPU=[SGD=[ParallelTrain=[DataParallelSGD=[gradientBits=64]]]]"
+cntkmpirun "-n $Instances" SimpleMultiGPU.cntk "numCPUThreads=$NumCPUThreads precision=double SimpleMultiGPU=[SGD=[ParallelTrain=[DataParallelSGD=[gradientBits=64]]]]"
 ExitCode=$?
 sed 's/^/MPI Rank 0: /' $TEST_RUN_DIR/"$LogFileName"_SimpleMultiGPU.logrank0
 sed 's/^/MPI Rank 1: /' $TEST_RUN_DIR/"$LogFileName"_SimpleMultiGPU.logrank1

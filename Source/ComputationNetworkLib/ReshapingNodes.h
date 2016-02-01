@@ -209,21 +209,6 @@ public:
     {
     }
 
-    virtual void /*ComputationNode::*/ BackpropTo(const size_t /*inputIndex*/, const FrameRange& fr) override
-    {
-        Input(0)->GradientFor(fr.WithLayout(Input(0)->GetMBLayout())) += GradientFor(fr);
-        // TODO: Once we do in-place, the above must include a copy-to-self check (pay special attention to adding vs. copying).
-    }
-
-    virtual bool OutputUsedInComputingInputNodesGradients() const override
-    {
-        return false;
-    }
-    virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override
-    {
-        return false;
-    }
-
     virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
     {
         // enforce compatibility of 'dataInput' with 'layoutInput'
@@ -238,6 +223,15 @@ public:
         ValueFor(fr).SetValue(Input(0)->ValueFor(fr.WithLayout(Input(0)->GetMBLayout()))); // just propagate through
         // TODO: Once we do in-place, the above must include a copy-to-self check (either here or inside the matrix lib).
     }
+
+    virtual void /*ComputationNode::*/ BackpropTo(const size_t /*inputIndex*/, const FrameRange& fr) override
+    {
+        Input(0)->GradientFor(fr.WithLayout(Input(0)->GetMBLayout())) += GradientFor(fr);
+        // TODO: Once we do in-place, the above must include a copy-to-self check (pay special attention to adding vs. copying).
+    }
+
+    virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }
+    virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override { return false; }
 
     virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
     {
@@ -256,8 +250,7 @@ template class ReconcileMBLayoutNode<double>;
 
 // -----------------------------------------------------------------------
 // RowSliceNode (input)
-// this node extracts part of the input by rows as the output
-// it has to be continuous segments of rows since each column is treated as one sample
+// This node extracts a slice of the first tensor dimension (row).
 // -----------------------------------------------------------------------
 
 template <class ElemType>
@@ -277,6 +270,7 @@ public:
           m_sliceHeight(numRows)
     {
     }
+
     RowSliceNode(const ScriptableObjects::IConfigRecordPtr configp)
         : RowSliceNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"startIndex"), configp->Get(L"numRows"))
     {
@@ -292,58 +286,62 @@ public:
         node->m_sliceHeight = m_sliceHeight;
     }
 
-    virtual void Save(File& fstream) const override
-    {
-        Base::Save(fstream);
-        fstream << m_startIndex << m_sliceHeight;
-    }
-
     virtual void Load(File& fstream, size_t modelVersion) override
     {
         Base::Load(fstream, modelVersion);
         fstream >> m_startIndex >> m_sliceHeight;
     }
 
-    virtual void /*ComputationNode::*/ BackpropTo(const size_t /*inputIndex*/, const FrameRange& fr) override
+    virtual void Save(File& fstream) const override
     {
-        Input(0)->GradientFor(fr).AddToRowSliceValuesOf(GradientFor(fr), m_startIndex, m_sliceHeight);
+        Base::Save(fstream);
+        fstream << m_startIndex << m_sliceHeight;
     }
 
-    virtual bool OutputUsedInComputingInputNodesGradients() const override
+private:
+
+    // determine the tensor shape that represents slice of the input that we are taking
+    TensorShape GetInputSlice(size_t rank, const FrameRange & fr) const
     {
-        // The RowSliceNode does not require its output value for computing
-        // the gradients of its input nodes
-        return false;
+        auto inputSlice = Input(0)->GetTensorSliceFor(rank, fr);    // input must be narrowed down
+        inputSlice.NarrowTo(0, m_startIndex, m_startIndex + m_sliceHeight);
+        return inputSlice;
     }
 
-    virtual bool InputUsedInComputingInputNodesGradients(size_t childIndex) const override
-    {
-        // The RowSliceNode does not require any of it's input's values for computing
-        // the gradients of its input nodes
-        UNREFERENCED_PARAMETER(childIndex);
-        return false;
-    }
+public:
 
     virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
     {
-        ValueFor(fr).AssignRowSliceValuesOf(Input(0)->ValueFor(fr), m_startIndex, m_sliceHeight);
+        size_t rank = DetermineElementwiseTensorRank();
+        auto output =                                ValueTensorFor(rank,         fr);
+        let   input = TensorView<ElemType>(Input(0)->Value(), GetInputSlice(rank, fr.AllowBroadcast()));
+        output.AssignCopyOf(input);
     }
+
+    virtual void /*ComputationNode::*/ BackpropTo(const size_t /*inputIndex*/, const FrameRange& fr) override
+    {
+        size_t rank = DetermineElementwiseTensorRank();
+        let outputGrad =                                GradientTensorFor(rank,         fr);
+        auto inputGrad = TensorView<ElemType>(Input(0)->Gradient(), GetInputSlice(rank, fr));
+        inputGrad.AddCopyOf(outputGrad);
+    }
+
+    virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }
+    virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override { return false; }
 
     virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
     {
         Base::Validate(isFinalValidationPass);
         InferMBLayoutFromInputsForStandardCase();
 
-        if (isFinalValidationPass && Input(0)->GetSampleMatrixNumRows() < m_startIndex + m_sliceHeight)
-            RuntimeError("%ls %ls operation: m_startIndex + m_sliceHeight exceeds number of rows in the input.", NodeName().c_str(), OperationName().c_str());
+        auto sampleLayout = Input(0)->GetSampleLayout();
+        if (isFinalValidationPass && sampleLayout[0] < m_startIndex + m_sliceHeight)
+            RuntimeError("%ls %ls operation: m_startIndex + m_sliceHeight (%d) exceeds number of rows in the input ([%s]).", NodeName().c_str(), OperationName().c_str(), (int)(m_startIndex + m_sliceHeight), string(sampleLayout).c_str());
 
-        // RowSlice cannot slice tensors.
-        // TODO: Create a TensorSlice operation, or just Slice.
-        if (isFinalValidationPass && !Input(0)->GetSampleLayout().IsColumnVector()
-            && !Input(0)->GetSampleLayout().IsVectorStoredAsImage() // legacy
-            )
-            RuntimeError("%ls %ls operation: Input must be a vector, tensor shape [%s] not allowed.", NodeName().c_str(), OperationName().c_str(), string(Input(0)->GetSampleLayout()).c_str());
-        SetDims(TensorShape(m_sliceHeight), HasMBLayout());
+        if (sampleLayout[0] >= m_startIndex + m_sliceHeight)    // (this guards against failing an out-of-bounds error if not isFinalValidationPass)
+            sampleLayout.NarrowTo(0, m_startIndex, m_startIndex + m_sliceHeight);
+
+        SetDims(TensorShape(sampleLayout.GetDims()), HasMBLayout());
     }
 
 private:
@@ -604,24 +602,6 @@ public:
     {
     }
 
-    virtual void Validate(bool isFinalValidationPass) override
-    {
-        Base::Validate(isFinalValidationPass);
-        m_pMBLayout = nullptr;
-
-        if (isFinalValidationPass && Input(0)->HasMBLayout())
-            InvalidArgument("%ls %ls operation cannot operate on minibatch data (which have a layout)", NodeName().c_str(), OperationName().c_str());
-
-        size_t dim = Input(0)->GetAsMatrixNumCols();
-        if (isFinalValidationPass && dim != Input(0)->GetAsMatrixNumRows())
-            InvalidArgument("%ls %ls operation requires a square matrix as its input.", NodeName().c_str(), OperationName().c_str());
-
-        if (Input(0)->HasSampleLayout())
-            fprintf(stderr, "WARNING: Diagonal operation cannot inherit image size information from its child. Image size info is lost.\n");
-
-        SetDims(TensorShape(1, dim), false);
-    }
-
     virtual void /*ComputationNodeNonLooping::*/ ForwardPropNonLooping() override
     {
         Input(0)->ValueAsMatrix().AssignDiagonalValuesTo(ValueAsMatrix()); // TODO: use tensor lib; this is a stride operation
@@ -646,19 +626,25 @@ public:
         inputGradientValues.SetDiagonalValue(diag);
     }
 
-    virtual bool OutputUsedInComputingInputNodesGradients() const override
-    {
-        // The DiagonalNode does not require its output value for computing
-        // the gradients of its input nodes
-        return false;
-    }
+    virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }
+    virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override { return false; }
 
-    virtual bool InputUsedInComputingInputNodesGradients(size_t childIndex) const override
+    virtual void Validate(bool isFinalValidationPass) override
     {
-        // The DiagonalNode does not require any of it's input's values for computing
-        // the gradients of its input nodes
-        UNREFERENCED_PARAMETER(childIndex);
-        return false;
+        Base::Validate(isFinalValidationPass);
+        m_pMBLayout = nullptr;
+
+        if (isFinalValidationPass && Input(0)->HasMBLayout())
+            InvalidArgument("%ls %ls operation cannot operate on minibatch data (which have a layout)", NodeName().c_str(), OperationName().c_str());
+
+        size_t dim = Input(0)->GetAsMatrixNumCols();
+        if (isFinalValidationPass && dim != Input(0)->GetAsMatrixNumRows())
+            InvalidArgument("%ls %ls operation requires a square matrix as its input.", NodeName().c_str(), OperationName().c_str());
+
+        if (Input(0)->HasSampleLayout())
+            fprintf(stderr, "WARNING: Diagonal operation cannot inherit image size information from its child. Image size info is lost.\n");
+
+        SetDims(TensorShape(1, dim), false);
     }
 };
 
@@ -839,18 +825,18 @@ public:
         }
     }
 
-    virtual void Save(File& fstream) const override
-    {
-        Base::Save(fstream);
-        fstream << m_numTargetRows;
-        m_targetImageLayout.Save(fstream);
-    }
-
     virtual void Load(File& fstream, size_t modelVersion) override
     {
         Base::Load(fstream, modelVersion);
         fstream >> m_numTargetRows;
         m_targetImageLayout.Load(fstream, /*acceptLegacyFormat=*/true);
+    }
+
+    virtual void Save(File& fstream) const override
+    {
+        Base::Save(fstream);
+        fstream << m_numTargetRows;
+        m_targetImageLayout.Save(fstream);
     }
 
     virtual void /*IComputationNode::*/ PrintSelfBeforeValidation() const override
@@ -869,56 +855,6 @@ public:
         }
         fprintf(stderr, ", NumOfRows=%lu, imageWidth=%lu, imageHeight=%lu, imageChannels=%lu)", m_numTargetRows, m_targetImageLayout[1], m_targetImageLayout[2], m_targetImageLayout[0]);
         // BUGBUG: This interpretaion as image dims is only correct for the 'legacy format, not for cudnn.
-    }
-
-    virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
-    {
-        Base::Validate(isFinalValidationPass);
-        if (factor() == 1) // canonical case: keeps the MBLayout(e.g. only changing the TensorShape)
-            m_pMBLayout = Input(0)->GetMBLayout();
-        else if (Input(0)->HasMBLayout())
-        {
-            if (!m_pMBLayout)
-                m_pMBLayout = make_shared<MBLayout>(); // mini-batch data: this generates a new layout
-        }
-        else
-            assert(!m_pMBLayout); // reshaping non-mini-batch data
-
-        size_t newCols = 1; // dummy
-        if (!m_pMBLayout)
-        {
-            size_t rows = Input(0)->GetAsMatrixNumRows(), cols = Input(0)->GetAsMatrixNumCols();
-            newCols = cols * rows / m_numTargetRows;
-            if (isFinalValidationPass)
-            {
-                if ((m_numTargetRows > rows && m_numTargetRows % rows != 0) || // grouping columns
-                    (m_numTargetRows < rows && rows % m_numTargetRows != 0))   // splitting columns
-                    InvalidArgument("%ls %ls operation: output row dimension %d is not an integer multiple or divisor of input dimension %d", NodeName().c_str(), OperationName().c_str(), (int) m_numTargetRows, (int) rows);
-                if (rows * cols != m_numTargetRows * newCols)
-                    LogicError("%ls %ls operation: unexpected dimension mismatch", NodeName().c_str(), OperationName().c_str());
-            }
-        }
-
-        // patch up m_targetImageLayout, which was originally a construction parameter
-        InferTargetSampleLayout();
-
-        // setting any dimension to 0 means lose the tensor, flatten to vector
-        if (m_targetImageLayout.GetNumElements() == 0)
-        {
-            if (Input(0)->HasSampleLayout())
-                fprintf(stderr, "WARNING: Reshape operation cannot inherit image size information from its child. Image size info is lost.\n");
-            // TODO: We need to decide what reshaping means in presence of a tensor.
-            if (HasMBLayout())
-                SetDims(TensorShape(m_numTargetRows), true);
-            else
-                SetDims(TensorShape(m_numTargetRows, newCols), false);
-        }
-        else
-        {
-            if (m_numTargetRows != m_targetImageLayout.GetNumElements())
-                LogicError("LegacyReshapeNode: InferTargetSampleLayout() computed a sample layout [%s] that mismatches m_numTargetRows %d.", string(m_targetImageLayout).c_str(), (int) m_numTargetRows);
-            SetDims(m_targetImageLayout, HasMBLayout());
-        }
     }
 
     // TODO: Clarify/resolve the semantic overlap between BeginForwardProp() and UpdateFunctionMBSize().
@@ -1002,19 +938,57 @@ public:
         }
     }
 
-    virtual bool OutputUsedInComputingInputNodesGradients() const override
-    {
-        // The LegacyReshapeNode does not require its output value for computing
-        // the gradients of its input nodes
-        return false;
-    }
+    virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }
+    virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override { return false; }
 
-    virtual bool InputUsedInComputingInputNodesGradients(size_t childIndex) const override
+    virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
     {
-        // The LegacyReshapeNode does not require any of it's input's values for computing
-        // the gradients of its input nodes
-        UNREFERENCED_PARAMETER(childIndex);
-        return false;
+        Base::Validate(isFinalValidationPass);
+        if (factor() == 1) // canonical case: keeps the MBLayout(e.g. only changing the TensorShape)
+            m_pMBLayout = Input(0)->GetMBLayout();
+        else if (Input(0)->HasMBLayout())
+        {
+            if (!m_pMBLayout)
+                m_pMBLayout = make_shared<MBLayout>(); // mini-batch data: this generates a new layout
+        }
+        else
+            assert(!m_pMBLayout); // reshaping non-mini-batch data
+
+        size_t newCols = 1; // dummy
+        if (!m_pMBLayout)
+        {
+            size_t rows = Input(0)->GetAsMatrixNumRows(), cols = Input(0)->GetAsMatrixNumCols();
+            newCols = cols * rows / m_numTargetRows;
+            if (isFinalValidationPass)
+            {
+                if ((m_numTargetRows > rows && m_numTargetRows % rows != 0) || // grouping columns
+                    (m_numTargetRows < rows && rows % m_numTargetRows != 0))   // splitting columns
+                    InvalidArgument("%ls %ls operation: output row dimension %d is not an integer multiple or divisor of input dimension %d", NodeName().c_str(), OperationName().c_str(), (int) m_numTargetRows, (int) rows);
+                if (rows * cols != m_numTargetRows * newCols)
+                    LogicError("%ls %ls operation: unexpected dimension mismatch", NodeName().c_str(), OperationName().c_str());
+            }
+        }
+
+        // patch up m_targetImageLayout, which was originally a construction parameter
+        InferTargetSampleLayout();
+
+        // setting any dimension to 0 means lose the tensor, flatten to vector
+        if (m_targetImageLayout.GetNumElements() == 0)
+        {
+            if (Input(0)->HasSampleLayout())
+                fprintf(stderr, "WARNING: Reshape operation cannot inherit image size information from its child. Image size info is lost.\n");
+            // TODO: We need to decide what reshaping means in presence of a tensor.
+            if (HasMBLayout())
+                SetDims(TensorShape(m_numTargetRows), true);
+            else
+                SetDims(TensorShape(m_numTargetRows, newCols), false);
+        }
+        else
+        {
+            if (m_numTargetRows != m_targetImageLayout.GetNumElements())
+                LogicError("LegacyReshapeNode: InferTargetSampleLayout() computed a sample layout [%s] that mismatches m_numTargetRows %d.", string(m_targetImageLayout).c_str(), (int) m_numTargetRows);
+            SetDims(m_targetImageLayout, HasMBLayout());
+        }
     }
 
 private:

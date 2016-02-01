@@ -1,4 +1,4 @@
-C:\dev\cntk3\CNTKSolution\x64\Release\cntk configFile=globals.config+rnnlu.config
+C:\dev\cntk3\CNTKSolution\x64\Release\cntk configFile=globals.cntk+rnnlu.cntk
 
 
 # expected results, which has a copy at Expected.log is 
@@ -11,6 +11,6 @@ Finished Epoch[3]: [Training Set] Train Loss Per Sample = 3.6568716    EvalErr P
 Finished Epoch[3]: [Validation Set] Train Loss Per Sample = 2.6959986  EvalErr Per Sample = 2.6959986
 
 del /q c:\temp\exp\atis
-C:\dev\cntk3\CNTKSolution\x64\Release\cntk configFile=globals.config+rnnlu.ndl.config
+C:\dev\cntk3\CNTKSolution\x64\Release\cntk configFile=globals.cntk+rnnlu.ndl.cntk
 #should have the same output as above using simple network builder. 
 

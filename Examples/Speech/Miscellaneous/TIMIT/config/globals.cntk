@@ -1,0 +1,10 @@
+WorkDir=D:\src\codeplex\cntk\ExampleSetups\ASR\TIMIT
+LibDir=$WorkDir$\lib
+ScpDir=$LibDir$\scp
+MlfDir=$LibDir$\mlf
+ConfigDir=$WorkDir$\config
+NdlDir=$ConfigDir$
+MelDir=$ConfigDir$
+ExpDir=D:\temp\cntk\TIMIT\Examples\exp
+DeviceNumber=0
+
