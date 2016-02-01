@@ -10,6 +10,7 @@
 #include <string>
 #include <array>
 #include <vector>
+#include <algorithm> // for find
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -49,14 +50,63 @@ static int operator||(int rc, const MpiFail &what)
     RuntimeError("%s", what.c_str());
 }
 
+// the following structure is defined for MA-related purpose. 
+// To use MA for the current HTKMLFReader, we need to keep MPI nodes synced with each other
+// Each node needs to know his peer's status: DataProcessing or DataEnd 
+// 1.   When a node has processed enough samples (SyncFrequencyInFrames), 
+//      1) it will first send its current status "DataProcessing" to peers (non-blocking call)
+//      2) it will call MPI_Recv to receive other's status (blocking call)
+//      3) if all the peers are in the DataProcessing status, a collective Bcast call will be posted 
+//         if some peer have been in the DataEnd status, no model sync will be performed
+// 2.   When a node has arrived at the end of epoch (DataEnd)
+//      1) it will first send its current status "DataEnd" to peers (non-blocking call)
+//      2) it will call MPI_Recv to receive other's status to complete MPI_Isend call from others 
+//      3) it will call MPI_Barrier to wait for all the other peers 
+
+enum class NodeStatus
+{
+    DataProcessing = 0,
+    DataEnd = 1 
+};
+
+
 class MPIWrapper
 {
+private:
     int m_myRank;
     int m_numMPINodes;
     size_t m_numNodesInUse;
 
     // MPI communicator that reflects the current subset selection
     MPI_Comm m_currentComm;
+
+    int m_trace;        // use trace to log performed related numbers
+    
+    // MA-related status 
+    std::vector<NodeStatus>     m_peerStatus; 
+    int                         m_numSyncPerformed;         
+    // this is the counter of number sync performed, it will NOT get reset after each epoch. 
+    // This is used as MPI_TAG to distinguish messages sent at different stages 
+    // This means the maximum number of sync to be safely performed is 2,147,483,647 
+    // If the SyncFreqInFrames is set as 40K, this means it allows to sweep 238 million hours of speech data, assuming 10ms per sample 
+
+private: 
+    bool PeersHaveEndProcessing()
+    {
+        auto iter=std::find(m_peerStatus.begin(), m_peerStatus.end(), NodeStatus::DataEnd);
+        return iter != m_peerStatus.end(); 
+        /*
+        bool b = false;
+        for (auto x : m_peerStatus)
+        {
+            if (x == NodeStatus::DataEnd)
+            {
+                b = true; break;
+            }
+        }
+        return b;
+        */
+    }
 
     // MPI_Init() with delay-loading the msmpi.dll (possibly causing a failure if missing; we want to catch that)
     int MPI_Init_DL()
@@ -139,6 +189,9 @@ public:
         // do an initial handshake
         Ping("mpihelper");
 
+        m_trace = 0; 
+        m_numSyncPerformed = 0; 
+        m_peerStatus.resize(NumNodesInUse(), NodeStatus::DataProcessing);
         // stagger the jobs just a little to get a sort-of deterministic order e.g. in GPU allocation when running on one machine
         // continue 0.5 seconds apart
         ::Sleep((DWORD)(500 * CurrentNodeRank()));
@@ -244,7 +297,10 @@ public:
     {
         return 0;
     }
-
+    void SetTrace(int traceLevel)
+    {
+        m_trace = traceLevel; 
+    }
     // -----------------------------------------------------------------------
     // data-exchange functions (wrappers around MPI functions)
     // -----------------------------------------------------------------------
@@ -308,6 +364,105 @@ public:
     void WaitAll()
     {
         MPI_Barrier(m_currentComm) || MpiFail("waitall: MPI_Barrier");
+    }
+
+    //////////////////////////////////////////////////////////////////////////
+    //  MA-related helper function 
+    //  OnStartDataProcessing:      This function is called at the begining of each epoch 
+    //  PeersHaveEndProcessing:     return true if any of my peers have arrived at DataEnd
+    //  OnArriveAtSyncPoint:        This function is called when a potential sync point is arrived 
+    //                              It returns true if a sync is needed, false if no (which means someone has already arrive at DataEnd)
+    //  OnPerformedOneSync:         This function is called after a sync is performed 
+    //  OnArriveAtEndOfDataProcessing: This function is called when arriving at the end of each epoch
+    //////////////////////////////////////////////////////////////////////////
+    void OnStartDataProcessing()
+    {
+        WaitAll(); 
+        m_peerStatus.resize(NumNodesInUse(), NodeStatus::DataProcessing); 
+    }
+    bool OnArriveAtSyncPoint()
+    {   
+        bool ret = false; 
+        if (!PeersHaveEndProcessing())
+        {
+            int sentSignal = (int)NodeStatus::DataProcessing; 
+            vector<MPI_Request> sendRequests(NumNodesInUse());
+            // 1. send my status to peers (non-blocking)
+            for (int dest = 0; dest < (int)NumNodesInUse(); dest++)
+            {
+                if (dest != m_myRank)
+                {
+                    MPI_Isend(&sentSignal, 1, MPI_INT, dest, m_numSyncPerformed, m_currentComm, &sendRequests[dest]);
+                }
+            }
+            // 2. recv status from others (blocking call)
+            for (int src = 0; src < (int)NumNodesInUse(); src++)
+            {
+                if (src != m_myRank)
+                {
+                    int recvSignal = 0; 
+                    MPI_Status status; 
+                    MPI_Recv(&recvSignal, 1, MPI_INT, src, m_numSyncPerformed, m_currentComm, &status); 
+                    // for debugging purpose, to be removed when mature 
+                    assert(status.MPI_SOURCE == src); 
+                    assert(status.MPI_TAG == m_numSyncPerformed); 
+                    m_peerStatus[src] = (NodeStatus)recvSignal;
+                }
+            }
+            // 3. makes sure the sending operation has completed 
+            for (int dest = 0; dest < (int)NumNodesInUse(); dest++)
+            {
+                if (dest != m_myRank)
+                {
+                    MPI_Wait(&sendRequests[dest], MPI_STATUS_IGNORE); 
+                }
+            }
+            // 4. check peer status and return whether we can sync 
+            ret=!PeersHaveEndProcessing(); 
+        }
+        return ret; 
+    }
+    void OnPerformedOneSync()
+    {
+        m_numSyncPerformed++;
+    }
+    bool OnArriveAtEndOfDataProcessing()
+    {
+        vector<MPI_Request> sendRequests(NumNodesInUse());
+        int sentSignal = (int)NodeStatus::DataEnd; 
+        // 1. send my status to notify peers 
+        for (int dest = 0; dest < (int)NumNodesInUse(); dest++)
+        {
+            if (dest != m_myRank)
+            {
+                MPI_Isend(&sentSignal, 1, MPI_INT, dest, m_numSyncPerformed, m_currentComm, &sendRequests[dest]);
+            }
+        }
+        // 2. recv others 
+        for (int src = 0; src < NumNodesInUse(); src++)
+        {
+            if (src != m_myRank && m_peerStatus[src] == NodeStatus::DataProcessing)
+            {
+                int recvSignal = 0; 
+                MPI_Status status; 
+                MPI_Recv(&recvSignal, 1, MPI_INT, src, m_numSyncPerformed, m_currentComm, &status);
+                m_peerStatus[src] = (NodeStatus)recvSignal; 
+                assert(status.MPI_SOURCE == src); 
+                assert(status.MPI_TAG == m_numSyncPerformed);
+            }
+        }
+        // 3. make sure sending operation finished 
+        for (int dest = 0; dest < (int)NumNodesInUse(); dest++)
+        {
+            if (dest != m_myRank)
+            {
+                MPI_Wait(&sendRequests[dest], MPI_STATUS_IGNORE);
+            }
+        }
+        m_peerStatus[m_myRank] = NodeStatus::DataEnd;
+
+        WaitAll();
+        return true; 
     }
 };
 }

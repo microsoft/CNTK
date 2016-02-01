@@ -449,7 +449,6 @@ protected:
                                   float& SecondsSinceLastSyncFinished, 
                                   float& SecondsSpentOnSync);
 
-    size_t ModelAveragingSync(int nSamplesSinceLastSync, const std::list<ComputationNodeBasePtr>& learnableNodes);
 
 public:
     // UpdateWeightsS - static version of UpdateWeights()

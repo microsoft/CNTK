@@ -741,9 +741,9 @@ template <class ElemType>
         size_t nSynced = 0; 
         float nSecondsOnMASync = 0;
         float nSecondsSinceLastMAPerfReport = 0;
-        if (useParallelTrain)
+        if (useModelAveraging)
         {
-            if (!m_MASGDhelper && useModelAveraging)
+            if (!m_MASGDhelper)
             {
                 m_MASGDhelper = std::make_shared<MASGD<ElemType>>(m_useNesterovMomentumInBMUF, m_blockMomentum, m_resetSGDMomentum);
                 m_MASGDhelper->Initialize(learnableNodes);
@@ -752,6 +752,7 @@ template <class ElemType>
             {
                 m_MASGDhelper->OnOneEpochStarted(learnableNodes);
             }
+            g_mpi->OnStartDataProcessing();
         }
 
 
@@ -1035,44 +1036,42 @@ template <class ElemType>
             // TODO: this does not happen each MB, does it?
             if (useModelAveraging)
             {
-                // Determine if any samples were processed across any of the ranks
+                if (nSamplesSinceLastModelSync > m_nFramesBetweenMASync && g_mpi->NumNodesInUse() > 1)
+                {
+                    bool ready2Sync = g_mpi->OnArriveAtSyncPoint(); 
+                    if (ready2Sync)
+                    {
+                        size_t processedSamples = 0;
+                        float secondsSinceLastSyncFinished = 0;
+                        float secondsSpentOnSync = 0;
+                        ModelAveragingProcessing(
+                                nSamplesSinceLastModelSync,        /* in */
+                                learnableNodes,                    /* in/out*/
+                                smoothedGradients,                 /* in/out*/
+                                processedSamples,                  /* out */
+                                secondsSinceLastSyncFinished,      /* out */
+                                secondsSpentOnSync                 /* out */
+                       );    
+                       nSamplesSinceLastModelSync = 0; 
+                       nSynced++; 
+                       nSecondsOnMASync += secondsSpentOnSync;
+                       nSecondsSinceLastMAPerfReport += secondsSinceLastSyncFinished;
+                       if (m_syncStatsTrace > 0)
+                       {
+                           if (nSynced % m_syncStatsTrace == 0)
+                           {
+                               fprintf(stderr, "\t\t-----(model averaging stats) %d-th sync, %8.2f seconds since last report, %5.2f seconds on communication\n",
+                                   (int)nSynced, nSecondsSinceLastMAPerfReport, nSecondsOnMASync);
+                               nSecondsOnMASync = 0;
+                               nSecondsSinceLastMAPerfReport = 0;
+                           }
+                       }
+                    }
+                }
+                // preparing break conditions 
                 if (useDistributedMBReading)
                 {
-                    std::array<int, 1> numNodesWithDataToProcess;
-                    numNodesWithDataToProcess[0] = wasDataRead ? 1 : 0;
-                    g_mpi->AllReduce(numNodesWithDataToProcess);
-
-                    if (numNodesWithDataToProcess[0] == 0)
-                        noMoreSamplesToProcess = true;
-                }
-
-                if (g_mpi->NumNodesInUse() > 1)
-                {
-                    size_t processedSamples = 0; 
-                    float secondsSinceLastSyncFinished = 0; 
-                    float secondsSpentOnSync = 0;
-                    if (ModelAveragingProcessing(nSamplesSinceLastModelSync, learnableNodes, smoothedGradients, 
-                                                 processedSamples,secondsSinceLastSyncFinished, secondsSpentOnSync))
-                    {
-                        // if a sync happens, do some extra work
-                        nSamplesSinceLastModelSync = 0; 
-                        nSynced++;
-
-                        nSecondsOnMASync += secondsSpentOnSync; 
-                        nSecondsSinceLastMAPerfReport += secondsSinceLastSyncFinished; 
-                    
-                        if (m_syncStatsTrace > 0)
-                        {
-                            if (nSynced % m_syncStatsTrace == 0)
-                            {
-                                fprintf(stderr, "\t\t-----(model averaging stats) %d-th sync, %8.2f seconds since last report, %5.2f seconds on communication\n",
-                                    (int) nSynced, nSecondsSinceLastMAPerfReport, nSecondsOnMASync);
-                                nSecondsOnMASync = 0; 
-                                nSecondsSinceLastMAPerfReport = 0; 
-                            }
-                        }
-                    }
-                    aggregateNumSamplesWithLabel = processedSamples;
+                    noMoreSamplesToProcess = !wasDataRead;
                 }
             }
 
@@ -1080,7 +1079,7 @@ template <class ElemType>
             numMBsRun++;
 
             totalTimeInMBs += timer.ElapsedSeconds();
-            numSamplesLastMBs += useModelAveraging ? int(numSamplesWithLabel) : int(aggregateNumSamplesWithLabel);
+            numSamplesLastMBs += aggregateNumSamplesWithLabel;
 
             if (numMBsRun % m_numMBsToShowResult == 0)
             {
@@ -1173,7 +1172,8 @@ template <class ElemType>
 
             timer.Restart();
             totalEpochSamples += aggregateNumSamplesWithLabel;
-            totalSamplesSeen += aggregateNumSamplesWithLabel;
+            if (!useModelAveraging )
+                totalSamplesSeen += aggregateNumSamplesWithLabel;
 
             // call DataEnd function
             // This signals something from SGD to the reader.
@@ -1192,16 +1192,18 @@ template <class ElemType>
 
         // --- END MAIN MINIBATCH LOOP
 
-    if (useModelAveraging && (g_mpi->NumNodesInUse() > 1))
+        if (useModelAveraging && (g_mpi->NumNodesInUse() > 1))
         {
+            g_mpi->OnArriveAtEndOfDataProcessing();
             // may not be synced after epoch finished, so do the sync here 
-            int residualSampels = (int) nSamplesSinceLastModelSync;
-            g_mpi->AllReduce(&residualSampels, 1);
-            totalSamplesSeen += residualSampels; 
-            totalEpochSamples += residualSampels;
-            ModelAveragingSync(nSamplesSinceLastModelSync, learnableNodes);
+            size_t samplesProcessed = 0;
+            float secSinceLastSync = 0; 
+            float secOnComm = 0; 
+            ModelAveragingProcessing(nSamplesSinceLastModelSync, learnableNodes, smoothedGradients, samplesProcessed, secSinceLastSync, secOnComm);
             nSynced++;
             nSamplesSinceLastModelSync = 0;
+            fprintf(stderr, "\t\t-----(model averaging stats) %d-th sync (last sync in this epoch), %8.2f seconds since last sync, %5.2f seconds on communication\n",
+                (int)nSynced, secSinceLastSync, secOnComm);
             m_MASGDhelper->OnOneEpochFinished(learnableNodes);
         }
 
@@ -1210,7 +1212,7 @@ template <class ElemType>
         {
             // with parallelization, we have them in regular variables
             epochCriterion /= float(totalEpochSamples);
-        for (size_t i = 0; i < epochEvalErrors.size(); i++)
+            for (size_t i = 0; i < epochEvalErrors.size(); i++)
             {
                 epochEvalErrors[i] /= totalEpochSamples;
             }
@@ -1231,9 +1233,25 @@ template <class ElemType>
         // in case of model averaging, do one more final aggregation of criteria
         if (useModelAveraging && (g_mpi->NumNodesInUse() > 1))
         {
+            // 1. total epoch samples processed by all workers
+            size_t totalEpochSamplesOfAllWorkers = totalEpochSamples;
+            g_mpi->AllReduce(&totalEpochSamplesOfAllWorkers,1);
+            totalSamplesSeen += totalEpochSamplesOfAllWorkers;
+
+            // 2. criterion and EvalErrors 
+            localEpochCriterion *= float(totalEpochSamples / totalEpochSamplesOfAllWorkers);
+            localEpochEvalErrors *= float(totalEpochSamples / totalEpochSamplesOfAllWorkers);
+
+            epochCriterion = localEpochCriterion.Get00Element(); 
+            for (size_t i = 0; i < epochEvalErrors.size(); i++)
+            {
+                epochEvalErrors[i] = localEpochEvalErrors(0, i);
+            }
             // merge epochCriterion and epochEvalErrors over nodes 
             g_mpi->AllReduce(&epochCriterion, 1);
             g_mpi->AllReduce(epochEvalErrors);
+            // 3. modify return value 
+            totalEpochSamples = totalEpochSamplesOfAllWorkers; 
         }
         return totalEpochSamples;
     }
@@ -1937,113 +1955,42 @@ template <class ElemType>
         }
     }
 
-template <class ElemType>
-    bool SGD<ElemType>::ModelAveragingProcessing(size_t nSamplesSinceLastSync, 
-                                                 const std::list<ComputationNodeBasePtr>& learnableNodes, 
-                                                 std::list<Matrix<ElemType>>&       smoothedGradients, 
-                                                 size_t& nProcessedFrames,
-                                                 float& SecondsSinceLastSyncFinished, 
-                                                 float& SecondsSpentOnSync)
+    template <class ElemType>
+    bool SGD<ElemType>::ModelAveragingProcessing(
+            size_t nSamplesSinceLastSync,
+            const std::list<ComputationNodeBasePtr>& learnableNodes,
+            std::list<Matrix<ElemType>>&       smoothedGradients,
+            size_t& nProcessedFrames,
+            float& SecondsSinceLastSyncFinished,
+            float& SecondsSpentOnSync
+            )
     {
-        //////////////////////////////////////////////////////////////////////////
-        // the current strategy is that after each minibatch, we will sync between processors 
-        // to decide whether a sync need to be performed. This is definitely not optimal, 
-        // which we will fix it later. 
-
-        // TODO: the way we handle timer is not very good 
-        //////////////////////////////////////////////////////////////////////////
-        static bool first = true;
-        static Timer MAtimer;
-        if (first)
+        static bool firstcall = true; 
+        static Timer MATimer; 
+        if (firstcall)
         {
-            MAtimer.Start();
-            first = false;
-        }
-
-        char bNeedToSync = (char)0; // use char for bool
-        if (g_mpi->IsMainNode() && nSamplesSinceLastSync >= m_nFramesBetweenMASync)
-        {
-            // only the main node can decide whether a sync need to be performed 
-            bNeedToSync = (char)1;
-        }
-        g_mpi->Bcast(&bNeedToSync, 1, g_mpi->MainNodeRank());
-        if (bNeedToSync)
-        {
-            MAtimer.Stop();
-            double elapsedsec = MAtimer.ElapsedSeconds();
-            SecondsSinceLastSyncFinished = first ? 0 : (float)elapsedsec;
-            MAtimer.Start();
-            m_MASGDhelper->PerformModelAveragingUpdate(learnableNodes, smoothedGradients, nSamplesSinceLastSync, nProcessedFrames);
-            MAtimer.Stop();
-            SecondsSpentOnSync = (float)MAtimer.ElapsedSeconds();
-
-            MAtimer.Start();
+            MATimer.Start(); 
+            firstcall = false; 
+            SecondsSinceLastSyncFinished = 0; 
         }
         else
         {
-            nProcessedFrames = 0;
-            return false;
+            MATimer.Stop(); 
+            SecondsSinceLastSyncFinished = (float)MATimer.ElapsedSeconds(); 
+            MATimer.Start();
         }
+        
+
+        m_MASGDhelper->PerformModelAveragingUpdate(learnableNodes, smoothedGradients, nSamplesSinceLastSync, nProcessedFrames);
+        MATimer.Stop(); 
+        SecondsSpentOnSync = (float)MATimer.ElapsedSeconds(); 
+        g_mpi->OnPerformedOneSync();
+
+        MATimer.Start(); 
         return true;
     }
 
-template <class ElemType>
-    size_t SGD<ElemType>::ModelAveragingSync(int nSamplesSinceLastSync, const std::list<ComputationNodeBasePtr>& learnableNodes)
-    {
-        if (g_mpi->NumNodesInUse() <= 1)
-        {
-            return nSamplesSinceLastSync; 
-        }
-
-        //========================================
-        // Sec. 1 calculate factor
-        //========================================
-        float factor = 0; 
-    int nTotalSamples = nSamplesSinceLastSync;
-        g_mpi->AllReduce(&nTotalSamples, 1);
-        if (nTotalSamples <= 0)
-        {
-            // prepare for overflow 
-            factor = 1.0f / g_mpi->NumNodesInUse(); 
-        }
-        else
-        {
-            factor = (nSamplesSinceLastSync + 0.0f) / nTotalSamples; 
-        }
-
-        //========================================
-        // Sec. 2 sync models based on factor 
-        // Note: this is suboptimal at the moment: 
-        //       we do the averaging for each node in a sequence manner, i.e., 
-        //          (node1) GPU->CPU->MPI_AllReduce -> (node2)GPU->CPU->MPI_AllReduce
-        //       we can improve it by using a pipeline 
-        //          (node1) GPU ->  CPU  ->  MPI_AllReduce
-        //          (node2)         GPU  ->  CPU            -> MPI_AllReduce
-        //          (node3)                  GPU            -> CPU              -> MPI_AllReduce
-        //========================================
-        for (auto iter = learnableNodes.begin(); iter != learnableNodes.end(); iter++)
-        {
-            ComputationNodeBasePtr pNode = *iter; 
-            if (!pNode->IsParameterUpdateRequired())
-                continue;
-
-            Matrix<ElemType>& mat = dynamic_pointer_cast<ComputationNode<ElemType>>(pNode)->Value();
-            // 1. normalize the weight matrix 
-            Matrix<ElemType>::Scale(factor, mat);
-            // 2. send weight matrix over MPI nodes; 
-            ElemType* px = mat.CopyToArray(); 
-        size_t nx = mat.GetNumElements();
-
-            // 3. inplace sum 
-            g_mpi->AllReduce(px, nx);
-            mat.SetValue(mat.GetNumRows(), mat.GetNumCols(), mat.GetDeviceId(), px);
-            // 4. clean up 
-        delete[] px;
-        }
-
-        return nTotalSamples; 
-    }
-    
+ 
 // public:
     // UpdateWeightsS - static version of UpdateWeights()
     // not static since it wants to access protected methods on the SGD object
