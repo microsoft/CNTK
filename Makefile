@@ -556,7 +556,7 @@ clean:
 	@echo $(SEPARATOR)
 	@rm -rf $(OBJDIR)
 	@rm -rf $(ALL)
-	@rm -rf $(SOURCEDIR)/CNTK/buildinfo.h
+	@rm -rf $(BUILDINFO)
 	@echo finished cleaning up the project
 
 buildall : $(ALL)
