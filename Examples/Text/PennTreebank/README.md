@@ -62,7 +62,7 @@ The configuration contains three commands.
 The first writes the word and class information as three separate files into the data directory.
 The training command uses the SimpleNetworkBuilder to build a recurrent network 
 using `rnnType = CLASSLSTM` and the LMSequenceReader.
-The test command evalutes the trained network against the specified `testFile`.
+The test command evaluates the trained network against the specified `testFile`.
 
 The trained models for each epoch are stored in the output models folder. 
 
