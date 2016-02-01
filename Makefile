@@ -423,7 +423,7 @@ ALL += $(IMAGEREADER)
 SRC+=$(IMAGEREADER_SRC)
 
 INCLUDEPATH += $(OPENCV_PATH)/include
-LIBPATH += $(OPENCV_PATH)/lib
+LIBPATH += $(OPENCV_PATH)/lib $(OPENCV_PATH)/release/lib
 
 $(IMAGEREADER): $(IMAGEREADER_OBJ) | $(CNTKMATH_LIB)
 	@echo $(SEPARATOR)
@@ -435,6 +435,11 @@ endif
 ########################################
 
 ifeq ("$(CNTK_ENABLE_1BitSGD)","true")
+
+ifeq (,$(wildcard Source/1BitSGD/*.h))
+  $(error Build with 1bit-SGD was requested but cannot find the code. Please check https://github.com/Microsoft/CNTK/wiki/Enabling-1bit-SGD for instructions)
+endif
+
   INCLUDEPATH += $(SOURCEDIR)/1BitSGD
 
   CPPFLAGS += -DQUANTIZED_GRADIENT_AGGREGATION

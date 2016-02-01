@@ -105,7 +105,7 @@ echo "$0 create cntk files"
 
    # You can either submit your jobs to your cluser, or run it in your local GPU machine
    # $cuda_cmd $dir/log/train_cntk.log \
-  $cn_gpu configFile=/exports/work/inf_hcrc_cstr_nst/llu/ami/s5b/cntk_config/CNTK.config modelName=cntkSpeech.dnn DeviceNumber=0 ExpDir=$dir logFile=$logFile labelMapping=$labelMapping ndlfile=$ndlfile inputFeat=$inputFeat trainMLF=$trainMLF labelDim=$labelDim cvInputFeat=$cvInputFeat featDim=600 action=TrainDNN phnLabel=no phnDim=no phnMapping=no inputSCP=no outputSCP=no
+  $cn_gpu configFile=/exports/work/inf_hcrc_cstr_nst/llu/ami/s5b/cntk_config/CNTK.cntk modelName=cntkSpeech.dnn DeviceNumber=0 ExpDir=$dir logFile=$logFile labelMapping=$labelMapping ndlfile=$ndlfile inputFeat=$inputFeat trainMLF=$trainMLF labelDim=$labelDim cvInputFeat=$cvInputFeat featDim=600 action=TrainDNN phnLabel=no phnDim=no phnMapping=no inputSCP=no outputSCP=no
 fi
 
 if [ $stage -le 6 ] ; then
@@ -120,7 +120,7 @@ if [ $stage -le 7 ]; then
     cnmodel=$dir/cntkSpeech.dnn.17
     graphdir=/exports/work/inf_hcrc_cstr_nst/llu/ami/s5b/exp/$mic/tri4a/graph_ami_fsh.o3g.kn.pr1-7
     class_frame_counts=/exports/work/inf_hcrc_cstr_nst/llu/ami/s5b/exp/ihm/dnn5b_pretrain-dbn_dnn_realign/ali_train_pdf.counts
-    cntk_string="$cn_gpu configFile=cntk_config/CNTK_write.config DeviceNumber=1 modelName=$cnmodel labelDim=$labelDim featDim=$featDim action=$action"
+    cntk_string="$cn_gpu configFile=cntk_config/CNTK_write.cntk DeviceNumber=1 modelName=$cnmodel labelDim=$labelDim featDim=$featDim action=$action"
     scripts/decode_cntk.sh  --nj 16 --cmd "$decode_cmd" --acwt 0.0833 --class-frame-counts "$class_frame_counts" \
       $graphdir $data_fmllr/eval $dir/decode_ami_fsh.o3g.kn.pr1-7 "$cntk_string" || exit 1;
 fi

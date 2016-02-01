@@ -313,11 +313,8 @@ public:
 protected:
     void Clear()
     {
-        if (m_matrixName != nullptr)
-        {
-            delete[] m_matrixName;
-            m_matrixName = nullptr;
-        }
+        delete[] m_matrixName;
+        m_matrixName = nullptr;
     }
 
 protected:
@@ -330,6 +327,7 @@ protected:
     ElemType* m_pArray;
     mutable DEVICEID_TYPE m_computeDevice; // current GPU device Id or CPUDEVICE
     size_t m_nz;                           // Number of non-zero elements for sparse matrices (unused in other formats)
-    wchar_t* m_matrixName;
+    wchar_t* m_matrixName;                 // TODO: Use std::wstring?
 };
+
 } } }

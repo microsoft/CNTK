@@ -1,0 +1,108 @@
+RootDir = "."
+
+ConfigDir = "$RootDir$"
+DataDir = "$RootDir$"
+OutputDir = "$RootDir$/Output"
+ModelDir = "$OutputDir$/Models"
+
+ndlMacros=$ConfigDir$/Macros.ndl
+
+precision=float
+deviceId=Auto
+prefetch=true
+parallelTrain=false
+
+command=Train:AddBNEval:Test
+
+stderr=$OutputDir$/03_ResNet
+traceLevel=1
+numMBsToShowResult=200
+
+Proj16to32Filename = $ConfigDir$/16to32.txt
+Proj32to64Filename = $ConfigDir$/32to64.txt
+
+Train=[
+    action=train
+    modelPath=$ModelDir$/03_ResNet
+
+     NDLNetworkBuilder=[
+        networkDescription=$ConfigDir$/03_ResNet.ndl
+    ]
+    
+    SGD=[
+        epochSize=0
+        minibatchSize=128
+        # Note that learning rates are 10x more than in the paper due to a different
+        # momentum update rule in CNTK: v{t + 1} = lr*(1 - momentum)*g{t + 1} + momentum*v{t}
+        learningRatesPerMB=1.0*80:0.1*40:0.01
+        momentumPerMB=0.9
+        maxEpochs=160
+        L2RegWeight=0.0001
+        dropoutRate=0
+        
+        ParallelTrain=[
+            parallelizationMethod=DataParallelSGD
+            distributedMBReading=true
+            parallelizationStartEpoch=1
+            DataParallelSGD=[
+                gradientBits=32
+            ]
+        ]
+    ]
+    
+    reader=[
+        readerType=ImageReader
+        file=$DataDir$/train_map.txt
+        randomize=Auto
+        features=[
+            width=32
+            height=32
+            channels=3
+            cropType=Random
+            cropRatio=0.8
+            jitterType=UniRatio
+            interpolations=Linear
+            meanFile=$ConfigDir$/CIFAR-10_mean.xml
+        ]
+        labels=[
+            labelDim=10
+        ]
+    ]    
+]
+
+AddBNEval=[    
+    action=edit
+    CurModel=$ModelDir$/03_ResNet
+    NewModel=$ModelDir$/03_ResNet.Eval
+    editPath=$ConfigDir$/03_ResNet.mel
+]
+
+Test=[
+    action=test
+    modelPath=$ModelDir$/03_ResNet.Eval
+    # Set minibatch size for testing.
+    minibatchSize=512
+
+     NDLNetworkBuilder=[
+        networkDescription=$ConfigDir$/03_ResNet.ndl
+    ]
+    
+    reader=[
+        readerType=ImageReader
+        file=$DataDir$/test_map.txt
+        randomize=Auto
+        features=[
+            width=32
+            height=32
+            channels=3
+            cropType=Center
+            cropRatio=1
+            jitterType=UniRatio
+            interpolations=Linear
+            meanFile=$ConfigDir$/CIFAR-10_mean.xml
+        ]
+        labels=[
+            labelDim=10
+        ]
+    ]    
+]

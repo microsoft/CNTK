@@ -392,9 +392,11 @@ void ImageReader<ElemType>::InitFromConfig(const ConfigRecordType& config)
 
     // Get mini-batch format.
     std::string mbFmt = featSect.second("mbFormat", "nchw");
-    if (AreEqual(mbFmt, "nhwc"))
+    if (AreEqual(mbFmt, "nhwc") || AreEqual(mbFmt, "legacy"))
         m_mbFmt = DataFormat::NHWC;
-    else if (!AreEqual(mbFmt, "nchw"))
+    else if (AreEqual(mbFmt, "nchw") || AreEqual(mbFmt, "cudnn"))
+        m_mbFmt = DataFormat::NCHW;
+    else
         RuntimeError("ImageReader does not support the mini-batch format %s.", mbFmt.c_str());
 
     // Initialize transforms.

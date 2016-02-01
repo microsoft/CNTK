@@ -669,7 +669,7 @@ int wmain(int argc, wchar_t* argv[]) // wmain wrapper that reports Win32 excepti
     }
     __except (1 /*EXCEPTION_EXECUTE_HANDLER, see excpt.h--not using constant to avoid Windows header in here*/)
     {
-        fprintf(stderr, "CNTK: Win32 exception caught (such an access violation or a stack overflow)\n"); // TODO: separate out these two into a separate message
+        fprintf(stderr, "CNTK: Win32 exception caught (such as access violation, a stack overflow, or a missing delay-loaded DLL)\n"); // TODO: separate out these into separate messages
         fflush(stderr);
         exit(EXIT_FAILURE);
     }

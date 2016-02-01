@@ -1,0 +1,3 @@
+ExpDir=\\speechstore5\transient\kaishengy\exp\lm\fnnlm
+ConfigDir=\\speechstore5\userdata\kaishengy\exp\lm\setup
+DataDir=\\speechstore5\transient\kaishengy\data\LM\PennTreeBank

@@ -105,7 +105,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "QuickE2E", "QuickE2E", "{4B
 		Tests\EndToEndTests\Speech\QuickE2E\baseline.gpu.txt = Tests\EndToEndTests\Speech\QuickE2E\baseline.gpu.txt
 		Tests\EndToEndTests\Speech\QuickE2E\baseline.windows.cpu.txt = Tests\EndToEndTests\Speech\QuickE2E\baseline.windows.cpu.txt
 		Tests\EndToEndTests\Speech\QuickE2E\baseline.windows.gpu.txt = Tests\EndToEndTests\Speech\QuickE2E\baseline.windows.gpu.txt
-		Tests\EndToEndTests\Speech\QuickE2E\cntk.config = Tests\EndToEndTests\Speech\QuickE2E\cntk.config
+		Tests\EndToEndTests\Speech\QuickE2E\cntk.cntk = Tests\EndToEndTests\Speech\QuickE2E\cntk.cntk
 		Tests\EndToEndTests\Speech\QuickE2E\run-test = Tests\EndToEndTests\Speech\QuickE2E\run-test
 		Tests\EndToEndTests\Speech\QuickE2E\testcases.yml = Tests\EndToEndTests\Speech\QuickE2E\testcases.yml
 	EndProjectSection
@@ -121,7 +121,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Data", "Data", "{5F733BBA-F
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "LSTM", "LSTM", "{19EE975B-232D-49F0-94C7-6F1C6424FB53}"
 	ProjectSection(SolutionItems) = preProject
-		Tests\EndToEndTests\Speech\LSTM\cntk.config = Tests\EndToEndTests\Speech\LSTM\cntk.config
+		Tests\EndToEndTests\Speech\LSTM\cntk.cntk = Tests\EndToEndTests\Speech\LSTM\cntk.cntk
 		Tests\EndToEndTests\Speech\LSTM\lstm.bs = Tests\EndToEndTests\Speech\LSTM\lstm.bs
 		Tests\EndToEndTests\Speech\DNN\DiscriminativePreTraining\macros.txt = Tests\EndToEndTests\Speech\DNN\DiscriminativePreTraining\macros.txt
 	EndProjectSection
@@ -139,7 +139,7 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "SGDLib", "Source\SGDLib\SGD
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "ParallelTraining", "ParallelTraining", "{5E666C53-2D82-49C9-9127-3FDDC321C741}"
 	ProjectSection(SolutionItems) = preProject
-		Tests\EndToEndTests\ParallelTraining\SimpleMultiGPU.config = Tests\EndToEndTests\ParallelTraining\SimpleMultiGPU.config
+		Tests\EndToEndTests\ParallelTraining\SimpleMultiGPU.cntk = Tests\EndToEndTests\ParallelTraining\SimpleMultiGPU.cntk
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Data", "Data", "{6D1353D6-F196-466F-B886-F16D48759B20}"
@@ -233,7 +233,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "FullUtterance", "FullUttera
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "DNN", "DNN", "{6994C86D-A672-4254-824A-51F4DFEB807F}"
 	ProjectSection(SolutionItems) = preProject
-		Tests\EndToEndTests\Speech\DNN\cntk.config = Tests\EndToEndTests\Speech\DNN\cntk.config
+		Tests\EndToEndTests\Speech\DNN\cntk.cntk = Tests\EndToEndTests\Speech\DNN\cntk.cntk
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Parallel1BitQuantization", "Parallel1BitQuantization", "{FD88A77E-A839-4513-AC5C-AD92447BE229}"
@@ -263,7 +263,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "DiscriminativePreTraining",
 		Tests\EndToEndTests\Speech\DNN\DiscriminativePreTraining\baseline.gpu.txt = Tests\EndToEndTests\Speech\DNN\DiscriminativePreTraining\baseline.gpu.txt
 		Tests\EndToEndTests\Speech\DNN\DiscriminativePreTraining\baseline.windows.cpu.txt = Tests\EndToEndTests\Speech\DNN\DiscriminativePreTraining\baseline.windows.cpu.txt
 		Tests\EndToEndTests\Speech\DNN\DiscriminativePreTraining\baseline.windows.gpu.txt = Tests\EndToEndTests\Speech\DNN\DiscriminativePreTraining\baseline.windows.gpu.txt
-		Tests\EndToEndTests\Speech\DNN\DiscriminativePreTraining\cntk_dpt.config = Tests\EndToEndTests\Speech\DNN\DiscriminativePreTraining\cntk_dpt.config
+		Tests\EndToEndTests\Speech\DNN\DiscriminativePreTraining\cntk_dpt.cntk = Tests\EndToEndTests\Speech\DNN\DiscriminativePreTraining\cntk_dpt.cntk
 		Tests\EndToEndTests\Speech\DNN\DiscriminativePreTraining\dnn.txt = Tests\EndToEndTests\Speech\DNN\DiscriminativePreTraining\dnn.txt
 		Tests\EndToEndTests\Speech\DNN\DiscriminativePreTraining\dnn_1layer.txt = Tests\EndToEndTests\Speech\DNN\DiscriminativePreTraining\dnn_1layer.txt
 		Tests\EndToEndTests\Speech\DNN\DiscriminativePreTraining\macros.txt = Tests\EndToEndTests\Speech\DNN\DiscriminativePreTraining\macros.txt
@@ -290,7 +290,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "SequenceTraining", "Sequenc
 		Tests\EndToEndTests\Speech\DNN\SequenceTraining\add_layer.mel = Tests\EndToEndTests\Speech\DNN\SequenceTraining\add_layer.mel
 		Tests\EndToEndTests\Speech\DNN\SequenceTraining\baseline.gpu.txt = Tests\EndToEndTests\Speech\DNN\SequenceTraining\baseline.gpu.txt
 		Tests\EndToEndTests\Speech\DNN\SequenceTraining\baseline.windows.gpu.txt = Tests\EndToEndTests\Speech\DNN\SequenceTraining\baseline.windows.gpu.txt
-		Tests\EndToEndTests\Speech\DNN\SequenceTraining\cntk_sequence.config = Tests\EndToEndTests\Speech\DNN\SequenceTraining\cntk_sequence.config
+		Tests\EndToEndTests\Speech\DNN\SequenceTraining\cntk_sequence.cntk = Tests\EndToEndTests\Speech\DNN\SequenceTraining\cntk_sequence.cntk
 		Tests\EndToEndTests\Speech\DNN\SequenceTraining\dnn.txt = Tests\EndToEndTests\Speech\DNN\SequenceTraining\dnn.txt
 		Tests\EndToEndTests\Speech\DNN\SequenceTraining\dnn_1layer.txt = Tests\EndToEndTests\Speech\DNN\SequenceTraining\dnn_1layer.txt
 		Tests\EndToEndTests\Speech\DNN\SequenceTraining\macros.txt = Tests\EndToEndTests\Speech\DNN\SequenceTraining\macros.txt
@@ -316,7 +316,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "QuickE2E", "QuickE2E", "{2A
 		Tests\EndToEndTests\Image\QuickE2E\baseline.windows.debug.gpu.txt = Tests\EndToEndTests\Image\QuickE2E\baseline.windows.debug.gpu.txt
 		Tests\EndToEndTests\Image\QuickE2E\baseline.windows.release.cpu.txt = Tests\EndToEndTests\Image\QuickE2E\baseline.windows.release.cpu.txt
 		Tests\EndToEndTests\Image\QuickE2E\baseline.windows.release.gpu.txt = Tests\EndToEndTests\Image\QuickE2E\baseline.windows.release.gpu.txt
-		Tests\EndToEndTests\Image\QuickE2E\cntk.config = Tests\EndToEndTests\Image\QuickE2E\cntk.config
+		Tests\EndToEndTests\Image\QuickE2E\cntk.cntk = Tests\EndToEndTests\Image\QuickE2E\cntk.cntk
 		Tests\EndToEndTests\Image\QuickE2E\Convolution.ndl = Tests\EndToEndTests\Image\QuickE2E\Convolution.ndl
 		Tests\EndToEndTests\Image\QuickE2E\Macros.ndl = Tests\EndToEndTests\Image\QuickE2E\Macros.ndl
 		Tests\EndToEndTests\Image\QuickE2E\run-test = Tests\EndToEndTests\Image\QuickE2E\run-test
@@ -329,7 +329,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "SVD", "SVD", "{669B6203-967
 		Tests\EndToEndTests\Speech\SVD\baseline.gpu.txt = Tests\EndToEndTests\Speech\SVD\baseline.gpu.txt
 		Tests\EndToEndTests\Speech\SVD\baseline.windows.cpu.txt = Tests\EndToEndTests\Speech\SVD\baseline.windows.cpu.txt
 		Tests\EndToEndTests\Speech\SVD\baseline.windows.gpu.txt = Tests\EndToEndTests\Speech\SVD\baseline.windows.gpu.txt
-		Tests\EndToEndTests\Speech\SVD\cntk.config = Tests\EndToEndTests\Speech\SVD\cntk.config
+		Tests\EndToEndTests\Speech\SVD\cntk.cntk = Tests\EndToEndTests\Speech\SVD\cntk.cntk
 		Tests\EndToEndTests\Speech\SVD\run-test = Tests\EndToEndTests\Speech\SVD\run-test
 		Tests\EndToEndTests\Speech\SVD\testcases.yml = Tests\EndToEndTests\Speech\SVD\testcases.yml
 	EndProjectSection
@@ -340,7 +340,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Simple", "Simple", "{81AE01
 		Tests\EndToEndTests\Speech\Simple\baseline.gpu.txt = Tests\EndToEndTests\Speech\Simple\baseline.gpu.txt
 		Tests\EndToEndTests\Speech\Simple\baseline.windows.cpu.txt = Tests\EndToEndTests\Speech\Simple\baseline.windows.cpu.txt
 		Tests\EndToEndTests\Speech\Simple\baseline.windows.gpu.txt = Tests\EndToEndTests\Speech\Simple\baseline.windows.gpu.txt
-		Tests\EndToEndTests\Speech\Simple\cntk.config = Tests\EndToEndTests\Speech\Simple\cntk.config
+		Tests\EndToEndTests\Speech\Simple\cntk.cntk = Tests\EndToEndTests\Speech\Simple\cntk.cntk
 		Tests\EndToEndTests\Speech\Simple\run-test = Tests\EndToEndTests\Speech\Simple\run-test
 		Tests\EndToEndTests\Speech\Simple\testcases.yml = Tests\EndToEndTests\Speech\Simple\testcases.yml
 	EndProjectSection
@@ -443,13 +443,13 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "RNNLM", "RNNLM", "{811924DE
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "CPU", "CPU", "{96012801-5187-4FAF-A54E-BF4B73C855F8}"
 	ProjectSection(SolutionItems) = preProject
-		Tests\EndToEndTests\LM\RNNLM\CPU\global.config = Tests\EndToEndTests\LM\RNNLM\CPU\global.config
-		Tests\EndToEndTests\LM\RNNLM\CPU\rnnlm.config = Tests\EndToEndTests\LM\RNNLM\CPU\rnnlm.config
+		Tests\EndToEndTests\LM\RNNLM\CPU\global.cntk = Tests\EndToEndTests\LM\RNNLM\CPU\global.cntk
+		Tests\EndToEndTests\LM\RNNLM\CPU\rnnlm.cntk = Tests\EndToEndTests\LM\RNNLM\CPU\rnnlm.cntk
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "GPU", "GPU", "{2A1F0FB0-2304-4F35-87B3-66230C6E58F0}"
 	ProjectSection(SolutionItems) = preProject
-		Tests\EndToEndTests\LM\RNNLM\GPU\rnnlm.config = Tests\EndToEndTests\LM\RNNLM\GPU\rnnlm.config
+		Tests\EndToEndTests\LM\RNNLM\GPU\rnnlm.cntk = Tests\EndToEndTests\LM\RNNLM\GPU\rnnlm.cntk
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "SLU", "SLU", "{BFBC6BE1-C33E-4A80-B8F3-A33410EC00FC}"
@@ -457,13 +457,13 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "SLU", "SLU", "{BFBC6BE1-C33
 		Tests\EndToEndTests\SLU\atis.dev.IOB.simple = Tests\EndToEndTests\SLU\atis.dev.IOB.simple
 		Tests\EndToEndTests\SLU\atis.test.apos.pred.pos.head.IOB.simple = Tests\EndToEndTests\SLU\atis.test.apos.pred.pos.head.IOB.simple
 		Tests\EndToEndTests\SLU\atis.train.apos.pred.pos.head.IOB.simple = Tests\EndToEndTests\SLU\atis.train.apos.pred.pos.head.IOB.simple
-		Tests\EndToEndTests\SLU\globals.config = Tests\EndToEndTests\SLU\globals.config
+		Tests\EndToEndTests\SLU\globals.cntk = Tests\EndToEndTests\SLU\globals.cntk
 		Tests\EndToEndTests\SLU\input.txt = Tests\EndToEndTests\SLU\input.txt
 		Tests\EndToEndTests\SLU\inputmap.txt = Tests\EndToEndTests\SLU\inputmap.txt
 		Tests\EndToEndTests\SLU\lstmNDL.txt = Tests\EndToEndTests\SLU\lstmNDL.txt
 		Tests\EndToEndTests\SLU\README.txt = Tests\EndToEndTests\SLU\README.txt
-		Tests\EndToEndTests\SLU\rnnlu.config = Tests\EndToEndTests\SLU\rnnlu.config
-		Tests\EndToEndTests\SLU\rnnlu.ndl.config = Tests\EndToEndTests\SLU\rnnlu.ndl.config
+		Tests\EndToEndTests\SLU\rnnlu.cntk = Tests\EndToEndTests\SLU\rnnlu.cntk
+		Tests\EndToEndTests\SLU\rnnlu.ndl.cntk = Tests\EndToEndTests\SLU\rnnlu.ndl.cntk
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "MNIST", "MNIST", "{FA33A61E-95C7-4049-8111-22058CE361A3}"
@@ -480,27 +480,27 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "AdditionalFiles", "Addition
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Config", "Config", "{6E5A252C-ACCE-42E0-9819-FF4DEF6D739E}"
 	ProjectSection(SolutionItems) = preProject
-		Examples\Image\MNIST\Config\01_OneHidden.config = Examples\Image\MNIST\Config\01_OneHidden.config
+		Examples\Image\MNIST\Config\01_OneHidden.cntk = Examples\Image\MNIST\Config\01_OneHidden.cntk
 		Examples\Image\MNIST\Config\01_OneHidden.ndl = Examples\Image\MNIST\Config\01_OneHidden.ndl
-		Examples\Image\MNIST\Config\02_Convolution.config = Examples\Image\MNIST\Config\02_Convolution.config
+		Examples\Image\MNIST\Config\02_Convolution.cntk = Examples\Image\MNIST\Config\02_Convolution.cntk
 		Examples\Image\MNIST\Config\02_Convolution.ndl = Examples\Image\MNIST\Config\02_Convolution.ndl
-		Examples\Image\MNIST\Config\03_ConvBatchNorm.config = Examples\Image\MNIST\Config\03_ConvBatchNorm.config
+		Examples\Image\MNIST\Config\03_ConvBatchNorm.cntk = Examples\Image\MNIST\Config\03_ConvBatchNorm.cntk
 		Examples\Image\MNIST\Config\03_ConvBatchNorm.ndl = Examples\Image\MNIST\Config\03_ConvBatchNorm.ndl
 		Examples\Image\MNIST\Config\Macros.ndl = Examples\Image\MNIST\Config\Macros.ndl
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "CIFAR-10", "CIFAR-10", "{77125562-3BF2-45D2-9B73-72CA8E03C78C}"
 	ProjectSection(SolutionItems) = preProject
-		Examples\Image\Miscellaneous\CIFAR-10\01_Conv.config = Examples\Image\Miscellaneous\CIFAR-10\01_Conv.config
+		Examples\Image\Miscellaneous\CIFAR-10\01_Conv.cntk = Examples\Image\Miscellaneous\CIFAR-10\01_Conv.cntk
 		Examples\Image\Miscellaneous\CIFAR-10\01_Convolution.ndl = Examples\Image\Miscellaneous\CIFAR-10\01_Convolution.ndl
-		Examples\Image\Miscellaneous\CIFAR-10\02_BatchNormConv.config = Examples\Image\Miscellaneous\CIFAR-10\02_BatchNormConv.config
+		Examples\Image\Miscellaneous\CIFAR-10\02_BatchNormConv.cntk = Examples\Image\Miscellaneous\CIFAR-10\02_BatchNormConv.cntk
 		Examples\Image\Miscellaneous\CIFAR-10\02_BatchNormConv.mel = Examples\Image\Miscellaneous\CIFAR-10\02_BatchNormConv.mel
 		Examples\Image\Miscellaneous\CIFAR-10\02_BatchNormConv.ndl = Examples\Image\Miscellaneous\CIFAR-10\02_BatchNormConv.ndl
 		Examples\Image\Miscellaneous\CIFAR-10\03_ProjWeightsGen.py = Examples\Image\Miscellaneous\CIFAR-10\03_ProjWeightsGen.py
-		Examples\Image\Miscellaneous\CIFAR-10\03_ResNet.config = Examples\Image\Miscellaneous\CIFAR-10\03_ResNet.config
+		Examples\Image\Miscellaneous\CIFAR-10\03_ResNet.cntk = Examples\Image\Miscellaneous\CIFAR-10\03_ResNet.cntk
 		Examples\Image\Miscellaneous\CIFAR-10\03_ResNet.mel = Examples\Image\Miscellaneous\CIFAR-10\03_ResNet.mel
 		Examples\Image\Miscellaneous\CIFAR-10\03_ResNet.ndl = Examples\Image\Miscellaneous\CIFAR-10\03_ResNet.ndl
-		Examples\Image\Miscellaneous\CIFAR-10\04_ResNet_56.config = Examples\Image\Miscellaneous\CIFAR-10\04_ResNet_56.config
+		Examples\Image\Miscellaneous\CIFAR-10\04_ResNet_56.cntk = Examples\Image\Miscellaneous\CIFAR-10\04_ResNet_56.cntk
 		Examples\Image\Miscellaneous\CIFAR-10\04_ResNet_56.ndl = Examples\Image\Miscellaneous\CIFAR-10\04_ResNet_56.ndl
 		Examples\Image\Miscellaneous\CIFAR-10\16to32.txt = Examples\Image\Miscellaneous\CIFAR-10\16to32.txt
 		Examples\Image\Miscellaneous\CIFAR-10\32to64.txt = Examples\Image\Miscellaneous\CIFAR-10\32to64.txt
@@ -516,7 +516,7 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "AlexNet", "AlexNet", "{D29DC402-98A3-40C7-B683-4CC84DEC5C18}"
 	ProjectSection(SolutionItems) = preProject
 		Examples\Image\Miscellaneous\ImageNet\AlexNet\add_top5_layer.mel = Examples\Image\Miscellaneous\ImageNet\AlexNet\add_top5_layer.mel
-		Examples\Image\Miscellaneous\ImageNet\AlexNet\AlexNet.config = Examples\Image\Miscellaneous\ImageNet\AlexNet\AlexNet.config
+		Examples\Image\Miscellaneous\ImageNet\AlexNet\AlexNet.cntk = Examples\Image\Miscellaneous\ImageNet\AlexNet\AlexNet.cntk
 		Examples\Image\Miscellaneous\ImageNet\AlexNet\AlexNet.ndl = Examples\Image\Miscellaneous\ImageNet\AlexNet\AlexNet.ndl
 		Examples\Image\Miscellaneous\ImageNet\AlexNet\Macros.ndl = Examples\Image\Miscellaneous\ImageNet\AlexNet\Macros.ndl
 	EndProjectSection
@@ -526,11 +526,11 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "VGG", "VGG", "{BC0D6DFF-80C
 		Examples\Image\Miscellaneous\ImageNet\VGG\add_top5_layer.mel = Examples\Image\Miscellaneous\ImageNet\VGG\add_top5_layer.mel
 		Examples\Image\Miscellaneous\ImageNet\VGG\ImageNet1K_mean.xml = Examples\Image\Miscellaneous\ImageNet\VGG\ImageNet1K_mean.xml
 		Examples\Image\Miscellaneous\ImageNet\VGG\Macros.ndl = Examples\Image\Miscellaneous\ImageNet\VGG\Macros.ndl
-		Examples\Image\Miscellaneous\ImageNet\VGG\VGG_A.config = Examples\Image\Miscellaneous\ImageNet\VGG\VGG_A.config
+		Examples\Image\Miscellaneous\ImageNet\VGG\VGG_A.cntk = Examples\Image\Miscellaneous\ImageNet\VGG\VGG_A.cntk
 		Examples\Image\Miscellaneous\ImageNet\VGG\VGG_A.ndl = Examples\Image\Miscellaneous\ImageNet\VGG\VGG_A.ndl
-		Examples\Image\Miscellaneous\ImageNet\VGG\VGG_E.config = Examples\Image\Miscellaneous\ImageNet\VGG\VGG_E.config
+		Examples\Image\Miscellaneous\ImageNet\VGG\VGG_E.cntk = Examples\Image\Miscellaneous\ImageNet\VGG\VGG_E.cntk
 		Examples\Image\Miscellaneous\ImageNet\VGG\VGG_E.ndl = Examples\Image\Miscellaneous\ImageNet\VGG\VGG_E.ndl
-		Examples\Image\Miscellaneous\ImageNet\VGG\VGG_E_BN.config = Examples\Image\Miscellaneous\ImageNet\VGG\VGG_E_BN.config
+		Examples\Image\Miscellaneous\ImageNet\VGG\VGG_E_BN.cntk = Examples\Image\Miscellaneous\ImageNet\VGG\VGG_E_BN.cntk
 		Examples\Image\Miscellaneous\ImageNet\VGG\VGG_E_BN.ndl = Examples\Image\Miscellaneous\ImageNet\VGG\VGG_E_BN.ndl
 	EndProjectSection
 EndProject
@@ -548,8 +548,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "NdlExamples", "NdlExamples"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Config", "Config", "{1E37CE40-556D-4693-B58C-F8D4CE349BB7}"
 	ProjectSection(SolutionItems) = preProject
-		Examples\Other\Simple2d\Config\Multigpu.config = Examples\Other\Simple2d\Config\Multigpu.config
-		Examples\Other\Simple2d\Config\Simple.config = Examples\Other\Simple2d\Config\Simple.config
+		Examples\Other\Simple2d\Config\Multigpu.cntk = Examples\Other\Simple2d\Config\Multigpu.cntk
+		Examples\Other\Simple2d\Config\Simple.cntk = Examples\Other\Simple2d\Config\Simple.cntk
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Miscellaneous", "Miscellaneous", "{BF1A621D-528B-4B84-AAFC-EF1455FC6830}"
@@ -563,8 +563,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "AN4", "AN4", "{EDA80B25-B18
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Config", "Config", "{B3E3AF4A-FEF5-46AB-A72A-19AF4F1FDD49}"
 	ProjectSection(SolutionItems) = preProject
-		Examples\Speech\AN4\Config\FeedForward.config = Examples\Speech\AN4\Config\FeedForward.config
-		Examples\Speech\AN4\Config\LSTM-NDL.config = Examples\Speech\AN4\Config\LSTM-NDL.config
+		Examples\Speech\AN4\Config\FeedForward.cntk = Examples\Speech\AN4\Config\FeedForward.cntk
+		Examples\Speech\AN4\Config\LSTM-NDL.cntk = Examples\Speech\AN4\Config\LSTM-NDL.cntk
 		Examples\Speech\AN4\Config\lstmp-3layer-opt.ndl = Examples\Speech\AN4\Config\lstmp-3layer-opt.ndl
 	EndProjectSection
 EndProject
@@ -587,16 +587,16 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "cntk_config", "cntk_config"
 	ProjectSection(SolutionItems) = preProject
 		Examples\Speech\Miscellaneous\AMI\cntk_config\40fbank.conf = Examples\Speech\Miscellaneous\AMI\cntk_config\40fbank.conf
 		Examples\Speech\Miscellaneous\AMI\cntk_config\80fbank.conf = Examples\Speech\Miscellaneous\AMI\cntk_config\80fbank.conf
-		Examples\Speech\Miscellaneous\AMI\cntk_config\Align.config = Examples\Speech\Miscellaneous\AMI\cntk_config\Align.config
-		Examples\Speech\Miscellaneous\AMI\cntk_config\CNTK.config = Examples\Speech\Miscellaneous\AMI\cntk_config\CNTK.config
-		Examples\Speech\Miscellaneous\AMI\cntk_config\CNTK2.config = Examples\Speech\Miscellaneous\AMI\cntk_config\CNTK2.config
-		Examples\Speech\Miscellaneous\AMI\cntk_config\CNTK2_dnn.config = Examples\Speech\Miscellaneous\AMI\cntk_config\CNTK2_dnn.config
+		Examples\Speech\Miscellaneous\AMI\cntk_config\Align.cntk = Examples\Speech\Miscellaneous\AMI\cntk_config\Align.cntk
+		Examples\Speech\Miscellaneous\AMI\cntk_config\CNTK.cntk = Examples\Speech\Miscellaneous\AMI\cntk_config\CNTK.cntk
+		Examples\Speech\Miscellaneous\AMI\cntk_config\CNTK2.cntk = Examples\Speech\Miscellaneous\AMI\cntk_config\CNTK2.cntk
+		Examples\Speech\Miscellaneous\AMI\cntk_config\CNTK2_dnn.cntk = Examples\Speech\Miscellaneous\AMI\cntk_config\CNTK2_dnn.cntk
 		Examples\Speech\Miscellaneous\AMI\cntk_config\CNTK2_dnn_smbr.mel = Examples\Speech\Miscellaneous\AMI\cntk_config\CNTK2_dnn_smbr.mel
-		Examples\Speech\Miscellaneous\AMI\cntk_config\CNTK2_lstmp.config = Examples\Speech\Miscellaneous\AMI\cntk_config\CNTK2_lstmp.config
-		Examples\Speech\Miscellaneous\AMI\cntk_config\CNTK2_lstmp_smbr.config = Examples\Speech\Miscellaneous\AMI\cntk_config\CNTK2_lstmp_smbr.config
-		Examples\Speech\Miscellaneous\AMI\cntk_config\CNTK2_smbr.config = Examples\Speech\Miscellaneous\AMI\cntk_config\CNTK2_smbr.config
-		Examples\Speech\Miscellaneous\AMI\cntk_config\CNTK2_write.config = Examples\Speech\Miscellaneous\AMI\cntk_config\CNTK2_write.config
-		Examples\Speech\Miscellaneous\AMI\cntk_config\CNTK_write.config = Examples\Speech\Miscellaneous\AMI\cntk_config\CNTK_write.config
+		Examples\Speech\Miscellaneous\AMI\cntk_config\CNTK2_lstmp.cntk = Examples\Speech\Miscellaneous\AMI\cntk_config\CNTK2_lstmp.cntk
+		Examples\Speech\Miscellaneous\AMI\cntk_config\CNTK2_lstmp_smbr.cntk = Examples\Speech\Miscellaneous\AMI\cntk_config\CNTK2_lstmp_smbr.cntk
+		Examples\Speech\Miscellaneous\AMI\cntk_config\CNTK2_smbr.cntk = Examples\Speech\Miscellaneous\AMI\cntk_config\CNTK2_smbr.cntk
+		Examples\Speech\Miscellaneous\AMI\cntk_config\CNTK2_write.cntk = Examples\Speech\Miscellaneous\AMI\cntk_config\CNTK2_write.cntk
+		Examples\Speech\Miscellaneous\AMI\cntk_config\CNTK_write.cntk = Examples\Speech\Miscellaneous\AMI\cntk_config\CNTK_write.cntk
 		Examples\Speech\Miscellaneous\AMI\cntk_config\default_macros.ndl = Examples\Speech\Miscellaneous\AMI\cntk_config\default_macros.ndl
 		Examples\Speech\Miscellaneous\AMI\cntk_config\dnn_3layer.ndl = Examples\Speech\Miscellaneous\AMI\cntk_config\dnn_3layer.ndl
 		Examples\Speech\Miscellaneous\AMI\cntk_config\dnn_6layer.ndl = Examples\Speech\Miscellaneous\AMI\cntk_config\dnn_6layer.ndl
@@ -620,36 +620,36 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "config", "config", "{1C7D22
 		Examples\Speech\Miscellaneous\TIMIT\config\classify.ndl = Examples\Speech\Miscellaneous\TIMIT\config\classify.ndl
 		Examples\Speech\Miscellaneous\TIMIT\config\create_1layer.ndl = Examples\Speech\Miscellaneous\TIMIT\config\create_1layer.ndl
 		Examples\Speech\Miscellaneous\TIMIT\config\default_macros.ndl = Examples\Speech\Miscellaneous\TIMIT\config\default_macros.ndl
-		Examples\Speech\Miscellaneous\TIMIT\config\globals.config = Examples\Speech\Miscellaneous\TIMIT\config\globals.config
+		Examples\Speech\Miscellaneous\TIMIT\config\globals.cntk = Examples\Speech\Miscellaneous\TIMIT\config\globals.cntk
 		Examples\Speech\Miscellaneous\TIMIT\config\lstm.ndl = Examples\Speech\Miscellaneous\TIMIT\config\lstm.ndl
 		Examples\Speech\Miscellaneous\TIMIT\config\mtl_fbank_mfcc.ndl = Examples\Speech\Miscellaneous\TIMIT\config\mtl_fbank_mfcc.ndl
 		Examples\Speech\Miscellaneous\TIMIT\config\mtl_senones_dr.ndl = Examples\Speech\Miscellaneous\TIMIT\config\mtl_senones_dr.ndl
 		Examples\Speech\Miscellaneous\TIMIT\config\PAC-RNN.ndl = Examples\Speech\Miscellaneous\TIMIT\config\PAC-RNN.ndl
 		Examples\Speech\Miscellaneous\TIMIT\config\README.txt = Examples\Speech\Miscellaneous\TIMIT\config\README.txt
-		Examples\Speech\Miscellaneous\TIMIT\config\TIMIT_AdaptLearnRate.config = Examples\Speech\Miscellaneous\TIMIT\config\TIMIT_AdaptLearnRate.config
-		Examples\Speech\Miscellaneous\TIMIT\config\TIMIT_CrossValidateSimpleNetwork.config = Examples\Speech\Miscellaneous\TIMIT\config\TIMIT_CrossValidateSimpleNetwork.config
-		Examples\Speech\Miscellaneous\TIMIT\config\TIMIT_EvalSimpleNetwork.config = Examples\Speech\Miscellaneous\TIMIT\config\TIMIT_EvalSimpleNetwork.config
-		Examples\Speech\Miscellaneous\TIMIT\config\TIMIT_TrainAutoEncoder.config = Examples\Speech\Miscellaneous\TIMIT\config\TIMIT_TrainAutoEncoder.config
-		Examples\Speech\Miscellaneous\TIMIT\config\TIMIT_TrainLSTM.config = Examples\Speech\Miscellaneous\TIMIT\config\TIMIT_TrainLSTM.config
-		Examples\Speech\Miscellaneous\TIMIT\config\TIMIT_TrainMultiInput.config = Examples\Speech\Miscellaneous\TIMIT\config\TIMIT_TrainMultiInput.config
-		Examples\Speech\Miscellaneous\TIMIT\config\TIMIT_TrainMultiTask.config = Examples\Speech\Miscellaneous\TIMIT\config\TIMIT_TrainMultiTask.config
-		Examples\Speech\Miscellaneous\TIMIT\config\TIMIT_TrainNDLNetwork.config = Examples\Speech\Miscellaneous\TIMIT\config\TIMIT_TrainNDLNetwork.config
-		Examples\Speech\Miscellaneous\TIMIT\config\TIMIT_TrainSimpleNetwork.config = Examples\Speech\Miscellaneous\TIMIT\config\TIMIT_TrainSimpleNetwork.config
-		Examples\Speech\Miscellaneous\TIMIT\config\TIMIT_TrainWithPreTrain.config = Examples\Speech\Miscellaneous\TIMIT\config\TIMIT_TrainWithPreTrain.config
-		Examples\Speech\Miscellaneous\TIMIT\config\TIMIT_WriteBottleneck.config = Examples\Speech\Miscellaneous\TIMIT\config\TIMIT_WriteBottleneck.config
-		Examples\Speech\Miscellaneous\TIMIT\config\TIMIT_WriteScaledLogLike.config = Examples\Speech\Miscellaneous\TIMIT\config\TIMIT_WriteScaledLogLike.config
+		Examples\Speech\Miscellaneous\TIMIT\config\TIMIT_AdaptLearnRate.cntk = Examples\Speech\Miscellaneous\TIMIT\config\TIMIT_AdaptLearnRate.cntk
+		Examples\Speech\Miscellaneous\TIMIT\config\TIMIT_CrossValidateSimpleNetwork.cntk = Examples\Speech\Miscellaneous\TIMIT\config\TIMIT_CrossValidateSimpleNetwork.cntk
+		Examples\Speech\Miscellaneous\TIMIT\config\TIMIT_EvalSimpleNetwork.cntk = Examples\Speech\Miscellaneous\TIMIT\config\TIMIT_EvalSimpleNetwork.cntk
+		Examples\Speech\Miscellaneous\TIMIT\config\TIMIT_TrainAutoEncoder.cntk = Examples\Speech\Miscellaneous\TIMIT\config\TIMIT_TrainAutoEncoder.cntk
+		Examples\Speech\Miscellaneous\TIMIT\config\TIMIT_TrainLSTM.cntk = Examples\Speech\Miscellaneous\TIMIT\config\TIMIT_TrainLSTM.cntk
+		Examples\Speech\Miscellaneous\TIMIT\config\TIMIT_TrainMultiInput.cntk = Examples\Speech\Miscellaneous\TIMIT\config\TIMIT_TrainMultiInput.cntk
+		Examples\Speech\Miscellaneous\TIMIT\config\TIMIT_TrainMultiTask.cntk = Examples\Speech\Miscellaneous\TIMIT\config\TIMIT_TrainMultiTask.cntk
+		Examples\Speech\Miscellaneous\TIMIT\config\TIMIT_TrainNDLNetwork.cntk = Examples\Speech\Miscellaneous\TIMIT\config\TIMIT_TrainNDLNetwork.cntk
+		Examples\Speech\Miscellaneous\TIMIT\config\TIMIT_TrainSimpleNetwork.cntk = Examples\Speech\Miscellaneous\TIMIT\config\TIMIT_TrainSimpleNetwork.cntk
+		Examples\Speech\Miscellaneous\TIMIT\config\TIMIT_TrainWithPreTrain.cntk = Examples\Speech\Miscellaneous\TIMIT\config\TIMIT_TrainWithPreTrain.cntk
+		Examples\Speech\Miscellaneous\TIMIT\config\TIMIT_WriteBottleneck.cntk = Examples\Speech\Miscellaneous\TIMIT\config\TIMIT_WriteBottleneck.cntk
+		Examples\Speech\Miscellaneous\TIMIT\config\TIMIT_WriteScaledLogLike.cntk = Examples\Speech\Miscellaneous\TIMIT\config\TIMIT_WriteScaledLogLike.cntk
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "CPU", "CPU", "{5ED4F5DC-E016-4E10-BACD-6A760A0CDE89}"
 	ProjectSection(SolutionItems) = preProject
-		Examples\Speech\Miscellaneous\TIMIT\CPU\TIMIT_DNN.config = Examples\Speech\Miscellaneous\TIMIT\CPU\TIMIT_DNN.config
-		Examples\Speech\Miscellaneous\TIMIT\CPU\TIMIT_LSTM.config = Examples\Speech\Miscellaneous\TIMIT\CPU\TIMIT_LSTM.config
+		Examples\Speech\Miscellaneous\TIMIT\CPU\TIMIT_DNN.cntk = Examples\Speech\Miscellaneous\TIMIT\CPU\TIMIT_DNN.cntk
+		Examples\Speech\Miscellaneous\TIMIT\CPU\TIMIT_LSTM.cntk = Examples\Speech\Miscellaneous\TIMIT\CPU\TIMIT_LSTM.cntk
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "GPU", "GPU", "{35CFD8E3-7206-4243-AB5C-AAF610109A5C}"
 	ProjectSection(SolutionItems) = preProject
-		Examples\Speech\Miscellaneous\TIMIT\GPU\TIMIT_DNN.config = Examples\Speech\Miscellaneous\TIMIT\GPU\TIMIT_DNN.config
-		Examples\Speech\Miscellaneous\TIMIT\GPU\TIMIT_LSTM.config = Examples\Speech\Miscellaneous\TIMIT\GPU\TIMIT_LSTM.config
+		Examples\Speech\Miscellaneous\TIMIT\GPU\TIMIT_DNN.cntk = Examples\Speech\Miscellaneous\TIMIT\GPU\TIMIT_DNN.cntk
+		Examples\Speech\Miscellaneous\TIMIT\GPU\TIMIT_LSTM.cntk = Examples\Speech\Miscellaneous\TIMIT\GPU\TIMIT_LSTM.cntk
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "PennTreebank", "PennTreebank", "{6F4125B5-220F-4FB7-B6C4-85A966A0268C}"
@@ -659,14 +659,14 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "PennTreebank", "PennTreeban
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Config", "Config", "{850008BC-36B0-4A0A-BD0C-B6D5C2184227}"
 	ProjectSection(SolutionItems) = preProject
-		Examples\Text\PennTreebank\Config\rnn.config = Examples\Text\PennTreebank\Config\rnn.config
+		Examples\Text\PennTreebank\Config\rnn.cntk = Examples\Text\PennTreebank\Config\rnn.cntk
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "SLU", "SLU", "{E6DC3B7D-303D-4A54-B040-D8DCF8C56E17}"
 	ProjectSection(SolutionItems) = preProject
 		Examples\Text\Miscellaneous\SLU\lstmNDL.txt = Examples\Text\Miscellaneous\SLU\lstmNDL.txt
 		Examples\Text\Miscellaneous\SLU\README.txt = Examples\Text\Miscellaneous\SLU\README.txt
-		Examples\Text\Miscellaneous\SLU\rnnlu.config = Examples\Text\Miscellaneous\SLU\rnnlu.config
+		Examples\Text\Miscellaneous\SLU\rnnlu.cntk = Examples\Text\Miscellaneous\SLU\rnnlu.cntk
 		Examples\Text\Miscellaneous\SLU\rnnluModelEditor.txt = Examples\Text\Miscellaneous\SLU\rnnluModelEditor.txt
 	EndProjectSection
 EndProject
@@ -683,11 +683,11 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "ResNet", "ResNet", "{06D2C6
 		Examples\Image\Miscellaneous\ImageNet\ResNet\create_eval_model.mel = Examples\Image\Miscellaneous\ImageNet\ResNet\create_eval_model.mel
 		Examples\Image\Miscellaneous\ImageNet\ResNet\Macros.ndl = Examples\Image\Miscellaneous\ImageNet\ResNet\Macros.ndl
 		Examples\Image\Miscellaneous\ImageNet\ResNet\ProjWeightsGen.py = Examples\Image\Miscellaneous\ImageNet\ResNet\ProjWeightsGen.py
-		Examples\Image\Miscellaneous\ImageNet\ResNet\ResNet_152.config = Examples\Image\Miscellaneous\ImageNet\ResNet\ResNet_152.config
+		Examples\Image\Miscellaneous\ImageNet\ResNet\ResNet_152.cntk = Examples\Image\Miscellaneous\ImageNet\ResNet\ResNet_152.cntk
 		Examples\Image\Miscellaneous\ImageNet\ResNet\ResNet_152.ndl = Examples\Image\Miscellaneous\ImageNet\ResNet\ResNet_152.ndl
-		Examples\Image\Miscellaneous\ImageNet\ResNet\ResNet_34.config = Examples\Image\Miscellaneous\ImageNet\ResNet\ResNet_34.config
+		Examples\Image\Miscellaneous\ImageNet\ResNet\ResNet_34.cntk = Examples\Image\Miscellaneous\ImageNet\ResNet\ResNet_34.cntk
 		Examples\Image\Miscellaneous\ImageNet\ResNet\ResNet_34.ndl = Examples\Image\Miscellaneous\ImageNet\ResNet\ResNet_34.ndl
-		Examples\Image\Miscellaneous\ImageNet\ResNet\ResNet_50.config = Examples\Image\Miscellaneous\ImageNet\ResNet\ResNet_50.config
+		Examples\Image\Miscellaneous\ImageNet\ResNet\ResNet_50.cntk = Examples\Image\Miscellaneous\ImageNet\ResNet\ResNet_50.cntk
 		Examples\Image\Miscellaneous\ImageNet\ResNet\ResNet_50.ndl = Examples\Image\Miscellaneous\ImageNet\ResNet\ResNet_50.ndl
 	EndProjectSection
 EndProject
@@ -701,6 +701,60 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CSEvalClient", "Source\Extensibility\CSEvalClient\CSEvalClient.csproj", "{41E11A59-62B2-4927-A4F8-F40B1B612C6C}"
 	ProjectSection(ProjectDependencies) = postProject
 		{EF766CAE-9CB1-494C-9153-0030631A6340} = {EF766CAE-9CB1-494C-9153-0030631A6340}
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Examples", "Examples", "{BD46CE02-3740-4526-80F6-CC7973B953E5}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Image", "Image", "{FC7E7EC7-6E6A-4518-81C6-DA60451C657A}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Other", "Other", "{CEADE942-4077-4577-ACF9-41C04388DDC0}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Speech", "Speech", "{FB7AF7B9-6BEA-459F-94D9-94D53916D2B6}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Text", "Text", "{439BE0E0-FABE-403D-BF2C-A41FB8A60616}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "MNIST", "MNIST", "{63C6816D-66BF-487E-B541-094142C8272B}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "02_Convolution", "02_Convolution", "{6F1D0CE1-0F18-4B4C-9581-1F2146C8D300}"
+	ProjectSection(SolutionItems) = preProject
+		Tests\EndToEndTests\Examples\Image\MNIST\02_Convolution\baseline.linux.debug.cpu.txt = Tests\EndToEndTests\Examples\Image\MNIST\02_Convolution\baseline.linux.debug.cpu.txt
+		Tests\EndToEndTests\Examples\Image\MNIST\02_Convolution\baseline.linux.debug.gpu.txt = Tests\EndToEndTests\Examples\Image\MNIST\02_Convolution\baseline.linux.debug.gpu.txt
+		Tests\EndToEndTests\Examples\Image\MNIST\02_Convolution\baseline.linux.release.cpu.txt = Tests\EndToEndTests\Examples\Image\MNIST\02_Convolution\baseline.linux.release.cpu.txt
+		Tests\EndToEndTests\Examples\Image\MNIST\02_Convolution\baseline.linux.release.gpu.txt = Tests\EndToEndTests\Examples\Image\MNIST\02_Convolution\baseline.linux.release.gpu.txt
+		Tests\EndToEndTests\Examples\Image\MNIST\02_Convolution\baseline.windows.debug.cpu.txt = Tests\EndToEndTests\Examples\Image\MNIST\02_Convolution\baseline.windows.debug.cpu.txt
+		Tests\EndToEndTests\Examples\Image\MNIST\02_Convolution\baseline.windows.debug.gpu.txt = Tests\EndToEndTests\Examples\Image\MNIST\02_Convolution\baseline.windows.debug.gpu.txt
+		Tests\EndToEndTests\Examples\Image\MNIST\02_Convolution\baseline.windows.release.cpu.txt = Tests\EndToEndTests\Examples\Image\MNIST\02_Convolution\baseline.windows.release.cpu.txt
+		Tests\EndToEndTests\Examples\Image\MNIST\02_Convolution\baseline.windows.release.gpu.txt = Tests\EndToEndTests\Examples\Image\MNIST\02_Convolution\baseline.windows.release.gpu.txt
+		Tests\EndToEndTests\Examples\Image\MNIST\02_Convolution\run-test = Tests\EndToEndTests\Examples\Image\MNIST\02_Convolution\run-test
+		Tests\EndToEndTests\Examples\Image\MNIST\02_Convolution\testcases.yml = Tests\EndToEndTests\Examples\Image\MNIST\02_Convolution\testcases.yml
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "01_OneHidden", "01_OneHidden", "{A0B366FE-2EEA-4E32-9AED-12C46409C30C}"
+	ProjectSection(SolutionItems) = preProject
+		Tests\EndToEndTests\Examples\Image\MNIST\01_OneHidden\baseline.linux.debug.cpu.txt = Tests\EndToEndTests\Examples\Image\MNIST\01_OneHidden\baseline.linux.debug.cpu.txt
+		Tests\EndToEndTests\Examples\Image\MNIST\01_OneHidden\baseline.linux.debug.gpu.txt = Tests\EndToEndTests\Examples\Image\MNIST\01_OneHidden\baseline.linux.debug.gpu.txt
+		Tests\EndToEndTests\Examples\Image\MNIST\01_OneHidden\baseline.linux.release.cpu.txt = Tests\EndToEndTests\Examples\Image\MNIST\01_OneHidden\baseline.linux.release.cpu.txt
+		Tests\EndToEndTests\Examples\Image\MNIST\01_OneHidden\baseline.linux.release.gpu.txt = Tests\EndToEndTests\Examples\Image\MNIST\01_OneHidden\baseline.linux.release.gpu.txt
+		Tests\EndToEndTests\Examples\Image\MNIST\01_OneHidden\baseline.windows.debug.cpu.txt = Tests\EndToEndTests\Examples\Image\MNIST\01_OneHidden\baseline.windows.debug.cpu.txt
+		Tests\EndToEndTests\Examples\Image\MNIST\01_OneHidden\baseline.windows.debug.gpu.txt = Tests\EndToEndTests\Examples\Image\MNIST\01_OneHidden\baseline.windows.debug.gpu.txt
+		Tests\EndToEndTests\Examples\Image\MNIST\01_OneHidden\baseline.windows.release.cpu.txt = Tests\EndToEndTests\Examples\Image\MNIST\01_OneHidden\baseline.windows.release.cpu.txt
+		Tests\EndToEndTests\Examples\Image\MNIST\01_OneHidden\baseline.windows.release.gpu.txt = Tests\EndToEndTests\Examples\Image\MNIST\01_OneHidden\baseline.windows.release.gpu.txt
+		Tests\EndToEndTests\Examples\Image\MNIST\01_OneHidden\run-test = Tests\EndToEndTests\Examples\Image\MNIST\01_OneHidden\run-test
+		Tests\EndToEndTests\Examples\Image\MNIST\01_OneHidden\testcases.yml = Tests\EndToEndTests\Examples\Image\MNIST\01_OneHidden\testcases.yml
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "03_ConvBatchNorm", "03_ConvBatchNorm", "{BD783D50-47E2-485F-BDAF-29BD40D84645}"
+	ProjectSection(SolutionItems) = preProject
+		Tests\EndToEndTests\Examples\Image\MNIST\03_ConvBatchNorm\baseline.linux.debug.cpu.txt = Tests\EndToEndTests\Examples\Image\MNIST\03_ConvBatchNorm\baseline.linux.debug.cpu.txt
+		Tests\EndToEndTests\Examples\Image\MNIST\03_ConvBatchNorm\baseline.linux.debug.gpu.txt = Tests\EndToEndTests\Examples\Image\MNIST\03_ConvBatchNorm\baseline.linux.debug.gpu.txt
+		Tests\EndToEndTests\Examples\Image\MNIST\03_ConvBatchNorm\baseline.linux.release.cpu.txt = Tests\EndToEndTests\Examples\Image\MNIST\03_ConvBatchNorm\baseline.linux.release.cpu.txt
+		Tests\EndToEndTests\Examples\Image\MNIST\03_ConvBatchNorm\baseline.linux.release.gpu.txt = Tests\EndToEndTests\Examples\Image\MNIST\03_ConvBatchNorm\baseline.linux.release.gpu.txt
+		Tests\EndToEndTests\Examples\Image\MNIST\03_ConvBatchNorm\baseline.windows.debug.cpu.txt = Tests\EndToEndTests\Examples\Image\MNIST\03_ConvBatchNorm\baseline.windows.debug.cpu.txt
+		Tests\EndToEndTests\Examples\Image\MNIST\03_ConvBatchNorm\baseline.windows.debug.gpu.txt = Tests\EndToEndTests\Examples\Image\MNIST\03_ConvBatchNorm\baseline.windows.debug.gpu.txt
+		Tests\EndToEndTests\Examples\Image\MNIST\03_ConvBatchNorm\baseline.windows.release.cpu.txt = Tests\EndToEndTests\Examples\Image\MNIST\03_ConvBatchNorm\baseline.windows.release.cpu.txt
+		Tests\EndToEndTests\Examples\Image\MNIST\03_ConvBatchNorm\baseline.windows.release.gpu.txt = Tests\EndToEndTests\Examples\Image\MNIST\03_ConvBatchNorm\baseline.windows.release.gpu.txt
+		Tests\EndToEndTests\Examples\Image\MNIST\03_ConvBatchNorm\run-test = Tests\EndToEndTests\Examples\Image\MNIST\03_ConvBatchNorm\run-test
+		Tests\EndToEndTests\Examples\Image\MNIST\03_ConvBatchNorm\testcases.yml = Tests\EndToEndTests\Examples\Image\MNIST\03_ConvBatchNorm\testcases.yml
 	EndProjectSection
 EndProject
 Global
@@ -987,5 +1041,14 @@ Global
 		{06D2C644-AE5F-4C30-A1F6-C78E2845AAB1} = {EF710C5A-E616-442A-889D-C997D39AF2E1}
 		{EF766CAE-9CB1-494C-9153-0030631A6340} = {60F87E25-BC87-4782-8E20-1621AAEBB113}
 		{41E11A59-62B2-4927-A4F8-F40B1B612C6C} = {60F87E25-BC87-4782-8E20-1621AAEBB113}
+		{BD46CE02-3740-4526-80F6-CC7973B953E5} = {6E565B48-1923-49CE-9787-9BBB9D96F4C5}
+		{FC7E7EC7-6E6A-4518-81C6-DA60451C657A} = {BD46CE02-3740-4526-80F6-CC7973B953E5}
+		{CEADE942-4077-4577-ACF9-41C04388DDC0} = {BD46CE02-3740-4526-80F6-CC7973B953E5}
+		{FB7AF7B9-6BEA-459F-94D9-94D53916D2B6} = {BD46CE02-3740-4526-80F6-CC7973B953E5}
+		{439BE0E0-FABE-403D-BF2C-A41FB8A60616} = {BD46CE02-3740-4526-80F6-CC7973B953E5}
+		{63C6816D-66BF-487E-B541-094142C8272B} = {FC7E7EC7-6E6A-4518-81C6-DA60451C657A}
+		{6F1D0CE1-0F18-4B4C-9581-1F2146C8D300} = {63C6816D-66BF-487E-B541-094142C8272B}
+		{A0B366FE-2EEA-4E32-9AED-12C46409C30C} = {63C6816D-66BF-487E-B541-094142C8272B}
+		{BD783D50-47E2-485F-BDAF-29BD40D84645} = {63C6816D-66BF-487E-B541-094142C8272B}
 	EndGlobalSection
 EndGlobal

@@ -1,0 +1,3 @@
+ExpDir=C:\CNTKExp\RNN\log\
+ConfigDir=..\..\ExampleSetups\LM\RNNLM
+DataDir=C:\CNTKExp\RNN\data\PennTreeBank

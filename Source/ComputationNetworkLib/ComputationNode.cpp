@@ -185,6 +185,7 @@ void ComputationNode<ElemType>::ValidateInferInputDimsFrom(const TensorShape& ot
 
 // determine the sample tensor dimension to use for operations based on output and all inputs
 // 'Sample tensor' means we only consider single samples. If we have an MBLayout, that is the sample layout of a single matrix column.
+// TODO: Turn rank into a member variable, and call this method once in validation (currently called for every single ForwardProp/BackpropTo()).
 size_t ComputationNodeBase::DetermineElementwiseTensorRank() const
 {
     // determine largest tensor dimension amongst the sample shapes of output and the selected inputs

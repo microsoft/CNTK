@@ -5,4 +5,4 @@
 ConfigDir=$TEST_DIR/..
 
 # cntkrun <CNTK config file name> <additional CNTK args>
-cntkrun cntk.config || exit $?
+cntkrun cntk.cntk || exit $?

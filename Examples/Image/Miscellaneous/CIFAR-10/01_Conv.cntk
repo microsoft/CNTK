@@ -1,0 +1,80 @@
+RootDir = "."
+
+ConfigDir = "$RootDir$"
+DataDir = "$RootDir$"
+OutputDir = "$RootDir$/Output"
+ModelDir = "$OutputDir$/Models"
+
+ndlMacros=$ConfigDir$/Macros.ndl
+
+precision=float
+deviceId=Auto
+prefetch=true
+
+command=Train:Test
+
+stderr=$OutputDir$/01_Conv
+traceLevel=1
+numMBsToShowResult=500
+
+Train=[
+    action=train
+    modelPath=$ModelDir$/01_Convolution
+
+     NDLNetworkBuilder=[
+        networkDescription=$ConfigDir$/01_Convolution.ndl
+    ]
+    
+    SGD=[
+        epochSize=49984
+        minibatchSize=64
+        learningRatesPerMB=0.01*10:0.003*10:0.001
+        momentumPerMB=0.9*20:0.99
+        maxEpochs=30
+        L2RegWeight=0.03
+        dropoutRate=0*5:0.5
+    ]
+    
+    reader=[
+        readerType=UCIFastReader
+        file=$DataDir$/Train.txt
+        randomize=None
+        features=[
+            dim=3072
+            start=1
+        ]
+        labels=[
+            dim=1
+            start=0
+            labelDim=10
+            labelMappingFile=$DataDir$/labelsmap.txt
+        ]
+    ]    
+]
+
+Test=[
+    action=test
+    modelPath=$ModelDir$/01_Convolution
+    # Set minibatch size for testing.
+    minibatchSize=16
+
+     NDLNetworkBuilder=[
+        networkDescription=$ConfigDir$/01_Convolution.ndl
+    ]
+    
+    reader=[
+        readerType=UCIFastReader
+        file=$DataDir$/Test.txt
+        randomize=None
+        features=[
+            dim=3072
+            start=1
+        ]
+        labels=[
+            dim=1
+            start=0
+            labelDim=10
+            labelMappingFile=$DataDir$/labelsmap.txt
+        ]
+    ]    
+]
