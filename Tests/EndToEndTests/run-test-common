@@ -18,11 +18,13 @@ LogFileName=
 ConfigDir=$TEST_DIR
 RunDir=$TEST_RUN_DIR
 DataDir=$TEST_DATA_DIR
+OutputDir=$TEST_RUN_DIR
 
 MPIMode=0
 MPIArgs=
 
 DeleteExistingModels=1
+DeleteModelsAfterTest=0
 
 # Helper function to print and run a command
 run()
@@ -66,14 +68,15 @@ cntkrun()
     ConfigDir=$(cygpath -aw $ConfigDir)
     RunDir=$(cygpath -aw $RunDir)
     DataDir=$(cygpath -aw $DataDir)
+    OutputDir=$(cygpath -aw $OutputDir)
   fi
 
-  CNTKArgs="configFile=$ConfigDir/$configFileName currentDirectory=$DataDir RunDir=$RunDir DataDir=$DataDir ConfigDir=$ConfigDir DeviceId=$CNTKDeviceId $additionalCNTKArgs"
+  CNTKArgs="configFile=$ConfigDir/$configFileName currentDirectory=$DataDir RunDir=$RunDir DataDir=$DataDir ConfigDir=$ConfigDir OutputDir=$OutputDir DeviceId=$CNTKDeviceId $additionalCNTKArgs"
   if [ "$LogFileName" != "" ]; then
     CNTKArgs="$CNTKArgs stderr=$RunDir/$LogFileName"
   fi
 
-  modelsDir=$TEST_RUN_DIR/models
+  modelsDir=$TEST_RUN_DIR/Models
   if [[ $DeleteExistingModels == 1 ]]; then
     [ -d $modelsDir ] && rm -rf $modelsDir
   fi
@@ -83,6 +86,9 @@ cntkrun()
     run "$BinaryPath" $CNTKArgs
   else
     run "$MPI_BINARY" $MPIArgs $BinaryPath $CNTKArgs
+  fi
+  if [[ $DeleteModelsAfterTest == 1 ]]; then
+    [ -d $modelsDir ] && rm -rf $modelsDir
   fi
 
   return $?

@@ -32,14 +32,6 @@
   </Choose>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{E6F26F9A-FF64-4F0A-B749-CD309EE357EE}</ProjectGuid>
-    <SccProjectName>
-    </SccProjectName>
-    <SccAuxPath>
-    </SccAuxPath>
-    <SccLocalPath>
-    </SccLocalPath>
-    <SccProvider>
-    </SccProvider>
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>CNTK</RootNamespace>
     <ProjectName>CNTK</ProjectName>

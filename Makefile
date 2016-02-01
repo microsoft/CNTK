@@ -435,6 +435,11 @@ endif
 ########################################
 
 ifeq ("$(CNTK_ENABLE_1BitSGD)","true")
+
+ifeq (,$(wildcard Source/1BitSGD/*.h))
+  $(error Build with 1bit-SGD was requested but cannot find the code. Please check https://github.com/Microsoft/CNTK/wiki/Enabling-1bit-SGD for instructions)
+endif
+
   INCLUDEPATH += $(SOURCEDIR)/1BitSGD
 
   CPPFLAGS += -DQUANTIZED_GRADIENT_AGGREGATION

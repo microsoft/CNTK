@@ -14,14 +14,6 @@
     <ProjectGuid>{B3DD765E-694E-4494-BAD7-37BBF2942517}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>Math</RootNamespace>
-    <SccProjectName>
-    </SccProjectName>
-    <SccAuxPath>
-    </SccAuxPath>
-    <SccLocalPath>
-    </SccLocalPath>
-    <SccProvider>
-    </SccProvider>
     <ProjectName>MathCUDA</ProjectName>
     <CudaPath>$(CUDA_PATH_V7_0)</CudaPath>
     <CudaToolkitCustomDir>$(CudaPath)</CudaToolkitCustomDir>

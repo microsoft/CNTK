@@ -92,8 +92,8 @@ void SynchronousNodeEvaluator<ElemType>::Evaluate(NDLNode<ElemType>* node, const
         {
             // evaluate only scalar parameters
             vector<void*> params = EvaluateParameters(node, baseName, 0, parameter.size(), pass);
-            size_t imageWidth = ((NDLNode<ElemType>*) params[0])->GetScalar();
-            size_t imageHeight = ((NDLNode<ElemType>*) params[1])->GetScalar();
+            size_t imageWidth    = ((NDLNode<ElemType>*) params[0])->GetScalar();
+            size_t imageHeight   = ((NDLNode<ElemType>*) params[1])->GetScalar();
             size_t imageChannels = ((NDLNode<ElemType>*) params[2])->GetScalar();
             ImageLayoutKind imageLayoutKind = ImageLayoutKindFrom(node->GetOptionalParameter("imageLayout", "HWC"));
 
@@ -123,8 +123,6 @@ void SynchronousNodeEvaluator<ElemType>::Evaluate(NDLNode<ElemType>* node, const
             vector<void*> params = EvaluateParameters(node, baseName, 0, parameter.size(), pass);
             size_t i = 0;
             auto tensorShape = ProcessTensorShapeParameters(node, params, i, isImage, cnNodeType);
-            if (isImage)
-                tensorShape.AppendInPlace(3, 1); // this goes into the column dimension
             bool needGradient = node->GetOptionalParameter("needGradient", "true");
 
             nodePtr = builder.CreateLearnableParameter(name, tensorShape);
