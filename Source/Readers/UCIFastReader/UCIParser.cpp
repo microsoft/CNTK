@@ -52,6 +52,8 @@ void UCIParser<NumType, LabelType>::SetupStateTables()
     SetState('-', Whitespace, Sign);
     SetState('+', Whitespace, Sign);
     // whitespace
+    SetState(';', Whitespace, Whitespace);
+    SetState(',', Whitespace, Whitespace);
     SetState(' ', Whitespace, Whitespace);
     SetState('\t', Whitespace, Whitespace);
     SetState('\r', Whitespace, Whitespace);
