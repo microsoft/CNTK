@@ -10,7 +10,7 @@ OutputDir = "$RootDir$/Output"
 ModelDir = "$OutputDir$/Models"
 
 # deviceId=-1 for CPU, >=0 for GPU devices, "auto" chooses the best GPU, or CPU if no usable GPU is available
-deviceId = -1
+deviceId = auto
 
 command = Char_RNN_Train:Char_RNN_Test
 
@@ -29,8 +29,8 @@ Char_RNN_Train = [
     # Notation xxx:yyy*n:zzz is equivalent to xxx, then yyy repeated n times, then zzz
     # Example: 10:20*3:5 is equivalent to 10:20:20:20:5
     SimpleNetworkBuilder = [
-        # 128 input, 2 256-element hidden, 128 output
-        layerSizes = 256:256*2:128
+        # 100 input, 2 200-element hidden, 100 output
+        layerSizes = 100:200*2:100
         trainingCriterion = "CrossEntropyWithSoftmax"
         evalCriterion = "ErrorPrediction"
         layerTypes = "Sigmoid"
@@ -59,14 +59,14 @@ Char_RNN_Train = [
         verbosity = 1  
 
         features = [
-            dim = 128        # two-dimensional input data
+            dim = 100        # 100-dimensional input data
             start = 1      # Start with first element on line
         ]
 
         labels = [
             start = 0      # Skip two elements
             dim = 1        # One label dimension
-            labelDim = 128   # Two labels possible
+            labelDim = 100   # Two labels possible
             labelMappingFile = "$DataDir$/ASCII1HotMapping.txt"
         ]
     ]
@@ -89,14 +89,14 @@ Char_RNN_Test = [
         randomize = "none"
 	  
         features = [
-            dim = 128
-            start = 1
+            dim = 100
+            start = 0
         ]
 	  
         labels = [
             start = 0
             dim = 1
-            labelDim = 128
+            labelDim = 100
             labelMappingFile = "$DataDir$/ASCII1HotMapping.txt"
         ]
     ]
@@ -104,8 +104,9 @@ Char_RNN_Test = [
 
 ########################################
 #  OUTPUT RESULTS                      #
-#  (Computes the labels for a test set #
-#   and writes the results to a file.) #
+#
+#  (generate synthetic output from the trained model)
+#
 ########################################
 
 Simple_Demo_Output=[
@@ -114,20 +115,20 @@ Simple_Demo_Output=[
     # Parameter values for the reader
     reader = [
         readerType = "UCIFastReader"
-        file = "$DataDir$/SimpleDataTest.txt"
+        file = "$DataDir$/TinyShakespeare1HotTest.txt"
         randomize = "none"
 	  
         features = [
-            dim = 2
+            dim = 100
             start = 0
         ]
 	  
         labels = [
-            start = 2
+            start = 0
             dim = 1
-            labelDim = 2
-            labelMappingFile = "$DataDir$/SimpleMapping.txt"
+            labelDim = 100
+            labelMappingFile = "$DataDir$/ASCII1HotMapping.txt"
         ]
     ]
 	
-    outputPath = "$OutputDir$/SimpleOutput"    # Dump output as text
+    outputPath = "$OutputDir$/TinyShakespeare-out.txt"    # Dump output as text

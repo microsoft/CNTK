@@ -26,6 +26,8 @@ Steps:
 	e    0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 ... 0 0 0 0 0 0 0 
 
     Some sample input data is in the ./data directory. You can try your own text files as well.
+    The ASCIITo1HotUCI.py script limit output to the Python-defined "string.printable" characters, which
+    is actually only 100 symbols, not 128.
 
 
 2.  Train the model by running CNTK with the Char-RNN.cntk config file. The command will look like this:
