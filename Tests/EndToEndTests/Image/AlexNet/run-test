@@ -22,7 +22,7 @@ mkdir $DataDir
 cp -R $DataSourceDir/* $DataDir || exit $?
 
 # cntkrun <CNTK config file name> <additional CNTK args>
-cntkrun AlexNet.config 
+cntkrun AlexNet.net 
 ExitCode=$?
 
 # Delete the test data
