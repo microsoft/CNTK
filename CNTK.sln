@@ -757,6 +757,21 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "03_ConvBatchNorm", "03_Conv
 		Tests\EndToEndTests\Examples\Image\MNIST\03_ConvBatchNorm\testcases.yml = Tests\EndToEndTests\Examples\Image\MNIST\03_ConvBatchNorm\testcases.yml
 	EndProjectSection
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Char-RNN", "Char-RNN", "{C8F5DCC9-0E17-477B-84F0-E9CE985610E8}"
+	ProjectSection(SolutionItems) = preProject
+		Examples\Text\Char-RNN\ASCIITo1HotUCI.py = Examples\Text\Char-RNN\ASCIITo1HotUCI.py
+		Examples\Text\Char-RNN\Char-RNN.cntk = Examples\Text\Char-RNN\Char-RNN.cntk
+		Examples\Text\Char-RNN\README.txt = Examples\Text\Char-RNN\README.txt
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "data", "data", "{6FAC4E89-D70F-4434-8F69-5B88FD048589}"
+	ProjectSection(SolutionItems) = preProject
+		Examples\Text\Char-RNN\data\MarcusAureliusMeditations.txt = Examples\Text\Char-RNN\data\MarcusAureliusMeditations.txt
+		Examples\Text\Char-RNN\data\MSFT-speeches-2015.txt = Examples\Text\Char-RNN\data\MSFT-speeches-2015.txt
+		Examples\Text\Char-RNN\data\README.txt = Examples\Text\Char-RNN\data\README.txt
+		Examples\Text\Char-RNN\data\TinyShakespeare.txt = Examples\Text\Char-RNN\data\TinyShakespeare.txt
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug_CpuOnly|x64 = Debug_CpuOnly|x64
@@ -1050,5 +1065,7 @@ Global
 		{6F1D0CE1-0F18-4B4C-9581-1F2146C8D300} = {63C6816D-66BF-487E-B541-094142C8272B}
 		{A0B366FE-2EEA-4E32-9AED-12C46409C30C} = {63C6816D-66BF-487E-B541-094142C8272B}
 		{BD783D50-47E2-485F-BDAF-29BD40D84645} = {63C6816D-66BF-487E-B541-094142C8272B}
+		{C8F5DCC9-0E17-477B-84F0-E9CE985610E8} = {97AAB0C8-D553-49CB-A539-004FCD7FD59F}
+		{6FAC4E89-D70F-4434-8F69-5B88FD048589} = {C8F5DCC9-0E17-477B-84F0-E9CE985610E8}
 	EndGlobalSection
 EndGlobal
