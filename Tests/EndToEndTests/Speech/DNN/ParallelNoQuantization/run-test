@@ -8,7 +8,7 @@ Instances=3
 NumCPUThreads=$(threadsPerInstance $Instances)
 
 # cntkmpirun <MPI args> <CNTK config file name> <additional CNTK args>
-cntkmpirun "-n $Instances" cntk.config "numCPUThreads=$NumCPUThreads"
+cntkmpirun "-n $Instances" cntk.cntk "numCPUThreads=$NumCPUThreads"
 ExitCode=$?
 sed 's/^/MPI Rank 0: /' $TEST_RUN_DIR/"$LogFileName"_speechTrain.logrank0
 sed 's/^/MPI Rank 1: /' $TEST_RUN_DIR/"$LogFileName"_speechTrain.logrank1
