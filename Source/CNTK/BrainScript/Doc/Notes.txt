@@ -181,7 +181,7 @@ TIMIT_AddLayer = new EditAction [
 sample
 ------
 
-// This sample is a modification of the original TIMIT_TrainSimpleNetwork.config and TIMIT_TrainNDLNetwork.config.
+// This sample is a modification of the original TIMIT_TrainSimpleNetwork.cntk and TIMIT_TrainNDLNetwork.cntk.
 // The changes compared to the origina syntax are called out in comments.
 
 stderr = ExpDir + "\TrainSimpleNetwork\log\log"     // before: $ExpDir$\TrainSimpleNetwork\log\log
