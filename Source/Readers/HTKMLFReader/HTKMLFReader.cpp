@@ -48,6 +48,11 @@ namespace msra { namespace lm {
 }
 }
 
+namespace msra { namespace asr {
+    /*static*/ std::unordered_map<std::wstring, unsigned int> htkfeatreader::parsedpath::archivePathStringMap;
+    /*static*/ std::vector<std::wstring> htkfeatreader::parsedpath::archivePathStringVector;
+}}
+
 namespace Microsoft { namespace MSR { namespace CNTK {
 
 // Create a Data Reader

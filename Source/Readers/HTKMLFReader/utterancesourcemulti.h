@@ -52,7 +52,7 @@ class minibatchutterancesourcemulti : public minibatchsource
         {
         }
 
-        const wstring &logicalpath() const
+        wstring logicalpath() const
         {
             return parsedpath; /*type cast will return logical path*/
         }
