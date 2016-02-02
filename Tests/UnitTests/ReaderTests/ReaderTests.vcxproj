@@ -102,7 +102,7 @@
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>$(BOOST_LIB_PATH);$(OutDir)..\;</AdditionalLibraryDirectories>
-      <AdditionalDependencies>htkmlfreader.lib;Math.lib;Reader.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>htkmlfreader.lib;Math.lib;ReaderLib.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <OptimizeReferences>true</OptimizeReferences>
     </Link>
   </ItemDefinitionGroup>
