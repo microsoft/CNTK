@@ -36,8 +36,8 @@ void DoCommand(const ConfigParameters& configRoot)
     std::map<std::wstring, Matrix<ElemType>*> outputMatrices;
     std::wstring inputName = L"features";
     std::wstring outputName = L"CE.BFF.FF.P";
-    Matrix<ElemType>* matrix = inputMatrices[inputName] = new Matrix<ElemType>(dimFeatures, mbSize);
-    outputMatrices[outputName] = new Matrix<ElemType>(dimLabels, mbSize);
+    Matrix<ElemType>* matrix = inputMatrices[inputName] = new Matrix<ElemType>(dimFeatures, mbSize, 0);
+    outputMatrices[outputName] = new Matrix<ElemType>(dimLabels, mbSize, 0);
 
     std::map<std::wstring, std::vector<ElemType>*> input;
     std::map<std::wstring, std::vector<ElemType>*> output;

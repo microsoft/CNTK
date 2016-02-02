@@ -20,7 +20,7 @@ QuantizedMatrix<ElemType>::QuantizedMatrix(const size_t numRows, const size_t nu
     }
     else
     {
-        m_quantizedData = new Matrix<char>(m_qColSize, m_numCols, (char*) m_allocator->Malloc(m_qColSize * m_numCols), matrixFlagDontOwnBuffer, deviceId);
+        m_quantizedData = new Matrix<char>(m_qColSize, m_numCols, (char*)m_allocator->Malloc(m_qColSize * m_numCols), deviceId, matrixFlagDontOwnBuffer);
     }
 }
 
