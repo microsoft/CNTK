@@ -11,17 +11,20 @@ import sys, os, string;
 
 def __main__():
 #
-#    infilename = sys.argv[1];
-#    outfilename = sys.argv[2];
+    infilename = sys.argv[1];
+    outfilename = sys.argv[2];
 
-    #infilename = "/Users/hojohnl/Source/Repos/CNTK/README.md";
-    infilename = "/Users/hojohnl/Source/Repos/CNTK/Examples/Text/Char-RNN/data/MarcusAureliusMeditations.txt";
-
+# can use README or sample data for sanity check
+#    infilename = "../../../README.md";
+#    infilename = "./data/MarcusAureliusMeditations.txt";
 
     infile = open(infilename, 'rU');
-    outfilename = "/Users/hojohnl/Source/Repos/CNTK/Examples/Text/Char-RNN/data/MarcusAurelius-1hot.txt"
-    outfile = open(outfilename, 'w');
+
+# can look at console output or write to sample data output
+#    outfilename = "./data/MarcusAurelius-1hot.txt"
 #    outfile = sys.stdout;
+
+    outfile = open(outfilename, 'w');
 
 
 

@@ -15,7 +15,7 @@ Steps:
     For this example, we limit the number of possible input symbols by requiring the text to be 7-bit ASCII.
     In general, any finite symbol set can be represented as 1-hot vectors, but may be impractically large.
     
-    Use the ASCIITo1HotUCI script to generate UCI format input files:
+    Change to the ./Char-RNN/ directory and use the ASCIITo1HotUCI script to generate UCI format input files:
 
 	    python ASCIITo1HotUCI.py <ascii-text-input-file> <uci-format-output-file>
 
@@ -28,6 +28,8 @@ Steps:
     Some sample input data is in the ./data directory. You can try your own text files as well.
     The ASCIITo1HotUCI.py script limit output to the Python-defined "string.printable" characters, which
     is actually only 100 symbols, not 128.
+
+	The script currently only works on Python 2.x for now.
 
 
 2.  Train the model by running CNTK with the Char-RNN.cntk config file. The command will look like this:

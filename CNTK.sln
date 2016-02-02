@@ -760,16 +760,24 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Char-RNN", "Char-RNN", "{C8F5DCC9-0E17-477B-84F0-E9CE985610E8}"
 	ProjectSection(SolutionItems) = preProject
 		Examples\Text\Char-RNN\ASCIITo1HotUCI.py = Examples\Text\Char-RNN\ASCIITo1HotUCI.py
-		Examples\Text\Char-RNN\Char-RNN.cntk = Examples\Text\Char-RNN\Char-RNN.cntk
 		Examples\Text\Char-RNN\README.txt = Examples\Text\Char-RNN\README.txt
 	EndProjectSection
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "data", "data", "{6FAC4E89-D70F-4434-8F69-5B88FD048589}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Config", "Config", "{4AD0775D-DCE8-478F-97D2-6343D31FBCCA}"
 	ProjectSection(SolutionItems) = preProject
-		Examples\Text\Char-RNN\data\MarcusAureliusMeditations.txt = Examples\Text\Char-RNN\data\MarcusAureliusMeditations.txt
-		Examples\Text\Char-RNN\data\MSFT-speeches-2015.txt = Examples\Text\Char-RNN\data\MSFT-speeches-2015.txt
-		Examples\Text\Char-RNN\data\README.txt = Examples\Text\Char-RNN\data\README.txt
-		Examples\Text\Char-RNN\data\TinyShakespeare.txt = Examples\Text\Char-RNN\data\TinyShakespeare.txt
+		Examples\Text\Char-RNN\Config\Char-RNN.cntk = Examples\Text\Char-RNN\Config\Char-RNN.cntk
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Models", "Models", "{0ED98042-F60D-4B95-B984-7AFB4C9B5E95}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Output", "Output", "{4841DDD3-2772-4DB3-BA13-DAE31DD56512}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Data", "Data", "{45E76104-3D30-4529-8B58-7061AFB54F9B}"
+	ProjectSection(SolutionItems) = preProject
+		Examples\Text\Char-RNN\Data\MarcusAureliusMeditations.txt = Examples\Text\Char-RNN\Data\MarcusAureliusMeditations.txt
+		Examples\Text\Char-RNN\Data\MSFT-speeches-2015.txt = Examples\Text\Char-RNN\Data\MSFT-speeches-2015.txt
+		Examples\Text\Char-RNN\Data\README.txt = Examples\Text\Char-RNN\Data\README.txt
+		Examples\Text\Char-RNN\Data\TinyShakespeare.txt = Examples\Text\Char-RNN\Data\TinyShakespeare.txt
 	EndProjectSection
 EndProject
 Global
@@ -1066,6 +1074,9 @@ Global
 		{A0B366FE-2EEA-4E32-9AED-12C46409C30C} = {63C6816D-66BF-487E-B541-094142C8272B}
 		{BD783D50-47E2-485F-BDAF-29BD40D84645} = {63C6816D-66BF-487E-B541-094142C8272B}
 		{C8F5DCC9-0E17-477B-84F0-E9CE985610E8} = {97AAB0C8-D553-49CB-A539-004FCD7FD59F}
-		{6FAC4E89-D70F-4434-8F69-5B88FD048589} = {C8F5DCC9-0E17-477B-84F0-E9CE985610E8}
+		{4AD0775D-DCE8-478F-97D2-6343D31FBCCA} = {C8F5DCC9-0E17-477B-84F0-E9CE985610E8}
+		{0ED98042-F60D-4B95-B984-7AFB4C9B5E95} = {C8F5DCC9-0E17-477B-84F0-E9CE985610E8}
+		{4841DDD3-2772-4DB3-BA13-DAE31DD56512} = {C8F5DCC9-0E17-477B-84F0-E9CE985610E8}
+		{45E76104-3D30-4529-8B58-7061AFB54F9B} = {C8F5DCC9-0E17-477B-84F0-E9CE985610E8}
 	EndGlobalSection
 EndGlobal
