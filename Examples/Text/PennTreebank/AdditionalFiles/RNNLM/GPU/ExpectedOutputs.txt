@@ -1,4 +1,4 @@
-cn.exe configFile=global.config+rnnlm.gpu.config train=[SGD=[momentumPerMB=0.9]] ExpFolder=c:\exp\gpurnnlm
+cn.exe configFile=global.cntk+rnnlm.gpu.cntk train=[SGD=[momentumPerMB=0.9]] ExpFolder=c:\exp\gpurnnlm
 
 Training phase:
 Finished Epoch[1]: [Training Set] Train Loss Per Sample = 6.168982    EvalErr Per Sample = 6.168982   Ave Learn Rate Per Sample = 0.009999999776  Epoch Time=535.896

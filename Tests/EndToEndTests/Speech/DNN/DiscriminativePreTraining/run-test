@@ -3,4 +3,4 @@
 . $TEST_ROOT_DIR/run-test-common
 
 # cntkrun <CNTK config file name> <additional CNTK args>
-cntkrun cntk_dpt.config || exit $?
+cntkrun cntk_dpt.cntk || exit $?

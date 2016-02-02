@@ -39,12 +39,12 @@ or prefix the call to the cntk executable with the corresponding folder.
 
 Run the example from the Text/Data folder using:
 
-`cntk configFile=../Config/rnn.config`
+`cntk configFile=../Config/rnn.cntk`
 
 or run from any folder and specify the Data folder as the `currentDirectory`, 
 e.g. running from the Text folder using:
 
-`cntk configFile=Config/rnn.config currentDirectory=Data`
+`cntk configFile=Config/rnn.cntk currentDirectory=Data`
 
 The output folder will be created inside Text/.
 

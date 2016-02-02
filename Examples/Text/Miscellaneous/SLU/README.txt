@@ -7,16 +7,16 @@ Below is a brief description of the examples.
 To Use:
 =======
 Modify the following files:
-* globals.config in "configs" to reflect your current experimental setup)
-* modify "DeviceNumber" in globals.config to specify CPU (<0) or GPU (>=0)
+* globals.cntk in "configs" to reflect your current experimental setup)
+* modify "DeviceNumber" in globals.cntk to specify CPU (<0) or GPU (>=0)
 * all SCP files (lists of files) in "lib/scp" to point to your feature files
 
-Run the command line with both globals.config and the desired config, separated by a +
-* for example: cntk configFile=globals.config+rnnlu.config
+Run the command line with both globals.cntk and the desired config, separated by a +
+* for example: cntk configFile=globals.cntk+rnnlu.cntk
 
 * note that full paths to config files need to be provided if you are not inside the config directory
 * for example 
-*  C:\dev\cntk5\x64\release\CNTK.exe configFile=C:\dev\cntk5\ExampleSetups\SLU\globals.config+C:\dev\cntk5\ExampleSetups\SLU\rnnlu.config
+*  C:\dev\cntk5\x64\release\CNTK.exe configFile=C:\dev\cntk5\ExampleSetups\SLU\globals.cntk+C:\dev\cntk5\ExampleSetups\SLU\rnnlu.cntk
 
 Scoring
 * ./score.sh 
@@ -25,7 +25,7 @@ Scoring
 
 Path Definitions:
 =================
-* globals.config [defines paths to feature and label files and experiments]
+* globals.cntk [defines paths to feature and label files and experiments]
 
 Check training loss
 ==========================
@@ -38,7 +38,7 @@ Finished Epoch[1]: [Validation Set] Train Loss Per Sample = 0.2035009  EvalErr P
 --------------------------------------------------------------
 Network Training Examples:
 ==========================
-* rnnlu.config 
+* rnnlu.cntk 
 
 # iter 10, learning rate 0.1
 accuracy:  98.01%; precision:  93.75%; recall:  94.04%; FB1:  93.89
