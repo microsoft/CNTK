@@ -32,6 +32,7 @@
     <ClCompile Include="..\..\..\Source\Common\Config.cpp">
       <Filter>Common</Filter>
     </ClCompile>
+    <ClCompile Include="ReaderLibTests.cpp" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Common">
