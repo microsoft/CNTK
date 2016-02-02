@@ -20,7 +20,7 @@
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{F0A9637C-20DA-42F0-83D4-23B4704DE602}</ProjectGuid>
-    <RootNamespace>Reader</RootNamespace>
+    <RootNamespace>ReaderLib</RootNamespace>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Label="Configuration">
