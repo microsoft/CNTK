@@ -763,6 +763,82 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ImageReader", "Source\Reade
 		{F0A9637C-20DA-42F0-83D4-23B4704DE602} = {F0A9637C-20DA-42F0-83D4-23B4704DE602}
 	EndProjectSection
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Simple2d", "Simple2d", "{D456FA9C-A51C-48B9-87DE-0F7D8A910265}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "MultiGpu", "MultiGpu", "{C86A6572-DE7A-4EBB-ADD0-A6C4906D46A3}"
+	ProjectSection(SolutionItems) = preProject
+		Tests\EndToEndTests\Examples\Other\Simple2d\MultiGpu\baseline.linux.debug.cpu.txt = Tests\EndToEndTests\Examples\Other\Simple2d\MultiGpu\baseline.linux.debug.cpu.txt
+		Tests\EndToEndTests\Examples\Other\Simple2d\MultiGpu\baseline.linux.debug.gpu.txt = Tests\EndToEndTests\Examples\Other\Simple2d\MultiGpu\baseline.linux.debug.gpu.txt
+		Tests\EndToEndTests\Examples\Other\Simple2d\MultiGpu\baseline.linux.release.cpu.txt = Tests\EndToEndTests\Examples\Other\Simple2d\MultiGpu\baseline.linux.release.cpu.txt
+		Tests\EndToEndTests\Examples\Other\Simple2d\MultiGpu\baseline.linux.release.gpu.txt = Tests\EndToEndTests\Examples\Other\Simple2d\MultiGpu\baseline.linux.release.gpu.txt
+		Tests\EndToEndTests\Examples\Other\Simple2d\MultiGpu\baseline.windows.debug.cpu.txt = Tests\EndToEndTests\Examples\Other\Simple2d\MultiGpu\baseline.windows.debug.cpu.txt
+		Tests\EndToEndTests\Examples\Other\Simple2d\MultiGpu\baseline.windows.debug.gpu.txt = Tests\EndToEndTests\Examples\Other\Simple2d\MultiGpu\baseline.windows.debug.gpu.txt
+		Tests\EndToEndTests\Examples\Other\Simple2d\MultiGpu\baseline.windows.release.cpu.txt = Tests\EndToEndTests\Examples\Other\Simple2d\MultiGpu\baseline.windows.release.cpu.txt
+		Tests\EndToEndTests\Examples\Other\Simple2d\MultiGpu\baseline.windows.release.gpu.txt = Tests\EndToEndTests\Examples\Other\Simple2d\MultiGpu\baseline.windows.release.gpu.txt
+		Tests\EndToEndTests\Examples\Other\Simple2d\MultiGpu\run-test = Tests\EndToEndTests\Examples\Other\Simple2d\MultiGpu\run-test
+		Tests\EndToEndTests\Examples\Other\Simple2d\MultiGpu\testcases.yml = Tests\EndToEndTests\Examples\Other\Simple2d\MultiGpu\testcases.yml
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Simple", "Simple", "{E330CA6B-5954-4EBA-9C64-6058494E338A}"
+	ProjectSection(SolutionItems) = preProject
+		Tests\EndToEndTests\Examples\Other\Simple2d\Simple\baseline.linux.debug.cpu.txt = Tests\EndToEndTests\Examples\Other\Simple2d\Simple\baseline.linux.debug.cpu.txt
+		Tests\EndToEndTests\Examples\Other\Simple2d\Simple\baseline.linux.debug.gpu.txt = Tests\EndToEndTests\Examples\Other\Simple2d\Simple\baseline.linux.debug.gpu.txt
+		Tests\EndToEndTests\Examples\Other\Simple2d\Simple\baseline.linux.release.cpu.txt = Tests\EndToEndTests\Examples\Other\Simple2d\Simple\baseline.linux.release.cpu.txt
+		Tests\EndToEndTests\Examples\Other\Simple2d\Simple\baseline.linux.release.gpu.txt = Tests\EndToEndTests\Examples\Other\Simple2d\Simple\baseline.linux.release.gpu.txt
+		Tests\EndToEndTests\Examples\Other\Simple2d\Simple\baseline.windows.debug.cpu.txt = Tests\EndToEndTests\Examples\Other\Simple2d\Simple\baseline.windows.debug.cpu.txt
+		Tests\EndToEndTests\Examples\Other\Simple2d\Simple\baseline.windows.debug.gpu.txt = Tests\EndToEndTests\Examples\Other\Simple2d\Simple\baseline.windows.debug.gpu.txt
+		Tests\EndToEndTests\Examples\Other\Simple2d\Simple\baseline.windows.release.cpu.txt = Tests\EndToEndTests\Examples\Other\Simple2d\Simple\baseline.windows.release.cpu.txt
+		Tests\EndToEndTests\Examples\Other\Simple2d\Simple\baseline.windows.release.gpu.txt = Tests\EndToEndTests\Examples\Other\Simple2d\Simple\baseline.windows.release.gpu.txt
+		Tests\EndToEndTests\Examples\Other\Simple2d\Simple\run-test = Tests\EndToEndTests\Examples\Other\Simple2d\Simple\run-test
+		Tests\EndToEndTests\Examples\Other\Simple2d\Simple\testcases.yml = Tests\EndToEndTests\Examples\Other\Simple2d\Simple\testcases.yml
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "AN4", "AN4", "{AC7BA8D3-B4C8-42A4-8507-B359BB6D49E8}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "FeedForward", "FeedForward", "{A17AC914-C539-4B47-A80F-9BD25C64E2A0}"
+	ProjectSection(SolutionItems) = preProject
+		Tests\EndToEndTests\Examples\Speech\AN4\FeedForward\baseline.linux.debug.cpu.txt = Tests\EndToEndTests\Examples\Speech\AN4\FeedForward\baseline.linux.debug.cpu.txt
+		Tests\EndToEndTests\Examples\Speech\AN4\FeedForward\baseline.linux.debug.gpu.txt = Tests\EndToEndTests\Examples\Speech\AN4\FeedForward\baseline.linux.debug.gpu.txt
+		Tests\EndToEndTests\Examples\Speech\AN4\FeedForward\baseline.linux.release.cpu.txt = Tests\EndToEndTests\Examples\Speech\AN4\FeedForward\baseline.linux.release.cpu.txt
+		Tests\EndToEndTests\Examples\Speech\AN4\FeedForward\baseline.linux.release.gpu.txt = Tests\EndToEndTests\Examples\Speech\AN4\FeedForward\baseline.linux.release.gpu.txt
+		Tests\EndToEndTests\Examples\Speech\AN4\FeedForward\baseline.windows.debug.cpu.txt = Tests\EndToEndTests\Examples\Speech\AN4\FeedForward\baseline.windows.debug.cpu.txt
+		Tests\EndToEndTests\Examples\Speech\AN4\FeedForward\baseline.windows.debug.gpu.txt = Tests\EndToEndTests\Examples\Speech\AN4\FeedForward\baseline.windows.debug.gpu.txt
+		Tests\EndToEndTests\Examples\Speech\AN4\FeedForward\baseline.windows.release.cpu.txt = Tests\EndToEndTests\Examples\Speech\AN4\FeedForward\baseline.windows.release.cpu.txt
+		Tests\EndToEndTests\Examples\Speech\AN4\FeedForward\baseline.windows.release.gpu.txt = Tests\EndToEndTests\Examples\Speech\AN4\FeedForward\baseline.windows.release.gpu.txt
+		Tests\EndToEndTests\Examples\Speech\AN4\FeedForward\run-test = Tests\EndToEndTests\Examples\Speech\AN4\FeedForward\run-test
+		Tests\EndToEndTests\Examples\Speech\AN4\FeedForward\testcases.yml = Tests\EndToEndTests\Examples\Speech\AN4\FeedForward\testcases.yml
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "LSTM", "LSTM", "{9F1F9C7C-2CC3-410C-ACDC-988B12D6AC14}"
+	ProjectSection(SolutionItems) = preProject
+		Tests\EndToEndTests\Examples\Speech\AN4\LSTM\baseline.linux.debug.cpu.txt = Tests\EndToEndTests\Examples\Speech\AN4\LSTM\baseline.linux.debug.cpu.txt
+		Tests\EndToEndTests\Examples\Speech\AN4\LSTM\baseline.linux.debug.gpu.txt = Tests\EndToEndTests\Examples\Speech\AN4\LSTM\baseline.linux.debug.gpu.txt
+		Tests\EndToEndTests\Examples\Speech\AN4\LSTM\baseline.linux.release.cpu.txt = Tests\EndToEndTests\Examples\Speech\AN4\LSTM\baseline.linux.release.cpu.txt
+		Tests\EndToEndTests\Examples\Speech\AN4\LSTM\baseline.linux.release.gpu.txt = Tests\EndToEndTests\Examples\Speech\AN4\LSTM\baseline.linux.release.gpu.txt
+		Tests\EndToEndTests\Examples\Speech\AN4\LSTM\baseline.windows.debug.cpu.txt = Tests\EndToEndTests\Examples\Speech\AN4\LSTM\baseline.windows.debug.cpu.txt
+		Tests\EndToEndTests\Examples\Speech\AN4\LSTM\baseline.windows.debug.gpu.txt = Tests\EndToEndTests\Examples\Speech\AN4\LSTM\baseline.windows.debug.gpu.txt
+		Tests\EndToEndTests\Examples\Speech\AN4\LSTM\baseline.windows.release.cpu.txt = Tests\EndToEndTests\Examples\Speech\AN4\LSTM\baseline.windows.release.cpu.txt
+		Tests\EndToEndTests\Examples\Speech\AN4\LSTM\baseline.windows.release.gpu.txt = Tests\EndToEndTests\Examples\Speech\AN4\LSTM\baseline.windows.release.gpu.txt
+		Tests\EndToEndTests\Examples\Speech\AN4\LSTM\run-test = Tests\EndToEndTests\Examples\Speech\AN4\LSTM\run-test
+		Tests\EndToEndTests\Examples\Speech\AN4\LSTM\testcases.yml = Tests\EndToEndTests\Examples\Speech\AN4\LSTM\testcases.yml
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "PennTreebank", "PennTreebank", "{A3231EF2-DED1-4638-B0A2-5F87C484CA92}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "RNN", "RNN", "{B72C5B0E-38E8-41BF-91FE-0C1012C7C078}"
+	ProjectSection(SolutionItems) = preProject
+		Tests\EndToEndTests\Examples\Text\PennTreebank\RNN\baseline.linux.debug.cpu.txt = Tests\EndToEndTests\Examples\Text\PennTreebank\RNN\baseline.linux.debug.cpu.txt
+		Tests\EndToEndTests\Examples\Text\PennTreebank\RNN\baseline.linux.debug.gpu.txt = Tests\EndToEndTests\Examples\Text\PennTreebank\RNN\baseline.linux.debug.gpu.txt
+		Tests\EndToEndTests\Examples\Text\PennTreebank\RNN\baseline.linux.release.cpu.txt = Tests\EndToEndTests\Examples\Text\PennTreebank\RNN\baseline.linux.release.cpu.txt
+		Tests\EndToEndTests\Examples\Text\PennTreebank\RNN\baseline.linux.release.gpu.txt = Tests\EndToEndTests\Examples\Text\PennTreebank\RNN\baseline.linux.release.gpu.txt
+		Tests\EndToEndTests\Examples\Text\PennTreebank\RNN\baseline.windows.debug.cpu.txt = Tests\EndToEndTests\Examples\Text\PennTreebank\RNN\baseline.windows.debug.cpu.txt
+		Tests\EndToEndTests\Examples\Text\PennTreebank\RNN\baseline.windows.debug.gpu.txt = Tests\EndToEndTests\Examples\Text\PennTreebank\RNN\baseline.windows.debug.gpu.txt
+		Tests\EndToEndTests\Examples\Text\PennTreebank\RNN\baseline.windows.release.cpu.txt = Tests\EndToEndTests\Examples\Text\PennTreebank\RNN\baseline.windows.release.cpu.txt
+		Tests\EndToEndTests\Examples\Text\PennTreebank\RNN\baseline.windows.release.gpu.txt = Tests\EndToEndTests\Examples\Text\PennTreebank\RNN\baseline.windows.release.gpu.txt
+		Tests\EndToEndTests\Examples\Text\PennTreebank\RNN\run-test = Tests\EndToEndTests\Examples\Text\PennTreebank\RNN\run-test
+		Tests\EndToEndTests\Examples\Text\PennTreebank\RNN\testcases.yml = Tests\EndToEndTests\Examples\Text\PennTreebank\RNN\testcases.yml
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug_CpuOnly|x64 = Debug_CpuOnly|x64
@@ -1065,5 +1141,13 @@ Global
 		{BD783D50-47E2-485F-BDAF-29BD40D84645} = {63C6816D-66BF-487E-B541-094142C8272B}
 		{F0A9637C-20DA-42F0-83D4-23B4704DE602} = {33EBFE78-A1A8-4961-8938-92A271941F94}
 		{9BD0A711-0BBD-45B6-B81C-053F03C26CFB} = {33EBFE78-A1A8-4961-8938-92A271941F94}
+		{D456FA9C-A51C-48B9-87DE-0F7D8A910265} = {CEADE942-4077-4577-ACF9-41C04388DDC0}
+		{C86A6572-DE7A-4EBB-ADD0-A6C4906D46A3} = {D456FA9C-A51C-48B9-87DE-0F7D8A910265}
+		{E330CA6B-5954-4EBA-9C64-6058494E338A} = {D456FA9C-A51C-48B9-87DE-0F7D8A910265}
+		{AC7BA8D3-B4C8-42A4-8507-B359BB6D49E8} = {FB7AF7B9-6BEA-459F-94D9-94D53916D2B6}
+		{A17AC914-C539-4B47-A80F-9BD25C64E2A0} = {AC7BA8D3-B4C8-42A4-8507-B359BB6D49E8}
+		{9F1F9C7C-2CC3-410C-ACDC-988B12D6AC14} = {AC7BA8D3-B4C8-42A4-8507-B359BB6D49E8}
+		{A3231EF2-DED1-4638-B0A2-5F87C484CA92} = {439BE0E0-FABE-403D-BF2C-A41FB8A60616}
+		{B72C5B0E-38E8-41BF-91FE-0C1012C7C078} = {A3231EF2-DED1-4638-B0A2-5F87C484CA92}
 	EndGlobalSection
 EndGlobal
