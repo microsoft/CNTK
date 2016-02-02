@@ -65,7 +65,7 @@ public:
         // TODO: Change dimensions to take a generic tensor instead. That will be a (minor) breaking change that will require fix-ups when converting from NDL to BrainScript.
         AttachInputs(configp, this->GetExpectedNumInputs());
         // parameters[rows, [cols=1]] plus other optional parameters (needGradient=[true|false], init=[uniform|gaussian|fixedvalue], initValueScale=[1|float], value=[0|float])
-        // TODO: "needGradient" should be renamed to better match m_parameterUpdateRequired
+        // TODO: "needGradient" should be renamed to better match m_parameterUpdateRequired. It is also inconsistent with MEL which uses "needsGradient"
         SetParameterUpdateRequired(configp->Get(L"needGradient"));
         wstring initString = configp->Get(L"init");
         if (initString == L"fixedValue")
