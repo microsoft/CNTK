@@ -70,8 +70,7 @@ void GPUSparseMatrix<ElemType>::ZeroInit(const MatrixFormat matrixFormat, const 
         LogicError("GPUSparseMatrix:  unsupported sparse matrix format");
     }
 
-    m_computeDevice = (computeDevice == AUTOPLACEMATRIX) ? GPUMatrix<ElemType>::GetBestGPUDeviceId() : computeDevice; // current GPU device Id
-    m_computeDevice = EnforceOneGPUOnly(m_computeDevice);                                                             // see EnforceOneGPUOnly() for comment on what this is
+    m_computeDevice = computeDevice; // current GPU device Id
     m_numRows = 0;
     m_numCols = 0;
     m_elemSizeAllocated = m_nz = 0; // Number of non-zero elements
@@ -91,15 +90,14 @@ void GPUSparseMatrix<ElemType>::ZeroInit(const MatrixFormat matrixFormat, const 
 }
 
 template <class ElemType>
-GPUSparseMatrix<ElemType>::GPUSparseMatrix(const size_t numRows, const size_t numCols, const size_t numNZ, const MatrixFormat matrixFormat /*= MatrixFormat::matrixFormatSparseCSR*/, const DEVICEID_TYPE computeDevice /*= AUTOPLACEMATRIX*/)
+GPUSparseMatrix<ElemType>::GPUSparseMatrix(const size_t numRows, const size_t numCols, const size_t numNZ, DEVICEID_TYPE computeDevice, const MatrixFormat matrixFormat /*= MatrixFormat::matrixFormatSparseCSR*/)
 {
     ZeroInit(matrixFormat, computeDevice);
     Resize(numRows, numCols, numNZ, true, false);
 }
 
 template <class ElemType>
-GPUSparseMatrix<ElemType>::GPUSparseMatrix(const MatrixFormat matrixFormat /*= MatrixFormat::matrixFormatSparseCSR*/,
-                                           const DEVICEID_TYPE computeDevice /*= AUTOPLACEMATRIX*/)
+GPUSparseMatrix<ElemType>::GPUSparseMatrix(DEVICEID_TYPE computeDevice, const MatrixFormat matrixFormat /*= MatrixFormat::matrixFormatSparseCSR*/)
 {
     ZeroInit(matrixFormat, computeDevice);
 }
@@ -404,7 +402,7 @@ void GPUSparseMatrix<ElemType>::ConvertToSparseFormat(MatrixFormat newFormat)
     if (oldFormat == newFormat)
         return;
 
-    GPUSparseMatrix<ElemType> tempMatrix(newFormat, GetComputeDeviceId());
+    GPUSparseMatrix<ElemType> tempMatrix(GetComputeDeviceId(), newFormat);
     ConvertToSparseFormat(newFormat, tempMatrix);
 
     *this = std::move(tempMatrix);
@@ -1017,7 +1015,7 @@ void GPUSparseMatrix<ElemType>::MultiplyAndWeightedAdd(ElemType alpha, const GPU
     }
     else if (rhs.m_format == matrixFormatSparseCSR)
     {
-        GPUSparseMatrix<ElemType> tempMatrix(matrixFormatSparseCSC, rhs.GetComputeDeviceId());
+        GPUSparseMatrix<ElemType> tempMatrix(rhs.GetComputeDeviceId(), matrixFormatSparseCSC);
         rhs.ConvertToSparseFormat(matrixFormatSparseCSC, tempMatrix);
         MultiplyAndWeightedAdd(alpha, lhs, transposeA, tempMatrix, transposeB, beta, c);
     }
@@ -2122,7 +2120,7 @@ bool GPUSparseMatrix<ElemType>::AreEqual(const GPUMatrix<ElemType>& a, const GPU
 {
     if (a.GetNumRows() != b.GetNumRows() || a.GetNumCols() != b.GetNumCols())
         return false;
-    GPUSparseMatrix<ElemType> c(b.GetFormat(), b.GetComputeDeviceId());
+    GPUSparseMatrix<ElemType> c(b.GetComputeDeviceId(), b.GetFormat());
     c.SetValue(a);
     return AreEqual(c, b, threshold);
 }
@@ -2133,7 +2131,7 @@ bool GPUSparseMatrix<ElemType>::AreEqual(const GPUSparseMatrix<ElemType>& a, con
 {
     if (a.GetNumRows() != b.GetNumRows() || a.GetNumCols() != b.GetNumCols())
         return false;
-    GPUSparseMatrix<ElemType> c(a.GetFormat(), a.GetComputeDeviceId());
+    GPUSparseMatrix<ElemType> c(a.GetComputeDeviceId(), a.GetFormat());
     c.SetValue(b);
     return AreEqual(a, c, threshold);
 }
@@ -2206,7 +2204,7 @@ GPUMatrix<ElemType> GPUSparseMatrix<ElemType>::ElementProductOf(const GPUMatrix<
 template <class ElemType>
 GPUSparseMatrix<ElemType> GPUSparseMatrix<ElemType>::operator+(const GPUSparseMatrix<ElemType>& a) const
 {
-    GPUSparseMatrix<ElemType> res(GetFormat(), GetComputeDeviceId());
+    GPUSparseMatrix<ElemType> res(GetComputeDeviceId(), GetFormat());
     GPUSparseMatrix<ElemType>::ScaleAndAdd(1, *this, 1, a, res);
     return res;
 }
@@ -2214,7 +2212,7 @@ GPUSparseMatrix<ElemType> GPUSparseMatrix<ElemType>::operator+(const GPUSparseMa
 template <class ElemType>
 GPUSparseMatrix<ElemType> GPUSparseMatrix<ElemType>::operator-(const GPUSparseMatrix<ElemType>& a) const
 {
-    GPUSparseMatrix<ElemType> res(GetFormat(), GetComputeDeviceId());
+    GPUSparseMatrix<ElemType> res(GetComputeDeviceId(), GetFormat());
     GPUSparseMatrix<ElemType>::ScaleAndAdd(1, *this, -1, a, res);
     return res;
 }
@@ -2230,7 +2228,7 @@ GPUSparseMatrix<ElemType>& GPUSparseMatrix<ElemType>::operator^=(ElemType alpha)
 template <class ElemType>
 GPUSparseMatrix<ElemType> GPUSparseMatrix<ElemType>::operator^(ElemType alpha) const
 {
-    GPUSparseMatrix<ElemType> c(GetFormat(), GetComputeDeviceId());
+    GPUSparseMatrix<ElemType> c(GetComputeDeviceId(), GetFormat());
     ElementWisePower(alpha, *this, c);
     return c;
 }
@@ -2271,7 +2269,7 @@ GPUSparseMatrix<ElemType> GPUSparseMatrix<ElemType>::Transpose() const
 
     assert(GetFormat() & matrixFormatCompressed); // for now this only supports compressed formats
     PrepareDevice();
-    GPUSparseMatrix c(GetFormat(), GetComputeDeviceId());
+    GPUSparseMatrix c(GetComputeDeviceId(), GetFormat());
     c.Resize(n, m, nnz, GetFormat(), true, false);
     c.m_nz = nnz;
 
@@ -2369,7 +2367,7 @@ GPUSparseMatrix<ElemType> GPUSparseMatrix<ElemType>::ColumnSlice(size_t startCol
     if (m_format != MatrixFormat::matrixFormatSparseCSC)
         NOT_IMPLEMENTED;
 
-    GPUSparseMatrix<ElemType> slice;
+    GPUSparseMatrix<ElemType> slice(m_computeDevice);
     slice.m_computeDevice = m_computeDevice;
     slice.m_numRows = m_numRows;
     slice.m_numCols = numCols;
@@ -2905,8 +2903,8 @@ template class MATH_API GPUSparseMatrix<double>;
 
 // We use Matrix<char> as the backing store for QuantizedMatrix
 // Let's explicitly instantiate the methods we need for that purpose
-template GPUSparseMatrix<char>::GPUSparseMatrix(const MatrixFormat matrixFormat, const DEVICEID_TYPE computeDevice);
-template GPUSparseMatrix<char>::GPUSparseMatrix(const size_t numRows, const size_t numCols, const size_t numNZ, const MatrixFormat matrixFormat, const DEVICEID_TYPE computeDevice);
+template GPUSparseMatrix<char>::GPUSparseMatrix(DEVICEID_TYPE computeDevice, const MatrixFormat matrixFormat);
+template GPUSparseMatrix<char>::GPUSparseMatrix(const size_t numRows, const size_t numCols, const size_t numNZ, DEVICEID_TYPE computeDevice, const MatrixFormat matrixFormat);
 template GPUSparseMatrix<char>::GPUSparseMatrix(GPUSparseMatrix<char> const&);
 template GPUSparseMatrix<char>::GPUSparseMatrix(GPUSparseMatrix<char>&&);
 template void GPUSparseMatrix<char>::SetValue(CPUSparseMatrix<char> const&);

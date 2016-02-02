@@ -898,8 +898,7 @@ void ComputationNetwork::PerformSVDecomposition(const map<wstring, float>& SVDCo
             if (!ptr)
                 continue;
 
-            Matrix<ElemType> W = ptr->Value();
-            if (W.GetNumCols() == 1 || W.GetNumRows() == 1)
+            if (ptr->Value().GetNumCols() == 1 || ptr->Value().GetNumRows() == 1)
                 continue;
 
             // still here ?
@@ -993,7 +992,7 @@ void ComputationNetwork::PerformSVDecomposition(const map<wstring, float>& SVDCo
             redVT.Resize(r, n);
             redVT.AssignRowSliceValuesOf(VT, 0, r);
 
-            Matrix<ElemType> redS(r, (size_t) 1);
+            Matrix<ElemType> redS(r, (size_t)1, A.GetDeviceId());
             for (size_t i = 0; i < r; i++)
             {
                 ElemType sqrtsigma = (ElemType) sqrt((double) S(i, 0));
