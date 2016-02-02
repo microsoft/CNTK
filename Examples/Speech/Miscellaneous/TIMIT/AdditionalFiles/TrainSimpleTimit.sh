@@ -13,5 +13,5 @@ $HTK/hcopy.exe -C $HCopyConfig -S $HCopyScript
 CNdir=../../../
 rm -f Models/TrainSimple.dnn*
 
-time $CNdir/cn.exe configFile=TrainSimpleTimit.config
+time $CNdir/cn.exe configFile=TrainSimpleTimit.cntk
 

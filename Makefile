@@ -380,6 +380,23 @@ $(LIBSVMBINARYREADER): $(LIBSVMBINARYREADER_OBJ) | $(CNTKMATH_LIB)
 	@echo $(SEPARATOR)
 	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(LIBPATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH)) -o $@ $^ -l$(CNTKMATH)
 
+########################################
+# SparsePCReader plugin
+########################################
+
+SPARSEPCREADER_SRC =\
+	$(SOURCEDIR)/Readers/SparsePCReader/Exports.cpp \
+	$(SOURCEDIR)/Readers/SparsePCReader/SparsePCReader.cpp \
+
+LIBSPARSEPCREADER_OBJ := $(patsubst %.cpp, $(OBJDIR)/%.o, $(LIBSPARCEPCREADER_SRC))
+
+LIBSPARSEPCREADER:=$(LIBDIR)/SparsePCReader.so
+ALL += $(LIBSPARSEPCREADER)
+SRC+=$(LIBSPARSEPCREADER_SRC)
+
+$(LIBSPARSEPCREADER): $(LIBSPARSEPCREADER_OBJ) | $(CNTKMATH_LIB)
+	@echo $(SEPARATOR)
+	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(LIBPATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH)) -o $@ $^ -l$(CNTKMATH)
 
 ########################################
 # Kaldi plugins
@@ -423,7 +440,7 @@ ALL += $(IMAGEREADER)
 SRC+=$(IMAGEREADER_SRC)
 
 INCLUDEPATH += $(OPENCV_PATH)/include
-LIBPATH += $(OPENCV_PATH)/lib
+LIBPATH += $(OPENCV_PATH)/lib $(OPENCV_PATH)/release/lib
 
 $(IMAGEREADER): $(IMAGEREADER_OBJ) | $(CNTKMATH_LIB)
 	@echo $(SEPARATOR)
@@ -539,6 +556,7 @@ clean:
 	@echo $(SEPARATOR)
 	@rm -rf $(OBJDIR)
 	@rm -rf $(ALL)
+	@rm -rf $(BUILDINFO)
 	@echo finished cleaning up the project
 
 buildall : $(ALL)

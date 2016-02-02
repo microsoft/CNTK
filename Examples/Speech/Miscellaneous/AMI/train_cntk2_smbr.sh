@@ -21,17 +21,17 @@ srcdir=${srcdir%/}
 device=-1
 alidir=${srcdir}_ali
 mkdir -p $alidir/configs
-cp -f cntk_config/Align.config $alidir/configs/Align.config
+cp -f cntk_config/Align.cntk $alidir/configs/Align.cntk
 scripts/align.sh --num-threads 1 --nj 30 --cmd "$decode_cmd" \
   --feat-dim $feat_dim --device $device \
-  --cntk-config $alidir/configs/Align.config \
+  --cntk-config $alidir/configs/Align.cntk \
   $data_fmllr/train data/lang $srcdir $alidir || exit 1;
 
 # Denominator lattices.
 device=-1
 denlatdir=${srcdir}_denlats
 mkdir -p $denlatdir/configs
-cp -f cntk_config/Align.config $denlatdir/configs/Decode.config
+cp -f cntk_config/Align.cntk $denlatdir/configs/Decode.config
 scripts/make_denlats.sh --num-threads 1 --nj 20 --sub-split 15 \
   --feat-dim $feat_dim --cmd "$decode_cmd" --acwt $acwt \
   --device $device --cntk-config $denlatdir/configs/Decode.config \
@@ -44,7 +44,7 @@ scripts/make_denlats.sh --num-threads 1 --nj 20 --sub-split 15 \
 device=0
 smbrdir=${srcdir}_smbr
 mkdir -p $smbrdir/configs
-cp -f cntk_config/CNTK2_smbr.config $smbrdir/configs/Train.config
+cp -f cntk_config/CNTK2_smbr.cntk $smbrdir/configs/Train.config
 cp -f cntk_config/dnn_6layer_smbr.ndl $smbrdir/configs/model.ndl
 cp -f cntk_config/default_macros.ndl $smbrdir/configs/default_macros.ndl
 scripts/train_sequence.sh --num-threads 1 --cmd "$cuda_cmd" \

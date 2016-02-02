@@ -44,12 +44,12 @@ or prefix the call to the cntk executable with the corresponding folder.
 
 Run the example from the Image/MNIST/Data folder using:
 
-`cntk configFile=../Config/01_OneHidden.config`
+`cntk configFile=../Config/01_OneHidden.cntk`
 
 or run from any folder and specify the Data folder as the `currentDirectory`, 
 e.g. running from the Image/MNIST folder using:
 
-`cntk configFile=Config/01_OneHidden.config currentDirectory=Data`
+`cntk configFile=Config/01_OneHidden.cntk currentDirectory=Data`
 
 The output folder will be created inside Image/MNIST/.
 
@@ -61,21 +61,21 @@ There are three config files and corresponding network description files in the 
 
 1. 01_OneHidden.ndl is a simple, one hidden layer network that produces 2.3% of error.
 To run the sample, navigate to the Data folder and run the following command:  
-`cntk configFile=../Config/01_OneHidden.config`
+`cntk configFile=../Config/01_OneHidden.cntk`
 
 2. 02_Convolution.ndl is more interesting, convolutional network which has 2 convolutional and 2 max pooling layers. 
 The network produces 0.87% of error after training for about 2 minutes on GPU.
 To run the sample, navigate to the Data folder and run the following command:  
-`cntk configFile=../Config/02_Convolution.config`
+`cntk configFile=../Config/02_Convolution.cntk`
 
 3. 03_ConvBatchNorm.ndl is almost identical to 02_Convolution.ndl 
 except that it uses batch normalization for the fully connected layer h1.
 Note that batch normalization is implemented using just NDL (see Macros.ndl for details).
 As a result, it uses less epochs (8 vs 15 in 02_Convolution) to achieve the same accuracy.
 To run the sample, navigate to the Data folder and run the following command:  
-`cntk configFile=../Config/03_ConvBatchNorm.config`
+`cntk configFile=../Config/03_ConvBatchNorm.cntk`
 
-For more details, refer to .ndl and corresponding .config files.
+For more details, refer to .ndl and corresponding .cntk files.
 
 ### Additional files
 
