@@ -5,4 +5,4 @@
 ConfigDir=$TEST_DIR/..
 
 # cntkrun <CNTK config file name> <additional CNTK args>
-cntkrun cntk.config 'Truncated=false speechTrain=[reader=[nbruttsineachrecurrentiter=2]] speechTrain=[SGD=[epochSize=2560]] speechTrain=[SGD=[maxEpochs=2]] speechTrain=[SGD=[numMBsToShowResult=1]] shareNodeValueMatrices=true' || exit $?
+cntkrun cntk.cntk 'Truncated=false speechTrain=[reader=[nbruttsineachrecurrentiter=2]] speechTrain=[SGD=[epochSize=2560]] speechTrain=[SGD=[maxEpochs=2]] speechTrain=[SGD=[numMBsToShowResult=1]] shareNodeValueMatrices=true' || exit $?

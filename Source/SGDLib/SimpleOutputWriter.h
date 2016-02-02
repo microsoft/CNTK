@@ -32,7 +32,6 @@ public:
 
     void WriteOutput(IDataReader<ElemType>& dataReader, size_t mbSize, IDataWriter<ElemType>& dataWriter, const std::vector<std::wstring>& outputNodeNames, size_t numOutputSamples = requestDataSize, bool doUnitTest = false)
     {
-
         // specify output nodes and files
         std::vector<ComputationNodeBasePtr> outputNodes;
         if (outputNodeNames.size() == 0)
@@ -108,6 +107,8 @@ public:
         // clean up
     }
 
+    // TODO: Remove code dup with above function
+    // E.g. create a shared function that takes the actual writing operation as a lambda.
     void WriteOutput(IDataReader<ElemType>& dataReader, size_t mbSize, std::wstring outputPath, const std::vector<std::wstring>& outputNodeNames, size_t numOutputSamples = requestDataSize)
     {
         msra::files::make_intermediate_dirs(outputPath);
@@ -142,6 +143,7 @@ public:
         // specify feature value nodes
         auto& featureNodes = m_net->FeatureNodes();
         std::map<std::wstring, Matrix<ElemType>*> inputMatrices;
+        // BUGBUG: This loop is inconsistent with the above version of this function in that it does not handle label nodes.
         for (size_t i = 0; i < featureNodes.size(); i++)
             inputMatrices[featureNodes[i]->NodeName()] = &dynamic_pointer_cast<ComputationNode<ElemType>>(featureNodes[i])->Value();
 
@@ -158,6 +160,7 @@ public:
         size_t actualMBSize;
         while (DataReaderHelpers::GetMinibatchIntoNetwork(dataReader, m_net, nullptr, false, false, inputMatrices, actualMBSize))
         {
+            // BUGBUG: This loop is inconsistent with the above version of this function in that it does not handle label nodes.
             ComputationNetwork::BumpEvalTimeStamp(featureNodes);
 
             for (int i = 0; i < outputNodes.size(); i++)

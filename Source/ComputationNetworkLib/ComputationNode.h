@@ -226,11 +226,10 @@ public:
         m_evalTimeStamp = CreateUniqId();
     }
 
-    // the difference is taken to take into account numeric overflow (which really should never happen for a 64-bit integer... but hey, it's free!)
     bool IsOlderThan(const TimeStamp& other) const
     {
-        // BUGBUG: For some reason, we must test equality as well, although that does not indicate being older.
-        return GetEvalTimeStamp() - other.GetEvalTimeStamp() /*<*/ <= 0;
+        // the difference is taken to take into account numeric overflow (which really should never happen for a 64-bit integer... but hey, it's free!)
+        return GetEvalTimeStamp() - other.GetEvalTimeStamp() < 0;
     }
 
     int64_t CreateUniqId() const
@@ -657,19 +656,15 @@ public:
 #endif
     }
 
-    // check whether a node is up-to-date w.r.t. its children, for lazy evaluation
-    // If this returns false, node must be evaluated to update m_value.
-    // BUGBUG: The function name is incorrect. It also returns 'true' if a child has the same time stamp (not older).
-    // This is virtual because it is overridden by traversal nodes.
-    virtual bool IsOutputOlderThanInputs() const
+    // check whether a node is out of date w.r.t. its children, for lazy evaluation
+    // If this returns true, node must be evaluated to update m_value.
+    // This is virtual because it is overridden by traversal nodes, which would check all their nodes' inputs.
+    virtual bool IsOutOfDateWrtInputs() const
     {
-        // TODO: use range-based for
-        for (size_t i = 0; i < GetNumInputs(); i++)
-        {
-            if (IsOlderThan(*m_inputs[i]))
+        for (const auto & input : GetInputs())
+            if (!input->IsOlderThan(*this))
                 return true;
-        }
-
+        // Note: This ^^ must also return true when time stamps are the same, for an unknown reason (possibly an initialization condition). We should track this down some day.
         return false;
     }
 
@@ -1737,7 +1732,7 @@ protected:                                                                      
     using Base::InvalidateMissingGradientColumns;                                                                                                        \
     using Base::InvalidateMissingValueColumns;                                                                                                           \
     using Base::IsLeaf;                                                                                                                                  \
-    using Base::IsOutputOlderThanInputs;                                                                                                                 \
+    using Base::IsOutOfDateWrtInputs;                                                                                                                 \
     using Base::LinkToMBLayout;                                                                                                                          \
     using Base::Load;                                                                                                                                    \
     using Base::LoadValue;                                                                                                                               \

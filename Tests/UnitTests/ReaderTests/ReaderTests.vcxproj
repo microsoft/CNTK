@@ -75,14 +75,14 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64' Or '$(Configuration)|$(Platform)'=='Debug_CpuOnly|x64'">
     <LinkIncremental>false</LinkIncremental>
-    <IncludePath>..\..\..\Source\Common\include;..\..\..\Source\Math;$(IncludePath)</IncludePath>
+    <IncludePath>..\..\..\Source\Readers\Reader;..\..\..\Source\Common\include;..\..\..\Source\Math;$(IncludePath)</IncludePath>
     <LibraryPath>$(OutDir);$(LibraryPath)</LibraryPath>
     <OutDir>$(SolutionDir)$(Platform)\$(Configuration)\UnitTests\</OutDir>
     <IntDir>$(Platform)\$(Configuration)\$(ProjectName)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64' Or '$(Configuration)|$(Platform)'=='Release_CpuOnly|x64'">
     <LinkIncremental>false</LinkIncremental>
-    <IncludePath>..\..\..\Source\Common\include;..\..\..\Source\Math;$(IncludePath)</IncludePath>
+    <IncludePath>..\..\..\Source\Readers\Reader;..\..\..\Source\Common\include;..\..\..\Source\Math;$(IncludePath)</IncludePath>
     <LibraryPath>$(OutDir);$(LibraryPath)</LibraryPath>
     <OutDir>$(SolutionDir)$(Platform)\$(Configuration)\UnitTests\</OutDir>
     <IntDir>$(Platform)\$(Configuration)\$(ProjectName)\</IntDir>
@@ -93,7 +93,7 @@
       <WarningLevel>Level4</WarningLevel>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>WIN32;_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(BOOST_INCLUDE_PATH);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\..\..\Source\Readers\ReaderLib;$(BOOST_INCLUDE_PATH);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <UseFullPaths>true</UseFullPaths>
       <OpenMPSupport>true</OpenMPSupport>
       <TreatWarningAsError>true</TreatWarningAsError>
@@ -102,7 +102,7 @@
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>$(BOOST_LIB_PATH);$(OutDir)..\;</AdditionalLibraryDirectories>
-      <AdditionalDependencies>htkmlfreader.lib;Math.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>htkmlfreader.lib;Math.lib;ReaderLib.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <OptimizeReferences>true</OptimizeReferences>
     </Link>
   </ItemDefinitionGroup>
@@ -114,7 +114,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>WIN32;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(BOOST_INCLUDE_PATH);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\..\..\Source\Readers\ReaderLib;$(BOOST_INCLUDE_PATH);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <UseFullPaths>true</UseFullPaths>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <TreatWarningAsError>true</TreatWarningAsError>
@@ -127,7 +127,7 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <AdditionalLibraryDirectories>$(BOOST_LIB_PATH);$(OutDir)..\;</AdditionalLibraryDirectories>
-      <AdditionalDependencies>htkmlfreader.lib;Math.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>htkmlfreader.lib;Math.lib;ReaderLib.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="!$(UsesCuda)">
@@ -149,6 +149,7 @@
     <ClCompile Include="..\..\..\Source\Common\fileutil.cpp" />
     <ClCompile Include="..\..\..\Source\Common\TimerUtility.cpp" />
     <ClCompile Include="HTKLMFReaderTests.cpp" />
+    <ClCompile Include="ReaderLibTests.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'  Or '$(Configuration)|$(Platform)'=='Debug_CpuOnly|x64'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64' Or '$(Configuration)|$(Platform)'=='Release_CpuOnly|x64'">Create</PrecompiledHeader>
@@ -156,27 +157,27 @@
     <ClCompile Include="UCIFastReaderTests.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <Text Include="Config\HTKMLFReaderSimpleDataLoop10_Config.txt" />
-    <Text Include="Config\HTKMLFReaderSimpleDataLoop11_Config.txt" />
-    <Text Include="Config\HTKMLFReaderSimpleDataLoop12_Config.txt" />
-    <Text Include="Config\HTKMLFReaderSimpleDataLoop13_Config.txt" />
-    <Text Include="Config\HTKMLFReaderSimpleDataLoop14_Config.txt" />
-    <Text Include="Config\HTKMLFReaderSimpleDataLoop16_Config.txt" />
-    <Text Include="Config\HTKMLFReaderSimpleDataLoop17_Config.txt" />
-    <Text Include="Config\HTKMLFReaderSimpleDataLoop19_Config.txt" />
-    <Text Include="Config\HTKMLFReaderSimpleDataLoop1_Config.txt" />
-    <Text Include="Config\HTKMLFReaderSimpleDataLoop20_Config.txt" />
-    <Text Include="Config\HTKMLFReaderSimpleDataLoop21_Config.txt" />
-    <Text Include="Config\HTKMLFReaderSimpleDataLoop22_Config.txt" />
-    <Text Include="Config\HTKMLFReaderSimpleDataLoop2_Config.txt" />
-    <Text Include="Config\HTKMLFReaderSimpleDataLoop3_Config.txt" />
-    <Text Include="Config\HTKMLFReaderSimpleDataLoop4_Config.txt" />
-    <Text Include="Config\HTKMLFReaderSimpleDataLoop5_Config.txt" />
-    <Text Include="Config\HTKMLFReaderSimpleDataLoop6_Config.txt" />
-    <Text Include="Config\HTKMLFReaderSimpleDataLoop7_Config.txt" />
-    <Text Include="Config\HTKMLFReaderSimpleDataLoop8_Config.txt" />
-    <Text Include="Config\HTKMLFReaderSimpleDataLoop9_Config.txt" />
-    <Text Include="Config\UCIFastReaderSimpleDataLoop_Config.txt" />
+    <Text Include="Config\HTKMLFReaderSimpleDataLoop10_Config.cntk" />
+    <Text Include="Config\HTKMLFReaderSimpleDataLoop11_Config.cntk" />
+    <Text Include="Config\HTKMLFReaderSimpleDataLoop12_Config.cntk" />
+    <Text Include="Config\HTKMLFReaderSimpleDataLoop13_Config.cntk" />
+    <Text Include="Config\HTKMLFReaderSimpleDataLoop14_Config.cntk" />
+    <Text Include="Config\HTKMLFReaderSimpleDataLoop16_Config.cntk" />
+    <Text Include="Config\HTKMLFReaderSimpleDataLoop17_Config.cntk" />
+    <Text Include="Config\HTKMLFReaderSimpleDataLoop19_Config.cntk" />
+    <Text Include="Config\HTKMLFReaderSimpleDataLoop1_Config.cntk" />
+    <Text Include="Config\HTKMLFReaderSimpleDataLoop20_Config.cntk" />
+    <Text Include="Config\HTKMLFReaderSimpleDataLoop21_Config.cntk" />
+    <Text Include="Config\HTKMLFReaderSimpleDataLoop22_Config.cntk" />
+    <Text Include="Config\HTKMLFReaderSimpleDataLoop2_Config.cntk" />
+    <Text Include="Config\HTKMLFReaderSimpleDataLoop3_Config.cntk" />
+    <Text Include="Config\HTKMLFReaderSimpleDataLoop4_Config.cntk" />
+    <Text Include="Config\HTKMLFReaderSimpleDataLoop5_Config.cntk" />
+    <Text Include="Config\HTKMLFReaderSimpleDataLoop6_Config.cntk" />
+    <Text Include="Config\HTKMLFReaderSimpleDataLoop7_Config.cntk" />
+    <Text Include="Config\HTKMLFReaderSimpleDataLoop8_Config.cntk" />
+    <Text Include="Config\HTKMLFReaderSimpleDataLoop9_Config.cntk" />
+    <Text Include="Config\UCIFastReaderSimpleDataLoop_Config.cntk" />
     <Text Include="Control\HTKMLFReaderSimpleDataLoop10_20_Control.txt" />
     <Text Include="Control\HTKMLFReaderSimpleDataLoop1_5_11_Control.txt" />
     <Text Include="Control\HTKMLFReaderSimpleDataLoop21_0_Control.txt" />

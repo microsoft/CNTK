@@ -18,15 +18,11 @@ imageLayout = "cudnn"
 command = train:test
 
 precision = "float"
-modelPath = "$ModelDir$/02_Convolution"
+modelPath = "$ModelDir$/03_ConvBatchNorm"
 ndlMacros = "$ConfigDir$/Macros.ndl"
 
 # uncomment the following line to write logs to a file 
-# stderr = "$OutputDir$/02_Convolution_out"
-traceLevel=1
-numMBsToShowResult=500
-
-prefetch=true
+# stderr = "$OutputDir$/03_ConvBatchNorm_out"
 
 #######################################
 #  TRAINING CONFIG                    #
@@ -36,7 +32,7 @@ train = [
     action = "train"
 
     NDLNetworkBuilder = [
-        networkDescription = "$ConfigDir$/02_Convolution.ndl"
+        networkDescription = "$ConfigDir$/03_ConvBatchNorm.ndl"
     ]
     
     SGD = [
@@ -44,11 +40,13 @@ train = [
         minibatchSize = 32
         learningRatesPerMB = 0.5
         momentumPerMB = 0*10:0.7
-        maxEpochs = 15
+        maxEpochs = 8
     ]
     
     reader = [
         readerType = "UCIFastReader"
+        # To get the data (Train-28x28.txt) please run `python mnist_convert.py` 
+        # from the 'AdditionalFiles' folder. See REAMDE.md for details.
         file = "$DataDir$/Train-28x28.txt"
         
         features = [
@@ -70,11 +68,10 @@ train = [
 #######################################
 
 test = [
-    action = test
-    minibatchSize = 16
-    
+    action = "test"
+
     NDLNetworkBuilder = [
-        networkDescription = "$ConfigDir$/02_Convolution.ndl"
+        networkDescription = "$ConfigDir$/03_ConvBatchNorm.ndl"
     ]
     
     reader = [

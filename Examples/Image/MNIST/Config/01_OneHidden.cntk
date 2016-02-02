@@ -18,11 +18,13 @@ imageLayout = "cudnn"
 command = train:test
 
 precision = "float"
-modelPath = "$ModelDir$/03_ConvBatchNorm"
+modelPath = "$ModelDir$/01_OneHidden"
 ndlMacros = "$ConfigDir$/Macros.ndl"
 
 # uncomment the following line to write logs to a file 
-# stderr = "$OutputDir$/03_ConvBatchNorm_out"
+# stderr = "$OutputDir$/01_OneHidden_out"
+traceLevel=1
+numMBsToShowResult=500
 
 #######################################
 #  TRAINING CONFIG                    #
@@ -32,15 +34,15 @@ train = [
     action = "train"
 
     NDLNetworkBuilder = [
-        networkDescription = "$ConfigDir$/03_ConvBatchNorm.ndl"
+        networkDescription = "$ConfigDir$/01_OneHidden.ndl"
     ]
     
     SGD = [
         epochSize = 60000
         minibatchSize = 32
-        learningRatesPerMB = 0.5
-        momentumPerMB = 0*10:0.7
-        maxEpochs = 8
+        learningRatesPerMB = 0.1
+        momentumPerMB = 0
+        maxEpochs = 30
     ]
     
     reader = [
@@ -67,13 +69,16 @@ train = [
 
 test = [
     action = "test"
+    minibatchSize = 16
 
-    NDLNetworkBuilder = [
-        networkDescription = "$ConfigDir$/03_ConvBatchNorm.ndl"
+    NDLNetworkBuilder=[
+        networkDescription = "$ConfigDir$/01_OneHidden.ndl"
     ]
     
     reader = [
         readerType = "UCIFastReader"
+        # To get the data (Train-28x28.txt) please run `python mnist_convert.py` 
+        # from the 'AdditionalFiles' folder. See REAMDE.md for details.
         file = "$DataDir$/Test-28x28.txt"
         
         features = [
@@ -87,5 +92,5 @@ test = [
             labelDim = 10
             labelMappingFile = "$DataDir$/labelsmap.txt"
         ]
-    ]
+    ]    
 ]

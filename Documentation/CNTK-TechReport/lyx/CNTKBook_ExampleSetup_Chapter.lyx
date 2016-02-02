@@ -3920,7 +3920,7 @@ One of the important tasks in spoken language understanding is labeling
 \backslash
 SLU
 \backslash
-rnnlu.config.
+rnnlu.cntk.
  The data is ATIS, which consists of 944 unique words, including <unk>,
  in the training/dev set.
  Output has 127 dimension, each corresponding to a semantic tag in ATIS.

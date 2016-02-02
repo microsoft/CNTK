@@ -70,7 +70,7 @@ cp -L $cntk_model $dir || exit 1;
 cp -L $kaldi_model $dir || exit 1;
 
 mkdir $dir/configs
-cp -f $cntk_config $dir/configs/Align.config
+cp -f $cntk_config $dir/configs/Align.cntk
 
 # Features to be fed to CNTK.
 feats="scp:$sdata/JOB/feats.scp"

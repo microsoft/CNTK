@@ -13,11 +13,19 @@
 #include <map>
 #include <vector>
 
+// Windows or Posix? Originally the reader was done only for Windows. Keep it this way for now when running on Windows.
+#ifdef __WINDOWS__
+#define SPARSE_PCREADER_USE_WINDOWS_API
+#endif
+
 namespace Microsoft { namespace MSR { namespace CNTK {
 
 template <class ElemType>
 class SparsePCReader : public IDataReader<ElemType>
 {
+public:
+    using LabelType = typename IDataReader<ElemType>::LabelType;
+    using LabelIdType = typename IDataReader<ElemType>::LabelIdType;
 private:
     ConfigParameters m_readerConfig;
     std::wstring m_file;
@@ -38,9 +46,14 @@ private:
     ElemType* m_labelsBuffer;
     MBLayoutPtr m_pMBLayout;
 
+#ifdef SPARSE_PCREADER_USE_WINDOWS_API
     HANDLE m_hndl;
     HANDLE m_filemap;
+#else
+    int m_hndl;
+#endif
     void* m_dataBuffer;
+   
     int64_t m_filePositionMax;
     int64_t m_currOffset;
     int m_traceLevel;
@@ -76,7 +89,7 @@ public:
         pMBLayout->CopyFrom(m_pMBLayout);
     }
     virtual const std::map<LabelIdType, LabelType>& GetLabelMapping(const std::wstring& sectionName);
-    virtual void SetLabelMapping(const std::wstring& sectionName, const std::map<LabelIdType, typename LabelType>& labelMapping);
+    virtual void SetLabelMapping(const std::wstring& sectionName, const std::map<LabelIdType, LabelType>& labelMapping);
     virtual bool GetData(const std::wstring& /*sectionName*/, size_t /*numRecords*/, void* /*data*/, size_t& /*dataBufferSize*/, size_t /*recordStart*/)
     {
         RuntimeError("GetData not supported in SparsePCReader");

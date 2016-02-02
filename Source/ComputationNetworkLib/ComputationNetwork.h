@@ -783,7 +783,7 @@ protected:
         virtual void AllocateGradientMatricesForInputs(MatrixPool& matrixPool);
         virtual void RequestMatricesBeforeBackprop(MatrixPool& matrixPool);
         virtual void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool);
-        virtual bool IsOutputOlderThanInputs() const override;
+        virtual bool IsOutOfDateWrtInputs() const override;
 
     public:
         // std::vector<ComputationNodeBasePtr> m_nestedNodes;               // all nodes involved in this loop, in evaluation order
