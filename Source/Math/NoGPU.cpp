@@ -34,8 +34,7 @@ GPUSPARSE_INDEX_TYPE GPUSparseMatrix<ElemType>::SecondaryIndexValueAt(size_t idx
 #pragma region Constructors and Destructor
 
 template <class ElemType>
-GPUSparseMatrix<ElemType>::GPUSparseMatrix(const MatrixFormat matrixFormat /*= MatrixFormat::matrixFormatSparseCSR*/,
-                                           const DEVICEID_TYPE computeDevice /*= AUTOPLACEMATRIX*/)
+GPUSparseMatrix<ElemType>::GPUSparseMatrix(DEVICEID_TYPE computeDevice, const MatrixFormat matrixFormat /*= MatrixFormat::matrixFormatSparseCSR*/)
 {
 }
 
@@ -55,7 +54,7 @@ GPUSparseMatrix<ElemType>::GPUSparseMatrix(const GPUSparseMatrix<ElemType>& deep
 }
 
 template <class ElemType>
-GPUSparseMatrix<ElemType>::GPUSparseMatrix(const size_t numRows, const size_t numCols, const size_t numNZ, const MatrixFormat matrixFormat /*= MatrixFormat::matrixFormatSparseCSR*/, const DEVICEID_TYPE computeDevice /*= AUTOPLACEMATRIX*/)
+GPUSparseMatrix<ElemType>::GPUSparseMatrix(const size_t numRows, const size_t numCols, const size_t numNZ, DEVICEID_TYPE computeDevice, const MatrixFormat matrixFormat /*= MatrixFormat::matrixFormatSparseCSR*/)
 {
 }
 
@@ -430,7 +429,7 @@ void GPUSparseMatrix<ElemType>::InplaceTranspose()
 template <class ElemType>
 GPUSparseMatrix<ElemType> GPUSparseMatrix<ElemType>::ColumnSlice(size_t startColumn, size_t numCols) const
 {
-    GPUSparseMatrix<ElemType> a;
+    GPUSparseMatrix<ElemType> a(0);
     return a;
 }
 template <class ElemType>
@@ -734,14 +733,6 @@ DeviceBoundNumber<ElemType>::~DeviceBoundNumber()
 
 template <class ElemType>
 void GPUMatrix<ElemType>::SetDevice(DEVICEID_TYPE deviceId){};
-
-// GetBestGPUDeviceId - Get the best GPU DeviceId, based on cuda information
-//  TODO: should be replaced by BestGpu class instead, it's much better
-template <class ElemType>
-int GPUMatrix<ElemType>::GetBestGPUDeviceId() // returns -1 if no GPUs can be used
-{
-    return EnforceOneGPUOnly(-1); // CPU
-}
 
 // PrepareDevice - Setup the correct cuda context for an operation
 // deviceId - the device on which the operation will take place

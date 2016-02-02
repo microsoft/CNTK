@@ -343,7 +343,7 @@ template <typename ElemType>
 class SynchronousExecutionEngine : public IExecutionEngine<ElemType>
 {
 public:
-    SynchronousExecutionEngine(DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, unsigned long randomSeedOffset = 0)
+    SynchronousExecutionEngine(DEVICEID_TYPE deviceId, unsigned long randomSeedOffset = 0)
     {
         m_computationNetwork = make_shared<ComputationNetwork>(deviceId);
         m_computationNetwork->SetRandomSeedOffset(randomSeedOffset);

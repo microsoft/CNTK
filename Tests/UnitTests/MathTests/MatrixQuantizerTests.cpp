@@ -264,7 +264,7 @@ static void TestRunQuantization(
 
     for (int iterNum = 0; iterNum < numIterations; ++iterNum)
     {
-        inMatrix = Matrix<ElemType>::RandomUniform(numRows, numCols, rangeLow, rangeHigh, seed + iterNum, deviceId);
+        inMatrix = Matrix<ElemType>::RandomUniform(numRows, numCols, deviceId, rangeLow, rangeHigh, seed + iterNum);
 
         std::unique_ptr<ElemType[]> gpuInMatrix(inMatrix.CopyToArray());
         std::unique_ptr<ElemType[]> gpuPrevResidualMatrix(residueMatrix.CopyToArray());

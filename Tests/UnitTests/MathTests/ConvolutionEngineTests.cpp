@@ -76,7 +76,7 @@ BOOST_AUTO_TEST_CASE(ConvolutionForward)
                       {
                           return seed++ % (inW * inH * cmapIn);
                       });
-        SingleMatrix in(inW * inH * cmapIn, n, buf.data(), matrixFlagNormal, deviceId);
+        SingleMatrix in(inW * inH * cmapIn, n, buf.data(), deviceId, matrixFlagNormal);
 
         seed = 0;
         buf.resize(kW * kH * cmapIn * cmapOut);
@@ -85,7 +85,7 @@ BOOST_AUTO_TEST_CASE(ConvolutionForward)
                       {
                           return seed++ % (kW * kH * cmapIn);
                       });
-        SingleMatrix filt(cmapOut, kW * kH * cmapIn, buf.data(), matrixFlagNormal, deviceId);
+        SingleMatrix filt(cmapOut, kW * kH * cmapIn, buf.data(), deviceId, matrixFlagNormal);
 
         SingleMatrix out(outW * outH * cmapOut, n, deviceId);
         SingleMatrix temp(deviceId);
@@ -98,13 +98,13 @@ BOOST_AUTO_TEST_CASE(ConvolutionForward)
             15219.0f, 15921.0f, 18729.0f, 19431.0f,
             15219.0f, 15921.0f, 18729.0f, 19431.0f,
             15219.0f, 15921.0f, 18729.0f, 19431.0f};
-        SingleMatrix exp(outW * outH * cmapOut, n, expBuf.data(), matrixFlagNormal, deviceId);
+        SingleMatrix exp(outW * outH * cmapOut, n, expBuf.data(), deviceId, matrixFlagNormal);
         BOOST_CHECK_MESSAGE(out.IsEqualTo(exp), "Unexpected convolution output.");
 
         float b[] = {1.0f, 2.0f};
-        SingleMatrix bias(cmapOut, 1, b, matrixFlagNormal, deviceId);
+        SingleMatrix bias(cmapOut, 1, b, deviceId, matrixFlagNormal);
 
-        SingleMatrix plusB(outW * outH * cmapOut, n, expBuf.data(), matrixFlagNormal, deviceId);
+        SingleMatrix plusB(outW * outH * cmapOut, n, expBuf.data(), deviceId, matrixFlagNormal);
         eng->AddBias(*outT, out, *biasT, bias, plusB);
 
         // Bias is per-channel.
@@ -114,7 +114,7 @@ BOOST_AUTO_TEST_CASE(ConvolutionForward)
                        {
                            return a + b[(seed++ % (outW * outH * cmapOut)) / (outW * outH)];
                        });
-        SingleMatrix expPlusB(outW * outH * cmapOut, n, expBuf.data(), matrixFlagNormal, deviceId);
+        SingleMatrix expPlusB(outW * outH * cmapOut, n, expBuf.data(), deviceId, matrixFlagNormal);
         BOOST_CHECK_MESSAGE(plusB.IsEqualTo(expPlusB), "Unexpected (convolution + bias) output.");
     }
 }
@@ -156,9 +156,9 @@ BOOST_AUTO_TEST_CASE(ConvolutionForwardPad)
 
         // Input in NCHW format.
         fprintf(stderr, "ConvolutionEngineTests.cpp %d\n", __LINE__);
-        SingleMatrix in(inW * inH * cmapIn, n, vec(inW * inH * cmapIn * n, 1.0f).data(), matrixFlagNormal, deviceId);
+        SingleMatrix in(inW * inH * cmapIn, n, vec(inW * inH * cmapIn * n, 1.0f).data(), deviceId, matrixFlagNormal);
         // Create cmapOut filters, each kW x kH x cmapIn (NCHW format).
-        SingleMatrix filt(cmapOut, kW * kH * cmapIn, vec(kW * kH * cmapIn * cmapOut, 1.0f).data(), matrixFlagNormal, deviceId);
+        SingleMatrix filt(cmapOut, kW * kH * cmapIn, vec(kW * kH * cmapIn * cmapOut, 1.0f).data(), deviceId, matrixFlagNormal);
 
         SingleMatrix out(outW * outH * cmapOut, n, deviceId);
         SingleMatrix temp(deviceId);
@@ -172,7 +172,7 @@ BOOST_AUTO_TEST_CASE(ConvolutionForwardPad)
             4.0f, 6.0f, 6.0f, 9.0f,
             4.0f, 6.0f, 6.0f, 9.0f,
         };
-        SingleMatrix exp(outW * outH * cmapOut, n, expBuf, matrixFlagNormal, deviceId);
+        SingleMatrix exp(outW * outH * cmapOut, n, expBuf, deviceId, matrixFlagNormal);
         BOOST_CHECK(out.IsEqualTo(exp));
     }
 }
@@ -208,7 +208,7 @@ BOOST_AUTO_TEST_CASE(ConvolutionBackwardData)
         float srcGradBuf[] = {
             1.0f, 1.0f,
             1.0f, 1.0f};
-        SingleMatrix srcGrad(outW * outH * cmapOut, n, srcGradBuf, matrixFlagNormal, deviceId);
+        SingleMatrix srcGrad(outW * outH * cmapOut, n, srcGradBuf, deviceId, matrixFlagNormal);
 
         vec filtB(kW * kH * cmapIn * cmapOut);
         // Create cmapOut filters, each kW x kH x cmapIn (NCHW format).
@@ -217,7 +217,7 @@ BOOST_AUTO_TEST_CASE(ConvolutionBackwardData)
                       {
                           return seed++ % (kW * kH * cmapIn);
                       });
-        SingleMatrix filt(cmapOut, kW * kH * cmapIn, filtB.data(), matrixFlagNormal, deviceId);
+        SingleMatrix filt(cmapOut, kW * kH * cmapIn, filtB.data(), deviceId, matrixFlagNormal);
 
         SingleMatrix grad(inW * inH * cmapIn, n, deviceId);
         grad.SetValue(1);
@@ -233,7 +233,7 @@ BOOST_AUTO_TEST_CASE(ConvolutionBackwardData)
                           return 2 * (seed++ % (kW * kH * cmapIn)) + 1;
                       });
 
-        SingleMatrix exp(inW * inH * cmapIn, n, gradB.data(), matrixFlagNormal, deviceId);
+        SingleMatrix exp(inW * inH * cmapIn, n, gradB.data(), deviceId, matrixFlagNormal);
         BOOST_CHECK(grad.IsEqualTo(exp));
     }
 }
@@ -271,7 +271,7 @@ BOOST_AUTO_TEST_CASE(ConvolutionBackwardFilter)
             1.0f, 1.0f,
             1.0f, 1.0f,
         };
-        SingleMatrix srcGrad(outW * outH * cmapOut, n, srcGradBuf, matrixFlagNormal, deviceId);
+        SingleMatrix srcGrad(outW * outH * cmapOut, n, srcGradBuf, deviceId, matrixFlagNormal);
 
         vec buf(inW * inH * cmapIn * n);
         int seed = 0;
@@ -280,7 +280,7 @@ BOOST_AUTO_TEST_CASE(ConvolutionBackwardFilter)
                       {
                           return seed++ % (inW * inH * cmapIn);
                       });
-        SingleMatrix in(inW * inH * cmapIn, n, buf.data(), matrixFlagNormal, deviceId);
+        SingleMatrix in(inW * inH * cmapIn, n, buf.data(), deviceId, matrixFlagNormal);
 
         SingleMatrix filt(cmapOut, kW * kH * cmapIn, deviceId);
         filt.SetValue(1);
@@ -295,18 +295,18 @@ BOOST_AUTO_TEST_CASE(ConvolutionBackwardFilter)
                       {
                           return 2 * (seed++ % (kW * kH * cmapIn)) + 1;
                       });
-        SingleMatrix exp(cmapOut, kW * kH * cmapIn, expFiltB.data(), matrixFlagNormal, deviceId);
+        SingleMatrix exp(cmapOut, kW * kH * cmapIn, expFiltB.data(), deviceId, matrixFlagNormal);
         BOOST_CHECK_MESSAGE(filt.IsEqualTo(exp), "Unexpected convolution gradient.");
 
         // Verify bias backpropagation.
         float b[] = {1.0f, 2.0f};
-        SingleMatrix biasGrad(cmapOut, 1, b, matrixFlagNormal, deviceId);
+        SingleMatrix biasGrad(cmapOut, 1, b, deviceId, matrixFlagNormal);
 
         eng->BackwardBias(*srcGradT, srcGrad, *biasT, biasGrad);
 
         // Bias is per-channel.
         float bg[] = {b[0] + srcGradBuf[0] + srcGradBuf[2], b[1] + srcGradBuf[1] + srcGradBuf[3]};
-        SingleMatrix expBiasGrad(cmapOut, 1, bg, matrixFlagNormal, deviceId);
+        SingleMatrix expBiasGrad(cmapOut, 1, bg, deviceId, matrixFlagNormal);
         BOOST_CHECK_MESSAGE(biasGrad.IsEqualTo(expBiasGrad), "Unexpected bias gradient.");
     }
 }
@@ -342,7 +342,7 @@ BOOST_AUTO_TEST_CASE(MaxPoolForward)
                       {
                           return seed++ % (inW * inH * cmap);
                       });
-        SingleMatrix in(inW * inH * cmap, n, buf.data(), matrixFlagNormal, deviceId);
+        SingleMatrix in(inW * inH * cmap, n, buf.data(), deviceId, matrixFlagNormal);
 
         SingleMatrix out(outW * outH * cmap, n, deviceId);
 
@@ -359,7 +359,7 @@ BOOST_AUTO_TEST_CASE(MaxPoolForward)
             21.0f, 23.0f,
             29.0f, 31.0f,
         };
-        SingleMatrix exp(outW * outH * cmap, n, expBuf, matrixFlagNormal, deviceId);
+        SingleMatrix exp(outW * outH * cmap, n, expBuf, deviceId, matrixFlagNormal);
         BOOST_CHECK(out.IsEqualTo(exp));
     }
 }
@@ -395,7 +395,7 @@ BOOST_AUTO_TEST_CASE(MaxPoolBackward)
                       {
                           return seed++ % (inW * inH * cmap);
                       });
-        SingleMatrix in(inW * inH * cmap, n, buf.data(), matrixFlagNormal, deviceId);
+        SingleMatrix in(inW * inH * cmap, n, buf.data(), deviceId, matrixFlagNormal);
         SingleMatrix out(outW * outH * cmap, n, deviceId);
         // Do forward pass first.
         eng->Forward(*inT, in, *poolT, *outT, out);
@@ -421,7 +421,7 @@ BOOST_AUTO_TEST_CASE(MaxPoolBackward)
         };
         for (size_t i = 0; i < expMap.size(); i++)
             buf[(int) expMap[i] + inW * inH * cmap * (i / (expMap.size() / n))] += expMap[i];
-        SingleMatrix exp(inW * inH * cmap, n, buf.data(), matrixFlagNormal, deviceId);
+        SingleMatrix exp(inW * inH * cmap, n, buf.data(), deviceId, matrixFlagNormal);
 
         BOOST_CHECK(grad.IsEqualTo(exp));
     }
@@ -458,7 +458,7 @@ BOOST_AUTO_TEST_CASE(AvgPoolForward)
                       {
                           return seed++ % (inW * inH * cmap);
                       });
-        SingleMatrix in(inW * inH * cmap, n, buf.data(), matrixFlagNormal, deviceId);
+        SingleMatrix in(inW * inH * cmap, n, buf.data(), deviceId, matrixFlagNormal);
 
         SingleMatrix out(outW * outH * cmap, n, deviceId);
 
@@ -475,7 +475,7 @@ BOOST_AUTO_TEST_CASE(AvgPoolForward)
             18.5f, 20.5f,
             26.5f, 28.5f,
         };
-        SingleMatrix exp(outW * outH * cmap, n, expBuf, matrixFlagNormal, deviceId);
+        SingleMatrix exp(outW * outH * cmap, n, expBuf, deviceId, matrixFlagNormal);
         BOOST_CHECK(out.IsEqualTo(exp));
     }
 }
@@ -511,7 +511,7 @@ BOOST_AUTO_TEST_CASE(AvgPoolBackward)
                       {
                           return seed++ % (inW * inH * cmap);
                       });
-        SingleMatrix in(inW * inH * cmap, n, buf.data(), matrixFlagNormal, deviceId);
+        SingleMatrix in(inW * inH * cmap, n, buf.data(), deviceId, matrixFlagNormal);
         SingleMatrix out(outW * outH * cmap, n, deviceId);
         // Do forward pass first.
         eng->Forward(*inT, in, *poolT, *outT, out);
@@ -530,7 +530,7 @@ BOOST_AUTO_TEST_CASE(AvgPoolBackward)
             3.625f, 3.625f, 4.125f, 4.125f,
             3.625f, 3.625f, 4.125f, 4.125f,
         };
-        SingleMatrix exp(inW * inH * cmap, n, expBuf, matrixFlagNormal, deviceId);
+        SingleMatrix exp(inW * inH * cmap, n, expBuf, deviceId, matrixFlagNormal);
         BOOST_CHECK(grad.IsEqualTo(exp));
     }
 }

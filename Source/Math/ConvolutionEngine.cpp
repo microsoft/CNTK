@@ -72,7 +72,7 @@ public:
             size_t startSampleId = i * subBatchSize;
             size_t endSampleId = min(batchSize, startSampleId + subBatchSize);
             size_t smallBatchSize = endSampleId - startSampleId;
-            Mat inputSubBatch;
+            Mat inputSubBatch(in.GetDeviceId());
 
             // We optimize for three different scenarios here by handling them slightly differently.
             // [Scenario 1] Dense: Unroll using AssignPackedConvolutionInput and multiply.
@@ -217,7 +217,7 @@ public:
                 // [Scenario 3] Sparse all others: convert to dense. Temporary work-around - allocating/de-allocating memory is costly!
                 if (m_gpuSparseOpt)
                 {
-                    Matrix<ElemType> inputSubBatch;
+                    Matrix<ElemType> inputSubBatch(in.GetDeviceId());
                     inputSubBatch.SetValue(in.ColumnSlice(startSampleID, smallBatchSize));
                     inputSubBatch.Reshape(inT.c(), smallBatchSize * inT.w() * inT.h());
                     Matrix<ElemType> inputSubBatchSparseReordered(inputSubBatch.GetNumCols(), inputSubBatch.GetNumRows(), inputSubBatch.GetDeviceId(), MatrixType::SPARSE, MatrixFormat::matrixFormatSparseCSC);

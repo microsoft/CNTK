@@ -27,7 +27,7 @@
 #else
 int bestGPUDummy = 42; // put something into this CPP, as to avoid a linker warning
 #endif
-#include "CommonMatrix.h" // for CPUDEVICE and AUTOPLACEMATRIX
+#include "CommonMatrix.h" // for CPUDEVICE
 
 #ifndef CPUONLY // #define this to disable GPUs
 
@@ -130,11 +130,11 @@ private:
 static DEVICEID_TYPE SelectDevice(DEVICEID_TYPE deviceId, bool bLockGPU)
 {
     // This can only be called with the same parameter.
-    static DEVICEID_TYPE lastDeviceId = DEVICEID_NOTYETDETERMINED;
-    if (lastDeviceId == DEVICEID_NOTYETDETERMINED)
-        lastDeviceId = deviceId;
-    else if (lastDeviceId != deviceId)
-        InvalidArgument("SelectDevice: Attempted to change device selection from %d to %d (%d means 'auto').", (int) lastDeviceId, (int) deviceId, (int) DEVICEID_AUTO);
+    static DEVICEID_TYPE selectedDeviceId = DEVICEID_NOTYETDETERMINED;
+    if (selectedDeviceId == DEVICEID_NOTYETDETERMINED)
+        selectedDeviceId = deviceId;
+    else if (selectedDeviceId != deviceId)
+        InvalidArgument("SelectDevice: Attempted to change device selection from %d to %d (%d means 'auto').", (int)selectedDeviceId, (int)deviceId, (int)DEVICEID_AUTO);
 
     if (deviceId == DEVICEID_AUTO)
     {
@@ -152,8 +152,8 @@ static DEVICEID_TYPE SelectDevice(DEVICEID_TYPE deviceId, bool bLockGPU)
         else // already chosen
             deviceId = bestDeviceId;
     }
-    // route the result through EnforceOneGPUOnly() which only lets the first choice through (see comment there)
-    return EnforceOneGPUOnly(deviceId);
+
+    return deviceId;
 }
 //#ifdef MATH_EXPORTS
 //__declspec(dllexport)
