@@ -566,7 +566,10 @@ public:
         if (m_hModule == NULL)
             RuntimeError("Plugin not found: %s", msra::strfun::utf8(m_dllName).c_str());
         // create a variable of each type just to call the proper templated version
-        return GetProcAddress(m_hModule, proc.c_str());
+        FARPROC entryPoint = GetProcAddress(m_hModule, proc.c_str());
+        if (entryPoint == nullptr)
+            RuntimeError("Symbol '%s' not found in plugin %s", proc.c_str(), m_dllName.c_str());
+        return entryPoint;
     }
     ~Plugin()
     {
@@ -593,7 +596,10 @@ public:
         void* handle = dlopen(soName.c_str(), RTLD_LAZY);
         if (handle == NULL)
             RuntimeError("Plugin not found: %s (error: %s)", soName.c_str(), dlerror());
-        return dlsym(handle, proc.c_str());
+        void* entryPoint = dlsym(handle, proc.c_str());
+        if (entryPoint == nullptr)
+            RuntimeError("Symbol '%s' not found in plugin %s", proc.c_str(), soName.c_str());
+        return entryPoint;
     }
     ~Plugin()
     {
