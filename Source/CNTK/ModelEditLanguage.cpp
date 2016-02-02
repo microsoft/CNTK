@@ -406,6 +406,7 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
 
         std::string propName = params[1];
         MELProperty prop = melPropNull;
+        // BUGBUG: "computeGradient" and "needsGradient" are both inconsistent with NDL which only accepts "needGradient" (no 's')
         if (EqualInsensitive(propName, "computeGradient", "needsGradient"))
         {
             prop = melPropComputeGradient;

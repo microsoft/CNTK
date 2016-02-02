@@ -129,12 +129,8 @@ ComputationNetwork::PARTraversalFlowControlNode::PARTraversalFlowControlNode(con
 {
     for (auto& node : m_nestedNodes)
     {
-        if (node->IsOutputOlderThanInputs())
+        if (node->IsOutOfDateWrtInputs())
         {
-            auto recInfo = dynamic_pointer_cast<SEQTraversalFlowControlNode>(node);
-            if (recInfo)
-                assert(recInfo->m_sourceNode->GetMBLayout() == node->GetMBLayout());
-
             node->BeginForwardProp();
             node->ForwardProp(fr.WithLayout(node->GetMBLayout()));
             node->EndForwardProp();
@@ -309,15 +305,16 @@ ComputationNetwork::PARTraversalFlowControlNode::PARTraversalFlowControlNode(con
     return nullptr; // not part of a recurrent loop
 }
 
-// check if any of the nodes in the recurrence IsOutputOlderThanInputs(), with exception of delay nodes for which this check would fail and can be skipped
+// check if any of the nodes in the recurrence IsOutOfDateWrtInputs(), with exception of delay nodes for which this check would fail and must be skipped
 // TODO: Would it be sufficient to check against our own time stamp, so that we can use a unified time-stamping mechanism? Then we'd not need this special check for delayed nodes; just check all inputs against our own time stamp.
-bool ComputationNetwork::SEQTraversalFlowControlNode::IsOutputOlderThanInputs() const
+bool ComputationNetwork::SEQTraversalFlowControlNode::IsOutOfDateWrtInputs() const
 {
     for (auto& ptr : m_nestedNodes)
     {
-        if (ptr->IsOutputOlderThanInputs() &&
+        if (ptr->IsOutOfDateWrtInputs() &&
             ptr->OperationName() != OperationNameOf(PastValueNode) &&
             ptr->OperationName() != OperationNameOf(FutureValueNode))
+            // TODO: when ShiftNode lands, check this as well. Ideally just test whether ptr is a IRecurrentNode
         {
             return true;
         }

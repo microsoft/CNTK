@@ -45,6 +45,8 @@ train = [
     
     reader = [
         readerType = "UCIFastReader"
+        # To get the data (Train-28x28.txt) please run `python mnist_convert.py` 
+        # from the 'AdditionalFiles' folder. See REAMDE.md for details.
         file = "$DataDir$/Train-28x28.txt"
         
         features = [
