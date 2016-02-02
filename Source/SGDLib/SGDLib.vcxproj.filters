@@ -141,6 +141,9 @@
     <ClInclude Include="..\Common\Include\MultiversoWrapper.h">
       <Filter>Parallelization</Filter>
     </ClInclude>
+    <ClInclude Include="NoMultiversoWrapper.h">
+      <Filter>Parallelization</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Common">

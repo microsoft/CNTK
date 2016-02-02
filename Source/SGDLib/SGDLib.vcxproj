@@ -86,6 +86,7 @@
       <WarningLevel>Level4</WarningLevel>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>_SCL_SECURE_NO_WARNINGS;WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions Condition="'$(CNTK_ENABLE_ASGD)'=='true'">MULTIVERSO_SUPPORT;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(CNTK_ENABLE_1BitSGD)'=='true'">QUANTIZED_GRADIENT_AGGREGATION;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
       <OpenMPSupport>true</OpenMPSupport>
@@ -137,6 +138,7 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(CNTK_ENABLE_1BitSGD)'=='true'">QUANTIZED_GRADIENT_AGGREGATION;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions Condition="'$(CNTK_ENABLE_ASGD)'=='true'">MULTIVERSO_SUPPORT;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
       <AdditionalOptions>/d2Zi+ %(AdditionalOptions)</AdditionalOptions>
@@ -221,6 +223,7 @@
     <ClInclude Include="..\ComputationNetworkLib\LinearAlgebraNodes.h" />
     <ClInclude Include="..\ComputationNetworkLib\NonlinearityNodes.h" />
     <ClInclude Include="..\ComputationNetworkLib\RecurrentNodes.h" />
+    <ClInclude Include="NoMultiversoWrapper.h" />
     <ClInclude Include="SimpleDistGradAggregator.h" />
     <ClInclude Include="SimpleEvaluator.h" />
     <ClInclude Include="SimpleOutputWriter.h" />

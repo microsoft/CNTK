@@ -17,7 +17,11 @@
 #include <chrono> 
 #include <random>
 #include "Profiler.h"
+#ifdef MULTIVERSO_SUPPORT
 #include "MultiversoWrapper.h"
+#else
+#include "NoMultiversoWrapper.h"
+#endif
 
 using namespace std; // ugh! TODO: get rid of this from .h files!!!
 
