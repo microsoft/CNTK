@@ -44,7 +44,7 @@ mathlib=
 default_use_1bitsgd=no
 enable_1bitsgd=$default_use_1bitsgd
 
-default_use_asgd=no
+default_use_asgd=yes
 enable_asgd=$default_use_asgd
 
 # List from best to worst choice
