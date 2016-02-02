@@ -438,6 +438,9 @@ endif
 ifdef OPENCV_PATH
 IMAGEREADER_SRC =\
 	$(SOURCEDIR)/Readers/ImageReader/Exports.cpp \
+	$(SOURCEDIR)/Readers/ImageReader/ImageConfigHelper.cpp \
+	$(SOURCEDIR)/Readers/ImageReader/ImageDataDeserializer.cpp \
+	$(SOURCEDIR)/Readers/ImageReader/ImageTransformers.cpp \
 	$(SOURCEDIR)/Readers/ImageReader/ImageReader.cpp \
 
 IMAGEREADER_OBJ := $(patsubst %.cpp, $(OBJDIR)/%.o, $(IMAGEREADER_SRC))
@@ -450,32 +453,6 @@ INCLUDEPATH += $(OPENCV_PATH)/include
 LIBPATH += $(OPENCV_PATH)/lib $(OPENCV_PATH)/release/lib
 
 $(IMAGEREADER): $(IMAGEREADER_OBJ) | $(CNTKMATH_LIB)
-	@echo $(SEPARATOR)
-	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(LIBPATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH)) -o $@ $^ -l$(CNTKMATH) -lopencv_core -lopencv_imgproc -lopencv_imgcodecs
-endif
-
-########################################
-# NewImageReader plugin
-########################################
-
-ifdef OPENCV_PATH
-NEWIMAGEREADER_SRC =\
-	$(SOURCEDIR)/Readers/NewImageReader/Exports.cpp \
-	$(SOURCEDIR)/Readers/NewImageReader/ImageConfigHelper.cpp \
-	$(SOURCEDIR)/Readers/NewImageReader/ImageDataDeserializer.cpp \
-	$(SOURCEDIR)/Readers/NewImageReader/ImageTransformers.cpp \
-	$(SOURCEDIR)/Readers/NewImageReader/ImageReader.cpp \
-
-NEWIMAGEREADER_OBJ := $(patsubst %.cpp, $(OBJDIR)/%.o, $(NEWIMAGEREADER_SRC))
-
-NEWIMAGEREADER:=$(LIBDIR)/NewImageReader.so
-ALL += $(NEWIMAGEREADER)
-SRC+=$(NEWIMAGEREADER_SRC)
-
-INCLUDEPATH += $(OPENCV_PATH)/include
-LIBPATH += $(OPENCV_PATH)/release/lib
-
-$(NEWIMAGEREADER): $(NEWIMAGEREADER_OBJ) | $(CNTKMATH_LIB)
 	@echo $(SEPARATOR)
 	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(LIBPATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH)) -o $@ $^ -l$(CNTKMATH) -lopencv_core -lopencv_imgproc -lopencv_imgcodecs
 endif
