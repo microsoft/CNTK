@@ -57,7 +57,7 @@ endif
 CXX = mpic++
 
 SOURCEDIR:= Source
-INCLUDEPATH:= $(addprefix $(SOURCEDIR)/, Common/Include Math CNTK ActionsLib ComputationNetworkLib SGDLib SequenceTrainingLib CNTK/BrainScript)
+INCLUDEPATH:= $(addprefix $(SOURCEDIR)/, Common/Include Math CNTK ActionsLib ComputationNetworkLib SGDLib SequenceTrainingLib CNTK/BrainScript Readers/ReaderLib)
 CPPFLAGS:= -D_POSIX_SOURCE -D_XOPEN_SOURCE=600 -D__USE_XOPEN2K
 CXXFLAGS:= -msse3 -std=c++0x -std=c++11 -fopenmp -fpermissive -fPIC -Werror -fcheck-new
 LIBPATH:=
@@ -211,6 +211,12 @@ $(BUILDINFO): $(GENBUILD)
 ########################################
 
 # Define all sources that need to be built
+READER_SRC =\
+	$(SOURCEDIR)/Readers/ReaderLib/SampleModePacker.cpp \
+	$(SOURCEDIR)/Readers/ReaderLib/BlockRandomizer.cpp \
+	$(SOURCEDIR)/Readers/ReaderLib/NoRandomizer.cpp \
+	$(SOURCEDIR)/Readers/ReaderLib/ReaderShim.cpp \
+
 COMMON_SRC =\
 	$(SOURCEDIR)/Common/Config.cpp \
 	$(SOURCEDIR)/Common/DataReader.cpp \
@@ -249,6 +255,7 @@ MATH_SRC +=\
 endif
 
 MATH_SRC+=$(COMMON_SRC)
+MATH_SRC+=$(READER_SRC)
 
 MATH_OBJ := $(patsubst %.cu, $(OBJDIR)/%.o, $(patsubst %.cpp, $(OBJDIR)/%.o, $(MATH_SRC)))
 
@@ -431,6 +438,9 @@ endif
 ifdef OPENCV_PATH
 IMAGEREADER_SRC =\
 	$(SOURCEDIR)/Readers/ImageReader/Exports.cpp \
+	$(SOURCEDIR)/Readers/ImageReader/ImageConfigHelper.cpp \
+	$(SOURCEDIR)/Readers/ImageReader/ImageDataDeserializer.cpp \
+	$(SOURCEDIR)/Readers/ImageReader/ImageTransformers.cpp \
 	$(SOURCEDIR)/Readers/ImageReader/ImageReader.cpp \
 
 IMAGEREADER_OBJ := $(patsubst %.cpp, $(OBJDIR)/%.o, $(IMAGEREADER_SRC))

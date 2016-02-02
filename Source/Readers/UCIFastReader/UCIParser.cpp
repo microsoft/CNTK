@@ -347,7 +347,7 @@ void UCIParser<NumType, LabelType>::StoreLastLabel()
 // bufferSize - size of temporary buffer to store reads
 // startPosition - file position on which we should start
 template <typename NumType, typename LabelType>
-void UCIParser<NumType, LabelType>::ParseInit(LPCWSTR fileName, size_t startFeatures, size_t dimFeatures, size_t startLabels, size_t dimLabels, size_t bufferSize, size_t startPosition)
+void UCIParser<NumType, LabelType>::ParseInit(LPCWSTR/*TODO: change to C++ type*/ fileName, size_t startFeatures, size_t dimFeatures, size_t startLabels, size_t dimLabels, size_t bufferSize, size_t startPosition)
 {
     assert(fileName != NULL);
     m_startLabels = startLabels;
@@ -365,10 +365,10 @@ void UCIParser<NumType, LabelType>::ParseInit(LPCWSTR fileName, size_t startFeat
 
     errno_t err = _wfopen_s(&m_pFile, fileName, L"rb");
     if (err)
-        RuntimeError("UCIParser::ParseInit - error opening file");
+        RuntimeError("UCIParser::ParseInit - error opening file %ls", fileName);
     int rc = _fseeki64(m_pFile, 0, SEEK_END);
     if (rc)
-        RuntimeError("UCIParser::ParseInit - error seeking in file");
+        RuntimeError("UCIParser::ParseInit - error seeking in file %ls", fileName);
 
     m_fileSize = GetFilePosition();
     m_fileBuffer = new BYTE[m_bufferSize];
