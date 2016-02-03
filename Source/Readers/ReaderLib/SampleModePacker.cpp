@@ -15,12 +15,11 @@ SampleModePacker::SampleModePacker(
     MemoryProviderPtr memoryProvider,
     TransformerPtr transformer,
     size_t minibatchSize,
-    const std::vector<StreamDescriptionPtr>& streams)
-    : m_transformer(transformer),
-    m_minibatchSize(minibatchSize),
-    m_outputStreams(streams),
-    m_minibatchLayout(std::make_shared<MBLayout>()),
-    m_memoryProvider(memoryProvider)
+    const std::vector<StreamDescriptionPtr>& streams) : m_transformer(transformer),
+                                                        m_minibatchSize(minibatchSize),
+                                                        m_outputStreams(streams),
+                                                        m_minibatchLayout(std::make_shared<MBLayout>()),
+                                                        m_memoryProvider(memoryProvider)
 {
     m_inputStreams = m_transformer->GetStreamDescriptions();
     assert(m_inputStreams.size() == m_outputStreams.size());

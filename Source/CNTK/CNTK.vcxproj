@@ -21,12 +21,12 @@
   <Choose>
     <When Condition="'$(Configuration)|$(Platform)'=='Debug_CpuOnly|x64' Or '$(Configuration)|$(Platform)'=='Release_CpuOnly|x64'">
       <PropertyGroup>
-          <UsesCuda>false</UsesCuda>
+        <UsesCuda>false</UsesCuda>
       </PropertyGroup>
     </When>
     <Otherwise>
       <PropertyGroup>
-          <UsesCuda>true</UsesCuda>
+        <UsesCuda>true</UsesCuda>
       </PropertyGroup>
     </Otherwise>
   </Choose>
@@ -116,9 +116,9 @@
     <ClCompile>
       <PreprocessorDefinitions>%(PreprocessorDefinitions);CPUONLY</PreprocessorDefinitions>
     </ClCompile>
-      <Link>
-        <DelayLoadDLLs>Math.dll; msmpi.dll;</DelayLoadDLLs>
-      </Link>
+    <Link>
+      <DelayLoadDLLs>Math.dll; msmpi.dll;</DelayLoadDLLs>
+    </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64' Or '$(Configuration)|$(Platform)'=='Release_CpuOnly|x64'">
     <ClCompile>
@@ -188,6 +188,7 @@
     <ClInclude Include="..\Common\Include\Basics.h" />
     <ClInclude Include="..\Common\Include\BestGpu.h" />
     <ClInclude Include="..\Common\Include\DataReader.h" />
+    <ClInclude Include="..\Common\Include\StringUtil.h" />
     <ClInclude Include="..\Common\Include\TensorShape.h" />
     <ClInclude Include="..\Common\Include\DataWriter.h" />
     <ClInclude Include="..\Common\Include\File.h" />
@@ -242,7 +243,8 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64' Or '$(Configuration)|$(Platform)'=='Debug_CpuOnly|x64'">NotUsing</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="..\Common\DebugUtil.cpp">
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64' Or '$(Configuration)|$(Platform)'=='Debug_CpuOnly|x64'"></PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64' Or '$(Configuration)|$(Platform)'=='Debug_CpuOnly|x64'">
+      </PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="..\Common\Include\ConcStack.h" />
     <ClCompile Include="..\Common\TimerUtility.cpp" />
