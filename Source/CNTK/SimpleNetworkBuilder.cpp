@@ -1771,27 +1771,27 @@ template class SimpleNetworkBuilder<double>;
 
 TrainingCriterion ParseTrainingCriterionString(wstring s)
 {
-         if (!_wcsicmp(s.c_str(), L"crossEntropyWithSoftmax"))  return TrainingCriterion::CrossEntropyWithSoftmax;
-    else if (!_wcsicmp(s.c_str(), L"sequenceWithSoftmax"))      return TrainingCriterion::SequenceWithSoftmax;
-    else if (!_wcsicmp(s.c_str(), L"squareError"))              return TrainingCriterion::SquareError;
-    else if (!_wcsicmp(s.c_str(), L"logistic"))                 return TrainingCriterion::Logistic;
-    else if (!_wcsicmp(s.c_str(), L"noiseContrastiveEstimation") || !_wcsicmp(s.c_str(), L"noiseContrastiveEstimationNode" /*spelling error, deprecated*/))
+    if      (EqualCI(s.c_str(), L"crossEntropyWithSoftmax"))  return TrainingCriterion::CrossEntropyWithSoftmax;
+    else if (EqualCI(s.c_str(), L"sequenceWithSoftmax"))      return TrainingCriterion::SequenceWithSoftmax;
+    else if (EqualCI(s.c_str(), L"squareError"))              return TrainingCriterion::SquareError;
+    else if (EqualCI(s.c_str(), L"logistic"))                 return TrainingCriterion::Logistic;
+    else if (EqualCI(s.c_str(), L"noiseContrastiveEstimation") || EqualCI(s.c_str(), L"noiseContrastiveEstimationNode" /*spelling error, deprecated*/))
         return TrainingCriterion::NCECrossEntropyWithSoftmax;
-    else if (!!_wcsicmp(s.c_str(), L"classCrossEntropyWithSoftmax")) // (twisted logic to keep compiler happy w.r.t. not returning from LogicError)
+    else if (!EqualCI(s.c_str(), L"classCrossEntropyWithSoftmax")) // (twisted logic to keep compiler happy w.r.t. not returning from LogicError)
         LogicError("trainingCriterion: Invalid trainingCriterion value. Valid values are (crossEntropyWithSoftmax | squareError | logistic | classCrossEntropyWithSoftmax| sequenceWithSoftmax)");
     return TrainingCriterion::ClassCrossEntropyWithSoftmax;
 }
 
 EvalCriterion ParseEvalCriterionString(wstring s)
 {
-         if (!_wcsicmp(s.c_str(), L"errorPrediction"))              return EvalCriterion::ErrorPrediction;
-    else if (!_wcsicmp(s.c_str(), L"crossEntropyWithSoftmax"))      return EvalCriterion::CrossEntropyWithSoftmax;
-    else if (!_wcsicmp(s.c_str(), L"sequenceWithSoftmax"))          return EvalCriterion::SequenceWithSoftmax; 
-    else if (!_wcsicmp(s.c_str(), L"classCrossEntropyWithSoftmax")) return EvalCriterion::ClassCrossEntropyWithSoftmax;
-    else if (!_wcsicmp(s.c_str(), L"logistic"))                     return EvalCriterion::Logistic;
-    else if (!_wcsicmp(s.c_str(), L"noiseContrastiveEstimation") || !_wcsicmp(s.c_str(), L"noiseContrastiveEstimationNode" /*spelling error, deprecated*/))
+    if      (EqualCI(s.c_str(), L"errorPrediction"))              return EvalCriterion::ErrorPrediction;
+    else if (EqualCI(s.c_str(), L"crossEntropyWithSoftmax"))      return EvalCriterion::CrossEntropyWithSoftmax;
+    else if (EqualCI(s.c_str(), L"sequenceWithSoftmax"))          return EvalCriterion::SequenceWithSoftmax; 
+    else if (EqualCI(s.c_str(), L"classCrossEntropyWithSoftmax")) return EvalCriterion::ClassCrossEntropyWithSoftmax;
+    else if (EqualCI(s.c_str(), L"logistic"))                     return EvalCriterion::Logistic;
+    else if (EqualCI(s.c_str(), L"noiseContrastiveEstimation") || EqualCI(s.c_str(), L"noiseContrastiveEstimationNode" /*spelling error, deprecated*/))
         return EvalCriterion::NCECrossEntropyWithSoftmax;
-    else if (!!_wcsicmp(s.c_str(), L"squareError"))
+    else if (!EqualCI(s.c_str(), L"squareError"))
         LogicError("evalCriterion: Invalid trainingCriterion value. Valid values are (errorPrediction | crossEntropyWithSoftmax | squareError | logistic | sequenceWithSoftmax)");
     return EvalCriterion::SquareError;
 }

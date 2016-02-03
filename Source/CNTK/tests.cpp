@@ -284,7 +284,7 @@ void TestConfiguration(const ConfigParameters& configBase)
                     if (initData.size() > 0)
                         initValueScale = initData[0];
                     if (initData.size() > 1)
-                        uniform = !_stricmp(initData[1], "uniform");
+                        uniform = EqualCI(initData[1], "uniform");
                 }
             }
         }

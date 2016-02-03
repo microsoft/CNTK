@@ -197,7 +197,7 @@ void DSSMReader<ElemType>::InitFromConfig(const ConfigRecordType& readerConfig)
     }
 
     std::string minibatchMode(readerConfig(L"minibatchMode", "Partial"));
-    m_partialMinibatch = !_stricmp(minibatchMode.c_str(), "Partial");
+    m_partialMinibatch = EqualCI(minibatchMode.c_str(), "Partial");
 
     // Get the config parameters for query feature and doc feature
     ConfigParameters configFeaturesQuery = readerConfig(m_featuresNameQuery, "");

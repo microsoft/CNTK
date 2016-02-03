@@ -365,7 +365,7 @@ void BatchLUSequenceReader<ElemType>::InitFromConfig(const ConfigRecordType& rea
 
             // determine label type desired
             wstring labelType(labelConfig(L"labelType", L"category"));
-            if (!_wcsicmp(labelType.c_str(), L"category"))
+            if (EqualCI(labelType.c_str(), L"category"))
             {
                 m_labelInfo[index].type = labelCategory;
             }
@@ -429,11 +429,11 @@ void BatchLUSequenceReader<ElemType>::InitFromConfig(const ConfigRecordType& rea
     if (readerConfig.Exists(L"randomize"))
     {
         string randomizeString = readerConfig(L"randomize");
-        if (!_stricmp(randomizeString.c_str(), "none"))
+        if (EqualCI(randomizeString.c_str(), "none"))
         {
             ;
         }
-        else if (!_stricmp(randomizeString.c_str(), "auto") || !_stricmp(randomizeString.c_str(), "true"))
+        else if (EqualCI(randomizeString.c_str(), "auto") || EqualCI(randomizeString.c_str(), "true"))
         {
             mRandomize = true;
         }
