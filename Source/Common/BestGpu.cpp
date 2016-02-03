@@ -188,9 +188,9 @@ DEVICEID_TYPE DeviceFromConfig(const ConfigParameters& config)
     ConfigValue val = config("deviceId", "auto");
     bool bLockGPU = config(L"lockGPU", true);
 
-    if (!_stricmp(val.c_str(), "cpu"))
+    if (EqualCI(val.c_str(), "cpu"))
         return SelectDevice(CPUDEVICE, false);
-    else if (!_stricmp(val.c_str(), "auto"))
+    else if (EqualCI(val.c_str(), "auto"))
         return SelectDevice(DEVICEID_AUTO, bLockGPU);
     else
         return SelectDevice((int) val, bLockGPU);

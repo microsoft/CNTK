@@ -310,7 +310,7 @@ public:
         for (NDLNode* param : m_parameters)
         {
             bool optParam = param->GetType() == ndlTypeOptionalParameter;
-            if (optParam && !_stricmp(param->GetName().c_str(), name.c_str()))
+            if (optParam && EqualCI(param->GetName().c_str(), name.c_str()))
             {
                 auto paramValue = param->GetValue();
                 auto resolveParamNode = m_parent->ParseVariable(paramValue, false);

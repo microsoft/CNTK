@@ -14,6 +14,7 @@
 namespace Microsoft { namespace MSR { namespace CNTK {
 
 // EqualInsensitive - check to see if two nodes are equal up to the length of the first string (must be at least half as long as actual node name)
+// TODO: Allowing partial matches seems misguided. We should discourage that, or just remove it.
 // string1 - [in,out] string to compare, if comparision is equal insensitive but not sensitive, will replace with sensitive version
 // string2 - second string to compare
 // alternate - alternate naming of the string

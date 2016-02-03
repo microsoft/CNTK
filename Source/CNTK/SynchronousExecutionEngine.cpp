@@ -137,13 +137,13 @@ void SynchronousNodeEvaluator<ElemType>::Evaluate(NDLNode<ElemType>* node, const
             bool initOnCPUOnly = node->GetOptionalParameter("initOnCPUOnly", "false");
             int forcedRandomSeed = node->GetOptionalParameter("randomSeed", "-1" /*disabled*/);
 
-            if (!_wcsicmp(initString.c_str(), L"fixedValue"))
+            if (EqualCI(initString.c_str(), L"fixedValue"))
                 nodePtr->Value().SetValue(value);
-            else if (!_wcsicmp(initString.c_str(), L"uniform"))
+            else if (EqualCI(initString.c_str(), L"uniform"))
                 m_net->InitLearnableParameters(nodePtr, true, forcedRandomSeed < 0 ? randomSeed++ : (unsigned long) forcedRandomSeed, initValueScale, initOnCPUOnly);
-            else if (!_wcsicmp(initString.c_str(), L"gaussian"))
+            else if (EqualCI(initString.c_str(), L"gaussian"))
                 m_net->InitLearnableParameters(nodePtr, false, forcedRandomSeed < 0 ? randomSeed++ : (unsigned long) forcedRandomSeed, initValueScale, initOnCPUOnly);
-            else if (!_wcsicmp(initString.c_str(), L"fromFile"))
+            else if (EqualCI(initString.c_str(), L"fromFile"))
             {
                 std::string initFromFilePath = node->GetOptionalParameter("initFromFilePath", "");
                 if (initFromFilePath == "")
