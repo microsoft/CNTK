@@ -9,6 +9,14 @@
       <Configuration>Release</Configuration>
       <Platform>x64</Platform>
     </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug_CpuOnly|x64">
+      <Configuration>Debug_CpuOnly</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release_CpuOnly|x64">
+      <Configuration>Release_CpuOnly</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{DE3C54E5-D7D0-47AF-A783-DFDCE59E7937}</ProjectGuid>
@@ -24,14 +32,26 @@
     <RootNamespace>CNTK</RootNamespace>
     <ProjectName>SGDLib</ProjectName>
   </PropertyGroup>
+  <Choose>
+    <When Condition="'$(Configuration)|$(Platform)'=='Debug_CpuOnly|x64' Or '$(Configuration)|$(Platform)'=='Release_CpuOnly|x64'">
+      <PropertyGroup>
+        <UsesCuda>false</UsesCuda>
+      </PropertyGroup>
+    </When>
+    <Otherwise>
+      <PropertyGroup>
+        <UsesCuda>true</UsesCuda>
+      </PropertyGroup>
+    </Otherwise>
+  </Choose>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64' Or '$(Configuration)|$(Platform)'=='Debug_CpuOnly|x64'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <PlatformToolset>v120</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64' Or '$(Configuration)|$(Platform)'=='Release_CpuOnly|x64'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <PlatformToolset>v120</PlatformToolset>
@@ -40,37 +60,40 @@
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings" />
-  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="PropertySheets">
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64' Or '$(Configuration)|$(Platform)'=='Debug_CpuOnly|x64'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
-  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="PropertySheets">
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64' Or '$(Configuration)|$(Platform)'=='Release_CpuOnly|x64'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <LinkIncremental>true</LinkIncremental>
-    <IncludePath>..\SequenceTrainingLib;..\ComputationNetworkLib;..\Math;..\Common\Include;..\CNTK\BrainScript;..\..\DataReader\HTKMLFReader;C:\Program Files (x86)\Microsoft SDKs\MPI\Include;$(CUDA_PATH)\include;$(VCInstallDir)include;$(WindowsSDK_IncludePath)</IncludePath>
-    <LibraryPath>C:\Program Files (x86)\Microsoft SDKs\MPI\Lib\x64;$(SolutionDir)$(Platform)\$(Configuration);$(SolutionDir)..\Common\lib;$(VCInstallDir)lib\amd64;$(WindowsSDK_LibraryPath_x64);$(CUDA_PATH)\lib\$(Platform)</LibraryPath>
+  <PropertyGroup>
+    <IncludePath>..\SequenceTrainingLib;..\ComputationNetworkLib;..\Math;..\Common\Include;..\CNTK\BrainScript;..\..\DataReader\HTKMLFReader;C:\Program Files (x86)\Microsoft SDKs\MPI\Include;$(VCInstallDir)include;$(WindowsSDK_IncludePath)</IncludePath>
+    <IncludePath Condition="'$(CNTK_ENABLE_1BitSGD)'=='true'">..\1BitSGD;$(IncludePath)</IncludePath>
+    <LibraryPath>C:\Program Files (x86)\Microsoft SDKs\MPI\Lib\x64;$(SolutionDir)$(Platform)\$(Configuration);$(SolutionDir)..\Common\lib;$(VCInstallDir)lib\amd64;$(WindowsSDK_LibraryPath_x64)</LibraryPath>
     <CustomBuildAfterTargets>Build</CustomBuildAfterTargets>
     <IntDir>$(Platform)\$(Configuration)\$(ProjectName)\</IntDir>
     <PreBuildEventUseInBuild>false</PreBuildEventUseInBuild>
   </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64' Or '$(Configuration)|$(Platform)'=='Release_CpuOnly|x64'">
     <LinkIncremental>false</LinkIncremental>
-    <IncludePath>..\SequenceTrainingLib;..\ComputationNetworkLib;..\Math;..\Common\Include;..\CNTK\BrainScript;..\..\DataReader\HTKMLFReader;C:\Program Files (x86)\Microsoft SDKs\MPI\Include;$(CUDA_PATH)\include;$(VCInstallDir)include;$(WindowsSDK_IncludePath)</IncludePath>
-    <LibraryPath>C:\Program Files (x86)\Microsoft SDKs\MPI\Lib\x64;$(SolutionDir)$(Platform)\$(Configuration);$(SolutionDir)..\Common\lib;$(VCInstallDir)lib\amd64;$(WindowsSDK_LibraryPath_x64);$(CUDA_PATH)\lib\$(Platform)</LibraryPath>
-    <CustomBuildAfterTargets>Build</CustomBuildAfterTargets>
     <ExecutablePath>$(ExecutablePath)</ExecutablePath>
-    <IntDir>$(Platform)\$(Configuration)\$(ProjectName)\</IntDir>
-    <PreBuildEventUseInBuild>false</PreBuildEventUseInBuild>
   </PropertyGroup>
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64' Or '$(Configuration)|$(Platform)'=='Debug_CpuOnly|x64'">
+    <LinkIncremental>true</LinkIncremental>
+  </PropertyGroup>
+  <PropertyGroup Condition="$(UsesCuda)">
+    <IncludePath>$(IncludePath);$(CUDA_PATH)\include</IncludePath>
+    <LibraryPath>$(LibraryPaht);$(CUDA_PATH)\lib\$(Platform)</LibraryPath>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64' Or '$(Configuration)|$(Platform)'=='Debug_CpuOnly|x64'">
     <ClCompile>
       <PrecompiledHeader>
       </PrecompiledHeader>
       <WarningLevel>Level4</WarningLevel>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>_SCL_SECURE_NO_WARNINGS;WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions Condition="'$(CNTK_ENABLE_1BitSGD)'=='true'">QUANTIZED_GRADIENT_AGGREGATION;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
       <OpenMPSupport>true</OpenMPSupport>
       <TreatWarningAsError>true</TreatWarningAsError>
@@ -85,10 +108,6 @@
       <DelayLoadDLLs>Math.dll; nvml.dll; cudart64_70.dll</DelayLoadDLLs>
       <StackReserveSize>100000000</StackReserveSize>
     </Link>
-    <PostBuildEvent>
-      <Command>if exist "%ProgramW6432%\NVIDIA Corporation\NVSMI" xcopy /I /D /Y "%ProgramW6432%\NVIDIA Corporation\NVSMI\nvml*.dll" $(TargetDir)</Command>
-      <Message>Copying NVidia GDK extension DLL to target folder</Message>
-    </PostBuildEvent>
     <CustomBuildStep>
     </CustomBuildStep>
     <CustomBuildStep>
@@ -103,7 +122,17 @@
       </Command>
     </PreBuildEvent>
   </ItemDefinitionGroup>
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug_CpuOnly|x64'">
+    <ClCompile>
+      <PreprocessorDefinitions>CPUONLY;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories></AdditionalIncludeDirectories>
+    </ClCompile>
+    <Link>
+      <DelayLoadDLLs>Math.dll</DelayLoadDLLs>
+      <AdditionalLibraryDirectories></AdditionalLibraryDirectories>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64' Or '$(Configuration)|$(Platform)'=='Release_CpuOnly|x64'">
     <ClCompile>
       <WarningLevel>Level4</WarningLevel>
       <PrecompiledHeader>
@@ -112,6 +141,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions Condition="'$(CNTK_ENABLE_1BitSGD)'=='true'">QUANTIZED_GRADIENT_AGGREGATION;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
       <AdditionalOptions>/d2Zi+ %(AdditionalOptions)</AdditionalOptions>
@@ -128,10 +158,6 @@
       <DelayLoadDLLs>Math.dll; nvml.dll; cudart64_70.dll</DelayLoadDLLs>
       <AdditionalLibraryDirectories>"c:\Program Files\NVIDIA Corporation\GDK\gdk_win7_amd64_release\nvml\lib"</AdditionalLibraryDirectories>
     </Link>
-    <PostBuildEvent>
-      <Command>if exist "%ProgramW6432%\NVIDIA Corporation\NVSMI" xcopy /I /D /Y "%ProgramW6432%\NVIDIA Corporation\NVSMI\nvml*.dll" $(TargetDir)</Command>
-      <Message>Copying NVidia GDK extension DLL to target folder</Message>
-    </PostBuildEvent>
     <CustomBuildStep>
       <Command>
       </Command>
@@ -150,13 +176,29 @@
       </Command>
     </PreBuildEvent>
   </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release_CpuOnly|x64'">
+    <ClCompile>
+      <PreprocessorDefinitions>CPUONLY;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories></AdditionalIncludeDirectories>
+    </ClCompile>
+    <Link>
+      <DelayLoadDLLs>Math.dll</DelayLoadDLLs>
+      <AdditionalLibraryDirectories></AdditionalLibraryDirectories>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="$(UsesCuda)">
+    <PostBuildEvent>
+      <Command>if exist "%ProgramW6432%\NVIDIA Corporation\NVSMI" xcopy /I /D /Y "%ProgramW6432%\NVIDIA Corporation\NVSMI\nvml*.dll" $(TargetDir)</Command>
+      <Message>Copying NVidia GDK extension DLL to target folder</Message>
+    </PostBuildEvent>
+  </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="..\Common\CrossProcessMutex.h" />
     <ClInclude Include="..\Common\Include\Basics.h" />
     <ClInclude Include="..\Common\Include\BestGpu.h" />
     <ClInclude Include="..\Common\Include\Config.h" />
     <ClInclude Include="..\Common\Include\DataReader.h" />
-    <ClInclude Include="..\Common\Include\DataTensor.h" />
+    <ClInclude Include="..\Common\Include\TensorShape.h" />
     <ClInclude Include="..\Common\Include\DataWriter.h" />
     <ClInclude Include="..\Common\Include\File.h" />
     <ClInclude Include="..\Common\Include\fileutil.h" />
@@ -165,45 +207,40 @@
     <ClInclude Include="..\Common\Include\ScriptableObjects.h" />
     <ClInclude Include="..\Common\Include\Sequences.h" />
     <ClInclude Include="..\Common\Include\TimerUtility.h" />
+    <ClInclude Include="..\ComputationNetworkLib\EvaluationNodes.h" />
+    <ClInclude Include="..\ComputationNetworkLib\PreComputeNodes.h" />
+    <ClInclude Include="..\ComputationNetworkLib\TrainingNodes.h" />
     <ClInclude Include="..\Math\CUDAPageLockedMemAllocator.h" />
     <ClInclude Include="..\Math\Matrix.h" />
-    <ClInclude Include="..\Math\MatrixQuantizer.h" />
     <ClInclude Include="..\Math\QuantizedMatrix.h" />
-    <ClInclude Include="..\ComputationNetworkLib\CompositeComputationNodes.h" />
-    <ClInclude Include="AllReduceDistGradAggregator.h" />
     <ClInclude Include="..\ComputationNetworkLib\ComputationNetwork.h" />
     <ClInclude Include="..\ComputationNetworkLib\ComputationNode.h" />
     <ClInclude Include="..\ComputationNetworkLib\ConvolutionalNodes.h" />
     <ClInclude Include="DataReaderHelpers.h" />
     <ClInclude Include="DistGradHeader.h" />
-    <ClInclude Include="IComputationNetBuilder.h" />
     <ClInclude Include="IDistGradAggregator.h" />
-    <ClInclude Include="..\ComputationNetworkLib\EvaluationCriterionNodes.h" />
     <ClInclude Include="..\ComputationNetworkLib\InputAndParamNodes.h" />
     <ClInclude Include="..\ComputationNetworkLib\LinearAlgebraNodes.h" />
-    <ClInclude Include="MultiNetworksEvaluator.h" />
-    <ClInclude Include="MultiNetworksSGD.h" />
     <ClInclude Include="..\ComputationNetworkLib\NonlinearityNodes.h" />
     <ClInclude Include="..\ComputationNetworkLib\RecurrentNodes.h" />
+    <ClInclude Include="SimpleDistGradAggregator.h" />
     <ClInclude Include="SimpleEvaluator.h" />
     <ClInclude Include="SimpleOutputWriter.h" />
     <ClInclude Include="SGD.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="targetver.h" />
-    <ClInclude Include="..\ComputationNetworkLib\TrainingCriterionNodes.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\Common\Config.cpp">
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="..\Common\DataReader.cpp" />
     <ClCompile Include="..\Common\DataWriter.cpp" />
     <ClCompile Include="..\Common\File.cpp">
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64' Or '$(Configuration)|$(Platform)'=='Debug_CpuOnly|x64'">NotUsing</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="..\Common\fileutil.cpp">
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64' Or '$(Configuration)|$(Platform)'=='Debug_CpuOnly|x64'">NotUsing</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="..\Common\TimerUtility.cpp" />
     <ClCompile Include="Profiler.cpp" />

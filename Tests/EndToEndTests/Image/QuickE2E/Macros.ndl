@@ -1,3 +1,4 @@
+# Sigmoid non-linearity
 DNNSigmoidLayer(inDim, outDim, x, parmScale) = [
     W = Parameter(outDim, inDim, init="uniform", initValueScale=parmScale) 
     b = Parameter(outDim, 1,     init="uniform", initValueScale=parmScale) 
@@ -6,6 +7,7 @@ DNNSigmoidLayer(inDim, outDim, x, parmScale) = [
     y = Sigmoid(z)
 ]
 
+# no non-linearity, as input for SoftMax
 DNNLayer(inDim, outDim, x, parmScale) = [
     W = Parameter(outDim, inDim, init="uniform", initValueScale=parmScale)
     b = Parameter(outDim, 1,     init="uniform", initValueScale=parmScale)
@@ -13,10 +15,11 @@ DNNLayer(inDim, outDim, x, parmScale) = [
     z = Plus(t, b)
 ]
 
+# ReLU non-linearity
 ConvReLULayer(inp, outMap, inWCount, kW, kH, hStride, vStride, wScale, bValue) = [
     convW = Parameter(outMap, inWCount, init="uniform", initValueScale=wScale)
     conv = Convolution(convW, inp, kW, kH, outMap, hStride, vStride, zeroPadding=false)
-    convB = Parameter(outMap, 1,        init="fixedValue", value=bValue)
+    convB = ImageParameter(1, 1, outMap, imageLayout="legacy", init="fixedValue", value=bValue)
     convPlusB = Plus(conv, convB);
     act = RectifiedLinear(convPlusB);
 ]

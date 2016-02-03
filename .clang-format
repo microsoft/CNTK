@@ -1,0 +1,31 @@
+---
+# Requires clang-format version 3.7.1 or later
+Language: Cpp
+AlignConsecutiveAssignments: false
+AlignEscapedNewlinesLeft: true
+AlignTrailingComments: true 
+AllowShortBlocksOnASingleLine: false
+AllowShortFunctionsOnASingleLine: Empty
+AllowShortIfStatementsOnASingleLine: false
+AllowShortLoopsOnASingleLine: false
+AlwaysBreakTemplateDeclarations: true
+AccessModifierOffset: -4
+BreakBeforeBraces: Allman
+BreakConstructorInitializersBeforeComma: false
+ColumnLimit: 0
+ConstructorInitializerAllOnOneLineOrOnePerLine: true
+DerivePointerAlignment: true
+ForEachMacros: [ BOOST_FOREACH, foreach_column, foreach_coord, foreach_index, foreach_row, foreach_row_in_submat ]
+IndentWidth: 4
+MaxEmptyLinesToKeep: 1
+NamespaceIndentation: None
+PointerAlignment: Left
+SpaceAfterCStyleCast: true
+SpaceBeforeAssignmentOperators: true
+SpaceBeforeParens: ControlStatements
+SpaceInEmptyParentheses: false
+Standard: Cpp11
+TabWidth: 4
+UseTab: Never
+...
+

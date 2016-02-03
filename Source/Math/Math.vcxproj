@@ -9,6 +9,14 @@
       <Configuration>Release</Configuration>
       <Platform>x64</Platform>
     </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug_CpuOnly|x64">
+      <Configuration>Debug_CpuOnly</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release_CpuOnly|x64">
+      <Configuration>Release_CpuOnly</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{60BDB847-D0C4-4FD3-A947-0C15C08BCDB5}</ProjectGuid>
@@ -24,15 +32,27 @@
     </SccProvider>
     <ProjectName>Math</ProjectName>
   </PropertyGroup>
+  <Choose>
+    <When Condition="'$(Configuration)|$(Platform)'=='Debug_CpuOnly|x64' Or '$(Configuration)|$(Platform)'=='Release_CpuOnly|x64'">
+      <PropertyGroup>
+        <UsesCuda>false</UsesCuda>
+      </PropertyGroup>
+    </When>
+    <Otherwise>
+      <PropertyGroup>
+        <UsesCuda>true</UsesCuda>
+      </PropertyGroup>
+    </Otherwise>
+  </Choose>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64' Or '$(Configuration)|$(Platform)'=='Debug_CpuOnly|x64'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <PlatformToolset>v120</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
     <UseIntelMKL>No</UseIntelMKL>
   </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64' Or '$(Configuration)|$(Platform)'=='Release_CpuOnly|x64'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <PlatformToolset>v120</PlatformToolset>
@@ -43,28 +63,25 @@
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings" />
-  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="PropertySheets">
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64' Or '$(Configuration)|$(Platform)'=='Debug_CpuOnly|x64'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
-  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="PropertySheets">
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64' Or '$(Configuration)|$(Platform)'=='Release_CpuOnly|x64'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64' Or '$(Configuration)|$(Platform)'=='Debug_CpuOnly|x64' Or '$(Configuration)|$(Platform)'=='Release|x64' Or '$(Configuration)|$(Platform)'=='Release_CpuOnly|x64'">
     <LinkIncremental>false</LinkIncremental>
-    <IncludePath>..\Common\include;$(ACML_PATH)\include;$(CUDA_PATH)\include;$(IncludePath)</IncludePath>
-    <LibraryPath>$(SolutionDir)$(Platform)\$(Configuration);$(ACML_PATH)\lib;$(CUDA_PATH)\lib\$(Platform);$(LibraryPath)</LibraryPath>
+    <IncludePath>..\Common\include;$(ACML_PATH)\include;$(IncludePath)</IncludePath>
+    <LibraryPath>$(SolutionDir)$(Platform)\$(Configuration);$(ACML_PATH)\lib;$(LibraryPath)</LibraryPath>
     <IntDir>$(Platform)\$(Configuration)\$(ProjectName)\</IntDir>
     <TargetName>Math</TargetName>
   </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <LinkIncremental>false</LinkIncremental>
-    <IncludePath>..\Common\include;$(ACML_PATH)\include;$(CUDA_PATH)\include;$(IncludePath)</IncludePath>
-    <LibraryPath>$(SolutionDir)$(Platform)\$(Configuration);$(ACML_PATH)\lib;$(CUDA_PATH)\lib\$(Platform);$(LibraryPath)</LibraryPath>
-    <IntDir>$(Platform)\$(Configuration)\$(ProjectName)\</IntDir>
-    <TargetName>Math</TargetName>
+  <PropertyGroup Condition="$(UsesCuda)">
+    <IncludePath>$(IncludePath);$(CUDA_PATH)\include</IncludePath>
+    <LibraryPath>$(LibraryPath);$(CUDA_PATH)\lib\$(Platform)</LibraryPath>
   </PropertyGroup>
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64' Or '$(Configuration)|$(Platform)'=='Debug_CpuOnly|x64'">
     <ClCompile>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <WarningLevel>Level4</WarningLevel>
@@ -79,11 +96,11 @@
       <TreatWarningAsError>true</TreatWarningAsError>
     </ClCompile>
     <Link>
-      <SubSystem>Windows</SubSystem>
+      <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalDependencies>libacml_mp_dll.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>$(SolutionDir)$(Platform)\$(Configuration)\</AdditionalLibraryDirectories>
-      <DelayLoadDLLs>cublas64_70.dll; cusparse64_70.dll; curand64_70.dll; cudart64_70.dll; libacml_mp_dll.dll; %(DelayLoadDLLs)</DelayLoadDLLs>
+      <DelayLoadDLLs>libacml_mp_dll.dll; cublas64_70.dll; cusparse64_70.dll; curand64_70.dll; cudart64_70.dll; %(DelayLoadDLLs)</DelayLoadDLLs>
       <Profile>true</Profile>
     </Link>
     <PostBuildEvent>
@@ -107,7 +124,15 @@
       </Command>
     </PreBuildEvent>
   </ItemDefinitionGroup>
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug_CpuOnly|x64'">
+    <ClCompile>
+      <PreprocessorDefinitions>CPUONLY;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <Link>
+      <DelayLoadDLLs>libacml_mp_dll.dll</DelayLoadDLLs>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64' Or '$(Configuration)|$(Platform)'=='Release_CpuOnly|x64'">
     <ClCompile>
       <WarningLevel>Level4</WarningLevel>
       <PrecompiledHeader>Use</PrecompiledHeader>
@@ -127,14 +152,14 @@
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
     </ClCompile>
     <Link>
-      <SubSystem>Windows</SubSystem>
+      <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <AdditionalLibraryDirectories>$(SolutionDir)$(Platform)\$(Configuration)\</AdditionalLibraryDirectories>
       <AdditionalDependencies>libacml_mp_dll.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <Profile>true</Profile>
-      <DelayLoadDLLs>cublas64_70.dll; cusparse64_70.dll; curand64_70.dll; cudart64_70.dll; libacml_dll.dll; libacml_mp_dll.dll; %(DelayLoadDLLs)</DelayLoadDLLs>
+      <DelayLoadDLLs>libacml_dll.dll; libacml_mp_dll.dll; cublas64_70.dll; cusparse64_70.dll; curand64_70.dll; cudart64_70.dll; %(DelayLoadDLLs)</DelayLoadDLLs>
     </Link>
     <PostBuildEvent>
       <Command>xcopy /D /I /Y "$(ACML_PATH)\lib\*.dll" $(OutputPath)</Command>
@@ -155,13 +180,23 @@
       <LinkLibraryDependencies>true</LinkLibraryDependencies>
     </ProjectReference>
   </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release_CpuOnly|x64'">
+    <ClCompile>
+      <PreprocessorDefinitions>CPUONLY; %(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <Link>
+      <DelayLoadDLLs>libacml_dll.dll; libacml_mp_dll.dll</DelayLoadDLLs>
+    </Link>
+  </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="..\Common\Include\TensorShape.h" />
     <ClInclude Include="..\Common\Include\File.h" />
     <ClInclude Include="..\Common\Include\fileutil.h" />
     <ClInclude Include="..\Common\Include\DebugUtil.h" />
     <ClInclude Include="CommonMatrix.h" />
     <ClInclude Include="ConvolutionEngine.h" />
     <ClInclude Include="CPUMatrix.h" />
+    <ClInclude Include="MatrixQuantizerImpl.h" />
     <ClInclude Include="TensorOps.h" />
     <ClInclude Include="TensorView.h" />
     <None Include="GPUWatcher.cu" />
@@ -175,7 +210,6 @@
     <ClInclude Include="CUDAPageLockedMemAllocator.h" />
     <ClInclude Include="Helpers.h" />
     <ClInclude Include="Matrix.h" />
-    <ClInclude Include="MatrixQuantizer.h" />
     <ClInclude Include="MatrixQuantizerCPU.h" />
     <ClInclude Include="MatrixQuantizerGPU.h" />
     <ClInclude Include="MemAllocator.h" />
@@ -199,8 +233,8 @@
       </PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="CPUMatrix.cpp" />
-    <ClCompile Include="MatrixQuantizer.cpp" />
     <ClCompile Include="MatrixQuantizerCPU.cpp" />
+    <ClCompile Include="MatrixQuantizerImpl.cpp" />
     <ClCompile Include="NoGPU.cpp" />
     <ClCompile Include="Matrix.cpp" />
     <ClCompile Include="QuantizedMatrix.cpp" />

@@ -669,7 +669,7 @@ status open
 
 \begin_layout Plain Layout
 
-FeatureNodes=(features)
+FeatureNodes=(features1, features2)
 \end_layout
 
 \begin_layout Plain Layout
@@ -705,7 +705,7 @@ After defining the network, it’s important to let CNTK know what the special
  It also needs to know the default output nodes, evaluation nodes and training
  criteria nodes.
  Note here the specification of the nodes that require special handling
- (NodesReqMultiSeqHandling) when the network is evalauted or trained with
+ (NodesReqMultiSeqHandling) when the network is evaluated or trained with
  multiple sequences, e.g., when the network itself is an RNN or the model
  is trained with the sequence-level criterion.
  Since in these cases multiple sequences will be stitched together to improve
@@ -733,7 +733,7 @@ Comments
 
 \end_inset
 
-:
+
 \end_layout
 
 \begin_layout Standard
@@ -2233,7 +2233,7 @@ RowStack
 \end_layout
 
 \begin_layout Standard
-Concatnate rows of input matrices to form a bigger matrix.
+Concatenate rows of input matrices to form a bigger matrix.
  The resulting matrix is a sumof(rows) by m1.cols matrix.
  It supports variable-length input.
  The syntax is
@@ -2569,6 +2569,10 @@ m1 and m2 must have same dimension in ElementTimes.
  vcol must have same number of rows in ColumnElementTimes.
 \end_layout
 
+\begin_layout Standard
+\begin_inset Note Comment
+status open
+
 \begin_layout Subsubsection
 KhatriRaoProduct
 \begin_inset Index idx
@@ -2593,7 +2597,7 @@ ColumnwiseCrossProduct
 
 \end_layout
 
-\begin_layout Standard
+\begin_layout Plain Layout
 Compute the cross product of each column of two input matrices.
  These two functions mean the same thing but ColumnwiseCrossProduct is easier
  to understand for most people.
@@ -2601,7 +2605,7 @@ Compute the cross product of each column of two input matrices.
  The syntax is
 \end_layout
 
-\begin_layout Standard
+\begin_layout Plain Layout
 \begin_inset listings
 inline false
 status open
@@ -2650,7 +2654,7 @@ GMMLL
 
 \end_layout
 
-\begin_layout Standard
+\begin_layout Plain Layout
 Compute the Gaussian mixture model log likelihood of feature values given
  the unnormalized Gaussian mixture weights (i.e., priors), Gaussian means
  and log standard deviation.
@@ -2660,7 +2664,7 @@ Compute the Gaussian mixture model log likelihood of feature values given
  The syntax is
 \end_layout
 
-\begin_layout Standard
+\begin_layout Plain Layout
 \begin_inset listings
 inline false
 status open
@@ -2706,9 +2710,14 @@ FeatureValues - the feature values on which to compute the log likelihood.
  
 \end_layout
 
-\begin_layout Standard
+\begin_layout Plain Layout
 Note, UnnormedPrior, Means and LogStddev should have the same number of
  columns which should be either 1 or the same as the columns in FeatureValues.
+\end_layout
+
+\end_inset
+
+
 \end_layout
 
 \begin_layout Subsubsection
@@ -2889,11 +2898,11 @@ labels - the ground truth labels.
  The first row is the ground truth output id.
  The second row is the ground truth class id.
  The third and fourth rows are the start (inclusive) and end (exclusive)
- output ids corresponding to the ground trueth class id.
+ output ids corresponding to the ground truth class id.
 \end_layout
 
 \begin_layout Itemize
-mainInputInfo - contains the main information to make the classfication
+mainInputInfo - contains the main information to make the classification
  decision.
  It's an inputDim by T matrix.
  In language model, inputDim is often the hidden layer size.
@@ -3517,7 +3526,7 @@ Convolution(w, image, kernelWidth, kernelHeight,
 
 \begin_layout Plain Layout
 
-            maxTempMemSizeInSamples=0])
+            maxTempMemSizeInSamples=0, imageLayout="HWC"|cudnn"])
 \end_layout
 
 \begin_layout Plain Layout
@@ -3537,7 +3546,7 @@ Convolve(w, image, kernelWidth, kernelHeight,
 
 \begin_layout Plain Layout
 
-            maxTempMemSizeInSamples=0]) #deprecated
+            maxTempMemSizeInSamples=0, imageLayout="HWC"|cudnn"]) #deprecated
 \end_layout
 
 \end_inset
@@ -3592,6 +3601,22 @@ maxTempMemSizeInSamples - [named optional] maximum amount of memory (in
  Default is 0 which means the same as the input samples.
 \end_layout
 
+\begin_layout Itemize
+imageLayout - [named optional] the storage format of each image.
+ By default it's 
+\begin_inset Quotes eld
+\end_inset
+
+HWC
+\begin_inset Quotes erd
+\end_inset
+
+, which means each image is stored as [channel, width, height] in column
+ major.
+ If you use cuDNN to speed up training, you should set it to cudnn, which
+ means each image is stored as [width, height, channel].
+\end_layout
+
 \begin_layout Subsubsection
 MaxPooling
 \begin_inset Index idx
@@ -3631,12 +3656,13 @@ status open
 
 \begin_layout Plain Layout
 
-MaxPooling(m, windowWidth, windowHeight, stepW, stepH)
+MaxPooling(m, windowWidth, windowHeight, stepW, stepH, imageLayout="HWC"|cudnn")
 \end_layout
 
 \begin_layout Plain Layout
 
-AveragePooling(m, windowWidth, windowHeight, stepW, stepH)
+AveragePooling(m, windowWidth, windowHeight, stepW, stepH, imageLayout="HWC"|cud
+nn")
 \end_layout
 
 \end_inset
@@ -3662,6 +3688,22 @@ stepW - step (or stride) used in the width direction
 
 \begin_layout Itemize
 stepH - step (or stride) used in the height direction
+\end_layout
+
+\begin_layout Itemize
+imageLayout - [named optional] the storage format of each image.
+ By default it's 
+\begin_inset Quotes eld
+\end_inset
+
+HWC
+\begin_inset Quotes erd
+\end_inset
+
+, which means each image is stored as [channel, width, height] in column
+ major.
+ If you use cuDNN to speed up training, you should set it to cudnn, which
+ means each image is stored as [width, height, channel].
 \end_layout
 
 \begin_layout Subsubsection
@@ -3806,6 +3848,15 @@ key "DNN-SWB-seide+2011,FeatEngInDNN-Seide+2011"
 
  on DNNs by building shallow networks first and then inserting new layers
  one on top of another.
+ To use MEL, you need to use the 
+\begin_inset Quotes eld
+\end_inset
+
+edit
+\begin_inset Quotes erd
+\end_inset
+
+ command in the config file.
 \end_layout
 
 \begin_layout Standard
@@ -4371,7 +4422,7 @@ To integrate this new layer into the model, the inputs and outputs of the
  After the copy any node whose connected nodes were not copied will have
  those connections set to an invalid value.
  These need to be fixed in order to have a valid model.
- Before a model can be saved CNTK first checkes to see if all nodes are
+ Before a model can be saved CNTK first checks to see if all nodes are
  correctly connected.
 \end_layout
 

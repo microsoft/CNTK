@@ -1816,11 +1816,11 @@ sly.
  In this algorithm, all the nodes whose children have not been computed
  are in the waiting set and those whose children are computed are in the
  ready set.
- At the beginning, all non-leaf descendents of 
+ At the beginning, all non-leaf descendants of 
 \begin_inset Formula $root$
 \end_inset
 
- are in the waiting set and all leaf descendents  are in the ready set.
+ are in the waiting set and all leaf descendants  are in the ready set.
  The scheduler picks a node from the ready set based on some policy, removes
  it from the ready set, and dispatches it for computation.
  Popular policies include first-come/first-serve, shortest task first, and
@@ -2015,7 +2015,7 @@ status open
 \begin_inset Formula $waiting$
 \end_inset
 
- is initialized to include all non-leaf descendents of 
+ is initialized to include all non-leaf descendants of 
 \begin_inset Formula $root$
 \end_inset
 
@@ -2061,7 +2061,7 @@ status open
 \begin_inset Formula $ready$
 \end_inset
 
- is initialized to include all leaf descendents of 
+ is initialized to include all leaf descendants of 
 \begin_inset Formula $root$
 \end_inset
 
@@ -3412,7 +3412,7 @@ status open
 
 \end_inset
 
-Decide the order to compute the gradient at all descendents of 
+Decide the order to compute the gradient at all descendants of 
 \begin_inset Formula $node$
 \end_inset
 
@@ -6776,6 +6776,12 @@ and
 \begin_layout Itemize
 
 \emph on
+\begin_inset Note Comment
+status open
+
+\begin_layout Itemize
+
+\emph on
 TimeReverse 
 \emph default
 
@@ -6795,7 +6801,7 @@ TimeReverse
 .
 \end_layout
 
-\begin_layout Standard
+\begin_layout Plain Layout
 \begin_inset Formula 
 \begin{eqnarray}
 \mathbf{\boldsymbol{\mathit{\upsilon}}}\left(\mathbf{X}(:,1:T\right) & \leftarrow & \mathbf{\boldsymbol{\mathit{\upsilon}}}\left(\mathbf{X}(:,T:-1:1\right)\\
@@ -6807,7 +6813,7 @@ TimeReverse
 
 \end_layout
 
-\begin_layout Standard
+\begin_layout Plain Layout
 
 \family roman
 \series medium
@@ -6826,6 +6832,11 @@ The time reverse node is usually used for bi-directional model.
  Then, do process on the processed input.
  Finally, use another TimeReverse node on the output of the processed data.
  
+\end_layout
+
+\end_inset
+
+
 \end_layout
 
 \begin_layout Subsection
@@ -8839,6 +8850,12 @@ v\left(\mathbf{X},\mathbf{\mathbf{Y}}\right) & += & \mathbf{C_{t}}\mathbf{\circ 
 \begin_layout Itemize
 
 \emph on
+\begin_inset Note Comment
+status open
+
+\begin_layout Itemize
+
+\emph on
 CRF
 \emph default
 
@@ -8875,7 +8892,7 @@ CRF
 \color none
  CRF stands for conditional random fields.
  This node does sequence-level training, using CRF criterion.
- This node has three nputs.
+ This node has three inputs.
  The first is the label 
 \family default
 \series bold
@@ -9151,7 +9168,7 @@ L
 : 
 \end_layout
 
-\begin_layout Standard
+\begin_layout Plain Layout
 \begin_inset Formula 
 \begin{eqnarray}
 \alpha_{t}\left(i\right) & \leftarrow & h_{it}+LogAdd{k}\left(\delta_{t-1}(k)+\eta a_{ki}\right)\\
@@ -9166,10 +9183,15 @@ L
 
 \end_layout
 
-\begin_layout Standard
+\begin_layout Plain Layout
 Notice that the gradient to the transition weights need to be summed over
  the whole observation sequence, which is the current minibatch.
  
+\end_layout
+
+\end_inset
+
+
 \end_layout
 
 \begin_layout Subsection
@@ -10176,7 +10198,7 @@ reference "fig:CN-WithDelayNode"
  A simple way to do forward computation and backpropagation in a recurrent
  network is to unroll all samples in the sequence over time.
  Once unrolled, the graph is expanded into a DAG and the forward computation
- and gradient calcalclation algorithms we just discussed can be directly
+ and gradient calculation algorithms we just discussed can be directly
  used.
  This means, however, all computation nodes in the CN need to be computed
  sample by sample and this significantly reduces the potential of parallelizatio
@@ -10296,7 +10318,7 @@ key "StronglyConnectedComponents-Hopcroft+1983"
  in the CN and the CN is reduced to a DAG.
  All the nodes inside each loop (or composite node) can be unrolled over
  time and also reduced to a DAG.
- For all these DAGs the forward computation and backprogation algorithms
+ For all these DAGs the forward computation and backpropagation algorithms
  we discussed in the previous sections can be applied.
  The detailed procedure in determining the forward computation order in
  the CN with arbitrary recurrent connections is described in Algorithm 

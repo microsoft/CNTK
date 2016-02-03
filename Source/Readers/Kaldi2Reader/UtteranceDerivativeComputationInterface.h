@@ -5,8 +5,8 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
-// This class defines the interface for utterance derivative computation. 
-template<class ElemType>
+// This class defines the interface for utterance derivative computation.
+template <class ElemType>
 class UtteranceDerivativeComputationInterface
 {
 public:
@@ -21,5 +21,4 @@ public:
     // returns false.
     virtual bool HasResourceForDerivative(const wstring& /*uttID*/) const = 0;
 };
-
-}}}
+} } }

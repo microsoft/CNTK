@@ -37,7 +37,7 @@ endif
 ifneq ("$(wildcard $(BUILD_TOP)/Config.make)","")
   include $(BUILD_TOP)/Config.make
 else
-  $(error Cannot find $(BUILD_TOP)/Config.make.  Please see the README file for configuration instructions.)
+  $(error Cannot find $(BUILD_TOP)/Config.make.  Please see CNTK Wiki at https://github.com/Microsoft/cntk/wiki for configuration instructions.)
 endif
 
 ifndef BUILDTYPE
@@ -162,7 +162,7 @@ ifeq ("$(BUILDTYPE)","debug")
   CXXFLAGS += -g
   LDFLAGS += -rdynamic
   CPPFLAGS += -D_DEBUG
-  CUFLAGS += -O0 -use_fast_math -lineinfo  $(GENCODE_FLAGS)
+  CUFLAGS += -O0 -g -use_fast_math -lineinfo  $(GENCODE_FLAGS)
 endif
 
 ifeq ("$(BUILDTYPE)","release")
@@ -172,9 +172,10 @@ ifeq ("$(BUILDTYPE)","release")
     GENCODE_FLAGS := $(GENCODE_SM20) $(GENCODE_SM30) $(GENCODE_SM35) $(GENCODE_SM50)
   endif
 
-  CXXFLAGS += -O4
+  CXXFLAGS += -g -O4
+  LDFLAGS += -rdynamic
   CPPFLAGS += -DNDEBUG
-  CUFLAGS += -O3 -use_fast_math -lineinfo $(GENCODE_FLAGS)
+  CUFLAGS += -O3 -g -use_fast_math -lineinfo $(GENCODE_FLAGS)
 endif
 
 ifdef CNTK_CUDA_DEVICE_DEBUGINFO
@@ -223,7 +224,7 @@ COMMON_SRC =\
 MATH_SRC =\
 	$(SOURCEDIR)/Math/CPUMatrix.cpp \
 	$(SOURCEDIR)/Math/CPUSparseMatrix.cpp \
-	$(SOURCEDIR)/Math/MatrixQuantizer.cpp \
+	$(SOURCEDIR)/Math/MatrixQuantizerImpl.cpp \
 	$(SOURCEDIR)/Math/MatrixQuantizerCPU.cpp \
 	$(SOURCEDIR)/Math/QuantizedMatrix.cpp \
 	$(SOURCEDIR)/Math/Matrix.cpp \
@@ -234,10 +235,12 @@ MATH_SRC =\
 ifdef CUDA_PATH
 MATH_SRC +=\
 	$(SOURCEDIR)/Math/GPUMatrix.cu \
+	$(SOURCEDIR)/Math/GPUTensor.cu \
 	$(SOURCEDIR)/Math/GPUSparseMatrix.cu \
 	$(SOURCEDIR)/Math/GPUWatcher.cu \
 	$(SOURCEDIR)/Math/MatrixQuantizerGPU.cu \
 	$(SOURCEDIR)/Math/CuDnnConvolutionEngine.cpp \
+	$(SOURCEDIR)/Math/GPUDataTransferer.cpp \
 
 else
 MATH_SRC +=\
@@ -383,29 +386,6 @@ $(LIBSVMBINARYREADER): $(LIBSVMBINARYREADER_OBJ) | $(CNTKMATH_LIB)
 ########################################
 
 ifdef KALDI_PATH
-KALDIREADER_SRC = \
-	$(SOURCEDIR)/Readers/KaldiReader/DataReader.cpp \
-	$(SOURCEDIR)/Readers/KaldiReader/DataWriter.cpp \
-	$(SOURCEDIR)/Readers/KaldiReader/HTKMLFReader.cpp \
-	$(SOURCEDIR)/Readers/KaldiReader/HTKMLFWriter.cpp \
-
-KALDIREADER_OBJ := $(patsubst %.cpp, $(OBJDIR)/%.o, $(KALDIREADER_SRC))
-
-KALDIREADER:=$(LIBDIR)/KaldiReader.so
-#ALL+=$(KALDIREADER)
-#SRC+=$(KALDIREADER_SRC)
-
-$(KALDIREADER): $(KALDIREADER_OBJ) | $(CNTKMATH_LIB)
-	@echo $(SEPARATOR)
-	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(KALDI_LIBPATH) $(LIBPATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(KALDI_LIBPATH) $(LIBPATH)) -o $@ $^ -l$(CNTKMATH) $(KALDI_LIBS)
-
-#KALDIWRITER:=$(LIBDIR)/KaldiWriter.so
-#ALL+=$(KALDIWRITER)
-
-$(KALDIWRITER): $(KALDIREADER_OBJ) | $(CNTKMATH_LIB)
-	@echo $(SEPARATOR)
-	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(LIBPATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH)) -o $@ $^ -l$(CNTKMATH)
-
 
 KALDI2READER_SRC = \
 	$(SOURCEDIR)/Readers/Kaldi2Reader/DataReader.cpp \
@@ -451,6 +431,16 @@ $(IMAGEREADER): $(IMAGEREADER_OBJ) | $(CNTKMATH_LIB)
 endif
 
 ########################################
+# 1bit SGD setup
+########################################
+
+ifeq ("$(CNTK_ENABLE_1BitSGD)","true")
+  INCLUDEPATH += $(SOURCEDIR)/1BitSGD
+
+  CPPFLAGS += -DQUANTIZED_GRADIENT_AGGREGATION
+endif
+
+########################################
 # cntk
 ########################################
 
@@ -473,7 +463,7 @@ CNTK_SRC =\
 	$(SOURCEDIR)/ActionsLib/TrainActions.cpp \
 	$(SOURCEDIR)/ActionsLib/EvalActions.cpp \
 	$(SOURCEDIR)/ActionsLib/OtherActions.cpp \
-	$(SOURCEDIR)/ActionsLib/EsotericActions.cpp \
+	$(SOURCEDIR)/ActionsLib/SpecialPurposeActions.cpp \
 	$(SOURCEDIR)/SequenceTrainingLib/latticeforwardbackward.cpp \
 	$(SOURCEDIR)/SequenceTrainingLib/parallelforwardbackward.cpp \
 	$(SOURCEDIR)/CNTK/BrainScript/BrainScriptEvaluator.cpp \

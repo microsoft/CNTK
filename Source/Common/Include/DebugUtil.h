@@ -1,14 +1,16 @@
 //
-// DebugUtil.h - debug util functions
+// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
 //
-//     Copyright (c) Microsoft Corporation.  All rights reserved.
+// DebugUtil.h - debug util functions
 //
 #pragma once
 #ifndef _DEBUGUTIL_
 #define _DEBUGUTIL_
 
 #ifdef _WIN32
-#include <windows.h>
+#define NOMINMAX
+#include "Windows.h"
 #include "DbgHelp.h"
 #include <WinBase.h>
 #pragma comment(lib, "Dbghelp.lib")
@@ -33,7 +35,6 @@ private:
 public:
     static void PrintCallStack();
 };
-
 }}}
 
-#endif    // _DEBUGUTIL_
+#endif // _DEBUGUTIL_

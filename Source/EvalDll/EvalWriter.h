@@ -1,7 +1,6 @@
 //
-// <copyright file="EvalWriter.h" company="Microsoft">
-//     Copyright (c) Microsoft Corporation.  All rights reserved.
-// </copyright>
+// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
 //
 #pragma once
 
@@ -12,16 +11,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
 // Evaluation Writer class
 // interface to pass to evaluation DLL
-template<class ElemType>
+template <class ElemType>
 class EvalWriter : public IDataWriter<ElemType>
 {
     typedef typename IDataWriter<ElemType>::LabelType LabelType;
     typedef typename IDataWriter<ElemType>::LabelIdType LabelIdType;
+
 private:
     std::map<std::wstring, std::vector<ElemType>*>* m_outputs; // our output data
-    std::map<std::wstring, size_t>* m_dimensions; // the number of rows for the output data
-    size_t m_recordCount; // count of records in this data
-    size_t m_currentRecord; // next record number to read
+    std::map<std::wstring, size_t>* m_dimensions;              // the number of rows for the output data
+    size_t m_recordCount;                                      // count of records in this data
+    size_t m_currentRecord;                                    // next record number to read
 public:
     // Method to setup the data for the reader
     void SetData(std::map<std::wstring, std::vector<ElemType>*>* outputs, std::map<std::wstring, size_t>* dimensions)
@@ -42,8 +42,7 @@ public:
             }
 
             size_t rows = (*dimensions)[val];
-            size_t recordCount = count/rows;
-
+            size_t recordCount = count / rows;
 
             if (m_recordCount != 0)
             {
@@ -58,8 +57,12 @@ public:
         }
     }
 
-    virtual void Init(const ConfigParameters & /*config*/) override { }
-    virtual void Init(const ScriptableObjects::IConfigRecord & /*config*/) override { }
+    virtual void Init(const ConfigParameters& /*config*/) override
+    {
+    }
+    virtual void Init(const ScriptableObjects::IConfigRecord& /*config*/) override
+    {
+    }
 
     // Destroy - cleanup and remove this class
     // NOTE: this destroys the object, and it can't be used past this point
@@ -69,8 +72,8 @@ public:
     }
 
     // EvalWriter Constructor
-    // config - [in] configuration parameters for the datareader 
-    template<class ConfigRecordType>
+    // config - [in] configuration parameters for the datareader
+    template <class ConfigRecordType>
     EvalWriter(const ConfigRecordType& config)
     {
         m_recordCount = m_currentRecord = 0;
@@ -82,7 +85,7 @@ public:
     {
     }
 
-    virtual void GetSections(std::map<std::wstring, SectionType, nocase_compare>& /*sections*/) 
+    virtual void GetSections(std::map<std::wstring, SectionType, nocase_compare>& /*sections*/)
     {
         assert(false);
         NOT_IMPLEMENTED;
@@ -95,7 +98,7 @@ public:
             // figure out the dimension of the data
             std::wstring val = iter->first;
             size_t rows = (*m_dimensions)[val];
-            //size_t count = rows*numRecords;
+            // size_t count = rows*numRecords;
 
             // find the output matrix we want to fill
             const std::map<std::wstring, void*, nocase_compare>::const_iterator iterIn = matrices.find(val);
@@ -106,17 +109,17 @@ public:
                 RuntimeError("No matrix data found for key '%ls', cannot continue", val.c_str());
             }
 
-            Matrix<ElemType>* matrix = (Matrix<ElemType>*)iterIn->second;
+            Matrix<ElemType>* matrix = (Matrix<ElemType>*) iterIn->second;
 
             // copy over the data
             std::vector<ElemType>* data = iter->second;
-            size_t index = m_currentRecord*rows;
-            size_t numberToCopy = rows*numRecords;
-            data->resize(index+numberToCopy);
-            void* dataPtr = (void*)((ElemType*)data->data() + index);
-            size_t dataSize = numberToCopy*sizeof(ElemType);
-            void* mat = &(*matrix)(0,0);
-            size_t matSize = matrix->GetNumElements()*sizeof(ElemType);
+            size_t index = m_currentRecord * rows;
+            size_t numberToCopy = rows * numRecords;
+            data->resize(index + numberToCopy);
+            void* dataPtr = (void*) ((ElemType*) data->data() + index);
+            size_t dataSize = numberToCopy * sizeof(ElemType);
+            void* mat = &(*matrix)(0, 0);
+            size_t matSize = matrix->GetNumElements() * sizeof(ElemType);
             memcpy_s(dataPtr, dataSize, mat, matSize);
         }
 
@@ -125,10 +128,7 @@ public:
 
         // return the "done with all records" value
         return (m_currentRecord >= m_recordCount);
-
     }
-    virtual void SaveMapping(std::wstring saveId, const std::map<typename EvalWriter<ElemType>::LabelIdType, typename EvalWriter<ElemType>::LabelType>& /*labelMapping*/) {};
-
+    virtual void SaveMapping(std::wstring saveId, const std::map<typename EvalWriter<ElemType>::LabelIdType, typename EvalWriter<ElemType>::LabelType>& /*labelMapping*/){};
 };
-
-}}}
+} } }

@@ -1,7 +1,6 @@
 //
-// <copyright file="GPUWatcher.cu" company="Microsoft">
-//     Copyright (c) Microsoft Corporation.  All rights reserved.
-// </copyright>
+// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
 //
 
 #include "stdafx.h"
@@ -17,24 +16,23 @@ int GPUWatcher::GetGPUIdWithTheMostFreeMemory()
 {
     int deviceCount = 0;
     cudaError_t error_id = cudaGetDeviceCount(&deviceCount);
-    if (error_id != cudaSuccess || deviceCount==0) 
-    { 
-        return -1;            
+    if (error_id != cudaSuccess || deviceCount == 0)
+    {
+        return -1;
     }
-    int curDev=0;
+    int curDev = 0;
     size_t curMemory = 0;
     for (int dev = 0; dev < deviceCount; ++dev)
     {
         size_t freeMem = GetFreeMemoryOnCUDADevice(dev);
-        if (freeMem>curMemory)
+        if (freeMem > curMemory)
         {
-            curMemory=freeMem;
+            curMemory = freeMem;
             curDev = dev;
         }
     }
     return curDev;
 }
-
 
 size_t GPUWatcher::GetFreeMemoryOnCUDADevice(int devId)
 {
@@ -43,10 +41,10 @@ size_t GPUWatcher::GetFreeMemoryOnCUDADevice(int devId)
     {
         return 0;
     }
-    //get the amount of free memory on the graphics card  
-    size_t free=0;  
-    size_t total=0;  
-    result = cudaMemGetInfo(&free, &total);  
+    // get the amount of free memory on the graphics card
+    size_t free = 0;
+    size_t total = 0;
+    result = cudaMemGetInfo(&free, &total);
     if (result != cudaSuccess)
     {
         return 0;
@@ -63,4 +61,4 @@ GPUWatcher::~GPUWatcher(void)
 {
 }
 
-#endif  // CPUONLY
+#endif // CPUONLY
