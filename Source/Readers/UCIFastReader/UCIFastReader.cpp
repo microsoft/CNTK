@@ -104,7 +104,7 @@ bool UCIFastReader<ElemType>::EnsureDataAvailable(size_t mbStartSample, bool end
     int recordsRead = 0;
     do
     {
-        int numRead = m_parser.Parse(numberToRead - recordsRead, &m_featureData, &m_labelData);
+        int numRead = m_parser->Parse(numberToRead - recordsRead, &m_featureData, &m_labelData);
 
         recordsRead += numRead;
         if (!m_endReached)
@@ -116,7 +116,7 @@ bool UCIFastReader<ElemType>::EnsureDataAvailable(size_t mbStartSample, bool end
             // update dataset variables
             size_t additionalToRead = UpdateDataVariables(mbStartSample + recordsRead);
 
-            m_parser.SetFilePosition(0); // make another pass of the dataset
+            m_parser->SetFilePosition(0); // make another pass of the dataset
 
             // if doing and end of data check, and we are at the end
             // or a partial minibatch was found exit now
@@ -274,6 +274,15 @@ template <class ElemType>
 template <class ConfigRecordType>
 void UCIFastReader<ElemType>::InitFromConfig(const ConfigRecordType& readerConfig)
 {
+    //customize delimiter and decimal points.
+    string customDelimiterStr = readerConfig(L"customDelimiter", "");
+    char customDelimiter = customDelimiterStr == "" ? char(0) : customDelimiterStr[0];
+
+    string customDecimalPointStr = readerConfig(L"customDecimalPoint", "");
+    char customDecimalPoint = customDecimalPointStr == "" ? char(0) : customDecimalPointStr[0];
+
+    m_parser = make_shared<UCIParser<ElemType, LabelType>>(customDelimiter, customDecimalPoint);
+
     // See if the user wants caching
     m_cachingReader = NULL;
     m_cachingWriter = NULL;
@@ -318,7 +327,7 @@ void UCIFastReader<ElemType>::InitFromConfig(const ConfigRecordType& readerConfi
     m_featureCount = vdim;
     m_readNextSample = 0;
     m_traceLevel = readerConfig(L"traceLevel", 0);
-    m_parser.SetTraceLevel(m_traceLevel);
+    m_parser->SetTraceLevel(m_traceLevel);
 
     m_prefetchEnabled = readerConfig(L"prefetch", false);
     // set the feature count to at least one (we better have one feature...)
@@ -384,7 +393,7 @@ void UCIFastReader<ElemType>::InitFromConfig(const ConfigRecordType& readerConfi
 
     // Simple heuristic to ensure buffer size and avoid breaking existing experiments.
     size_t bufSize = max(dimFeatures * 16, (size_t) 256 * 1024);
-    m_parser.ParseInit(file.c_str(), startFeatures, dimFeatures, startLabels, dimLabels, bufSize);
+    m_parser->ParseInit(file.c_str(), startFeatures, dimFeatures, startLabels, dimLabels, bufSize);
 
     // if we have labels, we need a label Mapping file, it will be a file with one label per line
     if (m_labelType != labelNone)
@@ -425,6 +434,7 @@ void UCIFastReader<ElemType>::InitFromConfig(const ConfigRecordType& readerConfi
     m_labelDim = (LabelIdType) udim;
 
     mOneLinePerFile = readerConfig(L"oneLinePerFile", false);
+
 }
 
 // InitCache - Initialize the caching reader if cache files exist, otherwise the writer
@@ -555,7 +565,7 @@ void UCIFastReader<ElemType>::SetupEpoch()
     if (m_epoch == 0 && m_totalSamples == 0 && m_cachingWriter != NULL)
     {
         m_readNextSample = m_epochStartSample = m_mbStartSample = 0;
-        m_parser.SetFilePosition(0);
+        m_parser->SetFilePosition(0);
     }
     else // otherwise, position the read to start at the right location
     {
@@ -564,10 +574,10 @@ void UCIFastReader<ElemType>::SetupEpoch()
         {
             if (m_traceLevel > 0)
                 fprintf(stderr, "UCIFastReader: Starting at epoch %lu, counting lines to determine record count...\n", (unsigned long) m_epoch);
-            m_parser.SetParseMode(ParseLineCount);
-            m_totalSamples = m_parser.Parse(size_t(-1), NULL, NULL);
-            m_parser.SetParseMode(ParseNormal);
-            m_parser.SetFilePosition(0);
+            m_parser->SetParseMode(ParseLineCount);
+            m_totalSamples = m_parser->Parse(size_t(-1), NULL, NULL);
+            m_parser->SetParseMode(ParseNormal);
+            m_parser->SetFilePosition(0);
             m_mbStartSample = 0;
             UpdateDataVariables(0); // update all the variables since we read to the end...
             if (m_traceLevel > 0)
@@ -593,7 +603,7 @@ void UCIFastReader<ElemType>::SetupEpoch()
             bool endReached = m_endReached;
             if (!endReached)
             {
-                if (!m_parser.HasMoreData())
+                if (!m_parser->HasMoreData())
                 {
                     endReached = true;
                     UpdateDataVariables(mbStartSample);
@@ -614,13 +624,13 @@ void UCIFastReader<ElemType>::SetupEpoch()
             // if we are already past the desired record, start at the beginning again
             if (currentFileRecord > fileRecord)
             {
-                m_parser.SetFilePosition(0);
+                m_parser->SetFilePosition(0);
                 currentFileRecord = 0;
             }
             fprintf(stderr, "reading from record %lu to %lu to be positioned properly for epoch\n", (unsigned long) currentFileRecord, (unsigned long) fileRecord);
-            m_parser.SetParseMode(ParseLineCount);
-            m_parser.Parse(fileRecord - currentFileRecord, NULL, NULL);
-            m_parser.SetParseMode(ParseNormal);
+            m_parser->SetParseMode(ParseLineCount);
+            m_parser->Parse(fileRecord - currentFileRecord, NULL, NULL);
+            m_parser->SetParseMode(ParseNormal);
             if (!m_labelFileToWrite.empty())
             {
                 fprintf(stderr, "WARNING: file %ls NOT written to disk, label file will only be written when starting epochs at the beginning of the dataset\n", m_labelFileToWrite.c_str());

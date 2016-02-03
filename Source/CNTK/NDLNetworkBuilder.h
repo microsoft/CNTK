@@ -50,7 +50,7 @@ public:
         const std::wstring& networkConfig,
         const std::string& configParams,
         const std::wstring& dumpFileName,
-        DEVICEID_TYPE deviceId = AUTOPLACEMATRIX)
+        DEVICEID_TYPE deviceId)
     {
         m_executionEngine = executionEngine;
         m_networkConfig = networkConfig;
@@ -58,9 +58,6 @@ public:
         m_initialConfig = configParams;
         m_deviceId = deviceId;
         m_net = executionEngine->GetComputationNetwork();
-        if (m_deviceId == AUTOPLACEMATRIX)
-            m_deviceId = Matrix<ElemType>::GetBestGPUDeviceId();
-        m_deviceId = EnforceOneGPUOnly(m_deviceId); // see EnforceOneGPUOnly() for comment on what this is
 
         m_net->SetDeviceId(m_deviceId);
         if (m_deviceId < 0)

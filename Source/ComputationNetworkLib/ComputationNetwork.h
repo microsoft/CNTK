@@ -65,10 +65,7 @@ public:
 
     void SetDeviceId(DEVICEID_TYPE deviceId)
     {
-        if (deviceId == AUTOPLACEMATRIX)
-            deviceId = Matrix<float>::GetBestGPUDeviceId();
         m_deviceId = deviceId;
-        m_deviceId = EnforceOneGPUOnly(m_deviceId); // see EnforceOneGPUOnly() for comment on what this is
     }
 
     DEVICEID_TYPE GetDeviceId() const { return m_deviceId; }
@@ -786,7 +783,7 @@ protected:
         virtual void AllocateGradientMatricesForInputs(MatrixPool& matrixPool);
         virtual void RequestMatricesBeforeBackprop(MatrixPool& matrixPool);
         virtual void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool);
-        virtual bool IsOutputOlderThanInputs() const override;
+        virtual bool IsOutOfDateWrtInputs() const override;
 
     public:
         // std::vector<ComputationNodeBasePtr> m_nestedNodes;               // all nodes involved in this loop, in evaluation order

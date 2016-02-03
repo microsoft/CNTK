@@ -414,6 +414,7 @@ void DoWriteWordAndClassInfo(const ConfigParameters& config)
     }
 
     std::ofstream ofvocab;
+    msra::files::make_intermediate_dirs(s2ws(outputVocabFile));
     ofvocab.open(outputVocabFile.c_str());
     for (size_t i = 0; i < m_index.size(); i++)
     {

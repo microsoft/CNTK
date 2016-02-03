@@ -117,7 +117,7 @@ private:
 
     // SetupStateTables - setup state transition tables for each state
     // each state has a block of 256 states indexed by the incoming character
-    void SetupStateTables();
+    void SetupStateTables(char customDelimiter = 0, char customDecimalPoint = 0);
 
     // reset all line state variables
     void PrepareStartLine();
@@ -134,9 +134,9 @@ private:
 
 public:
     // UCIParser constructor
-    UCIParser();
+    UCIParser(char customDelimiter = char(0), char customDecimalPoint = char(0));
     // setup all the state variables and state tables for state machine
-    void Init();
+    void Init(char customDelimiter = char(0), char customDecimalPoint = char(0));
 
     // Parser destructor
     ~UCIParser();

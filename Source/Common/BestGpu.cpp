@@ -27,7 +27,7 @@
 #else
 int bestGPUDummy = 42; // put something into this CPP, as to avoid a linker warning
 #endif
-#include "CommonMatrix.h" // for CPUDEVICE and AUTOPLACEMATRIX
+#include "CommonMatrix.h" // for CPUDEVICE
 
 #ifndef CPUONLY // #define this to disable GPUs
 
@@ -130,11 +130,11 @@ private:
 static DEVICEID_TYPE SelectDevice(DEVICEID_TYPE deviceId, bool bLockGPU)
 {
     // This can only be called with the same parameter.
-    static DEVICEID_TYPE lastDeviceId = DEVICEID_NOTYETDETERMINED;
-    if (lastDeviceId == DEVICEID_NOTYETDETERMINED)
-        lastDeviceId = deviceId;
-    else if (lastDeviceId != deviceId)
-        InvalidArgument("SelectDevice: Attempted to change device selection from %d to %d (%d means 'auto').", (int) lastDeviceId, (int) deviceId, (int) DEVICEID_AUTO);
+    static DEVICEID_TYPE selectedDeviceId = DEVICEID_NOTYETDETERMINED;
+    if (selectedDeviceId == DEVICEID_NOTYETDETERMINED)
+        selectedDeviceId = deviceId;
+    else if (selectedDeviceId != deviceId)
+        InvalidArgument("SelectDevice: Attempted to change device selection from %d to %d (%d means 'auto').", (int)selectedDeviceId, (int)deviceId, (int)DEVICEID_AUTO);
 
     if (deviceId == DEVICEID_AUTO)
     {
@@ -152,8 +152,8 @@ static DEVICEID_TYPE SelectDevice(DEVICEID_TYPE deviceId, bool bLockGPU)
         else // already chosen
             deviceId = bestDeviceId;
     }
-    // route the result through EnforceOneGPUOnly() which only lets the first choice through (see comment there)
-    return EnforceOneGPUOnly(deviceId);
+
+    return deviceId;
 }
 //#ifdef MATH_EXPORTS
 //__declspec(dllexport)
@@ -459,11 +459,11 @@ std::vector<int> BestGpu::GetDevices(int number, BestGpuFlags p_bestFlags)
             break;
     }
 
-    // this code allows only one process to run concurrently on a machine
+    // global lock for this process
     CrossProcessMutex deviceAllocationLock("DBN.exe GPGPU querying lock");
 
     if (!deviceAllocationLock.Acquire((bestFlags & bestGpuExclusiveLock) != 0)) // failure  --this should not really happen
-        RuntimeError("DeviceFromConfig: unexpected failure");
+        RuntimeError("DeviceFromConfig: Unexpected failure acquiring device allocation lock.");
 
     {
         // even if user do not want to lock the GPU, we still need to check whether a particular GPU is locked or not,
@@ -619,7 +619,7 @@ bool BestGpu::LockDevice(int deviceId, bool trial)
     char buffer[80];
     sprintf(buffer, "DBN.exe GPGPU exclusive lock for device %d", deviceId);
     std::unique_ptr<CrossProcessMutex> mutex(new CrossProcessMutex(buffer));
-    if (!mutex->Acquire(false)) // failure  --this should not really happen
+    if (!mutex->Acquire(/*wait=*/false)) // GPU not available
     {
         fprintf(stderr, "LockDevice: Failed to lock GPU %d for exclusive use.\n", deviceId);
         return false;
@@ -693,8 +693,7 @@ ExternC
 PfnDliHook   __pfnDliFailureHook2 = (PfnDliHook)DelayLoadNofify;
 #endif // _WIN32
 #endif
-}
-}
-}
+
+}}}
 
 #endif // CPUONLY
