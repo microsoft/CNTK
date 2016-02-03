@@ -512,22 +512,34 @@ public:
 namespace Microsoft { namespace MSR { namespace CNTK {
 
 // ----------------------------------------------------------------------------
-// string comparison class, so we do case insensitive compares
-// E.g. to define maps with case-insensitive key lookup
+// case-insensitive string-comparison helpers
 // ----------------------------------------------------------------------------
 
+// normalize between char* and string
+static inline const char    * c_str(const char *    p) { return p;         }
+static inline const char    * c_str(const string &  p) { return p.c_str(); }
+static inline const wchar_t * c_str(const wchar_t * p) { return p;         }
+static inline const wchar_t * c_str(const wstring & p) { return p.c_str(); }
+
+// compare strings
+static inline int CompareCI(const char *    a, const char *    b) { return _stricmp(a, b); }
+static inline int CompareCI(const wchar_t * a, const wchar_t * b) { return _wcsicmp(a, b); }
+
+template<typename S1, typename S2>
+static inline int CompareCI(const S1 & a, const S2 & b) { return CompareCI(c_str(a), c_str(b)); }
+
+// compare for equality
+template<typename S1, typename S2>
+static inline bool EqualCI(const S1 & a, const S2 & b) { return CompareCI(a, b) == 0; }
+
+// comparer class for defining maps with case-insensitive key lookup
 struct nocase_compare
 {
     // std::string version of 'less' function
-    // return false for equivalent, true for different
-    bool operator()(const string& left, const string& right) const
+    template<typename S1, typename S2>
+    bool operator()(const S1& left, const S2& right) const
     {
-        return _stricmp(left.c_str(), right.c_str()) < 0;
-    }
-    // std::wstring version of 'less' function, used in non-config classes
-    bool operator()(const wstring& left, const wstring& right) const
-    {
-        return _wcsicmp(left.c_str(), right.c_str()) < 0;
+        return CompareCI(left, right) < 0;
     }
 };
 
