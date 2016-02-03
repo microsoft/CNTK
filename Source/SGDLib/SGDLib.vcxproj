@@ -198,6 +198,7 @@
     <ClInclude Include="..\Common\Include\Config.h" />
     <ClInclude Include="..\Common\Include\DataReader.h" />
     <ClInclude Include="..\Common\Include\MultiversoWrapper.h" />
+    <ClInclude Include="..\Common\Include\NoMultiversoWrapper.h" />
     <ClInclude Include="..\Common\Include\TensorShape.h" />
     <ClInclude Include="..\Common\Include\DataWriter.h" />
     <ClInclude Include="..\Common\Include\File.h" />
@@ -223,7 +224,6 @@
     <ClInclude Include="..\ComputationNetworkLib\LinearAlgebraNodes.h" />
     <ClInclude Include="..\ComputationNetworkLib\NonlinearityNodes.h" />
     <ClInclude Include="..\ComputationNetworkLib\RecurrentNodes.h" />
-    <ClInclude Include="NoMultiversoWrapper.h" />
     <ClInclude Include="SimpleDistGradAggregator.h" />
     <ClInclude Include="SimpleEvaluator.h" />
     <ClInclude Include="SimpleOutputWriter.h" />

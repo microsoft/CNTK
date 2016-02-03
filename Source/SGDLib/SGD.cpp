@@ -320,9 +320,9 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
 				m_adjustlearningrateatbeginning,
 				m_adjustcoefficient,
 				m_adjustnbminibatch);
-			m_multiverso->ModelInit(learnableNodes);
+			m_multiverso->InitModel(learnableNodes);
 			m_multiversoBarrier = false;
-			m_multiverso->_adaptor->Barrier();
+			m_multiverso->WaitAll();
 		}
 
     // --- MAIN EPOCH LOOP
@@ -330,19 +330,16 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
     {
         // Synchronize all ranks before proceeding to ensure that
         // rank 0 has finished writing the previous model file
-			if (g_mpi != nullptr && m_parallelizationMethod != ParallelizationMethod::DataParallelASGD)
+		if (g_mpi != nullptr && m_parallelizationMethod != ParallelizationMethod::DataParallelASGD)
         {
             g_mpi->WaitAll();
-        }
+		}
 
-			if (m_parallelizationMethod == ParallelizationMethod::DataParallelASGD && m_nEpochBarrier > 0 && i % m_nEpochBarrier == 0)
-			{
-				fprintf(stderr, "Barrier at %d epoch..............", i + 1);
-				if (m_multiverso->_pThread->joinable())
-					m_multiverso->_pThread->join();
-				m_multiverso->_adaptor->Barrier();
-				fprintf(stderr, "Barrier finished.\n");
-			}
+		if (m_parallelizationMethod == ParallelizationMethod::DataParallelASGD && m_nEpochBarrier > 0 && i % m_nEpochBarrier == 0)
+		{
+			m_multiverso->WaitAsyncBuffer(); // [Review:qiwye] does
+			m_multiverso->WaitAll();
+		}
 
         Timer timer;
         timer.Start();
@@ -869,10 +866,8 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
 
 			if (!m_multiversoBarrier && useASGD)
 			{
-				fprintf(stderr, "Ready to train.....");
-				m_multiverso->_adaptor->Barrier();
+				m_multiverso->WaitAll();
 				m_multiversoBarrier = true;
-				fprintf(stderr, "Go!\n");
 			}
 
         if (!wasDataRead && (!useDistributedMBReading || noMoreSamplesToProcess)) // in case of distributed reading, we do a few more loops until all ranks have completed
@@ -1113,7 +1108,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
 				size_t processedSamples = 0;
 				if (nSamplesSinceLastModelSync >= m_nFramesBetweenASGDSync)
 				{
-					m_multiverso->ModelSync(learnableNodes);
+					m_multiverso->PushAndPullModel(learnableNodes);
 					processedSamples = nSamplesSinceLastModelSync;
 					nSamplesSinceLastModelSync = 0;
 				}
@@ -1265,7 +1260,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
 			int residualSampels = (int)nSamplesSinceLastModelSync;
 			totalSamplesSeen += residualSampels;
 			totalEpochSamples += residualSampels;
-			m_multiverso->ModelSync(learnableNodes);
+			m_multiverso->PushAndPullModel(learnableNodes);
 			nSamplesSinceLastModelSync = 0;
 		}
 
