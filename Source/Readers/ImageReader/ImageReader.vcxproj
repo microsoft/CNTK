@@ -148,6 +148,6 @@
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
   <Target Name="CheckDependencies">
-    <Warning Condition="!$(HasOpenCV)" Text="ImageReader requires OpenCV library v3.0 or higher to build. Please install the library from http://opencv.org/downloads.html and set OPENCV_PATH environment variable to OpenCV build folder (e.g. C:\src\opencv\build)." />
+    <Warning Condition="!$(HasOpenCV)" Text="ImageReader requires the OpenCV library to build. Please see https://github.com/Microsoft/CNTK/wiki/Setup-CNTK-on-Windows#opencv for installation instructions." />
   </Target>
 </Project>

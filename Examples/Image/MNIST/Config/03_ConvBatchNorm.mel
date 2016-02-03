@@ -1,0 +1,6 @@
+m=LoadModel($CurModel$, format=cntk)
+SetDefaultModel(m)
+
+SetPropertyForSubTree(CE, batchNormEvalMode, true)
+
+SaveModel(m, $NewModel$, format=cntk)

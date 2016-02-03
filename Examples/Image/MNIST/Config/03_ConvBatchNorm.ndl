@@ -9,10 +9,16 @@ ndlMnistMacros = [
     imageH = 28
     labelDim = 10
 
-    features = ImageInput(imageW, imageH, 1)
+    features = ImageInput(imageW, imageH, 1, imageLayout=$imageLayout$)
     featScale = Const(0.00390625)
     featScaled = Scale(featScale, features)
     labels = Input(labelDim)
+
+    scValue = 1
+    expAvg = 1
+    
+    convWScale = 10
+    convBValue = 0
 ]
 
 DNN = [
@@ -23,15 +29,15 @@ DNN = [
     hStride1 = 1
     vStride1 = 1
     # weight[cMap1, kW1 * kH1 * inputChannels]
-    # ConvReLUBNLayer is defined in Macros.ndl
-    conv1 = ConvReLUBNLayer(featScaled, cMap1, 25, kW1, kH1, hStride1, vStride1, 10)
+    # ConvBNReLULayer is defined in Macros.ndl
+    conv1 = ConvBNReLULayer(featScaled, cMap1, 25, kW1, kH1, hStride1, vStride1, convWScale, convBValue, scValue, expAvg)
 
     # pool1
     pool1W = 2
     pool1H = 2
     pool1hStride = 2
     pool1vStride = 2
-    pool1 = MaxPooling(conv1, pool1W, pool1H, pool1hStride, pool1vStride)
+    pool1 = MaxPooling(conv1, pool1W, pool1H, pool1hStride, pool1vStride, imageLayout=$imageLayout$)
 
     # conv2
     kW2 = 5
@@ -40,18 +46,20 @@ DNN = [
     hStride2 = 1
     vStride2 = 1
     # weight[cMap2, kW2 * kH2 * cMap1]
-    conv2 = ConvReLUBNLayer(pool1, cMap2, 400, kW2, kH2, hStride2, vStride2, 10)
+    conv2 = ConvBNReLULayer(pool1, cMap2, 400, kW2, kH2, hStride2, vStride2, convWScale, convBValue, scValue, expAvg)
 
     # pool2
     pool2W = 2
     pool2H = 2
     pool2hStride = 2
     pool2vStride = 2
-    pool2 = MaxPooling(conv2, pool2W, pool2H, pool2hStride, pool2vStride)
+    pool2 = MaxPooling(conv2, pool2W, pool2H, pool2hStride, pool2vStride, imageLayout=$imageLayout$)
 
     h1Dim = 128
-    # DnnBNSigmoidLayer is defined in Macros.ndl
-    h1 = DnnBNSigmoidLayer(512, h1Dim, pool2, 1)
+    fcWScale = 1
+    fcBValue = 0
+    # DnnBNReLULayer is defined in Macros.ndl
+    h1 = DnnBNReLULayer(1568, h1Dim, pool2, fcWScale, fcBValue, scValue, expAvg)
     ol = DNNLayer(h1Dim, labelDim, h1, 1)
     
     ce = CrossEntropyWithSoftmax(labels, ol)

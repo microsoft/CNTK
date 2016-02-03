@@ -171,16 +171,6 @@ void ComputationNetwork::SaveToFileImpl(const wstring& fileName, const FileOptio
     }
     fstream.PutMarker(FileMarker::fileMarkerEndSection, L"EOutputNodes");
 
-    if (m_pairNodes.size() > 0)
-    {
-        fstream.PutMarker(FileMarker::fileMarkerBeginSection, L"BPairNodes");
-
-        fstream << m_pairNodes.size();
-        for (size_t i = 0; i < m_pairNodes.size(); i++)
-            fstream << m_pairNodes[i]->NodeName();
-        fstream.PutMarker(FileMarker::fileMarkerEndSection, L"EPairNodes");
-    }
-
     fstream.PutMarker(FileMarker::fileMarkerEndSection, L"ERootNodes");
 
     fstream.PutMarker(FileMarker::fileMarkerEndSection, L"ECN");
@@ -234,11 +224,11 @@ void ComputationNetwork::ReadPersistableParameters(File& fstream, bool create)
 // deserialize the model
 // This does not post-process the model (CompileNetwork()). Use Load() instead.
 template <class ElemType>
-void ComputationNetwork::Read(const wstring& fileName, const FileOptions fileFormat, const bool /*bAllowNoCriterionNode --unused*/, ComputationNetwork* anotherNetwork)
+void ComputationNetwork::Read(const wstring& fileName)
 {
     ClearNetwork();
 
-    File fstream(fileName, fileFormat | FileOptions::fileOptionsRead);
+    File fstream(fileName, FileOptions::fileOptionsBinary | FileOptions::fileOptionsRead);
 
     ReadPersistableParameters<ElemType>(fstream, true);
 
@@ -263,7 +253,7 @@ void ComputationNetwork::Read(const wstring& fileName, const FileOptions fileFor
             vector<ComputationNodeBasePtr> childrenNodes;
             childrenNodes.resize(numChildren);
             for (int j = 0; j < numChildren; j++)
-                childrenNodes[j] = GetNodeFromName(childrenNames[j], anotherNetwork);
+                childrenNodes[j] = GetNodeFromName(childrenNames[j]);
 
             nodePtr->AttachInputs(childrenNodes);
         }
@@ -315,7 +305,7 @@ void ComputationNetwork::Read(const wstring& fileName, const FileOptions fileFor
             }
         }
 
-        // TODO: this section is defunct, skip over
+        // this section is for back compat only, skip over
         if (fstream.TryGetMarker(FileMarker::fileMarkerBeginSection, L"BNodesReqMultiSeqHandling"))
         {
             fprintf(stderr, "WARNING: Ignoring defunct 'BNodesReqMultiSeqHandling' section in input file.\n");
@@ -347,14 +337,12 @@ void ComputationNetwork::Read(const wstring& fileName, const FileOptions fileFor
             fstream.GetMarker(FileMarker::fileMarkerEndSection, L"EOutputNodes");
         }
 
+        // this section is for back compat only, skip over
         if (fstream.TryGetMarker(FileMarker::fileMarkerBeginSection, L"BPairNodes"))
         {
             fstream >> num;
-            for (size_t i = 0; i < num; i++)
-            {
-                fstream >> nodeName;
-                m_pairNodes.push_back(GetNodeFromName(nodeName));
-            }
+            if (num > 0)
+                RuntimeError("Read: PairNodes are no longer supported");
             fstream.GetMarker(FileMarker::fileMarkerEndSection, L"EPairNodes");
         }
     }
@@ -750,8 +738,6 @@ void ComputationNetwork::DescribeNetworkUsingDot(list<ComputationArc>& arcs,
         line = line + msra::strfun::wstrprintf(L"\"%ls\" ", x->GetName().c_str());
     for (const auto& x : m_outputNodes)
         line = line + msra::strfun::wstrprintf(L"\"%ls\" ", x->GetName().c_str());
-    for (const auto& x : m_pairNodes)
-        line = line + msra::strfun::wstrprintf(L"\"%ls\" ", x->GetName().c_str());
     for (const auto& x : m_evalNodes)
         line = line + msra::strfun::wstrprintf(L"\"%ls\" ", x->GetName().c_str());
 
@@ -1023,7 +1009,7 @@ void ComputationNetwork::PerformSVDecomposition(const map<wstring, float>& SVDCo
 }
 
 template void ComputationNetwork::InitLearnableParameters<float>(const ComputationNodeBasePtr& node, const bool uniformInit, const unsigned long randomSeed, const float initValueScale, bool initOnCPUOnly);
-template void ComputationNetwork::Read<float>(const wstring& fileName, const FileOptions fileFormat, const bool bAllowNoCriterionNode, ComputationNetwork* anotherNetwork);
+template void ComputationNetwork::Read<float>(const wstring& fileName);
 template void ComputationNetwork::ReadPersistableParameters<float>(File& fstream, bool create);
 template void ComputationNetwork::PerformSVDecomposition<float>(const map<wstring, float>& SVDConfig, size_t alignedsize);
 template /*static*/ void ComputationNetwork::SetDropoutRate<float>(ComputationNetworkPtr net, const ComputationNodeBasePtr& criterionNode, const double dropoutRate, double& prevDropoutRate, unsigned long& dropOutSeed);
@@ -1031,7 +1017,7 @@ template void ComputationNetwork::SetSeqParam<float>(ComputationNetworkPtr net, 
                                                      const double& amf, const double& lmf, const double& wp, const double& bMMIfactor, const bool& sMBR);
 
 template void ComputationNetwork::InitLearnableParameters<double>(const ComputationNodeBasePtr& node, const bool uniformInit, const unsigned long randomSeed, const double initValueScale, bool initOnCPUOnly);
-template void ComputationNetwork::Read<double>(const wstring& fileName, const FileOptions fileFormat, const bool bAllowNoCriterionNode, ComputationNetwork* anotherNetwork);
+template void ComputationNetwork::Read<double>(const wstring& fileName);
 template void ComputationNetwork::ReadPersistableParameters<double>(File& fstream, bool create);
 template void ComputationNetwork::PerformSVDecomposition<double>(const map<wstring, float>& SVDConfig, size_t alignedsize);
 template /*static*/ void ComputationNetwork::SetDropoutRate<double>(ComputationNetworkPtr net, const ComputationNodeBasePtr& criterionNode, const double dropoutRate, double& prevDropoutRate, unsigned long& dropOutSeed);

@@ -13,6 +13,7 @@
 //
 
 #define _CRT_SECURE_NO_WARNINGS // "secure" CRT not available on all platforms  --add this at the top of all CPP files that give "function or variable may be unsafe" warnings
+#include "Basics.h"
 #include "Platform.h"
 #include "BestGpu.h"
 #include "Config.h" // for ConfigParameters
@@ -63,8 +64,7 @@ struct ProcessorData
     cudaDeviceProp deviceProp;
     size_t cudaFreeMem;
     size_t cudaTotalMem;
-    bool dbnFound;
-    bool cnFound;
+    bool cntkFound;
     int deviceId; // the deviceId (cuda side) for this processor
 };
 
@@ -430,7 +430,7 @@ std::vector<int> BestGpu::GetDevices(int number, BestGpuFlags p_bestFlags)
         if (!pd->deviceProp.tccDriver || pd->memory.total == 0)
             mem = pd->cudaFreeMem / (double) pd->cudaTotalMem;
         score += mem * freeMemW;
-        score += ((pd->cnFound || pd->dbnFound) ? 0 : 1) * mlAppRunningW;
+        score += (pd->cntkFound ? 0 : 1) * mlAppRunningW;
         for (int i = 0; i < best.size(); i++)
         {
             // look for a better score
@@ -583,8 +583,7 @@ void BestGpu::QueryNvmlData()
             {
                 return;
             }
-            bool cnFound = false;
-            bool dbnFound = false;
+            bool cntkFound = false;
             for (nvmlProcessInfo_t info : processInfo)
             {
                 std::string name;
@@ -597,12 +596,11 @@ void BestGpu::QueryNvmlData()
                     name = name.substr(pos + 1);
                 if (GetCurrentProcessId() == info.pid || name.length() == 0)
                     continue;
-                cnFound = (cnFound || (!name.compare("cn.exe")));
-                dbnFound = (dbnFound || (!name.compare("dbn.exe")));
+                cntkFound = cntkFound || !name.compare("cntk.exe")
+                    || !name.compare("cn.exe") || !name.compare("dbn.exe"); // MS-proprietary legacy tools  --TODO: do we need a case-insensitive comparison here?
             }
             // set values to save
-            curPd->cnFound = cnFound;
-            curPd->dbnFound = dbnFound;
+            curPd->cntkFound = cntkFound;
         }
     }
     m_nvmlData = true;

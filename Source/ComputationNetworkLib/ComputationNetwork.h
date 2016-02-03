@@ -85,26 +85,20 @@ public:
     }
     // design BUGBUG: binary files do not know whether they are float or double.
     // TODO: modify file format to know this; then eliminate the <ElemType> dependency (and in some future, allow nodes to be different)
-    template <class ElemType>
-    void Read(const std::wstring& fileName, const FileOptions fileFormat = FileOptions::fileOptionsBinary,
-              const bool bAllowNoCriterionNode = false, ComputationNetwork* anotherNetwork = nullptr);
-    template <class ElemType>
-    void Load(const std::wstring& fileName, const FileOptions fileFormat = FileOptions::fileOptionsBinary,
-              const bool bAllowNoCriterionNode = false, ComputationNetwork* anotherNetwork = nullptr)
+    template <class ElemType> void Read(const std::wstring& fileName);
+    template <class ElemType> void Load(const std::wstring& fileName)
     {
-        Read<ElemType>(fileName, fileFormat, bAllowNoCriterionNode, anotherNetwork);
+        Read<ElemType>(fileName);
         // perform all further post-processing, caching, etc.
         CompileNetwork();
     }
 
     // static helper to instantiate a network from a file
     template <class ElemType>
-    static ComputationNetworkPtr CreateFromFile(DEVICEID_TYPE deviceId, const std::wstring& fileName,
-                                                const FileOptions fileFormat = FileOptions::fileOptionsBinary,
-                                                const bool bAllowNoCriterionNode = false, ComputationNetwork* anotherNetwork = nullptr)
+    static ComputationNetworkPtr CreateFromFile(DEVICEID_TYPE deviceId, const std::wstring& fileName)
     {
         auto net = make_shared<ComputationNetwork>(deviceId);
-        net->Load<ElemType>(fileName, FileOptions::fileOptionsBinary, bAllowNoCriterionNode, anotherNetwork);
+        net->Load<ElemType>(fileName);
         return net;
     }
 
@@ -348,22 +342,12 @@ public:
         return (iter != m_nameToNodeMap.end());
     }
 
-    ComputationNodeBasePtr GetNodeFromName(const std::wstring& name, ComputationNetwork* anotherNetwork = nullptr, bool bPanic = true) const
+    ComputationNodeBasePtr GetNodeFromName(const std::wstring& name) const
     {
         auto iter = m_nameToNodeMap.find(name);
-        if (iter != m_nameToNodeMap.end())
-        {
-            // found
-            return iter->second;
-        }
-
-        if (anotherNetwork != nullptr)
-            return anotherNetwork->GetNodeFromName(name);
-
-        if (bPanic)
+        if (iter == m_nameToNodeMap.end())
             RuntimeError("GetNodeFromName: Node name %ls does not exist.", name.c_str());
-        else
-            return nullptr;
+        return iter->second;
     }
 
     // GetNodesFromName - Get all the nodes from a name that may match a wildcard '*' pattern
@@ -473,10 +457,6 @@ public:
     inline std::vector<ComputationNodeBasePtr>& OutputNodes()
     {
         return m_outputNodes;
-    }
-    inline std::vector<ComputationNodeBasePtr>& PairNodes()
-    {
-        return m_pairNodes;
     }
 
     // -----------------------------------------------------------------------
@@ -874,15 +854,15 @@ protected:
 
     // node groups
     // These are specified by the user by means of tags or explicitly listing the node groups.
+    // TODO: Are these meant to be disjoint?
     std::vector<ComputationNodeBasePtr> m_features;
     std::vector<ComputationNodeBasePtr> m_labels;
     std::vector<ComputationNodeBasePtr> m_finalCriteria;
     std::vector<ComputationNodeBasePtr> m_evalNodes;
     std::vector<ComputationNodeBasePtr> m_outputNodes;
-    std::vector<ComputationNodeBasePtr> m_pairNodes;                // nodes for the children network to pair
     vector<std::vector<ComputationNodeBasePtr>*> GetAllNodeGroups() // get all groups to allow to iterate over all of them ...continue
     {
-        return vector<std::vector<ComputationNodeBasePtr>*>{&m_features, &m_labels, &m_finalCriteria, &m_evalNodes, &m_outputNodes, &m_pairNodes};
+        return vector<std::vector<ComputationNodeBasePtr>*>{&m_features, &m_labels, &m_finalCriteria, &m_evalNodes, &m_outputNodes};
     }
 
     // used for sentence boundary information passed from reader to reset RNN state
