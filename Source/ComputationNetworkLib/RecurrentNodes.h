@@ -329,9 +329,30 @@ public:
             Matrix<ElemType> out = ValueFor(fr);
 
             if (t_delayed < 0)
-                inp = DataWithMBLayoutFor(m_delayedValue, FrameRange(m_delayedActivationMBLayout, t_delayed + T_delayedActivation), m_delayedActivationMBLayout);
+            {
+                if (m_delayedValue.IsEmpty()) 
+                {
+                    if (IsPartOfLoop())
+                        InvalidArgument("The delay node tries to access past values that are out of bound, possibly because there is no sentence start marker in the MBLayout.");
+                    else //use first frame
+                        inp = Input(0)->ValueFor(FrameRange(m_pMBLayout, 0));
+                }
+                else
+                    inp = DataWithMBLayoutFor(m_delayedValue, FrameRange(m_delayedActivationMBLayout, t_delayed + T_delayedActivation), m_delayedActivationMBLayout);
+            }
+
             else if (t_delayed >= T)
-                inp = DataWithMBLayoutFor(m_delayedValue, FrameRange(m_delayedActivationMBLayout, t_delayed - T), m_delayedActivationMBLayout);
+            {
+                if (m_delayedValue.IsEmpty())  
+                {
+                    if (IsPartOfLoop())
+                        InvalidArgument("The delay node tries to access future values that are out of bound, possibly because there is no sentence end marker in the MBLayout.");
+                    else //use last frame
+                        inp = Input(0)->ValueFor(FrameRange(m_pMBLayout, T - 1));
+                }
+                else
+                    inp = DataWithMBLayoutFor(m_delayedValue, FrameRange(m_delayedActivationMBLayout, t_delayed - T), m_delayedActivationMBLayout);
+            }
             else
                 inp = Input(0)->ValueFor(frDelayed);
             // inp = Input(0)->ValueFor(FrameRange(m_pMBLayout, t_delayed));
