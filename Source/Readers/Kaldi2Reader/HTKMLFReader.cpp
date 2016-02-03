@@ -109,7 +109,7 @@ void HTKMLFReader<ElemType>::InitFromConfig(const ConfigRecordType& readerConfig
 
     // Checks if partial minibatches are allowed.
     std::string minibatchMode(readerConfig(L"minibatchMode", "Partial"));
-    m_partialMinibatch = EqualCI(minibatchMode.c_str(), "Partial");
+    m_partialMinibatch = EqualCI(minibatchMode, "Partial");
 
     // Figures out if we have to do minibatch buffering and how.
     if (m_doSeqTrain)
@@ -195,12 +195,12 @@ void HTKMLFReader<ElemType>::PrepareForSequenceTraining(const ConfigRecordType& 
         if (temp.ExistsCurrent(L"type"))
         {
             wstring type = temp(L"type");
-            if (EqualCI(type.c_str(), L"readerDeriv") || EqualCI(type.c_str(), L"seqTrainDeriv") /*for back compatibility */)
+            if (EqualCI(type, L"readerDeriv") || EqualCI(type, L"seqTrainDeriv") /*for back compatibility */)
             {
                 m_nameToTypeMap[id] = InputOutputTypes::readerDeriv;
                 hasDrive = true;
             }
-            else if (EqualCI(type.c_str(), L"readerObj") || EqualCI(type.c_str(), L"seqTrainObj") /*for back compatibility */)
+            else if (EqualCI(type, L"readerObj") || EqualCI(type, L"seqTrainObj") /*for back compatibility */)
             {
                 m_nameToTypeMap[id] = InputOutputTypes::readerObj;
                 hasObj = true;
@@ -305,7 +305,7 @@ void HTKMLFReader<ElemType>::PrepareForTrainingOrTesting(const ConfigRecordType&
 
         // Figures out the category.
         wstring type = thisFeature(L"type", L"real");
-        if (EqualCI(type.c_str(), L"real"))
+        if (EqualCI(type, L"real"))
         {
             m_nameToTypeMap[featureNames[i]] = InputOutputTypes::real;
         }
@@ -348,7 +348,7 @@ void HTKMLFReader<ElemType>::PrepareForTrainingOrTesting(const ConfigRecordType&
             type = (const wstring&) thisLabel(L"labelType"); // let's deprecate this eventually and just use "type"...
         else
             type = (const wstring&) thisLabel(L"type", L"category"); // outputs should default to category
-        if (EqualCI(type.c_str(), L"category"))
+        if (EqualCI(type, L"category"))
             m_nameToTypeMap[labelNames[i]] = InputOutputTypes::category;
         else
             InvalidArgument("label type must be Category");
@@ -402,11 +402,11 @@ void HTKMLFReader<ElemType>::PrepareForTrainingOrTesting(const ConfigRecordType&
     if (readerConfig.Exists(L"randomize"))
     {
         const std::string& randomizeString = readerConfig(L"randomize");
-        if (EqualCI(randomizeString.c_str(), "none"))
+        if (EqualCI(randomizeString, "none"))
         {
             randomize = randomizeNone;
         }
-        else if (EqualCI(randomizeString.c_str(), "auto"))
+        else if (EqualCI(randomizeString, "auto"))
         {
             randomize = randomizeAuto;
         }
@@ -464,7 +464,7 @@ void HTKMLFReader<ElemType>::PrepareForTrainingOrTesting(const ConfigRecordType&
     // option is "rollingWindow". We only support "blockRandomize" in
     // sequence training.
     std::string readMethod(readerConfig(L"readMethod", "blockRandomize"));
-    if (EqualCI(readMethod.c_str(), "blockRandomize"))
+    if (EqualCI(readMethod, "blockRandomize"))
     {
         // construct all the parameters we don't need, but need to be passed to the constructor...
         std::pair<std::vector<wstring>, std::vector<wstring>> latticetocs;
@@ -480,7 +480,7 @@ void HTKMLFReader<ElemType>::PrepareForTrainingOrTesting(const ConfigRecordType&
             scriptpaths, infilesmulti, labelsmulti, m_featDims, m_labelDims,
             numContextLeft, numContextRight, randomize, *m_lattices, m_latticeMap, m_framemode);
     }
-    else if (EqualCI(readMethod.c_str(), "rollingWindow"))
+    else if (EqualCI(readMethod, "rollingWindow"))
     {
         // "rollingWindow" is not supported in sequence training.
         if (m_doSeqTrain)

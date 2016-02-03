@@ -167,7 +167,7 @@ bool SequenceReader<ElemType>::EnsureDataAvailable(size_t mbStartSample, bool /*
                     continue; // empty input
 
                 // check for end of sequence marker
-                if (!bSentenceStart && (EqualCI(labelValue.c_str(), m_labelInfo[labelInfoIn].endSequence.c_str()) || ((label - 1) % m_mbSize == 0)))
+                if (!bSentenceStart && (EqualCI(labelValue, m_labelInfo[labelInfoIn].endSequence) || ((label - 1) % m_mbSize == 0)))
                 {
                     // ignore those cases where $</s> is put in the begining, because those are used for initialization purpose
                     spos.flags |= seqFlagStopLabel;
@@ -183,7 +183,7 @@ bool SequenceReader<ElemType>::EnsureDataAvailable(size_t mbStartSample, bool /*
                         RuntimeError("read sentence length is longer than the minibatch size. should be smaller. increase the minibatch size to at least %d", (int) epochSample);
                     }
 
-                    if (EqualCI(labelValue.c_str(), m_labelInfo[labelInfoIn].endSequence.c_str()))
+                    if (EqualCI(labelValue, m_labelInfo[labelInfoIn].endSequence))
                         continue; // ignore sentence ending
                 }
 
@@ -235,7 +235,7 @@ bool SequenceReader<ElemType>::EnsureDataAvailable(size_t mbStartSample, bool /*
                 {
                     // this is the next word (label was incremented above)
                     labelValue = labelTemp[label];
-                    if (EqualCI(labelValue.c_str(), m_labelInfo[labelInfoIn].endSequence.c_str()))
+                    if (EqualCI(labelValue, m_labelInfo[labelInfoIn].endSequence))
                     {
                         labelValue = labelInfo.endSequence;
                     }
@@ -1526,14 +1526,15 @@ void BatchSequenceReader<ElemType>::InitFromConfig(const ConfigRecordType& reade
     m_traceLevel = readerConfig(L"traceLevel", 0);
     m_parser.SetTraceLevel(m_traceLevel);
 
+    // TODO: some comment needed what this was meant to be
     if (readerConfig.Exists(L"randomize"))
     {
         string randomizeString = readerConfig(L"randomize");
-        if (EqualCI(randomizeString.c_str(), "none"))
+        if (EqualCI(randomizeString, "none"))
         {
             ;
         }
-        else if (EqualCI(randomizeString.c_str(), "auto"))
+        else if (EqualCI(randomizeString, "auto"))
         {
             ;
         }
@@ -1812,7 +1813,7 @@ bool BatchSequenceReader<ElemType>::EnsureDataAvailable(size_t /*mbStartSample*/
             {
                 // this is the next word (label was incremented above)
                 labelValue = m_labelTemp[label];
-                if (EqualCI(labelValue.c_str(), m_labelInfo[labelInfoIn].endSequence.c_str()))
+                if (EqualCI(labelValue, m_labelInfo[labelInfoIn].endSequence))
                 {
                     labelValue = labelInfo.endSequence;
                 }

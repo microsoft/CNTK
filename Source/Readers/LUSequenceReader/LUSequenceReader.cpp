@@ -365,7 +365,7 @@ void BatchLUSequenceReader<ElemType>::InitFromConfig(const ConfigRecordType& rea
 
             // determine label type desired
             wstring labelType(labelConfig(L"labelType", L"category"));
-            if (EqualCI(labelType.c_str(), L"category"))
+            if (EqualCI(labelType, L"category"))
             {
                 m_labelInfo[index].type = labelCategory;
             }
@@ -429,15 +429,16 @@ void BatchLUSequenceReader<ElemType>::InitFromConfig(const ConfigRecordType& rea
     if (readerConfig.Exists(L"randomize"))
     {
         string randomizeString = readerConfig(L"randomize");
-        if (EqualCI(randomizeString.c_str(), "none"))
+        if (EqualCI(randomizeString, "none"))
         {
             ;
         }
-        else if (EqualCI(randomizeString.c_str(), "auto") || EqualCI(randomizeString.c_str(), "true"))
+        else if (EqualCI(randomizeString, "auto") || EqualCI(randomizeString, "true"))  // TODO: "true" is inconsistent here, should be deprecated
         {
             mRandomize = true;
         }
         // else invalid
+        // TODO: fail on invalid
     }
 
     mEqualLengthOutput = readerConfig(L"equalLength", true);

@@ -2349,40 +2349,39 @@ template class SGD<double>;
 
 static AdaptationRegType ParseAdaptationRegType(const wstring& s)
 {
-    if (EqualCI(s.c_str(), L"") || EqualCI(s.c_str(), L"none"))         return AdaptationRegType::None;
-    else if (EqualCI(s.c_str(), L"kl") || EqualCI(s.c_str(), L"klReg")) return AdaptationRegType::KL;
+    if      (EqualCI(s, L"") || EqualCI(s, L"none"))    return AdaptationRegType::None;
+    else if (EqualCI(s, L"kl") || EqualCI(s, L"klReg")) return AdaptationRegType::KL;
     else
         InvalidArgument("ParseAdaptationRegType: Invalid Adaptation Regularization Type. Valid values are (none | kl)");
 }
 
 static GradientsUpdateType ParseGradUpdateType(const wstring& s)
 {
-    if      (EqualCI(s.c_str(), L"") || EqualCI(s.c_str(), L"none")) return GradientsUpdateType::None;
-    else if (EqualCI(s.c_str(), L"adagrad"))                         return GradientsUpdateType::AdaGrad;
-    else if (EqualCI(s.c_str(), L"rmsProp"))                         return GradientsUpdateType::RmsProp;
-    else if (EqualCI(s.c_str(), L"fsAdagrad"))                       return GradientsUpdateType::FSAdaGrad;
-    // legacy
-    else if (EqualCI(s.c_str(), L"normal") || EqualCI(s.c_str(), L"simple")) return GradientsUpdateType::None;
+    if      (EqualCI(s, L"") || EqualCI(s, L"none")) return GradientsUpdateType::None;
+    else if (EqualCI(s, L"adagrad"))                 return GradientsUpdateType::AdaGrad;
+    else if (EqualCI(s, L"rmsProp"))                 return GradientsUpdateType::RmsProp;
+    else if (EqualCI(s, L"fsAdagrad"))               return GradientsUpdateType::FSAdaGrad;
+    // legacy, deprecated
+    else if (EqualCI(s, L"normal") || EqualCI(s, L"simple")) return GradientsUpdateType::None;
     else InvalidArgument("ParseGradUpdateType: Invalid Gradient Updating Type. Valid values are (none | adagrad | rmsProp | fsAdagrad )");
 }
 
 static ParallelizationMethod ParseParallelizationMethod(const wstring& s)
 {
-    if      (EqualCI(s.c_str(), L"") || EqualCI(s.c_str(), L"none")) return ParallelizationMethod::None;
-    else if (EqualCI(s.c_str(), L"DataParallelSGD"))                 return ParallelizationMethod::DataParallelSGD;
-    else if (EqualCI(s.c_str(), L"ModelAveragingSGD"))               return ParallelizationMethod::ModelAveragingSGD;
+    if      (EqualCI(s, L"") || EqualCI(s, L"none")) return ParallelizationMethod::None;
+    else if (EqualCI(s, L"DataParallelSGD"))         return ParallelizationMethod::DataParallelSGD;
+    else if (EqualCI(s, L"ModelAveragingSGD"))       return ParallelizationMethod::ModelAveragingSGD;
     else InvalidArgument("ParseParallelizationMethod: Invalid Parallelization Method. Valid values are (none | dataParallelSGD | modelAveragingSGD)");
 }
 
 static LearningRateSearchAlgorithm ParseLearningRateSearchType(const wstring& s)
 {
-    // TODO: why allow so many variants?
-    if      (EqualCI(s.c_str(), L"false") || EqualCI(s.c_str(), L"none")) return LearningRateSearchAlgorithm::None;
-    else if (EqualCI(s.c_str(), L"searchBeforeEpoch"))                    return LearningRateSearchAlgorithm::SearchBeforeEpoch;
-    else if (EqualCI(s.c_str(), L"adjustAfterEpoch"))                     return LearningRateSearchAlgorithm::AdjustAfterEpoch;
-    // legacy
-    else if (EqualCI(s.c_str(), L"beforeEpoch" /*legacy, deprecated*/) || EqualCI(s.c_str(), L"before" /*legacy, deprecated*/)) return LearningRateSearchAlgorithm::SearchBeforeEpoch;
-    else if (EqualCI(s.c_str(), L"afterEpoch" /*legacy, deprecated*/) || EqualCI(s.c_str(), L"after" /*legacy, deprecated*/))   return LearningRateSearchAlgorithm::AdjustAfterEpoch;
+    if      (EqualCI(s, L"false") || EqualCI(s, L"none")) return LearningRateSearchAlgorithm::None;
+    else if (EqualCI(s, L"searchBeforeEpoch"))            return LearningRateSearchAlgorithm::SearchBeforeEpoch;
+    else if (EqualCI(s, L"adjustAfterEpoch"))             return LearningRateSearchAlgorithm::AdjustAfterEpoch;
+    // legacy, deprecated
+    else if (EqualCI(s, L"beforeEpoch") || EqualCI(s, L"before")) return LearningRateSearchAlgorithm::SearchBeforeEpoch;
+    else if (EqualCI(s, L"afterEpoch")  || EqualCI(s, L"after"))  return LearningRateSearchAlgorithm::AdjustAfterEpoch;
     else InvalidArgument("autoAdjustLR: Invalid learning rate search type. Valid values are (none | searchBeforeEpoch | adjustAfterEpoch)");
 }
 

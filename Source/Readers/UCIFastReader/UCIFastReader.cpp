@@ -336,11 +336,11 @@ void UCIFastReader<ElemType>::InitFromConfig(const ConfigRecordType& readerConfi
     if (readerConfig.Exists(L"randomize"))
     {
         string randomizeString = readerConfig(L"randomize");
-        if (EqualCI(randomizeString.c_str(), "none"))
+        if (EqualCI(randomizeString, "none"))
         {
             m_randomizeRange = randomizeNone;
         }
-        else if (EqualCI(randomizeString.c_str(), "auto"))
+        else if (EqualCI(randomizeString, "auto"))
         {
             m_randomizeRange = randomizeAuto;
         }
@@ -356,7 +356,7 @@ void UCIFastReader<ElemType>::InitFromConfig(const ConfigRecordType& readerConfi
 
     // determine if we partial minibatches are desired
     std::string minibatchMode(readerConfig(L"minibatchMode", "partial"));
-    m_partialMinibatch = EqualCI(minibatchMode.c_str(), "partial");
+    m_partialMinibatch = EqualCI(minibatchMode, "partial");
 
     // get start and dimensions for labels and features
     size_t startLabels = configLabels(L"start", (size_t) 0);
@@ -373,15 +373,15 @@ void UCIFastReader<ElemType>::InitFromConfig(const ConfigRecordType& readerConfi
         labelType = (wstring) configLabels(L"labelType", L"category");
 
     // convert to lower case for case insensitive comparison
-    if (EqualCI(labelType.c_str(), L"category"))
+    if (EqualCI(labelType, L"category"))
     {
         m_labelType = labelCategory;
     }
-    else if (EqualCI(labelType.c_str(), L"regression"))
+    else if (EqualCI(labelType, L"regression"))
     {
         m_labelType = labelRegression;
     }
-    else if (EqualCI(labelType.c_str(), L"none"))
+    else if (EqualCI(labelType, L"none"))
     {
         m_labelType = labelNone;
         dimLabels = 0; // override for no labels
