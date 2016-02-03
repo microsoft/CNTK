@@ -1575,7 +1575,7 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildNetworkFromDbnFile(co
         else if (m_layerSizes.size() > 0)
             m_layerSizes[m_layerSizes.size() - 1];
         else
-            std::runtime_error("Output layer size must be specified when converting pretrained network, use outputLayerSize=");
+            throw std::runtime_error("Output layer size must be specified when converting pretrained network, use outputLayerSize=");
 
         size_t penultimateSize = input->GetSampleMatrixNumRows();
 
