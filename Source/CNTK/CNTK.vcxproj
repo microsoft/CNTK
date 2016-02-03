@@ -109,7 +109,7 @@
       <Message>Copy content files to target directory</Message>
     </CustomBuildStep>
     <PreBuildEvent>
-      <Command>prebuild.bat</Command>
+      <Command>prebuild.bat $(Configuration)</Command>
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug_CpuOnly|x64'">

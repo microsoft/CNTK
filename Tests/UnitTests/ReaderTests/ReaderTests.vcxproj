@@ -197,7 +197,7 @@
   <Target Name="Build" Condition="$(HasBoost)" Outputs="$(TargetPath)" DependsOnTargets="$(BuildDependsOn)" />
   <ImportGroup Label="ExtensionTargets" />
   <Target Name="CheckDependencies">
-    <Warning Condition="!$(HasBoost)" Text="ReaderTests requires Boost 1.59 to build. Skipping the build. Please download and install boost from http://sourceforge.net/projects/boost/files/boost-binaries/1.59.0/boost_1_59_0-msvc-12.0-64.exe/download and set BOOST_INCLUDE_PATH environment variable to the &quot;&lt;boost install folder&gt;\boost_1_59_0&quot; directory and BOOST_LIB_PATH to the &quot;&lt;boost install folder&gt;\boost_1_59_0\lib64-msvc-12.0&quot; directory." />
+    <Warning Condition="!$(HasBoost)" Text="ReaderTests requires the Boost library to build. Please see https://github.com/Microsoft/CNTK/wiki/Setup-CNTK-on-Windows#boost for installation instructions." />
   </Target>
   <Target Name="CopyUnitTestDependencies" AfterTargets="Build">
     <ItemGroup>
