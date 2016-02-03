@@ -41,8 +41,11 @@ void UCIParser<NumType, LabelType>::SetStateRange(int value1, int value2, ParseS
 // SetupStateTables - setup state transition tables for each state
 // each state has a block of 256 states indexed by the incoming character
 template <typename NumType, typename LabelType>
-void UCIParser<NumType, LabelType>::SetupStateTables()
+void UCIParser<NumType, LabelType>::SetupStateTables(char customDelimiter, char customDecimalPoint)
 {
+    if (customDelimiter == customDecimalPoint && customDelimiter != 0)
+        InvalidArgument("The delimiter and decimal point cannot be the same.");
+
     // =========================
     // STATE = WHITESPACE
     // =========================
@@ -51,11 +54,14 @@ void UCIParser<NumType, LabelType>::SetupStateTables()
     SetStateRange('0', '9', Whitespace, WholeNumber);
     SetState('-', Whitespace, Sign);
     SetState('+', Whitespace, Sign);
+
     // whitespace
     SetState(' ', Whitespace, Whitespace);
     SetState('\t', Whitespace, Whitespace);
     SetState('\r', Whitespace, Whitespace);
     SetState('\n', Whitespace, EndOfLine);
+    if (customDelimiter != 0)
+        SetState(customDelimiter, Whitespace, Whitespace);
 
     // =========================
     // STATE = NEGATIVE_SIGN
@@ -68,6 +74,8 @@ void UCIParser<NumType, LabelType>::SetupStateTables()
     SetState('\t', Sign, Whitespace);
     SetState('\r', Sign, Whitespace);
     SetState('\n', Sign, EndOfLine);
+    if (customDelimiter != 0)
+        SetState(customDelimiter, Sign, Whitespace);
 
     // =========================
     // STATE = NUMBER
@@ -76,6 +84,9 @@ void UCIParser<NumType, LabelType>::SetupStateTables()
     SetStateRange(0, 255, WholeNumber, Label);
     SetStateRange('0', '9', WholeNumber, WholeNumber);
     SetState('.', WholeNumber, Period);
+    if (customDecimalPoint != 0)
+        SetState(customDecimalPoint, WholeNumber, Period);
+
     SetState('e', WholeNumber, TheLetterE);
     SetState('E', WholeNumber, TheLetterE);
     // whitespace
@@ -83,6 +94,8 @@ void UCIParser<NumType, LabelType>::SetupStateTables()
     SetState('\t', WholeNumber, Whitespace);
     SetState('\r', WholeNumber, Whitespace);
     SetState('\n', WholeNumber, EndOfLine);
+    if (customDelimiter != 0)
+        SetState(customDelimiter, WholeNumber, Whitespace);
 
     // =========================
     // STATE = PERIOD
@@ -95,6 +108,8 @@ void UCIParser<NumType, LabelType>::SetupStateTables()
     SetState('\t', Period, Whitespace);
     SetState('\r', Period, Whitespace);
     SetState('\n', Period, EndOfLine);
+    if (customDelimiter != 0)
+        SetState(customDelimiter, Period, Whitespace);
 
     // =========================
     // STATE = REMAINDER
@@ -109,6 +124,8 @@ void UCIParser<NumType, LabelType>::SetupStateTables()
     SetState('\t', Remainder, Whitespace);
     SetState('\r', Remainder, Whitespace);
     SetState('\n', Remainder, EndOfLine);
+    if (customDelimiter != 0)
+        SetState(customDelimiter, Remainder, Whitespace);
 
     // =========================
     // STATE = THE_LETTER_E
@@ -123,6 +140,8 @@ void UCIParser<NumType, LabelType>::SetupStateTables()
     SetState('\t', TheLetterE, Whitespace);
     SetState('\r', TheLetterE, Whitespace);
     SetState('\n', TheLetterE, EndOfLine);
+    if (customDelimiter != 0)
+        SetState(customDelimiter, TheLetterE, Whitespace);
 
     // =========================
     // STATE = EXPONENT_NEGATIVE_SIGN
@@ -135,6 +154,8 @@ void UCIParser<NumType, LabelType>::SetupStateTables()
     SetState('\t', ExponentSign, Whitespace);
     SetState('\r', ExponentSign, Whitespace);
     SetState('\n', ExponentSign, EndOfLine);
+    if (customDelimiter != 0)
+        SetState(customDelimiter, ExponentSign, Whitespace);
 
     // =========================
     // STATE = EXPONENT
@@ -147,6 +168,8 @@ void UCIParser<NumType, LabelType>::SetupStateTables()
     SetState('\t', Exponent, Whitespace);
     SetState('\r', Exponent, Whitespace);
     SetState('\n', Exponent, EndOfLine);
+    if (customDelimiter != 0)
+        SetState(customDelimiter, Exponent, Whitespace);
 
     // =========================
     // STATE = END_OF_LINE
@@ -159,6 +182,8 @@ void UCIParser<NumType, LabelType>::SetupStateTables()
     SetState(' ', EndOfLine, Whitespace);
     SetState('\t', EndOfLine, Whitespace);
     SetState('\r', EndOfLine, Whitespace);
+    if (customDelimiter != 0)
+        SetState(customDelimiter, EndOfLine, Whitespace);
 
     // =========================
     // STATE = LABEL
@@ -169,6 +194,8 @@ void UCIParser<NumType, LabelType>::SetupStateTables()
     SetState(' ', Label, Whitespace);
     SetState('\t', Label, Whitespace);
     SetState('\r', Label, Whitespace);
+    if (customDelimiter != 0)
+        SetState(customDelimiter, Label, Whitespace);
 
     // =========================
     // STATE = LINE_COUNT_EOL
@@ -223,20 +250,20 @@ void UCIParser<NumType, LabelType>::PrepareStartPosition(size_t position)
 
 // UCIParser constructor
 template <typename NumType, typename LabelType>
-UCIParser<NumType, LabelType>::UCIParser()
+UCIParser<NumType, LabelType>::UCIParser(char customDelimiter, char customDecimalPoint)
 {
-    Init();
+    Init(customDelimiter, customDecimalPoint);
 }
 
 // setup all the state variables and state tables for state machine
 template <typename NumType, typename LabelType>
-void UCIParser<NumType, LabelType>::Init()
+void UCIParser<NumType, LabelType>::Init(char customDelimiter, char customDecimalPoint)
 {
     PrepareStartPosition(0);
     m_fileBuffer = NULL;
     m_pFile = NULL;
     m_stateTable = new DWORD[AllStateMax * 256];
-    SetupStateTables();
+    SetupStateTables(customDelimiter, customDecimalPoint);
 }
 
 // Parser destructor
