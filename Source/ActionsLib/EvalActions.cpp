@@ -221,12 +221,21 @@ void DoWriteOutput(const ConfigParameters& config)
 
     ConfigArray outputNodeNames = config(L"outputNodeNames", "");
     vector<wstring> outputNodeNamesVector;
-    for (int i = 0; i < outputNodeNames.size(); ++i)
-    {
-        outputNodeNamesVector.push_back(outputNodeNames[i]);
-    }
 
-    auto net = ComputationNetwork::CreateFromFile<ElemType>(deviceId, modelPath);
+    // Note this is required since the user might specify OutputNodeNames in the config, so don't use CreateFromFile,
+	// instead we build the network ourselves.
+    auto net = make_shared<ComputationNetwork>(deviceId);
+    net->Read<ElemType>(modelPath);
+
+    if (outputNodeNames.size() > 0) {
+        net->OutputNodes().clear();
+        for (int i = 0; i < outputNodeNames.size(); ++i)
+        {
+            outputNodeNamesVector.push_back(outputNodeNames[i]);
+            net->OutputNodes().emplace_back(net->GetNodeFromName(outputNodeNames[i]));
+        }
+    }
+	net->CompileNetwork();
 
     SimpleOutputWriter<ElemType> writer(net, 1);
 
