@@ -42,13 +42,13 @@ public:
     LearnableParameter(DEVICEID_TYPE deviceId, const wstring& name)
         : Base(deviceId, name)
     {
-        m_parameterUpdateRequired = true;
+        m_learningRateMultiplier = true;
         this->m_valueSharable = false;
     }
     LearnableParameter(DEVICEID_TYPE deviceId, const wstring& name, const TensorShape& shape)
         : Base(deviceId, name)
     {
-        m_parameterUpdateRequired = true;
+        m_learningRateMultiplier = true;
         CreateMatrixIfNull(m_value);
         m_valueSharable = false;
         SetDims(shape, false);
@@ -65,8 +65,8 @@ public:
         // TODO: Change dimensions to take a generic tensor instead. That will be a (minor) breaking change that will require fix-ups when converting from NDL to BrainScript.
         AttachInputs(configp, this->GetExpectedNumInputs());
         // parameters[rows, [cols=1]] plus other optional parameters (needGradient=[true|false], init=[uniform|gaussian|fixedvalue], initValueScale=[1|float], value=[0|float])
-        // TODO: "needGradient" should be renamed to better match m_parameterUpdateRequired. It is also inconsistent with MEL which uses "needsGradient"
-        SetParameterUpdateRequired(configp->Get(L"needGradient"));
+        // TODO: "needGradient" should be renamed to better match m_learningRateMultiplier. It is also inconsistent with MEL which uses "needsGradient"
+        SetLearningRateMultiplier(configp->Get(L"needGradient"));
         wstring initString = configp->Get(L"init");
         if (initString == L"fixedValue")
             Value().SetValue((ElemType) configp->Get(L"value"));
@@ -91,7 +91,7 @@ public:
     virtual void Save(File& fstream) const override
     {
         Base::Save(fstream);
-        fstream << m_parameterUpdateRequired;
+        fstream << m_learningRateMultiplier;
         fstream << (size_t) 0 /*#rows in a legacy file format*/ << (size_t) 0 /*#cols in a legacy file format*/;
         m_sampleLayout.Save(fstream);
         fstream << Value();
@@ -102,7 +102,14 @@ public:
         Base::Load(fstream, modelVersion);
 
         size_t rows, cols;
-        fstream >> m_parameterUpdateRequired;
+        if (modelVersion >= CNTK_MODEL_VERSION_3)
+            fstream >> m_learningRateMultiplier;
+        else
+        {
+            bool parameterUpdateRequired;
+            fstream >> parameterUpdateRequired;
+            m_learningRateMultiplier = (float)parameterUpdateRequired;
+        }
         fstream >> rows >> cols;
 
         TensorShape sampleLayout;
@@ -203,7 +210,7 @@ public:
         char str[4096];
         sprintf(str, "[%lu,%lu]  ", GetAsMatrixNumRows(), GetAsMatrixNumCols());
         fstream << string(str);
-        sprintf(str, "NeedGradient=%s", m_parameterUpdateRequired ? "true" : "false"); // TODO: update NDL to accept a better matching name as well
+        sprintf(str, "NeedGradient=%s", m_learningRateMultiplier ? "true" : "false"); // TODO: update NDL to accept a better matching name as well
         fstream << string(str);
 
         PrintNodeValuesToFile(printValues, fstream);
@@ -232,7 +239,7 @@ class InputValueBase : public ComputationNode<ElemType>, public NumInputs<0>
 
         SetDims(sampleLayout, HasMBLayout()); // also called when reloading a file. Then we have an MBLayout, otherwise not yet
         UpdateFunctionValuesSize();           // we must allocate the matrix so that the readers get objects with valid row dimensions (some readers expect that)
-        m_parameterUpdateRequired = false;
+        m_learningRateMultiplier = false;
         this->m_valueSharable = false;
     }
 

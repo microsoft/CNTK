@@ -30,7 +30,8 @@
 // version number to control how to read and write
 #define CNTK_MODEL_VERSION_1 1
 #define CNTK_MODEL_VERSION_2 2
-#define CURRENT_CNTK_MODEL_VERSION CNTK_MODEL_VERSION_2
+#define CNTK_MODEL_VERSION_3 3
+#define CURRENT_CNTK_MODEL_VERSION CNTK_MODEL_VERSION_3
 
 extern bool g_shareNodeValueMatrices;
 
@@ -264,7 +265,7 @@ public:
     // -----------------------------------------------------------------------
 
     ComputationNodeBase(DEVICEID_TYPE deviceId, const wstring& name)
-        : m_deviceId(deviceId), m_outputNeededDuringBackprop(true), m_parameterUpdateRequired(false), m_gradientInitialized(false), m_nodeName(name == L"" ? CreateUniqNodeName() : name)
+        : m_deviceId(deviceId), m_outputNeededDuringBackprop(true), m_learningRateMultiplier(false), m_gradientInitialized(false), m_nodeName(name == L"" ? CreateUniqNodeName() : name)
     {
     }
     virtual ~ComputationNodeBase()
@@ -282,7 +283,7 @@ public:
         if (flags & CopyNodeFlags::copyNodeValue)
         {
             node->m_deviceId = m_deviceId;
-            node->m_parameterUpdateRequired = m_parameterUpdateRequired;
+            node->m_learningRateMultiplier = m_learningRateMultiplier;
             node->m_nodeName = newName;
 
             node->m_sampleLayout = m_sampleLayout;
@@ -586,8 +587,9 @@ public:
 
     const bool&/*TODO: should be bool by value*/ NeedGradient() { return m_needsGradient; }
 
-    void SetParameterUpdateRequired(bool f) { m_parameterUpdateRequired = f; }
-    bool IsParameterUpdateRequired() const { return m_parameterUpdateRequired; }
+    void SetLearningRateMultiplier(float f) { m_learningRateMultiplier = f; }
+    float GetLearningRateMultiplier() const { return m_learningRateMultiplier; }
+    bool IsParameterUpdateRequired() const { return !(m_learningRateMultiplier == 0); }
 
     // return true if the node's value should be computed before the normal training. e.g., mean and invStd of input features.
     virtual bool /*IComputationNode::*/ RequiresPreCompute() const { return false; }
@@ -828,7 +830,7 @@ protected:
     MBLayoutPtr m_pMBLayout;
 
     // flags related to gradient propagation
-    bool m_parameterUpdateRequired;    // update parameters? Only used for LearnableParameters.    --TODO: Should we make this a member of LearnableParameters actually? And require a type cast? Currently it is read out for all leaves.
+    float m_learningRateMultiplier;    // update parameters? Only used for LearnableParameters.    --TODO: Should we make this a member of LearnableParameters actually? And require a type cast? Currently it is read out for all leaves.
     bool m_gradientInitialized;        // indicates whether the gradient matrix has been resized and initialized to 0
     bool m_outputNeededDuringBackprop; // indicates whether the output value of the node is needed during backprop
 };
@@ -1754,7 +1756,7 @@ protected:                                                                      
     using Base::SetDims1;                                                                                                                                \
     using Base::SetDims;                                                                                                                                 \
     using Base::SetInput;                                                                                                                                \
-    using Base::SetParameterUpdateRequired;                                                                                                              \
+    using Base::SetLearningRateMultiplier;                                                                                                              \
     using Base::UpdateFunctionMBSize;                                                                                                                    \
     using Base::UpdateFunctionValuesSize;                                                                                                                \
     using Base::Validate;                                                                                                                                \
@@ -1774,7 +1776,7 @@ protected:                                                                      
     using Base::m_inputs;                                                                                                                                \
     using Base::m_nodeName;                                                                                                                              \
     using Base::m_pMBLayout;                                                                                                                             \
-    using Base::m_parameterUpdateRequired;                                                                                                               \
+    using Base::m_learningRateMultiplier;                                                                                                               \
     using Base::m_sampleLayout;                                                                                                                          \
     using Base::m_value;                                                                                                                                 \
     using Base::m_valueSharable;                                                                                                                         \

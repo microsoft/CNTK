@@ -453,7 +453,7 @@ public:
 #if 1         // no gradient flows to log LLs (but otherwise we leave it to user if, e.g., another node propagates a gradient into there)
             ; // gradient does not flow here
 #else
-            Input(inputIndex)->SetParameterUpdateRequired(false);
+            Input(inputIndex)->SetLearningRateMultiplier(false);
             Input(inputIndex)->Gradient().SetValue(0.0);
 #endif
         }
