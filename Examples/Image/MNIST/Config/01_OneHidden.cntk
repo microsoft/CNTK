@@ -92,5 +92,38 @@ test = [
             labelDim = 10
             labelMappingFile = "$DataDir$/labelsmap.txt"
         ]
-    ]    
+    ]
+]
+
+#######################################
+#  OUTPUT PREDICTION CONFIG           #
+#######################################
+
+output_pred = [
+    action = "write"
+    minibatchSize = 16
+
+    NDLNetworkBuilder = [
+        networkDescription = "$ConfigDir$/01_OneHidden.ndl"
+    ]
+    
+    reader = [
+        readerType = "UCIFastReader"
+        file = "$DataDir$/Test-28x28.txt"
+        
+        features = [
+            dim = 784
+            start = 1
+        ]
+        
+        labels = [
+            dim = 1
+            start = 0
+            labelDim = 10
+            labelMappingFile = "$DataDir$/labelsmap.txt"
+        ]
+    ]
+
+    outputPath="$OutputDir$/01_OneHidden"
+    outputNodeNames=(pred)
 ]

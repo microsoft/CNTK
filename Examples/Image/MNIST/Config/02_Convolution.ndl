@@ -57,6 +57,7 @@ DNN=[
     
     ce = CrossEntropyWithSoftmax(labels, ol)
     err = ErrorPrediction(labels, ol)
+    pred = ClassPrediction(labels, ol)
 
     # Special Nodes
     FeatureNodes = (features)

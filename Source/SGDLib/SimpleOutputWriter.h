@@ -140,12 +140,15 @@ public:
         // allocate memory for forward computation
         m_net->AllocateAllMatrices({}, outputNodes, nullptr);
 
-        // specify feature value nodes
+        // specify feature value and label nodes
         auto& featureNodes = m_net->FeatureNodes();
+        auto& labelNodes = m_net->LabelNodes();
         std::map<std::wstring, Matrix<ElemType>*> inputMatrices;
         // BUGBUG: This loop is inconsistent with the above version of this function in that it does not handle label nodes.
         for (size_t i = 0; i < featureNodes.size(); i++)
             inputMatrices[featureNodes[i]->NodeName()] = &dynamic_pointer_cast<ComputationNode<ElemType>>(featureNodes[i])->Value();
+        for (size_t i = 0; i < labelNodes.size(); i++)
+            inputMatrices[labelNodes[i]->NodeName()] = &dynamic_pointer_cast<ComputationNode<ElemType>>(labelNodes[i])->Value();
 
         // evaluate with minibatches
         dataReader.StartMinibatchLoop(mbSize, 0, numOutputSamples);
