@@ -683,7 +683,7 @@ void LibSVMBinaryReader<ElemType>::InitFromConfig(const ConfigRecordType& reader
 
     m_partialMinibatch = true;
     std::string minibatchMode(readerConfig(L"minibatchMode", "Partial"));
-    m_partialMinibatch = EqualCI(minibatchMode.c_str(), "Partial");
+    m_partialMinibatch = EqualCI(minibatchMode, "Partial");
 
     std::wstring file = readerConfig(L"file", L"");
 

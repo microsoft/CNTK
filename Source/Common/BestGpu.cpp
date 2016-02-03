@@ -188,12 +188,9 @@ DEVICEID_TYPE DeviceFromConfig(const ConfigParameters& config)
     ConfigValue val = config("deviceId", "auto");
     bool bLockGPU = config(L"lockGPU", true);
 
-    if (EqualCI(val.c_str(), "cpu"))
-        return SelectDevice(CPUDEVICE, false);
-    else if (EqualCI(val.c_str(), "auto"))
-        return SelectDevice(DEVICEID_AUTO, bLockGPU);
-    else
-        return SelectDevice((int) val, bLockGPU);
+    if      (EqualCI(val, "cpu"))  return SelectDevice(CPUDEVICE,     false);
+    else if (EqualCI(val, "auto")) return SelectDevice(DEVICEID_AUTO, bLockGPU);
+    else                           return SelectDevice((int) val,     bLockGPU);
 }
 
 // !!!!This is from helper_cuda.h which comes with CUDA samples!!!! Consider if it is beneficial to just include all helper_cuda.h
