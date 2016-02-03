@@ -584,7 +584,7 @@ public:
         fprintf(stderr, "Node --> %ls = %ls\n", NodeName().c_str(), OperationName().c_str()), fflush(stderr);
     }
 
-    const bool&/*TODO: should be bool by value*/ NeedGradient() { return m_needsGradient; }
+    bool NeedGradient() const { return m_needsGradient; }
 
     void SetParameterUpdateRequired(bool f) { m_parameterUpdateRequired = f; }
     bool IsParameterUpdateRequired() const { return m_parameterUpdateRequired; }
