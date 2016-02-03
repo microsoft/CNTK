@@ -20,6 +20,10 @@
 #include <memory>   // for unique_ptr
 #include <limits.h> // for ULONG_MAX
 
+#ifndef _WIN32
+#include <unistd.h>
+#endif
+
 // predeclare cublasHandle_t
 struct cublasContext;
 typedef struct cublasContext* cublasHandle_t;
@@ -135,7 +139,7 @@ private:
     void ReleaseWorkspace(std::unique_ptr<GPUMatrix<ElemType>> src) const;
 
 public:
-    GPUMatrix(int deviceId);
+    explicit GPUMatrix(int deviceId);
     GPUMatrix(FILE* f, const char* matrixName, int deviceId);
     GPUMatrix(const size_t numRows, const size_t numCols, int deviceId);
     GPUMatrix(const size_t numRows, const size_t numCols, int deviceId, ElemType* pArray, const size_t matrixFlags = matrixFlagNormal);
@@ -146,7 +150,6 @@ public:
     ~GPUMatrix(void);
 
     static void SetDevice(DEVICEID_TYPE deviceId);
-    static DEVICEID_TYPE GetBestGPUDeviceId();
     int GetComputeDeviceId() const;
     DEVICEID_TYPE PrepareDevice(DEVICEID_TYPE deviceId = -1) const;
 
@@ -527,6 +530,10 @@ typedef GPUMatrix<float> GPUSingleMatrix;
 
 }}}
 
+#ifndef CPUONLY
+
+#include <cuda_runtime.h>
+
 // Error handling
 template <typename ERRTYPE>
 const char* CudaErrString(ERRTYPE x); // actual error function is defined inside .cu files
@@ -537,8 +544,16 @@ static void CudaCall(ERRTYPE retCode, const char* exprString, const char* libNam
     {
         try
         {
-            const char* hostname = getenv("COMPUTERNAME"); // TODO: This is the easy way for Windows; likely different on Linux.
-            Microsoft::MSR::CNTK::RuntimeError("%s failure %d: %s ; GPU=%d ; hostname=%s ; expr=%s", libName, (int) retCode, CudaErrString(retCode), Microsoft::MSR::CNTK::GPUMatrix<float>::GetBestGPUDeviceId(), hostname ? hostname : "?", exprString);
+#ifdef _WIN32
+            const char* hostname = getenv("COMPUTERNAME");
+#else
+            char hostname[HOST_NAME_MAX];
+            if (gethostname(hostname, HOST_NAME_MAX) != 0)
+                strcpy(hostname, "?");
+#endif
+            int currentCudaDevice;
+            cudaGetDevice(&currentCudaDevice);
+            Microsoft::MSR::CNTK::RuntimeError("%s failure %d: %s ; GPU=%d ; hostname=%s ; expr=%s", libName, (int)retCode, CudaErrString(retCode), currentCudaDevice, hostname ? hostname : "?", exprString);
         }
         catch (const std::exception& e) // catch, log, and rethrow since CUDA code sometimes hangs in destruction, so we'd never get to see the error
         {
@@ -553,3 +568,5 @@ static void CudaCall(ERRTYPE retCode, const char* exprString, const char* libNam
 #define CUSPARSE_CALL(expr) (CudaCall((expr), #expr, "CUSPARSE", CUSPARSE_STATUS_SUCCESS))
 #define CURAND_CALL(expr)   (CudaCall((expr), #expr, "CURAND",   CURAND_STATUS_SUCCESS))
 #define CUDNN_CALL(expr)    (CudaCall((expr), #expr, "cuDNN",    CUDNN_STATUS_SUCCESS))
+
+#endif

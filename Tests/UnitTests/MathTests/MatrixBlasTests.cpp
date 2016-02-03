@@ -21,15 +21,15 @@ BOOST_AUTO_TEST_SUITE(CPUMatrixSuite)
 BOOST_FIXTURE_TEST_CASE(MatrixMultiplyTest, RandomSeedFixture)
 {
     // Part 1: Multiply with identity matrix
-    SingleMatrix matrixA = SingleMatrix::RandomGaussian(64, 23, 0, 2, IncrementCounter());
-    SingleMatrix matrixB = SingleMatrix::Eye(23);
+    SingleMatrix matrixA = SingleMatrix::RandomGaussian(64, 23, c_deviceIdZero, 0, 2, IncrementCounter());
+    SingleMatrix matrixB = SingleMatrix::Eye(23, c_deviceIdZero);
     SingleMatrix matrixC = matrixA * matrixB;
     foreach_coord (i, j, matrixA)
     {
         BOOST_CHECK_EQUAL(matrixA(i, j), matrixC(i, j));
     }
 
-    SingleMatrix matrix0(3, 3, AUTOPLACEMATRIX);
+    SingleMatrix matrix0(3, 3, c_deviceIdZero);
     matrix0(0, 0) = 1;
     matrix0(0, 1) = 2;
     matrix0(0, 2) = 3;
@@ -41,7 +41,7 @@ BOOST_FIXTURE_TEST_CASE(MatrixMultiplyTest, RandomSeedFixture)
     matrix0(2, 2) = 9;
 
     // Part 2: Compare with Octave on toy example
-    SingleMatrix matrix1(3, 4, AUTOPLACEMATRIX);
+    SingleMatrix matrix1(3, 4, c_deviceIdZero);
     matrix1(0, 0) = 8;
     matrix1(0, 1) = 9;
     matrix1(0, 2) = 3;
@@ -72,10 +72,10 @@ BOOST_FIXTURE_TEST_CASE(MatrixMultiplyTest, RandomSeedFixture)
 BOOST_FIXTURE_TEST_CASE(MatrixMultiplyAndPlusAndMinus, RandomSeedFixture)
 {
     // Part 1: Multiply with identity matrix
-    SingleMatrix matrixA = SingleMatrix::RandomGaussian(64, 23, 0, 2, IncrementCounter());
-    SingleMatrix matrixB = SingleMatrix::Eye(23);
-    SingleMatrix matrixB1 = SingleMatrix::RandomUniform(64, 23, -95.23f, 43.5f, IncrementCounter());
-    SingleMatrix matrixB2 = SingleMatrix::RandomUniform(64, 23, 23.23f, 143.5f, IncrementCounter());
+    SingleMatrix matrixA = SingleMatrix::RandomGaussian(64, 23, c_deviceIdZero, 0, 2, IncrementCounter());
+    SingleMatrix matrixB = SingleMatrix::Eye(23, c_deviceIdZero);
+    SingleMatrix matrixB1 = SingleMatrix::RandomUniform(64, 23, c_deviceIdZero, -95.23f, 43.5f, IncrementCounter());
+    SingleMatrix matrixB2 = SingleMatrix::RandomUniform(64, 23, c_deviceIdZero, 23.23f, 143.5f, IncrementCounter());
     SingleMatrix C = ((matrixA * matrixB) + matrixB1) - matrixB2;
     foreach_coord (i, j, matrixA)
     {
@@ -100,8 +100,8 @@ BOOST_FIXTURE_TEST_CASE(MatrixMultiplyAndPlusAndMinus, RandomSeedFixture)
     }
 
     // TODO: Split into separate test case WI# 82
-    SingleMatrix singleMatrix4 = SingleMatrix::Ones(8, 9);
-    SingleMatrix singleMatrix5 = SingleMatrix::Ones(8, 1);
+    SingleMatrix singleMatrix4 = SingleMatrix::Ones(8, 9, c_deviceIdZero);
+    SingleMatrix singleMatrix5 = SingleMatrix::Ones(8, 1, c_deviceIdZero);
     singleMatrix5(4, 0) = -5.5;
     SingleMatrix::ScaleAndAdd(1, singleMatrix5, singleMatrix4);
     foreach_coord (i, j, singleMatrix4)
@@ -120,8 +120,8 @@ BOOST_FIXTURE_TEST_CASE(MatrixMultiplyAndPlusAndMinus, RandomSeedFixture)
 BOOST_FIXTURE_TEST_CASE(MatrixScaleAndAdd, RandomSeedFixture)
 {
     const int seed = rand();
-    const SingleMatrix singleMatrixA = SingleMatrix::RandomUniform(1024, 512, -12.34f, 55.2312f, seed + 0, 0);
-    const SingleMatrix singleMatrixB = SingleMatrix::RandomUniform(1024, 512, -12.34f, 55.2312f, seed + 1, 0);
+    const SingleMatrix singleMatrixA = SingleMatrix::RandomUniform(1024, 512, c_deviceIdZero , - 12.34f, 55.2312f, seed + 0);
+    const SingleMatrix singleMatrixB = SingleMatrix::RandomUniform(1024, 512, c_deviceIdZero, -12.34f, 55.2312f, seed + 1);
     SingleMatrix singleMatrixC(singleMatrixB);
     const float alpha = 0.34213f;
     SingleMatrix::ScaleAndAdd(alpha, singleMatrixA, singleMatrixC);
@@ -132,8 +132,8 @@ BOOST_FIXTURE_TEST_CASE(MatrixScaleAndAdd, RandomSeedFixture)
 
     // Test 2
     // TODO: Split into separate test case WI# 82
-    const SingleMatrix singleMatrixA1 = SingleMatrix::RandomUniform(1024, 512, -12.34f, 55.2312f, seed + 2, 0);
-    const SingleMatrix singleMatrixB1 = SingleMatrix::RandomUniform(1024, 512, -12.34f, 55.2312f, seed + 3, 0);
+    const SingleMatrix singleMatrixA1 = SingleMatrix::RandomUniform(1024, 512, c_deviceIdZero, -12.34f, 55.2312f, seed + 2);
+    const SingleMatrix singleMatrixB1 = SingleMatrix::RandomUniform(1024, 512, c_deviceIdZero, -12.34f, 55.2312f, seed + 3);
     SingleMatrix singleMatrixC1(singleMatrixB1); // C1==B1
     const float beta = -1.4654f;
     SingleMatrix::ScaleAndAdd(alpha, singleMatrixA1, beta, singleMatrixC1); // C1=alpha*A1+beta*C1
@@ -144,8 +144,8 @@ BOOST_FIXTURE_TEST_CASE(MatrixScaleAndAdd, RandomSeedFixture)
 
     // Test 3 - columnwise
     // TODO: Split into separate test case WI# 82
-    const SingleMatrix singleMatrixA2 = SingleMatrix::RandomUniform(1024, 1, -12.34f, 55.2312f, seed + 4, 0);
-    const SingleMatrix singleMatrixB2 = SingleMatrix::RandomUniform(1024, 512, -12.34f, 55.2312f, seed + 5, 0); // Column
+    const SingleMatrix singleMatrixA2 = SingleMatrix::RandomUniform(1024, 1, c_deviceIdZero, -12.34f, 55.2312f, seed + 4);
+    const SingleMatrix singleMatrixB2 = SingleMatrix::RandomUniform(1024, 512, c_deviceIdZero, -12.34f, 55.2312f, seed + 5); // Column
     SingleMatrix singleMatrixC2(singleMatrixB2);                                                                // C2==B2
     const float betaOne = 1;
     SingleMatrix::ScaleAndAdd(alpha, singleMatrixA2, betaOne, singleMatrixC2); // C2=alpha*A1+beta*C1
@@ -160,8 +160,8 @@ BOOST_FIXTURE_TEST_CASE(MatrixScaleAndAdd, RandomSeedFixture)
 BOOST_FIXTURE_TEST_CASE(MatrixScaleAndAdd_double, RandomSeedFixture)
 {
     const int seed = rand();
-    DoubleMatrix matrixA = DoubleMatrix::RandomUniform(1024, 512, -12.34, 55.2312, seed + 0, 0);
-    DoubleMatrix matrixB = DoubleMatrix::RandomUniform(1024, 512, -12.34, 55.2312, seed + 1, 0);
+    DoubleMatrix matrixA = DoubleMatrix::RandomUniform(1024, 512, c_deviceIdZero, -12.34, 55.2312, seed + 0);
+    DoubleMatrix matrixB = DoubleMatrix::RandomUniform(1024, 512, c_deviceIdZero, -12.34, 55.2312, seed + 1);
     DoubleMatrix matrixC(matrixB);
     const float alpha = 0.34213f;
     DoubleMatrix::ScaleAndAdd(alpha, matrixA, matrixC);
@@ -172,8 +172,8 @@ BOOST_FIXTURE_TEST_CASE(MatrixScaleAndAdd_double, RandomSeedFixture)
 
     // Test 2
     // TODO: Split into separate test case WI# 82
-    DoubleMatrix matrixA1 = DoubleMatrix::RandomUniform(1024, 512, -12.34f, 55.2312f, seed + 2, 0);
-    DoubleMatrix matrixB1 = DoubleMatrix::RandomUniform(1024, 512, -12.34f, 55.2312f, seed + 3, 0);
+    DoubleMatrix matrixA1 = DoubleMatrix::RandomUniform(1024, 512, c_deviceIdZero, -12.34f, 55.2312f, seed + 2);
+    DoubleMatrix matrixB1 = DoubleMatrix::RandomUniform(1024, 512, c_deviceIdZero, -12.34f, 55.2312f, seed + 3);
     DoubleMatrix matrixC1(matrixB1); // C1==B1
     const float beta = -1.4654f;
     DoubleMatrix::ScaleAndAdd(alpha, matrixA1, beta, matrixC1); // C1=alpha*A1+beta*C1
@@ -184,8 +184,8 @@ BOOST_FIXTURE_TEST_CASE(MatrixScaleAndAdd_double, RandomSeedFixture)
 
     // Test 3 - columnwise
     // TODO: Split into separate test case WI# 82
-    DoubleMatrix matrixA2 = DoubleMatrix::RandomUniform(1024, 1, -12.34, 55.2312, seed + 4, 0);
-    DoubleMatrix matrixB2 = DoubleMatrix::RandomUniform(1024, 512, -12.34, 55.2312, seed + 5, 0); // Column
+    DoubleMatrix matrixA2 = DoubleMatrix::RandomUniform(1024, 1, c_deviceIdZero, -12.34, 55.2312, seed + 4);
+    DoubleMatrix matrixB2 = DoubleMatrix::RandomUniform(1024, 512, c_deviceIdZero, -12.34, 55.2312, seed + 5); // Column
     DoubleMatrix matrixC2(matrixB2);                                                              // C2==B2
     const float betaOne = 1;
     DoubleMatrix::ScaleAndAdd(alpha, matrixA2, betaOne, matrixC2); // C2=alpha*A1+beta*C1
@@ -199,7 +199,7 @@ BOOST_FIXTURE_TEST_CASE(MatrixScaleAndAdd_double, RandomSeedFixture)
 
 BOOST_FIXTURE_TEST_CASE(MatrixNorms, RandomSeedFixture)
 {
-    SingleMatrix matrix0(c_value_2, c_value_3);
+    SingleMatrix matrix0(c_value_2, c_value_3, c_deviceIdZero);
     matrix0(0, 0) = 1;
     matrix0(0, 1) = 2;
     matrix0(0, 2) = 3;
@@ -207,9 +207,9 @@ BOOST_FIXTURE_TEST_CASE(MatrixNorms, RandomSeedFixture)
     matrix0(1, 1) = 5;
     matrix0(1, 2) = 6;
 
-    SingleMatrix matrix3;
+    SingleMatrix matrix3(c_deviceIdZero);
     matrix0.VectorNorm1(matrix3, true);
-    SingleMatrix matrix2(c_value_1, c_value_3);
+    SingleMatrix matrix2(c_value_1, c_value_3, c_deviceIdZero);
     matrix2(0, 0) = 5;
     matrix2(0, 1) = 7;
     matrix2(0, 2) = 9;
@@ -234,14 +234,14 @@ BOOST_FIXTURE_TEST_CASE(MatrixNorms, RandomSeedFixture)
     matrix2(1, 0) = 8.7750f;
     BOOST_CHECK(matrix3.IsEqualTo(matrix2, c_epsilonFloat5E4));
 
-    SingleMatrix matrix00(c_value_2, c_value_3);
+    SingleMatrix matrix00(c_value_2, c_value_3, c_deviceIdZero);
     matrix00(0, 0) = 1;
     matrix00(0, 1) = 2;
     matrix00(0, 2) = 3;
     matrix00(1, 0) = 4;
     matrix00(1, 1) = 5;
     matrix00(1, 2) = 6;
-    SingleMatrix matrix1;
+    SingleMatrix matrix1(c_deviceIdZero);
     matrix00.VectorMax(matrix1, matrix3, true);
     matrix2.Resize(1, 3);
     matrix2(0, 0) = 4;
@@ -280,23 +280,23 @@ BOOST_FIXTURE_TEST_CASE(MatrixNorms, RandomSeedFixture)
     BOOST_CHECK(abs(matrix0.MatrixNormInf() - 6) < c_epsilonFloatE4);
     BOOST_CHECK_EQUAL(21, matrix00.MatrixNorm1());
 
-    Matrix<float> matrixA = Matrix<float>::Eye(4096);
+    Matrix<float> matrixA = Matrix<float>::Eye(4096, c_deviceIdZero);
     BOOST_CHECK_EQUAL(4096, matrixA.MatrixNorm0());
 
-    Matrix<float> matrixB = Matrix<float>::Eye(5);
+    Matrix<float> matrixB = Matrix<float>::Eye(5, c_deviceIdZero);
     BOOST_CHECK_EQUAL(5, matrixB.MatrixNorm0());
 }
 
 BOOST_FIXTURE_TEST_CASE(MatrixInnerProductOfMatrices, RandomSeedFixture)
 {
-    SingleMatrix vector1(c_value_2, c_value_3);
+    SingleMatrix vector1(c_value_2, c_value_3, c_deviceIdZero);
     vector1(0, 0) = 1;
     vector1(0, 1) = 2;
     vector1(0, 2) = 3;
     vector1(1, 0) = 4;
     vector1(1, 1) = 5;
     vector1(1, 2) = 6;
-    SingleMatrix vector2(c_value_2, c_value_3);
+    SingleMatrix vector2(c_value_2, c_value_3, c_deviceIdZero);
     vector2(0, 0) = 7;
     vector2(0, 1) = 8;
     vector2(0, 2) = 9;

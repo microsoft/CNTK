@@ -294,6 +294,12 @@ void PrintBuiltInfo()
 #ifdef _BUILDTYPE_
     fprintf(stderr, "\t\tBuild type: %s\n", _BUILDTYPE_);
 #endif
+#ifdef _BUILDTARGET_
+    fprintf(stderr, "\t\tBuild target: %s\n", _BUILDTARGET_);
+#endif
+#ifdef _WITH_1BITSGD_
+    fprintf(stderr, "\t\tWith 1bit-SGD: %s\n", _WITH_1BITSGD_);
+#endif
 #ifdef _MATHLIB_
     fprintf(stderr, "\t\tMath lib: %s\n", _MATHLIB_);
 #endif

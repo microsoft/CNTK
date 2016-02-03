@@ -23,7 +23,6 @@
 #define CPUDEVICE (DEVICEID_TYPE) - 1                 // device is the CPU
 #define DEVICEID_NOTYETDETERMINED (DEVICEID_TYPE) - 3 // not yet set
 #define DEVICEID_AUTO (DEVICEID_TYPE) - 4             // device should be picked automatically
-#define AUTOPLACEMATRIX (DEVICEID_TYPE) 1000          // used in parameters only
 
 #define EPS_IN_INVERSE 1e-30f    // 1e-37 is the only guaranteed precision
 #define EPS_IN_LOG 1e-37f        // 1e-37 is the only guaranteed precision
@@ -35,8 +34,6 @@
 
 #define GPUSPARSE_INDEX_TYPE int // cuSparse only supports int array indexes
 #define CPUSPARSE_INDEX_TYPE int // to be consistent with cuSparse but limited the possible size of the matrix.
-
-MATH_API DEVICEID_TYPE EnforceOneGPUOnly(DEVICEID_TYPE requestedDeviceId);
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 

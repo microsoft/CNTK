@@ -746,9 +746,6 @@ public:
 
         ComputeSoftMaxPartial();
 
-        Matrix<ElemType> grd_t;
-        Matrix<ElemType> grd_to_wgt_t;
-
         const size_t nT = Input(LABELDATA)->GetNumTimeSteps();
         const size_t nS = Input(LABELDATA)->GetNumParallelSequences();
         size_t sz = 0; // iterate over the packed concatenated class-conditioned prob vectors
@@ -775,20 +772,26 @@ public:
                 switch (inputIndex)
                 {
                 case 1:
+                {
                     // gradient to input
-                    grd_t = Input(INPUTDATA)->GradientFor(fr);
+                    Matrix<ElemType> grd_t = Input(INPUTDATA)->GradientFor(fr);
                     Matrix<ElemType>::MultiplyAndAdd(weightForClass, false, grd_to_soft_max_input, true, grd_t);
                     break;
+                }
                 case 2:
+                {
                     // gradient to input weight
-                    grd_to_wgt_t = Input(EMBEDDINGMATRIX)->GradientAsMatrix().ColumnSlice(lft_bnd, nbr_wrd);
+                    Matrix<ElemType> grd_to_wgt_t = Input(EMBEDDINGMATRIX)->GradientAsMatrix().ColumnSlice(lft_bnd, nbr_wrd);
                     Matrix<ElemType>::MultiplyAndAdd(obs, false, grd_to_soft_max_input, false, grd_to_wgt_t);
                     break;
+                }
                 case 3:
-                    grd_t = Input(CLASSPROBINDATA)->GradientFor(fr);
+                {
+                    Matrix<ElemType> grd_t = Input(CLASSPROBINDATA)->GradientFor(fr);
                     grd_t.SetValue(DataWithMBLayoutFor(m_clsSoftmax, fr, Input(CLASSPROBINDATA)->GetMBLayout()));
                     ComputeCEPartialToSoftmaxInputs(grd_t, Gradient(), c_t);
                     break;
+                }
                 }
 
                 sz += nbr_wrd;
