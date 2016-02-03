@@ -48,10 +48,6 @@ namespace Microsoft {
 			{
 				typedef shared_ptr<ComputationNode<ElemType>> ComputationNodePtr;
 			public:
-				//TODO: move to private
-				multiverso::Adaptor * _adaptor;
-				thread * _pThread;
-
 				MultiversoWrapper(const std::list<ComputationNodeBasePtr> & learnableNodes,
 					int localWorkerNumber,
 					bool isPipeline = true,
@@ -64,13 +60,13 @@ namespace Microsoft {
 					_adjustcoefficient = adjustcoef;
 					_adjustnbmb = adjustnbmb;
 
-					_isInitialized = false;
+					m_multiversoAdaptor = false;
 
-					_nClients = localWorkerNumber;
+					m_totalClientNumber = localWorkerNumber;
 
 					//Pipeline releated variables
-					_isPipeline = isPipeline;
-					_nLocalCache = _isPipeline ? 2 : 1;
+					m_isPipelined = isPipeline;
+					_nLocalCache = m_isPipelined ? 2 : 1;
 					_pCacheState = new int[_nLocalCache];
 
 					//CPU double buffer
@@ -88,10 +84,10 @@ namespace Microsoft {
 					for (int i = 0; i < _nLocalCache; i++)
 						_pCacheState[i] = (i + 1) % _nLocalCache;
 
-					_pThread = new thread();
+					m_prefetchThread = new thread();
 
-					_pSizeEachServer = new size_t[_nClients];
-					_pIdxEachServer = new size_t[_nClients];
+					_pSizeEachServer = new size_t[m_totalClientNumber];
+					_pIdxEachServer = new size_t[m_totalClientNumber];
 					Init(learnableNodes, 1);
 				}
 
@@ -100,8 +96,8 @@ namespace Microsoft {
 					fprintf(stderr, "~MultiversoWrapper\n");
 					fflush(stderr);
 
-					if (_isPipeline && _pThread != nullptr && _pThread->joinable())
-						_pThread->join();
+					if (m_isPipelined && m_prefetchThread != nullptr && m_prefetchThread->joinable())
+						m_prefetchThread->join();
 
 					delete _pCacheState, _pDelta, _pSizeEachServer, _pIdxEachServer;
 
@@ -125,7 +121,7 @@ namespace Microsoft {
 				//  This function will upload parameters into Multiverso
 				void ModelInit(const std::list<ComputationNodeBasePtr> & learnableNodes)
 				{
-					float factor = (float) 1.0 / _nClients;
+					float factor = (float) 1.0 / m_totalClientNumber;
 
 					int table_id = 0;
 
@@ -149,10 +145,10 @@ namespace Microsoft {
 
 					memcpy(_pDelta, _pPCache[0], sizeof(ElemType) * _lTotalLength);
 
-					for (int row = 0; row < _nClients; ++row)
-						_adaptor->Add(table_id, row, _pDelta + _pIdxEachServer[row], factor);
-					_adaptor->Barrier(); //should clock
-					_adaptor->BatchLoad(table_id, _pDelta, _pIdxEachServer, _pSizeEachServer);
+					for (int row = 0; row < m_totalClientNumber; ++row)
+						m_multiversoAdaptor->Add(table_id, row, _pDelta + _pIdxEachServer[row], factor);
+					m_multiversoAdaptor->Barrier(); //should clock
+					m_multiversoAdaptor->BatchLoad(table_id, _pDelta, _pIdxEachServer, _pSizeEachServer);
 
 					memcpy(_pDelta, _pPCache[0], sizeof(ElemType) * _lTotalLength);
 				}
@@ -168,13 +164,13 @@ namespace Microsoft {
 
 					Timer timer;
 					int table_id = 0;
-					if (_isPipeline && _pThread->joinable())
-						_pThread->join();
+					if (m_isPipelined && m_prefetchThread->joinable())
+						m_prefetchThread->join();
 
 					_nCacheIdx = _pCacheState[_nCacheIdx];
 
 					int i = 0;
-					if (_isPipeline)
+					if (m_isPipelined)
 					{
 
 						for (auto nodeIter = learnableNodes.begin(); nodeIter != learnableNodes.end(); nodeIter++, i++)
@@ -207,7 +203,7 @@ namespace Microsoft {
 #endif
 						}
 #ifndef CPUONLY
-						_pThread = new thread([&](){
+						m_prefetchThread = new thread([&](){
 							float factor = getUpdateCoefficient();
 							int table_id = 0, t_cacheIdx = _nCacheIdx;
 							int deviceId = _pPMatrixCache[t_cacheIdx][0]->GetDeviceId();
@@ -232,9 +228,9 @@ namespace Microsoft {
 							transform(_pDelta, _pDelta + _lTotalLength, _pPCache[t_cacheIdx], _pDelta, std::minus<ElemType>());
 
 							//////Communication
-							for (int row = 0; row < _nClients; row++)
-								_adaptor->Add(table_id, row, _pDelta + _pIdxEachServer[row], factor);
-							_adaptor->BatchLoad(table_id, _pPCache[t_cacheIdx], _pIdxEachServer, _pSizeEachServer);
+							for (int row = 0; row < m_totalClientNumber; row++)
+								m_multiversoAdaptor->Add(table_id, row, _pDelta + _pIdxEachServer[row], factor);
+							m_multiversoAdaptor->BatchLoad(table_id, _pPCache[t_cacheIdx], _pIdxEachServer, _pSizeEachServer);
 
 							//CPU buffer -> GPU buffer
 							for (int widx = 0; widx < _nTableCnt; widx++)
@@ -252,16 +248,16 @@ namespace Microsoft {
 
 						});
 #else
-						_pThread = new thread([&](){
+						m_prefetchThread = new thread([&](){
 							float factor = getUpdateCoefficient();
 							int table_id = 0, t_cacheIdx = _nCacheIdx;
 
 							transform(_pDelta, _pDelta + _lTotalLength, _pPCache[t_cacheIdx], _pDelta, std::minus<ElemType>());
 							for (int row = 0; row < g_mpi->NumNodesInUse(); row++)
-								_adaptor->Add(table_id, row, _pDelta + _pIdxEachServer[row], factor);
+								m_multiversoAdaptor->Add(table_id, row, _pDelta + _pIdxEachServer[row], factor);
 
 
-							_adaptor->BatchLoad(table_id, _pPCache[t_cacheIdx], _pIdxEachServer, _pSizeEachServer);
+							m_multiversoAdaptor->BatchLoad(table_id, _pPCache[t_cacheIdx], _pIdxEachServer, _pSizeEachServer);
 
 						});
 #endif
@@ -280,10 +276,10 @@ namespace Microsoft {
 
 						transform(_pDelta, _pDelta + _lTotalLength, _pPCache[0], _pDelta, std::minus<ElemType>());
 
-						for (int row = 0; row < _nClients; row++)
-							_adaptor->Add(table_id, row, _pDelta + _pIdxEachServer[row], factor);
+						for (int row = 0; row < m_totalClientNumber; row++)
+							m_multiversoAdaptor->Add(table_id, row, _pDelta + _pIdxEachServer[row], factor);
 
-						_adaptor->BatchLoad(table_id, _pPCache[0], _pIdxEachServer, _pSizeEachServer);
+						m_multiversoAdaptor->BatchLoad(table_id, _pPCache[0], _pIdxEachServer, _pSizeEachServer);
 
 						i = 0;
 
@@ -302,8 +298,8 @@ namespace Microsoft {
 			private:
 				void Init(const std::list<ComputationNodeBasePtr> & learnableNodes, int localWorkerNumber)
 				{
-					assert(!_isInitialized);
-					_isInitialized = true;
+					assert(!m_isInitialized);
+					m_isInitialized = true;
 
 					multiverso::SetCommType("p2p");
 					multiverso::SetSyncType("async");
@@ -325,13 +321,13 @@ namespace Microsoft {
 					//init cache space.
 					_lTotalLength = accumulate(_vTableLength.begin(), _vTableLength.end(), 0);
 					size_t idx = 0;
-					for (int i = 0; i < _nClients; i++)
+					for (int i = 0; i < m_totalClientNumber; i++)
 					{
 						_pIdxEachServer[i] = idx;
-						_pSizeEachServer[i] = i < _lTotalLength % _nClients ? _lTotalLength / _nClients + 1 : _lTotalLength / _nClients;
+						_pSizeEachServer[i] = i < _lTotalLength % m_totalClientNumber ? _lTotalLength / m_totalClientNumber + 1 : _lTotalLength / m_totalClientNumber;
 						idx += _pSizeEachServer[i];
 					}
-					multiverso::SetTable(table_id, _nClients, ((size_t)(_lTotalLength / _nClients)) + 1, sizeof(ElemType) == 4 ? "float" : "double");
+					multiverso::SetTable(table_id, m_totalClientNumber, ((size_t)(_lTotalLength / m_totalClientNumber)) + 1, sizeof(ElemType) == 4 ? "float" : "double");
 					idx = 0;
 					for (size_t len : _vTableLength)
 					{
@@ -362,7 +358,7 @@ namespace Microsoft {
 
 					int adaptor_id = g_mpi->CurrentNodeRank();
 
-					_adaptor = new multiverso::Adaptor(adaptor_id, 0);
+					m_multiversoAdaptor = new multiverso::Adaptor(adaptor_id, 0);
 					printf("%s@rank %d/%d: Initialized Adaptor.\n",
 						getenv("COMPUTERNAME"), multiverso::GetMPIRank(), multiverso::GetMPISize());
 					fflush(stdout);
@@ -387,11 +383,13 @@ namespace Microsoft {
 					return f;
 				}
 
-				bool _isInitialized;
+				multiverso::Adaptor * m_multiversoAdaptor;
+				thread * m_prefetchThread;
+				bool m_isInitialized;
 
-				int _nClients;
+				int m_totalClientNumber;
 
-				bool _isPipeline;
+				bool m_isPipelined;
 				int _nLocalCache;
 				int * _pCacheState;
 				int _nCacheIdx;

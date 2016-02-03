@@ -54,6 +54,11 @@ namespace Microsoft {
 
 				}
 
+				void WaitAsyncBuffer()
+				{
+
+				}
+
 			};
 		}
 	}
