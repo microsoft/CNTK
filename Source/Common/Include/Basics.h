@@ -522,7 +522,7 @@ static inline const wchar_t * c_str(const wchar_t * p) { return p;         }
 static inline const wchar_t * c_str(const wstring & p) { return p.c_str(); }
 
 // compare strings
-static inline int CompareCI(const char *    a, const char *    b) { return _stricmp(a, b); }
+static inline int CompareCI(const char    * a, const char    * b) { return _stricmp(a, b); }
 static inline int CompareCI(const wchar_t * a, const wchar_t * b) { return _wcsicmp(a, b); }
 
 template<typename S1, typename S2>
