@@ -46,10 +46,9 @@ public:
     using B::Clear;
     // without this, base members would require to use thi-> in GCC
 public:
-    GPUSparseMatrix(const size_t numRows, const size_t numCols, const size_t numNZ, const MatrixFormat matrixFormat = MatrixFormat::matrixFormatSparseCSR, const DEVICEID_TYPE computeDevice = AUTOPLACEMATRIX);
+    GPUSparseMatrix(const size_t numRows, const size_t numCols, const size_t numNZ, DEVICEID_TYPE computeDevice, const MatrixFormat matrixFormat = MatrixFormat::matrixFormatSparseCSR);
 
-    GPUSparseMatrix(const MatrixFormat matrixFormat = MatrixFormat::matrixFormatSparseCSR,
-                    const DEVICEID_TYPE computeDevice = AUTOPLACEMATRIX);
+    explicit GPUSparseMatrix(DEVICEID_TYPE computeDevice, const MatrixFormat matrixFormat = MatrixFormat::matrixFormatSparseCSR);
 
     GPUSparseMatrix(const GPUSparseMatrix<ElemType>&);
 

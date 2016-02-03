@@ -1733,6 +1733,7 @@ protected:                                                                      
     using Base::InvalidateMissingValueColumns;                                                                                                           \
     using Base::IsLeaf;                                                                                                                                  \
     using Base::IsOutOfDateWrtInputs;                                                                                                                 \
+    using Base::IsPartOfLoop;                                                                                                                 \
     using Base::LinkToMBLayout;                                                                                                                          \
     using Base::Load;                                                                                                                                    \
     using Base::LoadValue;                                                                                                                               \

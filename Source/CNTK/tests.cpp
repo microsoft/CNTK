@@ -115,8 +115,8 @@ void TestReader(const ConfigParameters& configBase)
     GetFileConfigNames(readerConfig, featureNames, labelNames);
 
     // setup minibatch matrices
-    Matrix<ElemType> featuresMatrix;
-    Matrix<ElemType> labelsMatrix;
+    Matrix<ElemType> featuresMatrix(0);
+    Matrix<ElemType> labelsMatrix(0);
     std::map<std::wstring, Matrix<ElemType>*> matrices;
     matrices[featureNames[0]] = &featuresMatrix;
     matrices[labelNames[0]] = &labelsMatrix;

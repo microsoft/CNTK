@@ -367,7 +367,7 @@ public:
     */
     // this is for frame-by-frame reading of data.
     // data is first read into these matrices and then if needed is column-by-column retrieved
-    map<wstring, Matrix<ElemType>> mMatrices;
+    map<wstring, std::shared_ptr<Matrix<ElemType>>> mMatrices;
     bool GetFrame(std::map<std::wstring, Matrix<ElemType>*>& matrices, const size_t tidx, vector<size_t>& history);
 
     // create proposals

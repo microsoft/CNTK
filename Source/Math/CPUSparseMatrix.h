@@ -44,7 +44,7 @@ private:
     void ReleaseMemory();
 
 public:
-    CPUSparseMatrix(const MatrixFormat format);
+    explicit CPUSparseMatrix(const MatrixFormat format);
     CPUSparseMatrix(const MatrixFormat format, const size_t numRows, const size_t numCols, const size_t size);
     CPUSparseMatrix(const CPUSparseMatrix<ElemType>& deepCopyFrom);                      // copy constructor, deep copy
     CPUSparseMatrix<ElemType>& operator=(const CPUSparseMatrix<ElemType>& deepCopyFrom); // assignment operator, deep copy

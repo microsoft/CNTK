@@ -289,7 +289,7 @@ void ColumnSliceMultAndAddTest(int n, int k, int m, DEVICEID_TYPE deviceID)
     t_endG = clock();
     std::cout << "MultiplyAndAdd With ColumnSlice&: " << 1.0 * (t_endG - t_startG) / CLOCKS_PER_SEC << " seconds" << endl;
 
-    Matrix<ElemType> col_BG1, col_CG1;
+    Matrix<ElemType> col_BG1(0), col_CG1(0);
     t_startG = clock();
     for (int i = 0; i < m; i++)
     {
