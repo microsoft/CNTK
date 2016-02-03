@@ -498,7 +498,7 @@ Section* Section::ReadSection(size_t index, MappingType mapping, size_t sizeElem
     if (!section->ValidateHeader())
     {
         char message[256];
-        sprintf_s(message, "Invalid header in file %ls, in header %s\n", m_file->GetName(), section->GetName());
+        sprintf_s(message, "Invalid header in file %ls, in header %s\n", m_file->GetName().c_str(), section->GetName().c_str());
         RuntimeError(message);
     }
 

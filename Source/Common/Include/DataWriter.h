@@ -56,6 +56,7 @@ public:
     virtual void Init(const ConfigParameters& writerConfig) = 0;
     virtual void Init(const ScriptableObjects::IConfigRecord& writerConfig) = 0;
     virtual void Destroy() = 0;
+    virtual ~IDataWriter() { }
     virtual void GetSections(std::map<std::wstring, SectionType, nocase_compare>& sections) = 0;
     virtual bool SaveData(size_t recordStart, const std::map<std::wstring, void*, nocase_compare>& matrices, size_t numRecords, size_t datasetSize, size_t byteVariableSized) = 0;
     virtual void SaveMapping(std::wstring saveId, const std::map<LabelIdType, LabelType>& labelMapping) = 0;

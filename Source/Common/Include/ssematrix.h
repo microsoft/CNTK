@@ -561,8 +561,8 @@ public:
         // copy column-wise
         for (size_t j = j0; j < j1; j++)
         {
-            const float *pcol = &patch(i0 - i0, j - j0);
-            float *qcol = &us(i0, j);
+            float       *qcol =    &us(i0,      j);      // unshifted coordinates
+            const float *pcol = &patch(i0 - i0, j - j0); // (i0,j) shifted by (i0,j0)
             const size_t colbytes = (i1 - i0) * sizeof(*pcol);
             memcpy(qcol, pcol, colbytes);
         }
