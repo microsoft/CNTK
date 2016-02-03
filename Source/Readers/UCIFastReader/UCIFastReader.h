@@ -45,7 +45,7 @@ public:
     // typedef std::string LabelType;
     // typedef unsigned LabelIdType;
 private:
-    UCIParser<ElemType, LabelType> m_parser;
+    shared_ptr<UCIParser<ElemType, LabelType>> m_parser;
     size_t m_mbSize;                 // size of minibatch requested
     LabelIdType m_labelIdMax;        // maximum label ID we have encountered so far
     LabelIdType m_labelDim;          // maximum label ID we will ever see (used for array dimensions)
