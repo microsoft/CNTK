@@ -5,7 +5,7 @@
 
 #include "stdafx.h"
 #include "ImageConfigHelper.h"
-#include "StringUtils.h"
+#include "StringUtil.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -49,11 +49,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         size_t c = featureSection("channels");
 
         std::string mbFmt = featureSection("mbFormat", "nchw");
-        if (AreEqualIgnoreCase(mbFmt, "nhwc"))
+        if (AreEqualIgnoreCase(mbFmt, "nhwc") || AreEqualIgnoreCase(mbFmt, "legacy"))
         {
             m_dataFormat = HWC;
         }
-        else if (!AreEqualIgnoreCase(mbFmt, "nchw"))
+        else if (!AreEqualIgnoreCase(mbFmt, "nchw") || AreEqualIgnoreCase(mbFmt, "cudnn"))
         {
             RuntimeError("ImageReader does not support the sample format '%s', only 'nchw' and 'nhwc' are supported.", mbFmt.c_str());
         }

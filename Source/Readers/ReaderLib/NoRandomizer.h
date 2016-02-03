@@ -13,6 +13,7 @@
 namespace Microsoft { namespace MSR { namespace CNTK {
 
 // The class represents a randomizer that does not randomize input (identity function over the original timeline).
+// This class is used for inference and for training where the training data has already been pre - randomized.
 // TODO: currently this code moved from the old block randomizer.
 // The class will be further refactored and common based will be extracted with BlockRandomizer.
 // Currently works only for frame mode (numberOfSample in sequence == 1) and without chunking

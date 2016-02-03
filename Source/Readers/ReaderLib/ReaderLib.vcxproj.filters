@@ -31,9 +31,6 @@
     <ClInclude Include="ElementTypeUtils.h">
       <Filter>Utils</Filter>
     </ClInclude>
-    <ClInclude Include="StringUtils.h">
-      <Filter>Utils</Filter>
-    </ClInclude>
     <ClInclude Include="TransformerBase.h">
       <Filter>Transformers</Filter>
     </ClInclude>
