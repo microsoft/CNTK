@@ -425,26 +425,12 @@ static inline double todouble(const char* s)
 // TODO: merge this with todouble(const char*) above
 static inline double todouble(const std::string& s)
 {
-    s.size(); // just used to remove the unreferenced warning
-
     double value = 0.0;
 
-// stod supposedly exists in VS2010, but some folks have compilation errors
-// If this causes errors again, change the #if into the respective one for VS 2010.
-#if _MSC_VER > 1400 // VS 2010+
     size_t* idx = 0;
     value = std::stod(s, idx);
     if (idx)
         RuntimeError("todouble: invalid input string '%s'", s.c_str());
-#else
-    char* ep = 0; // will be updated by strtod to point to first character that failed parsing
-    value = strtod(s.c_str(), &ep);
-
-    // strtod documentation says ep points to first unconverted character OR
-    // return value will be +/- HUGE_VAL for overflow/underflow
-    if (ep != s.c_str() + s.length() || value == HUGE_VAL || value == -HUGE_VAL)
-        RuntimeError("todouble: invalid input string '%s'", s.c_str());
-#endif
 
     return value;
 }
