@@ -27,6 +27,7 @@ Makefile text
 *.vcxproj.filters text
 *.vssettings text
 *.csproj text
+*.props text
 
 *.h text
 *.cpp text
