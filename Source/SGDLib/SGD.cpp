@@ -1239,8 +1239,8 @@ template <class ElemType>
             totalSamplesSeen += totalEpochSamplesOfAllWorkers;
 
             // 2. criterion and EvalErrors 
-            localEpochCriterion *= float(totalEpochSamples / totalEpochSamplesOfAllWorkers);
-            localEpochEvalErrors *= float(totalEpochSamples / totalEpochSamplesOfAllWorkers);
+            localEpochCriterion *= (float)totalEpochSamples / totalEpochSamplesOfAllWorkers;
+            localEpochEvalErrors*= (float)totalEpochSamples / totalEpochSamplesOfAllWorkers;
 
             epochCriterion = localEpochCriterion.Get00Element(); 
             for (size_t i = 0; i < epochEvalErrors.size(); i++)
