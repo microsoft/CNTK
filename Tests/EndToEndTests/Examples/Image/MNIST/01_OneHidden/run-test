@@ -16,5 +16,5 @@ else
   imageLayout=cudnn
 fi
 
-cntkrun 01_OneHidden.cntk  "train=[reader=[file=$CleanDataDir/Train.txt]]  test=[reader=[file=$CleanDataDir/Test.txt]]  train=[SGD=[maxEpochs=1]]  train=[SGD=[epochSize=100]]  train=[reader=[randomize=none]]  imageLayout=\"$imageLayout\"" || exit $?
+cntkrun 01_OneHidden.cntk  "MNISTtrain=[reader=[file=$CleanDataDir/Train.txt]]  MNISTtest=[reader=[file=$CleanDataDir/Test.txt]]  MNISTtrain=[SGD=[maxEpochs=1]]  MNISTtrain=[SGD=[epochSize=100]]  MNISTtrain=[reader=[randomize=none]]  imageLayout=\"$imageLayout\"" || exit $?
 
