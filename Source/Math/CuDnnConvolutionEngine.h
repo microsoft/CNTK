@@ -33,9 +33,23 @@ public:
                                      size_t wStride, size_t hStride, bool padding) override;
     PoolDescPtr CreatePoolDescriptor(typename PoolDesc::PoolKind kind, size_t w, size_t h, size_t wStride, size_t hStride, size_t wPad, size_t hPad) override;
 
-    ConvEnginePtr CreateConvEngine(DEVICEID_TYPE deviceId, size_t maxTempMemSizeInSamples) override;
+    ConvEnginePtr CreateConvEngine(DEVICEID_TYPE deviceId, size_t maxTempMemSizeInSamples, BatchNormImpl bnImpl) override;
     PoolEnginePtr CreatePoolEngine(DEVICEID_TYPE deviceId) override;
 
     static bool IsSupported(DEVICEID_TYPE deviceId);
+};
+
+class MATH_API CudaTimer
+{
+public:
+    CudaTimer(): m_start(nullptr), m_stop(nullptr)
+    {
+    }
+    void Start();
+    void Stop();
+    float Elapsed();
+private:
+    void* m_start;
+    void* m_stop;
 };
 } } }

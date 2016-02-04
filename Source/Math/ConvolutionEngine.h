@@ -289,6 +289,13 @@ public:
     PoolingEngine& operator=(PoolingEngine&&) = delete;
 };
 
+// REVIEW alexeyk: this is a temporary hack until we find a better place for poor BatchNorm.
+enum class BatchNormImpl
+{
+    CuDnn,
+    Cntk
+};
+
 template <class ElemType>
 class MATH_API ConvolutionEngineFactory
 {
@@ -316,7 +323,7 @@ public:
     virtual PoolDescPtr CreatePoolDescriptor(PoolDesc::PoolKind kind, size_t w, size_t h, size_t wStride, size_t hStride, size_t wPad, size_t hPad) = 0;
     // virtual Tensor4DPtr CreateLrnDescriptor() = 0;
 
-    virtual ConvEnginePtr CreateConvEngine(DEVICEID_TYPE deviceId, size_t maxTempMemSizeInSamples) = 0;
+    virtual ConvEnginePtr CreateConvEngine(DEVICEID_TYPE deviceId, size_t maxTempMemSizeInSamples, BatchNormImpl bnImpl = BatchNormImpl::CuDnn) = 0;
     virtual PoolEnginePtr CreatePoolEngine(DEVICEID_TYPE deviceId) = 0;
 
     enum class EngineType

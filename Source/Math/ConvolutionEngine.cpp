@@ -448,7 +448,7 @@ public:
         return std::make_unique<PoolDesc>(kind, w, h, wStride, hStride, wPad, hPad);
     }
 
-    ConvEnginePtr CreateConvEngine(DEVICEID_TYPE deviceId, size_t maxTempMemSizeInSamples) override
+    ConvEnginePtr CreateConvEngine(DEVICEID_TYPE deviceId, size_t maxTempMemSizeInSamples, BatchNormImpl /*bnImpl*/) override
     {
         return std::make_unique<DefaultConvolutionEngine<ElemType>>(deviceId, maxTempMemSizeInSamples);
     }

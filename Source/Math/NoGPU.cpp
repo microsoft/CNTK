@@ -2154,7 +2154,7 @@ typename CuDnnConvolutionEngineFactory<ElemType>::PoolDescPtr CuDnnConvolutionEn
 }
 
 template <class ElemType>
-typename CuDnnConvolutionEngineFactory<ElemType>::ConvEnginePtr CuDnnConvolutionEngineFactory<ElemType>::CreateConvEngine(DEVICEID_TYPE, size_t)
+typename CuDnnConvolutionEngineFactory<ElemType>::ConvEnginePtr CuDnnConvolutionEngineFactory<ElemType>::CreateConvEngine(DEVICEID_TYPE, size_t, BatchNormImpl)
 {
     RuntimeError("The code is compiled with CPUONLY macro.");
 }
