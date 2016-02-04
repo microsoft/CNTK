@@ -99,10 +99,6 @@
       <DelayLoadDLLs>Math.dll; nvml.dll; cudart64_70.dll</DelayLoadDLLs>
       <StackReserveSize>100000000</StackReserveSize>
     </Link>
-    <PreBuildEvent>
-      <Command>
-      </Command>
-    </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug_CpuOnly|x64'">
     <ClCompile>
