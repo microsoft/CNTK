@@ -193,6 +193,9 @@
     <ClInclude Include="..\ComputationNetworkLib\TrainingNodes.h">
       <Filter>from ComputationNetworkLib\Nodes</Filter>
     </ClInclude>
+    <ClInclude Include="..\Common\Include\StringUtil.h">
+      <Filter>Common\Include</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Text Include="modelEditor.txt">

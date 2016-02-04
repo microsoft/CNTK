@@ -12,7 +12,7 @@
 #include "Config.h"
 #include "ConcStack.h"
 #include "ImageConfigHelper.h"
-#include "StringUtils.h"
+#include "StringUtil.h"
 #include "ElementTypeUtils.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK

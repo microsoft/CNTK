@@ -86,7 +86,6 @@
     <ClInclude Include="MemoryProvider.h" />
     <ClInclude Include="Reader.h" />
     <ClInclude Include="ReaderShim.h" />
-    <ClInclude Include="StringUtils.h" />
     <ClInclude Include="Transformer.h" />
   </ItemGroup>
   <ItemGroup>
