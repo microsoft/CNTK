@@ -502,6 +502,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 // ----------------------------------------------------------------------------
 
 // normalize between char* and string
+// Note: Intended for use within a single expression. Otherwise be aware of memory ownership; same restrictions apply as for string::c_str().
 static inline const char    * c_str(const char *    p) { return p;         }
 static inline const char    * c_str(const string &  p) { return p.c_str(); }
 static inline const wchar_t * c_str(const wchar_t * p) { return p;         }
