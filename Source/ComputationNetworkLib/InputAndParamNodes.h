@@ -356,8 +356,6 @@ public:
     }
 };
 
-template class InputValue<float>;
-template class InputValue<double>;
 
 // -----------------------------------------------------------------------
 // SparseInputValue (/*no input*/)
@@ -394,8 +392,6 @@ public:
     }
 };
 
-template class SparseInputValue<float>;
-template class SparseInputValue<double>;
 
 // -----------------------------------------------------------------------
 // LookupTableNode (embedding matrix, bag-of-word representation of the inputs)
@@ -571,6 +567,4 @@ public:
     }
 };
 
-template class LookupTableNode<float>;
-template class LookupTableNode<double>;
 } } }

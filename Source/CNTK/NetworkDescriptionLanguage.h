@@ -99,8 +99,6 @@ public:
     }
 };
 
-template class NDLNodeEvaluator<float>;
-template class NDLNodeEvaluator<double>;
 
 template <typename ElemType>
 class NetNdl // class to associate a network with an NDLScript

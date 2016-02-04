@@ -313,8 +313,6 @@ private:
     std::unique_ptr<ConvolutionTensor4D> m_biasT;
 };
 
-template class ConvolutionNode<float>;
-template class ConvolutionNode<double>;
 
 // -----------------------------------------------------------------------
 // PoolingNodeBase (input)
@@ -542,8 +540,6 @@ public:
     }
 };
 
-template class MaxPoolingNode<float>;
-template class MaxPoolingNode<double>;
 
 // -----------------------------------------------------------------------
 // AveragePoolingNode
@@ -581,7 +577,5 @@ public:
     }
 };
 
-template class AveragePoolingNode<float>;
-template class AveragePoolingNode<double>;
 
 } } }

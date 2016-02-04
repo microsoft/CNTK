@@ -181,8 +181,6 @@ private:
     int m_endDimParameter;
 };
 
-template class ReshapeNode<float>;
-template class ReshapeNode<double>;
 
 // -----------------------------------------------------------------------
 // ReconcileMBLayout (dataInput, layoutInput)
@@ -245,8 +243,6 @@ public:
     }
 };
 
-template class ReconcileMBLayoutNode<float>;
-template class ReconcileMBLayoutNode<double>;
 
 // -----------------------------------------------------------------------
 // RowSliceNode (input)
@@ -348,8 +344,6 @@ private:
     size_t m_startIndex, m_sliceHeight;
 };
 
-template class RowSliceNode<float>;
-template class RowSliceNode<double>;
 
 // -----------------------------------------------------------------------
 // RowStackNode (input0, input1, ...)
@@ -479,8 +473,6 @@ private:
     std::vector<size_t> m_firstIndices;  // start row number in the stacked matrix of each input (child) (cumsum of matrix heights); plus one final entry that equals the total dimension
 };
 
-template class RowStackNode<float>;
-template class RowStackNode<double>;
 
 // -----------------------------------------------------------------------
 // RowRepeatNode (input) -- duplicate row(s) of a matrix multiple times
@@ -578,8 +570,6 @@ private:
     size_t m_numRepeat;
 };
 
-template class RowRepeatNode<float>;
-template class RowRepeatNode<double>;
 
 // -----------------------------------------------------------------------
 // DiagonalNode -- extract diagonal elements of a square matrix into a row vector
@@ -648,8 +638,6 @@ public:
     }
 };
 
-template class DiagonalNode<float>;
-template class DiagonalNode<double>;
 
 // -----------------------------------------------------------------------
 // ReinterpretNodeBase (input) -- base class for nodes that reinterpret
@@ -1064,8 +1052,6 @@ private:
     }
 };
 
-template class LegacyReshapeNode<float>;
-template class LegacyReshapeNode<double>;
 
 /*
 

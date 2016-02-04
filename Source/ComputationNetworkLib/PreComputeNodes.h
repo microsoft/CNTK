@@ -279,8 +279,6 @@ public:
     }
 };
 
-template class MeanNode<float>;
-template class MeanNode<double>;
 
 // -----------------------------------------------------------------------
 // InvStdDevNode (features)
@@ -408,8 +406,6 @@ private:
     Matrix<ElemType> m_temp;
 };
 
-template class InvStdDevNode<float>;
-template class InvStdDevNode<double>;
 
 // -----------------------------------------------------------------------
 // PerDimMeanVarNormalizationNode (feature, mean, invStdDev)
@@ -512,8 +508,6 @@ public:
     }
 };
 
-template class PerDimMeanVarNormalizationNode<float>;
-template class PerDimMeanVarNormalizationNode<double>;
 
 // -----------------------------------------------------------------------
 // PerDimMeanVarDeNormalizationNode (feature, mean, invStdDev)
@@ -624,7 +618,5 @@ public:
     }
 };
 
-template class PerDimMeanVarDeNormalizationNode<float>;
-template class PerDimMeanVarDeNormalizationNode<double>;
 
 } } }

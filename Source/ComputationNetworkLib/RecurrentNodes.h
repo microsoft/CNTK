@@ -490,8 +490,6 @@ public:
     }
 };
 
-template class PastValueNode<float>;
-template class PastValueNode<double>;
 
 // -----------------------------------------------------------------------
 // FutureValueNode (input) -- delay node in future direction
@@ -527,8 +525,6 @@ public:
     }
 };
 
-template class FutureValueNode<float>;
-template class FutureValueNode<double>;
 
 #ifdef COMING_SOON
 

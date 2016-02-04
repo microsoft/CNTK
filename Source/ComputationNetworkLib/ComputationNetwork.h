@@ -922,10 +922,6 @@ private:
 };
 typedef ComputationNetwork::ComputationNetworkPtr ComputationNetworkPtr;
 
-// The following emits the class and enables the BaseMatrix<double> to be available (used by EvalDll)
-// The corresponding Matrix<float> is emitted in the SetDeviceId function above.
-template class Matrix<double>;
-
 // TODOs:
 //  - automatic inference of time window w.r.t. delay nodes (and related nodes such as a temporal pooling)
 //  - have overrides of RuntimeError etc. in ComputationNode, which prepend the error string with the node name and operation

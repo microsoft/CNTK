@@ -130,8 +130,6 @@ private:
     int m_topK;
 };
 
-template class ErrorPredictionNode<float>;
-template class ErrorPredictionNode<double>;
 
 #ifdef COMING_SOON
 
@@ -332,8 +330,6 @@ public:
     }
 };
 
-template class SequenceDecoderNode<float>;
-template class SequenceDecoderNode<double>;
 
 #endif
 

@@ -68,8 +68,6 @@ public:
     }
 };
 
-template class PlusNode<float>;
-template class PlusNode<double>;
 
 // -----------------------------------------------------------------------
 // MinusNode (minuend, subtrahend)
@@ -116,8 +114,6 @@ public:
     }
 };
 
-template class MinusNode<float>;
-template class MinusNode<double>;
 
 // -----------------------------------------------------------------------
 // NegateNode (input)
@@ -172,8 +168,6 @@ public:
     }
 };
 
-template class NegateNode<float>;
-template class NegateNode<double>;
 
 // -----------------------------------------------------------------------
 // TimesNodeBase (A, B)
@@ -325,8 +319,6 @@ public:
     }
 };
 
-template class TimesNode<float>;
-template class TimesNode<double>;
 
 // -----------------------------------------------------------------------
 // TransposeTimesNode (A', B)
@@ -351,8 +343,6 @@ public:
     }
 };
 
-template class TransposeTimesNode<float>;
-template class TransposeTimesNode<double>;
 
 // -----------------------------------------------------------------------
 // ElementTimesNode (factor1, factor2)
@@ -407,8 +397,6 @@ public:
     }
 };
 
-template class ElementTimesNode<float>;
-template class ElementTimesNode<double>;
 
 // -----------------------------------------------------------------------
 // DiagTimesNode (vector representing the diagonal of a square matrix, data)
@@ -534,8 +522,6 @@ private:
     shared_ptr<Matrix<ElemType>> m_rightGradient;
 };
 
-template class DiagTimesNode<float>;
-template class DiagTimesNode<double>;
 
 // -----------------------------------------------------------------------
 // SumElementsNode (input)
@@ -592,8 +578,6 @@ public:
     }
 };
 
-template class SumElementsNode<float>;
-template class SumElementsNode<double>;
 
 // -----------------------------------------------------------------------
 // SumColumnElementsNode (input)
@@ -659,8 +643,6 @@ public:
     }
 };
 
-template class SumColumnElementsNode<float>;
-template class SumColumnElementsNode<double>;
 
 #ifdef COMING_SOON  // known bug in backprop; generalize to tensor
 
@@ -749,8 +731,6 @@ public:
     }
 };
 
-template class TransposeNode<float>;
-template class TransposeNode<double>;
 
 #endif
 
@@ -880,8 +860,6 @@ private:
     shared_ptr<Matrix<ElemType>> m_temp;
 };
 
-template class CosDistanceNode<float>;
-template class CosDistanceNode<double>;
 
 // -----------------------------------------------------------------------
 // KhatriRaoProductNode (left, right)
@@ -951,8 +929,6 @@ public:
     }
 };
 
-template class KhatriRaoProductNode<float>;
-template class KhatriRaoProductNode<double>;
 
 // -----------------------------------------------------------------------
 // CosDistanceWithNegativeSamplesNode (left, right, shift, neg)
@@ -1201,6 +1177,4 @@ private:
     shared_ptr<Matrix<ElemType>> m_temp;
 };
 
-template class CosDistanceWithNegativeSamplesNode<float>;
-template class CosDistanceWithNegativeSamplesNode<double>;
 } } }

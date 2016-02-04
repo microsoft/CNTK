@@ -231,6 +231,4 @@ private:
     DEVICEID_TYPE m_deviceId;
 };
 
-template class NDLBuilder<float>;
-template class NDLBuilder<double>;
 } } }
