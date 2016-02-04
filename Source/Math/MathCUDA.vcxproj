@@ -150,6 +150,7 @@ if exist "$(CuDnnDll)" (xcopy /Y "$(CuDnnDll)" $(OutputPath))
     <ClInclude Include="cudalatticeops.cu.h" />
     <ClInclude Include="cudalatticeops.h" />
     <ClInclude Include="cudalib.h" />
+    <ClInclude Include="CuDnnConvolutionEngine.cuh" />
     <ClInclude Include="CuDnnConvolutionEngine.h" />
     <ClInclude Include="GPUDataTransferer.h" />
     <ClInclude Include="GPUTensor.h" />
@@ -171,6 +172,7 @@ if exist "$(CuDnnDll)" (xcopy /Y "$(CuDnnDll)" $(OutputPath))
     <CudaCompile Include="GPUTensor.cu">
       <InterleaveSourceInPTX Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</InterleaveSourceInPTX>
       <Keep Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</Keep>
+      <FileType>CppCode</FileType>
     </CudaCompile>
     <CudaCompile Include="cudalatticeops.cu">
       <FileType>CppCode</FileType>
@@ -183,7 +185,9 @@ if exist "$(CuDnnDll)" (xcopy /Y "$(CuDnnDll)" $(OutputPath))
     </CudaCompile>
     <ClCompile Include="cudalattice.cpp" />
     <ClCompile Include="cudalib.cpp" />
-    <ClCompile Include="CuDnnConvolutionEngine.cpp" />
+    <CudaCompile Include="CuDnnConvolutionEngine.cu">
+      <FileType>CppCode</FileType>
+    </CudaCompile>
     <ClCompile Include="GPUDataTransferer.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader>Create</PrecompiledHeader>
