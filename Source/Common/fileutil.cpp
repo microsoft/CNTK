@@ -871,12 +871,12 @@ string fgetstring(FILE* f)
     string res;
     for (;;)
     {
-        char c = (char) fgetc(f);
+        int c = fgetc(f);
         if (c == EOF)
             RuntimeError("error reading string or missing 0: %s", strerror(errno));
         if (c == 0)
             break;
-        res.push_back(c);
+        res.push_back((char) c);
     }
     return res;
 }

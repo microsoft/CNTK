@@ -31,17 +31,8 @@
 #include <string>
 
 // forward-declare these lattice-related types to avoid having to include and pollute everything with lattice-related headers
-namespace msra { namespace dbn {
-
-class latticepair;
-class latticesource;
-}
-}
-namespace msra { namespace asr {
-
-class simplesenonehmm;
-}
-}
+namespace msra { namespace dbn {  class latticepair; class latticesource; } }
+namespace msra { namespace asr {  class simplesenonehmm; } } 
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -78,6 +69,9 @@ public:
     virtual void Init(const ConfigParameters& config) = 0;
     virtual void Init(const ScriptableObjects::IConfigRecord& config) = 0;
     virtual void Destroy() = 0;
+protected:
+    virtual ~IDataReader() { }
+public:
     virtual void StartMinibatchLoop(size_t mbSize, size_t epoch, size_t requestedEpochSamples = requestDataSize) = 0;
 
     virtual bool SupportsDistributedMBRead() const
