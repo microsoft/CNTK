@@ -4711,7 +4711,7 @@ void GPUMatrix<ElemType>::RCRFBackwardCompute(
 
 /**
     Compute the gradient for the first order Markov transition probabilities
-    It uses equations derived in R. Collobert's paper "Natural lanugage processing (almost) from scratch"
+    It uses equations derived in R. Collobert's paper "Natural language processing (almost) from scratch"
     */
 template <class ElemType>
 void GPUMatrix<ElemType>::RCRFTransGrdCompute(const GPUMatrix<ElemType>& lbls,
