@@ -58,14 +58,14 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64' Or '$(Configuration)|$(Platform)'=='Debug_CpuOnly|x64'">
     <LinkIncremental>true</LinkIncremental>
-    <IncludePath>..\SequenceTrainingLib;..\SGDLib;..\ComputationNetworkLib;..\CNTK;..\Math;..\Common\Include;..\CNTK\BrainScript;$(MSMPI_INC);$(VCInstallDir)include;..\..\DataReader\HTKMLFReader;$(WindowsSDK_IncludePath)</IncludePath>
+    <IncludePath>..\SequenceTrainingLib;..\SGDLib;..\ComputationNetworkLib;..\CNTK;..\Math;..\Common\Include;..\CNTK\BrainScript;$(MSMPI_INC);$(VCInstallDir)include;$(WindowsSDK_IncludePath)</IncludePath>
     <LibraryPath>$(MSMPI_LIB64);$(SolutionDir)$(Platform)\$(Configuration);$(SolutionDir)..\Common\lib;$(VCInstallDir)lib\amd64;$(WindowsSDK_LibraryPath_x64)</LibraryPath>
     <IntDir>$(Platform)\$(Configuration)\$(ProjectName)\</IntDir>
     <PreBuildEventUseInBuild>false</PreBuildEventUseInBuild>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64' Or '$(Configuration)|$(Platform)'=='Release_CpuOnly|x64'">
     <LinkIncremental>false</LinkIncremental>
-    <IncludePath>..\SequenceTrainingLib;..\SGDLib;..\ComputationNetworkLib;..\CNTK;..\Math;..\Common\Include;..\CNTK\BrainScript;$(MSMPI_INC);$(VCInstallDir)include;..\..\DataReader\HTKMLFReader;$(WindowsSDK_IncludePath)</IncludePath>
+    <IncludePath>..\SequenceTrainingLib;..\SGDLib;..\ComputationNetworkLib;..\CNTK;..\Math;..\Common\Include;..\CNTK\BrainScript;$(MSMPI_INC);$(VCInstallDir)include;$(WindowsSDK_IncludePath)</IncludePath>
     <LibraryPath>$(MSMPI_LIB64);$(SolutionDir)$(Platform)\$(Configuration);$(SolutionDir)..\Common\lib;$(VCInstallDir)lib\amd64;$(WindowsSDK_LibraryPath_x64)</LibraryPath>
     <ExecutablePath>$(ExecutablePath)</ExecutablePath>
     <IntDir>$(Platform)\$(Configuration)\$(ProjectName)\</IntDir>
