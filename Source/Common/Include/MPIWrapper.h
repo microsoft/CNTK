@@ -378,7 +378,8 @@ public:
     void OnStartDataProcessing()
     {
         WaitAll(); 
-        m_peerStatus.resize(NumNodesInUse(), NodeStatus::DataProcessing); 
+        m_peerStatus.resize(NumNodesInUse());
+        std::fill(m_peerStatus.begin(), m_peerStatus.end(), NodeStatus::DataProcessing);
     }
     bool OnArriveAtSyncPoint()
     {   
