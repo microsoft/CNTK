@@ -276,8 +276,9 @@ template <class ElemType>
                 g_mpi->WaitAll();
             }
 
+        if ((g_mpi == nullptr) || g_mpi->IsMainNode())
             net->Save(GetModelNameForEpoch(int(startEpoch) - 1));
-        }
+    }
 
         bool learnRateInitialized = false;
         if (startEpoch > 0)
@@ -579,13 +580,17 @@ template <class ElemType>
                             break;
                         }
                     }
-
-                    if (learnRateReduced)
+                    else
                     {
-                        learnRatePerSample *= m_learnRateDecreaseFactor;
-                        fprintf(stderr, "learnRatePerSample reduced to %.8g\n", learnRatePerSample);
+                        if ((g_mpi == nullptr) || g_mpi->IsMainNode())
+                            net->Save(GetModelNameForEpoch(i, true));
+
+                        if (learnRateReduced)
+                        {
+                            learnRatePerSample *= m_learnRateDecreaseFactor;
+                            fprintf(stderr, "learnRatePerSample reduced to %.8g\n", learnRatePerSample);
+                        }
                     }
-                }
                 else
                 {
                     if (std::isnan(avgCriterion) || 
