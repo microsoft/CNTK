@@ -18,8 +18,8 @@ struct SequenceDescription
     size_t m_id;              // Sequence id, uniquely identifies the sequence.
     size_t m_numberOfSamples; // Number of samples in a sequence.
     size_t m_chunkId;         // Each sequence belongs to an I/O chunk, how chunk is defined is specific to a
-                              // particular data deserializer. The randomizer guarantees to request sequences
-                              // from only limited subset of chunks at any moment in time.
+                              // particular data deserializer (or bundler). The randomizer guarantees to request
+                              // sequences from only limited subset of chunks at any moment in time.
     bool m_isValid;           // Indicates whether the sequence is valid.
 };
 typedef std::vector<const SequenceDescription*> SequenceDescriptions;
@@ -73,6 +73,7 @@ class DataDeserializer
 {
 public:
     // Describes streams this data deserializer can produce. Streams correspond to network inputs.
+    // TODO: Introduce the interface to reduce the size of the sequences available at any point in time (chunks/sequences).
     virtual std::vector<StreamDescriptionPtr> GetStreamDescriptions() const = 0;
 
     // Retrieves description of all sequences this data deserializer can produce.
