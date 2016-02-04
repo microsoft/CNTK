@@ -53,12 +53,16 @@ template <class ElemType>
             return;
         }
 
-        wstring modelFileName = GetModelNameForEpoch(int(startEpoch) - 1);
-        if (startEpoch >= 0)
-            fprintf(stderr, "Starting from checkpoint. Load Network From File %ls.\n", modelFileName.c_str());
+    wstring modelFileName = GetModelNameForEpoch(int(startEpoch) - 1);
+    bool loadNetworkFromCheckpoint = false;
+    if (startEpoch >= 0)
+    {
+        loadNetworkFromCheckpoint = true;
+        fprintf(stderr, "Starting from checkpoint. Load Network From File %ls.\n", modelFileName.c_str());
+    }
 
-        // create or load from checkpoint
-        shared_ptr<ComputationNetwork> net = startEpoch < 0 ? createNetworkFn(deviceId) : ComputationNetwork::CreateFromFile<ElemType>(deviceId, modelFileName);
+    // create or load from checkpoint
+    shared_ptr<ComputationNetwork> net = !loadNetworkFromCheckpoint ? createNetworkFn(deviceId) : ComputationNetwork::CreateFromFile<ElemType>(deviceId, modelFileName);
 
         // log the device we are computing on
         if (net->GetDeviceId() < 0)
@@ -72,7 +76,7 @@ template <class ElemType>
         startEpoch = max(startEpoch, 0);
         m_needAdaptRegularization = false;
 
-        TrainOrAdaptModel(startEpoch, net, net, nullptr, trainSetDataReader, validationSetDataReader);
+        TrainOrAdaptModel(startEpoch, net, loadNetworkFromCheckpoint, net, nullptr, trainSetDataReader, validationSetDataReader);
     }
 
     // -----------------------------------------------------------------------
@@ -92,18 +96,20 @@ template <class ElemType>
             return;
         }
 
-        ComputationNetworkPtr net;
-        if (startEpoch >= 0)
-        {
-            wstring modelFileName = GetModelNameForEpoch(int(startEpoch) - 1);
-            fprintf(stderr, "Starting from checkpoint. Load Network From File %ls.\n", modelFileName.c_str());
-            net = ComputationNetwork::CreateFromFile<ElemType>(deviceId, modelFileName);
-        }
-        else
-        {
-            fprintf(stderr, "Load Network From the original model file %ls.\n", origModelFileName.c_str());
-            net = ComputationNetwork::CreateFromFile<ElemType>(deviceId, origModelFileName);
-        }
+    ComputationNetworkPtr net;
+    bool networkLoadedFromCheckpoint = false;
+    if (startEpoch >= 0)
+    {
+        wstring modelFileName = GetModelNameForEpoch(int(startEpoch) - 1);
+        fprintf(stderr, "Starting from checkpoint. Load Network From File %ls.\n", modelFileName.c_str());
+        net = ComputationNetwork::CreateFromFile<ElemType>(deviceId, modelFileName);
+        networkLoadedFromCheckpoint = true;
+    }
+    else
+    {
+        fprintf(stderr, "Load Network From the original model file %ls.\n", origModelFileName.c_str());
+        net = ComputationNetwork::CreateFromFile<ElemType>(deviceId, origModelFileName);
+    }
 
         startEpoch = max(startEpoch, 0);
 
@@ -124,8 +130,8 @@ template <class ElemType>
             refNode = refNet->GetNodeFromName(refNodeName);
         }
 
-        TrainOrAdaptModel(startEpoch, net, refNet, refNode, trainSetDataReader, validationSetDataReader);
-    }
+    TrainOrAdaptModel(startEpoch, net, networkLoadedFromCheckpoint, refNet, refNode, trainSetDataReader, validationSetDataReader);
+}
 
     // -----------------------------------------------------------------------
     // TrainOrAdaptModel() -- main training end-to-end, given a start model
@@ -262,7 +268,18 @@ template <class ElemType>
              prevLearnRates[i] = -1.0;
         }
 
-        if (m_parallelizationMethod == ParallelizationMethod::DataParallelSGD)
+    if (m_parallelizationMethod == ParallelizationMethod::DataParallelSGD)
+    {
+        InitDistGradAgg(evaluationNodes.size(), m_traceLevel);
+    }
+    // precompute mean and invStdDev nodes and save initial model
+    // When no precompute, only save if we did not load the model from a 
+    // checkpoint but instead built it from a network description
+    if (PreCompute(net, trainSetDataReader, featureNodes, labelNodes, inputMatrices) || !networkLoadedFromCheckpoint)
+    {
+        // Synchronize all ranks before writing the model to ensure that
+        // everyone is done loading the model
+        if (g_mpi != nullptr)
         {
             InitDistGradAgg(evaluationNodes.size(), m_traceLevel);
         }
@@ -276,8 +293,7 @@ template <class ElemType>
                 g_mpi->WaitAll();
             }
 
-        if ((g_mpi == nullptr) || g_mpi->IsMainNode())
-            net->Save(GetModelNameForEpoch(int(startEpoch) - 1));
+        net->Save(GetModelNameForEpoch(int(startEpoch) - 1));
     }
 
         bool learnRateInitialized = false;
@@ -582,8 +598,7 @@ template <class ElemType>
                     }
                     else
                     {
-                        if ((g_mpi == nullptr) || g_mpi->IsMainNode())
-                            net->Save(GetModelNameForEpoch(i, true));
+                        net->Save(GetModelNameForEpoch(i, true));
 
                         if (learnRateReduced)
                         {
