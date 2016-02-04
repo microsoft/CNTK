@@ -65,6 +65,12 @@ class MPIWrapper
         __try
 #endif
         {
+            // don't initialize if that has been done already
+            int flag = 0;
+            MPI_Initialized(&flag);
+            if (flag)
+                return MPI_SUCCESS;
+
             int argc = 0;
             char **argv = NULL;
             int requiredThreadLevelSupport = MPI_THREAD_SERIALIZED;
@@ -112,12 +118,7 @@ public:
         fprintf(stderr, "MPIWrapper: initializing MPI\n");
         fflush(stderr);
 
-        int flag = 0;
-        MPI_Initialized(&flag);
-        if (!flag)
-        {
-            MPI_Init_DL() || MpiFail("mpiaggregator: MPI_Init");
-        }
+        MPI_Init_DL() || MpiFail("mpiaggregator: MPI_Init");
         MPI_Comm_rank(MPI_COMM_WORLD, &m_myRank);
         MPI_Comm_size(MPI_COMM_WORLD, &m_numMPINodes);
         m_numNodesInUse = m_numMPINodes;
