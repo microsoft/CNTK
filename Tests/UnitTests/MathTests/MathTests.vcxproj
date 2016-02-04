@@ -80,7 +80,7 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64' Or '$(Configuration)|$(Platform)'=='Release_CpuOnly|x64'">
     <LinkIncremental>true</LinkIncremental>
-    <IncludePath>$(IncludePath);$(VCInstallDir)include;$(VCInstallDir)atlmfc\include;$(WindowsSDK_IncludePath);</IncludePath>
+    <IncludePath>$(IncludePath);$(VCInstallDir)include;$(WindowsSDK_IncludePath);</IncludePath>
     <IntDir>$(Platform)\$(Configuration)\$(ProjectName)\</IntDir>
     <OutDir>$(SolutionDir)$(Platform)\$(Configuration)\UnitTests\</OutDir>
   </PropertyGroup>
