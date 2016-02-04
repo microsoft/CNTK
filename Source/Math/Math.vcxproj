@@ -24,6 +24,7 @@
     <RootNamespace>Math</RootNamespace>
     <ProjectName>Math</ProjectName>
   </PropertyGroup>
+  <Import Project="$(SolutionDir)\CNTK.Cpp.props" />
   <Choose>
     <When Condition="'$(Configuration)|$(Platform)'=='Debug_CpuOnly|x64' Or '$(Configuration)|$(Platform)'=='Release_CpuOnly|x64'">
       <PropertyGroup>
