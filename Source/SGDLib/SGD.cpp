@@ -268,7 +268,8 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
             g_mpi->WaitAll();
         }
 
-        net->Save(GetModelNameForEpoch(int(startEpoch) - 1));
+        if ((g_mpi == nullptr) || g_mpi->IsMainNode())
+            net->Save(GetModelNameForEpoch(int(startEpoch) - 1));
     }
 
     bool learnRateInitialized = false;
@@ -362,7 +363,8 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
                     i + 1, learnRatePerSample, m_minLearnRate);
             if (m_autoLearnRateSearchType != LearningRateSearchAlgorithm::None)
             {
-                net->Save(m_modelPath);
+                if ((g_mpi == nullptr) || g_mpi->IsMainNode())
+                    net->Save(m_modelPath);
             }
             break;
         }
@@ -565,7 +567,8 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
                     }
                     else
                     {
-                        net->Save(GetModelNameForEpoch(i, true));
+                        if ((g_mpi == nullptr) || g_mpi->IsMainNode())
+                            net->Save(GetModelNameForEpoch(i, true));
 
                         fprintf(stderr, "Finished training and saved final model\n\n");
                         break;
