@@ -156,23 +156,16 @@ public:
 
     void CompileNetwork(); // call this after creation, Load(), and any modification
 
-    // void ValidateNetwork(bool allowFragment = false, const bool bAllowNoCriterion = false);
-    // prepares the network for computation
-    // void BuildAndValidateSubNetwork(const ComputationNodeBasePtr rootNode);
 private:
+    void ValidateNetwork();
     void ValidateNodes(list<ComputationNodeBasePtr> nodes, bool isFinalValidationPass, size_t& todo);
-    void ValidateSubNetwork(const ComputationNodeBasePtr& rootNode);
     void MarkValueNonSharableNodes();
 
 private:
     void DetermineSetOfAllRoots();
     void CollectInputAndLearnableParameters(const ComputationNodeBasePtr& rootNode);
-    bool IsCompiled() const
-    {
-        return m_isCompiled;
-    }
+    bool IsCompiled() const { return m_isCompiled; }
     void VerifyIsCompiled(const char* where) const;
-    // bool BuiltAndValidatedSubNetwork(const ComputationNodeBasePtr & rootNode);
 public:
     void AllocateAllMatrices(const std::vector<ComputationNodeBasePtr>& evalRootNodes, const std::vector<ComputationNodeBasePtr>& outValueRootNodes, ComputationNodeBasePtr trainRootNode);
 
@@ -444,7 +437,6 @@ public:
     inline std::vector<ComputationNodeBasePtr> CriterionNodesFrom(const wstring& criterionNodeName)
     {
         ComputationNodeBasePtr node = GetNodeFromName(criterionNodeName);
-        ValidateSubNetwork(node);
         if (node->HasMBLayout() || node->GetSampleLayout().GetNumElements() != 1)
             InvalidArgument("%ls %ls operation is not a valid training or eval criterion node.", node->NodeName().c_str(), node->OperationName().c_str());
         return std::vector<ComputationNodeBasePtr>{node};

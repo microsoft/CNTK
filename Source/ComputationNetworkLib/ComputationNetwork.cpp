@@ -433,6 +433,7 @@ void ComputationNetwork::CollectInputAndLearnableParameters(const ComputationNod
     const list<ComputationNodeBasePtr>& nodes = GetEvalOrder(rootNode);
 
     // collect input values for given root
+    // Note: This will not return nodes that are reached through a PrecomputeNode that has already been computed.
     list<ComputationNodeBasePtr> inputs;
     for (const auto& node : nodes)
     {
