@@ -599,6 +599,10 @@ void renameOrDie(const std::string& from, const std::string& to)
     if (!MoveFileA(from.c_str(), to.c_str()))
         RuntimeError("error renaming file '%s': %d", from.c_str(), GetLastError());
 #else
+    // Delete destination file if it exists
+    // WORKAROUND: "rename" should do this but this is a workaround
+    // to the HDFS FUSE implementation's bug of failing to do so
+    unlinkOrDie(to);
     if (rename(from.c_str(), to.c_str()) != 0)
         RuntimeError("error renaming file '%s': %s", from.c_str(), strerror(errno));
 #endif
