@@ -50,11 +50,15 @@ void SGD<ElemType>::Train(function<ComputationNetworkPtr(DEVICEID_TYPE)> createN
     }
 
     wstring modelFileName = GetModelNameForEpoch(int(startEpoch) - 1);
+    bool loadNetworkFromCheckpoint = false;
     if (startEpoch >= 0)
+    {
+        loadNetworkFromCheckpoint = true;
         fprintf(stderr, "Starting from checkpoint. Load Network From File %ls.\n", modelFileName.c_str());
+    }
 
     // create or load from checkpoint
-    shared_ptr<ComputationNetwork> net = startEpoch < 0 ? createNetworkFn(deviceId) : ComputationNetwork::CreateFromFile<ElemType>(deviceId, modelFileName);
+    shared_ptr<ComputationNetwork> net = !loadNetworkFromCheckpoint ? createNetworkFn(deviceId) : ComputationNetwork::CreateFromFile<ElemType>(deviceId, modelFileName);
 
     // log the device we are computing on
     if (net->GetDeviceId() < 0)
@@ -68,7 +72,7 @@ void SGD<ElemType>::Train(function<ComputationNetworkPtr(DEVICEID_TYPE)> createN
     startEpoch = max(startEpoch, 0);
     m_needAdaptRegularization = false;
 
-    TrainOrAdaptModel(startEpoch, net, net, nullptr, trainSetDataReader, validationSetDataReader);
+    TrainOrAdaptModel(startEpoch, net, loadNetworkFromCheckpoint, net, nullptr, trainSetDataReader, validationSetDataReader);
 }
 
 // -----------------------------------------------------------------------
@@ -89,11 +93,13 @@ void SGD<ElemType>::Adapt(wstring origModelFileName, wstring refNodeName,
     }
 
     ComputationNetworkPtr net;
+    bool networkLoadedFromCheckpoint = false;
     if (startEpoch >= 0)
     {
         wstring modelFileName = GetModelNameForEpoch(int(startEpoch) - 1);
         fprintf(stderr, "Starting from checkpoint. Load Network From File %ls.\n", modelFileName.c_str());
         net = ComputationNetwork::CreateFromFile<ElemType>(deviceId, modelFileName);
+        networkLoadedFromCheckpoint = true;
     }
     else
     {
@@ -120,7 +126,7 @@ void SGD<ElemType>::Adapt(wstring origModelFileName, wstring refNodeName,
         refNode = refNet->GetNodeFromName(refNodeName);
     }
 
-    TrainOrAdaptModel(startEpoch, net, refNet, refNode, trainSetDataReader, validationSetDataReader);
+    TrainOrAdaptModel(startEpoch, net, networkLoadedFromCheckpoint, refNet, refNode, trainSetDataReader, validationSetDataReader);
 }
 
 // -----------------------------------------------------------------------
@@ -131,6 +137,7 @@ static double MomentumPerMB(double momentumPerSample, size_t minibatchSize);
 
 template <class ElemType>
 void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
+                                      bool networkLoadedFromCheckpoint,
                                       ComputationNetworkPtr refNet,
                                       ComputationNodeBasePtr refNode,
                                       IDataReader<ElemType>* trainSetDataReader,
@@ -259,7 +266,9 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
         InitDistGradAgg(evaluationNodes.size(), m_traceLevel);
     }
     // precompute mean and invStdDev nodes and save initial model
-    if (PreCompute(net, trainSetDataReader, featureNodes, labelNodes, inputMatrices) || startEpoch == 0)
+    // When no precompute, only save if we did not load the model from a 
+    // checkpoint but instead built it from a network description
+    if (PreCompute(net, trainSetDataReader, featureNodes, labelNodes, inputMatrices) || !networkLoadedFromCheckpoint)
     {
         // Synchronize all ranks before writing the model to ensure that
         // everyone is done loading the model
@@ -268,8 +277,7 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
             g_mpi->WaitAll();
         }
 
-        if ((g_mpi == nullptr) || g_mpi->IsMainNode())
-            net->Save(GetModelNameForEpoch(int(startEpoch) - 1));
+        net->Save(GetModelNameForEpoch(int(startEpoch) - 1));
     }
 
     bool learnRateInitialized = false;
@@ -363,8 +371,7 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
                     i + 1, learnRatePerSample, m_minLearnRate);
             if (m_autoLearnRateSearchType != LearningRateSearchAlgorithm::None)
             {
-                if ((g_mpi == nullptr) || g_mpi->IsMainNode())
-                    net->Save(m_modelPath);
+                net->Save(m_modelPath);
             }
             break;
         }
@@ -567,8 +574,7 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
                     }
                     else
                     {
-                        if ((g_mpi == nullptr) || g_mpi->IsMainNode())
-                            net->Save(GetModelNameForEpoch(i, true));
+                        net->Save(GetModelNameForEpoch(i, true));
 
                         fprintf(stderr, "Finished training and saved final model\n\n");
                         break;
