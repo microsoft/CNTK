@@ -383,82 +383,74 @@ bool ComputationNetwork::IsTypicalCriterionNode(ComputationNodeBasePtr nodePtr)
     return false;
 }
 
-template <class N>
-void ComputationNetwork::GetNodesRequiringX(list<ComputationNodeBasePtr>& nodesRequiringX, const ComputationNodeBasePtr& rootNode, bool checkComputed)
-{
-    if (!rootNode) // find nodes from all available nodes
-    {
-        for (const auto& nodep : m_nameToNodeMap)
-        {
-            auto node = dynamic_pointer_cast<N>(nodep.second);
-            if (node)
-            {
-                assert(node->RequiresPreCompute());
-                if (!checkComputed || !node->HasComputed())
-                    nodesRequiringX.push_back(node);
-            }
-        }
-    }
-    else // or for calculating a specific node
-    {
-        for (const auto& nodei : GetEvalOrder(rootNode))
-        {
-            auto node = dynamic_pointer_cast<N>(nodei);
-            if (node)
-            {
-                assert(node->RequiresPreCompute());
-                if (!checkComputed || !node->HasComputed())
-                    nodesRequiringX.push_back(node);
-            }
-        }
-    }
-    nodesRequiringX.unique();
-}
-
 // return list of nodes that require precomputation and not precomputed yet
 list<ComputationNodeBasePtr> ComputationNetwork::GetNodesRequiringPreComputation(const ComputationNodeBasePtr& rootNode, bool checkComputed)
 {
-    list<ComputationNodeBasePtr> nodesRequiringX;
-    GetNodesRequiringX<PreComputedNodeBase<float>>(nodesRequiringX, rootNode, checkComputed);
-    GetNodesRequiringX<PreComputedNodeBase<double>>(nodesRequiringX, rootNode, checkComputed);
-    return nodesRequiringX;
+    list<ComputationNodeBasePtr> nodes;
+    for (const auto& node : GetEvalOrder(rootNode))
+    {
+        auto pcnode = dynamic_pointer_cast<IPreComputeNode>(node);
+        if (pcnode)
+        {
+            assert(node->RequiresPreCompute());
+            if (!checkComputed || !pcnode->HasComputed())
+                nodes.push_back(node);
+        }
+    }
+    return nodes;
 }
 
 // create the m_inputValues[] and m_learnableParameters[] lists
+// This enumerates all leaves reachable from rootNode.
+// Leaves are:
+//  - inputs
+//  - learnable parameters
+// It does not traverse disabled ones, i.e.
+//  - inputs that are only reachable through PrecomputeNodes that have completed computation
+//  - learnable parameters that are constants
 void ComputationNetwork::CollectInputAndLearnableParameters(const ComputationNodeBasePtr& rootNode)
 {
     assert(m_inputValues.find(rootNode) == m_inputValues.end()); // this function must only be called once
     assert(m_learnableParameters.find(rootNode) == m_learnableParameters.end());
 
-    const list<ComputationNodeBasePtr>& nodes = GetEvalOrder(rootNode);
+    // gather the lists
+    set<ComputationNodeBasePtr> visited;
+    list<ComputationNodeBasePtr> inputs, learnableParameters;
+    if (rootNode)
+        CollectInputAndLearnableParametersRec(rootNode, visited, inputs, learnableParameters);
+    else
+        for (const auto& root : m_allRoots)
+            CollectInputAndLearnableParametersRec(root, visited, inputs, learnableParameters);
 
-    // collect input values for given root
-    // Note: This will not return nodes that are reached through a PrecomputeNode that has already been computed.
-    list<ComputationNodeBasePtr> inputs;
-    for (const auto& node : nodes)
+    // sort learnable parameters by name so that we get consistent order when load it from saved file
+    learnableParameters.sort([](const ComputationNodeBasePtr& a, const ComputationNodeBasePtr& b)
     {
-        if (node->OperationName() == OperationNameOf(InputValue) || node->OperationName() == OperationNameOf(SparseInputValue))
-            inputs.push_back(node);
-    }
-    m_inputValues[rootNode] = inputs;
+        return a->NodeName() < b->NodeName();
+    });
 
-    // instead of collecting the nodes themselves, collect the names (they will be sorted below)
-    list<wstring> learnableParameterNames;
-    for (auto nodeIter = nodes.begin(); nodeIter != nodes.end(); nodeIter++)
-    {
-        ComputationNodeBasePtr node = *nodeIter;
-        if (node->OperationName() == OperationNameOf(LearnableParameter) && node->IsParameterUpdateRequired())
-            learnableParameterNames.push_back(node->NodeName());
-    }
-
-    // sort names so that we get consistent order when load it from saved file
-    learnableParameterNames.sort();
-
-    // now collect the actual nodes in the sort order of their node names
-    list<ComputationNodeBasePtr> learnableParameters;
-    for (const auto& nodeNameIter : learnableParameterNames)
-        learnableParameters.push_back(GetNodeFromName(nodeNameIter));
+    m_inputValues[rootNode] = move(inputs);
     m_learnableParameters[rootNode] = move(learnableParameters);
+}
+
+void ComputationNetwork::CollectInputAndLearnableParametersRec(const ComputationNodeBasePtr& node, set<ComputationNodeBasePtr>& visited, list<ComputationNodeBasePtr>& inputs, list<ComputationNodeBasePtr>& learnableParameters)
+{
+    if (visited.find(node) != visited.end())    // allready got this one
+        return;
+    else if (node->OperationName() == OperationNameOf(InputValue) || node->OperationName() == OperationNameOf(SparseInputValue))
+        inputs.push_back(node);
+    else if (node->OperationName() == OperationNameOf(LearnableParameter) && node->IsParameterUpdateRequired())
+        learnableParameters.push_back(node);
+    else
+    {
+        // PreComputeNodes that are already done should not be traversed
+        auto pcnode = dynamic_pointer_cast<IPreComputeNode>(node);
+        if (pcnode && pcnode->HasComputed())
+            return;
+        // recurse
+        visited.insert(node);
+        for (const auto & input : node->GetInputs())
+            CollectInputAndLearnableParametersRec(input, visited, inputs, learnableParameters);
+    }
 }
 
 template <class ElemType>

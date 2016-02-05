@@ -5,7 +5,6 @@
 #include "Basics.h"
 #include "SGD.h"
 #include "NonlinearityNodes.h"          // for DropoutNode
-#include "PreComputeNodes.h"            // for PrecomputeNode
 #include "SpecialPurposeNodes.h"        // for SequenceWithSoftmaxNode
 #include "DataReaderHelpers.h"
 #include "MatrixQuantizerImpl.h"
@@ -1284,11 +1283,8 @@ bool SGD<ElemType>::PreCompute(ComputationNetworkPtr net,
     }
 
     fprintf(stderr, "\nPrecomputing --> %lu PreCompute nodes found.\n\n", nodes.size());
-    for (auto nodeIter = nodes.begin(); nodeIter != nodes.end(); nodeIter++)
-    {
-        auto node = static_pointer_cast<PreComputedNodeBase<ElemType>>(*nodeIter);
+    for (const auto & node : nodes)
         fprintf(stderr, "\tNodeName: %ls\n", (node->NodeName()).c_str());
-    }
 
     // compute
     // trainSetDataReader->StartMinibatchLoop(m_mbSize[0],  0 , requestDataSize);
@@ -1302,11 +1298,8 @@ bool SGD<ElemType>::PreCompute(ComputationNetworkPtr net,
     net->StartEvaluateMinibatchLoop(nodes);
 
     // initialize
-    for (auto nodeIter = nodes.begin(); nodeIter != nodes.end(); nodeIter++)
-    {
-        auto node = static_pointer_cast<PreComputedNodeBase<ElemType>>(*nodeIter);
-        node->MarkComputed(false /*begin accumulating*/);
-    }
+    for (auto & node : nodes)
+        dynamic_pointer_cast<IPreComputeNode>(node)->MarkComputed(false /*begin accumulating*/);
 
     const size_t numIterationsBeforePrintingProgress = 100;
     size_t numItersSinceLastPrintOfProgress = 0;
@@ -1332,11 +1325,9 @@ bool SGD<ElemType>::PreCompute(ComputationNetworkPtr net,
     }
 
     // finalize
-    for (auto nodeIter = nodes.begin(); nodeIter != nodes.end(); nodeIter++)
-    {
-        auto node = static_pointer_cast<PreComputedNodeBase<ElemType>>(*nodeIter);
-        node->MarkComputed(true /*done accumulating*/);
-    }
+    for (auto & node : nodes)
+        dynamic_pointer_cast<IPreComputeNode>(node)->MarkComputed(true /*done accumulating*/);
+
     fprintf(stderr, "\nPrecomputing --> Completed.\n\n");
 
     return true;
