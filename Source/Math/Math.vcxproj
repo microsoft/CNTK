@@ -53,7 +53,6 @@
     <LinkIncremental>false</LinkIncremental>
     <IncludePath>..\Common\include;$(ACML_PATH)\include;$(IncludePath)</IncludePath>
     <LibraryPath>$(SolutionDir)$(Platform)\$(Configuration);$(ACML_PATH)\lib;$(LibraryPath)</LibraryPath>
-    <IntDir>$(Platform)\$(Configuration)\$(ProjectName)\</IntDir>
     <TargetName>Math</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="$(GpuBuild)">

@@ -57,7 +57,6 @@
   <PropertyGroup>
     <IncludePath>..\..\common\include;..\..\math;$(OPENCV_PATH)\include;$(IncludePath);</IncludePath>
     <LibraryPath>$(SolutionDir)$(Platform)\$(Configuration);$(OPENCV_PATH)\x64\vc12\lib;$(LibraryPath);</LibraryPath>
-    <IntDir>$(Platform)\$(Configuration)\$(ProjectName)\</IntDir>
     <OpenCVLib Condition="$(HasOpenCV)">opencv_world300.lib</OpenCVLib>
   </PropertyGroup>
   <PropertyGroup Condition="$(DebugBuild)">

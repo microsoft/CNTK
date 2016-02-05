@@ -50,14 +50,12 @@
     <LinkIncremental>true</LinkIncremental>
     <IncludePath>..\SGDLib;..\ComputationNetworkLib;..\SequenceTrainingLib;..\Math;..\Common\Include;..\CNTK\BrainScript;$(MSMPI_INC);$(VCInstallDir)include;$(WindowsSDK_IncludePath)</IncludePath>
     <LibraryPath>..\ComputationNetworkLib;..\Math;$(MSMPI_LIB64);$(VCInstallDir)lib\amd64;$(WindowsSDK_LibraryPath_x64);$(Platform);$(SolutionDir)$(Platform)\$(Configuration)\</LibraryPath>
-    <IntDir>$(Platform)\$(Configuration)\$(ProjectName)\</IntDir>
     <TargetName>EvalDll</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="$(ReleaseBuild)">
     <LinkIncremental>false</LinkIncremental>
     <IncludePath>..\SGDLib;..\ComputationNetworkLib;..\SequenceTrainingLib;..\Math;..\Common\Include;..\CNTK\BrainScript;$(MSMPI_INC);$(CUDA_PATH)\include;$(VCInstallDir)include;$(WindowsSDK_IncludePath)</IncludePath>
     <LibraryPath>..\ComputationNetworkLib;..\Math;$(MSMPI_LIB64);$(CUDA_PATH)\lib\$(Platform);$(VCInstallDir)lib\amd64;$(WindowsSDK_LibraryPath_x64);$(Platform);$(SolutionDir)$(Platform)\$(Configuration)\</LibraryPath>
-    <IntDir>$(Platform)\$(Configuration)\$(ProjectName)\</IntDir>
     <TargetName>EvalDll</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="$(GpuBuild)">
