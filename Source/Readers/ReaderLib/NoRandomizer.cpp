@@ -86,6 +86,8 @@ Sequences NoRandomizer::GetNextSequences(size_t sampleCount)
         return result;
     }
 
+    // TODO: Currently we preserve chunks not for the complete window, only for minibatch
+    // Should be changed
     std::map<size_t, ChunkPtr> chunks;
     for (size_t id : chunkIds)
     {
@@ -102,9 +104,10 @@ Sequences NoRandomizer::GetNextSequences(size_t sampleCount)
 
     m_chunks.swap(chunks);
 
+    // TODO: Not clear whether batching will make sense for this.
+    // We have to reassamble the exposed result from sequences drawn from diffrent chunks.
     result.m_data.resize(sequences.size());
-
-#pragma omp parallel for ordered schedule(dynamic)
+#pragma omp parallel for ordered schedule(static)
     for (int i = 0; i < sequences.size(); ++i)
     {
         result.m_data[i] = m_chunks[sequences[i]->m_chunkId]->GetSequence(sequences[i]->m_id);

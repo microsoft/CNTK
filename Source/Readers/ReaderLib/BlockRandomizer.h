@@ -99,6 +99,6 @@ private:
 
     void RandomizeIfNewSweepIsEntered();
 
-    bool GetNextSequenceIds(size_t sampleCount, SequenceDescriptions& originalIds);
+    bool GetNextSequenceDescriptions(size_t sampleCount, SequenceDescriptions& sequences);
 };
 } } }

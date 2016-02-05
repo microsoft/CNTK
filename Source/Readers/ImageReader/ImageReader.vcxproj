@@ -113,7 +113,6 @@
     <ClInclude Include="ImageConfigHelper.h" />
     <ClInclude Include="ImageDataDeserializer.h" />
     <ClInclude Include="ImageReader.h" />
-    <ClInclude Include="ImageSequence.h" />
     <ClInclude Include="ImageTransformers.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="targetver.h" />

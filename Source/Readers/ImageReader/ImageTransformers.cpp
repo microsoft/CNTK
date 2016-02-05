@@ -14,10 +14,16 @@
 #include "ImageConfigHelper.h"
 #include "StringUtil.h"
 #include "ElementTypeUtils.h"
-#include "ImageSequence.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK
 {
+
+struct ImageSequenceData : DenseSequenceData
+{
+    cv::Mat m_image;
+    // In case we do not copy data - we have to preserve the original sequence.
+    SequenceDataPtr m_original;
+};
 
 void ImageTransformerBase::Initialize(TransformerPtr next,
                                       const ConfigParameters &readerConfig)
@@ -39,6 +45,7 @@ ImageTransformerBase::Apply(SequenceDataPtr sequence,
                             const StreamDescription &inputStream,
                             const StreamDescription & /*outputStream*/)
 {
+    assert(inputStream.m_storageType == StorageType::dense);
     auto inputSequence = reinterpret_cast<const DenseSequenceData&>(*sequence.get());
     ImageDimensions dimensions(*inputSequence.m_sampleLayout, HWC);
     int columns = static_cast<int>(dimensions.m_width);
