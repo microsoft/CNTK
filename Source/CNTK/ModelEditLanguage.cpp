@@ -407,8 +407,7 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
 
         std::string propName = params[1];
         MELProperty prop = melPropNull;
-        // BUGBUG: "computeGradient" and "needsGradient" are both inconsistent with NDL which only accepts "needGradient" (no 's')
-        if (EqualInsensitive(propName, "computeGradient", "needsGradient"))
+        if (EqualInsensitive(propName, "computeGradient", "needsGradient") || EqualInsensitive(propName, "needGradient"))
         {
             prop = melPropComputeGradient;
         }
@@ -420,15 +419,15 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
         {
             prop = melPropLabel;
         }
-        else if (EqualInsensitive(propName, "finalCriterion", "criterion") || EqualInsensitive(propName, "finalCriterion", "Criteria"))
+        else if (EqualInsensitive(propName, "criterion") || /*legacy:*/EqualInsensitive(propName, "finalCriterion", "Criteria"))
         {
             prop = melPropFinalCriterion;
         }
-        else if (EqualInsensitive(propName, "multiSeq", "reqMultiSeqHandling"))
+        else if (EqualInsensitive(propName, "multiSeq", "reqMultiSeqHandling")) // legacy
         {
             fprintf(stderr, "WARNING: '%s' property is defunct and will be ignored.\n", propName.c_str());
         }
-        else if (EqualInsensitive(propName, "evaluation", "eval"))
+        else if (EqualInsensitive(propName, "evaluation", "eval")) // TODO: choose one
         {
             prop = melPropEvaluation;
         }
