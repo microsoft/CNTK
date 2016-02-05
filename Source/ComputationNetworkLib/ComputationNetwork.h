@@ -26,6 +26,7 @@
 #include <regex>
 #include <chrono>
 #include <unordered_map>
+#include <set>
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -164,6 +165,7 @@ private:
 private:
     void DetermineSetOfAllRoots();
     void CollectInputAndLearnableParameters(const ComputationNodeBasePtr& rootNode);
+    void CollectInputAndLearnableParametersRec(const ComputationNodeBasePtr& node, set<ComputationNodeBasePtr>& visited, list<ComputationNodeBasePtr>& inputs, list<ComputationNodeBasePtr>& learnableParameters);
     bool IsCompiled() const { return m_isCompiled; }
     void VerifyIsCompiled(const char* where) const;
 public:
@@ -505,10 +507,6 @@ public:
 
         return nodesWithType;
     }
-
-private:
-    template <class N>
-    void GetNodesRequiringX(std::list<ComputationNodeBasePtr>& nodesRequirePreComputation, const ComputationNodeBasePtr& rootNode, bool checkComputed);
 
 public:
     // return list of nodes that require precomputation and not precomputed yet

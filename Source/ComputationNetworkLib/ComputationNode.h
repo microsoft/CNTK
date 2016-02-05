@@ -1673,10 +1673,24 @@ public:
 };
 
 // =======================================================================
-// IRecurrentNode -- helper wrapper class for ComputationNodes that can be recurrent
+// IRecurrentNode -- interface implemented by ComputationNodes that can be recurrent
 // =======================================================================
 
 struct IRecurrentNode { virtual int GetRecurrenceSteppingDirection() const = 0; };
+
+// =======================================================================
+// PreComputedNodeBase -- interface implemented by ComputationNodes that precompute
+// TODO: We can use this interface in more places.
+// =======================================================================
+
+struct IPreComputeNode
+{
+    // check whether node has already undergone precomputation
+    virtual bool HasComputed() const = 0;
+    // call this with 'false' at start and with 'true' at end
+    // This is used for resetting and updating from accumulators.
+    virtual void MarkComputed(const bool hasComputed) = 0;
+};
 
 // =======================================================================
 // helper macro to ease access to base members in presence of C++ two-phase name lookup
