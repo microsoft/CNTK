@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <array>
 #include <random>
+#include <numeric>
 #include "../../../Source/Math/Matrix.h"
 #include "../../../Source/Math/CPUMatrix.h"
 #include "../../../Source/Math/GPUMatrix.h"
@@ -549,13 +550,16 @@ std::vector<std::tuple<Tensor4DPtr, bool>> GenerateBNTestConfigs(ConvFact& fact)
     std::vector<std::tuple<Tensor4DPtr, bool>> res;
     for (bool spatial : {false})
     {
-        for (size_t n : { 6, 13, 62, 512})
+        // REVIEW alexeyk: how to test batches > 512? cuDNN does not support that so there is no baseline.
+        for (size_t n : {6, 13, 62, 512})
+        //for (size_t n : {8})
         {
             for (size_t c : {1})
             {
                 for (size_t h : {1})
                 {
-                    for (size_t w : { 6, 17, 126, 2048})
+                    for (size_t w : {6, 17, 126, 2048})
+                    //for (size_t w : {8})
                     {
                         res.push_back(std::make_tuple(std::move(fact.CreateTensor(w, h, c, n)), spatial));
                     }
@@ -566,12 +570,32 @@ std::vector<std::tuple<Tensor4DPtr, bool>> GenerateBNTestConfigs(ConvFact& fact)
     return res;
 }
 
+size_t CountNans(const SingleMatrix& src)
+{
+    size_t n = 0;
+    foreach_coord (i, j, src)
+    {
+        n += std::isnan(src(i, j)) ? 1 : 0;
+    }
+    return n;
+}
+
 BOOST_AUTO_TEST_SUITE(BatchNormalizationSuite)
 
 BOOST_AUTO_TEST_CASE(BatchNormalizationForwardTrain)
 {
     std::mt19937 rng(0);
     std::normal_distribution<float> nd;
+
+    auto initMat = [&](SingleMatrix& buf, size_t r, size_t c, vec& data) -> SingleMatrix
+    {
+        data.resize(r * 3 * c);
+        std::fill(begin(data), end(data), std::numeric_limits<float>::quiet_NaN());
+        std::generate(begin(data) + r * c, begin(data) + 2 * r * c, [&] { return nd(rng); });
+        buf.SetValue(r, 3 * c, buf.GetDeviceId(), data.data());
+        // Get center slice.
+        return buf.ColumnSlice(c, c);
+    };
 
     for (int deviceId : {0})
     {
@@ -592,31 +616,30 @@ BOOST_AUTO_TEST_CASE(BatchNormalizationForwardTrain)
             SingleMatrix in(crow, ccol, buf.data(), deviceId, matrixFlagNormal);
 
             Tensor4DPtr scaleBiasT = spatial ? fact->CreateTensor(1, 1, t.c(), 1) : fact->CreateTensor(t.w(), t.h(), t.c(), 1);
-            buf.resize(scaleBiasT->w() * scaleBiasT->h() * scaleBiasT->c());
+            size_t crowScaleBias = scaleBiasT->w() * scaleBiasT->h() * scaleBiasT->c();
+            buf.resize(crowScaleBias);
 
             std::generate(begin(buf), end(buf), [&] { return nd(rng); });
-            SingleMatrix scale(buf.size(), 1, buf.data(), deviceId, matrixFlagNormal);
+            SingleMatrix scale(crowScaleBias, 1, buf.data(), deviceId, matrixFlagNormal);
             std::generate(begin(buf), end(buf), [&] { return nd(rng); });
-            SingleMatrix bias(buf.size(), 1, buf.data(), deviceId, matrixFlagNormal);
+            SingleMatrix bias(crowScaleBias, 1, buf.data(), deviceId, matrixFlagNormal);
 
-            std::generate(begin(buf), end(buf), [&] { return nd(rng); });
-            SingleMatrix runMean(buf.size(), 1, buf.data(), deviceId, matrixFlagNormal);
-            SingleMatrix runMeanExp(buf.size(), 1, buf.data(), deviceId, matrixFlagNormal);
-            std::generate(begin(buf), end(buf), [&] { return nd(rng); });
-            SingleMatrix runInvStdDev(buf.size(), 1, buf.data(), deviceId, matrixFlagNormal);
-            SingleMatrix runInvStdDevExp(buf.size(), 1, buf.data(), deviceId, matrixFlagNormal);
+            SingleMatrix runMeanBuf(deviceId);
+            SingleMatrix runMean = initMat(runMeanBuf, crowScaleBias, 1, buf);
+            SingleMatrix runMeanExp(runMean);
+            SingleMatrix runInvStdDevBuf(deviceId);
+            SingleMatrix runInvStdDev = initMat(runInvStdDevBuf, crowScaleBias, 1, buf);
+            SingleMatrix runInvStdDevExp(runInvStdDev);
 
-            std::generate(begin(buf), end(buf), [&] { return nd(rng); });
-            SingleMatrix saveMean(buf.size(), 1, buf.data(), deviceId, matrixFlagNormal);
-            SingleMatrix saveMeanExp(buf.size(), 1, buf.data(), deviceId, matrixFlagNormal);
-            std::generate(begin(buf), end(buf), [&] { return nd(rng); });
-            SingleMatrix saveInvStdDev(buf.size(), 1, buf.data(), deviceId, matrixFlagNormal);
-            SingleMatrix saveInvStdDevExp(buf.size(), 1, buf.data(), deviceId, matrixFlagNormal);
+            SingleMatrix saveMeanBuf(deviceId);
+            SingleMatrix saveMean = initMat(saveMeanBuf, crowScaleBias, 1, buf);
+            SingleMatrix saveMeanExp(saveMean);
+            SingleMatrix saveInvStdDevBuf(deviceId);
+            SingleMatrix saveInvStdDev = initMat(saveInvStdDevBuf, crowScaleBias, 1, buf);
+            SingleMatrix saveInvStdDevExp(saveInvStdDev);
 
-            SingleMatrix outBuf(crow, 3 * ccol, deviceId);
-            outBuf.SetValue(std::numeric_limits<float>::quiet_NaN());
-            SingleMatrix out = outBuf.ColumnSlice(ccol, ccol);
-            out.SetValue(0);
+            SingleMatrix outBuf(deviceId);
+            SingleMatrix out = initMat(outBuf, crow, ccol, buf);
             SingleMatrix outExp(out);
 
             CudaTimer time1;
@@ -633,13 +656,31 @@ BOOST_AUTO_TEST_CASE(BatchNormalizationForwardTrain)
 
             std::stringstream tmsg;
             tmsg << "tensor: (w = " << t.w() << ", h = " << t.h() << ", c = " << t.c() << ", n = " << t.n() << ")";
-            std::string msg = " are not equal " + tmsg.str();
+            std::string msg = " are not equal, " + tmsg.str();
+            std::string msgNan = " has NaNs, " + tmsg.str();
+            std::string msgNotNan = " has buffer overflow/underflow, " + tmsg.str();
 
-            BOOST_REQUIRE_MESSAGE(out.IsEqualTo(outExp, 1e-5f), "out" << msg);
-            //BOOST_REQUIRE_MESSAGE(runMean.IsEqualTo(runMeanExp), "runMean" << msg);
-            //BOOST_REQUIRE_MESSAGE(runInvStdDev.IsEqualTo(runInvStdDevExp), "runInvStdDev" << msg);
-            BOOST_REQUIRE_MESSAGE(saveMean.IsEqualTo(saveMeanExp, 1e-5f), "saveMean" << msg);
-            BOOST_REQUIRE_MESSAGE(saveInvStdDev.IsEqualTo(saveInvStdDevExp, 1e-5f), "saveInvStdDev" << msg);
+            float absErr = 1e-5f;
+
+            BOOST_REQUIRE_MESSAGE(!out.HasNan("out"), "out" << msgNan);
+            BOOST_REQUIRE_MESSAGE(out.IsEqualTo(outExp, absErr), "out" << msg);
+            BOOST_REQUIRE_MESSAGE(CountNans(outBuf) == crow * 2 * ccol, "out" << msgNotNan);
+            // REVIEW alexeyk: add cases for testing numerical stability.
+
+            BOOST_REQUIRE_MESSAGE(!runMean.HasNan("runMean"), "runMean" << msgNan);
+            //BOOST_REQUIRE_MESSAGE(runMean.IsEqualTo(runMeanExp, absErr), "runMean" << msg);
+
+            BOOST_REQUIRE_MESSAGE(!runInvStdDev.HasNan("runInvStdDev"), "runInvStdDev" << msgNan);
+            //BOOST_REQUIRE_MESSAGE(runInvStdDev.IsEqualTo(runInvStdDevExp, absErr), "runInvStdDev" << msg);
+
+            BOOST_REQUIRE_MESSAGE(!saveMean.HasNan("saveMean"), "saveMean" << msgNan);
+            BOOST_REQUIRE_MESSAGE(saveMean.IsEqualTo(saveMeanExp, absErr), "saveMean" << msg);
+            BOOST_REQUIRE_MESSAGE(CountNans(saveMeanBuf) == crowScaleBias * 2, "saveMean" << msgNotNan);
+
+            BOOST_REQUIRE_MESSAGE(!saveInvStdDev.HasNan("saveInvStdDev"), "saveInvStdDev" << msgNan);
+            BOOST_REQUIRE_MESSAGE(saveInvStdDev.IsEqualTo(saveInvStdDevExp, absErr), "saveInvStdDev" << msg);
+            BOOST_REQUIRE_MESSAGE(CountNans(saveInvStdDevBuf) == crowScaleBias * 2, "saveInvStdDev" << msgNotNan);
+
 #ifndef _DEBUG
             float elapsedCntk = time1.Elapsed();
             float elapsedCudnn = time2.Elapsed();
@@ -650,6 +691,113 @@ BOOST_AUTO_TEST_CASE(BatchNormalizationForwardTrain)
                 // Use conservative estimates.
                 BOOST_REQUIRE_MESSAGE(2 * elapsedCntk < elapsedCudnn,
                                       "CNTK implementation (" << elapsedCntk << "ms) must be faster than cuDNN (" << elapsedCudnn << "ms) by at least 2x, what's changed? " << tmsg.str());
+            }
+#endif
+        }
+    }
+}
+
+BOOST_AUTO_TEST_CASE(BatchNormalizationBackward)
+{
+    std::mt19937 rng(0);
+    std::normal_distribution<float> nd;
+
+    auto initMat = [&](SingleMatrix& buf, size_t r, size_t c, vec& data) -> SingleMatrix
+    {
+        data.resize(r * 3 * c);
+        std::fill(begin(data), end(data), std::numeric_limits<float>::quiet_NaN());
+        std::generate(begin(data) + r * c, begin(data) + 2 * r * c, [&] { return nd(rng); });
+        buf.SetValue(r, 3 * c, buf.GetDeviceId(), data.data());
+        // Get center slice.
+        return buf.ColumnSlice(c, c);
+    };
+
+    for (int deviceId : {0})
+    {
+        auto fact = ConvFact::Create(deviceId, ConvFact::EngineType::Auto, ImageLayoutKind::CHW);
+        auto engCudnn = fact->CreateConvEngine(deviceId, 0, BatchNormImpl::CuDnn);
+        auto engCntk = fact->CreateConvEngine(deviceId, 0, BatchNormImpl::Cntk);
+        for (auto& cfg : GenerateBNTestConfigs(*fact))
+        {
+            auto& t = *std::move(std::get<0>(cfg));
+            bool spatial = std::get<1>(cfg);
+
+            size_t crow = t.w() * t.h() * t.c();
+            size_t ccol = t.n();
+
+            vec buf(crow * t.n());
+            std::generate(begin(buf), end(buf), [&] { return nd(rng); });
+            SingleMatrix x(crow, ccol, buf.data(), deviceId, matrixFlagNormal);
+
+            std::generate(begin(buf), end(buf), [&] { return nd(rng); });
+            SingleMatrix dy(crow, ccol, buf.data(), deviceId, matrixFlagNormal);
+
+            Tensor4DPtr scaleBiasT = spatial ? fact->CreateTensor(1, 1, t.c(), 1) : fact->CreateTensor(t.w(), t.h(), t.c(), 1);
+            size_t crowScaleBias = scaleBiasT->w() * scaleBiasT->h() * scaleBiasT->c();
+            buf.resize(crowScaleBias);
+
+            std::generate(begin(buf), end(buf), [&] { return nd(rng); });
+            SingleMatrix scale(crowScaleBias, 1, buf.data(), deviceId, matrixFlagNormal);
+
+            std::generate(begin(buf), end(buf), [&] { return nd(rng); });
+            SingleMatrix saveMean(crowScaleBias, 1, buf.data(), deviceId, matrixFlagNormal);
+
+            std::generate(begin(buf), end(buf), [&] { return nd(rng); });
+            SingleMatrix saveInvStdDev(crowScaleBias, 1, buf.data(), deviceId, matrixFlagNormal);
+
+            SingleMatrix dScaleBuf(deviceId);
+            SingleMatrix dScale = initMat(dScaleBuf, crowScaleBias, 1, buf);
+            SingleMatrix dScaleExp(dScale);
+            SingleMatrix dBiasBuf(deviceId);
+            SingleMatrix dBias = initMat(dBiasBuf, crowScaleBias, 1, buf);
+            SingleMatrix dBiasExp(dBias);
+
+            SingleMatrix dxBuf(deviceId);
+            SingleMatrix dx = initMat(dxBuf, crow, ccol, buf);
+            SingleMatrix dxExp(dx);
+
+            CudaTimer time1;
+            time1.Start();
+            engCntk->BackwardNormalizeBatch(t, x, dy, dx, *scaleBiasT, scale, spatial, saveMean, saveInvStdDev, dScale, dBias);
+            time1.Stop();
+
+            CudaTimer time2;
+            time2.Start();
+            engCudnn->BackwardNormalizeBatch(t, x, dy, dxExp, *scaleBiasT, scale, spatial, saveMean, saveInvStdDev, dScaleExp, dBiasExp);
+            time2.Stop();
+
+            std::stringstream tmsg;
+            tmsg << "tensor: (w = " << t.w() << ", h = " << t.h() << ", c = " << t.c() << ", n = " << t.n() << ")";
+            std::string msg = " are not equal, " + tmsg.str();
+            std::string msgNan = " has NaNs, " + tmsg.str();
+            std::string msgNotNan = " has buffer overflow/underflow, " + tmsg.str();
+
+            float absErr = 1e-4f;
+
+            BOOST_REQUIRE_MESSAGE(!dx.HasNan("dx"), "dx" << msgNan);
+            BOOST_REQUIRE_MESSAGE(dx.IsEqualTo(dxExp, absErr), "dx" << msg);
+            BOOST_REQUIRE_MESSAGE(CountNans(dxBuf) == crow * 2 * ccol, "out" << msgNotNan);
+            // REVIEW alexeyk: add cases for testing numerical stability.
+
+            BOOST_REQUIRE_MESSAGE(!dScale.HasNan("dScale"), "dScale" << msgNan);
+            BOOST_REQUIRE_MESSAGE(dScale.IsEqualTo(dScaleExp, absErr), "dScale" << msg);
+            BOOST_REQUIRE_MESSAGE(CountNans(dScaleBuf) == crowScaleBias * 2, "dScale" << msgNotNan);
+
+            BOOST_REQUIRE_MESSAGE(!dBias.HasNan("dBias"), "dBias" << msgNan);
+            BOOST_REQUIRE_MESSAGE(dBias.IsEqualTo(dBiasExp, absErr), "dBias" << msg);
+            BOOST_REQUIRE_MESSAGE(CountNans(dBiasBuf) == crowScaleBias * 2, "dBias" << msgNotNan);
+
+#ifndef _DEBUG
+            float elapsedCntk = time1.Elapsed();
+            float elapsedCudnn = time2.Elapsed();
+            // Check performance. Current version of cuDNN (v4 RC) is significanlty slower than CNTK implementation.
+            // For optimal cases (vectorSize % 4 == 0), CNTK implementation can be >5x faster than cuDNN.
+            if (crow >= 128 && ccol >= 32)
+            {
+                // Use conservative estimates.
+                int speedup = 2;
+                BOOST_REQUIRE_MESSAGE(speedup * elapsedCntk < elapsedCudnn,
+                                      "CNTK implementation (" << elapsedCntk << "ms) must be faster than cuDNN (" << elapsedCudnn << "ms) by at least " << speedup << "x, what's changed? " << tmsg.str());
             }
 #endif
         }

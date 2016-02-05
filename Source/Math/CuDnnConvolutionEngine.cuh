@@ -28,7 +28,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template <int UnrollFactor, typename T>
     __device__ __forceinline__ void LoadElements(const T* src, T dst[UnrollFactor])
     {
-    #pragma unroll
+#pragma unroll
         for (int i = 0; i < UnrollFactor; i++)
             dst[i] = src[i];
     }
@@ -61,7 +61,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template <int UnrollFactor, typename T>
     __device__ __forceinline__ void StoreElements(const T src[UnrollFactor], T* dst)
     {
-    #pragma unroll
+#pragma unroll
         for (int i = 0; i < UnrollFactor; i++)
             dst[i] = src[i];
     }
@@ -117,6 +117,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         };
     };
 
+    //--------------------------------------------------------------------
+    // Mean and variance computaion
+    //--------------------------------------------------------------------
+
     // The kernel implements online, parallel and numerically stable algorithm 
     // for computing batch mean and variance (here inverse standard deviation) with one pass over the data.
     // It uses algorithm described in: http://i.stanford.edu/pub/cstr/reports/cs/tr/79/773/CS-TR-79-773.pdf
@@ -141,7 +145,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         int n = 0;
         T mean[UnrollFactor];
         T m2[UnrollFactor];
-    #pragma unroll
+#pragma unroll
         for (int k = 0; k < UnrollFactor; k++)
         {
             mean[k] = 0;
@@ -150,13 +154,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         int icolSrc = threadIdx.y;
         const T* psrc = x + static_cast<size_t>(icolSrc) * vectorSize + irowSrcBase;
+        // Stride over all vectors in the batch.
         for (; icolSrc < batchSize; icolSrc += BlockDimY)
         {
             n++;
             T curVal[UnrollFactor];
             LoadElements<UnrollFactor>(psrc, curVal);
             // No need for separate unrolling, SASS looks good.
-    #pragma unroll
+#pragma unroll
             for (int k = 0; k < UnrollFactor; k++)
             {
                 T d = curVal[k] - mean[k];
@@ -173,14 +178,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // First, reduce within warp using shuffle.
         if (n > 0)
         {
-    #pragma unroll
+#pragma unroll
             for (int i = 1; i < CUB_PTX_WARP_THREADS / BlockDimX; i *= 2)
             {
                 int srcLane = laneId + BlockDimX * i;
                 int n2 = cub::ShuffleIndex(n, srcLane);
                 int nsum = n + n2;
                 T d[UnrollFactor];
-    #pragma unroll
+#pragma unroll
                 for (int k = 0; k < UnrollFactor; k++)
                 {
                     d[k] = cub::ShuffleIndex(mean[k], srcLane) - mean[k];
@@ -205,7 +210,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             if (laneId == 0)
                 nRes[iwarp - 1] = n;
-    #pragma unroll
+#pragma unroll
             for (int k = 0; k < UnrollFactor; k++)
             {
                 meanRes[laneId * UnrollFactor + k][iwarp - 1] = mean[k];
@@ -218,13 +223,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (threadIdx.y == 0)
         {
             // Use simple loop as number of warps is small, 8 at max.
-    #pragma unroll
+#pragma unroll
             for (int i = 0; i < cwarp - 1; i++)
             {
                 int n2 = nRes[i];
                 int nsum = n + n2;
                 T d[UnrollFactor];
-    #pragma unroll
+#pragma unroll
                 for (int k = 0; k < UnrollFactor; k++)
                 {
                     d[k] = meanRes[threadIdx.x * UnrollFactor + k][i] - mean[k];
@@ -237,7 +242,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             size_t idxDstBase = (blockIdx.x * BlockDimX + threadIdx.x) * UnrollFactor;
             StoreElements<UnrollFactor>(mean, xMean + idxDstBase);
             Operations::RSqrt<T> rsqrtOp;
-    #pragma unroll
+#pragma unroll
             for (int k = 0; k < UnrollFactor; k++)
             {
                 m2[k] = rsqrtOp(static_cast<T>(m2[k] / batchSize + epsilon));
@@ -272,6 +277,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             ComputeBatchMeanAndInvStdDevImpl<1>(vectorSize, batchSize, x, epsilon, xMean, xInvStdDev, stream);
         return cudaGetLastError();
     }
+
+    //--------------------------------------------------------------------
+    // Forward propagation
+    //--------------------------------------------------------------------
 
     template <int BlockDimX, int BlockDimY, int UnrollFactor, typename T>
     __global__ void kNormalizeBatchTraining(int vectorSize, int batchSize, const T* x, T* y,
@@ -323,15 +332,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             T val[UnrollFactor];
             LoadElements<UnrollFactor>(psrc, val);
-    #pragma unroll
+#pragma unroll
             for (int k = 0; k < UnrollFactor; k++)
             {
                 val[k] = scale[k] * (val[k] - mean[k]) * invStdDev[k] + bias[k];
             }
             StoreElements<UnrollFactor>(val, pdst);
         }
-        //for (int k = 0; k < UnrollFactor; k++)
-        //    printf("(%d, %d, %d): (%d, %f)\n", threadIdx.x, threadIdx.y, k, laneId, mean[k]);
     }
 
     template <int UnrollFactor, typename T>
@@ -367,18 +374,273 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     cudaError_t BatchNormalizationForwardTraining(size_t vectorSize, size_t batchSize, const T* x, T* y,
         const T* bnScale, const T* bnBias, double epsilon, T* saveMean, T* saveInvStdDev, cudaStream_t stream)
     {
+        assert(0 < vectorSize && vectorSize <= std::numeric_limits<int>::max());
+        assert(0 < batchSize  && batchSize  <= std::numeric_limits<int>::max());
         assert(nullptr != x);
         assert(nullptr != y);
+        assert(nullptr != bnScale);
+        assert(nullptr != bnBias);
         assert(std::isfinite(epsilon) && epsilon > 0);
         assert(nullptr != saveMean);
         assert(nullptr != saveInvStdDev);
 
         cudaError_t err;
         err = ComputeBatchMeanAndInvStdDev(vectorSize, batchSize, x, epsilon, saveMean, saveInvStdDev, stream);
+        assert(cudaSuccess == err);
         if (cudaSuccess != err)
             return err;
 
         err = NormalizeBatchTraining(vectorSize, batchSize, x, y, bnScale, bnBias, saveMean, saveInvStdDev, stream);
+        assert(cudaSuccess == err);
+        return err;
+    }
+
+    //--------------------------------------------------------------------
+    // Backpropagation
+    //--------------------------------------------------------------------
+
+    template <int BlockDimX, int BlockDimY, int UnrollFactor, typename T>
+    __global__ void kComputeScaleAndBiasGradients(int vectorSize, int batchSize, const T* x, const T* dy, T* dScale, T* dBias,
+                                                  const T* saveMean, const T* saveInvStdDev)
+    {
+        static_assert(BlockDimX * UnrollFactor == CUB_PTX_WARP_THREADS, "BlockDimX * UnrollFactor must be equal to warp size (32).");
+        static_assert((BlockDimX * BlockDimY % CUB_PTX_WARP_THREADS) == 0, "Block size must be a multiple of warp size (32).");
+        static_assert(((BlockDimY - 1) & BlockDimY) == 0, "BlockDimY must be a power of 2.");
+        assert((vectorSize % UnrollFactor) == 0);
+        assert(blockDim.x == BlockDimX);
+        assert(blockDim.y == BlockDimY);
+        assert(blockDim.z == 1);
+        assert(gridDim.y == 1);
+        assert(gridDim.z == 1);
+
+        // REVIEW alexeyk: first part looks very similar to kComputeBatchMeanAndInvStdDev, any chance to refactor?
+        int irowSrcBase = (blockIdx.x * BlockDimX + threadIdx.x) * UnrollFactor;
+        if (irowSrcBase >= vectorSize)
+            return;
+        assert(irowSrcBase + UnrollFactor <= vectorSize);
+
+        T mean[UnrollFactor];
+        T invStdDev[UnrollFactor];
+        __shared__ T meanS[BlockDimX * UnrollFactor];
+        __shared__ T invStdDevS[BlockDimX * UnrollFactor];
+        // Read mean and inv std dev.
+        if (threadIdx.y == 0)
+        {
+            LoadElements<UnrollFactor>(saveMean + irowSrcBase, mean);
+            LoadElements<UnrollFactor>(saveInvStdDev + irowSrcBase, invStdDev);
+            StoreElements<UnrollFactor>(mean, &meanS[threadIdx.x * UnrollFactor]);
+            StoreElements<UnrollFactor>(invStdDev, &invStdDevS[threadIdx.x * UnrollFactor]);
+        }
+        __syncthreads();
+        if (threadIdx.y != 0)
+        {
+            LoadElements<UnrollFactor>(&meanS[threadIdx.x * UnrollFactor], mean);
+            LoadElements<UnrollFactor>(&invStdDevS[threadIdx.x * UnrollFactor], invStdDev);
+        }
+
+        T ds[UnrollFactor];
+        T db[UnrollFactor];
+#pragma unroll
+        for (int k = 0; k < UnrollFactor; k++)
+        {
+            ds[k] = 0;
+            db[k] = 0;
+        }
+
+        int icolSrc = threadIdx.y;
+        size_t startOffs = static_cast<size_t>(icolSrc) * vectorSize + irowSrcBase;
+        const T* px = x + startOffs;
+        const T* pdy = dy + startOffs;
+        size_t stride = static_cast<size_t>(vectorSize) * BlockDimY;
+        // Stride over all vectors in the batch.
+        for (; icolSrc < batchSize; icolSrc += BlockDimY, px += stride, pdy += stride)
+        {
+            T curX[UnrollFactor];
+            T curdY[UnrollFactor];
+            LoadElements<UnrollFactor>(px, curX);
+            LoadElements<UnrollFactor>(pdy, curdY);
+#pragma unroll
+            for (int k = 0; k < UnrollFactor; k++)
+            {
+                ds[k] += pdy[k] * (curX[k] - mean[k]) * invStdDev[k];
+                db[k] += pdy[k];
+            }
+        }
+
+        // Final reduction.
+        __shared__ T dsS[BlockDimY][BlockDimX * UnrollFactor];
+        __shared__ T dbS[BlockDimY][BlockDimX * UnrollFactor];
+        StoreElements<UnrollFactor>(ds, &dsS[threadIdx.y][threadIdx.x * UnrollFactor]);
+        StoreElements<UnrollFactor>(db, &dbS[threadIdx.y][threadIdx.x * UnrollFactor]);
+        __syncthreads();
+        // Very simple block reduction. As the block y dim is small (e.g. 16) then the loop
+        // is executed very few times (e.g. 4) so the performance is good.
+        // Can be potentially improved by using shuffle instructions (as in kComputeBatchMeanAndInvStdDev).
+#pragma unroll
+        for (int y = BlockDimY / 2; y > 0; y /= 2)
+        {
+            if (threadIdx.y < y)
+            {
+#pragma unroll
+                for (int k = 0; k < UnrollFactor; k++)
+                {
+                    dsS[threadIdx.y][threadIdx.x * UnrollFactor + k] += dsS[threadIdx.y + y][threadIdx.x * UnrollFactor + k];
+                    dbS[threadIdx.y][threadIdx.x * UnrollFactor + k] += dbS[threadIdx.y + y][threadIdx.x * UnrollFactor + k];
+                }
+                __syncthreads();
+            }
+        }
+
+        // Write results.
+        if (threadIdx.y == 0)
+        {
+#pragma unroll
+            for (int k = 0; k < UnrollFactor; k++)
+            {
+                dScale[irowSrcBase + k] = dsS[0][threadIdx.x * UnrollFactor + k];
+                dBias[irowSrcBase + k] = dbS[0][threadIdx.x * UnrollFactor + k];
+            }
+        }
+
+        //for (int k = 0; k < UnrollFactor; k++)
+        //    printf("(%d, %d, %d): (%d, %f)\n", threadIdx.x, threadIdx.y, k, laneId, mean[k]);
+    }
+
+    template <int UnrollFactor, typename T>
+    void ComputeScaleAndBiasGradientsImpl(size_t vectorSize, size_t batchSize, const T* x, const T* dy,
+        T* dScale, T* dBias, const T* saveMean, const T* saveInvStdDev, cudaStream_t stream)
+    {
+        assert((vectorSize % UnrollFactor) == 0);
+        const int BlockDimX = 32 / UnrollFactor;
+        const int BlockDimY = 4 * UnrollFactor;
+        auto bdim = dim3(BlockDimX, BlockDimY);
+        // Create a grid that has uses striding in y-dimension to cover whole mini-batch.
+        auto gdim = dim3(static_cast<unsigned int>(RoundUpToMultiple(vectorSize, BlockDimX * UnrollFactor)));
+        kComputeScaleAndBiasGradients<BlockDimX, BlockDimY, UnrollFactor><<<gdim, bdim, 0, stream>>>(
+            static_cast<int>(vectorSize), static_cast<int>(batchSize), x, dy, dScale, dBias, saveMean, saveInvStdDev);
+    }
+
+    template <typename T>
+    cudaError_t ComputeScaleAndBiasGradients(size_t vectorSize, size_t batchSize, const T* x, const T* dy,
+        T* dScale, T* dBias, const T* saveMean, const T* saveInvStdDev, cudaStream_t stream)
+    {
+        if ((vectorSize % 4) == 0)
+            ComputeScaleAndBiasGradientsImpl<4>(vectorSize, batchSize, x, dy, dScale, dBias, saveMean, saveInvStdDev, stream);
+        else if ((vectorSize % 2) == 0)
+            ComputeScaleAndBiasGradientsImpl<2>(vectorSize, batchSize, x, dy, dScale, dBias, saveMean, saveInvStdDev, stream);
+        else
+            ComputeScaleAndBiasGradientsImpl<1>(vectorSize, batchSize, x, dy, dScale, dBias, saveMean, saveInvStdDev, stream);
+        return cudaGetLastError();
+    }
+
+    template <int BlockDimX, int BlockDimY, int UnrollFactor, typename T>
+    __global__ void kBackpropagateBatchNormGradients(int vectorSize, int batchSize, const T* x, const T* dy, T* dx, 
+                                                     const T* bnScale, const T* dScale, const T* dBias, const T* saveMean, const T* saveInvStdDev)
+    {
+        static_assert(BlockDimX * UnrollFactor == CUB_PTX_WARP_THREADS, "BlockDimX * UnrollFactor must be equal to warp size (32).");
+        static_assert((BlockDimX * BlockDimY % CUB_PTX_WARP_THREADS) == 0, "Block size must be a multiple of warp size (32).");
+        assert((vectorSize % UnrollFactor) == 0);
+        assert(blockDim.x == BlockDimX);
+        assert(blockDim.y == BlockDimY);
+        assert(blockDim.z == 1);
+        assert(gridDim.z == 1);
+
+        int irowBase = (blockIdx.x * BlockDimX + threadIdx.x) * UnrollFactor;
+        if (irowBase >= vectorSize)
+            return;
+        assert(irowBase + UnrollFactor <= vectorSize);
+        T scale[UnrollFactor];
+        T ds[UnrollFactor];
+        T db[UnrollFactor];
+        T mean[UnrollFactor];
+        T invStdDev[UnrollFactor];
+        LoadElements<UnrollFactor>(bnScale + irowBase, scale);
+        LoadElements<UnrollFactor>(dScale + irowBase, ds);
+        LoadElements<UnrollFactor>(dBias + irowBase, db);
+        LoadElements<UnrollFactor>(saveMean + irowBase, mean);
+        LoadElements<UnrollFactor>(saveInvStdDev + irowBase, invStdDev);
+
+        int icol = blockIdx.y * BlockDimY + threadIdx.y;
+        size_t startOffs = static_cast<size_t>(icol) * vectorSize + irowBase;
+        const T* px = x + startOffs;
+        const T* pdy = dy + startOffs;
+        T* pdx = dx + startOffs;
+        size_t stride = static_cast<size_t>(gridDim.y * BlockDimY) * vectorSize;
+        for (; icol < batchSize; icol += gridDim.y * BlockDimY, px += stride, pdy += stride, pdx += stride)
+        {
+            T xCur[UnrollFactor];
+            T dyCur[UnrollFactor];
+            T dxCur[UnrollFactor];
+            LoadElements<UnrollFactor>(px, xCur);
+            LoadElements<UnrollFactor>(pdy, dyCur);
+            LoadElements<UnrollFactor>(pdx, dxCur);
+            // From the BN paper, dL/dxi is a sum of three terms: dL/dxi = t1 + t2 + t3
+            // After simplifcation, they become the following:
+            // 1. t1 = scale * dL/dyi * invStdDev
+            // 2. t2 = (-scale / n) * invStdDev * xHat * dL/dScale
+            // 3. t3 = (-scale / n) * invStdDev * dL/dBias (for this one note that Sum(xHat) == 0)
+            // Simplifying this a bit, we get the formula below.
+            T val[UnrollFactor];
+#pragma unroll
+            for (int k = 0; k < UnrollFactor; k++)
+            {
+                T xNorm = (xCur[k] - mean[k]) * invStdDev[k];
+                val[k] = dxCur[k] + (scale[k] * invStdDev[k]) * (dyCur[k] - (xNorm * ds[k] + db[k]) / batchSize);
+            }
+            StoreElements<UnrollFactor>(val, pdx);
+        }
+    }
+
+    template <int UnrollFactor, typename T>
+    void BackpropagateBatchNormGradientsImpl(size_t vectorSize, size_t batchSize, const T* x, const T* dy, T* dx,
+        const T* bnScale, const T* dScale, const T* dBias, const T* saveMean, const T* saveInvStdDev, cudaStream_t stream)
+    {
+        assert((vectorSize % UnrollFactor) == 0);
+        const int BlockDimX = 32 / UnrollFactor;
+        const int BlockDimY = 4 * UnrollFactor;
+        auto bdim = dim3(BlockDimX, BlockDimY);
+        auto gdim = dim3(static_cast<unsigned int>(RoundUpToMultiple(vectorSize, BlockDimX * UnrollFactor)),
+                         static_cast<unsigned int>(RoundUpToMultiple(batchSize, BlockDimY)));
+        kBackpropagateBatchNormGradients<BlockDimX, BlockDimY, UnrollFactor><<<gdim, bdim, 0, stream>>>(
+            static_cast<int>(vectorSize), static_cast<int>(batchSize), x, dy, dx, bnScale, dScale, dBias, saveMean, saveInvStdDev);
+    }
+
+    template <typename T>
+    cudaError_t BackpropagateBatchNormGradients(size_t vectorSize, size_t batchSize, const T* x, const T* dy, T* dx,
+        const T* bnScale, const T* dScale, const T* dBias, const T* saveMean, const T* saveInvStdDev, cudaStream_t stream)
+    {
+        if ((vectorSize % 4) == 0)
+            BackpropagateBatchNormGradientsImpl<4>(vectorSize, batchSize, x, dy, dx, bnScale, dScale, dBias, saveMean, saveInvStdDev, stream);
+        else if ((vectorSize % 2) == 0)
+            BackpropagateBatchNormGradientsImpl<2>(vectorSize, batchSize, x, dy, dx, bnScale, dScale, dBias, saveMean, saveInvStdDev, stream);
+        else
+            BackpropagateBatchNormGradientsImpl<1>(vectorSize, batchSize, x, dy, dx, bnScale, dScale, dBias, saveMean, saveInvStdDev, stream);
+        return cudaGetLastError();
+    }
+
+    template <typename T>
+    cudaError_t BatchNormalizationBackward(size_t vectorSize, size_t batchSize, const T* x, const T* dy, T* dx,
+        const T* bnScale, T* dScale, T* dBias, const T* saveMean, const T* saveInvStdDev, cudaStream_t stream)
+    {
+        assert(0 < vectorSize && vectorSize <= std::numeric_limits<int>::max());
+        assert(0 < batchSize  && batchSize  <= std::numeric_limits<int>::max());
+        assert(nullptr != x);
+        assert(nullptr != dy);
+        assert(nullptr != dx);
+        assert(nullptr != bnScale);
+        assert(nullptr != dScale);
+        assert(nullptr != dBias);
+        assert(nullptr != saveMean);
+        assert(nullptr != saveInvStdDev);
+
+        cudaError_t err;
+        err = ComputeScaleAndBiasGradients(vectorSize, batchSize, x, dy, dScale, dBias, saveMean, saveInvStdDev, stream);
+        assert(cudaSuccess == err);
+        if (cudaSuccess != err)
+            return err;
+
+        err = BackpropagateBatchNormGradients(vectorSize, batchSize, x, dy, dx, bnScale, dScale, dBias, saveMean, saveInvStdDev, stream);
+        assert(cudaSuccess == err);
         return err;
     }
 
