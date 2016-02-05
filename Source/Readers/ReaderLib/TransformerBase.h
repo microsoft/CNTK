@@ -47,7 +47,7 @@ public:
         const auto &outputStreams = GetOutputStreams();
         assert(m_inputStreams.size() == outputStreams.size());
 
-#pragma omp parallel for ordered schedule(dynamic)
+#pragma omp parallel for ordered schedule(static)
         for (int i = 0; i < samples.m_data.size(); ++i)
         {
             auto &sample = samples.m_data[i];

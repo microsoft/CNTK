@@ -317,7 +317,7 @@ void BlockRandomizer::StartEpoch(const EpochConfiguration& config)
     RandomizeForGlobalSamplePosition(timeframe);
 };
 
-bool BlockRandomizer::GetNextSequenceIds(size_t sampleCount, SequenceDescriptions& sequenceDescriptions)
+bool BlockRandomizer::GetNextSequenceDescriptions(size_t sampleCount, SequenceDescriptions& sequenceDescriptions)
 {
     assert(m_frameMode); // TODO !m_frameMode not implemented yet
     assert(sequenceDescriptions.size() == 0);
@@ -378,7 +378,7 @@ Sequences BlockRandomizer::GetNextSequences(size_t sampleCount)
     assert(m_frameMode); // TODO sequence mode not implemented yet
 
     SequenceDescriptions sequenceDescriptions;
-    result.m_endOfEpoch = GetNextSequenceIds(sampleCount, sequenceDescriptions);
+    result.m_endOfEpoch = GetNextSequenceDescriptions(sampleCount, sequenceDescriptions);
 
     if (sequenceDescriptions.size() == 0)
     {
@@ -388,9 +388,11 @@ Sequences BlockRandomizer::GetNextSequences(size_t sampleCount)
     // TODO implement require and release chunks from the data deserializer, but only for this worker
     //      (probably in GetNextSequenceIds())
 
+    // TODO: Currenlty simply releasing the chunk. Should preserve them for complete window and release only when they are not needed.
+    // For current implementation of image reader it does no matter because chunk = image.
+    // We have to reassamble the exposed result from sequences drawn from diffrent chunks.
     result.m_data.resize(sequenceDescriptions.size());
-
-#pragma omp parallel for ordered schedule(dynamic)
+#pragma omp parallel for ordered schedule(static)
     for (int i = 0; i < sequenceDescriptions.size(); ++i)
     {
         ChunkPtr chunk = m_deserializer->GetChunk(sequenceDescriptions[i]->m_chunkId);

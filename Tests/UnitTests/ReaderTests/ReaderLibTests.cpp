@@ -31,25 +31,9 @@ public:
         return m_sequenceDescriptions;
     }
 
-    void StartEpoch(const EpochConfiguration& config) override
+    virtual ChunkPtr GetChunk(size_t) override
     {
-        UNREFERENCED_PARAMETER(config);
-    }
-
-    std::vector<std::vector<SequenceDataPtr>> GetSequencesById(const std::vector<size_t>& ids) override
-    {
-        UNREFERENCED_PARAMETER(ids);
-        return std::vector<std::vector<SequenceDataPtr>>();
-    }
-
-    void RequireChunk(size_t chunkIndex) override
-    {
-        UNREFERENCED_PARAMETER(chunkIndex);
-    }
-
-    void ReleaseChunk(size_t chunkIndex) override
-    {
-        UNREFERENCED_PARAMETER(chunkIndex);
+        return nullptr;
     }
 };
 

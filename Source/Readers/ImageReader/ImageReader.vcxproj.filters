@@ -43,7 +43,6 @@
     <ClInclude Include="ImageDataDeserializer.h" />
     <ClInclude Include="ImageReader.h" />
     <ClInclude Include="ImageConfigHelper.h" />
-    <ClInclude Include="ImageSequence.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Common">

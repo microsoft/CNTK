@@ -11,7 +11,6 @@
 #ifndef UNREFERENCED_PARAMETER
 #define UNREFERENCED_PARAMETER(P) (P)
 #endif
-#include "ImageSequence.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -46,39 +45,11 @@ private:
     TElement m_value;
 };
 
-ImageDataDeserializer::ImageDataDeserializer(const ConfigParameters& config)
+// Used to keep track of the image. Accessed only using DenseSequenceData interface.
+struct DeserializedImage : DenseSequenceData
 {
-    ImageConfigHelper configHelper(config);
-    m_streams = configHelper.GetStreams();
-    assert(m_streams.size() == 2);
-    const auto& label = m_streams[configHelper.GetLabelStreamId()];
-    const auto& feature = m_streams[configHelper.GetFeatureStreamId()];
-
-    // Expect data in HWC.
-    ImageDimensions dimensions(*feature->m_sampleLayout, configHelper.GetDataFormat());
-    feature->m_sampleLayout = std::make_shared<TensorShape>(dimensions.AsTensorShape(HWC));
-
-    label->m_storageType = StorageType::sparse_csc;
-    feature->m_storageType = StorageType::dense;
-
-    m_featureElementType = feature->m_elementType;
-    size_t labelDimension = label->m_sampleLayout->GetDim(0);
-
-    if (label->m_elementType == ElementType::tfloat)
-    {
-        m_labelGenerator = std::make_shared<TypedLabelGenerator<float>>();
-    }
-    else if (label->m_elementType == ElementType::tdouble)
-    {
-        m_labelGenerator = std::make_shared<TypedLabelGenerator<double>>();
-    }
-    else
-    {
-        RuntimeError("Unsupported label element type '%d'.", label->m_elementType);
-    }
-
-    CreateSequenceDescriptions(configHelper.GetMapPath(), labelDimension);
-}
+    cv::Mat m_image;
+};
 
 class ImageDataDeserializer::ImageChunk : public Chunk, public std::enable_shared_from_this<ImageChunk>
 {
@@ -97,7 +68,7 @@ public:
         UNREFERENCED_PARAMETER(sequenceId);
         const auto& imageSequence = m_description;
 
-        auto image = std::make_shared<ImageSequenceData>();
+        auto image = std::make_shared<DeserializedImage>();
         image->m_image = std::move(cv::imread(imageSequence.m_path, cv::IMREAD_COLOR));
         auto& cvImage = image->m_image;
 
@@ -130,16 +101,40 @@ public:
         m_parent.m_labelGenerator->CreateLabelFor(imageSequence.m_classId, *label);
         return std::vector<SequenceDataPtr> { image, label };
     }
-
-    ~ImageChunk()
-    {
-    }
 };
 
-ChunkPtr ImageDataDeserializer::GetChunk(size_t chunkId)
+ImageDataDeserializer::ImageDataDeserializer(const ConfigParameters& config)
 {
-    auto sequenceDescription = m_imageSequences[chunkId];
-    return std::make_shared<ImageChunk>(sequenceDescription, *this);
+    ImageConfigHelper configHelper(config);
+    m_streams = configHelper.GetStreams();
+    assert(m_streams.size() == 2);
+    const auto& label = m_streams[configHelper.GetLabelStreamId()];
+    const auto& feature = m_streams[configHelper.GetFeatureStreamId()];
+
+    // Expect data in HWC.
+    ImageDimensions dimensions(*feature->m_sampleLayout, configHelper.GetDataFormat());
+    feature->m_sampleLayout = std::make_shared<TensorShape>(dimensions.AsTensorShape(HWC));
+
+    label->m_storageType = StorageType::sparse_csc;
+    feature->m_storageType = StorageType::dense;
+
+    m_featureElementType = feature->m_elementType;
+    size_t labelDimension = label->m_sampleLayout->GetDim(0);
+
+    if (label->m_elementType == ElementType::tfloat)
+    {
+        m_labelGenerator = std::make_shared<TypedLabelGenerator<float>>();
+    }
+    else if (label->m_elementType == ElementType::tdouble)
+    {
+        m_labelGenerator = std::make_shared<TypedLabelGenerator<double>>();
+    }
+    else
+    {
+        RuntimeError("Unsupported label element type '%d'.", label->m_elementType);
+    }
+
+    CreateSequenceDescriptions(configHelper.GetMapPath(), labelDimension);
 }
 
 void ImageDataDeserializer::CreateSequenceDescriptions(std::string mapPath, size_t labelDimension)
@@ -201,6 +196,12 @@ void ImageDataDeserializer::FillSequenceDescriptions(SequenceDescriptions& timel
         {
             return &desc;
         });
+}
+
+ChunkPtr ImageDataDeserializer::GetChunk(size_t chunkId)
+{
+    auto sequenceDescription = m_imageSequences[chunkId];
+    return std::make_shared<ImageChunk>(sequenceDescription, *this);
 }
 
 }}}
