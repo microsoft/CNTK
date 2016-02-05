@@ -296,8 +296,6 @@ void BlockRandomizer::Initialize(TransformerPtr next, const ConfigParameters& re
 
 void BlockRandomizer::StartEpoch(const EpochConfiguration& config)
 {
-    m_deserializer->StartEpoch(config);
-
     m_workerRank = config.m_workerRank;
     m_numberOfWorkers = config.m_numberOfWorkers;
 
@@ -319,10 +317,10 @@ void BlockRandomizer::StartEpoch(const EpochConfiguration& config)
     RandomizeForGlobalSamplePosition(timeframe);
 };
 
-bool BlockRandomizer::GetNextSequenceIds(size_t sampleCount, std::vector<size_t>& originalIds)
+bool BlockRandomizer::GetNextSequenceIds(size_t sampleCount, SequenceDescriptions& sequenceDescriptions)
 {
     assert(m_frameMode); // TODO !m_frameMode not implemented yet
-    assert(originalIds.size() == 0);
+    assert(sequenceDescriptions.size() == 0);
     assert(sampleCount < m_numSamples);
 
     if (m_samplePositionInEpoch < m_epochSize)
@@ -332,7 +330,7 @@ bool BlockRandomizer::GetNextSequenceIds(size_t sampleCount, std::vector<size_t>
             assert(m_numberOfWorkers == 1); // TODO needs implementation
 
             while ((m_samplePositionInEpoch < m_epochSize) &&
-                   (originalIds.size() < sampleCount))
+                (sequenceDescriptions.size() < sampleCount))
             {
                 RandomizeIfNewSweepIsEntered();
 
@@ -340,7 +338,7 @@ bool BlockRandomizer::GetNextSequenceIds(size_t sampleCount, std::vector<size_t>
                 if ((seqDesc.m_chunkId % m_numberOfWorkers) == m_workerRank)
                 {
                     // Got one, collect it
-                    originalIds.push_back(seqDesc.m_id);
+                    sequenceDescriptions.push_back(m_deserializer->GetSequenceDescriptions()[seqDesc.m_id]);
                 }
 
                 m_samplePositionInEpoch += seqDesc.m_numberOfSamples;
@@ -362,7 +360,7 @@ bool BlockRandomizer::GetNextSequenceIds(size_t sampleCount, std::vector<size_t>
                 if (strideBegin <= i && i < strideEnd)
                 {
                     const auto& seqDesc = m_randomTimeline[m_sequencePositionInSweep];
-                    originalIds.push_back(seqDesc.m_id);
+                    sequenceDescriptions.push_back(m_deserializer->GetSequenceDescriptions()[seqDesc.m_id]);
                 }
             }
             assert(m_samplePositionInEpoch == nextSamplePositionInEpoch);
@@ -376,14 +374,13 @@ Sequences BlockRandomizer::GetNextSequences(size_t sampleCount)
 {
     assert(m_samplePositionInEpoch != SIZE_MAX); // SetEpochConfiguration() must be called first
 
-    std::vector<size_t> originalIds;
     Sequences result;
-
     assert(m_frameMode); // TODO sequence mode not implemented yet
 
-    result.m_endOfEpoch = GetNextSequenceIds(sampleCount, originalIds);
+    SequenceDescriptions sequenceDescriptions;
+    result.m_endOfEpoch = GetNextSequenceIds(sampleCount, sequenceDescriptions);
 
-    if (originalIds.size() == 0)
+    if (sequenceDescriptions.size() == 0)
     {
         return result;
     }
@@ -391,7 +388,15 @@ Sequences BlockRandomizer::GetNextSequences(size_t sampleCount)
     // TODO implement require and release chunks from the data deserializer, but only for this worker
     //      (probably in GetNextSequenceIds())
 
-    result.m_data = m_deserializer->GetSequencesById(originalIds);
+    result.m_data.resize(sequenceDescriptions.size());
+
+#pragma omp parallel for ordered schedule(dynamic)
+    for (int i = 0; i < sequenceDescriptions.size(); ++i)
+    {
+        ChunkPtr chunk = m_deserializer->GetChunk(sequenceDescriptions[i]->m_chunkId);
+        result.m_data[i] = chunk->GetSequence(sequenceDescriptions[i]->m_id);
+    }
+
     return result;
 };
 

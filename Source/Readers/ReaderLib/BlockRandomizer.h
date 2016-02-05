@@ -99,6 +99,6 @@ private:
 
     void RandomizeIfNewSweepIsEntered();
 
-    bool GetNextSequenceIds(size_t sampleCount, std::vector<size_t>& ids);
+    bool GetNextSequenceIds(size_t sampleCount, SequenceDescriptions& originalIds);
 };
 } } }

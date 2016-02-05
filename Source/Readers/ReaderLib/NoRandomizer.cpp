@@ -35,7 +35,6 @@ void NoRandomizer::Initialize(TransformerPtr, const ConfigParameters&)
 
 void NoRandomizer::StartEpoch(const EpochConfiguration& config)
 {
-    m_deserializer->StartEpoch(config);
     m_config = config;
 
     if (m_config.m_totalEpochSizeInSamples == requestDataSize)
@@ -62,24 +61,54 @@ Sequences NoRandomizer::GetNextSequences(size_t sampleCount)
     size_t end = maxSampleCount * (m_config.m_workerRank + 1) / m_config.m_numberOfWorkers;
     size_t subsetSize = end - start;
 
-    std::vector<size_t> originalIds;
-    originalIds.reserve(subsetSize);
+    std::vector<size_t> chunkIds;
+    SequenceDescriptions sequences;
+    sequences.reserve(subsetSize);
+    size_t previousChunk = std::numeric_limits<size_t>::max();
     for (size_t i = start; i < end; ++i)
     {
         const auto& sequence = m_timeline[(m_sequencePosition + i) % m_timeline.size()];
         assert(sequence->m_numberOfSamples == 1);
-        originalIds.push_back(sequence->m_id);
+        sequences.push_back(sequence);
+
+        if (previousChunk != sequence->m_chunkId)
+        {
+            chunkIds.push_back(sequence->m_chunkId);
+            previousChunk = sequence->m_chunkId;
+        }
     }
 
     m_samplePositionInEpoch += maxSampleCount;
     m_sequencePosition = (m_sequencePosition + maxSampleCount) % m_timeline.size();
 
-    if (originalIds.size() == 0)
+    if (sequences.size() == 0)
     {
         return result;
     }
 
-    result.m_data = m_deserializer->GetSequencesById(originalIds);
+    std::map<size_t, ChunkPtr> chunks;
+    for (size_t id : chunkIds)
+    {
+        auto chunk = m_chunks.find(id);
+        if (chunk == m_chunks.end())
+        {
+            chunks[id] = m_deserializer->GetChunk(id);
+        }
+        else
+        {
+            chunks[id] = chunk->second;
+        }
+    }
+
+    m_chunks.swap(chunks);
+
+    result.m_data.resize(sequences.size());
+
+#pragma omp parallel for ordered schedule(dynamic)
+    for (int i = 0; i < sequences.size(); ++i)
+    {
+        result.m_data[i] = m_chunks[sequences[i]->m_chunkId]->GetSequence(sequences[i]->m_id);
+    }
     return result;
 }
 

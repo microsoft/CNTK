@@ -12,8 +12,6 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
-// Currently supports only dense data format.
-template <class TBufferElement>
 class TransformerBase : public Transformer
 {
 public:
@@ -48,7 +46,6 @@ public:
         const auto &appliedStreamIds = GetAppliedStreamIds();
         const auto &outputStreams = GetOutputStreams();
         assert(m_inputStreams.size() == outputStreams.size());
-        m_buffer.resize(samples.m_data.size());
 
 #pragma omp parallel for ordered schedule(dynamic)
         for (int i = 0; i < samples.m_data.size(); ++i)
@@ -56,15 +53,10 @@ public:
             auto &sample = samples.m_data[i];
             assert(sample.size() == m_inputStreams.size());
 
-            m_buffer[i].resize(appliedStreamIds.size());
             for (int j = 0; j < appliedStreamIds.size(); ++j)
             {
                 size_t id = appliedStreamIds[j];
-                assert(m_inputStreams[id]->m_storageType == StorageType::dense);
-                const DenseSequenceData &sequence =
-                    reinterpret_cast<DenseSequenceData &>(*sample[id]);
-                sample[id] = Apply(sequence, *m_inputStreams[id], m_buffer[i][j],
-                                   *outputStreams[id]);
+                sample[id] = Apply(sample[id], *m_inputStreams[id], *outputStreams[id]);
             }
         }
 
@@ -85,14 +77,12 @@ protected:
 
 private:
     // Applies transformation to the sequence.
-    virtual SequenceDataPtr Apply(const DenseSequenceData &inputSequence,
+    virtual SequenceDataPtr Apply(SequenceDataPtr inputSequence,
                                   const StreamDescription &inputStream,
-                                  TBufferElement &buffer,
                                   const StreamDescription &outputStream) = 0;
 
     TransformerPtr m_next;
     std::vector<StreamId> m_featureStreamIds;
-    std::vector<std::vector<TBufferElement>> m_buffer;
     std::vector<StreamDescriptionPtr> m_inputStreams;
 };
 
