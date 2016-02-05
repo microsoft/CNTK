@@ -6,7 +6,7 @@
 #pragma once
 
 #include <vector>
-
+#include <set>
 #include "Transformer.h"
 #include "DataDeserializer.h"
 
@@ -41,6 +41,8 @@ private:
     EpochConfiguration m_config;
     size_t m_samplePositionInEpoch;
     size_t m_sequencePosition;
+
+    std::map<size_t, ChunkPtr> m_chunks;
 };
 
 }}}

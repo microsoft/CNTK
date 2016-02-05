@@ -17,9 +17,6 @@ public:
     DataDeserializerBase() : m_sequencesInitialized(false)
     {}
 
-    // Sets configuration for the current epoch.
-    void StartEpoch(const EpochConfiguration& /*config*/) override {};
-
     // Provides description of all sequences the deserializer can produce.
     const SequenceDescriptions& GetSequenceDescriptions() const override
     {
@@ -30,14 +27,6 @@ public:
         }
         return m_sequences;
     }
-
-    // To be called by the randomizer for prefetching the next chunk.
-    // By default IO read-ahead is not implemented.
-    void RequireChunk(size_t /*chunkIndex*/) override{};
-
-    // To be called by the randomizer for releasing a prefetched chunk.
-    // By default IO read-ahead is not implemented.
-    void ReleaseChunk(size_t /*chunkIndex*/) override{};
 
 protected:
     // Fills the timeline with sequence descriptions.

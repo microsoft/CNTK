@@ -14,6 +14,7 @@
 #include "ImageConfigHelper.h"
 #include "StringUtil.h"
 #include "ElementTypeUtils.h"
+#include "ImageSequence.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK
 {
@@ -34,10 +35,11 @@ void ImageTransformerBase::Initialize(TransformerPtr next,
 }
 
 SequenceDataPtr
-ImageTransformerBase::Apply(const DenseSequenceData &inputSequence,
-                            const StreamDescription &inputStream, cv::Mat &buffer,
+ImageTransformerBase::Apply(SequenceDataPtr sequence,
+                            const StreamDescription &inputStream,
                             const StreamDescription & /*outputStream*/)
 {
+    auto inputSequence = reinterpret_cast<const DenseSequenceData&>(*sequence.get());
     ImageDimensions dimensions(*inputSequence.m_sampleLayout, HWC);
     int columns = static_cast<int>(dimensions.m_width);
     int rows = static_cast<int>(dimensions.m_height);
@@ -57,20 +59,25 @@ ImageTransformerBase::Apply(const DenseSequenceData &inputSequence,
         RuntimeError("Unsupported type");
     }
 
+    auto result = std::make_shared<ImageSequenceData>();
     int type = CV_MAKETYPE(typeId, channels);
-    buffer = cv::Mat(rows, columns, type, inputSequence.m_data);
+    cv::Mat buffer = cv::Mat(rows, columns, type, inputSequence.m_data);
     this->Apply(buffer);
     if (!buffer.isContinuous())
     {
         buffer = buffer.clone();
     }
+    else
+    {
+        result->m_original = sequence;
+    }
     assert(buffer.isContinuous());
+    result->m_image = buffer;
+    result->m_data = buffer.ptr();
+    result->m_numberOfSamples = inputSequence.m_numberOfSamples;
 
-    auto result = std::make_shared<DenseSequenceData>();
     ImageDimensions outputDimensions(buffer.cols, buffer.rows, buffer.channels());
     result->m_sampleLayout = std::make_shared<TensorShape>(outputDimensions.AsTensorShape(HWC));
-    result->m_numberOfSamples = inputSequence.m_numberOfSamples;
-    result->m_data = buffer.ptr();
     return result;
 }
 
@@ -367,7 +374,7 @@ void MeanTransformer::Apply(cv::Mat &mat)
 void TransposeTransformer::Initialize(TransformerPtr next,
                                       const ConfigParameters &readerConfig)
 {
-    Base::Initialize(next, readerConfig);
+    TransformerBase::Initialize(next, readerConfig);
 
     // Currently we only support a single stream.
     ImageConfigHelper config(readerConfig);
@@ -392,39 +399,46 @@ void TransposeTransformer::Initialize(TransformerPtr next,
 }
 
 SequenceDataPtr
-TransposeTransformer::Apply(const DenseSequenceData &inputSequence,
+TransposeTransformer::Apply(SequenceDataPtr inputSequence,
                             const StreamDescription &inputStream,
-                            vector<char> &buffer,
                             const StreamDescription &outputStream)
 {
     if (inputStream.m_elementType == ElementType::tdouble)
     {
-        return TypedApply<double>(inputSequence, inputStream, buffer, outputStream);
+        return TypedApply<double>(inputSequence, inputStream, outputStream);
     }
 
     if (inputStream.m_elementType == ElementType::tfloat)
     {
-        return TypedApply<float>(inputSequence, inputStream, buffer, outputStream);
+        return TypedApply<float>(inputSequence, inputStream, outputStream);
     }
 
     RuntimeError("Unsupported type");
 }
 
+struct OwnedDenseSequence : DenseSequenceData
+{
+    std::vector<char> m_buffer;
+};
+
 template <class TElement>
 SequenceDataPtr
-TransposeTransformer::TypedApply(const DenseSequenceData &inputSequence,
+TransposeTransformer::TypedApply(SequenceDataPtr sequence,
                                  const StreamDescription &inputStream,
-                                 vector<char> &buffer,
                                  const StreamDescription &outputStream)
 {
+    assert(inputStream.m_storageType == StorageType::dense);
+    auto inputSequence = reinterpret_cast<DenseSequenceData&>(*sequence.get());
     assert(inputSequence.m_numberOfSamples == 1);
     assert(inputStream.m_sampleLayout->GetNumElements() ==
         outputStream.m_sampleLayout->GetNumElements());
 
     size_t count = inputStream.m_sampleLayout->GetNumElements() * GetSizeByType(inputStream.m_elementType);
-    buffer.resize(count);
 
-    TElement* typedBuffer = reinterpret_cast<TElement*>(&buffer[0]);
+    auto result = std::make_shared<OwnedDenseSequence>();
+    result->m_buffer.resize(count);
+
+    TElement* typedBuffer = reinterpret_cast<TElement*>(&result->m_buffer[0]);
     ImageDimensions dimensions(*inputStream.m_sampleLayout, ImageLayoutKind::HWC);
 
     size_t rowCount = dimensions.m_height * dimensions.m_width;
@@ -441,9 +455,8 @@ TransposeTransformer::TypedApply(const DenseSequenceData &inputSequence,
         }
     }
 
-    auto result = std::make_shared<DenseSequenceData>();
     result->m_sampleLayout = outputStream.m_sampleLayout;
-    result->m_data = &buffer[0];
+    result->m_data = &result->m_buffer[0];
     result->m_numberOfSamples = inputSequence.m_numberOfSamples;
     return result;
 }

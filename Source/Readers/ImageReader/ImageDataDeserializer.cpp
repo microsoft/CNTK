@@ -11,6 +11,7 @@
 #ifndef UNREFERENCED_PARAMETER
 #define UNREFERENCED_PARAMETER(P) (P)
 #endif
+#include "ImageSequence.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -79,6 +80,68 @@ ImageDataDeserializer::ImageDataDeserializer(const ConfigParameters& config)
     CreateSequenceDescriptions(configHelper.GetMapPath(), labelDimension);
 }
 
+class ImageDataDeserializer::ImageChunk : public Chunk, public std::enable_shared_from_this<ImageChunk>
+{
+    ImageSequenceDescription m_description;
+    ImageDataDeserializer& m_parent;
+
+public:
+    ImageChunk(ImageSequenceDescription& description, ImageDataDeserializer& parent)
+        : m_description(description), m_parent(parent)
+    {
+    }
+
+    virtual std::vector<SequenceDataPtr> GetSequence(const size_t& sequenceId) override
+    {
+        assert(sequenceId == m_description.m_id);
+        UNREFERENCED_PARAMETER(sequenceId);
+        const auto& imageSequence = m_description;
+
+        auto image = std::make_shared<ImageSequenceData>();
+        image->m_image = std::move(cv::imread(imageSequence.m_path, cv::IMREAD_COLOR));
+        auto& cvImage = image->m_image;
+
+        if (!cvImage.data)
+        {
+            RuntimeError("Cannot open file '%s'", imageSequence.m_path.c_str());
+        }
+
+        // Convert element type.
+        int dataType = m_parent.m_featureElementType == ElementType::tfloat ? CV_32F : CV_64F;
+        if (cvImage.type() != CV_MAKETYPE(dataType, cvImage.channels()))
+        {
+            cvImage.convertTo(cvImage, dataType);
+        }
+
+        if (!cvImage.isContinuous())
+        {
+            cvImage = cvImage.clone();
+        }
+        assert(cvImage.isContinuous());
+
+        image->m_data = image->m_image.data;
+        ImageDimensions dimensions(cvImage.cols, cvImage.rows, cvImage.channels());
+        image->m_sampleLayout = std::make_shared<TensorShape>(dimensions.AsTensorShape(HWC));
+        image->m_numberOfSamples = 1;
+        image->m_chunk = shared_from_this();
+
+        SparseSequenceDataPtr label = std::make_shared<SparseSequenceData>();
+        label->m_chunk = shared_from_this();
+        m_parent.m_labelGenerator->CreateLabelFor(imageSequence.m_classId, *label);
+        return std::vector<SequenceDataPtr> { image, label };
+    }
+
+    ~ImageChunk()
+    {
+    }
+};
+
+ChunkPtr ImageDataDeserializer::GetChunk(size_t chunkId)
+{
+    auto sequenceDescription = m_imageSequences[chunkId];
+    return std::make_shared<ImageChunk>(sequenceDescription, *this);
+}
+
 void ImageDataDeserializer::CreateSequenceDescriptions(std::string mapPath, size_t labelDimension)
 {
     UNREFERENCED_PARAMETER(labelDimension);
@@ -125,72 +188,6 @@ void ImageDataDeserializer::CreateSequenceDescriptions(std::string mapPath, size
 std::vector<StreamDescriptionPtr> ImageDataDeserializer::GetStreamDescriptions() const
 {
     return m_streams;
-}
-
-std::vector<std::vector<SequenceDataPtr>> ImageDataDeserializer::GetSequencesById(const std::vector<size_t>& ids)
-{
-    if (ids.empty())
-    {
-        RuntimeError("Number of requested sequences cannot be zero.");
-    }
-
-    m_currentImages.resize(ids.size());
-    m_labels.resize(ids.size());
-
-    std::vector<std::vector<SequenceDataPtr>> result;
-    result.resize(ids.size());
-
-#pragma omp parallel for ordered schedule(dynamic)
-    for (int i = 0; i < ids.size(); ++i)
-    {
-        if (ids[i] >= m_imageSequences.size())
-        {
-            RuntimeError("Invalid sequence id is provided '%d', expected range [0..%d].",
-                         static_cast<int>(ids[i]),
-                         static_cast<int>(m_imageSequences.size()) - 1);
-        }
-
-        const auto& imageSequence = m_imageSequences[ids[i]];
-
-        // Construct image
-        m_currentImages[i] = std::move(cv::imread(imageSequence.m_path, cv::IMREAD_COLOR));
-        cv::Mat& cvImage = m_currentImages[i];
-
-        if (!cvImage.data)
-        {
-            RuntimeError("Cannot open file '%s'", imageSequence.m_path.c_str());
-        }
-
-        // Convert element type.
-        // TODO We should all native CV element types to be able to match the behavior of the old reader.
-        int dataType = m_featureElementType == ElementType::tfloat ? CV_32F : CV_64F;
-        if (cvImage.type() != CV_MAKETYPE(dataType, cvImage.channels()))
-        {
-            cvImage.convertTo(cvImage, dataType);
-        }
-
-        if (!cvImage.isContinuous())
-        {
-            cvImage = cvImage.clone();
-        }
-        assert(cvImage.isContinuous());
-
-        ImageDimensions dimensions(cvImage.cols, cvImage.rows, cvImage.channels());
-        auto image = std::make_shared<DenseSequenceData>();
-        image->m_data = cvImage.data;
-        image->m_sampleLayout = std::make_shared<TensorShape>(dimensions.AsTensorShape(HWC));
-        image->m_numberOfSamples = 1;
-
-        if (m_labels[i] == nullptr)
-        {
-            m_labels[i] = std::make_shared<SparseSequenceData>();
-        }
-
-        m_labelGenerator->CreateLabelFor(imageSequence.m_classId, *m_labels[i]);
-        result[i] = std::move(std::vector<SequenceDataPtr>{image, m_labels[i]});
-    }
-
-    return result;
 }
 
 void ImageDataDeserializer::FillSequenceDescriptions(SequenceDescriptions& timeline) const

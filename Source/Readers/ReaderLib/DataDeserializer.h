@@ -10,6 +10,25 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
+struct SequenceDataBase;
+typedef std::shared_ptr<SequenceDataBase> SequenceDataPtr;
+
+class Chunk
+{
+public:
+    // Gets sequences by id.
+    virtual std::vector<SequenceDataPtr> GetSequence(const size_t& sequenceId) = 0;
+    virtual ~Chunk() {};
+
+protected:
+    Chunk() {}
+
+private:
+    Chunk(const Chunk&) = delete;
+    Chunk& operator=(const Chunk&) = delete;
+};
+typedef std::shared_ptr<Chunk> ChunkPtr;
+
 // Defines main properties of a sequence.
 // Sequence descriptions are used by the randomizer to establish a global timeline for complete input.
 // A sequence is defined as an ordered set of samples (size == 1 is used for sample training).
@@ -31,7 +50,12 @@ typedef std::vector<const SequenceDescription*> SequenceDescriptions;
 struct SequenceDataBase
 {
     SequenceDataBase() : m_data(nullptr) { }
+    virtual ~SequenceDataBase()
+    {
+        
+    }
 
+    ChunkPtr m_chunk;
     // A non-owned pointer. The actual size is provided for particular sequences,
     // i.e. see DenseSequenceData, or SparseSequenceData.
     void* m_data;
@@ -79,25 +103,8 @@ public:
     // Retrieves description of all sequences this data deserializer can produce.
     virtual const SequenceDescriptions& GetSequenceDescriptions() const = 0;
 
-    // Sets epoch configuration.
-    virtual void StartEpoch(const EpochConfiguration& config) = 0;
-
-    // Gets sequences by id.
-    // The return value can be used until the next call to GetSequencesById.
-    // All non-owned pointers returned are valid till the next call to this method.
-    virtual std::vector<std::vector<SequenceDataPtr>> GetSequencesById(const std::vector<size_t>& ids) = 0;
-
-    // Requires the chunk. Each sequence is assigned to the IO chunk by the data deserializer.
-    // This information is communicated thru GetSequenceDescriptions method.
-    // The randomizer guarantees that it accesses sequences only from a limited number of chunks.
-    // When randomizer requires a sequence from a particular chunk it notifies about this the data deserializer,
-    // so that the data deserializer can load/cache sequences more efficiently (loading complete chunks in memory).
-    virtual void RequireChunk(size_t chunkIndex) = 0;
-
-    // Releases the chunk.
-    // When randomizer read all sequences from a particular chunk it notifies the data deserializer
-    // that the chunk can be freed.
-    virtual void ReleaseChunk(size_t chunkIndex) = 0;
+    // Gets a chunk.
+    virtual ChunkPtr GetChunk(size_t chunkId) = 0;
 
     virtual ~DataDeserializer() {};
 };
