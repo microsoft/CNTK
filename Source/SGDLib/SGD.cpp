@@ -141,17 +141,18 @@ template <class ElemType>
 
 template <class ElemType>
     void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
+                                          bool networkLoadedFromCheckpoint, 
                                           ComputationNetworkPtr refNet,
                                           ComputationNodeBasePtr refNode,
                                           IDataReader<ElemType>* trainSetDataReader,
                                           IDataReader<ElemType>* validationSetDataReader)
     {
-    auto& featureNodes = net->FeatureNodes();
-    auto& labelNodes = net->LabelNodes();
-    auto& criterionNodes = GetTrainCriterionNodes(net);
+        auto& featureNodes = net->FeatureNodes();
+        auto& labelNodes = net->LabelNodes();
+        auto& criterionNodes = GetTrainCriterionNodes(net);
 
         fprintf(stderr, "\nTraining criterion node(s):\n");
-    for (const auto& node : criterionNodes)
+        for (const auto& node : criterionNodes)
             fprintf(stderr, "\t%ls = %ls\n", node->NodeName().c_str(), node->OperationName().c_str());
 
         // determine evaluationNodes from GetEvalCriterionNodes(), ensuring each criterion is only logged once
@@ -234,7 +235,7 @@ template <class ElemType>
 
         // initializing weights and gradient holder
         // only one criterion so far TODO: support multiple ones?
-    auto& learnableNodes = net->LearnableParameterNodes(criterionNodes[0]);
+        auto& learnableNodes = net->LearnableParameterNodes(criterionNodes[0]);
         std::list<Matrix<ElemType>> smoothedGradients;
 
         for (auto nodeIter = learnableNodes.begin(); nodeIter != learnableNodes.end(); nodeIter++)
@@ -268,23 +269,14 @@ template <class ElemType>
              prevLearnRates[i] = -1.0;
         }
 
-    if (m_parallelizationMethod == ParallelizationMethod::DataParallelSGD)
-    {
-        InitDistGradAgg(evaluationNodes.size(), m_traceLevel);
-    }
-    // precompute mean and invStdDev nodes and save initial model
-    // When no precompute, only save if we did not load the model from a 
-    // checkpoint but instead built it from a network description
-    if (PreCompute(net, trainSetDataReader, featureNodes, labelNodes, inputMatrices) || !networkLoadedFromCheckpoint)
-    {
-        // Synchronize all ranks before writing the model to ensure that
-        // everyone is done loading the model
-        if (g_mpi != nullptr)
+        if (m_parallelizationMethod == ParallelizationMethod::DataParallelSGD)
         {
             InitDistGradAgg(evaluationNodes.size(), m_traceLevel);
         }
-        //precompute mean and invStdDev nodes and save initial model
-        if (PreCompute(net, trainSetDataReader, featureNodes, labelNodes, inputMatrices) || startEpoch == 0)
+        // precompute mean and invStdDev nodes and save initial model
+        // When no precompute, only save if we did not load the model from a 
+        // checkpoint but instead built it from a network description
+        if (PreCompute(net, trainSetDataReader, featureNodes, labelNodes, inputMatrices) || !networkLoadedFromCheckpoint)
         {
             // Synchronize all ranks before writing the model to ensure that 
             // everyone is done loading the model
@@ -293,10 +285,10 @@ template <class ElemType>
                 g_mpi->WaitAll();
             }
 
-        net->Save(GetModelNameForEpoch(int(startEpoch) - 1));
-    }
+            net->Save(GetModelNameForEpoch(int(startEpoch) - 1));
+        }
 
-        bool learnRateInitialized = false;
+       bool learnRateInitialized = false;
         if (startEpoch > 0)
         {
             learnRateInitialized = LoadCheckPointInfo(startEpoch - 1,
@@ -337,7 +329,7 @@ template <class ElemType>
         }
 
         // --- MAIN EPOCH LOOP
-    for (int i = startEpoch; i < (int) m_maxEpochs; i++) // TODO: why is this an int, and not a size_t?
+        for (int i = startEpoch; i < (int)m_maxEpochs; i++) // TODO: why is this an int, and not a size_t?
         {
             // Synchronize all ranks before proceeding to ensure that 
             // rank 0 has finished writing the previous model file
@@ -356,7 +348,7 @@ template <class ElemType>
             if (m_autoLearnRateSearchType == LearningRateSearchAlgorithm::None || i < m_learningRatesParam.size())
             {
                 // BUGBUG: GetNumParallelSequences() returns 1 under certain situations; it seems when restarting from checkpoint
-            learnRatePerSample = GetLearningRatePerSample(i /*BUGBUG workaround:*/, trainSetDataReader->GetNumParallelSequences());
+                learnRatePerSample = GetLearningRatePerSample(i /*BUGBUG workaround:*/, trainSetDataReader->GetNumParallelSequences());
             }
             else if (m_autoLearnRateSearchType == LearningRateSearchAlgorithm::SearchBeforeEpoch)
             {
@@ -368,10 +360,10 @@ template <class ElemType>
 
                 // return a reasonable learning rate based on the initial minibatchSize
                 double newLearningRatePerSample = SearchForBestLearnRate(net, refNet, refNode, i, learnRatePerSample,
-                                                                           trainSetDataReader, featureNodes, labelNodes,
-                                                                           criterionNodes, evaluationNodes, inputMatrices,
-                                                                           learnableNodes, smoothedGradients,
-                                                                           learnRateInitialized, largestPrevLearnRatePerSample);
+                    trainSetDataReader, featureNodes, labelNodes,
+                    criterionNodes, evaluationNodes, inputMatrices,
+                    learnableNodes, smoothedGradients,
+                    learnRateInitialized, largestPrevLearnRatePerSample);
                 learningRateAdjustmentFactor = newLearningRatePerSample / learnRatePerSample;
                 learnRatePerSample = newLearningRatePerSample;
 
@@ -384,7 +376,7 @@ template <class ElemType>
             if (learnRatePerSample < m_minLearnRate)
             {
                 fprintf(stderr, "Learn Rate Per Sample for Epoch[%d] = %.8g is less than minLearnRate %.8g. Training complete.\n",
-                        i + 1, learnRatePerSample, m_minLearnRate);
+                    i + 1, learnRatePerSample, m_minLearnRate);
                 if (m_autoLearnRateSearchType != LearningRateSearchAlgorithm::None)
                 {
                     net->Save(m_modelPath);
@@ -410,12 +402,12 @@ template <class ElemType>
 
                 // Use tuning to try and find a better minibatch size
                 chosenMinibatchSize = AdaptiveMinibatchSizing(net, refNet, refNode, i,
-                                                              numFramesToUseInSearch,
-                                                              trainSetDataReader, learnRatePerSample,
-                                                              m_mbSize[i], featureNodes, labelNodes,
-                                                              criterionNodes, evaluationNodes,
-                                                              inputMatrices, learnableNodes,
-                                                              smoothedGradients, learningRateAdjustmentFactor);
+                    numFramesToUseInSearch,
+                    trainSetDataReader, learnRatePerSample,
+                    m_mbSize[i], featureNodes, labelNodes,
+                    criterionNodes, evaluationNodes,
+                    inputMatrices, learnableNodes,
+                    smoothedGradients, learningRateAdjustmentFactor);
                 m_prevChosenMinibatchSize = chosenMinibatchSize;
             }
             else
@@ -424,31 +416,31 @@ template <class ElemType>
                 chosenMinibatchSize = m_mbSize[i];
             }
 
-        actualMinibatchSize = FixUpEffectiveMBSize(chosenMinibatchSize /*BUGBUG workaround:*/, trainSetDataReader->GetNumParallelSequences());
+            actualMinibatchSize = FixUpEffectiveMBSize(chosenMinibatchSize /*BUGBUG workaround:*/, trainSetDataReader->GetNumParallelSequences());
 
-        double momentumPerSample = GetMomentumPerSample(i /*BUGBUG workaround:*/, trainSetDataReader->GetNumParallelSequences());
+            double momentumPerSample = GetMomentumPerSample(i /*BUGBUG workaround:*/, trainSetDataReader->GetNumParallelSequences());
             // time constant = number of samples after which a contribution has been reduced to e^-1
             double momentumAsTimeConstant = momentumPerSample == 0.0 ? 0.0
-                                          : momentumPerSample >= 1.0 ? 0.0
-                                          : -1.0 / log(momentumPerSample);
+                : momentumPerSample >= 1.0 ? 0.0
+                : -1.0 / log(momentumPerSample);
             fprintf(stderr, "Starting Epoch %d: learning rate per sample = %f  effective momentum = %f  momentum as time constant = %.1f samples\n",
-                    i + 1, learnRatePerSample, MomentumPerMB(momentumPerSample, actualMinibatchSize), momentumAsTimeConstant);
+                i + 1, learnRatePerSample, MomentumPerMB(momentumPerSample, actualMinibatchSize), momentumAsTimeConstant);
 
             TrainOneEpoch(net,
-                          refNet, 
-                          refNode, 
-                          i, 
-                          m_epochSize,
-                          trainSetDataReader, 
-                          learnRatePerSample, 
-                          chosenMinibatchSize, 
-                          featureNodes,
-                          labelNodes, 
-                          criterionNodes, 
-                          evaluationNodes,
-                          inputMatrices, 
-                          learnableNodes, smoothedGradients,
-                          epochCriterion, epochEvalErrors, totalSamplesSeen);
+                refNet,
+                refNode,
+                i,
+                m_epochSize,
+                trainSetDataReader,
+                learnRatePerSample,
+                chosenMinibatchSize,
+                featureNodes,
+                labelNodes,
+                criterionNodes,
+                evaluationNodes,
+                inputMatrices,
+                learnableNodes, smoothedGradients,
+                epochCriterion, epochEvalErrors, totalSamplesSeen);
 
             timer.Stop();
             double epochTime = timer.ElapsedSeconds();
@@ -463,20 +455,20 @@ template <class ElemType>
             }
 
             fprintf(stderr,
-                    "Finished Epoch[%2d of %d]: [Training Set] TrainLossPerSample = %.8g; ",
-                    i + 1, (int) m_maxEpochs, epochCriterion);
+                "Finished Epoch[%2d of %d]: [Training Set] TrainLossPerSample = %.8g; ",
+                i + 1, (int)m_maxEpochs, epochCriterion);
             m_lastFinishedEpochTrainLoss = epochCriterion;
-        if (epochEvalErrors.size() == 0) // no eval criterion, only train criterion itself
+            if (epochEvalErrors.size() == 0) // no eval criterion, only train criterion itself
             {
                 fprintf(stderr,
-                        "AvgLearningRatePerSample = %.8g; EpochTime=%.6g\n",
-                        learnRatePerSample, epochTime);
+                    "AvgLearningRatePerSample = %.8g; EpochTime=%.6g\n",
+                    learnRatePerSample, epochTime);
             }
             else if (epochEvalErrors.size() == 1)
             {
                 fprintf(stderr,
-                        "EvalErrPerSample = %.8g; AvgLearningRatePerSample = %.8g; EpochTime=%.6g\n",
-                        epochEvalErrors[0], learnRatePerSample, epochTime);
+                    "EvalErrPerSample = %.8g; AvgLearningRatePerSample = %.8g; EpochTime=%.6g\n",
+                    epochEvalErrors[0], learnRatePerSample, epochTime);
             }
             else
             {
@@ -487,16 +479,16 @@ template <class ElemType>
                 }
 
                 fprintf(stderr, "AvgLearningRatePerSample = %.8g; EpochTime=%.6g\n",
-                        learnRatePerSample, epochTime);
+                    learnRatePerSample, epochTime);
 
                 // TODO: why these extra log messages here and not for 1 eval criterion?
                 fprintf(stderr, "Finished Epoch[%2d of %d]: Criterion Node [%ls] Per Sample = %.8g\n",
-                                i + 1, (int) m_maxEpochs, criterionNodes[0]->NodeName().c_str(), epochCriterion);
+                    i + 1, (int)m_maxEpochs, criterionNodes[0]->NodeName().c_str(), epochCriterion);
 
                 for (size_t j = 0; j < epochEvalErrors.size(); j++)
                 {
                     fprintf(stderr, "Finished Epoch[%2d of %d]: Evaluation Node [%ls] Per Sample = %.8g\n",
-                            i + 1, (int) m_maxEpochs, evalNodeNames[j].c_str(), epochEvalErrors[j]);
+                        i + 1, (int)m_maxEpochs, evalNodeNames[j].c_str(), epochEvalErrors[j]);
                 }
             }
 
@@ -516,7 +508,7 @@ template <class ElemType>
                     }
 
                     vector<double> vScore = evalforvalidation.Evaluate(validationSetDataReader, cvSetTrainAndEvalNodes, m_mbSize[i]);
-                    fprintf(stderr, "Finished Epoch[%2d of %d]: [Validation Set] TrainLossPerSample = %.8g", i + 1, (int) m_maxEpochs, vScore[0]);
+                    fprintf(stderr, "Finished Epoch[%2d of %d]: [Validation Set] TrainLossPerSample = %.8g", i + 1, (int)m_maxEpochs, vScore[0]);
                     if (vScore.size() > 1)
                     {
                         fprintf(stderr, "; EvalErrPerSample = %.8g", vScore[1]);
@@ -553,9 +545,9 @@ template <class ElemType>
             else
             {
                 avgCriterion = ((epochsSinceLastLearnRateAdjust - 1 - epochsNotCountedInAvgCriterion) *
-                                avgCriterion +
-                            lrControlCriterion) /
-                                (epochsSinceLastLearnRateAdjust - epochsNotCountedInAvgCriterion);
+                    avgCriterion +
+                    lrControlCriterion) /
+                    (epochsSinceLastLearnRateAdjust - epochsNotCountedInAvgCriterion);
             }
 
             if (m_autoLearnRateSearchType == LearningRateSearchAlgorithm::AdjustAfterEpoch &&
@@ -569,18 +561,18 @@ template <class ElemType>
                         fprintf(stderr, "Loading previous model with best training-criterion value: %ls.\n", bestModelPath.c_str());
                         net->RereadPersistableParameters<ElemType>(bestModelPath);
                         LoadCheckPointInfo(i - m_learnRateAdjustInterval,
-                                           /*out*/ totalSamplesSeen,
-                                           /*out*/ learnRatePerSample,
-                                           smoothedGradients,
-                                           /*out*/ prevCriterion,
-                                           /*out*/ m_prevChosenMinibatchSize);
+                            /*out*/ totalSamplesSeen,
+                            /*out*/ learnRatePerSample,
+                            smoothedGradients,
+                            /*out*/ prevCriterion,
+                            /*out*/ m_prevChosenMinibatchSize);
                         loadedPrevModel = true;
                     }
                 }
 
                 if (m_continueReduce)
                 {
-                    if (std::isnan(avgCriterion) || 
+                    if (std::isnan(avgCriterion) ||
                         (prevCriterion - avgCriterion <= m_reduceLearnRateIfImproveLessThan * prevCriterion &&
                         prevCriterion != std::numeric_limits<double>::infinity()))
                     {
@@ -596,19 +588,16 @@ template <class ElemType>
                             break;
                         }
                     }
-                    else
-                    {
-                        net->Save(GetModelNameForEpoch(i, true));
 
-                        if (learnRateReduced)
-                        {
-                            learnRatePerSample *= m_learnRateDecreaseFactor;
-                            fprintf(stderr, "learnRatePerSample reduced to %.8g\n", learnRatePerSample);
-                        }
+                    if (learnRateReduced)
+                    {
+                        learnRatePerSample *= m_learnRateDecreaseFactor;
+                        fprintf(stderr, "learnRatePerSample reduced to %.8g\n", learnRatePerSample);
                     }
+                }
                 else
                 {
-                    if (std::isnan(avgCriterion) || 
+                    if (std::isnan(avgCriterion) ||
                         (prevCriterion - avgCriterion <= m_reduceLearnRateIfImproveLessThan * prevCriterion &&
                         prevCriterion != std::numeric_limits<double>::infinity()))
                     {
@@ -617,7 +606,7 @@ template <class ElemType>
                         fprintf(stderr, "learnRatePerSample reduced to %.8g\n", learnRatePerSample);
                     }
                     else if (prevCriterion - avgCriterion > m_increaseLearnRateIfImproveMoreThan * prevCriterion &&
-                             prevCriterion != std::numeric_limits<double>::infinity())
+                        prevCriterion != std::numeric_limits<double>::infinity())
                     {
                         learnRatePerSample *= m_learnRateIncreaseFactor;
                         fprintf(stderr, "learnRatePerSample increased to %.8g\n", learnRatePerSample);
@@ -628,79 +617,79 @@ template <class ElemType>
             {
                 if (std::isnan(avgCriterion))
                     RuntimeError("The training criterion is not a number (NAN). Stop\n");
-                }
-
-            // not loading previous values then set them
-            if (!loadedPrevModel && epochsSinceLastLearnRateAdjust == m_learnRateAdjustInterval)
-            {
-                prevCriterion = avgCriterion;
-                epochsNotCountedInAvgCriterion = 0;
             }
 
+                // not loading previous values then set them
+                if (!loadedPrevModel && epochsSinceLastLearnRateAdjust == m_learnRateAdjustInterval)
+                {
+                    prevCriterion = avgCriterion;
+                    epochsNotCountedInAvgCriterion = 0;
+                }
+
+                // Synchronize all ranks before proceeding to ensure that 
+                // nobody tries reading the checkpoint file at the same time
+                // as rank 0 deleting it below
+                if (g_mpi != nullptr)
+                {
+                    g_mpi->WaitAll();
+                }
+
+                // persist model and check-point info
+                if ((g_mpi == nullptr) || g_mpi->IsMainNode())
+                {
+                    net->Save(GetModelNameForEpoch(i));
+                    SaveCheckPointInfo(i, totalSamplesSeen, learnRatePerSample, smoothedGradients, prevCriterion, chosenMinibatchSize);
+                    if (!m_keepCheckPointFiles)
+                    {
+                        // delete previous checkpoint file to save space
+                        if (m_autoLearnRateSearchType == LearningRateSearchAlgorithm::AdjustAfterEpoch && m_loadBestModel)
+                        {
+                            if (epochsSinceLastLearnRateAdjust != 1)
+                            {
+                                _wunlink(GetCheckPointFileNameForEpoch(i - 1).c_str());
+                            }
+                            if (epochsSinceLastLearnRateAdjust == m_learnRateAdjustInterval)
+                            {
+                                _wunlink(GetCheckPointFileNameForEpoch(i - m_learnRateAdjustInterval).c_str());
+                            }
+                        }
+                        else
+                        {
+                            _wunlink(GetCheckPointFileNameForEpoch(i - 1).c_str());
+                        }
+                    }
+                }
+
+                if (learnRatePerSample < 1e-12)
+                {
+                    fprintf(stderr, "learnRate per sample is reduced to %.8g which is below 1e-12. stop training.\n",
+                        learnRatePerSample);
+                }
+            }
+            // --- END OF MAIN EPOCH LOOP
+
             // Synchronize all ranks before proceeding to ensure that 
-            // nobody tries reading the checkpoint file at the same time
-            // as rank 0 deleting it below
+            // rank 0 has finished writing the model file
             if (g_mpi != nullptr)
             {
                 g_mpi->WaitAll();
             }
 
-            // persist model and check-point info
-            if ((g_mpi == nullptr) || g_mpi->IsMainNode())
+            // progress tracing for compute cluster management
+            ProgressTracing::TraceProgressPercentage(m_maxEpochs, 0.0, true);
+            ProgressTracing::TraceTrainLoss(m_lastFinishedEpochTrainLoss);
+
+            // since we linked feature nodes. we need to remove it from the deletion
+            if (m_needAdaptRegularization && m_adaptationRegType == AdaptationRegType::KL && refNode != nullptr)
             {
-                net->Save(GetModelNameForEpoch(i));
-                SaveCheckPointInfo(i, totalSamplesSeen, learnRatePerSample, smoothedGradients, prevCriterion, chosenMinibatchSize);
-                if (!m_keepCheckPointFiles)
+                for (size_t i = 0; i < refFeatureNodes.size(); i++)
                 {
-                    // delete previous checkpoint file to save space
-                    if (m_autoLearnRateSearchType == LearningRateSearchAlgorithm::AdjustAfterEpoch && m_loadBestModel)
-                    {
-                        if (epochsSinceLastLearnRateAdjust != 1)
-                        {
-                            _wunlink(GetCheckPointFileNameForEpoch(i - 1).c_str());
-                        }
-                        if (epochsSinceLastLearnRateAdjust == m_learnRateAdjustInterval)
-                        {
-                            _wunlink(GetCheckPointFileNameForEpoch(i - m_learnRateAdjustInterval).c_str());
-                        }
-                    }
-                    else
-                    {
-                        _wunlink(GetCheckPointFileNameForEpoch(i - 1).c_str());
-                    }
+                    // note we need to handle deletion carefully
+                    refNet->ChangeNode(refFeatureNodes[i]->NodeName(), refFeatureNodes[i]);
                 }
             }
 
-            if (learnRatePerSample < 1e-12)
-            {
-                fprintf(stderr, "learnRate per sample is reduced to %.8g which is below 1e-12. stop training.\n",
-                        learnRatePerSample);
-            }
-        }
-        // --- END OF MAIN EPOCH LOOP
-
-        // Synchronize all ranks before proceeding to ensure that 
-        // rank 0 has finished writing the model file
-        if (g_mpi != nullptr)
-        {
-            g_mpi->WaitAll();
-        }
-
-        // progress tracing for compute cluster management
-        ProgressTracing::TraceProgressPercentage(m_maxEpochs, 0.0, true);
-        ProgressTracing::TraceTrainLoss(m_lastFinishedEpochTrainLoss);
-
-        // since we linked feature nodes. we need to remove it from the deletion
-        if (m_needAdaptRegularization && m_adaptationRegType == AdaptationRegType::KL && refNode != nullptr)
-        {
-            for (size_t i = 0; i < refFeatureNodes.size(); i++)
-            {
-                // note we need to handle deletion carefully
-                refNet->ChangeNode(refFeatureNodes[i]->NodeName(), refFeatureNodes[i]);
-            }
-        }
-
-        delete inputMatrices;
+            delete inputMatrices;
     }
 
     // -----------------------------------------------------------------------
