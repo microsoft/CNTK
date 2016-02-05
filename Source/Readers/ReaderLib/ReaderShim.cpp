@@ -48,7 +48,7 @@ void ReaderShim<ElemType>::Init(const ConfigParameters& config)
 }
 
 template <class ElemType>
-void ReaderShim<ElemType>::StartMinibatchLoop(size_t mbSize, size_t epoch, size_t requestedEpochSamples = requestDataSize)
+void ReaderShim<ElemType>::StartMinibatchLoop(size_t mbSize, size_t epoch, size_t requestedEpochSamples)
 {
     return StartDistributedMinibatchLoop(mbSize, epoch, 0, 1, requestedEpochSamples);
 }

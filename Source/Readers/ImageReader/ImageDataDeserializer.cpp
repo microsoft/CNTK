@@ -73,7 +73,7 @@ ImageDataDeserializer::ImageDataDeserializer(const ConfigParameters& config)
     }
     else
     {
-        RuntimeError("Unsupported label element type '%d'.", label->m_elementType);
+        RuntimeError("Unsupported label element type '%d'.", (int)label->m_elementType);
     }
 
     CreateSequenceDescriptions(configHelper.GetMapPath(), labelDimension);
