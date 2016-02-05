@@ -257,6 +257,10 @@ void DoCommands(const ConfigParameters& config)
             {
                 DoConvertFromDbn<ElemType>(commandParams);
             }
+            else if (action[j] == "exportdbn")
+            {
+                DoExportToDbn<ElemType>(commandParams);
+            }
             else if (action[j] == "createLabelMap")
             {
                 DoCreateLabelMap<ElemType>(commandParams);
