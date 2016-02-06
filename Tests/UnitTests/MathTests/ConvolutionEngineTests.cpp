@@ -21,6 +21,62 @@ using ConvFactSPtr = std::shared_ptr<ConvolutionEngineFactory<float>>;
 using vec = std::vector<float>;
 using Tensor4DPtr = ConvFact::Tensor4DPtr;
 
+template <typename T>
+struct Err
+{
+    static const T Rel;
+    static const T Abs;
+};
+template <>
+const float Err<float>::Rel = 1e-5f;
+template <>
+const double Err<double>::Rel = 1e-5f;
+template <>
+const float Err<float>::Abs = 1.192092896e-07f;
+template <>
+const double Err<double>::Abs = 2.2204460492503131e-016;
+
+static bool AreEqual(float a, float b, float maxRelError, float maxAbsError)
+{
+    float diff = std::abs(a - b);
+    if (diff <= maxAbsError)
+        return true;
+    float largest = std::max(std::abs(a), std::abs(b));
+    return diff < largest * maxRelError;
+}
+//static bool AreEqual(double a, double b, double maxRelError, double maxAbsError)
+//{
+//    double diff = std::abs(a - b);
+//    if (diff <= maxAbsError)
+//        return true;
+//    double largest = std::max(std::abs(a), std::abs(b));
+//    return diff < largest * maxRelError;
+//}
+
+template <typename T>
+static bool CheckEqual(const Matrix<T>& result, const Matrix<T>& reference, std::string& msg, T maxRelError, T maxAbsError)
+{
+    std::unique_ptr<T[]> res(result.CopyToArray());
+    std::unique_ptr<T[]> ref(reference.CopyToArray());
+    int count = 0;
+    int badIndex = -1;
+    for (int i = 0; i < result.GetNumElements(); ++i)
+    {
+        if (!AreEqual(res[i], ref[i], maxRelError, maxAbsError) && count++ == 0)
+            badIndex = i;
+    }
+    if (count > 0)
+    {
+        float a = res[badIndex];
+        float b = ref[badIndex];
+        std::stringstream ss;
+        ss << count << " mismatch" << (count > 1 ? "es" : "") << ", first mismatch at " << badIndex << ", " << a << " != " << b
+            << ", rel = " << std::abs(a - b) << ", abs = " << (std::abs(a - b) / std::max(std::abs(a), std::abs(b)));
+        msg = ss.str();
+    }
+    return count == 0;
+}
+
 static int GetNumOut(int i, int k, int s, bool pad)
 {
     return (i - (pad ? 1 : k)) / s + 1;
@@ -660,10 +716,12 @@ BOOST_AUTO_TEST_CASE(BatchNormalizationForwardTrain)
             std::string msgNan = " has NaNs, " + tmsg.str();
             std::string msgNotNan = " has buffer overflow/underflow, " + tmsg.str();
 
-            float absErr = 1e-5f;
+            float relErr = Err<float>::Rel;
+            float absErr = Err<float>::Abs;
+            std::string emsg;
 
             BOOST_REQUIRE_MESSAGE(!out.HasNan("out"), "out" << msgNan);
-            BOOST_REQUIRE_MESSAGE(out.IsEqualTo(outExp, absErr), "out" << msg);
+            BOOST_REQUIRE_MESSAGE(CheckEqual(out, outExp, emsg, relErr, absErr * 10), "out" << msg << ". " << emsg);
             BOOST_REQUIRE_MESSAGE(CountNans(outBuf) == crow * 2 * ccol, "out" << msgNotNan);
             // REVIEW alexeyk: add cases for testing numerical stability.
 
@@ -674,11 +732,11 @@ BOOST_AUTO_TEST_CASE(BatchNormalizationForwardTrain)
             //BOOST_REQUIRE_MESSAGE(runInvStdDev.IsEqualTo(runInvStdDevExp, absErr), "runInvStdDev" << msg);
 
             BOOST_REQUIRE_MESSAGE(!saveMean.HasNan("saveMean"), "saveMean" << msgNan);
-            BOOST_REQUIRE_MESSAGE(saveMean.IsEqualTo(saveMeanExp, absErr), "saveMean" << msg);
+            BOOST_REQUIRE_MESSAGE(CheckEqual(saveMean, saveMeanExp, emsg, relErr, absErr), "saveMean" << msg << ". " << emsg);
             BOOST_REQUIRE_MESSAGE(CountNans(saveMeanBuf) == crowScaleBias * 2, "saveMean" << msgNotNan);
 
             BOOST_REQUIRE_MESSAGE(!saveInvStdDev.HasNan("saveInvStdDev"), "saveInvStdDev" << msgNan);
-            BOOST_REQUIRE_MESSAGE(saveInvStdDev.IsEqualTo(saveInvStdDevExp, absErr), "saveInvStdDev" << msg);
+            BOOST_REQUIRE_MESSAGE(CheckEqual(saveInvStdDev, saveInvStdDevExp, emsg, relErr, absErr), "saveInvStdDev" << msg << ". " << emsg);
             BOOST_REQUIRE_MESSAGE(CountNans(saveInvStdDevBuf) == crowScaleBias * 2, "saveInvStdDev" << msgNotNan);
 
 #ifndef _DEBUG
@@ -772,20 +830,25 @@ BOOST_AUTO_TEST_CASE(BatchNormalizationBackward)
             std::string msgNan = " has NaNs, " + tmsg.str();
             std::string msgNotNan = " has buffer overflow/underflow, " + tmsg.str();
 
-            float absErr = 1e-4f;
+            float relErr = Err<float>::Rel;
+            float absErr = Err<float>::Abs;
+            std::string emsg;
 
             BOOST_REQUIRE_MESSAGE(!dx.HasNan("dx"), "dx" << msgNan);
-            BOOST_REQUIRE_MESSAGE(dx.IsEqualTo(dxExp, absErr), "dx" << msg);
+            auto p1 = dx.CopyToArray();
+            auto p2 = dxExp.CopyToArray();
+            BOOST_REQUIRE_MESSAGE(CheckEqual(dx, dxExp, emsg, relErr * 10, absErr * 10), "dx" << msg << ". " << emsg);
             BOOST_REQUIRE_MESSAGE(CountNans(dxBuf) == crow * 2 * ccol, "out" << msgNotNan);
             // REVIEW alexeyk: add cases for testing numerical stability.
 
             BOOST_REQUIRE_MESSAGE(!dScale.HasNan("dScale"), "dScale" << msgNan);
-            BOOST_REQUIRE_MESSAGE(dScale.IsEqualTo(dScaleExp, absErr), "dScale" << msg);
+            BOOST_REQUIRE_MESSAGE(CheckEqual(dScale, dScaleExp, emsg, relErr * 10, absErr * 20), "dScale" << msg << ". " << emsg);
             BOOST_REQUIRE_MESSAGE(CountNans(dScaleBuf) == crowScaleBias * 2, "dScale" << msgNotNan);
 
             BOOST_REQUIRE_MESSAGE(!dBias.HasNan("dBias"), "dBias" << msgNan);
-            BOOST_REQUIRE_MESSAGE(dBias.IsEqualTo(dBiasExp, absErr), "dBias" << msg);
+            BOOST_REQUIRE_MESSAGE(CheckEqual(dBias, dBiasExp, emsg, relErr * 50, absErr * 10), "dBias" << msg << ". " << emsg);
             BOOST_REQUIRE_MESSAGE(CountNans(dBiasBuf) == crowScaleBias * 2, "dBias" << msgNotNan);
+            UNUSED(p1);UNUSED(p2);
 
 #ifndef _DEBUG
             float elapsedCntk = time1.Elapsed();
