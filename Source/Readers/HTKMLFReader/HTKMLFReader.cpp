@@ -302,6 +302,11 @@ void HTKMLFReader<ElemType>::PrepareForTrainingOrTesting(const ConfigRecordType&
     m_frameMode = readerConfig(L"frameMode", true);
     m_verbosity = readerConfig(L"verbosity", 2);
 
+    if (m_frameMode && m_truncated)
+    {
+        InvalidArgument("'Truncated' cannot be 'true' in frameMode (i.e. when 'frameMode' is 'true')");
+    }
+
     // determine if we partial minibatches are desired
     wstring minibatchMode(readerConfig(L"minibatchMode", L"partial"));
     m_partialMinibatch = EqualCI(minibatchMode, L"partial");
