@@ -230,6 +230,9 @@ bool CheckFunction(std::string& p_nodeType, bool* allowUndeterminedVariable)
     return ret;
 }
 
+// Explicit instantiation required for template definition in cpp file
+template bool CheckFunction<float>(std::string& p_nodeType, bool* allowUndeterminedVariable);
+
 template <typename ElemType>
 NDLScript<ElemType> NDLScript<ElemType>::s_global("global");
 

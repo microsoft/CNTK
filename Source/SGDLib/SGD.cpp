@@ -2655,6 +2655,9 @@ SGDParams::SGDParams(const ConfigRecordType& configSGD, size_t sizeofElemType)
     }
 }
 
+// Explicit instantiation required for template definition in cpp file
+template SGDParams::SGDParams(const ScriptableObjects::IConfigRecord& configSGD, size_t sizeofElemType);
+
 static size_t GetSizeOfPrecision(const ScriptableObjects::IConfigRecordPtr configp)
 {
     wstring precision = configp->Get(L"precision");

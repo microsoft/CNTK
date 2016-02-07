@@ -799,6 +799,10 @@ CHAR* fgetline(FILE* f, CHAR* buf, int size)
     return buf;
 }
 
+// Explicit instantiation required for template definition in cpp file
+template char* fgetline(FILE* f, char* buf, int size);
+template wchar_t* fgetline(FILE* f, wchar_t* buf, int size);
+
 // STL string version
 std::string fgetline(FILE* f)
 {
