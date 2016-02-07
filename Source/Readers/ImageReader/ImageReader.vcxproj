@@ -80,7 +80,7 @@
       <AdditionalDependencies>ReaderLib.lib;Math.lib;$(OpenCVLib);%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
-      <Command Condition="$(HasOpenCV)">xcopy /Y $(OPENCV_PATH)\x64\vc12\bin\opencv_world300.dll $(TargetDir)</Command>
+      <Command Condition="$(HasOpenCV)">xcopy /Y "$(OPENCV_PATH)\x64\vc12\bin\opencv_world300.dll" $(TargetDir)</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64' Or '$(Configuration)|$(Platform)'=='Debug_CpuOnly|x64'">
