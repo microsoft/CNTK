@@ -482,6 +482,13 @@ void ComputationNetwork::DetermineSetOfAllRoots()
     // set m_allRoots to include both non-referenced nodes and also all explicitly specified roots
     m_allRoots.clear();
     set_union(unreferencedNodes.begin(), unreferencedNodes.end(), allKnownRoots.begin(), allKnownRoots.end(), inserter(m_allRoots, m_allRoots.end()));
+
+    // and bring the roots into a well-defined order
+    // I did observe different order depending on complexity of non-Node BrainScript expressions.
+    sort(m_allRoots.begin(), m_allRoots.end(),[](const ComputationNodeBasePtr& a, const ComputationNodeBasePtr& b)
+    {
+        return a->NodeName() < b->NodeName();
+    });
 }
 
 // -----------------------------------------------------------------------
