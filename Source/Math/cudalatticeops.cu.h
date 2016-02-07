@@ -20,7 +20,7 @@
 #include "Windows.h" // for timer
 #endif
 
-#if __unix__
+#if defined(__unix__) || defined(__unix) || (defined(__APPLE__) && defined(__MACH__))
 #include <sys/time.h>
 #endif
 
@@ -29,7 +29,7 @@ namespace msra { namespace cuda {
 cudaStream_t GetCurrentStream();
 
 // auto_timer timer; run(); double seconds = timer; // now can abandon the object
-#ifdef __unix__
+#if defined(__unix__) || defined(__unix) || (defined(__APPLE__) && defined(__MACH__))
 typedef timeval LARGE_INTEGER;
 #endif
 class auto_timer
@@ -45,8 +45,7 @@ public:
         if (!QueryPerformanceFrequency(&freq)) // count ticks per second
             RuntimeError("auto_timer: QueryPerformanceFrequency failure");
         QueryPerformanceCounter(&start);
-#endif
-#ifdef __unix__
+#else
         gettimeofday(&start, NULL);
 #endif
     }
@@ -56,8 +55,7 @@ public:
 #ifdef _WIN32
         QueryPerformanceCounter(&end);
         return (end.QuadPart - start.QuadPart) / (double) freq.QuadPart;
-#endif
-#ifdef __unix__
+#else
         gettimeofday(&end, NULL);
         return (end.tv_sec - start.tv_sec) + (end.tv_usec - start.tv_usec) / (1000 * 1000);
 #endif

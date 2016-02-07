@@ -12,7 +12,7 @@
 #include "simple_checked_arrays.h" // ... for dotprod(); we can eliminate this I believe
 #include "ssefloat4.h"
 #include <stdexcept>
-#ifndef __unix__
+#ifdef _WIN32
 #include <ppl.h>
 #include "pplhelpers.h"
 #include "numahelpers.h"
@@ -1400,8 +1400,7 @@ class ssematrix : public ssematrixbase
         sprintf_s(buf, "allocation of SSE vector failed (%d bytes)", nbytes);
         throw std::bad_exception(buf);
     }
-#endif
-#ifdef __unix__
+#else
     static void failed(size_t nbytes)
     {
         static /*not thread-safe--for diagnostics only*/ char buf[80] = {0};
@@ -1427,8 +1426,7 @@ class ssematrix : public ssematrixbase
         if (p)
             _aligned_free(p);
     }
-#endif
-#ifdef __unix__
+#else
     template <typename T>
     static T *new_sse(size_t nbytes)
     {

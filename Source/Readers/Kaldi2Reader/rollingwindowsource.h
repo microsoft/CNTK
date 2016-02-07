@@ -341,8 +341,7 @@ public:
                     {
 #ifdef _WIN32
                         key = regex_replace((wstring) ppath, wregex(L"\\.[^\\.\\\\/:]*$"), wstring()); // delete extension (or not if none)
-#endif
-#ifdef __unix__
+#else
                         key = removeExtension(basename(ppath));
 #endif
                         if (labels[0].find(key) == labels[0].end())

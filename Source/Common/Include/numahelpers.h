@@ -7,7 +7,7 @@
 
 #pragma once
 
-#ifndef __unix__
+#ifdef _WIN32
 #include <Windows.h>
 #include "pplhelpers.h"
 #endif

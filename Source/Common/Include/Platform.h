@@ -52,6 +52,9 @@
 #include <stdexcept>
 #include <chrono>
 #include <thread>
+#if defined(__APPLE__) && defined(__MACH__)
+#include <mach/mach_time.h>
+#endif
 // basic type conversion
 typedef int BOOL;
 typedef unsigned char BYTE;
@@ -84,6 +87,13 @@ typedef void *HANDLE;
 //string and io conversion
 #define strtok_s strtok_r
 #define sprintf_s snprintf
+#if defined(__APPLE__) && defined(__MACH__)
+template <size_t n, class ...Args>
+int snprintf(char (&buffer)[n], const char *format, Args... args)
+{
+    return snprintf(buffer, n, format, &args...);
+}
+#endif
 #define sscanf_s sscanf
 #define _strdup strdup
 
@@ -118,10 +128,17 @@ inline int _ftelli64(FILE *file)
 
 inline long GetTickCount(void)
 {
+#if defined(__APPLE__) && defined(__MACH__)
+    static mach_timebase_info_data_t sTimebaseInfo{0, 0};
+    if (sTimebaseInfo.denom == 0 && mach_timebase_info(&sTimebaseInfo) != KERN_SUCCESS)
+        return 0;
+    return mach_absolute_time() * sTimebaseInfo.numer / (sTimebaseInfo.denom * NSEC_PER_MSEC);
+#else
     struct timespec now;
     if (clock_gettime(CLOCK_MONOTONIC, &now))
         return 0;
     return now.tv_sec * 1000 + now.tv_nsec / 1000000;
+#endif
 }
 
 inline errno_t strcpy_s(char *strDest, size_t numElem, const char *strSrc)
@@ -130,6 +147,14 @@ inline errno_t strcpy_s(char *strDest, size_t numElem, const char *strSrc)
     strncpy(strDest, strSrc, numElem);
     return 0;
 }
+
+#if defined(__APPLE__) && defined(__MACH__)
+template <size_t n>
+inline errno_t strcpy_s(char (&dest)[n], const char *src)
+{
+    return strcpy_s(dest, n, src);
+}
+#endif
 
 inline errno_t wcstombs_s(size_t *prt, char *mbStr, size_t sizeInBytes, const wchar_t *wcStr, size_t count)
 {

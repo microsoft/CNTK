@@ -7,7 +7,7 @@
 
 #pragma once
 
-#ifndef __unix__
+#ifdef _WIN32
 #define NOMINMAX
 #include "Windows.h"
 #include "pplhelpers.h"

@@ -676,7 +676,7 @@ int wmain(int argc, wchar_t* argv[]) // wmain wrapper that reports Win32 excepti
 }
 #endif
 
-#ifdef __UNIX__
+#ifndef _WIN32
 /// UNIX main function converts arguments in UTF-8 encoding and passes to Visual-Studio style wmain() which takes wchar_t strings.
 int main(int argc, char* argv[])
 {

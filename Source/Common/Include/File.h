@@ -13,7 +13,7 @@
 #define NOMINMAX
 #include "Windows.h"
 #endif
-#ifdef __unix__
+#if defined(__unix__) || defined(__unix) || (defined(__APPLE__) && defined(__MACH__))
 #include <unistd.h>
 #endif
 #include "fileutil.h" // for f{ge,pu}t{,Text}()

@@ -9,7 +9,7 @@
 #include "htkfeatio.h" // for reading HTK features
 #include "minibatchsourcehelpers.h"
 
-#ifndef __unix__
+#ifdef _WIN32
 #include "ssematrix.h"
 #endif
 

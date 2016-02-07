@@ -500,11 +500,11 @@ void DoTopologyPlot(const ConfigParameters& config)
     if (!outRending.empty())
     {
         fprintf(stderr, "Executing a third-part tool for rendering dot:\n%S\n", rescmd.c_str());
-#ifdef __unix__
+#ifdef _WIN32
+        _wsystem(rescmd.c_str());
+#else
         const auto rc = system(msra::strfun::utf8(rescmd).c_str());
         rc /*ignoring the result--this gets flagged by gcc if we don't save the return value*/;
-#else
-        _wsystem(rescmd.c_str());
 #endif
         fprintf(stderr, "Done\n");
     }

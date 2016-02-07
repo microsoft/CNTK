@@ -12,7 +12,7 @@
 #include <string>
 #include <vector>
 #include <assert.h>
-#if __unix__
+#if defined(__unix__) || defined(__unix) || (defined(__APPLE__) && defined(__MACH__))
 #include <dlfcn.h> // for Plugin
 #endif
 
@@ -592,7 +592,11 @@ public:
     void* Load(const STRING& plugin, const std::string& proc)
     {
         string soName = msra::strfun::utf8(plugin);
-        soName = soName + ".so";
+#if defined(__APPLE__) && defined(__MACH__)
+        soName += ".dylib";
+#else
+        soName += ".so";
+#endif
         void* handle = dlopen(soName.c_str(), RTLD_LAZY);
         if (handle == NULL)
             RuntimeError("Plugin not found: %s (error: %s)", soName.c_str(), dlerror());

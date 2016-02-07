@@ -181,10 +181,10 @@ public:
         mUnkStr = unkstr;
 
         mFile.close();
-#ifdef __unix__
-        mFile.open(ws2s(fileName), wifstream::in);
-#else
+#ifdef _WIN32
         mFile.open(fileName, wifstream::in);
+#else
+        mFile.open(ws2s(fileName), wifstream::in);
 #endif
         if (!mFile.good())
             RuntimeError("cannot open file %ls", fileName);
@@ -193,10 +193,10 @@ public:
     void ParseReset()
     {
         mFile.close();
-#ifdef __unix__
-        mFile.open(ws2s(mFileName), wifstream::in);
-#else
+#ifdef _WIN32
         mFile.open(mFileName, wifstream::in);
+#else
+        mFile.open(ws2s(mFileName), wifstream::in);
 #endif
         if (!mFile.good())
             RuntimeError("cannot open file %ls", mFileName.c_str());

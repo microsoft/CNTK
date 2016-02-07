@@ -17,7 +17,7 @@
 #define _CRT_SECURE_CPP_OVERLOAD_STANDARD_NAMES 1
 #include "Basics.h"
 #include "fileutil.h"
-#ifdef __unix__
+#if defined(__unix__) || defined(__unix) || (defined(__APPLE__) && defined(__MACH__))
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
@@ -1999,23 +1999,22 @@ static inline std::wstring mbstowcs(const std::string& p) // input: MBCS
 
 wstring s2ws(const string& str)
 {
-#ifdef __unix__
-    return mbstowcs(str);
-#else
+#ifdef _WIN32
     typedef std::codecvt_utf8<wchar_t> convert_typeX;
     std::wstring_convert<convert_typeX, wchar_t> converterX;
     return converterX.from_bytes(str);
-
+#else
+    return mbstowcs(str);
 #endif
 }
 
 string ws2s(const wstring& wstr)
 {
-#ifdef __unix__
-    return wcstombs(wstr);
-#else
+#ifdef _WIN32
     typedef codecvt_utf8<wchar_t> convert_typeX;
     wstring_convert<convert_typeX, wchar_t> converterX;
     return converterX.to_bytes(wstr);
+#else
+    return wcstombs(wstr);
 #endif
 }

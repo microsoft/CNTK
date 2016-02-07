@@ -11,7 +11,7 @@
 #include <stdio.h>
 #include <vector>
 #include <algorithm>
-#ifndef __unix__
+#ifdef _WIN32
 #include "ssematrix.h" // for matrix type
 #endif
 

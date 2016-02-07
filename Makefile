@@ -56,9 +56,17 @@ endif
 # The actual compiler/linker flags added can be viewed by running 'mpic++ --showme:compile' and 'mpic++ --showme:link'
 CXX = mpic++
 
+UNAME_S := $(shell uname -s)
+
 SOURCEDIR:= Source
 INCLUDEPATH:= $(addprefix $(SOURCEDIR)/, Common/Include Math CNTK ActionsLib ComputationNetworkLib SGDLib SequenceTrainingLib CNTK/BrainScript)
-CPPFLAGS:= -D_POSIX_SOURCE -D_XOPEN_SOURCE=600 -D__USE_XOPEN2K
+ifeq ($(UNAME_S),Darwin)
+  CPPFLAGS:= -D_GNU_SOURCE -D_XOPEN_SOURCE=4 -D__USE_XOPEN2K
+  LIBEXT:=dylib
+else
+  CPPFLAGS:= -D_POSIX_SOURCE -D_XOPEN_SOURCE=600 -D__USE_XOPEN2K
+  LIBEXT:=so
+endif
 CXXFLAGS:= -msse3 -std=c++0x -std=c++11 -fopenmp -fpermissive -fPIC -Werror -fcheck-new
 LIBPATH:=
 LIBS:=
@@ -127,7 +135,11 @@ endif
 
 ifeq ("$(MATHLIB)","mkl")
   INCLUDEPATH += $(MKL_PATH)/mkl/include
-  LIBPATH += $(MKL_PATH)/compiler/lib/intel64 $(MKL_PATH)/mkl/lib/intel64 $(MKL_PATH)/compiler/lib/mic $(MKL_PATH)/mkl/lib/mic
+  ifeq ($(UNAME_S),Darwin)
+    LIBPATH += $(MKL_PATH)/mkl/lib $(MKL_PATH)/lib
+  else
+    LIBPATH += $(MKL_PATH)/compiler/lib/intel64 $(MKL_PATH)/mkl/lib/intel64 $(MKL_PATH)/compiler/lib/mic $(MKL_PATH)/mkl/lib/mic
+  endif
   LIBS += -lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core -lm -liomp5 -lpthread
   CPPFLAGS += -DUSE_MKL
 endif
@@ -160,7 +172,9 @@ ifeq ("$(BUILDTYPE)","debug")
   endif
 
   CXXFLAGS += -g
-  LDFLAGS += -rdynamic
+  ifneq ($(UNAME_S),Darwin)
+    LDFLAGS += -rdynamic
+  endif
   CPPFLAGS += -D_DEBUG
   CUFLAGS += -O0 -g -use_fast_math -lineinfo  $(GENCODE_FLAGS)
 endif
@@ -173,7 +187,9 @@ ifeq ("$(BUILDTYPE)","release")
   endif
 
   CXXFLAGS += -g -O4
-  LDFLAGS += -rdynamic
+  ifneq ($(UNAME_S),Darwin)
+    LDFLAGS += -rdynamic
+  endif
   CPPFLAGS += -DNDEBUG
   CUFLAGS += -O3 -g -use_fast_math -lineinfo $(GENCODE_FLAGS)
 endif
@@ -252,7 +268,7 @@ MATH_SRC+=$(COMMON_SRC)
 
 MATH_OBJ := $(patsubst %.cu, $(OBJDIR)/%.o, $(patsubst %.cpp, $(OBJDIR)/%.o, $(MATH_SRC)))
 
-CNTKMATH_LIB:= $(LIBDIR)/lib$(CNTKMATH).so
+CNTKMATH_LIB:= $(LIBDIR)/lib$(CNTKMATH).$(LIBEXT)
 ALL += $(CNTKMATH_LIB)
 SRC+=$(MATH_SRC)
 
@@ -275,7 +291,7 @@ BINARYREADER_SRC =\
 
 BINARYREADER_OBJ := $(patsubst %.cpp, $(OBJDIR)/%.o, $(BINARYREADER_SRC))
 
-BINARY_READER:= $(LIBDIR)/BinaryReader.so
+BINARY_READER:= $(LIBDIR)/BinaryReader.$(LIBEXT)
 
 #ALL += $(BINARY_READER)
 #SRC+=$(BINARYREADER_SRC)
@@ -296,11 +312,11 @@ HTKMLFREADER_SRC =\
 
 HTKMLFREADER_OBJ := $(patsubst %.cpp, $(OBJDIR)/%.o, $(HTKMLFREADER_SRC))
 
-HTKMLFREADER:=$(LIBDIR)/HTKMLFReader.so
+HTKMLFREADER:=$(LIBDIR)/HTKMLFReader.$(LIBEXT)
 ALL+=$(HTKMLFREADER)
 SRC+=$(HTKMLFREADER_SRC)
 
-$(LIBDIR)/HTKMLFReader.so: $(HTKMLFREADER_OBJ) | $(CNTKMATH_LIB)
+$(HTKMLFREADER): $(HTKMLFREADER_OBJ) | $(CNTKMATH_LIB)
 	@echo $(SEPARATOR)
 	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(LIBPATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH)) -o $@ $^ -l$(CNTKMATH)
 
@@ -316,7 +332,7 @@ LMSEQUENCEREADER_SRC =\
 
 LMSEQUENCEREADER_OBJ := $(patsubst %.cpp, $(OBJDIR)/%.o, $(LMSEQUENCEREADER_SRC))
 
-LMSEQUENCEREADER:= $(LIBDIR)/LMSequenceReader.so
+LMSEQUENCEREADER:= $(LIBDIR)/LMSequenceReader.$(LIBEXT)
 ALL+=$(LMSEQUENCEREADER)
 SRC+=$(LMSEQUENCEREADER_SRC)
 
@@ -335,7 +351,7 @@ LUSEQUENCEREADER_SRC =\
 
 LUSEQUENCEREADER_OBJ := $(patsubst %.cpp, $(OBJDIR)/%.o, $(LUSEQUENCEREADER_SRC))
 
-LUSEQUENCEREADER:=$(LIBDIR)/LUSequenceReader.so
+LUSEQUENCEREADER:=$(LIBDIR)/LUSequenceReader.$(LIBEXT)
 ALL+=$(LUSEQUENCEREADER)
 SRC+=$(LUSEQUENCEREADER_SRC)
 
@@ -354,7 +370,7 @@ UCIFASTREADER_SRC =\
 
 UCIFASTREADER_OBJ := $(patsubst %.cpp, $(OBJDIR)/%.o, $(UCIFASTREADER_SRC))
 
-UCIFASTREADER:=$(LIBDIR)/UCIFastReader.so
+UCIFASTREADER:=$(LIBDIR)/UCIFastReader.$(LIBEXT)
 ALL += $(UCIFASTREADER)
 SRC+=$(UCIFASTREADER_SRC)
 
@@ -372,7 +388,7 @@ LIBSVMBINARYREADER_SRC =\
 
 LIBSVMBINARYREADER_OBJ := $(patsubst %.cpp, $(OBJDIR)/%.o, $(LIBSVMBINARYREADER_SRC))
 
-LIBSVMBINARYREADER:=$(LIBDIR)/LibSVMBinaryReader.so
+LIBSVMBINARYREADER:=$(LIBDIR)/LibSVMBinaryReader.$(LIBEXT)
 ALL += $(LIBSVMBINARYREADER)
 SRC+=$(LIBSVMBINARYREADER_SRC)
 
@@ -390,7 +406,7 @@ SPARSEPCREADER_SRC =\
 
 LIBSPARSEPCREADER_OBJ := $(patsubst %.cpp, $(OBJDIR)/%.o, $(LIBSPARCEPCREADER_SRC))
 
-LIBSPARSEPCREADER:=$(LIBDIR)/SparsePCReader.so
+LIBSPARSEPCREADER:=$(LIBDIR)/SparsePCReader.$(LIBEXT)
 ALL += $(LIBSPARSEPCREADER)
 SRC+=$(LIBSPARSEPCREADER_SRC)
 
@@ -414,7 +430,7 @@ KALDI2READER_SRC = \
 
 KALDI2READER_OBJ := $(patsubst %.cpp, $(OBJDIR)/%.o, $(KALDI2READER_SRC))
 
-KALDI2READER:=$(LIBDIR)/Kaldi2Reader.so
+KALDI2READER:=$(LIBDIR)/Kaldi2Reader.$(LIBEXT)
 ALL+=$(KALDI2READER)
 SRC+=$(KALDI2READER_SRC)
 
@@ -435,12 +451,15 @@ IMAGEREADER_SRC =\
 
 IMAGEREADER_OBJ := $(patsubst %.cpp, $(OBJDIR)/%.o, $(IMAGEREADER_SRC))
 
-IMAGEREADER:=$(LIBDIR)/ImageReader.so
+IMAGEREADER:=$(LIBDIR)/ImageReader.$(LIBEXT)
 ALL += $(IMAGEREADER)
 SRC+=$(IMAGEREADER_SRC)
 
 INCLUDEPATH += $(OPENCV_PATH)/include
-LIBPATH += $(OPENCV_PATH)/lib $(OPENCV_PATH)/release/lib
+LIBPATH += $(OPENCV_PATH)/lib
+ifneq ($(UNAME_S),Darwin)
+  LIBPATH += $(OPENCV_PATH)/release/lib
+endif
 
 $(IMAGEREADER): $(IMAGEREADER_OBJ) | $(CNTKMATH_LIB)
 	@echo $(SEPARATOR)

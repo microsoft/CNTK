@@ -30,7 +30,7 @@
 #include <vld.h> // for memory leak detection
 #endif
 
-#ifdef __unix__
+#if defined(__unix__) || defined(__unix) || (defined(__APPLE__) && defined(__MACH__))
 #include <limits.h>
 typedef unsigned long DWORD;
 typedef unsigned short WORD;
@@ -474,8 +474,7 @@ void HTKMLFReader<ElemType>::PrepareForTrainingOrTesting(const ConfigRecordType&
             DWORD attrib = GetFileAttributes(pageFilePath.c_str());
             if (attrib == INVALID_FILE_ATTRIBUTES || !(attrib & FILE_ATTRIBUTE_DIRECTORY))
                 RuntimeError("pageFilePath does not exist");
-#endif
-#ifdef __unix__
+#else
             struct stat statbuf;
             if (stat(wtocharpath(pageFilePath).c_str(), &statbuf) == -1)
             {
@@ -488,8 +487,7 @@ void HTKMLFReader<ElemType>::PrepareForTrainingOrTesting(const ConfigRecordType&
 #ifdef _WIN32
             pageFilePath.reserve(MAX_PATH);
             GetTempPath(MAX_PATH, &pageFilePath[0]);
-#endif
-#ifdef __unix__
+#else
             pageFilePath = L"/tmp/temp.CNTK.XXXXXX";
 #endif
         }
@@ -507,8 +505,7 @@ void HTKMLFReader<ElemType>::PrepareForTrainingOrTesting(const ConfigRecordType&
             wchar_t tempFile[MAX_PATH];
             GetTempFileName(pageFilePath.c_str(), L"CNTK", 0, tempFile);
             pagePaths.push_back(tempFile);
-#endif
-#ifdef __unix__
+#else
             char tempFile[PATH_MAX];
             strcpy(tempFile, msra::strfun::utf8(pageFilePath).c_str());
             int fid = mkstemp(tempFile);

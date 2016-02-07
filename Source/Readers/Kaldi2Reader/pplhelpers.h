@@ -7,7 +7,7 @@
 
 #pragma once
 
-#ifndef __unix__
+#ifdef _WIN32
 #include <ppl.h>
 #endif
 namespace msra { namespace parallel {

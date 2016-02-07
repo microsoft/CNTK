@@ -445,7 +445,7 @@ size_t UCIParser<NumType, LabelType>::UpdateBuffer()
     }
 
     // read the next block
-    size_t bytesToRead = min(m_bufferSize, m_fileSize - m_bufferStart) - saveBytes;
+    size_t bytesToRead = min(m_bufferSize, static_cast<size_t>(m_fileSize) - m_bufferStart) - saveBytes;
     size_t bytesRead = fread(m_fileBuffer + saveBytes, 1, bytesToRead, m_pFile);
     if (bytesRead == 0 && ferror(m_pFile))
         RuntimeError("UCIParser::UpdateBuffer - error reading file");

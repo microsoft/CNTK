@@ -14,14 +14,18 @@
 #include "simple_checked_arrays.h" // ... for dotprod(); we can eliminate this I believe
 #include "ssefloat4.h"
 #include <stdexcept>
-#ifndef __unix__
+#ifdef WIN32
 #include <ppl.h>
 #include "pplhelpers.h"
 #include "numahelpers.h"
 #endif
 #include "fileutil.h" // for saving and reading matrices
 #include <limits>     // for NaN
+#if defined(__APPLE__) && defined(__MACH__)
+#include <malloc/malloc.h>
+#else
 #include <malloc.h>
+#endif
 
 #ifdef min
 #undef min // some garbage from some Windows header that conflicts with std::min()
@@ -1360,7 +1364,7 @@ class ssematrix : public ssematrixbase
             _aligned_free(p);
     }
 #endif
-#ifdef __unix__
+#if defined(__unix__) || defined(__unix) || (defined(__APPLE__) && defined(__MACH__))
     template <typename T>
     static T *new_sse(size_t nbytes)
     {

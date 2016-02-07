@@ -222,7 +222,7 @@ public:
         return ival;
     }
 //#if (SIZE_MAX != ULONG_MAX)     // on x64 GCC unsigned long == size_t, i.e. we'd get an ambigous declaration
-#ifdef _MSC_VER // somehow the above check does not work on GCC/Cygwin, causing an ambiguous declaration
+#if defined(_MSC_VER) || (defined(__APPLE__) && defined(__MACH__)) // somehow the above check does not work on GCC/Cygwin, causing an ambiguous declaration
     operator unsigned long() const
     {
         return toulong();

@@ -5,6 +5,8 @@
 #include "Windows.h"
 static LARGE_INTEGER s_ticksPerSecond;
 static BOOL s_setFreq = QueryPerformanceFrequency(&s_ticksPerSecond);
+#elif defined(__APPLE__) && defined(__MACH__)
+#include <sys/time.h>
 #else
 #include <time.h>
 #endif
@@ -17,6 +19,10 @@ long long Timer::GetStamp()
     LARGE_INTEGER li;
     QueryPerformanceCounter(&li);
     return li.QuadPart;
+#elif defined(__APPLE__) && defined(__MACH__)
+    struct timeval now;
+    gettimeofday(&now, NULL);
+    return now.tv_sec * NANO_PER_SEC + now.tv_usec * MICRO_PER_NANO;
 #else
     timespec ts;
     clock_gettime(CLOCK_REALTIME, &ts); // Works on Linux

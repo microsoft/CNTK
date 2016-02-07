@@ -9,8 +9,7 @@
 
 #ifdef _WIN32
 #include <intrin.h> // for intrinsics
-#endif
-#ifdef __unix__
+#else
 #include <x86intrin.h>
 #endif
 
