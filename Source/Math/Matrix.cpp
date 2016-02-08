@@ -3716,18 +3716,28 @@ void Matrix<ElemType>::TransferToDeviceIfNotThereAndNotAutoPlace(int id_to, bool
 }
 
 template <class ElemType>
-void Matrix<ElemType>::Print(const char* matrixName, size_t rowStart, size_t rowEnd, size_t colStart, size_t colEnd) const
+void Matrix<ElemType>::Print(const char* matrixName, ptrdiff_t rowStart, ptrdiff_t rowEnd, ptrdiff_t colStart, ptrdiff_t colEnd) const
 {
     DEVICEID_TYPE orgdevice = GetDeviceId();
 
     DISPATCH_MATRIX_ON_FLAG(this,
                             nullptr,
+                            // CPU:
                             m_CPUMatrix->Print(matrixName, rowStart, rowEnd, colStart, colEnd),
-                            _transferToDevice(CPUDEVICE, false, false);
-                            m_CPUMatrix->Print(matrixName, rowStart, rowEnd, colStart, colEnd); _transferToDevice(orgdevice, false, false),
-                                                                                                m_CPUSparseMatrix->Print(matrixName),
-                                                                                                _transferToDevice(CPUDEVICE, false, false);
-                            m_CPUSparseMatrix->Print(matrixName); _transferToDevice(orgdevice, false, false));
+                            // GPU;
+                            {
+                                _transferToDevice(CPUDEVICE, false, false);
+                                m_CPUMatrix->Print(matrixName, rowStart, rowEnd, colStart, colEnd);
+                                _transferToDevice(orgdevice, false, false);
+                            },
+                            // CPU, sparse:
+                            m_CPUSparseMatrix->Print(matrixName),
+                            // GPU, sparse:
+                            {
+                                _transferToDevice(CPUDEVICE, false, false);
+                                m_CPUSparseMatrix->Print(matrixName);
+                                _transferToDevice(orgdevice, false, false);
+                            });
 }
 
 template <class ElemType>
