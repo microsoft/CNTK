@@ -281,7 +281,7 @@ public:
 
     CPUMatrix<ElemType>& AssignNumOfDiff(const CPUMatrix<ElemType>& a, const CPUMatrix<ElemType>& b, bool searchInCol = false);
 
-    void Print(const char* matrixName, size_t rowStart, size_t rowEnd, size_t colStart, size_t colEnd) const;
+    void Print(const char* matrixName, ptrdiff_t rowStart, ptrdiff_t rowEnd, ptrdiff_t colStart, ptrdiff_t colEnd) const;
     void Print(const char* matrixName = nullptr) const; // print whole matrix. can be expensive
 
     void ReadFromFile(FILE* f, const char* matrixName); // matrixName is used to verify that correct matrix is read.

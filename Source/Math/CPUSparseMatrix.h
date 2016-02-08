@@ -167,7 +167,7 @@ public:
 
 public:
     // void Print(const char* /*matrixName*/) const { NOT_IMPLEMENTED; }
-    void Print(const char* matrixName, size_t rowStart, size_t rowEnd, size_t colStart, size_t colEnd) const;
+    void Print(const char* matrixName, ptrdiff_t rowStart, ptrdiff_t rowEnd, ptrdiff_t colStart, ptrdiff_t colEnd) const;
     void Print(const char* matrixName = NULL) const; // print whole matrix. can be expensive
 
 public:
