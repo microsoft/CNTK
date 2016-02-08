@@ -125,6 +125,9 @@ BOOST_AUTO_TEST_CASE(HTKMLFReaderSimpleDataLoop6)
         1);
 };
 
+// TODO: This test is using an incorrect config settings combination of
+// Truncated=true and frameMode=true.
+/*
 BOOST_AUTO_TEST_CASE(HTKMLFReaderSimpleDataLoop7)
 {
     HelperRunReaderTest<float>(
@@ -141,6 +144,7 @@ BOOST_AUTO_TEST_CASE(HTKMLFReaderSimpleDataLoop7)
         0,
         1);
 };
+*/
 
 BOOST_AUTO_TEST_CASE(HTKMLFReaderSimpleDataLoop8)
 {
@@ -281,6 +285,9 @@ BOOST_AUTO_TEST_CASE(HTKMLFReaderSimpleDataLoop16)
         1);
 };
 
+// TODO: This test is using an incorrect config settings combination of
+// Truncated=true and frameMode=true.
+/*
 BOOST_AUTO_TEST_CASE(HTKMLFReaderSimpleDataLoop17)
 {
     HelperRunReaderTest<double>(
@@ -297,6 +304,7 @@ BOOST_AUTO_TEST_CASE(HTKMLFReaderSimpleDataLoop17)
         0,
         1);
 };
+*/
 
 /*
         This test is commented out because it causes an assertion in debug mode on:
