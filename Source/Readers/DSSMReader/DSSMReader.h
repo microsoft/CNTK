@@ -33,7 +33,7 @@ private:
     HANDLE m_offsets;
     HANDLE m_data;
 
-    //void* header_orig; // Don't need this since the header is at the start of the file
+    // void* header_orig; // Don't need this since the header is at the start of the file
     void* offsets_orig;
     void* data_orig;
 
@@ -66,7 +66,7 @@ public:
 template <class ElemType>
 class DSSMReader : public IDataReader<ElemType>
 {
-    //public:
+    // public:
     //    typedef std::string LabelType;
     //    typedef unsigned LabelIdType;
 private:
@@ -124,7 +124,7 @@ private:
     ConfigParameters m_readerConfig;
 
     size_t RandomizeSweep(size_t epochSample);
-    //bool Randomize() {return m_randomizeRange != randomizeNone;}
+    // bool Randomize() {return m_randomizeRange != randomizeNone;}
     bool Randomize()
     {
         return false;

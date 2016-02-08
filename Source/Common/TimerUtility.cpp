@@ -1,7 +1,8 @@
 #include "TimerUtility.h"
 #include <assert.h>
 #ifdef WIN32
-#include <Windows.h>
+#define NOMINMAX
+#include "Windows.h"
 static LARGE_INTEGER s_ticksPerSecond;
 static BOOL s_setFreq = QueryPerformanceFrequency(&s_ticksPerSecond);
 #else

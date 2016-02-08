@@ -104,7 +104,7 @@ echo "$0 create cntk files"
     for i in `seq 1 $labelDim` ; do echo $i ; done > $labelMapping
    # echo $cn_gpu
    # $cuda_cmd $dir/log/train_cntk.log \
-  $cn_gpu configFile=/exports/work/inf_hcrc_cstr_nst/llu/ami/s5b/cntk_config/CNTK.config modelName=cntkSpeech.dnn DeviceNumber=0 ExpDir=$dir logFile=$logFile labelMapping=$labelMapping ndlfile=$ndlfile inputFeat=$inputFeat trainMLF=$trainMLF labelDim=$labelDim cvInputFeat=$cvInputFeat featDim=600 action=TrainDNN phnLabel=no phnDim=no phnMapping=no inputSCP=no outputSCP=no
+  $cn_gpu configFile=/exports/work/inf_hcrc_cstr_nst/llu/ami/s5b/cntk_config/CNTK.cntk modelName=cntkSpeech.dnn DeviceNumber=0 ExpDir=$dir logFile=$logFile labelMapping=$labelMapping ndlfile=$ndlfile inputFeat=$inputFeat trainMLF=$trainMLF labelDim=$labelDim cvInputFeat=$cvInputFeat featDim=600 action=TrainDNN phnLabel=no phnDim=no phnMapping=no inputSCP=no outputSCP=no
 fi
 
 exit 0;
@@ -121,7 +121,7 @@ if [ $stage -le 7 ]; then
     cnmodel=$dir/cntkSpeech.dnn.16
     graphdir=/exports/work/inf_hcrc_cstr_nst/llu/ami/s5b/exp/ihm/tri4a/graph_ami_fsh.o3g.kn.pr1-7
     class_frame_counts=/exports/work/inf_hcrc_cstr_nst/llu/ami/s5b/exp/ihm/dnn5b_pretrain-dbn_dnn_realign/ali_train_pdf.counts
-    cntk_string="$cn_gpu configFile=cntk_config/CNTK_write.config DeviceNumber=1 modelName=$cnmodel labelDim=$labelDim featDim=$featDim action=$action"
+    cntk_string="$cn_gpu configFile=cntk_config/CNTK_write.cntk DeviceNumber=1 modelName=$cnmodel labelDim=$labelDim featDim=$featDim action=$action"
     scripts/decode_cntk.sh  --nj 1 --acwt 0.0833 --class-frame-counts "$class_frame_counts" \
       $graphdir $data_fmllr/eval $dir/decode_ami_fsh.o3g.kn.pr1-7 "$cntk_string" || exit 1;
 fi

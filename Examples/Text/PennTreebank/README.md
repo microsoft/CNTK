@@ -2,23 +2,26 @@
 
 ## License
 
-Note: The data is not checked into the repository currently since a license is required for the penn treebank data.
+CNTK distribution contains a subset of the data of The Penn Treebank Project (https://www.cis.upenn.edu/~treebank/):
+
+Marcus, Mitchell, Beatrice Santorini, and Mary Ann Marcinkiewicz. Treebank-2 LDC95T7. Web Download. Philadelphia: Linguistic Data Consortium, 1995.
+
+See License.md in the root level folder of the CNTK repository for full license information.
 
 ## Overview
 
-|Data:     |The Penn Treebank Project (https://www.cis.upenn.edu/~treebank/) annotates naturally-occuring text for linguistic structure .
+|Data      |The Penn Treebank Project (https://www.cis.upenn.edu/~treebank/) annotates naturally-occuring text for linguistic structure .
 |:---------|:---|
-|Purpose:  |Showcase how to train a recurrent network for text data.
-|Network:  |SimpleNetworkBuilder for recurrent network with two hidden layers.
-|Training: |Stochastic gradient descent with adjusted learning rate.
-|Comments: |The provided configuration file performs class based RNN training.
+|Purpose   |Showcase how to train a recurrent network for text data.
+|Network   |SimpleNetworkBuilder for recurrent network with two hidden layers.
+|Training  |Stochastic gradient descent with adjusted learning rate.
+|Comments  |The provided configuration file performs class based RNN training.
 
 ## Running the example
 
 ### Getting the data
 
-The data is not checked into the repository currently since a license is required for the penn treebank data.
-Please visit https://www.cis.upenn.edu/~treebank/
+The data for this example is already contained in the folder PennTreebank/Data/.
 
 ### Setup
 
@@ -36,12 +39,12 @@ or prefix the call to the cntk executable with the corresponding folder.
 
 Run the example from the Text/Data folder using:
 
-`cntk configFile=../Config/rnn.config`
+`cntk configFile=../Config/rnn.cntk`
 
 or run from any folder and specify the Data folder as the `currentDirectory`, 
 e.g. running from the Text folder using:
 
-`cntk configFile=Config/rnn.config currentDirectory=Data`
+`cntk configFile=Config/rnn.cntk currentDirectory=Data`
 
 The output folder will be created inside Text/.
 
@@ -49,7 +52,7 @@ The output folder will be created inside Text/.
 
 ### Config files
 
-The config files define a `RootDir` variable and sevearal other variables for directories. 
+The config files define a `RootDir` variable and several other variables for directories. 
 The `ConfigDir` and `ModelDir` variables define the folders for additional config files and for model files. 
 These variables will be overwritten when running on the Philly cluster. 
 __It is therefore recommended to generally use `ConfigDir` and `ModelDir` in all config files.__ 
@@ -59,7 +62,7 @@ The configuration contains three commands.
 The first writes the word and class information as three separate files into the data directory.
 The training command uses the SimpleNetworkBuilder to build a recurrent network 
 using `rnnType = CLASSLSTM` and the LMSequenceReader.
-The test command evalutes the trained network agains the specified `testFile`.
+The test command evaluates the trained network against the specified `testFile`.
 
 The trained models for each epoch are stored in the output models folder. 
 

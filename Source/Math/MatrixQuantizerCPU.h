@@ -34,6 +34,4 @@ public:
     void UnquantizeAsync(QuantizedMatrix<ElemType>& inQMatrix, Matrix<ElemType>& outMatrix, bool add = false) override;
     void WaitUnquantizeAsyncDone() override;
 };
-}
-}
-}
+} } }

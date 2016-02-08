@@ -26,6 +26,7 @@
 #include <regex>
 #include <chrono>
 #include <unordered_map>
+#include <set>
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -44,8 +45,8 @@ public:
 
     ComputationNetwork()
         : m_randomSeedOffset(0),
-        m_isCompiled(false),
-        m_pMBLayout(make_shared<MBLayout>())
+          m_isCompiled(false),
+          m_pMBLayout(make_shared<MBLayout>())
     {
     }
     ComputationNetwork(DEVICEID_TYPE deviceId)
@@ -65,28 +66,15 @@ public:
 
     void SetDeviceId(DEVICEID_TYPE deviceId)
     {
-        if (deviceId == AUTOPLACEMATRIX)
-            deviceId = Matrix<float>::GetBestGPUDeviceId();
         m_deviceId = deviceId;
-        m_deviceId = EnforceOneGPUOnly(m_deviceId); // see EnforceOneGPUOnly() for comment on what this is
     }
 
-    DEVICEID_TYPE GetDeviceId() const
-    {
-        return m_deviceId;
-    }
+    DEVICEID_TYPE GetDeviceId() const { return m_deviceId; }
 
     // -----------------------------------------------------------------------
-    // serialization
+    // (de-)serialization
     // -----------------------------------------------------------------------
 
-    void Save(const std::wstring& fileName, const FileOptions fileFormat = FileOptions::fileOptionsBinary) const;
-    void SaveEdited(const std::wstring& fileName, const FileOptions fileFormat = FileOptions::fileOptionsBinary);
-
-private:
-    void SaveToFileImpl(const std::wstring& fileName, const FileOptions fileFormat) const;
-
-public:
     template <class ElemType>
     void ReadPersistableParameters(File& fstream, bool create);
     // reload node content only, e.g. used by SGD::Train() when going back to an older model that had better training objective
@@ -98,28 +86,31 @@ public:
     }
     // design BUGBUG: binary files do not know whether they are float or double.
     // TODO: modify file format to know this; then eliminate the <ElemType> dependency (and in some future, allow nodes to be different)
-    template <class ElemType>
-    void Read(const std::wstring& fileName, const FileOptions fileFormat = FileOptions::fileOptionsBinary,
-              const bool bAllowNoCriterionNode = false, ComputationNetwork* anotherNetwork = nullptr);
-    template <class ElemType>
-    void Load(const std::wstring& fileName, const FileOptions fileFormat = FileOptions::fileOptionsBinary,
-              const bool bAllowNoCriterionNode = false, ComputationNetwork* anotherNetwork = nullptr)
+    template <class ElemType> void Read(const std::wstring& fileName);
+    template <class ElemType> void Load(const std::wstring& fileName)
     {
-        Read<ElemType>(fileName, fileFormat, bAllowNoCriterionNode, anotherNetwork);
+        Read<ElemType>(fileName);
         // perform all further post-processing, caching, etc.
         CompileNetwork();
     }
 
     // static helper to instantiate a network from a file
     template <class ElemType>
-    static ComputationNetworkPtr CreateFromFile(DEVICEID_TYPE deviceId, const std::wstring& fileName,
-                                                const FileOptions fileFormat = FileOptions::fileOptionsBinary,
-                                                const bool bAllowNoCriterionNode = false, ComputationNetwork* anotherNetwork = nullptr)
+    static ComputationNetworkPtr CreateFromFile(DEVICEID_TYPE deviceId, const std::wstring& fileName)
     {
         auto net = make_shared<ComputationNetwork>(deviceId);
-        net->Load<ElemType>(fileName, FileOptions::fileOptionsBinary, bAllowNoCriterionNode, anotherNetwork);
+        net->Load<ElemType>(fileName);
         return net;
     }
+
+    void Save(const std::wstring& fileName, const FileOptions fileFormat = FileOptions::fileOptionsBinary) const;
+    void SaveEdited(const std::wstring& fileName, const FileOptions fileFormat = FileOptions::fileOptionsBinary);
+
+private:
+
+    void SaveToFileImpl(const std::wstring& fileName, const FileOptions fileFormat) const;
+
+public:
 
     // -----------------------------------------------------------------------
     // evaluation
@@ -166,23 +157,17 @@ public:
 
     void CompileNetwork(); // call this after creation, Load(), and any modification
 
-    //void ValidateNetwork(bool allowFragment = false, const bool bAllowNoCriterion = false);
-    // prepares the network for computation
-    //void BuildAndValidateSubNetwork(const ComputationNodeBasePtr rootNode);
 private:
+    void ValidateNetwork();
     void ValidateNodes(list<ComputationNodeBasePtr> nodes, bool isFinalValidationPass, size_t& todo);
-    void ValidateSubNetwork(const ComputationNodeBasePtr& rootNode);
     void MarkValueNonSharableNodes();
 
 private:
     void DetermineSetOfAllRoots();
     void CollectInputAndLearnableParameters(const ComputationNodeBasePtr& rootNode);
-    bool IsCompiled() const
-    {
-        return m_isCompiled;
-    }
+    void CollectInputAndLearnableParametersRec(const ComputationNodeBasePtr& node, set<ComputationNodeBasePtr>& visited, list<ComputationNodeBasePtr>& inputs, list<ComputationNodeBasePtr>& learnableParameters);
+    bool IsCompiled() const { return m_isCompiled; }
     void VerifyIsCompiled(const char* where) const;
-    //bool BuiltAndValidatedSubNetwork(const ComputationNodeBasePtr & rootNode);
 public:
     void AllocateAllMatrices(const std::vector<ComputationNodeBasePtr>& evalRootNodes, const std::vector<ComputationNodeBasePtr>& outValueRootNodes, ComputationNodeBasePtr trainRootNode);
 
@@ -228,7 +213,7 @@ public:
         }
 
         if (rootNode)
-            m_evalOrders[rootNode] = rootNode->EnumerateNodes(true /*skipPairNetwork, deprecated*/);
+            m_evalOrders[rootNode] = rootNode->EnumerateNodes();
         else
             m_evalOrders[rootNode] = ComputationNodeBase::EnumerateNodes(m_allRoots);
     }
@@ -261,39 +246,20 @@ public:
     // -----------------------------------------------------------------------
 
     // Note: this is also used to copy MBLayouts into our existing MBLayout instance, which is a somewhat questionable design.
-    const MBLayoutPtr& GetMBLayoutPtr()
-    {
-        return m_pMBLayout;
-    }
-
-    size_t GetNumParallelSequences() const
-    {
-        return m_pMBLayout->GetNumParallelSequences();
-    }
-
-    // temporary function: Call this after CopyMBLayoutTo(evalnet->GetMBLayoutPtr()) to ensure everything is consistent as expected
-    // It is actually called after every CopyMBLayoutTo() in the entire system (except for multi-reader CopyMBLayoutTo() itself).
-    // Remove this function after a few weeks of not firing.
-    void VerifyActualNumParallelSequences(const size_t expectedNumSeq)
-    {
-        size_t actualNumSeq = GetNumParallelSequences();
-        if (actualNumSeq != expectedNumSeq)
-        {
-            LogicError("VerifyActualNumParallelSequences: Number of parallel sequences in MBLayout (%d) not matching expected value (%d).",
-                       (int) actualNumSeq, (int) expectedNumSeq);
-        }
-    }
+    const MBLayoutPtr& GetMBLayoutPtr() { return m_pMBLayout; }
+    size_t GetNumParallelSequences() const { return m_pMBLayout->GetNumParallelSequences(); }
 
     // determine the actual MB size from the feature nodes
     // This returns max number of columns over the feature nodes.
     // Note that if we have multiple slices, MB size != #frames.
+    // BUGBUG: This will break once we have inconsistent layouts.
     size_t DetermineActualMBSizeFromFeatures() const
     {
         size_t actualMBSize = 0;
 
         const auto& featureNodes = FeatureNodes(); // TODO: a getter; should be called GetFeatureNodes()
         for (auto& nodeIter : featureNodes)
-            actualMBSize = max(actualMBSize, nodeIter->GetNumCols());
+            actualMBSize = max(actualMBSize, nodeIter->GetMBLayout()->GetNumCols());
 
         return actualMBSize;
     }
@@ -371,22 +337,12 @@ public:
         return (iter != m_nameToNodeMap.end());
     }
 
-    ComputationNodeBasePtr GetNodeFromName(const std::wstring& name, ComputationNetwork* anotherNetwork = nullptr, bool bPanic = true) const
+    ComputationNodeBasePtr GetNodeFromName(const std::wstring& name) const
     {
         auto iter = m_nameToNodeMap.find(name);
-        if (iter != m_nameToNodeMap.end())
-        {
-            //found
-            return iter->second;
-        }
-
-        if (anotherNetwork != nullptr)
-            return anotherNetwork->GetNodeFromName(name);
-
-        if (bPanic)
+        if (iter == m_nameToNodeMap.end())
             RuntimeError("GetNodeFromName: Node name %ls does not exist.", name.c_str());
-        else
-            return nullptr;
+        return iter->second;
     }
 
     // GetNodesFromName - Get all the nodes from a name that may match a wildcard '*' pattern
@@ -401,7 +357,7 @@ public:
         {
             if (NodeNameExists(name))
                 nodes.push_back(GetNodeFromName(name));
-            }
+        }
         else
         {
             std::wstring head = name.substr(0, found);
@@ -415,8 +371,8 @@ public:
                 bool tailMatch = tail.empty() || nodeName.rfind(tail) == nodeName.size() - tail.size();
                 if (headMatch && tailMatch)
                     nodes.push_back(nodeIter->second);
-                }
             }
+        }
         return nodes;
     }
 
@@ -428,10 +384,10 @@ public:
     static void SetDropoutRate(ComputationNetworkPtr net, const ComputationNodeBasePtr& criterionNode, const double dropoutRate, double& prevDropoutRate, unsigned long& dropOutSeed);
 
     template <class ElemType>
-    static void SetSeqParam(ComputationNetworkPtr net, 
-                            const ComputationNodeBasePtr criterionNode, 
+    static void SetSeqParam(ComputationNetworkPtr net,
+                            const ComputationNodeBasePtr criterionNode,
                             const double& hsmoothingWeight,
-                            const double& frameDropThresh, 
+                            const double& frameDropThresh,
                             const bool& doreferencealign,
                             const double& amf = 14.0f,
                             const double& lmf = 14.0f,
@@ -483,10 +439,8 @@ public:
     inline std::vector<ComputationNodeBasePtr> CriterionNodesFrom(const wstring& criterionNodeName)
     {
         ComputationNodeBasePtr node = GetNodeFromName(criterionNodeName);
-        ValidateSubNetwork(node);
-        if (node->GetNumRows() != 1 || node->GetNumCols() != 1)
-            InvalidArgument("the criterionNodeName specified in the config file is not a valid training or eval criterion node.");
-        // TODO: test this, then remove this comment
+        if (node->HasMBLayout() || node->GetSampleLayout().GetNumElements() != 1)
+            InvalidArgument("%ls %ls operation is not a valid training or eval criterion node.", node->NodeName().c_str(), node->OperationName().c_str());
         return std::vector<ComputationNodeBasePtr>{node};
     }
 
@@ -497,10 +451,6 @@ public:
     inline std::vector<ComputationNodeBasePtr>& OutputNodes()
     {
         return m_outputNodes;
-    }
-    inline std::vector<ComputationNodeBasePtr>& PairNodes()
-    {
-        return m_pairNodes;
     }
 
     // -----------------------------------------------------------------------
@@ -533,7 +483,7 @@ public:
     {
         std::list<ComputationNodeBasePtr> nodesWithType;
 
-        //find nodes from all available nodes
+        // find nodes from all available nodes
         if (rootNode == nullptr)
         {
             for (auto nodeIter = m_nameToNodeMap.begin(); nodeIter != m_nameToNodeMap.end(); nodeIter++)
@@ -545,7 +495,7 @@ public:
         }
         else
         {
-            //for calculating a specific node
+            // for calculating a specific node
             const std::list<ComputationNodeBasePtr>& nodes = GetEvalOrder(rootNode);
             for (auto nodeIter = nodes.begin(); nodeIter != nodes.end(); nodeIter++)
             {
@@ -558,15 +508,9 @@ public:
         return nodesWithType;
     }
 
-private:
-    template <class N>
-    void GetNodesRequiringX(std::list<ComputationNodeBasePtr>& nodesRequirePreComputation, const ComputationNodeBasePtr& rootNode, bool checkComputed);
-
 public:
-    //return list of nodes that require precomputation and not precomputed yet.
+    // return list of nodes that require precomputation and not precomputed yet
     std::list<ComputationNodeBasePtr> GetNodesRequiringPreComputation(const ComputationNodeBasePtr& rootNode = nullptr, bool checkComputed = true);
-    //return list of nodes that require precomputation and not precomputed yet.
-    std::list<ComputationNodeBasePtr> GetNodesRequiringBatchMode(const ComputationNodeBasePtr& rootNode = nullptr, bool checkComputed = true);
 
     // -----------------------------------------------------------------------
     // unit testing
@@ -582,43 +526,11 @@ public:
     template <class ElemType>
     void PerformSVDecomposition(const map<wstring, float>& SVDConfig, size_t AlignedSize);
 
-public:
-    // -----------------------------------------------------------------------
-    // evaluation: legacy
-    // -----------------------------------------------------------------------
-
-    // the following two are only called from FindBestPath() and FindbestPathWithVariableLength()
-    // This code is currently not in use.
-    // TODO: make these templated on <ElemType> locally
-    template <class ElemType>
-    void GetHistory(map<wstring, Matrix<ElemType>>& history, bool bLastTime = false)
-    {
-        //put all node info first
-        Matrix<ElemType> hist;
-        for (auto nodeIter = m_nameToNodeMap.begin(); nodeIter != m_nameToNodeMap.end(); nodeIter++)
-        {
-            shared_ptr<ComputationNode<ElemType>> nodePtr = dynamic_pointer_cast<ComputationNode<ElemType>>(nodeIter->second);
-            if (nodePtr && nodePtr->GetHistory(hist, bLastTime))
-                history[nodeIter->first] = hist;
-        }
-    };
-
-    template <class ElemType>
-    void SetHistory(map<wstring, Matrix<ElemType>>& history)
-    {
-        //put all node info first
-        for (auto nodeIter = m_nameToNodeMap.begin(); nodeIter != m_nameToNodeMap.end(); nodeIter++)
-        {
-            shared_ptr<ComputationNode<ElemType>> nodePtr = dynamic_pointer_cast<ComputationNode<ElemType>>(nodeIter->second);
-            if (nodePtr && history.find(nodeIter->first) != history.end())
-                nodePtr->SetHistory(history[nodeIter->first]);
-        }
-    };
-
-protected:
     // -----------------------------------------------------------------------
     // construction
     // -----------------------------------------------------------------------
+
+protected:
 
     // Copy constructor, should never be called.
 #pragma warning(push)
@@ -668,7 +580,7 @@ public:
     {
         nodePtr->AttachInputs(std::forward<_Types>(_Args)...);
         return AddNodeToNetWithElemType(nodePtr);
-        //return nodePtr; // allows e.g. return AddNodeToNetAndAttachInputs(New..., inputs);
+        // return nodePtr; // allows e.g. return AddNodeToNetAndAttachInputs(New..., inputs);
     }
 
 public:
@@ -684,9 +596,6 @@ public:
         for (auto& node : GetEvalOrder(rootNode)) // note: any order will do
             node->ZeroGradientsOfInputs();
     }
-
-    // FixupInputMinibatchSize - go through all the inputs and make sure they have a consistent minibatch size (after creation)
-    void FixupInputMinibatchSize();
 
 private:
     bool IsTypicalCriterionNode(ComputationNodeBasePtr nodePtr);
@@ -712,10 +621,10 @@ public:
                 const ComputationNodeBasePtr& nodePtr = GetNodeFromName(nodeName);
                 nodePtr->DumpNodeInfo(printValues, fstream);
             }
-            else //node name is not found, dump all nodes
+            else // node name is not found, dump all nodes
             {
                 fprintf(stderr, "Warning: node name %ls does not exist in the network. dumping all nodes.\n",
-                    nodeName.c_str());
+                        nodeName.c_str());
                 DumpAllNodesToFile(printValues, outputFile);
             }
         }
@@ -836,7 +745,7 @@ protected:
         virtual void BackpropTo(const size_t inputIndex, const FrameRange&) override
         {
             NOT_IMPLEMENTED;
-        } // ugh, call Backprop() instead
+        }
         virtual void EndBackprop() override;
         virtual void Backprop(const FrameRange& fr, bool childrenInThisLoop, bool childrenInOuterLoop) override;
         virtual void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool);
@@ -844,17 +753,17 @@ protected:
         virtual void AllocateGradientMatricesForInputs(MatrixPool& matrixPool);
         virtual void RequestMatricesBeforeBackprop(MatrixPool& matrixPool);
         virtual void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool);
-        virtual bool IsOutputOlderThanInputs() const override;
+        virtual bool IsOutOfDateWrtInputs() const override;
 
     public:
-        //std::vector<ComputationNodeBasePtr> m_nestedNodes;               // all nodes involved in this loop, in evaluation order
+        // std::vector<ComputationNodeBasePtr> m_nestedNodes;               // all nodes involved in this loop, in evaluation order
         ComputationNodeBasePtr m_sourceNode; // one of the nodes of the loop   --TODO: What is the special meaning of this node? It seems to always be a delay node.
         int m_loopId;                        // unique loop id, index in m_allSEQNodes array
         int m_steppingDirection;             // +1 if left to right (t=0..T-1), -1 if rightt to left (t=T-1..0)
 
         SEQTraversalFlowControlNode(int loopId, ComputationNodeBasePtr cur)
             : m_loopId(loopId),
-            m_sourceNode(cur)
+              m_sourceNode(cur)
         {
             SetNodeName(L"Loop_" + m_sourceNode->NodeName());
         }
@@ -935,18 +844,18 @@ protected:
 
     // node groups
     // These are specified by the user by means of tags or explicitly listing the node groups.
+    // TODO: Are these meant to be disjoint?
     std::vector<ComputationNodeBasePtr> m_features;
     std::vector<ComputationNodeBasePtr> m_labels;
     std::vector<ComputationNodeBasePtr> m_finalCriteria;
     std::vector<ComputationNodeBasePtr> m_evalNodes;
     std::vector<ComputationNodeBasePtr> m_outputNodes;
-    std::vector<ComputationNodeBasePtr> m_pairNodes;                /// nodes for the children network to pair
     vector<std::vector<ComputationNodeBasePtr>*> GetAllNodeGroups() // get all groups to allow to iterate over all of them ...continue
     {
-        return vector<std::vector<ComputationNodeBasePtr>*>{&m_features, &m_labels, &m_finalCriteria, &m_evalNodes, &m_outputNodes, &m_pairNodes};
+        return vector<std::vector<ComputationNodeBasePtr>*>{&m_features, &m_labels, &m_finalCriteria, &m_evalNodes, &m_outputNodes};
     }
 
-    // used for sentence boundary information passed from reader to reset RNN state 
+    // used for sentence boundary information passed from reader to reset RNN state
     // specify how the minibatch is packed for each sample
     // TODO: This will change once we allow for multiple inconsistent layouts.
     MBLayoutPtr m_pMBLayout; // note that this must be installed before doing anything that needs it (default leaves a nullptr)
@@ -980,16 +889,15 @@ private:
 };
 typedef ComputationNetwork::ComputationNetworkPtr ComputationNetworkPtr;
 
+// The following emits the class and enables the BaseMatrix<double> to be available (used by EvalDll)
+// The corresponding Matrix<float> is emitted in the SetDeviceId function above.
+template class Matrix<double>;
+
 // TODOs:
 //  - automatic inference of time window w.r.t. delay nodes (and related nodes such as a temporal pooling)
 //  - have overrides of RuntimeError etc. in ComputationNode, which prepend the error string with the node name and operation
 //  - code prettification:
 //     - sort all node implementations' methods into the same order; esp, ForwardProp() comes before partial
 //     - sort important nodes first; move unused/experimental nodes into source files named accordingly
-//  - finish the job:
-//     - everywhere complete folding ForwardPropS() into ForwardProp(FrameRange()), same for partial
-//     - revise node constructors, merge by means of default parameters
-//  - known issues that need actual test cases to be fixed:
-//     - CRFNode::BackpropTo() fails for >1 parallel sequence due to DataFor() not being able to return whole sequences
-//     - implement reading of MB Layout in Binary, DSSM, and LivbSVM readers    --is DSSM already done?
+
 } } }

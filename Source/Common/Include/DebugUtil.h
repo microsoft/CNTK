@@ -9,7 +9,8 @@
 #define _DEBUGUTIL_
 
 #ifdef _WIN32
-#include <windows.h>
+#define NOMINMAX
+#include "Windows.h"
 #include "DbgHelp.h"
 #include <WinBase.h>
 #pragma comment(lib, "Dbghelp.lib")
@@ -34,8 +35,6 @@ private:
 public:
     static void PrintCallStack();
 };
-}
-}
-}
+}}}
 
 #endif // _DEBUGUTIL_

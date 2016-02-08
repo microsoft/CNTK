@@ -538,16 +538,16 @@ BOOST_FIXTURE_TEST_CASE(GPUMatrixCurandSeedingDouble, RandomSeedFixture)
 }
 
 #if 0 // Temporarily disabling
-                BOOST_FIXTURE_TEST_CASE(GPUMatrixLargeInequality, RandomSeedFixture)
-                {
-                    const int rows = 33553921;
-                    const int cols = 1;
+BOOST_FIXTURE_TEST_CASE(GPUMatrixLargeInequality, RandomSeedFixture)
+{
+    const int rows = 33553921;
+    const int cols = 1;
 
-                    auto m0 = GPUMatrix<float>::Zeros(rows, cols, c_deviceIdZero);
-                    auto m1 = GPUMatrix<float>::Ones(rows, cols, c_deviceIdZero);
+    auto m0 = GPUMatrix<float>::Zeros(rows, cols, c_deviceIdZero);
+    auto m1 = GPUMatrix<float>::Ones(rows, cols, c_deviceIdZero);
 
-                    BOOST_CHECK(!m1.IsEqualTo(m0, c_epsilonFloatE5));
-                }
+    BOOST_CHECK(!m1.IsEqualTo(m0, c_epsilonFloatE5));
+}
 #endif
 
 BOOST_AUTO_TEST_SUITE_END()

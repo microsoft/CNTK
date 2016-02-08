@@ -138,7 +138,7 @@ public:
     std::vector<int> senoneid2transPindex; // or -1 if ambiguous
     std::vector<int> senoneid2stateindex;  // 0..2, or -1 if ambiguous
 
-    //zhaorui load from file, add a null construct function
+    // zhaorui load from file, add a null construct function
     simplesenonehmm()
     {
     }
@@ -291,11 +291,11 @@ public:
     {
         return senoneid2stateindex[senoneid];
     }
-    const size_t getnumsenone() const
+    size_t getnumsenone() const
     {
         return senoneid2stateindex.size();
     }
-    const bool statebelongstohmm(const size_t senoneid, const hmm& hmm) const // reutrn true if one of the states of this hmm == senoneid
+    bool statebelongstohmm(const size_t senoneid, const hmm& hmm) const // reutrn true if one of the states of this hmm == senoneid
     {
         size_t numstates = hmm.getnumstates();
         for (size_t i = 0; i < numstates; i++)
@@ -304,5 +304,5 @@ public:
         return false;
     }
 };
-};
-};
+
+}}

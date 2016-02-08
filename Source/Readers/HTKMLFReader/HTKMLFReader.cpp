@@ -48,6 +48,11 @@ namespace msra { namespace lm {
 }
 }
 
+namespace msra { namespace asr {
+    /*static*/ std::unordered_map<std::wstring, unsigned int> htkfeatreader::parsedpath::archivePathStringMap;
+    /*static*/ std::vector<std::wstring> htkfeatreader::parsedpath::archivePathStringVector;
+}}
+
 namespace Microsoft { namespace MSR { namespace CNTK {
 
 // Create a Data Reader
@@ -76,7 +81,7 @@ void HTKMLFReader<ElemType>::InitFromConfig(const ConfigRecordType& readerConfig
 
     m_noData = false;
 
-    wstring command(readerConfig(L"action", L"")); //look up in the config for the master command to determine whether we're writing output (inputs only) or training/evaluating (inputs and outputs)
+    wstring command(readerConfig(L"action", L"")); // look up in the config for the master command to determine whether we're writing output (inputs only) or training/evaluating (inputs and outputs)
 
     if (readerConfig.Exists(L"legacyMode"))
         RuntimeError("legacy mode has been deprecated\n");
@@ -110,7 +115,7 @@ void HTKMLFReader<ElemType>::PrepareForTrainingOrTesting(const ConfigRecordType&
     vector<vector<wstring>> infilesmulti;
     size_t numFiles;
     wstring unigrampath(L"");
-    //wstring statelistpath(L"");
+    // wstring statelistpath(L"");
     size_t randomize = randomizeAuto;
     size_t iFeat, iLabel;
     iFeat = iLabel = 0;
@@ -129,7 +134,7 @@ void HTKMLFReader<ElemType>::PrepareForTrainingOrTesting(const ConfigRecordType&
         InvalidArgument("network needs at least 1 input and 1 output specified!");
     }
 
-    //load data for all real-valued inputs (features)
+    // load data for all real-valued inputs (features)
     foreach_index (i, featureNames)
     {
         const ConfigRecordType& thisFeature = readerConfig(featureNames[i]);
@@ -158,7 +163,7 @@ void HTKMLFReader<ElemType>::PrepareForTrainingOrTesting(const ConfigRecordType&
         m_featDims[i] = m_featDims[i] * (1 + numContextLeft[i] + numContextRight[i]);
 
         wstring type = thisFeature(L"type", L"real");
-        if (!_wcsicmp(type.c_str(), L"real"))
+        if (EqualCI(type, L"real"))
         {
             m_nameToTypeMap[featureNames[i]] = InputOutputTypes::real;
         }
@@ -194,7 +199,7 @@ void HTKMLFReader<ElemType>::PrepareForTrainingOrTesting(const ConfigRecordType&
         else
             type = (const wstring&) thisLabel(L"type", L"category"); // outputs should default to category
 
-        if (!_wcsicmp(type.c_str(), L"category"))
+        if (EqualCI(type, L"category"))
             m_nameToTypeMap[labelNames[i]] = InputOutputTypes::category;
         else
             InvalidArgument("label type must be 'category'");
@@ -250,9 +255,9 @@ void HTKMLFReader<ElemType>::PrepareForTrainingOrTesting(const ConfigRecordType&
         }
     }
 
-    //get lattice toc file names
+    // get lattice toc file names
     std::pair<std::vector<wstring>, std::vector<wstring>> latticetocs;
-    foreach_index (i, latticeNames) //only support one set of lattice now
+    foreach_index (i, latticeNames) // only support one set of lattice now
     {
         const ConfigRecordType& thisLattice = readerConfig(latticeNames[i]);
 
@@ -269,7 +274,7 @@ void HTKMLFReader<ElemType>::PrepareForTrainingOrTesting(const ConfigRecordType&
         RootPathInLatticeTocs = (wstring) thisLattice(L"prefixPathInToc", L"");
     }
 
-    //get HMM related file names
+    // get HMM related file names
     vector<wstring> cdphonetyingpaths, transPspaths;
     foreach_index (i, hmmNames)
     {
@@ -280,7 +285,7 @@ void HTKMLFReader<ElemType>::PrepareForTrainingOrTesting(const ConfigRecordType&
     }
 
     // mmf files
-    //only support one set now
+    // only support one set now
     if (cdphonetyingpaths.size() > 0 && statelistpaths.size() > 0 && transPspaths.size() > 0)
         m_hset.loadfromfile(cdphonetyingpaths[0], statelistpaths[0], transPspaths[0]);
     if (iFeat != scriptpaths.size() || iLabel != mlfpathsmulti.size())
@@ -289,12 +294,9 @@ void HTKMLFReader<ElemType>::PrepareForTrainingOrTesting(const ConfigRecordType&
     if (readerConfig.Exists(L"randomize"))
     {
         wstring randomizeString = readerConfig.CanBeString(L"randomize") ? readerConfig(L"randomize") : wstring();
-        if (!_wcsicmp(randomizeString.c_str(), L"none"))
-            randomize = randomizeNone;
-        else if (!_wcsicmp(randomizeString.c_str(), L"auto"))
-            randomize = randomizeAuto;
-        else
-            randomize = readerConfig(L"randomize");
+        if      (EqualCI(randomizeString, L"none")) randomize = randomizeNone;
+        else if (EqualCI(randomizeString, L"auto")) randomize = randomizeAuto;
+        else                                        randomize = readerConfig(L"randomize"); // TODO: could this not just be randomizeString?
     }
 
     m_frameMode = readerConfig(L"frameMode", true);
@@ -302,7 +304,7 @@ void HTKMLFReader<ElemType>::PrepareForTrainingOrTesting(const ConfigRecordType&
 
     // determine if we partial minibatches are desired
     wstring minibatchMode(readerConfig(L"minibatchMode", L"partial"));
-    m_partialMinibatch = !_wcsicmp(minibatchMode.c_str(), L"partial");
+    m_partialMinibatch = EqualCI(minibatchMode, L"partial");
 
     // get the read method, defaults to "blockRandomize" other option is "rollingWindow"
     wstring readMethod(readerConfig(L"readMethod", L"blockRandomize"));
@@ -378,8 +380,8 @@ void HTKMLFReader<ElemType>::PrepareForTrainingOrTesting(const ConfigRecordType&
                        .../file2.feat
                        etc.
                        the features will be read from
-                       //aaa/bbb/ccc/file1.feat
-                       //aaa/bbb/ccc/file2.feat
+                       // aaa/bbb/ccc/file1.feat
+                       // aaa/bbb/ccc/file2.feat
                        etc.
                        This works well if you store the scp file with the features but
                        do not want different scp files everytime you move or create new features
@@ -426,13 +428,13 @@ void HTKMLFReader<ElemType>::PrepareForTrainingOrTesting(const ConfigRecordType&
     }
     // get labels
 
-    //if (readerConfig.Exists(L"statelist"))
+    // if (readerConfig.Exists(L"statelist"))
     //    statelistpath = readerConfig(L"statelist");
 
     double htktimetoframe = 100000.0; // default is 10ms
-    //std::vector<msra::asr::htkmlfreader<msra::asr::htkmlfentry,msra::lattices::lattice::htkmlfwordsequence>> labelsmulti;
+    // std::vector<msra::asr::htkmlfreader<msra::asr::htkmlfentry,msra::lattices::lattice::htkmlfwordsequence>> labelsmulti;
     std::vector<std::map<std::wstring, std::vector<msra::asr::htkmlfentry>>> labelsmulti;
-    //std::vector<std::wstring> pagepath;
+    // std::vector<std::wstring> pagepath;
     foreach_index (i, mlfpathsmulti)
     {
         const msra::lm::CSymbolSet* wordmap = unigram ? &unigramsymbols : NULL;
@@ -447,7 +449,7 @@ void HTKMLFReader<ElemType>::PrepareForTrainingOrTesting(const ConfigRecordType&
         labelsmulti.push_back(std::move(labels));
     }
 
-    if (!_wcsicmp(readMethod.c_str(), L"blockRandomize"))
+    if (EqualCI(readMethod, L"blockRandomize"))
     {
         // construct all the parameters we don't need, but need to be passed to the constructor...
 
@@ -458,7 +460,7 @@ void HTKMLFReader<ElemType>::PrepareForTrainingOrTesting(const ConfigRecordType&
         m_frameSource.reset(new msra::dbn::minibatchutterancesourcemulti(infilesmulti, labelsmulti, m_featDims, m_labelDims, numContextLeft, numContextRight, randomize, *m_lattices, m_latticeMap, m_frameMode));
         m_frameSource->setverbosity(m_verbosity);
     }
-    else if (!_wcsicmp(readMethod.c_str(), L"rollingWindow"))
+    else if (EqualCI(readMethod, L"rollingWindow"))
     {
         std::wstring pageFilePath;
         std::vector<std::wstring> pagePaths;
@@ -466,9 +468,10 @@ void HTKMLFReader<ElemType>::PrepareForTrainingOrTesting(const ConfigRecordType&
         {
             pageFilePath = (const wstring&) readerConfig(L"pageFilePath");
 
+#ifdef _WIN32
             // replace any '/' with '\' for compat with default path
             std::replace(pageFilePath.begin(), pageFilePath.end(), '/', '\\');
-#ifdef _WIN32
+
             // verify path exists
             DWORD attrib = GetFileAttributes(pageFilePath.c_str());
             if (attrib == INVALID_FILE_ATTRIBUTES || !(attrib & FILE_ATTRIBUTE_DIRECTORY))
@@ -549,7 +552,7 @@ void HTKMLFReader<ElemType>::PrepareForWriting(const ConfigRecordType& readerCon
 
     std::vector<std::wstring> featureNames;
     std::vector<std::wstring> labelNames;
-    //lattice and hmm
+    // lattice and hmm
     std::vector<std::wstring> hmmNames;
     std::vector<std::wstring> latticeNames;
 
@@ -584,7 +587,7 @@ void HTKMLFReader<ElemType>::PrepareForWriting(const ConfigRecordType& readerCon
         realDims[i] = realDims[i] * (1 + numContextLeft[i] + numContextRight[i]);
 
         wstring type = thisFeature(L"type", L"real");
-        if (!_wcsicmp(type.c_str(), L"real"))
+        if (EqualCI(type, L"real"))
         {
             m_nameToTypeMap[featureNames[i]] = InputOutputTypes::real;
         }
@@ -904,7 +907,7 @@ bool HTKMLFReader<ElemType>::GetMinibatchToTrainOrTest(std::map<std::wstring, Ma
             m_extraLabelsIDBufferMultiUtt.clear();
             m_extraPhoneboundaryIDBufferMultiUtt.clear();
             m_extraSeqsPerMB.clear();
-            if (m_noData && m_numFramesToProcess[0] == 0) //no data left for the first channel of this minibatch,
+            if (m_noData && m_numFramesToProcess[0] == 0) // no data left for the first channel of this minibatch,
             {
                 return false;
             }
@@ -1238,7 +1241,7 @@ bool HTKMLFReader<ElemType>::GetMinibatchToTrainOrTest(std::map<std::wstring, Ma
                     m_processedFrame[i] += (endFr - startFr);               // advance the cursor
                     assert(m_processedFrame[i] == m_numFramesToProcess[i]); // we must be at the end
                     m_switchFrame[i] = actualmbsize[i];
-                    //if (actualmbsize[i] != 0)
+                    // if (actualmbsize[i] != 0)
                     //    m_pMBLayout->Set(i, actualmbsize[i] - 1, MinibatchPackingFlags::SequenceEnd); // NOTE: this ORs, while original code overwrote in matrix but ORed into vector
                     // at this point, we completed an utterance--fill the rest with the next utterance
 
@@ -1261,7 +1264,7 @@ bool HTKMLFReader<ElemType>::GetMinibatchToTrainOrTest(std::map<std::wstring, Ma
                             {
                                 // dereference matrix that corresponds to key (input/output name) and
                                 // populate based on whether its a feature or a label
-                                //Matrix<ElemType>& data = *matrices[iter->first]; // can be features or labels
+                                // Matrix<ElemType>& data = *matrices[iter->first]; // can be features or labels
 
                                 if (m_nameToTypeMap[iter->first] == InputOutputTypes::real)
                                 {
@@ -1492,8 +1495,8 @@ bool HTKMLFReader<ElemType>::GetMinibatchToWrite(std::map<std::wstring, Matrix<E
                 {
                     m_pMBLayout->Init(1, feat.cols());
                     m_pMBLayout->AddSequence(NEW_SEQUENCE_ID, 0, 0, feat.cols()); // feat.cols() == number of time steps here since we only have one parallel sequence
-                    //m_pMBLayout->Set(0, 0, MinibatchPackingFlags::SequenceStart);
-                    //m_pMBLayout->SetWithoutOr(0, feat.cols() - 1, MinibatchPackingFlags::SequenceEnd);  // BUGBUG: using SetWithoutOr() because original code did; but that seems inconsistent
+                    // m_pMBLayout->Set(0, 0, MinibatchPackingFlags::SequenceStart);
+                    // m_pMBLayout->SetWithoutOr(0, feat.cols() - 1, MinibatchPackingFlags::SequenceEnd);  // BUGBUG: using SetWithoutOr() because original code did; but that seems inconsistent
                     first = false;
                 }
 
@@ -1658,7 +1661,7 @@ bool HTKMLFReader<ElemType>::ReNewBufferForMultiIO(size_t i)
             }
         }
     }
-    //lattice
+    // lattice
     if (m_latticeBufferMultiUtt[i] != NULL)
     {
         m_latticeBufferMultiUtt[i].reset();

@@ -32,39 +32,39 @@ def readBatch(src, outFmt):
             feat[:, 1::3] = g
             feat[:, 2::3] = b
         else:
-            print 'Format not supported: ' + outFmt
+            print ('Format not supported: ' + outFmt)
             usage()
             sys.exit(1)
     return np.hstack((np.reshape(d['labels'], (len(d['labels']), 1)), feat))
 
 def loadData(src, outFmt):
-    print 'Downloading ' + src
+    print ('Downloading ' + src)
     fname, h = urllib.urlretrieve(src, './delete.me')
-    print 'Done.'
+    print ('Done.')
     try:
-        print 'Extracting files...'
+        print ('Extracting files...')
         with tarfile.open(fname) as tar:
             tar.extractall()
-        print 'Done.'
-        print 'Preparing train set...'
+        print ('Done.')
+        print ('Preparing train set...')
         trn = np.empty((0, NumFeat + 1))
         for i in range(5):
             batchName = './cifar-10-batches-py/data_batch_{0}'.format(i + 1)
             trn = np.vstack((trn, readBatch(batchName, outFmt)))
-        print 'Done.'
-        print 'Preparing test set...'
+        print ('Done.')
+        print ('Preparing test set...')
         tst = readBatch('./cifar-10-batches-py/test_batch', outFmt)
-        print 'Done.'
+        print ('Done.')
     finally:
         os.remove(fname)
     return (trn, tst)
 
 def usage():
-    print 'Usage: CIFAR_convert.py [-f <format>] \n  where format can be either cudnn or legacy. Default is cudnn.'
+    print ('Usage: CIFAR_convert.py [-f <format>] \n  where format can be either cudnn or legacy. Default is cudnn.')
 
 def parseCmdOpt(argv):
     if len(argv) == 0:
-        print "Using cudnn output format."
+        print ("Using cudnn output format.")
         return "cudnn"
     try:
         opts, args = getopt.getopt(argv, 'hf:', ['help', 'outFormat='])
@@ -78,7 +78,7 @@ def parseCmdOpt(argv):
         elif opt in ('-f', '--outFormat'):
             fmt = arg
             if fmt != 'cudnn' and fmt != 'legacy':
-                print 'Invalid output format option.'
+                print ('Invalid output format option.')
                 usage()
                 sys.exit(1)
             return fmt
@@ -86,9 +86,9 @@ def parseCmdOpt(argv):
 if __name__ == "__main__":
     fmt = parseCmdOpt(sys.argv[1:])
     trn, tst = loadData('http://www.cs.toronto.edu/~kriz/cifar-10-python.tar.gz', fmt)
-    print 'Writing train text file...'
+    print ('Writing train text file...')
     np.savetxt(r'./Train.txt', trn, fmt = '%u', delimiter='\t')
-    print 'Done.'
-    print 'Writing test text file...'
+    print ('Done.')
+    print ('Writing test text file...')
     np.savetxt(r'./Test.txt', tst, fmt = '%u', delimiter='\t')
-    print 'Done.'
+    print ('Done.')

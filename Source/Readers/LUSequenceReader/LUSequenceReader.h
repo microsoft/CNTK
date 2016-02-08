@@ -53,8 +53,6 @@ protected:
     bool m_idx2clsRead;
     bool m_clsinfoRead;
 
-    std::wstring m_file;
-
 public:
     using LabelType = wstring;
     using LabelIdType = long;
@@ -64,13 +62,13 @@ public:
     bool mRandomize;
 
 public:
-    /// deal with OOV
+    // deal with OOV
     map<LabelType, LabelType> mWordMapping;
     wstring mWordMappingFn;
     LabelType mUnkStr;
 
 public:
-    /// accumulated number of sentneces read so far
+    // accumulated number of sentneces read so far
     unsigned long mTotalSentenceSofar;
 
 protected:
@@ -83,7 +81,7 @@ protected:
     size_t m_totalSamples;     // number of samples in the dataset
     size_t m_featureDim;       // feature dimensions for extra features
     size_t m_featureCount;     // total number of non-zero features (in labelsDim + extra features dim)
-    /// for language modeling, the m_featureCount = 1, since there is only one nonzero element
+    // for language modeling, the m_featureCount = 1, since there is only one nonzero element
     size_t m_readNextSampleLine; // next sample to read Line
     size_t m_readNextSample;     // next sample to read
     size_t m_seqIndex;           // index into the m_sequence array
@@ -130,11 +128,11 @@ protected:
         long dim;                // maximum label ID we will ever see (used for array dimensions)
         LabelType beginSequence; // starting sequence string (i.e. <s>)
         LabelType endSequence;   // ending sequence string (i.e. </s>)
-        bool busewordmap;        /// whether using wordmap to map unseen words to unk
+        bool busewordmap;        // whether using wordmap to map unseen words to unk
         std::wstring mapName;
         std::wstring fileToWrite; // set to the path if we need to write out the label file
 
-        bool isproposal; /// whether this is for proposal generation
+        bool isproposal; // whether this is for proposal generation
 
         ReaderMode readerMode;
         /**
@@ -298,7 +296,7 @@ public:
     }
     void Reset();
 
-    /// return length of sentences size
+    // return length of sentences size
     size_t FindNextSentences(size_t numSentences);
     bool DataEnd(EndDataType endDataType);
     void SetSentenceEnd(int wrd, int pos, int actualMbSize);
@@ -345,7 +343,7 @@ public:
 
     template <class ConfigRecordType>
     void LoadWordMapping(const ConfigRecordType& config);
-    bool CanReadFor(wstring nodeName); /// return true if this reader can output for a node with name nodeName
+    bool CanReadFor(wstring nodeName); // return true if this reader can output for a node with name nodeName
 
     vector<size_t> ReturnToProcessId()
     {
@@ -365,12 +363,12 @@ public:
     /**
     for sequential reading data, useful for beam search decoding
     */
-    /// this is for frame-by-frame reading of data.
-    /// data is first read into these matrices and then if needed is column-by-column retrieved
-    map<wstring, Matrix<ElemType>> mMatrices;
+    // this is for frame-by-frame reading of data.
+    // data is first read into these matrices and then if needed is column-by-column retrieved
+    map<wstring, std::shared_ptr<Matrix<ElemType>>> mMatrices;
     bool GetFrame(std::map<std::wstring, Matrix<ElemType>*>& matrices, const size_t tidx, vector<size_t>& history);
 
-    /// create proposals
+    // create proposals
     void InitProposals(map<wstring, Matrix<ElemType>*>& pMat);
 
 public:
@@ -443,7 +441,7 @@ public:
     int GetSentenceEndIdFromOutputLabel();
     bool DataEnd(EndDataType endDataType);
 
-    /// create proposals
+    // create proposals
     void InitProposals(map<wstring, Matrix<ElemType>*>& pMat);
     bool GetProposalObs(std::map<std::wstring, Matrix<ElemType>*>& matrices, const size_t tidx, vector<size_t>& history);
 };

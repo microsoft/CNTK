@@ -56,6 +56,9 @@ public:
     virtual void Init(const ConfigParameters& writerConfig) = 0;
     virtual void Init(const ScriptableObjects::IConfigRecord& writerConfig) = 0;
     virtual void Destroy() = 0;
+protected: public: // BUGBUG: This is accessed by a wrapper class.
+    virtual ~IDataWriter() { }
+public:
     virtual void GetSections(std::map<std::wstring, SectionType, nocase_compare>& sections) = 0;
     virtual bool SaveData(size_t recordStart, const std::map<std::wstring, void*, nocase_compare>& matrices, size_t numRecords, size_t datasetSize, size_t byteVariableSized) = 0;
     virtual void SaveMapping(std::wstring saveId, const std::map<LabelIdType, LabelType>& labelMapping) = 0;
@@ -84,7 +87,7 @@ private:
     // Init - Writer Initialize for multiple data sets
     // config - [in] configuration parameters for the datawriter
     // Sample format below for BinaryWriter:
-    //writer=[
+    // writer=[
     //  # writer to use, can implement both reader and writer
     //  writerType=BinaryWriter
     //  miniBatchMode=Partial
@@ -96,34 +99,33 @@ private:
     //  features=[
     //    dim=784
     //    start=1
-    //    sectionType=data
+    //    sectionType="data"
     //    stats=[
-    //      sectionType=stats
+    //      sectionType="stats"
     //      elementSize=8
-    //      compute={sum:count:mean:variance:stddev:max:min:range}
+    //      compute={"sum":"count":"mean:"v"ariance":"stddev":"max":"min":"range"}
     //    ]
     //  ]
     //  labels=[
     //    dim=1
     //    # sizeof(unsigned) which is the label index type
     //    elementSize=4
-    //    wref=features
-    //    sectionType=labels
+    //    wref="features"
+    //    sectionType="labels"
     //    mapping=[
     //      #redefine number of records for this section, since we don't need to save it for each data record
     //      wrecords=10
     //      #variable size so use an average string size
     //      elementSize=10
-    //      sectionType=stringMap
+    //      sectionType="stringMap"
     //    ]
     //    category=[
     //      dim=10
     //      #elementSize=sizeof(ElemType) is default
-    //      sectionType=categoryLabels
+    //      sectionType="categoryLabels"
     //    ]
-    //      labelType=Category
+    //    labelType="category"
     //  ]
-    //
     //]
     template <class ConfigRecordType>
     void InitFromConfig(const ConfigRecordType&);
@@ -167,4 +169,5 @@ public:
     // labelMapping - map we are saving to the file
     virtual void SaveMapping(std::wstring saveId, const std::map<LabelIdType, LabelType>& labelMapping);
 };
+
 } } }

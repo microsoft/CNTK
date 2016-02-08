@@ -34,13 +34,13 @@ class minibatchutterancesourcemulti : public minibatchsource
     std::vector<std::vector<size_t>> counts; // [s] occurence count for all states (used for priors)
     int verbosity;
     // lattice reader
-    //const std::vector<unique_ptr<latticesource>> &lattices;
+    // const std::vector<unique_ptr<latticesource>> &lattices;
     const latticesource &lattices;
 
-    //std::vector<latticesource> lattices;
+    // std::vector<latticesource> lattices;
     // word-level transcripts (for MMI mode when adding best path to lattices)
     const map<wstring, msra::lattices::lattice::htkmlfwordsequence> &allwordtranscripts; // (used for getting word-level transcripts)
-                                                                                         //std::vector<map<wstring,msra::lattices::lattice::htkmlfwordsequence>> allwordtranscripts;
+                                                                                         // std::vector<map<wstring,msra::lattices::lattice::htkmlfwordsequence>> allwordtranscripts;
     // data store (incl. paging in/out of features and lattices)
     struct utterancedesc // data descriptor for one utterance
     {
@@ -52,7 +52,7 @@ class minibatchutterancesourcemulti : public minibatchsource
         {
         }
 
-        const wstring &logicalpath() const
+        wstring logicalpath() const
         {
             return parsedpath; /*type cast will return logical path*/
         }
@@ -155,7 +155,7 @@ class minibatchutterancesourcemulti : public minibatchsource
                     lattices.resize(utteranceset.size());
                 foreach_index (i, utteranceset)
                 {
-                    //fprintf (stderr, ".");
+                    // fprintf (stderr, ".");
                     // read features for this file
                     auto uttframes = getutteranceframes(i);                                                    // matrix stripe for this utterance (currently unfilled)
                     reader.read(utteranceset[i].parsedpath, (const string &) featkind, sampperiod, uttframes); // note: file info here used for checkuing only
@@ -163,7 +163,7 @@ class minibatchutterancesourcemulti : public minibatchsource
                     if (!latticesource.empty())
                         latticesource.getlattices(utteranceset[i].key(), lattices[i], uttframes.cols());
                 }
-                //fprintf (stderr, "\n");
+                // fprintf (stderr, "\n");
                 if (verbosity)
                     fprintf(stderr, "requiredata: %d utterances read\n", (int) utteranceset.size());
             }
@@ -188,6 +188,8 @@ class minibatchutterancesourcemulti : public minibatchsource
     };
     std::vector<std::vector<utterancechunkdata>> allchunks;           // set of utterances organized in chunks, referred to by an iterator (not an index)
     std::vector<unique_ptr<biggrowablevector<CLASSIDTYPE>>> classids; // [classidsbegin+t] concatenation of all state sequences
+
+    bool generatePhoneBoundaries;
     std::vector<unique_ptr<biggrowablevector<HMMIDTYPE>>> phoneboundaries;
     bool issupervised() const
     {
@@ -243,7 +245,14 @@ class minibatchutterancesourcemulti : public minibatchsource
     struct utteranceref                               // describes the underlying random utterance associated with an utterance position
     {
         size_t chunkindex;     // lives in this chunk (index into randomizedchunks[])
-        size_t utteranceindex; // utterance index in that chunk
+    private:
+        size_t m_utteranceindex; // utterance index in that chunk
+    public:
+        size_t utteranceindex() const
+        {
+            return m_utteranceindex;
+        }
+
         size_t numframes;      // (cached since we cannot directly access the underlying data from here)
         size_t globalts;       // start frame in global space after randomization (for mapping frame index to utterance position)
         size_t globalte() const
@@ -251,13 +260,13 @@ class minibatchutterancesourcemulti : public minibatchsource
             return globalts + numframes;
         } // end frame
         utteranceref(size_t chunkindex, size_t utteranceindex)
-            : chunkindex(chunkindex), utteranceindex(utteranceindex), globalts(SIZE_MAX), numframes(0)
+            : chunkindex(chunkindex), m_utteranceindex(utteranceindex), globalts(SIZE_MAX), numframes(0)
         {
         }
         void swap(utteranceref &other) // used in randomization
         {
             ::swap(chunkindex, other.chunkindex);
-            ::swap(utteranceindex, other.utteranceindex);
+            ::swap(m_utteranceindex, other.m_utteranceindex);
             assert(globalts == SIZE_MAX && other.globalts == SIZE_MAX && numframes == 0 && other.numframes == 0); // can only swap before assigning these
         }
     };
@@ -286,25 +295,73 @@ class minibatchutterancesourcemulti : public minibatchsource
     std::vector<positionchunkwindow> positionchunkwindows; // [utterance position] -> [windowbegin, windowend) for controlling paging
 
     // frame-level randomization layered on top of utterance chunking (randomized, where randomization is cached)
+    #pragma pack(push)
+    #pragma pack(1)
     struct frameref
     {
         unsigned short chunkindex;     // lives in this chunk (index into randomizedchunks[])
-        unsigned short utteranceindex; // utterance index in that chunk
-        static const size_t maxutterancesperchunk = 65535;
-        unsigned short frameindex; // frame index within the utterance
-        static const size_t maxframesperutterance = 65535;
-        frameref(size_t ci, size_t ui, size_t fi)
-            : chunkindex((unsigned short) ci), utteranceindex((unsigned short) ui), frameindex((unsigned short) fi)
+
+    private:
+        // The utterance index and frame index are stored in a byte array
+        // with the first NUM_UTTERANCE_INDEX_BITS bits being the utterance index 
+        // and the remaining being the frame index
+        static const unsigned int NUM_STORAGE_BYTES = 3;
+        static const unsigned int NUM_UTTERANCE_INDEX_BITS = 11;
+        static const unsigned int NUM_FRAME_INDEX_BITS = (NUM_STORAGE_BYTES * 8) - NUM_UTTERANCE_INDEX_BITS;
+
+        unsigned char m_buffer[NUM_STORAGE_BYTES];
+        static_assert(NUM_STORAGE_BYTES <= sizeof(unsigned int), "Number of storage bytes in a frameref should not exceed sizeof(unsigned int)");
+        unsigned int fullvalue() const
         {
-            if (ci == chunkindex && ui == utteranceindex && fi == frameindex)
-                return;
-            LogicError("frameref: bit fields too small");
+            unsigned int fullValue = m_buffer[0];
+            for (int i = 1; i < NUM_STORAGE_BYTES; ++i)
+            {
+                fullValue = (fullValue << 8) + m_buffer[i];
+            }
+
+            return fullValue;
         }
-        frameref()
-            : chunkindex(0), utteranceindex(0), frameindex(0)
+    public:
+        static const size_t maxutterancesperchunk = (1 << NUM_UTTERANCE_INDEX_BITS) - 1;
+        static const size_t maxframesperutterance = (1 << NUM_FRAME_INDEX_BITS) - 1;
+
+        // utterance index in that chunk
+        unsigned short utteranceindex() const
         {
+            return (unsigned short)(fullvalue() >> NUM_FRAME_INDEX_BITS);
+        }
+
+        // frame index within the utterance
+        unsigned short frameindex() const
+        {
+            return (unsigned short)(fullvalue() & ((1U << NUM_FRAME_INDEX_BITS) - 1));
+        }
+
+        frameref(size_t ci, size_t ui, size_t fi)
+            : chunkindex((unsigned short) ci)
+        {
+            if ((ui <= maxutterancesperchunk) && (fi <= maxframesperutterance))
+            {
+                unsigned int fullValue = (unsigned int)ui;
+                fullValue = (fullValue << NUM_FRAME_INDEX_BITS) + (unsigned int)fi;
+                for (int i = NUM_STORAGE_BYTES - 1; i >=0; --i)
+                {
+                    m_buffer[i] = fullValue & ((1U << 8) - 1);
+                    fullValue = fullValue >> 8;
+                }
+            }
+            else
+                LogicError("frameref: bit fields too small");
+        }
+
+        frameref()
+            : chunkindex(0)
+        {
+            for (int i = 0; i < NUM_STORAGE_BYTES; ++i)
+                m_buffer[i] = 0;
         }
     };
+    #pragma pack(pop)
     biggrowablevector<frameref> randomizedframerefs; // [globalt-sweepts] -> (chunk, utt, frame) lookup table for randomized frames  --this can be REALLY big!
 
     // TODO: this may go away if we store classids directly in the utterance data
@@ -337,7 +394,6 @@ class minibatchutterancesourcemulti : public minibatchsource
     std::vector<shiftedvector<biggrowablevector<CLASSIDTYPE>>> getclassids(const UTTREF &uttref) // return sub-vector of classids[] for a given utterance
     {
         std::vector<shiftedvector<biggrowablevector<CLASSIDTYPE>>> allclassids;
-        allclassids.empty();
 
         if (!issupervised())
         {
@@ -347,8 +403,8 @@ class minibatchutterancesourcemulti : public minibatchsource
         }
         const auto &chunk = randomizedchunks[0][uttref.chunkindex];
         const auto &chunkdata = chunk.getchunkdata();
-        const size_t classidsbegin = chunkdata.getclassidsbegin(uttref.utteranceindex); // index of first state label in global concatenated classids[] array
-        const size_t n = chunkdata.numframes(uttref.utteranceindex);
+        const size_t classidsbegin = chunkdata.getclassidsbegin(uttref.utteranceindex()); // index of first state label in global concatenated classids[] array
+        const size_t n = chunkdata.numframes(uttref.utteranceindex());
         foreach_index (i, classids)
         {
             if ((*classids[i])[classidsbegin + n] != (CLASSIDTYPE) -1)
@@ -360,6 +416,9 @@ class minibatchutterancesourcemulti : public minibatchsource
     template <class UTTREF>
     std::vector<shiftedvector<biggrowablevector<HMMIDTYPE>>> getphonebound(const UTTREF &uttref) // return sub-vector of classids[] for a given utterance
     {
+        if (!generatePhoneBoundaries)
+            LogicError("getphonebound: generation of phone boundaries is not enabled for this utterance source!");
+
         std::vector<shiftedvector<biggrowablevector<HMMIDTYPE>>> allphoneboundaries;
         allphoneboundaries.empty();
 
@@ -371,8 +430,8 @@ class minibatchutterancesourcemulti : public minibatchsource
         }
         const auto &chunk = randomizedchunks[0][uttref.chunkindex];
         const auto &chunkdata = chunk.getchunkdata();
-        const size_t classidsbegin = chunkdata.getclassidsbegin(uttref.utteranceindex); // index of first state label in global concatenated classids[] array
-        const size_t n = chunkdata.numframes(uttref.utteranceindex);
+        const size_t classidsbegin = chunkdata.getclassidsbegin(uttref.utteranceindex()); // index of first state label in global concatenated classids[] array
+        const size_t n = chunkdata.numframes(uttref.utteranceindex());
         foreach_index (i, phoneboundaries)
         {
             if ((*phoneboundaries[i])[classidsbegin + n] != (HMMIDTYPE) -1)
@@ -389,7 +448,7 @@ public:
     minibatchutterancesourcemulti(const std::vector<std::vector<wstring>> &infiles, const std::vector<map<wstring, std::vector<msra::asr::htkmlfentry>>> &labels,
                                   std::vector<size_t> vdim, std::vector<size_t> udim, std::vector<size_t> leftcontext, std::vector<size_t> rightcontext, size_t randomizationrange,
                                   const latticesource &lattices, const map<wstring, msra::lattices::lattice::htkmlfwordsequence> &allwordtranscripts, const bool framemode)
-        : vdim(vdim), leftcontext(leftcontext), rightcontext(rightcontext), sampperiod(0), featdim(0), randomizationrange(randomizationrange), currentsweep(SIZE_MAX), lattices(lattices), allwordtranscripts(allwordtranscripts), framemode(framemode), chunksinram(0), timegetbatch(0), verbosity(2)
+                                  : vdim(vdim), leftcontext(leftcontext), rightcontext(rightcontext), sampperiod(0), featdim(0), randomizationrange(randomizationrange), currentsweep(SIZE_MAX), lattices(lattices), allwordtranscripts(allwordtranscripts), framemode(framemode), chunksinram(0), timegetbatch(0), verbosity(2), generatePhoneBoundaries(!lattices.empty())
     // [v-hansu] change framemode (lattices.empty()) into framemode (false) to run utterance mode without lattice
     // you also need to change another line, search : [v-hansu] comment out to run utterance mode without lattice
     {
@@ -402,7 +461,7 @@ public:
         size_t numutts = 0;
 
         std::vector<bool> uttisvalid;    // boolean flag to check that utterance is valid. valid means number of
-                                         //frames is consistent across all feature and label streams
+                                         // frames is consistent across all feature and label streams
         std::vector<size_t> uttduration; // track utterance durations to determine utterance validity
 
         std::vector<size_t> classidsbegin;
@@ -418,10 +477,12 @@ public:
         foreach_index (i, labels)
         {
             classids.push_back(unique_ptr<biggrowablevector<CLASSIDTYPE>>(new biggrowablevector<CLASSIDTYPE>()));
-            phoneboundaries.push_back(unique_ptr<biggrowablevector<HMMIDTYPE>>(new biggrowablevector<HMMIDTYPE>()));
-            //std::pair<std::vector<wstring>,std::vector<wstring>> latticetocs;
-            //std::unordered_map<std::string,size_t> modelsymmap;
-            //lattices.push_back(shared_ptr<latticesource>(new latticesource(latticetocs, modelsymmap)));
+            if (generatePhoneBoundaries)
+                phoneboundaries.push_back(unique_ptr<biggrowablevector<HMMIDTYPE>>(new biggrowablevector<HMMIDTYPE>()));
+
+            // std::pair<std::vector<wstring>,std::vector<wstring>> latticetocs;
+            // std::unordered_map<std::string,size_t> modelsymmap;
+            // lattices.push_back(shared_ptr<latticesource>(new latticesource(latticetocs, modelsymmap)));
         }
 
         // first check consistency across feature streams
@@ -442,7 +503,7 @@ public:
 
             foreach_index (i, infiles[m])
             {
-                utterancedesc utterance(msra::asr::htkfeatreader::parsedpath(infiles[m][i]), 0); //mseltzer - is this foolproof for multiio? is classids always non-empty?
+                utterancedesc utterance(msra::asr::htkfeatreader::parsedpath(infiles[m][i]), 0); // mseltzer - is this foolproof for multiio? is classids always non-empty?
                 const size_t uttframes = utterance.numframes();                                  // will throw if frame bounds not given --required to be given in this mode
                 // we need at least 2 frames for boundary markers to work
                 if (uttframes < 2)
@@ -486,9 +547,9 @@ public:
         {
             std::vector<utterancedesc> utteranceset; // read all utterances to here first; at the end, distribute to chunks
             utteranceset.reserve(infiles[m].size());
-            //if (m==0)
+            // if (m==0)
             //    numutts = infiles[m].size();
-            //else
+            // else
             //    if (infiles[m].size()!=numutts)
             //        RuntimeError("minibatchutterancesourcemulti: all feature files must have same number of utterances\n");
             if (m == 0)
@@ -507,28 +568,28 @@ public:
 
                 if (uttisvalid[i])
                 {
-                    utterancedesc utterance(msra::asr::htkfeatreader::parsedpath(infiles[m][i]), labels.empty() ? 0 : classidsbegin[i]); //mseltzer - is this foolproof for multiio? is classids always non-empty?
+                    utterancedesc utterance(msra::asr::htkfeatreader::parsedpath(infiles[m][i]), labels.empty() ? 0 : classidsbegin[i]); // mseltzer - is this foolproof for multiio? is classids always non-empty?
                     const size_t uttframes = utterance.numframes();                                                                      // will throw if frame bounds not given --required to be given in this mode
                     assert(uttframes == uttduration[i]);                                                                                 // ensure nothing funky happened
                     // already performed these checks above
                     // we need at least 2 frames for boundary markers to work
-                    //if (uttframes < 2)
+                    // if (uttframes < 2)
                     //    RuntimeError("minibatchutterancesource: utterances < 2 frames not supported");
-                    //if (uttframes > frameref::maxframesperutterance)
-                    //{
+                    // if (uttframes > frameref::maxframesperutterance)
+                    // {
                     //    fprintf (stderr, "minibatchutterancesource: skipping %d-th file (%d frames) because it exceeds max. frames (%d) for frameref bit field: %ls", i, uttframes, frameref::maxframesperutterance, key.c_str());
                     //    continue;
-                    //}
+                    // }
 
                     // check whether we have the ref transcript
-                    //auto labelsiter = labels[0].end();
+                    // auto labelsiter = labels[0].end();
                     bool lacksmlf = true;
                     if (!labels.empty()) // empty means unsupervised mode (don't load any)
                     {
                         key = utterance.key();
                         // check if labels are available (if not, it normally means that no path was found in realignment)
                         auto labelsiter = labels[0].find(key);
-                        //const bool lacksmlf = (labelsiter == labels[0].end());
+                        // const bool lacksmlf = (labelsiter == labels[0].end());
                         lacksmlf = (labelsiter == labels[0].end());
                         if (lacksmlf)
                             if (nomlf++ < 5)
@@ -554,7 +615,7 @@ public:
                     if (m == 0)
                     {
                         if (!labels.empty() && !lacksmlf)
-                        //if (!labels.empty() && labelsiter != labels[0].end())
+                        // if (!labels.empty() && labelsiter != labels[0].end())
                         {
                             // first verify that all the label files have the proper duration
                             foreach_index (j, labels)
@@ -567,7 +628,7 @@ public:
                                     fprintf(stderr, " [duration mismatch (%d in label vs. %d in feat file), skipping %ls]", (int) labframes, (int) uttframes, key.c_str());
                                     nomlf++;
                                     uttisvalid[i] = false;
-                                    //continue;   // skip this utterance at all
+                                    // continue;   // skip this utterance at all
                                     break;
                                 }
                             }
@@ -596,10 +657,13 @@ public:
                                         for (size_t t = e.firstframe; t < e.firstframe + e.numframes; t++)
                                         {
                                             classids[j]->push_back(e.classid);
-                                            if (e.phonestart != 0 && t == e.firstframe)
-                                                phoneboundaries[j]->push_back((HMMIDTYPE) e.phonestart);
-                                            else
-                                                phoneboundaries[j]->push_back((HMMIDTYPE) 0);
+                                            if (generatePhoneBoundaries)
+                                            {
+                                                if (e.phonestart != 0 && t == e.firstframe)
+                                                    phoneboundaries[j]->push_back((HMMIDTYPE)e.phonestart);
+                                                else
+                                                    phoneboundaries[j]->push_back((HMMIDTYPE)0);
+                                            }
                                         }
                                         numclasses[j] = max(numclasses[j], (size_t)(1u + e.classid));
                                         counts[j].resize(numclasses[j], 0);
@@ -607,7 +671,8 @@ public:
                                     }
 
                                     classids[j]->push_back((CLASSIDTYPE) -1);      // append a boundary marker marker for checking
-                                    phoneboundaries[j]->push_back((HMMIDTYPE) -1); // append a boundary marker marker for checking
+                                    if (generatePhoneBoundaries)
+                                        phoneboundaries[j]->push_back((HMMIDTYPE) -1); // append a boundary marker marker for checking
 
                                     if (!labels[j].empty() && classids[j]->size() != _totalframes + utteranceset.size())
                                         LogicError("minibatchutterancesource: label duration inconsistent with feature file in MLF label set: %ls", key.c_str());
@@ -642,10 +707,10 @@ public:
                     biggrowablevector<CLASSIDTYPE> &cid = *classids[j];
                     foreach_index (i, utteranceset)
                     {
-                        //if ((*classids[j])[utteranceset[i].classidsbegin + utteranceset[i].numframes()] != (CLASSIDTYPE) -1)
-                        //printf("index = %d\n",utteranceset[i].classidsbegin + utteranceset[i].numframes());
-                        //printf("cid[index] = %d\n",cid[utteranceset[i].classidsbegin + utteranceset[i].numframes()]);
-                        //printf("CLASSIDTYPE(-1) = %d\n",(CLASSIDTYPE) -1);
+                        // if ((*classids[j])[utteranceset[i].classidsbegin + utteranceset[i].numframes()] != (CLASSIDTYPE) -1)
+                        // printf("index = %d\n",utteranceset[i].classidsbegin + utteranceset[i].numframes());
+                        // printf("cid[index] = %d\n",cid[utteranceset[i].classidsbegin + utteranceset[i].numframes()]);
+                        // printf("CLASSIDTYPE(-1) = %d\n",(CLASSIDTYPE) -1);
                         if (cid[utteranceset[i].classidsbegin + utteranceset[i].numframes()] != (CLASSIDTYPE) -1)
                             LogicError("minibatchutterancesource: classids[] out of sync");
                     }
@@ -714,30 +779,6 @@ private:
             ::swap(v[i], v[irand]);
         }
     }
-#if 0
-    template<typename VECTOR> static void randomshuffle(std::vector<VECTOR &> v, size_t randomseed)
-    {
-        foreach_index(j, v)
-        {
-           if (v[j].size() > RAND_MAX * (size_t) RAND_MAX)
-            RuntimeError("randomshuffle: too large set: need to change to different random generator!");
-        }
-        srand ((unsigned int) randomseed);
-        
-        foreach_index (i, v[0])
-        {
-           // pick a random location
-            const size_t irand = msra::dbn::rand (0, v[0].size());
-
-            foreach_index(j, v){
-            // swap element i with it
-                if (irand == (size_t) i)
-                    continue;
-                ::swap (v[j][i], v[j][irand]);
-            }
-        }
-    }
-#endif //0
     static void checkoverflow(size_t fieldval, size_t targetval, const char *fieldname)
     {
         if (fieldval != targetval)
@@ -934,7 +975,7 @@ private:
             {
                 auto &uttref = randomizedutterancerefs[i];
                 uttref.globalts = t;
-                uttref.numframes = randomizedchunks[0][uttref.chunkindex].getchunkdata().numframes(uttref.utteranceindex);
+                uttref.numframes = randomizedchunks[0][uttref.chunkindex].getchunkdata().numframes(uttref.utteranceindex());
                 t = uttref.globalte();
             }
             assert(t == sweepts + _totalframes);
@@ -979,21 +1020,15 @@ private:
             // Later we will randomize those as well.
             foreach_index (i, randomizedchunks[0])
             {
-                frameref.chunkindex = (unsigned short) i;
-                checkoverflow(frameref.chunkindex, i, "frameref::chunkindex");
                 const auto &chunk = randomizedchunks[0][i];
                 const auto &chunkdata = chunk.getchunkdata();
                 const size_t numutt = chunkdata.numutterances();
                 for (size_t k = 0; k < numutt; k++)
                 {
-                    frameref.utteranceindex = (short) k;
-                    checkoverflow(frameref.utteranceindex, k, "frameref::utteranceindex");
                     const size_t n = chunkdata.numframes(k);
                     for (size_t m = 0; m < n; m++)
                     {
-                        frameref.frameindex = (short) m;
-                        checkoverflow(frameref.frameindex, m, "frameref::utteranceindex");
-                        randomizedframerefs[t] = frameref; // hopefully this is a memory copy, not a bit-wise assignment! If not, then code it explicitly
+                        randomizedframerefs[t] = {(size_t)i, k, m}; // hopefully this is a memory copy, not a bit-wise assignment! If not, then code it explicitly
                         ttochunk[t] = (unsigned short) i;
                         checkoverflow(ttochunk[t], i, "ttochunk[]");
                         t++;
@@ -1171,7 +1206,7 @@ private:
 
     size_t chunkforframepos(const size_t t) const // find chunk for a given frame position
     {
-        //inspect chunk of first feature stream only
+        // inspect chunk of first feature stream only
         auto iter = std::lower_bound(randomizedchunks[0].begin(), randomizedchunks[0].end(), t, [&](const chunk &chunk, size_t t)
                                      {
                                          return chunk.globalte() <= t;
@@ -1263,7 +1298,8 @@ public:
             // resize feat and uids
             feat.resize(vdim.size());
             uids.resize(classids.size());
-            phoneboundaries.resize(classids.size());
+            if (generatePhoneBoundaries)
+                phoneboundaries.resize(classids.size());
             sentendmark.resize(vdim.size());
             assert(feat.size() == vdim.size());
             assert(feat.size() == randomizedchunks.size());
@@ -1278,12 +1314,14 @@ public:
                         if (issupervised()) // empty means unsupervised training -> return empty uids
                         {
                             uids[j].resize(tspos);
-                            phoneboundaries[j].resize(tspos);
+                            if (generatePhoneBoundaries)
+                                phoneboundaries[j].resize(tspos);
                         }
                         else
                         {
                             uids[i].clear();
-                            phoneboundaries[i].clear();
+                            if (generatePhoneBoundaries)
+                                phoneboundaries[i].clear();
                         }
                         latticepairs.clear(); // will push_back() below
                         transcripts.clear();
@@ -1310,11 +1348,11 @@ public:
                     const auto &chunk = randomizedchunks[i][uttref.chunkindex];
                     const auto &chunkdata = chunk.getchunkdata();
                     assert((numsubsets > 1) || (uttref.globalts == globalts + tspos));
-                    auto uttframes = chunkdata.getutteranceframes(uttref.utteranceindex);
+                    auto uttframes = chunkdata.getutteranceframes(uttref.utteranceindex());
                     matrixasvectorofvectors uttframevectors(uttframes); // (wrapper that allows m[j].size() and m[j][i] as required by augmentneighbors())
                     n = uttframevectors.size();
                     sentendmark[i].push_back(n + tspos);
-                    assert(n == uttframes.cols() && uttref.numframes == n && chunkdata.numframes(uttref.utteranceindex) == n);
+                    assert(n == uttframes.cols() && uttref.numframes == n && chunkdata.numframes(uttref.utteranceindex()) == n);
 
                     // copy the frames and class labels
                     for (size_t t = 0; t < n; t++) // t = time index into source utterance
@@ -1331,14 +1369,16 @@ public:
                             rightextent = rightcontext[i];
                         }
                         augmentneighbors(uttframevectors, noboundaryflags, t, leftextent, rightextent, feat[i], t + tspos);
-                        //augmentneighbors(uttframevectors, noboundaryflags, t, feat[i], t + tspos);
+                        // augmentneighbors(uttframevectors, noboundaryflags, t, feat[i], t + tspos);
                     }
 
                     // copy the frames and class labels
                     if (i == 0)
                     {
                         auto uttclassids = getclassids(uttref);
-                        auto uttphoneboudaries = getphonebound(uttref);
+                        std::vector<shiftedvector<biggrowablevector<HMMIDTYPE>>> uttphoneboudaries;
+                        if (generatePhoneBoundaries)
+                            uttphoneboudaries = getphonebound(uttref);
                         foreach_index (j, uttclassids)
                         {
                             for (size_t t = 0; t < n; t++) // t = time index into source utterance
@@ -1346,13 +1386,14 @@ public:
                                 if (issupervised())
                                 {
                                     uids[j][t + tspos] = uttclassids[j][t];
-                                    phoneboundaries[j][t + tspos] = uttphoneboudaries[j][t];
+                                    if (generatePhoneBoundaries)
+                                        phoneboundaries[j][t + tspos] = uttphoneboudaries[j][t];
                                 }
                             }
 
                             if (!this->lattices.empty())
                             {
-                                auto latticepair = chunkdata.getutterancelattice(uttref.utteranceindex);
+                                auto latticepair = chunkdata.getutterancelattice(uttref.utteranceindex());
                                 latticepairs.push_back(latticepair);
                                 // look up reference
                                 const auto &key = latticepair->getkey();
@@ -1457,14 +1498,14 @@ public:
                 {
                     const auto &chunk = randomizedchunks[i][frameref.chunkindex];
                     const auto &chunkdata = chunk.getchunkdata();
-                    auto uttframes = chunkdata.getutteranceframes(frameref.utteranceindex);
+                    auto uttframes = chunkdata.getutteranceframes(frameref.utteranceindex());
                     matrixasvectorofvectors uttframevectors(uttframes); // (wrapper that allows m[.].size() and m[.][.] as required by augmentneighbors())
                     const size_t n = uttframevectors.size();
-                    assert(n == uttframes.cols() && chunkdata.numframes(frameref.utteranceindex) == n);
+                    assert(n == uttframes.cols() && chunkdata.numframes(frameref.utteranceindex()) == n);
                     n;
 
                     // copy frame and class labels
-                    const size_t t = frameref.frameindex;
+                    const size_t t = frameref.frameindex();
 
                     size_t leftextent, rightextent;
                     // page in the needed range of frames
@@ -1528,9 +1569,9 @@ public:
         RuntimeError("minibatchframesourcemulti: getbatch() being called for single input feature and single output feature, should use minibatchutterancesource instead\n");
 
         // for single input/output set size to be 1 and run old getbatch
-        //feat.resize(1);
-        //uids.resize(1);
-        //return getbatch(globalts, framesrequested, feat[0], uids[0], transcripts, latticepairs);
+        // feat.resize(1);
+        // uids.resize(1);
+        // return getbatch(globalts, framesrequested, feat[0], uids[0], transcripts, latticepairs);
     }
 
     size_t totalframes() const

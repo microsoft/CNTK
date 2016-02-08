@@ -31,6 +31,10 @@
     TypeName(TypeName&&) = delete;                 \
     TypeName& operator=(TypeName&&) = delete
 
+#ifndef let
+#define let const auto  // let x = ... ; let & r = ...
+#endif
+
 namespace Microsoft { namespace MSR { namespace CNTK {
 
 using namespace std;
@@ -53,10 +57,10 @@ __declspec_noreturn static inline void ThrowFormatted(const char* format, ...)
 
     va_start(args, format);
     vsprintf(buffer, format, args);
-    Microsoft::MSR::CNTK::DebugUtil::PrintCallStack();
 #ifdef _DEBUG // print this to log before throwing, so we can see what the error is
-    fprintf(stderr, "About to throw exception '%s'\n", buffer);
+    fprintf(stderr, "\nAbout to throw exception '%s'\n", buffer);
 #endif
+    Microsoft::MSR::CNTK::DebugUtil::PrintCallStack();
     throw E(buffer);
 };
 #pragma warning(pop)
@@ -306,7 +310,7 @@ static inline std::wstring mbstowcs(const std::string& p) // input: MBCS
     size_t len = p.length();
     std::vector<wchar_t> buf(len + 1); // max: >1 mb chars => 1 wchar
     std::fill(buf.begin(), buf.end(), (wchar_t) 0);
-    //OACR_WARNING_SUPPRESS(UNSAFE_STRING_FUNCTION, "Reviewed OK. size checked. [rogeryu 2006/03/21]");
+    // OACR_WARNING_SUPPRESS(UNSAFE_STRING_FUNCTION, "Reviewed OK. size checked. [rogeryu 2006/03/21]");
     ::mbstowcs(&buf[0], p.c_str(), len + 1);
     return std::wstring(&buf[0]);
 }
@@ -421,26 +425,12 @@ static inline double todouble(const char* s)
 // TODO: merge this with todouble(const char*) above
 static inline double todouble(const std::string& s)
 {
-    s.size(); // just used to remove the unreferenced warning
-
     double value = 0.0;
 
-// stod supposedly exists in VS2010, but some folks have compilation errors
-// If this causes errors again, change the #if into the respective one for VS 2010.
-#if _MSC_VER > 1400 // VS 2010+
     size_t* idx = 0;
     value = std::stod(s, idx);
     if (idx)
         RuntimeError("todouble: invalid input string '%s'", s.c_str());
-#else
-    char* ep = 0; // will be updated by strtod to point to first character that failed parsing
-    value = strtod(s.c_str(), &ep);
-
-    // strtod documentation says ep points to first unconverted character OR
-    // return value will be +/- HUGE_VAL for overflow/underflow
-    if (ep != s.c_str() + s.length() || value == HUGE_VAL || value == -HUGE_VAL)
-        RuntimeError("todouble: invalid input string '%s'", s.c_str());
-#endif
 
     return value;
 }
@@ -508,22 +498,35 @@ public:
 namespace Microsoft { namespace MSR { namespace CNTK {
 
 // ----------------------------------------------------------------------------
-// string comparison class, so we do case insensitive compares
-// E.g. to define maps with case-insensitive key lookup
+// case-insensitive string-comparison helpers
 // ----------------------------------------------------------------------------
 
+// normalize between char* and string
+// Note: Intended for use within a single expression. Otherwise be aware of memory ownership; same restrictions apply as for string::c_str().
+static inline const char    * c_str(const char *    p) { return p;         }
+static inline const char    * c_str(const string &  p) { return p.c_str(); }
+static inline const wchar_t * c_str(const wchar_t * p) { return p;         }
+static inline const wchar_t * c_str(const wstring & p) { return p.c_str(); }
+
+// compare strings
+static inline int CompareCI(const char    * a, const char    * b) { return _stricmp(a, b); }
+static inline int CompareCI(const wchar_t * a, const wchar_t * b) { return _wcsicmp(a, b); }
+
+template<typename S1, typename S2>
+static inline int CompareCI(const S1 & a, const S2 & b) { return CompareCI(c_str(a), c_str(b)); }
+
+// compare for equality
+template<typename S1, typename S2>
+static inline bool EqualCI(const S1 & a, const S2 & b) { return CompareCI(a, b) == 0; }
+
+// comparer class for defining maps with case-insensitive key lookup
 struct nocase_compare
 {
     // std::string version of 'less' function
-    // return false for equivalent, true for different
-    bool operator()(const string& left, const string& right) const
+    template<typename S1, typename S2>
+    bool operator()(const S1& left, const S2& right) const
     {
-        return _stricmp(left.c_str(), right.c_str()) < 0;
-    }
-    // std::wstring version of 'less' function, used in non-config classes
-    bool operator()(const wstring& left, const wstring& right) const
-    {
-        return _wcsicmp(left.c_str(), right.c_str()) < 0;
+        return CompareCI(left, right) < 0;
     }
 };
 
@@ -562,7 +565,10 @@ public:
         if (m_hModule == NULL)
             RuntimeError("Plugin not found: %s", msra::strfun::utf8(m_dllName).c_str());
         // create a variable of each type just to call the proper templated version
-        return GetProcAddress(m_hModule, proc.c_str());
+        FARPROC entryPoint = GetProcAddress(m_hModule, proc.c_str());
+        if (entryPoint == nullptr)
+            RuntimeError("Symbol '%s' not found in plugin %s", proc.c_str(), m_dllName.c_str());
+        return entryPoint;
     }
     ~Plugin()
     {
@@ -589,7 +595,10 @@ public:
         void* handle = dlopen(soName.c_str(), RTLD_LAZY);
         if (handle == NULL)
             RuntimeError("Plugin not found: %s (error: %s)", soName.c_str(), dlerror());
-        return dlsym(handle, proc.c_str());
+        void* entryPoint = dlsym(handle, proc.c_str());
+        if (entryPoint == nullptr)
+            RuntimeError("Symbol '%s' not found in plugin %s", proc.c_str(), soName.c_str());
+        return entryPoint;
     }
     ~Plugin()
     {

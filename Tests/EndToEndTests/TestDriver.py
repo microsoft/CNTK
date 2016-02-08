@@ -10,11 +10,11 @@
 #
 # ---- Adding the tests: -------
 # File system organization:
-#   Each test suite (e.g. Speech) has its own directory inside Tests
+#   Each test suite (e.g. Speech) has its own directory inside EndToEndTests
 #   Each test (e.g. QuickE2E) has its own directory within test suite
 #
 # Each test directory has a following components:
-#    - testcases.yml - main test confuguration file, whcih defines all test cases
+#    - testcases.yml - main test configuration file, which defines all test cases
 #    - run-test - (run-test) script
 #    - baseline*.txt - baseline files whith a captured expected output of run-test script
 #
@@ -40,7 +40,7 @@
 #   .....
 #
 # ----- pattern language --------
-# Multpile patterns of the same testcase are matching a *single* line of text
+# Multiple patterns of the same testcase are matching a *single* line of text
 # Pattern is essentiually a substring which has to be found in a line
 # if pattern starts with ^ then matching is constrained to look only at the beginning of the line
 #
@@ -157,7 +157,7 @@ class Test:
         try:
           assert(type(predicate(flavor='foo', device='bar', os='foobar', build_sku='qux')) == bool)
         except Exception as e:
-          print "Can't parse tag predicate expression in {0} ({1}):\n{2}".format(pathToYmlFile, pythonExpr, e)
+          print ("Can't parse tag predicate expression in {0} ({1}):\n{2}".format(pathToYmlFile, pythonExpr, e))
           raise e
 
         # saving generated lambda into tags dictionary
@@ -208,7 +208,7 @@ class Test:
       with open(baselineFile, "r") as f:
         baseline = f.read().split("\n")
         if args.verbose:
-           print "Baseline:", baselineFile
+           print ("Baseline: " + baselineFile)
 
     # Before running the test, pre-creating TestCaseRunResult object for each test case
     # and compute filtered lines from baseline file.
@@ -233,7 +233,13 @@ class Test:
       os.environ["TEST_CNTK_BINARY"] = os.path.join(args.build_location, flavor, "cntk.exe")
       os.environ["MPI_BINARY"] = os.path.join(os.environ["MSMPI_BIN"], "mpiexec.exe")
     else:
-      os.environ["TEST_CNTK_BINARY"] = os.path.join(args.build_location, flavor, "bin", "cntk")
+      tempPath = os.path.join(args.build_location, flavor, "bin", "cntk")
+      if not os.path.isfile(tempPath):
+        for bsku in ["/build/gpu/", "/build/cpu/", "/build/1bitsgd/"]:
+          if tempPath.find(bsku) >= 0:
+            tempPath = tempPath.replace(bsku, "/build/")
+            break
+      os.environ["TEST_CNTK_BINARY"] = tempPath
       os.environ["MPI_BINARY"] = "mpiexec"
     os.environ["TEST_DIR"] = self.testDir
     os.environ["TEST_DATA_DIR"] = self.dataDir
@@ -246,7 +252,7 @@ class Test:
     logFile = os.path.join(runDir, "output.txt")
     allLines = []
     if args.verbose:
-      print self.fullName + ":>" + logFile
+      print (self.fullName + ":>" + logFile)
     with open(logFile, "w") as output:
       cmdLine = ["bash", "-c", self.testDir + "/run-test 2>&1"]
       process = subprocess.Popen(cmdLine, stdout=subprocess.PIPE)
@@ -260,10 +266,10 @@ class Test:
           line=line[:len(line)-1]
 
         if args.verbose:
-          print self.fullName + ": " + line
+          print (self.fullName + ": " + line)
 
         if args.dry_run:
-          print line
+          print (line)
           continue
 
         print >>output, line
@@ -304,7 +310,7 @@ class Test:
 
       if result.succeeded:
        if args.verbose:
-         print "Updating baseline file", baselineFile
+         print ("Updating baseline file " + baselineFile)
        with open(baselineFile, "w") as f:
          f.write("\n".join(allLines))
 
@@ -394,14 +400,14 @@ class TestCase:
                                "Output:   {1}\n"
                               ).format(expected, line)
           if verbose:
-            print "[FAILED]: Testcase", self.name
-            print "Baseline:", expected
+            print ("[FAILED]: Testcase " + self.name)
+            print ("Baseline: " + expected)
      
           # also show all failed patterns
           for p in failedPatterns:
             msg = "Failed pattern: " + p.patternText
             if verbose:
-              print msg
+              print (msg)
             result.diagnostics+=msg+"\n"
         # removing this line, since we already matched it (whether succesfully or not - doesn't matter)
         del result.expectedLines[0]
@@ -535,15 +541,17 @@ def listCommand(args):
                    testsByTag[tag] = sets.Set([test.fullName])
   for tag in sorted(testsByTag.keys()):
     if tag=="*":
-      print ' '.join(sorted(testsByTag[tag]))
+      print (' '.join(sorted(testsByTag[tag])))
     else:
-      print tag+":", ' '.join(sorted(testsByTag[tag]))
+      print (tag + ": " + ' '.join(sorted(testsByTag[tag])))
 
 # Runs given test(s) or all tests
 def runCommand(args):
   if len(args.test) > 0:
      testsToRun = []
      for name in args.test:
+       if name[len(name)-1] == '/':
+         name = name[:-1]
        if name.lower() in Test.allTestsIndexedByFullName:
          testsToRun.append(Test.allTestsIndexedByFullName[name.lower()])
        else:
@@ -557,15 +565,15 @@ def runCommand(args):
 
   os.environ["TEST_ROOT_DIR"] = os.path.dirname(os.path.realpath(sys.argv[0]))
 
-  print "CNTK Test Driver is started"
-  print "Running tests:  ", " ".join([y.fullName for y in testsToRun])
-  print "Build location: ", args.build_location
-  print "Run location:   ", args.run_dir
-  print "Flavors:        ", " ".join(flavors)
-  print "Devices:        ", " ".join(devices)
+  print ("CNTK Test Driver is started")
+  print ("Running tests:  " + " ".join([y.fullName for y in testsToRun]))
+  print ("Build location: " + args.build_location)
+  print ("Run location:   " + args.run_dir)
+  print ("Flavors:        " + " ".join(flavors))
+  print ("Devices:        " + " ".join(devices))
   if (args.update_baseline):
-    print "*** Running in automatic baseline update mode ***"
-  print ""
+    print ("*** Running in automatic baseline update mode ***")
+  print ("")
   if args.dry_run:
     os.environ["DRY_RUN"] = "1"
   succeededCount, totalCount = 0, 0
@@ -582,7 +590,7 @@ def runCommand(args):
           # Printing the test which is about to run (without terminating the line)
           sys.stdout.write("Running test {0} ({1} {2}) - ".format(test.fullName, flavor, device));
           if args.dry_run:
-            print "[SKIPPED] (dry-run)"
+            print ("[SKIPPED] (dry-run)")
           # in verbose mode, terminate the line, since there will be a lot of output
           if args.verbose:
             sys.stdout.write("\n");
@@ -596,9 +604,9 @@ def runCommand(args):
           if result.succeeded:
             succeededCount = succeededCount + 1
             # in no-verbose mode this will be printed in the same line as 'Running test...'
-            print "[OK] {0:.2f} sec".format(result.duration)
+            print ("[OK] {0:.2f} sec".format(result.duration))
           else:
-            print "[FAILED] {0:.2f} sec".format(result.duration)
+            print ("[FAILED] {0:.2f} sec".format(result.duration))
           # Showing per-test-case results:
           for testCaseRunResult in result.testCaseRunResults:
             if testCaseRunResult.succeeded:
@@ -614,12 +622,12 @@ def runCommand(args):
               # In non-verbose mode log wasn't piped to the stdout, showing log file path for conveniencce
                
           if not result.succeeded and not args.verbose and result.logFile:
-            print "  See log file for details:", result.logFile
+            print ("  See log file for details: " + result.logFile)
         
   if args.update_baseline:
-    print "{0}/{1} baselines updated, {2} failed".format(succeededCount, totalCount, totalCount - succeededCount)
+    print ("{0}/{1} baselines updated, {2} failed".format(succeededCount, totalCount, totalCount - succeededCount))
   else:
-    print "{0}/{1} tests passed, {2} failed".format(succeededCount, totalCount, totalCount - succeededCount)
+    print ("{0}/{1} tests passed, {2} failed".format(succeededCount, totalCount, totalCount - succeededCount))
   if succeededCount != totalCount:
     sys.exit(10)
 

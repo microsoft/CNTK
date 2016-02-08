@@ -22,6 +22,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK{
 template<typename ElemType>
 class MASGD
 {
+    typedef shared_ptr<ComputationNode<ElemType>> ComputationNodePtr; 
 public:
     //========================================
     // Constructor and Initializer 
@@ -57,7 +58,7 @@ public:
                 continue;
             }
             wstring name = pNode->NodeName();
-            auto pnode = ComputationNode<ElemType>::UpCast(pNode); 
+            auto pnode =  DownCast(pNode); 
             auto pvalue = make_shared<Matrix<ElemType>>(pnode->Value().GetDeviceId());
             auto pSmoothedGrad = make_shared<Matrix<ElemType>>(pnode->Value().GetDeviceId());
             pvalue->SetValue(pnode->Value());
@@ -122,7 +123,7 @@ public:
             }
 
             // 2.1 model aggregation 
-            auto pNode = ComputationNode<ElemType>::UpCast(pBaseNode); 
+            auto pNode = DownCast(pBaseNode); 
             // 2.1.1. aggregate model from individual models 
             Matrix<ElemType> mat (pNode->Value());
             // 2.1.2. normalize the weight matrix 
@@ -178,7 +179,7 @@ public:
         {
             for (auto& pNode : LearnableNodes)
             {
-                auto pnode = ComputationNode<ElemType>::UpCast(pNode);
+                auto pnode = DownCast(pNode);
                 wstring name = pNode->NodeName();
                 if (m_blockLevelSmoothedGradient.find(name) == m_blockLevelSmoothedGradient.end())
                 {
@@ -197,7 +198,7 @@ public:
         {
             for (auto& pNode : LearnableNodes)
             {
-                auto pnode = ComputationNode<ElemType>::UpCast(pNode);
+                auto pnode = DownCast(pNode);
                 wstring name = pNode->NodeName();
                 if (m_blockLevelSmoothedGradient.find(name) == m_blockLevelSmoothedGradient.end())
                 {
@@ -221,6 +222,14 @@ private:
     map<wstring, shared_ptr<Matrix<ElemType>> >     m_blockLevelSmoothedGradient;
     // m_prevParameters holds model parameters before the next sync and after the last sync , required by BMUF
 
+
+    ComputationNodePtr DownCast(ComputationNodeBasePtr inode)
+    {
+        ComputationNodePtr node = dynamic_pointer_cast<ComputationNode<ElemType>>(inode);
+        if (!node)
+            InvalidArgument("an ComputationNodeBasePtr of mismatching precision was passed");
+        return node;
+    }
 
 };
 

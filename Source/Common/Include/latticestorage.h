@@ -27,16 +27,16 @@ static void checkoverflow(size_t fieldval, size_t targetval, const char* fieldna
 
 struct nodeinfo
 {
-    //uint64_t firstinedge : 24;  // index of first incoming edge
-    //uint64_t firstoutedge : 24; // index of first outgoing edge
-    //uint64_t t : 16;            // time associated with this
+    // uint64_t firstinedge : 24;  // index of first incoming edge
+    // uint64_t firstoutedge : 24; // index of first outgoing edge
+    // uint64_t t : 16;            // time associated with this
     unsigned short t; // time associated with this
     nodeinfo(size_t pt)
-        : t((unsigned short) pt) //, firstinedge (NOEDGE), firstoutedge (NOEDGE)
+        : t((unsigned short) pt) // , firstinedge (NOEDGE), firstoutedge (NOEDGE)
     {
         checkoverflow(t, pt, "nodeinfo::t");
-        //checkoverflow (firstinedge, NOEDGE, "nodeinfo::firstinedge");
-        //checkoverflow (firstoutedge, NOEDGE, "nodeinfo::firstoutedge");
+        // checkoverflow (firstinedge, NOEDGE, "nodeinfo::firstinedge");
+        // checkoverflow (firstoutedge, NOEDGE, "nodeinfo::firstoutedge");
     }
     nodeinfo() // [v-hansu] initialize to impossible values
     {

@@ -39,8 +39,8 @@ public:
         size_t packedInputRows = filterT.w() * filterT.h() * filterT.c();
         size_t packedInputColsPerSample = outT.w() * outT.h();
         size_t outputSizePerChannel = packedInputColsPerSample;
-        //size_t packedInputDim = packedInputRows * packedInputColsPerSample; // size of each packed input sample
-        //size_t inputDim = inT.w() * inT.h() * inT.c();  //size of each input sample
+        // size_t packedInputDim = packedInputRows * packedInputColsPerSample; // size of each packed input sample
+        // size_t inputDim = inT.w() * inT.h() * inT.c();  // size of each input sample
 
         size_t batchSize = inT.n();
         size_t maxTempMemSizeInSamples = (m_maxTempMemSizeInSamples == 0 ? batchSize : m_maxTempMemSizeInSamples);
@@ -72,7 +72,7 @@ public:
             size_t startSampleId = i * subBatchSize;
             size_t endSampleId = min(batchSize, startSampleId + subBatchSize);
             size_t smallBatchSize = endSampleId - startSampleId;
-            Mat inputSubBatch;
+            Mat inputSubBatch(in.GetDeviceId());
 
             // We optimize for three different scenarios here by handling them slightly differently.
             // [Scenario 1] Dense: Unroll using AssignPackedConvolutionInput and multiply.
@@ -104,13 +104,13 @@ public:
 
                 Mat outputSubBatch = out.ColumnSlice(outputSizePerChannel * startSampleId, outputSizePerChannel * smallBatchSize);
 
-                //workspace.Resize(packedInputRows, packedInputColsPerSample * smallBatchSize);
+                // workspace.Resize(packedInputRows, packedInputColsPerSample * smallBatchSize);
                 // BUGBUG: This ^^ destroys the content of the matrix. Also it seems not to change the size. Does it? Should this be a Reshape()?
                 Mat::Multiply(filter, false, workspace, false, outputSubBatch);
             }
         }
 
-        out.Reshape(outT.c() * outputSizePerChannel, batchSize); //each sample becomes a column
+        out.Reshape(outT.c() * outputSizePerChannel, batchSize); // each sample becomes a column
 
         assert(outT.w() * outT.h() * outT.c() == out.GetNumRows());
         assert(outT.n() == out.GetNumCols());
@@ -131,8 +131,8 @@ public:
         size_t packedInputRows = filterT.w() * filterT.h() * filterT.c();
         size_t packedInputColsPerSample = srcGradT.w() * srcGradT.h();
         size_t outputSizePerChannel = packedInputColsPerSample;
-        //size_t packedInputDim = packedInputRows * packedInputColsPerSample; // size of each packed input sample
-        //size_t inputDim = gradT.w() * gradT.h() * gradT.c();  //size of each input sample
+        // size_t packedInputDim = packedInputRows * packedInputColsPerSample; // size of each packed input sample
+        // size_t inputDim = gradT.w() * gradT.h() * gradT.c();  // size of each input sample
 
         size_t batchSize = srcGradT.n();
 
@@ -140,7 +140,7 @@ public:
 
         // Create slice which is the same as full matrix so we can reshape it.
         Matrix<ElemType> srcGradTmp = srcGrad.ColumnSlice(0, srcGrad.GetNumCols());
-        srcGradTmp.Reshape(srcGradT.c(), outputSizePerChannel * batchSize); //reshape to match the longernal operation
+        srcGradTmp.Reshape(srcGradT.c(), outputSizePerChannel * batchSize); // reshape to match the longernal operation
 
         size_t subBatchSize = min(batchSize, maxTempMemSizeInSamples);
         size_t numSubBatches = (batchSize + subBatchSize - 1) / subBatchSize;
@@ -182,24 +182,24 @@ public:
         size_t packedInputRows = filterT.w() * filterT.h() * filterT.c();
         size_t packedInputColsPerSample = srcGradT.w() * srcGradT.h();
         size_t outputSizePerChannel = packedInputColsPerSample;
-        //size_t packedInputDim = packedInputRows * packedInputColsPerSample; // size of each packed input sample
-        //size_t inputDim = m_inputImageLayout.width * m_inputImageLayout.height * m_inputImageLayout.channels;  //size of each input sample
+        // size_t packedInputDim = packedInputRows * packedInputColsPerSample; // size of each packed input sample
+        // size_t inputDim = m_inputImageLayout.width * m_inputImageLayout.height * m_inputImageLayout.channels;  // size of each input sample
 
         size_t batchSize = inT.n();
 
         size_t maxTempMemSizeInSamples = (m_maxTempMemSizeInSamples == 0 ? batchSize : m_maxTempMemSizeInSamples);
 
-        //const Matrix<ElemType> & weightMatrix = input0;
-        //inputGradientValues.Resize(weightMatrix.GetNumRows(), weightMatrix.GetNumCols()); //should have been resized when preparing gradient computation
+        // const Matrix<ElemType> & weightMatrix = input0;
+        // inputGradientValues.Resize(weightMatrix.GetNumRows(), weightMatrix.GetNumCols()); // should have been resized when preparing gradient computation
 
         // Create slice which is the same as full matrix so we can reshape it.
         Matrix<ElemType> srcGradTmp = srcGrad.ColumnSlice(0, srcGrad.GetNumCols());
-        srcGradTmp.Reshape(srcGradT.c(), outputSizePerChannel * batchSize); //reshape to match the longernal operation
+        srcGradTmp.Reshape(srcGradT.c(), outputSizePerChannel * batchSize); // reshape to match the longernal operation
 
         size_t subBatchSize = min(batchSize, maxTempMemSizeInSamples);
         size_t numSubBatches = (batchSize + subBatchSize - 1) / subBatchSize;
 
-        if (numSubBatches == 1 && allowReuse && !m_gpuSparseOpt) //reuse packed input from evaluation step if it's not changed by either subbatch or recurrent steps.
+        if (numSubBatches == 1 && allowReuse && !m_gpuSparseOpt) // reuse packed input from evaluation step if it's not changed by either subbatch or recurrent steps.
             // REVIEW alexeyk: the following makes an assumption that data in workspace was filled by Forward call and remained unchanged. Find way to enforce/verify that.
             Matrix<ElemType>::MultiplyAndAdd(srcGradTmp, false, workspace, true, filter);
         else
@@ -217,7 +217,7 @@ public:
                 // [Scenario 3] Sparse all others: convert to dense. Temporary work-around - allocating/de-allocating memory is costly!
                 if (m_gpuSparseOpt)
                 {
-                    Matrix<ElemType> inputSubBatch;
+                    Matrix<ElemType> inputSubBatch(in.GetDeviceId());
                     inputSubBatch.SetValue(in.ColumnSlice(startSampleID, smallBatchSize));
                     inputSubBatch.Reshape(inT.c(), smallBatchSize * inT.w() * inT.h());
                     Matrix<ElemType> inputSubBatchSparseReordered(inputSubBatch.GetNumCols(), inputSubBatch.GetNumRows(), inputSubBatch.GetDeviceId(), MatrixType::SPARSE, MatrixFormat::matrixFormatSparseCSC);
@@ -483,11 +483,11 @@ std::unique_ptr<ConvolutionEngineFactory<ElemType>> ConvolutionEngineFactory<Ele
         // REVIEW alexeyk: temp hack to allow this to work in MEL scenarios. InvalidArgument should be used instead.
         if (imageLayoutKind != ImageLayoutKind::HWC)
             fprintf(stderr, "WARNING: trying to use cuDNN on unsupported platform. It is safe to ignore the warning if it's produced during model editing command.\n");
-        //InvalidArgument("ConvolutionEngineFactory: ImageLayout '%s' is not compatible with the legacy convolution engine.", ToString(imageLayoutKind).c_str());
+        // InvalidArgument("ConvolutionEngineFactory: ImageLayout '%s' is not compatible with the legacy convolution engine.", ToString(imageLayoutKind).c_str());
         return std::make_unique<DefaultConvolutionEngineFactory<ElemType>>();
     }
 
-    RuntimeError("Not supported convolution engine type: %d.", engType);
+    RuntimeError("Not supported convolution engine type: %d.", (int)engType);
 }
 
 template class ConvolutionEngineFactory<float>;

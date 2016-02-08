@@ -44,12 +44,12 @@ private:
     void ReleaseMemory();
 
 public:
-    CPUSparseMatrix(const MatrixFormat format);
+    explicit CPUSparseMatrix(const MatrixFormat format);
     CPUSparseMatrix(const MatrixFormat format, const size_t numRows, const size_t numCols, const size_t size);
-    CPUSparseMatrix(const CPUSparseMatrix<ElemType>& deepCopyFrom);                      //copy constructor, deep copy
-    CPUSparseMatrix<ElemType>& operator=(const CPUSparseMatrix<ElemType>& deepCopyFrom); //assignment operator, deep copy
-    CPUSparseMatrix(CPUSparseMatrix<ElemType>&& moveFrom);                               //move constructor, shallow copy
-    CPUSparseMatrix<ElemType>& operator=(CPUSparseMatrix<ElemType>&& moveFrom);          //move assignment operator, shallow copy
+    CPUSparseMatrix(const CPUSparseMatrix<ElemType>& deepCopyFrom);                      // copy constructor, deep copy
+    CPUSparseMatrix<ElemType>& operator=(const CPUSparseMatrix<ElemType>& deepCopyFrom); // assignment operator, deep copy
+    CPUSparseMatrix(CPUSparseMatrix<ElemType>&& moveFrom);                               // move constructor, shallow copy
+    CPUSparseMatrix<ElemType>& operator=(CPUSparseMatrix<ElemType>&& moveFrom);          // move assignment operator, shallow copy
     ~CPUSparseMatrix();
 
 public:
@@ -97,7 +97,7 @@ public:
 
     static bool AreEqual(const CPUSparseMatrix<ElemType>& a, const CPUSparseMatrix<ElemType>& b, const ElemType threshold = 1e-8);
 
-    /// sum(vec(a).*vec(b))
+    // sum(vec(a).*vec(b))
     static ElemType InnerProductOfMatrices(const CPUSparseMatrix<ElemType>& /*a*/, const CPUMatrix<ElemType>& /*b*/)
     {
         NOT_IMPLEMENTED;
@@ -160,15 +160,15 @@ public:
     CPUSparseMatrix<ElemType>& InplaceTruncate(const ElemType threshold);
     CPUSparseMatrix<ElemType>& InplaceSoftThreshold(const ElemType threshold);
 
-    ElemType FrobeniusNorm() const; //useful for comparing CPU and GPU results
+    ElemType FrobeniusNorm() const; // useful for comparing CPU and GPU results
 
-    ElemType SumOfAbsElements() const; //sum of all abs(elements)
-    ElemType SumOfElements() const;    //sum of all elements
+    ElemType SumOfAbsElements() const; // sum of all abs(elements)
+    ElemType SumOfElements() const;    // sum of all elements
 
 public:
-    //void Print(const char* /*matrixName*/) const { NOT_IMPLEMENTED; }
+    // void Print(const char* /*matrixName*/) const { NOT_IMPLEMENTED; }
     void Print(const char* matrixName, size_t rowStart, size_t rowEnd, size_t colStart, size_t colEnd) const;
-    void Print(const char* matrixName = NULL) const; //print whole matrix. can be expensive
+    void Print(const char* matrixName = NULL) const; // print whole matrix. can be expensive
 
 public:
     const ElemType* NzValues() const
@@ -187,7 +187,7 @@ public:
     CPUSPARSE_INDEX_TYPE* MajorIndexLocation() const
     {
         return m_unCompIndex;
-    } //this is the major index, row/col ids in CSC/CSR format
+    } // this is the major index, row/col ids in CSC/CSR format
     size_t MajorIndexCount() const
     {
         return m_nz;
@@ -200,7 +200,7 @@ public:
     CPUSPARSE_INDEX_TYPE* SecondaryIndexLocation() const
     {
         return m_compIndex;
-    } //this is the compressed index, col/row in CSC/CSR format
+    } // this is the compressed index, col/row in CSC/CSR format
     size_t SecondaryIndexCount() const
     {
         if (m_format & matrixFormatCompressed)
@@ -238,17 +238,17 @@ public:
     } // actual number of bytes in use
 
 private:
-    int m_colIdx; //used to SetValue()
+    int m_colIdx; // used to SetValue()
     size_t m_compIndexSize;
     ElemType* m_nzValues;
 
-    //non-zero values are stored in m_pArray
-    CPUSPARSE_INDEX_TYPE* m_unCompIndex; //row/col ids in CSC/CSR format
-    CPUSPARSE_INDEX_TYPE* m_compIndex;   //begin ids of col/row in CSC/CSR format
+    // non-zero values are stored in m_pArray
+    CPUSPARSE_INDEX_TYPE* m_unCompIndex; // row/col ids in CSC/CSR format
+    CPUSPARSE_INDEX_TYPE* m_compIndex;   // begin ids of col/row in CSC/CSR format
 
-    size_t m_blockSize;    //block size
-    size_t* m_blockIds;    //block ids
-    size_t m_blockIdShift; //used to get efficient slice, actual col = blockIds[j] - m_blockIdShift
+    size_t m_blockSize;    // block size
+    size_t* m_blockIds;    // block ids
+    size_t m_blockIdShift; // used to get efficient slice, actual col = blockIds[j] - m_blockIdShift
 };
 
 typedef CPUSparseMatrix<float> CPUSingleSparseMatrix;

@@ -36,6 +36,7 @@ wstring computationNodes = // TODO: use actual TypeName() here? would first need
     L"LearnableParameter(rows, cols, needGradient = true, init = 'uniform'/*|fixedValue|gaussian|fromFile*/, initValueScale = 1, value = 0, initFromFilePath = '', initOnCPUOnly=true, randomSeed=-1, tag='') = new ComputationNode [ operation = 'LearnableParameter' ; shape = new TensorShape [ dims = (rows : cols) ] /*plus the function args*/ ]\n"
     L"Parameter = LearnableParameter // deprecated \n"
     L"ParameterTensor(dims, needGradient = true, init = 'uniform'/*|fixedValue|gaussian|fromFile*/, initValueScale = 1, value = 0, initFromFilePath = '', initOnCPUOnly=true, randomSeed=-1, tag='') = new ComputationNode [ operation = 'LearnableParameter' ; shape = new TensorShape [ /*dims*/ ] /*plus the function args*/ ]\n"
+    // TODO: ImageParameter?
     // ^^ already works; vv untested
     L"Input(dims, tag='feature') = new ComputationNode [ operation = 'InputValue' ; shape = new TensorShape [ /*dims*/ ] ; isImage = false /*plus the function args*/ ]\n" // note: naming a little inconsistent  // TODO: re-test after flag change
     L"SparseInput(dims, tag='feature') = new ComputationNode [ operation = 'SparseInputValue' ; shape = new TensorShape [ /*dims*/ ] ; isImage = false /*plus the function args*/ ]\n"
@@ -49,7 +50,7 @@ wstring computationNodes = // TODO: use actual TypeName() here? would first need
     L"RowSlice(startIndex, numRows, input, needGradient = false, tag='') = new ComputationNode [ operation = 'RowSlice' ; inputs = input /*plus the function args*/ ]\n"
     L"RowRepeat(input, numRepeats, needGradient = false, tag='') = new ComputationNode [ operation = 'RowRepeat' ; inputs = input /*plus the function args*/ ]\n"
     L"RowStack(inputs, tag='') = new ComputationNode [ operation = 'RowStack' /*plus the function args*/ ]\n"
-    L"Reshape(input, numRows, imageWidth = 0, imageHeight = 0, imageChannels = 0, tag='') = new ComputationNode [ operation = 'DeprecatedReshape' ; inputs = input /*plus the function args*/ ]\n"
+    L"Reshape(input, numRows, imageWidth = 0, imageHeight = 0, imageChannels = 0, tag='') = new ComputationNode [ operation = 'LegacyReshape' ; inputs = input /*plus the function args*/ ]\n"
     L"NewReshape(input, dims, beginDim=0, endDim=0, tag='') = new ComputationNode [ operation = 'Reshape' ; inputs = input ; shape = new TensorShape [ /*dims*/ ] /*plus the function args*/ ]\n"
     L"ReshapeDimension(x, dim, tensorShape) = NewReshape(x, tensorShape, beginDim=dim, endDim=dim + 1) \n"
     L"FlattenDimensions(x, dim, num) = NewReshape(x, 0, beginDim=dim, endDim=dim + num) \n"
@@ -65,61 +66,66 @@ wstring computationNodes = // TODO: use actual TypeName() here? would first need
     L"ColumnwiseCrossProduct = KhatriRaoProduct // deprecated \n" // TODO: should it be deprecated? It is described as easier to understand in the CNTKBook.
     L"ClassificationError = ErrorPrediction \n"
     L"Delay = PastValue \n" // TODO: should it allow negative offsets and an if test here?
-    L"BatchNormalization(input, scale, bias, runMean, runInvStdDev, eval, spatial, expAvgFactor, tag='') = new ComputationNode [ operation = 'BatchNormalization' ; inputs = (input : scale : bias : runMean : runInvStdDev) /*plus the function args*/ ]\n"
+    L"BatchNormalization(input, scale, bias, runMean, runInvStdDev, eval, spatial, expAvgFactor, imageLayout='CHW', tag='') = new ComputationNode [ operation = 'BatchNormalization' ; inputs = (input : scale : bias : runMean : runInvStdDev) /*plus the function args*/ ]\n"
 // standard nodes. We use macros to define these strings.
 #define UnaryStandardNode(Op, a) L## #Op L"(" L## #a L", tag='') = new ComputationNode [ operation = '" L## #Op L"' ; inputs = " L## #a L" /*plus the function args*/ ]\n"
 #define BinaryStandardNode(Op, a, b) L## #Op L"(" L## #a L", " L## #b L", tag='') = new ComputationNode [ operation = '" L## #Op L"' ; inputs = (" L## #a L" : " L## #b L") /*plus the function args*/ ]\n"
 #define TernaryStandardNode(Op, a, b, c) L## #Op L"(" L## #a L", " L## #b L", " L## #c L", tag='') = new ComputationNode [ operation = '" L## #Op L"' ; inputs = (" L## #a L" : " L## #b L" : " L## #c L") /*plus the function args*/ ]\n"
 #define QuaternaryStandardNode(Op, a, b, c, d) L## #Op L"(" L## #a L", " L## #b L", " L## #c L", " L## #d L", tag='') = new ComputationNode [ operation = '" L## #Op L"' ; inputs = (" L## #a L" : " L## #b L" : " L## #c L" : " L## #d L") /*plus the function args*/ ]\n"
+#ifdef COMING_SOON
     TernaryStandardNode(CRF, labelVectorSequence, positionDependenScoreVectorSequence, transitionScores) // TODO: better names
+#endif
     QuaternaryStandardNode(ClassBasedCrossEntropyWithSoftmax, labelClassDescriptorVectorSequence, mainInputInfo, mainWeight, classLogProbsBeforeSoftmax)
     // BUGBUG: the commented-out ones are not mentioned in the CNTK book, nor are their parameters documented in the source code
     BinaryStandardNode(ColumnElementTimes, aVectorSequence, anotherVectorSequence)
-        BinaryStandardNode(CosDistance, aVectorSequence, anotherVectorSequence)
-            QuaternaryStandardNode(CosDistanceWithNegativeSamples, aVectorSequence, anotherVectorSequence, numShifts, numNegSamples)
+    BinaryStandardNode(CosDistance, aVectorSequence, anotherVectorSequence)
+    QuaternaryStandardNode(CosDistanceWithNegativeSamples, aVectorSequence, anotherVectorSequence, numShifts, numNegSamples)
     //BinaryStandardNode(CosDistanceWithNegativeSamplesNode)
     UnaryStandardNode(Cosine, x)
-        BinaryStandardNode(CrossEntropy, refProbVectorSequence, outProbVectorSequence)
-            BinaryStandardNode(CrossEntropyWithSoftmax, labelVectorSequence, outProbVectorSequence)
-                BinaryStandardNode(DiagTimes, diagonalMatrixAsColumnVector, matrix)
-                    UnaryStandardNode(Dropout, activationVectorSequence)
+    BinaryStandardNode(CrossEntropy, refProbVectorSequence, outProbVectorSequence)
+    BinaryStandardNode(CrossEntropyWithSoftmax, labelVectorSequence, outProbVectorSequence)
+    BinaryStandardNode(DiagTimes, diagonalMatrixAsColumnVector, matrix)
+    UnaryStandardNode(Dropout, activationVectorSequence)
     //BinaryStandardNode(DummyCriterionNode)
     BinaryStandardNode(ElementTimes, aMatrix, anotherMatrix)
-        BinaryStandardNode(ErrorPrediction, labelVectorSequence, outVectorSequence) // CNTKBook: ClassificationError?
+    BinaryStandardNode(ErrorPrediction, labelVectorSequence, outVectorSequence) // CNTKBook: ClassificationError?
     UnaryStandardNode(Exp, x)
-        QuaternaryStandardNode(GMMLogLikelihood, unnormalizedPriorVector, meansAsRows, logStdDevAsRows, dataVectorSequence)
-            UnaryStandardNode(InvStdDev, dataVectorSequence)
-                BinaryStandardNode(KhatriRaoProduct, leftMatrix, rightMatrix)
+    QuaternaryStandardNode(GMMLogLikelihood, unnormalizedPriorVector, meansAsRows, logStdDevAsRows, dataVectorSequence)
+    UnaryStandardNode(InvStdDev, dataVectorSequence)
+    BinaryStandardNode(KhatriRaoProduct, leftMatrix, rightMatrix)
     //BinaryStandardNode(LSTMNode)
     UnaryStandardNode(Log, x)
-        UnaryStandardNode(LogSoftmax, z)
+    UnaryStandardNode(LogSoftmax, z)
     //BinaryStandardNode(LookupTableNode)
     UnaryStandardNode(MatrixL1Reg, matrix)
-        UnaryStandardNode(MatrixL2Reg, matrix)
+    UnaryStandardNode(MatrixL2Reg, matrix)
     // BUGBUG: CNTKBook also mentions L1Norm and L2Norm
     UnaryStandardNode(Mean, dataVectorSequence)
-        BinaryStandardNode(Minus, leftMatrix, rightMatrix)
-            UnaryStandardNode(Negate, input)
+    BinaryStandardNode(Minus, leftMatrix, rightMatrix)
+    UnaryStandardNode(Negate, input)
     //BinaryStandardNode(NoiseContrastiveEstimationNode)
-    //BinaryStandardNode(PairNetworkNode)
     //BinaryStandardNode(ParallelNode)
     TernaryStandardNode(PerDimMeanVarDeNormalization, dataVectorSequence, meanVector, invStdDevVector) // TODO: correct?
     TernaryStandardNode(PerDimMeanVarNormalization, dataVectorSequence, meanVector, invStdDevVector)
-        BinaryStandardNode(Plus, leftMatrix, rightMatrix)
-            UnaryStandardNode(RectifiedLinear, z)
+    BinaryStandardNode(Plus, leftMatrix, rightMatrix)
+    UnaryStandardNode(RectifiedLinear, z)
     //BinaryStandardNode(RowElementTimesNode)
     BinaryStandardNode(Scale, scalarScalingFactor, matrix)
+#ifdef COMING_SOON
     //BinaryStandardNode(SequenceDecoderNode)
+#endif
     UnaryStandardNode(Sigmoid, z)
-        UnaryStandardNode(Softmax, z)
-            UnaryStandardNode(Hardmax, z)
-                BinaryStandardNode(SquareError, aMatrix, anotherMatrix)
+    UnaryStandardNode(Softmax, z)
+    UnaryStandardNode(Hardmax, z)
+    BinaryStandardNode(SquareError, aMatrix, anotherMatrix)
     //BinaryStandardNode(StrideTimesNode)
     //BinaryStandardNode(SumColumnElementsNode)
     UnaryStandardNode(SumElements, matrix)
-        UnaryStandardNode(Tanh, z)
-            UnaryStandardNode(TimeReverse, vectorSequence)
-                BinaryStandardNode(Times, leftMatrix, rightMatrix)
-                    UnaryStandardNode(Transpose, matrix)
-    //BinaryStandardNode(TransposeTimesNode)
+    UnaryStandardNode(Tanh, z)
+    UnaryStandardNode(TimeReverse, vectorSequence)
+    BinaryStandardNode(Times, leftMatrix, rightMatrix)
+#ifdef COMING_SOON
+    UnaryStandardNode(Transpose, matrix)
+#endif
+    BinaryStandardNode(TransposeTimes, leftMatrix, rightMatrix)
     ;

@@ -7,38 +7,38 @@ Below is a brief description of the examples.
 To Use:
 =======
 Modify the following files:
-* globals.config in "configs" to reflect your current experimental setup)
-* modify "DeviceNumber" in globals.config to specify CPU (<0) or GPU (>=0)
+* globals.cntk in "configs" to reflect your current experimental setup)
+* modify "DeviceNumber" in globals.cntk to specify CPU (<0) or GPU (>=0)
 * all SCP files (lists of files) in "lib/scp" to point to your feature files
 
-Run the command line with both globals.config and the desired config, separated by a +
-* for example: cntk configFile=globals.config+TIMIT_TrainSimpleNetwork.config
+Run the command line with both globals.cntk and the desired config, separated by a +
+* for example: cntk configFile=globals.cntk+TIMIT_TrainSimpleNetwork.cntk
 * note that full paths to config files need to be provided if you are not inside the config directory
 
 Path Definitions:
 =================
-* globals.config [defines paths to feature and label files and experiments]
+* globals.cntk [defines paths to feature and label files and experiments]
 
 Network Training Examples:
 ==========================
-* TIMIT_TrainSimpleNetwork.config [train basic feedforward fully connected neural network]
-* TIMIT_TrainNDLNetwork.config [train a neural network defined using NDL]
-* TIMIT_TrainAdaptLearnRate.config [similar to simple network example, but learning rate adapted based on dev set]
-* TIMIT_TrainAutoEncoder.config [train autoencoder with bottleneck layer]
-* TIMIT_TrainWithPreTrain.config [pre-train using layerwise discriminative pre-training, then do full network training]
-* TIMIT_TrainMultiTask.config [train with multi-task learning with joint prediciton of senone labels and dialect region]
-* TIMIT_TrainMultiInput.config [train with 2 different inputs: fbank and mfcc]
-* TIMIT_TrainLSTM.config [train single layer LSTM network]
+* TIMIT_TrainSimpleNetwork.cntk [train basic feedforward fully connected neural network]
+* TIMIT_TrainNDLNetwork.cntk [train a neural network defined using NDL]
+* TIMIT_AdaptLearnRate.cntk [similar to simple network example, but learning rate adapted based on dev set]
+* TIMIT_TrainAutoEncoder.cntk [train autoencoder with bottleneck layer]
+* TIMIT_TrainWithPreTrain.cntk [pre-train using layerwise discriminative pre-training, then do full network training]
+* TIMIT_TrainMultiTask.cntk [train with multi-task learning with joint prediction of senone labels and dialect region]
+* TIMIT_TrainMultiInput.cntk [train with 2 different inputs: fbank and mfcc]
+* TIMIT_TrainLSTM.cntk [train single layer LSTM network]
 
 Network Evaluation Examples:
 ============================
-* TIMIT_CrossValidateSimpleNetwork.config [evaluate the models at all or some epochs and report best performing model]
-* TIMIT_EvalSimpleNetwork.config [evaluate a network]
+* TIMIT_CrossValidateSimpleNetwork.cntk [evaluate the models at all or some epochs and report best performing model]
+* TIMIT_EvalSimpleNetwork.cntk [evaluate a network]
 
 Network Output Writing:
 =======================
-* TIMIT_WriteBottleneck.config [write bottleneck features from autoencoder model]
-* TIMIT_WriteScaledLogLike.config [write scaled likelihoods from simple model]
+* TIMIT_WriteBottleneck.cntk [write bottleneck features from autoencoder model]
+* TIMIT_WriteScaledLogLike.cntk [write scaled likelihoods from simple model]
 
 Network Description Language (NDL) & Model Editing Language (MEL) files for experiments:
 =======================================================================================

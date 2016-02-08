@@ -6,12 +6,10 @@
 
 #include "Basics.h"
 #include "ComputationNetwork.h"
-#include "NonlinearityNodes.h"         // for DropoutNode
-#include "CompositeComputationNodes.h" // for PrecomputeNode
 #include "SimpleEvaluator.h"
 #include "DataReader.h"
-#include "IComputationNetBuilder.h"
 #include "ScriptableObjects.h"
+#include "MASGD.h"
 #include <vector>
 #include <string>
 #include <stdexcept>
@@ -102,7 +100,7 @@ struct SGDParams : public ScriptableObjects::Object
 
     SGDParams(const ScriptableObjects::IConfigRecordPtr configp);
 
-    //SGDParams(SGDParams&&) = default; // (does not compile in VS 2013; not critical)
+    // SGDParams(SGDParams&&) = default; // (does not compile in VS 2013; not critical)
 
 protected:
     // learning rate per sample provided outside
@@ -141,8 +139,8 @@ protected:
     }
 
     // only true when the user specify LearningRatePerMB and the number of parallel utterances in Reader > 1
-    //bool m_needToNormalizeLRByParallUtterance;          // TODO: should go away
-    //bool m_needToNormalizeMomentumByParallUtterance;
+    // bool m_needToNormalizeLRByParallUtterance;          // TODO: should go away
+    // bool m_needToNormalizeMomentumByParallUtterance;
 
     intargvector m_mbSize;
     bool m_truncated; // do BPTT
@@ -252,7 +250,7 @@ protected:
     double m_L2RegWeight;
     double m_L1RegWeight;
 
-    //sequence training
+    // sequence training
     double m_hSmoothingWeight;
     double m_frameDropThresh;
     bool m_doReferenceAlign;
@@ -290,7 +288,7 @@ public:
           // TODO: The next few do not belong into SGD any more than the network or reader we operate on. Either move network and reader in here, or move these out.
           m_modelPath((const wstring&) configSGD(L"modelPath")),
           m_keepCheckPointFiles(configSGD(L"keepCheckPointFiles", false)),
-          //m_validateAfterModelReloading(configSGD(L"validateAfterModelReloading", true)),
+          // m_validateAfterModelReloading(configSGD(L"validateAfterModelReloading", true)),
           m_trainCriterionNodeName((const wstring&) configSGD(L"trainCriterionNodeName", L"")),
           m_evalCriterionNodeName((const wstring&) configSGD(L"evalCriterionNodeName", L"")),
           m_prevChosenMinibatchSize(0),
@@ -316,14 +314,9 @@ public:
                IDataReader<ElemType>* trainSetDataReader,
                IDataReader<ElemType>* validationSetDataReader,
                const DEVICEID_TYPE deviceID, const bool makeMode = true);
-#if 0
-    // TODO: per discussion with Dong Yu, Guoguo Chen, and Yu Zhang, this function can be removed.
-    void SequenceTrain(IComputationNetBuilder<ElemType>* netBuilder, wstring origModelFileName,
-                       IDataReader<ElemType>* trainSetDataReader, IDataReader<ElemType>* validationSetDataReader,
-                       const DEVICEID_TYPE deviceID, const bool makeMode = true);
-#endif
 
 protected:
+
     std::vector<ComputationNodeBasePtr>& GetTrainCriterionNodes(ComputationNetworkPtr net);
     std::vector<ComputationNodeBasePtr>& GetEvalCriterionNodes(ComputationNetworkPtr net);
 
@@ -335,6 +328,7 @@ protected:
                            IDataReader<ElemType>* validationSetDataReader);
 
 protected:
+
     // return true if precomputation is executed.
     bool PreCompute(ComputationNetworkPtr net,
                     IDataReader<ElemType>* trainSetDataReader,
@@ -516,7 +510,7 @@ public:
 protected:
     wstring m_modelPath;
     bool m_keepCheckPointFiles;
-    //bool m_validateAfterModelReloading; // TODO: remove this. Why would one not validate a model?
+    // bool m_validateAfterModelReloading; // TODO: remove this. Why would one not validate a model?
 
     wstring m_trainCriterionNodeName;
     wstring m_evalCriterionNodeName;

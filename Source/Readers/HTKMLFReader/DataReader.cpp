@@ -58,6 +58,4 @@ void Trim(std::string& str)
         str.erase(found + 1);
 }
 #endif
-}
-}
-}
+} } }

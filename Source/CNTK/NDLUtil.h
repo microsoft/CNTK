@@ -31,12 +31,6 @@ public:
     {
     }
 
-    // FixupInputMinibatchSize - go through all the inputs and make sure they have a consistent minibatch size
-    void FixupInputMinibatchSize()
-    {
-        m_net->FixupInputMinibatchSize();
-    }
-
     // ProcessNDLConfig - Process the NDL script from a configuration string value
     // config - configuration string containing script
     void ProcessNDLConfig(const ConfigValue& config, bool fullValidate = false)
@@ -105,10 +99,7 @@ public:
         SynchronousNodeEvaluator<ElemType> ndlEvaluator(m_net);
         NDLNode<ElemType>* lastNode = script->Evaluate(ndlEvaluator, L"", ndlPass, skipThrough);
         if (ndlPass == ndlPassResolve)
-        {
             SetOutputNodes(script);
-            FixupInputMinibatchSize();
-        }
         return lastNode;
     }
 
@@ -119,7 +110,7 @@ public:
     {
         NDLNode<ElemType>* nodeArray = script->FindSymbol(symbolName);
         bool valid = m_net->FeatureNodes().size() > 0; // see if it's already valid
-        if (!valid && nodeArray)                       //otherwise, see if we found a symbol
+        if (!valid && nodeArray)                       // otherwise, see if we found a symbol
         {
             NDLType outputType = nodeArray->GetType();
             // accept either an array of nodes, or a single node
@@ -174,7 +165,7 @@ public:
         CheckOutputNodes(script, "FeatureNodes", m_net->FeatureNodes());
         CheckOutputNodes(script, "LabelNodes", m_net->LabelNodes());
         CheckOutputNodes(script, "CriterionNodes", m_net->FinalCriterionNodes());
-        CheckOutputNodes(script, "CriteriaNodes", m_net->FinalCriterionNodes()); //legacy
+        CheckOutputNodes(script, "CriteriaNodes", m_net->FinalCriterionNodes()); // legacy
         CheckOutputNodes(script, "EvalNodes", m_net->EvaluationNodes());
         CheckOutputNodes(script, "OutputNodes", m_net->OutputNodes());
     }
@@ -182,6 +173,4 @@ public:
 
 template class NDLUtil<float>;
 template class NDLUtil<double>;
-}
-}
-}
+} } }

@@ -130,7 +130,7 @@ Section* BinaryWriter<ElemType>::CreateSection(const ConfigParameters& config, S
         wstring type = config(L"sectionType");
         for (int i = 0; i < sectionTypeMax; i++)
         {
-            if (!_wcsicmp(type.c_str(), SectionTypeStrings[i]))
+            if (EqualCI(type, SectionTypeStrings[i]))
             {
                 foundType = SectionType(i);
                 break;
@@ -439,6 +439,4 @@ void BinaryWriter<ElemType>::SaveMapping(std::wstring saveId, const std::map<typ
 // instantiate all the combinations we expect to be used
 template class BinaryWriter<double>;
 template class BinaryWriter<float>;
-}
-}
-}
+} } }

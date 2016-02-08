@@ -36,31 +36,18 @@ using namespace std;
 // construction
 // -------------------------------------------------------------------
 
-// cast a matrix as a TensorView
+// main constructor (all constructors except the default one route through this)
 template <class ElemType>
-TensorView<ElemType>::TensorView(const Matrix<ElemType>& sob)
-    : m_sob(sob.AsReference()), m_shape(TensorShape(array<size_t, 2>{sob.GetNumRows(), sob.GetNumCols()}))
+TensorView<ElemType>::TensorView(const Matrix<ElemType>& sob, const TensorShape& shape)
+    : m_sob(sob.AsReference()), m_shape(shape)
 {
-}
-// reshape a TensorView
-template <class ElemType>
-TensorView<ElemType>::TensorView(const TensorView<ElemType>& other, const TensorShape& shape)
-    : m_sob(other.m_sob.AsReference()), m_shape(shape)
-{
-#if 0 // disabled since now we use slices, for which this check is no longer correct
-        // for now we enforce that tensor dimensions match dimensions of the underlying matrix storage object
-        // This is for sanity checks. In the future, it may appropriate to reduce this check to just checking the total number of elements, to allow abuses.
-        // TODO: Use the multipliers instead?
-        size_t i;
-        size_t rowDim = 1;
-        for (i = 0; i < m_shape.size() && rowDim < m_sob.GetNumRows(); i++)
-            rowDim *= m_shape[i];
-        // first i dimensions match matrix row dimension
-        size_t colDim = 1;
-        for (; i < m_shape.size(); i++)
-            colDim *= m_shape[i];
-        if (rowDim != m_sob.GetNumRows() || colDim != m_sob.GetNumCols())
-            LogicError("TensorView: Tensor dimensions %s do not match storage-object dims %d x %d", string(m_shape).c_str(), (int)m_sob.GetNumRows(), (int)m_sob.GetNumCols());
+#ifdef _DEBUG
+    // check bounds of TensorShape against underlying storage object
+    // This is useful to detect errors like passing a matrix from the wrong input.
+    const auto r = shape.GetLocationRange();
+    const auto n = m_sob.GetNumElements();
+    if (r.first < 0 || (size_t)r.second > n)
+        LogicError("TensorView: Shape bounds [%d,%d) exceed bounds of underlying storage object [0,%d).", (int) r.first, (int) r.second, (int) n);
 #endif
 }
 
@@ -93,7 +80,7 @@ static void PrepareTensorOperands(array<TensorShape, N> shapes, array<size_t, N>
             dims = shapes[i].GetRank();
     for (size_t i = 0; i < N; i++)
         if (shapes[i].GetRank() < dims)
-            shapes[i].PadInPlace(dims);
+            shapes[i].PadRankInPlace(dims);
     // all shapes[] now have the same rank
 
     // determine operation shape (max over all dimensions)
@@ -112,7 +99,7 @@ static void PrepareTensorOperands(array<TensorShape, N> shapes, array<size_t, N>
     // flatten consecutive dimensions
     // Dimensions must be consecutive in memory, and either non-broadcasting or all-broadcasting, across all dimensions.
     // After this, as, bs, and cs no longer match the TensorShape objects.
-    //fprintf(stderr, "Pre-flatten: Op %d: %s op %s -> %s via %s\n", (int)op, string(shapes[0]).c_str(), string(shapes[1]).c_str(), string(shapes[2]).c_str(), string(TensorShape(opDims)).c_str());
+    // fprintf(stderr, "Pre-flatten: Op %d: %s op %s -> %s via %s\n", (int)op, string(shapes[0]).c_str(), string(shapes[1]).c_str(), string(shapes[2]).c_str(), string(TensorShape(opDims)).c_str());
     for (size_t k = 1; k < dims; k++)
     {
         for (size_t i = 0; i < N; i++)
@@ -130,7 +117,7 @@ static void PrepareTensorOperands(array<TensorShape, N> shapes, array<size_t, N>
         opDims = TensorShape(opDims).FlattenInPlace(k).GetDims(); // (ugh)
     nope:;
     }
-    //fprintf(stderr, "Post-flatten: Op %d: %s op %s -> %s via %s\n", (int)op, string(shapes[0]).c_str(), string(shapes[1]).c_str(), string(shapes[2]).c_str(), string(TensorShape(opDims)).c_str());
+    // fprintf(stderr, "Post-flatten: Op %d: %s op %s -> %s via %s\n", (int)op, string(shapes[0]).c_str(), string(shapes[1]).c_str(), string(shapes[2]).c_str(), string(TensorShape(opDims)).c_str());
 
     // remove singleton dimensions
     SmallVector<bool> toDrop(dims, false);
@@ -154,7 +141,7 @@ static void PrepareTensorOperands(array<TensorShape, N> shapes, array<size_t, N>
     for (size_t i = 0; i < N; i++)
         assert(dims == shapes[i].size());
     // note: if op is a scalar, then we end up with 0 dimensions here, which is allowed
-    //fprintf(stderr, "Post-drop: Op %d: %s op %s -> %s via %s\n", (int)op, string(shapes[0]).c_str(), string(shapes[1]).c_str(), string(shapes[2]).c_str(), string(TensorShape(opDims)).c_str());
+    // fprintf(stderr, "Post-drop: Op %d: %s op %s -> %s via %s\n", (int)op, string(shapes[0]).c_str(), string(shapes[1]).c_str(), string(shapes[2]).c_str(), string(TensorShape(opDims)).c_str());
 
     // determine broadcasting; that is, set strides to 0 for 1-dimensions
     // To be more precise, we should only set actually broadcasting dimensions to 0.
@@ -167,7 +154,7 @@ static void PrepareTensorOperands(array<TensorShape, N> shapes, array<size_t, N>
                 break;
             }
 
-    //fprintf(stderr, "%s  op  %s  ->  %s  via  %s\n", string(shapes[0]).c_str(), string(shapes[1]).c_str(), string(shapes[2]).c_str(), string(TensorShape(opDims)).c_str());
+    // fprintf(stderr, "%s  op  %s  ->  %s  via  %s\n", string(shapes[0]).c_str(), string(shapes[1]).c_str(), string(shapes[2]).c_str(), string(TensorShape(opDims)).c_str());
 
     // determine inverse broadcasting dimensions
     // Inverse broadcasting dims are actual for loops in the kernel, whereas broadcasting input dims are handled by the thread index.
@@ -243,7 +230,7 @@ static bool CheckDifferentObject(const TensorView<ElemType>& a, const TensorView
 template <class ElemType>
 void TensorView<ElemType>::DoUnaryOpOf(ElemType beta, const TensorView& a, ElemType alpha, ElementWiseOperator op)
 {
-    //static int cc = 0; if (cc++ == 0)
+    // static int cc = 0; if (cc++ == 0)
     //    fprintf(stderr, "Tensor Op: Op %d: %s -> %s\n", (int)op, string(a.GetShape()).c_str(), string(GetShape()).c_str());
 
     // prepare all tensor descriptor information as needed for execution
@@ -263,7 +250,7 @@ void TensorView<ElemType>::DoUnaryOpOf(ElemType beta, const TensorView& a, ElemT
 template <class ElemType>
 void TensorView<ElemType>::DoBinaryOpOf(ElemType beta, const TensorView& a, const TensorView& b, ElemType alpha, ElementWiseOperator op)
 {
-    //static int cc = 0; if (cc++ == 0)
+    // static int cc = 0; if (cc++ == 0)
     //    fprintf(stderr, "Tensor Op: Op %d: %s op %s -> %s\n", (int)op, string(a.GetShape()).c_str(), string(b.GetShape()).c_str(), string(GetShape()).c_str());
 
     array<size_t, 3> offsets;
@@ -281,7 +268,7 @@ void TensorView<ElemType>::DoBinaryOpOf(ElemType beta, const TensorView& a, cons
 template <class ElemType>
 void TensorView<ElemType>::DoTernaryOpOf(ElemType beta, const TensorView& a, const TensorView& b, const TensorView& c, ElemType alpha, ElementWiseOperator op)
 {
-    //static int cc = 0; if (cc++ == 0)
+    // static int cc = 0; if (cc++ == 0)
     //    fprintf(stderr, "Tensor Op: Op %d: %s, %s, %s -> %s\n", (int)op, string(a.GetShape()).c_str(), string(b.GetShape()).c_str(), string(c.GetShape()).c_str(), string(GetShape()).c_str());
 
     array<size_t, 4> offsets;

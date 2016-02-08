@@ -127,12 +127,6 @@ public:
         // remember the dimensions
         m_numParallelSequences = numParallelSequences;
         m_numTimeSteps = numTimeSteps;
-// allocate lookup tables (note: except at the start, these don't really allocate new memory most of the time)
-#if 0
-            if ((m_distanceToStart.GetNumRows() != m_numParallelSequences || m_distanceToStart.GetNumCols() != m_numTimeSteps) && m_numTimeSteps > 0)   // sanity check for debugging a regression
-                fprintf(stderr, "MBLayout::Init: Resizing m_distanceToStart from %d x %d to %d x %d\n",
-                        (int)m_distanceToStart.GetNumRows(), (int)m_distanceToStart.GetNumCols(), (int)m_numParallelSequences, (int)m_numTimeSteps); // (I really want to know about actual allocations, but this is a necessary condition for them)
-#endif
         m_distanceToStart.Resize(m_numParallelSequences, m_numTimeSteps);
         m_distanceToEnd.Resize(m_numParallelSequences, m_numTimeSteps);
         m_distanceToNearestStart.assign(m_numTimeSteps, PTRDIFF_MAX);
@@ -175,13 +169,7 @@ public:
     // This is used by MeanNode and InvStdDevNode, and by statistics reporting.
     size_t GetActualNumSamples() const;
 
-    const Matrix<char> &GetColumnsValidityMask(DEVICEID_TYPE deviceId) const;
-
-#if 0 // in the future we can use the tensor lib to implement this
-        template<class ElemType> const Matrix<ElemType> GetColumnsValidMask() const;
-        template<> const Matrix<float> GetColumnsValidMask<float>() const { return m_distanceToStart.Reshaped(1, m_distanceToStart.GetNumElements()); }
-        template<> const Matrix<double> GetColumnsValidMask<double>() const { NOT_IMPLEMENTED; }
-#endif
+    const Matrix<char>& GetColumnsValidityMask(DEVICEID_TYPE deviceId) const;
 
     // compare whether two layouts are the same
     bool operator==(const MBLayout &other) const
@@ -231,15 +219,8 @@ public:
         if (beginTime >= (ptrdiff_t) m_numTimeSteps) // no need to test endTime since it is always non-negative (size_t)
             LogicError("AddSequence: Sequence added to an MBLayout must overlap with minibatch.");
 
-// remember it
-#if 0 //def _DEBUG
-            auto cap = m_sequences.capacity();  // Some sanity check for debugging a speed regression. This should only show up during the first minibatches, and growing only.
-            m_sequences.push_back(seqDesc);
-            if (cap != m_sequences.capacity())
-                fprintf(stderr, "AddSequence: m_sequences was reallocated from capacity %d to %d\n", (int)cap, (int)m_sequences.capacity());
-#else
+        // remember it
         m_sequences.push_back(seqDesc);
-#endif
 
         // create all the cached fast-lookup information
         const auto seqId = seqDesc.seqId;
@@ -424,15 +405,12 @@ private:
     mutable bool m_writable;
 
 public:
-    // -------------------------------------------------------------------
-    // special deprecated functions that are result of refactoring (to go away)
-    // -------------------------------------------------------------------
 
-    // only used in sequence training, must be replaced by a different mechanism
+    // special accessor for sequence training  --TODO: must be replaced by a different mechanism
     bool IsEnd(size_t s, size_t t) const
     {
         auto distanceToStart = (ptrdiff_t) m_distanceToStart(s, t);
-#if 1 // I don't exactly know what this does, so try assert() fifst
+#if 1 // I don't exactly know what this does, so try assert() first
         assert(distanceToStart != -1);
         distanceToStart;
 #else
@@ -464,10 +442,6 @@ typedef MBLayout::MBLayoutPtr MBLayoutPtr;
 // TODO: This will in the future be able to hold sub-ranges for nested loops as well.
 // -----------------------------------------------------------------------
 
-// TODO: We should also have a FrameRange that selects all frames of a single sequence. Currently now possible since that would require Matrix::RowSlice()
-//  - likewise, LSTMNode does its own iteration, hence needs access to GetNumParallelSequences() or NumCols() in the whole-batch iterator
-// BUGBUG: These nodes are currently broken and will need to be fixed:
-//  - CRFNode does not support > 1 parallel sequence
 class FrameRange
 {
 public:                       // TODO: make private (currently used from masking and DataFor) ; TODO: rename all members with m_ prefix
@@ -687,31 +661,7 @@ inline bool MBLayout::IsBeyondStartOrEnd(const FrameRange &fr) const
 }
 
 // TODO: Remove this version (with sanity checks) after this has been tested. Then the function can be inlined above.
-inline size_t MBLayout::GetActualNumSamples() const
-{
-#if 0 // sanity check  --TODO: delete this after a while
-        size_t n = GetNumCols();
-        if (HasGaps())
-        {
-            for (size_t t = 0; t < GetNumTimeSteps(); t++)
-            {
-                FrameRange fr(nullptr, t);
-                if (IsGap(fr))
-                {
-                    for (size_t s = 0; s < GetNumParallelSequences(); s++)
-                    {
-                        if (IsGap(fr.Sequence(s)))
-                            n--;
-                    }
-                }
-            }
-        }
-        if (m_numGapFrames != GetNumCols() - n)
-            LogicError("GetActualNumSamples: Gap counting broken, measured %d vs. originally counted %d", (int)(GetNumCols() - n), (int)m_numGapFrames);
-        assert(m_numFramesDeclared - m_numGapFrames == n);
-#endif
-    return m_numFramesDeclared - m_numGapFrames;
-}
+inline size_t MBLayout::GetActualNumSamples() const { return m_numFramesDeclared - m_numGapFrames; }
 
 // return m_columnsValidityMask(,), which is lazily created here upon first call
 // only called from MaskMissingColumnsTo()

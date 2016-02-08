@@ -99,7 +99,7 @@ protected:
                 RuntimeError("reading idx feature cache header: invalid magic");
             nsamples = swapint(fgetint(f));
             sampperiod = 0;
-            sampkind = (short) 9; //user type
+            sampkind = (short) 9; // user type
             int nRows = swapint(fgetint(f));
             int nCols = swapint(fgetint(f));
             sampsize = (short) (nRows * nCols); // features are stored as bytes;
@@ -322,7 +322,7 @@ class htkfeatreader : protected htkfeatio
     // information on current file
     // File handle and feature type information is stored in the underlying htkfeatio object.
     size_t physicalframes; // total number of frames in physical file
-    //TODO make this nicer
+    // TODO make this nicer
     bool isidxformat;           // support reading of features in idxformat as well (it's a hack, but different format's are not supported yet)
     uint64_t physicaldatastart; // byte offset of first data byte
     size_t vecbytesize;         // size of one vector in bytes
@@ -341,10 +341,24 @@ public:
     // parser for complex a=b[s,e] syntax
     struct parsedpath
     {
+        // Note: This is not thread-safe
+        static std::unordered_map<std::wstring, unsigned int> archivePathStringMap;
+        static std::vector<std::wstring> archivePathStringVector;
+
     protected:
         friend class htkfeatreader;
-        wstring logicalpath; // virtual path that this file should be understood to belong to
-        wstring archivepath; // physical path of archive file
+        msra::strfun::cstring logicalpath; // virtual path that this file should be understood to belong to
+
+    private:
+        unsigned int archivePathIdx;
+
+    protected:
+        // physical path of archive file
+        wstring archivepath() const
+        {
+            return archivePathStringVector[archivePathIdx];
+        }
+
         size_t s, e;         // first and last frame inside the archive file; (0, INT_MAX) if not given
         bool isarchive;      // true if archive (range specified)
         bool isidxformat;    // support reading of features in idxformat as well (it's a hack, but different format's are not supported yet)
@@ -354,7 +368,7 @@ public:
         }
 
         // consume and return up to 'delim'; remove from 'input' (we try to avoid C++0x here for VS 2008 compat)
-        wstring consume(wstring& input, const wchar_t* delim)
+        static wstring consume(wstring& input, const wchar_t* delim)
         {
             vector<wstring> parts = msra::strfun::split(input, delim); // (not very efficient, but does not matter here)
             if (parts.size() == 1)
@@ -368,15 +382,17 @@ public:
         // constructor parses a=b[s,e] syntax and fills in the file
         // Can be used implicitly e.g. by passing a string to open().
         parsedpath(const wstring& pathParam)
+            : logicalpath("")
         {
             wstring xpath(pathParam);
+            wstring archivepath;
 
             // parse out logical path
-            logicalpath = consume(xpath, L"=");
+            wstring localLogicalpath = consume(xpath, L"=");
             isidxformat = false;
             if (xpath.empty()) // no '=' detected: pass entire file (it's not an archive)
             {
-                archivepath = logicalpath;
+                archivepath = localLogicalpath;
                 s = 0;
                 e = INT_MAX;
                 isarchive = false;
@@ -406,18 +422,32 @@ public:
                     isarchive = true;
                 }
             }
+
+            auto iter = archivePathStringMap.find(archivepath);
+            if (iter != archivePathStringMap.end())
+            {
+                archivePathIdx = iter->second;
+            }
+            else
+            {
+                archivePathIdx = (unsigned int)archivePathStringMap.size();
+                archivePathStringMap[archivepath] = archivePathIdx;
+                archivePathStringVector.push_back(archivepath);
+            }
+
+            logicalpath = msra::strfun::utf8(localLogicalpath);
         }
 
         // get the physical path for 'make' test
-        const wstring& physicallocation() const
+        wstring physicallocation() const
         {
-            return archivepath;
+            return archivepath();
         }
 
         // casting to wstring yields the logical path
-        operator const wstring&() const
+        operator wstring() const
         {
-            return logicalpath;
+            return msra::strfun::utf16(logicalpath);
         }
 
         // get duration in frames
@@ -438,7 +468,7 @@ private:
     void openphysical(const parsedpath& ppath)
     {
         wstring physpath = ppath.physicallocation();
-        //auto_file_ptr f = fopenOrDie (physpath, L"rbS");
+        // auto_file_ptr f = fopenOrDie (physpath, L"rbS");
         auto_file_ptr f(fopenOrDie(physpath, L"rb")); // removed 'S' for now, as we mostly run local anyway, and this will speed up debugging
 
         // read the header (12 bytes for htk feature files)
@@ -573,9 +603,9 @@ public:
         if (ppath.isarchive) // reading a sub-range from an archive
         {
             if (ppath.s > ppath.e)
-                RuntimeError("open: start frame %d > end frame %d in '%ls'", (int) ppath.s, (int) ppath.e, ppath.logicalpath.c_str());
+                RuntimeError("open: start frame %d > end frame %d in '%ls'", (int)ppath.s, (int)ppath.e, ((wstring)ppath).c_str());
             if (ppath.e >= physicalframes)
-                RuntimeError("open: end frame exceeds archive's total number of frames %d in '%ls'", (int) physicalframes, ppath.logicalpath.c_str());
+                RuntimeError("open: end frame exceeds archive's total number of frames %d in '%ls'", (int)physicalframes, ((wstring)ppath).c_str());
 
             int64_t dataoffset = physicaldatastart + ppath.s * vecbytesize;
             fsetpos(f, dataoffset); // we assume fsetpos(), which is our own, is smart to not flush the read buffer
@@ -776,7 +806,7 @@ public:
             RuntimeError("htkmlfentry: state %s not found in statelist", toks[2]);
         const size_t uid = iter->second; // get state index
         setdata(ts, te, uid);
-        //phone boundary
+        // phone boundary
         if (hmmnamehash.size() > 0)
         {
             if (toks.size() > 4)
@@ -941,7 +971,7 @@ class htkmlfreader : public map<wstring, vector<ENTRY>> // [key][i] the data
                 if (sentend >= 0 && wordseqbuffer.back().wordindex == (size_t) silence)
                     wordseqbuffer.back().wordindex = sentend;
             }
-            //if (sentstart < 0 || sentend < 0 || silence < 0)
+            // if (sentstart < 0 || sentend < 0 || silence < 0)
             //    LogicError("parseentry: word map must contain !silence, !sent_start, and !sent_end");
             // implant
             auto& wordsequence = wordsequences[key]; // this creates the map entry
@@ -1000,7 +1030,7 @@ public:
             read(paths[i], restricttokeys, wordmap, unitmap, htkTimeToFrame);
     }
 
-    //phone boundary
+    // phone boundary
     template <typename WORDSYMBOLTABLE, typename UNITSYMBOLTABLE>
     htkmlfreader(const vector<wstring>& paths, const set<wstring>& restricttokeys, const wstring& stateListPath, const WORDSYMBOLTABLE* wordmap, const UNITSYMBOLTABLE* unitmap,
                  const double htkTimeToFrame, const msra::asr::simplesenonehmm& hset)

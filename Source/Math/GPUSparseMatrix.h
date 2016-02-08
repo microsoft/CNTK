@@ -46,18 +46,17 @@ public:
     using B::Clear;
     // without this, base members would require to use thi-> in GCC
 public:
-    GPUSparseMatrix(const size_t numRows, const size_t numCols, const size_t numNZ, const MatrixFormat matrixFormat = MatrixFormat::matrixFormatSparseCSR, const DEVICEID_TYPE computeDevice = AUTOPLACEMATRIX);
+    GPUSparseMatrix(const size_t numRows, const size_t numCols, const size_t numNZ, DEVICEID_TYPE computeDevice, const MatrixFormat matrixFormat = MatrixFormat::matrixFormatSparseCSR);
 
-    GPUSparseMatrix(const MatrixFormat matrixFormat = MatrixFormat::matrixFormatSparseCSR,
-                    const DEVICEID_TYPE computeDevice = AUTOPLACEMATRIX);
+    explicit GPUSparseMatrix(DEVICEID_TYPE computeDevice, const MatrixFormat matrixFormat = MatrixFormat::matrixFormatSparseCSR);
 
     GPUSparseMatrix(const GPUSparseMatrix<ElemType>&);
 
     GPUSparseMatrix(const GPUMatrix<ElemType>&, const MatrixFormat matrixFormat = MatrixFormat::matrixFormatSparseCSR);
 
-    //#ifndef __unix__
+    // #ifndef __unix__
     GPUSparseMatrix(GPUSparseMatrix<ElemType>&&);
-    //#endif    /* LINUX */
+    // #endif    /* LINUX */
 
     ~GPUSparseMatrix();
 
@@ -89,7 +88,7 @@ public:
         return m_nz;
     }
 
-    GPUSPARSE_INDEX_TYPE* MajorIndexLocation() const //row/col ids in CSC/CSR format, blockId2col/blockId2row in BlockCol/BlockRow format
+    GPUSPARSE_INDEX_TYPE* MajorIndexLocation() const // row/col ids in CSC/CSR format, blockId2col/blockId2row in BlockCol/BlockRow format
     {
         return (GPUSPARSE_INDEX_TYPE*) (m_pArray + m_elemSizeAllocated);
     }
@@ -118,7 +117,7 @@ public:
         return sizeof(GPUSPARSE_INDEX_TYPE) * MajorIndexCount();
     }
 
-    GPUSPARSE_INDEX_TYPE* SecondaryIndexLocation() const //compressed index, col/row in CSC/CSR format, col2blockId/row2blockId in BlockCol/BlockRow format
+    GPUSPARSE_INDEX_TYPE* SecondaryIndexLocation() const // compressed index, col/row in CSC/CSR format, col2blockId/row2blockId in BlockCol/BlockRow format
     {
         if (m_format == matrixFormatSparseBlockCol)
             return MajorIndexLocation() + m_numCols;
@@ -126,7 +125,7 @@ public:
             return MajorIndexLocation() + m_numRows;
         else
             return MajorIndexLocation() + m_elemSizeAllocated + m_sliceViewOffset;
-        //return MajorIndexLocation() + m_elemSizeAllocated + m_sliceViewOffset;
+        // return MajorIndexLocation() + m_elemSizeAllocated + m_sliceViewOffset;
     }
     size_t SecondaryIndexCount(const size_t numRows, const size_t numCols, const size_t numNZReserved, const MatrixFormat format) const
     {
@@ -178,28 +177,28 @@ public:
     // the column and row locations will swap based on what format we are in. Full index always follows the data array
     GPUSPARSE_INDEX_TYPE* RowLocation() const
     {
-        //not a valid function for other formats
+        // not a valid function for other formats
         assert(m_format == matrixFormatSparseCSC || m_format == matrixFormatSparseCSR);
 
         return (m_format & matrixFormatRowMajor) ? SecondaryIndexLocation() : MajorIndexLocation();
     }
     size_t RowSize() const // actual number of bytes in use
     {
-        //not a valid function for other formats
+        // not a valid function for other formats
         assert(m_format == matrixFormatSparseCSC || m_format == matrixFormatSparseCSR);
 
         return (m_format & matrixFormatRowMajor) ? SecondaryIndexSize() : MajorIndexSize();
     }
     GPUSPARSE_INDEX_TYPE* ColLocation() const
     {
-        //not a valid function for other formats
+        // not a valid function for other formats
         assert(m_format == matrixFormatSparseCSC || m_format == matrixFormatSparseCSR);
 
         return (m_format & matrixFormatRowMajor) ? MajorIndexLocation() : SecondaryIndexLocation();
     }
     size_t ColSize() const // actual number of bytes in use
     {
-        //not a valid function for other formats
+        // not a valid function for other formats
         assert(m_format == matrixFormatSparseCSC || m_format == matrixFormatSparseCSR);
 
         return (m_format & matrixFormatRowMajor) ? MajorIndexSize() : SecondaryIndexSize();
@@ -207,13 +206,13 @@ public:
     GPUSPARSE_INDEX_TYPE SecondaryIndexValueAt(size_t idx) const;
     GPUSPARSE_INDEX_TYPE* BlockId2ColOrRow() const
     {
-        //not a valid function for other formats
+        // not a valid function for other formats
         assert(m_format == matrixFormatSparseBlockCol || m_format == matrixFormatSparseBlockRow);
         return MajorIndexLocation();
     }
     GPUSPARSE_INDEX_TYPE* ColOrRow2BlockId() const
     {
-        //not a valid function for other formats
+        // not a valid function for other formats
         assert(m_format == matrixFormatSparseBlockCol || m_format == matrixFormatSparseBlockRow);
         return SecondaryIndexLocation();
     }
@@ -224,7 +223,7 @@ public:
 
     void Reshape(const size_t numRows, const size_t numCols);
     void ResizeAsAndCopyIndexFrom(const GPUSparseMatrix<ElemType>& a, const bool growOnly = true);
-    void Resize(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve, const MatrixFormat matrixFormat, const bool growOnly = true, bool keepExistingValues = true); //matrix format will affect the size to allocate
+    void Resize(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve, const MatrixFormat matrixFormat, const bool growOnly = true, bool keepExistingValues = true); // matrix format will affect the size to allocate
     void Resize(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve = 10000, const bool growOnly = true, bool keepExistingValues = false);
 
     GPUSparseMatrix<ElemType> Transpose() const;
@@ -242,13 +241,13 @@ public:
     void ChangeDeviceTo(DEVICEID_TYPE toId);
 
     GPUSparseMatrix<ElemType>& operator=(const GPUSparseMatrix<ElemType>& deepCopy);
-    //#ifndef __unix__
+    // #ifndef __unix__
     GPUSparseMatrix<ElemType>& operator=(GPUSparseMatrix<ElemType>&& moveFrom);
-    //#endif    /* LINUX */
+    // #endif    /* LINUX */
     GPUSparseMatrix<ElemType> operator+(const GPUSparseMatrix<ElemType>& a) const;
     GPUSparseMatrix<ElemType> operator-(const GPUSparseMatrix<ElemType>& a) const;
-    GPUSparseMatrix<ElemType>& operator^=(const ElemType alpha);     //element-wise power
-    GPUSparseMatrix<ElemType> operator^(const ElemType alpha) const; //element-wise power
+    GPUSparseMatrix<ElemType>& operator^=(const ElemType alpha);     // element-wise power
+    GPUSparseMatrix<ElemType> operator^(const ElemType alpha) const; // element-wise power
     GPUSparseMatrix<ElemType>& operator*=(const ElemType alpha);
     GPUSparseMatrix<ElemType> operator*(const ElemType alpha) const;
     GPUSparseMatrix<ElemType>& AssignElementPowerOf(const GPUSparseMatrix<ElemType>& a, const ElemType power);
@@ -259,13 +258,13 @@ public:
 public:
     virtual DEVICEID_TYPE GetComputeDeviceId(void) const;
 
-    //Sets sparse matrix in CSR format. this acts as deep copy
+    // Sets sparse matrix in CSR format. this acts as deep copy
     void SetMatrixFromCSRFormat(const CPUSPARSE_INDEX_TYPE* h_CSRRow, const CPUSPARSE_INDEX_TYPE* h_Col, const ElemType* h_Val,
                                 const size_t nz, const size_t numRows, const size_t numCols, const bool IsOnDevice = false, const DEVICEID_TYPE devId = -1);
     void SetMatrixFromCSCFormat(const CPUSPARSE_INDEX_TYPE* h_CSCCol, const CPUSPARSE_INDEX_TYPE* h_Row, const ElemType* h_Val,
                                 const size_t nz, const size_t numRows, const size_t numCols, const bool IsOnDevice = false, const DEVICEID_TYPE devId = -1);
 
-    //Gets sparse matrix in CSR format. this acts as deep copy. All passed pointers must be NULL. the function will allocate memory itself.
+    // Gets sparse matrix in CSR format. this acts as deep copy. All passed pointers must be NULL. the function will allocate memory itself.
     void GetMatrixFromCSRFormat(CPUSPARSE_INDEX_TYPE*& h_CSRRow, CPUSPARSE_INDEX_TYPE*& h_Col, ElemType*& h_Val, size_t& numElemAllocated, size_t& nz, size_t& numRows, size_t& numCols) const;
 
     void GetMatrixFromCSCFormat(CPUSPARSE_INDEX_TYPE*& h_CSCCol, CPUSPARSE_INDEX_TYPE*& h_Row, ElemType*& h_Val, size_t& numElemAllocated, size_t& nz, size_t& numRows, size_t& numCols) const;
@@ -310,8 +309,8 @@ public:
 
     GPUSparseMatrix<ElemType>& SetToZeroIfAbsLessThan(const ElemType threshold);
 
-    ElemType SumOfElements() const;    //sum of all elements
-    ElemType SumOfAbsElements() const; //sum of all abs(elements)
+    ElemType SumOfElements() const;    // sum of all elements
+    ElemType SumOfAbsElements() const; // sum of all abs(elements)
     ElemType FrobeniusNorm() const;
     ElemType MatrixNormInf() const;
     ElemType MatrixNorm1() const;
@@ -321,7 +320,7 @@ public:
     };
 
 public:
-    //Performs C = alpha ? op ( S ) ? D + beta ? C; Where S is sparse and D and C are dense
+    // Performs C = alpha ? op ( S ) ? D + beta ? C; Where S is sparse and D and C are dense
     static void MultiplyAndWeightedAdd(ElemType alpha, const GPUMatrix<ElemType>& a, const bool transposeA, const GPUSparseMatrix<ElemType>& b,
                                        const bool transposeB, ElemType beta, GPUMatrix<ElemType>& c);
     static void MultiplyAndWeightedAdd(ElemType alpha, const GPUSparseMatrix<ElemType>& S, const bool transposeS, const GPUMatrix<ElemType>& D,
@@ -352,7 +351,7 @@ public:
     static bool AreEqual(const GPUSparseMatrix<ElemType>& a, const GPUMatrix<ElemType>& b, const ElemType threshold = 1e-8);
     static bool AreEqual(const GPUMatrix<ElemType>& a, const GPUSparseMatrix<ElemType>& b, const ElemType threshold = 1e-8);
 
-    //For these two, I should also add a version which would return GPUSparseMatrix, since Dense.*Sparse =Sparse.*Dense=Sparse
+    // For these two, I should also add a version which would return GPUSparseMatrix, since Dense.*Sparse =Sparse.*Dense=Sparse
     static GPUMatrix<ElemType> ElementProductOf(const GPUSparseMatrix<ElemType>& a, const GPUMatrix<ElemType>& b);
     static GPUMatrix<ElemType> ElementProductOf(const GPUMatrix<ElemType>& a, const GPUSparseMatrix<ElemType>& b);
 
@@ -385,11 +384,11 @@ private:
 private:
     size_t m_totalBufferSizeAllocated;
 
-    //used by the blockCol and blockRow format
-    size_t m_blockSize;                      //block size
-    mutable GPUSPARSE_INDEX_TYPE* m_rowToId; //the id showing the order row number is observed in the nnz values.
+    // used by the blockCol and blockRow format
+    size_t m_blockSize;                      // block size
+    mutable GPUSPARSE_INDEX_TYPE* m_rowToId; // the id showing the order row number is observed in the nnz values.
 
-    mutable void* m_tempHostBuffer; //used to copy values.
+    mutable void* m_tempHostBuffer; // used to copy values.
     mutable size_t m_tempHostBufferSize;
 
     static bool do_sync;

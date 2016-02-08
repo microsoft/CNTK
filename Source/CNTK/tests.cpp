@@ -41,9 +41,9 @@ void TestBing(const ConfigParameters& config)
     DataReader<ElemType> dataReader(vdim, udim, filepaths, config);
     ConfigArray layerSizes(config("networkDescription"));
     SimpleNetworkBuilder<ElemType> netBuilder(layerSizes, TrainingCriterion::SquareError, EvalCriterion::SquareError, L"Sigmoid", true, false, false, &dataReader);
-    
 
-    ConfigArray learnRatesPerMB(config("learnRatesPerMB"));  
+
+    ConfigArray learnRatesPerMB(config("learnRatesPerMB"));
     ConfigArray mbSize(config("mbSize"));
     size_t epochSize = config("epochSize");
     size_t maxEpochs = config("maxEpochs");
@@ -52,16 +52,16 @@ void TestBing(const ConfigParameters& config)
     wstring modelPath = wstring(msra::strfun::utf16(outDir)).append(L"\\bingranknet.dnn");
 
     SimpleSGD<ElemType> sgd(learnRatesPerMB, mbSize, epochSize, maxEpochs, modelPath, momentumPerMB);
-    sgd.Train(netBuilder, dataReader, true);    
+    sgd.Train(netBuilder, dataReader, true);
 
     std::cout<<std::endl<<std::endl<<std::endl<<std::endl<<"Testing ..... "<<std::endl;
 
-    //test
+    // test
     vector<wstring> testfilepaths;
-    testfilepaths.push_back( config("test.set")); 
+    testfilepaths.push_back( config("test.set"));
     size_t testSize = config("test.set.size");
     DataReader<ElemType> testDataReader(vdim, udim, testfilepaths, config);
-    
+
     wstring finalNetPath = modelPath.append(L".").append(to_wstring(maxEpochs-1));
 
     SimpleEvaluator<ElemType> eval(netBuilder.LoadNetworkFromFile(finalNetPath, false));
@@ -95,7 +95,7 @@ void TestSpeech(const ConfigParameters& configBase)
 template <typename ElemType>
 void TestReader(const ConfigParameters& configBase)
 {
-    //int nonexistant = configBase("nonexistant");  // use to test global exception handler
+    // int nonexistant = configBase("nonexistant");  // use to test global exception handler
     ConfigParameters config(configBase("mnistTest"));
     ConfigParameters readerConfig(config("reader"));
     readerConfig.Insert("traceLevel", config("traceLevel", "0"));
@@ -115,8 +115,8 @@ void TestReader(const ConfigParameters& configBase)
     GetFileConfigNames(readerConfig, featureNames, labelNames);
 
     // setup minibatch matrices
-    Matrix<ElemType> featuresMatrix;
-    Matrix<ElemType> labelsMatrix;
+    Matrix<ElemType> featuresMatrix(0);
+    Matrix<ElemType> labelsMatrix(0);
     std::map<std::wstring, Matrix<ElemType>*> matrices;
     matrices[featureNames[0]] = &featuresMatrix;
     matrices[labelNames[0]] = &labelsMatrix;
@@ -151,7 +151,7 @@ void TestReader(const ConfigParameters& configBase)
 template <typename ElemType>
 void TestSequenceReader(const ConfigParameters& configBase)
 {
-    //int nonexistant = configBase("nonexistant");  // use to test global exception handler
+    // int nonexistant = configBase("nonexistant");  // use to test global exception handler
     ConfigParameters config = configBase("sequenceTest");
 
     size_t mbSize = config("minibatchSize");
@@ -266,7 +266,7 @@ void TestConfiguration(const ConfigParameters& configBase)
                 for (int i = 3; i < configNode.size(); ++i)
                 {
                     ConfigParameters configParam = configNode[i];
-                    if (configParam.Exists("needGradient"))
+                    if (configParam.Exists("needGradient")) // TODO: should this be a test for 'true' rather than Exists()?
                         needGradient = true;
                     else if (configParam.Exists("init"))
                     {
@@ -284,12 +284,12 @@ void TestConfiguration(const ConfigParameters& configBase)
                     if (initData.size() > 0)
                         initValueScale = initData[0];
                     if (initData.size() > 1)
-                        uniform = !_stricmp(initData[1], "uniform");
+                        uniform = EqualCI(initData[1], "uniform");
                 }
             }
         }
 
-        //now link up all the nodes
+        // now link up all the nodes
         configNodes = configCN("Relation");
         for (auto iter = configNodes.begin(); iter != configNodes.end(); iter++)
         {
@@ -327,7 +327,7 @@ void TestConfiguration(const ConfigParameters& configBase)
             }
         }
 
-        if (configRoots.Exists("CriteriaNodes")) //legacy
+        if (configRoots.Exists("CriteriaNodes")) // legacy
         {
             configNode = configRoots("CriteriaNodes");
             for (size_t i = 0; i < configNode.size(); i++)
@@ -378,21 +378,21 @@ void TestCommandLine(const ConfigParameters& configBase)
     //    # config file parsing, basic types
     //    int=20
     int i = config("int", "5555");
-    //cout << i << endl;
+    // cout << i << endl;
     i = config("nothere", "1234");
-    //cout << i << endl;
+    // cout << i << endl;
     //    long=8100000
     long l = config(L"long", "5555");
-    //cout << l << endl;
+    // cout << l << endl;
     l = config("nothere", "1234");
     //    size_t=12345678901234
     // should get the same thing asking from a double nested config
     l = unicodeTests(L"long", "5555");
-    //cout << l << endl;
+    // cout << l << endl;
     l = unicodeTests("nothere", "1234");
     //    size_t=12345678901234
     size_t s = config("size_t", "5555");
-    //cout << s << endl;
+    // cout << s << endl;
     s = config(L"nothere", "1234");
 
     // get stuff from base level config (3 levels down)
@@ -409,27 +409,27 @@ void TestCommandLine(const ConfigParameters& configBase)
     bool bif = config.Exists(L"boolImpliedFalse");
     bif;
     bf = config("nothere", "false");
-    //cout << bf << endl;
+    // cout << bf << endl;
     //    float=1234.5678
     float f = config("float", "555.555");
-    //cout << f << endl;
+    // cout << f << endl;
     f = config("nothere", "1.234");
     //    double=1.23456e-99
     double d = config("double", "555.555");
-    //cout << d << endl;
+    // cout << d << endl;
     d = stringTests("nothere", "1.2345");
     //    string=string1
     std::string str = stringTests("string");
     str = stringTests(L"nothere", "default");
-    //cout << str << endl;
+    // cout << str << endl;
     str = stringTests("nothere", "defString");
-    //cout << str << endl;
+    // cout << str << endl;
     //    stringQuotes="This is a string with quotes"
     str = stringTests("stringQuotes");
     //    wstring=東京
     std::wstring wstr = unicodeTests("wstring");
     wstr = (std::wstring) unicodeTests(L"nothere", L"newValue");
-    //wcout << wstr << endl;
+    // wcout << wstr << endl;
     wstr = (std::wstring) unicodeTests("nothere", L"defWstring");
     //    wstringQuotes="東京に行きましょう． 明日"
     std::wstring wstrQuotes = unicodeTests("wstringQuotes");
@@ -443,7 +443,7 @@ void TestCommandLine(const ConfigParameters& configBase)
     ConfigArray arrayMultiple = arrayTests(L"arrayMultiple");
     //    arrayMultipleBraces={hello:there:with:braces}
     ConfigArray arrayMultipleBraces = arrayTests("arrayMultipleBraces");
-    //arrayMultiple = arrayTests("nothere", arrayMultipleBraces); - no longer supported, can add if we need it
+    // arrayMultiple = arrayTests("nothere", arrayMultipleBraces); - no longer supported, can add if we need it
     //    arrayMultipleSeparatorBraces={|hello|there|with|custom|separator|and|braces}
     ConfigArray arrayMultipleSeparatorBraces = arrayTests("arrayMultipleSeparatorBraces");
     //    arrayQuotedStrings={
@@ -484,7 +484,7 @@ void TestCommandLine(const ConfigParameters& configBase)
     ConfigParameters dictMultiple(dictTests("dictMultiple"));
     //    dictMultipleBraces=[first=hello;second=there;third=with;forth=braces]
     ConfigParameters dictMultipleBraces(dictTests(L"dictMultipleBraces"));
-    //dictMultiple = dictTests("nothere", dictMultipleBraces); no longer supported, can add if we need
+    // dictMultiple = dictTests("nothere", dictMultipleBraces); no longer supported, can add if we need
     //    dictMultipleSeparatorBraces=[|first=hello|second=1|thirdBool|forth=12.345|fifth="quoted string"|sixth=古部|seventh=braces]
     ConfigParameters dictMultipleSeparatorBraces(dictTests("dictMultipleSeparatorBraces"));
     //    dictQuotedStrings=[
@@ -541,10 +541,10 @@ void TestCommandLine(const ConfigParameters& configBase)
     name = dict3.Name();
     //]
 
-    //File file(L"c:\\temp\\testing.txt", fileOptionsRead | fileOptionsText);
-    //char marker[5];
-    //if (file.TryGetMarker(fileMarkerBeginSection, L"BVAL"))
-    //{
+    // File file(L"c:\\temp\\testing.txt", fileOptionsRead | fileOptionsText);
+    // char marker[5];
+    // if (file.TryGetMarker(fileMarkerBeginSection, L"BVAL"))
+    // {
     //    if (file.TryGetMarker(fileMarkerBeginSection, L"BNEW"))
     //    {
     //        if (!file.TryGetMarker(fileMarkerBeginSection, L"OTHER"))
@@ -554,8 +554,8 @@ void TestCommandLine(const ConfigParameters& configBase)
     //            printf("pass");
     //        }
     //    }
-    //}
-    //TestConfiguration<ElemType>(configBase);
+    // }
+    // TestConfiguration<ElemType>(configBase);
     TestMacros<ElemType>(configBase);
 }
 
@@ -563,11 +563,11 @@ template <typename ElemType>
 void TestCn(const ConfigParameters& config)
 {
     TestCommandLine<ElemType>(config);
-    //TestSequenceReader<ElemType>(config);
+    // TestSequenceReader<ElemType>(config);
     TestReader<ElemType>(config);
     TestMNist<ElemType>(config);
     TestSpeech<ElemType>(config);
-    //TestBing<ElemType>(config);
+    // TestBing<ElemType>(config);
 }
 
 template void TestCn<float>(const ConfigParameters& config);

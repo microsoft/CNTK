@@ -19,8 +19,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 template <class ElemType>
 size_t UCIFastReader<ElemType>::RandomizeSweep(size_t mbStartSample)
 {
-    //size_t randomRangePerEpoch = (m_epochSize+m_randomizeRange-1)/m_randomizeRange;
-    //return m_epoch*randomRangePerEpoch + epochSample/m_randomizeRange;
+    // size_t randomRangePerEpoch = (m_epochSize+m_randomizeRange-1)/m_randomizeRange;
+    // return m_epoch*randomRangePerEpoch + epochSample/m_randomizeRange;
     return mbStartSample / m_randomizeRange;
 }
 
@@ -104,7 +104,7 @@ bool UCIFastReader<ElemType>::EnsureDataAvailable(size_t mbStartSample, bool end
     int recordsRead = 0;
     do
     {
-        int numRead = m_parser.Parse(numberToRead - recordsRead, &m_featureData, &m_labelData);
+        int numRead = m_parser->Parse(numberToRead - recordsRead, &m_featureData, &m_labelData);
 
         recordsRead += numRead;
         if (!m_endReached)
@@ -116,7 +116,7 @@ bool UCIFastReader<ElemType>::EnsureDataAvailable(size_t mbStartSample, bool end
             // update dataset variables
             size_t additionalToRead = UpdateDataVariables(mbStartSample + recordsRead);
 
-            m_parser.SetFilePosition(0); // make another pass of the dataset
+            m_parser->SetFilePosition(0); // make another pass of the dataset
 
             // if doing and end of data check, and we are at the end
             // or a partial minibatch was found exit now
@@ -274,6 +274,15 @@ template <class ElemType>
 template <class ConfigRecordType>
 void UCIFastReader<ElemType>::InitFromConfig(const ConfigRecordType& readerConfig)
 {
+    //customize delimiter and decimal points.
+    string customDelimiterStr = readerConfig(L"customDelimiter", "");
+    char customDelimiter = customDelimiterStr == "" ? char(0) : customDelimiterStr[0];
+
+    string customDecimalPointStr = readerConfig(L"customDecimalPoint", "");
+    char customDecimalPoint = customDecimalPointStr == "" ? char(0) : customDecimalPointStr[0];
+
+    m_parser = make_shared<UCIParser<ElemType, LabelType>>(customDelimiter, customDecimalPoint);
+
     // See if the user wants caching
     m_cachingReader = NULL;
     m_cachingWriter = NULL;
@@ -307,7 +316,7 @@ void UCIFastReader<ElemType>::InitFromConfig(const ConfigRecordType& readerConfi
         RuntimeError("features and label files must be the same file, use separate readers to define single use files");
 
     size_t vdim = configFeatures(L"dim");
-    //string name = configFeatures.Name();            // TODO: Aaargh!!!
+    // string name = configFeatures.Name();            // TODO: Aaargh!!!
     size_t udim = configLabels(L"labelDim", (size_t) 0);
 
     // initialize all the variables
@@ -318,7 +327,7 @@ void UCIFastReader<ElemType>::InitFromConfig(const ConfigRecordType& readerConfi
     m_featureCount = vdim;
     m_readNextSample = 0;
     m_traceLevel = readerConfig(L"traceLevel", 0);
-    m_parser.SetTraceLevel(m_traceLevel);
+    m_parser->SetTraceLevel(m_traceLevel);
 
     m_prefetchEnabled = readerConfig(L"prefetch", false);
     // set the feature count to at least one (we better have one feature...)
@@ -327,11 +336,11 @@ void UCIFastReader<ElemType>::InitFromConfig(const ConfigRecordType& readerConfi
     if (readerConfig.Exists(L"randomize"))
     {
         string randomizeString = readerConfig(L"randomize");
-        if (!_stricmp(randomizeString.c_str(), "none"))
+        if (EqualCI(randomizeString, "none"))
         {
             m_randomizeRange = randomizeNone;
         }
-        else if (!_stricmp(randomizeString.c_str(), "auto"))
+        else if (EqualCI(randomizeString, "auto"))
         {
             m_randomizeRange = randomizeAuto;
         }
@@ -347,7 +356,7 @@ void UCIFastReader<ElemType>::InitFromConfig(const ConfigRecordType& readerConfi
 
     // determine if we partial minibatches are desired
     std::string minibatchMode(readerConfig(L"minibatchMode", "partial"));
-    m_partialMinibatch = !_stricmp(minibatchMode.c_str(), "partial");
+    m_partialMinibatch = EqualCI(minibatchMode, "partial");
 
     // get start and dimensions for labels and features
     size_t startLabels = configLabels(L"start", (size_t) 0);
@@ -363,16 +372,16 @@ void UCIFastReader<ElemType>::InitFromConfig(const ConfigRecordType& readerConfi
     else
         labelType = (wstring) configLabels(L"labelType", L"category");
 
-    //convert to lower case for case insensitive comparison
-    if (!_wcsicmp(labelType.c_str(), L"category"))
+    // convert to lower case for case insensitive comparison
+    if (EqualCI(labelType, L"category"))
     {
         m_labelType = labelCategory;
     }
-    else if (!_wcsicmp(labelType.c_str(), L"regression"))
+    else if (EqualCI(labelType, L"regression"))
     {
         m_labelType = labelRegression;
     }
-    else if (!_wcsicmp(labelType.c_str(), L"none"))
+    else if (EqualCI(labelType, L"none"))
     {
         m_labelType = labelNone;
         dimLabels = 0; // override for no labels
@@ -384,7 +393,7 @@ void UCIFastReader<ElemType>::InitFromConfig(const ConfigRecordType& readerConfi
 
     // Simple heuristic to ensure buffer size and avoid breaking existing experiments.
     size_t bufSize = max(dimFeatures * 16, (size_t) 256 * 1024);
-    m_parser.ParseInit(file.c_str(), startFeatures, dimFeatures, startLabels, dimLabels, bufSize);
+    m_parser->ParseInit(file.c_str(), startFeatures, dimFeatures, startLabels, dimLabels, bufSize);
 
     // if we have labels, we need a label Mapping file, it will be a file with one label per line
     if (m_labelType != labelNone)
@@ -425,6 +434,7 @@ void UCIFastReader<ElemType>::InitFromConfig(const ConfigRecordType& readerConfi
     m_labelDim = (LabelIdType) udim;
 
     mOneLinePerFile = readerConfig(L"oneLinePerFile", false);
+
 }
 
 // InitCache - Initialize the caching reader if cache files exist, otherwise the writer
@@ -555,7 +565,7 @@ void UCIFastReader<ElemType>::SetupEpoch()
     if (m_epoch == 0 && m_totalSamples == 0 && m_cachingWriter != NULL)
     {
         m_readNextSample = m_epochStartSample = m_mbStartSample = 0;
-        m_parser.SetFilePosition(0);
+        m_parser->SetFilePosition(0);
     }
     else // otherwise, position the read to start at the right location
     {
@@ -564,10 +574,10 @@ void UCIFastReader<ElemType>::SetupEpoch()
         {
             if (m_traceLevel > 0)
                 fprintf(stderr, "UCIFastReader: Starting at epoch %lu, counting lines to determine record count...\n", (unsigned long) m_epoch);
-            m_parser.SetParseMode(ParseLineCount);
-            m_totalSamples = m_parser.Parse(size_t(-1), NULL, NULL);
-            m_parser.SetParseMode(ParseNormal);
-            m_parser.SetFilePosition(0);
+            m_parser->SetParseMode(ParseLineCount);
+            m_totalSamples = m_parser->Parse(size_t(-1), NULL, NULL);
+            m_parser->SetParseMode(ParseNormal);
+            m_parser->SetFilePosition(0);
             m_mbStartSample = 0;
             UpdateDataVariables(0); // update all the variables since we read to the end...
             if (m_traceLevel > 0)
@@ -593,7 +603,7 @@ void UCIFastReader<ElemType>::SetupEpoch()
             bool endReached = m_endReached;
             if (!endReached)
             {
-                if (!m_parser.HasMoreData())
+                if (!m_parser->HasMoreData())
                 {
                     endReached = true;
                     UpdateDataVariables(mbStartSample);
@@ -614,13 +624,13 @@ void UCIFastReader<ElemType>::SetupEpoch()
             // if we are already past the desired record, start at the beginning again
             if (currentFileRecord > fileRecord)
             {
-                m_parser.SetFilePosition(0);
+                m_parser->SetFilePosition(0);
                 currentFileRecord = 0;
             }
             fprintf(stderr, "reading from record %lu to %lu to be positioned properly for epoch\n", (unsigned long) currentFileRecord, (unsigned long) fileRecord);
-            m_parser.SetParseMode(ParseLineCount);
-            m_parser.Parse(fileRecord - currentFileRecord, NULL, NULL);
-            m_parser.SetParseMode(ParseNormal);
+            m_parser->SetParseMode(ParseLineCount);
+            m_parser->Parse(fileRecord - currentFileRecord, NULL, NULL);
+            m_parser->SetParseMode(ParseNormal);
             if (!m_labelFileToWrite.empty())
             {
                 fprintf(stderr, "WARNING: file %ls NOT written to disk, label file will only be written when starting epochs at the beginning of the dataset\n", m_labelFileToWrite.c_str());
@@ -657,7 +667,7 @@ void UCIFastReader<ElemType>::StartDistributedMinibatchLoop(size_t mbSize, size_
     m_subsetNum = subsetNum;
     m_numSubsets = numSubsets;
     if (mOneLinePerFile)
-        mbSize = mRequestedNumParallelSequences; /// each file has only one observation, therefore the number of data to read is the number of files
+        mbSize = mRequestedNumParallelSequences; // each file has only one observation, therefore the number of data to read is the number of files
 
     // if we aren't currently caching, see if we can use a cache
     if (!m_cachingReader && !m_cachingWriter)
@@ -835,8 +845,8 @@ bool UCIFastReader<ElemType>::GetMinibatchImpl(std::map<std::wstring, Matrix<Ele
 
     // figure which sweep of the randomization we are on
     size_t epochSample = m_mbStartSample % m_epochSize; // where the minibatch starts in this epoch
-    //size_t samplesExtra = m_totalSamples % m_epochSize; // extra samples at the end of an epoch
-    //size_t epochsDS = (m_totalSamples+m_epochSize-1)/m_epochSize; // how many epochs per dataset
+    // size_t samplesExtra = m_totalSamples % m_epochSize; // extra samples at the end of an epoch
+    // size_t epochsDS = (m_totalSamples+m_epochSize-1)/m_epochSize; // how many epochs per dataset
     size_t randomizeSet = randomize ? RandomizeSweep(m_mbStartSample) : 0;
     const auto& tmap = m_randomordering(randomizeSet);
     size_t epochEnd = m_epochSize;
@@ -900,7 +910,7 @@ bool UCIFastReader<ElemType>::GetMinibatchImpl(std::map<std::wstring, Matrix<Ele
         if (randomize)
             randBase = epochSample - epochSample % m_randomizeRange;
 
-        //loop through all the samples
+        // loop through all the samples
         for (size_t jSample = m_mbStartSample; j < actualmbsize; ++j, ++jSample)
         {
             // pick the right sample with randomization if desired

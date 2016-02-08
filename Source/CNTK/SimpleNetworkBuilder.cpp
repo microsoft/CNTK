@@ -14,10 +14,7 @@
 #include "NonlinearityNodes.h"
 #include "ConvolutionalNodes.h"
 #include "RecurrentNodes.h"
-#include "CompositeComputationNodes.h"
-#ifndef ENABLE_TENSORVIEW
-#include "EsotericNodes.h" // non-tensor versions have been moved here
-#endif
+#include "PreComputeNodes.h"
 
 #pragma warning(disable : 4189) // (we have lots of unused variables to show how variables can be set up)
 
@@ -27,86 +24,56 @@ template <class ElemType>
 ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildNetworkFromDescription()
 {
     ComputationNetworkPtr net;
-    switch (m_rnnType)
+    switch (m_standardNetworkKind)
     {
-    case SIMPLENET:
-        net = BuildSimpleDNN();
+    case FFDNNKind:
+        net = BuildFFDNNFromDescription();
         break;
-    case SIMPLERNN:
-        net = BuildSimpleRNN();
+    case RNNKind:
+        net = BuildRNNFromDescription();
         break;
-    case LSTM:
+    case LSTMKind:
         net = BuildLSTMNetworkFromDescription();
         break;
-    case CLASSLSTM:
-        net = BuildCLASSLSTMNetworkFromDescription();
+    case ClassLSTMNetworkKind:
+        net = BuildClassLSTMNetworkFromDescription();
         break;
-    case NCELSTM:
+    case NCELSTMNetworkKind:
         net = BuildNCELSTMNetworkFromDescription();
         break;
-    case CLASSLM:
-        net = BuildClassEntropyNetwork();
+    case ClassEntropyRNNKind:
+        net = BuildClassEntropyRNNFromDescription();
         break;
-    case LBLM:
+    case LogBilinearNetworkKind:
         net = BuildLogBilinearNetworkFromDescription();
         break;
-    case NPLM:
-        net = BuildNeuralProbNetworkFromDescription();
+    case DNNLMNetworkKind:
+        net = BuildDNNLMNetworkFromDescription();
         break;
-    case CLSTM:
+    case ConditionalLSTMNetworkKind:
         net = BuildConditionalLSTMNetworkFromDescription();
         break;
-    case RCRF:
-        net = BuildSeqTrnLSTMNetworkFromDescription();
+#ifdef COMING_SOON
+    case CRFLSTMNetworkKind:
+        net = BuildCRFLSTMNetworkFromDescription();
         break;
-    case LSTMENCODER:
-        net = BuildLSTMEncoderNetworkFromDescription();
-        break;
-    case UNIDIRECTIONALLSTM:
-        net = BuildUnidirectionalLSTMNetworksFromDescription();
-        break;
-    case BIDIRECTIONALLSTM:
-        net = BuildBiDirectionalLSTMNetworksFromDescription();
-        break;
+#endif
     default:
-        LogicError("BuildNetworkFromDescription: invalid m_rnnType %d", (int) m_rnnType);
+        LogicError("BuildNetworkFromDescription: invalid m_standardNetworkKind %d", (int) m_standardNetworkKind);
     }
 
-// post-process the network
-#if 1
+    // post-process the network
     net->CompileNetwork();
-#else
-    net->ValidateNetwork(false /*allowFragment*/, true /*bAllowNoCriterion*/); // no criterion possible because  ...TODO: what's the reason?
-#endif
 
     return net;
 }
 
-// special version for a deprecated implementation of sequence-to-sequence models
 template <class ElemType>
-ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildNetworkFromDescription(ComputationNetwork* encoderNet)
-{
-    ComputationNetworkPtr net;
-    switch (m_rnnType)
-    {
-    case ALIGNMENTSIMILARITYGENERATOR:
-        net = BuildAlignmentDecoderNetworkFromDescription(encoderNet);
-        net->CompileNetwork();
-        return net;
-    case ALIGNMENTSIMILARITYGFORWARDDECODER:
-        net = BuildAlignmentForwardDecoderNetworkFromDescription(encoderNet);
-        net->CompileNetwork();
-        return net;
-    }
-    return BuildNetworkFromDescription();
-}
-
-template <class ElemType>
-ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildSimpleDNN()
+ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildFFDNNFromDescription()
 {
 
     ComputationNetworkBuilder<ElemType> builder(*m_net);
-    if (m_net->GetTotalNumberOfNodes() < 1) //not built yet
+    if (m_net->GetTotalNumberOfNodes() < 1) // not built yet
     {
         unsigned long randomSeed = 1;
 
@@ -179,9 +146,9 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildSimpleDNN()
             prior = builder.Mean(label, L"Prior");
             input = builder.Log(prior, L"LogOfPrior");
 
-            //following two lines are needed only if true probability is needed
-            //output = builder.Softmax(output);
-            //output = builder.Log(output);
+            // following two lines are needed only if true probability is needed
+            // output = builder.Softmax(output);
+            // output = builder.Log(output);
 
             scaledLogLikelihood = builder.Minus(output, input, L"ScaledLogLikelihood");
             m_net->OutputNodes().push_back(scaledLogLikelihood);
@@ -191,9 +158,9 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildSimpleDNN()
             m_net->OutputNodes().push_back(output);
         }
 
-        //add softmax layer (if prob is needed or KL reg adaptation is needed)
+        // add softmax layer (if prob is needed or KL reg adaptation is needed)
         output = builder.Softmax(output, L"PosteriorProb");
-        //m_net->OutputNodes().push_back(output);
+        // m_net->OutputNodes().push_back(output);
     }
 
     return m_net;
@@ -201,10 +168,10 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildSimpleDNN()
 
 // Note: while ComputationNode and CompuationNetwork are (supposed to be) independent of ElemType, it is OK to keep this class dependent.
 template <class ElemType>
-ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildSimpleRNN()
+ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildRNNFromDescription()
 {
     ComputationNetworkBuilder<ElemType> builder(*m_net);
-    if (m_net->GetTotalNumberOfNodes() < 1) //not built yet
+    if (m_net->GetTotalNumberOfNodes() < 1) // not built yet
     {
         unsigned long randomSeed = 1;
 
@@ -229,7 +196,7 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildSimpleRNN()
         int recur_idx = 0;
         if (numHiddenLayers > 0)
         {
-            //TODO: to figure out sparse matrix size
+            // TODO: to figure out sparse matrix size
             u = builder.CreateLearnableParameter(L"U0", m_layerSizes[1], m_layerSizes[0]);
             m_net->InitLearnableParameters(u, m_uniformInit, randomSeed++, m_initValueScale);
 
@@ -239,7 +206,7 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildSimpleRNN()
                 m_net->InitLearnableParameters(w, m_uniformInit, randomSeed++, m_initValueScale);
 
                 pastValue = builder.PastValue(NULL, m_defaultHiddenActivity, m_layerSizes[1], 1);
-                /// unless there is a good algorithm to detect loops, use this explicit setup
+                // unless there is a good algorithm to detect loops, use this explicit setup
                 output = ApplyNonlinearFunction(
                     builder.Plus(
                         builder.Times(u, input), builder.Times(w, pastValue)),
@@ -250,7 +217,7 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildSimpleRNN()
             else
             {
                 output = SimpleNetworkBuilder<ElemType>::ApplyNonlinearFunction(builder.Plus(builder.Times(u, input), b), 0);
-                //output = builder.Times(u, input);
+                // output = builder.Times(u, input);
             }
 
             if (m_addDropoutNodes)
@@ -260,7 +227,7 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildSimpleRNN()
 
             for (int i = 1; i < numHiddenLayers; i++)
             {
-                //TODO: to figure out sparse matrix size
+                // TODO: to figure out sparse matrix size
                 u = builder.CreateLearnableParameter(msra::strfun::wstrprintf(L"U%d", i), m_layerSizes[i + 1], m_layerSizes[i]);
                 m_net->InitLearnableParameters(u, m_uniformInit, randomSeed++, m_initValueScale);
 
@@ -270,7 +237,7 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildSimpleRNN()
                     m_net->InitLearnableParameters(w, m_uniformInit, randomSeed++, m_initValueScale);
 
                     pastValue = builder.PastValue(NULL, m_defaultHiddenActivity, (size_t) m_layerSizes[i + 1], 1);
-                    /// unless there is a good algorithm to detect loops, use this explicit setup
+                    // unless there is a good algorithm to detect loops, use this explicit setup
                     output = ApplyNonlinearFunction(
                         builder.Plus(
                             builder.Times(u, input), builder.Times(w, pastValue)),
@@ -309,11 +276,11 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildSimpleRNN()
 }
 
 template <class ElemType>
-ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildClassEntropyNetwork()
+ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildClassEntropyRNNFromDescription()
 {
     ComputationNetworkBuilder<ElemType> builder(*m_net);
 
-    if (m_net->GetTotalNumberOfNodes() < 1) //not built yet
+    if (m_net->GetTotalNumberOfNodes() < 1) // not built yet
     {
         unsigned long randomSeed = 1;
 
@@ -325,7 +292,7 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildClassEntropyNetwork()
         ComputationNodePtr wrd2cls, cls2idx, clslogpostprob, clsweight;
 
         if (m_vocabSize != m_layerSizes[numHiddenLayers + 1])
-            RuntimeError("BuildClassEntropyNetwork : vocabulary size should be the same as the output layer size");
+            RuntimeError("BuildClassEntropyRNNFromDescription : vocabulary size should be the same as the output layer size");
 
         input = builder.CreateSparseInputNode(L"features", m_layerSizes[0]);
         m_net->FeatureNodes().push_back(input);
@@ -351,7 +318,7 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildClassEntropyNetwork()
                 m_net->InitLearnableParameters(w, m_uniformInit, randomSeed++, m_initValueScale);
 
                 pastValue = builder.PastValue(NULL, m_defaultHiddenActivity, m_layerSizes[1], 1);
-                /// unless there is a good algorithm to detect loops, use this explicit setup
+                // unless there is a good algorithm to detect loops, use this explicit setup
                 output = ApplyNonlinearFunction(
                     builder.Plus(
                         builder.Times(u, input), builder.Times(w, pastValue)),
@@ -381,7 +348,7 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildClassEntropyNetwork()
                     m_net->InitLearnableParameters(w, m_uniformInit, randomSeed++, m_initValueScale);
 
                     pastValue = builder.PastValue(NULL, m_defaultHiddenActivity, (size_t) m_layerSizes[i + 1], 1);
-                    /// unless there is a good algorithm to detect loops, use this explicit setup
+                    // unless there is a good algorithm to detect loops, use this explicit setup
                     output = ApplyNonlinearFunction(
                         builder.Plus(
                             builder.Times(u, input), builder.Times(w, pastValue)),
@@ -401,13 +368,13 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildClassEntropyNetwork()
             }
         }
 
-        /// need to have [input_dim x output_dim] matrix
-        /// e.g., [200 x 10000], where 10000 is the vocabulary size
-        /// this is for speed-up issue as per word matrix can be simply obtained using column slice
+        // need to have [input_dim x output_dim] matrix
+        // e.g., [200 x 10000], where 10000 is the vocabulary size
+        // this is for speed-up issue as per word matrix can be simply obtained using column slice
         w = builder.CreateLearnableParameter(msra::strfun::wstrprintf(L"W%d", numHiddenLayers), m_layerSizes[numHiddenLayers], m_layerSizes[numHiddenLayers + 1]);
         m_net->InitLearnableParameters(w, m_uniformInit, randomSeed++, m_initValueScale);
 
-        /// the label is a dense matrix. each element is the word index
+        // the label is a dense matrix. each element is the word index
         label = builder.CreateInputNode(L"labels", 4);
 
         clsweight = builder.CreateLearnableParameter(L"WeightForClassPostProb", m_nbrCls, m_layerSizes[numHiddenLayers]);
@@ -432,7 +399,7 @@ template <class ElemType>
 ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildConditionalLSTMNetworkFromDescription()
 {
     ComputationNetworkBuilder<ElemType> builder(*m_net);
-    if (m_net->GetTotalNumberOfNodes() < 1) //not built yet
+    if (m_net->GetTotalNumberOfNodes() < 1) // not built yet
     {
         unsigned long randomSeed = 1;
 
@@ -470,7 +437,7 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildConditionalLSTMNetwor
         }
         else
         {
-            LogicError("BuildCLASSLSTMNetworkFromDescription: LSTMNode cannot take sparse input. Need to project sparse input to continuous vector using LookupTable. Suggest using setups below\n layerSizes=$VOCABSIZE$:100:$HIDDIM$:$VOCABSIZE$ \nto have 100 dimension projection, and lookupTableOrder=1\n to project to a single window. To use larger context window, set lookupTableOrder=3 for example with width-3 context window.\n ");
+            LogicError("BuildClassLSTMNetworkFromDescription: LSTMNode cannot take sparse input. Need to project sparse input to continuous vector using LookupTable. Suggest using setups below\n layerSizes=$VOCABSIZE$:100:$HIDDIM$:$VOCABSIZE$ \nto have 100 dimension projection, and lookupTableOrder=1\n to project to a single window. To use larger context window, set lookupTableOrder=3 for example with width-3 context window.\n ");
         }
 
         int recur_idx = 0;
@@ -479,7 +446,7 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildConditionalLSTMNetwor
         {
             //           output = (ComputationNodePtr)BuildLSTMNodeComponent(randomSeed, 0, m_layerSizes[offset] * (offset ? m_lookupTableOrder : 1), m_layerSizes[offset + 1], input);
             output = (ComputationNodePtr) BuildLSTMComponent(randomSeed, 0, m_layerSizes[offset] * (offset ? m_lookupTableOrder : 1), m_layerSizes[offset + 1], input);
-            /// previously used function. now uses LSTMNode which is correct and fast
+            // previously used function. now uses LSTMNode which is correct and fast
             input = output;
             for (int i = 1 + offset; i < numHiddenLayers; i++)
             {
@@ -493,7 +460,7 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildConditionalLSTMNetwor
             }
         }
 
-        /// serve as a global bias term
+        // serve as a global bias term
         gt = builder.CreateInputNode(L"binaryFeature", m_auxFeatDim);
         m_net->FeatureNodes().push_back(gt);
         e = builder.CreateLearnableParameter(msra::strfun::wstrprintf(L"AuxTrans%d", 0),
@@ -503,13 +470,13 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildConditionalLSTMNetwor
         output = builder.Plus(input, u, L"PlusGlobalBias");
         input = output;
 
-        /// need to have [input_dim x output_dim] matrix
-        /// e.g., [200 x 10000], where 10000 is the vocabulary size
-        /// this is for speed-up issue as per word matrix can be simply obtained using column slice
+        // need to have [input_dim x output_dim] matrix
+        // e.g., [200 x 10000], where 10000 is the vocabulary size
+        // this is for speed-up issue as per word matrix can be simply obtained using column slice
         w = builder.CreateLearnableParameter(msra::strfun::wstrprintf(L"W%d", numHiddenLayers), m_layerSizes[numHiddenLayers], m_layerSizes[numHiddenLayers + 1]);
         m_net->InitLearnableParameters(w, m_uniformInit, randomSeed++, m_initValueScale);
 
-        /// the label is a dense matrix. each element is the word index
+        // the label is a dense matrix. each element is the word index
         label = builder.CreateInputNode(L"labels", 4);
 
         clsweight = builder.CreateLearnableParameter(L"WeightForClassPostProb", m_nbrCls, m_layerSizes[numHiddenLayers]);
@@ -519,270 +486,11 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildConditionalLSTMNetwor
         output = AddTrainAndEvalCriterionNodes(input, label, w, L"TrainNodeClassBasedCrossEntropy", L"EvalNodeClassBasedCrossEntrpy",
                                                clslogpostprob);
 
-        output = builder.Times(builder.Transpose(w), input, L"outputs");
+        output = builder.TransposeTimes(w, input, L"outputs");
 
         m_net->OutputNodes().push_back(output);
 
-        //add softmax layer (if prob is needed or KL reg adaptation is needed)
-        output = builder.Softmax(output, L"PosteriorProb");
-    }
-
-    return m_net;
-}
-
-/**
-    this builds an alignment based LM generator
-    the aligment node takes a variable length input and relates each element to a variable length output
-    */
-template <class ElemType>
-ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildAlignmentForwardDecoderNetworkFromDescription(ComputationNetwork* encoderNet)
-{
-    ComputationNetworkBuilder<ElemType> builder(*m_net);
-    if (m_net->GetTotalNumberOfNodes() < 1) //not built yet
-    {
-        unsigned long randomSeed = 1;
-
-        size_t numHiddenLayers = m_layerSizes.size() - 2;
-
-        size_t numRecurrentLayers = m_recurrentLayers.size();
-
-        ComputationNodePtr input, encoderOutput, e,
-            b, w, u, pastValue, output, label, alignoutput;
-        ComputationNodePtr clslogpostprob;
-        ComputationNodePtr clsweight;
-        ComputationNodePtr columnStride, rowStride;
-
-        input = builder.CreateSparseInputNode(L"features", m_layerSizes[0]);
-        m_net->FeatureNodes().push_back(input);
-
-        if (m_lookupTableOrder > 0)
-        {
-            e = builder.CreateLearnableParameter(msra::strfun::wstrprintf(L"E%d", 0), m_layerSizes[1], m_layerSizes[0] / m_lookupTableOrder);
-            m_net->InitLearnableParameters(e, m_uniformInit, randomSeed++, m_initValueScale);
-            output = builder.LookupTable(e, input, L"LookupTable");
-
-            if (m_addDropoutNodes)
-                input = builder.Dropout(output);
-            else
-                input = output;
-        }
-        else
-        {
-            LogicError("BuildCLASSLSTMNetworkFromDescription: LSTMNode cannot take sparse input. Need to project sparse input to continuous vector using LookupTable. Suggest using setups below\n layerSizes=$VOCABSIZE$:100:$HIDDIM$:$VOCABSIZE$ \nto have 100 dimension projection, and lookupTableOrder=1\n to project to a single window. To use larger context window, set lookupTableOrder=3 for example with width-3 context window.\n ");
-        }
-
-        int recur_idx = 0;
-        int offset = m_lookupTableOrder > 0 ? 1 : 0;
-
-        /// the source network side output dimension needs to match the 1st layer dimension in the decoder network
-        std::vector<ComputationNodeBasePtr>& encoderPairNodes = encoderNet->PairNodes();
-        if (encoderPairNodes.size() != 1)
-            LogicError("BuildAlignmentDecoderNetworkFromDescription: encoder network should have only one pairoutput node as source node for the decoder network: ");
-
-        encoderOutput = builder.PairNetwork(dynamic_pointer_cast<ComputationNode<ElemType>>(encoderPairNodes[0]), L"pairNetwork");
-
-        /// the source network side output dimension needs to match the 1st layer dimension in the decoder network
-        std::vector<ComputationNodeBasePtr>& encoderEvaluationNodes = encoderNet->OutputNodes();
-        if (encoderEvaluationNodes.size() != 1)
-            LogicError("BuildAlignmentDecoderNetworkFromDescription: encoder network should have only one output node as source node for the decoder network: ");
-
-        if (numHiddenLayers > 0)
-        {
-            int i = 1 + offset;
-            u = builder.CreateLearnableParameter(msra::strfun::wstrprintf(L"U%d", i), m_layerSizes[i], m_layerSizes[offset] * (offset ? m_lookupTableOrder : 1));
-            m_net->InitLearnableParameters(u, m_uniformInit, randomSeed++, m_initValueScale);
-            w = builder.CreateLearnableParameter(msra::strfun::wstrprintf(L"W%d", i), m_layerSizes[i], m_layerSizes[i]);
-            m_net->InitLearnableParameters(w, m_uniformInit, randomSeed++, m_initValueScale);
-
-            pastValue = builder.PastValue(NULL, m_defaultHiddenActivity, (size_t) m_layerSizes[i], 1);
-            //                output = (ComputationNodePtr)BuildLSTMNodeComponent(randomSeed, 0, m_layerSizes[offset] * (offset ? m_lookupTableOrder : 1), m_layerSizes[offset + 1], input);
-            //                output = (ComputationNodePtr)BuildLSTMComponent(randomSeed, 0, m_layerSizes[offset] * (offset ? m_lookupTableOrder : 1), m_layerSizes[offset + 1], input);
-
-            /// alignment node to get weights from source to target
-            /// this aligment node computes weights of the current hidden state after special encoder ending symbol to all
-            /// states before the special encoder ending symbol. The weights are used to summarize all encoder inputs.
-            /// the weighted sum of inputs are then used as the additional input to the LSTM input in the next layer
-            e = builder.CreateLearnableParameter(msra::strfun::wstrprintf(L"MatForSimilarity%d", i), m_layerSizes[i], m_layerSizes[i]);
-            m_net->InitLearnableParameters(e, m_uniformInit, randomSeed++, m_initValueScale);
-
-            columnStride = builder.CreateLearnableParameter(L"columnStride", 1, 1);
-            columnStride->Value().SetValue(1);
-            columnStride->SetParameterUpdateRequired(false);
-            rowStride = builder.CreateLearnableParameter(L"rowStride", 1, 1);
-            rowStride->Value().SetValue(0);
-            rowStride->SetParameterUpdateRequired(false);
-            alignoutput = builder.StrideTimes(encoderOutput, builder.Softmax(builder.StrideTimes(builder.Times(builder.Transpose(encoderOutput), e), pastValue, rowStride)), columnStride);
-
-            //                alignoutput = builder.Times(encoderOutput, builder.Softmax(builder.Times(builder.Times(builder.Transpose(encoderOutput), e), pastValue)));
-
-            output = ApplyNonlinearFunction(
-                builder.Plus(
-                    builder.Times(u, input), builder.Times(w, alignoutput)),
-                0);
-            pastValue->AttachInputs(output);
-            input = output;
-
-            for (; i < numHiddenLayers; i++)
-            {
-                //output = (ComputationNodePtr)BuildLSTMNodeComponent(randomSeed, i, m_layerSizes[i], m_layerSizes[i + 1], input);
-                output = (ComputationNodePtr) BuildLSTMComponent(randomSeed, i, m_layerSizes[i], m_layerSizes[i + 1], input);
-
-                if (m_addDropoutNodes)
-                    input = builder.Dropout(output);
-                else
-                    input = output;
-            }
-        }
-
-        /// need to have [input_dim x output_dim] matrix
-        /// e.g., [200 x 10000], where 10000 is the vocabulary size
-        /// this is for speed-up issue as per word matrix can be simply obtained using column slice
-        w = builder.CreateLearnableParameter(msra::strfun::wstrprintf(L"OW%d", numHiddenLayers), m_layerSizes[numHiddenLayers], m_layerSizes[numHiddenLayers + 1]);
-        m_net->InitLearnableParameters(w, m_uniformInit, randomSeed++, m_initValueScale);
-
-        /// the label is a dense matrix. each element is the word index
-        label = builder.CreateInputNode(L"labels", 4);
-
-        clsweight = builder.CreateLearnableParameter(L"WeightForClassPostProb", m_nbrCls, m_layerSizes[numHiddenLayers]);
-        m_net->InitLearnableParameters(clsweight, m_uniformInit, randomSeed++, m_initValueScale);
-        clslogpostprob = builder.Times(clsweight, input, L"ClassPostProb");
-
-        output = builder.Times(builder.Transpose(w), input, L"outputs");
-
-        m_net->PairNodes().push_back(input);
-
-        m_net->OutputNodes().push_back(output);
-
-        //add softmax layer (if prob is needed or KL reg adaptation is needed)
-        output = builder.Softmax(output, L"PosteriorProb");
-    }
-
-    return m_net;
-}
-
-template <class ElemType>
-ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildAlignmentDecoderNetworkFromDescription(ComputationNetwork* encoderNet)
-{
-    ComputationNetworkBuilder<ElemType> builder(*m_net);
-    if (m_net->GetTotalNumberOfNodes() < 1) //not built yet
-    {
-        unsigned long randomSeed = 1;
-
-        size_t numHiddenLayers = m_layerSizes.size() - 2;
-
-        size_t numRecurrentLayers = m_recurrentLayers.size();
-
-        ComputationNodePtr input, encoderOutput, e,
-            b, w, u, pastValue, output, label, alignoutput;
-        ComputationNodePtr clslogpostprob;
-        ComputationNodePtr clsweight;
-        ComputationNodePtr columnStride, rowStride;
-
-        input = builder.CreateSparseInputNode(L"features", m_layerSizes[0]);
-        m_net->FeatureNodes().push_back(input);
-
-        if (m_lookupTableOrder > 0)
-        {
-            e = builder.CreateLearnableParameter(msra::strfun::wstrprintf(L"E%d", 0), m_layerSizes[1], m_layerSizes[0] / m_lookupTableOrder);
-            m_net->InitLearnableParameters(e, m_uniformInit, randomSeed++, m_initValueScale);
-            output = builder.LookupTable(e, input, L"LookupTable");
-
-            if (m_addDropoutNodes)
-                input = builder.Dropout(output);
-            else
-                input = output;
-        }
-        else
-        {
-            LogicError("BuildCLASSLSTMNetworkFromDescription: LSTMNode cannot take sparse input. Need to project sparse input to continuous vector using LookupTable. Suggest using setups below\n layerSizes=$VOCABSIZE$:100:$HIDDIM$:$VOCABSIZE$ \nto have 100 dimension projection, and lookupTableOrder=1\n to project to a single window. To use larger context window, set lookupTableOrder=3 for example with width-3 context window.\n ");
-        }
-
-        int recur_idx = 0;
-        int offset = m_lookupTableOrder > 0 ? 1 : 0;
-
-        /// the source network side output dimension needs to match the 1st layer dimension in the decoder network
-        std::vector<ComputationNodeBasePtr>& encoderPairNodes = encoderNet->PairNodes();
-        if (encoderPairNodes.size() != 1)
-            LogicError("BuildAlignmentDecoderNetworkFromDescription: encoder network should have only one pairoutput node as source node for the decoder network: ");
-
-        encoderOutput = builder.PairNetwork(dynamic_pointer_cast<ComputationNode<ElemType>>(encoderPairNodes[0]), L"pairNetwork");
-
-        /// the source network side output dimension needs to match the 1st layer dimension in the decoder network
-        std::vector<ComputationNodeBasePtr>& encoderEvaluationNodes = encoderNet->OutputNodes();
-        if (encoderEvaluationNodes.size() != 1)
-            LogicError("BuildAlignmentDecoderNetworkFromDescription: encoder network should have only one output node as source node for the decoder network: ");
-
-        if (numHiddenLayers > 0)
-        {
-            int i = 1 + offset;
-            u = builder.CreateLearnableParameter(msra::strfun::wstrprintf(L"U%d", i), m_layerSizes[i], m_layerSizes[offset] * (offset ? m_lookupTableOrder : 1));
-            m_net->InitLearnableParameters(u, m_uniformInit, randomSeed++, m_initValueScale);
-            w = builder.CreateLearnableParameter(msra::strfun::wstrprintf(L"W%d", i), m_layerSizes[i], m_layerSizes[i]);
-            m_net->InitLearnableParameters(w, m_uniformInit, randomSeed++, m_initValueScale);
-
-            pastValue = builder.PastValue(NULL, m_defaultHiddenActivity, (size_t) m_layerSizes[i], 1);
-            //                output = (ComputationNodePtr)BuildLSTMNodeComponent(randomSeed, 0, m_layerSizes[offset] * (offset ? m_lookupTableOrder : 1), m_layerSizes[offset + 1], input);
-            //                output = (ComputationNodePtr)BuildLSTMComponent(randomSeed, 0, m_layerSizes[offset] * (offset ? m_lookupTableOrder : 1), m_layerSizes[offset + 1], input);
-
-            /// alignment node to get weights from source to target
-            /// this aligment node computes weights of the current hidden state after special encoder ending symbol to all
-            /// states before the special encoder ending symbol. The weights are used to summarize all encoder inputs.
-            /// the weighted sum of inputs are then used as the additional input to the LSTM input in the next layer
-            e = builder.CreateLearnableParameter(msra::strfun::wstrprintf(L"MatForSimilarity%d", i), m_layerSizes[i], m_layerSizes[i]);
-            m_net->InitLearnableParameters(e, m_uniformInit, randomSeed++, m_initValueScale);
-
-            columnStride = builder.CreateLearnableParameter(L"columnStride", 1, 1);
-            columnStride->Value().SetValue(1);
-            columnStride->SetParameterUpdateRequired(false);
-            rowStride = builder.CreateLearnableParameter(L"rowStride", 1, 1);
-            rowStride->Value().SetValue(0);
-            rowStride->SetParameterUpdateRequired(false);
-            alignoutput = builder.StrideTimes(encoderOutput, builder.Softmax(builder.StrideTimes(builder.Times(builder.Transpose(encoderOutput), e), pastValue, rowStride)), columnStride);
-
-            //                alignoutput = builder.Times(encoderOutput, builder.Softmax(builder.Times(builder.Times(builder.Transpose(encoderOutput), e), pastValue)));
-
-            output = ApplyNonlinearFunction(
-                builder.Plus(
-                    builder.Times(u, input), builder.Times(w, alignoutput)),
-                0);
-            pastValue->AttachInputs(output);
-            input = output;
-
-            for (; i < numHiddenLayers; i++)
-            {
-                //output = (ComputationNodePtr)BuildLSTMNodeComponent(randomSeed, i, m_layerSizes[i], m_layerSizes[i + 1], input);
-                output = (ComputationNodePtr) BuildLSTMComponent(randomSeed, i, m_layerSizes[i], m_layerSizes[i + 1], input);
-
-                if (m_addDropoutNodes)
-                    input = builder.Dropout(output);
-                else
-                    input = output;
-            }
-        }
-
-        /// need to have [input_dim x output_dim] matrix
-        /// e.g., [200 x 10000], where 10000 is the vocabulary size
-        /// this is for speed-up issue as per word matrix can be simply obtained using column slice
-        w = builder.CreateLearnableParameter(msra::strfun::wstrprintf(L"OW%d", numHiddenLayers), m_layerSizes[numHiddenLayers], m_layerSizes[numHiddenLayers + 1]);
-        m_net->InitLearnableParameters(w, m_uniformInit, randomSeed++, m_initValueScale);
-
-        /// the label is a dense matrix. each element is the word index
-        label = builder.CreateInputNode(L"labels", 4);
-
-        clsweight = builder.CreateLearnableParameter(L"WeightForClassPostProb", m_nbrCls, m_layerSizes[numHiddenLayers]);
-        m_net->InitLearnableParameters(clsweight, m_uniformInit, randomSeed++, m_initValueScale);
-        clslogpostprob = builder.Times(clsweight, input, L"ClassPostProb");
-
-        output = AddTrainAndEvalCriterionNodes(input, label, w, L"TrainNodeClassBasedCrossEntropy", L"EvalNodeClassBasedCrossEntrpy",
-                                               clslogpostprob);
-
-        output = builder.Times(builder.Transpose(w), input, L"outputs");
-
-        m_net->PairNodes().push_back(input);
-
-        m_net->OutputNodes().push_back(output);
-
-        //add softmax layer (if prob is needed or KL reg adaptation is needed)
+        // add softmax layer (if prob is needed or KL reg adaptation is needed)
         output = builder.Softmax(output, L"PosteriorProb");
     }
 
@@ -793,7 +501,7 @@ template <class ElemType>
 ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildLogBilinearNetworkFromDescription()
 {
     ComputationNetworkBuilder<ElemType> builder(*m_net);
-    if (m_net->GetTotalNumberOfNodes() < 1) //not built yet
+    if (m_net->GetTotalNumberOfNodes() < 1) // not built yet
     {
         unsigned long randomSeed = 1;
 
@@ -822,7 +530,7 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildLogBilinearNetworkFro
             input = output;
         }
 
-        //used for lookuptable node unittest, will delete
+        // used for lookuptable node unittest, will delete
         if (m_lookupTableOrder > 0)
         {
             e = builder.CreateLearnableParameter(msra::strfun::wstrprintf(L"E%d", 0), m_layerSizes[1], m_layerSizes[0] / m_lookupTableOrder);
@@ -836,7 +544,7 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildLogBilinearNetworkFro
         }
 
         int recur_idx = 0;
-        /// unless there is a good algorithm to detect loops, use this explicit setup
+        // unless there is a good algorithm to detect loops, use this explicit setup
         int ik = 1;
         output = input;
         while (ik <= m_maOrder)
@@ -845,7 +553,7 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildLogBilinearNetworkFro
                 builder.PastValue(NULL, m_defaultHiddenActivity, m_layerSizes[0], ik, msra::strfun::wstrprintf(L"pastValue%d", ik));
             pastValueXI->SetParameterUpdateRequired(false);
             pastValueXI->AttachInputs(input);
-            //TODO: to figure out sparse matrix size
+            // TODO: to figure out sparse matrix size
             Wxi = builder.CreateLearnableParameter(msra::strfun::wstrprintf(L"DD%d", ik), m_layerSizes[0], m_layerSizes[0]);
             m_net->InitLearnableParameters(Wxi, m_uniformInit, randomSeed++, m_initValueScale);
 
@@ -907,10 +615,10 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildLogBilinearNetworkFro
 }
 
 template <class ElemType>
-ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildNeuralProbNetworkFromDescription()
+ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildDNNLMNetworkFromDescription()
 {
     ComputationNetworkBuilder<ElemType> builder(*m_net);
-    if (m_net->GetTotalNumberOfNodes() < 1) //not built yet
+    if (m_net->GetTotalNumberOfNodes() < 1) // not built yet
     {
         unsigned long randomSeed = 1;
 
@@ -953,23 +661,23 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildNeuralProbNetworkFrom
 
             if (m_recurrentLayers.size() > 0 && m_recurrentLayers[recur_idx] == 1)
             {
-                //TODO: to figure out sparse matrix size
+                // TODO: to figure out sparse matrix size
                 Wxi2 = builder.CreateLearnableParameter(L"WXI2", m_layerSizes[1], m_layerSizes[0]);
                 m_net->InitLearnableParameters(Wxi2, m_uniformInit, randomSeed++, m_initValueScale);
-                //TODO: to figure out sparse matrix size
+                // TODO: to figure out sparse matrix size
                 Wxi3 = builder.CreateLearnableParameter(L"WXI3", m_layerSizes[1], m_layerSizes[0]);
                 m_net->InitLearnableParameters(Wxi3, m_uniformInit, randomSeed++, m_initValueScale);
-                //TODO: to figure out sparse matrix size
+                // TODO: to figure out sparse matrix size
                 Wxi4 = builder.CreateLearnableParameter(L"WXI4", m_layerSizes[1], m_layerSizes[0]);
                 m_net->InitLearnableParameters(Wxi4, m_uniformInit, randomSeed++, m_initValueScale);
-                //TODO: to figure out sparse matrix size
+                // TODO: to figure out sparse matrix size
                 Wxi1 = builder.CreateLearnableParameter(L"WXI1", m_layerSizes[1], m_layerSizes[0]);
                 m_net->InitLearnableParameters(Wxi1, m_uniformInit, randomSeed++, m_initValueScale);
-                //TODO: to figure out sparse matrix size
+                // TODO: to figure out sparse matrix size
                 Wxi = builder.CreateLearnableParameter(L"WXI", m_layerSizes[1], m_layerSizes[0]);
                 m_net->InitLearnableParameters(Wxi, m_uniformInit, randomSeed++, m_initValueScale);
 
-                /// unless there is a good algorithm to detect loops, use this explicit setup
+                // unless there is a good algorithm to detect loops, use this explicit setup
                 it = builder.Plus(
                     builder.Tanh(
                         builder.Plus(
@@ -1025,7 +733,7 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildNeuralProbNetworkFrom
             }
         }
 
-        //TODO: to figure out sparse matrix size
+        // TODO: to figure out sparse matrix size
         w = builder.CreateLearnableParameter(msra::strfun::wstrprintf(L"W%d", numHiddenLayers), m_layerSizes[numHiddenLayers + 1], m_layerSizes[numHiddenLayers]);
         m_net->InitLearnableParameters(w, m_uniformInit, randomSeed++, m_initValueScale);
         //                b = builder.CreateLearnableParameter(msra::strfun::wstrprintf (L"B%d", numHiddenLayers), m_layerSizes[numHiddenLayers+1], 1);
@@ -1062,11 +770,7 @@ shared_ptr<ComputationNode<ElemType>> /*ComputationNodePtr*/ SimpleNetworkBuilde
 
             ComputationNodePtr scalar = builder.CreateLearnableParameter(msra::strfun::wstrprintf(L"SV%d", i), 1, 1);
             scalar->Value().SetValue((ElemType) 0.01);
-#ifndef ENABLE_BROADCASTING_ELEMENTTIMES
-            ComputationNodePtr scaled = builder.Scale(scalar, directOutput, msra::strfun::wstrprintf(L"S%d", i));
-#else
             ComputationNodePtr scaled = builder.ElementTimes(scalar, directOutput, msra::strfun::wstrprintf(L"S%d", i));
-#endif
 
             mergedNode = builder.Plus(toNode, scaled);
         }
@@ -1105,11 +809,11 @@ shared_ptr<ComputationNode<ElemType>> /*ComputationNodePtr*/ SimpleNetworkBuilde
     bc = builder.CreateLearnableParameter(msra::strfun::wstrprintf(L"bc%d", iLayer), outputDim, 1);
     bi = builder.CreateLearnableParameter(msra::strfun::wstrprintf(L"bi%d", iLayer), outputDim, 1);
     bf = builder.CreateLearnableParameter(msra::strfun::wstrprintf(L"bf%d", iLayer), outputDim, 1);
-    //if (m_forgetGateInitVal > 0)
+    // if (m_forgetGateInitVal > 0)
     bf->Value().SetValue(m_forgetGateInitVal);
-    //if (m_inputGateInitVal > 0)
+    // if (m_inputGateInitVal > 0)
     bi->Value().SetValue(m_inputGateInitVal);
-    //if (m_outputGateInitVal > 0)
+    // if (m_outputGateInitVal > 0)
     bo->Value().SetValue(m_outputGateInitVal);
 
     Whi = builder.CreateLearnableParameter(msra::strfun::wstrprintf(L"WHI%d", iLayer), outputDim, outputDim);
@@ -1142,9 +846,9 @@ shared_ptr<ComputationNode<ElemType>> /*ComputationNodePtr*/ SimpleNetworkBuilde
 
     if (m_constInputGateValue)
     {
-        //it = builder.CreateLearnableParameter(msra::strfun::wstrprintf (L"CONSTIT%d", iLayer), outputDim);
-        //it->SetParameterUpdateRequired(false);
-        //it->Value().SetValue(m_constInputGateValue);
+        // it = builder.CreateLearnableParameter(msra::strfun::wstrprintf (L"CONSTIT%d", iLayer), outputDim);
+        // it->SetParameterUpdateRequired(false);
+        // it->Value().SetValue(m_constInputGateValue);
         it = nullptr;
     }
     else
@@ -1245,11 +949,13 @@ shared_ptr<ComputationNode<ElemType>> /*ComputationNodePtr*/ SimpleNetworkBuilde
     return output;
 }
 
+#ifdef COMING_SOON
+
 template <class ElemType>
-ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildSeqTrnLSTMNetworkFromDescription()
+ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildCRFLSTMNetworkFromDescription()
 {
     ComputationNetworkBuilder<ElemType> builder(*m_net);
-    if (m_net->GetTotalNumberOfNodes() < 1) //not built yet
+    if (m_net->GetTotalNumberOfNodes() < 1) // not built yet
     {
         ULONG randomSeed = 1;
 
@@ -1292,7 +998,7 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildSeqTrnLSTMNetworkFrom
             outputFromEachLayer[1] = input;
         }
 
-        /// direct connect from input node to output node
+        // direct connect from input node to output node
 
         int recur_idx = 0;
         int offset = m_lookupTableOrder > 0 ? 1 : 0;
@@ -1344,11 +1050,13 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildSeqTrnLSTMNetworkFrom
     return m_net;
 }
 
+#endif
+
 template <class ElemType>
-ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildCLASSLSTMNetworkFromDescription()
+ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildClassLSTMNetworkFromDescription()
 {
     ComputationNetworkBuilder<ElemType> builder(*m_net);
-    if (m_net->GetTotalNumberOfNodes() < 1) //not built yet
+    if (m_net->GetTotalNumberOfNodes() < 1) // not built yet
     {
         unsigned long randomSeed = 1;
 
@@ -1386,7 +1094,7 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildCLASSLSTMNetworkFromD
         }
         else
         {
-            LogicError("BuildCLASSLSTMNetworkFromDescription: LSTMNode cannot take sparse input. Need to project sparse input to continuous vector using LookupTable. Suggest using setups below\n layerSizes=$VOCABSIZE$:100:$HIDDIM$:$VOCABSIZE$ \nto have 100 dimension projection, and lookupTableOrder=1\n to project to a single window. To use larger context window, set lookupTableOrder=3 for example with width-3 context window.\n ");
+            LogicError("BuildClassLSTMNetworkFromDescription: LSTMNode cannot take sparse input. Need to project sparse input to continuous vector using LookupTable. Suggest using setups below\n layerSizes=$VOCABSIZE$:100:$HIDDIM$:$VOCABSIZE$ \nto have 100 dimension projection, and lookupTableOrder=1\n to project to a single window. To use larger context window, set lookupTableOrder=3 for example with width-3 context window.\n ");
         }
 
         int recur_idx = 0;
@@ -1395,7 +1103,7 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildCLASSLSTMNetworkFromD
         {
             //                output = (ComputationNodePtr)BuildLSTMNodeComponent(randomSeed, 0, m_layerSizes[offset] * (offset ? m_lookupTableOrder : 1), m_layerSizes[offset + 1], input);
             output = (ComputationNodePtr) BuildLSTMComponent(randomSeed, 0, m_layerSizes[offset] * (offset ? m_lookupTableOrder : 1), m_layerSizes[offset + 1], input);
-            /// previously used function. now uses LSTMNode which is correct and fast
+            // previously used function. now uses LSTMNode which is correct and fast
             input = output;
             for (int i = 1 + offset; i < numHiddenLayers; i++)
             {
@@ -1409,13 +1117,13 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildCLASSLSTMNetworkFromD
             }
         }
 
-        /// need to have [input_dim x output_dim] matrix
-        /// e.g., [200 x 10000], where 10000 is the vocabulary size
-        /// this is for speed-up issue as per word matrix can be simply obtained using column slice
+        // need to have [input_dim x output_dim] matrix
+        // e.g., [200 x 10000], where 10000 is the vocabulary size
+        // this is for speed-up issue as per word matrix can be simply obtained using column slice
         w = builder.CreateLearnableParameter(msra::strfun::wstrprintf(L"W%d", numHiddenLayers), m_layerSizes[numHiddenLayers], m_layerSizes[numHiddenLayers + 1]);
         m_net->InitLearnableParameters(w, m_uniformInit, randomSeed++, m_initValueScale);
 
-        /// the label is a dense matrix. each element is the word index
+        // the label is a dense matrix. each element is the word index
         label = builder.CreateInputNode(L"labels", 4);
 
         clsweight = builder.CreateLearnableParameter(L"WeightForClassPostProb", m_nbrCls, m_layerSizes[numHiddenLayers]);
@@ -1425,11 +1133,11 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildCLASSLSTMNetworkFromD
         output = AddTrainAndEvalCriterionNodes(input, label, w, L"TrainNodeClassBasedCrossEntropy", L"EvalNodeClassBasedCrossEntrpy",
                                                clslogpostprob);
 
-        output = builder.Times(builder.Transpose(w), input, L"outputs");
+        output = builder.TransposeTimes(w, input, L"outputs");
 
         m_net->OutputNodes().push_back(output);
 
-        //add softmax layer (if prob is needed or KL reg adaptation is needed)
+        // add softmax layer (if prob is needed or KL reg adaptation is needed)
         output = builder.Softmax(output, L"PosteriorProb");
     }
 
@@ -1456,16 +1164,16 @@ shared_ptr<ComputationNode<ElemType>> /*ComputationNodePtr*/ SimpleNetworkBuilde
     size_t nDim = inputDim + outputDim + 2;
     wInputGate = builder.CreateLearnableParameter(msra::strfun::wstrprintf(L"WINPUTGATE%d", iLayer), outputDim, nDim);
     m_net->InitLearnableParameters(wInputGate, m_uniformInit, randomSeed++, m_initValueScale);
-    wInputGate->Value().ColumnSlice(0, 1).SetValue(m_inputGateInitVal); /// init to input gate bias
+    wInputGate->Value().ColumnSlice(0, 1).SetValue(m_inputGateInitVal); // init to input gate bias
     wForgetGate = builder.CreateLearnableParameter(msra::strfun::wstrprintf(L"WFORGETGATE%d", iLayer), outputDim, nDim);
     m_net->InitLearnableParameters(wForgetGate, m_uniformInit, randomSeed++, m_initValueScale);
-    wForgetGate->Value().ColumnSlice(0, 1).SetValue(m_forgetGateInitVal); /// init to forget gate bias
+    wForgetGate->Value().ColumnSlice(0, 1).SetValue(m_forgetGateInitVal); // init to forget gate bias
     wOutputGate = builder.CreateLearnableParameter(msra::strfun::wstrprintf(L"WOUTPUTGATE%d", iLayer), outputDim, nDim);
     m_net->InitLearnableParameters(wOutputGate, m_uniformInit, randomSeed++, m_initValueScale);
-    wOutputGate->Value().ColumnSlice(0, 1).SetValue(m_outputGateInitVal); /// init to output gate bias
+    wOutputGate->Value().ColumnSlice(0, 1).SetValue(m_outputGateInitVal); // init to output gate bias
     wMemoryCellMatrix = builder.CreateLearnableParameter(msra::strfun::wstrprintf(L"WMEMORYCELLWEIGHT%d", iLayer), outputDim, inputDim + outputDim + 1);
     m_net->InitLearnableParameters(wMemoryCellMatrix, m_uniformInit, randomSeed++, m_initValueScale);
-    wMemoryCellMatrix->Value().ColumnSlice(0, 1).SetValue(0); /// init to memory cell bias
+    wMemoryCellMatrix->Value().ColumnSlice(0, 1).SetValue(0); // init to memory cell bias
 
     output = builder.LSTM(inputObs, wInputGate, wForgetGate, wOutputGate, wMemoryCellMatrix, msra::strfun::wstrprintf(L"LSTM%d", iLayer));
 
@@ -1490,7 +1198,7 @@ template <class ElemType>
 ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildLSTMNetworkFromDescription()
 {
     ComputationNetworkBuilder<ElemType> builder(*m_net);
-    if (m_net->GetTotalNumberOfNodes() < 1) //not built yet
+    if (m_net->GetTotalNumberOfNodes() < 1) // not built yet
     {
         ULONG randomSeed = 1;
 
@@ -1539,16 +1247,16 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildLSTMNetworkFromDescri
             outputFromEachLayer[1] = input;
         }
 
-        /// direct connect from input node to output node
+        // direct connect from input node to output node
 
         int recur_idx = 0;
         int offset = m_lookupTableOrder > 0 ? 1 : 0;
         if (numHiddenLayers > 0)
         {
 
-            //output = (ComputationNodePtr)BuildLSTMNodeComponent(randomSeed, 0, m_layerSizes[offset] * (offset ? m_lookupTableOrder : 1), m_layerSizes[offset + 1], input);
+            // output = (ComputationNodePtr)BuildLSTMNodeComponent(randomSeed, 0, m_layerSizes[offset] * (offset ? m_lookupTableOrder : 1), m_layerSizes[offset + 1], input);
             output = (ComputationNodePtr) BuildLSTMComponent(randomSeed, 0, m_layerSizes[offset] * (offset ? m_lookupTableOrder : 1), m_layerSizes[offset + 1], input);
-            /// previously used function. now uses LSTMNode which is correct and fast
+            // previously used function. now uses LSTMNode which is correct and fast
             input = output;
             outputFromEachLayer[offset + 1] = input;
 
@@ -1557,7 +1265,7 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildLSTMNetworkFromDescri
                 if (m_recurrentLayers.size() > 0 && m_recurrentLayers[recur_idx] == i)
                 {
 
-                    //output = (ComputationNodePtr)BuildLSTMNodeComponent(randomSeed, i, m_layerSizes[i], m_layerSizes[i + 1], input);
+                    // output = (ComputationNodePtr)BuildLSTMNodeComponent(randomSeed, i, m_layerSizes[i], m_layerSizes[i + 1], input);
                     output = (ComputationNodePtr) BuildLSTMComponent(randomSeed, i, m_layerSizes[i], m_layerSizes[i + 1], input);
                     // previously used function, now uses LSTMnode, which is fast and correct
 
@@ -1601,568 +1309,8 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildLSTMNetworkFromDescri
         else
             m_net->OutputNodes().push_back(output);
 
-        //add softmax layer (if prob is needed or KL reg adaptation is needed)
+        // add softmax layer (if prob is needed or KL reg adaptation is needed)
         output = builder.Softmax(output, L"PosteriorProb");
-    }
-
-    return m_net;
-}
-
-/**
-    This is encoder LSTM described in the following papers:
-    H. Sutskever, O. Vinyals and Q. V. Le, "Sequence to sequence learning with neural networks", http://arxiv.org/abs/1409.3215
-
-    The following code constructs the encoder and, to construct decoder, use BuildLSTMNetworkFromDescription
-
-    Developed by Kaisheng Yao
-    This is used in the following works:
-    K. Yao, G. Zweig, "Sequence-to-sequence neural net models for grapheme-to-phoneme conversion, submitted to Interspeech 2015
-    */
-template <class ElemType>
-ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildLSTMEncoderNetworkFromDescription()
-{
-
-    ComputationNetworkBuilder<ElemType> builder(*m_net);
-    if (m_net->GetTotalNumberOfNodes() < 1) //not built yet
-    {
-        ULONG randomSeed = 1;
-
-        size_t i = 0;
-        size_t numHiddenLayers = m_layerSizes.size() - 1;
-
-        size_t numRecurrentLayers = m_recurrentLayers.size();
-
-        ComputationNodePtr input, w, b, u, e, pastValue, output, label, prior;
-
-        if (m_sparse_input)
-            input = builder.CreateSparseInputNode(L"features", m_layerSizes[0]);
-        else
-            input = builder.CreateInputNode(L"features", m_layerSizes[0]);
-
-        m_net->FeatureNodes().push_back(input);
-
-        if (m_applyMeanVarNorm)
-        {
-            w = builder.Mean(input);
-            b = builder.InvStdDev(input);
-            output = builder.PerDimMeanVarNormalization(input, w, b);
-
-            input = output;
-        }
-
-        if (m_lookupTableOrder > 0)
-        {
-            e = builder.CreateLearnableParameter(msra::strfun::wstrprintf(L"EncoderE%d", 0), m_layerSizes[1], m_layerSizes[0] / m_lookupTableOrder);
-            m_net->InitLearnableParameters(e, m_uniformInit, randomSeed++, m_initValueScale);
-            output = builder.LookupTable(e, input, L"EncoderLookupTable");
-#ifdef DEBUG_DECODER
-            e->Value().SetValue((ElemType) 0.01);
-#endif
-
-            if (m_addDropoutNodes)
-                input = builder.Dropout(output);
-            else
-                input = output;
-            i++;
-        }
-
-        /// direct connect from input node to output node
-
-        int recur_idx = 0;
-        int offset = m_lookupTableOrder > 0 ? 1 : 0;
-        if (numHiddenLayers > 0)
-        {
-            //output = (ComputationNodePtr)BuildLSTMNodeComponent(randomSeed, 0, m_layerSizes[offset] * (offset ? m_lookupTableOrder : 1), m_layerSizes[offset + 1], input);
-            output = (ComputationNodePtr) BuildLSTMComponent(randomSeed, 0, m_layerSizes[offset] * (offset ? m_lookupTableOrder : 1), m_layerSizes[offset + 1], input);
-            input = output;
-            i++;
-
-            for (; i < numHiddenLayers; i++)
-            {
-                //output = (ComputationNodePtr)BuildLSTMNodeComponent(randomSeed, i, m_layerSizes[i], m_layerSizes[i + 1], input);
-                output = (ComputationNodePtr) BuildLSTMComponent(randomSeed, i, m_layerSizes[i], m_layerSizes[i + 1], input);
-
-                if (m_addDropoutNodes)
-                    input = builder.Dropout(output);
-                else
-                    input = output;
-            }
-        }
-
-        m_net->OutputNodes().push_back(output);
-        m_net->PairNodes().push_back(output); /// need to provide pairnodes so that the next layer of network can connect to this network
-        m_net->EvaluationNodes().push_back(output);
-    }
-
-    return m_net;
-}
-
-/**
-    Build unidirectional LSTM p(y_t | y_t-1, x_1^t)
-
-    Because the past prediction is used, decoding requires beam search decoder
-
-    Developed by Kaisheng Yao
-    This is used in the following work
-    K. Yao, G. Zweig, "Sequence-to-sequence neural net models for grapheme-to-phoneme conversion" submitted to Interspeech 2015
-    */
-template <class ElemType>
-ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildUnidirectionalLSTMNetworksFromDescription()
-{
-    ComputationNetworkBuilder<ElemType> builder(*m_net);
-    if (m_net->GetTotalNumberOfNodes() < 1) //not built yet
-    {
-        ULONG randomSeed = 1;
-
-        size_t numHiddenLayers = m_layerSizes.size() - 2;
-
-        size_t numRecurrentLayers = m_recurrentLayers.size();
-        size_t dims = 0;
-
-        ComputationNodePtr input, w, b, u, e, Wxo, output, label, prior;
-        vector<ComputationNodePtr> streams;
-        vector<size_t> streamdims;
-        ComputationNodePtr inputforward, inputbackward, inputletter;
-        ComputationNodePtr transcription_prediction;
-
-        map<wstring, size_t> featDim;
-
-        assert(m_streamSizes.size() > 0);
-        inputbackward = builder.CreateInputNode(L"featurepastValueedTarget", m_streamSizes[0]);
-        m_net->FeatureNodes().push_back(inputbackward);
-        featDim[L"featurepastValueedTarget"] = m_streamSizes[0];
-
-        inputletter = builder.CreateInputNode(L"ltrForward", m_streamSizes[1]);
-        m_net->FeatureNodes().push_back(inputletter);
-        featDim[L"ltrForward"] = m_streamSizes[1];
-
-        size_t layerIdx = 0;
-        size_t idx = 0;
-        int recur_idx = 0;
-        for (auto p = m_net->FeatureNodes().begin(); p != m_net->FeatureNodes().end(); p++, idx++)
-        {
-            layerIdx = 0; /// reset layer id because each input stream starts from layer 0
-            input = dynamic_pointer_cast<ComputationNode<ElemType>>(*p);
-            if (m_applyMeanVarNorm)
-            {
-                input = dynamic_pointer_cast<ComputationNode<ElemType>>(*p);
-                w = builder.Mean(input);
-                b = builder.InvStdDev(input);
-                output = builder.PerDimMeanVarNormalization(input, w, b);
-
-                input = output;
-            }
-
-            size_t idim = input->GetNumRows();
-            assert(m_lookupTabelOrderSizes.size() == m_streamSizes.size());
-
-            e = builder.CreateLearnableParameter(msra::strfun::wstrprintf(L"Embedding%d", idx), m_layerSizes[1], idim / m_lookupTabelOrderSizes[idx]);
-            m_net->InitLearnableParameters(e, m_uniformInit, randomSeed++, m_initValueScale);
-            output = builder.LookupTable(e, input, msra::strfun::wstrprintf(L"LOOKUP%d", idx));
-
-            streamdims.push_back(m_layerSizes[1] * m_lookupTabelOrderSizes[idx]);
-            input = output;
-            streams.push_back(input);
-        }
-
-        layerIdx++;
-
-        output = (ComputationNodePtr) builder.Parallel(streams[0], streams[1], L"Parallel0");
-        input = output;
-        dims = streamdims[0] + streamdims[1];
-
-        /// now merge the streams
-        if (numHiddenLayers > 0)
-        {
-            while (layerIdx < numHiddenLayers)
-            {
-                switch (m_rnnType)
-                {
-                case UNIDIRECTIONALLSTM:
-                    //output = (ComputationNodePtr)BuildLSTMNodeComponent(randomSeed, layerIdx, dims, m_layerSizes[layerIdx + 1], input);
-                    output = (ComputationNodePtr) BuildLSTMComponent(randomSeed, layerIdx, dims, m_layerSizes[layerIdx + 1], input);
-                    break;
-                default:
-                    LogicError("This is for unidorectional LSTM model. Check rnntype to see whether it is UNIDIRECTIONALLSTMWITHPASTPREDICTION or TRANSDUCER");
-                }
-
-                layerIdx++;
-                dims = m_layerSizes[layerIdx];
-                input = output;
-            }
-        }
-
-        /// directly connect transcription model output/feature to the output layer
-        Wxo = builder.CreateLearnableParameter(L"ConnectToLowerLayers", m_layerSizes[numHiddenLayers + 1], m_layerSizes[layerIdx]);
-        m_net->InitLearnableParameters(Wxo, m_uniformInit, randomSeed++, m_initValueScale);
-
-        output = builder.Times(Wxo, input);
-        input = output;
-
-        /// here uses "labels", so only one label from multiple stream inputs are used.
-        label = builder.CreateInputNode(L"labels", m_layerSizes[numHiddenLayers + 1]);
-
-        AddTrainAndEvalCriterionNodes(input, label, w);
-
-        //add softmax layer (if prob is needed or KL reg adaptation is needed)
-        output = builder.Softmax(input, L"outputs");
-
-        if (m_needPrior)
-        {
-            prior = builder.Mean(label);
-            input = builder.Log(prior, L"LogOfPrior");
-            ComputationNodePtr scaledLogLikelihood = builder.Minus(output, input, L"ScaledLogLikelihood");
-            m_net->OutputNodes().push_back(scaledLogLikelihood);
-        }
-        else
-            m_net->OutputNodes().push_back(output);
-    }
-
-    return m_net;
-}
-
-template <class ElemType>
-shared_ptr<ComputationNode<ElemType>> /*ComputationNodePtr*/ SimpleNetworkBuilder<ElemType>::BuildLSTMComponentWithMultiInputs(ULONG& randomSeed, size_t iLayer, const vector<size_t>& inputDim, size_t outputDim, const vector<ComputationNodePtr>& inputObs, bool inputWeightSparse)
-{
-    ComputationNetworkBuilder<ElemType> builder(*m_net);
-
-    size_t numHiddenLayers = m_layerSizes.size() - 2;
-
-    ComputationNodePtr input, w, b, u, e, pastValue, output, label, prior;
-    ComputationNodePtr Wxo, Who, Wco, bo, Wxi, Whi, Wci, bi;
-    ComputationNodePtr Wxf, Whf, Wcf, bf, Wxc, Whc, bc;
-    ComputationNodePtr ot, it, ft, ct, ht;
-    ComputationNodePtr pastValueHI, pastValueCI, pastValueHO, pastValueHF, pastValueHC, pastValueCF, pastValueCC;
-    ComputationNodePtr directWIO, directInput, directOutput;
-    ComputationNodePtr bit, bft, bct;
-    ComputationNodePtr streamsxi, streamsxo, streamsxf, streamsxc;
-
-    for (size_t sidx = 0; sidx < inputObs.size(); sidx++)
-    {
-        input = inputObs[sidx];
-#if 0
-            if (inputWeightSparse)
-            {
-                Wxo = builder.CreateSparseLearnableParameter(msra::strfun::wstrprintf(L"WXO%dI%d", iLayer, sidx), outputDim, inputDim[sidx]);
-                Wxi = builder.CreateSparseLearnableParameter(msra::strfun::wstrprintf(L"WXI%dI%d", iLayer, sidx), outputDim, inputDim[sidx]);
-                Wxf = builder.CreateSparseLearnableParameter(msra::strfun::wstrprintf(L"WXF%dI%d", iLayer, sidx), outputDim, inputDim[sidx]);
-                Wxc = builder.CreateSparseLearnableParameter(msra::strfun::wstrprintf(L"WXC%dI%d", iLayer, sidx), outputDim, inputDim[sidx]);
-            }
-            else
-#endif
-        {
-            Wxo = builder.CreateLearnableParameter(msra::strfun::wstrprintf(L"WXO%dI%d", iLayer, sidx), outputDim, inputDim[sidx]);
-            Wxi = builder.CreateLearnableParameter(msra::strfun::wstrprintf(L"WXI%dI%d", iLayer, sidx), outputDim, inputDim[sidx]);
-            Wxf = builder.CreateLearnableParameter(msra::strfun::wstrprintf(L"WXF%dI%d", iLayer, sidx), outputDim, inputDim[sidx]);
-            Wxc = builder.CreateLearnableParameter(msra::strfun::wstrprintf(L"WXC%dI%d", iLayer, sidx), outputDim, inputDim[sidx]);
-        }
-        m_net->InitLearnableParameters(Wxo, m_uniformInit, randomSeed++, m_initValueScale);
-        m_net->InitLearnableParameters(Wxi, m_uniformInit, randomSeed++, m_initValueScale);
-        m_net->InitLearnableParameters(Wxf, m_uniformInit, randomSeed++, m_initValueScale);
-        m_net->InitLearnableParameters(Wxc, m_uniformInit, randomSeed++, m_initValueScale);
-
-        streamsxi = (streamsxi == nullptr) ? builder.Times(Wxi, input) : builder.Plus(streamsxi, builder.Times(Wxi, input));
-        streamsxf = (streamsxf == nullptr) ? builder.Times(Wxf, input) : builder.Plus(streamsxf, builder.Times(Wxf, input));
-        streamsxc = (streamsxc == nullptr) ? builder.Times(Wxc, input) : builder.Plus(streamsxc, builder.Times(Wxc, input));
-        streamsxo = (streamsxo == nullptr) ? builder.Times(Wxo, input) : builder.Plus(streamsxo, builder.Times(Wxo, input));
-    }
-
-    bo = builder.CreateLearnableParameter(msra::strfun::wstrprintf(L"bo%d", iLayer), outputDim, 1);
-    bc = builder.CreateLearnableParameter(msra::strfun::wstrprintf(L"bc%d", iLayer), outputDim, 1);
-    bi = builder.CreateLearnableParameter(msra::strfun::wstrprintf(L"bi%d", iLayer), outputDim, 1);
-    bf = builder.CreateLearnableParameter(msra::strfun::wstrprintf(L"bf%d", iLayer), outputDim, 1);
-    //if (m_forgetGateInitVal > 0)
-    bf->Value().SetValue(m_forgetGateInitVal);
-    //if (m_inputGateInitVal > 0)
-    bi->Value().SetValue(m_inputGateInitVal);
-    //if (m_outputGateInitVal > 0)
-    bo->Value().SetValue(m_outputGateInitVal);
-
-    Whi = builder.CreateLearnableParameter(msra::strfun::wstrprintf(L"WHI%d", iLayer), outputDim, outputDim);
-    m_net->InitLearnableParameters(Whi, m_uniformInit, randomSeed++, m_initValueScale);
-    Wci = builder.CreateLearnableParameter(msra::strfun::wstrprintf(L"WCI%d", iLayer), outputDim, 1);
-    m_net->InitLearnableParameters(Wci, m_uniformInit, randomSeed++, m_initValueScale);
-
-    Whf = builder.CreateLearnableParameter(msra::strfun::wstrprintf(L"WHF%d", iLayer), outputDim, outputDim);
-    m_net->InitLearnableParameters(Whf, m_uniformInit, randomSeed++, m_initValueScale);
-    Wcf = builder.CreateLearnableParameter(msra::strfun::wstrprintf(L"WCF%d", iLayer), outputDim, 1);
-    m_net->InitLearnableParameters(Wcf, m_uniformInit, randomSeed++, m_initValueScale);
-
-    Who = builder.CreateLearnableParameter(msra::strfun::wstrprintf(L"WHO%d", iLayer), outputDim, outputDim);
-    m_net->InitLearnableParameters(Who, m_uniformInit, randomSeed++, m_initValueScale);
-    Wco = builder.CreateLearnableParameter(msra::strfun::wstrprintf(L"WCO%d", iLayer), outputDim, 1);
-    m_net->InitLearnableParameters(Wco, m_uniformInit, randomSeed++, m_initValueScale);
-
-    Whc = builder.CreateLearnableParameter(msra::strfun::wstrprintf(L"WHC%d", iLayer), outputDim, outputDim);
-    m_net->InitLearnableParameters(Whc, m_uniformInit, randomSeed++, m_initValueScale);
-
-    size_t layer1 = outputDim;
-
-    pastValueHI = builder.PastValue(NULL, m_defaultHiddenActivity, layer1, 1);
-    pastValueHF = builder.PastValue(NULL, m_defaultHiddenActivity, layer1, 1);
-    pastValueHO = builder.PastValue(NULL, m_defaultHiddenActivity, layer1, 1);
-    pastValueHC = builder.PastValue(NULL, m_defaultHiddenActivity, layer1, 1);
-    pastValueCI = builder.PastValue(NULL, m_defaultHiddenActivity, layer1, 1);
-    pastValueCF = builder.PastValue(NULL, m_defaultHiddenActivity, layer1, 1);
-    pastValueCC = builder.PastValue(NULL, m_defaultHiddenActivity, layer1, 1);
-
-    if (m_constInputGateValue)
-    {
-        //it = builder.CreateLearnableParameter(msra::strfun::wstrprintf (L"CONSTIT%d", iLayer), outputDim);
-        //it->SetParameterUpdateRequired(false);
-        //it->Value().SetValue(m_constInputGateValue);
-        it = nullptr;
-    }
-    else
-        it = ApplyNonlinearFunction(
-            builder.Plus(
-                builder.Plus(
-                    builder.Plus(
-                        streamsxi,
-                        bi),
-                    builder.Times(Whi, pastValueHI)),
-                builder.DiagTimes(Wci, pastValueCI)),
-            0);
-
-    if (it == nullptr)
-    {
-        bit = builder.Tanh(
-            builder.Plus(
-                streamsxc,
-                builder.Plus(
-                    builder.Times(Whc, pastValueHC),
-                    bc)));
-    }
-    else
-    {
-        bit = builder.ElementTimes(it,
-                                   builder.Tanh(
-                                       builder.Plus(
-                                           streamsxc,
-                                           builder.Plus(
-                                               builder.Times(Whc, pastValueHC),
-                                               bc))));
-    }
-
-    if (m_constForgetGateValue)
-    {
-        ft = nullptr;
-    }
-    else
-        ft = ApplyNonlinearFunction(
-            builder.Plus(
-                builder.Plus(
-                    builder.Plus(
-                        streamsxf,
-                        bf),
-                    builder.Times(Whf, pastValueHF)),
-                builder.DiagTimes(Wcf, pastValueCF)),
-            0);
-
-    if (ft == nullptr)
-    {
-        bft = pastValueCC;
-    }
-    else
-    {
-        bft = builder.ElementTimes(ft, pastValueCC);
-    }
-
-    ct = builder.Plus(bft, bit);
-
-    if (m_constOutputGateValue)
-    {
-        ot = nullptr;
-    }
-    else
-        ot = ApplyNonlinearFunction(
-            builder.Plus(
-                builder.Plus(
-                    builder.Plus(
-                        streamsxo,
-                        bo),
-                    builder.Times(Who, pastValueHO)),
-                builder.DiagTimes(Wco, ct)),
-            0);
-
-    if (ot == nullptr)
-    {
-        output = builder.Tanh(ct);
-    }
-    else
-    {
-        output = builder.ElementTimes(ot, builder.Tanh(ct));
-    }
-
-    pastValueHO->AttachInputs(output);
-    pastValueHI->AttachInputs(output);
-    pastValueHF->AttachInputs(output);
-    pastValueHC->AttachInputs(output);
-    pastValueCI->AttachInputs(ct);
-    pastValueCF->AttachInputs(ct);
-    pastValueCC->AttachInputs(ct);
-
-    if (m_addDropoutNodes)
-        input = builder.Dropout(output);
-    else
-        input = output;
-    output = input;
-
-    return output;
-}
-
-/**
-    Build a bi-directional LSTM network to compute the following 
-    p(y_t | y_1^{t-1}, x_1^T)
-    The target side for y_t is a LSTM language model with past prediction y_{t-1} as its input. This language model also uses 
-    the outputs from the forwawrd direction LSTM and the output from the backward direction LSTM that are operated on the source side. 
-
-    Developed by Kaisheng Yao. 
-    This is used in the following works:
-    K. Yao, G. Zweig, "Sequence-to-sequence neural net models for grapheme-to-phoneme conversion, submitted to Interspeech 2015
-    */
-template <class ElemType>
-ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildBiDirectionalLSTMNetworksFromDescription()
-{
-    ComputationNetworkBuilder<ElemType> builder(*m_net);
-    if (m_net->GetTotalNumberOfNodes() < 1) //not built yet
-    {
-        ULONG randomSeed = 1;
-
-        size_t numHiddenLayers = m_layerSizes.size() - 2;
-
-        size_t numRecurrentLayers = m_recurrentLayers.size();
-
-        ComputationNodePtr input, w, b, u, e, pastValue, output, label, prior, Wxo;
-        ComputationNodePtr forwardInput, forwardOutput, backwardInput, backwardOutput;
-        vector<ComputationNodePtr> streams;
-        vector<size_t> streamdims;
-        ComputationNodePtr inputprediction, inputletter, ngram;
-        ComputationNodePtr ltrSource;
-        size_t ltrDim = 0;
-
-        map<wstring, size_t> featDim;
-
-        size_t ltrSrcIdx = 1;
-        /// create projections to use pastValue predictions
-        inputprediction = builder.CreateInputNode(L"featurepastValueedTarget", m_streamSizes[0]);
-        m_net->FeatureNodes().push_back(inputprediction);
-
-        inputletter = builder.CreateInputNode(L"ltrForward", m_streamSizes[1]);
-        m_net->FeatureNodes().push_back(inputletter);
-        featDim[L"ltrForward"] = m_streamSizes[1];
-
-        size_t layerIdx = 0;
-        size_t idx = 0;
-        int recur_idx = 0;
-        for (auto p = m_net->FeatureNodes().begin(); p != m_net->FeatureNodes().end(); p++, idx++)
-        {
-            layerIdx = 0; /// reset layer id because each input stream starts from layer 0
-            input = dynamic_pointer_cast<ComputationNode<ElemType>>(*p);
-            if (m_applyMeanVarNorm)
-            {
-                input = dynamic_pointer_cast<ComputationNode<ElemType>>(*p);
-                w = builder.Mean(input);
-                b = builder.InvStdDev(input);
-                output = builder.PerDimMeanVarNormalization(input, w, b);
-
-                input = output;
-            }
-
-            size_t idim = input->GetNumRows();
-            assert(m_lookupTabelOrderSizes.size() == m_streamSizes.size());
-
-            e = builder.CreateLearnableParameter(msra::strfun::wstrprintf(L"Embedding%d", idx), m_layerSizes[1], idim / m_lookupTabelOrderSizes[idx]);
-            m_net->InitLearnableParameters(e, m_uniformInit, randomSeed++, m_initValueScale);
-            output = builder.LookupTable(e, input, msra::strfun::wstrprintf(L"LOOKUP%d", idx));
-
-            streamdims.push_back(m_layerSizes[1] * m_lookupTabelOrderSizes[idx]);
-            input = output;
-            streams.push_back(input);
-
-            if (idx == ltrSrcIdx)
-            {
-                ltrSource = input;
-                ltrDim = m_layerSizes[1] * m_lookupTabelOrderSizes[idx];
-            }
-        }
-
-        layerIdx++;
-
-        /// glue the two streams
-        forwardInput = (ComputationNodePtr) builder.Parallel(streams[0], streams[1], L"Parallel0");
-
-        if (numHiddenLayers > 0)
-        {
-            /// forward direction
-            //forwardOutput = (ComputationNodePtr)BuildLSTMNodeComponent(randomSeed, layerIdx + 100, streamdims[0] + streamdims[1], m_layerSizes[layerIdx + 1], forwardInput);
-            forwardOutput = (ComputationNodePtr) BuildLSTMComponent(randomSeed, layerIdx + 100, streamdims[0] + streamdims[1], m_layerSizes[layerIdx + 1], forwardInput);
-            forwardInput = forwardOutput;
-
-            backwardInput = (ComputationNodePtr) builder.TimeReverse(ltrSource);
-            //backwardOutput = (ComputationNodePtr)BuildLSTMNodeComponent(randomSeed, layerIdx + 200, ltrDim, m_layerSizes[layerIdx + 1], backwardInput);
-            backwardOutput = (ComputationNodePtr) BuildLSTMComponent(randomSeed, layerIdx + 200, ltrDim, m_layerSizes[layerIdx + 1], backwardInput);
-            backwardInput = backwardOutput;
-
-            layerIdx++;
-
-            while (layerIdx < numHiddenLayers - 1)
-            {
-                //forwardOutput = (ComputationNodePtr)BuildLSTMNodeComponent(randomSeed, layerIdx + 100, m_layerSizes[layerIdx], m_layerSizes[layerIdx + 1], forwardInput);
-                forwardOutput = (ComputationNodePtr) BuildLSTMComponent(randomSeed, layerIdx + 100, m_layerSizes[layerIdx], m_layerSizes[layerIdx + 1], forwardInput);
-                forwardInput = forwardOutput;
-
-                //backwardOutput = (ComputationNodePtr)BuildLSTMNodeComponent(randomSeed, layerIdx + 200, m_layerSizes[layerIdx], m_layerSizes[layerIdx + 1], backwardInput);
-                backwardOutput = (ComputationNodePtr) BuildLSTMComponent(randomSeed, layerIdx + 200, m_layerSizes[layerIdx], m_layerSizes[layerIdx + 1], backwardInput);
-                backwardInput = backwardOutput;
-
-                layerIdx++;
-            }
-
-            backwardOutput = (ComputationNodePtr) builder.TimeReverse(backwardInput);
-        }
-
-        streams.clear();
-        streamdims.clear();
-        streams.push_back(forwardOutput);
-        streamdims.push_back(m_layerSizes[layerIdx]);
-        streams.push_back(backwardOutput);
-        streamdims.push_back(m_layerSizes[layerIdx]);
-
-        /// glue the two streams
-        forwardInput = (ComputationNodePtr) builder.Parallel(streams[0], streams[1], L"Parallel1");
-
-        //                    output = (ComputationNodePtr)BuildLSTMNodeComponent(randomSeed, layerIdx, streamdims[0] + streamdims[1], m_layerSizes[layerIdx + 1], forwardInput);
-        output = (ComputationNodePtr) BuildLSTMComponent(randomSeed, layerIdx, streamdims[0] + streamdims[1], m_layerSizes[layerIdx + 1], forwardInput);
-
-        input = output;
-        layerIdx++;
-
-        /// directly connect transcription model output/feature to the output layer
-        Wxo = builder.CreateLearnableParameter(L"ConnectToLowerLayers", m_layerSizes[numHiddenLayers + 1], m_layerSizes[layerIdx]);
-        m_net->InitLearnableParameters(Wxo, m_uniformInit, randomSeed++, m_initValueScale);
-
-        output = builder.Times(Wxo, input);
-        input = output;
-
-        /// here uses "labels", so only one label from multiple stream inputs are used.
-        label = builder.CreateInputNode(L"labels", m_layerSizes[numHiddenLayers + 1]);
-
-        AddTrainAndEvalCriterionNodes(input, label);
-
-        //add softmax layer (if prob is needed or KL reg adaptation is needed)
-        output = builder.Softmax(input, L"outputs");
-
-        if (m_needPrior)
-        {
-            prior = builder.Mean(label);
-            input = builder.Log(prior, L"LogOfPrior");
-            ComputationNodePtr
-                scaledLogLikelihood = builder.Minus(output, input, L"ScaledLogLikelihood");
-            m_net->OutputNodes().push_back(scaledLogLikelihood);
-        }
-        else
-            m_net->OutputNodes().push_back(output);
     }
 
     return m_net;
@@ -2172,7 +1320,7 @@ template <class ElemType>
 ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildNCELSTMNetworkFromDescription()
 {
     ComputationNetworkBuilder<ElemType> builder(*m_net);
-    if (m_net->GetTotalNumberOfNodes() < 1) //not built yet
+    if (m_net->GetTotalNumberOfNodes() < 1) // not built yet
     {
         unsigned long randomSeed = 1;
 
@@ -2211,7 +1359,7 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildNCELSTMNetworkFromDes
             outputFromEachLayer[1] = input;
         }
 
-        /// direct connect from input node to output node
+        // direct connect from input node to output node
 
         int recur_idx = 0;
         int offset = m_lookupTableOrder > 0 ? 1 : 0;
@@ -2248,25 +1396,25 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildNCELSTMNetworkFromDes
 
         for (size_t i = offset; i < m_layerSizes.size(); i++)
         {
-            /// add direct connect from each layers' output to the layer before the output layer
+            // add direct connect from each layers' output to the layer before the output layer
             output = BuildDirectConnect(randomSeed, i, (i > 1) ? m_layerSizes[i] : ((offset == 0) ? m_layerSizes[i] : m_layerSizes[i] * m_lookupTableOrder), m_layerSizes[numHiddenLayers], outputFromEachLayer[i], input);
             if (output != nullptr)
                 input = output;
         }
 
-        /// need to have [input_dim x output_dim] matrix
-        /// e.g., [200 x 10000], where 10000 is the vocabulary size
-        /// this is for speed-up issue as per word matrix can be simply obtained using column slice
+        // need to have [input_dim x output_dim] matrix
+        // e.g., [200 x 10000], where 10000 is the vocabulary size
+        // this is for speed-up issue as per word matrix can be simply obtained using column slice
         w = builder.CreateLearnableParameter(msra::strfun::wstrprintf(L"W%d", numHiddenLayers), m_layerSizes[numHiddenLayers], m_layerSizes[numHiddenLayers + 1]);
         m_net->InitLearnableParameters(w, m_uniformInit, randomSeed++, m_initValueScale);
 
-        /// the label is a dense matrix. each element is the word index
+        // the label is a dense matrix. each element is the word index
         label = builder.CreateInputNode(L"labels", 2 * (this->nce_noises + 1));
 
         bias = builder.CreateLearnableParameter(L"BiasVector", 1, m_layerSizes[m_layerSizes.size() - 1]);
         bias->Value().SetValue((ElemType) -std::log(m_layerSizes[m_layerSizes.size() - 1]));
-        //m_net->InitLearnableParameters(bias, m_uniformInit, randomSeed++, std::log(m_layerSizes[m_layerSizes.size() - 1])* m_initValueScale);
-        //clslogpostprob = builder.Times(clsweight, input, L"ClassPostProb");
+        // m_net->InitLearnableParameters(bias, m_uniformInit, randomSeed++, std::log(m_layerSizes[m_layerSizes.size() - 1])* m_initValueScale);
+        // clslogpostprob = builder.Times(clsweight, input, L"ClassPostProb");
 
         output = AddTrainAndEvalCriterionNodes(input, label, w, L"TrainNodeNCEBasedCrossEntropy", L"EvalNodeNCEBasedCrossEntrpy", bias);
 
@@ -2295,7 +1443,7 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildNetworkFromDbnFile(co
     unsigned long randomSeed = 1;
 
     ComputationNodePtr input, w, b, output, label, prior, scaledLogLikelihood;
-    shared_ptr<PreComputedNode<ElemType>> pcNodePtr;
+    shared_ptr<PreComputedNodeBase<ElemType>> pcNodePtr;
 
     File fstream(dbnModelFileName, FileOptions::fileOptionsBinary | FileOptions::fileOptionsRead);
 
@@ -2311,7 +1459,7 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildNetworkFromDbnFile(co
     assert(globalMean.GetNumCols() == 1);
     assert(globalStdDev.GetNumCols() == 1);
 
-    //move to CPU since element-wise operation is expensive and can go wrong in GPU
+    // move to CPU since element-wise operation is expensive and can go wrong in GPU
     int curDevId = globalStdDev.GetDeviceId();
     globalStdDev.TransferFromDeviceToDevice(curDevId, CPUDEVICE, true, false, false);
     for (int i = 0; i < globalStdDev.GetNumRows(); i++)
@@ -2321,7 +1469,7 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildNetworkFromDbnFile(co
     if (!CheckDbnTag(fstream, "BNET"))
         RuntimeError("Error reading DBN file - did not find expected tag BNET\n");
 
-    for (i = 0; i < numLayers; i++) //0th index is for input layer,
+    for (i = 0; i < numLayers; i++) // 0th index is for input layer,
     {
         fstream >> layerType;
 
@@ -2339,7 +1487,7 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildNetworkFromDbnFile(co
             Matrix<ElemType> contextMean(contextDim, 1, m_deviceId);
             Matrix<ElemType> contextStdDev(contextDim, 1, m_deviceId);
 
-            //move to CPU since element-wise operation is expensive and can go wrong in GPU
+            // move to CPU since element-wise operation is expensive and can go wrong in GPU
             contextMean.TransferFromDeviceToDevice(m_deviceId, CPUDEVICE, true, false, false);
             contextStdDev.TransferFromDeviceToDevice(m_deviceId, CPUDEVICE, true, false, false);
             for (size_t j = 0; j < frameDim; j++)
@@ -2354,11 +1502,11 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildNetworkFromDbnFile(co
             contextStdDev.TransferFromDeviceToDevice(CPUDEVICE, m_deviceId, true, false, false);
 
             w = builder.Mean(input, L"MeanOfFeatures");
-            static_pointer_cast<PreComputedNode<ElemType>>(w)->SideLoadFromMatrix(contextMean);
+            static_pointer_cast<PreComputedNodeBase<ElemType>>(w)->SideLoadFromMatrix(contextMean);
             w->SetParameterUpdateRequired(false);
 
             b = builder.InvStdDev(input, L"InvStdOfFeatures");
-            static_pointer_cast<PreComputedNode<ElemType>>(b)->SideLoadFromMatrix(contextStdDev);
+            static_pointer_cast<PreComputedNodeBase<ElemType>>(b)->SideLoadFromMatrix(contextStdDev);
             b->SetParameterUpdateRequired(false);
 
             output = builder.PerDimMeanVarNormalization(input, w, b, L"MVNormalizedFeatures");
@@ -2404,21 +1552,19 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildNetworkFromDbnFile(co
 
     if (!CheckDbnTag(fstream, "ENET"))
         RuntimeError("Error reading DBN file - did not find expected tag ENET\n");
-    //size_t outputLayerSize =  m_layerSizes[m_layerSizes.size()-1];
+    // size_t outputLayerSize =  m_layerSizes[m_layerSizes.size()-1];
 
     label = builder.CreateInputNode(L"labels", m_outputLayerSize);
 
     if (layerType == "perceptron") // complete network
     {
         m_net->RenameNode(output, L"HLast");
-#if 0
-            assert(numLayers + 1 == m_layerSizes.size());
-#endif
+
         Matrix<ElemType> priorVals = ReadMatrixFromDbnFile(fstream, std::string("Pu"));
         assert(priorVals.GetNumCols() == 1 && priorVals.GetNumRows() == m_outputLayerSize);
 
         prior = builder.Mean(label, L"Prior");
-        static_pointer_cast<PreComputedNode<ElemType>>(prior)->SideLoadFromMatrix(priorVals);
+        static_pointer_cast<PreComputedNodeBase<ElemType>>(prior)->SideLoadFromMatrix(priorVals);
         prior->SetParameterUpdateRequired(false);
     }
     else // pretrained network - need to add output layer, initalize
@@ -2429,9 +1575,9 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildNetworkFromDbnFile(co
         else if (m_layerSizes.size() > 0)
             m_layerSizes[m_layerSizes.size() - 1];
         else
-            std::runtime_error("Output layer size must be specified when converting pretrained network, use outputLayerSize=");
+            RuntimeError("Output layer size must be specified when converting a pre-trained network, use outputLayerSize=");
 
-        size_t penultimateSize = input->GetNumRows();
+        size_t penultimateSize = input->GetSampleMatrixNumRows();
 
         wstring nameOfW = msra::strfun::wstrprintf(L"W%d", i);
         wstring nameOfB = msra::strfun::wstrprintf(L"B%d", i);
@@ -2450,7 +1596,7 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildNetworkFromDbnFile(co
         {
             Matrix<ElemType> zeros = Matrix<ElemType>::Zeros(outputLayerSize, 1, m_deviceId);
             prior = builder.Mean(label, L"Prior");
-            static_pointer_cast<PreComputedNode<ElemType>>(prior)->MarkComputed(false);
+            static_pointer_cast<PreComputedNodeBase<ElemType>>(prior)->MarkComputed(false);
             prior->Value().SetValue(zeros);
         }
     }
@@ -2461,9 +1607,9 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildNetworkFromDbnFile(co
     {
         input = builder.Log(prior, L"LogOfPrior");
 
-        //following two lines is needed only if true probability is needed
-        //output = builder.Softmax(output);
-        //output = builder.Log(output);
+        // following two lines is needed only if true probability is needed
+        // output = builder.Softmax(output);
+        // output = builder.Log(output);
 
         scaledLogLikelihood = builder.CreateComputationNode(OperationNameOf(MinusNode), L"ScaledLogLikelihood");
         scaledLogLikelihood->AttachInputs(output, input);
@@ -2499,7 +1645,7 @@ shared_ptr<ComputationNode<ElemType>> SimpleNetworkBuilder<ElemType>::ApplyNonli
         output = builder.Tanh(input, nodeName);
     else if (nonLinearFunction == L"None" || nonLinearFunction == L"none" || nonLinearFunction == L"")
     {
-        output = input; //linear layer
+        output = input; // linear layer
         if (nodeName != L"")
             m_net->RenameNode(output, nodeName);
     }
@@ -2540,16 +1686,18 @@ shared_ptr<ComputationNode<ElemType>> SimpleNetworkBuilder<ElemType>::AddTrainAn
             tinput = builder.Times(matrix, input);
         output = builder.Logistic(label, tinput, (trainNodeName == L"") ? L"Logistic" : trainNodeName);
         break;
+#ifdef COMING_SOON
     case TrainingCriterion::CRF:
         assert(trans != nullptr);
         output = builder.CRF(label, input, trans, (trainNodeName == L"") ? L"CRF" : trainNodeName);
         break;
+#endif
     case TrainingCriterion::ClassCrossEntropyWithSoftmax:
         output = builder.ClassCrossEntropyWithSoftmax(label, input, matrix, clspostprob, (trainNodeName == L"") ? L"ClassCrossEntropyWithSoftmax" : trainNodeName);
         break;
     case TrainingCriterion::NCECrossEntropyWithSoftmax:
         output = builder.NoiseContrastiveEstimation(label, input, matrix, clspostprob, (trainNodeName == L"") ? L"NoiseContrastiveEstimationNode" : trainNodeName);
-        //output = builder.NoiseContrastiveEstimation(label, input, matrix, clspostprob, (trainNodeName == L"") ? L"NoiseContrastiveEstimationNode" : trainNodeName);
+        // output = builder.NoiseContrastiveEstimation(label, input, matrix, clspostprob, (trainNodeName == L"") ? L"NoiseContrastiveEstimationNode" : trainNodeName);
         break;
     default:
         LogicError("Unsupported training criterion.");
@@ -2568,11 +1716,11 @@ shared_ptr<ComputationNode<ElemType>> SimpleNetworkBuilder<ElemType>::AddTrainAn
         case EvalCriterion::CrossEntropyWithSoftmax:
             if (matrix != nullptr && tinput == input)
                 tinput = builder.Times(matrix, input);
-            //output = builder.CrossEntropyWithSoftmax(label, tinput, (evalNodeName == L"")?L"EvalCrossEntropyWithSoftmax":evalNodeName);
+            // output = builder.CrossEntropyWithSoftmax(label, tinput, (evalNodeName == L"")?L"EvalCrossEntropyWithSoftmax":evalNodeName);
             output = builder.CrossEntropyWithSoftmax(label, tinput, (evalNodeName == L"") ? L"CrossEntropyWithSoftmax" : evalNodeName);
             break;
         case EvalCriterion::ClassCrossEntropyWithSoftmax:
-            //output = builder.ClassCrossEntropyWithSoftmax(label, input, matrix, clspostprob, (evalNodeName == L"") ? L"EvalClassCrossEntropyWithSoftmax" : evalNodeName);
+            // output = builder.ClassCrossEntropyWithSoftmax(label, input, matrix, clspostprob, (evalNodeName == L"") ? L"EvalClassCrossEntropyWithSoftmax" : evalNodeName);
             output = builder.ClassCrossEntropyWithSoftmax(label, input, matrix, clspostprob, (evalNodeName == L"") ? L"ClassCrossEntropyWithSoftmax" : evalNodeName);
             break;
         case EvalCriterion::NCECrossEntropyWithSoftmax:
@@ -2581,13 +1729,13 @@ shared_ptr<ComputationNode<ElemType>> SimpleNetworkBuilder<ElemType>::AddTrainAn
         case EvalCriterion::SquareError:
             if (matrix != nullptr && tinput == input)
                 tinput = builder.Times(matrix, input);
-            //output = builder.SquareError(label, tinput, (evalNodeName == L"")?L"EvalSquareError":evalNodeName);
+            // output = builder.SquareError(label, tinput, (evalNodeName == L"")?L"EvalSquareError":evalNodeName);
             output = builder.SquareError(label, tinput, (evalNodeName == L"") ? L"SquareError" : evalNodeName);
             break;
         case EvalCriterion::Logistic:
             if (matrix != nullptr && tinput == input)
                 tinput = builder.Times(matrix, input);
-            //output = builder.SquareError(label, tinput, (evalNodeName == L"")?L"EvalSquareError":evalNodeName);
+            // output = builder.SquareError(label, tinput, (evalNodeName == L"")?L"EvalSquareError":evalNodeName);
             output = builder.Logistic(label, tinput, (evalNodeName == L"") ? L"Logistic" : evalNodeName);
             break;
         case EvalCriterion::ErrorPrediction:
@@ -2595,12 +1743,14 @@ shared_ptr<ComputationNode<ElemType>> SimpleNetworkBuilder<ElemType>::AddTrainAn
                 tinput = builder.Times(matrix, input);
             output = builder.ErrorPrediction(label, tinput, (evalNodeName == L"") ? L"EvalErrorPrediction" : evalNodeName);
             break;
+#ifdef COMING_SOON
         case EvalCriterion::CRF:
             assert(trans != nullptr);
             if (matrix != nullptr && tinput == input)
                 tinput = builder.Times(matrix, input);
             output = builder.CRF(label, tinput, trans, (evalNodeName == L"") ? L"EvalCRF" : evalNodeName);
             break;
+#endif
         default:
             LogicError("Unsupported training criterion.");
         }
@@ -2621,37 +1771,25 @@ template class SimpleNetworkBuilder<double>;
 
 TrainingCriterion ParseTrainingCriterionString(wstring s)
 {
-    if (!_wcsicmp(s.c_str(), L"crossEntropyWithSoftmax"))
-        return TrainingCriterion::CrossEntropyWithSoftmax;
-    if (!_wcsicmp(s.c_str(), L"sequenceWithSoftmax"))
-        return TrainingCriterion::SequenceWithSoftmax;
-    else if (!_wcsicmp(s.c_str(), L"squareError"))
-        return TrainingCriterion::SquareError;
-    else if (!_wcsicmp(s.c_str(), L"logistic"))
-        return TrainingCriterion::Logistic;
-    else if (!_wcsicmp(s.c_str(), L"noiseContrastiveEstimation") || !_wcsicmp(s.c_str(), L"noiseContrastiveEstimationNode" /*spelling error, deprecated*/))
-        return TrainingCriterion::NCECrossEntropyWithSoftmax;
-    else if (!!_wcsicmp(s.c_str(), L"classCrossEntropyWithSoftmax")) // (twisted logic to keep compiler happy w.r.t. not returning from LogicError)
-        LogicError("trainingCriterion: Invalid trainingCriterion value. Valid values are (crossEntropyWithSoftmax | squareError | logistic | classCrossEntropyWithSoftmax| sequenceWithSoftmax)");
-    return TrainingCriterion::ClassCrossEntropyWithSoftmax;
+    if      (EqualCI(s, L"crossEntropyWithSoftmax"))      return TrainingCriterion::CrossEntropyWithSoftmax;
+    else if (EqualCI(s, L"sequenceWithSoftmax"))          return TrainingCriterion::SequenceWithSoftmax;
+    else if (EqualCI(s, L"squareError"))                  return TrainingCriterion::SquareError;
+    else if (EqualCI(s, L"logistic"))                     return TrainingCriterion::Logistic;
+    else if (EqualCI(s, L"noiseContrastiveEstimation"))   return TrainingCriterion::NCECrossEntropyWithSoftmax;
+    else if (EqualCI(s, L"classCrossEntropyWithSoftmax")) return TrainingCriterion::ClassCrossEntropyWithSoftmax;
+    else LogicError("trainingCriterion: Invalid trainingCriterion value. Valid values are (crossEntropyWithSoftmax | squareError | logistic | classCrossEntropyWithSoftmax| sequenceWithSoftmax)");
 }
 
 EvalCriterion ParseEvalCriterionString(wstring s)
 {
-    if (!_wcsicmp(s.c_str(), L"errorPrediction"))
-        return EvalCriterion::ErrorPrediction;
-    else if (!_wcsicmp(s.c_str(), L"crossEntropyWithSoftmax"))
-        return EvalCriterion::CrossEntropyWithSoftmax;
-    else if (!_wcsicmp(s.c_str(), L"sequenceWithSoftmax"))
-        return EvalCriterion::SequenceWithSoftmax;
-    else if (!_wcsicmp(s.c_str(), L"classCrossEntropyWithSoftmax"))
-        return EvalCriterion::ClassCrossEntropyWithSoftmax;
-    else if (!_wcsicmp(s.c_str(), L"noiseContrastiveEstimation") || !_wcsicmp(s.c_str(), L"noiseContrastiveEstimationNode" /*spelling error, deprecated*/))
-        return EvalCriterion::NCECrossEntropyWithSoftmax;
-    else if (!_wcsicmp(s.c_str(), L"logistic"))
-        return EvalCriterion::Logistic;
-    else if (!!_wcsicmp(s.c_str(), L"squareError"))
-        LogicError("evalCriterion: Invalid trainingCriterion value. Valid values are (errorPrediction | crossEntropyWithSoftmax | squareError | logistic | sequenceWithSoftmax)");
-    return EvalCriterion::SquareError;
+    if      (EqualCI(s, L"errorPrediction"))              return EvalCriterion::ErrorPrediction;
+    else if (EqualCI(s, L"crossEntropyWithSoftmax"))      return EvalCriterion::CrossEntropyWithSoftmax;
+    else if (EqualCI(s, L"sequenceWithSoftmax"))          return EvalCriterion::SequenceWithSoftmax; 
+    else if (EqualCI(s, L"classCrossEntropyWithSoftmax")) return EvalCriterion::ClassCrossEntropyWithSoftmax;
+    else if (EqualCI(s, L"logistic"))                     return EvalCriterion::Logistic;
+    else if (EqualCI(s, L"noiseContrastiveEstimation"))   return EvalCriterion::NCECrossEntropyWithSoftmax;
+    else if (EqualCI(s, L"squareError"))                  return EvalCriterion::SquareError;
+    else LogicError("evalCriterion: Invalid trainingCriterion value. Valid values are (errorPrediction | crossEntropyWithSoftmax | squareError | logistic | sequenceWithSoftmax)");
 }
+
 } } }

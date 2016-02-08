@@ -335,7 +335,7 @@ public:
                     if (seqPos)
                     {
                         SequencePosition sequencePos(numbers->size(), labels->size(),
-                                                     m_beginSequence ? seqFlagStartLabel : 0 | m_endSequence ? seqFlagStopLabel : 0 | seqFlagLineBreak);
+                                                     (m_beginSequence ? seqFlagStartLabel : 0) | (m_endSequence ? seqFlagStopLabel : 0) | seqFlagLineBreak);
                         // add a sequence element to the list
                         seqPos->push_back(sequencePos);
                         sequencePositionLast = sequencePos;
@@ -370,7 +370,7 @@ public:
                 case Whitespace:
                     m_spaceDelimitedMax = m_byteCounter;
                     // hit whitespace and nobody processed anything, so add as label
-                    //if (m_elementsConvertedThisLine == elementsProcessed)
+                    // if (m_elementsConvertedThisLine == elementsProcessed)
                     //    DoneWithLabel();
                     break;
                 case EndOfLine:
@@ -378,14 +378,14 @@ public:
                     {
                         m_spaceDelimitedMax = m_byteCounter;
                         // hit whitespace and nobody processed anything, so add as label
-                        //if (m_elementsConvertedThisLine == elementsProcessed)
+                        // if (m_elementsConvertedThisLine == elementsProcessed)
                         //    DoneWithLabel();
                     }
                 // process the label at the end of a line
-                //if (m_labelMode == LabelLast && m_labels != NULL)
-                //{
+                // if (m_labelMode == LabelLast && m_labels != NULL)
+                // {
                 //    StoreLastLabel();
-                //}
+                // }
                 // intentional fall-through
                 case LineCountEOL:
                     lineCount++; // done with another record
@@ -576,7 +576,7 @@ public:
         long orgRecordCount = (long) labels->size();
         long lineCount = 0;
         SequencePosition sequencePositionLast(0, 0, seqFlagNull);
-        /// get line
+        // get line
         char ch2[MAXSTRING];
         if (mFile == nullptr)
             Microsoft::MSR::CNTK::RuntimeError("File %ls can not be loaded\n", mFileName.c_str());

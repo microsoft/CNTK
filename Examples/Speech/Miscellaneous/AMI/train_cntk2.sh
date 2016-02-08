@@ -43,7 +43,7 @@ fi
 if [ $stage -le 1 ] ; then
 
 ### setup the configuration files for training CNTK models ###
-cp cntk_config/CNTK2.config $expdir/CNTK2.config
+cp cntk_config/CNTK2.cntk $expdir/CNTK2.cntk
 cp cntk_config/default_macros.ndl $expdir/default_macros.ndl
 cp cntk_config/dnn_6layer.ndl $expdir/dnn_6layer.ndl
 ndlfile=$expdir/dnn_6layer.ndl
@@ -68,7 +68,7 @@ cvInputLabels=${expdir}/cntk_valid.labels
 EOF
 
 ## training command ##
-$cn_gpu configFile=${expdir}/Base.config configFile=${expdir}/CNTK2.config DeviceNumber=0 action=TrainDNN ndlfile=$ndlfile
+$cn_gpu configFile=${expdir}/Base.config configFile=${expdir}/CNTK2.cntk DeviceNumber=0 action=TrainDNN ndlfile=$ndlfile
 
 echo "$0 successfuly finished.. $dir"
 
@@ -77,7 +77,7 @@ fi
 
 if [ $stage -le 2 ] ; then
 
-config_write=cntk_config/CNTK2_write.config
+config_write=cntk_config/CNTK2_write.cntk
 cnmodel=$expdir/cntk.dnn.16
 action=write
 graphdir=/exports/work/inf_hcrc_cstr_nst/llu/ami/s5b/exp/$mic/tri4a/graph_ami_fsh.o3g.kn.pr1-7

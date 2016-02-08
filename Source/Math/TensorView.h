@@ -25,17 +25,16 @@ public:
     // construction
     // -------------------------------------------------------------------
 
-    // cast a matrix storage object (SOB) as a TensorView (without shape change)
-    TensorView(const Matrix<ElemType>& sob);
-    // reshape a TensorView
-    TensorView(const TensorView<ElemType>& other, const TensorShape& shape);
-    // reinterpret a SOB as a TensorView with a given TensorShape
-    TensorView(const Matrix<ElemType>& sob, const TensorShape& shape)
-        : TensorView(TensorView(sob) /*cast as a TensorView*/, shape /*with a shape*/)
+    // reinterpret a matrix storage object (SOB) as a TensorView with a given TensorShape  --this is the main constructor
+    TensorView(const Matrix<ElemType>& sob, const TensorShape& shape);
+    // cast a Matrix as a 2D TensorView (without shape change)
+    TensorView(const Matrix<ElemType>& sob)
+        : m_sob(sob.AsReference()), m_shape(TensorShape(array<size_t, 2>{sob.GetNumRows(), sob.GetNumCols()}))
     {
     }
-    // empty constructor
-    TensorView()
+    // reshape a TensorView
+    TensorView(const TensorView<ElemType>& other, const TensorShape& shape)
+        : m_sob(other.m_sob.AsReference()), m_shape(shape)
     {
     }
     // copy constructor

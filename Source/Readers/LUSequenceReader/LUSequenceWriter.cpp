@@ -177,6 +177,4 @@ void LUSequenceWriter<ElemType>::Save(std::wstring& outputFile, const Matrix<Ele
 
 template class LUSequenceWriter<float>;
 template class LUSequenceWriter<double>;
-}
-}
-}
+} } }

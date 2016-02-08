@@ -29,6 +29,7 @@
 #include <stdint.h>
 #include <assert.h>
 #ifdef _WIN32
+#define NOMINMAX
 #include "Windows.h" // for FILETIME
 #endif
 #include <algorithm> // for std::find
@@ -412,10 +413,33 @@ void fprintfOrDie(FILE* f, const char* fmt, ...)
 void fflushOrDie(FILE* f)
 {
     int rc = fflush(f);
+
     if (rc != 0)
     {
         RuntimeError("error flushing to file: %s", strerror(errno));
     }
+
+    int fd = fileno(f);
+
+    if (fd == -1)
+    {
+        RuntimeError("unable to convert file handle to file descriptor: %s", strerror(errno));
+    }
+
+    // Ensure that all data is synced before returning from this function
+#ifdef _WIN32
+    if (!FlushFileBuffers((HANDLE)_get_osfhandle(fd)))
+    {
+        RuntimeError("error syncing to file: %d", (int) ::GetLastError());
+    }
+#else
+    rc = fsync(fd);
+
+    if (rc != 0)
+    {
+        RuntimeError("error syncing to file: %s", strerror(errno));
+    }
+#endif
 }
 
 // ----------------------------------------------------------------------------
@@ -575,6 +599,10 @@ void renameOrDie(const std::string& from, const std::string& to)
     if (!MoveFileA(from.c_str(), to.c_str()))
         RuntimeError("error renaming file '%s': %d", from.c_str(), GetLastError());
 #else
+    // Delete destination file if it exists
+    // WORKAROUND: "rename" should do this but this is a workaround
+    // to the HDFS FUSE implementation's bug of failing to do so
+    unlinkOrDie(to);
     if (rename(from.c_str(), to.c_str()) != 0)
         RuntimeError("error renaming file '%s': %s", from.c_str(), strerror(errno));
 #endif
@@ -698,7 +726,7 @@ bool funicode(FILE* f)
         (int) testCode == 0xFEFF)
         return true;
     fseek(f, 0, SEEK_SET);
-    //rewind (f);
+    // rewind (f);
     return false;
 }
 
@@ -775,50 +803,6 @@ CHAR* fgetline(FILE* f, CHAR* buf, int size)
     return buf;
 }
 
-#if 0
-const wchar_t * fgetline (FILE * f, wchar_t * buf, int size)
-{
-    wchar_t * p = fgetws (buf, size, f);
-    if (p == NULL)            // EOF reached: next time feof() = true
-    {
-        if (ferror (f))
-            RuntimeError ("error reading line: %s", strerror (errno));
-        buf[0] = 0;
-        return buf;
-    }
-    size_t n = wcsnlen (p, size); // SECURITY NOTE: string use has been reviewed
-
-    // check for buffer overflow
-
-    if (n >= (size_t) size -1)
-    {
-        wstring example (buf, min (n, 100));
-        RuntimeError ("input line too long at file offset %U64d (max. %d characters allowed) [%ls ...]",
-               fgetpos (f), size -1, example.c_str());
-    }
-
-    // remove newline at end
-
-    if (n > 0 && p[n-1] == L'\n')    // UNIX and Windows style
-    {
-        n--;
-        p[n] = 0;
-        if (n > 0 && p[n-1] == L'\r')    // Windows style
-        {
-            n--;
-            p[n] = 0;
-        }
-    }
-    else if (n > 0 && p[n-1] == L'\r')    // Mac style
-    {
-        n--;
-        p[n] = 0;
-    }
-
-    return buf;
-}
-#endif
-
 // STL string version
 std::string fgetline(FILE* f)
 {
@@ -891,12 +875,12 @@ string fgetstring(FILE* f)
     string res;
     for (;;)
     {
-        char c = (char) fgetc(f);
+        int c = fgetc(f);
         if (c == EOF)
             RuntimeError("error reading string or missing 0: %s", strerror(errno));
         if (c == 0)
             break;
-        res.push_back(c);
+        res.push_back((char) c);
     }
     return res;
 }
@@ -938,7 +922,7 @@ wstring fgetwstring(FILE* f)
         // this is already fixed in update release to VS 2012
         // for now the workaround is to use fgetc twice to simulate fgetwc
         //
-        //wint_t c = fgetwc (f);
+        // wint_t c = fgetwc (f);
         int c1 = fgetc(f);
         int c2 = fgetc(f);
 
@@ -1503,268 +1487,6 @@ void WAVEHEADER::write(FILE* f)
     fseekOrDie(f, curPos, SEEK_SET);
 }
 
-#if 0
-unsigned int WAVEHEADER::read (FILE * f, signed short & wRealFormatTag, int & bytesPerSample)
-{
-    // read header
-    fcheckTag (f, "RIFF");
-    /*unsigned int riffLen = */ fgetint (f);
-    fcheckTag (f, "WAVE");
-    fcheckTag (f, "fmt ");
-    unsigned int fmtLen = fgetint (f);
-    wRealFormatTag = fgetshort (f);
-    if (wRealFormatTag == -2)   // MARecorder.exe [Ivan Tashev] puts a -2 for
-    {                           // 8-channel recordings (meaning unknown).
-        wRealFormatTag = 1;     // Workaround: pretend it is 1 (seems safe)
-    }
-    (wRealFormatTag == 1 || wRealFormatTag == 7)
-        || RuntimeError ("WAVEHEADER::read: wFormatTag=%d not supported for now", wRealFormatTag);
-    unsigned short wChannels = fgetshort (f);
-    unsigned long dwSamplesPerSec = fgetint (f);
-    unsigned int sampleRate = dwSamplesPerSec;
-    /*unsigned long dwAvgBytesPerSec = */ fgetint (f);
-    unsigned short wBlockAlign = fgetshort (f);
-    unsigned short wBitsPerSample = fgetshort (f);
-    (wBitsPerSample <= 16) || RuntimeError ("WAVEHEADER::read: invalid wBitsPerSample %d", wBitsPerSample);
-    bytesPerSample = wBitsPerSample / 8;
-    (wBlockAlign == wChannels * bytesPerSample)
-        || RuntimeError ("WAVEHEADER::read: wBlockAlign != wChannels*bytesPerSample not supported");
-    while (fmtLen > 16) // unused extra garbage in header
-    {
-        fgetbyte (f);
-        fmtLen--;
-    }
-    if (wRealFormatTag == 7)
-    {
-        (bytesPerSample == 1) || RuntimeError ("WAVEHEADER::read: invalid wBitsPerSample %d for mulaw", wBitsPerSample);
-        fcheckTag (f, "fact");
-        unsigned int factLen = fgetint (f);
-        while (factLen > 0)
-        {
-            fgetbyte (f);
-            factLen--;
-        }
-    }
-    fcheckTag (f, "data");
-    unsigned int dataLen = fgetint (f);
-    unsigned int numSamples = dataLen / wBlockAlign;
-
-    // prepare a nice wave header without junk (44 bytes, 16-bit PCM)
-    prepare (sampleRate, wBitsPerSample, wChannels, numSamples);
-
-    return numSamples;
-}
-
-static short toolULawToLinear(unsigned char p_ucULawByte)
-{
-    static short anExpLut[8] = { 0, 132, 396, 924, 1980, 4092, 8316, 16764 };
-    short nSign, nExponent, nMantissa, nSample;
-
-    p_ucULawByte=~p_ucULawByte;
-    nSign=(p_ucULawByte & 0x80);
-    nExponent=(p_ucULawByte >> 4) & 0x07;
-    nMantissa=p_ucULawByte & 0x0F;
-    nSample=anExpLut[nExponent]+(nMantissa<<(nExponent+3));
-    if(nSign != 0) 
-        nSample = -nSample;
-
-    return nSample;
-}
-
-// fgetwavraw(): only read data of .wav file. For multi-channel data, samples
-// are kept interleaved.
-static void fgetwavraw(FILE * f, std::vector<short> & wav, const WAVEHEADER & wavhd)
-{
-    int bytesPerSample = wavhd.wBitsPerSample / 8;  // (sample size on one channel)
-    wav.resize (wavhd.DataLength / bytesPerSample);
-    if (wavhd.wFormatTag == 7)    // mulaw
-    {
-        (wavhd.nChannels == 1) || RuntimeError ("fgetwav: wChannels=%d not supported for mulaw", wavhd.nChannels);
-        std::vector<unsigned char> data;
-        int numSamples = wavhd.DataLength/wavhd.nBlockAlign;
-        data.resize (numSamples);
-        freadOrDie (&data[0], sizeof (data[0]), numSamples, f);
-        for (int i = 0; i < numSamples; i++)
-        {
-            wav[i] = toolULawToLinear (data[i]);
-        }
-    }
-    else if (bytesPerSample == 2)
-    {   // note: we may be reading an interleaved multi-channel signal.
-        freadOrDie (&wav[0], sizeof (wav[0]), wav.size(), f);
-    }
-    // ... TODO: support 8 bit linear PCM samples (implement when needed; samples scaled to 'short')
-    else
-    {
-        RuntimeError ("bytesPerSample != 2 is not supported except mulaw format!\n");
-    }
-}
-
-// ----------------------------------------------------------------------------
-// fgetwav(): read an entire .wav file. Stereo is mapped to mono.
-// ----------------------------------------------------------------------------
-
-void fgetwav (FILE * f, std::vector<short> & wav, int & sampleRate)
-{
-    WAVEHEADER wavhd;           // will be filled in for 16-bit PCM!!
-    signed short wFormatTag;    // real format tag as found in data
-    int bytesPerSample;         // bytes per sample as found in data
-
-    unsigned int numSamples = wavhd.read (f, wFormatTag, bytesPerSample);
-    sampleRate = (int) wavhd.nSamplesPerSec;
-
-    if (wavhd.nChannels == 1)
-    {
-        fgetwavraw (f, wav, wavhd);
-    }
-    else if (wavhd.nChannels == 2)
-    {
-        //read raw data        
-        std::vector<short> buf;
-        buf.resize(numSamples * 2);
-        fgetwavraw(f, buf, wavhd);
-        
-        //map to mono
-        wav.resize (numSamples);
-        const short * p = &buf[0];
-        for (int i = 0; i < (int) numSamples; i++)
-        {
-            int l = *p++;
-            int r = *p++;
-            int mono = ((l + r) + 1) >> 1;
-            wav[i] = (short) mono;
-        }
-    }
-    else
-    {
-        RuntimeError ("bytesPerSample/wChannels != 2 needs to be implemented");
-    }
-}
-
-void fgetwav (const wstring & fn, std::vector<short> & wav, int & sampleRate)
-{
-    auto_file_ptr f = fopenOrDie (fn, L"rbS");
-    fgetwav (f, wav, sampleRate);
-}
-
-// ----------------------------------------------------------------------------
-// ... TODO:
-//  - rename this function!!
-//  - also change to read header itself and return sample rate and channels
-// fgetraw(): read data of multi-channel .wav file, and separate data of multiple channels. 
-//            For example, data[i][j]: i is channel index, 0 means the first 
-//            channel. j is sample index.
-// ----------------------------------------------------------------------------
-
-void fgetraw (FILE *f, std::vector< std::vector<short> > & data, const WAVEHEADER & wavhd)
-{
-    std::vector<short> wavraw;
-    fgetwavraw (f, wavraw, wavhd);
-    data.resize (wavhd.nChannels);
-    int numSamples = wavhd.DataLength/wavhd.nBlockAlign;
-    assert (numSamples == (int) wavraw.size() / wavhd.nChannels);
-
-    for (int i = 0; i < wavhd.nChannels; i++)
-    {
-        data[i].resize (numSamples);
-
-        for (int j = 0; j < numSamples; j++)
-        {
-            data[i][j] = wavraw[wavhd.nChannels*j + i];
-        }
-    }
-}
-
-// ----------------------------------------------------------------------------
-// fgetwfx(), fputwfx(): direct access to simple WAV headers
-// ----------------------------------------------------------------------------
-
-// read header and skip to first data byte; return #samples
-unsigned int fgetwfx (FILE * f, WAVEFORMATEX & wfx)
-{
-    // read header
-    fcheckTag (f, "RIFF");
-    /*unsigned int riffLen = */ fgetint (f);
-    fcheckTag (f, "WAVE");
-    fcheckTag (f, "fmt ");
-    wfx.cbSize = sizeof (wfx);
-    int fmtLen = fgetint (f);
-    wfx.wFormatTag = fgetshort (f);
-    if (wfx.wFormatTag == -2)   // MARecorder.exe [Ivan Tashev] puts a -2 for
-    {                           // 8-channel recordings (meaning unknown).
-        wfx.wFormatTag = 1;     // Workaround: pretend it is 1 (seems safe)
-    }
-    (wfx.wFormatTag == 1 || wfx.wFormatTag == 3 || wfx.wFormatTag == 7)
-        || RuntimeError ("WAVEHEADER::read: wFormatTag=%d not supported for now", wfx.wFormatTag);
-    wfx.nChannels = fgetshort (f);
-    wfx.nSamplesPerSec = fgetint (f);
-    wfx.nAvgBytesPerSec = fgetint (f);
-    wfx.nBlockAlign = fgetshort (f);
-    wfx.wBitsPerSample = fgetshort (f);
-    // unused extra garbage in header
-    for ( ; fmtLen > 16; fmtLen--) fgetbyte (f);
-    fcheckTag (f, "data");
-    unsigned int dataLen = fgetint (f);
-    unsigned int numSamples = dataLen / wfx.nBlockAlign;
-    return numSamples;
-}
-
-void fputwfx (FILE *f, const WAVEFORMATEX & wfx, unsigned int numSamples)
-{
-    unsigned int DataLength = numSamples * wfx.nBlockAlign;
-    (DataLength / wfx.nBlockAlign == numSamples)
-        || RuntimeError ("fputwfx: data size exceeds WAV header 32-bit range");
-    unsigned int RiffLength = 36 + DataLength;
-    unsigned int FmtLength  = 16; 
-    // file header
-    assert (wfx.cbSize == 0 || wfx.cbSize == FmtLength + 2);
-    fputTag (f, "RIFF");
-    fputint (f, RiffLength);
-    fputTag (f, "WAVE");
-    // 'fmt ' chunk (to hold wfx)
-    fputTag (f, "fmt ");
-    fputint (f, FmtLength);
-    fputshort (f, wfx.wFormatTag);
-    fputshort (f, wfx.nChannels);
-    fputint (f, wfx.nSamplesPerSec);
-    fputint (f, wfx.nAvgBytesPerSec);
-    fputshort (f, wfx.nBlockAlign);
-    fputshort (f, wfx.wBitsPerSample);
-    // data chunk
-    fputTag (f, "data");
-    fputint (f, DataLength);
-    fflushOrDie (f);
-}
-
-// ----------------------------------------------------------------------------
-// fputwav(): write an entire .wav file (16 bit PCM)
-// ----------------------------------------------------------------------------
-
-void fputwav (FILE * f, const vector<short> & wav, int sampleRate, int nChannels)
-{
-    f;wav;sampleRate;nChannels;
-    // construct WAVEFORMATEX
-    WAVEFORMATEX wfx;
-    wfx.cbSize = 16 + 2;  //fmt data + extra data
-    wfx.nAvgBytesPerSec = (DWORD)(sampleRate * nChannels * 2); //short: 2 bytes per sample
-    wfx.nBlockAlign = (WORD)nChannels * 2; //short: 2bytes per sample
-    wfx.nChannels = (WORD)nChannels;
-    wfx.nSamplesPerSec = sampleRate;
-    wfx.wBitsPerSample = 16;
-    wfx.wFormatTag = WAVE_FORMAT_PCM;
-    //putwfx
-    fputwfx (f, wfx, (unsigned int) wav.size());
-    // wrtie the data
-    fwriteOrDie (&wav[0], sizeof(wav[0]), wav.size(), f);
-}
-
-void fputwav (const wstring & fn, const vector<short> & wav, int sampleRate, int nChannels)
-{
-    auto_file_ptr f = fopenOrDie (fn, L"wbS");
-    fputwav (f, wav, sampleRate, nChannels);
-    fflushOrDie (f);    // after this, fclose() (in destructor of f) cannot fail
-}
-#endif
 #endif
 
 // ----------------------------------------------------------------------------
@@ -2031,24 +1753,6 @@ bool getfiletime(const wstring& path, FILETIME& time)
 #endif
 }
 
-#if 0
-void setfiletime (const wstring & path, const FILETIME & time)
-{   // update the file modification time of an existing file
-    auto_find_handle h (CreateFileW (path.c_str(), FILE_WRITE_ATTRIBUTES,
-                                FILE_SHARE_READ|FILE_SHARE_WRITE, NULL,
-                                OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL));
-    if (h == INVALID_HANDLE_VALUE)
-    {
-        RuntimeError ("setfiletime: error opening file: %d", GetLastError());
-    }
-    BOOL rc = SetFileTime (h, NULL, NULL, &time);
-    if (!rc)
-    {
-        RuntimeError ("setfiletime: error setting file time information: %d", GetLastError());
-    }
-}
-#endif
-
 // ----------------------------------------------------------------------------
 // expand_wildcards -- wildcard expansion of a path, including directories.
 // ----------------------------------------------------------------------------
@@ -2069,7 +1773,7 @@ static BOOL ExpandWildcards(wstring path, vector<wstring>& paths)
         path.erase(last);
 
     // convert root to long filename convention
-    //if (path.find (L"\\\\?\\") != 0)
+    // if (path.find (L"\\\\?\\") != 0)
     //    path = L"\\\\?\\" + root;
 
     // split off everything after first wildcard
@@ -2288,7 +1992,7 @@ static inline std::wstring mbstowcs(const std::string& p) // input: MBCS
     size_t len = p.length();
     vector<wchar_t> buf(len + 1); // max: >1 mb chars => 1 wchar
     fill(buf.begin(), buf.end(), (wchar_t) 0);
-    //OACR_WARNING_SUPPRESS(UNSAFE_STRING_FUNCTION, "Reviewed OK. size checked. [rogeryu 2006/03/21]");
+    // OACR_WARNING_SUPPRESS(UNSAFE_STRING_FUNCTION, "Reviewed OK. size checked. [rogeryu 2006/03/21]");
     ::mbstowcs(&buf[0], p.c_str(), len + 1);
     return std::wstring(&buf[0]);
 }

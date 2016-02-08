@@ -31,17 +31,8 @@
 #include <string>
 
 // forward-declare these lattice-related types to avoid having to include and pollute everything with lattice-related headers
-namespace msra { namespace dbn {
-
-class latticepair;
-class latticesource;
-}
-}
-namespace msra { namespace asr {
-
-class simplesenonehmm;
-}
-}
+namespace msra { namespace dbn {  class latticepair; class latticesource; } }
+namespace msra { namespace asr {  class simplesenonehmm; } } 
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -78,6 +69,9 @@ public:
     virtual void Init(const ConfigParameters& config) = 0;
     virtual void Init(const ScriptableObjects::IConfigRecord& config) = 0;
     virtual void Destroy() = 0;
+protected:
+    virtual ~IDataReader() { }
+public:
     virtual void StartMinibatchLoop(size_t mbSize, size_t epoch, size_t requestedEpochSamples = requestDataSize) = 0;
 
     virtual bool SupportsDistributedMBRead() const
@@ -206,24 +200,24 @@ private:
     // Init - Reader Initialize for multiple data sets
     // config - [in] configuration parameters for the datareader
     // Sample format below for UCIReader:
-    //# Parameter values for the reader
-    //reader=[
+    // # Parameter values for the reader
+    // reader=[
     //  # reader to use
-    //  readerType=UCIFastReader
-    //  miniBatchMode=Partial
+    //  readerType="UCIFastReader"
+    //  miniBatchMode="partial"
     //  randomize=None
     //  features=[
     //    dim=784
     //    start=1
-    //    file=c:\speech\mnist\mnist_test.txt
+    //    file="c:\speech\mnist\mnist_test.txt"
     //  ]
     //  labels=[
     //    dim=1
     //      start=0
-    //      file=c:\speech\mnist\mnist_test.txt
-    //      labelMappingFile=c:\speech\mnist\labels.txt
+    //      file="c:\speech\mnist\mnist_test.txt"
+    //      labelMappingFile="c:\speech\mnist\labels.txt"
     //      labelDim=10
-    //      labelType=Category
+    //      labelType="category"
     //  ]
     //]
     template <class ConfigRecordType>
@@ -254,7 +248,7 @@ public:
     }
     virtual ~DataReader();
 
-    //StartMinibatchLoop - Startup a minibatch loop
+    // StartMinibatchLoop - Startup a minibatch loop
     // mbSize - [in] size of the minibatch (number of frames, etc.)
     // epoch - [in] epoch number for this loop
     // requestedEpochSamples - [in] number of samples to randomize, defaults to requestDataSize which uses the number of samples there are in the dataset

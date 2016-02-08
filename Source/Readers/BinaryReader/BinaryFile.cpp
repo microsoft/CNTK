@@ -48,13 +48,13 @@ BinaryFile::BinaryFile(std::wstring fileName, FileOptions options, size_t size)
     }
 
     // code to detect type of file (network/local)
-    //std::wstring path;
-    //auto found = fileName.find_last_of(L"\\/");
-    //if (found == npos)
+    // std::wstring path;
+    // auto found = fileName.find_last_of(L"\\/");
+    // if (found == npos)
     //    path = fileName + L"\\";
-    //else
+    // else
     //    path = fileName.substr(0, found);
-    //auto driveType = GetDriveType(path.c_str());
+    // auto driveType = GetDriveType(path.c_str());
 
     // get the actual size of the file
     if (size == 0)
@@ -406,12 +406,12 @@ bool Section::ValidateHeader(bool writing) const
     valid &= (m_sectionHeader->dataSections < (m_sectionHeader->sizeHeader - offset(SectionHeader, sectionFilePosition)) / sizeof(size_t));                // number of data sub-sections (for nesting)
     valid &= (m_sectionHeader->sectionType < sectionTypeMax * 2);                                                                                          // what is the type of the data in this section
     valid &= (m_sectionHeader->sectionData < sectionDataMax * 2);                                                                                          // type of section (SectionData enum)
-    //m_sectionHeader->bytesPerElement = elementSize;  // number of bytes per element, (0 means variable)
+    // m_sectionHeader->bytesPerElement = elementSize;  // number of bytes per element, (0 means variable)
     valid &= (m_sectionHeader->customStructureID < customStructureMax * 2); // ID for custom structure
-    //m_sectionHeader->elementsPerRecord = 0;  // number of elements per Record
+    // m_sectionHeader->elementsPerRecord = 0;  // number of elements per Record
     valid &= (m_sectionHeader->flags < flagMax * 2); // bit flags, dependent on sectionType
-    //m_sectionHeader->elementsCount = 0; // number of total elements stored
-    //strcpy_s(m_sectionHeader->nameDescription, description.c_str()); // name and description of section contents in this format (name: description) (string, with extra bytes zeroed out, at least one null terminator required)
+    // m_sectionHeader->elementsCount = 0; // number of total elements stored
+    // strcpy_s(m_sectionHeader->nameDescription, description.c_str()); // name and description of section contents in this format (name: description) (string, with extra bytes zeroed out, at least one null terminator required)
 
     // the size of the section must at least accomidate the header and all it's elements
     valid &= (m_sectionHeader->size >= m_sectionHeader->sizeHeader + m_sectionHeader->elementsCount * m_sectionHeader->bytesPerElement);    // size of this section (including header and all sub-sections)
@@ -498,7 +498,7 @@ Section* Section::ReadSection(size_t index, MappingType mapping, size_t sizeElem
     if (!section->ValidateHeader())
     {
         char message[256];
-        sprintf_s(message, "Invalid header in file %ls, in header %s\n", m_file->GetName(), section->GetName());
+        sprintf_s(message, "Invalid header in file %ls, in header %s\n", m_file->GetName().c_str(), section->GetName().c_str());
         RuntimeError(message);
     }
 
@@ -584,17 +584,17 @@ char* Section::GetElementBuffer(size_t element, size_t windowSize)
         m_mappedElementSize = 0; // only used for element window mapping
 
         // save off the header size so we can reestablish pointers if necessary
-        //size_t headerSize = m_sectionHeader->sizeHeader;
-        //assert((char*)m_elementBuffer - (char*)m_sectionHeader);
-        //void* elementBuffer =
+        // size_t headerSize = m_sectionHeader->sizeHeader;
+        // assert((char*)m_elementBuffer - (char*)m_sectionHeader);
+        // void* elementBuffer =
         EnsureMapped(m_elementBuffer, windowSize);
 
         // check to see if the mapping changed, if so update pointers
-        //if (elementBuffer != m_elementBuffer)
-        //{
+        // if (elementBuffer != m_elementBuffer)
+        // {
         //    m_elementBuffer = elementBuffer;
         //    m_sectionHeader -= headerSize;
-        //}
+        // }
 
         return (char*) m_elementBuffer;
     }
@@ -726,7 +726,7 @@ SectionHeader* Section::GetSectionHeader(size_t filePosition, MappingType& mappi
         if (filePosition < sectionOwner->GetFilePosition())
             RuntimeError("invalid fileposition, cannot be earlier in the file than mapping parent");
         size_t offset = filePosition - sectionOwner->GetFilePosition();
-        size_t totalSize = offset + max(size, sectionHeaderMin);
+        size_t totalSize = offset + max(size, (size_t) sectionHeaderMin);
 
         // make sure we can at least get to the header
         if (sectionOwner->GetMappedSize() < totalSize)
@@ -1010,7 +1010,7 @@ bool Section::SaveData(size_t recordStart, const std::map<std::wstring, void*, n
     }
 
     char* data = section->EnsureElements(index, size);
-    //void* data = section->GetElement(index);
+    // void* data = section->GetElement(index);
     memcpy_s(data, size, dataSource, size);
     return recordStart + numRecords < GetRecordCount();
 }
@@ -1158,39 +1158,39 @@ void SectionStats::Store()
     for (int i = 0; i < GetElementCount(); i++)
     {
         auto stat = GetElement<NumericStatistics>(i);
-        if (!_stricmp(stat->statistic, "sum"))
+        if (EqualCI(stat->statistic, "sum"))
         {
             stat->value = m_sum;
         }
-        else if (!_stricmp(stat->statistic, "count"))
+        else if (EqualCI(stat->statistic, "count"))
         {
             stat->value = (double) m_count;
         }
-        else if (!_stricmp(stat->statistic, "mean"))
+        else if (EqualCI(stat->statistic, "mean"))
         {
             stat->value = m_mean;
         }
-        else if (!_stricmp(stat->statistic, "max"))
+        else if (EqualCI(stat->statistic, "max"))
         {
             stat->value = m_max;
         }
-        else if (!_stricmp(stat->statistic, "min"))
+        else if (EqualCI(stat->statistic, "min"))
         {
             stat->value = m_min;
         }
-        else if (!_stricmp(stat->statistic, "range"))
+        else if (EqualCI(stat->statistic, "range"))
         {
             stat->value = abs(m_max - m_min);
         }
-        else if (!_stricmp(stat->statistic, "rootmeansquare"))
+        else if (EqualCI(stat->statistic, "rootmeansquare"))
         {
             stat->value = m_rms;
         }
-        else if (!_stricmp(stat->statistic, "variance"))
+        else if (EqualCI(stat->statistic, "variance"))
         {
             stat->value = m_variance;
         }
-        else if (!_stricmp(stat->statistic, "stddev"))
+        else if (EqualCI(stat->statistic, "stddev"))
         {
             stat->value = m_stddev;
         }
@@ -1255,7 +1255,7 @@ void SectionStats::SetCompute(const std::string& name, double value)
     for (int i = 0; i < GetElementCount(); i++)
     {
         auto stat = GetElement<NumericStatistics>(i);
-        if (!_stricmp(stat->statistic, name.c_str()))
+        if (EqualCI(stat->statistic, name.c_str()))
         {
             stat->value = value;
             break;
@@ -1271,7 +1271,7 @@ double SectionStats::GetCompute(const std::string& name)
     for (int i = 0; i < GetElementCount(); i++)
     {
         auto stat = GetElement<NumericStatistics>(i);
-        if (!_stricmp(stat->statistic, name.c_str()))
+        if (EqualCI(stat->statistic, name.c_str()))
         {
             return stat->value;
         }
@@ -1403,6 +1403,4 @@ bool SectionStats::AccumulateData(ElemType* dataSource, size_t numRecords, size_
     // done with data
     return false;
 }
-}
-}
-}
+} } }

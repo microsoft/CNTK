@@ -125,12 +125,12 @@ status open
 
 \begin_layout Plain Layout
 
-cntk configFile=yourExp.config
+cntk configFile=yourExp.cntk
 \end_layout
 
 \end_inset
 
-where yourExp.config is a CNTK configuration file, which typically contains
+where yourExp.cntk is a CNTK configuration file, which typically contains
  several command blocks.
  A command block is a top level block of the configuration.
  Each command block must specify what action to be carried out with related
@@ -965,7 +965,7 @@ CLASSLSTM
 
 : the class-based long short-term memory neural network.
  It uses sparse input, sparse parameter and sparse output.
- This is often uesd for language modeling tasks.
+ This is often used for language modeling tasks.
 \end_layout
 
 \end_deeper
@@ -1768,10 +1768,10 @@ numMiniBatch4LRSearch
 
 \end_inset
 
-: the number of minibatches used to search the minibatch size whenin adaptive
+: the number of minibatches used to search the minibatch size when in adaptive
  minibatch size mode.
  Default value is 500.
- It's typically set to 10-20% of the total minibatches in an epochthis is
+ It's typically set to 10-20% of the total minibatches in an epoch. This is
  shared with the search for learning rate in SearchBeforeEpoch mode.
  
 \end_layout
@@ -1792,10 +1792,10 @@ autoAdjustMinibatch
 \end_inset
 
 : enable or disable whether minibatch size is adaptively adjusted.
- Default value is false.Adapative minibatch sizing will begin on epochs starting
- after user minbatch sizes expcitilyspecified are complete.
+ Default value is false. Adaptive minibatch sizing will begin on epochs starting
+ after user minibatch sizes explicitly specified are complete.
   For example if the userspecifed minibatchSize=256:1024, then 256 and 1024are
- used in the first 2 Epochs and adaptive minibatchsizing is used aferwards
+ used in the first 2 Epochs and adaptive minibatchsizing is used afterwards
  
 \end_layout
 
@@ -1814,7 +1814,7 @@ minibatchSizeTuningFrequency
 
 \end_inset
 
-: The number of epochs to skip, on a periodic basis, beforedynamically adjusting
+: The number of epochs to skip, on a periodic basis, before dynamically adjusting
  the minibatch size.
  Default value is 1.
  
@@ -1835,7 +1835,7 @@ minibatchSizeTuningMax
 
 \end_inset
 
-: The maximum size allowed for anadaptively adjusted minibatch size.
+: The maximum size allowed for an adaptively adjusted minibatch size.
  Default value is 1048576.
  
 \end_layout
@@ -2669,10 +2669,10 @@ rollingWindow
 
  option reads in all feature files and stores them on disk in one large
  temporary binary file.
- The data is randomized by running a large rollowing window over the data
+ The data is randomized by running a large rolling window over the data
  in this file and randomizing the data within the window.
  This method produces more thorough randomization of the data but requires
- a large temprorary file written to disk.
+ a large temporary file written to disk.
  The other option is 
 \begin_inset Quotes eld
 \end_inset
@@ -2798,14 +2798,14 @@ labels
 \end_inset
 
  are the default names used by the SimpleNetworkBuilder but if the network
- is designed using the Network Descrition Language (NDL), then any names
+ is designed using the Network Description Language (NDL), then any names
  can be used, as long as they each have a corresponding node in the network.
 \end_layout
 
 \begin_layout Standard
 To specify continuous-valued features, e.g.
  MFCC's or log mel filterbank coefficients, the following parameters should
- be included in the a confguration block:
+ be included in the a configuration block:
 \end_layout
 
 \begin_layout Itemize
@@ -3378,7 +3378,7 @@ nbruttsineachrecurrentiter
  The reader arranges same-length input sentences, up to the specified limit,
  into each minibatch.
  For recurrent networks, trainer resets hidden layer activities only at
- the begining of sentences.
+ the beginning of sentences.
  Activities of hidden layers are carried over to the next minibatch if an
  end of sentence is not reached.
  Using multiple sentences in a minibatch can speed up training processes.
@@ -3425,7 +3425,7 @@ wordclass
  This is used for class-based language modeling.
  An example of the class information is below.
  The first column is the word index.
- The second column is the number of occurances, the third column is the
+ The second column is the number of occurrences, the third column is the
  word, and the last column is the class id of the word.
  
 \begin_inset listings
@@ -3795,7 +3795,7 @@ nbrUttsInEachRecurrentIter
  The reader arranges same-length input sentences, up to the specified limit,
  into each minibatch.
  For recurrent networks, trainer resets hidden layer activities only at
- the begining of sentences.
+ the beginning of sentences.
  Activities of hidden layers are carried over to the next minibatch if an
  end of sentence is not reached.
  Using multiple sentences in a minibatch can speed up training processes.
@@ -4960,6 +4960,10 @@ minibatchSize
  – the minibatch size to use when creating the label mapping file.
 \end_layout
 
+\begin_layout Standard
+\begin_inset Note Comment
+status open
+
 \begin_layout Subsection
 DoEncoderDecoder Command
 \begin_inset Index idx
@@ -4974,7 +4978,7 @@ DoEncoderDecoder Command
 
 \end_layout
 
-\begin_layout Standard
+\begin_layout Plain Layout
 Neural networks can be used to form a chain of networks.
  The first several networks can work as encoders and the following networks
  can serve as decoders.
@@ -4995,7 +4999,7 @@ section
 \end_inset
 
  – the encoderReader and decoderReader are the readers for encoder and decoder.
- Similary for encoderCVReader and decoderCVReader for validation set.
+ Similarly for encoderCVReader and decoderCVReader for validation set.
  
 \end_layout
 
@@ -5003,6 +5007,11 @@ section
 encoderNetworkBuilder and decoderNetworkBuilder: These specify the simple
  network builder to used.
  
+\end_layout
+
+\end_inset
+
+
 \end_layout
 
 \begin_layout Section
@@ -5356,7 +5365,7 @@ deviceId
 
 \begin_layout Standard
 CNTK supports CPU and GPU computation.
- Users can determine what device to use by setting the deviceId papameter.
+ Users can determine what device to use by setting the deviceId parameter.
  The possible values are
 \end_layout
 
@@ -5482,7 +5491,7 @@ traceLevel
 \end_layout
 
 \begin_layout Standard
-The traceLevel parameter is uniformly used by the code in CNTK to specify
+The traceLevel parameter is usually used by the code in CNTK to specify
  how much extra output (verbosity) is desired as in
 \end_layout
 
@@ -5500,8 +5509,49 @@ traceLevel=0 # larger values mean more output
 
 The default value is 0 and specifies minimal output.
  The higher the number the more output can be expected.
- Currently 0 (limited output), 1 (medium ouput) and 2 (verbose output) are
+ Currently 0 (limited output), 1 (medium output) and 2 (verbose output) are
  the only values supported.
+\end_layout
+
+\begin_layout Subsection
+ShareNodeValueMatrices
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+ShareNodeValueMatrices
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+The ShareNodeValueMatrices parameter is used to indicate whether to turn
+ on the sharing of forward computation result matrices to further reduce
+ memory usage.
+ To turn it on, use
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+ShareNodeValueMatrices=true
+\end_layout
+
+\end_inset
+
+The default value is false, which means the memory sharing only happens
+ during the backward phase.
+ You should decide whether to turn it on by running the same setup with
+ this flag on and off.
+ If the results are the same, you are safe to turn it on.
+ In the future, we will make it on by default after more extensive test.
 \end_layout
 
 \begin_layout Section
@@ -5618,7 +5668,7 @@ status open
 
 \begin_layout Plain Layout
 
-cntk configFile=yourExp.config
+cntk configFile=yourExp.cntk
 \end_layout
 
 \end_inset
@@ -5738,7 +5788,7 @@ status open
 
 \begin_layout Plain Layout
 
-cntk configFile=yourExp.config stderr="c:
+cntk configFile=yourExp.cntk stderr="c:
 \backslash
 temp
 \backslash
@@ -5766,7 +5816,7 @@ status open
 
 \begin_layout Plain Layout
 
-cntk configFile=yourExp.config mnistTrain=[minibatchSize=256] 
+cntk configFile=yourExp.cntk mnistTrain=[minibatchSize=256] 
 \end_layout
 
 \end_inset
@@ -5781,7 +5831,7 @@ status open
 
 \begin_layout Plain Layout
 
-cntk configFile=yourExp.config mnistTrain=[reader=[file="mynewfile.txt"]]
+cntk configFile=yourExp.cntk mnistTrain=[reader=[file="mynewfile.txt"]]
  
 \end_layout
 
@@ -5827,12 +5877,12 @@ status open
 
 \begin_layout Plain Layout
 
-cntk configFile=yourExp1.config+yourExp2.config 
+cntk configFile=yourExp1.cntk+yourExp2.cntk 
 \end_layout
 
 \begin_layout Plain Layout
 
-cntk configFile=yourExp1.config configFile=yourExp2.config 
+cntk configFile=yourExp1.cntk configFile=yourExp2.cntk 
 \end_layout
 
 \end_inset
@@ -5841,7 +5891,7 @@ cntk configFile=yourExp1.config configFile=yourExp2.config
 \end_layout
 
 \begin_layout Standard
-If yourExp2.config only contains the string "mnistTrain=[reader=[file=mynewfile.tx
+If yourExp2.cntk only contains the string "mnistTrain=[reader=[file=mynewfile.tx
 t]]", then both of these commands would be equivalent to: 
 \end_layout
 
@@ -5852,7 +5902,7 @@ status open
 
 \begin_layout Plain Layout
 
-cntk configFile=yourExp1.config mnistTrain=[reader=[file="mynewfile.txt"]]
+cntk configFile=yourExp1.cntk mnistTrain=[reader=[file="mynewfile.txt"]]
  
 \end_layout
 
@@ -5876,7 +5926,7 @@ status open
 
 \begin_layout Plain Layout
 
-cntk configFile=yourExp1.config+yourExp2.config var1=value configFile=yourExp3.conf
+cntk configFile=yourExp1.cntk+yourExp2.cntk var1=value configFile=yourExp3.conf
 ig 
 \end_layout
 
@@ -5893,7 +5943,7 @@ In addition being able to specify multiple configuration files at the command
 include
 \emph default
  one configuration file within another.
-  For example, if the first line of yourExp2.config was
+  For example, if the first line of yourExp2.cntk was
 \end_layout
 
 \begin_layout Standard
@@ -5903,7 +5953,7 @@ status open
 
 \begin_layout Plain Layout
 
-include=yourExp1.config
+include=yourExp1.cntk
 \end_layout
 
 \end_inset
@@ -5918,7 +5968,7 @@ status open
 
 \begin_layout Plain Layout
 
-cntk configFile=yourExp2.config
+cntk configFile=yourExp2.cntk
 \end_layout
 
 \end_inset
@@ -5933,12 +5983,12 @@ status open
 
 \begin_layout Plain Layout
 
-cntk configFile=yourExp1.config+yourExp2.config
+cntk configFile=yourExp1.cntk+yourExp2.cntk
 \end_layout
 
 \end_inset
 
-where in this latter case, yourExp2.config doesn't contain the 
+where in this latter case, yourExp2.cntk doesn't contain the 
 \emph on
 include
 \emph default
@@ -5957,9 +6007,9 @@ included
   Including a configuration file is equivalent to pasting the contents of
  that file at the location of the include statement.
  Include statements are resolved recursively (using a depth-first search),
- meaning that if yourExpA.config includes yourExpB.config, and yourExpB.config
- includes yourExpC.config, then the full chain will be resolved, and yourExpC.conf
-ig will effectively be included in yourExpA.config.
+ meaning that if yourExpA.cntk includes yourExpB.cntk, and yourExpB.cntk
+ includes yourExpC.cntk, then the full chain will be resolved, and yourExpC.conf
+ig will effectively be included in yourExpA.cntk.
   If a configuration file is included multiple times (eg, 'A' includes 'B'
  and 'C', and 'B' also includes 'C'), then it will effectively only be included
  the first time it is encountered.

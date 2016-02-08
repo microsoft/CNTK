@@ -40,9 +40,9 @@ void SequenceParser<NumType, LabelType>::SetStateRange(int value1, int value2, P
 template <typename NumType, typename LabelType>
 void SequenceParser<NumType, LabelType>::SetupStateTables()
 {
-    //=========================
+    // =========================
     // STATE = WHITESPACE
-    //=========================
+    // =========================
 
     SetStateRange(0, 255, Whitespace, Label);
     SetStateRange('0', '9', Whitespace, WholeNumber);
@@ -55,9 +55,9 @@ void SequenceParser<NumType, LabelType>::SetupStateTables()
     SetState(':', Whitespace, Whitespace); // intepret ':' as white space because it's a divider
     SetState('\n', Whitespace, EndOfLine);
 
-    //=========================
+    // =========================
     // STATE = NEGATIVE_SIGN
-    //=========================
+    // =========================
 
     SetStateRange(0, 255, Sign, Label);
     SetStateRange('0', '9', Sign, WholeNumber);
@@ -67,9 +67,9 @@ void SequenceParser<NumType, LabelType>::SetupStateTables()
     SetState('\r', Sign, Whitespace);
     SetState('\n', Sign, EndOfLine);
 
-    //=========================
+    // =========================
     // STATE = NUMBER
-    //=========================
+    // =========================
 
     SetStateRange(0, 255, WholeNumber, Label);
     SetStateRange('0', '9', WholeNumber, WholeNumber);
@@ -83,9 +83,9 @@ void SequenceParser<NumType, LabelType>::SetupStateTables()
     SetState(':', WholeNumber, Whitespace); // Add for 1234:0.9 usage in Sequences
     SetState('\n', WholeNumber, EndOfLine);
 
-    //=========================
+    // =========================
     // STATE = PERIOD
-    //=========================
+    // =========================
 
     SetStateRange(0, 255, Period, Label);
     SetStateRange('0', '9', Period, Remainder);
@@ -95,9 +95,9 @@ void SequenceParser<NumType, LabelType>::SetupStateTables()
     SetState('\r', Period, Whitespace);
     SetState('\n', Period, EndOfLine);
 
-    //=========================
+    // =========================
     // STATE = REMAINDER
-    //=========================
+    // =========================
 
     SetStateRange(0, 255, Remainder, Label);
     SetStateRange('0', '9', Remainder, Remainder);
@@ -110,9 +110,9 @@ void SequenceParser<NumType, LabelType>::SetupStateTables()
     SetState(':', Remainder, Whitespace); // Add for 1234:0.9 usage in Sequences
     SetState('\n', Remainder, EndOfLine);
 
-    //=========================
+    // =========================
     // STATE = THE_LETTER_E
-    //=========================
+    // =========================
 
     SetStateRange(0, 255, TheLetterE, Label);
     SetStateRange('0', '9', TheLetterE, Exponent);
@@ -124,9 +124,9 @@ void SequenceParser<NumType, LabelType>::SetupStateTables()
     SetState('\r', TheLetterE, Whitespace);
     SetState('\n', TheLetterE, EndOfLine);
 
-    //=========================
+    // =========================
     // STATE = EXPONENT_NEGATIVE_SIGN
-    //=========================
+    // =========================
 
     SetStateRange(0, 255, ExponentSign, Label);
     SetStateRange('0', '9', ExponentSign, Exponent);
@@ -136,9 +136,9 @@ void SequenceParser<NumType, LabelType>::SetupStateTables()
     SetState('\r', ExponentSign, Whitespace);
     SetState('\n', ExponentSign, EndOfLine);
 
-    //=========================
+    // =========================
     // STATE = EXPONENT
-    //=========================
+    // =========================
 
     SetStateRange(0, 255, Exponent, Label);
     SetStateRange('0', '9', Exponent, Exponent);
@@ -149,9 +149,9 @@ void SequenceParser<NumType, LabelType>::SetupStateTables()
     SetState(':', Exponent, Whitespace);
     SetState('\n', Exponent, EndOfLine);
 
-    //=========================
+    // =========================
     // STATE = END_OF_LINE
-    //=========================
+    // =========================
     SetStateRange(0, 255, EndOfLine, Label);
     SetStateRange('0', '9', EndOfLine, WholeNumber);
     SetState('-', EndOfLine, Sign);
@@ -161,9 +161,9 @@ void SequenceParser<NumType, LabelType>::SetupStateTables()
     SetState('\t', EndOfLine, Whitespace);
     SetState('\r', EndOfLine, Whitespace);
 
-    //=========================
+    // =========================
     // STATE = LABEL
-    //=========================
+    // =========================
     SetStateRange(0, 255, Label, Label);
     SetState('\n', Label, EndOfLine);
     // whitespace
@@ -172,15 +172,15 @@ void SequenceParser<NumType, LabelType>::SetupStateTables()
     SetState('\r', Label, Whitespace);
     SetState(':', Label, Whitespace);
 
-    //=========================
+    // =========================
     // STATE = LINE_COUNT_EOL
-    //=========================
+    // =========================
     SetStateRange(0, 255, LineCountEOL, LineCountOther);
     SetState('\n', LineCountEOL, LineCountEOL);
 
-    //=========================
+    // =========================
     // STATE = LINE_COUNT_OTHER
-    //=========================
+    // =========================
     SetStateRange(0, 255, LineCountOther, LineCountOther);
     SetState('\n', LineCountOther, LineCountEOL);
 }
@@ -293,12 +293,12 @@ void SequenceParser<NumType, LabelType>::DoneWithValue()
 
         // TODO: In sequence reader we probably don't need to store numbers in labels (we'll see)
         // if it's a label, store in label location instead of number location
-        //int index = m_elementsConvertedThisLine;
-        //if (m_startLabels <= index && index < m_startLabels + m_dimLabels)
-        //{
+        // int index = m_elementsConvertedThisLine;
+        // if (m_startLabels <= index && index < m_startLabels + m_dimLabels)
+        // {
         //    StoreLabel(FinalResult);
-        //}
-        //if (m_startFeatures <= index && index < m_startFeatures + m_dimFeatures)
+        // }
+        // if (m_startFeatures <= index && index < m_startFeatures + m_dimFeatures)
         {
             m_numbers->push_back(FinalResult);
             m_totalNumbersConverted++;
@@ -445,9 +445,9 @@ void SequenceParser<float, std::string>::StoreLabel(float /*finalResult*/)
     if (m_spaceDelimitedMax <= m_spaceDelimitedStart)
         m_spaceDelimitedMax = m_byteCounter;
     std::string label((LPCSTR) &m_fileBuffer[m_spaceDelimitedStart - m_bufferStart], m_spaceDelimitedMax - m_spaceDelimitedStart);
-    if (!m_beginSequence && !_stricmp(label.c_str(), m_beginTag.c_str()))
+    if (!m_beginSequence && EqualCI(label, m_beginTag))
         m_beginSequence = true;
-    if (!m_endSequence && !_stricmp(label.c_str(), m_endTag.c_str()))
+    if (!m_endSequence   && EqualCI(label, m_endTag))
         m_endSequence = true;
     m_labels->push_back(move(label));
     m_labelsConvertedThisLine++;
@@ -489,9 +489,9 @@ void SequenceParser<double, std::string>::StoreLabel(double /*finalResult*/)
     if (m_spaceDelimitedMax <= m_spaceDelimitedStart)
         m_spaceDelimitedMax = m_byteCounter;
     std::string label((LPCSTR) &m_fileBuffer[m_spaceDelimitedStart - m_bufferStart], m_spaceDelimitedMax - m_spaceDelimitedStart);
-    if (!m_beginSequence && !_stricmp(label.c_str(), m_beginTag.c_str()))
+    if (!m_beginSequence && EqualCI(label, m_beginTag))
         m_beginSequence = true;
-    if (!m_endSequence && !_stricmp(label.c_str(), m_endTag.c_str()))
+    if (!m_endSequence   && EqualCI(label, m_endTag))
         m_endSequence = true;
     m_labels->push_back(move(label));
     m_labelsConvertedThisLine++;
@@ -532,7 +532,7 @@ int wmain(int argc, wchar_t *argv[])
     std::vector<int> labels;
     labels.reserve(60000);
     parser.ParseInit(L"c:\\speech\\mnist\\mnist_train.txt", LabelFirst);
-    //parser.ParseInit("c:\\speech\\parseTest.txt", LabelNone);
+    // parser.ParseInit("c:\\speech\\parseTest.txt", LabelNone);
     int records = 0;
     do
     {

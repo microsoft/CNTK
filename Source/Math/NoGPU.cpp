@@ -8,6 +8,7 @@
 
 #ifdef CPUONLY
 
+#include "CommonMatrix.h"
 #include "GPUMatrix.h"
 #include "GPUSparseMatrix.h"
 #include "MatrixQuantizerGPU.h"
@@ -33,8 +34,7 @@ GPUSPARSE_INDEX_TYPE GPUSparseMatrix<ElemType>::SecondaryIndexValueAt(size_t idx
 #pragma region Constructors and Destructor
 
 template <class ElemType>
-GPUSparseMatrix<ElemType>::GPUSparseMatrix(const MatrixFormat matrixFormat /*= MatrixFormat::matrixFormatSparseCSR*/,
-                                           const DEVICEID_TYPE computeDevice /*= AUTOPLACEMATRIX*/)
+GPUSparseMatrix<ElemType>::GPUSparseMatrix(DEVICEID_TYPE computeDevice, const MatrixFormat matrixFormat /*= MatrixFormat::matrixFormatSparseCSR*/)
 {
 }
 
@@ -54,7 +54,7 @@ GPUSparseMatrix<ElemType>::GPUSparseMatrix(const GPUSparseMatrix<ElemType>& deep
 }
 
 template <class ElemType>
-GPUSparseMatrix<ElemType>::GPUSparseMatrix(const size_t numRows, const size_t numCols, const size_t numNZ, const MatrixFormat matrixFormat /*= MatrixFormat::matrixFormatSparseCSR*/, const DEVICEID_TYPE computeDevice /*= AUTOPLACEMATRIX*/)
+GPUSparseMatrix<ElemType>::GPUSparseMatrix(const size_t numRows, const size_t numCols, const size_t numNZ, DEVICEID_TYPE computeDevice, const MatrixFormat matrixFormat /*= MatrixFormat::matrixFormatSparseCSR*/)
 {
 }
 
@@ -133,7 +133,7 @@ void GPUSparseMatrix<ElemType>::ResizeAsAndCopyIndexFrom(const GPUSparseMatrix<E
 template <class ElemType>
 void GPUSparseMatrix<ElemType>::Resize(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve, const MatrixFormat matrixFormat, const bool growOnly, bool keepExistingValues)
 {
-} //matrix format will affect the size to allocate
+} // matrix format will affect the size to allocate
 template <class ElemType>
 void GPUSparseMatrix<ElemType>::Resize(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve, const bool growOnly, bool keepExistingValues)
 {
@@ -429,7 +429,7 @@ void GPUSparseMatrix<ElemType>::InplaceTranspose()
 template <class ElemType>
 GPUSparseMatrix<ElemType> GPUSparseMatrix<ElemType>::ColumnSlice(size_t startColumn, size_t numCols) const
 {
-    GPUSparseMatrix<ElemType> a;
+    GPUSparseMatrix<ElemType> a(0);
     return a;
 }
 template <class ElemType>
@@ -734,14 +734,6 @@ DeviceBoundNumber<ElemType>::~DeviceBoundNumber()
 template <class ElemType>
 void GPUMatrix<ElemType>::SetDevice(DEVICEID_TYPE deviceId){};
 
-// GetBestGPUDeviceId - Get the best GPU DeviceId, based on cuda information
-//  TODO: should be replaced by BestGpu class instead, it's much better
-template <class ElemType>
-int GPUMatrix<ElemType>::GetBestGPUDeviceId() //returns -1 if no GPUs can be used
-{
-    return EnforceOneGPUOnly(-1); // CPU
-}
-
 // PrepareDevice - Setup the correct cuda context for an operation
 // deviceId - the device on which the operation will take place
 //            defaults to -1, which means use matrices current device
@@ -949,7 +941,7 @@ void GPUMatrix<ElemType>::SetValue(const ElemType v)
 }
 
 template <class ElemType>
-void GPUMatrix<ElemType>::SetValue(const ElemType* d_v) //d_v is pointer to the the value in GPU memory
+void GPUMatrix<ElemType>::SetValue(const ElemType* d_v) // d_v is pointer to the the value in GPU memory
 {
 }
 
@@ -1864,7 +1856,7 @@ void GPUMatrix<ElemType>::Scale(GPUMatrix<ElemType>& /*alpha*/, GPUMatrix<ElemTy
 {
 }
 
-template <class ElemType> //c = alpha * a
+template <class ElemType> // c = alpha * a
 void GPUMatrix<ElemType>::Scale(ElemType alpha, const GPUMatrix<ElemType>& /*a*/, GPUMatrix<ElemType>& c)
 {
 }
@@ -2144,33 +2136,33 @@ typename CuDnnConvolutionEngineFactory<ElemType>::Tensor4DPtr CuDnnConvolutionEn
 template <class ElemType>
 typename CuDnnConvolutionEngineFactory<ElemType>::FilterPtr CuDnnConvolutionEngineFactory<ElemType>::CreateFilter(size_t, size_t, size_t, size_t)
 {
-    RuntimeError("The code is compiled without CPUONLY macro.");
+    RuntimeError("The code is compiled with CPUONLY macro.");
 }
 
 template <class ElemType>
 typename CuDnnConvolutionEngineFactory<ElemType>::ConvDescPtr CuDnnConvolutionEngineFactory<ElemType>::CreateConvDescriptor(
     const Tensor4D&, const Filter&, size_t, size_t, bool)
 {
-    RuntimeError("The code is compiled without CPUONLY macro.");
+    RuntimeError("The code is compiled with CPUONLY macro.");
 }
 
 template <class ElemType>
 typename CuDnnConvolutionEngineFactory<ElemType>::PoolDescPtr CuDnnConvolutionEngineFactory<ElemType>::CreatePoolDescriptor(
     typename PoolDesc::PoolKind, size_t, size_t, size_t, size_t, size_t, size_t)
 {
-    RuntimeError("The code is compiled without CPUONLY macro.");
+    RuntimeError("The code is compiled with CPUONLY macro.");
 }
 
 template <class ElemType>
 typename CuDnnConvolutionEngineFactory<ElemType>::ConvEnginePtr CuDnnConvolutionEngineFactory<ElemType>::CreateConvEngine(DEVICEID_TYPE, size_t)
 {
-    RuntimeError("The code is compiled without CPUONLY macro.");
+    RuntimeError("The code is compiled with CPUONLY macro.");
 }
 
 template <class ElemType>
 typename CuDnnConvolutionEngineFactory<ElemType>::PoolEnginePtr CuDnnConvolutionEngineFactory<ElemType>::CreatePoolEngine(DEVICEID_TYPE)
 {
-    RuntimeError("The code is compiled without CPUONLY macro.");
+    RuntimeError("The code is compiled with CPUONLY macro.");
 }
 
 template <class ElemType>

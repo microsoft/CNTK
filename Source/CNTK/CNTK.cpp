@@ -19,13 +19,12 @@
 #include "SynchronousExecutionEngine.h"
 #include "ModelEditLanguage.h"
 #include "CPUMatrix.h" // used for SetNumThreads()
+#include "CommonMatrix.h"
 #include "SGD.h"
 #include "MPIWrapper.h"
 #include "Config.h"
-#include "MultiNetworksSGD.h"
 #include "SimpleEvaluator.h"
 #include "SimpleOutputWriter.h"
-#include "MultiNetworksEvaluator.h"
 #include "BestGpu.h"
 #include "ProgressTracing.h"
 #include "fileutil.h"
@@ -38,6 +37,9 @@
 #include <algorithm>
 #if defined(_WIN32)
 #include "io.h"
+#include <DelayImp.h>
+#pragma comment(lib, "Delayimp.lib")
+#pragma comment(lib, "shlwapi.lib")
 #endif
 #include "buildinfo.h"
 #include "hostname.h"
@@ -100,7 +102,7 @@ void DumpNodeInfo(const ConfigParameters& config)
     wstring outputFile = config(L"outputFile", defOutFilePath);
     bool printValues = config(L"printValues", true);
 
-    ComputationNetwork net(-1); //always use CPU
+    ComputationNetwork net(-1); // always use CPU
     net.Load<ElemType>(modelPath);
     net.DumpNodeInfoToFile(nodeName, printValues, outputFile, nodeNameRegexStr);
 }
@@ -169,18 +171,14 @@ void DoCommands(const ConfigParameters& config)
     size_t fullTotalMaxEpochs = 0;
     for (int i = 0; i < command.size(); i++)
     {
-        //get the configuration parameters that match the command
+        // get the configuration parameters that match the command
         ConfigParameters commandParams(config(command[i]));
         ConfigArray action = commandParams("action", "train");
 
         // determine the action to perform, and do it
         for (int j = 0; j < action.size(); j++)
         {
-            if (action[j] == "train" || action[j] == "trainRNN"
-#if 0
-                || action[j] == "trainSequence" || action[j] == "trainSequenceRNN"
-#endif
-                )
+            if (action[j] == "train" || action[j] == "trainRNN")
             {
                 wstring modelPath = commandParams("modelPath");
                 std::wcerr << "CNTKModelPath: " << modelPath << endl;
@@ -203,7 +201,7 @@ void DoCommands(const ConfigParameters& config)
     // execute the commands
     for (int i = 0; i < command.size(); i++)
     {
-        //get the configuration parameters that match the command
+        // get the configuration parameters that match the command
         ConfigParameters commandParams(config(command[i]));
         ConfigArray action = commandParams("action", "train");
 
@@ -222,15 +220,6 @@ void DoCommands(const ConfigParameters& config)
                 std::cerr << "CNTKCommandTrainEnd: " + command[i] << endl;
                 fullEpochsOffset += GetMaxEpochs(commandParams);
             }
-#if 0
-            else if (action[j] == "trainSequence" || action[j] == "trainSequenceRNN")
-            {
-                std::cerr << "CNTKCommandTrainBegin: " + command[i] << endl;
-                DoSequenceTrain<ElemType>(commandParams);
-                std::cerr << "CNTKCommandTrainEnd: " + command[i] << endl;
-                fullEpochsOffset += GetMaxEpochs(commandParams);
-            }
-#endif
             else if (action[j] == "adapt")
             {
                 DoAdapt<ElemType>(commandParams);
@@ -238,10 +227,6 @@ void DoCommands(const ConfigParameters& config)
             else if (action[j] == "test" || action[j] == "eval")
             {
                 DoEval<ElemType>(commandParams);
-            }
-            else if (action[j] == "testunroll")
-            {
-                DoEvalUnroll<ElemType>(commandParams);
             }
             else if (action[j] == "edit")
             {
@@ -283,22 +268,6 @@ void DoCommands(const ConfigParameters& config)
             {
                 DoParameterSVD<ElemType>(commandParams);
             }
-            else if (action[j] == "trainEncoderDecoder")
-            {
-                DoEncoderDecoder<ElemType>(commandParams);
-            }
-            else if (action[j] == "testEncoderDecoder")
-            {
-                DoEvalEncodingBeamSearchDecoding<ElemType>(commandParams);
-            }
-            else if (action[j] == "trainBidirectionEncoderDecoder")
-            {
-                DoBidirectionEncoderDecoder<ElemType>(commandParams);
-            }
-            else if (action[j] == "beamSearch")
-            {
-                DoBeamSearchDecoding<ElemType>(commandParams);
-            }
             else
             {
                 RuntimeError("unknown action: %s  in command set: %s", action[j].c_str(), command[i].c_str());
@@ -312,16 +281,8 @@ void DoCommands(const ConfigParameters& config)
 
 std::string TimeDateStamp()
 {
-#if 0 // "safe" version for Windows, not needed it seems
-    __time64_t localtime;
-
-    _time64(&localtime);// get current time and date
-    struct tm now;
-    _localtime64_s(&now, &localtime);  // convert
-#else
     time_t t = time(NULL);
     struct tm now = *localtime(&t);
-#endif
     char buf[30];
     sprintf(buf, "%04d/%02d/%02d %02d:%02d:%02d", now.tm_year + 1900, now.tm_mon + 1, now.tm_mday, now.tm_hour, now.tm_min, now.tm_sec);
     return buf;
@@ -335,6 +296,12 @@ void PrintBuiltInfo()
     fprintf(stderr, "\t\tLast modified date: %s\n", __TIMESTAMP__);
 #ifdef _BUILDTYPE_
     fprintf(stderr, "\t\tBuild type: %s\n", _BUILDTYPE_);
+#endif
+#ifdef _BUILDTARGET_
+    fprintf(stderr, "\t\tBuild target: %s\n", _BUILDTARGET_);
+#endif
+#ifdef _WITH_1BITSGD_
+    fprintf(stderr, "\t\tWith 1bit-SGD: %s\n", _WITH_1BITSGD_);
 #endif
 #ifdef _MATHLIB_
     fprintf(stderr, "\t\tMath lib: %s\n", _MATHLIB_);
@@ -473,6 +440,8 @@ int wmainWithBS(int argc, wchar_t* argv[]) // called from wmain which is a wrapp
 
     g_shareNodeValueMatrices = config(L"shareNodeValueMatrices", false);
 
+    TracingGPUMemoryAllocator::SetTraceLevel(config(L"traceGPUMemoryAllocations", 0));
+
     // logging
     wstring logpath = config(L"stderr", L"");
     if (logpath != L"")
@@ -491,7 +460,7 @@ int wmainWithBS(int argc, wchar_t* argv[]) // called from wmain which is a wrapp
     PrintBuiltInfo();
 
     // execute the actions
-    //std::string type = config(L"precision", "float");
+    // std::string type = config(L"precision", "float");
     int numCPUThreads = config(L"numCPUThreads", 0);
     numCPUThreads = CPUMatrix<float /*any will do*/>::SetNumThreads(numCPUThreads);
     if (numCPUThreads > 0)
@@ -560,6 +529,8 @@ int wmainOldCNTKConfig(int argc, wchar_t* argv[]) // called from wmain which is 
 
     g_shareNodeValueMatrices = config(L"shareNodeValueMatrices", false);
 
+    TracingGPUMemoryAllocator::SetTraceLevel(config(L"traceGPUMemoryAllocations", 0));
+
     if (logpath != L"")
     {
         for (int i = 0; i < command.size(); i++)
@@ -581,7 +552,7 @@ int wmainOldCNTKConfig(int argc, wchar_t* argv[]) // called from wmain which is 
     PrintBuiltInfo(); // this one goes to log file
     std::string timestamp = TimeDateStamp();
 
-    //dump config info
+    // dump config info
     fprintf(stderr, "running on %s at %s\n", GetHostName().c_str(), timestamp.c_str());
     fprintf(stderr, "command line: \n");
     for (int i = 0; i < argc; i++)
@@ -613,7 +584,7 @@ int wmainOldCNTKConfig(int argc, wchar_t* argv[]) // called from wmain which is 
         fprintf(stderr, "%s ", command[i].c_str());
     }
 
-    //run commands
+    // run commands
     std::string type = config(L"precision", "float");
     // accept old precision key for backward compatibility
     if (config.Exists("type"))
@@ -689,15 +660,26 @@ int wmain1(int argc, wchar_t* argv[]) // called from wmain which is a wrapper th
 }
 
 #ifdef __WINDOWS__
-void terminate_this()
+void TerminateThis()
 {
     fprintf(stderr, "terminate_this: aborting\n"), fflush(stderr);
     exit(EXIT_FAILURE);
 }
 
+#define EXCEPTION_DLL_NOT_FOUND VcppException(ERROR_SEVERITY_ERROR, ERROR_MOD_NOT_FOUND)
+
+static void LogDelayLoadError(PEXCEPTION_POINTERS pExcPointers)
+{
+    if (pExcPointers->ExceptionRecord->ExceptionCode == EXCEPTION_DLL_NOT_FOUND)
+    {
+        const auto & pDelayLoadInfo = *PDelayLoadInfo(pExcPointers->ExceptionRecord->ExceptionInformation[0]);
+        fprintf(stderr, "CNTK: Failed to load DLL '%s'.\n", pDelayLoadInfo.szDll);
+    }
+}
+
 int wmain(int argc, wchar_t* argv[]) // wmain wrapper that reports Win32 exceptions
 {
-    set_terminate(terminate_this);   // insert a termination handler to ensure stderr gets flushed before actually terminating
+    set_terminate(TerminateThis);    // insert a termination handler to ensure stderr gets flushed before actually terminating
     _set_error_mode(_OUT_TO_STDERR); // make sure there are no CRT prompts when CNTK is executing
 
     // Note: this does not seem to work--processes with this seem to just hang instead of terminating
@@ -705,9 +687,15 @@ int wmain(int argc, wchar_t* argv[]) // wmain wrapper that reports Win32 excepti
     {
         return wmain1(argc, argv);
     }
-    __except (1 /*EXCEPTION_EXECUTE_HANDLER, see excpt.h--not using constant to avoid Windows header in here*/)
+    __except (LogDelayLoadError(GetExceptionInformation()), EXCEPTION_EXECUTE_HANDLER)
     {
-        fprintf(stderr, "CNTK: Win32 exception caught (such an access violation or a stack overflow)\n"); // TODO: separate out these two into a separate message
+        auto code = GetExceptionCode();
+        const char * msg = "";
+        if      (code == EXCEPTION_ACCESS_VIOLATION)   msg = ": Access violation"; // the famous 0xc0000005 error
+        else if (code == EXCEPTION_INT_DIVIDE_BY_ZERO) msg = ": Integer division by zero";
+        else if (code == EXCEPTION_STACK_OVERFLOW)     msg = ": Stack overflow";
+        else if (code == EXCEPTION_DLL_NOT_FOUND)      msg = ": Module not found";
+        fprintf(stderr, "CNTK: Caught Win32 exception 0x%08x%s.\n", (unsigned int)code, msg);
         fflush(stderr);
         exit(EXIT_FAILURE);
     }

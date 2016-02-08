@@ -42,10 +42,10 @@ public:
     using LabelType = typename IDataReader<ElemType>::LabelType;
     using LabelIdType = typename IDataReader<ElemType>::LabelIdType;
     using IDataReader<ElemType>::mRequestedNumParallelSequences;
-    //typedef std::string LabelType;
-    //typedef unsigned LabelIdType;
+    // typedef std::string LabelType;
+    // typedef unsigned LabelIdType;
 private:
-    UCIParser<ElemType, LabelType> m_parser;
+    shared_ptr<UCIParser<ElemType, LabelType>> m_parser;
     size_t m_mbSize;                 // size of minibatch requested
     LabelIdType m_labelIdMax;        // maximum label ID we have encountered so far
     LabelIdType m_labelDim;          // maximum label ID we will ever see (used for array dimensions)

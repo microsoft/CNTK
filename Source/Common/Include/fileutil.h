@@ -11,7 +11,8 @@
 #include "Basics.h"
 #include <stdio.h>
 #ifdef __WINDOWS__
-#include <windows.h> // for mmreg.h and FILETIME
+#define NOMINMAX
+#include "Windows.h" // for mmreg.h and FILETIME
 #include <mmreg.h>
 #endif
 #ifdef __unix__
@@ -446,8 +447,8 @@ const wchar_t* GetFormatString(T /*t*/)
     // a read and/or write routine.
     // If the type is a user defined class, you need to create some global functions that handles file in/out.
     // for example:
-    //File& operator>>(File& stream, MyClass& test);
-    //File& operator<<(File& stream, MyClass& test);
+    // File& operator>>(File& stream, MyClass& test);
+    // File& operator<<(File& stream, MyClass& test);
     //
     // in your class you will probably want to add these functions as friends so you can access any private members
     // friend File& operator>>(File& stream, MyClass& test);

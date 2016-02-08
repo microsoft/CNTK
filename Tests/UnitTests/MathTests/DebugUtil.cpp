@@ -66,6 +66,4 @@ void DebugUtil::PrintCallStack()
     free(symbolInfo);
 #endif // _WIN32
 }
-}
-}
-}
+} } }

@@ -51,7 +51,7 @@ void DataReader<ElemType>::InitFromConfig(const ConfigRecordType& /*config*/)
 template <class ElemType>
 void DataReader<ElemType>::Destroy()
 {
-    /// newer code that explicitly place multiple streams for inputs
+    // newer code that explicitly place multiple streams for inputs
     foreach_index (i, m_ioNames) // inputNames should map to node names
     {
         m_dataReaders[m_ioNames[i]]->Destroy();
@@ -79,6 +79,7 @@ DataReader<ElemType>::DataReader(const ConfigRecordType& config)
             // get the name for the reader we want to use, default to UCIFastReader
             GetReaderProc getReaderProc = (GetReaderProc) Plugin::Load(thisIO(L"readerType", L"UCIFastReader"), GetReaderName((ElemType) 0));
             m_ioNames.push_back(ioName);
+            assert(getReaderProc != nullptr);
             getReaderProc(&m_dataReaders[ioName]); // instantiates the reader with the default constructor (no config processed at this point)
         }
     }
@@ -89,11 +90,12 @@ DataReader<ElemType>::DataReader(const ConfigRecordType& config)
         // get the name for the reader we want to use, default to UCIFastReader
         GetReaderProc getReaderProc = (GetReaderProc) Plugin::Load(config(L"readerType", L"UCIFastReader"), GetReaderName((ElemType) 0));
         m_ioNames.push_back(ioName);
+        assert(getReaderProc != nullptr);
         getReaderProc(&m_dataReaders[ioName]);
     }
 
     // now pass that to concurrent reader so we can read ahead
-    //m_DataReader = new ConcurrentReader<ElemType>(m_DataReader);
+    // m_DataReader = new ConcurrentReader<ElemType>(m_DataReader);
     // NOW we can init
     // TODO: merge with the code above, but we first need to get the nbrUttPerMinibatch initialized inside each reader
     for (const auto& ioName : m_ioNames)
@@ -177,11 +179,11 @@ bool DataReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemType>*
     /**
     each reader reads data with number of columns as  nbr_utterances_per_minibatch * mbSize
     notice that readers may differ in their actual mbsize, though it is supposedly to be nbr_utterances_per_minibatch * mbSize.
-    To handle with this, readers use their getminibatch function and then return their exact number of utterance in each minbatch. 
-    This exact number, which is specified for the next reader, is passed to the next reader. 
+    To handle with this, readers use their getminibatch function and then return their exact number of utterance in each minbatch.
+    This exact number, which is specified for the next reader, is passed to the next reader.
     The next reader then returns the exact number of utterances per minibatch, after calling its getminibatch function.
     Then this returned number is compared against the specified number. If these two numbers are not consistent, return with logic error.
-    The logic error can be avoided usually with an exchange of reading orders. 
+    The logic error can be avoided usually with an exchange of reading orders.
     */
     for (size_t i = 0; i < m_ioNames.size(); i++)
     {

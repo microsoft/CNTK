@@ -41,7 +41,7 @@ template <class ElemType>
 DenseBinaryMatrix<ElemType>::DenseBinaryMatrix(wstring name, int deviceID, size_t numRows, size_t numCols)
     : BinaryMatrix<ElemType>(name, deviceID, numRows, numCols)
 {
-    //this->m_values = (ElemType*)malloc(sizeof(ElemType)*numRows*numCols);
+    // this->m_values = (ElemType*)malloc(sizeof(ElemType)*numRows*numCols);
     this->m_values = (ElemType*) CUDAPageLockedMemAllocator::Malloc(sizeof(ElemType) * numRows * numCols, deviceID);
 }
 
@@ -56,7 +56,7 @@ void DenseBinaryMatrix<ElemType>::Dispose()
 {
     if (this->m_values != nullptr)
     {
-        //free(this->m_values);
+        // free(this->m_values);
         CUDAPageLockedMemAllocator::Free(this->m_values, this->m_deviceID);
     }
     this->m_values = nullptr;
@@ -76,7 +76,7 @@ void DenseBinaryMatrix<ElemType>::SetMaxRows(size_t maxRows)
 {
     if (maxRows > this->m_maxNumRows)
     {
-        //ElemType* values = (ElemType*)malloc(sizeof(ElemType)*this->m_maxNumCols*maxRows);
+        // ElemType* values = (ElemType*)malloc(sizeof(ElemType)*this->m_maxNumCols*maxRows);
         ElemType* values = (ElemType*) CUDAPageLockedMemAllocator::Malloc(sizeof(ElemType) * this->m_maxNumCols * maxRows, this->m_deviceID);
         if (this->m_values != nullptr)
         {
@@ -84,7 +84,7 @@ void DenseBinaryMatrix<ElemType>::SetMaxRows(size_t maxRows)
             {
                 memcpy(values, this->m_values, sizeof(ElemType) * this->m_numRows * this->m_maxNumCols);
             }
-            //free(this->m_values);
+            // free(this->m_values);
             CUDAPageLockedMemAllocator::Free(this->m_values, this->m_deviceID);
         }
         this->m_values = values;
@@ -103,7 +103,7 @@ template <class ElemType>
 SparseBinaryMatrix<ElemType>::SparseBinaryMatrix(wstring name, int deviceId, size_t numRows, size_t numCols)
     : BinaryMatrix<ElemType>(name, deviceId, numRows, numCols), m_rowIndices(nullptr), m_colIndices(nullptr), m_nnz(0), m_maxNNz(0)
 {
-    //m_colIndices = (int32_t*)malloc(sizeof(int32_t)*(numRows + 1));
+    // m_colIndices = (int32_t*)malloc(sizeof(int32_t)*(numRows + 1));
     m_colIndices = (int32_t*) CUDAPageLockedMemAllocator::Malloc(sizeof(int32_t) * (numRows + 1), deviceId);
     m_colIndices[0] = 0;
 }
@@ -113,19 +113,19 @@ void SparseBinaryMatrix<ElemType>::Dispose()
 {
     if (this->m_values != nullptr)
     {
-        //free(this->m_values);
+        // free(this->m_values);
         CUDAPageLockedMemAllocator::Free(this->m_values, this->m_deviceID);
     }
     this->m_values = nullptr;
     if (m_colIndices != nullptr)
     {
-        //free(m_colIndices);
+        // free(m_colIndices);
         CUDAPageLockedMemAllocator::Free(this->m_colIndices, this->m_deviceID);
     }
     m_colIndices = nullptr;
     if (m_rowIndices != nullptr)
     {
-        //free(m_rowIndices);
+        // free(m_rowIndices);
         CUDAPageLockedMemAllocator::Free(this->m_rowIndices, this->m_deviceID);
     }
     m_rowIndices = nullptr;
@@ -136,7 +136,7 @@ void SparseBinaryMatrix<ElemType>::SetMaxRows(size_t maxRows)
 {
     if (maxRows > this->m_maxNumRows)
     {
-        //int32_t* colIndices = (int32_t*)malloc(sizeof(int32_t)*(maxRows+1));
+        // int32_t* colIndices = (int32_t*)malloc(sizeof(int32_t)*(maxRows+1));
         int32_t* colIndices = (int32_t*) CUDAPageLockedMemAllocator::Malloc(sizeof(int32_t) * (maxRows + 1), this->m_deviceID);
         if (this->m_colIndices != nullptr)
         {
@@ -144,7 +144,7 @@ void SparseBinaryMatrix<ElemType>::SetMaxRows(size_t maxRows)
             {
                 memcpy(colIndices, m_colIndices, sizeof(int32_t) * (this->m_numRows + 1));
             }
-            //free(this->m_colIndices);
+            // free(this->m_colIndices);
             CUDAPageLockedMemAllocator::Free(this->m_colIndices, this->m_deviceID);
         }
         this->m_colIndices = colIndices;
@@ -161,38 +161,36 @@ void SparseBinaryMatrix<ElemType>::ResizeArrays(size_t newNNz)
         return;
     }
     size_t newMaxNNz = (size_t)((newNNz + m_nnz) * 1.3);
-    //int32_t* rowIndices = (int32_t*)malloc(sizeof(int32_t)*newMaxNNz);
-    //ElemType* values = (ElemType*)malloc(sizeof(ElemType)*newMaxNNz);
-    int32_t* rowIndices = (int32_t*) CUDAPageLockedMemAllocator::Malloc(sizeof(int32_t) * newMaxNNz, this->m_deviceID);
-    ElemType* values = (ElemType*) CUDAPageLockedMemAllocator::Malloc(sizeof(ElemType) * newMaxNNz, this->m_deviceID);
+    // int32_t* rowIndices = (int32_t*)malloc(sizeof(int32_t)*newMaxNNz);
+    // ElemType* values = (ElemType*)malloc(sizeof(ElemType)*newMaxNNz);
+    int32_t* rowIndices = (int32_t*)  CUDAPageLockedMemAllocator::Malloc(sizeof(int32_t)  * newMaxNNz, m_deviceID);
+    ElemType* values    = (ElemType*) CUDAPageLockedMemAllocator::Malloc(sizeof(ElemType) * newMaxNNz, m_deviceID);
 
+    // copy old values if any
     if (m_nnz > 0)
     {
-        memcpy(rowIndices, m_rowIndices, sizeof(int32_t) * this->m_maxNNz);
-        memcpy(values, this->m_values, sizeof(ElemType) * this->m_maxNNz);
+        assert(m_rowIndices && m_values); // m_nnz > 0 implies that these pointers are allocated
+        memcpy(rowIndices, m_rowIndices, sizeof(int32_t)  * m_maxNNz);
+        memcpy(values,     m_values,     sizeof(ElemType) * m_maxNNz);
     }
 
+    // free old storage
     if (m_rowIndices != nullptr)
-    {
-        //free(m_rowIndices);
-        CUDAPageLockedMemAllocator::Free(this->m_rowIndices, this->m_deviceID);
-    }
-    if (this->m_values != nullptr)
-    {
-        //free(this->m_values);
-        CUDAPageLockedMemAllocator::Free(this->m_values, this->m_deviceID);
-    }
+        CUDAPageLockedMemAllocator::Free(m_rowIndices, m_deviceID);
+
+    if (m_values != nullptr)
+        CUDAPageLockedMemAllocator::Free(m_values, m_deviceID);
 
     m_rowIndices = rowIndices;
-    this->m_values = values;
-    this->m_maxNNz = newMaxNNz;
+    m_values = values;
+    m_maxNNz = newMaxNNz;
 }
 
 template <class ElemType>
 void SparseBinaryMatrix<ElemType>::Clear()
 {
-    this->m_numRows = 0;
-    this->m_nnz = 0;
+    m_numRows = 0;
+    m_nnz = 0;
 }
 
 template <class ElemType>
@@ -276,7 +274,7 @@ void SparseBinaryInput<ElemType>::Init(std::map<std::wstring, std::wstring> rena
 
         m_inFile.read((char*) tempName, len);
         tempName[len] = '\0';
-        //std::string name((char*)header_buffer + base_offset, len);
+        // std::string name((char*)header_buffer + base_offset, len);
         std::wstring wname = msra::strfun::utf16(tempName);
         if (rename.find(wname) == rename.end())
         {
@@ -289,7 +287,7 @@ void SparseBinaryInput<ElemType>::Init(std::map<std::wstring, std::wstring> rena
         base_offset += sizeof(int8_t) * len;
 
         m_inFile.read((char*) &numCols, sizeof(numCols));
-        //numCols = *(int32_t*)((char*)header_buffer + base_offset);
+        // numCols = *(int32_t*)((char*)header_buffer + base_offset);
         base_offset += sizeof(int32_t);
 
         m_mappedNumCols[m_features.back()] = numCols;
@@ -305,7 +303,7 @@ void SparseBinaryInput<ElemType>::Init(std::map<std::wstring, std::wstring> rena
         }
         base_offset += sizeof(int32_t);
 
-        //std::string name((char*)header_buffer + base_offset, len);
+        // std::string name((char*)header_buffer + base_offset, len);
         m_inFile.read((char*) tempName, len);
         tempName[len] = '\0';
         std::wstring wname = msra::strfun::utf16(tempName);
@@ -315,12 +313,12 @@ void SparseBinaryInput<ElemType>::Init(std::map<std::wstring, std::wstring> rena
         }
         else
         {
-            //m_features.emplace_back(rename[wname]);
+            // m_features.emplace_back(rename[wname]);
             m_labels.emplace_back(rename[wname]);
         }
         base_offset += sizeof(int8_t) * len;
 
-        //numCols = *(int32_t*)((char*)header_buffer + base_offset);
+        // numCols = *(int32_t*)((char*)header_buffer + base_offset);
         m_inFile.read((char*) &numCols, sizeof(numCols));
         base_offset += sizeof(int32_t);
         m_mappedNumCols[m_labels.back()] = numCols;
@@ -442,9 +440,9 @@ void SparseBinaryInput<ElemType>::StartDistributedMinibatchLoop(size_t mbSize, s
     for (size_t c = 0; c < m_windowSize; c++)
     {
         m_maxMBSize = max(m_maxMBSize, (size_t)(m_offsets[c + 1] - m_offsets[c]));
-        //fprintf(stderr, "m_offsets[%lu] = %lu\n", c, m_offsets[c]);
+        // fprintf(stderr, "m_offsets[%lu] = %lu\n", c, m_offsets[c]);
     }
-    //fprintf(stderr, "max mb size: %ld\n", m_maxMBSize);
+    // fprintf(stderr, "max mb size: %ld\n", m_maxMBSize);
     size_t maxMem = 1024 * 1024 * 1024; // 1GB
     size_t maxPointers = maxMem / m_maxMBSize;
     for (size_t c = 0; c < maxPointers; c++)
@@ -479,12 +477,12 @@ shared_ptr<BinaryMatrix<ElemType>> SparseBinaryInput<ElemType>::CreateMatrix(std
 {
     shared_ptr<BinaryMatrix<ElemType>> retVal; // = nullptr;
 
-    //if (m_features.find(matName) != m_features.end()) {
+    // if (m_features.find(matName) != m_features.end()) {
     if (std::find(m_features.begin(), m_features.end(), matName) != m_features.end())
     {
         retVal = make_shared<SparseBinaryMatrix<ElemType>>(matName, deviceId, m_mbSize, m_mappedNumCols[matName]);
     }
-    //else if (m_labels.find(matName) != m_labels.end()) {
+    // else if (m_labels.find(matName) != m_labels.end()) {
     else if (std::find(m_labels.begin(), m_labels.end(), matName) != m_labels.end())
     {
         retVal = make_shared<DenseBinaryMatrix<ElemType>>(matName, deviceId, m_mbSize, m_mappedNumCols[matName]);
@@ -498,7 +496,7 @@ void SparseBinaryInput<ElemType>::ReadMinibatches(size_t* read_order, size_t num
 {
 #if DEBUG
     marker_series series(L"Read Minibatches");
-    //diagnostic::span span(series, L"Reading Data");
+    // diagnostic::span span(series, L"Reading Data");
     span* read_span;
 #endif
     for (size_t c = 0; c < numToRead; c++)
@@ -506,7 +504,7 @@ void SparseBinaryInput<ElemType>::ReadMinibatches(size_t* read_order, size_t num
 #if DEBUG
         read_span = new span(series, 1, L"Getting Buffer %ld\n", c);
 #endif
-        //fprintf(stderr, "start reading data %ld\n", c);
+        // fprintf(stderr, "start reading data %ld\n", c);
         size_t readSize = m_offsets[read_order[c] + 1] - m_offsets[read_order[c]];
 //void* data_buffer = GetTempDataPointer(readSize);
 #if DEBUG
@@ -545,7 +543,7 @@ template <class ElemType>
 size_t SparseBinaryInput<ElemType>::ReadMinibatch(void* data_buffer, std::map<std::wstring, shared_ptr<BinaryMatrix<ElemType>>>& matrices)
 {
 
-    //fprintf(stderr, "start read minibatch.\n");
+    // fprintf(stderr, "start read minibatch.\n");
     /*
                 size_t readSize = m_offsets[cur_batch + 1] - m_offsets[cur_batch];
                 void* data_buffer = GetTempDataPointer(readSize);
@@ -567,7 +565,7 @@ size_t SparseBinaryInput<ElemType>::ReadMinibatch(void* data_buffer, std::map<st
 
     for (int32_t c = 0; c < m_features.size(); c++)
     {
-        //fprintf(stderr, "read features %d.\n", c);
+        // fprintf(stderr, "read features %d.\n", c);
         nnz = *(int32_t*) ((char*) data_buffer + buffer_offset);
         buffer_offset += sizeof(int32_t);
 
@@ -597,7 +595,7 @@ size_t SparseBinaryInput<ElemType>::ReadMinibatch(void* data_buffer, std::map<st
 
     for (int32_t c = 0; c < m_labels.size(); c++)
     {
-        //fprintf(stderr, "read labels %d.\n", c);
+        // fprintf(stderr, "read labels %d.\n", c);
         int32_t numCols = m_mappedNumCols[m_labels[c]];
 
         ElemType* vals = (ElemType*) ((char*) data_buffer + buffer_offset);
@@ -620,7 +618,7 @@ template <class ElemType>
 size_t SparseBinaryInput<ElemType>::FillMatrices(std::map<std::wstring, shared_ptr<BinaryMatrix<ElemType>>>& matrices)
 {
 
-    //fprintf(stderr, "start fill matrices\n");
+    // fprintf(stderr, "start fill matrices\n");
     size_t curSize = 0;
     for (auto mat : matrices)
     {
@@ -628,23 +626,23 @@ size_t SparseBinaryInput<ElemType>::FillMatrices(std::map<std::wstring, shared_p
         mat.second->Clear();
     }
     void* data_buffer;
-    //fprintf(stderr, "start while\n");
-    //clock_t start_w = clock();
-    //while (curSize + m_microBatchSize <= m_mbSize && (data_buffer = m_dataToConsume.pop()) != nullptr) {
+    // fprintf(stderr, "start while\n");
+    // clock_t start_w = clock();
+    // while (curSize + m_microBatchSize <= m_mbSize && (data_buffer = m_dataToConsume.pop()) != nullptr) {
     while (curSize + m_microBatchSize <= m_mbSize && m_nextMB < m_epochSize)
     {
         data_buffer = m_dataToConsume.pop();
-        //clock_t in_w = clock();
-        //start_w = in_w - start_w;
-        //fprintf(stderr, "start read mb\tIt took me %d clicks (%f seconds).\n", start_w, ((float)start_w) / CLOCKS_PER_SEC);
-        //start_w = in_w;
-        //fprintf(stderr, "start read mb\n");
+        // clock_t in_w = clock();
+        // start_w = in_w - start_w;
+        // fprintf(stderr, "start read mb\tIt took me %d clicks (%f seconds).\n", start_w, ((float)start_w) / CLOCKS_PER_SEC);
+        // start_w = in_w;
+        // fprintf(stderr, "start read mb\n");
         curSize += ReadMinibatch(data_buffer, matrices);
-        //fprintf(stderr, "end read mb\n");
+        // fprintf(stderr, "end read mb\n");
         m_nextMB++;
         m_dataToProduce.push(data_buffer);
     }
-    //fprintf(stderr, "end fill matrices\n");
+    // fprintf(stderr, "end fill matrices\n");
     return curSize;
 }
 
@@ -683,7 +681,7 @@ void LibSVMBinaryReader<ElemType>::InitFromConfig(const ConfigRecordType& reader
 
     m_partialMinibatch = true;
     std::string minibatchMode(readerConfig(L"minibatchMode", "Partial"));
-    m_partialMinibatch = !_stricmp(minibatchMode.c_str(), "Partial");
+    m_partialMinibatch = EqualCI(minibatchMode, "Partial");
 
     std::wstring file = readerConfig(L"file", L"");
 
@@ -763,11 +761,11 @@ void LibSVMBinaryReader<ElemType>::DoDSSMMatrix(Matrix<ElemType>& mat, size_t ac
     {
         if (DSSMLabels != nullptr)
         {
-            //free(DSSMLabels);
+            // free(DSSMLabels);
             CUDAPageLockedMemAllocator::Free(DSSMLabels, mat.GetDeviceId());
         }
         DSSMCols = actualMBSize;
-        //DSSMLabels = (ElemType*)malloc(sizeof(ElemType)*numRows*actualMBSize);
+        // DSSMLabels = (ElemType*)malloc(sizeof(ElemType)*numRows*actualMBSize);
         DSSMLabels = (ElemType*) CUDAPageLockedMemAllocator::Malloc(sizeof(ElemType) * numRows * actualMBSize, mat.GetDeviceId());
         memset(DSSMLabels, 0, sizeof(ElemType) * numRows * actualMBSize);
         for (size_t c = 0; c < numRows * actualMBSize; c += numRows)
@@ -793,7 +791,7 @@ bool LibSVMBinaryReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<El
     {
         if (!m_pendingAsyncGetMinibatch.valid())
         {
-            //fprintf(stderr, "not valid\n");
+            // fprintf(stderr, "not valid\n");
             CheckDataMatrices(matrices);
             m_pendingAsyncGetMinibatch = std::async(std::launch::async, [this]()
                                                     {
@@ -809,8 +807,8 @@ bool LibSVMBinaryReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<El
 #if DEBUG
         reader_series->write_flag(_T("after get."));
 #endif
-        //timer = clock() - timer;
-        //fprintf(stderr, "done get\tIt took me %d clicks (%f seconds).\n", timer, ((float)timer) / CLOCKS_PER_SEC);
+        // timer = clock() - timer;
+        // fprintf(stderr, "done get\tIt took me %d clicks (%f seconds).\n", timer, ((float)timer) / CLOCKS_PER_SEC);
 
         if (actualMBSize == 0)
         {
@@ -839,7 +837,7 @@ bool LibSVMBinaryReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<El
         }
         m_pendingAsyncGetMinibatch = std::async(std::launch::async, [this]()
                                                 {
-                                                    //CheckDataMatrices(matrices);
+                                                    // CheckDataMatrices(matrices);
                                                     return m_dataInput->FillMatrices(m_dataMatrices);
                                                 });
     }
@@ -851,7 +849,7 @@ bool LibSVMBinaryReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<El
                 timer = clock() - timer;
                 fprintf(stderr, "It took me %d clicks (%f seconds).\n", timer, ((float)timer) / CLOCKS_PER_SEC);
                 */
-    //fprintf(stderr, "done\n");
+    // fprintf(stderr, "done\n");
     return true;
 }
 

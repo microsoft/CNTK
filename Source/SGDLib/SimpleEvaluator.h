@@ -9,7 +9,8 @@
 #include "ComputationNode.h"
 #include "ComputationNetwork.h"
 #include "DataReaderHelpers.h"
-#include "TrainingCriterionNodes.h" // TODO: we should move the functions that depend on these to the .cpp
+#include "TrainingNodes.h" // TODO: we should move the functions that depend on these to the .cpp
+
 #include <vector>
 #include <string>
 #include <set>
@@ -56,8 +57,7 @@ public:
                 const auto& node = m_net->GetNodeFromName(evalNodeNames[i]);
                 if (!criteriaLogged.insert(node).second)
                     continue;
-                //m_net->BuildAndValidateSubNetwork(node);
-                if (node->GetNumRows() != 1 || node->GetNumCols() != 1)
+                if (node->GetSampleLayout().GetNumElements() != 1)
                     InvalidArgument("Criterion nodes to evaluate must have dimension 1x1.");
                 evalNodes.push_back(node);
             }
@@ -86,7 +86,7 @@ public:
         size_t numMBsRun = 0;
         size_t actualMBSize = 0;
         size_t numSamplesLastMBs = 0;
-        size_t lastMBsRun = 0; //MBs run before this display
+        size_t lastMBsRun = 0; // MBs run before this display
 
         std::vector<double> evalResultsLastMBs;
         for (int i = 0; i < evalResults.size(); i++)
@@ -141,7 +141,7 @@ public:
             DisplayEvalStatistics(lastMBsRun + 1, numMBsRun, numSamplesLastMBs, evalNodes, evalResults, evalResultsLastMBs);
         }
 
-        //final statistics
+        // final statistics
         for (int i = 0; i < evalResultsLastMBs.size(); i++)
         {
             evalResultsLastMBs[i] = 0;
@@ -183,7 +183,7 @@ protected:
 
             if (displayConvertedValue)
             {
-                //display Perplexity as well for crossEntropy values
+                // display Perplexity as well for crossEntropy values
                 if (evalNodes[i]->OperationName() == OperationNameOf(CrossEntropyWithSoftmaxNode) ||
                     evalNodes[i]->OperationName() == OperationNameOf(CrossEntropyNode) ||
                     evalNodes[i]->OperationName() == OperationNameOf(ClassBasedCrossEntropyWithSoftmaxNode) ||

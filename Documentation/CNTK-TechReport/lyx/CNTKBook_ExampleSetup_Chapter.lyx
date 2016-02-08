@@ -97,7 +97,7 @@ ns.
  All examples are based on the TIMIT corpus for phonetic recognition but
  can easily be modified for use for large vocabulary continuous speech recogniti
 on.
- The only significant change is that context-indepenent phonetic states
+ The only significant change is that context-independent phonetic states
  used in the TIMIT example would be replaced by context-dependent senone
  targets for large vocabulary tasks.
  We note that these examples are not meant to be representative of state
@@ -146,10 +146,10 @@ SimpleNetworkBuilder
  will also be monitored during training using the evalCriterion parameter.
  The input data will be mean and variance normalized since applyMeanVarNorm
  has been set to true.
- In addtion, if needPrior is set to true, the prior probablities of the
+ In addition, if needPrior is set to true, the prior probabilities of the
  labels will be computed and a ScaledLogLikelihood node in the network will
  be automatically created.
- This is important if this netwok will be used to generate acoustic scores
+ This is important if this network will be used to generate acoustic scores
  in a speech recognition decoder.
  
 \end_layout
@@ -838,7 +838,7 @@ SquareError
  Below is a snippet from the NDL file for this example.
  This autoencoder has three hidden layers including a middle bottleneck
  layer of 64 neurons.
- A macro is defined to peform mean and variance normalization and it is
+ A macro is defined to perform mean and variance normalization and it is
  applied to both the input and target features.
  Also, 
 \end_layout
@@ -1123,7 +1123,7 @@ discriminative pre-training
 \begin_layout Standard
 It is well known that deep networks can be difficult to optimize, especially
  when a limited amount of training data is available.
- As a result, a number of aproaches to initializing the parameters of these
+ As a result, a number of approaches to initializing the parameters of these
  networks have been proposed.
  One of these methods is known as discriminative pre-training.
  In this approach, a network with a single hidden layer is trained starting
@@ -1526,7 +1526,7 @@ multi-task learning
 
 \begin_layout Standard
 One interesting approach to network training is multi-task learning, where
- the network is trained to optmize two objective functions simultaneously.
+ the network is trained to optimize two objective functions simultaneously.
  This can be done in CNTK through the appropriate use of NDL.
  Let's assume that we have a network specified in NDL that has three hidden
  layers and output of the third hidden layer is defined as L3.
@@ -1856,7 +1856,7 @@ TIMIT.statelist"
 \begin_layout Standard
 The NDL for constructing a network with these inputs and outputs can be
  done in a number of ways.
- One way is to contruct a macro that constructs a layer that takes two inputs,
+ One way is to construct a macro that constructs a layer that takes two inputs,
  as follows:
 \end_layout
 
@@ -1984,7 +1984,7 @@ L1 = SBFF2(featInput1, HiddenDim, FeatDim1, featInput2, FeatDim2)
 
 The rest of the hidden layers and the output layer with a cross entropy
  objective function would be the same as previous examples.
- Notice that the names and dimensionality of the input adn output data have
+ Notice that the names and dimensionality of the input and output data have
  to the same in both the NDL model description and the reader configuration.
  
 \end_layout
@@ -2623,7 +2623,7 @@ layerSizes
 \end_inset
 
 =10000:200:10000.
- Sizes of input, hidden and ouput layers.
+ Sizes of input, hidden and output layers.
  Input layer size is equal to vocabulary size, hidden layer is normally
  in the range of 50 to 500, output layer size is the vocabulary size.
 \end_layout
@@ -2640,7 +2640,7 @@ uniformInit
 \end_inset
 
 =true.
- Whether to use uniformly randomizied values for initial paramter weights.
+ Whether to use uniformly randomized values for initial parameter weights.
 \end_layout
 
 \begin_layout Itemize
@@ -2898,7 +2898,7 @@ learnRateDecreaseFactor
 \end_inset
 
 =0.5.
- Learning rate decrese factor.
+ Learning rate decrease factor.
 \end_layout
 
 \end_deeper
@@ -2963,7 +2963,7 @@ t word_class
 \end_layout
 
 \begin_layout Standard
-word_id is a unique non-negative interger, frequency is the frequency of
+word_id is a unique non-negative integer, frequency is the frequency of
  word (optional), word_string is the word string (low frequent words may
  be mapped to <unk>), and word_class is the class id of word.
  Word class can be derived using frequency based heuristics 
@@ -3920,7 +3920,7 @@ One of the important tasks in spoken language understanding is labeling
 \backslash
 SLU
 \backslash
-rnnlu.config.
+rnnlu.cntk.
  The data is ATIS, which consists of 944 unique words, including <unk>,
  in the training/dev set.
  Output has 127 dimension, each corresponding to a semantic tag in ATIS.
@@ -4254,7 +4254,7 @@ wordContext
 \end_inset
 
 =0:1:2 : this specifies the time indices for forming a context window.
- In this example, this setup coresponds to using the current input, the
+ In this example, this setup corresponds to using the current input, the
  next input, and the input after the next input for a context window of
  size 3.
  User can also use other cases such as wordcontext=0:-1:1 to form a context
@@ -4344,7 +4344,7 @@ BOS
 \begin_inset Quotes erd
 \end_inset
 
- : this specifies the symbol of sequence begining.
+ : this specifies the symbol of sequence beginning.
 \end_layout
 
 \begin_layout Itemize
@@ -4634,7 +4634,7 @@ outputs:labels
 \end_inset
 
  : this specifies which nodes to output results.
- These node names are pre-spefied in CNTK's simple network builder.
+ These node names are pre-specified in CNTK's simple network builder.
  The node 
 \begin_inset Quotes eld
 \end_inset
@@ -4643,7 +4643,7 @@ outputs
 \begin_inset Quotes erd
 \end_inset
 
- is the node that output activies before softmax.
+ is the node that output activates before softmax.
  The node 
 \begin_inset Quotes eld
 \end_inset
@@ -4836,7 +4836,7 @@ output.rec.txt
 \begin_inset Quotes erd
 \end_inset
 
- : the file name for writting decode results from LUSequenceWriter.
+ : the file name for writing decode results from LUSequenceWriter.
  
 \end_layout
 

@@ -8,24 +8,27 @@
 #include "stdafx.h"
 #define DATAREADER_EXPORTS
 #include "DataReader.h"
+#include "ReaderShim.h"
 #include "ImageReader.h"
+#include "HeapMemoryProvider.h"
+#include "CudaMemoryProvider.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
-template <class ElemType>
-void DATAREADER_API GetReader(IDataReader<ElemType>** preader)
+// TODO: Memory provider should be injected by SGD.
+
+auto factory = [](const ConfigParameters& parameters) -> ReaderPtr
 {
-    *preader = new ImageReader<ElemType>();
-}
+    return std::make_shared<ImageReader>(std::make_shared<HeapMemoryProvider>(), parameters);
+};
 
 extern "C" DATAREADER_API void GetReaderF(IDataReader<float>** preader)
 {
-    GetReader(preader);
+    *preader = new ReaderShim<float>(factory);
 }
+
 extern "C" DATAREADER_API void GetReaderD(IDataReader<double>** preader)
 {
-    GetReader(preader);
+    *preader = new ReaderShim<double>(factory);
 }
-}
-}
-}
+} } }

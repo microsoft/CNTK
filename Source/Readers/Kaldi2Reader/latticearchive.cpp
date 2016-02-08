@@ -489,8 +489,8 @@ void lattice::dedup()
             L.merge(L2, hset);
             // note: we are left with dups due to true unigram merging (HTK lattices cannot represent true unigram lattices since id is on the nodes)
         }
-        //L.removefinalnull();
-        //L.determinenodecontexts (hset);
+        // L.removefinalnull();
+        // L.determinenodecontexts (hset);
 
         // convert it  --TODO: once we permanently use the new format, do this in fread() for V1
         // Note: Merging may have left this in unsorted format; we need to be robust against that.
@@ -640,7 +640,7 @@ void lattice::fromhtklattice(const wstring &path, const std::unordered_map<std::
             if (it == unitmap.end())
                 throw std::runtime_error("lattice: unit in alignment that is not in model: " + label);
             const size_t unitid = it->second;
-            //const size_t unitid = unitmap.insert (make_pair (label, unitmap.size())).first->second;  // may create a new entry with index = #entries
+            // const size_t unitid = unitmap.insert (make_pair (label, unitmap.size())).first->second;  // may create a new entry with index = #entries
             align.push_back(aligninfo(unitid, frames));
             edgeframes += frames;
         }

@@ -20,10 +20,8 @@
 #include "ModelEditLanguage.h"
 #include "SGD.h"
 #include "Config.h"
-#include "MultiNetworksSGD.h"
 #include "SimpleEvaluator.h"
 #include "SimpleOutputWriter.h"
-#include "MultiNetworksEvaluator.h"
 #include "BestGpu.h"
 #include "ScriptableObjects.h"
 #include "BrainScriptEvaluator.h"
@@ -50,76 +48,15 @@ using namespace Microsoft::MSR::CNTK;
 // DoTrain() - implements CNTK "train" command
 // ===========================================================================
 
-template <class ElemType>
-class BrainScriptNetworkBuilder : public IComputationNetBuilder<ElemType>
-{
-    typedef shared_ptr<ComputationNetwork> ComputationNetworkPtr;
-    ComputationNetworkPtr m_net;
-    ScriptableObjects::ConfigLambdaPtr m_createNetworkFn;
-    DEVICEID_TYPE m_deviceId;
-
-public:
-    // the constructor remembers the config lambda
-    // TODO: Really this should just take the lambda itself, or rather, this class should just be replaced by a lambda. But we need the IConfigRecord for templates to be compile-compatible with old CNTK config.
-    BrainScriptNetworkBuilder(const ScriptableObjects::IConfigRecord& config)
-    {
-        m_deviceId = config[L"deviceId"]; // TODO: only needed for LoadNetworkFromFile() which should go away anyway
-        m_createNetworkFn = config[L"createNetwork"].AsPtr<ScriptableObjects::ConfigLambda>();
-    }
-    // not supported for old CNTK
-    BrainScriptNetworkBuilder(const ConfigParameters& config)
-    {
-        NOT_IMPLEMENTED;
-    }
-
-    // build a ComputationNetwork from description language
-    virtual /*IComputationNetBuilder::*/ ComputationNetworkPtr BuildNetworkFromDescription(ComputationNetwork* = nullptr) override
-    {
-        vector<ScriptableObjects::ConfigValuePtr> args; // this lambda has no arguments
-        ScriptableObjects::ConfigLambda::NamedParams namedArgs;
-        let netValue = m_createNetworkFn->Apply(move(args), move(namedArgs), L"BuildNetworkFromDescription");
-        m_net = netValue.AsPtr<ComputationNetwork>();
-        if (m_net->GetDeviceId() < 0)
-            fprintf(stderr, "BrainScriptNetworkBuilder using CPU\n");
-        else
-            fprintf(stderr, "BrainScriptNetworkBuilder using GPU %d\n", (int) m_net->GetDeviceId());
-        return m_net;
-    }
-
-    // load an existing file--this is the same code as for NDLNetworkBuilder.h (OK to copy it here because this is temporary code anyway)
-    // TODO: This does not belong into NetworkBuilder, since the code is the same for all. Just create the network and load the darn thing.
-    virtual /*IComputationNetBuilder::*/ ComputationNetwork* LoadNetworkFromFile(const wstring& modelFileName, bool forceLoad = true,
-                                                                                 bool bAllowNoCriterionNode = false, ComputationNetwork* anotherNetwork = nullptr) override
-    {
-        if (!m_net || m_net->GetTotalNumberOfNodes() == 0 || forceLoad) //not built or force load   --TODO: why all these options?
-        {
-            auto net = make_shared<ComputationNetwork>(m_deviceId);
-            net->Load<ElemType>(modelFileName, FileOptions::fileOptionsBinary, bAllowNoCriterionNode, anotherNetwork);
-            m_net = net;
-        }
-        m_net->ResetEvalTimeStamps();
-        return m_net.get();
-    }
-};
-
 // TODO: decide where these should go. Also, do we need three variables?
 extern wstring standardFunctions;
 extern wstring commonMacros;
 extern wstring computationNodes;
 
 // helper that returns 'float' or 'double' depending on ElemType
-template <class ElemType>
-static const wchar_t* ElemTypeName();
-template <>
-/*static*/ const wchar_t* ElemTypeName<float>()
-{
-    return L"float";
-}
-template <>
-/*static*/ const wchar_t* ElemTypeName<double>()
-{
-    return L"double";
-}
+template <class ElemType> static const wchar_t* ElemTypeName();
+template <> /*static*/ const wchar_t* ElemTypeName<float>()  { return L"float"; }
+template <> /*static*/ const wchar_t* ElemTypeName<double>() { return L"double"; }
 
 function<ComputationNetworkPtr(DEVICEID_TYPE)> GetCreateNetworkFn(const ScriptableObjects::IConfigRecord& config)
 {
@@ -335,58 +272,3 @@ void DoEdit(const ConfigParameters& config)
 
 template void DoEdit<double>(const ConfigParameters& config);
 template void DoEdit<float>(const ConfigParameters& config);
-
-#if 0
-// ===========================================================================
-// DoSequenceTrain() - implements CNTK "trainSequence" command
-// ===========================================================================
-
-// TODO: per discussion with Dong Yu, Guoguo Chen, and Yu Zhang, this function can be removed.
-template <typename ElemType>
-void DoSequenceTrain(const ConfigParameters& config)
-{
-    DEVICEID_TYPE deviceId = DeviceFromConfig(config);
-
-    ConfigParameters configSGD(config(L"SGD"));
-    bool makeMode = config(L"makeMode", "true");
-
-    ConfigParameters readerConfig(config(L"reader"));
-    readerConfig.Insert("traceLevel", config(L"traceLevel", "0"));
-
-    IComputationNetBuilder<ElemType>* netBuilder = NULL;
-    if (config.Exists("NDLNetworkBuilder"))
-    {
-        ConfigParameters configNDL(config(L"NDLNetworkBuilder"));
-        netBuilder = (IComputationNetBuilder<ElemType>*)new NDLBuilder<ElemType>(configNDL);
-    }
-    else if (config.Exists("SimpleNetworkBuilder"))
-    {
-        ConfigParameters configSNB(config(L"SimpleNetworkBuilder"));
-        netBuilder = (IComputationNetBuilder<ElemType>*)new SimpleNetworkBuilder<ElemType>(configSNB);
-    }
-    else
-    {
-        RuntimeError("No network builder found in the config file. NDLNetworkBuilder or SimpleNetworkBuilde must be specified");
-    }
-
-    DataReader<ElemType>* dataReader = new DataReader<ElemType>(readerConfig);
-
-    DataReader<ElemType>* cvDataReader = nullptr;
-    ConfigParameters cvReaderConfig(config(L"cvReader", L""));
-
-    if (cvReaderConfig.size() != 0)
-    {
-        cvReaderConfig.Insert("traceLevel", config(L"traceLevel", "0"));
-        cvDataReader = new DataReader<ElemType>(cvReaderConfig);
-    }
-
-    wstring origModelFileName = config(L"origModelFileName", L"");
-
-    SGD<ElemType> sgd(configSGD);
-
-    sgd.SequenceTrain(netBuilder, origModelFileName, dataReader, cvDataReader, deviceId, makeMode);
-
-    delete dataReader;
-    delete cvDataReader;
-}
-#endif

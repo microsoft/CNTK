@@ -23,7 +23,6 @@
 #define CPUDEVICE (DEVICEID_TYPE) - 1                 // device is the CPU
 #define DEVICEID_NOTYETDETERMINED (DEVICEID_TYPE) - 3 // not yet set
 #define DEVICEID_AUTO (DEVICEID_TYPE) - 4             // device should be picked automatically
-#define AUTOPLACEMATRIX (DEVICEID_TYPE) 1000          // used in parameters only
 
 #define EPS_IN_INVERSE 1e-30f    // 1e-37 is the only guaranteed precision
 #define EPS_IN_LOG 1e-37f        // 1e-37 is the only guaranteed precision
@@ -33,12 +32,35 @@
 #define MINLOGEXP -9.2103
 #define LSMALL -0.5E10
 
-#define GPUSPARSE_INDEX_TYPE int //cuSparse only supports int array indexes
-#define CPUSPARSE_INDEX_TYPE int //to be consistent with cuSparse but limited the possible size of the matrix.
-
-MATH_API DEVICEID_TYPE EnforceOneGPUOnly(DEVICEID_TYPE requestedDeviceId);
+#define GPUSPARSE_INDEX_TYPE int // cuSparse only supports int array indexes
+#define CPUSPARSE_INDEX_TYPE int // to be consistent with cuSparse but limited the possible size of the matrix.
 
 namespace Microsoft { namespace MSR { namespace CNTK {
+
+class MATH_API TracingGPUMemoryAllocator
+{
+private:
+    static int m_traceLevel;
+
+public:
+    static void SetTraceLevel(int traceLevel);
+    static bool IsTraceEnabled();
+
+    template <typename AllocatedElemType>
+    static AllocatedElemType* Allocate(int deviceId, size_t numRows, size_t numCols);
+
+    template <typename AllocatedElemType>
+    static AllocatedElemType* Allocate(int deviceId, size_t numElements);
+
+    template <typename AllocatedElemType>
+    static void Free(int deviceId, AllocatedElemType* bufferPtr, bool ignoreCUDARetCode = false);
+
+private:
+    template <typename AllocatedElemType>
+    static AllocatedElemType* AllocateNoTrace(int deviceId, size_t numElements);
+
+    static std::pair<size_t, size_t> GetFreeAndTotalMemoryInMBs(int deviceId);
+};
 
 // -----------------------------------------------------------------------
 // ElementWiseOperator -- This enum represents which function to apply.
@@ -89,7 +111,7 @@ enum ElementWiseOperator
     opElementwiseProductWithLogDerivativeFromOutput,
     opElementwiseProductWithCosDerivative,
     // binary ops for indexing
-    //opIndex,
+    // opIndex,
     // ternary
     opCond /*a ? b : c*/,
     opClip /*clip a within interval b..c*/
@@ -135,7 +157,7 @@ enum ElementWiseOperator
     Macro(ElementwiseProductWithTanhDerivativeFromOutput);            \
     Macro(ElementwiseProductWithLinearRectifierDerivativeFromOutput); \
     Macro(ElementwiseProductWithLogDerivativeFromOutput);             \
-    Macro(ElementwiseProductWithCosDerivative);                       \
+    Macro(ElementwiseProductWithCosDerivative); \
 //Macro(Index);
 
 #define ForAllTernaryOps(Macro) \
@@ -168,8 +190,8 @@ enum MatrixFormat
     matrixFormatSparseCSR = matrixFormatSparse + matrixFormatRowMajor + matrixFormatCompressed,
     matrixFormatSparseOther = matrixFormatSparse + matrixFormatRowMajor,                   // currently used for CPU sparse format, will change to CSC/CSR eventually
     matrixFormatMask = matrixFormatRowMajor + matrixFormatSparse + matrixFormatCompressed, // mask that covers all the
-    matrixFormatSparseBlockCol,                                                            //col block based sparse matrix
-    matrixFormatSparseBlockRow,                                                            //row block based sparse matrix
+    matrixFormatSparseBlockCol,                                                            // col block based sparse matrix
+    matrixFormatSparseBlockRow,                                                            // row block based sparse matrix
 };
 
 // common matrix flags for use on all matrices
@@ -288,11 +310,8 @@ public:
 protected:
     void Clear()
     {
-        if (m_matrixName != nullptr)
-        {
-            delete[] m_matrixName;
-            m_matrixName = nullptr;
-        }
+        delete[] m_matrixName;
+        m_matrixName = nullptr;
     }
 
 protected:
@@ -303,8 +322,9 @@ protected:
     MatrixFormat m_format;
     bool m_externalBuffer; // is the buffer used by this matrix,
     ElemType* m_pArray;
-    mutable DEVICEID_TYPE m_computeDevice; //current GPU device Id or CPUDEVICE
-    size_t m_nz;                           //Number of non-zero elements for sparse matrices (unused in other formats)
-    wchar_t* m_matrixName;
+    mutable DEVICEID_TYPE m_computeDevice; // current GPU device Id or CPUDEVICE
+    size_t m_nz;                           // Number of non-zero elements for sparse matrices (unused in other formats)
+    wchar_t* m_matrixName;                 // TODO: Use std::wstring?
 };
+
 } } }
