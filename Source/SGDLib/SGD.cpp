@@ -629,8 +629,8 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
         // persist model and check-point info
         if ((g_mpi == nullptr) || g_mpi->IsMainNode())
         {
-            net->Save(GetModelNameForEpoch(i));
             SaveCheckPointInfo(i, totalSamplesSeen, learnRatePerSample, smoothedGradients, prevCriterion, chosenMinibatchSize);
+            net->Save(GetModelNameForEpoch(i));
             if (!m_keepCheckPointFiles)
             {
                 // delete previous checkpoint file to save space
