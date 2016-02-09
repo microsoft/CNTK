@@ -365,7 +365,8 @@ public:
     }
 
     void NormalizeBatch(const Tensor4D& inT, const Mat& in, const Tensor4D& scaleBiasT, const Mat& scale, const Mat& bias,
-                        bool spatial, double expAvgFactor, Mat& runMean, Mat& runInvStdDev, Mat& out, Mat& saveMean, Mat& saveInvStdDev) override
+                        bool spatial, double expAvgFactor, Mat& runMean, Mat& runInvStdDev, Mat& out,
+                        double epsilon, Mat& saveMean, Mat& saveInvStdDev) override
     {
         const size_t crowIn = inT.w() * inT.h() * inT.c();
         if (spatial)
@@ -398,14 +399,19 @@ public:
         if (m_bnImpl == BatchNormImpl::CuDnn)
         {
             cudnnBatchNormMode_t mode = spatial ? CUDNN_BATCHNORM_SPATIAL : CUDNN_BATCHNORM_PER_ACTIVATION;
+            epsilon = std::max(epsilon, CUDNN_BN_MIN_EPSILON);
             CUDNN_CALL(cudnnBatchNormalizationForwardTraining(m_cudnn, mode, &C::One, &C::Zero, t(inT), ptr(in), t(inT), ptr(out),
                 t(scaleBiasT), ptr(scale), ptr(bias), expAvgFactor, ptr(runMean), ptr(runInvStdDev), 
-                CUDNN_BN_MIN_EPSILON, ptr(saveMean), ptr(saveInvStdDev)));
+                epsilon, ptr(saveMean), ptr(saveInvStdDev)));
         }
         else if (m_bnImpl == BatchNormImpl::Cntk)
         {
+            // No support for exp averaging for now.
+            assert(expAvgFactor == 1);
+            epsilon = std::max(epsilon, 1e-9);
             CUDA_CALL(BatchNormalizationForwardTraining(inT, spatial, ptr(in), ptr(out), ptr(scale), ptr(bias),
-                                                        CUDNN_BN_MIN_EPSILON, ptr(saveMean), ptr(saveInvStdDev), m_stream));
+                                                        ptr(runMean), ptr(runInvStdDev), epsilon, 
+                                                        ptr(saveMean), ptr(saveInvStdDev), m_stream));
         }
         else
             RuntimeError("Provided batch norm implementation (%d) is not supported.", m_bnImpl);

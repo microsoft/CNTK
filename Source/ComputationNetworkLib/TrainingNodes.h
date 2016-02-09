@@ -1762,7 +1762,7 @@ public:
                 m_saveInvStdDev->Resize(runMean.GetNumRows(), runMean.GetNumCols());
 
             m_convEng->NormalizeBatch(*m_inT, sliceInputValue, *m_scaleBiasT, scale, bias, m_spatial, expAvgFactor, runMean, runInvStdDev,
-                                      sliceOutputValue, *m_saveMean, *m_saveInvStdDev);
+                                      sliceOutputValue, 1e-5, *m_saveMean, *m_saveInvStdDev);
 
             m_mbCount++;
         }

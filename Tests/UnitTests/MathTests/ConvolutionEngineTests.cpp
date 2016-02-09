@@ -681,6 +681,7 @@ BOOST_AUTO_TEST_CASE(BatchNormalizationForwardTrain)
             auto& t = *std::move(std::get<0>(cfg));
             bool spatial = std::get<1>(cfg);
             double expAvg = 1;
+            double eps = 1e-5; // CUDNN_BN_MIN_EPSILON
 
             size_t crow = t.w() * t.h() * t.c();
             size_t ccol = t.n();
@@ -719,13 +720,13 @@ BOOST_AUTO_TEST_CASE(BatchNormalizationForwardTrain)
             CudaTimer time1;
             time1.Start();
             engCntk->NormalizeBatch(t, in, *scaleBiasT, scale, bias, spatial, expAvg, runMean, runInvStdDev,
-                                    out, saveMean, saveInvStdDev);
+                                    out, eps, saveMean, saveInvStdDev);
             time1.Stop();
 
             CudaTimer time2;
             time2.Start();
             engCudnn->NormalizeBatch(t, in, *scaleBiasT, scale, bias, spatial, expAvg, runMeanExp, runInvStdDevExp,
-                                     outExp, saveMeanExp, saveInvStdDevExp);
+                                     outExp, eps, saveMeanExp, saveInvStdDevExp);
             time2.Stop();
 
             std::stringstream tmsg;
@@ -744,10 +745,12 @@ BOOST_AUTO_TEST_CASE(BatchNormalizationForwardTrain)
             // REVIEW alexeyk: add cases for testing numerical stability.
 
             BOOST_REQUIRE_MESSAGE(!runMean.HasNan("runMean"), "runMean" << msgNan);
-            //BOOST_REQUIRE_MESSAGE(runMean.IsEqualTo(runMeanExp, absErr), "runMean" << msg);
+            BOOST_REQUIRE_MESSAGE(CheckEqual(runMean, runMeanExp, emsg, relErr, absErr), "runMean" << msg << ". " << emsg);
+            BOOST_REQUIRE_MESSAGE(CountNans(runMeanBuf) == crowScaleBias * 2, "runMean" << msgNotNan);
 
             BOOST_REQUIRE_MESSAGE(!runInvStdDev.HasNan("runInvStdDev"), "runInvStdDev" << msgNan);
-            //BOOST_REQUIRE_MESSAGE(runInvStdDev.IsEqualTo(runInvStdDevExp, absErr), "runInvStdDev" << msg);
+            BOOST_REQUIRE_MESSAGE(CheckEqual(runInvStdDev, runInvStdDevExp, emsg, relErr, absErr), "runInvStdDev" << msg << ". " << emsg);
+            BOOST_REQUIRE_MESSAGE(CountNans(runInvStdDevBuf) == crowScaleBias * 2, "runInvStdDev" << msgNotNan);
 
             BOOST_REQUIRE_MESSAGE(!saveMean.HasNan("saveMean"), "saveMean" << msgNan);
             BOOST_REQUIRE_MESSAGE(CheckEqual(saveMean, saveMeanExp, emsg, relErr, absErr), "saveMean" << msg << ". " << emsg);
@@ -874,7 +877,7 @@ BOOST_AUTO_TEST_CASE(BatchNormalizationBackward)
             if (crow >= 32 && ccol >= 32)
             {
                 // Use conservative estimates.
-                int speedup = 1;
+                float speedup = 1.3f;
                 BOOST_REQUIRE_MESSAGE(speedup * elapsedCntk < elapsedCudnn,
                                       "CNTK implementation (" << elapsedCntk << "ms) must be faster than cuDNN (" << elapsedCudnn << "ms) by at least " << speedup << "x, what's changed? " << tmsg.str());
             }
