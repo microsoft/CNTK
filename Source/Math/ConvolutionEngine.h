@@ -251,7 +251,8 @@ public:
     virtual void BackwardBias(const Tensor4D& srcGradT, const Mat& srcGrad, const Tensor4D& biasT, Mat& biasGrad) = 0;
 
     virtual void NormalizeBatch(const Tensor4D& inT, const Mat& in, const Tensor4D& scaleBiasT, const Mat& scale, const Mat& bias,
-                                bool spatial, double expAvgFactor, Mat& runMean, Mat& runInvStdDev, Mat& out, Mat& saveMean, Mat& saveInvStdDev) = 0;
+                                bool spatial, double expAvgFactor, Mat& runMean, Mat& runInvStdDev, Mat& out,
+                                double epsilon, Mat& saveMean, Mat& saveInvStdDev) = 0;
 
     virtual void NormalizeBatchInference(const Tensor4D& inT, const Mat& in, const Tensor4D& scaleBiasT, const Mat& scale, const Mat& bias,
                                          bool spatial, const Mat& runMean, const Mat& runInvStdDev, Mat& out) = 0;
