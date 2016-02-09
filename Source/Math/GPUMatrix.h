@@ -517,10 +517,28 @@ public:
         stream << s << format;
 
         stream << us.m_numRows << us.m_numCols;
-        ElemType* pArray = us.CopyToArray();
-        for (size_t i = 0; i < us.GetNumElements(); ++i)
-            stream << pArray[i];
-        delete[] pArray;
+
+        // Write the matrix out in chunks to avoid allocating large contiguous
+        // CPU memory buffers
+        if (us.GetNumElements() > 0)
+        {
+            const size_t maxCPUBufferSizeForCopy = 1 << 25;
+            const size_t maxCPUNumElements = maxCPUBufferSizeForCopy / sizeof(ElemType);
+            const size_t maxNumCols = maxCPUNumElements / us.m_numRows;
+            size_t numColsRemaining = us.m_numCols;
+            while (numColsRemaining > 0)
+            {
+                size_t currentNumCols = std::min(maxNumCols, numColsRemaining);
+                GPUMatrix<ElemType> currentSlice = us.ColumnSlice(us.m_numCols - numColsRemaining, currentNumCols);
+                ElemType* pArray = currentSlice.CopyToArray();
+                for (size_t i = 0; i < currentSlice.GetNumElements(); ++i)
+                    stream << pArray[i];
+                delete[] pArray;
+
+                numColsRemaining -= currentNumCols;
+            }
+        }
+
         stream.PutMarker(fileMarkerEndSection, std::wstring(L"EMAT"));
         return stream;
     }
