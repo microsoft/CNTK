@@ -619,12 +619,21 @@ int wmainOldCNTKConfig(int argc, wchar_t* argv[]) // called from wmain which is 
     return EXIT_SUCCESS;
 }
 
+// new_handler to print call stack upon allocation failure
+void AllocationFailureHandler()
+{
+    Microsoft::MSR::CNTK::DebugUtil::PrintCallStack();
+    std::set_new_handler(nullptr);
+    throw std::bad_alloc();
+}
+
 // ---------------------------------------------------------------------------
 // main wrapper that catches C++ exceptions and prints them
 // ---------------------------------------------------------------------------
 
 int wmain1(int argc, wchar_t* argv[]) // called from wmain which is a wrapper that catches & reports Win32 exceptions
 {
+    std::set_new_handler(AllocationFailureHandler);
     try
     {
         PrintBuiltInfo(); // print build info directly in case that user provides zero argument (convenient for checking build type)
