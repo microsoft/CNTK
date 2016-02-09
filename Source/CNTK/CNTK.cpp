@@ -92,6 +92,7 @@ std::string WCharToString(const wchar_t* wst)
     return s;
 }
 
+// TODO: This is an action, it should be moved into ActionsLib.
 template <typename ElemType>
 void DumpNodeInfo(const ConfigParameters& config)
 {
@@ -102,8 +103,8 @@ void DumpNodeInfo(const ConfigParameters& config)
     wstring outputFile = config(L"outputFile", defOutFilePath);
     bool printValues = config(L"printValues", true);
 
-    ComputationNetwork net(-1); // always use CPU
-    net.Load<ElemType>(modelPath);
+    ComputationNetwork net(-1);    // always use CPU
+    net.Load<ElemType>(modelPath); // TODO: we have a function now to combine this and the previous line
     net.DumpNodeInfoToFile(nodeName, printValues, outputFile, nodeNameRegexStr);
 }
 

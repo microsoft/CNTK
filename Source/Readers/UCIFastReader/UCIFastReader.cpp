@@ -396,7 +396,7 @@ void UCIFastReader<ElemType>::InitFromConfig(const ConfigRecordType& readerConfi
     m_parser->ParseInit(file.c_str(), startFeatures, dimFeatures, startLabels, dimLabels, bufSize);
 
     // if we have labels, we need a label Mapping file, it will be a file with one label per line
-    if (m_labelType != labelNone)
+    if (m_labelType != labelNone)   // BUGBUG: should be == labelCategory
     {
         std::wstring labelPath = configLabels(L"labelMappingFile");
         if (fexists(labelPath))
@@ -434,7 +434,6 @@ void UCIFastReader<ElemType>::InitFromConfig(const ConfigRecordType& readerConfi
     m_labelDim = (LabelIdType) udim;
 
     mOneLinePerFile = readerConfig(L"oneLinePerFile", false);
-
 }
 
 // InitCache - Initialize the caching reader if cache files exist, otherwise the writer
@@ -832,7 +831,7 @@ bool UCIFastReader<ElemType>::GetMinibatchImpl(std::map<std::wstring, Matrix<Ele
 
     Matrix<ElemType>& features = *matrices[m_featuresName];
 
-    // get out if they didn't call StartMinibatchLoop() first
+    // get out if they didn't call StartMinibatchLoop() first  --BUGBUG: We should throw in that case.
     if (m_mbSize == 0)
         return false;
 

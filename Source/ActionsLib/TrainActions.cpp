@@ -203,9 +203,7 @@ shared_ptr<Object> MakeRuntimeObject<TrainAction>(const IConfigRecordPtr configp
 
 // register ComputationNode with the ScriptableObject system
 ScriptableObjects::ConfigurableRuntimeTypeRegister::Add<TrainAction> registerTrainAction(L"TrainAction");
-}
-}
-}
+}}}
 
 template void DoTrain<ScriptableObjects::IConfigRecord, float>(const ScriptableObjects::IConfigRecord& config);
 template void DoTrain<ScriptableObjects::IConfigRecord, double>(const ScriptableObjects::IConfigRecord& config);
