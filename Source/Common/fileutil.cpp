@@ -407,20 +407,12 @@ void fprintfOrDie(FILE* f, const char* fmt, ...)
 #pragma warning(pop)
 
 // ----------------------------------------------------------------------------
-// fflushOrDie(): like fflush() but terminate with err msg in case of error
+// fsyncOrDie(): like fsync() but terminate with err msg in case of error
 // ----------------------------------------------------------------------------
 
-void fflushOrDie(FILE* f)
+void fsyncOrDie(FILE* f)
 {
-    int rc = fflush(f);
-
-    if (rc != 0)
-    {
-        RuntimeError("error flushing to file: %s", strerror(errno));
-    }
-
     int fd = fileno(f);
-
     if (fd == -1)
     {
         RuntimeError("unable to convert file handle to file descriptor: %s", strerror(errno));
@@ -433,13 +425,25 @@ void fflushOrDie(FILE* f)
         RuntimeError("error syncing to file: %d", (int) ::GetLastError());
     }
 #else
-    rc = fsync(fd);
-
+    int rc = fsync(fd);
     if (rc != 0)
     {
         RuntimeError("error syncing to file: %s", strerror(errno));
     }
 #endif
+}
+
+// ----------------------------------------------------------------------------
+// fflushOrDie(): like fflush() but terminate with err msg in case of error
+// ----------------------------------------------------------------------------
+
+void fflushOrDie(FILE* f)
+{
+    int rc = fflush(f);
+    if (rc != 0)
+    {
+        RuntimeError("error flushing to file: %s", strerror(errno));
+    }
 }
 
 // ----------------------------------------------------------------------------
