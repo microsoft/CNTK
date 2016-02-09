@@ -604,25 +604,43 @@ BOOST_AUTO_TEST_SUITE_END()
 std::vector<std::tuple<Tensor4DPtr, bool>> GenerateBNTestConfigs(ConvFact& fact)
 {
     std::vector<std::tuple<Tensor4DPtr, bool>> res;
-    for (bool spatial : {false})
+    // REVIEW alexeyk: how to test batches > 512? cuDNN does not support that so there is no baseline.
+    // Per activation (non-spatial)
+    for (size_t n : {6, 13, 62, 512})
     {
-        // REVIEW alexeyk: how to test batches > 512? cuDNN does not support that so there is no baseline.
-        for (size_t n : {6, 13, 62, 512})
-        //for (size_t n : {8})
+        for (size_t c : {1})
         {
-            for (size_t c : {1})
+            for (size_t h : {1})
             {
-                for (size_t h : {1})
+                for (size_t w : {6, 17, 126, 2048})
                 {
-                    for (size_t w : {6, 17, 126, 2048})
-                    //for (size_t w : {8})
-                    {
-                        res.push_back(std::make_tuple(std::move(fact.CreateTensor(w, h, c, n)), spatial));
-                    }
+                    res.push_back(std::make_tuple(std::move(fact.CreateTensor(w, h, c, n)), false));
                 }
             }
         }
     }
+    // Spatial
+    for (size_t n : {2, 11, 64})
+    {
+        for (size_t c : {2, 13, 32})
+        {
+            for (size_t h : {2, 11, 16})
+            {
+                for (size_t w : {2, 11, 16})
+                {
+                    res.push_back(std::make_tuple(std::move(fact.CreateTensor(w, h, c, n)), true));
+                }
+            }
+        }
+    }
+    // For perf testing (similar to first layers of ResNet).
+    res.push_back(std::make_tuple(std::move(fact.CreateTensor(56, 56, 64, 64)), true));
+    // Next test will fail in cuDNN due to bug we discovered (and reported to NVIDIA).
+    //res.push_back(std::make_tuple(std::move(fact.CreateTensor(2, 2, 2048, 2)), true));
+    res.push_back(std::make_tuple(std::move(fact.CreateTensor(2, 2, 2048, 64)), true));
+
+    //res.push_back(std::make_tuple(std::move(fact.CreateTensor(2, 2, 2, 8)), true));
+
     return res;
 }
 
@@ -711,7 +729,7 @@ BOOST_AUTO_TEST_CASE(BatchNormalizationForwardTrain)
             time2.Stop();
 
             std::stringstream tmsg;
-            tmsg << "tensor: (w = " << t.w() << ", h = " << t.h() << ", c = " << t.c() << ", n = " << t.n() << ")";
+            tmsg << "tensor: (w = " << t.w() << ", h = " << t.h() << ", c = " << t.c() << ", n = " << t.n() << ", spatial = " << (spatial ? "true" : "false") << ")";
             std::string msg = " are not equal, " + tmsg.str();
             std::string msgNan = " has NaNs, " + tmsg.str();
             std::string msgNotNan = " has buffer overflow/underflow, " + tmsg.str();
@@ -721,7 +739,7 @@ BOOST_AUTO_TEST_CASE(BatchNormalizationForwardTrain)
             std::string emsg;
 
             BOOST_REQUIRE_MESSAGE(!out.HasNan("out"), "out" << msgNan);
-            BOOST_REQUIRE_MESSAGE(CheckEqual(out, outExp, emsg, relErr, absErr * 10), "out" << msg << ". " << emsg);
+            BOOST_REQUIRE_MESSAGE(CheckEqual(out, outExp, emsg, relErr, absErr * 20), "out" << msg << ". " << emsg);
             BOOST_REQUIRE_MESSAGE(CountNans(outBuf) == crow * 2 * ccol, "out" << msgNotNan);
             // REVIEW alexeyk: add cases for testing numerical stability.
 
@@ -743,12 +761,13 @@ BOOST_AUTO_TEST_CASE(BatchNormalizationForwardTrain)
             float elapsedCntk = time1.Elapsed();
             float elapsedCudnn = time2.Elapsed();
             // Check performance. Current version of cuDNN (v4 RC) is significanlty slower than CNTK implementation.
-            // For optimal cases (vectorSize % 4 == 0), CNTK implementation can be >5x faster than cuDNN.
-            if (crow >= 128 && ccol >= 32)
+            // For optimal cases (vectorSize % 32 == 0 and batchSize % 32 == 0), CNTK implementation can be >5x faster than cuDNN.
+            if (crow >= 32 && ccol >= 32)
             {
                 // Use conservative estimates.
-                BOOST_REQUIRE_MESSAGE(2 * elapsedCntk < elapsedCudnn,
-                                      "CNTK implementation (" << elapsedCntk << "ms) must be faster than cuDNN (" << elapsedCudnn << "ms) by at least 2x, what's changed? " << tmsg.str());
+                int speedup = 2;
+                BOOST_REQUIRE_MESSAGE(speedup * elapsedCntk < elapsedCudnn,
+                                      "CNTK implementation (" << elapsedCntk << "ms) must be faster than cuDNN (" << elapsedCudnn << "ms) by at least " << speedup << "x, what's changed? " << tmsg.str());
             }
 #endif
         }
@@ -825,7 +844,7 @@ BOOST_AUTO_TEST_CASE(BatchNormalizationBackward)
             time2.Stop();
 
             std::stringstream tmsg;
-            tmsg << "tensor: (w = " << t.w() << ", h = " << t.h() << ", c = " << t.c() << ", n = " << t.n() << ")";
+            tmsg << "tensor: (w = " << t.w() << ", h = " << t.h() << ", c = " << t.c() << ", n = " << t.n() << ", spatial = " << (spatial ? "true" : "false") << ")";
             std::string msg = " are not equal, " + tmsg.str();
             std::string msgNan = " has NaNs, " + tmsg.str();
             std::string msgNotNan = " has buffer overflow/underflow, " + tmsg.str();
@@ -835,30 +854,27 @@ BOOST_AUTO_TEST_CASE(BatchNormalizationBackward)
             std::string emsg;
 
             BOOST_REQUIRE_MESSAGE(!dx.HasNan("dx"), "dx" << msgNan);
-            auto p1 = dx.CopyToArray();
-            auto p2 = dxExp.CopyToArray();
-            BOOST_REQUIRE_MESSAGE(CheckEqual(dx, dxExp, emsg, relErr * 10, absErr * 10), "dx" << msg << ". " << emsg);
+            BOOST_REQUIRE_MESSAGE(CheckEqual(dx, dxExp, emsg, relErr * 16, absErr * 8), "dx" << msg << ". " << emsg);
             BOOST_REQUIRE_MESSAGE(CountNans(dxBuf) == crow * 2 * ccol, "out" << msgNotNan);
             // REVIEW alexeyk: add cases for testing numerical stability.
 
             BOOST_REQUIRE_MESSAGE(!dScale.HasNan("dScale"), "dScale" << msgNan);
-            BOOST_REQUIRE_MESSAGE(CheckEqual(dScale, dScaleExp, emsg, relErr * 10, absErr * 20), "dScale" << msg << ". " << emsg);
+            BOOST_REQUIRE_MESSAGE(CheckEqual(dScale, dScaleExp, emsg, relErr * 32, absErr * 8), "dScale" << msg << ". " << emsg);
             BOOST_REQUIRE_MESSAGE(CountNans(dScaleBuf) == crowScaleBias * 2, "dScale" << msgNotNan);
 
             BOOST_REQUIRE_MESSAGE(!dBias.HasNan("dBias"), "dBias" << msgNan);
-            BOOST_REQUIRE_MESSAGE(CheckEqual(dBias, dBiasExp, emsg, relErr * 50, absErr * 10), "dBias" << msg << ". " << emsg);
+            BOOST_REQUIRE_MESSAGE(CheckEqual(dBias, dBiasExp, emsg, relErr * 32, absErr * 8), "dBias" << msg << ". " << emsg);
             BOOST_REQUIRE_MESSAGE(CountNans(dBiasBuf) == crowScaleBias * 2, "dBias" << msgNotNan);
-            UNUSED(p1);UNUSED(p2);
 
 #ifndef _DEBUG
             float elapsedCntk = time1.Elapsed();
             float elapsedCudnn = time2.Elapsed();
             // Check performance. Current version of cuDNN (v4 RC) is significanlty slower than CNTK implementation.
-            // For optimal cases (vectorSize % 4 == 0), CNTK implementation can be >5x faster than cuDNN.
-            if (crow >= 128 && ccol >= 32)
+            // For optimal cases (vectorSize % 32 == 0 and batchSize % 32 == 0), CNTK implementation can be >5x faster than cuDNN.
+            if (crow >= 32 && ccol >= 32)
             {
                 // Use conservative estimates.
-                int speedup = 2;
+                int speedup = 1;
                 BOOST_REQUIRE_MESSAGE(speedup * elapsedCntk < elapsedCudnn,
                                       "CNTK implementation (" << elapsedCntk << "ms) must be faster than cuDNN (" << elapsedCudnn << "ms) by at least " << speedup << "x, what's changed? " << tmsg.str());
             }

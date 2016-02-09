@@ -393,6 +393,7 @@ public:
         assert(inT.n() == in.GetNumCols());
         assert(saveMean.GetNumElements() >= runMean.GetNumElements());
         assert(saveInvStdDev.GetNumElements() >= runInvStdDev.GetNumElements());
+        UNUSED(crowIn);
 
         if (m_bnImpl == BatchNormImpl::CuDnn)
         {
@@ -403,13 +404,8 @@ public:
         }
         else if (m_bnImpl == BatchNormImpl::Cntk)
         {
-            if (spatial)
-                assert(false);
-            else
-            {
-                CUDA_CALL(BatchNormalizationForwardTraining(crowIn, inT.n(), ptr(in), ptr(out), ptr(scale), ptr(bias),
-                                                            CUDNN_BN_MIN_EPSILON, ptr(saveMean), ptr(saveInvStdDev), m_stream));
-            }
+            CUDA_CALL(BatchNormalizationForwardTraining(inT, spatial, ptr(in), ptr(out), ptr(scale), ptr(bias),
+                                                        CUDNN_BN_MIN_EPSILON, ptr(saveMean), ptr(saveInvStdDev), m_stream));
         }
         else
             RuntimeError("Provided batch norm implementation (%d) is not supported.", m_bnImpl);
@@ -474,6 +470,7 @@ public:
         assert(scaleGrad.GetNumCols() == scale.GetNumCols());
         assert(biasGrad.GetNumRows() == scale.GetNumRows());
         assert(biasGrad.GetNumCols() == scale.GetNumCols());
+        UNUSED(crowIn);
 
         if (m_bnImpl == BatchNormImpl::CuDnn)
         {
@@ -483,13 +480,8 @@ public:
         }
         else if (m_bnImpl == BatchNormImpl::Cntk)
         {
-            if (spatial)
-                assert(false);
-            else
-            {
-                CUDA_CALL(BatchNormalizationBackward(crowIn, inT.n(), ptr(in), ptr(srcGrad), ptr(grad), ptr(scale), ptr(scaleGrad), ptr(biasGrad),
-                                                     ptr(saveMean), ptr(saveInvStdDev), m_stream));
-            }
+            CUDA_CALL(BatchNormalizationBackward(inT, spatial, ptr(in), ptr(srcGrad), ptr(grad), ptr(scale), ptr(scaleGrad), ptr(biasGrad),
+                                                 ptr(saveMean), ptr(saveInvStdDev), m_stream));
         }
         else
             RuntimeError("Provided batch norm implementation (%d) is not supported.", m_bnImpl);
