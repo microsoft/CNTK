@@ -1034,51 +1034,38 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
         // aggregation by model averaging
         if (useModelAveraging)
         {
-            // Determine if any samples were processed across any of the ranks
-            if (useDistributedMBReading)
+            if (nSamplesSinceLastModelSync > m_nFramesBetweenMASync && g_mpi->NumNodesInUse() > 1 )
             {
-                std::array<int, 1> numNodesWithDataToProcess;
-                numNodesWithDataToProcess[0] = wasDataRead ? 1 : 0;
-                g_mpi->AllReduce(numNodesWithDataToProcess);
-
-                if (numNodesWithDataToProcess[0] == 0)
-                    noMoreSamplesToProcess = true;
-            }
-
-            if (g_mpi->NumNodesInUse() > 1)
-            {
-                if (nSamplesSinceLastModelSync > m_nFramesBetweenMASync && g_mpi->NumNodesInUse() > 1)
+                bool ready2Sync = g_mpi->OnArriveAtSyncPoint();
+                if (ready2Sync)
                 {
-                    bool ready2Sync = g_mpi->OnArriveAtSyncPoint(); 
-                    if (ready2Sync)
+                    size_t processedSamples = 0;
+                    float secondsSinceLastSyncFinished = 0;
+                    float secondsSpentOnSync = 0;
+                    ModelAveragingProcessing(
+                        nSamplesSinceLastModelSync,        /* in */
+                        learnableNodes,                    /* in/out*/
+                        smoothedGradients,                 /* in/out*/
+                        processedSamples,                  /* out */
+                        secondsSinceLastSyncFinished,      /* out */
+                        secondsSpentOnSync                 /* out */
+                        );
+                    nSamplesSinceLastModelSync = 0;
+                    nSynced++;
+                    nSecondsOnMASync += secondsSpentOnSync;
+                    nSecondsSinceLastMAPerfReport += secondsSinceLastSyncFinished;
+                    if (m_syncStatsTrace > 0)
                     {
-                        size_t processedSamples = 0;
-                        float secondsSinceLastSyncFinished = 0;
-                        float secondsSpentOnSync = 0;
-                        ModelAveragingProcessing(
-                                nSamplesSinceLastModelSync,        /* in */
-                                learnableNodes,                    /* in/out*/
-                                smoothedGradients,                 /* in/out*/
-                                processedSamples,                  /* out */
-                                secondsSinceLastSyncFinished,      /* out */
-                                secondsSpentOnSync                 /* out */
-                       );    
-                       nSamplesSinceLastModelSync = 0; 
-                       nSynced++; 
-                       nSecondsOnMASync += secondsSpentOnSync;
-                       nSecondsSinceLastMAPerfReport += secondsSinceLastSyncFinished;
-                       if (m_syncStatsTrace > 0)
-                       {
-                           if (nSynced % m_syncStatsTrace == 0)
-                           {
-                               fprintf(stderr, "\t\t-----(model averaging stats) %d-th sync, %8.2f seconds since last report, %5.2f seconds on communication\n",
-                                   (int)nSynced, nSecondsSinceLastMAPerfReport, nSecondsOnMASync);
-                               nSecondsOnMASync = 0;
-                               nSecondsSinceLastMAPerfReport = 0;
-                           }
-                       }
+                        if (nSynced % m_syncStatsTrace == 0)
+                        {
+                            fprintf(stderr, "\t\t-----(model averaging stats) %d-th sync, %8.2f seconds since last report, %5.2f seconds on communication\n",
+                                (int)nSynced, nSecondsSinceLastMAPerfReport, nSecondsOnMASync);
+                            nSecondsOnMASync = 0;
+                            nSecondsSinceLastMAPerfReport = 0;
+                        }
                     }
                 }
+
                 // preparing break conditions 
                 if (useDistributedMBReading)
                 {
