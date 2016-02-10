@@ -1354,6 +1354,7 @@ class ssematrix : public ssematrixbase
             return pv;
         failed(nbytes * sizeof(T));
     }
+    template <typename T>
     static void delete_sse(void *p)
     {
         if (p)
@@ -1364,15 +1365,16 @@ class ssematrix : public ssematrixbase
     template <typename T>
     static T *new_sse(size_t nbytes)
     {
-        T *pv = (T *) _mm_malloc(nbytes * sizeof(T), 16);
+        T *pv = new T[nbytes];
         if (pv)
             return pv;
         failed(nbytes * sizeof(T));
     }
+    template <typename T>
     static void delete_sse(void *p)
     {
         if (p)
-            _mm_free(p);
+            delete[] (T*)p;
     }
 #endif
 
@@ -1435,7 +1437,7 @@ public:
     // destructor
     ~ssematrix()
     {
-        delete_sse(this->p);
+        delete_sse<float>(this->p);
     }
 
     // assignment
@@ -1451,7 +1453,7 @@ public:
     }
     ssematrix &operator=(ssematrix &&other)
     {
-        delete_sse(this->p);
+        delete_sse<float>(this->p);
         move(other);
         return *this;
     }
@@ -1472,7 +1474,7 @@ public:
         // fprintf (stderr, "resize (%d, %d) allocating %d elements\n", n, m, totalelem);
         float *pnew = totalelem > 0 ? new_sse<float>(totalelem) : NULL;
         std::swap(this->p, pnew);
-        delete_sse(pnew); // pnew is now the old p
+        delete_sse<float>(pnew); // pnew is now the old p
         this->numrows = n;
         this->numcols = m;
         this->colstride = newcolstride;
