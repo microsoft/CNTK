@@ -71,7 +71,7 @@ static bool CheckEqual(const Matrix<T>& result, const Matrix<T>& reference, std:
         float b = ref[badIndex];
         std::stringstream ss;
         ss << count << " mismatch" << (count > 1 ? "es" : "") << ", first mismatch at " << badIndex << ", " << a << " != " << b
-            << ", rel = " << std::abs(a - b) << ", abs = " << (std::abs(a - b) / std::max(std::abs(a), std::abs(b)));
+            << ", rel = " << (std::abs(a - b) / std::max(std::abs(a), std::abs(b))) << ", abs = " << std::abs(a - b);
         msg = ss.str();
     }
     return count == 0;
