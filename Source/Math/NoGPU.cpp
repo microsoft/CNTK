@@ -2173,9 +2173,22 @@ bool CuDnnConvolutionEngineFactory<ElemType>::IsSupported(DEVICEID_TYPE)
 
 template class CuDnnConvolutionEngineFactory<float>;
 template class CuDnnConvolutionEngineFactory<double>;
+
+CudaTimer::~CudaTimer()
+{
 }
+void CudaTimer::Start()
+{
 }
+void CudaTimer::Stop()
+{
 }
+float CudaTimer::Elapsed()
+{
+    return 0;
+}
+
+} } }
 
 // define a dummy GPUWatcher class too
 #include "GPUWatcher.h"

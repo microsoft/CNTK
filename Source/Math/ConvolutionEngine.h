@@ -290,7 +290,7 @@ public:
     PoolingEngine& operator=(PoolingEngine&&) = delete;
 };
 
-// REVIEW alexeyk: this is a temporary hack until we find a better place for poor BatchNorm.
+// REVIEW alexeyk: this is a temporary hack until we find a better place for the BatchNorm engine(s).
 enum class BatchNormImpl
 {
     CuDnn,

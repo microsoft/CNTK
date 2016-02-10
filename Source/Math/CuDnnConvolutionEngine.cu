@@ -38,6 +38,13 @@ bool CuDnnConvolutionEngineFactory<ElemType>::IsSupported(DEVICEID_TYPE deviceId
 #endif
 }
 
+CudaTimer::~CudaTimer()
+{
+    if (m_start != nullptr)
+        CUDA_CALL(cudaEventDestroy(reinterpret_cast<cudaEvent_t>(m_start)));
+    if (m_stop != nullptr)
+        CUDA_CALL(cudaEventDestroy(reinterpret_cast<cudaEvent_t>(m_stop)));
+}
 void CudaTimer::Start()
 {
     cudaEvent_t start;
@@ -394,7 +401,9 @@ public:
         assert(inT.n() == in.GetNumCols());
         assert(saveMean.GetNumElements() >= runMean.GetNumElements());
         assert(saveInvStdDev.GetNumElements() >= runInvStdDev.GetNumElements());
-        UNUSED(crowIn);
+#ifndef _DEBUG
+        UNUSED(crowIn); // crowIn used only in asserts.
+#endif
 
         if (m_bnImpl == BatchNormImpl::CuDnn)
         {
@@ -443,7 +452,9 @@ public:
         assert(inT.n() == in.GetNumCols());
         assert(runMean.GetNumCols() == 1);
         assert(runInvStdDev.GetNumCols() == 1);
-        UNUSED(crowIn);
+#ifndef _DEBUG
+        UNUSED(crowIn); // crowIn used only in asserts.
+#endif
 
         cudnnBatchNormMode_t mode = spatial ? CUDNN_BATCHNORM_SPATIAL : CUDNN_BATCHNORM_PER_ACTIVATION;
         CUDNN_CALL(cudnnBatchNormalizationForwardInference(m_cudnn, mode, &C::One, &C::Zero, t(inT), ptr(in), t(inT), ptr(out),
@@ -476,7 +487,9 @@ public:
         assert(scaleGrad.GetNumCols() == scale.GetNumCols());
         assert(biasGrad.GetNumRows() == scale.GetNumRows());
         assert(biasGrad.GetNumCols() == scale.GetNumCols());
-        UNUSED(crowIn);
+#ifndef _DEBUG
+        UNUSED(crowIn); // crowIn used only in asserts.
+#endif
 
         if (m_bnImpl == BatchNormImpl::CuDnn)
         {
