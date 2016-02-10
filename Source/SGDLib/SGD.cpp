@@ -1065,12 +1065,11 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                         }
                     }
                 }
-
-                // preparing break conditions 
-                if (useDistributedMBReading)
-                {
-                    noMoreSamplesToProcess = !wasDataRead;
-                }
+            }
+            // preparing break conditions 
+            if (useDistributedMBReading)
+            {
+                noMoreSamplesToProcess = !wasDataRead;
             }
         }
 
