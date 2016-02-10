@@ -5,7 +5,6 @@
 
 #pragma once
 
-#include <device_launch_parameters.h>
 #ifdef _MSC_VER
 #pragma warning(push)
 #pragma warning(disable : 4100)
@@ -106,6 +105,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         v.z = src[2];
         v.w = src[3];
         *(reinterpret_cast<float4*>(dst)) = v;
+    }
+
+    template <typename T>
+    __device__ __forceinline__ T Shuffle(T input, int srcLane)
+    {
+        // shfl is supported only on Kepler+. We really don't care about Fermi anymore but our build still has sm_20.
+#if __CUDA_ARCH__ >= 300
+        return cub::ShuffleIndex(input, srcLane);
+#else
+        assert(false);
+        return input;
+#endif
     }
 
     struct Operations
@@ -217,16 +228,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             for (int i = 1; i < CUB_PTX_WARP_THREADS / BlockDimX; i *= 2)
             {
                 int srcLane = laneId + BlockDimX * i;
-                int n2 = cub::ShuffleIndex(n, srcLane);
+                int n2 = Shuffle(n, srcLane);
                 int nsum = n + n2;
                 T d[U];
 #pragma unroll
                 for (int k = 0; k < U; k++)
                 {
-                    d[k] = cub::ShuffleIndex(mean[k], srcLane) - mean[k];
+                    d[k] = Shuffle(mean[k], srcLane) - mean[k];
                     T dScaled = d[k] * n2 / nsum;
                     mean[k] += dScaled;
-                    m2[k] += cub::ShuffleIndex(m2[k], srcLane) + d[k] * n * dScaled;
+                    m2[k] += Shuffle(m2[k], srcLane) + d[k] * n * dScaled;
                 }
                 n = nsum;
             }
@@ -357,16 +368,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             for (int i = 1; i < CUB_PTX_WARP_THREADS; i *= 2)
             {
                 int srcLane = laneId + i;
-                int n2 = cub::ShuffleIndex(n, srcLane);
+                int n2 = Shuffle(n, srcLane);
                 int nsum = n + n2;
                 T d[U];
 #pragma unroll
                 for (int k = 0; k < U; k++)
                 {
-                    d[k] = cub::ShuffleIndex(mean[k], srcLane) - mean[k];
+                    d[k] = Shuffle(mean[k], srcLane) - mean[k];
                     T dScaled = d[k] * n2 / nsum;
                     mean[k] += dScaled;
-                    m2[k] += cub::ShuffleIndex(m2[k], srcLane) + d[k] * n * dScaled;
+                    m2[k] += Shuffle(m2[k], srcLane) + d[k] * n * dScaled;
                 }
                 n = nsum;
             }

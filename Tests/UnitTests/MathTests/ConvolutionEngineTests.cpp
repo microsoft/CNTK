@@ -658,6 +658,9 @@ BOOST_AUTO_TEST_SUITE(BatchNormalizationSuite)
 
 BOOST_AUTO_TEST_CASE(BatchNormalizationForwardTrain)
 {
+    if (!IsCuDnnSupported())
+        return;
+
     std::mt19937 rng(0);
     std::normal_distribution<float> nd;
 
@@ -779,6 +782,9 @@ BOOST_AUTO_TEST_CASE(BatchNormalizationForwardTrain)
 
 BOOST_AUTO_TEST_CASE(BatchNormalizationBackward)
 {
+    if (!IsCuDnnSupported())
+        return;
+
     std::mt19937 rng(0);
     std::normal_distribution<float> nd;
 
