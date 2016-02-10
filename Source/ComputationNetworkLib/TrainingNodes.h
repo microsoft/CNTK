@@ -1787,7 +1787,10 @@ public:
         {
             if (m_spatial && m_imageLayoutKind != CHW)
             {
-                InvalidArgument("Batch normalization currently supports only cuDNN (CHW) format. Please specify imageLayout=\"cudnn\" in BatchNormalization node in your NDL/BrainScript.");
+                InvalidArgument(
+                    "Batch normalization currently supports only cuDNN (CHW) data layout." 
+                    "Please specify imageLayout=\"cudnn\" in BatchNormalization node in your NDL/BrainScript "
+                    "and make sure your input data layout is CHW");
             }
 
             auto shape = GetSampleLayout();

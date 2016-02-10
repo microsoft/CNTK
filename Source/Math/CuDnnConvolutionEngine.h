@@ -39,15 +39,22 @@ public:
     static bool IsSupported(DEVICEID_TYPE deviceId);
 };
 
+// REVIEW alexeyk: wrong place.
 class MATH_API CudaTimer
 {
 public:
     CudaTimer(): m_start(nullptr), m_stop(nullptr)
     {
     }
+    ~CudaTimer();
     void Start();
     void Stop();
     float Elapsed();
+
+    CudaTimer(const CudaTimer& src) = delete;
+    CudaTimer& operator=(const CudaTimer& src) = delete;
+    CudaTimer(CudaTimer&& src) = delete;
+    CudaTimer& operator=(CudaTimer&& src) = delete;
 private:
     void* m_start;
     void* m_stop;
