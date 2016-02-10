@@ -1343,7 +1343,7 @@ class ssematrix : public ssematrixbase
     // helpers for SSE-compatible memory allocation
     static __declspec_noreturn void failed(size_t nbytes)
     {
-        RuntimeError("allocation of SSE vector failed (%d bytes)", nbytes);
+        RuntimeError("allocation of SSE vector failed (%d bytes)", (int)nbytes);
     }
 #ifdef _WIN32
     template <typename T>
