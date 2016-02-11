@@ -839,6 +839,11 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "RNN", "RNN", "{B72C5B0E-38E
 		Tests\EndToEndTests\Examples\Text\PennTreebank\RNN\testcases.yml = Tests\EndToEndTests\Examples\Text\PennTreebank\RNN\testcases.yml
 	EndProjectSection
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "TextReader", "Source\Readers\TextReader\TextReader.vcxproj", "{91973E60-A7BE-4C86-8FDB-59C88A0B3715}"
+	ProjectSection(ProjectDependencies) = postProject
+		{F0A9637C-20DA-42F0-83D4-23B4704DE602} = {F0A9637C-20DA-42F0-83D4-23B4704DE602}
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug_CpuOnly|x64 = Debug_CpuOnly|x64
@@ -1037,6 +1042,14 @@ Global
 		{9BD0A711-0BBD-45B6-B81C-053F03C26CFB}.Release_CpuOnly|x64.Build.0 = Release_CpuOnly|x64
 		{9BD0A711-0BBD-45B6-B81C-053F03C26CFB}.Release|x64.ActiveCfg = Release|x64
 		{9BD0A711-0BBD-45B6-B81C-053F03C26CFB}.Release|x64.Build.0 = Release|x64
+		{91973E60-A7BE-4C86-8FDB-59C88A0B3715}.Debug_CpuOnly|x64.ActiveCfg = Debug_CpuOnly|x64
+		{91973E60-A7BE-4C86-8FDB-59C88A0B3715}.Debug_CpuOnly|x64.Build.0 = Debug_CpuOnly|x64
+		{91973E60-A7BE-4C86-8FDB-59C88A0B3715}.Debug|x64.ActiveCfg = Debug|x64
+		{91973E60-A7BE-4C86-8FDB-59C88A0B3715}.Debug|x64.Build.0 = Debug|x64
+		{91973E60-A7BE-4C86-8FDB-59C88A0B3715}.Release_CpuOnly|x64.ActiveCfg = Release_CpuOnly|x64
+		{91973E60-A7BE-4C86-8FDB-59C88A0B3715}.Release_CpuOnly|x64.Build.0 = Release_CpuOnly|x64
+		{91973E60-A7BE-4C86-8FDB-59C88A0B3715}.Release|x64.ActiveCfg = Release|x64
+		{91973E60-A7BE-4C86-8FDB-59C88A0B3715}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -1149,5 +1162,6 @@ Global
 		{9F1F9C7C-2CC3-410C-ACDC-988B12D6AC14} = {AC7BA8D3-B4C8-42A4-8507-B359BB6D49E8}
 		{A3231EF2-DED1-4638-B0A2-5F87C484CA92} = {439BE0E0-FABE-403D-BF2C-A41FB8A60616}
 		{B72C5B0E-38E8-41BF-91FE-0C1012C7C078} = {A3231EF2-DED1-4638-B0A2-5F87C484CA92}
+		{91973E60-A7BE-4C86-8FDB-59C88A0B3715} = {33EBFE78-A1A8-4961-8938-92A271941F94}
 	EndGlobalSection
 EndGlobal
