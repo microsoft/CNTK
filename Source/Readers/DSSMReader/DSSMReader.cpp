@@ -197,11 +197,11 @@ void DSSMReader<ElemType>::InitFromConfig(const ConfigRecordType& readerConfig)
     }
 
     std::string minibatchMode(readerConfig(L"minibatchMode", "Partial"));
-    m_partialMinibatch = !_stricmp(minibatchMode.c_str(), "Partial");
+    m_partialMinibatch = EqualCI(minibatchMode, "Partial");
 
     // Get the config parameters for query feature and doc feature
     ConfigParameters configFeaturesQuery = readerConfig(m_featuresNameQuery, "");
-    ConfigParameters configFeaturesDoc = readerConfig(m_featuresNameDoc, "");
+    ConfigParameters configFeaturesDoc   = readerConfig(m_featuresNameDoc, "");
 
     if (configFeaturesQuery.size() == 0)
         RuntimeError("features file not found, required in configuration: i.e. 'features=[file=c:\\myfile.txt;start=1;dim=123]'");
@@ -211,7 +211,7 @@ void DSSMReader<ElemType>::InitFromConfig(const ConfigRecordType& readerConfig)
     // Read in feature size information
     // This information will be used to handle OOVs
     m_featuresDimQuery = configFeaturesQuery(L"dim");
-    m_featuresDimDoc = configFeaturesDoc(L"dim");
+    m_featuresDimDoc   = configFeaturesDoc(L"dim");
 
     std::wstring fileQ = configFeaturesQuery("file");
     std::wstring fileD = configFeaturesDoc("file");

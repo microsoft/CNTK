@@ -335,7 +335,7 @@ public:
                     if (seqPos)
                     {
                         SequencePosition sequencePos(numbers->size(), labels->size(),
-                                                     m_beginSequence ? seqFlagStartLabel : 0 | m_endSequence ? seqFlagStopLabel : 0 | seqFlagLineBreak);
+                                                     (m_beginSequence ? seqFlagStartLabel : 0) | (m_endSequence ? seqFlagStopLabel : 0) | seqFlagLineBreak);
                         // add a sequence element to the list
                         seqPos->push_back(sequencePos);
                         sequencePositionLast = sequencePos;

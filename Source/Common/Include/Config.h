@@ -1158,7 +1158,7 @@ public:
     bool Match(const std::string& key, const std::string& compareValue) const
     {
         std::string value = Find(key);
-        return !_stricmp(compareValue.c_str(), value.c_str());
+        return EqualCI(compareValue, value);
     }
     bool Match(const std::wstring& key, const std::wstring& compareValue) const
     {

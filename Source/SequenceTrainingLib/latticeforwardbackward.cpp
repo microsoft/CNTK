@@ -906,14 +906,11 @@ void lattice::forwardbackwardalign(parallelstate &parallelstate,
         size_t ts, te, t;
         ts = te = 0;
 
-        aligninfo *refinfo;
-        unsigned short *refalign;
+        vector<aligninfo> refinfo(1);
+        vector<unsigned short> refalign(framenum);
 
-        refinfo = (aligninfo *) malloc(sizeof(aligninfo) * 1);
-        refalign = (unsigned short *) malloc(sizeof(unsigned short) * framenum);
-
-        array_ref<aligninfo> refunits(refinfo, 1);
-        array_ref<unsigned short> refedgealignmentsj(refalign, framenum);
+        array_ref<aligninfo> refunits(refinfo.data(), 1);
+        array_ref<unsigned short> refedgealignmentsj(refalign.data(), framenum);
 
         while (te < framenum)
         {
@@ -941,9 +938,6 @@ void lattice::forwardbackwardalign(parallelstate &parallelstate,
             }
             ts = te;
         }
-
-        free(refinfo);
-        free(refalign);
     }
 
     // Phase 4: alignment or forwardbackward on CPU for non parallel mode or verification

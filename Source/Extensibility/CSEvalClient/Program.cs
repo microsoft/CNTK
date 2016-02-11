@@ -106,7 +106,7 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
         static string GetConfig()
         {
             string configFilePath = Path.Combine(Environment.CurrentDirectory,
-                    @"..\Config\01_OneHidden.config");
+                    @"..\Config\01_OneHidden.cntk");
 
             var lines = System.IO.File.ReadAllLines(configFilePath);
             return string.Join("\n", lines);

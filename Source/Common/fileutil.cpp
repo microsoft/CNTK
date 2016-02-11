@@ -407,20 +407,12 @@ void fprintfOrDie(FILE* f, const char* fmt, ...)
 #pragma warning(pop)
 
 // ----------------------------------------------------------------------------
-// fflushOrDie(): like fflush() but terminate with err msg in case of error
+// fsyncOrDie(): like fsync() but terminate with err msg in case of error
 // ----------------------------------------------------------------------------
 
-void fflushOrDie(FILE* f)
+void fsyncOrDie(FILE* f)
 {
-    int rc = fflush(f);
-
-    if (rc != 0)
-    {
-        RuntimeError("error flushing to file: %s", strerror(errno));
-    }
-
     int fd = fileno(f);
-
     if (fd == -1)
     {
         RuntimeError("unable to convert file handle to file descriptor: %s", strerror(errno));
@@ -433,13 +425,25 @@ void fflushOrDie(FILE* f)
         RuntimeError("error syncing to file: %d", (int) ::GetLastError());
     }
 #else
-    rc = fsync(fd);
-
+    int rc = fsync(fd);
     if (rc != 0)
     {
         RuntimeError("error syncing to file: %s", strerror(errno));
     }
 #endif
+}
+
+// ----------------------------------------------------------------------------
+// fflushOrDie(): like fflush() but terminate with err msg in case of error
+// ----------------------------------------------------------------------------
+
+void fflushOrDie(FILE* f)
+{
+    int rc = fflush(f);
+    if (rc != 0)
+    {
+        RuntimeError("error flushing to file: %s", strerror(errno));
+    }
 }
 
 // ----------------------------------------------------------------------------
@@ -599,6 +603,10 @@ void renameOrDie(const std::string& from, const std::string& to)
     if (!MoveFileA(from.c_str(), to.c_str()))
         RuntimeError("error renaming file '%s': %d", from.c_str(), GetLastError());
 #else
+    // Delete destination file if it exists
+    // WORKAROUND: "rename" should do this but this is a workaround
+    // to the HDFS FUSE implementation's bug of failing to do so
+    unlinkOrDie(to);
     if (rename(from.c_str(), to.c_str()) != 0)
         RuntimeError("error renaming file '%s': %s", from.c_str(), strerror(errno));
 #endif
@@ -871,12 +879,12 @@ string fgetstring(FILE* f)
     string res;
     for (;;)
     {
-        char c = (char) fgetc(f);
+        int c = fgetc(f);
         if (c == EOF)
             RuntimeError("error reading string or missing 0: %s", strerror(errno));
         if (c == 0)
             break;
-        res.push_back(c);
+        res.push_back((char) c);
     }
     return res;
 }

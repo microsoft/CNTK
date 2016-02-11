@@ -48,6 +48,11 @@ namespace msra { namespace lm {
 }
 }
 
+namespace msra { namespace asr {
+    /*static*/ std::unordered_map<std::wstring, unsigned int> htkfeatreader::parsedpath::archivePathStringMap;
+    /*static*/ std::vector<std::wstring> htkfeatreader::parsedpath::archivePathStringVector;
+}}
+
 namespace Microsoft { namespace MSR { namespace CNTK {
 
 // Create a Data Reader
@@ -158,7 +163,7 @@ void HTKMLFReader<ElemType>::PrepareForTrainingOrTesting(const ConfigRecordType&
         m_featDims[i] = m_featDims[i] * (1 + numContextLeft[i] + numContextRight[i]);
 
         wstring type = thisFeature(L"type", L"real");
-        if (!_wcsicmp(type.c_str(), L"real"))
+        if (EqualCI(type, L"real"))
         {
             m_nameToTypeMap[featureNames[i]] = InputOutputTypes::real;
         }
@@ -194,7 +199,7 @@ void HTKMLFReader<ElemType>::PrepareForTrainingOrTesting(const ConfigRecordType&
         else
             type = (const wstring&) thisLabel(L"type", L"category"); // outputs should default to category
 
-        if (!_wcsicmp(type.c_str(), L"category"))
+        if (EqualCI(type, L"category"))
             m_nameToTypeMap[labelNames[i]] = InputOutputTypes::category;
         else
             InvalidArgument("label type must be 'category'");
@@ -289,12 +294,9 @@ void HTKMLFReader<ElemType>::PrepareForTrainingOrTesting(const ConfigRecordType&
     if (readerConfig.Exists(L"randomize"))
     {
         wstring randomizeString = readerConfig.CanBeString(L"randomize") ? readerConfig(L"randomize") : wstring();
-        if (!_wcsicmp(randomizeString.c_str(), L"none"))
-            randomize = randomizeNone;
-        else if (!_wcsicmp(randomizeString.c_str(), L"auto"))
-            randomize = randomizeAuto;
-        else
-            randomize = readerConfig(L"randomize");
+        if      (EqualCI(randomizeString, L"none")) randomize = randomizeNone;
+        else if (EqualCI(randomizeString, L"auto")) randomize = randomizeAuto;
+        else                                        randomize = readerConfig(L"randomize"); // TODO: could this not just be randomizeString?
     }
 
     m_frameMode = readerConfig(L"frameMode", true);
@@ -302,7 +304,7 @@ void HTKMLFReader<ElemType>::PrepareForTrainingOrTesting(const ConfigRecordType&
 
     // determine if we partial minibatches are desired
     wstring minibatchMode(readerConfig(L"minibatchMode", L"partial"));
-    m_partialMinibatch = !_wcsicmp(minibatchMode.c_str(), L"partial");
+    m_partialMinibatch = EqualCI(minibatchMode, L"partial");
 
     // get the read method, defaults to "blockRandomize" other option is "rollingWindow"
     wstring readMethod(readerConfig(L"readMethod", L"blockRandomize"));
@@ -447,7 +449,7 @@ void HTKMLFReader<ElemType>::PrepareForTrainingOrTesting(const ConfigRecordType&
         labelsmulti.push_back(std::move(labels));
     }
 
-    if (!_wcsicmp(readMethod.c_str(), L"blockRandomize"))
+    if (EqualCI(readMethod, L"blockRandomize"))
     {
         // construct all the parameters we don't need, but need to be passed to the constructor...
 
@@ -458,7 +460,7 @@ void HTKMLFReader<ElemType>::PrepareForTrainingOrTesting(const ConfigRecordType&
         m_frameSource.reset(new msra::dbn::minibatchutterancesourcemulti(infilesmulti, labelsmulti, m_featDims, m_labelDims, numContextLeft, numContextRight, randomize, *m_lattices, m_latticeMap, m_frameMode));
         m_frameSource->setverbosity(m_verbosity);
     }
-    else if (!_wcsicmp(readMethod.c_str(), L"rollingWindow"))
+    else if (EqualCI(readMethod, L"rollingWindow"))
     {
         std::wstring pageFilePath;
         std::vector<std::wstring> pagePaths;
@@ -585,7 +587,7 @@ void HTKMLFReader<ElemType>::PrepareForWriting(const ConfigRecordType& readerCon
         realDims[i] = realDims[i] * (1 + numContextLeft[i] + numContextRight[i]);
 
         wstring type = thisFeature(L"type", L"real");
-        if (!_wcsicmp(type.c_str(), L"real"))
+        if (EqualCI(type, L"real"))
         {
             m_nameToTypeMap[featureNames[i]] = InputOutputTypes::real;
         }

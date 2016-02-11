@@ -866,7 +866,7 @@ inline bool IConfigRecord::Match(const std::wstring &id, const std::wstring &com
 {
     auto *valp = Find(id);
     std::wstring val = valp ? *valp : std::wstring();
-    return !_wcsicmp(compareValue.c_str(), val.c_str());
+    return EqualCI(compareValue, val);
 }
 inline const std::string IConfigRecord::ConfigName() const
 {
