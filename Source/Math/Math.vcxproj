@@ -151,7 +151,7 @@
       <PreprocessorDefinitions>CPUONLY;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
-      <DelayLoadDLLs>libacml_mp_dll.dll</DelayLoadDLLs>
+      <DelayLoadDLLs>libacml_dll.dll; libacml_mp_dll.dll</DelayLoadDLLs>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
