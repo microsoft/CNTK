@@ -39,7 +39,9 @@ public:
     static bool IsSupported(DEVICEID_TYPE deviceId);
 };
 
-// REVIEW alexeyk: wrong place.
+// REVIEW alexeyk: wrong place. It is currently used only in unit tests but I can't add it there because of the build issues.
+// Timer that can be used to measure CUDA calls. 
+// Uses CUDA event and will synchronize(!) the stream when Stop is called.
 class MATH_API CudaTimer
 {
 public:

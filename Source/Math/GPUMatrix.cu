@@ -4300,8 +4300,8 @@ void GPUMatrix<ElemType>::CreateCurandObject(unsigned long seed, const char* cal
     if (s_curandGenerator == NULL)
     {
         unsigned long long cudaSeed = (seed == USE_TIME_BASED_SEED) ? time(NULL) : seed;
-        fprintf(stderr, "%s (GPU): creating curand object with seed %llu, sizeof(ElemType)==%lu\n",
-                caller, cudaSeed, sizeof(ElemType));
+        fprintf(stderr, "%s (GPU): creating curand object with seed %llu, sizeof(ElemType)==%u\n",
+                caller, cudaSeed, (unsigned long)sizeof(ElemType));
         s_curandGenerator = new curandGenerator_t;
         // Create pseudo-random number generator
         CURAND_CALL(curandCreateGenerator(&(((curandGenerator_t*) s_curandGenerator)[0]), CURAND_RNG_PSEUDO_XORWOW));
