@@ -114,6 +114,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #if __CUDA_ARCH__ >= 300
         return cub::ShuffleIndex(input, srcLane);
 #else
+        // REVIEW alexeyk: make static_assert once we remove SM 2.0 support from our build.
         assert(false);
         return input;
 #endif
@@ -121,32 +122,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     namespace Operations
     {
-        template <typename T>
-        struct RSqrt
+        __device__ float RSqrt(float a)
         {
-        };
+            // REVIEW alexeyk: rsqrtf is just one MUFU.RSQ instruction so it's faster than
+            // __frsqrt_rn intrinsic which performs round-to-nearest-even rounding which adds ~10 other instructions.
+            // __frsqrt_rn is unbiased rounding though, need to verify whether it is a better choice for BN implementation.
+            //return __frsqrt_rn(a);
+            return rsqrtf(a);
+        }
 
-        template <>
-        struct RSqrt<float>
+        __device__ double RSqrt(double a)
         {
-            __device__ float operator()(float a)
-            {
-                // REVIEW alexeyk: rsqrtf is just one MUFU.RSQ instruction so it's faster than
-                // __frsqrt_rn intrinsic which performs round-to-nearest-even rounding which adds ~10 other instructions.
-                // __frsqrt_rn is unbiased rounding though, need to verify whether it is a better choice for BN implementation.
-                //return __frsqrt_rn(a);
-                return rsqrtf(a);
-            }
-        };
-
-        template <>
-        struct RSqrt<double>
-        {
-            __device__ double operator()(double a)
-            {
-                return rsqrt(a);
-            }
-        };
+            return rsqrt(a);
+        }
     }
 
     // This function is used to select correct unroll factor.
@@ -168,10 +156,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     // The kernel implements online, parallel and numerically stable algorithm 
     // for computing batch mean and variance (here inverse standard deviation) with one pass over the data.
-    // It uses algorithm described in: http://i.stanford.edu/pub/cstr/reports/cs/tr/79/773/CS-TR-79-773.pdf
-    template <int BlockDimX, int BlockDimY, int U, typename T>
-    __global__ void kComputeBatchMeanAndInvStdDev(int vectorSize, int batchSize, const T* x, T* runMean, T* runInvStdDev,
-                                                  double epsilon, T* xMean, T* xInvStdDev)
+    // It uses algorithms by Knuth/Welford and Chan et al (http://i.stanford.edu/pub/cstr/reports/cs/tr/79/773/CS-TR-79-773.pdf)
+    // In short, algorithm has 2 steps:
+    // 1. Each thread strides over the input and computes mean and 
+    //    m2 value (used to compute variance at the end) - Welford algorithm.
+    // 2. Parallel reduction (Chan algorithm) performed by columns (note that 
+    //    thread block and grid X dimensions go along the vector and Y dimension - along the batch).
+    //    As a result, each block has 2 * blockDim.x (mean and inverse stddev) values to write at the end.
+    //    
+    template <int BlockDimX, int BlockDimY, int U, typename ElemType>
+    __global__ void kComputeBatchMeanAndInvStdDev(int vectorSize, int batchSize, const ElemType* x, ElemType* runMean, ElemType* runInvStdDev,
+                                                  double epsilon, ElemType* xMean, ElemType* xInvStdDev)
     {
         static_assert(BlockDimX * U == CUB_PTX_WARP_THREADS, "BlockDimX * U must be equal to warp size (32).");
         static_assert((BlockDimX * BlockDimY % CUB_PTX_WARP_THREADS) == 0, "Block size must be a multiple of warp size (32).");
@@ -189,8 +184,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         assert(irowSrcBase + U <= vectorSize);
 
         int n = 0;
-        T mean[U];
-        T m2[U];
+        ElemType mean[U];
+        ElemType m2[U];
 #pragma unroll
         for (int k = 0; k < U; k++)
         {
@@ -199,18 +194,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         int icolSrc = threadIdx.y;
-        const T* psrc = x + static_cast<size_t>(icolSrc) * vectorSize + irowSrcBase;
+        const ElemType* psrc = x + static_cast<size_t>(icolSrc) * vectorSize + irowSrcBase;
         // Stride over all vectors in the batch.
         for (; icolSrc < batchSize; icolSrc += BlockDimY)
         {
             n++;
-            T curVal[U];
+            ElemType curVal[U];
             LoadValues<U>(psrc, curVal);
             // No need for separate unrolling, SASS looks good.
 #pragma unroll
             for (int k = 0; k < U; k++)
             {
-                T d = curVal[k] - mean[k];
+                ElemType d = curVal[k] - mean[k];
                 // REVIEW alexeyk: we enabled fast CUDA math in CNTK so division below will be approximate, is this a problem?
                 // Using precise math slows down the code by about 40%.
                 mean[k] += d / n;
@@ -230,12 +225,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 int srcLane = laneId + BlockDimX * i;
                 int n2 = Shuffle(n, srcLane);
                 int nsum = n + n2;
-                T d[U];
+                ElemType d[U];
 #pragma unroll
                 for (int k = 0; k < U; k++)
                 {
                     d[k] = Shuffle(mean[k], srcLane) - mean[k];
-                    T dScaled = d[k] * n2 / nsum;
+                    ElemType dScaled = d[k] * n2 / nsum;
                     mean[k] += dScaled;
                     m2[k] += Shuffle(m2[k], srcLane) + d[k] * n * dScaled;
                 }
@@ -246,8 +241,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // Storage for each warp in a thread block. First warp ("accumulator") holds 
         // final results so it does not need shared memory.
         const int cwarp = BlockDimX * BlockDimY / CUB_PTX_WARP_THREADS;
-        __shared__ T meanRes[BlockDimX * U][cwarp - 1];
-        __shared__ T m2Res[BlockDimX * U][cwarp - 1];
+        __shared__ ElemType meanRes[BlockDimX * U][cwarp - 1];
+        __shared__ ElemType m2Res[BlockDimX * U][cwarp - 1];
         __shared__ int nRes[cwarp - 1];
 
         // Each warp (except warp0) will write accumulated results to shared memory.
@@ -266,6 +261,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         __syncthreads();
 
         // Accumulate and write final results.
+        // REVIEW alexeyk: see if atomicAdd can be used instead, do perf comparison.
         if (threadIdx.y == 0)
         {
             // Use simple loop as number of warps is small, 8 at max.
@@ -274,12 +270,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 int n2 = nRes[i];
                 int nsum = n + n2;
-                T d[U];
+                ElemType d[U];
 #pragma unroll
                 for (int k = 0; k < U; k++)
                 {
                     d[k] = meanRes[threadIdx.x * U + k][i] - mean[k];
-                    T dScaled = d[k] * n2 / nsum;
+                    ElemType dScaled = d[k] * n2 / nsum;
                     mean[k] += dScaled;
                     m2[k] += m2Res[threadIdx.x * U + k][i] + d[k] * n * dScaled;
                 }
@@ -288,23 +284,22 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             size_t idxDstBase = (blockIdx.x * BlockDimX + threadIdx.x) * U;
             StoreValues<U>(mean, xMean + idxDstBase);
             StoreValues<U>(mean, runMean + idxDstBase);
-            Operations::RSqrt<T> rsqrtOp;
 #pragma unroll
             for (int k = 0; k < U; k++)
             {
-                m2[k] = rsqrtOp(static_cast<T>(m2[k] / batchSize + epsilon));
+                m2[k] = Operations::RSqrt(static_cast<ElemType>(m2[k] / batchSize + epsilon));
             }
             StoreValues<U>(m2, xInvStdDev + idxDstBase);
             StoreValues<U>(m2, runInvStdDev + idxDstBase);
         }
     }
 
-    // This kernel is very similar to kComputeBatchMeanAndInvStdDev except it reduces not just over N (mini-batch)
+    // This kernel is very similar to kComputeBatchMeanAndInvStdDev except it reduces not just over N (minibatch)
     // but also W and H dimensions.
     // REVIEW alexeyk: is it possible to combine this and previous kernel into a single kernel without hurting performance/readability much?
-    template <int BlockDimX, int BlockDimY, int U, typename T>
-    __global__ void kComputeSpatialBatchMeanAndInvStdDev(int vectorSize, int spatialSize, int batchSize, const T* x, T* runMean, T* runInvStdDev,
-                                                         double epsilon, T* xMean, T* xInvStdDev)
+    template <int BlockDimX, int BlockDimY, int U, typename ElemType>
+    __global__ void kComputeSpatialBatchMeanAndInvStdDev(int vectorSize, int spatialSize, int batchSize, const ElemType* x, ElemType* runMean, ElemType* runInvStdDev,
+                                                         double epsilon, ElemType* xMean, ElemType* xInvStdDev)
     {
         static_assert(BlockDimX * U == CUB_PTX_WARP_THREADS, "BlockDimX * U must be equal to warp size (32).");
         static_assert((BlockDimX * BlockDimY % CUB_PTX_WARP_THREADS) == 0, "Block size must be a multiple of warp size (32).");
@@ -324,8 +319,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         int irowSrcLim = (blockIdx.x + 1) * spatialSize;
 
         int n = 0;
-        T mean[U];
-        T m2[U];
+        ElemType mean[U];
+        ElemType m2[U];
 #pragma unroll
         for (int k = 0; k < U; k++)
         {
@@ -334,22 +329,22 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         int icolSrc = threadIdx.y;
-        const T* psrcBase = x + static_cast<size_t>(icolSrc) * vectorSize + irowSrcBase;
+        const ElemType* psrcBase = x + static_cast<size_t>(icolSrc) * vectorSize + irowSrcBase;
         // Stride over all vectors in the batch.
         for (; icolSrc < batchSize; icolSrc += BlockDimY)
         {
-            const T* psrc = psrcBase;
+            const ElemType* psrc = psrcBase;
             // Stride over all values in feature map (W and H dimensions).
             for (int irowSrc = irowSrcBase; irowSrc < irowSrcLim; irowSrc += BlockDimX * U, psrc += BlockDimX * U)
             {
                 n++;
-                T curVal[U];
+                ElemType curVal[U];
                 LoadValues<U>(psrc, curVal);
                 // No need for separate unrolling, SASS looks good.
 #pragma unroll
                 for (int k = 0; k < U; k++)
                 {
-                    T d = curVal[k] - mean[k];
+                    ElemType d = curVal[k] - mean[k];
                     // REVIEW alexeyk: we enabled fast CUDA math in CNTK so division below will be approximate, is this a problem?
                     // Using precise math slows down the code by about 40%.
                     mean[k] += d / n;
@@ -370,12 +365,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 int srcLane = laneId + i;
                 int n2 = Shuffle(n, srcLane);
                 int nsum = n + n2;
-                T d[U];
+                ElemType d[U];
 #pragma unroll
                 for (int k = 0; k < U; k++)
                 {
                     d[k] = Shuffle(mean[k], srcLane) - mean[k];
-                    T dScaled = d[k] * n2 / nsum;
+                    ElemType dScaled = d[k] * n2 / nsum;
                     mean[k] += dScaled;
                     m2[k] += Shuffle(m2[k], srcLane) + d[k] * n * dScaled;
                 }
@@ -386,8 +381,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // Storage for each warp in a thread block. First warp ("accumulator") holds 
         // final results so it does not need shared memory.
         const int cwarp = BlockDimX * BlockDimY / CUB_PTX_WARP_THREADS;
-        __shared__ T meanRes[U][cwarp - 1];
-        __shared__ T m2Res[U][cwarp - 1];
+        __shared__ ElemType meanRes[U][cwarp - 1];
+        __shared__ ElemType m2Res[U][cwarp - 1];
         __shared__ int nRes[cwarp - 1];
 
         // Each warp (except warp0) will write accumulated results to shared memory.
@@ -413,12 +408,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 int n2 = nRes[i];
                 int nsum = n + n2;
-                T d[U];
+                ElemType d[U];
 #pragma unroll
                 for (int k = 0; k < U; k++)
                 {
                     d[k] = meanRes[k][i] - mean[k];
-                    T dScaled = d[k] * n2 / nsum;
+                    ElemType dScaled = d[k] * n2 / nsum;
                     mean[k] += dScaled;
                     m2[k] += m2Res[k][i] + d[k] * n * dScaled;
                 }
@@ -429,26 +424,28 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #pragma unroll
             for (int k = 1; k < U; k++)
             {
-                T d = mean[k] - mean[0];
-                T dScaled = d * n / (n + k * n);
+                ElemType d = mean[k] - mean[0];
+                ElemType dScaled = d * n / (n + k * n);
                 mean[0] += dScaled;
                 m2[0] += m2[k] + d * k * n * dScaled;
             }
 
             xMean[blockIdx.x] = mean[0];
             runMean[blockIdx.x] = mean[0];
-            Operations::RSqrt<T> rsqrtOp;
-            m2[0] = rsqrtOp(static_cast<T>(m2[0] / (batchSize * spatialSize) + epsilon));
+            m2[0] = Operations::RSqrt(static_cast<ElemType>(m2[0] / (batchSize * spatialSize) + epsilon));
             xInvStdDev[blockIdx.x] = m2[0];
             runInvStdDev[blockIdx.x] = m2[0];
         }
     }
 
+    // The struct is used by Call function to select proper template in runtime based on the size of the vector.
+    // The same pattern is used in other cases of similar structs.
     template <int U>
     struct ComputeBatchMeanAndInvStdDev
     {
-        template <typename T>
-        static void Call(size_t vectorSize, size_t batchSize, const T* x, T* runMean, T* runInvStdDev, double epsilon, T* xMean, T* xInvStdDev, cudaStream_t stream)
+        template <typename ElemType>
+        static void Call(size_t vectorSize, size_t batchSize, const ElemType* x, ElemType* runMean, ElemType* runInvStdDev, double epsilon,
+                         ElemType* xMean, ElemType* xInvStdDev, cudaStream_t stream)
         {
             assert((vectorSize % U) == 0);
 
@@ -466,9 +463,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template <int U>
     struct ComputeSpatialBatchMeanAndInvStdDev
     {
-        template <typename T>
-        static void Call(size_t vectorSize, size_t spatialSize, size_t batchSize, const T* x, T* runMean, T* runInvStdDev, double epsilon,
-                         T* xMean, T* xInvStdDev, cudaStream_t stream)
+        template <typename ElemType>
+        static void Call(size_t vectorSize, size_t spatialSize, size_t batchSize, const ElemType* x, ElemType* runMean, ElemType* runInvStdDev,
+                         double epsilon, ElemType* xMean, ElemType* xInvStdDev, cudaStream_t stream)
         {
             assert((vectorSize % spatialSize) == 0);
             assert((spatialSize % U) == 0);
@@ -487,11 +484,23 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     //--------------------------------------------------------------------
     // Forward propagation
+    // There are 2 main functions, BatchNormalizationForwardTraining and BatchNormalizationForwardInference.
+    // BatchNormalizationForwardTraining is used during the training while 
+    // BatchNormalizationForwardInference - during inference only.
+    // All functions accept input/outputs tensors in column-major format where each column is a vector of a minibatch.
+    // In convolutional case (i.e. spatial=true), each vector is in CHW format where W dimension has stride = 1.
+    // Tensors for biases and inverse stddevs have dimensions that equal to vector dimension in non-convolutional (i.e. spatial=false)
+    // or Cx1x1 in convolutional case.
+    // The *Training function performs update of saveMean and saveInvStdDev tensors with values computed for the _current_ minibatch.
+    // These values are then used in backpropagation. 
+    // It also updates runMean and runInvStdDev with running mean/var computed over all minibatches. 
+    // These values are used in inference/evaluation phase.
+    // The *Inference function computes outputs based on pre-computed mean and inv stddev.
     //--------------------------------------------------------------------
 
-    template <int BlockDimX, int BlockDimY, bool Spatial, int U, typename T>
-    __global__ void kNormalizeBatchTraining(int vectorSize, int spatialSize, int batchSize, const T* x, T* y,
-        const T* bnScale, const T* bnBias, const T* batchMean, const T* batchInvStdDev)
+    template <int BlockDimX, int BlockDimY, bool Spatial, int U, typename ElemType>
+    __global__ void kNormalizeBatchTraining(int vectorSize, int spatialSize, int batchSize, const ElemType* x, ElemType* y,
+        const ElemType* bnScale, const ElemType* bnBias, const ElemType* batchMean, const ElemType* batchInvStdDev)
     {
         static_assert(BlockDimX * U == CUB_PTX_WARP_THREADS, "BlockDimX * U must be equal to warp size (32).");
         static_assert((BlockDimX * BlockDimY % CUB_PTX_WARP_THREADS) == 0, "Block size must be a multiple of warp size (32).");
@@ -509,10 +518,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return;
         assert(irowBase + U <= vectorSize);
 
-        __shared__ T meanS[BlockDimX * U];
-        __shared__ T invStdDevS[BlockDimX * U];
-        __shared__ T scaleS[BlockDimX * U];
-        __shared__ T biasS[BlockDimX * U];
+        __shared__ ElemType meanS[BlockDimX * U];
+        __shared__ ElemType invStdDevS[BlockDimX * U];
+        __shared__ ElemType scaleS[BlockDimX * U];
+        __shared__ ElemType biasS[BlockDimX * U];
         int offs = threadIdx.x * U;
         // REVIEW alexeyk: optimize smem usage, reduce transaction count (is it worth it?).
         if (threadIdx.y == 0)
@@ -538,10 +547,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
         __syncthreads();
-        T mean[U];
-        T invStdDev[U];
-        T scale[U];
-        T bias[U];
+        ElemType mean[U];
+        ElemType invStdDev[U];
+        ElemType scale[U];
+        ElemType bias[U];
         LoadValues<U>(meanS + offs, mean);
         LoadValues<U>(invStdDevS + offs, invStdDev);
         LoadValues<U>(scaleS + offs, scale);
@@ -549,12 +558,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         int icol = blockIdx.y * BlockDimY + threadIdx.y;
         size_t startOffs = static_cast<size_t>(icol) * vectorSize + irowBase;
-        const T* psrc = x + startOffs;
-        T* pdst = y + startOffs;
+        const ElemType* psrc = x + startOffs;
+        ElemType* pdst = y + startOffs;
         size_t stride = static_cast<size_t>(gridDim.y * BlockDimY) * vectorSize;
         for (; icol < batchSize; icol += gridDim.y * BlockDimY, psrc += stride, pdst += stride)
         {
-            T val[U];
+            ElemType val[U];
             LoadValues<U>(psrc, val);
 #pragma unroll
             for (int k = 0; k < U; k++)
@@ -568,16 +577,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template <int U>
     struct NormalizeBatchTraining
     {
-        template <typename T>
-        static void Call(size_t vectorSize, size_t spatialSize, size_t batchSize, bool spatial, const T* x, T* y,
-            const T* bnScale, const T* bnBias, const T* batchMean, const T* batchInvStdDev, cudaStream_t stream)
+        template <typename ElemType>
+        static void Call(size_t vectorSize, size_t spatialSize, size_t batchSize, bool spatial, const ElemType* x, ElemType* y,
+            const ElemType* bnScale, const ElemType* bnBias, const ElemType* batchMean, const ElemType* batchInvStdDev, cudaStream_t stream)
         {
             assert((vectorSize % U) == 0);
 
             const int BlockDimX = 32 / U;
             const int BlockDimY = 4 * U;
             auto bdim = dim3(BlockDimX, BlockDimY);
-            // Create a grid that has uses striding in y-dimension to cover whole mini-batch.
+            // Create a grid that has uses striding in y-dimension to cover whole minibatch.
             auto gdim = dim3(static_cast<unsigned int>(RoundUpToMultiple(vectorSize, BlockDimX * U)));
             if (spatial)
             {
@@ -594,10 +603,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
     };
 
-    template <typename T>
-    cudaError_t BatchNormalizationForwardTraining(const Tensor4D& t, bool spatial, const T* x, T* y,
-                                                  const T* bnScale, const T* bnBias, T* runMean, T* runInvStdDev,
-                                                  double epsilon, T* saveMean, T* saveInvStdDev, cudaStream_t stream)
+
+    template <typename ElemType>
+    cudaError_t BatchNormalizationForwardTraining(const Tensor4D& t, bool spatial, const ElemType* x, ElemType* y,
+                                                  const ElemType* bnScale, const ElemType* bnBias, ElemType* runMean, ElemType* runInvStdDev,
+                                                  double epsilon, ElemType* saveMean, ElemType* saveInvStdDev, cudaStream_t stream)
     {
         assert(nullptr != x);
         assert(nullptr != y);
@@ -617,7 +627,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         if (spatial)
         {
-            Call<ComputeSpatialBatchMeanAndInvStdDev, T>(spatialSize, vectorSize, spatialSize, batchSize, x, 
+            Call<ComputeSpatialBatchMeanAndInvStdDev, ElemType>(spatialSize, vectorSize, spatialSize, batchSize, x, 
                                                          runMean, runInvStdDev, epsilon, saveMean, saveInvStdDev, stream);
             cudaError_t err = GetLastCudaError();
             if (cudaSuccess != err)
@@ -626,24 +636,49 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
         else
         {
-            Call<ComputeBatchMeanAndInvStdDev, T>(vectorSize, vectorSize, batchSize, x,
+            Call<ComputeBatchMeanAndInvStdDev, ElemType>(vectorSize, vectorSize, batchSize, x,
                                                   runMean, runInvStdDev, epsilon, saveMean, saveInvStdDev, stream);
             cudaError_t err = GetLastCudaError();
             if (cudaSuccess != err)
                 return err;
         }
-        Call<NormalizeBatchTraining, T>(spatial ? spatialSize : vectorSize, vectorSize, spatialSize, batchSize,
+        Call<NormalizeBatchTraining, ElemType>(spatial ? spatialSize : vectorSize, vectorSize, spatialSize, batchSize,
                                         spatial, x, y, bnScale, bnBias, saveMean, saveInvStdDev, stream);
+        return GetLastCudaError();
+    }
+
+    template <typename ElemType>
+    cudaError_t BatchNormalizationForwardInference(const Tensor4D& t, bool spatial, const ElemType* x, ElemType* y, const ElemType* bnScale,
+                                                   const ElemType* bnBias, const ElemType* runMean, const ElemType* runInvStdDev, cudaStream_t stream)
+    {
+        assert(nullptr != x);
+        assert(nullptr != y);
+        assert(nullptr != bnScale);
+        assert(nullptr != bnBias);
+        assert(nullptr != runMean);
+        assert(nullptr != runInvStdDev);
+
+        size_t vectorSize = t.w() * t.h() * t.c();
+        size_t spatialSize = spatial ? t.w() * t.h() : 1;
+        size_t batchSize = t.n();
+        assert(0 < vectorSize && vectorSize <= std::numeric_limits<int>::max());
+        assert(0 < batchSize  && batchSize  <= std::numeric_limits<int>::max());
+
+        Call<NormalizeBatchTraining, ElemType>(spatial ? spatialSize : vectorSize, vectorSize, spatialSize, batchSize,
+                                        spatial, x, y, bnScale, bnBias, runMean, runInvStdDev, stream);
         return GetLastCudaError();
     }
 
     //--------------------------------------------------------------------
     // Backpropagation
+    // BatchNormalizationBackward back-propagates derivatives of batch normalization function
+    // with respect to the inputs and scale and bias parameters.
+    // All tensor dimensions and assumptions are the same as in case of forward propagation.
     //--------------------------------------------------------------------
 
-    template <int BlockDimX, int BlockDimY, int U, typename T>
-    __global__ void kComputeScaleAndBiasGradients(int vectorSize, int batchSize, const T* x, const T* dy, T* dScale, T* dBias,
-                                                  const T* saveMean, const T* saveInvStdDev)
+    template <int BlockDimX, int BlockDimY, int U, typename ElemType>
+    __global__ void kComputeScaleAndBiasGradients(int vectorSize, int batchSize, const ElemType* x, const ElemType* dy, ElemType* dScale, ElemType* dBias,
+                                                  const ElemType* saveMean, const ElemType* saveInvStdDev)
     {
         static_assert(BlockDimX * U == CUB_PTX_WARP_THREADS, "BlockDimX * U must be equal to warp size (32).");
         static_assert((BlockDimX * BlockDimY % CUB_PTX_WARP_THREADS) == 0, "Block size must be a multiple of warp size (32).");
@@ -661,10 +696,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return;
         assert(irowSrcBase + U <= vectorSize);
 
-        T mean[U];
-        T invStdDev[U];
-        __shared__ T meanS[BlockDimX * U];
-        __shared__ T invStdDevS[BlockDimX * U];
+        ElemType mean[U];
+        ElemType invStdDev[U];
+        __shared__ ElemType meanS[BlockDimX * U];
+        __shared__ ElemType invStdDevS[BlockDimX * U];
         // Read mean and inv std dev.
         if (threadIdx.y == 0)
         {
@@ -680,8 +715,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             LoadValues<U>(&invStdDevS[threadIdx.x * U], invStdDev);
         }
 
-        T ds[U];
-        T db[U];
+        ElemType ds[U];
+        ElemType db[U];
 #pragma unroll
         for (int k = 0; k < U; k++)
         {
@@ -691,14 +726,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         int icolSrc = threadIdx.y;
         size_t startOffs = static_cast<size_t>(icolSrc) * vectorSize + irowSrcBase;
-        const T* px = x + startOffs;
-        const T* pdy = dy + startOffs;
+        const ElemType* px = x + startOffs;
+        const ElemType* pdy = dy + startOffs;
         size_t stride = static_cast<size_t>(vectorSize) * BlockDimY;
         // Stride over all vectors in the batch.
         for (; icolSrc < batchSize; icolSrc += BlockDimY, px += stride, pdy += stride)
         {
-            T curX[U];
-            T curdY[U];
+            ElemType curX[U];
+            ElemType curdY[U];
             LoadValues<U>(px, curX);
             LoadValues<U>(pdy, curdY);
 #pragma unroll
@@ -710,8 +745,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         // Final reduction.
-        __shared__ T dsS[BlockDimY][BlockDimX * U];
-        __shared__ T dbS[BlockDimY][BlockDimX * U];
+        __shared__ ElemType dsS[BlockDimY][BlockDimX * U];
+        __shared__ ElemType dbS[BlockDimY][BlockDimX * U];
         StoreValues<U>(ds, &dsS[threadIdx.y][threadIdx.x * U]);
         StoreValues<U>(db, &dbS[threadIdx.y][threadIdx.x * U]);
         __syncthreads();
@@ -745,9 +780,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
     }
 
-    template <int BlockDimX, int BlockDimY, int U, typename T>
-    __global__ void kComputeSpatialScaleAndBiasGradients(int vectorSize, int spatialSize, int batchSize, const T* x, const T* dy, T* dScale, T* dBias,
-                                                         const T* saveMean, const T* saveInvStdDev)
+    template <int BlockDimX, int BlockDimY, int U, typename ElemType>
+    __global__ void kComputeSpatialScaleAndBiasGradients(int vectorSize, int spatialSize, int batchSize, const ElemType* x, const ElemType* dy, 
+                                                         ElemType* dScale, ElemType* dBias, const ElemType* saveMean, const ElemType* saveInvStdDev)
     {
         static_assert(BlockDimX * U == CUB_PTX_WARP_THREADS, "BlockDimX * U must be equal to warp size (32).");
         static_assert((BlockDimX * BlockDimY % CUB_PTX_WARP_THREADS) == 0, "Block size must be a multiple of warp size (32).");
@@ -765,10 +800,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         assert(irowBase + U <= vectorSize);
         int irowLim = (blockIdx.x + 1) * spatialSize;
 
-        T mean;
-        T invStdDev;
-        __shared__ T meanS;
-        __shared__ T invStdDevS;
+        ElemType mean;
+        ElemType invStdDev;
+        __shared__ ElemType meanS;
+        __shared__ ElemType invStdDevS;
         const int tid = threadIdx.y * BlockDimX + threadIdx.x;
         // Read mean and inv std dev.
         if (tid == 0)
@@ -783,8 +818,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             invStdDev = invStdDevS;
         }
 
-        T ds[U];
-        T db[U];
+        ElemType ds[U];
+        ElemType db[U];
 #pragma unroll
         for (int k = 0; k < U; k++)
         {
@@ -794,19 +829,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         int icolSrc = threadIdx.y;
         size_t startOffs = static_cast<size_t>(icolSrc) * vectorSize + irowBase;
-        const T* pxBase = x + startOffs;
-        const T* pdyBase = dy + startOffs;
+        const ElemType* pxBase = x + startOffs;
+        const ElemType* pdyBase = dy + startOffs;
         size_t stride = static_cast<size_t>(vectorSize) * BlockDimY;
         // Stride over all vectors in the batch.
         for (; icolSrc < batchSize; icolSrc += BlockDimY, pxBase += stride, pdyBase += stride)
         {
-            const T* px = pxBase;
-            const T* pdy = pdyBase;
+            const ElemType* px = pxBase;
+            const ElemType* pdy = pdyBase;
             // Stride over all values in feature map (W and H dimensions).
             for (int irow = irowBase; irow < irowLim; irow += BlockDimX * U, px += BlockDimX * U, pdy += BlockDimX * U)
             {
-                T curX[U];
-                T curdY[U];
+                ElemType curX[U];
+                ElemType curdY[U];
                 LoadValues<U>(px, curX);
                 LoadValues<U>(pdy, curdY);
 #pragma unroll
@@ -818,12 +853,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
         __syncthreads();
-        using BlockReduce = cub::BlockReduce<T, BlockDimX, cub::BLOCK_REDUCE_WARP_REDUCTIONS, BlockDimY>;
+        using BlockReduce = cub::BlockReduce<ElemType, BlockDimX, cub::BLOCK_REDUCE_WARP_REDUCTIONS, BlockDimY>;
         // Note: must use separate temp storages for each reduction.
         __shared__ typename BlockReduce::TempStorage tmp1;
-        T dsRes = BlockReduce(tmp1).Sum(ds);
+        ElemType dsRes = BlockReduce(tmp1).Sum(ds);
         __shared__ typename BlockReduce::TempStorage tmp2;
-        T dbRes = BlockReduce(tmp2).Sum(db);
+        ElemType dbRes = BlockReduce(tmp2).Sum(db);
         if (tid == 0)
         {
             dScale[blockIdx.x] = dsRes;
@@ -834,15 +869,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template <int U>
     struct ComputeScaleAndBiasGradients
     {
-        template <typename T>
-        static void Call(size_t vectorSize, size_t batchSize, const T* x, const T* dy,
-            T* dScale, T* dBias, const T* saveMean, const T* saveInvStdDev, cudaStream_t stream)
+        template <typename ElemType>
+        static void Call(size_t vectorSize, size_t batchSize, const ElemType* x, const ElemType* dy,
+            ElemType* dScale, ElemType* dBias, const ElemType* saveMean, const ElemType* saveInvStdDev, cudaStream_t stream)
         {
             assert((vectorSize % U) == 0);
             const int BlockDimX = 32 / U;
             const int BlockDimY = 4 * U;
             auto bdim = dim3(BlockDimX, BlockDimY);
-            // Create a grid that has uses striding in y-dimension to cover whole mini-batch.
+            // Create a grid that has uses striding in y-dimension to cover whole minibatch.
             auto gdim = dim3(static_cast<unsigned int>(RoundUpToMultiple(vectorSize, BlockDimX * U)));
             kComputeScaleAndBiasGradients<BlockDimX, BlockDimY, U><<<gdim, bdim, 0, stream>>>(
                 static_cast<int>(vectorSize), static_cast<int>(batchSize), x, dy, dScale, dBias, saveMean, saveInvStdDev);
@@ -852,9 +887,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template <int U>
     struct ComputeSpatialScaleAndBiasGradients
     {
-        template <typename T>
-        static void Call(size_t vectorSize, size_t spatialSize, size_t batchSize, const T* x, const T* dy,
-            T* dScale, T* dBias, const T* saveMean, const T* saveInvStdDev, cudaStream_t stream)
+        template <typename ElemType>
+        static void Call(size_t vectorSize, size_t spatialSize, size_t batchSize, const ElemType* x, const ElemType* dy,
+            ElemType* dScale, ElemType* dBias, const ElemType* saveMean, const ElemType* saveInvStdDev, cudaStream_t stream)
         {
             assert((spatialSize % U) == 0);
             assert((vectorSize % spatialSize) == 0);
@@ -862,16 +897,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             const int BlockDimX = 32 / U;
             const int BlockDimY = 4 * U;
             auto bdim = dim3(BlockDimX, BlockDimY);
-            // Create a grid that has uses striding in y-dimension to cover whole mini-batch.
+            // Create a grid that has uses striding in y-dimension to cover whole minibatch.
             auto gdim = dim3(static_cast<unsigned int>(vectorSize / spatialSize));
             kComputeSpatialScaleAndBiasGradients<BlockDimX, BlockDimY, U><<<gdim, bdim, 0, stream>>>(
                 static_cast<int>(vectorSize), static_cast<int>(spatialSize), static_cast<int>(batchSize), x, dy, dScale, dBias, saveMean, saveInvStdDev);
         }
     };
 
-    template <int BlockDimX, int BlockDimY, bool Spatial, int U, typename T>
-    __global__ void kBackpropagateBatchNormGradients(int vectorSize, int spatialSize, int batchSize, const T* x, const T* dy, T* dx, const T* bnScale,
-                                                     const T* dScale, const T* dBias, const T* saveMean, const T* saveInvStdDev)
+    template <int BlockDimX, int BlockDimY, bool Spatial, int U, typename ElemType>
+    __global__ void kBackpropagateBatchNormGradients(int vectorSize, int spatialSize, int batchSize, const ElemType* x, const ElemType* dy, ElemType* dx,
+                                                     const ElemType* bnScale, const ElemType* dScale, const ElemType* dBias,
+                                                     const ElemType* saveMean, const ElemType* saveInvStdDev)
     {
         static_assert(BlockDimX * U == CUB_PTX_WARP_THREADS, "BlockDimX * U must be equal to warp size (32).");
         static_assert((BlockDimX * BlockDimY % CUB_PTX_WARP_THREADS) == 0, "Block size must be a multiple of warp size (32).");
@@ -888,11 +924,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (irowBase >= vectorSize)
             return;
         assert(irowBase + U <= vectorSize);
-        T scale[U];
-        T ds[U];
-        T db[U];
-        T mean[U];
-        T invStdDev[U];
+        ElemType scale[U];
+        ElemType ds[U];
+        ElemType db[U];
+        ElemType mean[U];
+        ElemType invStdDev[U];
         // REVIEW alexeyk: here we're wasting some bandwidth but this might be ok as it's a one-timer.
         if (Spatial)
         {
@@ -918,15 +954,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         int icol = blockIdx.y * BlockDimY + threadIdx.y;
         size_t startOffs = static_cast<size_t>(icol) * vectorSize + irowBase;
-        const T* px = x + startOffs;
-        const T* pdy = dy + startOffs;
-        T* pdx = dx + startOffs;
+        const ElemType* px = x + startOffs;
+        const ElemType* pdy = dy + startOffs;
+        ElemType* pdx = dx + startOffs;
         size_t stride = static_cast<size_t>(gridDim.y * BlockDimY) * vectorSize;
         for (; icol < batchSize; icol += gridDim.y * BlockDimY, px += stride, pdy += stride, pdx += stride)
         {
-            T xCur[U];
-            T dyCur[U];
-            T dxCur[U];
+            ElemType xCur[U];
+            ElemType dyCur[U];
+            ElemType dxCur[U];
             LoadValues<U>(px, xCur);
             LoadValues<U>(pdy, dyCur);
             LoadValues<U>(pdx, dxCur);
@@ -936,12 +972,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             // 2. t2 = (-scale / m) * invStdDev * xHat * dL/dScale
             // 3. t3 = (-scale / m) * invStdDev * dL/dBias (for this one note that Sum(xHat) == 0)
             // Simplifying this a bit more, we get the formula below.
-            T val[U];
+            ElemType val[U];
             int m = Spatial ? batchSize * spatialSize : batchSize;
 #pragma unroll
             for (int k = 0; k < U; k++)
             {
-                T xNorm = (xCur[k] - mean[k]) * invStdDev[k];
+                ElemType xNorm = (xCur[k] - mean[k]) * invStdDev[k];
                 val[k] = dxCur[k] + (scale[k] * invStdDev[k]) * (dyCur[k] - (xNorm * ds[k] + db[k]) / m);
             }
             StoreValues<U>(val, pdx);
@@ -951,9 +987,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template <int U>
     struct BackpropagateBatchNormGradients
     {
-        template <typename T>
-        static void Call(size_t vectorSize, size_t spatialSize, size_t batchSize, bool spatial, const T* x, const T* dy, T* dx,
-                         const T* bnScale, const T* dScale, const T* dBias, const T* saveMean, const T* saveInvStdDev, cudaStream_t stream)
+        template <typename ElemType>
+        static void Call(size_t vectorSize, size_t spatialSize, size_t batchSize, bool spatial, const ElemType* x, const ElemType* dy, ElemType* dx,
+                         const ElemType* bnScale, const ElemType* dScale, const ElemType* dBias, const ElemType* saveMean, const ElemType* saveInvStdDev, cudaStream_t stream)
         {
             assert((vectorSize % U) == 0);
             const int BlockDimX = 32 / U;
@@ -974,9 +1010,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
     };
 
-    template <typename T>
-    cudaError_t BatchNormalizationBackward(const Tensor4D& t, bool spatial, const T* x, const T* dy, T* dx, const T* bnScale,
-                                           T* dScale, T* dBias, const T* saveMean, const T* saveInvStdDev, cudaStream_t stream)
+    template <typename ElemType>
+    cudaError_t BatchNormalizationBackward(const Tensor4D& t, bool spatial, const ElemType* x, const ElemType* dy, ElemType* dx, const ElemType* bnScale,
+                                           ElemType* dScale, ElemType* dBias, const ElemType* saveMean, const ElemType* saveInvStdDev, cudaStream_t stream)
     {
         assert(nullptr != x);
         assert(nullptr != dy);
@@ -995,7 +1031,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         if (spatial)
         {
-            Call<ComputeSpatialScaleAndBiasGradients, T>(spatialSize, vectorSize, spatialSize, batchSize, x, dy, dScale, dBias, 
+            Call<ComputeSpatialScaleAndBiasGradients, ElemType>(spatialSize, vectorSize, spatialSize, batchSize, x, dy, dScale, dBias, 
                                                          saveMean, saveInvStdDev, stream);
             cudaError_t err = GetLastCudaError();
             if (cudaSuccess != err)
@@ -1003,13 +1039,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
         else
         {
-            Call<ComputeScaleAndBiasGradients, T>(vectorSize, vectorSize, batchSize, x, dy, dScale, dBias, 
+            Call<ComputeScaleAndBiasGradients, ElemType>(vectorSize, vectorSize, batchSize, x, dy, dScale, dBias, 
                                                   saveMean, saveInvStdDev, stream);
             cudaError_t err = GetLastCudaError();
             if (cudaSuccess != err)
                 return err;
         }
-        Call<BackpropagateBatchNormGradients, T>(spatial ? spatialSize : vectorSize, vectorSize, spatialSize, batchSize, spatial, 
+        Call<BackpropagateBatchNormGradients, ElemType>(spatial ? spatialSize : vectorSize, vectorSize, spatialSize, batchSize, spatial, 
                                                  x, dy, dx, bnScale, dScale, dBias, saveMean, saveInvStdDev, stream);
         return GetLastCudaError();
     }
