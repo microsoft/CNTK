@@ -45,11 +45,6 @@ public:
         assert(m_next != nullptr);
         Sequences samples = m_next->GetNextSequences(sampleCount);
 
-        if (samples.m_endOfEpoch)
-        {
-            return samples;
-        }
-
         const auto &appliedStreamIds = GetAppliedStreamIds();
         const auto &outputStreams = GetOutputStreams();
         assert(m_inputStreams.size() == outputStreams.size());
