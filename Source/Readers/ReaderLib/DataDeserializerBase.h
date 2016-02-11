@@ -11,7 +11,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
 // Base class for data deserializers.
 // Has a default implementation for a subset of methods.
-class DataDeserializerBase : public DataDeserializer
+class DataDeserializerBase : public IDataDeserializer
 {
 public:
     DataDeserializerBase() : m_sequencesInitialized(false)

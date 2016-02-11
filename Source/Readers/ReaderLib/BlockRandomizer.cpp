@@ -232,7 +232,7 @@ void BlockRandomizer::RandomizeForGlobalSamplePosition(const size_t samplePositi
 // Public methods
 //
 
-BlockRandomizer::BlockRandomizer(int verbosity, size_t randomizationRangeInSamples, DataDeserializerPtr deserializer)
+BlockRandomizer::BlockRandomizer(int verbosity, size_t randomizationRangeInSamples, IDataDeserializerPtr deserializer)
     : m_verbosity(verbosity),
       m_randomizationRangeInSamples(randomizationRangeInSamples),
       m_distributionMode(DistributionMode::sequences_strides),
@@ -329,8 +329,8 @@ bool BlockRandomizer::GetNextSequenceDescriptions(size_t sampleCount, SequenceDe
         {
             assert(m_numberOfWorkers == 1); // TODO needs implementation
 
-            while ((m_samplePositionInEpoch < m_epochSize) &&
-                (sequenceDescriptions.size() < sampleCount))
+            while (m_samplePositionInEpoch < m_epochSize &&
+                   sequenceDescriptions.size() < sampleCount)
             {
                 RandomizeIfNewSweepIsEntered();
 
@@ -392,6 +392,8 @@ Sequences BlockRandomizer::GetNextSequences(size_t sampleCount)
     // For current implementation of image reader it does no matter because chunk = image.
     // We have to reassamble the exposed result from sequences drawn from diffrent chunks.
     result.m_data.resize(sequenceDescriptions.size());
+
+    // TODO: Should prefetching be done on a single thread?
 #pragma omp parallel for ordered schedule(static)
     for (int i = 0; i < sequenceDescriptions.size(); ++i)
     {

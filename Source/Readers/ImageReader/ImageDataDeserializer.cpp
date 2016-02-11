@@ -51,6 +51,7 @@ struct DeserializedImage : DenseSequenceData
     cv::Mat m_image;
 };
 
+// For image, chunks correspond to a single image.
 class ImageDataDeserializer::ImageChunk : public Chunk, public std::enable_shared_from_this<ImageChunk>
 {
     ImageSequenceDescription m_description;

@@ -6,7 +6,7 @@
 #pragma once
 
 #include <vector>
-#include <set>
+#include <map>
 #include "Transformer.h"
 #include "DataDeserializer.h"
 
@@ -20,7 +20,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 class NoRandomizer : public Transformer
 {
 public:
-    NoRandomizer(DataDeserializerPtr deserializer);
+    NoRandomizer(IDataDeserializerPtr deserializer);
 
     virtual void Initialize(TransformerPtr next, const ConfigParameters& readerConfig) override;
     virtual void StartEpoch(const EpochConfiguration& config) override;
@@ -32,7 +32,7 @@ public:
 
 private:
     // Deserializer and information on the original timeline
-    DataDeserializerPtr m_deserializer;
+    IDataDeserializerPtr m_deserializer;
 
     // Initial timeline.
     SequenceDescriptions m_timeline;

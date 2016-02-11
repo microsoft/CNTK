@@ -93,7 +93,7 @@ typedef std::shared_ptr<SparseSequenceData> SparseSequenceDataPtr;
 // streams. Examples of data include image data deserializer or htkmlf data deserializer.
 // TODO: This interface will become ABI and deserializers can be implemented in different languages, i.e. Python.
 //////////////////////////////////////////////////////////////////////////////////////////////////
-class DataDeserializer
+class IDataDeserializer
 {
 public:
     // Describes streams this data deserializer can produce. Streams correspond to network inputs.
@@ -106,8 +106,8 @@ public:
     // Gets a chunk.
     virtual ChunkPtr GetChunk(size_t chunkId) = 0;
 
-    virtual ~DataDeserializer() {};
+    virtual ~IDataDeserializer() {};
 };
 
-typedef std::shared_ptr<DataDeserializer> DataDeserializerPtr;
+typedef std::shared_ptr<IDataDeserializer> IDataDeserializerPtr;
 } } }
