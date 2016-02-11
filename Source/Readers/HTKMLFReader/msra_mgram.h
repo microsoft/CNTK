@@ -143,7 +143,7 @@ public:
         // create
         const char *p = _strdup(key);
         if (!p)
-            BadExceptionError("CSymbolSet:id string allocation failure");
+            RuntimeError("CSymbolSet:id string allocation failure");
 
         try
         {
