@@ -119,7 +119,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif
     }
 
-    struct Operations
+    namespace Operations
     {
         template <typename T>
         struct RSqrt
@@ -147,7 +147,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 return rsqrt(a);
             }
         };
-    };
+    }
 
     // This function is used to select correct unroll factor.
     // REVIEW alexeyk: ask our C++ gurus (Marko/Amit) if there is better way.
