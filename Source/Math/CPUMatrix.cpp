@@ -4166,7 +4166,7 @@ void CPUMatrix<ElemType>::SVD(const CPUMatrix<ElemType>& A, CPUMatrix<ElemType>&
     if (sizeof(ElemType) == sizeof(double))
     {
 #ifndef USE_MKL
-        dgesvd('A', 'A', (int) m, (int) n, reinterpret_cast<double*>(A.m_pArray), (int) lda, reinterpret_cast<double*>(SIGMA.m_pArray), reinterpret_cast<double*>(U.m_pArray), (int) ldu, reinterpret_cast<double*>(VT.m_pArray), (int) ldvt, &info);
+        dgesvd('A', 'A', (int) m, (int) n, reinterpret_cast<double*>(A.m_pArray), (int) lda, reinterpret_cast<double*>(SIGMA.m_pArray), reinterpret_cast<double*>(U.m_pArray), (int) ldu, reinterpret_cast<double*>(VT.m_pArray), (int) ldvt, reinterpret_cast<long int*>(&info));
 #else
         double wkopt;
         int lwork = -1;
@@ -4180,7 +4180,7 @@ void CPUMatrix<ElemType>::SVD(const CPUMatrix<ElemType>& A, CPUMatrix<ElemType>&
     {
 #ifndef USE_MKL
 #pragma warning(suppress : 4244)
-        sgesvd('A', 'A', (int) m, (int) n, reinterpret_cast<float*>(A.m_pArray), (int) lda, reinterpret_cast<float*>(SIGMA.m_pArray), reinterpret_cast<float*>(U.m_pArray), (int) ldu, reinterpret_cast<float*>(VT.m_pArray), (int) ldvt, &info);
+        sgesvd('A', 'A', (int) m, (int) n, reinterpret_cast<float*>(A.m_pArray), (int) lda, reinterpret_cast<float*>(SIGMA.m_pArray), reinterpret_cast<float*>(U.m_pArray), (int) ldu, reinterpret_cast<float*>(VT.m_pArray), (int) ldvt, reinterpret_cast<long int*>(&info));
 #else
         float wkopt;
         int lwork = -1;
