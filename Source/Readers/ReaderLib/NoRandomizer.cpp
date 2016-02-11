@@ -11,7 +11,7 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
-NoRandomizer::NoRandomizer(DataDeserializerPtr deserializer)
+NoRandomizer::NoRandomizer(IDataDeserializerPtr deserializer)
     : m_deserializer(deserializer),
       m_samplePositionInEpoch(0),
       m_sequencePosition(0)
@@ -64,7 +64,7 @@ Sequences NoRandomizer::GetNextSequences(size_t sampleCount)
     std::vector<size_t> chunkIds;
     SequenceDescriptions sequences;
     sequences.reserve(subsetSize);
-    size_t previousChunk = std::numeric_limits<size_t>::max();
+    size_t previousChunk = SIZE_MAX;
     for (size_t i = start; i < end; ++i)
     {
         const auto& sequence = m_timeline[(m_sequencePosition + i) % m_timeline.size()];
@@ -105,7 +105,7 @@ Sequences NoRandomizer::GetNextSequences(size_t sampleCount)
     m_chunks.swap(chunks);
 
     // TODO: Not clear whether batching will make sense for this.
-    // We have to reassamble the exposed result from sequences drawn from diffrent chunks.
+    // We have to re-assemble the exposed result from sequences from different chunks.
     result.m_data.resize(sequences.size());
 #pragma omp parallel for ordered schedule(static)
     for (int i = 0; i < sequences.size(); ++i)

@@ -69,7 +69,7 @@ ImageTransformerBase::Apply(SequenceDataPtr sequence,
     auto result = std::make_shared<ImageSequenceData>();
     int type = CV_MAKETYPE(typeId, channels);
     cv::Mat buffer = cv::Mat(rows, columns, type, inputSequence.m_data);
-    this->Apply(buffer);
+    Apply(buffer);
     if (!buffer.isContinuous())
     {
         buffer = buffer.clone();
@@ -423,12 +423,15 @@ TransposeTransformer::Apply(SequenceDataPtr inputSequence,
     RuntimeError("Unsupported type");
 }
 
-struct OwnedDenseSequence : DenseSequenceData
+// The class represents a sequence that owns an internal data buffer.
+// Passed from the TransposeTransformer.
+// TODO: Trasposition potentially could be done in place.
+struct DenseSequenceWithBuffer : DenseSequenceData
 {
     std::vector<char> m_buffer;
 };
 
-template <class TElement>
+template <class TElemType>
 SequenceDataPtr
 TransposeTransformer::TypedApply(SequenceDataPtr sequence,
                                  const StreamDescription &inputStream,
@@ -442,15 +445,15 @@ TransposeTransformer::TypedApply(SequenceDataPtr sequence,
 
     size_t count = inputStream.m_sampleLayout->GetNumElements() * GetSizeByType(inputStream.m_elementType);
 
-    auto result = std::make_shared<OwnedDenseSequence>();
+    auto result = std::make_shared<DenseSequenceWithBuffer>();
     result->m_buffer.resize(count);
 
-    TElement* typedBuffer = reinterpret_cast<TElement*>(&result->m_buffer[0]);
+    TElemType* typedBuffer = reinterpret_cast<TElemType*>(result->m_buffer.data());
     ImageDimensions dimensions(*inputStream.m_sampleLayout, ImageLayoutKind::HWC);
 
     size_t rowCount = dimensions.m_height * dimensions.m_width;
     size_t channelCount = dimensions.m_numChannels;
-    TElement* data = reinterpret_cast<TElement*>(inputSequence.m_data);
+    TElemType* data = reinterpret_cast<TElemType*>(inputSequence.m_data);
 
     for (size_t rowIndex = 0; rowIndex < rowCount; rowIndex++)
     {
@@ -463,7 +466,7 @@ TransposeTransformer::TypedApply(SequenceDataPtr sequence,
     }
 
     result->m_sampleLayout = outputStream.m_sampleLayout;
-    result->m_data = &result->m_buffer[0];
+    result->m_data = result->m_buffer.data();
     result->m_numberOfSamples = inputSequence.m_numberOfSamples;
     return result;
 }
