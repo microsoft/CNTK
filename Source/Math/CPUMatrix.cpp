@@ -3570,37 +3570,95 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignNumOfDiff(const CPUMatrix<ElemTy
 
 #pragma region Other helper Functions
 
-template <class ElemType>
-void CPUMatrix<ElemType>::Print(const char* matrixName, size_t rowFirst, size_t rowLast, size_t colFirst, size_t colLast) const
+struct PrintRange
 {
+    // print from begin to skipBegin, then from skipEnd to end
+    // skipBegin = end if no split
+    size_t begin;
+    size_t skipBegin;
+    size_t skipEnd;
+    size_t end;
+    bool IsEmpty() const { return end <= begin; }
+
+    // examples:
+    //  * 3..10
+    //  * -3..-3: include end-3..end and 0..3
+    PrintRange(ptrdiff_t first, ptrdiff_t last, size_t total)
+    {
+        if (first >= 0 && last >= 0)
+        {
+            begin = (size_t)first;
+            end = (size_t)last + 1;
+            if (end > total)    // allow SIZE_MAX, meaning to end
+                end = total;
+            skipBegin = end;
+            skipEnd = end;
+        }
+        else if (first < 0 && last < 0)
+        {
+            begin = 0;
+            skipBegin = (size_t)(-last);
+            skipEnd = (size_t)(total + first);
+            end = total;
+        }
+        else    // if other combinations are ever of interest then implement them here
+            LogicError("Print: Bounds must be either both positive or both negative.");
+    }
+};
+
+// use negative ranges to print corners, e.g. specify first=-3, last=-3 which will print the first 3 and last 3 rows/cols
+template <class ElemType>
+void CPUMatrix<ElemType>::Print(const char* matrixName, ptrdiff_t rowFirst, ptrdiff_t rowLast, ptrdiff_t colFirst, ptrdiff_t colLast) const
+{
+    fprintf(stderr, "\n###### ");
     if (matrixName != nullptr)
-        fprintf(stderr, "\n###### %s (%lu, %lu) ######\n\n", matrixName, GetNumRows(), GetNumCols());
-    else
-        fprintf(stderr, "\n###### (%lu, %lu) ######\n\n", GetNumRows(), GetNumCols());
+        fprintf(stderr, "%s ", matrixName);
+    fprintf(stderr, "(%lu, %lu)", GetNumRows(), GetNumCols());
+    if (rowFirst != 0 || colFirst != 0 || (size_t)(rowLast + 1) != GetNumRows() || (size_t)(colLast + 1) != GetNumCols())
+        fprintf(stderr, " [%ld:%ld, %ld:%ld]", rowFirst, rowLast, colFirst, colLast);
+    fprintf(stderr, " ######\n\n");
 
     if (IsEmpty())
-        fprintf(stderr, "(empty)\n");
-    else if (rowLast >= GetNumRows() || colLast >= GetNumCols())
-        InvalidArgument("Index out of range.");
-
-    if (rowFirst > 0 || colFirst > 0)
-        fprintf(stderr, "------ Print Range (%lu:%lu, %lu:%lu) ------\n", rowFirst, rowLast, colFirst, colLast);
-
-    // TODO: extend this to take negative ranges, and allow to specify first=-3, last=3 which will print the first 3 and last 3 rows/cols. Also clip bounds to avoid having to test that outside.
-    const auto& us = *this;
-    if (rowFirst > 0)
-        fprintf(stderr, "...\n");
-    for (size_t i = rowFirst; i <= rowLast; i++)
     {
-        if (colFirst > 0)
+        fprintf(stderr, "(empty)\n");
+        return;
+    }
+
+    PrintRange rowRange(rowFirst, rowLast, GetNumRows());
+    PrintRange colRange(colFirst, colLast, GetNumCols());
+
+    if (rowRange.IsEmpty() || colRange.IsEmpty())
+    {
+        fprintf(stderr, "(empty)\n");
+        return;
+    }
+
+    const auto& us = *this;
+    if (rowRange.begin > 0)
+        fprintf(stderr, "...\n");
+    for (size_t i = rowRange.begin; i < rowRange.end; i++)
+    {
+        if (i == rowRange.skipBegin)        // insert ... between the two blocks if any
+        {
+            fprintf(stderr, "...\n");
+            i = rowRange.skipEnd;
+        }
+        if (colRange.begin > 0)             // ... at line start
             fprintf(stderr, "...\t");
-        for (size_t j = colFirst; j <= colLast; j++)
+        for (size_t j = colRange.begin; j < colRange.end; j++)
+        {
+            if (j == colRange.skipBegin)
+            {
+                fprintf(stderr, "...\t");
+                j = colRange.skipEnd;
+            }
             fprintf(stderr, "%.10f\t", us(i, j));
-        if (colLast < GetNumCols() - 1)
-            fprintf(stderr, "...\t");
+        }
+        if (colRange.end < GetNumCols())    // ... at line end
+            fprintf(stderr, "...");
         fprintf(stderr, "\n");
     }
-    if (rowLast < GetNumRows() - 1)
+    if (rowRange.end < GetNumRows())
         fprintf(stderr, "...\n");
 }
 

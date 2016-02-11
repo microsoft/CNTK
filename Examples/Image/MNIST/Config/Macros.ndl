@@ -13,6 +13,17 @@ DNNLayer(inDim, outDim, x, parmScale) = [
     z = Plus(t, b)
 ]
 
+DnnBNReLULayer(inDim, outDim, x, wScale, bValue, scValue, expAvg) = [
+    W = Parameter(outDim, inDim, init = Gaussian, initValueScale = wScale) 
+    b = Parameter(outDim, 1, init = fixedValue, value = bValue) 
+    sc = Parameter(outDim, 1, init = fixedValue, value = scValue) 
+    m = Parameter(outDim, 1, init = fixedValue, value = 0, needGradient = false)
+    isd = Parameter(outDim, 1, init = fixedValue, value = 0, needGradient = false)
+    t = Times(W, x)
+    bn = BatchNormalization(t, sc, b, m, isd, eval = false, spatial = false, expAvgFactor = expAvg)
+    y = RectifiedLinear(bn)
+]
+
 ConvReLULayer(inp, outMap, inWCount, kW, kH, hStride, vStride, wScale, bValue) = [
     convW = Parameter(outMap, inWCount, init="uniform", initValueScale=wScale)
     convB = ImageParameter(1, 1, outMap,     init="fixedValue", value=bValue, imageLayout=$imageLayout$)
@@ -21,4 +32,22 @@ ConvReLULayer(inp, outMap, inWCount, kW, kH, hStride, vStride, wScale, bValue) =
     act = RectifiedLinear(convPlusB);
 ]
 
-# BUGBUG: need to re-add DnnBNSigmoidLayer macro
+ConvBNLayerW(W, inp, outMap, kW, kH, hStride, vStride, bValue, scValue, expAvg) = [
+    b = Parameter(outMap, 1, init=fixedValue, value=bValue)
+    sc = Parameter(outMap, 1, init=fixedValue, value=scValue)
+    m = Parameter(outMap, 1, init=fixedValue, value=0, needGradient=false)
+    isd = Parameter(outMap, 1, init=fixedValue, value=0, needGradient=false)
+    
+    c = Convolution(W, inp, kW, kH, outMap, hStride, vStride, zeroPadding=true, imageLayout=$imageLayout$)
+    y = BatchNormalization(c, sc, b, m, isd, eval=false, spatial=true, expAvgFactor=expAvg, imageLayout=$imageLayout$)
+]
+
+ConvBNLayer(inp, outMap, inWCount, kW, kH, hStride, vStride, wScale, bValue, scValue, expAvg) = [
+    W = Parameter(outMap, inWCount, init=Gaussian, initValueScale=wScale)
+    c = ConvBNLayerW(W, inp, outMap, kW, kH, hStride, vStride, bValue, scValue, expAvg)
+]
+
+ConvBNReLULayer(inp, outMap, inWCount, kW, kH, hStride, vStride, wScale, bValue, scValue, expAvg) = [
+    c = ConvBNLayer(inp, outMap, inWCount, kW, kH, hStride, vStride, wScale, bValue, scValue, expAvg)
+    y = RectifiedLinear(c)
+]

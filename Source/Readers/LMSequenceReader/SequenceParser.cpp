@@ -445,9 +445,9 @@ void SequenceParser<float, std::string>::StoreLabel(float /*finalResult*/)
     if (m_spaceDelimitedMax <= m_spaceDelimitedStart)
         m_spaceDelimitedMax = m_byteCounter;
     std::string label((LPCSTR) &m_fileBuffer[m_spaceDelimitedStart - m_bufferStart], m_spaceDelimitedMax - m_spaceDelimitedStart);
-    if (!m_beginSequence && !_stricmp(label.c_str(), m_beginTag.c_str()))
+    if (!m_beginSequence && EqualCI(label, m_beginTag))
         m_beginSequence = true;
-    if (!m_endSequence && !_stricmp(label.c_str(), m_endTag.c_str()))
+    if (!m_endSequence   && EqualCI(label, m_endTag))
         m_endSequence = true;
     m_labels->push_back(move(label));
     m_labelsConvertedThisLine++;
@@ -489,9 +489,9 @@ void SequenceParser<double, std::string>::StoreLabel(double /*finalResult*/)
     if (m_spaceDelimitedMax <= m_spaceDelimitedStart)
         m_spaceDelimitedMax = m_byteCounter;
     std::string label((LPCSTR) &m_fileBuffer[m_spaceDelimitedStart - m_bufferStart], m_spaceDelimitedMax - m_spaceDelimitedStart);
-    if (!m_beginSequence && !_stricmp(label.c_str(), m_beginTag.c_str()))
+    if (!m_beginSequence && EqualCI(label, m_beginTag))
         m_beginSequence = true;
-    if (!m_endSequence && !_stricmp(label.c_str(), m_endTag.c_str()))
+    if (!m_endSequence   && EqualCI(label, m_endTag))
         m_endSequence = true;
     m_labels->push_back(move(label));
     m_labelsConvertedThisLine++;

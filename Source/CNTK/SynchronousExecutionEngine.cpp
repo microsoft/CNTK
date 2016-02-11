@@ -123,7 +123,8 @@ void SynchronousNodeEvaluator<ElemType>::Evaluate(NDLNode<ElemType>* node, const
             vector<void*> params = EvaluateParameters(node, baseName, 0, parameter.size(), pass);
             size_t i = 0;
             auto tensorShape = ProcessTensorShapeParameters(node, params, i, isImage, cnNodeType);
-            bool needGradient = node->GetOptionalParameter("needGradient", "true");
+            // TODO: harmonize the parameter names across MEL and NDL
+            bool needGradient = node->GetOptionalParameter("needGradient", "true") && node->GetOptionalParameter("needsGradient", "true") && node->GetOptionalParameter("computeGradient", "true");
 
             nodePtr = builder.CreateLearnableParameter(name, tensorShape);
             nodePtr->SetParameterUpdateRequired(needGradient);
@@ -137,13 +138,13 @@ void SynchronousNodeEvaluator<ElemType>::Evaluate(NDLNode<ElemType>* node, const
             bool initOnCPUOnly = node->GetOptionalParameter("initOnCPUOnly", "false");
             int forcedRandomSeed = node->GetOptionalParameter("randomSeed", "-1" /*disabled*/);
 
-            if (!_wcsicmp(initString.c_str(), L"fixedValue"))
+            if (EqualCI(initString, L"fixedValue"))
                 nodePtr->Value().SetValue(value);
-            else if (!_wcsicmp(initString.c_str(), L"uniform"))
+            else if (EqualCI(initString, L"uniform"))
                 m_net->InitLearnableParameters(nodePtr, true, forcedRandomSeed < 0 ? randomSeed++ : (unsigned long) forcedRandomSeed, initValueScale, initOnCPUOnly);
-            else if (!_wcsicmp(initString.c_str(), L"gaussian"))
+            else if (EqualCI(initString, L"gaussian"))
                 m_net->InitLearnableParameters(nodePtr, false, forcedRandomSeed < 0 ? randomSeed++ : (unsigned long) forcedRandomSeed, initValueScale, initOnCPUOnly);
-            else if (!_wcsicmp(initString.c_str(), L"fromFile"))
+            else if (EqualCI(initString, L"fromFile"))
             {
                 std::string initFromFilePath = node->GetOptionalParameter("initFromFilePath", "");
                 if (initFromFilePath == "")

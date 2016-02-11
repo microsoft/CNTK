@@ -53,8 +53,6 @@ protected:
     bool m_idx2clsRead;
     bool m_clsinfoRead;
 
-    std::wstring m_file;
-
 public:
     using LabelType = wstring;
     using LabelIdType = long;

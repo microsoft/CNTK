@@ -584,7 +584,7 @@ public:
         fprintf(stderr, "Node --> %ls = %ls\n", NodeName().c_str(), OperationName().c_str()), fflush(stderr);
     }
 
-    const bool&/*TODO: should be bool by value*/ NeedGradient() { return m_needsGradient; }
+    bool NeedGradient() const { return m_needsGradient; }
 
     void SetParameterUpdateRequired(bool f) { m_parameterUpdateRequired = f; }
     bool IsParameterUpdateRequired() const { return m_parameterUpdateRequired; }
@@ -1673,10 +1673,24 @@ public:
 };
 
 // =======================================================================
-// IRecurrentNode -- helper wrapper class for ComputationNodes that can be recurrent
+// IRecurrentNode -- interface implemented by ComputationNodes that can be recurrent
 // =======================================================================
 
 struct IRecurrentNode { virtual int GetRecurrenceSteppingDirection() const = 0; };
+
+// =======================================================================
+// PreComputedNodeBase -- interface implemented by ComputationNodes that precompute
+// TODO: We can use this interface in more places.
+// =======================================================================
+
+struct IPreComputeNode
+{
+    // check whether node has already undergone precomputation
+    virtual bool HasComputed() const = 0;
+    // call this with 'false' at start and with 'true' at end
+    // This is used for resetting and updating from accumulators.
+    virtual void MarkComputed(const bool hasComputed) = 0;
+};
 
 // =======================================================================
 // helper macro to ease access to base members in presence of C++ two-phase name lookup

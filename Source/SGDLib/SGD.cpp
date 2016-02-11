@@ -5,7 +5,6 @@
 #include "Basics.h"
 #include "SGD.h"
 #include "NonlinearityNodes.h"          // for DropoutNode
-#include "PreComputeNodes.h"            // for PrecomputeNode
 #include "SpecialPurposeNodes.h"        // for SequenceWithSoftmaxNode
 #include "DataReaderHelpers.h"
 #include "MatrixQuantizerImpl.h"
@@ -50,11 +49,15 @@ void SGD<ElemType>::Train(function<ComputationNetworkPtr(DEVICEID_TYPE)> createN
     }
 
     wstring modelFileName = GetModelNameForEpoch(int(startEpoch) - 1);
+    bool loadNetworkFromCheckpoint = false;
     if (startEpoch >= 0)
+    {
+        loadNetworkFromCheckpoint = true;
         fprintf(stderr, "Starting from checkpoint. Load Network From File %ls.\n", modelFileName.c_str());
+    }
 
     // create or load from checkpoint
-    shared_ptr<ComputationNetwork> net = startEpoch < 0 ? createNetworkFn(deviceId) : ComputationNetwork::CreateFromFile<ElemType>(deviceId, modelFileName);
+    shared_ptr<ComputationNetwork> net = !loadNetworkFromCheckpoint ? createNetworkFn(deviceId) : ComputationNetwork::CreateFromFile<ElemType>(deviceId, modelFileName);
 
     // log the device we are computing on
     if (net->GetDeviceId() < 0)
@@ -68,7 +71,7 @@ void SGD<ElemType>::Train(function<ComputationNetworkPtr(DEVICEID_TYPE)> createN
     startEpoch = max(startEpoch, 0);
     m_needAdaptRegularization = false;
 
-    TrainOrAdaptModel(startEpoch, net, net, nullptr, trainSetDataReader, validationSetDataReader);
+    TrainOrAdaptModel(startEpoch, net, loadNetworkFromCheckpoint, net, nullptr, trainSetDataReader, validationSetDataReader);
 }
 
 // -----------------------------------------------------------------------
@@ -89,11 +92,13 @@ void SGD<ElemType>::Adapt(wstring origModelFileName, wstring refNodeName,
     }
 
     ComputationNetworkPtr net;
+    bool networkLoadedFromCheckpoint = false;
     if (startEpoch >= 0)
     {
         wstring modelFileName = GetModelNameForEpoch(int(startEpoch) - 1);
         fprintf(stderr, "Starting from checkpoint. Load Network From File %ls.\n", modelFileName.c_str());
         net = ComputationNetwork::CreateFromFile<ElemType>(deviceId, modelFileName);
+        networkLoadedFromCheckpoint = true;
     }
     else
     {
@@ -120,7 +125,7 @@ void SGD<ElemType>::Adapt(wstring origModelFileName, wstring refNodeName,
         refNode = refNet->GetNodeFromName(refNodeName);
     }
 
-    TrainOrAdaptModel(startEpoch, net, refNet, refNode, trainSetDataReader, validationSetDataReader);
+    TrainOrAdaptModel(startEpoch, net, networkLoadedFromCheckpoint, refNet, refNode, trainSetDataReader, validationSetDataReader);
 }
 
 // -----------------------------------------------------------------------
@@ -131,6 +136,7 @@ static double MomentumPerMB(double momentumPerSample, size_t minibatchSize);
 
 template <class ElemType>
 void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
+                                      bool networkLoadedFromCheckpoint,
                                       ComputationNetworkPtr refNet,
                                       ComputationNodeBasePtr refNode,
                                       IDataReader<ElemType>* trainSetDataReader,
@@ -259,7 +265,9 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
         InitDistGradAgg(evaluationNodes.size(), m_traceLevel);
     }
     // precompute mean and invStdDev nodes and save initial model
-    if (PreCompute(net, trainSetDataReader, featureNodes, labelNodes, inputMatrices) || startEpoch == 0)
+    // When no precompute, only save if we did not load the model from a 
+    // checkpoint but instead built it from a network description
+    if (PreCompute(net, trainSetDataReader, featureNodes, labelNodes, inputMatrices) || !networkLoadedFromCheckpoint)
     {
         // Synchronize all ranks before writing the model to ensure that
         // everyone is done loading the model
@@ -620,8 +628,8 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
         // persist model and check-point info
         if ((g_mpi == nullptr) || g_mpi->IsMainNode())
         {
-            net->Save(GetModelNameForEpoch(i));
             SaveCheckPointInfo(i, totalSamplesSeen, learnRatePerSample, smoothedGradients, prevCriterion, chosenMinibatchSize);
+            net->Save(GetModelNameForEpoch(i));
             if (!m_keepCheckPointFiles)
             {
                 // delete previous checkpoint file to save space
@@ -1275,11 +1283,8 @@ bool SGD<ElemType>::PreCompute(ComputationNetworkPtr net,
     }
 
     fprintf(stderr, "\nPrecomputing --> %lu PreCompute nodes found.\n\n", nodes.size());
-    for (auto nodeIter = nodes.begin(); nodeIter != nodes.end(); nodeIter++)
-    {
-        auto node = static_pointer_cast<PreComputedNodeBase<ElemType>>(*nodeIter);
+    for (const auto & node : nodes)
         fprintf(stderr, "\tNodeName: %ls\n", (node->NodeName()).c_str());
-    }
 
     // compute
     // trainSetDataReader->StartMinibatchLoop(m_mbSize[0],  0 , requestDataSize);
@@ -1293,11 +1298,8 @@ bool SGD<ElemType>::PreCompute(ComputationNetworkPtr net,
     net->StartEvaluateMinibatchLoop(nodes);
 
     // initialize
-    for (auto nodeIter = nodes.begin(); nodeIter != nodes.end(); nodeIter++)
-    {
-        auto node = static_pointer_cast<PreComputedNodeBase<ElemType>>(*nodeIter);
-        node->MarkComputed(false /*begin accumulating*/);
-    }
+    for (auto & node : nodes)
+        dynamic_pointer_cast<IPreComputeNode>(node)->MarkComputed(false /*begin accumulating*/);
 
     const size_t numIterationsBeforePrintingProgress = 100;
     size_t numItersSinceLastPrintOfProgress = 0;
@@ -1323,11 +1325,9 @@ bool SGD<ElemType>::PreCompute(ComputationNetworkPtr net,
     }
 
     // finalize
-    for (auto nodeIter = nodes.begin(); nodeIter != nodes.end(); nodeIter++)
-    {
-        auto node = static_pointer_cast<PreComputedNodeBase<ElemType>>(*nodeIter);
-        node->MarkComputed(true /*done accumulating*/);
-    }
+    for (auto & node : nodes)
+        dynamic_pointer_cast<IPreComputeNode>(node)->MarkComputed(true /*done accumulating*/);
+
     fprintf(stderr, "\nPrecomputing --> Completed.\n\n");
 
     return true;
@@ -2349,51 +2349,40 @@ template class SGD<double>;
 
 static AdaptationRegType ParseAdaptationRegType(const wstring& s)
 {
-    if (!_wcsicmp(s.c_str(), L"") || !_wcsicmp(s.c_str(), L"none"))
-        return AdaptationRegType::None;
-    else if (!_wcsicmp(s.c_str(), L"kl") || !_wcsicmp(s.c_str(), L"klReg"))
-        return AdaptationRegType::KL;
+    if      (EqualCI(s, L"") || EqualCI(s, L"none"))    return AdaptationRegType::None;
+    else if (EqualCI(s, L"kl") || EqualCI(s, L"klReg")) return AdaptationRegType::KL;
     else
         InvalidArgument("ParseAdaptationRegType: Invalid Adaptation Regularization Type. Valid values are (none | kl)");
 }
 
 static GradientsUpdateType ParseGradUpdateType(const wstring& s)
 {
-    if (!_wcsicmp(s.c_str(), L"") || !_wcsicmp(s.c_str(), L"none") || !_wcsicmp(s.c_str(), L"normal") || !_wcsicmp(s.c_str(), L"simple"))
-        return GradientsUpdateType::None;
-    else if (!_wcsicmp(s.c_str(), L"adagrad"))
-        return GradientsUpdateType::AdaGrad;
-    else if (!_wcsicmp(s.c_str(), L"rmsProp"))
-        return GradientsUpdateType::RmsProp;
-    else if (!_wcsicmp(s.c_str(), L"fsAdagrad"))
-        return GradientsUpdateType::FSAdaGrad;
-    else
-        InvalidArgument("ParseGradUpdateType: Invalid Gradient Updating Type. Valid values are (none | adagrad | rmsProp | fsAdagrad )");
+    if      (EqualCI(s, L"") || EqualCI(s, L"none")) return GradientsUpdateType::None;
+    else if (EqualCI(s, L"adagrad"))                 return GradientsUpdateType::AdaGrad;
+    else if (EqualCI(s, L"rmsProp"))                 return GradientsUpdateType::RmsProp;
+    else if (EqualCI(s, L"fsAdagrad"))               return GradientsUpdateType::FSAdaGrad;
+    // legacy, deprecated
+    else if (EqualCI(s, L"normal") || EqualCI(s, L"simple")) return GradientsUpdateType::None;
+    else InvalidArgument("ParseGradUpdateType: Invalid Gradient Updating Type. Valid values are (none | adagrad | rmsProp | fsAdagrad )");
 }
 
 static ParallelizationMethod ParseParallelizationMethod(const wstring& s)
 {
-    if (!_wcsicmp(s.c_str(), L"") || !_wcsicmp(s.c_str(), L"none"))
-        return ParallelizationMethod::None;
-    else if (!_wcsicmp(s.c_str(), L"DataParallelSGD"))
-        return ParallelizationMethod::DataParallelSGD;
-    else if (!_wcsicmp(s.c_str(), L"ModelAveragingSGD"))
-        return ParallelizationMethod::ModelAveragingSGD;
-    else
-        InvalidArgument("ParseParallelizationMethod: Invalid Parallelization Method. Valid values are (none | dataParallelSGD | modelAveragingSGD)");
+    if      (EqualCI(s, L"") || EqualCI(s, L"none")) return ParallelizationMethod::None;
+    else if (EqualCI(s, L"DataParallelSGD"))         return ParallelizationMethod::DataParallelSGD;
+    else if (EqualCI(s, L"ModelAveragingSGD"))       return ParallelizationMethod::ModelAveragingSGD;
+    else InvalidArgument("ParseParallelizationMethod: Invalid Parallelization Method. Valid values are (none | dataParallelSGD | modelAveragingSGD)");
 }
 
 static LearningRateSearchAlgorithm ParseLearningRateSearchType(const wstring& s)
 {
-    // TODO: why allow so many variants?
-    if (!_wcsicmp(s.c_str(), L"false") || !_wcsicmp(s.c_str(), L"none"))
-        return LearningRateSearchAlgorithm::None;
-    else if (!_wcsicmp(s.c_str(), L"searchBeforeEpoch") || !_wcsicmp(s.c_str(), L"beforeEpoch" /*legacy, deprecated*/) || !_wcsicmp(s.c_str(), L"before" /*legacy, deprecated*/))
-        return LearningRateSearchAlgorithm::SearchBeforeEpoch;
-    else if (!_wcsicmp(s.c_str(), L"adjustAfterEpoch") || !_wcsicmp(s.c_str(), L"afterEpoch" /*legacy, deprecated*/) || !_wcsicmp(s.c_str(), L"after" /*legacy, deprecated*/))
-        return LearningRateSearchAlgorithm::AdjustAfterEpoch;
-    else
-        InvalidArgument("autoAdjustLR: Invalid learning rate search type. Valid values are (none | searchBeforeEpoch | adjustAfterEpoch)");
+    if      (EqualCI(s, L"false") || EqualCI(s, L"none")) return LearningRateSearchAlgorithm::None;
+    else if (EqualCI(s, L"searchBeforeEpoch"))            return LearningRateSearchAlgorithm::SearchBeforeEpoch;
+    else if (EqualCI(s, L"adjustAfterEpoch"))             return LearningRateSearchAlgorithm::AdjustAfterEpoch;
+    // legacy, deprecated
+    else if (EqualCI(s, L"beforeEpoch") || EqualCI(s, L"before")) return LearningRateSearchAlgorithm::SearchBeforeEpoch;
+    else if (EqualCI(s, L"afterEpoch")  || EqualCI(s, L"after"))  return LearningRateSearchAlgorithm::AdjustAfterEpoch;
+    else InvalidArgument("autoAdjustLR: Invalid learning rate search type. Valid values are (none | searchBeforeEpoch | adjustAfterEpoch)");
 }
 
 template <class ConfigRecordType>

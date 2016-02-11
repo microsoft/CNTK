@@ -86,14 +86,13 @@ NDLScript<ElemType>::NDLScript(const NDLScript& copyMe)
 template <typename ElemType>
 NDLNode<ElemType>::NDLNode(const NDLNode<ElemType>& copyMe)
 {
-    m_name = copyMe.m_name;               // value on the left of the equals
-    m_value = copyMe.m_value;             // value on the right of the equals (CN node name, or value)
-    m_parent = copyMe.m_parent;           // parent script
-    m_type = copyMe.m_type;               // type of node
+    m_name        = copyMe.m_name;        // value on the left of the equals
+    m_value       = copyMe.m_value;       // value on the right of the equals (CN node name, or value)
+    m_parent      = copyMe.m_parent;      // parent script
+    m_type        = copyMe.m_type;        // type of node
     m_paramString = copyMe.m_paramString; // parameter of a function/array
-    m_paramMacro = copyMe.m_paramMacro;   // parameter of a macro (the variables used in the macro definition)
-    // don't copy over the parameters, they will be reparsed after the copy
-    // m_parameters = copyMe.m_parameters; // copy over the parameters straight
+    m_paramMacro  = copyMe.m_paramMacro;  // parameter of a macro (the variables used in the macro definition)
+    // don't copy over m_parameters, they will be reparsed after the copy
 
     m_eval = nullptr; // pointer to an arbitrary eval structure
     // script for macro calls, need to expand the macro for each call
@@ -104,15 +103,15 @@ template <typename ElemType>
 NDLScript<ElemType>::NDLScript(const NDLScript&& moveMe)
     : ConfigParser(move(moveMe))
 {
-    m_baseName = move(moveMe.m_baseName);
-    m_scriptString = move(moveMe.m_scriptString);
-    m_script = move(moveMe.m_script);               // script lines in parsed node order, macros will have definition followed by body
-    m_symbols = move(moveMe.m_symbols);             // symbol table
-    m_macroNode = move(moveMe.m_macroNode);         // set when interpretting a macro definition
+    m_baseName      = move(moveMe.m_baseName);
+    m_scriptString  = move(moveMe.m_scriptString);
+    m_script        = move(moveMe.m_script);        // script lines in parsed node order, macros will have definition followed by body
+    m_symbols       = move(moveMe.m_symbols);       // symbol table
+    m_macroNode     = move(moveMe.m_macroNode);     // set when interpretting a macro definition
     m_noDefinitions = move(moveMe.m_noDefinitions); // no definitions can be made in this script, interpret all macro/function names as calls
     m_definingMacro = move(moveMe.m_definingMacro);
-    m_children = move(moveMe.m_children); // child nodes. Note that m_script nodes may not be children of this object, they include macro nodes
-    m_cn = move(moveMe.m_cn);             // computation network to use for backup symbol lookup. Used for MEL where NDL and network nodes are mixed
+    m_children      = move(moveMe.m_children);      // child nodes. Note that m_script nodes may not be children of this object, they include macro nodes
+    m_cn            = move(moveMe.m_cn);            // computation network to use for backup symbol lookup. Used for MEL where NDL and network nodes are mixed
 }
 
 // EqualInsensitive - check to see if two nodes are equal
@@ -122,10 +121,8 @@ NDLScript<ElemType>::NDLScript(const NDLScript&& moveMe)
 // return - true if strings are equal insensitive and modifies string1 to sensitive version if different
 bool EqualInsensitive(std::wstring& string1, const std::wstring& string2, const wchar_t* alternate /*=NULL*/)
 {
-    bool equal = !_wcsnicmp(string1.c_str(), string2.c_str(), string1.size()) && string1.size() == string2.size();
-
-    if (!equal && alternate != NULL)
-        equal = !_wcsnicmp(string1.c_str(), alternate, string1.size()) && string1.size() == wcslen(alternate);
+    bool equal = EqualCI(string1, string2) ||
+                 (alternate && EqualCI(string1, alternate));
 
     if (equal)
         string1 = string2;
