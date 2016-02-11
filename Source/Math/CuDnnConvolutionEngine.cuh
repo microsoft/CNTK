@@ -181,7 +181,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         assert(blockDim.z == 1);
         assert(gridDim.y == 1);
         assert(gridDim.z == 1);
-        assert(isfinite(epsilon) && epsilon > 0);
+        assert(::isfinite(epsilon) && epsilon > 0);
 
         int irowSrcBase = (blockIdx.x * BlockDimX + threadIdx.x) * U;
         if (irowSrcBase >= vectorSize)
@@ -315,7 +315,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         assert(gridDim.z == 1);
         assert((spatialSize % U) == 0);
         assert((vectorSize % spatialSize) == 0);
-        assert(isfinite(epsilon) && epsilon > 0);
+        assert(::isfinite(epsilon) && epsilon > 0);
 
         int irowSrcBase = blockIdx.x * spatialSize + threadIdx.x * U;
         if (irowSrcBase >= vectorSize)
