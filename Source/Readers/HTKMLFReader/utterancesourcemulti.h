@@ -437,9 +437,11 @@ class minibatchutterancesourcemulti : public minibatchsource
             for (size_t i = m_currentRangeEndChunkIdx; i < endChunkIdx; ++i)
                 addRandomizedFramesForChunk(i);
 
+            assert(m_currentRangeEndChunkIdx == endChunkIdx);
+
             // now randomize them --we use the nested loop again to avoid storing a backpointer
             // The condition is that a randomized frame may not be moved out of its associated chunk window.
-            // The catual range we randomize is up to the last frame that position (globalte - 1) could
+            // The actual range we randomize is up to the last frame that position (globalte - 1) could
             // potentially swap with
             for (size_t t = firstFramePosToRandomize; t < endFramePosToRandomize; ++t)
             {
@@ -481,7 +483,7 @@ class minibatchutterancesourcemulti : public minibatchsource
                         break;
                     // not valid: swap them back and try again  --we actually discovered a bug in the code above
                     ::swap(randomizedframeref(t), randomizedframeref(tswap));
-                    fprintf(stderr, "lazyrandomization: BUGBUG --invalid swapping condition detected\n");
+                    fprintf(stderr, "randomizeFrameRange: BUGBUG --invalid swapping condition detected\n");
                 }
             }
 
@@ -497,7 +499,7 @@ class minibatchutterancesourcemulti : public minibatchsource
 
                 const size_t randomizedchunkindex = randomizedframeref(t).chunkindex;
                 if (randomizedchunkindex < poswindowbegin || randomizedchunkindex >= poswindowend)
-                    LogicError("lazyrandomization: nope, you got frame randomization wrong, dude");
+                    LogicError("randomizeFrameRange: nope, you got frame randomization wrong, dude");
             }
         }
 
@@ -663,6 +665,8 @@ class minibatchutterancesourcemulti : public minibatchsource
         size_t chunkIdx(size_t t)
         {
             assert(t >= m_randomizedChunks[0][m_currentRangeBeginChunkIdx].globalts);
+
+            // TODO: Use std::lower_bound
             size_t low = m_currentRangeBeginChunkIdx;
             size_t high = m_randomizedChunks[0].size() - 1;
             while (high > low)
