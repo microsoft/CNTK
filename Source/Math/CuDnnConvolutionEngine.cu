@@ -463,7 +463,7 @@ public:
                                                                t(scaleBiasT), ptr(scale), ptr(bias), ptr(runMean), ptr(runInvStdDev), CUDNN_BN_MIN_EPSILON));
         }
         else if (m_bnImpl == BatchNormImpl::Cntk)
-        {;
+        {
             CUDA_CALL(BatchNormalizationForwardInference(inT, spatial, ptr(in), ptr(out), ptr(scale), ptr(bias),
                                                          ptr(runMean), ptr(runInvStdDev), m_stream));
         }
