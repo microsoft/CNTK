@@ -93,12 +93,14 @@ bool UCIFastReader<ElemType>::EnsureDataAvailable(size_t mbStartSample, bool end
     // truncate the present arrays to the location we are reading from, parser appends on these arrays
     if (m_featureData.size() > epochSample * m_featureCount) // should be this size, if not, truncate
         m_featureData.resize(epochSample * m_featureCount);
-    if (m_labelType != labelNone && m_labelData.size() > epochSample)
+    if (m_labelType == labelCategory && m_labelData.size() > epochSample)
     {
-        // make sure the labelId array is also the correct size
-        if (m_labelType == labelCategory)
-            m_labelIdData.resize(epochSample);
+        m_labelIdData.resize(epochSample);
         m_labelData.resize(epochSample);
+    }
+    else if (m_labelType != labelNone && m_labelData.size() > epochSample * m_labelDim)
+    {
+        m_labelData.resize(epochSample * m_labelDim);
     }
 
     int recordsRead = 0;
@@ -300,19 +302,28 @@ void UCIFastReader<ElemType>::InitFromConfig(const ConfigRecordType& readerConfi
     if (features.size() > 0)
     {
         m_featuresName = features[0];
+        if (!readerConfig.Exists(m_featuresName))
+            RuntimeError("features file not found, required in configuration: i.e. 'features=[file=c:\\myfile.txt;start=1;dim=123]'");
     }
     if (labels.size() > 0)
     {
         m_labelsName = labels[0];
     }
-    if (!readerConfig.Exists(m_featuresName))
-        RuntimeError("features file not found, required in configuration: i.e. 'features=[file=c:\\myfile.txt;start=1;dim=123]'");
     bool hasLabels = readerConfig.Exists(m_labelsName);
     if (!hasLabels)
         fprintf(stderr, "Warning: labels are not specified.");
+
     const ConfigRecordType& configFeatures = readerConfig(m_featuresName.c_str(), ConfigRecordType::Record());
     const ConfigRecordType& configLabels = readerConfig(m_labelsName.c_str(), ConfigRecordType::Record());
-    if (configFeatures(L"file", L"") != configLabels(L"file", L""))
+
+    // determine label type desired
+    std::wstring labelType;
+    if (!hasLabels)
+        labelType = L"none";
+    else
+        labelType = (wstring)configLabels(L"labelType", L"category");
+
+    if (!EqualCI(labelType, L"none") && configFeatures(L"file", L"") != configLabels(L"file", L""))
         RuntimeError("features and label files must be the same file, use separate readers to define single use files");
 
     size_t vdim = configFeatures(L"dim");
@@ -365,12 +376,6 @@ void UCIFastReader<ElemType>::InitFromConfig(const ConfigRecordType& readerConfi
     size_t startFeatures = configFeatures(L"start", (size_t) 0);
     size_t dimFeatures = configFeatures(L"dim", (size_t) 0);
 
-    // determine label type desired
-    std::wstring labelType;
-    if (!hasLabels)
-        labelType = L"none";
-    else
-        labelType = (wstring) configLabels(L"labelType", L"category");
 
     // convert to lower case for case insensitive comparison
     if (EqualCI(labelType, L"category"))
@@ -395,8 +400,8 @@ void UCIFastReader<ElemType>::InitFromConfig(const ConfigRecordType& readerConfi
     size_t bufSize = max(dimFeatures * 16, (size_t) 256 * 1024);
     m_parser->ParseInit(file.c_str(), startFeatures, dimFeatures, startLabels, dimLabels, bufSize);
 
-    // if we have labels, we need a label Mapping file, it will be a file with one label per line
-    if (m_labelType != labelNone)
+    // if we have labels and labels are categorical values, we need a label Mapping file, it will be a file with one label per line
+    if (m_labelType == labelCategory)
     {
         std::wstring labelPath = configLabels(L"labelMappingFile");
         if (fexists(labelPath))
@@ -422,19 +427,22 @@ void UCIFastReader<ElemType>::InitFromConfig(const ConfigRecordType& readerConfi
             else
                 RuntimeError("label mapping file %ls not found, can be created with a 'createLabelMap' command/action\n", labelPath.c_str());
         }
+
+        // if the value they passed in as udim is not big enough, add something on
+        if (udim < m_labelIdMax)
+            udim = m_labelIdMax;
+        m_labelDim = (LabelIdType)udim;
+    }
+    else
+    {
+        m_labelDim = (LabelIdType)dimLabels;
     }
 
     // if we know the size of the randomization now, resize, otherwise wait until we know the epochSize in StartMinibatchLoop()
     if (Randomize() && m_randomizeRange != randomizeAuto)
         m_randomordering.Resize(m_randomizeRange, m_randomizeRange);
 
-    // if the value they passed in as udim is not big enough, add something on
-    if (udim < m_labelIdMax)
-        udim = m_labelIdMax;
-    m_labelDim = (LabelIdType) udim;
-
     mOneLinePerFile = readerConfig(L"oneLinePerFile", false);
-
 }
 
 // InitCache - Initialize the caching reader if cache files exist, otherwise the writer
@@ -734,9 +742,12 @@ void UCIFastReader<ElemType>::StartDistributedMinibatchLoop(size_t mbSize, size_
     // allocate room for the data
     m_featureData.reserve(m_featureCount * epochSize);
     if (m_labelType == labelCategory)
+    { 
         m_labelIdData.reserve(epochSize);
-    else if (m_labelType != labelNone)
         m_labelData.reserve(epochSize);
+    }
+    else if (m_labelType != labelNone)
+        m_labelData.reserve(m_labelDim * epochSize);
 
     SetupEpoch();
 }
@@ -886,7 +897,7 @@ bool UCIFastReader<ElemType>::GetMinibatchImpl(std::map<std::wstring, Matrix<Ele
         }
         else if (m_labelType != labelNone)
         {
-            m_labelsBuffer = AllocateIntermediateBuffer(features.GetDeviceId(), m_mbSize);
+            m_labelsBuffer = AllocateIntermediateBuffer(features.GetDeviceId(), m_labelDim * m_mbSize);
             m_labelsIdBuffer = NULL;
         }
     }
@@ -898,7 +909,7 @@ bool UCIFastReader<ElemType>::GetMinibatchImpl(std::map<std::wstring, Matrix<Ele
     }
     else if (m_labelType != labelNone)
     {
-        memset(m_labelsBuffer.get(), 0, sizeof(ElemType) * 1 * actualmbsize);
+        memset(m_labelsBuffer.get(), 0, sizeof(ElemType) * m_labelDim * actualmbsize);
     }
 
     if (actualmbsize > 0)
@@ -915,7 +926,7 @@ bool UCIFastReader<ElemType>::GetMinibatchImpl(std::map<std::wstring, Matrix<Ele
         {
             // pick the right sample with randomization if desired
             size_t jRand = randomize ? (randBase + tmap[jSample % m_randomizeRange]) : jSample;
-            jRand %= m_epochSize;
+            jRand %= m_epochSize; //BUGBUG: this will make it randomize only inside m_epochSize which is not enough 
 
             // vector of feature data goes into matrix column
             memcpy(&m_featuresBuffer.get()[j * m_featureCount], &m_featureData[jRand * m_featureCount], sizeof(ElemType) * m_featureCount);
@@ -927,13 +938,9 @@ bool UCIFastReader<ElemType>::GetMinibatchImpl(std::map<std::wstring, Matrix<Ele
             }
             else if (m_labelType != labelNone)
             {
-                if (m_labelType == labelRegression)
+                for (size_t ii = 0; ii < m_labelDim; ii++)
                 {
-                    m_labelsBuffer.get()[j] = (ElemType) atof(m_labelData[jRand].c_str());
-                }
-                else
-                {
-                    StoreLabel(m_labelsBuffer.get()[j], m_labelData[jRand]);
+                    m_labelsBuffer.get()[j+ii] = (ElemType)atof(m_labelData[jRand + ii].c_str());
                 }
             }
         }
@@ -995,7 +1002,7 @@ bool UCIFastReader<ElemType>::GetMinibatchImpl(std::map<std::wstring, Matrix<Ele
 
     // now transfer to the GPU as needed
     features.SetValue(m_featureCount, currSubsetSize, features.GetDeviceId(), m_featuresBuffer.get() + (m_featureCount * currSubsetStartCol), matrixFlagNormal);
-    if (m_labelType == labelCategory)
+    if (m_labelType != labelNone)
     {
         auto labelEntry = matrices.find(m_labelsName);
         if (labelEntry != matrices.end())
@@ -1005,16 +1012,7 @@ bool UCIFastReader<ElemType>::GetMinibatchImpl(std::map<std::wstring, Matrix<Ele
                 labels->SetValue(m_labelDim, currSubsetSize, labels->GetDeviceId(), m_labelsBuffer.get() + (m_labelDim * currSubsetStartCol), matrixFlagNormal);
         }
     }
-    else if (m_labelType != labelNone)
-    {
-        auto labelEntry = matrices.find(m_labelsName);
-        if (labelEntry != matrices.end())
-        {
-            Matrix<ElemType>* labels = labelEntry->second;
-            if (labels != nullptr)
-                labels->SetValue(1, currSubsetSize, labels->GetDeviceId(), m_labelsBuffer.get() + (1 * currSubsetStartCol), matrixFlagNormal);
-        }
-    }
+
     // we read some records, so process them
     return true;
 }
