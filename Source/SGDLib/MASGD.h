@@ -211,7 +211,56 @@ public:
             }
         }
     }
+    bool AttempToLoadFromFile(const size_t epoch, const wstring& modelPath, DEVICEID_TYPE devID)
+    {
+        wstring ckpfile = GetMASGDCheckPointFileNameForEpoch(epoch, modelPath);
+        if (fexists(ckpfile))
+        {
+            LoadFromMASGDCheckPoint(epoch, modelPath, devID);
+            fprintf(stderr, "Loading MA-SGD info from check point file %s\n", msra::strfun::utf8(ckpfile).c_str());
+            return true;
+        }
+        else
+        {
+            return false;
+        }
+    }
+    void SaveToMASGDCheckPoint(const size_t epoch, const wstring& modelPath) const
+    {
+        if ((g_mpi == nullptr) || g_mpi->IsMainNode())
+        {
+            wstring toFile = GetMASGDCheckPointFileNameForEpoch(epoch, modelPath);
+            wstring toFileTemp = toFile + L".tmp";
+            {
+                File fstream(toFileTemp, FileOptions::fileOptionsBinary | FileOptions::fileOptionsWrite);
+                fstream.PutMarker(FileMarker::fileMarkerBeginSection, L"BCKP");
 
+                fstream.PutMarker(FileMarker::fileMarkerBeginSection, L"BOptions");
+                fstream << m_useBMUF << m_useNesterovBlockMomentum << m_resetSGDMomentum;
+                fstream.PutMarker(FileMarker::fileMarkerEndSection, L"EOptions");
+
+                fstream.PutMarker(FileMarker::fileMarkerBeginSection, L"BMomentum");
+                fstream << m_blockMomentum;
+                fstream.PutMarker(FileMarker::fileMarkerEndSection, L"EMomentum");
+
+                fstream.PutMarker(FileMarker::fileMarkerBeginSection, L"BParam");
+                SaveParameters(fstream, m_prevParameters);
+                SaveParameters(fstream, m_blockLevelSmoothedGradient);
+                fstream.PutMarker(FileMarker::fileMarkerBeginSection, L"EParam");
+
+                fstream.PutMarker(FileMarker::fileMarkerBeginSection, L"ECKP");
+
+            }
+            renameOrDie(toFileTemp, toFile);
+        }
+    }
+
+
+    // consistent naming of check point file 
+    static wstring GetMASGDCheckPointFileNameForEpoch(size_t epoch, wstring modelPath) 
+    {
+        return GetModelNameForEpoch(epoch, modelPath) + L".MAckp";
+    }
 
 private:
     bool    m_useBMUF;
@@ -222,7 +271,7 @@ private:
     map<wstring, shared_ptr<Matrix<ElemType>> >     m_blockLevelSmoothedGradient;
     // m_prevParameters holds model parameters before the next sync and after the last sync , required by BMUF
 
-
+    // borrow DownCast function from ComputationNetwork
     ComputationNodePtr DownCast(ComputationNodeBasePtr inode)
     {
         ComputationNodePtr node = dynamic_pointer_cast<ComputationNode<ElemType>>(inode);
@@ -230,6 +279,89 @@ private:
             InvalidArgument("an ComputationNodeBasePtr of mismatching precision was passed");
         return node;
     }
+    // borrowed and modified from SGD
+    static wstring GetModelNameForEpoch(const int epoch, wstring modelPath) 
+    {
+        int epoch1Base = epoch + 1;
+        wstring w = msra::strfun::wstrprintf(L"%ls.%d", modelPath.c_str(), (int)epoch1Base);
+        return w;
+    }
+    
+    // helper function to save/load map<wstring, shared_ptr<Matrix<ElemType>> structure 
+    void SaveParameters(File& f, const map<wstring, shared_ptr<Matrix<ElemType>>>& parameters) const 
+    {
+        // save sizeof(ElemType)
+        unsigned int size = sizeof(ElemType); 
+        f << size; 
+        // save number of pairs 
+        unsigned int numPairs = parameters.size();
+        f << numPairs;
+        for (auto& x : parameters)
+        {
+            f << x.first; 
+            f << *x.second;
+        }
+        f.Flush(); 
+        return;
+    }
+    void LoadParameters(File& f, map<wstring, shared_ptr<Matrix<ElemType>>>& parameters, DEVICEID_TYPE deviceID )
+    {
+        unsigned int size = 0; 
+        unsigned int pair = 0; 
+        f >> size; 
+        f >> pair; 
+        if (size != sizeof(ElemType))
+        {
+            LogicError("Mismatched ElemType in loading MASGD checkpoint. Expecting %s, while loading element size=%d\n",
+                sizeof(ElemType) == 4 ? "float" : "double",
+                size
+                ); 
+        }
+        parameters.clear(); 
+        for (size_t i = 0; i < pair; i++)
+        {
+            wstring name; 
+            f >> name; 
+            shared_ptr<Matrix<ElemType>> mat = make_shared<Matrix<ElemType>>(deviceID);
+            f >> *mat; 
+            parameters[name] = mat;
+        }
+
+    }
+    // helper function to actually load/save checkpoint 
+    void LoadFromMASGDCheckPoint(const size_t epoch, const wstring modelPath, DEVICEID_TYPE devID)
+    {
+        if ((g_mpi == nullptr) || g_mpi->IsMainNode())
+        {
+            wstring fromFile = GetMASGDCheckPointFileNameForEpoch(epoch, modelPath);
+            File fstream(fromFile, FileOptions::fileOptionsBinary | FileOptions::fileOptionsRead);
+            {
+                fstream.GetMarker(FileMarker::fileMarkerBeginSection, L"BCKP");
+
+                fstream.GetMarker(FileMarker::fileMarkerBeginSection, L"BOptions");
+                fstream >> m_useBMUF >> m_useNesterovBlockMomentum >> m_resetSGDMomentum;
+                fstream.GetMarker(FileMarker::fileMarkerEndSection, L"EOptions");
+
+                fstream.GetMarker(FileMarker::fileMarkerBeginSection, L"BMomentum");
+                fstream >> m_blockMomentum;
+                fstream.GetMarker(FileMarker::fileMarkerEndSection, L"EMomentum");
+                // logical change 
+                if (m_blockMomentum < 0 || m_blockMomentum > 1.0)
+                {
+                    LogicError("Error in loading MASGD checkpoint: loading a momentum %f, but expect a block-momentum in [0,1].\n",
+                        m_blockMomentum);
+                }
+
+                fstream.GetMarker(FileMarker::fileMarkerBeginSection, L"BParam");
+                LoadParameters(fstream, m_prevParameters, devID);
+                LoadParameters(fstream, m_blockLevelSmoothedGradient, devID);
+                fstream.GetMarker(FileMarker::fileMarkerBeginSection, L"EParam");
+
+                fstream.GetMarker(FileMarker::fileMarkerEndSection, L"ECKP");
+            }
+        }
+    }
+
 
 };
 

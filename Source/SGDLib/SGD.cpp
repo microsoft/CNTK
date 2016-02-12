@@ -267,6 +267,16 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
     {
         InitDistGradAgg(evaluationNodes.size(), m_traceLevel);
     }
+    if (m_parallelizationMethod == ParallelizationMethod::ModelAveragingSGD ) // in case that users 
+    {
+        if (g_mpi && g_mpi->NumNodesInUse()  > 1)   // just in case people forget to use mpiexec to start jobs 
+        {
+            m_MASGDhelper = std::make_shared<MASGD<ElemType>>(m_useNesterovMomentumInBMUF, m_blockMomentum, m_resetSGDMomentum);
+            m_MASGDhelper->Initialize(learnableNodes);
+        }
+    }
+
+
     // precompute mean and invStdDev nodes and save initial model
     // When no precompute, only save if we did not load the model from a 
     // checkpoint but instead built it from a network description
@@ -292,6 +302,11 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
                                                   /*out*/ m_prevChosenMinibatchSize);
         if (learnRateInitialized)
             prevLearnRates[startEpoch % m_numPrevLearnRates] = learnRatePerSample;
+
+        if (m_MASGDhelper)
+        {
+            m_MASGDhelper->AttempToLoadFromFile(startEpoch - 1, m_modelPath, net->GetDeviceId());
+        }
     }
 
     if (m_autoLearnRateSearchType == LearningRateSearchAlgorithm::AdjustAfterEpoch &&
@@ -630,6 +645,10 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
         if ((g_mpi == nullptr) || g_mpi->IsMainNode())
         {
             SaveCheckPointInfo(i, totalSamplesSeen, learnRatePerSample, smoothedGradients, prevCriterion, chosenMinibatchSize);
+            if (m_MASGDhelper)
+            {
+                m_MASGDhelper->SaveToMASGDCheckPoint(i, m_modelPath);
+            }
             net->Save(GetModelNameForEpoch(i));
             if (!m_keepCheckPointFiles)
             {
@@ -639,15 +658,21 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
                     if (epochsSinceLastLearnRateAdjust != 1)
                     {
                         _wunlink(GetCheckPointFileNameForEpoch(i - 1).c_str());
+                        if (m_MASGDhelper)
+                            _wunlink(MASGD<ElemType>::GetMASGDCheckPointFileNameForEpoch(i-1, m_modelPath).c_str());
                     }
                     if (epochsSinceLastLearnRateAdjust == m_learnRateAdjustInterval)
                     {
                         _wunlink(GetCheckPointFileNameForEpoch(i - m_learnRateAdjustInterval).c_str());
+                        if (m_MASGDhelper)
+                            _wunlink(MASGD<ElemType>::GetMASGDCheckPointFileNameForEpoch(i - m_learnRateAdjustInterval, m_modelPath).c_str());
                     }
                 }
                 else
                 {
                     _wunlink(GetCheckPointFileNameForEpoch(i - 1).c_str());
+                    if (m_MASGDhelper)
+                        _wunlink(MASGD<ElemType>::GetMASGDCheckPointFileNameForEpoch(i - 1, m_modelPath).c_str());
                 }
             }
         }
@@ -742,17 +767,12 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
     size_t nSynced = 0; 
     float nSecondsOnMASync = 0;
     float nSecondsSinceLastMAPerfReport = 0;
+    size_t nSamplesSinceLastMAPerfReport = 0;
+    size_t nSamplesSinceLastMAPerfReportByAllWorkers = 0;
     if (useModelAveraging)
     {
-        if (!m_MASGDhelper)
-        {
-            m_MASGDhelper = std::make_shared<MASGD<ElemType>>(m_useNesterovMomentumInBMUF, m_blockMomentum, m_resetSGDMomentum);
-            m_MASGDhelper->Initialize(learnableNodes);
-        }
-        else
-        {
-            m_MASGDhelper->OnOneEpochStarted(learnableNodes);
-        }
+        assert(m_MASGDhelper); // will be taken off later 
+        m_MASGDhelper->OnOneEpochStarted(learnableNodes);
         g_mpi->OnStartDataProcessing();
     }
 
@@ -1050,6 +1070,8 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                         secondsSinceLastSyncFinished,      /* out */
                         secondsSpentOnSync                 /* out */
                         );
+                    nSamplesSinceLastMAPerfReport += nSamplesSinceLastModelSync;
+                    nSamplesSinceLastMAPerfReportByAllWorkers += processedSamples;
                     nSamplesSinceLastModelSync = 0;
                     nSynced++;
                     nSecondsOnMASync += secondsSpentOnSync;
@@ -1058,10 +1080,20 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                     {
                         if (nSynced % m_syncStatsTrace == 0)
                         {
-                            fprintf(stderr, "\t\t-----(model averaging stats) %d-th sync, %8.2f seconds since last report, %5.2f seconds on communication\n",
-                                (int)nSynced, nSecondsSinceLastMAPerfReport, nSecondsOnMASync);
+                            fprintf(stderr, 
+                                "\t\t-----(model averaging stats) %d-th sync, %8.2f seconds since last report, %5.2f seconds on communication.\n"
+                                "\t\t-----(model averaging stats) %d samples processed in %8.2f seconds by %d workers (%d samples processed by me).\n"
+                                "\t\t-----(model averaging stats) throughput=%.2f SamplesPerSecond ; per worker throughput=%.2f SamplesPerSecond\n",
+                                (int)nSynced, nSecondsSinceLastMAPerfReport, nSecondsOnMASync,
+                                nSamplesSinceLastMAPerfReportByAllWorkers, nSecondsSinceLastMAPerfReport, g_mpi->NumNodesInUse(), nSamplesSinceLastMAPerfReport, 
+                                nSecondsSinceLastMAPerfReport >0.0 ? nSamplesSinceLastMAPerfReportByAllWorkers/nSecondsSinceLastMAPerfReport : 0.0, 
+                                nSecondsSinceLastMAPerfReport >0.0 ? nSamplesSinceLastMAPerfReportByAllWorkers/nSecondsSinceLastMAPerfReport/g_mpi->NumNodesInUse(): 0.0
+                                );
                             nSecondsOnMASync = 0;
                             nSecondsSinceLastMAPerfReport = 0;
+                            nSamplesSinceLastMAPerfReportByAllWorkers = 0; 
+                            nSamplesSinceLastMAPerfReport = 0;
+
                         }
                     }
                 }
@@ -1200,9 +1232,17 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
         float secOnComm = 0; 
         ModelAveragingProcessing(nSamplesSinceLastModelSync, learnableNodes, smoothedGradients, samplesProcessed, secSinceLastSync, secOnComm);
         nSynced++;
+        nSamplesSinceLastMAPerfReport += nSamplesSinceLastModelSync; 
+        nSamplesSinceLastMAPerfReportByAllWorkers += samplesProcessed;
         nSamplesSinceLastModelSync = 0;
-        fprintf(stderr, "\t\t-----(model averaging stats) %d-th sync (last sync in this epoch), %8.2f seconds since last sync, %5.2f seconds on communication\n",
-            (int)nSynced, secSinceLastSync, secOnComm);
+        fprintf(stderr, "\t\t-----(model averaging stats) %d-th sync (last sync in this epoch), %8.2f seconds since last report, %5.2f seconds on communication.\n"
+                                "\t\t-----(model averaging stats) %d samples processed in %8.2f seconds by %d workers. (%d samples processed by me)\n"
+                                "\t\t-----(model averaging stats) throughput=%.2f SamplesPerSecond ; per worker throughput=%.2f SamplesPerSecond\n",
+                                (int)nSynced, secSinceLastSync, secOnComm,
+                                nSamplesSinceLastMAPerfReportByAllWorkers, secSinceLastSync, g_mpi->NumNodesInUse(), nSamplesSinceLastMAPerfReport,
+                                secSinceLastSync >0.0 ? nSamplesSinceLastMAPerfReportByAllWorkers/secSinceLastSync : 0.0, 
+                                secSinceLastSync >0.0 ? nSamplesSinceLastMAPerfReportByAllWorkers/secSinceLastSync/g_mpi->NumNodesInUse(): 0.0
+                                );
         m_MASGDhelper->OnOneEpochFinished(learnableNodes);
     }
 
