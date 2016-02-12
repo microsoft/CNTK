@@ -124,7 +124,7 @@ public:
         ReleaseMatrixToPool(m_maxValues, matrixPool);
     }
 
-private:
+protected:
     shared_ptr<Matrix<ElemType>> m_maxIndexes0, m_maxIndexes1;
     shared_ptr<Matrix<ElemType>> m_maxValues;
     int m_topK;
@@ -132,6 +132,52 @@ private:
 
 template class ErrorPredictionNode<float>;
 template class ErrorPredictionNode<double>;
+
+// -----------------------------------------------------------------------
+// ClassPredictionNode (label, prediction)
+// Outputs index of max value of label and prediction vectors.
+// -----------------------------------------------------------------------
+
+template <class ElemType>
+class ClassPredictionNode : public ErrorPredictionNode /*ComputationNodeNonLooping*/<ElemType>
+{
+    typedef ErrorPredictionNode<ElemType> Base;
+    UsingComputationNodeMembersBoilerplate;
+    static const std::wstring TypeName()
+    {
+        return L"ClassPrediction";
+    }
+
+public:
+    DeclareConstructorFromConfig(ClassPredictionNode);
+    ClassPredictionNode(DEVICEID_TYPE deviceId, const wstring& name)
+        : Base(deviceId, name)
+    {
+    }
+
+    virtual void /*ComputationNodeNonLooping::*/ ForwardPropNonLooping() override
+    {
+        FrameRange fr(Input(0)->GetMBLayout());
+        Input(0)->ValueFor(fr).VectorMax(*m_maxIndexes0, *m_maxValues, true, m_topK);
+        Input(1)->ValueFor(fr).VectorMax(*m_maxIndexes1, *m_maxValues, true, m_topK);
+        MaskMissingColumnsToZero(*m_maxIndexes0, Input(0)->GetMBLayout(), fr);
+        MaskMissingColumnsToZero(*m_maxIndexes1, Input(1)->GetMBLayout(), fr);
+
+        Value().AssignToRowSliceValuesOf(*m_maxIndexes0, 0, 1); // Label class
+        Value().AssignToRowSliceValuesOf(*m_maxIndexes1, 1, 1); // Predicted class
+    }
+
+    virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
+    {
+        Base::Validate(isFinalValidationPass);
+
+        InferMBLayoutFromInputsForStandardCase();
+        SetDims(TensorShape(2), Input(0)->HasMBLayout()); // Two output values per sample
+    }
+};
+
+template class ClassPredictionNode<float>;
+template class ClassPredictionNode<double>;
 
 #ifdef COMING_SOON
 
