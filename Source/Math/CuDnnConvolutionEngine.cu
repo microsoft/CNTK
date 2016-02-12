@@ -419,7 +419,7 @@ public:
             // No support for exp averaging for now.
             assert(expAvgFactor == 1);
             if (expAvgFactor != 1)
-                InvalidArgument("CNTK batch norm implementation currently supports expAvgFactor = 1 only.", m_bnImpl);
+                InvalidArgument("CNTK batch norm implementation currently supports expAvgFactor = 1 only.");
             epsilon = std::max(epsilon, 1e-9);
             CUDA_CALL(BatchNormalizationForwardTraining(inT, spatial, ptr(in), ptr(out), ptr(scale), ptr(bias),
                                                         ptr(runMean), ptr(runInvStdDev), epsilon, 
