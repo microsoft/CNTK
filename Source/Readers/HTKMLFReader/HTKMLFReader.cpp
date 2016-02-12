@@ -466,6 +466,11 @@ void HTKMLFReader<ElemType>::PrepareForTrainingOrTesting(const ConfigRecordType&
     if (m_verbosity > 1)
       Microsoft::MSR::CNTK::DebugUtil::PrintMemInfo("HTKMLFReader::PrepareForTrainingOrTesting - After reading MLFs");
     
+    labelsmulti.clear();
+    
+    if (m_verbosity > 1)
+      Microsoft::MSR::CNTK::DebugUtil::PrintMemInfo("HTKMLFReader::PrepareForTrainingOrTesting - After reading MLFs and clearing");
+    
     if (EqualCI(readMethod, L"blockRandomize"))
     {
         // construct all the parameters we don't need, but need to be passed to the constructor...
