@@ -408,6 +408,7 @@ public:
         if (m_bnImpl == BatchNormImpl::CuDnn)
         {
             cudnnBatchNormMode_t mode = spatial ? CUDNN_BATCHNORM_SPATIAL : CUDNN_BATCHNORM_PER_ACTIVATION;
+            // cuDNN will fail with BAD_PARAM if epsilon < CUDNN_BN_MIN_EPSILON.
             epsilon = std::max(epsilon, CUDNN_BN_MIN_EPSILON);
             CUDNN_CALL(cudnnBatchNormalizationForwardTraining(m_cudnn, mode, &C::One, &C::Zero, t(inT), ptr(in), t(inT), ptr(out),
                 t(scaleBiasT), ptr(scale), ptr(bias), expAvgFactor, ptr(runMean), ptr(runInvStdDev), 
@@ -417,6 +418,8 @@ public:
         {
             // No support for exp averaging for now.
             assert(expAvgFactor == 1);
+            if (expAvgFactor != 1)
+                InvalidArgument("CNTK batch norm implementation currently supports expAvgFactor = 1 only.", m_bnImpl);
             epsilon = std::max(epsilon, 1e-9);
             CUDA_CALL(BatchNormalizationForwardTraining(inT, spatial, ptr(in), ptr(out), ptr(scale), ptr(bias),
                                                         ptr(runMean), ptr(runInvStdDev), epsilon, 

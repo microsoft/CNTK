@@ -1788,10 +1788,13 @@ public:
             if (m_spatial && m_imageLayoutKind != CHW)
             {
                 InvalidArgument(
-                    "Batch normalization currently supports only cuDNN (CHW) data layout." 
+                    "Batch normalization currently supports only cuDNN (CHW) data layout. " 
                     "Please specify imageLayout=\"cudnn\" in BatchNormalization node in your NDL/BrainScript "
                     "and make sure your input data layout is CHW");
             }
+            double cudnnMinEps = 1e-5; // CUDNN_BN_MIN_EPSILON
+            if (!m_useCntkEngine && m_epsilon < cudnnMinEps) 
+                fprintf(stderr, "\nWARNING: cuDNN batch normalization requires epsilon >= %e. Epsilon will be reset to that value.\n", cudnnMinEps);
 
             auto shape = GetSampleLayout();
 

@@ -403,9 +403,9 @@ void SynchronousNodeEvaluator<ElemType>::Evaluate(NDLNode<ElemType>* node, const
             double epsilon = node->GetOptionalParameter("epsilon", "0.00001");
             std::wstring bnEngineS = node->GetOptionalParameter("engine", "cntk");
             bool useCntkEngine;
-            if (bnEngineS == L"cntk")
+            if (EqualCI(bnEngineS, L"cntk"))
                 useCntkEngine = true;
-            else if (bnEngineS == L"cudnn")
+            else if (EqualCI(bnEngineS, L"cudnn"))
                 useCntkEngine = false;
             else
                 InvalidArgument("Unsupported batch normalization engine, choose either \"cntk\"(default) or \"cudnn\".");
