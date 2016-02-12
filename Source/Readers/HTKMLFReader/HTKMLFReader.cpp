@@ -30,6 +30,8 @@
 #include <vld.h> // for memory leak detection
 #endif
 
+#include "DebugUtil.h"
+
 #ifdef __unix__
 #include <limits.h>
 typedef unsigned long DWORD;
@@ -96,6 +98,9 @@ void HTKMLFReader<ElemType>::InitFromConfig(const ConfigRecordType& readerConfig
         m_trainOrTest = true;
         PrepareForTrainingOrTesting(readerConfig);
     }
+    
+    if (m_verbosity > 1)
+      Microsoft::MSR::CNTK::DebugUtil::PrintMemInfo("HTKMLFReader::InitFromConfig - End of function");
 }
 
 // Load all input and output data.
@@ -431,6 +436,10 @@ void HTKMLFReader<ElemType>::PrepareForTrainingOrTesting(const ConfigRecordType&
             restrictmlftokeys.insert(key);
         }
     }
+    
+    if (m_verbosity > 1)
+      Microsoft::MSR::CNTK::DebugUtil::PrintMemInfo("HTKMLFReader::PrepareForTrainingOrTesting - After reading SCPs");
+    
     // get labels
 
     // if (readerConfig.Exists(L"statelist"))
@@ -454,6 +463,9 @@ void HTKMLFReader<ElemType>::PrepareForTrainingOrTesting(const ConfigRecordType&
         labelsmulti.push_back(std::move(labels));
     }
 
+    if (m_verbosity > 1)
+      Microsoft::MSR::CNTK::DebugUtil::PrintMemInfo("HTKMLFReader::PrepareForTrainingOrTesting - After reading MLFs");
+    
     if (EqualCI(readMethod, L"blockRandomize"))
     {
         // construct all the parameters we don't need, but need to be passed to the constructor...
@@ -465,6 +477,9 @@ void HTKMLFReader<ElemType>::PrepareForTrainingOrTesting(const ConfigRecordType&
         bool minimizeReaderMemoryFootprint = readerConfig(L"minimizeReaderMemoryFootprint", true);
         m_frameSource.reset(new msra::dbn::minibatchutterancesourcemulti(infilesmulti, labelsmulti, m_featDims, m_labelDims, numContextLeft, numContextRight, randomize, *m_lattices, m_latticeMap, m_frameMode, minimizeReaderMemoryFootprint));
         m_frameSource->setverbosity(m_verbosity);
+	
+      if (m_verbosity > 1)
+	Microsoft::MSR::CNTK::DebugUtil::PrintMemInfo("HTKMLFReader::PrepareForTrainingOrTesting - After constructing minibatchutterancesourcemulti");
     }
     else if (EqualCI(readMethod, L"rollingWindow"))
     {
@@ -714,6 +729,9 @@ void HTKMLFReader<ElemType>::StartDistributedMinibatchLoop(size_t requestedMBSiz
 template <class ElemType>
 void HTKMLFReader<ElemType>::StartMinibatchLoopToTrainOrTest(size_t mbSize, size_t epoch, size_t subsetNum, size_t numSubsets, size_t requestedEpochSamples)
 {
+    if (m_verbosity > 1)
+      Microsoft::MSR::CNTK::DebugUtil::PrintMemInfo("HTKMLFReader::StartMinibatchLoopToTrainOrTest - Beginning of function");
+  
     size_t datapasses = 1;
     size_t totalFrames = m_frameSource->totalframes();
 
@@ -744,12 +762,18 @@ void HTKMLFReader<ElemType>::StartMinibatchLoopToTrainOrTest(size_t mbSize, size
     }
 
     m_mbiter.reset(new msra::dbn::minibatchiterator(*m_frameSource, epoch, requestedEpochSamples, mbSize, subsetNum, numSubsets, datapasses));
+    if (m_verbosity > 1)
+      Microsoft::MSR::CNTK::DebugUtil::PrintMemInfo("HTKMLFReader::StartMinibatchLoopToTrainOrTest - After constructing minibatchiterator");
+    
     // Advance the MB iterator until we find some data or reach the end of epoch
     while ((m_mbiter->currentmbframes() == 0) && *m_mbiter)
     {
         (*m_mbiter)++;
     }
 
+    if (m_verbosity > 1)
+      Microsoft::MSR::CNTK::DebugUtil::PrintMemInfo("HTKMLFReader::StartMinibatchLoopToTrainOrTest - After advancing minibatchiterator first time");
+    
     m_noData = false;
     if (!(*m_mbiter))
         m_noData = true;

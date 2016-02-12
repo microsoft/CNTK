@@ -34,6 +34,7 @@ private:
 
 public:
     static void PrintCallStack();
+    static void PrintMemInfo(const char* location);
 };
 }}}
 

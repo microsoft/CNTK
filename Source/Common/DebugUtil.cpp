@@ -16,6 +16,34 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
 using namespace std;
 
+void DebugUtil::PrintMemInfo(const char* location)
+{
+#ifdef _WIN32
+    // TODO: Add Windows implementation
+#else
+    FILE* fp = fopen("/proc/self/status", "r");
+    if (fp == NULL)
+    {
+        std::cerr << "Failed to open /proc/self/status !\n";
+        return;
+    }
+
+    char* line = NULL;
+    size_t len = 0;
+    std::cerr << "\nProcess memory info (" << location << "):\n";
+    while (getline(&line, &len, fp) != -1) 
+    {
+        const char* prefix = "Vm";
+        if (strncasecmp(line, prefix, strlen(prefix)) == 0)
+            std::cerr << line;
+    }
+    std::cerr << std::endl;
+
+    free(line);
+    fclose(fp);
+#endif
+}
+
 void DebugUtil::PrintCallStack()
 {
 
