@@ -8,6 +8,7 @@
 #include "GPUMatrix.h"
 #ifdef USE_CUDNN
 #include <cudnn.h>
+#include "CuDnnConvolutionEngine.cuh"
 
 template <>
 const char* CudaErrString<cudnnStatus_t>(cudnnStatus_t x)
@@ -37,6 +38,39 @@ bool CuDnnConvolutionEngineFactory<ElemType>::IsSupported(DEVICEID_TYPE deviceId
 #endif
 }
 
+CudaTimer::~CudaTimer()
+{
+    if (m_start != nullptr)
+        CUDA_CALL(cudaEventDestroy(reinterpret_cast<cudaEvent_t>(m_start)));
+    if (m_stop != nullptr)
+        CUDA_CALL(cudaEventDestroy(reinterpret_cast<cudaEvent_t>(m_stop)));
+}
+void CudaTimer::Start()
+{
+    cudaEvent_t start;
+    cudaEvent_t stop;
+    if (m_start != nullptr)
+        CUDA_CALL(cudaEventDestroy(reinterpret_cast<cudaEvent_t>(m_start)));
+    if (m_stop != nullptr)
+        CUDA_CALL(cudaEventDestroy(reinterpret_cast<cudaEvent_t>(m_stop)));
+    CUDA_CALL(cudaEventCreate(&start));
+    CUDA_CALL(cudaEventCreate(&stop));
+    m_start = start;
+    m_stop = stop;
+    CUDA_CALL(cudaEventRecord(start, GetStream()));
+}
+void CudaTimer::Stop()
+{
+    CUDA_CALL(cudaEventRecord(reinterpret_cast<cudaEvent_t>(m_stop), GetStream()));
+    CUDA_CALL(cudaEventSynchronize(reinterpret_cast<cudaEvent_t>(m_stop)));
+}
+float CudaTimer::Elapsed()
+{
+    float ms;
+    CUDA_CALL(cudaEventElapsedTime(&ms, reinterpret_cast<cudaEvent_t>(m_start), reinterpret_cast<cudaEvent_t>(m_stop)));
+    return ms;
+}
+
 #ifdef USE_CUDNN
 
 class CuDnnTensor4D : public ConvolutionTensor4D
@@ -56,7 +90,7 @@ public:
         return m_tensor;
     }
 
-    ~CuDnnTensor4D()
+    ~CuDnnTensor4D() noexcept
     {
         if (m_tensor != nullptr)
         {
@@ -94,7 +128,7 @@ public:
         return m_filter;
     }
 
-    ~CuDnnFilter()
+    ~CuDnnFilter() noexcept
     {
         if (m_filter != nullptr)
         {
@@ -126,7 +160,7 @@ public:
         return m_conv;
     }
 
-    ~CuDnnConvolutionDescriptor()
+    ~CuDnnConvolutionDescriptor() noexcept
     {
         if (m_conv != nullptr)
         {
@@ -161,7 +195,7 @@ public:
         return m_pool;
     }
 
-    ~CuDnnPoolingDescriptor()
+    ~CuDnnPoolingDescriptor() noexcept
     {
         if (m_pool != nullptr)
         {
@@ -233,11 +267,11 @@ public:
     using typename Base::Filter;
     using typename Base::ConvDesc;
 
-    CuDnnConvolutionEngine(size_t maxTempMemSizeInSamples)
-        : m_maxTempMemSizeInSamples(maxTempMemSizeInSamples), m_cudnn(nullptr), m_curMBSize(0)
+    CuDnnConvolutionEngine(size_t maxTempMemSizeInSamples, BatchNormImpl bnImpl)
+        : m_maxTempMemSizeInSamples(maxTempMemSizeInSamples), m_bnImpl(bnImpl), m_stream(GetStream()), m_cudnn(nullptr), m_curMBSize(0)
     {
         CUDNN_CALL(cudnnCreate(&m_cudnn));
-        CUDNN_CALL(cudnnSetStream(m_cudnn, GetStream()));
+        CUDNN_CALL(cudnnSetStream(m_cudnn, m_stream));
         m_fwdAlgo.status = CUDNN_STATUS_NOT_INITIALIZED;
         m_backDataAlgo.status = CUDNN_STATUS_NOT_INITIALIZED;
         m_backFiltAlgo.status = CUDNN_STATUS_NOT_INITIALIZED;
@@ -338,10 +372,10 @@ public:
     }
 
     void NormalizeBatch(const Tensor4D& inT, const Mat& in, const Tensor4D& scaleBiasT, const Mat& scale, const Mat& bias,
-                        bool spatial, double expAvgFactor, Mat& runMean, Mat& runInvStdDev, Mat& out, Mat& saveMean, Mat& saveInvStdDev) override
+                        bool spatial, double expAvgFactor, Mat& runMean, Mat& runInvStdDev, Mat& out,
+                        double epsilon, Mat& saveMean, Mat& saveInvStdDev) override
     {
         const size_t crowIn = inT.w() * inT.h() * inT.c();
-        UNUSED(crowIn); // crowIn used only in asserts.
         if (spatial)
         {
             assert(scaleBiasT.c() == inT.c());
@@ -367,10 +401,32 @@ public:
         assert(inT.n() == in.GetNumCols());
         assert(saveMean.GetNumElements() >= runMean.GetNumElements());
         assert(saveInvStdDev.GetNumElements() >= runInvStdDev.GetNumElements());
+#ifndef _DEBUG
+        UNUSED(crowIn); // crowIn used only in asserts.
+#endif
 
-        cudnnBatchNormMode_t mode = spatial ? CUDNN_BATCHNORM_SPATIAL : CUDNN_BATCHNORM_PER_ACTIVATION;
-        CUDNN_CALL(cudnnBatchNormalizationForwardTraining(m_cudnn, mode, &C::One, &C::Zero, t(inT), ptr(in), t(inT), ptr(out),
-                                                          t(scaleBiasT), ptr(scale), ptr(bias), expAvgFactor, ptr(runMean), ptr(runInvStdDev), CUDNN_BN_MIN_EPSILON, ptr(saveMean), ptr(saveInvStdDev)));
+        if (m_bnImpl == BatchNormImpl::CuDnn)
+        {
+            cudnnBatchNormMode_t mode = spatial ? CUDNN_BATCHNORM_SPATIAL : CUDNN_BATCHNORM_PER_ACTIVATION;
+            // cuDNN will fail with BAD_PARAM if epsilon < CUDNN_BN_MIN_EPSILON.
+            epsilon = std::max(epsilon, CUDNN_BN_MIN_EPSILON);
+            CUDNN_CALL(cudnnBatchNormalizationForwardTraining(m_cudnn, mode, &C::One, &C::Zero, t(inT), ptr(in), t(inT), ptr(out),
+                t(scaleBiasT), ptr(scale), ptr(bias), expAvgFactor, ptr(runMean), ptr(runInvStdDev), 
+                epsilon, ptr(saveMean), ptr(saveInvStdDev)));
+        }
+        else if (m_bnImpl == BatchNormImpl::Cntk)
+        {
+            // No support for exp averaging for now.
+            assert(expAvgFactor == 1);
+            if (expAvgFactor != 1)
+                InvalidArgument("CNTK batch norm implementation currently supports expAvgFactor = 1 only.");
+            epsilon = std::max(epsilon, 1e-9);
+            CUDA_CALL(BatchNormalizationForwardTraining(inT, spatial, ptr(in), ptr(out), ptr(scale), ptr(bias),
+                                                        ptr(runMean), ptr(runInvStdDev), epsilon, 
+                                                        ptr(saveMean), ptr(saveInvStdDev), m_stream));
+        }
+        else
+            RuntimeError("Provided batch norm implementation (%d) is not supported.", m_bnImpl);
     }
 
     void NormalizeBatchInference(const Tensor4D& inT, const Mat& in, const Tensor4D& scaleBiasT, const Mat& scale, const Mat& bias,
@@ -399,11 +455,23 @@ public:
         assert(inT.n() == in.GetNumCols());
         assert(runMean.GetNumCols() == 1);
         assert(runInvStdDev.GetNumCols() == 1);
-        UNUSED(crowIn);
+#ifndef _DEBUG
+        UNUSED(crowIn); // crowIn used only in asserts.
+#endif
 
-        cudnnBatchNormMode_t mode = spatial ? CUDNN_BATCHNORM_SPATIAL : CUDNN_BATCHNORM_PER_ACTIVATION;
-        CUDNN_CALL(cudnnBatchNormalizationForwardInference(m_cudnn, mode, &C::One, &C::Zero, t(inT), ptr(in), t(inT), ptr(out),
-                                                           t(scaleBiasT), ptr(scale), ptr(bias), ptr(runMean), ptr(runInvStdDev), CUDNN_BN_MIN_EPSILON));
+        if (m_bnImpl == BatchNormImpl::CuDnn)
+        {
+            cudnnBatchNormMode_t mode = spatial ? CUDNN_BATCHNORM_SPATIAL : CUDNN_BATCHNORM_PER_ACTIVATION;
+            CUDNN_CALL(cudnnBatchNormalizationForwardInference(m_cudnn, mode, &C::One, &C::Zero, t(inT), ptr(in), t(inT), ptr(out),
+                                                               t(scaleBiasT), ptr(scale), ptr(bias), ptr(runMean), ptr(runInvStdDev), CUDNN_BN_MIN_EPSILON));
+        }
+        else if (m_bnImpl == BatchNormImpl::Cntk)
+        {
+            CUDA_CALL(BatchNormalizationForwardInference(inT, spatial, ptr(in), ptr(out), ptr(scale), ptr(bias),
+                                                         ptr(runMean), ptr(runInvStdDev), m_stream));
+        }
+        else
+            RuntimeError("Provided batch norm implementation (%d) is not supported.", m_bnImpl);
     }
 
     void BackwardNormalizeBatch(const Tensor4D& inT, const Mat& in, const Mat& srcGrad, Mat& grad,
@@ -432,11 +500,23 @@ public:
         assert(scaleGrad.GetNumCols() == scale.GetNumCols());
         assert(biasGrad.GetNumRows() == scale.GetNumRows());
         assert(biasGrad.GetNumCols() == scale.GetNumCols());
-        UNUSED(crowIn);
+#ifndef _DEBUG
+        UNUSED(crowIn); // crowIn used only in asserts.
+#endif
 
-        cudnnBatchNormMode_t mode = spatial ? CUDNN_BATCHNORM_SPATIAL : CUDNN_BATCHNORM_PER_ACTIVATION;
-        CUDNN_CALL(cudnnBatchNormalizationBackward(m_cudnn, mode, &C::One, &C::One, t(inT), ptr(in), t(inT), ptr(srcGrad), t(inT), ptr(grad),
-                                                   t(scaleBiasT), ptr(scale), ptr(scaleGrad), ptr(biasGrad), CUDNN_BN_MIN_EPSILON, ptr(saveMean), ptr(saveInvStdDev)));
+        if (m_bnImpl == BatchNormImpl::CuDnn)
+        {
+            cudnnBatchNormMode_t mode = spatial ? CUDNN_BATCHNORM_SPATIAL : CUDNN_BATCHNORM_PER_ACTIVATION;
+            CUDNN_CALL(cudnnBatchNormalizationBackward(m_cudnn, mode, &C::One, &C::One, t(inT), ptr(in), t(inT), ptr(srcGrad), t(inT), ptr(grad),
+                                                       t(scaleBiasT), ptr(scale), ptr(scaleGrad), ptr(biasGrad), CUDNN_BN_MIN_EPSILON, ptr(saveMean), ptr(saveInvStdDev)));
+        }
+        else if (m_bnImpl == BatchNormImpl::Cntk)
+        {
+            CUDA_CALL(BatchNormalizationBackward(inT, spatial, ptr(in), ptr(srcGrad), ptr(grad), ptr(scale), ptr(scaleGrad), ptr(biasGrad),
+                                                 ptr(saveMean), ptr(saveInvStdDev), m_stream));
+        }
+        else
+            RuntimeError("Provided batch norm implementation (%d) is not supported.", m_bnImpl);
     }
 
 private:
@@ -511,7 +591,9 @@ private:
 
     // REVIEW alexeyk: currently limit is set once in ctor though in CNTK it can be, theoretically, changed in runtime.
     size_t m_maxTempMemSizeInSamples;
+    BatchNormImpl m_bnImpl;
     cudnnHandle_t m_cudnn;
+    cudaStream_t m_stream;
     // Current mini-batch size, needed for re-computing statistics in auto-tuner.
     size_t m_curMBSize;
     cudnnConvolutionFwdAlgoPerf_t m_fwdAlgo;
@@ -582,6 +664,7 @@ typename CuDnnConvolutionEngineFactory<ElemType>::Tensor4DPtr CuDnnConvolutionEn
 {
     // REVIEW alexeyk: assert fires in GCC but not in VC++.
     // static_assert(false, "cuDNN engine currently supports only single and double precision tensors.");
+    RuntimeError("Not implemented.");
 }
 template <>
 typename CuDnnConvolutionEngineFactory<float>::Tensor4DPtr CuDnnConvolutionEngineFactory<float>::CreateTensor(size_t w, size_t h, size_t c, size_t n)
@@ -599,6 +682,7 @@ typename CuDnnConvolutionEngineFactory<ElemType>::FilterPtr CuDnnConvolutionEngi
 {
     // REVIEW alexeyk: assert fires in GCC but not in VC++.
     // static_assert(false, "cuDNN engine currently supports only single and double precision filters.");
+    RuntimeError("Not implemented.");
 }
 template <>
 typename CuDnnConvolutionEngineFactory<float>::FilterPtr CuDnnConvolutionEngineFactory<float>::CreateFilter(size_t w, size_t h, size_t c, size_t k)
@@ -629,9 +713,9 @@ typename CuDnnConvolutionEngineFactory<ElemType>::PoolDescPtr CuDnnConvolutionEn
 
 template <class ElemType>
 typename CuDnnConvolutionEngineFactory<ElemType>::ConvEnginePtr CuDnnConvolutionEngineFactory<ElemType>::CreateConvEngine(
-    DEVICEID_TYPE /*deviceId*/, size_t maxTempMemSizeInSamples)
+    DEVICEID_TYPE /*deviceId*/, size_t maxTempMemSizeInSamples, BatchNormImpl bnImpl)
 {
-    return std::make_unique<CuDnnConvolutionEngine<ElemType>>(maxTempMemSizeInSamples);
+    return std::make_unique<CuDnnConvolutionEngine<ElemType>>(maxTempMemSizeInSamples, bnImpl);
 }
 
 template <class ElemType>
@@ -670,7 +754,7 @@ typename CuDnnConvolutionEngineFactory<ElemType>::PoolDescPtr CuDnnConvolutionEn
 }
 
 template <class ElemType>
-typename CuDnnConvolutionEngineFactory<ElemType>::ConvEnginePtr CuDnnConvolutionEngineFactory<ElemType>::CreateConvEngine(DEVICEID_TYPE, size_t)
+typename CuDnnConvolutionEngineFactory<ElemType>::ConvEnginePtr CuDnnConvolutionEngineFactory<ElemType>::CreateConvEngine(DEVICEID_TYPE, size_t, BatchNormImpl)
 {
     RuntimeError("The code is compiled without USE_CUDNN macro.");
 }

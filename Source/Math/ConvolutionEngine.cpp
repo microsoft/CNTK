@@ -284,7 +284,7 @@ public:
     }
 
     void NormalizeBatch(const Tensor4D& inT, const Mat& in, const Tensor4D& scaleBiasT, const Mat& scale, const Mat& bias,
-                        bool spatial, double expAvgFactor, Mat& runMean, Mat& runInvStdDev, Mat& out, Mat& saveMean, Mat& saveInvStdDev) override
+                        bool spatial, double expAvgFactor, Mat& runMean, Mat& runInvStdDev, Mat& out, double epsilon, Mat& saveMean, Mat& saveInvStdDev) override
     {
         UNUSED(inT);
         UNUSED(in);
@@ -296,6 +296,7 @@ public:
         UNUSED(expAvgFactor);
         UNUSED(runMean);
         UNUSED(runInvStdDev);
+        UNUSED(epsilon);
         UNUSED(saveMean);
         UNUSED(saveInvStdDev);
         RuntimeError("Not yet implemented.");
@@ -448,7 +449,7 @@ public:
         return std::make_unique<PoolDesc>(kind, w, h, wStride, hStride, wPad, hPad);
     }
 
-    ConvEnginePtr CreateConvEngine(DEVICEID_TYPE deviceId, size_t maxTempMemSizeInSamples) override
+    ConvEnginePtr CreateConvEngine(DEVICEID_TYPE deviceId, size_t maxTempMemSizeInSamples, BatchNormImpl /*bnImpl*/) override
     {
         return std::make_unique<DefaultConvolutionEngine<ElemType>>(deviceId, maxTempMemSizeInSamples);
     }
