@@ -1085,7 +1085,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                                 "\t\t-----(model averaging stats) %d samples processed in %8.2f seconds by %d workers (%d samples processed by me).\n"
                                 "\t\t-----(model averaging stats) throughput=%.2f SamplesPerSecond ; per worker throughput=%.2f SamplesPerSecond\n",
                                 (int)nSynced, nSecondsSinceLastMAPerfReport, nSecondsOnMASync,
-                                nSamplesSinceLastMAPerfReportByAllWorkers, nSecondsSinceLastMAPerfReport, g_mpi->NumNodesInUse(), nSamplesSinceLastMAPerfReport, 
+                                (int)nSamplesSinceLastMAPerfReportByAllWorkers, nSecondsSinceLastMAPerfReport, (int)g_mpi->NumNodesInUse(), (int)nSamplesSinceLastMAPerfReport, 
                                 nSecondsSinceLastMAPerfReport >0.0 ? nSamplesSinceLastMAPerfReportByAllWorkers/nSecondsSinceLastMAPerfReport : 0.0, 
                                 nSecondsSinceLastMAPerfReport >0.0 ? nSamplesSinceLastMAPerfReportByAllWorkers/nSecondsSinceLastMAPerfReport/g_mpi->NumNodesInUse(): 0.0
                                 );
@@ -1239,7 +1239,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                                 "\t\t-----(model averaging stats) %d samples processed in %8.2f seconds by %d workers. (%d samples processed by me)\n"
                                 "\t\t-----(model averaging stats) throughput=%.2f SamplesPerSecond ; per worker throughput=%.2f SamplesPerSecond\n",
                                 (int)nSynced, secSinceLastSync, secOnComm,
-                                nSamplesSinceLastMAPerfReportByAllWorkers, secSinceLastSync, g_mpi->NumNodesInUse(), nSamplesSinceLastMAPerfReport,
+                                (int)nSamplesSinceLastMAPerfReportByAllWorkers, secSinceLastSync,(int)g_mpi->NumNodesInUse(), (int)nSamplesSinceLastMAPerfReport,
                                 secSinceLastSync >0.0 ? nSamplesSinceLastMAPerfReportByAllWorkers/secSinceLastSync : 0.0, 
                                 secSinceLastSync >0.0 ? nSamplesSinceLastMAPerfReportByAllWorkers/secSinceLastSync/g_mpi->NumNodesInUse(): 0.0
                                 );
