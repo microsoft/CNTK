@@ -33,6 +33,7 @@
     <ClCompile Include="..\..\..\Source\Common\ExceptionWithCallStack.cpp">
       <Filter>Common</Filter>
     </ClCompile>
+    <ClCompile Include="ImageReaderTests.cpp" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Common">
@@ -49,6 +50,9 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
+    <Text Include="Data\ImageReaderSimple_map.txt">
+      <Filter>Data</Filter>
+    </Text>
     <Text Include="Data\UCIFastReaderSimpleDataLoop_Mapping.txt">
       <Filter>Data</Filter>
     </Text>
@@ -113,6 +117,9 @@
       <Filter>Config</Filter>
     </Text>
     <Text Include="Config\HTKMLFReaderSimpleDataLoop22_Config.cntk">
+      <Filter>Config</Filter>
+    </Text>
+    <Text Include="Config\ImageReaderSimple_Config.cntk">
       <Filter>Config</Filter>
     </Text>
     <Text Include="Config\UCIFastReaderSimpleDataLoop_Config.cntk">

@@ -1,0 +1,10 @@
+D:\Data\digits\0\0.jpg	0
+D:\Data\digits\1\1.jpg	1
+D:\Data\digits\2\2.jpg	2
+D:\Data\digits\3\3.jpg	3
+D:\Data\digits\4\4.jpg	4
+D:\Data\digits\5\5.jpg	5
+D:\Data\digits\6\6.jpg	6
+D:\Data\digits\7\7.jpg	7
+D:\Data\digits\8\8.jpg	8
+D:\Data\digits\9\9.jpg	9
