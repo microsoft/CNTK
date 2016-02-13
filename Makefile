@@ -134,6 +134,13 @@ ifeq ("$(MATHLIB)","mkl")
   COMMON_FLAGS += -DUSE_MKL
 endif
 
+ifeq ("$(MATHLIB)","openblas")
+  INCLUDEPATH += $(OPENBLAS_PATH)/include
+  LIBPATH += $(OPENBLAS_PATH)/lib
+  LIBS += -lopenblas -lm -lpthread
+  CPPFLAGS += -DUSE_OPENBLAS
+endif
+
 
 ifdef KALDI_PATH
   ########## Copy includes and defines from $(KALDI_PATH)/src/kaldi.mk ##########
