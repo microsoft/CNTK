@@ -167,7 +167,7 @@ bool SequenceReader<ElemType>::EnsureDataAvailable(size_t mbStartSample, bool /*
                     continue; // empty input
 
                 // check for end of sequence marker
-                if (!bSentenceStart && (!_stricmp(labelValue.c_str(), m_labelInfo[labelInfoIn].endSequence.c_str()) || ((label - 1) % m_mbSize == 0)))
+                if (!bSentenceStart && (EqualCI(labelValue, m_labelInfo[labelInfoIn].endSequence) || ((label - 1) % m_mbSize == 0)))
                 {
                     // ignore those cases where $</s> is put in the begining, because those are used for initialization purpose
                     spos.flags |= seqFlagStopLabel;
@@ -183,7 +183,7 @@ bool SequenceReader<ElemType>::EnsureDataAvailable(size_t mbStartSample, bool /*
                         RuntimeError("read sentence length is longer than the minibatch size. should be smaller. increase the minibatch size to at least %d", (int) epochSample);
                     }
 
-                    if (!_stricmp(labelValue.c_str(), m_labelInfo[labelInfoIn].endSequence.c_str()))
+                    if (EqualCI(labelValue, m_labelInfo[labelInfoIn].endSequence))
                         continue; // ignore sentence ending
                 }
 
@@ -235,7 +235,7 @@ bool SequenceReader<ElemType>::EnsureDataAvailable(size_t mbStartSample, bool /*
                 {
                     // this is the next word (label was incremented above)
                     labelValue = labelTemp[label];
-                    if (!_stricmp(labelValue.c_str(), m_labelInfo[labelInfoIn].endSequence.c_str()))
+                    if (EqualCI(labelValue, m_labelInfo[labelInfoIn].endSequence))
                     {
                         labelValue = labelInfo.endSequence;
                     }
@@ -549,16 +549,16 @@ void SequenceReader<ElemType>::InitFromConfig(const ConfigRecordType& readerConf
     //    m_featureCount = m_featureDim + m_labelInfo[labelInfoIn].dim;
     m_featureCount = 1;
 
-    std::wstring m_file = readerConfig(L"file");
+    wstring pathName = readerConfig(L"file");
     if (m_traceLevel > 0)
     {
-        fprintf(stderr, "reading sequence file %ls\n", m_file.c_str());
-        // std::wcerr << "reading sequence file" << m_file.c_str() << endl;
+        fprintf(stderr, "reading sequence file %ls\n", pathName.c_str());
+        // std::wcerr << "reading sequence file" << pathName.c_str() << endl;
     }
 
     const LabelInfo& labelIn = m_labelInfo[labelInfoIn];
     const LabelInfo& labelOut = m_labelInfo[labelInfoOut];
-    m_parser.ParseInit(m_file.c_str(), m_featureDim, labelIn.dim, labelOut.dim, labelIn.beginSequence, labelIn.endSequence, labelOut.beginSequence, labelOut.endSequence);
+    m_parser.ParseInit(pathName.c_str(), m_featureDim, labelIn.dim, labelOut.dim, labelIn.beginSequence, labelIn.endSequence, labelOut.beginSequence, labelOut.endSequence);
 
     // read unk sybol
     mUnk = readerConfig(L"unk", "<unk>");
@@ -1526,14 +1526,15 @@ void BatchSequenceReader<ElemType>::InitFromConfig(const ConfigRecordType& reade
     m_traceLevel = readerConfig(L"traceLevel", 0);
     m_parser.SetTraceLevel(m_traceLevel);
 
+    // TODO: some comment needed what this was meant to be
     if (readerConfig.Exists(L"randomize"))
     {
         string randomizeString = readerConfig(L"randomize");
-        if (!_stricmp(randomizeString.c_str(), "none"))
+        if (EqualCI(randomizeString, "none"))
         {
             ;
         }
-        else if (!_stricmp(randomizeString.c_str(), "auto"))
+        else if (EqualCI(randomizeString, "auto"))
         {
             ;
         }
@@ -1551,16 +1552,16 @@ void BatchSequenceReader<ElemType>::InitFromConfig(const ConfigRecordType& reade
     //    m_featureCount = m_featureDim + m_labelInfo[labelInfoIn].dim;
     m_featureCount = 1;
 
-    std::wstring m_file = readerConfig(L"file", L"");
+    wstring pathName = readerConfig(L"file", L"");
     if (m_traceLevel > 0)
     {
-        fwprintf(stderr, L"reading sequence file %s\n", m_file.c_str());
-        // std::wcerr << "reading sequence file " << m_file.c_str() << endl;
+        fwprintf(stderr, L"reading sequence file %s\n", pathName.c_str());
+        // std::wcerr << "reading sequence file " << pathName.c_str() << endl;
     }
 
     const LabelInfo& labelIn = m_labelInfo[labelInfoIn];
     const LabelInfo& labelOut = m_labelInfo[labelInfoOut];
-    m_parser.ParseInit(m_file.c_str(), m_featureDim, labelIn.dim, labelOut.dim, labelIn.beginSequence, labelIn.endSequence, labelOut.beginSequence, labelOut.endSequence);
+    m_parser.ParseInit(pathName.c_str(), m_featureDim, labelIn.dim, labelOut.dim, labelIn.beginSequence, labelIn.endSequence, labelOut.beginSequence, labelOut.endSequence);
 
     mRequestedNumParallelSequences = readerConfig(L"nbruttsineachrecurrentiter", (size_t) 1);
 }
@@ -1812,7 +1813,7 @@ bool BatchSequenceReader<ElemType>::EnsureDataAvailable(size_t /*mbStartSample*/
             {
                 // this is the next word (label was incremented above)
                 labelValue = m_labelTemp[label];
-                if (!_stricmp(labelValue.c_str(), m_labelInfo[labelInfoIn].endSequence.c_str()))
+                if (EqualCI(labelValue, m_labelInfo[labelInfoIn].endSequence))
                 {
                     labelValue = labelInfo.endSequence;
                 }
@@ -2058,8 +2059,8 @@ bool BatchSequenceReader<ElemType>::DataEnd(EndDataType endDataType)
 /// i.e., the ending_index is 1 plus of the true ending index
 template <class ElemType>
 void BatchSequenceReader<ElemType>::GetLabelOutput(std::map<std::wstring,
-                                                            Matrix<ElemType>*>& matrices,
-                                                   size_t m_mbStartSample, size_t actualmbsize)
+                                                   Matrix<ElemType>*>& matrices,
+                                                   size_t mbStartSample, size_t actualmbsize)
 {
     size_t j = 0;
     Matrix<ElemType>* labels = matrices[m_labelsName[labelInfoOut]];
@@ -2079,7 +2080,7 @@ void BatchSequenceReader<ElemType>::GetLabelOutput(std::map<std::wstring,
     ElemType epsilon = (ElemType) 1e-6; // avoid all zero, although this is almost impossible.
 
     if (labels->GetCurrentMatrixLocation() == CPU)
-        for (size_t jSample = m_mbStartSample; j < actualmbsize; ++j, ++jSample)
+        for (size_t jSample = mbStartSample; j < actualmbsize; ++j, ++jSample)
         {
             // pick the right sample with randomization if desired
             size_t jRand = jSample;

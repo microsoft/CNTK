@@ -15,7 +15,7 @@ imageLayout = "cudnn"
 # deviceId = -1
 # imageLayout = "legacy"
 
-command = train:test
+command = MNISTtrain:MNISTtest
 
 precision = "float"
 modelPath = "$ModelDir$/01_OneHidden"
@@ -30,7 +30,7 @@ numMBsToShowResult=500
 #  TRAINING CONFIG                    #
 #######################################
 
-train = [
+MNISTtrain = [
     action = "train"
 
     NDLNetworkBuilder = [
@@ -47,6 +47,8 @@ train = [
     
     reader = [
         readerType = "UCIFastReader"
+        # To get the data (Train-28x28.txt) please run `python mnist_convert.py` 
+        # from the 'AdditionalFiles' folder. See REAMDE.md for details.
         file = "$DataDir$/Train-28x28.txt"
         
         features = [
@@ -67,18 +69,12 @@ train = [
 #  TEST CONFIG                        #
 #######################################
 
-test = [
+MNISTtest = [
     action = "test"
     minibatchSize = 16
 
-    NDLNetworkBuilder=[
-        networkDescription = "$ConfigDir$/01_OneHidden.ndl"
-    ]
-    
     reader = [
         readerType = "UCIFastReader"
-        # To get the data (Train-28x28.txt) please run `python mnist_convert.py` 
-        # from the 'AdditionalFiles' folder. See REAMDE.md for details.
         file = "$DataDir$/Test-28x28.txt"
         
         features = [

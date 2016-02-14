@@ -408,11 +408,12 @@ void ComputationNetwork::CompileNetwork()
         FormEvalOrder(node);
 
     // STEP: form the m_inputValues and m_learnableParameters sets for this rootNode
+    CollectInputAndLearnableParameters(nullptr);
     for (const auto& root : m_allRoots)
         CollectInputAndLearnableParameters(root);
 
     // STEP: Discover nested loops.
-    FormRecurrentLoops(nullptr); // form the global one
+    FormRecurrentLoops(nullptr); // form the global one  --TODO: just use this; should be no need to do this for each root
     for (auto& node : m_allRoots)
         FormRecurrentLoops(node);
 
@@ -421,9 +422,7 @@ void ComputationNetwork::CompileNetwork()
         FormNestedNetwork(node);
 
     // STEP: Infer node dimensions.
-    // This leverages the nested structure.  TODO: ... one day
-    for (auto& node : m_allRoots)
-        ValidateSubNetwork(node);
+    ValidateNetwork();
 
     // STEP: Optimize the network.
     // :)
@@ -483,6 +482,13 @@ void ComputationNetwork::DetermineSetOfAllRoots()
     // set m_allRoots to include both non-referenced nodes and also all explicitly specified roots
     m_allRoots.clear();
     set_union(unreferencedNodes.begin(), unreferencedNodes.end(), allKnownRoots.begin(), allKnownRoots.end(), inserter(m_allRoots, m_allRoots.end()));
+
+    // and bring the roots into a well-defined order
+    // I did observe different order depending on complexity of non-Node BrainScript expressions.
+    sort(m_allRoots.begin(), m_allRoots.end(),[](const ComputationNodeBasePtr& a, const ComputationNodeBasePtr& b)
+    {
+        return a->NodeName() < b->NodeName();
+    });
 }
 
 // -----------------------------------------------------------------------
@@ -493,7 +499,7 @@ void ComputationNetwork::DetermineSetOfAllRoots()
 // This calls Validate() on every node in evaluation order (allowing to propagate things forwards through the net).
 // This is called lazily but once only per node until next ClearCache().
 // This also sets up MBLayout links.
-void ComputationNetwork::ValidateSubNetwork(const ComputationNodeBasePtr& rootNode)
+void ComputationNetwork::ValidateNetwork()
 {
     // reset to a well-defined MBLayout (any meaningful layout should do here)
     // Note that Validate is never called during operation. Any actual computation will lead to MBLayout to be set.
@@ -501,13 +507,13 @@ void ComputationNetwork::ValidateSubNetwork(const ComputationNodeBasePtr& rootNo
 
     // set up MBLayout links of inputs (all others get propagated upwards through Validate())
     // TODO: Once we support mismatching layouts, this will be more involved. For now, everything shares the one layout that the Network knows about.
-    for (auto node : InputNodes(rootNode))
+    for (auto node : InputNodes(nullptr))
         node->LinkToMBLayout(m_pMBLayout);
 
     // we call all nodes' Validate() in order to validate, that is, set up MBLayout and FunctionValues dimension
     // A problem is that recurrent loops may require partial validation.
     // Nodes validated on partial input (i.e. some children not yet validated) will be revisited.
-    const auto& nodes = GetEvalOrder(rootNode);
+    const auto& nodes = GetEvalOrder(nullptr);
 
     for (auto& node : nodes)
     {
@@ -526,10 +532,10 @@ void ComputationNetwork::ValidateSubNetwork(const ComputationNodeBasePtr& rootNo
     while (toValidate > 0)
     {
         pass++;
-        fprintf(stderr, "\n\nValidating for node %ls. %d nodes to process in pass %d.\n", rootNode->NodeName().c_str(), (int) toValidate, (int) pass);
+        fprintf(stderr, "\n\nValidating network. %d nodes to process in pass %d.\n", (int) toValidate, (int) pass);
         ValidateNodes(nodes, false /*isFinalValidationPass*/, toValidate);
     }
-    fprintf(stderr, "\n\nValidating for node %ls, final verification.\n", rootNode->NodeName().c_str());
+    fprintf(stderr, "\n\nValidating network, final pass.\n");
     ValidateNodes(nodes, true /*isFinalValidationPass*/, toValidate);
     if (toValidate != 0)
         LogicError("ValidateSubNetwork: ValidateNodes(true) unexpectedly returned with work left to do.");

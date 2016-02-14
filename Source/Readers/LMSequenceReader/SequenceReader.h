@@ -117,7 +117,6 @@ protected:
     bool m_clsinfoRead;
 
     bool m_idx2probRead;
-    std::wstring m_file;
 
 public:
     using LabelType = typename IDataReader<ElemType>::LabelType;

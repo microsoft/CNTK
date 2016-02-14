@@ -13,6 +13,7 @@
 //
 
 #define _CRT_SECURE_NO_WARNINGS // "secure" CRT not available on all platforms  --add this at the top of all CPP files that give "function or variable may be unsafe" warnings
+#include "Basics.h"
 #include "Platform.h"
 #include "BestGpu.h"
 #include "Config.h" // for ConfigParameters
@@ -63,8 +64,7 @@ struct ProcessorData
     cudaDeviceProp deviceProp;
     size_t cudaFreeMem;
     size_t cudaTotalMem;
-    bool dbnFound;
-    bool cnFound;
+    bool cntkFound;
     int deviceId; // the deviceId (cuda side) for this processor
 };
 
@@ -188,12 +188,9 @@ DEVICEID_TYPE DeviceFromConfig(const ConfigParameters& config)
     ConfigValue val = config("deviceId", "auto");
     bool bLockGPU = config(L"lockGPU", true);
 
-    if (!_stricmp(val.c_str(), "cpu"))
-        return SelectDevice(CPUDEVICE, false);
-    else if (!_stricmp(val.c_str(), "auto"))
-        return SelectDevice(DEVICEID_AUTO, bLockGPU);
-    else
-        return SelectDevice((int) val, bLockGPU);
+    if      (EqualCI(val, "cpu"))  return SelectDevice(CPUDEVICE,     false);
+    else if (EqualCI(val, "auto")) return SelectDevice(DEVICEID_AUTO, bLockGPU);
+    else                           return SelectDevice((int) val,     bLockGPU);
 }
 
 // !!!!This is from helper_cuda.h which comes with CUDA samples!!!! Consider if it is beneficial to just include all helper_cuda.h
@@ -430,7 +427,7 @@ std::vector<int> BestGpu::GetDevices(int number, BestGpuFlags p_bestFlags)
         if (!pd->deviceProp.tccDriver || pd->memory.total == 0)
             mem = pd->cudaFreeMem / (double) pd->cudaTotalMem;
         score += mem * freeMemW;
-        score += ((pd->cnFound || pd->dbnFound) ? 0 : 1) * mlAppRunningW;
+        score += (pd->cntkFound ? 0 : 1) * mlAppRunningW;
         for (int i = 0; i < best.size(); i++)
         {
             // look for a better score
@@ -503,7 +500,8 @@ std::vector<int> BestGpu::GetDevices(int number, BestGpuFlags p_bestFlags)
     return best; // return the array of the best GPUs
 }
 
-// QueryNvmlData - Query data from the Nvidia Management Library, and accumulate counters
+// QueryNvmlData - Query data from the Nvidia Management Library, and accumulate counters,
+// In case failure, this function simply backs out without filling in the data structure and without setting m_nvmlData.
 void BestGpu::QueryNvmlData()
 {
     if (!m_cudaData)
@@ -519,17 +517,13 @@ void BestGpu::QueryNvmlData()
         // Query for device handle to perform operations on a device
         nvmlReturn_t result = nvmlDeviceGetHandleByIndex(i, &device);
         if (NVML_SUCCESS != result)
-        {
-            return;
-        }
+            return; // failed: just back out
 
         // pci.busId is very useful to know which device physically you're talking to
         // Using PCI identifier you can also match nvmlDevice handle to CUDA device.
         result = nvmlDeviceGetPciInfo(device, &pci);
         if (NVML_SUCCESS != result)
-        {
             return;
-        }
 
         ProcessorData* curPd = NULL;
         for (ProcessorData* pd : m_procData)
@@ -547,21 +541,17 @@ void BestGpu::QueryNvmlData()
         // Get the memory usage, will only work for TCC drivers
         result = nvmlDeviceGetMemoryInfo(device, &memory);
         if (NVML_SUCCESS != result)
-        {
             return;
-        }
         curPd->memory = memory;
 
         // Get the memory usage, will only work for TCC drivers
         result = nvmlDeviceGetUtilizationRates(device, &utilization);
         if (NVML_SUCCESS != result)
-        {
             return;
-        }
         if (m_queryCount)
         {
             // average, slightly overweighting the most recent query
-            curPd->utilization.gpu = (curPd->utilization.gpu * m_queryCount + utilization.gpu * 2) / (m_queryCount + 2);
+            curPd->utilization.gpu    = (curPd->utilization.gpu    * m_queryCount + utilization.gpu    * 2) / (m_queryCount + 2);
             curPd->utilization.memory = (curPd->utilization.memory * m_queryCount + utilization.memory * 2) / (m_queryCount + 2);
         }
         else
@@ -570,7 +560,7 @@ void BestGpu::QueryNvmlData()
         }
         m_queryCount++;
 
-        unsigned size = 0;
+        unsigned int size = 0;
         result = nvmlDeviceGetComputeRunningProcesses(device, &size, NULL);
         if (size > 0)
         {
@@ -580,11 +570,8 @@ void BestGpu::QueryNvmlData()
                 info.usedGpuMemory = 0;
             result = nvmlDeviceGetComputeRunningProcesses(device, &size, &processInfo[0]);
             if (NVML_SUCCESS != result)
-            {
                 return;
-            }
-            bool cnFound = false;
-            bool dbnFound = false;
+            bool cntkFound = false;
             for (nvmlProcessInfo_t info : processInfo)
             {
                 std::string name;
@@ -597,12 +584,15 @@ void BestGpu::QueryNvmlData()
                     name = name.substr(pos + 1);
                 if (GetCurrentProcessId() == info.pid || name.length() == 0)
                     continue;
-                cnFound = (cnFound || (!name.compare("cn.exe")));
-                dbnFound = (dbnFound || (!name.compare("dbn.exe")));
+#ifdef _WIN32
+                cntkFound = cntkFound || EqualCI(name, "cntk.exe"); // recognize ourselves
+                cntkFound = cntkFound || EqualCI(name, "cn.exe") || EqualCI(name, "dbn.exe"); // also recognize some MS-proprietary legacy tools
+#else
+                cntkFound = cntkFound || name == "cntk"; // (Linux is case sensitive)
+#endif
             }
             // set values to save
-            curPd->cnFound = cnFound;
-            curPd->dbnFound = dbnFound;
+            curPd->cntkFound = cntkFound;
         }
     }
     m_nvmlData = true;

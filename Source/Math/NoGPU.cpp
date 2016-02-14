@@ -2154,7 +2154,7 @@ typename CuDnnConvolutionEngineFactory<ElemType>::PoolDescPtr CuDnnConvolutionEn
 }
 
 template <class ElemType>
-typename CuDnnConvolutionEngineFactory<ElemType>::ConvEnginePtr CuDnnConvolutionEngineFactory<ElemType>::CreateConvEngine(DEVICEID_TYPE, size_t)
+typename CuDnnConvolutionEngineFactory<ElemType>::ConvEnginePtr CuDnnConvolutionEngineFactory<ElemType>::CreateConvEngine(DEVICEID_TYPE, size_t, BatchNormImpl)
 {
     RuntimeError("The code is compiled with CPUONLY macro.");
 }
@@ -2173,9 +2173,22 @@ bool CuDnnConvolutionEngineFactory<ElemType>::IsSupported(DEVICEID_TYPE)
 
 template class CuDnnConvolutionEngineFactory<float>;
 template class CuDnnConvolutionEngineFactory<double>;
+
+CudaTimer::~CudaTimer()
+{
 }
+void CudaTimer::Start()
+{
 }
+void CudaTimer::Stop()
+{
 }
+float CudaTimer::Elapsed()
+{
+    return 0;
+}
+
+} } }
 
 // define a dummy GPUWatcher class too
 #include "GPUWatcher.h"

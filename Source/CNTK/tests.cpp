@@ -115,8 +115,9 @@ void TestReader(const ConfigParameters& configBase)
     GetFileConfigNames(readerConfig, featureNames, labelNames);
 
     // setup minibatch matrices
-    Matrix<ElemType> featuresMatrix(0);
-    Matrix<ElemType> labelsMatrix(0);
+    int deviceId = 0;
+    Matrix<ElemType> featuresMatrix(deviceId);
+    Matrix<ElemType> labelsMatrix(deviceId);
     std::map<std::wstring, Matrix<ElemType>*> matrices;
     matrices[featureNames[0]] = &featuresMatrix;
     matrices[labelNames[0]] = &labelsMatrix;
@@ -266,7 +267,7 @@ void TestConfiguration(const ConfigParameters& configBase)
                 for (int i = 3; i < configNode.size(); ++i)
                 {
                     ConfigParameters configParam = configNode[i];
-                    if (configParam.Exists("needGradient"))
+                    if (configParam.Exists("needGradient")) // TODO: should this be a test for 'true' rather than Exists()?
                         needGradient = true;
                     else if (configParam.Exists("init"))
                     {
@@ -284,7 +285,7 @@ void TestConfiguration(const ConfigParameters& configBase)
                     if (initData.size() > 0)
                         initValueScale = initData[0];
                     if (initData.size() > 1)
-                        uniform = !_stricmp(initData[1], "uniform");
+                        uniform = EqualCI(initData[1], "uniform");
                 }
             }
         }

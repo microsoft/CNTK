@@ -4300,8 +4300,8 @@ void GPUMatrix<ElemType>::CreateCurandObject(unsigned long seed, const char* cal
     if (s_curandGenerator == NULL)
     {
         unsigned long long cudaSeed = (seed == USE_TIME_BASED_SEED) ? time(NULL) : seed;
-        fprintf(stderr, "%s (GPU): creating curand object with seed %llu, sizeof(ElemType)==%u\n",
-                caller, cudaSeed, sizeof(ElemType));
+        fprintf(stderr, "%s (GPU): creating curand object with seed %llu, sizeof(ElemType)==%lu\n",
+                caller, cudaSeed, (unsigned long)sizeof(ElemType));
         s_curandGenerator = new curandGenerator_t;
         // Create pseudo-random number generator
         CURAND_CALL(curandCreateGenerator(&(((curandGenerator_t*) s_curandGenerator)[0]), CURAND_RNG_PSEUDO_XORWOW));
@@ -4711,7 +4711,7 @@ void GPUMatrix<ElemType>::RCRFBackwardCompute(
 
 /**
     Compute the gradient for the first order Markov transition probabilities
-    It uses equations derived in R. Collobert's paper "Natural lanugage processing (almost) from scratch"
+    It uses equations derived in R. Collobert's paper "Natural language processing (almost) from scratch"
     */
 template <class ElemType>
 void GPUMatrix<ElemType>::RCRFTransGrdCompute(const GPUMatrix<ElemType>& lbls,

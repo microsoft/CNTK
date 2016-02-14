@@ -52,7 +52,7 @@ class minibatchutterancesourcemulti : public minibatchsource
         {
         }
 
-        const wstring &logicalpath() const
+        wstring logicalpath() const
         {
             return parsedpath; /*type cast will return logical path*/
         }
@@ -188,6 +188,8 @@ class minibatchutterancesourcemulti : public minibatchsource
     };
     std::vector<std::vector<utterancechunkdata>> allchunks;           // set of utterances organized in chunks, referred to by an iterator (not an index)
     std::vector<unique_ptr<biggrowablevector<CLASSIDTYPE>>> classids; // [classidsbegin+t] concatenation of all state sequences
+
+    bool m_generatePhoneBoundaries;
     std::vector<unique_ptr<biggrowablevector<HMMIDTYPE>>> phoneboundaries;
     bool issupervised() const
     {
@@ -243,7 +245,14 @@ class minibatchutterancesourcemulti : public minibatchsource
     struct utteranceref                               // describes the underlying random utterance associated with an utterance position
     {
         size_t chunkindex;     // lives in this chunk (index into randomizedchunks[])
-        size_t utteranceindex; // utterance index in that chunk
+    private:
+        size_t m_utteranceindex; // utterance index in that chunk
+    public:
+        size_t utteranceindex() const
+        {
+            return m_utteranceindex;
+        }
+
         size_t numframes;      // (cached since we cannot directly access the underlying data from here)
         size_t globalts;       // start frame in global space after randomization (for mapping frame index to utterance position)
         size_t globalte() const
@@ -251,13 +260,13 @@ class minibatchutterancesourcemulti : public minibatchsource
             return globalts + numframes;
         } // end frame
         utteranceref(size_t chunkindex, size_t utteranceindex)
-            : chunkindex(chunkindex), utteranceindex(utteranceindex), globalts(SIZE_MAX), numframes(0)
+            : chunkindex(chunkindex), m_utteranceindex(utteranceindex), globalts(SIZE_MAX), numframes(0)
         {
         }
         void swap(utteranceref &other) // used in randomization
         {
             ::swap(chunkindex, other.chunkindex);
-            ::swap(utteranceindex, other.utteranceindex);
+            ::swap(m_utteranceindex, other.m_utteranceindex);
             assert(globalts == SIZE_MAX && other.globalts == SIZE_MAX && numframes == 0 && other.numframes == 0); // can only swap before assigning these
         }
     };
@@ -286,26 +295,458 @@ class minibatchutterancesourcemulti : public minibatchsource
     std::vector<positionchunkwindow> positionchunkwindows; // [utterance position] -> [windowbegin, windowend) for controlling paging
 
     // frame-level randomization layered on top of utterance chunking (randomized, where randomization is cached)
+    #pragma pack(push)
+    #pragma pack(1)
     struct frameref
     {
         unsigned short chunkindex;     // lives in this chunk (index into randomizedchunks[])
-        unsigned short utteranceindex; // utterance index in that chunk
-        static const size_t maxutterancesperchunk = 65535;
-        unsigned short frameindex; // frame index within the utterance
-        static const size_t maxframesperutterance = 65535;
-        frameref(size_t ci, size_t ui, size_t fi)
-            : chunkindex((unsigned short) ci), utteranceindex((unsigned short) ui), frameindex((unsigned short) fi)
+
+    private:
+        // The utterance index and frame index are stored in a byte array
+        // with the first NUM_UTTERANCE_INDEX_BITS bits being the utterance index 
+        // and the remaining being the frame index
+        static const unsigned int NUM_STORAGE_BYTES = 3;
+        static const unsigned int NUM_UTTERANCE_INDEX_BITS = 11;
+        static const unsigned int NUM_FRAME_INDEX_BITS = (NUM_STORAGE_BYTES * 8) - NUM_UTTERANCE_INDEX_BITS;
+
+        unsigned char m_buffer[NUM_STORAGE_BYTES];
+        static_assert(NUM_STORAGE_BYTES <= sizeof(unsigned int), "Number of storage bytes in a frameref should not exceed sizeof(unsigned int)");
+        unsigned int fullvalue() const
         {
-            if (ci == chunkindex && ui == utteranceindex && fi == frameindex)
-                return;
-            LogicError("frameref: bit fields too small");
+            unsigned int fullValue = m_buffer[0];
+            for (int i = 1; i < NUM_STORAGE_BYTES; ++i)
+            {
+                fullValue = (fullValue << 8) + m_buffer[i];
+            }
+
+            return fullValue;
         }
-        frameref()
-            : chunkindex(0), utteranceindex(0), frameindex(0)
+    public:
+        static const size_t maxutterancesperchunk = (1 << NUM_UTTERANCE_INDEX_BITS) - 1;
+        static const size_t maxframesperutterance = (1 << NUM_FRAME_INDEX_BITS) - 1;
+
+        // utterance index in that chunk
+        unsigned short utteranceindex() const
         {
+            return (unsigned short)(fullvalue() >> NUM_FRAME_INDEX_BITS);
+        }
+
+        // frame index within the utterance
+        unsigned short frameindex() const
+        {
+            return (unsigned short)(fullvalue() & ((1U << NUM_FRAME_INDEX_BITS) - 1));
+        }
+
+        frameref(size_t ci, size_t ui, size_t fi)
+            : chunkindex((unsigned short) ci)
+        {
+            if ((ui <= maxutterancesperchunk) && (fi <= maxframesperutterance))
+            {
+                unsigned int fullValue = (unsigned int)ui;
+                fullValue = (fullValue << NUM_FRAME_INDEX_BITS) + (unsigned int)fi;
+                for (int i = NUM_STORAGE_BYTES - 1; i >=0; --i)
+                {
+                    m_buffer[i] = fullValue & ((1U << 8) - 1);
+                    fullValue = fullValue >> 8;
+                }
+            }
+            else
+                LogicError("frameref: bit fields too small");
+        }
+
+        frameref()
+            : chunkindex(0)
+        {
+            for (int i = 0; i < NUM_STORAGE_BYTES; ++i)
+                m_buffer[i] = 0;
+        }
+
+        void print() const
+        {
+            fprintf(stderr, "chunkindex=%d, utteranceindex=%d, frameindex=%d\n", (int)chunkindex, (int)utteranceindex(), (int)frameindex());
         }
     };
-    biggrowablevector<frameref> randomizedframerefs; // [globalt-sweepts] -> (chunk, utt, frame) lookup table for randomized frames  --this can be REALLY big!
+    #pragma pack(pop)
+
+    class framerandomizer
+    {
+    private:
+        const std::vector<std::vector<chunk>>& m_randomizedChunks;
+
+        // When true we use a rolling window of randomized framerefs to minimize memory
+        // footprint, instead of using a large vector listing all frames in the training corpus
+        // Functionally, the 2 methods are identical.
+        const bool m_minimizeMemoryFootprint;
+
+        // [globalt-sweepts] -> (chunk, utt, frame) lookup table for randomized frames  --this can be REALLY big!
+        // Only used when m_minimizeMemoryFootprint is false
+        biggrowablevector<frameref> m_randomizedframerefs;
+
+        // A rolling windows of chunks of framerefs used for randomization in frame mode
+        // Along with each frameref, we also store the chunk index of the original frame
+        // at that index before randomization, to be used for determining the chunk range
+        // to be used for randomization of that frame's position
+        // Only used when m_minimizeMemoryFootprint is true
+        std::deque<std::vector<std::pair<unsigned short, frameref>>> m_randomizedframerefsWindow;
+        size_t m_currentRangeBeginChunkIdx;
+        size_t m_currentRangeEndChunkIdx;
+        size_t m_nextFramePosNotYetRandomized;
+
+    public:
+        framerandomizer(const std::vector<std::vector<chunk>>& randomizedChunks, bool minimizeMemoryFootprint)
+            : m_randomizedChunks(randomizedChunks), m_minimizeMemoryFootprint(minimizeMemoryFootprint), m_currentRangeBeginChunkIdx(0), m_currentRangeEndChunkIdx(0), m_nextFramePosNotYetRandomized(0)
+        {
+        }
+
+        void randomizeFrameRange(size_t globalts, size_t globalte)
+        {
+            if (m_nextFramePosNotYetRandomized == m_randomizedChunks[0].back().globalte())
+                return;
+
+            assert(m_nextFramePosNotYetRandomized >= m_randomizedChunks[0][0].globalts);
+
+            size_t firstFramePosToRandomize = m_nextFramePosNotYetRandomized;
+
+            // Find the smallest chunk index whose windowbegin exceeds the chunk index
+            // of the frame position (globalte - 1). We will randomize up to this chunk
+            // as the final position of (globalte - 1) is guaranteed to have been determined 
+            // when all frames up to that chunk have been randomized
+            size_t lastFramePosChunkIdx = chunkIdx(globalte - 1);
+            size_t endChunkIdxToRandomize = lastFramePosChunkIdx;
+            while ((endChunkIdxToRandomize < m_randomizedChunks[0].size()) &&
+                   (m_randomizedChunks[0][endChunkIdxToRandomize].windowbegin <= lastFramePosChunkIdx))
+            {
+                endChunkIdxToRandomize++;
+            }
+
+            size_t endFramePosToRandomize = m_randomizedChunks[0][endChunkIdxToRandomize - 1].globalte();
+
+            // Determine the range of chunks that need to be in m_randomizedframerefsWindow for us
+            // to perform the necessary randomization
+            size_t startChunkIdx = std::min(chunkIdx(globalts), m_randomizedChunks[0][chunkIdx(firstFramePosToRandomize)].windowbegin);
+            size_t endChunkIdx = m_randomizedChunks[0][chunkIdx(endFramePosToRandomize - 1)].windowend;
+
+            // Lets drop everything that is outside the new range [startChunkIdx, endChunkIdx)
+            for (size_t i = m_currentRangeBeginChunkIdx; i < startChunkIdx; ++i)
+            {
+                m_randomizedframerefsWindow.pop_front();
+                m_currentRangeBeginChunkIdx++;
+            }
+
+            // Lets page in everything from m_currentRangeEndChunkIdx to endChunkIdx
+            for (size_t i = m_currentRangeEndChunkIdx; i < endChunkIdx; ++i)
+                addRandomizedFramesForChunk(i);
+
+            assert(m_currentRangeEndChunkIdx == endChunkIdx);
+
+            // now randomize them --we use the nested loop again to avoid storing a backpointer
+            // The condition is that a randomized frame may not be moved out of its associated chunk window.
+            // The actual range we randomize is up to the last frame that position (globalte - 1) could
+            // potentially swap with
+            for (size_t t = firstFramePosToRandomize; t < endFramePosToRandomize; ++t)
+            {
+                size_t currentChunkIdx = chunkIdx(t);
+
+                size_t chunkWindowBegin = m_randomizedChunks[0][currentChunkIdx].windowbegin;
+                size_t chunkWindowEnd = m_randomizedChunks[0][currentChunkIdx].windowend;
+
+                // Chunk implies that if we are at position 't', we are guaranteed to have chunks [chunkWindowBegin, chunkWindowEnd) in RAM.
+                // These chunks are associated with a range of frame positions.
+                // It is implied that if we are at position 't', the frames covered by chunks [chunkWindowBegin, chunkWindowEnd) are in RAM.
+                const size_t postbegin = m_randomizedChunks[0][chunkWindowBegin].globalts;
+                const size_t postend = m_randomizedChunks[0][chunkWindowEnd - 1].globalte();
+                // The position that this frame gets randomized to must be guaranteed to belong to a chunk within [postbegin, postend).
+
+                for (;;) // (randomization retry loop)
+                {
+                    size_t tswap = msra::dbn::rand(postbegin, postend); // random frame position within allowed range
+                    // We want to swap 't' to 'tswap' and 'tswap' to 't'.
+                    //  - Both may have been swapped before.
+                    //  - Both must stay within the randomization window of their respective position.
+                    // check admissibility of where the element at 'tswap' gets swapped to 't' (range = [windowbegin,windowend))
+                    size_t tswapchunkindex = randomizedframeref(tswap).chunkindex;
+                    if (tswapchunkindex < chunkWindowBegin || tswapchunkindex >= chunkWindowEnd)
+                        continue;
+                    // check admissibility of where the element at t gets swapped to (which is frame position 'tswap')
+                    const size_t sourcechunkindex = randomizedframeref(t).chunkindex;
+                    size_t targetchunkindex = ttochunk(tswap); // chunk associated with this frame position defines value range
+                    const auto &targetchunk = m_randomizedChunks[0][targetchunkindex];
+                    const size_t targetwindowbegin = targetchunk.windowbegin;
+                    const size_t targetwindowend = targetchunk.windowend;
+                    if (sourcechunkindex < targetwindowbegin || sourcechunkindex >= targetwindowend)
+                        continue;
+                    // admissible--swap the two
+                    ::swap(randomizedframeref(t), randomizedframeref(tswap));
+
+                    // do a post-check if we got it right  --we seem not to
+                    if (isframepositionvalid(t) && isframepositionvalid(tswap))
+                        break;
+                    // not valid: swap them back and try again  --we actually discovered a bug in the code above
+                    ::swap(randomizedframeref(t), randomizedframeref(tswap));
+                    fprintf(stderr, "randomizeFrameRange: BUGBUG --invalid swapping condition detected\n");
+                }
+            }
+
+            m_nextFramePosNotYetRandomized = endFramePosToRandomize;
+
+            // Verify no frameref has violated its range constraints
+            for (size_t t = globalts; t < globalte; ++t)
+            {
+                size_t chunkIdx = ttochunk(t);
+                const auto &chunk = m_randomizedChunks[0][chunkIdx]; // for window and chunkdata
+                const size_t poswindowbegin = chunk.windowbegin;
+                const size_t poswindowend = chunk.windowend;
+
+                const size_t randomizedchunkindex = randomizedframeref(t).chunkindex;
+                if (randomizedchunkindex < poswindowbegin || randomizedchunkindex >= poswindowend)
+                    LogicError("randomizeFrameRange: nope, you got frame randomization wrong, dude");
+            }
+        }
+
+        void reset(unsigned int randSeed)
+        {
+            srand(randSeed);
+            size_t sweepts = m_randomizedChunks[0][0].globalts;
+            size_t totalFrames = m_randomizedChunks[0].back().globalte() - sweepts;
+            if (m_minimizeMemoryFootprint)
+            {
+                m_randomizedframerefsWindow.clear();
+                m_currentRangeBeginChunkIdx = m_randomizedChunks[0][0].windowbegin;
+                m_currentRangeEndChunkIdx = m_currentRangeBeginChunkIdx;
+                m_nextFramePosNotYetRandomized = sweepts;
+            }
+            else
+            {
+                if (m_randomizedframerefs.size() != totalFrames)
+                    m_randomizedframerefs.resize(totalFrames);
+
+                // An original timeline is established by the randomized chunks, denoted by 't'.
+                // Returned frames are indexed by frame position j = (globalt - sweept), which have an associated underlying 't'.
+                // It is guaranteed that uttterance frame position j maps to an underlying frame within the corresponding chunk window.
+                biggrowablevector<unsigned short> ttochunk; // randomized chunk index associated with frame position
+                ttochunk.resize(totalFrames);
+                size_t t = 0;
+                // enumerate chunks in their randomized order and assign frame indices in that order -> randomizedframerefs[t]
+                // At this point, chunks are in randomized order, but utterances and frames within utterances are not randomized.
+                // Later we will randomize those as well.
+                foreach_index(i, m_randomizedChunks[0])
+                {
+                    const auto &chunk = m_randomizedChunks[0][i];
+                    const auto &chunkdata = chunk.getchunkdata();
+                    const size_t numutt = chunkdata.numutterances();
+                    for (size_t k = 0; k < numutt; k++)
+                    {
+                        const size_t n = chunkdata.numframes(k);
+                        for (size_t m = 0; m < n; m++)
+                        {
+                            m_randomizedframerefs[t] = { (size_t)i, k, m }; // hopefully this is a memory copy, not a bit-wise assignment! If not, then code it explicitly
+                            ttochunk[t] = (unsigned short)i;
+                            checkoverflow(ttochunk[t], i, "ttochunk[]");
+                            t++;
+                        }
+                    }
+                }
+                assert(t == totalFrames);
+
+                // now randomize them --we use the nested loop again to avoid storing a backpointer
+                // The condition is that a randomized frame may not be moved out of its associated chunk window.
+                foreach_index(t, m_randomizedframerefs)
+                {
+                    const size_t positionchunkindex = ttochunk[t];               // position 't' lies within this chunk (relationship is monotonous, not random)
+                    const auto &chunk = m_randomizedChunks[0][positionchunkindex]; // for window
+
+                    // get in-RAM chunk range for this frame position (shared across all frame positions within the same chunk)
+                    const size_t poswindowbegin = chunk.windowbegin; // rolling window over chunks (which under the hood have been randomized)
+                    const size_t poswindowend = chunk.windowend;
+                    // Chunk implies that if we are at position 't', we are guaranteed to have chunks [poswindowbegin, poswindowend) in RAM.
+                    // These chunks are associated with a range of frame positions.
+                    // It is implied that if we are at position 't', the frames covered by chunks [poswindowbegin, poswindowend) are in RAM.
+                    const size_t postbegin = m_randomizedChunks[0][poswindowbegin].globalts - sweepts;
+                    const size_t postend = m_randomizedChunks[0][poswindowend - 1].globalte() - sweepts;
+                    // The position that this frame gets randomized to must be guaranteed to belong to a chunk within [postbegin, postend).
+
+                    for (;;) // (randomization retry loop)
+                    {
+                        size_t tswap = msra::dbn::rand(postbegin, postend); // random frame position within allowed range
+                        // We want to swap 't' to 'tswap' and 'tswap' to 't'.
+                        //  - Both may have been swapped before.
+                        //  - Both must stay within the randomization window of their respective position.
+                        // check admissibility of where the element at 'tswap' gets swapped to 't' (range = [windowbegin,windowend))
+                        size_t tswapchunkindex = m_randomizedframerefs[tswap].chunkindex;
+                        if (tswapchunkindex < poswindowbegin || tswapchunkindex >= poswindowend)
+                            continue;
+                        // check admissibility of where the element at t gets swapped to (which is frame position 'tswap')
+                        const size_t sourcechunkindex = m_randomizedframerefs[t].chunkindex;
+                        size_t targetchunkindex = ttochunk[tswap]; // chunk associated with this frame position defines value range
+                        const auto &targetchunk = m_randomizedChunks[0][targetchunkindex];
+                        const size_t targetwindowbegin = targetchunk.windowbegin;
+                        const size_t targetwindowend = targetchunk.windowend;
+                        if (sourcechunkindex < targetwindowbegin || sourcechunkindex >= targetwindowend)
+                            continue;
+                        // admissible--swap the two
+                        ::swap(m_randomizedframerefs[t], m_randomizedframerefs[tswap]);
+                        // do a post-check if we got it right  --we seem not to
+                        if (isframepositionvalid(t, ttochunk) && isframepositionvalid(tswap, ttochunk))
+                            break;
+                        // not valid: swap them back and try again  --we actually discovered a bug in the code above
+                        ::swap(m_randomizedframerefs[t], m_randomizedframerefs[tswap]);
+                        fprintf(stderr, "lazyrandomization: BUGBUG --invalid swapping condition detected\n");
+                    }
+                }
+
+                // check it --my head spins
+                t = 0;
+                foreach_index(i, m_randomizedChunks[0])
+                {
+                    const auto &chunk = m_randomizedChunks[0][i]; // for window and chunkdata
+                    const size_t poswindowbegin = chunk.windowbegin;
+                    const size_t poswindowend = chunk.windowend;
+
+                    const auto &chunkdata = chunk.getchunkdata(); // for numutterances/numframes
+                    const size_t numutt = chunkdata.numutterances();
+                    for (size_t k = 0; k < numutt; k++)
+                    {
+                        const size_t n = chunkdata.numframes(k);
+                        for (size_t m = 0; m < n; m++)
+                        {
+                            const size_t randomizedchunkindex = m_randomizedframerefs[t].chunkindex;
+                            if (randomizedchunkindex < poswindowbegin || randomizedchunkindex >= poswindowend)
+                                LogicError("lazyrandomization: nope, you got frame randomization wrong, dude");
+                            t++;
+                        }
+                    }
+                }
+                assert(t == totalFrames);
+
+                m_nextFramePosNotYetRandomized = m_randomizedChunks[0].back().globalte();
+                m_currentRangeBeginChunkIdx = 0;
+                m_currentRangeEndChunkIdx = m_randomizedChunks[0].size();
+            }
+        }
+
+        frameref& randomizedframeref(size_t globalts)
+        {
+            if (m_minimizeMemoryFootprint)
+                return randomizedframeentry(globalts).second;
+            else
+            {
+                size_t sweepts = m_randomizedChunks[0][0].globalts;
+                return m_randomizedframerefs[globalts - sweepts];
+            }
+        }
+
+    private:
+        void addRandomizedFramesForChunk(size_t chunkIdx)
+        {
+            assert(m_minimizeMemoryFootprint);
+            assert(chunkIdx == m_currentRangeEndChunkIdx);
+
+            const auto &chunk = m_randomizedChunks[0][chunkIdx];
+            const auto &chunkdata = chunk.getchunkdata();
+            const size_t numutt = chunkdata.numutterances();
+            std::vector<std::pair<unsigned short, frameref>> chunkFrames(chunkdata.totalframes);
+            size_t t = 0;
+            for (size_t k = 0; k < numutt; k++)
+            {
+                const size_t n = chunkdata.numframes(k);
+                for (size_t m = 0; m < n; m++)
+                {
+                    chunkFrames[t] = { (unsigned short)chunkIdx, { chunkIdx, k, m } };
+                    checkoverflow(chunkFrames[t].first, chunkIdx, "ttochunk[]");
+                    t++;
+                }
+            }
+
+            m_randomizedframerefsWindow.push_back(std::move(chunkFrames));
+
+            m_currentRangeEndChunkIdx++;
+        }
+
+        size_t chunkIdx(size_t t)
+        {
+            assert(t >= m_randomizedChunks[0][m_currentRangeBeginChunkIdx].globalts);
+
+            // TODO: Use std::lower_bound
+            size_t low = m_currentRangeBeginChunkIdx;
+            size_t high = m_randomizedChunks[0].size() - 1;
+            while (high > low)
+            {
+                size_t mid = (high + low) / 2;
+                if (t >= m_randomizedChunks[0][mid].globalte())
+                {
+                    low = mid + 1;
+                }
+                else if (t < m_randomizedChunks[0][mid].globalts)
+                {
+                    assert(mid > 0);
+                    high = mid - 1;
+                }
+                else
+                {
+                    return mid;
+                }
+            }
+
+            assert((high == low) && ((t >= m_randomizedChunks[0][low].globalts) && (t < m_randomizedChunks[0][low].globalte())));
+            return low;
+        }
+
+        // helper for testing whether a swapped frame position is valid (w.r.t. beign in RAM when being at position 't')
+        bool isframepositionvalid(const size_t t)
+        {
+            assert(m_minimizeMemoryFootprint);
+
+            // look up valid range for time position
+            const size_t positionchunkindex = ttochunk(t); // position 't' lies within this original chunk (relationship is monotonous, not random)
+            const auto &chunk = m_randomizedChunks[0][positionchunkindex];
+            // get in-RAM chunk range for this frame position (shared across all frame positions within the same chunk)
+            const size_t poswindowbegin = chunk.windowbegin; // rolling window over chunks (which under the hood have been randomized)
+            const size_t poswindowend = chunk.windowend;
+            // Chunk implies that if we are at position 't', we are guaranteed to have chunks [poswindowbegin, poswindowend) in RAM.
+
+            // now see if the randomized location is within that window
+            const size_t actualchunkindexforpos = randomizedframeref(t).chunkindex; // where this frame pos has been mapped to
+            return actualchunkindexforpos >= poswindowbegin && actualchunkindexforpos < poswindowend;
+            // We only need to test the chunk index. Utterance and frame can be randomized within a chunk as we want, as long it is in RAM.
+        }
+
+        // helper for testing whether a swapped frame position is valid (w.r.t. beign in RAM when being at position 't')
+        bool isframepositionvalid(const size_t t, const biggrowablevector<unsigned short> &ttochunk) const
+        {
+            assert(!m_minimizeMemoryFootprint);
+
+            // look up valid range for time position
+            const size_t positionchunkindex = ttochunk[t]; // position 't' lies within this original chunk (relationship is monotonous, not random)
+            const auto &chunk = m_randomizedChunks[0][positionchunkindex];
+            // get in-RAM chunk range for this frame position (shared across all frame positions within the same chunk)
+            const size_t poswindowbegin = chunk.windowbegin; // rolling window over chunks (which under the hood have been randomized)
+            const size_t poswindowend = chunk.windowend;
+            // Chunk implies that if we are at position 't', we are guaranteed to have chunks [poswindowbegin, poswindowend) in RAM.
+
+            // now see if the randomized location is within that window
+            const size_t actualchunkindexforpos = m_randomizedframerefs[t].chunkindex; // where this frame pos has been mapped to
+            return actualchunkindexforpos >= poswindowbegin && actualchunkindexforpos < poswindowend;
+            // We only need to test the chunk index. Utterance and frame can be randomized within a chunk as we want, as long it is in RAM.
+        }
+
+        unsigned short& ttochunk(size_t globalts)
+        {
+            assert(m_minimizeMemoryFootprint);
+            return randomizedframeentry(globalts).first;
+        }
+
+        std::pair<unsigned short, frameref>& randomizedframeentry(size_t globalts)
+        {
+            assert(m_minimizeMemoryFootprint);
+            size_t globaltsChunkIdx = chunkIdx(globalts);
+            assert(globaltsChunkIdx < m_currentRangeEndChunkIdx);
+            return m_randomizedframerefsWindow[globaltsChunkIdx - m_currentRangeBeginChunkIdx][globalts - m_randomizedChunks[0][globaltsChunkIdx].globalts];
+        }
+
+        framerandomizer& operator=(const framerandomizer&) = delete;
+    };
+
+    framerandomizer m_frameRandomizer;
 
     // TODO: this may go away if we store classids directly in the utterance data
     template <class VECTOR>
@@ -337,7 +778,6 @@ class minibatchutterancesourcemulti : public minibatchsource
     std::vector<shiftedvector<biggrowablevector<CLASSIDTYPE>>> getclassids(const UTTREF &uttref) // return sub-vector of classids[] for a given utterance
     {
         std::vector<shiftedvector<biggrowablevector<CLASSIDTYPE>>> allclassids;
-        allclassids.empty();
 
         if (!issupervised())
         {
@@ -347,8 +787,8 @@ class minibatchutterancesourcemulti : public minibatchsource
         }
         const auto &chunk = randomizedchunks[0][uttref.chunkindex];
         const auto &chunkdata = chunk.getchunkdata();
-        const size_t classidsbegin = chunkdata.getclassidsbegin(uttref.utteranceindex); // index of first state label in global concatenated classids[] array
-        const size_t n = chunkdata.numframes(uttref.utteranceindex);
+        const size_t classidsbegin = chunkdata.getclassidsbegin(uttref.utteranceindex()); // index of first state label in global concatenated classids[] array
+        const size_t n = chunkdata.numframes(uttref.utteranceindex());
         foreach_index (i, classids)
         {
             if ((*classids[i])[classidsbegin + n] != (CLASSIDTYPE) -1)
@@ -360,6 +800,9 @@ class minibatchutterancesourcemulti : public minibatchsource
     template <class UTTREF>
     std::vector<shiftedvector<biggrowablevector<HMMIDTYPE>>> getphonebound(const UTTREF &uttref) // return sub-vector of classids[] for a given utterance
     {
+        if (!m_generatePhoneBoundaries)
+            LogicError("getphonebound: generation of phone boundaries is not enabled for this utterance source!");
+
         std::vector<shiftedvector<biggrowablevector<HMMIDTYPE>>> allphoneboundaries;
         allphoneboundaries.empty();
 
@@ -371,8 +814,8 @@ class minibatchutterancesourcemulti : public minibatchsource
         }
         const auto &chunk = randomizedchunks[0][uttref.chunkindex];
         const auto &chunkdata = chunk.getchunkdata();
-        const size_t classidsbegin = chunkdata.getclassidsbegin(uttref.utteranceindex); // index of first state label in global concatenated classids[] array
-        const size_t n = chunkdata.numframes(uttref.utteranceindex);
+        const size_t classidsbegin = chunkdata.getclassidsbegin(uttref.utteranceindex()); // index of first state label in global concatenated classids[] array
+        const size_t n = chunkdata.numframes(uttref.utteranceindex());
         foreach_index (i, phoneboundaries)
         {
             if ((*phoneboundaries[i])[classidsbegin + n] != (HMMIDTYPE) -1)
@@ -388,8 +831,8 @@ public:
     // This mode requires utterances with time stamps.
     minibatchutterancesourcemulti(const std::vector<std::vector<wstring>> &infiles, const std::vector<map<wstring, std::vector<msra::asr::htkmlfentry>>> &labels,
                                   std::vector<size_t> vdim, std::vector<size_t> udim, std::vector<size_t> leftcontext, std::vector<size_t> rightcontext, size_t randomizationrange,
-                                  const latticesource &lattices, const map<wstring, msra::lattices::lattice::htkmlfwordsequence> &allwordtranscripts, const bool framemode)
-        : vdim(vdim), leftcontext(leftcontext), rightcontext(rightcontext), sampperiod(0), featdim(0), randomizationrange(randomizationrange), currentsweep(SIZE_MAX), lattices(lattices), allwordtranscripts(allwordtranscripts), framemode(framemode), chunksinram(0), timegetbatch(0), verbosity(2)
+                                  const latticesource &lattices, const map<wstring, msra::lattices::lattice::htkmlfwordsequence> &allwordtranscripts, const bool framemode, bool minimizeMemoryFootprint)
+                                  : vdim(vdim), leftcontext(leftcontext), rightcontext(rightcontext), sampperiod(0), featdim(0), randomizationrange(randomizationrange), currentsweep(SIZE_MAX), lattices(lattices), allwordtranscripts(allwordtranscripts), framemode(framemode), chunksinram(0), timegetbatch(0), verbosity(2), m_generatePhoneBoundaries(!lattices.empty()), m_frameRandomizer(randomizedchunks, minimizeMemoryFootprint)
     // [v-hansu] change framemode (lattices.empty()) into framemode (false) to run utterance mode without lattice
     // you also need to change another line, search : [v-hansu] comment out to run utterance mode without lattice
     {
@@ -418,7 +861,9 @@ public:
         foreach_index (i, labels)
         {
             classids.push_back(unique_ptr<biggrowablevector<CLASSIDTYPE>>(new biggrowablevector<CLASSIDTYPE>()));
-            phoneboundaries.push_back(unique_ptr<biggrowablevector<HMMIDTYPE>>(new biggrowablevector<HMMIDTYPE>()));
+            if (m_generatePhoneBoundaries)
+                phoneboundaries.push_back(unique_ptr<biggrowablevector<HMMIDTYPE>>(new biggrowablevector<HMMIDTYPE>()));
+
             // std::pair<std::vector<wstring>,std::vector<wstring>> latticetocs;
             // std::unordered_map<std::string,size_t> modelsymmap;
             // lattices.push_back(shared_ptr<latticesource>(new latticesource(latticetocs, modelsymmap)));
@@ -596,10 +1041,13 @@ public:
                                         for (size_t t = e.firstframe; t < e.firstframe + e.numframes; t++)
                                         {
                                             classids[j]->push_back(e.classid);
-                                            if (e.phonestart != 0 && t == e.firstframe)
-                                                phoneboundaries[j]->push_back((HMMIDTYPE) e.phonestart);
-                                            else
-                                                phoneboundaries[j]->push_back((HMMIDTYPE) 0);
+                                            if (m_generatePhoneBoundaries)
+                                            {
+                                                if (e.phonestart != 0 && t == e.firstframe)
+                                                    phoneboundaries[j]->push_back((HMMIDTYPE)e.phonestart);
+                                                else
+                                                    phoneboundaries[j]->push_back((HMMIDTYPE)0);
+                                            }
                                         }
                                         numclasses[j] = max(numclasses[j], (size_t)(1u + e.classid));
                                         counts[j].resize(numclasses[j], 0);
@@ -607,7 +1055,8 @@ public:
                                     }
 
                                     classids[j]->push_back((CLASSIDTYPE) -1);      // append a boundary marker marker for checking
-                                    phoneboundaries[j]->push_back((HMMIDTYPE) -1); // append a boundary marker marker for checking
+                                    if (m_generatePhoneBoundaries)
+                                        phoneboundaries[j]->push_back((HMMIDTYPE) -1); // append a boundary marker marker for checking
 
                                     if (!labels[j].empty() && classids[j]->size() != _totalframes + utteranceset.size())
                                         LogicError("minibatchutterancesource: label duration inconsistent with feature file in MLF label set: %ls", key.c_str());
@@ -718,23 +1167,6 @@ private:
     {
         if (fieldval != targetval)
             RuntimeError("checkoverflow: bit field %s too small for value 0x%x (cut from 0x%x)", fieldname, (int) targetval, (int) fieldval);
-    }
-
-    // helper for testing whether a swapped frame position is valid (w.r.t. beign in RAM when being at position 't')
-    bool isframepositionvalid(const size_t t, const biggrowablevector<unsigned short> &ttochunk) const
-    {
-        // look up valid range for time position
-        const size_t positionchunkindex = ttochunk[t]; // position 't' lies within this original chunk (relationship is monotonous, not random)
-        const auto &chunk = randomizedchunks[0][positionchunkindex];
-        // get in-RAM chunk range for this frame position (shared across all frame positions within the same chunk)
-        const size_t poswindowbegin = chunk.windowbegin; // rolling window over chunks (which under the hood have been randomized)
-        const size_t poswindowend = chunk.windowend;
-        // Chunk implies that if we are at position 't', we are guaranteed to have chunks [poswindowbegin, poswindowend) in RAM.
-
-        // now see if the randomized location is within that window
-        const size_t actualchunkindexforpos = randomizedframerefs[t].chunkindex; // where this frame pos has been mapped to
-        return actualchunkindexforpos >= poswindowbegin && actualchunkindexforpos < poswindowend;
-        // We only need to test the chunk index. Utterance and frame can be randomized within a chunk as we want, as long it is in RAM.
     }
 
     // big long helper to update all cached randomization information
@@ -910,7 +1342,7 @@ private:
             {
                 auto &uttref = randomizedutterancerefs[i];
                 uttref.globalts = t;
-                uttref.numframes = randomizedchunks[0][uttref.chunkindex].getchunkdata().numframes(uttref.utteranceindex);
+                uttref.numframes = randomizedchunks[0][uttref.chunkindex].getchunkdata().numframes(uttref.utteranceindex());
                 t = uttref.globalte();
             }
             assert(t == sweepts + _totalframes);
@@ -935,123 +1367,7 @@ private:
         }
         else // frame mode
         {
-            // This sets up the following members:
-            //  - randomizedframerefs
-
-            // Lazy mem allocation for frame references
-            if (randomizedframerefs.size() != _totalframes)
-                randomizedframerefs.resize(_totalframes);
-
-            srand((unsigned int) sweep + 1);
-            // An original timeline is established by the randomized chunks, denoted by 't'.
-            // Returned frames are indexed by frame position j = (globalt - sweept), which have an associated underlying 't'.
-            // It is guaranteed that uttterance frame position j maps to an underlying frame within the corresponding chunk window.
-            biggrowablevector<unsigned short> ttochunk; // randomized chunk index associated with frame position
-            ttochunk.resize(_totalframes);
-            size_t t = 0;
-            frameref frameref;
-            // enumerate chunks in their randomized order and assign frame indices in that order -> randomizedframerefs[t]
-            // At this point, chunks are in randomized order, but utterances and frames within utterances are not randomized.
-            // Later we will randomize those as well.
-            foreach_index (i, randomizedchunks[0])
-            {
-                frameref.chunkindex = (unsigned short) i;
-                checkoverflow(frameref.chunkindex, i, "frameref::chunkindex");
-                const auto &chunk = randomizedchunks[0][i];
-                const auto &chunkdata = chunk.getchunkdata();
-                const size_t numutt = chunkdata.numutterances();
-                for (size_t k = 0; k < numutt; k++)
-                {
-                    frameref.utteranceindex = (short) k;
-                    checkoverflow(frameref.utteranceindex, k, "frameref::utteranceindex");
-                    const size_t n = chunkdata.numframes(k);
-                    for (size_t m = 0; m < n; m++)
-                    {
-                        frameref.frameindex = (short) m;
-                        checkoverflow(frameref.frameindex, m, "frameref::utteranceindex");
-                        randomizedframerefs[t] = frameref; // hopefully this is a memory copy, not a bit-wise assignment! If not, then code it explicitly
-                        ttochunk[t] = (unsigned short) i;
-                        checkoverflow(ttochunk[t], i, "ttochunk[]");
-                        t++;
-                    }
-                }
-            }
-            assert(t == _totalframes);
-
-            // now randomize them --we use the nested loop again to avoid storing a backpointer
-            // The condition is that a randomized frame may not be moved out of its associated chunk window.
-            foreach_index (t, randomizedframerefs)
-            {
-                const size_t positionchunkindex = ttochunk[t];               // position 't' lies within this chunk (relationship is monotonous, not random)
-                const auto &chunk = randomizedchunks[0][positionchunkindex]; // for window
-
-                // get in-RAM chunk range for this frame position (shared across all frame positions within the same chunk)
-                const size_t poswindowbegin = chunk.windowbegin; // rolling window over chunks (which under the hood have been randomized)
-                const size_t poswindowend = chunk.windowend;
-                // Chunk implies that if we are at position 't', we are guaranteed to have chunks [poswindowbegin, poswindowend) in RAM.
-                // These chunks are associated with a range of frame positions.
-                // It is implied that if we are at position 't', the frames covered by chunks [poswindowbegin, poswindowend) are in RAM.
-                const size_t postbegin = randomizedchunks[0][poswindowbegin].globalts - sweepts;
-                const size_t postend = randomizedchunks[0][poswindowend - 1].globalte() - sweepts;
-                // The position that this frame gets randomized to must be guaranteed to belong to a chunk within [postbegin, postend).
-
-                for (;;) // (randomization retry loop)
-                {
-                    size_t tswap = msra::dbn::rand(postbegin, postend); // random frame position within allowed range
-                    // We want to swap 't' to 'tswap' and 'tswap' to 't'.
-                    //  - Both may have been swapped before.
-                    //  - Both must stay within the randomization window of their respective position.
-                    // check admissibility of where the element at 'tswap' gets swapped to 't' (range = [windowbegin,windowend))
-                    size_t tswapchunkindex = randomizedframerefs[tswap].chunkindex;
-                    if (tswapchunkindex < poswindowbegin || tswapchunkindex >= poswindowend)
-                        continue;
-                    // check admissibility of where the element at t gets swapped to (which is frame position 'tswap')
-                    const size_t sourcechunkindex = randomizedframerefs[t].chunkindex;
-                    size_t targetchunkindex = ttochunk[tswap]; // chunk associated with this frame position defines value range
-                    const auto &targetchunk = randomizedchunks[0][targetchunkindex];
-                    const size_t targetwindowbegin = targetchunk.windowbegin;
-                    const size_t targetwindowend = targetchunk.windowend;
-                    if (sourcechunkindex < targetwindowbegin || sourcechunkindex >= targetwindowend)
-                        continue;
-                    // admissible--swap the two
-                    ::swap(randomizedframerefs[t], randomizedframerefs[tswap]);
-#if 0
-                    break;
-#else // post-check  --so far did not trigger, can be removed
-
-                    // do a post-check if we got it right  --we seem not to
-                    if (isframepositionvalid(t, ttochunk) && isframepositionvalid(tswap, ttochunk))
-                        break;
-                    // not valid: swap them back and try again  --we actually discovered a bug in the code above
-                    ::swap(randomizedframerefs[t], randomizedframerefs[tswap]);
-                    fprintf(stderr, "lazyrandomization: BUGBUG --invalid swapping condition detected\n");
-#endif
-                }
-            }
-
-            // check it --my head spins
-            t = 0;
-            foreach_index (i, randomizedchunks[0])
-            {
-                const auto &chunk = randomizedchunks[0][i]; // for window and chunkdata
-                const size_t poswindowbegin = chunk.windowbegin;
-                const size_t poswindowend = chunk.windowend;
-
-                const auto &chunkdata = chunk.getchunkdata(); // for numutterances/numframes
-                const size_t numutt = chunkdata.numutterances();
-                for (size_t k = 0; k < numutt; k++)
-                {
-                    const size_t n = chunkdata.numframes(k);
-                    for (size_t m = 0; m < n; m++)
-                    {
-                        const size_t randomizedchunkindex = randomizedframerefs[t].chunkindex;
-                        if (randomizedchunkindex < poswindowbegin || randomizedchunkindex >= poswindowend)
-                            LogicError("lazyrandomization: nope, you got frame randomization wrong, dude");
-                        t++;
-                    }
-                }
-            }
-            assert(t == _totalframes);
+            m_frameRandomizer.reset((unsigned int)sweep + 1);
         }
 
         return sweep;
@@ -1239,7 +1555,8 @@ public:
             // resize feat and uids
             feat.resize(vdim.size());
             uids.resize(classids.size());
-            phoneboundaries.resize(classids.size());
+            if (m_generatePhoneBoundaries)
+                phoneboundaries.resize(classids.size());
             sentendmark.resize(vdim.size());
             assert(feat.size() == vdim.size());
             assert(feat.size() == randomizedchunks.size());
@@ -1254,12 +1571,14 @@ public:
                         if (issupervised()) // empty means unsupervised training -> return empty uids
                         {
                             uids[j].resize(tspos);
-                            phoneboundaries[j].resize(tspos);
+                            if (m_generatePhoneBoundaries)
+                                phoneboundaries[j].resize(tspos);
                         }
                         else
                         {
                             uids[i].clear();
-                            phoneboundaries[i].clear();
+                            if (m_generatePhoneBoundaries)
+                                phoneboundaries[i].clear();
                         }
                         latticepairs.clear(); // will push_back() below
                         transcripts.clear();
@@ -1286,11 +1605,11 @@ public:
                     const auto &chunk = randomizedchunks[i][uttref.chunkindex];
                     const auto &chunkdata = chunk.getchunkdata();
                     assert((numsubsets > 1) || (uttref.globalts == globalts + tspos));
-                    auto uttframes = chunkdata.getutteranceframes(uttref.utteranceindex);
+                    auto uttframes = chunkdata.getutteranceframes(uttref.utteranceindex());
                     matrixasvectorofvectors uttframevectors(uttframes); // (wrapper that allows m[j].size() and m[j][i] as required by augmentneighbors())
                     n = uttframevectors.size();
                     sentendmark[i].push_back(n + tspos);
-                    assert(n == uttframes.cols() && uttref.numframes == n && chunkdata.numframes(uttref.utteranceindex) == n);
+                    assert(n == uttframes.cols() && uttref.numframes == n && chunkdata.numframes(uttref.utteranceindex()) == n);
 
                     // copy the frames and class labels
                     for (size_t t = 0; t < n; t++) // t = time index into source utterance
@@ -1314,7 +1633,9 @@ public:
                     if (i == 0)
                     {
                         auto uttclassids = getclassids(uttref);
-                        auto uttphoneboudaries = getphonebound(uttref);
+                        std::vector<shiftedvector<biggrowablevector<HMMIDTYPE>>> uttphoneboudaries;
+                        if (m_generatePhoneBoundaries)
+                            uttphoneboudaries = getphonebound(uttref);
                         foreach_index (j, uttclassids)
                         {
                             for (size_t t = 0; t < n; t++) // t = time index into source utterance
@@ -1322,13 +1643,14 @@ public:
                                 if (issupervised())
                                 {
                                     uids[j][t + tspos] = uttclassids[j][t];
-                                    phoneboundaries[j][t + tspos] = uttphoneboudaries[j][t];
+                                    if (m_generatePhoneBoundaries)
+                                        phoneboundaries[j][t + tspos] = uttphoneboudaries[j][t];
                                 }
                             }
 
                             if (!this->lattices.empty())
                             {
-                                auto latticepair = chunkdata.getutterancelattice(uttref.utteranceindex);
+                                auto latticepair = chunkdata.getutterancelattice(uttref.utteranceindex());
                                 latticepairs.push_back(latticepair);
                                 // look up reference
                                 const auto &key = latticepair->getkey();
@@ -1356,6 +1678,9 @@ public:
             const size_t globalte = min(globalts + framesrequested, sweepte); // we return as much as requested, but not exceeding sweep end
             mbframes = globalte - globalts;                                   // that's our mb size
 
+            // Perform randomization of the desired frame range
+            m_frameRandomizer.randomizeFrameRange(globalts, globalte);
+
             // determine window range
             // We enumerate all frames--can this be done more efficiently?
             const size_t firstchunk = chunkforframepos(globalts);
@@ -1380,8 +1705,7 @@ public:
             std::vector<size_t> subsetsizes(numsubsets, 0);
             for (size_t i = 0; i < mbframes; i++) // i is input frame index; j < i in case of MPI/data-parallel sub-set mode
             {
-                const size_t framepos = (globalts + i) % _totalframes; // (for comments, see main loop below)
-                const frameref &frameref = randomizedframerefs[framepos];
+                const frameref &frameref = m_frameRandomizer.randomizedframeref(globalts + i);
                 subsetsizes[frameref.chunkindex % numsubsets]++;
             }
             size_t j = subsetsizes[subsetnum];                                           // return what we have  --TODO: we can remove the above full computation again now
@@ -1419,8 +1743,7 @@ public:
                     break;
 
                 // map to time index inside arrays
-                const size_t framepos = (globalts + j) % _totalframes; // using mod because we may actually run beyond the sweep for the last call
-                const frameref &frameref = randomizedframerefs[framepos];
+                const frameref &frameref = m_frameRandomizer.randomizedframeref(globalts + j);
 
                 // in MPI/data-parallel mode, skip frames that are not in chunks loaded for this MPI node
                 if ((frameref.chunkindex % numsubsets) != subsetnum)
@@ -1433,14 +1756,14 @@ public:
                 {
                     const auto &chunk = randomizedchunks[i][frameref.chunkindex];
                     const auto &chunkdata = chunk.getchunkdata();
-                    auto uttframes = chunkdata.getutteranceframes(frameref.utteranceindex);
+                    auto uttframes = chunkdata.getutteranceframes(frameref.utteranceindex());
                     matrixasvectorofvectors uttframevectors(uttframes); // (wrapper that allows m[.].size() and m[.][.] as required by augmentneighbors())
                     const size_t n = uttframevectors.size();
-                    assert(n == uttframes.cols() && chunkdata.numframes(frameref.utteranceindex) == n);
+                    assert(n == uttframes.cols() && chunkdata.numframes(frameref.utteranceindex()) == n);
                     n;
 
                     // copy frame and class labels
-                    const size_t t = frameref.frameindex;
+                    const size_t t = frameref.frameindex();
 
                     size_t leftextent, rightextent;
                     // page in the needed range of frames

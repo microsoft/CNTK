@@ -23,7 +23,7 @@
 
 #pragma warning(disable : 4127) // conditional expression is constant; "if (sizeof(ElemType)==sizeof(float))" triggers this
 
-#ifndef USE_MKL
+#ifdef USE_ACML
 // use ACML as default.
 // Download ACML 5.3.0 (e.g., acml5.3.0-ifort64.exe) or above
 // from http://developer.amd.com/tools/cpu-development/amd-core-math-library-acml/acml-downloads-resources/
@@ -31,9 +31,17 @@
 // Set Environment variable ACML_PATH to C:\AMD\acml5.3.0\ifort64_mp or the folder you installed acml
 // to point to your folder for the include file and link library
 #include <acml.h> // requires ACML 5.3.0 and above
-#else
+#elif defined(USE_MKL)
 // requires MKL 10.0 and above
 #include <mkl.h>
+#else
+#ifdef _MSC_VER
+// Visual Studio doesn't define standard complex types properly
+#define HAVE_LAPACK_CONFIG_H
+#define LAPACK_COMPLEX_STRUCTURE
+#endif
+#include <cblas.h>
+#include <lapacke.h>
 #endif
 
 // This is an example of an exported variable
@@ -45,7 +53,7 @@
 //    return 42;
 //}
 
-#ifndef USE_MKL // MKL has one additional parameter for different matrix order
+#ifdef USE_ACML // MKL has one additional parameter for different matrix order
 #define BLAS_COLMAJOR
 #else
 #define BLAS_COLMAJOR (int) MatrixOrder::ColMajor,
@@ -355,9 +363,8 @@ void CPUSparseMatrix<ElemType>::Print(const char* matrixName) const
 }
 
 template <class ElemType>
-void CPUSparseMatrix<ElemType>::Print(const char* matrixName, size_t /*rowStart*/, size_t /*rowEnd*/, size_t /*colStart*/, size_t /*colEnd*/) const
+void CPUSparseMatrix<ElemType>::Print(const char* matrixName, ptrdiff_t /*rowStart*/, ptrdiff_t /*rowEnd*/, ptrdiff_t /*colStart*/, ptrdiff_t /*colEnd*/) const
 {
-
     if (this->GetFormat() != matrixFormatSparseCSC && this->GetFormat() != matrixFormatSparseCSR)
     {
         return;
@@ -1186,7 +1193,7 @@ ElemType CPUSparseMatrix<ElemType>::SumOfAbsElements() const
 
     if (sizeof(ElemType) == sizeof(double))
     {
-#ifndef USE_MKL
+#ifdef USE_ACML
         return (ElemType) dasum((int) this->NzCount(), reinterpret_cast<double*>(m_nzValues), 1);
 #else
         return (ElemType) cblas_dasum((int) this->NzCount(), reinterpret_cast<double*>(m_nzValues), 1);
@@ -1195,7 +1202,7 @@ ElemType CPUSparseMatrix<ElemType>::SumOfAbsElements() const
     else
     {
 #pragma warning(suppress : 4244)
-#ifndef USE_MKL
+#ifdef USE_ACML
         return sasum((int) this->NzCount(), reinterpret_cast<float*>(m_nzValues), 1);
 #else
         return cblas_sasum((int) this->NzCount(), reinterpret_cast<float*>(m_nzValues), 1);
