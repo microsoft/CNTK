@@ -22,7 +22,6 @@
 #include "CommonMatrix.h"
 #include "SGD.h"
 #include "MPIWrapper.h"
-#include "multiverso.h"
 #include "Config.h"
 #include "SimpleEvaluator.h"
 #include "SimpleOutputWriter.h"
@@ -429,7 +428,6 @@ int wmainWithBS(int argc, wchar_t* argv[]) // called from wmain which is a wrapp
     bool paralleltrain = config(L"parallelTrain", false);
     if (paralleltrain)
 	{
-		multiverso::InitMPI();
         g_mpi = new MPIWrapper();
 	}
 
@@ -519,7 +517,6 @@ int wmainOldCNTKConfig(int argc, wchar_t* argv[]) // called from wmain which is 
     bool paralleltrain = config(L"parallelTrain", "false");
     if (paralleltrain)
     {
-		multiverso::InitMPI();
         g_mpi = new MPIWrapper();
     }
 
