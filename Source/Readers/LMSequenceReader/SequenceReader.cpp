@@ -397,6 +397,7 @@ void SequenceReader<ElemType>::Destroy()
 //  ]
 //]
 // Note: This is to a great deal a duplicate of BatchSequenceReader::InitFromConfig(), which has gotten some clean-up love, which we should apply here as well.
+// TODO: This function seems to be never called. Remove it if that is the case.
 template <class ElemType>
 template <class ConfigRecordType>
 void SequenceReader<ElemType>::InitFromConfig(const ConfigRecordType& readerConfig)
@@ -994,7 +995,7 @@ void SequenceReader<ElemType>::GetLabelOutput(std::map<std::wstring, Matrix<Elem
         return;
 
     if (readerMode == ReaderMode::NCE)
-        labels->Resize(2 * (this->noise_sample_size + 1), actualmbsize);
+        labels->Resize(2 * (m_noiseSampleSize + 1), actualmbsize);
     else if (readerMode == ReaderMode::Class)
         labels->Resize(4, actualmbsize);
     else if (readerMode == ReaderMode::Softmax)
@@ -1010,7 +1011,7 @@ void SequenceReader<ElemType>::GetLabelOutput(std::map<std::wstring, Matrix<Elem
         if (readerMode == ReaderMode::NCE)
         {
             labels->SetValue(1, j, (ElemType) m_noiseSampler.logprob(wrd));
-            for (size_t noiseid = 0; noiseid < this->noise_sample_size; noiseid++)
+            for (size_t noiseid = 0; noiseid < m_noiseSampleSize; noiseid++)
             {
                 int wid = m_noiseSampler.sample();
                 labels->SetValue(2 * (noiseid + 1), j, (ElemType) wid);
@@ -1372,11 +1373,13 @@ void BatchSequenceReader<ElemType>::InitFromConfig(const ConfigRecordType& reade
     std::vector<std::wstring> labels;
     GetFileConfigNames(readerConfig, features, labels);
 
+#if 0 // this actually fails for the RNN example, but still it is not clear what that 'sequence' section does
     // ############ BREAKING ############
     // Added this additional constraint, since I cannot see where we ever use more than one entry. But I may have missed something.
     if (features.size() > 1) // TODO: If this ever fails, please remove this check. One sample had 2 sections, but I could not see where they were used; this check is to verify that.
         InvalidArgument("BatchSequenceReader: Only one features section is allowed.");
     // ############ BREAKING ############
+#endif
     if (features.size() > 0)
         m_featuresName = features[0];
     // TODO: Is it at all meaningful to allow no features section?
@@ -1401,7 +1404,7 @@ void BatchSequenceReader<ElemType>::InitFromConfig(const ConfigRecordType& reade
     if (EqualCI(mode, L"nce"))
     {
         readerMode = ReaderMode::NCE;
-        noise_sample_size = featureConfig(L"noise_number", 0);
+        m_noiseSampleSize = featureConfig(L"noise_number", 0);
     }
     else if (EqualCI(mode, L"softmax"))
         readerMode = ReaderMode::Softmax;
@@ -2035,7 +2038,7 @@ void BatchSequenceReader<ElemType>::GetLabelOutput(std::map<std::wstring,
         return;
 
     if (readerMode == ReaderMode::NCE)
-        labels->Resize(2 * (this->noise_sample_size + 1), actualmbsize);
+        labels->Resize(2 * (m_noiseSampleSize + 1), actualmbsize);
     else if (readerMode == ReaderMode::Class)
         labels->Resize(4, actualmbsize, false);
     else
@@ -2060,7 +2063,7 @@ void BatchSequenceReader<ElemType>::GetLabelOutput(std::map<std::wstring,
         if (readerMode == ReaderMode::NCE)
         {
             labels->SetValue(1, j, (ElemType) m_noiseSampler.logprob(wrd));
-            for (size_t noiseid = 0; noiseid < this->noise_sample_size; noiseid++)
+            for (size_t noiseid = 0; noiseid < m_noiseSampleSize; noiseid++)
             {
                 int wid = m_noiseSampler.sample();
                 labels->SetValue(2 * (noiseid + 1), j, (ElemType) wid);

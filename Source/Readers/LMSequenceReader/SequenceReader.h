@@ -120,8 +120,8 @@ protected:
     bool m_idx2probRead;
 
 public:
-    using Base::LabelType;
-    using Base::LabelIdType;
+    using LabelType   = typename Base::LabelType;
+    using LabelIdType = typename Base::LabelIdType;
 
     map<string, int> word4idx;
     map<int, string> idx4word;
@@ -135,7 +135,7 @@ public:
     int m_classSize;
     map<int, vector<int>> class_words;
 
-    int noise_sample_size;
+    int m_noiseSampleSize;
     noiseSampler<long> m_noiseSampler;
 
     ReaderMode readerMode;
@@ -306,9 +306,9 @@ class BatchSequenceReader : public SequenceReader<ElemType>
 {
     typedef SequenceReader<ElemType> Base;
 public:
-    using Base::LabelType;
-    using Base::LabelIdType;
-    using Base::LabelInfo;
+    using LabelType   = typename Base::LabelType;
+    using LabelIdType = typename Base::LabelIdType;
+    using LabelInfo   = typename Base::LabelInfo;
     using Base::m_cachingReader;
     using Base::m_cachingWriter;
     using Base::m_featuresName;
@@ -360,6 +360,7 @@ public:
     using Base::m_sequence;
     using Base::idx4class;
     using Base::m_indexer;
+    using Base::m_noiseSampleSize;
     using Base::m_noiseSampler;
     using Base::readerMode;
     using Base::GetIdFromLabel;

@@ -30,7 +30,7 @@ private:
 
     map<wstring, string> mUnk; // unk symbol
 
-    int noise_sample_size;
+    int m_noiseSampleSize;
     noiseSampler<long> m_noiseSampler;
 
     map<wstring, int> nBests;

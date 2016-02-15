@@ -43,18 +43,35 @@ File::File(const wchar_t* filename, int fileOptions)
     Init(filename, fileOptions);
 }
 
+template<class String>
+static bool IsNonFilePath(const String& filename)
+{
+    return
+        filename.front() == '|' ||                    // "| command": output pipe
+        filename.back()  == '|' ||                    // "command |": input pipe
+        (filename.size() == 1 && filename[0] == '-'); // "-": stdin/stdout
+}
+
 // test if a file exists
 // If the pathname is a pipe, it is considered to exist.
 template<class String>
-static bool File::Exists(const String& filename)
+/*static*/ bool File::Exists(const String& filename)
 {
-    const auto outputPipe = (filename.front() == '|');
-    const auto inputPipe  = (filename.back()  == '|');
-    return (inputPipe || outputPipe || fexists(filename));
+    return IsNonFilePath(filename) || fexists(filename);
 }
 
-template /*static*/ bool File::Exists<string>(const string&  filename);
+template /*static*/ bool File::Exists<string> (const string&  filename);
 template /*static*/ bool File::Exists<wstring>(const wstring& filename);
+
+template<class String>
+/*static*/ void File::MakeIntermediateDirs(const String& filename)
+{
+    if (!IsNonFilePath(filename))
+        msra::files::make_intermediate_dirs(filename);
+}
+
+//template /*static*/ void File::MakeIntermediateDirs<string> (const string&  filename); // implement this if needed
+template /*static*/ void File::MakeIntermediateDirs<wstring>(const wstring& filename);
 
 // all constructors call this
 void File::Init(const wchar_t* filename, int fileOptions)
@@ -746,7 +763,7 @@ template <class ElemType>
             char* ep; // will be set to point to first character that failed parsing
             double value = strtod(p, &ep);
             if (*ep != 0 && !isspace((unsigned char)*ep))
-                RuntimeError("LoadMatrixFromTextFile: Malformed number '%s' in matrix row %d", (int) p, (int) elements.size());
+                RuntimeError("LoadMatrixFromTextFile: Malformed number '%.15s' in row %d of %ls", p, (int)elements.size(), filePath.c_str());
             p = ep;
             vec.push_back((ElemType)value);
         }
@@ -755,7 +772,7 @@ template <class ElemType>
         if (elements.empty())
             numColsInFirstRow = numElementsInRow;
         else if (numElementsInRow != numColsInFirstRow)
-            RuntimeError("The rows in the provided file do not all have the same number of columns: %s", filePath.c_str());
+            RuntimeError("Row %d has column dimension %d, inconsistent with previous dimension %d: %ls", (int)elements.size(), (int)numElementsInRow, (int)numColsInFirstRow, filePath.c_str());
 
         elements.push_back(vec);
     }

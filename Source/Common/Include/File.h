@@ -122,8 +122,13 @@ public:
     bool IsWhiteSpace(bool skip = false);
     int EndOfLineOrEOF(bool skip = false);
 
+    // test whether a file exists
     template<class String>
     static bool Exists(const String& filename);
+
+    // make intermediate directories
+    template<class String>
+    static void MakeIntermediateDirs(const String& filename);
 
     // TryGetText - for text value, try and get a particular type
     // returns - true if value returned, otherwise false, can't parse
@@ -142,18 +147,12 @@ public:
     template <typename T>
     File& operator<<(T val)
     {
-#ifndef __CUDACC__ // TODO: CUDA compiler blows up, fix this
-        attempt([=]()
-#endif
-                {
-                    if (IsTextBased())
-                        fputText(m_file, val);
-                    else
-                        fput(m_file, val);
-                }
-#ifndef __CUDACC__
-                );
-#endif
+        {
+            if (IsTextBased())
+                fputText(m_file, val);
+            else
+                fput(m_file, val);
+        }
         return *this;
     }
     File& operator<<(const std::wstring& val);
@@ -240,10 +239,7 @@ public:
         return *this;
     }
 
-    operator FILE*() const
-    {
-        return m_file;
-    }
+    operator FILE*() const { return m_file; }
 
     // Read a matrix stored in text format from 'filePath' (whitespace-separated columns, newline-separated rows),
     // and return a flat vector containing the contents of this file in column-major format.
