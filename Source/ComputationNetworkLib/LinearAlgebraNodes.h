@@ -542,9 +542,9 @@ template class DiagTimesNode<double>;
 // -----------------------------------------------------------------------
 
 template <class ElemType>
-class SumElementsNode : public ComputationNode<ElemType>, public NumInputs<1>
+class SumElementsNode : public ComputationNodeNonLooping /*ComputationNode*/<ElemType>, public NumInputs<1>
 {
-    typedef ComputationNode<ElemType> Base;
+    typedef ComputationNodeNonLooping<ElemType> Base;
     UsingComputationNodeMembersBoilerplate;
     static const std::wstring TypeName()
     {
@@ -558,25 +558,25 @@ public:
     {
     }
 
-    virtual void /*ComputationNode::*/ BackpropTo(const size_t /*inputIndex*/, const FrameRange& fr) override
+    virtual void /*ComputationNodeNonLooping::*/ ForwardPropNonLooping() override
     {
+        FrameRange fr(Input(0)->GetMBLayout());
+        // TODO: change to TensorView and AssignCopyOf() with reduction
+        Value().AssignSumOfElements(Input(0)->MaskedValueFor(fr)); // since we are reducing over frames, we must first mask gaps in input to zero
+    }
+
+    virtual void /*ComputationNodeNonLooping::*/ BackpropToNonLooping(size_t inputIndex) override
+    {
+        FrameRange fr(Input(0)->GetMBLayout());
         Input(0)->GradientFor(fr) += Gradient(); // here the assumption is that gradientValues are 1x1 matrix
     }
 
     virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }
     virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override { return false; }
 
-    virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
-    {
-        // TODO: change to TensorView and AssignCopyOf() with reduction
-        Value().AssignSumOfElements(Input(0)->MaskedValueFor(fr)); // since we are reducing over frames, we must first mask gaps in input to zero
-    }
-
     virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
     {
-        Base::Validate(isFinalValidationPass);
-        m_pMBLayout = nullptr; // this node does not hold mini-batch data
-        SetDims(TensorShape(1), false);
+        ValidateUnaryReduce(isFinalValidationPass);
     }
 };
 

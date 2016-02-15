@@ -511,11 +511,12 @@ void ComputationNetwork::SetSeqParam(ComputationNetworkPtr net,
 
 /*static*/ void ComputationNetwork::SetMaxTempMemSizeForCNN(ComputationNetworkPtr net, const ComputationNodeBasePtr& criterionNode, const size_t maxTempMemSizeInSamples)
 {
-    fprintf(stderr, "Set Max Temp Mem Size For Convolution Nodes to %lu samples.\n", maxTempMemSizeInSamples);
+    if (maxTempMemSizeInSamples > 0)
+        fprintf(stderr, "Setting max temp memory size for Convolution operations to %lu samples.\n", maxTempMemSizeInSamples);
     list<ComputationNodeBasePtr> convolutionNodes = net->GetNodesWithType(OperationNameOf(ConvolutionNode), criterionNode);
     if (convolutionNodes.size() == 0 && maxTempMemSizeInSamples != 0)
     {
-        fprintf(stderr, "WARNING: there is no convolution node.\n");
+        fprintf(stderr, "WARNING: No Convolution operation found.\n");
     }
     else
     {

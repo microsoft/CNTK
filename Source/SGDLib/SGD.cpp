@@ -53,7 +53,7 @@ void SGD<ElemType>::Train(function<ComputationNetworkPtr(DEVICEID_TYPE)> createN
     if (startEpoch >= 0)
     {
         loadNetworkFromCheckpoint = true;
-        fprintf(stderr, "Starting from checkpoint. Load Network From File %ls.\n", modelFileName.c_str());
+        fprintf(stderr, "Starting from checkpoint. Loading network from '%ls'.\n", modelFileName.c_str());
     }
 
     // create or load from checkpoint
@@ -96,7 +96,7 @@ void SGD<ElemType>::Adapt(wstring origModelFileName, wstring refNodeName,
     if (startEpoch >= 0)
     {
         wstring modelFileName = GetModelNameForEpoch(int(startEpoch) - 1);
-        fprintf(stderr, "Starting from checkpoint. Load Network From File %ls.\n", modelFileName.c_str());
+        fprintf(stderr, "Starting from checkpoint. Loading network from '%ls'.\n", modelFileName.c_str());
         net = ComputationNetwork::CreateFromFile<ElemType>(deviceId, modelFileName);
         networkLoadedFromCheckpoint = true;
     }

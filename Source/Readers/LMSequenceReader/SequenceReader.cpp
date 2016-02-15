@@ -262,7 +262,7 @@ bool SequenceReader<ElemType>::EnsureDataAvailable(size_t mbStartSample, bool /*
 
                 if (m_labelIdData[jEnd] != index)
                     // for language model, the first word/letter has to be <s>
-                    RuntimeError("SequenceReader: the last letter/word of a batch has to be the sentence ending symbol");
+                    RuntimeError("LMSequenceReader: The last letter/word of a batch has to be the sentence ending symbol.");
             }
         }
 
@@ -380,6 +380,11 @@ template <class ElemType>
 template <class ConfigRecordType>
 void SequenceReader<ElemType>::InitFromConfig(const ConfigRecordType& readerConfig)
 {
+    // this is an old version that is neither used nor maintained, should be deleted
+    bool isInUse = false;
+    if (!isInUse)
+        NOT_IMPLEMENTED;
+
     // See if the user wants caching
     m_cachingReader = NULL;
     m_cachingWriter = NULL;
@@ -403,7 +408,7 @@ void SequenceReader<ElemType>::InitFromConfig(const ConfigRecordType& readerConf
     }
 
     if (labels.size() != labelInfoNum)
-        RuntimeError("SequenceReader: Two label definitions (in and out) are required.");
+        RuntimeError("LMSequenceReader: Two label definitions (in and out) are required.");
 
     for (int index = 0; index < labelInfoNum; ++index)
         m_labelsName[index] = labels[index];
@@ -623,7 +628,7 @@ void SequenceReader<ElemType>::ReadClassInfo(const wstring& vocfile, int& classS
 
     // Note: If users specify labelDim = 0 (->nwords) this will not fail. Later we will interpret this as "infer".
     if (idx4class.size() < nwords)
-        LogicError("SequenceReader::ReadClassInfo the actual number of words %d is smaller than the specified vocabulary size %d. Check if labelDim is too large. ", (int) idx4class.size(), (int) nwords);
+        RuntimeError("ReadClassInfo: The actual number of words %d is smaller than the specified vocabulary size %d. Check if labelDim is too large. ", (int) idx4class.size(), (int) nwords);
 
     std::vector<double> counts(idx4cnt.size());
     for (const auto& p : idx4cnt)
@@ -632,9 +637,7 @@ void SequenceReader<ElemType>::ReadClassInfo(const wstring& vocfile, int& classS
 
     // check if unk is the same used in vocabulary file
     if (word4idx.find(mUnk.c_str()) == word4idx.end())
-    {
-        LogicError("SequenceReader::ReadClassInfo unk symbol %s is not in vocabulary file", mUnk.c_str());
-    }
+        RuntimeError("ReadClassInfo unknown symbol '%s' is not in vocabulary file.", mUnk.c_str());
 }
 
 // InitCache - Initialize the caching reader if cache files exist, otherwise the writer
@@ -1529,7 +1532,7 @@ void BatchSequenceReader<ElemType>::InitFromConfig(const ConfigRecordType& reade
 
     wstring pathName = readerConfig(L"file", L"");
     if (m_traceLevel > 0)
-        fwprintf(stderr, L"SequenceReader: Reading sequence file %s\n", pathName.c_str());
+        fwprintf(stderr, L"LMSequenceReader: Input file is '%s'.\n", pathName.c_str());
 
     const LabelInfo& labelIn = m_labelInfo[labelInfoIn];
     const LabelInfo& labelOut = m_labelInfo[labelInfoOut];
@@ -1716,7 +1719,9 @@ bool BatchSequenceReader<ElemType>::EnsureDataAvailable(size_t /*mbStartSample*/
         Reset();
 
         std::vector<SequencePosition> seqPos;
+        fprintf(stderr, "LMSequenceReader: Reading data..."), fflush(stderr);
         mNumRead = m_parser.Parse(CACHE_BLOCK_SIZE, &m_labelTemp, &m_featureTemp, &seqPos);
+        fprintf(stderr, " %d sentences read.\n", (int) mNumRead);
         firstPosInSentence = mLastPosInSentence;
         if (mNumRead == 0)
             return false;

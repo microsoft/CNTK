@@ -376,25 +376,26 @@ static ConfigValuePtr BadOp(const ExpressionPtr &e, ConfigValuePtr, ConfigValueP
 // lookup table for infix operators
 // This lists all infix operators with lambdas for evaluating them.
 static map<wstring, InfixOps> infixOps =
-    {
-        // symbol  PrettyName      NumbersOp StringsOp BoolOp ComputeNodeOp DictOp
-        {L"with", InfixOps(L"With", NumOp, BadOp, BadOp, NodeOp, DictOp)},
-        {L"*", InfixOps(L"Times", NumOp, BadOp, BadOp, NodeOp, BadOp)},
-        {L"/", InfixOps(L"Div", NumOp, BadOp, BadOp, BadOp, BadOp)},
-        {L".*", InfixOps(L"DotTimes", BadOp, BadOp, BadOp, NodeOp, BadOp)},
-        {L"**", InfixOps(L"Pow", NumOp, BadOp, BadOp, BadOp, BadOp)},
-        {L"%", InfixOps(L"Mod", NumOp, BadOp, BadOp, BadOp, BadOp)},
-        {L"+", InfixOps(L"Plus", NumOp, StrOp, BadOp, NodeOp, BadOp)},
-        {L"-", InfixOps(L"Minus", NumOp, BadOp, BadOp, NodeOp, BadOp)},
-        {L"==", InfixOps(L"Equal", NumOp, StrOp, BoolOp, BadOp, BadOp)},
-        {L"!=", InfixOps(L"NotEqual", NumOp, StrOp, BoolOp, BadOp, BadOp)},
-        {L"<", InfixOps(L"LT", NumOp, StrOp, BoolOp, BadOp, BadOp)},
-        {L">", InfixOps(L"GT", NumOp, StrOp, BoolOp, BadOp, BadOp)},
-        {L"<=", InfixOps(L"LE", NumOp, StrOp, BoolOp, BadOp, BadOp)},
-        {L">=", InfixOps(L"GT", NumOp, StrOp, BoolOp, BadOp, BadOp)},
-        {L"&&", InfixOps(L"And", BadOp, BadOp, BoolOp, BadOp, BadOp)},
-        {L"||", InfixOps(L"Or", BadOp, BadOp, BoolOp, BadOp, BadOp)},
-        {L"^", InfixOps(L"Xor", BadOp, BadOp, BoolOp, BadOp, BadOp)}};
+{
+    // symbol  PrettyName                NumbersOp StringsOp BoolOp  ComputeNodeOp DictOp
+    { L"with", InfixOps(L"With",         NumOp,    BadOp,    BadOp,  NodeOp,       DictOp) },
+    { L"*",    InfixOps(L"Times",        NumOp,    BadOp,    BadOp,  NodeOp,       BadOp) },
+    { L"/",    InfixOps(L"Div",          NumOp,    BadOp,    BadOp,  BadOp,        BadOp) },
+    { L".*",   InfixOps(L"ElementTimes", BadOp,    BadOp,    BadOp,  NodeOp,       BadOp) },
+    { L"**",   InfixOps(L"Pow",          NumOp,    BadOp,    BadOp,  BadOp,        BadOp) },
+    { L"%",    InfixOps(L"Mod",          NumOp,    BadOp,    BadOp,  BadOp,        BadOp) },
+    { L"+",    InfixOps(L"Plus",         NumOp,    StrOp,    BadOp,  NodeOp,       BadOp) },
+    { L"-",    InfixOps(L"Minus",        NumOp,    BadOp,    BadOp,  NodeOp,       BadOp) },
+    { L"==",   InfixOps(L"Equal",        NumOp,    StrOp,    BoolOp, BadOp,        BadOp) },
+    { L"!=",   InfixOps(L"NotEqual",     NumOp,    StrOp,    BoolOp, BadOp,        BadOp) },
+    { L"<",    InfixOps(L"LT",           NumOp,    StrOp,    BoolOp, BadOp,        BadOp) },
+    { L">",    InfixOps(L"GT",           NumOp,    StrOp,    BoolOp, BadOp,        BadOp) },
+    { L"<=",   InfixOps(L"LE",           NumOp,    StrOp,    BoolOp, BadOp,        BadOp) },
+    { L">=",   InfixOps(L"GT",           NumOp,    StrOp,    BoolOp, BadOp,        BadOp) },
+    { L"&&",   InfixOps(L"And",          BadOp,    BadOp,    BoolOp, BadOp,        BadOp) },
+    { L"||",   InfixOps(L"Or",           BadOp,    BadOp,    BoolOp, BadOp,        BadOp) },
+    { L"^",    InfixOps(L"Xor",          BadOp,    BadOp,    BoolOp, BadOp,        BadOp) }
+};
 
 // -----------------------------------------------------------------------
 // thunked (delayed) evaluation
