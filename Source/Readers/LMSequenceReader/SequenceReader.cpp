@@ -310,6 +310,7 @@ void SequenceReader<ElemType>::UpdateDataVariables()
     }
 }
 
+// TODO: move this to class File as well
 template <class ElemType>
 void SequenceReader<ElemType>::WriteLabelFile()
 {
@@ -336,29 +337,6 @@ void SequenceReader<ElemType>::WriteLabelFile()
                 std::wcerr << "WARNING: file " << labelInfo.fileToWrite.c_str() << " NOT written to disk, label files only written when starting at epoch zero!" << endl;
             }
         }
-    }
-}
-
-// a label file is a sequence of text lines with one token per line
-// This function allows spaces inside the word name, but trims surrounding spaces.
-// TODO: Move this to class File, as this is similar in nature to LoadMatrixFromTextFile().
-template <class ElemType>
-void SequenceReader<ElemType>::LoadLabelFile(const std::wstring& filePath, std::vector<LabelType>& retLabels)
-{
-    File file(filePath, fileOptionsRead | fileOptionsText);
-
-    string str;
-    retLabels.clear();
-    while (!file.IsEOF())
-    {
-        file.GetLine(str);
-        if (str.empty())
-            if (file.IsEOF())
-                break;
-            else
-                RuntimeError("LoadLabelFile: Invalid empty line in label file.");
-
-        retLabels.push_back(trim(str));
     }
 }
 
@@ -482,7 +460,7 @@ void SequenceReader<ElemType>::InitFromConfig(const ConfigRecordType& readerConf
             std::wstring labelPath = labelConfig(L"labelMappingFile");
             if (fexists(labelPath))
             {
-                LoadLabelFile(labelPath, arrayLabels);
+                File::LoadLabelFile(labelPath, arrayLabels);
                 for (int i = 0; i < arrayLabels.size(); ++i)
                 {
                     LabelType label = arrayLabels[i];
@@ -1480,7 +1458,7 @@ void BatchSequenceReader<ElemType>::InitFromConfig(const ConfigRecordType& reade
             std::wstring labelPath = labelConfig(L"labelMappingFile");
             if (File::Exists(labelPath))
             {
-                LoadLabelFile(labelPath, arrayLabels);
+                File::LoadLabelFile(labelPath, arrayLabels);
                 // build the two-way mapping tables
                 for (int i = 0; i < arrayLabels.size(); ++i)
                 {

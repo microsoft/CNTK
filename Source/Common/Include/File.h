@@ -249,6 +249,31 @@ public:
     // This function does not quite fit here, but it fits elsewhere even worse. TODO: change to use File class!
     template <class ElemType>
     static vector<ElemType> LoadMatrixFromTextFile(const std::wstring& filePath, size_t& /*out*/ numRows, size_t& /*out*/ numCols);
+
+    // Read a label file.
+    // A label file is a sequence of text lines with one token per line, where each line maps a string to an index, starting with 0.
+    // This function allows spaces inside the word name, but trims surrounding spaces.
+    // TODO: Move this to class File, as this is similar in nature to LoadMatrixFromTextFile().
+    template <class LabelType>
+    static void LoadLabelFile(const std::wstring& filePath, std::vector<LabelType>& retLabels)
+    {
+        File file(filePath, fileOptionsRead | fileOptionsText);
+
+        LabelType str;
+        retLabels.clear();
+        while (!file.IsEOF())
+        {
+            file.GetLine(str);
+            if (str.empty())
+                if (file.IsEOF())
+                    break;
+                else
+                    RuntimeError("LoadLabelFile: Invalid empty line in label file.");
+
+            retLabels.push_back(trim(str));
+        }
+    }
+
 };
 
 }}}
