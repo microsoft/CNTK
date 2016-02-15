@@ -763,7 +763,7 @@ template <class ElemType>
             char* ep; // will be set to point to first character that failed parsing
             double value = strtod(p, &ep);
             if (*ep != 0 && !isspace((unsigned char)*ep))
-                RuntimeError("LoadMatrixFromTextFile: Malformed number '%.15s' in row %d of %ls", p, (int)elements.size(), filePath.c_str());
+                RuntimeError("LoadMatrixFromTextFile: Malformed number '%.15s...' in row %d of %ls", p, (int)elements.size(), filePath.c_str());
             p = ep;
             vec.push_back((ElemType)value);
         }

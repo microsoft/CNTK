@@ -1617,10 +1617,6 @@ void BatchSequenceReader<ElemType>::StartMinibatchLoop(size_t mbSize, size_t epo
     m_featuresBufferRow = new size_t[mbSize];
     m_featuresBufferRowIdx = new size_t[mbSize];
 
-    m_labelsIdBufferRow = new CPUSPARSE_INDEX_TYPE[2 * mbSize];
-    m_labelsBlock2Id = new size_t[2 * mbSize];
-    m_labelsBlock2UniqId = new size_t[2 * mbSize];
-
     m_id2classLocal = new Matrix<ElemType>(CPUDEVICE);
     m_classInfoLocal = new Matrix<ElemType>(CPUDEVICE);
 
@@ -1834,6 +1830,8 @@ bool BatchSequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<E
     if (m_mbSize == 0)
         return false;
 
+    // TODO: validate whether the passed matrices set matches reader section definitions
+
     size_t firstPosInSentence;
     bool moreData = EnsureDataAvailable(m_mbStartSample, firstPosInSentence);
     if (!moreData)
@@ -1845,13 +1843,13 @@ bool BatchSequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<E
     size_t actualmbsize = 0;
 
     // figure out the size of the next sequence
-    actualmbsize = m_labelIdData.size();
+    actualmbsize = m_featureData.size();
+    assert(m_labelIdData.empty() || m_labelIdData.size() == actualmbsize);
     if (actualmbsize > m_mbSize * mToProcess.size())
         RuntimeError("Specified minibatch size %d is smaller than the actual minibatch size %d.", (int) m_mbSize, (int) actualmbsize);
 
-    // now get the labels
-    const LabelInfo& labelInfo = m_labelInfo[(m_labelInfo[labelInfoOut].type == labelNextWord) ? labelInfoIn : labelInfoOut];
-
+    // get the features
+    size_t featureDim = m_labelInfo[labelInfoIn].dim;
     if (actualmbsize > 0)
     {
         // loop through all the samples
@@ -1879,34 +1877,37 @@ bool BatchSequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<E
         // copy m_featureData to matrix
         // m_featureData is a sparse, already with interleaved parallel sequences. We copy it into a dense matrix.
         // we always copy it to cpu first and then convert to gpu if gpu is desired.
-        Matrix<ElemType>& features = *matrices[m_featuresName];
-        DEVICEID_TYPE featureDeviceId = features.GetDeviceId();
-        features.TransferFromDeviceToDevice(featureDeviceId, CPUDEVICE, false, true, false);
-
-        if (features.GetMatrixType() == MatrixType::DENSE)
+        auto iter = matrices.find(m_featuresName);
+        if (iter != matrices.end()) // (if not found then feature matrix is not requested this time)
         {
-            features.Resize(labelInfo.dim, actualmbsize);
-            features.SetValue(0);
+            Matrix<ElemType>& features = *iter->second;
+
+            bool moveMatrix = features.GetMatrixType() != MatrixType::SPARSE;
+            // BUGBUG: Matrix does not support modifying a dense GPU matrix temporarily ^^ on the CPU. We should instead have a local CPU matrix and assign it over.
+            DEVICEID_TYPE featureDeviceId = features.GetDeviceId();
+            features.TransferFromDeviceToDevice(featureDeviceId, CPUDEVICE, moveMatrix, true, false);
+
+            if (features.GetMatrixType() == MatrixType::SPARSE)
+            {
+                features.Resize(featureDim, actualmbsize, actualmbsize);
+                features.Reset();
+            }
+            else
+            {
+                features.Resize(featureDim, actualmbsize);
+                features.SetValue(0);
+            }
+
+            for (size_t j = 0; j < actualmbsize; ++j) // note: this is a loop over matrix columns, not time steps
+            {
+                // vector of feature data goes into matrix column
+                size_t idx = (size_t) m_featureData[j]; // one-hot index of the word, indexed by column (i.e. already interleaved, t=j/mToProcess.size(), s=j%mToProcess.size())
+
+                features.SetValue(idx, j, (ElemType) 1);
+            }
+
+            features.TransferFromDeviceToDevice(CPUDEVICE, featureDeviceId, moveMatrix, false, false);
         }
-        else
-        {
-            features.Resize(labelInfo.dim, actualmbsize, actualmbsize);
-            features.Reset();
-        }
-
-        for (size_t j = 0; j < actualmbsize; ++j) // note: this is a loop over matrix columns, not time steps or parallel sequences
-        {
-            // vector of feature data goes into matrix column
-            size_t idx = (size_t) m_featureData[j]; // one-hot index of the word, indexed by column (i.e. already interleaved)
-
-            features.SetValue(idx, j, (ElemType) 1);
-
-            // actual time position
-            // size_t timeIdx = (size_t)j / mToProcess.size();
-            // size_t uttIdx = (size_t)fmod(j, mToProcess.size()); // parallel-sequence index
-        }
-
-        features.TransferFromDeviceToDevice(CPUDEVICE, featureDeviceId, false, false, false);
 
         // TODO: move these two methods to startMiniBatchLoop()
         if (readerMode == ReaderMode::Class)
@@ -1923,27 +1924,20 @@ bool BatchSequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<E
         return false;
 
     // now transfer to the GPU as needed
-    try
+    // get the features array
+    if (matrices.find(m_featuresName) == matrices.end())
     {
-        // get the features array
-        if (matrices.find(m_featuresName) == matrices.end())
+        Matrix<ElemType>& nbs = *matrices[L"numberobs"]; // TODO: what is this? We fall back to a different node?
+        int curDevId = nbs.GetDeviceId();
+        nbs.TransferFromDeviceToDevice(curDevId, CPUDEVICE, true, false, false);
+        nbs(0, 0) = (float)actualmbsize;
+        nbs.TransferFromDeviceToDevice(CPUDEVICE, curDevId, true, false, false);
+        for (size_t i = 0; i < actualmbsize; i++)
         {
-            Matrix<ElemType>& nbs = *matrices[L"numberobs"];
-            int curDevId = nbs.GetDeviceId();
-            nbs.TransferFromDeviceToDevice(curDevId, CPUDEVICE, true, false, false);
-            nbs(0, 0) = (float) actualmbsize;
-            nbs.TransferFromDeviceToDevice(CPUDEVICE, curDevId, true, false, false);
-            for (size_t i = 0; i < actualmbsize; i++)
-            {
-                std::wstring ws = msra::strfun::wstrprintf(L"feature%d", i);
-                Matrix<ElemType>& features = *matrices[ws];
-                features.SetValue(labelInfo.dim, 1, features.GetDeviceId(), &m_featuresBuffer[i * labelInfo.dim], matrixFlagNormal);
-            }
+            std::wstring ws = msra::strfun::wstrprintf(L"feature%d", i);
+            Matrix<ElemType>& features = *matrices[ws];
+            features.SetValue(featureDim, 1, features.GetDeviceId(), &m_featuresBuffer[i * featureDim], matrixFlagNormal);
         }
-    }
-    catch (...)
-    {
-        RuntimeError("features size might not be sufficiently large. The asked minibatch size is %d. check minibatchSize in the feature definition", (int) actualmbsize);
     }
 
     // we read some records, so process them

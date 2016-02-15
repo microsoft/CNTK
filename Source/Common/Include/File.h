@@ -105,7 +105,7 @@ public:
     File(const std::wstring& filename, int fileOptions);
     File(const std::string&  filename, int fileOptions);
     File(const wchar_t* filename, int fileOptions);
-    ~File(void);
+    ~File();
 
     void Flush();
 

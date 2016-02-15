@@ -185,10 +185,6 @@ protected:
     size_t* m_featuresBufferRow;
     size_t* m_featuresBufferRowIdx;
 
-    CPUSPARSE_INDEX_TYPE* m_labelsIdBufferRow;
-    size_t* m_labelsBlock2Id;
-    size_t* m_labelsBlock2UniqId;
-
     bool m_endReached;
     int m_traceLevel;
 
@@ -342,9 +338,6 @@ public:
     using Base::m_featuresBufferRow;
     using Base::m_labelsBuffer;
     using Base::m_labelsIdBuffer;
-    using Base::m_labelsIdBufferRow;
-    using Base::m_labelsBlock2Id;
-    using Base::m_labelsBlock2UniqId;
     using Base::m_id2classLocal;
     using Base::m_classInfoLocal;
     using Base::m_mbSize;
