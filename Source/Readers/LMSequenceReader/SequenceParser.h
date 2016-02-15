@@ -618,7 +618,7 @@ struct SentenceInfo
     size_t sBegin;
 };
 
-/// language model sequence parser
+// language model sequence parser
 template <typename NumType, typename LabelType>
 class LMBatchSequenceParser : public LMSequenceParser<NumType, LabelType>
 {
