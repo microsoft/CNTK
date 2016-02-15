@@ -227,7 +227,8 @@ void DoWriteOutput(const ConfigParameters& config)
     auto net = make_shared<ComputationNetwork>(deviceId);
     net->Read<ElemType>(modelPath);
 
-    if (outputNodeNames.size() > 0) {
+    if (outputNodeNames.size() > 0)
+    {
         net->OutputNodes().clear();
         for (int i = 0; i < outputNodeNames.size(); ++i)
         {
@@ -235,7 +236,7 @@ void DoWriteOutput(const ConfigParameters& config)
             net->OutputNodes().emplace_back(net->GetNodeFromName(outputNodeNames[i]));
         }
     }
-	net->CompileNetwork();
+    net->CompileNetwork();
 
     SimpleOutputWriter<ElemType> writer(net, 1);
 
@@ -248,10 +249,27 @@ void DoWriteOutput(const ConfigParameters& config)
     }
     else if (config.Exists("outputPath"))
     {
-        wstring outputPath = config(L"outputPath"); // crashes if no default given?
-        writer.WriteOutput(testDataReader, mbSize[0], outputPath, outputNodeNamesVector, epochSize);
+        wstring outputPath = config(L"outputPath");
+
+        // gather additional formatting options
+        typename decltype(writer)::WriteFormattingOptions formattingOptions;
+        if (config.Exists("format"))
+        {
+            ConfigParameters formatConfig(config(L"format"));
+            formattingOptions.transpose        = formatConfig(L"transpose",        formattingOptions.transpose);
+            formattingOptions.prologue         = formatConfig(L"prologue",         formattingOptions.prologue);
+            formattingOptions.epilogue         = formatConfig(L"epilogue",         formattingOptions.epilogue);
+            formattingOptions.sequencePrologue = formatConfig(L"sequencePrologue", formattingOptions.sequencePrologue);
+            formattingOptions.sequenceEpilogue = formatConfig(L"sequenceEpilogue", formattingOptions.sequenceEpilogue);
+            formattingOptions.elementSeparator = formatConfig(L"elementSeparator", formattingOptions.elementSeparator);
+            formattingOptions.sampleSeparator  = formatConfig(L"sampleSeparator",  formattingOptions.sampleSeparator);
+            formattingOptions.precisionFormat  = formatConfig(L"precisionFormat",  formattingOptions.precisionFormat);
+        }
+
+        writer.WriteOutput(testDataReader, mbSize[0], outputPath, outputNodeNamesVector, formattingOptions, epochSize);
     }
-    // writer.WriteOutput(testDataReader, mbSize[0], testDataWriter, outputNodeNamesVector, epochSize);
+    else
+        InvalidArgument("write command: You must specify either 'writer'or 'outputPath'");
 }
 
 template void DoWriteOutput<float>(const ConfigParameters& config);

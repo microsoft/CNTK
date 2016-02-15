@@ -1850,6 +1850,7 @@ bool BatchSequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<E
 
     // get the features
     size_t featureDim = m_labelInfo[labelInfoIn].dim;
+    // BUGBUG: How can this ever be 0 here?
     if (actualmbsize > 0)
     {
         // loop through all the samples
