@@ -221,7 +221,6 @@ protected:
     size_t RecordsToRead(size_t mbStartSample, bool tail = false);
     void ReleaseMemory();
     void WriteLabelFile();
-    void LoadLabelFile(const std::wstring& filePath, std::vector<LabelType>& retLabels);
 
     LabelIdType GetIdFromLabel(const std::string& label, LabelInfo& labelInfo);
     bool CheckIdFromLabel(const std::string& labelValue, const LabelInfo& labelInfo, unsigned& labelId);
@@ -316,7 +315,6 @@ public:
     using Base::labelInfoIn;
     using Base::nwords;
     using Base::ReadClassInfo;
-    using Base::LoadLabelFile;
     using Base::word4idx;
     using Base::idx4word;
     using Base::idx4cnt;

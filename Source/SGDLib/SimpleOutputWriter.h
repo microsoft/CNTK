@@ -109,11 +109,13 @@ public:
         // clean up
     }
 
+    // pass this to WriteOutput() (to file-path, below) to specify how the output should be formatted
     struct WriteFormattingOptions
     {
         // How to interpret the data:
-        bool isCategoryLabel;         // true: find max value in column and output the index instead of the entire vector
-        bool transpose;               // true: one line per sample, each sample (column vector) forms one line; false: one column per sample
+        bool isCategoryLabel;          // true: find max value in column and output the index instead of the entire vector
+        std::wstring labelMappingFile; // optional dictionary for pretty-printing category labels
+        bool transpose;                // true: one line per sample, each sample (column vector) forms one line; false: one column per sample
         // The following strings are interspersed with the data:
         // overall
         std::string prologue; // print this at the start (e.g. a global header or opening bracket)
@@ -133,11 +135,13 @@ public:
         { }
     };
 
-    // TODO: Remove code dup with above function
-    // E.g. create a shared function that takes the actual writing operation as a lambda.
+    // TODO: Remove code dup with above function by creating a fake Writer object and then calling the other function.
     void WriteOutput(IDataReader<ElemType>& dataReader, size_t mbSize, std::wstring outputPath, const std::vector<std::wstring>& outputNodeNames, const WriteFormattingOptions & formattingOptions, size_t numOutputSamples = requestDataSize)
     {
-        File::MakeIntermediateDirs(outputPath);
+        // load a label mapping if requested
+        std::vector<std::string> labelMapping;
+        if (formattingOptions.isCategoryLabel && !formattingOptions.labelMappingFile.empty())
+            File::LoadLabelFile(formattingOptions.labelMappingFile, labelMapping);
 
         // specify output nodes and files
         std::vector<ComputationNodeBasePtr> outputNodes;
@@ -155,6 +159,8 @@ public:
                 outputNodes.push_back(m_net->GetNodeFromName(outputNodeNames[i]));
         }
 
+        // open output files
+        File::MakeIntermediateDirs(outputPath);
         std::map<ComputationNodeBasePtr, shared_ptr<File>> outputStreams; // TODO: why does unique_ptr not work here? Complains about non-existent default_delete()
         for (auto & onode : outputNodes)
         {
@@ -191,7 +197,8 @@ public:
             fprintfOrDie(f, "%s", formattingOptions.prologue.c_str());
         }
 
-        std::string valueFormatString = "%" + formattingOptions.precisionFormat + "f"; // format string used in fprintf() for formatting the values
+        char formatChar = !formattingOptions.isCategoryLabel ? 'f' : !formattingOptions.labelMappingFile.empty() ? 's' : 'u';
+        std::string valueFormatString = "%" + formattingOptions.precisionFormat + formatChar; // format string used in fprintf() for formatting the values
 
         size_t actualMBSize;
         while (DataReaderHelpers::GetMinibatchIntoNetwork(dataReader, m_net, nullptr, false, false, inputMatrices, actualMBSize))
@@ -201,13 +208,6 @@ public:
 
             for (auto & onode : outputNodes)
             {
-                FILE * f = *outputStreams[onode];
-
-                // sequence separator
-                if (numMBsRun > 0 && !formattingOptions.sequenceSeparator.empty())
-                    fprintfOrDie(f, "%s", formattingOptions.sequenceSeparator.c_str());
-                fprintfOrDie(f, "%s", formattingOptions.sequencePrologue.c_str());
-
                 // compute the node value
                 // Note: Intermediate values are memoized, so in case of multiple output nodes, we only compute what has not been computed already.
                 m_net->ForwardProp(onode);
@@ -217,11 +217,22 @@ public:
                 outputValues.CopyToArray(tempArray, tempArraySize);
                 ElemType* pCurValue = tempArray;
 
+                // sequence separator
+                FILE * f = *outputStreams[onode];
+                if (numMBsRun > 0 && !formattingOptions.sequenceSeparator.empty())
+                    fprintfOrDie(f, "%s", formattingOptions.sequenceSeparator.c_str());
+                fprintfOrDie(f, "%s", formattingOptions.sequencePrologue.c_str());
+
                 // output it according to our format specification
                 size_t T   = outputValues.GetNumCols();
                 size_t dim = outputValues.GetNumRows();
                 if (formattingOptions.isCategoryLabel)
                 {
+                    if (formatChar == 's') // verify label dimension
+                    {
+                        if (dim != labelMapping.size())
+                            InvalidArgument("write: Row dimension %d does not match number of entries %d in labelMappingFile '%ls'", (int)dim, (int)labelMapping.size(), formattingOptions.labelMappingFile.c_str());
+                    }
                     // update the matrix in-place from one-hot (or max) to index
                     // find the max in each column
                     foreach_column(j, outputValues)
@@ -253,8 +264,23 @@ public:
                     {
                         if (i > 0)
                             fprintfOrDie(f, "%s", formattingOptions.elementSeparator.c_str());
-                        double val = pCurValue[i * istride + j * jstride];
-                        fprintfOrDie(f, valueFormatString.c_str(), (double)val);
+                        if (formatChar == 'f') // print as real number
+                        {
+                            double dval = pCurValue[i * istride + j * jstride];
+                            fprintfOrDie(f, valueFormatString.c_str(), dval);
+                        }
+                        else if (formatChar == 'u') // print category as integer index
+                        {
+                            unsigned int uval = (unsigned int) pCurValue[i * istride + j * jstride];
+                            fprintfOrDie(f, valueFormatString.c_str(), uval);
+                        }
+                        else if (formatChar == 's') // print category as a label string
+                        {
+                            size_t uval = (size_t) pCurValue[i * istride + j * jstride];
+                            assert(uval < labelMapping.size());
+                            const char * sval = labelMapping[uval].c_str();
+                            fprintfOrDie(f, valueFormatString.c_str(), sval);
+                        }
                     }
                 }
                 fprintfOrDie(f, "%s", formattingOptions.sequenceEpilogue.c_str());
