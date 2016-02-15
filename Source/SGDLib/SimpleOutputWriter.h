@@ -112,7 +112,7 @@ public:
     struct WriteFormattingOptions
     {
         // How to interpret the data:
-        bool isCategoryLabel = false; // true: find max value in column and output the index instead of the entire vector
+        bool isCategoryLabel;         // true: find max value in column and output the index instead of the entire vector
         bool transpose;               // true: one line per sample, each sample (column vector) forms one line; false: one column per sample
         // The following strings are interspersed with the data:
         // overall
@@ -129,7 +129,7 @@ public:
         std::string precisionFormat;        // printf precision, e.g. ".2" to get a "%.2f"
 
         WriteFormattingOptions() :
-            transpose(true), sequenceEpilogue("\n"), elementSeparator(" "), sampleSeparator("\n")
+            isCategoryLabel(false), transpose(true), sequenceEpilogue("\n"), elementSeparator(" "), sampleSeparator("\n")
         { }
     };
 
@@ -191,6 +191,8 @@ public:
             fprintfOrDie(f, "%s", formattingOptions.prologue.c_str());
         }
 
+        std::string valueFormatString = "%" + formattingOptions.precisionFormat + "f"; // format string used in fprintf() for formatting the values
+
         size_t actualMBSize;
         while (DataReaderHelpers::GetMinibatchIntoNetwork(dataReader, m_net, nullptr, false, false, inputMatrices, actualMBSize))
         {
@@ -210,15 +212,39 @@ public:
                 // Note: Intermediate values are memoized, so in case of multiple output nodes, we only compute what has not been computed already.
                 m_net->ForwardProp(onode);
 
-                // output it according to our format specification
+                // get it (into a flat CPU-side vector)
                 Matrix<ElemType>& outputValues = dynamic_pointer_cast<ComputationNode<ElemType>>(onode)->Value();
                 outputValues.CopyToArray(tempArray, tempArraySize);
                 ElemType* pCurValue = tempArray;
-                std::string valueFormatString = "%" + formattingOptions.precisionFormat + "f";
-                size_t iend    = formattingOptions.transpose ? outputValues.GetNumRows() : outputValues.GetNumCols();
-                size_t jend    = formattingOptions.transpose ? outputValues.GetNumCols() : outputValues.GetNumRows();
-                size_t istride = formattingOptions.transpose ? 1                         : jend;
-                size_t jstride = formattingOptions.transpose ? iend                      : 1;
+
+                // output it according to our format specification
+                size_t T   = outputValues.GetNumCols();
+                size_t dim = outputValues.GetNumRows();
+                if (formattingOptions.isCategoryLabel)
+                {
+                    // update the matrix in-place from one-hot (or max) to index
+                    // find the max in each column
+                    foreach_column(j, outputValues)
+                    {
+                        double maxPos = -1;
+                        double maxVal = 0;
+                        foreach_row(i, outputValues)
+                        {
+                            double val = pCurValue[i + j * dim];
+                            if (maxPos < 0 || val >= maxVal)
+                            {
+                                maxPos = (double)i;
+                                maxVal = val;
+                            }
+                        }
+                        pCurValue[j] = (ElemType) maxPos; // overwrite in-place, assuming a flat vector
+                    }
+                    dim = 1;
+                }
+                size_t iend    = formattingOptions.transpose ? dim  : T;
+                size_t jend    = formattingOptions.transpose ? T    : dim;
+                size_t istride = formattingOptions.transpose ? 1    : jend;
+                size_t jstride = formattingOptions.transpose ? iend : 1;
                 for (size_t j = 0; j < jend; j++)
                 {
                     if (j > 0)
