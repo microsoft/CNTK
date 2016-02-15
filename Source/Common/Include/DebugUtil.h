@@ -34,6 +34,7 @@ private:
 
 public:
     static void PrintCallStack();
+    static string GetCallStack();
 };
 }}}
 
