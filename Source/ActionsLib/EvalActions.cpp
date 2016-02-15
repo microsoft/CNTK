@@ -256,6 +256,10 @@ void DoWriteOutput(const ConfigParameters& config)
         if (config.Exists("format"))
         {
             ConfigParameters formatConfig(config(L"format"));
+            string type = formatConfig(L"type", "");
+            if      (type == "real")     formattingOptions.isCategoryLabel = false;
+            else if (type == "category") formattingOptions.isCategoryLabel = true;
+            else if (type != "")         InvalidArgument("write: type must be 'real' or 'category'");
             formattingOptions.transpose        = formatConfig(L"transpose",        formattingOptions.transpose);
             formattingOptions.prologue         = formatConfig(L"prologue",         formattingOptions.prologue);
             formattingOptions.epilogue         = formatConfig(L"epilogue",         formattingOptions.epilogue);
