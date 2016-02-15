@@ -133,6 +133,16 @@ public:
         WriteFormattingOptions() :
             isCategoryLabel(false), transpose(true), sequenceEpilogue("\n"), elementSeparator(" "), sampleSeparator("\n")
         { }
+
+        // Process -- replace newlines and all %s by the given string
+        static std::string Processed(const std::wstring& nodeName, std::string fragment)
+        {
+            fragment = msra::strfun::ReplaceAll<std::string>(fragment, "\\n", "\n");
+            fragment = msra::strfun::ReplaceAll<std::string>(fragment, "\\t", "\t");
+            if (fragment.find("%s") != fragment.npos)
+                fragment = msra::strfun::ReplaceAll<std::string>(fragment, "%s", msra::strfun::utf8(nodeName));
+            return fragment;
+        }
     };
 
     // TODO: Remove code dup with above function by creating a fake Writer object and then calling the other function.
@@ -219,9 +229,15 @@ public:
 
                 // sequence separator
                 FILE * f = *outputStreams[onode];
-                if (numMBsRun > 0 && !formattingOptions.sequenceSeparator.empty())
-                    fprintfOrDie(f, "%s", formattingOptions.sequenceSeparator.c_str());
-                fprintfOrDie(f, "%s", formattingOptions.sequencePrologue.c_str());
+                const auto sequenceSeparator = formattingOptions.Processed(onode->NodeName(), formattingOptions.sequenceSeparator);
+                const auto sequencePrologue  = formattingOptions.Processed(onode->NodeName(), formattingOptions.sequencePrologue);
+                const auto sequenceEpilogue  = formattingOptions.Processed(onode->NodeName(), formattingOptions.sequenceEpilogue);
+                const auto elementSeparator  = formattingOptions.Processed(onode->NodeName(), formattingOptions.elementSeparator);
+                const auto sampleSeparator   = formattingOptions.Processed(onode->NodeName(), formattingOptions.sampleSeparator);
+
+                if (numMBsRun > 0 && !sequenceSeparator.empty())
+                    fprintfOrDie(f, "%s", sequenceSeparator.c_str());
+                fprintfOrDie(f, "%s", sequencePrologue.c_str());
 
                 // output it according to our format specification
                 size_t T   = outputValues.GetNumCols();
@@ -259,11 +275,11 @@ public:
                 for (size_t j = 0; j < jend; j++)
                 {
                     if (j > 0)
-                        fprintfOrDie(f, "%s", formattingOptions.sampleSeparator.c_str());
+                        fprintfOrDie(f, "%s", sampleSeparator.c_str());
                     for (size_t i = 0; i < iend; i++)
                     {
                         if (i > 0)
-                            fprintfOrDie(f, "%s", formattingOptions.elementSeparator.c_str());
+                            fprintfOrDie(f, "%s", elementSeparator.c_str());
                         if (formatChar == 'f') // print as real number
                         {
                             double dval = pCurValue[i * istride + j * jstride];
@@ -283,7 +299,7 @@ public:
                         }
                     }
                 }
-                fprintfOrDie(f, "%s", formattingOptions.sequenceEpilogue.c_str());
+                fprintfOrDie(f, "%s", sequenceEpilogue.c_str());
             }
 
             totalEpochSamples += actualMBSize;

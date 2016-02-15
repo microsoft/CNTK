@@ -399,6 +399,24 @@ static inline std::basic_string<_T> join(const std::vector<std::basic_string<_T>
 }
 
 // ----------------------------------------------------------------------------
+// find and replace
+// ----------------------------------------------------------------------------
+
+template<class String>
+// actual operations that we perform
+static String ReplaceAll(const String& s, const String& what, const String& withwhat)
+{
+    String res = s;
+    auto pos = res.find(what);
+    while (pos != String::npos)
+    {
+        res = res.substr(0, pos) + withwhat + res.substr(pos + what.size());
+        pos = res.find(what, pos + withwhat.size());
+    }
+    return res;
+}
+
+// ----------------------------------------------------------------------------
 // parsing strings to numbers
 // ----------------------------------------------------------------------------
 

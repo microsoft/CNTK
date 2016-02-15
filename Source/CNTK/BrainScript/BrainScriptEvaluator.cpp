@@ -788,18 +788,6 @@ static wstring FormatConfigValue(ConfigValuePtr arg, const wstring &how);
 // TODO: RegexReplace()
 class StringFunction : public String
 {
-    // actual operations that we perform
-    static wstring Replace(wstring s, const wstring &what, const wstring &withwhat)
-    {
-        wstring res = s;
-        auto pos = res.find(what);
-        while (pos != wstring::npos)
-        {
-            res = res.substr(0, pos) + withwhat + res.substr(pos + what.size());
-            pos = res.find(what, pos + withwhat.size());
-        }
-        return res;
-    }
     static wstring Substr(const wstring &s, int ibegin, int inum)
     {
         // negative index indexes from end; index may exceed
@@ -824,7 +812,7 @@ public:
         else if (what == L"Substr")
             us = Substr(arg, config[L"pos"], config[L"chars"]);
         else if (what == L"Replace")
-            us = Replace(arg, config[L"replacewhat"], config[L"withwhat"]);
+            us = msra::strfun::ReplaceAll<wstring>(arg, config[L"replacewhat"], config[L"withwhat"]);
         else
             whatArg.Fail(L"unknown 'what' value to StringFunction: " + what);
     }
