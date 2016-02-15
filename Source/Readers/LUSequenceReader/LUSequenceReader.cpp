@@ -59,7 +59,7 @@ void BatchLUSequenceReader<ElemType>::ReadLabelInfo(const wstring& vocfile,
     if (!vin.good())
         LogicError("LUSequenceReader cannot open %ls\n", vocfile.c_str());
 
-    wstring wstr = L" ";
+    const wstring wstr = L" \n\r\t";
     long b = 0;
     this->nwords = 0;
     int prevcls = -1;
@@ -74,7 +74,7 @@ void BatchLUSequenceReader<ElemType>::ReadLabelInfo(const wstring& vocfile,
             break;
         if (readClass)
         {
-            vector<wstring> wordandcls = wsep_string(strtmp, wstr);
+            vector<wstring> wordandcls = SplitString(strtmp, wstr);
             long cls = _wtoi(wordandcls[1].c_str());
             word4cls[wordandcls[0]] = cls;
 
@@ -1163,7 +1163,7 @@ void BatchLUSequenceReader<ElemType>::LoadWordMapping(const ConfigRecordType& re
             ss = trim(ss);
             if (ss.length() == 0)
                 break;
-            vs = wsep_string(ss, L" ");
+            vs = SplitString(ss, L" \n\r\t");
             si = vs[0];
             so = vs[1];
             mWordMapping[si] = so;
