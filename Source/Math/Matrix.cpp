@@ -5011,12 +5011,23 @@ Matrix<ElemType>& Matrix<ElemType>::AssignSequenceError(const ElemType hsmoothin
 }
 #pragma endregion Static BLAS Functions
 
+// TensorView currently does not interface with sparse matrices. For now, we just catch this and throw.
+template <class ElemType>
+static bool VerifyIsDense(const Matrix<ElemType>& a)
+{
+    if (a.GetMatrixType() != DENSE)
+        RuntimeError("TensorOp: Tensor operations are currently not supported for sparse matrices.");
+    return true;
+}
+
 template <class ElemType>
 void Matrix<ElemType>::TensorOp(ElemType beta, const Matrix<ElemType>& a, ElemType alpha, ElementWiseOperator op,
                                 const array<size_t, 2>& offsets,
                                 const SmallVector<size_t>& regularOpDims, const array<SmallVector<ptrdiff_t>, 2>& regularStrides,
                                 const SmallVector<size_t>& reducingOpDims, const array<SmallVector<ptrdiff_t>, 2>& reducingStrides)
 {
+    VerifyIsDense(*this) && VerifyIsDense(a);
+
     DecideAndMoveToRightDevice(*this, a);
 
     DISPATCH_MATRIX_ON_FLAG(this,
@@ -5033,6 +5044,8 @@ void Matrix<ElemType>::TensorOp(ElemType beta, const Matrix<ElemType>& a, const 
                                 const SmallVector<size_t>& regularOpDims, const array<SmallVector<ptrdiff_t>, 3>& regularStrides,
                                 const SmallVector<size_t>& reducingOpDims, const array<SmallVector<ptrdiff_t>, 3>& reducingStrides)
 {
+    VerifyIsDense(*this) && VerifyIsDense(a) && VerifyIsDense(b);
+
     DecideAndMoveToRightDevice(*this, a, b);
 
     DISPATCH_MATRIX_ON_FLAG(this,
@@ -5049,6 +5062,8 @@ void Matrix<ElemType>::TensorOp(ElemType beta, const Matrix<ElemType>& a, const 
                                 const SmallVector<size_t>& regularOpDims, const array<SmallVector<ptrdiff_t>, 4>& regularStrides,
                                 const SmallVector<size_t>& reducingOpDims, const array<SmallVector<ptrdiff_t>, 4>& reducingStrides)
 {
+    VerifyIsDense(*this) && VerifyIsDense(a) && VerifyIsDense(b) && VerifyIsDense(c);
+
     DecideAndMoveToRightDevice(*this, a, b, c);
 
     DISPATCH_MATRIX_ON_FLAG(this,

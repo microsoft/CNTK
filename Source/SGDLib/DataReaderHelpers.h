@@ -43,6 +43,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         bool wasDataRead = trainSetDataReader.GetMinibatch(inputMatrices); // fill in the minibatch data into the Input nodes' buffers directly
         // If this returns false, the matrices may contain garbage or not sized to 0 columns.
         // On the other hand, if it returns a 0-column matrix, that would be a perfectly cromulent minibatch (in case of data parallelism with distributed reading).
+        // If a passed matrix does not match a reader section, that is an error.
 
         // if no data read then we are done
         if (!wasDataRead)
