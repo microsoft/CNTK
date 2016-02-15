@@ -27,6 +27,8 @@ namespace CNTK {
 namespace Extensibility {
 namespace Managed {
 
+ref class CNTKException;
+
 // Used for retrieving the model appropriate for the element type (float / double)
 template<typename ElemType>
 using GetEvalProc = void(*)(IEvaluateModel<ElemType>**);
@@ -44,13 +46,24 @@ public:
     {
         pin_ptr<const WCHAR> dllname = PtrToStringChars("evaldll.dll");
         auto hModule = LoadLibrary(dllname);
+        if (hModule == nullptr)
+        {
+            throw gcnew CNTKException(System::String::Format("Cannot find library: {0}", gcnew String(dllname)));
+        }
 
-        msclr::interop::marshal_context context;
-        const std::string func = context.marshal_as<std::string>(funcName);
-        auto procAddress = GetProcAddress(hModule, func.c_str());
-        auto getEvalProc = (GetEvalProc<ElemType>)procAddress;
-        pin_ptr <IEvaluateModel<ElemType>*> p_eval = &m_eval;
-        getEvalProc(p_eval);
+        try
+        {
+            msclr::interop::marshal_context context;
+            const std::string func = context.marshal_as<std::string>(funcName);
+            auto procAddress = GetProcAddress(hModule, func.c_str());
+            auto getEvalProc = (GetEvalProc<ElemType>)procAddress;
+            pin_ptr <IEvaluateModel<ElemType>*> p_eval = &m_eval;
+            getEvalProc(p_eval);
+        }
+        catch (const exception& ex)
+        {
+            throw gcnew CNTKException(gcnew System::String(ex.what()));
+        }
     }
 
     /// <summary>Initializes the model evaluation library with a CNTK configuration</summary>
@@ -65,7 +78,14 @@ public:
         msclr::interop::marshal_context context;
         const std::string stdConfig = context.marshal_as<std::string>(config);
 
-        m_eval->Init(stdConfig);
+        try
+        {
+            m_eval->Init(stdConfig);
+        }
+        catch (const exception& ex)
+        {
+            throw GetCustomException(ex);
+        }
     }
 
     /// <summary>Loads a model file</summary>
@@ -78,7 +98,15 @@ public:
         }
 
         pin_ptr<const WCHAR> stdModelPath = PtrToStringChars(modelFileName);
-        m_eval->LoadModel(stdModelPath);
+
+        try
+        {
+            m_eval->LoadModel(stdModelPath);
+        }
+        catch (const exception& ex)
+        {
+            throw GetCustomException(ex);
+        }
     }
 
     /// <summary>Evaluates the model against input data and retrieves the output layer data</summary>
@@ -115,22 +143,29 @@ public:
                 stdOutputs.insert(MapEntry(key, ptr.get()));
             }
 
-            m_eval->Evaluate(stdInputs, stdOutputs);
+            try
+            {
+                m_eval->Evaluate(stdInputs, stdOutputs);
+            }
+            catch (const exception& ex)
+            {
+                throw GetCustomException(ex);
+            }
 
             auto enumerator = outputs->Keys->GetEnumerator();
-            for (std::map<std::wstring, std::vector<ElemType>*>::iterator ii = stdOutputs.begin(), e = stdOutputs.end(); ii != e; ii++)
+            for (auto& map_item : stdOutputs)
             {
                 // Retrieve the layer key
                 enumerator.MoveNext();
                 String^ key = enumerator.Current;
 
-                std::vector<ElemType> &refVector = *((*ii).second);
+                std::vector<ElemType> &refVec = *(map_item.second);
                 int index = 0;
 
                 // Copy output to CLI structure
-                for (std::vector<ElemType>::iterator ii = refVector.begin(), e = refVector.end(); ii != e; ii++)
+                for (auto& vec : refVec)
                 {
-                    outputs[key][index++] = *ii;
+                    outputs[key][index++] = vec;
                 }
             }
         }
@@ -185,7 +220,7 @@ private:
     // Native model evaluation instance
     IEvaluateModel<ElemType> *m_eval;
 
-    /// <summary>Copies a list of element types from a CLI structure to a native structure
+    /// <summary>Copies a list of element types from a CLI structure to a native structure</summary>
     /// <param name="list">The CLI list of items</param>
     /// <returns>A native vector of items</returns>
     shared_ptr<std::vector<ElemType>> CopyList(List<ElemType>^ list)
@@ -199,6 +234,34 @@ private:
             }
         }
         return lower;
+    }
+
+    /// <summary> Throws a CLR exception based on a native exception</summary>
+    /// <param name="ex">The native exception to throw as a CLR exception</param>
+    /// <returns>A CLR exception</returns>
+    CNTKException^ GetCustomException(const exception& ex)
+    {
+        // Determine the appropriate exception and initialize it with the exception payload
+        if (typeid(ex) == typeid(runtime_error))
+        {
+            return gcnew CNTKRuntimeException(gcnew System::String(ex.what()));
+        }
+        else if (typeid(ex) == typeid(logic_error))
+        {
+            return gcnew CNTKLogicErrorException(gcnew System::String(ex.what()));
+        }
+        else if (typeid(ex) == typeid(invalid_argument))
+        {
+            return gcnew CNTKInvalidArgumentException(gcnew System::String(ex.what()));
+        }
+        else if (typeid(ex) == typeid(bad_alloc))
+        {
+            return gcnew CNTKBadAllocException(gcnew System::String(ex.what()));
+        }
+        else
+        {
+            return gcnew CNTKException(gcnew System::String(ex.what()));
+        }
     }
 };
 
@@ -222,6 +285,59 @@ public:
         : IEvaluateModelManaged("GetEvalD")
     {
     }
+};
+
+public ref class CNTKException : Exception
+{
+public:
+    CNTKException() : Exception()
+    {}
+
+    CNTKException(String^ message) : Exception(message)
+    {}
+
+private:
+    String^ m_message;
+};
+
+public ref class CNTKRuntimeException : CNTKException
+{
+public:
+    CNTKRuntimeException() : CNTKException()
+    {}
+
+    CNTKRuntimeException(String^ message) : CNTKException(message)
+    {}
+};
+
+public ref class CNTKLogicErrorException : CNTKException
+{
+public:
+    CNTKLogicErrorException() : CNTKException()
+    {}
+
+    CNTKLogicErrorException(String^ message) : CNTKException(message)
+    {}
+};
+
+public ref class CNTKInvalidArgumentException : CNTKException
+{
+public:
+    CNTKInvalidArgumentException() : CNTKException()
+    {}
+
+    CNTKInvalidArgumentException(String^ message) : CNTKException(message)
+    {}
+};
+
+public ref class CNTKBadAllocException : CNTKException
+{
+public:
+    CNTKBadAllocException() : CNTKException()
+    {}
+
+    CNTKBadAllocException(String^ message) : CNTKException(message)
+    {}
 };
 
 // This method tricks the compiler into emitting the methods of the classes

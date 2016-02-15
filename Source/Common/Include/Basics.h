@@ -61,7 +61,9 @@ __declspec_noreturn static inline void ThrowFormatted(const char* format, ...)
     fprintf(stderr, "\nAbout to throw exception '%s'\n", buffer);
 #endif
     Microsoft::MSR::CNTK::DebugUtil::PrintCallStack();
-    throw E(buffer);
+    std::string msg(buffer);
+    msg += Microsoft::MSR::CNTK::DebugUtil::GetCallStack();
+    throw E(msg);
 };
 #pragma warning(pop)
 
