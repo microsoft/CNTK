@@ -1903,54 +1903,35 @@ bool msra::files::fuptodate(const wstring& target, const wstring& input, bool in
     return targettime >= inputtime; // note: uses an overload for WIN32 FILETIME (in Linux, FILETIME=time_t=size_t)
 }
 
-/// separate string by separator
-vector<string> sep_string(const string& istr, const string& sep)
-{
-    string str = istr;
-    str = trim(str);
-    vector<string> vstr;
-    string csub;
-    size_t ifound = 0;
-    size_t ifoundlast = ifound;
-    ifound = str.find(sep, ifound);
-    while (ifound != std::string::npos)
-    {
-        csub = str.substr(ifoundlast, ifound - ifoundlast);
-        vstr.push_back(trim(csub));
-
-        ifoundlast = ifound + 1;
-        ifound = str.find(sep, ifoundlast);
-    }
-    csub = str.substr(ifoundlast, str.length() - ifoundlast);
-    vstr.push_back(trim(csub));
-
-    return vstr;
-}
-
 // separate string by separator
-// TODO: unify with above
-vector<wstring> wsep_string(const wstring& istr, const wstring& sep)
+template<class String>
+vector<String> SplitString(const String& str, const String& sep)
 {
-    wstring str = istr;
-    str = trim(str);
-    vector<wstring> vstr;
-    wstring csub;
+    vector<String> vstr;
+    String csub;
     size_t ifound = 0;
     size_t ifoundlast = ifound;
-    ifound = str.find(sep, ifound);
-    while (ifound != std::wstring::npos)
+    ifound = str.find_first_of(sep, ifound);
+    while (ifound != String::npos)
     {
         csub = str.substr(ifoundlast, ifound - ifoundlast);
-        vstr.push_back(trim(csub));
+        if (!csub.empty())
+            vstr.push_back(csub);
 
         ifoundlast = ifound + 1;
-        ifound = str.find(sep, ifoundlast);
+        ifound = str.find_first_of(sep, ifoundlast);
     }
-    csub = str.substr(ifoundlast, str.length() - ifoundlast);
-    vstr.push_back(trim(csub));
+    ifound = str.length();
+    csub = str.substr(ifoundlast, ifound - ifoundlast);
+    if (!csub.empty())
+        vstr.push_back(csub);
 
     return vstr;
 }
+
+template vector<string>  SplitString(const  string& istr, const  string& sep);
+template vector<wstring> SplitString(const wstring& istr, const wstring& sep);
+
 static inline std::string wcstombs(const std::wstring& p) // output: MBCS
 {
     size_t len = p.length();

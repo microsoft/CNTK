@@ -89,7 +89,7 @@ long BatchLUSequenceParser<NumType, LabelType>::Parse(size_t recordsRequested, s
         // got a token
         tokenCount++;
 
-        vstr = wsep_string(ch, L" ");
+        vstr = SplitString(ch, L" \n\r\t");
         if (vstr.size() < 2)
             continue;
 

@@ -585,7 +585,7 @@ public:
         while (labels->size() - orgRecordCount < recordsRequested && fgets(ch2, MAXSTRING, mFile) != nullptr)
         {
             ch.assign(ch2);
-            std::vector<string> vstr = sep_string(ch, " ");
+            std::vector<string> vstr = SplitString(ch, " \n\r\t");
             if (vstr.size() < 3)    // TODO: Document this special condition. Why should we not process empty sequences like <s> </s>?
                 continue;
 
