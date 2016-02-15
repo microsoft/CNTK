@@ -14,8 +14,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 class Indexer 
 {
 private:
-    static const auto BUFFER_SIZE = 256 * 1024;
-
     FILE* m_file = NULL;
 
     int64_t m_fileOffsetStart;
@@ -27,15 +25,18 @@ private:
 
     bool m_done; // true, when all input was processed
 
-    const size_t m_maxChunkSize; // maximum permited chunk size;
+    bool m_skipSequenceIds; // true, when input contains one sequence per line 
+                            // and sequence id column can be skipped.
+
+    const int64_t m_maxChunkSize; // maximum permited chunk size;
 
     std::vector<SequenceDescriptor> m_timeline;
     std::vector<ChunkDescriptor> m_chunks;
+    std::map<SequenceId, TimelineOffset> m_idToOffsetMap;
 
-    // XXX:
     // assigns an appropriate chunk id to the sequence descriptor,
     // ensures that chunks do not exceed the maximum allowed size
-    // (except when a sequence size is gt the maximum chunk size)
+    // (except when a sequence size is greater than the maximum chunk size)
     void UpdateTimeline(SequenceDescriptor& sd);
 
     // fills buffer with data, this method assumes that all buffered
@@ -56,11 +57,14 @@ private:
     // Does not do any sequence parsing, instead uses line number as the corresponding sequence id.
     Index* BuildFromLines();
 
+
+    int64_t GetFileOffset() { return m_fileOffsetStart + (m_pos - m_bufferStart); }
+
     Indexer(const Indexer&) = delete;
     Indexer& operator=(const Indexer&) = delete;
 
 public:
-    Indexer(FILE* file, size_t chunkSize = 32 * 1024 * 1024);
+    Indexer(FILE* file, bool skipSequenceIds, int64_t chunkSize = 32 * 1024 * 1024);
 
     ~Indexer();
 

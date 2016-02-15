@@ -4,40 +4,40 @@
 //
 
 #include "stdafx.h"
+#include <inttypes.h>
 #include "Indexer.h"
+#include "TextReaderConstants.h"
 
 using std::string;
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
-    //TODO: throw proper exceptions
-
     //TODO: use fdadvise(fd, 0, 0, FADVISE_SEQUENTIAL) if possible
     // also, take at look at http://git.savannah.gnu.org/cgit/coreutils.git/tree/src/wc.c
 
 
-    Indexer::Indexer(FILE* file, size_t chunkSize) : m_maxChunkSize(chunkSize) {
+    Indexer::Indexer(FILE* file, bool skipSequenceIds, int64_t chunkSize) : m_maxChunkSize(chunkSize) {
         if (!file) {
-            throw "file not opened for reading";
+            RuntimeError("Input file not open for reading");
         }
         m_file = file;
         m_bufferStart = new char[BUFFER_SIZE + 1];
         m_fileOffsetStart = 0;
         m_fileOffsetEnd = 0;
         m_done = false;
+        m_skipSequenceIds = skipSequenceIds;
         m_chunks.push_back({});
     }
 
     Indexer::~Indexer() {
         delete[] m_bufferStart;
-        //std::cout << "Filesize = " << m_fileOffsetEnd << std::endl;
     }
 
     void Indexer::Fill() {
         if (!m_done) {
             size_t bytesRead = fread(m_bufferStart, 1, BUFFER_SIZE, m_file);
             if (bytesRead == (size_t)-1)
-                throw "read failed";
+                RuntimeError("Could not read from input file.");
             if (!bytesRead) {
                 m_done = true;
             }
@@ -52,28 +52,35 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     void Indexer::UpdateTimeline(SequenceDescriptor& sd) {
         ChunkDescriptor* chunk = &m_chunks.back();
+        TimelineOffset timelineOffset = m_timeline.size();
         if (chunk->m_byteSize > 0 && (chunk->m_byteSize + sd.m_byteSize) > m_maxChunkSize) {
             m_chunks.push_back({});
             chunk = &m_chunks.back();
-            chunk->m_index = m_chunks.size();
-            chunk->m_timelineOffset = m_timeline.size();
+            chunk->m_index = m_chunks.size() - 1;
+            chunk->m_timelineOffset = timelineOffset;
         }
         chunk->m_byteSize += sd.m_byteSize;
         chunk->m_numSequences++;
         sd.m_chunkId = chunk->m_index;
 
+        if (sd.m_id != timelineOffset) {
+            m_idToOffsetMap[sd.m_id] = timelineOffset;
+        }
         m_timeline.push_back(sd);
     }
 
     Index* Indexer::BuildFromLines() {
+        m_skipSequenceIds = true;
         size_t lines = 0;
         int64_t offset = m_fileOffsetStart;
         while (!m_done)
         {
-            while ((m_pos = (char*)memchr(m_pos, '\n', m_bufferEnd - m_pos))) {
+            m_pos = (char*)memchr(m_pos, ROW_DELIMETER, m_bufferEnd - m_pos);
+            if (m_pos) {
                 SequenceDescriptor sd = {};
                 sd.m_id = lines;
                 sd.m_numberOfSamples = 1;
+                sd.m_isValid = true;
                 sd.m_fileOffset = offset;
                 sd.m_byteSize = (m_fileOffsetEnd - (m_bufferEnd - m_pos)) - offset + 1;
                 offset += sd.m_byteSize;
@@ -81,22 +88,30 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 ++m_pos;
                 ++lines;
             }
-            Fill();
+            else {
+                Fill();
+            }
         }
 
-        return new Index{ true, m_timeline, m_chunks };
+        return new Index
+        { 
+            m_skipSequenceIds,
+            std::move(m_timeline), 
+            std::move(m_chunks), 
+            std::move(m_idToOffsetMap) 
+        };
     }
 
 
     Index* Indexer::Build() {
         Fill(); // read the first block of data
         if (m_done) {
-            throw "malformed input";
+            RuntimeError("Input file is empty");
         }
         // check the first byte and decide what to do next
         // TODO: ignore BOM
 
-        if (m_bufferStart[0] == '|') {
+        if (m_skipSequenceIds || m_bufferStart[0] == NAME_PREFIX) {
             // skip sequence id parsing, treat lines as individual sequences
             return BuildFromLines();
         }
@@ -105,12 +120,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         int64_t offset = m_fileOffsetStart;
         // read the very first sequence id
         if (!GetNextSequenceId(id)) {
-            throw "malformed input";
+            RuntimeError("Expected a sequence id at the offset %" PRIi64 ", none was found.",
+                offset);
         }
 
-        SequenceDescriptor sd = {};
+        SequenceDescriptor sd = SequenceDescriptor();
         sd.m_id = id;
         sd.m_fileOffset = offset;
+        sd.m_isValid = true;
 
         while (!m_done) {
             SkipLine(); // ignore whatever is left on this line.
@@ -121,23 +138,30 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 // found a new sequence, which starts at the [offset] bytes into the file
                 sd.m_byteSize = offset - sd.m_fileOffset;
                 UpdateTimeline(sd);
-                sd = {};
+                sd = SequenceDescriptor();
                 sd.m_id = id;
                 sd.m_fileOffset = offset;
+                sd.m_isValid = true;
             }
         }
 
         // calculate the byte size for the last sequence
         sd.m_byteSize = m_fileOffsetEnd - sd.m_fileOffset;
         UpdateTimeline(sd);
-        return new Index{ false, m_timeline, m_chunks };
+        return new Index
+        {
+            m_skipSequenceIds,
+            std::move(m_timeline), // TODO: shrink_to_fit
+            std::move(m_chunks),
+            std::move(m_idToOffsetMap) // this map can be relatively large
+        };
     }
 
 
     void Indexer::SkipLine() {
         while (!m_done)
         {
-            m_pos = (char*)memchr(m_pos, '\n', m_bufferEnd - m_pos);
+            m_pos = (char*)memchr(m_pos, ROW_DELIMETER, m_bufferEnd - m_pos);
             if (m_pos) {
                 //found a new-line character
                 if (++m_pos == m_bufferEnd) {
@@ -154,26 +178,43 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         id = 0;
         while (!m_done)
         {
-            while (m_pos != m_bufferEnd) {
+            while (m_pos != m_bufferEnd) 
+            {
                 char c = *m_pos;
-                //remember offset;
-                if (c == '|')  // TODO: replace with a constant
+                // a well-formed sequence id must end in either a column delimeter 
+                // or a name prefix
+                if (c == COLUMN_DELIMETER || c == NAME_PREFIX) 
                 {
                     return found;
                 }
 
-                if (c < '0' || c > '9') {
-                    throw "malfomed input"; // TODO: add offset, char and other details
+                if (c < '0' || c > '9') 
+                {
+                    // TODO: ignore malformed sequences
+                    RuntimeError("Unexpected character('%c')"
+                        " while reading a sequence id"
+                        " at the offset = %" PRIi64 "\n", c, GetFileOffset());
                 }
+
                 found |= true;
-                // TODO: check for overflows
+                size_t temp = id;
                 id = id * 10 + (c - '0');
+                if (temp > id)
+                {
+                    // TODO: ignore malformed sequences
+                    RuntimeError("Size_t overflow while reading a sequence id"
+                        " at the offset = %" PRIi64 "\n", GetFileOffset());
+                }
                 ++m_pos;
             }
             Fill();
         }
+
+        // TODO: ignore malformed sequences
         // reached EOF without hitting the pipe character.
-        throw "malfomed input";
+        RuntimeError("Reached the end of file "
+            " while reading a sequence id"
+            " at the offset = %" PRIi64 "\n", GetFileOffset());
     }
 
 }}}

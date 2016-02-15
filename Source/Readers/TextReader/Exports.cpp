@@ -29,6 +29,7 @@ extern "C" DATAREADER_API void GetReaderF(IDataReader<float>** preader)
 
 extern "C" DATAREADER_API void GetReaderD(IDataReader<double>** preader)
 {
+    RuntimeError("Not implemented");
     *preader = new ReaderShim<double>(factory);
 }
 } } }

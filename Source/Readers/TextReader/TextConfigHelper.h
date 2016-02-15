@@ -8,7 +8,7 @@
 #include <string>
 #include <vector>
 #include "Config.h"
-#include "Reader.h"
+#include "Descriptors.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -19,31 +19,40 @@ class TextConfigHelper
 public:
     explicit TextConfigHelper(const ConfigParameters& config);
 
-    // Get all streams that are specified in the configuration.
-    std::vector<StreamDescriptionPtr> GetStreams() const;
+    // Get all input streams that are specified in the configuration.
+    const std::vector<StreamDescriptor>& GetInputStreams() const;
+
+    // Get all input streams that are specified in the configuration.
+    const std::vector<StreamDescriptor>& GetOutputStreams() const;
 
     // Get full path to the input file.
-    std::string GetFilepath() const;
+    const std::string& GetFilepath() const;
 
-    int GetCpuThreadCount() const
-    {
-        return m_cpuThreadCount;
-    }
+    int GetCpuThreadCount() const;
 
-    bool ShouldRandomize() const
-    {
-        return m_randomize;
-    }
+    bool ShouldRandomize() const;
+
+    bool ShouldSkipSequenceIds() const;
+
+    unsigned int GetMaxAllowedErrors() const;
+
+    unsigned int GetTraceLevel() const;
+
+    void ParseStreamConfig(const ConfigParameters& config, std::vector<StreamDescriptor>& streams);
 
 private:
     TextConfigHelper(const TextConfigHelper&) = delete;
     TextConfigHelper& operator=(const TextConfigHelper&) = delete;
 
     std::string m_filepath;
-    std::vector<StreamDescriptionPtr> m_streams;
+    std::vector<StreamDescriptor> m_inputStreams;
+    std::vector<StreamDescriptor> m_outputStreams;
     int m_cpuThreadCount;
     bool m_randomize;
+    bool m_skipSequenceIds;
+    unsigned int m_maxErrors;
+    unsigned int m_traceLevel;
+
 };
 
-typedef std::shared_ptr<TextConfigHelper> TextConfigHelperPtr;
 } } }

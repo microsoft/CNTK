@@ -24,8 +24,6 @@ TextReader::TextReader(MemoryProviderPtr provider,
     // deserializer interface not only in C++ but in scripting languages as well.
 
     TextConfigHelper configHelper(config);
-    m_streams = configHelper.GetStreams();
-    assert(m_streams.size() == 2);
 
     int threadCount = configHelper.GetCpuThreadCount();
     if (threadCount > 0)
@@ -33,18 +31,24 @@ TextReader::TextReader(MemoryProviderPtr provider,
         omp_set_num_threads(threadCount);
     }
 
-    DataDeserializerPtr deserializer;
-    //TODO:
-    //auto deserializer = std::make_shared<TextParser>(configHelper.GetFilepath(), configHelper.GetStreams());
+    m_parser = std::make_shared<TextParser>(configHelper.GetFilepath(), configHelper.GetInputStreams());
+
+
+    for (const StreamDescriptor& stream : configHelper.GetOutputStreams())
+    {
+        auto streamDescription = std::make_shared<StreamDescription>(stream);
+        streamDescription->m_sampleLayout = std::make_shared<TensorShape>(stream.m_sampleSize);
+        m_streams.push_back(streamDescription);
+    }
 
     TransformerPtr randomizer;
     if (configHelper.ShouldRandomize())
     {
-        randomizer = std::make_shared<BlockRandomizer>(0, SIZE_MAX, deserializer);
+        randomizer = std::make_shared<BlockRandomizer>(0, SIZE_MAX, m_parser);
     }
     else
     {
-        randomizer = std::make_shared<NoRandomizer>(deserializer);
+        randomizer = std::make_shared<NoRandomizer>(m_parser);
     }
 
     randomizer->Initialize(nullptr, config);
@@ -54,7 +58,6 @@ TextReader::TextReader(MemoryProviderPtr provider,
 
 std::vector<StreamDescriptionPtr> TextReader::GetStreamDescriptions()
 {
-    assert(!m_streams.empty());
     return m_streams;
 }
 

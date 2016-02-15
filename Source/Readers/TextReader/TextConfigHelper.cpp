@@ -4,123 +4,131 @@
 //
 
 #include "stdafx.h"
+#include <string>
 #include "TextConfigHelper.h"
 #include "StringUtil.h"
 
+using std::string;
+using std::pair;
+using std::vector;
+
 namespace Microsoft { namespace MSR { namespace CNTK {
-
-    std::vector<std::string> GetSectionsWithParameter(const ConfigParameters& config, const std::string& parameterName)
-    {
-        std::vector<std::string> sectionNames;
-        for (const std::pair<std::string, ConfigParameters>& section : config)
-        {
-            if (section.second.ExistsCurrent(parameterName))
-            {
-                sectionNames.push_back(section.first);
-            }
-        }
-
-        if (sectionNames.empty())
-        {
-            RuntimeError("TextReader requires %s parameter.", parameterName.c_str());
-        }
-
-        return sectionNames;
-    }
 
     TextConfigHelper::TextConfigHelper(const ConfigParameters& config)
     {
+        ParseStreamConfig(config("input"), m_inputStreams);
 
-        ConfigParameters inputs = config("inputs");
+        ParseStreamConfig(config("output"), m_outputStreams);
 
-        
+        m_filepath = config("file");
 
-        //std::vector<std::string> featureNames = GetSectionsWithParameter(config, "width");
-        //std::vector<std::string> labelNames = GetSectionsWithParameter(config, "labelDim");
+        string rand = config("randomize", "auto");
 
-        //// REVIEW alexeyk: currently support only one feature and label section.
-        //if (featureNames.size() != 1 || labelNames.size() != 1)
-        //{
-        //    RuntimeError(
-        //        "TextReader currently supports a single feature and label stream. '%d' features , '%d' labels found.",
-        //        static_cast<int>(featureNames.size()),
-        //        static_cast<int>(labelNames.size()));
-        //}
-
-        //ConfigParameters featureSection = config(featureNames[0]);
-        //size_t w = featureSection("width");
-        //size_t h = featureSection("height");
-        //size_t c = featureSection("channels");
-
-        //std::string mbFmt = featureSection("mbFormat", "nchw");
-        //if (AreEqualIgnoreCase(mbFmt, "nhwc") || AreEqualIgnoreCase(mbFmt, "legacy"))
-        //{
-        //    m_dataFormat = HWC;
-        //}
-        //else if (!AreEqualIgnoreCase(mbFmt, "nchw") || AreEqualIgnoreCase(mbFmt, "cudnn"))
-        //{
-        //    RuntimeError("TextReader does not support the sample format '%s', only 'nchw' and 'nhwc' are supported.", mbFmt.c_str());
-        //}
-
-        //auto features = std::make_shared<StreamDescription>();
-        //features->m_id = 0;
-        //features->m_name = msra::strfun::utf16(featureSection.ConfigName());
-        //features->m_sampleLayout = std::make_shared<TensorShape>(ImageDimensions(w, h, c).AsTensorShape(m_dataFormat));
-        //m_streams.push_back(features);
-
-        //ConfigParameters label = config(labelNames[0]);
-        //size_t labelDimension = label("labelDim");
-
-        //auto labelSection = std::make_shared<StreamDescription>();
-        //labelSection->m_id = 1;
-        //labelSection->m_name = msra::strfun::utf16(label.ConfigName());
-        //labelSection->m_sampleLayout = std::make_shared<TensorShape>(labelDimension);
-        //m_streams.push_back(labelSection);
-
-        //m_filepath = config(L"file");
-
-        //std::string rand = config(L"randomize", "auto");
-
-        //if (AreEqualIgnoreCase(rand, "auto"))
-        //{
-        //    m_randomize = true;
-        //}
-        //else if (AreEqualIgnoreCase(rand, "none"))
-        //{
-        //    m_randomize = false;
-        //}
-        //else
-        //{
-        //    RuntimeError("'randomize' parameter must be set to 'auto' or 'none'");
-        //}
-
-        //// Identify precision
-        //string precision = config.Find("precision", "float");
-        //if (AreEqualIgnoreCase(precision, "float"))
-        //{
-        //    features->m_elementType = ElementType::tfloat;
-        //    labelSection->m_elementType = ElementType::tfloat;
-        //}
-        //else if (AreEqualIgnoreCase(precision, "double"))
-        //{
-        //    features->m_elementType = ElementType::tdouble;
-        //    labelSection->m_elementType = ElementType::tdouble;
-        //}
-        //else
-        //{
-        //    RuntimeError("Not supported precision '%s'. Expected 'double' or 'float'.", precision.c_str());
-        //}
+        if (AreEqualIgnoreCase(rand, "auto"))
+        {
+            m_randomize = true;
+        }
+        else if (AreEqualIgnoreCase(rand, "none"))
+        {
+            m_randomize = false;
+        }
+        else
+        {
+            RuntimeError("'randomize' parameter must be set to 'auto' or 'none'");
+        }
 
         m_cpuThreadCount = config(L"numCPUThreads", 0);
+        m_skipSequenceIds = config(L"skipSequenceIds", false);
+        m_maxErrors = config(L"maxErrors", 0);
+        m_traceLevel = config(L"traceLevel", 0);
+
+        //TODO: chunk_size (if ever need chunks).
     }
 
-    std::vector<StreamDescriptionPtr> TextConfigHelper::GetStreams() const
+    void TextConfigHelper::ParseStreamConfig(const ConfigParameters& config, std::vector<StreamDescriptor>& streams)
     {
-        return m_streams;
+        StreamId id = 0;
+        for (const pair<string, ConfigParameters>& section : config)
+        {
+            ConfigParameters input = section.second;
+            const string& name = section.first;
+
+            if (!input.ExistsCurrent("dim") || !input.ExistsCurrent("storage")) {
+                RuntimeError("An input section %s does not specify of the required parameters"
+                    "(dim, storage).", name.c_str());
+            }
+
+            StreamDescriptor stream;
+            stream.m_id = id++;
+            stream.m_name = msra::strfun::utf16(name);
+            stream.m_sampleSize = input("dim");
+            string type = input("storage");
+
+            if (AreEqualIgnoreCase(type, "dense"))
+            {
+                stream.m_storageType = StorageType::dense;
+            }
+            else if (AreEqualIgnoreCase(type, "sparse"))
+            {
+                stream.m_storageType = StorageType::sparse_csc;
+            }
+            else
+            {
+                RuntimeError("'storage' parameter must be set either to 'dense' or 'sparse'");
+            }
+
+            // alias is optional
+            if (input.ExistsCurrent("alias")) {
+                stream.m_alias = input("alias");
+            }
+            else {
+                stream.m_alias = name;
+            }
+
+            // TODO: add double support (with an optional "precision" parameter)
+            stream.m_elementType = ElementType::tfloat;
+            streams.push_back(stream);
+        }
     }
 
-    std::string TextConfigHelper::GetFilepath() const
+    const string& TextConfigHelper::GetFilepath() const
     {
         return m_filepath;
     }
+
+    int TextConfigHelper::GetCpuThreadCount() const
+    {
+        return m_cpuThreadCount;
+    }
+
+    bool TextConfigHelper::ShouldRandomize() const
+    {
+        return m_randomize;
+    }
+
+    const vector<StreamDescriptor>& TextConfigHelper::GetInputStreams() const
+    {
+        return m_inputStreams;
+    }
+
+    const vector<StreamDescriptor>& TextConfigHelper::GetOutputStreams() const
+    {
+        return m_outputStreams;
+    }
+
+    bool TextConfigHelper::ShouldSkipSequenceIds() const
+    {
+        return m_skipSequenceIds;
+    }
+
+    unsigned int TextConfigHelper::GetMaxAllowedErrors() const
+    {
+        return m_maxErrors;
+    }
+
+    unsigned int TextConfigHelper::GetTraceLevel() const
+    {
+        return m_traceLevel;
+    }
+
 }}}

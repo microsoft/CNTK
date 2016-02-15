@@ -94,6 +94,7 @@
     <ClInclude Include="..\..\Common\Include\DataReader.h" />
     <ClInclude Include="..\..\Common\Include\File.h" />
     <ClInclude Include="..\..\Common\Include\fileutil.h" />
+    <ClInclude Include="TextReaderConstants.h" />
     <ClInclude Include="Indexer.h" />
     <ClInclude Include="TextConfigHelper.h" />
     <ClInclude Include="TextParser.h" />
@@ -126,6 +127,12 @@
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader>Create</PrecompiledHeader>
     </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="SampleReaderConfig.cntk" />
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="SampleInput.txt" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets" />

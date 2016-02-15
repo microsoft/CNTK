@@ -44,6 +44,7 @@
     <ClInclude Include="Descriptors.h" />
     <ClInclude Include="Indexer.h" />
     <ClInclude Include="TextParser.h" />
+    <ClInclude Include="TextReaderConstants.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Common">
@@ -52,5 +53,18 @@
     <Filter Include="Common\Include">
       <UniqueIdentifier>{C6F55578-121A-4D7C-8F57-4172BC5C463B}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Sample">
+      <UniqueIdentifier>{34865c72-20f7-40ba-84d2-af1ba2f84ef1}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="SampleReaderConfig.cntk">
+      <Filter>Sample</Filter>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="SampleInput.txt">
+      <Filter>Sample</Filter>
+    </Text>
   </ItemGroup>
 </Project>

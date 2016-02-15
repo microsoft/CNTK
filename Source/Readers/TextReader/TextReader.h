@@ -5,6 +5,7 @@
 
 #pragma once
 
+#include "TextParser.h"
 #include "Reader.h"
 #include "SampleModePacker.h"
 
@@ -29,8 +30,8 @@ public:
     Minibatch ReadMinibatch() override;
 
 private:
-    // All streams this reader provides.
-    std::vector<StreamDescriptionPtr> m_streams;
+    
+    TextParserPtr m_parser;
 
     // A head transformer in a list of transformers.
     TransformerPtr m_transformer;
@@ -43,6 +44,9 @@ private:
 
     // Memory provider (TODO: this will possibly change in the near future.)
     MemoryProviderPtr m_provider;
+
+    // All streams this reader provides.
+    std::vector<StreamDescriptionPtr> m_streams;
 };
 
 }}}
