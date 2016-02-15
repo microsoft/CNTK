@@ -543,23 +543,24 @@ public:
         m_fileSize = -1;
         m_fileBuffer = NULL;
 
-        if (mFile)
+        if (mFile)  // TODO: Can this function be called multiple times? Then say so at the top function
             fclose(mFile);
 
-        if (_wfopen_s(&mFile, fileName, L"rt") != 0)
+        // TODO: use our File class, so that we get the benefit of popen()
+        if (_wfopen_s(&mFile, fileName, L"rt") != 0)    // TODO: What does this warning do? Why not fail?
             Microsoft::MSR::CNTK::Warning("cannot open file %s", fileName);
     }
 
     void ParseReset()
     {
-        if (mFile)
+        if (mFile) // TODO: can this ever be called without an open file?
             fseek(mFile, 0, SEEK_SET);
     }
 
-    // Parse - Parse the data
-    // recordsRequested - number of records requested
-    // labels - pointer to vector to return the labels
-    // numbers - pointer to vector to return the numbers
+    // Parse - Parse the data   --TODO: is this doing the whole file or incrementally?
+    // recordsRequested - number of records requested. A record here is a word.
+    // labels - pointer to vector to return the labels   --TODO: change to reference
+    // numbers - pointer to vector to return the numbers    --TODO: what the hell are those numbers?
     // seqPos - pointers to the other two arrays showing positions of each sequence
     // returns - number of records actually read, if the end of file is reached the return value will be < requested records
     long Parse(size_t recordsRequested, std::vector<LabelType> *labels, std::vector<NumType> *numbers, std::vector<SequencePosition> *seqPos)
@@ -572,35 +573,30 @@ public:
         m_labels = labels;
 
         long TickStart = GetTickCount();
-        long recordCount = 0;
-        long orgRecordCount = (long) labels->size();
-        long lineCount = 0;
-        SequencePosition sequencePositionLast(0, 0, seqFlagNull);
+        const auto orgRecordCount = labels->size();
+
         // get line
-        char ch2[MAXSTRING];
-        if (mFile == nullptr)
-            Microsoft::MSR::CNTK::RuntimeError("File %ls can not be loaded\n", mFileName.c_str());
+        char ch2[MAXSTRING]; // TODO: This is 0.5 MB right here on the stack. Really?
+        string ch;
+        if (mFile == nullptr) // TODO: why check here and not when it is being opened?
+            RuntimeError("File %ls can not be loaded\n", mFileName.c_str());
 
-        while (recordCount < recordsRequested && fgets(ch2, MAXSTRING, mFile) != nullptr)
+        size_t lineCount = 0; // number of lines read in this loop
+        while (labels->size() - orgRecordCount < recordsRequested && fgets(ch2, MAXSTRING, mFile) != nullptr)
         {
-
-            string ch = ch2;
-            std::vector<string> vstr;
-            vstr = sep_string(ch, " ");
-            if (vstr.size() < 3)
+            ch.assign(ch2);
+            std::vector<string> vstr = sep_string(ch, " ");
+            if (vstr.size() < 3)    // TODO: Document this special condition. Why should we not process empty sequences like <s> </s>?
                 continue;
 
+            // append all tokens to labels array
             for (size_t i = 0; i < vstr.size(); i++)
-            {
-                labels->push_back(vstr[i]);
-            }
+                labels->push_back(std::move(vstr[i])); // TODO: is this an entire sequence, or multiple columns describing a single token?
+
+            // add a sequence element to the list
             SequencePosition sequencePos(numbers->size(), labels->size(),
                                          m_beginSequence ? seqFlagStartLabel : 0 | m_endSequence ? seqFlagStopLabel : 0 | seqFlagLineBreak);
-            // add a sequence element to the list
             seqPos->push_back(sequencePos);
-            sequencePositionLast = sequencePos;
-
-            recordCount = (long) labels->size() - orgRecordCount;
 
             lineCount++;
         } // while
@@ -611,22 +607,23 @@ public:
 
         if (m_traceLevel > 2)
             fprintf(stderr, "\n%ld ms, %d numbers parsed\n\n", TickDelta, m_totalNumbersConverted);
-        return lineCount;
+        return (long) lineCount;    // TODO: change to size_t
     }
 };
 
-typedef struct
+// structure to describe how to find an input sentence in the 'labels' vector which is a concatenation of all
+struct SentenceInfo
 {
-    size_t sLen;
+    size_t sLen;    // TODO: say what these are
     size_t sBegin;
-    size_t sEnd;
-} stSentenceInfo;
+};
+
 /// language model sequence parser
 template <typename NumType, typename LabelType>
 class LMBatchSequenceParser : public LMSequenceParser<NumType, LabelType>
 {
 public:
-    vector<stSentenceInfo> mSentenceIndex2SentenceInfo;
+    vector<SentenceInfo> mSentenceIndex2SentenceInfo;
 
 public:
     LMBatchSequenceParser(){};
@@ -634,7 +631,7 @@ public:
     {
     }
 
-    void ParseInit(LPCWSTR fileName, size_t dimFeatures, size_t dimLabelsIn, size_t dimLabelsOut, std::string beginSequenceIn = "<s>", std::string endSequenceIn = "</s>", std::string beginSequenceOut = "O", std::string endSequenceOut = "O");
+    //void ParseInit(LPCWSTR fileName, size_t dimFeatures, size_t dimLabelsIn, size_t dimLabelsOut, std::string beginSequenceIn = "<s>", std::string endSequenceIn = "</s>", std::string beginSequenceOut = "O", std::string endSequenceOut = "O");
 
     // Parse - Parse the data
     // recordsRequested - number of records requested
@@ -642,5 +639,6 @@ public:
     // numbers - pointer to vector to return the numbers
     // seqPos - pointers to the other two arrays showing positions of each sequence
     // returns - number of records actually read, if the end of file is reached the return value will be < requested records
+    //   TODO: can return value be negative? If not, use size_t
     long Parse(size_t recordsRequested, std::vector<LabelType> *labels, std::vector<NumType> *numbers, std::vector<SequencePosition> *seqPos);
 };

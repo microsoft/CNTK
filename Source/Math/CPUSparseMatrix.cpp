@@ -554,14 +554,9 @@ void CPUSparseMatrix<ElemType>::Resize(const size_t numRows, const size_t numCol
     {
         if (m_format == MatrixFormat::matrixFormatSparseCSC || m_format == MatrixFormat::matrixFormatSparseCSR)
         {
-            ElemType* pArray = NULL;
-            pArray = new ElemType[numNZElemToReserve];
-            CPUSPARSE_INDEX_TYPE* unCompIndex = NULL;
-            unCompIndex = new CPUSPARSE_INDEX_TYPE[numNZElemToReserve];
-            CPUSPARSE_INDEX_TYPE* compIndex = NULL;
-            compIndex = new CPUSPARSE_INDEX_TYPE[newCompIndexSize];
-            if (numNZElemToReserve > 0)
-                memset(pArray, 0, sizeof(ElemType) * numNZElemToReserve);
+            auto* pArray      = new ElemType[numNZElemToReserve]();
+            auto* unCompIndex = new CPUSPARSE_INDEX_TYPE[numNZElemToReserve];
+            auto* compIndex   = new CPUSPARSE_INDEX_TYPE[newCompIndexSize];
 
             if (keepExistingValues && (m_nz > numNZElemToReserve || m_compIndexSize > newCompIndexSize))
                 LogicError("Resize: To keep values m_nz should <= numNZElemToReserve and m_compIndexSize <= newCompIndexSize");
@@ -579,7 +574,7 @@ void CPUSparseMatrix<ElemType>::Resize(const size_t numRows, const size_t numCol
             delete[] m_compIndex;
 
             m_pArray = pArray;
-            m_nzValues = m_pArray;
+            m_nzValues = m_pArray; // TODO: can this ever be different?
             m_unCompIndex = unCompIndex;
             m_compIndex = compIndex;
         }

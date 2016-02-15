@@ -331,11 +331,13 @@ static ConfigValuePtr NodeOp(const ExpressionPtr &e, ConfigValuePtr leftVal, Con
         // TODO: apply this more generally to all operators
         auto constantConfig = make_shared<ConfigRecord>(config, MakeFailFn(e->location));
         let leftFailFn = leftVal.GetFailFn(); // report any error for this Constant object as belonging to the scalar factor's expression
-        constantConfig->Add(L"operation", leftFailFn, ConfigValuePtr(make_shared<String>(L"Constant"), leftFailFn, exprPath));
+        constantConfig->Add(L"operation", leftFailFn, ConfigValuePtr(make_shared<String>(L"LearnableParameter"), leftFailFn, exprPath));
         let one = MakePrimitiveConfigValuePtr(1.0, leftVal.GetFailFn(), exprPath);
         constantConfig->Add(L"rows", leftFailFn, one);
         constantConfig->Add(L"cols", leftFailFn, one);
+        //constantConfig->Add(L"shape", leftFailFn, one);  // BUGBUG: rows,cols is no longer right, we need a TensorShape here
         constantConfig->Add(L"value", leftFailFn, leftVal);
+        constantConfig->Add(L"needGradient", leftFailFn, MakePrimitiveConfigValuePtr(false, leftVal.GetFailFn(), exprPath));
         let value = ConfigValuePtr(rtInfo->construct(constantConfig), leftFailFn, exprPath);
         let valueWithName = dynamic_cast<HasName *>(value.get());
         if (valueWithName)
@@ -913,7 +915,7 @@ public:
                 us = (double) ((wstring &) arg).size();
             else // otherwise expect an array
             {
-                let arr = (ConfigArray) arg;
+                let & arr = arg.AsRef<ConfigArray>();
                 let range = arr.GetIndexRange();
                 us = (double) (range.second + 1 - range.first);
             }

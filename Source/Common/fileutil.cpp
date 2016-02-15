@@ -1010,6 +1010,7 @@ bool fskipwspace(FILE* f)
 
 // fskipNewLine(): skip all white space until end of line incl. the newline
 // skip - skip the end of line if true, otherwise leave the end of line (but eat any leading space)
+// returns false, true, or EOF
 int fskipNewline(FILE* f, bool skip)
 {
     int c;
@@ -1041,40 +1042,6 @@ int fskipNewline(FILE* f, bool skip)
         return (int) found;
     }
     // if we get here we saw a newline
-    return (int) true;
-}
-
-// fskipwNewLine(): skip all white space until end of line incl. the newline
-// skip - skip the end of line if true, otherwise leave the end of line (but eat any leading space)
-int fskipwNewline(FILE* f, bool skip)
-{
-    // TODO: we should redefine this to write UTF-16 (which matters on GCC which defines wchar_t as 32 bit)
-    wint_t c;
-    bool found = false;
-    // skip white space
-
-    do
-    {
-        c = fgetwc(f);
-    } while (c == L' ' || c == L'\t');
-
-    if (c == L'\r' || c == L'\n') // accept any style of newline
-    {
-        found = true;
-        if (skip)
-            c = fgetwc(f);
-    }
-
-    if ((found && !skip) || !(c == L'\r' || c == L'\n'))
-    {
-        if (c == WEOF)
-            return found ? (int) true : EOF;
-        wint_t rc = ungetwc(c, f);
-        if (rc != c)
-            RuntimeError("error in ungetwc(): %s", strerror(errno));
-        return (int) found;
-    }
-    // if we get here we saw a double newline
     return (int) true;
 }
 
@@ -1960,11 +1927,12 @@ vector<string> sep_string(const string& istr, const string& sep)
     return vstr;
 }
 
-/// separate string by separator
+// separate string by separator
+// TODO: unify with above
 vector<wstring> wsep_string(const wstring& istr, const wstring& sep)
 {
     wstring str = istr;
-    str = wtrim(str);
+    str = trim(str);
     vector<wstring> vstr;
     wstring csub;
     size_t ifound = 0;
@@ -1973,13 +1941,13 @@ vector<wstring> wsep_string(const wstring& istr, const wstring& sep)
     while (ifound != std::wstring::npos)
     {
         csub = str.substr(ifoundlast, ifound - ifoundlast);
-        vstr.push_back(wtrim(csub));
+        vstr.push_back(trim(csub));
 
         ifoundlast = ifound + 1;
         ifound = str.find(sep, ifoundlast);
     }
     csub = str.substr(ifoundlast, str.length() - ifoundlast);
-    vstr.push_back(wtrim(csub));
+    vstr.push_back(trim(csub));
 
     return vstr;
 }

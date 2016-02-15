@@ -607,7 +607,7 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
         else
         {
             if (std::isnan(avgCriterion))
-                RuntimeError("The training criterion is not a number (NAN). Stop\n");
+                RuntimeError("The training criterion is not a number (NAN).");
         }
 
         // not loading previous values then set them
@@ -1156,7 +1156,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
 
             if (std::isnan(epochCriterion))
             {
-                RuntimeError("The training criterion is not a number (NAN). Stop\n");
+                RuntimeError("The training criterion is not a number (NAN).");
             }
         }
 

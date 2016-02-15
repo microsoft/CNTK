@@ -259,7 +259,6 @@ const wchar_t* fgettoken(FILE* f, wchar_t* buf, int size);
 std::wstring fgetwtoken(FILE* f);
 
 int fskipNewline(FILE* f, bool skip = true);
-int fskipwNewline(FILE* f, bool skip = true);
 
 // ----------------------------------------------------------------------------
 // fputstring(): write a 0-terminated std::string (terminate if error)
@@ -871,41 +870,30 @@ static inline bool relpath(const std::basic_string<CHAR>& s)
 }
 
 // trim from start
-static inline std::string& ltrim(std::string& s)
+template<class STRING>
+static inline STRING& ltrim(STRING& s)
 {
-    s.erase(s.begin(), std::find_if(s.begin(), s.end(), std::not1(std::ptr_fun<int, int>(std::isspace))));
-    return s;
-}
-static inline std::wstring& wltrim(std::wstring& s)
-{
-    s.erase(s.begin(), std::find_if(s.begin(), s.end(), std::not1(std::ptr_fun<int, int>(std::isspace))));
+    s.erase(s.begin(), std::find_if(s.begin(), s.end(), [](typename STRING::value_type c){ return !iscspace(c); }));
     return s;
 }
 
 // trim from end
-static inline std::string& rtrim(std::string& s)
+template<class STRING>
+static inline STRING& rtrim(STRING& s)
 {
-    s.erase(std::find_if(s.rbegin(), s.rend(), std::not1(std::ptr_fun<int, int>(std::isspace))).base(), s.end());
-    return s;
-}
-static inline std::wstring& wrtrim(std::wstring& s)
-{
-    s.erase(std::find_if(s.rbegin(), s.rend(), std::not1(std::ptr_fun<int, int>(std::isspace))).base(), s.end());
+    s.erase(std::find_if(s.rbegin(), s.rend(), [](typename STRING::value_type c){ return !iscspace(c); }).base(), s.end());
     return s;
 }
 
 // trim from both ends
-static inline std::string& trim(std::string& s)
+template<class STRING>
+static inline STRING& trim(STRING& s)
 {
     return ltrim(rtrim(s));
 }
-static inline std::wstring& wtrim(std::wstring& s)
-{
-    return wltrim(wrtrim(s));
-}
 
 std::vector<std::string> sep_string(const std::string& str, const std::string& sep);
-std::vector<std::wstring> wsep_string(const std::wstring& str, const std::wstring& sep);
+std::vector<std::wstring> wsep_string(const std::wstring& str, const std::wstring& sep); // TODO: overload sep_string with wstring type, no need for different name
 
 std::wstring s2ws(const std::string& str);
 

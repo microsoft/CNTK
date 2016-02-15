@@ -34,7 +34,7 @@ long LUSequenceReader<ElemType>::GetIdFromLabel(const LabelType& labelValue, Lab
 template <class ElemType>
 BatchLUSequenceReader<ElemType>::~BatchLUSequenceReader()
 {
-    for (int index = labelInfoMin; index < labelInfoMax; ++index)
+    for (int index = 0; index < labelInfoNum; ++index)
     {
         delete[] m_labelInfo[index].m_id2classLocal;
         delete[] m_labelInfo[index].m_classInfoLocal;
@@ -69,7 +69,7 @@ void BatchLUSequenceReader<ElemType>::ReadLabelInfo(const wstring& vocfile,
     while (vin.good())
     {
         getline(vin, strtmp);
-        strtmp = wtrim(strtmp);
+        strtmp = trim(strtmp); // TODO: operates in-place, so no need to re-assign to itself
         if (strtmp.length() == 0)
             break;
         if (readClass)
@@ -207,7 +207,7 @@ template <class ElemType>
 void LUSequenceReader<ElemType>::WriteLabelFile()
 {
     // update the label dimension if it is not big enough, need it here because m_labelIdMax get's updated in the processing loop (after a read)
-    for (int index = labelInfoMin; index < labelInfoMax; ++index)
+    for (int index = 0; index < labelInfoNum; ++index)
     {
         LabelInfo& labelInfo = m_labelInfo[index];
 
@@ -251,15 +251,16 @@ void LUSequenceReader<ElemType>::LoadLabelFile(const std::wstring& filePath, std
         wchar_t stmp[MAX_STRING];
         vin.getline(stmp, MAX_STRING);
         str = stmp;
-        str = wtrim(str);
+        str = trim(str);
         if (str.length() == 0)
             break;
 
         // check for a comment line
+        // BUGBUG: This is checking for an all-space line, which may be needed because vin.good() only fails after the end was hit.
         wstring::size_type pos = str.find_first_not_of(L" \t");
         if (pos != -1)
         {
-            str = wtrim(str);
+            str = trim(str);
             retLabels.push_back((LabelType) str);
         }
     }
@@ -307,54 +308,47 @@ void BatchLUSequenceReader<ElemType>::InitFromConfig(const ConfigRecordType& rea
     std::vector<std::wstring> labels;
     GetFileConfigNames(readerConfig, features, labels);
     if (features.size() > 0)
-    {
         m_featuresName = features[0];
-    }
 
     {
-        wstring tInputLabel = readerConfig(L"inputLabel", L"");
+        wstring tInputLabel  = readerConfig(L"inputLabel",  L"");
         wstring tOutputLabel = readerConfig(L"outputLabel", L"");
 
-        if (labels.size() == 2)
-        {
-            if (tInputLabel == L"" && tOutputLabel == L"")
-            {
-                for (int index = labelInfoMin; index < labelInfoMax; ++index)
-                {
-                    m_labelsName[index] = labels[index];
-                }
-            }
-            else
-            {
-                int index = 0;
-                for (int i = labelInfoMin; i < labelInfoMax; ++i)
-                {
-                    if (labels[i] == tInputLabel)
-                        m_labelsName[index] = labels[i];
-                }
-                if (m_labelsName[index] == L"")
-                    RuntimeError("cannot find input label");
+        if (labels.size() != labelInfoNum)
+            RuntimeError("BatchLUSequenceReader: Two label definitions (in and out) are required.");
 
-                index = 1;
-                for (int i = labelInfoMin; i < labelInfoMax; ++i)
-                {
-                    if (labels[i] == tOutputLabel)
-                        m_labelsName[index] = labels[i];
-                }
-                if (m_labelsName[index] == L"")
-                    RuntimeError("cannot find output label");
-            }
+        if (tInputLabel == L"" && tOutputLabel == L"")
+        {
+            for (int index = 0; index < labelInfoNum; ++index)
+                m_labelsName[index] = labels[index];
         }
         else
-            RuntimeError("two label definitions (in and out) required for Sequence Reader");
+        {
+            int index = 0;
+            for (int i = 0; i < labelInfoNum; ++i)
+            {
+                if (labels[i] == tInputLabel)
+                    m_labelsName[index] = labels[i];
+            }
+            if (m_labelsName[index] == L"")
+                RuntimeError("cannot find input label");
+
+            index = 1;
+            for (int i = 0; i < labelInfoNum; ++i)
+            {
+                if (labels[i] == tOutputLabel)
+                    m_labelsName[index] = labels[i];
+            }
+            if (m_labelsName[index] == L"")
+                RuntimeError("cannot find output label");
+        }
 
         // const ConfigRecordType & featureConfig = readerConfig(m_featuresName.c_str(), ConfigRecordType::Record());
 
-        for (int index = labelInfoMin; index < labelInfoMax; ++index)
+        for (int index = 0; index < labelInfoNum; ++index)
         {
             const ConfigRecordType& labelConfig = readerConfig(m_labelsName[index].c_str(), ConfigRecordType::Record());
 
-            m_labelInfo[index].idMax = 0;
             m_labelInfo[index].beginSequence = (wstring) labelConfig(L"beginSequence", L"");
             m_labelInfo[index].endSequence = (wstring) labelConfig(L"endSequence", L"");
             m_labelInfo[index].busewordmap = labelConfig(L"useWordMap", false);
@@ -416,7 +410,7 @@ void BatchLUSequenceReader<ElemType>::InitFromConfig(const ConfigRecordType& rea
 
     std::wstring pathName = readerConfig(L"file");
     if (m_traceLevel > 0)
-        fprintf(stderr, "reading sequence file %ls\n", pathName.c_str());
+        fprintf(stderr, "LUSequenceReader: Reading sequence file %ls\n", pathName.c_str());
 
     const LabelInfo& labelIn = m_labelInfo[labelInfoIn];
     const LabelInfo& labelOut = m_labelInfo[labelInfoOut];
@@ -656,7 +650,7 @@ bool BatchLUSequenceReader<ElemType>::EnsureDataAvailable(size_t /*mbStartSample
         {
             Reset();
 
-            mNumRead = m_parser.Parse(CACHE_BLOG_SIZE, &m_labelTemp, &m_featureTemp, &seqPos, featIn.word4idx, labelIn.word4idx, mAllowMultPassData);
+            mNumRead = m_parser.Parse(CACHE_BLOCK_SIZE, &m_labelTemp, &m_featureTemp, &seqPos, featIn.word4idx, labelIn.word4idx, mAllowMultPassData);
             if (mNumRead == 0)
             {
                 fprintf(stderr, "EnsureDataAvailable: No more data.\n");
@@ -1166,7 +1160,7 @@ void BatchLUSequenceReader<ElemType>::LoadWordMapping(const ConfigRecordType& re
         while (fp.good())
         {
             getline(fp, ss);
-            ss = wtrim(ss);
+            ss = trim(ss);
             if (ss.length() == 0)
                 break;
             vs = wsep_string(ss, L" ");
