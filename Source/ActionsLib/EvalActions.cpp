@@ -263,7 +263,7 @@ void DoWriteOutput(const ConfigParameters& config)
                 else if (type == "category") formattingOptions.isCategoryLabel = true;
                 else                         InvalidArgument("write: type must be 'real' or 'category'");
                 if (formattingOptions.isCategoryLabel)
-                    formattingOptions.labelMappingFile = formatConfig(L"labelMappingFile", L"");
+                    formattingOptions.labelMappingFile = (wstring)formatConfig(L"labelMappingFile", L"");
             }
             formattingOptions.transpose        = formatConfig(L"transpose",        formattingOptions.transpose);
             formattingOptions.prologue         = formatConfig(L"prologue",         formattingOptions.prologue);
