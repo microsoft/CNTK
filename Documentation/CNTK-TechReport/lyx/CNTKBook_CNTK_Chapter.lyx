@@ -1771,8 +1771,8 @@ numMiniBatch4LRSearch
 : the number of minibatches used to search the minibatch size when in adaptive
  minibatch size mode.
  Default value is 500.
- It's typically set to 10-20% of the total minibatches in an epoch. This is
- shared with the search for learning rate in SearchBeforeEpoch mode.
+ It's typically set to 10-20% of the total minibatches in an epoch.
+ This is shared with the search for learning rate in SearchBeforeEpoch mode.
  
 \end_layout
 
@@ -1792,8 +1792,9 @@ autoAdjustMinibatch
 \end_inset
 
 : enable or disable whether minibatch size is adaptively adjusted.
- Default value is false. Adaptive minibatch sizing will begin on epochs starting
- after user minibatch sizes explicitly specified are complete.
+ Default value is false.
+ Adaptive minibatch sizing will begin on epochs starting after user minibatch
+ sizes explicitly specified are complete.
   For example if the userspecifed minibatchSize=256:1024, then 256 and 1024are
  used in the first 2 Epochs and adaptive minibatchsizing is used afterwards
  
@@ -1814,8 +1815,8 @@ minibatchSizeTuningFrequency
 
 \end_inset
 
-: The number of epochs to skip, on a periodic basis, before dynamically adjusting
- the minibatch size.
+: The number of epochs to skip, on a periodic basis, before dynamically
+ adjusting the minibatch size.
  Default value is 1.
  
 \end_layout
@@ -4775,6 +4776,22 @@ printValues
  Default is true.
 \end_layout
 
+\begin_layout Itemize
+printMetadata
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+printMetadata
+\end_layout
+
+\end_inset
+
+ – determines whether to print the metadata (node name, dimensions, etc.)
+ associated with a node.
+ Default is true.
+\end_layout
+
 \begin_layout Subsection
 WriteWordAndClass Command
 \begin_inset Index idx
@@ -5509,8 +5526,8 @@ traceLevel=0 # larger values mean more output
 
 The default value is 0 and specifies minimal output.
  The higher the number the more output can be expected.
- Currently 0 (limited output), 1 (medium output) and 2 (verbose output) are
- the only values supported.
+ Currently 0 (limited output), 1 (medium output) and 2 (verbose output)
+ are the only values supported.
 \end_layout
 
 \begin_layout Subsection
@@ -5831,8 +5848,7 @@ status open
 
 \begin_layout Plain Layout
 
-cntk configFile=yourExp.cntk mnistTrain=[reader=[file="mynewfile.txt"]]
- 
+cntk configFile=yourExp.cntk mnistTrain=[reader=[file="mynewfile.txt"]] 
 \end_layout
 
 \end_inset
@@ -5891,8 +5907,8 @@ cntk configFile=yourExp1.cntk configFile=yourExp2.cntk
 \end_layout
 
 \begin_layout Standard
-If yourExp2.cntk only contains the string "mnistTrain=[reader=[file=mynewfile.tx
-t]]", then both of these commands would be equivalent to: 
+If yourExp2.cntk only contains the string "mnistTrain=[reader=[file=mynewfile.txt]
+]", then both of these commands would be equivalent to: 
 \end_layout
 
 \begin_layout Standard
@@ -5902,8 +5918,7 @@ status open
 
 \begin_layout Plain Layout
 
-cntk configFile=yourExp1.cntk mnistTrain=[reader=[file="mynewfile.txt"]]
- 
+cntk configFile=yourExp1.cntk mnistTrain=[reader=[file="mynewfile.txt"]] 
 \end_layout
 
 \end_inset
@@ -5926,8 +5941,8 @@ status open
 
 \begin_layout Plain Layout
 
-cntk configFile=yourExp1.cntk+yourExp2.cntk var1=value configFile=yourExp3.conf
-ig 
+cntk configFile=yourExp1.cntk+yourExp2.cntk var1=value configFile=yourExp3.config
+ 
 \end_layout
 
 \end_inset
@@ -6007,9 +6022,9 @@ included
   Including a configuration file is equivalent to pasting the contents of
  that file at the location of the include statement.
  Include statements are resolved recursively (using a depth-first search),
- meaning that if yourExpA.cntk includes yourExpB.cntk, and yourExpB.cntk
- includes yourExpC.cntk, then the full chain will be resolved, and yourExpC.conf
-ig will effectively be included in yourExpA.cntk.
+ meaning that if yourExpA.cntk includes yourExpB.cntk, and yourExpB.cntk includes
+ yourExpC.cntk, then the full chain will be resolved, and yourExpC.config
+ will effectively be included in yourExpA.cntk.
   If a configuration file is included multiple times (eg, 'A' includes 'B'
  and 'C', and 'B' also includes 'C'), then it will effectively only be included
  the first time it is encountered.
