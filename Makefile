@@ -165,7 +165,7 @@ ifeq ("$(BUILDTYPE)","debug")
   ifdef CNTK_CUDA_CODEGEN_DEBUG
     GENCODE_FLAGS := $(CNTK_CUDA_CODEGEN_DEBUG)
   else
-    GENCODE_FLAGS := -gencode arch=compute_20,code=\"compute_20\"
+    GENCODE_FLAGS := -gencode arch=compute_20,code=\"compute_20\" -gencode arch=compute_30,code=\"compute_30\"
   endif
 
   CXXFLAGS += -g
