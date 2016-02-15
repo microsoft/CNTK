@@ -9,11 +9,13 @@
 #include "ComputationNetwork.h"
 #include "DataReaderHelpers.h"
 #include "Helpers.h"
+#include "File.h"
 #include "fileutil.h"
 #include <vector>
 #include <string>
 #include <stdexcept>
 #include <fstream>
+#include <cstdio>
 
 using namespace std;
 
@@ -107,11 +109,35 @@ public:
         // clean up
     }
 
+    struct WriteFormattingOptions
+    {
+        // How to interpret the data:
+        bool isCategoryLabel = false; // true: find max value in column and output the index instead of the entire vector
+        bool transpose;               // true: one line per sample, each sample (column vector) forms one line; false: one column per sample
+        // The following strings are interspersed with the data:
+        // overall
+        std::string prologue; // print this at the start (e.g. a global header or opening bracket)
+        std::string epilogue; // and this at the end
+        // sequences
+        std::string sequenceSeparator; // print this between sequences (i.e. before all sequences but the first)
+        std::string sequencePrologue;  // print this before each sequence (after sequenceSeparator)
+        std::string sequenceEpilogue;  // and this after each sequence
+        // elements
+        std::string elementSeparator;  // print this between elements on a row
+        std::string sampleSeparator;   // and this between rows
+        // Optional printf precision parameter:
+        std::string precisionFormat;        // printf precision, e.g. ".2" to get a "%.2f"
+
+        WriteFormattingOptions() :
+            transpose(true), sequenceEpilogue("\n"), elementSeparator(" "), sampleSeparator("\n")
+        { }
+    };
+
     // TODO: Remove code dup with above function
     // E.g. create a shared function that takes the actual writing operation as a lambda.
-    void WriteOutput(IDataReader<ElemType>& dataReader, size_t mbSize, std::wstring outputPath, const std::vector<std::wstring>& outputNodeNames, size_t numOutputSamples = requestDataSize)
+    void WriteOutput(IDataReader<ElemType>& dataReader, size_t mbSize, std::wstring outputPath, const std::vector<std::wstring>& outputNodeNames, const WriteFormattingOptions & formattingOptions, size_t numOutputSamples = requestDataSize)
     {
-        msra::files::make_intermediate_dirs(outputPath);
+        File::MakeIntermediateDirs(outputPath);
 
         // specify output nodes and files
         std::vector<ComputationNodeBasePtr> outputNodes;
@@ -129,13 +155,15 @@ public:
                 outputNodes.push_back(m_net->GetNodeFromName(outputNodeNames[i]));
         }
 
-        std::vector<ofstream*> outputStreams;
-        for (int i = 0; i < outputNodes.size(); i++)
-#ifdef _MSC_VER
-            outputStreams.push_back(new ofstream((outputPath + L"." + outputNodes[i]->NodeName()).c_str()));
-#else
-            outputStreams.push_back(new ofstream(wtocharpath(outputPath + L"." + outputNodes[i]->NodeName()).c_str()));
-#endif
+        std::map<ComputationNodeBasePtr, shared_ptr<File>> outputStreams; // TODO: why does unique_ptr not work here? Complains about non-existent default_delete()
+        for (auto & onode : outputNodes)
+        {
+            std::wstring nodeOutputPath = outputPath;
+            if (nodeOutputPath != L"-")
+                nodeOutputPath += L"." + onode->NodeName();
+            auto f = make_shared<File>(nodeOutputPath, fileOptionsWrite | fileOptionsText);
+            outputStreams[onode] = f;
+        }
 
         // allocate memory for forward computation
         m_net->AllocateAllMatrices({}, outputNodes, nullptr);
@@ -157,28 +185,53 @@ public:
         size_t tempArraySize = 0;
         ElemType* tempArray = nullptr;
 
+        for (auto & onode : outputNodes)
+        {
+            FILE * f = *outputStreams[onode];
+            fprintfOrDie(f, "%s", formattingOptions.prologue.c_str());
+        }
+
         size_t actualMBSize;
         while (DataReaderHelpers::GetMinibatchIntoNetwork(dataReader, m_net, nullptr, false, false, inputMatrices, actualMBSize))
         {
             // BUGBUG: This loop is inconsistent with the above version of this function in that it does not handle label nodes.
             ComputationNetwork::BumpEvalTimeStamp(featureNodes);
 
-            for (int i = 0; i < outputNodes.size(); i++)
+            for (auto & onode : outputNodes)
             {
-                m_net->ForwardProp(outputNodes[i]);
+                FILE * f = *outputStreams[onode];
 
-                Matrix<ElemType>& outputValues = dynamic_pointer_cast<ComputationNode<ElemType>>(outputNodes[i])->Value();
-                ofstream& outputStream = *outputStreams[i];
+                // sequence separator
+                if (numMBsRun > 0 && !formattingOptions.sequenceSeparator.empty())
+                    fprintfOrDie(f, "%s", formattingOptions.sequenceSeparator.c_str());
+                fprintfOrDie(f, "%s", formattingOptions.sequencePrologue.c_str());
+
+                // compute the node value
+                // Note: Intermediate values are memoized, so in case of multiple output nodes, we only compute what has not been computed already.
+                m_net->ForwardProp(onode);
+
+                // output it according to our format specification
+                Matrix<ElemType>& outputValues = dynamic_pointer_cast<ComputationNode<ElemType>>(onode)->Value();
                 outputValues.CopyToArray(tempArray, tempArraySize);
                 ElemType* pCurValue = tempArray;
-                foreach_column (j, outputValues)
+                std::string valueFormatString = "%" + formattingOptions.precisionFormat + "f";
+                size_t iend    = formattingOptions.transpose ? outputValues.GetNumRows() : outputValues.GetNumCols();
+                size_t jend    = formattingOptions.transpose ? outputValues.GetNumCols() : outputValues.GetNumRows();
+                size_t istride = formattingOptions.transpose ? 1                         : jend;
+                size_t jstride = formattingOptions.transpose ? iend                      : 1;
+                for (size_t j = 0; j < jend; j++)
                 {
-                    foreach_row (k, outputValues)
+                    if (j > 0)
+                        fprintfOrDie(f, "%s", formattingOptions.sampleSeparator.c_str());
+                    for (size_t i = 0; i < iend; i++)
                     {
-                        outputStream << *pCurValue++ << " ";
+                        if (i > 0)
+                            fprintfOrDie(f, "%s", formattingOptions.elementSeparator.c_str());
+                        double val = pCurValue[i * istride + j * jstride];
+                        fprintfOrDie(f, valueFormatString.c_str(), (double)val);
                     }
-                    outputStream << endl;
                 }
+                fprintfOrDie(f, "%s", formattingOptions.sequenceEpilogue.c_str());
             }
 
             totalEpochSamples += actualMBSize;
@@ -186,16 +239,19 @@ public:
             fprintf(stderr, "Minibatch[%lu]: ActualMBSize = %lu\n", ++numMBsRun, actualMBSize);
         }
 
-        fprintf(stderr, "Total Samples Evaluated = %lu\n", totalEpochSamples);
-
-        // clean up
-        for (int i = 0; i < outputStreams.size(); i++)
+        for (auto & onode : outputNodes)
         {
-            outputStreams[i]->close();
-            delete outputStreams[i];
+            FILE * f = *outputStreams[onode];
+            fprintfOrDie(f, "%s", formattingOptions.epilogue.c_str());
         }
 
         delete[] tempArray;
+
+        fprintf(stderr, "Total Samples Evaluated = %lu\n", totalEpochSamples);
+
+        // flush all files (where we can catch errors) so that we can then destruct the handle cleanly without error
+        for (auto & iter : outputStreams)
+            iter.second->Flush();
     }
 
 private:
@@ -203,4 +259,5 @@ private:
     int m_verbosity;
     void operator=(const SimpleOutputWriter&); // (not assignable)
 };
-} } }
+
+}}}
