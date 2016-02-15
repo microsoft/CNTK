@@ -61,8 +61,9 @@ template <class ElemType>
 class DATAREADER_API IDataReader
 {
 public:
-    typedef std::string LabelType;
-    typedef unsigned int LabelIdType;
+    typedef std::string  LabelType;     // surface form of an input token
+    typedef unsigned int LabelIdType;   // input token mapped to an integer  --TODO: why not size_t? Does this save space?
+
     unsigned m_seed;
     size_t mRequestedNumParallelSequences; // number of desired parallel sequences in each minibatch
 
@@ -311,4 +312,5 @@ public:
     bool GetProposalObs(std::map<std::wstring, Matrix<ElemType>*>*, const size_t, vector<size_t>&);
     void InitProposals(std::map<std::wstring, Matrix<ElemType>*>* matrices);
 };
-} } }
+
+}}}

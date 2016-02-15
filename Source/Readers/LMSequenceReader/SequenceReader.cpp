@@ -31,15 +31,14 @@ bool SequenceReader<ElemType>::ReadRecord(size_t /*readSample*/)
 // RecordsToRead - Determine number of records to read to populate record buffers
 // mbStartSample - the starting sample from which to read
 // tail - we are checking for possible remainer records to read (default false)
-// returns - true if we have more to read, false if we hit the end of the dataset
+// returns - true if we have more to read, false if we hit the end of the dataset   --BUGBUG: Not returning a bool
 template <class ElemType>
 size_t SequenceReader<ElemType>::RecordsToRead(size_t mbStartSample, bool tail)
 {
     assert(mbStartSample >= m_epochStartSample);
     // determine how far ahead we need to read
     // need to read to the end of the next minibatch
-    size_t epochSample = mbStartSample;
-    epochSample %= m_epochSize;
+    size_t epochSample = mbStartSample % m_epochSize;
 
     // determine number left to read for this epoch
     size_t numberToEpoch = m_epochSize - epochSample;
@@ -59,11 +58,10 @@ template <class ElemType>
 typename IDataReader<ElemType>::LabelIdType SequenceReader<ElemType>::GetIdFromLabel(const std::string& labelValue, LabelInfo& labelInfo)
 {
     auto found = labelInfo.mapLabelToId.find(labelValue);
-    string unk = this->mUnk;
     // not yet found, add to the map
     if (found == labelInfo.mapLabelToId.end())
     {
-        found = labelInfo.mapLabelToId.find(unk);
+        found = labelInfo.mapLabelToId.find(mUnk);
         if (found == labelInfo.mapLabelToId.end())
             RuntimeError("%s not in vocabulary", labelValue.c_str());
     }
@@ -71,15 +69,13 @@ typename IDataReader<ElemType>::LabelIdType SequenceReader<ElemType>::GetIdFromL
 }
 
 template <class ElemType>
-bool SequenceReader<ElemType>::CheckIdFromLabel(const std::string& labelValue, const LabelInfo& labelInfo, unsigned& labelId)
+bool SequenceReader<ElemType>::CheckIdFromLabel(const std::string& labelValue, const LabelInfo& labelInfo, unsigned/*TODO: LabelIdType?*/& labelId)
 {
     auto found = labelInfo.mapLabelToId.find(labelValue);
 
     // not yet found, add to the map
     if (found == labelInfo.mapLabelToId.end())
-    {
         return false;
-    }
     labelId = found->second;
     return true;
 }
@@ -139,10 +135,10 @@ bool SequenceReader<ElemType>::EnsureDataAvailable(size_t mbStartSample, bool /*
     std::vector<SequencePosition> seqPos;
     do
     {
-        int numRead = m_parser.Parse(CACHE_BLOG_SIZE, &labelTemp, &featureTemp, &seqPos);
+        int numRead = m_parser.Parse(CACHE_BLOCK_SIZE, &labelTemp, &featureTemp, &seqPos);
         moreToRead = (numRead != 0);
 
-        // translate from the sparse parsed data format to the to the training format data
+        // translate from the sparse parsed data format to the training format data
         int label = 0;
         bool bSentenceStart = false;
         SequencePosition sposLast = SequencePosition(0, 0, seqFlagNull);
@@ -159,7 +155,6 @@ bool SequenceReader<ElemType>::EnsureDataAvailable(size_t mbStartSample, bool /*
             // loop through the labels for this entry
             while (label < spos.labelPos) // need to minus one since
             {
-
                 // labelIn should be a category label
                 LabelType labelValue = labelTemp[label++];
 
@@ -187,7 +182,7 @@ bool SequenceReader<ElemType>::EnsureDataAvailable(size_t mbStartSample, bool /*
                         continue; // ignore sentence ending
                 }
 
-                // to-do, should ignore <s>, check the sentence ending is </s>
+                // TODO: should ignore <s>, check the sentence ending is </s>
                 // need to remove <s> from the training set
                 // allocate and initialize the next chunck of featureData
                 if (labelIn.type == labelCategory)
@@ -200,7 +195,7 @@ bool SequenceReader<ElemType>::EnsureDataAvailable(size_t mbStartSample, bool /*
                 }
                 else
                 {
-                    RuntimeError("Input label expected to be a category label");
+                    RuntimeError("Input label expected to be a category label");  // TODO: ensure this at config time (maybe keep an assert() here as a reminder to the reader)
                 }
 
                 // if we have potential features
@@ -234,6 +229,7 @@ bool SequenceReader<ElemType>::EnsureDataAvailable(size_t mbStartSample, bool /*
                 else if (nextWord)
                 {
                     // this is the next word (label was incremented above)
+                    // TODO: Why is this produced by the reader, and not just realized through the use of delay nodes in the network?
                     labelValue = labelTemp[label];
                     if (EqualCI(labelValue, m_labelInfo[labelInfoIn].endSequence))
                     {
@@ -245,7 +241,7 @@ bool SequenceReader<ElemType>::EnsureDataAvailable(size_t mbStartSample, bool /*
                     RuntimeError("Invalid output label type, expected Category, or Next Word");
                 }
 
-                // get the ID from the label
+                // get the id from the label
                 LabelIdType id = GetIdFromLabel(labelValue, labelInfo);
                 m_labelIdData.push_back(id);
 
@@ -299,6 +295,7 @@ void SequenceReader<ElemType>::UpdateDataVariables()
             m_epochSize = m_totalSamples;
         }
 
+        // TODO: comment what this does, in a function called UpdateDataVariables
         WriteLabelFile();
 
         // we got to the end of the dataset
@@ -306,10 +303,10 @@ void SequenceReader<ElemType>::UpdateDataVariables()
     }
 
     // update the label dimension if it is not big enough, need it here because m_labelIdMax get's updated in the processing loop (after a read)
-    for (int index = labelInfoMin; index < labelInfoMax; ++index)
+    for (int index = 0; index < labelInfoNum; ++index)
     {
-        if (m_labelInfo[index].type == labelCategory && m_labelInfo[index].idMax > m_labelInfo[index].dim)
-            m_labelInfo[index].dim = m_labelInfo[index].idMax; // update the label dimensions if different
+        if (m_labelInfo[index].type == labelCategory && m_labelInfo[index].numIds > m_labelInfo[index].dim)
+            m_labelInfo[index].dim = m_labelInfo[index].numIds; // update the label dimensions if different
     }
 }
 
@@ -317,7 +314,7 @@ template <class ElemType>
 void SequenceReader<ElemType>::WriteLabelFile()
 {
     // update the label dimension if it is not big enough, need it here because m_labelIdMax get's updated in the processing loop (after a read)
-    for (int index = labelInfoMin; index < labelInfoMax; ++index)
+    for (int index = 0; index < labelInfoNum; ++index)
     {
         LabelInfo& labelInfo = m_labelInfo[index];
 
@@ -342,30 +339,26 @@ void SequenceReader<ElemType>::WriteLabelFile()
     }
 }
 
+// a label file is a sequence of text lines with one token per line
+// This function allows spaces inside the word name, but trims surrounding spaces.
+// TODO: Move this to class File, as this is similar in nature to LoadMatrixFromTextFile().
 template <class ElemType>
 void SequenceReader<ElemType>::LoadLabelFile(const std::wstring& filePath, std::vector<LabelType>& retLabels)
 {
-    File file(filePath, fileOptionsRead);
+    File file(filePath, fileOptionsRead | fileOptionsText);
 
-    // initialize with file name
-    std::string path = msra::strfun::utf8(filePath);
-    auto location = path.find_last_of("/\\");
-    if (location != npos)
-        path = path.substr(location + 1);
-
-    // read the entire file into a string
     string str;
-    retLabels.resize(0);
+    retLabels.clear();
     while (!file.IsEOF())
     {
         file.GetLine(str);
+        if (str.empty())
+            if (file.IsEOF())
+                break;
+            else
+                RuntimeError("LoadLabelFile: Invalid empty line in label file.");
 
-        // check for a comment line
-        string::size_type pos = str.find_first_not_of(" \t");
-        if (pos != -1)
-        {
-            retLabels.push_back((LabelType) trim(str));
-        }
+        retLabels.push_back(trim(str));
     }
 }
 
@@ -403,6 +396,7 @@ void SequenceReader<ElemType>::Destroy()
 //    endSequence="O"
 //  ]
 //]
+// Note: This is to a great deal a duplicate of BatchSequenceReader::InitFromConfig(), which has gotten some clean-up love, which we should apply here as well.
 template <class ElemType>
 template <class ConfigRecordType>
 void SequenceReader<ElemType>::InitFromConfig(const ConfigRecordType& readerConfig)
@@ -429,27 +423,24 @@ void SequenceReader<ElemType>::InitFromConfig(const ConfigRecordType& readerConf
         m_featuresName = features[0];
     }
 
-    if (labels.size() == 2)
-    {
-        for (int index = labelInfoMin; index < labelInfoMax; ++index)
-        {
-            m_labelsName[index] = labels[index];
-        }
-    }
-    else
-        RuntimeError("two label definitions (in and out) required for Sequence Reader");
+    if (labels.size() != labelInfoNum)
+        RuntimeError("SequenceReader: Two label definitions (in and out) are required.");
+
+    for (int index = 0; index < labelInfoNum; ++index)
+        m_labelsName[index] = labels[index];
 
     const ConfigRecordType& featureConfig = readerConfig(m_featuresName.c_str(), ConfigRecordType::Record());
 
-    class_size = 0;
+    m_classSize = 0;
     m_featureDim = featureConfig(L"dim");
-    for (int index = labelInfoMin; index < labelInfoMax; ++index)
+    for (int index = 0; index < labelInfoNum; ++index)
     {
         const ConfigRecordType& labelConfig = readerConfig(m_labelsName[index].c_str(), ConfigRecordType::Record());
 
-        m_labelInfo[index].idMax = 0;
+        // TODO: use a reference for m_labelInfo[index]
+        m_labelInfo[index].numIds = 0;
         m_labelInfo[index].beginSequence = msra::strfun::utf8(labelConfig(L"beginSequence", L""));
-        m_labelInfo[index].endSequence = msra::strfun::utf8(labelConfig(L"endSequence", L""));
+        m_labelInfo[index].endSequence   = msra::strfun::utf8(labelConfig(L"endSequence",   L""));
 
         // determine label type desired
         wstring labelType(labelConfig(L"labelType", L"Category"));
@@ -476,7 +467,7 @@ void SequenceReader<ElemType>::InitFromConfig(const ConfigRecordType& readerConf
             nwords = labelConfig(L"labelDim");
             if (wClassFile != L"")
             {
-                ReadClassInfo(wClassFile, class_size,
+                ReadClassInfo(wClassFile, m_classSize,
                               word4idx,
                               idx4word,
                               idx4class,
@@ -497,14 +488,14 @@ void SequenceReader<ElemType>::InitFromConfig(const ConfigRecordType& readerConf
                     m_labelInfo[index].mapIdToLabel[i] = label;
                     m_labelInfo[index].mapLabelToId[label] = i;
                 }
-                m_labelInfo[index].idMax = (LabelIdType) arrayLabels.size();
+                m_labelInfo[index].numIds = (LabelIdType) arrayLabels.size();
                 m_labelInfo[index].mapName = labelPath;
             }
             else
             {
                 if (wClassFile != L"")
                 {
-                    ReadClassInfo(wClassFile, class_size,
+                    ReadClassInfo(wClassFile, m_classSize,
                                   word4idx,
                                   idx4word,
                                   idx4class,
@@ -520,7 +511,7 @@ void SequenceReader<ElemType>::InitFromConfig(const ConfigRecordType& readerConf
                         m_labelInfo[index].mapIdToLabel[i] = label;
                         m_labelInfo[index].mapLabelToId[label] = i;
                     }
-                    m_labelInfo[index].idMax = (LabelIdType)(iMax + 1);
+                    m_labelInfo[index].numIds = (LabelIdType)(iMax + 1);
                 }
                 m_labelInfo[index].mapName = labelPath;
 
@@ -531,9 +522,9 @@ void SequenceReader<ElemType>::InitFromConfig(const ConfigRecordType& readerConf
         m_labelInfo[index].dim = (LabelIdType)(size_t) labelConfig(L"labelDim");
 
         // update dimension if the file says it's bigger
-        if (m_labelInfo[index].dim < m_labelInfo[index].idMax)
+        if (m_labelInfo[index].dim < m_labelInfo[index].numIds)
         {
-            m_labelInfo[index].dim = m_labelInfo[index].idMax;
+            m_labelInfo[index].dim = m_labelInfo[index].numIds;
         }
     }
 
@@ -551,16 +542,14 @@ void SequenceReader<ElemType>::InitFromConfig(const ConfigRecordType& readerConf
 
     wstring pathName = readerConfig(L"file");
     if (m_traceLevel > 0)
-    {
-        fprintf(stderr, "reading sequence file %ls\n", pathName.c_str());
-        // std::wcerr << "reading sequence file" << pathName.c_str() << endl;
-    }
+        fprintf(stderr, "LMSequenceReader: reading input file %ls...\n", pathName.c_str());
 
+    // TODO: how many of these do we have? labelInfoIn, Min, Out, Max, and there must be exactly 2?
     const LabelInfo& labelIn = m_labelInfo[labelInfoIn];
     const LabelInfo& labelOut = m_labelInfo[labelInfoOut];
     m_parser.ParseInit(pathName.c_str(), m_featureDim, labelIn.dim, labelOut.dim, labelIn.beginSequence, labelIn.endSequence, labelOut.beginSequence, labelOut.endSequence);
 
-    // read unk sybol
+    // unk symbol
     mUnk = readerConfig(L"unk", "<unk>");
 }
 
@@ -607,12 +596,12 @@ void SequenceReader<ElemType>::ReadWord(char* word, FILE* fin)
 }
 
 template <class ElemType>
-void SequenceReader<ElemType>::ReadClassInfo(const wstring& vocfile, int& class_size,
+void SequenceReader<ElemType>::ReadClassInfo(const wstring& vocfile, int& classSize,
                                              map<string, int>& word4idx,
                                              map<int, string>& idx4word,
                                              map<int, int>& idx4class,
                                              map<int, size_t>& idx4cnt,
-                                             int nwords,
+                                             int nwords, // only used for a consistency check
                                              string mUnk,
                                              noiseSampler<long>& m_noiseSampler,
                                              bool /*flatten*/)
@@ -621,7 +610,7 @@ void SequenceReader<ElemType>::ReadClassInfo(const wstring& vocfile, int& class_
     string strtmp;
     size_t cnt;
     int clsidx, b;
-    class_size = 0;
+    classSize = 0;
 
     string line;
     vector<string> tokens;
@@ -648,15 +637,15 @@ void SequenceReader<ElemType>::ReadClassInfo(const wstring& vocfile, int& class_
         idx4word[b] = strtmp;
 
         idx4class[b] = clsidx;
-        class_size = max(class_size, clsidx);
+        classSize = max(classSize, clsidx);
     }
     fin.close();
-    class_size++;
+    classSize++;
 
+    // Note: If users specify labelDim = 0 (->nwords) this will not fail. Later we will interpret this as "infer".
     if (idx4class.size() < nwords)
-    {
         LogicError("SequenceReader::ReadClassInfo the actual number of words %d is smaller than the specified vocabulary size %d. Check if labelDim is too large. ", (int) idx4class.size(), (int) nwords);
-    }
+
     std::vector<double> counts(idx4cnt.size());
     for (const auto& p : idx4cnt)
         counts[p.first] = (double) p.second;
@@ -789,7 +778,7 @@ void SequenceReader<ElemType>::SetupEpoch()
     if (m_epoch == 0 && m_totalSamples == 0 && m_cachingWriter == NULL)
     {
         m_readNextSampleLine = m_readNextSample = m_epochStartSample = m_mbStartSample = m_seqIndex = 0;
-        m_parser.SetFilePosition(0);
+        m_parser.SetFilePosition(0);    // TODO: can this ever be set to not 0?
     }
     else // otherwise, position the read to start at the right location
     {
@@ -812,7 +801,7 @@ void SequenceReader<ElemType>::SetupEpoch()
         }
         m_seqIndex = 0;
 
-        // we have a slight delima here, if we haven't determined the end of the file yet
+        // we have a slight dilemma here, if we haven't determined the end of the file yet
         // and the user told us to find how many records are in the file, we can't distinguish "almost done"
         // with a file (a character away) and the middle of the file. So read ahead a record to see if it's there.
         bool endReached = m_endReached;
@@ -1031,7 +1020,7 @@ void SequenceReader<ElemType>::GetLabelOutput(std::map<std::wstring, Matrix<Elem
         else if (readerMode == ReaderMode::Class)
         {
             int clsidx = idx4class[wrd];
-            if (class_size > 0)
+            if (m_classSize > 0)
             {
                 labels->SetValue(1, j, (ElemType) clsidx);
                 // save the [begining ending_indx) of the class
@@ -1110,7 +1099,7 @@ void SequenceReader<ElemType>::GetClassInfo()
 
     // populate local CPU matrix
     m_classInfoLocal->SwitchToMatrixType(MatrixType::DENSE, matrixFormatDense, false);
-    m_classInfoLocal->Resize(2, class_size);
+    m_classInfoLocal->Resize(2, m_classSize);
 
     // move to CPU since element-wise operation is expensive and can go wrong in GPU
     int curDevId = m_classInfoLocal->GetDeviceId();
@@ -1382,105 +1371,134 @@ void BatchSequenceReader<ElemType>::InitFromConfig(const ConfigRecordType& reade
     std::vector<std::wstring> features;
     std::vector<std::wstring> labels;
     GetFileConfigNames(readerConfig, features, labels);
+
+    // ############ BREAKING ############
+    // Added this additional constraint, since I cannot see where we ever use more than one entry. But I may have missed something.
+    if (features.size() > 1) // TODO: If this ever fails, please remove this check. One sample had 2 sections, but I could not see where they were used; this check is to verify that.
+        InvalidArgument("BatchSequenceReader: Only one features section is allowed.");
+    // ############ BREAKING ############
     if (features.size() > 0)
-    {
         m_featuresName = features[0];
-    }
+    // TODO: Is it at all meaningful to allow no features section?
 
-    if (labels.size() == 2)
-    {
-        for (int index = labelInfoMin; index < labelInfoMax; ++index)
-        {
-            m_labelsName[index] = labels[index];
-        }
-    }
-    else
-        RuntimeError("two label definitions (in and out) required for Sequence Reader");
+    if (labels.size() != labelInfoNum)
+        RuntimeError("BatchSequenceReader: Two label definitions (in and out) are required, even if one is of labelType 'none'.");
 
-    const ConfigRecordType& featureConfig = readerConfig(m_featuresName.c_str(), ConfigRecordType::Record());
+    // BUGBUG: The names come from the dictionary in alphabetical order, not in definition order.
+    //         E.g. "labelsIn=[]; labels=[]" will parse labelsIn as the output labels.
+    for (int index = 0; index < labelInfoNum; ++index)
+        m_labelsName[index] = labels[index];
+    // We expect two label sections:
+    //  - the alphabetically first one goes into features
+    //  - the alphabetically second one goes into labels
+    // These labels are interleaved in the input, except for output labelType = "nextWord",
+    // in which case the word succeeding the input will be copied as the output (for LM training).
+    // It is possible to specify labelType = "none" for either. --TODO: I only tested doing so for the first.
+
+    const ConfigRecordType& featureConfig = m_featuresName.empty() ? readerConfig : readerConfig(m_featuresName.c_str(), ConfigRecordType::Record());
     wstring mode = featureConfig(L"mode", L"class"); // class, softmax, nce
-    std::transform(mode.begin(), mode.end(), mode.begin(), ::tolower);
 
-    if (mode == L"nce")
+    if (EqualCI(mode, L"nce"))
     {
         readerMode = ReaderMode::NCE;
-
-        this->noise_sample_size = featureConfig(L"noise_number", 0);
+        noise_sample_size = featureConfig(L"noise_number", 0);
     }
-    else if (mode == L"softmax")
+    else if (EqualCI(mode, L"softmax"))
         readerMode = ReaderMode::Softmax;
-    else if (mode == L"class")
+    else if (EqualCI(mode, L"class"))
         readerMode = ReaderMode::Class;
     else
         LogicError("unsupported format %ls", mode.c_str());
 
-    // read unk sybol
-    this->mUnk = msra::strfun::utf8(readerConfig(L"unk", L"<unk>"));
+    // unk sybol
+    mUnk = msra::strfun::utf8(readerConfig(L"unk", L"<unk>"));
 
-    class_size = 0;
-    m_featureDim = featureConfig(L"dim");
-    for (int index = labelInfoMin; index < labelInfoMax; ++index)
+    m_classSize = 0;
+    m_featureDim = m_featuresName.empty() ? 0 : featureConfig(L"dim");
+    for (int index = 0; index < labelInfoNum; ++index)
     {
+        // the code below builds the labelInfo record for this label input
+        auto& labelInfo = m_labelInfo[index];
+
         const ConfigRecordType& labelConfig = readerConfig(m_labelsName[index].c_str(), ConfigRecordType::Record());
 
-        m_labelInfo[index].idMax = 0;
-        m_labelInfo[index].beginSequence = msra::strfun::utf8(labelConfig(L"beginSequence", L""));
-        m_labelInfo[index].endSequence = msra::strfun::utf8(labelConfig(L"endSequence", L""));
+        labelInfo.numIds = 0; // if no mapping or word-class file is read, then we build the mapping on the fly
+        labelInfo.beginSequence = msra::strfun::utf8(labelConfig(L"beginSequence", L""));
+        labelInfo.endSequence   = msra::strfun::utf8(labelConfig(L"endSequence",   L""));
 
         // determine label type desired
-        std::string labelType(labelConfig(L"labelType", "Category"));
-        if (labelType == "Category")
+        std::string labelType(labelConfig(L"labelType", "category"));
+        if (EqualCI(labelType, "category"))
         {
-            m_labelInfo[index].type = labelCategory;
+            labelInfo.type = labelCategory;
+            labelInfo.dim = (LabelIdType)(size_t)labelConfig(L"labelDim", 0); // 0 means infer from inputs
         }
-        else if (labelType == "NextWord")
+        else if (EqualCI(labelType, "nextWord"))
         {
+            if (index == 0)
+                InvalidArgument("BatchSequenceReader: Input labels must not be of kind 'nextWord'.");
             // in this case, it's all identical to the Input labels, except the data type
-            m_labelInfo[index].type = labelNextWord;
-            m_labelInfo[index].dim = m_labelInfo[labelInfoIn].dim;
+            labelInfo.type = labelNextWord;
+            labelInfo.dim = m_labelInfo[labelInfoIn].dim;
+            // ########### BREAKING ##########
+            // old version overwrote this by looking up a 'labelDim' parameter
+            // ########### BREAKING ##########
         }
-        else if (labelType == "None")
+        else if (EqualCI(labelType, "none"))
         {
-            m_labelInfo[index].type = labelNone;
-            m_labelInfo[index].dim = 0; // override for no labels
+            labelInfo.type = labelNone;
+            labelInfo.dim = 0; // override for no labels
         }
+        else
+            InvalidArgument("BatchSequenceReader: Invalid labelType '%s'", labelType.c_str());
 
         // if we have labels, we need a label Mapping file, it will be a file with one label per line
-        if (m_labelInfo[index].type != labelNone)
+        if (labelInfo.type != labelNone)    // BUGBUG: This seems wrong for "nextWord" case. E.g. it reads the class info twice.
         {
+            nwords = labelInfo.dim; // BUGBUG: 'nwords' is a class member, but it gets set twice in nextWord case
+
+            // read the word-class definition file if specified
             std::wstring wClassFile = readerConfig(L"wordclass", L"");
-            nwords = labelConfig(L"labelDim");
             if (wClassFile != L"")
             {
-                ReadClassInfo(wClassFile, class_size,
+                ReadClassInfo(wClassFile, m_classSize,
                               word4idx,
                               idx4word,
                               idx4class,
                               idx4cnt,
-                              nwords,
+                              nwords, // only used for a consistency check
                               mUnk, m_noiseSampler,
                               false);
             }
 
+            // read a word-mapping file if present
             std::vector<string> arrayLabels;
+            // Note: labelMappingFile is I/O. It is created if it does not exist yet.
             std::wstring labelPath = labelConfig(L"labelMappingFile");
-            if (fexists(labelPath))
+            if (File::Exists(labelPath))
             {
                 LoadLabelFile(labelPath, arrayLabels);
+                // build the two-way mapping tables
                 for (int i = 0; i < arrayLabels.size(); ++i)
                 {
                     LabelType label = arrayLabels[i];
-                    m_labelInfo[index].mapIdToLabel[i] = label;
-                    m_labelInfo[index].mapLabelToId[label] = i;
+                    labelInfo.mapIdToLabel[i] = label;
+                    labelInfo.mapLabelToId[label] = i;
                 }
-                m_labelInfo[index].idMax = (LabelIdType) arrayLabels.size();
-                m_labelInfo[index].mapName = labelPath;
+                labelInfo.numIds = (LabelIdType) arrayLabels.size();
+                labelInfo.mapName = labelPath;
+                labelInfo.fileToWrite.clear();  // (not an output, so nothing to write at end)
             }
             else
             {
                 if (wClassFile != L"")
                 {
-                    ReadClassInfo(wClassFile, class_size,
+#if 0
+                    // ######### BREAKING #########
+                    // removed this seemingly redundant read--but is it?
+                    // ######### BREAKING #########
+                    // BUGBUG: The same thing was just done above, so isn't redundant?
+                    ReadClassInfo(wClassFile, m_classSize,
                                   word4idx,
                                   idx4word,
                                   idx4class,
@@ -1488,34 +1506,30 @@ void BatchSequenceReader<ElemType>::InitFromConfig(const ConfigRecordType& reade
                                   nwords,
                                   mUnk, m_noiseSampler,
                                   false);
-                    if (word4idx.size() != nwords)
-                    {
+#endif
+                    if (word4idx.size() != nwords) // TODO: Why not infer it at this point in time? If labelInfo.dim == 0 then set if to word4idx.size()
                         LogicError("BatchSequenceReader::Init : vocabulary size %d from setup file and %d from that in word class file %ls is not consistent", (int) nwords, (int) word4idx.size(), wClassFile.c_str());
-                    }
-                    int iMax = -1, i;
+                    int iMax = -1;
+                    int i;
                     for (auto ptr = word4idx.begin(); ptr != word4idx.end(); ptr++)
                     {
                         LabelType label = ptr->first;
                         i = ptr->second;
                         iMax = max(i, iMax);
-                        m_labelInfo[index].mapIdToLabel[i] = label;
-                        m_labelInfo[index].mapLabelToId[label] = i;
+                        labelInfo.mapIdToLabel[i] = label;
+                        labelInfo.mapLabelToId[label] = i;
                     }
-                    m_labelInfo[index].idMax = (LabelIdType)(iMax + 1);
+                    labelInfo.numIds = (LabelIdType)(iMax + 1);
                 }
-                m_labelInfo[index].mapName = labelPath;
-
-                m_labelInfo[index].fileToWrite = labelPath;
+                labelInfo.mapName = labelPath;
+                labelInfo.fileToWrite = labelPath; // mapping path denotes an output: write the mapping here at the end
             }
         }
 
-        m_labelInfo[index].dim = (LabelIdType)(size_t) labelConfig(L"labelDim");
-
-        // update dimension if the file says it's bigger
-        if (m_labelInfo[index].dim < m_labelInfo[index].idMax)
-        {
-            m_labelInfo[index].dim = m_labelInfo[index].idMax;
-        }
+        // update dimension if the class or mapping file says it's bigger, or if it is specified as 0 (meaning 'infer from inputs')
+        // TODO: Clean this up--do this only if numIds is 0 (no class or mapping read), otherwise require them to be identical or 0.
+        if (labelInfo.dim < labelInfo.numIds)
+            labelInfo.dim = labelInfo.numIds;
     }
 
     // initialize all the variables
@@ -1526,27 +1540,7 @@ void BatchSequenceReader<ElemType>::InitFromConfig(const ConfigRecordType& reade
     m_traceLevel = readerConfig(L"traceLevel", 0);
     m_parser.SetTraceLevel(m_traceLevel);
 
-    // TODO: some comment needed what this was meant to be
-    if (readerConfig.Exists(L"randomize"))
-    {
-        string randomizeString = readerConfig(L"randomize");
-        if (EqualCI(randomizeString, "none"))
-        {
-            ;
-        }
-        else if (EqualCI(randomizeString, "auto"))
-        {
-            ;
-        }
-        else
-        {
-            ; // readerConfig(L"randomize");
-        }
-    }
-    else
-    {
-        ; // randomizeAuto;
-    }
+    // BUGBUG: "randomize" option is ignored
 
     // The input data is a combination of the label Data and extra feature dims together
     //    m_featureCount = m_featureDim + m_labelInfo[labelInfoIn].dim;
@@ -1554,16 +1548,14 @@ void BatchSequenceReader<ElemType>::InitFromConfig(const ConfigRecordType& reade
 
     wstring pathName = readerConfig(L"file", L"");
     if (m_traceLevel > 0)
-    {
-        fwprintf(stderr, L"reading sequence file %s\n", pathName.c_str());
-        // std::wcerr << "reading sequence file " << pathName.c_str() << endl;
-    }
+        fwprintf(stderr, L"SequenceReader: Reading sequence file %s\n", pathName.c_str());
 
     const LabelInfo& labelIn = m_labelInfo[labelInfoIn];
     const LabelInfo& labelOut = m_labelInfo[labelInfoOut];
     m_parser.ParseInit(pathName.c_str(), m_featureDim, labelIn.dim, labelOut.dim, labelIn.beginSequence, labelIn.endSequence, labelOut.beginSequence, labelOut.endSequence);
 
     mRequestedNumParallelSequences = readerConfig(L"nbruttsineachrecurrentiter", (size_t) 1);
+    // TODO: ^^ This should depend on the sequences themselves.
 }
 
 template <class ElemType>
@@ -1601,27 +1593,20 @@ void BatchSequenceReader<ElemType>::StartMinibatchLoop(size_t mbSize, size_t epo
         return;
     }
 
+    const LabelInfo& labelInfo = m_labelInfo[(m_labelInfo[labelInfoOut].type == labelNextWord) ? labelInfoIn : labelInfoOut];
     if (m_featuresBuffer == NULL)
-    {
-        const LabelInfo& labelInfo = m_labelInfo[(m_labelInfo[labelInfoOut].type == labelNextWord) ? labelInfoIn : labelInfoOut];
-        m_featuresBuffer = new ElemType[mbSize * labelInfo.dim];
-        memset(m_featuresBuffer, 0, sizeof(ElemType) * mbSize * labelInfo.dim);
-    }
+        m_featuresBuffer = new ElemType[mbSize * labelInfo.dim]();
 
     if (m_labelsBuffer == NULL)
     {
-        const LabelInfo& labelInfo = m_labelInfo[(m_labelInfo[labelInfoOut].type == labelNextWord) ? labelInfoIn : labelInfoOut];
         if (labelInfo.type == labelCategory)
         {
-            m_labelsBuffer = new ElemType[labelInfo.dim * mbSize];
-            memset(m_labelsBuffer, 0, sizeof(ElemType) * labelInfo.dim * mbSize);
-            m_labelsIdBuffer = new typename IDataReader<ElemType>::LabelIdType[mbSize];
-            memset(m_labelsIdBuffer, 0, sizeof(typename IDataReader<ElemType>::LabelIdType) * mbSize);
+            m_labelsBuffer = new ElemType[labelInfo.dim * mbSize]();
+            m_labelsIdBuffer = new /*typename IDataReader<ElemType>::*/LabelIdType[mbSize]();     // TODO: no "new" please! Use a vector
         }
         else if (labelInfo.type != labelNone)
         {
-            m_labelsBuffer = new ElemType[mbSize];
-            memset(m_labelsBuffer, 0, sizeof(ElemType) * mbSize);
+            m_labelsBuffer = new ElemType[mbSize]();
             m_labelsIdBuffer = NULL;
         }
     }
@@ -1674,6 +1659,7 @@ void BatchSequenceReader<ElemType>::StartMinibatchLoop(size_t mbSize, size_t epo
     Reset();
 }
 
+// this function updates mToProcess[] (only, except it also lazily initializes mProcessed[])
 template <class ElemType>
 size_t BatchSequenceReader<ElemType>::FindNextSentences(size_t numRead)
 {
@@ -1744,25 +1730,16 @@ bool BatchSequenceReader<ElemType>::EnsureDataAvailable(size_t /*mbStartSample*/
     m_featureData.clear();
     m_labelIdData.clear();
 
-    // now get the labels
-    LabelInfo& labelIn = m_labelInfo[labelInfoIn];
-
-    bool nextWord = false;
-    if (m_labelInfo[labelInfoOut].type == labelNextWord)
-    {
-        nextWord = true;
-    }
-    LabelInfo& labelInfo = m_labelInfo[nextWord ? labelInfoIn : labelInfoOut];
+    const bool nextWord = (m_labelInfo[labelInfoOut].type == labelNextWord);
 
     // see how many we already read
-    std::vector<SequencePosition> seqPos;
-
     size_t sLn = FindNextSentences(mNumRead);
     if (sLn == 0)
     {
         Reset();
 
-        mNumRead = m_parser.Parse(CACHE_BLOG_SIZE, &m_labelTemp, &m_featureTemp, &seqPos);
+        std::vector<SequencePosition> seqPos;
+        mNumRead = m_parser.Parse(CACHE_BLOCK_SIZE, &m_labelTemp, &m_featureTemp, &seqPos);
         firstPosInSentence = mLastPosInSentence;
         if (mNumRead == 0)
             return false;
@@ -1774,6 +1751,9 @@ bool BatchSequenceReader<ElemType>::EnsureDataAvailable(size_t /*mbStartSample*/
     }
 
     // add one minibatch
+    LabelInfo& labelIn  = m_labelInfo[labelInfoIn];
+    LabelInfo& labelOut = m_labelInfo[labelInfoOut];
+
     firstPosInSentence = mLastPosInSentence;
     size_t i = mLastPosInSentence;
     size_t j = 0;
@@ -1786,11 +1766,13 @@ bool BatchSequenceReader<ElemType>::EnsureDataAvailable(size_t /*mbStartSample*/
             size_t label = m_parser.mSentenceIndex2SentenceInfo[seq].sBegin + i;
 
             // labelIn should be a category label
-            LabelType labelValue = m_labelTemp[label++];
+            const auto& labelValue = m_labelTemp[label];
+            label++; // consume it
 
-            // to-do, should ignore <s>, check the sentence ending is </s>
+            // TODO: should ignore <s>, check the sentence ending is </s>
             // need to remove <s> from the training set
             // allocate and initialize the next chunck of featureData
+            // TODO: ^^ understand the above comment
             if (labelIn.type == labelCategory)
             {
                 LabelIdType index = GetIdFromLabel(labelValue, labelIn);
@@ -1800,32 +1782,31 @@ bool BatchSequenceReader<ElemType>::EnsureDataAvailable(size_t /*mbStartSample*/
                 m_featureData.push_back((float) index);
             }
             else
-            {
-                RuntimeError("Input label expected to be a category label");
-            }
+                RuntimeError("Input labels are expected to be category labels.");
 
             // now get the output label
-            if (m_labelInfo[labelInfoOut].type == labelCategory)
+            if (labelOut.type != labelNone)
             {
-                labelValue = m_labelTemp[label++];
-            }
-            else if (nextWord)
-            {
-                // this is the next word (label was incremented above)
-                labelValue = m_labelTemp[label];
-                if (EqualCI(labelValue, m_labelInfo[labelInfoIn].endSequence))
+                const auto& labelValue = m_labelTemp[label];
+                LabelIdType index;
+                if (labelOut.type == labelCategory)
                 {
-                    labelValue = labelInfo.endSequence;
+                    label++; // consume it
+                    index = GetIdFromLabel(labelValue, labelOut);
                 }
-            }
-            else
-            {
-                RuntimeError("Invalid output label type, expected Category, or Next Word");
-            }
+                else if (nextWord)
+                {
+                    // this is the next word (label was incremented above)
+                    if (EqualCI(labelValue, labelIn.endSequence)) // end symbol may differ between input and output
+                        index = GetIdFromLabel(labelIn.endSequence, labelIn);
+                    else
+                        index = GetIdFromLabel(labelValue, labelIn);
+                }
+                else
+                    LogicError("Unexpected output label type."); // should never get here
 
-            // get the ID from the label
-            LabelIdType id = GetIdFromLabel(labelValue, labelInfo);
-            m_labelIdData.push_back(id);
+                m_labelIdData.push_back(index);
+            }
 
             m_totalSamples++;
         }
@@ -1871,7 +1852,6 @@ bool BatchSequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<E
     if (actualmbsize > 0)
     {
         // loop through all the samples
-        Matrix<ElemType>& features = *matrices[m_featuresName];
 
         // create MBLayout
         size_t nT = actualmbsize / mToProcess.size();
@@ -1896,6 +1876,7 @@ bool BatchSequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<E
         // copy m_featureData to matrix
         // m_featureData is a sparse, already with interleaved parallel sequences. We copy it into a dense matrix.
         // we always copy it to cpu first and then convert to gpu if gpu is desired.
+        Matrix<ElemType>& features = *matrices[m_featuresName];
         DEVICEID_TYPE featureDeviceId = features.GetDeviceId();
         features.TransferFromDeviceToDevice(featureDeviceId, CPUDEVICE, false, true, false);
 
@@ -1966,22 +1947,7 @@ bool BatchSequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<E
     return true;
 }
 
-template <class ElemType>
-void BatchSequenceReader<ElemType>::SetSentenceEnd(int wrd, int pos, int actualMbSize)
-{
-    // now get the labels
-    LabelInfo& labelIn = m_labelInfo[labelInfoIn];
-    LabelIdType index = GetIdFromLabel(labelIn.endSequence.c_str(), labelIn);
-
-    if (pos == actualMbSize - 1)
-    {
-        if (wrd == (int) index)
-            mSentenceEnd = true;
-        else
-            mSentenceEnd = false;
-    }
-}
-
+#if 0
 /**
 timePos: the time position. for example, 100 actual minibatch with 10 streams,
 timePosition = [0,..,9] for each actual tiem
@@ -2006,6 +1972,7 @@ void BatchSequenceReader<ElemType>::SetSentenceBegin(int wrd, int uttPos, int ti
         }
     }
 }
+#endif
 
 // TODO: this should have been renamed to CopyMBLayoutTo(), but it had the wrong signature??
 template <class ElemType>
@@ -2074,70 +2041,76 @@ void BatchSequenceReader<ElemType>::GetLabelOutput(std::map<std::wstring,
     else
         labels->Resize(1, actualmbsize, false);
 
-    // move to CPU since element-wise operation is expensive and can go wrong in GPU
+    // move to CPU since element-wise operation is expensive on GPU
     int curDevId = labels->GetDeviceId();
     labels->TransferFromDeviceToDevice(curDevId, CPUDEVICE, true, false, false);
+    assert(labels->GetCurrentMatrixLocation() == CPU);
+
     ElemType epsilon = (ElemType) 1e-6; // avoid all zero, although this is almost impossible.
 
-    if (labels->GetCurrentMatrixLocation() == CPU)
-        for (size_t jSample = mbStartSample; j < actualmbsize; ++j, ++jSample)
+    for (size_t jSample = mbStartSample; j < actualmbsize; ++j, ++jSample)
+    {
+        // get the token
+        LabelIdType wrd = m_labelIdData[jSample];
+
+        // write sample value into output
+        // This writes an index into a row vector. Which is wrong, we want a sparse one-hot vector.
+        labels->SetValue(0, j, (ElemType) wrd);
+
+        if (readerMode == ReaderMode::NCE)
         {
-            // pick the right sample with randomization if desired
-            size_t jRand = jSample;
-            int wrd = m_labelIdData[jRand];
-            labels->SetValue(0, j, (ElemType) wrd);
-            SetSentenceEnd(wrd, j, actualmbsize);
-
-            if (readerMode == ReaderMode::NCE)
+            labels->SetValue(1, j, (ElemType) m_noiseSampler.logprob(wrd));
+            for (size_t noiseid = 0; noiseid < this->noise_sample_size; noiseid++)
             {
-                labels->SetValue(1, j, (ElemType) m_noiseSampler.logprob(wrd));
-                for (size_t noiseid = 0; noiseid < this->noise_sample_size; noiseid++)
-                {
-                    int wid = m_noiseSampler.sample();
-                    labels->SetValue(2 * (noiseid + 1), j, (ElemType) wid);
-                    labels->SetValue(2 * (noiseid + 1) + 1, j, -(ElemType) m_noiseSampler.logprob(wid));
-                }
-            }
-            else if (readerMode == ReaderMode::Class)
-            {
-                int clsidx = idx4class[wrd];
-                if (class_size > 0)
-                {
-
-                    labels->SetValue(1, j, (ElemType) clsidx);
-
-                    // save the [begining ending_indx) of the class
-                    size_t lft = (size_t) (*m_classInfoLocal)(0, clsidx);
-                    size_t rgt = (size_t) (*m_classInfoLocal)(1, clsidx);
-                    if (wrd < lft || lft > rgt || wrd >= rgt)
-                    {
-                        LogicError("LMSequenceReader::GetLabelOutput word %d should be at least equal to or larger than its class's left index %d; right index %d of its class should be larger or equal to left index %d of its class; word index %d should be smaller than its class's right index %d.\n",
-                                   (int) wrd, (int) lft, (int) rgt, (int) lft, (int) wrd, (int) rgt);
-                    }
-                    labels->SetValue(2, j, (*m_classInfoLocal)(0, clsidx)); // begining index of the class
-                    labels->SetValue(3, j, (*m_classInfoLocal)(1, clsidx)); // end index of the class
-                }
-            }
-            else if (readerMode == ReaderMode::Softmax)
-            {
-                if (wrd == 0)
-                    labels->SetValue(0, j, epsilon + (ElemType) wrd);
-            }
-            else if (readerMode == ReaderMode::Unnormalize)
-            {
-                labels->SetValue(0, j, -(ElemType) wrd);
-                if (wrd == 0)
-                    labels->SetValue(0, j, -epsilon - (ElemType) wrd);
+                int wid = m_noiseSampler.sample();
+                labels->SetValue(2 * (noiseid + 1), j, (ElemType) wid);
+                labels->SetValue(2 * (noiseid + 1) + 1, j, -(ElemType) m_noiseSampler.logprob(wid));
             }
         }
-    else // GPU
-    {
-        RuntimeError("GetLabelOutput::should use CPU for labels ");
+        else if (readerMode == ReaderMode::Class)
+        {
+            int clsidx = idx4class[wrd];
+            if (m_classSize > 0)
+            {
+                labels->SetValue(1, j, (ElemType) clsidx);
+
+                // save the [begining ending_indx) of the class
+                size_t lft = (size_t) (*m_classInfoLocal)(0, clsidx);
+                size_t rgt = (size_t) (*m_classInfoLocal)(1, clsidx);
+                if (wrd < lft || lft > rgt || wrd >= rgt)
+                {
+                    LogicError("LMSequenceReader::GetLabelOutput word %d should be at least equal to or larger than its class's left index %d; right index %d of its class should be larger or equal to left index %d of its class; word index %d should be smaller than its class's right index %d.\n",
+                               (int) wrd, (int) lft, (int) rgt, (int) lft, (int) wrd, (int) rgt);
+                }
+                labels->SetValue(2, j, (*m_classInfoLocal)(0, clsidx)); // begining index of the class
+                labels->SetValue(3, j, (*m_classInfoLocal)(1, clsidx)); // end index of the class
+            }
+        }
+        else if (readerMode == ReaderMode::Softmax)
+        {
+            if (wrd == 0)
+                labels->SetValue(0, j, epsilon + (ElemType) wrd);
+        }
+        else if (readerMode == ReaderMode::Unnormalize)
+        {
+            labels->SetValue(0, j, -(ElemType) wrd);
+            if (wrd == 0)
+                labels->SetValue(0, j, -epsilon - (ElemType) wrd);
+        }
+
+        // keep track of sentence ends. mSentenceEnd is read only in DataEnd().
+        if (j == actualmbsize - 1) // if last entry then set mSentenceEnd to whether the word is the sentence-end symbol
+        {
+            // find numeric index of sentence-end token
+            LabelInfo& labelIn = m_labelInfo[(m_labelInfo[labelInfoOut].type == labelNextWord) ? labelInfoIn : labelInfoOut]; // m_labelInfo[labelInfoIn]; <-- This is what it was before, which triggered a bug and I think is wrong wrd comes from m_labelIdData, which is the output.
+            LabelIdType endSequenceIndex = GetIdFromLabel(labelIn.endSequence, labelIn);
+
+            mSentenceEnd = (wrd == (int)endSequenceIndex);
+        }
     }
+    // send it back to the GPU if so desired
     if (curDevId != CPUDEVICE && readerMode != ReaderMode::Class)
-    {
         labels->TransferFromDeviceToDevice(CPUDEVICE, curDevId, false, false, false);
-    }
 }
 
 template <class ElemType>

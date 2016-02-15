@@ -15,6 +15,8 @@
 #if __unix__
 #include <dlfcn.h> // for Plugin
 #endif
+#include <cctype>
+#include <cwctype>
 
 #define TWO_PI 6.283185307f // TODO: find the official standards-confirming definition of this and use it instead
 
@@ -242,7 +244,7 @@ private:
 // (w)strprintf() -- sprintf() that returns an STL string
 // ----------------------------------------------------------------------------
 
-typedef strfun::_strprintf<char> strprintf;     // char version
+typedef strfun::_strprintf<char>    strprintf;  // char version
 typedef strfun::_strprintf<wchar_t> wstrprintf; // wchar_t version
 
 // ----------------------------------------------------------------------------
@@ -475,8 +477,25 @@ public:
 #endif
     }
 };
-}
-}
+
+}}
+
+// ----------------------------------------------------------------------------
+// iscalpha(), iscspace(), etc.: saner version of ctype helpers that do not blow up upon negative signed char values
+// Name differs in using 'c' between is- and -what(). Also returns bool instead of int.
+// TODO: switch all uses if isspace() etc. to this once tested well
+// ----------------------------------------------------------------------------
+
+#define DefineIsCType(pred) \
+  static inline bool isc ## pred(char c)    { return !!is  ## pred((unsigned char) c); } \
+  static inline bool isc ## pred(wchar_t c) { return !!isw ## pred(c); }
+DefineIsCType(alpha);
+DefineIsCType(upper);
+DefineIsCType(lower);
+DefineIsCType(cntrl);
+DefineIsCType(digit);
+DefineIsCType(punct);
+DefineIsCType(space);
 
 // ----------------------------------------------------------------------------
 // functional-programming style helper macros (...do this with templates?)

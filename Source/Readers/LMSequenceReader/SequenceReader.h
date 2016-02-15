@@ -19,7 +19,7 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
-#define CACHE_BLOG_SIZE 50000
+#define CACHE_BLOCK_SIZE 50000
 
 #define STRIDX2CLS L"idx2cls"
 #define CLASSINFO L"classinfo"
@@ -112,6 +112,7 @@ public:
 template <class ElemType>
 class SequenceReader : public IDataReader<ElemType>
 {
+    typedef IDataReader<ElemType> Base;
 protected:
     bool m_idx2clsRead;
     bool m_clsinfoRead;
@@ -119,8 +120,8 @@ protected:
     bool m_idx2probRead;
 
 public:
-    using LabelType = typename IDataReader<ElemType>::LabelType;
-    using LabelIdType = typename IDataReader<ElemType>::LabelIdType;
+    using Base::LabelType;
+    using Base::LabelIdType;
 
     map<string, int> word4idx;
     map<int, string> idx4word;
@@ -131,7 +132,7 @@ public:
     Matrix<ElemType>* m_classInfoLocal; // CPU version
 
     Matrix<ElemType>* m_id2Prob; // CPU version
-    int class_size;
+    int m_classSize;
     map<int, vector<int>> class_words;
 
     int noise_sample_size;
@@ -165,16 +166,15 @@ protected:
 
     enum LabelInfoType
     {
-        labelInfoMin = 0,
-        labelInfoIn = labelInfoMin,
+        labelInfoIn = 0,
         labelInfoOut,
-        labelInfoMax
+        labelInfoNum
     };
 
-    std::wstring m_labelsName[labelInfoMax];
+    std::wstring m_labelsName[labelInfoNum];
     std::wstring m_featuresName;
-    std::wstring m_labelsCategoryName[labelInfoMax];
-    std::wstring m_labelsMapName[labelInfoMax];
+    std::wstring m_labelsCategoryName[labelInfoNum];
+    std::wstring m_labelsMapName[labelInfoNum];
     std::wstring m_sequenceName;
 
     ElemType* m_featuresBuffer;
@@ -205,13 +205,13 @@ protected:
         LabelKind type; // labels are categories, create mapping table
         std::map<LabelIdType, LabelType> mapIdToLabel;
         std::map<LabelType, LabelIdType> mapLabelToId;
-        LabelIdType idMax;         // maximum label ID we have encountered so far
+        LabelIdType numIds;        // maximum label ID we have encountered so far
         LabelIdType dim;           // maximum label ID we will ever see (used for array dimensions)
         std::string beginSequence; // starting sequence string (i.e. <s>)
         std::string endSequence;   // ending sequence string (i.e. </s>)
         std::wstring mapName;
         std::wstring fileToWrite; // set to the path if we need to write out the label file
-    } m_labelInfo[labelInfoMax];
+    } m_labelInfo[labelInfoNum];
 
     // caching support
     DataReader<ElemType>* m_cachingReader;
@@ -245,7 +245,7 @@ public:
     {
         InitFromConfig(config);
     }
-    static void ReadClassInfo(const wstring& vocfile, int& class_size,
+    static void ReadClassInfo(const wstring& vocfile, int& classSize,
                               map<string, int>& word4idx,
                               map<int, string>& idx4word,
                               map<int, int>& idx4class,
@@ -304,72 +304,68 @@ public:
 template <class ElemType>
 class BatchSequenceReader : public SequenceReader<ElemType>
 {
+    typedef SequenceReader<ElemType> Base;
 public:
-    using LabelType = typename SequenceReader<ElemType>::LabelType;
-    using LabelIdType = typename SequenceReader<ElemType>::LabelIdType;
-    using LabelInfo = typename SequenceReader<ElemType>::LabelInfo;
-    using SequenceReader<ElemType>::m_cachingReader;
-    using SequenceReader<ElemType>::m_cachingWriter;
-    using SequenceReader<ElemType>::m_featuresName;
-    using SequenceReader<ElemType>::labelInfoMin;
-    using SequenceReader<ElemType>::labelInfoMax;
-    using SequenceReader<ElemType>::m_labelsName;
-    using SequenceReader<ElemType>::m_featureDim;
-    using SequenceReader<ElemType>::class_size;
-    using SequenceReader<ElemType>::m_labelInfo;
-    using SequenceReader<ElemType>::labelInfoIn;
-    using SequenceReader<ElemType>::nwords;
-    using SequenceReader<ElemType>::ReadClassInfo;
-    using SequenceReader<ElemType>::LoadLabelFile;
-    using SequenceReader<ElemType>::word4idx;
-    using SequenceReader<ElemType>::idx4word;
-    using SequenceReader<ElemType>::idx4cnt;
-    using SequenceReader<ElemType>::mUnk;
-    using SequenceReader<ElemType>::m_mbStartSample;
-    using SequenceReader<ElemType>::m_epoch;
-    using SequenceReader<ElemType>::m_totalSamples;
-    using SequenceReader<ElemType>::m_epochStartSample;
-    using SequenceReader<ElemType>::m_seqIndex;
-    using SequenceReader<ElemType>::m_readNextSampleLine;
-    using SequenceReader<ElemType>::m_readNextSample;
-    using SequenceReader<ElemType>::m_traceLevel;
-    using SequenceReader<ElemType>::m_featureCount;
-    using SequenceReader<ElemType>::m_endReached;
-    //  using IDataReader<ElemType>::labelIn;
-    //  using IDataReader<ElemType>::labelOut;
-    using SequenceReader<ElemType>::InitCache;
-    using SequenceReader<ElemType>::m_readerConfig;
-    using SequenceReader<ElemType>::ReleaseMemory;
-    using SequenceReader<ElemType>::m_featuresBuffer;
-    using SequenceReader<ElemType>::m_featuresBufferRow;
-    using SequenceReader<ElemType>::m_labelsBuffer;
-    using SequenceReader<ElemType>::m_labelsIdBuffer;
-    //  using IDataReader<ElemType>::labelInfo;
-    //  using SequenceReader<ElemType>::m_featuresBufferRowIndex;
-    using SequenceReader<ElemType>::m_labelsIdBufferRow;
-    using SequenceReader<ElemType>::m_labelsBlock2Id;
-    using SequenceReader<ElemType>::m_labelsBlock2UniqId;
-    using SequenceReader<ElemType>::m_id2classLocal;
-    using SequenceReader<ElemType>::m_classInfoLocal;
-    using SequenceReader<ElemType>::m_mbSize;
-    using SequenceReader<ElemType>::m_epochSize;
-    using SequenceReader<ElemType>::m_featureData;
-    using SequenceReader<ElemType>::labelInfoOut;
-    using SequenceReader<ElemType>::m_labelData;
-    using SequenceReader<ElemType>::m_labelIdData;
-    using SequenceReader<ElemType>::LMSetupEpoch;
-    using SequenceReader<ElemType>::m_clsinfoRead;
-    using SequenceReader<ElemType>::m_idx2clsRead;
-    using SequenceReader<ElemType>::m_featuresBufferRowIdx;
-    using SequenceReader<ElemType>::m_sequence;
-    using SequenceReader<ElemType>::idx4class;
-    using SequenceReader<ElemType>::m_indexer;
-    using SequenceReader<ElemType>::m_noiseSampler;
-    using SequenceReader<ElemType>::readerMode;
-    using SequenceReader<ElemType>::GetIdFromLabel;
-    using SequenceReader<ElemType>::GetInputToClass;
-    using SequenceReader<ElemType>::GetClassInfo;
-    using IDataReader<ElemType>::mRequestedNumParallelSequences;
+    using Base::LabelType;
+    using Base::LabelIdType;
+    using Base::LabelInfo;
+    using Base::m_cachingReader;
+    using Base::m_cachingWriter;
+    using Base::m_featuresName;
+    using Base::labelInfoNum;
+    using Base::m_labelsName;
+    using Base::m_featureDim;
+    using Base::m_classSize;
+    using Base::m_labelInfo;
+    using Base::labelInfoIn;
+    using Base::nwords;
+    using Base::ReadClassInfo;
+    using Base::LoadLabelFile;
+    using Base::word4idx;
+    using Base::idx4word;
+    using Base::idx4cnt;
+    using Base::mUnk;
+    using Base::m_mbStartSample;
+    using Base::m_epoch;
+    using Base::m_totalSamples;
+    using Base::m_epochStartSample;
+    using Base::m_seqIndex;
+    using Base::m_readNextSampleLine;
+    using Base::m_readNextSample;
+    using Base::m_traceLevel;
+    using Base::m_featureCount;
+    using Base::m_endReached;
+    using Base::InitCache;
+    using Base::m_readerConfig;
+    using Base::ReleaseMemory;
+    using Base::m_featuresBuffer;
+    using Base::m_featuresBufferRow;
+    using Base::m_labelsBuffer;
+    using Base::m_labelsIdBuffer;
+    using Base::m_labelsIdBufferRow;
+    using Base::m_labelsBlock2Id;
+    using Base::m_labelsBlock2UniqId;
+    using Base::m_id2classLocal;
+    using Base::m_classInfoLocal;
+    using Base::m_mbSize;
+    using Base::m_epochSize;
+    using Base::m_featureData;
+    using Base::labelInfoOut;
+    using Base::m_labelData;
+    using Base::m_labelIdData;
+    using Base::LMSetupEpoch;
+    using Base::m_clsinfoRead;
+    using Base::m_idx2clsRead;
+    using Base::m_featuresBufferRowIdx;
+    using Base::m_sequence;
+    using Base::idx4class;
+    using Base::m_indexer;
+    using Base::m_noiseSampler;
+    using Base::readerMode;
+    using Base::GetIdFromLabel;
+    using Base::GetInputToClass;
+    using Base::GetClassInfo;
+    using Base::mRequestedNumParallelSequences; // IDataReader<ElemType>
 
 private:
     size_t mLastProcssedSentenceId;
@@ -410,36 +406,36 @@ public:
     {
         InitFromConfig(config);
     }
+private:
     void Reset();
+public:
 
     // return length of sentences size
+    bool DataEnd(EndDataType endDataType) override;
+private:
     size_t FindNextSentences(size_t numSentences);
-    bool DataEnd(EndDataType endDataType);
-    void SetSentenceEnd(int wrd, int pos, int actualMbSize);
-    void SetSentenceBegin(int wrd, int pos, int actualMbSize);
-    void SetSentenceBegin(int wrd, size_t pos, size_t actualMbSize)
-    {
-        SetSentenceBegin(wrd, (int) pos, (int) actualMbSize);
-    } // TODO: clean this up
-    void SetSentenceEnd(int wrd, size_t pos, size_t actualMbSize)
-    {
-        SetSentenceEnd(wrd, (int) pos, (int) actualMbSize);
-    }
-    void SetSentenceBegin(size_t wrd, size_t pos, size_t actualMbSize)
-    {
-        SetSentenceBegin((int) wrd, (int) pos, (int) actualMbSize);
-    }
-    void SetSentenceEnd(size_t wrd, size_t pos, size_t actualMbSize)
-    {
-        SetSentenceEnd((int) wrd, (int) pos, (int) actualMbSize);
-    }
+    //void SetSentenceEnd(int wrd, int pos, int actualMbSize);
+    //void SetSentenceEnd(int    wrd, size_t pos, size_t actualMbSize) { SetSentenceEnd(wrd,      (int)pos, (int)actualMbSize); }    // type-casting helpers
+    //void SetSentenceEnd(size_t wrd, size_t pos, size_t actualMbSize) { SetSentenceEnd((int)wrd, (int)pos, (int)actualMbSize); }
+    //void SetSentenceBegin(int wrd, int pos, int actualMbSize);
+    //void SetSentenceBegin(int wrd, size_t pos, size_t actualMbSize)
+    //{
+    //    SetSentenceBegin(wrd, (int) pos, (int) actualMbSize);
+    //} // TODO: clean this up
+    //void SetSentenceBegin(size_t wrd, size_t pos, size_t actualMbSize)
+    //{
+    //    SetSentenceBegin((int) wrd, (int) pos, (int) actualMbSize);
+    //}
     void GetLabelOutput(std::map<std::wstring, Matrix<ElemType>*>& matrices,
                         size_t m_mbStartSample, size_t actualmbsize);
+public:
 
-    void StartMinibatchLoop(size_t mbSize, size_t epoch, size_t requestedEpochSamples = requestDataSize);
-    bool GetMinibatch(std::map<std::wstring, Matrix<ElemType>*>& matrices);
+    void StartMinibatchLoop(size_t mbSize, size_t epoch, size_t requestedEpochSamples = requestDataSize) override;
+    bool GetMinibatch(std::map<std::wstring, Matrix<ElemType>*>& matrices) override;
+private:
     bool EnsureDataAvailable(size_t mbStartSample, size_t& firstPosInSentence);
-    size_t GetNumParallelSequences();
+public:
+    size_t GetNumParallelSequences() override;
 
     void SetSentenceSegBatch(std::vector<size_t>& sentenceEnd);
     void CopyMBLayoutTo(MBLayoutPtr);
@@ -450,4 +446,5 @@ public:
 
     int GetSentenceEndIdFromOutputLabel();
 };
-} } }
+
+}}}

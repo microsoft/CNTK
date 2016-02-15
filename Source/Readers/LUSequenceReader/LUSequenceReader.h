@@ -20,9 +20,9 @@
 namespace Microsoft { namespace MSR { namespace CNTK {
 
 #ifdef DBG_SMT
-#define CACHE_BLOG_SIZE 2
+#define CACHE_BLOCK_SIZE 2
 #else
-#define CACHE_BLOG_SIZE 50000
+#define CACHE_BLOCK_SIZE 50000
 #endif
 
 #define STRIDX2CLS L"idx2cls"
@@ -90,16 +90,15 @@ protected:
 
     enum LabelInfoType
     {
-        labelInfoMin = 0,
-        labelInfoIn = labelInfoMin,
+        labelInfoIn = 0,
         labelInfoOut,
-        labelInfoMax
+        labelInfoNum
     };
 
-    std::wstring m_labelsName[labelInfoMax];
+    std::wstring m_labelsName[labelInfoNum];
     std::wstring m_featuresName;
-    std::wstring m_labelsCategoryName[labelInfoMax];
-    std::wstring m_labelsMapName[labelInfoMax];
+    std::wstring m_labelsCategoryName[labelInfoNum];
+    std::wstring m_labelsMapName[labelInfoNum];
     std::wstring m_sequenceName;
 
     ElemType* m_featuresBuffer;
@@ -124,7 +123,6 @@ protected:
         LabelKind type; // labels are categories, create mapping table
         map<LabelType, LabelIdType> word4idx;
         map<LabelIdType, LabelType> idx4word;
-        LabelIdType idMax;       // maximum label ID we have encountered so far
         long dim;                // maximum label ID we will ever see (used for array dimensions)
         LabelType beginSequence; // starting sequence string (i.e. <s>)
         LabelType endSequence;   // ending sequence string (i.e. </s>)
@@ -148,7 +146,7 @@ protected:
         Matrix<ElemType>* m_classInfoLocal; // CPU version
         int mNbrClasses;
         bool m_clsinfoRead;
-    } m_labelInfo[labelInfoMax];
+    } m_labelInfo[labelInfoNum];
 
     // caching support
     DataReader<ElemType>* m_cachingReader;
@@ -210,8 +208,7 @@ public:
     using LUSequenceReader<ElemType>::m_cachingWriter;
     using LUSequenceReader<ElemType>::m_featuresName;
     using LUSequenceReader<ElemType>::m_labelsName;
-    using LUSequenceReader<ElemType>::labelInfoMin;
-    using LUSequenceReader<ElemType>::labelInfoMax;
+    using LUSequenceReader<ElemType>::labelInfoNum;
     using LUSequenceReader<ElemType>::m_featureDim;
     using LUSequenceReader<ElemType>::m_labelInfo;
     //  using LUSequenceReader<ElemType>::m_labelInfoIn;
