@@ -13,7 +13,8 @@ namespace Microsoft {
 
 			template<class ElemType = float>
 			class MultiversoWrapper
-			{
+	 		{
+            public:
 				MultiversoWrapper(const std::list<ComputationNodeBasePtr> & learnableNodes,
 					int localWorkerNumber,
 					bool isPipeline = true,

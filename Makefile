@@ -487,13 +487,15 @@ endif
 
 ifeq ("$(CNTK_ENABLE_ASGD)","true")
 
-ifeq (,$(wildcard Source/Multiverso/include/*.h))
-  $(error Build with Multiverso was requested but cannot find the code. Please check https://github.com/Microsoft/CNTK/wiki/Enabling-ASGD for instructions)
+ifeq (,$(wildcard Source/Multiverso/include/multiverso/*.h))
+  $(error Build with Multiverso was requested but cannot find the code. Please check https://github.com/Microsoft/DMTK to learn more.)
 endif
 
   INCLUDEPATH += $(SOURCEDIR)/Multiverso/include
   LIBPATH += $(SOURCEDIR)/Multiverso/x64/$(BUILDTYPE)
-  LIBS += -lmultiverso -lzmq -lyaml-cpp
+  LIBS += -lmultiverso
+
+  COMMON_FLAGS += -DMULTIVERSO_SUPPORT
 endif
 
 ########################################
