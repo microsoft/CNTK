@@ -55,6 +55,12 @@ if "%CNTK_ENABLE_1BitSGD%" == "true" (
     echo #define _WITH_1BITSGD_ "no">>buildinfo.h$$
 )
 
+if "%CNTK_ENABLE_ASGD%" == "true" (
+    echo #define _WITH_ASGD_ "yes">>buildinfo.h$$
+) else (
+    echo #define _WITH_ASGD_ "no">>buildinfo.h$$
+)
+
 if not %build_target% == CPU-only (
     if "%cuda_path%" == "" (
         echo #define _CUDA_PATH_    "NOT_DEFINED"     >> buildinfo.h$$

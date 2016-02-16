@@ -308,6 +308,9 @@ void PrintBuiltInfo()
 #ifdef _WITH_1BITSGD_
     fprintf(stderr, "\t\tWith 1bit-SGD: %s\n", _WITH_1BITSGD_);
 #endif
+#ifdef _WITH_ASGD_
+    fprintf(stderr, "\t\tWith ASGD: %s\n", _WITH_ASGD_);
+#endif
 #ifdef _MATHLIB_
     fprintf(stderr, "\t\tMath lib: %s\n", _MATHLIB_);
 #endif
