@@ -46,7 +46,7 @@ ImageTransformerBase::Apply(SequenceDataPtr sequence,
                             const StreamDescription & /*outputStream*/)
 {
     assert(inputStream.m_storageType == StorageType::dense);
-    auto inputSequence = reinterpret_cast<const DenseSequenceData&>(*sequence.get());
+    auto inputSequence = static_cast<const DenseSequenceData&>(*sequence.get());
     ImageDimensions dimensions(*inputSequence.m_sampleLayout, HWC);
     int columns = static_cast<int>(dimensions.m_width);
     int rows = static_cast<int>(dimensions.m_height);
@@ -398,7 +398,7 @@ void TransposeTransformer::Initialize(TransformerPtr next,
 
         ImageDimensions dimensions(*stream->m_sampleLayout, HWC);
 
-        // Changing layout from NWH to NHW
+        // Changing from NHWC to NCHW
         auto changedStream = std::make_shared<StreamDescription>(*stream);
         changedStream->m_sampleLayout = std::make_shared<TensorShape>(dimensions.AsTensorShape(CHW));
         m_outputStreams[id] = changedStream;
@@ -438,7 +438,7 @@ TransposeTransformer::TypedApply(SequenceDataPtr sequence,
                                  const StreamDescription &outputStream)
 {
     assert(inputStream.m_storageType == StorageType::dense);
-    auto inputSequence = reinterpret_cast<DenseSequenceData&>(*sequence.get());
+    auto inputSequence = static_cast<DenseSequenceData&>(*sequence.get());
     assert(inputSequence.m_numberOfSamples == 1);
     assert(inputStream.m_sampleLayout->GetNumElements() ==
         outputStream.m_sampleLayout->GetNumElements());

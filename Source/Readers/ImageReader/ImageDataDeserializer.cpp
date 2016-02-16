@@ -8,10 +8,6 @@
 #include "ImageDataDeserializer.h"
 #include "ImageConfigHelper.h"
 
-#ifndef UNREFERENCED_PARAMETER
-#define UNREFERENCED_PARAMETER(P) (P)
-#endif
-
 namespace Microsoft { namespace MSR { namespace CNTK {
 
 class ImageDataDeserializer::LabelGenerator
@@ -66,7 +62,7 @@ public:
     virtual std::vector<SequenceDataPtr> GetSequence(const size_t& sequenceId) override
     {
         assert(sequenceId == m_description.m_id);
-        UNREFERENCED_PARAMETER(sequenceId);
+        UNUSED(sequenceId);
         const auto& imageSequence = m_description;
 
         auto image = std::make_shared<DeserializedImage>();
@@ -140,7 +136,7 @@ ImageDataDeserializer::ImageDataDeserializer(const ConfigParameters& config)
 
 void ImageDataDeserializer::CreateSequenceDescriptions(std::string mapPath, size_t labelDimension)
 {
-    UNREFERENCED_PARAMETER(labelDimension);
+    UNUSED(labelDimension);
 
     std::ifstream mapFile(mapPath);
     if (!mapFile)

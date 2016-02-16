@@ -107,7 +107,7 @@ Sequences NoRandomizer::GetNextSequences(size_t sampleCount)
     // TODO: Not clear whether batching will make sense for this.
     // We have to re-assemble the exposed result from sequences from different chunks.
     result.m_data.resize(sequences.size());
-#pragma omp parallel for ordered schedule(static)
+#pragma omp parallel for ordered schedule(dynamic)
     for (int i = 0; i < sequences.size(); ++i)
     {
         result.m_data[i] = m_chunks[sequences[i]->m_chunkId]->GetSequence(sequences[i]->m_id);
