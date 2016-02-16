@@ -338,6 +338,7 @@ namespace Microsoft {
 					m_isInitialized = true;
 
 					multiverso::MultiversoInit();
+                    multiverso::Log::ResetLogLevel(multiverso::LogLevel::Debug);
 
 					//weights
 					for (auto nodeIter = learnableNodes.begin(); nodeIter != learnableNodes.end(); nodeIter++)
