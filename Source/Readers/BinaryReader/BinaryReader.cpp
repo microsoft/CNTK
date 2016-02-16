@@ -416,32 +416,10 @@ bool BinaryReader<ElemType>::GetData(const std::wstring& sectionName, size_t num
 }
 
 template <class ElemType>
-bool BinaryReader<ElemType>::DataEnd(EndDataType endDataType)
-{
-    bool ret = false;
-    switch (endDataType)
-    {
-    //case endDataNull:
-    //    assert(false);
-    //    break;
-    //case endDataEpoch:
-    //    ret = (m_mbStartSample / m_epochSize != m_epoch);
-    //    break;
-    //case endDataSet:
-    //{
-    //    // actual size is either what requested, or total number of samples read so far
-    //    size_t actualmbsize = min(m_totalSamples, m_mbSize); // it may still return less if at end of sweep
-    //    ret = CheckEndDataset(actualmbsize);
-    //    break;
-    //}
-    case endDataSentence: // for fast reader each minibatch is considered a "sentence", so always true
-        ret = true;
-        break;
-    }
-    return ret;
-}
+bool BinaryReader<ElemType>::DataEnd() { return true; }
 
 // instantiate all the combinations we expect to be used
 template class BinaryReader<double>;
 template class BinaryReader<float>;
-} } }
+
+}}}

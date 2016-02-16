@@ -899,25 +899,9 @@ void SequenceReader<ElemType>::StartMinibatchLoop(size_t mbSize, size_t epoch, s
 }
 
 template <class ElemType>
-bool SequenceReader<ElemType>::DataEnd(EndDataType endDataType)
+bool SequenceReader<ElemType>::DataEnd()
 {
-    bool ret = false;
-    switch (endDataType)
-    {
-    //case endDataNull:
-    //    assert(false);
-    //    break;
-    //case endDataEpoch:
-    //    ret = m_sequence.size() > 0 && m_mbStartSample > m_sequence[m_sequence.size() - 1];
-    //    break;
-    //case endDataSet:
-    //    ret = !EnsureDataAvailable(m_mbStartSample);
-    //    break;
-    case endDataSentence: // for fast reader each minibatch is considered a "sentence", so always true
-        ret = SentenceEnd();
-        break;
-    }
-    return ret;
+    return SentenceEnd();
 }
 
 template <class ElemType>
@@ -1998,27 +1982,12 @@ void BatchSequenceReader<ElemType>::SetSentenceSegBatch(vector<size_t>& sentence
 
 // note: DataEnd() must be called for each minibatch in order to propagate mSentenceEnd to mProcessed[]
 template <class ElemType>
-bool BatchSequenceReader<ElemType>::DataEnd(EndDataType endDataType)
+bool BatchSequenceReader<ElemType>::DataEnd()
 {
-    //size_t firstPosInSentence;
-    bool ret = false;
-    switch (endDataType)
-    {
-    //case endDataNull:
-    //    assert(false);
-    //    break;
-    //case endDataEpoch:
-    //case endDataSet:
-    //    ret = !GetMinibatchData(firstPosInSentence); // TODO: What does this do? Check whether there is more data?
-    //    break;
-    case endDataSentence: // for fast reader each minibatch is considered a "sentence", so always true
-        if (mSentenceEnd)
-            for (auto seq : mToProcess)
-                mProcessed[seq] = true;
-        ret = mSentenceEnd;
-        break;
-    }
-    return ret;
+    if (mSentenceEnd)
+        for (auto seq : mToProcess)
+            mProcessed[seq] = true;
+    return mSentenceEnd;
 }
 
 // fill the labels (from m_labelIdData)

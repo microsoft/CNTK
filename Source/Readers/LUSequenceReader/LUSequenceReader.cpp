@@ -1003,32 +1003,18 @@ void BatchLUSequenceReader<ElemType>::SetSentenceBegin(int wrd, int pos, int /*a
 }
 
 template <class ElemType>
-bool BatchLUSequenceReader<ElemType>::DataEnd(EndDataType endDataType)
+bool BatchLUSequenceReader<ElemType>::DataEnd()
 {
-    bool ret = false;
-    switch (endDataType)
+    if (mSentenceEndAt.size() != mToProcess.size())
+        LogicError("DataEnd: Sentence ending vector size %d and the toprocess vector size %d should be the same.", (int)mSentenceEndAt.size(), (int)mToProcess.size());
+    for (size_t i = 0; i < mToProcess.size(); i++)
     {
-    //case endDataNull:
-    //    assert(false);
-    //    break;
-    //case endDataEpoch:
-    //case endDataSet:
-    //    ret = !EnsureDataAvailable(m_mbStartSample);
-    //    break;
-    case endDataSentence: // for fast reader each minibatch is considered a "sentence", so always true
-        if (mSentenceEndAt.size() != mToProcess.size())
-            LogicError("DataEnd: Sentence ending vector size %d and the toprocess vector size %d should be the same.", (int) mSentenceEndAt.size(), (int) mToProcess.size());
-        ret = true;
-        for (size_t i = 0; i < mToProcess.size(); i++)
-        {
-            if (mSentenceEndAt[i] == NO_INPUT)
-                LogicError("BatchLUSequenceReader: Minibatch should be large enough to accomodate the longest sentence.");
-            size_t k = mToProcess[i];
-            mProcessed[k] = true;
-        }
-        break;
+        if (mSentenceEndAt[i] == NO_INPUT)
+            LogicError("BatchLUSequenceReader: Minibatch should be large enough to accomodate the longest sentence.");
+        size_t k = mToProcess[i];
+        mProcessed[k] = true;
     }
-    return ret;
+    return true;
 }
 
 template <class ElemType>
@@ -1317,17 +1303,18 @@ int MultiIOBatchLUSequenceReader<ElemType>::GetSentenceEndIdFromOutputLabel()
 #endif
 
 template <class ElemType>
-bool MultiIOBatchLUSequenceReader<ElemType>::DataEnd(EndDataType endDataType)
+bool MultiIOBatchLUSequenceReader<ElemType>::DataEnd()
 {
     bool ret = true;
-    for (typename map<wstring, BatchLUSequenceReader<ElemType>*>::iterator p = mReader.begin(); p != mReader.end(); p++)
-    {
-        ret |= (p->second)->DataEnd(endDataType);
-    }
+    for (auto& iter : mReader)
+        ret &= iter.second->DataEnd();
+    // ###### BREAKING ######
+    // The above was an |= which did not make sense. I follow the other examples where we have an &= here. Hope that is correct.
+    // ###### BREAKING ######
     return ret;
 }
 
-/// history is shared
+// history is shared
 template <class ElemType>
 bool MultiIOBatchLUSequenceReader<ElemType>::GetProposalObs(std::map<std::wstring, Matrix<ElemType>*>& matrices, const size_t tidx, vector<size_t>& history)
 {

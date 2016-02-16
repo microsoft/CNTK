@@ -446,27 +446,7 @@ void DSSMReader<ElemType>::SetLabelMapping(const std::wstring& /*sectionName*/, 
 }
 
 template <class ElemType>
-bool DSSMReader<ElemType>::DataEnd(EndDataType endDataType)
-{
-    bool ret = false;
-    switch (endDataType)
-    {
-    //case endDataNull:
-    //    assert(false);
-    //    break;
-    //case endDataEpoch:
-    //    // ret = (m_mbStartSample / m_epochSize < m_epoch);
-    //    ret = (m_readNextSample >= m_totalSamples);
-    //    break;
-    //case endDataSet:
-    //    ret = (m_readNextSample >= m_totalSamples);
-    //    break;
-    case endDataSentence: // for fast reader each minibatch is considered a "sentence", so always true
-        ret = true;
-        break;
-    }
-    return ret;
-}
+bool DSSMReader<ElemType>::DataEnd() { return true; }
 
 template <class ElemType>
 DSSM_BinaryInput<ElemType>::DSSM_BinaryInput()

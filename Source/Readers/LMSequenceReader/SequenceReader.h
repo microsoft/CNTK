@@ -288,7 +288,7 @@ public:
     virtual void SetLabelMapping(const std::wstring& sectionName, const std::map<LabelIdType, LabelType>& labelMapping);
     virtual bool GetData(const std::wstring& sectionName, size_t numRecords, void* data, size_t& dataBufferSize, size_t recordStart = 0);
 
-    virtual bool DataEnd(EndDataType endDataType);
+    virtual bool DataEnd();
 
     //int GetSentenceEndIdFromOutputLabel() { return -1; };
 };
@@ -411,7 +411,7 @@ private:
 public:
     void StartMinibatchLoop(size_t mbSize, size_t epoch, size_t requestedEpochSamples = requestDataSize) override;
     bool GetMinibatch(std::map<std::wstring, Matrix<ElemType>*>& matrices) override;
-    bool DataEnd(EndDataType endDataType) override;
+    bool DataEnd() override;
 
     void CopyMBLayoutTo(MBLayoutPtr pMBLayout) { assert(mToProcess.size() == m_pMBLayout->GetNumParallelSequences()); pMBLayout->CopyFrom(m_pMBLayout); }
     size_t GetNumParallelSequences() override { return mToProcess.size(); } // TODO: or get it from MBLayout? Can this ever be called before GetMinibatch()?

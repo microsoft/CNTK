@@ -356,11 +356,11 @@ bool DataReader<ElemType>::GetData(const std::wstring& sectionName, size_t numRe
 }
 
 template <class ElemType>
-bool DataReader<ElemType>::DataEnd(EndDataType endDataType)
+bool DataReader<ElemType>::DataEnd()
 {
     bool bRet = true;
     for (size_t i = 0; i < m_ioNames.size(); i++)
-        bRet &= m_dataReaders[m_ioNames[i]]->DataEnd(endDataType);
+        bRet &= m_dataReaders[m_ioNames[i]]->DataEnd();
     return bRet;
 }
 
