@@ -125,12 +125,12 @@ status open
 
 \begin_layout Plain Layout
 
-cntk configFile=yourExp.config
+cntk configFile=yourExp.cntk
 \end_layout
 
 \end_inset
 
-where yourExp.config is a CNTK configuration file, which typically contains
+where yourExp.cntk is a CNTK configuration file, which typically contains
  several command blocks.
  A command block is a top level block of the configuration.
  Each command block must specify what action to be carried out with related
@@ -5668,7 +5668,7 @@ status open
 
 \begin_layout Plain Layout
 
-cntk configFile=yourExp.config
+cntk configFile=yourExp.cntk
 \end_layout
 
 \end_inset
@@ -5788,7 +5788,7 @@ status open
 
 \begin_layout Plain Layout
 
-cntk configFile=yourExp.config stderr="c:
+cntk configFile=yourExp.cntk stderr="c:
 \backslash
 temp
 \backslash
@@ -5816,7 +5816,7 @@ status open
 
 \begin_layout Plain Layout
 
-cntk configFile=yourExp.config mnistTrain=[minibatchSize=256] 
+cntk configFile=yourExp.cntk mnistTrain=[minibatchSize=256] 
 \end_layout
 
 \end_inset
@@ -5831,7 +5831,7 @@ status open
 
 \begin_layout Plain Layout
 
-cntk configFile=yourExp.config mnistTrain=[reader=[file="mynewfile.txt"]]
+cntk configFile=yourExp.cntk mnistTrain=[reader=[file="mynewfile.txt"]]
  
 \end_layout
 
@@ -5877,12 +5877,12 @@ status open
 
 \begin_layout Plain Layout
 
-cntk configFile=yourExp1.config+yourExp2.config 
+cntk configFile=yourExp1.cntk+yourExp2.cntk 
 \end_layout
 
 \begin_layout Plain Layout
 
-cntk configFile=yourExp1.config configFile=yourExp2.config 
+cntk configFile=yourExp1.cntk configFile=yourExp2.cntk 
 \end_layout
 
 \end_inset
@@ -5891,7 +5891,7 @@ cntk configFile=yourExp1.config configFile=yourExp2.config
 \end_layout
 
 \begin_layout Standard
-If yourExp2.config only contains the string "mnistTrain=[reader=[file=mynewfile.tx
+If yourExp2.cntk only contains the string "mnistTrain=[reader=[file=mynewfile.tx
 t]]", then both of these commands would be equivalent to: 
 \end_layout
 
@@ -5902,7 +5902,7 @@ status open
 
 \begin_layout Plain Layout
 
-cntk configFile=yourExp1.config mnistTrain=[reader=[file="mynewfile.txt"]]
+cntk configFile=yourExp1.cntk mnistTrain=[reader=[file="mynewfile.txt"]]
  
 \end_layout
 
@@ -5926,7 +5926,7 @@ status open
 
 \begin_layout Plain Layout
 
-cntk configFile=yourExp1.config+yourExp2.config var1=value configFile=yourExp3.conf
+cntk configFile=yourExp1.cntk+yourExp2.cntk var1=value configFile=yourExp3.conf
 ig 
 \end_layout
 
@@ -5943,7 +5943,7 @@ In addition being able to specify multiple configuration files at the command
 include
 \emph default
  one configuration file within another.
-  For example, if the first line of yourExp2.config was
+  For example, if the first line of yourExp2.cntk was
 \end_layout
 
 \begin_layout Standard
@@ -5953,7 +5953,7 @@ status open
 
 \begin_layout Plain Layout
 
-include=yourExp1.config
+include=yourExp1.cntk
 \end_layout
 
 \end_inset
@@ -5968,7 +5968,7 @@ status open
 
 \begin_layout Plain Layout
 
-cntk configFile=yourExp2.config
+cntk configFile=yourExp2.cntk
 \end_layout
 
 \end_inset
@@ -5983,12 +5983,12 @@ status open
 
 \begin_layout Plain Layout
 
-cntk configFile=yourExp1.config+yourExp2.config
+cntk configFile=yourExp1.cntk+yourExp2.cntk
 \end_layout
 
 \end_inset
 
-where in this latter case, yourExp2.config doesn't contain the 
+where in this latter case, yourExp2.cntk doesn't contain the 
 \emph on
 include
 \emph default
@@ -6007,9 +6007,9 @@ included
   Including a configuration file is equivalent to pasting the contents of
  that file at the location of the include statement.
  Include statements are resolved recursively (using a depth-first search),
- meaning that if yourExpA.config includes yourExpB.config, and yourExpB.config
- includes yourExpC.config, then the full chain will be resolved, and yourExpC.conf
-ig will effectively be included in yourExpA.config.
+ meaning that if yourExpA.cntk includes yourExpB.cntk, and yourExpB.cntk
+ includes yourExpC.cntk, then the full chain will be resolved, and yourExpC.conf
+ig will effectively be included in yourExpA.cntk.
   If a configuration file is included multiple times (eg, 'A' includes 'B'
  and 'C', and 'B' also includes 'C'), then it will effectively only be included
  the first time it is encountered.

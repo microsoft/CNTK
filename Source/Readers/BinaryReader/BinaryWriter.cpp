@@ -130,7 +130,7 @@ Section* BinaryWriter<ElemType>::CreateSection(const ConfigParameters& config, S
         wstring type = config(L"sectionType");
         for (int i = 0; i < sectionTypeMax; i++)
         {
-            if (!_wcsicmp(type.c_str(), SectionTypeStrings[i]))
+            if (EqualCI(type, SectionTypeStrings[i]))
             {
                 foundType = SectionType(i);
                 break;

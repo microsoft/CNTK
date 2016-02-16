@@ -79,6 +79,7 @@ DataReader<ElemType>::DataReader(const ConfigRecordType& config)
             // get the name for the reader we want to use, default to UCIFastReader
             GetReaderProc getReaderProc = (GetReaderProc) Plugin::Load(thisIO(L"readerType", L"UCIFastReader"), GetReaderName((ElemType) 0));
             m_ioNames.push_back(ioName);
+            assert(getReaderProc != nullptr);
             getReaderProc(&m_dataReaders[ioName]); // instantiates the reader with the default constructor (no config processed at this point)
         }
     }
@@ -89,6 +90,7 @@ DataReader<ElemType>::DataReader(const ConfigRecordType& config)
         // get the name for the reader we want to use, default to UCIFastReader
         GetReaderProc getReaderProc = (GetReaderProc) Plugin::Load(config(L"readerType", L"UCIFastReader"), GetReaderName((ElemType) 0));
         m_ioNames.push_back(ioName);
+        assert(getReaderProc != nullptr);
         getReaderProc(&m_dataReaders[ioName]);
     }
 

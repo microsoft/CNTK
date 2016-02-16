@@ -94,10 +94,23 @@ const char* CudaErrString<cudaError_t>(cudaError_t x)
     return cudaGetErrorString(x);
 }
 template <>
-const char* CudaErrString<cublasStatus_t>(cublasStatus_t)
+const char* CudaErrString<cublasStatus_t>(cublasStatus_t e)
 {
     cudaDeviceSynchronize();
-    return "(see cublas_api.h & look for cublasStatus_t or CUBLAS_STATUS_xxx)";
+    switch (e)
+    {
+    case CUBLAS_STATUS_SUCCESS:          return "CUBLAS_STATUS_SUCCESS";
+    case CUBLAS_STATUS_NOT_INITIALIZED:  return "CUBLAS_STATUS_NOT_INITIALIZED";
+    case CUBLAS_STATUS_ALLOC_FAILED:     return "CUBLAS_STATUS_ALLOC_FAILED";
+    case CUBLAS_STATUS_INVALID_VALUE:    return "CUBLAS_STATUS_INVALID_VALUE";
+    case CUBLAS_STATUS_ARCH_MISMATCH:    return "CUBLAS_STATUS_ARCH_MISMATCH";
+    case CUBLAS_STATUS_MAPPING_ERROR:    return "CUBLAS_STATUS_MAPPING_ERROR";
+    case CUBLAS_STATUS_EXECUTION_FAILED: return "CUBLAS_STATUS_EXECUTION_FAILED";
+    case CUBLAS_STATUS_INTERNAL_ERROR:   return "CUBLAS_STATUS_INTERNAL_ERROR";
+    case CUBLAS_STATUS_NOT_SUPPORTED:    return "CUBLAS_STATUS_NOT_SUPPORTED";
+    case CUBLAS_STATUS_LICENSE_ERROR:    return "CUBLAS_STATUS_LICENSE_ERROR";
+    default:                             return "(look for CUBLAS_STATUS_xxx in cublas_api.h)";
+    }
 }
 template <>
 const char* CudaErrString<curandStatus>(curandStatus)
@@ -111,13 +124,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 template <typename AllocatedElemType>
 AllocatedElemType* TracingGPUMemoryAllocator::Allocate(int deviceId, size_t numRows, size_t numCols)
 {
+    if (IsTraceEnabled())
+    {
+        auto freeAndTotalMemory = GetFreeAndTotalMemoryInMBs(deviceId);
+        fprintf(stderr, "Allocating Matrix<%s> (Rows = %d, Cols = %d) buffer on DeviceId = %d; GPU Memory Free = %d MB of %d MB\n", typeid(AllocatedElemType).name(), (int)numRows, (int)numCols, (int)deviceId, (int)freeAndTotalMemory.first, (int)freeAndTotalMemory.second);
+        Microsoft::MSR::CNTK::DebugUtil::PrintCallStack();
+    }
+
     AllocatedElemType* deviceBufferPtr = AllocateNoTrace<AllocatedElemType>(deviceId, numRows * numCols);
 
     if (IsTraceEnabled())
     {
-        auto freeAndTotalMemory = GetFreeAndTotalMemoryInMBs(deviceId);
-        fprintf(stderr, "Allocated Matrix<%s> (Rows = %d, Cols = %d) buffer on DeviceId = %d, DeviceBufferPointer = %p; GPU Memory Free = %d MB of %d MB\n", typeid(AllocatedElemType).name(), (int) numRows, (int) numCols, (int) deviceId, (void*) deviceBufferPtr, (int) freeAndTotalMemory.first, (int) freeAndTotalMemory.second);
-        Microsoft::MSR::CNTK::DebugUtil::PrintCallStack();
+        fprintf(stderr, "Allocated DeviceBufferPointer = %p\n", (void*) deviceBufferPtr);
     }
 
     return deviceBufferPtr;
@@ -126,13 +144,18 @@ AllocatedElemType* TracingGPUMemoryAllocator::Allocate(int deviceId, size_t numR
 template <typename AllocatedElemType>
 AllocatedElemType* TracingGPUMemoryAllocator::Allocate(int deviceId, size_t numElements)
 {
+    if (IsTraceEnabled())
+    {
+        auto freeAndTotalMemory = GetFreeAndTotalMemoryInMBs(deviceId);
+        fprintf(stderr, "Allocating array<%s> (NumElements = %d) on DeviceId = %d; GPU Memory Free = %d MB of %d MB\n", typeid(AllocatedElemType).name(), (int)numElements, (int)deviceId, (int)freeAndTotalMemory.first, (int)freeAndTotalMemory.second);
+        Microsoft::MSR::CNTK::DebugUtil::PrintCallStack();
+    }
+
     AllocatedElemType* deviceBufferPtr = AllocateNoTrace<AllocatedElemType>(deviceId, numElements);
 
     if (IsTraceEnabled())
     {
-        auto freeAndTotalMemory = GetFreeAndTotalMemoryInMBs(deviceId);
-        fprintf(stderr, "Allocated array<%s> (NumElements = %d) on DeviceId = %d, DeviceBufferPointer = %p; GPU Memory Free = %d MB of %d MB\n", typeid(AllocatedElemType).name(), (int) numElements, (int) deviceId, (void*) deviceBufferPtr, (int) freeAndTotalMemory.first, (int) freeAndTotalMemory.second);
-        Microsoft::MSR::CNTK::DebugUtil::PrintCallStack();
+        fprintf(stderr, "Allocated DeviceBufferPointer = %p\n", (void*)deviceBufferPtr);
     }
 
     return deviceBufferPtr;
@@ -171,21 +194,17 @@ std::pair<size_t, size_t> TracingGPUMemoryAllocator::GetFreeAndTotalMemoryInMBs(
     PrepareDevice(deviceId);
 
     size_t free, total;
-    auto result = cudaMemGetInfo(&free, &total);
-    if (result != cudaSuccess)
-        return {size_t(0), size_t(0)};
-    else
-    {
-        size_t numBytesPerMB = 1 << 20;
-        return {free / numBytesPerMB, total / numBytesPerMB};
-    }
+    CUDA_CALL(cudaMemGetInfo(&free, &total));
+
+    size_t numBytesPerMB = 1 << 20;
+    return {free / numBytesPerMB, total / numBytesPerMB};
 }
 
 // PrepareDevice - Setup the correct cuda context for an operation
 // deviceId - the device on which the operation will take place
 void PrepareDevice(DEVICEID_TYPE deviceId)
 {
-    static DEVICEID_TYPE currentDevice = AUTOPLACEMATRIX; // set to anything valid
+    static DEVICEID_TYPE currentDevice = DEVICEID_NOTYETDETERMINED;
     // and if we last set the device to be this device we are good
     if (deviceId == currentDevice)
         return;
@@ -244,80 +263,11 @@ cublasHandle_t _initCUBLAS(int devId)
     return cuHandle;
 }
 
-// GetBestGPUDeviceId - Get the best GPU DeviceId, based on cuda information
-// Returns -1 if no GPUs can be used.
-//  TODO: should be replaced by BestGpu class instead, it's much better
-static DEVICEID_TYPE SelectBestGPUDeviceId() // this is an internal version that is wrapped by GPUMatrix<ElemType>::GetBestGPUDeviceId() below
-{
-    // currently there is little point in giving out different device IDs each time ask for a matrix,
-    // we really want them all on the same device eventually
-    static int chosenDeviceId = AUTOPLACEMATRIX;
-    if (chosenDeviceId != AUTOPLACEMATRIX)
-        return chosenDeviceId;
-#ifdef __WINDOWS__
-    __try
-#endif
-    {
-        // stash previous device state
-        // if there was one on entry:
-        int nPrevDev = -1;
-        cudaError_t ePrevDev = cudaGetDevice(&nPrevDev);
-
-        int deviceCount = -1;
-        cudaError_t error_id = cudaGetDeviceCount(&deviceCount);
-        if (error_id != cudaSuccess || deviceCount == 0)
-        {
-            return -1;
-        }
-
-        int setDev = -1;
-        int curDev = 0;
-        CUDA_LONG curPower = 0;
-        for (DEVICEID_TYPE dev = 0; dev < deviceCount; ++dev)
-        {
-            CUDA_CALL(cudaSetDevice(dev));
-            setDev = dev;
-            cudaDeviceProp deviceProp;
-            cudaGetDeviceProperties(&deviceProp, dev);
-            int power = _ConvertSMVer2Cores(deviceProp.major, deviceProp.minor) * deviceProp.multiProcessorCount;
-            // CUDA_LONG power = _GetFreeMemoryOnCUDADevice(dev);
-            if (power > curPower)
-            {
-                curPower = power;
-                curDev = dev;
-            }
-        }
-
-        if (nPrevDev >= 0 && ePrevDev == cudaSuccess &&
-            setDev >= 0 && setDev != nPrevDev)
-        {
-            // restore current context to the one we entered with
-            // if there was one the caller might want unchanged.
-            cudaSetDevice(nPrevDev);
-        }
-        chosenDeviceId = curDev;
-        return curDev;
-    }
-#ifdef __WINDOWS__
-    __except (1)
-    {
-        return -1; // CPU
-    }
-#endif
-}
-
 template <class ElemType>
 void GPUMatrix<ElemType>::SetDevice(DEVICEID_TYPE deviceId)
 {
     assert(deviceId >= 0);
     CUDA_CALL(cudaSetDevice(deviceId));
-}
-
-template <class ElemType>
-/*static*/ DEVICEID_TYPE GPUMatrix<ElemType>::GetBestGPUDeviceId() // returns -1 if no GPUs can be used
-{
-    // route the result through EnforceOneGPUOnly() which only lets the first choice through (see comment there)
-    return EnforceOneGPUOnly(SelectBestGPUDeviceId());
 }
 
 // PrepareDevice - Setup the correct cuda context for an operation
@@ -4351,8 +4301,8 @@ void GPUMatrix<ElemType>::CreateCurandObject(unsigned long seed, const char* cal
     if (s_curandGenerator == NULL)
     {
         unsigned long long cudaSeed = (seed == USE_TIME_BASED_SEED) ? time(NULL) : seed;
-        fprintf(stderr, "%s (GPU): creating curand object with seed %llu, sizeof(ElemType)==%u\n",
-                caller, cudaSeed, sizeof(ElemType));
+        fprintf(stderr, "%s (GPU): creating curand object with seed %llu, sizeof(ElemType)==%lu\n",
+                caller, cudaSeed, (unsigned long)sizeof(ElemType));
         s_curandGenerator = new curandGenerator_t;
         // Create pseudo-random number generator
         CURAND_CALL(curandCreateGenerator(&(((curandGenerator_t*) s_curandGenerator)[0]), CURAND_RNG_PSEUDO_XORWOW));
@@ -4919,7 +4869,7 @@ void GPUMatrix<ElemType>::RCRFBackwardCompute(
 
 /**
     Compute the gradient for the first order Markov transition probabilities
-    It uses equations derived in R. Collobert's paper "Natural lanugage processing (almost) from scratch"
+    It uses equations derived in R. Collobert's paper "Natural language processing (almost) from scratch"
     */
 template <class ElemType>
 void GPUMatrix<ElemType>::RCRFTransGrdCompute(const GPUMatrix<ElemType>& lbls,
@@ -5083,7 +5033,6 @@ template void GPUMatrix<char>::ChangeDeviceTo(int);
 template void GPUMatrix<char>::Resize(size_t, size_t, bool);
 
 template GPUMatrix<char>::~GPUMatrix();
-template DEVICEID_TYPE GPUMatrix<char>::GetBestGPUDeviceId();
 template GPUMatrix<char> GPUMatrix<char>::ColumnSlice(size_t startColumn, size_t numCols) const;
 template GPUMatrix<char>& GPUMatrix<char>::operator=(GPUMatrix<char>&&);
 template GPUMatrix<char>::GPUMatrix(int);

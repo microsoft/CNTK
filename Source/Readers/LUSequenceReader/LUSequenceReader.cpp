@@ -365,7 +365,7 @@ void BatchLUSequenceReader<ElemType>::InitFromConfig(const ConfigRecordType& rea
 
             // determine label type desired
             wstring labelType(labelConfig(L"labelType", L"category"));
-            if (!_wcsicmp(labelType.c_str(), L"category"))
+            if (EqualCI(labelType, L"category"))
             {
                 m_labelInfo[index].type = labelCategory;
             }
@@ -414,14 +414,14 @@ void BatchLUSequenceReader<ElemType>::InitFromConfig(const ConfigRecordType& rea
     //    m_featureCount = m_featureDim + m_labelInfo[labelInfoIn].dim;
     m_featureCount = 1;
 
-    std::wstring m_file = readerConfig(L"file");
+    std::wstring pathName = readerConfig(L"file");
     if (m_traceLevel > 0)
-        fprintf(stderr, "reading sequence file %ls\n", m_file.c_str());
+        fprintf(stderr, "reading sequence file %ls\n", pathName.c_str());
 
     const LabelInfo& labelIn = m_labelInfo[labelInfoIn];
     const LabelInfo& labelOut = m_labelInfo[labelInfoOut];
-    fprintf(stderr, "BatchLUSequenceReader: Input file is %ls\n", m_file.c_str());
-    m_parser.ParseInit(m_file.c_str(), labelIn.dim, labelOut.dim, labelIn.beginSequence, labelIn.endSequence, labelOut.beginSequence, labelOut.endSequence, mUnkStr);
+    fprintf(stderr, "BatchLUSequenceReader: Input file is %ls\n", pathName.c_str());
+    m_parser.ParseInit(pathName.c_str(), labelIn.dim, labelOut.dim, labelIn.beginSequence, labelIn.endSequence, labelOut.beginSequence, labelOut.endSequence, mUnkStr);
 
     mRequestedNumParallelSequences = readerConfig(L"nbruttsineachrecurrentiter", (size_t) 1);
 
@@ -429,15 +429,16 @@ void BatchLUSequenceReader<ElemType>::InitFromConfig(const ConfigRecordType& rea
     if (readerConfig.Exists(L"randomize"))
     {
         string randomizeString = readerConfig(L"randomize");
-        if (!_stricmp(randomizeString.c_str(), "none"))
+        if (EqualCI(randomizeString, "none"))
         {
             ;
         }
-        else if (!_stricmp(randomizeString.c_str(), "auto") || !_stricmp(randomizeString.c_str(), "true"))
+        else if (EqualCI(randomizeString, "auto") || EqualCI(randomizeString, "true"))  // TODO: "true" is inconsistent here, should be deprecated
         {
             mRandomize = true;
         }
         // else invalid
+        // TODO: fail on invalid
     }
 
     mEqualLengthOutput = readerConfig(L"equalLength", true);
@@ -1115,11 +1116,11 @@ bool BatchLUSequenceReader<ElemType>::GetFrame(std::map<std::wstring, Matrix<Ele
     }
     else
     {
-        for (typename map<wstring, Matrix<ElemType>>::iterator p = mMatrices.begin(); p != mMatrices.end(); p++)
+        for (auto p = mMatrices.begin(); p != mMatrices.end(); p++)
         {
-            assert(mMatrices[p->first].GetNumCols() > tidx);
+            assert(mMatrices[p->first]->GetNumCols() > tidx);
             if (matrices.find(p->first) != matrices.end())
-                matrices[p->first]->SetValue(mMatrices[p->first].ColumnSlice(tidx, mRequestedNumParallelSequences));
+                matrices[p->first]->SetValue(mMatrices[p->first]->ColumnSlice(tidx, mRequestedNumParallelSequences));
         }
     }
 
@@ -1136,12 +1137,12 @@ void BatchLUSequenceReader<ElemType>::InitProposals(map<wstring, Matrix<ElemType
     {
         // no need to save info for labelInfoIn since it is in mProposals
         if (pMat.find(m_labelsName[labelInfoOut]) != pMat.end())
-            mMatrices[m_labelsName[labelInfoOut]].SetValue(*(pMat[m_labelsName[labelInfoOut]]));
+            mMatrices[m_labelsName[labelInfoOut]]->SetValue(*(pMat[m_labelsName[labelInfoOut]]));
     }
     else
     {
         if (pMat.find(m_featuresName) != pMat.end())
-            mMatrices[m_featuresName].SetValue(*(pMat[m_featuresName]));
+            mMatrices[m_featuresName]->SetValue(*(pMat[m_featuresName]));
     }
 }
 

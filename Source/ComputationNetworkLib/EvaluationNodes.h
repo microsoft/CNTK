@@ -259,10 +259,10 @@ private:
         static const int delPen = 7;
         static const int insPen = 7;
 
-        Matrix<float> grid;
-        Matrix<float> insmatrix;
-        Matrix<float> delmatrix;
-        Matrix<float> submatrix;
+        Matrix<float> grid(CPUDEVICE);
+        Matrix<float> insmatrix(CPUDEVICE);
+        Matrix<float> delmatrix(CPUDEVICE);
+        Matrix<float> submatrix(CPUDEVICE);
 
         float d, h, v;
         //size_t fullcolsize = refframeseq.GetNumCols() / samplesInRecurrentStep;

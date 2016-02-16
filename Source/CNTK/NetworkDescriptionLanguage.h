@@ -310,7 +310,7 @@ public:
         for (NDLNode* param : m_parameters)
         {
             bool optParam = param->GetType() == ndlTypeOptionalParameter;
-            if (optParam && !_stricmp(param->GetName().c_str(), name.c_str()))
+            if (optParam && EqualCI(param->GetName(), name))
             {
                 auto paramValue = param->GetValue();
                 auto resolveParamNode = m_parent->ParseVariable(paramValue, false);
@@ -470,9 +470,7 @@ public:
     {
         // need to free all the child nodes attached to this script node
         for (NDLNode<ElemType>* node : m_children)
-        {
             delete node;
-        }
         m_children.clear();
     }
 
@@ -576,14 +574,10 @@ public:
     {
 
         for (NDLNode<ElemType>* node : m_children)
-        {
             delete node;
-        }
         m_children.clear();
         for (NDLNode<ElemType>* node : m_script)
-        {
             delete node;
-        }
         m_script.clear();
 
         m_symbols.clear();

@@ -873,9 +873,8 @@ static inline std::pair<DimensionVector, DimensionVector> TensorSliceWithMBLayou
     // These are only valid if we have a layout.
     // In the future, the 'timeDim' will be identified by the FrameRange.
     int iterDimParam = fr.GetIterationDimension();
-    size_t iterDim = iterDimParam > 0 ? iterDimParam - 1 /*regular dimensions are specified as 1-based*/ : shape.size() + iterDimParam /*-1 for time dimension*/;
-    size_t sequenceDim = shape.size() - 2; // TODO: In case of multiple time dims, this must be adjusted.
-    bool isTimeIteration = iterDim >= sequenceDim;
+    bool isTimeIteration = iterDimParam < 0;
+    size_t iterDim = isTimeIteration ? shape.size() + iterDimParam /*-1 for time dimension*/ : iterDimParam - 1 /*regular dimensions are specified as 1-based*/;
 
     // MBLayout of data and of FrameRange must be identical pointers,
     // or in case of broadcasting, respective parent pointers.
@@ -918,13 +917,20 @@ static inline std::pair<DimensionVector, DimensionVector> TensorSliceWithMBLayou
     }
 
     // sequence index
-    if (fr.seqIndex != SIZE_MAX /*sequence requested*/ && pMBLayout /*have sequences*/ && result.second[sequenceDim] > 1 /*>1 sequence (not broadcasting)*/)
+    if (fr.seqIndex != SIZE_MAX)  // sequence requested?
     {
-        size_t s = fr.seqIndex;
-        if (s >= result.second[sequenceDim])
-            LogicError("DataFor: FrameRange specifies a paralllel-sequence index that is out of range.");
-        result.first[sequenceDim] = (ElemType) s;
-        result.second[sequenceDim] = (ElemType) s + 1;
+        if (pMBLayout) // (if no layout then broadcast to all sequences)
+        {
+            size_t sequenceDim = shape.size() - 2; // (only valid if pMBLayout)  --TODO: In case of multiple time dims, this must be adjusted.
+            if (result.second[sequenceDim] > 1 /*>1 sequence (not broadcasting)*/)
+            {
+                size_t s = fr.seqIndex;
+                if (s >= result.second[sequenceDim])
+                    LogicError("DataFor: FrameRange specifies a paralllel-sequence index that is out of range.");
+                result.first[sequenceDim] = (ElemType)s;
+                result.second[sequenceDim] = (ElemType)s + 1;
+            }
+        }
     }
 
     return result;

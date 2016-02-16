@@ -14,7 +14,7 @@ minibatch_size=20
 evaluate_period=100
 
 cntk_train_opts=
-cntk_config=cntk_config/CNTK2_lstmp.config
+cntk_config=cntk_config/CNTK2_lstmp.cntk
 default_macros=cntk_config/default_macros.ndl
 model_ndl=cntk_config/lstmp-3layer.ndl
 device=-1

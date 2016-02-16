@@ -61,7 +61,7 @@ scripts/train_nnet.sh --num-threads 1 --device 0 --cmd "$cuda_cmd" \
   --feat-dim $feat_dim --cntk-train-opts "$cntk_train_opts" \
   --learning-rate "0.1:1" --momentum "0:0.9" \
   --max-epochs 50 --minibatch-size 256 --evaluate-period 100 \
-  --cntk-config cntk_config/CNTK2_dnn.config \
+  --cntk-config cntk_config/CNTK2_dnn.cntk \
   --default-macros cntk_config/default_macros.ndl \
   --model-ndl cntk_config/dnn_6layer.ndl \
   data/sdm1/train_120fbank exp/sdm1/tri3a_ali exp_cntk/sdm1/dnn
@@ -70,7 +70,7 @@ scripts/train_nnet.sh --num-threads 1 --device 0 --cmd "$cuda_cmd" \
 device=-1
 scripts/align.sh --num-threads 1 --nj 60 --cmd "$decode_cmd" \
   --feat-dim $feat_dim --device $device \
-  --cntk-config cntk_config/Align.config \
+  --cntk-config cntk_config/Align.cntk \
   data/sdm1/train_120fbank data/lang \
   exp_cntk/sdm1/dnn exp_cntk/sdm1/dnn_ali
 
@@ -92,7 +92,7 @@ scripts/train_nnet.sh --num-threads 1 --device 0 --cmd "$cuda_cmd" \
   --learning-rate "0.2:1" --momentum "0:0.9" \
   --max-epochs 50 --minibatch-size 20 --evaluate-period 100 \
   --clipping-per-sample 0.05 --l2-reg-weight 0.00001 --dropout-rate "0.1*5:0.8"\
-  --cntk-config cntk_config/CNTK2_lstmp.config \
+  --cntk-config cntk_config/CNTK2_lstmp.cntk \
   --default-macros cntk_config/default_macros.ndl \
   --model-ndl cntk_config/lstmp-3layer-highway-dropout.ndl \
   data/sdm1/train_80fbank exp_cntk/sdm1/dnn_ali exp_cntk/sdm1/hlstmp
@@ -110,7 +110,7 @@ device=-1
 alidir=${srcdir}_ali
 scripts/align.sh --num-threads 1 --nj 60 --cmd "$decode_cmd" \
   --feat-dim $feat_dim --device $device \
-  --cntk-config cntk_config/Align.config \
+  --cntk-config cntk_config/Align.cntk \
   $data data/lang $srcdir $alidir || exit 1;
 
 # Denominator lattices.
@@ -118,7 +118,7 @@ device=-1
 denlatdir=${srcdir}_denlats
 scripts/make_denlats.sh --num-threads 1 --nj 20 --sub-split 60 \
   --feat-dim $feat_dim --cmd "$decode_cmd" --acwt $acwt \
-  --device $device --cntk-config cntk_config/Align.config \
+  --device $device --cntk-config cntk_config/Align.cntk \
   --ngram-order 2 \
   $data data/lang $srcdir $denlatdir || exit 1;
 
@@ -134,7 +134,7 @@ scripts/train_nnet_sequence.sh --num-threads 1 --cmd "$cuda_cmd" --momentum 0.9\
   --minibatch-size 20 --cntk-train-opts "$cntk_train_opts" \
   --clipping-per-sample 0.05 --smooth-factor 0.1 \
   --l2-reg-weight 0.00001 --one-silence-class false --dropout-rate 0 \
-  --cntk-config cntk_config/CNTK2_lstmp_smbr.config \
+  --cntk-config cntk_config/CNTK2_lstmp_smbr.cntk \
   --model-mel cntk_config/lstmp-smbr.mel \
   --model-ndl cntk_config/lstmp-3layer-highway-dropout.ndl \
   --default-macros cntk_config/default_macros.ndl \

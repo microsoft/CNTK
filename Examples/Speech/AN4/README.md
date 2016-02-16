@@ -7,6 +7,8 @@ The data uses the format required by the HTKMLFReader. For details please refer 
 The [AN4 dataset](http://www.speech.cs.cmu.edu/databases/an4) is a part of CMU audio databases. 
 This modified version of dataset is distributed under the terms of a AN4 license which can be found in 'AdditionalFiles/AN4.LICENSE.html'
 
+See License.md in the root level folder of the CNTK repository for full license information.
+
 ## Overview
 
 |Data:     |Speech data from the CMU Audio Database aka AN4 (http://www.speech.cs.cmu.edu/databases/an4)
@@ -14,7 +16,7 @@ This modified version of dataset is distributed under the terms of a AN4 license
 |Purpose:  |Showcase how to train feed forward and LSTM networks for speech data
 |Network:  |SimpleNetworkBuilder for 2-layer FF, NdlNetworkBuilder for 3-layer LSTM network
 |Training: |Data-parallel 1-Bit SGD with automatic mini batch rescaling (FF)
-|Comments: |There are two config files: FeedForward.config and LSTM-NDL.config for FF and LSTM training respectively
+|Comments: |There are two config files: FeedForward.cntk and LSTM-NDL.cntk for FF and LSTM training respectively
 
 ## Running the example
 
@@ -38,12 +40,12 @@ or prefix the call to the cntk executable with the corresponding folder.
 
 Run the example from the Speech/Data folder using:
 
-`cntk configFile=../Config/FeedForward.config`
+`cntk configFile=../Config/FeedForward.cntk`
 
 or run from any folder and specify the Data folder as the `currentDirectory`, 
 e.g. running from the Speech folder using:
 
-`cntk configFile=Config/FeedForward.config currentDirectory=Data`
+`cntk configFile=Config/FeedForward.cntk currentDirectory=Data`
 
 The output folder will be created inside Speech/.
 
@@ -57,9 +59,9 @@ These variables will be overwritten when running on the Philly cluster.
 __It is therefore recommended to generally use `ConfigDir` and `ModelDir` in all config files.__ 
 To run on CPU set `deviceId = -1`, to run on GPU set deviceId to "auto" or a specific value >= 0.
 
-The FeedForward.config file uses the SimpleNetworkBuilder to create a 2-layer 
+The FeedForward.cntk file uses the SimpleNetworkBuilder to create a 2-layer 
 feed forward network with sigmoid nodes and a softmax layer.
-The LSTM-NDL.config file uses the NdlNetworkBuilder and refers to the lstmp-3layer-opt.ndl file. 
+The LSTM-NDL.cntk file uses the NdlNetworkBuilder and refers to the lstmp-3layer-opt.ndl file. 
 In the ndl file an LSTM component is defined and used to create a 3-layer LSTM network with a softmax layer. 
 Both configuration only define and execute a single training task:
 

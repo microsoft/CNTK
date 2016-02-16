@@ -120,6 +120,8 @@ protected:
 template <class ElemType>
 class SparseBinaryMatrix : public BinaryMatrix<ElemType>
 {
+    typedef BinaryMatrix<ElemType> Base;
+    using Base::m_values; using Base::m_numRows; using Base::m_deviceID;
 public:
     SparseBinaryMatrix(wstring name, int deviceID, size_t numRows, size_t numCols);
     // SparseBinaryMatrix(wstring name, size_t numRows, size_t numCols);

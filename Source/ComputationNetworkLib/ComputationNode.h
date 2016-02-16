@@ -81,7 +81,7 @@ struct /*interface*/ IComputationNode
     virtual void BackpropTo(const size_t inputIndex, const FrameRange&) = 0; // backprop gradient into one of the inputs
     virtual void EndBackprop() = 0;                                          // called after last iteration step of ComputeGradient()
 
-    // --- these are meant to be overridden by ControlFlowNodes
+    // --- this is meant to be overridden by ControlFlowNodes
 
     virtual void Backprop(const FrameRange& fr, bool childrenInThisLoop, bool childrenInOuterLoop) = 0;
 
@@ -226,11 +226,10 @@ public:
         m_evalTimeStamp = CreateUniqId();
     }
 
-    // the difference is taken to take into account numeric overflow (which really should never happen for a 64-bit integer... but hey, it's free!)
     bool IsOlderThan(const TimeStamp& other) const
     {
-        // BUGBUG: For some reason, we must test equality as well, although that does not indicate being older.
-        return GetEvalTimeStamp() - other.GetEvalTimeStamp() /*<*/ <= 0;
+        // the difference is taken to take into account numeric overflow (which really should never happen for a 64-bit integer... but hey, it's free!)
+        return GetEvalTimeStamp() - other.GetEvalTimeStamp() < 0;
     }
 
     int64_t CreateUniqId() const
@@ -491,9 +490,10 @@ public:
 protected:
 
     size_t DetermineElementwiseTensorRank() const;                          // determine tensor rank when considering all inputs with padding
-    TensorShape GetTensorSliceFor(size_t rank, const FrameRange& fr) const; // form tensor shape of the slice referenced by FrameRange
 
 public:
+
+    TensorShape GetTensorSliceFor(size_t rank, const FrameRange& fr) const; // form tensor shape of the slice referenced by FrameRange. Public since nodes may call it for their inputs.
 
     // -----------------------------------------------------------------------
     // inputs
@@ -584,7 +584,7 @@ public:
         fprintf(stderr, "Node --> %ls = %ls\n", NodeName().c_str(), OperationName().c_str()), fflush(stderr);
     }
 
-    const bool&/*TODO: should be bool by value*/ NeedGradient() { return m_needsGradient; }
+    bool NeedGradient() const { return m_needsGradient; }
 
     void SetParameterUpdateRequired(bool f) { m_parameterUpdateRequired = f; }
     bool IsParameterUpdateRequired() const { return m_parameterUpdateRequired; }
@@ -656,19 +656,15 @@ public:
 #endif
     }
 
-    // check whether a node is up-to-date w.r.t. its children, for lazy evaluation
-    // If this returns false, node must be evaluated to update m_value.
-    // BUGBUG: The function name is incorrect. It also returns 'true' if a child has the same time stamp (not older).
-    // This is virtual because it is overridden by traversal nodes.
-    virtual bool IsOutputOlderThanInputs() const
+    // check whether a node is out of date w.r.t. its children, for lazy evaluation
+    // If this returns true, node must be evaluated to update m_value.
+    // This is virtual because it is overridden by traversal nodes, which would check all their nodes' inputs.
+    virtual bool IsOutOfDateWrtInputs() const
     {
-        // TODO: use range-based for
-        for (size_t i = 0; i < GetNumInputs(); i++)
-        {
-            if (IsOlderThan(*m_inputs[i]))
+        for (const auto & input : GetInputs())
+            if (!input->IsOlderThan(*this))
                 return true;
-        }
-
+        // Note: This ^^ must also return true when time stamps are the same, for an unknown reason (possibly an initialization condition). We should track this down some day.
         return false;
     }
 
@@ -902,7 +898,7 @@ public:
         Base::CopyTo(nodeP, newName, flags);
         if (flags & CopyNodeFlags::copyNodeValue)
         {
-            auto node = UpCast(nodeP);
+            auto node = DownCast(nodeP);
             *node->m_value = *m_value;
             if (m_gradient)
                 *node->m_gradient = *m_gradient;
@@ -979,7 +975,7 @@ public:
         m_inputs.resize(inputs.size());
         for (size_t i = 0; i < m_inputs.size(); i++)
             if (inputs[i])
-                m_inputs[i] = UpCast(inputs[i]); // (UpCast() checks the type; the assignment then downcasts it again)
+                m_inputs[i] = DownCast(inputs[i]); // (DownCast() checks the type; the assignment then downcasts it again)
             else
                 m_inputs[i] = nullptr; // during network creation, nullpts are possible
     }
@@ -1012,7 +1008,7 @@ protected:
     }
 
     // up-cast to make life easier
-    static ComputationNodePtr UpCast(ComputationNodeBasePtr inode)
+    static ComputationNodePtr DownCast(ComputationNodeBasePtr inode)
     {
         ComputationNodePtr node = dynamic_pointer_cast<ComputationNode<ElemType>>(inode);
         if (!node)
@@ -1024,12 +1020,12 @@ protected:
     {
         if (inputIndex >= m_inputs.size())
             LogicError("Inputs: inputIndex %d is out of range for %ls %ls operation.", (int) inputIndex, NodeName().c_str(), OperationName().c_str());
-        return UpCast(m_inputs[inputIndex]);
+        return DownCast(m_inputs[inputIndex]);
     }
 
     void /*ComputationNodeBase::*/ SetInput(const size_t childIndex, const ComputationNodeBasePtr& inode) override
     {
-        const ComputationNodePtr node = UpCast(inode);
+        const ComputationNodePtr node = DownCast(inode);
 
         // require first nodes specified before the second to avoid null nodes condition.
         if (childIndex > m_inputs.size())
@@ -1677,10 +1673,24 @@ public:
 };
 
 // =======================================================================
-// IRecurrentNode -- helper wrapper class for ComputationNodes that can be recurrent
+// IRecurrentNode -- interface implemented by ComputationNodes that can be recurrent
 // =======================================================================
 
 struct IRecurrentNode { virtual int GetRecurrenceSteppingDirection() const = 0; };
+
+// =======================================================================
+// PreComputedNodeBase -- interface implemented by ComputationNodes that precompute
+// TODO: We can use this interface in more places.
+// =======================================================================
+
+struct IPreComputeNode
+{
+    // check whether node has already undergone precomputation
+    virtual bool HasComputed() const = 0;
+    // call this with 'false' at start and with 'true' at end
+    // This is used for resetting and updating from accumulators.
+    virtual void MarkComputed(const bool hasComputed) = 0;
+};
 
 // =======================================================================
 // helper macro to ease access to base members in presence of C++ two-phase name lookup
@@ -1736,7 +1746,8 @@ protected:                                                                      
     using Base::InvalidateMissingGradientColumns;                                                                                                        \
     using Base::InvalidateMissingValueColumns;                                                                                                           \
     using Base::IsLeaf;                                                                                                                                  \
-    using Base::IsOutputOlderThanInputs;                                                                                                                 \
+    using Base::IsOutOfDateWrtInputs;                                                                                                                 \
+    using Base::IsPartOfLoop;                                                                                                                 \
     using Base::LinkToMBLayout;                                                                                                                          \
     using Base::Load;                                                                                                                                    \
     using Base::LoadValue;                                                                                                                               \

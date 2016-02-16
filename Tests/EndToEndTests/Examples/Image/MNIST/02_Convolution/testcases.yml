@@ -1,0 +1,15 @@
+dataDir: ../../../../Image/Data
+
+# Note: Windows temporarily disabled because of instability (pending investigation; perhaps
+#   alexeyk/batch_norm fixes it)
+tags:
+    # running on every BVT job in 'E' (Examples) leg
+    - bvt-e ((flavor=='debug') ^ (device=='cpu')) and (os=='linux')
+    # running every Nightly job in 'E' (Examples) leg
+    - nightly-e (os=='linux')
+
+testCases:
+  CNTK Run must be completed:
+    patterns:
+      - ^COMPLETED
+

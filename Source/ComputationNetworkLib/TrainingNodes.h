@@ -747,9 +747,6 @@ public:
 
         ComputeSoftMaxPartial();
 
-        Matrix<ElemType> grd_t;
-        Matrix<ElemType> grd_to_wgt_t;
-
         const size_t nT = Input(LABELDATA)->GetNumTimeSteps();
         const size_t nS = Input(LABELDATA)->GetNumParallelSequences();
         size_t sz = 0; // iterate over the packed concatenated class-conditioned prob vectors
@@ -776,20 +773,26 @@ public:
                 switch (inputIndex)
                 {
                 case 1:
+                {
                     // gradient to input
-                    grd_t = Input(INPUTDATA)->GradientFor(fr);
+                    Matrix<ElemType> grd_t = Input(INPUTDATA)->GradientFor(fr);
                     Matrix<ElemType>::MultiplyAndAdd(weightForClass, false, grd_to_soft_max_input, true, grd_t);
                     break;
+                }
                 case 2:
+                {
                     // gradient to input weight
-                    grd_to_wgt_t = Input(EMBEDDINGMATRIX)->GradientAsMatrix().ColumnSlice(lft_bnd, nbr_wrd);
+                    Matrix<ElemType> grd_to_wgt_t = Input(EMBEDDINGMATRIX)->GradientAsMatrix().ColumnSlice(lft_bnd, nbr_wrd);
                     Matrix<ElemType>::MultiplyAndAdd(obs, false, grd_to_soft_max_input, false, grd_to_wgt_t);
                     break;
+                }
                 case 3:
-                    grd_t = Input(CLASSPROBINDATA)->GradientFor(fr);
+                {
+                    Matrix<ElemType> grd_t = Input(CLASSPROBINDATA)->GradientFor(fr);
                     grd_t.SetValue(DataWithMBLayoutFor(m_clsSoftmax, fr, Input(CLASSPROBINDATA)->GetMBLayout()));
                     ComputeCEPartialToSoftmaxInputs(grd_t, Gradient(), c_t);
                     break;
+                }
                 }
 
                 sz += nbr_wrd;
@@ -1414,7 +1417,7 @@ public:
 
             if (isFinalValidationPass &&
                 !(Input(0)->GetSampleMatrixNumRows() == Input(2)->GetSampleMatrixNumRows() &&
-                  (Input(0)->GetMBLayout() == Input(2)->GetMBLayout() || !Input(0)->HasMBLayout() || !Input(0)->HasMBLayout())))
+                  (Input(0)->GetMBLayout() == Input(2)->GetMBLayout() || !Input(0)->HasMBLayout() || !Input(2)->HasMBLayout())))
             {
                 LogicError("The Matrix dimensions of the second argument weights the %ls %ls operation do not match.", NodeName().c_str(), OperationName().c_str());
             }
@@ -1611,16 +1614,17 @@ class BatchNormalizationNode : public ComputationNode<ElemType>, public NumInput
 
 public:
     BatchNormalizationNode(DEVICEID_TYPE deviceId, const wstring& name)
-        : Base(deviceId, name), m_eval(false), m_spatial(false), m_expAvgFactor(0), m_mbCount(0), m_imageLayoutKind(ImageLayoutKind::CHW)
+        : Base(deviceId, name), m_eval(false), m_spatial(false), m_expAvgFactor(0), m_epsilon(0), m_useCntkEngine(true), m_mbCount(0), m_imageLayoutKind(ImageLayoutKind::CHW)
     {
     }
-    BatchNormalizationNode(DEVICEID_TYPE deviceId, const wstring& name, bool eval, bool spatial, double expAvgFactor, ImageLayoutKind imageLayoutKind)
-        : Base(deviceId, name), m_eval(eval), m_spatial(spatial), m_expAvgFactor(expAvgFactor), m_imageLayoutKind(imageLayoutKind), m_mbCount(0)
+    BatchNormalizationNode(DEVICEID_TYPE deviceId, const wstring& name, bool eval, bool spatial, double expAvgFactor, double epsilon, bool useCntkEngine, ImageLayoutKind imageLayoutKind)
+        : Base(deviceId, name), m_eval(eval), m_spatial(spatial), m_expAvgFactor(expAvgFactor), m_epsilon(epsilon), m_useCntkEngine(useCntkEngine),
+          m_imageLayoutKind(imageLayoutKind), m_mbCount(0)
     {
     }
     BatchNormalizationNode(const ScriptableObjects::IConfigRecordPtr configp)
         : BatchNormalizationNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"eval"), configp->Get(L"spatial"), configp->Get(L"expAvgFactor"),
-                                 ImageLayoutKindFrom(configp->Get(L"imageLayout")))
+                                 configp->Get(L"epsilon"), configp->Get(L"useCntkEngine"), ImageLayoutKindFrom(configp->Get(L"imageLayout")))
     {
         AttachInputs(configp, this->GetExpectedNumInputs());
     }
@@ -1760,7 +1764,7 @@ public:
                 m_saveInvStdDev->Resize(runMean.GetNumRows(), runMean.GetNumCols());
 
             m_convEng->NormalizeBatch(*m_inT, sliceInputValue, *m_scaleBiasT, scale, bias, m_spatial, expAvgFactor, runMean, runInvStdDev,
-                                      sliceOutputValue, *m_saveMean, *m_saveInvStdDev);
+                                      sliceOutputValue, m_epsilon, *m_saveMean, *m_saveInvStdDev);
 
             m_mbCount++;
         }
@@ -1782,12 +1786,23 @@ public:
 
         if (isFinalValidationPass)
         {
+            if (m_spatial && m_imageLayoutKind != CHW)
+            {
+                InvalidArgument(
+                    "Batch normalization currently supports only cuDNN (CHW) data layout. " 
+                    "Please specify imageLayout=\"cudnn\" in BatchNormalization node in your NDL/BrainScript "
+                    "and make sure your input data layout is CHW");
+            }
+            double cudnnMinEps = 1e-5; // CUDNN_BN_MIN_EPSILON
+            if (!m_useCntkEngine && m_epsilon < cudnnMinEps) 
+                fprintf(stderr, "\nWARNING: cuDNN batch normalization requires epsilon >= %e. Epsilon will be reset to that value.\n", cudnnMinEps);
+
             auto shape = GetSampleLayout();
 
             if (m_factory == nullptr)
                 m_factory = ConvolutionEngineFactory<ElemType>::Create(m_deviceId, ConvolutionEngineFactory<ElemType>::EngineType::Auto, m_imageLayoutKind);
             if (m_convEng == nullptr)
-                m_convEng = m_factory->CreateConvEngine(m_deviceId, 0);
+                m_convEng = m_factory->CreateConvEngine(m_deviceId, 0, m_useCntkEngine ? BatchNormImpl::Cntk : BatchNormImpl::CuDnn);
             if (m_spatial)
             {
                 auto dims = ImageDimensions(shape, m_imageLayoutKind);
@@ -1870,6 +1885,10 @@ private:
     bool m_spatial;
     // Smoothing factor.
     double m_expAvgFactor;
+    // Epsilon used to compute inverse std deviation.
+    double m_epsilon;
+    // Whether to use CNTK or cuDNN BN implementation.
+    bool m_useCntkEngine;
     // Layout (e.g. CHW).
     ImageLayoutKind m_imageLayoutKind;
     // Minibatch count, used to compute cumulative moving average.

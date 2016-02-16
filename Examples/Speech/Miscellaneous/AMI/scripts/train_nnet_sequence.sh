@@ -24,7 +24,7 @@ evaluate_period=100
 one_silence_class=true
 
 cntk_train_opts=
-cntk_config=cntk_config/CNTK2_lstmp_smbr.config
+cntk_config=cntk_config/CNTK2_lstmp_smbr.cntk
 default_macros=cntk_config/default_macros.ndl
 model_ndl=cntk_config/lstmp-3layer.ndl
 model_mel=cntk_config/lstmp-3layer-smbr.mel

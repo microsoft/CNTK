@@ -498,7 +498,7 @@ Section* Section::ReadSection(size_t index, MappingType mapping, size_t sizeElem
     if (!section->ValidateHeader())
     {
         char message[256];
-        sprintf_s(message, "Invalid header in file %ls, in header %s\n", m_file->GetName(), section->GetName());
+        sprintf_s(message, "Invalid header in file %ls, in header %s\n", m_file->GetName().c_str(), section->GetName().c_str());
         RuntimeError(message);
     }
 
@@ -1158,39 +1158,39 @@ void SectionStats::Store()
     for (int i = 0; i < GetElementCount(); i++)
     {
         auto stat = GetElement<NumericStatistics>(i);
-        if (!_stricmp(stat->statistic, "sum"))
+        if (EqualCI(stat->statistic, "sum"))
         {
             stat->value = m_sum;
         }
-        else if (!_stricmp(stat->statistic, "count"))
+        else if (EqualCI(stat->statistic, "count"))
         {
             stat->value = (double) m_count;
         }
-        else if (!_stricmp(stat->statistic, "mean"))
+        else if (EqualCI(stat->statistic, "mean"))
         {
             stat->value = m_mean;
         }
-        else if (!_stricmp(stat->statistic, "max"))
+        else if (EqualCI(stat->statistic, "max"))
         {
             stat->value = m_max;
         }
-        else if (!_stricmp(stat->statistic, "min"))
+        else if (EqualCI(stat->statistic, "min"))
         {
             stat->value = m_min;
         }
-        else if (!_stricmp(stat->statistic, "range"))
+        else if (EqualCI(stat->statistic, "range"))
         {
             stat->value = abs(m_max - m_min);
         }
-        else if (!_stricmp(stat->statistic, "rootmeansquare"))
+        else if (EqualCI(stat->statistic, "rootmeansquare"))
         {
             stat->value = m_rms;
         }
-        else if (!_stricmp(stat->statistic, "variance"))
+        else if (EqualCI(stat->statistic, "variance"))
         {
             stat->value = m_variance;
         }
-        else if (!_stricmp(stat->statistic, "stddev"))
+        else if (EqualCI(stat->statistic, "stddev"))
         {
             stat->value = m_stddev;
         }
@@ -1255,7 +1255,7 @@ void SectionStats::SetCompute(const std::string& name, double value)
     for (int i = 0; i < GetElementCount(); i++)
     {
         auto stat = GetElement<NumericStatistics>(i);
-        if (!_stricmp(stat->statistic, name.c_str()))
+        if (EqualCI(stat->statistic, name.c_str()))
         {
             stat->value = value;
             break;
@@ -1271,7 +1271,7 @@ double SectionStats::GetCompute(const std::string& name)
     for (int i = 0; i < GetElementCount(); i++)
     {
         auto stat = GetElement<NumericStatistics>(i);
-        if (!_stricmp(stat->statistic, name.c_str()))
+        if (EqualCI(stat->statistic, name.c_str()))
         {
             return stat->value;
         }

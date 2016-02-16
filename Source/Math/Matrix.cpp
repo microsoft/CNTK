@@ -164,32 +164,6 @@
         }                                                                                                                             \
     }
 
-// EnforceOneGPUOnly - enforce that we only use one GPU (because we don't really support more than one at this point in time)
-// BUGBUG workaround.
-// Call this after every place a device is deviced.
-// We have multiple independent mechanisms to pick a device.
-// After selecting a device id, always run the result through this function, which will cache the first choice.
-// TODO: This is a stop-gap. It will be cleaned up once we also fix the GPU late-locking bug.
-//       The correct fix is to always route GPU selection through a single function in the first place.
-DEVICEID_TYPE EnforceOneGPUOnly(DEVICEID_TYPE requestedDeviceId)
-{
-    if (requestedDeviceId < 0) // only apply this to GPU ids
-        return requestedDeviceId;
-    static DEVICEID_TYPE theGPUId = DEVICEID_NOTYETDETERMINED;
-    if (theGPUId == DEVICEID_NOTYETDETERMINED)
-        theGPUId = requestedDeviceId;
-    else if (theGPUId != requestedDeviceId)
-    {
-        static bool shown = false;
-        if (!shown)
-        {
-            fprintf(stderr, "EnforceOneGPUOnly: WARNING: Ignored attempt to change GPU choice from %d to %d. This message will be shown only once.\n", theGPUId, requestedDeviceId);
-            shown = true;
-        }
-    }
-    return theGPUId;
-}
-
 namespace Microsoft { namespace MSR { namespace CNTK {
 
 #pragma region Constructors, destructors and other static matrix builders
@@ -207,9 +181,7 @@ void Matrix<ElemType>::Init(DEVICEID_TYPE deviceId)
     m_currentDataLocation = CurrentDataLocation::NONE;
     m_matrixType = MatrixType::UNDETERMINED;
 
-    int _devId = deviceId != AUTOPLACEMATRIX ? deviceId : GetBestGPUDeviceId();
-    _devId = EnforceOneGPUOnly(_devId); // see EnforceOneGPUOnly() for comment on what this is
-    m_preferredDeviceId = _devId;
+    m_preferredDeviceId = deviceId;
     m_numTimesDeviceChanged = 0;
     m_numTimesMatrixTypeChanged = 0;
     m_devicesTransferedTo[1] = m_devicesTransferedTo[0] = CPUDEVICE - 1;
@@ -365,7 +337,7 @@ Matrix<ElemType>::Matrix(const size_t numRows, const size_t numCols, DEVICEID_TY
         }
         else
         {
-            m_GPUSparseMatrix = new GPUSparseMatrix<ElemType>(numRows, numCols, 0, matrixFormat, m_preferredDeviceId);
+            m_GPUSparseMatrix = new GPUSparseMatrix<ElemType>(numRows, numCols, 0, m_preferredDeviceId, matrixFormat);
             SetDataLocation(GPU, SPARSE);
         }
     }
@@ -392,7 +364,7 @@ Matrix<ElemType>::Matrix(const size_t numRows, const size_t numCols, DEVICEID_TY
 }
 
 template <class ElemType>
-Matrix<ElemType>::Matrix(const size_t numRows, const size_t numCols, ElemType* pArray, const size_t matrixFlags, DEVICEID_TYPE deviceId, const size_t nnz)
+Matrix<ElemType>::Matrix(const size_t numRows, const size_t numCols, ElemType* pArray, DEVICEID_TYPE deviceId, const size_t matrixFlags, const size_t nnz)
 {
     Init(deviceId);
 
@@ -415,7 +387,7 @@ Matrix<ElemType>::Matrix(const size_t numRows, const size_t numCols, ElemType* p
         if (matrixFlags & matrixFormatSparse)
         {
             // m_GPUSparseMatrix = new GPUSparseMatrix<ElemType>(numRows,numCols,nnz, pArray,matrixFlags,m_preferredDeviceId);
-            m_GPUSparseMatrix = new GPUSparseMatrix<ElemType>(MatrixFormat(matrixFlags & MatrixFormat::matrixFormatMask), m_preferredDeviceId);
+            m_GPUSparseMatrix = new GPUSparseMatrix<ElemType>(m_preferredDeviceId, MatrixFormat(matrixFlags & MatrixFormat::matrixFormatMask));
             m_GPUSparseMatrix->Resize(numRows, numCols, nnz, true, false);
             SetDataLocation(GPU, SPARSE);
         }
@@ -432,12 +404,15 @@ Matrix<ElemType>::Matrix(const size_t numRows, const size_t numCols, ElemType* p
 
 //copy constructor, deep copy
 template <class ElemType>
+Matrix<ElemType>::Matrix(const Matrix<ElemType>& deepCopyFrom)
+    : Matrix(deepCopyFrom, deepCopyFrom.GetDeviceId())
+{
+}
+
+template <class ElemType>
 Matrix<ElemType>::Matrix(const Matrix<ElemType>& deepCopyFrom, DEVICEID_TYPE deviceId)
 {
     int origCopyFromDeviceId = deepCopyFrom.GetDeviceId();
-
-    if (deviceId == AUTOPLACEMATRIX) // use copyFrom's device if we have choice
-        deviceId = (DEVICEID_TYPE) origCopyFromDeviceId;
 
     Init(deviceId); // will set m_preferredDeviceId
 
@@ -554,7 +529,7 @@ Matrix<ElemType> Matrix<ElemType>::Eye(const size_t rows, DEVICEID_TYPE deviceId
 }
 
 template <class ElemType>
-Matrix<ElemType> Matrix<ElemType>::RandomUniform(const size_t rows, const size_t cols, const ElemType low, const ElemType high, unsigned long seed, DEVICEID_TYPE deviceId)
+Matrix<ElemType> Matrix<ElemType>::RandomUniform(const size_t rows, const size_t cols, DEVICEID_TYPE deviceId, const ElemType low, const ElemType high, unsigned long seed)
 {
     Matrix<ElemType> c(rows, cols, deviceId); // will initialize to 0
     c.SetUniformRandomValue(low, high, seed);
@@ -562,7 +537,7 @@ Matrix<ElemType> Matrix<ElemType>::RandomUniform(const size_t rows, const size_t
 }
 
 template <class ElemType>
-Matrix<ElemType> Matrix<ElemType>::RandomGaussian(const size_t rows, const size_t cols, const ElemType mean, const ElemType sigma, unsigned long seed, DEVICEID_TYPE deviceId)
+Matrix<ElemType> Matrix<ElemType>::RandomGaussian(const size_t rows, const size_t cols, DEVICEID_TYPE deviceId, const ElemType mean, const ElemType sigma, unsigned long seed)
 {
     Matrix<ElemType> c(rows, cols, deviceId); // will initialize to 0
     c.SetGaussianRandomValue(mean, sigma, seed);
@@ -608,7 +583,7 @@ void Matrix<ElemType>::Read(File& stream)
         else
         {
             if (M.m_GPUSparseMatrix == NULL)
-                M.m_GPUSparseMatrix = new GPUSparseMatrix<ElemType>();
+                M.m_GPUSparseMatrix = new GPUSparseMatrix<ElemType>(M.GetDeviceId());
             stream >> (*M.m_GPUSparseMatrix);
             M.SetDataLocation(GPU, SPARSE);
         }
@@ -977,9 +952,9 @@ void Matrix<ElemType>::SwitchToMatrixType(MatrixType newMatrixType, MatrixFormat
         if (newMatrixType == MatrixType::SPARSE)
         {
             if (m_baseMatrix == nullptr)
-                m_GPUSparseMatrix = new GPUSparseMatrix<ElemType>(newMatrixFormat, GetDeviceId());
+                m_GPUSparseMatrix = new GPUSparseMatrix<ElemType>(GetDeviceId(), newMatrixFormat);
             else
-                m_GPUSparseMatrix = new GPUSparseMatrix<ElemType>(GetNumRows(), GetNumCols(), 0, newMatrixFormat, GetDeviceId());
+                m_GPUSparseMatrix = new GPUSparseMatrix<ElemType>(GetNumRows(), GetNumCols(), 0, GetDeviceId(), newMatrixFormat);
 
             if (keepValues)
                 m_GPUSparseMatrix->SetValue(*m_GPUMatrix);
@@ -1599,7 +1574,7 @@ Matrix<ElemType>& Matrix<ElemType>::operator+=(ElemType alpha)
 template <class ElemType>
 Matrix<ElemType> Matrix<ElemType>::operator+(ElemType alpha) const
 {
-    Matrix<ElemType> c(GetNumRows(), GetNumCols());
+    Matrix<ElemType> c(GetNumRows(), GetNumCols(), GetDeviceId());
     c.AssignSumOf(alpha, *this);
     return c;
 }
@@ -1708,7 +1683,7 @@ Matrix<ElemType>& Matrix<ElemType>::operator-=(ElemType alpha)
 template <class ElemType>
 Matrix<ElemType> Matrix<ElemType>::operator-(ElemType alpha) const
 {
-    Matrix<ElemType> c(GetNumRows(), GetNumCols());
+    Matrix<ElemType> c(GetNumRows(), GetNumCols(), GetDeviceId());
     c.AssignDifferenceOf(*this, alpha);
     return c;
 }
@@ -3600,7 +3575,7 @@ void Matrix<ElemType>::_transferFromDeviceToDevice(int from_id, int to_id, bool 
                 LogicError("Can't move from CPU because I'm not there!");
 
             if (m_GPUSparseMatrix == NULL)
-                m_GPUSparseMatrix = new GPUSparseMatrix<ElemType>(m_CPUSparseMatrix->GetFormat(), to_id);
+                m_GPUSparseMatrix = new GPUSparseMatrix<ElemType>(to_id, m_CPUSparseMatrix->GetFormat());
             else
                 m_GPUSparseMatrix->ChangeDeviceTo(to_id);
 
@@ -3737,23 +3712,32 @@ void Matrix<ElemType>::TransferToDeviceIfNotThere(int id_to, bool ismoved, bool 
 template <class ElemType>
 void Matrix<ElemType>::TransferToDeviceIfNotThereAndNotAutoPlace(int id_to, bool ismoved, bool emptyTransfer, bool updatePreferredDevice) const
 {
-    if (id_to != AUTOPLACEMATRIX)
-        TransferToDeviceIfNotThere(id_to, ismoved, emptyTransfer, updatePreferredDevice);
+    TransferToDeviceIfNotThere(id_to, ismoved, emptyTransfer, updatePreferredDevice);
 }
 
 template <class ElemType>
-void Matrix<ElemType>::Print(const char* matrixName, size_t rowStart, size_t rowEnd, size_t colStart, size_t colEnd) const
+void Matrix<ElemType>::Print(const char* matrixName, ptrdiff_t rowStart, ptrdiff_t rowEnd, ptrdiff_t colStart, ptrdiff_t colEnd) const
 {
     DEVICEID_TYPE orgdevice = GetDeviceId();
 
     DISPATCH_MATRIX_ON_FLAG(this,
                             nullptr,
+                            // CPU:
                             m_CPUMatrix->Print(matrixName, rowStart, rowEnd, colStart, colEnd),
-                            _transferToDevice(CPUDEVICE, false, false);
-                            m_CPUMatrix->Print(matrixName, rowStart, rowEnd, colStart, colEnd); _transferToDevice(orgdevice, false, false),
-                                                                                                m_CPUSparseMatrix->Print(matrixName),
-                                                                                                _transferToDevice(CPUDEVICE, false, false);
-                            m_CPUSparseMatrix->Print(matrixName); _transferToDevice(orgdevice, false, false));
+                            // GPU;
+                            {
+                                _transferToDevice(CPUDEVICE, false, false);
+                                m_CPUMatrix->Print(matrixName, rowStart, rowEnd, colStart, colEnd);
+                                _transferToDevice(orgdevice, false, false);
+                            },
+                            // CPU, sparse:
+                            m_CPUSparseMatrix->Print(matrixName),
+                            // GPU, sparse:
+                            {
+                                _transferToDevice(CPUDEVICE, false, false);
+                                m_CPUSparseMatrix->Print(matrixName);
+                                _transferToDevice(orgdevice, false, false);
+                            });
 }
 
 template <class ElemType>
@@ -4129,7 +4113,7 @@ void Matrix<ElemType>::MultiplyAndWeightedAdd(ElemType alpha, const Matrix<ElemT
             }
             else
             {
-                GPUSparseMatrix<ElemType> tmp;
+                GPUSparseMatrix<ElemType> tmp(b.m_GPUSparseMatrix->GetComputeDeviceId());
                 GPUSparseMatrix<ElemType>::Multiply(first, transposeA, *b.m_GPUSparseMatrix, transposeB, tmp);
                 *c.m_GPUSparseMatrix = tmp + (*c.m_GPUSparseMatrix) * beta;
                 c.SetDataLocation(GPU, SPARSE);
@@ -4138,7 +4122,7 @@ void Matrix<ElemType>::MultiplyAndWeightedAdd(ElemType alpha, const Matrix<ElemT
         else if (a.m_matrixType == b.m_matrixType && a.m_matrixType == MatrixType::DENSE && c.m_matrixType == MatrixType::SPARSE)
         {
             GPUMatrix<ElemType> tmp(a.m_GPUMatrix->GetComputeDeviceId());
-            GPUSparseMatrix<ElemType> tmpSparse;
+            GPUSparseMatrix<ElemType> tmpSparse(a.m_GPUMatrix->GetComputeDeviceId());
             GPUMatrix<ElemType>::MultiplyAndWeightedAdd(alpha, *a.m_GPUMatrix, transposeA, *b.m_GPUMatrix, transposeB, beta, tmp);
             tmpSparse.SetValue(tmp);
             *c.m_GPUSparseMatrix = tmpSparse + (*c.m_GPUSparseMatrix) * beta;
@@ -4689,7 +4673,7 @@ bool Matrix<ElemType>::HasNan(const char* name) const
     // if GPU then first detect NaN there, will be faster
     if (GetDeviceId() != CPUDEVICE)
     {
-        Matrix<ElemType> sum;
+        Matrix<ElemType> sum(GetDeviceId());
         sum.AssignSumOfElements(*this);
         auto x = sum.Get00Element();
         if (!std::isnan(x))
@@ -4724,12 +4708,6 @@ size_t Matrix<ElemType>::CountNanInf() const
             n++;
     }
     return n;
-}
-
-template <class ElemType>
-DEVICEID_TYPE Matrix<ElemType>::GetBestGPUDeviceId()
-{
-    return EnforceOneGPUOnly(GPUMatrix<ElemType>::GetBestGPUDeviceId()); // see EnforceOneGPUOnly() for comment on what this is
 }
 
 // TODO: these are scalar operations--why are they in Matrix?
@@ -5169,7 +5147,7 @@ template class Matrix<double>;
 template Matrix<char>::Matrix(DEVICEID_TYPE);
 template Matrix<char>::Matrix(Matrix<char>&&);
 template Matrix<char>::Matrix(const size_t numRows, const size_t numCols, DEVICEID_TYPE deviceId, const MatrixType matrixType, const MatrixFormat matrixFormat);
-template Matrix<char>::Matrix(const size_t numRows, const size_t numCols, char* pArray, const size_t matrixFlags, DEVICEID_TYPE deviceId, const size_t nnz);
+template Matrix<char>::Matrix(const size_t numRows, const size_t numCols, char* pArray, DEVICEID_TYPE deviceId, const size_t matrixFlags, const size_t nnz);
 template Matrix<char>::~Matrix();
 template Matrix<char>& Matrix<char>::operator=(Matrix<char>&& moveFrom);
 template Matrix<char>& Matrix<char>::operator=(const Matrix<char>& deepCopyFrom);

@@ -126,7 +126,7 @@ void BinaryReader<ElemType>::InitFromConfig(const ConfigRecordType& readerConfig
 
     // determine if partial minibatches are desired
     std::string minibatchMode(readerConfig(L"minibatchMode", "Partial"));
-    m_partialMinibatch = !_stricmp(minibatchMode.c_str(), "Partial");
+    m_partialMinibatch = EqualCI(minibatchMode, "Partial");
 
     // Initial load is complete
     DisplayProperties();

@@ -25,6 +25,9 @@
     <CudaCompile Include="GPUTensor.cu">
       <Filter>GPU\Tensors</Filter>
     </CudaCompile>
+    <CudaCompile Include="CuDnnConvolutionEngine.cu">
+      <Filter>GPU\Convolution</Filter>
+    </CudaCompile>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="cudalattice.cpp">
@@ -38,9 +41,6 @@
     </ClCompile>
     <ClCompile Include="stdafx.cpp">
       <Filter>Misc</Filter>
-    </ClCompile>
-    <ClCompile Include="CuDnnConvolutionEngine.cpp">
-      <Filter>GPU\Convolution</Filter>
     </ClCompile>
     <ClCompile Include="GPUDataTransferer.cpp">
       <Filter>GPU</Filter>
@@ -109,6 +109,9 @@
     </ClInclude>
     <ClInclude Include="GPUDataTransferer.h">
       <Filter>GPU</Filter>
+    </ClInclude>
+    <ClInclude Include="CuDnnConvolutionEngine.cuh">
+      <Filter>GPU\Convolution</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

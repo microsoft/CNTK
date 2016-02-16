@@ -40,7 +40,7 @@ BOOST_FIXTURE_TEST_CASE(CPUMatrixFileWriteRead, RandomSeedFixture)
 BOOST_FIXTURE_TEST_CASE(MatrixFileWriteRead, RandomSeedFixture)
 {
     // Test Matrix in Dense mode
-    Matrix<float> matrix = Matrix<float>::RandomUniform(43, 10, -26.3f, 30.2f, IncrementCounter());
+    Matrix<float> matrix = Matrix<float>::RandomUniform(43, 10, c_deviceIdZero, - 26.3f, 30.2f, IncrementCounter());
     Matrix<float> matrixCopy = matrix;
 
     std::wstring fileName(L"M.txt");
@@ -49,13 +49,13 @@ BOOST_FIXTURE_TEST_CASE(MatrixFileWriteRead, RandomSeedFixture)
     file << matrix;
     file.SetPosition(0);
 
-    Matrix<float> matrixRead;
+    Matrix<float> matrixRead(c_deviceIdZero);
     file >> matrixRead;
 
     BOOST_CHECK(matrixRead.IsEqualTo(matrixCopy, c_epsilonFloatE5));
 
     // Test Matrix in Sparse mode
-    Matrix<float> matrixSparse = Matrix<float>::RandomUniform(43, 10, -26.3f, 30.2f, IncrementCounter());
+    Matrix<float> matrixSparse = Matrix<float>::RandomUniform(43, 10, c_deviceIdZero, - 26.3f, 30.2f, IncrementCounter());
     Matrix<float> matrixSparseCopy = matrixSparse;
 
     matrixSparse.SwitchToMatrixType(MatrixType::SPARSE, matrixFormatSparseCSR, true);
@@ -66,7 +66,7 @@ BOOST_FIXTURE_TEST_CASE(MatrixFileWriteRead, RandomSeedFixture)
     fileSparse << matrixSparse;
     fileSparse.SetPosition(0);
 
-    Matrix<float> matrixSparseRead;
+    Matrix<float> matrixSparseRead(c_deviceIdZero);
     fileSparse >> matrixSparseRead;
 
     BOOST_CHECK(MatrixType::SPARSE == matrixSparseRead.GetMatrixType());

@@ -57,9 +57,11 @@ endif
 CXX = mpic++
 
 SOURCEDIR:= Source
-INCLUDEPATH:= $(addprefix $(SOURCEDIR)/, Common/Include Math CNTK ActionsLib ComputationNetworkLib SGDLib SequenceTrainingLib CNTK/BrainScript)
-CPPFLAGS:= -D_POSIX_SOURCE -D_XOPEN_SOURCE=600 -D__USE_XOPEN2K
-CXXFLAGS:= -msse3 -std=c++0x -std=c++11 -fopenmp -fpermissive -fPIC -Werror -fcheck-new
+INCLUDEPATH:= $(addprefix $(SOURCEDIR)/, Common/Include Math CNTK ActionsLib ComputationNetworkLib SGDLib SequenceTrainingLib CNTK/BrainScript Readers/ReaderLib)
+# COMMON_FLAGS include settings that are passed both to NVCC and C++ compilers.
+COMMON_FLAGS:= -D_POSIX_SOURCE -D_XOPEN_SOURCE=600 -D__USE_XOPEN2K -std=c++11
+CPPFLAGS:= 
+CXXFLAGS:= -msse3 -std=c++0x -fopenmp -fpermissive -fPIC -Werror -fcheck-new
 LIBPATH:=
 LIBS:=
 LDFLAGS:=
@@ -78,7 +80,7 @@ SRC:=
 all : buildall
 
 # Set up basic nvcc options and add CUDA targets from above
-CUFLAGS = -std=c++11 -D_POSIX_SOURCE -D_XOPEN_SOURCE=600 -D__USE_XOPEN2K -m 64
+CUFLAGS = -m 64
 
 ifdef CUDA_PATH
   ifndef GDK_PATH
@@ -110,26 +112,26 @@ ifdef CUDA_PATH
     INCLUDEPATH += $(CUDNN_PATH)/cuda/include
     LIBPATH += $(CUDNN_PATH)/cuda/lib64
     LIBS += -lcudnn
-    CPPFLAGS +=-DUSE_CUDNN
+    COMMON_FLAGS +=-DUSE_CUDNN
   endif
 else
   DEVICE = cpu
 
-  CPPFLAGS +=-DCPUONLY
+  COMMON_FLAGS +=-DCPUONLY
 endif
 
 ifeq ("$(MATHLIB)","acml")
   INCLUDEPATH += $(ACML_PATH)/include
   LIBPATH += $(ACML_PATH)/lib
   LIBS += -lacml_mp -liomp5 -lm -lpthread
-  CPPFLAGS += -DUSE_ACML
+  COMMON_FLAGS += -DUSE_ACML
 endif
 
 ifeq ("$(MATHLIB)","mkl")
   INCLUDEPATH += $(MKL_PATH)/mkl/include
   LIBPATH += $(MKL_PATH)/compiler/lib/intel64 $(MKL_PATH)/mkl/lib/intel64 $(MKL_PATH)/compiler/lib/mic $(MKL_PATH)/mkl/lib/mic
   LIBS += -lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core -lm -liomp5 -lpthread
-  CPPFLAGS += -DUSE_MKL
+  COMMON_FLAGS += -DUSE_MKL
 endif
 
 
@@ -161,7 +163,7 @@ ifeq ("$(BUILDTYPE)","debug")
 
   CXXFLAGS += -g
   LDFLAGS += -rdynamic
-  CPPFLAGS += -D_DEBUG
+  COMMON_FLAGS += -D_DEBUG
   CUFLAGS += -O0 -g -use_fast_math -lineinfo  $(GENCODE_FLAGS)
 endif
 
@@ -174,7 +176,7 @@ ifeq ("$(BUILDTYPE)","release")
 
   CXXFLAGS += -g -O4
   LDFLAGS += -rdynamic
-  CPPFLAGS += -DNDEBUG
+  COMMON_FLAGS += -DNDEBUG
   CUFLAGS += -O3 -g -use_fast_math -lineinfo $(GENCODE_FLAGS)
 endif
 
@@ -211,6 +213,12 @@ $(BUILDINFO): $(GENBUILD)
 ########################################
 
 # Define all sources that need to be built
+READER_SRC =\
+	$(SOURCEDIR)/Readers/ReaderLib/SampleModePacker.cpp \
+	$(SOURCEDIR)/Readers/ReaderLib/BlockRandomizer.cpp \
+	$(SOURCEDIR)/Readers/ReaderLib/NoRandomizer.cpp \
+	$(SOURCEDIR)/Readers/ReaderLib/ReaderShim.cpp \
+
 COMMON_SRC =\
 	$(SOURCEDIR)/Common/Config.cpp \
 	$(SOURCEDIR)/Common/DataReader.cpp \
@@ -239,7 +247,7 @@ MATH_SRC +=\
 	$(SOURCEDIR)/Math/GPUSparseMatrix.cu \
 	$(SOURCEDIR)/Math/GPUWatcher.cu \
 	$(SOURCEDIR)/Math/MatrixQuantizerGPU.cu \
-	$(SOURCEDIR)/Math/CuDnnConvolutionEngine.cpp \
+	$(SOURCEDIR)/Math/CuDnnConvolutionEngine.cu \
 	$(SOURCEDIR)/Math/GPUDataTransferer.cpp \
 
 else
@@ -249,6 +257,7 @@ MATH_SRC +=\
 endif
 
 MATH_SRC+=$(COMMON_SRC)
+MATH_SRC+=$(READER_SRC)
 
 MATH_OBJ := $(patsubst %.cu, $(OBJDIR)/%.o, $(patsubst %.cpp, $(OBJDIR)/%.o, $(MATH_SRC)))
 
@@ -380,6 +389,23 @@ $(LIBSVMBINARYREADER): $(LIBSVMBINARYREADER_OBJ) | $(CNTKMATH_LIB)
 	@echo $(SEPARATOR)
 	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(LIBPATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH)) -o $@ $^ -l$(CNTKMATH)
 
+########################################
+# SparsePCReader plugin
+########################################
+
+SPARSEPCREADER_SRC =\
+	$(SOURCEDIR)/Readers/SparsePCReader/Exports.cpp \
+	$(SOURCEDIR)/Readers/SparsePCReader/SparsePCReader.cpp \
+
+SPARSEPCREADER_OBJ := $(patsubst %.cpp, $(OBJDIR)/%.o, $(SPARSEPCREADER_SRC))
+
+SPARSEPCREADER:=$(LIBDIR)/SparsePCReader.so
+ALL += $(SPARSEPCREADER)
+SRC+=$(SPARSEPCREADER_SRC)
+
+$(SPARSEPCREADER): $(SPARSEPCREADER_OBJ) | $(CNTKMATH_LIB)
+	@echo $(SEPARATOR)
+	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(LIBPATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH)) -o $@ $^ -l$(CNTKMATH)
 
 ########################################
 # Kaldi plugins
@@ -414,6 +440,9 @@ endif
 ifdef OPENCV_PATH
 IMAGEREADER_SRC =\
 	$(SOURCEDIR)/Readers/ImageReader/Exports.cpp \
+	$(SOURCEDIR)/Readers/ImageReader/ImageConfigHelper.cpp \
+	$(SOURCEDIR)/Readers/ImageReader/ImageDataDeserializer.cpp \
+	$(SOURCEDIR)/Readers/ImageReader/ImageTransformers.cpp \
 	$(SOURCEDIR)/Readers/ImageReader/ImageReader.cpp \
 
 IMAGEREADER_OBJ := $(patsubst %.cpp, $(OBJDIR)/%.o, $(IMAGEREADER_SRC))
@@ -423,7 +452,7 @@ ALL += $(IMAGEREADER)
 SRC+=$(IMAGEREADER_SRC)
 
 INCLUDEPATH += $(OPENCV_PATH)/include
-LIBPATH += $(OPENCV_PATH)/release/lib
+LIBPATH += $(OPENCV_PATH)/lib $(OPENCV_PATH)/release/lib
 
 $(IMAGEREADER): $(IMAGEREADER_OBJ) | $(CNTKMATH_LIB)
 	@echo $(SEPARATOR)
@@ -435,9 +464,14 @@ endif
 ########################################
 
 ifeq ("$(CNTK_ENABLE_1BitSGD)","true")
+
+ifeq (,$(wildcard Source/1BitSGD/*.h))
+  $(error Build with 1bit-SGD was requested but cannot find the code. Please check https://github.com/Microsoft/CNTK/wiki/Enabling-1bit-SGD for instructions)
+endif
+
   INCLUDEPATH += $(SOURCEDIR)/1BitSGD
 
-  CPPFLAGS += -DQUANTIZED_GRADIENT_AGGREGATION
+  COMMON_FLAGS += -DQUANTIZED_GRADIENT_AGGREGATION
 endif
 
 ########################################
@@ -517,13 +551,13 @@ $(OBJDIR)/%.o : %.cu Makefile
 	@echo $(SEPARATOR)
 	@echo creating $@ for $(ARCH) with build type $(BUILDTYPE)
 	@mkdir -p $(dir $@)
-	$(NVCC) -c $< -o $@  $(CUFLAGS) $(INCLUDEPATH:%=-I%) -Xcompiler "-fPIC -Werror"
+	$(NVCC) -c $< -o $@ $(COMMON_FLAGS) $(CUFLAGS) $(INCLUDEPATH:%=-I%) -Xcompiler "-fPIC -Werror"
 
 $(OBJDIR)/%.o : %.cpp Makefile
 	@echo $(SEPARATOR)
 	@echo creating $@ for $(ARCH) with build type $(BUILDTYPE)
 	@mkdir -p $(dir $@)
-	$(CXX) -c $< -o $@ $(CPPFLAGS) $(CXXFLAGS) $(INCLUDEPATH:%=-I%) -MD -MP -MF ${@:.o=.d}
+	$(CXX) -c $< -o $@ $(COMMON_FLAGS) $(CPPFLAGS) $(CXXFLAGS) $(INCLUDEPATH:%=-I%) -MD -MP -MF ${@:.o=.d}
 
 .PHONY: force clean buildall all
 
@@ -534,6 +568,7 @@ clean:
 	@echo $(SEPARATOR)
 	@rm -rf $(OBJDIR)
 	@rm -rf $(ALL)
+	@rm -rf $(BUILDINFO)
 	@echo finished cleaning up the project
 
 buildall : $(ALL)

@@ -459,7 +459,7 @@ bool File::IsUnicodeBOM(bool skip)
     {
         char val[3];
         file.ReadString(val, 3);
-        found = (val[0] == 0xEF && val[1] == 0xBB && val[2] == 0xBF);
+        found = ((unsigned char)val[0] == 0xEF && (unsigned char)val[1] == 0xBB && (unsigned char)val[2] == 0xBF);
     }
     // restore pointer if no BOM or we aren't skipping it
     if (!found || !skip)
