@@ -78,6 +78,11 @@ makebuildinfo()
         else
             printf "#define _WITH_1BITSGD_ \"no\"\n"
         fi
+	    if [ ! -z "$WITH_ASGD" ]; then 
+            printf "#define _WITH_ASGD_ \"yes\"\n"
+        else
+            printf "#define _WITH_ASGD_ \"no\"\n"
+        fi
         printf "#define _BUILDER_ \"%s\"\n"  "$BUILDER"
         printf "#define _BUILDMACHINE_ \"%s\"\n"  "$BUILDMACHINE"
         printf "#define _BUILDPATH_ \"%s\"\n"  "$BUILDPATH"
