@@ -316,27 +316,7 @@ bool SparsePCReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemTy
 }
 
 template <class ElemType>
-bool SparsePCReader<ElemType>::DataEnd(EndDataType endDataType)
-{
-    bool ret = false;
-    switch (endDataType)
-    {
-    //case endDataNull:
-    //    assert(false);
-    //    break;
-    //case endDataEpoch:
-    //    ret = (m_currOffset >= m_filePositionMax);
-    //    break;
-    //case endDataSet:
-    //    ret = (m_currOffset >= m_filePositionMax);
-    //    break;
-    case endDataSentence: // for fast reader each minibatch is considered a "sentence", so always true --huh?
-        ret = true;
-        break;
-    }
-
-    return ret;
-}
+bool SparsePCReader<ElemType>::DataEnd() { return true; }
 
 // GetLabelMapping - Gets the label mapping from integer index to label type
 // returns - a map from numeric datatype to native label type

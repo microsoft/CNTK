@@ -1999,29 +1999,14 @@ bool HTKMLFReader<ElemType>::GetData(const std::wstring& /*sectionName*/, size_t
 }
 
 template <class ElemType>
-bool HTKMLFReader<ElemType>::DataEnd(EndDataType endDataType)
+bool HTKMLFReader<ElemType>::DataEnd()
 {
     // each minibatch is considered a "sentence"
-    // other datatypes not really supported...
-    // assert(endDataType == endDataSentence);
-    // for the truncated BPTT, we need to support check wether it's the end of data
-    bool ret = false;
-    switch (endDataType)
-    {
-    //case endDataNull:
-    //case endDataEpoch:
-    //case endDataSet:
-    //    throw std::logic_error("DataEnd: does not support endDataTypes: endDataNull, endDataEpoch and endDataSet");
-    //    break;
-    case endDataSentence:
-        if (m_truncated)
-            ret = m_sentenceEnd[0];
-        else
-            ret = true; // useless in current condition
-        break;
-    }
-    return ret;
-}
+    // for the truncated BPTT, we need to support check whether it's the end of data
+    if (m_truncated)
+        return m_sentenceEnd[0];
+    else
+        return true; // useless in current condition
 
 template <class ElemType>
 void HTKMLFReader<ElemType>::SetSentenceEndInBatch(vector<size_t>& sentenceEnd)

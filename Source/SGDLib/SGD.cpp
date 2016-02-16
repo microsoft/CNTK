@@ -1167,7 +1167,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
         // call DataEnd function
         // This signals something from SGD to the reader.
         // DataEnd does reader specific process if sentence ending is reached
-        trainSetDataReader->DataEnd(EndDataType::endDataSentence);
+        trainSetDataReader->DataEnd();
 
         // Attempts to compute the error signal for the whole utterance, which will
         // be fed to the neural network as features. Currently it is a workaround

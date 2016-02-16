@@ -295,7 +295,7 @@ public:
 
     // return length of sentences size
     size_t FindNextSentences(size_t numSentences);
-    bool DataEnd(EndDataType endDataType);
+    bool DataEnd();
     void SetSentenceEnd(int wrd, int pos, int actualMbSize);
     void SetSentenceBegin(int wrd, int pos, int actualMbSize);
     void SetSentenceBegin(int wrd, size_t pos, size_t actualMbSize)
@@ -436,7 +436,7 @@ public:
 
 public:
     //int GetSentenceEndIdFromOutputLabel();
-    bool DataEnd(EndDataType endDataType);
+    bool DataEnd();
 
     // create proposals
     void InitProposals(map<wstring, Matrix<ElemType>*>& pMat);

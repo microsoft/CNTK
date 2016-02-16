@@ -1067,30 +1067,12 @@ bool UCIFastReader<ElemType>::GetData(const std::wstring& sectionName, size_t nu
 }
 
 template <class ElemType>
-bool UCIFastReader<ElemType>::DataEnd(EndDataType endDataType)
+bool UCIFastReader<ElemType>::DataEnd()
 {
     if (m_cachingReader)
-    {
-        return m_cachingReader->DataEnd(endDataType);
-    }
-
-    bool ret = false;
-    switch (endDataType)
-    {
-    //case endDataNull:
-    //    assert(false);
-    //    break;
-    //case endDataEpoch:
-    //    ret = (m_mbStartSample / m_epochSize != m_epoch);
-    //    break;
-    //case endDataSet:
-    //    ret = EnsureDataAvailable(m_mbStartSample, true);
-    //    break;
-    case endDataSentence: // for fast reader each minibatch is considered a "sentence", so always true
-        ret = true;
-        break;
-    }
-    return ret;
+        return m_cachingReader->DataEnd();
+    else
+        return true;
 }
 
 template <class ElemType>

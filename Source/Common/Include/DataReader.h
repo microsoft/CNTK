@@ -47,15 +47,6 @@ const size_t randomizeNone = 0;
 // We use this constant as a stand in for the total number of frames in the dataset.
 const size_t requestDataSize = randomizeAuto;
 
-// TODO: Since all but one are unused, we can remove this enum and the parameter to DataEnd().
-enum EndDataType
-{
-    //endDataNull,     // null values
-    //endDataEpoch,    // end of epoch
-    //endDataSet,      // end of dataset
-    endDataSentence, // end of sentence
-};
-
 // Data Reader interface
 // implemented by DataReader and underlying classes
 template <class ElemType>
@@ -118,7 +109,7 @@ public:
     {
         NOT_IMPLEMENTED;
     }
-    virtual bool DataEnd(EndDataType)
+    virtual bool DataEnd()
     {
         NOT_IMPLEMENTED;
     }
@@ -284,7 +275,9 @@ public:
     // returns: true if data remains to be read, false if the end of data was reached
     virtual bool GetData(const std::wstring& sectionName, size_t numRecords, void* data, size_t& dataBufferSize, size_t recordStart = 0);
 
-    virtual bool DataEnd(EndDataType endDataType);
+    virtual bool DataEnd();
+    // TODO: The return value if this is never used except in loops where we do an &=. It is not clear whether that is a bug or intentionally prevents DataEnd() from being called.
+    //       Once this is understood, we can change the return value to void.
 
     // Gets a copy of the minibatch for the forward computation. This can be
     // useful if some of the computation has to happen in the reader.

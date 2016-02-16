@@ -100,7 +100,7 @@ public:
 
             // call DataEnd function in dataReader to do
             // reader specific process if sentence ending is reached
-            dataReader.DataEnd(endDataSentence);
+            dataReader.DataEnd();
         }
 
         if (m_verbosity > 0)
