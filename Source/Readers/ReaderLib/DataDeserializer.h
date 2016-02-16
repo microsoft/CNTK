@@ -18,14 +18,14 @@ class Chunk
 public:
     // Gets sequences by id.
     virtual std::vector<SequenceDataPtr> GetSequence(const size_t& sequenceId) = 0;
-    virtual ~Chunk() {};
+    virtual ~Chunk() = default;
+
+    Chunk(const Chunk&) = delete;
+    Chunk(Chunk&&) = delete;
+    Chunk& operator=(const Chunk&) = delete;
 
 protected:
     Chunk() {}
-
-private:
-    Chunk(const Chunk&) = delete;
-    Chunk& operator=(const Chunk&) = delete;
 };
 typedef std::shared_ptr<Chunk> ChunkPtr;
 
@@ -50,10 +50,7 @@ typedef std::vector<const SequenceDescription*> SequenceDescriptions;
 struct SequenceDataBase
 {
     SequenceDataBase() : m_data(nullptr) { }
-    virtual ~SequenceDataBase()
-    {
-        
-    }
+    virtual ~SequenceDataBase() = default;
 
     ChunkPtr m_chunk;
     // A non-owned pointer. The actual size is provided for particular sequences,
@@ -106,7 +103,7 @@ public:
     // Gets a chunk.
     virtual ChunkPtr GetChunk(size_t chunkId) = 0;
 
-    virtual ~IDataDeserializer() {};
+    virtual ~IDataDeserializer() = default;
 };
 
 typedef std::shared_ptr<IDataDeserializer> IDataDeserializerPtr;

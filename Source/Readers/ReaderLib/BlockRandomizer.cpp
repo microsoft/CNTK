@@ -13,10 +13,6 @@
 #include "DataReader.h"
 #include <random>
 
-#ifndef UNREFERENCED_PARAMETER
-#define UNREFERENCED_PARAMETER(P) (P)
-#endif
-
 namespace Microsoft { namespace MSR { namespace CNTK {
 
 static inline size_t rand(const size_t begin, const size_t end)
@@ -290,8 +286,8 @@ BlockRandomizer::BlockRandomizer(int verbosity, size_t randomizationRangeInSampl
 void BlockRandomizer::Initialize(TransformerPtr next, const ConfigParameters& readerConfig)
 {
     // Not used for the block randomizer.
-    UNREFERENCED_PARAMETER(next);
-    UNREFERENCED_PARAMETER(readerConfig);
+    UNUSED(next);
+    UNUSED(readerConfig);
 }
 
 void BlockRandomizer::StartEpoch(const EpochConfiguration& config)
@@ -394,7 +390,7 @@ Sequences BlockRandomizer::GetNextSequences(size_t sampleCount)
     result.m_data.resize(sequenceDescriptions.size());
 
     // TODO: Should prefetching be done on a single thread?
-#pragma omp parallel for ordered schedule(static)
+#pragma omp parallel for ordered schedule(dynamic)
     for (int i = 0; i < sequenceDescriptions.size(); ++i)
     {
         ChunkPtr chunk = m_deserializer->GetChunk(sequenceDescriptions[i]->m_chunkId);
