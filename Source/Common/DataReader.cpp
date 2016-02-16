@@ -172,10 +172,6 @@ void DataReader<ElemType>::StartDistributedMinibatchLoop(size_t mbSize, size_t e
 template <class ElemType>
 bool DataReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemType>*>& matrices)
 {
-    bool bRet = true;
-    vector<size_t> vNbrSentences;
-    size_t nbr = 0;
-    size_t thisNbr = 0;
     /**
     each reader reads data with number of columns as  nbr_utterances_per_minibatch * mbSize
     notice that readers may differ in their actual mbsize, though it is supposedly to be nbr_utterances_per_minibatch * mbSize.
@@ -185,15 +181,19 @@ bool DataReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemType>*
     Then this returned number is compared against the specified number. If these two numbers are not consistent, return with logic error.
     The logic error can be avoided usually with an exchange of reading orders.
     */
+    bool bRet = true;
+    //vector<size_t> vNbrSentences;
+    size_t nbr = 0;
     for (size_t i = 0; i < m_ioNames.size(); i++)
     {
         if (nbr > 0)
-            m_dataReaders[m_ioNames[i]]->SetNumParallelSequences(nbr);
+            m_dataReaders[m_ioNames[i]]->SetNumParallelSequences(nbr); // the first one determines the param of all others --TODO: This is flimsy.
         bRet &= m_dataReaders[m_ioNames[i]]->GetMinibatch(matrices);
-        thisNbr = m_dataReaders[m_ioNames[i]]->GetNumParallelSequences();
-        if (nbr > 0 && thisNbr != nbr)
+        size_t thisNbr = m_dataReaders[m_ioNames[i]]->GetNumParallelSequences();
+        if (nbr == 0)
+            nbr = thisNbr;
+        else if (thisNbr != nbr)
             LogicError("DataReader<ElemType>::GetMinibatch: The specified number of utterances per minibatch is not consistent to the actual number of utterances per minibatch");
-        nbr = thisNbr;
     }
     return bRet;
 }
@@ -237,7 +237,7 @@ size_t DataReader<ElemType>::GetNumParallelSequences()
         IDataReader<ElemType>* ptr = m_dataReaders[m_ioNames[i]];
         if (nNbr == 0)
             nNbr = ptr->GetNumParallelSequences();
-        if (nNbr != ptr->GetNumParallelSequences())
+        else if (nNbr != ptr->GetNumParallelSequences())
             LogicError("GetNumParallelSequences: number of slices in each minibatch not consistent for these streams");
     }
     return nNbr;

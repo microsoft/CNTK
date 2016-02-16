@@ -411,10 +411,10 @@ private:
 public:
     void StartMinibatchLoop(size_t mbSize, size_t epoch, size_t requestedEpochSamples = requestDataSize) override;
     bool GetMinibatch(std::map<std::wstring, Matrix<ElemType>*>& matrices) override;
-    void CopyMBLayoutTo(MBLayoutPtr) override;
     bool DataEnd(EndDataType endDataType) override;
 
-    size_t GetNumParallelSequences() override;
+    void CopyMBLayoutTo(MBLayoutPtr pMBLayout) { assert(mToProcess.size() == m_pMBLayout->GetNumParallelSequences()); pMBLayout->CopyFrom(m_pMBLayout); }
+    size_t GetNumParallelSequences() override { return mToProcess.size(); } // TODO: or get it from MBLayout? Can this ever be called before GetMinibatch()?
 
     // TODO: what are these?
     //bool RequireSentenceSeg() const override { return true; }

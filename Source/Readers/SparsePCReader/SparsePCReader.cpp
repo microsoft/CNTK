@@ -321,15 +321,15 @@ bool SparsePCReader<ElemType>::DataEnd(EndDataType endDataType)
     bool ret = false;
     switch (endDataType)
     {
-    case endDataNull:
-        assert(false);
-        break;
-    case endDataEpoch:
-        ret = (m_currOffset >= m_filePositionMax);
-        break;
-    case endDataSet:
-        ret = (m_currOffset >= m_filePositionMax);
-        break;
+    //case endDataNull:
+    //    assert(false);
+    //    break;
+    //case endDataEpoch:
+    //    ret = (m_currOffset >= m_filePositionMax);
+    //    break;
+    //case endDataSet:
+    //    ret = (m_currOffset >= m_filePositionMax);
+    //    break;
     case endDataSentence: // for fast reader each minibatch is considered a "sentence", so always true --huh?
         ret = true;
         break;

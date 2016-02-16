@@ -2008,11 +2008,11 @@ bool HTKMLFReader<ElemType>::DataEnd(EndDataType endDataType)
     bool ret = false;
     switch (endDataType)
     {
-    case endDataNull:
-    case endDataEpoch:
-    case endDataSet:
-        throw std::logic_error("DataEnd: does not support endDataTypes: endDataNull, endDataEpoch and endDataSet");
-        break;
+    //case endDataNull:
+    //case endDataEpoch:
+    //case endDataSet:
+    //    throw std::logic_error("DataEnd: does not support endDataTypes: endDataNull, endDataEpoch and endDataSet");
+    //    break;
     case endDataSentence:
         if (m_truncated)
             ret = m_sentenceEnd[0];

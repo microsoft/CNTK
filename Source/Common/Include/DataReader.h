@@ -47,11 +47,12 @@ const size_t randomizeNone = 0;
 // We use this constant as a stand in for the total number of frames in the dataset.
 const size_t requestDataSize = randomizeAuto;
 
+// TODO: Since all but one are unused, we can remove this enum and the parameter to DataEnd().
 enum EndDataType
 {
-    endDataNull,     // null values
-    endDataEpoch,    // end of epoch
-    endDataSet,      // end of dataset
+    //endDataNull,     // null values
+    //endDataEpoch,    // end of epoch
+    //endDataSet,      // end of dataset
     endDataSentence, // end of sentence
 };
 

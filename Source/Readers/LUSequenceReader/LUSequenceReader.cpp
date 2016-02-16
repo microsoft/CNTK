@@ -1008,13 +1008,13 @@ bool BatchLUSequenceReader<ElemType>::DataEnd(EndDataType endDataType)
     bool ret = false;
     switch (endDataType)
     {
-    case endDataNull:
-        assert(false);
-        break;
-    case endDataEpoch:
-    case endDataSet:
-        ret = !EnsureDataAvailable(m_mbStartSample);
-        break;
+    //case endDataNull:
+    //    assert(false);
+    //    break;
+    //case endDataEpoch:
+    //case endDataSet:
+    //    ret = !EnsureDataAvailable(m_mbStartSample);
+    //    break;
     case endDataSentence: // for fast reader each minibatch is considered a "sentence", so always true
         if (mSentenceEndAt.size() != mToProcess.size())
             LogicError("DataEnd: Sentence ending vector size %d and the toprocess vector size %d should be the same.", (int) mSentenceEndAt.size(), (int) mToProcess.size());

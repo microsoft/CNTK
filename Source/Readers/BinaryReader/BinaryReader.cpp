@@ -421,19 +421,19 @@ bool BinaryReader<ElemType>::DataEnd(EndDataType endDataType)
     bool ret = false;
     switch (endDataType)
     {
-    case endDataNull:
-        assert(false);
-        break;
-    case endDataEpoch:
-        ret = (m_mbStartSample / m_epochSize != m_epoch);
-        break;
-    case endDataSet:
-    {
-        // actual size is either what requested, or total number of samples read so far
-        size_t actualmbsize = min(m_totalSamples, m_mbSize); // it may still return less if at end of sweep
-        ret = CheckEndDataset(actualmbsize);
-        break;
-    }
+    //case endDataNull:
+    //    assert(false);
+    //    break;
+    //case endDataEpoch:
+    //    ret = (m_mbStartSample / m_epochSize != m_epoch);
+    //    break;
+    //case endDataSet:
+    //{
+    //    // actual size is either what requested, or total number of samples read so far
+    //    size_t actualmbsize = min(m_totalSamples, m_mbSize); // it may still return less if at end of sweep
+    //    ret = CheckEndDataset(actualmbsize);
+    //    break;
+    //}
     case endDataSentence: // for fast reader each minibatch is considered a "sentence", so always true
         ret = true;
         break;
