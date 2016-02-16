@@ -108,7 +108,7 @@ struct /*interface*/ IComputationNode
     // --- optional overrides for more informative logging
 
     virtual void PrintSelfBeforeValidation() const = 0; // called in validation loop right before Validate()
-    virtual void DumpNodeInfo(const bool /*printValues*/, File& fstream) const = 0;
+    virtual void DumpNodeInfo(const bool /*printValues*/, const bool /*printMetadata*/, File& fstream) const = 0;
 
 protected:
     virtual ~IComputationNode()
@@ -1439,16 +1439,19 @@ public:
     // miscellaneous
     // -----------------------------------------------------------------------
 
-    virtual void DumpNodeInfo(const bool /*printValues*/, File& fstream) const;
+    virtual void DumpNodeInfo(const bool /*printValues*/, const bool /*printMetadata*/, File& fstream) const;
 
 protected:
 
     // print node values
-    void PrintNodeValuesToFile(const bool printValues, File& fstream) const
+    void PrintNodeValuesToFile(const bool printValues, const bool printMetadata, File& fstream) const
     {
         if (printValues)
-        {
-            fstream << wstring(L"\n");
+        { 
+            if (printMetadata)
+            {
+                fstream << wstring(L"\n");
+            }
             const Matrix<ElemType>& m = Value();
             for (size_t i = 0; i < m.GetNumRows(); i++)
             {
@@ -1458,7 +1461,10 @@ protected:
                 }
                 fstream << wstring(L"\n");
             }
-            fstream << wstring(L"####################################################################");
+            if (printMetadata)
+            {
+                fstream << wstring(L"####################################################################");
+            }
         }
     }
 
@@ -1633,7 +1639,7 @@ public:
     // these are meant to be called during computation, so provide dummy implementations
     virtual bool RequiresPreCompute() const override { return false; } // return true if the node's value should be computed before the normal training. e.g., mean and invStd of input features.
     virtual void PrintSelfBeforeValidation() const override { }
-    virtual void DumpNodeInfo(const bool /*printValues*/, File& fstream) const override { }
+    virtual void DumpNodeInfo(const bool /*printValues*/, const bool /*printMetadata*/, File& fstream) const override {}
 
 protected: public:                                     // needed in ComputationNetwork::FindInRecurrentLoops(), which really should be part of SEQTraversalFlowControlNode
     std::vector<ComputationNodeBasePtr> m_nestedNodes; // nodes tucked away in this node, in evaluation order

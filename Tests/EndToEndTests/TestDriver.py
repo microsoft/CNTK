@@ -230,10 +230,13 @@ class Test:
     os.environ["TEST_DEVICE"] = device
     os.environ["TEST_BUILD_LOCATION"] = args.build_location
     if windows:
-      os.environ["TEST_CNTK_BINARY"] = os.path.join(args.build_location, flavor, "cntk.exe")
+      if args.build_sku == "cpu":
+        os.environ["TEST_CNTK_BINARY"] = os.path.join(args.build_location, (flavor + "_CpuOnly"), "cntk.exe")
+      else:
+        os.environ["TEST_CNTK_BINARY"] = os.path.join(args.build_location, flavor, "cntk.exe")
       os.environ["MPI_BINARY"] = os.path.join(os.environ["MSMPI_BIN"], "mpiexec.exe")
     else:
-      tempPath = os.path.join(args.build_location, flavor, "bin", "cntk")
+      tempPath = os.path.join(args.build_location, args.build_sku, flavor, "bin", "cntk")
       if not os.path.isfile(tempPath):
         for bsku in ["/build/gpu/", "/build/cpu/", "/build/1bitsgd/"]:
           if tempPath.find(bsku) >= 0:
@@ -568,6 +571,7 @@ def runCommand(args):
   print ("CNTK Test Driver is started")
   print ("Running tests:  " + " ".join([y.fullName for y in testsToRun]))
   print ("Build location: " + args.build_location)
+  print ("Build SKU:      " + args.build_sku)
   print ("Run location:   " + args.run_dir)
   print ("Flavors:        " + " ".join(flavors))
   print ("Devices:        " + " ".join(devices))
@@ -641,9 +645,8 @@ runSubparser.add_argument("test", nargs="*",
                          "If not specified then all tests will be run.")
 
 defaultBuildSKU = "gpu"
-defaultBuildLocation=os.path.realpath(os.path.join(thisDir, "../..", "x64" if windows else "build/"+defaultBuildSKU))
 
-runSubparser.add_argument("-b", "--build-location", default=defaultBuildLocation, help="location of the CNTK build to run")
+runSubparser.add_argument("-b", "--build-location", help="location of the CNTK build to run")
 runSubparser.add_argument("-t", "--tag", help="runs tests which match the spacified tag")
 runSubparser.add_argument("-d", "--device", help="cpu|gpu - run on a specified device")
 runSubparser.add_argument("-f", "--flavor", help="release|debug - run only a specified flavor")
@@ -695,10 +698,10 @@ if (args.build_sku):
   if not args.build_sku in args.buildSKUs:
     print >>sys.stderr, "--build-sku must be one of", args.buildSKUs
     sys.exit(1)
-  if args.func == runCommand:
-    if (args.build_location == defaultBuildLocation):
-      args.build_location = os.path.realpath(os.path.join(thisDir, "../..", "x64" if windows else "build/"+args.build_sku))
   args.buildSKUs = [args.build_sku]
+
+if args.func == runCommand and not args.build_location:
+  args.build_location = os.path.realpath(os.path.join(thisDir, "../..", "x64" if windows else "build/"))
 
 if args.func == listCommand:
   args.oses = ["windows", "linux"]
