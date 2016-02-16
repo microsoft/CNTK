@@ -235,20 +235,23 @@ TensorShape ComputationNodeBase::GetTensorSliceFor(size_t rank, const FrameRange
 // -----------------------------------------------------------------------
 
 template <class ElemType>
-/*virtual*/ void ComputationNode<ElemType>::DumpNodeInfo(const bool /*printValues*/, File& fstream) const
+/*virtual*/ void ComputationNode<ElemType>::DumpNodeInfo(const bool /*printValues*/, const bool printMetadata, File& fstream) const
 {
-    fstream << L"\n" + NodeName() + L"=" + OperationName();
-
-    if (!IsLeaf())
+    if (printMetadata)
     {
-        fstream << wstring(L"(");
-        for (size_t i = 0; i < GetNumInputs(); i++)
+        fstream << L"\n" + NodeName() + L"=" + OperationName();
+
+        if (!IsLeaf())
         {
-            if (i > 0)
-                fstream << wstring(L",");
-            fstream << (Input(i) ? Input(i)->NodeName() : L"NULL");
+            fstream << wstring(L"(");
+            for (size_t i = 0; i < GetNumInputs(); i++)
+            {
+                if (i > 0)
+                    fstream << wstring(L",");
+                fstream << (Input(i) ? Input(i)->NodeName() : L"NULL");
+            }
+            fstream << wstring(L")");
         }
-        fstream << wstring(L")");
     }
 }
 
