@@ -191,8 +191,8 @@ public:
 
     virtual bool GetData(const std::wstring& sectionName, size_t numRecords, void* data, size_t& dataBufferSize, size_t recordStart = 0);
 
-public:
-    int GetSentenceEndIdFromOutputLabel();
+//public:
+//    int GetSentenceEndIdFromOutputLabel();
 };
 
 template <class ElemType>
@@ -248,7 +248,7 @@ public:
     using LUSequenceReader<ElemType>::mRandomize;
     using LUSequenceReader<ElemType>::m_seed;
     using LUSequenceReader<ElemType>::mTotalSentenceSofar;
-    using LUSequenceReader<ElemType>::GetSentenceEndIdFromOutputLabel;
+    //using LUSequenceReader<ElemType>::GetSentenceEndIdFromOutputLabel;
 
 private:
     size_t mLastProcessedSentenceId;
@@ -435,7 +435,7 @@ public:
     void SetRandomSeed(int);
 
 public:
-    int GetSentenceEndIdFromOutputLabel();
+    //int GetSentenceEndIdFromOutputLabel();
     bool DataEnd(EndDataType endDataType);
 
     // create proposals

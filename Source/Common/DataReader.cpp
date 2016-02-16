@@ -243,6 +243,7 @@ size_t DataReader<ElemType>::GetNumParallelSequences()
     return nNbr;
 }
 
+#if 0
 template <class ElemType>
 bool DataReader<ElemType>::RequireSentenceSeg() const
 {
@@ -251,6 +252,7 @@ bool DataReader<ElemType>::RequireSentenceSeg() const
         ans = ans || m_dataReaders.find(m_ioNames[i])->second->RequireSentenceSeg(); // can't say m_dataReaders[] since that is non-const...
     return ans;
 }
+#endif
 
 template <class ElemType>
 void DataReader<ElemType>::InitProposals(std::map<std::wstring, Matrix<ElemType>*>* matrices)
@@ -259,6 +261,7 @@ void DataReader<ElemType>::InitProposals(std::map<std::wstring, Matrix<ElemType>
         m_dataReaders[m_ioNames[i]]->InitProposals(matrices);
 }
 
+#if 0
 template <class ElemType>
 int DataReader<ElemType>::GetSentenceEndIdFromOutputLabel()
 {
@@ -267,6 +270,7 @@ int DataReader<ElemType>::GetSentenceEndIdFromOutputLabel()
         iRet = m_dataReaders[m_ioNames[i]]->GetSentenceEndIdFromOutputLabel();
     return iRet;
 }
+#endif
 
 template <class ElemType>
 bool DataReader<ElemType>::GetProposalObs(std::map<std::wstring, Matrix<ElemType>*>* matrices, const size_t tidx, vector<size_t>& history)

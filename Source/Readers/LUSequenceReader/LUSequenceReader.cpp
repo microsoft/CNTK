@@ -161,6 +161,7 @@ bool LUSequenceReader<ElemType>::GetIdFromLabel(const vector<LabelIdType>& label
     return true; // TODO: what's this return value for?
 }
 
+#if 0
 template <class ElemType>
 int LUSequenceReader<ElemType>::GetSentenceEndIdFromOutputLabel()
 {
@@ -173,6 +174,7 @@ int LUSequenceReader<ElemType>::GetSentenceEndIdFromOutputLabel()
     else
         return -1; // not found
 }
+#endif
 
 // GetData - Gets metadata from the specified section (into CPU memory)
 // sectionName - section name to retrieve data from
@@ -1298,6 +1300,7 @@ size_t MultiIOBatchLUSequenceReader<ElemType>::GetNumParallelSequences()
     return mReader.begin()->second->GetNumParallelSequences();
 }
 
+#if 0
 template <class ElemType>
 int MultiIOBatchLUSequenceReader<ElemType>::GetSentenceEndIdFromOutputLabel()
 {
@@ -1311,6 +1314,7 @@ int MultiIOBatchLUSequenceReader<ElemType>::GetSentenceEndIdFromOutputLabel()
     }
     return iret;
 }
+#endif
 
 template <class ElemType>
 bool MultiIOBatchLUSequenceReader<ElemType>::DataEnd(EndDataType endDataType)

@@ -189,10 +189,10 @@ protected:
     int m_traceLevel;
 
     // feature and label data are parallel arrays
-    std::vector<ElemType> m_featureData;
-    std::vector<LabelIdType> m_labelIdData;
-    std::vector<ElemType> m_labelData;
-    std::vector<size_t> m_sequence;
+    std::vector<ElemType>    m_featureData; // [j] input label index (seems only 1 dimension, category)
+    std::vector<LabelIdType> m_labelIdData; // [j] output label index
+    //std::vector<ElemType> m_labelData;
+    std::vector<size_t>      m_sequence;
     std::map<size_t, size_t> m_indexer; // feature or label indexer
 
     // we have two one for input and one for output
@@ -290,10 +290,7 @@ public:
 
     virtual bool DataEnd(EndDataType endDataType);
 
-    int GetSentenceEndIdFromOutputLabel()
-    {
-        return -1;
-    };
+    //int GetSentenceEndIdFromOutputLabel() { return -1; };
 };
 
 template <class ElemType>
@@ -342,7 +339,7 @@ public:
     using Base::m_epochSize;
     using Base::m_featureData;
     using Base::labelInfoOut;
-    using Base::m_labelData;
+    //using Base::m_labelData;
     using Base::m_labelIdData;
     using Base::LMSetupEpoch;
     using Base::m_clsinfoRead;
@@ -362,10 +359,13 @@ public:
 private:
     size_t mLastProcssedSentenceId;
 
+    size_t mNumRead;            // number of sentences in current epoch
+    vector<bool> mProcessed;    // [mNumRead] true if sequence has already been returned in this epoch
+
+    vector<size_t> mToProcess;  // [] current set of sequences (gets updated each minibatch except if they are too long)
+
     size_t mPosInSentence;
-    vector<size_t> mToProcess;
     size_t mLastPosInSentence;
-    size_t mNumRead;
 
     std::vector<ElemType> m_featureTemp;
     std::vector<LabelType> m_labelTemp;
@@ -376,7 +376,6 @@ private:
     MBLayoutPtr m_pMBLayout;
 
 public:
-    vector<bool> mProcessed;
     LMBatchSequenceParser<ElemType, LabelType> m_parser;
     BatchSequenceReader()
         : m_pMBLayout(make_shared<MBLayout>())
@@ -402,41 +401,24 @@ private:
     void Reset();
 public:
 
-    // return length of sentences size
-    bool DataEnd(EndDataType endDataType) override;
+
 private:
-    size_t FindNextSentences(size_t numSentences);
-    //void SetSentenceEnd(int wrd, int pos, int actualMbSize);
-    //void SetSentenceEnd(int    wrd, size_t pos, size_t actualMbSize) { SetSentenceEnd(wrd,      (int)pos, (int)actualMbSize); }    // type-casting helpers
-    //void SetSentenceEnd(size_t wrd, size_t pos, size_t actualMbSize) { SetSentenceEnd((int)wrd, (int)pos, (int)actualMbSize); }
-    //void SetSentenceBegin(int wrd, int pos, int actualMbSize);
-    //void SetSentenceBegin(int wrd, size_t pos, size_t actualMbSize)
-    //{
-    //    SetSentenceBegin(wrd, (int) pos, (int) actualMbSize);
-    //} // TODO: clean this up
-    //void SetSentenceBegin(size_t wrd, size_t pos, size_t actualMbSize)
-    //{
-    //    SetSentenceBegin((int) wrd, (int) pos, (int) actualMbSize);
-    //}
+    size_t DetermineSequencesToProcess();
+    bool GetMinibatchData(size_t& firstPosInSentence);
     void GetLabelOutput(std::map<std::wstring, Matrix<ElemType>*>& matrices,
                         size_t m_mbStartSample, size_t actualmbsize);
-public:
 
+public:
     void StartMinibatchLoop(size_t mbSize, size_t epoch, size_t requestedEpochSamples = requestDataSize) override;
     bool GetMinibatch(std::map<std::wstring, Matrix<ElemType>*>& matrices) override;
-private:
-    bool EnsureDataAvailable(size_t mbStartSample, size_t& firstPosInSentence);
-public:
+    void CopyMBLayoutTo(MBLayoutPtr) override;
+    bool DataEnd(EndDataType endDataType) override;
+
     size_t GetNumParallelSequences() override;
 
-    void SetSentenceSegBatch(std::vector<size_t>& sentenceEnd);
-    void CopyMBLayoutTo(MBLayoutPtr);
-    bool RequireSentenceSeg() const override
-    {
-        return true;
-    }
-
-    int GetSentenceEndIdFromOutputLabel();
+    // TODO: what are these?
+    //bool RequireSentenceSeg() const override { return true; }
+    //int GetSentenceEndIdFromOutputLabel() override;
 };
 
 }}}
