@@ -99,18 +99,12 @@ public:
         NOT_IMPLEMENTED;
     };
     virtual size_t GetNumParallelSequences() = 0;
-    virtual int GetSentenceEndIdFromOutputLabel()
-    {
-        return -1;
-    }
+    //virtual int GetSentenceEndIdFromOutputLabel() { return -1; }
     virtual void SetNumParallelSequences(const size_t sz)
     {
         mRequestedNumParallelSequences = sz;
     }
-    virtual bool RequireSentenceSeg() const
-    {
-        return false;
-    }
+    //virtual bool RequireSentenceSeg() const { return false; }
     virtual const std::map<LabelIdType, LabelType>& GetLabelMapping(const std::wstring&)
     {
         NOT_IMPLEMENTED;
@@ -142,7 +136,7 @@ public:
     virtual void InitProposals(std::map<std::wstring, Matrix<ElemType>*>*)
     {
     }
-    virtual bool CanReadFor(wstring /* nodeName */)
+    virtual bool CanReadFor(wstring /* nodeName */) // return true if this reader can output for a node with name nodeName  --TODO: const wstring&
     {
         return false;
     }
@@ -267,8 +261,8 @@ public:
     virtual bool GetHmmData(msra::asr::simplesenonehmm* hmm);
 
     size_t GetNumParallelSequences();
-    int GetSentenceEndIdFromOutputLabel();
-    bool RequireSentenceSeg() const override;
+    //int GetSentenceEndIdFromOutputLabel();
+    //bool RequireSentenceSeg() const override;
 
     // GetLabelMapping - Gets the label mapping from integer index to label type
     // returns - a map from numeric datatype to native label type

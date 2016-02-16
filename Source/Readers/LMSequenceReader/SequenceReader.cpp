@@ -747,7 +747,7 @@ void SequenceReader<ElemType>::ReleaseMemory()
     m_labelsIdBuffer = NULL;
     m_featureData.clear();
     m_labelIdData.clear();
-    m_labelData.clear();
+    //m_labelData.clear();
     m_sequence.clear();
 }
 
@@ -884,8 +884,8 @@ void SequenceReader<ElemType>::StartMinibatchLoop(size_t mbSize, size_t epoch, s
     m_featureData.reserve(m_featureCount * epochSize);
     if (m_labelInfo[labelInfoOut].type == labelCategory)
         m_labelIdData.reserve(epochSize);
-    else if (m_labelInfo[labelInfoOut].type != labelNone)
-        m_labelData.reserve(epochSize);
+    //else if (m_labelInfo[labelInfoOut].type != labelNone)
+    //    m_labelData.reserve(epochSize);
     m_sequence.reserve(m_seqIndex); // clear out the sequence array
     // this is too complicated for LM
     // SetupEpoch();
@@ -1623,8 +1623,8 @@ void BatchSequenceReader<ElemType>::StartMinibatchLoop(size_t mbSize, size_t epo
     m_featureData.reserve(m_featureCount * epochSize);
     if (m_labelInfo[labelInfoOut].type == labelCategory)
         m_labelIdData.reserve(epochSize);
-    else if (m_labelInfo[labelInfoOut].type != labelNone)
-        m_labelData.reserve(epochSize);
+    //else if (m_labelInfo[labelInfoOut].type != labelNone)
+    //    m_labelData.reserve(epochSize);
     m_sequence.reserve(m_seqIndex); // clear out the sequence array
     // this is too complicated for LM
     // SetupEpoch();
@@ -1639,23 +1639,29 @@ void BatchSequenceReader<ElemType>::StartMinibatchLoop(size_t mbSize, size_t epo
     Reset();
 }
 
-// this function updates mToProcess[] (only, except it also lazily initializes mProcessed[])
+// fill mToProcess[] with the next set of sequences of the same length
+// This function updates mToProcess[] (only, except it also lazily initializes mProcessed[]).
+// If mToProcess[] is not empty, then it will check whether those sequences are done, and if not, just return with mToProcess[] unchanged.
+// It returns 0 if there are no more sequences to process in this epoch.
 template <class ElemType>
-size_t BatchSequenceReader<ElemType>::FindNextSentences(size_t numRead)
+size_t BatchSequenceReader<ElemType>::DetermineSequencesToProcess()
 {
-    size_t sln = 0;
-
-    if (numRead == 0)
+    if (mNumRead == 0) // no data loaded or input file empty (?)
         return 0;
 
+    // lazily create the mProcessed[] array
     if (mProcessed.size() == 0)
     {
-        mProcessed.resize(numRead, false);
+        mProcessed.resize(mNumRead, false);
     }
 
+    // lazily check if we are done
+    // We are done if mToProcess[] contains a sequence for which mProcessed[] is set (...which likely applies to all?).
     if (mToProcess.size() > 0)
     {
         bool allDone = false;
+        // allDone gets set when at least one entry in mToProcess[] is complete
+        // I guess since they all have the same length, they are then all complete
         for (int s = 0; s < mToProcess.size(); s++)
         {
             int mp = (int) mToProcess[s];
@@ -1667,43 +1673,44 @@ size_t BatchSequenceReader<ElemType>::FindNextSentences(size_t numRead)
                 break;
             }
         }
-        if (allDone)
+        if (allDone) // if we are done
         {
             mToProcess.clear();
         }
     }
 
+    // if we still have unfinished sequences then just return their length
     if (mToProcess.size() > 0)
     {
-        sln = m_parser.mSentenceIndex2SentenceInfo[mToProcess[0]].sLen;
-        return sln;
+        // They are all the same length, so we can just get the value from the first entry.
+        return m_parser.mSentenceIndex2SentenceInfo[mToProcess[0]].sLen;
     }
 
-    for (size_t seq = mLastProcssedSentenceId; seq < numRead; seq++)
+    // mToProcess[] is empty: fill it up with at most mRequestedNumParallelSequences entries of the same length
+    size_t sln = 0;
+    for (size_t seq = mLastProcssedSentenceId; seq < mNumRead && mToProcess.size() < mRequestedNumParallelSequences; seq++)
     {
+        // skip entries that are done
         if (mProcessed[seq])
             continue;
 
+        // first unprocessed sequence determines the length if this minibatch
         if (sln == 0)
-        {
             sln = m_parser.mSentenceIndex2SentenceInfo[seq].sLen;
-        }
-        if (sln == m_parser.mSentenceIndex2SentenceInfo[seq].sLen &&
-            mProcessed[seq] == false &&
-            mToProcess.size() < mRequestedNumParallelSequences)
-        {
-            mToProcess.push_back(seq);
-        }
+        else if (sln != m_parser.mSentenceIndex2SentenceInfo[seq].sLen)
+            continue;
 
-        if (mToProcess.size() == mRequestedNumParallelSequences)
-            break;
+        // include all of the same length as the first
+        mToProcess.push_back(seq);
     }
+    // if all are already done, we will return sln=0
 
     return sln;
 }
 
+// fill the buffer with the next one or more sequences to process
 template <class ElemType>
-bool BatchSequenceReader<ElemType>::EnsureDataAvailable(size_t /*mbStartSample*/, size_t& firstPosInSentence)
+bool BatchSequenceReader<ElemType>::GetMinibatchData(size_t& firstPosInSentence)
 {
     bool bDataIsThere = true;
 
@@ -1712,27 +1719,28 @@ bool BatchSequenceReader<ElemType>::EnsureDataAvailable(size_t /*mbStartSample*/
 
     const bool nextWord = (m_labelInfo[labelInfoOut].type == labelNextWord);
 
-    // see how many we already read
-    size_t sLn = FindNextSentences(mNumRead);
-    if (sLn == 0)
+    // --- STEP 1: determine the next set of sequences to process (-> mToProcess[])
+    size_t sLn = DetermineSequencesToProcess();
+    if (sLn == 0) // none left: we hit the end of an epoch boundary; shuffle in the next epoch
     {
         Reset();
 
         std::vector<SequencePosition> seqPos;
-        fprintf(stderr, "LMSequenceReader: Reading data..."), fflush(stderr);
+        fprintf(stderr, "LMSequenceReader: Reading epoch data..."), fflush(stderr);
         mNumRead = m_parser.Parse(CACHE_BLOCK_SIZE, &m_labelTemp, &m_featureTemp, &seqPos);
-        fprintf(stderr, " %d sentences read.\n", (int) mNumRead);
+        fprintf(stderr, " %d sequences read.\n", (int) mNumRead);
         firstPosInSentence = mLastPosInSentence;
         if (mNumRead == 0)
             return false;
 
+        // TODO: disable this for decoding
         std::random_shuffle(m_parser.mSentenceIndex2SentenceInfo.begin(), m_parser.mSentenceIndex2SentenceInfo.end());
 
         m_readNextSampleLine += mNumRead;
-        sLn = FindNextSentences(mNumRead);
+        sLn = DetermineSequencesToProcess();
     }
 
-    // add one minibatch
+    // --- STEP 2: copy sentences in mToProcess[] into m_featureData[] and m_labelIdData[]
     LabelInfo& labelIn  = m_labelInfo[labelInfoIn];
     LabelInfo& labelOut = m_labelInfo[labelInfoOut];
 
@@ -1805,6 +1813,11 @@ size_t BatchSequenceReader<ElemType>::GetNumParallelSequences()
     return mToProcess.size();
 }
 
+// How this returns data:
+//  - input sequences are chunked into "epochs" as defined in XXX?
+//  - each epoch's sequences are randomly sorted
+//  - up to N sequences of the same length are returned in each MB
+//     - minibatches consist of sequences of the same length only (no gaps)
 template <class ElemType>
 bool BatchSequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemType>*>& matrices)
 {
@@ -1815,98 +1828,102 @@ bool BatchSequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<E
 
     // TODO: validate whether the passed matrices set matches reader section definitions
 
+    // --- STEP 1: get the data for the this minibatch
+
     size_t firstPosInSentence;
-    bool moreData = EnsureDataAvailable(m_mbStartSample, firstPosInSentence);
+    bool moreData = GetMinibatchData(firstPosInSentence);
     if (!moreData)
     {
         m_pMBLayout->Init(mToProcess.size(), 0);
         return false;
     }
-    // actual size is the size of the next seqence
-    size_t actualmbsize = 0;
+    // now:
+    //  - there is at least one sequence to return
+    //  - mToProcess[] lists all sequences
+    //  - mProcessed[s] says whether a sequence has completed
+    //  - m_featureData[j] contains the input label indices
+    //  - m_labelIdData[j] contains the output label indices
 
-    // figure out the size of the next sequence
-    actualmbsize = m_featureData.size();
+    // --- STEP 2: transfer the data to the matrices
+
+    size_t actualmbsize = m_featureData.size();
+    assert(actualmbsize > 0);
     assert(m_labelIdData.empty() || m_labelIdData.size() == actualmbsize);
     if (actualmbsize > m_mbSize * mToProcess.size())
         RuntimeError("Specified minibatch size %d is smaller than the actual minibatch size %d.", (int) m_mbSize, (int) actualmbsize);
 
-    // get the features
-    size_t featureDim = m_labelInfo[labelInfoIn].dim;
-    // BUGBUG: How can this ever be 0 here?
-    if (actualmbsize > 0)
+    // create MBLayout
+    // This handles variable-length sequences.
+    size_t nT = actualmbsize / mToProcess.size();
+    m_pMBLayout->Init(mToProcess.size(), nT);
+    for (size_t s = 0; s < mToProcess.size(); s++)
     {
-        // loop through all the samples
-
-        // create MBLayout
-        size_t nT = actualmbsize / mToProcess.size();
-        m_pMBLayout->Init(mToProcess.size(), nT);
-        for (size_t s = 0; s < mToProcess.size(); s++)
-        {
-            size_t seq = mToProcess[s];
-            size_t len = m_parser.mSentenceIndex2SentenceInfo[seq].sLen - 1; // -1 because last one is label
-            ptrdiff_t begin = -(ptrdiff_t) firstPosInSentence;
-            ptrdiff_t end = (ptrdiff_t) len - (ptrdiff_t) firstPosInSentence;
-            if (begin >= (ptrdiff_t) nT)
-                LogicError("BatchSequenceReader: Sentence begin outside minibatch?");
-            if (end < 0)
-                LogicError("BatchSequenceReader: Sentence end outside minibatch?");
-            m_pMBLayout->AddSequence(NEW_SEQUENCE_ID, s, begin, (size_t) end);
-            if (begin > 0)
-                m_pMBLayout->AddGap(s, 0, (size_t) begin);
-            if (end < (ptrdiff_t) nT)
-                m_pMBLayout->AddGap(s, end, nT);
-        }
-
-        // copy m_featureData to matrix
-        // m_featureData is a sparse, already with interleaved parallel sequences. We copy it into a dense matrix.
-        // we always copy it to cpu first and then convert to gpu if gpu is desired.
-        auto iter = matrices.find(m_featuresName);
-        if (iter != matrices.end()) // (if not found then feature matrix is not requested this time)
-        {
-            Matrix<ElemType>& features = *iter->second;
-
-            bool moveMatrix = features.GetMatrixType() != MatrixType::SPARSE;
-            // BUGBUG: Matrix does not support modifying a dense GPU matrix temporarily ^^ on the CPU. We should instead have a local CPU matrix and assign it over.
-            DEVICEID_TYPE featureDeviceId = features.GetDeviceId();
-            features.TransferFromDeviceToDevice(featureDeviceId, CPUDEVICE, moveMatrix, true, false);
-
-            if (features.GetMatrixType() == MatrixType::SPARSE)
-            {
-                features.Resize(featureDim, actualmbsize, actualmbsize);
-                features.Reset();
-            }
-            else
-            {
-                features.Resize(featureDim, actualmbsize);
-                features.SetValue(0);
-            }
-
-            for (size_t j = 0; j < actualmbsize; ++j) // note: this is a loop over matrix columns, not time steps
-            {
-                // vector of feature data goes into matrix column
-                size_t idx = (size_t) m_featureData[j]; // one-hot index of the word, indexed by column (i.e. already interleaved, t=j/mToProcess.size(), s=j%mToProcess.size())
-
-                features.SetValue(idx, j, (ElemType) 1);
-            }
-
-            features.TransferFromDeviceToDevice(CPUDEVICE, featureDeviceId, moveMatrix, false, false);
-        }
-
-        // TODO: move these two methods to startMiniBatchLoop()
-        if (readerMode == ReaderMode::Class)
-        {
-            GetInputToClass(matrices);
-            GetClassInfo();
-        }
-        GetLabelOutput(matrices, 0, actualmbsize);
-
-        // go to the next sequence
-        m_seqIndex++;
+        size_t seq = mToProcess[s];
+        size_t len = m_parser.mSentenceIndex2SentenceInfo[seq].sLen - 1; // -1 because last one is label
+        ptrdiff_t begin = -(ptrdiff_t) firstPosInSentence;
+        ptrdiff_t end = (ptrdiff_t) len - (ptrdiff_t) firstPosInSentence;
+        if (begin >= (ptrdiff_t) nT)
+            LogicError("BatchSequenceReader: Sentence begin outside minibatch?");
+        if (end < 0)
+            LogicError("BatchSequenceReader: Sentence end outside minibatch?");
+        m_pMBLayout->AddSequence(NEW_SEQUENCE_ID, s, begin, (size_t) end);
+        if (begin > 0)
+            m_pMBLayout->AddGap(s, 0, (size_t) begin);
+        if (end < (ptrdiff_t) nT)
+            m_pMBLayout->AddGap(s, end, nT);
     }
-    else
-        return false;
 
+
+    // copy m_featureData to matrix
+    // m_featureData is a sparse, already with interleaved parallel sequences. We copy it into a dense matrix.
+    // we always copy it to cpu first and then convert to gpu if gpu is desired.
+    size_t featureDim = m_labelInfo[labelInfoIn].dim;
+    auto iter = matrices.find(m_featuresName);
+    if (iter != matrices.end()) // (if not found then feature matrix is not requested this time)
+    {
+        Matrix<ElemType>& features = *iter->second;
+
+        bool moveMatrix = features.GetMatrixType() != MatrixType::SPARSE;
+        // BUGBUG: Matrix does not support modifying a dense GPU matrix temporarily ^^ on the CPU. We should instead have a local CPU matrix and assign it over.
+        DEVICEID_TYPE featureDeviceId = features.GetDeviceId();
+        features.TransferFromDeviceToDevice(featureDeviceId, CPUDEVICE, moveMatrix, true, false);
+
+        if (features.GetMatrixType() == MatrixType::SPARSE)
+        {
+            features.Resize(featureDim, actualmbsize, actualmbsize);
+            features.Reset();
+        }
+        else
+        {
+            features.Resize(featureDim, actualmbsize);
+            features.SetValue(0);
+        }
+
+        for (size_t j = 0; j < actualmbsize; ++j) // note: this is a loop over matrix columns, not time steps
+        {
+            // vector of feature data goes into matrix column
+            size_t idx = (size_t) m_featureData[j]; // one-hot index of the word, indexed by column (i.e. already interleaved, t=j/mToProcess.size(), s=j%mToProcess.size())
+
+            features.SetValue(idx, j, (ElemType) 1);
+        }
+
+        features.TransferFromDeviceToDevice(CPUDEVICE, featureDeviceId, moveMatrix, false, false);
+    }
+
+    // get class info
+    if (readerMode == ReaderMode::Class)
+    {
+        GetInputToClass(matrices);
+        GetClassInfo();
+    }
+
+    // get labels
+    GetLabelOutput(matrices, 0, actualmbsize);
+
+    // go to the next sequence
+    m_seqIndex++;
+
+#if 0 // what is this?
     // now transfer to the GPU as needed
     // get the features array
     if (matrices.find(m_featuresName) == matrices.end())
@@ -1923,6 +1940,7 @@ bool BatchSequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<E
             features.SetValue(featureDim, 1, features.GetDeviceId(), &m_featuresBuffer[i * featureDim], matrixFlagNormal);
         }
     }
+#endif
 
     // we read some records, so process them
     return true;
@@ -1955,6 +1973,7 @@ void BatchSequenceReader<ElemType>::SetSentenceBegin(int wrd, int uttPos, int ti
 }
 #endif
 
+#if 0
 // TODO: this should have been renamed to CopyMBLayoutTo(), but it had the wrong signature??
 template <class ElemType>
 void BatchSequenceReader<ElemType>::SetSentenceSegBatch(vector<size_t>& sentenceEnd)
@@ -1969,6 +1988,7 @@ void BatchSequenceReader<ElemType>::SetSentenceSegBatch(vector<size_t>& sentence
         sentenceEnd.assign(mToProcess.size(), m_mbSize + 2);
     }
 }
+#endif
 
 template <class ElemType>
 bool BatchSequenceReader<ElemType>::DataEnd(EndDataType endDataType)
@@ -1982,7 +2002,7 @@ bool BatchSequenceReader<ElemType>::DataEnd(EndDataType endDataType)
         break;
     case endDataEpoch:
     case endDataSet:
-        ret = !EnsureDataAvailable(m_mbStartSample, firstPosInSentence);
+        ret = !GetMinibatchData(firstPosInSentence); // TODO: What does this do? Check whether there is more data?
         break;
     case endDataSentence: // for fast reader each minibatch is considered a "sentence", so always true
         if (mSentenceEnd)
@@ -1994,17 +2014,18 @@ bool BatchSequenceReader<ElemType>::DataEnd(EndDataType endDataType)
     return ret;
 }
 
-/// labels are in [L x T] matrix
-/// where L depends on reader mode:
-///     4             under CLASS           [wid, class-id, beg-class, end-class]
-///     2*(noise + 1) under NCE training    [wid, prob, (noise-id, noise-prob)+]
-///     1             o.w.                  [wid]
-/// the following comments are obsolete now
-/// 1st row is the word id
-/// 2nd row is the class id of this word
-/// 3rd and 4th rows are the begining and ending indices of this class
-/// notice that indices are defined as follows [begining ending_indx) of the class
-/// i.e., the ending_index is 1 plus of the true ending index
+// fill the labels (from m_labelIdData)
+// When using classes, labels are in [L x T] matrix.
+// where L depends on reader mode:
+//     4             under CLASS           [wid, class-id, beg-class, end-class]
+//     2*(noise + 1) under NCE training    [wid, prob, (noise-id, noise-prob)+]
+//     1             o.w.                  [wid]
+// the following comments are obsolete now
+// 1st row is the word id
+// 2nd row is the class id of this word
+// 3rd and 4th rows are the begining and ending indices of this class
+// notice that indices are defined as follows [begining ending_indx) of the class
+// i.e., the ending_index is 1 plus of the true ending index
 template <class ElemType>
 void BatchSequenceReader<ElemType>::GetLabelOutput(std::map<std::wstring,
                                                    Matrix<ElemType>*>& matrices,
@@ -2100,6 +2121,7 @@ void BatchSequenceReader<ElemType>::CopyMBLayoutTo(MBLayoutPtr pMBLayout)
     pMBLayout->CopyFrom(m_pMBLayout);
 }
 
+#if 0
 template <class ElemType>
 int BatchSequenceReader<ElemType>::GetSentenceEndIdFromOutputLabel()
 {
@@ -2116,6 +2138,7 @@ int BatchSequenceReader<ElemType>::GetSentenceEndIdFromOutputLabel()
     else
         return -1;
 }
+#endif
 
 template class BatchSequenceReader<double>;
 template class BatchSequenceReader<float>;

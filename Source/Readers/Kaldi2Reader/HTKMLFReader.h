@@ -212,9 +212,6 @@ public:
     {
         pMBLayout->CopyFrom(m_pMBLayout);
     }
-    bool RequireSentenceSeg() const override
-    {
-        return !m_framemode;
-    };
+    //bool RequireSentenceSeg() const override { return !m_framemode; };
 };
 } } }
