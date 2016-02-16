@@ -904,15 +904,15 @@ bool SequenceReader<ElemType>::DataEnd(EndDataType endDataType)
     bool ret = false;
     switch (endDataType)
     {
-    case endDataNull:
-        assert(false);
-        break;
-    case endDataEpoch:
-        ret = m_sequence.size() > 0 && m_mbStartSample > m_sequence[m_sequence.size() - 1];
-        break;
-    case endDataSet:
-        ret = !EnsureDataAvailable(m_mbStartSample);
-        break;
+    //case endDataNull:
+    //    assert(false);
+    //    break;
+    //case endDataEpoch:
+    //    ret = m_sequence.size() > 0 && m_mbStartSample > m_sequence[m_sequence.size() - 1];
+    //    break;
+    //case endDataSet:
+    //    ret = !EnsureDataAvailable(m_mbStartSample);
+    //    break;
     case endDataSentence: // for fast reader each minibatch is considered a "sentence", so always true
         ret = SentenceEnd();
         break;
@@ -1709,17 +1709,17 @@ size_t BatchSequenceReader<ElemType>::DetermineSequencesToProcess()
 }
 
 // fill the buffer with the next one or more sequences to process
+// Advances mLastPosInSentence, which is the cursor into the sentence(s).
+// Returns the previous value of mLastPosInSentence, which is needed in creating the MB layout.
+// This is a subroutine for GetMinibatch(), it is not called from elsewhere.
 template <class ElemType>
-bool BatchSequenceReader<ElemType>::GetMinibatchData(size_t& firstPosInSentence)
+bool BatchSequenceReader<ElemType>::GetMinibatchData(size_t& /*out*/ firstPosInSentence)
 {
-    bool bDataIsThere = true;
-
     m_featureData.clear();
     m_labelIdData.clear();
 
-    const bool nextWord = (m_labelInfo[labelInfoOut].type == labelNextWord);
-
     // --- STEP 1: determine the next set of sequences to process (-> mToProcess[])
+
     size_t sLn = DetermineSequencesToProcess();
     if (sLn == 0) // none left: we hit the end of an epoch boundary; shuffle in the next epoch
     {
@@ -1731,7 +1731,7 @@ bool BatchSequenceReader<ElemType>::GetMinibatchData(size_t& firstPosInSentence)
         fprintf(stderr, " %d sequences read.\n", (int) mNumRead);
         firstPosInSentence = mLastPosInSentence;
         if (mNumRead == 0)
-            return false;
+            return false; // end
 
         // TODO: disable this for decoding
         std::random_shuffle(m_parser.mSentenceIndex2SentenceInfo.begin(), m_parser.mSentenceIndex2SentenceInfo.end());
@@ -1741,23 +1741,28 @@ bool BatchSequenceReader<ElemType>::GetMinibatchData(size_t& firstPosInSentence)
     }
 
     // --- STEP 2: copy sentences in mToProcess[] into m_featureData[] and m_labelIdData[]
-    LabelInfo& labelIn  = m_labelInfo[labelInfoIn];
+
+    const bool nextWord = (m_labelInfo[labelInfoOut].type == labelNextWord);
+    LabelInfo& labelIn = m_labelInfo[labelInfoIn];
     LabelInfo& labelOut = m_labelInfo[labelInfoOut];
 
     firstPosInSentence = mLastPosInSentence;
-    size_t i = mLastPosInSentence;
-    size_t j = 0;
-    // exclude the last token since it is the last label to be predicted
-    for (i = mLastPosInSentence; j < m_mbSize && i < sLn - 1; i++, j++)
+
+    size_t & i = mLastPosInSentence;
+    size_t iend = sLn - (labelOut.type != labelNone); // exclude the last token since it is the last label to be predicted
+    // ############### BREAKING CHANGE ################
+    // We use sLn, not sLn -1, if labelOut.type is labelNode, assuming there is no output label, and all labels are inputs.
+    // ############### BREAKING CHANGE ################
+    for (size_t j = 0; j < m_mbSize && i < iend; i++, j++)
     {
         for (int k = 0; k < mToProcess.size(); k++)
         {
             size_t seq = mToProcess[k];
-            size_t label = m_parser.mSentenceIndex2SentenceInfo[seq].sBegin + i;
+            size_t pos = m_parser.mSentenceIndex2SentenceInfo[seq].sBegin + i;
 
             // labelIn should be a category label
-            const auto& labelValue = m_labelTemp[label];
-            label++; // consume it
+            const auto& labelValue = m_labelTemp[pos];
+            pos++; // consume it
 
             // TODO: should ignore <s>, check the sentence ending is </s>
             // need to remove <s> from the training set
@@ -1765,11 +1770,11 @@ bool BatchSequenceReader<ElemType>::GetMinibatchData(size_t& firstPosInSentence)
             // TODO: ^^ understand the above comment
             if (labelIn.type == labelCategory)
             {
-                LabelIdType index = GetIdFromLabel(labelValue, labelIn);
+                LabelIdType labelId = GetIdFromLabel(labelValue, labelIn);
 
                 // use the found value, and set the appropriate location to a 1.0
-                assert(labelIn.dim > index); // if this goes off labelOut dimension is too small
-                m_featureData.push_back((float) index);
+                assert(labelIn.dim > labelId); // if this goes off labelOut dimension is too small
+                m_featureData.push_back((float) labelId);
             }
             else
                 RuntimeError("Input labels are expected to be category labels.");
@@ -1777,40 +1782,37 @@ bool BatchSequenceReader<ElemType>::GetMinibatchData(size_t& firstPosInSentence)
             // now get the output label
             if (labelOut.type != labelNone)
             {
-                const auto& labelValue = m_labelTemp[label];
-                LabelIdType index;
+                const auto& labelValue = m_labelTemp[pos];
+                LabelIdType labelId;
                 if (labelOut.type == labelCategory)
                 {
-                    label++; // consume it
-                    index = GetIdFromLabel(labelValue, labelOut);
+                    pos++; // consume it   --TODO: value is not used after this
+                    labelId = GetIdFromLabel(labelValue, labelOut);
                 }
                 else if (nextWord)
                 {
-                    // this is the next word (label was incremented above)
+                    // this is the next word (pos was already incremented above when reading out labelValue)
                     if (EqualCI(labelValue, labelIn.endSequence)) // end symbol may differ between input and output
-                        index = GetIdFromLabel(labelIn.endSequence, labelIn);
+                        labelId = GetIdFromLabel(labelIn.endSequence, labelIn);
                     else
-                        index = GetIdFromLabel(labelValue, labelIn);
+                        labelId = GetIdFromLabel(labelValue, labelIn);
                 }
                 else
                     LogicError("Unexpected output label type."); // should never get here
 
-                m_labelIdData.push_back(index);
+                m_labelIdData.push_back(labelId);
             }
 
             m_totalSamples++;
         }
     }
+    //mLastPosInSentence = i; // (we could also iterate over mLastPosInSentence directly)
 
-    mLastPosInSentence = i;
+    // remember if we are at the end
+    // Note: This flag will propagate into setting mProcessed[] in DataEnd(), which seems a bit fragile. Can't we do it here?
+    mSentenceEnd = (i == iend);
 
-    return bDataIsThere;
-}
-
-template <class ElemType>
-size_t BatchSequenceReader<ElemType>::GetNumParallelSequences()
-{
-    return mToProcess.size();
+    return true;
 }
 
 // How this returns data:
@@ -1859,8 +1861,12 @@ bool BatchSequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<E
     for (size_t s = 0; s < mToProcess.size(); s++)
     {
         size_t seq = mToProcess[s];
-        size_t len = m_parser.mSentenceIndex2SentenceInfo[seq].sLen - 1; // -1 because last one is label
-        ptrdiff_t begin = -(ptrdiff_t) firstPosInSentence;
+        const LabelInfo& labelOut = m_labelInfo[labelInfoOut];
+        size_t len = m_parser.mSentenceIndex2SentenceInfo[seq].sLen - (labelOut.type != labelNone); // -1 because last one is label
+        // ############### BREAKING CHANGE ################
+        // We use sLen, not sLen -1, if labelOut.type is labelNode, assuming there is no output label, and all labels are inputs.
+        // ############### BREAKING CHANGE ################
+        ptrdiff_t begin = -(ptrdiff_t)firstPosInSentence;
         ptrdiff_t end = (ptrdiff_t) len - (ptrdiff_t) firstPosInSentence;
         if (begin >= (ptrdiff_t) nT)
             LogicError("BatchSequenceReader: Sentence begin outside minibatch?");
@@ -1990,24 +1996,25 @@ void BatchSequenceReader<ElemType>::SetSentenceSegBatch(vector<size_t>& sentence
 }
 #endif
 
+// note: DataEnd() must be called for each minibatch in order to propagate mSentenceEnd to mProcessed[]
 template <class ElemType>
 bool BatchSequenceReader<ElemType>::DataEnd(EndDataType endDataType)
 {
-    size_t firstPosInSentence;
+    //size_t firstPosInSentence;
     bool ret = false;
     switch (endDataType)
     {
-    case endDataNull:
-        assert(false);
-        break;
-    case endDataEpoch:
-    case endDataSet:
-        ret = !GetMinibatchData(firstPosInSentence); // TODO: What does this do? Check whether there is more data?
-        break;
+    //case endDataNull:
+    //    assert(false);
+    //    break;
+    //case endDataEpoch:
+    //case endDataSet:
+    //    ret = !GetMinibatchData(firstPosInSentence); // TODO: What does this do? Check whether there is more data?
+    //    break;
     case endDataSentence: // for fast reader each minibatch is considered a "sentence", so always true
         if (mSentenceEnd)
-            for (auto ptr = mToProcess.begin(); ptr != mToProcess.end(); ptr++)
-                mProcessed[*ptr] = true;
+            for (auto seq : mToProcess)
+                mProcessed[seq] = true;
         ret = mSentenceEnd;
         break;
     }
@@ -2026,6 +2033,7 @@ bool BatchSequenceReader<ElemType>::DataEnd(EndDataType endDataType)
 // 3rd and 4th rows are the begining and ending indices of this class
 // notice that indices are defined as follows [begining ending_indx) of the class
 // i.e., the ending_index is 1 plus of the true ending index
+// This is a subroutine to GetMinibatch() and is only called from there.
 template <class ElemType>
 void BatchSequenceReader<ElemType>::GetLabelOutput(std::map<std::wstring,
                                                    Matrix<ElemType>*>& matrices,
@@ -2100,7 +2108,8 @@ void BatchSequenceReader<ElemType>::GetLabelOutput(std::map<std::wstring,
                 labels->SetValue(0, j, -epsilon - (ElemType) wrd);
         }
 
-        // keep track of sentence ends. mSentenceEnd is read only in DataEnd().
+#if 0   // This is fragile--if a line does not end with </s>, we will never get out of here. Instead, this is now set in GetMinibatchData().
+        // keep track of sentence ends. mSentenceEnd is read only in DataEnd(), which will then reset mProcessed[].
         if (j == actualmbsize - 1) // if last entry then set mSentenceEnd to whether the word is the sentence-end symbol
         {
             // find numeric index of sentence-end token
@@ -2109,16 +2118,11 @@ void BatchSequenceReader<ElemType>::GetLabelOutput(std::map<std::wstring,
 
             mSentenceEnd = (wrd == (int)endSequenceIndex);
         }
+#endif
     }
     // send it back to the GPU if so desired
     if (curDevId != CPUDEVICE && readerMode != ReaderMode::Class)
         labels->TransferFromDeviceToDevice(CPUDEVICE, curDevId, false, false, false);
-}
-
-template <class ElemType>
-void BatchSequenceReader<ElemType>::CopyMBLayoutTo(MBLayoutPtr pMBLayout)
-{
-    pMBLayout->CopyFrom(m_pMBLayout);
 }
 
 #if 0

@@ -884,15 +884,15 @@ bool SparseBinaryInput<ElemType>::DataEnd(EndDataType endDataType)
     bool ret = false;
     switch (endDataType)
     {
-    case endDataNull:
-        assert(false);
-        break;
-    case endDataEpoch:
-        ret = (m_nextMB >= m_epochSize);
-        break;
-    case endDataSet:
-        ret = (m_nextMB >= m_epochSize);
-        break;
+    //case endDataNull:
+    //    assert(false);
+    //    break;
+    //case endDataEpoch:
+    //    ret = (m_nextMB >= m_epochSize);
+    //    break;
+    //case endDataSet:
+    //    ret = (m_nextMB >= m_epochSize);
+    //    break;
     case endDataSentence: // for fast reader each minibatch is considered a "sentence", so always true
         ret = true;
         break;

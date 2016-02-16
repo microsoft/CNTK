@@ -1077,15 +1077,15 @@ bool UCIFastReader<ElemType>::DataEnd(EndDataType endDataType)
     bool ret = false;
     switch (endDataType)
     {
-    case endDataNull:
-        assert(false);
-        break;
-    case endDataEpoch:
-        ret = (m_mbStartSample / m_epochSize != m_epoch);
-        break;
-    case endDataSet:
-        ret = EnsureDataAvailable(m_mbStartSample, true);
-        break;
+    //case endDataNull:
+    //    assert(false);
+    //    break;
+    //case endDataEpoch:
+    //    ret = (m_mbStartSample / m_epochSize != m_epoch);
+    //    break;
+    //case endDataSet:
+    //    ret = EnsureDataAvailable(m_mbStartSample, true);
+    //    break;
     case endDataSentence: // for fast reader each minibatch is considered a "sentence", so always true
         ret = true;
         break;
