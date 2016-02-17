@@ -124,10 +124,10 @@
     <ClInclude Include="targetver.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\..\..\Source\Common\DebugUtil.cpp" />
     <ClCompile Include="constants.cpp" />
     <ClCompile Include="ConvolutionEngineTests.cpp" />
     <ClCompile Include="CPUSparseMatrixTests.cpp" />
-    <ClCompile Include="DebugUtil.cpp" />
     <ClCompile Include="fixtures.cpp" />
     <ClCompile Include="GPUMatrixCudaBlasTests.cpp" />
     <ClCompile Include="GPUMatrixTests.cpp" />
