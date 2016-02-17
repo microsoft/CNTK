@@ -83,9 +83,10 @@ void UCIParser<NumType, LabelType>::SetupStateTables(char customDelimiter, char 
 
     SetStateRange(0, 255, WholeNumber, Label);
     SetStateRange('0', '9', WholeNumber, WholeNumber);
-    SetState('.', WholeNumber, Period);
     if (customDecimalPoint != 0)
         SetState(customDecimalPoint, WholeNumber, Period);
+    else
+        SetState('.', WholeNumber, Period);
 
     SetState('e', WholeNumber, TheLetterE);
     SetState('E', WholeNumber, TheLetterE);

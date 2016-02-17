@@ -1636,8 +1636,10 @@ public:
         fstream << m_eval;
         fstream << m_spatial;
         fstream << m_expAvgFactor;
-        fstream << (int32_t) m_imageLayoutKind;
+        fstream << (int32_t)m_imageLayoutKind;
         fstream << m_mbCount;
+        fstream << m_epsilon;
+        fstream << m_useCntkEngine;
     }
 
     void Load(File& fstream, size_t modelVersion) override
@@ -1665,6 +1667,11 @@ public:
         {
             fstream >> m_imageLayoutKind;
             fstream >> m_mbCount;
+        }
+        if (verWritten >= 0x00010003)
+        {
+            fstream >> m_epsilon;
+            fstream >> m_useCntkEngine;
         }
     }
 
@@ -1860,19 +1867,11 @@ public:
 private:
     struct VersionInfo
     {
-        // int32_t VerWrittenCur() const     { return 0x00010001; } // Initial
-        int32_t VerWrittenCur() const
-        {
-            return 0x00010002;
-        } // Added m_imageLayoutKind and m_mbCount
-        int32_t VerReadableCur() const
-        {
-            return 0x00010002;
-        }
-        int32_t VerWeCanReadBack() const
-        {
-            return 0x00010001;
-        }
+        //int32_t VerWrittenCur() const      { return 0x00010001; } // Initial
+        //int32_t VerWrittenCur() const      { return 0x00010002; } // Added m_imageLayoutKind and m_mbCount
+        int32_t VerWrittenCur() const        { return 0x00010003; } // Added m_epsilon and m_useCntkEngine
+        int32_t VerReadableCur() const       { return 0x00010003; }
+        int32_t VerWeCanReadBack() const     { return 0x00010001; }
     };
     VersionInfo m_version;
 

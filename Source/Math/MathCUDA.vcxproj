@@ -69,7 +69,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
     <CudaCodeGen>$(CNTK_CUDA_CODEGEN_RELEASE)</CudaCodeGen>
-    <CudaCodeGen Condition="'$(CudaCodeGen)'==''">compute_20,sm_20;compute_30,sm_30;compute_35,sm_35;compute_50,sm_50;</CudaCodeGen>
+    <CudaCodeGen Condition="'$(CudaCodeGen)'==''">compute_30,sm_30;compute_35,sm_35;compute_50,sm_50;</CudaCodeGen>
   </PropertyGroup>
   <ItemDefinitionGroup>
     <ClCompile>
