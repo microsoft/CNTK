@@ -106,6 +106,9 @@ public:
     void Save(const std::wstring& fileName, const FileOptions fileFormat = FileOptions::fileOptionsBinary) const;
     void SaveEdited(const std::wstring& fileName, const FileOptions fileFormat = FileOptions::fileOptionsBinary);
 
+    template <class ElemType>
+    void SaveToDbnFile(ComputationNetworkPtr net, const std::wstring& fileName) const;
+
 private:
 
     void SaveToFileImpl(const std::wstring& fileName, const FileOptions fileFormat) const;
