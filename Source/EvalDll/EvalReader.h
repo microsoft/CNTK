@@ -145,17 +145,10 @@ public:
 
             Matrix<ElemType>* matrix = iterIn->second;
 
-            // resize to the proper size to hold the data
-            matrix->Resize(rows, recordCount);
-
             // copy over the data
             std::vector<ElemType>* data = iter->second;
-            // size_t  = m_currentRecord*rows;
-            void* mat = &(*matrix)(0, 0);
-            size_t matSize = matrix->GetNumElements() * sizeof(ElemType);
-            void* dataPtr = (void*) ((ElemType*) data->data() + m_currentRecord * rows);
-            size_t dataSize = rows * recordCount * sizeof(ElemType);
-            memcpy_s(mat, matSize, dataPtr, dataSize);
+            ElemType* dataPtr = ((ElemType*)data->data()) + (m_currentRecord * rows);
+            matrix->SetValue(rows, recordCount, matrix->GetDeviceId(), dataPtr, matrixFlagNormal);
         }
 
         // increment our record pointer
