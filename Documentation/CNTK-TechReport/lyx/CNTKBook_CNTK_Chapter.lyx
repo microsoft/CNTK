@@ -2501,6 +2501,34 @@ parameter up so that it can be shared by both the training and evaluation
  blocks.
 \end_layout
 
+\begin_layout Itemize
+customDelimiter : the customized delimiter.
+ By default, spaces are used as the delimiter.
+ With this parameter you can choose to use another delimiter such as comma
+ or semicolon in addition to spaces.
+ Note though, this reader does not handle empty fields, e.g., two commas in
+ a row, with or without whitespace in-between.
+ 
+\end_layout
+
+\begin_layout Itemize
+customDecimalPoint: the customized decimal point.
+ By default, dot is used as the decimal point.
+ With this parameter you can choose to use another decimal point such as
+ those used in European countries.
+ 
+\end_layout
+
+\begin_layout Itemize
+labelType : to indicate how the label columns should be interpreted.
+ By default it is set to "Category" which means it requires a mapping table
+ to map from values (can be string) to class IDs so that values are converted
+ to 1-hot representation.
+ It can be set to "Regression" to indicate that the values are used directly
+ without any conversion or "None" to indicate no labels are used.
+ 
+\end_layout
+
 \begin_layout Subsection
 HTKMLFReader
 \begin_inset Index idx
