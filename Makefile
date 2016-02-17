@@ -134,6 +134,13 @@ ifeq ("$(MATHLIB)","mkl")
   COMMON_FLAGS += -DUSE_MKL
 endif
 
+ifeq ("$(MATHLIB)","openblas")
+  INCLUDEPATH += $(OPENBLAS_PATH)/include
+  LIBPATH += $(OPENBLAS_PATH)/lib
+  LIBS += -lopenblas -lm -lpthread
+  CPPFLAGS += -DUSE_OPENBLAS
+endif
+
 
 ifdef KALDI_PATH
   ########## Copy includes and defines from $(KALDI_PATH)/src/kaldi.mk ##########
@@ -158,7 +165,7 @@ ifeq ("$(BUILDTYPE)","debug")
   ifdef CNTK_CUDA_CODEGEN_DEBUG
     GENCODE_FLAGS := $(CNTK_CUDA_CODEGEN_DEBUG)
   else
-    GENCODE_FLAGS := -gencode arch=compute_20,code=\"compute_20\"
+    GENCODE_FLAGS := -gencode arch=compute_20,code=\"compute_20\" $(GENCODE_SM30)
   endif
 
   CXXFLAGS += -g
