@@ -254,9 +254,9 @@ public:
         }
     }
 
-    void DumpNodeInfo(const bool printValues, File& fstream) const override
+    void DumpNodeInfo(const bool printValues, const bool printMetadata, File& fstream) const override
     {
-        Base::DumpNodeInfo(printValues, fstream);
+        Base::DumpNodeInfo(printValues, printMetadata, fstream);
 
         auto inDims = ImageDimensions(GetInputSampleLayout(1), m_imageLayoutKind);
         auto outDims = ImageDimensions(m_sampleLayout, m_imageLayoutKind);
@@ -457,21 +457,24 @@ public:
         }
     }
 
-    void DumpNodeInfo(const bool printValues, File& fstream) const override
+    void DumpNodeInfo(const bool printValues, const bool printMetadata, File& fstream) const override
     {
-        Base::DumpNodeInfo(printValues, fstream);
+        Base::DumpNodeInfo(printValues, printMetadata, fstream);
 
-        auto inputSampleLayout = GetInputSampleLayout(0);
+        if (printMetadata)
+        {
+            auto inputSampleLayout = GetInputSampleLayout(0);
 
-        char str[4096];
-        sprintf(str, "Input[Width:%lu, Height:%lu, Channels:%lu]  \n", inputSampleLayout[1], inputSampleLayout[2], inputSampleLayout[0]);
-        fstream << string(str);
-        sprintf(str, "PoolingWindow[Width:%lu, Height:%lu]  SubSampling[Horizontal:%lu, Vertical:%lu]\n", m_windowWidth, m_windowHeight, m_horizontalSubsample, m_verticalSubsample);
-        fstream << string(str);
-        sprintf(str, "Output[Width:%lu, Height:%lu, Channels:%lu]  \n", m_sampleLayout[1], m_sampleLayout[2], m_sampleLayout[0]);
-        fstream << string(str);
-        sprintf(str, "TotalSizePerSample[Input:%lu, Output:%lu]  \n", m_inputSizePerSample, m_outputSizePerSample);
-        fstream << string(str);
+            char str[4096];
+            sprintf(str, "Input[Width:%lu, Height:%lu, Channels:%lu]  \n", inputSampleLayout[1], inputSampleLayout[2], inputSampleLayout[0]);
+            fstream << string(str);
+            sprintf(str, "PoolingWindow[Width:%lu, Height:%lu]  SubSampling[Horizontal:%lu, Vertical:%lu]\n", m_windowWidth, m_windowHeight, m_horizontalSubsample, m_verticalSubsample);
+            fstream << string(str);
+            sprintf(str, "Output[Width:%lu, Height:%lu, Channels:%lu]  \n", m_sampleLayout[1], m_sampleLayout[2], m_sampleLayout[0]);
+            fstream << string(str);
+            sprintf(str, "TotalSizePerSample[Input:%lu, Output:%lu]  \n", m_inputSizePerSample, m_outputSizePerSample);
+            fstream << string(str);
+        }
     }
 
 protected:
