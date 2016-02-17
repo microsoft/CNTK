@@ -272,12 +272,6 @@ public:
     {
         CUDNN_CALL(cudnnCreate(&m_cudnn));
         CUDNN_CALL(cudnnSetStream(m_cudnn, m_stream));
-        memset(&m_fwdAlgo, 0, sizeof(m_fwdAlgo));
-        m_fwdAlgo.Algo.status = CUDNN_STATUS_NOT_INITIALIZED;
-        memset(&m_backDataAlgo, 0, sizeof(m_backDataAlgo));
-        m_backDataAlgo.Algo.status = CUDNN_STATUS_NOT_INITIALIZED;
-        memset(&m_backFiltAlgo, 0, sizeof(m_backFiltAlgo));
-        m_backFiltAlgo.Algo.status = CUDNN_STATUS_NOT_INITIALIZED;
     }
 
     ~CuDnnConvolutionEngine()
@@ -591,8 +585,13 @@ private:
 
 private:
     template <typename T>
-    struct Perf
+    struct ConvAlgoInfo
     {
+        ConvAlgoInfo()
+            : CurMBSize(0)
+        {
+            Algo.status = CUDNN_STATUS_NOT_INITIALIZED;
+        }
         // Current mini-batch size, needed for re-computing statistics in auto-tuner.
         size_t CurMBSize;
         T Algo;
@@ -605,9 +604,9 @@ private:
     BatchNormImpl m_bnImpl;
     cudnnHandle_t m_cudnn;
     cudaStream_t m_stream;
-    Perf<cudnnConvolutionFwdAlgoPerf_t> m_fwdAlgo;
-    Perf<cudnnConvolutionBwdDataAlgoPerf_t> m_backDataAlgo;
-    Perf<cudnnConvolutionBwdFilterAlgoPerf_t> m_backFiltAlgo;
+    ConvAlgoInfo<cudnnConvolutionFwdAlgoPerf_t> m_fwdAlgo;
+    ConvAlgoInfo<cudnnConvolutionBwdDataAlgoPerf_t> m_backDataAlgo;
+    ConvAlgoInfo<cudnnConvolutionBwdFilterAlgoPerf_t> m_backFiltAlgo;
 };
 
 template <class ElemType>
