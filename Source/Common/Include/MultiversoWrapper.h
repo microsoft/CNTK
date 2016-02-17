@@ -50,7 +50,7 @@ namespace Microsoft {
 				typedef shared_ptr<ComputationNode<ElemType>> ComputationNodePtr;
 			public:
 				MultiversoWrapper(const std::list<ComputationNodeBasePtr> & learnableNodes,
-					int localWorkerNumber,
+					int MPINodeNum,
 					bool isPipeline = true,
 					AdjustLearningRateatBeginning adjusttype = AdjustLearningRateatBeginning::None,
 					double adjustcoef = 0.2,
@@ -61,9 +61,7 @@ namespace Microsoft {
 					m_adjustCoefficient = adjustcoef;
 					m_adjustMBNumber = adjustnbmb;
 
-					//m_multiversoAdaptor = false;
-
-					m_totalClientNumber = localWorkerNumber;
+					m_totalClientNumber = MPINodeNum;
 
 					//Pipeline releated variables
 					m_isPipelined = isPipeline;
@@ -89,7 +87,7 @@ namespace Microsoft {
 
 					m_modelSizeOfEachServer = new size_t[m_totalClientNumber];
 					m_indexOfEachServer = new size_t[m_totalClientNumber];
-					MultiversoInit(learnableNodes, 1);
+					MultiversoInit(learnableNodes);
 				}
 
 				~MultiversoWrapper()
@@ -115,8 +113,6 @@ namespace Microsoft {
 					CudaErrorCheck(cudaStreamDestroy(_commStream));
 #endif
 					multiverso::MultiversoShutDown(false);
-					//multiverso::FinishTrain();
-					//multiverso::Close(false);
 				}
 
 				//  This function will upload parameters into Multiverso
@@ -147,13 +143,8 @@ namespace Microsoft {
 					std::transform(m_deltaArray, m_deltaArray + m_totalModelSize, m_deltaArray, std::bind1st(std::multiplies<ElemType>(), factor));
 
 					m_sharedArray->Add(m_deltaArray, m_totalModelSize);
-					m_sharedArray->Get();
-					//for (int row = 0; row < m_totalClientNumber; ++row)
-					//	m_multiversoAdaptor->Add(table_id, row, m_deltaArray + m_indexOfEachServer[row], factor);
-					//m_multiversoAdaptor->Barrier(); //should clock
-					//m_multiversoAdaptor->BatchLoad(table_id, m_deltaArray, m_indexOfEachServer, m_modelSizeOfEachServer);
+					m_sharedArray->Get(m_deltaArray, m_totalModelSize);
 
-					memcpy(m_deltaArray, m_sharedArray->raw().data(), sizeof(ElemType) * m_totalModelSize);
 				}
 
 				//Todo: support auto adjust learning rate 
@@ -166,8 +157,6 @@ namespace Microsoft {
 					m_modelSyncCount++;
 
 					Timer timer;
-					//if (m_isPipelined && m_prefetchThread->joinable())
-					//	m_prefetchThread->join();
 					WaitAsyncBuffer();
 
 					m_cacheIndex = m_cacheSwapIndex[m_cacheIndex];
@@ -234,12 +223,8 @@ namespace Microsoft {
 							std::transform(m_deltaArray, m_deltaArray + m_totalModelSize, m_deltaArray, std::bind1st(std::multiplies<ElemType>(), factor));
 
 							m_sharedArray->Add(m_deltaArray, m_totalModelSize);
-							m_sharedArray->Get();
-							memcpy(m_cpuAsyncBuffer[t_cacheIdx], m_sharedArray->raw().data(), m_totalModelSize);
-							//////Communication
-							//for (int row = 0; row < m_totalClientNumber; row++)
-							//	m_multiversoAdaptor->Add(table_id, row, m_deltaArray + m_indexOfEachServer[row], factor);
-							//m_multiversoAdaptor->BatchLoad(table_id, m_cpuAsyncBuffer[t_cacheIdx], m_indexOfEachServer, m_modelSizeOfEachServer);
+							m_sharedArray->Get(m_cpuAsyncBuffer[t_cacheIdx], m_totalModelSize);
+							//memcpy(m_cpuAsyncBuffer[t_cacheIdx], m_sharedArray->raw().data(), m_totalModelSize);
 
 							//CPU buffer -> GPU buffer
 							for (int widx = 0; widx < m_tableCount; widx++)
@@ -262,11 +247,9 @@ namespace Microsoft {
 							int table_id = 0, t_cacheIdx = m_cacheIndex;
 
 							transform(m_deltaArray, m_deltaArray + m_totalModelSize, m_cpuAsyncBuffer[t_cacheIdx], m_deltaArray, std::minus<ElemType>());
-							for (int row = 0; row < g_mpi->NumNodesInUse(); row++)
-								m_multiversoAdaptor->Add(table_id, row, m_deltaArray + m_indexOfEachServer[row], factor);
-
-
-							m_multiversoAdaptor->BatchLoad(table_id, m_cpuAsyncBuffer[t_cacheIdx], m_indexOfEachServer, m_modelSizeOfEachServer);
+							m_sharedArray->Add(m_deltaArray, m_totalModelSize);
+							m_sharedArray->Get(m_cpuAsyncBuffer[t_cacheIdx], m_totalModelSize);
+							//memcpy(m_cpuAsyncBuffer[t_cacheIdx], m_sharedArray->raw().data(), m_totalModelSize);
 
 						});
 #endif
@@ -274,6 +257,7 @@ namespace Microsoft {
 					else
 					{
 						float factor = DecayCoefficient();
+						i = 0;
 						for (auto nodeIter = learnableNodes.begin(); nodeIter != learnableNodes.end(); nodeIter++, i++)
 						{
 							ComputationNodePtr node = dynamic_pointer_cast<ComputationNode<ElemType>>(*nodeIter);
@@ -289,16 +273,10 @@ namespace Microsoft {
 						std::transform(m_deltaArray, m_deltaArray + m_totalModelSize, m_deltaArray, std::bind1st(std::multiplies<ElemType>(), factor));
 
 						m_sharedArray->Add(m_deltaArray, m_totalModelSize);
-						m_sharedArray->Get();
-						memcpy(m_cpuAsyncBuffer[0], m_sharedArray->raw().data(), m_totalModelSize);
-
-						//for (int row = 0; row < m_totalClientNumber; row++)
-						//	m_multiversoAdaptor->Add(table_id, row, m_deltaArray + m_indexOfEachServer[row], factor);
-
-						//m_multiversoAdaptor->BatchLoad(table_id, m_cpuAsyncBuffer[0], m_indexOfEachServer, m_modelSizeOfEachServer);
+						m_sharedArray->Get(m_cpuAsyncBuffer[0], m_totalModelSize);
+						//memcpy(m_cpuAsyncBuffer[0], m_sharedArray->raw().data(), m_totalModelSize);
 
 						i = 0;
-
 						for (auto nodeIter = learnableNodes.begin(); nodeIter != learnableNodes.end(); nodeIter++, i++)
 						{
 							ComputationNodePtr node = dynamic_pointer_cast<ComputationNode<ElemType>>(*nodeIter);
@@ -332,13 +310,13 @@ namespace Microsoft {
 						m_prefetchThread->join();
 				}
 			private:
-				void MultiversoInit(const std::list<ComputationNodeBasePtr> & learnableNodes, int localWorkerNumber)
+				void MultiversoInit(const std::list<ComputationNodeBasePtr> & learnableNodes)
 				{
 					assert(!m_isInitialized);
 					m_isInitialized = true;
 
 					multiverso::MultiversoInit();
-                    multiverso::Log::ResetLogLevel(multiverso::LogLevel::Debug);
+                    //multiverso::Log::ResetLogLevel(multiverso::LogLevel::Debug);
 
 					//weights
 					for (auto nodeIter = learnableNodes.begin(); nodeIter != learnableNodes.end(); nodeIter++)
@@ -355,17 +333,18 @@ namespace Microsoft {
 					//init cache space.
 					m_totalModelSize = accumulate(m_tableLength.begin(), m_tableLength.end(), 0);
 					size_t idx = 0;
-					for (int i = 0; i < m_totalClientNumber; i++)
-					{
-						m_indexOfEachServer[i] = idx;
-						m_modelSizeOfEachServer[i] = i < m_totalModelSize % m_totalClientNumber ? m_totalModelSize / m_totalClientNumber + 1 : m_totalModelSize / m_totalClientNumber;
-						idx += m_modelSizeOfEachServer[i];
-					}
+ 
+					//for (int i = 0; i < m_totalClientNumber; i++)
+					//{
+					//	m_indexOfEachServer[i] = idx;
+					//	m_modelSizeOfEachServer[i] = i < m_totalModelSize % m_totalClientNumber ? m_totalModelSize / m_totalClientNumber + 1 : m_totalModelSize / m_totalClientNumber;
+					//	idx += m_modelSizeOfEachServer[i];
+					//}
+
 					m_sharedArray = new multiverso::ArrayWorker<ElemType>(m_totalModelSize);
 					m_serverArray = new multiverso::ArrayServer<ElemType>(m_totalModelSize);
 					
 					multiverso::MultiversoBarrier();
-					//multiverso::SetTable(table_id, m_totalClientNumber, ((size_t)(m_totalModelSize / m_totalClientNumber)) + 1, sizeof(ElemType) == 4 ? "float" : "double");
 					idx = 0;
 					for (size_t len : m_tableLength)
 					{
@@ -387,19 +366,6 @@ namespace Microsoft {
 					for (int i = 0; i < m_localCacheNumber; i++)
 						m_cpuAsyncBuffer[i] = new ElemType[m_totalModelSize + 1];
 #endif
-
-					//multiverso::Init(localWorkerNumber);
-
-					//printf("%s@rank %d/%d: Initialized multiverso.\n",
-					//	getenv("COMPUTERNAME"), multiverso::GetMPIRank(), multiverso::GetMPISize());
-					//fflush(stdout);
-
-					//int adaptor_id = g_mpi->CurrentNodeRank();
-
-					////m_multiversoAdaptor = new multiverso::Adaptor(adaptor_id, 0);
-					//printf("%s@rank %d/%d: Initialized Adaptor.\n",
-					//	getenv("COMPUTERNAME"), multiverso::GetMPIRank(), multiverso::GetMPISize());
-					fflush(stdout);
 				}
 
 				float DecayCoefficient()
@@ -422,7 +388,6 @@ namespace Microsoft {
 				}
 				multiverso::ArrayWorker<ElemType>* m_sharedArray;
 				multiverso::ArrayServer<ElemType>* m_serverArray;
-				//multiverso::Adaptor * m_multiversoAdaptor;
 				thread * m_prefetchThread;
 				bool m_isInitialized;
 
@@ -445,6 +410,7 @@ namespace Microsoft {
 				ElemType * m_deltaArray;
 				ElemType ** m_cpuAsyncBuffer;
 
+				// TODO deprecated this unused variables
 				size_t * m_modelSizeOfEachServer;
 				size_t * m_indexOfEachServer;
 

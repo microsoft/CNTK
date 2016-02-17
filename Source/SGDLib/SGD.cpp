@@ -1111,7 +1111,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
 				if (useDistributedMBReading)
 				{
 					noMoreSamplesToProcess = !wasDataRead;
-        }
+				}
 
 				size_t processedSamples = 0;
 				if (nSamplesSinceLastModelSync >= m_nFramesBetweenASGDSync)
@@ -1121,7 +1121,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
 					nSamplesSinceLastModelSync = 0;
 				}
 				aggregateNumSamplesWithLabel = processedSamples;
-        }
+			}
 
 			commTimer.Stop();
 			commTime += commTimer.ElapsedSeconds();
@@ -1194,7 +1194,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
             }
 
                 string formatString = "TotalTime = " + GeneratePaddedFloatOrExpFormat(0, 4, totalTimeInMBs) + "s; SamplesPerSecond = %.1f";
-            SGDTrace(stderr, formatString.c_str(), totalTimeInMBs, numSamplesLastMBs / totalTimeInMBs);
+				SGDTrace(stderr, formatString.c_str(), totalTimeInMBs, numSamplesLastMBs / totalTimeInMBs);
 
 				string statcis_formatString = "; ReadTime = " + GeneratePaddedFloatOrExpFormat(0, 5, readTime) + "s; ComputeTime = " +
 									GeneratePaddedFloatOrExpFormat(0, 5, computeTime) + "s; CommunicationTime = " + 
@@ -2707,9 +2707,10 @@ SGDParams::SGDParams(const ConfigRecordType& configSGD, size_t sizeofElemType)
     m_parallelizationStartEpochNum = 0;
     m_nFramesBetweenMASync = 40000; // default 40k frames
 
-		m_nFramesBetweenASGDSync = 1280;
-		m_nEpochBarrier = 0;
-		m_adjustlearningrateatbeginning = AdjustLearningRateatBeginning::None;
+	m_nFramesBetweenASGDSync = 1280;
+	m_numMBsToASGDPushAndPull = 0;
+	m_nEpochBarrier = 0;
+	m_adjustlearningrateatbeginning = AdjustLearningRateatBeginning::None;
 
 
     if ((g_mpi != nullptr) && configSGD.Exists(L"ParallelTrain"))

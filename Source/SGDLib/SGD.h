@@ -249,6 +249,8 @@ protected:
     double m_L1RegWeight;
 
 	// Parallel training related with ASGD 
+	size_t m_numMBsToASGDPushAndPull;  // decide how many minibatchs should ASGD to a pull&push to parameter server.
+									   //      note that, this will override m_nFramesBetweenASGDSync when set.
 	size_t m_nFramesBetweenASGDSync;
 	bool m_isPipeline;
 	size_t m_nEpochBarrier;
