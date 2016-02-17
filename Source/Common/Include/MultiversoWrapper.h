@@ -243,10 +243,11 @@ namespace Microsoft {
 						});
 #else
 						m_prefetchThread = new thread([&](){
-							float factor = getUpdateCoefficient();
-							int table_id = 0, t_cacheIdx = m_cacheIndex;
+							float factor = DecayCoefficient();
+							int t_cacheIdx = m_cacheIndex;
 
-							transform(m_deltaArray, m_deltaArray + m_totalModelSize, m_cpuAsyncBuffer[t_cacheIdx], m_deltaArray, std::minus<ElemType>());
+							std::transform(m_deltaArray, m_deltaArray + m_totalModelSize, m_cpuAsyncBuffer[t_cacheIdx], m_deltaArray, std::minus<ElemType>());
+							std::transform(m_deltaArray, m_deltaArray + m_totalModelSize, m_deltaArray, std::bind1st(std::multiplies<ElemType>(), factor));
 							m_sharedArray->Add(m_deltaArray, m_totalModelSize);
 							m_sharedArray->Get(m_cpuAsyncBuffer[t_cacheIdx], m_totalModelSize);
 							//memcpy(m_cpuAsyncBuffer[t_cacheIdx], m_sharedArray->raw().data(), m_totalModelSize);
