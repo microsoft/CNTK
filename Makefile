@@ -406,6 +406,28 @@ $(SPARSEPCREADER): $(SPARSEPCREADER_OBJ) | $(CNTKMATH_LIB)
 	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(LIBPATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH)) -o $@ $^ -l$(CNTKMATH)
 
 ########################################
+# CNTKTextFormatReader plugin
+########################################
+
+CNTKTEXTFORMATREADER_SRC =\
+	$(SOURCEDIR)/Readers/TextReader/Exports.cpp \
+	$(SOURCEDIR)/Readers/TextReader/Indexer.cpp \
+	$(SOURCEDIR)/Readers/TextReader/TextParser.cpp \
+	$(SOURCEDIR)/Readers/TextReader/TextReader.cpp \
+	$(SOURCEDIR)/Readers/TextReader/TextConfigHelper.cpp \
+
+CNTKTEXTFORMATREADER_OBJ := $(patsubst %.cpp, $(OBJDIR)/%.o, $(CNTKTEXTFORMATREADER_SRC))
+
+CNTKTEXTFORMATREADER:=$(LIBDIR)/CNTKTextFormatReader.so
+ALL += $(CNTKTEXTFORMATREADER)
+SRC+=$(CNTKTEXTFORMATREADER_SRC)
+
+$(CNTKTEXTFORMATREADER): $(CNTKTEXTFORMATREADER_OBJ) | $(CNTKMATH_LIB)
+	@echo $(SEPARATOR)
+	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(LIBPATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH)) -o $@ $^ -l$(CNTKMATH)
+
+
+########################################
 # Kaldi plugins
 ########################################
 

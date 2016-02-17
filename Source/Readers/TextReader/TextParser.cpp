@@ -23,12 +23,7 @@ TextParser::TextParser(const std::string& filename, const vector<StreamDescripto
 {
     assert(streams.size() > 0);
 
-    errno_t err = fopen_s(&m_file, m_filename.c_str(), "rb");
-    if (err)
-    {
-        RuntimeError("Could not open %s for reading.", m_filename.c_str());
-    }
-
+    m_file = fopenOrDie(m_filename, "rb");
     m_numAllowedErrors = 0;
     m_traceLevel = TraceLevel::Error;
     m_skipSequenceIds = false;
@@ -215,7 +210,7 @@ void TextParser::SetFileOffset(int64_t offset)
 {
     int rc = _fseeki64(m_file, offset, SEEK_SET);
     if (rc) {
-        RuntimeError("Error seeking to position %" PRId64 " in file %s", m_filename.c_str());
+        RuntimeError("Error seeking to position %" PRId64 " in file %s", offset, m_filename.c_str());
     }
     "error seeking in file";
 
@@ -282,8 +277,8 @@ Sequence TextParser::LoadSequence(bool verifyId, const SequenceDescriptor& seque
         else if (m_traceLevel >= Warning)
         {
             fprintf(stderr,
-                "WARNING: could not read a row (# %d)"
-                " while loading sequence (id = %u)"
+                "WARNING: could not read a row (# %" PRIi64 ")"
+                " while loading sequence (id = %" PRIi64 ")"
                 " at the offset = %" PRIi64 "\n", i, sequenceDsc.m_id, GetFileOffset());
         }
 
@@ -293,7 +288,7 @@ Sequence TextParser::LoadSequence(bool verifyId, const SequenceDescriptor& seque
             {
                 fprintf(stderr,
                     "WARNING: exhaused all expected input"
-                    " expected for the current sequence (id = %u)"
+                    " expected for the current sequence (id = %" PRId64 ")"
                     " at the offset = %" PRIi64 "\n", sequenceDsc.m_id, GetFileOffset());
             }
             break;
@@ -303,8 +298,8 @@ Sequence TextParser::LoadSequence(bool verifyId, const SequenceDescriptor& seque
     if (m_traceLevel >= Info)
     {
         fprintf(stderr,
-            "INFO: finished loading sequence (id = %u),"
-            " successfully read %u out of expected %u rows\n",
+            "INFO: finished loading sequence (id = %" PRId64 "),"
+            " successfully read %" PRId64 " out of expected %" PRId64 " rows\n",
             sequenceDsc.m_id, numRowsRead, expectedRowCount);
     }
 
