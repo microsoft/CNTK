@@ -798,11 +798,13 @@ BOOST_AUTO_TEST_CASE(BatchNormalizationForwardInference)
         return buf.ColumnSlice(c, c);
     };
 
-    for (int deviceId : {0})
+    for (int deviceId : {-1})
     {
-        auto fact = ConvFact::Create(deviceId, ConvFact::EngineType::Auto, ImageLayoutKind::CHW);
-        auto engCudnn = fact->CreateConvEngine(deviceId, 0, BatchNormImpl::CuDnn);
-        auto engCntk = fact->CreateConvEngine(deviceId, 0, BatchNormImpl::Cntk);
+        int cudnnDeviceId = deviceId < 0 ? 0 : deviceId;
+        auto fact = ConvFact::Create(cudnnDeviceId, ConvFact::EngineType::CuDnn, ImageLayoutKind::CHW);
+        auto engCudnn = fact->CreateConvEngine(cudnnDeviceId, 0, BatchNormImpl::CuDnn);
+        auto testFact = ConvFact::Create(deviceId, ConvFact::EngineType::Auto, ImageLayoutKind::CHW);
+        auto engCntk = testFact->CreateConvEngine(deviceId, 0, BatchNormImpl::Cntk);
         for (auto& cfg : GenerateBNTestConfigs(*fact))
         {
             auto& t = *std::move(std::get<0>(cfg));
@@ -814,6 +816,7 @@ BOOST_AUTO_TEST_CASE(BatchNormalizationForwardInference)
             vec buf(crow * t.n());
             std::generate(begin(buf), end(buf), [&] { return nd(rng); });
             SingleMatrix in(crow, ccol, buf.data(), deviceId, matrixFlagNormal);
+            SingleMatrix inExp(crow, ccol, buf.data(), cudnnDeviceId, matrixFlagNormal);
 
             Tensor4DPtr scaleBiasT = spatial ? fact->CreateTensor(1, 1, t.c(), 1) : fact->CreateTensor(t.w(), t.h(), t.c(), 1);
             size_t crowScaleBias = scaleBiasT->w() * scaleBiasT->h() * scaleBiasT->c();
@@ -821,17 +824,21 @@ BOOST_AUTO_TEST_CASE(BatchNormalizationForwardInference)
 
             std::generate(begin(buf), end(buf), [&] { return nd(rng); });
             SingleMatrix scale(crowScaleBias, 1, buf.data(), deviceId, matrixFlagNormal);
+            SingleMatrix scaleExp(crowScaleBias, 1, buf.data(), cudnnDeviceId, matrixFlagNormal);
             std::generate(begin(buf), end(buf), [&] { return nd(rng); });
             SingleMatrix bias(crowScaleBias, 1, buf.data(), deviceId, matrixFlagNormal);
+            SingleMatrix biasExp(crowScaleBias, 1, buf.data(), cudnnDeviceId, matrixFlagNormal);
 
             std::generate(begin(buf), end(buf), [&] { return nd(rng); });
             SingleMatrix runMean(crowScaleBias, 1, buf.data(), deviceId, matrixFlagNormal);
+            SingleMatrix runMeanExp(crowScaleBias, 1, buf.data(), cudnnDeviceId, matrixFlagNormal);
             std::generate(begin(buf), end(buf), [&] { return nd(rng); });
             SingleMatrix runInvStdDev(crowScaleBias, 1, buf.data(), deviceId, matrixFlagNormal);
+            SingleMatrix runInvStdDevExp(crowScaleBias, 1, buf.data(), cudnnDeviceId, matrixFlagNormal);
 
             SingleMatrix outBuf(deviceId);
             SingleMatrix out = initMat(outBuf, crow, ccol, buf);
-            SingleMatrix outExp(out);
+            SingleMatrix outExp(crow, ccol, out.CopyToArray(), cudnnDeviceId, matrixFlagNormal);
 
             CudaTimer time1;
             time1.Start();
@@ -840,7 +847,7 @@ BOOST_AUTO_TEST_CASE(BatchNormalizationForwardInference)
 
             CudaTimer time2;
             time2.Start();
-            engCudnn->NormalizeBatchInference(t, in, *scaleBiasT, scale, bias, spatial, runMean, runInvStdDev, outExp);
+            engCudnn->NormalizeBatchInference(t, inExp, *scaleBiasT, scaleExp, biasExp, spatial, runMeanExp, runInvStdDevExp, outExp);
             time2.Stop();
 
             std::stringstream tmsg;

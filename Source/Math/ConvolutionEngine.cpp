@@ -20,8 +20,8 @@ public:
     using typename Base::ConvDesc;
 
 public:
-    DefaultConvolutionEngine(DEVICEID_TYPE deviceId, size_t maxTempMemSizeInSamples)
-        : m_ones(deviceId), m_maxTempMemSizeInSamples(maxTempMemSizeInSamples)
+    DefaultConvolutionEngine(DEVICEID_TYPE deviceId, size_t maxTempMemSizeInSamples, ImageLayoutKind imageLayout, BatchNormImpl bnImpl)
+        : m_deviceId(deviceId), m_ones(deviceId), m_maxTempMemSizeInSamples(maxTempMemSizeInSamples), m_imageLayout(imageLayout), m_bnImpl(bnImpl)
     {
     }
 
@@ -305,16 +305,67 @@ public:
     void NormalizeBatchInference(const Tensor4D& inT, const Mat& in, const Tensor4D& scaleBiasT, const Mat& scale, const Mat& bias,
                                  bool spatial, const Mat& runMean, const Mat& runInvStdDev, Mat& out) override
     {
-        UNUSED(inT);
-        UNUSED(in);
-        UNUSED(scaleBiasT);
-        UNUSED(scale);
-        UNUSED(bias);
-        UNUSED(out);
-        UNUSED(spatial);
-        UNUSED(runMean);
-        UNUSED(runInvStdDev);
-        RuntimeError("Not yet implemented.");
+        const size_t crowIn = inT.w() * inT.h() * inT.c();
+
+        if (spatial)
+        {
+            assert(scaleBiasT.c() == inT.c());
+            assert(scaleBiasT.w() == 1);
+            assert(scaleBiasT.h() == 1);
+            assert(scaleBiasT.c() == runMean.GetNumRows());
+            assert(scaleBiasT.c() == runInvStdDev.GetNumRows());
+        }
+        else
+        {
+            assert(scaleBiasT.c() == inT.c());
+            assert(scaleBiasT.w() == inT.w());
+            assert(scaleBiasT.h() == inT.h());
+            assert(crowIn == runMean.GetNumRows());
+            assert(crowIn == runInvStdDev.GetNumRows());
+        }
+        assert(crowIn == in.GetNumRows());
+        assert(crowIn == out.GetNumRows());
+        assert(inT.n() == in.GetNumCols());
+        assert(inT.n() == out.GetNumCols());
+        assert(scaleBiasT.n() == 1);
+        assert(bias.GetNumCols() == 1);
+        assert(scale.GetNumCols() == 1);
+        assert(runMean.GetNumCols() == 1);
+        assert(runInvStdDev.GetNumCols() == 1);
+#ifndef _DEBUG
+        UNUSED(crowIn); // crowIn used only in asserts.
+#endif
+        if (m_deviceId >= 0)
+            InvalidArgument("This engine does not support batch normalization on GPUs.");
+        if (m_bnImpl != BatchNormImpl::Cntk)
+            InvalidArgument("Only CNTK batch normalization implementation is supported by this engine.");
+        if (spatial && m_imageLayout != ImageLayoutKind::CHW)
+            InvalidArgument("This engine batch normalization currently supports only CHW data layout for convolutional nodes.");
+
+        if (spatial)
+        {
+            size_t spatialSize = inT.w() * inT.h();
+#pragma omp parallel for
+            for (long icol = 0; icol < out.GetNumCols(); icol++)
+            {
+                for (long irow = 0; irow < out.GetNumRows(); irow++)
+                {
+                    size_t imap = irow / spatialSize;
+                    out(irow, icol) = scale(imap, 0) * (in(irow, icol) - runMean(imap, 0)) * runInvStdDev(imap, 0) + bias(imap, 0);
+                }
+            }
+        }
+        else
+        {
+#pragma omp parallel for
+            for (long icol = 0; icol < out.GetNumCols(); icol++)
+            {
+                for (long irow = 0; irow < out.GetNumRows(); irow++)
+                {
+                    out(irow, icol) = scale(irow, 0) * (in(irow, icol) - runMean(irow, 0)) * runInvStdDev(irow, 0) + bias(irow, 0);
+                }
+            }
+        }
     }
 
     void BackwardNormalizeBatch(const Tensor4D& inT, const Mat& in, const Mat& srcGrad, Mat& grad,
@@ -336,7 +387,10 @@ public:
     }
 
 private:
+    DEVICEID_TYPE m_deviceId;
     size_t m_maxTempMemSizeInSamples;
+    ImageLayoutKind m_imageLayout;
+    BatchNormImpl m_bnImpl;
     Mat m_ones;
     bool m_gpuSparseOpt;
     bool m_gpuSparse1D;
@@ -428,6 +482,12 @@ public:
     using typename Base::PoolEnginePtr;
 
 public:
+    DefaultConvolutionEngineFactory(ImageLayoutKind imageLayout)
+        : m_imageLayout(imageLayout)
+    {
+    }
+
+public:
     Tensor4DPtr CreateTensor(size_t w, size_t h, size_t c, size_t n) override
     {
         return std::make_unique<ConvolutionTensor4D>(w, h, c, n);
@@ -449,15 +509,18 @@ public:
         return std::make_unique<PoolDesc>(kind, w, h, wStride, hStride, wPad, hPad);
     }
 
-    ConvEnginePtr CreateConvEngine(DEVICEID_TYPE deviceId, size_t maxTempMemSizeInSamples, BatchNormImpl /*bnImpl*/) override
+    ConvEnginePtr CreateConvEngine(DEVICEID_TYPE deviceId, size_t maxTempMemSizeInSamples, BatchNormImpl bnImpl) override
     {
-        return std::make_unique<DefaultConvolutionEngine<ElemType>>(deviceId, maxTempMemSizeInSamples);
+        return std::make_unique<DefaultConvolutionEngine<ElemType>>(deviceId, maxTempMemSizeInSamples, m_imageLayout, bnImpl);
     }
 
     PoolEnginePtr CreatePoolEngine(DEVICEID_TYPE /*deviceId*/) override
     {
         return std::make_unique<DefaultPoolingEngine<ElemType>>();
     }
+
+private:
+    ImageLayoutKind m_imageLayout;
 };
 
 template <class ElemType>
@@ -485,7 +548,7 @@ std::unique_ptr<ConvolutionEngineFactory<ElemType>> ConvolutionEngineFactory<Ele
         if (imageLayoutKind != ImageLayoutKind::HWC)
             fprintf(stderr, "WARNING: trying to use cuDNN on unsupported platform. It is safe to ignore the warning if it's produced during model editing command.\n");
         // InvalidArgument("ConvolutionEngineFactory: ImageLayout '%s' is not compatible with the legacy convolution engine.", ToString(imageLayoutKind).c_str());
-        return std::make_unique<DefaultConvolutionEngineFactory<ElemType>>();
+        return std::make_unique<DefaultConvolutionEngineFactory<ElemType>>(imageLayoutKind);
     }
 
     RuntimeError("Not supported convolution engine type: %d.", (int)engType);
