@@ -173,6 +173,12 @@
     <Text Include="Data\UCIFastReaderSimpleDataLoop_Mapping.txt" />
     <Text Include="Data\UCIFastReaderSimpleDataLoop_Train.txt" />
   </ItemGroup>
+  <ItemGroup>
+    <Image Include="Data\images\black.jpg" />
+    <Image Include="Data\images\blue.jpg" />
+    <Image Include="Data\images\green.jpg" />
+    <Image Include="Data\images\red.jpg" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <Target Name="Build" Condition="$(HasBoost)" Outputs="$(TargetPath)" DependsOnTargets="$(BuildDependsOn)" />
   <ImportGroup Label="ExtensionTargets" />
@@ -181,7 +187,7 @@
   </Target>
   <Target Name="CopyUnitTestDependencies" AfterTargets="Build">
     <ItemGroup>
-      <UnitTestDependencies Include="$(OutDir)..\Math.dll;$(OutDir)..\ucifastreader.dll;$(OutDir)..\htkmlfreader.dll;$(OutDir)..\ImageReader.dll;$(OPENCV_PATH)\x64\vc12\bin\opencv_world300.dll;$(OutDir)..\libacml_mp_dll.dll;$(OutDir)..\libifcoremd.dll;$(OutDir)..\libifportmd.dll;$(OutDir)..\libiomp*.dll;$(OutDir)..\libmmd.dll;$(OutDir)..\svml_dispmd.dll;" />
+      <UnitTestDependencies Include="$(OutDir)..\Math.dll;$(OutDir)..\ucifastreader.dll;$(OutDir)..\htkmlfreader.dll;$(OutDir)..\ImageReader.dll;$(OPENCV_PATH)\x64\vc12\bin\opencv_world300.dll;$(OutDir)..\libacml_mp_dll.dll;$(OutDir)..\libifcoremd.dll;$(OutDir)..\libifportmd.dll;$(OutDir)..\libiomp*.dll;$(OutDir)..\libmmd.dll;$(OutDir)..\svml_dispmd.dll;$(OutDir)..\zip.dll;$(OutDir)..\zlib.dll;" />
     </ItemGroup>
     <Copy SourceFiles="@(UnitTestDependencies)" DestinationFolder="$(OutDir)" SkipUnchangedFiles="true">
       <Output TaskParameter="DestinationFiles" ItemName="NewFileWrites" />

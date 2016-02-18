@@ -161,5 +161,13 @@
     <Text Include="Control\UCIFastReaderSimpleDataLoop_Control.txt">
       <Filter>Control</Filter>
     </Text>
+    <Text Include="Data\ImageReaderSimple_map.txt" />
+    <Text Include="Config\ImageReaderSimple_Config.cntk" />
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="Data\images\black.jpg" />
+    <Image Include="Data\images\blue.jpg" />
+    <Image Include="Data\images\green.jpg" />
+    <Image Include="Data\images\red.jpg" />
   </ItemGroup>
 </Project>

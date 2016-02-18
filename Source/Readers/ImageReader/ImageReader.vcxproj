@@ -30,18 +30,18 @@
     <PlatformToolset>v120</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
-  <Choose>
-    <When Condition="Exists('$(OPENCV_PATH)')">
-      <PropertyGroup>
-        <HasOpenCV>true</HasOpenCV>
-      </PropertyGroup>
-    </When>
-    <Otherwise>
-      <PropertyGroup>
-        <HasOpenCV>false</HasOpenCV>
-      </PropertyGroup>
-    </Otherwise>
-  </Choose>
+  <PropertyGroup>
+    <HasOpenCV>false</HasOpenCV>
+    <HasOpenCV Condition="Exists('$(OPENCV_PATH)')">true</HasOpenCV>
+    <UseZip>false</UseZip>
+    <UseZip Condition="Exists('$(ZLIB_PATH)')">true</UseZip>
+  </PropertyGroup>
+  <PropertyGroup Condition="$(UseZip)">
+    <ZipInclude>$(ZLIB_PATH)\include;$(ZLIB_PATH)\lib\libzip\include;</ZipInclude>
+    <ZipDefine>USE_ZIP</ZipDefine>
+    <ZipLibPath>$(ZLIB_PATH)\lib;</ZipLibPath>
+    <ZipLibs>zlib.lib;zip.lib;</ZipLibs>
+  </PropertyGroup>
   <PropertyGroup Condition="$(DebugBuild)" Label="Configuration">
     <UseDebugLibraries>true</UseDebugLibraries>
   </PropertyGroup>
@@ -55,8 +55,8 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup>
-    <IncludePath>..\..\common\include;..\..\math;$(OPENCV_PATH)\include;$(IncludePath);</IncludePath>
-    <LibraryPath>$(SolutionDir)$(Platform)\$(Configuration);$(OPENCV_PATH)\x64\vc12\lib;$(LibraryPath);</LibraryPath>
+    <IncludePath>..\..\common\include;..\..\math;$(OPENCV_PATH)\include;$(ZipInclude);$(IncludePath);</IncludePath>
+    <LibraryPath>$(SolutionDir)$(Platform)\$(Configuration);$(OPENCV_PATH)\x64\vc12\lib;$(ZipLibPath);$(LibraryPath);</LibraryPath>
     <OpenCVLib Condition="$(HasOpenCV)">opencv_world300.lib</OpenCVLib>
   </PropertyGroup>
   <PropertyGroup Condition="$(DebugBuild)">
@@ -69,7 +69,7 @@
     <ClCompile>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <WarningLevel>Level4</WarningLevel>
-      <PreprocessorDefinitions>WIN32;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;_WINDOWS;_USRDLL;$(ZipDefine);%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
       <TreatWarningAsError>true</TreatWarningAsError>
       <OpenMPSupport>true</OpenMPSupport>
@@ -77,10 +77,11 @@
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>ReaderLib.lib;Math.lib;$(OpenCVLib);%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>ReaderLib.lib;Math.lib;$(OpenCVLib);$(ZipLibs);%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
       <Command Condition="$(HasOpenCV)">xcopy /Y "$(OPENCV_PATH)\x64\vc12\bin\opencv_world300.dll" $(TargetDir)</Command>
+      <Command Condition="$(UseZip)">xcopy /Y "$(ZLIB_PATH)\bin\*.dll" $(TargetDir)</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="$(DebugBuild)">
@@ -110,6 +111,7 @@
     <ClInclude Include="..\..\Common\Include\DataReader.h" />
     <ClInclude Include="..\..\Common\Include\File.h" />
     <ClInclude Include="..\..\Common\Include\fileutil.h" />
+    <ClInclude Include="ByteReader.h" />
     <ClInclude Include="ImageConfigHelper.h" />
     <ClInclude Include="ImageDataDeserializer.h" />
     <ClInclude Include="ImageReader.h" />
@@ -141,11 +143,13 @@
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader>Create</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="ZipByteReader.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <Target Name="Build" Condition="$(HasOpenCV)" Outputs="$(TargetPath)" DependsOnTargets="$(BuildDependsOn)" />
   <ImportGroup Label="ExtensionTargets" />
   <Target Name="CheckDependencies">
     <Warning Condition="!$(HasOpenCV)" Text="ImageReader requires the OpenCV library to build. Please see https://github.com/Microsoft/CNTK/wiki/Setup-CNTK-on-Windows#opencv for installation instructions." />
+    <Warning Condition="!$(UseZip)" Text="zlib and libzip libraries were not found, ImageReader will be built without zip container support. Please see https://github.com/Microsoft/CNTK/wiki/Setup-CNTK-on-Windows#libzip for installation instructions." />
   </Target>
 </Project>

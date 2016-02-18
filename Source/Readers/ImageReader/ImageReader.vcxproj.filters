@@ -23,6 +23,7 @@
     <ClCompile Include="..\..\Common\ExceptionWithCallStack.cpp">
       <Filter>Common</Filter>
     </ClCompile>
+    <ClCompile Include="ZipByteReader.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="stdafx.h" />
@@ -43,6 +44,7 @@
     <ClInclude Include="ImageDataDeserializer.h" />
     <ClInclude Include="ImageReader.h" />
     <ClInclude Include="ImageConfigHelper.h" />
+    <ClInclude Include="ByteReader.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Common">
