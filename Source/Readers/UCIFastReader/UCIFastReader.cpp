@@ -940,7 +940,8 @@ bool UCIFastReader<ElemType>::GetMinibatchImpl(std::map<std::wstring, Matrix<Ele
             {
                 for (size_t ii = 0; ii < m_labelDim; ii++)
                 {
-                    m_labelsBuffer.get()[j+ii] = (ElemType)atof(m_labelData[jRand + ii].c_str());
+                    ElemType v = (ElemType)atof(m_labelData[jRand*m_labelDim + ii].c_str());
+                    m_labelsBuffer.get()[j*m_labelDim + ii] = v;
                 }
             }
         }
