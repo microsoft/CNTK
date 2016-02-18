@@ -116,11 +116,11 @@ public:
             size_t index = m_currentRecord * rows;
             size_t numberToCopy = rows * numRecords;
             data->resize(index + numberToCopy);
-            void* dataPtr = (void*) ((ElemType*) data->data() + index);
-            size_t dataSize = numberToCopy * sizeof(ElemType);
-            void* mat = &(*matrix)(0, 0);
-            size_t matSize = matrix->GetNumElements() * sizeof(ElemType);
-            memcpy_s(dataPtr, dataSize, mat, matSize);
+            ElemType* dataPtr = ((ElemType*)data->data()) + index;
+            if (matrix->GetNumElements() > numberToCopy)
+                RuntimeError("The output matrix being saved has more data than the numRecords (%d) requested to be saved", numRecords);
+
+            matrix->CopyToArray(dataPtr, numberToCopy);
         }
 
         // increment our record pointer
