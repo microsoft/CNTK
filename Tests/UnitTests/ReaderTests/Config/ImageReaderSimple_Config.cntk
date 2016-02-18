@@ -24,8 +24,8 @@ Simple_Test = [
 
 		numCPUThreads = 1
         features=[
-            width=32
-            height=32
+            width=4
+            height=8
             channels=3
             cropType=Center
             cropRatio=1.0
@@ -34,7 +34,7 @@ Simple_Test = [
             #meanFile=$RootDir$/ImageReaderSimple_mean.xml
         ]
         labels=[
-            labelDim=10
+            labelDim=4
         ]
     ]
 ]

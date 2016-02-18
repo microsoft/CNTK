@@ -26,8 +26,25 @@ BOOST_AUTO_TEST_CASE(ImageReaderSimple)
         testDataPath() + "/Control/ImageReaderSimple_Output.txt",
         "Simple_Test",
         "reader",
-        10,
-        2,
+        4,
+        4,
+        1,
+        1,
+        0,
+        0,
+        1);
+};
+
+BOOST_AUTO_TEST_CASE(ImageReaderZip)
+{
+    HelperRunReaderTest<float>(
+        testDataPath() + "/Config/ImageReaderZip_Config.cntk",
+        testDataPath() + "/Control/ImageReaderZip_Control.txt",
+        testDataPath() + "/Control/ImageReaderZip_Output.txt",
+        "Zip_Test",
+        "reader",
+        4,
+        4,
         1,
         1,
         0,
