@@ -230,7 +230,7 @@ COMMON_SRC =\
 	$(SOURCEDIR)/Common/Config.cpp \
 	$(SOURCEDIR)/Common/DataReader.cpp \
 	$(SOURCEDIR)/Common/DataWriter.cpp \
-	$(SOURCEDIR)/Common/DebugUtil.cpp \
+	$(SOURCEDIR)/Common/ExceptionWithCallStack.cpp \
 	$(SOURCEDIR)/Common/Eval.cpp \
 	$(SOURCEDIR)/Common/File.cpp \
 	$(SOURCEDIR)/Common/TimerUtility.cpp \

@@ -19,8 +19,8 @@
     <ClCompile Include="..\..\Common\File.cpp">
       <Filter>Common</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\Common\DebugUtil.cpp" />
     <ClCompile Include="..\..\Common\Config.cpp" />
+    <ClCompile Include="..\..\Common\ExceptionWithCallStack.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="LUSequenceWriter.h" />
@@ -40,7 +40,6 @@
     <ClInclude Include="..\..\Common\Include\fileutil.h">
       <Filter>Common\Include</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\Common\Include\DebugUtil.h" />
   </ItemGroup>
   <ItemGroup>
     <Text Include="SequenceTest.txt" />
