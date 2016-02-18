@@ -19,12 +19,23 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
+// add this to all 
+static void FailBecauseDeprecated(const char * fnName)
+{
+    // this is an old version that is neither used nor maintained, should be deleted
+    bool isInUse = false;
+    if (!isInUse)
+        LogicError("%s: This function is deprecated and is not expected to be called.", fnName);
+}
+    
 // ReadLine - Read a line
 // readSample - sample to read in global sample space
 // returns - true if we successfully read a record, otherwise false
 template <class ElemType>
 bool SequenceReader<ElemType>::ReadRecord(size_t /*readSample*/)
 {
+    FailBecauseDeprecated(__FUNCTION__);    // DEPRECATED CLASS, SHOULD NOT BE USED ANYMORE
+
     return false; // not used
 }
 
@@ -35,6 +46,8 @@ bool SequenceReader<ElemType>::ReadRecord(size_t /*readSample*/)
 template <class ElemType>
 size_t SequenceReader<ElemType>::RecordsToRead(size_t mbStartSample, bool tail)
 {
+    FailBecauseDeprecated(__FUNCTION__);    // DEPRECATED CLASS, SHOULD NOT BE USED ANYMORE
+
     assert(mbStartSample >= m_epochStartSample);
     // determine how far ahead we need to read
     // need to read to the end of the next minibatch
@@ -71,6 +84,8 @@ typename IDataReader<ElemType>::LabelIdType SequenceReader<ElemType>::GetIdFromL
 template <class ElemType>
 bool SequenceReader<ElemType>::CheckIdFromLabel(const std::string& labelValue, const LabelInfo& labelInfo, unsigned/*TODO: LabelIdType?*/& labelId)
 {
+    FailBecauseDeprecated(__FUNCTION__);    // DEPRECATED CLASS, SHOULD NOT BE USED ANYMORE
+
     auto found = labelInfo.mapLabelToId.find(labelValue);
 
     // not yet found, add to the map
@@ -87,6 +102,8 @@ bool SequenceReader<ElemType>::CheckIdFromLabel(const std::string& labelValue, c
 template <class ElemType>
 bool SequenceReader<ElemType>::EnsureDataAvailable(size_t mbStartSample, bool /*endOfDataCheck*/)
 {
+    FailBecauseDeprecated(__FUNCTION__);    // DEPRECATED CLASS, SHOULD NOT BE USED ANYMORE
+
     assert(mbStartSample >= m_epochStartSample);
     // determine how far ahead we need to read
     // need to read to the end of the next minibatch
@@ -135,7 +152,7 @@ bool SequenceReader<ElemType>::EnsureDataAvailable(size_t mbStartSample, bool /*
     std::vector<SequencePosition> seqPos;
     do
     {
-        int numRead = m_parser.Parse(CACHE_BLOCK_SIZE, &labelTemp, &featureTemp, &seqPos);
+        int numRead = m_parser.Parse(m_cacheBlockSize, &labelTemp, &featureTemp, &seqPos);
         moreToRead = (numRead != 0);
 
         // translate from the sparse parsed data format to the training format data
@@ -283,6 +300,8 @@ bool SequenceReader<ElemType>::EnsureDataAvailable(size_t mbStartSample, bool /*
 template <class ElemType>
 void SequenceReader<ElemType>::UpdateDataVariables()
 {
+    FailBecauseDeprecated(__FUNCTION__);    // DEPRECATED CLASS, SHOULD NOT BE USED ANYMORE
+
     // if we haven't been all the way through the file yet
     if (!m_endReached)
     {
@@ -314,6 +333,8 @@ void SequenceReader<ElemType>::UpdateDataVariables()
 template <class ElemType>
 void SequenceReader<ElemType>::WriteLabelFile()
 {
+    FailBecauseDeprecated(__FUNCTION__);    // DEPRECATED CLASS, SHOULD NOT BE USED ANYMORE
+
     // update the label dimension if it is not big enough, need it here because m_labelIdMax get's updated in the processing loop (after a read)
     for (int index = 0; index < labelInfoNum; ++index)
     {
@@ -380,10 +401,7 @@ template <class ElemType>
 template <class ConfigRecordType>
 void SequenceReader<ElemType>::InitFromConfig(const ConfigRecordType& readerConfig)
 {
-    // this is an old version that is neither used nor maintained, should be deleted
-    bool isInUse = false;
-    if (!isInUse)
-        NOT_IMPLEMENTED;
+    FailBecauseDeprecated(__FUNCTION__);    // DEPRECATED CLASS, SHOULD NOT BE USED ANYMORE
 
     // See if the user wants caching
     m_cachingReader = NULL;
@@ -540,6 +558,8 @@ void SequenceReader<ElemType>::InitFromConfig(const ConfigRecordType& readerConf
 template <class ElemType>
 void SequenceReader<ElemType>::ReadWord(char* word, FILE* fin)
 {
+    FailBecauseDeprecated(__FUNCTION__);    // DEPRECATED CLASS, SHOULD NOT BE USED ANYMORE
+
     int a = 0, ch;
 
     while (!feof(fin))
@@ -590,6 +610,8 @@ void SequenceReader<ElemType>::ReadClassInfo(const wstring& vocfile, int& classS
                                              noiseSampler<long>& m_noiseSampler,
                                              bool /*flatten*/)
 {
+    FailBecauseDeprecated(__FUNCTION__);    // DEPRECATED CLASS, SHOULD NOT BE USED ANYMORE
+
     string tmp_vocfile(vocfile.begin(), vocfile.end()); // convert from wstring to string
     string strtmp;
     size_t cnt;
@@ -751,10 +773,12 @@ void SequenceReader<ElemType>::ReleaseMemory()
     m_sequence.clear();
 }
 
-//SetupEpoch - Setup the proper position in the file, and other variable settings to start a particular epoch
+// SetupEpoch - Setup the proper position in the file, and other variable settings to start a particular epoch
 template <class ElemType>
 void SequenceReader<ElemType>::SetupEpoch()
 {
+    FailBecauseDeprecated(__FUNCTION__);    // DEPRECATED CLASS, SHOULD NOT BE USED ANYMORE
+
     // if we are starting fresh (epoch zero and no data read), init everything
     // however if we are using cachingWriter, we need to know record count, so do that first
     if (m_epoch == 0 && m_totalSamples == 0 && m_cachingWriter == NULL)
@@ -822,6 +846,8 @@ inline size_t RoundUp(size_t value, size_t size)
 template <class ElemType>
 void SequenceReader<ElemType>::StartMinibatchLoop(size_t mbSize, size_t epoch, size_t requestedEpochSamples)
 {
+    FailBecauseDeprecated(__FUNCTION__);    // DEPRECATED CLASS, SHOULD NOT BE USED ANYMORE
+
     // if we aren't currently caching, see if we can use a cache
     if (!m_cachingReader && !m_cachingWriter)
     {
@@ -849,8 +875,8 @@ void SequenceReader<ElemType>::StartMinibatchLoop(size_t mbSize, size_t epoch, s
         const LabelInfo& labelInfo = m_labelInfo[(m_labelInfo[labelInfoOut].type == labelNextWord) ? labelInfoIn : labelInfoOut];
         if (labelInfo.type == labelCategory)
         {
-            m_labelsBuffer = new ElemType[labelInfo.dim * mbSize];
-            memset(m_labelsBuffer, 0, sizeof(ElemType) * labelInfo.dim * mbSize);
+            m_labelsBuffer = new ElemType[mbSize * labelInfo.dim];
+            memset(m_labelsBuffer, 0, sizeof(ElemType) * mbSize * labelInfo.dim);
             m_labelsIdBuffer = new typename IDataReader<ElemType>::LabelIdType[mbSize];
             memset(m_labelsIdBuffer, 0, sizeof(typename IDataReader<ElemType>::LabelIdType) * mbSize);
         }
@@ -901,12 +927,16 @@ void SequenceReader<ElemType>::StartMinibatchLoop(size_t mbSize, size_t epoch, s
 template <class ElemType>
 bool SequenceReader<ElemType>::DataEnd()
 {
+    FailBecauseDeprecated(__FUNCTION__);    // DEPRECATED CLASS, SHOULD NOT BE USED ANYMORE
+
     return SentenceEnd();
 }
 
 template <class ElemType>
 bool SequenceReader<ElemType>::SentenceEnd()
 {
+    FailBecauseDeprecated(__FUNCTION__);    // DEPRECATED CLASS, SHOULD NOT BE USED ANYMORE
+
     // this is after getMinibatch size, which has increased m_seqIndex by 1
     // so the real index is m_seqIndex - 1;
     int seqIndex = (int) m_seqIndex - 1;
@@ -954,6 +984,8 @@ template <class ElemType>
 void SequenceReader<ElemType>::GetLabelOutput(std::map<std::wstring, Matrix<ElemType>*>& matrices,
                                               size_t m_mbStartSample, size_t actualmbsize)
 {
+    FailBecauseDeprecated(__FUNCTION__);    // DEPRECATED CLASS, SHOULD NOT BE USED ANYMORE
+
     size_t j = 0;
     Matrix<ElemType>* labels = matrices[m_labelsName[labelInfoOut]];
     if (labels == nullptr)
@@ -999,6 +1031,8 @@ void SequenceReader<ElemType>::GetLabelOutput(std::map<std::wstring, Matrix<Elem
 template <class ElemType>
 void SequenceReader<ElemType>::GetInputProb(std::map<std::wstring, Matrix<ElemType>*>& matrices)
 {
+    FailBecauseDeprecated(__FUNCTION__);    // DEPRECATED CLASS, SHOULD NOT BE USED ANYMORE
+
     Matrix<ElemType>* idx2prob = matrices[STRIDX2PROB];
     if (idx2prob == nullptr)
         return;
@@ -1101,6 +1135,7 @@ void SequenceReader<ElemType>::GetClassInfo()
 template <class ElemType>
 bool SequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemType>*>& matrices)
 {
+    FailBecauseDeprecated(__FUNCTION__);    // DEPRECATED CLASS, SHOULD NOT BE USED ANYMORE
 
     // get out if they didn't call StartMinibatchLoop() first
     if (m_mbSize == 0)
@@ -1267,6 +1302,8 @@ bool SequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemTy
 template <class ElemType>
 const std::map<typename IDataReader<ElemType>::LabelIdType, typename IDataReader<ElemType>::LabelType>& SequenceReader<ElemType>::GetLabelMapping(const std::wstring& sectionName)
 {
+    FailBecauseDeprecated(__FUNCTION__);    // DEPRECATED CLASS, SHOULD NOT BE USED ANYMORE
+
     if (m_cachingReader)
     {
         return m_cachingReader->GetLabelMapping(sectionName);
@@ -1282,6 +1319,8 @@ const std::map<typename IDataReader<ElemType>::LabelIdType, typename IDataReader
 template <class ElemType>
 void SequenceReader<ElemType>::SetLabelMapping(const std::wstring& /*sectionName*/, const std::map<typename IDataReader<ElemType>::LabelIdType, LabelType>& labelMapping)
 {
+    FailBecauseDeprecated(__FUNCTION__);    // DEPRECATED CLASS, SHOULD NOT BE USED ANYMORE
+
     if (m_cachingReader)
     {
         RuntimeError("Cannot set mapping table when the caching reader is being used");
@@ -1324,7 +1363,7 @@ void BatchSequenceReader<ElemType>::InitFromConfig(const ConfigRecordType& reade
     m_cachingReader = NULL;
     m_cachingWriter = NULL;
 
-    // NOTE: probably want to re-enable at some point
+    m_cacheBlockSize = readerConfig(L"cacheBlockSize", m_cacheBlockSize); // in number of tokens
 
     // initialize the cache
     // InitCache(readerConfig);
@@ -1522,7 +1561,7 @@ void BatchSequenceReader<ElemType>::InitFromConfig(const ConfigRecordType& reade
     const LabelInfo& labelOut = m_labelInfo[labelInfoOut];
     m_parser.ParseInit(pathName.c_str(), m_featureDim, labelIn.dim, labelOut.dim, labelIn.beginSequence, labelIn.endSequence, labelOut.beginSequence, labelOut.endSequence);
 
-    mRequestedNumParallelSequences = readerConfig(L"nbruttsineachrecurrentiter", (size_t) 1);
+    mRequestedNumParallelSequences = readerConfig(L"nbruttsineachrecurrentiter", (size_t) 1); // 0 indicates auto-fill mbSize
     // TODO: ^^ This should depend on the sequences themselves.
 }
 
@@ -1561,15 +1600,18 @@ void BatchSequenceReader<ElemType>::StartMinibatchLoop(size_t mbSize, size_t epo
         return;
     }
 
+    // allocate buffers for building features and labels
+    // We allocate 'mbSize' entries, i.e. that's the total token cound across multiple parallel sequences.
     const LabelInfo& labelInfo = m_labelInfo[(m_labelInfo[labelInfoOut].type == labelNextWord) ? labelInfoIn : labelInfoOut];
-    if (m_featuresBuffer == NULL)
+
+    if (m_featuresBuffer == NULL)       // features
         m_featuresBuffer = new ElemType[mbSize * labelInfo.dim]();
 
-    if (m_labelsBuffer == NULL)
+    if (m_labelsBuffer == NULL)         // labels
     {
         if (labelInfo.type == labelCategory)
         {
-            m_labelsBuffer = new ElemType[labelInfo.dim * mbSize]();
+            m_labelsBuffer = new ElemType[mbSize * labelInfo.dim]();
             m_labelsIdBuffer = new /*typename IDataReader<ElemType>::*/LabelIdType[mbSize]();     // TODO: no "new" please! Use a vector
         }
         else if (labelInfo.type != labelNone)
@@ -1579,8 +1621,8 @@ void BatchSequenceReader<ElemType>::StartMinibatchLoop(size_t mbSize, size_t epo
         }
     }
 
-    m_featuresBufferRow = new size_t[mbSize];
-    m_featuresBufferRowIdx = new size_t[mbSize];
+    //m_featuresBufferRow = new size_t[mbSize];
+    //m_featuresBufferRowIdx = new size_t[mbSize];
 
     m_id2classLocal = new Matrix<ElemType>(CPUDEVICE);
     m_classInfoLocal = new Matrix<ElemType>(CPUDEVICE);
@@ -1602,6 +1644,7 @@ void BatchSequenceReader<ElemType>::StartMinibatchLoop(size_t mbSize, size_t epo
     size_t epochSize = m_epochSize == requestDataSize ? 1000 : m_epochSize;
     m_epoch = epoch;
     m_mbStartSample = epoch * m_epochSize;
+    m_epochSamplesReturned = 0;     // counter to know when we returned one epoch
 
     // allocate room for the data
     m_featureData.reserve(m_featureCount * epochSize);
@@ -1672,7 +1715,13 @@ size_t BatchSequenceReader<ElemType>::DetermineSequencesToProcess()
 
     // mToProcess[] is empty: fill it up with at most mRequestedNumParallelSequences entries of the same length
     size_t sln = 0;
-    for (size_t seq = mLastProcssedSentenceId; seq < mNumRead && mToProcess.size() < mRequestedNumParallelSequences; seq++)
+    size_t maxToProcess = mRequestedNumParallelSequences > 0 ? mRequestedNumParallelSequences : SIZE_MAX; // if mRequestedNumParallelSequences is 0 then we go by MB size
+    size_t maxTokens    = mRequestedNumParallelSequences > 0 ?                       SIZE_MAX : m_mbSize;
+    size_t numTokens = 0;  // token counter
+    for (size_t seq = mLastProcssedSentenceId;
+         seq < mNumRead &&                 // hit end of buffer
+         mToProcess.size() < maxToProcess; // hit parallel-sequence limit
+         seq++)
     {
         // skip entries that are done
         if (mProcessed[seq])
@@ -1684,10 +1733,18 @@ size_t BatchSequenceReader<ElemType>::DetermineSequencesToProcess()
         else if (sln != m_parser.mSentenceIndex2SentenceInfo[seq].sLen)
             continue;
 
+        // check max tokens
+        if (numTokens > 0 && numTokens + sln >= maxTokens)
+            break;             // hit total token limit
+
         // include all of the same length as the first
         mToProcess.push_back(seq);
+
+        // and count tokens
+        numTokens += m_parser.mSentenceIndex2SentenceInfo[seq].sLen;
     }
     // if all are already done, we will return sln=0
+    fprintf(stderr, "DetermineSequencesToProcess: %d sequences of len %d, %d tokens\n", (int) mToProcess.size(), (int) sln, (int) numTokens);
 
     return sln;
 }
@@ -1699,6 +1756,15 @@ size_t BatchSequenceReader<ElemType>::DetermineSequencesToProcess()
 template <class ElemType>
 bool BatchSequenceReader<ElemType>::GetMinibatchData(size_t& /*out*/ firstPosInSentence)
 {
+    // we returned enough samples to make up one epoch
+    // This is a stopgap, with these flaws:
+    //  - the next epoch will reload and re-randomize (with epoch# as random seed), so we don't guarantee to not return the same samples
+    //  - the parser will start over, to cacheBlockSize must be >= corpus size, and all gets (re-)loaded into RAM each epoch
+    // The alternative, set cacheBlockSize == epoch size, is not good since it will have very few utterances of the same length to batch.
+    // We will not fix much more than this since the soon-to-come new reader API will solve these issues.
+    if (m_epochSamplesReturned > m_epochSize)
+        return false;
+
     m_featureData.clear();
     m_labelIdData.clear();
 
@@ -1711,14 +1777,24 @@ bool BatchSequenceReader<ElemType>::GetMinibatchData(size_t& /*out*/ firstPosInS
 
         std::vector<SequencePosition> seqPos;
         fprintf(stderr, "LMSequenceReader: Reading epoch data..."), fflush(stderr);
-        mNumRead = m_parser.Parse(CACHE_BLOCK_SIZE, &m_labelTemp, &m_featureTemp, &seqPos);
+        mNumRead = m_parser.Parse(m_cacheBlockSize, &m_labelTemp, &m_featureTemp, &seqPos);
         fprintf(stderr, " %d sequences read.\n", (int) mNumRead);
         firstPosInSentence = mLastPosInSentence;
         if (mNumRead == 0)
             return false; // end
 
-        // TODO: disable this for decoding
-        std::random_shuffle(m_parser.mSentenceIndex2SentenceInfo.begin(), m_parser.mSentenceIndex2SentenceInfo.end());
+        if (m_cacheBlockSize == 50000) // back compat--this used to be a constant
+        {
+            // this uses rand(), which maxes out at 32767  --BUGBUG?
+            std::random_shuffle(m_parser.mSentenceIndex2SentenceInfo.begin(), m_parser.mSentenceIndex2SentenceInfo.end());
+        }
+        else // new configs use a wider randomization
+        {
+            std::srand((unsigned int)m_epoch);
+            std::random_shuffle(m_parser.mSentenceIndex2SentenceInfo.begin(), m_parser.mSentenceIndex2SentenceInfo.end(),
+                [](int i){
+                return (std::rand() * (RAND_MAX+1) + std::rand()) % i; });
+        }
 
         m_readNextSampleLine += mNumRead;
         sLn = DetermineSequencesToProcess();
@@ -1733,11 +1809,12 @@ bool BatchSequenceReader<ElemType>::GetMinibatchData(size_t& /*out*/ firstPosInS
     firstPosInSentence = mLastPosInSentence;
 
     size_t & i = mLastPosInSentence;
-    size_t iend = sLn - (labelOut.type != labelNone); // exclude the last token since it is the last label to be predicted
+    size_t iend = sLn - (labelOut.type != labelNone);       // exclude the last token since it is the last label to be predicted
     // ############### BREAKING CHANGE ################
     // We use sLn, not sLn -1, if labelOut.type is labelNode, assuming there is no output label, and all labels are inputs.
     // ############### BREAKING CHANGE ################
-    for (size_t j = 0; j < m_mbSize && i < iend; i++, j++)
+    const size_t jend = mRequestedNumParallelSequences > 0 ? m_mbSize : SIZE_MAX;                           // mbSize here is truncation length
+    for (size_t j = 0; j < jend && i < iend; i++, j++)
     {
         for (int k = 0; k < mToProcess.size(); k++)
         {
@@ -1788,6 +1865,7 @@ bool BatchSequenceReader<ElemType>::GetMinibatchData(size_t& /*out*/ firstPosInS
             }
 
             m_totalSamples++;
+            m_epochSamplesReturned++;
         }
     }
     //mLastPosInSentence = i; // (we could also iterate over mLastPosInSentence directly)
@@ -1832,15 +1910,14 @@ bool BatchSequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<E
 
     // --- STEP 2: transfer the data to the matrices
 
-    size_t actualmbsize = m_featureData.size();
+    size_t actualmbsize = m_featureData.size(); // total number of tokens across all sequences in this MB
     assert(actualmbsize > 0);
     assert(m_labelIdData.empty() || m_labelIdData.size() == actualmbsize);
-    if (actualmbsize > m_mbSize * mToProcess.size())
-        RuntimeError("Specified minibatch size %d is smaller than the actual minibatch size %d.", (int) m_mbSize, (int) actualmbsize);
 
     // create MBLayout
     // This handles variable-length sequences.
     size_t nT = actualmbsize / mToProcess.size();
+    assert(nT * mToProcess.size() == actualmbsize);
     m_pMBLayout->Init(mToProcess.size(), nT);
     for (size_t s = 0; s < mToProcess.size(); s++)
     {
@@ -1862,7 +1939,6 @@ bool BatchSequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<E
         if (end < (ptrdiff_t) nT)
             m_pMBLayout->AddGap(s, end, nT);
     }
-
 
     // copy m_featureData to matrix
     // m_featureData is a sparse, already with interleaved parallel sequences. We copy it into a dense matrix.

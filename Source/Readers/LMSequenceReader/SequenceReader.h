@@ -19,8 +19,6 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
-#define CACHE_BLOCK_SIZE 50000
-
 #define STRIDX2CLS L"idx2cls"
 #define CLASSINFO L"classinfo"
 
@@ -109,6 +107,7 @@ public:
     }
 };
 
+// Note: This class is deprecated for standalone use, only used as a base for BatchSequenceReader which overrides most of the functions.
 template <class ElemType>
 class SequenceReader : public IDataReader<ElemType>
 {
@@ -177,13 +176,15 @@ protected:
     std::wstring m_labelsMapName[labelInfoNum];
     std::wstring m_sequenceName;
 
+    size_t m_cacheBlockSize = 50000;
+
     ElemType* m_featuresBuffer;
     ElemType* m_labelsBuffer;
     LabelIdType* m_labelsIdBuffer;
     size_t* m_sequenceBuffer;
 
-    size_t* m_featuresBufferRow;
-    size_t* m_featuresBufferRowIdx;
+    //size_t* m_featuresBufferRow;
+    //size_t* m_featuresBufferRowIdx;
 
     bool m_endReached;
     int m_traceLevel;
@@ -330,11 +331,12 @@ public:
     using Base::m_readerConfig;
     using Base::ReleaseMemory;
     using Base::m_featuresBuffer;
-    using Base::m_featuresBufferRow;
+    //using Base::m_featuresBufferRow;
     using Base::m_labelsBuffer;
     using Base::m_labelsIdBuffer;
     using Base::m_id2classLocal;
     using Base::m_classInfoLocal;
+    using Base::m_cacheBlockSize;
     using Base::m_mbSize;
     using Base::m_epochSize;
     using Base::m_featureData;
@@ -344,7 +346,7 @@ public:
     using Base::LMSetupEpoch;
     using Base::m_clsinfoRead;
     using Base::m_idx2clsRead;
-    using Base::m_featuresBufferRowIdx;
+    //using Base::m_featuresBufferRowIdx;
     using Base::m_sequence;
     using Base::idx4class;
     using Base::m_indexer;
@@ -359,19 +361,21 @@ public:
 private:
     size_t mLastProcssedSentenceId;
 
-    size_t mNumRead;            // number of sentences in current epoch
-    vector<bool> mProcessed;    // [mNumRead] true if sequence has already been returned in this epoch
+    size_t mNumRead;               // number of sentences in current cache block
+    vector<bool> mProcessed;       // [mNumRead] true if sequence has already been returned in this cache block
+    size_t m_epochSamplesReturned; // number of samples returned in this epoch
 
-    vector<size_t> mToProcess;  // [] current set of sequences (gets updated each minibatch except if they are too long)
+    vector<size_t> mToProcess;     // [] current set of sequences (gets updated each minibatch except if they are too long)
 
     size_t mPosInSentence;
     size_t mLastPosInSentence;
+    size_t m_truncationLength;     // sequences longer than this get chopped up
 
     std::vector<ElemType> m_featureTemp;
     std::vector<LabelType> m_labelTemp;
 
     bool mSentenceEnd;
-    bool mSentenceBegin;
+    //bool mSentenceBegin;
 
     MBLayoutPtr m_pMBLayout;
 
@@ -399,10 +403,6 @@ public:
     }
 private:
     void Reset();
-public:
-
-
-private:
     size_t DetermineSequencesToProcess();
     bool GetMinibatchData(size_t& firstPosInSentence);
     void GetLabelOutput(std::map<std::wstring, Matrix<ElemType>*>& matrices,
