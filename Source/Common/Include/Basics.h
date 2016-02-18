@@ -8,10 +8,14 @@
 #define _BASICS_H_
 
 #include "Platform.h"
-#include "DebugUtil.h"
+#include "ExceptionWithCallStack.h"
 #include <string>
 #include <vector>
 #include <assert.h>
+#include <stdarg.h>
+#ifdef _WIN32
+#include <Windows.h>
+#endif
 #if __unix__
 #include <dlfcn.h> // for Plugin
 #endif
@@ -51,6 +55,8 @@ using namespace std;
 template <class E>
 __declspec_noreturn void ThrowFormatted(const char* format, ...) __attribute__((format(printf, 1, 2)));
 #endif
+
+
 template <class E>
 __declspec_noreturn static inline void ThrowFormatted(const char* format, ...)
 {
@@ -62,10 +68,10 @@ __declspec_noreturn static inline void ThrowFormatted(const char* format, ...)
 #ifdef _DEBUG // print this to log before throwing, so we can see what the error is
     fprintf(stderr, "\nAbout to throw exception '%s'\n", buffer);
 #endif
-    Microsoft::MSR::CNTK::DebugUtil::PrintCallStack();
+    Microsoft::MSR::CNTK::ExceptionWithCallStack<E>::PrintCallStack();
     std::string msg(buffer);
-    msg += Microsoft::MSR::CNTK::DebugUtil::GetCallStack();
-    throw E(msg);
+    std::string callstack(Microsoft::MSR::CNTK::ExceptionWithCallStack<E>::GetCallStack());
+    throw ExceptionWithCallStack<E>(msg, callstack);
 };
 #pragma warning(pop)
 

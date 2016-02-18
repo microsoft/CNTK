@@ -18,7 +18,6 @@
 #include "BestGpu.h"
 #include "Config.h" // for ConfigParameters
 #include "ScriptableObjects.h"
-#include "DebugUtil.h"
 #ifndef CPUONLY
 #pragma comment(lib, "cudart.lib")
 #include <cuda_runtime.h>
