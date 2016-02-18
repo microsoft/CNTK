@@ -1,0 +1,12 @@
+dataDir: .
+tags:
+    # running on every BVT job in 'E' (Examples) leg
+    - bvt-e ((flavor=='release') & (device=='gpu') & (os=='linux') 
+    # running every Nightly job in 'E' (Examples) leg
+    - nightly-e (os=='linux')
+
+testCases:
+  CNTK Run must be completed:
+    patterns:
+      - ^COMPLETED
+

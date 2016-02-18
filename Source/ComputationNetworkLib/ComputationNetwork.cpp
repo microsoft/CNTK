@@ -1033,7 +1033,7 @@ void ComputationNetwork::PerformSVDecomposition(const map<wstring, float>& SVDCo
     CompileNetwork();
 }
 
-// save network to legacy DBN.exe format
+// Helper class to form a logical DBN layer while exporting the network (used by SaveToDbnFile)
 class DbnLayer
 {
 public:
@@ -1044,8 +1044,9 @@ public:
     ~DbnLayer() {};
 };
 
+// Save network in the format of the Microsoft-internal legacy "DBN.exe" tool (this function is not useful outside of Microsoft)
 template <class ElemType>
-void ComputationNetwork::SaveToDbnFile(ComputationNetworkPtr net, const std::wstring& fileName) const
+void ComputationNetwork::SaveToDbnFile(ComputationNetworkPtr net, const std::wstring& fileName) const 
 {
     // Helper methods
     auto VerifyTypeAll = [](const std::vector<ComputationNodeBasePtr>& nodes, const std::wstring& typeValue) -> bool
@@ -1099,7 +1100,7 @@ void ComputationNetwork::SaveToDbnFile(ComputationNetworkPtr net, const std::wst
 
         for (auto& node : list)
         {
-            if (node->OperationName() == type )
+            if (node->OperationName() == type)
             {
                 results.push_back(node);
             }
@@ -1136,17 +1137,19 @@ void ComputationNetwork::SaveToDbnFile(ComputationNetworkPtr net, const std::wst
         auto nodeInputs = node->GetInputs();
         for (auto& input : nodeInputs)
         {
+            bool cyclic = false;
             for (auto& item : orderList)
             {
                 if (item == input)
                 {
-                    RuntimeError("Cyclic dependency on node '%ls'", item->GetName().c_str());
+                    Warning("Cyclic dependency on node '%ls'\n", item->GetName().c_str());
+                    cyclic = true;
                 }
             }
 
-            nodeStack.push(input);
+            if (!cyclic)
+                nodeStack.push(input);
         }
-
         orderList.push_back(node);
     }
 
@@ -1164,7 +1167,7 @@ void ComputationNetwork::SaveToDbnFile(ComputationNetworkPtr net, const std::wst
             multNodes.push_back(item);
         }
     }
-    
+
     for (auto& node : multNodes)
     {
         std::vector<ComputationNodeBasePtr> consumers = GetNodeConsumers(node);
@@ -1246,7 +1249,7 @@ void ComputationNetwork::SaveToDbnFile(ComputationNetworkPtr net, const std::wst
     std::vector<ComputationNodeBasePtr> priorNodes = WhereNode(net->GetAllNodes(), GetAllPriorNodes);
     if (priorNodes.size() != 1)
     {
-        RuntimeError("Could not reliably determine the prior node!");
+        Warning("Could not reliably determine the prior node!");
     }
 
     // =================
@@ -1258,9 +1261,9 @@ void ComputationNetwork::SaveToDbnFile(ComputationNetworkPtr net, const std::wst
     auto PutTag = [&fstream](const char * tag) { while (*tag) fstream << *tag++; };
     auto PutString = [&fstream](const char * string) { fstream.WriteString(string, 0); };
     auto PutInt = [&fstream](int val) { fstream << val; };
-    
+
     // write a DBN matrix object, optionally applying a function
-    auto PutMatrixConverted = [&](const Matrix<ElemType> * m, size_t maxelem, const char * name, float(*f)(float))      
+    auto PutMatrixConverted = [&](const Matrix<ElemType> * m, size_t maxelem, const char * name, float(*f)(float))
     {
         PutTag("BMAT");
         PutString(name);
@@ -1305,7 +1308,7 @@ void ComputationNetwork::SaveToDbnFile(ComputationNetworkPtr net, const std::wst
     for (auto ii = dbnLayers.begin(), e = dbnLayers.end(); ii != e; ++ii)
     {
         DbnLayerPtr& layer = *ii;
-        
+
         if (ii == dbnLayers.begin())
         {
             PutString("rbmgaussbernoulli");
@@ -1348,7 +1351,14 @@ void ComputationNetwork::SaveToDbnFile(ComputationNetworkPtr net, const std::wst
 
     // Dump the priors
     PutTag("ENET");
-    PutMatrix(&(priorNodes.front()->As<ComputationNode<ElemType>>()->Value()), "Pu");
+    if (priorNodes.size() > 0)
+    {
+        PutMatrix(&(priorNodes.front()->As<ComputationNode<ElemType>>()->Value()), "Pu");
+    }
+    else
+    {
+        Warning("No priority node(s) found!");
+    }
     PutTag("EDBN");
 }
 
