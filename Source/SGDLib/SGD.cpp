@@ -629,7 +629,9 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
         if ((g_mpi == nullptr) || g_mpi->IsMainNode())
         {
             SaveCheckPointInfo(i, totalSamplesSeen, learnRatePerSample, smoothedGradients, prevCriterion, chosenMinibatchSize);
-            net->Save(GetModelNameForEpoch(i));
+            auto modelName = GetModelNameForEpoch(i);
+            fprintf(stderr, "SGD: Saving checkpoint model '%ls'\n", modelName.c_str());
+            net->Save(modelName);
             if (!m_keepCheckPointFiles)
             {
                 // delete previous checkpoint file to save space
@@ -1069,7 +1071,11 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
         totalTimeInMBs += timer.ElapsedSeconds();
         numSamplesLastMBs += useModelAveraging ? int(actualMBSize) : int(aggregateNumSamplesWithLabel);
 
-        if (numMBsRun % m_numMBsToShowResult == 0)
+        if (
+#if 0       // output the first few to see if everything started right
+            numMBsRun <= 3 ||
+#endif
+            numMBsRun % m_numMBsToShowResult == 0)
         {
             // get the epoch Values updated
             if (!useGradientAggregation)
