@@ -872,12 +872,6 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
         bool wasDataRead = DataReaderHelpers::GetMinibatchIntoNetwork(*trainSetDataReader, net, criterionNodes[0],
                                                                       useDistributedMBReading, useParallelTrain, *inputMatrices, actualMBSize);
 
-			if (!m_multiversoBarrier && useASGD)
-			{
-				m_multiverso->WaitAll();
-				m_multiversoBarrier = true;
-			}
-
         if (!wasDataRead && (!useDistributedMBReading || noMoreSamplesToProcess)) // in case of distributed reading, we do a few more loops until all ranks have completed
 				break;
 
@@ -2465,17 +2459,13 @@ static LearningRateSearchAlgorithm ParseLearningRateSearchType(const wstring& s)
     else InvalidArgument("autoAdjustLR: Invalid learning rate search type. Valid values are (none | searchBeforeEpoch | adjustAfterEpoch)");
 }
 
-	static AdjustLearningRateatBeginning AdjustLearningRateAtBeginningType(wstring s)
-	{
-		if (!_wcsicmp(s.c_str(), L"") || !_wcsicmp(s.c_str(), L"none"))
-			return AdjustLearningRateatBeginning::None;
-		else if (!_wcsicmp(s.c_str(), L"linearly"))
-			return AdjustLearningRateatBeginning::Linearly;
-		else if (!_wcsicmp(s.c_str(), L"staircase"))
-			return AdjustLearningRateatBeginning::Staircase;
-		else
-			InvalidArgument("AdjustLearningRateatBeginningType: Invalid Type. Valid values are (None | Linearly | Staircase)");
-	}
+static AdjustLearningRateatBeginning AdjustLearningRateAtBeginningType(wstring s)
+{
+	if      (EqualCI(s.c_str(), L"") || EqualCI(s.c_str(), L"none")) return AdjustLearningRateatBeginning::None;
+	else if (EqualCI(s.c_str(), L"linearly"))                        return AdjustLearningRateatBeginning::Linearly;
+	else if (EqualCI(s.c_str(), L"staircase"))                       return AdjustLearningRateatBeginning::Staircase;
+	else InvalidArgument("AdjustLearningRateatBeginningType: Invalid Type. Valid values are (None | Linearly | Staircase)");
+}
 
     template<class ConfigRecordType>
 SGDParams::SGDParams(const ConfigRecordType& configSGD, size_t sizeofElemType)
@@ -2655,37 +2645,37 @@ SGDParams::SGDParams(const ConfigRecordType& configSGD, size_t sizeofElemType)
         m_momentumParam = momentumPerSampleVec;
         m_momentumSpecifiedForMBSize = intargvector(L"1");
     }
-    else if (momentumPerMB.size() > 0)
-    {
-        m_momentumParam = momentumPerMB;
-        m_momentumSpecifiedForMBSize = m_mbSize;
-    }
-    else // default: momentumPerMB = 0.9 per MB
-    {
-        m_momentumParam = floatargvector(L"0.9");
-        m_momentumSpecifiedForMBSize = m_mbSize;
-    }
-    m_useNesterovMomentum = useNesterovMomentum;
+	else if (momentumPerMB.size() > 0)
+	{
+		m_momentumParam = momentumPerMB;
+		m_momentumSpecifiedForMBSize = m_mbSize;
+	}
+	else // default: momentumPerMB = 0.9 per MB
+	{
+		m_momentumParam = floatargvector(L"0.9");
+		m_momentumSpecifiedForMBSize = m_mbSize;
+	}
+	m_useNesterovMomentum = useNesterovMomentum;
 
-    for (int i = 0; i < m_momentumParam.size(); i++)
-    {
-        if (m_momentumParam[i] >= 1.0 || m_momentumParam[i] < 0.0)
-        {
-            InvalidArgument("Momentum parameter must be in [0, 1).");
-        }
-    }
+	for (int i = 0; i < m_momentumParam.size(); i++)
+	{
+		if (m_momentumParam[i] >= 1.0 || m_momentumParam[i] < 0.0)
+		{
+			InvalidArgument("Momentum parameter must be in [0, 1).");
+		}
+	}
 
-    if (m_learnRateDecreaseFactor > 1 || m_learnRateIncreaseFactor < 1)
-    {
-        InvalidArgument("learnRateIncreaseFactor must be >= 1 and learnRateDecreaseFactor must be <= 1.");
-    }
+	if (m_learnRateDecreaseFactor > 1 || m_learnRateIncreaseFactor < 1)
+	{
+		InvalidArgument("learnRateIncreaseFactor must be >= 1 and learnRateDecreaseFactor must be <= 1.");
+	}
 
-    for (size_t i = 0; i < m_dropoutRates.size(); i++)
-    {
-        if (m_dropoutRates[i] >= 1 || m_dropoutRates[i] < 0)
-        {
-            InvalidArgument("dropoutRate must be >= 0 and < 1.");
-        }
+	for (size_t i = 0; i < m_dropoutRates.size(); i++)
+	{
+		if (m_dropoutRates[i] >= 1 || m_dropoutRates[i] < 0)
+		{
+			InvalidArgument("dropoutRate must be >= 0 and < 1.");
+		}
     }
 
     if (m_adaptationRegWeight > 1 || m_adaptationRegWeight < 0)
@@ -2760,13 +2750,13 @@ SGDParams::SGDParams(const ConfigRecordType& configSGD, size_t sizeofElemType)
 
 static size_t GetSizeOfPrecision(const ScriptableObjects::IConfigRecordPtr configp)
 {
-    wstring precision = configp->Get(L"precision");
-    if (precision == L"float")
-        return sizeof(float);
-    else if (precision == L"double")
-        return sizeof(double);
-    else
-        RuntimeError("invalid value '%ls' for 'precision', must be 'float' or 'double'", precision.c_str());
+	wstring precision = configp->Get(L"precision");
+	if (precision == L"float")
+		return sizeof(float);
+	else if (precision == L"double")
+		return sizeof(double);
+	else
+		RuntimeError("invalid value '%ls' for 'precision', must be 'float' or 'double'", precision.c_str());
 }
 
 SGDParams::SGDParams(const ScriptableObjects::IConfigRecordPtr configp)
