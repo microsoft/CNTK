@@ -55,15 +55,10 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup>
-
     <ClCompile>
-
       <OpenMPSupport>true</OpenMPSupport>
-
     </ClCompile>
-
   </ItemDefinitionGroup>
-
   <ItemDefinitionGroup Condition="$(DebugBuild)">
     <ClCompile>
       <Optimization>Disabled</Optimization>
