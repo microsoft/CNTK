@@ -48,6 +48,9 @@
     <Filter Include="Control">
       <UniqueIdentifier>{024ba6c7-74fe-4a89-a5e9-394e46c13f82}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Data\images">
+      <UniqueIdentifier>{eb1dd93b-a95c-4576-a18c-7cfb0ee7001f}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <Text Include="Data\ImageReaderSimple_map.txt">
@@ -125,6 +128,9 @@
     <Text Include="Config\UCIFastReaderSimpleDataLoop_Config.cntk">
       <Filter>Config</Filter>
     </Text>
+    <None Include="Config\ImageReaderZip_Config.cntk">
+      <Filter>Config</Filter>
+    </None>
     <Text Include="Control\HTKMLFReaderSimpleDataLoop1_5_11_Control.txt">
       <Filter>Control</Filter>
     </Text>
@@ -161,22 +167,45 @@
     <Text Include="Control\UCIFastReaderSimpleDataLoop_Control.txt">
       <Filter>Control</Filter>
     </Text>
-    <Text Include="Data\ImageReaderSimple_map.txt" />
-    <Text Include="Config\ImageReaderSimple_Config.cntk" />
-    <Text Include="Data\ImageReaderZip_map.txt" />
-    <Text Include="Control\ImageReaderSimple_Control.txt" />
-    <Text Include="Control\ImageReaderZip_Control.txt" />
+    <Text Include="Config\ImageReaderSimple_Config.cntk">
+      <Filter>Config</Filter>
+    </Text>
+    <Text Include="Control\ImageReaderSimple_Control.txt">
+      <Filter>Control</Filter>
+    </Text>
+    <Text Include="Control\ImageReaderZip_Control.txt">
+      <Filter>Control</Filter>
+    </Text>
+    <Text Include="Data\ImageReaderSimple_map.txt">
+      <Filter>Data</Filter>
+    </Text>
+    <Text Include="Data\ImageReaderZip_map.txt">
+      <Filter>Data</Filter>
+    </Text>
   </ItemGroup>
   <ItemGroup>
-    <Image Include="Data\images\black.jpg" />
-    <Image Include="Data\images\blue.jpg" />
-    <Image Include="Data\images\green.jpg" />
-    <Image Include="Data\images\red.jpg" />
+    <Image Include="Data\images\black.jpg">
+      <Filter>Data\images</Filter>
+    </Image>
+    <Image Include="Data\images\blue.jpg">
+      <Filter>Data\images</Filter>
+    </Image>
+    <Image Include="Data\images\green.jpg">
+      <Filter>Data\images</Filter>
+    </Image>
+    <Image Include="Data\images\red.jpg">
+      <Filter>Data\images</Filter>
+    </Image>
   </ItemGroup>
   <ItemGroup>
-    <None Include="Data\images\chunk0.zip" />
-    <None Include="Data\images\chunk1.zip" />
-    <None Include="Data\images\simple.zip" />
-    <None Include="Config\ImageReaderZip_Config.cntk" />
+    <None Include="Data\images\chunk0.zip">
+      <Filter>Data\images</Filter>
+    </None>
+    <None Include="Data\images\chunk1.zip">
+      <Filter>Data\images</Filter>
+    </None>
+    <None Include="Data\images\simple.zip">
+      <Filter>Data\images</Filter>
+    </None>
   </ItemGroup>
 </Project>
