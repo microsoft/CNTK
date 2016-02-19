@@ -24,7 +24,7 @@ public:
     std::vector<StreamDescriptionPtr> GetStreamDescriptions() const override;
 
     // Get sequences by specified ids. Order of returned sequences corresponds to the order of provided ids.
-    std::vector<std::vector<SequenceDataPtr>> GetSequencesById(const std::vector<size_t>& ids) override;
+    virtual ChunkPtr GetChunk(size_t chunkId) override;
 
 protected:
     void FillSequenceDescriptions(SequenceDescriptions& timeline) const override;
@@ -40,6 +40,8 @@ private:
         size_t m_classId;
     };
 
+    class ImageChunk;
+
     // A helper class for generation of type specific labels (currently float/double only).
     class LabelGenerator;
     typedef std::shared_ptr<LabelGenerator> LabelGeneratorPtr;
@@ -47,12 +49,6 @@ private:
 
     // Sequence descriptions for all input data.
     std::vector<ImageSequenceDescription> m_imageSequences;
-
-    // Buffer to store label data.
-    std::vector<SparseSequenceDataPtr> m_labels;
-
-    // Buffer to store feature data.
-    std::vector<cv::Mat> m_currentImages;
 
     // Element type of the feature/label stream (currently float/double only).
     ElementType m_featureElementType;
