@@ -17,6 +17,8 @@
 //#include "commandArgUtil.h"
 #include "ReaderShim.h"
 
+typedef CPUSPARSE_INDEX_TYPE IndexType;
+
 namespace Microsoft { namespace MSR { namespace CNTK {
 
 template <class ElemType>
@@ -115,15 +117,26 @@ bool ReaderShim<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemType>*
         {
             assert(m_nameToStreamId.find(mx.first) != m_nameToStreamId.end());
             size_t streamId = m_nameToStreamId[mx.first];
-
+            
             const auto& stream = minibatch.m_data[streamId];
             m_layout = stream->m_layout;
-
             size_t columnNumber = m_layout->GetNumCols();
             size_t rowNumber = m_streams[streamId]->m_sampleLayout->GetNumElements();
 
-            auto data = reinterpret_cast<const ElemType*>(stream->m_data);
-            mx.second->SetValue(rowNumber, columnNumber, mx.second->GetDeviceId(), const_cast<ElemType*>(data), matrixFlagNormal);
+            if (m_streams[streamId]->m_storageType == StorageType::sparse_csc) 
+            {
+                auto data = reinterpret_cast<const ElemType*>(stream->m_data);
+                mx.second->SetValue(rowNumber, columnNumber, mx.second->GetDeviceId(), const_cast<ElemType*>(data), matrixFlagNormal);
+            }
+            else
+            {
+                size_t* data = reinterpret_cast<size_t*>(stream->m_data);
+                size_t nnzCount = *data;
+                ElemType* values = reinterpret_cast<ElemType*>(data + 1);
+                IndexType* rows = reinterpret_cast<IndexType*>(values + nnzCount);
+                IndexType* columns = reinterpret_cast<IndexType*>(rows + nnzCount);
+                mx.second->SetMatrixFromCSCFormat(columns, rows, values, nnzCount, rowNumber, columnNumber);
+            }
         }
     }
 
