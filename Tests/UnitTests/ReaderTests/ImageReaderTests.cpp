@@ -33,7 +33,7 @@ BOOST_AUTO_TEST_CASE(ImageReaderSimple)
         0,
         0,
         1);
-};
+}
 
 BOOST_AUTO_TEST_CASE(ImageReaderZip)
 {
@@ -50,7 +50,7 @@ BOOST_AUTO_TEST_CASE(ImageReaderZip)
         0,
         0,
         1);
-};
+}
 
 BOOST_AUTO_TEST_SUITE_END()
 } } } }
