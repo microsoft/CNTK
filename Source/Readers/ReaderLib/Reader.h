@@ -83,6 +83,10 @@ struct Minibatch
     Minibatch() : m_endOfEpoch(false)
     {
     }
+
+    Minibatch(bool endOfEpoch) : m_endOfEpoch(endOfEpoch)
+    {
+    }
 };
 
 //////////////////////////////////////////////////////////////////////////////////////////////////
