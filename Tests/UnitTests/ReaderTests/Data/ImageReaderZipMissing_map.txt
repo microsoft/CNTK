@@ -1,0 +1,5 @@
+C:\src\cntk\Tests\UnitTests\ReaderTests\Data\images\simple.zip@\chunk0\black.jpg	0
+C:\src\cntk\Tests\UnitTests\ReaderTests\Data\images\simple.zip@\chunk0\blue.jpg	1
+C:\src\cntk\Tests\UnitTests\ReaderTests\Data\images\simple.zip@\chunk1\green.jpg	2
+C:\src\cntk\Tests\UnitTests\ReaderTests\Data\images\simple.zip@\missing.jpg	3
+C:\src\cntk\Tests\UnitTests\ReaderTests\Data\images\simple.zip@\chunk1\red.jpg	3
