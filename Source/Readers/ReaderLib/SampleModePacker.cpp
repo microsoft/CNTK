@@ -6,10 +6,34 @@
 #define _CRT_SECURE_NO_WARNINGS
 #define _SCL_SECURE_NO_WARNINGS
 
+#include <numeric>
 #include "SampleModePacker.h"
 #include "ElementTypeUtils.h"
+#include "CommonMatrix.h"
+
+typedef CPUSPARSE_INDEX_TYPE IndexType;
 
 namespace Microsoft { namespace MSR { namespace CNTK {
+
+void StreamBuffer::Allocate(MemoryProviderPtr memoryProvider, size_t capacity)
+{
+    m_capacity = capacity;
+    m_data.reset(
+        reinterpret_cast<char*>(memoryProvider->Alloc(1, capacity)),
+        [memoryProvider](char* p)
+    {
+        memoryProvider->Free(p);
+    });
+    Reset();
+}
+
+
+void StreamBuffer::Reset()
+{
+    auto ptr = m_data.get();
+    std::fill(ptr, ptr + m_capacity, 0);
+}
+
 
 SampleModePacker::SampleModePacker(
     MemoryProviderPtr memoryProvider,
@@ -17,23 +41,25 @@ SampleModePacker::SampleModePacker(
     size_t minibatchSize,
     const std::vector<StreamDescriptionPtr>& streams) : m_transformer(transformer),
                                                         m_minibatchSize(minibatchSize),
+                                                        m_numberOfStreams(streams.size()),
                                                         m_outputStreams(streams),
-                                                        m_minibatchLayout(std::make_shared<MBLayout>()),
                                                         m_memoryProvider(memoryProvider)
 {
     m_inputStreams = m_transformer->GetStreamDescriptions();
-    assert(m_inputStreams.size() == m_outputStreams.size());
+    assert(m_inputStreams.size() == m_numberOfStreams);
     assert(
         std::find_if(
-            m_outputStreams.begin(),
-            m_outputStreams.end(),
-            [](const StreamDescriptionPtr& s)
-            {
-                return s->m_storageType == StorageType::sparse_csc;
-            }) == m_outputStreams.end());
+        m_outputStreams.begin(),
+        m_outputStreams.end(),
+        [](const StreamDescriptionPtr& s)
+    {
+        return s->m_storageType == StorageType::sparse_csc;
+    }) == m_outputStreams.end());
 
     assert(m_minibatchSize > 0);
-    for (int i = 0; i < m_outputStreams.size(); ++i)
+
+    m_streamBuffers.resize(m_numberOfStreams);
+    for (int i = 0; i < m_numberOfStreams; ++i)
     {
         const auto& stream = m_outputStreams[i];
         // Input and output should match in everything except for sparse/dense.
@@ -42,44 +68,39 @@ SampleModePacker::SampleModePacker(
         assert(stream->m_id == m_inputStreams[i]->m_id);
         assert(GetSampleSize(m_inputStreams[i]) == GetSampleSize(stream));
 
-        m_streamBuffers.push_back(
-            AllocateBuffer(m_minibatchSize * stream->m_sampleLayout->GetNumElements(), GetSizeByType(stream->m_elementType)));
+        // dense to sparse re-packing is not supported
+        assert(!(m_inputStreams[i]->m_storageType == StorageType::dense && 
+            stream->m_storageType == StorageType::sparse_csc));
     }
 }
 
 Minibatch SampleModePacker::ReadMinibatch()
 {
     auto sequences = m_transformer->GetNextSequences(m_minibatchSize);
+    const auto& batch = sequences.m_data;
 
     Minibatch minibatch;
     minibatch.m_endOfEpoch = sequences.m_endOfEpoch;
 
-    // Iterating for sequences inside the batch of sequences.
-    for (size_t sequenceIndex = 0; sequenceIndex < sequences.m_data.size(); sequenceIndex++)
-    {
-        // For each sequence iterating thru all the streams with this sequence id and copying to the buffer.
-        assert(m_streamBuffers.size() == sequences.m_data[sequenceIndex].size());
-        for (int streamIndex = 0; streamIndex < sequences.m_data[sequenceIndex].size(); ++streamIndex)
-        {
-            CopySequenceToBuffer(sequenceIndex, streamIndex, sequences.m_data);
-        }
-    }
-
-    if (sequences.m_data.size() == 0)
+    if (batch.size() == 0)
     {
         return minibatch;
     }
 
-    // Creating output minibatch with shared layout between all streams.
-    m_minibatchLayout->InitAsFrameMode(sequences.m_data.size());
-    for (int i = 0; i < m_outputStreams.size(); ++i)
+    for (int streamIndex = 0; streamIndex < m_numberOfStreams; ++streamIndex)
     {
-        auto stream = std::make_shared<StreamMinibatch>();
-        stream->m_data = m_streamBuffers[i].get();
-        stream->m_dataSize = sequences.m_data.size() * GetSampleSize(m_outputStreams[i]);
-        stream->m_layout = m_minibatchLayout;
+        const auto& type = m_outputStreams[streamIndex]->m_storageType;
+        auto layout = (type == StorageType::dense) ?
+            PackDenseStream(batch, streamIndex) : PackSparseStream(batch, streamIndex);
 
-        minibatch.m_data.push_back(stream);
+        auto& buffer = m_streamBuffers[streamIndex];
+
+        auto streamMinibatch = std::make_shared<StreamMinibatch>();
+        streamMinibatch->m_data = buffer.m_data.get();
+        streamMinibatch->m_dataSize = buffer.m_size;
+        streamMinibatch->m_layout = layout;
+
+        minibatch.m_data.push_back(streamMinibatch);
     }
 
     return minibatch;
@@ -92,60 +113,244 @@ size_t SampleModePacker::GetSampleSize(StreamDescriptionPtr stream)
     return stream->m_sampleLayout->GetNumElements() * elementSize;
 }
 
-void SampleModePacker::CopySequenceToBuffer(size_t sampleIndex, size_t streamIndex, const std::vector<std::vector<SequenceDataPtr>>& sequences)
+
+size_t SampleModePacker::GetMaxSequenceLength(const SequenceBatch& batch, size_t streamIndex)
 {
-    // In framemode sequence just contains a single sample.
-    const auto& sample = sequences[sampleIndex][streamIndex];
-    size_t sampleSize = GetSampleSize(m_inputStreams[streamIndex]);
-    auto sampleData = reinterpret_cast<const char*>(sample->m_data);
+    size_t maxLength = 0;
+    const StorageType type = m_inputStreams[streamIndex]->m_storageType;
+    for (const auto& sequences : batch)
+    {
+        const auto& sequence = sequences[streamIndex];
+        size_t numSamples = 0;
+        if (type == StorageType::dense)
+        {
+            const auto& denseSequence = reinterpret_cast<const DenseSequenceData&>(*sequence);
+            numSamples = denseSequence.m_numberOfSamples;
+        }
+        else
+        {
+            const auto& sparseSequence = reinterpret_cast<const SparseSequenceData&>(*sequence);
+            numSamples = sparseSequence.m_indices.size();
+        }
+
+        maxLength = max(maxLength, numSamples);
+    }
+    return maxLength;
+}
+
+
+MBLayoutPtr SampleModePacker::PackDenseStream(const SequenceBatch& batch, size_t streamIndex)
+{
+    assert(m_outputStreams[streamIndex]->m_storageType == StorageType::dense);
 
     const auto& stream = m_inputStreams[streamIndex];
+    auto& buffer = m_streamBuffers[streamIndex];
+    size_t sampleSize = GetSampleSize(stream);
     auto elementSize = GetSizeByType(stream->m_elementType);
-    auto buffer = m_streamBuffers[streamIndex].get();
+    size_t maxSequenceLength = GetMaxSequenceLength(batch, streamIndex);
+    size_t numSequences = batch.size();
+    size_t requiredSize = sampleSize * maxSequenceLength * numSequences;
 
-    if (stream->m_storageType == StorageType::dense)
+    if (buffer.m_capacity < requiredSize)
     {
-        auto data = reinterpret_cast<DenseSequenceData&>(*sample);
-        // Expect single sample.
-        assert(data.m_numberOfSamples == 1);
-
-        // Copying the sequence to its position in the buffer. Effectivly a buffer contains concatenation of samples for a stream.
-        std::copy(sampleData, sampleData + sampleSize, buffer + sampleIndex * sampleSize);
-    }
-    else if (stream->m_storageType == StorageType::sparse_csc)
-    {
-        auto data = reinterpret_cast<SparseSequenceData&>(*sample);
-        // Expect single sample.
-        assert(data.m_indices.size() == 1);
-
-        // Currently sparse data has to be unpacked to the dense one. Possibly can be done later
-        // in the network or as a transformation.
-
-        // Fill it in with zeros.
-        std::fill(buffer + sampleIndex * sampleSize, buffer + (sampleIndex + 1) * sampleSize, 0);
-
-        // Copy the non zero data to the buffer.
-        size_t nonZeroCount = data.m_indices[0].size();
-        for (size_t nonZeroIndex = 0; nonZeroIndex < nonZeroCount; ++nonZeroIndex)
-        {
-            size_t rowIndex = data.m_indices[0][nonZeroIndex];
-            char* destination = buffer + sampleIndex * sampleSize + rowIndex * elementSize;
-            std::copy(sampleData + nonZeroIndex * elementSize, sampleData + (nonZeroIndex + 1) * elementSize, destination);
-        }
+        buffer.Allocate(m_memoryProvider, requiredSize);
     }
     else
     {
-        RuntimeError("Storage type %d is not supported.", m_inputStreams[streamIndex]->m_storageType);
+        // Do we always need to do this?
+        buffer.Reset();
     }
+
+    auto mbLayout = std::make_shared<MBLayout>();
+    mbLayout->Init(numSequences, maxSequenceLength);
+
+    for (size_t sequenceIndex = 0; sequenceIndex < numSequences; ++sequenceIndex)
+    {
+        assert(m_numberOfStreams == batch[sequenceIndex].size());
+
+        // it'd be nicer if all sequences from a particular stream were
+        // stored in a single vector, i.e. sequence = batch[streamIndex][sequenceIndex]
+        // In which case, there's actually no need to pass the whole batch 
+        // inside this metod
+        const auto& sequence = batch[sequenceIndex][streamIndex];
+        auto data = reinterpret_cast<const char*>(sequence->m_data);
+        size_t numSamples = 0;
+
+        if (stream->m_storageType == StorageType::dense)
+        {
+            const auto& denseSequence = reinterpret_cast<DenseSequenceData&>(*sequence);
+            numSamples = denseSequence.m_numberOfSamples;
+            // Hm, why do we need to spread samples from a single sequence
+            // all over the place, as opposed to keeping them in a contiguous
+            // region???
+            char* source = const_cast<char*>(data);
+            char* destination = buffer.m_data.get() + sequenceIndex * sampleSize;
+            for (int sampleIndex = 0; sampleIndex < numSamples; ++sampleIndex)
+            {
+                std::copy(source, source + sampleSize, destination);
+                source += sampleSize;
+                destination += numSequences * sampleSize;                
+            }           
+            assert(destination < buffer.m_data.get() + buffer.m_capacity);
+        }
+        else // repack sparse to dense
+        {
+            const auto& sparseSequence = reinterpret_cast<SparseSequenceData&>(*sequence);
+            numSamples = sparseSequence.m_indices.size();
+
+            char* source = const_cast<char*>(data);
+            char* destination = buffer.m_data.get() + sequenceIndex * sampleSize;
+
+            // Copy the non zero data to the buffer.
+            for (size_t sampleIndex = 0; sampleIndex < numSamples; ++sampleIndex)
+            {
+                const auto& indices = sparseSequence.m_indices[sampleIndex];
+                size_t nonZeroCount = indices.size();
+                for (size_t nonZeroIndex = 0; nonZeroIndex < nonZeroCount; ++nonZeroIndex)
+                {
+                    size_t rowIndex = indices[nonZeroIndex];
+                    size_t offset = rowIndex * elementSize;
+                    assert(offset < sampleSize);
+                    char* from = source + nonZeroIndex * elementSize;
+                    char* to = destination + offset;
+                    std::copy(from, from + elementSize, to);
+                }
+                source += sampleSize;
+                destination += numSequences * sampleSize;
+            }
+        }
+
+        // We don't do any packing per se, instead we create MB with 
+        // the the number of parallel sequences equal to the number of 
+        // Sequences in the batch.
+        mbLayout->AddSequence(NEW_SEQUENCE_ID, sequenceIndex, 0, numSamples);
+        if (numSamples < maxSequenceLength)
+        {
+            mbLayout->AddGap(sequenceIndex, numSamples, maxSequenceLength);
+        }
+    }
+    return mbLayout;
 }
 
-std::shared_ptr<char> SampleModePacker::AllocateBuffer(size_t numElements, size_t elementSize)
+MBLayoutPtr SampleModePacker::PackSparseStream(const SequenceBatch& batch, size_t streamIndex)
 {
-    return std::shared_ptr<char>(
-        reinterpret_cast<char*>(m_memoryProvider->Alloc(elementSize, numElements)),
-        [this](char* p)
+    assert(m_outputStreams[streamIndex]->m_storageType == StorageType::sparse_csc);
+
+    const auto& stream = m_inputStreams[streamIndex];
+
+    assert(stream->m_storageType == StorageType::sparse_csc);
+
+    auto& buffer = m_streamBuffers[streamIndex];
+    
+    auto elementSize = GetSizeByType(stream->m_elementType);
+
+    auto mbLayout = std::make_shared<MBLayout>();
+
+    size_t maxSequenceLength = GetMaxSequenceLength(batch, streamIndex);
+
+    // TODO: need to figure out how to pack sparse sequences in the non-frame mode.
+    assert(maxSequenceLength == 1); 
+
+    size_t numSequences = batch.size();
+
+    mbLayout->Init(numSequences, maxSequenceLength);
+
+    size_t nnzCount = 0;
+    vector<IndexType> sparseRowIndices;
+    vector<IndexType> sparseColumnIndices;
+    vector<size_t> perSequeceNonZeroCounts;
+
+    sparseColumnIndices.push_back(0);
+    // This whole thing will disappear, once SparseSequenceData is refactored 
+    // to contain nnz and proper type (int32_t) for the indices.
+    for (const auto& sequences : batch) {
+        const auto& sequence = sequences[streamIndex];
+        const auto& sparseSequence = reinterpret_cast<const SparseSequenceData&>(*sequence);
+
+        size_t nnz = 0;
+        for (const auto& sampleIndices : sparseSequence.m_indices)
         {
-            m_memoryProvider->Free(p);
-        });
+            for (const size_t& index : sampleIndices)
+            {
+                sparseRowIndices.push_back(static_cast<IndexType>(index));
+            }
+            nnz += sparseRowIndices.size();
+            sparseColumnIndices.push_back(static_cast<IndexType>(sparseRowIndices.size()));
+        }
+        perSequeceNonZeroCounts.push_back(nnz);
+        nnzCount += nnz;
+    }
+
+    assert(nnzCount == sparseRowIndices.size());
+
+    // size of nnz type + nnz * (size of the element type) + nnz * (size of the row index type) + 
+    // number of columns * (size of the column index type). 
+    size_t requiredSize =
+        sizeof(nnzCount) +
+        nnzCount * (elementSize + sizeof(IndexType)) +
+        sizeof(IndexType) * (sparseColumnIndices.size() - 1);
+    if (buffer.m_capacity < requiredSize)
+    {
+        buffer.Allocate(m_memoryProvider, requiredSize);
+    }
+
+    const char * source = reinterpret_cast<char*>(&nnzCount);
+    char * destination = buffer.m_data.get();
+    // insert the nnzCount as the first element in the buffer.
+    std::copy(source, source + sizeof(nnzCount), destination);
+
+    destination += sizeof(nnzCount);
+
+
+    if (buffer.m_capacity < requiredSize)
+    {
+        buffer.Allocate(m_memoryProvider, requiredSize);
+    }
+    else
+    {
+        // Do we always need to do this?
+        buffer.Reset();
+    }
+
+    for (size_t sequenceIndex = 0; sequenceIndex < numSequences; ++sequenceIndex)
+    {
+        assert(m_numberOfStreams == batch[sequenceIndex].size());
+
+        // it'd be nicer if all sequences from a particular stream were
+        // stored in a single vector, i.e. sequence = batch[streamIndex][sequenceIndex]
+        // In which case, there's actually no need to pass the whole batch 
+        // inside this metod
+        const auto& sequence = batch[sequenceIndex][streamIndex];
+        auto data = reinterpret_cast<const char*>(sequence->m_data);
+
+        size_t numSamples = 0;
+
+        const auto& sparseSequence = reinterpret_cast<SparseSequenceData&>(*sequence);
+        numSamples = sparseSequence.m_indices.size();
+        size_t size = perSequeceNonZeroCounts[sequenceIndex] * elementSize;
+        std::copy(data, data + size, destination);
+        destination += size;
+        // We don't do any packing per se, instead we create MB with 
+        // the the number of parallel sequences equal to the number of 
+        // Sequences in the batch.
+        mbLayout->AddSequence(NEW_SEQUENCE_ID, sequenceIndex, 0, numSamples);
+        if (numSamples < maxSequenceLength)
+        {
+            mbLayout->AddGap(sequenceIndex, numSamples, maxSequenceLength);
+        }
+    }
+
+    assert(buffer.m_data.get() + sizeof(nnzCount) + nnzCount * elementSize == destination);
+
+    size_t size = nnzCount * sizeof(IndexType);
+    source = reinterpret_cast<const char*>(sparseRowIndices.data());
+    std::copy(source, source + size, destination);
+    destination += size;
+
+    size = sizeof(IndexType) * (sparseColumnIndices.size() - 1);
+    source = reinterpret_cast<const char*>(sparseColumnIndices.data());
+    std::copy(source, source + size, destination);
+
+    return mbLayout;
 }
 } } }
