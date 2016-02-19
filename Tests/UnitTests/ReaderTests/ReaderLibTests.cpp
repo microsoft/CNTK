@@ -14,7 +14,7 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Test {
 
 BOOST_AUTO_TEST_SUITE(ReaderLibTests)
 
-class MockDeserializer : public DataDeserializer
+class MockDeserializer : public IDataDeserializer
 {
 private:
     SequenceDescriptions m_sequenceDescriptions;
