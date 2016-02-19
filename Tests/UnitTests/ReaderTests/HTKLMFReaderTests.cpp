@@ -274,14 +274,6 @@ BOOST_AUTO_TEST_CASE(HTKMLFReaderSimpleDataLoop16)
         1);
 };
 
-BOOST_AUTO_TEST_CASE(HTKMLFReaderSimpleDataLoop17)
-{
-    HelperRunReaderTestWithException<double, std::invalid_argument>(
-        testDataPath() + "/Config/HTKMLFReaderSimpleDataLoop7_Config.cntk",
-        "Simple_Test",
-        "reader");
-};
-
 /*
 This test is commented out because it causes an assertion in debug mode on:
 HTKMLFReader (BPTT) (1110)
