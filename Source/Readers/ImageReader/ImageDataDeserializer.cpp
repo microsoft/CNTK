@@ -66,7 +66,7 @@ public:
         const auto& imageSequence = m_description;
 
         auto image = std::make_shared<DeserializedImage>();
-        image->m_image = std::move(ReadImage(m_description.m_id, imageSequence.m_path));
+        image->m_image = std::move(m_parent.ReadImage(m_description.m_id, imageSequence.m_path));
         auto& cvImage = image->m_image;
 
         if (!cvImage.data)

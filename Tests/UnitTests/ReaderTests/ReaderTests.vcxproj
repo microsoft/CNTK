@@ -168,8 +168,11 @@
     <Text Include="Control\HTKMLFReaderSimpleDataLoop6_16_17_Control.txt" />
     <Text Include="Control\HTKMLFReaderSimpleDataLoop7_Control.txt" />
     <Text Include="Control\HTKMLFReaderSimpleDataLoop9_19_Control.txt" />
+    <Text Include="Control\ImageReaderSimple_Control.txt" />
+    <Text Include="Control\ImageReaderZip_Control.txt" />
     <Text Include="Control\UCIFastReaderSimpleDataLoop_Control.txt" />
     <Text Include="Data\ImageReaderSimple_map.txt" />
+    <Text Include="Data\ImageReaderZip_map.txt" />
     <Text Include="Data\UCIFastReaderSimpleDataLoop_Mapping.txt" />
     <Text Include="Data\UCIFastReaderSimpleDataLoop_Train.txt" />
   </ItemGroup>
@@ -178,6 +181,12 @@
     <Image Include="Data\images\blue.jpg" />
     <Image Include="Data\images\green.jpg" />
     <Image Include="Data\images\red.jpg" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Config\ImageReaderZip_Config.cntk" />
+    <None Include="Data\images\chunk0.zip" />
+    <None Include="Data\images\chunk1.zip" />
+    <None Include="Data\images\simple.zip" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <Target Name="Build" Condition="$(HasBoost)" Outputs="$(TargetPath)" DependsOnTargets="$(BuildDependsOn)" />

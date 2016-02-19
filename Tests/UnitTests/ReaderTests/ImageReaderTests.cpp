@@ -52,5 +52,24 @@ BOOST_AUTO_TEST_CASE(ImageReaderZip)
         1);
 }
 
+BOOST_AUTO_TEST_CASE(ImageReaderZipMissingFile)
+{
+    BOOST_CHECK_THROW(
+        HelperRunReaderTest<float>(
+            testDataPath() + "/Config/ImageReaderZipMissing_Config.cntk",
+            testDataPath() + "/Control/ImageReaderZip_Control.txt",
+            testDataPath() + "/Control/ImageReaderZip_Output.txt",
+            "ZipMissing_Test",
+            "reader",
+            4,
+            4,
+            1,
+            1,
+            0,
+            0,
+            1),
+            std::runtime_error);
+}
+
 BOOST_AUTO_TEST_SUITE_END()
 } } } }
