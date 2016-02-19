@@ -7,7 +7,6 @@
 #include "Basics.h"
 #include "ComputationNode.h"
 #include "ConvolutionEngine.h"
-#include "gammacalculation.h"
 
 #include <map>
 #include <string>

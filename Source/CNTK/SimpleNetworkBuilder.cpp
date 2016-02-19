@@ -1787,17 +1787,15 @@ TrainingCriterion ParseTrainingCriterionString(wstring s)
 
 EvalCriterion ParseEvalCriterionString(wstring s)
 {
-    if (!_wcsicmp(s.c_str(), L"errorPrediction"))                   return EvalCriterion::ErrorPrediction;
-    else if (!_wcsicmp(s.c_str(), L"PhoneError"))                   return EvalCriterion::PhoneError;
-    else if (!_wcsicmp(s.c_str(), L"crossEntropyWithSoftmax"))      return EvalCriterion::CrossEntropyWithSoftmax;
-    else if (!_wcsicmp(s.c_str(), L"sequenceWithSoftmax"))          return EvalCriterion::SequenceWithSoftmax; 
-    else if (!_wcsicmp(s.c_str(), L"classCrossEntropyWithSoftmax")) return EvalCriterion::ClassCrossEntropyWithSoftmax;
-    else if (!_wcsicmp(s.c_str(), L"logistic"))                     return EvalCriterion::Logistic;
-    else if (!_wcsicmp(s.c_str(), L"noiseContrastiveEstimation") || !_wcsicmp(s.c_str(), L"noiseContrastiveEstimationNode" /*spelling error, deprecated*/))
-        return EvalCriterion::NCECrossEntropyWithSoftmax;
-    else if (!!_wcsicmp(s.c_str(), L"squareError"))
-        LogicError("evalCriterion: Invalid trainingCriterion value. Valid values are (errorPrediction | crossEntropyWithSoftmax | squareError | logistic | sequenceWithSoftmax)");
-    return EvalCriterion::SquareError;
+    if      (EqualCI(s, L"errorPrediction"))              return EvalCriterion::ErrorPrediction;
+    else if (EqualCI(s, L"PhoneError"))                   return EvalCriterion::PhoneError;
+    else if (EqualCI(s, L"crossEntropyWithSoftmax"))      return EvalCriterion::CrossEntropyWithSoftmax;
+    else if (EqualCI(s, L"sequenceWithSoftmax"))          return EvalCriterion::SequenceWithSoftmax; 
+    else if (EqualCI(s, L"classCrossEntropyWithSoftmax")) return EvalCriterion::ClassCrossEntropyWithSoftmax;
+    else if (EqualCI(s, L"logistic"))                     return EvalCriterion::Logistic;
+    else if (EqualCI(s, L"noiseContrastiveEstimation"))   return EvalCriterion::NCECrossEntropyWithSoftmax;
+    else if (EqualCI(s, L"squareError"))                  return EvalCriterion::SquareError;
+    else LogicError("evalCriterion: Invalid trainingCriterion value. Valid values are (errorPrediction | crossEntropyWithSoftmax | squareError | logistic | sequenceWithSoftmax)");
 }
 
 } } }
