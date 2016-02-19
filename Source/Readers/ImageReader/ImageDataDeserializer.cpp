@@ -59,7 +59,7 @@ public:
     {
     }
 
-    virtual std::vector<SequenceDataPtr> GetSequence(const size_t& sequenceId) override
+    virtual std::vector<SequenceDataPtr> GetSequence(size_t sequenceId) override
     {
         assert(sequenceId == m_description.m_id);
         UNUSED(sequenceId);
@@ -177,6 +177,12 @@ void ImageDataDeserializer::CreateSequenceDescriptions(std::string mapPath, size
         m_imageSequences.push_back(description);
         RegisterByteReader(description.m_id, description.m_path, knownReaders);
     }
+}
+
+size_t ImageDataDeserializer::GetTotalNumberOfChunks()
+{
+    // Currently we use one chunk per image.
+    return m_imageSequences.size();
 }
 
 std::vector<StreamDescriptionPtr> ImageDataDeserializer::GetStreamDescriptions() const

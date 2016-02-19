@@ -110,6 +110,7 @@ bool ReaderShim<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemType>*
 
     if (!minibatch.m_data.empty())
     {
+        // TODO: Use alternating pinned buffer in the packer, do not copy anything, but pack into the pinned memory.
         // Copy returned minibatch to the matrices.
         for (const auto& mx : matrices)
         {
