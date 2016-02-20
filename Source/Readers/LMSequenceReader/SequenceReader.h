@@ -250,7 +250,7 @@ public:
                               string mUnk,
                               noiseSampler<long>& m_noiseSampler,
                               bool flatten);
-    static void ReadWord(char* wrod, FILE* fin);
+    //static void ReadWord(char* wrod, FILE* fin);
 
     void GetLabelOutput(std::map<std::wstring, Matrix<ElemType>*>& matrices,
                         size_t m_mbStartSample, size_t actualmbsize);
