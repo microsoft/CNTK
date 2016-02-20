@@ -212,9 +212,10 @@ void ImageDataDeserializer::RegisterByteReader(size_t seqId, const std::string& 
     // Is it container or plain image file?
     if (atPos == std::string::npos)
         return;
+    // REVIEW alexeyk: only .zip container support for now.
+#ifdef USE_ZIP
     assert(atPos > 0);
     assert(atPos + 1 < path.length());
-    // REVIEW alexeyk: only .zip container support for now.
     auto containerPath = path.substr(0, atPos);
     // skip @ symbol and path separator (/ or \)
     auto itemPath = path.substr(atPos + 2);
@@ -233,6 +234,11 @@ void ImageDataDeserializer::RegisterByteReader(size_t seqId, const std::string& 
     }
     reader->Register(seqId, itemPath);
     m_readers[seqId] = reader;
+#else
+    UNUSED(seqId);
+    UNUSED(knownReaders);
+    RuntimeError("The code is built without zip container support. Only plain image files are supported.");
+#endif
 }
 
 cv::Mat ImageDataDeserializer::ReadImage(size_t seqId, const std::string& path)
