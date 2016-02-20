@@ -1825,10 +1825,7 @@ bool BatchSequenceReader<ElemType>::GetMinibatchData(size_t& /*out*/ firstPosInS
             const auto& labelValue = m_labelTemp[pos];
             pos++; // consume it
 
-            // TODO: should ignore <s>, check the sentence ending is </s>
-            // need to remove <s> from the training set
-            // allocate and initialize the next chunck of featureData
-            // TODO: ^^ understand the above comment
+            // generate the feature token
             if (labelIn.type == labelCategory)
             {
                 LabelIdType labelId = GetIdFromLabel(labelValue, labelIn);
@@ -1840,7 +1837,7 @@ bool BatchSequenceReader<ElemType>::GetMinibatchData(size_t& /*out*/ firstPosInS
             else
                 RuntimeError("Input labels are expected to be category labels.");
 
-            // now get the output label
+            // generate the output label token
             if (labelOut.type != labelNone)
             {
                 const auto& labelValue = m_labelTemp[pos];

@@ -2,9 +2,6 @@
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <ClCompile Include="CNTKEval.cpp" />
-    <ClCompile Include="..\Common\Eval.cpp">
-      <Filter>Common</Filter>
-    </ClCompile>
     <ClCompile Include="..\Common\fileutil.cpp">
       <Filter>Common</Filter>
     </ClCompile>
@@ -26,14 +23,14 @@
     <ClCompile Include="..\Common\Config.cpp">
       <Filter>Common</Filter>
     </ClCompile>
+    <ClCompile Include="..\Common\Eval.cpp">
+      <Filter>For External Use</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="EvalReader.h" />
     <ClInclude Include="EvalWriter.h" />
     <ClInclude Include="CNTKEval.h" />
-    <ClInclude Include="..\Common\Include\Eval.h">
-      <Filter>Common\Include</Filter>
-    </ClInclude>
     <ClInclude Include="..\Common\Include\File.h">
       <Filter>Common\Include</Filter>
     </ClInclude>
@@ -58,6 +55,9 @@
     <ClInclude Include="..\Common\Include\Config.h">
       <Filter>Common\Include</Filter>
     </ClInclude>
+    <ClInclude Include="..\Common\Include\Eval.h">
+      <Filter>For External Use</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Common">
@@ -68,6 +68,9 @@
     </Filter>
     <Filter Include="Misc">
       <UniqueIdentifier>{3660ead9-4e83-4246-8f76-dd1fda8e2590}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="For External Use">
+      <UniqueIdentifier>{fa8ec6d7-8998-44f0-bddb-cb4dffc5ec0b}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
 </Project>
