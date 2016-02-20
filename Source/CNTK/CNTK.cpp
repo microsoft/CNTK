@@ -102,10 +102,15 @@ void DumpNodeInfo(const ConfigParameters& config)
     wstring defOutFilePath = modelPath + L"." + nodeName + L".txt";
     wstring outputFile = config(L"outputFile", defOutFilePath);
     bool printValues = config(L"printValues", true);
+    bool printMetadata = config(L"printMetadata", true);
+    if (!printValues && !printMetadata)
+    {
+        InvalidArgument("printValues and printMetadata: Since both are set to false, there will be nothing to dump");
+    }
 
     ComputationNetwork net(-1);    // always use CPU
     net.Load<ElemType>(modelPath); // TODO: we have a function now to combine this and the previous line
-    net.DumpNodeInfoToFile(nodeName, printValues, outputFile, nodeNameRegexStr);
+    net.DumpNodeInfoToFile(nodeName, printValues, printMetadata, outputFile, nodeNameRegexStr);
 }
 
 size_t GetMaxEpochs(const ConfigParameters& configParams)
@@ -252,6 +257,10 @@ void DoCommands(const ConfigParameters& config)
             else if (action[j] == "convertdbn")
             {
                 DoConvertFromDbn<ElemType>(commandParams);
+            }
+            else if (action[j] == "exportdbn")
+            {
+                DoExportToDbn<ElemType>(commandParams);
             }
             else if (action[j] == "createLabelMap")
             {
@@ -620,12 +629,21 @@ int wmainOldCNTKConfig(int argc, wchar_t* argv[]) // called from wmain which is 
     return EXIT_SUCCESS;
 }
 
+// new_handler to print call stack upon allocation failure
+void AllocationFailureHandler()
+{
+    Microsoft::MSR::CNTK::DebugUtil::PrintCallStack();
+    std::set_new_handler(nullptr);
+    throw std::bad_alloc();
+}
+
 // ---------------------------------------------------------------------------
 // main wrapper that catches C++ exceptions and prints them
 // ---------------------------------------------------------------------------
 
 int wmain1(int argc, wchar_t* argv[]) // called from wmain which is a wrapper that catches & reports Win32 exceptions
 {
+    std::set_new_handler(AllocationFailureHandler);
     try
     {
         PrintBuiltInfo(); // print build info directly in case that user provides zero argument (convenient for checking build type)

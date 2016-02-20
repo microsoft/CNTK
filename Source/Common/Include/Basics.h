@@ -63,7 +63,9 @@ __declspec_noreturn static inline void ThrowFormatted(const char* format, ...)
     fprintf(stderr, "\nAbout to throw exception '%s'\n", buffer);
 #endif
     Microsoft::MSR::CNTK::DebugUtil::PrintCallStack();
-    throw E(buffer);
+    std::string msg(buffer);
+    msg += Microsoft::MSR::CNTK::DebugUtil::GetCallStack();
+    throw E(msg);
 };
 #pragma warning(pop)
 
@@ -72,7 +74,6 @@ __declspec_noreturn static inline void ThrowFormatted(const char* format, ...)
 #define RuntimeError ThrowFormatted<std::runtime_error>
 #define LogicError ThrowFormatted<std::logic_error>
 #define InvalidArgument ThrowFormatted<std::invalid_argument>
-#define BadExceptionError(...) throw std::bad_exception() // ThrowFormatted<std::bad_exception> does not exist on gcc
 #else
 template <class... _Types>
 __declspec_noreturn static inline void RuntimeError(const char* format, _Types&&... _Args)
@@ -88,11 +89,6 @@ template <class... _Types>
 __declspec_noreturn static inline void InvalidArgument(const char* format, _Types&&... _Args)
 {
     ThrowFormatted<std::invalid_argument>(format, forward<_Types>(_Args)...);
-}
-template <class... _Types>
-__declspec_noreturn static inline void BadExceptionError(const char* format, _Types&&... _Args)
-{
-    ThrowFormatted<std::bad_exception>(format, forward<_Types>(_Args)...);
 }
 #endif
 
@@ -132,7 +128,6 @@ using Microsoft::MSR::CNTK::ThrowFormatted;
 using Microsoft::MSR::CNTK::RuntimeError;
 using Microsoft::MSR::CNTK::LogicError;
 using Microsoft::MSR::CNTK::InvalidArgument;
-using Microsoft::MSR::CNTK::BadExceptionError;
 #endif
 
 #ifdef _MSC_VER

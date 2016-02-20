@@ -19,7 +19,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 class BlockRandomizer : public Transformer
 {
 public:
-    BlockRandomizer(int verbosity, size_t randomizationRangeInSamples, DataDeserializerPtr deserializer);
+    BlockRandomizer(int verbosity, size_t randomizationRangeInSamples, IDataDeserializerPtr deserializer);
     virtual ~BlockRandomizer()
     {
     }
@@ -64,7 +64,7 @@ private:
     DistributionMode m_distributionMode;
 
     // Deserializer and information on the original timeline
-    DataDeserializerPtr m_deserializer;
+    IDataDeserializerPtr m_deserializer;
     size_t m_numSequences;
     size_t m_numChunks;
     size_t m_numSamples;
@@ -99,6 +99,6 @@ private:
 
     void RandomizeIfNewSweepIsEntered();
 
-    bool GetNextSequenceIds(size_t sampleCount, std::vector<size_t>& ids);
+    bool GetNextSequenceDescriptions(size_t sampleCount, SequenceDescriptions& sequences);
 };
 } } }
