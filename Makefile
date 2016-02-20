@@ -29,6 +29,8 @@
 #   If not specified, Kaldi plugins will not be built
 # OPENCV_PATH= path to OpenCV 3.0.0 installation, so $(OPENCV_PATH) exists
 #   defaults to /usr/local/opencv-3.0.0
+# LIBZIP_PATH= path to libzip installation, so $(LIBZIP_PATH) exists
+#   defaults to /usr/local/
 
 ifndef BUILD_TOP
 BUILD_TOP=.
@@ -445,6 +447,15 @@ endif
 ########################################
 
 ifdef OPENCV_PATH
+
+LIBS += -lopencv_core -lopencv_imgproc -lopencv_imgcodecs
+
+ifdef LIBZIP_PATH
+  CPPFLAGS += -DUSE_ZIP
+  INCLUDEPATH += $(LIBZIP_PATH)/lib/libzip/include
+  LIBS += -lzip
+endif
+
 IMAGEREADER_SRC =\
 	$(SOURCEDIR)/Readers/ImageReader/Exports.cpp \
 	$(SOURCEDIR)/Readers/ImageReader/ImageConfigHelper.cpp \
@@ -463,7 +474,7 @@ LIBPATH += $(OPENCV_PATH)/lib $(OPENCV_PATH)/release/lib
 
 $(IMAGEREADER): $(IMAGEREADER_OBJ) | $(CNTKMATH_LIB)
 	@echo $(SEPARATOR)
-	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(LIBPATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH)) -o $@ $^ -l$(CNTKMATH) -lopencv_core -lopencv_imgproc -lopencv_imgcodecs
+	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(LIBPATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH)) -o $@ $^ -l$(CNTKMATH)
 endif
 
 ########################################

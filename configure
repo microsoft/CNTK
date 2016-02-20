@@ -44,6 +44,11 @@ cudnn_check=cuda/include/cudnn.h
 have_opencv=no
 opencv_path=
 opencv_check=include/opencv2/opencv.hpp
+
+have_libzip=no
+libzip_path=
+libzip_check=include/zip.h
+
 mathlib=
 
 default_use_1bitsgd=no
@@ -64,6 +69,7 @@ default_gdks=". gdk/usr"
 default_cubs="cub-1.4.1"
 default_cudnns="cudnn-4.0"
 default_opencvs="opencv-3.0.0"
+default_libzips="libzip-1.1.2"
 
 function default_paths ()
 {
@@ -145,6 +151,12 @@ function find_opencv ()
 {
     find_dir "$default_opencvs" "$opencv_check"
 }
+
+function find_libzip ()
+{
+    find_dir "$default_libzips" "$libzip_check"
+}
+
 function is_hardlinked ()
 {
     r=no
@@ -196,6 +208,7 @@ function show_help ()
     echo "  --with-buildtype=(debug|release) $(show_default $default_buildtype)"
     echo "  --with-kaldi[=directory] $(show_default $(find_kaldi))"
     echo "  --with-opencv[=directory] $(show_default $(find_opencv))"
+    echo "  --with-libzip[=directory] $(show_default $(find_libzip))"
     echo "Libraries search path:"
     for head in $(default_paths)
     do
@@ -460,6 +473,28 @@ do
                 fi
             fi
             ;;
+        --with-libzip*)
+            have_libzip=yes
+            if test x$optarg = x
+            then
+                libzip_path=$(find_libzip)
+                if test x$libzip_path = x
+                then
+                    echo "Cannot find libzip directory."
+                    echo "Please specify a value for --with-libzip"
+                    echo "libzip can be downloaded from http://www.nih.at/libzip/"
+                    exit 1
+                fi
+            else
+                if test $(check_dir $optarg $$libzip_check) = yes
+                then
+                    libzip_path=$optarg
+                else
+                    echo "Invalid libzip directory $optarg"
+                    exit 1
+                fi
+            fi
+            ;;
         *)
             echo Invalid option $key
             show_help
@@ -554,6 +589,17 @@ then
     fi
 fi
 
+if test x$libzip_path = x
+then
+    libzip_path=$(find_libzip)
+    if test x$libzip_path = x ; then
+        echo Cannot locate libzip files
+        echo ImageReader will be built without zip container support.
+    else
+        echo Found libzip at $libzip_path
+    fi
+fi
+
 config=$build_top/Config.make
 echo Generating $config
 echo "#Configuration file for cntk" > $config
@@ -581,6 +627,9 @@ if test x$kaldi_path != x ; then
 fi
 if test x$opencv_path != x ; then
     echo OPENCV_PATH=$opencv_path >> $config
+fi
+if test x$libzip_path != x ; then
+    echo LIBZIP_PATH=$libzip_path >> $config
 fi
 if test $enable_1bitsgd = yes ; then
     echo CNTK_ENABLE_1BitSGD=true >> $config
