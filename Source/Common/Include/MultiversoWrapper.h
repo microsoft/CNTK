@@ -308,7 +308,11 @@ namespace Microsoft {
 				void WaitAsyncBuffer()
 				{
 					if (m_prefetchThread != nullptr && m_prefetchThread->joinable())
+					{
 						m_prefetchThread->join();
+						delete m_prefetchThread;
+						m_prefetchThread == nullptr;
+					}
 				}
 			private:
 				void MultiversoInit(const std::list<ComputationNodeBasePtr> & learnableNodes)
