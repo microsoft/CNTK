@@ -555,6 +555,7 @@ void SequenceReader<ElemType>::InitFromConfig(const ConfigRecordType& readerConf
     mUnk = readerConfig(L"unk", "<unk>");
 }
 
+#if 0
 template <class ElemType>
 void SequenceReader<ElemType>::ReadWord(char* word, FILE* fin)
 {
@@ -598,6 +599,7 @@ void SequenceReader<ElemType>::ReadWord(char* word, FILE* fin)
     }
     word[a] = 0;
 }
+#endif
 
 template <class ElemType>
 void SequenceReader<ElemType>::ReadClassInfo(const wstring& vocfile, int& classSize,
@@ -610,8 +612,6 @@ void SequenceReader<ElemType>::ReadClassInfo(const wstring& vocfile, int& classS
                                              noiseSampler<long>& m_noiseSampler,
                                              bool /*flatten*/)
 {
-    FailBecauseDeprecated(__FUNCTION__);    // DEPRECATED CLASS, SHOULD NOT BE USED ANYMORE
-
     string tmp_vocfile(vocfile.begin(), vocfile.end()); // convert from wstring to string
     string strtmp;
     size_t cnt;
