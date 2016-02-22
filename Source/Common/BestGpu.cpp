@@ -139,18 +139,18 @@ static DEVICEID_TYPE SelectDevice(DEVICEID_TYPE deviceId, bool bLockGPU)
     if (deviceId == DEVICEID_AUTO)
     {
         static DEVICEID_TYPE bestDeviceId = DEVICEID_NOTYETDETERMINED;
-        if (bestDeviceId == DEVICEID_NOTYETDETERMINED) // we only choose once
+        // set bestDeviceId once if not set yet
+        if (bestDeviceId == DEVICEID_NOTYETDETERMINED)
         {
             // GPU device to be auto-selected, so init our class
             static BestGpu* g_bestGpu = nullptr;
             if (g_bestGpu == nullptr)
                 g_bestGpu = new BestGpu();
-            deviceId = (DEVICEID_TYPE)
-                           g_bestGpu->GetDevice(BestGpuFlags(bLockGPU ? (bestGpuAvoidSharing | bestGpuExclusiveLock) : bestGpuAvoidSharing));
-            bestDeviceId = deviceId;
+            bestDeviceId = (DEVICEID_TYPE)g_bestGpu->GetDevice(BestGpuFlags(bLockGPU ? (bestGpuAvoidSharing | bestGpuExclusiveLock) : bestGpuAvoidSharing));
+            // TODO: Do we need to hold this pointer at all? We will only query it once. Or is it used to hold lock to a GPU?
         }
-        else // already chosen
-            deviceId = bestDeviceId;
+        // already chosen
+        deviceId = bestDeviceId;
     }
 
     return deviceId;
@@ -629,7 +629,8 @@ bool BestGpu::LockDevice(int deviceId, bool trial)
 
 #if 0
 // ---------------------------------------------------------------------------
-// some interfacing with the Windows DLL system to ensure clean shutdown vs. Delay loading of CUDA DLLs
+// some interfacing with the Windows DLL system for finding nvml.dll if not in PATH
+// Not needed since the build process copies it.
 // ---------------------------------------------------------------------------
 
 // The "notify hook" gets called for every call to the
@@ -638,12 +639,12 @@ bool BestGpu::LockDevice(int deviceId, bool trial)
 //
 // dliNotify == { dliStartProcessing | dliNotePreLoadLibrary  | dliNotePreGetProc | dliNoteEndProcessing } on this call.
 
-extern "C" INT_PTR WINAPI DelayLoadNofify(
+extern "C" INT_PTR WINAPI DelayLoadNotify(
     unsigned        dliNotify,
     PDelayLoadInfo  pdli
     )
 {
-    // load the library from an alternate path
+    // load nvml.dll from an alternate path
     if (dliNotify == dliNotePreLoadLibrary && !strcmp(pdli->szDll, "nvml.dll"))
     {
         WCHAR *path;
@@ -677,10 +678,10 @@ extern "C" INT_PTR WINAPI DelayLoadNofify(
 }
 
 ExternC
-PfnDliHook __pfnDliNotifyHook2 = (PfnDliHook)DelayLoadNofify;
+PfnDliHook __pfnDliNotifyHook2 = (PfnDliHook)DelayLoadNotify;
 // This is the failure hook, dliNotify = {dliFailLoadLib|dliFailGetProc}
 ExternC
-PfnDliHook   __pfnDliFailureHook2 = (PfnDliHook)DelayLoadNofify;
+PfnDliHook   __pfnDliFailureHook2 = (PfnDliHook)DelayLoadNotify;
 #endif // _WIN32
 #endif
 

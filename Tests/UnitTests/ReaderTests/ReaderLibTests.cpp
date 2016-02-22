@@ -14,7 +14,7 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Test {
 
 BOOST_AUTO_TEST_SUITE(ReaderLibTests)
 
-class MockDeserializer : public DataDeserializer
+class MockDeserializer : public IDataDeserializer
 {
 private:
     SequenceDescriptions m_sequenceDescriptions;
@@ -31,25 +31,9 @@ public:
         return m_sequenceDescriptions;
     }
 
-    void StartEpoch(const EpochConfiguration& config) override
+    virtual ChunkPtr GetChunk(size_t) override
     {
-        UNREFERENCED_PARAMETER(config);
-    }
-
-    std::vector<std::vector<SequenceDataPtr>> GetSequencesById(const std::vector<size_t>& ids) override
-    {
-        UNREFERENCED_PARAMETER(ids);
-        return std::vector<std::vector<SequenceDataPtr>>();
-    }
-
-    void RequireChunk(size_t chunkIndex) override
-    {
-        UNREFERENCED_PARAMETER(chunkIndex);
-    }
-
-    void ReleaseChunk(size_t chunkIndex) override
-    {
-        UNREFERENCED_PARAMETER(chunkIndex);
+        return nullptr;
     }
 };
 

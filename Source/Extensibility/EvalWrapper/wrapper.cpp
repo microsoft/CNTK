@@ -9,6 +9,8 @@
 #include <vcclr.h>
 #include <string>
 #include <utility>
+#include <vector>
+#include <memory>
 #include <msclr\marshal_cppstd.h>
 
 #include "Eval.h"
@@ -16,16 +18,13 @@
 #using <System.dll>
 #using <System.Collections.dll>
 
+using namespace std;
 using namespace System;
 using namespace System::Collections::Generic;
 using namespace System::Collections;
 using namespace Microsoft::MSR::CNTK;
 
-namespace Microsoft {
-namespace MSR {
-namespace CNTK {
-namespace Extensibility {
-namespace Managed {
+namespace Microsoft { namespace MSR { namespace CNTK { namespace Extensibility { namespace Managed {
 
 ref class CNTKException;
 
@@ -357,8 +356,5 @@ void emit()
     d.Evaluate(nullptr, "", 0);
     d.LoadModel("");
 }
-}
-}
-}
-}
-}
+
+}}}}}

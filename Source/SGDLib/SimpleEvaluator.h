@@ -132,7 +132,7 @@ public:
 
             // call DataEnd to check if end of sentence is reached
             // datareader will do its necessary/specific process for sentence ending
-            dataReader->DataEnd(endDataSentence);
+            dataReader->DataEnd();
         }
 
         // show last batch of results

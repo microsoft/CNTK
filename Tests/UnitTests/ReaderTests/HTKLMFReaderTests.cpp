@@ -125,26 +125,14 @@ BOOST_AUTO_TEST_CASE(HTKMLFReaderSimpleDataLoop6)
         1);
 };
 
-// TODO: This test is using an incorrect config settings combination of
-// Truncated=true and frameMode=true.
-/*
 BOOST_AUTO_TEST_CASE(HTKMLFReaderSimpleDataLoop7)
 {
-    HelperRunReaderTest<float>(
+    HelperRunReaderTestWithException<float, std::invalid_argument>(
         testDataPath() + "/Config/HTKMLFReaderSimpleDataLoop7_Config.cntk",
-        testDataPath() + "/Control/HTKMLFReaderSimpleDataLoop7_Control.txt",
-        testDataPath() + "/Control/HTKMLFReaderSimpleDataLoop7_Output.txt",
         "Simple_Test",
-        "reader",
-        500,
-        200,
-        2,
-        1,
-        1,
-        0,
-        1);
+        "reader");
 };
-*/
+
 
 BOOST_AUTO_TEST_CASE(HTKMLFReaderSimpleDataLoop8)
 {
@@ -162,26 +150,27 @@ BOOST_AUTO_TEST_CASE(HTKMLFReaderSimpleDataLoop8)
         0,
         1);
 };
+
 /*
-        This test is commented out because it causes an assertion in debug mode on:
-        CPUMatrix::LocateColumn (1458)
-        BOOST_AUTO_TEST_CASE(HTKMLFReaderSimpleDataLoop9)
-        {
-            HelperRunReaderTest<float>(
-                testDataPath() + "/Config/HTKMLFReaderSimpleDataLoop9_Config.cntk",
-                testDataPath() + "/Control/HTKMLFReaderSimpleDataLoop9_19_Control.txt",
-                testDataPath() + "/Control/HTKMLFReaderSimpleDataLoop9_Output.txt",
-                "Simple_Test",
-                "reader",
-                5000,
-                250,
-                2,
-                1,
-                1,
-                0,
-                1);
-        };
-        */
+This test is commented out because it causes an assertion in debug mode on:
+HTKMLFReader (BPTT) (1110)
+BOOST_AUTO_TEST_CASE(HTKMLFReaderSimpleDataLoop9)
+{
+    HelperRunReaderTest<float>(
+        testDataPath() + "/Config/HTKMLFReaderSimpleDataLoop9_Config.cntk",
+        testDataPath() + "/Control/HTKMLFReaderSimpleDataLoop9_19_Control.txt",
+        testDataPath() + "/Control/HTKMLFReaderSimpleDataLoop9_Output.txt",
+        "Simple_Test",
+        "reader",
+        5000,
+        250,
+        2,
+        1,
+        1,
+        0,
+        1);
+};
+*/      
 
 BOOST_AUTO_TEST_CASE(HTKMLFReaderSimpleDataLoop10)
 {
@@ -285,18 +274,18 @@ BOOST_AUTO_TEST_CASE(HTKMLFReaderSimpleDataLoop16)
         1);
 };
 
-// TODO: This test is using an incorrect config settings combination of
-// Truncated=true and frameMode=true.
 /*
-BOOST_AUTO_TEST_CASE(HTKMLFReaderSimpleDataLoop17)
+This test is commented out because it causes an assertion in debug mode on:
+HTKMLFReader (BPTT) (1110)
+BOOST_AUTO_TEST_CASE(HTKMLFReaderSimpleDataLoop19)
 {
     HelperRunReaderTest<double>(
-        testDataPath() + "/Config/HTKMLFReaderSimpleDataLoop17_Config.cntk",
-        testDataPath() + "/Control/HTKMLFReaderSimpleDataLoop6_16_17_Control.txt",
-        testDataPath() + "/Control/HTKMLFReaderSimpleDataLoop17_Output.txt",
+        testDataPath() + "/Config/HTKMLFReaderSimpleDataLoop19_Config.cntk",
+        testDataPath() + "/Control/HTKMLFReaderSimpleDataLoop9_19_Control.txt",
+        testDataPath() + "/Control/HTKMLFReaderSimpleDataLoop19_Output.txt",
         "Simple_Test",
         "reader",
-        500,
+        5000,
         250,
         2,
         1,
@@ -305,28 +294,6 @@ BOOST_AUTO_TEST_CASE(HTKMLFReaderSimpleDataLoop17)
         1);
 };
 */
-
-/*
-        This test is commented out because it causes an assertion in debug mode on:
-        CPUMatrix::LocateColumn (1458)
-        BOOST_AUTO_TEST_CASE(HTKMLFReaderSimpleDataLoop19)
-        {
-
-            HelperRunReaderTest<double>(
-                testDataPath() + "/Config/HTKMLFReaderSimpleDataLoop19_Config.cntk",
-                testDataPath() + "/Control/HTKMLFReaderSimpleDataLoop9_19_Control.txt",
-                testDataPath() + "/Control/HTKMLFReaderSimpleDataLoop19_Output.txt",
-                "Simple_Test",
-                "reader",
-                5000,
-                250,
-                2,
-                1,
-                1,
-                0,
-                1);
-        };
-        */
 
 BOOST_AUTO_TEST_CASE(HTKMLFReaderSimpleDataLoop20)
 {

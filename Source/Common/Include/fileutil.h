@@ -259,7 +259,6 @@ const wchar_t* fgettoken(FILE* f, wchar_t* buf, int size);
 std::wstring fgetwtoken(FILE* f);
 
 int fskipNewline(FILE* f, bool skip = true);
-int fskipwNewline(FILE* f, bool skip = true);
 
 // ----------------------------------------------------------------------------
 // fputstring(): write a 0-terminated std::string (terminate if error)
@@ -601,8 +600,8 @@ static inline std::vector<std::string> fgetfilelines(const std::wstring& pathnam
     return lines;
 }
 std::vector<char*> fgetfilelines(const std::wstring& pathname, std::vector<char>& readbuffer);
-};
-};
+
+}}
 
 #ifdef _WIN32
 // ----------------------------------------------------------------------------
@@ -864,48 +863,39 @@ static inline bool relpath(const wchar_t* path)
     // ... TODO: handle long NT paths
     return true; // all others
 }
-template <class CHAR>
-static inline bool relpath(const std::basic_string<CHAR>& s)
+template <class Char>
+static inline bool relpath(const std::basic_string<Char>& s)
 {
     return relpath(s.c_str());
 }
 
 // trim from start
-static inline std::string& ltrim(std::string& s)
+template<class String>
+static inline String& ltrim(String& s)
 {
-    s.erase(s.begin(), std::find_if(s.begin(), s.end(), std::not1(std::ptr_fun<int, int>(std::isspace))));
-    return s;
-}
-static inline std::wstring& wltrim(std::wstring& s)
-{
-    s.erase(s.begin(), std::find_if(s.begin(), s.end(), std::not1(std::ptr_fun<int, int>(std::isspace))));
+    s.erase(s.begin(), std::find_if(s.begin(), s.end(), [](typename String::value_type c){ return !iscspace(c); }));
     return s;
 }
 
 // trim from end
-static inline std::string& rtrim(std::string& s)
+template<class String>
+static inline String& rtrim(String& s)
 {
-    s.erase(std::find_if(s.rbegin(), s.rend(), std::not1(std::ptr_fun<int, int>(std::isspace))).base(), s.end());
-    return s;
-}
-static inline std::wstring& wrtrim(std::wstring& s)
-{
-    s.erase(std::find_if(s.rbegin(), s.rend(), std::not1(std::ptr_fun<int, int>(std::isspace))).base(), s.end());
+    s.erase(std::find_if(s.rbegin(), s.rend(), [](typename String::value_type c){ return !iscspace(c); }).base(), s.end());
     return s;
 }
 
 // trim from both ends
-static inline std::string& trim(std::string& s)
+template<class String>
+static inline String& trim(String& s)
 {
     return ltrim(rtrim(s));
 }
-static inline std::wstring& wtrim(std::wstring& s)
-{
-    return wltrim(wrtrim(s));
-}
 
-std::vector<std::string> sep_string(const std::string& str, const std::string& sep);
-std::vector<std::wstring> wsep_string(const std::wstring& str, const std::wstring& sep);
+template<class String>
+std::vector<String> SplitString(const String& str, const String& sep);
+template<class String, class Char>
+std::vector<String> SplitString(const String& str, const Char* sep) { return SplitString(str, String(sep)); }
 
 std::wstring s2ws(const std::string& str);
 
