@@ -53,7 +53,7 @@ void SGD<ElemType>::Train(function<ComputationNetworkPtr(DEVICEID_TYPE)> createN
     if (startEpoch >= 0)
     {
         loadNetworkFromCheckpoint = true;
-        fprintf(stderr, "Starting from checkpoint. Load Network From File %ls.\n", modelFileName.c_str());
+        fprintf(stderr, "Starting from checkpoint. Loading network from '%ls'.\n", modelFileName.c_str());
     }
 
     // create or load from checkpoint
@@ -96,7 +96,7 @@ void SGD<ElemType>::Adapt(wstring origModelFileName, wstring refNodeName,
     if (startEpoch >= 0)
     {
         wstring modelFileName = GetModelNameForEpoch(int(startEpoch) - 1);
-        fprintf(stderr, "Starting from checkpoint. Load Network From File %ls.\n", modelFileName.c_str());
+        fprintf(stderr, "Starting from checkpoint. Loading network from '%ls'.\n", modelFileName.c_str());
         net = ComputationNetwork::CreateFromFile<ElemType>(deviceId, modelFileName);
         networkLoadedFromCheckpoint = true;
     }
@@ -607,7 +607,7 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
         else
         {
             if (std::isnan(avgCriterion))
-                RuntimeError("The training criterion is not a number (NAN). Stop\n");
+                RuntimeError("The training criterion is not a number (NAN).");
         }
 
         // not loading previous values then set them
@@ -629,7 +629,9 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
         if ((g_mpi == nullptr) || g_mpi->IsMainNode())
         {
             SaveCheckPointInfo(i, totalSamplesSeen, learnRatePerSample, smoothedGradients, prevCriterion, chosenMinibatchSize);
-            net->Save(GetModelNameForEpoch(i));
+            auto modelName = GetModelNameForEpoch(i);
+            fprintf(stderr, "SGD: Saving checkpoint model '%ls'\n", modelName.c_str());
+            net->Save(modelName);
             if (!m_keepCheckPointFiles)
             {
                 // delete previous checkpoint file to save space
@@ -1069,7 +1071,11 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
         totalTimeInMBs += timer.ElapsedSeconds();
         numSamplesLastMBs += useModelAveraging ? int(actualMBSize) : int(aggregateNumSamplesWithLabel);
 
-        if (numMBsRun % m_numMBsToShowResult == 0)
+        if (
+#if 0       // output the first few to see if everything started right
+            numMBsRun <= 3 ||
+#endif
+            numMBsRun % m_numMBsToShowResult == 0)
         {
             // get the epoch Values updated
             if (!useGradientAggregation)
@@ -1156,7 +1162,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
 
             if (std::isnan(epochCriterion))
             {
-                RuntimeError("The training criterion is not a number (NAN). Stop\n");
+                RuntimeError("The training criterion is not a number (NAN).");
             }
         }
 
@@ -1167,7 +1173,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
         // call DataEnd function
         // This signals something from SGD to the reader.
         // DataEnd does reader specific process if sentence ending is reached
-        trainSetDataReader->DataEnd(EndDataType::endDataSentence);
+        trainSetDataReader->DataEnd();
 
         // Attempts to compute the error signal for the whole utterance, which will
         // be fed to the neural network as features. Currently it is a workaround

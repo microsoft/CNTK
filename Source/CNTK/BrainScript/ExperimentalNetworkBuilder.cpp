@@ -103,8 +103,6 @@ wstring computationNodes = // TODO: use actual TypeName() here? would first need
     UnaryStandardNode(Mean, dataVectorSequence)
     BinaryStandardNode(Minus, leftMatrix, rightMatrix)
     UnaryStandardNode(Negate, input)
-    //BinaryStandardNode(NoiseContrastiveEstimationNode)
-    //BinaryStandardNode(ParallelNode)
     TernaryStandardNode(PerDimMeanVarDeNormalization, dataVectorSequence, meanVector, invStdDevVector) // TODO: correct?
     TernaryStandardNode(PerDimMeanVarNormalization, dataVectorSequence, meanVector, invStdDevVector)
     BinaryStandardNode(Plus, leftMatrix, rightMatrix)
@@ -118,8 +116,7 @@ wstring computationNodes = // TODO: use actual TypeName() here? would first need
     UnaryStandardNode(Softmax, z)
     UnaryStandardNode(Hardmax, z)
     BinaryStandardNode(SquareError, aMatrix, anotherMatrix)
-    //BinaryStandardNode(StrideTimesNode)
-    //BinaryStandardNode(SumColumnElementsNode)
+    UnaryStandardNode(SumColumnElements, z)
     UnaryStandardNode(SumElements, matrix)
     UnaryStandardNode(Tanh, z)
     UnaryStandardNode(TimeReverse, vectorSequence)
@@ -128,4 +125,8 @@ wstring computationNodes = // TODO: use actual TypeName() here? would first need
     UnaryStandardNode(Transpose, matrix)
 #endif
     BinaryStandardNode(TransposeTimes, leftMatrix, rightMatrix)
+    // those nodes are deprecated, we won't implement them in BS:
+    //BinaryStandardNode(NoiseContrastiveEstimationNode)
+    //BinaryStandardNode(ParallelNode)
+    //BinaryStandardNode(StrideTimesNode)
     ;

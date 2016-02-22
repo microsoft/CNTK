@@ -46,7 +46,7 @@ public:
 
     virtual bool GetMinibatch(std::map<std::wstring, Matrix<ElemType>*>& matrices) override;
 
-    virtual bool DataEnd(EndDataType endDataType) override;
+    virtual bool DataEnd() override;
 
     void CopyMBLayoutTo(MBLayoutPtr) override;
 

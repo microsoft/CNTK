@@ -47,22 +47,15 @@ const size_t randomizeNone = 0;
 // We use this constant as a stand in for the total number of frames in the dataset.
 const size_t requestDataSize = randomizeAuto;
 
-enum EndDataType
-{
-    endDataNull,     // null values
-    endDataEpoch,    // end of epoch
-    endDataSet,      // end of dataset
-    endDataSentence, // end of sentence
-};
-
 // Data Reader interface
 // implemented by DataReader and underlying classes
 template <class ElemType>
 class DATAREADER_API IDataReader
 {
 public:
-    typedef std::string LabelType;
-    typedef unsigned int LabelIdType;
+    typedef std::string  LabelType;     // surface form of an input token
+    typedef unsigned int LabelIdType;   // input token mapped to an integer  --TODO: why not size_t? Does this save space?
+
     unsigned m_seed;
     size_t mRequestedNumParallelSequences; // number of desired parallel sequences in each minibatch
 
@@ -98,18 +91,12 @@ public:
         NOT_IMPLEMENTED;
     };
     virtual size_t GetNumParallelSequences() = 0;
-    virtual int GetSentenceEndIdFromOutputLabel()
-    {
-        return -1;
-    }
+    //virtual int GetSentenceEndIdFromOutputLabel() { return -1; }
     virtual void SetNumParallelSequences(const size_t sz)
     {
         mRequestedNumParallelSequences = sz;
     }
-    virtual bool RequireSentenceSeg() const
-    {
-        return false;
-    }
+    //virtual bool RequireSentenceSeg() const { return false; }
     virtual const std::map<LabelIdType, LabelType>& GetLabelMapping(const std::wstring&)
     {
         NOT_IMPLEMENTED;
@@ -122,7 +109,7 @@ public:
     {
         NOT_IMPLEMENTED;
     }
-    virtual bool DataEnd(EndDataType)
+    virtual bool DataEnd()
     {
         NOT_IMPLEMENTED;
     }
@@ -141,7 +128,7 @@ public:
     virtual void InitProposals(std::map<std::wstring, Matrix<ElemType>*>*)
     {
     }
-    virtual bool CanReadFor(wstring /* nodeName */)
+    virtual bool CanReadFor(wstring /* nodeName */) // return true if this reader can output for a node with name nodeName  --TODO: const wstring&
     {
         return false;
     }
@@ -266,8 +253,8 @@ public:
     virtual bool GetHmmData(msra::asr::simplesenonehmm* hmm);
 
     size_t GetNumParallelSequences();
-    int GetSentenceEndIdFromOutputLabel();
-    bool RequireSentenceSeg() const override;
+    //int GetSentenceEndIdFromOutputLabel();
+    //bool RequireSentenceSeg() const override;
 
     // GetLabelMapping - Gets the label mapping from integer index to label type
     // returns - a map from numeric datatype to native label type
@@ -288,7 +275,9 @@ public:
     // returns: true if data remains to be read, false if the end of data was reached
     virtual bool GetData(const std::wstring& sectionName, size_t numRecords, void* data, size_t& dataBufferSize, size_t recordStart = 0);
 
-    virtual bool DataEnd(EndDataType endDataType);
+    virtual bool DataEnd();
+    // TODO: The return value if this is never used except in loops where we do an &=. It is not clear whether that is a bug or intentionally prevents DataEnd() from being called.
+    //       Once this is understood, we can change the return value to void.
 
     // Gets a copy of the minibatch for the forward computation. This can be
     // useful if some of the computation has to happen in the reader.
@@ -311,4 +300,5 @@ public:
     bool GetProposalObs(std::map<std::wstring, Matrix<ElemType>*>*, const size_t, vector<size_t>&);
     void InitProposals(std::map<std::wstring, Matrix<ElemType>*>* matrices);
 };
-} } }
+
+}}}

@@ -136,10 +136,7 @@ bool ReaderShim<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemType>*
 }
 
 template <class ElemType>
-bool ReaderShim<ElemType>::DataEnd(EndDataType /*endDataType*/)
-{
-    return false;
-}
+bool ReaderShim<ElemType>::DataEnd() { return false; } // Note: Return value never used.
 
 template <class ElemType>
 void ReaderShim<ElemType>::CopyMBLayoutTo(MBLayoutPtr layout)

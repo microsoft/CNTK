@@ -246,7 +246,7 @@ public:
         return false;
     }
 
-    virtual bool DataEnd(EndDataType /*endDataType*/)
+    virtual bool DataEnd()
     {
         return m_currentRecord < m_recordCount;
     }

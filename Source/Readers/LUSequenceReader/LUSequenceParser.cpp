@@ -64,7 +64,7 @@ long BatchLUSequenceParser<NumType, LabelType>::Parse(size_t recordsRequested, s
     while (lineCount < recordsRequested && mFile.good())
     {
         getline(mFile, ch);
-        ch = wtrim(ch);
+        ch = trim(ch); // TODO: operates in-place, so no need to assign back
 
         if (mFile.eof())
         {
@@ -89,7 +89,7 @@ long BatchLUSequenceParser<NumType, LabelType>::Parse(size_t recordsRequested, s
         // got a token
         tokenCount++;
 
-        vstr = wsep_string(ch, L" ");
+        vstr = SplitString(ch, L" \n\r\t");
         if (vstr.size() < 2)
             continue;
 
@@ -136,7 +136,7 @@ long BatchLUSequenceParser<NumType, LabelType>::Parse(size_t recordsRequested, s
     for (auto ptr = seqPos->begin(); ptr != seqPos->end(); ptr++, i++)
     {
         size_t iln = ptr->labelPos - prvat;
-        stSentenceInfo stinfo;
+        SentenceInfo stinfo;
         stinfo.sLen = iln;
         stinfo.sBegin = prvat;
         stinfo.sEnd = (int) ptr->labelPos;

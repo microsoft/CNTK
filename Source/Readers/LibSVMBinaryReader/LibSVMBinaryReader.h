@@ -168,7 +168,7 @@ public:
     void Shuffle();
     shared_ptr<BinaryMatrix<ElemType>> CreateMatrix(std::wstring matName, int deviceId);
     // shared_ptr<BinaryMatrix<ElemType>> CreateMatrix(std::wstring matName);
-    virtual bool DataEnd(EndDataType endDataType);
+    virtual bool DataEnd();
 
 private:
     void ReadOffsets(size_t startMB, size_t numMBs);
@@ -268,7 +268,7 @@ public:
     void RenamedMatrices(const ConfigRecordType& readerConfig, std::map<std::wstring, std::wstring>& rename);
     virtual void SetLabelMapping(const std::wstring& /*sectionName*/, const std::map<LabelIdType, LabelType>& /*labelMapping*/){NOT_IMPLEMENTED};
     virtual bool GetData(const std::wstring& /*sectionName*/, size_t /*numRecords*/, void* /*data*/, size_t& /*dataBufferSize*/, size_t /*recordStart = 0*/){NOT_IMPLEMENTED};
-    virtual bool DataEnd(EndDataType endDataType);
+    virtual bool DataEnd();
 
     size_t GetNumParallelSequences()
     {
@@ -279,7 +279,7 @@ public:
         pMBLayout->CopyFrom(m_pMBLayout);
     };
 
-    // virtual bool DataEnd(EndDataType endDataType);
+    // virtual bool DataEnd();
 
     size_t NumberSlicesInEachRecurrentIter()
     {

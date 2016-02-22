@@ -634,7 +634,7 @@ public:
     virtual void /*IComputationNode::*/ BeginForwardProp() override // called before first iteration step of ForwardProp()
     {
 #ifdef TRACK_GAP_NANS
-        fprintf(stderr, "BeginForwardProp: %ls %ls operation\n", NodeName().c_str(), OperationName().c_str());
+        fprintf(stderr, "BeginForwardProp: %ls %ls operation [%s]\n", NodeName().c_str(), OperationName().c_str(), std::string(GetTensorShape(DetermineElementwiseTensorRank())).c_str());
 #endif
     }
     virtual void /*IComputationNode::*/ EndForwardProp() override // called after last iteration step of ForwardProp()
@@ -1187,8 +1187,11 @@ private:
         else
         {
             const auto& shape = GetSampleLayout();
-            rows = shape.GetRank() > 0 ? shape[0] : 0;
-            cols = rows > 0 ? shape.GetNumElements() / rows : 0;
+            size_t rank = shape.GetRank();
+            rows = rank > 0 ? shape[0] : 0;
+            cols = rank > 0 ?        1 : 0;
+            for (size_t k = 1; k < rank; k++)   // all dimensions except leading one
+                cols *= shape[k];
         }
     }
 

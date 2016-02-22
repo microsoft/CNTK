@@ -259,7 +259,7 @@ public:
     {
     }
 
-    virtual void BackpropToNonLooping(size_t inputIndex) override
+    virtual void /*ComputationNodeNonLooping::*/ BackpropToNonLooping(size_t inputIndex) override
     {
         FrameRange fr(Input(0)->GetMBLayout());
         // left Node must be a scalar
