@@ -134,9 +134,9 @@ private:
 
 public:
     // UCIParser constructor
-    UCIParser(char customDelimiter = char(0), char customDecimalPoint = char(0));
+    UCIParser(char customDelimiter, char customDecimalPoint);
     // setup all the state variables and state tables for state machine
-    void Init(char customDelimiter = char(0), char customDecimalPoint = char(0));
+    void Init(char customDelimiter, char customDecimalPoint);
 
     // Parser destructor
     ~UCIParser();

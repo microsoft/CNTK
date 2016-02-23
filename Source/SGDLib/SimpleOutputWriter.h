@@ -26,16 +26,11 @@ class SimpleOutputWriter
 {
     typedef shared_ptr<ComputationNode<ElemType>> ComputationNodePtr;
 
-public:
-    SimpleOutputWriter(ComputationNetworkPtr net, int verbosity = 0)
-        : m_net(net), m_verbosity(verbosity)
+private:
+    std::vector<ComputationNodeBasePtr> DetermineOutputNodes(const std::vector<std::wstring>& outputNodeNames)
     {
-    }
-
-    void WriteOutput(IDataReader<ElemType>& dataReader, size_t mbSize, IDataWriter<ElemType>& dataWriter, const std::vector<std::wstring>& outputNodeNames, size_t numOutputSamples = requestDataSize, bool doUnitTest = false)
-    {
-        // specify output nodes and files
         std::vector<ComputationNodeBasePtr> outputNodes;
+
         if (outputNodeNames.size() == 0)
         {
             if (m_verbosity > 0)
@@ -51,22 +46,56 @@ public:
                 outputNodes.push_back(m_net->GetNodeFromName(outputNodeNames[i]));
         }
 
+        return outputNodes;
+    }
+
+    std::vector<ComputationNodeBasePtr> DetermineInputNodes(const std::vector<ComputationNodeBasePtr>& outputNodes)
+    {
+        //use map to remove duplicated items
+        std::set<ComputationNodeBasePtr> inputNodesMap;
+        for (auto& onode : outputNodes)
+        {
+            for (auto& inode : m_net->InputNodes(onode))
+                inputNodesMap.insert(inode);
+        }
+
+        std::vector<ComputationNodeBasePtr> inputNodes;
+        for (auto& inode : inputNodesMap)
+            inputNodes.push_back(inode);
+
+        return inputNodes;
+    }
+
+    std::map<std::wstring, Matrix<ElemType>*> RetrieveInputMatrices(const std::vector<ComputationNodeBasePtr>& inputNodes)
+    {
+        std::map<std::wstring, Matrix<ElemType>*> inputMatrices;
+
+        for (auto& inode : inputNodes)
+            inputMatrices[inode->NodeName()] = &dynamic_pointer_cast<ComputationNode<ElemType>>(inode)->Value();
+
+        return inputMatrices;
+    }
+
+public:
+    SimpleOutputWriter(ComputationNetworkPtr net, int verbosity = 0)
+        : m_net(net), m_verbosity(verbosity)
+    {
+    }
+
+    void WriteOutput(IDataReader<ElemType>& dataReader, size_t mbSize, IDataWriter<ElemType>& dataWriter, const std::vector<std::wstring>& outputNodeNames, size_t numOutputSamples = requestDataSize, bool doUnitTest = false)
+    {
+        std::vector<ComputationNodeBasePtr> outputNodes = DetermineOutputNodes(outputNodeNames);
+        std::vector<ComputationNodeBasePtr> inputNodes = DetermineInputNodes(outputNodes);
+
         // allocate memory for forward computation
         m_net->AllocateAllMatrices({}, outputNodes, nullptr);
 
-        // specify feature value nodes
-        std::map<std::wstring, Matrix<ElemType>*> inputMatrices;
-        for (auto& onode : outputNodes)
-            for (auto& inode : m_net->InputNodes(onode))
-                inputMatrices[inode->NodeName()] = &dynamic_pointer_cast<ComputationNode<ElemType>>(inode)->Value();
-
-        // Matrix<ElemType> endOfFile =  Matrix<ElemType>((size_t)1,(size_t)1);
-        // endOfFile(0,0)=0;
+        std::map<std::wstring, Matrix<ElemType>*> inputMatrices = RetrieveInputMatrices(inputNodes);
 
         // evaluate with minibatches
         dataReader.StartMinibatchLoop(mbSize, 0, numOutputSamples);
-        dataReader.SetNumParallelSequences(1);
-
+        if (!dataWriter.SupportMultiUtterances())
+            dataReader.SetNumParallelSequences(1);
         m_net->StartEvaluateMinibatchLoop(outputNodes);
 
         size_t totalEpochSamples = 0;
@@ -75,10 +104,7 @@ public:
         size_t actualMBSize;
         while (DataReaderHelpers::GetMinibatchIntoNetwork(dataReader, m_net, nullptr, false, false, inputMatrices, actualMBSize))
         {
-            // Update timestamp for all input nodes ancestors of the output nodes
-            for (auto& onode : outputNodes)
-                for (auto& inode : m_net->InputNodes(onode))
-                    inode->BumpEvalTimeStamp();
+            ComputationNetwork::BumpEvalTimeStamp(inputNodes);
 
             for (int i = 0; i < outputNodes.size(); i++)
             {
@@ -148,26 +174,18 @@ public:
     // TODO: Remove code dup with above function by creating a fake Writer object and then calling the other function.
     void WriteOutput(IDataReader<ElemType>& dataReader, size_t mbSize, std::wstring outputPath, const std::vector<std::wstring>& outputNodeNames, const WriteFormattingOptions & formattingOptions, size_t numOutputSamples = requestDataSize)
     {
+        std::vector<ComputationNodeBasePtr> outputNodes = DetermineOutputNodes(outputNodeNames);
+        std::vector<ComputationNodeBasePtr> inputNodes = DetermineInputNodes(outputNodes);
+
+        // allocate memory for forward computation
+        m_net->AllocateAllMatrices({}, outputNodes, nullptr);
+
+        std::map<std::wstring, Matrix<ElemType>*> inputMatrices = RetrieveInputMatrices(inputNodes);
+
         // load a label mapping if requested
         std::vector<std::string> labelMapping;
         if (formattingOptions.isCategoryLabel && !formattingOptions.labelMappingFile.empty())
             File::LoadLabelFile(formattingOptions.labelMappingFile, labelMapping);
-
-        // specify output nodes and files
-        std::vector<ComputationNodeBasePtr> outputNodes;
-        if (outputNodeNames.size() == 0)
-        {
-            fprintf(stderr, "OutputNodeNames are not specified, using the default outputnodes.\n");
-            if (m_net->OutputNodes().size() == 0)
-                LogicError("There is no default output node specified in the network.");
-
-            outputNodes = m_net->OutputNodes();
-        }
-        else
-        {
-            for (int i = 0; i < outputNodeNames.size(); i++)
-                outputNodes.push_back(m_net->GetNodeFromName(outputNodeNames[i]));
-        }
 
         // open output files
         File::MakeIntermediateDirs(outputPath);
@@ -180,16 +198,6 @@ public:
             auto f = make_shared<File>(nodeOutputPath, fileOptionsWrite | fileOptionsText);
             outputStreams[onode] = f;
         }
-
-        // allocate memory for forward computation
-        m_net->AllocateAllMatrices({}, outputNodes, nullptr);
-
-        // specify feature value nodes
-        auto& featureNodes = m_net->FeatureNodes();
-        std::map<std::wstring, Matrix<ElemType>*> inputMatrices;
-        // BUGBUG: This loop is inconsistent with the above version of this function in that it does not handle label nodes.
-        for (size_t i = 0; i < featureNodes.size(); i++)
-            inputMatrices[featureNodes[i]->NodeName()] = &dynamic_pointer_cast<ComputationNode<ElemType>>(featureNodes[i])->Value();
 
         // evaluate with minibatches
         dataReader.StartMinibatchLoop(mbSize, 0, numOutputSamples);
@@ -213,8 +221,7 @@ public:
         size_t actualMBSize;
         while (DataReaderHelpers::GetMinibatchIntoNetwork(dataReader, m_net, nullptr, false, false, inputMatrices, actualMBSize))
         {
-            // BUGBUG: This loop is inconsistent with the above version of this function in that it does not handle label nodes.
-            ComputationNetwork::BumpEvalTimeStamp(featureNodes);
+            ComputationNetwork::BumpEvalTimeStamp(inputNodes);
 
             for (auto & onode : outputNodes)
             {
