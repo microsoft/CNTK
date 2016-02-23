@@ -829,6 +829,8 @@ public:
         // get the key
         auto key = stringParse.substr(tokenStart, keyEnd - tokenStart);
         Trim(key);
+        if (key.empty())
+            LogicError("ParseValue: Empty key.");
         tokenStart = keyEnd;
         if (stringParse[keyEnd] == '=')
         {
@@ -854,22 +856,28 @@ public:
                 tokenStart++;
                 substrSize -= 2; // take out the quotes
             }
+            //else if (substrSize == 0)
+            //{
+            //    InvalidArgument("ParseValue: No value given for '%s'.", key.c_str());
+            //    //return npos;
+            //}
+            // Not a quoted string: It's an empty section. Nothing wrong with that, is it?
         }
-
-        if (substrSize == 0)
+        else if (substrSize == 0)
         {
-            return npos;
+            InvalidArgument("ParseValue: No value given for '%s'.", key.c_str());
+            //return npos; // old version would just return, but cause rest of dictionary to be ignored
         }
 
         // get the value
         value = stringParse.substr(tokenStart, substrSize);
         Trim(value);
 
-        // add the value to the dictionary if both values are valid
-        if (!key.empty() && !value.empty())
-        {
-            Insert(key, value);
-        }
+        // add the value to the dictionary
+        //if (!key.empty() && !value.empty())
+        // This check ^^ was here before, leading to not being able to define values to be empty strings.
+        // I hope there is no hidden assumption on this check somewhere.
+        Insert(key, value);
 
         return tokenEnd;
     }
