@@ -448,12 +448,12 @@ endif
 
 ifdef OPENCV_PATH
 
-LIBS += -lopencv_core -lopencv_imgproc -lopencv_imgcodecs
+IMAGE_READER_LIBS += -lopencv_core -lopencv_imgproc -lopencv_imgcodecs
 
 ifdef LIBZIP_PATH
   CPPFLAGS += -DUSE_ZIP
   INCLUDEPATH += $(LIBZIP_PATH)/lib/libzip/include
-  LIBS += -lzip
+  IMAGE_READER_LIBS += -lzip
 endif
 
 IMAGEREADER_SRC =\
@@ -462,6 +462,7 @@ IMAGEREADER_SRC =\
 	$(SOURCEDIR)/Readers/ImageReader/ImageDataDeserializer.cpp \
 	$(SOURCEDIR)/Readers/ImageReader/ImageTransformers.cpp \
 	$(SOURCEDIR)/Readers/ImageReader/ImageReader.cpp \
+        $(SOURCEDIR)/Readers/ImageReader/ZipByteReader.cpp \
 
 IMAGEREADER_OBJ := $(patsubst %.cpp, $(OBJDIR)/%.o, $(IMAGEREADER_SRC))
 
@@ -474,7 +475,7 @@ LIBPATH += $(OPENCV_PATH)/lib $(OPENCV_PATH)/release/lib
 
 $(IMAGEREADER): $(IMAGEREADER_OBJ) | $(CNTKMATH_LIB)
 	@echo $(SEPARATOR)
-	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(LIBPATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH)) -o $@ $^ -l$(CNTKMATH)
+	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(LIBPATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH)) -o $@ $^ -l$(CNTKMATH) $(IMAGE_READER_LIBS)
 endif
 
 ########################################
