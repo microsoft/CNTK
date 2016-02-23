@@ -105,8 +105,10 @@
       <AdditionalOptions>-Xcudafe "--diag_suppress=field_without_dll_interface" %(AdditionalOptions)</AdditionalOptions>
     </CudaCompile>
     <PostBuildEvent>
-      <Command>
-xcopy /D /I /Y "$(CudaPath)\bin\cudart64_*.dll" $(OutputPath)
+      <Command>if exist "$(CudaPath)\bin\cublas64_*.dll" (xcopy /Y "$(CudaPath)\bin\cublas64_*.dll" $(OutputPath))
+if exist "$(CudaPath)\bin\cusparse64_*.dll" (xcopy /Y "$(CudaPath)\bin\cusparse64_*.dll" $(OutputPath))
+if exist "$(CudaPath)\bin\curand64_*.dll" (xcopy /Y "$(CudaPath)\bin\curand64_*.dll" $(OutputPath))
+if exist "$(CudaPath)\bin\cudart64_*.dll" (xcopy /Y "$(CudaPath)\bin\cudart64_*.dll" $(OutputPath))
 if exist "$(CuDnnDll)" (xcopy /Y "$(CuDnnDll)" $(OutputPath))
 </Command>
     </PostBuildEvent>
