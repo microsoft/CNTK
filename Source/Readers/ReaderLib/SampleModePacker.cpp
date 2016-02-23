@@ -135,7 +135,7 @@ void SampleModePacker::CopySequenceToBuffer(size_t sampleIndex, size_t streamInd
     }
     else
     {
-        RuntimeError("Storage type %d is not supported.", m_inputStreams[streamIndex]->m_storageType);
+        RuntimeError("Storage type %d is not supported.", (int)m_inputStreams[streamIndex]->m_storageType);
     }
 }
 
