@@ -13,9 +13,6 @@
     <ClCompile Include="..\Common\fileutil.cpp">
       <Filter>Common</Filter>
     </ClCompile>
-    <ClCompile Include="..\Common\DebugUtil.cpp">
-      <Filter>Common</Filter>
-    </ClCompile>
     <ClCompile Include="ModelEditLanguage.cpp">
       <Filter>Model Editing</Filter>
     </ClCompile>
@@ -59,12 +56,12 @@
     <ClCompile Include="BrainScript\ExperimentalNetworkBuilder.cpp">
       <Filter>BrainScript</Filter>
     </ClCompile>
+    <ClCompile Include="..\Common\ExceptionWithCallStack.cpp">
+      <Filter>Common</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\Common\Include\fileutil.h">
-      <Filter>Common\Include</Filter>
-    </ClInclude>
-    <ClInclude Include="..\Common\Include\DebugUtil.h">
       <Filter>Common\Include</Filter>
     </ClInclude>
     <ClInclude Include="..\Common\Include\File.h">
@@ -194,6 +191,9 @@
       <Filter>from ComputationNetworkLib\Nodes</Filter>
     </ClInclude>
     <ClInclude Include="..\Common\Include\StringUtil.h">
+      <Filter>Common\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Common\Include\ExceptionWithCallStack.h">
       <Filter>Common\Include</Filter>
     </ClInclude>
   </ItemGroup>

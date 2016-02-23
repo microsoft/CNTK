@@ -7,9 +7,6 @@
     <ClCompile Include="HTKMLFWriter.cpp" />
     <ClCompile Include="latticearchive.cpp" />
     <ClCompile Include="stdafx.cpp" />
-    <ClCompile Include="..\..\Common\DebugUtil.cpp">
-      <Filter>Duplicates to remove</Filter>
-    </ClCompile>
     <ClCompile Include="DataReader.cpp" />
     <ClCompile Include="..\..\Common\TimerUtility.cpp">
       <Filter>Common</Filter>
@@ -17,6 +14,7 @@
     <ClCompile Include="..\..\Common\fileutil.cpp">
       <Filter>Common</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\Common\ExceptionWithCallStack.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="biggrowablevectors.h" />
@@ -32,9 +30,6 @@
     <ClInclude Include="targetver.h" />
     <ClInclude Include="utterancesourcemulti.h" />
     <ClInclude Include="basetypes.h">
-      <Filter>Duplicates to remove</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\Common\Include\DebugUtil.h">
       <Filter>Duplicates to remove</Filter>
     </ClInclude>
     <ClInclude Include="..\..\Common\Include\DataReader.h">
