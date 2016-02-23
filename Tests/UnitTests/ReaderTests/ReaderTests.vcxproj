@@ -121,8 +121,8 @@
   <ItemGroup>
     <ClCompile Include="..\..\..\Source\Common\Config.cpp" />
     <ClCompile Include="..\..\..\Source\Common\DataReader.cpp" />
-    <ClCompile Include="..\..\..\Source\Common\DebugUtil.cpp" />
     <ClCompile Include="..\..\..\Source\Common\Eval.cpp" />
+    <ClCompile Include="..\..\..\Source\Common\ExceptionWithCallStack.cpp" />
     <ClCompile Include="..\..\..\Source\Common\File.cpp" />
     <ClCompile Include="..\..\..\Source\Common\fileutil.cpp" />
     <ClCompile Include="..\..\..\Source\Common\TimerUtility.cpp" />

@@ -101,7 +101,6 @@
     <ClInclude Include="..\..\Common\Include\DataWriter.h" />
     <ClInclude Include="..\..\Common\Include\File.h" />
     <ClInclude Include="..\..\Common\Include\fileutil.h" />
-    <ClInclude Include="..\..\Common\Include\DebugUtil.h" />
     <ClInclude Include="BinaryReader.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="targetver.h" />
@@ -109,13 +108,11 @@
   <ItemGroup>
     <ClCompile Include="..\..\Common\DataReader.cpp" />
     <ClCompile Include="..\..\Common\DataWriter.cpp" />
+    <ClCompile Include="..\..\Common\ExceptionWithCallStack.cpp" />
     <ClCompile Include="..\..\Common\File.cpp">
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="..\..\Common\fileutil.cpp">
-      <PrecompiledHeader>NotUsing</PrecompiledHeader>
-    </ClCompile>
-    <ClCompile Include="..\..\Common\DebugUtil.cpp">
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="BinaryFile.cpp" />

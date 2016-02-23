@@ -25,14 +25,14 @@
     <ClCompile Include="..\..\Common\fileutil.cpp">
       <Filter>Common</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\Common\DebugUtil.cpp">
-      <Filter>Common</Filter>
-    </ClCompile>
     <ClCompile Include="dllmain.cpp" />
     <ClCompile Include="Exports.cpp" />
     <ClCompile Include="LibSVMBinaryReader.cpp" />
     <ClCompile Include="stdafx.cpp" />
     <ClCompile Include="..\..\Common\Config.cpp" />
+    <ClCompile Include="..\..\Common\ExceptionWithCallStack.cpp">
+      <Filter>Common</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\Common\Include\DataReader.h">
@@ -45,9 +45,6 @@
       <Filter>Common\Include</Filter>
     </ClInclude>
     <ClInclude Include="..\..\Common\Include\fileutil.h">
-      <Filter>Common\Include</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\Common\Include\DebugUtil.h">
       <Filter>Common\Include</Filter>
     </ClInclude>
     <ClInclude Include="LibSVMBinaryReader.h" />

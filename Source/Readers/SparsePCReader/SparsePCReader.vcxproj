@@ -108,9 +108,6 @@
     <ClInclude Include="..\..\Common\Include\fileutil.h">
       <ExcludedFromBuild Condition="$(DebugBuild)">false</ExcludedFromBuild>
     </ClInclude>
-    <ClInclude Include="..\..\Common\Include\DebugUtil.h">
-      <ExcludedFromBuild Condition="$(DebugBuild)">false</ExcludedFromBuild>
-    </ClInclude>
     <ClInclude Include="..\..\Common\Include\RandomOrdering.h" />
     <ClInclude Include="SparsePCReader.h" />
     <ClInclude Include="stdafx.h" />
@@ -121,13 +118,11 @@
     <ClCompile Include="..\..\Common\DataWriter.cpp">
       <PrecompiledHeader Condition="$(DebugBuild)">NotUsing</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="..\..\Common\ExceptionWithCallStack.cpp" />
     <ClCompile Include="..\..\Common\File.cpp">
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="..\..\Common\fileutil.cpp">
-      <PrecompiledHeader>NotUsing</PrecompiledHeader>
-    </ClCompile>
-    <ClCompile Include="..\..\Common\DebugUtil.cpp">
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="..\..\Common\Config.cpp">
