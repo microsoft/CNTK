@@ -274,9 +274,8 @@ template class ComputationNode<double>;
 
 template class LearnableParameter<float>;
 template class LearnableParameter<double>;
-}
-}
-}
+
+}}}
 
 namespace Microsoft { namespace MSR { namespace ScriptableObjects {
 
@@ -352,4 +351,5 @@ public:
 ScriptableObjects::ConfigurableRuntimeTypeRegister::Add<BoxedTensorShape> registerTensorShape(L"TensorShape");
 ScriptableObjects::ConfigurableRuntimeTypeRegister::Add<BoxedVector<int>> registerIntVector(L"IntVector");
 ScriptableObjects::ConfigurableRuntimeTypeRegister::Add<BoxedVector<size_t>> registerSizeVector(L"SizeVector");
-} } }
+
+}}}

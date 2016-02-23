@@ -464,7 +464,7 @@ ypename LabelIdType, typename LabelType>& labelMapping) = 0;
 
 \begin_layout Plain Layout
 
-    virtual bool DataEnd(EndDataType endDataType) = 0;
+    virtual bool DataEnd() = 0;
 \end_layout
 
 \begin_layout Plain Layout

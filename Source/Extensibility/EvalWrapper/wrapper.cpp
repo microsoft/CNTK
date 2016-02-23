@@ -9,23 +9,23 @@
 #include <vcclr.h>
 #include <string>
 #include <utility>
+#include <vector>
+#include <memory>
 #include <msclr\marshal_cppstd.h>
 
+#include "ExceptionWithCallStack.h"
 #include "Eval.h"
 
 #using <System.dll>
 #using <System.Collections.dll>
 
+using namespace std;
 using namespace System;
 using namespace System::Collections::Generic;
 using namespace System::Collections;
 using namespace Microsoft::MSR::CNTK;
 
-namespace Microsoft {
-namespace MSR {
-namespace CNTK {
-namespace Extensibility {
-namespace Managed {
+namespace Microsoft { namespace MSR { namespace CNTK { namespace Extensibility { namespace Managed {
 
 ref class CNTKException;
 
@@ -242,17 +242,20 @@ private:
     CNTKException^ GetCustomException(const exception& ex)
     {
         // Determine the appropriate exception and initialize it with the exception payload
-        if (typeid(ex) == typeid(runtime_error))
+        if (typeid(ex) == typeid(ExceptionWithCallStack<runtime_error>))
         {
-            return gcnew CNTKRuntimeException(gcnew System::String(ex.what()));
+            ExceptionWithCallStack<runtime_error>& rich = dynamic_cast<ExceptionWithCallStack<runtime_error>&>((runtime_error&)ex);
+            return gcnew CNTKRuntimeException(gcnew System::String(rich.what()), gcnew System::String(rich.CallStack().c_str()));
         }
-        else if (typeid(ex) == typeid(logic_error))
+        else if (typeid(ex) == typeid(ExceptionWithCallStack<logic_error>))
         {
-            return gcnew CNTKLogicErrorException(gcnew System::String(ex.what()));
+            ExceptionWithCallStack<logic_error>& rich = dynamic_cast<ExceptionWithCallStack<logic_error>&>((logic_error&)ex);
+            return gcnew CNTKLogicErrorException(gcnew System::String(ex.what()), gcnew System::String(rich.CallStack().c_str()));
         }
-        else if (typeid(ex) == typeid(invalid_argument))
+        else if (typeid(ex) == typeid(ExceptionWithCallStack<invalid_argument>))
         {
-            return gcnew CNTKInvalidArgumentException(gcnew System::String(ex.what()));
+            ExceptionWithCallStack<invalid_argument>& rich = dynamic_cast<ExceptionWithCallStack<invalid_argument>&>((invalid_argument&)ex);
+            return gcnew CNTKInvalidArgumentException(gcnew System::String(ex.what()), gcnew System::String(rich.CallStack().c_str()));
         }
         else if (typeid(ex) == typeid(bad_alloc))
         {
@@ -296,8 +299,10 @@ public:
     CNTKException(String^ message) : Exception(message)
     {}
 
-private:
-    String^ m_message;
+    CNTKException(String^ message, String^ callstack) : Exception(message), NativeCallStack(callstack)
+    {}
+
+    const String^ NativeCallStack;
 };
 
 public ref class CNTKRuntimeException : CNTKException
@@ -306,7 +311,7 @@ public:
     CNTKRuntimeException() : CNTKException()
     {}
 
-    CNTKRuntimeException(String^ message) : CNTKException(message)
+    CNTKRuntimeException(String^ message, String^ callstack) : CNTKException(message, callstack)
     {}
 };
 
@@ -316,7 +321,7 @@ public:
     CNTKLogicErrorException() : CNTKException()
     {}
 
-    CNTKLogicErrorException(String^ message) : CNTKException(message)
+    CNTKLogicErrorException(String^ message, String^ callstack) : CNTKException(message, callstack)
     {}
 };
 
@@ -326,7 +331,7 @@ public:
     CNTKInvalidArgumentException() : CNTKException()
     {}
 
-    CNTKInvalidArgumentException(String^ message) : CNTKException(message)
+    CNTKInvalidArgumentException(String^ message, String^ callstack) : CNTKException(message, callstack)
     {}
 };
 
@@ -357,8 +362,5 @@ void emit()
     d.Evaluate(nullptr, "", 0);
     d.LoadModel("");
 }
-}
-}
-}
-}
-}
+
+}}}}}

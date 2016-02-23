@@ -524,14 +524,14 @@ public:
             LogicError("CanFlatten() must not be called for index [0].");
         else if (k >= size()) // it's OK to test bottom-lessly expanded dimensions
             return true;
-        if (m_dims[k] == 1 || m_dims[k - 1] == 1) // both are broadcasting or scalar--we don't care about stride in this case
+        if (m_dims[k] == 1 && m_dims[k - 1] == 1) // both are broadcasting or scalar--we don't care about stride in this case
             return true;
         else
             return m_strides[k] == m_strides[k - 1] * (ptrdiff_t) m_dims[k - 1];
     }
     // editing functions for tensor operations
     // Unlike other methods, these are in-place.
-    TensorShape& FlattenInPlace(size_t k) // flatten [k] with [k-1]
+    TensorShape& FlattenInPlace(size_t k) // flatten [k] with [k-1]. Dim[k-1] will be absorbed into [k] and set to 1.
     {
         if (!CanFlatten(k))
             LogicError("Flatten() cannot flatten dimensions with gaps");
@@ -545,7 +545,7 @@ public:
         // TODO: rethink whether this is correct for example of negative strides
         m_dims[k] *= m_dims[k - 1];
         m_dims[k - 1] = 1;
-        m_strides[k] = /*m_dims[k - 1] *, it's 1 */ m_strides[k - 1];
+        m_strides[k] = m_strides[k - 1];
         return *this;
     }
     TensorShape& DropDimsInPlace(const SmallVector<bool>& toDrop) // remove dimension

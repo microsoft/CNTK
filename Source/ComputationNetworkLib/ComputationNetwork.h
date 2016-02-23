@@ -669,6 +669,7 @@ public:
         }
     }
 
+    // this one is called from MEL and from DumpNodeInfoToFile() above
     void DumpNodeInfoToFile(const vector<ComputationNodeBasePtr>& nodes,
                             const bool printValues,
                             const bool printMetadata,

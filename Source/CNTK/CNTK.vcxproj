@@ -140,12 +140,12 @@
     <ClInclude Include="..\Common\Include\Basics.h" />
     <ClInclude Include="..\Common\Include\BestGpu.h" />
     <ClInclude Include="..\Common\Include\DataReader.h" />
+    <ClInclude Include="..\Common\Include\ExceptionWithCallStack.h" />
     <ClInclude Include="..\Common\Include\StringUtil.h" />
     <ClInclude Include="..\Common\Include\TensorShape.h" />
     <ClInclude Include="..\Common\Include\DataWriter.h" />
     <ClInclude Include="..\Common\Include\File.h" />
     <ClInclude Include="..\Common\Include\fileutil.h" />
-    <ClInclude Include="..\Common\Include\DebugUtil.h" />
     <ClInclude Include="..\Common\Include\hostname.h" />
     <ClInclude Include="..\Common\Include\Platform.h" />
     <ClInclude Include="..\Common\Include\ProgressTracing.h" />
@@ -188,15 +188,12 @@
     </ClCompile>
     <ClCompile Include="..\Common\DataReader.cpp" />
     <ClCompile Include="..\Common\DataWriter.cpp" />
+    <ClCompile Include="..\Common\ExceptionWithCallStack.cpp" />
     <ClCompile Include="..\Common\File.cpp">
       <PrecompiledHeader Condition="$(DebugBuild)">NotUsing</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="..\Common\fileutil.cpp">
       <PrecompiledHeader Condition="$(DebugBuild)">NotUsing</PrecompiledHeader>
-    </ClCompile>
-    <ClCompile Include="..\Common\DebugUtil.cpp">
-      <PrecompiledHeader Condition="$(DebugBuild)">
-      </PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="..\Common\Include\ConcStack.h" />
     <ClCompile Include="..\Common\TimerUtility.cpp" />

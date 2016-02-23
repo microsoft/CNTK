@@ -105,8 +105,10 @@
       <AdditionalOptions>-Xcudafe "--diag_suppress=field_without_dll_interface" %(AdditionalOptions)</AdditionalOptions>
     </CudaCompile>
     <PostBuildEvent>
-      <Command>
-xcopy /D /I /Y "$(CudaPath)\bin\cudart64_*.dll" $(OutputPath)
+      <Command>if exist "$(CudaPath)\bin\cublas64_*.dll" (xcopy /Y "$(CudaPath)\bin\cublas64_*.dll" $(OutputPath))
+if exist "$(CudaPath)\bin\cusparse64_*.dll" (xcopy /Y "$(CudaPath)\bin\cusparse64_*.dll" $(OutputPath))
+if exist "$(CudaPath)\bin\curand64_*.dll" (xcopy /Y "$(CudaPath)\bin\curand64_*.dll" $(OutputPath))
+if exist "$(CudaPath)\bin\cudart64_*.dll" (xcopy /Y "$(CudaPath)\bin\cudart64_*.dll" $(OutputPath))
 if exist "$(CuDnnDll)" (xcopy /Y "$(CuDnnDll)" $(OutputPath))
 </Command>
     </PostBuildEvent>
@@ -141,7 +143,6 @@ if exist "$(CuDnnDll)" (xcopy /Y "$(CuDnnDll)" $(OutputPath))
   <ItemGroup>
     <ClInclude Include="..\Common\Include\File.h" />
     <ClInclude Include="..\Common\Include\fileutil.h" />
-    <ClInclude Include="..\Common\Include\DebugUtil.h" />
     <ClInclude Include="ColumnQuantizer.h" />
     <ClInclude Include="CommonMatrix.h" />
     <ClInclude Include="cudabasetypes.h" />
@@ -183,6 +184,7 @@ if exist "$(CuDnnDll)" (xcopy /Y "$(CuDnnDll)" $(OutputPath))
     <CudaCompile Include="GPUWatcher.cu">
       <FileType>CppCode</FileType>
     </CudaCompile>
+    <ClCompile Include="..\Common\ExceptionWithCallStack.cpp" />
     <ClCompile Include="cudalattice.cpp" />
     <ClCompile Include="cudalib.cpp" />
     <CudaCompile Include="CuDnnConvolutionEngine.cu">
@@ -191,10 +193,6 @@ if exist "$(CuDnnDll)" (xcopy /Y "$(CuDnnDll)" $(OutputPath))
     <ClCompile Include="GPUDataTransferer.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader>Create</PrecompiledHeader>
-    </ClCompile>
-    <ClCompile Include="..\Common\DebugUtil.cpp">
-      <PrecompiledHeader>
-      </PrecompiledHeader>
     </ClCompile>
     <CudaCompile Include="MatrixQuantizerGPU.cu">
       <FileType>CppCode</FileType>
