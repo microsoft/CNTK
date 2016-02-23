@@ -248,16 +248,11 @@ class RowSliceNode : public ComputationNode<ElemType>, public NumInputs<1>
 {
     typedef ComputationNode<ElemType> Base;
     UsingComputationNodeMembersBoilerplate;
-    static const std::wstring TypeName()
-    {
-        return L"RowSlice";
-    }
+    static const std::wstring TypeName() { return L"RowSlice"; }
 
 public:
     RowSliceNode(DEVICEID_TYPE deviceId, const wstring& name, size_t startIndex = 0, size_t numRows = 0)
-        : Base(deviceId, name),
-          m_startIndex(startIndex),
-          m_sliceHeight(numRows)
+        : Base(deviceId, name), m_startIndex(startIndex), m_sliceHeight(numRows)
     {
     }
 
@@ -280,12 +275,17 @@ public:
     {
         Base::Load(fstream, modelVersion);
         fstream >> m_startIndex >> m_sliceHeight;
+        int dim; // preparation for future extension that stores a dimension along which we slice
+        if (modelVersion >= CNTK_MODEL_VERSION_3)
+            fstream >> dim;
     }
 
     virtual void Save(File& fstream) const override
     {
         Base::Save(fstream);
         fstream << m_startIndex << m_sliceHeight;
+        int dim = 1; // preparation for future extension that stores a dimension along which we slice
+        fstream << dim;
     }
 
 private:
@@ -345,7 +345,7 @@ template class RowSliceNode<double>;
 // RowStackNode (input0, input1, ...)
 // stacks multiple inputs on top of each other
 // The inputs will be spliced w.r.t. their first tensor dimension (the "row" dimension).
-// TODO: This is very close to the planned SpliceNode (just make m_spliceDim configurable) except for splicing along time.
+// TODO: This is very close to the planned SpliceNode (just make m_spliceDim actually configurable) except for splicing along time.
 // -----------------------------------------------------------------------
 
 template <class ElemType>
@@ -353,17 +353,12 @@ class RowStackNode : public ComputationNode<ElemType> // note: not deriving from
 {
     typedef ComputationNode<ElemType> Base;
     UsingComputationNodeMembersBoilerplate;
-    static const std::wstring TypeName()
-    {
-        return L"RowStack";
-    }
-
-    static const size_t m_spliceDim = 0;    // tensor dimension according to which to stack  --TODO: Make this a parameter.
+    static const std::wstring TypeName() { return L"RowStack"; }
 
 public:
     DeclareConstructorFromConfig(RowStackNode);
-    RowStackNode(DEVICEID_TYPE deviceId, const wstring& name)
-        : Base(deviceId, name)
+    RowStackNode(DEVICEID_TYPE deviceId, const wstring& name, int spliceDim = 1/*TODO: complete this*/)
+        : Base(deviceId, name), m_spliceDim(spliceDim)
     {
     }
 
@@ -377,18 +372,33 @@ public:
         }
     }
 
-private:
+    virtual void Load(File& fstream, size_t modelVersion) override
+    {
+        Base::Load(fstream, modelVersion);
+        if (modelVersion >= CNTK_MODEL_VERSION_3)
+            fstream >> m_spliceDim;
+        else
+            m_spliceDim = 1;
+    }
 
+    virtual void Save(File& fstream) const override
+    {
+        Base::Save(fstream);
+        fstream << m_spliceDim;
+    }
+
+private:
     // changes the result slice (which includes all stacked inputs) to the stripe that matches where one of the inputs goes
     TensorShape NarrowToStripe(const TensorShape & resultSlice, size_t inputIndex)
     {
         auto resultSubSlice = resultSlice;
-        resultSubSlice.NarrowTo(m_spliceDim, m_firstIndices[inputIndex], m_firstIndices[inputIndex + 1]);
+        assert(m_spliceDim > 0);
+        size_t index = (size_t)m_spliceDim - 1;
+        resultSubSlice.NarrowTo(index, m_firstIndices[inputIndex], m_firstIndices[inputIndex + 1]);
         return resultSubSlice;
     }
 
 public:
-
     virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
     {
         size_t rank = DetermineElementwiseTensorRank();
@@ -426,16 +436,18 @@ public:
         // All dimensions but the last must be the same. (In a future version, we should be able to stack along any given dimension.)
 
         // determine maximum rank (we can stack tensors with lower rank, which will have their dimensions paded to max automatically)
-        size_t maxRank = m_spliceDim + 1; // spliceDim may exceed all of them, which will create a new dimension, e.g. stacking column vectors into a matrix
+        assert(m_spliceDim > 0);
+        size_t index = (size_t)m_spliceDim - 1;
+        size_t maxRank = index + 1; // spliceDim may exceed all of them, which will create a new dimension, e.g. stacking column vectors into a matrix
         for (int i = 0; i < GetNumInputs(); i++)
             if (maxRank < Input(i)->GetSampleLayout().GetRank())
                 maxRank = Input(i)->GetSampleLayout().GetRank();
 
         // the following loop does multiple things:
-        //  - count total dimension along m_spliceDim, and form associated m_firstIndices[] array
+        //  - count total dimension along index, and form associated m_firstIndices[] array
         //  - verify all other dimension's compatibility (we allow broadcasting)
         auto dims = Input(0)->GetSampleLayout().PadRank(maxRank).GetDims(); // dimensions padded to max rank; start with dims of first input
-        dims[m_spliceDim] = 0;                                              // this dimension is created, while all others are verified for consistency
+        dims[index] = 0;                                                    // this dimension is created, while all others are verified for consistency
         m_firstIndices.assign(1, 0);                                        // accumulative splice dimension; start with 0
         for (int i = 0; i < GetNumInputs(); i++)
         {
@@ -444,11 +456,11 @@ public:
             for (size_t k = 0; k < maxRank; k++)
             {
                 size_t dim = shape.GetDimPadded(k);
-                if (k == m_spliceDim)
+                if (k == index)
                 {
                     // accumulate the spliced dimension
-                    dims[m_spliceDim] += dim;
-                    m_firstIndices.push_back(dims[m_spliceDim]);    // and remember it
+                    dims[index] += dim;
+                    m_firstIndices.push_back(dims[index]);    // and remember it
                 }
                 else
                 {
@@ -466,7 +478,8 @@ public:
     }
 
 private:
-    std::vector<size_t> m_firstIndices;  // start row number in the stacked matrix of each input (child) (cumsum of matrix heights); plus one final entry that equals the total dimension
+    std::vector<size_t> m_firstIndices; // start row number in the stacked matrix of each input (child) (cumsum of matrix heights); plus one final entry that equals the total dimension
+    int m_spliceDim;                    // tensor dimension according to which to stack (1-based)
 };
 
 template class RowStackNode<float>;

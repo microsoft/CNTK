@@ -100,9 +100,10 @@ speechTrain = [
         numLSTMs = 3        // number of hidden LSTM model layers
 
         // features
-        features = Input(featDim, tag='feature')
-        labels = Input(labelDim, tag='label')
-        feashift = RowSlice(featDim - baseFeatDim, baseFeatDim, features);      # shift 5 frames right (x_{t+5} -> x_{t} )  // TODO why 5? Where do I see this? Seems to be the last frame!
+        features = Input((1 : featDim),  tag='feature') // TEST: Artificially reading data transposed
+        realFeatures = Transpose (features)             //       and swapping them back to (featDim:1), for testing Transpose()
+        labels   = Input(labelDim, tag='label')
+        feashift = RowSlice(featDim - baseFeatDim, baseFeatDim, realFeatures);
 
         featNorm = MeanVarNorm(feashift)
 

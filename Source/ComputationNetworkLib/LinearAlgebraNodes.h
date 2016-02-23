@@ -715,7 +715,7 @@ public:
         if (modelVersion >= CNTK_MODEL_VERSION_3)
             fstream >> m_dim1 >> m_dim2;
         else
-            m_dim1 = 1, m_dim2 = 2;
+            m_dim1 = 1, m_dim2 = 2; // default
     }
 
 private:
@@ -728,7 +728,8 @@ private:
         shape.SwapDimsInPlace(i, j);
     }
 
-    // get the transposed output shape for the current input
+    // get the transposed input shape
+    // Using this shape yields the same tensor but index positions are swapped.
     TensorShape GetTransposedTensorSliceFor(size_t rank, const FrameRange& fr)
     {
         auto shape = Input(0)->GetTensorSliceFor(rank, fr);
@@ -740,16 +741,16 @@ public:
     virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
     {
         size_t rank = DetermineElementwiseTensorRank();
-        auto input  = Input(0)->ValueTensorFor(rank, fr);
-        auto output = TensorView<ElemType>(Value(), GetTransposedTensorSliceFor(rank, fr));
+        auto output = ValueTensorFor(rank, fr);
+        auto input  = TensorView<ElemType>(Input(0)->Value(), GetTransposedTensorSliceFor(rank, fr));
         output.AssignCopyOf(input);
     }
 
     virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
     {
         size_t rank = DetermineElementwiseTensorRank();
-        auto inputGradient  = Input(0)->GradientTensorFor(rank, fr);
-        auto outputGradient = TensorView<ElemType>(Gradient(), GetTransposedTensorSliceFor(rank, fr));
+        auto outputGradient = GradientTensorFor(rank, fr);
+        auto inputGradient  = TensorView<ElemType>(Input(0)->Gradient(), GetTransposedTensorSliceFor(rank, fr));
         inputGradient.AddCopyOf(outputGradient);
     }
 
@@ -779,7 +780,7 @@ public:
             shape.PadRankInPlace(maxij + 1);
         // apply the permutation
         TransposeShape(shape);
-        // init with dimensions only (dropping strides), since we want to allow that getting the actual minibatch tensor later may mess with strides
+        // drop the strides, since output is dense (swapped strides will be used with the input in ForwardProp())
         SetDims(TensorShape(shape.GetDims()), HasMBLayout());
     }
 

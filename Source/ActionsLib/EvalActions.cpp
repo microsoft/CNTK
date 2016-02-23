@@ -265,14 +265,15 @@ void DoWriteOutput(const ConfigParameters& config)
                 if (formattingOptions.isCategoryLabel)
                     formattingOptions.labelMappingFile = (wstring)formatConfig(L"labelMappingFile", L"");
             }
-            formattingOptions.transpose        = formatConfig(L"transpose",        formattingOptions.transpose);
-            formattingOptions.prologue         = formatConfig(L"prologue",         formattingOptions.prologue);
-            formattingOptions.epilogue         = formatConfig(L"epilogue",         formattingOptions.epilogue);
-            formattingOptions.sequencePrologue = formatConfig(L"sequencePrologue", formattingOptions.sequencePrologue);
-            formattingOptions.sequenceEpilogue = formatConfig(L"sequenceEpilogue", formattingOptions.sequenceEpilogue);
-            formattingOptions.elementSeparator = formatConfig(L"elementSeparator", formattingOptions.elementSeparator);
-            formattingOptions.sampleSeparator  = formatConfig(L"sampleSeparator",  formattingOptions.sampleSeparator);
-            formattingOptions.precisionFormat  = formatConfig(L"precisionFormat",  formattingOptions.precisionFormat);
+            formattingOptions.transpose         = formatConfig(L"transpose",         formattingOptions.transpose);
+            formattingOptions.prologue          = formatConfig(L"prologue",          formattingOptions.prologue);
+            formattingOptions.epilogue          = formatConfig(L"epilogue",          formattingOptions.epilogue);
+            formattingOptions.sequenceSeparator = formatConfig(L"sequenceSeparator", formattingOptions.sequenceSeparator);
+            formattingOptions.sequencePrologue  = formatConfig(L"sequencePrologue",  formattingOptions.sequencePrologue);
+            formattingOptions.sequenceEpilogue  = formatConfig(L"sequenceEpilogue",  formattingOptions.sequenceEpilogue);
+            formattingOptions.elementSeparator  = formatConfig(L"elementSeparator",  formattingOptions.elementSeparator);
+            formattingOptions.sampleSeparator   = formatConfig(L"sampleSeparator",   formattingOptions.sampleSeparator);
+            formattingOptions.precisionFormat   = formatConfig(L"precisionFormat",   formattingOptions.precisionFormat);
         }
 
         writer.WriteOutput(testDataReader, mbSize[0], outputPath, outputNodeNamesVector, formattingOptions, epochSize);
