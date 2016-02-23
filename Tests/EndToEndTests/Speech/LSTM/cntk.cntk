@@ -100,8 +100,8 @@ speechTrain = [
         numLSTMs = 3        // number of hidden LSTM model layers
 
         // features
-        features = Input((featDim),  tag='feature') // TEST: Artificially reading data transposed
-        realFeatures = (features)             //       and swapping them back to (featDim:1), for testing Transpose()
+        features = Input((1 : featDim),  tag='feature') // TEST: Artificially reading data transposed
+        realFeatures = FlattenDimensions (Transpose (features), 1, 2)             //       and swapping them back to featDim:1), for testing Transpose()
         labels   = Input(labelDim, tag='label')
         feashift = RowSlice(featDim - baseFeatDim, baseFeatDim, realFeatures);
 
