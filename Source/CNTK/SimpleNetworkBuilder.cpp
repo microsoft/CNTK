@@ -97,7 +97,7 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildFFDNNFromDescription(
             w = builder.CreateLearnableParameter(L"W0", m_layerSizes[1], m_layerSizes[0]);
             m_net->InitLearnableParameters(w, m_uniformInit, randomSeed++, m_initValueScale);
             b = builder.CreateLearnableParameter(L"B0", m_layerSizes[1], 1);
-            output = ApplyNonlinearFunction(builder.Plus(builder.Times(w, input, L"W0*features"), b, L"W0*features+B0"), 0, L"H1");
+            output = ApplyNonlinearFunction(builder.Plus(builder.Times(w, input, 1, L"W0*features"), b, L"W0*features+B0"), 0, L"H1");
 
             if (m_addDropoutNodes)
                 input = builder.Dropout(output, L"DropH1");
@@ -116,7 +116,7 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildFFDNNFromDescription(
                 w = builder.CreateLearnableParameter(nameOfW, m_layerSizes[i + 1], m_layerSizes[i]);
                 m_net->InitLearnableParameters(w, m_uniformInit, randomSeed++, m_initValueScale);
                 b = builder.CreateLearnableParameter(nameOfB, m_layerSizes[i + 1], 1);
-                output = ApplyNonlinearFunction(builder.Plus(builder.Times(w, input, nameOfTimes), b, nameOfPlus), i, nameOfH);
+                output = ApplyNonlinearFunction(builder.Plus(builder.Times(w, input, 1, nameOfTimes), b, nameOfPlus), i, nameOfH);
 
                 if (m_addDropoutNodes)
                     input = builder.Dropout(output, L"Drop" + nameOfH);
@@ -134,7 +134,7 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildFFDNNFromDescription(
         w = builder.CreateLearnableParameter(nameOfW, m_layerSizes[numHiddenLayers + 1], m_layerSizes[numHiddenLayers]);
         m_net->InitLearnableParameters(w, m_uniformInit, randomSeed++, m_initValueScale);
         b = builder.CreateLearnableParameter(nameOfB, m_layerSizes[numHiddenLayers + 1], 1);
-        output = builder.Plus(builder.Times(w, input, nameOfTimes), b, nameOfPlus);
+        output = builder.Plus(builder.Times(w, input, 1, nameOfTimes), b, nameOfPlus);
         m_net->RenameNode(output, L"HLast");
 
         label = builder.CreateInputNode(L"labels", m_layerSizes[numHiddenLayers + 1]);
@@ -264,7 +264,7 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildRNNFromDescription()
         label = builder.CreateInputNode(L"labels", m_layerSizes[numHiddenLayers + 1]);
         AddTrainAndEvalCriterionNodes(input, label, w, L"criterion", L"eval");
 
-        output = builder.Times(w, input, L"outputs");
+        output = builder.Times(w, input, 1, L"outputs");
 
         m_net->OutputNodes().push_back(output);
 
@@ -379,7 +379,7 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildClassEntropyRNNFromDe
 
         clsweight = builder.CreateLearnableParameter(L"WeightForClassPostProb", m_nbrCls, m_layerSizes[numHiddenLayers]);
         m_net->InitLearnableParameters(clsweight, m_uniformInit, randomSeed++, m_initValueScale);
-        clslogpostprob = builder.Times(clsweight, input, L"ClassPostProb");
+        clslogpostprob = builder.Times(clsweight, input, 1, L"ClassPostProb");
 
         output = AddTrainAndEvalCriterionNodes(input, label, w, L"TrainNodeClassBasedCrossEntropy", L"EvalNodeClassBasedCrossEntrpy",
                                                clslogpostprob);
@@ -481,7 +481,7 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildConditionalLSTMNetwor
 
         clsweight = builder.CreateLearnableParameter(L"WeightForClassPostProb", m_nbrCls, m_layerSizes[numHiddenLayers]);
         m_net->InitLearnableParameters(clsweight, m_uniformInit, randomSeed++, m_initValueScale);
-        clslogpostprob = builder.Times(clsweight, input, L"ClassPostProb");
+        clslogpostprob = builder.Times(clsweight, input, 1, L"ClassPostProb");
 
         output = AddTrainAndEvalCriterionNodes(input, label, w, L"TrainNodeClassBasedCrossEntropy", L"EvalNodeClassBasedCrossEntrpy",
                                                clslogpostprob);
@@ -601,7 +601,7 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildLogBilinearNetworkFro
         label = builder.CreateInputNode(L"labels", m_layerSizes[numHiddenLayers + 1]);
         AddTrainAndEvalCriterionNodes(input, label, w);
 
-        output = builder.Times(w, input, L"outputs");
+        output = builder.Times(w, input, 1, L"outputs");
 
         m_net->OutputNodes().push_back(output);
 
@@ -1128,7 +1128,7 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildClassLSTMNetworkFromD
 
         clsweight = builder.CreateLearnableParameter(L"WeightForClassPostProb", m_nbrCls, m_layerSizes[numHiddenLayers]);
         m_net->InitLearnableParameters(clsweight, m_uniformInit, randomSeed++, m_initValueScale);
-        clslogpostprob = builder.Times(clsweight, input, L"ClassPostProb");
+        clslogpostprob = builder.Times(clsweight, input, 1, L"ClassPostProb");
 
         output = AddTrainAndEvalCriterionNodes(input, label, w, L"TrainNodeClassBasedCrossEntropy", L"EvalNodeClassBasedCrossEntrpy",
                                                clslogpostprob);
@@ -1296,7 +1296,7 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildLSTMNetworkFromDescri
         label = builder.CreateInputNode(L"labels", m_layerSizes[numHiddenLayers + 1]);
         AddTrainAndEvalCriterionNodes(input, label, w);
 
-        output = builder.Times(w, input, L"outputs");
+        output = builder.Times(w, input, 1, L"outputs");
 
         if (m_needPrior)
         {
@@ -1414,7 +1414,7 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildNCELSTMNetworkFromDes
         bias = builder.CreateLearnableParameter(L"BiasVector", 1, m_layerSizes[m_layerSizes.size() - 1]);
         bias->Value().SetValue((ElemType) -std::log(m_layerSizes[m_layerSizes.size() - 1]));
         // m_net->InitLearnableParameters(bias, m_uniformInit, randomSeed++, std::log(m_layerSizes[m_layerSizes.size() - 1])* m_initValueScale);
-        // clslogpostprob = builder.Times(clsweight, input, L"ClassPostProb");
+        // clslogpostprob = builder.Times(clsweight, input, 1, L"ClassPostProb");
 
         output = AddTrainAndEvalCriterionNodes(input, label, w, L"TrainNodeNCEBasedCrossEntropy", L"EvalNodeNCEBasedCrossEntrpy", bias);
 
@@ -1532,17 +1532,17 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildNetworkFromDbnFile(co
         if (layerType == "perceptron")
         {
             fprintf(stderr, "DBN: Reading (%lu x %lu) perceptron\n", (unsigned long) wts.GetNumRows(), (unsigned long) wts.GetNumCols());
-            output = builder.Plus(builder.Times(w, input, nameOfTimes), b, nameOfPlus);
+            output = builder.Plus(builder.Times(w, input, 1, nameOfTimes), b, nameOfPlus);
         }
         else if (layerType == "rbmisalinearbernoulli")
         {
             fprintf(stderr, "DBN: Reading (%lu x %lu) linear layer\n", (unsigned long) wts.GetNumRows(), (unsigned long) wts.GetNumCols());
-            output = builder.Plus(builder.Times(w, input, nameOfTimes), b, nameOfPlus);
+            output = builder.Plus(builder.Times(w, input, 1, nameOfTimes), b, nameOfPlus);
         }
         else // assume rbmbernoullibernoulli
         {
             fprintf(stderr, "DBN: Reading (%lu x %lu) non-linear layer\n", (unsigned long) wts.GetNumRows(), (unsigned long) wts.GetNumCols());
-            output = ApplyNonlinearFunction(builder.Plus(builder.Times(w, input, nameOfTimes), b, nameOfPlus), i, nameOfH);
+            output = ApplyNonlinearFunction(builder.Plus(builder.Times(w, input, 1, nameOfTimes), b, nameOfPlus), i, nameOfH);
             if (m_addDropoutNodes)
                 input = builder.Dropout(output, L"Drop" + nameOfH);
         }
@@ -1589,7 +1589,7 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildNetworkFromDbnFile(co
         w = builder.CreateLearnableParameter(nameOfW, outputLayerSize, penultimateSize);
         m_net->InitLearnableParameters(w, m_uniformInit, randomSeed++, m_initValueScale);
         b = builder.CreateLearnableParameter(nameOfB, outputLayerSize, 1);
-        output = builder.Plus(builder.Times(w, input, nameOfTimes), b, nameOfPlus);
+        output = builder.Plus(builder.Times(w, input, 1, nameOfTimes), b, nameOfPlus);
         m_net->RenameNode(output, L"HLast");
 
         if (m_needPrior)

@@ -33,40 +33,43 @@ wstring commonMacros =
     L"LogPrior(labels) = Log(Mean(labels)) \n";
 
 wstring computationNodes = // TODO: use actual TypeName() here? would first need to make it a wide string; we should also extract those two methods into the base macro
-    L"LearnableParameter(rows, cols, needGradient = true, init = 'uniform'/*|fixedValue|gaussian|fromFile*/, initValueScale = 1, value = 0, initFromFilePath = '', initOnCPUOnly=true, randomSeed=-1, tag='') = new ComputationNode [ operation = 'LearnableParameter' ; shape = new TensorShape [ dims = (rows : cols) ] /*plus the function args*/ ]\n"
-    L"Parameter = LearnableParameter // deprecated \n"
-    L"ParameterTensor(dims, needGradient = true, init = 'uniform'/*|fixedValue|gaussian|fromFile*/, initValueScale = 1, value = 0, initFromFilePath = '', initOnCPUOnly=true, randomSeed=-1, tag='') = new ComputationNode [ operation = 'LearnableParameter' ; shape = new TensorShape [ /*dims*/ ] /*plus the function args*/ ]\n"
-    // TODO: ImageParameter?
-    // ^^ already works; vv untested
-    L"Input(dims, tag='feature') = new ComputationNode [ operation = 'InputValue' ; shape = new TensorShape [ /*dims*/ ] ; isImage = false /*plus the function args*/ ]\n" // note: naming a little inconsistent  // TODO: re-test after flag change
-    L"SparseInput(dims, tag='feature') = new ComputationNode [ operation = 'SparseInputValue' ; shape = new TensorShape [ /*dims*/ ] ; isImage = false /*plus the function args*/ ]\n"
-    L"ImageInput(imageWidth, imageHeight, imageChannels, imageLayout='CHW', tag='feature') = new ComputationNode [ operation = 'InputValue' ; isImage = true /*plus the function args*/ ]\n"
-    L"SparseImageInput(imageWidth, imageHeight, imageChannels, imageLayout='CHW', tag='feature') = new ComputationNode [ operation = 'SparseInputValue' ; isImage = true /*plus the function args*/ ]\n"
-    L"Constant(val, rows = 1, cols = 1, tag='') = Parameter(rows, cols, needGradient = false, init = 'fixedValue', value = val) \n"
-    L"PastValue(dims, input, timeStep = 1, defaultHiddenActivation = 0.1, tag='') = new ComputationNode [ operation = 'PastValue' ; inputs = input ; shape = new TensorShape [ /*dims*/ ] /*plus the function args*/ ]\n"
-    L"FutureValue(dims, input, timeStep = 1, defaultHiddenActivation = 0.1, tag='') = new ComputationNode [ operation = 'FutureValue' ; inputs = input ; shape = new TensorShape [ /*dims*/ ] /*plus the function args*/ ]\n"
-    // TODO: ^^ DelayedValues no longer need to know their dimension. That is inferred in Validation.
-    L"Shift(input, fromOffset, boundaryValue, boundaryMode=-1/*context*/, dim=-1, tag='') = new ComputationNode [ operation = 'Shift' ; inputs = (input : boundaryValue) /*plus the function args*/ ]\n"
-    L"RowSlice(startIndex, numRows, input, needGradient = false, tag='') = new ComputationNode [ operation = 'RowSlice' ; inputs = input /*plus the function args*/ ]\n"
-    L"RowRepeat(input, numRepeats, needGradient = false, tag='') = new ComputationNode [ operation = 'RowRepeat' ; inputs = input /*plus the function args*/ ]\n"
-    L"RowStack(inputs, tag='') = new ComputationNode [ operation = 'RowStack' /*plus the function args*/ ]\n"
-    L"Reshape(input, numRows, imageWidth = 0, imageHeight = 0, imageChannels = 0, tag='') = new ComputationNode [ operation = 'LegacyReshape' ; inputs = input /*plus the function args*/ ]\n"
-    L"NewReshape(input, dims, beginDim=0, endDim=0, tag='') = new ComputationNode [ operation = 'Reshape' ; inputs = input ; shape = new TensorShape [ /*dims*/ ] /*plus the function args*/ ]\n"
-    L"ReshapeDimension(x, dim, tensorShape) = NewReshape(x, tensorShape, beginDim=dim, endDim=dim + 1) \n"
-    L"FlattenDimensions(x, dim, num) = NewReshape(x, 0, beginDim=dim, endDim=dim + num) \n"
-    L"SplitDimension(x, dim, N) = ReshapeDimension(x, dim, 0:N) \n"
-    L"Logistic(label, probability, tag='') = new ComputationNode [ operation = 'Logistic' ; inputs = (label : probability) /*plus the function args*/ ]\n"
-    L"WeightedLogistic(label, probability, instanceWeight, tag='') = new ComputationNode [ operation = 'Logistic' ; inputs = (label : probability : instanceWeight) /*plus the function args*/ ]\n"
-    L"ReconcileMBLayout(dataInput, layoutInput, tag='') = new ComputationNode [ operation = 'ReconcileMBLayout' ; inputs = (dataInput : layoutInput) /*plus the function args*/ ]\n"
-    L"Convolution(weightNode, inputValueNode, kernelWidth, kernelHeight, outputChannels, horizontalSubsample, verticalSubsample, zeroPadding = false, maxTempMemSizeInSamples = 0, imageLayout='CHW', tag='') = new ComputationNode [ operation = 'Convolution' ; inputs = (weightNode : inputValueNode) /*plus the function args*/ ]\n"
-    L"MaxPooling(input, windowWidth, windowHeight, horizontalSubsample, verticalSubsample, imageLayout='CHW', tag='') = new ComputationNode [ operation = 'MaxPooling' ; inputs = input /*plus the function args*/ ]\n"
-    L"AveragePooling(input, windowWidth, windowHeight, horizontalSubsample, verticalSubsample, imageLayout='CHW', tag='') = new ComputationNode [ operation = 'AveragePooling' ; inputs = input /*plus the function args*/ ]\n"
-    // TODO: define DelayedValue, with negative delay for future; cannot do this yet, need to be able to say something like delay = -(^.delay)
-    // aliases
-    L"ColumnwiseCrossProduct = KhatriRaoProduct // deprecated \n" // TODO: should it be deprecated? It is described as easier to understand in the CNTKBook.
-    L"ClassificationError = ErrorPrediction \n"
-    L"Delay = PastValue \n" // TODO: should it allow negative offsets and an if test here?
-    L"BatchNormalization(input, scale, bias, runMean, runInvStdDev, eval, spatial, expAvgFactor = 1.0, epsilon = 0.00001, useCntkEngine = true, imageLayout='CHW', tag='') = new ComputationNode [ operation = 'BatchNormalization' ; inputs = (input : scale : bias : runMean : runInvStdDev) /*plus the function args*/ ]\n"
+L"LearnableParameter(rows, cols, needGradient = true, init = 'uniform'/*|fixedValue|gaussian|fromFile*/, initValueScale = 1, value = 0, initFromFilePath = '', initOnCPUOnly=true, randomSeed=-1, tag='') = new ComputationNode [ operation = 'LearnableParameter' ; shape = new TensorShape [ dims = (rows : cols) ] /*plus the function args*/ ]\n"
+L"Parameter = LearnableParameter // deprecated \n"
+L"ParameterTensor(dims, needGradient = true, init = 'uniform'/*|fixedValue|gaussian|fromFile*/, initValueScale = 1, value = 0, initFromFilePath = '', initOnCPUOnly=true, randomSeed=-1, tag='') = new ComputationNode [ operation = 'LearnableParameter' ; shape = new TensorShape [ /*dims*/ ] /*plus the function args*/ ]\n"
+// TODO: ImageParameter?
+// ^^ already works; vv untested
+L"Input(dims, tag='feature') = new ComputationNode [ operation = 'InputValue' ; shape = new TensorShape [ /*dims*/ ] ; isImage = false /*plus the function args*/ ]\n" // note: naming a little inconsistent  // TODO: re-test after flag change
+L"SparseInput(dims, tag='feature') = new ComputationNode [ operation = 'SparseInputValue' ; shape = new TensorShape [ /*dims*/ ] ; isImage = false /*plus the function args*/ ]\n"
+L"ImageInput(imageWidth, imageHeight, imageChannels, imageLayout='CHW', tag='feature') = new ComputationNode [ operation = 'InputValue' ; isImage = true /*plus the function args*/ ]\n"
+L"SparseImageInput(imageWidth, imageHeight, imageChannels, imageLayout='CHW', tag='feature') = new ComputationNode [ operation = 'SparseInputValue' ; isImage = true /*plus the function args*/ ]\n"
+L"Constant(val, rows = 1, cols = 1, tag='') = Parameter(rows, cols, needGradient = false, init = 'fixedValue', value = val) \n"
+L"PastValue(dims, input, timeStep = 1, defaultHiddenActivation = 0.1, tag='') = new ComputationNode [ operation = 'PastValue' ; inputs = input ; shape = new TensorShape [ /*dims*/ ] /*plus the function args*/ ]\n"
+L"FutureValue(dims, input, timeStep = 1, defaultHiddenActivation = 0.1, tag='') = new ComputationNode [ operation = 'FutureValue' ; inputs = input ; shape = new TensorShape [ /*dims*/ ] /*plus the function args*/ ]\n"
+// TODO: ^^ DelayedValues no longer need to know their dimension. That is inferred in Validation.
+L"Shift(input, fromOffset, boundaryValue, boundaryMode=-1/*context*/, dim=-1, tag='') = new ComputationNode [ operation = 'Shift' ; inputs = (input : boundaryValue) /*plus the function args*/ ]\n"
+L"RowSlice(startIndex, numRows, input, needGradient = false, tag='') = new ComputationNode [ operation = 'RowSlice' ; inputs = input /*plus the function args*/ ]\n"
+L"RowRepeat(input, numRepeats, needGradient = false, tag='') = new ComputationNode [ operation = 'RowRepeat' ; inputs = input /*plus the function args*/ ]\n"
+L"RowStack(inputs, tag='') = new ComputationNode [ operation = 'RowStack' /*plus the function args*/ ]\n"
+L"Reshape(input, numRows, imageWidth = 0, imageHeight = 0, imageChannels = 0, tag='') = new ComputationNode [ operation = 'LegacyReshape' ; inputs = input /*plus the function args*/ ]\n"
+L"NewReshape(input, dims, beginDim=0, endDim=0, tag='') = new ComputationNode [ operation = 'Reshape' ; inputs = input ; shape = new TensorShape [ /*dims*/ ] /*plus the function args*/ ]\n"
+L"ReshapeDimension(x, dim, tensorShape) = NewReshape(x, tensorShape, beginDim=dim, endDim=dim + 1) \n"
+L"FlattenDimensions(x, dim, num) = NewReshape(x, 0, beginDim=dim, endDim=dim + num) \n"
+L"SplitDimension(x, dim, N) = ReshapeDimension(x, dim, 0:N) \n"
+L"TransposeDimensions(input, dim1, dim2, tag='') = new ComputationNode [ operation = 'TransposeDimensions' ; inputs = input /*plus the function args*/ ]\n"
+L"Transpose(x) = TransposeDimensions(x, 1, 2)\n"
+L"Times(A, B, outputRank=1) = new ComputationNode [ operation = 'Times' ; inputs = ( A : B ) /*plus the function args*/ ]\n"
+L"Logistic(label, probability, tag='') = new ComputationNode [ operation = 'Logistic' ; inputs = (label : probability) /*plus the function args*/ ]\n"
+L"WeightedLogistic(label, probability, instanceWeight, tag='') = new ComputationNode [ operation = 'Logistic' ; inputs = (label : probability : instanceWeight) /*plus the function args*/ ]\n"
+L"ReconcileMBLayout(dataInput, layoutInput, tag='') = new ComputationNode [ operation = 'ReconcileMBLayout' ; inputs = (dataInput : layoutInput) /*plus the function args*/ ]\n"
+L"Convolution(weightNode, inputValueNode, kernelWidth, kernelHeight, outputChannels, horizontalSubsample, verticalSubsample, zeroPadding = false, maxTempMemSizeInSamples = 0, imageLayout='CHW', tag='') = new ComputationNode [ operation = 'Convolution' ; inputs = (weightNode : inputValueNode) /*plus the function args*/ ]\n"
+L"MaxPooling(input, windowWidth, windowHeight, horizontalSubsample, verticalSubsample, imageLayout='CHW', tag='') = new ComputationNode [ operation = 'MaxPooling' ; inputs = input /*plus the function args*/ ]\n"
+L"AveragePooling(input, windowWidth, windowHeight, horizontalSubsample, verticalSubsample, imageLayout='CHW', tag='') = new ComputationNode [ operation = 'AveragePooling' ; inputs = input /*plus the function args*/ ]\n"
+// TODO: define DelayedValue, with negative delay for future; cannot do this yet, need to be able to say something like delay = -(^.delay)
+// aliases
+L"ColumnwiseCrossProduct = KhatriRaoProduct // deprecated \n" // TODO: should it be deprecated? It is described as easier to understand in the CNTKBook.
+L"ClassificationError = ErrorPrediction \n"
+L"Delay = PastValue \n" // TODO: should it allow negative offsets and an if test here?
+L"BatchNormalization(input, scale, bias, runMean, runInvStdDev, eval, spatial, expAvgFactor = 1.0, epsilon = 0.00001, useCntkEngine = true, imageLayout='CHW', tag='') = new ComputationNode [ operation = 'BatchNormalization' ; inputs = (input : scale : bias : runMean : runInvStdDev) /*plus the function args*/ ]\n"
 // standard nodes. We use macros to define these strings.
 #define UnaryStandardNode(Op, a) L## #Op L"(" L## #a L", tag='') = new ComputationNode [ operation = '" L## #Op L"' ; inputs = " L## #a L" /*plus the function args*/ ]\n"
 #define BinaryStandardNode(Op, a, b) L## #Op L"(" L## #a L", " L## #b L", tag='') = new ComputationNode [ operation = '" L## #Op L"' ; inputs = (" L## #a L" : " L## #b L") /*plus the function args*/ ]\n"
@@ -120,10 +123,6 @@ wstring computationNodes = // TODO: use actual TypeName() here? would first need
     UnaryStandardNode(SumElements, matrix)
     UnaryStandardNode(Tanh, z)
     UnaryStandardNode(TimeReverse, vectorSequence)
-    BinaryStandardNode(Times, leftMatrix, rightMatrix)
-#ifdef COMING_SOON
-    UnaryStandardNode(Transpose, matrix)
-#endif
     BinaryStandardNode(TransposeTimes, leftMatrix, rightMatrix)
     // those nodes are deprecated, we won't implement them in BS:
     //BinaryStandardNode(NoiseContrastiveEstimationNode)

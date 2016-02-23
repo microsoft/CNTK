@@ -366,7 +366,7 @@ public:
     //  - as a Matrix reference
     //     - actual object is a 2D tensor without MB Layout
     //     - ValueAsMatrix(), GradientAsMatrix() returns tensor as a 2D Matrix object
-    //     - nodes that do this are: TimesNode, DiagTimesNode, ConvolutionNode, NoiseContrastiveEstimationNode, ClassBasedCrossEntropyWithSoftmaxNode, TransposeNode, DiagonalNode
+    //     - nodes that do this are: TimesNode, DiagTimesNode, ConvolutionNode, NoiseContrastiveEstimationNode, ClassBasedCrossEntropyWithSoftmaxNode, TransposeDimensionsNode, DiagonalNode
     //
     // How values are stored:
     //
@@ -919,17 +919,17 @@ public:
     // creation from configuration
     // Nodes with NumInputs<> should say DeclareConstructorFromConfigWithNumInputs(ClassName), and nodes without DeclareConstructorFromConfig(ClassName).
     // The macro will forward to the regular constructor of the node (which may do more than just calling the base constructor), and then attach the inputs from config.
-#define DeclareConstructorFromConfig(C)                  \
-    C(const ScriptableObjects::IConfigRecordPtr configp) \
-        : C(configp->Get(L"deviceId"), L"<placeholder>") \
-    {                                                    \
-        AttachInputs(configp);                           \
-    }
 #define DeclareConstructorFromConfigWithNumInputs(C)         \
     C(const ScriptableObjects::IConfigRecordPtr configp)     \
         : C(configp->Get(L"deviceId"), L"<placeholder>")     \
     {                                                        \
         AttachInputs(configp, this->GetExpectedNumInputs()); \
+    }
+#define DeclareConstructorFromConfig(C)                  \
+    C(const ScriptableObjects::IConfigRecordPtr configp) \
+        : C(configp->Get(L"deviceId"), L"<placeholder>") \
+    {                                                    \
+        AttachInputs(configp);                           \
     }
 
     // helper to load m_value from a stream
