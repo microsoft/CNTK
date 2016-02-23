@@ -52,6 +52,8 @@ COMMAND:    currentDirectory=\\storage.ccp.philly.selfhost.corp.microsoft.com\pu
 
 --- MNIST:
 
+COMMAND:    configFile=$(SolutionDir)Examples/Image/MNIST/Config/01_OneHidden.cntk  currentDirectory=$(SolutionDir)Tests/EndToEndTests/Image/Data  RunDir=$(SolutionDir)Tests/EndToEndTests/RunDir/Image/MNIST_01_OneHidden  DataDir=$(SolutionDir)Tests/EndToEndTests/Image/Data  ConfigDir=$(SolutionDir)Examples/Image/MNIST/Config  OutputDir=$(SolutionDir)Tests/EndToEndTests/RunDir/Image/MNIST_01_OneHidden  DeviceId=0  MNISTtrain=[reader=[file=$(SolutionDir)Tests/EndToEndTests/Image/Data/Train.txt]]  MNISTtest=[reader=[file=$(SolutionDir)Tests/EndToEndTests/Image/Data/Test.txt]]  MNISTtrain=[SGD=[maxEpochs=1]]  MNISTtrain=[SGD=[epochSize=100]]  MNISTtrain=[reader=[randomize=none]]  imageLayout="cudnn"  makeMode=false
+
 TODO out-of-date:
 COMMAND:     currentDirectory=$(SolutionDir)ExampleSetups\Image\MNIST  configFile=02_Conv.cntk configName=02_Conv
 
