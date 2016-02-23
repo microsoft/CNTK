@@ -827,10 +827,9 @@ public:
         }
 
         // get the key
+        // As a special case, we will get an empty key when parsing a macro definition.
         auto key = stringParse.substr(tokenStart, keyEnd - tokenStart);
         Trim(key);
-        if (key.empty())
-            LogicError("ParseValue: Empty key.");
         tokenStart = keyEnd;
         if (stringParse[keyEnd] == '=')
         {
@@ -866,7 +865,6 @@ public:
         else if (substrSize == 0)
         {
             InvalidArgument("ParseValue: No value given for '%s'.", key.c_str());
-            //return npos; // old version would just return, but cause rest of dictionary to be ignored
         }
 
         // get the value
@@ -874,10 +872,8 @@ public:
         Trim(value);
 
         // add the value to the dictionary
-        //if (!key.empty() && !value.empty())
-        // This check ^^ was here before, leading to not being able to define values to be empty strings.
-        // I hope there is no hidden assumption on this check somewhere.
-        Insert(key, value);
+        if (!key.empty()) // in NDL macro definitions, we get called with cursor on the '='
+            Insert(key, value);
 
         return tokenEnd;
     }
