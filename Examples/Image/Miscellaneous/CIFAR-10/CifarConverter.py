@@ -16,7 +16,7 @@ def saveImage(fname, data, label, mapFile, pad, **key_parms):
         key_parms['mean'] += pixData
 
     if pad > 0:
-        pixData = np.pad(pixData, ((0, 0), (pad, pad), (pad, pad)), mode = 'edge')
+        pixData = np.pad(pixData, ((0, 0), (pad, pad), (pad, pad)), mode='constant', constant_values=128) # can also use mode='edge'
 
     img = Image.new('RGB', (imgSize + 2 * pad, imgSize + 2 * pad))
     pixels = img.load()
@@ -44,21 +44,30 @@ def saveMean(fname, data):
         f.write(x.toprettyxml(indent = '  '))
 
 if __name__ == "__main__":
-    rootDir = r'C:\Data\CIFAR-10' + '\\'
+    if len(sys.argv) != 2:
+        print "Usage: CifarConverter.py <path to CIFAR-10 dataset directory>\nCIFAR-10 dataset (Python version) can be downloaded from http://www.cs.toronto.edu/~kriz/cifar-10-python.tar.gz"
+        sys.exit(1)
+    rootDir = sys.argv[1]
+    trainDir = os.path.join(rootDir, os.path.join('data', 'train'))
+    if not os.path.exists(trainDir):
+        os.makedirs(trainDir)
+    testDir = os.path.join(rootDir, os.path.join('data', 'test'))
+    if not os.path.exists(testDir):
+      os.makedirs(testDir)
     data = {}
     dataMean = np.zeros((3, imgSize, imgSize)) # mean is in CHW format.
-    with open(rootDir + 'train_map.txt', 'w') as mapFile:
+    with open(os.path.join(rootDir, 'train_map.txt'), 'w') as mapFile:
         for ifile in range(1, 6):
-            with open(r'C:\Data\CIFAR-10\Python\data_batch_' + str(ifile), 'rb') as f:
+            with open(os.path.join(rootDir, 'data_batch_' + str(ifile)), 'rb') as f:
                 data = cp.load(f)
                 for i in range(10000):
-                    fname = '%sdata\\train\\%05d.png' % (rootDir, i + (ifile - 1) * 10000)
+                    fname = os.path.join(trainDir, ('%05d.png' % (i + (ifile - 1) * 10000)))
                     saveImage(fname, data['data'][i, :], data['labels'][i], mapFile, 4, mean=dataMean)
     dataMean = dataMean / (50 * 1000)
-    saveMean('%sdata\\CIFAR-10_mean.xml' % rootDir, dataMean)
-    with open(rootDir + 'test_map.txt', 'w') as mapFile:
-        with open(r'C:\Data\CIFAR-10\Python\test_batch', 'rb') as f:
+    saveMean(os.path.join(rootDir, 'CIFAR-10_mean.xml'), dataMean)
+    with open(os.path.join(rootDir, 'test_map.txt'), 'w') as mapFile:
+        with open(os.path.join(rootDir, 'test_batch'), 'rb') as f:
             data = cp.load(f)
             for i in range(10000):
-                fname = '%sdata\\test\\%05d.png' % (rootDir, i)
+                fname = os.path.join(testDir, ('%05d.png' % i))
                 saveImage(fname, data['data'][i, :], data['labels'][i], mapFile, 0)
