@@ -63,6 +63,8 @@ private:
     std::map<std::wstring, size_t> m_nameToStreamId;
     std::vector<StreamDescriptionPtr> m_streams;
     launch m_launchType;
+
+    void FillMatrixFromStream(StorageType type, Matrix<ElemType>* matrix, size_t numRows, const StreamMinibatchPtr& stream);
 };
 
 }}}

@@ -1,10 +1,9 @@
 reader = [
-    readerType = "TextReader"
+    readerType = "CNTKTextReader"
     file = "SampleInput.txt"
         
-    # meta-data describing input format (i.e., file format)
     input = [
-            features = [
+        features = [
             alias = "F"
             dim = 784
             storage = "dense"
@@ -14,19 +13,6 @@ reader = [
             alias = "L"
             dim = 10
             storage = "sparse"
-        ]
-    ]
-        
-    # meta-data describing output this reader produces
-    output = [
-            features = [
-            dim = 784
-            storage = "dense"
-        ]
-            
-        labels = [
-            dim = 10
-            storage = "dense"
         ]
     ]
 ]

@@ -16,7 +16,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
 TextReader::TextReader(MemoryProviderPtr provider,
                          const ConfigParameters& config)
-    : m_seed(0), m_provider(provider)
+    :m_provider(provider)
 {
     // In the future, deserializers and transformers will be dynamically loaded
     // from external libraries based on the configuration/brain script.
@@ -31,15 +31,17 @@ TextReader::TextReader(MemoryProviderPtr provider,
         omp_set_num_threads(threadCount);
     }
 
-    m_parser = std::make_shared<TextParser>(configHelper.GetFilepath(), configHelper.GetInputStreams());
+    m_parser = std::shared_ptr<TextParser>(
+        new TextParser(configHelper.GetFilePath(), configHelper.GetStreams()));
 
-
-    for (const StreamDescriptor& stream : configHelper.GetOutputStreams())
+    m_parser->SetTraceLevel(configHelper.GetTraceLevel());
+    m_parser->SetMaxAllowedErrors(configHelper.GetMaxAllowedErrors());
+    if (configHelper.ShouldSkipSequenceIds()) 
     {
-        auto streamDescription = std::make_shared<StreamDescription>(stream);
-        streamDescription->m_sampleLayout = std::make_shared<TensorShape>(stream.m_sampleSize);
-        m_streams.push_back(streamDescription);
+        m_parser->SetSkipSequenceIds(true);
     }
+
+    m_parser->Initialize();
 
     TransformerPtr randomizer;
     if (configHelper.ShouldRandomize())
@@ -58,14 +60,14 @@ TextReader::TextReader(MemoryProviderPtr provider,
 
 std::vector<StreamDescriptionPtr> TextReader::GetStreamDescriptions()
 {
-    return m_streams;
+    return m_parser->GetStreamDescriptions();
 }
 
 void TextReader::StartEpoch(const EpochConfiguration& config)
 {
     if (config.m_totalEpochSizeInSamples <= 0)
     {
-        RuntimeError("Unsupported minibatch size '%u'.", (int)config.m_totalEpochSizeInSamples);
+        RuntimeError("Unsupported minibatch size '%d'.", (int)config.m_totalEpochSizeInSamples);
     }
 
     m_transformer->StartEpoch(config);
@@ -73,7 +75,7 @@ void TextReader::StartEpoch(const EpochConfiguration& config)
         m_provider,
         m_transformer,
         config.m_minibatchSizeInSamples,
-        m_streams);
+        GetStreamDescriptions());
 }
 
 Minibatch TextReader::ReadMinibatch()

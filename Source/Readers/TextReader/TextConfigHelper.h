@@ -20,13 +20,10 @@ public:
     explicit TextConfigHelper(const ConfigParameters& config);
 
     // Get all input streams that are specified in the configuration.
-    const std::vector<StreamDescriptor>& GetInputStreams() const;
-
-    // Get all input streams that are specified in the configuration.
-    const std::vector<StreamDescriptor>& GetOutputStreams() const;
+    const std::vector<StreamDescriptor>& GetStreams() const;
 
     // Get full path to the input file.
-    const std::string& GetFilepath() const;
+    const std::wstring& GetFilePath() const;
 
     int GetCpuThreadCount() const;
 
@@ -44,9 +41,8 @@ private:
     TextConfigHelper(const TextConfigHelper&) = delete;
     TextConfigHelper& operator=(const TextConfigHelper&) = delete;
 
-    std::string m_filepath;
-    std::vector<StreamDescriptor> m_inputStreams;
-    std::vector<StreamDescriptor> m_outputStreams;
+    std::wstring m_filepath;
+    std::vector<StreamDescriptor> m_streams;
     int m_cpuThreadCount;
     bool m_randomize;
     bool m_skipSequenceIds;

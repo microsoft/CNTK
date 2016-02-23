@@ -16,29 +16,31 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 struct Data 
 {
     virtual ~Data() {};
+
+    size_t m_numberOfSamples = 0;
+    std::vector<float> m_buffer;
 };
 
-struct DenseData : Data {
+struct DenseData : Data 
+{
 
     // capacity = expected number of samples * sample size
-    DenseData(size_t capacity) : m_numberOfSamples(0)
+    DenseData(size_t capacity)
     {
         m_buffer.reserve(capacity);
     }
-
-    size_t m_numberOfSamples = 0;
-    std::vector<float> m_buffer;
 };
 
-struct SparseData : Data {
-    size_t m_numberOfSamples = 0;
-    std::vector<float> m_buffer;
+struct SparseData : Data 
+{
     std::vector<std::vector<size_t>> m_indices;
 };
 
 // should these be shared pointers instead?
 typedef std::vector<std::unique_ptr<Data>> Sequence;
 
+// TODO: more details when tracing warnings 
+// (e.g., buffer content around the char that triggered the warning)
 class TextParser : public DataDeserializerBase {
 private:
 
@@ -48,41 +50,30 @@ private:
         Info = 2
     };
 
-    enum State {
-        Init = 0,
-        Sign,
-        IntegralPart,
-        Period,
-        FractionalPart,
-        TheLetterE,
-        ExponentSign,
-        Exponent
-    };
-
     struct StreamInfo {
         StorageType m_type;
-        size_t m_sampleSize;
+        size_t m_sampleDimension;
     };
 
     static const auto BUFFER_SIZE = 256 * 1024;
 
-    const std::string m_filename;
-    FILE* m_file = NULL;
+    const std::wstring m_filename;
+    FILE* m_file = nullptr;
 
     const size_t m_numberOfStreams;
-    StreamInfo * m_streamInfos;
+    std::vector<StreamInfo> m_streamInfos;
 
     size_t m_maxAliasLength;
     std::map<std::string, size_t> m_aliasToIdMap;
 
-    Index* m_index = NULL;
+    std::shared_ptr<Index> m_index = nullptr;
 
     int64_t m_fileOffsetStart;
     int64_t m_fileOffsetEnd;
 
-    char* m_bufferStart = NULL; //
-    char* m_bufferEnd = NULL;
-    char* m_pos = NULL; // buffer index
+    char* m_bufferStart = nullptr;
+    char* m_bufferEnd = nullptr;
+    char* m_pos = nullptr; // buffer index
 
     char* m_scratch; // local buffer for string parsing
 
@@ -96,8 +87,9 @@ private:
     // Buffer to store feature data.
     std::vector<Sequence> m_loadedSequences;
 
-    // throw runtime exception when num errors gt some threshold
-    void IncrementNumberOfErrors();
+    // throws runtime exception when number of parsing erros is 
+    // greater than the specified threshold
+    void IncrementNumberOfErrorsOrDie();
 
     void SetFileOffset(int64_t position);
 
@@ -108,24 +100,20 @@ private:
 
     int64_t GetFileOffset() { return m_fileOffsetStart + (m_pos - m_bufferStart); }
 
-    bool ReadSequenceId(size_t& id, int64_t& bytesToRead);
-
     // reads an alias/name and converts it to an internal stream id (= stream index).
     bool GetInputId(size_t& id, int64_t& bytesToRead);
 
     //TODO: use a template here
-    bool ReadValue(float& value, int64_t& bytesToRead);
+    bool ReadRealNumber(float& value, int64_t& bytesToRead);
 
-    bool ReadIndex(size_t& index, int64_t& bytesToRead);
+    bool ReadUint64(size_t& index, int64_t& bytesToRead);
 
     bool ReadDenseSample(std::vector<float>& values, size_t sampleSize, int64_t& bytesToRead);
 
     bool ReadSparseSample(std::vector<float>& values, std::vector<size_t>& indices, int64_t& bytesToRead);
 
-    // read one whole row (terminated by a row delimeter) of samples
+    // read one whole row (terminated by a row delimiter) of samples
     bool ReadRow(Sequence& sequence, int64_t& bytesToRead);
-
-    void Initialize();
 
     bool inline Available() { return m_pos != m_bufferEnd || Fill(); }
 
@@ -136,11 +124,12 @@ protected:
     void FillSequenceDescriptions(SequenceDescriptions& timeline) const override;
 
 public:
-    TextParser(const std::string& filename, const vector<StreamDescriptor>& streams);
-
-    TextParser(const TextConfigHelper& configHelper);
+    TextParser(const std::wstring& filename, const vector<StreamDescriptor>& streams);
 
     ~TextParser();
+
+    // Builds an index of the input data.
+    void Initialize();
 
     // Description of streams that this data deserializer provides.
     std::vector<StreamDescriptionPtr> GetStreamDescriptions() const override;
@@ -154,6 +143,10 @@ public:
     Sequence LoadSequence(bool verifyId, const SequenceDescriptor& descriptor);
 
     void SetTraceLevel(unsigned int traceLevel);
+
+    void SetMaxAllowedErrors(unsigned int maxErrors);
+
+    void SetSkipSequenceIds(bool skip);
 };
 
 typedef std::shared_ptr<TextParser> TextParserPtr;

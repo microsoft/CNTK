@@ -120,23 +120,9 @@ bool ReaderShim<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemType>*
             
             const auto& stream = minibatch.m_data[streamId];
             m_layout = stream->m_layout;
-            size_t columnNumber = m_layout->GetNumCols();
             size_t rowNumber = m_streams[streamId]->m_sampleLayout->GetNumElements();
 
-            if (m_streams[streamId]->m_storageType == StorageType::sparse_csc) 
-            {
-                auto data = reinterpret_cast<const ElemType*>(stream->m_data);
-                mx.second->SetValue(rowNumber, columnNumber, mx.second->GetDeviceId(), const_cast<ElemType*>(data), matrixFlagNormal);
-            }
-            else
-            {
-                size_t* data = reinterpret_cast<size_t*>(stream->m_data);
-                size_t nnzCount = *data;
-                ElemType* values = reinterpret_cast<ElemType*>(data + 1);
-                IndexType* rows = reinterpret_cast<IndexType*>(values + nnzCount);
-                IndexType* columns = reinterpret_cast<IndexType*>(rows + nnzCount);
-                mx.second->SetMatrixFromCSCFormat(columns, rows, values, nnzCount, rowNumber, columnNumber);
-            }
+            FillMatrixFromStream(m_streams[streamId]->m_storageType, mx.second, rowNumber, stream);
         }
     }
 
@@ -146,6 +132,33 @@ bool ReaderShim<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemType>*
     });
 
     return !minibatch.m_data.empty();
+}
+
+template <class ElemType>
+void ReaderShim<ElemType>::FillMatrixFromStream(StorageType type, Matrix<ElemType>* matrix, size_t numRows, const StreamMinibatchPtr& stream)
+{
+    size_t numCols = stream->m_layout->GetNumCols();
+
+    if (type == StorageType::dense)
+    {
+        auto data = reinterpret_cast<const ElemType*>(stream->m_data);
+        matrix->SetValue(numRows, numCols, matrix->GetDeviceId(), const_cast<ElemType*>(data), matrixFlagNormal);
+    }
+    else if (type == StorageType::sparse_csc)
+    {
+        // In the sparse case the m_data layout is identical to CUDA's CSC layout
+        // (see http://docs.nvidia.com/cuda/cusparse/#compressed-sparse-column-format-csc).
+        size_t* data = reinterpret_cast<size_t*>(stream->m_data);
+        size_t nnzCount = *data;
+        ElemType* values = reinterpret_cast<ElemType*>(data + 1);
+        IndexType* rows = reinterpret_cast<IndexType*>(values + nnzCount);
+        IndexType* columns = reinterpret_cast<IndexType*>(rows + nnzCount);
+        matrix->SetMatrixFromCSCFormat(columns, rows, values, nnzCount, numRows, numCols);
+    }
+    else 
+    {
+        RuntimeError("Storage type %d is not supported.", type);
+    }
 }
 
 template <class ElemType>

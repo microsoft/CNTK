@@ -4,25 +4,96 @@
 //
 
 #include "stdafx.h"
-#include <string>
 #include "TextConfigHelper.h"
 #include "StringUtil.h"
 
 using std::string;
+using std::wstring;
 using std::pair;
 using std::vector;
+using std::map;
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
     TextConfigHelper::TextConfigHelper(const ConfigParameters& config)
     {
-        ParseStreamConfig(config("input"), m_inputStreams);
 
-        ParseStreamConfig(config("output"), m_outputStreams);
+        if (!config.ExistsCurrent(L"input")) 
+        {
+            RuntimeError("CNTKTextReader configuration does not contain input section");
+        }
 
-        m_filepath = config("file");
+        const ConfigParameters& input = config(L"input");
 
-        string rand = config("randomize", "auto");
+        if (input.empty())
+        {
+            RuntimeError("CNTKTextReader configuration contains an empty input section");
+        }
+
+        StreamId id = 0;
+        map<string, wstring> aliasToInputMap;
+        for (const pair<string, ConfigParameters>& section : input)
+        {
+            ConfigParameters input = section.second;
+            const wstring& name = msra::strfun::utf16(section.first);
+
+            if (!input.ExistsCurrent(L"dim") || !input.ExistsCurrent(L"storage")) {
+                RuntimeError("Input section for input '%ls' does not specify all the required parameters, "
+                    "\"dim\" and \"storage\".", name.c_str());
+            }
+
+            StreamDescriptor stream;
+            stream.m_id = id++;
+            stream.m_name = name;
+            stream.m_sampleSize = input(L"dim");
+            string type = input(L"storage");
+
+            if (AreEqualIgnoreCase(type, "dense"))
+            {
+                stream.m_storageType = StorageType::dense;
+            }
+            else if (AreEqualIgnoreCase(type, "sparse"))
+            {
+                stream.m_storageType = StorageType::sparse_csc;
+            }
+            else
+            {
+                RuntimeError("'storage' parameter must be set either to 'dense' or 'sparse'");
+            }
+
+            // alias is optional
+            if (input.ExistsCurrent(L"alias")) {
+                stream.m_alias = input(L"alias");
+                if (stream.m_alias.empty()) 
+                {
+                    RuntimeError("Alias value for input '%ls' is empty", name.c_str());
+                }
+            }
+            else 
+            {
+                stream.m_alias = section.first;
+            }
+
+            if (aliasToInputMap.find(stream.m_alias) != aliasToInputMap.end()) 
+            {
+                RuntimeError("Alias %s is already mapped to input %ls.", 
+                    stream.m_alias, aliasToInputMap[stream.m_alias]);
+            }
+            else
+            {
+                aliasToInputMap[stream.m_alias] = stream.m_name;
+            }
+
+            // TODO: add double support (with an optional "precision" parameter)
+            stream.m_elementType = ElementType::tfloat;
+            m_streams.push_back(stream);
+        }
+
+
+
+        m_filepath = msra::strfun::utf16(config(L"file"));
+
+        string rand = config(L"randomize", "auto");
 
         if (AreEqualIgnoreCase(rand, "auto"))
         {
@@ -45,53 +116,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         //TODO: chunk_size (if ever need chunks).
     }
 
-    void TextConfigHelper::ParseStreamConfig(const ConfigParameters& config, std::vector<StreamDescriptor>& streams)
-    {
-        StreamId id = 0;
-        for (const pair<string, ConfigParameters>& section : config)
-        {
-            ConfigParameters input = section.second;
-            const string& name = section.first;
-
-            if (!input.ExistsCurrent("dim") || !input.ExistsCurrent("storage")) {
-                RuntimeError("An input section %s does not specify of the required parameters"
-                    "(dim, storage).", name.c_str());
-            }
-
-            StreamDescriptor stream;
-            stream.m_id = id++;
-            stream.m_name = msra::strfun::utf16(name);
-            stream.m_sampleSize = input("dim");
-            string type = input("storage");
-
-            if (AreEqualIgnoreCase(type, "dense"))
-            {
-                stream.m_storageType = StorageType::dense;
-            }
-            else if (AreEqualIgnoreCase(type, "sparse"))
-            {
-                stream.m_storageType = StorageType::sparse_csc;
-            }
-            else
-            {
-                RuntimeError("'storage' parameter must be set either to 'dense' or 'sparse'");
-            }
-
-            // alias is optional
-            if (input.ExistsCurrent("alias")) {
-                stream.m_alias = input("alias");
-            }
-            else {
-                stream.m_alias = name;
-            }
-
-            // TODO: add double support (with an optional "precision" parameter)
-            stream.m_elementType = ElementType::tfloat;
-            streams.push_back(stream);
-        }
-    }
-
-    const string& TextConfigHelper::GetFilepath() const
+    const wstring& TextConfigHelper::GetFilePath() const
     {
         return m_filepath;
     }
@@ -106,14 +131,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         return m_randomize;
     }
 
-    const vector<StreamDescriptor>& TextConfigHelper::GetInputStreams() const
+    const vector<StreamDescriptor>& TextConfigHelper::GetStreams() const
     {
-        return m_inputStreams;
-    }
-
-    const vector<StreamDescriptor>& TextConfigHelper::GetOutputStreams() const
-    {
-        return m_outputStreams;
+        return m_streams;
     }
 
     bool TextConfigHelper::ShouldSkipSequenceIds() const

@@ -11,17 +11,18 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
+// TODO: merge this with the TextParser
 class Indexer 
 {
 private:
-    FILE* m_file = NULL;
+    FILE* m_file = nullptr;
 
     int64_t m_fileOffsetStart;
     int64_t m_fileOffsetEnd;
 
-    char* m_bufferStart = NULL;
-    char* m_bufferEnd = NULL;
-    char* m_pos = NULL; // buffer index
+    char* m_bufferStart = nullptr;
+    char* m_bufferEnd = nullptr;
+    char* m_pos = nullptr; // buffer index
 
     bool m_done; // true, when all input was processed
 
@@ -55,7 +56,7 @@ private:
 
     // Builds timeline, treating each line as an individual sequence.
     // Does not do any sequence parsing, instead uses line number as the corresponding sequence id.
-    Index* BuildFromLines();
+    std::shared_ptr<Index> BuildFromLines();
 
 
     int64_t GetFileOffset() { return m_fileOffsetStart + (m_pos - m_bufferStart); }
@@ -69,7 +70,7 @@ public:
     ~Indexer();
 
     // Reads the input file building an index of sequence metadata.
-    Index* Build();
+    std::shared_ptr<Index> Build();
 };
 
 }}}

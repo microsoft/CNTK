@@ -16,6 +16,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     struct StreamDescriptor : StreamDescription {
         std::string m_alias; // correspoding short name used in the input data (only relevant for input streams)
+        // TODO: rename to m_sampleDimension
         size_t m_sampleSize; // number of elements in the sample (same as m_sampleLayout->GetNumElements())
     };
 
@@ -46,7 +47,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     };
 
     struct Index {
-        bool hasSequenceIds; // true when the input does not have the sequence id column
+        bool m_hasSequenceIds; // true when input contains sequence id column
         std::vector<SequenceDescriptor> m_timeline;
         std::vector<ChunkDescriptor> m_chunks;
         std::map<SequenceId, TimelineOffset> m_idToOffsetMap; // maps sequence ids to offsets
