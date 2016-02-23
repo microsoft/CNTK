@@ -1,4 +1,4 @@
-C:\src\cntk\Tests\UnitTests\ReaderTests\Data\images\black.jpg	0
-C:\src\cntk\Tests\UnitTests\ReaderTests\Data\images\blue.jpg	1
-C:\src\cntk\Tests\UnitTests\ReaderTests\Data\images\green.jpg	2
-C:\src\cntk\Tests\UnitTests\ReaderTests\Data\images\red.jpg	3
+\\storage.gcr.philly.selfhost.corp.microsoft.com\public\CNTKTestData\Image\tiny\black.jpg	0
+\\storage.gcr.philly.selfhost.corp.microsoft.com\public\CNTKTestData\Image\tiny\blue.jpg	1
+\\storage.gcr.philly.selfhost.corp.microsoft.com\public\CNTKTestData\Image\tiny\green.jpg	2
+\\storage.gcr.philly.selfhost.corp.microsoft.com\public\CNTKTestData\Image\tiny\red.jpg	3
