@@ -644,6 +644,7 @@ public:
         return *this;
     }
     // swap two existing dimensions (implements transposition)
+    // This yields the same tensor but index positions are exchanged.
     void SwapDimsInPlace(size_t i, size_t j)
     {
         if (i == j) // this is OK
