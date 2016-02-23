@@ -30,11 +30,12 @@
 // version number to control how to read and write
 #define CNTK_MODEL_VERSION_1 1
 #define CNTK_MODEL_VERSION_2 2
-#define CURRENT_CNTK_MODEL_VERSION CNTK_MODEL_VERSION_2
+#define CNTK_MODEL_VERSION_3 3
+#define CURRENT_CNTK_MODEL_VERSION CNTK_MODEL_VERSION_3
 
 extern bool g_shareNodeValueMatrices;
 
-#ifndef UNREFERENCED_PARAMETER
+#ifndef UNREFERENCED_PARAMETER // TODO: unify with UNUSED()
 #define UNREFERENCED_PARAMETER(P) (P)
 #endif
 

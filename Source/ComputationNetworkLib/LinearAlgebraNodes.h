@@ -187,9 +187,24 @@ class TimesNodeBase : public ComputationNode<ElemType>, public NumInputs<2>
     UsingComputationNodeMembers;
 
 public:
-    TimesNodeBase(DEVICEID_TYPE deviceId, const wstring& name, size_t outputRank = 1/*TODO: complete this*/)
-        : Base(deviceId, name)
+    TimesNodeBase(DEVICEID_TYPE deviceId, const wstring& name, size_t outputRank = 1)
+        : Base(deviceId, name), m_outputRank(outputRank)
     {
+    }
+
+    void Save(File& fstream) const
+    {
+        Base::Save(fstream);
+        fstream << m_outputRank;
+    }
+
+    virtual void Load(File& fstream, size_t modelVersion) override
+    {
+        Base::Load(fstream, modelVersion);
+        if (modelVersion >= CNTK_MODEL_VERSION_3)
+            fstream >> m_outputRank;
+        else
+            m_outputRank = 1;
     }
 
     virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
@@ -295,6 +310,9 @@ public:
         // so that the default allocator will not allocate it again.
         Base::AllocateGradientMatricesForInputs(matrixPool);
     }
+
+private:
+    size_t m_outputRank;
 };
 
 // -----------------------------------------------------------------------
@@ -685,7 +703,20 @@ public:
         AttachInputs(configp, this->GetExpectedNumInputs());
     }
 
-    // TODO: Save and Load for m_dims; if old model version then default to 1:2
+    void Save(File& fstream) const
+    {
+        Base::Save(fstream);
+        fstream << m_dim1 << m_dim2;
+    }
+
+    virtual void Load(File& fstream, size_t modelVersion) override
+    {
+        Base::Load(fstream, modelVersion);
+        if (modelVersion >= CNTK_MODEL_VERSION_3)
+            fstream >> m_dim1 >> m_dim2;
+        else
+            m_dim1 = 1, m_dim2 = 2;
+    }
 
 private:
     // compute the transposed tensor shape (in-place)
