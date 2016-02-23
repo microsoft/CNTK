@@ -44,6 +44,15 @@ public:
     {
     }
 
+    virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
+    {
+        size_t rank = DetermineElementwiseTensorRank();
+        auto result = ValueTensorFor(rank, fr);
+        auto input0 = Input(0)->ValueTensorFor(rank, fr.AllowBroadcast());
+        auto input1 = Input(1)->ValueTensorFor(rank, fr.AllowBroadcast());
+        result.AssignSumOf(input0, input1);
+    }
+
     virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
     {
         size_t rank = DetermineElementwiseTensorRank();
@@ -55,15 +64,6 @@ public:
             MaskMissingGradientColumnsToZero(fr);
 
         inputGradient.AddCopyOf(gradient);
-    }
-
-    virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
-    {
-        size_t rank = DetermineElementwiseTensorRank();
-        auto result = ValueTensorFor(rank, fr);
-        auto input0 = Input(0)->ValueTensorFor(rank, fr.AllowBroadcast());
-        auto input1 = Input(1)->ValueTensorFor(rank, fr.AllowBroadcast());
-        result.AssignSumOf(input0, input1);
     }
 };
 
@@ -175,9 +175,9 @@ template class NegateNode<float>;
 template class NegateNode<double>;
 
 // -----------------------------------------------------------------------
-// TimesNodeBase (A, B)
+// TimesNodeBase (A, B, outputRank=1)
 // shared code of TimesNode and TransposeTimesNode (which transposes A)
-// right operand and output can have MB layout, while left operand cannot
+// Right operand and output can have MB layout, while left operand cannot.
 // -----------------------------------------------------------------------
 
 template <class ElemType, bool m_transpose>
@@ -187,7 +187,7 @@ class TimesNodeBase : public ComputationNode<ElemType>, public NumInputs<2>
     UsingComputationNodeMembers;
 
 public:
-    TimesNodeBase(DEVICEID_TYPE deviceId, const wstring& name)
+    TimesNodeBase(DEVICEID_TYPE deviceId, const wstring& name, size_t outputRank = 1/*TODO: complete this*/)
         : Base(deviceId, name)
     {
     }
@@ -220,12 +220,8 @@ public:
         }
     }
 
-    virtual bool OutputUsedInComputingInputNodesGradients() const override
-    {
-        // The TimesNode does not require its output value for computing
-        // the gradients of its input nodes
-        return false;
-    }
+    virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }
+    // but both inputs are
 
     virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
     {
@@ -302,8 +298,19 @@ public:
 };
 
 // -----------------------------------------------------------------------
-// TimesNode (A, B)
-// right operand and output can have MB layout, while left operand cannot
+// TimesNode (A, B, outputRank=1) -- matrix product
+// Right operand and output can have MB layout, while left operand cannot.
+// This is generalized to tensors, in that B's leading dimension(s) must match
+// the trailing dimension(s) of A, and those dimensions get flattened into a single
+// dimension, after which the regular matrix product is applied.
+// Leading dimension(s) of A and trailing ones of B remain unchanged.
+// For example:
+//  [I x J x K] * [J x K x L x *] = [I x L x *]
+// How many dimensions must match is controlled by an optional parameter
+// 'outputRank', where all but the first 'outputRank' dimensions of A must match.
+// 'outputRank' defaults to 1, which is used in the above example.
+// Example for outputRank = 2:
+//  [I x J x K] * [K x L x M x *] = [I x L x M x *]
 // -----------------------------------------------------------------------
 
 template <class ElemType>
@@ -311,16 +318,17 @@ class TimesNode : public TimesNodeBase<ElemType, false>
 {
     typedef TimesNodeBase<ElemType, false> Base;
     UsingComputationNodeMembersBoilerplate;
-    static const std::wstring TypeName()
-    {
-        return L"Times";
-    }
+    static const std::wstring TypeName() { return L"Times"; }
 
 public:
-    DeclareConstructorFromConfigWithNumInputs(TimesNode);
-    TimesNode(DEVICEID_TYPE deviceId, const wstring& name)
-        : Base(deviceId, name)
+    TimesNode(DEVICEID_TYPE deviceId, const wstring& name, size_t outputRank = 1)
+        : Base(deviceId, name, outputRank)
     {
+    }
+    TimesNode(const ScriptableObjects::IConfigRecordPtr configp)
+        : TimesNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"outputRank"))
+    {
+        AttachInputs(configp, this->GetExpectedNumInputs());
     }
 };
 
@@ -329,7 +337,9 @@ template class TimesNode<double>;
 
 // -----------------------------------------------------------------------
 // TransposeTimesNode (A', B)
-// right operand and output can have MB layout, while left operand cannot
+// Right operand and output can have MB layout, while left operand cannot.
+// This differs from TimesNode in that A is transposed, where A must be a
+// rank-1 or rank-2 tensor.
 // -----------------------------------------------------------------------
 
 template <class ElemType>
@@ -337,15 +347,12 @@ class TransposeTimesNode : public TimesNodeBase<ElemType, true>
 {
     typedef TimesNodeBase<ElemType, true> Base;
     UsingComputationNodeMembersBoilerplate;
-    static const std::wstring TypeName()
-    {
-        return L"TransposeTimes";
-    }
+    static const std::wstring TypeName() { return L"TransposeTimes"; }
 
 public:
     DeclareConstructorFromConfigWithNumInputs(TransposeTimesNode);
     TransposeTimesNode(DEVICEID_TYPE deviceId, const wstring& name)
-        : Base(deviceId, name)
+        : Base(deviceId, name, /*outputRank=*/1)
     {
     }
 };
@@ -650,97 +657,107 @@ public:
 template class SumColumnElementsNode<float>;
 template class SumColumnElementsNode<double>;
 
-#ifdef COMING_SOON  // known bug in backprop; generalize to tensor
-
 // -----------------------------------------------------------------------
-// TransposeNode (input matrix)
-// TODO: extend towards tensor transpose (swap 2 dimensions, incl. time)
+// TransposeDimensionsNode (input, dim1, dim2)
+//  - swaps index dimensions dim1 and dim2. The values are 1-based; 1 stands for the leading dimension.
+//  - new dimensions can be created; e.g. a column vector can be transposed into a row vector, which is a [1 x N] tensor
+//  - transposing into the time dimension is currently not supported
+//  - internally implemented with tensor lib by shuffling dimensions with their strides
+//  - input may be minibatch data or not
+// Transpose (input) = TransposeDimensions (input, 1, 2)
 // -----------------------------------------------------------------------
 
 template <class ElemType>
-class TransposeNode : public ComputationNodeNonLooping /*ComputationNode*/<ElemType>, public NumInputs<1>
+class TransposeDimensionsNode : public ComputationNode /*ComputationNode*/<ElemType>, public NumInputs<1>
 {
-    typedef ComputationNodeNonLooping<ElemType> Base;
+    typedef ComputationNode<ElemType> Base;
     UsingComputationNodeMembersBoilerplate;
-    static const std::wstring TypeName()
+    static const std::wstring TypeName() { return L"TransposeDimensions"; }
+
+public:
+    TransposeDimensionsNode(DEVICEID_TYPE deviceId, const wstring& name, int dim1 = 1, int dim2 = 2)
+        : Base(deviceId, name), m_dim1(dim1), m_dim2(dim2)
     {
-        return L"Transpose";
+    }
+    TransposeDimensionsNode(const ScriptableObjects::IConfigRecordPtr configp)
+        : TransposeDimensionsNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"dim1"), configp->Get(L"dim2"))
+    {
+        AttachInputs(configp, this->GetExpectedNumInputs());
+    }
+
+    // TODO: Save and Load for m_dims; if old model version then default to 1:2
+
+private:
+    // compute the transposed tensor shape (in-place)
+    void TransposeShape(TensorShape& shape) const
+    {
+        assert(m_dim1 > 0 && m_dim2 > 0);
+        size_t i = m_dim1 - 1;
+        size_t j = m_dim2 - 1;
+        shape.SwapDimsInPlace(i, j);
+    }
+
+    // get the transposed output shape for the current input
+    TensorShape GetTransposedTensorSliceFor(size_t rank, const FrameRange& fr)
+    {
+        auto shape = Input(0)->GetTensorSliceFor(rank, fr);
+        TransposeShape(shape);
+        return shape;
     }
 
 public:
-    DeclareConstructorFromConfigWithNumInputs(TransposeNode);
-    TransposeNode(DEVICEID_TYPE deviceId, const wstring& name)
-        : Base(deviceId, name)
+    virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
     {
+        size_t rank = DetermineElementwiseTensorRank();
+        auto input  = Input(0)->ValueTensorFor(rank, fr);
+        auto output = TensorView<ElemType>(Value(), GetTransposedTensorSliceFor(rank, fr));
+        output.AssignCopyOf(input);
     }
 
-    virtual void /*ComputationNodeNonLooping::*/ BackpropToNonLooping(size_t /*inputIndex*/) override
+    virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
     {
-        auto& inputGradientValues = Input(0)->GradientAsMatrix();
-        auto& gradientValues = GradientAsMatrix();
-#if DUMPOUTPUT
-        gradientValues.Print("Gradient-in");
-        inputGradientValues.Print("child Gradient-in/out");
-        inputFunctionValues.Print("child Function values");
-#endif
-        const Matrix<ElemType>& ones = ConstOnes(inputGradientValues.GetNumRows(), inputGradientValues.GetNumRows(), inputGradientValues.GetDeviceId());
-        // BUGBUG: This should be ^^ Identity(). This will be fixed once we switch to the more generic tensor Transpose operation, which can handle this easily.
-        Matrix<ElemType>::MultiplyAndAdd(ones, false, gradientValues, true, inputGradientValues);
-#if DUMPOUTPUT
-        inputGradientValues.Print("child Gradient-out");
-#endif
-        InvalidArgument("TransposeNode::BackpropTo() has a known bug. it is not functional.");
+        size_t rank = DetermineElementwiseTensorRank();
+        auto inputGradient  = Input(0)->GradientTensorFor(rank, fr);
+        auto outputGradient = TensorView<ElemType>(Gradient(), GetTransposedTensorSliceFor(rank, fr));
+        inputGradient.AddCopyOf(outputGradient);
     }
 
-    virtual bool OutputUsedInComputingInputNodesGradients() const override
-    {
-#if DUMPOUTPUT
-        return true;
-#else
-        // The TransposeNode does not require its output value for computing
-        // the gradients of its input nodes
-        return false;
-#endif
-    }
-
-    virtual bool InputUsedInComputingInputNodesGradients(size_t childIndex) const override
-    {
-        // The TransposeNode does not require any of it's input's values for computing
-        // the gradients of its input nodes
-        UNREFERENCED_PARAMETER(childIndex);
-        return false;
-    }
-
-    virtual void /*ComputationNodeNonLooping::*/ ForwardPropNonLooping() override
-    {
-#if DUMPOUTPUT
-        Input(0)->ValueAsMatrix().Print("TransposeNode- Input0");
-#endif
-        ValueAsMatrix().AssignTransposeOf(Input(0)->ValueAsMatrix());
-#if NANCHECK
-        Value().HasNan("Transpose");
-#endif
-#if DUMPOUTPUT
-        ValueAsMatrix().Print("TransposeNode");
-#endif
-    }
+    virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }
+    virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override { return false; }
 
     virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
     {
-        Base::Validate(isFinalValidationPass);
-        if (Input(0)->HasMBLayout())
-            InvalidArgument("%ls %ls operation cannot operate on minibatch data (which have a layout)", NodeName().c_str(), OperationName().c_str());
-        m_pMBLayout = nullptr; // this node does not hold mini-batch data
+        assert(m_inputs.size() == 1);
+        ComputationNodeBase::Validate(isFinalValidationPass);
+        InferMBLayoutFromInputsForStandardCase();
 
-        size_t rows0 = Input(0)->GetAsMatrixNumRows(), cols0 = Input(0)->GetAsMatrixNumCols();
-        SetDims(TensorShape(cols0, rows0), false);
+        // input shape
+        auto shape = Input(0)->GetSampleLayout();
+        // validate indices
+        if (m_dim1 < 1 || m_dim2 < 1)
+            InvalidArgument("%ls %ls operation: Indices to transpose must be >= 1.", NodeName().c_str(), OperationName().c_str());
+        size_t i = m_dim1 - 1;
+        size_t j = m_dim2 - 1;
+        if (i >= shape.GetRank() && j >= shape.GetRank())
+            InvalidArgument("%ls %ls operation: At least one index must refer to an existing index.", NodeName().c_str(), OperationName().c_str());
+        // pad
+        // Permutation is allowed to create new dimensions, specifically to be able to transpose a [N] column vector into a [1 x N] row vector.
+        // One can also use SplitDimensions() for this, but this seems a natural thing to do.
+        size_t maxij = std::max(i, j);
+        if (maxij >= shape.GetRank())
+            shape.PadRankInPlace(maxij + 1);
+        // apply the permutation
+        TransposeShape(shape);
+        // init with dimensions only (dropping strides), since we want to allow that getting the actual minibatch tensor later may mess with strides
+        SetDims(TensorShape(shape.GetDims()), HasMBLayout());
     }
+
+private:
+    int m_dim1, m_dim2; // the two dimensions (axes, 1-based) to swap
 };
 
-template class TransposeNode<float>;
-template class TransposeNode<double>;
-
-#endif
+template class TransposeDimensionsNode<float>;
+template class TransposeDimensionsNode<double>;
 
 // -----------------------------------------------------------------------
 // CosDistanceNode (left, right)
