@@ -101,7 +101,7 @@ speechTrain = [
 
         // features
         features = Input((1 : featDim),  tag='feature') // TEST: Artificially reading data transposed
-        realFeatures = FlattenDimensions (Transpose (features), 1, 2)             //       and swapping them back to featDim:1), for testing Transpose()
+        realFeatures = FlattenDimensions (Transpose (features), 1, 2)             //       and swapping them back to featDim:1, for testing Transpose()
         labels   = Input(labelDim, tag='label')
         feashift = RowSlice(featDim - baseFeatDim, baseFeatDim, realFeatures);
 
