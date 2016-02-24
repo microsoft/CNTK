@@ -305,8 +305,8 @@ class minibatchutterancesourcemulti : public minibatchsource
         // The utterance index and frame index are stored in a byte array
         // with the first NUM_UTTERANCE_INDEX_BITS bits being the utterance index 
         // and the remaining being the frame index
-        static const unsigned int NUM_STORAGE_BYTES = 3;
-        static const unsigned int NUM_UTTERANCE_INDEX_BITS = 11;
+        static const unsigned int NUM_STORAGE_BYTES = 4;
+        static const unsigned int NUM_UTTERANCE_INDEX_BITS = 16;
         static const unsigned int NUM_FRAME_INDEX_BITS = (NUM_STORAGE_BYTES * 8) - NUM_UTTERANCE_INDEX_BITS;
 
         unsigned char m_buffer[NUM_STORAGE_BYTES];
