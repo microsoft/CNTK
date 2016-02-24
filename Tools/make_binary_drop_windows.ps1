@@ -43,10 +43,12 @@
 $basePath = "BinaryDrops\ToZip"
 $baseDropPath = $basePath + "\cntk"
 $zipFile = "BinaryDrops\BinaryDrops.zip"
-# $buildPath = "x64\Release"
-$buildPath = "x64\Release_CpuOnly"
+$buildPath = "x64\Release"
+# $buildPath = "x64\Release_CpuOnly"
 
 Write-Host "BUILD_CONFIGURATION = " (Get-Item env:"BUILD_CONFIGURATION").Value
+Write-Host "TARGET_CONFIGURATION = " (Get-Item env:"TARGET_CONFIGURATION").Value
+
 
 # Make dir structure
 # New-Item -Path 'BinaryDrops\cntk\cntk' -ItemType "directory"
