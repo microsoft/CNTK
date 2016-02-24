@@ -17,6 +17,8 @@
 #define _CRT_SECURE_CPP_OVERLOAD_STANDARD_NAMES 1
 #include "Basics.h"
 #include "fileutil.h"
+#include "ProgressTracing.h"
+
 #ifdef __unix__
 #include <sys/types.h>
 #include <sys/stat.h>
