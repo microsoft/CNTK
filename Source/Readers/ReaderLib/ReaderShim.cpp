@@ -126,10 +126,13 @@ bool ReaderShim<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemType>*
         }
     }
 
-    m_prefetchTask = std::async(m_launchType, [this]()
+    if (!m_endOfEpoch)
     {
-        return m_reader->ReadMinibatch();
-    });
+        m_prefetchTask = std::async(m_launchType, [this]()
+        {
+            return m_reader->ReadMinibatch();
+        });
+    }
 
     return !minibatch.m_data.empty();
 }

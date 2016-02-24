@@ -44,14 +44,24 @@ typedef std::vector<std::unique_ptr<Data>> Sequence;
 class TextParser : public DataDeserializerBase {
 private:
     class TextDataChunk : public Chunk, public std::enable_shared_from_this<TextDataChunk> {
-        friend class TextParser;
+    public:
+        TextDataChunk(const ChunkDescriptor& descriptor, TextParser& parent);
+
+        // Gets sequences by id.
+        std::vector<SequenceDataPtr> GetSequence(const size_t& sequenceId) override;
+
         std::map<size_t, std::vector<SequenceDataPtr>> m_sequencePtrMap;
         // Buffer to store the actual data.
         std::vector<Sequence> m_sequenceData;
-    public:
-        TextDataChunk(const ChunkDescriptor& descriptor) : m_sequenceData(descriptor.m_numSequences) {}
-        // Gets sequences by id.
-        std::vector<SequenceDataPtr> GetSequence(const size_t& sequenceId) override;
+
+        TextParser& m_parent;
+
+        // chunk id (copied from the descriptor)
+        size_t m_id; 
+        // Keeps track of how many times GetSequence was called.
+        // When this counter value reaches the number of sequences in 
+        // the this chunk, it can be safely unloaded.
+        size_t m_sequenceRequestCount;
     };
 
 
@@ -95,6 +105,9 @@ private:
     
     // All streams this reader provides.
     std::vector<StreamDescriptionPtr> m_streams;
+
+    // A map of currently loaded chunks
+    std::map<size_t, ChunkPtr> m_chunkCache;
 
     // throws runtime exception when number of parsing erros is 
     // greater than the specified threshold

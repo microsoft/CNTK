@@ -34,9 +34,11 @@ public:
 
 private:
     enum class DistributionMode {
-        // TODO better names, description
-        chunk_modulus,
-        sequences_strides
+        // both modes are round-robin, but granularities are different
+        chunks,     // assign work items at the chunk-granularity 
+                    // (different chunks to different workers)
+        sequences   // assign work items at the sequence-granularity 
+                    // (different sequences to different workers)
     };
 
     // Structure for per-chunk information
@@ -79,7 +81,6 @@ private:
 
     // Per-randomization-sweep information
     size_t m_sweep;
-    size_t m_sweepStartInSamples; // TODO do we need it?
     size_t m_sequencePositionInSweep;
     std::vector<RandomizedChunk> m_randomizedChunks;    // (includes a sentinel)
     std::vector<size_t> m_sequencePositionToChunkIndex; // TODO find on m_randomizedChunks instead?

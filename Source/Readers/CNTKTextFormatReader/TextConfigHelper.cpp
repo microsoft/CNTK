@@ -37,16 +37,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             ConfigParameters input = section.second;
             const wstring& name = msra::strfun::utf16(section.first);
 
-            if (!input.ExistsCurrent(L"dim") || !input.ExistsCurrent(L"storage")) {
+            if (!input.ExistsCurrent(L"dim") || !input.ExistsCurrent(L"format")) {
                 RuntimeError("Input section for input '%ls' does not specify all the required parameters, "
-                    "\"dim\" and \"storage\".", name.c_str());
+                    "\"dim\" and \"format\".", name.c_str());
             }
 
             StreamDescriptor stream;
             stream.m_id = id++;
             stream.m_name = name;
             stream.m_sampleSize = input(L"dim");
-            string type = input(L"storage");
+            string type = input(L"format");
 
             if (AreEqualIgnoreCase(type, "dense"))
             {
@@ -58,7 +58,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
             else
             {
-                RuntimeError("'storage' parameter must be set either to 'dense' or 'sparse'");
+                RuntimeError("'format' parameter must be set either to 'dense' or 'sparse'");
             }
 
             // alias is optional

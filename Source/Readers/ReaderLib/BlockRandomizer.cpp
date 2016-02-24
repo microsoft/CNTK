@@ -59,7 +59,7 @@ void BlockRandomizer::RandomizeChunks()
     m_randomizedChunks.clear();
     m_randomizedChunks.reserve(m_numChunks + 1);
     size_t chunkId, samplePosition, sequencePosition;
-    for (chunkId = 0, samplePosition = m_sweepStartInSamples, sequencePosition = 0; chunkId < m_numChunks; chunkId++)
+    for (chunkId = 0, samplePosition = 0, sequencePosition = 0; chunkId < m_numChunks; chunkId++)
     {
         const size_t originalChunkIndex = randomizedChunkIndices[chunkId];
         const size_t numSequences =
@@ -196,7 +196,7 @@ void BlockRandomizer::Randomize()
 void BlockRandomizer::RandomizeIfNewSweepIsEntered()
 {
     // Check that StartEpoch() was called
-    assert(m_sequencePositionInSweep != SIZE_MAX);
+    assert(m_samplePositionInEpoch != SIZE_MAX);
 
     if (m_sequencePositionInSweep >= m_numSequences)
     {
@@ -204,25 +204,24 @@ void BlockRandomizer::RandomizeIfNewSweepIsEntered()
             std::cerr << __FUNCTION__ << ": re-randomizing for sweep " << m_sweep
                       << " in " << (m_frameMode ? "frame" : "utterance") << " mode" << endl;
         m_sweep++;
-        m_sweepStartInSamples += m_numSamples;
         Randomize();
-        m_sequencePositionInSweep -= m_numSequences;
-        assert(m_sequencePositionInSweep < m_numSequences); // cannot jump ahead more than a sweep
+        m_sequencePositionInSweep = 0;
     };
 }
 
-void BlockRandomizer::RandomizeForGlobalSamplePosition(const size_t samplePosition)
-{
-    size_t sweep = samplePosition / m_numSamples;
-
-    if (m_sweep != sweep)
-    {
-        m_sweep = sweep;
-        m_sweepStartInSamples = sweep * m_numSamples;
-        Randomize();
-    }
-    m_sequencePositionInSweep = samplePosition % m_numSamples; // TODO only for m_frameMode
-};
+// This thing is rather pointless, we'll just pick up 
+// from wherever we left off and re-sweep when needed. 
+//void BlockRandomizer::RandomizeForGlobalSamplePosition(const size_t samplePosition)
+//{
+//    size_t sweep = samplePosition / m_numSamples;
+//
+//    if (m_sweep != sweep)
+//    {
+//        m_sweep = sweep;
+//        Randomize();
+//        m_sequencePositionInSweep = 0;
+//    }
+//};
 
 //
 // Public methods
@@ -231,7 +230,7 @@ void BlockRandomizer::RandomizeForGlobalSamplePosition(const size_t samplePositi
 BlockRandomizer::BlockRandomizer(int verbosity, size_t randomizationRangeInSamples, IDataDeserializerPtr deserializer)
     : m_verbosity(verbosity),
       m_randomizationRangeInSamples(randomizationRangeInSamples),
-      m_distributionMode(DistributionMode::sequences_strides),
+      m_distributionMode(DistributionMode::sequences),
       m_deserializer(deserializer),
       m_sweep(SIZE_MAX),
       m_sequencePositionInSweep(SIZE_MAX),
@@ -288,10 +287,16 @@ void BlockRandomizer::Initialize(TransformerPtr next, const ConfigParameters& re
     // Not used for the block randomizer.
     UNUSED(next);
     UNUSED(readerConfig);
+
+    Randomize();
+    m_sequencePositionInSweep = 0;
+    m_sweep = 0;
 }
 
 void BlockRandomizer::StartEpoch(const EpochConfiguration& config)
 {
+    // check that we've already been initialized.
+    assert(m_sweep != SIZE_MAX);
     m_workerRank = config.m_workerRank;
     m_numberOfWorkers = config.m_numberOfWorkers;
 
@@ -307,61 +312,47 @@ void BlockRandomizer::StartEpoch(const EpochConfiguration& config)
 
     // TODO add some asserts on EpochConfiguration
     m_samplePositionInEpoch = 0;
-    size_t timeframe = m_epochSize * config.m_epochIndex;
-    assert(m_frameMode); // TODO !m_frameMode needs fixes
-    assert(timeframe != SIZE_MAX); // used as special value for init
-    RandomizeForGlobalSamplePosition(timeframe);
 };
 
 bool BlockRandomizer::GetNextSequenceDescriptions(size_t sampleCount, SequenceDescriptions& sequenceDescriptions)
 {
-    assert(m_frameMode); // TODO !m_frameMode not implemented yet
     assert(sequenceDescriptions.size() == 0);
-    assert(sampleCount < m_numSamples);
+    assert(sampleCount < m_numSamples); 
+    assert(m_samplePositionInEpoch < m_epochSize);
 
-    if (m_samplePositionInEpoch < m_epochSize)
+    size_t nextSamplePositionInEpoch = std::min(m_epochSize, m_samplePositionInEpoch + sampleCount);
+
+    assert(m_numberOfWorkers == 1); // TODO needs implementation
+
+    while (m_samplePositionInEpoch < nextSamplePositionInEpoch)
     {
-        if (m_distributionMode == DistributionMode::chunk_modulus)
+        RandomizeIfNewSweepIsEntered();
+
+        const auto& seqDesc = m_randomTimeline[m_sequencePositionInSweep];
+
+        size_t workItemId;
+
+        if (m_distributionMode == DistributionMode::chunks)
         {
-            assert(m_numberOfWorkers == 1); // TODO needs implementation
-
-            while (m_samplePositionInEpoch < m_epochSize &&
-                   sequenceDescriptions.size() < sampleCount)
-            {
-                RandomizeIfNewSweepIsEntered();
-
-                const auto& seqDesc = m_randomTimeline[m_sequencePositionInSweep];
-                if ((seqDesc.m_chunkId % m_numberOfWorkers) == m_workerRank)
-                {
-                    // Got one, collect it
-                    sequenceDescriptions.push_back(m_deserializer->GetSequenceDescriptions()[seqDesc.m_id]);
-                }
-
-                m_samplePositionInEpoch += seqDesc.m_numberOfSamples;
-                m_sequencePositionInSweep++;
-            }
+            workItemId = seqDesc.m_chunkId;
         }
-        else
+        else 
         {
-            assert(m_distributionMode == DistributionMode::sequences_strides);
-
-            size_t nextSamplePositionInEpoch = std::min(m_epochSize, m_samplePositionInEpoch + sampleCount);
-            size_t distributedSampleCount = nextSamplePositionInEpoch - m_samplePositionInEpoch;
-            size_t strideBegin = distributedSampleCount * m_workerRank / m_numberOfWorkers;
-            size_t strideEnd = distributedSampleCount * (m_workerRank + 1) / m_numberOfWorkers;
-
-            for (size_t i = 0; i < distributedSampleCount; ++i, ++m_samplePositionInEpoch, ++m_sequencePositionInSweep)
-            {
-                RandomizeIfNewSweepIsEntered();
-                if (strideBegin <= i && i < strideEnd)
-                {
-                    const auto& seqDesc = m_randomTimeline[m_sequencePositionInSweep];
-                    sequenceDescriptions.push_back(m_deserializer->GetSequenceDescriptions()[seqDesc.m_id]);
-                }
-            }
-            assert(m_samplePositionInEpoch == nextSamplePositionInEpoch);
+            assert(m_distributionMode == DistributionMode::sequences);
+            workItemId = seqDesc.m_id;
         }
+        
+        if ((workItemId % m_numberOfWorkers) == m_workerRank)
+        {
+            // Got one, collect it
+            sequenceDescriptions.push_back(m_deserializer->GetSequenceDescriptions()[seqDesc.m_id]);
+        }
+
+        m_samplePositionInEpoch += seqDesc.m_numberOfSamples;
+        m_sequencePositionInSweep++;
     }
+
+    assert(m_samplePositionInEpoch == nextSamplePositionInEpoch);    
 
     return m_epochSize <= m_samplePositionInEpoch;
 }
@@ -371,7 +362,6 @@ Sequences BlockRandomizer::GetNextSequences(size_t sampleCount)
     assert(m_samplePositionInEpoch != SIZE_MAX); // SetEpochConfiguration() must be called first
 
     Sequences result;
-    assert(m_frameMode); // TODO sequence mode not implemented yet
 
     SequenceDescriptions sequenceDescriptions;
     result.m_endOfEpoch = GetNextSequenceDescriptions(sampleCount, sequenceDescriptions);

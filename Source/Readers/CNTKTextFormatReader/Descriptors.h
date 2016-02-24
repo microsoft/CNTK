@@ -40,7 +40,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // Chunk metadata
     struct ChunkDescriptor
     {
-        size_t m_index; // chunk index
+        size_t m_id; 
         int64_t m_byteSize; // size in bytes
         size_t m_numSequences; // number of sequences in this chunk
         TimelineOffset m_timelineOffset; // offset into the timeline

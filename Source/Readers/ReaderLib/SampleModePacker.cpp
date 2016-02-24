@@ -66,7 +66,7 @@ SampleModePacker::SampleModePacker(
         if (m_inputStreams[i]->m_storageType == StorageType::dense &&
             stream->m_storageType == StorageType::sparse_csc) 
         {
-            RuntimeError("Dense to sparse re-packing requested for stream '%s' is not supported.", 
+            RuntimeError("Dense to sparse re-packing requested for stream '%ls' is not supported.", 
                 stream->m_name.c_str());
         }
     }
@@ -295,8 +295,8 @@ MBLayoutPtr SampleModePacker::PackSparseStream(const SequenceBatch& batch, size_
     {
         buffer.Reset();
     }
-    const char * source = reinterpret_cast<char*>(&nnzCount);
-    char * destination = buffer.m_data.get();
+    const char* source = reinterpret_cast<char*>(&nnzCount);
+    char* destination = buffer.m_data.get();
     // insert the nnzCount as the first element in the buffer.
     std::copy(source, source + sizeof(nnzCount), destination);
 

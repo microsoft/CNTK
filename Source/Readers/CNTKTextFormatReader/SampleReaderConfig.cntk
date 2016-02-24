@@ -1,18 +1,18 @@
 reader = [
-    readerType = "CNTKTextReader"
+    readerType = "CNTKTextFormatReader"
     file = "SampleInput.txt"
         
     input = [
         features = [
             alias = "F"
             dim = 784
-            storage = "dense"
+            format = "dense"
         ]
             
         labels = [
             alias = "L"
             dim = 10
-            storage = "sparse"
+            format = "sparse"
         ]
     ]
 ]

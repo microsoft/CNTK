@@ -37,7 +37,8 @@ TextParser::TextParser(const std::wstring& filename, const vector<StreamDescript
     m_file = fopenOrDie(m_filename, L"rbS");
     if (funicode(m_file)) 
     {
-        RuntimeError("Unicode encoding is not currently supported.");
+        RuntimeError("Found a UTF-16 BOM at the beginning of the input file %ls. "
+            "UTF-16 encoding is currently not supported.", m_filename.c_str());
     }
 
     m_numAllowedErrors = 0;
@@ -98,7 +99,7 @@ void TextParser::Initialize()
     int64_t position = _ftelli64(m_file);
     if (position == -1L)
     {
-        RuntimeError("Error retrieving file position in file %s", m_filename.c_str());
+        RuntimeError("Error retrieving file position in file %ls", m_filename.c_str());
     }
 
     m_fileOffsetStart = position;
@@ -124,17 +125,38 @@ void TextParser::FillSequenceDescriptions(SequenceDescriptions& timeline) const
     });
 }
 
+TextParser::TextDataChunk::TextDataChunk(const ChunkDescriptor& descriptor, TextParser& parent) 
+    : m_sequenceData(descriptor.m_numSequences),
+    m_parent(parent)
+{
+    m_id = descriptor.m_id;
+    m_sequenceRequestCount = 0;
+}
+
 vector<SequenceDataPtr> TextParser::TextDataChunk::GetSequence(const size_t& sequenceId)
 {
+    assert(m_sequenceRequestCount < m_sequencePtrMap.size());
     auto it = m_sequencePtrMap.find(sequenceId);
     assert(it != m_sequencePtrMap.end());
+    if (++m_sequenceRequestCount == m_sequencePtrMap.size()) 
+    {
+        // all sequences in this chunk have been used up,
+        // now it's time to remove it from the cache.
+        m_parent.m_chunkCache.erase(m_id);
+    }
     return it->second;
 }
 
 ChunkPtr TextParser::GetChunk(size_t chunkId)
 {
+    auto it = m_chunkCache.find(chunkId);
+    if (it != m_chunkCache.end()) 
+    {
+        return it->second;
+    }
+
     const auto& chunkDescriptor = m_index->m_chunks[chunkId];
-    auto chunk = make_shared<TextDataChunk>(chunkDescriptor);
+    auto chunk = make_shared<TextDataChunk>(chunkDescriptor, *this);
     vector<Sequence> sequences(chunkDescriptor.m_numSequences);
     for (size_t i = 0; i < chunkDescriptor.m_numSequences; ++i)
     {
@@ -167,6 +189,8 @@ ChunkPtr TextParser::GetChunk(size_t chunkId)
         chunk->m_sequencePtrMap[sequenceDescriptor.m_id] = move(sequencePtrs);
     }
 
+    m_chunkCache[chunkId] = chunk;
+
     return chunk;
 }
 
@@ -183,7 +207,7 @@ bool TextParser::Fill()
     size_t bytesRead = fread(m_bufferStart, 1, BUFFER_SIZE, m_file);
     
     if (bytesRead == (size_t)-1)
-        RuntimeError("Could not read from the input file.");
+        RuntimeError("Could not read from the input file %ls", m_filename.c_str());
 
     if (!bytesRead) 
     {
@@ -201,7 +225,7 @@ void TextParser::SetFileOffset(int64_t offset)
 {
     int rc = _fseeki64(m_file, offset, SEEK_SET);
     if (rc) {
-        RuntimeError("Error seeking to position %" PRId64 " in file %s", offset, m_filename.c_str());
+        RuntimeError("Error seeking to position %" PRId64 " in file %ls", offset, m_filename.c_str());
     }
 
     m_fileOffsetStart = offset;
@@ -685,7 +709,7 @@ bool TextParser::ReadUint64(size_t& id, int64_t& bytesToRead) {
 
 
 // TODO: templatize, better precision?
-// Assumens that bytesToRead is greater than the number of characters 
+// Assumes that bytesToRead is greater than the number of characters 
 // in the string representation of the floating point number
 // (i.e., the string is followed by one of the delimiters)
 // Post condition: m_pos points to the first character that 

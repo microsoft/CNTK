@@ -56,12 +56,12 @@ void Indexer::UpdateTimeline(SequenceDescriptor& sd) {
     if (chunk->m_byteSize > 0 && (chunk->m_byteSize + sd.m_byteSize) > m_maxChunkSize) {
         m_chunks.push_back({});
         chunk = &m_chunks.back();
-        chunk->m_index = m_chunks.size() - 1;
+        chunk->m_id = m_chunks.size() - 1;
         chunk->m_timelineOffset = timelineOffset;
     }
     chunk->m_byteSize += sd.m_byteSize;
     chunk->m_numSequences++;
-    sd.m_chunkId = chunk->m_index;
+    sd.m_chunkId = chunk->m_id;
 
     m_timeline.push_back(sd);
 }
