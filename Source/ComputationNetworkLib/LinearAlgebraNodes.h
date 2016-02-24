@@ -326,8 +326,8 @@ public:
             for (size_t k = numReductionDims; k < dimsB.size(); k++)
                 dimsC.push_back(dimsB[k]);
             SetDims(TensorShape(dimsC), Input(1)->HasMBLayout());
-#endif
         }
+#endif
 
 #if 1
         // support automatic dimension inference for learnable parameters

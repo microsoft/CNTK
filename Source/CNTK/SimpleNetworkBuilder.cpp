@@ -551,7 +551,7 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildLogBilinearNetworkFro
         {
             pastValueXI =
                 builder.PastValue(NULL, m_defaultHiddenActivity, m_layerSizes[0], ik, msra::strfun::wstrprintf(L"pastValue%d", ik));
-            pastValueXI->SetParameterUpdateRequired(false);
+            pastValueXI->SetLearningRateMultiplier(0);
             pastValueXI->AttachInputs(input);
             // TODO: to figure out sparse matrix size
             Wxi = builder.CreateLearnableParameter(msra::strfun::wstrprintf(L"DD%d", ik), m_layerSizes[0], m_layerSizes[0]);
@@ -691,10 +691,10 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildDNNLMNetworkFromDescr
                                         builder.Times(Wxi, input)))))),
                     bi);
                 output = it;
-                pastValueXI->SetParameterUpdateRequired(false);
-                pastValueXII->SetParameterUpdateRequired(false);
-                pastValueXIII->SetParameterUpdateRequired(false);
-                pastValueXIV->SetParameterUpdateRequired(false);
+                pastValueXI->SetLearningRateMultiplier(0);
+                pastValueXII->SetLearningRateMultiplier(0);
+                pastValueXIII->SetLearningRateMultiplier(0);
+                pastValueXIV->SetLearningRateMultiplier(0);
                 recur_idx++;
             }
             else
@@ -847,7 +847,7 @@ shared_ptr<ComputationNode<ElemType>> /*ComputationNodePtr*/ SimpleNetworkBuilde
     if (m_constInputGateValue)
     {
         // it = builder.CreateLearnableParameter(msra::strfun::wstrprintf (L"CONSTIT%d", iLayer), outputDim);
-        // it->SetParameterUpdateRequired(false);
+        // it->SetLearningRateMultiplier(0);
         // it->Value().SetValue(m_constInputGateValue);
         it = nullptr;
     }
@@ -1036,7 +1036,7 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildCRFLSTMNetworkFromDes
         trans = builder.CreateLearnableParameter(msra::strfun::wstrprintf(L"TransProb%d", numHiddenLayers), m_layerSizes[numHiddenLayers + 1], m_layerSizes[numHiddenLayers + 1]);
         trans->Value().SetValue((ElemType) 1.0 / m_layerSizes[numHiddenLayers + 1]);
         //          m_net->InitLearnableParameters(trans, m_uniformInit, randomSeed++, m_initValueScale);
-        trans->SetParameterUpdateRequired(true);
+        trans->SetLearningRateMultiplier(1.0f);
         label = builder.CreateInputNode(L"labels", m_layerSizes[numHiddenLayers + 1]);
         AddTrainAndEvalCriterionNodes(output, label, nullptr, L"CRFTrainCriterion", L"CRFEvalCriterion", nullptr, trans);
 
@@ -1503,11 +1503,11 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildNetworkFromDbnFile(co
 
             w = builder.Mean(input, L"MeanOfFeatures");
             static_pointer_cast<PreComputedNodeBase<ElemType>>(w)->SideLoadFromMatrix(contextMean);
-            w->SetParameterUpdateRequired(false);
+            w->SetLearningRateMultiplier(0);
 
             b = builder.InvStdDev(input, L"InvStdOfFeatures");
             static_pointer_cast<PreComputedNodeBase<ElemType>>(b)->SideLoadFromMatrix(contextStdDev);
-            b->SetParameterUpdateRequired(false);
+            b->SetLearningRateMultiplier(0);
 
             output = builder.PerDimMeanVarNormalization(input, w, b, L"MVNormalizedFeatures");
             input = output;
@@ -1565,7 +1565,7 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildNetworkFromDbnFile(co
 
         prior = builder.Mean(label, L"Prior");
         static_pointer_cast<PreComputedNodeBase<ElemType>>(prior)->SideLoadFromMatrix(priorVals);
-        prior->SetParameterUpdateRequired(false);
+        prior->SetLearningRateMultiplier(0);
     }
     else // pretrained network - need to add output layer, initalize
     {
@@ -1754,7 +1754,7 @@ shared_ptr<ComputationNode<ElemType>> SimpleNetworkBuilder<ElemType>::AddTrainAn
         default:
             LogicError("Unsupported training criterion.");
         }
-        output->SetParameterUpdateRequired(false);
+        output->SetLearningRateMultiplier(0);
     }
 
     m_net->EvaluationNodes().push_back(output);

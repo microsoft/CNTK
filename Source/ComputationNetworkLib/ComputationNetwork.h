@@ -327,7 +327,8 @@ public:
     void ReplaceFinalCriterionNode(wstring oldNodeName, ComputationNodeBasePtr newNode);
     void AddFeatureNode(ComputationNodeBasePtr featureNode);
     void RemoveFeatureNode(ComputationNodeBasePtr featureNode);
-    void SetLearnableNodesBelowNeedGradient(const bool needGradient, const ComputationNodeBasePtr& rootNode = nullptr);
+    void SetLearnableNodesBelowLearningRateMultiplier(const float learningRateMultiplier, const ComputationNodeBasePtr& rootNode = nullptr);
+    void SetLearnableNodesBelowNeedGradient(const bool needGradient, const ComputationNodeBasePtr& rootNode = nullptr); //for backward compatibility
     void SetBatchNormlizationNodesBelowEvalMode(const bool evalMode, const ComputationNodeBasePtr& rootNode = nullptr);
 
     // -----------------------------------------------------------------------

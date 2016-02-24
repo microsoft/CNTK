@@ -507,8 +507,8 @@ public:
         }
 
         // TODO: Is this correct? Why not just skip propagating a gradient into these? We should not poke around in our children.
-        Input(1)->SetParameterUpdateRequired(false); // prevent learning
-        Input(2)->SetParameterUpdateRequired(false);
+        Input(1)->SetLearningRateMultiplier(0); // prevent learning
+        Input(2)->SetLearningRateMultiplier(0);
 
         SetDims(Input(0));
     }
@@ -619,8 +619,8 @@ public:
         }
 
         // TODO: Is this correct? Why not just skip propagating a gradient into these? We should not poke around in our children.
-        Input(1)->SetParameterUpdateRequired(false); // prevent learning
-        Input(2)->SetParameterUpdateRequired(false);
+        Input(1)->SetLearningRateMultiplier(0); // prevent learning
+        Input(2)->SetLearningRateMultiplier(0);
 
         SetDims(Input(0));
     }
