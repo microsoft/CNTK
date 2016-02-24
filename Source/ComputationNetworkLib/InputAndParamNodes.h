@@ -65,7 +65,11 @@ public:
         // TODO: Change dimensions to take a generic tensor instead. That will be a (minor) breaking change that will require fix-ups when converting from NDL to BrainScript.
         AttachInputs(configp, this->GetExpectedNumInputs());
         // parameters[rows, [cols=1]] plus other optional parameters (learningRateMultiplier=[1|0|float], init=[uniform|gaussian|fixedvalue], initValueScale=[1|float], value=[0|float])
-        SetLearningRateMultiplier(configp->Get(L"learningRateMultiplier"));
+        if (configp->Exists(L"learningRateMultiplier"))
+            SetLearningRateMultiplier(configp->Get(L"learningRateMultiplier"));
+        else if (configp->Exists(L"needsGradient") || configp->Exists(L"needGradient") || configp->Exists(L"computeGradient"))
+            InvalidArgument("needsGradient|needGradient|computeGradient are not supported in BrainScript. Use learningRateMultiplier instead.");
+
         wstring initString = configp->Get(L"init");
         if (initString == L"fixedValue")
             Value().SetValue((ElemType) configp->Get(L"value"));
@@ -263,7 +267,7 @@ public:
             char str[4096];
             sprintf(str, "[%lu,%lu]  ", GetAsMatrixNumRows(), GetAsMatrixNumCols());
             fstream << string(str);
-            sprintf(str, "learningRateMultiplier=%f  NeedGradient=%s", m_learningRateMultiplier, m_learningRateMultiplier>0 ? "true" : "false"); // TODO: update NDL to accept a better matching name as well
+            sprintf(str, "learningRateMultiplier=%f  NeedsGradient=%s", m_learningRateMultiplier, m_learningRateMultiplier>0 ? "true" : "false"); // TODO: update NDL to accept a better matching name as well
             fstream << string(str);
         }
 
