@@ -118,7 +118,7 @@ public:
             data->resize(index + numberToCopy);
             ElemType* dataPtr = ((ElemType*)data->data()) + index;
             if (matrix->GetNumElements() > numberToCopy)
-                RuntimeError("The output matrix being saved has more data than the numRecords (%d) requested to be saved", numRecords);
+                RuntimeError("The output matrix being saved has more data than the numRecords (%d) requested to be saved", (int)numRecords);
 
             matrix->CopyToArray(dataPtr, numberToCopy);
         }
