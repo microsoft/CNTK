@@ -337,7 +337,7 @@ static ConfigValuePtr NodeOp(const ExpressionPtr &e, ConfigValuePtr leftVal, Con
         constantConfig->Add(L"cols", leftFailFn, one);
         //constantConfig->Add(L"shape", leftFailFn, one);  // BUGBUG: rows,cols is no longer right, we need a TensorShape here
         constantConfig->Add(L"value", leftFailFn, leftVal);
-        constantConfig->Add(L"needGradient", leftFailFn, MakePrimitiveConfigValuePtr(false, leftFailFn, exprPath));
+        constantConfig->Add(L"learningRateMultiplier", leftFailFn, MakePrimitiveConfigValuePtr(0.0f, leftFailFn, exprPath));
         let value = ConfigValuePtr(rtInfo->construct(constantConfig), leftFailFn, exprPath);
         let valueWithName = dynamic_cast<HasName *>(value.get());
         if (valueWithName)

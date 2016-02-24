@@ -183,8 +183,7 @@ template class NegateNode<double>;
 template <class ElemType, bool m_transpose>
 class TimesNodeBase : public ComputationNode<ElemType>, public NumInputs<2>
 {
-    typedef ComputationNode<ElemType> Base;
-    UsingComputationNodeMembers;
+    typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers; using Base::OperationName;                                                                                                                           \
 
 public:
     TimesNodeBase(DEVICEID_TYPE deviceId, const wstring& name, size_t outputRank = 1)
