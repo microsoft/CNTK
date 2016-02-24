@@ -43,6 +43,18 @@ typedef std::vector<std::unique_ptr<Data>> Sequence;
 // (e.g., buffer content around the char that triggered the warning)
 class TextParser : public DataDeserializerBase {
 private:
+    class TextDataChunk : public Chunk, public std::enable_shared_from_this<TextDataChunk> {
+        friend class TextParser;
+        std::map<size_t, std::vector<SequenceDataPtr>> m_sequencePtrMap;
+        // Buffer to store the actual data.
+        std::vector<Sequence> m_sequenceData;
+    public:
+        TextDataChunk(const ChunkDescriptor& descriptor) : m_sequenceData(descriptor.m_numSequences) {}
+        // Gets sequences by id.
+        std::vector<SequenceDataPtr> GetSequence(const size_t& sequenceId) override;
+    };
+
+
 
     enum TraceLevel {
         Error = 0,
@@ -84,9 +96,6 @@ private:
     // All streams this reader provides.
     std::vector<StreamDescriptionPtr> m_streams;
 
-    // Buffer to store feature data.
-    std::vector<Sequence> m_loadedSequences;
-
     // throws runtime exception when number of parsing erros is 
     // greater than the specified threshold
     void IncrementNumberOfErrorsOrDie();
@@ -115,11 +124,14 @@ private:
     // read one whole row (terminated by a row delimiter) of samples
     bool ReadRow(Sequence& sequence, int64_t& bytesToRead);
 
-    bool inline Available() { return m_pos != m_bufferEnd || Fill(); }
+    bool inline CanRead() { return m_pos != m_bufferEnd || Fill(); }
+
+    std::vector<Sequence> LoadChunk(const ChunkDescriptor& chunk);
+
+    Sequence LoadSequence(bool verifyId, const SequenceDescriptor& descriptor);
 
     TextParser(const TextParser&) = delete;
     TextParser& operator=(const TextParser&) = delete;
-
 protected:
     void FillSequenceDescriptions(SequenceDescriptions& timeline) const override;
 
@@ -134,13 +146,8 @@ public:
     // Description of streams that this data deserializer provides.
     std::vector<StreamDescriptionPtr> GetStreamDescriptions() const override;
 
-    // TODO: why doesn't this take a vector of SequenceDescription instead?
-    // Get sequences by specified ids. Order of returned sequences corresponds to the order of provided ids.
-    std::vector<std::vector<SequenceDataPtr>> GetSequencesById(const std::vector<size_t>& ids) override;
-
-    std::vector<Sequence> LoadChunk(const ChunkDescriptor& chunk);
-
-    Sequence LoadSequence(bool verifyId, const SequenceDescriptor& descriptor);
+    // Gets a chunk.
+    ChunkPtr GetChunk(size_t chunkId) override;
 
     void SetTraceLevel(unsigned int traceLevel);
 

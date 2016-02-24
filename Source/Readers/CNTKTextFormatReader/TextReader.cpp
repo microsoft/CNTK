@@ -15,7 +15,7 @@
 namespace Microsoft { namespace MSR { namespace CNTK {
 
 TextReader::TextReader(MemoryProviderPtr provider,
-                         const ConfigParameters& config)
+    const ConfigParameters& config)
     :m_provider(provider)
 {
     // In the future, deserializers and transformers will be dynamically loaded

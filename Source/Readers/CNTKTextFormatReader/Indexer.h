@@ -33,7 +33,6 @@ private:
 
     std::vector<SequenceDescriptor> m_timeline;
     std::vector<ChunkDescriptor> m_chunks;
-    std::map<SequenceId, TimelineOffset> m_idToOffsetMap;
 
     // assigns an appropriate chunk id to the sequence descriptor,
     // ensures that chunks do not exceed the maximum allowed size

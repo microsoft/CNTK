@@ -63,9 +63,6 @@ void Indexer::UpdateTimeline(SequenceDescriptor& sd) {
     chunk->m_numSequences++;
     sd.m_chunkId = chunk->m_index;
 
-    if (sd.m_id != timelineOffset) {
-        m_idToOffsetMap[sd.m_id] = timelineOffset;
-    }
     m_timeline.push_back(sd);
 }
 
@@ -97,8 +94,7 @@ std::shared_ptr<Index> Indexer::BuildFromLines() {
     { 
         !m_skipSequenceIds,
         std::move(m_timeline), 
-        std::move(m_chunks), 
-        std::move(m_idToOffsetMap) 
+        std::move(m_chunks)
     });
 }
 
@@ -151,8 +147,7 @@ std::shared_ptr<Index> Indexer::Build() {
     {
         !m_skipSequenceIds,
         std::move(m_timeline), // TODO: shrink_to_fit
-        std::move(m_chunks),
-        std::move(m_idToOffsetMap) // this map can be relatively large
+        std::move(m_chunks)
     });
 }
 

@@ -40,7 +40,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // Chunk metadata
     struct ChunkDescriptor
     {
-        size_t m_index; // this index is actually redandunt 
+        size_t m_index; // chunk index
         int64_t m_byteSize; // size in bytes
         size_t m_numSequences; // number of sequences in this chunk
         TimelineOffset m_timelineOffset; // offset into the timeline
@@ -50,7 +50,5 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         bool m_hasSequenceIds; // true when input contains sequence id column
         std::vector<SequenceDescriptor> m_timeline;
         std::vector<ChunkDescriptor> m_chunks;
-        std::map<SequenceId, TimelineOffset> m_idToOffsetMap; // maps sequence ids to offsets
-        // only for sequences where id is different from the position in the timeline.
     };
 }}}

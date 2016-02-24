@@ -124,73 +124,50 @@ void TextParser::FillSequenceDescriptions(SequenceDescriptions& timeline) const
     });
 }
 
-vector<vector<SequenceDataPtr>> TextParser::GetSequencesById(const vector<size_t>& ids)
+vector<SequenceDataPtr> TextParser::TextDataChunk::GetSequence(const size_t& sequenceId)
 {
-    const size_t numRequestedSequences = ids.size();
-    vector<SequenceDescriptor const*> descriptors(numRequestedSequences);
-    for (size_t i = 0; i < numRequestedSequences; ++i)
+    auto it = m_sequencePtrMap.find(sequenceId);
+    assert(it != m_sequencePtrMap.end());
+    return it->second;
+}
+
+ChunkPtr TextParser::GetChunk(size_t chunkId)
+{
+    const auto& chunkDescriptor = m_index->m_chunks[chunkId];
+    auto chunk = make_shared<TextDataChunk>(chunkDescriptor);
+    vector<Sequence> sequences(chunkDescriptor.m_numSequences);
+    for (size_t i = 0; i < chunkDescriptor.m_numSequences; ++i)
     {
-        const size_t& sequenceId = ids[i];
-        const auto it = m_index->m_idToOffsetMap.find(sequenceId);
-        if (it != m_index->m_idToOffsetMap.end()) 
-        {
-            descriptors[i] = &m_index->m_timeline[it->second];
-        }
-        else 
-        {
-            // id-to-offset map does not contain this sequenceId,
-            // which means that the sequenceId is identical with 
-            // the timeline position
-            descriptors[i] = &m_index->m_timeline[sequenceId];
-        }
-    }
-
-    if (numRequestedSequences > 1)
-    {
-        // sort sequence descriptors by file offset
-        std::sort(
-            descriptors.begin(),
-            descriptors.end(),
-            [](SequenceDescriptor const* sd1, SequenceDescriptor const* sd2)
-        {
-            return sd1->m_fileOffset < sd2->m_fileOffset;
-        });
-
-    }
-  
-    m_loadedSequences.resize(numRequestedSequences);
-
-    vector<vector<SequenceDataPtr>> results(numRequestedSequences);
-
-    for (size_t i = 0; i < numRequestedSequences; ++i)
-    {
-        m_loadedSequences[i] = std::move(LoadSequence(!m_skipSequenceIds, *(descriptors[i])));
-        vector<SequenceDataPtr>& sequenceData = results[i];
-        sequenceData.resize(m_numberOfStreams);
-        const Sequence& loadedSequence = m_loadedSequences[i];
-        for (size_t j = 0; j < m_numberOfStreams; ++j) 
+        size_t offset = chunkDescriptor.m_timelineOffset + i;
+        const auto& sequenceDescriptor = m_index->m_timeline[offset];
+        chunk->m_sequenceData[i] = move(LoadSequence(!m_skipSequenceIds, sequenceDescriptor));
+        const auto& sequenceData = chunk->m_sequenceData[i];
+        vector<SequenceDataPtr> sequencePtrs(m_numberOfStreams);
+        for (size_t j = 0; j < m_numberOfStreams; ++j)
         {
             const StreamInfo& stream = m_streamInfos[j];
             if (stream.m_type == StorageType::dense)
             {
-                DenseData* loadedData = (DenseData*)(loadedSequence[j].get());
-                auto data = std::make_shared<DenseSequenceData>();
-                data->m_data = loadedData->m_buffer.data(); 
+                DenseData* loadedData = (DenseData*)(sequenceData[j].get());
+                auto data = make_shared<DenseSequenceData>();
+                data->m_data = loadedData->m_buffer.data();
                 data->m_sampleLayout = m_streams[j]->m_sampleLayout;
                 data->m_numberOfSamples = loadedData->m_numberOfSamples;
-                sequenceData[j] = data;
+                sequencePtrs[j] = data;
             }
             else
-            { 
-                SparseData* loadedData = (SparseData*)(loadedSequence[j].get());
-                auto data = std::make_shared<SparseSequenceData>();
+            {
+                SparseData* loadedData = (SparseData*)(sequenceData[j].get());
+                auto data = make_shared<SparseSequenceData>();
                 data->m_data = loadedData->m_buffer.data();
-                data->m_indices = std::move(loadedData->m_indices);
-                sequenceData[j] = data;
+                data->m_indices = move(loadedData->m_indices);
+                sequencePtrs[j] = data;
             }
         }
+        chunk->m_sequencePtrMap[sequenceDescriptor.m_id] = move(sequencePtrs);
     }
-    return results;
+
+    return chunk;
 }
 
 void TextParser::IncrementNumberOfErrorsOrDie() 
@@ -200,7 +177,6 @@ void TextParser::IncrementNumberOfErrorsOrDie()
         RuntimeError("Reached maximum allowed number of reader errors");
     }
 }
-
 
 bool TextParser::Fill() 
 {
@@ -232,17 +208,6 @@ void TextParser::SetFileOffset(int64_t offset)
     m_fileOffsetEnd = offset;
 
     Fill();
-}
-
-vector<Sequence> TextParser::LoadChunk(const ChunkDescriptor& chunk) {
-    // TODO: update as soon as the functionality up the stack relies on chunk loading.
-    vector<Sequence> chunkData(chunk.m_numSequences);
-    for (size_t i = 0; i < chunk.m_numSequences; i++) {
-        size_t sequenceIndex = chunk.m_timelineOffset + i;
-        const SequenceDescriptor& descriptor = m_index->m_timeline[sequenceIndex];
-        chunkData[i] = std::move(LoadSequence(!m_skipSequenceIds, descriptor));
-    }
-    return chunkData;
 }
 
 Sequence TextParser::LoadSequence(bool verifyId, const SequenceDescriptor& sequenceDsc) {
@@ -327,13 +292,8 @@ Sequence TextParser::LoadSequence(bool verifyId, const SequenceDescriptor& seque
 // read one whole line of input 
 bool TextParser::ReadRow(Sequence& sequence, int64_t& bytesToRead) {
     bool found = false;
-    while (bytesToRead)
+    while (bytesToRead && CanRead())
     {
-        if (m_pos == m_bufferEnd && !Fill())
-        {
-            break;
-        }
-
         char c = *m_pos;
 
         if (isNumber(c) || c == COLUMN_DELIMITER || c == CARRIAGE_RETURN) {
@@ -434,13 +394,8 @@ bool TextParser::GetInputId(size_t& id, int64_t& bytesToRead)
     ++m_pos;
     --bytesToRead;
 
-    while (bytesToRead)
+    while (bytesToRead && CanRead())
     {
-        if (m_pos == m_bufferEnd && !Fill())
-        {
-            break;
-        }
-
         c = *m_pos;
 
         // an input id can be followed by a value marker, end of line (also, carriage return),
@@ -512,13 +467,8 @@ bool TextParser::ReadDenseSample(vector<float>& values, size_t sampleSize, int64
     size_t counter = 0;
     float value;
 
-    while (bytesToRead)
+    while (bytesToRead && CanRead())
     {
-        if (m_pos == m_bufferEnd && !Fill())
-        {
-            break;
-        }
-
         char c = *m_pos;
 
         // return as soon as we hit a non-printable or a name prefix
@@ -586,13 +536,8 @@ bool TextParser::ReadSparseSample(std::vector<float>& values, std::vector<size_t
     size_t index;
     float value;
 
-    while (bytesToRead)
+    while (bytesToRead && CanRead())
     {
-        if (m_pos == m_bufferEnd && !Fill())
-        {
-            break;
-        }
-
         char c = *m_pos;
 
         // return as soon as we hit a non-printable or a name prefix
@@ -667,13 +612,8 @@ bool TextParser::ReadSparseSample(std::vector<float>& values, std::vector<size_t
 
 void TextParser::SkipToNextValue(int64_t& bytesToRead)
 {
-    while (bytesToRead)
+    while (bytesToRead && CanRead())
     {
-        if (m_pos == m_bufferEnd && !Fill())
-        {
-            break;
-        }
-
         char c = *m_pos;
         // skip everything until we hit either a value marker, an input marker or the end of row.
         if (c == VALUE_DELIMITER || c == ROW_DELIMITER || c == NAME_PREFIX)
@@ -687,13 +627,8 @@ void TextParser::SkipToNextValue(int64_t& bytesToRead)
 
 void TextParser::SkipToNextInput(int64_t& bytesToRead)
 {
-    while (bytesToRead)
+    while (bytesToRead && CanRead())
     {
-        if (m_pos == m_bufferEnd && !Fill())
-        {
-            break;
-        }
-
         char c = *m_pos;
         // skip everything until we hit either an input marker or the end of row.
         if (c == NAME_PREFIX || c == ROW_DELIMITER)
@@ -708,13 +643,8 @@ void TextParser::SkipToNextInput(int64_t& bytesToRead)
 bool TextParser::ReadUint64(size_t& id, int64_t& bytesToRead) {
     id = 0;
     bool found = false;
-    while (bytesToRead)
+    while (bytesToRead && CanRead())
     {
-        if (m_pos == m_bufferEnd && !Fill())
-        {
-            break;
-        }
-
         char c = *m_pos;
 
         if (!isNumber(c))
@@ -767,13 +697,8 @@ bool TextParser::ReadRealNumber(float& value, int64_t& bytesToRead)
     double coefficient = .0, number = .0, divider = .0;
     bool negative = false;
 
-    while (bytesToRead)
+    while (bytesToRead && CanRead())
     {
-        if (m_pos == m_bufferEnd && !Fill())
-        {
-            break;
-        }
-
         char c = *m_pos;
 
         switch (state)
