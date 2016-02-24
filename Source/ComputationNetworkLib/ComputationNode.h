@@ -1763,8 +1763,8 @@ protected:                                                                      
     using Base::InvalidateMissingGradientColumns;                                                                                                        \
     using Base::InvalidateMissingValueColumns;                                                                                                           \
     using Base::IsLeaf;                                                                                                                                  \
-    using Base::IsOutOfDateWrtInputs;                                                                                                                 \
-    using Base::IsPartOfLoop;                                                                                                                 \
+    using Base::IsOutOfDateWrtInputs;                                                                                                                    \
+    using Base::IsPartOfLoop;                                                                                                                            \
     using Base::LinkToMBLayout;                                                                                                                          \
     using Base::Load;                                                                                                                                    \
     using Base::LoadValue;                                                                                                                               \
@@ -1773,6 +1773,7 @@ protected:                                                                      
     using Base::MaskMissingValueColumnsToZero;                                                                                                           \
     using Base::MaskedGradientFor;                                                                                                                       \
     using Base::MaskedValueFor;                                                                                                                          \
+    using Base::MarkValueNonSharable;                                                                                                                    \
     using Base::OutputUsedInComputingInputNodesGradients;                                                                                                \
     using Base::PrintNodeValuesToFile;                                                                                                                   \
     using Base::PrintSelfBeforeValidation;                                                                                                               \
@@ -1786,7 +1787,7 @@ protected:                                                                      
     using Base::SetDims1;                                                                                                                                \
     using Base::SetDims;                                                                                                                                 \
     using Base::SetInput;                                                                                                                                \
-    using Base::SetLearningRateMultiplier;                                                                                                              \
+    using Base::SetLearningRateMultiplier;                                                                                                               \
     using Base::UpdateFunctionMBSize;                                                                                                                    \
     using Base::UpdateFunctionValuesSize;                                                                                                                \
     using Base::Validate;                                                                                                                                \
@@ -1806,7 +1807,7 @@ protected:                                                                      
     using Base::m_inputs;                                                                                                                                \
     using Base::m_nodeName;                                                                                                                              \
     using Base::m_pMBLayout;                                                                                                                             \
-    using Base::m_learningRateMultiplier;                                                                                                               \
+    using Base::m_learningRateMultiplier;                                                                                                                \
     using Base::m_sampleLayout;                                                                                                                          \
     using Base::m_value;                                                                                                                                 \
     using Base::m_valueSharable;                                                                                                                         \
