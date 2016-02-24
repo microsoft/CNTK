@@ -50,5 +50,26 @@ void DoConvertFromDbn(const ConfigParameters& config)
     net->Save(modelPath);
 }
 
+// ===========================================================================
+// DoExportToDbn() - implements CNTK "exportdbn" command
+// ===========================================================================
+
+template <typename ElemType>
+void DoExportToDbn(const ConfigParameters& config)
+{
+    DEVICEID_TYPE deviceID = DeviceFromConfig(config);
+
+    const wstring modelPath = config("modelPath");
+    wstring dbnModelPath = config("dbnModelPath");
+
+    ComputationNetworkPtr net = make_shared<ComputationNetwork>(deviceID);
+    net->Load<ElemType>(modelPath);
+
+    // write dbn file
+    net->SaveToDbnFile<ElemType>(net, dbnModelPath);
+}
+
 template void DoConvertFromDbn<float>(const ConfigParameters& config);
 template void DoConvertFromDbn<double>(const ConfigParameters& config);
+template void DoExportToDbn<float>(const ConfigParameters& config);
+template void DoExportToDbn<double>(const ConfigParameters& config);

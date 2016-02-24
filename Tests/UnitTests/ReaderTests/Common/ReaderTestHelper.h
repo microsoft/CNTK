@@ -264,6 +264,30 @@ struct ReaderFixture
 
         BOOST_CHECK_EQUAL_COLLECTIONS(beginStream1, endStream1, beginStream2, endStream2);
     }
+
+    // Helper function to run a Reader test and catch an expected exception.
+    // configFileName       : the file name for the config file
+    // testSectionName      : the section name for the test inside the config file
+    // readerSectionName    : the reader field name in the test section
+    template <class ElemType, class ExceptionType>
+    void HelperRunReaderTestWithException(
+        string configFileName,
+        string testSectionName,
+        string readerSectionName)
+    {
+        std::wstring configFN(configFileName.begin(), configFileName.end());
+        std::wstring configFileCommand(L"configFile=" + configFN);
+
+        wchar_t* arg[2]{L"CNTK", &configFileCommand[0]};
+        ConfigParameters config;
+        const std::string rawConfigString = ConfigParameters::ParseCommandLine(2, arg, config);
+
+        config.ResolveVariables(rawConfigString);
+        const ConfigParameters simpleDemoConfig = config(testSectionName);
+        const ConfigParameters readerConfig = simpleDemoConfig(readerSectionName);
+
+        BOOST_CHECK_THROW(DataReader<ElemType> dataReader(readerConfig), ExceptionType);
+    }
 };
 }
 } } }

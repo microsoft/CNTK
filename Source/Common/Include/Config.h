@@ -411,6 +411,7 @@ public:
         }
         // hit end before everything was closed: error
         RuntimeError("no closing bracket found in parameters");
+        //RuntimeError("no closing bracket found in parameters (opening bracket at offset %d)\n%s", (int)tokenStart, str.substr(tokenStart).c_str());
     }
 
     // ParseValue - virtual function to parse a "token" as tokenized by Parse() below.
@@ -1026,8 +1027,10 @@ public:
     //     In this example, calling ResolveVariables with $B$, would see B=$A$, then look up the value
     //     of A and see A=1, and it would then replace the string "$B$" with the string "1".
     //     Note that this method ignores comments in 'configString' (though they should probably already be
-    //     removed from 'configString' before calling this method), and it doesn't allow 'varName' to include
-    //     any whitespace characters.  If an opening "$" is found without a closing "$", an exception is thrown.
+    //     removed from 'configString' before calling this method).
+    //     Variables must begin with a letter; e.g. $1 does not trigger.
+    //     If an opening "$" is found without a closing "$", an exception is thrown.
+    // BUGBUG: This does not allow to deliver a string value to a config parameter that contains a $ sign followed by a letter.
     // configString - the string that you would like to resolve variables in.
     // returns: A copy of 'configString' with all the variables resolved.
     std::string ResolveVariablesInSingleLine(const std::string& configLine) const
@@ -1042,32 +1045,38 @@ public:
         std::string newConfigLine = StripComments(configLine);
         std::size_t start = newConfigLine.find_first_of(openBraceVar);
         std::size_t end = 0;
-        while (start != std::string::npos)
+        while (start != std::string::npos )
         {
+            // variable names must begin with a letter
+            if (start + 1 < newConfigLine.size() && !iscalpha(newConfigLine[start + 1]))
+            {
+                start = newConfigLine.find_first_of(openBraceVar, start + 2);
+                continue;
+            }
+
             // search for whitespace or closing brace.
             end = newConfigLine.find_first_of(std::string(closingBraceVar) + forbiddenCharactersInVarName,
                                               start + openBraceVarSize);
 
-            // ensure that a closing brace exists for every opening brace.
-            // Also ensure that there is no whitespace between the opening and closing braces.
-            if (end == std::string::npos)
+            // If no end found on the line or the variable name would be invalid, we ignore the $.
+            if (end == std::string::npos || newConfigLine[end] != '$')
             {
-                RuntimeError("\"%s\" found without corresponding closing \"%s\": %s:%s",
-                             openBraceVar, closingBraceVar,
-                             m_configName.c_str(), newConfigLine.c_str());
-            }
-
-            if (newConfigLine[end] != '$')
-            {
-                RuntimeError("Forbidden characters found between \"%s\" and \"%s\".  Variable names cannot any of the following characters: %s. %s:%s",
-                             openBraceVar, closingBraceVar,
-                             forbiddenCharactersInVarNameEscapeWhitespace,
-                             m_configName.c_str(), newConfigLine.c_str());
+                start = newConfigLine.find_first_of(openBraceVar, start + 1);
+                continue;
             }
 
             // end + 1 - start = the length of the string, including opening and closing braces.
             std::size_t varLength = (end + 1 - start) - (openBraceVarSize + closingBraceVarSize);
             std::string varName = newConfigLine.substr(start + openBraceVarSize, varLength);
+
+            // It would be great to recognize $$ as $, but since stuff gets parsed and reparsed over again
+            // in nested dictionaries, this is not working.
+            if (varName.empty())
+            {
+                RuntimeError("$$ is not allowed.  Parsing of string failed: %s:%s",
+                             m_configName.c_str(),
+                             newConfigLine.c_str());
+            }
 
             // Note that this call to "Find" can trigger further substitutions of the form $varName2$ -> varValue2,
             // thus making this search process recursive.

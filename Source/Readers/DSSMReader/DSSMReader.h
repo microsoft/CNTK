@@ -175,7 +175,7 @@ public:
     virtual void SetLabelMapping(const std::wstring& sectionName, const std::map<LabelIdType, typename LabelType>& labelMapping);
     virtual bool GetData(const std::wstring& sectionName, size_t numRecords, void* data, size_t& dataBufferSize, size_t recordStart = 0);
 
-    virtual bool DataEnd(EndDataType endDataType);
+    virtual bool DataEnd();
 
     void SetRandomSeed(int)
     {

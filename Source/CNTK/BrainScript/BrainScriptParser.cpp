@@ -37,7 +37,7 @@ SourceFile::SourceFile(wstring path, const vector<wstring>& includePaths)
 {
     // ... scan paths
     includePaths;
-    File(path, fileOptionsRead).GetLines(lines);
+    File(path, fileOptionsRead | fileOptionsText).GetLines(lines);
 }
 
 bool TextLocation::IsValid() const

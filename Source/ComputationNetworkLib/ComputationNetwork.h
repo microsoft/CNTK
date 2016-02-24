@@ -106,6 +106,9 @@ public:
     void Save(const std::wstring& fileName, const FileOptions fileFormat = FileOptions::fileOptionsBinary) const;
     void SaveEdited(const std::wstring& fileName, const FileOptions fileFormat = FileOptions::fileOptionsBinary);
 
+    template <class ElemType>
+    void SaveToDbnFile(ComputationNetworkPtr net, const std::wstring& fileName) const;
+
 private:
 
     void SaveToFileImpl(const std::wstring& fileName, const FileOptions fileFormat) const;
@@ -609,7 +612,7 @@ public:
     // if node name is not found, dump all nodes
     // otherwise dump just that node
     // This function is called from MEL, i.e. must be prepared to operate on an uncompiled network (only m_nameToNodeMap is valid).
-    void DumpNodeInfoToFile(const std::wstring& nodeName, const bool printValues, const std::wstring outputFile, const std::wstring& nodeNameInRegEx = L"")
+    void DumpNodeInfoToFile(const std::wstring& nodeName, const bool printValues, const bool printMetadata, const std::wstring outputFile, const std::wstring& nodeNameInRegEx = L"")
     {
         if (nodeNameInRegEx.empty())
         {
@@ -619,13 +622,13 @@ public:
                              FileOptions::fileOptionsText | FileOptions::fileOptionsWrite);
 
                 const ComputationNodeBasePtr& nodePtr = GetNodeFromName(nodeName);
-                nodePtr->DumpNodeInfo(printValues, fstream);
+                nodePtr->DumpNodeInfo(printValues, printMetadata, fstream);
             }
             else // node name is not found, dump all nodes
             {
                 fprintf(stderr, "Warning: node name %ls does not exist in the network. dumping all nodes.\n",
                         nodeName.c_str());
-                DumpAllNodesToFile(printValues, outputFile);
+                DumpAllNodesToFile(printValues, printMetadata, outputFile);
             }
         }
         else
@@ -647,12 +650,13 @@ public:
                 fprintf(stderr, "\t%ls\n", x.c_str());
             }
             fprintf(stderr, "DumpNodeInfo: dumping node info (%s printing values) to %ls\n", printValues ? "with" : "without", outputFile.c_str());
-            DumpNodeInfoToFile(NodeList, printValues, outputFile);
+            DumpNodeInfoToFile(NodeList, printValues, printMetadata, outputFile);
         }
     }
 
     // dump all nodes in the network to file
     void DumpAllNodesToFile(const bool printValues,
+                            const bool printMetadata,
                             const std::wstring outputFile)
     {
         File fstream(outputFile,
@@ -661,12 +665,14 @@ public:
         for (auto nodeIter = m_nameToNodeMap.begin(); nodeIter != m_nameToNodeMap.end(); nodeIter++)
         {
             ComputationNodeBasePtr nodePtr = nodeIter->second;
-            nodePtr->DumpNodeInfo(printValues, fstream);
+            nodePtr->DumpNodeInfo(printValues, printMetadata, fstream);
         }
     }
 
+    // this one is called from MEL and from DumpNodeInfoToFile() above
     void DumpNodeInfoToFile(const vector<ComputationNodeBasePtr>& nodes,
                             const bool printValues,
+                            const bool printMetadata,
                             const std::wstring outputFile)
     {
         File fstream(outputFile,
@@ -675,7 +681,7 @@ public:
         for (auto nodeIter = nodes.begin(); nodeIter != nodes.end(); nodeIter++)
         {
             ComputationNodeBasePtr nodePtr = *nodeIter;
-            nodePtr->DumpNodeInfo(printValues, fstream);
+            nodePtr->DumpNodeInfo(printValues, printMetadata, fstream);
         }
     }
 

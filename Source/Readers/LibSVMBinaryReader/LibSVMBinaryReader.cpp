@@ -873,32 +873,13 @@ void LibSVMBinaryReader<ElemType>::RenamedMatrices(const ConfigRecordType& confi
 }
 
 template <class ElemType>
-bool LibSVMBinaryReader<ElemType>::DataEnd(EndDataType endDataType)
+bool LibSVMBinaryReader<ElemType>::DataEnd()
 {
-    return m_dataInput->DataEnd(endDataType);
+    return m_dataInput->DataEnd();
 }
 
 template <class ElemType>
-bool SparseBinaryInput<ElemType>::DataEnd(EndDataType endDataType)
-{
-    bool ret = false;
-    switch (endDataType)
-    {
-    case endDataNull:
-        assert(false);
-        break;
-    case endDataEpoch:
-        ret = (m_nextMB >= m_epochSize);
-        break;
-    case endDataSet:
-        ret = (m_nextMB >= m_epochSize);
-        break;
-    case endDataSentence: // for fast reader each minibatch is considered a "sentence", so always true
-        ret = true;
-        break;
-    }
-    return ret;
-}
+bool SparseBinaryInput<ElemType>::DataEnd() { return true; }
 
 // instantiate all the combinations we expect to be used
 template class LibSVMBinaryReader<double>;

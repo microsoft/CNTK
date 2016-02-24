@@ -9,7 +9,6 @@
 #include "Helpers.h"
 #include "CommonMatrix.h"
 #include "TensorShape.h" // only for SmallVector; I was hoping to keep this out
-#include "DebugUtil.h"
 #include "BestGpu.h" // for CPUONLY macro
 #include "ConcStack.h"
 #include <string>
@@ -520,7 +519,9 @@ public:
         ElemType* pArray = us.CopyToArray();
         for (size_t i = 0; i < us.GetNumElements(); ++i)
             stream << pArray[i];
+        
         delete[] pArray;
+
         stream.PutMarker(fileMarkerEndSection, std::wstring(L"EMAT"));
         return stream;
     }

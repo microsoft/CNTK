@@ -603,9 +603,9 @@ shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Looku
 template <class ElemType>
 shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::BatchNormalization(const ComputationNodePtr input,
                                                                                               const ComputationNodePtr scale, const ComputationNodePtr bias, const ComputationNodePtr runMean, const ComputationNodePtr runInvStdDev,
-                                                                                              bool eval, bool spatial, double expAvgFactor, ImageLayoutKind imageLayoutKind, const std::wstring nodeName)
+                                                                                              bool eval, bool spatial, double expAvgFactor, double epsilon, bool useCntkEngine, ImageLayoutKind imageLayoutKind, const std::wstring nodeName)
 {
-    return net.AddNodeToNetAndAttachInputs(New<BatchNormalizationNode<ElemType>>(net.GetDeviceId(), nodeName, eval, spatial, expAvgFactor, imageLayoutKind),
+    return net.AddNodeToNetAndAttachInputs(New<BatchNormalizationNode<ElemType>>(net.GetDeviceId(), nodeName, eval, spatial, expAvgFactor, epsilon, useCntkEngine, imageLayoutKind),
                                            input, scale, bias, runMean, runInvStdDev);
 }
 

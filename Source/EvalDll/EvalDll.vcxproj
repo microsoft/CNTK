@@ -111,11 +111,13 @@
   <ItemDefinitionGroup Condition="$(CpuOnlyBuild)">
     <ClCompile>
       <PreprocessorDefinitions>CPUONLY;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories></AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>
+      </AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <DelayLoadDLLs>Math.dll</DelayLoadDLLs>
-      <AdditionalLibraryDirectories></AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>
+      </AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="$(GpuBuild)">
@@ -130,7 +132,6 @@
     <ClInclude Include="..\Common\Include\Eval.h" />
     <ClInclude Include="..\Common\Include\File.h" />
     <ClInclude Include="..\Common\Include\fileutil.h" />
-    <ClInclude Include="..\Common\Include\DebugUtil.h" />
     <ClInclude Include="..\Common\Include\TimerUtility.h" />
     <ClInclude Include="EvalReader.h" />
     <ClInclude Include="EvalWriter.h" />
@@ -140,14 +141,17 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\Common\Config.cpp" />
-    <ClCompile Include="..\Common\Eval.cpp" />
+    <ClCompile Include="..\Common\Eval.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug_CpuOnly|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release_CpuOnly|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="..\Common\ExceptionWithCallStack.cpp" />
     <ClCompile Include="..\Common\File.cpp">
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="..\Common\fileutil.cpp">
-      <PrecompiledHeader>NotUsing</PrecompiledHeader>
-    </ClCompile>
-    <ClCompile Include="..\Common\DebugUtil.cpp">
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="..\Common\TimerUtility.cpp" />

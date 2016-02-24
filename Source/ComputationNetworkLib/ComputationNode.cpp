@@ -235,20 +235,23 @@ TensorShape ComputationNodeBase::GetTensorSliceFor(size_t rank, const FrameRange
 // -----------------------------------------------------------------------
 
 template <class ElemType>
-/*virtual*/ void ComputationNode<ElemType>::DumpNodeInfo(const bool /*printValues*/, File& fstream) const
+/*virtual*/ void ComputationNode<ElemType>::DumpNodeInfo(const bool /*printValues*/, const bool printMetadata, File& fstream) const
 {
-    fstream << L"\n" + NodeName() + L"=" + OperationName();
-
-    if (!IsLeaf())
+    if (printMetadata)
     {
-        fstream << wstring(L"(");
-        for (size_t i = 0; i < GetNumInputs(); i++)
+        fstream << L"\n" + NodeName() + L"=" + OperationName();
+
+        if (!IsLeaf())
         {
-            if (i > 0)
-                fstream << wstring(L",");
-            fstream << (Input(i) ? Input(i)->NodeName() : L"NULL");
+            fstream << wstring(L"(");
+            for (size_t i = 0; i < GetNumInputs(); i++)
+            {
+                if (i > 0)
+                    fstream << wstring(L",");
+                fstream << (Input(i) ? Input(i)->NodeName() : L"NULL");
+            }
+            fstream << wstring(L")");
         }
-        fstream << wstring(L")");
     }
 }
 
@@ -271,9 +274,8 @@ template class ComputationNode<double>;
 
 template class LearnableParameter<float>;
 template class LearnableParameter<double>;
-}
-}
-}
+
+}}}
 
 namespace Microsoft { namespace MSR { namespace ScriptableObjects {
 
@@ -349,4 +351,5 @@ public:
 ScriptableObjects::ConfigurableRuntimeTypeRegister::Add<BoxedTensorShape> registerTensorShape(L"TensorShape");
 ScriptableObjects::ConfigurableRuntimeTypeRegister::Add<BoxedVector<int>> registerIntVector(L"IntVector");
 ScriptableObjects::ConfigurableRuntimeTypeRegister::Add<BoxedVector<size_t>> registerSizeVector(L"SizeVector");
-} } }
+
+}}}

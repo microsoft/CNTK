@@ -36,7 +36,7 @@ public:
         delete this;
     }
 
-    virtual void StartMinibatchLoop(size_t mbSize, size_t epoch, size_t requestedEpochSamples) override;
+    virtual void StartMinibatchLoop(size_t mbSize, size_t epoch, size_t requestedEpochSamples = requestDataSize) override;
     virtual void StartDistributedMinibatchLoop(size_t requestedMBSize, size_t epoch, size_t subsetNum, size_t numSubsets, size_t requestedEpochSamples) override;
 
     virtual bool SupportsDistributedMBRead() const override
@@ -46,7 +46,7 @@ public:
 
     virtual bool GetMinibatch(std::map<std::wstring, Matrix<ElemType>*>& matrices) override;
 
-    virtual bool DataEnd(EndDataType endDataType) override;
+    virtual bool DataEnd() override;
 
     void CopyMBLayoutTo(MBLayoutPtr) override;
 

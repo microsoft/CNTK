@@ -7,6 +7,7 @@
 #include "Basics.h"
 #include "ComputationNode.h"
 #include "ScriptableObjects.h"
+#include "TensorShape.h"
 #include "Matrix.h"
 #include "File.h" // for LoadMatrixFromTextFile()
 
@@ -43,7 +44,7 @@ public:
         : Base(deviceId, name)
     {
         m_parameterUpdateRequired = true;
-        this->m_valueSharable = false;
+        m_valueSharable = false; // TODO: wasn't this a function one should call?
     }
     LearnableParameter(DEVICEID_TYPE deviceId, const wstring& name, const TensorShape& shape)
         : Base(deviceId, name)
@@ -154,20 +155,66 @@ public:
     // initialize by reading a matrix from a text file
     void InitFromFile(const std::wstring& initFromFilePath)
     {
-        size_t numRows = 0;
-        size_t numCols = 0;
-        auto array = File::LoadMatrixFromTextFile<ElemType>(msra::strfun::utf8(initFromFilePath), numRows, numCols); // TODO: change pathname to wstring
+        size_t numRows, numCols;
+        auto array = File::LoadMatrixFromTextFile<ElemType>(initFromFilePath, numRows, numCols);
+
+        // infer tensor dimensions from input file if not set
+        if (GetSampleLayout().GetNumElements() == 0)    // at least one dimension is 0
+        {
+            auto dims = GetSampleLayout().GetDims();
+            // infer rank
+            if (dims.size() == 0)
+                dims.push_back(0);
+            if (dims.size() == 1 && numCols != 1)
+                dims.push_back(0);
+            // infer #rows
+            if (dims[0] == 0)           // infer row dimension as input matrix row dimension
+                dims[0] = numRows;      // (if already set, then mismatch will be caught in VerifyDataSize() below)
+            // infer #cols: product of all dimensions but the first must match matrix #cols; if there is a single 0 position, we infer it
+            size_t zeroDim = 0;         // 0 means not found
+            size_t prod = 1;
+            for (size_t k = 1; k < dims.size(); k++)
+            {
+                auto dim = dims[k];
+                if (dim != 0)
+                    prod *= dim;
+                else if (zeroDim == 0)
+                    zeroDim = k;
+                else
+                    InvalidArgument("%ls %ls operation's specified shape [%s] cannot be inferred: Too many unknown dimensions.", NodeName().c_str(), OperationName().c_str(), string(GetSampleLayout()).c_str());
+            }
+            if (zeroDim != 0)   // we found a zero
+            {
+                dims[zeroDim] = numCols / prod;
+                if (prod * dims[zeroDim] != numCols)
+                    InvalidArgument("%ls %ls operation's specified shape [%s] cannot be inferred: Tensor shape cannot hold a [%d x %d] matrix.", NodeName().c_str(), OperationName().c_str(), string(GetSampleLayout()).c_str(), (int)numRows, (int)numCols);
+            }
+            SetDims(TensorShape(dims), false);
+        }
+
         Value().SetValue(numRows, numCols, m_deviceId, array.data(), matrixFlagNormal);
+        VerifyDataSize(Value());      // sanity check
     }
 
-    // TODO: share code with InitFromFile()
+    // reload parameters from file
+    // This is called from MEL.
+    // TODO: Move this error check there, since this is called only from one place.
     void ReviseFromFile(const std::wstring& reviseFromFilePath)
     {
-        size_t numRows = 0;
-        size_t numCols = 0;
-        auto array = File::LoadMatrixFromTextFile<ElemType>(msra::strfun::utf8(reviseFromFilePath), numRows, numCols); // TODO: change pathname to wstring
-        size_t nRows = m_value->GetNumRows();
-        size_t nCols = m_value->GetNumCols();
+#if 1
+        try
+        {
+            InitFromFile(reviseFromFilePath);
+        }
+        catch(const std::exception & e)
+        {
+            RuntimeError("ReviseFromFile: Failed to reload %ls %ls operation from file %ls: %s", NodeName().c_str(), OperationName().c_str(), reviseFromFilePath.c_str(), e.what());
+        }
+#else
+        size_t numRows, numCols;
+        auto array = File::LoadMatrixFromTextFile<ElemType>(reviseFromFilePath, numRows, numCols);
+        size_t nRows, nCols;
+        DetermineDataSize(nRows, nCols); // BUGBUG: private
 
         if (numRows != nRows || numCols != nCols)
         {
@@ -176,6 +223,8 @@ public:
         }
 
         Value().SetValue(numRows, numCols, m_deviceId, array.data(), matrixFlagNormal);
+        VerifyDataSize(Value());      // sanity check
+#endif
     }
 
     // computation functions don't do anything for parameter nodes
@@ -196,17 +245,20 @@ public:
         m_pMBLayout = nullptr; // this node does not hold mini-batch data
     }
 
-    virtual void DumpNodeInfo(const bool printValues, File& fstream) const override
+    virtual void DumpNodeInfo(const bool printValues, const bool printMetadata, File& fstream) const override
     {
-        Base::DumpNodeInfo(printValues, fstream);
+        if (printMetadata)
+        {
+            Base::DumpNodeInfo(printValues, printMetadata, fstream);
 
-        char str[4096];
-        sprintf(str, "[%lu,%lu]  ", GetAsMatrixNumRows(), GetAsMatrixNumCols());
-        fstream << string(str);
-        sprintf(str, "NeedGradient=%s", m_parameterUpdateRequired ? "true" : "false"); // TODO: update NDL to accept a better matching name as well
-        fstream << string(str);
+            char str[4096];
+            sprintf(str, "[%lu,%lu]  ", GetAsMatrixNumRows(), GetAsMatrixNumCols());
+            fstream << string(str);
+            sprintf(str, "NeedGradient=%s", m_parameterUpdateRequired ? "true" : "false"); // TODO: update NDL to accept a better matching name as well
+            fstream << string(str);
+        }
 
-        PrintNodeValuesToFile(printValues, fstream);
+        PrintNodeValuesToFile(printValues, printMetadata, fstream);
     }
 };
 
@@ -306,10 +358,13 @@ public:
         LogicError("InputValueBase::BackpropTo() should never be called.");
     }
 
-    virtual void DumpNodeInfo(const bool printValues, File& fstream) const override
+    virtual void DumpNodeInfo(const bool printValues, const bool printMetadata, File& fstream) const override
     {
-        Base::DumpNodeInfo(printValues, fstream);
-        fstream << "[" << string(GetSampleLayout()) << "]";
+        Base::DumpNodeInfo(printValues, printMetadata, fstream);
+        if (printMetadata)
+        {
+            fstream << "[" << string(GetSampleLayout()) << "]";
+        }
     }
 
 private:

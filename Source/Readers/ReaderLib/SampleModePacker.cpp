@@ -214,7 +214,7 @@ MBLayoutPtr SampleModePacker::PackDenseStream(const SequenceBatch& batch, size_t
         }
         else 
         {
-            RuntimeError("Storage type %d is not supported.", stream->m_storageType);
+            RuntimeError("Storage type %d is not supported.", (int)stream->m_storageType);
         }
 
         // We don't do any packing per se, instead we create MB with 

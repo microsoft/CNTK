@@ -10,9 +10,9 @@ ndlMnistMacros = [
     labelDim = 10
 
     features = ImageInput(imageW, imageH, 1, imageLayout=$imageLayout$)
-    featScale = Const(0.00390625)
+    featScale = Constant(0.00390625)
     featScaled = Scale(featScale, features)
-    labels = Input(labelDim)
+    labels = InputValue(labelDim)
 
     scValue = 1
     expAvg = 1
