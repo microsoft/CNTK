@@ -130,5 +130,9 @@ public:
         return (m_currentRecord >= m_recordCount);
     }
     virtual void SaveMapping(std::wstring saveId, const std::map<typename EvalWriter<ElemType>::LabelIdType, typename EvalWriter<ElemType>::LabelType>& /*labelMapping*/){};
+    virtual bool SupportMultiUtterances() const
+    {
+        return false;
+    };
 };
 } } }

@@ -102,7 +102,6 @@
     <ClInclude Include="..\..\Common\Include\DataWriter.h" />
     <ClInclude Include="..\..\Common\Include\File.h" />
     <ClInclude Include="..\..\Common\Include\fileutil.h" />
-    <ClInclude Include="..\..\Common\Include\DebugUtil.h" />
     <ClInclude Include="..\..\Common\Include\RandomOrdering.h" />
     <ClInclude Include="SequenceWriter.h" />
     <ClInclude Include="stdafx.h" />
@@ -113,17 +112,15 @@
   <ItemGroup>
     <ClCompile Include="..\..\Common\DataReader.cpp" />
     <ClCompile Include="..\..\Common\DataWriter.cpp" />
+    <ClCompile Include="..\..\Common\ExceptionWithCallStack.cpp" />
     <ClCompile Include="..\..\Common\File.cpp">
-      <PrecompiledHeader >NotUsing</PrecompiledHeader>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="..\..\Common\fileutil.cpp">
-      <PrecompiledHeader >NotUsing</PrecompiledHeader>
-    </ClCompile>
-    <ClCompile Include="..\..\Common\DebugUtil.cpp">
-      <PrecompiledHeader >NotUsing</PrecompiledHeader>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="..\..\Common\Config.cpp">
-      <PrecompiledHeader >NotUsing</PrecompiledHeader>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="Exports.cpp" />
     <ClCompile Include="dllmain.cpp">

@@ -8,9 +8,6 @@
     <ClCompile Include="..\Common\fileutil.cpp">
       <Filter>Common</Filter>
     </ClCompile>
-    <ClCompile Include="..\Common\DebugUtil.cpp">
-      <Filter>Common</Filter>
-    </ClCompile>
     <ClCompile Include="CPUMatrix.cpp">
       <Filter>CPU</Filter>
     </ClCompile>
@@ -43,6 +40,9 @@
     </ClCompile>
     <ClCompile Include="MatrixQuantizerImpl.cpp">
       <Filter>1bitSGD</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Common\ExceptionWithCallStack.cpp">
+      <Filter>Common</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -81,9 +81,6 @@
     </ClInclude>
     <ClInclude Include="Helpers.h">
       <Filter>Misc</Filter>
-    </ClInclude>
-    <ClInclude Include="..\Common\Include\DebugUtil.h">
-      <Filter>Common\Include</Filter>
     </ClInclude>
     <ClInclude Include="ConvolutionEngine.h">
       <Filter>Convolution</Filter>
