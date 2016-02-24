@@ -25,7 +25,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 // -----------------------------------------------------------------------
 
 template <class ElemType>
-class PreComputedNodeBase : public ComputationNodeNonLooping /*ComputationNode*/<ElemType>
+class PreComputedNodeBase : public ComputationNodeNonLooping /*ComputationNode*/<ElemType>, public IPreComputeNode
 {
     typedef ComputationNodeNonLooping<ElemType> Base;
     UsingComputationNodeMembers;
@@ -40,14 +40,14 @@ public:
     // interface through which this node is operated on are these two functions
 
     // check whether node has already undergone precomputation
-    virtual bool HasComputed() const
+    virtual bool /*IPreComputeNode::*/ HasComputed() const override
     {
         return m_hasComputed;
     }
 
     // call this with 'false' at start and with 'true' at end
     // This is used for resetting and updating from accumulators.
-    virtual void MarkComputed(const bool hasComputed)
+    virtual void /*IPreComputeNode::*/ MarkComputed(const bool hasComputed) override
     {
         m_hasComputed = hasComputed;
         CreateMatrixIfNull(m_value);
@@ -73,17 +73,20 @@ public:
         // Note: This loses the sample layout, but that is recovered by Validate().
     }
 
-    virtual void DumpNodeInfo(const bool printValues, File& fstream) const override
+    virtual void DumpNodeInfo(const bool printValues, const bool printMetadata, File& fstream) const override
     {
-        Base::DumpNodeInfo(printValues, fstream);
+        Base::DumpNodeInfo(printValues, printMetadata, fstream);
 
-        char str[4096];
-        sprintf(str, "[%s]  ", string(GetSampleLayout()).c_str());
-        fstream << string(str);
-        sprintf(str, "HasComputed=%ls", HasComputed() ? L"true" : L"false");
-        fstream << string(str);
+        if (printMetadata)
+        {
+            char str[4096];
+            sprintf(str, "[%s]  ", string(GetSampleLayout()).c_str());
+            fstream << string(str);
+            sprintf(str, "HasComputed=%ls", HasComputed() ? L"true" : L"false");
+            fstream << string(str);
+        }
 
-        PrintNodeValuesToFile(printValues, fstream);
+        PrintNodeValuesToFile(printValues, printMetadata, fstream);
     }
 
     virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override

@@ -51,7 +51,7 @@ void LMSequenceWriter<ElemType>::InitFromConfig(const ConfigRecordType& writerCo
         // read unk sybol
         mUnk[outputNames[i]] = writerConfig(L"unk", "<unk>");
 
-        SequenceReader<ElemType>::ReadClassInfo(fname, class_size,
+        SequenceReader<ElemType>::ReadClassInfo(fname, m_classSize,
                                                 word4idx[outputNames[i]],
                                                 idx4word[outputNames[i]],
                                                 idx4class[outputNames[i]],

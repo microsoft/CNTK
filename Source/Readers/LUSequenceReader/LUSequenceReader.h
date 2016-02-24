@@ -20,9 +20,9 @@
 namespace Microsoft { namespace MSR { namespace CNTK {
 
 #ifdef DBG_SMT
-#define CACHE_BLOG_SIZE 2
+#define CACHE_BLOCK_SIZE 2
 #else
-#define CACHE_BLOG_SIZE 50000
+#define CACHE_BLOCK_SIZE 50000
 #endif
 
 #define STRIDX2CLS L"idx2cls"
@@ -52,8 +52,6 @@ class LUSequenceReader : public IDataReader<ElemType>
 protected:
     bool m_idx2clsRead;
     bool m_clsinfoRead;
-
-    std::wstring m_file;
 
 public:
     using LabelType = wstring;
@@ -92,16 +90,15 @@ protected:
 
     enum LabelInfoType
     {
-        labelInfoMin = 0,
-        labelInfoIn = labelInfoMin,
+        labelInfoIn = 0,
         labelInfoOut,
-        labelInfoMax
+        labelInfoNum
     };
 
-    std::wstring m_labelsName[labelInfoMax];
+    std::wstring m_labelsName[labelInfoNum];
     std::wstring m_featuresName;
-    std::wstring m_labelsCategoryName[labelInfoMax];
-    std::wstring m_labelsMapName[labelInfoMax];
+    std::wstring m_labelsCategoryName[labelInfoNum];
+    std::wstring m_labelsMapName[labelInfoNum];
     std::wstring m_sequenceName;
 
     ElemType* m_featuresBuffer;
@@ -126,7 +123,6 @@ protected:
         LabelKind type; // labels are categories, create mapping table
         map<LabelType, LabelIdType> word4idx;
         map<LabelIdType, LabelType> idx4word;
-        LabelIdType idMax;       // maximum label ID we have encountered so far
         long dim;                // maximum label ID we will ever see (used for array dimensions)
         LabelType beginSequence; // starting sequence string (i.e. <s>)
         LabelType endSequence;   // ending sequence string (i.e. </s>)
@@ -150,7 +146,7 @@ protected:
         Matrix<ElemType>* m_classInfoLocal; // CPU version
         int mNbrClasses;
         bool m_clsinfoRead;
-    } m_labelInfo[labelInfoMax];
+    } m_labelInfo[labelInfoNum];
 
     // caching support
     DataReader<ElemType>* m_cachingReader;
@@ -195,8 +191,8 @@ public:
 
     virtual bool GetData(const std::wstring& sectionName, size_t numRecords, void* data, size_t& dataBufferSize, size_t recordStart = 0);
 
-public:
-    int GetSentenceEndIdFromOutputLabel();
+//public:
+//    int GetSentenceEndIdFromOutputLabel();
 };
 
 template <class ElemType>
@@ -212,8 +208,7 @@ public:
     using LUSequenceReader<ElemType>::m_cachingWriter;
     using LUSequenceReader<ElemType>::m_featuresName;
     using LUSequenceReader<ElemType>::m_labelsName;
-    using LUSequenceReader<ElemType>::labelInfoMin;
-    using LUSequenceReader<ElemType>::labelInfoMax;
+    using LUSequenceReader<ElemType>::labelInfoNum;
     using LUSequenceReader<ElemType>::m_featureDim;
     using LUSequenceReader<ElemType>::m_labelInfo;
     //  using LUSequenceReader<ElemType>::m_labelInfoIn;
@@ -253,7 +248,7 @@ public:
     using LUSequenceReader<ElemType>::mRandomize;
     using LUSequenceReader<ElemType>::m_seed;
     using LUSequenceReader<ElemType>::mTotalSentenceSofar;
-    using LUSequenceReader<ElemType>::GetSentenceEndIdFromOutputLabel;
+    //using LUSequenceReader<ElemType>::GetSentenceEndIdFromOutputLabel;
 
 private:
     size_t mLastProcessedSentenceId;
@@ -300,7 +295,7 @@ public:
 
     // return length of sentences size
     size_t FindNextSentences(size_t numSentences);
-    bool DataEnd(EndDataType endDataType);
+    bool DataEnd();
     void SetSentenceEnd(int wrd, int pos, int actualMbSize);
     void SetSentenceBegin(int wrd, int pos, int actualMbSize);
     void SetSentenceBegin(int wrd, size_t pos, size_t actualMbSize)
@@ -367,7 +362,7 @@ public:
     */
     // this is for frame-by-frame reading of data.
     // data is first read into these matrices and then if needed is column-by-column retrieved
-    map<wstring, Matrix<ElemType>> mMatrices;
+    map<wstring, std::shared_ptr<Matrix<ElemType>>> mMatrices;
     bool GetFrame(std::map<std::wstring, Matrix<ElemType>*>& matrices, const size_t tidx, vector<size_t>& history);
 
     // create proposals
@@ -440,8 +435,8 @@ public:
     void SetRandomSeed(int);
 
 public:
-    int GetSentenceEndIdFromOutputLabel();
-    bool DataEnd(EndDataType endDataType);
+    //int GetSentenceEndIdFromOutputLabel();
+    bool DataEnd();
 
     // create proposals
     void InitProposals(map<wstring, Matrix<ElemType>*>& pMat);

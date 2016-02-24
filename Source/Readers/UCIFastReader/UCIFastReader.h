@@ -45,7 +45,7 @@ public:
     // typedef std::string LabelType;
     // typedef unsigned LabelIdType;
 private:
-    UCIParser<ElemType, LabelType> m_parser;
+    shared_ptr<UCIParser<ElemType, LabelType>> m_parser;
     size_t m_mbSize;                 // size of minibatch requested
     LabelIdType m_labelIdMax;        // maximum label ID we have encountered so far
     LabelIdType m_labelDim;          // maximum label ID we will ever see (used for array dimensions)
@@ -173,7 +173,7 @@ public:
     virtual void SetLabelMapping(const std::wstring& sectionName, const std::map<LabelIdType, LabelType>& labelMapping);
     virtual bool GetData(const std::wstring& sectionName, size_t numRecords, void* data, size_t& dataBufferSize, size_t recordStart = 0);
 
-    virtual bool DataEnd(EndDataType endDataType);
+    virtual bool DataEnd();
     void SetSentenceSegBatch(Matrix<float>&, Matrix<ElemType>&){};
 
     void SetNumParallelSequences(const size_t sz);

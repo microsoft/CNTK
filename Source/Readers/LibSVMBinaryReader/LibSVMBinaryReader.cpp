@@ -163,36 +163,34 @@ void SparseBinaryMatrix<ElemType>::ResizeArrays(size_t newNNz)
     size_t newMaxNNz = (size_t)((newNNz + m_nnz) * 1.3);
     // int32_t* rowIndices = (int32_t*)malloc(sizeof(int32_t)*newMaxNNz);
     // ElemType* values = (ElemType*)malloc(sizeof(ElemType)*newMaxNNz);
-    int32_t* rowIndices = (int32_t*) CUDAPageLockedMemAllocator::Malloc(sizeof(int32_t) * newMaxNNz, this->m_deviceID);
-    ElemType* values = (ElemType*) CUDAPageLockedMemAllocator::Malloc(sizeof(ElemType) * newMaxNNz, this->m_deviceID);
+    int32_t* rowIndices = (int32_t*)  CUDAPageLockedMemAllocator::Malloc(sizeof(int32_t)  * newMaxNNz, m_deviceID);
+    ElemType* values    = (ElemType*) CUDAPageLockedMemAllocator::Malloc(sizeof(ElemType) * newMaxNNz, m_deviceID);
 
+    // copy old values if any
     if (m_nnz > 0)
     {
-        memcpy(rowIndices, m_rowIndices, sizeof(int32_t) * this->m_maxNNz);
-        memcpy(values, this->m_values, sizeof(ElemType) * this->m_maxNNz);
+        assert(m_rowIndices && m_values); // m_nnz > 0 implies that these pointers are allocated
+        memcpy(rowIndices, m_rowIndices, sizeof(int32_t)  * m_maxNNz);
+        memcpy(values,     m_values,     sizeof(ElemType) * m_maxNNz);
     }
 
+    // free old storage
     if (m_rowIndices != nullptr)
-    {
-        // free(m_rowIndices);
-        CUDAPageLockedMemAllocator::Free(this->m_rowIndices, this->m_deviceID);
-    }
-    if (this->m_values != nullptr)
-    {
-        // free(this->m_values);
-        CUDAPageLockedMemAllocator::Free(this->m_values, this->m_deviceID);
-    }
+        CUDAPageLockedMemAllocator::Free(m_rowIndices, m_deviceID);
+
+    if (m_values != nullptr)
+        CUDAPageLockedMemAllocator::Free(m_values, m_deviceID);
 
     m_rowIndices = rowIndices;
-    this->m_values = values;
-    this->m_maxNNz = newMaxNNz;
+    m_values = values;
+    m_maxNNz = newMaxNNz;
 }
 
 template <class ElemType>
 void SparseBinaryMatrix<ElemType>::Clear()
 {
-    this->m_numRows = 0;
-    this->m_nnz = 0;
+    m_numRows = 0;
+    m_nnz = 0;
 }
 
 template <class ElemType>
@@ -683,7 +681,7 @@ void LibSVMBinaryReader<ElemType>::InitFromConfig(const ConfigRecordType& reader
 
     m_partialMinibatch = true;
     std::string minibatchMode(readerConfig(L"minibatchMode", "Partial"));
-    m_partialMinibatch = !_stricmp(minibatchMode.c_str(), "Partial");
+    m_partialMinibatch = EqualCI(minibatchMode, "Partial");
 
     std::wstring file = readerConfig(L"file", L"");
 
@@ -875,32 +873,13 @@ void LibSVMBinaryReader<ElemType>::RenamedMatrices(const ConfigRecordType& confi
 }
 
 template <class ElemType>
-bool LibSVMBinaryReader<ElemType>::DataEnd(EndDataType endDataType)
+bool LibSVMBinaryReader<ElemType>::DataEnd()
 {
-    return m_dataInput->DataEnd(endDataType);
+    return m_dataInput->DataEnd();
 }
 
 template <class ElemType>
-bool SparseBinaryInput<ElemType>::DataEnd(EndDataType endDataType)
-{
-    bool ret = false;
-    switch (endDataType)
-    {
-    case endDataNull:
-        assert(false);
-        break;
-    case endDataEpoch:
-        ret = (m_nextMB >= m_epochSize);
-        break;
-    case endDataSet:
-        ret = (m_nextMB >= m_epochSize);
-        break;
-    case endDataSentence: // for fast reader each minibatch is considered a "sentence", so always true
-        ret = true;
-        break;
-    }
-    return ret;
-}
+bool SparseBinaryInput<ElemType>::DataEnd() { return true; }
 
 // instantiate all the combinations we expect to be used
 template class LibSVMBinaryReader<double>;

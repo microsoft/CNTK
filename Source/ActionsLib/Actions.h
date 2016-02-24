@@ -33,7 +33,7 @@ void DoCrossValidate(const ConfigParameters& config);
 template <typename ElemType>
 void DoWriteOutput(const ConfigParameters& config);
 
-// misc (OtherActions.cp)
+// misc (OtherActions.cpp)
 template <typename ElemType>
 void DoCreateLabelMap(const ConfigParameters& config);
 template <typename ElemType>
@@ -43,6 +43,8 @@ void DoWriteWordAndClassInfo(const ConfigParameters& config);
 template <typename ElemType>
 void DoTopologyPlot(const ConfigParameters& config);
 
-// special purpose (EsotericActions.cp)
+// special purpose (SpecialPurposeActions.cpp)
 template <typename ElemType>
 void DoConvertFromDbn(const ConfigParameters& config);
+template<typename ElemType>
+void DoExportToDbn(const ConfigParameters& config);

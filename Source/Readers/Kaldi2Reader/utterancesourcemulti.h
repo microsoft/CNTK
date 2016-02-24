@@ -352,7 +352,6 @@ class minibatchutterancesourcemulti : public minibatchsource
     std::vector<shiftedvector<biggrowablevector<CLASSIDTYPE>>> getclassids(const UTTREF &uttref) // return sub-vector of classids[] for a given utterance
     {
         std::vector<shiftedvector<biggrowablevector<CLASSIDTYPE>>> allclassids;
-        allclassids.empty();
 
         if (!issupervised())
         {

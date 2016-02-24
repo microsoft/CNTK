@@ -94,7 +94,7 @@ public:
             // if requested then dump the nodes
             // Note: This happens on the invalidated network.
             if (dumpFileName != L"")
-                m_net->DumpAllNodesToFile(false, dumpFileName);
+                m_net->DumpAllNodesToFile(false, true, dumpFileName);
         }
         SynchronousNodeEvaluator<ElemType> ndlEvaluator(m_net);
         NDLNode<ElemType>* lastNode = script->Evaluate(ndlEvaluator, L"", ndlPass, skipThrough);

@@ -59,5 +59,9 @@ public:
     }
     virtual void Destroy();
     virtual bool SaveData(size_t recordStart, const std::map<std::wstring, void*, nocase_compare>& matrices, size_t numRecords, size_t datasetSize, size_t byteVariableSized);
+    virtual bool SupportMultiUtterances() const
+    {
+        return false;
+    };
 };
 } } }

@@ -37,6 +37,9 @@
 #include <algorithm>
 #if defined(_WIN32)
 #include "io.h"
+#include <DelayImp.h>
+#pragma comment(lib, "Delayimp.lib")
+#pragma comment(lib, "shlwapi.lib")
 #endif
 #include "buildinfo.h"
 #include "hostname.h"
@@ -89,6 +92,7 @@ std::string WCharToString(const wchar_t* wst)
     return s;
 }
 
+// TODO: This is an action, it should be moved into ActionsLib.
 template <typename ElemType>
 void DumpNodeInfo(const ConfigParameters& config)
 {
@@ -98,10 +102,15 @@ void DumpNodeInfo(const ConfigParameters& config)
     wstring defOutFilePath = modelPath + L"." + nodeName + L".txt";
     wstring outputFile = config(L"outputFile", defOutFilePath);
     bool printValues = config(L"printValues", true);
+    bool printMetadata = config(L"printMetadata", true);
+    if (!printValues && !printMetadata)
+    {
+        InvalidArgument("printValues and printMetadata: Since both are set to false, there will be nothing to dump");
+    }
 
-    ComputationNetwork net(-1); // always use CPU
-    net.Load<ElemType>(modelPath);
-    net.DumpNodeInfoToFile(nodeName, printValues, outputFile, nodeNameRegexStr);
+    ComputationNetwork net(-1);    // always use CPU
+    net.Load<ElemType>(modelPath); // TODO: we have a function now to combine this and the previous line
+    net.DumpNodeInfoToFile(nodeName, printValues, printMetadata, outputFile, nodeNameRegexStr);
 }
 
 size_t GetMaxEpochs(const ConfigParameters& configParams)
@@ -249,6 +258,10 @@ void DoCommands(const ConfigParameters& config)
             {
                 DoConvertFromDbn<ElemType>(commandParams);
             }
+            else if (action[j] == "exportdbn")
+            {
+                DoExportToDbn<ElemType>(commandParams);
+            }
             else if (action[j] == "createLabelMap")
             {
                 DoCreateLabelMap<ElemType>(commandParams);
@@ -293,6 +306,12 @@ void PrintBuiltInfo()
     fprintf(stderr, "\t\tLast modified date: %s\n", __TIMESTAMP__);
 #ifdef _BUILDTYPE_
     fprintf(stderr, "\t\tBuild type: %s\n", _BUILDTYPE_);
+#endif
+#ifdef _BUILDTARGET_
+    fprintf(stderr, "\t\tBuild target: %s\n", _BUILDTARGET_);
+#endif
+#ifdef _WITH_1BITSGD_
+    fprintf(stderr, "\t\tWith 1bit-SGD: %s\n", _WITH_1BITSGD_);
 #endif
 #ifdef _MATHLIB_
     fprintf(stderr, "\t\tMath lib: %s\n", _MATHLIB_);
@@ -610,12 +629,21 @@ int wmainOldCNTKConfig(int argc, wchar_t* argv[]) // called from wmain which is 
     return EXIT_SUCCESS;
 }
 
+// new_handler to print call stack upon allocation failure
+void AllocationFailureHandler()
+{
+    Microsoft::MSR::CNTK::DebugUtil::PrintCallStack();
+    std::set_new_handler(nullptr);
+    throw std::bad_alloc();
+}
+
 // ---------------------------------------------------------------------------
 // main wrapper that catches C++ exceptions and prints them
 // ---------------------------------------------------------------------------
 
 int wmain1(int argc, wchar_t* argv[]) // called from wmain which is a wrapper that catches & reports Win32 exceptions
 {
+    std::set_new_handler(AllocationFailureHandler);
     try
     {
         PrintBuiltInfo(); // print build info directly in case that user provides zero argument (convenient for checking build type)
@@ -651,15 +679,26 @@ int wmain1(int argc, wchar_t* argv[]) // called from wmain which is a wrapper th
 }
 
 #ifdef __WINDOWS__
-void terminate_this()
+void TerminateThis()
 {
     fprintf(stderr, "terminate_this: aborting\n"), fflush(stderr);
     exit(EXIT_FAILURE);
 }
 
+#define EXCEPTION_DLL_NOT_FOUND VcppException(ERROR_SEVERITY_ERROR, ERROR_MOD_NOT_FOUND)
+
+static void LogDelayLoadError(PEXCEPTION_POINTERS pExcPointers)
+{
+    if (pExcPointers->ExceptionRecord->ExceptionCode == EXCEPTION_DLL_NOT_FOUND)
+    {
+        const auto & pDelayLoadInfo = *PDelayLoadInfo(pExcPointers->ExceptionRecord->ExceptionInformation[0]);
+        fprintf(stderr, "CNTK: Failed to load DLL '%s'.\n", pDelayLoadInfo.szDll);
+    }
+}
+
 int wmain(int argc, wchar_t* argv[]) // wmain wrapper that reports Win32 exceptions
 {
-    set_terminate(terminate_this);   // insert a termination handler to ensure stderr gets flushed before actually terminating
+    set_terminate(TerminateThis);    // insert a termination handler to ensure stderr gets flushed before actually terminating
     _set_error_mode(_OUT_TO_STDERR); // make sure there are no CRT prompts when CNTK is executing
 
     // Note: this does not seem to work--processes with this seem to just hang instead of terminating
@@ -667,9 +706,15 @@ int wmain(int argc, wchar_t* argv[]) // wmain wrapper that reports Win32 excepti
     {
         return wmain1(argc, argv);
     }
-    __except (1 /*EXCEPTION_EXECUTE_HANDLER, see excpt.h--not using constant to avoid Windows header in here*/)
+    __except (LogDelayLoadError(GetExceptionInformation()), EXCEPTION_EXECUTE_HANDLER)
     {
-        fprintf(stderr, "CNTK: Win32 exception caught (such as access violation, a stack overflow, or a missing delay-loaded DLL)\n"); // TODO: separate out these into separate messages
+        auto code = GetExceptionCode();
+        const char * msg = "";
+        if      (code == EXCEPTION_ACCESS_VIOLATION)   msg = ": Access violation"; // the famous 0xc0000005 error
+        else if (code == EXCEPTION_INT_DIVIDE_BY_ZERO) msg = ": Integer division by zero";
+        else if (code == EXCEPTION_STACK_OVERFLOW)     msg = ": Stack overflow";
+        else if (code == EXCEPTION_DLL_NOT_FOUND)      msg = ": Module not found";
+        fprintf(stderr, "CNTK: Caught Win32 exception 0x%08x%s.\n", (unsigned int)code, msg);
         fflush(stderr);
         exit(EXIT_FAILURE);
     }

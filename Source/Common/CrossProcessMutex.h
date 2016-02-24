@@ -36,7 +36,12 @@ public:
         assert(m_handle == NULL);
         m_handle = ::CreateMutexA(NULL /*security attr*/, FALSE /*bInitialOwner*/, m_name.c_str());
         if (m_handle == NULL)
-            RuntimeError("Acquire: Failed to create named mutex %s: %d.", m_name.c_str(), GetLastError());
+        {
+            if (!wait)
+                return false;   // can't lock due to access permissions: lock already exists, consider not available
+            else
+                RuntimeError("Acquire: Failed to create named mutex %s: %d.", m_name.c_str(), GetLastError());
+        }
 
         if (::WaitForSingleObject(m_handle, wait ? INFINITE : 0) != WAIT_OBJECT_0)
         {

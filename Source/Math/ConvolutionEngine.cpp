@@ -72,7 +72,7 @@ public:
             size_t startSampleId = i * subBatchSize;
             size_t endSampleId = min(batchSize, startSampleId + subBatchSize);
             size_t smallBatchSize = endSampleId - startSampleId;
-            Mat inputSubBatch;
+            Mat inputSubBatch(in.GetDeviceId());
 
             // We optimize for three different scenarios here by handling them slightly differently.
             // [Scenario 1] Dense: Unroll using AssignPackedConvolutionInput and multiply.
@@ -217,7 +217,7 @@ public:
                 // [Scenario 3] Sparse all others: convert to dense. Temporary work-around - allocating/de-allocating memory is costly!
                 if (m_gpuSparseOpt)
                 {
-                    Matrix<ElemType> inputSubBatch;
+                    Matrix<ElemType> inputSubBatch(in.GetDeviceId());
                     inputSubBatch.SetValue(in.ColumnSlice(startSampleID, smallBatchSize));
                     inputSubBatch.Reshape(inT.c(), smallBatchSize * inT.w() * inT.h());
                     Matrix<ElemType> inputSubBatchSparseReordered(inputSubBatch.GetNumCols(), inputSubBatch.GetNumRows(), inputSubBatch.GetDeviceId(), MatrixType::SPARSE, MatrixFormat::matrixFormatSparseCSC);
@@ -284,7 +284,7 @@ public:
     }
 
     void NormalizeBatch(const Tensor4D& inT, const Mat& in, const Tensor4D& scaleBiasT, const Mat& scale, const Mat& bias,
-                        bool spatial, double expAvgFactor, Mat& runMean, Mat& runInvStdDev, Mat& out, Mat& saveMean, Mat& saveInvStdDev) override
+                        bool spatial, double expAvgFactor, Mat& runMean, Mat& runInvStdDev, Mat& out, double epsilon, Mat& saveMean, Mat& saveInvStdDev) override
     {
         UNUSED(inT);
         UNUSED(in);
@@ -296,6 +296,7 @@ public:
         UNUSED(expAvgFactor);
         UNUSED(runMean);
         UNUSED(runInvStdDev);
+        UNUSED(epsilon);
         UNUSED(saveMean);
         UNUSED(saveInvStdDev);
         RuntimeError("Not yet implemented.");
@@ -448,7 +449,7 @@ public:
         return std::make_unique<PoolDesc>(kind, w, h, wStride, hStride, wPad, hPad);
     }
 
-    ConvEnginePtr CreateConvEngine(DEVICEID_TYPE deviceId, size_t maxTempMemSizeInSamples) override
+    ConvEnginePtr CreateConvEngine(DEVICEID_TYPE deviceId, size_t maxTempMemSizeInSamples, BatchNormImpl /*bnImpl*/) override
     {
         return std::make_unique<DefaultConvolutionEngine<ElemType>>(deviceId, maxTempMemSizeInSamples);
     }
