@@ -49,8 +49,8 @@ speechTrain = [
     ExperimentalNetworkBuilder=[
 
         WeightParam(m,n) = Parameter(m, n, init='uniform', initValueScale=1, initOnCPUOnly=true, randomSeed=1)
-        #BiasParam(m) = ParameterTensor(m, init='fixedValue', value=0.0)
-        BiasParam(m) = Parameter(m, 1, init='fixedValue', value=0.0)
+        BiasParam(m) = ParameterTensor(m, init='fixedValue', value=0.0)
+        #BiasParam(m) = Parameter(m, 1, init='fixedValue', value=0.0)
         ScalarParam() = Parameter(1, 1, init='fixedValue', value=0.0)
 
         NewBeta() = Exp(ScalarParam())

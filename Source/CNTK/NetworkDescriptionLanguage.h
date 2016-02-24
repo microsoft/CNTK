@@ -19,7 +19,6 @@ bool EqualInsensitive(std::wstring& string1, const std::wstring& string2, const 
 // string1 - [in,out] string to compare, if comparision is equal and at least half the full node name will replace with full node name
 // allowUndeterminedVariable - [out] set to true if undetermined variables (symbols yet to be defined) are allowed here
 // return - true if function name found
-template <typename ElemType>
 bool CheckFunction(std::string& p_nodeType, bool* allowUndeterminedVariable = nullptr);
 
 // NDLType - Network Description Language node type
@@ -310,7 +309,7 @@ public:
         for (NDLNode* param : m_parameters)
         {
             bool optParam = param->GetType() == ndlTypeOptionalParameter;
-            if (optParam && !_stricmp(param->GetName().c_str(), name.c_str()))
+            if (optParam && EqualCI(param->GetName(), name))
             {
                 auto paramValue = param->GetValue();
                 auto resolveParamNode = m_parent->ParseVariable(paramValue, false);
@@ -470,9 +469,7 @@ public:
     {
         // need to free all the child nodes attached to this script node
         for (NDLNode<ElemType>* node : m_children)
-        {
             delete node;
-        }
         m_children.clear();
     }
 
@@ -522,7 +519,7 @@ public:
             std::string functionName = param;
             // check for function name, a function may have two valid names
             // in which case 'functionName' will get the default node name returned
-            if (CheckFunction<ElemType>(functionName))
+            if (CheckFunction(functionName))
             {
                 RuntimeError("NDLScript: Macro %s includes a parameter %s, which is also the name of a function. Parameter names may not be the same as function names.", macroName.c_str(), param.c_str());
             }
@@ -576,14 +573,10 @@ public:
     {
 
         for (NDLNode<ElemType>* node : m_children)
-        {
             delete node;
-        }
         m_children.clear();
         for (NDLNode<ElemType>* node : m_script)
-        {
             delete node;
-        }
         m_script.clear();
 
         m_symbols.clear();
@@ -797,7 +790,7 @@ public:
         std::string functionName = name;
         // check for function name, a function may have two valid names
         // in which case 'functionName' will get the default node name returned
-        if (CheckFunction<ElemType>(functionName))
+        if (CheckFunction(functionName))
         {
             NDLNode<ElemType>* ndlNode = new NDLNode<ElemType>("", functionName, this, ndlTypeFunction);
             return ndlNode;
@@ -1019,7 +1012,7 @@ public:
 
             // check to make sure variable name isn't a valid function name as well
             string strTemp = key;
-            if (CheckFunction<ElemType>(strTemp))
+            if (CheckFunction(strTemp))
                 RuntimeError("variable %s is invalid, it is reserved because it is also the name of a function", key.c_str());
 
             tokenStart = keyEnd;

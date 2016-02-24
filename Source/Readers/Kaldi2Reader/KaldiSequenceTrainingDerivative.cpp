@@ -41,16 +41,8 @@ KaldiSequenceTrainingDerivative<ElemType>::KaldiSequenceTrainingDerivative(
 template <class ElemType>
 KaldiSequenceTrainingDerivative<ElemType>::~KaldiSequenceTrainingDerivative()
 {
-    if (m_denlatReader != NULL)
-    {
-        delete m_denlatReader;
-        m_denlatReader = NULL;
-    }
-    if (m_aliReader != NULL)
-    {
-        delete m_aliReader;
-        m_aliReader = NULL;
-    }
+    delete m_denlatReader;
+    delete m_aliReader;
 }
 
 template <class ElemType>

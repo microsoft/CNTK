@@ -346,8 +346,9 @@ int64_t SequenceParser<NumType, LabelType>::GetFilePosition()
 
 // SetFilePosition - Set the current file position from the beginning of the file, and read in the first block of data
 // state machine mode will be initialized similar to the beginning of the file
-// it is recommneded that only return values from GetFilePosition() known to be the start of a line
+// it is recommended that only return values from GetFilePosition() known to be the start of a line
 // and zero be passed to this function
+// TODO: Is this ever called with anything other than 0?
 template <typename NumType, typename LabelType>
 void SequenceParser<NumType, LabelType>::SetFilePosition(int64_t position)
 {
@@ -445,9 +446,9 @@ void SequenceParser<float, std::string>::StoreLabel(float /*finalResult*/)
     if (m_spaceDelimitedMax <= m_spaceDelimitedStart)
         m_spaceDelimitedMax = m_byteCounter;
     std::string label((LPCSTR) &m_fileBuffer[m_spaceDelimitedStart - m_bufferStart], m_spaceDelimitedMax - m_spaceDelimitedStart);
-    if (!m_beginSequence && !_stricmp(label.c_str(), m_beginTag.c_str()))
+    if (!m_beginSequence && EqualCI(label, m_beginTag))
         m_beginSequence = true;
-    if (!m_endSequence && !_stricmp(label.c_str(), m_endTag.c_str()))
+    if (!m_endSequence   && EqualCI(label, m_endTag))
         m_endSequence = true;
     m_labels->push_back(move(label));
     m_labelsConvertedThisLine++;
@@ -489,9 +490,9 @@ void SequenceParser<double, std::string>::StoreLabel(double /*finalResult*/)
     if (m_spaceDelimitedMax <= m_spaceDelimitedStart)
         m_spaceDelimitedMax = m_byteCounter;
     std::string label((LPCSTR) &m_fileBuffer[m_spaceDelimitedStart - m_bufferStart], m_spaceDelimitedMax - m_spaceDelimitedStart);
-    if (!m_beginSequence && !_stricmp(label.c_str(), m_beginTag.c_str()))
+    if (!m_beginSequence && EqualCI(label, m_beginTag))
         m_beginSequence = true;
-    if (!m_endSequence && !_stricmp(label.c_str(), m_endTag.c_str()))
+    if (!m_endSequence   && EqualCI(label, m_endTag))
         m_endSequence = true;
     m_labels->push_back(move(label));
     m_labelsConvertedThisLine++;
@@ -555,34 +556,33 @@ template class SequenceParser<double, int>;
 template class SequenceParser<double, double>;
 template class SequenceParser<double, std::string>;
 
-template <typename NumType, typename LabelType>
-void LMBatchSequenceParser<NumType, LabelType>::ParseInit(LPCWSTR fileName, size_t dimFeatures, size_t dimLabelsIn, size_t dimLabelsOut, std::string beginSequenceIn /*="<s>"*/, std::string endSequenceIn /*="</s>"*/, std::string beginSequenceOut /*="O"*/, std::string endSequenceOut /*="O"*/)
-{
-    ::LMSequenceParser<NumType, LabelType>::ParseInit(fileName, dimFeatures, dimLabelsIn, dimLabelsOut, beginSequenceIn, endSequenceIn, beginSequenceOut, endSequenceOut);
-}
+//template <typename NumType, typename LabelType>
+//void LMBatchSequenceParser<NumType, LabelType>::ParseInit(LPCWSTR fileName, size_t dimFeatures, size_t dimLabelsIn, size_t dimLabelsOut, std::string beginSequenceIn /*="<s>"*/, std::string endSequenceIn /*="</s>"*/, std::string beginSequenceOut /*="O"*/, std::string endSequenceOut /*="O"*/)
+//{
+//    ::LMSequenceParser<NumType, LabelType>::ParseInit(fileName, dimFeatures, dimLabelsIn, dimLabelsOut, beginSequenceIn, endSequenceIn, beginSequenceOut, endSequenceOut);
+//}
 
 template <typename NumType, typename LabelType>
 long LMBatchSequenceParser<NumType, LabelType>::Parse(size_t recordsRequested, std::vector<LabelType> *labels, std::vector<NumType> *numbers, std::vector<SequencePosition> *seqPos)
 {
-    long linecnt;
-    linecnt = ::LMSequenceParser<NumType, LabelType>::Parse(recordsRequested, labels, numbers, seqPos);
+    size_t linecnt = (size_t) ::LMSequenceParser<NumType, LabelType>::Parse(recordsRequested, labels, numbers, seqPos);
 
+    // create array of SentenceInfo structures, one per read input line
     size_t prvat = 0;
     size_t i = 0;
     for (auto ptr = seqPos->begin(); ptr != seqPos->end(); ptr++, i++)
     {
-        size_t iln = ptr->labelPos - prvat;
-        stSentenceInfo stinfo;
-        stinfo.sLen = iln;
+        SentenceInfo stinfo;
         stinfo.sBegin = prvat;
-        stinfo.sEnd = ptr->labelPos;
+        size_t sEnd = ptr->labelPos;
+        stinfo.sLen = sEnd - stinfo.sBegin;
         mSentenceIndex2SentenceInfo.push_back(stinfo);
 
         prvat = ptr->labelPos;
     }
 
     assert(mSentenceIndex2SentenceInfo.size() == linecnt);
-    return linecnt;
+    return (long) linecnt; // TODO: change to size_t
 }
 
 template class LMBatchSequenceParser<float, std::string>;

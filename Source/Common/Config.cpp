@@ -236,18 +236,18 @@ void GetFileConfigNames(const ConfigRecordType& config, std::vector<std::wstring
         if (!config.CanBeConfigRecord(id))
             continue;
         const ConfigRecordType& temp = config(id);
-        // see if we have a config parameters that contains a "dim" element, it's a sub key, use it
-        if (temp.ExistsCurrent(L"dim"))
-        {
-            if (temp.ExistsCurrent(L"labelMappingFile") || temp.ExistsCurrent(L"labelDim") || temp.ExistsCurrent(L"labelType") || (temp.ExistsCurrent(L"sectionType") && (const wstring&) temp(L"sectionType") == L"labels"))
-            {
-                labels.push_back(id);
-            }
-            else
-            {
-                features.push_back(id);
-            }
-        }
+        // ############### BREAKING ############
+        // Before it required a "dim" parameter, but that was unused for labels.
+        // ############### BREAKING ############
+        //// see if we have a config parameters that contains a "dim" element, it's a sub key, use it
+        //if (temp.ExistsCurrent(L"dim"))
+        //{
+        // any sub-dictionary that contains any relevant entries is considered an input stream, either label or features
+        if (temp.ExistsCurrent(L"labelMappingFile") || temp.ExistsCurrent(L"labelDim") || temp.ExistsCurrent(L"labelType") || (temp.ExistsCurrent(L"sectionType") && (const wstring&) temp(L"sectionType") == L"labels"))
+            labels.push_back(id);
+        else if (temp.ExistsCurrent(L"dim"))
+            features.push_back(id);
+        //}
     }
 }
 

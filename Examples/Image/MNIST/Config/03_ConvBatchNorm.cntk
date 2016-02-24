@@ -15,7 +15,7 @@ imageLayout = "cudnn"
 # deviceId = -1
 # imageLayout = "legacy"
 
-command = train:test
+command = train:CreateEvalModel:test
 
 precision = "float"
 modelPath = "$ModelDir$/03_ConvBatchNorm"
@@ -40,7 +40,7 @@ train = [
         minibatchSize = 32
         learningRatesPerMB = 0.5
         momentumPerMB = 0*10:0.7
-        maxEpochs = 8
+        maxEpochs = 2
     ]
     
     reader = [
@@ -64,11 +64,25 @@ train = [
 ]
 
 #######################################
+#  Edit model                         #
+#######################################
+
+CreateEvalModel=[    
+    action=edit
+    CurModel=$ModelDir$/03_ConvBatchNorm
+    NewModel=$ModelDir$/03_ConvBatchNorm.Eval
+    editPath=$ConfigDir$/03_ConvBatchNorm.mel
+]
+
+#######################################
 #  TEST CONFIG                        #
 #######################################
 
 test = [
     action = "test"
+    minibatchSize = 32
+
+    modelPath=$ModelDir$/03_ConvBatchNorm.Eval
 
     NDLNetworkBuilder = [
         networkDescription = "$ConfigDir$/03_ConvBatchNorm.ndl"

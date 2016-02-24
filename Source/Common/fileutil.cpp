@@ -407,20 +407,12 @@ void fprintfOrDie(FILE* f, const char* fmt, ...)
 #pragma warning(pop)
 
 // ----------------------------------------------------------------------------
-// fflushOrDie(): like fflush() but terminate with err msg in case of error
+// fsyncOrDie(): like fsync() but terminate with err msg in case of error
 // ----------------------------------------------------------------------------
 
-void fflushOrDie(FILE* f)
+void fsyncOrDie(FILE* f)
 {
-    int rc = fflush(f);
-
-    if (rc != 0)
-    {
-        RuntimeError("error flushing to file: %s", strerror(errno));
-    }
-
     int fd = fileno(f);
-
     if (fd == -1)
     {
         RuntimeError("unable to convert file handle to file descriptor: %s", strerror(errno));
@@ -433,13 +425,25 @@ void fflushOrDie(FILE* f)
         RuntimeError("error syncing to file: %d", (int) ::GetLastError());
     }
 #else
-    rc = fsync(fd);
-
+    int rc = fsync(fd);
     if (rc != 0)
     {
         RuntimeError("error syncing to file: %s", strerror(errno));
     }
 #endif
+}
+
+// ----------------------------------------------------------------------------
+// fflushOrDie(): like fflush() but terminate with err msg in case of error
+// ----------------------------------------------------------------------------
+
+void fflushOrDie(FILE* f)
+{
+    int rc = fflush(f);
+    if (rc != 0)
+    {
+        RuntimeError("error flushing to file: %s", strerror(errno));
+    }
 }
 
 // ----------------------------------------------------------------------------
@@ -599,6 +603,10 @@ void renameOrDie(const std::string& from, const std::string& to)
     if (!MoveFileA(from.c_str(), to.c_str()))
         RuntimeError("error renaming file '%s': %d", from.c_str(), GetLastError());
 #else
+    // Delete destination file if it exists
+    // WORKAROUND: "rename" should do this but this is a workaround
+    // to the HDFS FUSE implementation's bug of failing to do so
+    unlinkOrDie(to);
     if (rename(from.c_str(), to.c_str()) != 0)
         RuntimeError("error renaming file '%s': %s", from.c_str(), strerror(errno));
 #endif
@@ -871,12 +879,12 @@ string fgetstring(FILE* f)
     string res;
     for (;;)
     {
-        char c = (char) fgetc(f);
+        int c = fgetc(f);
         if (c == EOF)
             RuntimeError("error reading string or missing 0: %s", strerror(errno));
         if (c == 0)
             break;
-        res.push_back(c);
+        res.push_back((char) c);
     }
     return res;
 }
@@ -1002,6 +1010,7 @@ bool fskipwspace(FILE* f)
 
 // fskipNewLine(): skip all white space until end of line incl. the newline
 // skip - skip the end of line if true, otherwise leave the end of line (but eat any leading space)
+// returns false, true, or EOF
 int fskipNewline(FILE* f, bool skip)
 {
     int c;
@@ -1033,40 +1042,6 @@ int fskipNewline(FILE* f, bool skip)
         return (int) found;
     }
     // if we get here we saw a newline
-    return (int) true;
-}
-
-// fskipwNewLine(): skip all white space until end of line incl. the newline
-// skip - skip the end of line if true, otherwise leave the end of line (but eat any leading space)
-int fskipwNewline(FILE* f, bool skip)
-{
-    // TODO: we should redefine this to write UTF-16 (which matters on GCC which defines wchar_t as 32 bit)
-    wint_t c;
-    bool found = false;
-    // skip white space
-
-    do
-    {
-        c = fgetwc(f);
-    } while (c == L' ' || c == L'\t');
-
-    if (c == L'\r' || c == L'\n') // accept any style of newline
-    {
-        found = true;
-        if (skip)
-            c = fgetwc(f);
-    }
-
-    if ((found && !skip) || !(c == L'\r' || c == L'\n'))
-    {
-        if (c == WEOF)
-            return found ? (int) true : EOF;
-        wint_t rc = ungetwc(c, f);
-        if (rc != c)
-            RuntimeError("error in ungetwc(): %s", strerror(errno));
-        return (int) found;
-    }
-    // if we get here we saw a double newline
     return (int) true;
 }
 
@@ -1928,53 +1903,35 @@ bool msra::files::fuptodate(const wstring& target, const wstring& input, bool in
     return targettime >= inputtime; // note: uses an overload for WIN32 FILETIME (in Linux, FILETIME=time_t=size_t)
 }
 
-/// separate string by separator
-vector<string> sep_string(const string& istr, const string& sep)
+// separate string by separator
+template<class String>
+vector<String> SplitString(const String& str, const String& sep)
 {
-    string str = istr;
-    str = trim(str);
-    vector<string> vstr;
-    string csub;
+    vector<String> vstr;
+    String csub;
     size_t ifound = 0;
     size_t ifoundlast = ifound;
-    ifound = str.find(sep, ifound);
-    while (ifound != std::string::npos)
+    ifound = str.find_first_of(sep, ifound);
+    while (ifound != String::npos)
     {
         csub = str.substr(ifoundlast, ifound - ifoundlast);
-        vstr.push_back(trim(csub));
+        if (!csub.empty())
+            vstr.push_back(csub);
 
         ifoundlast = ifound + 1;
-        ifound = str.find(sep, ifoundlast);
+        ifound = str.find_first_of(sep, ifoundlast);
     }
-    csub = str.substr(ifoundlast, str.length() - ifoundlast);
-    vstr.push_back(trim(csub));
+    ifound = str.length();
+    csub = str.substr(ifoundlast, ifound - ifoundlast);
+    if (!csub.empty())
+        vstr.push_back(csub);
 
     return vstr;
 }
 
-/// separate string by separator
-vector<wstring> wsep_string(const wstring& istr, const wstring& sep)
-{
-    wstring str = istr;
-    str = wtrim(str);
-    vector<wstring> vstr;
-    wstring csub;
-    size_t ifound = 0;
-    size_t ifoundlast = ifound;
-    ifound = str.find(sep, ifound);
-    while (ifound != std::wstring::npos)
-    {
-        csub = str.substr(ifoundlast, ifound - ifoundlast);
-        vstr.push_back(wtrim(csub));
+template vector<string>  SplitString(const  string& istr, const  string& sep);
+template vector<wstring> SplitString(const wstring& istr, const wstring& sep);
 
-        ifoundlast = ifound + 1;
-        ifound = str.find(sep, ifoundlast);
-    }
-    csub = str.substr(ifoundlast, str.length() - ifoundlast);
-    vstr.push_back(wtrim(csub));
-
-    return vstr;
-}
 static inline std::string wcstombs(const std::wstring& p) // output: MBCS
 {
     size_t len = p.length();

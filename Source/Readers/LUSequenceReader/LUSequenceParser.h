@@ -26,7 +26,7 @@ struct SequencePosition
 {
     long inputPos;  // max position in the number array for this sequence
     long labelPos;  // max position in the label array for this sequence
-    unsigned flags; // flags that apply to this sequence
+    unsigned flags; // flags that apply to this sequence   --TODO: We really need to know at least what those flags are, if an enum is asking for too much.
     SequencePosition(long inPos, long labelPos, unsigned flags)
         : inputPos(inPos), labelPos(labelPos), flags(flags)
     {
@@ -121,14 +121,15 @@ public:
     }
 };
 
-/// language model sequence parser
-typedef struct
+// structure to describe how to find an input sentence in the 'labels' vector which is a concatenation of all
+struct SentenceInfo
 {
     size_t sLen;
     int sBegin;
     int sEnd;
-} stSentenceInfo;
+};
 
+// language-understanding sequence parser
 template <typename NumType, typename LabelType = wstring>
 class BatchLUSequenceParser : public LUSequenceParser<NumType, LabelType>
 {
@@ -138,7 +139,7 @@ public:
 public:
     std::wifstream mFile;
     std::wstring mFileName;
-    vector<stSentenceInfo> mSentenceIndex2SentenceInfo;
+    vector<SentenceInfo> mSentenceIndex2SentenceInfo;
 
 public:
     using LUSequenceParser<NumType, LabelType>::m_dimFeatures;

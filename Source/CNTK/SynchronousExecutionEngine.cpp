@@ -144,13 +144,13 @@ void SynchronousNodeEvaluator<ElemType>::Evaluate(NDLNode<ElemType>* node, const
             bool initOnCPUOnly = node->GetOptionalParameter("initOnCPUOnly", "false");
             int forcedRandomSeed = node->GetOptionalParameter("randomSeed", "-1" /*disabled*/);
 
-            if (!_wcsicmp(initString.c_str(), L"fixedValue"))
+            if (EqualCI(initString, L"fixedValue"))
                 nodePtr->Value().SetValue(value);
-            else if (!_wcsicmp(initString.c_str(), L"uniform"))
+            else if (EqualCI(initString, L"uniform"))
                 m_net->InitLearnableParameters(nodePtr, true, forcedRandomSeed < 0 ? randomSeed++ : (unsigned long) forcedRandomSeed, initValueScale, initOnCPUOnly);
-            else if (!_wcsicmp(initString.c_str(), L"gaussian"))
+            else if (EqualCI(initString, L"gaussian"))
                 m_net->InitLearnableParameters(nodePtr, false, forcedRandomSeed < 0 ? randomSeed++ : (unsigned long) forcedRandomSeed, initValueScale, initOnCPUOnly);
-            else if (!_wcsicmp(initString.c_str(), L"fromFile"))
+            else if (EqualCI(initString, L"fromFile"))
             {
                 std::string initFromFilePath = node->GetOptionalParameter("initFromFilePath", "");
                 if (initFromFilePath == "")
@@ -394,9 +394,18 @@ void SynchronousNodeEvaluator<ElemType>::Evaluate(NDLNode<ElemType>* node, const
             bool eval = node->GetOptionalParameter("eval", "false");
             bool spatial = node->GetOptionalParameter("spatial", "false");
             double expAvgFactor = node->GetOptionalParameter("expAvgFactor", "1.0");
+            double epsilon = node->GetOptionalParameter("epsilon", "0.00001");
+            std::wstring bnEngineS = node->GetOptionalParameter("engine", "cntk");
+            bool useCntkEngine;
+            if (EqualCI(bnEngineS, L"cntk"))
+                useCntkEngine = true;
+            else if (EqualCI(bnEngineS, L"cudnn"))
+                useCntkEngine = false;
+            else
+                InvalidArgument("Unsupported batch normalization engine, choose either \"cntk\"(default) or \"cudnn\".");
             ImageLayoutKind imageLayoutKind = ImageLayoutKindFrom(node->GetOptionalParameter("imageLayout", "CHW"));
 
-            nodePtr = builder.BatchNormalization(nullptr, nullptr, nullptr, nullptr, nullptr, eval, spatial, expAvgFactor, imageLayoutKind, name);
+            nodePtr = builder.BatchNormalization(nullptr, nullptr, nullptr, nullptr, nullptr, eval, spatial, expAvgFactor, epsilon, useCntkEngine, imageLayoutKind, name);
         }
     }
     else

@@ -100,16 +100,13 @@ public:
 
     // full parameter Init routine
     void Init(const intargvector& layerSizes, const TrainingCriterion trainCriterion, const EvalCriterion evalCriterion,
+              DEVICEID_TYPE deviceId,
               int outputLayerSize = -1,
               const stringargvector nonLinearFunctions = L"Sigmoid",
               const bool addDropoutNodes = false,
               const bool uniformInit = true, const ElemType initValueScale = 1.0f,
-              const bool applyMeanVarNorm = false, bool needPrior = false, DEVICEID_TYPE deviceId = AUTOPLACEMATRIX)
+              const bool applyMeanVarNorm = false, bool needPrior = false)
     {
-        if (deviceId == AUTOPLACEMATRIX)
-            deviceId = Matrix<ElemType>::GetBestGPUDeviceId();
-        deviceId = EnforceOneGPUOnly(deviceId); // see EnforceOneGPUOnly() for comment on what this is
-
         m_deviceId = deviceId;
         m_net = make_shared<ComputationNetwork>(m_deviceId);
 
@@ -229,9 +226,9 @@ public:
         m_nbrCls = (int) config("nbrClass", "-1");
         nce_noises = (int) config("noise_number", "-1"); // nce noise
 
-        Init(layers, trainingCriterion, evalCriterion, outputLayerSize,
+        Init(layers, trainingCriterion, evalCriterion, deviceId, outputLayerSize,
              nonlinearFunctions, addDropoutNodes,
-             uniformInit, initValueScale, applyMeanVarNorm, needPrior, deviceId);
+             uniformInit, initValueScale, applyMeanVarNorm, needPrior);
 
         InitRecurrentConfig(config);
 

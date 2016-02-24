@@ -204,7 +204,7 @@ public:
         const Matrix<ElemType>& outputs,
         const MBLayoutPtr pMBLayout);
 
-    virtual bool DataEnd(EndDataType endDataType);
+    virtual bool DataEnd();
     void SetSentenceEndInBatch(vector<size_t>& /*sentenceEnd*/);
     void SetSentenceEnd(int /*actualMbSize*/){};
 
@@ -212,9 +212,6 @@ public:
     {
         pMBLayout->CopyFrom(m_pMBLayout);
     }
-    bool RequireSentenceSeg() const override
-    {
-        return !m_framemode;
-    };
+    //bool RequireSentenceSeg() const override { return !m_framemode; };
 };
 } } }

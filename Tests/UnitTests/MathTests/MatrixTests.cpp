@@ -20,10 +20,10 @@ BOOST_AUTO_TEST_SUITE(MatrixUnitTests)
 
 BOOST_FIXTURE_TEST_CASE(MatrixConstructors, RandomSeedFixture)
 {
-    SingleMatrix a0;
-    SingleMatrix a1(AUTOPLACEMATRIX);
-    SingleMatrix a2(-1);
-    SingleMatrix a3(13, 12, AUTOPLACEMATRIX);
+    SingleMatrix a0(0);
+    SingleMatrix a1(0);
+    SingleMatrix a2(CPUDEVICE);
+    SingleMatrix a3(13, 12, 0);
 
     BOOST_CHECK_EQUAL(0, a0.GetNumRows());
     BOOST_CHECK_EQUAL(0, a0.GetNumCols());
@@ -41,8 +41,8 @@ BOOST_FIXTURE_TEST_CASE(MatrixConstructors, RandomSeedFixture)
 BOOST_FIXTURE_TEST_CASE(MatrixMoveTest1, RandomSeedFixture)
 {
     // no moves required
-    SingleMatrix a;
-    SingleMatrix b;
+    SingleMatrix a(c_deviceIdZero);
+    SingleMatrix b(c_deviceIdZero);
     b.Resize(50, 100);
 
     BOOST_CHECK_EQUAL(b.GetNumRows(), 50);
@@ -60,8 +60,8 @@ BOOST_FIXTURE_TEST_CASE(MatrixMoveTest1, RandomSeedFixture)
 BOOST_FIXTURE_TEST_CASE(MatrixMoveTest2, RandomSeedFixture)
 {
     // potentially a move is required
-    SingleMatrix a;
-    SingleMatrix b;
+    SingleMatrix a(c_deviceIdZero);
+    SingleMatrix b(c_deviceIdZero);
     b.Resize(50, 100);
     BOOST_CHECK_EQUAL(b.GetNumRows(), 50);
     BOOST_CHECK_EQUAL(b.GetNumCols(), 100);
@@ -83,8 +83,8 @@ BOOST_FIXTURE_TEST_CASE(MatrixMoveTest2, RandomSeedFixture)
 BOOST_FIXTURE_TEST_CASE(MatrixDeepCopy, RandomSeedFixture)
 {
     // This is deep copy, not move
-    SingleMatrix a;
-    SingleMatrix b;
+    SingleMatrix a(c_deviceIdZero);
+    SingleMatrix b(c_deviceIdZero);
 
     b.Resize(50, 100);
     BOOST_CHECK_EQUAL(a.GetNumRows(), 0);
@@ -116,7 +116,7 @@ BOOST_FIXTURE_TEST_CASE(MatrixDeepCopy, RandomSeedFixture)
 
 BOOST_FIXTURE_TEST_CASE(MatrixInitZero, RandomSeedFixture)
 {
-    SingleMatrix a = SingleMatrix::Zeros(12, 32);
+    SingleMatrix a = SingleMatrix::Zeros(12, 32, c_deviceIdZero);
     BOOST_CHECK_EQUAL(a.GetNumRows(), 12);
     BOOST_CHECK_EQUAL(a.GetNumCols(), 32);
     foreach_coord (i, j, a)
@@ -127,7 +127,7 @@ BOOST_FIXTURE_TEST_CASE(MatrixInitZero, RandomSeedFixture)
 
 BOOST_FIXTURE_TEST_CASE(MatrixInitEye, RandomSeedFixture)
 {
-    SingleMatrix a = SingleMatrix::Eye(56);
+    SingleMatrix a = SingleMatrix::Eye(56, c_deviceIdZero);
     BOOST_CHECK_EQUAL(a.GetNumRows(), 56);
     BOOST_CHECK_EQUAL(a.GetNumCols(), 56);
 
@@ -146,7 +146,7 @@ BOOST_FIXTURE_TEST_CASE(MatrixInitEye, RandomSeedFixture)
 
 BOOST_FIXTURE_TEST_CASE(MatrixInitOnes, RandomSeedFixture)
 {
-    SingleMatrix a = SingleMatrix::Ones(12, 56);
+    SingleMatrix a = SingleMatrix::Ones(12, 56, c_deviceIdZero);
     BOOST_CHECK_EQUAL(a.GetNumRows(), 12);
     BOOST_CHECK_EQUAL(a.GetNumCols(), 56);
     foreach_coord (i, j, a)
@@ -157,7 +157,7 @@ BOOST_FIXTURE_TEST_CASE(MatrixInitOnes, RandomSeedFixture)
 
 BOOST_FIXTURE_TEST_CASE(MatrixInitGaussianRand, RandomSeedFixture)
 {
-    SingleMatrix a = SingleMatrix::RandomGaussian(640, 230, 0.0f, 2.0f, IncrementCounter());
+    SingleMatrix a = SingleMatrix::RandomGaussian(640, 230, c_deviceIdZero, 0.0f, 2.0f, IncrementCounter());
     BOOST_CHECK_EQUAL(a.GetNumRows(), 640);
     BOOST_CHECK_EQUAL(a.GetNumCols(), 230);
 
@@ -183,7 +183,7 @@ BOOST_FIXTURE_TEST_CASE(MatrixInitRandomUniform, RandomSeedFixture)
 {
     const float low = -26.3f;
     const float high = 30.2f;
-    SingleMatrix a = SingleMatrix::RandomUniform(435, 100, low, high, IncrementCounter());
+    SingleMatrix a = SingleMatrix::RandomUniform(435, 100, c_deviceIdZero, low, high, IncrementCounter());
     bool has_small = false;
     bool has_big = false;
     foreach_coord (i, j, a)
@@ -207,7 +207,7 @@ BOOST_FIXTURE_TEST_CASE(MatrixInitRandomUniformSeed, RandomSeedFixture)
 {
     const float low = -0.01f;
     const float high = 0.01f;
-    SingleMatrix a = SingleMatrix::RandomUniform(429, 1024, low, high, IncrementCounter());
+    SingleMatrix a = SingleMatrix::RandomUniform(429, 1024, c_deviceIdZero, low, high, IncrementCounter());
     foreach_coord (i, j, a)
     {
         BOOST_CHECK_GE(a(i, j), low);
@@ -221,7 +221,7 @@ BOOST_FIXTURE_TEST_CASE(MatrixInitRandomUniformSeed, RandomSeedFixture)
 BOOST_FIXTURE_TEST_CASE(MatrixSetValueMethods, RandomSeedFixture)
 {
     // void SetValue(const ElemType v);
-    SingleMatrix a(32, 12, AUTOPLACEMATRIX);
+    SingleMatrix a(32, 12, c_deviceIdZero);
     BOOST_CHECK_EQUAL(32, a.GetNumRows());
     BOOST_CHECK_EQUAL(12, a.GetNumCols());
     BOOST_CHECK_EQUAL(12 * 32, a.GetNumElements());
@@ -233,7 +233,7 @@ BOOST_FIXTURE_TEST_CASE(MatrixSetValueMethods, RandomSeedFixture)
     }
 
     // void SetValue(const Matrix<ElemType>& deepCopyFrom);
-    SingleMatrix b;
+    SingleMatrix b(c_deviceIdZero);
     b.SetValue(a);
     foreach_coord (i, j, b)
     {
@@ -246,7 +246,7 @@ BOOST_FIXTURE_TEST_CASE(MatrixSetValueMethods, RandomSeedFixture)
     float *arr = arrVector.data();
     b.SetValue(2, 3, b.GetDeviceId(), arr, matrixFlagNormal);
 
-    SingleMatrix b1;
+    SingleMatrix b1(c_deviceIdZero);
     b1.SetValue(2, 3, b.GetDeviceId(), arr);
     foreach_coord (i, j, b1)
     {
@@ -254,7 +254,7 @@ BOOST_FIXTURE_TEST_CASE(MatrixSetValueMethods, RandomSeedFixture)
         BOOST_CHECK_EQUAL(arr[IDX2C(i, j, 2)], b1(i, j));
     }
 
-    SingleMatrix bbbb = SingleMatrix::Zeros(6, 8);
+    SingleMatrix bbbb = SingleMatrix::Zeros(6, 8, c_deviceIdZero);
     bbbb.SetColumn(arr, 3);
     for (int i = 0; i < 6; ++i)
     {
@@ -262,7 +262,7 @@ BOOST_FIXTURE_TEST_CASE(MatrixSetValueMethods, RandomSeedFixture)
     }
 
     // void SetDiagonalValue(const ElemType v);
-    SingleMatrix c(4, 4, AUTOPLACEMATRIX);
+    SingleMatrix c(4, 4, c_deviceIdZero);
     const float val = -0.00332f;
     c.SetDiagonalValue(val);
     foreach_coord (i, j, c)
@@ -274,7 +274,7 @@ BOOST_FIXTURE_TEST_CASE(MatrixSetValueMethods, RandomSeedFixture)
     }
 
     // void SetDiagonalValue(const Matrix<ElemType>& vector);
-    SingleMatrix d(4, 1, AUTOPLACEMATRIX);
+    SingleMatrix d(4, 1, c_deviceIdZero);
     const float val1 = 43.324f;
     d.SetValue(val1);
     c.SetDiagonalValue(d);
@@ -286,8 +286,8 @@ BOOST_FIXTURE_TEST_CASE(MatrixSetValueMethods, RandomSeedFixture)
             BOOST_CHECK_EQUAL(0, c(i, j));
     }
 
-    SingleMatrix c1(5, 5, AUTOPLACEMATRIX);
-    SingleMatrix d1(1, 5, AUTOPLACEMATRIX);
+    SingleMatrix c1(5, 5, c_deviceIdZero);
+    SingleMatrix d1(1, 5, c_deviceIdZero);
     float val2 = 0.53f;
     d1 = d1.Transpose();
     d1.SetValue(val2);
@@ -303,7 +303,7 @@ BOOST_FIXTURE_TEST_CASE(MatrixSetValueMethods, RandomSeedFixture)
 
 BOOST_FIXTURE_TEST_CASE(MatrixTransposeTest, RandomSeedFixture)
 {
-    SingleMatrix a = SingleMatrix::RandomGaussian(64, 23, 0, 2, IncrementCounter());
+    SingleMatrix a = SingleMatrix::RandomGaussian(64, 23, c_deviceIdZero, 0, 2, IncrementCounter());
     BOOST_CHECK_EQUAL(64, a.GetNumRows());
     BOOST_CHECK_EQUAL(23, a.GetNumCols());
 
@@ -320,7 +320,7 @@ BOOST_FIXTURE_TEST_CASE(MatrixTransposeTest, RandomSeedFixture)
 
 BOOST_FIXTURE_TEST_CASE(MatrixMultiAndDiv, RandomSeedFixture)
 {
-    SingleMatrix m0(2, 3, AUTOPLACEMATRIX);
+    SingleMatrix m0(2, 3, c_deviceIdZero);
     m0(0, 0) = 1;
     m0(0, 1) = 2;
     m0(0, 2) = 3;
@@ -328,7 +328,7 @@ BOOST_FIXTURE_TEST_CASE(MatrixMultiAndDiv, RandomSeedFixture)
     m0(1, 1) = 5;
     m0(1, 2) = 6;
 
-    SingleMatrix m00(2, 3, AUTOPLACEMATRIX);
+    SingleMatrix m00(2, 3, c_deviceIdZero);
     m00(0, 0) = 10;
     m00(0, 1) = 20;
     m00(0, 2) = 30;
@@ -336,7 +336,7 @@ BOOST_FIXTURE_TEST_CASE(MatrixMultiAndDiv, RandomSeedFixture)
     m00(1, 1) = 50;
     m00(1, 2) = 60;
 
-    SingleMatrix m1(2, 3, AUTOPLACEMATRIX);
+    SingleMatrix m1(2, 3, c_deviceIdZero);
     m1.Reshape(3, 2);
     m1(0, 0) = 11;
     m1(0, 1) = 15;
@@ -345,7 +345,7 @@ BOOST_FIXTURE_TEST_CASE(MatrixMultiAndDiv, RandomSeedFixture)
     m1(2, 0) = 12;
     m1(2, 1) = 16;
 
-    SingleMatrix m2(2, 2, AUTOPLACEMATRIX);
+    SingleMatrix m2(2, 2, c_deviceIdZero);
     m2(0, 0) = 75;
     m2(0, 1) = 89;
     m2(1, 0) = 186;
@@ -399,7 +399,7 @@ BOOST_FIXTURE_TEST_CASE(MatrixMultiAndDiv, RandomSeedFixture)
 
     // Multiplications of arbitrary matrix with 1x1 matrix
 
-    SingleMatrix a(2, 3, AUTOPLACEMATRIX);
+    SingleMatrix a(2, 3, c_deviceIdZero);
     a(0, 0) = 1;
     a(0, 1) = 2;
     a(0, 2) = 3;
@@ -407,7 +407,7 @@ BOOST_FIXTURE_TEST_CASE(MatrixMultiAndDiv, RandomSeedFixture)
     a(1, 1) = 5;
     a(1, 2) = 6;
 
-    SingleMatrix b = SingleMatrix::Eye(1);
+    SingleMatrix b = SingleMatrix::Eye(1, c_deviceIdZero);
 
     SingleMatrix c = a * b;
     BOOST_CHECK(c.IsEqualTo(a));
@@ -417,7 +417,7 @@ BOOST_FIXTURE_TEST_CASE(MatrixMultiAndDiv, RandomSeedFixture)
     b.InplaceAbs();
     c = a * b;
 
-    SingleMatrix d(2, 3, AUTOPLACEMATRIX);
+    SingleMatrix d(2, 3, c_deviceIdZero);
     d(0, 0) = 0.5;
     d(0, 1) = 1;
     d(0, 2) = 1.5;
@@ -429,7 +429,7 @@ BOOST_FIXTURE_TEST_CASE(MatrixMultiAndDiv, RandomSeedFixture)
 
 BOOST_FIXTURE_TEST_CASE(MatrixTranspose, RandomSeedFixture)
 {
-    SingleMatrix m0(2, 3, AUTOPLACEMATRIX);
+    SingleMatrix m0(2, 3, c_deviceIdZero);
     m0(0, 0) = 1;
     m0(0, 1) = 2;
     m0(0, 2) = 3;
@@ -437,7 +437,7 @@ BOOST_FIXTURE_TEST_CASE(MatrixTranspose, RandomSeedFixture)
     m0(1, 1) = 5;
     m0(1, 2) = 6;
 
-    SingleMatrix m1(3, 2, AUTOPLACEMATRIX);
+    SingleMatrix m1(3, 2, c_deviceIdZero);
     m1(0, 0) = 1;
     m1(0, 1) = 4;
     m1(1, 0) = 2;
@@ -454,7 +454,7 @@ BOOST_FIXTURE_TEST_CASE(MatrixTranspose, RandomSeedFixture)
 
 BOOST_FIXTURE_TEST_CASE(MatrixAddAndSub, RandomSeedFixture)
 {
-    SingleMatrix m0(2, 3, AUTOPLACEMATRIX);
+    SingleMatrix m0(2, 3, c_deviceIdZero);
     m0(0, 0) = 1;
     m0(0, 1) = 2;
     m0(0, 2) = 3;
@@ -462,7 +462,7 @@ BOOST_FIXTURE_TEST_CASE(MatrixAddAndSub, RandomSeedFixture)
     m0(1, 1) = 5;
     m0(1, 2) = 6;
 
-    SingleMatrix m1(2, 3, AUTOPLACEMATRIX);
+    SingleMatrix m1(2, 3, c_deviceIdZero);
     m1(0, 0) = 11;
     m1(0, 1) = 12;
     m1(0, 2) = 13;
@@ -470,7 +470,7 @@ BOOST_FIXTURE_TEST_CASE(MatrixAddAndSub, RandomSeedFixture)
     m1(1, 1) = 15;
     m1(1, 2) = 16;
 
-    SingleMatrix m2(2, 3, AUTOPLACEMATRIX);
+    SingleMatrix m2(2, 3, c_deviceIdZero);
     m2(0, 0) = 12;
     m2(0, 1) = 14;
     m2(0, 2) = 16;
@@ -492,7 +492,7 @@ BOOST_FIXTURE_TEST_CASE(MatrixAddAndSub, RandomSeedFixture)
 
     m3 = m1 + m0;
     BOOST_CHECK(m3.IsEqualTo(m2));
-    SingleMatrix m4 = SingleMatrix::Eye(3);
+    SingleMatrix m4 = SingleMatrix::Eye(3, c_deviceIdZero);
 
     m3 -= m0;
     BOOST_CHECK(m3.IsEqualTo(m1));
@@ -504,7 +504,7 @@ BOOST_FIXTURE_TEST_CASE(MatrixAddAndSub, RandomSeedFixture)
     m3 += 10;
     BOOST_CHECK(m3.IsEqualTo(m1));
 
-    SingleMatrix m55 = SingleMatrix::Eye(1);
+    SingleMatrix m55 = SingleMatrix::Eye(1, c_deviceIdZero);
     m55(0, 0) = 10;
     m55.InplaceAbs();
     m33 += m55;
@@ -516,7 +516,7 @@ BOOST_FIXTURE_TEST_CASE(MatrixAddAndSub, RandomSeedFixture)
 
 BOOST_FIXTURE_TEST_CASE(MatrixElementOps, RandomSeedFixture)
 {
-    SingleMatrix m0(2, 3, AUTOPLACEMATRIX);
+    SingleMatrix m0(2, 3, c_deviceIdZero);
     m0(0, 0) = 1;
     m0(0, 1) = 2;
     m0(0, 2) = 3;
@@ -524,7 +524,7 @@ BOOST_FIXTURE_TEST_CASE(MatrixElementOps, RandomSeedFixture)
     m0(1, 1) = 5;
     m0(1, 2) = 6;
 
-    SingleMatrix m00(2, 3, AUTOPLACEMATRIX);
+    SingleMatrix m00(2, 3, c_deviceIdZero);
     m00(0, 0) = 1.0f;
     m00(0, 1) = static_cast<float>(1 / 2.0);
     m00(0, 2) = static_cast<float>(1 / 3.0);
@@ -532,7 +532,7 @@ BOOST_FIXTURE_TEST_CASE(MatrixElementOps, RandomSeedFixture)
     m00(1, 1) = static_cast<float>(1 / 5.0);
     m00(1, 2) = static_cast<float>(1 / 6.0);
 
-    SingleMatrix m1(2, 3, AUTOPLACEMATRIX);
+    SingleMatrix m1(2, 3, c_deviceIdZero);
     m1(0, 0) = 1;
     m1(0, 1) = 1;
     m1(0, 2) = 1;
@@ -540,16 +540,16 @@ BOOST_FIXTURE_TEST_CASE(MatrixElementOps, RandomSeedFixture)
     m1(1, 1) = 1;
     m1(1, 2) = 1;
 
-    SingleMatrix m3;
+    SingleMatrix m3(c_deviceIdZero);
     m3.AssignElementProductOf(m0, m00);
     BOOST_CHECK(m3.IsEqualTo(m1, c_epsilonFloatE4));
 
-    SingleMatrix m4 = SingleMatrix::Zeros(2, 3);
+    SingleMatrix m4 = SingleMatrix::Zeros(2, 3, c_deviceIdZero);
     m4 = m4.AddElementProductOf(m0, m00);
     BOOST_CHECK(m4.IsEqualTo(m1, c_epsilonFloatE4));
 
     m3 = m0 ^ 4;
-    SingleMatrix m2(2, 3, AUTOPLACEMATRIX);
+    SingleMatrix m2(2, 3, c_deviceIdZero);
     m2(0, 0) = 1;
     m2(0, 1) = 16;
     m2(0, 2) = 81;
@@ -695,8 +695,8 @@ BOOST_FIXTURE_TEST_CASE(MatrixColumnElementMultiply, RandomSeedFixture)
     mcpu.ColumnElementMultiplyWith(acpu);
     BOOST_CHECK(mcpuCopy.IsEqualTo(mcpu, c_epsilonFloatE4));
 
-    Matrix<float> m = Matrix<float>::RandomUniform(429, 1024, -3.4f, 1, IncrementCounter());
-    Matrix<float> a = Matrix<float>::Ones(429, 1);
+    Matrix<float> m = Matrix<float>::RandomUniform(429, 1024, c_deviceIdZero, -3.4f, 1, IncrementCounter());
+    Matrix<float> a = Matrix<float>::Ones(429, 1, c_deviceIdZero);
     Matrix<float> mCopy(m);
 
     m.ColumnElementMultiplyWith(a);
@@ -719,9 +719,9 @@ BOOST_FIXTURE_TEST_CASE(MatrixColumnElementMultiply, RandomSeedFixture)
 BOOST_FIXTURE_TEST_CASE(MatrixAssignXOf, RandomSeedFixture)
 {
     // AssignDifferenceOf
-    Matrix<float> a = Matrix<float>::RandomUniform(429, 1024, 5, 32, IncrementCounter());
-    Matrix<float> b = Matrix<float>::RandomUniform(429, 1024, 5, 32, IncrementCounter());
-    Matrix<float> c;
+    Matrix<float> a = Matrix<float>::RandomUniform(429, 1024, c_deviceIdZero, 5, 32, IncrementCounter());
+    Matrix<float> b = Matrix<float>::RandomUniform(429, 1024, c_deviceIdZero, 5, 32, IncrementCounter());
+    Matrix<float> c(c_deviceIdZero);
 
     c.AssignDifferenceOf(a, b);
     foreach_coord (i, j, c)
@@ -777,8 +777,8 @@ BOOST_FIXTURE_TEST_CASE(MatrixAssignXOf, RandomSeedFixture)
     }
 
     // AssignSignOf
-    Matrix<float> m1 = Matrix<float>::RandomUniform(42, 12, -5, 12, IncrementCounter());
-    Matrix<float> m2(4, 5, AUTOPLACEMATRIX);
+    Matrix<float> m1 = Matrix<float>::RandomUniform(42, 12, c_deviceIdZero, -5, 12, IncrementCounter());
+    Matrix<float> m2(4, 5, c_deviceIdZero);
     m2.AssignSignOf(m1);
     foreach_coord (i, j, m1)
     {
@@ -788,7 +788,7 @@ BOOST_FIXTURE_TEST_CASE(MatrixAssignXOf, RandomSeedFixture)
         BOOST_CHECK_EQUAL(expected, actual);
     }
 
-    Matrix<float> m3 = Matrix<float>::RandomUniform(42, 12, -5, 2, IncrementCounter());
+    Matrix<float> m3 = Matrix<float>::RandomUniform(42, 12, c_deviceIdZero, -5, 2, IncrementCounter());
     Matrix<float> m4(m3);
     m3.AddSignOf(m1);
     foreach_coord (i, j, m3)
@@ -798,20 +798,20 @@ BOOST_FIXTURE_TEST_CASE(MatrixAssignXOf, RandomSeedFixture)
     }
 
     // AssignTruncateBottom and Top
-    Matrix<float> m5(2, 2, AUTOPLACEMATRIX);
+    Matrix<float> m5(2, 2, c_deviceIdZero);
     m5(0, 0) = 1;
     m5(0, 1) = 2;
     m5(1, 0) = 3;
     m5(1, 1) = 4;
 
-    Matrix<float> m6;
+    Matrix<float> m6(c_deviceIdZero);
     m6.AssignTruncateBottomOf(m5, 3);
     BOOST_CHECK_EQUAL(3, m6(0, 0));
     BOOST_CHECK_EQUAL(3, m6(0, 1));
     BOOST_CHECK_EQUAL(3, m6(1, 0));
     BOOST_CHECK_EQUAL(4, m6(1, 1));
 
-    Matrix<float> m7;
+    Matrix<float> m7(c_deviceIdZero);
     m7.AssignTruncateTopOf(m5, 3);
     BOOST_CHECK_EQUAL(1, m7(0, 0));
     BOOST_CHECK_EQUAL(2, m7(0, 1));
@@ -829,12 +829,12 @@ BOOST_FIXTURE_TEST_CASE(MatrixSumOfElements, RandomSeedFixture)
     float sumCPU = mcpu.SumOfElements();
     BOOST_CHECK_EQUAL(429 * 1024, sumCPU);
 
-    Matrix<float> m1 = Matrix<float>::Ones(42, 332);
+    Matrix<float> m1 = Matrix<float>::Ones(42, 332, c_deviceIdZero);
     m1 *= -1;
     float sum1 = m1.SumOfElements();
     BOOST_CHECK_EQUAL(-1 * 42 * 332, sum1);
 
-    Matrix<float> m2 = Matrix<float>::Ones(3, 2);
+    Matrix<float> m2 = Matrix<float>::Ones(3, 2, c_deviceIdZero);
     m2 *= -1;
     float sum2 = m2.SumOfElements();
     BOOST_CHECK_EQUAL(-1 * 3 * 2, sum2);
@@ -859,16 +859,16 @@ BOOST_FIXTURE_TEST_CASE(MatrixColumnSlice, RandomSeedFixture)
 
     size_t k = 100, n = 20, m = 50;
 
-    Matrix<float> ag(k, n, AUTOPLACEMATRIX);
+    Matrix<float> ag(k, n, c_deviceIdZero);
     ag.SetUniformRandomValue(-1, 1, IncrementCounter());
 
-    Matrix<float> bg(n, m, AUTOPLACEMATRIX);
+    Matrix<float> bg(n, m, c_deviceIdZero);
     bg.SetUniformRandomValue(-1, 1, IncrementCounter());
 
-    Matrix<float> cg(k, m, AUTOPLACEMATRIX);
+    Matrix<float> cg(k, m, c_deviceIdZero);
     cg.SetUniformRandomValue(-1, 1, IncrementCounter());
 
-    Matrix<float> dg(k, m, AUTOPLACEMATRIX);
+    Matrix<float> dg(k, m, c_deviceIdZero);
     dg.SetValue(cg);
 
     Matrix<float>::MultiplyAndAdd(ag, false, bg, false, dg);
@@ -903,7 +903,7 @@ BOOST_FIXTURE_TEST_CASE(MatrixKhatriRaoProduct, RandomSeedFixture)
     fArray[5] = 0.0975f;
     fArray[8] = 0.9575f;
     fArray[11] = 0.9706f;
-    Matrix<float> a(3, 4, fArray);
+    Matrix<float> a(3, 4, fArray, c_deviceIdZero);
 
     fArray[0] = 0.9572f;
     fArray[2] = 0.8003f;
@@ -913,7 +913,7 @@ BOOST_FIXTURE_TEST_CASE(MatrixKhatriRaoProduct, RandomSeedFixture)
     fArray[3] = 0.1419f;
     fArray[5] = 0.9157f;
     fArray[7] = 0.9595f;
-    Matrix<float> b(2, 4, fArray);
+    Matrix<float> b(2, 4, fArray, c_deviceIdZero);
 
     fArray[0] = 0.7798f;
     fArray[6] = 0.7310f;
@@ -939,9 +939,9 @@ BOOST_FIXTURE_TEST_CASE(MatrixKhatriRaoProduct, RandomSeedFixture)
     fArray[11] = 0.0138f;
     fArray[17] = 0.8768f;
     fArray[23] = 0.9313f;
-    Matrix<float> d(6, 4, fArray);
+    Matrix<float> d(6, 4, fArray, c_deviceIdZero);
 
-    Matrix<float> c;
+    Matrix<float> c(c_deviceIdZero);
     c.AssignKhatriRaoProductOf(a, b);
     BOOST_CHECK(c.IsEqualTo(d, c_epsilonFloatE4));
 }
@@ -965,7 +965,7 @@ BOOST_FIXTURE_TEST_CASE(MatrixAddColumnReshapeProductOf, RandomSeedFixture)
     fArray[10] = 0.7060f;
     fArray[5] = 0.7577f;
     fArray[11] = 0.0318f;
-    Matrix<float> a(6, 2, fArray);
+    Matrix<float> a(6, 2, fArray, c_deviceIdZero);
 
     fArray[0] = 0.2769f;
     fArray[3] = 0.8235f;
@@ -973,21 +973,21 @@ BOOST_FIXTURE_TEST_CASE(MatrixAddColumnReshapeProductOf, RandomSeedFixture)
     fArray[4] = 0.6948f;
     fArray[2] = 0.0971f;
     fArray[5] = 0.3171f;
-    Matrix<float> b(3, 2, fArray);
+    Matrix<float> b(3, 2, fArray, c_deviceIdZero);
 
     fArray[0] = 0.2867f;
     fArray[2] = 1.2913f;
     fArray[1] = 0.1266f;
     fArray[3] = 0.4520f;
-    Matrix<float> d0(2, 2, fArray);
+    Matrix<float> d0(2, 2, fArray, c_deviceIdZero);
 
     fArray[0] = 0.2657f;
     fArray[2] = 1.0923f;
     fArray[1] = 0.3636f;
     fArray[3] = 0.6416f;
-    Matrix<float> d1(2, 2, fArray);
+    Matrix<float> d1(2, 2, fArray, c_deviceIdZero);
 
-    Matrix<float> c(2, 2, AUTOPLACEMATRIX);
+    Matrix<float> c(2, 2, c_deviceIdZero);
     c.SetValue(0.0f);
     c.AddColumnReshapeProductOf(a, b, false);
     BOOST_CHECK(c.IsEqualTo(d0, c_epsilonFloatE4));
@@ -1031,7 +1031,7 @@ BOOST_FIXTURE_TEST_CASE(MatrixHasElement, RandomSeedFixture)
     {
         const size_t size = 3;
         float src[size] = {0.0f, 1.0f, 2.0f};
-        SingleMatrix m1(1, size, src, matrixFlagNormal, deviceId);
+        SingleMatrix m1(1, size, src, deviceId, matrixFlagNormal);
         BOOST_CHECK(SingleMatrix::HasElement(m1, 1.0f));
         BOOST_CHECK(!SingleMatrix::HasElement(m1, -1.0f));
 
@@ -1063,12 +1063,12 @@ BOOST_FIXTURE_TEST_CASE(MatrixVectorMax, RandomSeedFixture)
         4.0f, 3.0f,
         6.0f, 5.0f};
 
-    for (auto deviceId : {CPUDEVICE, AUTOPLACEMATRIX})
+    for (auto deviceId : {CPUDEVICE, c_deviceIdZero})
     {
-        Matrix<float> expIdx(2, 2, expectedIdx, matrixFlagNormal, deviceId);
-        Matrix<float> expVal(2, 2, expectedVal, matrixFlagNormal, deviceId);
+        Matrix<float> expIdx(2, 2, expectedIdx, deviceId, matrixFlagNormal);
+        Matrix<float> expVal(2, 2, expectedVal, deviceId, matrixFlagNormal);
 
-        Matrix<float> actual(3, 2, src, matrixFlagNormal, deviceId);
+        Matrix<float> actual(3, 2, src, deviceId, matrixFlagNormal);
         Matrix<float> actualIdx(deviceId);
         Matrix<float> actualVal(deviceId);
 
@@ -1089,10 +1089,10 @@ BOOST_FIXTURE_TEST_CASE(MatrixAssignNumOfDiff, RandomSeedFixture)
         4.0f, 6.0f,
         2.0f, 3.0f};
 
-    for (auto deviceId : {CPUDEVICE, AUTOPLACEMATRIX})
+    for (auto deviceId : {CPUDEVICE, c_deviceIdZero})
     {
-        Matrix<float> lbl(1, 3, labels, matrixFlagNormal, deviceId);
-        Matrix<float> topKRes(2, 3, topKResults, matrixFlagNormal, deviceId);
+        Matrix<float> lbl(1, 3, labels, deviceId, matrixFlagNormal);
+        Matrix<float> topKRes(2, 3, topKResults, deviceId, matrixFlagNormal);
 
         Matrix<float> actual(deviceId);
         actual.AssignNumOfDiff(lbl, topKRes, true);

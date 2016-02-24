@@ -90,26 +90,25 @@ public:
     // Constructors, destructors and other static matrix builders
     // Each constructor can take deviceId as parameter.
     // If deviceId<0 then the matrix will be based in RAM (CPUMatrix)
-    // Elseif deviceId>=0 and <AUTOPLACEMATRIX, then the matrix will be based on GPU with specified deviceId
-    // Else (default) if deviceId=AUTOPLACEMATRIX, the class will try to place itself on the best GPU, if fails it will go to CPU
-    // The default behaiviour should be deviceId=AUTOPLACEMATRIX
-    Matrix(DEVICEID_TYPE deviceId = AUTOPLACEMATRIX);
+    // Elseif deviceId>=0 then the matrix will be based on GPU with specified deviceId
+    explicit Matrix(DEVICEID_TYPE deviceId);
     Matrix(BaseMatrix<ElemType>* baseMatrix, ElemType* pArray, DEVICEID_TYPE deviceId);                                     // constructor for setting Matrix from a base matrix (externally managed butter pArray)
-    Matrix(FILE* f, const char* matrixName, DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const MatrixType matrixType = DENSE); // matrixName is used to verify that correct matrix is read.
-    Matrix(const size_t numRows, const size_t numCols, DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const MatrixType matrixType = DENSE, const MatrixFormat matrixFormat = matrixFormatDense);
-    Matrix(const size_t numRows, const size_t numCols, ElemType* pArray, const size_t matrixFlags = matrixFlagNormal, DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const size_t nnz = 0);
-    Matrix(const Matrix<ElemType>& deepCopyFrom, DEVICEID_TYPE deviceId = AUTOPLACEMATRIX); // copy constructor, deep copy
+    Matrix(FILE* f, const char* matrixName, DEVICEID_TYPE deviceId, const MatrixType matrixType = DENSE); // matrixName is used to verify that correct matrix is read.
+    Matrix(const size_t numRows, const size_t numCols, DEVICEID_TYPE deviceId, const MatrixType matrixType = DENSE, const MatrixFormat matrixFormat = matrixFormatDense);
+    Matrix(const size_t numRows, const size_t numCols, ElemType* pArray, DEVICEID_TYPE deviceId, const size_t matrixFlags = matrixFlagNormal, const size_t nnz = 0);
+    Matrix(const Matrix<ElemType>& deepCopyFrom); // copy constructor, deep copy
+    Matrix(const Matrix<ElemType>& deepCopyFrom, DEVICEID_TYPE deviceId);
     Matrix<ElemType>& operator=(const Matrix<ElemType>& deepCopyFrom);                      // assignment operator, deep copy
     Matrix(Matrix<ElemType>&& moveFrom);                                                    // move constructor, shallow copy
     Matrix<ElemType>& operator=(Matrix<ElemType>&& moveFrom);                               // move coment operator, shallow copy
 
-    static Matrix<ElemType> Ones(const size_t rows, const size_t cols, DEVICEID_TYPE deviceId = AUTOPLACEMATRIX);
-    static Matrix<ElemType> Zeros(const size_t rows, const size_t cols, DEVICEID_TYPE deviceId = AUTOPLACEMATRIX);
-    static Matrix<ElemType> Eye(const size_t rows, DEVICEID_TYPE deviceId = AUTOPLACEMATRIX);
+    static Matrix<ElemType> Ones(const size_t rows, const size_t cols, DEVICEID_TYPE deviceId);
+    static Matrix<ElemType> Zeros(const size_t rows, const size_t cols, DEVICEID_TYPE deviceId);
+    static Matrix<ElemType> Eye(const size_t rows, DEVICEID_TYPE deviceId);
 
 #define USE_TIME_BASED_SEED ULONG_MAX
-    static Matrix<ElemType> RandomUniform(const size_t rows, const size_t cols, const ElemType low, const ElemType high, unsigned long seed = USE_TIME_BASED_SEED, DEVICEID_TYPE deviceId = AUTOPLACEMATRIX);
-    static Matrix<ElemType> RandomGaussian(const size_t rows, const size_t cols, const ElemType mean, const ElemType sigma, unsigned long seed = USE_TIME_BASED_SEED, DEVICEID_TYPE deviceId = AUTOPLACEMATRIX);
+    static Matrix<ElemType> RandomUniform(const size_t rows, const size_t cols, DEVICEID_TYPE deviceId, const ElemType low, const ElemType high, unsigned long seed = USE_TIME_BASED_SEED);
+    static Matrix<ElemType> RandomGaussian(const size_t rows, const size_t cols, DEVICEID_TYPE deviceId, const ElemType mean, const ElemType sigma, unsigned long seed = USE_TIME_BASED_SEED);
 
     static void SetDevice(DEVICEID_TYPE deviceId);
 
@@ -435,7 +434,7 @@ public:
     bool HasNan(const char* name) const;
     size_t CountNanInf() const;
 
-    void Print(const char* matrixName, size_t rowFirst, size_t rowLast, size_t colFirst, size_t colLast) const;
+    void Print(const char* matrixName, ptrdiff_t rowFirst, ptrdiff_t rowLast, ptrdiff_t colFirst, ptrdiff_t colLast) const;
     void Print(const char* matrixName = nullptr) const; // print whole matrix. can be expensive
 
     Matrix<ElemType>& AssignPackedConvolutionInput(const Matrix<ElemType>& inputSubBatch,
@@ -474,8 +473,6 @@ public:
     ElemType LogAdd(ElemType x, ElemType y);
 
 public:
-    static DEVICEID_TYPE GetBestGPUDeviceId();
-
     // static BLAS functions
 
     // singular value decomposition of A as A = U*SIGMA*VT

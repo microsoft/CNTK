@@ -76,7 +76,7 @@ void ComputationNetwork::CopySubTree(const ComputationNetwork& fromNet,
 
     ComputationNodeBasePtr fromRoot = fromNet.GetNodeFromName(fromName);
 
-    for (const auto& fromNode : GetEvalOrder(fromRoot))
+    for (const auto& fromNode : GetEvalOrder(fromRoot)) // BUGBUG: This probably will fail because the precomputed eval orders are invalid at this point.
     {
         wstring fromNodeName = fromNode->NodeName();
         wstring toNodeName = toNamePrefix + fromNodeName;
@@ -319,6 +319,31 @@ void ComputationNetwork::SetLearnableNodesBelowLearningRateMultiplier(const floa
         {
             if (node->OperationName() == OperationNameOf(LearnableParameter))
                 node->SetLearningRateMultiplier(learningRateMultiplier);
+        }
+    }
+}
+
+// sets m_learningRateMultiplier in all LearnableParameters feeding into the passed rootNode
+// Called from MEL
+void ComputationNetwork::SetLearnableNodesBelowNeedGradient(const bool needGradient, const ComputationNodeBasePtr& rootNode)
+{
+    // find nodes from all available nodes
+    if (rootNode == nullptr)
+    {
+        for (auto nodeIter = m_nameToNodeMap.begin(); nodeIter != m_nameToNodeMap.end(); nodeIter++)
+        {
+            ComputationNodeBasePtr node = nodeIter->second;
+            if (node->OperationName() == OperationNameOf(LearnableParameter))
+                node->SetLearningRateMultiplier((float)needGradient);
+        }
+    }
+    else
+    {
+        // for calculating a specific node
+        for (const auto& node : GetEvalOrder(rootNode))
+        {
+            if (node->OperationName() == OperationNameOf(LearnableParameter))
+                node->SetLearningRateMultiplier((float)needGradient);
         }
     }
 }

@@ -72,9 +72,9 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
                     }
                 }
             }
-            catch (Exception ex)
+            catch (CNTKException ex)
             {
-                Console.WriteLine("Error: {0} \n {1}", ex, ex.InnerException != null ? ex.InnerException.Message : "No Inner Exception");
+                Console.WriteLine("Error: {0}\nNative CallStack: {1}\n Inner Exception: {2}", ex.Message, ex.NativeCallStack, ex.InnerException != null ? ex.InnerException.Message : "No Inner Exception");
             }
 
             Console.WriteLine("Press <Enter> to terminate.");
@@ -106,7 +106,7 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
         static string GetConfig()
         {
             string configFilePath = Path.Combine(Environment.CurrentDirectory,
-                    @"..\Config\01_OneHidden.config");
+                    @"..\Config\01_OneHidden.cntk");
 
             var lines = System.IO.File.ReadAllLines(configFilePath);
             return string.Join("\n", lines);

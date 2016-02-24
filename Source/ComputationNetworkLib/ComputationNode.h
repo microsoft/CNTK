@@ -109,7 +109,7 @@ struct /*interface*/ IComputationNode
     // --- optional overrides for more informative logging
 
     virtual void PrintSelfBeforeValidation() const = 0; // called in validation loop right before Validate()
-    virtual void DumpNodeInfo(const bool /*printValues*/, File& fstream) const = 0;
+    virtual void DumpNodeInfo(const bool /*printValues*/, const bool /*printMetadata*/, File& fstream) const = 0;
 
 protected:
     virtual ~IComputationNode()
@@ -265,7 +265,7 @@ public:
     // -----------------------------------------------------------------------
 
     ComputationNodeBase(DEVICEID_TYPE deviceId, const wstring& name)
-        : m_deviceId(deviceId), m_outputNeededDuringBackprop(true), m_learningRateMultiplier(false), m_gradientInitialized(false), m_nodeName(name == L"" ? CreateUniqNodeName() : name)
+        : m_deviceId(deviceId), m_outputNeededDuringBackprop(true), m_learningRateMultiplier(0), m_gradientInitialized(false), m_nodeName(name == L"" ? CreateUniqNodeName() : name)
     {
     }
     virtual ~ComputationNodeBase()
@@ -585,11 +585,17 @@ public:
         fprintf(stderr, "Node --> %ls = %ls\n", NodeName().c_str(), OperationName().c_str()), fflush(stderr);
     }
 
-    const bool&/*TODO: should be bool by value*/ NeedGradient() { return m_needsGradient; }
+    bool NeedGradient() const { return m_needsGradient; }
 
-    void SetLearningRateMultiplier(float f) { m_learningRateMultiplier = f; }
+    void SetLearningRateMultiplier(float f) 
+    { 
+        if (f < 0)
+            InvalidArgument("LearningRateMultiplier should be non-nagative. You are tring to set it to %f.\n", f);
+
+        m_learningRateMultiplier = f; 
+    }
     float GetLearningRateMultiplier() const { return m_learningRateMultiplier; }
-    bool IsParameterUpdateRequired() const { return !(m_learningRateMultiplier == 0); }
+    bool IsParameterUpdateRequired() const { return m_learningRateMultiplier > 0; }
 
     // return true if the node's value should be computed before the normal training. e.g., mean and invStd of input features.
     virtual bool /*IComputationNode::*/ RequiresPreCompute() const { return false; }
@@ -636,7 +642,7 @@ public:
     virtual void /*IComputationNode::*/ BeginForwardProp() override // called before first iteration step of ForwardProp()
     {
 #ifdef TRACK_GAP_NANS
-        fprintf(stderr, "BeginForwardProp: %ls %ls operation\n", NodeName().c_str(), OperationName().c_str());
+        fprintf(stderr, "BeginForwardProp: %ls %ls operation [%s]\n", NodeName().c_str(), OperationName().c_str(), std::string(GetTensorShape(DetermineElementwiseTensorRank())).c_str());
 #endif
     }
     virtual void /*IComputationNode::*/ EndForwardProp() override // called after last iteration step of ForwardProp()
@@ -1189,8 +1195,11 @@ private:
         else
         {
             const auto& shape = GetSampleLayout();
-            rows = shape.GetRank() > 0 ? shape[0] : 0;
-            cols = rows > 0 ? shape.GetNumElements() / rows : 0;
+            size_t rank = shape.GetRank();
+            rows = rank > 0 ? shape[0] : 0;
+            cols = rank > 0 ?        1 : 0;
+            for (size_t k = 1; k < rank; k++)   // all dimensions except leading one
+                cols *= shape[k];
         }
     }
 
@@ -1441,16 +1450,19 @@ public:
     // miscellaneous
     // -----------------------------------------------------------------------
 
-    virtual void DumpNodeInfo(const bool /*printValues*/, File& fstream) const;
+    virtual void DumpNodeInfo(const bool /*printValues*/, const bool /*printMetadata*/, File& fstream) const;
 
 protected:
 
     // print node values
-    void PrintNodeValuesToFile(const bool printValues, File& fstream) const
+    void PrintNodeValuesToFile(const bool printValues, const bool printMetadata, File& fstream) const
     {
         if (printValues)
-        {
-            fstream << wstring(L"\n");
+        { 
+            if (printMetadata)
+            {
+                fstream << wstring(L"\n");
+            }
             const Matrix<ElemType>& m = Value();
             for (size_t i = 0; i < m.GetNumRows(); i++)
             {
@@ -1460,7 +1472,10 @@ protected:
                 }
                 fstream << wstring(L"\n");
             }
-            fstream << wstring(L"####################################################################");
+            if (printMetadata)
+            {
+                fstream << wstring(L"####################################################################");
+            }
         }
     }
 
@@ -1635,7 +1650,7 @@ public:
     // these are meant to be called during computation, so provide dummy implementations
     virtual bool RequiresPreCompute() const override { return false; } // return true if the node's value should be computed before the normal training. e.g., mean and invStd of input features.
     virtual void PrintSelfBeforeValidation() const override { }
-    virtual void DumpNodeInfo(const bool /*printValues*/, File& fstream) const override { }
+    virtual void DumpNodeInfo(const bool /*printValues*/, const bool /*printMetadata*/, File& fstream) const override {}
 
 protected: public:                                     // needed in ComputationNetwork::FindInRecurrentLoops(), which really should be part of SEQTraversalFlowControlNode
     std::vector<ComputationNodeBasePtr> m_nestedNodes; // nodes tucked away in this node, in evaluation order
@@ -1675,10 +1690,24 @@ public:
 };
 
 // =======================================================================
-// IRecurrentNode -- helper wrapper class for ComputationNodes that can be recurrent
+// IRecurrentNode -- interface implemented by ComputationNodes that can be recurrent
 // =======================================================================
 
 struct IRecurrentNode { virtual int GetRecurrenceSteppingDirection() const = 0; };
+
+// =======================================================================
+// PreComputedNodeBase -- interface implemented by ComputationNodes that precompute
+// TODO: We can use this interface in more places.
+// =======================================================================
+
+struct IPreComputeNode
+{
+    // check whether node has already undergone precomputation
+    virtual bool HasComputed() const = 0;
+    // call this with 'false' at start and with 'true' at end
+    // This is used for resetting and updating from accumulators.
+    virtual void MarkComputed(const bool hasComputed) = 0;
+};
 
 // =======================================================================
 // helper macro to ease access to base members in presence of C++ two-phase name lookup
@@ -1735,6 +1764,7 @@ protected:                                                                      
     using Base::InvalidateMissingValueColumns;                                                                                                           \
     using Base::IsLeaf;                                                                                                                                  \
     using Base::IsOutOfDateWrtInputs;                                                                                                                 \
+    using Base::IsPartOfLoop;                                                                                                                 \
     using Base::LinkToMBLayout;                                                                                                                          \
     using Base::Load;                                                                                                                                    \
     using Base::LoadValue;                                                                                                                               \

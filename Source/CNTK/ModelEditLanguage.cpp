@@ -14,6 +14,7 @@
 namespace Microsoft { namespace MSR { namespace CNTK {
 
 // EqualInsensitive - check to see if two nodes are equal up to the length of the first string (must be at least half as long as actual node name)
+// TODO: Allowing partial matches seems misguided. We should discourage that, or just remove it.
 // string1 - [in,out] string to compare, if comparision is equal insensitive but not sensitive, will replace with sensitive version
 // string2 - second string to compare
 // alternate - alternate naming of the string
@@ -265,7 +266,7 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
         {
             NetNdl<ElemType>* netNdl = &found->second;
             ProcessNDLScript(netNdl, ndlPassAll, true);
-            found->second.cn->DumpAllNodesToFile(includeData, fileName);
+            found->second.cn->DumpAllNodesToFile(includeData, true, fileName);
         }
     }
     else if (EqualInsensitive(name, "DumpNode"))
@@ -281,7 +282,7 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
         NetNdl<ElemType>* netNdl;
         vector<ComputationNodeBasePtr> nodes = FindSymbols(params[0], netNdl);
         ProcessNDLScript(netNdl, ndlPassAll);
-        netNdl->cn->DumpNodeInfoToFile(nodes, includeData, fileName);
+        netNdl->cn->DumpNodeInfoToFile(nodes, includeData, true, fileName);
     }
     else if (EqualInsensitive(name, "CopyNode", "Copy"))
     {
@@ -423,15 +424,15 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
         {
             prop = melPropLabel;
         }
-        else if (EqualInsensitive(propName, "finalCriterion", "criterion") || EqualInsensitive(propName, "finalCriterion", "Criteria"))
+        else if (EqualInsensitive(propName, "criterion") || /*legacy:*/EqualInsensitive(propName, "finalCriterion", "Criteria"))
         {
             prop = melPropFinalCriterion;
         }
-        else if (EqualInsensitive(propName, "multiSeq", "reqMultiSeqHandling"))
+        else if (EqualInsensitive(propName, "multiSeq", "reqMultiSeqHandling")) // legacy
         {
             fprintf(stderr, "WARNING: '%s' property is defunct and will be ignored.\n", propName.c_str());
         }
-        else if (EqualInsensitive(propName, "evaluation", "eval"))
+        else if (EqualInsensitive(propName, "evaluation", "eval")) // TODO: choose one
         {
             prop = melPropEvaluation;
         }

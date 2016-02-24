@@ -269,35 +269,19 @@ public:
         // loop through all the optional parameters processing them as necessary
         for (NDLNode<ElemType>* param : params)
         {
-            // make sure it's a "tag" optional parameter, that's all we process currently
-            if (_stricmp(param->GetName().c_str(), "tag"))
+            // we only process the "tag" optional parameter for now
+            if (!EqualCI(param->GetName(), "tag"))
                 continue;
 
             std::string value = param->GetValue();
-            if (!_stricmp(value.c_str(), "feature"))
-            {
-                SetOutputNode(m_net->FeatureNodes(), compNode);
-            }
-            else if (!_stricmp(value.c_str(), "label"))
-            {
-                SetOutputNode(m_net->LabelNodes(), compNode);
-            }
-            else if (!_stricmp(value.c_str(), "criterion") || !_stricmp(value.c_str(), "criteria"))
-            {
-                SetOutputNode(m_net->FinalCriterionNodes(), compNode);
-            }
-            else if (!_stricmp(value.c_str(), "multiSeq"))
-            {
-                fprintf(stderr, "'multiSeq' tag is defunct.\n");
-            }
-            else if (!_strnicmp(value.c_str(), "eval", 4)) // only compare the first 4 characters. Yikes!!
-            {
-                SetOutputNode(m_net->EvaluationNodes(), compNode);
-            }
-            else if (!_stricmp(value.c_str(), "output"))
-            {
-                SetOutputNode(m_net->OutputNodes(), compNode);
-            }
+            if      (EqualCI(value,            "feature"))   SetOutputNode(m_net->FeatureNodes(), compNode);
+            else if (EqualCI(value,            "label"))     SetOutputNode(m_net->LabelNodes(), compNode);
+            else if (EqualCI(value,            "criterion")) SetOutputNode(m_net->FinalCriterionNodes(), compNode);
+            else if (!_strnicmp(value.c_str(), "eval", 4))   SetOutputNode(m_net->EvaluationNodes(), compNode); // only compare the first 4 characters. Yikes!!
+            else if (EqualCI(value,            "output"))    SetOutputNode(m_net->OutputNodes(), compNode);
+            // legacy
+            else if (EqualCI(value,            "criteria"))  SetOutputNode(m_net->FinalCriterionNodes(), compNode); // legacy (mis-spelled)
+            else if (EqualCI(value,            "multiSeq"))  fprintf(stderr, "'multiSeq' tag is defunct.\n");
         }
     }
 
@@ -343,7 +327,7 @@ template <typename ElemType>
 class SynchronousExecutionEngine : public IExecutionEngine<ElemType>
 {
 public:
-    SynchronousExecutionEngine(DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, unsigned long randomSeedOffset = 0)
+    SynchronousExecutionEngine(DEVICEID_TYPE deviceId, unsigned long randomSeedOffset = 0)
     {
         m_computationNetwork = make_shared<ComputationNetwork>(deviceId);
         m_computationNetwork->SetRandomSeedOffset(randomSeedOffset);
