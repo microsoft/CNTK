@@ -102,7 +102,6 @@
     <ClInclude Include="..\..\Common\Include\DataWriter.h" />
     <ClInclude Include="..\..\Common\Include\File.h" />
     <ClInclude Include="..\..\Common\Include\fileutil.h" />
-    <ClInclude Include="..\..\Common\Include\DebugUtil.h" />
     <ClInclude Include="..\..\Common\Include\RandomOrdering.h" />
     <ClInclude Include="LibSVMBinaryReader.h" />
     <ClInclude Include="stdafx.h" />
@@ -115,15 +114,14 @@
     <ClCompile Include="..\..\Common\DataWriter.cpp">
       <PrecompiledHeader Condition="$(DebugBuild)">NotUsing</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="..\..\Common\ExceptionWithCallStack.cpp">
+      <PrecompiledHeader Condition="$(DebugBuild)">NotUsing</PrecompiledHeader>
+    </ClCompile>
     <ClCompile Include="..\..\Common\File.cpp">
       <PrecompiledHeader Condition="$(DebugBuild)">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="$(ReleaseBuild)">NotUsing</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="..\..\Common\fileutil.cpp">
-      <PrecompiledHeader Condition="$(DebugBuild)">NotUsing</PrecompiledHeader>
-      <PrecompiledHeader Condition="$(ReleaseBuild)">NotUsing</PrecompiledHeader>
-    </ClCompile>
-    <ClCompile Include="..\..\Common\DebugUtil.cpp">
       <PrecompiledHeader Condition="$(DebugBuild)">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="$(ReleaseBuild)">NotUsing</PrecompiledHeader>
     </ClCompile>

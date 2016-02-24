@@ -36,14 +36,14 @@
     <ClCompile Include="cudalib.cpp">
       <Filter>GPU\SequenceTraining</Filter>
     </ClCompile>
-    <ClCompile Include="..\Common\DebugUtil.cpp">
-      <Filter>Misc</Filter>
-    </ClCompile>
     <ClCompile Include="stdafx.cpp">
       <Filter>Misc</Filter>
     </ClCompile>
     <ClCompile Include="GPUDataTransferer.cpp">
       <Filter>GPU</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Common\ExceptionWithCallStack.cpp">
+      <Filter>Misc</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -51,9 +51,6 @@
       <Filter>Common\Include</Filter>
     </ClInclude>
     <ClInclude Include="..\Common\Include\fileutil.h">
-      <Filter>Common\Include</Filter>
-    </ClInclude>
-    <ClInclude Include="..\Common\Include\DebugUtil.h">
       <Filter>Common\Include</Filter>
     </ClInclude>
     <ClInclude Include="ColumnQuantizer.h">
