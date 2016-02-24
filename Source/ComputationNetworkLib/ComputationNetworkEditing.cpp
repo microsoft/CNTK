@@ -323,32 +323,6 @@ void ComputationNetwork::SetLearnableNodesBelowLearningRateMultiplier(const floa
     }
 }
 
-// sets m_learningRateMultiplier in all LearnableParameters feeding into the passed rootNode
-// Called from MEL
-// TODO: This function should be implemented using teh above. No code dup please!
-void ComputationNetwork::SetLearnableNodesBelowNeedGradient(const bool needGradient, const ComputationNodeBasePtr& rootNode)
-{
-    // find nodes from all available nodes
-    if (rootNode == nullptr)
-    {
-        for (auto nodeIter = m_nameToNodeMap.begin(); nodeIter != m_nameToNodeMap.end(); nodeIter++)
-        {
-            ComputationNodeBasePtr node = nodeIter->second;
-            if (node->OperationName() == OperationNameOf(LearnableParameter))
-                node->SetLearningRateMultiplier((float)needGradient);
-        }
-    }
-    else
-    {
-        // for calculating a specific node
-        for (const auto& node : GetEvalOrder(rootNode))
-        {
-            if (node->OperationName() == OperationNameOf(LearnableParameter))
-                node->SetLearningRateMultiplier((float)needGradient);
-        }
-    }
-}
-
 void ComputationNetwork::SetBatchNormlizationNodesBelowEvalMode(const bool evalMode, const ComputationNodeBasePtr& rootNode /* = nullptr */)
 {
     vector<ComputationNodeBasePtr> nodes;
