@@ -1,60 +1,36 @@
 # Copyright (c) Microsoft. All rights reserved.
 # Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+# WARNING. This will run in Microsoft Internal Environment ONLY
 
-# CNTK files
+# Get Jenkins environment Variables
+$buildConfig =(Get-Item env:"BUILD_CONFIGURATION").Value
+$targetConfig =(Get-Item env:"TARGET_CONFIGURATION").Value
 
-# ACML_PATH + lib
-# CUDA_PATH + bin
-# CUDNN_PATH +bin
-# OPENCV_PATH + x64\vc12\bin
-# C:\jenkins\workspace\CNTK-Build-Windows\x64\Release
+# If not a Release build quit
+If ($buildConfig -ne "Release")
+{
+	Write-Host "Not a release build. No binary drops generaion"
+	Exit
+}
 
-# MPI file
-
-# ACML files
-
-# CUDA files
-
-# cuDNN files
-
-# NVML file
-
-# $test="C:\CNTK-Test\Source"
-# if (-not $test.EndsWith("\"))
-# {
-#	$test = $test + "\"
-# }
-
-# Write-Host $test
-
-# $source = "C:\CNTK-Test\Source"
-# $destination = "C:\CNTK-Test\Backup.zip"
-# If(Test-path $destination) {Remove-item $destination}
-
-# Add-Type -assembly "system.io.compression.filesystem"
-
-# [io.compression.zipfile]::CreateFromDirectory($Source, $destination)
-
-# $x = "Path"
-# (get-item env:$x).Value
-# Write-Host $x
-
+# Set Paths
 $basePath = "BinaryDrops\ToZip"
 $baseDropPath = $basePath + "\cntk"
 $zipFile = "BinaryDrops\BinaryDrops.zip"
-$buildPath = "x64\Release"
-# $buildPath = "x64\Release_CpuOnly"
+If ($targetConfig -eq "CPU")
+{
+	$buildPath = "x64\Release_CpuOnly"
+}
+Else
+{
+	$buildPath = "x64\Release"
+}
+$sharePath = "\\muc-vfs-01a\CNTKshare\CNTK-Binary-Drop" + "\" + $buildConfig
 
-Write-Host "BUILD_CONFIGURATION = " (Get-Item env:"BUILD_CONFIGURATION").Value
-Write-Host "TARGET_CONFIGURATION = " (Get-Item env:"TARGET_CONFIGURATION").Value
 
-
-# Make dir structure
-# New-Item -Path 'BinaryDrops\cntk\cntk' -ItemType "directory"
-New-Item -Path $baseDropPath"\license" -ItemType "directory"
-New-Item -Path $baseDropPath"\prerequisites" -ItemType "directory"
-# New-Item -Path 'BinaryDrops\cntk\Examples' -ItemType "directory"
+# Make binary drop folder
+New-Item -Path $baseDropPath -ItemType "directory"
 
 # Copy build binaries
 Copy-Item $buildPath -Recurse -Destination $baseDropPath\cntk
@@ -70,7 +46,9 @@ Remove-Item $baseDropPath\cntk\*.metagen
 # Copy Examples
 Copy-Item Examples -Recurse -Destination $baseDropPath\Examples
 
-# TODO Copy Lisence etc
+# Copy all items from the share
+Copy-Item $sharePath\*  -Recurse -Destination $baseDropPath\cntk
+
 
 # Make ZIP file
 $source = $PWD.Path + "\" + $basePath
