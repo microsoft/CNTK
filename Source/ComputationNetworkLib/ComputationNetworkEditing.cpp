@@ -298,8 +298,34 @@ void ComputationNetwork::RemoveFeatureNode(ComputationNodeBasePtr featureNode)
     m_nameToNodeMap.erase(nodeName);
 }
 
-// sets m_parameterUpdateRequired in all LearnableParameters feeding into the passed rootNode
-// Called from MEL  --TODO: correct?
+// sets m_learningRateMultiplier in all LearnableParameters feeding into the passed rootNode
+// Called from MEL
+void ComputationNetwork::SetLearnableNodesBelowLearningRateMultiplier(const float learningRateMultiplier, const ComputationNodeBasePtr& rootNode)
+{
+    // find nodes from all available nodes
+    if (rootNode == nullptr)
+    {
+        for (auto nodeIter = m_nameToNodeMap.begin(); nodeIter != m_nameToNodeMap.end(); nodeIter++)
+        {
+            ComputationNodeBasePtr node = nodeIter->second;
+            if (node->OperationName() == OperationNameOf(LearnableParameter))
+                node->SetLearningRateMultiplier(learningRateMultiplier);
+        }
+    }
+    else
+    {
+        // for calculating a specific node
+        for (const auto& node : GetEvalOrder(rootNode))
+        {
+            if (node->OperationName() == OperationNameOf(LearnableParameter))
+                node->SetLearningRateMultiplier(learningRateMultiplier);
+        }
+    }
+}
+
+// sets m_learningRateMultiplier in all LearnableParameters feeding into the passed rootNode
+// Called from MEL
+// TODO: This function should be implemented using teh above. No code dup please!
 void ComputationNetwork::SetLearnableNodesBelowNeedGradient(const bool needGradient, const ComputationNodeBasePtr& rootNode)
 {
     // find nodes from all available nodes
@@ -309,7 +335,7 @@ void ComputationNetwork::SetLearnableNodesBelowNeedGradient(const bool needGradi
         {
             ComputationNodeBasePtr node = nodeIter->second;
             if (node->OperationName() == OperationNameOf(LearnableParameter))
-                node->SetParameterUpdateRequired(needGradient);
+                node->SetLearningRateMultiplier((float)needGradient);
         }
     }
     else
@@ -318,7 +344,7 @@ void ComputationNetwork::SetLearnableNodesBelowNeedGradient(const bool needGradi
         for (const auto& node : GetEvalOrder(rootNode))
         {
             if (node->OperationName() == OperationNameOf(LearnableParameter))
-                node->SetParameterUpdateRequired(needGradient);
+                node->SetLearningRateMultiplier((float)needGradient);
         }
     }
 }

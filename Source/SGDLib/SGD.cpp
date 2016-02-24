@@ -2070,10 +2070,11 @@ void SGD<ElemType>::UpdateWeights(const ComputationNodeBasePtr& node,
     fprintf(stderr, "Update_%ls\n", node->NodeName().c_str());
 #endif
     if (!node->IsParameterUpdateRequired())
-        LogicError("UpdateWeights() called for a learnable ComputationNode which has m_parameterUpdateRequired == false!");
+        LogicError("UpdateWeights() called for a learnable ComputationNode which has m_learningRateMultiplier == 0!");
 
+    double nodeDependentLearningRatePerSample = learnRatePerSample * node->GetLearningRateMultiplier();
     UpdateWeightsS(this, dynamic_pointer_cast<ComputationNode<ElemType>>(node)->Value(), dynamic_pointer_cast<ComputationNode<ElemType>>(node)->Gradient(),
-                   smoothedGradient, learnRatePerSample, momentumPerSample,
+                   smoothedGradient, nodeDependentLearningRatePerSample, momentumPerSample,
                    actualMBSize, L2RegWeight, L1RegWeight,
                    needAveMultiplier, m_useNesterovMomentum);
     node->BumpEvalTimeStamp();
