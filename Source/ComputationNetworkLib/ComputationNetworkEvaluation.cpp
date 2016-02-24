@@ -689,10 +689,12 @@ void ComputationNetwork::MarkValueNonSharableNodes()
             {
                 node->MarkValueNonSharable();
             }
+#if 0       // no, we should never set it again, this function should only go one way
             else
             {
                 node->MarkValueSharable();
             }
+#endif
         }
     }
 }

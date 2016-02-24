@@ -44,14 +44,13 @@ public:
         : Base(deviceId, name)
     {
         m_parameterUpdateRequired = true;
-        m_valueSharable = false; // TODO: wasn't this a function one should call?
+        MarkValueNonSharable();
     }
     LearnableParameter(DEVICEID_TYPE deviceId, const wstring& name, const TensorShape& shape)
         : Base(deviceId, name)
     {
         m_parameterUpdateRequired = true;
-        CreateMatrixIfNull(m_value);
-        m_valueSharable = false;
+        MarkValueNonSharable();
         SetDims(shape, false);
         UpdateFunctionValuesSize(); // this allocates the matrix
         Value().SetValue(0);
@@ -278,14 +277,13 @@ class InputValueBase : public ComputationNode<ElemType>, public NumInputs<0>
     void Init(const TensorShape& sampleLayout, bool isSparse)
     {
         m_isSparse = isSparse;
-        CreateMatrixIfNull(m_value);
+        MarkValueNonSharable();
         if (isSparse)
             ConvertToSparseMatrix();
 
         SetDims(sampleLayout, HasMBLayout()); // also called when reloading a file. Then we have an MBLayout, otherwise not yet
         UpdateFunctionValuesSize();           // we must allocate the matrix so that the readers get objects with valid row dimensions (some readers expect that)
         m_parameterUpdateRequired = false;
-        this->m_valueSharable = false;
     }
 
 protected:

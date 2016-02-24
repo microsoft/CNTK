@@ -1360,6 +1360,7 @@ public:
     // request matrices needed to do node function value evaluation
     virtual void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool) override
     {
+        // TODO: Non-shareable nodes should not get their matrices from the pool ever.
         RequestMatrixFromPool(m_value, matrixPool);
     }
 

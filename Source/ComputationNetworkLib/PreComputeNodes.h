@@ -35,6 +35,7 @@ public:
     PreComputedNodeBase(DEVICEID_TYPE deviceId, const wstring& name)
         : Base(deviceId, name), m_hasComputed(false)
     {
+        MarkValueNonSharable();
     }
 
     // interface through which this node is operated on are these two functions
@@ -50,7 +51,6 @@ public:
     virtual void /*IPreComputeNode::*/ MarkComputed(const bool hasComputed) override
     {
         m_hasComputed = hasComputed;
-        CreateMatrixIfNull(m_value);
     }
 
     virtual bool RequiresPreCompute() const override
@@ -117,7 +117,7 @@ public:
     {
         if (value.GetNumCols() != 1)
             InvalidArgument("SideLoadFromMatrix: Side-loading is only supported for column vectors.");
-        CreateMatrixIfNull(m_value);
+        //CreateMatrixIfNull(m_value);
         m_value->SetValue(value);
         m_hasComputed = true;
         SetDims(TensorShape(value.GetNumRows()), false);
