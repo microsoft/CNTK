@@ -100,9 +100,14 @@ public:
     {
         Base::Load(fstream, modelVersion);
 
+        TensorShape sampleLayout;
+
         if (modelVersion >= CNTK_MODEL_VERSION_3)
+        {
             fstream >> m_learningRateMultiplier;
-        else
+            sampleLayout.Load(fstream);
+        }
+        else // legacy format(s)
         {
             bool parameterUpdateRequired;
             fstream >> parameterUpdateRequired;
@@ -110,7 +115,6 @@ public:
 
             size_t rows, cols;
             fstream >> rows >> cols;
-            TensorShape sampleLayout;
             if (rows != 0) // legacy file format
                 sampleLayout = TensorShape(rows, cols);
             else
@@ -120,6 +124,7 @@ public:
                     sampleLayout.AppendInPlace(sampleLayout.GetRank(), cols);
             }
         }
+
         LoadValue(fstream);
         SetDims(sampleLayout, false); // note: call this after LoadValue() since LoadValue() overwrites m_sampleLayout
         VerifyDataSize(Value());      // sanity check
