@@ -437,7 +437,7 @@ public:
 
     virtual void /*ComputationNode::*/ BackpropTo(const size_t /*inputIndex*/, const FrameRange&) override
     {
-        InvalidArgument("PerDimMeanVarNormalizationNode should only be called in the evaluation stage.");
+        InvalidArgument("PerDimMeanVarNormalizationNode should only be called in the evaluation stage. Is any of its descendents a learnable parameter that requires gradient?");
     }
 
     virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
@@ -507,10 +507,6 @@ public:
                 InvalidArgument("PerDimMeanVarNormalizationNode: All inputs should have same sample layout.");
         }
 
-        // TODO: Is this correct? Why not just skip propagating a gradient into these? We should not poke around in our children.
-        Input(1)->SetLearningRateMultiplier(false); // prevent learning
-        Input(2)->SetLearningRateMultiplier(false);
-
         SetDims(Input(0));
     }
 };
@@ -541,7 +537,7 @@ public:
 
     virtual void /*ComputationNode::*/ BackpropTo(const size_t /*inputIndex*/, const FrameRange&) override
     {
-        InvalidArgument("PerDimMeanVarDeNormalizationNode should only be called in the evaluation stage.");
+        InvalidArgument("PerDimMeanVarDeNormalizationNode should only be called in the evaluation stage. Is any of its descendents a learnable parameter that requires gradient?");
     }
 
     // (feature-mean).*InvStdDev
@@ -618,10 +614,6 @@ public:
             if (!Input(0)->GetSampleLayout().IsElementwiseCompatibleWith(Input(1)->GetSampleLayout()) || !Input(0)->GetSampleLayout().IsElementwiseCompatibleWith(Input(2)->GetSampleLayout()))
                 InvalidArgument("PerDimMeanVarDeNormalizationNode: All inputs should have same sample layout.");
         }
-
-        // TODO: Is this correct? Why not just skip propagating a gradient into these? We should not poke around in our children.
-        Input(1)->SetLearningRateMultiplier(false); // prevent learning
-        Input(2)->SetLearningRateMultiplier(false);
 
         SetDims(Input(0));
     }

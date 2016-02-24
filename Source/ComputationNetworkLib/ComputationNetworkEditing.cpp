@@ -325,27 +325,9 @@ void ComputationNetwork::SetLearnableNodesBelowLearningRateMultiplier(const floa
 
 // sets m_learningRateMultiplier in all LearnableParameters feeding into the passed rootNode
 // Called from MEL
-void ComputationNetwork::SetLearnableNodesBelowNeedGradient(const bool needGradient, const ComputationNodeBasePtr& rootNode)
+void ComputationNetwork::SetLearnableNodesBelowNeedGradient(const bool needsGradient, const ComputationNodeBasePtr& rootNode)
 {
-    // find nodes from all available nodes
-    if (rootNode == nullptr)
-    {
-        for (auto nodeIter = m_nameToNodeMap.begin(); nodeIter != m_nameToNodeMap.end(); nodeIter++)
-        {
-            ComputationNodeBasePtr node = nodeIter->second;
-            if (node->OperationName() == OperationNameOf(LearnableParameter))
-                node->SetLearningRateMultiplier((float)needGradient);
-        }
-    }
-    else
-    {
-        // for calculating a specific node
-        for (const auto& node : GetEvalOrder(rootNode))
-        {
-            if (node->OperationName() == OperationNameOf(LearnableParameter))
-                node->SetLearningRateMultiplier((float)needGradient);
-        }
-    }
+    SetLearnableNodesBelowLearningRateMultiplier(needsGradient ? 1.0f : 0);
 }
 
 void ComputationNetwork::SetBatchNormlizationNodesBelowEvalMode(const bool evalMode, const ComputationNodeBasePtr& rootNode /* = nullptr */)

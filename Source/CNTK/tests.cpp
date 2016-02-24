@@ -259,7 +259,7 @@ void TestConfiguration(const ConfigParameters& configBase)
                 size_t cols = 0;
                 if (!IsParameter(paramsMap, configNode[2]))
                     cols = configNode[2];
-                bool needGradient = false;
+                bool needsGradient = false;
                 bool init = false;
                 ConfigArray initData;
 
@@ -267,8 +267,8 @@ void TestConfiguration(const ConfigParameters& configBase)
                 for (int i = 3; i < configNode.size(); ++i)
                 {
                     ConfigParameters configParam = configNode[i];
-                    if (configParam.Exists("needGradient")) // TODO: should this be a test for 'true' rather than Exists()?
-                        needGradient = true;
+                    if (configParam.Exists("needsGradient")) // TODO: should this be a test for 'true' rather than Exists()?
+                        needsGradient = true;
                     else if (configParam.Exists("init"))
                     {
                         init = true;
