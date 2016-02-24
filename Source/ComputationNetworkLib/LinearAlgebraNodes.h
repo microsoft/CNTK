@@ -260,12 +260,78 @@ public:
     {
         Base::Validate(isFinalValidationPass);
         if (isFinalValidationPass && Input(0)->HasMBLayout())
-            InvalidArgument("%ls Times operation requires the first factor to not be minibatch data (must not have an MBLayout).", NodeName().c_str());
+            InvalidArgument("%ls %ls operation requires the first factor to not be minibatch data (must not have an MBLayout).", NodeName().c_str(), OperationName().c_str());
         InferMBLayoutFromInputsForStandardCase();
 
+        bool transpose = m_transpose; // (assigning to a non-const variable avoids a compiler warning C4127: conditional expression is constant)
+
+#if 0
+        // get tensor shapes
+        auto dimsA = Input(0)->GetSampleLayout().GetDims();
+        auto dimsB = Input(1)->GetSampleLayout().GetDims();
+        string dimsAstring = string(Input(0)->GetSampleLayout()); // for error messages
+        string dimsBstring = string(Input(1)->GetSampleLayout());
+
+        // validate and infer
+        if (isFinalValidationPass || (dimsA.size() > 0 && dimsB.size() > 0)) // only if we got at least some input dimensions to work with or need to wrap up
+        {
+            // if transposing then only support actual matrices or column vectors
+            if (transpose)
+            {
+                if (dimsA.size() == 1)  // column vector: treat as N x 1 matrix
+                    dimsA.push_back(1);
+                else if (dimsA.size() != 2)
+                    InvalidArgument("%ls %ls operation: The first outputRank (%d) dimensions in left argument's shape [%s] must not be 0.", NodeName().c_str(), OperationName().c_str(), (int)m_outputRank, dimsAstring.c_str());
+                if (m_outputRank != 1)
+                    InvalidArgument("%ls %ls operation: outputRank (%d) must be 1.", NodeName().c_str(), OperationName().c_str(), (int)m_outputRank, dimsAstring.c_str());
+                // swap them temporarily, to get transposition out of the way for validation
+                std::swap(dimsA[0], dimsA[1]);
+            }
+
+            if (m_outputRank > dimsA.size())
+                InvalidArgument("%ls %ls operation: outputRank %d exceeds left argument's shape [%s].", NodeName().c_str(), OperationName().c_str(), (int)m_outputRank, dimsAstring.c_str());
+            auto numReductionDims = dimsA.size() - m_outputRank;  // we reduce over the remaining dims; this is their number
+            if (numReductionDims > dimsB.size())
+                InvalidArgument("%ls %ls operation: right argument shape [%s] has too few dimensions for outputRank %d.", NodeName().c_str(), OperationName().c_str(), (int)m_outputRank, dimsBstring.c_str(), (int)m_outputRank);
+
+            // validate or automatically infer dimension inference for learnable parameters
+            for (size_t k = 0; k < m_outputRank; k++) // outputRank dimensions cannot be inferred
+                if (dimsA[k] == 0)
+                    InvalidArgument("%ls %ls operation: The outputRank (%d) dimensions in left argument's shape [%s] must not be 0.", NodeName().c_str(), OperationName().c_str(), (int)m_outputRank, dimsAstring.c_str());
+
+            // fill in the missing ones
+            for (size_t k = m_outputRank; k < dimsA.size(); k++)
+            {
+                auto& dimA = dimsA[k];
+                auto& dimB = dimsB[k - m_outputRank];
+                if (isFinalValidationPass && dimB == 0)
+                    InvalidArgument("%ls %ls operation: Right [%s] operand must have zero dimensions.", NodeName().c_str(), OperationName().c_str(), dimsBstring.c_str());
+                else if (dimA == 0)
+                    dimA = dimB; // infer dimension
+            }
+
+            // swap back in case of TransposeTimes
+            if (transpose)
+                std::swap(dimsA[0], dimsA[1]);
+
+            // update if LearnableParameter
+            Input(0)->ValidateInferInputDimsFrom(TensorShape(dimsA));
+
+            // and verify once again
+            if (isFinalValidationPass && Input(0)->GetSampleLayout().GetDims() != dimsA)
+                InvalidArgument("%ls %ls operation: Left [%s] and right [%s] operands' shapes are not compatible.", NodeName().c_str(), OperationName().c_str(), dimsAstring.c_str(), dimsBstring.c_str());
+
+            // now determine output dimensions
+            auto dimsC = dimsA;
+            for (size_t k = numReductionDims; k < dimsB.size(); k++)
+                dimsC.push_back(dimsB[k]);
+            SetDims(TensorShape(dimsC), Input(1)->HasMBLayout());
+#endif
+        }
+
+#if 1
         // support automatic dimension inference for learnable parameters
         size_t rows0 = Input(0)->GetAsMatrixNumRows(), cols0 = Input(0)->GetAsMatrixNumCols();
-        bool transpose = m_transpose; // (assigning to a non-const variable avoids a compiler warning C4127: conditional expression is constant)
         if (transpose)
             std::swap(rows0, cols0);
         size_t rows1 = Input(1)->HasMBLayout() ? Input(1)->GetSampleMatrixNumRows() : Input(1)->GetAsMatrixNumRows();
@@ -295,6 +361,7 @@ public:
         rows1 = Input(1)->HasMBLayout() ? Input(1)->GetSampleMatrixNumRows() : Input(1)->GetAsMatrixNumRows();
         if (isFinalValidationPass && cols0 != rows1)
             InvalidArgument("The inner matrix dimension in the %ls Times operation does not match (%d vs. %d).", NodeName().c_str(), (int) rows1, (int) cols0);
+#endif
     }
 
     virtual void AllocateGradientMatricesForInputs(MatrixPool& matrixPool) override
@@ -328,7 +395,7 @@ private:
 // 'outputRank', where all but the first 'outputRank' dimensions of A must match.
 // 'outputRank' defaults to 1, which is used in the above example.
 // Example for outputRank = 2:
-//  [I x J x K] * [K x L x M x *] = [I x L x M x *]
+//  [I x J x K] * [K x L x M x *] = [I x J x L x M x *]
 // -----------------------------------------------------------------------
 
 template <class ElemType>
