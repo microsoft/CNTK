@@ -6,6 +6,9 @@
     <ClCompile Include="..\..\Common\DataReader.cpp">
       <Filter>Common</Filter>
     </ClCompile>
+	<ClCompile Include="..\..\Common\ExceptionWithCallStack.cpp">
+      <Filter>Common</Filter>
+    </ClCompile>
     <ClCompile Include="..\..\Common\fileutil.cpp">
       <Filter>Common</Filter>
     </ClCompile>
@@ -15,9 +18,6 @@
     <ClCompile Include="dllmain.cpp" />
     <ClCompile Include="TextReader.cpp" />
     <ClCompile Include="TextConfigHelper.cpp" />
-    <ClCompile Include="..\..\Common\DebugUtil.cpp">
-      <Filter>Common</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\Common\Config.cpp">
       <Filter>Common</Filter>
     </ClCompile>
@@ -43,8 +43,8 @@
     <ClInclude Include="TextConfigHelper.h" />
     <ClInclude Include="Descriptors.h" />
     <ClInclude Include="Indexer.h" />
-    <ClInclude Include="TextParser.h" />
     <ClInclude Include="TextReaderConstants.h" />
+    <ClInclude Include="TextParser.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Common">

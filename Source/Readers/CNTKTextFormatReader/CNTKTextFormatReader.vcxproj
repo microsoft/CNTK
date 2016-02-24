@@ -21,8 +21,8 @@
   <PropertyGroup Label="Globals">
     <ProjectGuid>{91973E60-A7BE-4C86-8FDB-59C88A0B3715}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
-    <RootNamespace>TextReader</RootNamespace>
-    <ProjectName>CNTKTextReader</ProjectName>
+    <RootNamespace>CNTKTextFormatReader</RootNamespace>
+    <ProjectName>CNTKTextFormatReader</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <Import Project="$(SolutionDir)\CNTK.Cpp.props" />
@@ -106,10 +106,8 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\Common\DataReader.cpp" />
+	<ClCompile Include="..\..\Common\ExceptionWithCallStack.cpp" />
     <ClCompile Include="..\..\Common\File.cpp">
-      <PrecompiledHeader>NotUsing</PrecompiledHeader>
-    </ClCompile>
-    <ClCompile Include="..\..\Common\DebugUtil.cpp">
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="..\..\Common\fileutil.cpp">
