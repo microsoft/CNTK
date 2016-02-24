@@ -26,7 +26,7 @@ Else
 {
 	$buildPath = "x64\Release"
 }
-$sharePath = "\\muc-vfs-01a\CNTKshare\CNTK-Binary-Drop" + "\" + $buildConfig
+$sharePath = "\\muc-vfs-01a\CNTKshare\CNTK-Binary-Drop" + "\" + $targetConfig
 
 
 # Make binary drop folder
@@ -47,14 +47,12 @@ Remove-Item $baseDropPath\cntk\*.metagen
 Copy-Item Examples -Recurse -Destination $baseDropPath\Examples
 
 # Copy all items from the share
-Copy-Item $sharePath\*  -Recurse -Destination $baseDropPath\cntk
+Copy-Item $sharePath"\*"  -Recurse -Destination $baseDropPath
 
 
 # Make ZIP file
 $source = $PWD.Path + "\" + $basePath
-Write-Host $source
 $destination = $PWD.Path + "\" + $zipFile
-Write-Host $destination
 Add-Type -assembly "system.io.compression.filesystem"
 [io.compression.zipfile]::CreateFromDirectory($source, $destination)
 
