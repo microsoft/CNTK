@@ -740,7 +740,7 @@ public:
     // compute gradients to input observations, the weights to the observations, and the class log posterior probabilites
     virtual void BackpropToNonLooping(size_t inputIndex) override
     {
-        // this should never be called for input[0], which is controlled through the needGradient flag
+        // this should never be called for input[0], which is controlled through learningRateMultiplier == 0
         if (inputIndex != 1 && inputIndex != 2 && inputIndex != 3)
             InvalidArgument("ClassCrossEntropyWithSoftmaxNode criterion only takes with respect to input, weight to the input and class log posterior probability.");
 
@@ -1086,7 +1086,7 @@ public:
     virtual void BackpropToNonLooping(size_t inputIndex) override // scaled by 2*number of colmns (samples) in the Matrix<ElemType>
     {
         FrameRange fr(Input(0)->GetMBLayout());
-        // inputIndex 0 should not get us here, it should be prevented by the needGradient flag of input[0]
+        // this should never be called for input[0], which is controlled through learningRateMultiplier == 0
         if (inputIndex != 1 && inputIndex != 2)
             InvalidArgument("CRFNode only takes with respect to input and weight.");
 

@@ -64,9 +64,8 @@ public:
     {
         // TODO: Change dimensions to take a generic tensor instead. That will be a (minor) breaking change that will require fix-ups when converting from NDL to BrainScript.
         AttachInputs(configp, this->GetExpectedNumInputs());
-        // parameters[rows, [cols=1]] plus other optional parameters (needGradient=[true|false], init=[uniform|gaussian|fixedvalue], initValueScale=[1|float], value=[0|float])
-        // TODO: "needGradient" should be renamed to better match m_learningRateMultiplier. It is also inconsistent with MEL which uses "needsGradient"
-        SetLearningRateMultiplier(configp->Get(L"needGradient"));
+        // parameters[rows, [cols=1]] plus other optional parameters (learningRateMultiplier=[1|0|float], init=[uniform|gaussian|fixedvalue], initValueScale=[1|float], value=[0|float])
+        SetLearningRateMultiplier(configp->Get(L"learningRateMultiplier"));
         wstring initString = configp->Get(L"init");
         if (initString == L"fixedValue")
             Value().SetValue((ElemType) configp->Get(L"value"));
