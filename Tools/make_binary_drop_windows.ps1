@@ -43,6 +43,10 @@
 $basePath = "BinaryDrops\ToZip"
 $baseDropPath = $basePath + "\cntk"
 $zipFile = "BinaryDrops\BinaryDrops.zip"
+# $buildPath = "x64\Release"
+$buildPath = "x64\Release_CpuOnly"
+
+Write-Host "BUILD_CONFIGURATION = " (Get-Item env:"BUILD_CONFIGURATION").Value
 
 # Make dir structure
 # New-Item -Path 'BinaryDrops\cntk\cntk' -ItemType "directory"
@@ -51,7 +55,7 @@ New-Item -Path $baseDropPath"\prerequisites" -ItemType "directory"
 # New-Item -Path 'BinaryDrops\cntk\Examples' -ItemType "directory"
 
 # Copy build binaries
-Copy-Item x64\Release -Recurse -Destination $baseDropPath\cntk
+Copy-Item $buildPath -Recurse -Destination $baseDropPath\cntk
 
 # Clean unwanted items
 If (Test-Path $baseDropPath\cntk\UnitTests) {Remove-Item $baseDropPath\cntk\UnitTests -Recurse}
