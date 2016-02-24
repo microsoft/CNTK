@@ -17,6 +17,8 @@
 #define _CRT_SECURE_CPP_OVERLOAD_STANDARD_NAMES 1
 #include "Basics.h"
 #include "fileutil.h"
+#include "ProgressTracing.h"
+
 #ifdef __unix__
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -608,7 +610,16 @@ void renameOrDie(const std::string& from, const std::string& to)
     // to the HDFS FUSE implementation's bug of failing to do so
     unlinkOrDie(to);
     if (rename(from.c_str(), to.c_str()) != 0)
+    {
         RuntimeError("error renaming file '%s': %s", from.c_str(), strerror(errno));
+    }
+
+    // workaround for FUSE rename when running on Philly
+    if (ProgressTracing::IsEnabled())
+    {
+        fprintf(stderr, "sleep for 120 sec as workaround for FUSE write.\n");
+        sleep(120);
+    }
 #endif
 }
 
