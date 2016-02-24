@@ -117,7 +117,6 @@ public:
     {
         if (value.GetNumCols() != 1)
             InvalidArgument("SideLoadFromMatrix: Side-loading is only supported for column vectors.");
-        //CreateMatrixIfNull(m_value);
         m_value->SetValue(value);
         m_hasComputed = true;
         SetDims(TensorShape(value.GetNumRows()), false);
