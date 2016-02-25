@@ -47,6 +47,7 @@ Remove-Item $baseDropPath\cntk\*.metagen
 Copy-Item Examples -Recurse -Destination $baseDropPath\Examples
 
 # Copy all items from the share
+Write-Host "Current user is "(Get-Item env:USERDOMAIN).Value"\"(Get-Item env:USERNAME).Value
 Copy-Item $sharePath"\*"  -Recurse -Destination $baseDropPath
 
 
