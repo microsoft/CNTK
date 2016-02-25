@@ -48,7 +48,12 @@ Copy-Item Examples -Recurse -Destination $baseDropPath\Examples
 
 # Copy all items from the share
 Write-Host "Current user is "(Get-Item env:USERDOMAIN).Value"\"(Get-Item env:USERNAME).Value
-Copy-Item $sharePath"\*"  -Recurse -Destination $baseDropPath
+# Copy-Item $sharePath"\*"  -Recurse -Destination $baseDropPath
+# Try with Robocopy
+$robocopyCmd = "robocopy " + $sharePath + " " + $baseDropPath + " /s/e"
+Write-Host "Invoking" $robocopyCmd
+Invoke-Expression $robocopyCmd
+
 
 
 # Make ZIP file
@@ -58,4 +63,4 @@ Add-Type -assembly "system.io.compression.filesystem"
 [io.compression.zipfile]::CreateFromDirectory($source, $destination)
 
 # Remove ZIP sources
-If (Test-Path $basePath) {Remove-Item $basePath -Recurse}
+# If (Test-Path $basePath) {Remove-Item $basePath -Recurse}
