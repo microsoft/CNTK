@@ -21,7 +21,7 @@ ndlMnistMacros = [
     
     scValue = 1
     
-    expAvg = 1
+    normTimeConst = 1024
   
     fc1WScale = 12
     fc1BValue = 0
@@ -37,7 +37,7 @@ DNN=[
     hStride1 = 1
     vStride1 = 1
     # weight[cMap1, kW1 * kH1 * ImageC]
-    conv1 = ConvBNReLULayer(featScaled, cMap1, 75, kW1, kH1, hStride1, vStride1, conv1WScale, conv1BValue, scValue, expAvg)
+    conv1 = ConvBNReLULayer(featScaled, cMap1, 75, kW1, kH1, hStride1, vStride1, conv1WScale, conv1BValue, scValue, normTimeConst)
 
     # pool1
     pool1W = 3
@@ -53,7 +53,7 @@ DNN=[
     hStride2 = 1
     vStride2 = 1
     # weight[cMap2, kW2 * kH2 * cMap1]
-    conv2 = ConvBNReLULayer(pool1, cMap2, 800, kW2, kH2, hStride2, vStride2, conv2WScale, conv2BValue, scValue, expAvg)
+    conv2 = ConvBNReLULayer(pool1, cMap2, 800, kW2, kH2, hStride2, vStride2, conv2WScale, conv2BValue, scValue, normTimeConst)
 
     # pool2
     pool2W = 3
@@ -69,7 +69,7 @@ DNN=[
     hStride3 = 1
     vStride3 = 1
     # weight[cMap3, kW3 * kH3 * cMap2]
-    conv3 = ConvBNReLULayer(pool2, cMap3, 800, kW3, kH3, hStride3, vStride3, conv3WScale, conv3BValue, scValue, expAvg)
+    conv3 = ConvBNReLULayer(pool2, cMap3, 800, kW3, kH3, hStride3, vStride3, conv3WScale, conv3BValue, scValue, normTimeConst)
 
     # pool3
     pool3W = 3
@@ -79,7 +79,7 @@ DNN=[
     pool3 = MaxPooling(conv3, pool3W, pool3H, pool3hStride, pool3vStride, imageLayout = "cudnn")
 
     hiddenDim = 64
-    h1 = DnnBNReLULayer(576, hiddenDim, pool3, fc1WScale, fc1BValue, scValue, expAvg)
+    h1 = DnnBNReLULayer(576, hiddenDim, pool3, fc1WScale, fc1BValue, scValue, normTimeConst)
     ol = DNNLastLayer(hiddenDim, labelDim, h1, fc2WScale, fc2BValue)
     
     CE = CrossEntropyWithSoftmax(labels, ol, tag = Criteria)

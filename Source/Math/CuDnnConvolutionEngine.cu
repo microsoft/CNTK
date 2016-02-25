@@ -413,14 +413,10 @@ public:
         }
         else if (m_bnImpl == BatchNormImpl::Cntk)
         {
-            // No support for exp averaging for now.
-            assert(expAvgFactor == 1);
-            if (expAvgFactor != 1)
-                InvalidArgument("CNTK batch norm implementation currently supports expAvgFactor = 1 only.");
             epsilon = std::max(epsilon, 1e-9);
             CUDA_CALL(BatchNormalizationForwardTraining(inT, spatial, ptr(in), ptr(out), ptr(scale), ptr(bias),
-                                                        ptr(runMean), ptr(runInvStdDev), epsilon, 
-                                                        ptr(saveMean), ptr(saveInvStdDev), m_stream));
+                                                        expAvgFactor, ptr(runMean), ptr(runInvStdDev),
+                                                        epsilon, ptr(saveMean), ptr(saveInvStdDev), m_stream));
         }
         else
             RuntimeError("Provided batch norm implementation (%d) is not supported.", m_bnImpl);
@@ -599,6 +595,7 @@ private:
             // If minibatch size is decreased we assume that previously selected algorithm requires less or the same amount of workspace.
             // This is done to avoid re-running auto-tuner every time in case minibatch size changes frequently (e.g. when distributed reading is enabled).
             // REVIEW alexeyk: potentially, this might cause some perf issues if better (faster) algo can be selected for a smaller mininbatch.
+            // We also need to reset auto-tuning status at the beginning of each epoch but ComputationNode currently does not provide such notification.
             // We assume no other dimensions of tensors can change so we don't check it.
             // REVIEW alexeyk: disabled for now until we find a better solution.
             //return (Algo.status != CUDNN_STATUS_SUCCESS || t1.n() > CurMBSize || t2.n() > CurMBSize);

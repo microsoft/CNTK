@@ -399,7 +399,7 @@ void SynchronousNodeEvaluator<ElemType>::Evaluate(NDLNode<ElemType>* node, const
             // Optional parameters
             bool eval = node->GetOptionalParameter("eval", "false");
             bool spatial = node->GetOptionalParameter("spatial", "false");
-            double expAvgFactor = node->GetOptionalParameter("expAvgFactor", "1.0");
+            double normTimeConst = node->GetOptionalParameter("normTimeConst", "0");
             double epsilon = node->GetOptionalParameter("epsilon", "0.00001");
             std::wstring bnEngineS = node->GetOptionalParameter("engine", "cntk");
             bool useCntkEngine;
@@ -411,7 +411,7 @@ void SynchronousNodeEvaluator<ElemType>::Evaluate(NDLNode<ElemType>* node, const
                 InvalidArgument("Unsupported batch normalization engine, choose either \"cntk\"(default) or \"cudnn\".");
             ImageLayoutKind imageLayoutKind = ImageLayoutKindFrom(node->GetOptionalParameter("imageLayout", "CHW"));
 
-            nodePtr = builder.BatchNormalization(nullptr, nullptr, nullptr, nullptr, nullptr, eval, spatial, expAvgFactor, epsilon, useCntkEngine, imageLayoutKind, name);
+            nodePtr = builder.BatchNormalization(nullptr, nullptr, nullptr, nullptr, nullptr, eval, spatial, normTimeConst, epsilon, useCntkEngine, imageLayoutKind, name);
         }
     }
     else

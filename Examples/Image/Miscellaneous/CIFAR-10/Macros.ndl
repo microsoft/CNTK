@@ -7,7 +7,7 @@ ConvReLULayer(inp, outMap, inWCount, kW, kH, hStride, vStride, wScale, bValue)
     y = RectifiedLinear(p)
 }
 
-ConvBNLayerW(W, inp, outMap, kW, kH, hStride, vStride, bValue, scValue, expAvg)
+ConvBNLayerW(W, inp, outMap, kW, kH, hStride, vStride, bValue, scValue, tconst)
 {
     b = Parameter(outMap, 1, init = fixedValue, value = bValue)
     sc = Parameter(outMap, 1, init = fixedValue, value = scValue)
@@ -15,54 +15,54 @@ ConvBNLayerW(W, inp, outMap, kW, kH, hStride, vStride, bValue, scValue, expAvg)
     isd = Parameter(outMap, 1, init = fixedValue, value = 0, needGradient = false)
     
     c = Convolution(W, inp, kW, kH, outMap, hStride, vStride, zeroPadding = true, imageLayout = "cudnn")
-    y = BatchNormalization(c, sc, b, m, isd, eval = false, spatial = true, expAvgFactor = expAvg, imageLayout = "cudnn")
+    y = BatchNormalization(c, sc, b, m, isd, eval = false, spatial = true, normTimeConst = tconst, imageLayout = "cudnn")
 }
 
-ConvBNLayer(inp, outMap, inWCount, kW, kH, hStride, vStride, wScale, bValue, scValue, expAvg)
+ConvBNLayer(inp, outMap, inWCount, kW, kH, hStride, vStride, wScale, bValue, scValue, tconst)
 {
     W = Parameter(outMap, inWCount, init = Gaussian, initValueScale = wScale)
-    c = ConvBNLayerW(W, inp, outMap, kW, kH, hStride, vStride, bValue, scValue, expAvg)
+    c = ConvBNLayerW(W, inp, outMap, kW, kH, hStride, vStride, bValue, scValue, tconst)
 }
 
-ConvBNReLULayer(inp, outMap, inWCount, kW, kH, hStride, vStride, wScale, bValue, scValue, expAvg)
+ConvBNReLULayer(inp, outMap, inWCount, kW, kH, hStride, vStride, wScale, bValue, scValue, tconst)
 {
-    c = ConvBNLayer(inp, outMap, inWCount, kW, kH, hStride, vStride, wScale, bValue, scValue, expAvg)
+    c = ConvBNLayer(inp, outMap, inWCount, kW, kH, hStride, vStride, wScale, bValue, scValue, tconst)
     y = RectifiedLinear(c)
 }
 
-ResNetNode2(inp, outMap, inWCount, kW, kH, wScale, bValue, scValue, expAvg)
+ResNetNode2(inp, outMap, inWCount, kW, kH, wScale, bValue, scValue, tconst)
 {
     # First convolution layer.
-    c1 = ConvBNReLULayer(inp, outMap, inWCount, kW, kH, 1, 1, wScale, bValue, scValue, expAvg)
+    c1 = ConvBNReLULayer(inp, outMap, inWCount, kW, kH, 1, 1, wScale, bValue, scValue, tconst)
     # Second convolution layer, no ReLU.
-    c2 = ConvBNLayer(c1, outMap, inWCount, kW, kH, 1, 1, wScale, bValue, scValue, expAvg)
+    c2 = ConvBNLayer(c1, outMap, inWCount, kW, kH, 1, 1, wScale, bValue, scValue, tconst)
     p = Plus(c2, inp)
     y = RectifiedLinear(p)
 }
 
-ResNetNode2Inc(inp, outMap, inWCount, wCount, kW, kH, wScale, bValue, scValue, expAvg, Wproj)
+ResNetNode2Inc(inp, outMap, inWCount, wCount, kW, kH, wScale, bValue, scValue, tconst, Wproj)
 {
     # First convolution layer.
-    c1 = ConvBNReLULayer(inp, outMap, inWCount, kW, kH, 2, 2, wScale, bValue, scValue, expAvg)
+    c1 = ConvBNReLULayer(inp, outMap, inWCount, kW, kH, 2, 2, wScale, bValue, scValue, tconst)
     # Second convolution layer, no ReLU.
-    c2 = ConvBNLayer(c1, outMap, wCount, kW, kH, 1, 1, wScale, bValue, scValue, expAvg)
+    c2 = ConvBNLayer(c1, outMap, wCount, kW, kH, 1, 1, wScale, bValue, scValue, tconst)
     
     # Projection convolution layer.
-    c_proj = ConvBNLayerW(Wproj, inp, outMap, 1, 1, 2, 2, bValue, scValue, expAvg)
+    c_proj = ConvBNLayerW(Wproj, inp, outMap, 1, 1, 2, 2, bValue, scValue, tconst)
     #c_proj = Convolution(Wproj, inp, 1, 1, outMap, 2, 2, zeroPadding = false, imageLayout = "cudnn")
     
     p = Plus(c2, c_proj)
     y = RectifiedLinear(p)
 }
 
-ResNetNode2Inc2(inp, inMap, outMap, inWCount, wCount, kW, kH, wScale, w1Scale, bValue, scValue, expAvg)
+ResNetNode2Inc2(inp, inMap, outMap, inWCount, wCount, kW, kH, wScale, w1Scale, bValue, scValue, tconst)
 {
     pool = MaxPooling(inp, 1, 1, 2, 2, imageLayout = "cudnn")
     # First convolution layer.
-    c1 = ConvBNReLULayer(inp, outMap, inWCount, kW, kH, 2, 2, wScale, bValue, scValue, expAvg)
+    c1 = ConvBNReLULayer(inp, outMap, inWCount, kW, kH, 2, 2, wScale, bValue, scValue, tconst)
     # Second convolution layer, no ReLU.
-    c2 = ConvBNLayer(c1, inMap, wCount, kW, kH, 1, 1, w1Scale, bValue, scValue, expAvg)
-    c3 = ConvBNLayer(c1, inMap, wCount, kW, kH, 1, 1, w1Scale, bValue, scValue, expAvg)
+    c2 = ConvBNLayer(c1, inMap, wCount, kW, kH, 1, 1, w1Scale, bValue, scValue, tconst)
+    c3 = ConvBNLayer(c1, inMap, wCount, kW, kH, 1, 1, w1Scale, bValue, scValue, tconst)
     
     p = Plus(c2, pool)
     r = RowStack(p, c3)
@@ -78,7 +78,7 @@ DnnReLULayer(inDim, outDim, x, wScale, bValue)
     y = RectifiedLinear(z)
 }
 
-DnnBNReLULayer(inDim, outDim, x, wScale, bValue, scValue, expAvg)
+DnnBNReLULayer(inDim, outDim, x, wScale, bValue, scValue, tconst)
 {
     W = Parameter(outDim, inDim, init = Gaussian, initValueScale = wScale) 
     b = Parameter(outDim, 1, init = fixedValue, value = bValue) 
@@ -86,7 +86,7 @@ DnnBNReLULayer(inDim, outDim, x, wScale, bValue, scValue, expAvg)
     m = Parameter(outDim, 1, init = fixedValue, value = 0, needGradient = false)
     isd = Parameter(outDim, 1, init = fixedValue, value = 0, needGradient = false)
     t = Times(W, x)
-    bn = BatchNormalization(t, sc, b, m, isd, eval = false, spatial = false, expAvgFactor = expAvg)
+    bn = BatchNormalization(t, sc, b, m, isd, eval = false, spatial = false, normTimeConst = tconst)
     y = RectifiedLinear(bn)
 }
 
