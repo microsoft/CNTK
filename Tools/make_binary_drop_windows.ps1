@@ -50,7 +50,7 @@ Copy-Item Examples -Recurse -Destination $baseDropPath\Examples
 Write-Host "Current user is "(Get-Item env:USERDOMAIN).Value"\"(Get-Item env:USERNAME).Value
 # Copy-Item $sharePath"\*"  -Recurse -Destination $baseDropPath
 # Try with Robocopy
-$robocopyCmd = "robocopy " + $sharePath + " " + $baseDropPath + " /s/e"
+$robocopyCmd = "robocopy " + $sharePath + " " + $baseDropPath + " /s /e"
 Write-Host "Invoking" $robocopyCmd
 Invoke-Expression $robocopyCmd
 
