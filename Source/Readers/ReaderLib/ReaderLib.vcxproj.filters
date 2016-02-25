@@ -43,6 +43,9 @@
     <ClInclude Include="Bundler.h">
       <Filter>Deserializers</Filter>
     </ClInclude>
+    <ClInclude Include="PartialBlockRandomizer.h">
+      <Filter>Randomizers</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="BlockRandomizer.cpp">
@@ -59,6 +62,9 @@
     </ClCompile>
     <ClCompile Include="Bundler.cpp">
       <Filter>Deserializers</Filter>
+    </ClCompile>
+    <ClCompile Include="PartialBlockRandomizer.cpp">
+      <Filter>Randomizers</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
