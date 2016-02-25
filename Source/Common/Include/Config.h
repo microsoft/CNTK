@@ -1051,8 +1051,8 @@ public:
         std::size_t end = 0;
         while (start != std::string::npos )
         {
-            // variable names must begin with a letter
-            if (start + 1 < newConfigLine.size() && !iscalpha(newConfigLine[start + 1]))
+            // variable names must begin with a letter or '_'
+            if (start + 1 < newConfigLine.size() && !iscalpha(newConfigLine[start + 1]) && newConfigLine[start + 1] != '_')
             {
                 start = newConfigLine.find_first_of(openBraceVar, start + 2);
                 continue;

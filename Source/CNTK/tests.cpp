@@ -259,7 +259,7 @@ void TestConfiguration(const ConfigParameters& configBase)
                 size_t cols = 0;
                 if (!IsParameter(paramsMap, configNode[2]))
                     cols = configNode[2];
-                bool needGradient = false;
+                bool learningRateMultiplier = 0;
                 bool init = false;
                 ConfigArray initData;
 
@@ -268,8 +268,8 @@ void TestConfiguration(const ConfigParameters& configBase)
                 {
                     ConfigParameters configParam = configNode[i];
                     // TODO: update to learningRateMultiplier
-                    if (configParam.Exists("needGradient")) // TODO: should this be a test for 'true' rather than Exists()?
-                        needGradient = true;
+                    if (configParam.Exists("learningRateMultiplier")) // TODO: should this be a test for 'true' rather than Exists()?
+                        needsGradient = (float)configParam("learningRateMultiplier") > 0? true : false;
                     else if (configParam.Exists("init"))
                     {
                         init = true;
