@@ -601,10 +601,11 @@ BOOST_AUTO_TEST_SUITE_END()
 // Batch normalization unit tests.
 // REVIEW alexeyk: is this a right place?
 
-std::vector<std::tuple<Tensor4DPtr, bool>> GenerateBNTestConfigs(ConvFact& fact)
+std::vector<std::tuple<Tensor4DPtr, bool, double>> GenerateBNTestConfigs(ConvFact& fact)
 {
-    std::vector<std::tuple<Tensor4DPtr, bool>> res;
+    std::vector<std::tuple<Tensor4DPtr, bool, double>> res;
     // REVIEW alexeyk: how to test batches > 512? cuDNN does not support that so there is no baseline.
+    double expAvgFactor = 1;
     // Per activation (non-spatial)
     for (size_t n : {6, 13, 62, 512})
     {
@@ -614,7 +615,7 @@ std::vector<std::tuple<Tensor4DPtr, bool>> GenerateBNTestConfigs(ConvFact& fact)
             {
                 for (size_t w : {6, 17, 126, 2048})
                 {
-                    res.push_back(std::make_tuple(std::move(fact.CreateTensor(w, h, c, n)), false));
+                    res.push_back(std::make_tuple(std::move(fact.CreateTensor(w, h, c, n)), false, expAvgFactor));
                 }
             }
         }
@@ -628,18 +629,21 @@ std::vector<std::tuple<Tensor4DPtr, bool>> GenerateBNTestConfigs(ConvFact& fact)
             {
                 for (size_t w : {2, 11, 16})
                 {
-                    res.push_back(std::make_tuple(std::move(fact.CreateTensor(w, h, c, n)), true));
+                    res.push_back(std::make_tuple(std::move(fact.CreateTensor(w, h, c, n)), true, expAvgFactor));
                 }
             }
         }
     }
     // For perf testing (similar to first layers of ResNet).
-    res.push_back(std::make_tuple(std::move(fact.CreateTensor(56, 56, 64, 64)), true));
+    res.push_back(std::make_tuple(std::move(fact.CreateTensor(56, 56, 64, 64)), true, expAvgFactor));
     // Next test will fail in cuDNN due to bug we discovered (and reported to NVIDIA).
     //res.push_back(std::make_tuple(std::move(fact.CreateTensor(2, 2, 2048, 2)), true));
-    res.push_back(std::make_tuple(std::move(fact.CreateTensor(2, 2, 2048, 64)), true));
+    res.push_back(std::make_tuple(std::move(fact.CreateTensor(2, 2, 2048, 64)), true, expAvgFactor));
 
-    //res.push_back(std::make_tuple(std::move(fact.CreateTensor(2, 2, 2, 8)), true));
+    // Test running mean/isd.
+    expAvgFactor = 0.1;
+    res.push_back(std::make_tuple(std::move(fact.CreateTensor(2, 2, 2, 8)), false, expAvgFactor));
+    res.push_back(std::make_tuple(std::move(fact.CreateTensor(2, 2, 2, 8)), true, expAvgFactor));
 
     return res;
 }
@@ -683,7 +687,7 @@ BOOST_AUTO_TEST_CASE(BatchNormalizationForwardTrain)
         {
             auto& t = *std::move(std::get<0>(cfg));
             bool spatial = std::get<1>(cfg);
-            double expAvg = 1;
+            double expAvg = std::get<2>(cfg);
             double eps = 1e-5; // CUDNN_BN_MIN_EPSILON
 
             size_t crow = t.w() * t.h() * t.c();
@@ -733,7 +737,9 @@ BOOST_AUTO_TEST_CASE(BatchNormalizationForwardTrain)
             time2.Stop();
 
             std::stringstream tmsg;
-            tmsg << "tensor: (w = " << t.w() << ", h = " << t.h() << ", c = " << t.c() << ", n = " << t.n() << ", spatial = " << (spatial ? "true" : "false") << ")";
+            tmsg << "tensor: (w = " << t.w() << ", h = " << t.h() << ", c = " << t.c() << ", n = " << t.n() 
+                 << ", spatial = " << (spatial ? "true" : "false")
+                 << ", expAvg = " << expAvg << ")";
             std::string msg = " are not equal, " + tmsg.str();
             std::string msgNan = " has NaNs, " + tmsg.str();
             std::string msgNotNan = " has buffer overflow/underflow, " + tmsg.str();
@@ -798,7 +804,7 @@ BOOST_AUTO_TEST_CASE(BatchNormalizationForwardInference)
         return buf.ColumnSlice(c, c);
     };
 
-    for (int deviceId : {-1})
+    for (int deviceId : {-1, 0})
     {
         int cudnnDeviceId = deviceId < 0 ? 0 : deviceId;
         auto fact = ConvFact::Create(cudnnDeviceId, ConvFact::EngineType::CuDnn, ImageLayoutKind::CHW);
@@ -866,16 +872,19 @@ BOOST_AUTO_TEST_CASE(BatchNormalizationForwardInference)
             // REVIEW alexeyk: add cases for testing numerical stability.
 
 #ifndef _DEBUG
-            float elapsedCntk = time1.Elapsed();
-            float elapsedCudnn = time2.Elapsed();
-            // Check performance. Current version of cuDNN (v4 RC) is significanlty slower than CNTK implementation.
-            // For optimal cases (vectorSize % 32 == 0 and batchSize % 32 == 0), CNTK implementation can be >5x faster than cuDNN.
-            if (crow >= 32 && ccol >= 32)
+            if (deviceId >= 0)
             {
-                // Use conservative estimates.
-                int speedup = 2;
-                BOOST_REQUIRE_MESSAGE(speedup * elapsedCntk < elapsedCudnn,
-                                      "CNTK implementation (" << elapsedCntk << "ms) must be faster than cuDNN (" << elapsedCudnn << "ms) by at least " << speedup << "x, what's changed? " << tmsg.str());
+                float elapsedCntk = time1.Elapsed();
+                float elapsedCudnn = time2.Elapsed();
+                // Check performance. Current version of cuDNN (v4 RC) is significanlty slower than CNTK implementation.
+                // For optimal cases (vectorSize % 32 == 0 and batchSize % 32 == 0), CNTK implementation can be >5x faster than cuDNN.
+                if (crow >= 32 && ccol >= 32)
+                {
+                    // Use conservative estimates.
+                    float speedup = 1.5f;
+                    BOOST_REQUIRE_MESSAGE(speedup * elapsedCntk < elapsedCudnn,
+                                          "CNTK implementation (" << elapsedCntk << "ms) must be faster than cuDNN (" << elapsedCudnn << "ms) by at least " << speedup << "x, what's changed? " << tmsg.str());
+                }
             }
 #endif
         }

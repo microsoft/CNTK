@@ -1600,7 +1600,6 @@ template class DropoutNode<double>;
 // Implements batch normalization technique as described in:
 // Batch Normalization: Accelerating Deep Network Training by Reducing Internal Covariate Shift [S. Ioffe, C. Szegedy]
 // http://arxiv.org/abs/1502.03167
-// REVIEW alexeyk: is this a right header for this node? It's not really limited to only convolutional nodes.
 template <class ElemType>
 class BatchNormalizationNode : public ComputationNode<ElemType>, public NumInputs<5>
 {
@@ -1613,17 +1612,20 @@ class BatchNormalizationNode : public ComputationNode<ElemType>, public NumInput
 
 public:
     BatchNormalizationNode(DEVICEID_TYPE deviceId, const wstring& name)
-        : Base(deviceId, name), m_eval(false), m_spatial(false), m_expAvgFactor(0), m_epsilon(0), m_useCntkEngine(true), m_mbCount(0), m_imageLayoutKind(ImageLayoutKind::CHW)
+        : Base(deviceId, name), m_eval(false), m_spatial(false), m_normTimeConst(0), m_epsilon(0), m_useCntkEngine(true),
+        m_mbCount(0), m_imageLayoutKind(ImageLayoutKind::CHW)
     {
     }
-    BatchNormalizationNode(DEVICEID_TYPE deviceId, const wstring& name, bool eval, bool spatial, double expAvgFactor, double epsilon, bool useCntkEngine, ImageLayoutKind imageLayoutKind)
-        : Base(deviceId, name), m_eval(eval), m_spatial(spatial), m_expAvgFactor(expAvgFactor), m_epsilon(epsilon), m_useCntkEngine(useCntkEngine),
-          m_imageLayoutKind(imageLayoutKind), m_mbCount(0)
+    BatchNormalizationNode(DEVICEID_TYPE deviceId, const wstring& name, bool eval, bool spatial, double normTimeConst, double epsilon,
+                           bool useCntkEngine, ImageLayoutKind imageLayoutKind)
+        : Base(deviceId, name), m_eval(eval), m_spatial(spatial), m_normTimeConst(normTimeConst), m_epsilon(epsilon),
+          m_useCntkEngine(useCntkEngine), m_imageLayoutKind(imageLayoutKind), m_mbCount(0)
     {
     }
     BatchNormalizationNode(const ScriptableObjects::IConfigRecordPtr configp)
-        : BatchNormalizationNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"eval"), configp->Get(L"spatial"), configp->Get(L"expAvgFactor"),
-                                 configp->Get(L"epsilon"), configp->Get(L"useCntkEngine"), ImageLayoutKindFrom(configp->Get(L"imageLayout")))
+        : BatchNormalizationNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"eval"), configp->Get(L"spatial"),
+                                 configp->Get(L"normTimeConst"), configp->Get(L"epsilon"), configp->Get(L"useCntkEngine"),
+                                 ImageLayoutKindFrom(configp->Get(L"imageLayout")))
     {
         AttachInputs(configp, this->GetExpectedNumInputs());
     }
@@ -1635,7 +1637,7 @@ public:
 
         fstream << m_eval;
         fstream << m_spatial;
-        fstream << m_expAvgFactor;
+        fstream << m_normTimeConst;
         fstream << (int32_t)m_imageLayoutKind;
         fstream << m_mbCount;
         fstream << m_epsilon;
@@ -1662,7 +1664,14 @@ public:
 
         fstream >> m_eval;
         fstream >> m_spatial;
-        fstream >> m_expAvgFactor;
+        if (verWritten >= 0x00010004)
+            fstream >> m_normTimeConst;
+        else
+        {
+            double expAvgFactor;
+            fstream >> expAvgFactor;
+            UNUSED(expAvgFactor); // Used in previous versions, replaced by m_normTimeConst.
+        }
         if (verWritten >= 0x00010002)
         {
             fstream >> m_imageLayoutKind;
@@ -1685,7 +1694,11 @@ public:
 
             node->m_eval = m_eval;
             node->m_spatial = m_spatial;
-            node->m_expAvgFactor = m_expAvgFactor;
+            node->m_normTimeConst = m_normTimeConst;
+            node->m_imageLayoutKind = m_imageLayoutKind;
+            node->m_mbCount = m_mbCount;
+            node->m_epsilon = m_epsilon;
+            node->m_useCntkEngine = m_useCntkEngine;
         }
     }
 
@@ -1761,8 +1774,17 @@ public:
             m_convEng->NormalizeBatchInference(*m_inT, sliceInputValue, *m_scaleBiasT, scale, bias, m_spatial, runMean, runInvStdDev, sliceOutputValue);
         else
         {
-            // REVIEW alexeyk: hack, use m_expAvgFactor <= 0 to compute CMA.
-            double expAvgFactor = (m_expAvgFactor > 0) ? m_expAvgFactor : (1.0 / (1.0 + m_mbCount));
+            double expAvgFactor;
+            if (m_normTimeConst > 0)
+            {
+                // Convert to per-minibatch factor.
+                expAvgFactor = 1.0 - exp(-(double)GetMBLayout()->GetActualNumSamples() / m_normTimeConst);
+            }
+            else
+            {
+                // REVIEW alexeyk: hack, m_normTimeConst < 0 is used to compute CMA.
+                expAvgFactor = (m_normTimeConst < 0) ? (1.0 / (1.0 + m_mbCount)) : 1;
+            }
 
             if (m_saveMean->GetNumElements() != runMean.GetNumElements())
                 m_saveMean->Resize(runMean.GetNumRows(), runMean.GetNumCols());
@@ -1869,8 +1891,9 @@ private:
     {
         //int32_t VerWrittenCur() const      { return 0x00010001; } // Initial
         //int32_t VerWrittenCur() const      { return 0x00010002; } // Added m_imageLayoutKind and m_mbCount
-        int32_t VerWrittenCur() const        { return 0x00010003; } // Added m_epsilon and m_useCntkEngine
-        int32_t VerReadableCur() const       { return 0x00010003; }
+        //int32_t VerWrittenCur() const      { return 0x00010003; } // Added m_epsilon and m_useCntkEngine
+        int32_t VerWrittenCur() const        { return 0x00010004; } // Added m_normTimeConst
+        int32_t VerReadableCur() const       { return 0x00010004; }
         int32_t VerWeCanReadBack() const     { return 0x00010001; }
     };
     VersionInfo m_version;
@@ -1881,8 +1904,8 @@ private:
     // Determines whether to use per-activation (used after non-convolutional layers like fully connected)
     // or spatial (used after convolutional layers).
     bool m_spatial;
-    // Smoothing factor.
-    double m_expAvgFactor;
+    // Time constant for running mean and variance.
+    double m_normTimeConst;
     // Epsilon used to compute inverse std deviation.
     double m_epsilon;
     // Whether to use CNTK or cuDNN BN implementation.

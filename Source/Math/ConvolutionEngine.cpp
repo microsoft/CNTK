@@ -333,7 +333,9 @@ public:
         assert(runMean.GetNumCols() == 1);
         assert(runInvStdDev.GetNumCols() == 1);
 #ifndef _DEBUG
-        UNUSED(crowIn); // crowIn used only in asserts.
+        // used only in asserts.
+        UNUSED(crowIn); 
+        UNUSED(scaleBiasT);
 #endif
         if (m_deviceId >= 0)
             InvalidArgument("This engine does not support batch normalization on GPUs.");
