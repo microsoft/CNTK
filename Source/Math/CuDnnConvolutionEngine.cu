@@ -600,7 +600,9 @@ private:
             // This is done to avoid re-running auto-tuner every time in case minibatch size changes frequently (e.g. when distributed reading is enabled).
             // REVIEW alexeyk: potentially, this might cause some perf issues if better (faster) algo can be selected for a smaller mininbatch.
             // We assume no other dimensions of tensors can change so we don't check it.
-            return (Algo.status != CUDNN_STATUS_SUCCESS || t1.n() > CurMBSize || t2.n() > CurMBSize);
+            // REVIEW alexeyk: disabled for now until we find a better solution.
+            //return (Algo.status != CUDNN_STATUS_SUCCESS || t1.n() > CurMBSize || t2.n() > CurMBSize);
+            return (Algo.status != CUDNN_STATUS_SUCCESS || t1.n() != CurMBSize || t2.n() != CurMBSize);
         }
     };
 

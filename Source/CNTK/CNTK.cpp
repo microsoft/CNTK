@@ -199,6 +199,7 @@ void DoCommands(const ConfigParameters& config)
     // set up progress tracing for compute cluster management
     if (progressTracing && ((g_mpi == nullptr) || g_mpi->IsMainNode()))
     {
+        ProgressTracing::SetTracingFlag();
         ProgressTracing::TraceTotalNumberOfSteps(fullTotalMaxEpochs); // enable tracing, using this as the total number of epochs
     }
 
