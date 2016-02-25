@@ -15,7 +15,7 @@ ndlMnistMacros = [
     labels = InputValue(labelDim)
 
     scValue = 1
-    expAvg = 1
+    normTimeConst = 1024
     
     convWScale = 10
     convBValue = 0
@@ -30,7 +30,7 @@ DNN = [
     vStride1 = 1
     # weight[cMap1, kW1 * kH1 * inputChannels]
     # ConvBNReLULayer is defined in Macros.ndl
-    conv1 = ConvBNReLULayer(featScaled, cMap1, 25, kW1, kH1, hStride1, vStride1, convWScale, convBValue, scValue, expAvg)
+    conv1 = ConvBNReLULayer(featScaled, cMap1, 25, kW1, kH1, hStride1, vStride1, convWScale, convBValue, scValue, normTimeConst)
 
     # pool1
     pool1W = 2
@@ -46,7 +46,7 @@ DNN = [
     hStride2 = 1
     vStride2 = 1
     # weight[cMap2, kW2 * kH2 * cMap1]
-    conv2 = ConvBNReLULayer(pool1, cMap2, 400, kW2, kH2, hStride2, vStride2, convWScale, convBValue, scValue, expAvg)
+    conv2 = ConvBNReLULayer(pool1, cMap2, 400, kW2, kH2, hStride2, vStride2, convWScale, convBValue, scValue, normTimeConst)
 
     # pool2
     pool2W = 2
@@ -59,7 +59,7 @@ DNN = [
     fcWScale = 1
     fcBValue = 0
     # DnnBNReLULayer is defined in Macros.ndl
-    h1 = DnnBNReLULayer(1568, h1Dim, pool2, fcWScale, fcBValue, scValue, expAvg)
+    h1 = DnnBNReLULayer(1568, h1Dim, pool2, fcWScale, fcBValue, scValue, normTimeConst)
     ol = DNNLayer(h1Dim, labelDim, h1, 1)
     
     ce = CrossEntropyWithSoftmax(labels, ol)
