@@ -19,7 +19,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
 // -----------------------------------------------------------------------
 // ErrorPredictionNode (label, prediction)   or ErrorPredictionNode (prediction, label)
-// performs classification and error counting
+// Performs classification and error counting.
+// Result is an error rate, lower = better.
 // -----------------------------------------------------------------------
 
 template <class ElemType>

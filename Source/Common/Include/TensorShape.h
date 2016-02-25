@@ -351,26 +351,11 @@ public:
     }
 
     // convenience constructors, e,g. for test code
-    explicit TensorShape(size_t I)
-        : TensorShape(SmallVector<size_t>{I})
-    {
-    }
-    TensorShape(size_t I, size_t J)
-        : TensorShape(SmallVector<size_t>{I, J})
-    {
-    }
-    TensorShape(size_t I, size_t J, size_t K)
-        : TensorShape(SmallVector<size_t>{I, J, K})
-    {
-    }
-    TensorShape(size_t I, size_t J, size_t K, size_t L)
-        : TensorShape(SmallVector<size_t>{I, J, K, L})
-    {
-    }
-    TensorShape(size_t I, size_t J, size_t K, size_t L, size_t M)
-        : TensorShape(SmallVector<size_t>{I, J, K, L, M})
-    {
-    }
+    explicit TensorShape(size_t I)                                : TensorShape(SmallVector<size_t>{I}) { }
+    TensorShape(size_t I, size_t J)                               : TensorShape(SmallVector<size_t>{I, J}) { }
+    TensorShape(size_t I, size_t J, size_t K)                     : TensorShape(SmallVector<size_t>{I, J, K}) { }
+    TensorShape(size_t I, size_t J, size_t K, size_t L)           : TensorShape(SmallVector<size_t>{I, J, K, L}) { }
+    TensorShape(size_t I, size_t J, size_t K, size_t L, size_t M) : TensorShape(SmallVector<size_t>{I, J, K, L, M}) { }
 
     // default constructor
     TensorShape()
@@ -379,14 +364,8 @@ public:
     }
 
     // boilerplate
-    bool operator==(const TensorShape& other) const
-    {
-        return m_dims == other.m_dims;
-    }
-    bool operator!=(const TensorShape& other) const
-    {
-        return !operator==(other);
-    } // duh!
+    bool operator==(const TensorShape& other) const { return m_dims == other.m_dims; }
+    bool operator!=(const TensorShape& other) const { return !operator==(other); } // duh!
 
     // verify that this refers to a dense matrix (no strides)
     void VerifyIsDense() const

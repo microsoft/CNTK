@@ -2363,25 +2363,25 @@ GPUSparseMatrix<ElemType> GPUSparseMatrix<ElemType>::ColumnSlice(size_t startCol
     if (startColumn + numCols > m_numCols)
         InvalidArgument("The slice (%d+%d) is out of range of the source matrix (%d).", (int) startColumn, (int) numCols, (int) m_numCols);
 
-    if (m_format != MatrixFormat::matrixFormatSparseCSC)
+    if (m_format != MatrixFormat::matrixFormatSparseCSC && startColumn != 0 && numCols != m_numCols)
         NOT_IMPLEMENTED;
 
     GPUSparseMatrix<ElemType> slice(m_computeDevice);
-    slice.m_computeDevice = m_computeDevice;
-    slice.m_numRows = m_numRows;
-    slice.m_numCols = numCols;
-    slice.m_nz = (numCols == m_numCols) ? m_nz : SecondaryIndexValueAt(startColumn + numCols) - SecondaryIndexValueAt(startColumn);
-    slice.m_elemSizeAllocated = m_elemSizeAllocated;
+    slice.m_computeDevice            = m_computeDevice;
+    slice.m_numRows                  = m_numRows;
+    slice.m_numCols                  = numCols;
+    slice.m_nz                       = (numCols == m_numCols) ? m_nz : SecondaryIndexValueAt(startColumn + numCols) - SecondaryIndexValueAt(startColumn);
+    slice.m_elemSizeAllocated        = m_elemSizeAllocated;
     slice.m_totalBufferSizeAllocated = m_totalBufferSizeAllocated;
-    slice.m_pArray = m_pArray;
-    slice.m_format = m_format;
-    slice.m_externalBuffer = true;
-    slice.m_matrixName = m_matrixName;
-    slice.m_blockSize = m_blockSize;
-    slice.m_rowToId = m_rowToId;
-    slice.m_tempHostBuffer = m_tempHostBuffer;
-    slice.m_tempHostBufferSize = m_tempHostBufferSize;
-    slice.m_sliceViewOffset = startColumn; // Just shift the compressed index location to the new startColumn - that's it!
+    slice.m_pArray                   = m_pArray;
+    slice.m_format                   = m_format;
+    slice.m_externalBuffer           = true;
+    slice.m_matrixName               = m_matrixName;
+    slice.m_blockSize                = m_blockSize;
+    slice.m_rowToId                  = m_rowToId;
+    slice.m_tempHostBuffer           = m_tempHostBuffer;
+    slice.m_tempHostBufferSize       = m_tempHostBufferSize;
+    slice.m_sliceViewOffset          = startColumn; // Just shift the compressed index location to the new startColumn - that's it!
 
     return slice;
 }
