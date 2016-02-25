@@ -1184,9 +1184,7 @@ public:
     {
         try
         {
-            fr; data; rank;
-            RuntimeError("x");
-            //return TensorView<ElemType>(data, GetTensorSliceFor(rank, fr));
+            return TensorView<ElemType>(data, GetTensorSliceFor(rank, fr));
         }
         catch (const std::exception& e) // catch the error and rethrow it with the node name attached
         {
