@@ -70,22 +70,33 @@ cv::Mat ZipByteReader::Read(size_t seqId, const std::string& path)
     if (contents.size() < size)
         contents.resize(size);
     auto zipFile = m_zips.pop_or_create([this]() { return OpenZip(); });
-    zip_file *file = zip_fopen_index(zipFile.get(), index, 0);
-    assert(nullptr != file);
-    if (nullptr == file)
     {
-        RuntimeError("Could not open file %s in the zip file, sequence id = %lu, zip library error: %s",
-                     path.c_str(), (long)seqId, GetZipError(zip_error_code_zip(zip_get_error(zipFile.get()))).c_str());
+        std::unique_ptr<zip_file_t, void(*)(zip_file_t*)> file(
+            zip_fopen_index(zipFile.get(), index, 0),
+            [](zip_file_t* f)
+            {
+                assert(f != nullptr);
+                int err = zip_fclose(f);
+                assert(ZIP_ER_OK == err);
+#ifdef NDEBUG
+                UNUSED(err);
+#endif
+            });
+        assert(nullptr != file);
+        if (nullptr == file)
+        {
+            RuntimeError("Could not open file %s in the zip file, sequence id = %lu, zip library error: %s",
+                         path.c_str(), (long)seqId, GetZipError(zip_error_code_zip(zip_get_error(zipFile.get()))).c_str());
+        }
+        assert(contents.size() >= size);
+        zip_uint64_t bytesRead = zip_fread(file.get(), contents.data(), size);
+        assert(bytesRead == size);
+        if (bytesRead != size)
+        {
+            RuntimeError("Bytes read %lu != expected %lu while reading file %s",
+                         (long)bytesRead, (long)size, path.c_str());
+        }
     }
-    assert(contents.size() >= size);
-    zip_uint64_t bytesRead = zip_fread(file, contents.data(), size);
-    assert(bytesRead == size);
-    if (bytesRead != size)
-    {
-        RuntimeError("Bytes read %lu != expected %lu while reading file %s",
-                     (long)bytesRead, (long)size, path.c_str());
-    }
-    zip_fclose(file);
     m_zips.push(std::move(zipFile));
 
     cv::Mat img = cv::imdecode(cv::Mat(1, (int)size, CV_8UC1, contents.data()), cv::IMREAD_COLOR);

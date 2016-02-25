@@ -144,12 +144,11 @@ void ImageDataDeserializer::CreateSequenceDescriptions(std::string mapPath, size
         RuntimeError("Could not open %s for reading.", mapPath.c_str());
     }
 
-    PathReaderMap knownReaders;
-
     std::string line;
     ImageSequenceDescription description;
     description.m_numberOfSamples = 1;
     description.m_isValid = true;
+    PathReaderMap knownReaders;
     for (size_t lineIndex = 0; std::getline(mapFile, line); ++lineIndex)
     {
         std::stringstream ss(line);
