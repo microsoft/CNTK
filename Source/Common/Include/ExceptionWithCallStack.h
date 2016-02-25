@@ -24,22 +24,23 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
 using namespace std;
 
+// base class that we can catch, independent of the type parameter
+struct /*interface*/ IExceptionWithCallStackBase { virtual const char * CallStack() const = 0; };
+
 // Exception wrapper to include native call stack string
 template <class E>
-class ExceptionWithCallStack : public E
+class ExceptionWithCallStack : public E, public IExceptionWithCallStackBase
 {
 private:
     static const int MAX_CALLERS = 62;
     static const unsigned short MAX_CALL_STACK_DEPTH = 20;
 
 public:
-    ExceptionWithCallStack(std::string& msg, std::string& callstack) : E(msg), m_callStack(callstack)
-    {}
+    ExceptionWithCallStack(const std::string& msg, const std::string& callstack) :
+        E(msg), m_callStack(callstack)
+    { }
 
-    std::string CallStack() const
-    {
-        return m_callStack.c_str();
-    }
+    virtual const char * CallStack() const override { return m_callStack.c_str(); }
 
     static void PrintCallStack();
     static std::string GetCallStack();
@@ -49,9 +50,8 @@ protected:
 
 private:
     static void CollectCallStack(const function<void(std::string)>& write, const function<void()>& newline);
-
 };
 
-typedef ExceptionWithCallStack<std::runtime_error> DebugUtil;
+typedef ExceptionWithCallStack<std::runtime_error> DebugUtil; // some code calls PrintCallStack() directly, using this namespace
 
 }}}
