@@ -6,6 +6,12 @@
 #include "multiverso/message.h"
 
 namespace multiverso {
+
+enum NetThreadLevel {
+  THREAD_SERIALIZED, 
+  THREAD_MULTIPLE
+};
+
 // Interface of inter process communication method
 class NetInterface {
 public:
@@ -17,8 +23,17 @@ public:
   virtual int size() const = 0;
   virtual int rank() const = 0;
 
-  virtual size_t Send(const MessagePtr& msg) = 0;
+  // \return 1. > 0 sended size
+  //         2. = 0 not sended
+  //         3. < 0 net error
+  virtual size_t Send(MessagePtr& msg) = 0;
+
+  // \return 1. > 0 received size
+  //         2. = 0 not received
+  //         3. < 0 net error
   virtual size_t Recv(MessagePtr* msg) = 0;
+
+  virtual int thread_level_support() = 0;
 };
 
 }

@@ -11,12 +11,15 @@ enum Role {
   kAll = 3
 };
 
-void MultiversoInit(int role = kAll);
+void MultiversoInit(int* argc = nullptr, 
+                    char* argv[] = nullptr, 
+                    int role = kAll);
 
 void MultiversoBarrier();
 
 void MultiversoShutDown(bool finalize_mpi = true);
 
+int MultiversoRank();
 }
 
 #endif // MULTIVERSO_INCLUDE_MULTIVERSO_H_

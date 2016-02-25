@@ -23,14 +23,14 @@ public:
   static Zoo* Get() { static Zoo zoo; return &zoo; };
 
   // Start all actors
-  void Start(int role);
+  void Start(int* argc, char** argv, int role);
   // Stop all actors
   void Stop(bool finalize_net);
 
   void Barrier();
 
-  void Deliver(const std::string& name, MessagePtr&);
-  void Accept(MessagePtr& msg);
+  void SendTo(const std::string& name, MessagePtr&);
+  void Receive(MessagePtr& msg);
 
   int rank() const;
   int size() const;

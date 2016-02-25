@@ -3,6 +3,7 @@
 #ifndef MULTIVERSO_MT_QUEUE_H_
 #define MULTIVERSO_MT_QUEUE_H_
 
+#include <atomic>
 #include <queue>
 #include <mutex>
 #include <condition_variable>
@@ -16,7 +17,7 @@ template<typename T>
 class MtQueue {
 public:
   /*! \brief Constructor */
-  MtQueue() : exit_(false) {}
+  MtQueue() { exit_.store(false); }
 
   /*!
    * \brief Push an element into the queue. the function is based on
@@ -60,13 +61,16 @@ public:
   /*! \brief Exit queue, awake all threads blocked by the queue */
   void Exit();
 
+  bool Alive();
+
 private:
   /*! the underlying container of queue */
   std::queue<T> buffer_;
   mutable std::mutex mutex_;
   std::condition_variable empty_condition_;
   /*! whether the queue is still work */
-  bool exit_;
+  std::atomic_bool exit_;
+  // bool exit_;
 
   // No copying allowed
   MtQueue(const MtQueue&);
@@ -126,8 +130,13 @@ bool MtQueue<T>::Empty() const {
 template<typename T>
 void MtQueue<T>::Exit() {
   std::unique_lock<std::mutex> lock(mutex_);
-  exit_ = true;
+  exit_.store(true);
   empty_condition_.notify_all();
+}
+
+template<typename T>
+bool MtQueue<T>::Alive() {
+  return exit_ == false;
 }
 }
 

@@ -1,5 +1,5 @@
-#ifndef MULTIVERSO_ARRAY_TABLE_H_
-#define MULTIVERSO_ARRAY_TABLE_H_
+#ifndef MULTIVERSO_SMOOTH_ARRAY_TABLE_H_
+#define MULTIVERSO_SMOOTH_ARRAY_TABLE_H_
 
 #include "multiverso/table_interface.h"
 #include "multiverso/util/log.h"
@@ -10,22 +10,20 @@ namespace multiverso {
 // A distributed shared std::vector<T> table
 
 template <typename T>
-class ArrayWorker : public WorkerTable {
+class SmoothArrayWorker : public WorkerTable {
 public:
-  explicit ArrayWorker(size_t size) : WorkerTable(), size_(size) {
-    // table_.resize(size);
+  explicit SmoothArrayWorker(size_t size) : WorkerTable(), size_(size) {
     num_server_ = Zoo::Get()->num_servers();
     server_offsets_.push_back(0);
-    CHECK(size_ > Zoo::Get()->num_servers()); // not support too small size vector
+    CHECK(size_ > Zoo::Get()->num_servers());
     int length = static_cast<int>(size_) / Zoo::Get()->num_servers();
     for (int i = 1; i < Zoo::Get()->num_servers(); ++i) {
-      server_offsets_.push_back(i * length); // may not balance
+      server_offsets_.push_back(i * length);
     }
     server_offsets_.push_back(size_);
-	Log::Debug("worker %d create arrayTable with %d elements.\n", Zoo::Get()->rank(), size);
+    Log::Debug("worker %d create SmoothArrayTable with %d elements.\n", Zoo::Get()->rank(), size);
   }
 
-  // std::vector<T>& raw() { return table_; }
   T* raw() { return data_; }
 
   // Get all element
@@ -35,31 +33,41 @@ public:
     data_ = data;
     int all_key = -1;
     Blob whole_table(&all_key, sizeof(int));
-    WorkerTable::Get(whole_table); 
+    WorkerTable::Get(whole_table);
     Log::Debug("worker %d getting all parameters.\n", Zoo::Get()->rank());
   }
 
   // Add all element
-  void Add(T* data, size_t size) {
+  void Add(T* data, size_t size, float smooth_momentum = 0.0) {
     CHECK(size == size_);
     int all_key = -1;
 
     Blob key(&all_key, sizeof(int));
     Blob val(data, sizeof(T) * size);
+    smooth_momentum_ = smooth_momentum;
     WorkerTable::Add(key, val);
     Log::Debug("worker %d adding parameters with size of %d.\n", Zoo::Get()->rank(), size);
   }
 
   int Partition(const std::vector<Blob>& kv,
     std::unordered_map<int, std::vector<Blob> >* out) override {
-    CHECK(kv.size() == 1 || kv.size() == 2);
-    for (int i = 0; i < num_server_; ++i) (*out)[i].push_back(kv[0]);
-    if (kv.size() == 2) {
+    CHECK(kv.size() == 1 || kv.size() == 2); // kv.size() == 1 : get msg;
+    // kv.size() == 2 : add msg;
+    for (int i = 0; i < num_server_; ++i)
+    {
+      (*out)[i].push_back(kv[0]);
+    }
+
+    if (kv.size() == 2)
+    {
       CHECK(kv[1].size() == size_ * sizeof(T));
-      for (int i = 0; i < num_server_; ++i) {
-        Blob blob(kv[1].data() + server_offsets_[i] * sizeof(T), 
+      for (int i = 0; i < num_server_; ++i)
+      {
+        Blob blob(kv[1].data() + server_offsets_[i] * sizeof(T),
           (server_offsets_[i + 1] - server_offsets_[i]) * sizeof(T));
         (*out)[i].push_back(blob);
+        Blob momentum(&smooth_momentum_, sizeof(float)); // sending coefficent of smooth gradient to server
+        (*out)[i].push_back(momentum);
       }
     }
     return num_server_;
@@ -68,34 +76,34 @@ public:
   void ProcessReplyGet(std::vector<Blob>& reply_data) override {
     CHECK(reply_data.size() == 2);
     int id = (reply_data[0]).As<int>();
-    CHECK(reply_data[1].size<T>() == (server_offsets_[id+1] - server_offsets_[id]));
+    CHECK(reply_data[1].size<T>() == (server_offsets_[id + 1] - server_offsets_[id]));
 
+    // TODO(qiwye): is there a way to reduce this memcpy?
     memcpy(data_ + server_offsets_[id], reply_data[1].data(), reply_data[1].size());
-    // memcpy(table_.data() + server_offsets_[id], //  * sizeof(T), 
-    //  reply_data[1].data(), reply_data[1].size());
   }
-  
+
 private:
-  // std::vector<T> table_;
   T* data_; // not owned
   size_t size_;
   int num_server_;
+  float smooth_momentum_;
   std::vector<size_t> server_offsets_;
 };
 
-// TODO(feiga): rename. The name static is inherited from last version
 // The storage is a continuous large chunk of memory
 template <typename T>
-class ArrayServer : public ServerTable {
+class SmoothArrayServer : public ServerTable {
 public:
-  explicit ArrayServer(size_t size) : ServerTable() {
+  explicit SmoothArrayServer(size_t size) : ServerTable() {
     server_id_ = Zoo::Get()->rank();
     size_ = size / Zoo::Get()->size();
-    if (server_id_ == Zoo::Get()->num_servers()-1) { // last server 
+    if (server_id_ == Zoo::Get()->num_servers() - 1) { // last server 
       size_ += size % Zoo::Get()->num_servers();
     }
     storage_.resize(size_);
-	Log::Debug("server %d create arrayTable with %d elements of %d elements.\n", server_id_, size_, size);
+    smooth_gradient_.resize(size_);
+    smooth_momentum_ = 0.0f;
+    Log::Debug("server %d create SmoothArrayTable with %d elements of %d elements.\n", server_id_, size_ * 2, size * 2);
   }
 
   void ProcessAdd(const std::vector<Blob>& data) override {
@@ -104,9 +112,14 @@ public:
     Log::Fatal("Not implemented yet\n");
 #else
     Blob keys = data[0], values = data[1];
+    smooth_momentum_ = data[2].As<float>();
     CHECK(keys.size<int>() == 1 && keys.As<int>() == -1); // Always request whole table
     CHECK(values.size() == size_ * sizeof(T));
-    for (int i = 0; i < size_; ++i) storage_[i] += values.As<T>(i);
+    for (int i = 0; i < size_; ++i)
+    {
+      smooth_gradient_[i] = smooth_momentum_ * smooth_gradient_[i] + (1 - smooth_momentum_) * values.As<T>(i);
+      storage_[i] += smooth_gradient_[i];
+    }
 #endif
   }
 
@@ -122,10 +135,11 @@ public:
 
 private:
   int server_id_;
-  // T* storage_;
+  float smooth_momentum_;
   std::vector<T> storage_;
+  std::vector<T> smooth_gradient_;
   size_t size_; // number of element with type T
 };
 }
 
-#endif // MULTIVERSO_ARRAY_TABLE_H_
+#endif // MULTIVERSO_SMOOTH_ARRAY_TABLE_H_
