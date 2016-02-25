@@ -51,7 +51,7 @@ namespace Microsoft {
 			public:
 				MultiversoWrapper(const std::list<ComputationNodeBasePtr> & learnableNodes,
 					int MPINodeNum,
-					bool isPipeline = true,
+					bool isAsyncBuffered = true,
 					AdjustLearningRateatBeginning adjusttype = AdjustLearningRateatBeginning::None,
 					double adjustcoef = 0.2,
 					size_t adjustnbmb = 600)
@@ -64,29 +64,25 @@ namespace Microsoft {
 					m_totalClientNumber = MPINodeNum;
 
 					//Pipeline releated variables
-					m_isPipelined = isPipeline;
-					m_localCacheNumber = m_isPipelined ? 2 : 1;
+					m_isUseAsyncBuffered = isAsyncBuffered;
+					m_localCacheNumber = m_isUseAsyncBuffered ? 2 : 1;
 					m_cacheSwapIndex = new int[m_localCacheNumber];
 
-					//CPU double buffer
+					//CPU asynchronous buffer
 					m_cpuAsyncBuffer = new ElemType*[m_localCacheNumber];
-
 #ifndef CPUONLY
-					//GPU double buffer
+					//GPU asynchronous buffer
 					m_gpuAsyncBuffer = new Matrix<ElemType>**[m_localCacheNumber];
 
-					//Communication Stream
+					//creat an communication stream for the data tranfer between GPU and CPU
 					CudaErrorCheck(cudaStreamCreate(&_commStream));
 #endif
-
-					m_cacheIndex = 0;
+					m_bufferInUse = 0;
 					for (int i = 0; i < m_localCacheNumber; i++)
 						m_cacheSwapIndex[i] = (i + 1) % m_localCacheNumber;
 
-					m_prefetchThread = new thread();
+					m_prefetchThread = nullptr;
 
-					m_modelSizeOfEachServer = new size_t[m_totalClientNumber];
-					m_indexOfEachServer = new size_t[m_totalClientNumber];
 					MultiversoInit(learnableNodes);
 				}
 
@@ -95,10 +91,10 @@ namespace Microsoft {
 					fprintf(stderr, "~MultiversoWrapper\n");
 					fflush(stderr);
 
-					if (m_isPipelined && m_prefetchThread != nullptr && m_prefetchThread->joinable())
+					if (m_isUseAsyncBuffered && m_prefetchThread != nullptr && m_prefetchThread->joinable())
 						m_prefetchThread->join();
 
-					delete m_cacheSwapIndex, m_deltaArray, m_modelSizeOfEachServer, m_indexOfEachServer;
+					delete m_cacheSwapIndex, m_deltaArray;
 
 					for (size_t i = 0; i < m_localCacheNumber; i++)
 					{
@@ -115,13 +111,12 @@ namespace Microsoft {
 					multiverso::MultiversoShutDown(false);
 				}
 
-				//  This function will upload parameters into Multiverso
+				// upoload preCompute model to the parameter servers
 				void InitModel(const std::list<ComputationNodeBasePtr> & learnableNodes)
 				{
 					float factor = (float) 1.0 / m_totalClientNumber;
 
-					//weights
-					int i = 0;
+					int i = 0; // indicate the index of learnable nodes
 					for (auto nodeIter = learnableNodes.begin(); nodeIter != learnableNodes.end(); nodeIter++, i++)
 					{
 						ComputationNodePtr node = dynamic_pointer_cast<ComputationNode<ElemType>>(*nodeIter);
@@ -159,10 +154,10 @@ namespace Microsoft {
 					Timer timer;
 					WaitAsyncBuffer();
 
-					m_cacheIndex = m_cacheSwapIndex[m_cacheIndex];
+					m_bufferInUse = m_cacheSwapIndex[m_bufferInUse];
 
-					int i = 0;
-					if (m_isPipelined)
+					int i = 0; // indicate the index of learnable nodes
+					if (m_isUseAsyncBuffered)
 					{
 
 						for (auto nodeIter = learnableNodes.begin(); nodeIter != learnableNodes.end(); nodeIter++, i++)
@@ -171,22 +166,22 @@ namespace Microsoft {
 							Microsoft::MSR::CNTK::Matrix<ElemType> &mat = node->Value();
 #ifndef CPUONLY
 							//CNTK model -> GPU buffer
-							CudaErrorCheck(cudaMemcpy(m_gpuAsyncBuffer[m_cacheIndex][i]->BufferPointer(),
+							CudaErrorCheck(cudaMemcpy(m_gpuAsyncBuffer[m_bufferInUse][i]->BufferPointer(),
 								mat.BufferPointer(),
 								mat.GetNumElements() * sizeof(ElemType),
 								cudaMemcpyDeviceToDevice));
 
 							//GPU buffer -> CNTK model
 							CudaErrorCheck(cudaMemcpy(mat.BufferPointer(),
-								m_gpuAsyncBuffer[m_cacheSwapIndex[m_cacheIndex]][i]->BufferPointer(),
+								m_gpuAsyncBuffer[m_cacheSwapIndex[m_bufferInUse]][i]->BufferPointer(),
 								mat.GetNumElements() * sizeof(ElemType),
 								cudaMemcpyDeviceToDevice));
 #else
-							ElemType * px = m_cpuAsyncBuffer[m_cacheIndex] + m_tableIndex[i];
+							ElemType * px = m_cpuAsyncBuffer[m_bufferInUse] + m_tableIndex[i];
 
 							mat.CopyToArray(px, m_tableLength[i]);
 
-							ElemType * py = m_cpuAsyncBuffer[m_cacheSwapIndex[m_cacheIndex]] + m_tableIndex[i];
+							ElemType * py = m_cpuAsyncBuffer[m_cacheSwapIndex[m_bufferInUse]] + m_tableIndex[i];
 
 							mat.SetValue(mat.GetNumRows(), mat.GetNumCols(), mat.GetDeviceId(), py);
 
@@ -197,7 +192,7 @@ namespace Microsoft {
 #ifndef CPUONLY
 						m_prefetchThread = new thread([&](){
 							float factor = DecayCoefficient();
-							int t_cacheIdx = m_cacheIndex;
+							int t_cacheIdx = m_bufferInUse;
 							int deviceId = m_gpuAsyncBuffer[t_cacheIdx][0]->GetDeviceId();
 
 							CudaErrorCheck(cudaSetDevice(deviceId));
@@ -213,10 +208,10 @@ namespace Microsoft {
 									_commStream));
 							}
 
-							//Sync for copy
+							// waiting copy from GPU to CPU finished
 							CudaErrorCheck(cudaStreamSynchronize(_commStream));
 
-							//Calculate delta
+							// calculate delta
 							std::transform(m_deltaArray, m_deltaArray + m_totalModelSize, m_cpuAsyncBuffer[t_cacheIdx], m_deltaArray, std::minus<ElemType>());
 
 							// lr decay
@@ -224,9 +219,8 @@ namespace Microsoft {
 
 							m_sharedArray->Add(m_deltaArray, m_totalModelSize);
 							m_sharedArray->Get(m_cpuAsyncBuffer[t_cacheIdx], m_totalModelSize);
-							//memcpy(m_cpuAsyncBuffer[t_cacheIdx], m_sharedArray->raw().data(), m_totalModelSize);
 
-							//CPU buffer -> GPU buffer
+							// copy parameters from CPU buffer to GPU buffer
 							for (int widx = 0; widx < m_tableCount; widx++)
 							{
 								ElemType * py = m_cpuAsyncBuffer[t_cacheIdx] + m_tableIndex[widx];
@@ -244,13 +238,12 @@ namespace Microsoft {
 #else
 						m_prefetchThread = new thread([&](){
 							float factor = DecayCoefficient();
-							int t_cacheIdx = m_cacheIndex;
+							int t_cacheIdx = m_bufferInUse;
 
 							std::transform(m_deltaArray, m_deltaArray + m_totalModelSize, m_cpuAsyncBuffer[t_cacheIdx], m_deltaArray, std::minus<ElemType>());
 							std::transform(m_deltaArray, m_deltaArray + m_totalModelSize, m_deltaArray, std::bind1st(std::multiplies<ElemType>(), factor));
 							m_sharedArray->Add(m_deltaArray, m_totalModelSize);
 							m_sharedArray->Get(m_cpuAsyncBuffer[t_cacheIdx], m_totalModelSize);
-							//memcpy(m_cpuAsyncBuffer[t_cacheIdx], m_sharedArray->raw().data(), m_totalModelSize);
 
 						});
 #endif
@@ -275,7 +268,6 @@ namespace Microsoft {
 
 						m_sharedArray->Add(m_deltaArray, m_totalModelSize);
 						m_sharedArray->Get(m_cpuAsyncBuffer[0], m_totalModelSize);
-						//memcpy(m_cpuAsyncBuffer[0], m_sharedArray->raw().data(), m_totalModelSize);
 
 						i = 0;
 						for (auto nodeIter = learnableNodes.begin(); nodeIter != learnableNodes.end(); nodeIter++, i++)
@@ -284,7 +276,6 @@ namespace Microsoft {
 							Microsoft::MSR::CNTK::Matrix<ElemType> &mat = node->Value();
 
 							ElemType * px = m_cpuAsyncBuffer[0] + m_tableIndex[i];
-
 							mat.SetValue(mat.GetNumRows(), mat.GetNumCols(), mat.GetDeviceId(), px);
 						}
 					}
@@ -311,7 +302,7 @@ namespace Microsoft {
 					{
 						m_prefetchThread->join();
 						delete m_prefetchThread;
-						m_prefetchThread == nullptr;
+						m_prefetchThread = nullptr;
 					}
 				}
 			private:
@@ -320,8 +311,8 @@ namespace Microsoft {
 					assert(!m_isInitialized);
 					m_isInitialized = true;
 
-					multiverso::MultiversoInit();
                     //multiverso::Log::ResetLogLevel(multiverso::LogLevel::Debug);
+					multiverso::MultiversoInit();
 
 					//weights
 					for (auto nodeIter = learnableNodes.begin(); nodeIter != learnableNodes.end(); nodeIter++)
@@ -335,22 +326,15 @@ namespace Microsoft {
 
 					m_tableCount = m_tableLength.size();
 
-					//init cache space.
+					// cacluate total of learnable node's size
 					m_totalModelSize = accumulate(m_tableLength.begin(), m_tableLength.end(), 0);
-					size_t idx = 0;
  
-					//for (int i = 0; i < m_totalClientNumber; i++)
-					//{
-					//	m_indexOfEachServer[i] = idx;
-					//	m_modelSizeOfEachServer[i] = i < m_totalModelSize % m_totalClientNumber ? m_totalModelSize / m_totalClientNumber + 1 : m_totalModelSize / m_totalClientNumber;
-					//	idx += m_modelSizeOfEachServer[i];
-					//}
-
 					m_sharedArray = new multiverso::ArrayWorker<ElemType>(m_totalModelSize);
 					m_serverArray = new multiverso::ArrayServer<ElemType>(m_totalModelSize);
 					
 					multiverso::MultiversoBarrier();
-					idx = 0;
+
+					size_t idx = 0;
 					for (size_t len : m_tableLength)
 					{
 						m_tableIndex.push_back(idx);
@@ -358,18 +342,17 @@ namespace Microsoft {
 					}
 
 #ifndef CPUONLY
-					//pinned memory
-					for (int i = 0; i < m_localCacheNumber; ++i)
-						CudaErrorCheck(cudaMallocHost((void **)&m_cpuAsyncBuffer[i], sizeof(ElemType) * (m_totalModelSize + 1), cudaHostAllocPortable));
-
-					CudaErrorCheck(cudaMallocHost((void **)&m_deltaArray, sizeof(ElemType) * (m_totalModelSize + 1), cudaHostAllocPortable));
-
-					//GPU memory cache
 					for (int i = 0; i < m_localCacheNumber; i++)
 						m_gpuAsyncBuffer[i] = new Matrix<ElemType>*[m_tableCount];
+
+					//create pinned memory
+					for (int i = 0; i < m_localCacheNumber; ++i)
+						CudaErrorCheck(cudaMallocHost((void **)&m_cpuAsyncBuffer[i], sizeof(ElemType) * (m_totalModelSize), cudaHostAllocPortable));
+
+					CudaErrorCheck(cudaMallocHost((void **)&m_deltaArray, sizeof(ElemType) * (m_totalModelSize), cudaHostAllocPortable));
 #else
 					for (int i = 0; i < m_localCacheNumber; i++)
-						m_cpuAsyncBuffer[i] = new ElemType[m_totalModelSize + 1];
+						m_cpuAsyncBuffer[i] = new ElemType[m_totalModelSize];
 #endif
 				}
 
@@ -398,10 +381,10 @@ namespace Microsoft {
 
 				int m_totalClientNumber;
 
-				bool m_isPipelined;
+				bool m_isUseAsyncBuffered;
 				int m_localCacheNumber;
 				int * m_cacheSwapIndex;
-				int m_cacheIndex;
+				int m_bufferInUse;
 
 				size_t m_modelSyncCount;
 
@@ -414,10 +397,6 @@ namespace Microsoft {
 				vector<size_t> m_tableIndex;
 				ElemType * m_deltaArray;
 				ElemType ** m_cpuAsyncBuffer;
-
-				// TODO deprecated this unused variables
-				size_t * m_modelSizeOfEachServer;
-				size_t * m_indexOfEachServer;
 
 				//GPU double buffer
 				Matrix<ElemType> *** m_gpuAsyncBuffer;

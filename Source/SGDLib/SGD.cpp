@@ -319,19 +319,20 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
                                                   m_seqGammarCalcAMF, m_seqGammarCalcLMF, m_seqGammarCalcWP, m_seqGammarCalcbMMIFactor, m_seqGammarCalcUsesMBR);
     }
 
-		//Multiverso Warpper for ASGD logic init
-		if (m_parallelizationMethod == ParallelizationMethod::DataParallelASGD)
-		{
-			m_multiverso = new MultiversoWrapper<ElemType>(learnableNodes,
-				g_mpi->NumNodesInUse(),
-				m_isPipeline,
-				m_adjustlearningrateatbeginning,
-				m_adjustcoefficient,
-				m_adjustnbminibatch);
-			m_multiverso->InitModel(learnableNodes);
-			m_multiversoBarrier = false;
-			m_multiverso->WaitAll();
-		}
+	//Multiverso Warpper for ASGD logic init
+	if (m_parallelizationMethod == ParallelizationMethod::DataParallelASGD)
+	{
+		g_mpi->WaitAll();
+		m_multiverso = new MultiversoWrapper<ElemType>(learnableNodes,
+			g_mpi->NumNodesInUse(),
+			m_isPipeline,
+			m_adjustlearningrateatbeginning,
+			m_adjustcoefficient,
+			m_adjustnbminibatch);
+		m_multiverso->InitModel(learnableNodes);
+		m_multiversoBarrier = false;
+		m_multiverso->WaitAll();
+	}
 
     // --- MAIN EPOCH LOOP
     for (int i = startEpoch; i < (int) m_maxEpochs; i++) // TODO: why is this an int, and not a size_t?
@@ -343,9 +344,9 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
             g_mpi->WaitAll();
         }
 
-		if (m_parallelizationMethod == ParallelizationMethod::DataParallelASGD && m_nEpochBarrier > 0 && i % m_nEpochBarrier == 0)
+		if (m_parallelizationMethod == ParallelizationMethod::DataParallelASGD && m_nEpochBarrier[i] > 0 && i % m_nEpochBarrier[i] == 0)
 		{
-			m_multiverso->WaitAsyncBuffer(); // [Review:qiwye] does
+			m_multiverso->WaitAsyncBuffer();
 			m_multiverso->WaitAll();
 		}
 
@@ -701,11 +702,11 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
         }
     }
 
-    delete inputMatrices;
-		if (m_parallelizationMethod == ParallelizationMethod::DataParallelASGD)
-		{
-			delete m_multiverso;
-}
+	delete inputMatrices;
+	if (m_parallelizationMethod == ParallelizationMethod::DataParallelASGD)
+	{
+		delete m_multiverso;
+	}
 }
 
 // -----------------------------------------------------------------------
@@ -759,9 +760,9 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                                    (epochNumber >= m_parallelizationStartEpochNum));
     bool useModelAveraging = ((m_parallelizationMethod == ParallelizationMethod::ModelAveragingSGD) &&
                               (epochNumber >= m_parallelizationStartEpochNum));
-		bool useASGD = ((m_parallelizationMethod == ParallelizationMethod::DataParallelASGD) &&
+	bool useASGD = ((m_parallelizationMethod == ParallelizationMethod::DataParallelASGD) &&
 			(epochNumber >= m_parallelizationStartEpochNum));
-		bool useParallelTrain = useGradientAggregation || useModelAveraging || useASGD;
+	bool useParallelTrain = useGradientAggregation || useModelAveraging || useASGD;
 
     // MA-related variables
     size_t nSamplesSinceLastModelSync = 0;
@@ -1097,28 +1098,28 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                 }
                 aggregateNumSamplesWithLabel = processedSamples;
             }
-            }
+		}
 
-			if (useASGD && g_mpi->NumNodesInUse() > 1)
+		if (useASGD && g_mpi->NumNodesInUse() > 1)
+		{
+			// Determine if any samples were processed across any of the ranks
+			if (useDistributedMBReading)
 			{
-				// Determine if any samples were processed across any of the ranks
-				if (useDistributedMBReading)
-				{
-					noMoreSamplesToProcess = !wasDataRead;
-				}
-
-				size_t processedSamples = 0;
-				if (nSamplesSinceLastModelSync >= m_nFramesBetweenASGDSync)
-				{
-					m_multiverso->PushAndPullModel(learnableNodes);
-					processedSamples = nSamplesSinceLastModelSync;
-					nSamplesSinceLastModelSync = 0;
-				}
-				aggregateNumSamplesWithLabel = processedSamples;
+				noMoreSamplesToProcess = !wasDataRead;
 			}
 
-			commTimer.Stop();
-			commTime += commTimer.ElapsedSeconds();
+			size_t processedSamples = 0;
+			if (nSamplesSinceLastModelSync >= m_nFramesBetweenASGDSync[epochNumber])
+			{
+				m_multiverso->PushAndPullModel(learnableNodes);
+				processedSamples = nSamplesSinceLastModelSync;
+				nSamplesSinceLastModelSync = 0;
+			}
+			aggregateNumSamplesWithLabel = processedSamples;
+		}
+
+		commTimer.Stop();
+		commTime += commTimer.ElapsedSeconds();
 
         timer.Stop();
         numMBsRun++;
@@ -1256,15 +1257,15 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
         nSamplesSinceLastModelSync = 0;
     }
 
-		if (useASGD && (g_mpi->NumNodesInUse() > 1))
-		{
-			// ASGD also may not be synced after epoch finished, so do the sync here 
-			int residualSampels = (int)nSamplesSinceLastModelSync;
-			totalSamplesSeen += residualSampels;
-			totalEpochSamples += residualSampels;
-			m_multiverso->PushAndPullModel(learnableNodes);
-			nSamplesSinceLastModelSync = 0;
-		}
+	if (useASGD && (g_mpi->NumNodesInUse() > 1))
+	{
+		// ASGD also may not be synced after epoch finished, so do the sync here 
+		int residualSampels = (int)nSamplesSinceLastModelSync;
+		totalSamplesSeen += residualSampels;
+		totalEpochSamples += residualSampels;
+		m_multiverso->PushAndPullModel(learnableNodes);
+		nSamplesSinceLastModelSync = 0;
+	}
 
     // compute final criterion values
     if (useGradientAggregation)
@@ -2697,53 +2698,50 @@ SGDParams::SGDParams(const ConfigRecordType& configSGD, size_t sizeofElemType)
     m_parallelizationStartEpochNum = 0;
     m_nFramesBetweenMASync = 40000; // default 40k frames
 
-	m_nFramesBetweenASGDSync = 1280;
-	m_numMBsToASGDPushAndPull = 0;
-	m_nEpochBarrier = 0;
 	m_adjustlearningrateatbeginning = AdjustLearningRateatBeginning::None;
 
 
     if ((g_mpi != nullptr) && configSGD.Exists(L"ParallelTrain"))
     {
-        const ConfigRecordType& configParallelTrain(configSGD(L"ParallelTrain", ConfigRecordType::Record()));
-        m_parallelizationMethod = ParseParallelizationMethod(configParallelTrain(L"parallelizationMethod", L"none"));
-        m_parallelizationStartEpochNum = configParallelTrain(L"parallelizationStartEpoch", (int) 1) - 1; // Epoch numbers internally are 0 based
-        m_enableDistributedMBReading = configParallelTrain(L"distributedMBReading", false);
-        m_syncStatsTrace = configParallelTrain(L"syncPerfStats", (int) 0);
+		const ConfigRecordType& configParallelTrain(configSGD(L"ParallelTrain", ConfigRecordType::Record()));
+		m_parallelizationMethod = ParseParallelizationMethod(configParallelTrain(L"parallelizationMethod", L"none"));
+		m_parallelizationStartEpochNum = configParallelTrain(L"parallelizationStartEpoch", (int)1) - 1; // Epoch numbers internally are 0 based
+		m_enableDistributedMBReading = configParallelTrain(L"distributedMBReading", false);
+		m_syncStatsTrace = configParallelTrain(L"syncPerfStats", (int)0);
 
-        if (configParallelTrain.Exists(L"DataParallelSGD"))
-        {
-            const ConfigRecordType& configDataParallelSGD(configParallelTrain(L"DataParallelSGD", ConfigRecordType::Record()));
-            size_t defaultGradientBits = 8 * sizeofElemType;
-            m_numGradientBits = configDataParallelSGD(L"gradientBits", defaultGradientBits);
-            m_zeroThresholdFor1Bit = configDataParallelSGD(L"useZeroThresholdFor1BitQuantization", true);
-            m_bufferedAsyncGradientAggregation = configDataParallelSGD(L"useBufferedAsyncGradientAggregation", false);
-            if ((m_numGradientBits < 1) || (m_numGradientBits > (8 * sizeofElemType)))
-            {
-                InvalidArgument("gradientBits must be in the range [1, 32] when using precision=float and in range [1, 64] when using precision=double!");
-            }
-        }
-
-        if (configParallelTrain.Exists(L"ModelAveragingSGD"))
-        {
-            const ConfigRecordType& configMASGD(configParallelTrain(L"ModelAveragingSGD", ConfigRecordType::Record()));
-            m_nFramesBetweenMASync = configMASGD(L"syncFrequencyInFrames", (size_t) 40000);
-        }
-
-			if (configParallelTrain.Exists(L"DataParallelASGD"))
+		if (configParallelTrain.Exists(L"DataParallelSGD"))
+		{
+			const ConfigRecordType& configDataParallelSGD(configParallelTrain(L"DataParallelSGD", ConfigRecordType::Record()));
+			size_t defaultGradientBits = 8 * sizeofElemType;
+			m_numGradientBits = configDataParallelSGD(L"gradientBits", defaultGradientBits);
+			m_zeroThresholdFor1Bit = configDataParallelSGD(L"useZeroThresholdFor1BitQuantization", true);
+			m_bufferedAsyncGradientAggregation = configDataParallelSGD(L"useBufferedAsyncGradientAggregation", false);
+			if ((m_numGradientBits < 1) || (m_numGradientBits >(8 * sizeofElemType)))
 			{
-				const ConfigRecordType & configDataParallelASGD(configParallelTrain(L"DataParallelASGD", ConfigRecordType::Record()));
-				m_nFramesBetweenASGDSync = configDataParallelASGD(L"SyncFrequencyInFrames", (size_t)1280);
-				m_isPipeline = configDataParallelASGD(L"UsePipeline", true);
-				m_nEpochBarrier = configDataParallelASGD(L"EpochBarrier", (size_t)0);
-				if (configDataParallelASGD.Exists(L"AdjustLearningRateAtBeginning"))
-				{
-					const ConfigRecordType & configAdjustLearningRateAtBeginning(configDataParallelASGD(L"AdjustLearningRateAtBeginning", ConfigRecordType::Record()));
-					m_adjustlearningrateatbeginning = AdjustLearningRateAtBeginningType(configAdjustLearningRateAtBeginning(L"adjustType", L"None"));
-					m_adjustcoefficient = configAdjustLearningRateAtBeginning(L"adjustCoefficient", (double)0.2);
-					m_adjustnbminibatch = configAdjustLearningRateAtBeginning(L"adjustNbMinibatch", (size_t)600);
-				}
+				InvalidArgument("gradientBits must be in the range [1, 32] when using precision=float and in range [1, 64] when using precision=double!");
 			}
+		}
+
+		if (configParallelTrain.Exists(L"ModelAveragingSGD"))
+		{
+			const ConfigRecordType& configMASGD(configParallelTrain(L"ModelAveragingSGD", ConfigRecordType::Record()));
+			m_nFramesBetweenMASync = configMASGD(L"syncFrequencyInFrames", (size_t)40000);
+		}
+
+		if (configParallelTrain.Exists(L"DataParallelASGD"))
+		{
+			const ConfigRecordType & configDataParallelASGD(configParallelTrain(L"DataParallelASGD", ConfigRecordType::Record()));
+			m_nFramesBetweenASGDSync = configDataParallelASGD(L"SyncFrequencyInFrames", ConfigRecordType::Array(intargvector(vector<int>{1280})));
+			m_isPipeline = configDataParallelASGD(L"UsePipeline", true);
+			m_nEpochBarrier = configDataParallelASGD(L"EpochBarrier", ConfigRecordType::Array(intargvector(vector<int>{0})));
+			if (configDataParallelASGD.Exists(L"AdjustLearningRateAtBeginning"))
+			{
+				const ConfigRecordType & configAdjustLearningRateAtBeginning(configDataParallelASGD(L"AdjustLearningRateAtBeginning", ConfigRecordType::Record()));
+				m_adjustlearningrateatbeginning = AdjustLearningRateAtBeginningType(configAdjustLearningRateAtBeginning(L"adjustType", L"None"));
+				m_adjustcoefficient = configAdjustLearningRateAtBeginning(L"adjustCoefficient", (double)0.2);
+				m_adjustnbminibatch = configAdjustLearningRateAtBeginning(L"adjustNbMinibatch", (size_t)600);
+			}
+		}
 
     }
 }
