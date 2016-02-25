@@ -1652,7 +1652,7 @@ LearnableParameter(row, cols,
 
 \begin_layout Plain Layout
 
-Parameter(row, cols, {needGradient=true|false, 
+Parameter(row, cols, {needsGradient=true|false, 
 \end_layout
 
 \begin_layout Plain Layout
@@ -1680,7 +1680,7 @@ cols - number of columns in the parameter, defaults to 1.
 \end_layout
 
 \begin_layout Itemize
-needGradient- [named optional] determines whether the parameter should be
+needsGradient- [named optional] determines whether the parameter should be
  updated by the training algorithm.
  Defaults is true.
 \end_layout
@@ -4221,7 +4221,7 @@ features=InputValue [784,32]
 
 \begin_layout Plain Layout
 
-L1.BFF.B=LearnableParameter [256,1] NeedGradient=true
+L1.BFF.B=LearnableParameter [256,1] NeedsGradient=true
 \end_layout
 
 \begin_layout Plain Layout
@@ -4266,7 +4266,7 @@ L1.BFF.FF.T=Times ( L1.BFF.W , normInput )
 
 \begin_layout Plain Layout
 
-L1.BFF.W=LearnableParameter [256,784] NeedGradient=true
+L1.BFF.W=LearnableParameter [256,784] NeedsGradient=true
 \end_layout
 
 \begin_layout Plain Layout

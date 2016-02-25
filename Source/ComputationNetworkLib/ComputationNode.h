@@ -585,7 +585,7 @@ public:
         fprintf(stderr, "Node --> %ls = %ls\n", NodeName().c_str(), OperationName().c_str()), fflush(stderr);
     }
 
-    bool NeedGradient() const { return m_needsGradient; }
+    bool NeedsGradient() const { return m_needsGradient; }
 
     void SetLearningRateMultiplier(float f) 
     { 
@@ -1422,7 +1422,7 @@ public:
     {
         for (int i = 0; i < m_inputs.size(); i++)
         {
-            if (m_inputs[i]->NeedGradient())
+            if (m_inputs[i]->NeedsGradient())
                 m_inputs[i]->RequestMatricesBeforeBackprop(matrixPool);
         }
     }
