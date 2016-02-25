@@ -27,8 +27,9 @@ template <class E>
 void ExceptionWithCallStack<E>::CollectCallStack(const function<void(std::string)>& write, const function<void()>& newline)
 {
     newline();
-
+    write("[CALL STACK]");
 #ifdef _WIN32
+    newline();
     typedef USHORT(WINAPI * CaptureStackBackTraceType)(__in ULONG, __in ULONG, __out PVOID*, __out_opt PULONG);
     CaptureStackBackTraceType func = (CaptureStackBackTraceType)(GetProcAddress(LoadLibrary(L"kernel32.dll"), "RtlCaptureStackBackTrace"));
 
@@ -55,16 +56,13 @@ void ExceptionWithCallStack<E>::CollectCallStack(const function<void(std::string
     symbolInfo->SizeOfStruct = sizeof(SYMBOL_INFO);
     frames = min(frames, MAX_CALL_STACK_DEPTH);
 
-    for (unsigned int i = 1; i < frames; i++)
+    unsigned int firstFrame = 4; // 4 bottom functions are CollectCallStack(), GetCallStack(), ThrowFormatted(), and XXXError()
+    for (unsigned int i = firstFrame; i < frames; i++)
     {
-        if (i == 1)
-        {
+        if (i == firstFrame)
             write( "    >");
-        }
         else
-        {
             write("    -");
-        }
 
         if (SymFromAddr(process, (DWORD64)(callStack[i]), 0, symbolInfo))
         {
@@ -88,7 +86,6 @@ void ExceptionWithCallStack<E>::CollectCallStack(const function<void(std::string
 
     SymCleanup(process);
 #else
-    write("[CALL STACK]");
     newline();
 
     unsigned int MAX_NUM_FRAMES = 1024;
@@ -96,7 +93,8 @@ void ExceptionWithCallStack<E>::CollectCallStack(const function<void(std::string
     unsigned int numFrames = backtrace(backtraceAddresses, MAX_NUM_FRAMES);
     char** symbolList = backtrace_symbols(backtraceAddresses, numFrames);
 
-    for (unsigned int i = 0; i < numFrames; i++)
+    unsigned int firstFrame = 2; // 3 bottom functions are CollectCallStack(), and CollectCallStack()
+    for (unsigned int i = firstFrame; i < numFrames; i++)
     {
         char* beginName = NULL;
         char* beginOffset = NULL;

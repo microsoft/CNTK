@@ -1099,6 +1099,30 @@ public:
 
 private:
 
+    template<class E>
+    void RethrowAs(const std::exception & e, const std::string & what)
+    {
+        const auto * pe = dynamic_cast<const ExceptionWithCallStack<E> *>(&e);
+        if (pe)
+            throw ExceptionWithCallStack<E>(what, pe->CallStack());
+        else if (dynamic_cast<const E *>(&e))
+            throw E(what);
+    }
+
+    // rethrow an exception with added node-name information
+    // Use this for exceptions we may get e.g. from the Matrix library, such as VerifySize().
+    __declspec_noreturn
+    void Rethrow(const std::exception & e)
+    {
+        string what = msra::strfun::strprintf("%s, for %ls %ls operation.", e.what(), NodeName().c_str(), OperationName().c_str());
+        RethrowAs<std::runtime_error>   (e, what);
+        RethrowAs<std::logic_error>     (e, what);
+        RethrowAs<std::invalid_argument>(e, what);
+        //RethrowAs<std::bad_alloc>       (e, what); // can't throw with message
+        //RethrowAs<std::exception>       (e, what); // ditto
+        throw e;
+    }
+
     // map a tensor to a matrix
     // The leading dimension maps to rows, the rest to columns, for compat with sparse matrix lib.
     Matrix<ElemType>& TensorAsMatrix(Matrix<ElemType>& data)
@@ -1106,7 +1130,14 @@ private:
         size_t numRows = GetAsMatrixNumRows();
         size_t numCols = GetAsMatrixNumCols();
         // We only get here if the tensor indeed describes an 1D or 2D object. In that case, just verify the dimensions.
-        data.VerifySize(numRows, numCols);
+        try
+        {
+            data.VerifySize(numRows, numCols);
+        }
+        catch (const std::exception& e)
+        {
+            Rethrow(e);
+        }
         return data;
     }
 
@@ -1123,9 +1154,9 @@ public:
         {
             return DataWithMBLayoutFor(data, fr, m_pMBLayout);
         }
-        catch (const logic_error& e) // catch the error and rethrow it with the node name attached
+        catch (const std::exception& e) // catch the error and rethrow it with the node name attached
         {
-            LogicError("%s, for %ls %ls operation.", e.what(), NodeName().c_str(), OperationName().c_str());
+            Rethrow(e);
         }
     }
 
@@ -1153,11 +1184,13 @@ public:
     {
         try
         {
-            return TensorView<ElemType>(data, GetTensorSliceFor(rank, fr));
+            fr; data; rank;
+            RuntimeError("x");
+            //return TensorView<ElemType>(data, GetTensorSliceFor(rank, fr));
         }
-        catch (const logic_error& e) // catch the error and rethrow it with the node name attached
+        catch (const std::exception& e) // catch the error and rethrow it with the node name attached
         {
-            LogicError("%s, for %ls %ls operation.", e.what(), NodeName().c_str(), OperationName().c_str());
+            Rethrow(e);
         }
     }
     TensorView<ElemType> ValueTensorFor(size_t rank, const FrameRange& fr)
@@ -1216,7 +1249,14 @@ protected:
     {
         size_t rows, cols;
         DetermineDataSize(rows, cols);
-        m.VerifySize(rows, cols);
+        try
+        {
+            m.VerifySize(rows, cols);
+        }
+        catch (const std::exception& e)
+        {
+            Rethrow(e);
+        }
     }
 
 public:

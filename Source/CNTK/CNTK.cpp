@@ -648,7 +648,11 @@ int wmain1(int argc, wchar_t* argv[]) // called from wmain which is a wrapper th
     {
         PrintBuiltInfo(); // print build info directly in case that user provides zero argument (convenient for checking build type)
         if (argc <= 1)
-            InvalidArgument("No command-line argument given.");
+        {
+            fprintf(stderr, "No command-line argument given.\n");
+            PrintUsageInfo();
+            return EXIT_FAILURE;
+        }
         // detect legacy CNTK configuration
         bool isOldCNTKConfig = false;
         for (int i = 0; i < argc && !isOldCNTKConfig; i++)
@@ -664,16 +668,19 @@ int wmain1(int argc, wchar_t* argv[]) // called from wmain which is a wrapper th
         err.PrintError();
         return EXIT_FAILURE;
     }
+    catch (const IExceptionWithCallStackBase& err)
+    {
+        fprintf(stderr, "EXCEPTION occurred: %s\n%s", dynamic_cast<const std::exception&>(err).what(), err.CallStack());
+        return EXIT_FAILURE;
+    }
     catch (const std::exception& err)
     {
         fprintf(stderr, "EXCEPTION occurred: %s\n", err.what());
-        PrintUsageInfo();
         return EXIT_FAILURE;
     }
     catch (...)
     {
         fprintf(stderr, "Unknown ERROR occurred");
-        PrintUsageInfo();
         return EXIT_FAILURE;
     }
 }
