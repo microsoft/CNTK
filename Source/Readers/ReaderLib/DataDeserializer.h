@@ -106,6 +106,26 @@ private:
     DISABLE_COPY_AND_MOVE(Chunk);
 };
 
+struct ChunkDescription
+{
+    size_t id;
+    size_t numberOfSamples;
+    size_t numberOfSequences;
+};
+
+typedef std::vector<ChunkDescription> ChunkDescriptions;
+
+class ICorpus
+{
+public:
+    virtual const ChunkDescriptions& GetChunkDescriptions() const = 0;
+    virtual SequenceDescriptions GetSequencesForChunk(size_t chunkId) const = 0;
+    virtual size_t TotalNumberOfSamples() = 0;
+    virtual size_t TotalNumberOfSequences() = 0;
+};
+
+typedef std::shared_ptr<ICorpus> ICorpusPtr;
+
 //////////////////////////////////////////////////////////////////////////////////////////////////
 // Interface all data deserializers should implement.
 // Data deserializers are intimately familiar with a particular input formats and responsible for bringing

@@ -79,6 +79,7 @@
   <ItemGroup>
     <ClInclude Include="Bundler.h" />
     <ClInclude Include="DataDeserializerBase.h" />
+    <ClInclude Include="PartialBlockRandomizer.h" />
     <ClInclude Include="TransformerBase.h" />
     <ClInclude Include="BlockRandomizer.h" />
     <ClInclude Include="NoRandomizer.h" />
@@ -96,6 +97,7 @@
     <ClCompile Include="Bundler.cpp" />
     <ClCompile Include="BlockRandomizer.cpp" />
     <ClCompile Include="NoRandomizer.cpp" />
+    <ClCompile Include="PartialBlockRandomizer.cpp" />
     <ClCompile Include="SampleModePacker.cpp" />
     <ClCompile Include="ReaderShim.cpp" />
   </ItemGroup>
