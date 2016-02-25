@@ -13,14 +13,14 @@ DNNLayer(inDim, outDim, x, parmScale) = [
     z = Plus(t, b)
 ]
 
-DnnBNReLULayer(inDim, outDim, x, wScale, bValue, scValue, expAvg) = [
+DnnBNReLULayer(inDim, outDim, x, wScale, bValue, scValue, tconst) = [
     W = LearnableParameter(outDim, inDim, init = Gaussian, initValueScale = wScale) 
     b = LearnableParameter(outDim, 1, init = fixedValue, value = bValue) 
     sc = LearnableParameter(outDim, 1, init = fixedValue, value = scValue) 
     m = LearnableParameter(outDim, 1, init = fixedValue, value = 0, needGradient = false)
     isd = LearnableParameter(outDim, 1, init = fixedValue, value = 0, needGradient = false)
     t = Times(W, x)
-    bn = BatchNormalization(t, sc, b, m, isd, eval = false, spatial = false, expAvgFactor = expAvg)
+    bn = BatchNormalization(t, sc, b, m, isd, eval = false, spatial = false, normTimeConst = tconst)
     y = RectifiedLinear(bn)
 ]
 
@@ -32,22 +32,22 @@ ConvReLULayer(inp, outMap, inWCount, kW, kH, hStride, vStride, wScale, bValue) =
     act = RectifiedLinear(convPlusB);
 ]
 
-ConvBNLayerW(W, inp, outMap, kW, kH, hStride, vStride, bValue, scValue, expAvg) = [
+ConvBNLayerW(W, inp, outMap, kW, kH, hStride, vStride, bValue, scValue, tconst) = [
     b = LearnableParameter(outMap, 1, init=fixedValue, value=bValue)
     sc = LearnableParameter(outMap, 1, init=fixedValue, value=scValue)
     m = LearnableParameter(outMap, 1, init=fixedValue, value=0, needGradient=false)
     isd = LearnableParameter(outMap, 1, init=fixedValue, value=0, needGradient=false)
     
     c = Convolution(W, inp, kW, kH, outMap, hStride, vStride, zeroPadding=true, imageLayout=$imageLayout$)
-    y = BatchNormalization(c, sc, b, m, isd, eval=false, spatial=true, expAvgFactor=expAvg, imageLayout=$imageLayout$)
+    y = BatchNormalization(c, sc, b, m, isd, eval=false, spatial=true, normTimeConst=tconst, imageLayout=$imageLayout$)
 ]
 
-ConvBNLayer(inp, outMap, inWCount, kW, kH, hStride, vStride, wScale, bValue, scValue, expAvg) = [
+ConvBNLayer(inp, outMap, inWCount, kW, kH, hStride, vStride, wScale, bValue, scValue, tconst) = [
     W = LearnableParameter(outMap, inWCount, init=Gaussian, initValueScale=wScale)
-    c = ConvBNLayerW(W, inp, outMap, kW, kH, hStride, vStride, bValue, scValue, expAvg)
+    c = ConvBNLayerW(W, inp, outMap, kW, kH, hStride, vStride, bValue, scValue, tconst)
 ]
 
-ConvBNReLULayer(inp, outMap, inWCount, kW, kH, hStride, vStride, wScale, bValue, scValue, expAvg) = [
-    c = ConvBNLayer(inp, outMap, inWCount, kW, kH, hStride, vStride, wScale, bValue, scValue, expAvg)
+ConvBNReLULayer(inp, outMap, inWCount, kW, kH, hStride, vStride, wScale, bValue, scValue, tconst) = [
+    c = ConvBNLayer(inp, outMap, inWCount, kW, kH, hStride, vStride, wScale, bValue, scValue, tconst)
     y = RectifiedLinear(c)
 ]
