@@ -74,8 +74,8 @@ class MPIWrapper
             int argc = 0;
             char **argv = NULL;
             // TODO the MPI_THREAD_MULTIPLE support is needed by project Multiverso.
-            // please make sure using the MSMPIv7 (or openmpi-1.8) and above.
-            int requiredThreadLevelSupport = MPI_THREAD_MULTIPLE;
+            // please make sure using the MSMPIv6 (or openmpi-1.8) and above.
+            int requiredThreadLevelSupport = MPI_THREAD_SERIALIZED;
             int provided;
             int ret = MPI_Init_thread(&argc, &argv, requiredThreadLevelSupport, &provided);
             if (provided != requiredThreadLevelSupport)
