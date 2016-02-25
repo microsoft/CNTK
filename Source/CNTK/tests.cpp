@@ -266,8 +266,8 @@ void TestConfiguration(const ConfigParameters& configBase)
                 // look for optional parameters
                 for (int i = 3; i < configNode.size(); ++i)
                 {
+                    bool needsGradient = false;
                     ConfigParameters configParam = configNode[i];
-                    // TODO: update to learningRateMultiplier
                     if (configParam.Exists("learningRateMultiplier")) // TODO: should this be a test for 'true' rather than Exists()?
                         needsGradient = (float)configParam("learningRateMultiplier") > 0? true : false;
                     else if (configParam.Exists("init"))
