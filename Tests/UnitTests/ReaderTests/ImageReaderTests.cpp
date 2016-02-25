@@ -54,6 +54,7 @@ BOOST_AUTO_TEST_CASE(ImageReaderZip)
 
 BOOST_AUTO_TEST_CASE(ImageReaderZipMissingFile)
 {
+    // REVIEW alexeyk: is there a way to check specific exception message?
     BOOST_CHECK_THROW(
         HelperRunReaderTest<float>(
             testDataPath() + "/Config/ImageReaderZipMissing_Config.cntk",

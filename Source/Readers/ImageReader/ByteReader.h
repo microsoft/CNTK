@@ -24,10 +24,7 @@ public:
     virtual void Register(size_t seqId, const std::string& path) = 0;
     virtual cv::Mat Read(size_t seqId, const std::string& path) = 0;
 
-    ByteReader(const ByteReader&) = delete;
-    ByteReader& operator=(const ByteReader&) = delete;
-    ByteReader(ByteReader&&) = delete;
-    ByteReader& operator=(ByteReader&&) = delete;
+    DISABLE_COPY_AND_MOVE(ByteReader);
 };
 
 class FileByteReader : public ByteReader

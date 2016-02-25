@@ -482,7 +482,7 @@ do
                 then
                     echo "Cannot find libzip directory."
                     echo "Please specify a value for --with-libzip"
-                    echo "libzip can be downloaded from http://www.nih.at/libzip/"
+                    echo "libzip (v.1.1.2 or higher) can be downloaded from http://www.nih.at/libzip/"
                     exit 1
                 fi
             else
