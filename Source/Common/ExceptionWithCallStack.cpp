@@ -14,7 +14,6 @@
 #include <algorithm>
 #include <iostream>
 
-
 namespace Microsoft { namespace MSR { namespace CNTK {
 
 using namespace std;
@@ -28,8 +27,8 @@ void ExceptionWithCallStack<E>::CollectCallStack(const function<void(std::string
 {
     newline();
     write("[CALL STACK]");
-#ifdef _WIN32
     newline();
+#ifdef _WIN32
     typedef USHORT(WINAPI * CaptureStackBackTraceType)(__in ULONG, __in ULONG, __out PVOID*, __out_opt PULONG);
     CaptureStackBackTraceType func = (CaptureStackBackTraceType)(GetProcAddress(LoadLibrary(L"kernel32.dll"), "RtlCaptureStackBackTrace"));
 
@@ -85,15 +84,13 @@ void ExceptionWithCallStack<E>::CollectCallStack(const function<void(std::string
     free(symbolInfo);
 
     SymCleanup(process);
-#else
-    newline();
-
+#else // Linux
     unsigned int MAX_NUM_FRAMES = 1024;
     void* backtraceAddresses[MAX_NUM_FRAMES];
     unsigned int numFrames = backtrace(backtraceAddresses, MAX_NUM_FRAMES);
     char** symbolList = backtrace_symbols(backtraceAddresses, numFrames);
 
-    unsigned int firstFrame = 2; // 3 bottom functions are CollectCallStack(), and CollectCallStack()
+    unsigned int firstFrame = 2; // 2 bottom functions are CollectCallStack(), and CollectCallStack()
     for (unsigned int i = firstFrame; i < numFrames; i++)
     {
         char* beginName = NULL;

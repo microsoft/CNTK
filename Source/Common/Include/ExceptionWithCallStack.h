@@ -25,7 +25,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 using namespace std;
 
 // base class that we can catch, independent of the type parameter
-struct /*interface*/ IExceptionWithCallStackBase { virtual const char * CallStack() const = 0; };
+struct /*interface*/ IExceptionWithCallStackBase
+{
+    virtual const char * CallStack() const = 0;
+    virtual ~IExceptionWithCallStackBase() throw() {}
+};
 
 // Exception wrapper to include native call stack string
 template <class E>
