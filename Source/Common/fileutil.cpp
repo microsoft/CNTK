@@ -615,7 +615,7 @@ void renameOrDie(const std::string& from, const std::string& to)
     }
 
     // workaround for FUSE rename when running on Philly
-    if (ProgressTracing::IsEnabled())
+    if (ProgressTracing::GetTracingFlag())
     {
         fprintf(stderr, "sleep for 120 sec as workaround for FUSE write.\n");
         sleep(120);
