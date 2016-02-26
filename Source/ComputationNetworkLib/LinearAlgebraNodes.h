@@ -310,9 +310,9 @@ public:
                 if (dimsA.size() == 1) // column vector transposed becomes a 2D tensor
                     dimsA.push_back(1);
                 else if (dimsA.size() != 2)
-                    InvalidArgument("%ls %ls operation: Transposition requires a 2D tensor (matrix) or a 1D tensor (column vector).", NodeName().c_str(), OperationName().c_str(), (int)m_outputRank, dimsAstring.c_str());
+                    InvalidArgument("%ls %ls operation: Transposition requires a 2D tensor (matrix) or a 1D tensor (column vector), instead of a [%s].", NodeName().c_str(), OperationName().c_str(), dimsAstring.c_str());
                 else if (m_outputRank != 1)
-                    InvalidArgument("%ls %ls operation: OutputRank (%d) must be 1 when transposing.", NodeName().c_str(), OperationName().c_str(), (int)m_outputRank, dimsAstring.c_str());
+                    InvalidArgument("%ls %ls operation: The outputRank (%d) must be 1 when transposing.", NodeName().c_str(), OperationName().c_str(), (int)m_outputRank);
                 // swap them temporarily, to get transposition out of the way for validation
                 std::swap(dimsA[0], dimsA[1]);
             }
@@ -321,7 +321,7 @@ public:
                 InvalidArgument("%ls %ls operation: outputRank %d exceeds left argument's shape [%s].", NodeName().c_str(), OperationName().c_str(), (int)m_outputRank, dimsAstring.c_str());
             auto numReductionDims = dimsA.size() - m_outputRank;  // we reduce over the remaining dims; this is their number. Can be 0 in case of dyadic product uv'
             if (numReductionDims > dimsB.size())
-                InvalidArgument("%ls %ls operation: right argument shape [%s] has too few dimensions for outputRank %d.", NodeName().c_str(), OperationName().c_str(), (int)m_outputRank, dimsBstring.c_str(), (int)m_outputRank);
+                InvalidArgument("%ls %ls operation: right argument shape [%s] has too few dimensions for outputRank %d.", NodeName().c_str(), OperationName().c_str(), dimsBstring.c_str(), (int)m_outputRank);
 
             // validate or automatically infer dimension inference for learnable parameters
             for (size_t k = 0; k < m_outputRank; k++) // outputRank dimensions cannot be inferred
