@@ -359,6 +359,7 @@ template <class ElemType>
 // matrix product -- GEMM for flattened tensors
 // -------------------------------------------------------------------
 
+// print the dimensions of a matrix-product operation, for pretty error reporting
 static string MatrixProductFormat(const TensorShape& shapeA, bool transA, const TensorShape& shapeB, bool transB, const TensorShape& shapeC, bool transC)
 {
     string result = "[" + string(shapeA) + "]"; if (transA) result.append("'");
@@ -391,9 +392,10 @@ static void FlattenToMatrix(TensorShape& shape, bool trans, size_t splitPoint)
         if (dimsToDrop[k - 1])
             shape.FlattenInPlace(k);
     shape.DropDimsInPlace(dimsToDrop);
-    // handle case where first dimension missing, e.g. uv'
+    // handle edge case where first dimension missing, e.g. u'v where both are scalars
     if (splitPoint == 0)
     {
+        // we must insert a 1 dimension at the start
         assert(shape.GetRank() == 1); // we have reduced everything after the split point at this point
         shape.PadRankInPlace(2);      // append a 1
         shape.SwapDimsInPlace(0, 1);  // and swap--this preserves the stride of the second dimension
@@ -408,21 +410,30 @@ Matrix/*ref*/<ElemType> TensorView<ElemType>::AsMatrix() const
 {
     assert(m_shape.GetRank() == 2);
     if (m_shape.GetStrides()[0] != 1)
-        InvalidArgument("AsMatrix: Flattened [%d x %d] matrix is not dense (it has a stride).", string(m_shape).c_str());
+        InvalidArgument("AsMatrix: Flattened [%s] matrix is not dense (it has a stride).", string(m_shape).c_str());
     // create a Matrix view into the TensorView (which in turn is a view over a Matrix...)
     // The way to do this is to use a ColumnSlice.
     // express the TensorView's storage in m_sob's coordinates
     let firstColumn = m_shape.GetOffset()      / m_sob.GetNumRows();
     let numColumns  = m_shape.GetNumElements() / m_sob.GetNumRows();
     if (firstColumn * m_sob.GetNumRows() != m_shape.GetOffset() || numColumns * m_sob.GetNumRows() != m_shape.GetNumElements())
-        InvalidArgument("AsMatrix: Flattened [%d x %d] matrix has an offset or width that is not a multiple of the storage object's row dimension.", string(m_shape).c_str());
+        InvalidArgument("AsMatrix: Flattened [%s] matrix has an offset or width that is not a multiple of the storage object's row dimension.", string(m_shape).c_str());
     auto sob = m_sob.ColumnSlice(firstColumn, numColumns);
+    // now reinterpret this slice according to the new tensor shape
+    // Example:
+    //  - each sob column contains a set of vectors stored as a 2D tensor [I x J], and [S x T] samples
+    //  - we want to apply a [K x I] matrix to all vectors in each set
+    //  - so we reinterpret the [(I * J) x (S * T)] storage object as a [I x (J * S * T)] matrix
+    //    and apply the matrix product to this (by calling GEMM)
+    //  - which in turn yields a [K x (J * S x*T)] matrix
+    //    which gets reinterpreted back as a [K x J x S x T] tensor
+    // In the special case of sparse matrices, this split cannot be done. E.g. in the above example, we could only multiply with a [K x I x J] tensor.
     if (sob.GetMatrixType() == MatrixType::DENSE)
         return sob.Reshaped(m_shape[0], m_shape[1]);
     else if (m_shape[0] == sob.GetNumRows()) // SPARSE matrices cannot be reshaped, so we only support 1D and 2D tensors
         return sob;
     else
-        RuntimeError("AsMatrix: Sparse tensors are not supported unless they are 1D or 2D matrices.", string(m_shape).c_str());
+        RuntimeError("AsMatrix: Sparse tensors are not supported unless they are 1D or 2D matrices.");
 }
 
 template <class ElemType>
