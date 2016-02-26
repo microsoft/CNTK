@@ -2,7 +2,7 @@
 // Copyright (c) Microsoft. All rights reserved.
 // Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
 //
-// Wrapper.cpp -- Managed code wrapping the native EvaluateModel interface
+// EvalWrapper.cpp -- Managed code wrapping the native EvaluateModel interface
 //
 
 #include <windows.h>
