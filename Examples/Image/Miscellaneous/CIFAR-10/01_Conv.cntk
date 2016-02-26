@@ -5,24 +5,25 @@ DataDir = "$RootDir$"
 OutputDir = "$RootDir$/Output"
 ModelDir = "$OutputDir$/Models"
 
-ndlMacros=$ConfigDir$/Macros.ndl
+ndlMacros="$ConfigDir$/Macros.ndl"
 
-precision=float
-deviceId=Auto
-prefetch=true
+precision="float"
+deviceId="Auto"
+prefetch="true"
 
 command=Train:Test
 
-stderr=$OutputDir$/01_Conv
+modelPath="$ModelDir$/01_Convolution"
+
+stderr="$OutputDir$/01_Conv"
 traceLevel=1
 numMBsToShowResult=500
 
 Train=[
-    action=train
-    modelPath=$ModelDir$/01_Convolution
+    action="train"
 
      NDLNetworkBuilder=[
-        networkDescription=$ConfigDir$/01_Convolution.ndl
+        networkDescription="$ConfigDir$/01_Convolution.ndl"
     ]
     
     SGD=[
@@ -36,9 +37,9 @@ Train=[
     ]
     
     reader=[
-        readerType=UCIFastReader
-        file=$DataDir$/Train.txt
-        randomize=None
+        readerType="UCIFastReader"
+        file="$DataDir$/Train.txt"
+        randomize="Auto"
         features=[
             dim=3072
             start=1
@@ -47,25 +48,20 @@ Train=[
             dim=1
             start=0
             labelDim=10
-            labelMappingFile=$DataDir$/labelsmap.txt
+            labelMappingFile="$DataDir$/labelsmap.txt"
         ]
     ]    
 ]
 
 Test=[
-    action=test
-    modelPath=$ModelDir$/01_Convolution
+    action="test"
     # Set minibatch size for testing.
     minibatchSize=16
 
-     NDLNetworkBuilder=[
-        networkDescription=$ConfigDir$/01_Convolution.ndl
-    ]
-    
     reader=[
-        readerType=UCIFastReader
-        file=$DataDir$/Test.txt
-        randomize=None
+        readerType="UCIFastReader"
+        file="$DataDir$/Test.txt"
+        randomize="None"
         features=[
             dim=3072
             start=1
@@ -74,7 +70,7 @@ Test=[
             dim=1
             start=0
             labelDim=10
-            labelMappingFile=$DataDir$/labelsmap.txt
+            labelMappingFile="$DataDir$/labelsmap.txt"
         ]
     ]    
 ]
