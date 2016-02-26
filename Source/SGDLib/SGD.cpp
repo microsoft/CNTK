@@ -322,7 +322,6 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
 	//Multiverso Warpper for ASGD logic init
 	if (m_parallelizationMethod == ParallelizationMethod::DataParallelASGD)
 	{
-		g_mpi->WaitAll();
 		m_multiverso = new MultiversoWrapper<ElemType>(learnableNodes,
 			g_mpi->NumNodesInUse(),
 			m_isPipeline,

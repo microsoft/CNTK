@@ -11,6 +11,17 @@ enum Role {
   kAll = 3
 };
 
+void MV_Init(int* argc = nullptr, 
+             char* argv[] = nullptr, 
+             int role = kAll);
+
+void MV_Barrier();
+
+void MV_ShutDown(bool finalize_mpi = true);
+
+int  MV_Rank();
+
+// will deprecate the following function name
 void MultiversoInit(int* argc = nullptr, 
                     char* argv[] = nullptr, 
                     int role = kAll);
