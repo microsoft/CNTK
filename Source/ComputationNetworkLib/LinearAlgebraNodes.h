@@ -215,19 +215,6 @@ public:
         auto input0 = Input(0)->ValueTensorFor(Input(0)->GetSampleLayout().GetRank(), FrameRange(/*select entire object*/));
         auto input1 = Input(1)->ValueTensorFor(Input(1)->GetSampleLayout().GetRank(), fr);
         output.AssignMatrixProductOf(false/*transC*/, input0, m_transpose/*transA*/, input1, false/*transB*/);
-#if 0
-        // right operand and output can have MB layout, while left operand cannot
-        auto sliceInput1Value = Input(1)->ValueFor(fr);
-        auto sliceOutputValue = ValueFor(fr);
-        // BUGBUG: This uses correct Matrix dimensions when multiplying with a non-minibatch only by luck. To be fixed when we allow to apply TimesNode to a subset of tensor dimensions.
-        sliceOutputValue.AssignProductOf(Input(0)->ValueAsMatrix(), m_transpose, sliceInput1Value, false);
-#if NANCHECK
-        sliceOutputValue.HasNan("Times");
-#endif
-#if DUMPOUTPUT
-        sliceOutputValue.Print("TimesNode");
-#endif
-#endif
     }
 
     virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
@@ -254,32 +241,6 @@ public:
             auto input1Gradient = Input(1)->GradientTensorFor(Input(1)->GetSampleLayout().GetRank(), fr);
             input1Gradient.AddMatrixProductOf(false/*transC*/, input0, !m_transpose/*transA*/, outputGradient, false/*transB*/);
         }
-#if 0
-        if (inputIndex == 0) // left derivative
-        {
-            // this potentially computes inner products over time, so we use the Masked- variants
-            auto sliceOutputGrad = MaskedGradientFor(fr);
-            auto sliceInput1Value = Input(1)->MaskedValueFor(fr);
-            auto& input0Grad = Input(0)->GradientAsMatrix();
-
-            // currently we only support one combination when the input is sparse.
-            if (sliceInput1Value.GetMatrixType() == SPARSE && Input(0)->Gradient().GetMatrixType() == DENSE && sliceOutputGrad.GetMatrixType() == DENSE)
-                Input(0)->Gradient().SwitchToMatrixType(SPARSE, MatrixFormat::matrixFormatSparseBlockCol, false);
-
-            bool transpose = m_transpose; // (assigning to a non-const variable avoids a compiler warning C4127: conditional expression is constant)
-            if (!transpose)
-                Matrix<ElemType>::MultiplyAndAdd(sliceOutputGrad, false, sliceInput1Value, true, input0Grad);
-            else
-                Matrix<ElemType>::MultiplyAndAdd(sliceInput1Value, false, sliceOutputGrad, true, input0Grad);
-        }
-        else // right derivative
-        {
-            auto sliceInput1Grad = Input(1)->GradientFor(fr);
-            auto sliceOutputGrad = GradientFor(fr);
-
-            Matrix<ElemType>::MultiplyAndAdd(Input(0)->ValueAsMatrix(), !m_transpose, sliceOutputGrad, false, sliceInput1Grad);
-        }
-#endif
     }
 
     virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }
@@ -294,7 +255,6 @@ public:
 
         bool transpose = m_transpose; // (assigning to a non-const variable avoids a compiler warning C4127: conditional expression is constant)
 
-#if 1
         // get tensor shapes
         auto dimsA = Input(0)->GetSampleLayout().GetDims();
         auto dimsB = Input(1)->GetSampleLayout().GetDims();
@@ -329,6 +289,7 @@ public:
                     InvalidArgument("%ls %ls operation: The outputRank (%d) dimensions in left argument's shape [%s] must not be 0.", NodeName().c_str(), OperationName().c_str(), (int)m_outputRank, dimsAstring.c_str());
 
             // fill in the missing ones
+            // We fill in dimensions given as 0. The tensor rank is not inferred.
             for (size_t k = m_outputRank; k < dimsA.size(); k++)
             {
                 auto& dimA = dimsA[k];
@@ -344,6 +305,7 @@ public:
                 std::swap(dimsA[0], dimsA[1]);
 
             // update if LearnableParameter
+
             Input(0)->ValidateInferInputDimsFrom(TensorShape(dimsA));
 
             // and verify once again
@@ -357,41 +319,6 @@ public:
                 dimsC.push_back(dimsB[k]); // input dims
             SetDims(TensorShape(dimsC), Input(1)->HasMBLayout());
         }
-#endif
-
-#if 0
-        // support automatic dimension inference for learnable parameters
-        size_t rows0 = Input(0)->GetAsMatrixNumRows(), cols0 = Input(0)->GetAsMatrixNumCols();
-        if (transpose)
-            std::swap(rows0, cols0);
-        size_t rows1 = Input(1)->HasMBLayout() ? Input(1)->GetSampleMatrixNumRows() : Input(1)->GetAsMatrixNumRows();
-
-        // limited automatic dimension inference for *children*, useful for CNN since it can be hard to know the size of each input parameter without deep knowledge how CNN is implemented (padding, stride)
-        // infer cols0 as rows1
-        Input(0)->ValidateInferInputDimsFrom(m_transpose ? TensorShape(rows1, rows0) : TensorShape(rows0, rows1));
-
-        // TODO: With tensors, inner dimensions must match.
-        // after multiplication the tensor structure is lost
-        if (Input(1)->HasMBLayout())
-        {
-            // infer rows1 as cols0
-            Input(1)->ValidateInferInputDimsFrom(TensorShape(cols0));
-            SetDims(TensorShape(rows0), true);
-        }
-        else // multiplying two straight matrices
-        {
-            size_t cols1 = Input(1)->GetAsMatrixNumCols();
-            // infer rows1 as cols0
-            Input(1)->ValidateInferInputDimsFrom(TensorShape(cols0, cols1));
-            SetDims(TensorShape(rows0, cols1), false);
-        }
-
-        // update after inference
-        cols0 = m_transpose ? Input(0)->GetAsMatrixNumRows() : Input(0)->GetAsMatrixNumCols();
-        rows1 = Input(1)->HasMBLayout() ? Input(1)->GetSampleMatrixNumRows() : Input(1)->GetAsMatrixNumRows();
-        if (isFinalValidationPass && cols0 != rows1)
-            InvalidArgument("The inner matrix dimension in the %ls Times operation does not match (%d vs. %d).", NodeName().c_str(), (int) rows1, (int) cols0);
-#endif
     }
 
     virtual void AllocateGradientMatricesForInputs(MatrixPool& matrixPool) override

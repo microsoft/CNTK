@@ -2363,7 +2363,7 @@ GPUSparseMatrix<ElemType> GPUSparseMatrix<ElemType>::ColumnSlice(size_t startCol
     if (startColumn + numCols > m_numCols)
         InvalidArgument("The slice (%d+%d) is out of range of the source matrix (%d).", (int) startColumn, (int) numCols, (int) m_numCols);
 
-    if (m_format != MatrixFormat::matrixFormatSparseCSC && startColumn != 0 && numCols != m_numCols)
+    if (m_format != MatrixFormat::matrixFormatSparseCSC && (startColumn != 0 || numCols != m_numCols))
         NOT_IMPLEMENTED;
 
     GPUSparseMatrix<ElemType> slice(m_computeDevice);

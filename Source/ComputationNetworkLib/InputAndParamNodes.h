@@ -32,11 +32,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 template <class ElemType>
 class LearnableParameter : public ComputationNode<ElemType>, public NumInputs<0>
 {
-    typedef ComputationNode<ElemType> Base;
-    UsingComputationNodeMembersBoilerplate;
-    static const std::wstring TypeName()
+    typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+    static const std::wstring TypeName() { return L"LearnableParameter"; }
+
+    // BUGBUG: If called after random init, this will reset to 0.
+    // TODO: Need to remember the init parameters, and do it here.
+    void InitShape(const TensorShape& shape)
     {
-        return L"LearnableParameter";
+        SetDims(shape, false);
+        UpdateFunctionValuesSize(); // this allocates the matrix
+        Value().SetValue(0);
     }
 
 public:
@@ -51,9 +56,7 @@ public:
     {
         SetLearningRateMultiplier(1.0f);
         MarkValueNonSharable();
-        SetDims(shape, false);
-        UpdateFunctionValuesSize(); // this allocates the matrix
-        Value().SetValue(0);
+        InitShape(shape);
     }
     LearnableParameter(DEVICEID_TYPE deviceId, const wstring& name, size_t rows, size_t cols)
         : LearnableParameter(deviceId, name, TensorShape(rows, cols))
@@ -256,6 +259,44 @@ public:
     {
         Base::Validate(isFinalValidationPass);
         m_pMBLayout = nullptr; // this node does not hold mini-batch data
+    }
+
+    // called from ComputationNode::ValidateInferInputDimsFrom()
+    // In case of an error, this function just backs out without updating.
+    // The caller must verify the dimensions.
+    // This is a bit weird since it is called after this node has been Validated once.
+    // BUGBUG: This will clear out any random initialization to 0. So currently this is not usable for most cases.
+    void InferInputDimsFrom(const TensorShape& otherShape)
+    {
+        const auto& thisShape = GetSampleLayout();
+
+        // see where we stand with our shape
+        bool hasMissingDims = thisShape.GetRank() == 0 || thisShape.GetNumElements() == 0;
+        if (!hasMissingDims) // all there--nothing to infer
+            return;
+    
+        // infer at least one dimension
+        if (otherShape.GetRank() == 0 || otherShape.GetNumElements() == 0)
+            return; // LogicError("ValidateInferInputDimsFrom: Inferred dimensions must not be empty.");
+    
+        // if no dimensions have been set at all, copy otherShape
+        // Don't verify dimensions in this case, because the node may have explicitly been defined as a vector of 0 elements.
+        bool hasAnyDim = false;
+        for (auto dim : thisShape.GetDims())
+            hasAnyDim |= dim != 0;
+        if (!hasAnyDim)          // just use it straight
+            InitShape(otherShape);
+        else if (hasMissingDims) // we got a pre-existing shape: If it has zeroes, we fill them in from otherShape
+        {
+            if (thisShape.GetRank() != 0 && thisShape.GetRank() != otherShape.GetRank())
+                return; // LogicError("ValidateInferInputDimsFrom: Inferred dimensions must match in rank.");
+            SmallVector<size_t> newDims = thisShape.GetDims();
+            for (size_t i = 0; i < thisShape.GetRank(); i++)
+                if (newDims[i] == 0)
+                    newDims[i] = otherShape[i];
+            InitShape(TensorShape(newDims));
+        }
+        fprintf(stderr, "%ls %ls operation: Tensor shape was inferred as [%s].\n", NodeName().c_str(), OperationName().c_str(), string(GetSampleLayout()).c_str());
     }
 
     virtual void DumpNodeInfo(const bool printValues, const bool printMetadata, File& fstream) const override

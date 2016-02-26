@@ -378,7 +378,7 @@ static void FlattenToMatrix(TensorShape& shape, bool trans, size_t splitPoint)
         splitPoint = shape.GetRank() - splitPoint;
     // check & print meaningful error message
     SmallVector<bool> dimsToDrop(shape.GetRank(), false);
-    for (size_t k = shape.GetRank(); k-- > 1;)
+    for (size_t k = 1; k < shape.GetRank(); k++)
         if (k != splitPoint)
             if (!shape.CanFlatten(k))
                 InvalidArgument("DoMatrixProductOf: Shape [%s] is not dense at dimension %d.", string(shape).c_str(), (int)k);
@@ -388,7 +388,7 @@ static void FlattenToMatrix(TensorShape& shape, bool trans, size_t splitPoint)
     if (splitPoint == shape.GetRank())
         shape.PadRankInPlace(splitPoint + 1);
     // flatten the dimensions
-    for (size_t k = shape.GetRank(); k-- > 1;)
+    for (size_t k = 1; k < shape.GetRank(); k++)
         if (dimsToDrop[k - 1])
             shape.FlattenInPlace(k);
     shape.DropDimsInPlace(dimsToDrop);
@@ -460,7 +460,7 @@ void TensorView<ElemType>::DoMatrixProductOf(ElemType beta, bool transC, const T
         shapeB[1-transB] != shapeC[1-transC] || // input dim
         shapeA[1-transA] != shapeB[transB])     // reduction dim
     {
-        InvalidArgument("DoMatrixProductOf: Dimensions %s mismatch.", MatrixProductFormat(shapeA, transA, shapeB, transB, shapeC, transC).c_str());
+        InvalidArgument("DoMatrixProductOf: Flattened tensor dimensions %s mismatch.", MatrixProductFormat(shapeA, transA, shapeB, transB, shapeC, transC).c_str());
     }
     // create Matrix objects out of this
     let  A = a.Reshaped(shapeA).AsMatrix();

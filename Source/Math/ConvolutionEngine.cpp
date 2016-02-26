@@ -26,6 +26,8 @@ public:
     }
 
 public:
+    // TODO: A note on the supported tensor layouts here.
+    // TODO: Runtime check whether input tensors are in supported format.
     void Forward(const Tensor4D& inT, const Mat& in, const Filter& filterT, const Mat& filter, const ConvDesc& convDesc,
                  const Tensor4D& outT, Mat& out, Mat& workspace) override
     {
