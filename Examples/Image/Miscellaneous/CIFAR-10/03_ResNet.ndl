@@ -18,7 +18,8 @@ LocalMacros = [
     
     scValue = 1
     
-    tconst = 4096
+    # Batch normalization time constant.
+    bnTimeConst = 4096
     
     kW = 3
     kH = 3
@@ -30,25 +31,25 @@ LocalMacros = [
 DNN=[
     conv1WScale = 0.26
     cMap1 = 16
-    conv1 = ConvBNReLULayer(features, cMap1, 27, kW, kH, hStride1, vStride1, conv1WScale, convBValue, scValue, tconst)
+    conv1 = ConvBNReLULayer(features, cMap1, 27, kW, kH, hStride1, vStride1, conv1WScale, convBValue, scValue, bnTimeConst)
 
-    rn1_1 = ResNetNode2(conv1, cMap1, 144, kW, kH, convWScale, convBValue, scValue, tconst)
-    rn1_2 = ResNetNode2(rn1_1, cMap1, 144, kW, kH, convWScale, convBValue, scValue, tconst)
-    rn1_3 = ResNetNode2(rn1_2, cMap1, 144, kW, kH, convWScale, convBValue, scValue, tconst)
+    rn1_1 = ResNetNode2(conv1, cMap1, 144, kW, kH, convWScale, convBValue, scValue, bnTimeConst)
+    rn1_2 = ResNetNode2(rn1_1, cMap1, 144, kW, kH, convWScale, convBValue, scValue, bnTimeConst)
+    rn1_3 = ResNetNode2(rn1_2, cMap1, 144, kW, kH, convWScale, convBValue, scValue, bnTimeConst)
 
     cMap2 = 32
     rn2_1_Wproj = Parameter(cMap2, cMap1, init = fromFile, initFromFilePath = "$Proj16to32Filename$", needGradient = false)
-    rn2_1 = ResNetNode2Inc(rn1_3, cMap2, 144, 288, kW, kH, convWScale, convBValue, scValue, tconst, rn2_1_Wproj)
-    #rn2_1 = ResNetNode2Inc2(rn1_3, cMap1, cMap2, 144, 288, kW, kH, convWScale, 3.5, convBValue, scValue, tconst)
-    rn2_2 = ResNetNode2(rn2_1, cMap2, 288, kW, kH, convWScale, convBValue, scValue, tconst)
-    rn2_3 = ResNetNode2(rn2_2, cMap2, 288, kW, kH, convWScale, convBValue, scValue, tconst)
+    rn2_1 = ResNetNode2Inc(rn1_3, cMap2, 144, 288, kW, kH, convWScale, convBValue, scValue, bnTimeConst, rn2_1_Wproj)
+    #rn2_1 = ResNetNode2Inc2(rn1_3, cMap1, cMap2, 144, 288, kW, kH, convWScale, 3.5, convBValue, scValue, bnTimeConst)
+    rn2_2 = ResNetNode2(rn2_1, cMap2, 288, kW, kH, convWScale, convBValue, scValue, bnTimeConst)
+    rn2_3 = ResNetNode2(rn2_2, cMap2, 288, kW, kH, convWScale, convBValue, scValue, bnTimeConst)
 
     cMap3 = 64
     rn3_1_Wproj = Parameter(cMap3, cMap2, init = fromFile, initFromFilePath = "$Proj32to64Filename$", needGradient = false)
-    rn3_1 = ResNetNode2Inc(rn2_3, cMap3, 288, 576, kW, kH, convWScale, convBValue, scValue, tconst, rn3_1_Wproj)
-    #rn3_1 = ResNetNode2Inc2(rn2_3, cMap2, cMap3, 288, 576, kW, kH, convWScale, 3.5, convBValue, scValue, tconst)
-    rn3_2 = ResNetNode2(rn3_1, cMap3, 576, kW, kH, convWScale, convBValue, scValue, tconst)
-    rn3_3 = ResNetNode2(rn3_2, cMap3, 576, kW, kH, convWScale, convBValue, scValue, tconst)
+    rn3_1 = ResNetNode2Inc(rn2_3, cMap3, 288, 576, kW, kH, convWScale, convBValue, scValue, bnTimeConst, rn3_1_Wproj)
+    #rn3_1 = ResNetNode2Inc2(rn2_3, cMap2, cMap3, 288, 576, kW, kH, convWScale, 3.5, convBValue, scValue, bnTimeConst)
+    rn3_2 = ResNetNode2(rn3_1, cMap3, 576, kW, kH, convWScale, convBValue, scValue, bnTimeConst)
+    rn3_3 = ResNetNode2(rn3_2, cMap3, 576, kW, kH, convWScale, convBValue, scValue, bnTimeConst)
                 
     # Global average pooling
     poolW = 8
