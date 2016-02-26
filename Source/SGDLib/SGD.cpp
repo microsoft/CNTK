@@ -335,6 +335,7 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
 
         // set dropout rate for this epoch
         ComputationNetwork::SetDropoutRate<ElemType>(net, criterionNodes[0], m_dropoutRates[i], prevDropoutRate, dropOutSeed);
+        net->SetBatchNormlizationNodesBelowEvalMode(false, criterionNodes[0]);
 
         // learning rate adjustment
         if (m_autoLearnRateSearchType == LearningRateSearchAlgorithm::None || i < m_learningRatesParam.size())
@@ -436,6 +437,8 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
 
         timer.Stop();
         double epochTime = timer.ElapsedSeconds();
+
+        net->SetBatchNormlizationNodesBelowEvalMode(true, criterionNodes[0]);
 
         if (m_useEvalCriterionControlLR && epochEvalErrors.size() > 0)
         {
