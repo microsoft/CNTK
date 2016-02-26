@@ -4,39 +4,51 @@
 # WARNING. This will run in Microsoft Internal Environment ONLY
 # Generating CNTK Binary drops in Jenkins environment
 
-Write-Host "Making binary drops..."
+$ErrorActionPreference = 'Stop'
+
+# Command line parameters
+[CmdletBinding()]
+Param
+(
+   [switch]$verbose
+)
+
+# Set Verbose mode
+if ($verbose)
+{
+	 $VerbosePreference = "continue"
+}
+
+Write-Verbose "Making binary drops..."
 
 # Get Jenkins environment Variables
-$buildConfig =(Get-Item env:"BUILD_CONFIGURATION").Value
-$targetConfig =(Get-Item env:"TARGET_CONFIGURATION").Value
+$buildConfig =(Get-Item env:BUILD_CONFIGURATION).Value
+$targetConfig =(Get-Item env:TARGET_CONFIGURATION).Value
 
 # If not a Release build quit
 If ($buildConfig -ne "Release")
 {
-	Write-Host "Not a release build. No binary drops generaion"
+	Write-Verbose "Not a release build. No binary drops generation"
 	Exit
 }
 
 # Set Paths
 $basePath = "BinaryDrops\ToZip"
-$baseDropPath = $basePath + "\cntk"
+$baseDropPath = Join-Path $basePath -ChildPath cntk
 $zipFile = "BinaryDrops\BinaryDrops.zip"
+$buildPath = "x64\Release"
 If ($targetConfig -eq "CPU")
 {
 	$buildPath = "x64\Release_CpuOnly"
 }
-Else
-{
-	$buildPath = "x64\Release"
-}
-$sharePath = "\\muc-vfs-01a\CNTKshare\CNTK-Binary-Drop" + "\" + $targetConfig
+$sharePath = Join-Path "\\muc-vfs-01a\CNTKshare\CNTK-Binary-Drop" -ChildPath $targetConfig
 
 
 # Make binary drop folder
 New-Item -Path $baseDropPath -ItemType "directory"
 
 # Copy build binaries
-Write-Host "Copying build binaries ..."
+Write-Verbose "Copying build binaries ..."
 Copy-Item $buildPath -Recurse -Destination $baseDropPath\cntk
 
 # Clean unwanted items
@@ -48,22 +60,21 @@ Remove-Item $baseDropPath\cntk\*.exp
 Remove-Item $baseDropPath\cntk\*.metagen
 
 # Copy Examples
-Write-Host "Copying Examples ..."
+Write-Verbose "Copying Examples ..."
 Copy-Item Examples -Recurse -Destination $baseDropPath\Examples
 
 # Copy all items from the share
 # For whatever reason Copy-Item in the line below does not work
 # Copy-Item $sharePath"\*"  -Recurse -Destination $baseDropPath
 # Copying with Robocopy
-Write-Host "Copying dependencies and other files from Remote Share ..."
-$robocopyCmd = "robocopy " + $sharePath + " " + $baseDropPath + " /s /e"
-Invoke-Expression $robocopyCmd
+Write-Verbose "Copying dependencies and other files from Remote Share ..."
+robocopy $sharePath $baseDropPath /s /e
 
-Write-Host "Making ZIP and cleaning up..."
+Write-Verbose "Making ZIP and cleaning up..."
 
 # Make ZIP file
-$source = $PWD.Path + "\" + $basePath
-$destination = $PWD.Path + "\" + $zipFile
+$source = Join-Path $PWD.Path -ChildPath $basePath
+$destination = Join-Path $PWD.Path -ChildPath $zipFile
 Add-Type -assembly "system.io.compression.filesystem"
 [io.compression.zipfile]::CreateFromDirectory($source, $destination)
 
