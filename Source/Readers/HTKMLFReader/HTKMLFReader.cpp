@@ -1502,6 +1502,7 @@ bool HTKMLFReader<ElemType>::GetMinibatchToWrite(StreamMinibatchInputs& matrices
         m_fileEvalSource->Reset();
 
         // load next file (or set of files)
+        size_t nfr = 0;
         foreach_index (i, m_inputFilesMultiIO)
         {
             msra::asr::htkfeatreader reader;
@@ -1512,9 +1513,18 @@ bool HTKMLFReader<ElemType>::GetMinibatchToWrite(StreamMinibatchInputs& matrices
             string featkind;
             unsigned int sampperiod;
             msra::util::attempt(5, [&]()
-                                {
-                                    reader.read(path, featkind, sampperiod, feat); // whole file read as columns of feature vectors
-                                });
+            {
+                reader.read(path, featkind, sampperiod, feat); // whole file read as columns of feature vectors
+            });
+            if (i == 0) nfr = feat.cols();
+            else if (1 == feat.cols() && nfr > 1)
+            { // do auto-expansion
+                msra::dbn::matrix feat_col(feat);
+                feat.resize(feat.rows(), nfr);
+                for (size_t i = 0; i < feat.rows(); i++)
+                    for (size_t j = 0; j < feat.cols(); j++)
+                        feat(i, j) = feat_col(i, 0);
+            }
             fprintf(stderr, "evaluate: reading %d frames of %ls\n", (int) feat.cols(), ((wstring) path).c_str());
             m_fileEvalSource->AddFile(feat, featkind, sampperiod, i);
         }
