@@ -399,7 +399,7 @@ void SynchronousNodeEvaluator<ElemType>::Evaluate(NDLNode<ElemType>* node, const
             // Optional parameters
             bool eval = node->GetOptionalParameter("eval", "false");
             bool spatial = node->GetOptionalParameter("spatial", "false");
-            double normTimeConst = node->GetOptionalParameter("normTimeConst", "0");
+            double normTimeConst = node->GetOptionalParameter("normalizationTimeConstant", "0");
             double epsilon = node->GetOptionalParameter("epsilon", "0.00001");
             std::wstring bnEngineS = node->GetOptionalParameter("engine", "cntk");
             bool useCntkEngine;
