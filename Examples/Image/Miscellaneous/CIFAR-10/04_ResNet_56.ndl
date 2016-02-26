@@ -91,10 +91,10 @@ DNN=[
     rn3_12= ResNetNode2(rn3_11, cMap3, 576, kW, kH, convWScale, convBValue, scValue, bnTimeConst)
     rn3_13= ResNetNode2(rn3_12, cMap3, 576, kW, kH, convWScale, convBValue, scValue, bnTimeConst)
     rn3_14= ResNetNode2(rn3_13, cMap3, 576, kW, kH, convWScale, convBValue, scValue, bnTimeConst)
-    rn3_15= ResNetNode2(rn3_14, cMap3, 576, kW, kH, convWScale, convBValue, scValue, tconst)
-    rn3_16= ResNetNode2(rn3_15, cMap3, 576, kW, kH, convWScale, convBValue, scValue, tconst)
-    rn3_17= ResNetNode2(rn3_16, cMap3, 576, kW, kH, convWScale, convBValue, scValue, tconst)
-    rn3_18= ResNetNode2(rn3_17, cMap3, 576, kW, kH, convWScale, convBValue, scValue, tconst)
+    rn3_15= ResNetNode2(rn3_14, cMap3, 576, kW, kH, convWScale, convBValue, scValue, bnTimeConst)
+    rn3_16= ResNetNode2(rn3_15, cMap3, 576, kW, kH, convWScale, convBValue, scValue, bnTimeConst)
+    rn3_17= ResNetNode2(rn3_16, cMap3, 576, kW, kH, convWScale, convBValue, scValue, bnTimeConst)
+    rn3_18= ResNetNode2(rn3_17, cMap3, 576, kW, kH, convWScale, convBValue, scValue, bnTimeConst)
                 
     # Global average pooling
     poolW = 8

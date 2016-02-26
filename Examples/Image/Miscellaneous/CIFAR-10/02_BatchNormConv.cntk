@@ -5,24 +5,24 @@ DataDir = "$RootDir$"
 OutputDir = "$RootDir$/Output"
 ModelDir = "$OutputDir$/Models"
 
-ndlMacros=$ConfigDir$/Macros.ndl
+ndlMacros="$ConfigDir$/Macros.ndl"
 
-precision=float
-deviceId=Auto
-prefetch=true
+precision="float"
+deviceId="Auto"
+prefetch="true"
 
 command=Train:AddBNEval:Test
 
-stderr=$OutputDir$/02_BatchNormConv
+stderr="$OutputDir$/02_BatchNormConv"
 traceLevel=1
 numMBsToShowResult=500
 
 Train=[
-    action=train
-    modelPath=$ModelDir$/02_BatchNormConv
+    action="train"
+    modelPath="$ModelDir$/02_BatchNormConv"
 
      NDLNetworkBuilder=[
-        networkDescription=$ConfigDir$/02_BatchNormConv.ndl
+        networkDescription="$ConfigDir$/02_BatchNormConv.ndl"
     ]
     
     SGD=[
@@ -36,9 +36,9 @@ Train=[
     ]
     
     reader=[
-        readerType=UCIFastReader
-        file=$DataDir$/Train.txt
-        randomize=None
+        readerType="UCIFastReader"
+        file="$DataDir$/Train.txt"
+        randomize="Auto"
         features=[
             dim=3072
             start=1
@@ -47,32 +47,28 @@ Train=[
             dim=1
             start=0
             labelDim=10
-            labelMappingFile=$DataDir$/labelsmap.txt
+            labelMappingFile="$DataDir$/labelsmap.txt"
         ]
     ]    
 ]
 
 AddBNEval=[    
-    action=edit
-    CurModel=$ModelDir$/02_BatchNormConv
-    NewModel=$ModelDir$/02_BatchNormConv.Eval
-    editPath=$ConfigDir$/02_BatchNormConv.mel
+    action="edit"
+    CurModel="$ModelDir$/02_BatchNormConv"
+    NewModel="$ModelDir$/02_BatchNormConv.Eval"
+    editPath="$ConfigDir$/02_BatchNormConv.mel"
 ]
 
 Test=[
-    action=test
-    modelPath=$ModelDir$/02_BatchNormConv.Eval
+    action="test"
+    modelPath="$ModelDir$/02_BatchNormConv.Eval"
     # Set minibatch size for testing.
     minibatchSize=16
 
-     NDLNetworkBuilder=[
-        networkDescription=$ConfigDir$/02_BatchNormConv.ndl
-    ]
-    
     reader=[
-        readerType=UCIFastReader
-        file=$DataDir$/Test.txt
-        randomize=None
+        readerType="UCIFastReader"
+        file="$DataDir$/Test.txt"
+        randomize="None"
         features=[
             dim=3072
             start=1

@@ -272,7 +272,6 @@ public:
     {
         CUDNN_CALL(cudnnCreate(&m_cudnn));
         CUDNN_CALL(cudnnSetStream(m_cudnn, m_stream));
-        m_fwdAlgo.NoWorkspaceAlgo = CUDNN_CONVOLUTION_FWD_ALGO_IMPLICIT_GEMM;
     }
 
     ~CuDnnConvolutionEngine()
@@ -567,90 +566,28 @@ private:
         if (res == algoPerf + calgo)
         {
             // In theory, this should never happen.
-            assert(false);
-            algo.NoWorkspaceAlgo = algo.Algo.algo;
-            std::cerr << "cuDNN could not find no-workspace algorithm for the current convolution configuration.\n";
+            RuntimeError("cuDNN could not find no-workspace algorithm for the current convolution configuration.");
         }
         else
             algo.NoWorkspaceAlgo = (*res).algo;
     }
 
-    //void FindBestForwardAlgo(const CuDnnTensor4D& inT, const CuDnnFilter& filtT, const CuDnnConvolutionDescriptor& convDesc, const CuDnnTensor4D& outT)
-    //{
-    //    if (!m_fwdAlgo.NeedAutotuning(inT))
-    //        return;
-    //    const int MaxAlgoCount = 10;
-    //    int calgo = 0;
-    //    cudnnConvolutionFwdAlgoPerf_t algoPerf[MaxAlgoCount];
-    //    CUDNN_CALL(cudnnFindConvolutionForwardAlgorithm(m_cudnn, inT, filtT, convDesc, outT, MaxAlgoCount, &calgo, algoPerf));
-    //    assert(calgo > 0);
-    //    size_t maxMem = m_maxTempMemSizeInSamples == 0 ? (std::numeric_limits<size_t>::max)() : inT.w() * inT.h() * inT.c() * m_maxTempMemSizeInSamples * sizeof(ElemType);
-    //    auto res = std::find_if(algoPerf, algoPerf + calgo,
-    //                            [=](const cudnnConvolutionFwdAlgoPerf_t& cur)
-    //                            {
-    //                                return cur.status == CUDNN_STATUS_SUCCESS && cur.memory <= maxMem;
-    //                            });
-    //    if (res == algoPerf + calgo)
-    //        RuntimeError("cuDNN could not find suitable algorithm for cudnnConvolutionForward.");
-    //    m_fwdAlgo.CurMBSize = inT.n();
-    //    m_fwdAlgo.Algo = *res;
-    //}
-
-    //void FindBestBackwardDataAlgo(const CuDnnFilter& filtT, const CuDnnTensor4D& srcGradT, const CuDnnConvolutionDescriptor& convDesc, const CuDnnTensor4D& gradT)
-    //{
-    //    if (!m_backDataAlgo.NeedAutotuning(srcGradT))
-    //        return;
-    //    const int MaxAlgoCount = 10;
-    //    int calgo = 0;
-    //    cudnnConvolutionBwdDataAlgoPerf_t algoPerf[MaxAlgoCount];
-    //    CUDNN_CALL(cudnnFindConvolutionBackwardDataAlgorithm(m_cudnn, filtT, srcGradT, convDesc, gradT, MaxAlgoCount, &calgo, algoPerf));
-    //    assert(calgo > 0);
-    //    size_t maxMem = m_maxTempMemSizeInSamples == 0 ? (std::numeric_limits<size_t>::max)() : gradT.w() * gradT.h() * gradT.c() * m_maxTempMemSizeInSamples * sizeof(ElemType);
-    //    auto res = std::find_if(algoPerf, algoPerf + calgo,
-    //                            [=](const cudnnConvolutionBwdDataAlgoPerf_t& cur)
-    //                            {
-    //                                return cur.status == CUDNN_STATUS_SUCCESS && cur.memory <= maxMem;
-    //                            });
-    //    if (res == algoPerf + calgo)
-    //        RuntimeError("cuDNN could not find suitable algorithm for cudnnConvolutionBackwardData.");
-    //    m_backDataAlgo.CurMBSize = srcGradT.n();
-    //    m_backDataAlgo.Algo = *res;
-    //}
-
-    //void FindBestBackwardFilterAlgo(const CuDnnTensor4D& inT, const CuDnnTensor4D& srcGradT, const CuDnnConvolutionDescriptor& convDesc, const CuDnnFilter& filtT)
-    //{
-    //    if (!m_backFiltAlgo.NeedAutotuning(inT))
-    //        return;
-    //    const int MaxAlgoCount = 10;
-    //    int calgo = 0;
-    //    cudnnConvolutionBwdFilterAlgoPerf_t algoPerf[MaxAlgoCount];
-    //    CUDNN_CALL(cudnnFindConvolutionBackwardFilterAlgorithm(m_cudnn, inT, srcGradT, convDesc, filtT, MaxAlgoCount, &calgo, algoPerf));
-    //    assert(calgo > 0);
-    //    size_t maxMem = m_maxTempMemSizeInSamples == 0 ? (std::numeric_limits<size_t>::max)() : inT.w() * inT.h() * inT.c() * m_maxTempMemSizeInSamples * sizeof(ElemType);
-    //    auto res = std::find_if(algoPerf, algoPerf + calgo,
-    //                            [=](const cudnnConvolutionBwdFilterAlgoPerf_t& cur)
-    //                            {
-    //                                return cur.status == CUDNN_STATUS_SUCCESS && cur.memory <= maxMem;
-    //                            });
-    //    if (res == algoPerf + calgo)
-    //        RuntimeError("cuDNN could not find suitable algorithm for cudnnConvolutionBackwardFilter.");
-    //    m_backFiltAlgo.CurMBSize = inT.n();
-    //    m_backFiltAlgo.Algo = *res;
-    //}
-
 private:
     template <typename T>
     struct ConvAlgoInfo
     {
+        using CuDnnAlgoT = decltype(T::algo);
+
         ConvAlgoInfo()
             : CurMBSize(0)
         {
             Algo.status = CUDNN_STATUS_NOT_INITIALIZED;
+            NoWorkspaceAlgo = (CuDnnAlgoT)-1;
         }
         // Current mini-batch size, needed for re-computing statistics in auto-tuner.
         size_t CurMBSize;
         T Algo;
-        decltype(T::algo) NoWorkspaceAlgo;
+        CuDnnAlgoT NoWorkspaceAlgo;
 
         bool NeedAutotuning(const CuDnnTensor4D& t)
         {
@@ -660,9 +597,8 @@ private:
             // REVIEW alexeyk: potentially, this might cause some perf issues if better (faster) algo can be selected for a smaller mininbatch.
             // We also need to reset auto-tuning status at the beginning of each epoch but ComputationNode currently does not provide such notification.
             // We assume no other dimensions of tensors can change so we don't check it.
-            // REVIEW alexeyk: disabled for now until we find a better solution.
+            // REVIEW alexeyk: review once we get responce from NVIDIA.
             return (Algo.status != CUDNN_STATUS_SUCCESS || t.n() > CurMBSize);
-            //return (Algo.status != CUDNN_STATUS_SUCCESS || t1.n() != CurMBSize || t2.n() != CurMBSize);
         }
     };
 
