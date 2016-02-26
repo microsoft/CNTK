@@ -6,6 +6,14 @@ DNNSigmoidLayer(inDim, outDim, x, parmScale) = [
     y = Sigmoid(z)
 ]
 
+DNNImageSigmoidLayer(inW, inH, inC, outDim, x, parmScale) = [
+    W = ImageParameter(outDim, inW, inH, inC, init="uniform", initValueScale=parmScale, imageLayout=$imageLayout$)
+    b = LearnableParameter(outDim, 1,         init="uniform", initValueScale=parmScale) 
+    t = Times(W, x)
+    z = Plus(t, b)
+    y = Sigmoid(z)
+]
+
 DNNLayer(inDim, outDim, x, parmScale) = [
     W = LearnableParameter(outDim, inDim, init="uniform", initValueScale=parmScale)
     b = LearnableParameter(outDim, 1,     init="uniform", initValueScale=parmScale)
@@ -26,7 +34,7 @@ DnnBNReLULayer(inDim, outDim, x, wScale, bValue, scValue, expAvg) = [
 
 ConvReLULayer(inp, outMap, inWCount, kW, kH, hStride, vStride, wScale, bValue) = [
     convW = LearnableParameter(outMap, inWCount, init="uniform", initValueScale=wScale)
-    convB = ImageParameter(1, 1, outMap,     init="fixedValue", value=bValue, imageLayout=$imageLayout$)
+    convB = ImageParameter(1, 1, outMap, init="fixedValue", value=bValue, imageLayout=$imageLayout$)
     conv = Convolution(convW, inp, kW, kH, outMap, hStride, vStride, zeroPadding=false, imageLayout=$imageLayout$)
     convPlusB = Plus(conv, convB);
     act = RectifiedLinear(convPlusB);

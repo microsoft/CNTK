@@ -298,6 +298,8 @@ public:
                     InvalidArgument("%ls %ls operation: Right [%s] operand must have zero dimensions.", NodeName().c_str(), OperationName().c_str(), dimsBstring.c_str());
                 else if (dimA == 0)
                     dimA = dimB; // infer dimension
+                else if (dimA != dimB)
+                    InvalidArgument("%ls %ls operation: Left [%s] and right [%s] operands' shapes are not compatible.", NodeName().c_str(), OperationName().c_str(), dimsAstring.c_str(), dimsBstring.c_str());
             }
 
             // swap back in case of TransposeTimes
@@ -305,7 +307,6 @@ public:
                 std::swap(dimsA[0], dimsA[1]);
 
             // update if LearnableParameter
-
             Input(0)->ValidateInferInputDimsFrom(TensorShape(dimsA));
 
             // and verify once again
