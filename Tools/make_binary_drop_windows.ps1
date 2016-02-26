@@ -4,14 +4,12 @@
 # WARNING. This will run in Microsoft Internal Environment ONLY
 # Generating CNTK Binary drops in Jenkins environment
 
-$ErrorActionPreference = 'Stop'
-
-# Command line parameters
+# Enable Verbose automatically
 [CmdletBinding()]
-Param
-(
-   [switch]$verbose
-)
+param ()
+
+# Set to Stop on Error
+$ErrorActionPreference = 'Stop'
 
 # Set Verbose mode
 if ($verbose)
