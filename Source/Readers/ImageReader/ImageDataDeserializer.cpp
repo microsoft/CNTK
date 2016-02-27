@@ -66,7 +66,7 @@ public:
         const auto& imageSequence = m_description;
 
         auto image = std::make_shared<DeserializedImage>();
-        image->m_image = std::move(cv::imread(imageSequence.m_path, cv::IMREAD_COLOR));
+        image->m_image = std::move(m_parent.ReadImage(m_description.m_id, imageSequence.m_path));
         auto& cvImage = image->m_image;
 
         if (!cvImage.data)
@@ -148,6 +148,7 @@ void ImageDataDeserializer::CreateSequenceDescriptions(std::string mapPath, size
     ImageSequenceDescription description;
     description.m_numberOfSamples = 1;
     description.m_isValid = true;
+    PathReaderMap knownReaders;
     for (size_t lineIndex = 0; std::getline(mapFile, line); ++lineIndex)
     {
         std::stringstream ss(line);
@@ -174,6 +175,7 @@ void ImageDataDeserializer::CreateSequenceDescriptions(std::string mapPath, size
                 static_cast<int>(labelDimension));
         }
         m_imageSequences.push_back(description);
+        RegisterByteReader(description.m_id, description.m_path, knownReaders);
     }
 }
 
@@ -201,4 +203,57 @@ ChunkPtr ImageDataDeserializer::GetChunk(size_t chunkId)
     return std::make_shared<ImageChunk>(sequenceDescription, *this);
 }
 
+void ImageDataDeserializer::RegisterByteReader(size_t seqId, const std::string& path, PathReaderMap& knownReaders)
+{
+    assert(!path.empty());
+
+    auto atPos = path.find_first_of('@');
+    // Is it container or plain image file?
+    if (atPos == std::string::npos)
+        return;
+    // REVIEW alexeyk: only .zip container support for now.
+#ifdef USE_ZIP
+    assert(atPos > 0);
+    assert(atPos + 1 < path.length());
+    auto containerPath = path.substr(0, atPos);
+    // skip @ symbol and path separator (/ or \)
+    auto itemPath = path.substr(atPos + 2);
+    // zlib only supports / as path separator.
+    std::replace(begin(itemPath), end(itemPath), '\\', '/');
+    std::shared_ptr<ByteReader> reader;
+    auto r = knownReaders.find(containerPath);
+    if (r == knownReaders.end())
+    {
+        reader = std::make_shared<ZipByteReader>(containerPath);
+        knownReaders[containerPath] = reader;
+    }
+    else
+    {
+        reader = (*r).second;
+    }
+    reader->Register(seqId, itemPath);
+    m_readers[seqId] = reader;
+#else
+    UNUSED(seqId);
+    UNUSED(knownReaders);
+    RuntimeError("The code is built without zip container support. Only plain image files are supported.");
+#endif
+}
+
+cv::Mat ImageDataDeserializer::ReadImage(size_t seqId, const std::string& path)
+{
+    assert(!path.empty());
+
+    ImageDataDeserializer::SeqReaderMap::const_iterator r;
+    if (m_readers.empty() || (r = m_readers.find(seqId)) == m_readers.end())
+        return m_defaultReader.Read(seqId, path);
+    return (*r).second->Read(seqId, path);
+}
+
+cv::Mat FileByteReader::Read(size_t, const std::string& path)
+{
+    assert(!path.empty());
+
+    return cv::imread(path, cv::IMREAD_COLOR);
+}
 }}}

@@ -147,7 +147,7 @@ public:
         // the random seed offset is set via the "randomSeedOffset" parameter in config
         if (initOnCPUOnly)
             Value().TransferToDeviceIfNotThereAndNotAutoPlace(CPUDEVICE, true);
-#if 1 // this more complex version is needed to repro test cases generated with an older version
+#if 1   // this more complex version is needed to repro test cases generated with an older version
         auto& value = GetSampleLayout().GetRank() > 2 ? Value() : ValueAsMatrix();
 #else
         auto& value = Value();
