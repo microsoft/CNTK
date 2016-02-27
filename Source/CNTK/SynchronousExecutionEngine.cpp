@@ -490,21 +490,24 @@ TensorShape SynchronousNodeEvaluator<ElemType>::ProcessTensorShapeParameters(con
     for (i++; i < params.size(); i++)
         dims.push_back(((NDLNode<ElemType>*) params[i])->GetScalar());
 
-    // turn into tensor
-    TensorShape tensorShape(dims);
-
     // if image then interpret as W, H, C with layout according to optional imageLayout parameter
+    // If more than 3 parameters are given, then we assume that this is for a Times operation and interpret the last 3 dimensions according to imageLayout.
     if (isImage)
     {
-        if (dims.size() != 3)
-            RuntimeError("%ls should have 3 parameters [width, height, numChannels].", cnNodeType.c_str());
+        if (dims.size() < 3)
+            RuntimeError("%ls should have 3 or more parameters [width, height, numChannels].", cnNodeType.c_str());
         ImageLayoutKind imageLayoutKind = ImageLayoutKindFrom(node->GetOptionalParameter("imageLayout", "HWC"));
-        tensorShape = ImageDimensions::AsTensorShape(tensorShape[0], tensorShape[1], tensorShape[2], imageLayoutKind);
+        size_t k0 = dims.size() - 3; // last 3 need to be arranged
+        SmallVector<size_t> imageDims = ImageDimensions::AsTensorShape(dims[k0 + 0], dims[k0 + 1], dims[k0 + 2], imageLayoutKind).GetDims();
+        for (size_t k = 0; k < 3; k++)
+            dims[k0 + k] = imageDims[k];
     }
 
-    return tensorShape;
+    // turn into tensor
+    return TensorShape(dims);
 }
 
 template class SynchronousExecutionEngine<float>;
 template class SynchronousExecutionEngine<double>;
-} } }
+
+}}}
