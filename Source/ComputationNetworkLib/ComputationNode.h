@@ -404,9 +404,9 @@ private:
     void CheckTensorIsMatrix() const
     {
         if (HasMBLayout())
-            LogicError("CheckTensorIsMatrix: Minibatch data cannot be interpreted as a single 2D tensor.");
+            LogicError("%ls %ls operation: Minibatch data cannot be interpreted as a single 2D tensor.", NodeName().c_str(), OperationName().c_str());
         else if (m_sampleLayout.GetRank() < 1 || m_sampleLayout.GetRank() > 2) // note: scalars are not stored as tensors of rank 0, but rather as 1-dim vectors. TODO: clean this up some day
-            LogicError("CheckTensorIsMatrix: Sample is not a column vector or matrix (1D or 2D tensor).");
+            LogicError("%ls %ls operation: Sample [%s] is not a column vector or matrix (1D or 2D tensor).", NodeName().c_str(), OperationName().c_str(), string(m_sampleLayout).c_str());
     }
 public:
     size_t GetAsMatrixNumRows() const
