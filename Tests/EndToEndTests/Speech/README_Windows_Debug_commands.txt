@@ -65,13 +65,7 @@ COMMAND:     configFile=$(SolutionDir)Tests/EndToEndTests/Image/QuickE2E/cntk.cn
 
 --- Other/Simple2d:
 
-Examples/Other/Simple2d  /README.md
-Examples\Other\Simple2d\Config\Simple.cntk
-
 COMMAND:     configFile=$(SolutionDir)Examples/Other/Simple2d/Config/Simple.cntk  RunDir=$(SolutionDir)Examples/Other/Simple2d/_run  DataDir=$(SolutionDir)Examples/Other/Simple2d/Data  ConfigDir=$(SolutionDir)Examples/Other/Simple2d/Config  stderr=$(SolutionDir)Examples/Other/Simple2d/_run/Simple.log  DeviceId=0  useCuDnn=false   makeMode=false
-
-cntk configFile=Config/Simple.cntk currentDirectory=Data
-
 
 Simple test
 -----------

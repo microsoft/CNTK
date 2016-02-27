@@ -665,23 +665,23 @@ int wmain1(int argc, wchar_t* argv[]) // called from wmain which is a wrapper th
     }
     catch (const ScriptableObjects::ScriptingException& err)
     {
-        fprintf(stderr, "EXCEPTION occurred: %s\n", err.what());
+        fprintf(stderr, "\nEXCEPTION occurred: %s\n", err.what());
         err.PrintError();
         return EXIT_FAILURE;
     }
     catch (const IExceptionWithCallStackBase& err)
     {
-        fprintf(stderr, "EXCEPTION occurred: %s\n%s", dynamic_cast<const std::exception&>(err).what(), err.CallStack());
+        fprintf(stderr, "\nEXCEPTION occurred: %s\n%s", dynamic_cast<const std::exception&>(err).what(), err.CallStack());
         return EXIT_FAILURE;
     }
     catch (const std::exception& err)
     {
-        fprintf(stderr, "EXCEPTION occurred: %s\n", err.what());
+        fprintf(stderr, "\nEXCEPTION occurred: %s\n", err.what());
         return EXIT_FAILURE;
     }
     catch (...)
     {
-        fprintf(stderr, "Unknown ERROR occurred");
+        fprintf(stderr, "\nUnknown ERROR occurred");
         return EXIT_FAILURE;
     }
 }
