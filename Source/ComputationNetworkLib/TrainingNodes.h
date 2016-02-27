@@ -1830,7 +1830,7 @@ public:
             if (m_factory == nullptr)
                 m_factory = ConvolutionEngineFactory<ElemType>::Create(m_deviceId, ConvolutionEngineFactory<ElemType>::EngineType::Auto, m_imageLayoutKind);
             if (m_convEng == nullptr)
-                m_convEng = m_factory->CreateConvEngine(m_deviceId, 0, m_useCntkEngine ? BatchNormImpl::Cntk : BatchNormImpl::CuDnn);
+                m_convEng = m_factory->CreateConvEngine(m_deviceId, m_imageLayoutKind, 0, m_useCntkEngine ? BatchNormImpl::Cntk : BatchNormImpl::CuDnn);
             if (m_spatial)
             {
                 auto dims = ImageDimensions(shape, m_imageLayoutKind);

@@ -73,6 +73,11 @@ float CudaTimer::Elapsed()
 
 #ifdef USE_CUDNN
 
+static bool IsGpu(DEVICEID_TYPE deviceId)
+{
+    return deviceId >= 0;
+}
+
 class CuDnnTensor4D : public ConvolutionTensor4D
 {
 public:
@@ -267,8 +272,8 @@ public:
     using typename Base::Filter;
     using typename Base::ConvDesc;
 
-    CuDnnConvolutionEngine(size_t maxTempMemSizeInSamples, BatchNormImpl bnImpl)
-        : m_maxTempMemSizeInSamples(maxTempMemSizeInSamples), m_bnImpl(bnImpl), m_stream(GetStream()), m_cudnn(nullptr)
+    CuDnnConvolutionEngine(DEVICEID_TYPE deviceId, ImageLayoutKind imageLayout, size_t maxTempMemSizeInSamples, BatchNormImpl bnImpl)
+        : Base(deviceId, imageLayout), m_maxTempMemSizeInSamples(maxTempMemSizeInSamples), m_bnImpl(bnImpl), m_stream(GetStream()), m_cudnn(nullptr)
     {
         CUDNN_CALL(cudnnCreate(&m_cudnn));
         CUDNN_CALL(cudnnSetStream(m_cudnn, m_stream));
@@ -283,17 +288,18 @@ public:
         }
     }
 
-public:
-    void Forward(const Tensor4D& inT, const Mat& in, const Filter& filterT, const Mat& filter, const ConvDesc& convDesc,
-                 const Tensor4D& outT, Mat& out, Mat& workspace) override
+protected:
+    void EnsureCompatible() override
     {
-        assert(inT.w() * inT.h() * inT.c() == in.GetNumRows());
-        assert(inT.n() == in.GetNumCols());
-        assert(filterT.k() == filter.GetNumRows());
-        assert(filterT.w() * filterT.h() * filterT.c() == filter.GetNumCols());
-        assert(inT.c() == filterT.c());
-        assert(outT.c() == filterT.k());
+        if (m_imageLayout != ImageLayoutKind::CHW)
+            RuntimeError("cuDNN convolution engine supports only CHW/cudnn layout.");
+        if (!IsGpu(m_deviceId))
+            RuntimeError("cuDNN convolution engine supports GPU devices only.");
+    }
 
+    void ForwardCore(const Tensor4D& inT, const Mat& in, const Filter& filterT, const Mat& filter, const ConvDesc& convDesc,
+                     const Tensor4D& outT, Mat& out, Mat& workspace) override
+    {
         // Find best algo and allocate temp buffer, if needed.
         auto finder = [&](int& calgo, cudnnConvolutionFwdAlgoPerf_t algoPerf[MaxAlgoCount]) -> cudnnStatus_t
         {
@@ -303,13 +309,13 @@ public:
         if (m_fwdAlgo.Algo.memory > 0)
             workspace.Resize((m_fwdAlgo.Algo.memory + sizeof(ElemType) - 1) / sizeof(ElemType), 1);
         // Perform forward convolution operation.
-        auto err = cudnnConvolutionForward(m_cudnn, &C::One, t(inT), ptr(in), f(filterT), ptr(filter), cd(convDesc), 
+        auto err = cudnnConvolutionForward(m_cudnn, &C::One, t(inT), ptr(in), f(filterT), ptr(filter), cd(convDesc),
                                            m_fwdAlgo.Algo.algo, ptr(workspace), m_fwdAlgo.Algo.memory, &C::Zero, t(outT), ptr(out));
         // There might be a case where cuDNN fails due to workspace being too small, try using no-workspace algo instead.
         // REVIEW alexeyk: NVIDIA is currently reviewing this issue.
         if (CUDNN_STATUS_INVALID_VALUE == err && m_fwdAlgo.Algo.memory > 0)
         {
-            auto err2 = cudnnConvolutionForward(m_cudnn, &C::One, t(inT), ptr(in), f(filterT), ptr(filter), cd(convDesc), 
+            auto err2 = cudnnConvolutionForward(m_cudnn, &C::One, t(inT), ptr(in), f(filterT), ptr(filter), cd(convDesc),
                                                 m_fwdAlgo.NoWorkspaceAlgo, nullptr, 0, &C::Zero, t(outT), ptr(out));
             // Update original error in case of success.
             if (CUDNN_STATUS_SUCCESS == err2)
@@ -318,18 +324,9 @@ public:
         CUDNN_CALL(err);
     }
 
-    void BackwardData(const Tensor4D& srcGradT, const Mat& srcGrad, const Filter& filterT, const Mat& filter, const ConvDesc& convDesc,
-                      const Tensor4D& gradT, Mat& grad, Mat& workspace) override
+    void BackwardDataCore(const Tensor4D& srcGradT, const Mat& srcGrad, const Filter& filterT, const Mat& filter, const ConvDesc& convDesc,
+                          const Tensor4D& gradT, Mat& grad, Mat& workspace) override
     {
-        assert(srcGradT.w() * srcGradT.h() * srcGradT.c() == srcGrad.GetNumRows());
-        assert(srcGradT.n() == srcGrad.GetNumCols());
-        assert(filterT.k() == filter.GetNumRows());
-        assert(filterT.w() * filterT.h() * filterT.c() == filter.GetNumCols());
-        assert(srcGradT.c() == filterT.k());
-        assert(gradT.c() == filterT.c());
-        assert(gradT.w() * gradT.h() * gradT.c() == grad.GetNumRows());
-        assert(gradT.n() == grad.GetNumCols());
-
         // Find best algo and allocate temp buffer, if needed.
         auto finder = [&](int& calgo, cudnnConvolutionBwdDataAlgoPerf_t algoPerf[MaxAlgoCount]) -> cudnnStatus_t
         {
@@ -343,18 +340,9 @@ public:
                                                 ptr(workspace), m_backDataAlgo.Algo.memory, &C::One, t(gradT), ptr(grad)));
     }
 
-    void BackwardFilter(const Tensor4D& srcGradT, const Mat& srcGrad, const Tensor4D& inT, const Mat& in, const ConvDesc& convDesc,
-                        const Filter& filterT, Mat& filter, bool /*allowReuse*/, Mat& workspace) override
+    void BackwardFilterCore(const Tensor4D& srcGradT, const Mat& srcGrad, const Tensor4D& inT, const Mat& in, const ConvDesc& convDesc,
+                            const Filter& filterT, Mat& filter, bool /*allowReuse*/, Mat& workspace) override
     {
-        assert(srcGradT.w() * srcGradT.h() * srcGradT.c() == srcGrad.GetNumRows());
-        assert(srcGradT.n() == srcGrad.GetNumCols());
-        assert(inT.w() * inT.h() * inT.c() == in.GetNumRows());
-        assert(inT.n() == in.GetNumCols());
-        assert(srcGradT.c() == filterT.k());
-        assert(inT.c() == filterT.c());
-        assert(filterT.k() == filter.GetNumRows());
-        assert(filterT.w() * filterT.h() * filterT.c() == filter.GetNumCols());
-
         // Find best algo and allocate temp buffer, if needed.
         auto finder = [&](int& calgo, cudnnConvolutionBwdFilterAlgoPerf_t algoPerf[MaxAlgoCount]) -> cudnnStatus_t
         {
@@ -368,63 +356,18 @@ public:
                                                   ptr(workspace), m_backFiltAlgo.Algo.memory, &C::One, f(filterT), ptr(filter)));
     }
 
-    void AddBias(const Tensor4D& outT, const Mat& out, const Tensor4D& biasT, const Mat& bias, Mat& dst) override
+    void EnsureCompatibleBatchNorm(bool spatial) override
     {
-        assert(biasT.c() == outT.c());
-        assert(biasT.w() == 1);
-        assert(biasT.h() == 1);
-        assert(biasT.n() == 1);
-        assert(outT.w() * outT.h() * outT.c() == out.GetNumRows());
-        assert(outT.n() == out.GetNumCols());
-
-        CUDNN_CALL(cudnnAddTensor(m_cudnn, &C::One, t(outT), ptr(out), &C::Zero, t(outT), ptr(dst)));
-        CUDNN_CALL(cudnnAddTensor(m_cudnn, &C::One, t(biasT), ptr(bias), &C::One, t(outT), ptr(dst)));
+        if (!IsGpu(m_deviceId))
+            InvalidArgument("cuDNN engine does not support batch normalization on CPUs.");
+        if (spatial && m_imageLayout != ImageLayoutKind::CHW)
+            InvalidArgument("cuDNN engine batch normalization currently supports only CHW data layout for convolutional nodes.");
     }
 
-    void BackwardBias(const Tensor4D& srcGradT, const Mat& srcGrad, const Tensor4D& biasT, Mat& biasGrad) override
+    void NormalizeBatchCore(const Tensor4D& inT, const Mat& in, const Tensor4D& scaleBiasT, const Mat& scale, const Mat& bias,
+                            bool spatial, double expAvgFactor, Mat& runMean, Mat& runInvStdDev, Mat& out,
+                            double epsilon, Mat& saveMean, Mat& saveInvStdDev) override
     {
-        assert(biasT.c() == srcGradT.c());
-        assert(biasT.w() == 1);
-        assert(biasT.h() == 1);
-        assert(biasT.n() == 1);
-
-        CUDNN_CALL(cudnnConvolutionBackwardBias(m_cudnn, &C::One, t(srcGradT), ptr(srcGrad), &C::One, t(biasT), ptr(biasGrad)));
-    }
-
-    void NormalizeBatch(const Tensor4D& inT, const Mat& in, const Tensor4D& scaleBiasT, const Mat& scale, const Mat& bias,
-                        bool spatial, double expAvgFactor, Mat& runMean, Mat& runInvStdDev, Mat& out,
-                        double epsilon, Mat& saveMean, Mat& saveInvStdDev) override
-    {
-        const size_t crowIn = inT.w() * inT.h() * inT.c();
-        if (spatial)
-        {
-            assert(scaleBiasT.c() == inT.c());
-            assert(scaleBiasT.w() == 1);
-            assert(scaleBiasT.h() == 1);
-            assert(runMean.GetNumRows() == inT.c());
-            assert(runMean.GetNumCols() == 1);
-            assert(runInvStdDev.GetNumRows() == inT.c());
-            assert(runInvStdDev.GetNumCols() == 1);
-        }
-        else
-        {
-            assert(scaleBiasT.c() == inT.c());
-            assert(scaleBiasT.w() == inT.w());
-            assert(scaleBiasT.h() == inT.h());
-            assert(runMean.GetNumRows() == crowIn);
-            assert(runMean.GetNumCols() == 1);
-            assert(runInvStdDev.GetNumRows() == crowIn);
-            assert(runInvStdDev.GetNumCols() == 1);
-        }
-        assert(scaleBiasT.n() == 1);
-        assert(crowIn == in.GetNumRows());
-        assert(inT.n() == in.GetNumCols());
-        assert(saveMean.GetNumElements() >= runMean.GetNumElements());
-        assert(saveInvStdDev.GetNumElements() >= runInvStdDev.GetNumElements());
-#ifndef _DEBUG
-        UNUSED(crowIn); // crowIn used only in asserts.
-#endif
-
         if (m_bnImpl == BatchNormImpl::CuDnn)
         {
             cudnnBatchNormMode_t mode = spatial ? CUDNN_BATCHNORM_SPATIAL : CUDNN_BATCHNORM_PER_ACTIVATION;
@@ -445,36 +388,9 @@ public:
             RuntimeError("Provided batch norm implementation (%d) is not supported.", m_bnImpl);
     }
 
-    void NormalizeBatchInference(const Tensor4D& inT, const Mat& in, const Tensor4D& scaleBiasT, const Mat& scale, const Mat& bias,
-                                 bool spatial, const Mat& runMean, const Mat& runInvStdDev, Mat& out) override
+    void NormalizeBatchInferenceCore(const Tensor4D& inT, const Mat& in, const Tensor4D& scaleBiasT, const Mat& scale, const Mat& bias,
+                                     bool spatial, const Mat& runMean, const Mat& runInvStdDev, Mat& out) override
     {
-        const size_t crowIn = inT.w() * inT.h() * inT.c();
-
-        if (spatial)
-        {
-            assert(scaleBiasT.c() == inT.c());
-            assert(scaleBiasT.w() == 1);
-            assert(scaleBiasT.h() == 1);
-            assert(scaleBiasT.c() == runMean.GetNumRows());
-            assert(scaleBiasT.c() == runInvStdDev.GetNumRows());
-        }
-        else
-        {
-            assert(scaleBiasT.c() == inT.c());
-            assert(scaleBiasT.w() == inT.w());
-            assert(scaleBiasT.h() == inT.h());
-            assert(crowIn == runMean.GetNumRows());
-            assert(crowIn == runInvStdDev.GetNumRows());
-        }
-        assert(scaleBiasT.n() == 1);
-        assert(crowIn == in.GetNumRows());
-        assert(inT.n() == in.GetNumCols());
-        assert(runMean.GetNumCols() == 1);
-        assert(runInvStdDev.GetNumCols() == 1);
-#ifndef _DEBUG
-        UNUSED(crowIn); // crowIn used only in asserts.
-#endif
-
         if (m_bnImpl == BatchNormImpl::CuDnn)
         {
             cudnnBatchNormMode_t mode = spatial ? CUDNN_BATCHNORM_SPATIAL : CUDNN_BATCHNORM_PER_ACTIVATION;
@@ -490,36 +406,10 @@ public:
             RuntimeError("Provided batch norm implementation (%d) is not supported.", m_bnImpl);
     }
 
-    void BackwardNormalizeBatch(const Tensor4D& inT, const Mat& in, const Mat& srcGrad, Mat& grad,
-                                const Tensor4D& scaleBiasT, const Mat& scale, bool spatial, const Mat& saveMean, const Mat& saveInvStdDev,
-                                Mat& scaleGrad, Mat& biasGrad) override
+    void BackwardNormalizeBatchCore(const Tensor4D& inT, const Mat& in, const Mat& srcGrad, Mat& grad,
+                                    const Tensor4D& scaleBiasT, const Mat& scale, bool spatial, const Mat& saveMean, const Mat& saveInvStdDev,
+                                    Mat& scaleGrad, Mat& biasGrad) override
     {
-        if (spatial)
-        {
-            assert(scaleBiasT.c() == inT.c());
-            assert(scaleBiasT.w() == 1);
-            assert(scaleBiasT.h() == 1);
-        }
-        else
-        {
-            assert(scaleBiasT.c() == inT.c());
-            assert(scaleBiasT.w() == inT.w());
-            assert(scaleBiasT.h() == inT.h());
-        }
-        assert(scaleBiasT.n() == 1);
-        const size_t crowIn = inT.w() * inT.h() * inT.c();
-        assert(crowIn == in.GetNumRows());
-        assert(inT.n() == in.GetNumCols());
-        assert(saveMean.GetNumElements() >= scale.GetNumElements());
-        assert(saveInvStdDev.GetNumElements() >= scale.GetNumElements());
-        assert(scaleGrad.GetNumRows() == scale.GetNumRows());
-        assert(scaleGrad.GetNumCols() == scale.GetNumCols());
-        assert(biasGrad.GetNumRows() == scale.GetNumRows());
-        assert(biasGrad.GetNumCols() == scale.GetNumCols());
-#ifndef _DEBUG
-        UNUSED(crowIn); // crowIn used only in asserts.
-#endif
-
         if (m_bnImpl == BatchNormImpl::CuDnn)
         {
             cudnnBatchNormMode_t mode = spatial ? CUDNN_BATCHNORM_SPATIAL : CUDNN_BATCHNORM_PER_ACTIVATION;
@@ -597,7 +487,7 @@ private:
             // REVIEW alexeyk: potentially, this might cause some perf issues if better (faster) algo can be selected for a smaller mininbatch.
             // We also need to reset auto-tuning status at the beginning of each epoch but ComputationNode currently does not provide such notification.
             // We assume no other dimensions of tensors can change so we don't check it.
-            // REVIEW alexeyk: review once we get responce from NVIDIA.
+            // REVIEW alexeyk: review once we get response from NVIDIA.
             return (Algo.status != CUDNN_STATUS_SUCCESS || t.n() > CurMBSize);
         }
     };
@@ -624,8 +514,8 @@ public:
     using typename Base::Mat;
 
 public:
-    CuDnnPoolingEngine()
-        : m_cudnn(nullptr)
+    CuDnnPoolingEngine(DEVICEID_TYPE deviceId, ImageLayoutKind imageLayout)
+        : Base(deviceId, imageLayout), m_cudnn(nullptr)
     {
         CUDNN_CALL(cudnnCreate(&m_cudnn));
         CUDNN_CALL(cudnnSetStream(m_cudnn, GetStream()));
@@ -640,28 +530,22 @@ public:
         }
     }
 
-public:
-    void Forward(const Tensor4D& inT, const Mat& in, const PoolDesc& poolDesc, const Tensor4D& outT, Mat& out) override
+protected:
+    void EnsureCompatible() override
     {
-        assert(inT.w() * inT.h() * inT.c() == in.GetNumRows());
-        assert(inT.n() == in.GetNumCols());
-        assert(outT.w() * outT.h() * outT.c() == out.GetNumRows());
-        assert(outT.n() == out.GetNumCols());
+        if (m_imageLayout != ImageLayoutKind::CHW)
+            RuntimeError("cuDNN pooling engine supports only CHW/cudnn layout.");
+        if (!IsGpu(m_deviceId))
+            RuntimeError("cuDNN pooling engine supports GPU devices only.");
+    }
 
+    void ForwardCore(const Tensor4D& inT, const Mat& in, const PoolDesc& poolDesc, const Tensor4D& outT, Mat& out) override
+    {
         CUDNN_CALL(cudnnPoolingForward(m_cudnn, p(poolDesc), &C::One, t(inT), ptr(in), &C::Zero, t(outT), ptr(out)));
     }
 
-    void Backward(const Tensor4D& outT, const Mat& out, const Mat& srcGrad, const PoolDesc& poolDesc, const Tensor4D& inT, const Mat& in, Mat& grad) override
+    void BackwardCore(const Tensor4D& outT, const Mat& out, const Mat& srcGrad, const PoolDesc& poolDesc, const Tensor4D& inT, const Mat& in, Mat& grad) override
     {
-        assert(outT.w() * outT.h() * outT.c() == out.GetNumRows());
-        assert(outT.n() == out.GetNumCols());
-        assert(out.GetNumRows() == srcGrad.GetNumRows());
-        assert(out.GetNumCols() == srcGrad.GetNumCols());
-        assert(inT.w() * inT.h() * inT.c() == in.GetNumRows());
-        assert(inT.n() == in.GetNumCols());
-        assert(in.GetNumRows() == grad.GetNumRows());
-        assert(in.GetNumCols() == grad.GetNumCols());
-
         CUDNN_CALL(cudnnPoolingBackward(m_cudnn, p(poolDesc), &C::One, t(outT), ptr(out), t(outT), ptr(srcGrad),
                                         t(inT), ptr(in), &C::One, t(inT), ptr(grad)));
     }
@@ -726,16 +610,16 @@ typename CuDnnConvolutionEngineFactory<ElemType>::PoolDescPtr CuDnnConvolutionEn
 
 template <class ElemType>
 typename CuDnnConvolutionEngineFactory<ElemType>::ConvEnginePtr CuDnnConvolutionEngineFactory<ElemType>::CreateConvEngine(
-    DEVICEID_TYPE /*deviceId*/, size_t maxTempMemSizeInSamples, BatchNormImpl bnImpl)
+    DEVICEID_TYPE deviceId, ImageLayoutKind imageLayout, size_t maxTempMemSizeInSamples, BatchNormImpl bnImpl)
 {
-    return std::make_unique<CuDnnConvolutionEngine<ElemType>>(maxTempMemSizeInSamples, bnImpl);
+    return std::make_unique<CuDnnConvolutionEngine<ElemType>>(deviceId, imageLayout, maxTempMemSizeInSamples, bnImpl);
 }
 
 template <class ElemType>
 typename CuDnnConvolutionEngineFactory<ElemType>::PoolEnginePtr CuDnnConvolutionEngineFactory<ElemType>::CreatePoolEngine(
-    DEVICEID_TYPE /*deviceId*/)
+    DEVICEID_TYPE deviceId, ImageLayoutKind imageLayout)
 {
-    return std::make_unique<CuDnnPoolingEngine<ElemType>>();
+    return std::make_unique<CuDnnPoolingEngine<ElemType>>(deviceId, imageLayout);
 }
 
 #else
@@ -767,13 +651,13 @@ typename CuDnnConvolutionEngineFactory<ElemType>::PoolDescPtr CuDnnConvolutionEn
 }
 
 template <class ElemType>
-typename CuDnnConvolutionEngineFactory<ElemType>::ConvEnginePtr CuDnnConvolutionEngineFactory<ElemType>::CreateConvEngine(DEVICEID_TYPE, size_t, BatchNormImpl)
+typename CuDnnConvolutionEngineFactory<ElemType>::ConvEnginePtr CuDnnConvolutionEngineFactory<ElemType>::CreateConvEngine(DEVICEID_TYPE, ImageLayoutKind, size_t, BatchNormImpl)
 {
     RuntimeError("The code is compiled without USE_CUDNN macro.");
 }
 
 template <class ElemType>
-typename CuDnnConvolutionEngineFactory<ElemType>::PoolEnginePtr CuDnnConvolutionEngineFactory<ElemType>::CreatePoolEngine(DEVICEID_TYPE)
+typename CuDnnConvolutionEngineFactory<ElemType>::PoolEnginePtr CuDnnConvolutionEngineFactory<ElemType>::CreatePoolEngine(DEVICEID_TYPE, ImageLayoutKind)
 {
     RuntimeError("The code is compiled without USE_CUDNN macro.");
 }
