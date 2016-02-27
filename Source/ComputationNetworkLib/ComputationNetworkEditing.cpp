@@ -323,7 +323,7 @@ void ComputationNetwork::SetLearnableNodesBelowLearningRateMultiplier(const floa
     }
 }
 
-void ComputationNetwork::SetBatchNormlizationNodesBelowEvalMode(const bool evalMode, const ComputationNodeBasePtr& rootNode /* = nullptr */)
+void ComputationNetwork::SetBatchNormalizationNodesBelowEvalMode(const bool evalMode, const ComputationNodeBasePtr& rootNode /* = nullptr */)
 {
     vector<ComputationNodeBasePtr> nodes;
     if (rootNode == nullptr)

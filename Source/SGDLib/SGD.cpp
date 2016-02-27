@@ -335,7 +335,7 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
 
         // set dropout rate for this epoch
         ComputationNetwork::SetDropoutRate<ElemType>(net, criterionNodes[0], m_dropoutRates[i], prevDropoutRate, dropOutSeed);
-        net->SetBatchNormlizationNodesBelowEvalMode(false, criterionNodes[0]);
+        net->SetBatchNormalizationNodesBelowEvalMode(false, criterionNodes[0]);
 
         // learning rate adjustment
         if (m_autoLearnRateSearchType == LearningRateSearchAlgorithm::None || i < m_learningRatesParam.size())
@@ -438,7 +438,7 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
         timer.Stop();
         double epochTime = timer.ElapsedSeconds();
 
-        net->SetBatchNormlizationNodesBelowEvalMode(true, criterionNodes[0]);
+        net->SetBatchNormalizationNodesBelowEvalMode(true, criterionNodes[0]);
 
         if (m_useEvalCriterionControlLR && epochEvalErrors.size() > 0)
         {
@@ -781,7 +781,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
     // prepare for sub-minibatching
     // Sub-minibatching is used if a single minibatch is too large to fit into GPU RAM.
     DataReaderHelpers::SubminibatchDispatcher<ElemType> smbDispatcher;
-    size_t numSubminibatchesNeeded = DataReaderHelpers::GetNumSubminibatchNeeded(trainSetDataReader, m_maxSamplesInRAM, m_numSubminiBatches, tunedMBSize);
+    size_t numSubminibatchesNeeded = DataReaderHelpers::GetNumSubminibatchesNeeded(trainSetDataReader, m_maxSamplesInRAM, m_numSubminiBatches, tunedMBSize);
     // this is non-trivial, we need a manager object to handle this
     if (numSubminibatchesNeeded > 1)
         smbDispatcher.Init(net, learnableNodes, criterionNodes, evaluationNodes);

@@ -596,7 +596,7 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
             case melPropBatchNormMode:
             {
                 bool evalMode = params[2];
-                netNdl->cn->SetBatchNormlizationNodesBelowEvalMode(evalMode, node);
+                netNdl->cn->SetBatchNormalizationNodesBelowEvalMode(evalMode, node);
                 break;
             }
             default:

@@ -186,13 +186,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     template<class ElemType>
-    static size_t GetNumSubminibatchNeeded(IDataReader<ElemType>* dataReader,
+    static size_t GetNumSubminibatchesNeeded(IDataReader<ElemType>* dataReader,
                                            size_t maxSamplesInRAM,
-                                           size_t numSubminiBatches,
+                                           size_t numSubminibatches,
                                            size_t tunedMBSize)
     {
-        if (numSubminiBatches > 1)
-            return numSubminiBatches;
+        if (numSubminibatches > 1) // user-specified maximum number of samples
+            return numSubminibatches;
 
         if (maxSamplesInRAM < SIZE_MAX)
         {
@@ -200,9 +200,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             // TODO: The following calculation relies on the ill-devised definition of "minibatch" of the current truncated BPTT implementation. Adapt this once fixed.
             size_t numParallelSequences = dataReader->GetNumParallelSequences();
             size_t estimatedMBSize = tunedMBSize * numParallelSequences;
-            return (size_t)std::ceil((float)estimatedMBSize / maxSamplesInRAM);
+            return (estimatedMBSize + maxSamplesInRAM - 1) / maxSamplesInRAM;
         }
 
+        // The return value of this method decides how many subminibatch needed for the training or 
+        // eval process. The current process only starts the subminibatch loop when the calculated
+        // subminibatch number is larger than 1. So here returning 0 or 1 shares the same behavior.
+        // But the default value should still be 0 which means no subminibatch needed for this case.
         return 0;
     }
 

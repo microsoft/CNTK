@@ -13,7 +13,6 @@
 #include "ProgressTracing.h"
 #include "DistGradHeader.h"
 #include "IDistGradAggregator.h"
-#include "MatrixQuantizerImpl.h"
 #include "SimpleDistGradAggregator.h"
 
 #include <vector>
@@ -108,12 +107,13 @@ public:
         for (int i = 0; i < evalResults.size(); i++)
             evalResultsLastMBs.push_back((ElemType) 0);
 
+        //TODO: we should add support for distributed reading
         dataReader->StartMinibatchLoop(mbSize, 0, testSize);
         m_net->StartEvaluateMinibatchLoop(evalNodes);
 
         std::vector<Matrix<ElemType>*> learnParamsGradients;
         DataReaderHelpers::SubminibatchDispatcher<ElemType> smbDispatcher;
-        size_t numSubminibatchesNeeded = DataReaderHelpers::GetNumSubminibatchNeeded(dataReader, m_maxSamplesInRAM, m_numSubminiBatches, mbSize);
+        size_t numSubminibatchesNeeded = DataReaderHelpers::GetNumSubminibatchesNeeded(dataReader, m_maxSamplesInRAM, m_numSubminiBatches, mbSize);
 
         // Passing in two empty node lists so the dispatcher can work for the evalNodes.
         std::list<ComputationNodeBasePtr> learnableNodes;
@@ -121,48 +121,37 @@ public:
         if (numSubminibatchesNeeded > 1)
             smbDispatcher.Init(m_net, learnableNodes, criterionNodes, evalNodes);
 
-        bool noMoreSamplesToProcess = false;
-        for (;;)        
+        while (DataReaderHelpers::GetMinibatchIntoNetwork(*dataReader, m_net, nullptr, false, m_parallelRun, inputMatrices, actualMBSize))
         {
-            bool wasDataRead = DataReaderHelpers::GetMinibatchIntoNetwork(*dataReader, m_net, nullptr, false, m_parallelRun, inputMatrices, actualMBSize);
-            if (!wasDataRead && (!m_parallelRun || noMoreSamplesToProcess))
-                break;
-
-            if (!wasDataRead)
-                actualMBSize = 0;
-
-            if (actualMBSize > 0)
+            size_t actualNumSubminibatches = numSubminibatchesNeeded <= 1 ? 1 : smbDispatcher.GetMinibatchIntoCache(*dataReader, *m_net, inputMatrices, numSubminibatchesNeeded);
+            for (size_t ismb = 0; ismb < actualNumSubminibatches; ismb++)
             {
-                size_t actualNumSubminibatches = numSubminibatchesNeeded <= 1 ? 1 : smbDispatcher.GetMinibatchIntoCache(*dataReader, *m_net, inputMatrices, numSubminibatchesNeeded);
-                for (size_t ismb = 0; ismb < actualNumSubminibatches; ismb++)
-                {
-                    if (actualNumSubminibatches > 1)
-                    {
-                        smbDispatcher.GetSubMinibatchToNet(ismb); // get sub-minibatch from full-size one
-                    }
-
-                    ComputationNetwork::BumpEvalTimeStamp(featureNodes);
-                    ComputationNetwork::BumpEvalTimeStamp(labelNodes);
-
-                    m_net->ForwardProp(evalNodes);
-
-                    // house-keeping for sub-minibatching
-                    if (actualNumSubminibatches > 1)
-                        smbDispatcher.DoneWithCurrentSubMinibatch(ismb); // page state out
-                }                                                        // end sub-minibatch loop
-
                 if (actualNumSubminibatches > 1)
-                    smbDispatcher.DoneWithCurrentMinibatch();
-            } // if (actualMBSize > 0)
+                {
+                    smbDispatcher.GetSubMinibatchToNet(ismb); // get sub-minibatch from full-size one
+                }
 
-            size_t numSamplesWithLabel = wasDataRead ? m_net->GetNumSamplesWithLabel(actualMBSize) : 0;
+                ComputationNetwork::BumpEvalTimeStamp(featureNodes);
+                ComputationNetwork::BumpEvalTimeStamp(labelNodes);
+
+                m_net->ForwardProp(evalNodes);
+
+                // house-keeping for sub-minibatching
+                if (actualNumSubminibatches > 1)
+                    smbDispatcher.DoneWithCurrentSubMinibatch(ismb); // page state out
+            }                                                        // end sub-minibatch loop
+
+            if (actualNumSubminibatches > 1)
+                smbDispatcher.DoneWithCurrentMinibatch();
+
+            size_t numSamplesWithLabel = m_net->GetNumSamplesWithLabel(actualMBSize);
             size_t aggregateNumSamplesWithLabel = numSamplesWithLabel;
             if (m_parallelRun)
             {
                 if (m_gradHeader == nullptr)
                 {
                     m_gradHeader = DistGradHeader::Create(evalNodes.size());
-                    m_distGradAgg = new SimpleDistGradAggregator<ElemType>(g_mpi, false, m_traceLevel);
+                    m_distGradAgg = make_shared<SimpleDistGradAggregator<ElemType>>(g_mpi, false, m_traceLevel);
                 }
 
                 m_gradHeader->numEvalNode = evalNodes.size();
@@ -170,16 +159,20 @@ public:
                 m_gradHeader->numSamplesWithLabel = numSamplesWithLabel;
                 m_gradHeader->criterion = 0.0;
                 for (size_t i = 0; i < evalNodes.size(); i++)
-                    m_gradHeader->evalErrors[i] = actualMBSize > 0 ? evalNodes[i]->Get00Element() : 0.0;
+                    m_gradHeader->evalErrors[i] = evalNodes[i]->Get00Element();
 
+                // TODO: We are reusing the aggregation logic inside SimpleDistGradAggregator, which has a heavy dependency
+                // on the gradient matrix. At some point we should refacotr the aggregator class to be able to only calculating
+                // eval results and then remove this hack.
                 if (learnParamsGradients.size() == 0)
                 {
                     Matrix<ElemType>* matrix = new Matrix<ElemType>((DEVICEID_TYPE)m_net->GetDeviceId());
                     learnParamsGradients.push_back(matrix);
                 }
 
-                bool samplesProcessed = m_distGradAgg->AggregateGradients(learnParamsGradients, m_gradHeader, 0);
-                noMoreSamplesToProcess = !samplesProcessed;
+                // Using SimpleDistAggregator for eval results only. At some point we should rename the class to be just
+                // IDistAggregator and SimpleDistAggregator.
+                m_distGradAgg->AggregateGradients(learnParamsGradients, m_gradHeader, 0);
                 aggregateNumSamplesWithLabel = m_gradHeader->numSamplesWithLabel;
                 for (size_t i = 0; i < evalResults.size(); i++)
                     evalResults[i] += m_gradHeader->evalErrors[i];
@@ -294,7 +287,7 @@ protected:
     size_t m_numSubminiBatches;
     bool m_parallelRun;
 
-    IDistGradAggregator<ElemType>* m_distGradAgg;
+    shared_ptr<IDistGradAggregator<ElemType>> m_distGradAgg;
     struct DistGradHeader* m_gradHeader;
     int m_traceLevel;
     void operator=(const SimpleEvaluator&); // (not assignable)

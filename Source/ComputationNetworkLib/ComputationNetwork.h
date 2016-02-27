@@ -328,7 +328,7 @@ public:
     void AddFeatureNode(ComputationNodeBasePtr featureNode);
     void RemoveFeatureNode(ComputationNodeBasePtr featureNode);
     void SetLearnableNodesBelowLearningRateMultiplier(const float learningRateMultiplier, const ComputationNodeBasePtr& rootNode = nullptr);
-    void SetBatchNormlizationNodesBelowEvalMode(const bool evalMode, const ComputationNodeBasePtr& rootNode = nullptr);
+    void SetBatchNormalizationNodesBelowEvalMode(const bool evalMode, const ComputationNodeBasePtr& rootNode = nullptr);
 
     // -----------------------------------------------------------------------
     // node access
