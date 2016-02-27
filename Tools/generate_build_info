@@ -49,9 +49,10 @@ makebuildinfo()
     CUDA_PATH=$6
     CUB_PATH=$7
     WITH_1BITSGD=$8
-    BUILDER=$9
-    BUILDMACHINE=$10
-    BUILDPATH=$11
+    WITH_ASGD=$9
+    BUILDER=$10
+    BUILDMACHINE=$11
+    BUILDPATH=$12
 
     (
         printf "#ifndef _BUILDINFO_H\n"
@@ -150,6 +151,7 @@ makebuildinfo \
     "$CUDAPATH" \
     "$CUBPATH" \
     "$CNTK_ENABLE_1BitSGD" \
+    "$CNTK_ENABLE_ASGD" \
     "$BUILDER" \
     "$BUILDMACHINE" \
     "$BUILDPATH"
