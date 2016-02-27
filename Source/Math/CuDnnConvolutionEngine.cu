@@ -289,6 +289,9 @@ public:
     }
 
 protected:
+    using Base::m_deviceId;
+    using Base::m_imageLayout;
+
     void EnsureCompatible() override
     {
         if (m_imageLayout != ImageLayoutKind::CHW)
@@ -531,6 +534,9 @@ public:
     }
 
 protected:
+    using Base::m_deviceId;
+    using Base::m_imageLayout;
+
     void EnsureCompatible() override
     {
         if (m_imageLayout != ImageLayoutKind::CHW)
