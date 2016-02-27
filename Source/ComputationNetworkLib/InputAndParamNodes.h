@@ -160,7 +160,7 @@ public:
         }
         else
         {
-            size_t inputSize = GetAsMatrixNumCols();
+            size_t inputSize = value.GetNumCols();
             ElemType randInitstd = 0.2f * initValueScale / sqrt(ElemType(inputSize));
             value.SetGaussianRandomValue(0, randInitstd, randomSeed);
         }

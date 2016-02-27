@@ -90,7 +90,7 @@ void ExceptionWithCallStack<E>::CollectCallStack(const function<void(std::string
     unsigned int numFrames = backtrace(backtraceAddresses, MAX_NUM_FRAMES);
     char** symbolList = backtrace_symbols(backtraceAddresses, numFrames);
 
-    unsigned int firstFrame = 2; // 2 bottom functions are CollectCallStack(), and CollectCallStack()
+    unsigned int firstFrame = 3; // 3 bottom functions are GetCallStack(), ThrowFormatted(), and XXXError()
     for (unsigned int i = firstFrame; i < numFrames; i++)
     {
         char* beginName = NULL;
