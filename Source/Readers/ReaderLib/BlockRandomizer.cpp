@@ -317,7 +317,7 @@ bool BlockRandomizer::GetNextSequenceDescriptions(size_t sampleCount, SequenceDe
 {
     assert(m_frameMode); // TODO !m_frameMode not implemented yet
     assert(sequenceDescriptions.size() == 0);
-    assert(sampleCount < m_numSamples);
+    assert(sampleCount <= m_numSamples);
 
     if (m_samplePositionInEpoch < m_epochSize)
     {

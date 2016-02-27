@@ -160,7 +160,7 @@ struct ComputationNetworkOwnedNodeState
 
     virtual void MarkValueNonSharable() { m_valueSharable = false; }
     virtual void MarkValueSharable() { m_valueSharable = true; }
-    bool isValueSharable() const { return m_valueSharable; }
+    bool IsValueSharable() const { return m_valueSharable; }
 
 protected:                // TODO: should be fully encapsulated here
 
@@ -1132,7 +1132,7 @@ private:
         // We only get here if the tensor indeed describes an 1D or 2D object. In that case, just verify the dimensions.
         try
         {
-            data.VerifySize(numRows, numCols);
+        data.VerifySize(numRows, numCols);
         }
         catch (const std::exception& e)
         {
@@ -1249,8 +1249,8 @@ protected:
         DetermineDataSize(rows, cols);
         try
         {
-            m.VerifySize(rows, cols);
-        }
+        m.VerifySize(rows, cols);
+    }
         catch (const std::exception& e)
         {
             Rethrow(e);
@@ -1404,15 +1404,17 @@ public:
     // request matrices needed to do node function value evaluation
     virtual void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool) override
     {
-        // TODO: Non-shareable nodes should not get their matrices from the pool ever.
+        if (IsValueSharable())
         RequestMatrixFromPool(m_value, matrixPool);
+        else
+            CreateMatrixIfNull(m_value);
     }
 
     // release temp matrices that are only used by forward computation
     // don't release matrices that need to be used in the gradient computation
     virtual void ReleaseMatricesAfterForwardProp(MatrixPool& matrixPool) override
     {
-        if (!IsOutputNeededDuringBackprop() && (m_value->GetMatrixType() != SPARSE) && isValueSharable())
+        if (!IsOutputNeededDuringBackprop() && (m_value->GetMatrixType() != SPARSE) && IsValueSharable())
             ReleaseMatrixToPool(m_value, matrixPool);
     }
 
@@ -1441,7 +1443,7 @@ public:
 
             // Release the Value matrix only if the output value is needed during backprop
             // since in the case it isn't used, we release it during forward prop itself
-            if (IsOutputNeededDuringBackprop() && m_value->GetMatrixType() != SPARSE && isValueSharable())
+            if (IsOutputNeededDuringBackprop() && m_value->GetMatrixType() != SPARSE && IsValueSharable())
                 ReleaseMatrixToPool(m_value, matrixPool);
         }
     }
