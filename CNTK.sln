@@ -839,6 +839,23 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "RNN", "RNN", "{B72C5B0E-38E
 		Tests\EndToEndTests\Examples\Text\PennTreebank\RNN\testcases.yml = Tests\EndToEndTests\Examples\Text\PennTreebank\RNN\testcases.yml
 	EndProjectSection
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "AlexNet", "AlexNet", "{2B1046A1-0140-43B7-B3DC-CF7DEEE1009E}"
+	ProjectSection(SolutionItems) = preProject
+		Tests\EndToEndTests\Image\AlexNet\add_top5_layer.mel = Tests\EndToEndTests\Image\AlexNet\add_top5_layer.mel
+		Tests\EndToEndTests\Image\AlexNet\AlexNet.cntk = Tests\EndToEndTests\Image\AlexNet\AlexNet.cntk
+		Tests\EndToEndTests\Image\AlexNet\AlexNet.ndl = Tests\EndToEndTests\Image\AlexNet\AlexNet.ndl
+		Tests\EndToEndTests\Image\AlexNet\baseline.linux.debug.gpu.txt = Tests\EndToEndTests\Image\AlexNet\baseline.linux.debug.gpu.txt
+		Tests\EndToEndTests\Image\AlexNet\baseline.linux.release.gpu.txt = Tests\EndToEndTests\Image\AlexNet\baseline.linux.release.gpu.txt
+		Tests\EndToEndTests\Image\AlexNet\baseline.windows.debug.gpu.txt = Tests\EndToEndTests\Image\AlexNet\baseline.windows.debug.gpu.txt
+		Tests\EndToEndTests\Image\AlexNet\baseline.windows.release.gpu.txt = Tests\EndToEndTests\Image\AlexNet\baseline.windows.release.gpu.txt
+		Tests\EndToEndTests\Image\AlexNet\ImageNet1K_mean.xml = Tests\EndToEndTests\Image\AlexNet\ImageNet1K_mean.xml
+		Tests\EndToEndTests\Image\AlexNet\Macros.ndl = Tests\EndToEndTests\Image\AlexNet\Macros.ndl
+		Tests\EndToEndTests\Image\AlexNet\run-test = Tests\EndToEndTests\Image\AlexNet\run-test
+		Tests\EndToEndTests\Image\AlexNet\testcases.yml = Tests\EndToEndTests\Image\AlexNet\testcases.yml
+		Tests\EndToEndTests\Image\AlexNet\train_map.txt = Tests\EndToEndTests\Image\AlexNet\train_map.txt
+		Tests\EndToEndTests\Image\AlexNet\val_map.txt = Tests\EndToEndTests\Image\AlexNet\val_map.txt
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug_CpuOnly|x64 = Debug_CpuOnly|x64
@@ -1149,5 +1166,6 @@ Global
 		{9F1F9C7C-2CC3-410C-ACDC-988B12D6AC14} = {AC7BA8D3-B4C8-42A4-8507-B359BB6D49E8}
 		{A3231EF2-DED1-4638-B0A2-5F87C484CA92} = {439BE0E0-FABE-403D-BF2C-A41FB8A60616}
 		{B72C5B0E-38E8-41BF-91FE-0C1012C7C078} = {A3231EF2-DED1-4638-B0A2-5F87C484CA92}
+		{2B1046A1-0140-43B7-B3DC-CF7DEEE1009E} = {8071EF60-30F7-4A77-81AA-ADCA0E18B1E3}
 	EndGlobalSection
 EndGlobal
