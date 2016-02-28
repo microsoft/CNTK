@@ -28,7 +28,7 @@ confVocabSize = 10000
 confClassSize = 50
 
 trainFile = "ptb.train.txt"
-validFile = "ptb.valid.txt"
+validFile = "ptb.valid.txt-2"
 testFile  = "ptb.test.txt"
 
 #######################################
@@ -65,7 +65,7 @@ train = [
 
     SimpleNetworkBuilder = [
         trainingCriterion = "classCrossEntropyWithSoftmax"
-        evalCriterion = "classCrossEntropyWithSoftmax"
+        evalCriterion     = "classCrossEntropyWithSoftmax"
         nodeType = "sigmoid"
         initValueScale = 6.0
         layerSizes = "$confVocabSize$:150:200:10000"
@@ -85,8 +85,7 @@ train = [
         momentumPerMB = 0
         gradientClippingWithTruncation = true
         clippingThresholdPerSample = 15.0
-        maxEpochs = 16
-        unroll = false
+        maxEpochs = 16                      # BUGBUG: this seems to be ignored?
         numMBsToShowResult = 100
         gradUpdateType = "none"
         loadBestModel = true
@@ -111,6 +110,8 @@ train = [
         readerType = "LMSequenceReader"
         randomize = "none"              # BUGBUG: This is currently ignored
         nbruttsineachrecurrentiter = 10 # note: real-life configurations would use something much larger
+        #nbruttsineachrecurrentiter = 0  # means fill up the minibatch with as many parallel sequences as fit
+        #cacheBlockSize = 2000000        # just load it all
 
         # word class info
         wordclass = "$ModelDir$/vocab.txt"
@@ -218,6 +219,8 @@ train = [
         # reader to use
         readerType = "LMSequenceReader"
         randomize = "none"
+        nbruttsineachrecurrentiter = 0  # 0 means fill up the minibatch with as many parallel sequences as fit
+        cacheBlockSize = 2000000        # just load it all
 
         # word class info
         wordclass = "$ModelDir$/vocab.txt"
@@ -347,6 +350,7 @@ test = [
         # reader to use
         readerType = "LMSequenceReader"
         randomize = "none"
+        nbruttsineachrecurrentiter = 2 # means fill up the minibatch with as many parallel sequences as fit
 
         # word class info
         wordclass = "$ModelDir$/vocab.txt"

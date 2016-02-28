@@ -1673,14 +1673,12 @@ void BatchSequenceReader<ElemType>::StartMinibatchLoop(size_t mbSize, size_t epo
 template <class ElemType>
 size_t BatchSequenceReader<ElemType>::DetermineSequencesToProcess()
 {
-    if (mNumRead == 0) // no data loaded or input file empty (?)
+    if (mNumRead == 0) // no data loaded (either this is the first call, or the input file empty)
         return 0;
 
     // lazily create the mProcessed[] array
     if (mProcessed.size() == 0)
-    {
         mProcessed.resize(mNumRead, false);
-    }
 
     // lazily check if we are done
     // We are done if mToProcess[] contains a sequence for which mProcessed[] is set (...which likely applies to all?).
@@ -1701,9 +1699,7 @@ size_t BatchSequenceReader<ElemType>::DetermineSequencesToProcess()
             }
         }
         if (allDone) // if we are done
-        {
             mToProcess.clear();
-        }
     }
 
     // if we still have unfinished sequences then just return their length

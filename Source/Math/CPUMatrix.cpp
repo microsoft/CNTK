@@ -3603,6 +3603,8 @@ struct PrintRange
             begin = 0;
             skipBegin = (size_t)(-last);
             skipEnd = (size_t)(total + first);
+            if (skipEnd <= skipBegin)
+                skipBegin = skipEnd = total;
             end = total;
         }
         else    // if other combinations are ever of interest then implement them here
@@ -3610,7 +3612,7 @@ struct PrintRange
     }
 };
 
-// use negative ranges to print corners, e.g. specify first=-3, last=-3 which will print the first 3 and last 3 rows/cols
+// use negative ranges to print corners, e.g. Print("name", -3, -3, -3, -3) will print the first 3 and last 3 rows/cols
 template <class ElemType>
 void CPUMatrix<ElemType>::Print(const char* matrixName, ptrdiff_t rowFirst, ptrdiff_t rowLast, ptrdiff_t colFirst, ptrdiff_t colLast) const
 {
