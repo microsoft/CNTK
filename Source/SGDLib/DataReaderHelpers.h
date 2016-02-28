@@ -70,14 +70,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         // reader will have resized input node's m_value directly. Nodes must be notified to do necessary internal state updates from that.
         // TODO: This is a stopgap. SGD will at some point change from sets of matrices to sets of nodes. Then this will become much simpler.
-        std::set<Matrix<ElemType>*> matrices;
+        std::set<std::shared_ptr<Matrix<ElemType>>> matrices;
         for (const auto& iter : inputMatrices)
             matrices.insert(iter.second);
         for (auto& node : net->FeatureNodes())
-            if (matrices.find(&node->As<ComputationNode<ElemType>>()->Value()) != matrices.end())
+            if (matrices.find(node->As<ComputationNode<ElemType>>()->ValuePtr()) != matrices.end())
                 node->NotifyFunctionValuesMBSizeModified();
         for (auto& node : net->LabelNodes())
-            if (matrices.find(&node->As<ComputationNode<ElemType>>()->Value()) != matrices.end())
+            if (matrices.find(node->As<ComputationNode<ElemType>>()->ValuePtr()) != matrices.end())
                 node->NotifyFunctionValuesMBSizeModified();
 
         // get MB size and tell Network to update its nodes' buffers based on what's in the input matrices
@@ -128,7 +128,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (nT != numCols / numParallelSequences)
                 LogicError("ERROR: MBLayout borked, GetNumTimeSteps() mismatches minibatch number of columns\n");
 
-            auto matrixp = new Matrix<ElemType>(devID);
+            auto matrixp = make_shared<Matrix<ElemType>>(devID);
             matrixp->AssignRowSliceValuesOf(mat.Reshaped(numRows * numParallelSequences, nT), st * numRows, (en - st) * numRows);
             matrixp->Reshape(numRows, numNewParallelSequence * nT);
             decimatedMB.AddInputMatrix(name, matrixp);
@@ -227,29 +227,29 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         Uid m_uidCache;
         ExtrauttMap m_extrauttmapCache;
         Boundaries m_BoundariesCache;
-        shared_ptr<Matrix<ElemType>> m_NetCriterionAccumulator;
-        shared_ptr<Matrix<ElemType>> m_NetEvaluationAccumulator;
-        std::map<wstring, vector<shared_ptr<INodeState>>> m_NetStates; // m_NetStatefulNodes[node][i] caches the state of i-th subminibatch of node
+        shared_ptr<Matrix<ElemType>> m_netCriterionAccumulator;
+        shared_ptr<Matrix<ElemType>> m_netEvaluationAccumulator;
+        std::map<wstring, vector<shared_ptr<INodeState>>> m_netStates; // m_netStatefulNodes[node][i] caches the state of i-th subminibatch of node
         bool m_hasLattices;
 
         Matrices m_cachedGradient;
         // we also need to remember where to put into the net
-        MBLayoutPtr m_NetMBLayoutPtr;
+        MBLayoutPtr m_netMBLayoutPtr;
         std::map<wstring, shared_ptr<ComputationNode<ElemType>>> m_LearnableNodePtr;
         // followings are lattice-related
         Matrices m_netInputMatrixPtr;
-        LatticePtr m_NetLatticePtr; // TODO: camelCase for all m_Net...
-        UidPtr m_NetUidPtr;
-        ExtrauttMapPtr m_NetExtrauttMapPtr;
-        BoundariesPtr m_NetBoundariesPtr;
+        LatticePtr m_netLatticePtr;
+        UidPtr m_netUidPtr;
+        ExtrauttMapPtr m_netExtrauttMapPtr;
+        BoundariesPtr m_netBoundariesPtr;
         // we remember the pointer to the learnable Nodes so that we can accumulate the gradient once a sub-minibatch is done
 
         size_t m_numParallelSequences; // number of paralle sequence in the cached matrix and MBLayout
         size_t m_numSubminibatches;    // how many subminibatches we are going to use ?
 
-        std::vector<shared_ptr<ComputationNode<ElemType>>> m_NetCriterionNodes;
-        std::vector<shared_ptr<ComputationNode<ElemType>>> m_NetEvaluationNodes;
-        std::map<wstring, shared_ptr<IStatefulNode>> m_NetStatefulNodes; // we need to Export/Import states of stateful nodes when we swtich subminibatches
+        std::vector<shared_ptr<ComputationNode<ElemType>>> m_netCriterionNodes;
+        std::vector<shared_ptr<ComputationNode<ElemType>>> m_netEvaluationNodes;
+        std::map<wstring, shared_ptr<IStatefulNode>> m_netStatefulNodes; // we need to Export/Import states of stateful nodes when we swtich subminibatches
 
     private:
         void EnumerateStatefulNodeWithRoot(ComputationNetwork& net, ComputationNodeBasePtr root, std::map<wstring, shared_ptr<IStatefulNode>>& statefulnode)
@@ -286,7 +286,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     public:
         SubminibatchDispatcher()
-            : m_MBLayoutCache(nullptr), m_NetLatticePtr(nullptr), m_NetExtrauttMapPtr(nullptr), m_NetUidPtr(nullptr), m_NetBoundariesPtr(nullptr)
+            : m_MBLayoutCache(nullptr), m_netLatticePtr(nullptr), m_netExtrauttMapPtr(nullptr), m_netUidPtr(nullptr), m_netBoundariesPtr(nullptr)
         {
         }
 
@@ -296,8 +296,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                   const std::vector<ComputationNodeBasePtr>& evaluationNodes)
         {
             m_MBLayoutCache = make_shared<MBLayout>();
-            m_NetCriterionAccumulator = make_shared<Matrix<ElemType>>(1, 1, net->GetDeviceId());
-            m_NetEvaluationAccumulator = make_shared<Matrix<ElemType>>(1, evaluationNodes.size(), net->GetDeviceId());
+            m_netCriterionAccumulator = make_shared<Matrix<ElemType>>(1, 1, net->GetDeviceId());
+            m_netEvaluationAccumulator = make_shared<Matrix<ElemType>>(1, evaluationNodes.size(), net->GetDeviceId());
             // remember ptrs to learnable nodes
             for (auto x : learnableNodes)
             {
@@ -307,21 +307,21 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
             for (auto& x : criterionNodes)
             {
-                m_NetCriterionNodes.push_back(dynamic_pointer_cast<ComputationNode<ElemType>>(x));
+                m_netCriterionNodes.push_back(dynamic_pointer_cast<ComputationNode<ElemType>>(x));
             }
             for (auto& x : evaluationNodes)
             {
-                m_NetEvaluationNodes.push_back(dynamic_pointer_cast<ComputationNode<ElemType>>(x));
+                m_netEvaluationNodes.push_back(dynamic_pointer_cast<ComputationNode<ElemType>>(x));
             }
-            m_NetCriterionAccumulator->SetValue((ElemType) 0);
-            m_NetEvaluationAccumulator->SetValue((ElemType) 0);
+            m_netCriterionAccumulator->SetValue((ElemType) 0);
+            m_netEvaluationAccumulator->SetValue((ElemType) 0);
 
             // emulate all the nodes, find nodes that have state
-            m_NetStatefulNodes = EnumerateStatefulNode(*net, criterionNodes, evaluationNodes);
-            for (auto x : m_NetStatefulNodes)
+            m_netStatefulNodes = EnumerateStatefulNode(*net, criterionNodes, evaluationNodes);
+            for (auto x : m_netStatefulNodes)
             {
                 wstring name = x.first;
-                m_NetStates[name] = vector<shared_ptr<INodeState>>();
+                m_netStates[name] = vector<shared_ptr<INodeState>>();
             }
 
             // for sequence training
@@ -329,34 +329,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 auto node = dynamic_pointer_cast<SequenceWithSoftmaxNode<ElemType>>(criterionNodes[0]);
                 assert(node);
-                m_NetLatticePtr = node->getLatticePtr();
-                m_NetExtrauttMapPtr = node->getextrauttmap();
-                m_NetUidPtr = node->getuidprt();
-                m_NetBoundariesPtr = node->getboundaryprt();
+                m_netLatticePtr = node->getLatticePtr();
+                m_netExtrauttMapPtr = node->getextrauttmap();
+                m_netUidPtr = node->getuidprt();
+                m_netBoundariesPtr = node->getboundaryprt();
                 m_hasLattices = true;
             }
             else
             {
-                m_NetLatticePtr = nullptr;
-                m_NetExtrauttMapPtr = nullptr;
-                m_NetUidPtr = nullptr;
-                m_NetBoundariesPtr = nullptr;
+                m_netLatticePtr = nullptr;
+                m_netExtrauttMapPtr = nullptr;
+                m_netUidPtr = nullptr;
+                m_netBoundariesPtr = nullptr;
                 m_hasLattices = false;
-            }
-        }
-
-        ~SubminibatchDispatcher()
-        {
-            // TODO: remove these by using shared_ptr
-
-            for (auto x : m_inputMatricesCache)
-            {
-                delete x.second;
-            }
-
-            for (auto x : m_cachedGradient)
-            {
-                delete x.second;
             }
         }
 
@@ -366,7 +351,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                      size_t requestedSubminibatches)
         {
             // first, remember interface to the net
-            m_NetMBLayoutPtr = net.GetMBLayoutPtr();
+            m_netMBLayoutPtr = net.GetMBLayoutPtr();
             m_netInputMatrixPtr = inputMatrices;
 
             // second, get data from reader, stored it in cache
@@ -374,9 +359,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             for (auto pa : inputMatrices)
             {
                 wstring name = pa.first;
-                Matrix<ElemType>* M = pa.second;
+                auto M = pa.second;
                 if (m_inputMatricesCache.find(name) == m_inputMatricesCache.end())
-                    m_inputMatricesCache.AddInputMatrix(name, new Matrix<ElemType>(*M, M->GetDeviceId())); // deep copy from M
+                    m_inputMatricesCache.AddInputMatrix(name, make_shared<Matrix<ElemType>>(*M, M->GetDeviceId())); // deep copy from M
                 else
                     m_inputMatricesCache.GetInputMatrix(name).SetValue(*M);
             }
@@ -392,10 +377,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 m_extrauttmapCache.clear();
                 m_BoundariesCache.clear();
 
-                m_LatticeCache = *m_NetLatticePtr;
-                m_uidCache = *m_NetUidPtr;
-                m_extrauttmapCache = *m_NetExtrauttMapPtr;
-                m_BoundariesCache = *m_NetBoundariesPtr;
+                m_LatticeCache = *m_netLatticePtr;
+                m_uidCache = *m_netUidPtr;
+                m_extrauttmapCache = *m_netExtrauttMapPtr;
+                m_BoundariesCache = *m_netBoundariesPtr;
             }
 
             // subminibatches are cutted at the parallel sequence level;
@@ -417,20 +402,20 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     if (m_cachedGradient.find(nodeName) == m_cachedGradient.end())
                     {
                         // not allocated yet
-                        auto matrixp = new Matrix<ElemType>(nrow, ncol, funvalue.GetDeviceId());
+                        auto matrixp = make_shared<Matrix<ElemType>>(nrow, ncol, funvalue.GetDeviceId());
                         matrixp->SetValue(0);
                         m_cachedGradient.AddInputMatrix(nodeName, matrixp);
                     }
                 }
             }
             // 5. for stateful node
-            for (auto x : m_NetStatefulNodes)
+            for (auto x : m_netStatefulNodes)
             {
                 wstring name = x.first;
-                if (m_NetStates[name].empty())
+                if (m_netStates[name].empty())
                 {
                     // this only happens in the first minibatch in an epoch
-                    m_NetStates[name].resize(actualnumSubminibatches);
+                    m_netStates[name].resize(actualnumSubminibatches);
                 }
             }
 
@@ -486,7 +471,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 DecimateLattices(
                     /*output */
-                    m_NetLatticePtr, m_NetBoundariesPtr, m_NetExtrauttMapPtr, m_NetUidPtr,
+                    m_netLatticePtr, m_netBoundariesPtr, m_netExtrauttMapPtr, m_netUidPtr,
                     /*input to be decimated */
                     m_LatticeCache, m_BoundariesCache, m_extrauttmapCache, m_uidCache,
                     /* what range we want ? */
@@ -496,20 +481,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             // The following does m_netInputMatrixPtr = decimatedMatrices; with ownership shenanigans.
             for (auto& x : decimatedMatrices)
             {
-                wstring name = x.first;
+                const wstring& name = x.first;
                 m_netInputMatrixPtr.GetInputMatrix(name).SetValue(*x.second);
-                delete x.second; // TODO: is it safe to delete here ? Yes! SetValue call cuda memcpy so it is a blocking call
-                x.second = nullptr; // TODO: ownership shenanigans
             }
 
-            m_NetMBLayoutPtr->CopyFrom(decimatedLayout);
+            m_netMBLayoutPtr->CopyFrom(decimatedLayout);
 
-            for (auto& x : m_NetStatefulNodes)
+            for (auto& x : m_netStatefulNodes)
             {
-                wstring name = x.first;
-                shared_ptr<IStatefulNode> pNode = x.second;
-                if (m_NetStates[name][iSubminibatch])
-                    pNode->ImportState(std::move(m_NetStates[name][iSubminibatch]));
+                const wstring& name = x.first;
+                auto& pNode         = x.second;
+                if (m_netStates[name][iSubminibatch])
+                    pNode->ImportState(std::move(m_netStates[name][iSubminibatch]));
             }
         }
 
@@ -529,22 +512,22 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 pNode->Gradient().SetValue((ElemType) 0);
             }
             // accumulate criterion value
-            Matrix<ElemType>::AddElementToElement(m_NetCriterionNodes[0]->Value(), 0, 0,
-                                                  *m_NetCriterionAccumulator, 0, 0);
-            m_NetCriterionNodes[0]->Value().SetValue((ElemType) 0);
+            Matrix<ElemType>::AddElementToElement(m_netCriterionNodes[0]->Value(), 0, 0,
+                                                  *m_netCriterionAccumulator, 0, 0);
+            m_netCriterionNodes[0]->Value().SetValue((ElemType) 0);
             // accumulate evaluation value
-            for (size_t i = 0; i < m_NetEvaluationNodes.size(); i++)
+            for (size_t i = 0; i < m_netEvaluationNodes.size(); i++)
             {
-                Matrix<ElemType>::AddElementToElement(m_NetEvaluationNodes[i]->Value(), 0, 0,
-                                                      *m_NetEvaluationAccumulator, 0, i);
-                m_NetEvaluationNodes[i]->Value().SetValue((ElemType) 0);
+                Matrix<ElemType>::AddElementToElement(m_netEvaluationNodes[i]->Value(), 0, 0,
+                                                      *m_netEvaluationAccumulator, 0, i);
+                m_netEvaluationNodes[i]->Value().SetValue((ElemType) 0);
             }
 
             // Export node state
-            for (auto& x : m_NetStatefulNodes)
+            for (auto& x : m_netStatefulNodes)
             {
-                wstring name = x.first;
-                m_NetStates[name][iSubminibatch] = x.second->ExportState();
+                const wstring& name = x.first;
+                m_netStates[name][iSubminibatch] = x.second->ExportState();
             }
         }
 
@@ -552,33 +535,35 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             for (auto& x : m_cachedGradient)
             {
-                wstring name = x.first;
-                Matrix<ElemType>* accumulategrad = x.second;
+                const wstring& name  = x.first;
+                auto& accumulategrad = x.second;
 
                 if (m_LearnableNodePtr.find(name) == m_LearnableNodePtr.end())
                 {
                     // should never happen, remove this code later
-                    RuntimeError("ERROR: in DoneWithCurrentSubMinibatch: node %ls not found in LearnableNode", name.c_str());
+                    RuntimeError("DoneWithCurrentSubMinibatch: Node '%ls' not found in LearnableNode set.", name.c_str());
                 }
                 m_LearnableNodePtr[name]->Gradient().SetValue(*accumulategrad);
-                x.second->SetValue((ElemType) 0);
+                x.second->SetValue(0);
             }
             // also revert net.m_MBLayoutPtr
-            m_NetMBLayoutPtr->CopyFrom(m_MBLayoutCache);
+            m_netMBLayoutPtr->CopyFrom(m_MBLayoutCache);
 
-            // m_NetCriterionNodes[0]->Value().SetValue((ElemType)0);
-            Matrix<ElemType>::AddElementToElement(*m_NetCriterionAccumulator, 0, 0,
-                                                  m_NetCriterionNodes[0]->Value(), 0, 0);
-            m_NetCriterionAccumulator->SetValue((ElemType) 0);
+            // m_netCriterionNodes[0]->Value().SetValue((ElemType)0);
+            Matrix<ElemType>::AddElementToElement(*m_netCriterionAccumulator, 0, 0,
+                                                  m_netCriterionNodes[0]->Value(), 0, 0);
+            m_netCriterionAccumulator->SetValue((ElemType) 0);
 
-            for (size_t i = 0; i < m_NetEvaluationNodes.size(); i++)
+            for (size_t i = 0; i < m_netEvaluationNodes.size(); i++)
             {
-                // m_NetEvaluationNodes[i]->Value().SetValue((ElemType)0);
-                Matrix<ElemType>::AddElementToElement(*m_NetEvaluationAccumulator, 0, i,
-                                                      m_NetEvaluationNodes[i]->Value(), 0, 0);
+                // m_netEvaluationNodes[i]->Value().SetValue((ElemType)0);
+                Matrix<ElemType>::AddElementToElement(*m_netEvaluationAccumulator, 0, i,
+                                                      m_netEvaluationNodes[i]->Value(), 0, 0);
             }
-            m_NetEvaluationAccumulator->SetValue((ElemType) 0);
+            m_netEvaluationAccumulator->SetValue((ElemType) 0);
         }
     };
 };
-} } }
+
+}}}
+// BUGBUG: If I add a 'x' here, I get an error in ConvolutionEngine.h included from SGD.cpp. Why does ConvolutionEngine.h depend on this header, or whichever is included right before?

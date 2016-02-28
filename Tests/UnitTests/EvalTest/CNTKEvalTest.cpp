@@ -37,9 +37,9 @@ void DoCommand(const ConfigParameters& configRoot)
     std::wstring inputName = L"features";
     std::wstring outputName = L"CE.BFF.FF.P";
     int deviceId = 0;
-    Matrix<ElemType>* matrix = new Matrix<ElemType>(dimFeatures, mbSize, deviceId);
+    auto matrix = make_shared<Matrix<ElemType>>(dimFeatures, mbSize, deviceId);
     inputMatrices.AddInputMatrix(inputName, matrix);
-    outputMatrices.AddInputMatrix(outputName, new Matrix<ElemType>(dimLabels, mbSize, deviceId));
+    outputMatrices.AddInputMatrix(outputName, make_shared<Matrix<ElemType>>(dimLabels, mbSize, deviceId));
 
     std::map<std::wstring, std::vector<ElemType>*> input;
     std::map<std::wstring, std::vector<ElemType>*> output;

@@ -220,7 +220,7 @@ bool SparsePCReader<ElemType>::GetMinibatch(StreamMinibatchInputs<ElemType>& mat
     if (m_currOffset >= m_filePositionMax)
         return false;
 
-    Matrix<ElemType>* labels = nullptr; // labels to return, or NULL if no labels in matrix set
+    shared_ptr<Matrix<ElemType>> labels; // labels to return, or NULL if no labels in matrix set
     auto labelEntry = matrices.find(m_labelName);
     if (labelEntry != matrices.end())
     {

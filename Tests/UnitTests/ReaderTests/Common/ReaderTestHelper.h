@@ -228,21 +228,21 @@ struct ReaderFixture
         DataReader<ElemType> dataReader(readerConfig);
 
         StreamMinibatchInputs<ElemType> map;
-        std::vector<Matrix<ElemType>*> features;
-        std::vector<Matrix<ElemType>*> labels;
+        std::vector<shared_ptr<Matrix<ElemType>>> features;
+        std::vector<shared_ptr<Matrix<ElemType>>> labels;
 
         for (auto i = 0; i < numFeatureFiles; i++)
         {
-            features.push_back(new Matrix<ElemType>(0));
+            features.push_back(make_shared<Matrix<ElemType>>(0));
             wstring name = numFeatureFiles > 1 ? L"features" + std::to_wstring(i + 1) : L"features";
-            map.insert(std::pair<wstring, Matrix<ElemType>*>(name, features[i]));
+            map.insert(make_pair(name, features[i]));
         }
 
         for (auto i = 0; i < numLabelFiles; i++)
         {
-            labels.push_back(new Matrix<ElemType>(0));
+            labels.push_back(make_shared<Matrix<ElemType>>(0));
             wstring name = numLabelFiles > 1 ? L"labels" + std::to_wstring(i + 1) : L"labels";
-            map.insert(std::pair<wstring, Matrix<ElemType>*>(name, labels[i]));
+            map.insert(make_pair(name, labels[i]));
         }
 
         // Setup output file

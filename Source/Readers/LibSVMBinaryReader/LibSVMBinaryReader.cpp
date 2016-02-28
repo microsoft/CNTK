@@ -823,9 +823,7 @@ bool LibSVMBinaryReader<ElemType>::GetMinibatch(StreamMinibatchInputs<ElemType>&
         {
             auto findMat = matrices.find(matrix.first);
             if (findMat != matrices.end())
-            {
-                matrix.second->Fill(findMat->second);
-            }
+                matrix.second->Fill(findMat->second.get());
         }
 #if DEBUG
         reader_series->write_flag(_T("done fill."));

@@ -116,11 +116,11 @@ void TestReader(const ConfigParameters& configBase)
 
     // setup minibatch matrices
     int deviceId = 0;
-    Matrix<ElemType> featuresMatrix(deviceId);
-    Matrix<ElemType> labelsMatrix(deviceId);
+    auto featuresMatrix = make_shared<Matrix<ElemType>>(deviceId);
+    auto labelsMatrix   = make_shared<Matrix<ElemType>>(deviceId);
     StreamMinibatchInputs<ElemType> matrices;
-    matrices.AddInputMatrix(featureNames[0], &featuresMatrix);
-    matrices.AddInputMatrix(labelNames[0]  , &labelsMatrix);
+    matrices.AddInputMatrix(featureNames[0], featuresMatrix);
+    matrices.AddInputMatrix(labelNames[0],   labelsMatrix);
 
     auto start = std::chrono::system_clock::now();
     int epochs = config("maxEpochs");

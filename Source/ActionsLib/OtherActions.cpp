@@ -54,10 +54,10 @@ void DoCreateLabelMap(const ConfigParameters& config)
     GetFileConfigNames(readerConfig, featureNames, labelNames);
 
     // setup minibatch matrices
-    Matrix<ElemType> featuresMatrix(CPUDEVICE);
-    Matrix<ElemType> labelsMatrix(CPUDEVICE);
+    auto featuresMatrix = make_shared<Matrix<ElemType>>(CPUDEVICE);
+    auto labelsMatrix   = make_shared<Matrix<ElemType>>(CPUDEVICE);
     StreamMinibatchInputs<ElemType> matrices;
-    matrices.AddInputMatrix(featureNames[0], &featuresMatrix);
+    matrices.AddInputMatrix(featureNames[0], featuresMatrix);
     if (labelNames.size() == 0)
         RuntimeError("CreateLabelMap: no labels found to process");
 
@@ -66,23 +66,17 @@ void DoCreateLabelMap(const ConfigParameters& config)
     for (const std::wstring& labelsName : labelNames)
     {
         // take the last label file defined (the other one might be input)
-        matrices.AddInputMatrix(labelsName, &labelsMatrix);
+        matrices.AddInputMatrix(labelsName, labelsMatrix);
 
         // get the label mapping file name
         ConfigParameters labelConfig(readerConfig(labelsName));
         std::string labelMappingFile;
         if (labelConfig.ExistsCurrent(L"labelMappingFile"))
-        {
             labelMappingFile = labelConfig(L"labelMappingFile");
-        }
         else if (readerConfig.ExistsCurrent(L"labelMappingFile"))
-        {
             labelMappingFile = labelConfig(L"labelMappingFile");
-        }
         else
-        {
             RuntimeError("CreateLabelMap: No labelMappingFile defined");
-        }
 
         if (fexists(labelMappingFile))
         {

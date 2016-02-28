@@ -1094,6 +1094,8 @@ public:
     const Matrix<ElemType>& Value() const { return *m_value; }
     Matrix<ElemType>&       Value()       { return *m_value; }
 
+    std::shared_ptr<Matrix<ElemType>> ValuePtr() { return m_value; }    // readers want this as a shared_ptr straight
+
     const Matrix<ElemType>& Gradient() const { return *m_gradient; }
     Matrix<ElemType>&       Gradient()       { return *m_gradient; }
 

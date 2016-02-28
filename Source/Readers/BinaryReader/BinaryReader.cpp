@@ -268,7 +268,7 @@ bool BinaryReader<ElemType>::GetMinibatch(StreamMinibatchInputs<ElemType>& matri
     {
         wstring matrixName = value.first;
         Section* section = m_sections[matrixName];
-        Matrix<ElemType>* gpuData = value.second;
+        auto& gpuData = value.second;
         size_t rows = section->GetElementsPerRecord();
         SectionData dataType;
         size_t dataSize;
