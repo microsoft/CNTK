@@ -15,7 +15,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
 /*static*/ struct DataReaderHelpers
 {
-
     // -------------------------------------------------------------------
     // GetMinibatchIntoNetwork() -- get one minibatch from Reader (this->trainSetDataReader) into Network (this->net)
     // Returns false if no data is read. In that case, no other return value can be expected to contain meaningful values (e.g. actualMBSize will be unchanged).
@@ -30,7 +29,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                         ComputationNodeBasePtr criterionNode,
                                         bool useDistributedMBReading,
                                         bool useParallelTrain,
-                                        std::map<std::wstring, Matrix<ElemType>*>& inputMatrices,
+                                        StreamMinibatchInputs<ElemType>& inputMatrices,
                                         size_t& actualMBSize)
     {
         auto pMBLayout = net->GetMBLayoutPtr();
@@ -95,8 +94,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // non-inplace decimation , to be used in subminibatch implementation
     // returns a subset of parallel sequences
     template <class ElemType>
-    static pair<size_t, size_t> DecimateMinibatch(const std::map<std::wstring, Matrix<ElemType>*> MB,     // input matrices
-                                                  std::map<std::wstring, Matrix<ElemType>*>& decimatedMB, // output decimated matrices.
+    static pair<size_t, size_t> DecimateMinibatch(const StreamMinibatchInputs<ElemType> MB,     // input matrices  --TODO: Should this be a const &?
+                                                  StreamMinibatchInputs<ElemType>& decimatedMB, // output decimated matrices.
                                                   MBLayoutPtr pMBLayout,                                  // input MBLayout
                                                   MBLayoutPtr& pDecimateMBLayout,                         // output decimated MBLayout (note: cannot work in-place)
                                                   int numWorker, int rank)
@@ -161,7 +160,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // in-place decimation, for use with data-parallel processing
     // returns a subset of parallel sequences
     template <class ElemType>
-    static pair<size_t, size_t> DecimateMinibatch(std::map<std::wstring, Matrix<ElemType>*>& mb, // matrix to be decimated
+    static pair<size_t, size_t> DecimateMinibatch(StreamMinibatchInputs<ElemType>& mb, // matrix to be decimated
                                                   int numprocs, int rank,                        // rank info
                                                   MBLayoutPtr pMBLayout)                         // get decimated as well
     {
@@ -171,7 +170,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         // allocate space for non-inplace decimation
         MBLayoutPtr pDecimatedMB = make_shared<MBLayout>();
-        std::map<wstring, Matrix<ElemType>*> decimatedMB;
+        StreamMinibatchInputs<ElemType> decimatedMB;
         // call in-place decimation
         pair<size_t, size_t> selected = DecimateMinibatch(mb, decimatedMB, pMBLayout, pDecimatedMB, numprocs, rank);
         // move the data
@@ -219,7 +218,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         typedef std::vector<size_t>* UidPtr;
         typedef std::vector<size_t>* ExtrauttMapPtr;
         typedef std::vector<size_t>* BoundariesPtr;
-        typedef std::map<std::wstring, Matrix<ElemType>*> Matrices;
+        typedef StreamMinibatchInputs<ElemType> Matrices;
 
         // member variables served as caching space
         Matrices m_inputMatricesCache;
@@ -363,7 +362,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         size_t GetMinibatchIntoCache(IDataReader<ElemType>& trainSetDataReader,
                                      ComputationNetwork& net,
-                                     std::map<std::wstring, Matrix<ElemType>*>& inputMatrices,
+                                     StreamMinibatchInputs<ElemType>& inputMatrices,
                                      size_t requestedSubminibatches)
         {
             // first, remember interface to the net

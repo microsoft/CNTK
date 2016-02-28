@@ -78,7 +78,7 @@ void ReaderShim<ElemType>::StartDistributedMinibatchLoop(
 }
 
 template <class ElemType>
-bool ReaderShim<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemType>*>& matrices)
+bool ReaderShim<ElemType>::GetMinibatch(StreamMinibatchInputs<ElemType>& matrices)
 {
     if (m_endOfEpoch)
     {

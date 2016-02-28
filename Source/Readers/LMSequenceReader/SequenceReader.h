@@ -252,11 +252,10 @@ public:
                               bool flatten);
     //static void ReadWord(char* wrod, FILE* fin);
 
-    void GetLabelOutput(std::map<std::wstring, Matrix<ElemType>*>& matrices,
-                        size_t m_mbStartSample, size_t actualmbsize);
-    void GetInputToClass(std::map<std::wstring, Matrix<ElemType>*>& matrices);
+    void GetLabelOutput(StreamMinibatchInputs<ElemType>& matrices, size_t m_mbStartSample, size_t actualmbsize);
+    void GetInputToClass(StreamMinibatchInputs<ElemType>& matrices);
 
-    void GetInputProb(std::map<std::wstring, Matrix<ElemType>*>& matrices);
+    void GetInputProb(StreamMinibatchInputs<ElemType>& matrices);
     void GetClassInfo();
 
     virtual void Destroy();
@@ -281,7 +280,7 @@ public:
     }
     virtual ~SequenceReader();
     virtual void StartMinibatchLoop(size_t mbSize, size_t epoch, size_t requestedEpochSamples = requestDataSize);
-    virtual bool GetMinibatch(std::map<std::wstring, Matrix<ElemType>*>& matrices);
+    virtual bool GetMinibatch(StreamMinibatchInputs<ElemType>& matrices);
 
     // void SetSentenceSegBatch(std::vector<size_t> &/*sentenceEnd*/) {};
     // TODO: ^^ should this be   void CopyMBLayoutTo(MBLayoutPtr pMBLayout);
@@ -405,12 +404,11 @@ private:
     void Reset();
     size_t DetermineSequencesToProcess();
     bool GetMinibatchData(size_t& firstPosInSentence);
-    void GetLabelOutput(std::map<std::wstring, Matrix<ElemType>*>& matrices,
-                        size_t m_mbStartSample, size_t actualmbsize);
+    void GetLabelOutput(StreamMinibatchInputs<ElemType>& matrices, size_t m_mbStartSample, size_t actualmbsize);
 
 public:
     void StartMinibatchLoop(size_t mbSize, size_t epoch, size_t requestedEpochSamples = requestDataSize) override;
-    bool GetMinibatch(std::map<std::wstring, Matrix<ElemType>*>& matrices) override;
+    bool GetMinibatch(StreamMinibatchInputs<ElemType>& matrices) override;
     bool DataEnd() override;
 
     void CopyMBLayoutTo(MBLayoutPtr pMBLayout) { assert(mToProcess.size() == m_pMBLayout->GetNumParallelSequences()); pMBLayout->CopyFrom(m_pMBLayout); }

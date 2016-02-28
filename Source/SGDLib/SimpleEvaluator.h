@@ -75,7 +75,7 @@ public:
         auto& featureNodes = m_net->FeatureNodes();
         auto& labelNodes = m_net->LabelNodes();
 
-        std::map<std::wstring, Matrix<ElemType>*> inputMatrices;
+        StreamMinibatchInputs<ElemType> inputMatrices;
         for (size_t i = 0; i < featureNodes.size(); i++)
             inputMatrices[featureNodes[i]->NodeName()] = &dynamic_pointer_cast<ComputationNode<ElemType>>(featureNodes[i])->Value();
         for (size_t i = 0; i < labelNodes.size(); i++)

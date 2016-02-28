@@ -56,7 +56,7 @@ void DoCreateLabelMap(const ConfigParameters& config)
     // setup minibatch matrices
     Matrix<ElemType> featuresMatrix(CPUDEVICE);
     Matrix<ElemType> labelsMatrix(CPUDEVICE);
-    std::map<std::wstring, Matrix<ElemType>*> matrices;
+    StreamMinibatchInputs<ElemType> matrices;
     matrices[featureNames[0]] = &featuresMatrix;
     if (labelNames.size() == 0)
         RuntimeError("CreateLabelMap: no labels found to process");

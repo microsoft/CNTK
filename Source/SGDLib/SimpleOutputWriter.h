@@ -66,9 +66,9 @@ private:
         return inputNodes;
     }
 
-    std::map<std::wstring, Matrix<ElemType>*> RetrieveInputMatrices(const std::vector<ComputationNodeBasePtr>& inputNodes)
+    StreamMinibatchInputs<ElemType> RetrieveInputMatrices(const std::vector<ComputationNodeBasePtr>& inputNodes)
     {
-        std::map<std::wstring, Matrix<ElemType>*> inputMatrices;
+        StreamMinibatchInputs<ElemType> inputMatrices;
 
         for (auto& inode : inputNodes)
             inputMatrices[inode->NodeName()] = &dynamic_pointer_cast<ComputationNode<ElemType>>(inode)->Value();
@@ -90,7 +90,7 @@ public:
         // allocate memory for forward computation
         m_net->AllocateAllMatrices({}, outputNodes, nullptr);
 
-        std::map<std::wstring, Matrix<ElemType>*> inputMatrices = RetrieveInputMatrices(inputNodes);
+        StreamMinibatchInputs<ElemType> inputMatrices = RetrieveInputMatrices(inputNodes);
 
         // evaluate with minibatches
         dataReader.StartMinibatchLoop(mbSize, 0, numOutputSamples);
@@ -180,7 +180,7 @@ public:
         // allocate memory for forward computation
         m_net->AllocateAllMatrices({}, outputNodes, nullptr);
 
-        std::map<std::wstring, Matrix<ElemType>*> inputMatrices = RetrieveInputMatrices(inputNodes);
+        StreamMinibatchInputs<ElemType> inputMatrices = RetrieveInputMatrices(inputNodes);
 
         // load a label mapping if requested
         std::vector<std::string> labelMapping;

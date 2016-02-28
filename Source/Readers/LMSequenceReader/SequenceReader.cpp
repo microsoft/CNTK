@@ -981,7 +981,7 @@ bool SequenceReader<ElemType>::SentenceEnd()
 /// the third row is begining index of the class for this word
 /// the fourth row is the ending index + 1 of the class for this word
 template <class ElemType>
-void SequenceReader<ElemType>::GetLabelOutput(std::map<std::wstring, Matrix<ElemType>*>& matrices,
+void SequenceReader<ElemType>::GetLabelOutput(StreamMinibatchInputs<ElemType>& matrices,
                                               size_t m_mbStartSample, size_t actualmbsize)
 {
     FailBecauseDeprecated(__FUNCTION__);    // DEPRECATED CLASS, SHOULD NOT BE USED ANYMORE
@@ -1029,7 +1029,7 @@ void SequenceReader<ElemType>::GetLabelOutput(std::map<std::wstring, Matrix<Elem
     }
 }
 template <class ElemType>
-void SequenceReader<ElemType>::GetInputProb(std::map<std::wstring, Matrix<ElemType>*>& matrices)
+void SequenceReader<ElemType>::GetInputProb(StreamMinibatchInputs<ElemType>& matrices)
 {
     FailBecauseDeprecated(__FUNCTION__);    // DEPRECATED CLASS, SHOULD NOT BE USED ANYMORE
 
@@ -1060,7 +1060,7 @@ void SequenceReader<ElemType>::GetInputProb(std::map<std::wstring, Matrix<ElemTy
 }
 
 template <class ElemType>
-void SequenceReader<ElemType>::GetInputToClass(std::map<std::wstring, Matrix<ElemType>*>& matrices)
+void SequenceReader<ElemType>::GetInputToClass(StreamMinibatchInputs<ElemType>& matrices)
 {
     Matrix<ElemType>* idx2cls = matrices[STRIDX2CLS];
     if (idx2cls == nullptr)
@@ -1133,7 +1133,7 @@ void SequenceReader<ElemType>::GetClassInfo()
 }
 
 template <class ElemType>
-bool SequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemType>*>& matrices)
+bool SequenceReader<ElemType>::GetMinibatch(StreamMinibatchInputs<ElemType>& matrices)
 {
     FailBecauseDeprecated(__FUNCTION__);    // DEPRECATED CLASS, SHOULD NOT BE USED ANYMORE
 
@@ -1876,7 +1876,7 @@ bool BatchSequenceReader<ElemType>::GetMinibatchData(size_t& /*out*/ firstPosInS
 //  - up to N sequences of the same length are returned in each MB
 //     - minibatches consist of sequences of the same length only (no gaps)
 template <class ElemType>
-bool BatchSequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemType>*>& matrices)
+bool BatchSequenceReader<ElemType>::GetMinibatch(StreamMinibatchInputs<ElemType>& matrices)
 {
     // get out if they didn't call StartMinibatchLoop() first
     // TODO: Why not fail here?
@@ -2073,8 +2073,7 @@ bool BatchSequenceReader<ElemType>::DataEnd()
 // i.e., the ending_index is 1 plus of the true ending index
 // This is a subroutine to GetMinibatch() and is only called from there.
 template <class ElemType>
-void BatchSequenceReader<ElemType>::GetLabelOutput(std::map<std::wstring,
-                                                   Matrix<ElemType>*>& matrices,
+void BatchSequenceReader<ElemType>::GetLabelOutput(StreamMinibatchInputs<ElemType>& matrices,
                                                    size_t mbStartSample, size_t actualmbsize)
 {
     size_t j = 0;

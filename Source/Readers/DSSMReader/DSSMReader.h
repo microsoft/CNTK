@@ -158,7 +158,7 @@ public:
     }
     virtual ~DSSMReader();
     virtual void StartMinibatchLoop(size_t mbSize, size_t epoch, size_t requestedEpochSamples = requestDataSize);
-    virtual bool GetMinibatch(std::map<std::wstring, Matrix<ElemType>*>& matrices);
+    virtual bool GetMinibatch(StreamMinibatchInputs<ElemType>& matrices);
 
     size_t GetNumParallelSequences()
     {
