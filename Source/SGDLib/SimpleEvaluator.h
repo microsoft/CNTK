@@ -77,9 +77,9 @@ public:
 
         StreamMinibatchInputs<ElemType> inputMatrices;
         for (size_t i = 0; i < featureNodes.size(); i++)
-            inputMatrices[featureNodes[i]->NodeName()] = &dynamic_pointer_cast<ComputationNode<ElemType>>(featureNodes[i])->Value();
+            inputMatrices.AddInputMatrix(featureNodes[i]->NodeName(), &dynamic_pointer_cast<ComputationNode<ElemType>>(featureNodes[i])->Value());
         for (size_t i = 0; i < labelNodes.size(); i++)
-            inputMatrices[labelNodes[i]->NodeName()] = &dynamic_pointer_cast<ComputationNode<ElemType>>(labelNodes[i])->Value();
+            inputMatrices.AddInputMatrix(labelNodes[i]->NodeName(),   &dynamic_pointer_cast<ComputationNode<ElemType>>(labelNodes[i])->Value());
 
         // evaluate through minibatches
         size_t totalEpochSamples = 0;

@@ -1369,7 +1369,7 @@ void HTKMLFReader<ElemType>::CopyMinibatchFromBufferToMatrix(
     // Copies data to the matrix.
     for (auto iter = matrices.begin(); iter != matrices.end(); iter++)
     {
-        Matrix<ElemType>& data = *matrices[iter->first];
+        Matrix<ElemType>& data = matrices.GetInputMatrix(iter->first);
         if (m_nameToTypeMap[iter->first] == InputOutputTypes::real)
         {
             size_t id = m_featureNameToIdMap[iter->first];
@@ -1400,16 +1400,16 @@ void HTKMLFReader<ElemType>::CopyMinibatchFromBufferToMatrix(
                 {
                     if (data.GetNumCols() != m_currentMBSize * m_numberOfuttsPerMinibatch)
                     {
-                        matrices[iter->first]->Resize(data.GetNumRows(),
-                                                      m_currentMBSize * m_numberOfuttsPerMinibatch);
+                        matrices.GetInputMatrix(iter->first).Resize(data.GetNumRows(),
+                                                                    m_currentMBSize * m_numberOfuttsPerMinibatch);
                     }
-                    matrices[iter->first]->SetValue(0);
+                    matrices.GetInputMatrix(iter->first).SetValue(0);
                 }
                 else
                 {
                     m_uttDerivBuffer->GetDerivative(m_minibatchUttInfo,
                                                     m_pMBLayout,
-                                                    matrices[iter->first]);
+                                                    matrices.GetInputMatrixPtr(iter->first)); // TODO: use a reference instead of a ptr
                 }
             }
             else if (m_nameToTypeMap[iter->first] == InputOutputTypes::readerObj)
@@ -1425,7 +1425,7 @@ void HTKMLFReader<ElemType>::CopyMinibatchFromBufferToMatrix(
                 else
                 {
                     m_uttDerivBuffer->GetObjective(m_minibatchUttInfo,
-                                                   matrices[iter->first]);
+                                                   matrices.GetInputMatrixPtr(iter->first)); // TODO: use a reference instead of a ptr
                 }
             }
         }
@@ -1447,7 +1447,7 @@ void HTKMLFReader<ElemType>::CopyMinibatchToMatrix(
 {
     for (auto iter = matrices.begin(); iter != matrices.end(); iter++)
     {
-        Matrix<ElemType>& data = *matrices[iter->first];
+        Matrix<ElemType>& data = matrices.GetInputMatrix(iter->first);
         if (m_nameToTypeMap.at(iter->first) == InputOutputTypes::real)
         {
             size_t id = m_featureNameToIdMap.at(iter->first);
@@ -1590,7 +1590,7 @@ bool HTKMLFReader<ElemType>::GetMinibatchToWrite(StreamMinibatchInputs<ElemType>
 
             if (m_nameToTypeMap.find(iter->first) != m_nameToTypeMap.end() && m_nameToTypeMap[iter->first] == InputOutputTypes::real)
             {
-                Matrix<ElemType>& data = *matrices[iter->first]; // can be features or labels
+                Matrix<ElemType>& data = matrices.GetInputMatrix(iter->first); // can be features or labels
                 size_t id = m_featureNameToIdMap[iter->first];
                 size_t dim = m_featureNameToDimMap[iter->first];
 
@@ -1643,7 +1643,7 @@ bool HTKMLFReader<ElemType>::GetMinibatchToWrite(StreamMinibatchInputs<ElemType>
             }
             else
             { // Resizes other inputs so they won't affect actual minibatch size.
-                Matrix<ElemType>& data = *matrices[iter->first];
+                Matrix<ElemType>& data = matrices.GetInputMatrix(iter->first);
                 data.Resize(data.GetNumRows(), 1);
             }
         }

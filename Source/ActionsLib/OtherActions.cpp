@@ -57,7 +57,7 @@ void DoCreateLabelMap(const ConfigParameters& config)
     Matrix<ElemType> featuresMatrix(CPUDEVICE);
     Matrix<ElemType> labelsMatrix(CPUDEVICE);
     StreamMinibatchInputs<ElemType> matrices;
-    matrices[featureNames[0]] = &featuresMatrix;
+    matrices.AddInputMatrix(featureNames[0], &featuresMatrix);
     if (labelNames.size() == 0)
         RuntimeError("CreateLabelMap: no labels found to process");
 
@@ -66,7 +66,7 @@ void DoCreateLabelMap(const ConfigParameters& config)
     for (const std::wstring& labelsName : labelNames)
     {
         // take the last label file defined (the other one might be input)
-        matrices[labelsName] = &labelsMatrix;
+        matrices.AddInputMatrix(labelsName, &labelsMatrix);
 
         // get the label mapping file name
         ConfigParameters labelConfig(readerConfig(labelsName));
@@ -97,7 +97,7 @@ void DoCreateLabelMap(const ConfigParameters& config)
         int count = 0;
         while (dataReader.GetMinibatch(matrices))
         {
-            Matrix<ElemType>& features = *matrices[featureNames[0]];
+            Matrix<ElemType>& features = matrices.GetInputMatrix(featureNames[0]);
             count += features.GetNumCols();
             if (traceLevel > 1)
                 fprintf(stderr, "."); // progress meter

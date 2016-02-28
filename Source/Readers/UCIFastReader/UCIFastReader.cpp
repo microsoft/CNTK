@@ -778,10 +778,9 @@ bool UCIFastReader<ElemType>::GetMinibatch(StreamMinibatchInputs<ElemType>& matr
         for (auto iter = matrices.begin(); iter != matrices.end(); ++iter)
         {
             if (m_prefetchMatrices.find(iter->first) == m_prefetchMatrices.end())
-            {
-                LogicError("No matching prefetch matrix found for matrix named %S!", iter->first.c_str());
-            }
+                LogicError("GetMinibatch: No matching prefetch matrix found for matrix named %ls.", iter->first.c_str());
 
+            // TODO: There are some ownership shenanigans going on here. Just change everything to shared_ptr, and we are good.
             Matrix<ElemType>* prefetchMatrix = m_prefetchMatrices[iter->first].get();
             std::swap(*(iter->second), *prefetchMatrix);
         }
@@ -806,21 +805,20 @@ bool UCIFastReader<ElemType>::GetMinibatch(StreamMinibatchInputs<ElemType>& matr
     // Fire a new prefetch if there are any minibatches remaining
     if (minibatchesRemaining && m_prefetchEnabled)
     {
-        Matrix<ElemType>& features = *matrices[m_featuresName];
+        Matrix<ElemType>& features = matrices.GetInputMatrix(m_featuresName);
         int deviceId = features.GetDeviceId();
         m_pendingAsyncGetMinibatch = std::async(std::launch::async, [this, deviceId]()
-                                                {
-                                                    // Set the device since this will execute on a new thread
-                                                    Matrix<ElemType>::SetDevice(deviceId);
-
-                                                    StreamMinibatchInputs<ElemType> prefetchMatrices;
-                                                    for (auto iter = m_prefetchMatrices.begin(); iter != m_prefetchMatrices.end(); ++iter)
-                                                    {
-                                                        prefetchMatrices[iter->first] = iter->second.get();
-                                                    }
-
-                                                    return GetMinibatchImpl(prefetchMatrices);
-                                                });
+        {
+            // Set the device since this will execute on a new thread
+            Matrix<ElemType>::SetDevice(deviceId);
+ 
+            StreamMinibatchInputs<ElemType> prefetchMatrices;
+            for (auto& iter : m_prefetchMatrices)
+                prefetchMatrices.AddInput(iter.first, iter.second.get());
+            // TODO: Why not just assign? Some ownership shenanigans going on here.
+ 
+            return GetMinibatchImpl(prefetchMatrices);
+        });
     }
 
     return minibatchesRemaining;
@@ -841,7 +839,7 @@ bool UCIFastReader<ElemType>::GetMinibatchImpl(StreamMinibatchInputs<ElemType>& 
     if (matrices.find(m_featuresName) == matrices.end())
         RuntimeError("Features matrix not found in config file, there should be a section '%ls=[...]' in the configuration file.", m_featuresName.c_str());
 
-    Matrix<ElemType>& features = *matrices[m_featuresName];
+    Matrix<ElemType>& features = matrices.GetInputMatrix(m_featuresName);
 
     // get out if they didn't call StartMinibatchLoop() first  --BUGBUG: We should throw in that case.
     if (m_mbSize == 0)

@@ -987,7 +987,7 @@ void SequenceReader<ElemType>::GetLabelOutput(StreamMinibatchInputs<ElemType>& m
     FailBecauseDeprecated(__FUNCTION__);    // DEPRECATED CLASS, SHOULD NOT BE USED ANYMORE
 
     size_t j = 0;
-    Matrix<ElemType>* labels = matrices[m_labelsName[labelInfoOut]];
+    Matrix<ElemType>* labels = matrices.GetInputMatrixPtr(m_labelsName[labelInfoOut]);
     if (labels == nullptr)
         return;
 
@@ -1033,7 +1033,7 @@ void SequenceReader<ElemType>::GetInputProb(StreamMinibatchInputs<ElemType>& mat
 {
     FailBecauseDeprecated(__FUNCTION__);    // DEPRECATED CLASS, SHOULD NOT BE USED ANYMORE
 
-    Matrix<ElemType>* idx2prob = matrices[STRIDX2PROB];
+    Matrix<ElemType>* idx2prob = matrices.GetInputMatrixPtr(STRIDX2PROB);
     if (idx2prob == nullptr)
         return;
 
@@ -1059,10 +1059,11 @@ void SequenceReader<ElemType>::GetInputProb(StreamMinibatchInputs<ElemType>& mat
     m_idx2probRead = true;
 }
 
+// TODO: Document what this is. It seems we can fill specific hard-coded inputs with something interesting.
 template <class ElemType>
 void SequenceReader<ElemType>::GetInputToClass(StreamMinibatchInputs<ElemType>& matrices)
 {
-    Matrix<ElemType>* idx2cls = matrices[STRIDX2CLS];
+    Matrix<ElemType>* idx2cls = matrices.GetInputMatrixPtr(STRIDX2CLS);
     if (idx2cls == nullptr)
         return;
 
@@ -1197,7 +1198,7 @@ bool SequenceReader<ElemType>::GetMinibatch(StreamMinibatchInputs<ElemType>& mat
 
         // loop through all the samples
         int j = 0;
-        Matrix<ElemType>& features = *matrices[m_featuresName];
+        Matrix<ElemType>& features = matrices.GetInputMatrix(m_featuresName);
         if (matrices.find(m_featuresName) != matrices.end())
         {
             if (features.GetMatrixType() == MatrixType::DENSE)
@@ -1250,7 +1251,7 @@ bool SequenceReader<ElemType>::GetMinibatch(StreamMinibatchInputs<ElemType>& mat
         // get the features array
         if (matrices.find(m_featuresName) == matrices.end())
         {
-            Matrix<ElemType>& nbs = *matrices[L"numberobs"];
+            Matrix<ElemType>& nbs = matrices.GetInputMatrix(L"numberobs");
             int curDevId = nbs.GetDeviceId();
             nbs.TransferFromDeviceToDevice(curDevId, CPUDEVICE, true, false, false);
             nbs(0, 0) = (float) actualmbsize;
@@ -1258,7 +1259,7 @@ bool SequenceReader<ElemType>::GetMinibatch(StreamMinibatchInputs<ElemType>& mat
             for (size_t i = 0; i < actualmbsize; i++)
             {
                 std::wstring ws = msra::strfun::wstrprintf(L"feature%d", i);
-                Matrix<ElemType>& features = *matrices[ws];
+                Matrix<ElemType>& features = matrices.GetInputMatrix(ws);
                 features.SetValue(labelInfo.dim, 1, features.GetDeviceId(), &m_featuresBuffer[i * labelInfo.dim], matrixFlagNormal);
             }
         }
@@ -1274,18 +1275,21 @@ bool SequenceReader<ElemType>::GetMinibatch(StreamMinibatchInputs<ElemType>& mat
         {
             if (matrices.find(m_labelsName[labelInfoOut]) == matrices.end())
             {
+                // TODO: What is this? Debug code?
                 for (size_t i = 0; i < actualmbsize; i++)
                 {
                     std::wstring ws = msra::strfun::wstrprintf(L"label%d", i);
-                    Matrix<ElemType>* labels = matrices[ws];
-                    labels->SetValue(labelInfo.dim, 1, labels->GetDeviceId(), &m_labelsBuffer[i * labelInfo.dim], matrixFlagNormal);
+                    // This writes into nodes named "labelN", or crashes if they don't exist. Seems this is dead code.
+                    Matrix<ElemType>& labels = matrices.GetInputMatrix(ws);
+                    labels.SetValue(labelInfo.dim, 1, labels.GetDeviceId(), &m_labelsBuffer[i * labelInfo.dim], matrixFlagNormal);
                 }
             }
+            // BUGBUG? If category labels then this will not output anything if such node is given.
         }
         else if (labelInfo.type != labelNone)
         {
-            Matrix<ElemType>* labels = matrices[m_labelsName[labelInfoOut]];
-            labels->SetValue(1, actualmbsize, labels->GetDeviceId(), m_labelsBuffer, matrixFlagNormal);
+            Matrix<ElemType>& labels = matrices.GetInputMatrix(m_labelsName[labelInfoOut]);
+            labels.SetValue(1, actualmbsize, labels.GetDeviceId(), m_labelsBuffer, matrixFlagNormal);
         }
     }
     catch (...)
@@ -2077,7 +2081,7 @@ void BatchSequenceReader<ElemType>::GetLabelOutput(StreamMinibatchInputs<ElemTyp
                                                    size_t mbStartSample, size_t actualmbsize)
 {
     size_t j = 0;
-    Matrix<ElemType>* labels = matrices[m_labelsName[labelInfoOut]];
+    Matrix<ElemType>* labels = matrices.GetInputMatrixPtr(m_labelsName[labelInfoOut]);
     if (labels == nullptr)
         return;
 
