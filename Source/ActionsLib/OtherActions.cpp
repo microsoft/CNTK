@@ -274,7 +274,7 @@ void DoWriteWordAndClassInfo(const ConfigParameters& config)
 #if 1
     std::unordered_map<string, double> v_count;
 #else
-    // for unknown reasons, this gives a very different result (PPL of 500 instead of 190)
+    // TODO: For unknown reasons, this gives a very different result (PPL of 500 instead of 190). Should be tracked down.
     std::map<string, double> v_count;
     v_count[beginSequence] = 0;  // get these into the table upfront into position 0 (and 1 if different)
     v_count[endSequence]   = 0;
