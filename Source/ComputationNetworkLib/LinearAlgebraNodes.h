@@ -302,23 +302,21 @@ public:
                     InvalidArgument("%ls %ls operation: Left [%s] and right [%s] operands' shapes are not compatible.", NodeName().c_str(), OperationName().c_str(), dimsAstring.c_str(), dimsBstring.c_str());
             }
 
-            // swap back in case of TransposeTimes
-            if (transpose)
-                std::swap(dimsA[0], dimsA[1]);
-
-            // update if LearnableParameter
-            Input(0)->ValidateInferInputDimsFrom(TensorShape(dimsA));
-
-            // and verify once again
-            if (isFinalValidationPass && Input(0)->GetSampleLayout().GetDims() != dimsA)
-                InvalidArgument("%ls %ls operation: Left [%s] and right [%s] operands' shapes are not compatible.", NodeName().c_str(), OperationName().c_str(), dimsAstring.c_str(), dimsBstring.c_str());
-
             // now determine result dimensions
             auto dimsC = dimsA;
             dimsC.resize(m_outputRank);    // output dims
             for (size_t k = numReductionDims; k < dimsB.size(); k++)
                 dimsC.push_back(dimsB[k]); // input dims
             SetDims(TensorShape(dimsC), Input(1)->HasMBLayout());
+
+            // update dimensions of A
+            if (transpose)
+                std::swap(dimsA[0], dimsA[1]);
+            // update if LearnableParameter
+            Input(0)->ValidateInferInputDimsFrom(TensorShape(dimsA));
+            // and verify once again
+            if (isFinalValidationPass && Input(0)->GetSampleLayout().GetDims() != dimsA)
+                InvalidArgument("%ls %ls operation: Left [%s] and right [%s] operands' shapes are not compatible.", NodeName().c_str(), OperationName().c_str(), dimsAstring.c_str(), dimsBstring.c_str());
         }
     }
 

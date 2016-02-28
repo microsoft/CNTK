@@ -12,7 +12,7 @@ ModelDir  = "$OutputDir$/Models"
 # deviceId=-1 for CPU, >=0 for GPU devices, "auto" chooses the best GPU, or CPU if no usable GPU is available
 deviceId = "auto"
 
-command = writeWordAndClassInfo:train:test #:write
+command = writeWordAndClassInfo:train:test:write
 
 precision  = "float"
 traceLevel = 1
@@ -28,7 +28,7 @@ confVocabSize = 10000
 confClassSize = 50
 
 trainFile = "ptb.train.txt"
-validFile = "ptb.valid.txt-2"
+validFile = "ptb.valid.txt"
 testFile  = "ptb.test.txt"
 
 #######################################
@@ -145,14 +145,6 @@ train = [
             sectionType = "data"
         ]
       
-        # sequence break table, list indexes into sequence records, so we know when a sequence starts/stops
-        sequence = [
-            dim = 1
-            wrecords = 2
-            # write definition
-            sectionType = "data"
-        ]
-        
         #labels sections
         labelIn = [
             dim = 1
@@ -254,14 +246,6 @@ train = [
             sectionType = "data"
         ]
         
-        # sequence break table, list indexes into sequence records, so we know when a sequence starts/stops
-        sequence = [
-            dim = 1
-            wrecords = 2
-            # write definition
-            sectionType = "data"
-        ]
-        
         # labels sections
         # it should be the same as that in the training set
         labelIn = [
@@ -337,20 +321,17 @@ test = [
     action = "eval"
 
     # correspond to the number of words/characteres to train in a minibatch
-    minibatchSize = 1
+    minibatchSize = 8192                # choose as large as memory allows for maximum concurrency
     # need to be small since models are updated for each minibatch
     traceLevel = 1
     epochSize = 0
-    recurrentLayer = 1
-    defaultHiddenActivity = 0.1
-    useValidation = true
-    rnnType = "CLASSLSTM"
 
     reader = [
         # reader to use
         readerType = "LMSequenceReader"
         randomize = "none"
-        nbruttsineachrecurrentiter = 2 # means fill up the minibatch with as many parallel sequences as fit
+        nbruttsineachrecurrentiter = 0  # 0 means fill up the minibatch with as many parallel sequences as fit
+        cacheBlockSize = 2000000        # just load it all
 
         # word class info
         wordclass = "$ModelDir$/vocab.txt"
@@ -383,10 +364,124 @@ test = [
             sectionType = "data"
         ]
         
-        # sequence break table, list indexes into sequence records, so we know when a sequence starts/stops
-        sequence = [
+        #labels sections
+        labelIn = [
             dim = 1
-            wrecords = 2
+
+            # vocabulary size
+            labelDim = "$confVocabSize$"
+            labelMappingFile = "$OutputDir$/sentenceLabels.txt"
+            
+            labelType = "Category"
+            beginSequence = "</s>"
+            endSequence = "</s>"
+
+            # Write definition
+            # sizeof(unsigned) which is the label index type
+            elementSize = 4
+            sectionType = "labels"
+            
+            mapping = [
+                # redefine number of records for this section, since we don't need to save it for each data record
+                wrecords = 11
+                # variable size so use an average string size
+                elementSize = 10
+                sectionType = "labelMapping"
+            ]
+            
+            category = [
+                dim = 11
+                # elementSize = sizeof(ElemType) is default
+                sectionType = "categoryLabels"
+            ]
+        ]
+        
+        #labels sections
+        labels = [
+            dim = 1
+            labelType = "NextWord"
+            beginSequence = "O"
+            endSequence = "O"
+
+            # vocabulary size
+            labelDim = "$confVocabSize$"
+
+            labelMappingFile = "$OutputDir$/sentenceLabels.out.txt"
+            # Write definition
+            # sizeof(unsigned) which is the label index type
+            elementSize = 4
+            sectionType = "labels"
+            
+            mapping = [
+                # redefine number of records for this section, since we don't need to save it for each data record
+                wrecords = 3
+                # variable size so use an average string size
+                elementSize = 10
+                sectionType = "labelMapping"
+            ]
+            
+            category = [
+                dim = 3
+                # elementSize = sizeof(ElemType) is default
+                sectionType = "categoryLabels"
+            ]
+        ]
+    ]
+]
+
+#######################################
+#  WRITE CONFIG                       #
+#######################################
+
+write = [
+    action = "write"
+
+    outputPath = "$OutputDir$/Write"
+    outputNodeNames = PosteriorProb
+    format = [
+        type = "real"
+        sequenceEpilogue = "\n-------------\n" # separator between sequences
+    ]
+
+    minibatchSize = 8192                # choose as large as memory allows for maximum concurrency
+    # need to be small since models are updated for each minibatch
+    traceLevel = 1
+    epochSize = 0
+
+    reader = [
+        # reader to use
+        readerType = "LMSequenceReader"
+        randomize = "none"              # BUGBUG: This is ignored.
+        nbruttsineachrecurrentiter = 0  # 0 means fill up the minibatch with as many parallel sequences as fit
+        cacheBlockSize = 1              # forces it to go sequence by sequence, bypassing randomization
+
+        # word class info
+        wordclass = "$ModelDir$/vocab.txt"
+
+        # if writerType is set, we will cache to a binary file
+        # if the binary file exists, we will use it instead of parsing this file
+        # writerType = "BinaryReader"
+
+        # write definition
+        wfile = "$OutputDir$/sequenceSentence.bin"
+        # wsize - inital size of the file in MB
+        # if calculated size would be bigger, that is used instead
+        wsize = 256
+
+        # wrecords - number of records we should allocate space for in the file
+        # files cannot be expanded, so this should be large enough. If known modify this element in config before creating file
+        wrecords = 1000
+        
+        # windowSize - number of records we should include in BinaryWriter window
+        windowSize = "$confVocabSize$"
+
+        file = "$DataDir$/$testFile$"
+
+        # additional features sections
+        # for now store as expanded category data (including label in)
+        features = [
+            # sentence has no features, so need to set dimension to zero
+            dim = 0
             # write definition
             sectionType = "data"
         ]
