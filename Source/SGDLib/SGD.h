@@ -323,7 +323,7 @@ protected:
                     IDataReader<ElemType>* trainSetDataReader,
                     std::vector<ComputationNodeBasePtr>& featureNodes,
                     std::vector<ComputationNodeBasePtr>& labelNodes,
-                    std::map<std::wstring, Matrix<ElemType>*>* inputMatrices);
+                    StreamMinibatchInputs<ElemType>* inputMatrices);
 
     // return a reasonable initial learning rate based on the initial mbsize
     double SearchForBestLearnRate(ComputationNetworkPtr net,
@@ -335,7 +335,7 @@ protected:
                                   const std::vector<ComputationNodeBasePtr>& labelNodes,
                                   const std::vector<ComputationNodeBasePtr>& criterionNodes,
                                   const std::vector<ComputationNodeBasePtr>& evaluationNodes,
-                                  std::map<std::wstring, Matrix<ElemType>*>* inputMatrices,
+                                  StreamMinibatchInputs<ElemType>* inputMatrices,
                                   const std::list<ComputationNodeBasePtr>& learnableNodes,
                                   std::list<Matrix<ElemType>>& smoothedGradients,
                                   const bool learnRateInitialized,
@@ -351,7 +351,7 @@ protected:
                                          const std::vector<ComputationNodeBasePtr>& labelNodes,
                                          const std::vector<ComputationNodeBasePtr>& criterionNodes,
                                          const std::vector<ComputationNodeBasePtr>& evaluationNodes,
-                                         std::map<std::wstring, Matrix<ElemType>*>* inputMatrices,
+                                         StreamMinibatchInputs<ElemType>* inputMatrices,
                                          const std::list<ComputationNodeBasePtr>& learnableNodes,
                                          std::list<Matrix<ElemType>>& smoothedGradients,
                                          /*out*/ double& epochCriterion,
@@ -371,7 +371,7 @@ protected:
                                    const std::vector<ComputationNodeBasePtr>& labelNodes,
                                    const std::vector<ComputationNodeBasePtr>& criterionNodes,
                                    const std::vector<ComputationNodeBasePtr>& evaluationNodes,
-                                   std::map<std::wstring, Matrix<ElemType>*>* inputMatrices,
+                                   StreamMinibatchInputs<ElemType>* inputMatrices,
                                    const std::list<ComputationNodeBasePtr>& learnableNodes,
                                    std::list<Matrix<ElemType>>& smoothedGradients,
                                    const double learningRateAdjustmentFactor);
@@ -389,7 +389,7 @@ protected:
                                       const std::vector<ComputationNodeBasePtr>& labelNodes,
                                       const std::vector<ComputationNodeBasePtr>& criterionNodes,
                                       const std::vector<ComputationNodeBasePtr>& evaluationNodes,
-                                      std::map<std::wstring, Matrix<ElemType>*>* inputMatrices,
+                                      StreamMinibatchInputs<ElemType>* inputMatrices,
                                       const std::list<ComputationNodeBasePtr>& learnableNodes,
                                       std::list<Matrix<ElemType>>& smoothedGradients,
                                       const size_t minMinibatchSize, const size_t maxMinibatchSize);
@@ -402,7 +402,7 @@ protected:
     void AttemptUtteranceDerivativeFeatures(ComputationNetworkPtr net,
                                             IDataReader<ElemType>* trainSetDataReader,
                                             const std::vector<ComputationNodeBasePtr>& featureNodes,
-                                            std::map<std::wstring, Matrix<ElemType>*>* inputMatrices);
+                                            StreamMinibatchInputs<ElemType>* inputMatrices);
 
     size_t TrainOneEpoch(ComputationNetworkPtr net,
                          ComputationNetworkPtr refNet,
@@ -416,7 +416,7 @@ protected:
                          const std::vector<ComputationNodeBasePtr>& labelNodes,
                          const std::vector<ComputationNodeBasePtr>& criterionNodes,
                          const std::vector<ComputationNodeBasePtr>& evaluationNodes,
-                         std::map<std::wstring, Matrix<ElemType>*>* inputMatrices,
+                         StreamMinibatchInputs<ElemType>* inputMatrices,
                          const std::list<ComputationNodeBasePtr>& learnableNodes,
                          std::list<Matrix<ElemType>>& smoothedGradients,
                          /*out*/ double& epochCriterion,

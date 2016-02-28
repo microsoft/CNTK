@@ -170,7 +170,7 @@ void DataReader<ElemType>::StartDistributedMinibatchLoop(size_t mbSize, size_t e
 //             [out] each matrix resized if necessary containing data.
 // returns - true if there are more minibatches, false if no more minibatchs remain
 template <class ElemType>
-bool DataReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemType>*>& matrices)
+bool DataReader<ElemType>::GetMinibatch(StreamMinibatchInputs<ElemType>& matrices)
 {
     /**
     each reader reads data with number of columns as  nbr_utterances_per_minibatch * mbSize
@@ -255,7 +255,7 @@ bool DataReader<ElemType>::RequireSentenceSeg() const
 #endif
 
 template <class ElemType>
-void DataReader<ElemType>::InitProposals(std::map<std::wstring, Matrix<ElemType>*>* matrices)
+void DataReader<ElemType>::InitProposals(StreamMinibatchInputs<ElemType>* matrices)
 {
     for (size_t i = 0; i < m_ioNames.size(); i++)
         m_dataReaders[m_ioNames[i]]->InitProposals(matrices);
@@ -273,7 +273,7 @@ int DataReader<ElemType>::GetSentenceEndIdFromOutputLabel()
 #endif
 
 template <class ElemType>
-bool DataReader<ElemType>::GetProposalObs(std::map<std::wstring, Matrix<ElemType>*>* matrices, const size_t tidx, vector<size_t>& history)
+bool DataReader<ElemType>::GetProposalObs(StreamMinibatchInputs<ElemType>* matrices, const size_t tidx, vector<size_t>& history)
 {
     bool bRet = true;
     for (size_t i = 0; i < m_ioNames.size(); i++)
@@ -299,7 +299,7 @@ void DataReader<ElemType>::SetRandomSeed(int seed)
 template <class ElemType>
 bool DataReader<ElemType>::GetMinibatchCopy(
     std::vector<std::vector<std::pair<wstring, size_t>>>& uttInfo,
-    std::map<std::wstring, Matrix<ElemType>*>& matrices,
+    StreamMinibatchInputs<ElemType>& matrices,
     MBLayoutPtr pMBLayout)
 {
     bool ans = false;

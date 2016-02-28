@@ -44,7 +44,7 @@ public:
         return true;
     }
 
-    virtual bool GetMinibatch(std::map<std::wstring, Matrix<ElemType>*>& matrices) override;
+    virtual bool GetMinibatch(StreamMinibatchInputs<ElemType>& matrices) override;
 
     virtual bool DataEnd() override;
 

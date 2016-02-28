@@ -846,7 +846,7 @@ void HTKMLFReader<ElemType>::StartMinibatchLoopToWrite(size_t mbSize, size_t /*e
 //             [out] each matrix resized if necessary containing data.
 // returns - true if there are more minibatches, false if no more minibatchs remain
 template <class ElemType>
-bool HTKMLFReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemType>*>& matrices)
+bool HTKMLFReader<ElemType>::GetMinibatch(StreamMinibatchInputs<ElemType>& matrices)
 {
     if (m_trainOrTest)
     {
@@ -867,7 +867,7 @@ bool HTKMLFReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemType
 // if startFrame = 5, endFrame = 10, then we copy frames 5, 6, 7, 8, 9.
 template <class ElemType>
 bool HTKMLFReader<ElemType>::PopulateUtteranceInMinibatch(
-    const std::map<std::wstring, Matrix<ElemType>*>& matrices,
+    const StreamMinibatchInputs<ElemType>& matrices,
     size_t uttIndex, size_t startFrame,
     size_t endFrame, size_t mbSize, size_t mbOffset)
 {
@@ -956,7 +956,7 @@ bool HTKMLFReader<ElemType>::PopulateUtteranceInMinibatch(
 
 template <class ElemType>
 bool HTKMLFReader<ElemType>::GetOneMinibatchToTrainOrTestDataBuffer(
-    const std::map<std::wstring, Matrix<ElemType>*>& matrices)
+    const StreamMinibatchInputs<ElemType>& matrices)
 {
     bool skip = false;
 
@@ -1357,7 +1357,7 @@ void HTKMLFReader<ElemType>::CopyMinibatchToBuffer()
 template <class ElemType>
 void HTKMLFReader<ElemType>::CopyMinibatchFromBufferToMatrix(
     size_t index,
-    std::map<std::wstring, Matrix<ElemType>*>& matrices)
+    StreamMinibatchInputs<ElemType>& matrices)
 {
     assert(m_minibatchBuffer.size() > index);
 
@@ -1443,7 +1443,7 @@ void HTKMLFReader<ElemType>::CopyMinibatchToMatrix(
     size_t size,
     const vector<ElemType*>& featureBuffer,
     const vector<ElemType*>& labelBuffer,
-    std::map<std::wstring, Matrix<ElemType>*>& matrices) const
+    StreamMinibatchInputs<ElemType>& matrices) const
 {
     for (auto iter = matrices.begin(); iter != matrices.end(); iter++)
     {
@@ -1487,7 +1487,7 @@ void HTKMLFReader<ElemType>::CopyMinibatchToMatrix(
 
 template <class ElemType>
 bool HTKMLFReader<ElemType>::GetMinibatchToTrainOrTest(
-    std::map<std::wstring, Matrix<ElemType>*>& matrices)
+    StreamMinibatchInputs<ElemType>& matrices)
 {
     // We either copy a new minibatch from buffer or read one from minibatch
     // iterator.
@@ -1531,7 +1531,7 @@ bool HTKMLFReader<ElemType>::GetMinibatchToTrainOrTest(
 }
 
 template <class ElemType>
-bool HTKMLFReader<ElemType>::GetMinibatchToWrite(std::map<std::wstring, Matrix<ElemType>*>& matrices)
+bool HTKMLFReader<ElemType>::GetMinibatchToWrite(StreamMinibatchInputs<ElemType>& matrices)
 {
     std::map<std::wstring, size_t>::iterator iter;
     if (m_checkDictionaryKeys)
@@ -1582,7 +1582,7 @@ bool HTKMLFReader<ElemType>::GetMinibatchToWrite(std::map<std::wstring, Matrix<E
 
         // populate input matrices
         bool first = true;
-        typename std::map<std::wstring, Matrix<ElemType>*>::iterator iter;
+        typename StreamMinibatchInputs<ElemType>::iterator iter;
         for (iter = matrices.begin(); iter != matrices.end(); iter++)
         {
             // dereference matrix that corresponds to key (input/output name) and
@@ -1869,7 +1869,7 @@ bool HTKMLFReader<ElemType>::ReNewBufferForMultiIO(size_t i)
 template <class ElemType>
 bool HTKMLFReader<ElemType>::GetMinibatchCopy(
     std::vector<std::vector<std::pair<wstring, size_t>>>& uttInfo,
-    std::map<std::wstring, Matrix<ElemType>*>& matrices,
+    StreamMinibatchInputs<ElemType>& matrices,
     MBLayoutPtr pMBLayout)
 {
     // We need to get a "copy" of the minibatch to do the forward

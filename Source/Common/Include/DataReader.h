@@ -47,6 +47,26 @@ const size_t randomizeNone = 0;
 // We use this constant as a stand in for the total number of frames in the dataset.
 const size_t requestDataSize = randomizeAuto;
 
+// this class contains the input data structures to be filled in by the GetMinibatch() call
+// TODO: This current implementation just mimics the old type, but is a start for abstracting.
+template<class ElemType> // REMOVE THIS
+class StreamMinibatchInputs
+{
+    typedef map<std::wstring, Matrix<ElemType>*> Map;
+    Map matrices;
+public:
+    Matrix<ElemType>*& operator[](const std::wstring& nodeName) { return matrices[nodeName]; }
+    typename Map::iterator begin() { return matrices.begin(); }
+    typename Map::iterator end()   { return matrices.end(); }
+    typename Map::iterator find(const std::wstring& nodeName) { return matrices.find(nodeName); }
+    typename Map::const_iterator begin() const { return matrices.begin(); }
+    typename Map::const_iterator end()   const { return matrices.end(); }
+    typename Map::const_iterator find(const std::wstring& nodeName) const { return matrices.find(nodeName); }
+    // these are only used by test code:
+    void insert(std::pair<wstring, Matrix<ElemType>*> pair) { matrices.insert(pair); }
+    Matrix<ElemType>*& at(const std::wstring& nodeName) { return matrices.at(nodeName); }
+};
+
 // Data Reader interface
 // implemented by DataReader and underlying classes
 template <class ElemType>
@@ -81,7 +101,7 @@ public:
         return StartMinibatchLoop(mbSize, epoch, requestedEpochSamples);
     }
 
-    virtual bool GetMinibatch(std::map<std::wstring, Matrix<ElemType>*>& matrices) = 0;
+    virtual bool GetMinibatch(StreamMinibatchInputs<ElemType>& matrices) = 0;
     virtual bool GetMinibatch4SE(std::vector<shared_ptr<const msra::dbn::latticepair>>& /*latticeinput*/, vector<size_t>& /*uids*/, vector<size_t>& /*boundaries*/, vector<size_t>& /*extrauttmap*/)
     {
         NOT_IMPLEMENTED;
@@ -121,11 +141,11 @@ public:
     {
         m_seed = seed;
     }
-    virtual bool GetProposalObs(std::map<std::wstring, Matrix<ElemType>*>*, const size_t, vector<size_t>&)
+    virtual bool GetProposalObs(StreamMinibatchInputs<ElemType>*, const size_t, vector<size_t>&)
     {
         return false;
     }
-    virtual void InitProposals(std::map<std::wstring, Matrix<ElemType>*>*)
+    virtual void InitProposals(StreamMinibatchInputs<ElemType>*)
     {
     }
     virtual bool CanReadFor(wstring /* nodeName */) // return true if this reader can output for a node with name nodeName  --TODO: const wstring&
@@ -133,7 +153,7 @@ public:
         return false;
     }
 
-    bool GetFrame(std::map<std::wstring, Matrix<ElemType>*>& /*matrices*/, const size_t /*tidx*/, vector<size_t>& /*history*/)
+    bool GetFrame(StreamMinibatchInputs<ElemType>& /*matrices*/, const size_t /*tidx*/, vector<size_t>& /*history*/)
     {
         NOT_IMPLEMENTED;
     }
@@ -144,7 +164,7 @@ public:
     // TODO: move this out of the reader.
     virtual bool GetMinibatchCopy(
         std::vector<std::vector<std::pair<wstring, size_t>>>& /*uttInfo*/,
-        std::map<std::wstring, Matrix<ElemType>*>& /*matrices*/,
+        StreamMinibatchInputs<ElemType>& /*matrices*/,
         MBLayoutPtr /*data copied here*/)
     {
         return false;
@@ -248,7 +268,7 @@ public:
     // matrices - [in] a map with named matrix types (i.e. 'features', 'labels') mapped to the corresponding matrix,
     //             [out] each matrix resized if necessary containing data.
     // returns - true if there are more minibatches, false if no more minibatchs remain
-    virtual bool GetMinibatch(std::map<std::wstring, Matrix<ElemType>*>& matrices);
+    virtual bool GetMinibatch(StreamMinibatchInputs<ElemType>& matrices);
     virtual bool GetMinibatch4SE(std::vector<shared_ptr<const msra::dbn::latticepair>>& latticeinput, vector<size_t>& uids, vector<size_t>& boundaries, vector<size_t>& extrauttmap);
     virtual bool GetHmmData(msra::asr::simplesenonehmm* hmm);
 
@@ -283,7 +303,7 @@ public:
     // useful if some of the computation has to happen in the reader.
     virtual bool GetMinibatchCopy(
         std::vector<std::vector<std::pair<wstring, size_t>>>& uttInfo,
-        std::map<std::wstring, Matrix<ElemType>*>& matrices,
+        StreamMinibatchInputs<ElemType>& matrices,
         MBLayoutPtr);
 
     // Sets the neural network output to the reader. This can be useful if some
@@ -297,8 +317,8 @@ public:
 
     void SetRandomSeed(int);
 
-    bool GetProposalObs(std::map<std::wstring, Matrix<ElemType>*>*, const size_t, vector<size_t>&);
-    void InitProposals(std::map<std::wstring, Matrix<ElemType>*>* matrices);
+    bool GetProposalObs(StreamMinibatchInputs<ElemType>*, const size_t, vector<size_t>&);
+    void InitProposals(StreamMinibatchInputs<ElemType>* matrices);
 };
 
 }}}

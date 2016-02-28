@@ -739,7 +739,7 @@ void LibSVMBinaryReader<ElemType>::StartDistributedMinibatchLoop(size_t mbSize, 
 }
 
 template <class ElemType>
-void LibSVMBinaryReader<ElemType>::CheckDataMatrices(std::map<std::wstring, Matrix<ElemType>*>& matrices)
+void LibSVMBinaryReader<ElemType>::CheckDataMatrices(StreamMinibatchInputs<ElemType>& matrices)
 {
     if (m_dataMatrices.empty())
     {
@@ -780,7 +780,7 @@ void LibSVMBinaryReader<ElemType>::DoDSSMMatrix(Matrix<ElemType>& mat, size_t ac
 }
 
 template <class ElemType>
-bool LibSVMBinaryReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemType>*>& matrices)
+bool LibSVMBinaryReader<ElemType>::GetMinibatch(StreamMinibatchInputs<ElemType>& matrices)
 {
 //timer = clock();
 #if DEBUG

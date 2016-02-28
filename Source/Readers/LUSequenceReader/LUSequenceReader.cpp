@@ -809,7 +809,7 @@ void BatchLUSequenceReader<ElemType>::SetNumParallelSequences(const size_t mz)
 }
 
 template <class ElemType>
-bool BatchLUSequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemType>*>& matrices)
+bool BatchLUSequenceReader<ElemType>::GetMinibatch(StreamMinibatchInputs<ElemType>& matrices)
 {
     // get out if they didn't call StartMinibatchLoop() first
     // TODO: Why is this allowed? Why not terminate?
@@ -906,9 +906,7 @@ bool BatchLUSequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix
 }
 
 template <class ElemType>
-size_t BatchLUSequenceReader<ElemType>::GetLabelOutput(std::map<std::wstring,
-                                                                Matrix<ElemType>*>& matrices,
-                                                       LabelInfo& labelInfo, size_t actualmbsize)
+size_t BatchLUSequenceReader<ElemType>::GetLabelOutput(StreamMinibatchInputs<ElemType>& matrices, LabelInfo& labelInfo, size_t actualmbsize)
 {
     Matrix<ElemType>* labels = matrices[m_labelsName[labelInfoOut]];
     if (labels == nullptr)
@@ -1032,7 +1030,7 @@ bool BatchLUSequenceReader<ElemType>::CanReadFor(wstring nodeName) // TODO: cons
 
 /// get a column slice corresponding to a frame of observations
 template <class ElemType>
-bool BatchLUSequenceReader<ElemType>::GetFrame(std::map<std::wstring, Matrix<ElemType>*>& matrices, const size_t tidx, vector<size_t>& history)
+bool BatchLUSequenceReader<ElemType>::GetFrame(StreamMinibatchInputs<ElemType>& matrices, const size_t tidx, vector<size_t>& history)
 {
 
     // get out if they didn't call StartMinibatchLoop() first
@@ -1113,7 +1111,7 @@ bool BatchLUSequenceReader<ElemType>::GetFrame(std::map<std::wstring, Matrix<Ele
 /// propose labels, return a vector with size larger than 0 if this reader allows proposal
 /// otherwise, return a vector with length zero
 template <class ElemType>
-void BatchLUSequenceReader<ElemType>::InitProposals(map<wstring, Matrix<ElemType>*>& pMat)
+void BatchLUSequenceReader<ElemType>::InitProposals(StreamMinibatchInputs<ElemType>& pMat)
 {
     if (m_labelInfo[labelInfoIn].isproposal)
     {
@@ -1165,16 +1163,16 @@ template class BatchLUSequenceReader<double>;
 template class BatchLUSequenceReader<float>;
 
 template <class ElemType>
-bool MultiIOBatchLUSequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemType>*>& matrices)
+bool MultiIOBatchLUSequenceReader<ElemType>::GetMinibatch(StreamMinibatchInputs<ElemType>& matrices)
 {
     // on first iteration, need to check if all requested data matrices are available
     std::map<std::wstring, size_t>::iterator iter;
     if (mCheckDictionaryKeys)
     {
-        for (auto iter = matrices.begin(); iter != matrices.end(); iter++)
+        for (auto iter = matrices.begin(); iter != matrices.end(); iter++) // TODO: range-based for
         {
             bool bFound = false;
-            for (typename map<wstring, BatchLUSequenceReader<ElemType>*>::iterator p = mReader.begin(); p != mReader.end(); p++)
+            for (typename map<wstring, BatchLUSequenceReader<ElemType>*>::iterator p = mReader.begin(); p != mReader.end(); p++) // TODO: range-based for
             {
                 if ((p->second)->CanReadFor(iter->first))
                 {
@@ -1316,7 +1314,7 @@ bool MultiIOBatchLUSequenceReader<ElemType>::DataEnd()
 
 // history is shared
 template <class ElemType>
-bool MultiIOBatchLUSequenceReader<ElemType>::GetProposalObs(std::map<std::wstring, Matrix<ElemType>*>& matrices, const size_t tidx, vector<size_t>& history)
+bool MultiIOBatchLUSequenceReader<ElemType>::GetProposalObs(StreamMinibatchInputs<ElemType>& matrices, const size_t tidx, vector<size_t>& history)
 {
     // run for each reader
     for (typename map<wstring, BatchLUSequenceReader<ElemType>*>::iterator p = mReader.begin(); p != mReader.end(); p++)
@@ -1332,13 +1330,11 @@ bool MultiIOBatchLUSequenceReader<ElemType>::GetProposalObs(std::map<std::wstrin
 /// need to provide initial matrice values if there are
 /// these values are from getMinibatch
 template <class ElemType>
-void MultiIOBatchLUSequenceReader<ElemType>::InitProposals(std::map<std::wstring, Matrix<ElemType>*>& matrices)
+void MultiIOBatchLUSequenceReader<ElemType>::InitProposals(StreamMinibatchInputs<ElemType>& matrices)
 {
     // run for each reader
-    for (typename map<wstring, BatchLUSequenceReader<ElemType>*>::iterator p = mReader.begin(); p != mReader.end(); p++)
-    {
-        (p->second)->InitProposals(matrices);
-    }
+    for (auto & iter : mReader)
+        iter.second->InitProposals(matrices);
 }
 
 template class MultiIOBatchLUSequenceReader<double>;

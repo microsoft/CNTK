@@ -147,7 +147,7 @@ struct ReaderFixture
     void HelperWriteReaderContentToFile(
         ofstream& outputFile,
         DataReader<ElemType>& dataReader,
-        std::map<std::wstring, Matrix<ElemType>*>& map,
+        StreamMinibatchInputs<ElemType>& map,
         size_t epochs,
         size_t mbSize,
         size_t epochSize,
@@ -227,7 +227,7 @@ struct ReaderFixture
 
         DataReader<ElemType> dataReader(readerConfig);
 
-        std::map<std::wstring, Matrix<ElemType>*> map;
+        StreamMinibatchInputs<ElemType> map;
         std::vector<Matrix<ElemType>*> features;
         std::vector<Matrix<ElemType>*> labels;
 

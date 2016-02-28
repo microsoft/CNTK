@@ -117,7 +117,7 @@ public:
     // matrices - [in] a map with named matrix types (i.e. 'features', 'labels') mapped to the corresponding matrix,
     //             [out] each matrix resized if necessary containing data.
     // returns - true if there are more minibatches, false if no more minibatchs remain
-    virtual bool GetMinibatch(std::map<std::wstring, Matrix<ElemType>*>& matrices)
+    virtual bool GetMinibatch(StreamMinibatchInputs<ElemType>& matrices)
     {
         // how many records are we reading this time
         size_t recordCount = min(m_mbSize, m_recordCount - m_currentRecord);

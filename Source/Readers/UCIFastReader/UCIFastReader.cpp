@@ -765,7 +765,7 @@ void UCIFastReader<ElemType>::StoreLabel(ElemType& labelStore, const LabelType& 
 //             [out] each matrix resized if necessary containing data.
 // returns - true if there are more minibatches, false if no more minibatchs remain
 template <class ElemType>
-bool UCIFastReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemType>*>& matrices)
+bool UCIFastReader<ElemType>::GetMinibatch(StreamMinibatchInputs<ElemType>& matrices)
 {
     bool minibatchesRemaining = true;
     if (m_pendingAsyncGetMinibatch.valid())
@@ -813,7 +813,7 @@ bool UCIFastReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemTyp
                                                     // Set the device since this will execute on a new thread
                                                     Matrix<ElemType>::SetDevice(deviceId);
 
-                                                    std::map<std::wstring, Matrix<ElemType>*> prefetchMatrices;
+                                                    StreamMinibatchInputs<ElemType> prefetchMatrices;
                                                     for (auto iter = m_prefetchMatrices.begin(); iter != m_prefetchMatrices.end(); ++iter)
                                                     {
                                                         prefetchMatrices[iter->first] = iter->second.get();
@@ -831,7 +831,7 @@ bool UCIFastReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemTyp
 //             [out] each matrix resized if necessary containing data.
 // returns - true if there are more minibatches, false if no more minibatchs remain
 template <class ElemType>
-bool UCIFastReader<ElemType>::GetMinibatchImpl(std::map<std::wstring, Matrix<ElemType>*>& matrices)
+bool UCIFastReader<ElemType>::GetMinibatchImpl(StreamMinibatchInputs<ElemType>& matrices)
 {
     if (m_cachingReader)
     {

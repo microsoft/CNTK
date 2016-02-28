@@ -157,9 +157,9 @@ public:
 
     virtual void StartDistributedMinibatchLoop(size_t mbSize, size_t epoch, size_t subsetNum, size_t numSubsets, size_t requestedEpochSamples = requestDataSize) override;
 
-    virtual bool GetMinibatch(std::map<std::wstring, Matrix<ElemType>*>& matrices);
+    virtual bool GetMinibatch(StreamMinibatchInputs<ElemType>& matrices);
 
-    bool GetMinibatchImpl(std::map<std::wstring, Matrix<ElemType>*>& matrices);
+    bool GetMinibatchImpl(StreamMinibatchInputs<ElemType>& matrices);
 
     size_t GetNumParallelSequences()
     {

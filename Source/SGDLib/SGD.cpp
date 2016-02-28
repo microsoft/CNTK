@@ -182,7 +182,8 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
 
     // get feature and label nodes into an array of matrices that will be passed to GetMinibatch()
     // TODO: instead, remember the nodes directly, to be able to handle both float and double nodes; current version will crash for mixed networks
-    std::map<std::wstring, Matrix<ElemType>*>* inputMatrices = new std::map<std::wstring, Matrix<ElemType>*>();
+    StreamMinibatchInputs<ElemType>* inputMatrices = new StreamMinibatchInputs<ElemType>();
+    // TODO: ^^ change to shared_ptr or unique_ptr
     for (size_t pass = 0; pass < 2; pass++)
     {
         auto& nodes = (pass == 0) ? featureNodes : labelNodes;
@@ -705,7 +706,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                                     const std::vector<ComputationNodeBasePtr>& labelNodes,
                                     const std::vector<ComputationNodeBasePtr>& criterionNodes,
                                     const std::vector<ComputationNodeBasePtr>& evaluationNodes,
-                                    std::map<std::wstring, Matrix<ElemType>*>* inputMatrices, // TODO: why is this a pointer?
+                                    StreamMinibatchInputs<ElemType>* inputMatrices, // TODO: why is this a pointer?
                                     const std::list<ComputationNodeBasePtr>& learnableNodes,
                                     std::list<Matrix<ElemType>>& smoothedGradients,
                                     /*out*/ double& epochCriterion,
@@ -1279,7 +1280,7 @@ bool SGD<ElemType>::PreCompute(ComputationNetworkPtr net,
                                IDataReader<ElemType>* trainSetDataReader,
                                std::vector<ComputationNodeBasePtr>& featureNodes,
                                std::vector<ComputationNodeBasePtr>& labelNodes,
-                               std::map<std::wstring, Matrix<ElemType>*>* inputMatrices)
+                               StreamMinibatchInputs<ElemType>* inputMatrices)
 {
     std::list<ComputationNodeBasePtr> nodes = net->GetNodesRequiringPreComputation(); // this tests all HasComputed() flags
 
@@ -1351,7 +1352,7 @@ double SGD<ElemType>::SearchForBestLearnRate(ComputationNetworkPtr net,
                                              const std::vector<ComputationNodeBasePtr>& labelNodes,
                                              const std::vector<ComputationNodeBasePtr>& criterionNodes,
                                              const std::vector<ComputationNodeBasePtr>& evaluationNodes,
-                                             std::map<std::wstring, Matrix<ElemType>*>* inputMatrices,
+                                             StreamMinibatchInputs<ElemType>* inputMatrices,
                                              const std::list<ComputationNodeBasePtr>& learnableNodes,
                                              std::list<Matrix<ElemType>>& smoothedGradients,
                                              const bool learnRateInitialized,
@@ -1520,7 +1521,7 @@ size_t SGD<ElemType>::AdaptiveMinibatchSizing(ComputationNetworkPtr net,
                                               const std::vector<ComputationNodeBasePtr>& labelNodes,
                                               const std::vector<ComputationNodeBasePtr>& criterionNodes,
                                               const std::vector<ComputationNodeBasePtr>& evaluationNodes,
-                                              std::map<std::wstring, Matrix<ElemType>*>* inputMatrices,
+                                              StreamMinibatchInputs<ElemType>* inputMatrices,
                                               const std::list<ComputationNodeBasePtr>& learnableNodes,
                                               std::list<Matrix<ElemType>>& smoothedGradients,
                                               const double learningRateAdjustmentFactor)
@@ -1625,7 +1626,7 @@ size_t SGD<ElemType>::SearchForBestMinibatchSize(ComputationNetworkPtr net,
                                                  const std::vector<ComputationNodeBasePtr>& labelNodes,
                                                  const std::vector<ComputationNodeBasePtr>& criterionNodes,
                                                  const std::vector<ComputationNodeBasePtr>& evaluationNodes,
-                                                 std::map<std::wstring, Matrix<ElemType>*>* inputMatrices,
+                                                 StreamMinibatchInputs<ElemType>* inputMatrices,
                                                  const std::list<ComputationNodeBasePtr>& learnableNodes,
                                                  std::list<Matrix<ElemType>>& smoothedGradients,
                                                  const size_t minMinibatchSize, const size_t maxMinibatchSize)
@@ -1722,7 +1723,7 @@ void SGD<ElemType>::TrainOneMiniEpochAndReloadModel(ComputationNetworkPtr net,
                                                     const std::vector<ComputationNodeBasePtr>& labelNodes,
                                                     const std::vector<ComputationNodeBasePtr>& criterionNodes,
                                                     const std::vector<ComputationNodeBasePtr>& evaluationNodes,
-                                                    std::map<std::wstring, Matrix<ElemType>*>* inputMatrices,
+                                                    StreamMinibatchInputs<ElemType>* inputMatrices,
                                                     const std::list<ComputationNodeBasePtr>& learnableNodes,
                                                     std::list<Matrix<ElemType>>& smoothedGradients,
                                                     /*out*/ double& epochCriterion,
@@ -1774,7 +1775,7 @@ template <class ElemType>
 void SGD<ElemType>::AttemptUtteranceDerivativeFeatures(ComputationNetworkPtr net,
                                                        IDataReader<ElemType>* trainSetDataReader,
                                                        const std::vector<ComputationNodeBasePtr>& featureNodes,
-                                                       std::map<std::wstring, Matrix<ElemType>*>* inputMatrices)
+                                                       StreamMinibatchInputs<ElemType>* inputMatrices)
 {
     assert(trainSetDataReader != NULL);
     std::vector<std::vector<std::pair<wstring, size_t>>> uttInfo;

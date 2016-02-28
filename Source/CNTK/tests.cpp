@@ -118,7 +118,7 @@ void TestReader(const ConfigParameters& configBase)
     int deviceId = 0;
     Matrix<ElemType> featuresMatrix(deviceId);
     Matrix<ElemType> labelsMatrix(deviceId);
-    std::map<std::wstring, Matrix<ElemType>*> matrices;
+    StreamMinibatchInputs<ElemType> matrices;
     matrices[featureNames[0]] = &featuresMatrix;
     matrices[labelNames[0]] = &labelsMatrix;
 
@@ -180,7 +180,7 @@ void TestSequenceReader(const ConfigParameters& configBase)
         // setup minibatch matrices
         Matrix<ElemType> featuresMatrix;
         Matrix<ElemType> labelsMatrix;
-        std::map<std::wstring, Matrix<ElemType>*> matrices;
+        StreamMinibatchInputs<ElemType> matrices;
         matrices[featureNames[0]] = &featuresMatrix;
         matrices[labelNames[1]] = &labelsMatrix;
 

@@ -890,7 +890,7 @@ bool HTKMLFReader<ElemType>::GetHmmData(msra::asr::simplesenonehmm* hmm)
 // returns - true if there are more minibatches, false if no more minibatchs remain
 // TODO: Why do we have two read functions? Is one not a superset of the other?
 template <class ElemType>
-bool HTKMLFReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemType>*>& matrices)
+bool HTKMLFReader<ElemType>::GetMinibatch(StreamMinibatchInputs<ElemType>& matrices)
 {
     if (m_trainOrTest)
     {
@@ -903,7 +903,7 @@ bool HTKMLFReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemType
 }
 
 template <class ElemType>
-bool HTKMLFReader<ElemType>::GetMinibatchToTrainOrTest(std::map<std::wstring, Matrix<ElemType>*>& matrices)
+bool HTKMLFReader<ElemType>::GetMinibatchToTrainOrTest(StreamMinibatchInputs<ElemType>& matrices)
 {
     size_t id;
     size_t dim;
@@ -1386,7 +1386,7 @@ bool HTKMLFReader<ElemType>::GetMinibatchToTrainOrTest(std::map<std::wstring, Ma
 // copy an utterance into the minibatch given a location (parallel-sequence index, start frame)
 // TODO: This should use DataFor(). But for that, DataFor() will have to move out from ComputationNode. Ah, it has!
 template <class ElemType>
-void HTKMLFReader<ElemType>::fillOneUttDataforParallelmode(std::map<std::wstring, Matrix<ElemType>*>& matrices, size_t startFr,
+void HTKMLFReader<ElemType>::fillOneUttDataforParallelmode(StreamMinibatchInputs<ElemType>& matrices, size_t startFr,
                                                            size_t framenum, size_t channelIndex, size_t sourceChannelIndex)
 {
     size_t id;
@@ -1394,8 +1394,7 @@ void HTKMLFReader<ElemType>::fillOneUttDataforParallelmode(std::map<std::wstring
     size_t numOfFea = m_featuresBufferMultiIO.size();
     size_t numOfLabel = m_labelsBufferMultiIO.size();
 
-    typename std::map<std::wstring, Matrix<ElemType>*>::iterator iter;
-    for (iter = matrices.begin(); iter != matrices.end(); iter++)
+    for (auto iter = matrices.begin(); iter != matrices.end(); iter++)
     {
         // dereference matrix that corresponds to key (input/output name) and
         // populate based on whether its a feature or a label
@@ -1455,7 +1454,7 @@ void HTKMLFReader<ElemType>::fillOneUttDataforParallelmode(std::map<std::wstring
 }
 
 template <class ElemType>
-bool HTKMLFReader<ElemType>::GetMinibatchToWrite(std::map<std::wstring, Matrix<ElemType>*>& matrices)
+bool HTKMLFReader<ElemType>::GetMinibatchToWrite(StreamMinibatchInputs<ElemType>& matrices)
 {
     std::map<std::wstring, size_t>::iterator iter;
     if (m_checkDictionaryKeys)
@@ -1469,12 +1468,12 @@ bool HTKMLFReader<ElemType>::GetMinibatchToWrite(std::map<std::wstring, Matrix<E
             }
         }
         /*
-                   for (auto iter=matrices.begin();iter!=matrices.end();iter++)
-                   {
-                   if (m_featureNameToIdMap.find(iter->first)==m_featureNameToIdMap.end())
-                   RuntimeError(msra::strfun::strprintf("minibatch requested for input node %ws not found in reader - cannot generate input\n",iter->first.c_str()));
-                   }
-                   */
+         for (auto iter=matrices.begin();iter!=matrices.end();iter++)
+         {
+         if (m_featureNameToIdMap.find(iter->first)==m_featureNameToIdMap.end())
+         RuntimeError(msra::strfun::strprintf("minibatch requested for input node %ws not found in reader - cannot generate input\n",iter->first.c_str()));
+         }
+         */
         m_checkDictionaryKeys = false;
     }
 
@@ -1506,8 +1505,7 @@ bool HTKMLFReader<ElemType>::GetMinibatchToWrite(std::map<std::wstring, Matrix<E
 
         // populate input matrices
         bool first = true;
-        typename std::map<std::wstring, Matrix<ElemType>*>::iterator iter;
-        for (iter = matrices.begin(); iter != matrices.end(); iter++)
+        for (auto iter = matrices.begin(); iter != matrices.end(); iter++)
         {
             // dereference matrix that corresponds to key (input/output name) and
             // populate based on whether its a feature or a label
