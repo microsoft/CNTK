@@ -143,9 +143,7 @@ public:
 
         // final statistics
         for (int i = 0; i < evalResultsLastMBs.size(); i++)
-        {
-            evalResultsLastMBs[i] = 0;
-        }
+            evalResultsLastMBs[i] = 0; // clear this since statistics display will subtract the previous value
 
         fprintf(stderr, "Final Results: ");
         DisplayEvalStatistics(1, numMBsRun, totalEpochSamples, evalNodes, evalResults, evalResultsLastMBs, true);

@@ -54,24 +54,26 @@ writeWordAndClassInfo = [
 
 train = [
     action = "train"
-    minibatchSize = 128:512
+    minibatchSize = 128:256:512
     traceLevel = 1
     epochSize = 0               # (for quick tests, this can be overridden with something small)
-    recurrentLayer = 1
     defaultHiddenActivity = 0.1
     useValidation = true
-    rnnType = "CLASSLSTM"
 
     SimpleNetworkBuilder = [
+        rnnType = "CLASSLSTM"
+        recurrentLayer = 1      # number of recurrent layers
+        nodeType = "sigmoid"    # TODO: Why do we need this? It's an LSTM without dense FF layers
+
         trainingCriterion = "classCrossEntropyWithSoftmax"
         evalCriterion     = "classCrossEntropyWithSoftmax"
-        nodeType = "sigmoid"
+
         initValueScale = 6.0
+        uniformInit = true
         layerSizes = "$confVocabSize$:150:200:10000"
         addPrior = false
         addDropoutNodes = false
         applyMeanVarNorm = false
-        uniformInit = true
         lookupTableOrder = 1        # TODO: document what this means
 
         # these are for the class information for class-based language modeling
@@ -435,7 +437,7 @@ write = [
     action = "write"
 
     outputPath = "$OutputDir$/Write"
-    outputNodeNames = PosteriorProb
+    outputNodeNames = PosteriorProb     # BUGBUG: This is not the actual conditions LM prob, but a concatenation of class-conditionals, incorrectly normalized.
     format = [
         type = "real"
         sequenceEpilogue = "\n-------------\n" # separator between sequences

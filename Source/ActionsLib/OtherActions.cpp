@@ -258,7 +258,7 @@ void DoWriteWordAndClassInfo(const ConfigParameters& config)
     // legacy: Old version hard-coded "</s>" for ^^ both of these.
     //         For a while, do not fall back to defaults but rather have users fix their scripts.
     if (beginSequence.empty() || endSequence.empty())
-        InvalidArgument("Please specify beginSequence and endSequence.");
+        InvalidArgument("Please specify parameters 'beginSequence' and 'endSequence'.");
 
     std::cerr     << "Vocabulary file:    " << outputVocabFile << std::endl;
     if (nbrCls > 0)
