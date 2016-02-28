@@ -908,16 +908,16 @@ bool BatchLUSequenceReader<ElemType>::GetMinibatch(StreamMinibatchInputs<ElemTyp
 template <class ElemType>
 size_t BatchLUSequenceReader<ElemType>::GetLabelOutput(StreamMinibatchInputs<ElemType>& matrices, LabelInfo& labelInfo, size_t actualmbsize)
 {
-    Matrix<ElemType>* labels = matrices.GetInputMatrixPtr(m_labelsName[labelInfoOut]);
-    if (labels == nullptr)
+    if (!matrices.HasInput(m_labelsName[labelInfoOut]))
         return 0;
 
-    labels->Resize(labelInfo.dim, actualmbsize);
-    labels->SetValue(0);
+    Matrix<ElemType>& labels = matrices.GetInputMatrix(m_labelsName[labelInfoOut]);
+    labels.Resize(labelInfo.dim, actualmbsize);
+    labels.SetValue(0);
 
     // build it on the CPU side
-    DEVICEID_TYPE deviceId = labels->GetDeviceId();
-    labels->TransferFromDeviceToDevice(deviceId, CPUDEVICE, true);
+    DEVICEID_TYPE deviceId = labels.GetDeviceId();
+    labels.TransferFromDeviceToDevice(deviceId, CPUDEVICE, true);
 
     size_t nbrLabl = 0;
     for (size_t j = 0; j < actualmbsize; ++j) // loop over columns of the minibatch matrix
@@ -933,22 +933,22 @@ size_t BatchLUSequenceReader<ElemType>::GetLabelOutput(StreamMinibatchInputs<Ele
         // if Plain then labels are 1-dim
         // if Class then labels are 3-dim, including the index range of all words belonging to the same class (words within a class have consecutive ids)
         if (labelInfo.readerMode == ReaderMode::Plain)
-            labels->SetValue(wrd, j, 1);
+            labels.SetValue(wrd, j, 1);
         else if (labelInfo.readerMode == ReaderMode::Class && labelInfo.mNbrClasses > 0)
         {
-            labels->SetValue(0, j, (ElemType) wrd);
+            labels.SetValue(0, j, (ElemType) wrd);
 
             long clsidx = -1;
             clsidx = labelInfo.idx4class[wrd];
 
-            labels->SetValue(1, j, (ElemType) clsidx);
+            labels.SetValue(1, j, (ElemType) clsidx);
             // save the [beginning ending_indx) of the class
             ElemType lft = (*labelInfo.m_classInfoLocal)(0, clsidx);
             ElemType rgt = (*labelInfo.m_classInfoLocal)(1, clsidx);
             if (rgt <= lft)
                 LogicError("LUSequenceReader : right is equal or smaller than the left, which is wrong.");
-            labels->SetValue(2, j, lft); // beginning index of the class
-            labels->SetValue(3, j, rgt); // end index of the class
+            labels.SetValue(2, j, lft); // beginning index of the class
+            labels.SetValue(3, j, rgt); // end index of the class
         }
         else
             LogicError("LUSequenceReader: reader mode is not set to Plain. Or in the case of setting it to Class, the class number is 0. ");
@@ -956,7 +956,7 @@ size_t BatchLUSequenceReader<ElemType>::GetLabelOutput(StreamMinibatchInputs<Ele
     }
 
     // move it back to GPU if that's where it was before
-    labels->TransferFromDeviceToDevice(CPUDEVICE, deviceId, true);
+    labels.TransferFromDeviceToDevice(CPUDEVICE, deviceId, true);
 
     return nbrLabl;
 }
