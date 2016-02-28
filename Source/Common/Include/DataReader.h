@@ -59,21 +59,13 @@ public:
     // TODO: GetInput() will return a struct
     // access to matrix entries
     void AddInputMatrix(const std::wstring& nodeName, Matrix<ElemType>* matrix) { matrices[nodeName] = matrix; }
-    Matrix<ElemType>* GetInputMatrixPtr(const std::wstring& nodeName) // gets matrix, or NULL if no such entry
+    bool HasInput(const std::wstring& nodeName) const { return matrices.find(nodeName) != matrices.end(); }
+    Matrix<ElemType>& GetInputMatrix(const std::wstring& nodeName)
     {
         auto iter = matrices.find(nodeName);
-        if (iter != matrices.end())
-            return iter->second;
-        else
-            return nullptr;
-    }
-    Matrix<ElemType>& GetInputMatrix (const std::wstring& nodeName)
-    {
-        auto* matrixp = GetInputMatrixPtr(nodeName);
-        if (!matrixp)
+        if (iter == matrices.end())
             LogicError("GetInputMatrix: Attempted to access non-existent input stream '%ls'", nodeName.c_str());
-        else
-            return *matrixp;
+        return *iter->second;
     }
     // some stuff we should get rid off
     void FreeInputMatrix(const std::wstring& nodeName) // called by DecimateMinibatch()

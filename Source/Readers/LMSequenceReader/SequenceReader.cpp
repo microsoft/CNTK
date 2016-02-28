@@ -987,32 +987,33 @@ void SequenceReader<ElemType>::GetLabelOutput(StreamMinibatchInputs<ElemType>& m
     FailBecauseDeprecated(__FUNCTION__);    // DEPRECATED CLASS, SHOULD NOT BE USED ANYMORE
 
     size_t j = 0;
-    Matrix<ElemType>* labels = matrices.GetInputMatrixPtr(m_labelsName[labelInfoOut]);
-    if (labels == nullptr)
+    if (!matrices.HasInput(m_labelsName[labelInfoOut]))
         return;
 
+    Matrix<ElemType>& labels = matrices.GetInputMatrix(m_labelsName[labelInfoOut]);
+
     if (readerMode == ReaderMode::NCE)
-        labels->Resize(2 * (m_noiseSampleSize + 1), actualmbsize);
+        labels.Resize(2 * (m_noiseSampleSize + 1), actualmbsize);
     else if (readerMode == ReaderMode::Class)
-        labels->Resize(4, actualmbsize);
+        labels.Resize(4, actualmbsize);
     else if (readerMode == ReaderMode::Softmax)
-        labels->Resize(1, actualmbsize);
+        labels.Resize(1, actualmbsize);
 
     for (size_t jSample = m_mbStartSample; j < actualmbsize; ++j, ++jSample)
     {
         // pick the right sample with randomization if desired
         size_t jRand = jSample;
         int wrd = m_labelIdData[jRand];
-        labels->SetValue(0, j, (ElemType) wrd);
+        labels.SetValue(0, j, (ElemType) wrd);
 
         if (readerMode == ReaderMode::NCE)
         {
-            labels->SetValue(1, j, (ElemType) m_noiseSampler.logprob(wrd));
+            labels.SetValue(1, j, (ElemType) m_noiseSampler.logprob(wrd));
             for (size_t noiseid = 0; noiseid < m_noiseSampleSize; noiseid++)
             {
                 int wid = m_noiseSampler.sample();
-                labels->SetValue(2 * (noiseid + 1), j, (ElemType) wid);
-                labels->SetValue(2 * (noiseid + 1) + 1, j, -(ElemType) m_noiseSampler.logprob(wid));
+                labels.SetValue(2 * (noiseid + 1), j, (ElemType) wid);
+                labels.SetValue(2 * (noiseid + 1) + 1, j, -(ElemType) m_noiseSampler.logprob(wid));
             }
         }
         else if (readerMode == ReaderMode::Class)
@@ -1020,10 +1021,10 @@ void SequenceReader<ElemType>::GetLabelOutput(StreamMinibatchInputs<ElemType>& m
             int clsidx = idx4class[wrd];
             if (m_classSize > 0)
             {
-                labels->SetValue(1, j, (ElemType) clsidx);
+                labels.SetValue(1, j, (ElemType) clsidx);
                 // save the [begining ending_indx) of the class
-                labels->SetValue(2, j, (*m_classInfoLocal)(0, clsidx)); // begining index of the class
-                labels->SetValue(3, j, (*m_classInfoLocal)(1, clsidx)); // end index of the class
+                labels.SetValue(2, j, (*m_classInfoLocal)(0, clsidx)); // begining index of the class
+                labels.SetValue(3, j, (*m_classInfoLocal)(1, clsidx)); // end index of the class
             }
         }
     }
@@ -1033,12 +1034,13 @@ void SequenceReader<ElemType>::GetInputProb(StreamMinibatchInputs<ElemType>& mat
 {
     FailBecauseDeprecated(__FUNCTION__);    // DEPRECATED CLASS, SHOULD NOT BE USED ANYMORE
 
-    Matrix<ElemType>* idx2prob = matrices.GetInputMatrixPtr(STRIDX2PROB);
-    if (idx2prob == nullptr)
+    if (!matrices.HasInput(STRIDX2PROB))
         return;
 
     if (m_idx2probRead)
         return;
+
+    Matrix<ElemType>& idx2prob = matrices.GetInputMatrix(STRIDX2PROB);
 
     // populate local CPU matrix
     m_id2Prob->SwitchToMatrixType(MatrixType::DENSE, matrixFormatDense, false);
@@ -1051,10 +1053,10 @@ void SequenceReader<ElemType>::GetInputProb(StreamMinibatchInputs<ElemType>& mat
         (*m_id2Prob)((int) j, 0) = (float) m_noiseSampler.prob((int) j);
     m_id2Prob->TransferFromDeviceToDevice(CPUDEVICE, curDevId, true, false, false);
 
-    int oldDeviceId = idx2prob->GetDeviceId();
+    int oldDeviceId = idx2prob.GetDeviceId();
     // caution, SetValue changes idx2cls from GPU to CPU, may change this behavior later
-    idx2prob->SetValue(*m_id2Prob);
-    idx2prob->TransferFromDeviceToDevice(idx2prob->GetDeviceId(), oldDeviceId, true);
+    idx2prob.SetValue(*m_id2Prob);
+    idx2prob.TransferFromDeviceToDevice(idx2prob.GetDeviceId(), oldDeviceId, true);
 
     m_idx2probRead = true;
 }
@@ -1063,12 +1065,13 @@ void SequenceReader<ElemType>::GetInputProb(StreamMinibatchInputs<ElemType>& mat
 template <class ElemType>
 void SequenceReader<ElemType>::GetInputToClass(StreamMinibatchInputs<ElemType>& matrices)
 {
-    Matrix<ElemType>* idx2cls = matrices.GetInputMatrixPtr(STRIDX2CLS);
-    if (idx2cls == nullptr)
+    if (!matrices.HasInput(STRIDX2CLS))
         return;
 
     if (m_idx2clsRead)
         return;
+
+    Matrix<ElemType>& idx2cls = matrices.GetInputMatrix(STRIDX2CLS);
 
     // populate local CPU matrix
     m_id2classLocal->SwitchToMatrixType(MatrixType::DENSE, matrixFormatDense, false);
@@ -1084,10 +1087,10 @@ void SequenceReader<ElemType>::GetInputToClass(StreamMinibatchInputs<ElemType>& 
     }
     m_id2classLocal->TransferFromDeviceToDevice(CPUDEVICE, curDevId, true, false, false);
 
-    int oldDeviceId = idx2cls->GetDeviceId();
+    int oldDeviceId = idx2cls.GetDeviceId();
     // caution, SetValue changes idx2cls from GPU to CPU, may change this behavior later
-    idx2cls->SetValue(*m_id2classLocal);
-    idx2cls->TransferFromDeviceToDevice(idx2cls->GetDeviceId(), oldDeviceId, true);
+    idx2cls.SetValue(*m_id2classLocal);
+    idx2cls.TransferFromDeviceToDevice(idx2cls.GetDeviceId(), oldDeviceId, true);
 
     m_idx2clsRead = true;
 }
@@ -2080,22 +2083,22 @@ template <class ElemType>
 void BatchSequenceReader<ElemType>::GetLabelOutput(StreamMinibatchInputs<ElemType>& matrices,
                                                    size_t mbStartSample, size_t actualmbsize)
 {
-    size_t j = 0;
-    Matrix<ElemType>* labels = matrices.GetInputMatrixPtr(m_labelsName[labelInfoOut]);
-    if (labels == nullptr)
+    if (!matrices.HasInput(m_labelsName[labelInfoOut]))
         return;
 
+    size_t j = 0;
+    Matrix<ElemType>& labels = matrices.GetInputMatrix(m_labelsName[labelInfoOut]);
     if (readerMode == ReaderMode::NCE)
-        labels->Resize(2 * (m_noiseSampleSize + 1), actualmbsize);
+        labels.Resize(2 * (m_noiseSampleSize + 1), actualmbsize);
     else if (readerMode == ReaderMode::Class)
-        labels->Resize(4, actualmbsize, false);
+        labels.Resize(4, actualmbsize, false);
     else
-        labels->Resize(1, actualmbsize, false);
+        labels.Resize(1, actualmbsize, false);
 
     // move to CPU since element-wise operation is expensive on GPU
-    int curDevId = labels->GetDeviceId();
-    labels->TransferFromDeviceToDevice(curDevId, CPUDEVICE, true, false, false);
-    assert(labels->GetCurrentMatrixLocation() == CPU);
+    int curDevId = labels.GetDeviceId();
+    labels.TransferFromDeviceToDevice(curDevId, CPUDEVICE, true, false, false);
+    assert(labels.GetCurrentMatrixLocation() == CPU);
 
     ElemType epsilon = (ElemType) 1e-6; // avoid all zero, although this is almost impossible.
 
@@ -2106,16 +2109,16 @@ void BatchSequenceReader<ElemType>::GetLabelOutput(StreamMinibatchInputs<ElemTyp
 
         // write sample value into output
         // This writes an index into a row vector. Which is wrong, we want a sparse one-hot vector.
-        labels->SetValue(0, j, (ElemType) wrd);
+        labels.SetValue(0, j, (ElemType) wrd);
 
         if (readerMode == ReaderMode::NCE)
         {
-            labels->SetValue(1, j, (ElemType) m_noiseSampler.logprob(wrd));
+            labels.SetValue(1, j, (ElemType) m_noiseSampler.logprob(wrd));
             for (size_t noiseid = 0; noiseid < m_noiseSampleSize; noiseid++)
             {
                 int wid = m_noiseSampler.sample();
-                labels->SetValue(2 * (noiseid + 1), j, (ElemType) wid);
-                labels->SetValue(2 * (noiseid + 1) + 1, j, -(ElemType) m_noiseSampler.logprob(wid));
+                labels.SetValue(2 * (noiseid + 1), j, (ElemType) wid);
+                labels.SetValue(2 * (noiseid + 1) + 1, j, -(ElemType) m_noiseSampler.logprob(wid));
             }
         }
         else if (readerMode == ReaderMode::Class)
@@ -2123,7 +2126,7 @@ void BatchSequenceReader<ElemType>::GetLabelOutput(StreamMinibatchInputs<ElemTyp
             int clsidx = idx4class[wrd];
             if (m_classSize > 0)
             {
-                labels->SetValue(1, j, (ElemType) clsidx);
+                labels.SetValue(1, j, (ElemType) clsidx);
 
                 // save the [begining ending_indx) of the class
                 size_t lft = (size_t) (*m_classInfoLocal)(0, clsidx);
@@ -2133,20 +2136,20 @@ void BatchSequenceReader<ElemType>::GetLabelOutput(StreamMinibatchInputs<ElemTyp
                     LogicError("LMSequenceReader::GetLabelOutput word %d should be at least equal to or larger than its class's left index %d; right index %d of its class should be larger or equal to left index %d of its class; word index %d should be smaller than its class's right index %d.\n",
                                (int) wrd, (int) lft, (int) rgt, (int) lft, (int) wrd, (int) rgt);
                 }
-                labels->SetValue(2, j, (*m_classInfoLocal)(0, clsidx)); // begining index of the class
-                labels->SetValue(3, j, (*m_classInfoLocal)(1, clsidx)); // end index of the class
+                labels.SetValue(2, j, (*m_classInfoLocal)(0, clsidx)); // begining index of the class
+                labels.SetValue(3, j, (*m_classInfoLocal)(1, clsidx)); // end index of the class
             }
         }
         else if (readerMode == ReaderMode::Softmax)
         {
             if (wrd == 0)
-                labels->SetValue(0, j, epsilon + (ElemType) wrd);
+                labels.SetValue(0, j, epsilon + (ElemType) wrd);
         }
         else if (readerMode == ReaderMode::Unnormalize)
         {
-            labels->SetValue(0, j, -(ElemType) wrd);
+            labels.SetValue(0, j, -(ElemType) wrd);
             if (wrd == 0)
-                labels->SetValue(0, j, -epsilon - (ElemType) wrd);
+                labels.SetValue(0, j, -epsilon - (ElemType) wrd);
         }
 
 #if 0   // This is fragile--if a line does not end with </s>, we will never get out of here. Instead, this is now set in GetMinibatchData().
@@ -2163,7 +2166,7 @@ void BatchSequenceReader<ElemType>::GetLabelOutput(StreamMinibatchInputs<ElemTyp
     }
     // send it back to the GPU if so desired
     if (curDevId != CPUDEVICE && readerMode != ReaderMode::Class)
-        labels->TransferFromDeviceToDevice(CPUDEVICE, curDevId, false, false, false);
+        labels.TransferFromDeviceToDevice(CPUDEVICE, curDevId, false, false, false);
 }
 
 #if 0

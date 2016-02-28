@@ -1409,7 +1409,7 @@ void HTKMLFReader<ElemType>::CopyMinibatchFromBufferToMatrix(
                 {
                     m_uttDerivBuffer->GetDerivative(m_minibatchUttInfo,
                                                     m_pMBLayout,
-                                                    matrices.GetInputMatrixPtr(iter->first)); // TODO: use a reference instead of a ptr
+                                                    &matrices.GetInputMatrix(iter->first)); // TODO: use a reference instead of a ptr
                 }
             }
             else if (m_nameToTypeMap[iter->first] == InputOutputTypes::readerObj)
@@ -1425,7 +1425,7 @@ void HTKMLFReader<ElemType>::CopyMinibatchFromBufferToMatrix(
                 else
                 {
                     m_uttDerivBuffer->GetObjective(m_minibatchUttInfo,
-                                                   matrices.GetInputMatrixPtr(iter->first)); // TODO: use a reference instead of a ptr
+                                                   &matrices.GetInputMatrix(iter->first)); // TODO: use a reference instead of a ptr
                 }
             }
         }
