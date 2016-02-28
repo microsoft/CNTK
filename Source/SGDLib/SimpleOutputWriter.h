@@ -326,6 +326,10 @@ public:
             totalEpochSamples += actualMBSize;
 
             fprintf(stderr, "Minibatch[%lu]: ActualMBSize = %lu\n", ++numMBsRun, actualMBSize);
+
+            // call DataEnd function in dataReader to do
+            // reader specific process if sentence ending is reached
+            dataReader.DataEnd();
         } // end loop over minibatches
 
         for (auto & onode : outputNodes)

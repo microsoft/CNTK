@@ -265,7 +265,7 @@ void DoWriteWordAndClassInfo(const ConfigParameters& config)
 
     ifstream fp(inputFile.c_str());
     if (!fp)
-        RuntimeError("Failed to open input file: ", inputFile.c_str());
+        RuntimeError("Failed to open input file: %s", inputFile.c_str());
     cerr << "Reading input file inputFile: " << inputFile << std::endl;
 
     if (nbrCls > 0)
