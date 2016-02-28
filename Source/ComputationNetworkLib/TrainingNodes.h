@@ -775,7 +775,7 @@ private:
         if (inputIndex != 1 && inputIndex != 2 && inputIndex != 3)
             InvalidArgument("ClassCrossEntropyWithSoftmaxNode criterion only takes with respect to input, weight to the input and class log posterior probability.");
 
-        ComputeSoftMaxPartial(); // BUGBUG: Does this need to be computed over again?
+        ComputeSoftMaxPartial(); // Note: Flag m_needRecomputeGradientToSoftmaxInput guards so that this computes only once.
 
         ForColumnsWithClass([&](size_t /*s*/, size_t /*t*/, const FrameRange& fr, size_t /*y_t*/, size_t c_t, size_t sz, size_t lft_bnd, size_t nbr_wrd)
         {
@@ -856,7 +856,7 @@ public:
 
         auto& functionValues = Value();
 
-        const size_t hdSize = Input(INPUTDATA)->GetSampleMatrixNumRows(); // hdSize
+        const size_t hdSize = Input(INPUTDATA)->GetSampleMatrixNumRows();
         assert(m_nbrCls == Input(CLASSPROBINDATA)->GetSampleMatrixNumRows());
 
         // compute the class posteriors

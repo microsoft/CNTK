@@ -222,12 +222,13 @@ void DoCommands(const ConfigParameters& config)
         {
             string thisAction = action[j];
 
+            // print a banner to visually separate each action in the log
             const char* delim = "##############################################################################";
             const char* prefix = "Action ";
             fprintf(stderr, "\n%s\n", delim);
-            fprintf(stderr, "#%*s#\n", strlen(delim) - 2, "");
-            fprintf(stderr, "# %s\"%s\"%*s #\n", prefix, thisAction.c_str(), strlen(delim) - strlen(prefix) - thisAction.size() - 6, "");
-            fprintf(stderr, "#%*s#\n", strlen(delim) - 2, "");
+            fprintf(stderr, "#%*s#\n", (int)(strlen(delim) - 2), "");
+            fprintf(stderr, "# %s\"%s\"%*s #\n", prefix, thisAction.c_str(), (int)(strlen(delim) - strlen(prefix) - thisAction.size() - 6), "");
+            fprintf(stderr, "#%*s#\n", (int)(strlen(delim) - 2), "");
             fprintf(stderr, "%s\n\n", delim);
 
             if (thisAction == "train" || thisAction == "trainRNN")

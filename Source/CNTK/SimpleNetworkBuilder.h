@@ -143,7 +143,7 @@ public:
         ConfigArray str_rnnType = config("rnnType", L"SIMPLENET");
 
         m_maOrder = config("maOrder", "0");
-        m_lookupTableOrder = config("lookupTableOrder", "0");
+        m_lookupTableOrder = config("lookupTableOrder", "0"); // TODO: What is this?
 
         ConfigArray sSizes = config("streamSizes", "");
         m_streamSizes = sSizes;

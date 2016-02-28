@@ -174,7 +174,7 @@ protected:
     void DisplayEvalStatistics(const size_t startMBNum, const size_t endMBNum, const size_t numSamplesLastMBs, const vector<ComputationNodeBasePtr>& evalNodes,
                                const vector<double>& evalResults, const vector<double>& evalResultsLastMBs, bool displayConvertedValue = false)
     {
-        fprintf(stderr, "Minibatch[%lu-%lu]: Samples Seen = %lu    ", startMBNum, endMBNum, numSamplesLastMBs);
+        fprintf(stderr, "Minibatch[%lu-%lu]: SamplesSeen = %lu    ", startMBNum, endMBNum, numSamplesLastMBs);
 
         for (size_t i = 0; i < evalResults.size(); i++)
         {

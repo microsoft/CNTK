@@ -414,7 +414,7 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
         double momentumAsTimeConstant = momentumPerSample == 0.0 ? 0.0
                                                                  : momentumPerSample >= 1.0 ? 0.0
                                                                                             : -1.0 / log(momentumPerSample);
-        fprintf(stderr, "Starting Epoch %d: learning rate per sample = %f  effective momentum = %f  momentum as time constant = %.1f samples\n",
+        fprintf(stderr, "\nStarting Epoch %d: learning rate per sample = %f  effective momentum = %f  momentum as time constant = %.1f samples\n",
                 i + 1, learnRatePerSample, MomentumPerMB(momentumPerSample, actualMinibatchSize), momentumAsTimeConstant);
 
         TrainOneEpoch(net,
@@ -1284,7 +1284,7 @@ bool SGD<ElemType>::PreCompute(ComputationNetworkPtr net,
 
     if (nodes.size() == 0)
     {
-        fprintf(stderr, "No PreCompute nodes found, skipping PreCompute step\n");
+        fprintf(stderr, "No PreCompute nodes found, skipping PreCompute step.\n");
         return false;
     }
 
