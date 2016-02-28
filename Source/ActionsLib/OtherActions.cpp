@@ -47,7 +47,6 @@ void DoCreateLabelMap(const ConfigParameters& config)
     ConfigParameters configSection(config(section));
     ConfigParameters readerConfig(configSection("reader"));
     readerConfig.Insert("allowMapCreation", "true");
-    DEVICEID_TYPE deviceId = CPUDEVICE;
     size_t minibatchSize = config(L"minibatchSize", "2048");
     int traceLevel = config(L"traceLevel", "0");
     std::vector<std::wstring> featureNames;
@@ -55,8 +54,8 @@ void DoCreateLabelMap(const ConfigParameters& config)
     GetFileConfigNames(readerConfig, featureNames, labelNames);
 
     // setup minibatch matrices
-    Matrix<ElemType> featuresMatrix(deviceId);
-    Matrix<ElemType> labelsMatrix(deviceId);
+    Matrix<ElemType> featuresMatrix(CPUDEVICE);
+    Matrix<ElemType> labelsMatrix(CPUDEVICE);
     std::map<std::wstring, Matrix<ElemType>*> matrices;
     matrices[featureNames[0]] = &featuresMatrix;
     if (labelNames.size() == 0)
@@ -244,13 +243,15 @@ struct compare_second
 template <typename ElemType>
 void DoWriteWordAndClassInfo(const ConfigParameters& config)
 {
-    string inputFile       = config(L"inputFile"); // training text file without <unk>
-    string outputWord2Cls  = config(L"outputWord2Cls");
-    string outputVocabFile = config(L"outputVocabFile");
-    string outputCls2Index = config(L"outputCls2Index");
     size_t vocabSize = config(L"vocabSize");
-    int nbrCls       = config(L"nbrClass", "0"); // TODO: why int and not size_t?
-    int cutoff       = config(L"cutoff", "1");
+    int nbrCls = config(L"nbrClass", "0"); // TODO: why int and not size_t?
+    int cutoff = config(L"cutoff", "1");
+
+    string inputFile = config(L"inputFile"); // training text file without <unk>
+    string outputVocabFile = config(L"outputVocabFile");
+    string outputWord2Cls  = nbrCls > 0 ? config(L"outputWord2Cls")  : string();
+    string outputCls2Index = nbrCls > 0 ? config(L"outputCls2Index") : string();
+
     string unkWord       = config(L"unk", "<unk>");
     string beginSequence = config(L"beginSequence", "");
     string endSequence   = config(L"endSequence",   "");
@@ -259,11 +260,35 @@ void DoWriteWordAndClassInfo(const ConfigParameters& config)
     if (beginSequence.empty() || endSequence.empty())
         InvalidArgument("Please specify beginSequence and endSequence.");
 
-    DEVICEID_TYPE deviceId = CPUDEVICE;
-    Matrix<ElemType> wrd2cls(deviceId);
-    Matrix<ElemType> cls2idx(deviceId);
+    std::cerr     << "Vocabulary file:    " << outputVocabFile << std::endl;
+    if (nbrCls > 0)
+    {
+        std::cerr << "Word-to-class map:  " << outputWord2Cls  << std::endl;
+        std::cerr << "Class-to-index map: " << outputCls2Index << std::endl;
+    }
+    std::cerr << std::endl;
+    
+    // check whether we are already up-to-date
+    bool makeMode = config(L"makeMode", true);
+    if (makeMode)
+    {
+        bool done = msra::files::fuptodate(s2ws(outputVocabFile), s2ws(inputFile), /*inputRequired=*/false);
+        if (nbrCls > 0)
+        {
+            done &= msra::files::fuptodate(s2ws(outputWord2Cls),  s2ws(inputFile), /*inputRequired=*/false);
+            done &= msra::files::fuptodate(s2ws(outputCls2Index), s2ws(inputFile), /*inputRequired=*/false);
+        }
+        if (done)
+        {
+            std::cerr << "All output files up to date.\n";
+            return;
+        }
+    }
 
-    ifstream fp(inputFile.c_str());
+    Matrix<ElemType> wrd2cls(CPUDEVICE);
+    Matrix<ElemType> cls2idx(CPUDEVICE);
+
+    ifstream fp(inputFile.c_str()); // TODO: use class File, as to support pipes
     if (!fp)
         RuntimeError("Failed to open input file: %s", inputFile.c_str());
     cerr << "Reading input file inputFile: " << inputFile << std::endl;
@@ -420,7 +445,7 @@ void DoWriteWordAndClassInfo(const ConfigParameters& config)
         ofvocab << "     " << i << "\t     " << m_count[i] << "\t" << m_words[i] << "\t" << clsIdx << std::endl;
     }
     ofvocab.close();
-    std::cerr << "Created vocabulary file with " << v_count.size() << " entries: " << outputVocabFile << "\n";
+    std::cerr << "Created vocabulary file with " << v_count.size() << " entries.\n";
 
     if (nbrCls > 0)
     {
@@ -433,7 +458,7 @@ void DoWriteWordAndClassInfo(const ConfigParameters& config)
         for (size_t r = 0; r < wrd2cls.GetNumRows(); r++)
             owfp << (int) wrd2cls(r, 0) << endl;
         owfp.close();
-        std::cerr << "Created word-to-class map with " << wrd2cls.GetNumRows() << " entries: " << outputWord2Cls << "\n";
+        std::cerr << "Created word-to-class map with " << wrd2cls.GetNumRows() << " entries.\n";
 
         msra::files::make_intermediate_dirs(s2ws(outputCls2Index));
         ofstream ocfp(outputCls2Index.c_str());
@@ -442,7 +467,7 @@ void DoWriteWordAndClassInfo(const ConfigParameters& config)
         for (size_t r = 0; r < cls2idx.GetNumRows(); r++)
             ocfp << (int) cls2idx(r, 0) << endl;
         ocfp.close();
-        std::cerr << "Created class-to-index map with " << cls2idx.GetNumRows() << " entries: " << outputCls2Index << "\n";
+        std::cerr << "Created class-to-index map with " << cls2idx.GetNumRows() << " entries.\n";
     }
 }
 

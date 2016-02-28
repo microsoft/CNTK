@@ -21,7 +21,6 @@ modelPath  = "$ModelDir$/rnn.dnn"
 # uncomment the following line to write logs to a file
 #stderr=$OutputDir$/rnnOutput
 
-type = "double"    # ??? what is this?
 numCPUThreads = 1
 
 confVocabSize = 10000
@@ -55,9 +54,9 @@ writeWordAndClassInfo = [
 
 train = [
     action = "train"
-    minibatchSize = 2048
+    minibatchSize = 128:512
     traceLevel = 1
-    epochSize = 0
+    epochSize = 0               # (for quick tests, this can be overridden with something small)
     recurrentLayer = 1
     defaultHiddenActivity = 0.1
     useValidation = true
@@ -73,8 +72,8 @@ train = [
         addDropoutNodes = false
         applyMeanVarNorm = false
         uniformInit = true
-        lookupTableOrder = 1
-        
+        lookupTableOrder = 1        # TODO: document what this means
+
         # these are for the class information for class-based language modeling
         vocabSize = "$confVocabSize$"
         nbrClass  = "$confClassSize$"
@@ -85,7 +84,7 @@ train = [
         momentumPerMB = 0
         gradientClippingWithTruncation = true
         clippingThresholdPerSample = 15.0
-        maxEpochs = 16                      # BUGBUG: this seems to be ignored?
+        maxEpochs = 16
         numMBsToShowResult = 100
         gradUpdateType = "none"
         loadBestModel = true
@@ -109,9 +108,8 @@ train = [
     reader = [
         readerType = "LMSequenceReader"
         randomize = "none"              # BUGBUG: This is currently ignored
-        nbruttsineachrecurrentiter = 10 # note: real-life configurations would use something much larger
-        #nbruttsineachrecurrentiter = 0  # means fill up the minibatch with as many parallel sequences as fit
-        #cacheBlockSize = 2000000        # just load it all
+        nbruttsineachrecurrentiter = 0  # means fill up the minibatch with as many parallel sequences as fit
+        cacheBlockSize = 2000000        # load it all
 
         # word class info
         wordclass = "$ModelDir$/vocab.txt"
