@@ -67,6 +67,11 @@ COMMAND:     configFile=$(SolutionDir)Tests/EndToEndTests/Image/QuickE2E/cntk.cn
 
 COMMAND:     configFile=$(SolutionDir)Examples/Other/Simple2d/Config/Simple.cntk  RunDir=$(SolutionDir)Examples/Other/Simple2d/_run  DataDir=$(SolutionDir)Examples/Other/Simple2d/Data  ConfigDir=$(SolutionDir)Examples/Other/Simple2d/Config  stderr=$(SolutionDir)Examples/Other/Simple2d/_run/Simple.log  DeviceId=0  useCuDnn=false   makeMode=false
 
+--- Text/RNN:
+
+COMMAND:    configFile=$(SolutionDir)Examples/Text/PennTreebank/Config/rnn.cntk  RunDir=$(SolutionDir)Examples/Text/PennTreebank/_run  RootDir=$(SolutionDir)Examples/Text/PennTreebank/_run  DataDir=$(SolutionDir)Examples/Text/PennTreebank/Data  ConfigDir=$(SolutionDir)Examples/Text/PennTreebank/Config  stderr=$(SolutionDir)Examples/Text/PennTreebank/_run/Simple.log  train=[SGD=[maxEpochs=1]]  train=[epochSize=2048]]  confVocabSize=1000  DeviceId=0  makeMode=false
+# append this for small set: trainFile=ptb.small.train.txt  validFile=ptb.small.valid.txt testFile=ptb.small.test.txt
+
 Simple test
 -----------
 

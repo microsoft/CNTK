@@ -165,12 +165,12 @@ void DoCommands(const ConfigParameters& config)
 
     if (numCPUThreads > 0)
     {
-        std::cerr << "Using " << numCPUThreads << " CPU threads" << endl;
+        std::cerr << "Using " << numCPUThreads << " CPU threads." << endl;
     }
 
     bool progressTracing = config(L"progressTracing", false);
 
-    // temporary hack to prevent users from failling for a small breaking change related to the "truncated" flag (will be redone bigger and better some day)
+    // temporary hack to prevent users from failing due to a small breaking change related to the "truncated" flag (will be redone bigger and better some day)
     DisableLegacyUsage(config, command);
 
     // summarize command info upfront in the log and stdout
@@ -220,69 +220,81 @@ void DoCommands(const ConfigParameters& config)
         // determine the action to perform, and do it
         for (int j = 0; j < action.size(); j++)
         {
-            if (action[j] == "train" || action[j] == "trainRNN")
+            string thisAction = action[j];
+
+            const char* delim = "##############################################################################";
+            const char* prefix = "Action ";
+            fprintf(stderr, "\n%s\n", delim);
+            fprintf(stderr, "#%*s#\n", strlen(delim) - 2, "");
+            fprintf(stderr, "# %s\"%s\"%*s #\n", prefix, thisAction.c_str(), strlen(delim) - strlen(prefix) - thisAction.size() - 6, "");
+            fprintf(stderr, "#%*s#\n", strlen(delim) - 2, "");
+            fprintf(stderr, "%s\n\n", delim);
+
+            if (thisAction == "train" || thisAction == "trainRNN")
             {
                 std::cerr << "CNTKCommandTrainBegin: " + command[i] << endl;
                 DoTrain<ConfigParameters, ElemType>(commandParams);
                 std::cerr << "CNTKCommandTrainEnd: " + command[i] << endl;
                 fullEpochsOffset += GetMaxEpochs(commandParams);
             }
-            else if (action[j] == "adapt")
+            else if (thisAction == "adapt")
             {
                 DoAdapt<ElemType>(commandParams);
             }
-            else if (action[j] == "test" || action[j] == "eval")
+            else if (thisAction == "test" || thisAction == "eval")
             {
                 DoEval<ElemType>(commandParams);
             }
-            else if (action[j] == "edit")
+            else if (thisAction == "edit")
             {
                 DoEdit<ElemType>(commandParams);
             }
-            else if (action[j] == "cv")
+            else if (thisAction == "cv")
             {
                 DoCrossValidate<ElemType>(commandParams);
             }
-            else if (action[j] == "write")
+            else if (thisAction == "write")
             {
                 DoWriteOutput<ElemType>(commandParams);
             }
-            else if (action[j] == "devtest")
+            else if (thisAction == "devtest")
             {
                 TestCn<ElemType>(config); // for "devtest" action pass the root config instead
             }
-            else if (action[j] == "dumpnode")
+            else if (thisAction == "dumpnode")
             {
                 DumpNodeInfo<ElemType>(commandParams);
             }
-            else if (action[j] == "convertdbn")
+            else if (thisAction == "convertdbn")
             {
                 DoConvertFromDbn<ElemType>(commandParams);
             }
-            else if (action[j] == "exportdbn")
+            else if (thisAction == "exportdbn")
             {
                 DoExportToDbn<ElemType>(commandParams);
             }
-            else if (action[j] == "createLabelMap")
+            else if (thisAction == "createLabelMap")
             {
                 DoCreateLabelMap<ElemType>(commandParams);
             }
-            else if (action[j] == "writeWordAndClass")
+            else if (thisAction == "writeWordAndClass")
             {
                 DoWriteWordAndClassInfo<ElemType>(commandParams);
             }
-            else if (action[j] == "plot")
+            else if (thisAction == "plot")
             {
                 DoTopologyPlot<ElemType>(commandParams);
             }
-            else if (action[j] == "SVD")
+            else if (thisAction == "SVD")
             {
                 DoParameterSVD<ElemType>(commandParams);
             }
             else
             {
-                RuntimeError("unknown action: %s  in command set: %s", action[j].c_str(), command[i].c_str());
+                RuntimeError("unknown action: %s  in command set: %s", thisAction.c_str(), command[i].c_str());
             }
+
+            fprintf(stderr, "\nAction \"%s\" complete.\n\n", thisAction.c_str());
 
             NDLScript<ElemType> ndlScript;
             ndlScript.ClearGlobal(); // clear global macros between commands
@@ -589,7 +601,7 @@ int wmainOldCNTKConfig(int argc, wchar_t* argv[]) // called from wmain which is 
     config.dumpWithResolvedVariables();
     fprintf(stderr, "<<<<<<<<<<<<<<<<<<<< PROCESSED CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<\n");
 
-    fprintf(stderr, "command: ");
+    fprintf(stderr, "Commands: ");
     for (int i = 0; i < command.size(); i++)
     {
         fprintf(stderr, "%s ", command[i].c_str());
@@ -603,7 +615,7 @@ int wmainOldCNTKConfig(int argc, wchar_t* argv[]) // called from wmain which is 
         type = config(L"type", "float");
     }
 
-    fprintf(stderr, "\nprecision = %s\n", type.c_str());
+    fprintf(stderr, "\nPrecision = \"%s\"\n", type.c_str());
     if (type == "float")
     {
         DoCommands<float>(config);
@@ -614,7 +626,7 @@ int wmainOldCNTKConfig(int argc, wchar_t* argv[]) // called from wmain which is 
     }
     else
     {
-        RuntimeError("invalid precision specified: %s", type.c_str());
+        RuntimeError("CNTK: Invalid precision string: \"%s\", must be \"float\" or \"double\"", type.c_str());
     }
 
     // still here , write a DoneFile if necessary
