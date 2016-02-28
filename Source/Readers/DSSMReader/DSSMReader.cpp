@@ -329,9 +329,9 @@ bool DSSMReader<ElemType>::GetMinibatch(StreamMinibatchInputs<ElemType>& matrice
     // In my unit test example, the input matrices contain 5: N, S, fD, fQ and labels
     // Both N and S serve as a pre-set constant values, no need to change them
     // In this node, we only need to fill in these matrices: fD, fQ, labels
-    Matrix<ElemType>& featuresQ = *matrices[m_featuresNameQuery];
-    Matrix<ElemType>& featuresD = *matrices[m_featuresNameDoc];
-    Matrix<ElemType>& labels = *matrices[m_labelsName]; // will change this part later.
+    Matrix<ElemType>& featuresQ = matrices.GetInputMatrix(m_featuresNameQuery);
+    Matrix<ElemType>& featuresD = matrices.GetInputMatrix(m_featuresNameDoc);
+    Matrix<ElemType>& labels    = matrices.GetInputMatrix(m_labelsName); // will change this part later.  TODO: How?
 
     size_t actualMBSize = (m_readNextSample + m_mbSize > m_totalSamples) ? m_totalSamples - m_readNextSample : m_mbSize;
 

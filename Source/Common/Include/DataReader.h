@@ -55,7 +55,34 @@ class StreamMinibatchInputs
     typedef map<std::wstring, Matrix<ElemType>*> Map;
     Map matrices;
 public:
-    Matrix<ElemType>*& operator[](const std::wstring& nodeName) { return matrices[nodeName]; }
+    void AddInput(const std::wstring& nodeName, Matrix<ElemType>* matrix) { AddInputMatrix(nodeName, matrix); } // use this where entire entry is copied (UCIFastReader::GetMinibatch() async)
+    // TODO: GetInput() will return a struct
+    // access to matrix entries
+    void AddInputMatrix(const std::wstring& nodeName, Matrix<ElemType>* matrix) { matrices[nodeName] = matrix; }
+    Matrix<ElemType>* GetInputMatrixPtr(const std::wstring& nodeName) // gets matrix, or NULL if no such entry
+    {
+        auto iter = matrices.find(nodeName);
+        if (iter != matrices.end())
+            return iter->second;
+        else
+            return nullptr;
+    }
+    Matrix<ElemType>& GetInputMatrix (const std::wstring& nodeName)
+    {
+        auto* matrixp = GetInputMatrixPtr(nodeName);
+        if (!matrixp)
+            LogicError("GetInputMatrix: Attempted to access non-existent input stream '%ls'", nodeName.c_str());
+        else
+            return *matrixp;
+    }
+    // some stuff we should get rid off
+    void FreeInputMatrix(const std::wstring& nodeName) // called by DecimateMinibatch()
+    {
+        delete matrices[nodeName];
+        matrices[nodeName] = nullptr; // TODO: change ownership handling to using shared_ptrs
+    }
+    // iterating
+    // TODO: Abstract this.
     typename Map::iterator begin() { return matrices.begin(); }
     typename Map::iterator end()   { return matrices.end(); }
     typename Map::iterator find(const std::wstring& nodeName) { return matrices.find(nodeName); }

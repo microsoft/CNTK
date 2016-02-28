@@ -119,8 +119,8 @@ void TestReader(const ConfigParameters& configBase)
     Matrix<ElemType> featuresMatrix(deviceId);
     Matrix<ElemType> labelsMatrix(deviceId);
     StreamMinibatchInputs<ElemType> matrices;
-    matrices[featureNames[0]] = &featuresMatrix;
-    matrices[labelNames[0]] = &labelsMatrix;
+    matrices.AddInputMatrix(featureNames[0], &featuresMatrix);
+    matrices.AddInputMatrix(labelNames[0]  , &labelsMatrix);
 
     auto start = std::chrono::system_clock::now();
     int epochs = config("maxEpochs");
@@ -131,8 +131,8 @@ void TestReader(const ConfigParameters& configBase)
         int i = 0;
         while (dataReader.GetMinibatch(matrices))
         {
-            Matrix<ElemType>& features = *matrices[featureNames[0]];
-            Matrix<ElemType>& labels = *matrices[labelNames[0]];
+            Matrix<ElemType>& features = matrices.GetInputMatrix(featureNames[0]);
+            Matrix<ElemType>& labels   = matrices.GetInputMatrix(labelNames[0]);
 
             if (labels.GetNumRows() == 0)
             {

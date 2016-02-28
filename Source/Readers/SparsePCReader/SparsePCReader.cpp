@@ -282,7 +282,7 @@ bool SparsePCReader<ElemType>::GetMinibatch(StreamMinibatchInputs<ElemType>& mat
     for (int i = 0; i < m_featureCount; i++)
     {
         m_colIndices[i][j] = currIndex[i];
-        Matrix<ElemType>& features = *matrices[m_featureNames[i]];
+        Matrix<ElemType>& features = matrices.GetInputMatrix(m_featureNames[i]);
 
         if (features.GetFormat() != MatrixFormat::matrixFormatSparseCSC)
             features.SwitchToMatrixType(MatrixType::SPARSE, MatrixFormat::matrixFormatSparseCSC, false);
@@ -293,9 +293,7 @@ bool SparsePCReader<ElemType>::GetMinibatch(StreamMinibatchInputs<ElemType>& mat
     if (m_returnDense || m_doGradientCheck)
     {
         for (int i = 0; i < m_featureCount; i++)
-        {
-            (*matrices[m_featureNames[i]]).SwitchToMatrixType(MatrixType::DENSE, MatrixFormat::matrixFormatDense, true);
-        }
+            matrices.GetInputMatrix(m_featureNames[i]).SwitchToMatrixType(MatrixType::DENSE, MatrixFormat::matrixFormatDense, true);
     }
 
     if (labels)

@@ -71,7 +71,7 @@ private:
         StreamMinibatchInputs<ElemType> inputMatrices;
 
         for (auto& inode : inputNodes)
-            inputMatrices[inode->NodeName()] = &dynamic_pointer_cast<ComputationNode<ElemType>>(inode)->Value();
+            inputMatrices.AddInputMatrix(inode->NodeName(), &dynamic_pointer_cast<ComputationNode<ElemType>>(inode)->Value());
 
         return inputMatrices;
     }
