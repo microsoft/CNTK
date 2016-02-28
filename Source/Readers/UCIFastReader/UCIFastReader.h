@@ -74,7 +74,7 @@ private:
     // Prefetching related fields
     bool m_prefetchEnabled;
     std::future<bool> m_pendingAsyncGetMinibatch;
-    std::map<std::wstring, std::unique_ptr<Matrix<ElemType>>> m_prefetchMatrices;
+    StreamMinibatchInputs<ElemType> m_prefetchMatrices;
 
     // Distributed reading related fields
     size_t m_subsetNum;

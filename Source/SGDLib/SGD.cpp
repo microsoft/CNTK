@@ -188,7 +188,7 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
     {
         auto& nodes = (pass == 0) ? featureNodes : labelNodes;
         for (const auto & node : nodes)
-            (*inputMatrices).AddInputMatrix(node->NodeName(), &dynamic_pointer_cast<ComputationNode<ElemType>>(node)->Value());
+            (*inputMatrices).AddInputMatrix(node->NodeName(), dynamic_pointer_cast<ComputationNode<ElemType>>(node)->ValuePtr());
     }
 
     // get hmm file for sequence training

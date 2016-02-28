@@ -76,10 +76,10 @@ public:
         auto& labelNodes = m_net->LabelNodes();
 
         StreamMinibatchInputs<ElemType> inputMatrices;
-        for (size_t i = 0; i < featureNodes.size(); i++)
-            inputMatrices.AddInputMatrix(featureNodes[i]->NodeName(), &dynamic_pointer_cast<ComputationNode<ElemType>>(featureNodes[i])->Value());
-        for (size_t i = 0; i < labelNodes.size(); i++)
-            inputMatrices.AddInputMatrix(labelNodes[i]->NodeName(),   &dynamic_pointer_cast<ComputationNode<ElemType>>(labelNodes[i])->Value());
+        for (auto& node : featureNodes)
+            inputMatrices.AddInputMatrix(node->NodeName(), node->As<ComputationNode<ElemType>>()->ValuePtr());
+        for (auto& node : labelNodes)
+            inputMatrices.AddInputMatrix(node->NodeName(), node->As<ComputationNode<ElemType>>()->ValuePtr());
 
         // evaluate through minibatches
         size_t totalEpochSamples = 0;

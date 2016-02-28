@@ -2165,6 +2165,8 @@ void BatchSequenceReader<ElemType>::GetLabelOutput(StreamMinibatchInputs<ElemTyp
 #endif
     }
     // send it back to the GPU if so desired
+    // We have a special hack here to keep it on the CPU because we know that something is inefficient later.
+    // TODO: No! Readers should not have such knowledge.
     if (curDevId != CPUDEVICE && readerMode != ReaderMode::Class)
         labels.TransferFromDeviceToDevice(CPUDEVICE, curDevId, false, false, false);
 }

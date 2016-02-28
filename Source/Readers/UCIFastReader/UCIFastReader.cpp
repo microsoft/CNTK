@@ -775,30 +775,28 @@ bool UCIFastReader<ElemType>::GetMinibatch(StreamMinibatchInputs<ElemType>& matr
         minibatchesRemaining = m_pendingAsyncGetMinibatch.get();
 
         // Now swap the m_prefetchedMatrices and parameter matrices
-        for (auto iter = matrices.begin(); iter != matrices.end(); ++iter)
+        for (auto& iter : matrices)
         {
-            if (m_prefetchMatrices.find(iter->first) == m_prefetchMatrices.end())
-                LogicError("GetMinibatch: No matching prefetch matrix found for matrix named %ls.", iter->first.c_str());
+            if (m_prefetchMatrices.find(iter.first) == m_prefetchMatrices.end())
+                LogicError("GetMinibatch: No matching prefetch matrix found for matrix named %ls.", iter.first.c_str());
 
-            // TODO: There are some ownership shenanigans going on here. Just change everything to shared_ptr, and we are good.
-            Matrix<ElemType>* prefetchMatrix = m_prefetchMatrices[iter->first].get();
-            std::swap(*(iter->second), *prefetchMatrix);
+            std::swap(*iter.second, m_prefetchMatrices.GetInputMatrix(iter.first)); // BUGBUG?: This swaps the matrix structures directly, messing with ownership. And are we sure it does not do deep copies for this?
+            //Matrix<ElemType>* prefetchMatrix = m_prefetchMatrices[iter->first].get();
+            //std::swap(*(iter->second), *prefetchMatrix);
         }
     }
     else
     {
         minibatchesRemaining = GetMinibatchImpl(matrices);
 
-        // Allocate prefetch matrices if we would be firing an async minibatch prefetch
+        // Allocate prefetch matrices if were firing an async minibatch prefetch
         if (minibatchesRemaining && m_prefetchEnabled)
         {
-            // DeAllocate the existing m_prefetchMatrices
+            // Deallocate the existing m_prefetchMatrices
             m_prefetchMatrices.clear();
 
             for (auto iter = matrices.begin(); iter != matrices.end(); ++iter)
-            {
-                m_prefetchMatrices[iter->first].reset(new Matrix<ElemType>(iter->second->GetDeviceId()));
-            }
+                m_prefetchMatrices.AddInputMatrix(iter->first, make_shared<Matrix<ElemType>>(iter->second->GetDeviceId()));
         }
     }
 
@@ -814,8 +812,8 @@ bool UCIFastReader<ElemType>::GetMinibatch(StreamMinibatchInputs<ElemType>& matr
  
             StreamMinibatchInputs<ElemType> prefetchMatrices;
             for (auto& iter : m_prefetchMatrices)
-                prefetchMatrices.AddInput(iter.first, iter.second.get());
-            // TODO: Why not just assign? Some ownership shenanigans going on here.
+                prefetchMatrices.AddInput(iter.first, iter.second);
+            // TODO: We may now be able to just use an assignment here.
  
             return GetMinibatchImpl(prefetchMatrices);
         });
@@ -1006,8 +1004,8 @@ bool UCIFastReader<ElemType>::GetMinibatchImpl(StreamMinibatchInputs<ElemType>& 
         auto labelEntry = matrices.find(m_labelsName);
         if (labelEntry != matrices.end())
         {
-            Matrix<ElemType>* labels = labelEntry->second;
-            if (labels != nullptr)
+            auto& labels = labelEntry->second;
+            if (labels)
                 labels->SetValue(m_labelDim, currSubsetSize, labels->GetDeviceId(), m_labelsBuffer.get() + (m_labelDim * currSubsetStartCol), matrixFlagNormal);
         }
     }

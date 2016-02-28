@@ -29,6 +29,7 @@
 #include "ScriptableObjects.h"
 #include <map>
 #include <string>
+#include <memory>
 
 // forward-declare these lattice-related types to avoid having to include and pollute everything with lattice-related headers
 namespace msra { namespace dbn {  class latticepair; class latticesource; } }
@@ -52,13 +53,13 @@ const size_t requestDataSize = randomizeAuto;
 template<class ElemType> // REMOVE THIS
 class StreamMinibatchInputs
 {
-    typedef map<std::wstring, Matrix<ElemType>*> Map;
+    typedef map<std::wstring, std::shared_ptr<Matrix<ElemType>>> Map;
     Map matrices;
 public:
-    void AddInput(const std::wstring& nodeName, Matrix<ElemType>* matrix) { AddInputMatrix(nodeName, matrix); } // use this where entire entry is copied (UCIFastReader::GetMinibatch() async)
+    void AddInput(const std::wstring& nodeName, std::shared_ptr<Matrix<ElemType>> matrix) { AddInputMatrix(nodeName, matrix); } // use this where entire entry is copied (UCIFastReader::GetMinibatch() async)
     // TODO: GetInput() will return a struct
     // access to matrix entries
-    void AddInputMatrix(const std::wstring& nodeName, Matrix<ElemType>* matrix) { matrices[nodeName] = matrix; }
+    void AddInputMatrix(const std::wstring& nodeName, std::shared_ptr<Matrix<ElemType>> matrix) { matrices[nodeName] = matrix; }
     bool HasInput(const std::wstring& nodeName) const { return matrices.find(nodeName) != matrices.end(); }
     Matrix<ElemType>& GetInputMatrix(const std::wstring& nodeName)
     {
@@ -70,8 +71,7 @@ public:
     // some stuff we should get rid off
     void FreeInputMatrix(const std::wstring& nodeName) // called by DecimateMinibatch()
     {
-        delete matrices[nodeName];
-        matrices[nodeName] = nullptr; // TODO: change ownership handling to using shared_ptrs
+        matrices[nodeName] = nullptr;
     }
     // iterating
     // TODO: Abstract this.
@@ -81,9 +81,10 @@ public:
     typename Map::const_iterator begin() const { return matrices.begin(); }
     typename Map::const_iterator end()   const { return matrices.end(); }
     typename Map::const_iterator find(const std::wstring& nodeName) const { return matrices.find(nodeName); }
+    void clear() { matrices.clear(); }
     // these are only used by test code:
-    void insert(std::pair<wstring, Matrix<ElemType>*> pair) { matrices.insert(pair); }
-    Matrix<ElemType>*& at(const std::wstring& nodeName) { return matrices.at(nodeName); }
+    void insert(std::pair<wstring, shared_ptr<Matrix<ElemType>>> pair) { matrices.insert(pair); }
+    shared_ptr<Matrix<ElemType>> at(const std::wstring& nodeName) { return matrices.at(nodeName); }
 };
 
 // Data Reader interface

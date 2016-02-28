@@ -143,7 +143,7 @@ public:
                 RuntimeError("No matrix data found for key '%ls', cannot continue", val.c_str());
             }
 
-            Matrix<ElemType>* matrix = iterIn->second;
+            auto& matrix = iterIn->second;
 
             // copy over the data
             std::vector<ElemType>* data = iter->second;

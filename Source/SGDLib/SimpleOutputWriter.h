@@ -49,9 +49,11 @@ private:
         return outputNodes;
     }
 
+    // collect all input nodes that outputNodes depend on
+    // TODO: This is rather generic, we should move this to a shared place. DataReaderHelpers.h?
     std::vector<ComputationNodeBasePtr> DetermineInputNodes(const std::vector<ComputationNodeBasePtr>& outputNodes)
     {
-        //use map to remove duplicated items
+        // use map to remove duplicated items
         std::set<ComputationNodeBasePtr> inputNodesMap;
         for (auto& onode : outputNodes)
         {
@@ -66,13 +68,13 @@ private:
         return inputNodes;
     }
 
+    // get StreamMinibatchInputs for a given set of input nodes
+    // TODO: This seems generic, we should have that in a shared place.
     StreamMinibatchInputs<ElemType> RetrieveInputMatrices(const std::vector<ComputationNodeBasePtr>& inputNodes)
     {
         StreamMinibatchInputs<ElemType> inputMatrices;
-
-        for (auto& inode : inputNodes)
-            inputMatrices.AddInputMatrix(inode->NodeName(), &dynamic_pointer_cast<ComputationNode<ElemType>>(inode)->Value());
-
+        for (auto& node : inputNodes)
+            inputMatrices.AddInputMatrix(node->NodeName(), node->As<ComputationNode<ElemType>>()->ValuePtr());
         return inputMatrices;
     }
 
@@ -85,7 +87,7 @@ public:
     void WriteOutput(IDataReader<ElemType>& dataReader, size_t mbSize, IDataWriter<ElemType>& dataWriter, const std::vector<std::wstring>& outputNodeNames, size_t numOutputSamples = requestDataSize, bool doUnitTest = false)
     {
         std::vector<ComputationNodeBasePtr> outputNodes = DetermineOutputNodes(outputNodeNames);
-        std::vector<ComputationNodeBasePtr> inputNodes = DetermineInputNodes(outputNodes);
+        std::vector<ComputationNodeBasePtr> inputNodes  = DetermineInputNodes(outputNodes);
 
         // allocate memory for forward computation
         m_net->AllocateAllMatrices({}, outputNodes, nullptr);
@@ -116,7 +118,7 @@ public:
             {
                 std::map<std::wstring, void*, nocase_compare> inputMatricesUnitTest;
                 for (auto iter = inputMatrices.begin(); iter != inputMatrices.end(); iter++)
-                    inputMatricesUnitTest[iter->first] = (void*) (iter->second);
+                    inputMatricesUnitTest[iter->first] = (void*) iter->second.get();  // BUGBUG: void* are evil
                 dataWriter.SaveData(0, inputMatricesUnitTest, actualMBSize, actualMBSize, 0);
             }
             else
