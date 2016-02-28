@@ -446,8 +446,8 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
         }
 
         fprintf(stderr,
-                "Finished Epoch[%2d of %d]: [Training Set] TrainLossPerSample = %.8g; ",
-                i + 1, (int) m_maxEpochs, epochCriterion);
+                "Finished Epoch[%2d of %d]: [Training Set] TrainLossPerSample = %.8g; TotalSamplesSeen = %d; ",
+                i + 1, (int)m_maxEpochs, epochCriterion, (int)totalSamplesSeen);
         m_lastFinishedEpochTrainLoss = epochCriterion;
         if (epochEvalErrors.size() == 0) // no eval criterion, only train criterion itself
         {
@@ -709,7 +709,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                                     std::list<Matrix<ElemType>>& smoothedGradients,
                                     /*out*/ double& epochCriterion,
                                     /*out*/ std::vector<double>& epochEvalErrors,
-                                    /*out*/ size_t& totalSamplesSeen,
+                                    /*in/out*/ size_t& totalSamplesSeen,
                                     std::string prefixMsg)
 {
     double totalTimeInMBs = 0; // use double since timer has sub-microsecond time resolution

@@ -5,23 +5,23 @@
 RootDir = ".."
 
 ConfigDir = "$RootDir$/Config"
-DataDir = "$RootDir$/Data"
+DataDir   = "$RootDir$/Data"
 OutputDir = "$RootDir$/Output"
-ModelDir = "$OutputDir$/Models"
+ModelDir  = "$OutputDir$/Models"
 
 # deviceId=-1 for CPU, >=0 for GPU devices, "auto" chooses the best GPU, or CPU if no usable GPU is available
 deviceId = "auto"
 
-command = writeWordAndClassInfo:train:test
+command = writeWordAndClassInfo:train:test #:write
 
-precision = "float"
+precision  = "float"
 traceLevel = 1
-modelPath = "$ModelDir$/rnn.dnn"
+modelPath  = "$ModelDir$/rnn.dnn"
 
 # uncomment the following line to write logs to a file
 #stderr=$OutputDir$/rnnOutput
 
-type = double
+type = "double"    # ??? what is this?
 numCPUThreads = 1
 
 confVocabSize = 10000
@@ -29,13 +29,19 @@ confClassSize = 50
 
 trainFile = "ptb.train.txt"
 validFile = "ptb.valid.txt"
-testFile = "ptb.test.txt"
+testFile  = "ptb.test.txt"
+
+#######################################
+#  PREPARATION CONFIG                 #
+#######################################
 
 writeWordAndClassInfo = [
     action = "writeWordAndClass"
     inputFile = "$DataDir$/$trainFile$"
+    beginSequence = "</s>"
+    endSequence   = "</s>"
     outputVocabFile = "$ModelDir$/vocab.txt"
-    outputWord2Cls = "$ModelDir$/word2cls.txt"
+    outputWord2Cls  = "$ModelDir$/word2cls.txt"
     outputCls2Index = "$ModelDir$/cls2idx.txt"
     vocabSize = "$confVocabSize$"
     nbrClass = "$confClassSize$"
@@ -71,7 +77,7 @@ train = [
         
         # these are for the class information for class-based language modeling
         vocabSize = "$confVocabSize$"
-        nbrClass = "$confClassSize$"
+        nbrClass  = "$confClassSize$"
     ]
 
     SGD = [
@@ -103,8 +109,8 @@ train = [
 
     reader = [
         readerType = "LMSequenceReader"
-        randomize = "none"
-        nbruttsineachrecurrentiter = 10
+        randomize = "none"              # BUGBUG: This is currently ignored
+        nbruttsineachrecurrentiter = 10 # note: real-life configurations would use something much larger
 
         # word class info
         wordclass = "$ModelDir$/vocab.txt"
@@ -207,6 +213,7 @@ train = [
         ]
     ]
 
+    # if a cvReader section is specified, SGD will use this to compute the CV criterion
     cvReader = [
         # reader to use
         readerType = "LMSequenceReader"
