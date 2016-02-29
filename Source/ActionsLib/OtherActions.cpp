@@ -56,7 +56,7 @@ void DoCreateLabelMap(const ConfigParameters& config)
     // setup minibatch matrices
     auto featuresMatrix = make_shared<Matrix<ElemType>>(CPUDEVICE);
     auto labelsMatrix   = make_shared<Matrix<ElemType>>(CPUDEVICE);
-    StreamMinibatchInputs<ElemType> matrices;
+    StreamMinibatchInputs matrices;
     matrices.AddInputMatrix(featureNames[0], featuresMatrix);
     if (labelNames.size() == 0)
         RuntimeError("CreateLabelMap: no labels found to process");
@@ -91,7 +91,7 @@ void DoCreateLabelMap(const ConfigParameters& config)
         int count = 0;
         while (dataReader.GetMinibatch(matrices))
         {
-            Matrix<ElemType>& features = matrices.GetInputMatrix(featureNames[0]);
+            Matrix<ElemType>& features = matrices.GetInputMatrix<ElemType>(featureNames[0]);
             count += features.GetNumCols();
             if (traceLevel > 1)
                 fprintf(stderr, "."); // progress meter

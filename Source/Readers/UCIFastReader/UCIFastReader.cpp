@@ -765,7 +765,7 @@ void UCIFastReader<ElemType>::StoreLabel(ElemType& labelStore, const LabelType& 
 //             [out] each matrix resized if necessary containing data.
 // returns - true if there are more minibatches, false if no more minibatchs remain
 template <class ElemType>
-bool UCIFastReader<ElemType>::GetMinibatch(StreamMinibatchInputs<ElemType>& matrices)
+bool UCIFastReader<ElemType>::GetMinibatch(StreamMinibatchInputs& matrices)
 {
     bool minibatchesRemaining = true;
     if (m_pendingAsyncGetMinibatch.valid())
@@ -780,7 +780,7 @@ bool UCIFastReader<ElemType>::GetMinibatch(StreamMinibatchInputs<ElemType>& matr
             if (m_prefetchMatrices.find(iter.first) == m_prefetchMatrices.end())
                 LogicError("GetMinibatch: No matching prefetch matrix found for matrix named %ls.", iter.first.c_str());
 
-            std::swap(*iter.second, m_prefetchMatrices.GetInputMatrix(iter.first)); // BUGBUG?: This swaps the matrix structures directly, messing with ownership. And are we sure it does not do deep copies for this?
+            std::swap(matrices.GetInputMatrix<ElemType>(iter.first), m_prefetchMatrices.GetInputMatrix<ElemType>(iter.first)); // BUGBUG?: This swaps the matrix structures directly, messing with ownership. And are we sure it does not do deep copies for this?
             //Matrix<ElemType>* prefetchMatrix = m_prefetchMatrices[iter->first].get();
             //std::swap(*(iter->second), *prefetchMatrix);
         }
@@ -795,22 +795,22 @@ bool UCIFastReader<ElemType>::GetMinibatch(StreamMinibatchInputs<ElemType>& matr
             // Deallocate the existing m_prefetchMatrices
             m_prefetchMatrices.clear();
 
-            for (auto iter = matrices.begin(); iter != matrices.end(); ++iter)
-                m_prefetchMatrices.AddInputMatrix(iter->first, make_shared<Matrix<ElemType>>(iter->second->GetDeviceId()));
+            for (auto& iter : matrices)
+                m_prefetchMatrices.AddInputMatrix(iter.first, make_shared<Matrix<ElemType>>(iter.second->GetDeviceId()));
         }
     }
 
     // Fire a new prefetch if there are any minibatches remaining
     if (minibatchesRemaining && m_prefetchEnabled)
     {
-        Matrix<ElemType>& features = matrices.GetInputMatrix(m_featuresName);
+        Matrix<ElemType>& features = matrices.GetInputMatrix<ElemType>(m_featuresName);
         int deviceId = features.GetDeviceId();
         m_pendingAsyncGetMinibatch = std::async(std::launch::async, [this, deviceId]()
         {
             // Set the device since this will execute on a new thread
             Matrix<ElemType>::SetDevice(deviceId);
  
-            StreamMinibatchInputs<ElemType> prefetchMatrices;
+            StreamMinibatchInputs prefetchMatrices;
             for (auto& iter : m_prefetchMatrices)
                 prefetchMatrices.AddInput(iter.first, iter.second);
             // TODO: We may now be able to just use an assignment here.
@@ -827,7 +827,7 @@ bool UCIFastReader<ElemType>::GetMinibatch(StreamMinibatchInputs<ElemType>& matr
 //             [out] each matrix resized if necessary containing data.
 // returns - true if there are more minibatches, false if no more minibatchs remain
 template <class ElemType>
-bool UCIFastReader<ElemType>::GetMinibatchImpl(StreamMinibatchInputs<ElemType>& matrices)
+bool UCIFastReader<ElemType>::GetMinibatchImpl(StreamMinibatchInputs& matrices)
 {
     if (m_cachingReader)
     {
@@ -837,7 +837,7 @@ bool UCIFastReader<ElemType>::GetMinibatchImpl(StreamMinibatchInputs<ElemType>& 
     if (matrices.find(m_featuresName) == matrices.end())
         RuntimeError("Features matrix not found in config file, there should be a section '%ls=[...]' in the configuration file.", m_featuresName.c_str());
 
-    Matrix<ElemType>& features = matrices.GetInputMatrix(m_featuresName);
+    Matrix<ElemType>& features = matrices.GetInputMatrix<ElemType>(m_featuresName);
 
     // get out if they didn't call StartMinibatchLoop() first  --BUGBUG: We should throw in that case.
     if (m_mbSize == 0)
@@ -1001,12 +1001,10 @@ bool UCIFastReader<ElemType>::GetMinibatchImpl(StreamMinibatchInputs<ElemType>& 
     features.SetValue(m_featureCount, currSubsetSize, features.GetDeviceId(), m_featuresBuffer.get() + (m_featureCount * currSubsetStartCol), matrixFlagNormal);
     if (m_labelType != labelNone)
     {
-        auto labelEntry = matrices.find(m_labelsName);
-        if (labelEntry != matrices.end())
+        if (matrices.HasInput(m_labelsName))
         {
-            auto& labels = labelEntry->second;
-            if (labels)
-                labels->SetValue(m_labelDim, currSubsetSize, labels->GetDeviceId(), m_labelsBuffer.get() + (m_labelDim * currSubsetStartCol), matrixFlagNormal);
+            auto& labels = matrices.GetInputMatrix<ElemType>(m_labelsName);
+            labels.SetValue(m_labelDim, currSubsetSize, labels.GetDeviceId(), m_labelsBuffer.get() + (m_labelDim * currSubsetStartCol), matrixFlagNormal);
         }
     }
 

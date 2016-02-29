@@ -207,7 +207,7 @@ void SparsePCReader<ElemType>::StartMinibatchLoop(size_t mbSize, size_t /*epoch*
 //             [out] each matrix resized if necessary containing data.
 // returns - true if there are more minibatches, false if no more minibatchs remain
 template <class ElemType>
-bool SparsePCReader<ElemType>::GetMinibatch(StreamMinibatchInputs<ElemType>& matrices)
+bool SparsePCReader<ElemType>::GetMinibatch(StreamMinibatchInputs& matrices)
 {
     // get out if they didn't call StartMinibatchLoop() first
     if (m_miniBatchSize == 0)
@@ -220,12 +220,10 @@ bool SparsePCReader<ElemType>::GetMinibatch(StreamMinibatchInputs<ElemType>& mat
     if (m_currOffset >= m_filePositionMax)
         return false;
 
-    shared_ptr<Matrix<ElemType>> labels; // labels to return, or NULL if no labels in matrix set
-    auto labelEntry = matrices.find(m_labelName);
-    if (labelEntry != matrices.end())
+    Matrix<ElemType>* labels = nullptr; // labels to return, or NULL if no labels in matrix set
+    if (matrices.HasInput(m_labelName))
     {
-        labels = labelEntry->second;
-
+        labels = &matrices.GetInputMatrix<ElemType>(m_labelName);
         if (labels->GetNumRows() != 1)
             RuntimeError("SparsePCReader only supports single label value per column but the network expected %d.", (int) labels->GetNumRows());
     }
@@ -282,7 +280,7 @@ bool SparsePCReader<ElemType>::GetMinibatch(StreamMinibatchInputs<ElemType>& mat
     for (int i = 0; i < m_featureCount; i++)
     {
         m_colIndices[i][j] = currIndex[i];
-        Matrix<ElemType>& features = matrices.GetInputMatrix(m_featureNames[i]);
+        Matrix<ElemType>& features = matrices.GetInputMatrix<ElemType>(m_featureNames[i]);
 
         if (features.GetFormat() != MatrixFormat::matrixFormatSparseCSC)
             features.SwitchToMatrixType(MatrixType::SPARSE, MatrixFormat::matrixFormatSparseCSC, false);
@@ -293,7 +291,7 @@ bool SparsePCReader<ElemType>::GetMinibatch(StreamMinibatchInputs<ElemType>& mat
     if (m_returnDense || m_doGradientCheck)
     {
         for (int i = 0; i < m_featureCount; i++)
-            matrices.GetInputMatrix(m_featureNames[i]).SwitchToMatrixType(MatrixType::DENSE, MatrixFormat::matrixFormatDense, true);
+            matrices.GetInputMatrix<ElemType>(m_featureNames[i]).SwitchToMatrixType(MatrixType::DENSE, MatrixFormat::matrixFormatDense, true);
     }
 
     if (labels)

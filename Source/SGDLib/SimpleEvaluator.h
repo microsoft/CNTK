@@ -75,7 +75,7 @@ public:
         auto& featureNodes = m_net->FeatureNodes();
         auto& labelNodes = m_net->LabelNodes();
 
-        StreamMinibatchInputs<ElemType> inputMatrices;
+        StreamMinibatchInputs inputMatrices;
         for (auto& node : featureNodes)
             inputMatrices.AddInputMatrix(node->NodeName(), node->As<ComputationNode<ElemType>>()->ValuePtr());
         for (auto& node : labelNodes)

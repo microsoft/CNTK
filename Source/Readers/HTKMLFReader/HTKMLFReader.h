@@ -97,10 +97,10 @@ private:
     template <class ConfigRecordType>
     void PrepareForWriting(const ConfigRecordType& config);
 
-    bool GetMinibatchToTrainOrTest(StreamMinibatchInputs<ElemType>& matrices);
+    bool GetMinibatchToTrainOrTest(StreamMinibatchInputs& matrices);
     bool GetMinibatch4SEToTrainOrTest(std::vector<shared_ptr<const msra::dbn::latticepair>>& latticeinput, vector<size_t>& uids, vector<size_t>& boundaries, std::vector<size_t>& extrauttmap);
-    void fillOneUttDataforParallelmode(StreamMinibatchInputs<ElemType>& matrices, size_t startFr, size_t framenum, size_t channelIndex, size_t sourceChannelIndex); // TODO: PascalCase()
-    bool GetMinibatchToWrite(StreamMinibatchInputs<ElemType>& matrices);
+    void fillOneUttDataforParallelmode(StreamMinibatchInputs& matrices, size_t startFr, size_t framenum, size_t channelIndex, size_t sourceChannelIndex); // TODO: PascalCase()
+    bool GetMinibatchToWrite(StreamMinibatchInputs& matrices);
 
     void StartMinibatchLoopToTrainOrTest(size_t mbSize, size_t epoch, size_t subsetNum, size_t numSubsets, size_t requestedEpochSamples = requestDataSize);
     void StartMinibatchLoopToWrite(size_t mbSize, size_t epoch, size_t requestedEpochSamples = requestDataSize);
@@ -173,7 +173,7 @@ public:
 
     virtual void StartDistributedMinibatchLoop(size_t mbSize, size_t epoch, size_t subsetNum, size_t numSubsets, size_t requestedEpochSamples = requestDataSize) override;
 
-    virtual bool GetMinibatch(StreamMinibatchInputs<ElemType>& matrices);
+    virtual bool GetMinibatch(StreamMinibatchInputs& matrices);
     virtual const std::map<LabelIdType, LabelType>& GetLabelMapping(const std::wstring& sectionName);
     virtual void SetLabelMapping(const std::wstring& sectionName, const std::map<LabelIdType, LabelType>& labelMapping);
     virtual bool GetData(const std::wstring& sectionName, size_t numRecords, void* data, size_t& dataBufferSize, size_t recordStart = 0);

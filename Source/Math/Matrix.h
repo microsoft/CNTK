@@ -36,30 +36,24 @@ enum MatrixType
     SPARSE
 };
 
-// TODO: create an <ElemType>-agnostic base class, then move generic functions such as getting dims, resizing, and getting/setting as scalars
-class MATH_API MatrixBase
-{
-protected:
-    // virtual ~MatrixBase() { };
-    // TODO: currently this causes link errors when building DLLs
-};
-
 // avoid pulling in these header files for consumers of this class
-template <class ElemType>
-class GPUMatrix;
-template <class ElemType>
-class CPUMatrix;
-template <class ElemType>
-class GPUSparseMatrix;
-template <class ElemType>
-class CPUSparseMatrix;
-template <class ElemType>
-class DeviceBoundNumber;
+template <class ElemType> class GPUMatrix;
+template <class ElemType> class CPUMatrix;
+template <class ElemType> class GPUSparseMatrix;
+template <class ElemType> class CPUSparseMatrix;
+template <class ElemType> class DeviceBoundNumber;
 
-//To compy with BLAS libraries matrices are stored in ColMajor. However, by default C/C++/C# use RowMajor
-//convertion is need when passing data between Matrix and C++ matrices
-//For the best performance compile CNTKMath project with NO_SYNC preprocessor directive
-//!!!WARNING!!! This class is NOT THREAD SAFE. Test and add necessary modifications if using in multi-threaded environment
+// <ElemType>-agnostic base class
+struct /*interface*/ MATH_API MatrixBase
+{
+    virtual int GetDeviceId() const = 0;
+    // TODO: Move more generic functions such as getting dims, resizing, and getting/setting as scalars in here.
+    virtual ~MatrixBase();
+};
+typedef std::shared_ptr<MatrixBase> MatrixBasePtr;
+
+// Note: To comply with BLAS libraries, matrices are stored in ColMajor. However, by default C/C++/C# use RowMajor convertion.
+// !!!WARNING!!! This class is NOT THREAD SAFE. Test and add necessary modifications if using in multi-threaded environment
 template <class ElemType>
 class MATH_API Matrix : public MatrixBase
 {
@@ -574,4 +568,5 @@ File& operator<<(File& stream, const Matrix<ElemType>& M)
 
 typedef Matrix<float> SingleMatrix;
 typedef Matrix<double> DoubleMatrix;
-} } }
+
+}}}

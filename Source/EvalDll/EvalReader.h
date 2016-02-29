@@ -117,7 +117,7 @@ public:
     // matrices - [in] a map with named matrix types (i.e. 'features', 'labels') mapped to the corresponding matrix,
     //             [out] each matrix resized if necessary containing data.
     // returns - true if there are more minibatches, false if no more minibatchs remain
-    virtual bool GetMinibatch(StreamMinibatchInputs<ElemType>& matrices)
+    virtual bool GetMinibatch(StreamMinibatchInputs& matrices)
     {
         // how many records are we reading this time
         size_t recordCount = min(m_mbSize, m_recordCount - m_currentRecord);
@@ -130,25 +130,21 @@ public:
         for (auto iter = m_inputs->begin(); iter != m_inputs->end(); ++iter)
         {
             // figure out the dimension of the data
-            std::wstring val = iter->first;
-            size_t rows = (*m_dimensions)[val];
+            const auto& name = iter->first;
+            size_t rows = (*m_dimensions)[name];
             // size_t count = rows*recordCount;
 
             // find the output matrix we want to fill
-            auto iterIn = matrices.find(val);
+            if (!matrices.HasInput(name))
+                RuntimeError("No matrix data found for key '%ls'.", name.c_str());
 
             // allocate the matrix if we don't have one yet
-            if (iterIn == matrices.end())
-            {
-                RuntimeError("No matrix data found for key '%ls', cannot continue", val.c_str());
-            }
-
-            auto& matrix = iterIn->second;
+            auto& matrix = matrices.GetInputMatrix<ElemType>(name);
 
             // copy over the data
             std::vector<ElemType>* data = iter->second;
-            ElemType* dataPtr = ((ElemType*)data->data()) + (m_currentRecord * rows);
-            matrix->SetValue(rows, recordCount, matrix->GetDeviceId(), dataPtr, matrixFlagNormal);
+            ElemType* dataPtr = data->data() + (m_currentRecord * rows);
+            matrix.SetValue(rows, recordCount, matrix.GetDeviceId(), dataPtr, matrixFlagNormal);
         }
 
         // increment our record pointer

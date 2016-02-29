@@ -116,10 +116,10 @@ private:
     template <class ConfigRecordType>
     void PrepareForSequenceTraining(const ConfigRecordType& config);
 
-    bool GetMinibatchToTrainOrTest(StreamMinibatchInputs<ElemType>& matrices);
-    bool GetOneMinibatchToTrainOrTestDataBuffer(const StreamMinibatchInputs<ElemType>& matrices);
-    bool GetMinibatchToWrite(StreamMinibatchInputs<ElemType>& matrices);
-    bool PopulateUtteranceInMinibatch(const StreamMinibatchInputs<ElemType>& matrices, size_t uttIndex, size_t startFrame, size_t endFrame, size_t mbSize, size_t mbOffset = 0);
+    bool GetMinibatchToTrainOrTest(StreamMinibatchInputs& matrices);
+    bool GetOneMinibatchToTrainOrTestDataBuffer(const StreamMinibatchInputs& matrices);
+    bool GetMinibatchToWrite(StreamMinibatchInputs& matrices);
+    bool PopulateUtteranceInMinibatch(const StreamMinibatchInputs& matrices, size_t uttIndex, size_t startFrame, size_t endFrame, size_t mbSize, size_t mbOffset = 0);
 
     // If we have to read the current minibatch from buffer, return true,
     // otherwise return false.
@@ -129,10 +129,10 @@ private:
     void CopyMinibatchToBuffer();
 
     // Copys one minibatch from buffer to matrix.
-    void CopyMinibatchFromBufferToMatrix(size_t index, StreamMinibatchInputs<ElemType>& matrices);
+    void CopyMinibatchFromBufferToMatrix(size_t index, StreamMinibatchInputs& matrices);
 
     // Copys one minibatch from <m_featuresBufferMultiIO> to matrix.
-    void CopyMinibatchToMatrix(size_t size, const std::vector<ElemType*>& featureBuffer, const std::vector<ElemType*>& labelBuffer, StreamMinibatchInputs<ElemType>& matrices) const;
+    void CopyMinibatchToMatrix(size_t size, const std::vector<ElemType*>& featureBuffer, const std::vector<ElemType*>& labelBuffer, StreamMinibatchInputs& matrices) const;
 
     void StartMinibatchLoopToTrainOrTest(size_t mbSize, size_t epoch, size_t requestedEpochSamples = requestDataSize);
     void StartMinibatchLoopToWrite(size_t mbSize, size_t epoch, size_t requestedEpochSamples = requestDataSize);
@@ -186,7 +186,7 @@ public:
     }
     virtual ~HTKMLFReader();
     virtual void StartMinibatchLoop(size_t mbSize, size_t epoch, size_t requestedEpochSamples = requestDataSize);
-    virtual bool GetMinibatch(StreamMinibatchInputs<ElemType>& matrices);
+    virtual bool GetMinibatch(StreamMinibatchInputs& matrices);
     virtual const std::map<LabelIdType, LabelType>& GetLabelMapping(const std::wstring& sectionName);
     virtual void SetLabelMapping(const std::wstring& sectionName, const std::map<LabelIdType, LabelType>& labelMapping);
     virtual bool GetData(const std::wstring& sectionName, size_t numRecords, void* data, size_t& dataBufferSize, size_t recordStart = 0);
@@ -197,11 +197,11 @@ public:
 
     virtual bool GetMinibatchCopy(
         std::vector<std::vector<std::pair<wstring, size_t>>>& uttInfo,
-        StreamMinibatchInputs<ElemType>& matrices,
+        StreamMinibatchInputs& matrices,
         MBLayoutPtr pMBLayout);
     virtual bool SetNetOutput(
         const std::vector<std::vector<std::pair<wstring, size_t>>>& uttInfo,
-        const Matrix<ElemType>& outputs,
+        const MatrixBase& outputs,
         const MBLayoutPtr pMBLayout);
 
     virtual bool DataEnd();

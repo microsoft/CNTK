@@ -809,7 +809,7 @@ void BatchLUSequenceReader<ElemType>::SetNumParallelSequences(const size_t mz)
 }
 
 template <class ElemType>
-bool BatchLUSequenceReader<ElemType>::GetMinibatch(StreamMinibatchInputs<ElemType>& matrices)
+bool BatchLUSequenceReader<ElemType>::GetMinibatch(StreamMinibatchInputs& matrices)
 {
     // get out if they didn't call StartMinibatchLoop() first
     // TODO: Why is this allowed? Why not terminate?
@@ -838,7 +838,7 @@ bool BatchLUSequenceReader<ElemType>::GetMinibatch(StreamMinibatchInputs<ElemTyp
     {
         if (matrices.find(m_featuresName) == matrices.end())
             RuntimeError("BatchLUSequenceReader cannot find %ls.", m_featuresName.c_str());
-        Matrix<ElemType>& features = matrices.GetInputMatrix(m_featuresName);
+        Matrix<ElemType>& features = matrices.GetInputMatrix<ElemType>(m_featuresName);
 
         // loop through all the samples and create a one-hot representation, or multi-hot in some conditions (TODO: which condition)
         Matrix<ElemType> locObs(CPUDEVICE);
@@ -906,12 +906,12 @@ bool BatchLUSequenceReader<ElemType>::GetMinibatch(StreamMinibatchInputs<ElemTyp
 }
 
 template <class ElemType>
-size_t BatchLUSequenceReader<ElemType>::GetLabelOutput(StreamMinibatchInputs<ElemType>& matrices, LabelInfo& labelInfo, size_t actualmbsize)
+size_t BatchLUSequenceReader<ElemType>::GetLabelOutput(StreamMinibatchInputs& matrices, LabelInfo& labelInfo, size_t actualmbsize)
 {
     if (!matrices.HasInput(m_labelsName[labelInfoOut]))
         return 0;
 
-    Matrix<ElemType>& labels = matrices.GetInputMatrix(m_labelsName[labelInfoOut]);
+    Matrix<ElemType>& labels = matrices.GetInputMatrix<ElemType>(m_labelsName[labelInfoOut]);
     labels.Resize(labelInfo.dim, actualmbsize);
     labels.SetValue(0);
 
@@ -1030,7 +1030,7 @@ bool BatchLUSequenceReader<ElemType>::CanReadFor(wstring nodeName) // TODO: cons
 
 /// get a column slice corresponding to a frame of observations
 template <class ElemType>
-bool BatchLUSequenceReader<ElemType>::GetFrame(StreamMinibatchInputs<ElemType>& matrices, const size_t tidx, vector<size_t>& history)
+bool BatchLUSequenceReader<ElemType>::GetFrame(StreamMinibatchInputs& matrices, const size_t tidx, vector<size_t>& history)
 {
 
     // get out if they didn't call StartMinibatchLoop() first
@@ -1044,7 +1044,7 @@ bool BatchLUSequenceReader<ElemType>::GetFrame(StreamMinibatchInputs<ElemType>& 
         const LabelInfo& featInfo = m_labelInfo[labelInfoIn];
 
         // loop through all the samples
-        Matrix<ElemType>& features = matrices.GetInputMatrix(m_featuresName);
+        Matrix<ElemType>& features = matrices.GetInputMatrix<ElemType>(m_featuresName);
         Matrix<ElemType> locObs(CPUDEVICE);
         locObs.SwitchToMatrixType(SPARSE, matrixFormatSparseCSC, false);
 
@@ -1100,7 +1100,7 @@ bool BatchLUSequenceReader<ElemType>::GetFrame(StreamMinibatchInputs<ElemType>& 
         {
             assert(mMatrices[p->first]->GetNumCols() > tidx);
             if (matrices.find(p->first) != matrices.end())
-                matrices.GetInputMatrix(p->first).SetValue(mMatrices[p->first]->ColumnSlice(tidx, mRequestedNumParallelSequences));
+                matrices.GetInputMatrix<ElemType>(p->first).SetValue(mMatrices[p->first]->ColumnSlice(tidx, mRequestedNumParallelSequences));
         }
     }
 
@@ -1111,18 +1111,18 @@ bool BatchLUSequenceReader<ElemType>::GetFrame(StreamMinibatchInputs<ElemType>& 
 /// propose labels, return a vector with size larger than 0 if this reader allows proposal
 /// otherwise, return a vector with length zero
 template <class ElemType>
-void BatchLUSequenceReader<ElemType>::InitProposals(StreamMinibatchInputs<ElemType>& pMat)
+void BatchLUSequenceReader<ElemType>::InitProposals(StreamMinibatchInputs& pMat)
 {
     if (m_labelInfo[labelInfoIn].isproposal)
     {
         // no need to save info for labelInfoIn since it is in mProposals
         if (pMat.find(m_labelsName[labelInfoOut]) != pMat.end())
-            mMatrices[m_labelsName[labelInfoOut]]->SetValue(pMat.GetInputMatrix(m_labelsName[labelInfoOut]));
+            mMatrices[m_labelsName[labelInfoOut]]->SetValue(pMat.GetInputMatrix<ElemType>(m_labelsName[labelInfoOut]));
     }
     else
     {
         if (pMat.find(m_featuresName) != pMat.end())
-            mMatrices[m_featuresName]->SetValue(pMat.GetInputMatrix(m_featuresName));
+            mMatrices[m_featuresName]->SetValue(pMat.GetInputMatrix<ElemType>(m_featuresName));
     }
 }
 
@@ -1163,7 +1163,7 @@ template class BatchLUSequenceReader<double>;
 template class BatchLUSequenceReader<float>;
 
 template <class ElemType>
-bool MultiIOBatchLUSequenceReader<ElemType>::GetMinibatch(StreamMinibatchInputs<ElemType>& matrices)
+bool MultiIOBatchLUSequenceReader<ElemType>::GetMinibatch(StreamMinibatchInputs& matrices)
 {
     // on first iteration, need to check if all requested data matrices are available
     std::map<std::wstring, size_t>::iterator iter;
@@ -1314,7 +1314,7 @@ bool MultiIOBatchLUSequenceReader<ElemType>::DataEnd()
 
 // history is shared
 template <class ElemType>
-bool MultiIOBatchLUSequenceReader<ElemType>::GetProposalObs(StreamMinibatchInputs<ElemType>& matrices, const size_t tidx, vector<size_t>& history)
+bool MultiIOBatchLUSequenceReader<ElemType>::GetProposalObs(StreamMinibatchInputs& matrices, const size_t tidx, vector<size_t>& history)
 {
     // run for each reader
     for (typename map<wstring, BatchLUSequenceReader<ElemType>*>::iterator p = mReader.begin(); p != mReader.end(); p++)
@@ -1330,7 +1330,7 @@ bool MultiIOBatchLUSequenceReader<ElemType>::GetProposalObs(StreamMinibatchInput
 /// need to provide initial matrice values if there are
 /// these values are from getMinibatch
 template <class ElemType>
-void MultiIOBatchLUSequenceReader<ElemType>::InitProposals(StreamMinibatchInputs<ElemType>& matrices)
+void MultiIOBatchLUSequenceReader<ElemType>::InitProposals(StreamMinibatchInputs& matrices)
 {
     // run for each reader
     for (auto & iter : mReader)

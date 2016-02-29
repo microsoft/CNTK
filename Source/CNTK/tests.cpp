@@ -118,7 +118,7 @@ void TestReader(const ConfigParameters& configBase)
     int deviceId = 0;
     auto featuresMatrix = make_shared<Matrix<ElemType>>(deviceId);
     auto labelsMatrix   = make_shared<Matrix<ElemType>>(deviceId);
-    StreamMinibatchInputs<ElemType> matrices;
+    StreamMinibatchInputs matrices;
     matrices.AddInputMatrix(featureNames[0], featuresMatrix);
     matrices.AddInputMatrix(labelNames[0],   labelsMatrix);
 
@@ -131,8 +131,8 @@ void TestReader(const ConfigParameters& configBase)
         int i = 0;
         while (dataReader.GetMinibatch(matrices))
         {
-            Matrix<ElemType>& features = matrices.GetInputMatrix(featureNames[0]);
-            Matrix<ElemType>& labels   = matrices.GetInputMatrix(labelNames[0]);
+            Matrix<ElemType>& features = matrices.GetInputMatrix<ElemType>(featureNames[0]);
+            Matrix<ElemType>& labels   = matrices.GetInputMatrix<ElemType>(labelNames[0]);
 
             if (labels.GetNumRows() == 0)
             {
@@ -178,11 +178,11 @@ void TestSequenceReader(const ConfigParameters& configBase)
         files.push_back(readerConfig(L"file"));
 
         // setup minibatch matrices
-        Matrix<ElemType> featuresMatrix;
-        Matrix<ElemType> labelsMatrix;
-        StreamMinibatchInputs<ElemType> matrices;
-        matrices[featureNames[0]] = &featuresMatrix;
-        matrices[labelNames[1]] = &labelsMatrix;
+        auto featuresMatrix = make_shared<Matrix<ElemType>>();
+        auto labelsMatrix   = make_shared<Matrix<ElemType>>();
+        StreamMinibatchInputs matrices;
+        matrices.AddInputMatrix(featureNames[0], featuresMatrix);
+        matrices.AddInputMatrix(labelNames[1]  , labelsMatrix);
 
         auto start = std::chrono::system_clock::now();
         int epochs = config("maxEpochs");
@@ -190,13 +190,11 @@ void TestSequenceReader(const ConfigParameters& configBase)
         for (int epoch = 0; epoch < epochs; epoch++)
         {
             dataReader.StartMinibatchLoop(mbSize, epoch, epochSize);
-            int i = 0;
-            while (dataReader.GetMinibatch(matrices))
+            for (int i = 0; dataReader.GetMinibatch(matrices); i++)
             {
-                Matrix<ElemType>& features = *matrices[featureNames[0]];
-                Matrix<ElemType>& labels = *matrices[labelNames[1]];
-
-                fprintf(stderr, "%4d: features dim: %lu x %lu - [%.8g, %.8g, ...] label dim: %d x %d - [%d, %d, ...]\n", i++, features.GetNumRows(), features.GetNumCols(), features(0, 0), features(0, 1), labels.GetNumRows(), labels.GetNumCols(), (int) labels(0, 0), (int) labels(0, 1));
+                auto& features = matrices.GetInputMatrix<ElemType>(featureNames[0]);
+                auto& labels   = matrices.GetInputMatrix<ElemType>(labelNames[1]);
+                fprintf(stderr, "%4d: features dim: %lu x %lu - [%.8g, %.8g, ...] label dim: %d x %d - [%d, %d, ...]\n", i, features.GetNumRows(), features.GetNumCols(), features(0, 0), features(0, 1), labels.GetNumRows(), labels.GetNumCols(), (int) labels(0, 0), (int) labels(0, 1));
             }
         }
         auto end = std::chrono::system_clock::now();

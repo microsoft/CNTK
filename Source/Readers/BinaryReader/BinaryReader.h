@@ -590,7 +590,7 @@ public:
     }
     virtual ~BinaryReader();
     virtual void StartMinibatchLoop(size_t mbSize, size_t epoch, size_t requestedEpochSamples = requestDataSize);
-    virtual bool GetMinibatch(StreamMinibatchInputs<ElemType>& matrices);
+    virtual bool GetMinibatch(StreamMinibatchInputs& matrices);
 
     size_t GetNumParallelSequences()
     {

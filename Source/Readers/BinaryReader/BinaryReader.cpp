@@ -244,7 +244,7 @@ bool BinaryReader<ElemType>::CheckEndDataset(size_t actualmbsize)
 //             [out] each matrix resized if necessary containing data.
 // returns - true if there are more minibatches, false if no more minibatchs remain
 template <class ElemType>
-bool BinaryReader<ElemType>::GetMinibatch(StreamMinibatchInputs<ElemType>& matrices)
+bool BinaryReader<ElemType>::GetMinibatch(StreamMinibatchInputs& matrices)
 {
     // get out if they didn't call StartMinibatchLoop() first
     if (m_mbSize == 0)
@@ -266,9 +266,9 @@ bool BinaryReader<ElemType>::GetMinibatch(StreamMinibatchInputs<ElemType>& matri
 
     for (auto value : matrices)
     {
-        wstring matrixName = value.first;
+        const auto& matrixName = value.first;
+        auto& gpuData = matrices.GetInputMatrix<ElemType>(matrixName);
         Section* section = m_sections[matrixName];
-        auto& gpuData = value.second;
         size_t rows = section->GetElementsPerRecord();
         SectionData dataType;
         size_t dataSize;
@@ -324,7 +324,7 @@ bool BinaryReader<ElemType>::GetMinibatch(StreamMinibatchInputs<ElemType>& matri
         {
             RuntimeError("GetMinibatch: Section %ls Auxilary section specified, and/or element size %lld mismatch", section->GetName().c_str(), section->GetElementSize());
         }
-        gpuData->SetValue(rows, actualmbsize, gpuData->GetDeviceId(), data);
+        gpuData.SetValue(rows, actualmbsize, gpuData.GetDeviceId(), data);
     }
 
     // advance to the next minibatch

@@ -147,7 +147,7 @@ struct ReaderFixture
     void HelperWriteReaderContentToFile(
         ofstream& outputFile,
         DataReader<ElemType>& dataReader,
-        StreamMinibatchInputs<ElemType>& map,
+        StreamMinibatchInputs& map,
         size_t epochs,
         size_t mbSize,
         size_t epochSize,
@@ -173,14 +173,14 @@ struct ReaderFixture
                 for (auto i = 0; i < numFeatureFiles; i++)
                 {
                     wstring name = numFeatureFiles > 1 ? L"features" + std::to_wstring(i + 1) : L"features";
-                    OutputMatrix(*map.at(name), outputFile);
+                    OutputMatrix(map.GetInputMatrix<ElemType>(name), outputFile);
                 }
 
                 // Process the Label Matri(x|ces)
                 for (auto i = 0; i < numLabelFiles; i++)
                 {
                     wstring name = numLabelFiles > 1 ? L"labels" + std::to_wstring(i + 1) : L"labels";
-                    OutputMatrix(*map.at(name), outputFile);
+                    OutputMatrix(map.GetInputMatrix<ElemType>(name), outputFile);
                 }
             }
         }
@@ -227,7 +227,7 @@ struct ReaderFixture
 
         DataReader<ElemType> dataReader(readerConfig);
 
-        StreamMinibatchInputs<ElemType> map;
+        StreamMinibatchInputs map;
         std::vector<shared_ptr<Matrix<ElemType>>> features;
         std::vector<shared_ptr<Matrix<ElemType>>> labels;
 
