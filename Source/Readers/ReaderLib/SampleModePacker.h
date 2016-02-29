@@ -26,7 +26,7 @@ public:
 private:
     std::shared_ptr<char> AllocateBuffer(size_t numElements, size_t elementSize);
     size_t GetSampleSize(StreamDescriptionPtr stream);
-    void CopySequenceToBuffer(size_t sequenceIndex, size_t streamIndex, const std::vector<std::vector<SequenceDataPtr>>& sequences);
+    void CopySequenceToBuffer(SequenceDataPtr sample, size_t streamIndex, size_t sampleIndex);
 
     MemoryProviderPtr m_memoryProvider;
     TransformerPtr m_transformer;

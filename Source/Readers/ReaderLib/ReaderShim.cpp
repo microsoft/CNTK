@@ -110,6 +110,7 @@ bool ReaderShim<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemType>*
 
     if (!minibatch.m_data.empty())
     {
+        // TODO: Use alternating pinned buffer in the packer, do not copy anything, but pack into the pinned memory.
         // Copy returned minibatch to the matrices.
         for (const auto& mx : matrices)
         {
@@ -117,7 +118,7 @@ bool ReaderShim<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemType>*
             size_t streamId = m_nameToStreamId[mx.first];
 
             const auto& stream = minibatch.m_data[streamId];
-            m_layout = stream->m_layout;
+            m_layout->CopyFrom(stream->m_layout);
 
             size_t columnNumber = m_layout->GetNumCols();
             size_t rowNumber = m_streams[streamId]->m_sampleLayout->GetNumElements();
