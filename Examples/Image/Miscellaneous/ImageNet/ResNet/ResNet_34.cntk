@@ -92,7 +92,7 @@ CreateEval=[
     action="edit"
     CurModel="$ModelDir$/ResNet_34"
     NewModel="$ModelDir$/ResNet_34.Eval"
-    editPath="$ConfigDir$/create_eval_model.mel"
+    editPath="$ConfigDir$/CreateEvalModel.mel"
 ]
 
 Test=[

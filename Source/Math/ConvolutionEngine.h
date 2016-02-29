@@ -281,6 +281,7 @@ protected:
                                     bool spatial, double expAvgFactor, Mat& runMean, Mat& runInvStdDev, Mat& out,
                                     double epsilon, Mat& saveMean, Mat& saveInvStdDev) = 0;
 
+    // REVIEW alexeyk: roll into NormalizeBatchCore.
     virtual void NormalizeBatchInferenceCore(const Tensor4D& inT, const Mat& in, const Tensor4D& scaleBiasT, const Mat& scale, const Mat& bias,
                                              bool spatial, const Mat& runMean, const Mat& runInvStdDev, Mat& out) = 0;
 

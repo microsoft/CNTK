@@ -8,7 +8,7 @@ ModelDir = "$OutputDir$/Models"
 ndlMacros="$ConfigDir$/Macros.ndl"
 
 precision="float"
-deviceId="Auto"
+deviceId="auto"
 prefetch="true"
 
 command=Train:AddBNEval:Test
@@ -38,7 +38,7 @@ Train=[
     reader=[
         readerType="UCIFastReader"
         file="$DataDir$/Train.txt"
-        randomize="Auto"
+        randomize="auto"
         features=[
             dim=3072
             start=1
@@ -68,7 +68,7 @@ Test=[
     reader=[
         readerType="UCIFastReader"
         file="$DataDir$/Test.txt"
-        randomize="None"
+        randomize="none"
         features=[
             dim=3072
             start=1

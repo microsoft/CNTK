@@ -87,7 +87,7 @@ AddTop5Eval=[
     action="edit"
     CurModel="$ModelDir$/VGG_E"
     NewModel="$ModelDir$/VGG_E.Top5"
-    editPath="$ConfigDir$/add_top5_layer.mel"
+    editPath="$ConfigDir$/CreateEvalModel.mel"
 ]
 
 Test=[

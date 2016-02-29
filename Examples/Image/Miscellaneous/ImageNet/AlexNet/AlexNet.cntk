@@ -88,7 +88,7 @@ AddTop5Eval=[
     action="edit"
     CurModel="$ModelDir$/AlexNet"
     NewModel="$ModelDir$/AlexNet.Top5"
-    editPath="$ConfigDir$/add_top5_layer.mel"
+    editPath="$ConfigDir$/AddTop5Layer.mel"
 ]
 
 Test=[
