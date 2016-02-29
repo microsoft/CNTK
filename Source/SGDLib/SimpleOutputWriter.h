@@ -70,9 +70,9 @@ private:
 
     // get StreamMinibatchInputs for a given set of input nodes
     // TODO: This seems generic, we should have that in a shared place.
-    StreamMinibatchInputs<ElemType> RetrieveInputMatrices(const std::vector<ComputationNodeBasePtr>& inputNodes)
+    StreamMinibatchInputs RetrieveInputMatrices(const std::vector<ComputationNodeBasePtr>& inputNodes)
     {
-        StreamMinibatchInputs<ElemType> inputMatrices;
+        StreamMinibatchInputs inputMatrices;
         for (auto& node : inputNodes)
             inputMatrices.AddInputMatrix(node->NodeName(), node->As<ComputationNode<ElemType>>()->ValuePtr());
         return inputMatrices;
@@ -92,7 +92,7 @@ public:
         // allocate memory for forward computation
         m_net->AllocateAllMatrices({}, outputNodes, nullptr);
 
-        StreamMinibatchInputs<ElemType> inputMatrices = RetrieveInputMatrices(inputNodes);
+        StreamMinibatchInputs inputMatrices = RetrieveInputMatrices(inputNodes);
 
         // evaluate with minibatches
         dataReader.StartMinibatchLoop(mbSize, 0, numOutputSamples);
@@ -182,7 +182,7 @@ public:
         // allocate memory for forward computation
         m_net->AllocateAllMatrices({}, outputNodes, nullptr);
 
-        StreamMinibatchInputs<ElemType> inputMatrices = RetrieveInputMatrices(inputNodes);
+        StreamMinibatchInputs inputMatrices = RetrieveInputMatrices(inputNodes);
 
         // load a label mapping if requested
         std::vector<std::string> labelMapping;

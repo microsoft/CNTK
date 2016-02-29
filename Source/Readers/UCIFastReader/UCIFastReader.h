@@ -74,7 +74,7 @@ private:
     // Prefetching related fields
     bool m_prefetchEnabled;
     std::future<bool> m_pendingAsyncGetMinibatch;
-    StreamMinibatchInputs<ElemType> m_prefetchMatrices;
+    StreamMinibatchInputs m_prefetchMatrices;
 
     // Distributed reading related fields
     size_t m_subsetNum;
@@ -157,9 +157,9 @@ public:
 
     virtual void StartDistributedMinibatchLoop(size_t mbSize, size_t epoch, size_t subsetNum, size_t numSubsets, size_t requestedEpochSamples = requestDataSize) override;
 
-    virtual bool GetMinibatch(StreamMinibatchInputs<ElemType>& matrices);
+    virtual bool GetMinibatch(StreamMinibatchInputs& matrices);
 
-    bool GetMinibatchImpl(StreamMinibatchInputs<ElemType>& matrices);
+    bool GetMinibatchImpl(StreamMinibatchInputs& matrices);
 
     size_t GetNumParallelSequences()
     {

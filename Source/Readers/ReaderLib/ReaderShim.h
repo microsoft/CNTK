@@ -44,7 +44,7 @@ public:
         return true;
     }
 
-    virtual bool GetMinibatch(StreamMinibatchInputs<ElemType>& matrices) override;
+    virtual bool GetMinibatch(StreamMinibatchInputs& matrices) override;
 
     virtual bool DataEnd() override;
 

@@ -890,7 +890,7 @@ bool HTKMLFReader<ElemType>::GetHmmData(msra::asr::simplesenonehmm* hmm)
 // returns - true if there are more minibatches, false if no more minibatchs remain
 // TODO: Why do we have two read functions? Is one not a superset of the other?
 template <class ElemType>
-bool HTKMLFReader<ElemType>::GetMinibatch(StreamMinibatchInputs<ElemType>& matrices)
+bool HTKMLFReader<ElemType>::GetMinibatch(StreamMinibatchInputs& matrices)
 {
     if (m_trainOrTest)
     {
@@ -903,7 +903,7 @@ bool HTKMLFReader<ElemType>::GetMinibatch(StreamMinibatchInputs<ElemType>& matri
 }
 
 template <class ElemType>
-bool HTKMLFReader<ElemType>::GetMinibatchToTrainOrTest(StreamMinibatchInputs<ElemType>& matrices)
+bool HTKMLFReader<ElemType>::GetMinibatchToTrainOrTest(StreamMinibatchInputs& matrices)
 {
     size_t id;
     size_t dim;
@@ -1080,7 +1080,7 @@ bool HTKMLFReader<ElemType>::GetMinibatchToTrainOrTest(StreamMinibatchInputs<Ele
                 {
                     // dereference matrix that corresponds to key (input/output name) and
                     // populate based on whether its a feature or a label
-                    Matrix<ElemType>& data = matrices.GetInputMatrix(iter->first); // can be features or labels
+                    Matrix<ElemType>& data = matrices.GetInputMatrix<ElemType>(iter->first); // can be features or labels
                     if (m_nameToTypeMap[iter->first] == InputOutputTypes::real)
                     {
                         id = m_featureNameToIdMap[iter->first];
@@ -1154,7 +1154,7 @@ bool HTKMLFReader<ElemType>::GetMinibatchToTrainOrTest(StreamMinibatchInputs<Ele
                     {
                         // dereference matrix that corresponds to key (input/output name) and
                         // populate based on whether its a feature or a label
-                        Matrix<ElemType>& data = matrices.GetInputMatrix(iter->first); // can be features or labels
+                        Matrix<ElemType>& data = matrices.GetInputMatrix<ElemType>(iter->first); // can be features or labels
 
                         if (m_nameToTypeMap[iter->first] == InputOutputTypes::real)
                         {
@@ -1218,7 +1218,7 @@ bool HTKMLFReader<ElemType>::GetMinibatchToTrainOrTest(StreamMinibatchInputs<Ele
                     {
                         // dereference matrix that corresponds to key (input/output name) and
                         // populate based on whether its a feature or a label
-                        Matrix<ElemType>& data = matrices.GetInputMatrix(iter->first); // can be features or labels
+                        Matrix<ElemType>& data = matrices.GetInputMatrix<ElemType>(iter->first); // can be features or labels
 
                         if (m_nameToTypeMap[iter->first] == InputOutputTypes::real)
                         {
@@ -1355,7 +1355,7 @@ bool HTKMLFReader<ElemType>::GetMinibatchToTrainOrTest(StreamMinibatchInputs<Ele
             {
                 // dereference matrix that corresponds to key (input/output name) and
                 // populate based on whether its a feature or a label
-                Matrix<ElemType>& data = matrices.GetInputMatrix(iter->first); // can be features or labels
+                Matrix<ElemType>& data = matrices.GetInputMatrix<ElemType>(iter->first); // can be features or labels
                 if (m_nameToTypeMap[iter->first] == InputOutputTypes::real)
                 {
                     id = m_featureNameToIdMap[iter->first];
@@ -1386,7 +1386,7 @@ bool HTKMLFReader<ElemType>::GetMinibatchToTrainOrTest(StreamMinibatchInputs<Ele
 // copy an utterance into the minibatch given a location (parallel-sequence index, start frame)
 // TODO: This should use DataFor(). But for that, DataFor() will have to move out from ComputationNode. Ah, it has!
 template <class ElemType>
-void HTKMLFReader<ElemType>::fillOneUttDataforParallelmode(StreamMinibatchInputs<ElemType>& matrices, size_t startFr,
+void HTKMLFReader<ElemType>::fillOneUttDataforParallelmode(StreamMinibatchInputs& matrices, size_t startFr,
                                                            size_t framenum, size_t channelIndex, size_t sourceChannelIndex)
 {
     size_t id;
@@ -1398,7 +1398,7 @@ void HTKMLFReader<ElemType>::fillOneUttDataforParallelmode(StreamMinibatchInputs
     {
         // dereference matrix that corresponds to key (input/output name) and
         // populate based on whether its a feature or a label
-        Matrix<ElemType>& data = matrices.GetInputMatrix(iter->first); // can be features or labels
+        Matrix<ElemType>& data = matrices.GetInputMatrix<ElemType>(iter->first); // can be features or labels
 
         if (m_nameToTypeMap[iter->first] == InputOutputTypes::real)
         {
@@ -1454,7 +1454,7 @@ void HTKMLFReader<ElemType>::fillOneUttDataforParallelmode(StreamMinibatchInputs
 }
 
 template <class ElemType>
-bool HTKMLFReader<ElemType>::GetMinibatchToWrite(StreamMinibatchInputs<ElemType>& matrices)
+bool HTKMLFReader<ElemType>::GetMinibatchToWrite(StreamMinibatchInputs& matrices)
 {
     std::map<std::wstring, size_t>::iterator iter;
     if (m_checkDictionaryKeys)
@@ -1512,7 +1512,7 @@ bool HTKMLFReader<ElemType>::GetMinibatchToWrite(StreamMinibatchInputs<ElemType>
 
             if (m_nameToTypeMap.find(iter->first) != m_nameToTypeMap.end() && m_nameToTypeMap[iter->first] == InputOutputTypes::real)
             {
-                Matrix<ElemType>& data = matrices.GetInputMatrix(iter->first); // can be features or labels   (TODO: Really? Didn't we just ^^^ check that it is 'real'?)
+                Matrix<ElemType>& data = matrices.GetInputMatrix<ElemType>(iter->first); // can be features or labels   (TODO: Really? Didn't we just ^^^ check that it is 'real'?)
                 size_t id = m_featureNameToIdMap[iter->first];
                 size_t dim = m_featureNameToDimMap[iter->first];
 

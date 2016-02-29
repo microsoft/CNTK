@@ -155,7 +155,6 @@ public:
     void StartDistributedMinibatchLoop(size_t mbSize, size_t subsetNum, size_t numSubsets);
     void ReadMinibatches(size_t* read_order, size_t numToRead);
     size_t ReadMinibatch(void* data_buffer, std::map<std::wstring, shared_ptr<BinaryMatrix<ElemType>>>& matrices);
-    // void GetMinibatch(StreamMinibatchInputs<ElemType>& matrices);
     size_t FillMatrices(std::map<std::wstring, shared_ptr<BinaryMatrix<ElemType>>>& matrices);
     size_t GetMBSize()
     {
@@ -257,7 +256,7 @@ public:
 
     virtual void StartMinibatchLoop(size_t mbSize, size_t epoch, size_t requestedEpochSamples = requestDataSize);
     virtual void StartDistributedMinibatchLoop(size_t mbSize, size_t epoch, size_t subsetNum, size_t numSubsets, size_t requestedEpochSamples) override;
-    virtual bool GetMinibatch(StreamMinibatchInputs<ElemType>& matrices);
+    virtual bool GetMinibatch(StreamMinibatchInputs& matrices);
 
     virtual bool SupportsDistributedMBRead() const override
     {
@@ -296,7 +295,7 @@ private:
     clock_t timer;
     void DoDSSMMatrix(Matrix<ElemType>& mat, size_t actualMBSize);
 
-    void CheckDataMatrices(StreamMinibatchInputs<ElemType>& matrices);
+    void CheckDataMatrices(StreamMinibatchInputs& matrices);
     MBLayoutPtr m_pMBLayout;
     ConfigParameters m_readerConfig;
 

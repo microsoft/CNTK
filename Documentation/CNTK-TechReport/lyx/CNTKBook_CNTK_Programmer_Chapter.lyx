@@ -430,8 +430,7 @@ ochSamples=requestDataSize) = 0;
 
 \begin_layout Plain Layout
 
-    virtual bool GetMinibatch(StreamMinibatchInputs<ElemType>&
- matrices) = 0;
+    virtual bool GetMinibatch(StreamMinibatchInputs& matrices) = 0;
 \end_layout
 
 \begin_layout Plain Layout
@@ -4391,7 +4390,7 @@ std::vector<ComputationNodePtr> & labelNodes = net.LabelNodes();
 
 \begin_layout Plain Layout
 
-StreamMinibatchInputs<ElemType> inputMatrices; 
+StreamMinibatchInputs inputMatrices; 
 \end_layout
 
 \begin_layout Plain Layout

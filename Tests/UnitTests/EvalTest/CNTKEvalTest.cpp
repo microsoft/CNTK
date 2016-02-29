@@ -32,8 +32,8 @@ void DoCommand(const ConfigParameters& configRoot)
     ConfigParameters configSgd = config("SGD");
     std::wstring modelPath = configSgd("modelPath");
 
-    StreamMinibatchInputs<ElemType> inputMatrices;
-    StreamMinibatchInputs<ElemType> outputMatrices;
+    StreamMinibatchInputs inputMatrices;
+    StreamMinibatchInputs outputMatrices;
     std::wstring inputName = L"features";
     std::wstring outputName = L"CE.BFF.FF.P";
     int deviceId = 0;
