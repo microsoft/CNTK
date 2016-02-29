@@ -12,12 +12,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 // Evaluation Reader class
 // interface to pass to evaluation DLL
 template <class ElemType>
-class EvalReader : public IDataReader<ElemType>
+class EvalReader : public IDataReader
 {
-    typedef typename IDataReader<ElemType>::LabelType LabelType;
-    typedef typename IDataReader<ElemType>::LabelIdType LabelIdType;
-
-private:
     std::map<std::wstring, std::vector<ElemType>*>* m_inputs; // our input data
     std::map<std::wstring, size_t>* m_dimensions;             // the number of rows for the input data
     size_t m_recordCount;                                     // count of records in this data

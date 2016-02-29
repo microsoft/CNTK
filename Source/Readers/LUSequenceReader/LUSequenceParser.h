@@ -5,6 +5,8 @@
 // LUSequenceParser.h : Parses the UCI format using a custom state machine (for speed)
 //
 
+#pragma once
+
 #include <string>
 #include <vector>
 #include <assert.h>

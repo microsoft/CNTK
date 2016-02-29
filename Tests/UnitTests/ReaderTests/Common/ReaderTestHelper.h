@@ -146,7 +146,7 @@ struct ReaderFixture
     template <class ElemType>
     void HelperWriteReaderContentToFile(
         ofstream& outputFile,
-        DataReader<ElemType>& dataReader,
+        DataReader& dataReader,
         StreamMinibatchInputs& map,
         size_t epochs,
         size_t mbSize,
@@ -225,7 +225,7 @@ struct ReaderFixture
         const ConfigParameters simpleDemoConfig = config(testSectionName);
         const ConfigParameters readerConfig = simpleDemoConfig(readerSectionName);
 
-        DataReader<ElemType> dataReader(readerConfig);
+        DataReader dataReader(readerConfig);
 
         StreamMinibatchInputs map;
         std::vector<shared_ptr<Matrix<ElemType>>> features;
@@ -250,7 +250,7 @@ struct ReaderFixture
         ofstream outputFile(testDataFilePath, ios::out);
 
         // Perform the data reading
-        HelperWriteReaderContentToFile(outputFile, dataReader, map, epochs, mbSize, epochSize, numFeatureFiles, numLabelFiles, subsetNum, numSubsets);
+        HelperWriteReaderContentToFile<ElemType>(outputFile, dataReader, map, epochs, mbSize, epochSize, numFeatureFiles, numLabelFiles, subsetNum, numSubsets);
 
         outputFile.close();
 
@@ -286,8 +286,9 @@ struct ReaderFixture
         const ConfigParameters simpleDemoConfig = config(testSectionName);
         const ConfigParameters readerConfig = simpleDemoConfig(readerSectionName);
 
-        BOOST_CHECK_THROW(DataReader<ElemType> dataReader(readerConfig), ExceptionType);
+        BOOST_CHECK_THROW(DataReader dataReader(readerConfig), ExceptionType);
     }
 };
 }
-} } }
+
+}}}

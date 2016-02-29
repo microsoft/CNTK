@@ -9,10 +9,19 @@
 #include "Config.h" // for intargvector
 #include "CUDAPageLockedMemAllocator.h"
 
+#include "htkfeatio.h" // for reading HTK features
+#ifdef _WIN32
+#include "latticearchive.h" // for reading HTK phoneme lattices (MMI training)
+#endif
+#include "simplesenonehmm.h" // for MMI scoring
+#include "msra_mgram.h"      // for unigram scores of ground-truth path in sequence training
+#include "rollingwindowsource.h" // minibatch sources
+#include "chunkevalsource.h"
+
 namespace Microsoft { namespace MSR { namespace CNTK {
 
 template <class ElemType>
-class HTKMLFReader : public IDataReader<ElemType>
+class HTKMLFReader : public IDataReader
 {
 private:
     const static size_t m_htkRandomizeAuto = 0;
@@ -41,8 +50,8 @@ private:
     size_t m_extraNumSeqs;
     bool m_noData;
     bool m_trainOrTest; // if false, in file writing mode
-    using LabelType = typename IDataReader<ElemType>::LabelType;
-    using LabelIdType = typename IDataReader<ElemType>::LabelIdType;
+    using IDataReader::LabelType;
+    using IDataReader::LabelIdType;
 
     std::map<LabelIdType, LabelType> m_idToLabelMap;
 

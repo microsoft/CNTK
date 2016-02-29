@@ -574,6 +574,7 @@ public:
 
     // helper to access to element(0,0) without having to type-cast
     virtual double Get00Element() const = 0;
+    virtual MatrixBasePtr ValuePtr() const = 0; // for use in readers that pass the agnostic object around
 
     // TODO: two sets of functions, choose one
     const std::wstring& NodeName() const { return m_nodeName; }
@@ -1094,7 +1095,8 @@ public:
     const Matrix<ElemType>& Value() const { return *m_value; }
     Matrix<ElemType>&       Value()       { return *m_value; }
 
-    std::shared_ptr<Matrix<ElemType>> ValuePtr() { return m_value; }    // readers want this as a shared_ptr straight
+    MatrixBasePtr ValuePtr() const override final { return m_value; }    // readers want this as a shared_ptr straight
+    // Note: We cannot return a const& since returning m_value as a MatrixBasePtr is a type cast that generates a temporary. Interesting.
 
     const Matrix<ElemType>& Gradient() const { return *m_gradient; }
     Matrix<ElemType>&       Gradient()       { return *m_gradient; }
@@ -1677,6 +1679,7 @@ public:
     virtual void CopyTo(ComputationNodeBasePtr node, const std::wstring& newName, const CopyNodeFlags flags) const override { NOT_IMPLEMENTED; }
     virtual ComputationNodeBasePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) override { NOT_IMPLEMENTED; }
     virtual double Get00Element() const override { NOT_IMPLEMENTED; }
+    virtual MatrixBasePtr ValuePtr() const override { NOT_IMPLEMENTED; }
     virtual void UpdateFunctionMBSize() override { NOT_IMPLEMENTED; }
     virtual void AttachInputs(const std::vector<ComputationNodeBasePtr>& inputs) override { NOT_IMPLEMENTED; }
     virtual void PrintSelf(bool) const override { NOT_IMPLEMENTED; }

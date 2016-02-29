@@ -541,12 +541,8 @@ public:
 };
 
 template <class ElemType>
-class BinaryReader : public IDataReader<ElemType>
+class BinaryReader : public IDataReader
 {
-    typedef typename IDataReader<ElemType>::LabelType LabelType;
-    typedef typename IDataReader<ElemType>::LabelIdType LabelIdType;
-
-private:
     size_t m_mbSize;           // size of minibatch requested
     size_t m_mbStartSample;    // starting sample # of the next minibatch
     size_t m_epochSize;        // size of an epoch
@@ -615,12 +611,8 @@ public:
 };
 
 template <class ElemType>
-class BinaryWriter : public IDataWriter<ElemType>
+class BinaryWriter : public IDataWriter
 {
-    typedef typename IDataWriter<ElemType>::LabelType LabelType;
-    typedef typename IDataWriter<ElemType>::LabelIdType LabelIdType;
-
-private:
     int m_traceLevel; // trace level to output the
     size_t m_recordCurrent;
     size_t m_recordMax;

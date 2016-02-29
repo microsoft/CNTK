@@ -47,7 +47,7 @@ enum ReaderMode
 };
 
 template <class ElemType>
-class LUSequenceReader : public IDataReader<ElemType>
+class LUSequenceReader : public IDataReader
 {
 protected:
     bool m_idx2clsRead;
@@ -149,8 +149,8 @@ protected:
     } m_labelInfo[labelInfoNum];
 
     // caching support
-    DataReader<ElemType>* m_cachingReader;
-    DataWriter<ElemType>* m_cachingWriter;
+    DataReader* m_cachingReader;
+    DataWriter* m_cachingWriter;
     ConfigParameters m_readerConfig;
     void InitCache(const ConfigParameters& config);
 

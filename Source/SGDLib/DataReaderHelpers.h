@@ -24,7 +24,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // Note: This will go away with the redesigned reader interface.
     // TODO: callers of this often do ComputationNetwork::BumpEvalTimeStamp(featureNodes) and also for labels; we should eliminate the need for this.
     template <class ElemType>
-    static bool GetMinibatchIntoNetwork(IDataReader<ElemType>& trainSetDataReader,
+    static bool GetMinibatchIntoNetwork(IDataReader& trainSetDataReader,
                                         ComputationNetworkPtr net,
                                         ComputationNodeBasePtr criterionNode,
                                         bool useDistributedMBReading,
@@ -345,7 +345,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
 
-        size_t GetMinibatchIntoCache(IDataReader<ElemType>& trainSetDataReader,
+        size_t GetMinibatchIntoCache(IDataReader& trainSetDataReader,
                                      ComputationNetwork& net,
                                      StreamMinibatchInputs& inputMatrices,
                                      size_t requestedSubminibatches)

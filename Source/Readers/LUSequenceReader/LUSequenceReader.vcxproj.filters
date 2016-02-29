@@ -10,9 +10,6 @@
     <ClCompile Include="..\..\Common\DataReader.cpp">
       <Filter>Common</Filter>
     </ClCompile>
-    <ClCompile Include="DataWriter.cpp">
-      <Filter>Common</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\Common\fileutil.cpp">
       <Filter>Common</Filter>
     </ClCompile>
@@ -21,6 +18,9 @@
     </ClCompile>
     <ClCompile Include="..\..\Common\Config.cpp" />
     <ClCompile Include="..\..\Common\ExceptionWithCallStack.cpp" />
+    <ClCompile Include="DataWriterLocal.cpp">
+      <Filter>Common</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="LUSequenceWriter.h" />
@@ -50,9 +50,6 @@
     </Filter>
     <Filter Include="Common\Include">
       <UniqueIdentifier>{85d2fa50-2b95-4ec7-8f2c-c5c0b1cb493e}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Duplicates to remove">
-      <UniqueIdentifier>{10f819fb-8861-4607-9389-60ca80f968c2}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
 </Project>

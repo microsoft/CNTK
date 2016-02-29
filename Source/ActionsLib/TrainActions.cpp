@@ -155,11 +155,11 @@ void DoTrain(const ConfigRecordType& config)
         RuntimeError("No network builder found in the config file. NDLNetworkBuilder or SimpleNetworkBuilde must be specified");
     }
 
-    auto dataReader = CreateObject<DataReader<ElemType>>(config, L"reader");
+    auto dataReader = CreateObject<DataReader>(config, L"reader");
 
-    shared_ptr<DataReader<ElemType>> cvDataReader;
+    shared_ptr<DataReader> cvDataReader;
     if (config.Exists(L"cvReader"))
-        cvDataReader = CreateObject<DataReader<ElemType>>(config, L"cvReader");
+        cvDataReader = CreateObject<DataReader>(config, L"cvReader");
 
     shared_ptr<SGD<ElemType>> optimizer;
     if (config.Exists(L"optimizer"))
@@ -225,15 +225,15 @@ void DoAdapt(const ConfigParameters& config)
     ConfigParameters readerConfig(config(L"reader"));
     readerConfig.Insert("traceLevel", config(L"traceLevel", "0"));
 
-    DataReader<ElemType>* dataReader = new DataReader<ElemType>(readerConfig);
+    auto dataReader = make_shared<DataReader>(readerConfig);
 
-    DataReader<ElemType>* cvDataReader = nullptr;
+    shared_ptr<DataReader> cvDataReader;
     ConfigParameters cvReaderConfig(config(L"cvReader", L""));
 
     if (cvReaderConfig.size() != 0)
     {
         cvReaderConfig.Insert("traceLevel", config(L"traceLevel", "0"));
-        cvDataReader = new DataReader<ElemType>(cvReaderConfig);
+        cvDataReader = make_shared<DataReader>(cvReaderConfig);
     }
 
     wstring origModelFileName = config(L"origModelFileName", L"");
@@ -241,10 +241,7 @@ void DoAdapt(const ConfigParameters& config)
 
     SGD<ElemType> sgd(configSGD);
 
-    sgd.Adapt(origModelFileName, refNodeName, dataReader, cvDataReader, deviceId, makeMode);
-
-    delete dataReader;
-    delete cvDataReader;
+    sgd.Adapt(origModelFileName, refNodeName, dataReader.get(), cvDataReader.get(), deviceId, makeMode);
 }
 
 template void DoAdapt<float>(const ConfigParameters& config);

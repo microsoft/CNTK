@@ -500,11 +500,11 @@ void UCIFastReader<ElemType>::InitCache(const ConfigParameters& readerConfig)
             // mmodify the config so the reader types look correct
             config["readerType"] = config("writerType");
             config["file"] = filesList;
-            m_cachingReader = new DataReader<ElemType>(config);
+            m_cachingReader = new DataReader(config);
         }
         else
         {
-            m_cachingWriter = new DataWriter<ElemType>(readerConfig);
+            m_cachingWriter = new DataWriter(readerConfig);
 
             // now get the section names for map and category types
             std::map<std::wstring, SectionType, nocase_compare> sections;
@@ -1015,7 +1015,7 @@ bool UCIFastReader<ElemType>::GetMinibatchImpl(StreamMinibatchInputs& matrices)
 // GetLabelMapping - Gets the label mapping from integer index to label type
 // returns - a map from numeric datatype to native label type
 template <class ElemType>
-const std::map<typename IDataReader<ElemType>::LabelIdType, typename IDataReader<ElemType>::LabelType>& UCIFastReader<ElemType>::GetLabelMapping(const std::wstring& sectionName)
+const std::map<IDataReader::LabelIdType, IDataReader::LabelType>& UCIFastReader<ElemType>::GetLabelMapping(const std::wstring& sectionName)
 {
     if (m_cachingReader)
     {
@@ -1028,7 +1028,7 @@ const std::map<typename IDataReader<ElemType>::LabelIdType, typename IDataReader
 // labelMapping - mapping table from label values to IDs (must be 0-n)
 // note: for tasks with labels, the mapping table must be the same between a training run and a testing run
 template <class ElemType>
-void UCIFastReader<ElemType>::SetLabelMapping(const std::wstring& /*sectionName*/, const std::map<typename IDataReader<ElemType>::LabelIdType, LabelType>& labelMapping)
+void UCIFastReader<ElemType>::SetLabelMapping(const std::wstring& /*sectionName*/, const std::map<LabelIdType, LabelType>& labelMapping)
 {
     if (m_cachingReader)
     {

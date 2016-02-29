@@ -418,7 +418,7 @@ bool DSSMReader<ElemType>::GetMinibatch(StreamMinibatchInputs& matrices)
 // GetLabelMapping - Gets the label mapping from integer index to label type
 // returns - a map from numeric datatype to native label type
 template <class ElemType>
-const std::map<typename IDataReader<ElemType>::LabelIdType, typename IDataReader<ElemType>::LabelType>& DSSMReader<ElemType>::GetLabelMapping(const std::wstring& sectionName)
+const std::map<IDataReader::LabelIdType, IDataReader::LabelType>& DSSMReader<ElemType>::GetLabelMapping(const std::wstring& sectionName)
 {
     if (m_cachingReader)
     {
@@ -431,7 +431,7 @@ const std::map<typename IDataReader<ElemType>::LabelIdType, typename IDataReader
 // labelMapping - mapping table from label values to IDs (must be 0-n)
 // note: for tasks with labels, the mapping table must be the same between a training run and a testing run
 template <class ElemType>
-void DSSMReader<ElemType>::SetLabelMapping(const std::wstring& /*sectionName*/, const std::map<typename IDataReader<ElemType>::LabelIdType, typename LabelType>& labelMapping)
+void DSSMReader<ElemType>::SetLabelMapping(const std::wstring& /*sectionName*/, const std::map<LabelIdType, LabelType>& labelMapping)
 {
     if (m_cachingReader)
     {

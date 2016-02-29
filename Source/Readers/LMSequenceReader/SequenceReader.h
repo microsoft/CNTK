@@ -109,9 +109,8 @@ public:
 
 // Note: This class is deprecated for standalone use, only used as a base for BatchSequenceReader which overrides most of the functions.
 template <class ElemType>
-class SequenceReader : public IDataReader<ElemType>
+class SequenceReader : public IDataReader
 {
-    typedef IDataReader<ElemType> Base;
 protected:
     bool m_idx2clsRead;
     bool m_clsinfoRead;
@@ -119,9 +118,6 @@ protected:
     bool m_idx2probRead;
 
 public:
-    using LabelType   = typename Base::LabelType;
-    using LabelIdType = typename Base::LabelIdType;
-
     map<string, int> word4idx;
     map<int, string> idx4word;
     map<int, int> idx4class;
@@ -211,8 +207,8 @@ protected:
     } m_labelInfo[labelInfoNum];
 
     // caching support
-    DataReader<ElemType>* m_cachingReader;
-    DataWriter<ElemType>* m_cachingWriter;
+    DataReader* m_cachingReader;
+    DataWriter* m_cachingWriter;
     ConfigParameters m_readerConfig;
     void InitCache(const ConfigParameters& config);
 

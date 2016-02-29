@@ -321,7 +321,7 @@ test = [
     action = "eval"
 
     # correspond to the number of words/characteres to train in a minibatch
-    minibatchSize = 8192                # choose as large as memory allows for maximum concurrency
+    minibatchSize = 8192                # choose as large as memory allows for maximum GPU concurrency
     # need to be small since models are updated for each minibatch
     traceLevel = 1
     epochSize = 0

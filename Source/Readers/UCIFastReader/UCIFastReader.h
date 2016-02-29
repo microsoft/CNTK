@@ -36,15 +36,8 @@ enum LabelKind
 };
 
 template <class ElemType>
-class UCIFastReader : public IDataReader<ElemType>
+class UCIFastReader : public IDataReader
 {
-public:
-    using LabelType = typename IDataReader<ElemType>::LabelType;
-    using LabelIdType = typename IDataReader<ElemType>::LabelIdType;
-    using IDataReader<ElemType>::mRequestedNumParallelSequences;
-    // typedef std::string LabelType;
-    // typedef unsigned LabelIdType;
-private:
     shared_ptr<UCIParser<ElemType, LabelType>> m_parser;
     size_t m_mbSize;                 // size of minibatch requested
     LabelIdType m_labelIdMax;        // maximum label ID we have encountered so far
@@ -102,8 +95,8 @@ private:
     unique_ptr<CUDAPageLockedMemAllocator> m_cudaAllocator;
 
     // caching support
-    DataReader<ElemType>* m_cachingReader;
-    DataWriter<ElemType>* m_cachingWriter;
+    DataReader* m_cachingReader;
+    DataWriter* m_cachingWriter;
     ConfigParameters m_readerConfig;
     void InitCache(const ConfigParameters& config);
     void InitCache(const ScriptableObjects::IConfigRecord& config);
