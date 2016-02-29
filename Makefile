@@ -5,32 +5,31 @@
 # work to make all sources compile with GCC, and also to check for GCC-compat regressions due to
 # modifications which are currently done under Windows.
 #
-# This makefile will be extended/completed as we go.
-#
 # To use this Makefile, create a directory to build in and make a Config.make in the directory
 # that provides
-# ACML_PATH= path to ACML library installation
-#   only needed if MATHLIB=acml
-# MKL_PATH= path to MKL library installation
-#   only needed if MATHLIB=mkl
-# GDK_PATH= path to cuda gdk installation, so $(GDK_PATH)/include/nvidia/gdk/nvml.h exists
-#   defaults to /usr
-# BUILDTYPE= One of release or debug
-#   defaults to release
-# MATHLIB= One of acml or mkl
-#   defaults to acml
-# CUDA_PATH= Path to CUDA
-#   If not specified, GPU will not be enabled
-# CUB_PATH= path to NVIDIA CUB installation, so $(CUB_PATH)/cub/cub.cuh exists
-#   defaults to /usr/local/cub-1.4.1
-# CUDNN_PATH= path to NVIDIA cuDNN installation so $(CUDNN_PATH)/cuda/include/cudnn.h exists
-#   If not specified, CNTK will be be built without cuDNN.
-# KALDI_PATH= Path to Kaldi
-#   If not specified, Kaldi plugins will not be built
-# OPENCV_PATH= path to OpenCV 3.0.0 installation, so $(OPENCV_PATH) exists
-#   defaults to /usr/local/opencv-3.0.0
-# LIBZIP_PATH= path to libzip installation, so $(LIBZIP_PATH) exists
-#   defaults to /usr/local/
+#   BUILDTYPE= One of release or debug
+#     defaults to release
+#   ACML_PATH= path to ACML library installation
+#     only needed if MATHLIB=acml
+#   MKL_PATH= path to MKL library installation
+#     only needed if MATHLIB=mkl
+#   GDK_PATH= path to cuda gdk installation, so $(GDK_PATH)/include/nvidia/gdk/nvml.h exists
+#     defaults to /usr
+#   MATHLIB= One of acml or mkl
+#     defaults to acml
+#   CUDA_PATH= Path to CUDA
+#     If not specified, GPU will not be enabled
+#   CUB_PATH= path to NVIDIA CUB installation, so $(CUB_PATH)/cub/cub.cuh exists
+#     defaults to /usr/local/cub-1.4.1
+#   CUDNN_PATH= path to NVIDIA cuDNN installation so $(CUDNN_PATH)/cuda/include/cudnn.h exists
+#     If not specified, CNTK will be be built without cuDNN.
+#   KALDI_PATH= Path to Kaldi
+#     If not specified, Kaldi plugins will not be built
+#   OPENCV_PATH= path to OpenCV 3.0.0 installation, so $(OPENCV_PATH) exists
+#     defaults to /usr/local/opencv-3.0.0
+#   LIBZIP_PATH= path to libzip installation, so $(LIBZIP_PATH) exists
+#     defaults to /usr/local/
+# These can be overridden on the command line, e.g. make BUILDTYPE=debug
 
 ifndef BUILD_TOP
 BUILD_TOP=.
