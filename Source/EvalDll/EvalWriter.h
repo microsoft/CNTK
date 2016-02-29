@@ -12,16 +12,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 // Evaluation Writer class
 // interface to pass to evaluation DLL
 template <class ElemType>
-class EvalWriter : public IDataWriter<ElemType>
+class EvalWriter : public IDataWriter
 {
-    typedef typename IDataWriter<ElemType>::LabelType LabelType;
-    typedef typename IDataWriter<ElemType>::LabelIdType LabelIdType;
-
-private:
     std::map<std::wstring, std::vector<ElemType>*>* m_outputs; // our output data
     std::map<std::wstring, size_t>* m_dimensions;              // the number of rows for the output data
     size_t m_recordCount;                                      // count of records in this data
     size_t m_currentRecord;                                    // next record number to read
+
 public:
     // Method to setup the data for the reader
     void SetData(std::map<std::wstring, std::vector<ElemType>*>* outputs, std::map<std::wstring, size_t>* dimensions)

@@ -85,14 +85,13 @@ public:
 
 // Data Reader interface
 // implemented by DataReader and underlying classes
-// TODO: Remove <ElemType>. Only one method to go: SetNetOutput().
-template <class ElemType>
 class DATAREADER_API IDataReader
 {
 public:
     typedef std::string  LabelType;     // surface form of an input token
     typedef unsigned int LabelIdType;   // input token mapped to an integer  --TODO: why not size_t? Does this save space?
 
+    // BUGBUG: We should not have data members in an interace!
     unsigned m_seed;
     size_t mRequestedNumParallelSequences; // number of desired parallel sequences in each minibatch
 
@@ -199,27 +198,20 @@ public:
         return false;
     }
 };
+typedef std::shared_ptr<IDataReader> IDataReaderPtr;
 
-// GetReader - get a reader type from the DLL
-// since we have 2 reader types based on template parameters, exposes 2 exports
-// could be done directly the templated name, but that requires mangled C++ names
-template <class ElemType>
-void DATAREADER_API GetReader(IDataReader<ElemType>** preader);
-extern "C" DATAREADER_API void GetReaderF(IDataReader<float>** preader);
-extern "C" DATAREADER_API void GetReaderD(IDataReader<double>** preader);
+// GetReaderX() - get a reader type from the DLL
+// The F version gets the 'float' version, and D gets 'double'.
+extern "C" DATAREADER_API void GetReaderF(IDataReader** preader);
+extern "C" DATAREADER_API void GetReaderD(IDataReader** preader);
 
 // Data Reader class
 // interface for clients of the Data Reader
 // mirrors the IDataReader interface, except the Init method is private (use the constructor)
-template <class ElemType>
-class DataReader : public IDataReader<ElemType>, protected Plugin, public ScriptableObjects::Object
+class DataReader : public IDataReader, protected Plugin, public ScriptableObjects::Object
 {
-    typedef typename IDataReader<ElemType>::LabelType LabelType;
-    typedef typename IDataReader<ElemType>::LabelIdType LabelIdType;
-
-private:
     vector<wstring> m_ioNames;                          // TODO: why are these needed, why not loop over m_dataReaders?
-    map<wstring, IDataReader<ElemType>*> m_dataReaders; // readers
+    map<wstring, IDataReader*> m_dataReaders; // readers
 
     // Init - Reader Initialize for multiple data sets
     // config - [in] configuration parameters for the datareader

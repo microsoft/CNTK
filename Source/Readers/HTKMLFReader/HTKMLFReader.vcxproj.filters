@@ -1,13 +1,11 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <ClCompile Include="DataWriter.cpp" />
     <ClCompile Include="dllmain.cpp" />
     <ClCompile Include="HTKMLFReader.cpp" />
     <ClCompile Include="HTKMLFWriter.cpp" />
     <ClCompile Include="latticearchive.cpp" />
     <ClCompile Include="stdafx.cpp" />
-    <ClCompile Include="DataReader.cpp" />
     <ClCompile Include="..\..\Common\TimerUtility.cpp">
       <Filter>Common</Filter>
     </ClCompile>
@@ -15,6 +13,8 @@
       <Filter>Common</Filter>
     </ClCompile>
     <ClCompile Include="..\..\Common\ExceptionWithCallStack.cpp" />
+    <ClCompile Include="Exports.cpp" />
+    <ClCompile Include="DataWriterLocal.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="biggrowablevectors.h" />

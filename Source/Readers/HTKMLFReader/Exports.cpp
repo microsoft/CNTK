@@ -8,36 +8,31 @@
 #include "stdafx.h"
 #include "Basics.h"
 
-#include "htkfeatio.h" // for reading HTK features
-#ifdef _WIN32
-#include "latticearchive.h" // for reading HTK phoneme lattices (MMI training)
-#endif
-#include "simplesenonehmm.h" // for MMI scoring
-#include "msra_mgram.h"      // for unigram scores of ground-truth path in sequence training
-
-#include "rollingwindowsource.h" // minibatch sources
-#include "chunkevalsource.h"
 #define DATAREADER_EXPORTS
-#include "DataReader.h"
+#define DATAWRITER_EXPORTS
 #include "HTKMLFReader.h"
-#include "Config.h"
+#include "HTKMLFWriter.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
-template <class ElemType>
-void DATAREADER_API GetReader(IDataReader<ElemType>** preader)
+extern "C" DATAREADER_API void GetReaderF(IDataReader** preader)
 {
-    *preader = new HTKMLFReader<ElemType>();
+    *preader = new HTKMLFReader<float>();
+}
+extern "C" DATAREADER_API void GetReaderD(IDataReader** preader)
+{
+    *preader = new HTKMLFReader<double>();
 }
 
-extern "C" DATAREADER_API void GetReaderF(IDataReader<float>** preader)
+extern "C" DATAWRITER_API void GetWriterF(IDataWriter** pwriter)
 {
-    GetReader(preader);
+    *pwriter = new HTKMLFWriter<float>();
 }
-extern "C" DATAREADER_API void GetReaderD(IDataReader<double>** preader)
+extern "C" DATAWRITER_API void GetWriterD(IDataWriter** pwriter)
 {
-    GetReader(preader);
+    *pwriter = new HTKMLFWriter<double>();
 }
+
 #ifdef _WIN32
 // Utility function, in ConfigFile.cpp, but HTKMLFReader doesn't need that code...
 
@@ -58,4 +53,5 @@ void Trim(std::string& str)
         str.erase(found + 1);
 }
 #endif
-} } }
+
+}}}

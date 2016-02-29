@@ -74,7 +74,7 @@ private:
     {
         StreamMinibatchInputs inputMatrices;
         for (auto& node : inputNodes)
-            inputMatrices.AddInputMatrix(node->NodeName(), node->As<ComputationNode<ElemType>>()->ValuePtr());
+            inputMatrices.AddInputMatrix(node->NodeName(), node->ValuePtr());
         return inputMatrices;
     }
 
@@ -84,7 +84,7 @@ public:
     {
     }
 
-    void WriteOutput(IDataReader<ElemType>& dataReader, size_t mbSize, IDataWriter<ElemType>& dataWriter, const std::vector<std::wstring>& outputNodeNames, size_t numOutputSamples = requestDataSize, bool doUnitTest = false)
+    void WriteOutput(IDataReader& dataReader, size_t mbSize, IDataWriter& dataWriter, const std::vector<std::wstring>& outputNodeNames, size_t numOutputSamples = requestDataSize, bool doUnitTest = false)
     {
         std::vector<ComputationNodeBasePtr> outputNodes = DetermineOutputNodes(outputNodeNames);
         std::vector<ComputationNodeBasePtr> inputNodes  = DetermineInputNodes(outputNodes);
@@ -104,7 +104,7 @@ public:
         std::map<std::wstring, void*, nocase_compare> outputMatrices;
 
         size_t actualMBSize;
-        while (DataReaderHelpers::GetMinibatchIntoNetwork(dataReader, m_net, nullptr, false, false, inputMatrices, actualMBSize))
+        while (DataReaderHelpers::GetMinibatchIntoNetwork<ElemType>(dataReader, m_net, nullptr, false, false, inputMatrices, actualMBSize))
         {
             ComputationNetwork::BumpEvalTimeStamp(inputNodes);
 
@@ -174,7 +174,7 @@ public:
     };
 
     // TODO: Remove code dup with above function by creating a fake Writer object and then calling the other function.
-    void WriteOutput(IDataReader<ElemType>& dataReader, size_t mbSize, std::wstring outputPath, const std::vector<std::wstring>& outputNodeNames, const WriteFormattingOptions & formattingOptions, size_t numOutputSamples = requestDataSize)
+    void WriteOutput(IDataReader& dataReader, size_t mbSize, std::wstring outputPath, const std::vector<std::wstring>& outputNodeNames, const WriteFormattingOptions & formattingOptions, size_t numOutputSamples = requestDataSize)
     {
         std::vector<ComputationNodeBasePtr> outputNodes = DetermineOutputNodes(outputNodeNames);
         std::vector<ComputationNodeBasePtr> inputNodes = DetermineInputNodes(outputNodes);
@@ -221,7 +221,7 @@ public:
         std::string valueFormatString = "%" + formattingOptions.precisionFormat + formatChar; // format string used in fprintf() for formatting the values
 
         size_t actualMBSize;
-        while (DataReaderHelpers::GetMinibatchIntoNetwork(dataReader, m_net, nullptr, false, false, inputMatrices, actualMBSize))
+        while (DataReaderHelpers::GetMinibatchIntoNetwork<ElemType>(dataReader, m_net, nullptr, false, false, inputMatrices, actualMBSize))
         {
             ComputationNetwork::BumpEvalTimeStamp(inputNodes);
 

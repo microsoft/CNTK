@@ -296,12 +296,12 @@ public:
     }
 
     void Train(function<ComputationNetworkPtr(DEVICEID_TYPE)> createNetworkFn, DEVICEID_TYPE deviceId,
-               IDataReader<ElemType>* trainSetDataReader,
-               IDataReader<ElemType>* validationSetDataReader,
+               IDataReader* trainSetDataReader,
+               IDataReader* validationSetDataReader,
                const bool makeMode = true);
     void Adapt(wstring origModelFileName, wstring refNodeName,
-               IDataReader<ElemType>* trainSetDataReader,
-               IDataReader<ElemType>* validationSetDataReader,
+               IDataReader* trainSetDataReader,
+               IDataReader* validationSetDataReader,
                const DEVICEID_TYPE deviceID, const bool makeMode = true);
 
 protected:
@@ -313,14 +313,14 @@ protected:
                            bool networkLoadedFromCheckpoint,
                            ComputationNetworkPtr refNet,
                            ComputationNodeBasePtr refNode,
-                           IDataReader<ElemType>* trainSetDataReader,
-                           IDataReader<ElemType>* validationSetDataReader);
+                           IDataReader* trainSetDataReader,
+                           IDataReader* validationSetDataReader);
 
 protected:
 
     // return true if precomputation is executed.
     bool PreCompute(ComputationNetworkPtr net,
-                    IDataReader<ElemType>* trainSetDataReader,
+                    IDataReader* trainSetDataReader,
                     std::vector<ComputationNodeBasePtr>& featureNodes,
                     std::vector<ComputationNodeBasePtr>& labelNodes,
                     StreamMinibatchInputs* inputMatrices);
@@ -330,7 +330,7 @@ protected:
                                   ComputationNetworkPtr refNet,
                                   const ComputationNodeBasePtr& refNode, const int epochNumber,
                                   const double curLearnRate,
-                                  IDataReader<ElemType>* trainSetDataReader,
+                                  IDataReader* trainSetDataReader,
                                   const std::vector<ComputationNodeBasePtr>& featureNodes,
                                   const std::vector<ComputationNodeBasePtr>& labelNodes,
                                   const std::vector<ComputationNodeBasePtr>& criterionNodes,
@@ -344,7 +344,7 @@ protected:
     void TrainOneMiniEpochAndReloadModel(ComputationNetworkPtr net,
                                          ComputationNetworkPtr refNet,
                                          const ComputationNodeBasePtr& refNode, const int epochNumber,
-                                         const size_t epochSize, IDataReader<ElemType>* trainSetDataReader,
+                                         const size_t epochSize, IDataReader* trainSetDataReader,
                                          const double learnRatePerSample,
                                          const size_t minibatchSize,
                                          const std::vector<ComputationNodeBasePtr>& featureNodes,
@@ -364,7 +364,7 @@ protected:
                                    const ComputationNodeBasePtr& refNode,
                                    const int epochNumber,
                                    const size_t numFramesToUseInSearch,
-                                   IDataReader<ElemType>* trainSetDataReader,
+                                   IDataReader* trainSetDataReader,
                                    const double learnRatePerSample,
                                    const size_t initialMinibatchSize,
                                    const std::vector<ComputationNodeBasePtr>& featureNodes,
@@ -383,7 +383,7 @@ protected:
                                       const ComputationNodeBasePtr& refNode,
                                       const int epochNumber,
                                       const size_t numFramesToUseInSearch,
-                                      IDataReader<ElemType>* trainSetDataReader,
+                                      IDataReader* trainSetDataReader,
                                       const double learnRatePerSample,
                                       const std::vector<ComputationNodeBasePtr>& featureNodes,
                                       const std::vector<ComputationNodeBasePtr>& labelNodes,
@@ -400,7 +400,7 @@ protected:
     // processing more utterances at the same time. Only used in Kaldi2Reader.
     // TODO: move the two-forward-pass support out of the reader.
     void AttemptUtteranceDerivativeFeatures(ComputationNetworkPtr net,
-                                            IDataReader<ElemType>* trainSetDataReader,
+                                            IDataReader* trainSetDataReader,
                                             const std::vector<ComputationNodeBasePtr>& featureNodes,
                                             StreamMinibatchInputs* inputMatrices);
 
@@ -409,7 +409,7 @@ protected:
                          const ComputationNodeBasePtr& refNode,
                          const int epochNumber,
                          const size_t epochSize,
-                         IDataReader<ElemType>* trainSetDataReader,
+                         IDataReader* trainSetDataReader,
                          const double learnRatePerSample,
                          size_t tunedMBSize,
                          const std::vector<ComputationNodeBasePtr>& featureNodes,

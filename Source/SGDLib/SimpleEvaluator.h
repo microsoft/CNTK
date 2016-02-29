@@ -30,7 +30,7 @@ public:
     }
 
     // returns evaluation node values per sample determined by evalNodeNames (which can include both training and eval criterion nodes)
-    vector<double> Evaluate(IDataReader<ElemType>* dataReader, const vector<wstring>& evalNodeNames, const size_t mbSize, const size_t testSize = requestDataSize)
+    vector<double> Evaluate(IDataReader* dataReader, const vector<wstring>& evalNodeNames, const size_t mbSize, const size_t testSize = requestDataSize)
     {
         // determine nodes to evaluate
         std::vector<ComputationNodeBasePtr> evalNodes;
@@ -77,9 +77,9 @@ public:
 
         StreamMinibatchInputs inputMatrices;
         for (auto& node : featureNodes)
-            inputMatrices.AddInputMatrix(node->NodeName(), node->As<ComputationNode<ElemType>>()->ValuePtr());
+            inputMatrices.AddInputMatrix(node->NodeName(), node->ValuePtr());
         for (auto& node : labelNodes)
-            inputMatrices.AddInputMatrix(node->NodeName(), node->As<ComputationNode<ElemType>>()->ValuePtr());
+            inputMatrices.AddInputMatrix(node->NodeName(), node->ValuePtr());
 
         // evaluate through minibatches
         size_t totalEpochSamples = 0;
@@ -95,7 +95,7 @@ public:
         dataReader->StartMinibatchLoop(mbSize, 0, testSize);
         m_net->StartEvaluateMinibatchLoop(evalNodes);
 
-        while (DataReaderHelpers::GetMinibatchIntoNetwork(*dataReader, m_net, nullptr, false, false, inputMatrices, actualMBSize))
+        while (DataReaderHelpers::GetMinibatchIntoNetwork<ElemType>(*dataReader, m_net, nullptr, false, false, inputMatrices, actualMBSize))
         {
             ComputationNetwork::BumpEvalTimeStamp(featureNodes);
             ComputationNetwork::BumpEvalTimeStamp(labelNodes);

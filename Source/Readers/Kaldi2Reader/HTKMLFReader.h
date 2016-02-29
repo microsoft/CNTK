@@ -13,7 +13,7 @@
 namespace Microsoft { namespace MSR { namespace CNTK {
 
 template <class ElemType>
-class HTKMLFReader : public IDataReader<ElemType>
+class HTKMLFReader : public IDataReader
 {
 private:
     msra::dbn::minibatchiterator* m_mbiter;
@@ -71,8 +71,6 @@ private:
     bool m_noData;
 
     bool m_trainOrTest; // if false, in file writing mode
-    using LabelType = typename IDataReader<ElemType>::LabelType;
-    using LabelIdType = typename IDataReader<ElemType>::LabelIdType;
 
     std::map<LabelIdType, LabelType> m_idToLabelMap;
 

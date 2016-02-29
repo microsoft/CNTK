@@ -107,7 +107,7 @@ void TestReader(const ConfigParameters& configBase)
         epochSize = requestDataSize;
     }
 
-    DataReader<ElemType> dataReader(readerConfig);
+    DataReader dataReader(readerConfig);
 
     // get names of features and labels
     std::vector<std::wstring> featureNames;
@@ -171,7 +171,7 @@ void TestSequenceReader(const ConfigParameters& configBase)
         std::vector<std::wstring> labelNames;
         GetFileConfigNames(readerConfig, featureNames, labelNames);
 
-        DataReader<ElemType> dataReader(readerConfig);
+        DataReader dataReader(readerConfig);
 
         // get names of features and labels
         std::vector<std::wstring> files;

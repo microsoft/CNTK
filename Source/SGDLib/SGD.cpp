@@ -36,8 +36,8 @@ template SGD<double>::SGD(const ScriptableObjects::IConfigRecord&);
 
 template <class ElemType>
 void SGD<ElemType>::Train(function<ComputationNetworkPtr(DEVICEID_TYPE)> createNetworkFn, DEVICEID_TYPE deviceId,
-                          IDataReader<ElemType>* trainSetDataReader,
-                          IDataReader<ElemType>* validationSetDataReader,
+                          IDataReader* trainSetDataReader,
+                          IDataReader* validationSetDataReader,
                           const bool makeMode)
 {
     // determine which epoch to start with, including recovering a checkpoint if any and 'makeMode' enabled
@@ -80,8 +80,8 @@ void SGD<ElemType>::Train(function<ComputationNetworkPtr(DEVICEID_TYPE)> createN
 
 template <class ElemType>
 void SGD<ElemType>::Adapt(wstring origModelFileName, wstring refNodeName,
-                          IDataReader<ElemType>* trainSetDataReader,
-                          IDataReader<ElemType>* validationSetDataReader,
+                          IDataReader* trainSetDataReader,
+                          IDataReader* validationSetDataReader,
                           const DEVICEID_TYPE deviceId, const bool makeMode)
 {
     int startEpoch = DetermineStartEpoch(makeMode);
@@ -139,8 +139,8 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
                                       bool networkLoadedFromCheckpoint,
                                       ComputationNetworkPtr refNet,
                                       ComputationNodeBasePtr refNode,
-                                      IDataReader<ElemType>* trainSetDataReader,
-                                      IDataReader<ElemType>* validationSetDataReader)
+                                      IDataReader* trainSetDataReader,
+                                      IDataReader* validationSetDataReader)
 {
     auto& featureNodes = net->FeatureNodes();
     auto& labelNodes = net->LabelNodes();
@@ -188,7 +188,7 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
     {
         auto& nodes = (pass == 0) ? featureNodes : labelNodes;
         for (const auto & node : nodes)
-            (*inputMatrices).AddInputMatrix(node->NodeName(), dynamic_pointer_cast<ComputationNode<ElemType>>(node)->ValuePtr());
+            (*inputMatrices).AddInputMatrix(node->NodeName(), node->ValuePtr());
     }
 
     // get hmm file for sequence training
@@ -699,7 +699,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                                     const ComputationNodeBasePtr& refNode,
                                     const int epochNumber,
                                     const size_t epochSize,
-                                    IDataReader<ElemType>* trainSetDataReader,
+                                    IDataReader* trainSetDataReader,
                                     const double learnRatePerSample,
                                     size_t tunedMBSize,
                                     const std::vector<ComputationNodeBasePtr>& featureNodes,
@@ -843,7 +843,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
         // get minibatch
         // TODO: is it guaranteed that the GPU is already completed at this point, is it safe to overwrite the buffers?
         size_t actualMBSize = 0;
-        bool wasDataRead = DataReaderHelpers::GetMinibatchIntoNetwork(*trainSetDataReader, net, criterionNodes[0],
+        bool wasDataRead = DataReaderHelpers::GetMinibatchIntoNetwork<ElemType>(*trainSetDataReader, net, criterionNodes[0],
                                                                       useDistributedMBReading, useParallelTrain, *inputMatrices, actualMBSize);
         if (!wasDataRead && (!useDistributedMBReading || noMoreSamplesToProcess)) // in case of distributed reading, we do a few more loops until all ranks have completed
             break;                                                                // end of epoch
@@ -1277,7 +1277,7 @@ std::vector<ComputationNodeBasePtr>& SGD<ElemType>::GetEvalCriterionNodes(Comput
 // Returns true if precomputation was executed.
 template <class ElemType>
 bool SGD<ElemType>::PreCompute(ComputationNetworkPtr net,
-                               IDataReader<ElemType>* trainSetDataReader,
+                               IDataReader* trainSetDataReader,
                                std::vector<ComputationNodeBasePtr>& featureNodes,
                                std::vector<ComputationNodeBasePtr>& labelNodes,
                                StreamMinibatchInputs* inputMatrices)
@@ -1312,7 +1312,7 @@ bool SGD<ElemType>::PreCompute(ComputationNetworkPtr net,
     const size_t numIterationsBeforePrintingProgress = 100;
     size_t numItersSinceLastPrintOfProgress = 0;
     size_t actualMBSizeDummy;
-    while (DataReaderHelpers::GetMinibatchIntoNetwork(*trainSetDataReader, net, nullptr, false, false, *inputMatrices, actualMBSizeDummy))
+    while (DataReaderHelpers::GetMinibatchIntoNetwork<ElemType>(*trainSetDataReader, net, nullptr, false, false, *inputMatrices, actualMBSizeDummy))
     {
         // TODO: move these into GetMinibatchIntoNetwork()  --but those are passed around; necessary? Can't we get them from 'net'?
         ComputationNetwork::BumpEvalTimeStamp(featureNodes);
@@ -1347,7 +1347,7 @@ double SGD<ElemType>::SearchForBestLearnRate(ComputationNetworkPtr net,
                                              ComputationNetworkPtr refNet,
                                              const ComputationNodeBasePtr& refNode, const int epochNumber,
                                              const double curLearnRate,
-                                             IDataReader<ElemType>* trainSetDataReader,
+                                             IDataReader* trainSetDataReader,
                                              const std::vector<ComputationNodeBasePtr>& featureNodes,
                                              const std::vector<ComputationNodeBasePtr>& labelNodes,
                                              const std::vector<ComputationNodeBasePtr>& criterionNodes,
@@ -1514,7 +1514,7 @@ size_t SGD<ElemType>::AdaptiveMinibatchSizing(ComputationNetworkPtr net,
                                               const ComputationNodeBasePtr& refNode,
                                               const int epochNumber,
                                               const size_t numFramesToUseInSearch,
-                                              IDataReader<ElemType>* trainSetDataReader,
+                                              IDataReader* trainSetDataReader,
                                               const double learnRatePerSample,
                                               const size_t initialMinibatchSize,
                                               const std::vector<ComputationNodeBasePtr>& featureNodes,
@@ -1620,7 +1620,7 @@ size_t SGD<ElemType>::SearchForBestMinibatchSize(ComputationNetworkPtr net,
                                                  const ComputationNodeBasePtr& refNode,
                                                  const int epochNumber,
                                                  const size_t numFramesToUseInSearch,
-                                                 IDataReader<ElemType>* trainSetDataReader,
+                                                 IDataReader* trainSetDataReader,
                                                  const double learnRatePerSample,
                                                  const std::vector<ComputationNodeBasePtr>& featureNodes,
                                                  const std::vector<ComputationNodeBasePtr>& labelNodes,
@@ -1716,7 +1716,7 @@ template <class ElemType>
 void SGD<ElemType>::TrainOneMiniEpochAndReloadModel(ComputationNetworkPtr net,
                                                     ComputationNetworkPtr refNet,
                                                     const ComputationNodeBasePtr& refNode, const int epochNumber,
-                                                    const size_t epochSize, IDataReader<ElemType>* trainSetDataReader,
+                                                    const size_t epochSize, IDataReader* trainSetDataReader,
                                                     const double learnRatePerSample,
                                                     const size_t minibatchSize,
                                                     const std::vector<ComputationNodeBasePtr>& featureNodes,
@@ -1773,7 +1773,7 @@ void SGD<ElemType>::TrainOneMiniEpochAndReloadModel(ComputationNetworkPtr net,
 // TODO: move the two-forward-pass support out of the reader.
 template <class ElemType>
 void SGD<ElemType>::AttemptUtteranceDerivativeFeatures(ComputationNetworkPtr net,
-                                                       IDataReader<ElemType>* trainSetDataReader,
+                                                       IDataReader* trainSetDataReader,
                                                        const std::vector<ComputationNodeBasePtr>& featureNodes,
                                                        StreamMinibatchInputs* inputMatrices)
 {

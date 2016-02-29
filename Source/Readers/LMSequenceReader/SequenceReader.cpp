@@ -12,6 +12,7 @@
 #ifdef LEAKDETECT
 #include <vld.h> // leak detection
 #endif
+#include "DataWriter.h"
 #include "fileutil.h" // for fexists()
 #include <iostream>
 #include <vector>
@@ -68,7 +69,7 @@ size_t SequenceReader<ElemType>::RecordsToRead(size_t mbStartSample, bool tail)
 // endOfDataCheck - check if we are at the end of the dataset (no wraparound)
 // returns - true if we have more to read, false if we hit the end of the dataset
 template <class ElemType>
-typename IDataReader<ElemType>::LabelIdType SequenceReader<ElemType>::GetIdFromLabel(const std::string& labelValue, LabelInfo& labelInfo)
+IDataReader::LabelIdType SequenceReader<ElemType>::GetIdFromLabel(const std::string& labelValue, LabelInfo& labelInfo)
 {
     auto found = labelInfo.mapLabelToId.find(labelValue);
     // not yet found, add to the map
@@ -701,11 +702,11 @@ void SequenceReader<ElemType>::InitCache(const ConfigParameters& readerConfig)
             // mmodify the config so the reader types look correct
             config["readerType"] = config("writerType");
             config["file"] = filesList;
-            m_cachingReader = new DataReader<ElemType>(config);
+            m_cachingReader = new DataReader(config);
         }
         else
         {
-            m_cachingWriter = new DataWriter<ElemType>(readerConfig);
+            m_cachingWriter = new DataWriter(readerConfig);
 
             // now get the section names for map and category types
             std::map<std::wstring, SectionType, nocase_compare> sections;
@@ -877,8 +878,8 @@ void SequenceReader<ElemType>::StartMinibatchLoop(size_t mbSize, size_t epoch, s
         {
             m_labelsBuffer = new ElemType[mbSize * labelInfo.dim];
             memset(m_labelsBuffer, 0, sizeof(ElemType) * mbSize * labelInfo.dim);
-            m_labelsIdBuffer = new typename IDataReader<ElemType>::LabelIdType[mbSize];
-            memset(m_labelsIdBuffer, 0, sizeof(typename IDataReader<ElemType>::LabelIdType) * mbSize);
+            m_labelsIdBuffer = new LabelIdType[mbSize];
+            memset(m_labelsIdBuffer, 0, sizeof(LabelIdType) * mbSize);
         }
         else if (labelInfo.type != labelNone)
         {
@@ -1188,7 +1189,7 @@ bool SequenceReader<ElemType>::GetMinibatch(StreamMinibatchInputs& matrices)
     if (labelInfo.type == labelCategory)
     {
         memset(m_labelsBuffer, 0, sizeof(ElemType) * labelInfo.dim * actualmbsize);
-        memset(m_labelsIdBuffer, 0, sizeof(typename IDataReader<ElemType>::LabelIdType) * actualmbsize);
+        memset(m_labelsIdBuffer, 0, sizeof(LabelIdType) * actualmbsize);
     }
     else if (labelInfo.type != labelNone)
     {
@@ -1307,7 +1308,7 @@ bool SequenceReader<ElemType>::GetMinibatch(StreamMinibatchInputs& matrices)
 // GetLabelMapping - Gets the label mapping from integer index to label type
 // returns - a map from numeric datatype to native label type
 template <class ElemType>
-const std::map<typename IDataReader<ElemType>::LabelIdType, typename IDataReader<ElemType>::LabelType>& SequenceReader<ElemType>::GetLabelMapping(const std::wstring& sectionName)
+const std::map<IDataReader::LabelIdType, IDataReader::LabelType>& SequenceReader<ElemType>::GetLabelMapping(const std::wstring& sectionName)
 {
     FailBecauseDeprecated(__FUNCTION__);    // DEPRECATED CLASS, SHOULD NOT BE USED ANYMORE
 
@@ -1324,7 +1325,7 @@ const std::map<typename IDataReader<ElemType>::LabelIdType, typename IDataReader
 // labelMapping - mapping table from label values to IDs (must be 0-n)
 // note: for tasks with labels, the mapping table must be the same between a training run and a testing run
 template <class ElemType>
-void SequenceReader<ElemType>::SetLabelMapping(const std::wstring& /*sectionName*/, const std::map<typename IDataReader<ElemType>::LabelIdType, LabelType>& labelMapping)
+void SequenceReader<ElemType>::SetLabelMapping(const std::wstring& /*sectionName*/, const std::map<IDataReader::LabelIdType, LabelType>& labelMapping)
 {
     FailBecauseDeprecated(__FUNCTION__);    // DEPRECATED CLASS, SHOULD NOT BE USED ANYMORE
 

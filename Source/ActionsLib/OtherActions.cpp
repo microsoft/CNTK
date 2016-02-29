@@ -85,8 +85,7 @@ void DoCreateLabelMap(const ConfigParameters& config)
         }
         fprintf(stderr, "CreateLabelMap: Creating the mapping file '%s' \n", labelMappingFile.c_str());
 
-        DataReader<ElemType> dataReader(readerConfig);
-
+        DataReader dataReader(readerConfig);
         dataReader.StartMinibatchLoop(minibatchSize, 0, requestDataSize);
         int count = 0;
         while (dataReader.GetMinibatch(matrices))

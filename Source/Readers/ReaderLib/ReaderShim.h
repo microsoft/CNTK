@@ -19,7 +19,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 typedef ReaderPtr (*ReaderFactory)(const ConfigParameters& parameters);
 
 template <class ElemType>
-class ReaderShim : public IDataReader<ElemType>
+class ReaderShim : public IDataReader
 {
 public:
     explicit ReaderShim(ReaderFactory factory);

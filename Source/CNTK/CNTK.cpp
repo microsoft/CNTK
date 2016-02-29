@@ -612,25 +612,17 @@ int wmainOldCNTKConfig(int argc, wchar_t* argv[]) // called from wmain which is 
     std::string type = config(L"precision", "float");
     // accept old precision key for backward compatibility
     if (config.Exists("type"))
-    {
-        type = config(L"type", "float");
-    }
+        InvalidArgument("CNTK: Use of 'type' parameter is deprecated, it is called 'precision' now.");
 
     fprintf(stderr, "\nPrecision = \"%s\"\n", type.c_str());
     if (type == "float")
-    {
         DoCommands<float>(config);
-    }
     else if (type == "double")
-    {
         DoCommands<double>(config);
-    }
     else
-    {
         RuntimeError("CNTK: Invalid precision string: \"%s\", must be \"float\" or \"double\"", type.c_str());
-    }
 
-    // still here , write a DoneFile if necessary
+    // if completed then write a DoneFile if requested
     if (!DoneFile.empty())
     {
         FILE* fp = fopenOrDie(DoneFile.c_str(), L"w");

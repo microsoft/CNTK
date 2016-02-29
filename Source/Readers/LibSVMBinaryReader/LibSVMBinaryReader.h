@@ -226,12 +226,9 @@ private:
 };
 
 template <class ElemType>
-class LibSVMBinaryReader : public IDataReader<ElemType>
+class LibSVMBinaryReader : public IDataReader
 {
 public:
-    using LabelType = typename IDataReader<ElemType>::LabelType;
-    using LabelIdType = typename IDataReader<ElemType>::LabelIdType;
-
     virtual void Init(const ConfigParameters& config) override
     {
         InitFromConfig(config);

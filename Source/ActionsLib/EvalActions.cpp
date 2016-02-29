@@ -43,7 +43,7 @@ using namespace Microsoft::MSR::CNTK;
 // ===========================================================================
 
 template <typename ElemType>
-static void DoEvalBase(const ConfigParameters& config, IDataReader<ElemType>& reader)
+static void DoEvalBase(const ConfigParameters& config, IDataReader& reader)
 {
     DEVICEID_TYPE deviceId = DeviceFromConfig(config);
     ConfigArray minibatchSize = config(L"minibatchSize", "40960");
@@ -78,9 +78,9 @@ void DoEval(const ConfigParameters& config)
     ConfigParameters readerConfig(config(L"reader"));
     readerConfig.Insert("traceLevel", config(L"traceLevel", "0"));
 
-    DataReader<ElemType> testDataReader(readerConfig);
+    DataReader testDataReader(readerConfig);
 
-    DoEvalBase(config, testDataReader);
+    DoEvalBase<ElemType>(config, testDataReader);
 }
 
 template void DoEval<double>(const ConfigParameters& config);
@@ -125,7 +125,7 @@ void DoCrossValidate(const ConfigParameters& config)
     std::vector<std::vector<double>> cvErrorResults;
     std::vector<std::wstring> cvModels;
 
-    DataReader<ElemType> cvDataReader(readerConfig);
+    DataReader cvDataReader(readerConfig);
 
     bool finalModelEvaluated = false;
     for (size_t i = cvInterval[0]; i <= cvInterval[2]; i += cvInterval[1])
@@ -206,7 +206,7 @@ void DoWriteOutput(const ConfigParameters& config)
     readerConfig.Insert("traceLevel", config(L"traceLevel", "0"));
     readerConfig.Insert("randomize", "None"); // we don't want randomization when output results
 
-    DataReader<ElemType> testDataReader(readerConfig);
+    DataReader testDataReader(readerConfig);
 
     DEVICEID_TYPE deviceId = DeviceFromConfig(config);
     ConfigArray minibatchSize = config(L"minibatchSize", "2048");
@@ -244,7 +244,7 @@ void DoWriteOutput(const ConfigParameters& config)
     {
         ConfigParameters writerConfig(config(L"writer"));
         bool bWriterUnittest = writerConfig(L"unittest", "false");
-        DataWriter<ElemType> testDataWriter(writerConfig);
+        DataWriter testDataWriter(writerConfig);
         writer.WriteOutput(testDataReader, mbSize[0], testDataWriter, outputNodeNamesVector, epochSize, bWriterUnittest);
     }
     else if (config.Exists("outputPath"))
