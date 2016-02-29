@@ -519,10 +519,7 @@ public:
 private:
     void FindBestForwardAlgo(const CuDnnTensor4D& inT, const CuDnnFilter& filtT, const CuDnnConvolutionDescriptor& convDesc, const CuDnnTensor4D& outT)
     {
-        // Need to re-run auto-tuner in case batch size has been changed.
-        // We assume no other dimensions of tensors can change so we don't check it.
-        // REVIEW alexeyk: is this a safe assumption? Can convolution configuration change in runtime?
-        if (m_fwdAlgo.Algo.status == CUDNN_STATUS_SUCCESS && inT.n() == m_fwdAlgo.CurMBSize && outT.n() == m_fwdAlgo.CurMBSize)
+        if (!m_fwdAlgo.NeedAutotuning(inT, outT))
             return;
         const int MaxAlgoCount = 10;
         int calgo = 0;
@@ -543,7 +540,7 @@ private:
 
     void FindBestBackwardDataAlgo(const CuDnnFilter& filtT, const CuDnnTensor4D& srcGradT, const CuDnnConvolutionDescriptor& convDesc, const CuDnnTensor4D& gradT)
     {
-        if (m_backDataAlgo.Algo.status == CUDNN_STATUS_SUCCESS && srcGradT.n() == m_backDataAlgo.CurMBSize && gradT.n() == m_backDataAlgo.CurMBSize)
+        if (!m_backDataAlgo.NeedAutotuning(srcGradT, gradT))
             return;
         const int MaxAlgoCount = 10;
         int calgo = 0;
@@ -564,7 +561,7 @@ private:
 
     void FindBestBackwardFilterAlgo(const CuDnnTensor4D& inT, const CuDnnTensor4D& srcGradT, const CuDnnConvolutionDescriptor& convDesc, const CuDnnFilter& filtT)
     {
-        if (m_backFiltAlgo.Algo.status == CUDNN_STATUS_SUCCESS && inT.n() == m_backFiltAlgo.CurMBSize && srcGradT.n() == m_backFiltAlgo.CurMBSize)
+        if (!m_backFiltAlgo.NeedAutotuning(inT, srcGradT))
             return;
         const int MaxAlgoCount = 10;
         int calgo = 0;
@@ -595,6 +592,18 @@ private:
         // Current mini-batch size, needed for re-computing statistics in auto-tuner.
         size_t CurMBSize;
         T Algo;
+
+        bool NeedAutotuning(const CuDnnTensor4D& t1, const CuDnnTensor4D& t2)
+        {
+            // Need to re-run auto-tuner in case minibatch size is increased.
+            // If minibatch size is decreased we assume that previously selected algorithm requires less or the same amount of workspace.
+            // This is done to avoid re-running auto-tuner every time in case minibatch size changes frequently (e.g. when distributed reading is enabled).
+            // REVIEW alexeyk: potentially, this might cause some perf issues if better (faster) algo can be selected for a smaller mininbatch.
+            // We assume no other dimensions of tensors can change so we don't check it.
+            // REVIEW alexeyk: disabled for now until we find a better solution.
+            //return (Algo.status != CUDNN_STATUS_SUCCESS || t1.n() > CurMBSize || t2.n() > CurMBSize);
+            return (Algo.status != CUDNN_STATUS_SUCCESS || t1.n() != CurMBSize || t2.n() != CurMBSize);
+        }
     };
 
     using C = Consts<ElemType>;

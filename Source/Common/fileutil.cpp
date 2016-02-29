@@ -17,6 +17,8 @@
 #define _CRT_SECURE_CPP_OVERLOAD_STANDARD_NAMES 1
 #include "Basics.h"
 #include "fileutil.h"
+#include "ProgressTracing.h"
+
 #ifdef __unix__
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -606,9 +608,17 @@ void renameOrDie(const std::string& from, const std::string& to)
     // Delete destination file if it exists
     // WORKAROUND: "rename" should do this but this is a workaround
     // to the HDFS FUSE implementation's bug of failing to do so
+    // workaround for FUSE rename when running on Philly
+    if (ProgressTracing::GetTracingFlag())
+    {
+        fprintf(stderr, "rename %s to %s\n", from.c_str(), to.c_str());
+    }    
+    
     unlinkOrDie(to);
     if (rename(from.c_str(), to.c_str()) != 0)
+    {
         RuntimeError("error renaming file '%s': %s", from.c_str(), strerror(errno));
+    }
 #endif
 }
 
