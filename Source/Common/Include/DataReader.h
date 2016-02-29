@@ -64,10 +64,11 @@ public:
     {
         auto iter = matrices.find(nodeName);
         if (iter == matrices.end())
-            LogicError("GetInputMatrix<ElemType>: Attempted to access non-existent input stream '%ls'", nodeName.c_str());
+            LogicError("GetInputMatrix: Attempted to access non-existent input stream '%ls'", nodeName.c_str());
+        assert(iter->second);
         auto* matrixp = dynamic_cast<Matrix<ElemType>*>(iter->second.get());
         if (!matrixp)
-            LogicError("GetInputMatrix<ElemType>: Attempted to access input stream '%ls' with wrong precision.", nodeName.c_str());
+            LogicError("GetInputMatrix: Attempted to access input stream '%ls' with wrong precision, got %s instead of %s.", nodeName.c_str(), typeid(iter->second.get()).name(), typeid(Matrix<ElemType>*).name());
         return *matrixp;
     }
     // iterating
