@@ -2007,6 +2007,7 @@ bool HTKMLFReader<ElemType>::DataEnd()
         return m_sentenceEnd[0];
     else
         return true; // useless in current condition
+}
 
 template <class ElemType>
 void HTKMLFReader<ElemType>::SetSentenceEndInBatch(vector<size_t>& sentenceEnd)
