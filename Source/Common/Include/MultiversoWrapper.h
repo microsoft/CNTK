@@ -7,6 +7,7 @@
 #include <multiverso/util/log.h>
 #include <multiverso/util/net_util.h>
 #include <multiverso/table/array_table.h>
+#include <cstring>
 #pragma comment(lib, "IMultiverso.lib")
 
 #ifndef CPUONLY
@@ -381,10 +382,18 @@ namespace Microsoft {
 				void TestNet() {
 					multiverso::NetInterface* net = multiverso::NetInterface::Get();
 					net->Init();
-
-					char* hi1 = "hello, world";
-					char* hi2 = "hello, c++";
-					char* hi3 = "hello, multiverso";
+					
+					const char* chi1 = std::string("hello, world").c_str();
+					const char* chi2 = std::string("hello, c++").c_str();
+					const char* chi3 = std::string("hello, multiverso").c_str();
+					char* hi1 = new char[14];
+					strcpy(hi1, chi1);
+					char* hi2 = new char[12];
+					strcpy(hi2, chi2);
+					char* hi3 = new char[19];
+					strcpy(hi3, chi3);
+					//char* hi2 = "hello, c++";
+					//char* hi3 = "hello, multiverso";
 					if (net->rank() == 0) {
 						multiverso::MessagePtr msg(new multiverso::Message());// = std::make_unique<Message>();
 						msg->set_src(0);
