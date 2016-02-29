@@ -108,7 +108,7 @@ namespace Microsoft {
 #ifndef CPUONLY
 					CudaErrorCheck(cudaStreamDestroy(_commStream));
 #endif
-					multiverso::MultiversoShutDown(false);
+					multiverso::MV_ShutDown(false);
 				}
 
 				// upoload preCompute model to the parameter servers
@@ -293,7 +293,7 @@ namespace Microsoft {
 
 				void WaitAll()
 				{
-					multiverso::MultiversoBarrier();
+					multiverso::MV_Barrier();
 				}
 
 				void WaitAsyncBuffer()
@@ -312,7 +312,7 @@ namespace Microsoft {
 					m_isInitialized = true;
 
                     //multiverso::Log::ResetLogLevel(multiverso::LogLevel::Debug);
-					multiverso::MultiversoInit();
+					multiverso::MV_Init();
 
 					//weights
 					for (auto nodeIter = learnableNodes.begin(); nodeIter != learnableNodes.end(); nodeIter++)
@@ -332,7 +332,7 @@ namespace Microsoft {
 					m_sharedArray = new multiverso::ArrayWorker<ElemType>(m_totalModelSize);
 					m_serverArray = new multiverso::ArrayServer<ElemType>(m_totalModelSize);
 					
-					multiverso::MultiversoBarrier();
+					multiverso::MV_Barrier();
 
 					size_t idx = 0;
 					for (size_t len : m_tableLength)
