@@ -3,6 +3,9 @@
 // This uses Multiverso.h which requires 
 // the header files in ..\Multiverso\include
 #include <multiverso/multiverso.h>
+#include <multiverso/net.h>
+#include <multiverso/util/log.h>
+#include <multiverso/util/net_util.h>
 #include <multiverso/table/array_table.h>
 #pragma comment(lib, "IMultiverso.lib")
 
@@ -56,6 +59,7 @@ namespace Microsoft {
 					double adjustcoef = 0.2,
 					size_t adjustnbmb = 600)
 				{
+					TestNet();
 					m_modelSyncCount = 0;
 					m_adjustLearningRateAtBeginningType = adjusttype;
 					m_adjustCoefficient = adjustcoef;
@@ -373,6 +377,62 @@ namespace Microsoft {
 						break;
 					}
 					return f;
+				}
+				void TestNet() {
+					multiverso::NetInterface* net = multiverso::NetInterface::Get();
+					net->Init();
+
+					char* hi1 = "hello, world";
+					char* hi2 = "hello, c++";
+					char* hi3 = "hello, multiverso";
+					if (net->rank() == 0) {
+						multiverso::MessagePtr msg(new multiverso::Message());// = std::make_unique<Message>();
+						msg->set_src(0);
+						msg->set_dst(1);
+						msg->Push(multiverso::Blob(hi1, 13));
+						msg->Push(multiverso::Blob(hi2, 11));
+						msg->Push(multiverso::Blob(hi3, 18));
+						net->Send(msg);
+						multiverso::Log::Info("rank 0 send\n");
+						multiverso::Log::Info("Hi = %s\n", msg->data()[0].data());
+
+						msg.reset(new multiverso::Message());
+						while (net->Recv(&msg) == 0) {
+							multiverso::Log::Info("recv return 0\n");
+						}
+						multiverso::Log::Info("rank 0 recv\n");
+						// CHECK(strcmp(msg->data()[0].data(), hi) == 0);
+						std::vector<multiverso::Blob> recv_data = msg->data();
+						//CHECK(recv_data.size() == 3);
+						for (int i = 0; i < msg->size(); ++i) {
+							multiverso::Log::Info("%s\n", recv_data[i].data());
+						};
+					}
+					else if (net->rank() == 1) {
+						multiverso::MessagePtr msg(new multiverso::Message());// = std::make_unique<Message>();
+						while (net->Recv(&msg) == 0) {
+							multiverso::Log::Info("recv return 0\n");
+						}
+						multiverso::Log::Info("rank 1 recv\n");
+						// CHECK(strcmp(msg->data()[0].data(), hi) == 0);
+						std::vector<multiverso::Blob> recv_data = msg->data();
+						//CHECK(recv_data.size() == 3);
+						for (int i = 0; i < msg->size(); ++i) {
+							multiverso::Log::Info("%s\n", recv_data[i].data());
+						}
+
+						msg.reset(new multiverso::Message());
+						msg->set_src(1);
+						msg->set_dst(0);
+						msg->Push(multiverso::Blob(hi1, 13));
+						msg->Push(multiverso::Blob(hi2, 11));
+						msg->Push(multiverso::Blob(hi3, 18));
+						net->Send(msg);
+						multiverso::Log::Info("rank 0 send\n");
+						multiverso::Log::Info("Hi = %s\n", msg->data()[0].data());
+					}
+
+					net->Finalize();
 				}
 				multiverso::ArrayWorker<ElemType>* m_sharedArray;
 				multiverso::ArrayServer<ElemType>* m_serverArray;
