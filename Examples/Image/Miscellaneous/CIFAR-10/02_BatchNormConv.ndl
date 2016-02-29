@@ -22,7 +22,7 @@ ndlMnistMacros = [
     scValue = 1
     
     # Batch normalization time constant.
-    bnTimeConst = 1024
+    bnTimeConst = 4096
   
     fc1WScale = 12
     fc1BValue = 0

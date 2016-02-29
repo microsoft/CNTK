@@ -5,6 +5,6 @@ SetDefaultModel(m1)
 SetPropertyForSubTree(CE, batchNormEvalMode, true)
 
 # Add top-5 error prediction node.
-ErrTop5 = ErrorPrediction(labels, OutputNodes.z, Const(5), tag = Eval)
+ErrTop5 = ErrorPrediction(labels, OutputNodes.z, Const(5), tag = "eval")
 
 SaveModel(m1, $NewModel$, format=cntk)
