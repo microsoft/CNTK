@@ -20,6 +20,10 @@ void MV_Barrier();
 void MV_ShutDown(bool finalize_mpi = true);
 
 int  MV_Rank();
+int  MV_Size();
+
+int  MV_Worker_Id();
+int  MV_Server_Id();
 
 // will deprecate the following function name
 void MultiversoInit(int* argc = nullptr, 

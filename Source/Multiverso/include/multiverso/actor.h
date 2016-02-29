@@ -1,6 +1,7 @@
 #ifndef MULTIVERSO_ACTOR_H_
 #define MULTIVERSO_ACTOR_H_
 
+#include <atomic>
 #include <functional>
 #include <memory>
 #include <string>
@@ -41,13 +42,16 @@ protected:
   // messages based on registered message handlers
   virtual void Main();
 
-  std::string name_;
-
-  std::unique_ptr<std::thread> thread_;
   // message queue
   std::unique_ptr<MtQueue<MessagePtr> > mailbox_;
   // message handlers function
   std::unordered_map<int, Handler> handlers_;
+  // std::atomic_bool is_working_;
+  bool is_working_;
+private:
+  std::string name_;
+
+  std::unique_ptr<std::thread> thread_;
 };
 
 namespace actor {

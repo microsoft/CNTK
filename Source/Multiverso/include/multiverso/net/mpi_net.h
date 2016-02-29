@@ -11,6 +11,7 @@
 
 #include "multiverso/message.h"
 #include "multiverso/util/log.h"
+#include "multiverso/util/mt_queue.h"
 
 #include <mpi.h>
 
@@ -51,7 +52,7 @@ public:
       int flag;
       MPI_Testall(count, handles_.data(), &flag, status);
       delete[] status;
-      return flag;
+      return flag != 0;
     }
   private:
     std::vector<MPI_Request> handles_;
@@ -77,7 +78,7 @@ public:
     }
     MPI_Comm_rank(MPI_COMM_WORLD, &rank_);
     MPI_Comm_size(MPI_COMM_WORLD, &size_);
-	//MPI_Barrier(MPI_COMM_WORLD);
+	MPI_Barrier(MPI_COMM_WORLD);
     Log::Debug("%s net util inited, rank = %d, size = %d\n",
       name().c_str(), rank(), size());
   }
@@ -88,22 +89,45 @@ public:
   int size() const override { return size_; }
   std::string name() const override { return "MPI"; }
 
+  //size_t Send(MessagePtr& msg) override {
+  //  while (!msg_handles_.empty()) {
+  //    MPIMsgHandle* prev = msg_handles_.front();
+  //    if (prev->Test()) {
+  //      delete prev;
+  //      prev = nullptr;
+  //      msg_handles_.pop();
+  //    } else {
+  //      break;
+  //    }
+  //  }
+  //  MPIMsgHandle* handle = new MPIMsgHandle();
+  //  handle->set_msg(msg);
+  //  size_t size = SendAsync(handle->msg(), handle);
+  //  handle->set_size(size);
+  //  msg_handles_.push(handle);
+  //  return size;
+  //}
+
   size_t Send(MessagePtr& msg) override {
-    while (!msg_handles_.empty()) {
-      MPIMsgHandle* prev = msg_handles_.front();
-      if (prev->Test()) {
-        delete prev;
-        prev = nullptr;
-        msg_handles_.pop();
-      } else {
-        break;
-      }
+    if (msg.get()) { send_queue_.Push(msg); }
+    
+    if (last_handle_.get() != nullptr && !last_handle_->Test()) {
+      // Last msg is still on the air
+      return 0;
     }
-    MPIMsgHandle* handle = new MPIMsgHandle();
-    handle->set_msg(msg);
-    size_t size = SendAsync(handle->msg(), handle);
-    handle->set_size(size);
-    msg_handles_.push(handle);
+
+    // send over, free the last msg
+    last_handle_.reset();
+
+    // if there is more msg to send
+    if (send_queue_.Empty()) return 0;
+    
+    // Send a front msg of send queue
+    last_handle_.reset(new MPIMsgHandle()); 
+    MessagePtr sending_msg;
+    CHECK(send_queue_.TryPop(sending_msg));
+    last_handle_->set_msg(sending_msg);
+    size_t size = SendAsync(last_handle_->msg(), last_handle_.get());
     return size;
   }
 
@@ -125,6 +149,7 @@ public:
 private:
   size_t SendAsync(const MessagePtr& msg, 
                    MPIMsgHandle* msg_handle) {
+    CHECK_NOTNULL(msg_handle);
     size_t size = Message::kHeaderSize;
     MPI_Request handle;
     MPI_Isend(msg->header(), Message::kHeaderSize, MPI_BYTE,
@@ -183,7 +208,9 @@ private:
   int inited_;
   int rank_;
   int size_;
-  std::queue<MPIMsgHandle *> msg_handles_;
+  // std::queue<MPIMsgHandle *> msg_handles_;
+  std::unique_ptr<MPIMsgHandle> last_handle_;
+  MtQueue<MessagePtr> send_queue_;
 };
 
 }

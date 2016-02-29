@@ -8,6 +8,8 @@
 #include <mutex>
 #include <condition_variable>
 
+#include "multiverso/zoo.h"
+
 namespace multiverso {
 /*!
  * \brief A thread safe queue support multithread push and pop concurrently
@@ -79,17 +81,23 @@ private:
 
 template<typename T>
 void MtQueue<T>::Push(T& item) {
-  std::unique_lock<std::mutex> lock(mutex_);
-  buffer_.push(std::move(item));
-  empty_condition_.notify_one();
+  {
+    std::lock_guard<std::mutex> lock(mutex_);
+    buffer_.push(std::move(item));
+    empty_condition_.notify_one();
+  }
 }
 
 template<typename T>
 bool MtQueue<T>::Pop(T& result)
 {
   std::unique_lock<std::mutex> lock(mutex_);
-  empty_condition_.wait(lock,
-    [this]{ return !buffer_.empty() || exit_; });
+  // empty_condition_.wait(lock,
+  //  [this]{ return !buffer_.empty() || exit_; });
+  while (buffer_.empty() && !exit_) {
+  // while (true) {
+     empty_condition_.wait(lock);
+  }
   if (buffer_.empty()) return false;
   result = std::move(buffer_.front());
   buffer_.pop();
@@ -98,7 +106,7 @@ bool MtQueue<T>::Pop(T& result)
 
 template<typename T>
 bool MtQueue<T>::TryPop(T& result) {
-  std::unique_lock<std::mutex> lock(mutex_);
+  std::lock_guard<std::mutex> lock(mutex_);
   if (buffer_.empty()) return false;
   result = std::move(buffer_.front());
   buffer_.pop();
@@ -117,25 +125,26 @@ bool MtQueue<T>::Front(T& result) {
 
 template<typename T>
 int MtQueue<T>::Size() const {
-  std::unique_lock<std::mutex> lock(mutex_);
+  std::lock_guard<std::mutex> lock(mutex_);
   return static_cast<int>(buffer_.size());
 }
 
 template<typename T>
 bool MtQueue<T>::Empty() const {
-  std::unique_lock<std::mutex> lock(mutex_);
+  std::lock_guard<std::mutex> lock(mutex_);
   return buffer_.empty();
 }
 
 template<typename T>
 void MtQueue<T>::Exit() {
-  std::unique_lock<std::mutex> lock(mutex_);
+  std::lock_guard<std::mutex> lock(mutex_);
   exit_.store(true);
   empty_condition_.notify_all();
 }
 
 template<typename T>
 bool MtQueue<T>::Alive() {
+  std::lock_guard<std::mutex> lock(mutex_);
   return exit_ == false;
 }
 }
