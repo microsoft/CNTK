@@ -34,12 +34,6 @@
 #pragma warning(disable : 4127) // conditional expression is constant; "if (sizeof(ElemType)==sizeof(float))" triggers this
 #pragma warning(disable : 4702) // unreachable code; triggered for unknown reasons
 
-#ifdef NO_SYNC
-bool do_sync = false;
-#else
-bool do_sync = true;
-#endif
-
 #define DEFAULT_THREAD_PER_DIM 16
 
 #define UNCONST(t, c, uc) GPUMatrix<t>& uc = const_cast<GPUMatrix<t>&>(c);
@@ -384,49 +378,31 @@ void GPUMatrix<ElemType>::performElementWiseFunction(ElementWiseOperator kind, c
     PrepareDevice();
     CUDA_LONG N = (CUDA_LONG) GetNumElements();
     int blocksPerGrid = (int) ceil(1.0 * N / GridDim::maxThreadsPerBlock);
-    PrepareDevice();
-    cudaEvent_t done = nullptr;
-    if (do_sync)
-        CUDA_CALL(cudaEventCreate(&done));
+    SyncGuard syncGuard;
     switch (kind)
     {
     case ElementWiseOperator::opSigmoid:
-        _elementWiseSigmoidOnCuda<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(src, m_pArray, N);
-        break;
+        return _elementWiseSigmoidOnCuda<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(src, m_pArray, N);
     case ElementWiseOperator::opTanh:
-        _elementWiseTanhOnCuda<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(src, m_pArray, N);
-        break;
+        return _elementWiseTanhOnCuda<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(src, m_pArray, N);
     case ElementWiseOperator::opSqrt:
-        _elementWiseSqrtOnCuda<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(src, m_pArray, N);
-        break;
+        return _elementWiseSqrtOnCuda<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(src, m_pArray, N);
     case ElementWiseOperator::opExp:
-        _elementWiseExpOnCuda<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(src, m_pArray, N);
-        break;
+        return _elementWiseExpOnCuda<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(src, m_pArray, N);
     case ElementWiseOperator::opLog:
-        _elementWiseLogOnCuda<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(src, m_pArray, N);
-        break;
+        return _elementWiseLogOnCuda<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(src, m_pArray, N);
     case ElementWiseOperator::opAbs:
-        _elementWiseAbsOnCuda<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(src, m_pArray, N);
-        break;
+        return _elementWiseAbsOnCuda<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(src, m_pArray, N);
     case ElementWiseOperator::opLinearRectifierDerivative:
-        _elementWiseLinRectDerivativeOnCuda<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(src, m_pArray, N);
-        break;
+        return _elementWiseLinRectDerivativeOnCuda<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(src, m_pArray, N);
     case ElementWiseOperator::opCosine:
-        _elementWiseCosineOnCuda<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(src, m_pArray, N);
-        break;
+        return _elementWiseCosineOnCuda<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(src, m_pArray, N);
     case ElementWiseOperator::opNegativeSine:
-        _elementWiseNegativeSineOnCuda<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(src, m_pArray, N);
-        break;
+        return _elementWiseNegativeSineOnCuda<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(src, m_pArray, N);
     case ElementWiseOperator::opSigmoidDerivative:
-        _elementWiseSigmoidDerivativeOnCuda<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(src, m_pArray, N);
-        break;
+        return _elementWiseSigmoidDerivativeOnCuda<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(src, m_pArray, N);
+    default: LogicError("performElementWiseFunction: unexpected op code %d", (int)kind);
     }
-    if (do_sync)
-        CUDA_CALL(cudaEventRecord(done));
-    if (do_sync)
-        CUDA_CALL(cudaEventSynchronize(done));
-    if (do_sync)
-        CUDA_CALL(cudaEventDestroy(done));
 }
 
 #pragma endregion Helper functions
@@ -669,16 +645,8 @@ void GPUMatrix<ElemType>::CopyColumnsStrided(const GPUMatrix<ElemType>& fromMatr
         CUDA_LONG N = (CUDA_LONG)(m_numRows * numCols);
         int blocksPerGrid = (int) ceil(1.0 * N / GridDim::maxThreadsPerBlock);
         PrepareDevice();
-        cudaEvent_t done = nullptr;
-        if (do_sync)
-            CUDA_CALL(cudaEventCreate(&done));
+        SyncGuard syncGuard;
         _copyColumnsStrided<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(m_pArray, fromMatrix.m_pArray, N, (CUDA_LONG) m_numRows, (CUDA_LONG) destNumColsStride, (CUDA_LONG) srcNumColsStride);
-        if (do_sync)
-            CUDA_CALL(cudaEventRecord(done));
-        if (do_sync)
-            CUDA_CALL(cudaEventSynchronize(done));
-        if (do_sync)
-            CUDA_CALL(cudaEventDestroy(done));
     }
 }
 
@@ -701,17 +669,8 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignToRowSliceValuesOf(const GPUMatr
     CUDA_LONG N = (CUDA_LONG) a.GetNumElements();
     int blocksPerGrid = (int) ceil(1.0 * N / GridDim::maxThreadsPerBlock);
     PrepareDevice();
-    cudaEvent_t done = nullptr;
-    if (do_sync)
-        CUDA_CALL(cudaEventCreate(&done));
+    SyncGuard syncGuard;
     _assignToRowSliceValuesOf<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(m_pArray, a.m_pArray, N, (CUDA_LONG) startIndex, (CUDA_LONG) GetNumRows(), (CUDA_LONG) a.GetNumRows());
-    if (do_sync)
-        CUDA_CALL(cudaEventRecord(done));
-    if (do_sync)
-        CUDA_CALL(cudaEventSynchronize(done));
-    if (do_sync)
-        CUDA_CALL(cudaEventDestroy(done));
-
     return *this;
 }
 
@@ -730,17 +689,8 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignRowSliceValuesOf(const GPUMatrix
     CUDA_LONG N = (CUDA_LONG) GetNumElements();
     int blocksPerGrid = (int) ceil(1.0 * N / GridDim::maxThreadsPerBlock);
     PrepareDevice();
-    cudaEvent_t done = nullptr;
-    if (do_sync)
-        CUDA_CALL(cudaEventCreate(&done));
+    SyncGuard syncGuard;
     _assignRowSliceValuesOf<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(m_pArray, a.m_pArray, N, (CUDA_LONG) startIndex, (CUDA_LONG) numRows, (CUDA_LONG) a.GetNumRows());
-    if (do_sync)
-        CUDA_CALL(cudaEventRecord(done));
-    if (do_sync)
-        CUDA_CALL(cudaEventSynchronize(done));
-    if (do_sync)
-        CUDA_CALL(cudaEventDestroy(done));
-
     return *this;
 }
 
@@ -763,17 +713,8 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AddToRowSliceValuesOf(const GPUMatrix<
     CUDA_LONG N = (CUDA_LONG) a.GetNumElements();
     int blocksPerGrid = (int) ceil(1.0 * N / GridDim::maxThreadsPerBlock);
     PrepareDevice();
-    cudaEvent_t done = nullptr;
-    if (do_sync)
-        CUDA_CALL(cudaEventCreate(&done));
+    SyncGuard syncGuard;
     _addToRowSliceValuesOf<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(m_pArray, a.m_pArray, N, (CUDA_LONG) startIndex, (CUDA_LONG) GetNumRows(), (CUDA_LONG) a.GetNumRows());
-    if (do_sync)
-        CUDA_CALL(cudaEventRecord(done));
-    if (do_sync)
-        CUDA_CALL(cudaEventSynchronize(done));
-    if (do_sync)
-        CUDA_CALL(cudaEventDestroy(done));
-
     return *this;
 }
 
@@ -796,17 +737,8 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AddWithRowSliceValuesOf(const GPUMatri
     CUDA_LONG N = (CUDA_LONG) GetNumElements();
     int blocksPerGrid = (int) ceil(1.0 * N / GridDim::maxThreadsPerBlock);
     PrepareDevice();
-    cudaEvent_t done = nullptr;
-    if (do_sync)
-        CUDA_CALL(cudaEventCreate(&done));
+    SyncGuard syncGuard;
     _addWithRowSliceValuesOf<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(m_pArray, a.m_pArray, N, (CUDA_LONG) startIndex, (CUDA_LONG) GetNumRows(), (CUDA_LONG) a.GetNumRows());
-    if (do_sync)
-        CUDA_CALL(cudaEventRecord(done));
-    if (do_sync)
-        CUDA_CALL(cudaEventSynchronize(done));
-    if (do_sync)
-        CUDA_CALL(cudaEventDestroy(done));
-
     return *this;
 }
 
@@ -823,17 +755,8 @@ GPUMatrix<ElemType> GPUMatrix<ElemType>::Diagonal() const
     CUDA_LONG N = (CUDA_LONG) GetNumElements();
     int blocksPerGrid = (int) ceil(1.0 * N / GridDim::maxThreadsPerBlock);
     PrepareDevice();
-    cudaEvent_t done = nullptr;
-    if (do_sync)
-        CUDA_CALL(cudaEventCreate(&done));
+    SyncGuard syncGuard;
     _assignToDiagonalValuesOf<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(diag.m_pArray, m_pArray, N, (CUDA_LONG) n);
-    if (do_sync)
-        CUDA_CALL(cudaEventRecord(done));
-    if (do_sync)
-        CUDA_CALL(cudaEventSynchronize(done));
-    if (do_sync)
-        CUDA_CALL(cudaEventDestroy(done));
-
     return diag;
 }
 
@@ -843,20 +766,13 @@ void GPUMatrix<ElemType>::MinusOneAt(GPUMatrix<ElemType>& c, const size_t positi
 {
     assert(position < c.GetNumElements());
 
-    cudaEvent_t done = nullptr;
     CUDA_LONG n = (CUDA_LONG) c.GetNumElements();
     CUDA_LONG p = (CUDA_LONG) position;
 
     int blocksPerGrid = (int) ceil(1.0 * n / GridDim::maxThreadsPerBlock);
-    if (do_sync)
-        CUDA_CALL(cudaEventCreate(&done));
+    // BUGBUG: PrepareDevice() missing?
+    SyncGuard syncGuard;
     _minusOneAt<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(c.m_pArray, p, n);
-    if (do_sync)
-        CUDA_CALL(cudaEventRecord(done));
-    if (do_sync)
-        CUDA_CALL(cudaEventSynchronize(done));
-    if (do_sync)
-        CUDA_CALL(cudaEventDestroy(done));
 }
 
 template <class ElemType>
@@ -874,17 +790,8 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignRepeatOf(const GPUMatrix<ElemTyp
     CUDA_LONG n = (CUDA_LONG) a.GetNumCols(), m = (CUDA_LONG) a.GetNumRows();
     int blocksPerGrid = (int) ceil(1.0 * N / GridDim::maxThreadsPerBlock);
     PrepareDevice();
-    cudaEvent_t done = nullptr;
-    if (do_sync)
-        CUDA_CALL(cudaEventCreate(&done));
+    SyncGuard syncGuard;
     _assignRepeatOf<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(m_pArray, a.m_pArray, N, m, n, (CUDA_LONG) GetNumRows());
-    if (do_sync)
-        CUDA_CALL(cudaEventRecord(done));
-    if (do_sync)
-        CUDA_CALL(cudaEventSynchronize(done));
-    if (do_sync)
-        CUDA_CALL(cudaEventDestroy(done));
-
     return *this;
 }
 
@@ -902,17 +809,8 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AddToRowRepeatValuesOf(const GPUMatrix
     CUDA_LONG N = (CUDA_LONG) a.GetNumElements();
     int blocksPerGrid = (int) ceil(1.0 * N / GridDim::maxThreadsPerBlock);
     PrepareDevice();
-    cudaEvent_t done = nullptr;
-    if (do_sync)
-        CUDA_CALL(cudaEventCreate(&done));
+    SyncGuard syncGuard;
     _addToRowRepeatValuesOf<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(m_pArray, a.m_pArray, N, (CUDA_LONG) a.GetNumRows(), (CUDA_LONG) a.GetNumCols(), (CUDA_LONG) GetNumRows());
-    if (do_sync)
-        CUDA_CALL(cudaEventRecord(done));
-    if (do_sync)
-        CUDA_CALL(cudaEventSynchronize(done));
-    if (do_sync)
-        CUDA_CALL(cudaEventDestroy(done));
-
     return *this;
 }
 
@@ -931,17 +829,8 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignPositiveAndShiftedNegSample(cons
     CUDA_LONG n = (CUDA_LONG) a.GetNumCols(), m = (CUDA_LONG) a.GetNumRows();
     int blocksPerGrid = (int) ceil(1.0 * N / GridDim::maxThreadsPerBlock);
     PrepareDevice();
-    cudaEvent_t done = nullptr;
-    if (do_sync)
-        CUDA_CALL(cudaEventCreate(&done));
+    SyncGuard syncGuard;
     _assignPositiveAndShiftedNegSample<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(m_pArray, a.m_pArray, N, m, n, (CUDA_LONG) GetNumRows(), posNumber, shiftNumber);
-    if (do_sync)
-        CUDA_CALL(cudaEventRecord(done));
-    if (do_sync)
-        CUDA_CALL(cudaEventSynchronize(done));
-    if (do_sync)
-        CUDA_CALL(cudaEventDestroy(done));
-
     return *this;
 }
 
@@ -961,17 +850,8 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AddFoldedPositiveAndShiftedNegSample(c
     CUDA_LONG n = (CUDA_LONG) a.GetNumCols(), m = (CUDA_LONG) a.GetNumRows();
     int blocksPerGrid = (int) ceil(1.0 * N / GridDim::maxThreadsPerBlock);
     PrepareDevice();
-    cudaEvent_t done = nullptr;
-    if (do_sync)
-        CUDA_CALL(cudaEventCreate(&done));
+    SyncGuard syncGuard;
     _addFoldedPositiveAndShiftedNegSample<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(m_pArray, a.m_pArray, N, m, n, (CUDA_LONG) GetNumRows(), posNumber, shiftNumber);
-    if (do_sync)
-        CUDA_CALL(cudaEventRecord(done));
-    if (do_sync)
-        CUDA_CALL(cudaEventSynchronize(done));
-    if (do_sync)
-        CUDA_CALL(cudaEventDestroy(done));
-
     return *this;
 }
 
@@ -1080,16 +960,8 @@ void GPUMatrix<ElemType>::SetValue(const ElemType v)
     {
         int blocksPerGrid = (int) ceil(1.0 * N / GridDim::maxThreadsPerBlock);
         PrepareDevice();
-        cudaEvent_t done = nullptr;
-        if (do_sync)
-            CUDA_CALL(cudaEventCreate(&done));
+        SyncGuard syncGuard;
         _setValue<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(m_pArray, v, N);
-        if (do_sync)
-            CUDA_CALL(cudaEventRecord(done));
-        if (do_sync)
-            CUDA_CALL(cudaEventSynchronize(done));
-        if (do_sync)
-            CUDA_CALL(cudaEventDestroy(done));
     }
 }
 
@@ -1102,16 +974,8 @@ void GPUMatrix<ElemType>::SetValue(const ElemType* d_v) // d_v is pointer to the
     CUDA_LONG N = (CUDA_LONG) GetNumElements();
     int blocksPerGrid = (int) ceil(1.0 * N / GridDim::maxThreadsPerBlock);
     PrepareDevice();
-    cudaEvent_t done = nullptr;
-    if (do_sync)
-        CUDA_CALL(cudaEventCreate(&done));
+    SyncGuard syncGuard;
     _setValue<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(m_pArray, d_v, N);
-    if (do_sync)
-        CUDA_CALL(cudaEventRecord(done));
-    if (do_sync)
-        CUDA_CALL(cudaEventSynchronize(done));
-    if (do_sync)
-        CUDA_CALL(cudaEventDestroy(done));
 }
 
 template <class ElemType>
@@ -1125,16 +989,8 @@ void GPUMatrix<ElemType>::MaskColumnsValue(const GPUMatrix<char>& columnsMask, E
 
     int blocksPerGrid = (int) GetNumCols();
     PrepareDevice();
-    cudaEvent_t done = nullptr;
-    if (do_sync)
-        CUDA_CALL(cudaEventCreate(&done));
+    SyncGuard syncGuard;
     _maskColumnsValue<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(m_pArray, columnsMask.m_pArray, (CUDA_LONG) GetNumCols(), (CUDA_LONG) GetNumRows(), val);
-    if (do_sync)
-        CUDA_CALL(cudaEventRecord(done));
-    if (do_sync)
-        CUDA_CALL(cudaEventSynchronize(done));
-    if (do_sync)
-        CUDA_CALL(cudaEventDestroy(done));
 }
 
 template <class ElemType>
@@ -1236,16 +1092,8 @@ void GPUMatrix<ElemType>::SetDiagonalValue(const ElemType v)
     CUDA_LONG N = (CUDA_LONG) GetNumRows();
     int blocksPerGrid = (int) ceil(1.0 * N / GridDim::maxThreadsPerBlock);
     PrepareDevice();
-    cudaEvent_t done = nullptr;
-    if (do_sync)
-        CUDA_CALL(cudaEventCreate(&done));
+    SyncGuard syncGuard;
     _setDiagonalValue<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(m_pArray, v, N, (CUDA_LONG) GetNumRows());
-    if (do_sync)
-        CUDA_CALL(cudaEventRecord(done));
-    if (do_sync)
-        CUDA_CALL(cudaEventSynchronize(done));
-    if (do_sync)
-        CUDA_CALL(cudaEventDestroy(done));
 }
 
 template <class ElemType>
@@ -1270,16 +1118,8 @@ void GPUMatrix<ElemType>::SetDiagonalValue(const GPUMatrix<ElemType>& vector)
         CUDA_LONG N = (CUDA_LONG) GetNumRows();
         int blocksPerGrid = (int) ceil(1.0 * N / GridDim::maxThreadsPerBlock);
         PrepareDevice();
-        cudaEvent_t done = nullptr;
-        if (do_sync)
-            CUDA_CALL(cudaEventCreate(&done));
+        SyncGuard syncGuard;
         _setDiagonalValueFromVector<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(m_pArray, vector.m_pArray, N);
-        if (do_sync)
-            CUDA_CALL(cudaEventRecord(done));
-        if (do_sync)
-            CUDA_CALL(cudaEventSynchronize(done));
-        if (do_sync)
-            CUDA_CALL(cudaEventDestroy(done));
     }
 }
 
@@ -1290,15 +1130,11 @@ void GPUMatrix<ElemType>::SetUniformRandomValue(const ElemType low, const ElemTy
     CreateCurandObject(seed, __FUNCTION__); // TODO call ResetCurandObject() instead?
 
     cudaEvent_t done = nullptr;
-    CUDA_CALL(cudaEventCreate(&done));
+    CUDA_CALL(cudaEventCreate(&done)); // TODO: why not condition on do_sync, so that we can use SyncGuard?
     if (sizeof(ElemType) == sizeof(float))
-    {
         CURAND_CALL(curandGenerateUniform(((curandGenerator_t*) s_curandGenerator)[0], reinterpret_cast<float*>(m_pArray), GetNumElements()));
-    }
     else
-    {
         CURAND_CALL(curandGenerateUniformDouble(((curandGenerator_t*) s_curandGenerator)[0], reinterpret_cast<double*>(m_pArray), GetNumElements()));
-    }
     CUDA_CALL(cudaEventRecord(done));
     CUDA_CALL(cudaEventSynchronize(done));
     // CURAND_CALL(curandDestroyGenerator(gen));
@@ -1307,15 +1143,8 @@ void GPUMatrix<ElemType>::SetUniformRandomValue(const ElemType low, const ElemTy
     size_t N = GetNumElements();
     size_t blocksPerGrid = (size_t) ceil(N / (double) GridDim::maxThreadsPerBlock);
 
-    if (do_sync)
-        CUDA_CALL(cudaEventCreate(&done));
+    SyncGuard syncGuard;
     _rescaleToRange<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(m_pArray, N, low, high);
-    if (do_sync)
-        CUDA_CALL(cudaEventRecord(done));
-    if (do_sync)
-        CUDA_CALL(cudaEventSynchronize(done));
-    if (do_sync)
-        CUDA_CALL(cudaEventDestroy(done));
 }
 
 template <class ElemType>
@@ -1324,14 +1153,11 @@ void GPUMatrix<ElemType>::SetGaussianRandomValue(const ElemType mean, const Elem
     PrepareDevice();
     CreateCurandObject(seed, __FUNCTION__); // TODO call ResetCurandObject() instead?
 
+    // TODO: Why not use SyncGuard?
     if (sizeof(ElemType) == sizeof(float))
-    {
         CURAND_CALL(curandGenerateNormal(((curandGenerator_t*) s_curandGenerator)[0], reinterpret_cast<float*>(m_pArray), GetNumElements(), (float) mean, (float) sigma));
-    }
     else
-    {
         CURAND_CALL(curandGenerateNormalDouble(((curandGenerator_t*) s_curandGenerator)[0], reinterpret_cast<double*>(m_pArray), GetNumElements(), (double) mean, (double) sigma));
-    }
     // CURAND_CALL(curandDestroyGenerator(gen));
 }
 
@@ -1344,15 +1170,11 @@ void GPUMatrix<ElemType>::SetUniformRandomMask(const ElemType maskRate, const El
     CreateCurandObject(seed, __FUNCTION__); // TODO call ResetCurandObject() instead?
 
     cudaEvent_t done = nullptr;
-    CUDA_CALL(cudaEventCreate(&done));
+    CUDA_CALL(cudaEventCreate(&done)); // TODO: why not condition on do_sync, so that we can use SyncGuard?
     if (sizeof(ElemType) == sizeof(float))
-    {
         CURAND_CALL(curandGenerateUniform((((curandGenerator_t*) s_curandGenerator)[0]), reinterpret_cast<float*>(m_pArray), GetNumElements()));
-    }
     else
-    {
         CURAND_CALL(curandGenerateUniformDouble((((curandGenerator_t*) s_curandGenerator)[0]), reinterpret_cast<double*>(m_pArray), GetNumElements()));
-    }
     CUDA_CALL(cudaEventRecord(done));
     CUDA_CALL(cudaEventSynchronize(done));
     CUDA_CALL(cudaEventDestroy(done));
@@ -1360,15 +1182,8 @@ void GPUMatrix<ElemType>::SetUniformRandomMask(const ElemType maskRate, const El
 
     size_t N = GetNumElements();
     size_t blocksPerGrid = (size_t) ceil(N / (double) GridDim::maxThreadsPerBlock);
-    if (do_sync)
-        CUDA_CALL(cudaEventCreate(&done));
+    SyncGuard syncGuard;
     _setMaskAndScale<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(m_pArray, N, maskRate, scaleValue);
-    if (do_sync)
-        CUDA_CALL(cudaEventRecord(done));
-    if (do_sync)
-        CUDA_CALL(cudaEventSynchronize(done));
-    if (do_sync)
-        CUDA_CALL(cudaEventDestroy(done));
 }
 
 template <class ElemType>
@@ -1594,16 +1409,8 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::operator+=(ElemType alpha)
         LogicError("operator+=: Matrix is empty.");
     CUDA_LONG N = (CUDA_LONG) GetNumElements();
     int blocksPerGrid = (int) ceil(1.0 * N / GridDim::maxThreadsPerBlock);
-    cudaEvent_t done = nullptr;
-    if (do_sync)
-        CUDA_CALL(cudaEventCreate(&done));
+    SyncGuard syncGuard;
     _addValue<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(m_pArray, alpha, N);
-    if (do_sync)
-        CUDA_CALL(cudaEventRecord(done));
-    if (do_sync)
-        CUDA_CALL(cudaEventSynchronize(done));
-    if (do_sync)
-        CUDA_CALL(cudaEventDestroy(done));
     return *this;
 }
 
@@ -1630,22 +1437,7 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignSumOf(const ElemType alpha, cons
 template <class ElemType>
 GPUMatrix<ElemType>& GPUMatrix<ElemType>::operator+=(const GPUMatrix<ElemType>& a)
 {
-    // if (a.GetNumElements()==1)
-    // {
-    //    // *this += a.Get00Element();
-    //    CUDA_LONG N=(CUDA_LONG)GetNumElements();
-    //    int blocksPerGrid =(int)ceil(1.0*N/GridDim::maxThreadsPerBlock);
-    //    cudaEvent_t done = nullptr;
-    //    if (do_sync)    CUDA_CALL(cudaEventCreate(&done));
-    //    _addValue<ElemType><<<blocksPerGrid,GridDim::maxThreadsPerBlock,0,t_stream>>>(m_pArray,a.m_pArray,N);
-    //    if (do_sync)    CUDA_CALL(cudaEventRecord(done));
-    //    if (do_sync)    CUDA_CALL(cudaEventSynchronize(done));
-    //    if (do_sync)    CUDA_CALL(cudaEventDestroy(done));
-    // }
-    // else
-    // {
     ScaleAndAdd(1, a, *this);
-    // }
     return *this;
 }
 
@@ -1703,21 +1495,9 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignDifferenceOf(const ElemType alph
     CUDA_LONG N = (CUDA_LONG) GetNumElements();
     int blocksPerGrid = (int) ceil(1.0 * N / GridDim::maxThreadsPerBlock);
     a.PrepareDevice();
-    cudaEvent_t done = nullptr;
-    if (do_sync)
-        CUDA_CALL(cudaEventCreate(&done));
+    SyncGuard syncGuard;
     _assignDifferenceOf1<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(m_pArray, alpha, a.m_pArray, N);
-    if (do_sync)
-        CUDA_CALL(cudaEventRecord(done));
-    if (do_sync)
-        CUDA_CALL(cudaEventSynchronize(done));
-    if (do_sync)
-        CUDA_CALL(cudaEventDestroy(done));
     return *this;
-    /*Resize(a.m_numRows,a.m_numCols);
-        SetValue(alpha);
-        (*this)-=a;
-        return *this;*/
 }
 
 template <class ElemType>
@@ -1727,20 +1507,9 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignDifferenceOf(const GPUMatrix<Ele
     CUDA_LONG N = (CUDA_LONG) GetNumElements();
     int blocksPerGrid = (int) ceil(1.0 * N / GridDim::maxThreadsPerBlock);
     a.PrepareDevice();
-    cudaEvent_t done = nullptr;
-    if (do_sync)
-        CUDA_CALL(cudaEventCreate(&done));
+    SyncGuard syncGuard;
     _assignDifferenceOf2<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(m_pArray, alpha, a.m_pArray, N);
-    if (do_sync)
-        CUDA_CALL(cudaEventRecord(done));
-    if (do_sync)
-        CUDA_CALL(cudaEventSynchronize(done));
-    if (do_sync)
-        CUDA_CALL(cudaEventDestroy(done));
     return *this;
-    /*SetValue(a);
-        (*this)-=alpha;
-        return *this;*/
 }
 
 template <class ElemType>
@@ -1895,16 +1664,8 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AddElementProductOf(const GPUMatrix<El
     CUDA_LONG N = (CUDA_LONG) GetNumElements();
     int blocksPerGrid = (int) ceil(1.0 * N / GridDim::maxThreadsPerBlock);
     a.PrepareDevice();
-    cudaEvent_t done = nullptr;
-    if (do_sync)
-        CUDA_CALL(cudaEventCreate(&done));
+    SyncGuard syncGuard;
     _addElementProductOf<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(m_pArray, a.m_pArray, b.m_pArray, N);
-    if (do_sync)
-        CUDA_CALL(cudaEventRecord(done));
-    if (do_sync)
-        CUDA_CALL(cudaEventSynchronize(done));
-    if (do_sync)
-        CUDA_CALL(cudaEventDestroy(done));
     return *this;
 }
 
@@ -1921,17 +1682,8 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::ColumnElementMultiplyWith(const GPUMat
     CUDA_LONG M = (CUDA_LONG) GetNumCols();
     int blocksPerGrid = (int) ceil(1.0 * N / GridDim::maxThreadsPerBlock);
     a.PrepareDevice();
-    cudaEvent_t done = nullptr;
-    if (do_sync)
-        CUDA_CALL(cudaEventCreate(&done));
+    SyncGuard syncGuard;
     _columnElementMultiplyWith<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(m_pArray, a.m_pArray, N, M);
-    if (do_sync)
-        CUDA_CALL(cudaEventRecord(done));
-    if (do_sync)
-        CUDA_CALL(cudaEventSynchronize(done));
-    if (do_sync)
-        CUDA_CALL(cudaEventDestroy(done));
-
     return *this;
 }
 
@@ -1948,17 +1700,8 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::RowElementMultiplyWith(const GPUMatrix
     CUDA_LONG M = (CUDA_LONG) a.GetNumCols();
     int blocksPerGrid = (int) ceil(1.0 * M / GridDim::maxThreadsPerBlock);
     a.PrepareDevice();
-    cudaEvent_t done = nullptr;
-    if (do_sync)
-        CUDA_CALL(cudaEventCreate(&done));
+    SyncGuard syncGuard;
     _rowElementMultiplyWith<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock>>>(m_pArray, a.m_pArray, N, M);
-    if (do_sync)
-        CUDA_CALL(cudaEventRecord(done));
-    if (do_sync)
-        CUDA_CALL(cudaEventSynchronize(done));
-    if (do_sync)
-        CUDA_CALL(cudaEventDestroy(done));
-
     return *this;
 }
 
@@ -1975,17 +1718,8 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::RowElementDivideBy(const GPUMatrix<Ele
     CUDA_LONG M = (CUDA_LONG) a.GetNumCols();
     int blocksPerGrid = (int) ceil(1.0 * M / GridDim::maxThreadsPerBlock);
     a.PrepareDevice();
-    cudaEvent_t done = nullptr;
-    if (do_sync)
-        CUDA_CALL(cudaEventCreate(&done));
+    SyncGuard syncGuard;
     _rowElementDivideBy<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock>>>(m_pArray, a.m_pArray, N, M);
-    if (do_sync)
-        CUDA_CALL(cudaEventRecord(done));
-    if (do_sync)
-        CUDA_CALL(cudaEventSynchronize(done));
-    if (do_sync)
-        CUDA_CALL(cudaEventDestroy(done));
-
     return *this;
 }
 
@@ -2002,17 +1736,8 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::ColumnElementDivideBy(const GPUMatrix<
     CUDA_LONG M = (CUDA_LONG) GetNumCols();
     int blocksPerGrid = (int) ceil(1.0 * N / GridDim::maxThreadsPerBlock);
     a.PrepareDevice();
-    cudaEvent_t done = nullptr;
-    if (do_sync)
-        CUDA_CALL(cudaEventCreate(&done));
+    SyncGuard syncGuard;
     _ColumnElementDivideBy<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(m_pArray, a.m_pArray, N, M);
-    if (do_sync)
-        CUDA_CALL(cudaEventRecord(done));
-    if (do_sync)
-        CUDA_CALL(cudaEventSynchronize(done));
-    if (do_sync)
-        CUDA_CALL(cudaEventDestroy(done));
-
     return *this;
 }
 
@@ -2025,16 +1750,8 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::ElementInverse()
     CUDA_LONG N = (CUDA_LONG) GetNumElements();
     int blocksPerGrid = (int) ceil(1.0 * N / GridDim::maxThreadsPerBlock);
     PrepareDevice();
-    cudaEvent_t done = nullptr;
-    if (do_sync)
-        CUDA_CALL(cudaEventCreate(&done));
+    SyncGuard syncGuard;
     _elemInverse<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(m_pArray, N);
-    if (do_sync)
-        CUDA_CALL(cudaEventRecord(done));
-    if (do_sync)
-        CUDA_CALL(cudaEventSynchronize(done));
-    if (do_sync)
-        CUDA_CALL(cudaEventDestroy(done));
     return *this;
 }
 
@@ -2054,23 +1771,13 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignSigmoidOf(const GPUMatrix<ElemTy
     CUDA_LONG N = (CUDA_LONG) GetNumElements();
     int blocksPerGrid = (int) ceil(1.0 * N / GridDim::maxThreadsPerBlock);
     PrepareDevice();
-    cudaEvent_t done = nullptr;
-    if (do_sync)
-        CUDA_CALL(cudaEventCreate(&done));
+    SyncGuard syncGuard;
     // _elementWIseSigmoidOnCuda has an implementation that avoids possible overflow errors, but has a slight accuracy regression.
 #if 0
     _elementWiseSigmoidOnCuda<<<blocksPerGrid, threadsPerBlock, 0, t_stream>>>(a.m_pArray, m_pArray, N);
 #else
     _assignSigmoidOf<<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(a.m_pArray, m_pArray, N);
 #endif
-    if (do_sync)
-        CUDA_CALL(cudaEventRecord(done));
-    if (do_sync)
-        CUDA_CALL(cudaEventSynchronize(done));
-    if (do_sync)
-        CUDA_CALL(cudaEventDestroy(done));
-    /*SetValue(a);
-        InplaceSigmoid();*/
     return *this;
 }
 
@@ -2089,9 +1796,7 @@ void GPUMatrix<ElemType>::AssignNoiseContrastiveEstimation(const GPUMatrix<ElemT
     UNCONST(ElemType, a, my_a);
     UNCONST(ElemType, b, my_b);
     UNCONST(ElemType, bias, my_bias);
-    cudaEvent_t done = nullptr;
-    if (do_sync)
-        CUDA_CALL(cudaEventCreate(&done));
+    SyncGuard syncGuard;
     // a: dim * minibatch
     // b: dim * |vocab|
     int p = 512;
@@ -2123,13 +1828,6 @@ void GPUMatrix<ElemType>::AssignNoiseContrastiveEstimation(const GPUMatrix<ElemT
         my_b.GetArray(),
         tmp.GetArray(),
         c.GetArray());
-
-    if (do_sync)
-        CUDA_CALL(cudaEventRecord(done));
-    if (do_sync)
-        CUDA_CALL(cudaEventSynchronize(done));
-    if (do_sync)
-        CUDA_CALL(cudaEventDestroy(done));
 }
 
 template <class ElemType>
@@ -2138,9 +1836,7 @@ void GPUMatrix<ElemType>::AssignNCEDerivative(GPUMatrix<ElemType>& tmp, const GP
 {
     UNCONST(ElemType, a, my_a);
     UNCONST(ElemType, b, my_b);
-    cudaEvent_t done = nullptr;
-    if (do_sync)
-        CUDA_CALL(cudaEventCreate(&done));
+    SyncGuard syncGuard;
     int p = 512;
     int width = a.GetNumRows();
     while (p / 2 > width)
@@ -2156,22 +1852,13 @@ void GPUMatrix<ElemType>::AssignNCEDerivative(GPUMatrix<ElemType>& tmp, const GP
         tmp.GetArray(),
         c.GetArray(),
         inputIndex);
-
-    if (do_sync)
-        CUDA_CALL(cudaEventRecord(done));
-    if (do_sync)
-        CUDA_CALL(cudaEventSynchronize(done));
-    if (do_sync)
-        CUDA_CALL(cudaEventDestroy(done));
 }
 
 template <class ElemType>
 void GPUMatrix<ElemType>::AssignSoftmaxSum(const GPUMatrix<ElemType>& a, GPUMatrix<ElemType>& c)
 {
     UNCONST(ElemType, a, my_a);
-    cudaEvent_t done = nullptr;
-    if (do_sync)
-        CUDA_CALL(cudaEventCreate(&done));
+    SyncGuard syncGuard;
     int p = 512;
     int width = a.GetNumRows();
     while (p / 2 > width)
@@ -2182,14 +1869,8 @@ void GPUMatrix<ElemType>::AssignSoftmaxSum(const GPUMatrix<ElemType>& a, GPUMatr
         width,
         GetArray(),
         c.GetArray());
-
-    if (do_sync)
-        CUDA_CALL(cudaEventRecord(done));
-    if (do_sync)
-        CUDA_CALL(cudaEventSynchronize(done));
-    if (do_sync)
-        CUDA_CALL(cudaEventDestroy(done));
 }
+
 template <class ElemType>
 void GPUMatrix<ElemType>::AssignNCEUnnormalizedEval(const GPUMatrix<ElemType>& a, const GPUMatrix<ElemType>& b, GPUMatrix<ElemType>& c)
 {
@@ -2236,31 +1917,15 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::InplaceLogSoftmax(const bool isColWise
     {
         CUDA_LONG N = (CUDA_LONG) GetNumCols(); // one kernel per column
         int blocksPerGrid = (int) ceil(N * 1.0 / GridDim::maxThreadsPerBlock);
-        cudaEvent_t done = nullptr;
-        if (do_sync)
-            CUDA_CALL(cudaEventCreate(&done));
+        SyncGuard syncGuard;
         _logSoftMaxColWise<<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(m_pArray, (CUDA_LONG) m_numCols, (CUDA_LONG) m_numRows);
-        if (do_sync)
-            CUDA_CALL(cudaEventRecord(done));
-        if (do_sync)
-            CUDA_CALL(cudaEventSynchronize(done));
-        if (do_sync)
-            CUDA_CALL(cudaEventDestroy(done));
     }
     else
     {
         CUDA_LONG N = (CUDA_LONG) GetNumRows(); // one kernel per column
         int blocksPerGrid = (int) ceil(N * 1.0 / GridDim::maxThreadsPerBlock);
-        cudaEvent_t done = nullptr;
-        if (do_sync)
-            CUDA_CALL(cudaEventCreate(&done));
+        SyncGuard syncGuard;
         _logSoftMaxRowWise<<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(m_pArray, (CUDA_LONG) m_numCols, (CUDA_LONG) m_numRows);
-        if (do_sync)
-            CUDA_CALL(cudaEventRecord(done));
-        if (do_sync)
-            CUDA_CALL(cudaEventSynchronize(done));
-        if (do_sync)
-            CUDA_CALL(cudaEventDestroy(done));
     }
     return *this;
 }
@@ -2274,16 +1939,8 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignLogSoftmaxOf(const GPUMatrix<Ele
         PrepareDevice();
         CUDA_LONG N = (CUDA_LONG) GetNumCols();
         CUDA_LONG M = (CUDA_LONG) GetNumRows();
-        cudaEvent_t done = nullptr;
-        if (do_sync)
-            CUDA_CALL(cudaEventCreate(&done));
+        SyncGuard syncGuard;
         _assignColumnwiseLogSoftmaxOf<<<N, 512, 0, t_stream>>>(a.m_pArray, m_pArray, N, M);
-        if (do_sync)
-            CUDA_CALL(cudaEventRecord(done));
-        if (do_sync)
-            CUDA_CALL(cudaEventSynchronize(done));
-        if (do_sync)
-            CUDA_CALL(cudaEventDestroy(done));
     }
     else
     {
@@ -2308,16 +1965,8 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignHardmaxOf(const GPUMatrix<ElemTy
         PrepareDevice();
         CUDA_LONG N = (CUDA_LONG) GetNumCols();
         CUDA_LONG M = (CUDA_LONG) GetNumRows();
-        cudaEvent_t done = nullptr;
-        if (do_sync)
-            CUDA_CALL(cudaEventCreate(&done));
+        SyncGuard syncGuard;
         _assignColumnwiseHardmaxOf<<<N, 512, 0, t_stream>>>(a.m_pArray, m_pArray, N, M);
-        if (do_sync)
-            CUDA_CALL(cudaEventRecord(done));
-        if (do_sync)
-            CUDA_CALL(cudaEventSynchronize(done));
-        if (do_sync)
-            CUDA_CALL(cudaEventDestroy(done));
     }
     else
     {
@@ -2368,17 +2017,8 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignTruncateBottomOf(const GPUMatrix
     CUDA_LONG N = (CUDA_LONG) GetNumElements();
     int blocksPerGrid = (int) ceil(N * 1.0 / GridDim::maxThreadsPerBlock);
     PrepareDevice();
-    cudaEvent_t done = nullptr;
-    if (do_sync)
-        CUDA_CALL(cudaEventCreate(&done));
+    SyncGuard syncGuard;
     _assignTruncateBottom<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(m_pArray, a.m_pArray, threshold, N);
-    if (do_sync)
-        CUDA_CALL(cudaEventRecord(done));
-    if (do_sync)
-        CUDA_CALL(cudaEventSynchronize(done));
-    if (do_sync)
-        CUDA_CALL(cudaEventDestroy(done));
-
     return *this;
 }
 
@@ -2402,17 +2042,8 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignTruncateTopOf(const GPUMatrix<El
     CUDA_LONG N = (CUDA_LONG) GetNumElements();
     int blocksPerGrid = (int) ceil(N * 1.0 / GridDim::maxThreadsPerBlock);
     a.PrepareDevice();
-    cudaEvent_t done = nullptr;
-    if (do_sync)
-        CUDA_CALL(cudaEventCreate(&done));
+    SyncGuard syncGuard;
     _assignTruncateTop<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(m_pArray, a.m_pArray, threshold, N);
-    if (do_sync)
-        CUDA_CALL(cudaEventRecord(done));
-    if (do_sync)
-        CUDA_CALL(cudaEventSynchronize(done));
-    if (do_sync)
-        CUDA_CALL(cudaEventDestroy(done));
-
     return *this;
 }
 
@@ -2425,16 +2056,8 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::InplaceTruncate(const ElemType thresho
     CUDA_LONG N = (CUDA_LONG) GetNumElements();
     int blocksPerGrid = (int) ceil(N * 1.0 / GridDim::maxThreadsPerBlock);
     PrepareDevice();
-    cudaEvent_t done = nullptr;
-    if (do_sync)
-        CUDA_CALL(cudaEventCreate(&done));
+    SyncGuard syncGuard;
     _inplaceTruncate<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(m_pArray, threshold, N);
-    if (do_sync)
-        CUDA_CALL(cudaEventRecord(done));
-    if (do_sync)
-        CUDA_CALL(cudaEventSynchronize(done));
-    if (do_sync)
-        CUDA_CALL(cudaEventDestroy(done));
     return *this;
 }
 
@@ -2447,16 +2070,8 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::InplaceSoftThreshold(const ElemType th
     CUDA_LONG N = (CUDA_LONG) GetNumElements();
     int blocksPerGrid = (int) ceil(N * 1.0 / GridDim::maxThreadsPerBlock);
     PrepareDevice();
-    cudaEvent_t done = nullptr;
-    if (do_sync)
-        CUDA_CALL(cudaEventCreate(&done));
+    SyncGuard syncGuard;
     _inplaceSoftThreshold<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(m_pArray, threshold, N);
-    if (do_sync)
-        CUDA_CALL(cudaEventRecord(done));
-    if (do_sync)
-        CUDA_CALL(cudaEventSynchronize(done));
-    if (do_sync)
-        CUDA_CALL(cudaEventDestroy(done));
     return *this;
 }
 template <class ElemType>
@@ -2467,16 +2082,8 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::SetToZeroIfAbsLessThan(const ElemType 
     CUDA_LONG N = (CUDA_LONG) GetNumElements();
     int blocksPerGrid = (int) ceil(N * 1.0 / GridDim::maxThreadsPerBlock);
     PrepareDevice();
-    cudaEvent_t done = nullptr;
-    if (do_sync)
-        CUDA_CALL(cudaEventCreate(&done));
+    SyncGuard syncGuard;
     _setToZeroIfAbsLessThan<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(m_pArray, threshold, N);
-    if (do_sync)
-        CUDA_CALL(cudaEventRecord(done));
-    if (do_sync)
-        CUDA_CALL(cudaEventSynchronize(done));
-    if (do_sync)
-        CUDA_CALL(cudaEventDestroy(done));
     return *this;
 }
 
@@ -2526,17 +2133,9 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignSumOfElements(const GPUMatrix<El
     Resize(1, 1);
 
     PrepareDevice();
-    cudaEvent_t done = nullptr;
-    if (do_sync)
-        CUDA_CALL(cudaEventCreate(&done));
+    SyncGuard syncGuard;
     // WARNING: THIS kernel is not the most efficient way!
     _reductionSumAndAssign<ElemType><<<1, 1024>>>(m_pArray, a.m_pArray, (CUDA_LONG) a.GetNumElements(), (CUDA_LONG) GetNumElements());
-    if (do_sync)
-        CUDA_CALL(cudaEventRecord(done));
-    if (do_sync)
-        CUDA_CALL(cudaEventSynchronize(done));
-    if (do_sync)
-        CUDA_CALL(cudaEventDestroy(done));
     return (*this);
 }
 
@@ -2591,16 +2190,8 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::ElementMultiplyWith(const GPUMatrix<El
     CUDA_LONG N = (CUDA_LONG) GetNumElements();
     int blocksPerGrid = (int) ceil(((double) N) / GridDim::maxThreadsPerBlock);
     a.PrepareDevice();
-    cudaEvent_t done = nullptr;
-    if (do_sync)
-        CUDA_CALL(cudaEventCreate(&done));
+    SyncGuard syncGuard;
     _elemMul<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(m_pArray, a.m_pArray, N);
-    if (do_sync)
-        CUDA_CALL(cudaEventRecord(done));
-    if (do_sync)
-        CUDA_CALL(cudaEventSynchronize(done));
-    if (do_sync)
-        CUDA_CALL(cudaEventDestroy(done));
     return *this;
 }
 
@@ -2618,16 +2209,8 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignElementProductOf(const GPUMatrix
     CUDA_LONG N = (CUDA_LONG) GetNumElements();
     int blocksPerGrid = (int) ceil(((double) N) / GridDim::maxThreadsPerBlock);
     a.PrepareDevice();
-    cudaEvent_t done = nullptr;
-    if (do_sync)
-        CUDA_CALL(cudaEventCreate(&done));
+    SyncGuard syncGuard;
     _assignElementProductOf<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(m_pArray, a.m_pArray, b.m_pArray, N);
-    if (do_sync)
-        CUDA_CALL(cudaEventRecord(done));
-    if (do_sync)
-        CUDA_CALL(cudaEventSynchronize(done));
-    if (do_sync)
-        CUDA_CALL(cudaEventDestroy(done));
     return *this;
 }
 
@@ -2651,16 +2234,8 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignElementDivisionOf(const GPUMatri
     CUDA_LONG N = (CUDA_LONG) GetNumElements();
     int blocksPerGrid = (int) ceil(((double) N) / GridDim::maxThreadsPerBlock);
     a.PrepareDevice();
-    cudaEvent_t done = nullptr;
-    if (do_sync)
-        CUDA_CALL(cudaEventCreate(&done));
+    SyncGuard syncGuard;
     _assignElementDivisionOf<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(m_pArray, a.m_pArray, b.m_pArray, N);
-    if (do_sync)
-        CUDA_CALL(cudaEventRecord(done));
-    if (do_sync)
-        CUDA_CALL(cudaEventSynchronize(done));
-    if (do_sync)
-        CUDA_CALL(cudaEventDestroy(done));
     return *this;
 }
 
@@ -2687,8 +2262,6 @@ void GPUMatrix<ElemType>::VectorSum(const GPUMatrix<ElemType>& a, GPUMatrix<Elem
     const CUDA_LONG m = (CUDA_LONG) a.GetNumCols();
     assert(m > 0 && n > 0); // converting from size_t to int may cause overflow
 
-    cudaEvent_t done = nullptr;
-
     int blocksPerGrid = 0;
     if (isColWise) // col-wise
     {
@@ -2701,15 +2274,8 @@ void GPUMatrix<ElemType>::VectorSum(const GPUMatrix<ElemType>& a, GPUMatrix<Elem
         blocksPerGrid = (int) ceil(1.0 * n / GridDim::maxThreadsPerBlock);
     }
 
-    if (do_sync)
-        CUDA_CALL(cudaEventCreate(&done));
+    SyncGuard syncGuard;
     _vectorSum<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(c.m_pArray, a.m_pArray, n, m, isColWise);
-    if (do_sync)
-        CUDA_CALL(cudaEventRecord(done));
-    if (do_sync)
-        CUDA_CALL(cudaEventSynchronize(done));
-    if (do_sync)
-        CUDA_CALL(cudaEventDestroy(done));
 }
 template <class ElemType>
 void GPUMatrix<ElemType>::VectorNorm1(GPUMatrix<ElemType>& c, const bool isColWise) const
@@ -2721,7 +2287,6 @@ void GPUMatrix<ElemType>::VectorNorm1(GPUMatrix<ElemType>& c, const bool isColWi
     const CUDA_LONG m = (CUDA_LONG) GetNumCols();
     assert(m > 0 && n > 0); // converting from size_t to int may cause overflow
 
-    cudaEvent_t done = nullptr;
     PrepareDevice();
     c.ChangeDeviceTo(GetComputeDeviceId());
 
@@ -2737,15 +2302,8 @@ void GPUMatrix<ElemType>::VectorNorm1(GPUMatrix<ElemType>& c, const bool isColWi
         blocksPerGrid = (int) ceil(1.0 * n / GridDim::maxThreadsPerBlock);
     }
 
-    if (do_sync)
-        CUDA_CALL(cudaEventCreate(&done));
+    SyncGuard syncGuard;
     _vectorNorm1<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(c.m_pArray, m_pArray, n, m, isColWise);
-    if (do_sync)
-        CUDA_CALL(cudaEventRecord(done));
-    if (do_sync)
-        CUDA_CALL(cudaEventSynchronize(done));
-    if (do_sync)
-        CUDA_CALL(cudaEventDestroy(done));
 }
 
 template <class ElemType>
@@ -2765,7 +2323,6 @@ void GPUMatrix<ElemType>::VectorNorm2(GPUMatrix<ElemType>& c, const bool isColWi
     const CUDA_LONG m = (CUDA_LONG) GetNumCols();
     assert(m > 0 && n > 0); // converting from size_t to int may cause overflow
 
-    cudaEvent_t done = nullptr;
     PrepareDevice();
     c.ChangeDeviceTo(GetComputeDeviceId());
 
@@ -2782,15 +2339,8 @@ void GPUMatrix<ElemType>::VectorNorm2(GPUMatrix<ElemType>& c, const bool isColWi
         blocksPerGrid = (int) ceil(1.0 * n / GridDim::maxThreadsPerBlock);
     }
 
-    if (do_sync)
-        CUDA_CALL(cudaEventCreate(&done));
+    SyncGuard syncGuard;
     _vectorNorm2<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(c.m_pArray, m_pArray, n, m, isColWise);
-    if (do_sync)
-        CUDA_CALL(cudaEventRecord(done));
-    if (do_sync)
-        CUDA_CALL(cudaEventSynchronize(done));
-    if (do_sync)
-        CUDA_CALL(cudaEventDestroy(done));
 }
 
 template <class ElemType>
@@ -2844,17 +2394,8 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignKhatriRaoProductOf(const GPUMatr
     float N = (float) GetNumElements();
     int blocksPerGrid = (int) ceil(N / GridDim::maxThreadsPerBlock);
     a.PrepareDevice();
-    cudaEvent_t done = nullptr;
-    if (do_sync)
-        CUDA_CALL(cudaEventCreate(&done));
+    SyncGuard syncGuard;
     _assignKhatriRaoProductOf<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(m_pArray, a.m_pArray, b.m_pArray, rowsA, rowsB, cols);
-    if (do_sync)
-        CUDA_CALL(cudaEventRecord(done));
-    if (do_sync)
-        CUDA_CALL(cudaEventSynchronize(done));
-    if (do_sync)
-        CUDA_CALL(cudaEventDestroy(done));
-
     return *this;
 }
 
@@ -2886,17 +2427,8 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AddColumnReshapeProductOf(const GPUMat
     float N = (float) GetNumElements();
     int blocksPerGrid = (int) ceil(N / GridDim::maxThreadsPerBlock);
     a.PrepareDevice();
-    cudaEvent_t done = nullptr;
-    if (do_sync)
-        CUDA_CALL(cudaEventCreate(&done));
+    SyncGuard syncGuard;
     _addColumnReshapeProductOf<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(m_pArray, a.m_pArray, b.m_pArray, rowsB, rowsC, cols, transposeAColumn);
-    if (do_sync)
-        CUDA_CALL(cudaEventRecord(done));
-    if (do_sync)
-        CUDA_CALL(cudaEventSynchronize(done));
-    if (do_sync)
-        CUDA_CALL(cudaEventDestroy(done));
-
     return *this;
 }
 
@@ -2988,17 +2520,9 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignSignOf(const GPUMatrix<ElemType>
         Resize(a.GetNumRows(), a.GetNumCols());
 
     PrepareDevice();
-    cudaEvent_t done = nullptr;
     int blocksPerGrid = (int) ceil(1.0 * GetNumElements() / GridDim::maxThreadsPerBlock);
-    if (do_sync)
-        CUDA_CALL(cudaEventCreate(&done));
+    SyncGuard syncGuard;
     _assignSignOf<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(m_pArray, a.m_pArray, (CUDA_LONG) GetNumElements());
-    if (do_sync)
-        CUDA_CALL(cudaEventRecord(done));
-    if (do_sync)
-        CUDA_CALL(cudaEventSynchronize(done));
-    if (do_sync)
-        CUDA_CALL(cudaEventDestroy(done));
     return *this;
 }
 
@@ -3012,17 +2536,9 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AddSignOf(const GPUMatrix<ElemType>& a
         Resize(a.GetNumRows(), a.GetNumCols());
 
     PrepareDevice();
-    cudaEvent_t done = nullptr;
     int blocksPerGrid = (int) ceil(1.0 * GetNumElements() / GridDim::maxThreadsPerBlock);
-    if (do_sync)
-        CUDA_CALL(cudaEventCreate(&done));
+    SyncGuard syncGuard;
     _addSignOf<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(m_pArray, a.m_pArray, (CUDA_LONG) GetNumElements());
-    if (do_sync)
-        CUDA_CALL(cudaEventRecord(done));
-    if (do_sync)
-        CUDA_CALL(cudaEventSynchronize(done));
-    if (do_sync)
-        CUDA_CALL(cudaEventDestroy(done));
     return *this;
 }
 
@@ -3038,9 +2554,7 @@ void GPUMatrix<ElemType>::VectorMax(GPUMatrix<ElemType>& maxIndexes, GPUMatrix<E
     assert(m > 0 && n > 0); // converting from size_t to int may cause overflow
 
     PrepareDevice();
-    cudaEvent_t done = nullptr;
-    if (do_sync)
-        CUDA_CALL(cudaEventCreate(&done));
+    SyncGuard syncGuard;
     if (isColWise)
     {
         maxValues.Resize(1, n);
@@ -3059,12 +2573,6 @@ void GPUMatrix<ElemType>::VectorMax(GPUMatrix<ElemType>& maxIndexes, GPUMatrix<E
         int blocksPerGrid = (int) ceil(1.0 * m / GridDim::maxThreadsPerBlock);
         _vectorMax<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(us.m_pArray, maxIndexes.m_pArray, maxValues.m_pArray, m, n, isColWise);
     }
-    if (do_sync)
-        CUDA_CALL(cudaEventRecord(done));
-    if (do_sync)
-        CUDA_CALL(cudaEventSynchronize(done));
-    if (do_sync)
-        CUDA_CALL(cudaEventDestroy(done));
 }
 
 __global__ void _initIndicesForSort(uint64_t* indexes, CUDA_LONG crow, CUDA_LONG ccol)
@@ -3099,9 +2607,7 @@ void GPUMatrix<ElemType>::VectorMax(GPUMatrix<ElemType>& maxIndexes, GPUMatrix<E
     assert(m > 0 && n > 0); // converting from size_t to int may cause overflow
 
     PrepareDevice();
-    cudaEvent_t done = nullptr;
-    if (do_sync)
-        CUDA_CALL(cudaEventCreate(&done));
+    SyncGuard syncGuard;
     maxValues.Resize(topK, n);
     maxIndexes.Resize(topK, n);
 
@@ -3160,12 +2666,6 @@ void GPUMatrix<ElemType>::VectorMax(GPUMatrix<ElemType>& maxIndexes, GPUMatrix<E
 
     ReleaseWorkspace(std::move(workspace));
 
-    if (do_sync)
-        CUDA_CALL(cudaEventRecord(done));
-    if (do_sync)
-        CUDA_CALL(cudaEventSynchronize(done));
-    if (do_sync)
-        CUDA_CALL(cudaEventDestroy(done));
 }
 
 template <class ElemType>
@@ -3180,9 +2680,7 @@ void GPUMatrix<ElemType>::VectorMin(GPUMatrix<ElemType>& minIndexes, GPUMatrix<E
 
     assert(m > 0 && n > 0); // converting from size_t to int may cause overflow
     PrepareDevice();
-    cudaEvent_t done = nullptr;
-    if (do_sync)
-        CUDA_CALL(cudaEventCreate(&done));
+    SyncGuard syncGuard;
     if (isColWise)
     {
         minValues.Resize(1, n);
@@ -3202,12 +2700,6 @@ void GPUMatrix<ElemType>::VectorMin(GPUMatrix<ElemType>& minIndexes, GPUMatrix<E
         int blocksPerGrid = (int) ceil(1.0 * m / GridDim::maxThreadsPerBlock);
         _vectorMin<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(us.m_pArray, minIndexes.m_pArray, minValues.m_pArray, m, n, isColWise);
     }
-    if (do_sync)
-        CUDA_CALL(cudaEventRecord(done));
-    if (do_sync)
-        CUDA_CALL(cudaEventSynchronize(done));
-    if (do_sync)
-        CUDA_CALL(cudaEventDestroy(done));
 }
 
 template <class ElemType>
@@ -3221,9 +2713,7 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignNumOfDiff(const GPUMatrix<ElemTy
     Resize(1, 1); // result should be one element
 
     PrepareDevice();
-    cudaEvent_t done = nullptr;
-    if (do_sync)
-        CUDA_CALL(cudaEventCreate(&done));
+    SyncGuard syncGuard;
     if (!searchInCol)
     {
         // int blocksPerGrid=(int)ceil(1.0*a.GetNumElements()/GridDim::maxThreadsPerBlock);
@@ -3236,12 +2726,6 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignNumOfDiff(const GPUMatrix<ElemTy
         _assignNumOfDiffCol<blockSize><<<1, blockSize, 0, t_stream>>>(a.m_pArray, b.m_pArray, m_pArray,
                                                                       static_cast<CUDA_LONG>(b.GetNumRows()), static_cast<CUDA_LONG>(a.GetNumCols()));
     }
-    if (do_sync)
-        CUDA_CALL(cudaEventRecord(done));
-    if (do_sync)
-        CUDA_CALL(cudaEventSynchronize(done));
-    if (do_sync)
-        CUDA_CALL(cudaEventDestroy(done));
     return *this;
 }
 
@@ -3299,21 +2783,13 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignPackedConvolutionInput(const GPU
 #else
     dim3 blocksPerGrid((inputWidth * inputHeight * inputChannels + numThreadPerBlock - 1) / numThreadPerBlock, smallBatchSize);
 #endif
-    cudaEvent_t done = nullptr;
-    if (do_sync)
-        CUDA_CALL(cudaEventCreate(&done));
+    SyncGuard syncGuard;
     _assignPackedConvolutionInput<<<blocksPerGrid, numThreadPerBlock, 0, t_stream>>>(m_pArray,
                                                                                      inputSubBatch.m_pArray,
                                                                                      smallBatchSize,
                                                                                      inputWidth, inputHeight, inputChannels,
                                                                                      outputWidth, outputHeight, outputChannels,
                                                                                      kernelWidth, kernelHeight, horizontalSubsample, verticalSubsample, zeroPadding);
-    if (do_sync)
-        CUDA_CALL(cudaEventRecord(done));
-    if (do_sync)
-        CUDA_CALL(cudaEventSynchronize(done));
-    if (do_sync)
-        CUDA_CALL(cudaEventDestroy(done));
 
     return *this;
 }
@@ -3337,21 +2813,13 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::UnpackConvolutionInput(GPUMatrix<ElemT
 #else
     dim3 blocksPerGrid((inputWidth * inputHeight * inputChannels + numThreadPerBlock - 1) / numThreadPerBlock, smallBatchSize);
 #endif
-    cudaEvent_t done = nullptr;
-    if (do_sync)
-        CUDA_CALL(cudaEventCreate(&done));
+    SyncGuard syncGuard;
     _unpackConvolutionInput<<<blocksPerGrid, numThreadPerBlock, 0, t_stream>>>(m_pArray,
                                                                                inputSubBatch.m_pArray,
                                                                                smallBatchSize,
                                                                                inputWidth, inputHeight, inputChannels,
                                                                                outputWidth, outputHeight, outputChannels,
                                                                                kernelWidth, kernelHeight, horizontalSubsample, verticalSubsample, zeroPadding);
-    if (do_sync)
-        CUDA_CALL(cudaEventRecord(done));
-    if (do_sync)
-        CUDA_CALL(cudaEventSynchronize(done));
-    if (do_sync)
-        CUDA_CALL(cudaEventDestroy(done));
 
     return inputSubBatch;
 }
@@ -3371,19 +2839,11 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignMaxPoolingResult(const GPUMatrix
     int blocksPerGrid = (batchSize * outputSizePerSample + numThreadPerBlock - 1) / numThreadPerBlock;
 
     PrepareDevice();
-    cudaEvent_t done = nullptr;
-    if (do_sync)
-        CUDA_CALL(cudaEventCreate(&done));
+    SyncGuard syncGuard;
     _assignMaxPoolingResult<<<blocksPerGrid, numThreadPerBlock, 0, t_stream>>>(m_pArray, inputBatch.m_pArray, batchSize, channels,
                                                                                inputWidth, inputHeight, inputSizePerSample,
                                                                                outputWidth, outputHeight, outputSizePerSample,
                                                                                windowWidth, windowHeight, horizontalSubsample, verticalSubsample);
-    if (do_sync)
-        CUDA_CALL(cudaEventRecord(done));
-    if (do_sync)
-        CUDA_CALL(cudaEventSynchronize(done));
-    if (do_sync)
-        CUDA_CALL(cudaEventDestroy(done));
 
     return *this;
 }
@@ -3401,21 +2861,13 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AddMaxPoolingGradient(const GPUMatrix<
     int numThreadPerBlock = GridDim::maxThreadsPerBlock;
 
     PrepareDevice();
-    cudaEvent_t done = nullptr;
-    if (do_sync)
-        CUDA_CALL(cudaEventCreate(&done));
+    SyncGuard syncGuard;
 
     int blocksPerGrid = (batchSize * inputSizePerSample + numThreadPerBlock - 1) / numThreadPerBlock;
     _addMaxPoolingGradient<<<blocksPerGrid, numThreadPerBlock, 0, t_stream>>>(m_pArray, outputGradientBatch.m_pArray, inputBatch.m_pArray, outputBatch.m_pArray, batchSize, channels,
                                                                               inputWidth, inputHeight, inputSizePerSample,
                                                                               outputWidth, outputHeight, outputSizePerSample,
                                                                               windowWidth, windowHeight, horizontalSubsample, verticalSubsample);
-    if (do_sync)
-        CUDA_CALL(cudaEventRecord(done));
-    if (do_sync)
-        CUDA_CALL(cudaEventSynchronize(done));
-    if (do_sync)
-        CUDA_CALL(cudaEventDestroy(done));
 
     return *this;
 }
@@ -3435,19 +2887,11 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignAveragePoolingResult(const GPUMa
     int blocksPerGrid = (batchSize * outputSizePerSample + numThreadPerBlock - 1) / numThreadPerBlock;
 
     PrepareDevice();
-    cudaEvent_t done = nullptr;
-    if (do_sync)
-        CUDA_CALL(cudaEventCreate(&done));
+    SyncGuard syncGuard;
     _assignAveragePoolingResult<<<blocksPerGrid, numThreadPerBlock, 0, t_stream>>>(m_pArray, inputBatch.m_pArray, batchSize, channels,
                                                                                    inputWidth, inputHeight, inputSizePerSample,
                                                                                    outputWidth, outputHeight, outputSizePerSample,
                                                                                    windowWidth, windowHeight, horizontalSubsample, verticalSubsample);
-    if (do_sync)
-        CUDA_CALL(cudaEventRecord(done));
-    if (do_sync)
-        CUDA_CALL(cudaEventSynchronize(done));
-    if (do_sync)
-        CUDA_CALL(cudaEventDestroy(done));
 
     return *this;
 }
@@ -3465,21 +2909,12 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AddAveragePoolingGradient(const GPUMat
     int numThreadPerBlock = GridDim::maxThreadsPerBlock;
 
     PrepareDevice();
-    cudaEvent_t done = nullptr;
-    if (do_sync)
-        CUDA_CALL(cudaEventCreate(&done));
-
+    SyncGuard syncGuard;
     size_t blocksPerGrid = (batchSize * inputSizePerSample + numThreadPerBlock - 1) / numThreadPerBlock;
     _addAveragePoolingGradient<<<blocksPerGrid, numThreadPerBlock, 0, t_stream>>>(m_pArray, outputGradientBatch.m_pArray, (CUDA_LONG) batchSize, channels,
                                                                                   inputWidth, inputHeight, inputSizePerSample,
                                                                                   outputWidth, outputHeight, outputSizePerSample,
                                                                                   windowWidth, windowHeight, horizontalSubsample, verticalSubsample);
-    if (do_sync)
-        CUDA_CALL(cudaEventRecord(done));
-    if (do_sync)
-        CUDA_CALL(cudaEventSynchronize(done));
-    if (do_sync)
-        CUDA_CALL(cudaEventDestroy(done));
 
     return *this;
 }
@@ -3543,16 +2978,8 @@ void GPUMatrix<ElemType>::Multiply1x1AndWeightedAdd(ElemType alpha, const GPUMat
         InvalidArgument("All matrices must be on the same GPU");
     CUDA_LONG N = (CUDA_LONG) c.GetNumElements();
     int blocksPerGrid = (int) ceil(1.0 * N / GridDim::maxThreadsPerBlock);
-    cudaEvent_t done = nullptr;
-    if (do_sync)
-        CUDA_CALL(cudaEventCreate(&done));
+    SyncGuard syncGuard;
     _multiply1x1AndWeightedAdd<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(alpha, a.m_pArray, b.m_pArray, beta, c.m_pArray, N);
-    if (do_sync)
-        CUDA_CALL(cudaEventRecord(done));
-    if (do_sync)
-        CUDA_CALL(cudaEventSynchronize(done));
-    if (do_sync)
-        CUDA_CALL(cudaEventDestroy(done));
 }
 
 template <class ElemType>
@@ -3625,17 +3052,9 @@ void GPUMatrix<ElemType>::ScaleAndAdd(ElemType alpha, const GPUMatrix<ElemType>&
             CUDA_LONG N = (CUDA_LONG) c.GetNumElements();
             int blocksPerGrid = (int) ceil(1.0 * N / GridDim::maxThreadsPerBlock);
             c.PrepareDevice();
-            cudaEvent_t done = nullptr;
-            if (do_sync)
-                CUDA_CALL(cudaEventCreate(&done));
+            SyncGuard syncGuard;
             _scaleAndAddScalar<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(c.m_pArray, N, alpha, a.m_pArray, c.m_pArray);
-            if (do_sync)
-                CUDA_CALL(cudaEventRecord(done));
-            if (do_sync)
-                CUDA_CALL(cudaEventSynchronize(done));
-            if (do_sync)
-                CUDA_CALL(cudaEventDestroy(done));
-        }
+                                }
         else if (a.GetNumCols() == 1) // col vector, add it to all columns
         {
             CUDA_LONG m = (CUDA_LONG) c.GetNumRows();
@@ -3643,10 +3062,8 @@ void GPUMatrix<ElemType>::ScaleAndAdd(ElemType alpha, const GPUMatrix<ElemType>&
             if (m != (CUDA_LONG) a.GetNumRows())
                 InvalidArgument("To add column vector, rows should match.");
 
-            cudaEvent_t done = nullptr;
             int blocksPerGrid = (int) (ceil(1.0 * m * n / GridDim::maxThreadsPerBlock));
-            if (do_sync)
-                CUDA_CALL(cudaEventCreate(&done));
+            SyncGuard syncGuard;
 #ifdef VALIDATION
             printf(">>>> CUDA compute device is %d\n", a.GetComputeDeviceId());
             printf(">>>> a.m_pArray = %p, c.m_pArray = %p, alpha = %f, m = %ld, n = %ld\n", a.m_pArray, c.m_pArray, alpha, m, n);
@@ -3661,13 +3078,7 @@ void GPUMatrix<ElemType>::ScaleAndAdd(ElemType alpha, const GPUMatrix<ElemType>&
 
             _matrixVectorColumnWiseAddWithThreadPerElem<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(a.m_pArray, c.m_pArray, c.m_pArray, alpha, m, n);
 
-            if (do_sync)
-                CUDA_CALL(cudaEventRecord(done));
-            if (do_sync)
-                CUDA_CALL(cudaEventSynchronize(done));
-            if (do_sync)
-                CUDA_CALL(cudaEventDestroy(done));
-        }
+                                }
         else if (a.GetNumRows() == 1) // row vector, add it to all rows
         {
             cublasHandle_t cuHandle = GetCublasHandle(a.GetComputeDeviceId());
@@ -3732,32 +3143,16 @@ void GPUMatrix<ElemType>::ScaleAndAdd(ElemType alpha, const GPUMatrix<ElemType>&
             CUDA_LONG N = (CUDA_LONG) c.GetNumElements();
             int blocksPerGrid = (int) ceil(1.0 * N / GridDim::maxThreadsPerBlock);
             c.PrepareDevice();
-            cudaEvent_t done = nullptr;
-            if (do_sync)
-                CUDA_CALL(cudaEventCreate(&done));
+            SyncGuard syncGuard;
             _matrixMatrixAddOnCuda<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(alpha, a.m_pArray, b.m_pArray, c.m_pArray, N);
-            if (do_sync)
-                CUDA_CALL(cudaEventRecord(done));
-            if (do_sync)
-                CUDA_CALL(cudaEventSynchronize(done));
-            if (do_sync)
-                CUDA_CALL(cudaEventDestroy(done));
         }
         else if (a.GetNumElements() == 1)
         {
             CUDA_LONG N = (CUDA_LONG) c.GetNumElements();
             int blocksPerGrid = (int) ceil(1.0 * N / GridDim::maxThreadsPerBlock);
             c.PrepareDevice();
-            cudaEvent_t done = nullptr;
-            if (do_sync)
-                CUDA_CALL(cudaEventCreate(&done));
+            SyncGuard syncGuard;
             _scaleAndAddScalar<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(c.m_pArray, N, alpha, a.m_pArray, b.m_pArray);
-            if (do_sync)
-                CUDA_CALL(cudaEventRecord(done));
-            if (do_sync)
-                CUDA_CALL(cudaEventSynchronize(done));
-            if (do_sync)
-                CUDA_CALL(cudaEventDestroy(done));
         }
         else if (a.GetNumCols() == 1) // col vector, add it to all columns
         {
@@ -3766,18 +3161,10 @@ void GPUMatrix<ElemType>::ScaleAndAdd(ElemType alpha, const GPUMatrix<ElemType>&
             if (m != (CUDA_LONG) a.GetNumRows())
                 InvalidArgument("To add column vector, rows should match.");
 
-            cudaEvent_t done = nullptr;
             int blocksPerGrid = (int) (ceil(1.0 * m * n / GridDim::maxThreadsPerBlock));
-            if (do_sync)
-                CUDA_CALL(cudaEventCreate(&done));
+            SyncGuard syncGuard;
             _matrixVectorColumnWiseAddWithThreadPerElem<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(a.m_pArray, b.m_pArray, c.m_pArray, alpha, m, n);
 
-            if (do_sync)
-                CUDA_CALL(cudaEventRecord(done));
-            if (do_sync)
-                CUDA_CALL(cudaEventSynchronize(done));
-            if (do_sync)
-                CUDA_CALL(cudaEventDestroy(done));
         }
         else if (a.GetNumRows() == 1) // row vector, add it to all rows
         {
@@ -3786,18 +3173,9 @@ void GPUMatrix<ElemType>::ScaleAndAdd(ElemType alpha, const GPUMatrix<ElemType>&
             if (m != (CUDA_LONG) a.GetNumRows())
                 InvalidArgument("To add column vector, rows should match.");
 
-            cudaEvent_t done = nullptr;
             int blocksPerGrid = (int) (ceil(1.0 * m * n / GridDim::maxThreadsPerBlock));
-            if (do_sync)
-                CUDA_CALL(cudaEventCreate(&done));
+            SyncGuard syncGuard;
             _matrixVectorRowWiseAddWithThreadPerElem<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(a.m_pArray, b.m_pArray, c.m_pArray, alpha, m, n);
-
-            if (do_sync)
-                CUDA_CALL(cudaEventRecord(done));
-            if (do_sync)
-                CUDA_CALL(cudaEventSynchronize(done));
-            if (do_sync)
-                CUDA_CALL(cudaEventDestroy(done));
         }
         else
             InvalidArgument("dimension of matrix c does not match dimension of matrix a.");
@@ -3833,18 +3211,10 @@ void GPUMatrix<ElemType>::AddScaledDifference(const ElemType alpha, const GPUMat
         if (a.IsEmpty())
             LogicError("AddScaledDifference:  Input matrix a is empty.");
 
-        cudaEvent_t done = nullptr;
         CUDA_LONG n = (CUDA_LONG) a.GetNumElements();
         int blocksPerGrid = (int) ceil(1.0 * n / GridDim::maxThreadsPerBlock);
-        if (do_sync)
-            CUDA_CALL(cudaEventCreate(&done));
+        SyncGuard syncGuard;
         _addScaledDifference<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(alpha, a.m_pArray, b.m_pArray, c.m_pArray, n);
-        if (do_sync)
-            CUDA_CALL(cudaEventRecord(done));
-        if (do_sync)
-            CUDA_CALL(cudaEventSynchronize(done));
-        if (do_sync)
-            CUDA_CALL(cudaEventDestroy(done));
     }
 }
 
@@ -3878,18 +3248,10 @@ void GPUMatrix<ElemType>::AssignScaledDifference(const ElemType alpha, const GPU
         if (&c != &a && &c != &b)
             c.Resize(a.GetNumRows(), a.GetNumCols());
 
-        cudaEvent_t done = nullptr;
         CUDA_LONG n = (CUDA_LONG) a.GetNumElements();
         int blocksPerGrid = (int) ceil(1.0 * n / GridDim::maxThreadsPerBlock);
-        if (do_sync)
-            CUDA_CALL(cudaEventCreate(&done));
+        SyncGuard syncGuard;
         _assignScaledDifference<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(alpha, a.m_pArray, b.m_pArray, c.m_pArray, n);
-        if (do_sync)
-            CUDA_CALL(cudaEventRecord(done));
-        if (do_sync)
-            CUDA_CALL(cudaEventSynchronize(done));
-        if (do_sync)
-            CUDA_CALL(cudaEventDestroy(done));
     }
 }
 
@@ -3926,18 +3288,10 @@ void GPUMatrix<ElemType>::AddScaledDifference(const GPUMatrix<ElemType>& alpha, 
         if (a.IsEmpty())
             LogicError("AddScaledDifference:  Input matrix a is empty.");
 
-        cudaEvent_t done = nullptr;
         CUDA_LONG n = (CUDA_LONG) a.GetNumElements();
         int blocksPerGrid = (int) ceil(1.0 * n / GridDim::maxThreadsPerBlock);
-        if (do_sync)
-            CUDA_CALL(cudaEventCreate(&done));
+        SyncGuard syncGuard;
         _addScaledDifference<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(alpha.m_pArray, a.m_pArray, b.m_pArray, c.m_pArray, n);
-        if (do_sync)
-            CUDA_CALL(cudaEventRecord(done));
-        if (do_sync)
-            CUDA_CALL(cudaEventSynchronize(done));
-        if (do_sync)
-            CUDA_CALL(cudaEventDestroy(done));
     }
 }
 
@@ -3974,18 +3328,10 @@ void GPUMatrix<ElemType>::AssignScaledDifference(const GPUMatrix<ElemType>& alph
 
         c.Resize(a.GetNumRows(), a.GetNumCols());
 
-        cudaEvent_t done = nullptr;
         CUDA_LONG n = (CUDA_LONG) a.GetNumElements();
         int blocksPerGrid = (int) ceil(1.0 * n / GridDim::maxThreadsPerBlock);
-        if (do_sync)
-            CUDA_CALL(cudaEventCreate(&done));
+        SyncGuard syncGuard;
         _assignScaledDifference<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(alpha.m_pArray, a.m_pArray, b.m_pArray, c.m_pArray, n);
-        if (do_sync)
-            CUDA_CALL(cudaEventRecord(done));
-        if (do_sync)
-            CUDA_CALL(cudaEventSynchronize(done));
-        if (do_sync)
-            CUDA_CALL(cudaEventDestroy(done));
     }
 }
 
@@ -3998,17 +3344,9 @@ void GPUMatrix<ElemType>::AddElementToElement(const GPUMatrix<ElemType>& a, cons
         InvalidArgument("AddElementToElement:  index out of range.");
 
     a.PrepareDevice();
-    cudaEvent_t done = nullptr;
     int blocksPerGrid = 1; // only one element   --BUGBUG: then why not launch only 1 thread per block?
-    if (do_sync)
-        CUDA_CALL(cudaEventCreate(&done));
+    SyncGuard syncGuard;
     _addElementToElement<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock /*BUGBUG: should be 1?*/, 0, t_stream>>>(a.m_pArray, (CUDA_LONG) a.LocateElement(ai, aj), c.m_pArray, (CUDA_LONG) c.LocateElement(ci, cj));
-    if (do_sync)
-        CUDA_CALL(cudaEventRecord(done));
-    if (do_sync)
-        CUDA_CALL(cudaEventSynchronize(done));
-    if (do_sync)
-        CUDA_CALL(cudaEventDestroy(done));
 }
 
 template <class ElemType>
@@ -4096,7 +3434,6 @@ void GPUMatrix<ElemType>::InnerProduct(const GPUMatrix<ElemType>& a, const GPUMa
     }
     else
     {
-        cudaEvent_t done = nullptr;
         c.PrepareDevice();
 
         int blocksPerGrid = 0;
@@ -4111,15 +3448,8 @@ void GPUMatrix<ElemType>::InnerProduct(const GPUMatrix<ElemType>& a, const GPUMa
             blocksPerGrid = (int) ceil(1.0 * m / GridDim::maxThreadsPerBlock);
         }
 
-        if (do_sync)
-            CUDA_CALL(cudaEventCreate(&done));
+        SyncGuard syncGuard;
         _innerProduct<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(c.m_pArray, a.m_pArray, b.m_pArray, m, n, isColWise);
-        if (do_sync)
-            CUDA_CALL(cudaEventRecord(done));
-        if (do_sync)
-            CUDA_CALL(cudaEventSynchronize(done));
-        if (do_sync)
-            CUDA_CALL(cudaEventDestroy(done));
     }
 }
 
@@ -4202,19 +3532,11 @@ void GPUMatrix<ElemType>::ElementWisePower(ElemType alpha, const GPUMatrix<ElemT
 
         c.Resize(a.GetNumRows(), a.GetNumCols());
 
-        cudaEvent_t done = nullptr;
         a.PrepareDevice();
-        if (do_sync)
-            CUDA_CALL(cudaEventCreate(&done));
+        SyncGuard syncGuard;
         CUDA_LONG N = (CUDA_LONG) a.GetNumElements();
         int blocksPerGrid = (int) ceil(1.0 * N / GridDim::maxThreadsPerBlock);
         _elementWisePowerOnCuda<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(alpha, a.m_pArray, c.m_pArray, N);
-        if (do_sync)
-            CUDA_CALL(cudaEventRecord(done));
-        if (do_sync)
-            CUDA_CALL(cudaEventSynchronize(done));
-        if (do_sync)
-            CUDA_CALL(cudaEventDestroy(done));
     }
 }
 
@@ -4252,17 +3574,9 @@ void GPUMatrix<ElemType>::TensorShuffleScaleAndAdd(ElemType keepWeight, const GP
     assert(N == (CUDA_LONG) a.GetNumElements() && N == (CUDA_LONG) b.GetNumElements());
     assert(a.GetComputeDeviceId() == c.GetComputeDeviceId() && b.GetComputeDeviceId() == c.GetComputeDeviceId());
     a.PrepareDevice();
-    cudaEvent_t done = nullptr;
-    if (do_sync)
-        CUDA_CALL(cudaEventCreate(&done));
+    SyncGuard syncGuard;
     int blocksPerGrid = (int) ceil(1.0 * N / GridDim::maxThreadsPerBlock);
     _tensorShuffleScaleAndAdd<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(keepWeight, a.m_pArray, D, S, M, K, T, scaleFactor, b.m_pArray, c.m_pArray);
-    if (do_sync)
-        CUDA_CALL(cudaEventRecord(done));
-    if (do_sync)
-        CUDA_CALL(cudaEventSynchronize(done));
-    if (do_sync)
-        CUDA_CALL(cudaEventDestroy(done));
 }
 
 template <class ElemType>
@@ -4428,19 +3742,10 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignElementProductOfWithShiftNeg(con
     dim3 block_tail((nt + 1 + DEFAULT_THREAD_PER_DIM - 1) / DEFAULT_THREAD_PER_DIM, (BS + DEFAULT_THREAD_PER_DIM - 1) / DEFAULT_THREAD_PER_DIM);
 
     a.PrepareDevice();
-    cudaEvent_t done = nullptr;
-    ;
-    if (do_sync)
-        CUDA_CALL(cudaEventCreate(&done));
+    SyncGuard syncGuard;
     _assignElementProductOfWithShiftNeg<ElemType><<<block_tail, thread_tail, 0, t_stream>>>(m_pArray, a.m_pArray, b.m_pArray, shift, nt + 1, BS);
     //      _assignElementProductOf<ElemType> << <block_tail, thread_tail, 0, t_stream >> >(m_pArray, a.m_pArray, b.m_pArray, nt);
 
-    if (do_sync)
-        CUDA_CALL(cudaEventRecord(done));
-    if (do_sync)
-        CUDA_CALL(cudaEventSynchronize(done));
-    if (do_sync)
-        CUDA_CALL(cudaEventDestroy(done));
     return *this;
 }
 
@@ -4467,22 +3772,13 @@ void GPUMatrix<ElemType>::InnerProductWithShiftNeg(const GPUMatrix<ElemType>& a,
 
     if (true)
     {
-        cudaEvent_t done = nullptr;
-        ;
         c.PrepareDevice();
 
         dim3 thread_tail(DEFAULT_THREAD_PER_DIM, DEFAULT_THREAD_PER_DIM);
         dim3 block_tail((nt + 1 + DEFAULT_THREAD_PER_DIM - 1) / DEFAULT_THREAD_PER_DIM, (n + DEFAULT_THREAD_PER_DIM - 1) / DEFAULT_THREAD_PER_DIM);
 
-        if (do_sync)
-            CUDA_CALL(cudaEventCreate(&done));
+        SyncGuard syncGuard;
         _innerProductWithShiftNeg<ElemType><<<block_tail, thread_tail, 0, t_stream>>>(c.m_pArray, a.m_pArray, b.m_pArray, m, n, shift, nt + 1);
-        if (do_sync)
-            CUDA_CALL(cudaEventRecord(done));
-        if (do_sync)
-            CUDA_CALL(cudaEventSynchronize(done));
-        if (do_sync)
-            CUDA_CALL(cudaEventDestroy(done));
     }
 }
 
@@ -4503,19 +3799,9 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::GetARowByIndex(const GPUMatrix<ElemTyp
     int blocksPerGrid = (int) ceil(((double) P) / GridDim::maxThreadsPerBlock);
 
     a.PrepareDevice();
-    cudaEvent_t done = nullptr;
-    ;
-    if (do_sync)
-        CUDA_CALL(cudaEventCreate(&done));
+    SyncGuard syncGuard;
     _getARowByIndex<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(m_pArray, a.m_pArray, n, P, m);
     //      _assignElementProductOf<ElemType> << <block_tail, thread_tail, 0, t_stream >> >(m_pArray, a.m_pArray, b.m_pArray, nt);
-
-    if (do_sync)
-        CUDA_CALL(cudaEventRecord(done));
-    if (do_sync)
-        CUDA_CALL(cudaEventSynchronize(done));
-    if (do_sync)
-        CUDA_CALL(cudaEventDestroy(done));
     return *this;
 }
 
@@ -4541,22 +3827,13 @@ void GPUMatrix<ElemType>::ConductRowElementMultiplyWithShift(const GPUMatrix<Ele
 
     if (true)
     {
-        cudaEvent_t done = nullptr;
-        ;
         c.PrepareDevice();
 
         dim3 thread_tail(DEFAULT_THREAD_PER_DIM, DEFAULT_THREAD_PER_DIM);
         dim3 block_tail((O + DEFAULT_THREAD_PER_DIM - 1) / DEFAULT_THREAD_PER_DIM, (P + DEFAULT_THREAD_PER_DIM - 1) / DEFAULT_THREAD_PER_DIM);
 
-        if (do_sync)
-            CUDA_CALL(cudaEventCreate(&done));
+        SyncGuard syncGuard;
         _conductRowElementMultiplyWithShift<ElemType><<<block_tail, thread_tail, 0, t_stream>>>(c.m_pArray, a.m_pArray, b.m_pArray, O, P, shift, isafixed);
-        if (do_sync)
-            CUDA_CALL(cudaEventRecord(done));
-        if (do_sync)
-            CUDA_CALL(cudaEventSynchronize(done));
-        if (do_sync)
-            CUDA_CALL(cudaEventDestroy(done));
     }
 }
 
@@ -4577,17 +3854,8 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignElementProductOfWithShift(const 
     CUDA_LONG N = (CUDA_LONG) GetNumElements();
     int blocksPerGrid = (int) ceil(((double) N) / GridDim::maxThreadsPerBlock);
     a.PrepareDevice();
-    cudaEvent_t done = nullptr;
-    ;
-    if (do_sync)
-        CUDA_CALL(cudaEventCreate(&done));
+    SyncGuard syncGuard;
     _assignElementProductOfWithShift<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(m_pArray, a.m_pArray, b.m_pArray, shift, N);
-    if (do_sync)
-        CUDA_CALL(cudaEventRecord(done));
-    if (do_sync)
-        CUDA_CALL(cudaEventSynchronize(done));
-    if (do_sync)
-        CUDA_CALL(cudaEventDestroy(done));
     return *this;
 }
 
@@ -4602,18 +3870,8 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::DropFrame(const GPUMatrix<ElemType>& l
 
     long N = (long) GetNumCols(); // one kernel per column
     int blocksPerGrid = (int) ceil(N * 1.0 / GridDim::maxThreadsPerBlock);
-    cudaEvent_t done = nullptr;
-    if (do_sync)
-        CUDA_CALL(cudaEventCreate(&done));
+    SyncGuard syncGuard;
     _DropFrame<<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(m_pArray, label.m_pArray, gamma.m_pArray, threshhold, (long) m_numCols, (long) m_numRows);
-
-    if (do_sync)
-        CUDA_CALL(cudaEventRecord(done));
-    if (do_sync)
-        CUDA_CALL(cudaEventSynchronize(done));
-    if (do_sync)
-        CUDA_CALL(cudaEventDestroy(done));
-
     return *this;
 }
 
@@ -4626,20 +3884,10 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignSequenceError(const ElemType hsm
 
     PrepareDevice();
 
-    cudaEvent_t done = nullptr;
-    if (do_sync)
-        CUDA_CALL(cudaEventCreate(&done));
+    SyncGuard syncGuard;
     long N = (LONG64) label.GetNumElements();
     int blocksPerGrid = (int) ceil(1.0 * N / GridDim::maxThreadsPerBlock);
     _AssignSequenceError<<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(hsmoothingWeight, m_pArray, label.m_pArray, dnnoutput.m_pArray, gamma.m_pArray, alpha, N);
-
-    if (do_sync)
-        CUDA_CALL(cudaEventRecord(done));
-    if (do_sync)
-        CUDA_CALL(cudaEventSynchronize(done));
-    if (do_sync)
-        CUDA_CALL(cudaEventDestroy(done));
-
     return *this;
 }
 
@@ -4893,9 +4141,8 @@ template void TracingGPUMemoryAllocator::Free<size_t>(int, size_t*, bool);
 template void TracingGPUMemoryAllocator::Free<char>(int, char*, bool);
 template void TracingGPUMemoryAllocator::Free<float>(int, float*, bool);
 template void TracingGPUMemoryAllocator::Free<double>(int, double*, bool);
-}
-}
-}
+
+}}}
 
 // !!!!This is from helper_cuda.h which comes with CUDA samples!!!! Consider if it is beneficial to just include all helper_cuda.h
 // TODO: This is duplicated in BestGpu.cpp

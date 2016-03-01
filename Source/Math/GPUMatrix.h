@@ -535,7 +535,10 @@ typedef GPUMatrix<float> GPUSingleMatrix;
 
 #include <cuda_runtime.h>
 
+// -----------------------------------------------------------------------
 // Error handling
+// -----------------------------------------------------------------------
+
 template <typename ERRTYPE>
 const char* CudaErrString(ERRTYPE x); // actual error function is defined inside .cu files
 template <typename ERRTYPE>
@@ -570,4 +573,45 @@ static void CudaCall(ERRTYPE retCode, const char* exprString, const char* libNam
 #define CURAND_CALL(expr)   (CudaCall((expr), #expr, "CURAND",   CURAND_STATUS_SUCCESS))
 #define CUDNN_CALL(expr)    (CudaCall((expr), #expr, "cuDNN",    CUDNN_STATUS_SUCCESS))
 
+// -----------------------------------------------------------------------
+// SyncGuard -- synchronize around CUDA calls
+// -----------------------------------------------------------------------
+
+class SyncGuard
+{
+    bool DoSync()
+    {
+#ifdef NO_SYNC // this strange way of writing it allows modifying this variable at runtime in the debugger
+        static bool do_sync = false;
+#else
+        static bool do_sync = true;
 #endif
+        return do_sync;
+    }
+    cudaEvent_t done;
+public:
+    SyncGuard()
+    {
+        done = nullptr;
+        if (DoSync())
+            CUDA_CALL(cudaEventCreate(&done));
+    }
+    ~SyncGuard()
+    {
+        if (DoSync())
+        {
+            try
+            {
+                CUDA_CALL(cudaEventRecord(done));
+                CUDA_CALL(cudaEventSynchronize(done));
+                CUDA_CALL(cudaEventDestroy(done));
+            }
+            catch (const std::exception& e) // can't throw in destructors!
+            {
+                std::cerr << "SyncGuard: Destructor swallowing CUDA failure: " << e.what() << std::endl;
+            }
+        }
+    }
+};
+
+#endif // CPUONLY
