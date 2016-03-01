@@ -52,7 +52,7 @@ private:
     };
 
     class HTKChunk;
-    std::vector<SequenceDataPtr> GetSequenceById(size_t id);
+    std::vector<SequenceDataPtr> GetSequenceById(size_t chunkId, size_t id);
 
     // Dimension of features.
     size_t m_dimension;

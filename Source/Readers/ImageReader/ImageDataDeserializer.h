@@ -24,10 +24,35 @@ public:
 
     // Description of streams that this data deserializer provides.
     std::vector<StreamDescriptionPtr> GetStreamDescriptions() const override;
-    virtual size_t GetTotalNumberOfChunks() override;
+    virtual size_t GetTotalNumberOfChunks();
 
     // Get sequences by specified ids. Order of returned sequences corresponds to the order of provided ids.
     virtual ChunkPtr GetChunk(size_t chunkId) override;
+
+    virtual ChunkDescriptions GetChunkDescriptions() override 
+    {
+        throw std::logic_error("Not implemented");
+    }
+
+    virtual std::vector<SequenceDescriptionPtr> GetSequencesForChunk(size_t)
+    {
+        throw std::logic_error("Not implemented");
+    }
+
+    virtual const SequenceDescription* GetSequenceDescriptionByKey(const KeyType&)
+    {
+        throw std::logic_error("Not implemented");
+    }
+
+    virtual size_t GetTotalNumberOfSamples()
+    {
+        throw std::logic_error("Not implemented");
+    }
+
+    virtual size_t GetTotalNumberOfSequences()
+    {
+        throw std::logic_error("Not implemented");
+    }
 
 protected:
     void FillSequenceDescriptions(SequenceDescriptions& timeline) const override;

@@ -98,6 +98,7 @@ HTKDataDeserializer::HTKDataDeserializer(
     m_chunks.reserve(totalSize / chunkframes);
 
     int chunkId = -1;
+    size_t startFrameInsideChunk = 0;
     foreach_index(i, m_utterances)
     {
         // if exceeding current entry--create a new one
@@ -106,6 +107,7 @@ HTKDataDeserializer::HTKDataDeserializer(
         {
             m_chunks.push_back(HTKChunkDescription());
             chunkId++;
+            startFrameInsideChunk = 0;
         }
 
         // append utterance to last chunk
@@ -113,6 +115,8 @@ HTKDataDeserializer::HTKDataDeserializer(
         m_utterances[i].SetIndexInsideChunk(currentchunk.GetNumberOfUtterances());
         currentchunk.Add(&m_utterances[i]); // move it out from our temp array into the chunk
         m_utterances[i].m_chunkId = chunkId;
+        m_utterances[i].SetStartFrameInsideChunk(startFrameInsideChunk);
+        startFrameInsideChunk += m_utterances[i].GetNumberOfFrames();
     }
 
     fprintf(stderr,
@@ -282,7 +286,7 @@ public:
 
     virtual std::vector<SequenceDataPtr> GetSequence(size_t sequenceId) override
     {
-        return m_parent->GetSequenceById(sequenceId);
+        return m_parent->GetSequenceById(m_chunkId, sequenceId);
     }
 
     ~HTKChunk()
@@ -321,13 +325,16 @@ struct HTKSequenceData : DenseSequenceData
 
 typedef std::shared_ptr<HTKSequenceData> HTKSequenceDataPtr;
 
-std::vector<SequenceDataPtr> HTKDataDeserializer::GetSequenceById(size_t id)
+std::vector<SequenceDataPtr> HTKDataDeserializer::GetSequenceById(size_t chunkId, size_t id)
 {
-    const auto& frame = m_frames[id];
-    UtteranceDescription* utterance = frame.m_utterence;
+    //const auto& frame = m_frames[id];
+    //UtteranceDescription* utterance = frame.m_utterence;
 
-    const auto& chunkDescription = m_chunks[utterance->m_chunkId];
-    auto utteranceFrames = chunkDescription.GetUtteranceFrames(utterance->GetIndexInsideChunk());
+    const auto& chunkDescription = m_chunks[chunkId];
+    size_t utteranceIndex = chunkDescription.GetUtteranceForChunkFrameIndex(id);
+    UtteranceDescription* utterance = chunkDescription.GetUtterance(utteranceIndex);
+    auto utteranceFrames = chunkDescription.GetUtteranceFrames(utteranceIndex);
+    size_t frameIndex = id - utterance->GetStartFrameIndexInsideChunk();
 
     // wrapper that allows m[j].size() and m[j][i] as required by augmentneighbors()
     MatrixAsVectorOfVectors utteranceFramesWrapper(utteranceFrames);
@@ -344,9 +351,9 @@ std::vector<SequenceDataPtr> HTKDataDeserializer::GetSequenceById(size_t id)
     HTKSequenceDataPtr result = std::make_shared<HTKSequenceData>();
     result->m_buffer.resize(m_dimension, 1);
     const std::vector<char> noBoundaryFlags; // dummy
-    msra::dbn::augmentneighbors(utteranceFramesWrapper, noBoundaryFlags, frame.m_frameIndex, leftExtent, rightExtent, result->m_buffer, 0);
+    msra::dbn::augmentneighbors(utteranceFramesWrapper, noBoundaryFlags, frameIndex, leftExtent, rightExtent, result->m_buffer, 0);
 
-    result->m_numberOfSamples = frame.m_numberOfSamples;
+    result->m_numberOfSamples = 1;
     msra::dbn::matrixstripe stripe(result->m_buffer, 0, result->m_buffer.cols());
     const size_t dimensions = stripe.rows();
 
