@@ -3,8 +3,11 @@
 // Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
 //
 
+#pragma once
+
 #include "DataDeserializer.h"
 #include "../HTKMLFReader/htkfeatio.h"
+#include "UtteranceDescription.h"
 #include "ssematrix.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
@@ -66,6 +69,25 @@ public:
     UtteranceDescription* GetUtterance(size_t index) const
     {
         return m_utteranceSet[index];
+    }
+
+    size_t GetUtteranceForChunkFrameIndex(size_t frameIndex) const
+    {
+        struct PositionConverter
+        {
+            size_t m_position;
+            PositionConverter(const UtteranceDescription* u) : m_position(u->GetStartFrameIndexInsideChunk()) {};
+            PositionConverter(size_t position) : m_position(position) {};
+        };
+
+        PositionConverter p(frameIndex);
+        auto result = std::lower_bound(m_utteranceSet.begin(), m_utteranceSet.end(), p,
+                                       [](const PositionConverter& a, const PositionConverter& b)
+        {
+            return a.m_position <= b.m_position;
+        });
+
+        return result - 1 - m_utteranceSet.begin();
     }
 
     // Returns frames of a given utterance.

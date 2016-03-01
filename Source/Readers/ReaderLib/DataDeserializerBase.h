@@ -18,7 +18,7 @@ public:
     {}
 
     // Provides description of all sequences the deserializer can produce.
-    const SequenceDescriptions& GetSequenceDescriptions() const override
+    const SequenceDescriptions& GetSequenceDescriptions() const
     {
         if (!m_sequencesInitialized)
         {
