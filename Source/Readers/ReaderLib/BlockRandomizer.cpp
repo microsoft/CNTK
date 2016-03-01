@@ -159,7 +159,8 @@ bool BlockRandomizer::IsValidForPosition(size_t targetPosition, const SequenceDe
 
 void BlockRandomizer::Randomize()
 {
-    const auto& timeline = m_deserializer->GetSequenceDescriptions();
+    //const auto& timeline = m_deserializer->GetSequenceDescriptions();
+    SequenceDescriptions timeline;
     RandomizeChunks();
 
     // Set up m_randomTimeline, shuffled by chunks.
@@ -285,7 +286,7 @@ BlockRandomizer::BlockRandomizer(int verbosity,
     m_epochSize(SIZE_MAX)
 {
     assert(deserializer != nullptr);
-    const SequenceDescriptions& timeline = m_deserializer->GetSequenceDescriptions();
+    SequenceDescriptions timeline;// = m_deserializer->GetSequenceDescriptions();
     assert(TimelineIsValidForRandomization(timeline));
 
     if (timeline.size() == 0)
@@ -474,7 +475,7 @@ Sequences BlockRandomizer::GetNextSequences(size_t sampleCount)
         }
     }
 
-    const auto& originalTimeline = m_deserializer->GetSequenceDescriptions();
+    const SequenceDescriptions originalTimeline;// = m_deserializer->GetSequenceDescriptions();
     result.m_data.resize(m_streams.size(), std::vector<SequenceDataPtr>(originalIds.size()));
 
     // TODO: This will be changed, when we move transformers under the randomizer.

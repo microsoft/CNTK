@@ -18,7 +18,7 @@ NoRandomizer::NoRandomizer(IDataDeserializerPtr deserializer)
 {
     assert(deserializer != nullptr);
 
-    m_timeline = m_deserializer->GetSequenceDescriptions();
+    //m_timeline = m_deserializer->GetSequenceDescriptions();
     for (const auto& sequence : m_timeline)
     {
         if (sequence->m_numberOfSamples != 1)

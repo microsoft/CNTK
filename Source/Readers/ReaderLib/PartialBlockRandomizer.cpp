@@ -8,14 +8,11 @@
 #include "PartialBlockRandomizer.h"
 #include <algorithm>
 #include <utility>
-#include <iostream>
 #include <deque>
 
 #include "DataReader.h"
 #include <random>
-#include "../HTKMLFReader/biggrowablevectors.h"
 #include <set>
-#include <unordered_set>
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -55,26 +52,32 @@ class SequenceRandomizer
     // Along with each frameref, we also store the chunk index of the original frame
     // at that index before randomization, to be used for determining the chunk range
     // to be used for randomization of that frame's position
+
     std::deque<std::vector<std::pair<unsigned short, RandomizedSequenceDescription>>> m_randomizedSequenceWindow;
+    
 
     size_t m_currentRangeBeginChunkIdx;
     size_t m_currentRangeEndChunkIdx;
 
     size_t m_nextFramePosNotYetRandomized;
-    ICorpusPtr m_corpus;
+    size_t m_nextSequencePosNotYetRandomized;
+    IMetaDataPtr m_metaData;
     PartialBlockRandomizer& m_parent;
 
 public:
+    std::map<size_t, ChunkPtr> m_randomizedSequenceWindowChunks;
+
     SequenceRandomizer(
         PartialBlockRandomizer& parent,
-        ICorpusPtr corpus,
+        IMetaDataPtr metaData,
         const std::vector<RandomizedChunk>& randomizedChunks)
         : m_randomizedChunks(randomizedChunks),
         m_currentRangeBeginChunkIdx(0),
         m_currentRangeEndChunkIdx(0),
         m_nextFramePosNotYetRandomized(0),
-        m_corpus(corpus),
-        m_parent(parent)
+        m_metaData(metaData),
+        m_parent(parent),
+        m_nextSequencePosNotYetRandomized(0)
     {
     }
 
@@ -102,16 +105,23 @@ public:
 
     void RandomizeSequenceForRange(size_t globalts, size_t globalte)
     {
+        assert(globalts < globalte);
         assert(globalts <= m_nextFramePosNotYetRandomized);// is this true between sweeps?
         if (m_nextFramePosNotYetRandomized == m_randomizedChunks.back().globalte())
         {
-            // not clear why. there is some expectation from the calling side it seems. last one?
+            return;
+        }
+
+        if (m_nextSequencePosNotYetRandomized == m_randomizedChunks.back().PositionEnd())
+        {
+            assert(false);
             return;
         }
 
         assert(m_nextFramePosNotYetRandomized >= m_randomizedChunks[0].m_samplePositionStart);
 
         size_t firstFramePosToRandomize = m_nextFramePosNotYetRandomized;
+        size_t firstSequencePosToRandomize = m_nextSequencePosNotYetRandomized;
 
         // Find the smallest chunk index whose windowbegin exceeds the chunk index
         // of the frame position (globalte - 1). We will randomize up to this chunk
@@ -127,6 +137,7 @@ public:
         }
 
         size_t endFramePosToRandomize = m_randomizedChunks[endChunkIdxToRandomize - 1].globalte();
+        size_t endSequencePosToRandomize = m_randomizedChunks[endChunkIdxToRandomize - 1].PositionEnd();
 
         // Determine the range of chunks that need to be in m_randomizedframerefsWindow for us
         // to perform the necessary randomization
@@ -136,7 +147,10 @@ public:
         // Lets drop everything that is outside the new range [startChunkIdx, endChunkIdx)
         for (size_t i = m_currentRangeBeginChunkIdx; i < startChunkIdx; ++i)
         {
+            size_t chunkId = m_randomizedSequenceWindow.front()[0].first;
             m_randomizedSequenceWindow.pop_front();
+            m_randomizedSequenceWindowChunks.erase(chunkId);
+
             m_currentRangeBeginChunkIdx++;
         }
 
@@ -146,70 +160,139 @@ public:
             AddRandomizedFramesForChunk(i);
         }
 
+        for (size_t t = firstSequencePosToRandomize; t < endSequencePosToRandomize; ++t)
+        {
+            // Get valid randomization range, expressed in chunks
+            const size_t currentChunkIdx = GetChunkIndexForSequencePosition(t);
+            //size_t currentChunkIdx = GetChunkIndexOf(t);
+
+            size_t chunkWindowBegin = m_randomizedChunks[currentChunkIdx].m_randomizationWindow.m_begin;
+            size_t chunkWindowEnd = m_randomizedChunks[currentChunkIdx].m_randomizationWindow.m_end;
+
+            // Get valid randomization range, expressed in sequence positions.
+            size_t posBegin = m_randomizedChunks[chunkWindowBegin].m_sequencePositionStart;
+            size_t posEnd = m_randomizedChunks[chunkWindowEnd - 1].PositionEnd();
+
+            for (;;)
+            {
+                // Pick a sequence position from [posBegin, posEnd)
+                const size_t j = rand(posBegin, posEnd);
+
+                // Try again if the sequence currently at j cannot be placed at position i.
+                if (!IsValidForPosition(t, GetRandomizedSequenceDescriptionBySequenceId(j)))
+                    continue;
+
+                // Try again if the sequence currently at i cannot be placed at position j.
+                if (!IsValidForPosition(j, GetRandomizedSequenceDescriptionBySequenceId(t)))
+                    continue;
+
+                // Swap and break out.
+                std::swap(GetRandomizedSequenceDescriptionBySequenceId(t), GetRandomizedSequenceDescriptionBySequenceId(j)); // TODO old swap was perhaps more efficient
+                break;
+            }
+        }
+
+        // Verify that we got it right
+        for (size_t t = firstSequencePosToRandomize; t < endSequencePosToRandomize; ++t)
+        {
+            // TODO assert only
+            if (!IsValidForPosition(t, GetRandomizedSequenceDescriptionBySequenceId(t)))
+            {
+                LogicError("BlockRandomizer::Randomize: randomization logic mangled!");
+            }
+        }
+        /*
         // now randomize them --we use the nested loop again to avoid storing a backpointer
         // The condition is that a randomized frame may not be moved out of its associated chunk window.
         // The catual range we randomize is up to the last frame that position (globalte - 1) could
         // potentially swap with
         for (size_t t = firstFramePosToRandomize; t < endFramePosToRandomize; ++t)
         {
-            size_t currentChunkIdx = GetChunkIndexOf(t);
+        size_t currentChunkIdx = GetChunkIndexOf(t);
 
-            size_t chunkWindowBegin = m_randomizedChunks[currentChunkIdx].m_randomizationWindow.m_begin;
-            size_t chunkWindowEnd = m_randomizedChunks[currentChunkIdx].m_randomizationWindow.m_end;
+        size_t chunkWindowBegin = m_randomizedChunks[currentChunkIdx].m_randomizationWindow.m_begin;
+        size_t chunkWindowEnd = m_randomizedChunks[currentChunkIdx].m_randomizationWindow.m_end;
 
-            // Chunk implies that if we are at position 't', we are guaranteed to have chunks [chunkWindowBegin, chunkWindowEnd) in RAM.
-            // These chunks are associated with a range of frame positions.
-            // It is implied that if we are at position 't', the frames covered by chunks [chunkWindowBegin, chunkWindowEnd) are in RAM.
-            const size_t postbegin = m_randomizedChunks[chunkWindowBegin].m_samplePositionStart;
-            const size_t postend = m_randomizedChunks[chunkWindowEnd - 1].globalte();
-            // The position that this frame gets randomized to must be guaranteed to belong to a chunk within [postbegin, postend).
+        // Chunk implies that if we are at position 't', we are guaranteed to have chunks [chunkWindowBegin, chunkWindowEnd) in RAM.
+        // These chunks are associated with a range of frame positions.
+        // It is implied that if we are at position 't', the frames covered by chunks [chunkWindowBegin, chunkWindowEnd) are in RAM.
+        const size_t postbegin = m_randomizedChunks[chunkWindowBegin].m_samplePositionStart;
+        const size_t postend = m_randomizedChunks[chunkWindowEnd - 1].globalte();
+        // The position that this frame gets randomized to must be guaranteed to belong to a chunk within [postbegin, postend).
 
-            for (;;) // (randomization retry loop)
-            {
-                size_t tswap = rand(postbegin, postend); // random frame position within allowed range
-                // We want to swap 't' to 'tswap' and 'tswap' to 't'.
-                //  - Both may have been swapped before.
-                //  - Both must stay within the randomization window of their respective position.
-                // check admissibility of where the element at 'tswap' gets swapped to 't' (range = [windowbegin,windowend))
-                size_t tswapchunkindex = GetRandomizedSequenceDescription(tswap).m_chunk->m_chunkId;
-                if (tswapchunkindex < chunkWindowBegin || tswapchunkindex >= chunkWindowEnd)
-                    continue;
+        for (;;) // (randomization retry loop)
+        {
+        size_t tswap = rand(postbegin, postend); // random frame position within allowed range
+        // We want to swap 't' to 'tswap' and 'tswap' to 't'.
+        //  - Both may have been swapped before.
+        //  - Both must stay within the randomization window of their respective position.
+        // check admissibility of where the element at 'tswap' gets swapped to 't' (range = [windowbegin,windowend))
+        size_t tswapchunkindex = GetRandomizedSequenceDescription(tswap).m_chunk->m_chunkId;
+        if (tswapchunkindex < chunkWindowBegin || tswapchunkindex >= chunkWindowEnd)
+        continue;
 
-                // check admissibility of where the element at t gets swapped to (which is frame position 'tswap')
-                const size_t sourcechunkindex = GetRandomizedSequenceDescription(t).m_chunk->m_chunkId;
-                size_t targetchunkindex = TimestampToRandomizedChunkIndex(tswap); // chunk associated with this frame position defines value range
-                const auto &targetchunk = m_randomizedChunks[targetchunkindex];
-                const size_t targetwindowbegin = targetchunk.m_randomizationWindow.m_begin;
-                const size_t targetwindowend = targetchunk.m_randomizationWindow.m_end;
-                if (sourcechunkindex < targetwindowbegin || sourcechunkindex >= targetwindowend)
-                    continue;
-                // admissible--swap the two
-                ::swap(GetRandomizedSequenceDescription(t), GetRandomizedSequenceDescription(tswap));
+        // check admissibility of where the element at t gets swapped to (which is frame position 'tswap')
+        const size_t sourcechunkindex = GetRandomizedSequenceDescription(t).m_chunk->m_chunkId;
+        size_t targetchunkindex = TimestampToRandomizedChunkIndex(tswap); // chunk associated with this frame position defines value range
+        const auto &targetchunk = m_randomizedChunks[targetchunkindex];
+        const size_t targetwindowbegin = targetchunk.m_randomizationWindow.m_begin;
+        const size_t targetwindowend = targetchunk.m_randomizationWindow.m_end;
+        if (sourcechunkindex < targetwindowbegin || sourcechunkindex >= targetwindowend)
+        continue;
+        // admissible--swap the two
+        ::swap(GetRandomizedSequenceDescription(t), GetRandomizedSequenceDescription(tswap));
 
-                // do a post-check if we got it right  --we seem not to
-                if (IsFramePositionValid(t) && IsFramePositionValid(tswap))
-                    break;
-                // not valid: swap them back and try again  --we actually discovered a bug in the code above
-                ::swap(GetRandomizedSequenceDescription(t), GetRandomizedSequenceDescription(tswap));
-                fprintf(stderr, "lazyrandomization: BUGBUG --invalid swapping condition detected\n");
-            }
+        // do a post-check if we got it right  --we seem not to
+        if (IsFramePositionValid(t) && IsFramePositionValid(tswap))
+        break;
+        // not valid: swap them back and try again  --we actually discovered a bug in the code above
+        ::swap(GetRandomizedSequenceDescription(t), GetRandomizedSequenceDescription(tswap));
+        fprintf(stderr, "lazyrandomization: BUGBUG --invalid swapping condition detected\n");
         }
+        }*/
 
         m_nextFramePosNotYetRandomized = endFramePosToRandomize;
+        m_nextSequencePosNotYetRandomized = endSequencePosToRandomize;
 
         // Verify no frameref has violated its range constraints
-        for (size_t t = globalts; t < globalte; ++t)
-        {
-            size_t chunkIdx = TimestampToRandomizedChunkIndex(t);
-            const auto &chunk = m_randomizedChunks[chunkIdx]; // for window and chunkdata
-            const size_t poswindowbegin = chunk.m_randomizationWindow.m_begin;
-            const size_t poswindowend = chunk.m_randomizationWindow.m_end;
+        /*        for (size_t t = globalts; t < globalte; ++t)
+                {
+                size_t chunkIdx = TimestampToRandomizedChunkIndex(t);
+                const auto &chunk = m_randomizedChunks[chunkIdx]; // for window and chunkdata
+                const size_t poswindowbegin = chunk.m_randomizationWindow.m_begin;
+                const size_t poswindowend = chunk.m_randomizationWindow.m_end;
 
-            const size_t randomizedchunkindex = GetRandomizedSequenceDescription(t).m_chunk->m_chunkId;
-            if (randomizedchunkindex < poswindowbegin || randomizedchunkindex >= poswindowend)
+                const size_t randomizedchunkindex = GetRandomizedSequenceDescription(t).m_chunk->m_chunkId;
+                if (randomizedchunkindex < poswindowbegin || randomizedchunkindex >= poswindowend)
                 LogicError("lazyrandomization: nope, you got frame randomization wrong, dude");
-        }
+                }*/
     }
+
+    bool IsValidForPosition(size_t targetPosition, const RandomizedSequenceDescription& seqDesc) const
+    {
+        const auto& chunk = m_randomizedChunks[GetChunkIndexForSequencePosition(targetPosition)];
+        return chunk.m_randomizationWindow.m_begin <= seqDesc.m_chunk->m_chunkId && seqDesc.m_chunk->m_chunkId < chunk.m_randomizationWindow.m_end;
+    }
+
+
+    size_t GetChunkIndexForSequencePosition(size_t sequencePosition) const
+    {
+        struct PositionConverter
+        {
+            size_t m_position;
+            PositionConverter(const RandomizedChunk & chunk) : m_position(chunk.m_sequencePositionStart) {};
+            PositionConverter(size_t sequencePosition) : m_position(sequencePosition) {};
+        };
+
+        auto result = std::lower_bound(m_randomizedChunks.begin(), m_randomizedChunks.end(), sequencePosition,
+                                       [](const PositionConverter& a, const PositionConverter& b)
+        {
+            return a.m_position <= b.m_position;
+        });
+
+        return result - 1 - m_randomizedChunks.begin();
+    }
+
 
     void Reset(size_t randSeed)
     {
@@ -220,11 +303,17 @@ public:
         m_currentRangeBeginChunkIdx = m_randomizedChunks[0].m_randomizationWindow.m_begin;
         m_currentRangeEndChunkIdx = m_currentRangeBeginChunkIdx;
         m_nextFramePosNotYetRandomized = sweepts;
+        m_nextSequencePosNotYetRandomized = 0;
     }
 
     RandomizedSequenceDescription& GetRandomizedSequenceDescription(size_t globalts)
     {
         return RandomizedSequenceByGlobalSample(globalts).second;
+    }
+
+    RandomizedSequenceDescription& GetRandomizedSequenceDescriptionBySequenceId(size_t sequenceId)
+    {
+        return GetRandomizedSequenceBySequenceId(sequenceId).second;
     }
 
 private:
@@ -236,7 +325,7 @@ private:
         std::vector<std::pair<unsigned short, RandomizedSequenceDescription>> chunkSequences;
         chunkSequences.reserve(chunk.m_original->numberOfSequences);
 
-        SequenceDescriptions originalSequences = m_parent.m_corpus->GetSequencesForChunk(chunk.m_original->id);
+        std::vector<SequenceDescriptionPtr> originalSequences = m_parent.m_metaData->GetSequencesForChunk(chunk.m_original->id);
         for (size_t k = 0; k < originalSequences.size(); k++)
         {
             RandomizedSequenceDescription s;
@@ -246,6 +335,7 @@ private:
         }
 
         m_randomizedSequenceWindow.push_back(std::move(chunkSequences));
+        m_randomizedSequenceWindowChunks[chunkIdx] = m_parent.m_deserializer->GetChunk(chunk.m_original->id);
         m_currentRangeEndChunkIdx++;
     }
 
@@ -298,27 +388,64 @@ private:
         return RandomizedSequenceByGlobalSample(globalts).first;
     }
 
+    std::pair<unsigned short, RandomizedSequenceDescription>& GetRandomizedSequenceBySequenceId(size_t sequenceId)
+    {
+        size_t globalChunkIdx = GetChunkIndexForSequencePosition(sequenceId);
+        size_t sequenceOffsetInsideChunk = sequenceId - m_randomizedChunks[globalChunkIdx].m_sequencePositionStart;
+        return m_randomizedSequenceWindow[globalChunkIdx - m_currentRangeBeginChunkIdx][sequenceOffsetInsideChunk];
+    }
+
     std::pair<unsigned short, RandomizedSequenceDescription>& RandomizedSequenceByGlobalSample(size_t globalts)
     {
         size_t globaltsChunkIdx = GetChunkIndexOf(globalts);
         assert(globaltsChunkIdx < m_currentRangeEndChunkIdx);
 
         size_t sampleOffsetInsideChunk = globalts - m_randomizedChunks[globaltsChunkIdx].m_samplePositionStart;
-        auto sequences = m_corpus->GetSequencesForChunk(m_randomizedChunks[globaltsChunkIdx].m_original->id);
+        auto& sequences = m_randomizedSequenceWindow[globaltsChunkIdx - m_currentRangeBeginChunkIdx];
+
         size_t numberOfSamples = 0;
         size_t sequenceId = 0;
         for (size_t i = 0; i < sequences.size(); ++i)
         {
-            if (sequences[i]->m_numberOfSamples + numberOfSamples > sampleOffsetInsideChunk)
+            size_t sequenceSize = sequences[i].second.m_original->m_numberOfSamples;
+            if (sequenceSize + numberOfSamples > sampleOffsetInsideChunk)
             {
                 break;
             }
-            numberOfSamples += sequences[i]->m_numberOfSamples;
+
+            numberOfSamples += sequenceSize;
             sequenceId++;
         }
 
         assert(sequenceId < sequences.size());
         return m_randomizedSequenceWindow[globaltsChunkIdx - m_currentRangeBeginChunkIdx][sequenceId];
+    }
+
+    size_t GetRandomizedSequenceIdByGlobalSample(size_t globalts)
+    {
+        size_t globaltsChunkIdx = GetChunkIndexOf(globalts);
+        assert(globaltsChunkIdx < m_currentRangeEndChunkIdx);
+
+        size_t sampleOffsetInsideChunk = globalts - m_randomizedChunks[globaltsChunkIdx].m_samplePositionStart;
+        auto& sequences = m_randomizedSequenceWindow[globaltsChunkIdx - m_currentRangeBeginChunkIdx];
+        size_t currentSequenceId = m_randomizedChunks[globaltsChunkIdx].m_sequencePositionStart;
+        size_t numberOfSamples = 0;
+        size_t sequenceId = 0;
+        for (size_t i = 0; i < sequences.size(); ++i)
+        {
+            size_t sequenceSize = sequences[i].second.m_original->m_numberOfSamples;
+            if (sequenceSize + numberOfSamples > sampleOffsetInsideChunk)
+            {
+                break;
+            }
+
+            numberOfSamples += sequenceSize;
+            sequenceId++;
+            currentSequenceId++;
+        }
+
+        assert(sequenceId < sequences.size());
+        return currentSequenceId;
     }
 
     DISABLE_COPY_AND_MOVE(SequenceRandomizer);
@@ -330,7 +457,7 @@ PartialBlockRandomizer::PartialBlockRandomizer(
     IDataDeserializerPtr deserializer,
     DistributionMode distributionMode,
     bool useLegacyRandomization,
-    ICorpusPtr corpus)
+    IMetaDataPtr metadata)
     : m_verbosity(verbosity),
       m_randomizationRangeInSamples(randomizationRangeInSamples),
       m_deserializer(deserializer),
@@ -339,14 +466,14 @@ PartialBlockRandomizer::PartialBlockRandomizer(
       m_sweep(SIZE_MAX),
       m_samplePositionInEpoch(SIZE_MAX),
       m_epochSize(SIZE_MAX),
-      m_corpus(corpus),
+      m_metaData(metadata),
       m_globalSamplePosition(SIZE_MAX)
 {
     assert(deserializer != nullptr);
 
-    m_originalChunks = m_corpus->GetChunkDescriptions();
+    m_originalChunks = m_metaData->GetChunkDescriptions();
     m_streams = m_deserializer->GetStreamDescriptions();
-    m_sequenceRandomizer = std::make_unique<SequenceRandomizer>(*this, m_corpus, m_randomizedChunks);
+    m_sequenceRandomizer = std::make_shared<SequenceRandomizer>(*this, m_metaData, m_randomizedChunks);
 }
 
 void PartialBlockRandomizer::StartEpoch(const EpochConfiguration& config)
@@ -354,7 +481,7 @@ void PartialBlockRandomizer::StartEpoch(const EpochConfiguration& config)
     m_config = config;
     if (config.m_totalEpochSizeInSamples == requestDataSize)
     {
-        m_epochSize = m_corpus->TotalNumberOfSamples();
+        m_epochSize = m_metaData->GetTotalNumberOfSamples();
     }
     else
     {
@@ -368,13 +495,16 @@ void PartialBlockRandomizer::StartEpoch(const EpochConfiguration& config)
 
 void PartialBlockRandomizer::RandomizeForGlobalSamplePosition(size_t samplePosition)
 {
-    size_t sweep = samplePosition / m_corpus->TotalNumberOfSamples();
+    size_t sweep = samplePosition / m_metaData->GetTotalNumberOfSamples();
     if (m_sweep != sweep)
     {
         m_sweep = sweep;
-        m_sweepStartInSamples = sweep * m_corpus->TotalNumberOfSamples();
+        m_sweepStartInSamples = sweep * m_metaData->GetTotalNumberOfSamples();
         RandomizeChunks();
-        m_sequenceRandomizer->RandomizeSequenceForRange(m_sweepStartInSamples, samplePosition);
+        if (samplePosition != m_sweepStartInSamples)
+        {
+            m_sequenceRandomizer->RandomizeSequenceForRange(m_sweepStartInSamples, samplePosition);
+        }
     }
 }
 
@@ -401,25 +531,30 @@ void PartialBlockRandomizer::RandomizeChunks()
     m_randomizedChunks.clear();
     m_randomizedChunks.reserve(m_originalChunks.size());
     size_t samplePosition = m_sweepStartInSamples;
+    size_t sequencePosition = 0;
     for (size_t chunkIndex = 0; chunkIndex < m_originalChunks.size(); chunkIndex++)
     {
         const size_t originalChunkIndex = randomizedChunkIndices[chunkIndex];
-        const size_t numberOfSamples = m_originalChunks[originalChunkIndex].numberOfSamples;
+        const size_t numberOfSamples = m_originalChunks[originalChunkIndex]->numberOfSamples;
+        const size_t numberOfSequences = m_originalChunks[originalChunkIndex]->numberOfSequences;
 
         RandomizedChunk randomizedChunk;
-        randomizedChunk.m_original = &m_originalChunks[originalChunkIndex];
+        randomizedChunk.m_chunkId = chunkIndex;
+        randomizedChunk.m_original = m_originalChunks[originalChunkIndex].get();
         randomizedChunk.m_samplePositionStart = samplePosition;
+        randomizedChunk.m_sequencePositionStart = sequencePosition;
         m_randomizedChunks.push_back(randomizedChunk);
         samplePosition += numberOfSamples;
+        sequencePosition += numberOfSequences;
     }
 
     // Add sentinel
-    RandomizedChunk sentinel;
+  /*  RandomizedChunk sentinel;
     sentinel.m_original = nullptr;
     sentinel.m_randomizationWindow.m_begin = SIZE_MAX;
     sentinel.m_randomizationWindow.m_end = SIZE_MAX;
     m_randomizedChunks.push_back(sentinel);
-    assert(m_originalChunks.size() + 1 == m_randomizedChunks.size());
+    assert(m_originalChunks.size() + 1 == m_randomizedChunks.size());*/
 
     // For each chunk, compute the randomization range (w.r.t. the randomized chunk sequence)
     size_t halfWindowRange = m_randomizationRangeInSamples / 2;
@@ -448,12 +583,14 @@ void PartialBlockRandomizer::RandomizeChunks()
         }
 
         while (chunk.m_randomizationWindow.m_end < m_originalChunks.size() &&
-               m_randomizedChunks[chunk.m_randomizationWindow.m_end + 1].m_samplePositionStart - chunk.m_samplePositionStart < halfWindowRange)
+               m_randomizedChunks[chunk.m_randomizationWindow.m_end].globalte() - chunk.m_samplePositionStart < halfWindowRange)
         {
             // got more space, move window to the right.
             chunk.m_randomizationWindow.m_end++;
         }
     }
+
+    //m_randomizedChunks.resize(m_randomizedChunks.size() - 1); // remove sentinel.
 }
 /*
 bool PartialBlockRandomizer::RandomizeIfNewSweepIsEntered()
@@ -480,11 +617,6 @@ bool PartialBlockRandomizer::RandomizeIfNewSweepIsEntered()
 
 Sequences PartialBlockRandomizer::GetNextSequences(size_t sampleCount)
 {
-    assert(m_samplePositionInEpoch != SIZE_MAX); // SetEpochConfiguration() must be called first
-
-    std::vector<size_t> originalIds;
-    std::unordered_set<size_t> originalChunks;
-
     Sequences result;
     std::vector<RandomizedSequenceDescription> sequences;
     result.m_endOfEpoch = GetNextSequenceDescriptions(sampleCount, sequences);
@@ -493,7 +625,7 @@ Sequences PartialBlockRandomizer::GetNextSequences(size_t sampleCount)
     {
         return result;
     }
-
+    /*
     std::map<size_t, ChunkPtr> chunks;
     std::set<size_t> tracked;
     for (auto s: sequences)
@@ -515,7 +647,7 @@ Sequences PartialBlockRandomizer::GetNextSequences(size_t sampleCount)
             chunks[chunkIndex] = m_deserializer->GetChunk(chunkIndex);
         }
     }
-    std::swap(chunks, m_chunks);
+    std::swap(chunks, m_chunks);*/
 
     result.m_data.resize(m_streams.size(), std::vector<SequenceDataPtr>(sequences.size()));
 
@@ -525,7 +657,7 @@ Sequences PartialBlockRandomizer::GetNextSequences(size_t sampleCount)
     for (int i = 0; i < sequences.size(); ++i)
     {
         const auto& sequenceDescription = sequences[i].m_original;
-        auto sequence = m_chunks[sequenceDescription->m_chunkId]->GetSequence(originalIds[i]);
+        auto sequence = m_sequenceRandomizer->m_randomizedSequenceWindowChunks[sequences[i].m_chunk->m_chunkId]->GetSequence(sequenceDescription->m_id);
         for (int j = 0; j < m_streams.size(); ++j)
         {
             result.m_data[j][i] = sequence[j];
@@ -551,14 +683,15 @@ bool PartialBlockRandomizer::GetNextSequenceDescriptions(size_t sampleCount, std
     }
 
     // Check sweep if rerandomization is needed.
-    size_t sweepPosition = m_globalSamplePosition % m_corpus->TotalNumberOfSamples();
-    if (sweepPosition + sampleCount >= m_corpus->TotalNumberOfSamples())
+    size_t sweepPosition = m_globalSamplePosition % m_metaData->GetTotalNumberOfSamples();
+    if (sweepPosition + sampleCount >= m_metaData->GetTotalNumberOfSamples())
     {
-        sampleCount = m_corpus->TotalNumberOfSamples() - sweepPosition;
+        sampleCount = m_metaData->GetTotalNumberOfSamples() - sweepPosition;
     }
+    assert(sampleCount != 0);
 
-    m_sequenceRandomizer->RandomizeSequenceForRange(m_globalSamplePosition, m_globalSamplePosition + sampleCount);
-    std::vector<RandomizedSequenceDescription> sequences = m_sequenceRandomizer->GetSequencesForRange(m_globalSamplePosition, m_globalSamplePosition + sampleCount);
+    m_sequenceRandomizer->RandomizeSequenceForRange(m_globalSamplePosition, m_globalSamplePosition + sampleCount + 1);
+    std::vector<RandomizedSequenceDescription> sequences = m_sequenceRandomizer->GetSequencesForRange(m_globalSamplePosition, m_globalSamplePosition + sampleCount + 1);
 
     if (m_distributionMode == DistributionMode::chunk)
     {
@@ -574,10 +707,7 @@ bool PartialBlockRandomizer::GetNextSequenceDescriptions(size_t sampleCount, std
     {
         size_t strideBegin = sampleCount * m_config.m_workerRank / m_config.m_numberOfWorkers;
         size_t strideEnd = sampleCount * (m_config.m_workerRank + 1) / m_config.m_numberOfWorkers;
-        for (size_t i = strideBegin; i < strideEnd; ++i)
-        {
-            result.assign(sequences.begin() + strideBegin, sequences.begin() + strideEnd);
-        }
+        result.assign(sequences.begin() + strideBegin, sequences.begin() + strideEnd);
     }
     else
     {
