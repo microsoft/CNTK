@@ -271,7 +271,7 @@ MBLayoutPtr SampleModePacker::PackSparseStream(const SequenceBatch& batch, size_
             {
                 sparseRowIndices.push_back(static_cast<IndexType>(index));
             }
-            nnz += sparseRowIndices.size();
+            nnz += sampleIndices.size();
             sparseColumnIndices.push_back(static_cast<IndexType>(sparseRowIndices.size()));
         }
         perSequenceNonZeroCounts.push_back(nnz);
