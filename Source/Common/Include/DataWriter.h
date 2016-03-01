@@ -62,6 +62,7 @@ public:
     virtual void GetSections(std::map<std::wstring, SectionType, nocase_compare>& sections) = 0;
     virtual bool SaveData(size_t recordStart, const std::map<std::wstring, void*, nocase_compare>& matrices, size_t numRecords, size_t datasetSize, size_t byteVariableSized) = 0;
     virtual void SaveMapping(std::wstring saveId, const std::map<LabelIdType, LabelType>& labelMapping) = 0;
+    virtual bool SupportMultiUtterances() const = 0;
 };
 
 // GetWriter - get a reader type from the DLL
@@ -168,6 +169,10 @@ public:
     // saveId - name of the section to save into (section:subsection format)
     // labelMapping - map we are saving to the file
     virtual void SaveMapping(std::wstring saveId, const std::map<LabelIdType, LabelType>& labelMapping);
+    virtual bool SupportMultiUtterances() const 
+    {
+        return false;
+    };
 };
 
 } } }

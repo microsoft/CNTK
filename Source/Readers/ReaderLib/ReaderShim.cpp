@@ -48,7 +48,7 @@ void ReaderShim<ElemType>::Init(const ConfigParameters& config)
 }
 
 template <class ElemType>
-void ReaderShim<ElemType>::StartMinibatchLoop(size_t mbSize, size_t epoch, size_t requestedEpochSamples = requestDataSize)
+void ReaderShim<ElemType>::StartMinibatchLoop(size_t mbSize, size_t epoch, size_t requestedEpochSamples)
 {
     return StartDistributedMinibatchLoop(mbSize, epoch, 0, 1, requestedEpochSamples);
 }
@@ -110,6 +110,7 @@ bool ReaderShim<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemType>*
 
     if (!minibatch.m_data.empty())
     {
+        // TODO: Use alternating pinned buffer in the packer, do not copy anything, but pack into the pinned memory.
         // Copy returned minibatch to the matrices.
         for (const auto& mx : matrices)
         {
@@ -117,7 +118,7 @@ bool ReaderShim<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemType>*
             size_t streamId = m_nameToStreamId[mx.first];
 
             const auto& stream = minibatch.m_data[streamId];
-            m_layout = stream->m_layout;
+            m_layout->CopyFrom(stream->m_layout);
 
             size_t columnNumber = m_layout->GetNumCols();
             size_t rowNumber = m_streams[streamId]->m_sampleLayout->GetNumElements();
@@ -136,10 +137,7 @@ bool ReaderShim<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemType>*
 }
 
 template <class ElemType>
-bool ReaderShim<ElemType>::DataEnd(EndDataType /*endDataType*/)
-{
-    return false;
-}
+bool ReaderShim<ElemType>::DataEnd() { return false; } // Note: Return value never used.
 
 template <class ElemType>
 void ReaderShim<ElemType>::CopyMBLayoutTo(MBLayoutPtr layout)

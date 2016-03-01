@@ -94,6 +94,6 @@ public:
     {
         RuntimeError("GetData not supported in SparsePCReader");
     };
-    virtual bool DataEnd(EndDataType endDataType);
+    virtual bool DataEnd();
 };
 } } }

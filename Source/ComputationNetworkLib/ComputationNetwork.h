@@ -106,6 +106,9 @@ public:
     void Save(const std::wstring& fileName, const FileOptions fileFormat = FileOptions::fileOptionsBinary) const;
     void SaveEdited(const std::wstring& fileName, const FileOptions fileFormat = FileOptions::fileOptionsBinary);
 
+    template <class ElemType>
+    void SaveToDbnFile(ComputationNetworkPtr net, const std::wstring& fileName) const;
+
 private:
 
     void SaveToFileImpl(const std::wstring& fileName, const FileOptions fileFormat) const;
@@ -666,6 +669,7 @@ public:
         }
     }
 
+    // this one is called from MEL and from DumpNodeInfoToFile() above
     void DumpNodeInfoToFile(const vector<ComputationNodeBasePtr>& nodes,
                             const bool printValues,
                             const bool printMetadata,

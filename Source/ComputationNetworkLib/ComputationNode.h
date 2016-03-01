@@ -159,7 +159,7 @@ struct ComputationNetworkOwnedNodeState
 
     virtual void MarkValueNonSharable() { m_valueSharable = false; }
     virtual void MarkValueSharable() { m_valueSharable = true; }
-    bool isValueSharable() const { return m_valueSharable; }
+    bool IsValueSharable() const { return m_valueSharable; }
 
 protected:                // TODO: should be fully encapsulated here
 
@@ -634,7 +634,7 @@ public:
     virtual void /*IComputationNode::*/ BeginForwardProp() override // called before first iteration step of ForwardProp()
     {
 #ifdef TRACK_GAP_NANS
-        fprintf(stderr, "BeginForwardProp: %ls %ls operation\n", NodeName().c_str(), OperationName().c_str());
+        fprintf(stderr, "BeginForwardProp: %ls %ls operation [%s]\n", NodeName().c_str(), OperationName().c_str(), std::string(GetTensorShape(DetermineElementwiseTensorRank())).c_str());
 #endif
     }
     virtual void /*IComputationNode::*/ EndForwardProp() override // called after last iteration step of ForwardProp()
@@ -1187,8 +1187,11 @@ private:
         else
         {
             const auto& shape = GetSampleLayout();
-            rows = shape.GetRank() > 0 ? shape[0] : 0;
-            cols = rows > 0 ? shape.GetNumElements() / rows : 0;
+            size_t rank = shape.GetRank();
+            rows = rank > 0 ? shape[0] : 0;
+            cols = rank > 0 ?        1 : 0;
+            for (size_t k = 1; k < rank; k++)   // all dimensions except leading one
+                cols *= shape[k];
         }
     }
 
@@ -1356,14 +1359,17 @@ public:
     // request matrices needed to do node function value evaluation
     virtual void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool) override
     {
-        RequestMatrixFromPool(m_value, matrixPool);
+        if (IsValueSharable())
+            RequestMatrixFromPool(m_value, matrixPool);
+        else
+            CreateMatrixIfNull(m_value);
     }
 
     // release temp matrices that are only used by forward computation
     // don't release matrices that need to be used in the gradient computation
     virtual void ReleaseMatricesAfterForwardProp(MatrixPool& matrixPool) override
     {
-        if (!IsOutputNeededDuringBackprop() && (m_value->GetMatrixType() != SPARSE) && isValueSharable())
+        if (!IsOutputNeededDuringBackprop() && (m_value->GetMatrixType() != SPARSE) && IsValueSharable())
             ReleaseMatrixToPool(m_value, matrixPool);
     }
 
@@ -1392,7 +1398,7 @@ public:
 
             // Release the Value matrix only if the output value is needed during backprop
             // since in the case it isn't used, we release it during forward prop itself
-            if (IsOutputNeededDuringBackprop() && m_value->GetMatrixType() != SPARSE && isValueSharable())
+            if (IsOutputNeededDuringBackprop() && m_value->GetMatrixType() != SPARSE && IsValueSharable())
                 ReleaseMatrixToPool(m_value, matrixPool);
         }
     }

@@ -1,7 +1,6 @@
 //
-// <copyright company="Microsoft">
-//     Copyright (c) Microsoft Corporation.  All rights reserved.
-// </copyright>
+// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
 //
 
 #pragma once
@@ -20,7 +19,7 @@ class ConfigParameters;
 
 // Base class for image transformations based on OpenCV
 // that helps to wrap the sequences into OpenCV::Mat class.
-class ImageTransformerBase : public TransformerBase<cv::Mat>
+class ImageTransformerBase : public TransformerBase
 {
 public:
     // Initializes the transformer.
@@ -44,13 +43,13 @@ protected:
         return m_seed;
     }
 
-    using Base = TransformerBase<cv::Mat>;
+    using Base = TransformerBase;
     using UniRealT = std::uniform_real_distribution<double>;
     using UniIntT = std::uniform_int_distribution<int>;
 
     // Applies transformation to the sequence.
-    SequenceDataPtr Apply(const DenseSequenceData &inputSequence,
-                          const StreamDescription &inputStream, cv::Mat &buffer,
+    SequenceDataPtr Apply(SequenceDataPtr inputSequence,
+                          const StreamDescription &inputStream,
                           const StreamDescription &outputStream) override;
 
     // The only function that should be redefined by the inherited classes.
@@ -139,7 +138,7 @@ private:
 };
 
 // Transpose transformation from HWC to CHW.
-class TransposeTransformer : public TransformerBase<vector<char>>
+class TransposeTransformer : public TransformerBase
 {
 public:
     virtual void Initialize(TransformerPtr next,
@@ -156,18 +155,14 @@ protected:
         return m_outputStreams;
     }
 
-    SequenceDataPtr Apply(const DenseSequenceData &inputSequence,
+    SequenceDataPtr Apply(SequenceDataPtr inputSequence,
                           const StreamDescription &inputStream,
-                          vector<char> &buffer,
                           const StreamDescription &outputStream) override;
 
 private:
-    using Base = TransformerBase<vector<char>>;
-
     template <class TElement>
-    SequenceDataPtr TypedApply(const DenseSequenceData &inputSequence,
+    SequenceDataPtr TypedApply(SequenceDataPtr inputSequence,
                                const StreamDescription &inputStream,
-                               vector<char> &buffer,
                                const StreamDescription &outputStream);
 
     std::vector<StreamDescriptionPtr> m_outputStreams;

@@ -1,0 +1,39 @@
+RootDir = .
+ModelDir = "models"
+command = "ZipMissing_Test"
+
+precision = "float"
+
+modelPath = "$ModelDir$/ImageReaderZipMissing_Model.dnn"
+
+# deviceId = -1 for CPU, >= 0 for GPU devices
+deviceId = -1
+
+outputNodeNames = "Dummy"
+traceLevel = 1
+
+ZipMissing_Test = [
+    # Parameter values for the reader
+    reader = [
+        # reader to use
+        readerType = "ImageReader"
+        file = "$RootDir$/ImageReaderZipMissing_map.txt"
+
+        randomize = "auto"
+        verbosity = 1
+
+		numCPUThreads = 1
+        features=[
+            width=4
+            height=8
+            channels=3
+            cropType=Center
+            cropRatio=1.0
+            jitterType=UniRatio
+            interpolations=Linear
+        ]
+        labels=[
+            labelDim=4
+        ]
+    ]
+]

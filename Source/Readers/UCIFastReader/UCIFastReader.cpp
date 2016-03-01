@@ -95,7 +95,7 @@ bool UCIFastReader<ElemType>::EnsureDataAvailable(size_t mbStartSample, bool end
         m_featureData.resize(epochSample * m_featureCount);
     if (m_labelType == labelCategory && m_labelData.size() > epochSample)
     {
-        m_labelIdData.resize(epochSample);
+            m_labelIdData.resize(epochSample);
         m_labelData.resize(epochSample);
     }
     else if (m_labelType != labelNone && m_labelData.size() > epochSample * m_labelDim)
@@ -843,7 +843,7 @@ bool UCIFastReader<ElemType>::GetMinibatchImpl(std::map<std::wstring, Matrix<Ele
 
     Matrix<ElemType>& features = *matrices[m_featuresName];
 
-    // get out if they didn't call StartMinibatchLoop() first
+    // get out if they didn't call StartMinibatchLoop() first  --BUGBUG: We should throw in that case.
     if (m_mbSize == 0)
         return false;
 
@@ -940,11 +940,12 @@ bool UCIFastReader<ElemType>::GetMinibatchImpl(std::map<std::wstring, Matrix<Ele
             {
                 for (size_t ii = 0; ii < m_labelDim; ii++)
                 {
-                    m_labelsBuffer.get()[j+ii] = (ElemType)atof(m_labelData[jRand + ii].c_str());
+                    ElemType v = (ElemType)atof(m_labelData[jRand*m_labelDim + ii].c_str());
+                    m_labelsBuffer.get()[j*m_labelDim + ii] = v;
+                }
                 }
             }
         }
-    }
 
     // There may be multiple parallel trainers reading at the same time in which case
     // we will slice the data to only return the share of the current trainer's subset
@@ -1066,30 +1067,12 @@ bool UCIFastReader<ElemType>::GetData(const std::wstring& sectionName, size_t nu
 }
 
 template <class ElemType>
-bool UCIFastReader<ElemType>::DataEnd(EndDataType endDataType)
+bool UCIFastReader<ElemType>::DataEnd()
 {
     if (m_cachingReader)
-    {
-        return m_cachingReader->DataEnd(endDataType);
-    }
-
-    bool ret = false;
-    switch (endDataType)
-    {
-    case endDataNull:
-        assert(false);
-        break;
-    case endDataEpoch:
-        ret = (m_mbStartSample / m_epochSize != m_epoch);
-        break;
-    case endDataSet:
-        ret = EnsureDataAvailable(m_mbStartSample, true);
-        break;
-    case endDataSentence: // for fast reader each minibatch is considered a "sentence", so always true
-        ret = true;
-        break;
-    }
-    return ret;
+        return m_cachingReader->DataEnd();
+    else
+        return true;
 }
 
 template <class ElemType>

@@ -347,9 +347,18 @@ void HTKMLFReader<ElemType>::PrepareForTrainingOrTesting(const ConfigRecordType&
         {
             // first make slash consistent (sorry for linux users:this is not necessary for you)
             std::replace(rootpath.begin(), rootpath.end(), L'\\', L'/');
-            // second, remove trailling slash if there is any
-            std::wregex trailer(L"/+$");
-            rootpath = std::regex_replace(rootpath, trailer, wstring());
+
+            // second, remove trailing slash if there is any
+            // TODO: when gcc -v is 4.9 or greater, this should be: std::regex_replace(rootpath, L"\\/+$", wstring());
+            size_t stringPos = 0;
+            for (stringPos = rootpath.length() - 1; stringPos >= 0; stringPos--) {
+                if (rootpath[stringPos] != L'/')
+                {
+                    break;
+                }
+            }
+            rootpath = rootpath.substr(0, stringPos + 1);
+
             // third, join the rootpath with each entry in filelist
             if (!rootpath.empty())
             {
@@ -427,8 +436,23 @@ void HTKMLFReader<ElemType>::PrepareForTrainingOrTesting(const ConfigRecordType&
         foreach_index (i, infilesmulti[0])
         {
             msra::asr::htkfeatreader::parsedpath ppath(infilesmulti[0][i]);
-            const wstring key = regex_replace((wstring) ppath, wregex(L"\\.[^\\.\\\\/:]*$"), wstring()); // delete extension (or not if none)
-            restrictmlftokeys.insert(key);
+            const wstring ppathStr = (wstring) ppath;
+
+            // delete extension (or not if none) 
+            // TODO: when gcc -v is 4.9 or greater, this should be: regex_replace((wstring)ppath, wregex(L"\\.[^\\.\\\\/:]*$"), wstring()); 
+            int stringPos = 0;
+            for (stringPos = (int) ppathStr.length() - 1; stringPos >= 0; stringPos--) {
+                if (ppathStr[stringPos] == L'.' || ppathStr[stringPos] == L'\\' || ppathStr[stringPos] == L'/' || ppathStr[stringPos] == L':')
+                {
+                    break;
+                }
+            }
+            if (ppathStr[stringPos] == L'.') {
+                restrictmlftokeys.insert(ppathStr.substr(0, stringPos));
+            }
+            else {
+                restrictmlftokeys.insert(ppathStr);
+            }
         }
     }
     // get labels
@@ -1794,28 +1818,14 @@ bool HTKMLFReader<ElemType>::GetData(const std::wstring& /*sectionName*/, size_t
 }
 
 template <class ElemType>
-bool HTKMLFReader<ElemType>::DataEnd(EndDataType endDataType)
+bool HTKMLFReader<ElemType>::DataEnd()
 {
     // each minibatch is considered a "sentence"
-    // other datatypes not really supported...
-    // assert(endDataType == endDataSentence);
     // for the truncated BPTT, we need to support check wether it's the end of data
-    bool ret = false;
-    switch (endDataType)
-    {
-    case endDataNull:
-    case endDataEpoch:
-    case endDataSet:
-        LogicError("DataEnd: does not support endDataTypes: endDataNull, endDataEpoch and endDataSet");
-        break;
-    case endDataSentence:
-        if (m_truncated)
-            ret = m_sentenceEnd[0];
-        else
-            ret = true; // useless in current condition
-        break;
-    }
-    return ret;
+    if (m_truncated)
+        return m_sentenceEnd[0];
+    else
+        return true; // useless in current condition
 }
 
 template <class ElemType>
