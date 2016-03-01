@@ -327,10 +327,10 @@ $(LIBDIR)/HTKMLFReader.so: $(HTKMLFREADER_OBJ) | $(CNTKMATH_LIB)
 ########################################
 
 EXPERIMENTALHTKMLFREADER_SRC =\
-	$(SOURCEDIR)/Readers/HTKMLFReader/DataWriter.cpp \
+	$(SOURCEDIR)/Readers/HTKMLFReader/DataWriterLocal.cpp \
 	$(SOURCEDIR)/Readers/HTKMLFReader/HTKMLFWriter.cpp \
 	$(SOURCEDIR)/Readers/ExperimentalHTKMLFReader/ConfigHelper.cpp \
-	$(SOURCEDIR)/Readers/ExperimentalHTKMLFReader/DataReader.cpp \
+	$(SOURCEDIR)/Readers/ExperimentalHTKMLFReader/Exports.cpp \
 	$(SOURCEDIR)/Readers/ExperimentalHTKMLFReader/HTKDataDeserializer.cpp \
 	$(SOURCEDIR)/Readers/ExperimentalHTKMLFReader/HTKMLFReader.cpp \
 	$(SOURCEDIR)/Readers/ExperimentalHTKMLFReader/MLFDataDeserializer.cpp \
