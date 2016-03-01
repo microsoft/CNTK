@@ -33,8 +33,8 @@ public:
                                      size_t wStride, size_t hStride, bool padding) override;
     PoolDescPtr CreatePoolDescriptor(typename PoolDesc::PoolKind kind, size_t w, size_t h, size_t wStride, size_t hStride, size_t wPad, size_t hPad) override;
 
-    ConvEnginePtr CreateConvEngine(DEVICEID_TYPE deviceId, size_t maxTempMemSizeInSamples, BatchNormImpl bnImpl) override;
-    PoolEnginePtr CreatePoolEngine(DEVICEID_TYPE deviceId) override;
+    ConvEnginePtr CreateConvEngine(DEVICEID_TYPE deviceId, ImageLayoutKind imageLayout, size_t maxTempMemSizeInSamples, BatchNormImpl bnImpl) override;
+    PoolEnginePtr CreatePoolEngine(DEVICEID_TYPE deviceId, ImageLayoutKind imageLayout) override;
 
     static bool IsSupported(DEVICEID_TYPE deviceId);
 };
@@ -53,10 +53,7 @@ public:
     void Stop();
     float Elapsed();
 
-    CudaTimer(const CudaTimer& src) = delete;
-    CudaTimer& operator=(const CudaTimer& src) = delete;
-    CudaTimer(CudaTimer&& src) = delete;
-    CudaTimer& operator=(CudaTimer&& src) = delete;
+    DISABLE_COPY_AND_MOVE(CudaTimer);
 private:
     void* m_start;
     void* m_stop;

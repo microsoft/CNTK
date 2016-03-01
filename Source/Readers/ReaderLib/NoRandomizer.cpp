@@ -27,6 +27,8 @@ NoRandomizer::NoRandomizer(IDataDeserializerPtr deserializer)
                 static_cast<int>(sequence->m_numberOfSamples));
         }
     }
+
+    m_streams = m_deserializer->GetStreamDescriptions();
 }
 
 void NoRandomizer::Initialize(TransformerPtr, const ConfigParameters&)
@@ -50,7 +52,7 @@ void NoRandomizer::StartEpoch(const EpochConfiguration& config)
 Sequences NoRandomizer::GetNextSequences(size_t sampleCount)
 {
     Sequences result;
-    if(m_config.m_totalEpochSizeInSamples <= m_samplePositionInEpoch)
+    if (m_config.m_totalEpochSizeInSamples <= m_samplePositionInEpoch)
     {
         result.m_endOfEpoch = true;
         return result;
@@ -106,13 +108,19 @@ Sequences NoRandomizer::GetNextSequences(size_t sampleCount)
 
     // TODO: Not clear whether batching will make sense for this.
     // We have to re-assemble the exposed result from sequences from different chunks.
-    result.m_data.resize(sequences.size());
+    result.m_data.resize(m_streams.size(), std::vector<SequenceDataPtr>(sequences.size()));
+
 #pragma omp parallel for ordered schedule(dynamic)
     for (int i = 0; i < sequences.size(); ++i)
     {
-        result.m_data[i] = m_chunks[sequences[i]->m_chunkId]->GetSequence(sequences[i]->m_id);
+        auto sequence = m_chunks[sequences[i]->m_chunkId]->GetSequence(sequences[i]->m_id);
+
+        for (int j = 0; j < m_streams.size(); ++j)
+        {
+            result.m_data[j][i] = sequence[j];
+        }
     }
     return result;
 }
 
-}}}
+} } }

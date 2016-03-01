@@ -363,6 +363,92 @@ BOOST_AUTO_TEST_CASE(HTKMLFReaderSimpleDataLoop22)
         1);
 };
 
+BOOST_AUTO_TEST_CASE(ExperimentalHTKMLFReaderSimpleDataLoop1)
+{
+    HelperRunReaderTest<float>(
+        testDataPath() + "/Config/ExperimentalHTKMLFReaderSimpleDataLoop1_Config.cntk",
+        testDataPath() + "/Control/HTKMLFReaderSimpleDataLoop1_5_11_Control.txt",
+        testDataPath() + "/Control/HTKMLFReaderSimpleDataLoop1_Output.txt",
+        "Simple_Test",
+        "reader",
+        500,
+        250,
+        2,
+        1,
+        1,
+        0,
+        1);
+};
+
+BOOST_AUTO_TEST_CASE(ExperimentalHTKMLFReaderSimpleDataLoop5)
+{
+    HelperRunReaderTest<float>(
+        testDataPath() + "/Config/ExperimentalHTKMLFReaderSimpleDataLoop5_Config.cntk",
+        testDataPath() + "/Control/HTKMLFReaderSimpleDataLoop1_5_11_Control.txt",
+        testDataPath() + "/Control/HTKMLFReaderSimpleDataLoop5_Output.txt",
+        "Simple_Test",
+        "reader",
+        500,
+        250,
+        2,
+        1,
+        1,
+        0,
+        1);
+};
+
+BOOST_AUTO_TEST_CASE(ExperimentalHTKMLFReaderSimpleDataLoop11)
+{
+    HelperRunReaderTest<double>(
+        testDataPath() + "/Config/ExperimentalHTKMLFReaderSimpleDataLoop11_Config.cntk",
+        testDataPath() + "/Control/HTKMLFReaderSimpleDataLoop1_5_11_Control.txt",
+        testDataPath() + "/Control/HTKMLFReaderSimpleDataLoop11_Output.txt",
+        "Simple_Test",
+        "reader",
+        500,
+        250,
+        2,
+        1,
+        1,
+        0,
+        1);
+};
+
+BOOST_AUTO_TEST_CASE(ExperimentalHTKMLFReaderSimpleDataLoop21_0)
+{
+    HelperRunReaderTest<float>(
+        testDataPath() + "/Config/ExperimentalHTKMLFReaderSimpleDataLoop21_Config.cntk",
+        testDataPath() + "/Control/HTKMLFReaderSimpleDataLoop21_0_Control.txt",
+        testDataPath() + "/Control/HTKMLFReaderSimpleDataLoop21_0_Output.txt",
+        "Simple_Test",
+        "reader",
+        500,
+        250,
+        2,
+        1,
+        1,
+        0,
+        2);
+};
+
+BOOST_AUTO_TEST_CASE(ExperimentalHTKMLFReaderSimpleDataLoop21_1)
+{
+    HelperRunReaderTest<float>(
+        testDataPath() + "/Config/ExperimentalHTKMLFReaderSimpleDataLoop21_Config.cntk",
+        testDataPath() + "/Control/HTKMLFReaderSimpleDataLoop21_1_Control.txt",
+        testDataPath() + "/Control/HTKMLFReaderSimpleDataLoop21_1_Output.txt",
+        "Simple_Test",
+        "reader",
+        500,
+        250,
+        2,
+        1,
+        1,
+        1,
+        2);
+};
+
 BOOST_AUTO_TEST_SUITE_END()
+
 }
 } } }
