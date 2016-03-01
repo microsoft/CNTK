@@ -285,7 +285,7 @@ MBLayoutPtr SampleModePacker::PackSparseStream(const SequenceBatch& batch, size_
     size_t requiredSize =
         sizeof(nnzCount) +
         nnzCount * (elementSize + sizeof(IndexType)) +
-        sizeof(IndexType) * (sparseColumnIndices.size() - 1);
+        sizeof(IndexType) * sparseColumnIndices.size();
     
     if (buffer.m_capacity < requiredSize)
     {
@@ -337,7 +337,7 @@ MBLayoutPtr SampleModePacker::PackSparseStream(const SequenceBatch& batch, size_
     std::copy(source, source + size, destination);
     destination += size;
 
-    size = sizeof(IndexType) * (sparseColumnIndices.size() - 1);
+    size = sizeof(IndexType) * (sparseColumnIndices.size());
     source = reinterpret_cast<const char*>(sparseColumnIndices.data());
     std::copy(source, source + size, destination);
 

@@ -16,6 +16,7 @@
 #include "DataReader.h"
 //#include "commandArgUtil.h"
 #include "ReaderShim.h"
+#include <sstream>
 
 typedef CPUSPARSE_INDEX_TYPE IndexType;
 
@@ -115,7 +116,25 @@ bool ReaderShim<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemType>*
         // Copy returned minibatch to the matrices.
         for (const auto& mx : matrices)
         {
-            assert(m_nameToStreamId.find(mx.first) != m_nameToStreamId.end());
+            if (m_nameToStreamId.find(mx.first) == m_nameToStreamId.end())
+            {
+                // TODO use boost::algorithm::join, boost::adapters::transformed
+                std::stringstream str;
+                bool first = true;
+                
+                for (auto s : m_nameToStreamId)
+                {
+                    str  << (first ? "" : ", ");
+                    auto name = msra::strfun::utf8(s.first);
+                    str << '\"' << name.c_str() << '\"';
+                    first = false;
+                }
+
+                auto msg = str.str();
+
+                RuntimeError("Could not map input '%s' to the reader. Reader outputs only [%s].", utf8(mx.first.c_str()).c_str(), msg.c_str());
+            }
+
             size_t streamId = m_nameToStreamId[mx.first];
             
             const auto& stream = minibatch.m_data[streamId];
