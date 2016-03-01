@@ -222,10 +222,11 @@ $(BUILDINFO): $(GENBUILD)
 
 # Define all sources that need to be built
 READER_SRC =\
-	$(SOURCEDIR)/Readers/ReaderLib/SampleModePacker.cpp \
 	$(SOURCEDIR)/Readers/ReaderLib/BlockRandomizer.cpp \
+	$(SOURCEDIR)/Readers/ReaderLib/Bundler.cpp \
 	$(SOURCEDIR)/Readers/ReaderLib/NoRandomizer.cpp \
 	$(SOURCEDIR)/Readers/ReaderLib/ReaderShim.cpp \
+	$(SOURCEDIR)/Readers/ReaderLib/SampleModePacker.cpp \
 
 COMMON_SRC =\
 	$(SOURCEDIR)/Common/Config.cpp \
@@ -318,6 +319,29 @@ ALL+=$(HTKMLFREADER)
 SRC+=$(HTKMLFREADER_SRC)
 
 $(LIBDIR)/HTKMLFReader.so: $(HTKMLFREADER_OBJ) | $(CNTKMATH_LIB)
+	@echo $(SEPARATOR)
+	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(LIBPATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH)) -o $@ $^ -l$(CNTKMATH)
+
+########################################
+# ExperimentalHTKMLFReader plugin
+########################################
+
+EXPERIMENTALHTKMLFREADER_SRC =\
+	$(SOURCEDIR)/Readers/HTKMLFReader/DataWriter.cpp \
+	$(SOURCEDIR)/Readers/HTKMLFReader/HTKMLFWriter.cpp \
+	$(SOURCEDIR)/Readers/ExperimentalHTKMLFReader/ConfigHelper.cpp \
+	$(SOURCEDIR)/Readers/ExperimentalHTKMLFReader/DataReader.cpp \
+	$(SOURCEDIR)/Readers/ExperimentalHTKMLFReader/HTKDataDeserializer.cpp \
+	$(SOURCEDIR)/Readers/ExperimentalHTKMLFReader/HTKMLFReader.cpp \
+	$(SOURCEDIR)/Readers/ExperimentalHTKMLFReader/MLFDataDeserializer.cpp \
+
+EXPERIMENTALHTKMLFREADER_OBJ := $(patsubst %.cpp, $(OBJDIR)/%.o, $(EXPERIMENTALHTKMLFREADER_SRC))
+
+EXPERIMENTALHTKMLFREADER:=$(LIBDIR)/ExperimentalHTKMLFReader.so
+ALL+=$(EXPERIMENTALHTKMLFREADER)
+SRC+=$(EXPERIMENTALHTKMLFREADER_SRC)
+
+$(LIBDIR)/ExperimentalHTKMLFReader.so: $(EXPERIMENTALHTKMLFREADER_OBJ) | $(CNTKMATH_LIB)
 	@echo $(SEPARATOR)
 	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(LIBPATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH)) -o $@ $^ -l$(CNTKMATH)
 

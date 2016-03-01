@@ -8,7 +8,7 @@
 //
 
 #include "stdafx.h"
-#include "basetypes.h"
+#include "Basics.h"
 
 #include "htkfeatio.h" // for reading HTK features
 

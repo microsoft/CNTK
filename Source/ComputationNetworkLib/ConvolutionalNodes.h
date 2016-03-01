@@ -239,7 +239,7 @@ public:
             // TODO: This seems to expose too much internal knowlegde of the engine to the ConvolutionNode().
             //       Why not just pass everything to the engine creator, and get one object that holds everything.
             if (m_convEng == nullptr)
-                m_convEng = m_factory->CreateConvEngine(m_deviceId, m_maxTempMemSizeInSamples);
+                m_convEng = m_factory->CreateConvEngine(m_deviceId, m_imageLayoutKind, m_maxTempMemSizeInSamples, BatchNormImpl::Cntk);
             if (m_inT == nullptr)
                 m_inT = m_factory->CreateTensor(inDims.m_width, inDims.m_height, inDims.m_numChannels, 1);
             if (m_filterT == nullptr)
@@ -449,7 +449,7 @@ public:
             // if (m_factory == nullptr)
             //    m_factory = ConvolutionEngineFactory<ElemType>::Create(m_deviceId, ConvolutionEngineFactory<ElemType>::EngineType::Auto, m_imageLayoutKind);
             if (m_poolEng == nullptr)
-                m_poolEng = m_factory->CreatePoolEngine(m_deviceId);
+                m_poolEng = m_factory->CreatePoolEngine(m_deviceId, m_imageLayoutKind);
             if (m_inT == nullptr)
                 m_inT = m_factory->CreateTensor(inDims.m_width, inDims.m_height, inDims.m_numChannels, 1);
             if (m_outT == nullptr)
