@@ -6,6 +6,7 @@
 #pragma once
 
 #include <vector>
+#include <unordered_set>
 
 #include "Transformer.h"
 #include "DataDeserializer.h"
@@ -14,12 +15,23 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
 // The class represents a randomizer that does randomization based on chunks/sequences inside a set of chunk.
 // TODO: currently this code moved from the old block randomizer.
-// The class will be further refactored and common based will be extracted with NoRandomizer.
-// Currently works only for frame mode (numberOfSample in sequence == 1)
+// TODO: The class will be further refactored and common based will be extracted with NoRandomizer.
+// TODO: Currently works only for frame mode (numberOfSample in sequence == 1)
+// TODO: This layering will be changed, when we move transformers under the randomizer, it won't be a transformer anymore.
 class BlockRandomizer : public Transformer
 {
 public:
-    BlockRandomizer(int verbosity, size_t randomizationRangeInSamples, IDataDeserializerPtr deserializer);
+    enum class DistributionMode {
+        chunk_modulus,
+        sequences_strides
+    };
+
+    BlockRandomizer(int verbosity,
+                    size_t randomizationRangeInSamples,
+                    IDataDeserializerPtr deserializer,
+                    DistributionMode distributionMode = DistributionMode::sequences_strides,
+                    bool useLegacyRandomization = false);
+
     virtual ~BlockRandomizer()
     {
     }
@@ -33,12 +45,6 @@ public:
     }
 
 private:
-    enum class DistributionMode {
-        // TODO better names, description
-        chunk_modulus,
-        sequences_strides
-    };
-
     // Structure for per-chunk information
     struct ChunkInformation
     {
@@ -59,6 +65,7 @@ private:
     };
 
     // General configuration
+    bool m_useLegacyRandomization;
     int m_verbosity;
     size_t m_randomizationRangeInSamples; // full window
     DistributionMode m_distributionMode;
@@ -82,8 +89,14 @@ private:
     size_t m_sweepStartInSamples; // TODO do we need it?
     size_t m_sequencePositionInSweep;
     std::vector<RandomizedChunk> m_randomizedChunks;    // (includes a sentinel)
-    std::vector<size_t> m_sequencePositionToChunkIndex; // TODO find on m_randomizedChunks instead?
+    // TODO optimize footprint:
+    //      (do not require full timeline, i.e., Amit's change in original HTKMLFReader)
+    //      (instead of SequenceDescription, use something smaller)
     std::vector<SequenceDescription> m_randomTimeline;
+    std::vector<StreamDescriptionPtr> m_streams;
+
+    // Chunks that we currently hold a pointer to
+    std::map<size_t, ChunkPtr> m_chunks; // TODO vector? or unordered_map
 
     // Check that timeline has only valid sequences of non-zero length
     // with incrementing IDs and non-decreasing chunk identifiers.
@@ -91,14 +104,17 @@ private:
 
     void RandomizeChunks();
 
+    size_t GetChunkIndexForSequencePosition(size_t sequencePosition) const;
+
     bool IsValidForPosition(size_t targetPosition, const SequenceDescription& seqDesc) const;
 
     void Randomize();
 
     void RandomizeForGlobalSamplePosition(const size_t samplePosition);
 
-    void RandomizeIfNewSweepIsEntered();
+    bool RandomizeIfNewSweepIsEntered();
 
-    bool GetNextSequenceDescriptions(size_t sampleCount, SequenceDescriptions& sequences);
+    bool GetNextSequenceIds(size_t sampleCount, std::vector<size_t>& originalIds, std::unordered_set<size_t>& originalChunks);
 };
-} } }
+
+}}}

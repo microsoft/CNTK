@@ -235,37 +235,63 @@ public:
     using Mat = Matrix<ElemType>;
 
 public:
-    ConvolutionEngine() = default;
+    ConvolutionEngine(DEVICEID_TYPE deviceId, ImageLayoutKind imageLayout)
+        : m_deviceId(deviceId), m_imageLayout(imageLayout)
+    {
+    }
     virtual ~ConvolutionEngine() = default;
 
-    virtual void Forward(const Tensor4D& inT, const Mat& in, const Filter& filterT, const Mat& filter, const ConvDesc& convDesc,
-                         const Tensor4D& outT, Mat& out, Mat& workspace) = 0;
+    void Forward(const Tensor4D& inT, const Mat& in, const Filter& filterT, const Mat& filter, const ConvDesc& convDesc,
+                 const Tensor4D& outT, Mat& out, Mat& workspace);
 
-    virtual void BackwardData(const Tensor4D& srcGradT, const Mat& srcGrad, const Filter& filterT, const Mat& filter, const ConvDesc& convDesc,
-                              const Tensor4D& gradT, Mat& grad, Mat& workspace) = 0;
+    void BackwardData(const Tensor4D& srcGradT, const Mat& srcGrad, const Filter& filterT, const Mat& filter, const ConvDesc& convDesc,
+                      const Tensor4D& gradT, Mat& grad, Mat& workspace);
 
-    virtual void BackwardFilter(const Tensor4D& srcGradT, const Mat& srcGrad, const Tensor4D& inT, const Mat& in, const ConvDesc& convDesc,
-                                const Filter& filterT, Mat& filter, bool allowReuse, Mat& workspace) = 0;
+    void BackwardFilter(const Tensor4D& srcGradT, const Mat& srcGrad, const Tensor4D& inT, const Mat& in, const ConvDesc& convDesc,
+                        const Filter& filterT, Mat& filter, bool allowReuse, Mat& workspace);
 
-    virtual void AddBias(const Tensor4D& outT, const Mat& out, const Tensor4D& biasT, const Mat& bias, Mat& dst) = 0;
-    virtual void BackwardBias(const Tensor4D& srcGradT, const Mat& srcGrad, const Tensor4D& biasT, Mat& biasGrad) = 0;
+    void NormalizeBatch(const Tensor4D& inT, const Mat& in, const Tensor4D& scaleBiasT, const Mat& scale, const Mat& bias,
+                        bool spatial, double expAvgFactor, Mat& runMean, Mat& runInvStdDev, Mat& out,
+                        double epsilon, Mat& saveMean, Mat& saveInvStdDev);
 
-    virtual void NormalizeBatch(const Tensor4D& inT, const Mat& in, const Tensor4D& scaleBiasT, const Mat& scale, const Mat& bias,
-                                bool spatial, double expAvgFactor, Mat& runMean, Mat& runInvStdDev, Mat& out,
-                                double epsilon, Mat& saveMean, Mat& saveInvStdDev) = 0;
+    void NormalizeBatchInference(const Tensor4D& inT, const Mat& in, const Tensor4D& scaleBiasT, const Mat& scale, const Mat& bias,
+                                 bool spatial, const Mat& runMean, const Mat& runInvStdDev, Mat& out);
 
-    virtual void NormalizeBatchInference(const Tensor4D& inT, const Mat& in, const Tensor4D& scaleBiasT, const Mat& scale, const Mat& bias,
-                                         bool spatial, const Mat& runMean, const Mat& runInvStdDev, Mat& out) = 0;
+    void BackwardNormalizeBatch(const Tensor4D& inT, const Mat& in, const Mat& srcGrad, Mat& grad,
+                                const Tensor4D& scaleBiasT, const Mat& scale, bool spatial, const Mat& saveMean, const Mat& saveInvStdDev,
+                                Mat& scaleGrad, Mat& biasGrad);
 
-    virtual void BackwardNormalizeBatch(const Tensor4D& inT, const Mat& in, const Mat& srcGrad, Mat& grad,
-                                        const Tensor4D& scaleBiasT, const Mat& scale, bool spatial, const Mat& saveMean, const Mat& saveInvStdDev,
-                                        Mat& scaleGrad, Mat& biasGrad) = 0;
+    DISABLE_COPY_AND_MOVE(ConvolutionEngine);
 
-public:
-    ConvolutionEngine(const ConvolutionEngine&) = delete;
-    ConvolutionEngine& operator=(const ConvolutionEngine&) = delete;
-    ConvolutionEngine(ConvolutionEngine&&) = delete;
-    ConvolutionEngine& operator=(ConvolutionEngine&&) = delete;
+protected:
+    virtual void EnsureCompatible() = 0;
+
+    virtual void ForwardCore(const Tensor4D& inT, const Mat& in, const Filter& filterT, const Mat& filter, const ConvDesc& convDesc,
+                             const Tensor4D& outT, Mat& out, Mat& workspace) = 0;
+
+    virtual void BackwardDataCore(const Tensor4D& srcGradT, const Mat& srcGrad, const Filter& filterT, const Mat& filter, const ConvDesc& convDesc,
+                                  const Tensor4D& gradT, Mat& grad, Mat& workspace) = 0;
+
+    virtual void BackwardFilterCore(const Tensor4D& srcGradT, const Mat& srcGrad, const Tensor4D& inT, const Mat& in, const ConvDesc& convDesc,
+                                    const Filter& filterT, Mat& filter, bool allowReuse, Mat& workspace) = 0;
+
+    virtual void EnsureCompatibleBatchNorm(bool spatial) = 0;
+
+    virtual void NormalizeBatchCore(const Tensor4D& inT, const Mat& in, const Tensor4D& scaleBiasT, const Mat& scale, const Mat& bias,
+                                    bool spatial, double expAvgFactor, Mat& runMean, Mat& runInvStdDev, Mat& out,
+                                    double epsilon, Mat& saveMean, Mat& saveInvStdDev) = 0;
+
+    // REVIEW alexeyk: roll into NormalizeBatchCore.
+    virtual void NormalizeBatchInferenceCore(const Tensor4D& inT, const Mat& in, const Tensor4D& scaleBiasT, const Mat& scale, const Mat& bias,
+                                             bool spatial, const Mat& runMean, const Mat& runInvStdDev, Mat& out) = 0;
+
+    virtual void BackwardNormalizeBatchCore(const Tensor4D& inT, const Mat& in, const Mat& srcGrad, Mat& grad,
+                                            const Tensor4D& scaleBiasT, const Mat& scale, bool spatial, const Mat& saveMean, const Mat& saveInvStdDev,
+                                            Mat& scaleGrad, Mat& biasGrad) = 0;
+
+protected:
+    DEVICEID_TYPE m_deviceId;
+    ImageLayoutKind m_imageLayout;
 };
 
 template <class ElemType>
@@ -277,17 +303,25 @@ public:
     using Mat = Matrix<ElemType>;
 
 public:
-    PoolingEngine() = default;
+    PoolingEngine(DEVICEID_TYPE deviceId, ImageLayoutKind imageLayout)
+        : m_deviceId(deviceId), m_imageLayout(imageLayout)
+    {
+    }
     virtual ~PoolingEngine() = default;
 
-    virtual void Forward(const Tensor4D& inT, const Mat& in, const PoolDesc& poolDesc, const Tensor4D& outT, Mat& out) = 0;
-    virtual void Backward(const Tensor4D& outT, const Mat& out, const Mat& srcGrad, const PoolDesc& poolDesc, const Tensor4D& inT, const Mat& in, Mat& grad) = 0;
+    void Forward(const Tensor4D& inT, const Mat& in, const PoolDesc& poolDesc, const Tensor4D& outT, Mat& out);
+    void Backward(const Tensor4D& outT, const Mat& out, const Mat& srcGrad, const PoolDesc& poolDesc, const Tensor4D& inT, const Mat& in, Mat& grad);
 
-public:
-    PoolingEngine(const PoolingEngine&) = delete;
-    PoolingEngine& operator=(const PoolingEngine&) = delete;
-    PoolingEngine(PoolingEngine&&) = delete;
-    PoolingEngine& operator=(PoolingEngine&&) = delete;
+    DISABLE_COPY_AND_MOVE(PoolingEngine);
+
+protected:
+    virtual void EnsureCompatible() = 0;
+    virtual void ForwardCore(const Tensor4D& inT, const Mat& in, const PoolDesc& poolDesc, const Tensor4D& outT, Mat& out) = 0;
+    virtual void BackwardCore(const Tensor4D& outT, const Mat& out, const Mat& srcGrad, const PoolDesc& poolDesc, const Tensor4D& inT, const Mat& in, Mat& grad) = 0;
+
+protected:
+    DEVICEID_TYPE m_deviceId;
+    ImageLayoutKind m_imageLayout;
 };
 
 // REVIEW alexeyk: this is a temporary hack until we find a better place for the BatchNorm engine(s).
@@ -324,8 +358,8 @@ public:
     virtual PoolDescPtr CreatePoolDescriptor(PoolDesc::PoolKind kind, size_t w, size_t h, size_t wStride, size_t hStride, size_t wPad, size_t hPad) = 0;
     // virtual Tensor4DPtr CreateLrnDescriptor() = 0;
 
-    virtual ConvEnginePtr CreateConvEngine(DEVICEID_TYPE deviceId, size_t maxTempMemSizeInSamples, BatchNormImpl bnImpl = BatchNormImpl::CuDnn) = 0;
-    virtual PoolEnginePtr CreatePoolEngine(DEVICEID_TYPE deviceId) = 0;
+    virtual ConvEnginePtr CreateConvEngine(DEVICEID_TYPE deviceId, ImageLayoutKind imageLayout, size_t maxTempMemSizeInSamples, BatchNormImpl bnImpl) = 0;
+    virtual PoolEnginePtr CreatePoolEngine(DEVICEID_TYPE deviceId, ImageLayoutKind imageLayout) = 0;
 
     enum class EngineType
     {
@@ -335,10 +369,6 @@ public:
     };
     static std::unique_ptr<ConvolutionEngineFactory<ElemType>> Create(DEVICEID_TYPE deviceId, EngineType engType, ImageLayoutKind imageLayoutKind);
 
-public:
-    ConvolutionEngineFactory(const ConvolutionEngineFactory&) = delete;
-    ConvolutionEngineFactory& operator=(const ConvolutionEngineFactory&) = delete;
-    ConvolutionEngineFactory(ConvolutionEngineFactory&&) = delete;
-    ConvolutionEngineFactory& operator=(ConvolutionEngineFactory&&) = delete;
+    DISABLE_COPY_AND_MOVE(ConvolutionEngineFactory);
 };
 } } }

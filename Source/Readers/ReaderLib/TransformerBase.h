@@ -1,7 +1,6 @@
 //
-// <copyright company="Microsoft">
-//     Copyright (c) Microsoft Corporation.  All rights reserved.
-// </copyright>
+// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
 //
 
 #pragma once
@@ -43,23 +42,26 @@ public:
         assert(m_next != nullptr);
         Sequences samples = m_next->GetNextSequences(sampleCount);
 
-        const auto &appliedStreamIds = GetAppliedStreamIds();
-        const auto &outputStreams = GetOutputStreams();
-        assert(m_inputStreams.size() == outputStreams.size());
-
-#pragma omp parallel for ordered schedule(static)
-        for (int i = 0; i < samples.m_data.size(); ++i)
+        if (samples.m_data.empty())
         {
-            auto &sample = samples.m_data[i];
-            assert(sample.size() == m_inputStreams.size());
-
-            for (int j = 0; j < appliedStreamIds.size(); ++j)
-            {
-                size_t id = appliedStreamIds[j];
-                sample[id] = Apply(sample[id], *m_inputStreams[id], *outputStreams[id]);
-            }
+            return samples;
         }
 
+        const auto &appliedStreamIds = GetAppliedStreamIds();
+        const auto &outputStreams = GetOutputStreams();
+
+        // TODO: Move parallelization on the outer loop with collapse.
+        for (int j = 0; j < appliedStreamIds.size(); ++j)
+        {
+            size_t streamId = appliedStreamIds[j];
+            auto& allSamples = samples.m_data[streamId];
+
+#pragma omp parallel for ordered schedule(dynamic)
+            for (int i = 0; i < allSamples.size(); ++i)
+            {
+                allSamples[i] = Apply(allSamples[i], *m_inputStreams[streamId], *outputStreams[streamId]);
+            }
+        }
         return samples;
     }
 

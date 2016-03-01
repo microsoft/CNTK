@@ -11,12 +11,32 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
 // Compares two ASCII strings ignoring the case.
 // TODO: Should switch to boost, boost::iequal should be used instead.
-inline bool AreEqualIgnoreCase(const std::string& s1, const std::string& s2)
+// TODO: we already have EqualCI() in Basics.h which does the same thing.
+template<class TElement>
+inline bool AreEqualIgnoreCase(
+    const std::basic_string<TElement, char_traits<TElement>, allocator<TElement>>& s1,
+    const std::basic_string<TElement, char_traits<TElement>, allocator<TElement> >& s2)
 {
-    return std::equal(s1.begin(), s1.end(), s2.begin(), [](const char& a, const char& b)
+    return std::equal(s1.begin(), s1.end(), s2.begin(), [](const TElement& a, const TElement& b)
     {
         return std::tolower(a) == std::tolower(b);
     });
 }
 
-} } }
+template<class TString>
+inline bool AreEqualIgnoreCase(
+    const TString& s1,
+    const typename TString::value_type* s2pointer)
+{
+    return AreEqualIgnoreCase(s1, TString(s2pointer));
+}
+
+template<class TString>
+inline bool AreEqualIgnoreCase(
+    const typename TString::value_type* s1pointer,
+    const TString& s2)
+{
+    return AreEqualIgnoreCase(TString(s1pointer), s2);
+}
+
+}}}

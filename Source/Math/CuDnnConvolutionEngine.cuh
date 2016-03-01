@@ -165,7 +165,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     //    As a result, each block has 2 * blockDim.x (mean and inverse stddev) values to write at the end.
     //    
     template <int BlockDimX, int BlockDimY, int U, typename ElemType>
-    __global__ void kComputeBatchMeanAndInvStdDev(int vectorSize, int batchSize, const ElemType* x, ElemType* runMean, ElemType* runInvStdDev,
+    __global__ void kComputeBatchMeanAndInvStdDev(int vectorSize, int batchSize, const ElemType* x, double expAvgFactor, ElemType* runMean, ElemType* runInvStdDev,
                                                   double epsilon, ElemType* xMean, ElemType* xInvStdDev)
     {
         static_assert(BlockDimX * U == CUB_PTX_WARP_THREADS, "BlockDimX * U must be equal to warp size (32).");
@@ -177,6 +177,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         assert(gridDim.y == 1);
         assert(gridDim.z == 1);
         assert(::isfinite(epsilon) && epsilon > 0);
+        assert(::isfinite(expAvgFactor) && expAvgFactor > 0);
 
         int irowSrcBase = (blockIdx.x * BlockDimX + threadIdx.x) * U;
         if (irowSrcBase >= vectorSize)
@@ -282,15 +283,37 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 n = nsum;
             }
             size_t idxDstBase = (blockIdx.x * BlockDimX + threadIdx.x) * U;
+            // Store mean and running mean.
             StoreValues<U>(mean, xMean + idxDstBase);
-            StoreValues<U>(mean, runMean + idxDstBase);
+            if (expAvgFactor == 1)
+                StoreValues<U>(mean, runMean + idxDstBase);
+            else
+            {
+                ElemType run[U];
+                LoadValues<U>(runMean + idxDstBase, run);
+#pragma unroll
+                for (int k = 0; k < U; k++)
+                    run[k] = expAvgFactor * mean[k] + (1.0 - expAvgFactor) * run[k];
+                StoreValues<U>(run, runMean + idxDstBase);
+            }
+            // Store inv std dev and its running version.
 #pragma unroll
             for (int k = 0; k < U; k++)
             {
                 m2[k] = Operations::RSqrt(static_cast<ElemType>(m2[k] / batchSize + epsilon));
             }
             StoreValues<U>(m2, xInvStdDev + idxDstBase);
-            StoreValues<U>(m2, runInvStdDev + idxDstBase);
+            if (expAvgFactor == 1)
+                StoreValues<U>(m2, runInvStdDev + idxDstBase);
+            else
+            {
+                ElemType run[U];
+                LoadValues<U>(runInvStdDev + idxDstBase, run);
+#pragma unroll
+                for (int k = 0; k < U; k++)
+                    run[k] = expAvgFactor * m2[k] + (1.0 - expAvgFactor) * run[k];
+                StoreValues<U>(run, runInvStdDev + idxDstBase);
+            }
         }
     }
 
@@ -298,7 +321,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // but also W and H dimensions.
     // REVIEW alexeyk: is it possible to combine this and previous kernel into a single kernel without hurting performance/readability much?
     template <int BlockDimX, int BlockDimY, int U, typename ElemType>
-    __global__ void kComputeSpatialBatchMeanAndInvStdDev(int vectorSize, int spatialSize, int batchSize, const ElemType* x, ElemType* runMean, ElemType* runInvStdDev,
+    __global__ void kComputeSpatialBatchMeanAndInvStdDev(int vectorSize, int spatialSize, int batchSize, const ElemType* x, 
+                                                         double expAvgFactor, ElemType* runMean, ElemType* runInvStdDev,
                                                          double epsilon, ElemType* xMean, ElemType* xInvStdDev)
     {
         static_assert(BlockDimX * U == CUB_PTX_WARP_THREADS, "BlockDimX * U must be equal to warp size (32).");
@@ -310,6 +334,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         assert(gridDim.z == 1);
         assert((spatialSize % U) == 0);
         assert((vectorSize % spatialSize) == 0);
+        assert(::isfinite(expAvgFactor) && expAvgFactor > 0);
         assert(::isfinite(epsilon) && epsilon > 0);
 
         int irowSrcBase = blockIdx.x * spatialSize + threadIdx.x * U;
@@ -431,10 +456,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
 
             xMean[blockIdx.x] = mean[0];
-            runMean[blockIdx.x] = mean[0];
+            runMean[blockIdx.x] = (expAvgFactor == 1) ? mean[0] : (expAvgFactor * mean[0] + (1.0 - expAvgFactor) * runMean[blockIdx.x]);
             m2[0] = Operations::RSqrt(static_cast<ElemType>(m2[0] / (batchSize * spatialSize) + epsilon));
             xInvStdDev[blockIdx.x] = m2[0];
-            runInvStdDev[blockIdx.x] = m2[0];
+            runInvStdDev[blockIdx.x] = (expAvgFactor == 1) ? m2[0] : (expAvgFactor * m2[0] + (1.0 - expAvgFactor) * runInvStdDev[blockIdx.x]);
         }
     }
 
@@ -444,8 +469,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     struct ComputeBatchMeanAndInvStdDev
     {
         template <typename ElemType>
-        static void Call(size_t vectorSize, size_t batchSize, const ElemType* x, ElemType* runMean, ElemType* runInvStdDev, double epsilon,
-                         ElemType* xMean, ElemType* xInvStdDev, cudaStream_t stream)
+        static void Call(size_t vectorSize, size_t batchSize, const ElemType* x, double expAvgFactor, ElemType* runMean, ElemType* runInvStdDev,
+                         double epsilon, ElemType* xMean, ElemType* xInvStdDev, cudaStream_t stream)
         {
             assert((vectorSize % U) == 0);
 
@@ -456,7 +481,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             auto gdim = dim3(static_cast<unsigned int>(RoundUpToMultiple(vectorSize, BlockDimX * U)));
             kComputeBatchMeanAndInvStdDev<BlockDimX, BlockDimY, U><<<gdim, bdim, 0, stream>>>(
                 static_cast<int>(vectorSize), static_cast<int>(batchSize), 
-                x, runMean, runInvStdDev, epsilon, xMean, xInvStdDev);
+                x, expAvgFactor, runMean, runInvStdDev, epsilon, xMean, xInvStdDev);
         }
     };
 
@@ -464,7 +489,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     struct ComputeSpatialBatchMeanAndInvStdDev
     {
         template <typename ElemType>
-        static void Call(size_t vectorSize, size_t spatialSize, size_t batchSize, const ElemType* x, ElemType* runMean, ElemType* runInvStdDev,
+        static void Call(size_t vectorSize, size_t spatialSize, size_t batchSize, const ElemType* x, 
+                         double expAvgFactor, ElemType* runMean, ElemType* runInvStdDev,
                          double epsilon, ElemType* xMean, ElemType* xInvStdDev, cudaStream_t stream)
         {
             assert((vectorSize % spatialSize) == 0);
@@ -478,7 +504,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             auto gdim = dim3(static_cast<unsigned int>(vectorSize / spatialSize));
             kComputeSpatialBatchMeanAndInvStdDev<BlockDimX, BlockDimY, U><<<gdim, bdim, 0, stream>>>(
                 static_cast<int>(vectorSize), static_cast<int>(spatialSize), static_cast<int>(batchSize), 
-                x, runMean, runInvStdDev,epsilon, xMean, xInvStdDev);
+                x, expAvgFactor, runMean, runInvStdDev,epsilon, xMean, xInvStdDev);
         }
     };
 
@@ -606,7 +632,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     template <typename ElemType>
     cudaError_t BatchNormalizationForwardTraining(const Tensor4D& t, bool spatial, const ElemType* x, ElemType* y,
-                                                  const ElemType* bnScale, const ElemType* bnBias, ElemType* runMean, ElemType* runInvStdDev,
+                                                  const ElemType* bnScale, const ElemType* bnBias, double expAvgFactor, ElemType* runMean, ElemType* runInvStdDev,
                                                   double epsilon, ElemType* saveMean, ElemType* saveInvStdDev, cudaStream_t stream)
     {
         assert(nullptr != x);
@@ -614,6 +640,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         assert(nullptr != bnScale);
         assert(nullptr != bnBias);
         assert(std::isfinite(epsilon) && epsilon > 0);
+        assert(std::isfinite(expAvgFactor) && expAvgFactor > 0);
         assert(nullptr != runMean);
         assert(nullptr != runInvStdDev);
         assert(nullptr != saveMean);
@@ -628,22 +655,21 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (spatial)
         {
             Call<ComputeSpatialBatchMeanAndInvStdDev, ElemType>(spatialSize, vectorSize, spatialSize, batchSize, x, 
-                                                         runMean, runInvStdDev, epsilon, saveMean, saveInvStdDev, stream);
+                                                                expAvgFactor, runMean, runInvStdDev, epsilon, saveMean, saveInvStdDev, stream);
             cudaError_t err = GetLastCudaError();
             if (cudaSuccess != err)
                 return err;
-
         }
         else
         {
             Call<ComputeBatchMeanAndInvStdDev, ElemType>(vectorSize, vectorSize, batchSize, x,
-                                                  runMean, runInvStdDev, epsilon, saveMean, saveInvStdDev, stream);
+                                                         expAvgFactor, runMean, runInvStdDev, epsilon, saveMean, saveInvStdDev, stream);
             cudaError_t err = GetLastCudaError();
             if (cudaSuccess != err)
                 return err;
         }
         Call<NormalizeBatchTraining, ElemType>(spatial ? spatialSize : vectorSize, vectorSize, spatialSize, batchSize,
-                                        spatial, x, y, bnScale, bnBias, saveMean, saveInvStdDev, stream);
+                                               spatial, x, y, bnScale, bnBias, saveMean, saveInvStdDev, stream);
         return GetLastCudaError();
     }
 
@@ -665,7 +691,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         assert(0 < batchSize  && batchSize  <= std::numeric_limits<int>::max());
 
         Call<NormalizeBatchTraining, ElemType>(spatial ? spatialSize : vectorSize, vectorSize, spatialSize, batchSize,
-                                        spatial, x, y, bnScale, bnBias, runMean, runInvStdDev, stream);
+                                               spatial, x, y, bnScale, bnBias, runMean, runInvStdDev, stream);
         return GetLastCudaError();
     }
 
@@ -1032,7 +1058,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (spatial)
         {
             Call<ComputeSpatialScaleAndBiasGradients, ElemType>(spatialSize, vectorSize, spatialSize, batchSize, x, dy, dScale, dBias, 
-                                                         saveMean, saveInvStdDev, stream);
+                                                                saveMean, saveInvStdDev, stream);
             cudaError_t err = GetLastCudaError();
             if (cudaSuccess != err)
                 return err;
@@ -1040,13 +1066,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         else
         {
             Call<ComputeScaleAndBiasGradients, ElemType>(vectorSize, vectorSize, batchSize, x, dy, dScale, dBias, 
-                                                  saveMean, saveInvStdDev, stream);
+                                                         saveMean, saveInvStdDev, stream);
             cudaError_t err = GetLastCudaError();
             if (cudaSuccess != err)
                 return err;
         }
         Call<BackpropagateBatchNormGradients, ElemType>(spatial ? spatialSize : vectorSize, vectorSize, spatialSize, batchSize, spatial, 
-                                                 x, dy, dx, bnScale, dScale, dBias, saveMean, saveInvStdDev, stream);
+                                                        x, dy, dx, bnScale, dScale, dBias, saveMean, saveInvStdDev, stream);
         return GetLastCudaError();
     }
 } } }

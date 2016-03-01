@@ -10,6 +10,182 @@
 namespace Microsoft { namespace MSR { namespace CNTK {
 
 template <class ElemType>
+void ConvolutionEngine<ElemType>::Forward(const Tensor4D& inT, const Mat& in, const Filter& filterT, const Mat& filter, 
+                                          const ConvDesc& convDesc, const Tensor4D& outT, Mat& out, Mat& workspace)
+{
+    assert(inT.w() * inT.h() * inT.c() == in.GetNumRows());
+    assert(inT.n() == in.GetNumCols());
+    assert(filterT.k() == filter.GetNumRows());
+    assert(filterT.w() * filterT.h() * filterT.c() == filter.GetNumCols());
+    assert(inT.c() == filterT.c());
+    assert(outT.c() == filterT.k());
+    assert(outT.w() * outT.h() * outT.c() == out.GetNumRows());
+    assert(outT.n() == out.GetNumCols());
+
+    EnsureCompatible();
+    ForwardCore(inT, in, filterT, filter, convDesc, outT, out, workspace);
+}
+
+template <class ElemType>
+void ConvolutionEngine<ElemType>::BackwardData(const Tensor4D& srcGradT, const Mat& srcGrad, const Filter& filterT, const Mat& filter, const ConvDesc& convDesc,
+                                               const Tensor4D& gradT, Mat& grad, Mat& workspace)
+{
+    assert(srcGradT.w() * srcGradT.h() * srcGradT.c() == srcGrad.GetNumRows());
+    assert(srcGradT.n() == srcGrad.GetNumCols());
+    assert(filterT.k() == filter.GetNumRows());
+    assert(filterT.w() * filterT.h() * filterT.c() == filter.GetNumCols());
+    assert(srcGradT.c() == filterT.k());
+    assert(gradT.c() == filterT.c());
+    assert(gradT.w() * gradT.h() * gradT.c() == grad.GetNumRows());
+    assert(gradT.n() == grad.GetNumCols());
+
+    EnsureCompatible();
+    BackwardDataCore(srcGradT, srcGrad, filterT, filter, convDesc, gradT, grad, workspace);
+}
+
+template <class ElemType>
+void ConvolutionEngine<ElemType>::BackwardFilter(const Tensor4D& srcGradT, const Mat& srcGrad, const Tensor4D& inT, const Mat& in, const ConvDesc& convDesc,
+                                                 const Filter& filterT, Mat& filter, bool allowReuse, Mat& workspace)
+{
+    assert(srcGradT.w() * srcGradT.h() * srcGradT.c() == srcGrad.GetNumRows());
+    assert(srcGradT.n() == srcGrad.GetNumCols());
+    assert(inT.w() * inT.h() * inT.c() == in.GetNumRows());
+    assert(inT.n() == in.GetNumCols());
+    assert(srcGradT.c() == filterT.k());
+    assert(inT.c() == filterT.c());
+    assert(filterT.k() == filter.GetNumRows());
+    assert(filterT.w() * filterT.h() * filterT.c() == filter.GetNumCols());
+
+    EnsureCompatible();
+    BackwardFilterCore(srcGradT, srcGrad, inT, in, convDesc, filterT, filter, allowReuse, workspace);
+}
+
+template <class ElemType>
+void ConvolutionEngine<ElemType>::NormalizeBatch(const Tensor4D& inT, const Mat& in, const Tensor4D& scaleBiasT, const Mat& scale, const Mat& bias,
+                                                 bool spatial, double expAvgFactor, Mat& runMean, Mat& runInvStdDev, Mat& out,
+                                                 double epsilon, Mat& saveMean, Mat& saveInvStdDev)
+{
+    const size_t crowIn = inT.w() * inT.h() * inT.c();
+    if (spatial)
+    {
+        assert(scaleBiasT.c() == inT.c());
+        assert(scaleBiasT.w() == 1);
+        assert(scaleBiasT.h() == 1);
+        assert(runMean.GetNumRows() == inT.c());
+        assert(runInvStdDev.GetNumRows() == inT.c());
+    }
+    else
+    {
+        assert(scaleBiasT.c() == inT.c());
+        assert(scaleBiasT.w() == inT.w());
+        assert(scaleBiasT.h() == inT.h());
+        assert(runMean.GetNumRows() == crowIn);
+        assert(runInvStdDev.GetNumRows() == crowIn);
+    }
+    assert(scaleBiasT.n() == 1);
+    assert(crowIn == in.GetNumRows());
+    assert(crowIn == out.GetNumRows());
+    assert(inT.n() == in.GetNumCols());
+    assert(inT.n() == out.GetNumCols());
+    assert(bias.GetNumCols() == 1);
+    assert(scale.GetNumCols() == 1);
+    assert(runMean.GetNumCols() == 1);
+    assert(runInvStdDev.GetNumCols() == 1);
+    assert(runMean.GetNumCols() == saveMean.GetNumCols());
+    assert(runMean.GetNumRows() == saveMean.GetNumRows());
+    assert(runInvStdDev.GetNumCols() == saveInvStdDev.GetNumCols());
+    assert(runInvStdDev.GetNumRows() == saveInvStdDev.GetNumRows());
+
+#ifndef _DEBUG
+    UNUSED(crowIn); // crowIn used only in asserts.
+#endif
+
+    EnsureCompatibleBatchNorm(spatial);
+    NormalizeBatchCore(inT, in, scaleBiasT, scale, bias, spatial, expAvgFactor, runMean, runInvStdDev, out, epsilon, saveMean, saveInvStdDev);
+}
+
+template <class ElemType>
+void ConvolutionEngine<ElemType>::NormalizeBatchInference(const Tensor4D& inT, const Mat& in, const Tensor4D& scaleBiasT, const Mat& scale, const Mat& bias,
+                                                          bool spatial, const Mat& runMean, const Mat& runInvStdDev, Mat& out)
+{
+    const size_t crowIn = inT.w() * inT.h() * inT.c();
+
+    if (spatial)
+    {
+        assert(scaleBiasT.c() == inT.c());
+        assert(scaleBiasT.w() == 1);
+        assert(scaleBiasT.h() == 1);
+        assert(scaleBiasT.c() == runMean.GetNumRows());
+        assert(scaleBiasT.c() == runInvStdDev.GetNumRows());
+    }
+    else
+    {
+        assert(scaleBiasT.c() == inT.c());
+        assert(scaleBiasT.w() == inT.w());
+        assert(scaleBiasT.h() == inT.h());
+        assert(crowIn == runMean.GetNumRows());
+        assert(crowIn == runInvStdDev.GetNumRows());
+    }
+    assert(scaleBiasT.n() == 1);
+    assert(crowIn == in.GetNumRows());
+    assert(crowIn == out.GetNumRows());
+    assert(inT.n() == in.GetNumCols());
+    assert(inT.n() == out.GetNumCols());
+    assert(bias.GetNumCols() == 1);
+    assert(scale.GetNumCols() == 1);
+    assert(runMean.GetNumCols() == 1);
+    assert(runInvStdDev.GetNumCols() == 1);
+#ifndef _DEBUG
+    // used only in asserts.
+    UNUSED(crowIn);
+#endif
+
+    EnsureCompatibleBatchNorm(spatial);
+    NormalizeBatchInferenceCore(inT, in, scaleBiasT, scale, bias, spatial, runMean, runInvStdDev, out);
+}
+
+template <class ElemType>
+void ConvolutionEngine<ElemType>::BackwardNormalizeBatch(const Tensor4D& inT, const Mat& in, const Mat& srcGrad, Mat& grad,
+                                                         const Tensor4D& scaleBiasT, const Mat& scale, bool spatial, const Mat& saveMean, const Mat& saveInvStdDev,
+                                                         Mat& scaleGrad, Mat& biasGrad)
+{
+    const size_t crowIn = inT.w() * inT.h() * inT.c();
+
+    if (spatial)
+    {
+        assert(scaleBiasT.c() == inT.c());
+        assert(scaleBiasT.w() == 1);
+        assert(scaleBiasT.h() == 1);
+    }
+    else
+    {
+        assert(scaleBiasT.c() == inT.c());
+        assert(scaleBiasT.w() == inT.w());
+        assert(scaleBiasT.h() == inT.h());
+    }
+    assert(scaleBiasT.n() == 1);
+    assert(crowIn == in.GetNumRows());
+    assert(crowIn == srcGrad.GetNumRows());
+    assert(crowIn == grad.GetNumRows());
+    assert(inT.n() == in.GetNumCols());
+    assert(inT.n() == srcGrad.GetNumCols());
+    assert(inT.n() == grad.GetNumCols());
+    assert(scaleGrad.GetNumRows() == scale.GetNumRows());
+    assert(scaleGrad.GetNumCols() == scale.GetNumCols());
+    assert(biasGrad.GetNumRows() == scale.GetNumRows());
+    assert(biasGrad.GetNumCols() == scale.GetNumCols());
+#ifndef _DEBUG
+    UNUSED(crowIn); // crowIn used only in asserts.
+#endif
+
+    EnsureCompatibleBatchNorm(spatial);
+    BackwardNormalizeBatchCore(inT, in, srcGrad, grad, scaleBiasT, scale, spatial, saveMean, saveInvStdDev, scaleGrad, biasGrad);
+}
+
+//------------------------------------------------------------------
+// Default (legacy) convolution engine implementation.
+//------------------------------------------------------------------
+template <class ElemType>
 class DefaultConvolutionEngine : public ConvolutionEngine<ElemType>
 {
 public:
@@ -20,24 +196,24 @@ public:
     using typename Base::ConvDesc;
 
 public:
-    DefaultConvolutionEngine(DEVICEID_TYPE deviceId, size_t maxTempMemSizeInSamples)
-        : m_ones(deviceId), m_maxTempMemSizeInSamples(maxTempMemSizeInSamples)
+    DefaultConvolutionEngine(DEVICEID_TYPE deviceId, ImageLayoutKind imageLayout, size_t maxTempMemSizeInSamples, BatchNormImpl bnImpl)
+        : Base(deviceId, imageLayout), m_ones(deviceId), m_maxTempMemSizeInSamples(maxTempMemSizeInSamples), m_bnImpl(bnImpl)
     {
     }
 
-public:
-    // TODO: A note on the supported tensor layouts here.
-    // TODO: Runtime check whether input tensors are in supported format.
-    void Forward(const Tensor4D& inT, const Mat& in, const Filter& filterT, const Mat& filter, const ConvDesc& convDesc,
+protected:
+    using Base::m_deviceId;
+    using Base::m_imageLayout;
+
+    void EnsureCompatible() override
+    {
+        if (m_imageLayout != ImageLayoutKind::HWC)
+            RuntimeError("Default convolution engine currently supports only HWC/legacy layout.");
+    }
+
+    void ForwardCore(const Tensor4D& inT, const Mat& in, const Filter& filterT, const Mat& filter, const ConvDesc& convDesc,
                  const Tensor4D& outT, Mat& out, Mat& workspace) override
     {
-        assert(inT.w() * inT.h() * inT.c() == in.GetNumRows());
-        assert(inT.n() == in.GetNumCols());
-        assert(filterT.k() == filter.GetNumRows());
-        assert(filterT.w() * filterT.h() * filterT.c() == filter.GetNumCols());
-        assert(inT.c() == filterT.c());
-        assert(outT.c() == filterT.k());
-
         size_t packedInputRows = filterT.w() * filterT.h() * filterT.c();
         size_t packedInputColsPerSample = outT.w() * outT.h();
         size_t outputSizePerChannel = packedInputColsPerSample;
@@ -118,18 +294,9 @@ public:
         assert(outT.n() == out.GetNumCols());
     }
 
-    void BackwardData(const Tensor4D& srcGradT, const Mat& srcGrad, const Filter& filterT, const Mat& filter, const ConvDesc& convDesc,
+    void BackwardDataCore(const Tensor4D& srcGradT, const Mat& srcGrad, const Filter& filterT, const Mat& filter, const ConvDesc& convDesc,
                       const Tensor4D& gradT, Mat& grad, Mat& workspace) override
     {
-        assert(srcGradT.w() * srcGradT.h() * srcGradT.c() == srcGrad.GetNumRows());
-        assert(srcGradT.n() == srcGrad.GetNumCols());
-        assert(filterT.k() == filter.GetNumRows());
-        assert(filterT.w() * filterT.h() * filterT.c() == filter.GetNumCols());
-        assert(srcGradT.c() == filterT.k());
-        assert(gradT.c() == filterT.c());
-        assert(gradT.w() * gradT.h() * gradT.c() == grad.GetNumRows());
-        assert(gradT.n() == grad.GetNumCols());
-
         size_t packedInputRows = filterT.w() * filterT.h() * filterT.c();
         size_t packedInputColsPerSample = srcGradT.w() * srcGradT.h();
         size_t outputSizePerChannel = packedInputColsPerSample;
@@ -169,18 +336,9 @@ public:
         assert(srcGradT.n() == srcGrad.GetNumCols());
     }
 
-    void BackwardFilter(const Tensor4D& srcGradT, const Mat& srcGrad, const Tensor4D& inT, const Mat& in, const ConvDesc& convDesc,
+    void BackwardFilterCore(const Tensor4D& srcGradT, const Mat& srcGrad, const Tensor4D& inT, const Mat& in, const ConvDesc& convDesc,
                         const Filter& filterT, Mat& filter, bool allowReuse, Mat& workspace) override
     {
-        assert(srcGradT.w() * srcGradT.h() * srcGradT.c() == srcGrad.GetNumRows());
-        assert(srcGradT.n() == srcGrad.GetNumCols());
-        assert(inT.w() * inT.h() * inT.c() == in.GetNumRows());
-        assert(inT.n() == in.GetNumCols());
-        assert(srcGradT.c() == filterT.k());
-        assert(inT.c() == filterT.c());
-        assert(filterT.k() == filter.GetNumRows());
-        assert(filterT.w() * filterT.h() * filterT.c() == filter.GetNumCols());
-
         size_t packedInputRows = filterT.w() * filterT.h() * filterT.c();
         size_t packedInputColsPerSample = srcGradT.w() * srcGradT.h();
         size_t outputSizePerChannel = packedInputColsPerSample;
@@ -252,40 +410,17 @@ public:
         assert(srcGradT.n() == srcGrad.GetNumCols());
     }
 
-    void AddBias(const Tensor4D& outT, const Mat& out, const Tensor4D& biasT, const Mat& bias, Mat& dst) override
+    void EnsureCompatibleBatchNorm(bool spatial) override
     {
-        assert(biasT.c() == outT.c());
-        assert(biasT.w() == 1);
-        assert(biasT.h() == 1);
-        assert(biasT.n() == 1);
-        assert(bias.GetNumRows() == biasT.c());
-        assert(bias.GetNumCols() == 1);
-        assert(outT.w() * outT.h() * outT.c() == out.GetNumRows());
-        assert(outT.n() == out.GetNumCols());
-
-        Mat o = out.ColumnSlice(0, out.GetNumCols()); // same as .AsReference()
-        Mat d = dst.Reshaped(biasT.c(), outT.w() * outT.h() * outT.n());
-        d.AssignSumOf(o.Reshaped(biasT.c(), outT.w() * outT.h() * outT.n()), bias);
+        if (m_deviceId >= 0)
+            InvalidArgument("This engine does not support batch normalization on GPUs.");
+        if (m_bnImpl != BatchNormImpl::Cntk)
+            InvalidArgument("Only CNTK batch normalization implementation is supported by this engine.");
+        if (spatial && m_imageLayout != ImageLayoutKind::CHW)
+            InvalidArgument("This engine batch normalization currently supports only CHW data layout for convolutional nodes.");
     }
 
-    void BackwardBias(const Tensor4D& srcGradT, const Mat& srcGrad, const Tensor4D& biasT, Mat& biasGrad) override
-    {
-        assert(biasT.c() == srcGradT.c());
-        assert(biasT.w() == 1);
-        assert(biasT.h() == 1);
-        assert(biasT.n() == 1);
-        assert(biasGrad.GetNumRows() == biasT.c());
-        assert(biasGrad.GetNumCols() == 1);
-
-        Mat sg = srcGrad.ColumnSlice(0, srcGrad.GetNumCols());
-        size_t ccol = srcGradT.w() * srcGradT.h() * srcGradT.n();
-        // REVIEW alexeyk: should be replaced by ConstOnes eventually.
-        m_ones.Resize(ccol, 1);
-        m_ones.SetValue(1);
-        Mat::MultiplyAndAdd(sg.Reshaped(biasT.c(), ccol), false, m_ones, false, biasGrad);
-    }
-
-    void NormalizeBatch(const Tensor4D& inT, const Mat& in, const Tensor4D& scaleBiasT, const Mat& scale, const Mat& bias,
+    void NormalizeBatchCore(const Tensor4D& inT, const Mat& in, const Tensor4D& scaleBiasT, const Mat& scale, const Mat& bias,
                         bool spatial, double expAvgFactor, Mat& runMean, Mat& runInvStdDev, Mat& out, double epsilon, Mat& saveMean, Mat& saveInvStdDev) override
     {
         UNUSED(inT);
@@ -304,22 +439,37 @@ public:
         RuntimeError("Not yet implemented.");
     }
 
-    void NormalizeBatchInference(const Tensor4D& inT, const Mat& in, const Tensor4D& scaleBiasT, const Mat& scale, const Mat& bias,
+    void NormalizeBatchInferenceCore(const Tensor4D& inT, const Mat& in, const Tensor4D& scaleBiasT, const Mat& scale, const Mat& bias,
                                  bool spatial, const Mat& runMean, const Mat& runInvStdDev, Mat& out) override
     {
-        UNUSED(inT);
-        UNUSED(in);
         UNUSED(scaleBiasT);
-        UNUSED(scale);
-        UNUSED(bias);
-        UNUSED(out);
-        UNUSED(spatial);
-        UNUSED(runMean);
-        UNUSED(runInvStdDev);
-        RuntimeError("Not yet implemented.");
+        if (spatial)
+        {
+            size_t spatialSize = inT.w() * inT.h();
+#pragma omp parallel for
+            for (long icol = 0; icol < out.GetNumCols(); icol++)
+            {
+                for (long irow = 0; irow < out.GetNumRows(); irow++)
+                {
+                    size_t imap = irow / spatialSize;
+                    out(irow, icol) = scale(imap, 0) * (in(irow, icol) - runMean(imap, 0)) * runInvStdDev(imap, 0) + bias(imap, 0);
+                }
+            }
+        }
+        else
+        {
+#pragma omp parallel for
+            for (long icol = 0; icol < out.GetNumCols(); icol++)
+            {
+                for (long irow = 0; irow < out.GetNumRows(); irow++)
+                {
+                    out(irow, icol) = scale(irow, 0) * (in(irow, icol) - runMean(irow, 0)) * runInvStdDev(irow, 0) + bias(irow, 0);
+                }
+            }
+        }
     }
 
-    void BackwardNormalizeBatch(const Tensor4D& inT, const Mat& in, const Mat& srcGrad, Mat& grad,
+    void BackwardNormalizeBatchCore(const Tensor4D& inT, const Mat& in, const Mat& srcGrad, Mat& grad,
                                 const Tensor4D& scaleBiasT, const Mat& scale, bool spatial, const Mat& saveMean, const Mat& saveInvStdDev,
                                 Mat& scaleGrad, Mat& biasGrad) override
     {
@@ -339,6 +489,7 @@ public:
 
 private:
     size_t m_maxTempMemSizeInSamples;
+    BatchNormImpl m_bnImpl;
     Mat m_ones;
     bool m_gpuSparseOpt;
     bool m_gpuSparse1D;
@@ -347,6 +498,42 @@ private:
 template class ConvolutionEngine<float>;
 template class ConvolutionEngine<double>;
 
+//------------------------------------------------------------------
+// Pooling engine.
+//------------------------------------------------------------------
+
+
+template <class ElemType>
+void PoolingEngine<ElemType>::Forward(const Tensor4D& inT, const Mat& in, const PoolDesc& poolDesc, const Tensor4D& outT, Mat& out)
+{
+    assert(inT.w() * inT.h() * inT.c() == in.GetNumRows());
+    assert(inT.n() == in.GetNumCols());
+    assert(outT.w() * outT.h() * outT.c() == out.GetNumRows());
+    assert(outT.n() == out.GetNumCols());
+
+    EnsureCompatible();
+    ForwardCore(inT, in, poolDesc, outT, out);
+}
+
+template <class ElemType>
+void PoolingEngine<ElemType>::Backward(const Tensor4D& outT, const Mat& out, const Mat& srcGrad, const PoolDesc& poolDesc, const Tensor4D& inT, const Mat& in, Mat& grad)
+{
+    assert(outT.w() * outT.h() * outT.c() == out.GetNumRows());
+    assert(outT.n() == out.GetNumCols());
+    assert(out.GetNumRows() == srcGrad.GetNumRows());
+    assert(out.GetNumCols() == srcGrad.GetNumCols());
+    assert(inT.w() * inT.h() * inT.c() == in.GetNumRows());
+    assert(inT.n() == in.GetNumCols());
+    assert(in.GetNumRows() == grad.GetNumRows());
+    assert(in.GetNumCols() == grad.GetNumCols());
+
+    EnsureCompatible();
+    BackwardCore(outT, out, srcGrad, poolDesc, inT, in, grad);
+}
+
+//------------------------------------------------------------------
+// Default (legacy) pooling engine implementation.
+//------------------------------------------------------------------
 template <class ElemType>
 class DefaultPoolingEngine : public PoolingEngine<ElemType>
 {
@@ -357,13 +544,23 @@ public:
     using typename Base::Mat;
 
 public:
-    void Forward(const Tensor4D& inT, const Mat& in, const PoolDesc& poolDesc, const Tensor4D& outT, Mat& out) override
+    DefaultPoolingEngine(DEVICEID_TYPE deviceId, ImageLayoutKind imageLayout)
+        : Base(deviceId, imageLayout)
     {
-        assert(inT.w() * inT.h() * inT.c() == in.GetNumRows());
-        assert(inT.n() == in.GetNumCols());
-        assert(outT.w() * outT.h() * outT.c() == out.GetNumRows());
-        assert(outT.n() == out.GetNumCols());
+    }
 
+protected:
+    using Base::m_deviceId;
+    using Base::m_imageLayout;
+
+    void EnsureCompatible() override
+    {
+        if (m_imageLayout != ImageLayoutKind::HWC)
+            RuntimeError("Default pooling engine currently supports only HWC/legacy layout.");
+    }
+
+    void ForwardCore(const Tensor4D& inT, const Mat& in, const PoolDesc& poolDesc, const Tensor4D& outT, Mat& out) override
+    {
         if (poolDesc.kind() == PoolDesc::PoolKind::Max)
         {
             out.AssignMaxPoolingResult(in, inT.c(), inT.w(), inT.h(), inT.w() * inT.h() * inT.c(),
@@ -377,20 +574,11 @@ public:
                                            poolDesc.w(), poolDesc.h(), poolDesc.wStride(), poolDesc.hStride());
         }
         else
-            assert(false);
+            InvalidArgument("Pooling type %d is not supported.", (int)poolDesc.kind());
     }
 
-    void Backward(const Tensor4D& outT, const Mat& out, const Mat& srcGrad, const PoolDesc& poolDesc, const Tensor4D& inT, const Mat& in, Mat& grad) override
+    void BackwardCore(const Tensor4D& outT, const Mat& out, const Mat& srcGrad, const PoolDesc& poolDesc, const Tensor4D& inT, const Mat& in, Mat& grad) override
     {
-        assert(outT.w() * outT.h() * outT.c() == out.GetNumRows());
-        assert(outT.n() == out.GetNumCols());
-        assert(out.GetNumRows() == srcGrad.GetNumRows());
-        assert(out.GetNumCols() == srcGrad.GetNumCols());
-        assert(inT.w() * inT.h() * inT.c() == in.GetNumRows());
-        assert(inT.n() == in.GetNumCols());
-        assert(in.GetNumRows() == grad.GetNumRows());
-        assert(in.GetNumCols() == grad.GetNumCols());
-
         if (poolDesc.kind() == PoolDesc::PoolKind::Max)
         {
             grad.AddMaxPoolingGradient(srcGrad, in, out,
@@ -405,7 +593,7 @@ public:
                                            poolDesc.w(), poolDesc.h(), poolDesc.wStride(), poolDesc.hStride());
         }
         else
-            assert(false);
+            InvalidArgument("Pooling type %d is not supported.", (int)poolDesc.kind());
     }
 };
 
@@ -451,14 +639,14 @@ public:
         return std::make_unique<PoolDesc>(kind, w, h, wStride, hStride, wPad, hPad);
     }
 
-    ConvEnginePtr CreateConvEngine(DEVICEID_TYPE deviceId, size_t maxTempMemSizeInSamples, BatchNormImpl /*bnImpl*/) override
+    ConvEnginePtr CreateConvEngine(DEVICEID_TYPE deviceId, ImageLayoutKind imageLayout, size_t maxTempMemSizeInSamples, BatchNormImpl bnImpl) override
     {
-        return std::make_unique<DefaultConvolutionEngine<ElemType>>(deviceId, maxTempMemSizeInSamples);
+        return std::make_unique<DefaultConvolutionEngine<ElemType>>(deviceId, imageLayout, maxTempMemSizeInSamples, bnImpl);
     }
 
-    PoolEnginePtr CreatePoolEngine(DEVICEID_TYPE /*deviceId*/) override
+    PoolEnginePtr CreatePoolEngine(DEVICEID_TYPE deviceId, ImageLayoutKind imageLayout) override
     {
-        return std::make_unique<DefaultPoolingEngine<ElemType>>();
+        return std::make_unique<DefaultPoolingEngine<ElemType>>(deviceId, imageLayout);
     }
 };
 
@@ -483,10 +671,6 @@ std::unique_ptr<ConvolutionEngineFactory<ElemType>> ConvolutionEngineFactory<Ele
     }
     else if (engType == EngineType::Legacy)
     {
-        // REVIEW alexeyk: temp hack to allow this to work in MEL scenarios. InvalidArgument should be used instead.
-        if (imageLayoutKind != ImageLayoutKind::HWC)
-            fprintf(stderr, "WARNING: trying to use cuDNN on unsupported platform. It is safe to ignore the warning if it's produced during model editing command.\n");
-        // InvalidArgument("ConvolutionEngineFactory: ImageLayout '%s' is not compatible with the legacy convolution engine.", ToString(imageLayoutKind).c_str());
         return std::make_unique<DefaultConvolutionEngineFactory<ElemType>>();
     }
 
@@ -495,4 +679,5 @@ std::unique_ptr<ConvolutionEngineFactory<ElemType>> ConvolutionEngineFactory<Ele
 
 template class ConvolutionEngineFactory<float>;
 template class ConvolutionEngineFactory<double>;
-} } }
+
+}}}
