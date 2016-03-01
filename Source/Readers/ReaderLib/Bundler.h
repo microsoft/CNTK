@@ -7,8 +7,24 @@
 
 #include "DataDeserializer.h"
 #include "Config.h"
+#include <set>
 
 namespace Microsoft { namespace MSR { namespace CNTK {
+
+struct BundlerChunkDescription : public ChunkDescription
+{
+    ChunkDescriptionPtr m_original;
+    std::set<size_t> m_invalid;
+};
+
+typedef std::shared_ptr<BundlerChunkDescription> BundlerChunkDescriptionPtr;
+
+struct BundlerSequenceDescription : public SequenceDescription
+{
+    BundlerChunkDescriptionPtr m_chunk;
+};
+
+typedef std::shared_ptr<BundlerSequenceDescription> BundlerSequenceDescriptionPtr;
 
 // Class represents an bundler of several deserializers.
 // In case when only a single deserializer is used, the bundler can be omitted and 
@@ -19,9 +35,10 @@ class Bundler : public IDataDeserializer
 public:
     Bundler(const ConfigParameters& readerConfig, IDataDeserializerPtr driver, std::vector<IDataDeserializerPtr> deserializers);
 
-    // Retrieves description of all sequences this data deserializer can produce, together with associated chunks.
-    // TODO: For huge corpus, the memory footprint is too big. We adapt this interface to request timeline in chunks.
-    virtual const SequenceDescriptions& GetSequenceDescriptions() const override;
+    virtual ChunkDescriptions GetChunkDescriptions() override;
+    virtual std::vector<SequenceDescriptionPtr> GetSequencesForChunk(size_t chunkId) override;
+    virtual size_t GetTotalNumberOfSamples() override;
+    virtual size_t GetTotalNumberOfSequences() override;
 
     // Retrieves description of a single sequence given its key.
     virtual const SequenceDescription* GetSequenceDescriptionByKey(const KeyType& key) override;
@@ -32,24 +49,21 @@ public:
     // Retrieves a chunk with data.
     virtual ChunkPtr GetChunk(size_t) override;
 
-    // Retrieves total number of chunks this deserializer can produce.
-    virtual size_t GetTotalNumberOfChunks() override;
-
 private:
     DISABLE_COPY_AND_MOVE(Bundler);
 
-    void CreateSequenceDescriptions();
+    void CreateChunkDescriptions();
 
     // Exposed bundled streams.
     std::vector<StreamDescriptionPtr> m_streams;
+
     // Underlying deserializers.
     std::vector<IDataDeserializerPtr> m_deserializers;
+
     // Driving deserializer that defines chunks.
     IDataDeserializerPtr m_driver;
 
-    // Seqeunce descriptions.
-    std::vector<SequenceDescription> m_sequenceDescriptions;
-    SequenceDescriptions m_sequences;
+    std::vector<BundlerChunkDescriptionPtr> m_chunks;
 
     // Exposed sequence id to chunk mapping.
     std::vector<std::vector<size_t>> m_sequenceToChunk;
@@ -57,9 +71,6 @@ private:
     // Exposed sequence id to internal sequence id mapping.
     std::vector<std::vector<size_t>> m_sequenceToSequence;
 
-    // Chunk offsets - m_chunkOffsets[chunkId] stores the index of 
-    // the sequence in m_sequenceDescription where the chunk starts.
-    std::vector<size_t> m_chunkOffsets;
 
     friend class BundlingChunk;
 };

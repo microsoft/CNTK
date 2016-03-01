@@ -104,12 +104,12 @@ HTKDataDeserializer::HTKDataDeserializer(
         // I.e. our chunks are a little larger than wanted (on av. half the av. utterance length).
         if (m_chunks.empty() || m_chunks.back().GetTotalFrames() > chunkframes || m_chunks.back().GetNumberOfUtterances() >= MaxUtterancesPerChunk)
         {
-            m_chunks.push_back(ChunkDescription());
+            m_chunks.push_back(HTKChunkDescription());
             chunkId++;
         }
 
         // append utterance to last chunk
-        ChunkDescription& currentchunk = m_chunks.back();
+        HTKChunkDescription& currentchunk = m_chunks.back();
         m_utterances[i].SetIndexInsideChunk(currentchunk.GetNumberOfUtterances());
         currentchunk.Add(&m_utterances[i]); // move it out from our temp array into the chunk
         m_utterances[i].m_chunkId = chunkId;
@@ -170,9 +170,64 @@ HTKDataDeserializer::HTKDataDeserializer(
     });
 }
 
-const SequenceDescriptions& HTKDataDeserializer::GetSequenceDescriptions() const
+ChunkDescriptions HTKDataDeserializer::GetChunkDescriptions()
 {
-    return m_sequences;
+    ChunkDescriptions chunks;
+    chunks.reserve(m_chunks.size());
+
+    for (size_t i = 0; i < m_chunks.size(); ++i)
+    {
+        auto cd = std::make_shared<ChunkDescription>();
+        cd->id = i;
+        cd->numberOfSamples = m_chunks[i].GetTotalFrames();
+        cd->numberOfSequences = m_chunks[i].GetTotalFrames();
+        chunks.push_back(cd);
+    }
+
+    return chunks;
+}
+
+std::vector<SequenceDescriptionPtr> HTKDataDeserializer::GetSequencesForChunk(size_t chunkId)
+{
+    std::vector<SequenceDescriptionPtr> result;
+    const HTKChunkDescription& chunk = m_chunks[chunkId];
+    size_t id = 0;
+    for (size_t i = 0; i < chunk.GetNumberOfUtterances(); ++i)
+    {
+        auto utterance = chunk.GetUtterance(i);
+
+        std::wstring key = utterance->GetKey();
+        for (size_t k = 0; k < utterance->m_numberOfSamples; ++k)
+        {
+            auto f = std::make_shared<Frame>(utterance);
+            f->m_key.major = key;
+            f->m_key.minor = k;
+            f->m_id = id++;
+            f->m_chunkId = utterance->m_chunkId;
+            f->m_numberOfSamples = 1;
+            f->m_frameIndex = k;
+            f->m_isValid = true;
+            result.push_back(f);
+        }
+    }
+
+    return result;
+}
+
+size_t HTKDataDeserializer::GetTotalNumberOfSamples()
+{
+    size_t sum = 0;
+    for (auto c : m_chunks)
+    {
+        sum += c.GetTotalFrames();
+    }
+
+    return sum;
+}
+
+size_t HTKDataDeserializer::GetTotalNumberOfSequences()
+{
+    return GetTotalNumberOfSamples();
 }
 
 std::vector<StreamDescriptionPtr> HTKDataDeserializer::GetStreamDescriptions() const
@@ -319,11 +374,6 @@ std::vector<SequenceDataPtr> HTKDataDeserializer::GetSequenceById(size_t id)
 const SequenceDescription* HTKDataDeserializer::GetSequenceDescriptionByKey(const KeyType&)
 {
     LogicError("HTKDataDeserializer::GetSequenceDescriptionByKey: currently not implemented. Supported only as a primary deserializer.");
-}
-
-size_t HTKDataDeserializer::GetTotalNumberOfChunks()
-{
-    return m_chunks.size();
 }
 
 } } }

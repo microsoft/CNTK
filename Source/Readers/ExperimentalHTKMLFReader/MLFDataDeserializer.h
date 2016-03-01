@@ -23,20 +23,18 @@ public:
     // Produces a single stream of MLF labels.
     virtual std::vector<StreamDescriptionPtr> GetStreamDescriptions() const override;
 
-    // Retrieves description of all sequences this data deserializer can produce, together with associated chunks.
-    // TODO: For huge corpus, the memory footprint is too big. We adapt this interface to request timeline in chunks.
-    virtual const SequenceDescriptions& GetSequenceDescriptions() const override;
-
     // Retrieves sequence description by its key. Used for deserializers that are not in "primary"/"driving" mode.
     const SequenceDescription* GetSequenceDescriptionByKey(const KeyType& key) override;
-
-    // Retrieves total number of chunks this deserializer can produce.
-    virtual size_t GetTotalNumberOfChunks() override;
 
     // Retrieves a chunk with data.
     // TODO: Currenty it is a single chunk => all labels are loaded into memory.
     // TODO: After we switch the timeline to work in chunks, we will also introduce chunking of labels.
     virtual ChunkPtr GetChunk(size_t) override;
+
+    virtual ChunkDescriptions GetChunkDescriptions() override;
+    virtual std::vector<SequenceDescriptionPtr> GetSequencesForChunk(size_t chunkId) override;
+    virtual size_t GetTotalNumberOfSamples() override;
+    virtual size_t GetTotalNumberOfSequences() override;
 
 private:
     DISABLE_COPY_AND_MOVE(MLFDataDeserializer);

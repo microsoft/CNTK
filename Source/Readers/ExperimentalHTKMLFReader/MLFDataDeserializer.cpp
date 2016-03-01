@@ -148,20 +148,46 @@ MLFDataDeserializer::MLFDataDeserializer(CorpusDescriptorPtr corpus, const Confi
     m_streams.push_back(stream);
 }
 
-const SequenceDescriptions& MLFDataDeserializer::GetSequenceDescriptions() const
+ChunkDescriptions MLFDataDeserializer::GetChunkDescriptions()
 {
-    return m_sequences;
+    auto cd = std::make_shared<ChunkDescription>();
+    cd->id = 0;
+    cd->numberOfSequences = m_sequences.size();
+    cd->numberOfSamples = m_sequences.size();
+    return ChunkDescriptions{cd};
+}
+
+std::vector<SequenceDescriptionPtr> MLFDataDeserializer::GetSequencesForChunk(size_t )
+{
+    std::vector<SequenceDescriptionPtr> result;
+    for (size_t i = 0; i < m_sequences.size(); ++i)
+    {
+        auto f = std::make_shared<MLFFrame>();
+        f->m_key.major = m_frames[i].m_key.major;
+        f->m_key.minor = m_frames[i].m_key.minor;
+        f->m_id = m_frames[i].m_id;
+        f->m_chunkId = m_frames[i].m_chunkId;
+        f->m_numberOfSamples = 1;
+        f->m_isValid = true;
+        result.push_back(f);
+    }
+
+    return result;
+}
+
+size_t MLFDataDeserializer::GetTotalNumberOfSamples()
+{
+    return m_sequences.size();
+}
+
+size_t MLFDataDeserializer::GetTotalNumberOfSequences()
+{
+    return GetTotalNumberOfSamples();
 }
 
 std::vector<StreamDescriptionPtr> MLFDataDeserializer::GetStreamDescriptions() const
 {
     return m_streams;
-}
-
-size_t MLFDataDeserializer::GetTotalNumberOfChunks()
-{
-    // Currently all mlf data is in memory.
-    return 1;
 }
 
 ChunkPtr MLFDataDeserializer::GetChunk(size_t chunkId)

@@ -102,11 +102,6 @@ public:
         return m_streams;
     }
 
-    const SequenceDescriptions& GetSequenceDescriptions() const override
-    {
-        return m_sequenceDescriptions;
-    }
-
     virtual ChunkPtr GetChunk(size_t chunkId) override
     {
         assert(chunkId < m_numChunks);
@@ -114,7 +109,6 @@ public:
         size_t chunkEnd = chunkBegin + m_numSequencesPerChunk;
         std::shared_ptr<Chunk> chunk = std::make_shared<MockChunk>(chunkBegin, chunkEnd, m_data);
         return chunk;
-
     }
 
     virtual const SequenceDescription* GetSequenceDescriptionByKey(const KeyType&) override
@@ -122,7 +116,22 @@ public:
         throw std::logic_error("Not implemented");
     }
 
-    virtual size_t GetTotalNumberOfChunks() override
+    virtual ChunkDescriptions GetChunkDescriptions() override
+    {
+        throw std::logic_error("Not implemented");
+    }
+
+    virtual std::vector<SequenceDescriptionPtr> GetSequencesForChunk(size_t) override
+    {
+        throw std::logic_error("Not implemented");
+    }
+
+    virtual size_t GetTotalNumberOfSamples() override
+    {
+        throw std::logic_error("Not implemented");
+    }
+
+    virtual size_t GetTotalNumberOfSequences() override
     {
         throw std::logic_error("Not implemented");
     }
