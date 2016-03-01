@@ -4,12 +4,30 @@
 # WARNING. This will run in Microsoft Internal Environment ONLY
 # Generating CNTK Binary drops in Jenkins environment
 
-# Enable Verbose automatically
+# Command line parameters
+# Verbose is automatically enabled
 [CmdletBinding()]
-param ()
+param
+(
+	# Supposed to be taken from Jenkins BUILD_CONFIGURATION
+	[string]$buildConfig,
+	
+	# Supposed to be taken from Jenkins TARGET_CONFIGURATION
+	[string]$targetConfig,
+	
+	# File share path. Supposed to have sub-folders corresponding to $targetConfig
+	[string]$sharePath
+)
 
 # Set to Stop on Error
 $ErrorActionPreference = 'Stop'
+
+# Manual parameters check rather than using [Parameter(Mandatory=$True)]
+# to avoid the risk of interactive prompts inside a Jenkins job
+$usage = " parameter is missing. Usage example: make_binary_drop_windows.ps1 -buildConfig Release -targetConfig gpu -sharePath \\server\share"
+If (-not $buildConfig) {Throw "buildConfig" + $usage}
+If (-not $targetConfig) {Throw "targetConfig" + $usage}
+If (-not $sharePath) {Throw "sharePath" + $usage}
 
 # Set Verbose mode
 if ($verbose)
@@ -18,10 +36,6 @@ if ($verbose)
 }
 
 Write-Verbose "Making binary drops..."
-
-# Get Jenkins environment Variables
-$buildConfig = $env:BUILD_CONFIGURATION
-$targetConfig = $env:TARGET_CONFIGURATION
 
 # If not a Release build quit
 If ($buildConfig -ne "Release")
@@ -39,7 +53,7 @@ If ($targetConfig -eq "CPU")
 {
 	$buildPath = "x64\Release_CpuOnly"
 }
-$sharePath = Join-Path "\\muc-vfs-01a\CNTKshare\CNTK-Binary-Drop" -ChildPath $targetConfig
+$sharePath = Join-Path $sharePath -ChildPath $targetConfig
 
 
 # Make binary drop folder
