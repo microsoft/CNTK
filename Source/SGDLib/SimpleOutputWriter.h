@@ -245,6 +245,11 @@ public:
 
                 // process all sequences one by one
                 auto pMBLayout = onode->GetMBLayout();
+                if (!pMBLayout) // no MBLayout: We are printing aggregates (or LearnableParameters?)
+                {
+                    pMBLayout = make_shared<MBLayout>();
+                    pMBLayout->InitAsFrameMode(1); // treat this as if we have one single sample
+                }
                 const auto& sequences = pMBLayout->GetAllSequences();
                 size_t colStride = pMBLayout->GetNumParallelSequences() * outputValues.GetNumRows(); // how to get from one column to the next
                 size_t width     = pMBLayout->GetNumTimeSteps();

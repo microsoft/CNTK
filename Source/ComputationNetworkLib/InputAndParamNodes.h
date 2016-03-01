@@ -41,7 +41,7 @@ class LearnableParameter : public ComputationNode<ElemType>, public NumInputs<0>
     {
         SetDims(shape, false);
         UpdateFunctionValuesSize(); // this allocates the matrix
-        Value().SetValue(0);
+        Value().SetValue(0); // TODO: invalidate instead
     }
 
 public:
