@@ -382,7 +382,7 @@ namespace Microsoft {
 				void TestNet() {
 					multiverso::NetInterface* net = multiverso::NetInterface::Get();
 					net->Init();
-					
+
 					const char* chi1 = std::string("hello, world").c_str();
 					const char* chi2 = std::string("hello, c++").c_str();
 					const char* chi3 = std::string("hello, multiverso").c_str();
@@ -392,54 +392,58 @@ namespace Microsoft {
 					strcpy(hi2, chi2);
 					char* hi3 = new char[19];
 					strcpy(hi3, chi3);
-					//char* hi2 = "hello, c++";
-					//char* hi3 = "hello, multiverso";
 					if (net->rank() == 0) {
-						multiverso::MessagePtr msg(new multiverso::Message());// = std::make_unique<Message>();
-						msg->set_src(0);
-						msg->set_dst(1);
-						msg->Push(multiverso::Blob(hi1, 13));
-						msg->Push(multiverso::Blob(hi2, 11));
-						msg->Push(multiverso::Blob(hi3, 18));
-						net->Send(msg);
-						multiverso::Log::Info("rank 0 send\n");
-						multiverso::Log::Info("Hi = %s\n", msg->data()[0].data());
-
-						msg.reset(new multiverso::Message());
-						while (net->Recv(&msg) == 0) {
-							multiverso::Log::Info("recv return 0\n");
+						for (int rank = 1; rank < net->size(); ++rank) {
+							multiverso::MessagePtr msg(new multiverso::Message());// = std::make_unique<Message>();
+							msg->set_src(0);
+							msg->set_dst(rank);
+							msg->Push(multiverso::Blob(hi1, 13));
+							msg->Push(multiverso::Blob(hi2, 11));
+							msg->Push(multiverso::Blob(hi3, 18));
+							net->Send(msg);
+							multiverso::Log::Info("rank 0 send\n");
 						}
-						multiverso::Log::Info("rank 0 recv\n");
-						// CHECK(strcmp(msg->data()[0].data(), hi) == 0);
-						std::vector<multiverso::Blob> recv_data = msg->data();
-						//CHECK(recv_data.size() == 3);
-						for (int i = 0; i < msg->size(); ++i) {
-							multiverso::Log::Info("%s\n", recv_data[i].data());
-						};
+
+						for (int i = 1; i < net->size(); ++i) {
+							multiverso::MessagePtr msg(new multiverso::Message());
+							msg.reset(new multiverso::Message());
+							while (net->Recv(&msg) == 0) {
+								// multiverso::Log::Info("recv return 0\n");
+							}
+							multiverso::Log::Info("rank 0 recv\n");
+							// CHECK(strcmp(msg->data()[0].data(), hi) == 0);
+							std::vector<multiverso::Blob> recv_data = msg->data();
+							//CHECK(recv_data.size() == 3);
+							for (int i = 0; i < msg->size(); ++i) {
+								multiverso::Log::Info("recv from srv %d: %s\n", msg->src(), recv_data[i].data());
+							};
+						}
 					}
-					else if (net->rank() == 1) {
+					else {// other rank
 						multiverso::MessagePtr msg(new multiverso::Message());// = std::make_unique<Message>();
 						while (net->Recv(&msg) == 0) {
-							multiverso::Log::Info("recv return 0\n");
+							// multiverso::Log::Info("recv return 0\n");
 						}
-						multiverso::Log::Info("rank 1 recv\n");
+						multiverso::Log::Info("rank %d recv\n", net->rank());
 						// CHECK(strcmp(msg->data()[0].data(), hi) == 0);
-						std::vector<multiverso::Blob> recv_data = msg->data();
+						std::vector<multiverso::Blob>& recv_data = msg->data();
 						//CHECK(recv_data.size() == 3);
 						for (int i = 0; i < msg->size(); ++i) {
 							multiverso::Log::Info("%s\n", recv_data[i].data());
 						}
 
 						msg.reset(new multiverso::Message());
-						msg->set_src(1);
+						msg->set_src(net->rank());
 						msg->set_dst(0);
 						msg->Push(multiverso::Blob(hi1, 13));
 						msg->Push(multiverso::Blob(hi2, 11));
 						msg->Push(multiverso::Blob(hi3, 18));
 						net->Send(msg);
-						multiverso::Log::Info("rank 0 send\n");
-						multiverso::Log::Info("Hi = %s\n", msg->data()[0].data());
+						multiverso::Log::Info("rank %d send\n", net->rank());
 					}
+					// while (!net->Test()) {
+					//  // wait all message process finished
+					// }
 
 					net->Finalize();
 				}
