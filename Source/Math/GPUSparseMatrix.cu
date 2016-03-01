@@ -43,14 +43,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
 #pragma region Constructors and Destructor
 
-#ifdef NO_SYNC
-template <class ElemType>
-bool GPUSparseMatrix<ElemType>::do_sync = false;
-#else
-template <class ElemType>
-bool GPUSparseMatrix<ElemType>::do_sync = true;
-#endif
-
 template <class ElemType>
 GPUSPARSE_INDEX_TYPE GPUSparseMatrix<ElemType>::SecondaryIndexValueAt(size_t idx) const
 {
@@ -147,20 +139,11 @@ void GPUSparseMatrix<ElemType>::DeepCopy(const GPUSparseMatrix<ElemType>& deepCo
     if (deepCopy.m_sliceViewOffset > 0)
     {
         int blocksPerGrid = (int) ceil(1.0 * SecondaryIndexCount() / GridDim::maxThreadsPerBlock);
-        cudaEvent_t done = nullptr;
-        if (do_sync)
-            CUDA_CALL(cudaEventCreate(&done));
+        SyncGuard syncGuard;
         _shiftColCSCIndexFromSliceViewToAbsolute<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(
             SecondaryIndexLocation(),
             SecondaryIndexCount(),
             GetNumNZElements());
-
-        if (do_sync)
-            CUDA_CALL(cudaEventRecord(done));
-        if (do_sync)
-            CUDA_CALL(cudaEventSynchronize(done));
-        if (do_sync)
-            CUDA_CALL(cudaEventDestroy(done));
     }
 
     m_externalBuffer = false;
@@ -288,9 +271,7 @@ void GPUSparseMatrix<ElemType>::CopyToDenseMatrix(GPUMatrix<ElemType>& denseMatr
 
     denseMatrix.Resize(m_numRows, m_numCols);
 
-    cudaEvent_t done = nullptr;
-    if (do_sync)
-        CUDA_CALL(cudaEventCreate(&done));
+    SyncGuard syncGuard;
     CUSPARSE_CALL(cusparseSetStream(cusparseHandle, t_stream));
     if (m_format == MatrixFormat::matrixFormatSparseCSR)
     {
@@ -318,13 +299,6 @@ void GPUSparseMatrix<ElemType>::CopyToDenseMatrix(GPUMatrix<ElemType>& denseMatr
     {
         NOT_IMPLEMENTED;
     }
-
-    if (do_sync)
-        CUDA_CALL(cudaEventRecord(done));
-    if (do_sync)
-        CUDA_CALL(cudaEventSynchronize(done));
-    if (do_sync)
-        CUDA_CALL(cudaEventDestroy(done));
     CUSPARSE_CALL(cusparseDestroy(cusparseHandle));
 
     denseMatrix.SetMatrixName(m_matrixName);
@@ -350,9 +324,7 @@ void GPUSparseMatrix<ElemType>::ConvertToSparseFormat(MatrixFormat newFormat, GP
     cusparseHandle_t cusparseHandle = 0;
     CUSPARSE_CALL(cusparseCreate(&cusparseHandle));
 
-    cudaEvent_t done = nullptr;
-    if (do_sync)
-        CUDA_CALL(cudaEventCreate(&done));
+    SyncGuard syncGuard;
     CUSPARSE_CALL(cusparseSetStream(cusparseHandle, t_stream));
 
     outMatrix.ChangeDeviceTo(GetComputeDeviceId());
@@ -379,12 +351,6 @@ void GPUSparseMatrix<ElemType>::ConvertToSparseFormat(MatrixFormat newFormat, GP
         NOT_IMPLEMENTED;
     }
 
-    if (do_sync)
-        CUDA_CALL(cudaEventRecord(done));
-    if (do_sync)
-        CUDA_CALL(cudaEventSynchronize(done));
-    if (do_sync)
-        CUDA_CALL(cudaEventDestroy(done));
     CUSPARSE_CALL(cusparseDestroy(cusparseHandle));
 }
 
@@ -500,33 +466,25 @@ void GPUSparseMatrix<ElemType>::SetValue(const GPUMatrix<ElemType>& denseMatrix,
     int* nnzPerRowOrCol = TracingGPUMemoryAllocator::Allocate<GPUSPARSE_INDEX_TYPE>(m_computeDevice, ((matrixFormat & matrixFormatRowMajor) ? numRows : numCols));
     int nnzTotalDevHostPtr = -1;
 
-    cudaEvent_t done = nullptr;
-    if (do_sync)
-        CUDA_CALL(cudaEventCreate(&done));
-
-    if (sizeof(ElemType) == sizeof(float))
     {
-        CUSPARSE_CALL(cusparseSnnz(cusparseHandle, (matrixFormat & matrixFormatRowMajor) ? CUSPARSE_DIRECTION_ROW : CUSPARSE_DIRECTION_COLUMN, (int) numRows, (int) numCols, descr,
-                                   reinterpret_cast<float*>(denseMatrix.BufferPointer()), (int) numRows, nnzPerRowOrCol, &nnzTotalDevHostPtr));
+        SyncGuard syncGuard;
+        if (sizeof(ElemType) == sizeof(float))
+        {
+            CUSPARSE_CALL(cusparseSnnz(cusparseHandle, (matrixFormat & matrixFormatRowMajor) ? CUSPARSE_DIRECTION_ROW : CUSPARSE_DIRECTION_COLUMN, (int) numRows, (int) numCols, descr,
+                                       reinterpret_cast<float*>(denseMatrix.BufferPointer()), (int) numRows, nnzPerRowOrCol, &nnzTotalDevHostPtr));
+        }
+        else
+        {
+            CUSPARSE_CALL(cusparseDnnz(cusparseHandle, (matrixFormat & matrixFormatRowMajor) ? CUSPARSE_DIRECTION_ROW : CUSPARSE_DIRECTION_COLUMN, (int) numRows, (int) numCols, descr,
+                                       reinterpret_cast<double*>(denseMatrix.BufferPointer()), (int) numRows, nnzPerRowOrCol, &nnzTotalDevHostPtr));
+        }
+        // ~SyncGuard
     }
-    else
-    {
-        CUSPARSE_CALL(cusparseDnnz(cusparseHandle, (matrixFormat & matrixFormatRowMajor) ? CUSPARSE_DIRECTION_ROW : CUSPARSE_DIRECTION_COLUMN, (int) numRows, (int) numCols, descr,
-                                   reinterpret_cast<double*>(denseMatrix.BufferPointer()), (int) numRows, nnzPerRowOrCol, &nnzTotalDevHostPtr));
-    }
-    if (do_sync)
-        CUDA_CALL(cudaEventRecord(done));
-    if (do_sync)
-        CUDA_CALL(cudaEventSynchronize(done));
-    if (do_sync)
-        CUDA_CALL(cudaEventDestroy(done));
 
     Resize(numRows, numCols, nnzTotalDevHostPtr, matrixFormat, true, false);
     SetNzCount(nnzTotalDevHostPtr);
 
-    if (do_sync)
-        CUDA_CALL(cudaEventCreate(&done));
-
+    SyncGuard syncGuard;
     if (m_format == MatrixFormat::matrixFormatSparseCSR)
     {
         if (sizeof(ElemType) == sizeof(float))
@@ -553,12 +511,6 @@ void GPUSparseMatrix<ElemType>::SetValue(const GPUMatrix<ElemType>& denseMatrix,
                                              (int) m_numRows, nnzPerRowOrCol, reinterpret_cast<double*>(BufferPointer()), RowLocation(), ColLocation()));
         }
     }
-    if (do_sync)
-        CUDA_CALL(cudaEventRecord(done));
-    if (do_sync)
-        CUDA_CALL(cudaEventSynchronize(done));
-    if (do_sync)
-        CUDA_CALL(cudaEventDestroy(done));
     SetMatrixName(denseMatrix.GetMatrixName());
 }
 
@@ -704,9 +656,7 @@ void GPUSparseMatrix<ElemType>::Reshape(const size_t numRows, const size_t numCo
         GPUSPARSE_INDEX_TYPE* secondaryIndexInNewBuffer = majorIndexInNewBuffer + MajorIndexCount(numRows, numCols, m_elemSizeAllocated, m_format);
 
         int blocksPerGrid = (int) ceil(1.0 * numCols / GridDim::maxThreadsPerBlock);
-        cudaEvent_t done = nullptr;
-        if (do_sync)
-            CUDA_CALL(cudaEventCreate(&done));
+        SyncGuard syncGuard;
         _reshape<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(
             m_numRows,                // old row count
             m_numCols,                // old col count
@@ -717,14 +667,6 @@ void GPUSparseMatrix<ElemType>::Reshape(const size_t numRows, const size_t numCo
             majorIndexInNewBuffer,    // new row index array
             secondaryIndexInNewBuffer // new column index array
             );
-
-        if (do_sync)
-            CUDA_CALL(cudaEventRecord(done));
-        if (do_sync)
-            CUDA_CALL(cudaEventSynchronize(done));
-        if (do_sync)
-            CUDA_CALL(cudaEventDestroy(done));
-
         TracingGPUMemoryAllocator::Free<ElemType>(m_computeDevice, m_pArray);
     }
 
@@ -1064,9 +1006,7 @@ void GPUSparseMatrix<ElemType>::ConvolveAndWeightedAdd(ElemType alpha, const GPU
         if (!transposeB)
         {
             int blocksPerGrid = (int) ceil(1.0 * cRows * cCols / GridDim::maxThreadsPerBlock);
-            cudaEvent_t done = nullptr;
-            if (do_sync)
-                CUDA_CALL(cudaEventCreate(&done));
+            SyncGuard syncGuard;
             _dense1DConvMultSparseCSCAndWeightedAddToDense<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(
                 m,                   // rowDense
                 k,                   // colDense
@@ -1084,13 +1024,6 @@ void GPUSparseMatrix<ElemType>::ConvolveAndWeightedAdd(ElemType alpha, const GPU
                 beta,
                 reinterpret_cast<ElemType*>(c.BufferPointer()) // dense target
                 );
-
-            if (do_sync)
-                CUDA_CALL(cudaEventRecord(done));
-            if (do_sync)
-                CUDA_CALL(cudaEventSynchronize(done));
-            if (do_sync)
-                CUDA_CALL(cudaEventDestroy(done));
         }
         else
         {
@@ -1099,9 +1032,7 @@ void GPUSparseMatrix<ElemType>::ConvolveAndWeightedAdd(ElemType alpha, const GPU
                 RuntimeError("Only support c += alpha * a operation");
             }
             int blocksPerGrid = (int) ceil(1.0 * cRows / GridDim::maxThreadsPerBlock);
-            cudaEvent_t done = nullptr;
-            if (do_sync)
-                CUDA_CALL(cudaEventCreate(&done));
+            SyncGuard syncGuard;
             for (int rowInB = 0; rowInB < l; rowInB++)
             {
                 _dense1DConvMultSparseCSCTransposeAndAddToDense<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(
@@ -1122,13 +1053,6 @@ void GPUSparseMatrix<ElemType>::ConvolveAndWeightedAdd(ElemType alpha, const GPU
                     reinterpret_cast<ElemType*>(c.BufferPointer()) // dense target
                     );
             }
-
-            if (do_sync)
-                CUDA_CALL(cudaEventRecord(done));
-            if (do_sync)
-                CUDA_CALL(cudaEventSynchronize(done));
-            if (do_sync)
-                CUDA_CALL(cudaEventDestroy(done));
         }
     }
     else
@@ -1162,9 +1086,7 @@ void GPUSparseMatrix<ElemType>::TensorShuffleScaleAndAdd(ElemType keepWeight, co
     if (c.m_nz > 0)
     {
         c.PrepareDevice();
-        cudaEvent_t done = nullptr;
-        if (do_sync)
-            CUDA_CALL(cudaEventCreate(&done));
+        SyncGuard syncGuard;
         CUDA_LONG N = (CUDA_LONG) c.GetNumElemAllocated();
         int blocksPerGrid = (int) ceil(1.0 * N / GridDim::maxThreadsPerBlock);
         _tensorShuffleScaleAndAddRowSparse<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(
@@ -1176,12 +1098,6 @@ void GPUSparseMatrix<ElemType>::TensorShuffleScaleAndAdd(ElemType keepWeight, co
             c.ColLocation(),
             D, S, M, K, T,
             c.GetNumElemAllocated());
-        if (do_sync)
-            CUDA_CALL(cudaEventRecord(done));
-        if (do_sync)
-            CUDA_CALL(cudaEventSynchronize(done));
-        if (do_sync)
-            CUDA_CALL(cudaEventDestroy(done));
     }
     else
     {
@@ -1229,9 +1145,7 @@ void GPUSparseMatrix<ElemType>::MultiplyAndAdd(ElemType alpha, const GPUMatrix<E
         lhs.PrepareDevice();
 
         int blocksPerGrid = 0;
-        cudaEvent_t done = nullptr;
-        if (do_sync)
-            CUDA_CALL(cudaEventCreate(&done));
+        SyncGuard syncGuard;
 
         // based on the size of m_nz in rhs and numCols in the resulted matrix we use different approaches
         if (n * 10 < GridDim::maxThreadsPerBlock * rhs.m_nz)
@@ -1246,20 +1160,12 @@ void GPUSparseMatrix<ElemType>::MultiplyAndAdd(ElemType alpha, const GPUMatrix<E
             blocksPerGrid = (int) ceil(((double) rhs.m_nz) / GridDim::maxThreadsPerBlock);
             _findColsWithValues<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(
                 rhs.RowLocation(), c.BlockId2ColOrRow(), rhs.m_nz);
-            if (do_sync)
-                CUDA_CALL(cudaEventRecord(done));
-            if (do_sync)
-                CUDA_CALL(cudaEventSynchronize(done));
-
+                
             blocksPerGrid = (int) ceil(((double) n) / GridDim::maxThreadsPerBlock);
             _determineBlockIds<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(
                 c.BlockId2ColOrRow(), c.ColOrRow2BlockId(), n, blockSize);
 
-            if (do_sync)
-                CUDA_CALL(cudaEventRecord(done));
-            if (do_sync)
-                CUDA_CALL(cudaEventSynchronize(done));
-
+                
             CUDA_CALL(cudaMemcpy(&c.m_blockSize, blockSize, sizeof(size_t), cudaMemcpyDeviceToHost));
             TracingGPUMemoryAllocator::Free<size_t>(lhs.GetComputeDeviceId(), blockSize);
 
@@ -1305,12 +1211,6 @@ void GPUSparseMatrix<ElemType>::MultiplyAndAdd(ElemType alpha, const GPUMatrix<E
                 c.BlockId2ColOrRow());
         }
 
-        if (do_sync)
-            CUDA_CALL(cudaEventRecord(done));
-        if (do_sync)
-            CUDA_CALL(cudaEventSynchronize(done));
-        if (do_sync)
-            CUDA_CALL(cudaEventDestroy(done));
     }
     else if (transposeA && !transposeB)
     {
@@ -1362,9 +1262,7 @@ void GPUSparseMatrix<ElemType>::ScaleAndAdd(const ElemType alpha, const GPUSpars
     {
         bool blockCol = (lhs.m_format == matrixFormatSparseBlockCol);
 
-        cudaEvent_t done = nullptr;
-        if (do_sync)
-            CUDA_CALL(cudaEventCreate(&done));
+        SyncGuard syncGuard;
         LONG64 N = (LONG64) lhs.GetNumNZElements();
         int blocksPerGrid = (int) ceil(((double) N) / GridDim::maxThreadsPerBlock);
         _scaleSparseBlockAndAddToDense<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock>>>(
@@ -1377,12 +1275,6 @@ void GPUSparseMatrix<ElemType>::ScaleAndAdd(const ElemType alpha, const GPUSpars
             lhs.BlockId2ColOrRow(),
             rhs.BufferPointer());
 
-        if (do_sync)
-            CUDA_CALL(cudaEventRecord(done));
-        if (do_sync)
-            CUDA_CALL(cudaEventSynchronize(done));
-        if (do_sync)
-            CUDA_CALL(cudaEventDestroy(done));
     }
     else
     {
@@ -1399,18 +1291,9 @@ GPUSparseMatrix<ElemType>& GPUSparseMatrix<ElemType>::InplaceTruncate(const Elem
     CUDA_LONG N = (CUDA_LONG) GetNumNZElements();
 
     CUDA_LONG blocksPerGrid = (CUDA_LONG) ceil(N * 1.0 / GridDim::maxThreadsPerBlock);
-    cudaEvent_t done = nullptr;
-    if (do_sync)
-        CUDA_CALL(cudaEventCreate(&done));
+    SyncGuard syncGuard;
     ElemType* values = NzValues();
     _inplaceTruncate<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock>>>(values, threshold, N);
-    if (do_sync)
-        CUDA_CALL(cudaEventRecord(done));
-    if (do_sync)
-        CUDA_CALL(cudaEventSynchronize(done));
-    if (do_sync)
-        CUDA_CALL(cudaEventDestroy(done));
-
     return *this;
 }
 
@@ -1423,18 +1306,9 @@ GPUSparseMatrix<ElemType>& GPUSparseMatrix<ElemType>::InplaceSoftThreshold(const
     CUDA_LONG N = (CUDA_LONG) GetNumNZElements();
 
     CUDA_LONG blocksPerGrid = (CUDA_LONG) ceil(N * 1.0 / GridDim::maxThreadsPerBlock);
-    cudaEvent_t done = nullptr;
-    if (do_sync)
-        CUDA_CALL(cudaEventCreate(&done));
+    SyncGuard syncGuard;
     ElemType* values = NzValues();
     _inplaceSoftThreshold<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock>>>(values, threshold, N);
-    if (do_sync)
-        CUDA_CALL(cudaEventRecord(done));
-    if (do_sync)
-        CUDA_CALL(cudaEventSynchronize(done));
-    if (do_sync)
-        CUDA_CALL(cudaEventDestroy(done));
-
     return *this;
 }
 
@@ -1454,9 +1328,7 @@ void GPUSparseMatrix<ElemType>::NormalGrad(GPUMatrix<ElemType>& c, const ElemTyp
     if (m_format == matrixFormatSparseBlockCol || m_format == matrixFormatSparseBlockRow)
     {
         bool isBlockCol = (m_format == MatrixFormat::matrixFormatSparseBlockCol);
-        cudaEvent_t done = nullptr;
-        if (do_sync)
-            CUDA_CALL(cudaEventCreate(&done));
+        SyncGuard syncGuard;
         LONG64 N = (LONG64) GetNumNZElements();
         int blocksPerGrid = (int) ceil(((double) N) / GridDim::maxThreadsPerBlock);
 
@@ -1469,13 +1341,6 @@ void GPUSparseMatrix<ElemType>::NormalGrad(GPUMatrix<ElemType>& c, const ElemTyp
             BufferPointer(),
             BlockId2ColOrRow(),
             c.BufferPointer());
-
-        if (do_sync)
-            CUDA_CALL(cudaEventRecord(done));
-        if (do_sync)
-            CUDA_CALL(cudaEventSynchronize(done));
-        if (do_sync)
-            CUDA_CALL(cudaEventDestroy(done));
     }
     else
     {
@@ -1571,9 +1436,7 @@ void GPUSparseMatrix<ElemType>::MultiplyAndWeightedAdd(ElemType alpha, const GPU
     assert(n == (int) c.GetNumCols());
     int k = (int) a.GetNumCols();
 
-    cudaEvent_t done = nullptr;
-    if (do_sync)
-        CUDA_CALL(cudaEventCreate(&done));
+    SyncGuard syncGuard;
     if (sizeof(ElemType) == sizeof(float))
     {
         CUSPARSE_CALL(cusparseScsrmm(cusparseHandle, oper, m, n, k, (int) a.GetNumElemAllocated(), reinterpret_cast<float*>(&alpha), descr, reinterpret_cast<const float*>(a.BufferPointer()),
@@ -1586,12 +1449,6 @@ void GPUSparseMatrix<ElemType>::MultiplyAndWeightedAdd(ElemType alpha, const GPU
                                      a.RowLocation(), a.ColLocation(), reinterpret_cast<double*>(b.BufferPointer()),
                                      (int) b.GetNumRows(), reinterpret_cast<double*>(&beta), reinterpret_cast<double*>(c.BufferPointer()), (int) c.GetNumRows()));
     }
-    if (do_sync)
-        CUDA_CALL(cudaEventRecord(done));
-    if (do_sync)
-        CUDA_CALL(cudaEventSynchronize(done));
-    if (do_sync)
-        CUDA_CALL(cudaEventDestroy(done));
     CUSPARSE_CALL(cusparseDestroy(cusparseHandle));
 }
 
@@ -1739,9 +1596,7 @@ void GPUSparseMatrix<ElemType>::Multiply(const GPUSparseMatrix<ElemType>& S1, bo
     int nnzA = (int) S1.GetNumNZElements();
     int nnzB = (int) S2.GetNumNZElements();
 
-    cudaEvent_t done = nullptr;
-    if (do_sync)
-        CUDA_CALL(cudaEventCreate(&done));
+    SyncGuard syncGuard;
     // Step 1
     c.PrepareBuffer(m, n, false, // false means we cannot reuse the "c" buffer if it exists for temporaries
                     [&](GPUSPARSE_INDEX_TYPE* csrRowPtrC) -> size_t
@@ -1765,12 +1620,6 @@ void GPUSparseMatrix<ElemType>::Multiply(const GPUSparseMatrix<ElemType>& S1, bo
                                        descrB, nnzB, (const double*) S2.BufferPointer(), S2.RowLocation(), S2.ColLocation(),
                                        descrC, (double*) c.BufferPointer(), c.RowLocation(), c.ColLocation()));
     }
-    if (do_sync)
-        CUDA_CALL(cudaEventRecord(done));
-    if (do_sync)
-        CUDA_CALL(cudaEventSynchronize(done));
-    if (do_sync)
-        CUDA_CALL(cudaEventDestroy(done));
     cusparseDestroy(cusparseHandle);
 }
 
@@ -1816,9 +1665,7 @@ void GPUSparseMatrix<ElemType>::ScaleAndAdd(ElemType alpha, const GPUSparseMatri
     cusparseSetMatIndexBase(descrB, CUSPARSE_INDEX_BASE_ZERO);
     cusparseSetMatIndexBase(descrC, CUSPARSE_INDEX_BASE_ZERO);
 
-    cudaEvent_t done = nullptr;
-    if (do_sync)
-        CUDA_CALL(cudaEventCreate(&done));
+    SyncGuard syncGuard;
     // Step 1
     bool inOutParameter = (&b == &c);
     c.PrepareBuffer(m, n, !inOutParameter, [&](GPUSPARSE_INDEX_TYPE* csrRowPtrC) -> size_t
@@ -1839,12 +1686,6 @@ void GPUSparseMatrix<ElemType>::ScaleAndAdd(ElemType alpha, const GPUSparseMatri
         CUSPARSE_CALL(cusparseDcsrgeam(cusparseHandle, m, n, reinterpret_cast<const double*>(&alpha), descrA, nnzA, reinterpret_cast<const double*>(a.BufferPointer()), a.RowLocation(), a.ColLocation(),
                                        reinterpret_cast<const double*>(&beta), descrB, nnzB, reinterpret_cast<const double*>(b.BufferPointer()), b.RowLocation(), b.ColLocation(), descrC, reinterpret_cast<double*>(c.BufferPointer()), c.RowLocation(), c.ColLocation()));
     }
-    if (do_sync)
-        CUDA_CALL(cudaEventRecord(done));
-    if (do_sync)
-        CUDA_CALL(cudaEventSynchronize(done));
-    if (do_sync)
-        CUDA_CALL(cudaEventDestroy(done));
     cusparseDestroy(cusparseHandle);
 }
 
@@ -1865,18 +1706,10 @@ void GPUSparseMatrix<ElemType>::ScaleAndAdd(ElemType alpha, const GPUSparseMatri
     {
         c *= beta;
     }
-    cudaEvent_t done = nullptr;
-    if (do_sync)
-        CUDA_CALL(cudaEventCreate(&done));
+    SyncGuard syncGuard;
     CUDA_LONG M = (CUDA_LONG) a.GetNumRows();
     int blocksPerGrid = (int) ceil(1.0 * M / GridDim::maxThreadsPerBlock);
     _sparseCSRPlusDense<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock>>>(alpha, a.BufferPointer(), a.RowLocation(), a.ColLocation(), c.BufferPointer(), M);
-    if (do_sync)
-        CUDA_CALL(cudaEventRecord(done));
-    if (do_sync)
-        CUDA_CALL(cudaEventSynchronize(done));
-    if (do_sync)
-        CUDA_CALL(cudaEventDestroy(done));
 }
 
 template <class ElemType>
@@ -1896,16 +1729,8 @@ void GPUSparseMatrix<ElemType>::Scale(ElemType alpha, GPUSparseMatrix<ElemType>&
 
     CUDA_LONG N = (CUDA_LONG) a.GetNumNZElements();
     int blocksPerGrid = (int) ceil(1.0 * N / GridDim::maxThreadsPerBlock);
-    cudaEvent_t done = nullptr;
-    if (do_sync)
-        CUDA_CALL(cudaEventCreate(&done));
+    SyncGuard syncGuard;
     _scaleArray<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock>>>(alpha, a.NzValues(), N);
-    if (do_sync)
-        CUDA_CALL(cudaEventRecord(done));
-    if (do_sync)
-        CUDA_CALL(cudaEventSynchronize(done));
-    if (do_sync)
-        CUDA_CALL(cudaEventDestroy(done));
 }
 
 template <class ElemType>
@@ -1925,19 +1750,11 @@ void GPUSparseMatrix<ElemType>::ElementWisePower(ElemType alpha, const GPUSparse
 
         c.ResizeAsAndCopyIndexFrom(a);
 
-        cudaEvent_t done = nullptr;
-        if (do_sync)
-            CUDA_CALL(cudaEventCreate(&done));
+        SyncGuard syncGuard;
         a.PrepareDevice();
         CUDA_LONG N = (CUDA_LONG) a.GetNumNZElements();
         int blocksPerGrid = (int) ceil(1.0 * N / GridDim::maxThreadsPerBlock);
         _elementWisePowerOnCuda<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock>>>(alpha, a.NzValues(), c.NzValues(), N);
-        if (do_sync)
-            CUDA_CALL(cudaEventRecord(done));
-        if (do_sync)
-            CUDA_CALL(cudaEventSynchronize(done));
-        if (do_sync)
-            CUDA_CALL(cudaEventDestroy(done));
     }
 }
 
@@ -1958,7 +1775,6 @@ ElemType GPUSparseMatrix<ElemType>::InnerProductOfMatrices(const GPUSparseMatrix
     GPUSPARSE_INDEX_TYPE* cscRowIndA = nullptr;
     GPUSPARSE_INDEX_TYPE* cscColPtrA = nullptr;
 
-    cudaEvent_t done = nullptr;
     cusparseAction_t cpVals = CUSPARSE_ACTION_NUMERIC;
     cusparseIndexBase_t idxBase = CUSPARSE_INDEX_BASE_ZERO;
     cusparseHandle_t cusparseHandle = 0;
@@ -1970,8 +1786,7 @@ ElemType GPUSparseMatrix<ElemType>::InnerProductOfMatrices(const GPUSparseMatrix
         cscColPtrA = TracingGPUMemoryAllocator::Allocate<GPUSPARSE_INDEX_TYPE>(a.GetComputeDeviceId(), (n + 1));
 
         CUSPARSE_CALL(cusparseCreate(&cusparseHandle));
-        if (do_sync)
-            CUDA_CALL(cudaEventCreate(&done));
+        SyncGuard syncGuard;
         if (sizeof(ElemType) == sizeof(float))
         {
             CUSPARSE_CALL(cusparseScsr2csc(cusparseHandle, m, n, nnz, reinterpret_cast<const float*>(a.BufferPointer()), a.RowLocation(), a.ColLocation(), reinterpret_cast<float*>(cscValA), cscRowIndA, cscColPtrA, cpVals, idxBase));
@@ -1980,12 +1795,6 @@ ElemType GPUSparseMatrix<ElemType>::InnerProductOfMatrices(const GPUSparseMatrix
         {
             CUSPARSE_CALL(cusparseDcsr2csc(cusparseHandle, m, n, nnz, reinterpret_cast<const double*>(a.BufferPointer()), a.RowLocation(), a.ColLocation(), reinterpret_cast<double*>(cscValA), cscRowIndA, cscColPtrA, cpVals, idxBase));
         }
-        if (do_sync)
-            CUDA_CALL(cudaEventRecord(done));
-        if (do_sync)
-            CUDA_CALL(cudaEventSynchronize(done));
-        if (do_sync)
-            CUDA_CALL(cudaEventDestroy(done));
     }
     else if (a.m_format == matrixFormatSparseCSC)
     {
@@ -2003,15 +1812,8 @@ ElemType GPUSparseMatrix<ElemType>::InnerProductOfMatrices(const GPUSparseMatrix
     CUDA_LONG N = m;
     // GPUSPARSE_INDEX_TYPE* h_vectArray= new int[a.m_nz];
     int blocksPerGrid = (int) ceil(1.0 * M / GridDim::maxThreadsPerBlock);
-    if (do_sync)
-        CUDA_CALL(cudaEventCreate(&done));
+    SyncGuard syncGuard;
     _getSparseVectorRepresntationForCSCMatrix<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock>>>(cscColPtrA, cscRowIndA, vectArray, M, N);
-    if (do_sync)
-        CUDA_CALL(cudaEventRecord(done));
-    if (do_sync)
-        CUDA_CALL(cudaEventSynchronize(done));
-    if (do_sync)
-        CUDA_CALL(cudaEventDestroy(done));
     TracingGPUMemoryAllocator::Free<GPUSPARSE_INDEX_TYPE>(a.GetComputeDeviceId(), cscRowIndA);
     TracingGPUMemoryAllocator::Free<GPUSPARSE_INDEX_TYPE>(a.GetComputeDeviceId(), cscColPtrA);
     // CUDA_CALL(cudaMemcpy(h_vectArray,vectArray,sizeof(GPUSPARSE_INDEX_TYPE)*a.m_nz,cudaMemcpyDeviceToHost));
@@ -2058,17 +1860,9 @@ bool GPUSparseMatrix<ElemType>::IsValid() const
     long* d_res = TracingGPUMemoryAllocator::Allocate<long>(m_computeDevice, 4);
     CUDA_CALL(cudaMemcpy(d_res, res, sizeof(long) * 4, cudaMemcpyHostToDevice));
 
-    cudaEvent_t done = nullptr;
-    if (do_sync)
-        CUDA_CALL(cudaEventCreate(&done));
+    SyncGuard syncGuard;
     int blocksPerGrid = (int) ceil((1.0 * SecondaryIndexCount()) / GridDim::maxThreadsPerBlock);
     _isValid<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock>>>(MajorIndexLocation(), SecondaryIndexLocation(), GetNumRows(), GetNumCols(), GetNumNZElements(), d_res);
-    if (do_sync)
-        CUDA_CALL(cudaEventRecord(done));
-    if (do_sync)
-        CUDA_CALL(cudaEventSynchronize(done));
-    if (do_sync)
-        CUDA_CALL(cudaEventDestroy(done));
 
     CUDA_CALL(cudaMemcpy(res, d_res, sizeof(long) * 4, cudaMemcpyDeviceToHost));
 
@@ -2179,18 +1973,10 @@ GPUMatrix<ElemType> GPUSparseMatrix<ElemType>::ElementProductOf(const GPUSparseM
     b.PrepareDevice();
     GPUMatrix<ElemType> c(b.GetNumRows(), b.GetNumCols(), b.GetComputeDeviceId());
 
-    cudaEvent_t done = nullptr;
-    if (do_sync)
-        CUDA_CALL(cudaEventCreate(&done));
+    SyncGuard syncGuard;
     CUDA_LONG M = (CUDA_LONG) a.GetNumRows();
     int blocksPerGrid = (int) ceil(1.0 * M / GridDim::maxThreadsPerBlock);
     _sparseCSRElemMulDense<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock>>>(a.BufferPointer(), a.RowLocation(), a.ColLocation(), b.BufferPointer(), c.BufferPointer(), M);
-    if (do_sync)
-        CUDA_CALL(cudaEventRecord(done));
-    if (do_sync)
-        CUDA_CALL(cudaEventSynchronize(done));
-    if (do_sync)
-        CUDA_CALL(cudaEventDestroy(done));
     return c;
 }
 
@@ -2275,9 +2061,7 @@ GPUSparseMatrix<ElemType> GPUSparseMatrix<ElemType>::Transpose() const
     cusparseHandle_t cusparseHandle = 0;
     CUSPARSE_CALL(cusparseCreate(&cusparseHandle));
 
-    cudaEvent_t done = nullptr;
-    if (do_sync)
-        CUDA_CALL(cudaEventCreate(&done));
+    SyncGuard syncGuard;
     if (m_format == MatrixFormat::matrixFormatSparseCSR)
     {
         if (nnz > 0)
@@ -2322,12 +2106,6 @@ GPUSparseMatrix<ElemType> GPUSparseMatrix<ElemType>::Transpose() const
     {
         NOT_IMPLEMENTED;
     }
-    if (do_sync)
-        CUDA_CALL(cudaEventRecord(done));
-    if (do_sync)
-        CUDA_CALL(cudaEventSynchronize(done));
-    if (do_sync)
-        CUDA_CALL(cudaEventDestroy(done));
     CUSPARSE_CALL(cusparseDestroy(cusparseHandle));
     return c;
 }
@@ -2411,9 +2189,7 @@ GPUMatrix<ElemType> GPUSparseMatrix<ElemType>::CopyColumnSliceToDense(size_t sta
     cusparseSetMatType(descr, CUSPARSE_MATRIX_TYPE_GENERAL);
     cusparseSetMatIndexBase(descr, CUSPARSE_INDEX_BASE_ZERO);
 
-    cudaEvent_t done = nullptr;
-    if (do_sync)
-        CUDA_CALL(cudaEventCreate(&done));
+    SyncGuard syncGuard;
     CUSPARSE_CALL(cusparseSetStream(cusparseHandle, t_stream));
     if (sizeof(ElemType) == sizeof(float))
     {
@@ -2424,12 +2200,6 @@ GPUMatrix<ElemType> GPUSparseMatrix<ElemType>::CopyColumnSliceToDense(size_t sta
         CUSPARSE_CALL(cusparseDcsc2dense(cusparseHandle, m, numCols, descr, (double*) BufferPointer(), RowLocation(), ColLocation() + startColumn, (double*) slice.BufferPointer(), m));
     }
 
-    if (do_sync)
-        CUDA_CALL(cudaEventRecord(done));
-    if (do_sync)
-        CUDA_CALL(cudaEventSynchronize(done));
-    if (do_sync)
-        CUDA_CALL(cudaEventDestroy(done));
     CUSPARSE_CALL(cusparseDestroy(cusparseHandle));
 
     slice.SetMatrixName(m_matrixName);
@@ -2555,16 +2325,8 @@ GPUSparseMatrix<ElemType>& GPUSparseMatrix<ElemType>::ElementInverse()
 
     CUDA_LONG N = (CUDA_LONG) GetNumNZElements();
     int blocksPerGrid = (int) ceil(1.0 * N / GridDim::maxThreadsPerBlock);
-    cudaEvent_t done = nullptr;
-    if (do_sync)
-        CUDA_CALL(cudaEventCreate(&done));
+    SyncGuard syncGuard;
     _elemInverse<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock>>>(NzValues(), N);
-    if (do_sync)
-        CUDA_CALL(cudaEventRecord(done));
-    if (do_sync)
-        CUDA_CALL(cudaEventSynchronize(done));
-    if (do_sync)
-        CUDA_CALL(cudaEventDestroy(done));
     return *this;
 }
 
@@ -2697,16 +2459,8 @@ GPUSparseMatrix<ElemType>& GPUSparseMatrix<ElemType>::InplaceTruncateBottom(cons
         LogicError("InplaceTruncateBottom: Matrix is empty.");
     CUDA_LONG N = (CUDA_LONG) GetNumNZElements();
     int blocksPerGrid = (int) ceil(N * 1.0 / GridDim::maxThreadsPerBlock);
-    cudaEvent_t done = nullptr;
-    if (do_sync)
-        CUDA_CALL(cudaEventCreate(&done));
+    SyncGuard syncGuard;
     _assignTruncateBottom<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock>>>(NzValues(), NzValues(), threshold, N);
-    if (do_sync)
-        CUDA_CALL(cudaEventRecord(done));
-    if (do_sync)
-        CUDA_CALL(cudaEventSynchronize(done));
-    if (do_sync)
-        CUDA_CALL(cudaEventDestroy(done));
     return *this;
 }
 
@@ -2726,16 +2480,8 @@ GPUSparseMatrix<ElemType>& GPUSparseMatrix<ElemType>::AssignTruncateBottomOf(con
     }
     CUDA_LONG N = (CUDA_LONG) GetNumNZElements();
     int blocksPerGrid = (int) ceil(N * 1.0 / GridDim::maxThreadsPerBlock);
-    cudaEvent_t done = nullptr;
-    if (do_sync)
-        CUDA_CALL(cudaEventCreate(&done));
+    SyncGuard syncGuard;
     _assignTruncateBottom<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock>>>(NzValues(), a.NzValues(), threshold, N);
-    if (do_sync)
-        CUDA_CALL(cudaEventRecord(done));
-    if (do_sync)
-        CUDA_CALL(cudaEventSynchronize(done));
-    if (do_sync)
-        CUDA_CALL(cudaEventDestroy(done));
     return *this;
 }
 
@@ -2749,16 +2495,8 @@ GPUSparseMatrix<ElemType>& GPUSparseMatrix<ElemType>::InplaceTruncateTop(const E
         LogicError("InplaceTruncateTop: Matrix is empty.");
     CUDA_LONG N = (CUDA_LONG) GetNumNZElements();
     int blocksPerGrid = (int) ceil(N * 1.0 / GridDim::maxThreadsPerBlock);
-    cudaEvent_t done = nullptr;
-    if (do_sync)
-        CUDA_CALL(cudaEventCreate(&done));
+    SyncGuard syncGuard;
     _assignTruncateTop<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock>>>(NzValues(), NzValues(), threshold, N);
-    if (do_sync)
-        CUDA_CALL(cudaEventRecord(done));
-    if (do_sync)
-        CUDA_CALL(cudaEventSynchronize(done));
-    if (do_sync)
-        CUDA_CALL(cudaEventDestroy(done));
     return *this;
 }
 
@@ -2778,16 +2516,8 @@ GPUSparseMatrix<ElemType>& GPUSparseMatrix<ElemType>::AssignTruncateTopOf(const 
 
     CUDA_LONG N = (CUDA_LONG) GetNumNZElements();
     int blocksPerGrid = (int) ceil(N * 1.0 / GridDim::maxThreadsPerBlock);
-    cudaEvent_t done = nullptr;
-    if (do_sync)
-        CUDA_CALL(cudaEventCreate(&done));
+    SyncGuard syncGuard;
     _assignTruncateTop<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock>>>(NzValues(), a.NzValues(), threshold, N);
-    if (do_sync)
-        CUDA_CALL(cudaEventRecord(done));
-    if (do_sync)
-        CUDA_CALL(cudaEventSynchronize(done));
-    if (do_sync)
-        CUDA_CALL(cudaEventDestroy(done));
     return *this;
 }
 
@@ -2801,16 +2531,8 @@ GPUSparseMatrix<ElemType>& GPUSparseMatrix<ElemType>::SetToZeroIfAbsLessThan(con
         LogicError("SetToZeroIfAbsLessThan: Matrix is empty.");
     CUDA_LONG N = (CUDA_LONG) GetNumNZElements();
     int blocksPerGrid = (int) ceil(N * 1.0 / GridDim::maxThreadsPerBlock);
-    cudaEvent_t done = nullptr;
-    if (do_sync)
-        CUDA_CALL(cudaEventCreate(&done));
+    SyncGuard syncGuard;
     _setToZeroIfAbsLessThan<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock>>>(NzValues(), threshold, N);
-    if (do_sync)
-        CUDA_CALL(cudaEventRecord(done));
-    if (do_sync)
-        CUDA_CALL(cudaEventSynchronize(done));
-    if (do_sync)
-        CUDA_CALL(cudaEventDestroy(done));
     return *this;
 }
 
@@ -2858,41 +2580,26 @@ void GPUSparseMatrix<ElemType>::performElementWiseFunction(ElementWiseOperator k
 
     CUDA_LONG N = (CUDA_LONG) GetNumNZElements();
     int blocksPerGrid = (int) ceil(1.0 * N / GridDim::maxThreadsPerBlock);
-    cudaEvent_t done = nullptr;
-    if (do_sync)
-        CUDA_CALL(cudaEventCreate(&done));
+    SyncGuard syncGuard;
     switch (kind)
     {
     case ElementWiseOperator::opSigmoid:
-        _elementWiseSigmoidOnCuda<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock>>>(src.NzValues(), NzValues(), N);
-        break;
+        return _elementWiseSigmoidOnCuda<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock>>>(src.NzValues(), NzValues(), N);
     case ElementWiseOperator::opTanh:
-        _elementWiseTanhOnCuda<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock>>>(src.NzValues(), NzValues(), N);
-        break;
+        return _elementWiseTanhOnCuda<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock>>>(src.NzValues(), NzValues(), N);
     case ElementWiseOperator::opSqrt:
-        _elementWiseSqrtOnCuda<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock>>>(src.NzValues(), NzValues(), N);
-        break;
+        return _elementWiseSqrtOnCuda<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock>>>(src.NzValues(), NzValues(), N);
     case ElementWiseOperator::opExp:
-        _elementWiseExpOnCuda<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock>>>(src.NzValues(), NzValues(), N);
-        break;
+        return _elementWiseExpOnCuda<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock>>>(src.NzValues(), NzValues(), N);
     case ElementWiseOperator::opLog:
-        _elementWiseLogOnCuda<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock>>>(src.NzValues(), NzValues(), N);
-        break;
+        return _elementWiseLogOnCuda<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock>>>(src.NzValues(), NzValues(), N);
     case ElementWiseOperator::opAbs:
-        _elementWiseAbsOnCuda<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock>>>(src.NzValues(), NzValues(), N);
-        break;
+        return _elementWiseAbsOnCuda<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock>>>(src.NzValues(), NzValues(), N);
     case ElementWiseOperator::opLinearRectifierDerivative:
-        _elementWiseLinRectDerivativeOnCuda<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock>>>(src.NzValues(), NzValues(), N);
-        break;
+        return _elementWiseLinRectDerivativeOnCuda<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock>>>(src.NzValues(), NzValues(), N);
     default:
         NOT_IMPLEMENTED;
     }
-    if (do_sync)
-        CUDA_CALL(cudaEventRecord(done));
-    if (do_sync)
-        CUDA_CALL(cudaEventSynchronize(done));
-    if (do_sync)
-        CUDA_CALL(cudaEventDestroy(done));
 }
 
 #pragma endregion Helper Functions
@@ -3051,8 +2758,7 @@ MATH_API File& operator<<(File& stream, const GPUSparseMatrix<ElemType>& us)
 
 template MATH_API File& operator<<(File& stream, const GPUSparseMatrix<float>& us);
 template MATH_API File& operator<<(File& stream, const GPUSparseMatrix<double>& us);
-}
-}
-}
+
+}}}
 
 #endif // CPUONLY

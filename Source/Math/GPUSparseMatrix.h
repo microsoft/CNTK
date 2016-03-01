@@ -390,7 +390,6 @@ private:
 
     mutable void* m_tempHostBuffer; // used to copy values.
     mutable size_t m_tempHostBufferSize;
-
-    static bool do_sync;
 };
-} } }
+
+}}}

@@ -686,7 +686,7 @@ int wmain1(int argc, wchar_t* argv[]) // called from wmain which is a wrapper th
     }
     catch (...)
     {
-        fprintf(stderr, "\nUnknown ERROR occurred");
+        fprintf(stderr, "\nUnknown ERROR occurred\n");
         return EXIT_FAILURE;
     }
 }

@@ -73,7 +73,7 @@ public:
             auto isFloat  = !!dynamic_cast<Matrix<float>*>(iter->second.get());
             auto isDouble = !!dynamic_cast<Matrix<double>*>(iter->second.get());
             LogicError("GetInputMatrix<%s>: Attempted to access input stream '%ls' with wrong precision, got %s {%d,%d} instead of %s.",
-                        typeid(ElemType), nodeName.c_str(), typeid(iter->second.get()).name(), (int)isFloat, (int)isDouble, typeid(Matrix<ElemType>*).name());
+                        typeid(ElemType).name(), nodeName.c_str(), typeid(iter->second.get()).name(), (int)isFloat, (int)isDouble, typeid(Matrix<ElemType>*).name());
         }
         return *matrixp;
     }
