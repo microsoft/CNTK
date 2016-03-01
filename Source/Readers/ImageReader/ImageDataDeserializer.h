@@ -24,6 +24,7 @@ public:
 
     // Description of streams that this data deserializer provides.
     std::vector<StreamDescriptionPtr> GetStreamDescriptions() const override;
+    virtual size_t GetTotalNumberOfChunks() override;
 
     // Get sequences by specified ids. Order of returned sequences corresponds to the order of provided ids.
     virtual ChunkPtr GetChunk(size_t chunkId) override;

@@ -40,6 +40,9 @@
     <ClInclude Include="SampleModePacker.h">
       <Filter>Packers</Filter>
     </ClInclude>
+    <ClInclude Include="Bundler.h">
+      <Filter>Deserializers</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="BlockRandomizer.cpp">
@@ -53,6 +56,9 @@
     </ClCompile>
     <ClCompile Include="SampleModePacker.cpp">
       <Filter>Packers</Filter>
+    </ClCompile>
+    <ClCompile Include="Bundler.cpp">
+      <Filter>Deserializers</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

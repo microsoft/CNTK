@@ -123,7 +123,7 @@ BOOST_AUTO_TEST_CASE(ConvolutionForward)
         auto fact = ConvFact::Create(deviceId, ConvFact::EngineType::Auto, ImageLayoutKind::CHW);
         auto tt = typeid(fact).name();
         UNUSED(tt);
-        auto eng = fact->CreateConvEngine(deviceId, 0);
+        auto eng = fact->CreateConvEngine(deviceId, ImageLayoutKind::CHW, 0, BatchNormImpl::Cntk);
         auto inT = fact->CreateTensor(inW, inH, cmapIn, n);
         auto filtT = fact->CreateFilter(kW, kH, cmapIn, cmapOut);
         auto outT = fact->CreateTensor(outW, outH, cmapOut, n);
@@ -161,22 +161,6 @@ BOOST_AUTO_TEST_CASE(ConvolutionForward)
             15219.0f, 15921.0f, 18729.0f, 19431.0f};
         SingleMatrix exp(outW * outH * cmapOut, n, expBuf.data(), deviceId, matrixFlagNormal);
         BOOST_CHECK_MESSAGE(out.IsEqualTo(exp), "Unexpected convolution output.");
-
-        float b[] = {1.0f, 2.0f};
-        SingleMatrix bias(cmapOut, 1, b, deviceId, matrixFlagNormal);
-
-        SingleMatrix plusB(outW * outH * cmapOut, n, expBuf.data(), deviceId, matrixFlagNormal);
-        eng->AddBias(*outT, out, *biasT, bias, plusB);
-
-        // Bias is per-channel.
-        seed = 0;
-        std::transform(expBuf.begin(), expBuf.end(), expBuf.begin(),
-                       [=, &seed, &b](const float& a)
-                       {
-                           return a + b[(seed++ % (outW * outH * cmapOut)) / (outW * outH)];
-                       });
-        SingleMatrix expPlusB(outW * outH * cmapOut, n, expBuf.data(), deviceId, matrixFlagNormal);
-        BOOST_CHECK_MESSAGE(plusB.IsEqualTo(expPlusB), "Unexpected (convolution + bias) output.");
     }
 }
 
@@ -199,24 +183,16 @@ BOOST_AUTO_TEST_CASE(ConvolutionForwardPad)
     int outW = GetNumOut(inW, kW, sW, pad);
     int outH = GetNumOut(inH, kH, sH, pad);
 
-    for (int deviceId : {-1, 0})
+    for (int deviceId : {0})
     {
-        fprintf(stderr, "ConvolutionEngineTests.cpp %d\n", __LINE__);
         auto fact = ConvFact::Create(deviceId, ConvFact::EngineType::Auto, deviceId >= 0 ? ImageLayoutKind::CHW : ImageLayoutKind::HWC);
-        fprintf(stderr, "ConvolutionEngineTests.cpp %d\n", __LINE__);
-        auto eng = fact->CreateConvEngine(deviceId, 0);
-        fprintf(stderr, "ConvolutionEngineTests.cpp %d\n", __LINE__);
+        auto eng = fact->CreateConvEngine(deviceId, ImageLayoutKind::CHW, 0, BatchNormImpl::Cntk);
         auto inT = fact->CreateTensor(inW, inH, cmapIn, n);
-        fprintf(stderr, "ConvolutionEngineTests.cpp %d\n", __LINE__);
         auto filtT = fact->CreateFilter(kW, kH, cmapIn, cmapOut);
-        fprintf(stderr, "ConvolutionEngineTests.cpp %d\n", __LINE__);
         auto outT = fact->CreateTensor(outW, outH, cmapOut, n);
-        fprintf(stderr, "ConvolutionEngineTests.cpp %d\n", __LINE__);
         auto convT = fact->CreateConvDescriptor(*inT, *filtT, sW, sH, pad);
-        fprintf(stderr, "ConvolutionEngineTests.cpp %d\n", __LINE__);
 
         // Input in NCHW format.
-        fprintf(stderr, "ConvolutionEngineTests.cpp %d\n", __LINE__);
         SingleMatrix in(inW * inH * cmapIn, n, vec(inW * inH * cmapIn * n, 1.0f).data(), deviceId, matrixFlagNormal);
         // Create cmapOut filters, each kW x kH x cmapIn (NCHW format).
         SingleMatrix filt(cmapOut, kW * kH * cmapIn, vec(kW * kH * cmapIn * cmapOut, 1.0f).data(), deviceId, matrixFlagNormal);
@@ -224,9 +200,7 @@ BOOST_AUTO_TEST_CASE(ConvolutionForwardPad)
         SingleMatrix out(outW * outH * cmapOut, n, deviceId);
         SingleMatrix temp(deviceId);
 
-        fprintf(stderr, "ConvolutionEngineTests.cpp %d\n", __LINE__);
         eng->Forward(*inT, in, *filtT, filt, *convT, *outT, out, temp);
-        fprintf(stderr, "ConvolutionEngineTests.cpp %d\n", __LINE__);
 
         // Output is in NCHW format.
         float expBuf[] = {
@@ -259,7 +233,7 @@ BOOST_AUTO_TEST_CASE(ConvolutionBackwardData)
     for (int deviceId : {0})
     {
         auto fact = ConvFact::Create(deviceId, ConvFact::EngineType::Auto, ImageLayoutKind::CHW);
-        auto eng = fact->CreateConvEngine(deviceId, 0);
+        auto eng = fact->CreateConvEngine(deviceId, ImageLayoutKind::CHW, 0, BatchNormImpl::Cntk);
         auto srcGradT = fact->CreateTensor(outW, outH, cmapOut, n);
         auto filtT = fact->CreateFilter(kW, kH, cmapIn, cmapOut);
         auto gradT = fact->CreateTensor(inW, inH, cmapIn, n);
@@ -320,7 +294,7 @@ BOOST_AUTO_TEST_CASE(ConvolutionBackwardFilter)
     for (int deviceId : {0})
     {
         auto fact = ConvFact::Create(deviceId, ConvFact::EngineType::Auto, ImageLayoutKind::CHW);
-        auto eng = fact->CreateConvEngine(deviceId, 0);
+        auto eng = fact->CreateConvEngine(deviceId, ImageLayoutKind::CHW, 0, BatchNormImpl::Cntk);
         auto srcGradT = fact->CreateTensor(outW, outH, cmapOut, n);
         auto filtT = fact->CreateFilter(kW, kH, cmapIn, cmapOut);
         auto inT = fact->CreateTensor(inW, inH, cmapIn, n);
@@ -358,17 +332,6 @@ BOOST_AUTO_TEST_CASE(ConvolutionBackwardFilter)
                       });
         SingleMatrix exp(cmapOut, kW * kH * cmapIn, expFiltB.data(), deviceId, matrixFlagNormal);
         BOOST_CHECK_MESSAGE(filt.IsEqualTo(exp), "Unexpected convolution gradient.");
-
-        // Verify bias backpropagation.
-        float b[] = {1.0f, 2.0f};
-        SingleMatrix biasGrad(cmapOut, 1, b, deviceId, matrixFlagNormal);
-
-        eng->BackwardBias(*srcGradT, srcGrad, *biasT, biasGrad);
-
-        // Bias is per-channel.
-        float bg[] = {b[0] + srcGradBuf[0] + srcGradBuf[2], b[1] + srcGradBuf[1] + srcGradBuf[3]};
-        SingleMatrix expBiasGrad(cmapOut, 1, bg, deviceId, matrixFlagNormal);
-        BOOST_CHECK_MESSAGE(biasGrad.IsEqualTo(expBiasGrad), "Unexpected bias gradient.");
     }
 }
 
@@ -391,7 +354,7 @@ BOOST_AUTO_TEST_CASE(MaxPoolForward)
     for (int deviceId : {0})
     {
         auto fact = ConvFact::Create(deviceId, ConvFact::EngineType::Auto, ImageLayoutKind::CHW);
-        auto eng = fact->CreatePoolEngine(deviceId);
+        auto eng = fact->CreatePoolEngine(deviceId, ImageLayoutKind::CHW);
         auto inT = fact->CreateTensor(inW, inH, cmap, n);
         auto outT = fact->CreateTensor(outW, outH, cmap, n);
         auto poolT = fact->CreatePoolDescriptor(PoolingDescriptor::PoolKind::Max, kW, kH, sW, sH, 0, 0);
@@ -444,7 +407,7 @@ BOOST_AUTO_TEST_CASE(MaxPoolBackward)
     for (int deviceId : {0})
     {
         auto fact = ConvFact::Create(deviceId, ConvFact::EngineType::Auto, ImageLayoutKind::CHW);
-        auto eng = fact->CreatePoolEngine(deviceId);
+        auto eng = fact->CreatePoolEngine(deviceId, ImageLayoutKind::CHW);
         auto inT = fact->CreateTensor(inW, inH, cmap, n);
         auto outT = fact->CreateTensor(outW, outH, cmap, n);
         auto poolT = fact->CreatePoolDescriptor(PoolingDescriptor::PoolKind::Max, kW, kH, sW, sH, 0, 0);
@@ -507,7 +470,7 @@ BOOST_AUTO_TEST_CASE(AvgPoolForward)
     for (int deviceId : {0})
     {
         auto fact = ConvFact::Create(deviceId, ConvFact::EngineType::Auto, ImageLayoutKind::CHW);
-        auto eng = fact->CreatePoolEngine(deviceId);
+        auto eng = fact->CreatePoolEngine(deviceId, ImageLayoutKind::CHW);
         auto inT = fact->CreateTensor(inW, inH, cmap, n);
         auto outT = fact->CreateTensor(outW, outH, cmap, n);
         auto poolT = fact->CreatePoolDescriptor(PoolingDescriptor::PoolKind::Average, kW, kH, sW, sH, 0, 0);
@@ -560,7 +523,7 @@ BOOST_AUTO_TEST_CASE(AvgPoolBackward)
     for (int deviceId : {0})
     {
         auto fact = ConvFact::Create(deviceId, ConvFact::EngineType::Auto, ImageLayoutKind::CHW);
-        auto eng = fact->CreatePoolEngine(deviceId);
+        auto eng = fact->CreatePoolEngine(deviceId, ImageLayoutKind::CHW);
         auto inT = fact->CreateTensor(inW, inH, cmap, n);
         auto outT = fact->CreateTensor(outW, outH, cmap, n);
         auto poolT = fact->CreatePoolDescriptor(PoolingDescriptor::PoolKind::Average, kW, kH, sW, sH, 0, 0);
@@ -601,10 +564,11 @@ BOOST_AUTO_TEST_SUITE_END()
 // Batch normalization unit tests.
 // REVIEW alexeyk: is this a right place?
 
-std::vector<std::tuple<Tensor4DPtr, bool>> GenerateBNTestConfigs(ConvFact& fact)
+std::vector<std::tuple<Tensor4DPtr, bool, double>> GenerateBNTestConfigs(ConvFact& fact)
 {
-    std::vector<std::tuple<Tensor4DPtr, bool>> res;
+    std::vector<std::tuple<Tensor4DPtr, bool, double>> res;
     // REVIEW alexeyk: how to test batches > 512? cuDNN does not support that so there is no baseline.
+    double expAvgFactor = 1;
     // Per activation (non-spatial)
     for (size_t n : {6, 13, 62, 512})
     {
@@ -614,7 +578,7 @@ std::vector<std::tuple<Tensor4DPtr, bool>> GenerateBNTestConfigs(ConvFact& fact)
             {
                 for (size_t w : {6, 17, 126, 2048})
                 {
-                    res.push_back(std::make_tuple(std::move(fact.CreateTensor(w, h, c, n)), false));
+                    res.push_back(std::make_tuple(std::move(fact.CreateTensor(w, h, c, n)), false, expAvgFactor));
                 }
             }
         }
@@ -628,18 +592,21 @@ std::vector<std::tuple<Tensor4DPtr, bool>> GenerateBNTestConfigs(ConvFact& fact)
             {
                 for (size_t w : {2, 11, 16})
                 {
-                    res.push_back(std::make_tuple(std::move(fact.CreateTensor(w, h, c, n)), true));
+                    res.push_back(std::make_tuple(std::move(fact.CreateTensor(w, h, c, n)), true, expAvgFactor));
                 }
             }
         }
     }
     // For perf testing (similar to first layers of ResNet).
-    res.push_back(std::make_tuple(std::move(fact.CreateTensor(56, 56, 64, 64)), true));
+    res.push_back(std::make_tuple(std::move(fact.CreateTensor(56, 56, 64, 64)), true, expAvgFactor));
     // Next test will fail in cuDNN due to bug we discovered (and reported to NVIDIA).
     //res.push_back(std::make_tuple(std::move(fact.CreateTensor(2, 2, 2048, 2)), true));
-    res.push_back(std::make_tuple(std::move(fact.CreateTensor(2, 2, 2048, 64)), true));
+    res.push_back(std::make_tuple(std::move(fact.CreateTensor(2, 2, 2048, 64)), true, expAvgFactor));
 
-    //res.push_back(std::make_tuple(std::move(fact.CreateTensor(2, 2, 2, 8)), true));
+    // Test running mean/isd.
+    expAvgFactor = 0.1;
+    res.push_back(std::make_tuple(std::move(fact.CreateTensor(2, 2, 2, 8)), false, expAvgFactor));
+    res.push_back(std::make_tuple(std::move(fact.CreateTensor(2, 2, 2, 8)), true, expAvgFactor));
 
     return res;
 }
@@ -677,13 +644,13 @@ BOOST_AUTO_TEST_CASE(BatchNormalizationForwardTrain)
     for (int deviceId : {0})
     {
         auto fact = ConvFact::Create(deviceId, ConvFact::EngineType::Auto, ImageLayoutKind::CHW);
-        auto engCudnn = fact->CreateConvEngine(deviceId, 0, BatchNormImpl::CuDnn);
-        auto engCntk = fact->CreateConvEngine(deviceId, 0, BatchNormImpl::Cntk);
+        auto engCudnn = fact->CreateConvEngine(deviceId, ImageLayoutKind::CHW, 0, BatchNormImpl::CuDnn);
+        auto engCntk = fact->CreateConvEngine(deviceId, ImageLayoutKind::CHW, 0, BatchNormImpl::Cntk);
         for (auto& cfg : GenerateBNTestConfigs(*fact))
         {
             auto& t = *std::move(std::get<0>(cfg));
             bool spatial = std::get<1>(cfg);
-            double expAvg = 1;
+            double expAvg = std::get<2>(cfg);
             double eps = 1e-5; // CUDNN_BN_MIN_EPSILON
 
             size_t crow = t.w() * t.h() * t.c();
@@ -733,7 +700,9 @@ BOOST_AUTO_TEST_CASE(BatchNormalizationForwardTrain)
             time2.Stop();
 
             std::stringstream tmsg;
-            tmsg << "tensor: (w = " << t.w() << ", h = " << t.h() << ", c = " << t.c() << ", n = " << t.n() << ", spatial = " << (spatial ? "true" : "false") << ")";
+            tmsg << "tensor: (w = " << t.w() << ", h = " << t.h() << ", c = " << t.c() << ", n = " << t.n() 
+                 << ", spatial = " << (spatial ? "true" : "false")
+                 << ", expAvg = " << expAvg << ")";
             std::string msg = " are not equal, " + tmsg.str();
             std::string msgNan = " has NaNs, " + tmsg.str();
             std::string msgNotNan = " has buffer overflow/underflow, " + tmsg.str();
@@ -801,8 +770,8 @@ BOOST_AUTO_TEST_CASE(BatchNormalizationForwardInference)
     for (int deviceId : {0})
     {
         auto fact = ConvFact::Create(deviceId, ConvFact::EngineType::Auto, ImageLayoutKind::CHW);
-        auto engCudnn = fact->CreateConvEngine(deviceId, 0, BatchNormImpl::CuDnn);
-        auto engCntk = fact->CreateConvEngine(deviceId, 0, BatchNormImpl::Cntk);
+        auto engCudnn = fact->CreateConvEngine(deviceId, ImageLayoutKind::CHW, 0, BatchNormImpl::CuDnn);
+        auto engCntk = fact->CreateConvEngine(deviceId, ImageLayoutKind::CHW, 0, BatchNormImpl::Cntk);
         for (auto& cfg : GenerateBNTestConfigs(*fact))
         {
             auto& t = *std::move(std::get<0>(cfg));
@@ -875,6 +844,91 @@ BOOST_AUTO_TEST_CASE(BatchNormalizationForwardInference)
     }
 }
 
+BOOST_AUTO_TEST_CASE(BatchNormalizationForwardInferenceCpu)
+{
+    if (!IsCuDnnSupported())
+        return;
+
+    std::mt19937 rng(0);
+    std::normal_distribution<float> nd;
+
+    auto initMat = [&](SingleMatrix& buf, size_t r, size_t c, vec& data) -> SingleMatrix
+    {
+        data.resize(r * 3 * c);
+        std::fill(begin(data), end(data), std::numeric_limits<float>::quiet_NaN());
+        std::generate(begin(data) + r * c, begin(data) + 2 * r * c, [&] { return nd(rng); });
+        buf.SetValue(r, 3 * c, buf.GetDeviceId(), data.data());
+        // Get center slice.
+        return buf.ColumnSlice(c, c);
+    };
+
+    int deviceId = -1;
+    int cudnnDeviceId = deviceId < 0 ? 0 : deviceId;
+    auto fact = ConvFact::Create(cudnnDeviceId, ConvFact::EngineType::CuDnn, ImageLayoutKind::CHW);
+    auto engCudnn = fact->CreateConvEngine(cudnnDeviceId, ImageLayoutKind::CHW, 0, BatchNormImpl::CuDnn);
+    auto testFact = ConvFact::Create(deviceId, ConvFact::EngineType::Auto, ImageLayoutKind::CHW);
+    auto engCntk = testFact->CreateConvEngine(deviceId, ImageLayoutKind::CHW, 0, BatchNormImpl::Cntk);
+    for (auto& cfg : GenerateBNTestConfigs(*fact))
+    {
+        auto& t = *std::move(std::get<0>(cfg));
+        bool spatial = std::get<1>(cfg);
+
+        size_t crow = t.w() * t.h() * t.c();
+        size_t ccol = t.n();
+
+        vec buf(crow * t.n());
+        std::generate(begin(buf), end(buf), [&] { return nd(rng); });
+        SingleMatrix in(crow, ccol, buf.data(), deviceId, matrixFlagNormal);
+        SingleMatrix inExp(crow, ccol, buf.data(), cudnnDeviceId, matrixFlagNormal);
+
+        Tensor4DPtr scaleBiasT = spatial ? fact->CreateTensor(1, 1, t.c(), 1) : fact->CreateTensor(t.w(), t.h(), t.c(), 1);
+        size_t crowScaleBias = scaleBiasT->w() * scaleBiasT->h() * scaleBiasT->c();
+        buf.resize(crowScaleBias);
+
+        std::generate(begin(buf), end(buf), [&] { return nd(rng); });
+        SingleMatrix scale(crowScaleBias, 1, buf.data(), deviceId, matrixFlagNormal);
+        SingleMatrix scaleExp(crowScaleBias, 1, buf.data(), cudnnDeviceId, matrixFlagNormal);
+        std::generate(begin(buf), end(buf), [&] { return nd(rng); });
+        SingleMatrix bias(crowScaleBias, 1, buf.data(), deviceId, matrixFlagNormal);
+        SingleMatrix biasExp(crowScaleBias, 1, buf.data(), cudnnDeviceId, matrixFlagNormal);
+
+        std::generate(begin(buf), end(buf), [&] { return nd(rng); });
+        SingleMatrix runMean(crowScaleBias, 1, buf.data(), deviceId, matrixFlagNormal);
+        SingleMatrix runMeanExp(crowScaleBias, 1, buf.data(), cudnnDeviceId, matrixFlagNormal);
+        std::generate(begin(buf), end(buf), [&] { return nd(rng); });
+        SingleMatrix runInvStdDev(crowScaleBias, 1, buf.data(), deviceId, matrixFlagNormal);
+        SingleMatrix runInvStdDevExp(crowScaleBias, 1, buf.data(), cudnnDeviceId, matrixFlagNormal);
+
+        SingleMatrix outBuf(deviceId);
+        SingleMatrix out = initMat(outBuf, crow, ccol, buf);
+        SingleMatrix outExp(crow, ccol, out.CopyToArray(), cudnnDeviceId, matrixFlagNormal);
+
+        CudaTimer time1;
+        time1.Start();
+        engCntk->NormalizeBatchInference(t, in, *scaleBiasT, scale, bias, spatial, runMean, runInvStdDev, out);
+        time1.Stop();
+
+        CudaTimer time2;
+        time2.Start();
+        engCudnn->NormalizeBatchInference(t, inExp, *scaleBiasT, scaleExp, biasExp, spatial, runMeanExp, runInvStdDevExp, outExp);
+        time2.Stop();
+
+        std::stringstream tmsg;
+        tmsg << "tensor: (w = " << t.w() << ", h = " << t.h() << ", c = " << t.c() << ", n = " << t.n() << ", spatial = " << (spatial ? "true" : "false") << ")";
+        std::string msg = " are not equal, " + tmsg.str();
+        std::string msgNan = " has NaNs, " + tmsg.str();
+        std::string msgNotNan = " has buffer overflow/underflow, " + tmsg.str();
+
+        float relErr = Err<float>::Rel;
+        float absErr = Err<float>::Abs;
+        std::string emsg;
+
+        BOOST_REQUIRE_MESSAGE(!out.HasNan("out"), "out" << msgNan);
+        BOOST_REQUIRE_MESSAGE(CheckEqual(out, outExp, emsg, relErr, absErr * 20), "out" << msg << ". " << emsg);
+        BOOST_REQUIRE_MESSAGE(CountNans(outBuf) == crow * 2 * ccol, "out" << msgNotNan);
+    }
+}
+
 BOOST_AUTO_TEST_CASE(BatchNormalizationBackward)
 {
     if (!IsCuDnnSupported())
@@ -896,8 +950,8 @@ BOOST_AUTO_TEST_CASE(BatchNormalizationBackward)
     for (int deviceId : {0})
     {
         auto fact = ConvFact::Create(deviceId, ConvFact::EngineType::Auto, ImageLayoutKind::CHW);
-        auto engCudnn = fact->CreateConvEngine(deviceId, 0, BatchNormImpl::CuDnn);
-        auto engCntk = fact->CreateConvEngine(deviceId, 0, BatchNormImpl::Cntk);
+        auto engCudnn = fact->CreateConvEngine(deviceId, ImageLayoutKind::CHW, 0, BatchNormImpl::CuDnn);
+        auto engCntk = fact->CreateConvEngine(deviceId, ImageLayoutKind::CHW, 0, BatchNormImpl::Cntk);
         for (auto& cfg : GenerateBNTestConfigs(*fact))
         {
             auto& t = *std::move(std::get<0>(cfg));

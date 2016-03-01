@@ -1,6 +1,8 @@
 # CNTK
 
 ## Latest news
+*2016-02-29.* Added documentation for the ImageReader. Added ZIP files support to the ImageReader.
+
 *2016-02-17.* CNTK Contribution Guidelines are published.
 
 *2016-02-15.* The first part of CNTK tutorial is published.
