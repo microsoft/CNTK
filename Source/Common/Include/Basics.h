@@ -8,13 +8,19 @@
 #define _BASICS_H_
 
 #include "Platform.h"
-#include "DebugUtil.h"
+#include "ExceptionWithCallStack.h"
 #include <string>
 #include <vector>
 #include <assert.h>
+#include <stdarg.h>
+#ifdef _WIN32
+#include <Windows.h>
+#endif
 #if __unix__
 #include <dlfcn.h> // for Plugin
 #endif
+#include <cctype>
+#include <cwctype>
 
 #define TWO_PI 6.283185307f // TODO: find the official standards-confirming definition of this and use it instead
 
@@ -49,6 +55,8 @@ using namespace std;
 template <class E>
 __declspec_noreturn void ThrowFormatted(const char* format, ...) __attribute__((format(printf, 1, 2)));
 #endif
+
+
 template <class E>
 __declspec_noreturn static inline void ThrowFormatted(const char* format, ...)
 {
@@ -60,8 +68,10 @@ __declspec_noreturn static inline void ThrowFormatted(const char* format, ...)
 #ifdef _DEBUG // print this to log before throwing, so we can see what the error is
     fprintf(stderr, "\nAbout to throw exception '%s'\n", buffer);
 #endif
-    Microsoft::MSR::CNTK::DebugUtil::PrintCallStack();
-    throw E(buffer);
+    Microsoft::MSR::CNTK::ExceptionWithCallStack<E>::PrintCallStack();
+    std::string msg(buffer);
+    std::string callstack(Microsoft::MSR::CNTK::ExceptionWithCallStack<E>::GetCallStack());
+    throw ExceptionWithCallStack<E>(msg, callstack);
 };
 #pragma warning(pop)
 
@@ -235,7 +245,7 @@ private:
 // (w)strprintf() -- sprintf() that returns an STL string
 // ----------------------------------------------------------------------------
 
-typedef strfun::_strprintf<char> strprintf;     // char version
+typedef strfun::_strprintf<char>    strprintf;  // char version
 typedef strfun::_strprintf<wchar_t> wstrprintf; // wchar_t version
 
 // ----------------------------------------------------------------------------
@@ -390,6 +400,24 @@ static inline std::basic_string<_T> join(const std::vector<std::basic_string<_T>
 }
 
 // ----------------------------------------------------------------------------
+// find and replace
+// ----------------------------------------------------------------------------
+
+template<class String>
+// actual operations that we perform
+static String ReplaceAll(const String& s, const String& what, const String& withwhat)
+{
+    String res = s;
+    auto pos = res.find(what);
+    while (pos != String::npos)
+    {
+        res = res.substr(0, pos) + withwhat + res.substr(pos + what.size());
+        pos = res.find(what, pos + withwhat.size());
+    }
+    return res;
+}
+
+// ----------------------------------------------------------------------------
 // parsing strings to numbers
 // ----------------------------------------------------------------------------
 
@@ -468,8 +496,25 @@ public:
 #endif
     }
 };
-}
-}
+
+}}
+
+// ----------------------------------------------------------------------------
+// iscalpha(), iscspace(), etc.: saner version of ctype helpers that do not blow up upon negative signed char values
+// Name differs in using 'c' between is- and -what(). Also returns bool instead of int.
+// TODO: switch all uses if isspace() etc. to this once tested well
+// ----------------------------------------------------------------------------
+
+#define DefineIsCType(pred) \
+  static inline bool isc ## pred(char c)    { return !!is  ## pred((unsigned char) c); } \
+  static inline bool isc ## pred(wchar_t c) { return !!isw ## pred(c); }
+DefineIsCType(alpha);
+DefineIsCType(upper);
+DefineIsCType(lower);
+DefineIsCType(cntrl);
+DefineIsCType(digit);
+DefineIsCType(punct);
+DefineIsCType(space);
 
 // ----------------------------------------------------------------------------
 // functional-programming style helper macros (...do this with templates?)

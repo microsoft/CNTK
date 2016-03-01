@@ -142,7 +142,6 @@ NDLPass& operator++(NDLPass& ndlPass)
 // string1 - [in,out] string to compare, if comparision is equal and at least half the full node name will replace with full node name
 // allowUndeterminedVariable - [out] set to true if undetermined variables (symbols yet to be defined) are allowed here
 // return - true if function name found
-template <typename ElemType>
 bool CheckFunction(std::string& p_nodeType, bool* allowUndeterminedVariable)
 {
     if (allowUndeterminedVariable)

@@ -92,6 +92,7 @@ std::string WCharToString(const wchar_t* wst)
     return s;
 }
 
+// TODO: This is an action, it should be moved into ActionsLib.
 template <typename ElemType>
 void DumpNodeInfo(const ConfigParameters& config)
 {
@@ -107,8 +108,8 @@ void DumpNodeInfo(const ConfigParameters& config)
         InvalidArgument("printValues and printMetadata: Since both are set to false, there will be nothing to dump");
     }
 
-    ComputationNetwork net(-1); // always use CPU
-    net.Load<ElemType>(modelPath);
+    ComputationNetwork net(-1);    // always use CPU
+    net.Load<ElemType>(modelPath); // TODO: we have a function now to combine this and the previous line
     net.DumpNodeInfoToFile(nodeName, printValues, printMetadata, outputFile, nodeNameRegexStr);
 }
 
@@ -198,6 +199,7 @@ void DoCommands(const ConfigParameters& config)
     // set up progress tracing for compute cluster management
     if (progressTracing && ((g_mpi == nullptr) || g_mpi->IsMainNode()))
     {
+        ProgressTracing::SetTracingFlag();
         ProgressTracing::TraceTotalNumberOfSteps(fullTotalMaxEpochs); // enable tracing, using this as the total number of epochs
     }
 
@@ -256,6 +258,10 @@ void DoCommands(const ConfigParameters& config)
             else if (action[j] == "convertdbn")
             {
                 DoConvertFromDbn<ElemType>(commandParams);
+            }
+            else if (action[j] == "exportdbn")
+            {
+                DoExportToDbn<ElemType>(commandParams);
             }
             else if (action[j] == "createLabelMap")
             {

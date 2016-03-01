@@ -2,28 +2,37 @@
 // Copyright (c) Microsoft. All rights reserved.
 // Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
 //
-// DebugUtil.cpp : Defines the debug util functions.
+// ExceptionWithCallStack.cpp : Defines the CNTK exception and stack utilities
 //
-#ifndef _CRT_SECURE_NO_WARNINGS
-#define _CRT_SECURE_NO_WARNINGS // "secure" CRT not available on all platforms  --add this at the top of all CPP files that give "function or variable may be unsafe" warnings
-#endif
-
+#include "stdafx.h"
+#include "ExceptionWithCallStack.h"
 #include "Basics.h"
-#include "DebugUtil.h"
+#ifdef _WIN32
+#include "DbgHelp.h"
+#include <WinBase.h>
+#endif
 #include <algorithm>
+#include <iostream>
+
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
 using namespace std;
 
-void DebugUtil::PrintCallStack()
+/// <summary>This function collects the stack tracke and writes it through the provided write function
+/// <param name="write">Function for writing the text associated to a the callstack</param>
+/// <param name="newline">Function for writing and "end-of-line" / "newline"</param>
+/// </summary>
+template <class E>
+void ExceptionWithCallStack<E>::CollectCallStack(const function<void(std::string)>& write, const function<void()>& newline)
 {
+    newline();
 
 #ifdef _WIN32
     typedef USHORT(WINAPI * CaptureStackBackTraceType)(__in ULONG, __in ULONG, __out PVOID*, __out_opt PULONG);
     CaptureStackBackTraceType func = (CaptureStackBackTraceType)(GetProcAddress(LoadLibrary(L"kernel32.dll"), "RtlCaptureStackBackTrace"));
 
-    if (func == NULL)
+    if (func == nullptr)
         return;
 
     void* callStack[MAX_CALLERS];
@@ -32,52 +41,55 @@ void DebugUtil::PrintCallStack()
     HANDLE process;
 
     process = GetCurrentProcess();
-    if (!SymInitialize(process, NULL, TRUE))
+    if (!SymInitialize(process, nullptr, TRUE))
     {
         DWORD error = GetLastError();
-        std::cerr << "Failed to print CALL STACK! SymInitialize error : " << msra::strfun::utf8(FormatWin32Error(error)) << std::endl;
+        write("Failed to print CALL STACK! SymInitialize error : " + msra::strfun::utf8(FormatWin32Error(error)));
+        newline();
         return;
     }
 
-    frames = (func)(0, MAX_CALLERS, callStack, NULL);
-    symbolInfo = (SYMBOL_INFO*) calloc(sizeof(SYMBOL_INFO) + 256 * sizeof(char), 1);
+    frames = (func)(0, MAX_CALLERS, callStack, nullptr);
+    symbolInfo = (SYMBOL_INFO*)calloc(sizeof(SYMBOL_INFO) + 256 * sizeof(char), 1);
     symbolInfo->MaxNameLen = 255;
     symbolInfo->SizeOfStruct = sizeof(SYMBOL_INFO);
-    frames = std::min(frames, MAX_CALL_STACK_DEPTH);
-
-    std::cerr << std::endl
-              << "[CALL STACK]" << std::endl;
+    frames = min(frames, MAX_CALL_STACK_DEPTH);
 
     for (unsigned int i = 1; i < frames; i++)
     {
         if (i == 1)
         {
-            std::cerr << "    >";
+            write( "    >");
         }
         else
         {
-            std::cerr << "    -";
+            write("    -");
         }
 
         if (SymFromAddr(process, (DWORD64)(callStack[i]), 0, symbolInfo))
         {
-            std::cerr << symbolInfo->Name << std::endl;
+            write(symbolInfo->Name);
+            newline();
         }
         else
         {
             DWORD error = GetLastError();
-            std::cerr << callStack[i] << " (SymFromAddr error : " << msra::strfun::utf8(FormatWin32Error(error)) << ")" << std::endl;
+            char buf[17];
+            sprintf_s(buf, "%p", callStack[i]);
+            write(buf);
+            write(" (SymFromAddr error : " + msra::strfun::utf8(FormatWin32Error(error)) + ")");
+            newline();
         }
     }
 
-    std::cerr << std::endl;
+    newline();
 
     free(symbolInfo);
 
     SymCleanup(process);
 #else
-    std::cerr << std::endl
-              << "[CALL STACK]" << std::endl;
+    write("[CALL STACK]");
+    newline();
 
     unsigned int MAX_NUM_FRAMES = 1024;
     void* backtraceAddresses[MAX_NUM_FRAMES];
@@ -100,6 +112,8 @@ void DebugUtil::PrintCallStack()
             else if ((*p == ')') && (beginOffset || beginName))
                 endOffset = p;
         }
+        const int buf_size = 1024;
+        char buffer[buf_size];
 
         if (beginName && endOffset && (beginName < endOffset))
         {
@@ -120,21 +134,64 @@ void DebugUtil::PrintCallStack()
 
             if (beginOffset)
             {
-                fprintf(stderr, "  %-30s ( %-40s  + %-6s) %s\n", symbolList[i], fName, beginOffset, endOffset);
+                snprintf(buffer, buf_size, "  %-30s ( %-40s  + %-6s) %s\n", symbolList[i], fName, beginOffset, endOffset);
             }
             else
             {
-                fprintf(stderr, "  %-30s ( %-40s    %-6s) %s\n", symbolList[i], fName, "", endOffset);
+                snprintf(buffer, buf_size, "  %-30s ( %-40s    %-6s) %s\n", symbolList[i], fName, "", endOffset);
             }
         }
         else
         {
             // Couldn't parse the line. Print the whole line.
-            fprintf(stderr, "  %-30s\n", symbolList[i]);
+            snprintf(buffer, buf_size, "  %-30s\n", symbolList[i]);
         }
+
+        write(buffer);
     }
 
     free(symbolList);
 #endif
 }
-} } }
+
+/// <summary>This function retrieves the call stack as a string</summary>
+template <class E>
+std::string ExceptionWithCallStack<E>::GetCallStack()
+{
+    std::string output;
+    auto WriteToString = [&output](std::string stack)
+    {
+        output += stack;
+    };
+
+    auto WriteNewLineToString = [&output]
+    {
+        output += "\n";
+    };
+
+    CollectCallStack(WriteToString, WriteNewLineToString);
+
+    return output;
+}
+
+/// <summary>This function outputs the call stack to the std err</summary>
+template <class E>
+void ExceptionWithCallStack<E>::PrintCallStack()
+{
+    auto WriteToStdErr = [](std::string stack)
+    {
+        std::cerr << stack;
+    };
+
+    auto WriteNewLineToStdErr = []
+    {
+        std::cerr << std::endl;
+    };
+
+    CollectCallStack(WriteToStdErr, WriteNewLineToStdErr);
+}
+
+template class ExceptionWithCallStack<std::runtime_error>;
+template class ExceptionWithCallStack<std::logic_error>;
+template class ExceptionWithCallStack<std::invalid_argument>;
+}}}

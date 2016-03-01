@@ -28,12 +28,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 /*static*/ class ProgressTracing
 {
     bool m_enabled;
+    bool m_tracingFlag;
     size_t m_totalNumberOfSteps; // total number of epochs in entire training run
     size_t m_currentStepOffset;  // current offset
     Timer m_progressTracingTimer;
 
     ProgressTracing()
-        : m_enabled(false), m_totalNumberOfSteps(0), m_currentStepOffset(0)
+        : m_enabled(false), m_tracingFlag(false), m_totalNumberOfSteps(0), m_currentStepOffset(0)
     {
     }
 
@@ -47,6 +48,17 @@ public:
     static bool IsEnabled()
     {
         return GetStaticInstance().m_enabled;
+    }
+
+    static bool GetTracingFlag()
+    {
+        return GetStaticInstance().m_tracingFlag;
+    }
+
+    static void SetTracingFlag()
+    {
+        auto& us = GetStaticInstance();
+        us.m_tracingFlag = true;
     }
 
     // call TraceTotalNumberOfSteps() to set the total number of steps

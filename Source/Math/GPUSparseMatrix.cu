@@ -5,7 +5,6 @@
 
 #include "Basics.h"
 #include "BestGpu.h"
-#include "DebugUtil.h"
 
 #ifndef CPUONLY
 
@@ -433,7 +432,7 @@ void GPUSparseMatrix<ElemType>::ChangeDeviceTo(DEVICEID_TYPE to_id)
     }
     else
     {
-        ElemType* d_dst = TracingGPUMemoryAllocator::Allocate<ElemType>(to_id, m_totalBufferSizeAllocated / sizeof(ElemType));
+        ElemType* d_dst = (ElemType*)TracingGPUMemoryAllocator::Allocate<char>(to_id, m_totalBufferSizeAllocated);
 
         // first try peer access
         int canAccessPeer = false;
@@ -695,7 +694,7 @@ void GPUSparseMatrix<ElemType>::Reshape(const size_t numRows, const size_t numCo
 
     size_t bufferSizeNeeded = BufferSizeNeeded(numRows, numCols, m_elemSizeAllocated, m_format);
 
-    ElemType* pArray = TracingGPUMemoryAllocator::Allocate<ElemType>(m_computeDevice, bufferSizeNeeded / sizeof(ElemType));
+    ElemType* pArray = (ElemType*)TracingGPUMemoryAllocator::Allocate<char>(m_computeDevice, bufferSizeNeeded);
 
     if (m_pArray != nullptr)
     {
@@ -763,7 +762,7 @@ void GPUSparseMatrix<ElemType>::Resize(const size_t numRows, const size_t numCol
 
     if (reallocate)
     {
-        ElemType* pArray = TracingGPUMemoryAllocator::Allocate<ElemType>(m_computeDevice, bufferSizeNeeded / sizeof(ElemType));
+        ElemType* pArray = (ElemType*)TracingGPUMemoryAllocator::Allocate<char>(m_computeDevice, bufferSizeNeeded);
 
         if (m_pArray != nullptr)
         {

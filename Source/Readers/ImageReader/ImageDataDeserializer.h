@@ -7,6 +7,8 @@
 #include <opencv2/core/mat.hpp>
 #include "DataDeserializerBase.h"
 #include "Config.h"
+#include "ByteReader.h"
+#include <unordered_map>
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -22,9 +24,10 @@ public:
 
     // Description of streams that this data deserializer provides.
     std::vector<StreamDescriptionPtr> GetStreamDescriptions() const override;
+    virtual size_t GetTotalNumberOfChunks() override;
 
     // Get sequences by specified ids. Order of returned sequences corresponds to the order of provided ids.
-    std::vector<std::vector<SequenceDataPtr>> GetSequencesById(const std::vector<size_t>& ids) override;
+    virtual ChunkPtr GetChunk(size_t chunkId) override;
 
 protected:
     void FillSequenceDescriptions(SequenceDescriptions& timeline) const override;
@@ -40,6 +43,8 @@ private:
         size_t m_classId;
     };
 
+    class ImageChunk;
+
     // A helper class for generation of type specific labels (currently float/double only).
     class LabelGenerator;
     typedef std::shared_ptr<LabelGenerator> LabelGeneratorPtr;
@@ -48,14 +53,19 @@ private:
     // Sequence descriptions for all input data.
     std::vector<ImageSequenceDescription> m_imageSequences;
 
-    // Buffer to store label data.
-    std::vector<SparseSequenceDataPtr> m_labels;
-
-    // Buffer to store feature data.
-    std::vector<cv::Mat> m_currentImages;
-
     // Element type of the feature/label stream (currently float/double only).
     ElementType m_featureElementType;
+
+    // Not using nocase_compare here as it's not correct on Linux.
+    using PathReaderMap = std::unordered_map<std::string, std::shared_ptr<ByteReader>>;
+    void RegisterByteReader(size_t seqId, const std::string& path, PathReaderMap& knownReaders);
+    cv::Mat ReadImage(size_t seqId, const std::string& path);
+
+    // REVIEW alexeyk: can potentially use vector instead of map. Need to handle default reader and resizing though.
+    using SeqReaderMap = std::unordered_map<size_t, std::shared_ptr<ByteReader>>;
+    SeqReaderMap m_readers;
+
+    FileByteReader m_defaultReader;
 };
 
 }}}

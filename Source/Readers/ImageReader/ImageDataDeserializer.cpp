@@ -8,10 +8,6 @@
 #include "ImageDataDeserializer.h"
 #include "ImageConfigHelper.h"
 
-#ifndef UNREFERENCED_PARAMETER
-#define UNREFERENCED_PARAMETER(P) (P)
-#endif
-
 namespace Microsoft { namespace MSR { namespace CNTK {
 
 class ImageDataDeserializer::LabelGenerator
@@ -45,6 +41,65 @@ private:
     TElement m_value;
 };
 
+// Used to keep track of the image. Accessed only using DenseSequenceData interface.
+struct DeserializedImage : DenseSequenceData
+{
+    cv::Mat m_image;
+};
+
+// For image, chunks correspond to a single image.
+class ImageDataDeserializer::ImageChunk : public Chunk, public std::enable_shared_from_this<ImageChunk>
+{
+    ImageSequenceDescription m_description;
+    ImageDataDeserializer& m_parent;
+
+public:
+    ImageChunk(ImageSequenceDescription& description, ImageDataDeserializer& parent)
+        : m_description(description), m_parent(parent)
+    {
+    }
+
+    virtual std::vector<SequenceDataPtr> GetSequence(size_t sequenceId) override
+    {
+        assert(sequenceId == m_description.m_id);
+        UNUSED(sequenceId);
+        const auto& imageSequence = m_description;
+
+        auto image = std::make_shared<DeserializedImage>();
+        image->m_image = std::move(m_parent.ReadImage(m_description.m_id, imageSequence.m_path));
+        auto& cvImage = image->m_image;
+
+        if (!cvImage.data)
+        {
+            RuntimeError("Cannot open file '%s'", imageSequence.m_path.c_str());
+        }
+
+        // Convert element type.
+        int dataType = m_parent.m_featureElementType == ElementType::tfloat ? CV_32F : CV_64F;
+        if (cvImage.type() != CV_MAKETYPE(dataType, cvImage.channels()))
+        {
+            cvImage.convertTo(cvImage, dataType);
+        }
+
+        if (!cvImage.isContinuous())
+        {
+            cvImage = cvImage.clone();
+        }
+        assert(cvImage.isContinuous());
+
+        image->m_data = image->m_image.data;
+        ImageDimensions dimensions(cvImage.cols, cvImage.rows, cvImage.channels());
+        image->m_sampleLayout = std::make_shared<TensorShape>(dimensions.AsTensorShape(HWC));
+        image->m_numberOfSamples = 1;
+        image->m_chunk = shared_from_this();
+
+        SparseSequenceDataPtr label = std::make_shared<SparseSequenceData>();
+        label->m_chunk = shared_from_this();
+        m_parent.m_labelGenerator->CreateLabelFor(imageSequence.m_classId, *label);
+        return std::vector<SequenceDataPtr> { image, label };
+    }
+};
+
 ImageDataDeserializer::ImageDataDeserializer(const ConfigParameters& config)
 {
     ImageConfigHelper configHelper(config);
@@ -73,7 +128,7 @@ ImageDataDeserializer::ImageDataDeserializer(const ConfigParameters& config)
     }
     else
     {
-        RuntimeError("Unsupported label element type '%d'.", label->m_elementType);
+        RuntimeError("Unsupported label element type '%d'.", (int)label->m_elementType);
     }
 
     CreateSequenceDescriptions(configHelper.GetMapPath(), labelDimension);
@@ -81,7 +136,7 @@ ImageDataDeserializer::ImageDataDeserializer(const ConfigParameters& config)
 
 void ImageDataDeserializer::CreateSequenceDescriptions(std::string mapPath, size_t labelDimension)
 {
-    UNREFERENCED_PARAMETER(labelDimension);
+    UNUSED(labelDimension);
 
     std::ifstream mapFile(mapPath);
     if (!mapFile)
@@ -93,6 +148,7 @@ void ImageDataDeserializer::CreateSequenceDescriptions(std::string mapPath, size
     ImageSequenceDescription description;
     description.m_numberOfSamples = 1;
     description.m_isValid = true;
+    PathReaderMap knownReaders;
     for (size_t lineIndex = 0; std::getline(mapFile, line); ++lineIndex)
     {
         std::stringstream ss(line);
@@ -119,78 +175,19 @@ void ImageDataDeserializer::CreateSequenceDescriptions(std::string mapPath, size
                 static_cast<int>(labelDimension));
         }
         m_imageSequences.push_back(description);
+        RegisterByteReader(description.m_id, description.m_path, knownReaders);
     }
+}
+
+size_t ImageDataDeserializer::GetTotalNumberOfChunks()
+{
+    // Currently we use one chunk per image.
+    return m_imageSequences.size();
 }
 
 std::vector<StreamDescriptionPtr> ImageDataDeserializer::GetStreamDescriptions() const
 {
     return m_streams;
-}
-
-std::vector<std::vector<SequenceDataPtr>> ImageDataDeserializer::GetSequencesById(const std::vector<size_t>& ids)
-{
-    if (ids.empty())
-    {
-        RuntimeError("Number of requested sequences cannot be zero.");
-    }
-
-    m_currentImages.resize(ids.size());
-    m_labels.resize(ids.size());
-
-    std::vector<std::vector<SequenceDataPtr>> result;
-    result.resize(ids.size());
-
-#pragma omp parallel for ordered schedule(dynamic)
-    for (int i = 0; i < ids.size(); ++i)
-    {
-        if (ids[i] >= m_imageSequences.size())
-        {
-            RuntimeError("Invalid sequence id is provided '%d', expected range [0..%d].",
-                         static_cast<int>(ids[i]),
-                         static_cast<int>(m_imageSequences.size()) - 1);
-        }
-
-        const auto& imageSequence = m_imageSequences[ids[i]];
-
-        // Construct image
-        m_currentImages[i] = std::move(cv::imread(imageSequence.m_path, cv::IMREAD_COLOR));
-        cv::Mat& cvImage = m_currentImages[i];
-
-        if (!cvImage.data)
-        {
-            RuntimeError("Cannot open file '%s'", imageSequence.m_path.c_str());
-        }
-
-        // Convert element type.
-        // TODO We should all native CV element types to be able to match the behavior of the old reader.
-        int dataType = m_featureElementType == ElementType::tfloat ? CV_32F : CV_64F;
-        if (cvImage.type() != CV_MAKETYPE(dataType, cvImage.channels()))
-        {
-            cvImage.convertTo(cvImage, dataType);
-        }
-
-        if (!cvImage.isContinuous())
-        {
-            cvImage = cvImage.clone();
-        }
-        assert(cvImage.isContinuous());
-
-        ImageDimensions dimensions(cvImage.cols, cvImage.rows, cvImage.channels());
-        auto image = std::make_shared<DenseSequenceData>();
-        image->m_data = cvImage.data;
-        image->m_sampleLayout = std::make_shared<TensorShape>(dimensions.AsTensorShape(HWC));
-        image->m_numberOfSamples = 1;
-
-        if (m_labels[i] == nullptr)
-        {
-            m_labels[i] = std::make_shared<SparseSequenceData>();
-        }
-
-        m_labelGenerator->CreateLabelFor(imageSequence.m_classId, *m_labels[i]);
-        result[i] = std::move(std::vector<SequenceDataPtr>{image, m_labels[i]});
-    }
-
-    return result;
 }
 
 void ImageDataDeserializer::FillSequenceDescriptions(SequenceDescriptions& timeline) const
@@ -206,4 +203,63 @@ void ImageDataDeserializer::FillSequenceDescriptions(SequenceDescriptions& timel
         });
 }
 
+ChunkPtr ImageDataDeserializer::GetChunk(size_t chunkId)
+{
+    auto sequenceDescription = m_imageSequences[chunkId];
+    return std::make_shared<ImageChunk>(sequenceDescription, *this);
+}
+
+void ImageDataDeserializer::RegisterByteReader(size_t seqId, const std::string& path, PathReaderMap& knownReaders)
+{
+    assert(!path.empty());
+
+    auto atPos = path.find_first_of('@');
+    // Is it container or plain image file?
+    if (atPos == std::string::npos)
+        return;
+    // REVIEW alexeyk: only .zip container support for now.
+#ifdef USE_ZIP
+    assert(atPos > 0);
+    assert(atPos + 1 < path.length());
+    auto containerPath = path.substr(0, atPos);
+    // skip @ symbol and path separator (/ or \)
+    auto itemPath = path.substr(atPos + 2);
+    // zlib only supports / as path separator.
+    std::replace(begin(itemPath), end(itemPath), '\\', '/');
+    std::shared_ptr<ByteReader> reader;
+    auto r = knownReaders.find(containerPath);
+    if (r == knownReaders.end())
+    {
+        reader = std::make_shared<ZipByteReader>(containerPath);
+        knownReaders[containerPath] = reader;
+    }
+    else
+    {
+        reader = (*r).second;
+    }
+    reader->Register(seqId, itemPath);
+    m_readers[seqId] = reader;
+#else
+    UNUSED(seqId);
+    UNUSED(knownReaders);
+    RuntimeError("The code is built without zip container support. Only plain image files are supported.");
+#endif
+}
+
+cv::Mat ImageDataDeserializer::ReadImage(size_t seqId, const std::string& path)
+{
+    assert(!path.empty());
+
+    ImageDataDeserializer::SeqReaderMap::const_iterator r;
+    if (m_readers.empty() || (r = m_readers.find(seqId)) == m_readers.end())
+        return m_defaultReader.Read(seqId, path);
+    return (*r).second->Read(seqId, path);
+}
+
+cv::Mat FileByteReader::Read(size_t, const std::string& path)
+{
+    assert(!path.empty());
+
+    return cv::imread(path, cv::IMREAD_COLOR);
+}
 }}}

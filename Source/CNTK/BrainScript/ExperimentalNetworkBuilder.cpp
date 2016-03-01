@@ -66,7 +66,7 @@ wstring computationNodes = // TODO: use actual TypeName() here? would first need
     L"ColumnwiseCrossProduct = KhatriRaoProduct // deprecated \n" // TODO: should it be deprecated? It is described as easier to understand in the CNTKBook.
     L"ClassificationError = ErrorPrediction \n"
     L"Delay = PastValue \n" // TODO: should it allow negative offsets and an if test here?
-    L"BatchNormalization(input, scale, bias, runMean, runInvStdDev, eval, spatial, expAvgFactor = 1.0, epsilon = 0.00001, useCntkEngine = true, imageLayout='CHW', tag='') = new ComputationNode [ operation = 'BatchNormalization' ; inputs = (input : scale : bias : runMean : runInvStdDev) /*plus the function args*/ ]\n"
+    L"BatchNormalization(input, scale, bias, runMean, runInvStdDev, eval, spatial, normalizationTimeConstant = 0, epsilon = 0.00001, useCntkEngine = true, imageLayout='CHW', tag='') = new ComputationNode [ operation = 'BatchNormalization' ; inputs = (input : scale : bias : runMean : runInvStdDev) /*plus the function args*/ ]\n"
 // standard nodes. We use macros to define these strings.
 #define UnaryStandardNode(Op, a) L## #Op L"(" L## #a L", tag='') = new ComputationNode [ operation = '" L## #Op L"' ; inputs = " L## #a L" /*plus the function args*/ ]\n"
 #define BinaryStandardNode(Op, a, b) L## #Op L"(" L## #a L", " L## #b L", tag='') = new ComputationNode [ operation = '" L## #Op L"' ; inputs = (" L## #a L" : " L## #b L") /*plus the function args*/ ]\n"
@@ -103,8 +103,6 @@ wstring computationNodes = // TODO: use actual TypeName() here? would first need
     UnaryStandardNode(Mean, dataVectorSequence)
     BinaryStandardNode(Minus, leftMatrix, rightMatrix)
     UnaryStandardNode(Negate, input)
-    //BinaryStandardNode(NoiseContrastiveEstimationNode)
-    //BinaryStandardNode(ParallelNode)
     TernaryStandardNode(PerDimMeanVarDeNormalization, dataVectorSequence, meanVector, invStdDevVector) // TODO: correct?
     TernaryStandardNode(PerDimMeanVarNormalization, dataVectorSequence, meanVector, invStdDevVector)
     BinaryStandardNode(Plus, leftMatrix, rightMatrix)
@@ -118,8 +116,7 @@ wstring computationNodes = // TODO: use actual TypeName() here? would first need
     UnaryStandardNode(Softmax, z)
     UnaryStandardNode(Hardmax, z)
     BinaryStandardNode(SquareError, aMatrix, anotherMatrix)
-    //BinaryStandardNode(StrideTimesNode)
-    //BinaryStandardNode(SumColumnElementsNode)
+    UnaryStandardNode(SumColumnElements, z)
     UnaryStandardNode(SumElements, matrix)
     UnaryStandardNode(Tanh, z)
     UnaryStandardNode(TimeReverse, vectorSequence)
@@ -128,4 +125,8 @@ wstring computationNodes = // TODO: use actual TypeName() here? would first need
     UnaryStandardNode(Transpose, matrix)
 #endif
     BinaryStandardNode(TransposeTimes, leftMatrix, rightMatrix)
+    // those nodes are deprecated, we won't implement them in BS:
+    //BinaryStandardNode(NoiseContrastiveEstimationNode)
+    //BinaryStandardNode(ParallelNode)
+    //BinaryStandardNode(StrideTimesNode)
     ;
