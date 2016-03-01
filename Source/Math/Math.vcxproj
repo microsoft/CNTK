@@ -158,6 +158,7 @@
     <ClInclude Include="..\Common\Include\fileutil.h" />
     <ClInclude Include="CommonMatrix.h" />
     <ClInclude Include="ConvolutionEngine.h" />
+    <ClInclude Include="ConvolveGeometry.h" />
     <ClInclude Include="CPUMatrix.h" />
     <ClInclude Include="MatrixQuantizerImpl.h" />
     <ClInclude Include="TensorOps.h" />

@@ -18,6 +18,7 @@
 
 #include "Matrix.h"
 #include "TensorShape.h" // for ImageLayoutKind
+#include "ConvolveGeometry.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 

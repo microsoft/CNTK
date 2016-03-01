@@ -25,6 +25,157 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
+template <class ElemType>
+class NDConvolutionNode : public ComputationNode<ElemType>, public NumInputs<2>
+{
+    typedef ComputationNode<ElemType> Base;
+    UsingComputationNodeMembersBoilerplate;
+    static const std::wstring TypeName()
+    {
+        return L"NDConvolution";
+    }
+
+public:
+    NDConvolutionNode(DEVICEID_TYPE deviceId, const wstring& name)
+        : Base(deviceId, name)
+    {
+    }
+    NDConvolutionNode(DEVICEID_TYPE deviceId, const wstring& name, const TensorShape& kernelShape, const TensorShape& mapShape, const TensorShape& strideShape,
+                      const std::vector<bool>& sharing, const std::vector<bool>& autoPadding, const TensorShape& lowerPad, const TensorShape& upperPad,
+                      ImageLayoutKind imageLayout, size_t maxTempMemSizeInSamples)
+        : Base(deviceId, name), m_kernel(kernelShape), m_stride(strideShape), m_sharing(sharing),
+        m_autoPad(autoPadding), m_lowerPad(lowerPad), m_upperPad(upperPad)
+    {
+    }
+    NDConvolutionNode(const ScriptableObjects::IConfigRecordPtr configp)
+        : NDConvolutionNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"kernelShape"), configp->Get(L"mapShape"), configp->Get(L"strideShape"),
+        configp->Get(L"dimSharing"), configp->Get(L"dimPadding"), configp->Get(L"dimPadLower"), configp->Get(L"dimPadUpper"),
+        ImageLayoutKindFrom(configp->Get(L"imageLayout")), configp->Get(L"maxTempMemSizeInSamples"))
+    {
+        AttachInputs(configp, this->GetExpectedNumInputs());
+    }
+
+public:
+    void Save(File& fstream) const override
+    {
+        Base::Save(fstream);
+    }
+
+    void Load(File& fstream, size_t modelVersion) override
+    {
+        Base::Load(fstream, modelVersion);
+    }
+
+    void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
+    {
+        Base::CopyTo(nodeP, newName, flags);
+        if (flags & CopyNodeFlags::copyNodeValue)
+        {
+        }
+    }
+
+    void BackpropTo(const size_t inputIndex, const FrameRange& fr) override
+    {
+    }
+
+    virtual bool OutputUsedInComputingInputNodesGradients() const override
+    {
+        return false;
+    }
+
+    void ForwardProp(const FrameRange& fr) override
+    {
+    }
+
+    void Validate(bool isFinalValidationPass) override
+    {
+        Base::Validate(isFinalValidationPass);
+        InferMBLayoutFromInputsForStandardCase();
+
+        bool validate = isFinalValidationPass;
+        if (validate && m_imageLayoutKind != ImageLayoutKind::CHW)
+        {
+            InvalidArgument(
+                "NDConvolution supports only cuDNN (CHW) data layout. "
+                "Please specify imageLayout=\"cudnn\" in NDConvolution node in your BrainScript "
+                "and make sure input data layout is CHW");
+        }
+
+        auto dimsInput = GetInputSampleLayout(1);
+        if (validate)
+        {
+            if (dimsInput.GetRank() != m_kernel.GetRank())
+                InvalidArgument("Convolution input and kernel tensors must have the same rank.");
+            if (m_stride.GetRank() != 1 && dimsInput.GetRank() != m_stride.GetRank())
+                InvalidArgument("Convolution stride tensor must have rank 1 or the same as the input tensor.");
+            if (m_sharing.size() != 1 && dimsInput.GetRank() != m_sharing.size())
+                InvalidArgument("Convolution sharing tensor must have rank 1 or the same as the input tensor.");
+            if (m_autoPad.size() != 1 && dimsInput.GetRank() != m_autoPad.size())
+                InvalidArgument("Convolution padding tensor must have rank 1 or the same as the input tensor.");
+            if (m_lowerPad.GetRank() != 1 && dimsInput.GetRank() != m_lowerPad.GetRank())
+                InvalidArgument("Convolution lower pad tensor must have rank 1 or the same as the input tensor.");
+            if (m_upperPad.GetRank() != 1 && dimsInput.GetRank() != m_upperPad.GetRank())
+                InvalidArgument("Convolution upper pad tensor must have rank 1 or the same as the input tensor.");
+        }
+
+        SmallVector<size_t> dimsOutput(dimsInput.GetRank());
+        for (size_t i = 0; i < dimsInput.GetRank(); i++)
+        {
+            assert(dimsInput[i] >= 1);
+            if (validate && m_kernel[i] > dimsInput[i])
+                InvalidArgument("NDConvolution operation requires that kernel dim %d <= input dim %d.", (int)m_kernel[i], (int)dimsInput[i]);
+
+            size_t delta = m_stride[m_stride.GetRank() == 1 ? 0 : i];
+            if (validate && delta > m_kernel[i])
+                InvalidArgument("NDConvolution operation requires that stride %d <= input dim %d.", (int)m_stride[i], (int)dimsInput[i]);
+            
+            size_t dim = dimsInput[i];
+            bool autoPad = m_autoPad[m_autoPad.size() == 1 ? 0 : i];
+            if (autoPad)
+            {
+                dim -= 1;
+            }
+            else
+            {
+                size_t lo = m_lowerPad[m_lowerPad.size() == 1 ? 0 : i];
+                size_t hi = m_upperPad[m_upperPad.size() == 1 ? 0 : i];
+                dim += lo + hi;
+            }
+        }
+
+        SetDims(TensorShape(dimsOutput), true);
+
+        if (isFinalValidationPass)
+        {
+        }
+    }
+
+    void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool) override
+    {
+        Base::RequestMatricesBeforeForwardProp(matrixPool);
+    }
+
+    void RequestMatricesBeforeBackprop(MatrixPool& matrixPool) override
+    {
+        Base::RequestMatricesBeforeBackprop(matrixPool);
+    }
+
+    void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool) override
+    {
+        Base::ReleaseMatricesAfterBackprop(matrixPool);
+    }
+
+private:
+    ImageLayoutKind m_imageLayoutKind;
+
+    TensorShape m_kernel;
+    TensorShape m_stride;
+    std::vector<bool> m_sharing;
+    std::vector<bool> m_autoPad;
+    TensorShape m_lowerPad;
+    TensorShape m_upperPad;
+};
+
 // -----------------------------------------------------------------------
 // ConvolutionNode (convolutionWeights, inputFeature)
 // -----------------------------------------------------------------------

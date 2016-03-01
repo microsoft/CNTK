@@ -1,0 +1,152 @@
+# Parameters can be overwritten on the command line
+# for example: cntk configFile=myConfigFile RootDir=../.. 
+# For running from Visual Studio add
+# currentDirectory=$(SolutionDir)/<path to corresponding data folder> 
+RootDir = ".."
+
+ConfigDir = "$RootDir$/Config"
+DataDir   = "$RootDir$/Data"
+OutputDir = "$RootDir$/Output"
+ModelDir  = "$OutputDir$/Models"
+
+deviceId = 0
+imageLayout = "cudnn"
+# override the above as follows when running on CPU:
+# deviceId = -1
+# imageLayout = "legacy"
+
+command = train:test
+
+precision = "float"
+modelPath = "$ModelDir$/04_NDConvolution"
+
+# uncomment the following line to write logs to a file 
+stderr = "$OutputDir$/04_NDConvolution_out"
+traceLevel=1
+numMBsToShowResult=500
+
+prefetch=true
+useCuDnn=true
+
+#######################################
+#  TRAINING CONFIG                    #
+#######################################
+
+train = [
+    action = "train"
+
+    BrainScriptNetworkBuilder = [
+
+        useCuDnn = $useCuDnn$
+
+        // macros
+        NDConvReLULayer(inp, kW, kH, inMap, outMap, hStride, vStride, wScale, bValue) = [  // ReLU non-linearity
+            convW = Parameter(outMap, kW * kH * inMap, init="uniform", initValueScale=wScale, initOnCPUOnly=false)
+            //conv = NDConvolution(convW, inp, kernelShape=(kW : kH : inMap), mapShape=(1 : 1 : outMap), stride=(hStride : vStride : 1), 
+            //                     sharing=(true : true : true), padding=(true : true : false), imageLayout=if useCuDnn then "cudnn" else "legacy")
+            //conv = NDConvolution(convW, inp, (kW : kH : inMap), (1 : 1 : outMap), (hStride : vStride : 1), 
+            //                     (1 : 1 : 1), (1 : 1 : 1), (1 : 1 : 1), (1 : 1 : 1), imageLayout=if useCuDnn then "cudnn" else "legacy")
+            conv = NDConvolution(convW, inp, (kW : kH : inMap), (1 : 1 : outMap), stride=1, sharing=true, autoPadding=false, lowerPad=1, imageLayout=if useCuDnn then "cudnn" else "legacy")
+            convB = if useCuDnn
+                    then ParameterTensor((1 : 1 : outMap), init="fixedValue", value=bValue)
+                    else Parameter(outMap, 1,              init="fixedValue", value=bValue)
+            convPlusB = Plus(conv, convB);
+            out = RectifiedLinear(convPlusB);
+        ]
+
+        DNNSigmoidLayer(inDim, outDim, x, parmScale) = [        // Sigmoid non-linearity
+            W = Parameter(outDim, inDim, init="uniform", initValueScale=parmScale, initOnCPUOnly=false) 
+            b = Parameter(outDim, 1,     init="uniform", initValueScale=parmScale, initOnCPUOnly=false) 
+            t = Times(W, x)
+            z = Plus(t, b)
+            out = Sigmoid(z)
+        ]
+
+        DNNLayer(inDim, outDim, x, parmScale) = [               // no non-linearity, as input for SoftMax
+            W = Parameter(outDim, inDim, init="uniform", initValueScale=parmScale, initOnCPUOnly=false)
+            b = Parameter(outDim, 1,     init="uniform", initValueScale=parmScale, initOnCPUOnly=false)
+            t = Times(W, x)
+            out = Plus(t, b)
+        ]
+
+        imageW = 28
+        imageH = 28
+        labelDim = 10
+
+        features = ImageInput(imageW, imageH, 1, imageLayout=if useCuDnn then "cudnn" else "legacy", tag="feature")
+        featScale = Constant(0.00390625)
+        featScaled = Scale(featScale, features)
+        labels = Input(labelDim, tag="label")
+
+        # conv1
+        kW1 = 5
+        kH1 = 5
+        cMap1 = 16
+        hStride1 = 1
+        vStride1 = 1
+        # weight[cMap1, kW1 * kH1 * inputChannels]
+        conv1_act = NDConvReLULayer(featScaled, kW1, kH1, 1, cMap1, hStride1, vStride1, 10, 1).out
+
+        h1Dim = 128
+        # DNNSigmoidLayer and DNNLayer are defined in Macros.ndl
+        h1 = DNNSigmoidLayer(12544, h1Dim, conv1_act, 1).out
+        ol = DNNLayer(h1Dim, labelDim, h1, 1).out
+
+        ce = CrossEntropyWithSoftmax(labels, ol, tag="criterion")
+        err = ErrorPrediction(labels, ol, tag="eval")
+        outputNodes = ol
+    ]
+    
+    SGD = [
+        epochSize = 60000
+        minibatchSize = 32
+        learningRatesPerMB = 0.5
+        momentumPerMB = 0*10:0.7
+        maxEpochs = 15
+    ]
+    
+    reader = [
+        readerType = "UCIFastReader"
+        # To get the data (Train-28x28.txt) please run `python mnist_convert.py` 
+        # from the 'AdditionalFiles' folder. See REAMDE.md for details.
+        file = "$DataDir$/Train-28x28.txt"
+        
+        features = [
+            dim = 784
+            start = 1
+        ]
+        
+        labels = [
+            dim = 1
+            start = 0
+            labelDim = 10
+            labelMappingFile = "$DataDir$/labelsmap.txt"
+        ]
+    ]    
+]
+
+#######################################
+#  TEST CONFIG                        #
+#######################################
+
+test = [
+    action = test
+    minibatchSize = 16
+    
+    reader = [
+        readerType = "UCIFastReader"
+        file = "$DataDir$/Test-28x28.txt"
+        
+        features = [
+            dim = 784
+            start = 1
+        ]
+        
+        labels = [
+            dim = 1
+            start = 0
+            labelDim = 10
+            labelMappingFile = "$DataDir$/labelsmap.txt"
+        ]
+    ]
+]

@@ -97,6 +97,9 @@
     <ClInclude Include="MatrixQuantizerImpl.h">
       <Filter>1bitSGD</Filter>
     </ClInclude>
+    <ClInclude Include="ConvolveGeometry.h">
+      <Filter>Convolution</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="GPUMatrix.h">

@@ -563,5 +563,6 @@ public:
 ScriptableObjects::ConfigurableRuntimeTypeRegister::Add<BoxedTensorShape> registerTensorShape(L"TensorShape");
 ScriptableObjects::ConfigurableRuntimeTypeRegister::Add<BoxedVector<int>> registerIntVector(L"IntVector");
 ScriptableObjects::ConfigurableRuntimeTypeRegister::Add<BoxedVector<size_t>> registerSizeVector(L"SizeVector");
+ScriptableObjects::ConfigurableRuntimeTypeRegister::Add<BoxedVector<bool>> registerBoolVector(L"BoolVector");
 
 }}}
