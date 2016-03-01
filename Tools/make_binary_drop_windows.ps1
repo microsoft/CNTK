@@ -20,8 +20,8 @@ if ($verbose)
 Write-Verbose "Making binary drops..."
 
 # Get Jenkins environment Variables
-$buildConfig =(Get-Item env:BUILD_CONFIGURATION).Value
-$targetConfig =(Get-Item env:TARGET_CONFIGURATION).Value
+$buildConfig = $env:BUILD_CONFIGURATION
+$targetConfig = $env:TARGET_CONFIGURATION
 
 # If not a Release build quit
 If ($buildConfig -ne "Release")
