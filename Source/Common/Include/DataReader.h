@@ -68,7 +68,13 @@ public:
         assert(iter->second);
         auto* matrixp = dynamic_cast<Matrix<ElemType>*>(iter->second.get());
         if (!matrixp)
-            LogicError("GetInputMatrix: Attempted to access input stream '%ls' with wrong precision, got %s instead of %s.", nodeName.c_str(), typeid(iter->second.get()).name(), typeid(Matrix<ElemType>*).name());
+        {
+            // print a rather rich error to track down a regression failure
+            auto isFloat  = !!dynamic_cast<Matrix<float>*>(iter->second.get());
+            auto isDouble = !!dynamic_cast<Matrix<double>*>(iter->second.get());
+            LogicError("GetInputMatrix<%s>: Attempted to access input stream '%ls' with wrong precision, got %s {%d,%d} instead of %s.",
+                        typeid(ElemType), nodeName.c_str(), typeid(iter->second.get()).name(), (int)isFloat, (int)isDouble, typeid(Matrix<ElemType>*).name());
+        }
         return *matrixp;
     }
     // iterating
