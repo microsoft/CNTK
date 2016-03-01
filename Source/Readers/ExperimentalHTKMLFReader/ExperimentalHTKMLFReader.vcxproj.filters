@@ -3,7 +3,6 @@
   <ItemGroup>
     <ClCompile Include="dllmain.cpp" />
     <ClCompile Include="stdafx.cpp" />
-    <ClCompile Include="DataReader.cpp" />
     <ClCompile Include="..\..\Common\TimerUtility.cpp">
       <Filter>Common</Filter>
     </ClCompile>
@@ -23,6 +22,7 @@
     <ClCompile Include="..\..\Common\ExceptionWithCallStack.cpp">
       <Filter>Common</Filter>
     </ClCompile>
+    <ClCompile Include="Exports.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="stdafx.h" />
