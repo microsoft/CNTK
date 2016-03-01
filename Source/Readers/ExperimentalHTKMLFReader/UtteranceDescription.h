@@ -3,6 +3,8 @@
 // Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
 //
 
+#pragma once
+
 #include "DataDeserializer.h"
 #include "../HTKMLFReader/htkfeatio.h"
 
@@ -17,10 +19,11 @@ class UtteranceDescription : public SequenceDescription
 
     // Index of the utterance inside the chunk.
     size_t m_indexInsideChunk;
+    size_t m_startFrameIndexInsideChunk;
 
 public:
     UtteranceDescription(msra::asr::htkfeatreader::parsedpath&& path)
-        : m_path(std::move(path)), m_indexInsideChunk(0)
+        : m_path(std::move(path)), m_indexInsideChunk(0), m_startFrameIndexInsideChunk(0)
     {
     }
 
@@ -48,6 +51,16 @@ public:
     void SetIndexInsideChunk(size_t indexInsideChunk)
     {
         m_indexInsideChunk = indexInsideChunk;
+    }
+
+    size_t GetStartFrameIndexInsideChunk() const
+    {
+        return m_startFrameIndexInsideChunk;
+    }
+
+    void SetStartFrameInsideChunk(size_t startFrameIndexInsideChunk)
+    {
+        m_startFrameIndexInsideChunk = startFrameIndexInsideChunk;
     }
 };
 
