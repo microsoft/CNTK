@@ -205,6 +205,7 @@ template void DoParameterSVD<double>(const ConfigParameters& config);
 // DoWriteWordAndClassInfo() - implements CNTK "writeWordAndClass" command
 // ===========================================================================
 
+// BUGBUG: This should compare both elements (first one is the word name). This current version leads to different sorting and thus class definitions with VS and gcc.
 template <typename T>
 struct compare_second
 {

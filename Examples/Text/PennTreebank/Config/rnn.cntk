@@ -433,17 +433,31 @@ test = [
 #  WRITE CONFIG                       #
 #######################################
 
+# This will write out the log sentence probabilities
+#   log P(W) = sum_i P(w_n | w_1..w_n-1)
+# of all test sentences in the form log P(W)=<value>, one line per test
+# sentence.
+#
+# This is accomplished by writing out the value of the CE criterion, which
+# is an aggregate over all words in a minibatch. By presenting each sentence
+# as a separate minibatch, the CE criterion is equal to the log sentence prob.
+#
+# This can be used for N-best rescoring if you prepare your N-best hypotheses
+# as an input file with one line of text per hypothesis, where the output is
+# the corresponding log probabilities, one value per line, in the same order.
+
 write = [
     action = "write"
 
     outputPath = "$OutputDir$/Write"
-    outputNodeNames = PosteriorProb     # BUGBUG: This is not the actual conditions LM prob, but a concatenation of class-conditionals, incorrectly normalized.
+    #outputPath = "-"                    # "-" will write to stdout; useful for debugging
+    outputNodeNames = TrainNodeClassBasedCrossEntropy # when processing one sentence per minibatch, this is the sentence posterior
     format = [
+        sequencePrologue = "log P(W)="    # (using this to demonstrate some formatting strings)
         type = "real"
-        sequenceEpilogue = "\n-------------\n" # separator between sequences
     ]
 
-    minibatchSize = 8192                # choose as large as memory allows for maximum concurrency
+    minibatchSize = 8192                # choose this to be big enough for the longest sentence
     # need to be small since models are updated for each minibatch
     traceLevel = 1
     epochSize = 0
@@ -452,8 +466,8 @@ write = [
         # reader to use
         readerType = "LMSequenceReader"
         randomize = "none"              # BUGBUG: This is ignored.
-        nbruttsineachrecurrentiter = 0  # 0 means fill up the minibatch with as many parallel sequences as fit
-        cacheBlockSize = 1              # forces it to go sequence by sequence, bypassing randomization
+        nbruttsineachrecurrentiter = 1  # one sentence per minibatch
+        cacheBlockSize = 1              # workaround to disable randomization
 
         # word class info
         wordclass = "$ModelDir$/vocab.txt"
