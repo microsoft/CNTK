@@ -95,7 +95,6 @@ bool MtQueue<T>::Pop(T& result)
   // empty_condition_.wait(lock,
   //  [this]{ return !buffer_.empty() || exit_; });
   while (buffer_.empty() && !exit_) {
-  // while (true) {
      empty_condition_.wait(lock);
   }
   if (buffer_.empty()) return false;
