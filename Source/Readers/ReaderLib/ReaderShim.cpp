@@ -80,6 +80,23 @@ void ReaderShim<ElemType>::StartDistributedMinibatchLoop(
     });
 }
 
+string EnumerateInputs(const map<wstring, size_t> &nameToStreamId)
+{
+    // TODO use boost::algorithm::join, boost::adapters::transformed, make this a generic function
+    std::stringstream str;
+    bool first = true;
+
+    for (auto s : nameToStreamId)
+    {
+        str << (first ? "" : ", ");
+        auto name = msra::strfun::utf8(s.first);
+        str << '\"' << name.c_str() << '\"';
+        first = false;
+    }
+
+    return str.str();
+}
+
 template <class ElemType>
 bool ReaderShim<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemType>*>& matrices)
 {
@@ -118,21 +135,8 @@ bool ReaderShim<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemType>*
         {
             if (m_nameToStreamId.find(mx.first) == m_nameToStreamId.end())
             {
-                // TODO use boost::algorithm::join, boost::adapters::transformed
-                std::stringstream str;
-                bool first = true;
-                
-                for (auto s : m_nameToStreamId)
-                {
-                    str  << (first ? "" : ", ");
-                    auto name = msra::strfun::utf8(s.first);
-                    str << '\"' << name.c_str() << '\"';
-                    first = false;
-                }
-
-                auto msg = str.str();
-
-                RuntimeError("Could not map input '%s' to the reader. Reader outputs only [%s].", utf8(mx.first.c_str()).c_str(), msg.c_str());
+                string inputNames = EnumerateInputs(m_nameToStreamId);
+                RuntimeError("Could not map input '%s' to the reader. Reader outputs only [%s].", utf8(mx.first.c_str()).c_str(), inputNames.c_str());
             }
 
             size_t streamId = m_nameToStreamId[mx.first];
