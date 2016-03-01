@@ -12,7 +12,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 // Class represents a description of an HTK chunk.
 // It is only used internally by the HTK deserializer.
 // Can exist without associated data and provides methods for requiring/releasing chunk data.
-class ChunkDescription
+class HTKChunkDescription
 {
     // All utterances in the chunk.
     std::vector<UtteranceDescription*> m_utteranceSet;
@@ -28,7 +28,7 @@ class ChunkDescription
     size_t m_totalFrames;
 
 public:
-    ChunkDescription() : m_totalFrames(0)
+    HTKChunkDescription() : m_totalFrames(0)
     {
     }
 
@@ -61,6 +61,11 @@ public:
     size_t GetUtteranceNumberOfFrames(size_t index) const
     {
         return m_utteranceSet[index]->GetNumberOfFrames();
+    }
+
+    UtteranceDescription* GetUtterance(size_t index) const
+    {
+        return m_utteranceSet[index];
     }
 
     // Returns frames of a given utterance.

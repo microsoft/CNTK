@@ -23,17 +23,23 @@ struct RandomizedChunk
     size_t m_chunkId;
     const ChunkDescription* m_original;
     size_t m_samplePositionStart;
+    size_t m_sequencePositionStart;
     ClosedOpenInterval m_randomizationWindow;
 
     size_t globalte() const
     {
         return m_original->numberOfSamples + m_samplePositionStart;
     }
+
+    size_t PositionEnd() const
+    {
+        return m_original->numberOfSequences + m_sequencePositionStart;
+    }
 };
 
 struct RandomizedSequenceDescription
 {
-    const SequenceDescription* m_original;
+    SequenceDescriptionPtr m_original;
     const RandomizedChunk* m_chunk;
 };
 
@@ -53,7 +59,7 @@ public:
         IDataDeserializerPtr deserializer,
         DistributionMode distributionMode,
         bool useLegacyRandomization,
-        ICorpusPtr corpus);
+        IMetaDataPtr metadata);
 
     virtual ~PartialBlockRandomizer()
     {
@@ -76,12 +82,12 @@ private:
     size_t m_sweepStartInSamples;
 
     friend class SequenceRandomizer;
-    std::unique_ptr<SequenceRandomizer> m_sequenceRandomizer;
+    std::shared_ptr<SequenceRandomizer> m_sequenceRandomizer;
     std::map<size_t, ChunkPtr> m_chunks;
     IDataDeserializerPtr m_deserializer;
     std::vector<RandomizedChunk> m_randomizedChunks;    // (includes a sentinel)
     std::vector<StreamDescriptionPtr> m_streams;
-    ICorpusPtr m_corpus;
+    IMetaDataPtr m_metaData;
 
     // General configuration
     bool m_useLegacyRandomization;

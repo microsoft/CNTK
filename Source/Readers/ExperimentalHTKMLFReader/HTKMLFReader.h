@@ -7,7 +7,7 @@
 
 #include "Reader.h"
 #include "SampleModePacker.h"
-#include "BlockRandomizer.h"
+#include "PartialBlockRandomizer.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -44,7 +44,7 @@ private:
     // Memory provider (TODO: this will possibly change in the near future.)
     MemoryProviderPtr m_provider;
 
-    std::shared_ptr<BlockRandomizer> m_randomizer;
+    std::shared_ptr<PartialBlockRandomizer> m_randomizer;
 };
 
 }}}

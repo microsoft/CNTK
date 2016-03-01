@@ -35,6 +35,7 @@ struct SequenceDescription
     KeyType m_key;            // Sequence key, used for correlations between sequences of different deserializers.
 };
 typedef std::vector<const SequenceDescription*> SequenceDescriptions;
+typedef std::shared_ptr<SequenceDescription> SequenceDescriptionPtr;
 
 // Defines sequence data and its layout.
 // Currently CNTK supports dense and sparse sequences (csc).
@@ -113,18 +114,28 @@ struct ChunkDescription
     size_t numberOfSequences;
 };
 
-typedef std::vector<ChunkDescription> ChunkDescriptions;
+typedef std::shared_ptr<ChunkDescription> ChunkDescriptionPtr;
+typedef std::vector<ChunkDescriptionPtr> ChunkDescriptions;
 
-class ICorpus
+class IMetaData
 {
 public:
-    virtual const ChunkDescriptions& GetChunkDescriptions() const = 0;
-    virtual SequenceDescriptions GetSequencesForChunk(size_t chunkId) const = 0;
-    virtual size_t TotalNumberOfSamples() = 0;
-    virtual size_t TotalNumberOfSequences() = 0;
+    // Describes streams this data deserializer can produce. Streams correspond to network inputs.
+    // TODO: Introduce the interface to reduce the size of the sequences available at any point in time (chunks/sequences).
+    virtual std::vector<StreamDescriptionPtr> GetStreamDescriptions() const = 0;
+    virtual ChunkDescriptions GetChunkDescriptions() = 0;
+
+    virtual std::vector<SequenceDescriptionPtr> GetSequencesForChunk(size_t chunkId) = 0;
+    // Retrieves description of a single sequence given its key.
+    virtual const SequenceDescription* GetSequenceDescriptionByKey(const KeyType& key) = 0;
+
+    virtual size_t GetTotalNumberOfSamples() = 0;
+    virtual size_t GetTotalNumberOfSequences() = 0;
+
+    virtual ~IMetaData() {};
 };
 
-typedef std::shared_ptr<ICorpus> ICorpusPtr;
+typedef std::shared_ptr<IMetaData> IMetaDataPtr;
 
 //////////////////////////////////////////////////////////////////////////////////////////////////
 // Interface all data deserializers should implement.
@@ -134,28 +145,13 @@ typedef std::shared_ptr<ICorpus> ICorpusPtr;
 // streams. Examples of data include image data deserializer or htkmlf data deserializer.
 // TODO: This interface will become ABI and deserializers can be implemented in different languages, i.e. Python.
 //////////////////////////////////////////////////////////////////////////////////////////////////
-class IDataDeserializer
+class IDataDeserializer : public IMetaData
 {
 public:
-    // Describes streams this data deserializer can produce. Streams correspond to network inputs.
-    // TODO: Introduce the interface to reduce the size of the sequences available at any point in time (chunks/sequences).
-    virtual std::vector<StreamDescriptionPtr> GetStreamDescriptions() const = 0;
-
-    // Retrieves description of all sequences this data deserializer can produce.
-    // TODO for huge corpuses, footprint will be too big; need interface to request timeline in chunks
-    virtual const SequenceDescriptions& GetSequenceDescriptions() const = 0;
-
-    // Retrieves description of a single sequence given its key.
-    virtual const SequenceDescription* GetSequenceDescriptionByKey(const KeyType& key) = 0;
-
-    // Retrieves total number of chunks this deserializer can produce.
-    virtual size_t GetTotalNumberOfChunks() = 0;
-
-    // Retrieves a chunk with data.
     virtual ChunkPtr GetChunk(size_t chunkId) = 0;
-
     virtual ~IDataDeserializer() {};
 };
 
 typedef std::shared_ptr<IDataDeserializer> IDataDeserializerPtr;
-} } }
+
+}}}

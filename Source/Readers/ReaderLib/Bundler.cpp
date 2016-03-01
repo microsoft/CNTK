@@ -27,82 +27,87 @@ Bundler::Bundler(
     }
 
     m_streams = streams;
-    CreateSequenceDescriptions();
+    CreateChunkDescriptions();
 }
 
-// Creates additional structures for fast indexing between chunks/deseriazliers.
-// TODO: This must be changed when we introduce chunking of the timeline.
-void Bundler::CreateSequenceDescriptions()
+void Bundler::CreateChunkDescriptions()
 {
-    m_sequenceToSequence.resize(m_deserializers.size());
-    m_sequenceToChunk.resize(m_deserializers.size());
-    m_sequenceDescriptions.reserve(m_driver->GetSequenceDescriptions().size());
-    m_chunkOffsets.reserve(m_driver->GetTotalNumberOfChunks() + 1);
+    auto chunks = m_driver->GetChunkDescriptions();
 
-    size_t maxNumberOfSequences = m_driver->GetSequenceDescriptions().size();
-    for (int i = 0; i < m_deserializers.size(); ++i)
+    for (size_t chunkIndex = 0; chunkIndex < chunks.size(); ++chunkIndex)
     {
-        // TODO use reserve(), .push_back() ? also elsewhere
-        m_sequenceToSequence[i].resize(maxNumberOfSequences);
-        m_sequenceToChunk[i].resize(maxNumberOfSequences);
-    }
-
-    fprintf(stderr, "Bundler::CreateSequenceDescriptions: auxiliary mapping data for bundler has been allocated.\n");
-
-    size_t previousChunk = SIZE_MAX;
-    size_t currentMapping = 0;
-    for (int i = 0; i < m_driver->GetSequenceDescriptions().size(); ++i)
-    {
-        const auto* sequenceDescription = m_driver->GetSequenceDescriptions()[i];
-
-        bool isValid = true;
-        for (int j = 1; j < m_deserializers.size(); ++j)
+        size_t numberOfSamples = 0;
+        size_t numberOfSequences = 0;
+        auto sequenceDescriptions = m_driver->GetSequencesForChunk(chunks[chunkIndex]->id);
+        std::set<size_t> invalid;
+        for (size_t sequenceIndex = 0; sequenceIndex < sequenceDescriptions.size(); ++sequenceIndex)
         {
-            auto description = m_deserializers[j]->GetSequenceDescriptionByKey(sequenceDescription->m_key);
-            if (!description->m_isValid)
+            auto sequence = sequenceDescriptions[sequenceIndex];
+            bool isValid = true;
+            for (size_t deserializerIndex = 1; deserializerIndex < m_deserializers.size(); ++deserializerIndex)
             {
-                isValid = false;
-                break;
+                auto s = m_deserializers[deserializerIndex]->GetSequenceDescriptionByKey(sequenceDescriptions[sequenceIndex]->m_key);
+                if (!s->m_isValid)
+                {
+                    isValid = false;
+                    invalid.insert(sequenceIndex);
+                    break;
+                }
             }
 
-            m_sequenceToChunk[j][currentMapping] = description->m_chunkId;
-            m_sequenceToSequence[j][currentMapping] = description->m_id;
-        }
-
-        m_sequenceToChunk[0][currentMapping] = sequenceDescription->m_chunkId;
-        m_sequenceToSequence[0][currentMapping] = sequenceDescription->m_id;
-
-        if (isValid)
-        {
-            if (sequenceDescription->m_chunkId != previousChunk)
+            if (isValid)
             {
-                m_chunkOffsets.push_back(m_sequenceDescriptions.size());
-                previousChunk = sequenceDescription->m_chunkId;
+                numberOfSamples += sequence->m_numberOfSamples;
+                numberOfSequences++;
             }
+        }
 
-            m_sequenceDescriptions.push_back(*sequenceDescription);
-            m_sequenceDescriptions.back().m_id = m_sequenceDescriptions.size() - 1;
-            m_sequenceToSequence[0][currentMapping] = sequenceDescription->m_id;
-            currentMapping++;
+        if (numberOfSamples > 0)
+        {
+            auto cd = std::make_shared<BundlerChunkDescription>();
+            cd->numberOfSamples = numberOfSamples;
+            cd->numberOfSequences = numberOfSequences;
+            cd->id = m_chunks.size();
+            cd->m_original = chunks[chunkIndex];
+            m_chunks.push_back(cd);
+            cd->m_invalid = std::move(invalid);
         }
     }
+}
 
-    fprintf(stderr, "Bundler::CreateSequenceDescriptions: dropped %d sequences\n", (int)(m_driver->GetSequenceDescriptions().size() - m_sequenceDescriptions.size()));
-    fprintf(stderr, "Bundler::CreateSequenceDescriptions: total number of sequences is  %d\n", (int)m_sequenceDescriptions.size());
+ChunkDescriptions Bundler::GetChunkDescriptions()
+{
+    return ChunkDescriptions(m_chunks.begin(), m_chunks.end());
+}
 
-    for (int i = 0; i < m_deserializers.size(); ++i)
+std::vector<SequenceDescriptionPtr> Bundler::GetSequencesForChunk(size_t chunkId)
+{
+    BundlerChunkDescriptionPtr chunk = m_chunks[chunkId];
+    ChunkDescriptionPtr original = chunk->m_original;
+    auto sequences = m_driver->GetSequencesForChunk(original->id);
+    std::vector<SequenceDescriptionPtr> result;
+    result.reserve(sequences.size());
+    for (size_t sequenceIndex = 0; sequenceIndex < sequences.size(); ++sequenceIndex)
     {
-        m_sequenceToSequence[i].resize(currentMapping);
+        if (chunk->m_invalid.find(sequenceIndex) != chunk->m_invalid.end())
+        {
+            continue;
+        }
+
+        result.push_back(sequences[sequenceIndex]);
     }
 
-    // Last
-    m_chunkOffsets.push_back(m_sequenceDescriptions.size());
+    return result;
+}
 
-    m_sequences.resize(m_sequenceDescriptions.size());
-    for (int k = 0; k < m_sequenceDescriptions.size(); ++k)
-    {
-        m_sequences[k] = &m_sequenceDescriptions[k];
-    }
+size_t Bundler::GetTotalNumberOfSamples()
+{
+    return m_driver->GetTotalNumberOfSamples();
+}
+
+size_t Bundler::GetTotalNumberOfSequences()
+{
+    return m_driver->GetTotalNumberOfSequences();
 }
 
 // Represents a chunk that has poibters to the underlying deserialzer chunks.
@@ -111,7 +116,9 @@ class BundlingChunk : public Chunk
     size_t m_numberOfInputs;
     Bundler* m_parent;
     size_t m_chunkId;
+
     std::vector<std::vector<ChunkPtr>> m_innerChunks;
+    std::vector<std::vector<size_t>> m_sequenceToSequence;
 
     DISABLE_COPY_AND_MOVE(BundlingChunk);
 
@@ -119,32 +126,55 @@ public:
     BundlingChunk(size_t numberOfInputs, Bundler* parent, size_t chunkId)
         : m_numberOfInputs(numberOfInputs), m_parent(parent), m_chunkId(chunkId)
     {
-        size_t numberOfSequences = m_parent->m_chunkOffsets[chunkId + 1] - m_parent->m_chunkOffsets[chunkId];
-        m_innerChunks.resize(numberOfSequences);
+        BundlerChunkDescriptionPtr chunk = m_parent->m_chunks[m_chunkId];
+        ChunkDescriptionPtr original = chunk->m_original;
 
-        int innerIndex = 0;
-        for (size_t sequenceId = m_parent->m_chunkOffsets[chunkId]; innerIndex < numberOfSequences; ++sequenceId, ++innerIndex)
+        auto& deserializers = m_parent->m_deserializers;
+        m_sequenceToSequence.resize(deserializers.size());
+        m_innerChunks.resize(deserializers.size());
+
+        auto sequences = m_parent->m_driver->GetSequencesForChunk(original->id);
+        ChunkPtr drivingChunk = m_parent->m_driver->GetChunk(original->id);
+        m_sequenceToSequence[0].resize(sequences.size());
+        m_innerChunks[0].resize(sequences.size());
+        for (size_t sequenceIndex = 0; sequenceIndex < sequences.size(); ++sequenceIndex)
         {
-            m_innerChunks[innerIndex].resize(m_parent->m_deserializers.size());
-            for (size_t i = 0; i < m_parent->m_deserializers.size(); ++i)
+            if (chunk->m_invalid.find(sequenceIndex) != chunk->m_invalid.end())
             {
-                size_t innerChunkId = m_parent->m_sequenceToChunk[i][sequenceId];
-                m_innerChunks[innerIndex][i] = m_parent->m_deserializers[i]->GetChunk(innerChunkId);
+                continue;
+            }
+
+            m_sequenceToSequence[0][sequenceIndex] = sequences[sequenceIndex]->m_id;
+            m_innerChunks[0][sequenceIndex] = drivingChunk;
+        }
+
+        for (size_t deserializerIndex = 1; deserializerIndex < m_parent->m_deserializers.size(); ++deserializerIndex)
+        {
+            m_sequenceToSequence[deserializerIndex].resize(sequences.size());
+            m_innerChunks[deserializerIndex].resize(sequences.size());
+            for (size_t sequenceIndex = 0; sequenceIndex < sequences.size(); ++sequenceIndex)
+            {
+                if (chunk->m_invalid.find(sequenceIndex) != chunk->m_invalid.end())
+                {
+                    continue;
+                }
+
+                auto s = deserializers[deserializerIndex]->GetSequenceDescriptionByKey(sequences[sequenceIndex]->m_key);
+                m_sequenceToSequence[deserializerIndex][sequenceIndex] = s->m_id;
+                m_innerChunks[deserializerIndex][sequenceIndex] = deserializers[deserializerIndex]->GetChunk(s->m_chunkId);
             }
         }
     }
 
     virtual std::vector<SequenceDataPtr> GetSequence(size_t sequenceId) override
     {
-        size_t index = sequenceId - m_parent->m_chunkOffsets[m_chunkId];
-        const auto& chunks = m_innerChunks[index];
         std::vector<SequenceDataPtr> result;
         result.reserve(m_numberOfInputs);
 
-        for (int i = 0; i < chunks.size(); ++i)
+        for (int i = 0; i < m_parent->m_deserializers.size(); ++i)
         {
-            size_t originalSequenceId = m_parent->m_sequenceToSequence[i][sequenceId];
-            auto sequences = chunks[i]->GetSequence(originalSequenceId);
+            size_t originalSequenceId = m_sequenceToSequence[i][sequenceId];
+            auto sequences = m_innerChunks[i][sequenceId]->GetSequence(originalSequenceId);
             result.insert(result.end(), sequences.begin(), sequences.end());
         }
 
@@ -157,11 +187,6 @@ ChunkPtr Bundler::GetChunk(size_t chunkId)
     return std::make_shared<BundlingChunk>(m_streams.size(), this, chunkId);
 }
 
-const SequenceDescriptions& Bundler::GetSequenceDescriptions() const
-{
-    return m_sequences;
-}
-
 std::vector<StreamDescriptionPtr> Bundler::GetStreamDescriptions() const
 {
     return m_streams;
@@ -170,11 +195,6 @@ std::vector<StreamDescriptionPtr> Bundler::GetStreamDescriptions() const
 const SequenceDescription* Bundler::GetSequenceDescriptionByKey(const KeyType&)
 {
     throw std::logic_error("Not implemented");
-}
-
-size_t Bundler::GetTotalNumberOfChunks()
-{
-    return m_chunkOffsets.size();
 }
 
 }}}

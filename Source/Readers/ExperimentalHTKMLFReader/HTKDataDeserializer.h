@@ -24,18 +24,16 @@ public:
     // Produces a single stream of HTK features.
     virtual std::vector<StreamDescriptionPtr> GetStreamDescriptions() const override;
 
-    // Retrieves description of all sequences this data deserializer can produce, together with associated chunks.
-    // TODO: For huge corpus, the memory footprint is too big. We adapt this interface to request timeline in chunks.
-    virtual const SequenceDescriptions& GetSequenceDescriptions() const override;
-
     // Retrieves sequence description by its key. Used for deserializers that are not in "primary"/"driving" mode.
     virtual const SequenceDescription* GetSequenceDescriptionByKey(const KeyType& key) override;
 
-    // Retrieves total number of chunks this deserializer can produce.
-    virtual size_t GetTotalNumberOfChunks() override;
-
     // Retrieves a chunk with data.
     virtual ChunkPtr GetChunk(size_t chunkId) override;
+
+    virtual ChunkDescriptions GetChunkDescriptions() override;
+    virtual std::vector<SequenceDescriptionPtr> GetSequencesForChunk(size_t chunkId) override;
+    virtual size_t GetTotalNumberOfSamples() override;
+    virtual size_t GetTotalNumberOfSequences() override;
 
 private:
     DISABLE_COPY_AND_MOVE(HTKDataDeserializer);
@@ -71,7 +69,7 @@ private:
     ElementType m_elementType;
 
     // Chunk descriptions.
-    std::vector<ChunkDescription> m_chunks;
+    std::vector<HTKChunkDescription> m_chunks;
     // Weak pointers on existing chunks.
     std::vector<std::weak_ptr<Chunk>> m_weakChunks;
 
