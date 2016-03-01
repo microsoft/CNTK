@@ -579,7 +579,7 @@ static void CudaCall(ERRTYPE retCode, const char* exprString, const char* libNam
 
 class SyncGuard
 {
-    bool DoSync()
+    static bool DoSync()
     {
 #ifdef NO_SYNC // this strange way of writing it allows modifying this variable at runtime in the debugger
         static bool do_sync = false;
@@ -588,27 +588,30 @@ class SyncGuard
 #endif
         return do_sync;
     }
-    cudaEvent_t done;
+    cudaEvent_t m_done;
 public:
     SyncGuard()
     {
-        done = nullptr;
+        m_done = nullptr;
         if (DoSync())
-            CUDA_CALL(cudaEventCreate(&done));
+            CUDA_CALL(cudaEventCreate(&m_done));
     }
     ~SyncGuard()
     {
         if (DoSync())
         {
-            try
+            // The regular use of this destructor is to synchronize the GPU, but also
+            // to check for errors. So this destructor is where CUDA errors would be thrown.
+            // If this destructor runs during stack unwinding, then a different error has
+            // already happened that should be reported; so we only clean up the resource.
+            if (std::uncaught_exception())
+                cudaEventDestroy(m_done);
+            else
             {
-                CUDA_CALL(cudaEventRecord(done));
-                CUDA_CALL(cudaEventSynchronize(done));
-                CUDA_CALL(cudaEventDestroy(done));
-            }
-            catch (const std::exception& e) // can't throw in destructors!
-            {
-                std::cerr << "SyncGuard: Destructor swallowing CUDA failure: " << e.what() << std::endl;
+                // failures in a prior launch might be reported here
+                CUDA_CALL(cudaEventRecord(m_done));
+                CUDA_CALL(cudaEventSynchronize(m_done));
+                CUDA_CALL(cudaEventDestroy(m_done));
             }
         }
     }

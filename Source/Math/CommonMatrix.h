@@ -158,7 +158,7 @@ enum ElementWiseOperator
     Macro(ElementwiseProductWithLinearRectifierDerivativeFromOutput); \
     Macro(ElementwiseProductWithLogDerivativeFromOutput);             \
     Macro(ElementwiseProductWithCosDerivative); \
-//Macro(Index);
+    //Macro(Index);
 
 #define ForAllTernaryOps(Macro) \
     Macro(Cond);                \
@@ -170,6 +170,7 @@ enum ElementWiseOperator
 
 enum MatrixFlagBitPosition
 {
+    // TODO: remove all formats that are actually not supported
     bitPosRowMajor = 0,         // row major matrix
     bitPosSparse = 1,           // sparse matrix (COO if uncompressed)
     bitPosCompressed = 2,       // a compressed sparse format (CSC/CSR)
@@ -179,6 +180,7 @@ enum MatrixFlagBitPosition
 
 enum MatrixFormat
 {
+    // TODO: remove all formats that are actually not supported
     matrixFormatDense = 0,                          // default is dense
     matrixFormatColMajor = 0,                       // default is column major
     matrixFormatRowMajor = 1 << bitPosRowMajor,     // row major matrix
@@ -314,17 +316,46 @@ protected:
         m_matrixName = nullptr;
     }
 
+    void ZeroInit()
+    {
+        m_numRows           = 0;
+        m_numCols           = 0;
+        m_elemSizeAllocated = 0;
+        m_sliceViewOffset   = 0;
+        m_externalBuffer    = false;
+        m_pArray            = nullptr;
+        m_nz                = 0;
+        m_matrixName        = nullptr;
+    }
+
+    // copy all metadata (but not content taht pArray points to)
+    void ShallowCopyFrom(const BaseMatrix& other)
+    {
+        m_format            = other.m_format;
+        m_computeDevice     = other.m_computeDevice;
+
+        m_numRows           = other.m_numRows;
+        m_numCols           = other.m_numCols;
+        m_elemSizeAllocated = other.m_elemSizeAllocated;
+        m_sliceViewOffset   = other.m_sliceViewOffset;
+        m_externalBuffer    = other.m_externalBuffer;
+        m_pArray            = other.m_pArray;
+        m_nz                = other.m_nz;
+        m_matrixName        = other.m_matrixName;
+    }
+
 protected:
+    MatrixFormat m_format;
+    mutable DEVICEID_TYPE m_computeDevice; // current GPU device Id or CPUDEVICE
+
     size_t m_numRows;
     size_t m_numCols;
     size_t m_elemSizeAllocated;
-    size_t m_sliceViewOffset; // this is used to get a column slice view of a matrix in the Sparse CSC format
-    MatrixFormat m_format;
+    size_t m_sliceViewOffset; // this is used to get a column slice view of a matrix in the Sparse CSC format  --TODO: move to sparse matrix implementations? Or common sparse base class?
     bool m_externalBuffer; // is the buffer used by this matrix,
     ElemType* m_pArray;
-    mutable DEVICEID_TYPE m_computeDevice; // current GPU device Id or CPUDEVICE
     size_t m_nz;                           // Number of non-zero elements for sparse matrices (unused in other formats)
     wchar_t* m_matrixName;                 // TODO: Use std::wstring?
 };
 
-} } }
+}}}
