@@ -2106,6 +2106,9 @@ void SGD<ElemType>::SaveCheckPointInfo(const size_t epoch, const size_t totalSam
 
         {
             File fstream(tempFileName, FileOptions::fileOptionsBinary | FileOptions::fileOptionsWrite);
+            fstream.PutMarker(FileMarker::fileMarkerBeginSection, L"BVersion"); 
+            fstream << CURRENT_CNTK_CHECKPOINT_VERSION; 
+            fstream.PutMarker(FileMarker::fileMarkerEndSection, L"EVersion");
             fstream.PutMarker(FileMarker::fileMarkerBeginSection, L"BCKP");
 
             fstream.PutMarker(FileMarker::fileMarkerBeginSection, L"BLearnRate");
@@ -2153,6 +2156,16 @@ bool SGD<ElemType>::LoadCheckPointInfo(const size_t epochNumber,
 
     File fstream(checkPointFileName,
                  FileOptions::fileOptionsBinary | FileOptions::fileOptionsRead);
+
+    // version info 
+    size_t ckpVersion = CNTK_CHECKPOINT_VERSION_1; // if no version info is found -> version 1
+    if (fstream.TryGetMarker(FileMarker::fileMarkerBeginSection, L"BVersion"))
+    {
+        fstream >> ckpVersion; 
+        fstream.GetMarker(FileMarker::fileMarkerEndSection, L"EVersion");
+    }
+
+
     fstream.GetMarker(FileMarker::fileMarkerBeginSection, L"BCKP");
 
     fstream.GetMarker(FileMarker::fileMarkerBeginSection, L"BLearnRate");

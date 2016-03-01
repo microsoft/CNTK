@@ -20,6 +20,11 @@
 
 using namespace std; // ugh! TODO: get rid of this from .h files!!!
 
+#define CNTK_CHECKPOINT_VERSION_1 1     // 1 -> no version number 
+#define CNTK_CHECKPOINT_VERSION_2 2     
+#define CURRENT_CNTK_CHECKPOINT_VERSION CNTK_CHECKPOINT_VERSION_2
+
+
 namespace Microsoft { namespace MSR { namespace CNTK {
 
 enum class LearningRateSearchAlgorithm : int
