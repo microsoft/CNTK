@@ -186,7 +186,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     template<class ElemType>
-    static size_t GetNumSubminibatchesNeeded(IDataReader<ElemType>* dataReader,
+    static size_t GetNumSubminibatchesNeeded(IDataReader* dataReader,
                                            size_t maxSamplesInRAM,
                                            size_t numSubminibatches,
                                            size_t tunedMBSize)

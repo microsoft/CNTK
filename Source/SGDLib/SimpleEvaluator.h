@@ -31,8 +31,8 @@ template <class ElemType>
 class SimpleEvaluator
 {
 public:
-    SimpleEvaluator(ComputationNetworkPtr net, const size_t numMBsToShowResult = 100, const int traceLevel = 0, const size_t maxSamplesInRAM = SIZE_MAX,
-					const size_t numSubminiBatches = 1, const bool parallelRun = true)
+    SimpleEvaluator(ComputationNetworkPtr net, const bool parallelRun, const size_t numMBsToShowResult = 100, const int traceLevel = 0, const size_t maxSamplesInRAM = SIZE_MAX,
+					const size_t numSubminiBatches = 1)
         : m_net(net), 
           m_numMBsToShowResult(numMBsToShowResult), 
           m_traceLevel(traceLevel),
@@ -113,7 +113,7 @@ public:
 
         std::vector<Matrix<ElemType>*> learnParamsGradients;
         DataReaderHelpers::SubminibatchDispatcher<ElemType> smbDispatcher;
-        size_t numSubminibatchesNeeded = DataReaderHelpers::GetNumSubminibatchesNeeded(dataReader, m_maxSamplesInRAM, m_numSubminiBatches, mbSize);
+        size_t numSubminibatchesNeeded = DataReaderHelpers::GetNumSubminibatchesNeeded<ElemType>(dataReader, m_maxSamplesInRAM, m_numSubminiBatches, mbSize);
 
         // Passing in two empty node lists so the dispatcher can work for the evalNodes.
         std::list<ComputationNodeBasePtr> learnableNodes;
@@ -121,7 +121,9 @@ public:
         if (numSubminibatchesNeeded > 1)
             smbDispatcher.Init(m_net, learnableNodes, criterionNodes, evalNodes);
 
-        while (DataReaderHelpers::GetMinibatchIntoNetwork(*dataReader, m_net, nullptr, false, m_parallelRun, inputMatrices, actualMBSize))
+        const size_t numIterationsBeforePrintingProgress = 100;
+        size_t numItersSinceLastPrintOfProgress = 0;
+        while (DataReaderHelpers::GetMinibatchIntoNetwork<ElemType>(*dataReader, m_net, nullptr, false, m_parallelRun, inputMatrices, actualMBSize))
         {
             size_t actualNumSubminibatches = numSubminibatchesNeeded <= 1 ? 1 : smbDispatcher.GetMinibatchIntoCache(*dataReader, *m_net, inputMatrices, numSubminibatchesNeeded);
             for (size_t ismb = 0; ismb < actualNumSubminibatches; ismb++)

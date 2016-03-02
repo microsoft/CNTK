@@ -92,6 +92,8 @@ public:
         Read<ElemType>(fileName);
         // perform all further post-processing, caching, etc.
         CompileNetwork();
+        // To ensure that all the BN nodes changed to eval mode unless it's in Training mode.
+        SetBatchNormalizationNodesBelowEvalMode(true);
     }
 
     // static helper to instantiate a network from a file

@@ -489,7 +489,7 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
 
         if (validationSetDataReader != trainSetDataReader && validationSetDataReader != nullptr)
         {
-            SimpleEvaluator<ElemType> evalforvalidation(net);
+            SimpleEvaluator<ElemType> evalforvalidation(net, g_mpi != nullptr);
             vector<wstring> cvSetTrainAndEvalNodes;
             if (criterionNodes.size() > 0)
             {
@@ -781,7 +781,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
     // prepare for sub-minibatching
     // Sub-minibatching is used if a single minibatch is too large to fit into GPU RAM.
     DataReaderHelpers::SubminibatchDispatcher<ElemType> smbDispatcher;
-    size_t numSubminibatchesNeeded = DataReaderHelpers::GetNumSubminibatchesNeeded(trainSetDataReader, m_maxSamplesInRAM, m_numSubminiBatches, tunedMBSize);
+    size_t numSubminibatchesNeeded = DataReaderHelpers::GetNumSubminibatchesNeeded<ElemType>(trainSetDataReader, m_maxSamplesInRAM, m_numSubminiBatches, tunedMBSize);
     // this is non-trivial, we need a manager object to handle this
     if (numSubminibatchesNeeded > 1)
         smbDispatcher.Init(net, learnableNodes, criterionNodes, evaluationNodes);
