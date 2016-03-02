@@ -10,12 +10,10 @@ else
 fi
 
 # cntkrun <CNTK config file name> <additional CNTK args>
-# Note: always use legacy for now.
-imageLayout=legacy
-#if [ "$TEST_DEVICE" == "cpu" ]; then
-#  imageLayout=legacy
-#else
-#  imageLayout=cudnn
-#fi
+if [ "$TEST_DEVICE" == "cpu" ]; then
+  imageLayout=legacy
+else
+  imageLayout=cudnn
+fi
 
 cntkrun  02_Convolution.cntk  "train=[reader=[file=$CleanDataDir/Train.txt]]  test=[reader=[file=$CleanDataDir/Test.txt]]  train=[SGD=[maxEpochs=1]]  train=[SGD=[epochSize=128]]  train=[reader=[randomize=none]]  imageLayout=\"$imageLayout\"" || exit $?
