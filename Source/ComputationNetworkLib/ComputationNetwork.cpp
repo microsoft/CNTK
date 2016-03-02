@@ -194,6 +194,8 @@ void ComputationNetwork::ReadPersistableParameters(File& fstream, bool create)
         fstream >> modelVersion;
         fstream.GetMarker(FileMarker::fileMarkerEndSection, L"EVersion");
     }
+    if (modelVersion > CURRENT_CNTK_MODEL_VERSION)
+        InvalidArgument("Read: The model file has a newer format version (%d) than this CNTK version can handle (%d).", (int)modelVersion, (int)CURRENT_CNTK_MODEL_VERSION);
 
     size_t numNodes;
     fstream >> numNodes;

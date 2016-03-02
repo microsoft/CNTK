@@ -11,29 +11,18 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
-template <class ElemType>
-std::string GetWriterName(ElemType)
+static const char* GetWriterName(const string& precision)
 {
-    std::string empty;
-    return empty;
+    if (precision == "float")
+        return "GetWriterF";
+    else if (precision == "double")
+        return "GetWriterD";
+    else
+        InvalidArgument("DataWriter: The 'precision' parameter must be 'float' or 'double'.");
 }
 
-template <>
-std::string GetWriterName(float)
-{
-    std::string name = "GetWriterF";
-    return name;
-}
-template <>
-std::string GetWriterName(double)
-{
-    std::string name = "GetWriterD";
-    return name;
-}
-
-template <class ElemType>
 template <class ConfigRecordType>
-void DataWriter<ElemType>::InitFromConfig(const ConfigRecordType& /*config*/)
+void DataWriter::InitFromConfig(const ConfigRecordType& /*config*/)
 {
     RuntimeError("Init shouldn't be called, use constructor");
     // not implemented, calls the underlying class instead
@@ -41,22 +30,17 @@ void DataWriter<ElemType>::InitFromConfig(const ConfigRecordType& /*config*/)
 
 // Destroy - cleanup and remove this class
 // NOTE: this destroys the object, and it can't be used past this point
-template <class ElemType>
-void DataWriter<ElemType>::Destroy()
+void DataWriter::Destroy()
 {
     m_dataWriter->Destroy();
 }
 
 // DataWriter Constructor
 // config - [in] configuration data for the data writer
-template <class ElemType>
 template <class ConfigRecordType>
-DataWriter<ElemType>::DataWriter(const ConfigRecordType& config)
+DataWriter::DataWriter(const ConfigRecordType& config)
 {
-    typedef void (*GetWriterProc)(IDataWriter<ElemType>** pwriter);
-
-    // initialize just in case
-    m_dataWriter = NULL;
+    typedef void (*GetWriterProc)(IDataWriter** pwriter);
 
     // get the name for the writer we want to use, default to BinaryWriter (which is in BinaryReader.dll)
     // TODO: This seems like a find-replace operation?
@@ -82,21 +66,20 @@ DataWriter<ElemType>::DataWriter(const ConfigRecordType& config)
         writerType = L"KaldiReader";
     }
 
-    ElemType elemType = ElemType();
-    GetWriterProc getWriterProc = (GetWriterProc) Plugin::Load(writerType, GetWriterName(elemType));
+    string precision = config(L"precision", "float");
+
+    GetWriterProc getWriterProc = (GetWriterProc)Plugin::Load(writerType, GetWriterName(precision));
+    m_dataWriter = NULL;
     getWriterProc(&m_dataWriter);
 
     m_dataWriter->Init(config);
 }
 
-template DataWriter<float>::DataWriter(const ConfigParameters&);
-template DataWriter<double>::DataWriter(const ConfigParameters&);
-template DataWriter<float>::DataWriter(const ScriptableObjects::IConfigRecord&);
-template DataWriter<double>::DataWriter(const ScriptableObjects::IConfigRecord&);
+template DataWriter::DataWriter(const ConfigParameters&);
+template DataWriter::DataWriter(const ScriptableObjects::IConfigRecord&);
 
 // destructor - cleanup temp files, etc.
-template <class ElemType>
-DataWriter<ElemType>::~DataWriter()
+DataWriter::~DataWriter()
 {
     // free up resources
     if (m_dataWriter)
@@ -105,8 +88,7 @@ DataWriter<ElemType>::~DataWriter()
 
 // GetSections - Get the sections of the file
 // sections - a map of section name to section. Data sepcifications from config file will be used to determine where and how to save data
-template <class ElemType>
-void DataWriter<ElemType>::GetSections(std::map<std::wstring, SectionType, nocase_compare>& sections)
+void DataWriter::GetSections(std::map<std::wstring, SectionType, nocase_compare>& sections)
 {
     m_dataWriter->GetSections(sections);
 }
@@ -117,8 +99,7 @@ void DataWriter<ElemType>::GetSections(std::map<std::wstring, SectionType, nocas
 // numRecords - number of records we are saving, can be zero if not applicable
 // datasetSize - Size of the dataset
 // byteVariableSized - for variable sized data, size of current block to be written, zero when not used, or ignored if not variable sized data
-template <class ElemType>
-bool DataWriter<ElemType>::SaveData(size_t recordStart, const std::map<std::wstring, void*, nocase_compare>& matrices, size_t numRecords, size_t datasetSize, size_t byteVariableSized)
+bool DataWriter::SaveData(size_t recordStart, const std::map<std::wstring, void*, nocase_compare>& matrices, size_t numRecords, size_t datasetSize, size_t byteVariableSized)
 {
     return m_dataWriter->SaveData(recordStart, matrices, numRecords, datasetSize, byteVariableSized);
 }
@@ -126,13 +107,9 @@ bool DataWriter<ElemType>::SaveData(size_t recordStart, const std::map<std::wstr
 // SaveMapping - save a map into the file
 // saveId - name of the section to save into (section:subsection format)
 // labelMapping - map we are saving to the file
-template <class ElemType>
-void DataWriter<ElemType>::SaveMapping(std::wstring saveId, const std::map<LabelIdType, LabelType>& labelMapping)
+void DataWriter::SaveMapping(std::wstring saveId, const std::map<LabelIdType, LabelType>& labelMapping)
 {
     m_dataWriter->SaveMapping(saveId, labelMapping);
 }
 
-//The explicit instantiation
-template class DataWriter<double>;
-template class DataWriter<float>;
-} } }
+}}}

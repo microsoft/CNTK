@@ -14,7 +14,6 @@
 #include <algorithm>
 #include <iostream>
 
-
 namespace Microsoft { namespace MSR { namespace CNTK {
 
 using namespace std;
@@ -27,7 +26,8 @@ template <class E>
 void ExceptionWithCallStack<E>::CollectCallStack(const function<void(std::string)>& write, const function<void()>& newline)
 {
     newline();
-
+    write("[CALL STACK]");
+    newline();
 #ifdef _WIN32
     typedef USHORT(WINAPI * CaptureStackBackTraceType)(__in ULONG, __in ULONG, __out PVOID*, __out_opt PULONG);
     CaptureStackBackTraceType func = (CaptureStackBackTraceType)(GetProcAddress(LoadLibrary(L"kernel32.dll"), "RtlCaptureStackBackTrace"));
@@ -55,16 +55,13 @@ void ExceptionWithCallStack<E>::CollectCallStack(const function<void(std::string
     symbolInfo->SizeOfStruct = sizeof(SYMBOL_INFO);
     frames = min(frames, MAX_CALL_STACK_DEPTH);
 
-    for (unsigned int i = 1; i < frames; i++)
+    unsigned int firstFrame = 4; // 4 bottom functions are CollectCallStack(), GetCallStack(), ThrowFormatted(), and XXXError()
+    for (unsigned int i = firstFrame; i < frames; i++)
     {
-        if (i == 1)
-        {
+        if (i == firstFrame)
             write( "    >");
-        }
         else
-        {
             write("    -");
-        }
 
         if (SymFromAddr(process, (DWORD64)(callStack[i]), 0, symbolInfo))
         {
@@ -87,16 +84,14 @@ void ExceptionWithCallStack<E>::CollectCallStack(const function<void(std::string
     free(symbolInfo);
 
     SymCleanup(process);
-#else
-    write("[CALL STACK]");
-    newline();
-
+#else // Linux
     unsigned int MAX_NUM_FRAMES = 1024;
     void* backtraceAddresses[MAX_NUM_FRAMES];
     unsigned int numFrames = backtrace(backtraceAddresses, MAX_NUM_FRAMES);
     char** symbolList = backtrace_symbols(backtraceAddresses, numFrames);
 
-    for (unsigned int i = 0; i < numFrames; i++)
+    unsigned int firstFrame = 3; // 3 bottom functions are GetCallStack(), ThrowFormatted(), and XXXError()
+    for (unsigned int i = firstFrame; i < numFrames; i++)
     {
         char* beginName = NULL;
         char* beginOffset = NULL;

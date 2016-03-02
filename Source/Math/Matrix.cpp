@@ -166,6 +166,8 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
+MatrixBase::~MatrixBase() { }
+
 #pragma region Constructors, destructors and other static matrix builders
 
 //This function will only initialize default bland matrix. The actual matrices need to allocated
@@ -1246,14 +1248,17 @@ void Matrix<ElemType>::SetDiagonalValue(const ElemType v)
 template <class ElemType>
 void Matrix<ElemType>::SetDiagonalValue(const Matrix<ElemType>& vector)
 {
-    if (IsEmpty() || vector.IsEmpty())
-        LogicError("SetDiagonalValue: Matrix is empty.");
-
     if (GetNumRows() != GetNumCols())
         LogicError("SetDiagonalValue: NumRows and NumCols do not agree.");
 
     if (vector.GetNumRows() != 1 && vector.GetNumCols() != 1)
-        LogicError("SetDiagonalValue: input vector must be a vector.");
+        LogicError("SetDiagonalValue: Input vector must be a vector.");
+
+    if (vector.GetNumRows() * vector.GetNumCols() != GetNumRows())
+        LogicError("SetDiagonalValue: Input vector must match matrix dimension.");
+
+    if (IsEmpty())
+        return;
 
     DecideAndMoveToRightDevice(*this, vector);
 
@@ -1287,7 +1292,7 @@ template <class ElemType>
 void Matrix<ElemType>::SetUniformRandomValue(const ElemType low, const ElemType high, unsigned long seed)
 {
     if (IsEmpty())
-        LogicError("SetUniformRandomValue: Matrix is empty.");
+        return;
 
     DISPATCH_MATRIX_ON_FLAG(this,
                             this,
@@ -1321,7 +1326,7 @@ void Matrix<ElemType>::AddGaussianRandomValue(const ElemType mean, const ElemTyp
         InvalidArgument("SetUniformRandomValue: sigma must be a positive value.");
 
     if (IsEmpty())
-        LogicError("SetUniformRandomValue: Matrix is empty.");
+        return;
 
     DISPATCH_MATRIX_ON_FLAG(this,
                             this,
@@ -1337,7 +1342,7 @@ template <class ElemType>
 void Matrix<ElemType>::SetUniformRandomMask(const ElemType maskRate, const ElemType scaleValue, unsigned long seed)
 {
     if (IsEmpty())
-        LogicError("SetUniformRandomMask: Matrix is empty.");
+        return;
 
     DISPATCH_MATRIX_ON_FLAG(this,
                             this,
@@ -5097,4 +5102,5 @@ template void Matrix<char>::SetValue(const char);
 template void Matrix<char>::SetValue(size_t numRows, const size_t numCols, int deviceId, char* pArray, size_t matrixFlags);
 template bool Matrix<char>::IsEmpty() const;
 template void Matrix<char>::Resize(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve, bool growOnly);
-} } }
+
+}}}

@@ -30,7 +30,7 @@ public:
     }
 
     // returns evaluation node values per sample determined by evalNodeNames (which can include both training and eval criterion nodes)
-    vector<double> Evaluate(IDataReader<ElemType>* dataReader, const vector<wstring>& evalNodeNames, const size_t mbSize, const size_t testSize = requestDataSize)
+    vector<double> Evaluate(IDataReader* dataReader, const vector<wstring>& evalNodeNames, const size_t mbSize, const size_t testSize = requestDataSize)
     {
         // determine nodes to evaluate
         std::vector<ComputationNodeBasePtr> evalNodes;
@@ -75,11 +75,11 @@ public:
         auto& featureNodes = m_net->FeatureNodes();
         auto& labelNodes = m_net->LabelNodes();
 
-        std::map<std::wstring, Matrix<ElemType>*> inputMatrices;
-        for (size_t i = 0; i < featureNodes.size(); i++)
-            inputMatrices[featureNodes[i]->NodeName()] = &dynamic_pointer_cast<ComputationNode<ElemType>>(featureNodes[i])->Value();
-        for (size_t i = 0; i < labelNodes.size(); i++)
-            inputMatrices[labelNodes[i]->NodeName()] = &dynamic_pointer_cast<ComputationNode<ElemType>>(labelNodes[i])->Value();
+        StreamMinibatchInputs inputMatrices;
+        for (auto& node : featureNodes)
+            inputMatrices.AddInputMatrix(node->NodeName(), node->ValuePtr());
+        for (auto& node : labelNodes)
+            inputMatrices.AddInputMatrix(node->NodeName(), node->ValuePtr());
 
         // evaluate through minibatches
         size_t totalEpochSamples = 0;
@@ -95,7 +95,7 @@ public:
         dataReader->StartMinibatchLoop(mbSize, 0, testSize);
         m_net->StartEvaluateMinibatchLoop(evalNodes);
 
-        while (DataReaderHelpers::GetMinibatchIntoNetwork(*dataReader, m_net, nullptr, false, false, inputMatrices, actualMBSize))
+        while (DataReaderHelpers::GetMinibatchIntoNetwork<ElemType>(*dataReader, m_net, nullptr, false, false, inputMatrices, actualMBSize))
         {
             ComputationNetwork::BumpEvalTimeStamp(featureNodes);
             ComputationNetwork::BumpEvalTimeStamp(labelNodes);
@@ -143,9 +143,7 @@ public:
 
         // final statistics
         for (int i = 0; i < evalResultsLastMBs.size(); i++)
-        {
-            evalResultsLastMBs[i] = 0;
-        }
+            evalResultsLastMBs[i] = 0; // clear this since statistics display will subtract the previous value
 
         fprintf(stderr, "Final Results: ");
         DisplayEvalStatistics(1, numMBsRun, totalEpochSamples, evalNodes, evalResults, evalResultsLastMBs, true);
@@ -174,7 +172,7 @@ protected:
     void DisplayEvalStatistics(const size_t startMBNum, const size_t endMBNum, const size_t numSamplesLastMBs, const vector<ComputationNodeBasePtr>& evalNodes,
                                const vector<double>& evalResults, const vector<double>& evalResultsLastMBs, bool displayConvertedValue = false)
     {
-        fprintf(stderr, "Minibatch[%lu-%lu]: Samples Seen = %lu    ", startMBNum, endMBNum, numSamplesLastMBs);
+        fprintf(stderr, "Minibatch[%lu-%lu]: SamplesSeen = %lu    ", startMBNum, endMBNum, numSamplesLastMBs);
 
         for (size_t i = 0; i < evalResults.size(); i++)
         {

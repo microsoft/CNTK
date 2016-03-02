@@ -6,16 +6,16 @@
       <Platform>x64</Platform>
     </ProjectConfiguration>
     <ProjectConfiguration Include="Debug_CpuOnly|x64">
-        <Configuration>Debug_CpuOnly</Configuration>
-        <Platform>x64</Platform>
+      <Configuration>Debug_CpuOnly</Configuration>
+      <Platform>x64</Platform>
     </ProjectConfiguration>
     <ProjectConfiguration Include="Release|x64">
       <Configuration>Release</Configuration>
       <Platform>x64</Platform>
     </ProjectConfiguration>
     <ProjectConfiguration Include="Release_CpuOnly|x64">
-        <Configuration>Release_CpuOnly</Configuration>
-        <Platform>x64</Platform>
+      <Configuration>Release_CpuOnly</Configuration>
+      <Platform>x64</Platform>
     </ProjectConfiguration>
   </ItemGroup>
   <PropertyGroup Label="Globals">
@@ -85,7 +85,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="wrapper.cpp" />
+    <ClCompile Include="EvalWrapper.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\..\Common\Include\Eval.h" />

@@ -739,7 +739,7 @@ void LibSVMBinaryReader<ElemType>::StartDistributedMinibatchLoop(size_t mbSize, 
 }
 
 template <class ElemType>
-void LibSVMBinaryReader<ElemType>::CheckDataMatrices(std::map<std::wstring, Matrix<ElemType>*>& matrices)
+void LibSVMBinaryReader<ElemType>::CheckDataMatrices(StreamMinibatchInputs& matrices)
 {
     if (m_dataMatrices.empty())
     {
@@ -780,7 +780,7 @@ void LibSVMBinaryReader<ElemType>::DoDSSMMatrix(Matrix<ElemType>& mat, size_t ac
 }
 
 template <class ElemType>
-bool LibSVMBinaryReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemType>*>& matrices)
+bool LibSVMBinaryReader<ElemType>::GetMinibatch(StreamMinibatchInputs& matrices)
 {
 //timer = clock();
 #if DEBUG
@@ -821,25 +821,20 @@ bool LibSVMBinaryReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<El
 #endif
         for (auto matrix : m_dataMatrices)
         {
-            auto findMat = matrices.find(matrix.first);
-            if (findMat != matrices.end())
-            {
-                matrix.second->Fill(findMat->second);
-            }
+            if (matrices.HasInput(matrix.first))
+                matrix.second->Fill(&matrices.GetInputMatrix<ElemType>(matrix.first));
         }
 #if DEBUG
         reader_series->write_flag(_T("done fill."));
 #endif
-        auto findMat = matrices.find(L"DSSMLabel");
-        if (findMat != matrices.end())
-        {
-            DoDSSMMatrix(*(findMat->second), actualMBSize);
-        }
+        if (matrices.HasInput(L"DSSMLabel"))
+            DoDSSMMatrix(matrices.GetInputMatrix<ElemType>(L"DSSMLabel"), actualMBSize);
+
         m_pendingAsyncGetMinibatch = std::async(std::launch::async, [this]()
-                                                {
-                                                    // CheckDataMatrices(matrices);
-                                                    return m_dataInput->FillMatrices(m_dataMatrices);
-                                                });
+        {
+            // CheckDataMatrices(matrices);
+            return m_dataInput->FillMatrices(m_dataMatrices);
+        });
     }
 #if DEBUG
     cur_read++;

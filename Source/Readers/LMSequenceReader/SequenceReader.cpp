@@ -12,6 +12,7 @@
 #ifdef LEAKDETECT
 #include <vld.h> // leak detection
 #endif
+#include "DataWriter.h"
 #include "fileutil.h" // for fexists()
 #include <iostream>
 #include <vector>
@@ -68,7 +69,7 @@ size_t SequenceReader<ElemType>::RecordsToRead(size_t mbStartSample, bool tail)
 // endOfDataCheck - check if we are at the end of the dataset (no wraparound)
 // returns - true if we have more to read, false if we hit the end of the dataset
 template <class ElemType>
-typename IDataReader<ElemType>::LabelIdType SequenceReader<ElemType>::GetIdFromLabel(const std::string& labelValue, LabelInfo& labelInfo)
+IDataReader::LabelIdType SequenceReader<ElemType>::GetIdFromLabel(const std::string& labelValue, LabelInfo& labelInfo)
 {
     auto found = labelInfo.mapLabelToId.find(labelValue);
     // not yet found, add to the map
@@ -701,11 +702,11 @@ void SequenceReader<ElemType>::InitCache(const ConfigParameters& readerConfig)
             // mmodify the config so the reader types look correct
             config["readerType"] = config("writerType");
             config["file"] = filesList;
-            m_cachingReader = new DataReader<ElemType>(config);
+            m_cachingReader = new DataReader(config);
         }
         else
         {
-            m_cachingWriter = new DataWriter<ElemType>(readerConfig);
+            m_cachingWriter = new DataWriter(readerConfig);
 
             // now get the section names for map and category types
             std::map<std::wstring, SectionType, nocase_compare> sections;
@@ -877,8 +878,8 @@ void SequenceReader<ElemType>::StartMinibatchLoop(size_t mbSize, size_t epoch, s
         {
             m_labelsBuffer = new ElemType[mbSize * labelInfo.dim];
             memset(m_labelsBuffer, 0, sizeof(ElemType) * mbSize * labelInfo.dim);
-            m_labelsIdBuffer = new typename IDataReader<ElemType>::LabelIdType[mbSize];
-            memset(m_labelsIdBuffer, 0, sizeof(typename IDataReader<ElemType>::LabelIdType) * mbSize);
+            m_labelsIdBuffer = new LabelIdType[mbSize];
+            memset(m_labelsIdBuffer, 0, sizeof(LabelIdType) * mbSize);
         }
         else if (labelInfo.type != labelNone)
         {
@@ -981,38 +982,39 @@ bool SequenceReader<ElemType>::SentenceEnd()
 /// the third row is begining index of the class for this word
 /// the fourth row is the ending index + 1 of the class for this word
 template <class ElemType>
-void SequenceReader<ElemType>::GetLabelOutput(std::map<std::wstring, Matrix<ElemType>*>& matrices,
+void SequenceReader<ElemType>::GetLabelOutput(StreamMinibatchInputs& matrices,
                                               size_t m_mbStartSample, size_t actualmbsize)
 {
     FailBecauseDeprecated(__FUNCTION__);    // DEPRECATED CLASS, SHOULD NOT BE USED ANYMORE
 
     size_t j = 0;
-    Matrix<ElemType>* labels = matrices[m_labelsName[labelInfoOut]];
-    if (labels == nullptr)
+    if (!matrices.HasInput(m_labelsName[labelInfoOut]))
         return;
 
+    Matrix<ElemType>& labels = matrices.GetInputMatrix<ElemType>(m_labelsName[labelInfoOut]);
+
     if (readerMode == ReaderMode::NCE)
-        labels->Resize(2 * (m_noiseSampleSize + 1), actualmbsize);
+        labels.Resize(2 * (m_noiseSampleSize + 1), actualmbsize);
     else if (readerMode == ReaderMode::Class)
-        labels->Resize(4, actualmbsize);
+        labels.Resize(4, actualmbsize);
     else if (readerMode == ReaderMode::Softmax)
-        labels->Resize(1, actualmbsize);
+        labels.Resize(1, actualmbsize);
 
     for (size_t jSample = m_mbStartSample; j < actualmbsize; ++j, ++jSample)
     {
         // pick the right sample with randomization if desired
         size_t jRand = jSample;
         int wrd = m_labelIdData[jRand];
-        labels->SetValue(0, j, (ElemType) wrd);
+        labels.SetValue(0, j, (ElemType) wrd);
 
         if (readerMode == ReaderMode::NCE)
         {
-            labels->SetValue(1, j, (ElemType) m_noiseSampler.logprob(wrd));
+            labels.SetValue(1, j, (ElemType) m_noiseSampler.logprob(wrd));
             for (size_t noiseid = 0; noiseid < m_noiseSampleSize; noiseid++)
             {
                 int wid = m_noiseSampler.sample();
-                labels->SetValue(2 * (noiseid + 1), j, (ElemType) wid);
-                labels->SetValue(2 * (noiseid + 1) + 1, j, -(ElemType) m_noiseSampler.logprob(wid));
+                labels.SetValue(2 * (noiseid + 1), j, (ElemType) wid);
+                labels.SetValue(2 * (noiseid + 1) + 1, j, -(ElemType) m_noiseSampler.logprob(wid));
             }
         }
         else if (readerMode == ReaderMode::Class)
@@ -1020,25 +1022,26 @@ void SequenceReader<ElemType>::GetLabelOutput(std::map<std::wstring, Matrix<Elem
             int clsidx = idx4class[wrd];
             if (m_classSize > 0)
             {
-                labels->SetValue(1, j, (ElemType) clsidx);
+                labels.SetValue(1, j, (ElemType) clsidx);
                 // save the [begining ending_indx) of the class
-                labels->SetValue(2, j, (*m_classInfoLocal)(0, clsidx)); // begining index of the class
-                labels->SetValue(3, j, (*m_classInfoLocal)(1, clsidx)); // end index of the class
+                labels.SetValue(2, j, (*m_classInfoLocal)(0, clsidx)); // begining index of the class
+                labels.SetValue(3, j, (*m_classInfoLocal)(1, clsidx)); // end index of the class
             }
         }
     }
 }
 template <class ElemType>
-void SequenceReader<ElemType>::GetInputProb(std::map<std::wstring, Matrix<ElemType>*>& matrices)
+void SequenceReader<ElemType>::GetInputProb(StreamMinibatchInputs& matrices)
 {
     FailBecauseDeprecated(__FUNCTION__);    // DEPRECATED CLASS, SHOULD NOT BE USED ANYMORE
 
-    Matrix<ElemType>* idx2prob = matrices[STRIDX2PROB];
-    if (idx2prob == nullptr)
+    if (!matrices.HasInput(STRIDX2PROB))
         return;
 
     if (m_idx2probRead)
         return;
+
+    Matrix<ElemType>& idx2prob = matrices.GetInputMatrix<ElemType>(STRIDX2PROB);
 
     // populate local CPU matrix
     m_id2Prob->SwitchToMatrixType(MatrixType::DENSE, matrixFormatDense, false);
@@ -1051,23 +1054,25 @@ void SequenceReader<ElemType>::GetInputProb(std::map<std::wstring, Matrix<ElemTy
         (*m_id2Prob)((int) j, 0) = (float) m_noiseSampler.prob((int) j);
     m_id2Prob->TransferFromDeviceToDevice(CPUDEVICE, curDevId, true, false, false);
 
-    int oldDeviceId = idx2prob->GetDeviceId();
+    int oldDeviceId = idx2prob.GetDeviceId();
     // caution, SetValue changes idx2cls from GPU to CPU, may change this behavior later
-    idx2prob->SetValue(*m_id2Prob);
-    idx2prob->TransferFromDeviceToDevice(idx2prob->GetDeviceId(), oldDeviceId, true);
+    idx2prob.SetValue(*m_id2Prob);
+    idx2prob.TransferFromDeviceToDevice(idx2prob.GetDeviceId(), oldDeviceId, true);
 
     m_idx2probRead = true;
 }
 
+// TODO: Document what this is. It seems we can fill specific hard-coded inputs with something interesting.
 template <class ElemType>
-void SequenceReader<ElemType>::GetInputToClass(std::map<std::wstring, Matrix<ElemType>*>& matrices)
+void SequenceReader<ElemType>::GetInputToClass(StreamMinibatchInputs& matrices)
 {
-    Matrix<ElemType>* idx2cls = matrices[STRIDX2CLS];
-    if (idx2cls == nullptr)
+    if (!matrices.HasInput(STRIDX2CLS))
         return;
 
     if (m_idx2clsRead)
         return;
+
+    Matrix<ElemType>& idx2cls = matrices.GetInputMatrix<ElemType>(STRIDX2CLS);
 
     // populate local CPU matrix
     m_id2classLocal->SwitchToMatrixType(MatrixType::DENSE, matrixFormatDense, false);
@@ -1083,10 +1088,10 @@ void SequenceReader<ElemType>::GetInputToClass(std::map<std::wstring, Matrix<Ele
     }
     m_id2classLocal->TransferFromDeviceToDevice(CPUDEVICE, curDevId, true, false, false);
 
-    int oldDeviceId = idx2cls->GetDeviceId();
+    int oldDeviceId = idx2cls.GetDeviceId();
     // caution, SetValue changes idx2cls from GPU to CPU, may change this behavior later
-    idx2cls->SetValue(*m_id2classLocal);
-    idx2cls->TransferFromDeviceToDevice(idx2cls->GetDeviceId(), oldDeviceId, true);
+    idx2cls.SetValue(*m_id2classLocal);
+    idx2cls.TransferFromDeviceToDevice(idx2cls.GetDeviceId(), oldDeviceId, true);
 
     m_idx2clsRead = true;
 }
@@ -1133,7 +1138,7 @@ void SequenceReader<ElemType>::GetClassInfo()
 }
 
 template <class ElemType>
-bool SequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemType>*>& matrices)
+bool SequenceReader<ElemType>::GetMinibatch(StreamMinibatchInputs& matrices)
 {
     FailBecauseDeprecated(__FUNCTION__);    // DEPRECATED CLASS, SHOULD NOT BE USED ANYMORE
 
@@ -1184,7 +1189,7 @@ bool SequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemTy
     if (labelInfo.type == labelCategory)
     {
         memset(m_labelsBuffer, 0, sizeof(ElemType) * labelInfo.dim * actualmbsize);
-        memset(m_labelsIdBuffer, 0, sizeof(typename IDataReader<ElemType>::LabelIdType) * actualmbsize);
+        memset(m_labelsIdBuffer, 0, sizeof(LabelIdType) * actualmbsize);
     }
     else if (labelInfo.type != labelNone)
     {
@@ -1197,7 +1202,7 @@ bool SequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemTy
 
         // loop through all the samples
         int j = 0;
-        Matrix<ElemType>& features = *matrices[m_featuresName];
+        Matrix<ElemType>& features = matrices.GetInputMatrix<ElemType>(m_featuresName);
         if (matrices.find(m_featuresName) != matrices.end())
         {
             if (features.GetMatrixType() == MatrixType::DENSE)
@@ -1250,7 +1255,7 @@ bool SequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemTy
         // get the features array
         if (matrices.find(m_featuresName) == matrices.end())
         {
-            Matrix<ElemType>& nbs = *matrices[L"numberobs"];
+            Matrix<ElemType>& nbs = matrices.GetInputMatrix<ElemType>(L"numberobs");
             int curDevId = nbs.GetDeviceId();
             nbs.TransferFromDeviceToDevice(curDevId, CPUDEVICE, true, false, false);
             nbs(0, 0) = (float) actualmbsize;
@@ -1258,7 +1263,7 @@ bool SequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemTy
             for (size_t i = 0; i < actualmbsize; i++)
             {
                 std::wstring ws = msra::strfun::wstrprintf(L"feature%d", i);
-                Matrix<ElemType>& features = *matrices[ws];
+                Matrix<ElemType>& features = matrices.GetInputMatrix<ElemType>(ws);
                 features.SetValue(labelInfo.dim, 1, features.GetDeviceId(), &m_featuresBuffer[i * labelInfo.dim], matrixFlagNormal);
             }
         }
@@ -1274,18 +1279,21 @@ bool SequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemTy
         {
             if (matrices.find(m_labelsName[labelInfoOut]) == matrices.end())
             {
+                // TODO: What is this? Debug code?
                 for (size_t i = 0; i < actualmbsize; i++)
                 {
                     std::wstring ws = msra::strfun::wstrprintf(L"label%d", i);
-                    Matrix<ElemType>* labels = matrices[ws];
-                    labels->SetValue(labelInfo.dim, 1, labels->GetDeviceId(), &m_labelsBuffer[i * labelInfo.dim], matrixFlagNormal);
+                    // This writes into nodes named "labelN", or crashes if they don't exist. Seems this is dead code.
+                    Matrix<ElemType>& labels = matrices.GetInputMatrix<ElemType>(ws);
+                    labels.SetValue(labelInfo.dim, 1, labels.GetDeviceId(), &m_labelsBuffer[i * labelInfo.dim], matrixFlagNormal);
                 }
             }
+            // BUGBUG? If category labels then this will not output anything if such node is given.
         }
         else if (labelInfo.type != labelNone)
         {
-            Matrix<ElemType>* labels = matrices[m_labelsName[labelInfoOut]];
-            labels->SetValue(1, actualmbsize, labels->GetDeviceId(), m_labelsBuffer, matrixFlagNormal);
+            Matrix<ElemType>& labels = matrices.GetInputMatrix<ElemType>(m_labelsName[labelInfoOut]);
+            labels.SetValue(1, actualmbsize, labels.GetDeviceId(), m_labelsBuffer, matrixFlagNormal);
         }
     }
     catch (...)
@@ -1300,7 +1308,7 @@ bool SequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemTy
 // GetLabelMapping - Gets the label mapping from integer index to label type
 // returns - a map from numeric datatype to native label type
 template <class ElemType>
-const std::map<typename IDataReader<ElemType>::LabelIdType, typename IDataReader<ElemType>::LabelType>& SequenceReader<ElemType>::GetLabelMapping(const std::wstring& sectionName)
+const std::map<IDataReader::LabelIdType, IDataReader::LabelType>& SequenceReader<ElemType>::GetLabelMapping(const std::wstring& sectionName)
 {
     FailBecauseDeprecated(__FUNCTION__);    // DEPRECATED CLASS, SHOULD NOT BE USED ANYMORE
 
@@ -1317,7 +1325,7 @@ const std::map<typename IDataReader<ElemType>::LabelIdType, typename IDataReader
 // labelMapping - mapping table from label values to IDs (must be 0-n)
 // note: for tasks with labels, the mapping table must be the same between a training run and a testing run
 template <class ElemType>
-void SequenceReader<ElemType>::SetLabelMapping(const std::wstring& /*sectionName*/, const std::map<typename IDataReader<ElemType>::LabelIdType, LabelType>& labelMapping)
+void SequenceReader<ElemType>::SetLabelMapping(const std::wstring& /*sectionName*/, const std::map<IDataReader::LabelIdType, LabelType>& labelMapping)
 {
     FailBecauseDeprecated(__FUNCTION__);    // DEPRECATED CLASS, SHOULD NOT BE USED ANYMORE
 
@@ -1673,14 +1681,12 @@ void BatchSequenceReader<ElemType>::StartMinibatchLoop(size_t mbSize, size_t epo
 template <class ElemType>
 size_t BatchSequenceReader<ElemType>::DetermineSequencesToProcess()
 {
-    if (mNumRead == 0) // no data loaded or input file empty (?)
+    if (mNumRead == 0) // no data loaded (either this is the first call, or the input file empty)
         return 0;
 
     // lazily create the mProcessed[] array
     if (mProcessed.size() == 0)
-    {
         mProcessed.resize(mNumRead, false);
-    }
 
     // lazily check if we are done
     // We are done if mToProcess[] contains a sequence for which mProcessed[] is set (...which likely applies to all?).
@@ -1701,9 +1707,7 @@ size_t BatchSequenceReader<ElemType>::DetermineSequencesToProcess()
             }
         }
         if (allDone) // if we are done
-        {
             mToProcess.clear();
-        }
     }
 
     // if we still have unfinished sequences then just return their length
@@ -1783,17 +1787,18 @@ bool BatchSequenceReader<ElemType>::GetMinibatchData(size_t& /*out*/ firstPosInS
         if (mNumRead == 0)
             return false; // end
 
-        if (m_cacheBlockSize == 50000) // back compat--this used to be a constant
+#ifdef _MSC_VER // make some old configurations reproducable (m_cacheBlockSize used to be a constant)  --TODO: remove in a few months
+        if (m_cacheBlockSize == 50000)
         {
-            // this uses rand(), which maxes out at 32767  --BUGBUG?
             std::random_shuffle(m_parser.mSentenceIndex2SentenceInfo.begin(), m_parser.mSentenceIndex2SentenceInfo.end());
+            // Note: random_shuffle is deprecated since C++14.
         }
         else // new configs use a wider randomization
+#endif
         {
-            std::srand((unsigned int)m_epoch);
-            std::random_shuffle(m_parser.mSentenceIndex2SentenceInfo.begin(), m_parser.mSentenceIndex2SentenceInfo.end(),
-                [](int i){
-                return (std::rand() * (RAND_MAX+1) + std::rand()) % i; });
+            std::random_device rd;
+            std::mt19937 g(rd());
+            std::shuffle(m_parser.mSentenceIndex2SentenceInfo.begin(), m_parser.mSentenceIndex2SentenceInfo.end(), g);
         }
 
         m_readNextSampleLine += mNumRead;
@@ -1880,7 +1885,7 @@ bool BatchSequenceReader<ElemType>::GetMinibatchData(size_t& /*out*/ firstPosInS
 //  - up to N sequences of the same length are returned in each MB
 //     - minibatches consist of sequences of the same length only (no gaps)
 template <class ElemType>
-bool BatchSequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemType>*>& matrices)
+bool BatchSequenceReader<ElemType>::GetMinibatch(StreamMinibatchInputs& matrices)
 {
     // get out if they didn't call StartMinibatchLoop() first
     // TODO: Why not fail here?
@@ -1944,7 +1949,7 @@ bool BatchSequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<E
     auto iter = matrices.find(m_featuresName);
     if (iter != matrices.end()) // (if not found then feature matrix is not requested this time)
     {
-        Matrix<ElemType>& features = *iter->second;
+        Matrix<ElemType>& features = matrices.GetInputMatrix<ElemType>(iter->first);
 
         bool moveMatrix = features.GetMatrixType() != MatrixType::SPARSE;
         // BUGBUG: Matrix does not support modifying a dense GPU matrix temporarily ^^ on the CPU. We should instead have a local CPU matrix and assign it over.
@@ -2077,26 +2082,25 @@ bool BatchSequenceReader<ElemType>::DataEnd()
 // i.e., the ending_index is 1 plus of the true ending index
 // This is a subroutine to GetMinibatch() and is only called from there.
 template <class ElemType>
-void BatchSequenceReader<ElemType>::GetLabelOutput(std::map<std::wstring,
-                                                   Matrix<ElemType>*>& matrices,
+void BatchSequenceReader<ElemType>::GetLabelOutput(StreamMinibatchInputs& matrices,
                                                    size_t mbStartSample, size_t actualmbsize)
 {
-    size_t j = 0;
-    Matrix<ElemType>* labels = matrices[m_labelsName[labelInfoOut]];
-    if (labels == nullptr)
+    if (!matrices.HasInput(m_labelsName[labelInfoOut]))
         return;
 
+    size_t j = 0;
+    Matrix<ElemType>& labels = matrices.GetInputMatrix<ElemType>(m_labelsName[labelInfoOut]);
     if (readerMode == ReaderMode::NCE)
-        labels->Resize(2 * (m_noiseSampleSize + 1), actualmbsize);
+        labels.Resize(2 * (m_noiseSampleSize + 1), actualmbsize);
     else if (readerMode == ReaderMode::Class)
-        labels->Resize(4, actualmbsize, false);
+        labels.Resize(4, actualmbsize, false);
     else
-        labels->Resize(1, actualmbsize, false);
+        labels.Resize(1, actualmbsize, false);
 
     // move to CPU since element-wise operation is expensive on GPU
-    int curDevId = labels->GetDeviceId();
-    labels->TransferFromDeviceToDevice(curDevId, CPUDEVICE, true, false, false);
-    assert(labels->GetCurrentMatrixLocation() == CPU);
+    int curDevId = labels.GetDeviceId();
+    labels.TransferFromDeviceToDevice(curDevId, CPUDEVICE, true, false, false);
+    assert(labels.GetCurrentMatrixLocation() == CPU);
 
     ElemType epsilon = (ElemType) 1e-6; // avoid all zero, although this is almost impossible.
 
@@ -2107,16 +2111,16 @@ void BatchSequenceReader<ElemType>::GetLabelOutput(std::map<std::wstring,
 
         // write sample value into output
         // This writes an index into a row vector. Which is wrong, we want a sparse one-hot vector.
-        labels->SetValue(0, j, (ElemType) wrd);
+        labels.SetValue(0, j, (ElemType) wrd);
 
         if (readerMode == ReaderMode::NCE)
         {
-            labels->SetValue(1, j, (ElemType) m_noiseSampler.logprob(wrd));
+            labels.SetValue(1, j, (ElemType) m_noiseSampler.logprob(wrd));
             for (size_t noiseid = 0; noiseid < m_noiseSampleSize; noiseid++)
             {
                 int wid = m_noiseSampler.sample();
-                labels->SetValue(2 * (noiseid + 1), j, (ElemType) wid);
-                labels->SetValue(2 * (noiseid + 1) + 1, j, -(ElemType) m_noiseSampler.logprob(wid));
+                labels.SetValue(2 * (noiseid + 1), j, (ElemType) wid);
+                labels.SetValue(2 * (noiseid + 1) + 1, j, -(ElemType) m_noiseSampler.logprob(wid));
             }
         }
         else if (readerMode == ReaderMode::Class)
@@ -2124,7 +2128,7 @@ void BatchSequenceReader<ElemType>::GetLabelOutput(std::map<std::wstring,
             int clsidx = idx4class[wrd];
             if (m_classSize > 0)
             {
-                labels->SetValue(1, j, (ElemType) clsidx);
+                labels.SetValue(1, j, (ElemType) clsidx);
 
                 // save the [begining ending_indx) of the class
                 size_t lft = (size_t) (*m_classInfoLocal)(0, clsidx);
@@ -2134,20 +2138,20 @@ void BatchSequenceReader<ElemType>::GetLabelOutput(std::map<std::wstring,
                     LogicError("LMSequenceReader::GetLabelOutput word %d should be at least equal to or larger than its class's left index %d; right index %d of its class should be larger or equal to left index %d of its class; word index %d should be smaller than its class's right index %d.\n",
                                (int) wrd, (int) lft, (int) rgt, (int) lft, (int) wrd, (int) rgt);
                 }
-                labels->SetValue(2, j, (*m_classInfoLocal)(0, clsidx)); // begining index of the class
-                labels->SetValue(3, j, (*m_classInfoLocal)(1, clsidx)); // end index of the class
+                labels.SetValue(2, j, (*m_classInfoLocal)(0, clsidx)); // begining index of the class
+                labels.SetValue(3, j, (*m_classInfoLocal)(1, clsidx)); // end index of the class
             }
         }
         else if (readerMode == ReaderMode::Softmax)
         {
             if (wrd == 0)
-                labels->SetValue(0, j, epsilon + (ElemType) wrd);
+                labels.SetValue(0, j, epsilon + (ElemType) wrd);
         }
         else if (readerMode == ReaderMode::Unnormalize)
         {
-            labels->SetValue(0, j, -(ElemType) wrd);
+            labels.SetValue(0, j, -(ElemType) wrd);
             if (wrd == 0)
-                labels->SetValue(0, j, -epsilon - (ElemType) wrd);
+                labels.SetValue(0, j, -epsilon - (ElemType) wrd);
         }
 
 #if 0   // This is fragile--if a line does not end with </s>, we will never get out of here. Instead, this is now set in GetMinibatchData().
@@ -2163,8 +2167,10 @@ void BatchSequenceReader<ElemType>::GetLabelOutput(std::map<std::wstring,
 #endif
     }
     // send it back to the GPU if so desired
+    // We have a special hack here to keep it on the CPU because we know that something is inefficient later.
+    // TODO: No! Readers should not have such knowledge.
     if (curDevId != CPUDEVICE && readerMode != ReaderMode::Class)
-        labels->TransferFromDeviceToDevice(CPUDEVICE, curDevId, false, false, false);
+        labels.TransferFromDeviceToDevice(CPUDEVICE, curDevId, false, false, false);
 }
 
 #if 0

@@ -298,12 +298,12 @@ status open
 
 \begin_layout Plain Layout
 
-extern "C" DATAREADER_API void GetReaderF(IDataReader<float>** preader);
+extern "C" DATAREADER_API void GetReaderF(IDataReader** preader);
 \end_layout
 
 \begin_layout Plain Layout
 
-extern "C" DATAREADER_API void GetReaderD(IDataReader<double>** preader);
+extern "C" DATAREADER_API void GetReaderD(IDataReader** preader);
 \end_layout
 
 \end_inset
@@ -319,12 +319,12 @@ status open
 
 \begin_layout Plain Layout
 
-extern "C" DATAWRITER_API void GetWriterF(IDataWriter<float>** pwriter);
+extern "C" DATAWRITER_API void GetWriterF(IDataWriter** pwriter);
 \end_layout
 
 \begin_layout Plain Layout
 
-extern "C" DATAWRITER_API void GetWriterD(IDataWriter<double>** pwriter);
+extern "C" DATAWRITER_API void GetWriterD(IDataWriter** pwriter);
 \end_layout
 
 \end_inset
@@ -430,8 +430,7 @@ ochSamples=requestDataSize) = 0;
 
 \begin_layout Plain Layout
 
-    virtual bool GetMinibatch(std::map<std::wstring, Matrix<ElemType>*>&
- matrices) = 0;
+    virtual bool GetMinibatch(StreamMinibatchInputs& matrices) = 0;
 \end_layout
 
 \begin_layout Plain Layout
@@ -441,14 +440,13 @@ ochSamples=requestDataSize) = 0;
 
 \begin_layout Plain Layout
 
-  virtual const std::map<typename LabelIdType, typename LabelType>& GetLabelMapp
+  virtual const std::map<LabelIdType, LabelType>& GetLabelMapp
 ing(const std::wstring& sectionName) = 0;
 \end_layout
 
 \begin_layout Plain Layout
 
-  virtual void SetLabelMapping(const std::wstring& sectionName, const std::map<t
-ypename LabelIdType, typename LabelType>& labelMapping) = 0;
+  virtual void SetLabelMapping(const std::wstring& sectionName, const std::map<LabelIdType, LabelType>& labelMapping) = 0;
 \end_layout
 
 \begin_layout Plain Layout
@@ -1098,8 +1096,7 @@ public:
 
 \begin_layout Plain Layout
 
-   virtual void SaveMapping(std::wstring saveId, const std::map<typename
- LabelIdType, typename LabelType>& labelMapping) = 0;
+   virtual void SaveMapping(std::wstring saveId, const std::map<LabelIdType, LabelType>& labelMapping) = 0;
 \end_layout
 
 \begin_layout Plain Layout
@@ -4391,7 +4388,7 @@ std::vector<ComputationNodePtr> & labelNodes = net.LabelNodes();
 
 \begin_layout Plain Layout
 
-std::map<std::wstring, Matrix<ElemType>*> inputMatrices; 
+StreamMinibatchInputs inputMatrices; 
 \end_layout
 
 \begin_layout Plain Layout

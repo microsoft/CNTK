@@ -12,7 +12,7 @@
 namespace Microsoft { namespace MSR { namespace CNTK {
 
 template <class ElemType>
-class LMSequenceWriter : public IDataWriter<ElemType>
+class LMSequenceWriter : public IDataWriter
 {
 private:
     std::vector<size_t> outputDims;
@@ -49,8 +49,6 @@ public:
     }
 
 public:
-    using LabelType = typename IDataWriter<ElemType>::LabelType;
-    using LabelIdType = typename IDataWriter<ElemType>::LabelIdType;
     void GetSections(std::map<std::wstring, SectionType, nocase_compare>& /*sections*/)
     {
     }
@@ -77,20 +75,4 @@ public:
     };
 };
 
-template <class ElemType>
-void DATAWRITER_API GetWriter(IDataWriter<ElemType>** pwriter)
-{
-    assert(pwriter != nullptr);
-    *pwriter = new LMSequenceWriter<ElemType>();
-    assert(*pwriter != nullptr);
-}
-
-extern "C" DATAWRITER_API void GetWriterF(IDataWriter<float>** pwriter)
-{
-    GetWriter(pwriter);
-}
-extern "C" DATAWRITER_API void GetWriterD(IDataWriter<double>** pwriter)
-{
-    GetWriter(pwriter);
-}
-} } }
+}}}

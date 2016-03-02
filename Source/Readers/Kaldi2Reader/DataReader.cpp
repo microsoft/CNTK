@@ -4,6 +4,8 @@
 //
 // DataReader.cpp : Defines the exported functions for the DLL application.
 //
+// TODO: Rename to Exports.cpp
+//
 
 #include "stdafx.h"
 #include "basetypes.h"
@@ -23,19 +25,13 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
-template <class ElemType>
-void DATAREADER_API GetReader(IDataReader<ElemType>** preader)
+extern "C" DATAREADER_API void GetReaderF(IDataReader** preader)
 {
-    *preader = new HTKMLFReader<ElemType>();
+    *preader = new HTKMLFReader<float>();
 }
-
-extern "C" DATAREADER_API void GetReaderF(IDataReader<float>** preader)
+extern "C" DATAREADER_API void GetReaderD(IDataReader** preader)
 {
-    GetReader(preader);
-}
-extern "C" DATAREADER_API void GetReaderD(IDataReader<double>** preader)
-{
-    GetReader(preader);
+    *preader = new HTKMLFReader<double>();
 }
 
 // Utility function, in ConfigFile.cpp, but HTKMLFReader doesn't need that code...

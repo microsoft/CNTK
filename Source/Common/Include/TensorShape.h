@@ -74,7 +74,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 //     - allows output and input tensors (TimesNode will get optional parameter how many leading dims to not contract), e.g.
 //       A[U,V,I,J] * B[I,J,S,T] -> C[U,V,S,T], c_uvst = sum_ij a_uvij * b_ijst
 //     - for now this operation must be flattenable as to be implementable as SGEMM (may extend in the future)
-//  - tensor transpose -> TransposeNode
+//  - tensor transpose -> TransposeDimensionsNode
 //     - swaps any two dimensions. This does not change the column-major definition, i.e. requires a memory copy.
 //     - special case: swapping between sample and MBLayout, e.g. turn a sample dimension to a time dimension
 //  - Validate() stage will automatically infer tensor dimensions from inputs, and also infer downwards into LearnableParameters where requested
@@ -351,26 +351,11 @@ public:
     }
 
     // convenience constructors, e,g. for test code
-    explicit TensorShape(size_t I)
-        : TensorShape(SmallVector<size_t>{I})
-    {
-    }
-    TensorShape(size_t I, size_t J)
-        : TensorShape(SmallVector<size_t>{I, J})
-    {
-    }
-    TensorShape(size_t I, size_t J, size_t K)
-        : TensorShape(SmallVector<size_t>{I, J, K})
-    {
-    }
-    TensorShape(size_t I, size_t J, size_t K, size_t L)
-        : TensorShape(SmallVector<size_t>{I, J, K, L})
-    {
-    }
-    TensorShape(size_t I, size_t J, size_t K, size_t L, size_t M)
-        : TensorShape(SmallVector<size_t>{I, J, K, L, M})
-    {
-    }
+    explicit TensorShape(size_t I)                                : TensorShape(SmallVector<size_t>{I}) { }
+    TensorShape(size_t I, size_t J)                               : TensorShape(SmallVector<size_t>{I, J}) { }
+    TensorShape(size_t I, size_t J, size_t K)                     : TensorShape(SmallVector<size_t>{I, J, K}) { }
+    TensorShape(size_t I, size_t J, size_t K, size_t L)           : TensorShape(SmallVector<size_t>{I, J, K, L}) { }
+    TensorShape(size_t I, size_t J, size_t K, size_t L, size_t M) : TensorShape(SmallVector<size_t>{I, J, K, L, M}) { }
 
     // default constructor
     TensorShape()
@@ -379,14 +364,8 @@ public:
     }
 
     // boilerplate
-    bool operator==(const TensorShape& other) const
-    {
-        return m_dims == other.m_dims;
-    }
-    bool operator!=(const TensorShape& other) const
-    {
-        return !operator==(other);
-    } // duh!
+    bool operator==(const TensorShape& other) const { return m_dims == other.m_dims; }
+    bool operator!=(const TensorShape& other) const { return !operator==(other); } // duh!
 
     // verify that this refers to a dense matrix (no strides)
     void VerifyIsDense() const
@@ -642,6 +621,15 @@ public:
         for (size_t k = 0; k < size(); k++)
             NarrowTo(k, (size_t)bounds.first[k], (size_t)bounds.second[k]);
         return *this;
+    }
+    // swap two existing dimensions (implements transposition)
+    // This yields the same tensor but index positions are exchanged.
+    void SwapDimsInPlace(size_t i, size_t j)
+    {
+        if (i == j) // this is OK
+            return;
+        std::swap(m_dims[i],    m_dims[j]);
+        std::swap(m_strides[i], m_strides[j]);
     }
 
     // compare two TensorShapes, whether they are compatible, considering padding and broadcasting

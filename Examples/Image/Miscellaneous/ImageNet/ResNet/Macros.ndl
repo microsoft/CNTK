@@ -2,8 +2,8 @@ ConvBNLayerW(W, inp, outMap, kW, kH, hStride, vStride, bValue, scValue, bnTimeCo
 [
     b = Parameter(outMap, 1, init = fixedValue, value = bValue)
     sc = Parameter(outMap, 1, init = fixedValue, value = scValue)
-    m = Parameter(outMap, 1, init = fixedValue, value = 0, needGradient = false)
-    isd = Parameter(outMap, 1, init = fixedValue, value = 0, needGradient = false)
+    m = Parameter(outMap, 1, init = fixedValue, value = 0, learningRateMultiplier = 0)
+    isd = Parameter(outMap, 1, init = fixedValue, value = 0, learningRateMultiplier = 0)
     
     c = Convolution(W, inp, kW, kH, outMap, hStride, vStride, zeroPadding = true, imageLayout = "cudnn")
     y = BatchNormalization(c, sc, b, m, isd, eval = false, spatial = true, normalizationTimeConstant = bnTimeConst, epsilon = 0.000000001, imageLayout = "cudnn")

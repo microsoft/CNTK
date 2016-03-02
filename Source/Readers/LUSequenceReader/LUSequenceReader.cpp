@@ -809,7 +809,7 @@ void BatchLUSequenceReader<ElemType>::SetNumParallelSequences(const size_t mz)
 }
 
 template <class ElemType>
-bool BatchLUSequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemType>*>& matrices)
+bool BatchLUSequenceReader<ElemType>::GetMinibatch(StreamMinibatchInputs& matrices)
 {
     // get out if they didn't call StartMinibatchLoop() first
     // TODO: Why is this allowed? Why not terminate?
@@ -838,7 +838,7 @@ bool BatchLUSequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix
     {
         if (matrices.find(m_featuresName) == matrices.end())
             RuntimeError("BatchLUSequenceReader cannot find %ls.", m_featuresName.c_str());
-        Matrix<ElemType>& features = *matrices[m_featuresName];
+        Matrix<ElemType>& features = matrices.GetInputMatrix<ElemType>(m_featuresName);
 
         // loop through all the samples and create a one-hot representation, or multi-hot in some conditions (TODO: which condition)
         Matrix<ElemType> locObs(CPUDEVICE);
@@ -906,20 +906,18 @@ bool BatchLUSequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix
 }
 
 template <class ElemType>
-size_t BatchLUSequenceReader<ElemType>::GetLabelOutput(std::map<std::wstring,
-                                                                Matrix<ElemType>*>& matrices,
-                                                       LabelInfo& labelInfo, size_t actualmbsize)
+size_t BatchLUSequenceReader<ElemType>::GetLabelOutput(StreamMinibatchInputs& matrices, LabelInfo& labelInfo, size_t actualmbsize)
 {
-    Matrix<ElemType>* labels = matrices[m_labelsName[labelInfoOut]];
-    if (labels == nullptr)
+    if (!matrices.HasInput(m_labelsName[labelInfoOut]))
         return 0;
 
-    labels->Resize(labelInfo.dim, actualmbsize);
-    labels->SetValue(0);
+    Matrix<ElemType>& labels = matrices.GetInputMatrix<ElemType>(m_labelsName[labelInfoOut]);
+    labels.Resize(labelInfo.dim, actualmbsize);
+    labels.SetValue(0);
 
     // build it on the CPU side
-    DEVICEID_TYPE deviceId = labels->GetDeviceId();
-    labels->TransferFromDeviceToDevice(deviceId, CPUDEVICE, true);
+    DEVICEID_TYPE deviceId = labels.GetDeviceId();
+    labels.TransferFromDeviceToDevice(deviceId, CPUDEVICE, true);
 
     size_t nbrLabl = 0;
     for (size_t j = 0; j < actualmbsize; ++j) // loop over columns of the minibatch matrix
@@ -935,22 +933,22 @@ size_t BatchLUSequenceReader<ElemType>::GetLabelOutput(std::map<std::wstring,
         // if Plain then labels are 1-dim
         // if Class then labels are 3-dim, including the index range of all words belonging to the same class (words within a class have consecutive ids)
         if (labelInfo.readerMode == ReaderMode::Plain)
-            labels->SetValue(wrd, j, 1);
+            labels.SetValue(wrd, j, 1);
         else if (labelInfo.readerMode == ReaderMode::Class && labelInfo.mNbrClasses > 0)
         {
-            labels->SetValue(0, j, (ElemType) wrd);
+            labels.SetValue(0, j, (ElemType) wrd);
 
             long clsidx = -1;
             clsidx = labelInfo.idx4class[wrd];
 
-            labels->SetValue(1, j, (ElemType) clsidx);
+            labels.SetValue(1, j, (ElemType) clsidx);
             // save the [beginning ending_indx) of the class
             ElemType lft = (*labelInfo.m_classInfoLocal)(0, clsidx);
             ElemType rgt = (*labelInfo.m_classInfoLocal)(1, clsidx);
             if (rgt <= lft)
                 LogicError("LUSequenceReader : right is equal or smaller than the left, which is wrong.");
-            labels->SetValue(2, j, lft); // beginning index of the class
-            labels->SetValue(3, j, rgt); // end index of the class
+            labels.SetValue(2, j, lft); // beginning index of the class
+            labels.SetValue(3, j, rgt); // end index of the class
         }
         else
             LogicError("LUSequenceReader: reader mode is not set to Plain. Or in the case of setting it to Class, the class number is 0. ");
@@ -958,7 +956,7 @@ size_t BatchLUSequenceReader<ElemType>::GetLabelOutput(std::map<std::wstring,
     }
 
     // move it back to GPU if that's where it was before
-    labels->TransferFromDeviceToDevice(CPUDEVICE, deviceId, true);
+    labels.TransferFromDeviceToDevice(CPUDEVICE, deviceId, true);
 
     return nbrLabl;
 }
@@ -1032,7 +1030,7 @@ bool BatchLUSequenceReader<ElemType>::CanReadFor(wstring nodeName) // TODO: cons
 
 /// get a column slice corresponding to a frame of observations
 template <class ElemType>
-bool BatchLUSequenceReader<ElemType>::GetFrame(std::map<std::wstring, Matrix<ElemType>*>& matrices, const size_t tidx, vector<size_t>& history)
+bool BatchLUSequenceReader<ElemType>::GetFrame(StreamMinibatchInputs& matrices, const size_t tidx, vector<size_t>& history)
 {
 
     // get out if they didn't call StartMinibatchLoop() first
@@ -1046,7 +1044,7 @@ bool BatchLUSequenceReader<ElemType>::GetFrame(std::map<std::wstring, Matrix<Ele
         const LabelInfo& featInfo = m_labelInfo[labelInfoIn];
 
         // loop through all the samples
-        Matrix<ElemType>& features = *matrices[m_featuresName];
+        Matrix<ElemType>& features = matrices.GetInputMatrix<ElemType>(m_featuresName);
         Matrix<ElemType> locObs(CPUDEVICE);
         locObs.SwitchToMatrixType(SPARSE, matrixFormatSparseCSC, false);
 
@@ -1102,7 +1100,7 @@ bool BatchLUSequenceReader<ElemType>::GetFrame(std::map<std::wstring, Matrix<Ele
         {
             assert(mMatrices[p->first]->GetNumCols() > tidx);
             if (matrices.find(p->first) != matrices.end())
-                matrices[p->first]->SetValue(mMatrices[p->first]->ColumnSlice(tidx, mRequestedNumParallelSequences));
+                matrices.GetInputMatrix<ElemType>(p->first).SetValue(mMatrices[p->first]->ColumnSlice(tidx, mRequestedNumParallelSequences));
         }
     }
 
@@ -1113,18 +1111,18 @@ bool BatchLUSequenceReader<ElemType>::GetFrame(std::map<std::wstring, Matrix<Ele
 /// propose labels, return a vector with size larger than 0 if this reader allows proposal
 /// otherwise, return a vector with length zero
 template <class ElemType>
-void BatchLUSequenceReader<ElemType>::InitProposals(map<wstring, Matrix<ElemType>*>& pMat)
+void BatchLUSequenceReader<ElemType>::InitProposals(StreamMinibatchInputs& pMat)
 {
     if (m_labelInfo[labelInfoIn].isproposal)
     {
         // no need to save info for labelInfoIn since it is in mProposals
         if (pMat.find(m_labelsName[labelInfoOut]) != pMat.end())
-            mMatrices[m_labelsName[labelInfoOut]]->SetValue(*(pMat[m_labelsName[labelInfoOut]]));
+            mMatrices[m_labelsName[labelInfoOut]]->SetValue(pMat.GetInputMatrix<ElemType>(m_labelsName[labelInfoOut]));
     }
     else
     {
         if (pMat.find(m_featuresName) != pMat.end())
-            mMatrices[m_featuresName]->SetValue(*(pMat[m_featuresName]));
+            mMatrices[m_featuresName]->SetValue(pMat.GetInputMatrix<ElemType>(m_featuresName));
     }
 }
 
@@ -1165,16 +1163,16 @@ template class BatchLUSequenceReader<double>;
 template class BatchLUSequenceReader<float>;
 
 template <class ElemType>
-bool MultiIOBatchLUSequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemType>*>& matrices)
+bool MultiIOBatchLUSequenceReader<ElemType>::GetMinibatch(StreamMinibatchInputs& matrices)
 {
     // on first iteration, need to check if all requested data matrices are available
     std::map<std::wstring, size_t>::iterator iter;
     if (mCheckDictionaryKeys)
     {
-        for (auto iter = matrices.begin(); iter != matrices.end(); iter++)
+        for (auto iter = matrices.begin(); iter != matrices.end(); iter++) // TODO: range-based for
         {
             bool bFound = false;
-            for (typename map<wstring, BatchLUSequenceReader<ElemType>*>::iterator p = mReader.begin(); p != mReader.end(); p++)
+            for (typename map<wstring, BatchLUSequenceReader<ElemType>*>::iterator p = mReader.begin(); p != mReader.end(); p++) // TODO: range-based for
             {
                 if ((p->second)->CanReadFor(iter->first))
                 {
@@ -1316,7 +1314,7 @@ bool MultiIOBatchLUSequenceReader<ElemType>::DataEnd()
 
 // history is shared
 template <class ElemType>
-bool MultiIOBatchLUSequenceReader<ElemType>::GetProposalObs(std::map<std::wstring, Matrix<ElemType>*>& matrices, const size_t tidx, vector<size_t>& history)
+bool MultiIOBatchLUSequenceReader<ElemType>::GetProposalObs(StreamMinibatchInputs& matrices, const size_t tidx, vector<size_t>& history)
 {
     // run for each reader
     for (typename map<wstring, BatchLUSequenceReader<ElemType>*>::iterator p = mReader.begin(); p != mReader.end(); p++)
@@ -1332,13 +1330,11 @@ bool MultiIOBatchLUSequenceReader<ElemType>::GetProposalObs(std::map<std::wstrin
 /// need to provide initial matrice values if there are
 /// these values are from getMinibatch
 template <class ElemType>
-void MultiIOBatchLUSequenceReader<ElemType>::InitProposals(std::map<std::wstring, Matrix<ElemType>*>& matrices)
+void MultiIOBatchLUSequenceReader<ElemType>::InitProposals(StreamMinibatchInputs& matrices)
 {
     // run for each reader
-    for (typename map<wstring, BatchLUSequenceReader<ElemType>*>::iterator p = mReader.begin(); p != mReader.end(); p++)
-    {
-        (p->second)->InitProposals(matrices);
-    }
+    for (auto & iter : mReader)
+        iter.second->InitProposals(matrices);
 }
 
 template class MultiIOBatchLUSequenceReader<double>;

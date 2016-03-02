@@ -13,7 +13,7 @@
 namespace Microsoft { namespace MSR { namespace CNTK {
 
 template <class ElemType>
-class HTKMLFWriter : public IDataWriter<ElemType>
+class HTKMLFWriter : public IDataWriter
 {
 private:
     std::vector<size_t> outputDims;

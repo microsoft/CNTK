@@ -47,7 +47,7 @@ enum ReaderMode
 };
 
 template <class ElemType>
-class LUSequenceReader : public IDataReader<ElemType>
+class LUSequenceReader : public IDataReader
 {
 protected:
     bool m_idx2clsRead;
@@ -149,8 +149,8 @@ protected:
     } m_labelInfo[labelInfoNum];
 
     // caching support
-    DataReader<ElemType>* m_cachingReader;
-    DataWriter<ElemType>* m_cachingWriter;
+    DataReader* m_cachingReader;
+    DataWriter* m_cachingWriter;
     ConfigParameters m_readerConfig;
     void InitCache(const ConfigParameters& config);
 
@@ -315,12 +315,10 @@ public:
         SetSentenceEnd((int) wrd, (int) pos, (int) actualMbSize);
     }
 
-    size_t GetLabelOutput(std::map<std::wstring,
-                                   Matrix<ElemType>*>& matrices,
-                          LabelInfo& labelInfo, size_t actualmbsize);
+    size_t GetLabelOutput(StreamMinibatchInputs& matrices, LabelInfo& labelInfo, size_t actualmbsize);
 
     void StartMinibatchLoop(size_t mbSize, size_t epoch, size_t requestedEpochSamples = requestDataSize);
-    bool GetMinibatch(std::map<std::wstring, Matrix<ElemType>*>& matrices);
+    bool GetMinibatch(StreamMinibatchInputs& matrices);
 
     bool EnsureDataAvailable(size_t mbStartSample);
     size_t GetNumParallelSequences();
@@ -363,10 +361,10 @@ public:
     // this is for frame-by-frame reading of data.
     // data is first read into these matrices and then if needed is column-by-column retrieved
     map<wstring, std::shared_ptr<Matrix<ElemType>>> mMatrices;
-    bool GetFrame(std::map<std::wstring, Matrix<ElemType>*>& matrices, const size_t tidx, vector<size_t>& history);
+    bool GetFrame(StreamMinibatchInputs& matrices, const size_t tidx, vector<size_t>& history);
 
     // create proposals
-    void InitProposals(map<wstring, Matrix<ElemType>*>& pMat);
+    void InitProposals(StreamMinibatchInputs& pMat);
 
 public:
     bool mEqualLengthOutput;
@@ -412,7 +410,7 @@ public:
         }
     };
 
-    bool GetMinibatch(std::map<std::wstring, Matrix<ElemType>*>& matrices);
+    bool GetMinibatch(StreamMinibatchInputs& matrices);
 
     void StartMinibatchLoop(size_t mbSize, size_t epoch, size_t requestedEpochSamples);
 
@@ -439,7 +437,7 @@ public:
     bool DataEnd();
 
     // create proposals
-    void InitProposals(map<wstring, Matrix<ElemType>*>& pMat);
-    bool GetProposalObs(std::map<std::wstring, Matrix<ElemType>*>& matrices, const size_t tidx, vector<size_t>& history);
+    void InitProposals(StreamMinibatchInputs& pMat);
+    bool GetProposalObs(StreamMinibatchInputs& matrices, const size_t tidx, vector<size_t>& history);
 };
 } } }
