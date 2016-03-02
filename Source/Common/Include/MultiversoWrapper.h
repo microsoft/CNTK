@@ -400,7 +400,7 @@ namespace Microsoft {
 							msg->Push(multiverso::Blob(hi1, 13));
 							msg->Push(multiverso::Blob(hi2, 11));
 							msg->Push(multiverso::Blob(hi3, 18));
-							net->Send(msg);
+							while (net->Send(msg) == 0) {}
 							multiverso::Log::Info("rank 0 send\n");
 						}
 
@@ -438,7 +438,7 @@ namespace Microsoft {
 						msg->Push(multiverso::Blob(hi1, 13));
 						msg->Push(multiverso::Blob(hi2, 11));
 						msg->Push(multiverso::Blob(hi3, 18));
-						net->Send(msg);
+						while (net->Send(msg) == 0) {}
 						multiverso::Log::Info("rank %d send\n", net->rank());
 					}
 					// while (!net->Test()) {
