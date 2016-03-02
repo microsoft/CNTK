@@ -23,9 +23,16 @@ using namespace std;
 // This uses some heuristics for C++ names that may be fragile, but that's OK since this only adds/removes spaces.
 static string PrettifyName(string name)
 {
-    if (name.empty())
-        return name;
-    bool hasArgList = name.back() == ')';
+    //name = "Microsoft::MSR::CNTK::ConfigParameters::operator()(std::basic_string<wchar_t,std::char_traits<wchar_t>,std::allocator<wchar_t>> const&) const";
+    // strip off modifiers. Onyl handles 
+    string modifiers;
+    auto pos = name.find_last_not_of(" abcdefghijklmnopqrstuvwxyz");
+    if (pos != string::npos)
+    {
+        modifiers = name.substr(pos + 1);
+        name = name.substr(0, pos + 1);
+    }
+    bool hasArgList = !name.empty() && name.back() == ')';
     size_t angleDepth = 0;
     size_t parenDepth = 0;
     bool hitEnd = !hasArgList; // hit end of function name already?
@@ -44,6 +51,9 @@ static string PrettifyName(string name)
             parenDepth++;
         else if (name[i] == '(')
             parenDepth--;
+        // space before '>'
+        if (name[i] == ' ' && i + 1 < name.size() && name[i + 1] == '>')
+            name.erase(i, 1); // remove
         // commas
         if (name[i] == ',')
         {
@@ -64,12 +74,12 @@ static string PrettifyName(string name)
         else if ((name[i] == ' ' || name[i] == ':' || name[i] == '>') && hitEnd && !hitStart && i > 0) // we hit the start of the function name
         {
             if (name[i] != ' ')
-                name.insert(i + 1, "  ");
-            name.insert(i + 1, "  "); // in total insert 2 spaces
+                name.insert(i + 1, " ");
+            name.insert(i + 1, " "); // in total insert 2 spaces
             hitStart = true;
         }
     }
-    return name;
+    return name + modifiers;
 }
 
 /// <summary>This function collects the stack tracke and writes it through the provided write function
@@ -175,7 +185,7 @@ void ExceptionWithCallStack<E>::CollectCallStack(const function<void(string)>& w
             const char* ret = abi::__cxa_demangle(beginName, funcName, &funcNameSize, &status);
             string fName;
             if (status == 0)
-                fName = PrettifyName(ret) + "orig: " + ret; // make it a bit more readable
+                fName = PrettifyName(ret); // make it a bit more readable
             else
                 fName = beginName; // failed: fall back
 
