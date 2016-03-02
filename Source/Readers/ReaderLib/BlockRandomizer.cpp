@@ -424,7 +424,7 @@ bool BlockRandomizer::GetNextSequenceIds(size_t sampleCount, std::vector<size_t>
                     const auto& seqDesc = m_randomTimeline[m_sequencePositionInSweep];
                     originalIds.push_back(seqDesc.m_id);
 
-                    const auto & currentChunk = m_randomizedChunks[GetChunkIndexForSequencePosition(seqDesc.m_id)];
+                    const auto & currentChunk = m_randomizedChunks[GetChunkIndexForSequencePosition(m_sequencePositionInSweep)];
                     const size_t windowBegin = currentChunk.m_windowBegin;
                     const size_t windowEnd = currentChunk.m_windowEnd;
 
