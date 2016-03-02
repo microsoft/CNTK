@@ -211,7 +211,7 @@ public:
         assert(m_format == matrixFormatSparseBlockCol || m_format == matrixFormatSparseBlockRow);
         return MajorIndexLocation();
     }
-    GPUSPARSE_INDEX_TYPE* ColOrRow2BlockId() const
+    GPUSPARSE_INDEX_TYPE* ColOrRow2BlockId() const	
     {
         // not a valid function for other formats
         assert(m_format == matrixFormatSparseBlockCol || m_format == matrixFormatSparseBlockRow);
@@ -371,6 +371,21 @@ private:
 private:
     void ZeroInit(const MatrixFormat matrixFormat, const DEVICEID_TYPE deviceId);
 
+    void VerifyReadable(const string fname) const
+    {
+        if (m_slicedBy)
+            LogicError("%s: Matrix is not readable.", fname.c_str());
+    }
+
+    void VerifyWritable(const string fname) const
+    {
+        if (m_slicedBy)
+            LogicError("%s: Cannot modify the matrix, the buffer is managed externally.", fname.c_str());
+        for( auto* parent = m_sliceOf; parent != nullptr; parent = parent->m_sliceOf)
+            if ( parent->m_numCols != m_numCols || parent->m_sliceViewOffset != m_sliceViewOffset )
+				LogicError("%s: Cannot modify the matrix, the view is smaller than the underlying matrix.", fname.c_str());
+    }
+
 private:
     void performElementWiseFunction(const ElementWiseOperator kind, const GPUSparseMatrix<ElemType>& src);
     void DeepCopy(const GPUSparseMatrix<ElemType>& deepCopyFrom);
@@ -393,6 +408,7 @@ private:
     mutable size_t m_tempHostBufferSize;
 
     GPUSparseMatrix* m_sliceOf; // if this is a slice, then this points to the owning matrix object that we sliced from
+    GPUSparseMatrix* m_slicedBy; // if this is a slice, then this points to the owning matrix object that we sliced from
 };
 
 }}}

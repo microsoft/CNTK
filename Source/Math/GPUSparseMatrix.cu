@@ -70,6 +70,7 @@ void GPUSparseMatrix<ElemType>::ZeroInit(const MatrixFormat matrixFormat, const 
     m_format                   = matrixFormat;
 
     m_sliceOf                  = nullptr;
+    m_slicedBy                 = nullptr;
     m_totalBufferSizeAllocated = 0;
     m_blockSize                = 0;
     m_rowToId                  = nullptr;
@@ -101,7 +102,7 @@ GPUSparseMatrix<ElemType>::GPUSparseMatrix(const GPUMatrix<ElemType>& deepCopy, 
 template <class ElemType>
 GPUSparseMatrix<ElemType>::GPUSparseMatrix(const GPUSparseMatrix<ElemType>& deepCopy)
 {
-
+    deepCopy.VerifyReadable(__FUNCTION__);
     ZeroInit(deepCopy.GetFormat(), deepCopy.GetComputeDeviceId());
     DeepCopy(deepCopy);
 }
@@ -122,12 +123,14 @@ DEVICEID_TYPE GPUSparseMatrix<ElemType>::PrepareDevice(DEVICEID_TYPE deviceId /*
 template <class ElemType>
 /*private*/ void GPUSparseMatrix<ElemType>::DeepCopy(const GPUSparseMatrix<ElemType>& deepCopy)
 {
+    deepCopy.VerifyReadable(__FUNCTION__);
     ChangeDeviceTo(deepCopy.m_computeDevice);
     deepCopy.PrepareDevice();
 
     Resize(deepCopy.m_numRows, deepCopy.m_numCols, deepCopy.GetNumNZElements(), deepCopy.m_format, true, false);
     m_externalBuffer  = false;
     m_sliceOf         = nullptr;
+    m_slicedBy        = nullptr;
     m_nz              = deepCopy.m_nz;
     m_sliceViewOffset = 0; // reset to zero as we only start copying the indices starting from the offset in the source matrix
 
@@ -153,8 +156,8 @@ template <class ElemType>
 template <class ElemType>
 void GPUSparseMatrix<ElemType>::SetValue(const GPUSparseMatrix<ElemType>& deepCopy)
 {
-    if (!OwnBuffer())
-        LogicError("Cannot SetValue on managed external matrix");
+    deepCopy.VerifyReadable(__FUNCTION__);
+    VerifyWritable(__FUNCTION__);
 
     DeepCopy(deepCopy);
 }
@@ -163,8 +166,7 @@ void GPUSparseMatrix<ElemType>::SetValue(const GPUSparseMatrix<ElemType>& deepCo
 template <class ElemType>
 void GPUSparseMatrix<ElemType>::SetValue(const CPUSparseMatrix<ElemType>& deepCopy)
 {
-    if (!OwnBuffer())
-        LogicError("Cannot SetValue on Managed external matrix");
+    VerifyWritable(__FUNCTION__);
 
     SetFormat(deepCopy.GetFormat());
     if (deepCopy.IsEmpty())
@@ -308,8 +310,7 @@ void GPUSparseMatrix<ElemType>::CopyToDenseMatrix(GPUMatrix<ElemType>& denseMatr
 template <class ElemType>
 void GPUSparseMatrix<ElemType>::ConvertToSparseFormat(MatrixFormat newFormat, GPUSparseMatrix<ElemType>& outMatrix) const
 {
-    if (!outMatrix.OwnBuffer())
-        LogicError("Cannot ConvertToSparseFormat to managed external matrix");
+    outMatrix.VerifyWritable(__FUNCTION__);
 
     if (IsEmpty())
     {
@@ -389,8 +390,7 @@ GPUMatrix<ElemType> GPUSparseMatrix<ElemType>::CopyToDenseMatrix() const
 template <class ElemType>
 void GPUSparseMatrix<ElemType>::ChangeDeviceTo(DEVICEID_TYPE to_id)
 {
-    if (!OwnBuffer())
-        LogicError("Cannot change device on Managed external matrix");
+    VerifyWritable(__FUNCTION__);
     if (to_id == CPUDEVICE)
         LogicError("to_id must be valid GPU");
     if (m_computeDevice == to_id)
@@ -439,8 +439,7 @@ void GPUSparseMatrix<ElemType>::ChangeDeviceTo(DEVICEID_TYPE to_id)
 template <class ElemType>
 void GPUSparseMatrix<ElemType>::SetValue(const GPUMatrix<ElemType>& denseMatrix)
 {
-    if (!OwnBuffer())
-        LogicError("Cannot SetValue on Managed external matrix");
+    VerifyWritable(__FUNCTION__);
 
     SetValue(denseMatrix, GetFormat());
 }
@@ -448,8 +447,7 @@ void GPUSparseMatrix<ElemType>::SetValue(const GPUMatrix<ElemType>& denseMatrix)
 template <class ElemType>
 void GPUSparseMatrix<ElemType>::SetValue(const GPUMatrix<ElemType>& denseMatrix, const MatrixFormat matrixFormat)
 {
-    if (!OwnBuffer())
-        LogicError("Cannot SetValue on Managed external matrix");
+    VerifyWritable(__FUNCTION__);
 
     if (matrixFormat != matrixFormatSparseCSR && matrixFormat != matrixFormatSparseCSC)
     {
@@ -521,6 +519,7 @@ void GPUSparseMatrix<ElemType>::SetValue(const GPUMatrix<ElemType>& denseMatrix,
 template <class ElemType>
 GPUSparseMatrix<ElemType>& GPUSparseMatrix<ElemType>::operator=(const GPUSparseMatrix<ElemType>& deepCopy)
 {
+    deepCopy.VerifyReadable(__FUNCTION__);
     Clear();
     if (this != &deepCopy)
         SetValue(deepCopy);
@@ -532,20 +531,29 @@ GPUSparseMatrix<ElemType>& GPUSparseMatrix<ElemType>::operator=(const GPUSparseM
 template <class ElemType>
 GPUSparseMatrix<ElemType>::GPUSparseMatrix(GPUSparseMatrix<ElemType>&& moveFrom)
 {
+    moveFrom.VerifyReadable(__FUNCTION__);
     Base::ShallowCopyFrom(moveFrom);
     // TODO: implement this using operator= or a shared function
     m_totalBufferSizeAllocated = moveFrom.m_totalBufferSizeAllocated;
     m_sliceOf                  = moveFrom.m_sliceOf;
+    m_slicedBy                 = moveFrom.m_slicedBy;
     m_blockSize                = moveFrom.m_blockSize;
     m_rowToId                  = moveFrom.m_rowToId;
     m_tempHostBuffer           = moveFrom.m_tempHostBuffer;
     m_tempHostBufferSize       = moveFrom.m_tempHostBufferSize;
+
+    // Since we're moving, we need to update the slicer/slicee pointers
+    if ( m_slicedBy )
+        m_slicedBy->m_sliceOf = this;
+    if ( m_sliceOf )
+        m_sliceOf->m_slicedBy = this;
     moveFrom.ZeroInit(moveFrom.m_format, moveFrom.m_computeDevice); // so that memory in moveFrom is not freed
 }
 
 template <class ElemType>
 GPUSparseMatrix<ElemType>& GPUSparseMatrix<ElemType>::operator=(GPUSparseMatrix<ElemType>&& moveFrom)
 {
+    moveFrom.VerifyReadable(__FUNCTION__);
     if (this != &moveFrom)
     {
         if (OwnBuffer())
@@ -553,10 +561,17 @@ GPUSparseMatrix<ElemType>& GPUSparseMatrix<ElemType>::operator=(GPUSparseMatrix<
         Base::ShallowCopyFrom(moveFrom);
         m_totalBufferSizeAllocated = moveFrom.m_totalBufferSizeAllocated;
         m_sliceOf                  = moveFrom.m_sliceOf;
+        m_slicedBy                 = moveFrom.m_slicedBy;
         m_blockSize                = moveFrom.m_blockSize;
         m_rowToId                  = moveFrom.m_rowToId;
         m_tempHostBuffer           = moveFrom.m_tempHostBuffer;
         m_tempHostBufferSize       = moveFrom.m_tempHostBufferSize;
+
+        // Since we're moving, we need to update the slicer/slicee pointers
+        if ( m_slicedBy )
+            m_slicedBy->m_sliceOf = this;
+        if ( m_sliceOf )
+            m_sliceOf->m_slicedBy = this;
         moveFrom.ZeroInit(moveFrom.m_format, moveFrom.m_computeDevice);
     }
 
@@ -566,6 +581,22 @@ GPUSparseMatrix<ElemType>& GPUSparseMatrix<ElemType>::operator=(GPUSparseMatrix<
 template <class ElemType>
 GPUSparseMatrix<ElemType>::~GPUSparseMatrix()
 {
+    // Due to new semantics, destruction must maintain doubly linked list of slice pointers
+    // If we're not the leaf, update our slicer/slicee slice pointers
+    if (m_slicedBy)
+    {
+        m_slicedBy->m_sliceOf = m_sliceOf;
+        if (m_sliceOf) 
+            m_sliceOf->m_slicedBy = m_slicedBy;
+    }
+    // Otherwise, if we're the leaf and we have a parent, then move all of our data into the parent
+    else if (m_sliceOf)
+    {
+        auto parent = m_sliceOf;
+        m_sliceOf = parent->m_sliceOf;
+        *parent = std::move(*this);
+        // plus further swapping of dimensions if desired in the future
+    }
     ReleaseMemory();
 }
 
@@ -597,6 +628,7 @@ template <class ElemType>
 template <class ElemType>
 void GPUSparseMatrix<ElemType>::ResizeAsAndCopyIndexFrom(const GPUSparseMatrix<ElemType>& a, const bool growOnly /*= true*/)
 {
+    a.VerifyReadable(__FUNCTION__);
     Resize(a.m_numRows, a.m_numCols, a.m_nz, a.m_format, growOnly, false);
     SetNzCount(a.m_nz);
 
@@ -614,8 +646,7 @@ void GPUSparseMatrix<ElemType>::Reshape(const size_t numRows, const size_t numCo
     if (m_numRows == numRows && m_numCols == numCols)
         return;
 
-    if (!OwnBuffer())
-        LogicError("GPUSparseMatrix::Reshape: Cannot Reshape since the buffer is managed externally.");
+    VerifyWritable(__FUNCTION__);
 
     if (m_format != MatrixFormat::matrixFormatSparseCSC)
         NOT_IMPLEMENTED;
@@ -672,8 +703,7 @@ void GPUSparseMatrix<ElemType>::Resize(const size_t numRows, const size_t numCol
 template <class ElemType>
 void GPUSparseMatrix<ElemType>::Resize(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve, const MatrixFormat matrixFormat, const bool growOnly /*= true*/, bool keepExistingValues /*=true*/)
 {
-    if (!OwnBuffer())
-        LogicError("Cannot Resize since the buffer is managed externally.");
+    VerifyWritable(__FUNCTION__);
 
     if (matrixFormat != m_format || m_numRows != numRows || m_numCols != numCols)
         keepExistingValues = false;
@@ -732,8 +762,7 @@ void GPUSparseMatrix<ElemType>::Resize(const size_t numRows, const size_t numCol
 template <class ElemType>
 void GPUSparseMatrix<ElemType>::Reset()
 {
-    if (!OwnBuffer())
-        LogicError("Cannot Reset since the buffer is managed externally.");
+    VerifyWritable(__FUNCTION__);
 
     m_nz = 0;
     m_blockSize = 0;
@@ -744,8 +773,7 @@ template <class ElemType>
 void GPUSparseMatrix<ElemType>::SetMatrixFromCSRFormat(const GPUSPARSE_INDEX_TYPE* h_CSRRow, const GPUSPARSE_INDEX_TYPE* h_Col, const ElemType* h_Val,
                                                        const size_t nz, const size_t numRows, const size_t numCols, const bool IsOnDevice /*= false*/, const DEVICEID_TYPE devId /*= -1*/)
 {
-    if (!OwnBuffer())
-        LogicError("Cannot Set since the buffer is managed externally.");
+    VerifyWritable(__FUNCTION__);
 
     if (h_CSRRow == nullptr || h_Col == nullptr || h_Val == nullptr)
         LogicError("SetMatrixFromCSRFormat: nullptr passed in.");
@@ -781,8 +809,7 @@ void GPUSparseMatrix<ElemType>::SetMatrixFromCSRFormat(const GPUSPARSE_INDEX_TYP
 template <class ElemType>
 void GPUSparseMatrix<ElemType>::GetMatrixFromCSRFormat(CPUSPARSE_INDEX_TYPE*& h_CSRRow, CPUSPARSE_INDEX_TYPE*& h_Col, ElemType*& h_Val, size_t& numElemAllocated, size_t& nz, size_t& numRows, size_t& numCols) const
 {
-    if (!OwnBuffer())
-        LogicError("Cannot Set since the buffer is managed externally.");
+    VerifyWritable(__FUNCTION__);
 
     if (h_CSRRow != nullptr || h_Col != nullptr || h_Val != nullptr)
         LogicError("GetMatrixFromCSRFormat: Passed pointers must be nullptr");
@@ -826,8 +853,7 @@ template <class ElemType>
 void GPUSparseMatrix<ElemType>::SetMatrixFromCSCFormat(const CPUSPARSE_INDEX_TYPE* h_CSCCol, const CPUSPARSE_INDEX_TYPE* h_Row, const ElemType* h_Val,
                                                        const size_t nz, const size_t numRows, const size_t numCols, const bool IsOnDevice /*= false*/, const DEVICEID_TYPE devId /*= -1*/)
 {
-    if (!OwnBuffer())
-        LogicError("Cannot Set since the buffer is managed externally.");
+    VerifyWritable(__FUNCTION__);
 
     if (h_CSCCol == nullptr || h_Row == nullptr || h_Val == nullptr)
         LogicError("SetMatrixFromCSCFormat: nullptr passed in.");
@@ -909,6 +935,7 @@ template <class ElemType>
 void GPUSparseMatrix<ElemType>::MultiplyAndWeightedAdd(ElemType alpha, const GPUMatrix<ElemType>& lhs, const bool transposeA,
                                                        const GPUSparseMatrix<ElemType>& rhs, const bool transposeB, ElemType beta, GPUMatrix<ElemType>& c)
 {
+    rhs.VerifyReadable(__FUNCTION__);
     if (lhs.GetComputeDeviceId() != rhs.GetComputeDeviceId() || (lhs.GetComputeDeviceId() != c.GetComputeDeviceId()))
         RuntimeError("GPUSparseMatrix::MultiplyAndWeightedAdd: All matrices must be on the same GPU");
 
@@ -955,6 +982,8 @@ void GPUSparseMatrix<ElemType>::ConvolveAndWeightedAdd(ElemType alpha, const GPU
                                                        const GPUSparseMatrix<ElemType>& rhs, const bool transposeB, ElemType beta,
                                                        GPUMatrix<ElemType>& c, size_t numChannels, size_t horizontalSubsample, bool padding, bool channelwise)
 {
+    rhs.VerifyReadable(__FUNCTION__);
+
     if (lhs.GetComputeDeviceId() != rhs.GetComputeDeviceId() || (lhs.GetComputeDeviceId() != c.GetComputeDeviceId()))
         RuntimeError("GPUSparseMatrix<ElemType>::ConvolveAndWeightedAdd: All matrices must be on the same GPU");
 
@@ -1049,8 +1078,9 @@ void GPUSparseMatrix<ElemType>::ConvolveAndWeightedAdd(ElemType alpha, const GPU
 template <class ElemType>
 void GPUSparseMatrix<ElemType>::TensorShuffleScaleAndAdd(ElemType keepWeight, const GPUSparseMatrix<ElemType>& a, size_t D, size_t S, size_t M, size_t K, size_t T, ElemType scaleFactor, const GPUSparseMatrix<ElemType>& b, GPUSparseMatrix<ElemType>& c)
 {
-    if (!c.OwnBuffer())
-        LogicError("Cannot modify externally managed matrix");
+    a.VerifyReadable(__FUNCTION__);
+    b.VerifyReadable(__FUNCTION__);
+    c.VerifyWritable(__FUNCTION__);
 
     if (a.GetComputeDeviceId() != c.GetComputeDeviceId() || b.GetComputeDeviceId() != c.GetComputeDeviceId())
         RuntimeError("GPUSparseMatrix<ElemType>::TensorShuffleScaleAndAdd: All matrices must be on the same GPU");
@@ -1096,8 +1126,8 @@ template <class ElemType>
 void GPUSparseMatrix<ElemType>::MultiplyAndAdd(ElemType alpha, const GPUMatrix<ElemType>& lhs, const bool transposeA,
                                                const GPUSparseMatrix<ElemType>& rhs, const bool transposeB, GPUSparseMatrix<ElemType>& c)
 {
-    if (!c.OwnBuffer())
-        LogicError("Cannot modify since the buffer is managed externally.");
+    rhs.VerifyReadable(__FUNCTION__);
+    c.VerifyWritable(__FUNCTION__);
 
     if (lhs.GetComputeDeviceId() != rhs.GetComputeDeviceId())
         RuntimeError("GPUSparseMatrix::MultiplyAndAdd: All matrices must be on the same GPU");
@@ -1237,6 +1267,8 @@ size_t GPUSparseMatrix<ElemType>::IdentifyRowsWithValues() const
 template <class ElemType>
 void GPUSparseMatrix<ElemType>::ScaleAndAdd(const ElemType alpha, const GPUSparseMatrix<ElemType>& lhs, GPUMatrix<ElemType>& rhs)
 {
+    lhs.VerifyReadable(__FUNCTION__);
+
     if (lhs.GetNumRows() != rhs.GetNumRows() || lhs.GetNumCols() != rhs.GetNumCols())
         LogicError("ScaleAndAdd: dimension mismatch");
 
@@ -1270,8 +1302,7 @@ void GPUSparseMatrix<ElemType>::ScaleAndAdd(const ElemType alpha, const GPUSpars
 template <class ElemType>
 GPUSparseMatrix<ElemType>& GPUSparseMatrix<ElemType>::InplaceTruncate(const ElemType threshold)
 {
-    if (!OwnBuffer())
-        LogicError("Cannot modify since the buffer is managed externally.");
+    VerifyWritable(__FUNCTION__);
 
     CUDA_LONG N = (CUDA_LONG) GetNumNZElements();
 
@@ -1285,8 +1316,7 @@ GPUSparseMatrix<ElemType>& GPUSparseMatrix<ElemType>::InplaceTruncate(const Elem
 template <class ElemType>
 GPUSparseMatrix<ElemType>& GPUSparseMatrix<ElemType>::InplaceSoftThreshold(const ElemType threshold)
 {
-    if (!OwnBuffer())
-        LogicError("Cannot modify since the buffer is managed externally.");
+    VerifyWritable(__FUNCTION__);
 
     CUDA_LONG N = (CUDA_LONG) GetNumNZElements();
 
@@ -1301,8 +1331,7 @@ GPUSparseMatrix<ElemType>& GPUSparseMatrix<ElemType>::InplaceSoftThreshold(const
 template <class ElemType>
 void GPUSparseMatrix<ElemType>::NormalGrad(GPUMatrix<ElemType>& c, const ElemType momentum)
 {
-    if (!OwnBuffer())
-        LogicError("Cannot modify since the buffer is managed externally.");
+    VerifyWritable(__FUNCTION__);
 
     if (c.IsEmpty())
     {
@@ -1336,8 +1365,7 @@ void GPUSparseMatrix<ElemType>::NormalGrad(GPUMatrix<ElemType>& c, const ElemTyp
 template <class ElemType>
 ElemType GPUSparseMatrix<ElemType>::Adagrad(GPUMatrix<ElemType>& c, const bool needAveMultiplier)
 {
-    if (!OwnBuffer())
-        LogicError("Cannot modify since the buffer is managed externally.");
+    VerifyWritable(__FUNCTION__);
 
     size_t numColsNeeded = GetNumCols();
     if (needAveMultiplier)
@@ -1394,6 +1422,7 @@ template <class ElemType>
 void GPUSparseMatrix<ElemType>::MultiplyAndWeightedAdd(ElemType alpha, const GPUSparseMatrix<ElemType>& a, const bool transposeA,
                                                        const GPUMatrix<ElemType>& b, const bool transposeD, ElemType beta, GPUMatrix<ElemType>& c)
 {
+    a.VerifyReadable(__FUNCTION__);
     if (a.m_format != matrixFormatSparseCSR)
         NOT_IMPLEMENTED;
 
@@ -1436,6 +1465,7 @@ void GPUSparseMatrix<ElemType>::MultiplyAndWeightedAdd(ElemType alpha, const GPU
 template <class ElemType>
 void GPUSparseMatrix<ElemType>::Multiply(const GPUSparseMatrix<ElemType>& S, const GPUMatrix<ElemType>& D, GPUMatrix<ElemType>& C)
 {
+    S.VerifyReadable(__FUNCTION__);
     C.Resize(S.GetNumRows(), D.GetNumCols());
 
     MultiplyAndWeightedAdd(1, S, false, D, false, 0, C);
@@ -1444,6 +1474,7 @@ void GPUSparseMatrix<ElemType>::Multiply(const GPUSparseMatrix<ElemType>& S, con
 template <class ElemType>
 void GPUSparseMatrix<ElemType>::Multiply(const GPUMatrix<ElemType>& D, const GPUSparseMatrix<ElemType>& S, GPUMatrix<ElemType>& C)
 {
+    S.VerifyReadable(__FUNCTION__);
     C.Resize(S.GetNumCols(), D.GetNumRows());
 
     MultiplyAndWeightedAdd(1, D, false, S, false, 0, C);
@@ -1493,8 +1524,7 @@ size_t GPUSparseMatrix<ElemType>::ElemCountFromBufferSize() const
 template <class ElemType>
 void GPUSparseMatrix<ElemType>::PrepareBuffer(size_t m, size_t n, bool canReuseBuffer, std::function<size_t(GPUSPARSE_INDEX_TYPE* csrRowPtrC)> func)
 {
-    if (!OwnBuffer())
-        LogicError("Cannot modify since the buffer is managed externally.");
+    VerifyWritable(__FUNCTION__);
 
     if (this->m_format != matrixFormatSparseCSR)
         NOT_IMPLEMENTED;
@@ -1542,8 +1572,9 @@ void GPUSparseMatrix<ElemType>::PrepareBuffer(size_t m, size_t n, bool canReuseB
 template <class ElemType>
 void GPUSparseMatrix<ElemType>::Multiply(const GPUSparseMatrix<ElemType>& S1, bool transposeS1, const GPUSparseMatrix<ElemType>& S2, bool transposeS2, GPUSparseMatrix<ElemType>& c)
 {
-    if (!c.OwnBuffer())
-        LogicError("Cannot modify since the buffer is managed externally.");
+    S1.VerifyReadable(__FUNCTION__);
+    S2.VerifyReadable(__FUNCTION__);
+    c.VerifyWritable(__FUNCTION__);
 
     if (S1.m_format != matrixFormatSparseCSR || S2.m_format != matrixFormatSparseCSR || c.m_format != matrixFormatSparseCSR)
         NOT_IMPLEMENTED;
@@ -1614,8 +1645,9 @@ GPUSparseMatrix<ElemType>& GPUSparseMatrix<ElemType>::AssignProductOf(const GPUS
 template <class ElemType>
 void GPUSparseMatrix<ElemType>::ScaleAndAdd(ElemType alpha, const GPUSparseMatrix<ElemType>& a, ElemType beta, const GPUSparseMatrix<ElemType>& b, GPUSparseMatrix<ElemType>& c)
 {
-    if (!c.OwnBuffer())
-        LogicError("Cannot modify since the buffer is managed externally.");
+    a.VerifyReadable(__FUNCTION__);
+    b.VerifyReadable(__FUNCTION__);
+    c.VerifyWritable(__FUNCTION__);
 
     if (a.m_format != matrixFormatSparseCSR || b.m_format != matrixFormatSparseCSR || c.m_format != matrixFormatSparseCSR)
     {
@@ -1673,6 +1705,7 @@ void GPUSparseMatrix<ElemType>::ScaleAndAdd(ElemType alpha, const GPUSparseMatri
 template <class ElemType>
 void GPUSparseMatrix<ElemType>::ScaleAndAdd(ElemType alpha, const GPUSparseMatrix<ElemType>& a, ElemType beta, const GPUMatrix<ElemType>& b, GPUMatrix<ElemType>& c)
 {
+    a.VerifyReadable(__FUNCTION__);
     if (a.m_format != matrixFormatSparseCSR)
         NOT_IMPLEMENTED;
 
@@ -1702,8 +1735,7 @@ void GPUSparseMatrix<ElemType>::ScaleAndAdd(ElemType alpha, const GPUMatrix<Elem
 template <class ElemType>
 void GPUSparseMatrix<ElemType>::Scale(ElemType alpha, GPUSparseMatrix<ElemType>& a)
 {
-    if (!a.OwnBuffer())
-        LogicError("Cannot modify since the buffer is managed externally.");
+    a.VerifyWritable(__FUNCTION__);
 
     if (a.IsEmpty())
         return;
@@ -1717,8 +1749,8 @@ void GPUSparseMatrix<ElemType>::Scale(ElemType alpha, GPUSparseMatrix<ElemType>&
 template <class ElemType>
 void GPUSparseMatrix<ElemType>::ElementWisePower(ElemType alpha, const GPUSparseMatrix<ElemType>& a, GPUSparseMatrix<ElemType>& c)
 {
-    if (!c.OwnBuffer())
-        LogicError("Cannot modify since the buffer is managed externally.");
+    a.VerifyReadable(__FUNCTION__);
+    c.VerifyWritable(__FUNCTION__);
 
     if (a.GetComputeDeviceId() != c.GetComputeDeviceId())
     {
@@ -1743,6 +1775,8 @@ void GPUSparseMatrix<ElemType>::ElementWisePower(ElemType alpha, const GPUSparse
 template <class ElemType>
 ElemType GPUSparseMatrix<ElemType>::InnerProductOfMatrices(const GPUSparseMatrix<ElemType>& a, const GPUMatrix<ElemType>& b)
 {
+    a.VerifyReadable(__FUNCTION__);
+
     if (a.m_format != matrixFormatSparseCSR && a.m_format != matrixFormatSparseCSC)
         NOT_IMPLEMENTED;
 
@@ -1863,6 +1897,8 @@ template <class ElemType>
 /*static*/ bool GPUSparseMatrix<ElemType>::AreEqual(const GPUSparseMatrix<ElemType>& a, const GPUSparseMatrix<ElemType>& b,
                                                     const ElemType threshold)
 {
+    a.VerifyReadable(__FUNCTION__);
+    b.VerifyReadable(__FUNCTION__);
     if (a.GetNumNZElements() != b.GetNumNZElements() || a.GetNumRows() != b.GetNumRows() || a.GetNumCols() != b.GetNumCols())
         return false;
 
@@ -1893,6 +1929,7 @@ template <class ElemType>
 /*static*/ bool GPUSparseMatrix<ElemType>::AreEqual(const GPUMatrix<ElemType>& a, const GPUSparseMatrix<ElemType>& b,
                                                     const ElemType threshold)
 {
+    b.VerifyReadable(__FUNCTION__);
     if (a.GetNumRows() != b.GetNumRows() || a.GetNumCols() != b.GetNumCols())
         return false;
     GPUSparseMatrix<ElemType> c(b.GetComputeDeviceId(), b.GetFormat());
@@ -1904,6 +1941,7 @@ template <class ElemType>
 /*static*/ bool GPUSparseMatrix<ElemType>::AreEqual(const GPUSparseMatrix<ElemType>& a, const GPUMatrix<ElemType>& b,
                                                     const ElemType threshold)
 {
+    a.VerifyReadable(__FUNCTION__);
     if (a.GetNumRows() != b.GetNumRows() || a.GetNumCols() != b.GetNumCols())
         return false;
     GPUSparseMatrix<ElemType> c(a.GetComputeDeviceId(), a.GetFormat());
@@ -1945,8 +1983,7 @@ DEVICEID_TYPE GPUSparseMatrix<ElemType>::GetComputeDeviceId() const
 template <class ElemType>
 GPUMatrix<ElemType> GPUSparseMatrix<ElemType>::ElementProductOf(const GPUSparseMatrix<ElemType>& a, const GPUMatrix<ElemType>& b)
 {
-    if (!b.OwnBuffer())
-        LogicError("Cannot modify since the buffer is managed externally.");
+    a.VerifyReadable(__FUNCTION__);
 
     if (a.m_format != matrixFormatSparseCSR)
         NOT_IMPLEMENTED;
@@ -2033,6 +2070,7 @@ GPUSparseMatrix<ElemType>& GPUSparseMatrix<ElemType>::AssignElementPowerOf(const
 template <class ElemType>
 GPUSparseMatrix<ElemType> GPUSparseMatrix<ElemType>::Transpose() const
 {
+    VerifyWritable(__FUNCTION__);
     int m = (int) GetNumRows();
     int n = (int) GetNumCols();
     int nnz = (int) GetNumNZElements();
@@ -2100,8 +2138,8 @@ GPUSparseMatrix<ElemType> GPUSparseMatrix<ElemType>::Transpose() const
 template <class ElemType>
 GPUSparseMatrix<ElemType>& GPUSparseMatrix<ElemType>::AssignTransposeOf(const GPUSparseMatrix<ElemType>& a)
 {
-    if (!OwnBuffer())
-        LogicError("Cannot modify since the buffer is managed externally.");
+    a.VerifyReadable(__FUNCTION__);
+    VerifyWritable(__FUNCTION__);
 
     if (this == &a)
         LogicError("AssignTransposeOf: a is the same as [this]. Does not support inplace transpose.");
@@ -2131,7 +2169,39 @@ GPUSparseMatrix<ElemType> GPUSparseMatrix<ElemType>::ColumnSlice(size_t startCol
     if (m_format != MatrixFormat::matrixFormatSparseCSC && (startColumn != 0 || numCols != m_numCols))
         NOT_IMPLEMENTED;
 
-    GPUSparseMatrix<ElemType> slice(m_computeDevice);
+	// TODO: Implement column slicing for actual slices, currently only implemented for "full" slice
+    if (startColumn != 0 || numCols != m_numCols)
+        NOT_IMPLEMENTED;
+
+	// If we do not own the matrix currently, we cannot be sliced.
+    if (m_slicedBy)
+        LogicError("ColumnSlice: cannot ColumnSlice a more than once.");
+
+	// OwnBuffer check
+                
+	// BUGBUG (from fseide): ColumnSlice() returns a reference to a mutable matrix, even if itself is 'const'; should not be.
+	// "wthis" is a hack.
+	auto* wthis = const_cast<GPUSparseMatrix<ElemType>*>(this);
+    GPUSparseMatrix<ElemType> slice(std::move(*wthis));
+
+	// These values need to be properly stored for the VerifyWritable check. 
+	// Restore relevant data after the move
+    wthis->m_numCols         = slice.m_numCols;
+    wthis->m_sliceViewOffset = slice.m_sliceViewOffset;
+	// Set the proper values for the slice
+    slice.m_numCols          = numCols;
+    slice.m_sliceViewOffset  = startColumn;
+	// More values must be properly stored to allow for arbitrary slicing
+    //slice.m_nz        = (numCols == m_numCols) ? m_nz : SecondaryIndexValueAt(startColumn + numCols) - SecondaryIndexValueAt(startColumn);
+
+	// setup the sliceof/slicedby pointers for the doubly linked list
+    wthis->m_sliceOf         = slice.m_sliceOf; // Remember the old value
+    slice.m_sliceOf          = wthis;
+    wthis->m_slicedBy        = &slice;
+    slice.m_slicedBy         = nullptr; // technically redundant due to the constructor remove?
+
+#if 0
+	// Old version with unclear ownership of column slice which made a shallow copy of the old matrix
     slice.m_computeDevice            = m_computeDevice;
     slice.m_numRows                  = m_numRows;
     slice.m_numCols                  = numCols;
@@ -2141,13 +2211,14 @@ GPUSparseMatrix<ElemType> GPUSparseMatrix<ElemType>::ColumnSlice(size_t startCol
     slice.m_pArray                   = m_pArray;
     slice.m_format                   = m_format;
     slice.m_externalBuffer           = true;
-    slice.m_sliceOf                  = const_cast<GPUSparseMatrix<ElemType>*>(this); // BUGBUG: ColumnSlice() returns a reference to a mutable matrix, even if itself is 'const'; should not be.
+    slice.m_sliceOf                  = m_externalBuffer ? m_sliceOf : const_cast<GPUSparseMatrix<ElemType>*>(this); // BUGBUG: ColumnSlice() returns a reference to a mutable matrix, even if itself is 'const'; should not be.
     slice.m_matrixName               = m_matrixName;
     slice.m_blockSize                = m_blockSize;
     slice.m_rowToId                  = m_rowToId;
     slice.m_tempHostBuffer           = m_tempHostBuffer;
     slice.m_tempHostBufferSize       = m_tempHostBufferSize;
     slice.m_sliceViewOffset          = startColumn; // Just shift the compressed index location to the new startColumn - that's it!
+#endif
 
     return slice;
 }
@@ -2155,6 +2226,7 @@ GPUSparseMatrix<ElemType> GPUSparseMatrix<ElemType>::ColumnSlice(size_t startCol
 template <class ElemType>
 GPUMatrix<ElemType> GPUSparseMatrix<ElemType>::CopyColumnSliceToDense(size_t startColumn, size_t numCols) const
 {
+    VerifyReadable(__FUNCTION__);
     int m = (int) GetNumRows();
     int n = (int) GetNumCols();
 
@@ -2198,6 +2270,7 @@ GPUMatrix<ElemType> GPUSparseMatrix<ElemType>::CopyColumnSliceToDense(size_t sta
 template <class ElemType>
 GPUMatrix<ElemType> GPUSparseMatrix<ElemType>::DiagonalToDense() const
 {
+    VerifyReadable(__FUNCTION__);
     int m = (int) GetNumRows();
     int n = (int) GetNumCols();
 
@@ -2218,6 +2291,7 @@ GPUMatrix<ElemType> GPUSparseMatrix<ElemType>::DiagonalToDense() const
 template <class ElemType>
 ElemType GPUSparseMatrix<ElemType>::SumOfAbsElements() const
 {
+    VerifyReadable(__FUNCTION__);
     if (IsEmpty())
         return 0;
 
@@ -2239,6 +2313,7 @@ ElemType GPUSparseMatrix<ElemType>::SumOfAbsElements() const
 template <class ElemType>
 ElemType GPUSparseMatrix<ElemType>::SumOfElements() const
 {
+    VerifyReadable(__FUNCTION__);
     if (IsEmpty())
         LogicError("SumOfElements: Matrix is empty");
 
@@ -2256,6 +2331,7 @@ ElemType GPUSparseMatrix<ElemType>::SumOfElements() const
 template <class ElemType>
 ElemType GPUSparseMatrix<ElemType>::FrobeniusNorm() const
 {
+    VerifyReadable(__FUNCTION__);
     if (IsEmpty())
         return 0;
 
@@ -2275,6 +2351,7 @@ ElemType GPUSparseMatrix<ElemType>::FrobeniusNorm() const
 template <class ElemType>
 ElemType GPUSparseMatrix<ElemType>::MatrixNormInf() const
 {
+    VerifyReadable(__FUNCTION__);
     if (IsEmpty())
         return 0;
 
@@ -2308,8 +2385,7 @@ GPUSparseMatrix<ElemType>& GPUSparseMatrix<ElemType>::ElementInverse()
     // Note: This makes no sense because sparse matrices are defined by having lots of zeroes.
     NOT_IMPLEMENTED;
 #else
-    if (!OwnBuffer())
-        LogicError("Cannot modify since the buffer is managed externally.");
+    VerifyWritable(__FUNCTION__);
 
     if (IsEmpty())
         LogicError("ElementInverse: Matrix is empty.");
@@ -2480,8 +2556,7 @@ GPUSparseMatrix<ElemType>& GPUSparseMatrix<ElemType>::AssignAbsOf(const GPUSpars
 template <class ElemType>
 GPUSparseMatrix<ElemType>& GPUSparseMatrix<ElemType>::InplaceTruncateBottom(const ElemType threshold)
 {
-    if (!OwnBuffer())
-        LogicError("Cannot modify since the buffer is managed externally.");
+    VerifyWritable(__FUNCTION__);
 
     if (IsEmpty())
         LogicError("InplaceTruncateBottom: Matrix is empty.");
@@ -2495,8 +2570,7 @@ GPUSparseMatrix<ElemType>& GPUSparseMatrix<ElemType>::InplaceTruncateBottom(cons
 template <class ElemType>
 GPUSparseMatrix<ElemType>& GPUSparseMatrix<ElemType>::AssignTruncateBottomOf(const GPUSparseMatrix<ElemType>& a, const ElemType threshold)
 {
-    if (!OwnBuffer())
-        LogicError("Cannot modify since the buffer is managed externally.");
+    VerifyWritable(__FUNCTION__);
 
     if (a.IsEmpty())
         LogicError("AssignTruncateBottomOf: Matrix a is empty.");
@@ -2516,8 +2590,7 @@ GPUSparseMatrix<ElemType>& GPUSparseMatrix<ElemType>::AssignTruncateBottomOf(con
 template <class ElemType>
 GPUSparseMatrix<ElemType>& GPUSparseMatrix<ElemType>::InplaceTruncateTop(const ElemType threshold)
 {
-    if (!OwnBuffer())
-        LogicError("Cannot modify since the buffer is managed externally.");
+    VerifyWritable(__FUNCTION__);
 
     if (IsEmpty())
         LogicError("InplaceTruncateTop: Matrix is empty.");
@@ -2531,8 +2604,7 @@ GPUSparseMatrix<ElemType>& GPUSparseMatrix<ElemType>::InplaceTruncateTop(const E
 template <class ElemType>
 GPUSparseMatrix<ElemType>& GPUSparseMatrix<ElemType>::AssignTruncateTopOf(const GPUSparseMatrix<ElemType>& a, const ElemType threshold)
 {
-    if (!OwnBuffer())
-        LogicError("Cannot modify since the buffer is managed externally.");
+    VerifyWritable(__FUNCTION__);
 
     if (a.IsEmpty())
         LogicError("AssignTruncateTopOf: Matrix a is empty.");
@@ -2552,8 +2624,7 @@ GPUSparseMatrix<ElemType>& GPUSparseMatrix<ElemType>::AssignTruncateTopOf(const 
 template <class ElemType>
 GPUSparseMatrix<ElemType>& GPUSparseMatrix<ElemType>::SetToZeroIfAbsLessThan(const ElemType threshold)
 {
-    if (!OwnBuffer())
-        LogicError("Cannot modify since the buffer is managed externally.");
+    VerifyWritable(__FUNCTION__);
 
     if (IsEmpty())
         LogicError("SetToZeroIfAbsLessThan: Matrix is empty.");
@@ -2603,8 +2674,8 @@ void* GPUSparseMatrix<ElemType>::ReserveTempHostBuffer(const size_t sizeInByte) 
 template <class ElemType>
 void GPUSparseMatrix<ElemType>::performElementWiseFunction(ElementWiseOperator kind, const GPUSparseMatrix<ElemType>& src)
 {
-    if (!OwnBuffer())
-        LogicError("Cannot modify since the buffer is managed externally.");
+    src.VerifyReadable(__FUNCTION__);
+    VerifyWritable(__FUNCTION__);
 
     CUDA_LONG N = (CUDA_LONG) GetNumNZElements();
     int blocksPerGrid = (int) ceil(1.0 * N / GridDim::maxThreadsPerBlock);
@@ -2657,8 +2728,7 @@ template GPUSparseMatrix<char>& GPUSparseMatrix<char>::operator=(GPUSparseMatrix
 template <class ElemType>
 MATH_API File& operator>>(File& stream, GPUSparseMatrix<ElemType>& us)
 {
-    if (!us.OwnBuffer())
-        LogicError("Cannot read into a managed external matrix");
+    us.VerifyWritable(__FUNCTION__);
 
     stream.GetMarker(fileMarkerBeginSection, std::wstring(L"BMAT"));
     size_t elsize;
@@ -2728,6 +2798,7 @@ template MATH_API File& operator>>(File& stream, GPUSparseMatrix<double>& us);
 template <class ElemType>
 MATH_API File& operator<<(File& stream, const GPUSparseMatrix<ElemType>& us)
 {
+    us.VerifyReadable(__FUNCTION__);
     if (us.m_format != matrixFormatSparseCSC && us.m_format != matrixFormatSparseCSR)
         NOT_IMPLEMENTED;
 
