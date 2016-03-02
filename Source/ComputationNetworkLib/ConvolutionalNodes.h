@@ -43,8 +43,9 @@ public:
     NDConvolutionNode(DEVICEID_TYPE deviceId, const wstring& name, const TensorShape& kernelShape, const TensorShape& mapShape, const TensorShape& strideShape,
                       const std::vector<bool>& sharing, const std::vector<bool>& autoPadding, const TensorShape& lowerPad, const TensorShape& upperPad,
                       ImageLayoutKind imageLayout, size_t maxTempMemSizeInSamples)
-        : Base(deviceId, name), m_kernel(kernelShape), m_stride(strideShape), m_sharing(sharing),
-        m_autoPad(autoPadding), m_lowerPad(lowerPad), m_upperPad(upperPad)
+        : Base(deviceId, name), m_kernelShape(kernelShape), m_mapShape(mapShape), m_stride(strideShape), m_sharing(sharing),
+        m_autoPad(autoPadding), m_lowerPad(lowerPad), m_upperPad(upperPad),
+        m_imageLayoutKind(imageLayout), m_maxTempMemSizeInSamples(maxTempMemSizeInSamples)
     {
     }
     NDConvolutionNode(const ScriptableObjects::IConfigRecordPtr configp)
@@ -92,8 +93,7 @@ public:
         Base::Validate(isFinalValidationPass);
         InferMBLayoutFromInputsForStandardCase();
 
-        bool validate = isFinalValidationPass;
-        if (validate && m_imageLayoutKind != ImageLayoutKind::CHW)
+        if (m_imageLayoutKind != ImageLayoutKind::CHW)
         {
             InvalidArgument(
                 "NDConvolution supports only cuDNN (CHW) data layout. "
@@ -102,38 +102,37 @@ public:
         }
 
         auto dimsInput = GetInputSampleLayout(1);
-        if (validate)
-        {
-            if (dimsInput.GetRank() != m_kernel.GetRank())
-                InvalidArgument("Convolution input and kernel tensors must have the same rank.");
-            if (m_stride.GetRank() != 1 && dimsInput.GetRank() != m_stride.GetRank())
-                InvalidArgument("Convolution stride tensor must have rank 1 or the same as the input tensor.");
-            if (m_sharing.size() != 1 && dimsInput.GetRank() != m_sharing.size())
-                InvalidArgument("Convolution sharing tensor must have rank 1 or the same as the input tensor.");
-            if (m_autoPad.size() != 1 && dimsInput.GetRank() != m_autoPad.size())
-                InvalidArgument("Convolution padding tensor must have rank 1 or the same as the input tensor.");
-            if (m_lowerPad.GetRank() != 1 && dimsInput.GetRank() != m_lowerPad.GetRank())
-                InvalidArgument("Convolution lower pad tensor must have rank 1 or the same as the input tensor.");
-            if (m_upperPad.GetRank() != 1 && dimsInput.GetRank() != m_upperPad.GetRank())
-                InvalidArgument("Convolution upper pad tensor must have rank 1 or the same as the input tensor.");
-        }
+        if (dimsInput.GetRank() != m_kernelShape.GetRank())
+            InvalidArgument("Convolution input and kernel tensors must have the same rank.");
+        if (m_mapShape.GetRank() != 1 && dimsInput.GetRank() != m_mapShape.GetRank())
+            InvalidArgument("Convolution map tensor must have rank 1 or the same as the input tensor.");
+        if (m_stride.GetRank() != 1 && dimsInput.GetRank() != m_stride.GetRank())
+            InvalidArgument("Convolution stride tensor must have rank 1 or the same as the input tensor.");
+        if (m_sharing.size() != 1 && dimsInput.GetRank() != m_sharing.size())
+            InvalidArgument("Convolution sharing tensor must have rank 1 or the same as the input tensor.");
+        if (m_autoPad.size() != 1 && dimsInput.GetRank() != m_autoPad.size())
+            InvalidArgument("Convolution padding tensor must have rank 1 or the same as the input tensor.");
+        if (m_lowerPad.GetRank() != 1 && dimsInput.GetRank() != m_lowerPad.GetRank())
+            InvalidArgument("Convolution lower pad tensor must have rank 1 or the same as the input tensor.");
+        if (m_upperPad.GetRank() != 1 && dimsInput.GetRank() != m_upperPad.GetRank())
+            InvalidArgument("Convolution upper pad tensor must have rank 1 or the same as the input tensor.");
 
         SmallVector<size_t> dimsOutput(dimsInput.GetRank());
         for (size_t i = 0; i < dimsInput.GetRank(); i++)
         {
             assert(dimsInput[i] >= 1);
-            if (validate && m_kernel[i] > dimsInput[i])
-                InvalidArgument("NDConvolution operation requires that kernel dim %d <= input dim %d.", (int)m_kernel[i], (int)dimsInput[i]);
+            if (m_kernelShape[i] > dimsInput[i])
+                InvalidArgument("NDConvolution operation requires that kernel dim %d <= input dim %d.", (int)m_kernelShape[i], (int)dimsInput[i]);
 
             size_t delta = m_stride[m_stride.GetRank() == 1 ? 0 : i];
-            if (validate && delta > m_kernel[i])
+            if (delta > m_kernelShape[i])
                 InvalidArgument("NDConvolution operation requires that stride %d <= input dim %d.", (int)m_stride[i], (int)dimsInput[i]);
             
             size_t dim = dimsInput[i];
             bool autoPad = m_autoPad[m_autoPad.size() == 1 ? 0 : i];
             if (autoPad)
             {
-                dim -= 1;
+                dim += m_kernelShape[i] - 1;
             }
             else
             {
@@ -141,9 +140,29 @@ public:
                 size_t hi = m_upperPad[m_upperPad.size() == 1 ? 0 : i];
                 dim += lo + hi;
             }
-        }
+            size_t dimOut = (dim - m_kernelShape[i]) / delta + 1;
+            if (!autoPad)
+            {
+                // When LowerPad and/or UpperPad are specified, we insist that the kernel applications
+                // fill the entire space.
+                size_t size = (dimOut - 1) * delta + m_kernelShape[i];
+                if (size != dim)
+                    InvalidArgument("NDConvolution requires that kernel fills the entire space if auto-padding is disabled.");
+            }
+            if (m_mapShape.size() > 1)
+                dimOut *= m_mapShape[i];
+            else if (i == dimsInput.GetRank() - 1)
+                dimOut *= m_mapShape[0];
 
-        SetDims(TensorShape(dimsOutput), true);
+            dimsOutput[i] = dimOut;
+        }
+        auto dimsOut = TensorShape(dimsOutput);
+        // Check the output dimensions.
+        size_t mapCount = m_mapShape.GetNumElements();
+        size_t sizeOut = dimsOut.GetNumElements();
+        assert(sizeOut % mapCount == 0);
+
+        SetDims(dimsOut, true);
 
         if (isFinalValidationPass)
         {
@@ -168,12 +187,15 @@ public:
 private:
     ImageLayoutKind m_imageLayoutKind;
 
-    TensorShape m_kernel;
+    TensorShape m_kernelShape;
+    TensorShape m_mapShape;
     TensorShape m_stride;
     std::vector<bool> m_sharing;
     std::vector<bool> m_autoPad;
     TensorShape m_lowerPad;
     TensorShape m_upperPad;
+
+    size_t m_maxTempMemSizeInSamples;
 };
 
 // -----------------------------------------------------------------------

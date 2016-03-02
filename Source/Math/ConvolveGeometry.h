@@ -5,6 +5,7 @@
 #pragma once
 
 #include "Basics.h"
+#include "TensorShape.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -62,12 +63,50 @@ public:
     const IntVec&  Start() const { return m_start; }
     int StartIndex() const { return m_startIndex; }
 
-    ConvolveGeometry(const TensorShape& input, const TensorShape& kernel)
+    ConvolveGeometry(const TensorShape& inputShape, const TensorShape& kernelShape, const TensorShape& mapCount, const TensorShape& stride,
+                     const std::vector<bool>& sharing, const std::vector<bool>& autoPadding, const TensorShape& lowerPad, const TensorShape& upperPad)
+                     : m_mapCount(mapCount), m_sharing(sharing)
     {
-        assert(input.GetRank() == kernel.GetRank());
+        assert(inputShape.GetRank() == kernelShape.GetRank());
+
+        size_t dimCount = inputShape.GetRank();
+        size_t kernelSize = kernelShape.GetNumElements();
+
+        // Compute the total number of kernels.
+        size_t kernelCount = 1;
+        for (size_t i = 0; i < dimCount; i++)
+            kernelCount *= !GetSharing(i) ? m_outputShape[i] : GetMapCount(i);
+        size_t weightCount = kernelCount * (kernelSize + 1);
+
+    }
+
+    DISABLE_COPY_AND_MOVE(ConvolveGeometry);
+
+private:
+
+    bool GetSharing(size_t dim)
+    {
+        assert(dim < m_sharing.size());
+        return m_sharing[m_sharing.size() == 1 ? 0 : dim];
+    }
+
+    bool GetMapCount(size_t dim)
+    {
+        assert(dim < m_mapCount.size());
+        return m_mapCount[m_mapCount.size() == 1 ? 0 : dim];
     }
 
 private:
+    TensorShape m_inputShape;
+    TensorShape m_outputShape;
+    TensorShape m_kernelShape;
+    TensorShape m_mapCount;
+    TensorShape m_stride;
+    std::vector<bool> m_sharing;
+    std::vector<bool> m_autoPad;
+    TensorShape m_lowerPad;
+    TensorShape m_upperPad;
+
     IntVec m_mpRowCol;
     IntVec m_mpRowIwht;
     IntVec m_mpRowRun;

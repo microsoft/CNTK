@@ -46,7 +46,7 @@ train = [
             //                     sharing=(true : true : true), padding=(true : true : false), imageLayout=if useCuDnn then "cudnn" else "legacy")
             //conv = NDConvolution(convW, inp, (kW : kH : inMap), (1 : 1 : outMap), (hStride : vStride : 1), 
             //                     (1 : 1 : 1), (1 : 1 : 1), (1 : 1 : 1), (1 : 1 : 1), imageLayout=if useCuDnn then "cudnn" else "legacy")
-            conv = NDConvolution(convW, inp, (kW : kH : inMap), (1 : 1 : outMap), stride=1, sharing=true, autoPadding=false, lowerPad=1, imageLayout=if useCuDnn then "cudnn" else "legacy")
+            conv = NDConvolution(convW, inp, (kW : kH : inMap), (1 : 1 : outMap), stride=1, sharing=true, autoPadding=true, lowerPad=1, imageLayout=if useCuDnn then "cudnn" else "legacy")
             convB = if useCuDnn
                     then ParameterTensor((1 : 1 : outMap), init="fixedValue", value=bValue)
                     else Parameter(outMap, 1,              init="fixedValue", value=bValue)
