@@ -36,30 +36,24 @@ enum MatrixType
     SPARSE
 };
 
-// TODO: create an <ElemType>-agnostic base class, then move generic functions such as getting dims, resizing, and getting/setting as scalars
-class MATH_API MatrixBase
-{
-protected:
-    // virtual ~MatrixBase() { };
-    // TODO: currently this causes link errors when building DLLs
-};
-
 // avoid pulling in these header files for consumers of this class
-template <class ElemType>
-class GPUMatrix;
-template <class ElemType>
-class CPUMatrix;
-template <class ElemType>
-class GPUSparseMatrix;
-template <class ElemType>
-class CPUSparseMatrix;
-template <class ElemType>
-class DeviceBoundNumber;
+template <class ElemType> class GPUMatrix;
+template <class ElemType> class CPUMatrix;
+template <class ElemType> class GPUSparseMatrix;
+template <class ElemType> class CPUSparseMatrix;
+template <class ElemType> class DeviceBoundNumber;
 
-//To compy with BLAS libraries matrices are stored in ColMajor. However, by default C/C++/C# use RowMajor
-//convertion is need when passing data between Matrix and C++ matrices
-//For the best performance compile CNTKMath project with NO_SYNC preprocessor directive
-//!!!WARNING!!! This class is NOT THREAD SAFE. Test and add necessary modifications if using in multi-threaded environment
+// <ElemType>-agnostic base class
+struct /*interface*/ MATH_API MatrixBase
+{
+    virtual int GetDeviceId() const = 0;
+    // TODO: Move more generic functions such as getting dims, resizing, and getting/setting as scalars in here.
+    virtual ~MatrixBase();
+};
+typedef std::shared_ptr<MatrixBase> MatrixBasePtr;
+
+// Note: To comply with BLAS libraries, matrices are stored in ColMajor. However, by default C/C++/C# use RowMajor convertion.
+// !!!WARNING!!! This class is NOT THREAD SAFE. Test and add necessary modifications if using in multi-threaded environment
 template <class ElemType>
 class MATH_API Matrix : public MatrixBase
 {
@@ -175,7 +169,7 @@ public:
     // REVIEW alexeyk: GPU version copies from device to host only, implement all versions (device <-> host).
     void CopySection(size_t numRows, size_t numCols, ElemType* dst, size_t colStride) const;
 
-    Matrix<ElemType> ColumnSlice(size_t startColumn, size_t numCols) const;
+    Matrix<ElemType> ColumnSlice(size_t startColumn, size_t numCols) const; // note: 'const' is misleading here, as the returned matrix is a mutable reference
 
     // difference between AssignColumnSlice and SetColumnSlice
     // AssignColumnSlice :      this(:, startColumn:startColumn+numCols-1) = fromMatrix(:, startColumn: startColumn+numCols-1)
@@ -238,7 +232,7 @@ public:
 
     void SetValue(const ElemType v);
     void SetValue(const DeviceBoundNumber<ElemType>& db_number);
-    void SetValue(const Matrix<ElemType>& deepCopyFrom, const MatrixFormat format = matrixFormatSparseCSR);
+    void SetValue(const Matrix<ElemType>& deepCopyFrom, const MatrixFormat format = matrixFormatSparseCSR); // BUGBUG: default for 'format' is unexpected
     void SetValue(const size_t numRows, const size_t numCols, int deviceId, ElemType* pArray, const size_t matrixFlags = matrixFlagNormal);
     void SetValue(const size_t rIdx, const size_t cIdx, ElemType val); // set matrix sparsely
     void SetValue(const size_t numRows, const size_t numCols, std::initializer_list<ElemType> l)
@@ -574,4 +568,5 @@ File& operator<<(File& stream, const Matrix<ElemType>& M)
 
 typedef Matrix<float> SingleMatrix;
 typedef Matrix<double> DoubleMatrix;
-} } }
+
+}}}

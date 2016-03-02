@@ -212,7 +212,7 @@ protected:
     }
 
     void ForwardCore(const Tensor4D& inT, const Mat& in, const Filter& filterT, const Mat& filter, const ConvDesc& convDesc,
-                     const Tensor4D& outT, Mat& out, Mat& workspace) override
+                 const Tensor4D& outT, Mat& out, Mat& workspace) override
     {
         size_t packedInputRows = filterT.w() * filterT.h() * filterT.c();
         size_t packedInputColsPerSample = outT.w() * outT.h();
@@ -295,7 +295,7 @@ protected:
     }
 
     void BackwardDataCore(const Tensor4D& srcGradT, const Mat& srcGrad, const Filter& filterT, const Mat& filter, const ConvDesc& convDesc,
-                          const Tensor4D& gradT, Mat& grad, Mat& workspace) override
+                      const Tensor4D& gradT, Mat& grad, Mat& workspace) override
     {
         size_t packedInputRows = filterT.w() * filterT.h() * filterT.c();
         size_t packedInputColsPerSample = srcGradT.w() * srcGradT.h();
@@ -337,7 +337,7 @@ protected:
     }
 
     void BackwardFilterCore(const Tensor4D& srcGradT, const Mat& srcGrad, const Tensor4D& inT, const Mat& in, const ConvDesc& convDesc,
-                            const Filter& filterT, Mat& filter, bool allowReuse, Mat& workspace) override
+                        const Filter& filterT, Mat& filter, bool allowReuse, Mat& workspace) override
     {
         size_t packedInputRows = filterT.w() * filterT.h() * filterT.c();
         size_t packedInputColsPerSample = srcGradT.w() * srcGradT.h();
@@ -421,7 +421,7 @@ protected:
     }
 
     void NormalizeBatchCore(const Tensor4D& inT, const Mat& in, const Tensor4D& scaleBiasT, const Mat& scale, const Mat& bias,
-                            bool spatial, double expAvgFactor, Mat& runMean, Mat& runInvStdDev, Mat& out, double epsilon, Mat& saveMean, Mat& saveInvStdDev) override
+                        bool spatial, double expAvgFactor, Mat& runMean, Mat& runInvStdDev, Mat& out, double epsilon, Mat& saveMean, Mat& saveInvStdDev) override
     {
         UNUSED(inT);
         UNUSED(in);
@@ -440,7 +440,7 @@ protected:
     }
 
     void NormalizeBatchInferenceCore(const Tensor4D& inT, const Mat& in, const Tensor4D& scaleBiasT, const Mat& scale, const Mat& bias,
-                                     bool spatial, const Mat& runMean, const Mat& runInvStdDev, Mat& out) override
+                                 bool spatial, const Mat& runMean, const Mat& runInvStdDev, Mat& out) override
     {
         UNUSED(scaleBiasT);
         if (spatial)
@@ -470,8 +470,8 @@ protected:
     }
 
     void BackwardNormalizeBatchCore(const Tensor4D& inT, const Mat& in, const Mat& srcGrad, Mat& grad,
-                                    const Tensor4D& scaleBiasT, const Mat& scale, bool spatial, const Mat& saveMean, const Mat& saveInvStdDev,
-                                    Mat& scaleGrad, Mat& biasGrad) override
+                                const Tensor4D& scaleBiasT, const Mat& scale, bool spatial, const Mat& saveMean, const Mat& saveInvStdDev,
+                                Mat& scaleGrad, Mat& biasGrad) override
     {
         UNUSED(inT);
         UNUSED(in);
@@ -679,4 +679,5 @@ std::unique_ptr<ConvolutionEngineFactory<ElemType>> ConvolutionEngineFactory<Ele
 
 template class ConvolutionEngineFactory<float>;
 template class ConvolutionEngineFactory<double>;
-} } }
+
+}}}

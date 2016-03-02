@@ -208,10 +208,9 @@ bool CheckFunction(std::string& p_nodeType, bool* allowUndeterminedVariable)
     else if (EqualInsensitive(nodeType, OperationNameOf(SumElementsNode))) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(TanhNode))) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(TimesNode))) ret = true;
-#ifdef COMING_SOON
-    else if (EqualInsensitive(nodeType, OperationNameOf(TransposeNode))) ret = true;
-#endif
+    //else if (EqualInsensitive(nodeType, OperationNameOf(TransposeDimensionsNode))) ret = true; // not supported from NDL, use Transpose()
     else if (EqualInsensitive(nodeType, OperationNameOf(TransposeTimesNode))) ret = true;
+    // legacy names:
     else if (EqualInsensitive(nodeType, L"ColumnElementTimes")) ret = true;
     else if (EqualInsensitive(nodeType, L"Constant", L"Const")) ret = true;
     else if (EqualInsensitive(nodeType, L"ImageInput", L"Image")) ret = true;
@@ -219,6 +218,7 @@ bool CheckFunction(std::string& p_nodeType, bool* allowUndeterminedVariable)
     else if (EqualInsensitive(nodeType, L"RowElementTimes")) ret = true;
     else if (EqualInsensitive(nodeType, L"Scale")) ret = true;
     else if (EqualInsensitive(nodeType, L"SparseImageInput", L"SparseImage")) ret = true;
+    else if (EqualInsensitive(nodeType, L"Transpose")) ret = true;
 
     // return the actual node name in the parameter if we found something
     if (ret)

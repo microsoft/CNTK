@@ -64,7 +64,7 @@ public:
 };
 
 template <class ElemType>
-class DSSMReader : public IDataReader<ElemType>
+class DSSMReader : public IDataReader
 {
     // public:
     //    typedef std::string LabelType;
@@ -119,8 +119,8 @@ private:
     std::map<LabelType, LabelIdType> m_mapLabelToId;
 
     // caching support
-    DataReader<ElemType>* m_cachingReader;
-    DataWriter<ElemType>* m_cachingWriter;
+    DataReader* m_cachingReader;
+    DataWriter* m_cachingWriter;
     ConfigParameters m_readerConfig;
 
     size_t RandomizeSweep(size_t epochSample);
@@ -158,7 +158,7 @@ public:
     }
     virtual ~DSSMReader();
     virtual void StartMinibatchLoop(size_t mbSize, size_t epoch, size_t requestedEpochSamples = requestDataSize);
-    virtual bool GetMinibatch(std::map<std::wstring, Matrix<ElemType>*>& matrices);
+    virtual bool GetMinibatch(StreamMinibatchInputs& matrices);
 
     size_t GetNumParallelSequences()
     {
@@ -172,7 +172,7 @@ public:
     }
 
     virtual const std::map<LabelIdType, LabelType>& GetLabelMapping(const std::wstring& sectionName);
-    virtual void SetLabelMapping(const std::wstring& sectionName, const std::map<LabelIdType, typename LabelType>& labelMapping);
+    virtual void SetLabelMapping(const std::wstring& sectionName, const std::map<LabelIdType, LabelType>& labelMapping);
     virtual bool GetData(const std::wstring& sectionName, size_t numRecords, void* data, size_t& dataBufferSize, size_t recordStart = 0);
 
     virtual bool DataEnd();

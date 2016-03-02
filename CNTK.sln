@@ -358,6 +358,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Text", "Text", "{97AAB0C8-D
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ReaderTests", "Tests\UnitTests\ReaderTests\ReaderTests.vcxproj", "{A4FC3467-4787-43E8-BBC0-D79AE56B468D}"
 	ProjectSection(ProjectDependencies) = postProject
+		{9BD0A711-0BBD-45B6-B81C-053F03C26CFB} = {9BD0A711-0BBD-45B6-B81C-053F03C26CFB}
 		{33D2FD22-DEF2-4507-A58A-368F641AEBE5} = {33D2FD22-DEF2-4507-A58A-368F641AEBE5}
 		{60BDB847-D0C4-4FD3-A947-0C15C08BCDB5} = {60BDB847-D0C4-4FD3-A947-0C15C08BCDB5}
 		{7B7A51ED-AA8E-4660-A805-D50235A02120} = {7B7A51ED-AA8E-4660-A805-D50235A02120}
@@ -846,6 +847,23 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ImageReader", "Source\Reade
 		{F0A9637C-20DA-42F0-83D4-23B4704DE602} = {F0A9637C-20DA-42F0-83D4-23B4704DE602}
 	EndProjectSection
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "AlexNet", "AlexNet", "{2B1046A1-0140-43B7-B3DC-CF7DEEE1009E}"
+	ProjectSection(SolutionItems) = preProject
+		Tests\EndToEndTests\Image\AlexNet\add_top5_layer.mel = Tests\EndToEndTests\Image\AlexNet\add_top5_layer.mel
+		Tests\EndToEndTests\Image\AlexNet\AlexNet.cntk = Tests\EndToEndTests\Image\AlexNet\AlexNet.cntk
+		Tests\EndToEndTests\Image\AlexNet\AlexNet.ndl = Tests\EndToEndTests\Image\AlexNet\AlexNet.ndl
+		Tests\EndToEndTests\Image\AlexNet\baseline.linux.debug.gpu.txt = Tests\EndToEndTests\Image\AlexNet\baseline.linux.debug.gpu.txt
+		Tests\EndToEndTests\Image\AlexNet\baseline.linux.release.gpu.txt = Tests\EndToEndTests\Image\AlexNet\baseline.linux.release.gpu.txt
+		Tests\EndToEndTests\Image\AlexNet\baseline.windows.debug.gpu.txt = Tests\EndToEndTests\Image\AlexNet\baseline.windows.debug.gpu.txt
+		Tests\EndToEndTests\Image\AlexNet\baseline.windows.release.gpu.txt = Tests\EndToEndTests\Image\AlexNet\baseline.windows.release.gpu.txt
+		Tests\EndToEndTests\Image\AlexNet\ImageNet1K_mean.xml = Tests\EndToEndTests\Image\AlexNet\ImageNet1K_mean.xml
+		Tests\EndToEndTests\Image\AlexNet\Macros.ndl = Tests\EndToEndTests\Image\AlexNet\Macros.ndl
+		Tests\EndToEndTests\Image\AlexNet\run-test = Tests\EndToEndTests\Image\AlexNet\run-test
+		Tests\EndToEndTests\Image\AlexNet\testcases.yml = Tests\EndToEndTests\Image\AlexNet\testcases.yml
+		Tests\EndToEndTests\Image\AlexNet\train_map.txt = Tests\EndToEndTests\Image\AlexNet\train_map.txt
+		Tests\EndToEndTests\Image\AlexNet\val_map.txt = Tests\EndToEndTests\Image\AlexNet\val_map.txt
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug_CpuOnly|x64 = Debug_CpuOnly|x64
@@ -1165,5 +1183,6 @@ Global
 		{B72C5B0E-38E8-41BF-91FE-0C1012C7C078} = {A3231EF2-DED1-4638-B0A2-5F87C484CA92}
 		{7B7A51ED-AA8E-4660-A805-D50235A02120} = {33EBFE78-A1A8-4961-8938-92A271941F94}
 		{9BD0A711-0BBD-45B6-B81C-053F03C26CFB} = {33EBFE78-A1A8-4961-8938-92A271941F94}
+		{2B1046A1-0140-43B7-B3DC-CF7DEEE1009E} = {8071EF60-30F7-4A77-81AA-ADCA0E18B1E3}
 	EndGlobalSection
 EndGlobal

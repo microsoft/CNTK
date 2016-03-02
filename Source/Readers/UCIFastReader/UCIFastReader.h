@@ -36,15 +36,8 @@ enum LabelKind
 };
 
 template <class ElemType>
-class UCIFastReader : public IDataReader<ElemType>
+class UCIFastReader : public IDataReader
 {
-public:
-    using LabelType = typename IDataReader<ElemType>::LabelType;
-    using LabelIdType = typename IDataReader<ElemType>::LabelIdType;
-    using IDataReader<ElemType>::mRequestedNumParallelSequences;
-    // typedef std::string LabelType;
-    // typedef unsigned LabelIdType;
-private:
     shared_ptr<UCIParser<ElemType, LabelType>> m_parser;
     size_t m_mbSize;                 // size of minibatch requested
     LabelIdType m_labelIdMax;        // maximum label ID we have encountered so far
@@ -74,7 +67,7 @@ private:
     // Prefetching related fields
     bool m_prefetchEnabled;
     std::future<bool> m_pendingAsyncGetMinibatch;
-    std::map<std::wstring, std::unique_ptr<Matrix<ElemType>>> m_prefetchMatrices;
+    StreamMinibatchInputs m_prefetchMatrices;
 
     // Distributed reading related fields
     size_t m_subsetNum;
@@ -102,8 +95,8 @@ private:
     unique_ptr<CUDAPageLockedMemAllocator> m_cudaAllocator;
 
     // caching support
-    DataReader<ElemType>* m_cachingReader;
-    DataWriter<ElemType>* m_cachingWriter;
+    DataReader* m_cachingReader;
+    DataWriter* m_cachingWriter;
     ConfigParameters m_readerConfig;
     void InitCache(const ConfigParameters& config);
     void InitCache(const ScriptableObjects::IConfigRecord& config);
@@ -157,9 +150,9 @@ public:
 
     virtual void StartDistributedMinibatchLoop(size_t mbSize, size_t epoch, size_t subsetNum, size_t numSubsets, size_t requestedEpochSamples = requestDataSize) override;
 
-    virtual bool GetMinibatch(std::map<std::wstring, Matrix<ElemType>*>& matrices);
+    virtual bool GetMinibatch(StreamMinibatchInputs& matrices);
 
-    bool GetMinibatchImpl(std::map<std::wstring, Matrix<ElemType>*>& matrices);
+    bool GetMinibatchImpl(StreamMinibatchInputs& matrices);
 
     size_t GetNumParallelSequences()
     {

@@ -14,7 +14,6 @@
 
 #define DATAREADER_EXPORTS // creating the exports here
 #include "DataReader.h"
-//#include "commandArgUtil.h"
 #include "ReaderShim.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
@@ -78,7 +77,7 @@ void ReaderShim<ElemType>::StartDistributedMinibatchLoop(
 }
 
 template <class ElemType>
-bool ReaderShim<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemType>*>& matrices)
+bool ReaderShim<ElemType>::GetMinibatch(StreamMinibatchInputs& matrices)
 {
     if (m_endOfEpoch)
     {
@@ -123,8 +122,8 @@ bool ReaderShim<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemType>*
             size_t columnNumber = m_layout->GetNumCols();
             size_t rowNumber = m_streams[streamId]->m_sampleLayout->GetNumElements();
 
-            auto data = reinterpret_cast<const ElemType*>(stream->m_data);
-            mx.second->SetValue(rowNumber, columnNumber, mx.second->GetDeviceId(), const_cast<ElemType*>(data), matrixFlagNormal);
+            auto* data = reinterpret_cast<const ElemType*>(stream->m_data);
+            matrices.GetInputMatrix<ElemType>(mx.first).SetValue(rowNumber, columnNumber, mx.second->GetDeviceId(), const_cast<ElemType*>(data), matrixFlagNormal);
         }
     }
 

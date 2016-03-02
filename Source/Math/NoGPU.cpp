@@ -214,14 +214,6 @@ ElemType GPUSparseMatrix<ElemType>::Adagrad(GPUMatrix<ElemType>& c, const bool n
 //template<class ElemType>
 //void GPUSparseMatrix<ElemType>::FSAdagrad(CPUMatrix<ElemType>& gradients, CPUMatrix<ElemType>&, ElemType, ElemType, ElemType, ElemType) { }
 
-#ifdef NO_SYNC
-template <class ElemType>
-bool GPUSparseMatrix<ElemType>::do_sync = false;
-#else
-template <class ElemType>
-bool GPUSparseMatrix<ElemType>::do_sync = true;
-#endif
-
 template <class ElemType>
 void GPUSparseMatrix<ElemType>::MultiplyAndWeightedAdd(ElemType alpha, const GPUSparseMatrix<ElemType>& a, const bool transposeA,
                                                        const GPUMatrix<ElemType>& b, const bool transposeD, ElemType beta, GPUMatrix<ElemType>& c)

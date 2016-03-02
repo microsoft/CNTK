@@ -30,11 +30,12 @@
 // version number to control how to read and write
 #define CNTK_MODEL_VERSION_1 1
 #define CNTK_MODEL_VERSION_2 2
-#define CURRENT_CNTK_MODEL_VERSION CNTK_MODEL_VERSION_2
+#define CNTK_MODEL_VERSION_3 3
+#define CURRENT_CNTK_MODEL_VERSION CNTK_MODEL_VERSION_3
 
 extern bool g_shareNodeValueMatrices;
 
-#ifndef UNREFERENCED_PARAMETER
+#ifndef UNREFERENCED_PARAMETER // TODO: unify with UNUSED()
 #define UNREFERENCED_PARAMETER(P) (P)
 #endif
 
@@ -264,7 +265,7 @@ public:
     // -----------------------------------------------------------------------
 
     ComputationNodeBase(DEVICEID_TYPE deviceId, const wstring& name)
-        : m_deviceId(deviceId), m_outputNeededDuringBackprop(true), m_parameterUpdateRequired(false), m_gradientInitialized(false), m_nodeName(name == L"" ? CreateUniqNodeName() : name)
+        : m_deviceId(deviceId), m_outputNeededDuringBackprop(true), m_learningRateMultiplier(0), m_gradientInitialized(false), m_nodeName(name == L"" ? CreateUniqNodeName() : name)
     {
     }
     virtual ~ComputationNodeBase()
@@ -282,7 +283,7 @@ public:
         if (flags & CopyNodeFlags::copyNodeValue)
         {
             node->m_deviceId = m_deviceId;
-            node->m_parameterUpdateRequired = m_parameterUpdateRequired;
+            node->m_learningRateMultiplier = m_learningRateMultiplier;
             node->m_nodeName = newName;
 
             node->m_sampleLayout = m_sampleLayout;
@@ -366,7 +367,7 @@ public:
     //  - as a Matrix reference
     //     - actual object is a 2D tensor without MB Layout
     //     - ValueAsMatrix(), GradientAsMatrix() returns tensor as a 2D Matrix object
-    //     - nodes that do this are: TimesNode, DiagTimesNode, ConvolutionNode, NoiseContrastiveEstimationNode, ClassBasedCrossEntropyWithSoftmaxNode, TransposeNode, DiagonalNode
+    //     - nodes that do this are: TimesNode, DiagTimesNode, ConvolutionNode, NoiseContrastiveEstimationNode, ClassBasedCrossEntropyWithSoftmaxNode, TransposeDimensionsNode, DiagonalNode
     //
     // How values are stored:
     //
@@ -403,9 +404,9 @@ private:
     void CheckTensorIsMatrix() const
     {
         if (HasMBLayout())
-            LogicError("CheckTensorIsMatrix: Minibatch data cannot be interpreted as a single 2D tensor.");
+            LogicError("%ls %ls operation: Minibatch data cannot be interpreted as a single 2D tensor.", NodeName().c_str(), OperationName().c_str());
         else if (m_sampleLayout.GetRank() < 1 || m_sampleLayout.GetRank() > 2) // note: scalars are not stored as tensors of rank 0, but rather as 1-dim vectors. TODO: clean this up some day
-            LogicError("CheckTensorIsMatrix: Sample is not a column vector or matrix (1D or 2D tensor).");
+            LogicError("%ls %ls operation: Sample [%s] is not a column vector or matrix (1D or 2D tensor).", NodeName().c_str(), OperationName().c_str(), string(m_sampleLayout).c_str());
     }
 public:
     size_t GetAsMatrixNumRows() const
@@ -573,6 +574,7 @@ public:
 
     // helper to access to element(0,0) without having to type-cast
     virtual double Get00Element() const = 0;
+    virtual MatrixBasePtr ValuePtr() const = 0; // for use in readers that pass the agnostic object around
 
     // TODO: two sets of functions, choose one
     const std::wstring& NodeName() const { return m_nodeName; }
@@ -584,10 +586,16 @@ public:
         fprintf(stderr, "Node --> %ls = %ls\n", NodeName().c_str(), OperationName().c_str()), fflush(stderr);
     }
 
-    bool NeedGradient() const { return m_needsGradient; }
+    bool NeedsGradient() const { return m_needsGradient; }
 
-    void SetParameterUpdateRequired(bool f) { m_parameterUpdateRequired = f; }
-    bool IsParameterUpdateRequired() const { return m_parameterUpdateRequired; }
+    void SetLearningRateMultiplier(float f) 
+    { 
+        if (f < 0)
+            InvalidArgument("LearningRateMultiplier should be non-negative. You are tring to set it to %f.", f);
+        m_learningRateMultiplier = f; 
+    }
+    float GetLearningRateMultiplier() const { return m_learningRateMultiplier; }
+    bool IsParameterUpdateRequired() const { return m_learningRateMultiplier > 0; }
 
     // return true if the node's value should be computed before the normal training. e.g., mean and invStd of input features.
     virtual bool /*IComputationNode::*/ RequiresPreCompute() const { return false; }
@@ -623,7 +631,7 @@ protected:
     void ValidateBinaryZip(bool isFinalValidationPass, bool allowBroadcast);
     void ValidateBinaryReduce(bool isFinalValidationPass);
     void InferMBLayoutFromInputsForStandardCase();
-    virtual void ValidateInferInputDimsFrom(const TensorShape&) = 0;    // (implemented by ComputationNode<ElemType>
+    virtual void ValidateInferInputDimsFrom(const TensorShape&) = 0;    // (implemented by ComputationNode<ElemType>)
 
 public:
 
@@ -828,7 +836,7 @@ protected:
     MBLayoutPtr m_pMBLayout;
 
     // flags related to gradient propagation
-    bool m_parameterUpdateRequired;    // update parameters? Only used for LearnableParameters.    --TODO: Should we make this a member of LearnableParameters actually? And require a type cast? Currently it is read out for all leaves.
+    float m_learningRateMultiplier;    // update parameters? Only used for LearnableParameters.    --TODO: Should we make this a member of LearnableParameters actually? And require a type cast? Currently it is read out for all leaves.
     bool m_gradientInitialized;        // indicates whether the gradient matrix has been resized and initialized to 0
     bool m_outputNeededDuringBackprop; // indicates whether the output value of the node is needed during backprop
 };
@@ -919,17 +927,17 @@ public:
     // creation from configuration
     // Nodes with NumInputs<> should say DeclareConstructorFromConfigWithNumInputs(ClassName), and nodes without DeclareConstructorFromConfig(ClassName).
     // The macro will forward to the regular constructor of the node (which may do more than just calling the base constructor), and then attach the inputs from config.
-#define DeclareConstructorFromConfig(C)                  \
-    C(const ScriptableObjects::IConfigRecordPtr configp) \
-        : C(configp->Get(L"deviceId"), L"<placeholder>") \
-    {                                                    \
-        AttachInputs(configp);                           \
-    }
 #define DeclareConstructorFromConfigWithNumInputs(C)         \
     C(const ScriptableObjects::IConfigRecordPtr configp)     \
         : C(configp->Get(L"deviceId"), L"<placeholder>")     \
     {                                                        \
         AttachInputs(configp, this->GetExpectedNumInputs()); \
+    }
+#define DeclareConstructorFromConfig(C)                  \
+    C(const ScriptableObjects::IConfigRecordPtr configp) \
+        : C(configp->Get(L"deviceId"), L"<placeholder>") \
+    {                                                    \
+        AttachInputs(configp);                           \
     }
 
     // helper to load m_value from a stream
@@ -1087,10 +1095,37 @@ public:
     const Matrix<ElemType>& Value() const { return *m_value; }
     Matrix<ElemType>&       Value()       { return *m_value; }
 
+    MatrixBasePtr ValuePtr() const override final { return m_value; }    // readers want this as a shared_ptr straight
+    // Note: We cannot return a const& since returning m_value as a MatrixBasePtr is a type cast that generates a temporary. Interesting.
+
     const Matrix<ElemType>& Gradient() const { return *m_gradient; }
     Matrix<ElemType>&       Gradient()       { return *m_gradient; }
 
 private:
+
+    template<class E>
+    void RethrowAs(const std::exception & e, const std::string & what)
+    {
+        const auto * pe = dynamic_cast<const ExceptionWithCallStack<E> *>(&e);
+        if (pe)
+            throw ExceptionWithCallStack<E>(what, pe->CallStack());
+        else if (dynamic_cast<const E *>(&e))
+            throw E(what);
+    }
+
+    // rethrow an exception with added node-name information
+    // Use this for exceptions we may get e.g. from the Matrix library, such as VerifySize().
+    __declspec_noreturn
+    void Rethrow(const std::exception & e)
+    {
+        string what = msra::strfun::strprintf("%s, for %ls %ls operation.", e.what(), NodeName().c_str(), OperationName().c_str());
+        RethrowAs<std::runtime_error>   (e, what);
+        RethrowAs<std::logic_error>     (e, what);
+        RethrowAs<std::invalid_argument>(e, what);
+        //RethrowAs<std::bad_alloc>       (e, what); // can't throw with message
+        //RethrowAs<std::exception>       (e, what); // ditto
+        throw e;
+    }
 
     // map a tensor to a matrix
     // The leading dimension maps to rows, the rest to columns, for compat with sparse matrix lib.
@@ -1099,7 +1134,14 @@ private:
         size_t numRows = GetAsMatrixNumRows();
         size_t numCols = GetAsMatrixNumCols();
         // We only get here if the tensor indeed describes an 1D or 2D object. In that case, just verify the dimensions.
+        try
+        {
         data.VerifySize(numRows, numCols);
+        }
+        catch (const std::exception& e)
+        {
+            Rethrow(e);
+        }
         return data;
     }
 
@@ -1116,9 +1158,9 @@ public:
         {
             return DataWithMBLayoutFor(data, fr, m_pMBLayout);
         }
-        catch (const logic_error& e) // catch the error and rethrow it with the node name attached
+        catch (const std::exception& e) // catch the error and rethrow it with the node name attached
         {
-            LogicError("%s, for %ls %ls operation.", e.what(), NodeName().c_str(), OperationName().c_str());
+            Rethrow(e);
         }
     }
 
@@ -1148,9 +1190,9 @@ public:
         {
             return TensorView<ElemType>(data, GetTensorSliceFor(rank, fr));
         }
-        catch (const logic_error& e) // catch the error and rethrow it with the node name attached
+        catch (const std::exception& e) // catch the error and rethrow it with the node name attached
         {
-            LogicError("%s, for %ls %ls operation.", e.what(), NodeName().c_str(), OperationName().c_str());
+            Rethrow(e);
         }
     }
     TensorView<ElemType> ValueTensorFor(size_t rank, const FrameRange& fr)
@@ -1209,7 +1251,14 @@ protected:
     {
         size_t rows, cols;
         DetermineDataSize(rows, cols);
+        try
+        {
         m.VerifySize(rows, cols);
+    }
+        catch (const std::exception& e)
+        {
+            Rethrow(e);
+        }
     }
 
 public:
@@ -1360,7 +1409,7 @@ public:
     virtual void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool) override
     {
         if (IsValueSharable())
-            RequestMatrixFromPool(m_value, matrixPool);
+        RequestMatrixFromPool(m_value, matrixPool);
         else
             CreateMatrixIfNull(m_value);
     }
@@ -1377,7 +1426,7 @@ public:
     {
         for (int i = 0; i < m_inputs.size(); i++)
         {
-            if (m_inputs[i]->NeedGradient())
+            if (m_inputs[i]->NeedsGradient())
                 m_inputs[i]->RequestMatricesBeforeBackprop(matrixPool);
         }
     }
@@ -1630,6 +1679,7 @@ public:
     virtual void CopyTo(ComputationNodeBasePtr node, const std::wstring& newName, const CopyNodeFlags flags) const override { NOT_IMPLEMENTED; }
     virtual ComputationNodeBasePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) override { NOT_IMPLEMENTED; }
     virtual double Get00Element() const override { NOT_IMPLEMENTED; }
+    virtual MatrixBasePtr ValuePtr() const override { NOT_IMPLEMENTED; }
     virtual void UpdateFunctionMBSize() override { NOT_IMPLEMENTED; }
     virtual void AttachInputs(const std::vector<ComputationNodeBasePtr>& inputs) override { NOT_IMPLEMENTED; }
     virtual void PrintSelf(bool) const override { NOT_IMPLEMENTED; }
@@ -1758,8 +1808,8 @@ protected:                                                                      
     using Base::InvalidateMissingGradientColumns;                                                                                                        \
     using Base::InvalidateMissingValueColumns;                                                                                                           \
     using Base::IsLeaf;                                                                                                                                  \
-    using Base::IsOutOfDateWrtInputs;                                                                                                                 \
-    using Base::IsPartOfLoop;                                                                                                                 \
+    using Base::IsOutOfDateWrtInputs;                                                                                                                    \
+    using Base::IsPartOfLoop;                                                                                                                            \
     using Base::LinkToMBLayout;                                                                                                                          \
     using Base::Load;                                                                                                                                    \
     using Base::LoadValue;                                                                                                                               \
@@ -1768,6 +1818,7 @@ protected:                                                                      
     using Base::MaskMissingValueColumnsToZero;                                                                                                           \
     using Base::MaskedGradientFor;                                                                                                                       \
     using Base::MaskedValueFor;                                                                                                                          \
+    using Base::MarkValueNonSharable;                                                                                                                    \
     using Base::OutputUsedInComputingInputNodesGradients;                                                                                                \
     using Base::PrintNodeValuesToFile;                                                                                                                   \
     using Base::PrintSelfBeforeValidation;                                                                                                               \
@@ -1781,7 +1832,7 @@ protected:                                                                      
     using Base::SetDims1;                                                                                                                                \
     using Base::SetDims;                                                                                                                                 \
     using Base::SetInput;                                                                                                                                \
-    using Base::SetParameterUpdateRequired;                                                                                                              \
+    using Base::SetLearningRateMultiplier;                                                                                                               \
     using Base::UpdateFunctionMBSize;                                                                                                                    \
     using Base::UpdateFunctionValuesSize;                                                                                                                \
     using Base::Validate;                                                                                                                                \
@@ -1801,7 +1852,7 @@ protected:                                                                      
     using Base::m_inputs;                                                                                                                                \
     using Base::m_nodeName;                                                                                                                              \
     using Base::m_pMBLayout;                                                                                                                             \
-    using Base::m_parameterUpdateRequired;                                                                                                               \
+    using Base::m_learningRateMultiplier;                                                                                                                \
     using Base::m_sampleLayout;                                                                                                                          \
     using Base::m_value;                                                                                                                                 \
     using Base::m_valueSharable;                                                                                                                         \

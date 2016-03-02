@@ -13,7 +13,7 @@
 namespace Microsoft { namespace MSR { namespace CNTK {
 
 template <class ElemType>
-class HTKMLFWriter : public IDataWriter<ElemType>
+class HTKMLFWriter : public IDataWriter
 {
 private:
     std::vector<size_t> outputDims;
@@ -36,8 +36,6 @@ private:
     };
 
 public:
-    using LabelType = typename IDataWriter<ElemType>::LabelType;
-    using LabelIdType = typename IDataWriter<ElemType>::LabelIdType;
     template <class ConfigRecordType>
     void InitFromConfig(const ConfigRecordType& writerConfig);
     virtual void Init(const ConfigParameters& config)

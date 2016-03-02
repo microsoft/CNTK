@@ -109,12 +109,12 @@ void SynchronousNodeEvaluator<ElemType>::Evaluate(NDLNode<ElemType>* node, const
         if (!isImage)
         {
             if (parameter.size() < 1)
-                RuntimeError("%ls should have 1 or more parameters (tensor dimensions, e.g. [vecdim] or [rows, cols]) plus other optional parameters (needGradient=[true|false], init=[uniform|gaussian|fixedvalue], initValueScale=[1|float], value=[0|float]).", cnNodeType.c_str());
+                RuntimeError("%ls should have 1 or more parameters (tensor dimensions, e.g. [vecdim] or [rows, cols]) plus other optional parameters (learningRateMultiplier=[1|0|float], init=[uniform|gaussian|fixedvalue], initValueScale=[1|float], value=[0|float]).", cnNodeType.c_str());
         }
         else
         {
             if (parameter.size() < 3)
-                RuntimeError("%ls should have 3 parameters [imageWidth, imageHeight, imageChannels] plus other optional parameters (needGradient=[true|false], init=[uniform|gaussian|fixedvalue], initValueScale=[1|float], value=[0|float]).", cnNodeType.c_str());
+                RuntimeError("%ls should have 3 or more parameters [imageWidth, imageHeight, imageChannels] plus other optional parameters (learningRateMultiplier=[1|0|float], init=[uniform|gaussian|fixedvalue], initValueScale=[1|float], value=[0|float]).", cnNodeType.c_str());
         }
 
         if (pass == ndlPassInitial)
@@ -123,11 +123,17 @@ void SynchronousNodeEvaluator<ElemType>::Evaluate(NDLNode<ElemType>* node, const
             vector<void*> params = EvaluateParameters(node, baseName, 0, parameter.size(), pass);
             size_t i = 0;
             auto tensorShape = ProcessTensorShapeParameters(node, params, i, isImage, cnNodeType);
-            // TODO: harmonize the parameter names across MEL and NDL
-            bool needGradient = node->GetOptionalParameter("needGradient", "true") && node->GetOptionalParameter("needsGradient", "true") && node->GetOptionalParameter("computeGradient", "true");
+
+            // for backward compatibility needsGradient is now subsumed by learningRateMultiplier
+            bool gradientUpdateNeeded = node->GetOptionalParameter("needGradient", "true") 
+                                     && node->GetOptionalParameter("needsGradient", "true")
+                                     && node->GetOptionalParameter("computeGradient", "true");
+            float learningRateMultiplier = node->GetOptionalParameter("learningRateMultiplier", "1");
+            if (!gradientUpdateNeeded)  // if user has specified needsGradient flag to false
+                learningRateMultiplier = 0.0;
 
             nodePtr = builder.CreateLearnableParameter(name, tensorShape);
-            nodePtr->SetParameterUpdateRequired(needGradient);
+            nodePtr->SetLearningRateMultiplier(learningRateMultiplier);
         }
         else if (pass == ndlPassFinal)
         {
@@ -171,7 +177,7 @@ void SynchronousNodeEvaluator<ElemType>::Evaluate(NDLNode<ElemType>* node, const
             size_t cols = node->GetOptionalParameter("cols", "1");
 
             nodePtr = builder.CreateLearnableParameter(name, rows, cols);
-            nodePtr->SetParameterUpdateRequired(false);
+            nodePtr->SetLearningRateMultiplier(0);
         }
         else if (pass == ndlPassFinal || nodePtr->Value().GetNumElements() != 0)
         {
@@ -194,10 +200,7 @@ void SynchronousNodeEvaluator<ElemType>::Evaluate(NDLNode<ElemType>* node, const
             size_t start_index = ((NDLNode<ElemType>*) params[0])->GetScalar();
             size_t num_rows = ((NDLNode<ElemType>*) params[1])->GetScalar();
 
-            bool needGradient = node->GetOptionalParameter("needGradient", "false");
             nodePtr = builder.RowSlice(NULL, start_index, num_rows, name);
-            // BUGBUG: This was probably meant to cut updates at this point. However, this will overwritten in EnumerateNodes() with values propagated upwards.
-            nodePtr->SetParameterUpdateRequired(needGradient);
         }
     }
     else if (cnNodeType == OperationNameOf(RowRepeatNode))
@@ -214,9 +217,7 @@ void SynchronousNodeEvaluator<ElemType>::Evaluate(NDLNode<ElemType>* node, const
             vector<void*> params = EvaluateParameters(node, baseName, 0, parameter.size(), pass);
             size_t num_repeat = ((NDLNode<ElemType>*) params[1])->GetScalar();
 
-            bool needGradient = node->GetOptionalParameter("needGradient", "false");
             nodePtr = builder.RowRepeat(NULL, num_repeat, name);
-            nodePtr->SetParameterUpdateRequired(needGradient);
         }
     }
     else if (cnNodeType == OperationNameOf(DiagonalNode))
@@ -232,9 +233,7 @@ void SynchronousNodeEvaluator<ElemType>::Evaluate(NDLNode<ElemType>* node, const
             // evaluate only scalar parameters
             vector<void*> params = EvaluateParameters(node, baseName, 0, parameter.size(), pass);
 
-            bool needGradient = node->GetOptionalParameter("needGradient", "false");
             nodePtr = builder.Diagonal(NULL, name);
-            nodePtr->SetParameterUpdateRequired(needGradient);
         }
     }
     else if (cnNodeType == L"Reshape" /*OperationNameOf(ReshapeNode)*/)
@@ -254,9 +253,7 @@ void SynchronousNodeEvaluator<ElemType>::Evaluate(NDLNode<ElemType>* node, const
             size_t img_height = node->GetOptionalParameter("imageHeight", "0");
             size_t img_channels = node->GetOptionalParameter("imageChannels", "0");
 
-            bool needGradient = node->GetOptionalParameter("needGradient", "false");
             nodePtr = builder.LegacyReshape(NULL, num_rows, ImageDimensions::AsTensorShape(img_width, img_height, img_channels, ImageLayoutKind::HWC /*legacy*/), name); // BUGBUG: use a tensor descriptor instead
-            nodePtr->SetParameterUpdateRequired(needGradient);
         }
     }
     else if (cnNodeType == OperationNameOf(PastValueNode) ||
@@ -277,7 +274,6 @@ void SynchronousNodeEvaluator<ElemType>::Evaluate(NDLNode<ElemType>* node, const
             // if we have three parameters the second is columns
             // ignore legacy size_t cols = parameter.size() > 2 ? ((NDLNode<ElemType>*)params[1])->GetScalar() : 1;
 
-            // bool needGradient = node->GetOptionalParameter("needGradient", "false");  // TODO: what's this for?
             float defaultHiddenActivity = node->GetOptionalParameter("defaultHiddenActivity", "0.1"); // TODO: parameter should be called 'defaultHiddenActivation'
 
             // for backward compatibility we check 'timeStep' first
@@ -289,8 +285,6 @@ void SynchronousNodeEvaluator<ElemType>::Evaluate(NDLNode<ElemType>* node, const
                 nodePtr = builder.PastValue(NULL, defaultHiddenActivity, rows, timeStep, name);
             else
                 nodePtr = builder.FutureValue(NULL, defaultHiddenActivity, rows, timeStep, name);
-
-            // nodePtr->SetParameterUpdateRequired(needGradient);    // TODO: what's this for?
         }
     }
     else if (cnNodeType == OperationNameOf(ConvolutionNode))
@@ -496,21 +490,24 @@ TensorShape SynchronousNodeEvaluator<ElemType>::ProcessTensorShapeParameters(con
     for (i++; i < params.size(); i++)
         dims.push_back(((NDLNode<ElemType>*) params[i])->GetScalar());
 
-    // turn into tensor
-    TensorShape tensorShape(dims);
-
     // if image then interpret as W, H, C with layout according to optional imageLayout parameter
+    // If more than 3 parameters are given, then we assume that this is for a Times operation and interpret the last 3 dimensions according to imageLayout.
     if (isImage)
     {
-        if (dims.size() != 3)
-            RuntimeError("%ls should have 3 parameters [width, height, numChannels].", cnNodeType.c_str());
+        if (dims.size() < 3)
+            RuntimeError("%ls should have 3 or more parameters [width, height, numChannels].", cnNodeType.c_str());
         ImageLayoutKind imageLayoutKind = ImageLayoutKindFrom(node->GetOptionalParameter("imageLayout", "HWC"));
-        tensorShape = ImageDimensions::AsTensorShape(tensorShape[0], tensorShape[1], tensorShape[2], imageLayoutKind);
+        size_t k0 = dims.size() - 3; // last 3 need to be arranged
+        SmallVector<size_t> imageDims = ImageDimensions::AsTensorShape(dims[k0 + 0], dims[k0 + 1], dims[k0 + 2], imageLayoutKind).GetDims();
+        for (size_t k = 0; k < 3; k++)
+            dims[k0 + k] = imageDims[k];
     }
 
-    return tensorShape;
+    // turn into tensor
+    return TensorShape(dims);
 }
 
 template class SynchronousExecutionEngine<float>;
 template class SynchronousExecutionEngine<double>;
-} } }
+
+}}}
