@@ -445,7 +445,7 @@ namespace Microsoft {
 					//  // wait all message process finished
 					// }
 
-					net->Finalize();
+					//net->Finalize();
 				}
 				multiverso::ArrayWorker<ElemType>* m_sharedArray;
 				multiverso::ArrayServer<ElemType>* m_serverArray;
