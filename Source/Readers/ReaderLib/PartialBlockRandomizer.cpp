@@ -501,6 +501,7 @@ void PartialBlockRandomizer::RandomizeForGlobalSamplePosition(size_t samplePosit
         m_sweep = sweep;
         m_sweepStartInSamples = sweep * m_metaData->GetTotalNumberOfSamples();
         RandomizeChunks();
+        m_sequenceRandomizer->Reset(m_sweep);
         if (samplePosition != m_sweepStartInSamples)
         {
             m_sequenceRandomizer->RandomizeSequenceForRange(m_sweepStartInSamples, samplePosition);
@@ -679,7 +680,7 @@ bool PartialBlockRandomizer::GetNextSequenceDescriptions(size_t sampleCount, std
 
     if (sampleCount <= 0)
     {
-        return false;
+        return true;
     }
 
     // Check sweep if rerandomization is needed.
@@ -692,6 +693,11 @@ bool PartialBlockRandomizer::GetNextSequenceDescriptions(size_t sampleCount, std
 
     m_sequenceRandomizer->RandomizeSequenceForRange(m_globalSamplePosition, m_globalSamplePosition + sampleCount + 1);
     std::vector<RandomizedSequenceDescription> sequences = m_sequenceRandomizer->GetSequencesForRange(m_globalSamplePosition, m_globalSamplePosition + sampleCount + 1);
+
+    for (const auto& s : sequences)
+    {
+        m_globalSamplePosition += s.m_original->m_numberOfSamples;
+    }
 
     if (m_distributionMode == DistributionMode::chunk)
     {
@@ -714,7 +720,7 @@ bool PartialBlockRandomizer::GetNextSequenceDescriptions(size_t sampleCount, std
         LogicError("Not supporeted mode.");
     }
 
-    return true;
+    return false;
 }
 
 /*
