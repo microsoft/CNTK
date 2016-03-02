@@ -80,11 +80,11 @@
       <AdditionalDependencies>ReaderLib.lib;Math.lib;$(OpenCVLib);$(ZipLibs);%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
-      <Command Condition="$(HasOpenCV)">xcopy /Y "$(OPENCV_PATH)\x64\vc12\bin\opencv_world300.dll" $(TargetDir)</Command>
-      <Command Condition="$(UseZip)">
-        copy /Y "$(ZLIB_PATH)\bin\zip.dll" "$(TargetDir)"
-        if exist "$(ZLIB_PATH)\bin\zlib1.dll" (copy /Y "$(ZLIB_PATH)\bin\zlib1.dll" "$(TargetDir)") else (copy /Y "$(ZLIB_PATH)\bin\zlib.dll" "$(TargetDir)\zlib1.dll")
-      </Command>
+      <Command>if "$(HasOpenCv)" == "true" xcopy /Y "$(OPENCV_PATH)\x64\vc12\bin\opencv_world300.dll" $(TargetDir)
+if "$(UseZip)" == "true" copy /Y "$(ZLIB_PATH)\bin\zip.dll" "$(TargetDir)"
+if "$(UseZip)" == "true" if exist "$(ZLIB_PATH)\bin\zlib1.dll" (copy /Y "$(ZLIB_PATH)\bin\zlib1.dll" "$(TargetDir)") else (copy /Y "$(ZLIB_PATH)\bin\zlib.dll" "$(TargetDir)\zlib1.dll")
+        </Command>
+      <Message>Copying dependencies</Message>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="$(DebugBuild)">
