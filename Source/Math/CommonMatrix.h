@@ -296,12 +296,8 @@ public:
 
     BaseMatrix()
     {
-        m_numRows = m_numCols = m_elemSizeAllocated = 0;
-        m_pArray = NULL;
-        m_matrixName = NULL;
+        ZeroInit();
         m_format = matrixFormatDense;
-        m_externalBuffer = false;
-        m_nz = 0;
         m_computeDevice = CPUDEVICE;
     }
     ~BaseMatrix()

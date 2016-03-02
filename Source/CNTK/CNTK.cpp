@@ -405,7 +405,7 @@ int wmainWithBS(int argc, wchar_t* argv[]) // called from wmain which is a wrapp
     wstring startupMessage = msra::strfun::wstrprintf(L"running on %ls at %ls\n", msra::strfun::utf16(GetHostName()).c_str(), msra::strfun::utf16(TimeDateStamp()).c_str());
     startupMessage += msra::strfun::wstrprintf(L"command line: %ls", exePath.c_str());
     for (const auto& arg : args)
-        startupMessage += L" " + arg;
+        startupMessage += L"  " + arg;
 
     fprintf(stderr, "%ls\n", startupMessage.c_str());
 
@@ -580,9 +580,7 @@ int wmainOldCNTKConfig(int argc, wchar_t* argv[]) // called from wmain which is 
     fprintf(stderr, "running on %s at %s\n", GetHostName().c_str(), timestamp.c_str());
     fprintf(stderr, "command line: \n");
     for (int i = 0; i < argc; i++)
-    {
-        fprintf(stderr, "%s ", WCharToString(argv[i]).c_str());
-    }
+        fprintf(stderr, "%*s%ls", i > 0 ? 2 : 0, "", argv[i]); // use 2 spaces for better visual separability
 
     // This simply merges all the different config parameters specified (eg, via config files or via command line directly),
     // and prints it.

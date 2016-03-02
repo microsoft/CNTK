@@ -47,13 +47,13 @@ public:
     virtual const char * CallStack() const override { return m_callStack.c_str(); }
 
     static void PrintCallStack();
-    static std::string GetCallStack();
+    static std::string GetCallStack(); // generate call stack as a string, which should then be passed to the constructor of this  --TODO: Why not generate it directly in the constructor?
     
 protected:
     std::string m_callStack;
 
 private:
-    static void CollectCallStack(const function<void(std::string)>& write, const function<void()>& newline);
+    static void CollectCallStack(const function<void(std::string)>& write);
 };
 
 typedef ExceptionWithCallStack<std::runtime_error> DebugUtil; // some code calls PrintCallStack() directly, using this namespace

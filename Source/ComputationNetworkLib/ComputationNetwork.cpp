@@ -462,6 +462,7 @@ template <class ElemType>
     if (dropoutRate != prevDropoutRate)
     {
         fprintf(stderr, "Switching dropout rate to %.8g.\n", dropoutRate);
+        // TODO: Change this to use an interface that is independent of <ElemType>.
         list<ComputationNodeBasePtr> dropoutNodes = net->GetNodesWithType(OperationNameOf(DropoutNode), criterionNode);
         if (dropoutNodes.size() == 0 && dropoutRate > 0)
             fprintf(stderr, "WARNING: there is no dropout node.\n");
