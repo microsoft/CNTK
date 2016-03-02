@@ -1213,7 +1213,7 @@ MPI Rank 1:
 MPI Rank 1: Allocating matrices for forward and/or backward propagation.
 MPI Rank 1: minibatchiterator: epoch 0: frames [0..83050] (first utterance at frame 0), data subset 0 of 1, with 1 datapasses
 MPI Rank 1: Final Results: Minibatch[1-325]: Samples Seen = 83050    CrossEntropyWithSoftmax: CrossEntropyWithSoftmax/Sample = 1.8690699    Perplexity = 6.4822646    EvalErrorPrediction: ErrorPrediction/Sample = 0.52003612    
-MPI Rank 1: Finished Epoch[ 2 of 3]: [Validation Set] TrainLossPerSample = 11.8690699; EvalErrPerSample = 0.52003612
+MPI Rank 1: Finished Epoch[ 2 of 3]: [Validation Set] TrainLossPerSample = 1.8690699; EvalErrPerSample = 0.52003612
 MPI Rank 1: Starting Epoch 3: learning rate per sample = 0.000098  effective momentum = 0.656119  momentum as time constant = 2429.9 samples
 MPI Rank 1: minibatchiterator: epoch 2: frames [40960..61440] (first utterance at frame 40960), data subset 1 of 2, with 1 datapasses
 MPI Rank 1: 
