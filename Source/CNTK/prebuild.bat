@@ -11,18 +11,21 @@ echo #define _BUILDINFO_H >> buildinfo.h$$
 FOR /F %%i IN ('hostname') DO SET HOST=%%i
 :: assuming hostname always exists
 
-:: not sure whether git in path ?
-call git --version 2 > nul
-if not %ERRORLEVEL% == 9009 (
-    echo #define _GIT_EXIST >> buildinfo.h$$
-    FOR /F %%i IN ('git rev-parse --abbrev-ref HEAD') DO SET BRANCH=%%i
-    FOR /F %%i IN ('git rev-parse HEAD') DO SET COMMIT=%%i
-    set STATUS=
-    git diff --quiet --cached
-    if not errorlevel 1 git diff --quiet
-    if errorlevel 1 set STATUS= ^(modified^)
-    echo #define _BUILDBRANCH_  "!BRANCH!"      >> buildinfo.h$$
-    echo #define _BUILDSHA1_    "!COMMIT!!STATUS!">> buildinfo.h$$
+:: note: we'll only use git which is in path
+where -q git
+if not errorlevel 1 (
+    call git --version > NUL 2>&1
+    if not errorlevel 1 (
+        echo #define _GIT_EXIST >> buildinfo.h$$
+        FOR /F %%i IN ('call git rev-parse --abbrev-ref HEAD') DO SET BRANCH=%%i
+        FOR /F %%i IN ('call git rev-parse HEAD') DO SET COMMIT=%%i
+        set STATUS=
+        call git diff --quiet --cached
+        if not errorlevel 1 call git diff --quiet
+        if errorlevel 1 set STATUS= ^(modified^)
+        echo #define _BUILDBRANCH_  "!BRANCH!"      >> buildinfo.h$$
+        echo #define _BUILDSHA1_    "!COMMIT!!STATUS!">> buildinfo.h$$
+    )
 )
 
 :: For now, math lib is basically hardwired
@@ -75,4 +78,4 @@ echo #endif >> buildinfo.h$$
 
 ::: update file only if it changed (otherwise CNTK.cpp will get rebuilt each time)
 fc buildinfo.h$$ buildinfo.h > NUL 2>&1
-if ERRORLEVEL 1 move /Y buildinfo.h$$ buildinfo.h
+if errorlevel 1 move /Y buildinfo.h$$ buildinfo.h
