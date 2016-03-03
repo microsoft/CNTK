@@ -75,6 +75,7 @@ private:
     std::vector<StreamDescriptionPtr> m_streams;
 
     int m_verbosity;
+    size_t m_totalNumberOfFrames;
 
     // Auxiliary data for checking against the data in the feature file.
     unsigned int m_samplePeriod;

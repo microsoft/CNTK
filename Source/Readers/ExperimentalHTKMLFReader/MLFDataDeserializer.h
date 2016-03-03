@@ -68,6 +68,8 @@ private:
 
     // Streams, this deserializer provides. A single mlf stream.
     std::vector<StreamDescriptionPtr> m_streams;
+
+    size_t m_totalNumberOfFrames;
 };
 
 }}}
