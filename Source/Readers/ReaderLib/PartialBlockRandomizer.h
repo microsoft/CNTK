@@ -109,6 +109,7 @@ private:
     void RandomizeChunks();
 
     void RandomizeForGlobalSamplePosition(size_t samplePosition);
+    void PrepareNewSweepIfNeeded(size_t samplePosition);
 };
 
 }}}
