@@ -1320,7 +1320,7 @@ bool SGD<ElemType>::PreCompute(ComputationNetworkPtr net,
 
         net->ForwardProp(nodes);
 
-        if (ProgressTracing::IsEnabled())
+        if (ProgressTracing::GetTracingFlag())
         {
             numItersSinceLastPrintOfProgress++;
             if (numItersSinceLastPrintOfProgress >= numIterationsBeforePrintingProgress)
