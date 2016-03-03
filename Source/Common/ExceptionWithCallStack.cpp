@@ -18,77 +18,118 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
 using namespace std;
 
+static string MakeFunctionNameStandOut(string name);
+static void CollectCallStack(size_t skipLevels, bool makeFunctionNamesStandOut, const function<void(string)>& write);
+
+/// <summary>This function retrieves the call stack as a string</summary>
+template <class E>
+string ExceptionWithCallStack<E>::GetCallStack(size_t skipLevels /*= 0*/, bool makeFunctionNamesStandOut /*= false*/)
+{
+    try
+    {
+        string output;
+        CollectCallStack(skipLevels + 1/*skip this function*/, makeFunctionNamesStandOut, [&output](string stack)
+        {
+            output += stack;
+        });
+        return output;
+    }
+    catch (...) // since we run as part of error reporting, don't get hung up on our own error
+    {
+        return string();
+    }
+}
+
+/// <summary>This function outputs the call stack to the std err</summary>
+template <class E>
+void ExceptionWithCallStack<E>::PrintCallStack(size_t skipLevels /*= 0*/, bool makeFunctionNamesStandOut /*= false*/)
+{
+    CollectCallStack(skipLevels + 1/*skip this function*/, makeFunctionNamesStandOut, [](string stack)
+    {
+        cerr << stack;
+    });
+}
+
 // make the unmangled name a bit more readable
 // Insert spaces around the main function name for better visual parsability; and double-spaces between function arguments.
 // This uses some heuristics for C++ names that may be fragile, but that's OK since this only adds/removes spaces.
-static string PrettifyName(string name)
+static string MakeFunctionNameStandOut(string origName)
 {
-    //name = "Microsoft::MSR::CNTK::ConfigParameters::operator()(std::basic_string<wchar_t,std::char_traits<wchar_t>,std::allocator<wchar_t>> const&) const";
-    // strip off modifiers. Onyl handles 
-    string modifiers;
-    auto pos = name.find_last_not_of(" abcdefghijklmnopqrstuvwxyz");
-    if (pos != string::npos)
+    try // guard against exception, since this is used for exception reporting
     {
-        modifiers = name.substr(pos + 1);
-        name = name.substr(0, pos + 1);
+        auto name = origName;
+        // strip off modifiers for parsing (will be put back at the end)
+        string modifiers;
+        auto pos = name.find_last_not_of(" abcdefghijklmnopqrstuvwxyz");
+        if (pos != string::npos)
+        {
+            modifiers = name.substr(pos + 1);
+            name = name.substr(0, pos + 1);
+        }
+        bool hasArgList = !name.empty() && name.back() == ')';
+        size_t angleDepth = 0;
+        size_t parenDepth = 0;
+        bool hitEnd = !hasArgList; // hit end of function name already?
+        bool hitStart = false;
+        // we parse the function name from the end; escape nested <> and ()
+        // We look for the end and start of the function name itself (without namespace qualifiers),
+        // and for commas separating function arguments.
+        for (size_t i = name.size(); i--> 0;)
+        {
+            // account for nested <> and ()
+            if (name[i] == '>')
+                angleDepth++;
+            else if (name[i] == '<')
+                angleDepth--;
+            else if (name[i] == ')')
+                parenDepth++;
+            else if (name[i] == '(')
+                parenDepth--;
+            // space before '>'
+            if (name[i] == ' ' && i + 1 < name.size() && name[i + 1] == '>')
+                name.erase(i, 1); // remove
+            // commas
+            if (name[i] == ',')
+            {
+                if (i + 1 < name.size() && name[i + 1] == ' ')
+                    name.erase(i + 1, 1);  // remove spaces after comma
+                if (!hitEnd && angleDepth == 0 && parenDepth == 1)
+                    name.insert(i + 1, "  "); // except for top-level arguments, we separate them by 2 spaces for better readability
+            }
+            // function name
+            if ((name[i] == '(' || name[i] == '<') &&
+                parenDepth == 0 && angleDepth == 0 &&
+                (i == 0 || name[i - 1] != '>') &&
+                !hitEnd && !hitStart) // we hit the start of the argument list
+            {
+                hitEnd = true;
+                name.insert(i, "  ");
+            }
+            else if ((name[i] == ' ' || name[i] == ':' || name[i] == '>') && hitEnd && !hitStart && i > 0) // we hit the start of the function name
+            {
+                if (name[i] != ' ')
+                    name.insert(i + 1, " ");
+                name.insert(i + 1, " "); // in total insert 2 spaces
+                hitStart = true;
+            }
+        }
+        return name + modifiers;
     }
-    bool hasArgList = !name.empty() && name.back() == ')';
-    size_t angleDepth = 0;
-    size_t parenDepth = 0;
-    bool hitEnd = !hasArgList; // hit end of function name already?
-    bool hitStart = false;
-    // we parse the function name from the end; escape nested <> and ()
-    // We look for the end and start of the function name itself (without namespace qualifiers),
-    // and for commas separating function arguments.
-    for (size_t i = name.size(); i--> 0;)
+    catch (...)
     {
-        // account for nested <> and ()
-        if (name[i] == '>')
-            angleDepth++;
-        else if (name[i] == '<')
-            angleDepth--;
-        else if (name[i] == ')')
-            parenDepth++;
-        else if (name[i] == '(')
-            parenDepth--;
-        // space before '>'
-        if (name[i] == ' ' && i + 1 < name.size() && name[i + 1] == '>')
-            name.erase(i, 1); // remove
-        // commas
-        if (name[i] == ',')
-        {
-            if (i + 1 < name.size() && name[i + 1] == ' ')
-                name.erase(i + 1, 1);  // remove spaces after comma
-            if (!hitEnd && angleDepth == 0 && parenDepth == 1)
-                name.insert(i + 1, "  "); // except for top-level arguments, we separate them by 2 spaces for better readability
-        }
-        // function name
-        if ((name[i] == '(' || name[i] == '<') &&
-            parenDepth == 0 && angleDepth == 0 &&
-            (i == 0 || name[i - 1] != '>') &&
-            !hitEnd && !hitStart) // we hit the start of the argument list
-        {
-            hitEnd = true;
-            name.insert(i, "  ");
-        }
-        else if ((name[i] == ' ' || name[i] == ':' || name[i] == '>') && hitEnd && !hitStart && i > 0) // we hit the start of the function name
-        {
-            if (name[i] != ' ')
-                name.insert(i + 1, " ");
-            name.insert(i + 1, " "); // in total insert 2 spaces
-            hitStart = true;
-        }
+        return origName;
     }
-    return name + modifiers;
 }
 
 /// <summary>This function collects the stack tracke and writes it through the provided write function
 /// <param name="write">Function for writing the text associated to a the callstack</param>
 /// <param name="newline">Function for writing and "end-of-line" / "newline"</param>
 /// </summary>
-template <class E>
-void ExceptionWithCallStack<E>::CollectCallStack(const function<void(string)>& write)
+static void CollectCallStack(size_t skipLevels, bool makeFunctionNamesStandOut, const function<void(string)>& write)
 {
+    static const int MAX_CALLERS = 62;
+    static const unsigned short MAX_CALL_STACK_DEPTH = 20;
+
     write("\n[CALL STACK]\n");
 
 #ifdef _WIN32
@@ -114,8 +155,8 @@ void ExceptionWithCallStack<E>::CollectCallStack(const function<void(string)>& w
     frames = min(frames, MAX_CALL_STACK_DEPTH);
 
     // format and emit
-    unsigned int firstFrame = 4; // 4 bottom functions are CollectCallStack(), GetCallStack(), ThrowFormatted(), and XXXError()
-    for (unsigned int i = firstFrame; i < frames; i++)
+    size_t firstFrame = skipLevels + 1; // skip CollectCallStack()
+    for (size_t i = firstFrame; i < frames; i++)
     {
         if (i == firstFrame)
             write("    > ");
@@ -124,7 +165,7 @@ void ExceptionWithCallStack<E>::CollectCallStack(const function<void(string)>& w
 
         if (SymFromAddr(process, (DWORD64)(callStack[i]), 0, symbolInfo))
         {
-            write(PrettifyName(symbolInfo->Name));
+            write(makeFunctionNamesStandOut ? MakeFunctionNameStandOut(symbolInfo->Name) : symbolInfo->Name);
             write("\n");
         }
         else
@@ -150,8 +191,7 @@ void ExceptionWithCallStack<E>::CollectCallStack(const function<void(string)>& w
     unsigned int numFrames = backtrace(backtraceAddresses, MAX_NUM_FRAMES);
     char** symbolList = backtrace_symbols(backtraceAddresses, numFrames);
 
-    unsigned int firstFrame = 3; // 3 bottom functions are GetCallStack(), ThrowFormatted(), and XXXError()
-    for (unsigned int i = firstFrame; i < numFrames; i++)
+    for (size_t i = skipLevels; i < numFrames; i++)
     {
         char* beginName    = NULL;
         char* beginOffset  = NULL;
@@ -185,7 +225,7 @@ void ExceptionWithCallStack<E>::CollectCallStack(const function<void(string)>& w
             const char* ret = abi::__cxa_demangle(beginName, funcName, &funcNameSize, &status);
             string fName;
             if (status == 0)
-                fName = PrettifyName(ret); // make it a bit more readable
+                fName = makeFunctionNamesStandOut ? MakeFunctionNameStandOut(ret) : ret; // make it a bit more readable
             else
                 fName = beginName; // failed: fall back
 
@@ -194,6 +234,8 @@ void ExceptionWithCallStack<E>::CollectCallStack(const function<void(string)>& w
             //static const size_t sourceFileWidth = 20;
             //if (sourceFile.size() > sourceFileWidth)
             //    sourceFile = "..." + sourceFile.substr(sourceFile.size() - (sourceFileWidth-3));
+            while (*beginAddress == ' ') // eat unnecessary space
+                beginAddress++;
             string pcOffset = beginOffset ? string(" + ") + beginOffset : string();
             snprintf(buffer, buf_size, "%-20s%-50s%s\n", beginAddress, fName.c_str(), pcOffset.c_str());
         }
@@ -208,30 +250,8 @@ void ExceptionWithCallStack<E>::CollectCallStack(const function<void(string)>& w
 #endif
 }
 
-/// <summary>This function retrieves the call stack as a string</summary>
-template <class E>
-string ExceptionWithCallStack<E>::GetCallStack()
-{
-    string output;
-    CollectCallStack([&output](string stack)
-    {
-        output += stack;
-    });
-    return output;
-}
-
-/// <summary>This function outputs the call stack to the std err</summary>
-template <class E>
-void ExceptionWithCallStack<E>::PrintCallStack()
-{
-    CollectCallStack([](string stack)
-    {
-        cerr << stack;
-    });
-}
-
-template class ExceptionWithCallStack<runtime_error>;
-template class ExceptionWithCallStack<logic_error>;
-template class ExceptionWithCallStack<invalid_argument>;
+template class ExceptionWithCallStack<std::runtime_error>;
+template class ExceptionWithCallStack<std::logic_error>;
+template class ExceptionWithCallStack<std::invalid_argument>;
 
 }}}

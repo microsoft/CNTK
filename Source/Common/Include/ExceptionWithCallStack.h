@@ -35,10 +35,6 @@ struct /*interface*/ IExceptionWithCallStackBase
 template <class E>
 class ExceptionWithCallStack : public E, public IExceptionWithCallStackBase
 {
-private:
-    static const int MAX_CALLERS = 62;
-    static const unsigned short MAX_CALL_STACK_DEPTH = 20;
-
 public:
     ExceptionWithCallStack(const std::string& msg, const std::string& callstack) :
         E(msg), m_callStack(callstack)
@@ -46,16 +42,17 @@ public:
 
     virtual const char * CallStack() const override { return m_callStack.c_str(); }
 
-    static void PrintCallStack();
-    static std::string GetCallStack(); // generate call stack as a string, which should then be passed to the constructor of this  --TODO: Why not generate it directly in the constructor?
-    
+    static void      PrintCallStack(size_t skipLevels = 0, bool makeFunctionNamesStandOut = false);
+    static std::string GetCallStack(size_t skipLevels = 0, bool makeFunctionNamesStandOut = false); // generate call stack as a string, which should then be passed to the constructor of this  --TODO: Why not generate it directly in the constructor?
+
 protected:
     std::string m_callStack;
-
-private:
-    static void CollectCallStack(const function<void(std::string)>& write);
 };
 
-typedef ExceptionWithCallStack<std::runtime_error> DebugUtil; // some code calls PrintCallStack() directly, using this namespace
+// some older code uses this namespace
+namespace DebugUtil
+{
+    static inline void PrintCallStack() { ExceptionWithCallStack<std::runtime_error>::PrintCallStack(0, false); }
+};
 
 }}}
