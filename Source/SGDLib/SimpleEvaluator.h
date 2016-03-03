@@ -10,6 +10,7 @@
 #include "ComputationNetwork.h"
 #include "DataReaderHelpers.h"
 #include "TrainingNodes.h" // TODO: we should move the functions that depend on these to the .cpp
+#include "ProgressTracing.h"
 
 #include <vector>
 #include <string>
@@ -95,6 +96,8 @@ public:
         dataReader->StartMinibatchLoop(mbSize, 0, testSize);
         m_net->StartEvaluateMinibatchLoop(evalNodes);
 
+        const size_t numIterationsBeforePrintingProgress = 100;
+        size_t numItersSinceLastPrintOfProgress = 0;
         while (DataReaderHelpers::GetMinibatchIntoNetwork<ElemType>(*dataReader, m_net, nullptr, false, false, inputMatrices, actualMBSize))
         {
             ComputationNetwork::BumpEvalTimeStamp(featureNodes);
@@ -127,6 +130,18 @@ public:
                     }
                     numSamplesLastMBs = 0;
                     lastMBsRun = numMBsRun;
+                }
+            }
+
+
+            if (ProgressTracing::GetTracingFlag())
+            {
+                numItersSinceLastPrintOfProgress++;
+                if (numItersSinceLastPrintOfProgress >= numIterationsBeforePrintingProgress)
+                {
+                    // TODO: For now just print 0.0 instead of calculating actual progress
+                    printf("PROGRESS: %.2f%%\n", 0.0f);
+                    numItersSinceLastPrintOfProgress = 0;
                 }
             }
 

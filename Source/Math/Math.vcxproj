@@ -83,8 +83,6 @@
     </Link>
     <PostBuildEvent>
       <Command>xcopy /D /I /Y "$(ACML_PATH)\lib\*.dll" $(OutputPath)</Command>
-    </PostBuildEvent>
-    <PostBuildEvent>
       <Message>Copying ACML DLLs</Message>
     </PostBuildEvent>
     <CudaCompile>

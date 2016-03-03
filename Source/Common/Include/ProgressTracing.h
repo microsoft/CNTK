@@ -45,11 +45,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     } // wrap static state in an accessor, so we won't need a CPP file
 
 public:
-    static bool IsEnabled()
-    {
-        return GetStaticInstance().m_enabled;
-    }
-
     static bool GetTracingFlag()
     {
         return GetStaticInstance().m_tracingFlag;
