@@ -42,11 +42,8 @@ train = [
         // macros
         NDConvReLULayer(inp, kW, kH, inMap, outMap, hStride, vStride, wScale, bValue) = [  // ReLU non-linearity
             convW = Parameter(outMap, kW * kH * inMap, init="uniform", initValueScale=wScale, initOnCPUOnly=false)
-            //conv = NDConvolution(convW, inp, kernelShape=(kW : kH : inMap), mapShape=(1 : 1 : outMap), stride=(hStride : vStride : 1), 
-            //                     sharing=(true : true : true), padding=(true : true : false), imageLayout=if useCuDnn then "cudnn" else "legacy")
-            //conv = NDConvolution(convW, inp, (kW : kH : inMap), (1 : 1 : outMap), (hStride : vStride : 1), 
-            //                     (1 : 1 : 1), (1 : 1 : 1), (1 : 1 : 1), (1 : 1 : 1), imageLayout=if useCuDnn then "cudnn" else "legacy")
-            conv = NDConvolution(convW, inp, (kW : kH : inMap), (1 : 1 : outMap), stride=1, sharing=true, autoPadding=true, lowerPad=1, imageLayout=if useCuDnn then "cudnn" else "legacy")
+            //conv = NDConvolution(convW, inp, (kW : kH : inMap), (1 : 1 : outMap), stride=1, sharing=true, autoPadding=true, lowerPad=1, imageLayout=if useCuDnn then "cudnn" else "legacy")
+            conv = NDConvolution(convW, inp, (kW : kH : inMap), (1 : 1 : outMap), stride=1, sharing=true, autoPadding=false, lowerPad=(2 : 2 : 0), imageLayout=if useCuDnn then "cudnn" else "legacy")
             convB = if useCuDnn
                     then ParameterTensor((1 : 1 : outMap), init="fixedValue", value=bValue)
                     else Parameter(outMap, 1,              init="fixedValue", value=bValue)
@@ -54,13 +51,13 @@ train = [
             out = RectifiedLinear(convPlusB);
         ]
 
-        DNNSigmoidLayer(inDim, outDim, x, parmScale) = [        // Sigmoid non-linearity
-            W = Parameter(outDim, inDim, init="uniform", initValueScale=parmScale, initOnCPUOnly=false) 
-            b = Parameter(outDim, 1,     init="uniform", initValueScale=parmScale, initOnCPUOnly=false) 
-            t = Times(W, x)
-            z = Plus(t, b)
-            out = Sigmoid(z)
-        ]
+				DNNImageSigmoidLayer(inW, inH, inC, outDim, x, parmScale) = [
+						W = ParameterTensor((outDim: inW : inH : inC), init="uniform", initValueScale=parmScale)
+						b = LearnableParameter(outDim, 1,         init="uniform", initValueScale=parmScale) 
+						t = Times(W, x)
+						z = Plus(t, b)
+						out = Sigmoid(z)
+				]
 
         DNNLayer(inDim, outDim, x, parmScale) = [               // no non-linearity, as input for SoftMax
             W = Parameter(outDim, inDim, init="uniform", initValueScale=parmScale, initOnCPUOnly=false)
@@ -89,7 +86,7 @@ train = [
 
         h1Dim = 128
         # DNNSigmoidLayer and DNNLayer are defined in Macros.ndl
-        h1 = DNNSigmoidLayer(12544, h1Dim, conv1_act, 1).out
+        h1 = DNNImageSigmoidLayer(26, 26, cMap1, h1Dim, conv1_act, 1).out
         ol = DNNLayer(h1Dim, labelDim, h1, 1).out
 
         ce = CrossEntropyWithSoftmax(labels, ol, tag="criterion")

@@ -1585,7 +1585,6 @@ public:
 
         // Read and check version.
         // REVIEW alexeyk: extract version checking so it can be re-used in other places.
-        // BUGBUG: We must serialize m_inputLayout.
         int32_t verWritten;
         int32_t verReadable;
         fstream >> verWritten >> verReadable;

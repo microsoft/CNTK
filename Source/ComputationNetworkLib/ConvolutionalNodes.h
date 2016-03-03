@@ -40,16 +40,16 @@ public:
         : Base(deviceId, name)
     {
     }
-    NDConvolutionNode(DEVICEID_TYPE deviceId, const wstring& name, const TensorShape& kernelShape, const TensorShape& mapShape, const TensorShape& strideShape,
+    NDConvolutionNode(DEVICEID_TYPE deviceId, const wstring& name, const TensorShape& kernelShape, const TensorShape& mapCount, const TensorShape& strideShape,
                       const std::vector<bool>& sharing, const std::vector<bool>& autoPadding, const TensorShape& lowerPad, const TensorShape& upperPad,
                       ImageLayoutKind imageLayout, size_t maxTempMemSizeInSamples)
-        : Base(deviceId, name), m_kernelShape(kernelShape), m_mapShape(mapShape), m_stride(strideShape), m_sharing(sharing),
+        : Base(deviceId, name), m_kernelShape(kernelShape), m_mapCount(mapCount), m_stride(strideShape), m_sharing(sharing),
         m_autoPad(autoPadding), m_lowerPad(lowerPad), m_upperPad(upperPad),
-        m_imageLayoutKind(imageLayout), m_maxTempMemSizeInSamples(maxTempMemSizeInSamples)
+        m_imageLayout(imageLayout), m_maxTempMemSizeInSamples(maxTempMemSizeInSamples)
     {
     }
     NDConvolutionNode(const ScriptableObjects::IConfigRecordPtr configp)
-        : NDConvolutionNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"kernelShape"), configp->Get(L"mapShape"), configp->Get(L"strideShape"),
+        : NDConvolutionNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"kernelShape"), configp->Get(L"mapCount"), configp->Get(L"strideShape"),
         configp->Get(L"dimSharing"), configp->Get(L"dimPadding"), configp->Get(L"dimPadLower"), configp->Get(L"dimPadUpper"),
         ImageLayoutKindFrom(configp->Get(L"imageLayout")), configp->Get(L"maxTempMemSizeInSamples"))
     {
@@ -60,11 +60,47 @@ public:
     void Save(File& fstream) const override
     {
         Base::Save(fstream);
+
+        fstream << m_version.VerWrittenCur() << m_version.VerReadableCur();
+
+        m_kernelShape.Save(fstream);
+        m_mapCount.Save(fstream);
+        m_stride.Save(fstream);
+        fstream << m_sharing;
+        fstream << m_autoPad;
+        m_lowerPad.Save(fstream);
+        m_upperPad.Save(fstream);
+        fstream << (int32_t)m_imageLayout;
+        fstream << m_maxTempMemSizeInSamples;
     }
 
     void Load(File& fstream, size_t modelVersion) override
     {
         Base::Load(fstream, modelVersion);
+
+        // Read and check version.
+        int32_t verWritten;
+        int32_t verReadable;
+        fstream >> verWritten >> verReadable;
+
+        if (verReadable > verWritten)
+            RuntimeError("Corrupt model file.");
+        if (verWritten < m_version.VerWeCanReadBack())
+            RuntimeError("Model is too old.");
+        if (verReadable > m_version.VerWrittenCur())
+            RuntimeError("Model is too new.");
+
+        m_kernelShape.Load(fstream);
+        m_mapCount.Load(fstream);
+        m_stride.Load(fstream);
+        fstream >> m_sharing;
+        fstream >> m_autoPad;
+        m_lowerPad.Load(fstream);
+        m_upperPad.Load(fstream);
+        int32_t layout;
+        fstream >> layout;
+        m_imageLayout = (ImageLayoutKind)layout;
+        fstream >> m_maxTempMemSizeInSamples;
     }
 
     void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
@@ -93,7 +129,7 @@ public:
         Base::Validate(isFinalValidationPass);
         InferMBLayoutFromInputsForStandardCase();
 
-        if (m_imageLayoutKind != ImageLayoutKind::CHW)
+        if (m_imageLayout != ImageLayoutKind::CHW)
         {
             InvalidArgument(
                 "NDConvolution supports only cuDNN (CHW) data layout. "
@@ -101,71 +137,16 @@ public:
                 "and make sure input data layout is CHW");
         }
 
-        auto dimsInput = GetInputSampleLayout(1);
-        if (dimsInput.GetRank() != m_kernelShape.GetRank())
-            InvalidArgument("Convolution input and kernel tensors must have the same rank.");
-        if (m_mapShape.GetRank() != 1 && dimsInput.GetRank() != m_mapShape.GetRank())
-            InvalidArgument("Convolution map tensor must have rank 1 or the same as the input tensor.");
-        if (m_stride.GetRank() != 1 && dimsInput.GetRank() != m_stride.GetRank())
-            InvalidArgument("Convolution stride tensor must have rank 1 or the same as the input tensor.");
-        if (m_sharing.size() != 1 && dimsInput.GetRank() != m_sharing.size())
-            InvalidArgument("Convolution sharing tensor must have rank 1 or the same as the input tensor.");
-        if (m_autoPad.size() != 1 && dimsInput.GetRank() != m_autoPad.size())
-            InvalidArgument("Convolution padding tensor must have rank 1 or the same as the input tensor.");
-        if (m_lowerPad.GetRank() != 1 && dimsInput.GetRank() != m_lowerPad.GetRank())
-            InvalidArgument("Convolution lower pad tensor must have rank 1 or the same as the input tensor.");
-        if (m_upperPad.GetRank() != 1 && dimsInput.GetRank() != m_upperPad.GetRank())
-            InvalidArgument("Convolution upper pad tensor must have rank 1 or the same as the input tensor.");
-
-        SmallVector<size_t> dimsOutput(dimsInput.GetRank());
-        for (size_t i = 0; i < dimsInput.GetRank(); i++)
-        {
-            assert(dimsInput[i] >= 1);
-            if (m_kernelShape[i] > dimsInput[i])
-                InvalidArgument("NDConvolution operation requires that kernel dim %d <= input dim %d.", (int)m_kernelShape[i], (int)dimsInput[i]);
-
-            size_t delta = m_stride[m_stride.GetRank() == 1 ? 0 : i];
-            if (delta > m_kernelShape[i])
-                InvalidArgument("NDConvolution operation requires that stride %d <= input dim %d.", (int)m_stride[i], (int)dimsInput[i]);
-            
-            size_t dim = dimsInput[i];
-            bool autoPad = m_autoPad[m_autoPad.size() == 1 ? 0 : i];
-            if (autoPad)
-            {
-                dim += m_kernelShape[i] - 1;
-            }
-            else
-            {
-                size_t lo = m_lowerPad[m_lowerPad.size() == 1 ? 0 : i];
-                size_t hi = m_upperPad[m_upperPad.size() == 1 ? 0 : i];
-                dim += lo + hi;
-            }
-            size_t dimOut = (dim - m_kernelShape[i]) / delta + 1;
-            if (!autoPad)
-            {
-                // When LowerPad and/or UpperPad are specified, we insist that the kernel applications
-                // fill the entire space.
-                size_t size = (dimOut - 1) * delta + m_kernelShape[i];
-                if (size != dim)
-                    InvalidArgument("NDConvolution requires that kernel fills the entire space if auto-padding is disabled.");
-            }
-            if (m_mapShape.size() > 1)
-                dimOut *= m_mapShape[i];
-            else if (i == dimsInput.GetRank() - 1)
-                dimOut *= m_mapShape[0];
-
-            dimsOutput[i] = dimOut;
-        }
-        auto dimsOut = TensorShape(dimsOutput);
-        // Check the output dimensions.
-        size_t mapCount = m_mapShape.GetNumElements();
-        size_t sizeOut = dimsOut.GetNumElements();
-        assert(sizeOut % mapCount == 0);
-
+        auto inputShape = GetInputSampleLayout(1);
+        auto dimsOut = ConvolveGeometry::ComputeOutputShape(inputShape, m_kernelShape, m_mapCount, m_stride,
+                                                            m_sharing, m_autoPad, m_lowerPad, m_upperPad);
         SetDims(dimsOut, true);
 
         if (isFinalValidationPass)
         {
+            ConvolveGeometry g(inputShape, m_kernelShape, m_mapCount, m_stride,
+                               m_sharing, m_autoPad, m_lowerPad, m_upperPad);
+            UNUSED(g);
         }
     }
 
@@ -185,10 +166,19 @@ public:
     }
 
 private:
-    ImageLayoutKind m_imageLayoutKind;
+    struct VersionInfo
+    {
+        int32_t VerWrittenCur() const     { return 0x00010001; } // Initial
+        int32_t VerReadableCur() const    { return 0x00010001; }
+        int32_t VerWeCanReadBack() const  { return 0x00010001; }
+    };
+    VersionInfo m_version;
+
+private:
+    ImageLayoutKind m_imageLayout;
 
     TensorShape m_kernelShape;
-    TensorShape m_mapShape;
+    TensorShape m_mapCount;
     TensorShape m_stride;
     std::vector<bool> m_sharing;
     std::vector<bool> m_autoPad;
