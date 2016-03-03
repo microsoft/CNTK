@@ -130,6 +130,8 @@ MLFDataDeserializer::MLFDataDeserializer(CorpusDescriptorPtr corpus, const Confi
         }
     }
 
+    m_totalNumberOfFrames = totalFrames;
+
     m_sequences.reserve(m_frames.size());
     for (int i = 0; i < m_frames.size(); ++i)
     {
@@ -177,12 +179,13 @@ std::vector<SequenceDescriptionPtr> MLFDataDeserializer::GetSequencesForChunk(si
 
 size_t MLFDataDeserializer::GetTotalNumberOfSamples()
 {
-    return m_sequences.size();
+    assert(m_sequences.size() == m_totalNumberOfFrames);
+    return m_totalNumberOfFrames;
 }
 
 size_t MLFDataDeserializer::GetTotalNumberOfSequences()
 {
-    return GetTotalNumberOfSamples();
+    return MLFDataDeserializer::GetTotalNumberOfSamples();
 }
 
 std::vector<StreamDescriptionPtr> MLFDataDeserializer::GetStreamDescriptions() const

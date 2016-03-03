@@ -75,6 +75,8 @@ HTKDataDeserializer::HTKDataDeserializer(
         totalFrames += description.m_numberOfSamples;
     }
 
+    m_totalNumberOfFrames = totalFrames;
+
     size_t totalSize = std::accumulate(
         m_utterances.begin(),
         m_utterances.end(),
@@ -197,18 +199,12 @@ std::vector<SequenceDescriptionPtr> HTKDataDeserializer::GetSequencesForChunk(si
 
 size_t HTKDataDeserializer::GetTotalNumberOfSamples()
 {
-    size_t sum = 0;
-    for (auto c : m_chunks)
-    {
-        sum += c.GetTotalFrames();
-    }
-
-    return sum;
+    return m_totalNumberOfFrames;
 }
 
 size_t HTKDataDeserializer::GetTotalNumberOfSequences()
 {
-    return GetTotalNumberOfSamples();
+    return m_totalNumberOfFrames;
 }
 
 std::vector<StreamDescriptionPtr> HTKDataDeserializer::GetStreamDescriptions() const
