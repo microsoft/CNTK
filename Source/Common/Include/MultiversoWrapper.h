@@ -60,7 +60,6 @@ namespace Microsoft {
 					double adjustcoef = 0.2,
 					size_t adjustnbmb = 600)
 				{
-					TestNet();
 					m_modelSyncCount = 0;
 					m_adjustLearningRateAtBeginningType = adjusttype;
 					m_adjustCoefficient = adjustcoef;
@@ -316,7 +315,7 @@ namespace Microsoft {
 					assert(!m_isInitialized);
 					m_isInitialized = true;
 
-                    //multiverso::Log::ResetLogLevel(multiverso::LogLevel::Debug);
+                    multiverso::Log::ResetLogLevel(multiverso::LogLevel::Debug);
 					multiverso::MV_Init();
 
 					//weights
@@ -379,74 +378,7 @@ namespace Microsoft {
 					}
 					return f;
 				}
-				void TestNet() {
-					multiverso::NetInterface* net = multiverso::NetInterface::Get();
-					net->Init();
 
-					const char* chi1 = std::string("hello, world").c_str();
-					const char* chi2 = std::string("hello, c++").c_str();
-					const char* chi3 = std::string("hello, multiverso").c_str();
-					char* hi1 = new char[14];
-					strcpy(hi1, chi1);
-					char* hi2 = new char[12];
-					strcpy(hi2, chi2);
-					char* hi3 = new char[19];
-					strcpy(hi3, chi3);
-					if (net->rank() == 0) {
-						for (int rank = 1; rank < net->size(); ++rank) {
-							multiverso::MessagePtr msg(new multiverso::Message());// = std::make_unique<Message>();
-							msg->set_src(0);
-							msg->set_dst(rank);
-							msg->Push(multiverso::Blob(hi1, 13));
-							msg->Push(multiverso::Blob(hi2, 11));
-							msg->Push(multiverso::Blob(hi3, 18));
-							while (net->Send(msg) == 0) {}
-							multiverso::Log::Info("rank 0 send\n");
-						}
-
-						for (int i = 1; i < net->size(); ++i) {
-							multiverso::MessagePtr msg(new multiverso::Message());
-							msg.reset(new multiverso::Message());
-							while (net->Recv(&msg) == 0) {
-								// multiverso::Log::Info("recv return 0\n");
-							}
-							multiverso::Log::Info("rank 0 recv\n");
-							// CHECK(strcmp(msg->data()[0].data(), hi) == 0);
-							std::vector<multiverso::Blob> recv_data = msg->data();
-							//CHECK(recv_data.size() == 3);
-							for (int i = 0; i < msg->size(); ++i) {
-								multiverso::Log::Info("recv from srv %d: %s\n", msg->src(), recv_data[i].data());
-							};
-						}
-					}
-					else {// other rank
-						multiverso::MessagePtr msg(new multiverso::Message());// = std::make_unique<Message>();
-						while (net->Recv(&msg) == 0) {
-							// multiverso::Log::Info("recv return 0\n");
-						}
-						multiverso::Log::Info("rank %d recv\n", net->rank());
-						// CHECK(strcmp(msg->data()[0].data(), hi) == 0);
-						std::vector<multiverso::Blob>& recv_data = msg->data();
-						//CHECK(recv_data.size() == 3);
-						for (int i = 0; i < msg->size(); ++i) {
-							multiverso::Log::Info("%s\n", recv_data[i].data());
-						}
-
-						msg.reset(new multiverso::Message());
-						msg->set_src(net->rank());
-						msg->set_dst(0);
-						msg->Push(multiverso::Blob(hi1, 13));
-						msg->Push(multiverso::Blob(hi2, 11));
-						msg->Push(multiverso::Blob(hi3, 18));
-						while (net->Send(msg) == 0) {}
-						multiverso::Log::Info("rank %d send\n", net->rank());
-					}
-					// while (!net->Test()) {
-					//  // wait all message process finished
-					// }
-
-					//net->Finalize();
-				}
 				multiverso::ArrayWorker<ElemType>* m_sharedArray;
 				multiverso::ArrayServer<ElemType>* m_serverArray;
 				thread * m_prefetchThread;
