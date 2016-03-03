@@ -1,0 +1,37 @@
+# Copyright (c) Microsoft. All rights reserved.
+# Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+command=Predict
+
+modelPath="%(ModelPath)s"		
+deviceId=-1						    # CPU
+FeatureDimension=%(FeatureDimension)s
+LabelDimension=%(LabelDimension)s
+
+Predict=[
+	action="write"
+	
+	reader = [
+		readerType = "UCIFastReader"
+		file = "%(PredictInputFile)s"
+		randomize = "none"
+		verbosity = 1
+		
+		features=[
+			start = 0
+			dim = $FeatureDimension$
+		]
+	
+		labels=[
+			start = $FeatureDimension$		      
+			dim = $LabelDimension$		          
+            labelDim=2 # for some reason, CNTK needs to have labels specified
+			labelType=%(LabelType)s     # 'category' or 'regression' 
+            labelMappingFile="%(LabelMappingFile)s" 
+		]
+	]
+	
+	outputPath = "%(PredictOutputFile)s"		# dump the output as text
+]
+
+
