@@ -54,7 +54,6 @@ class SequenceRandomizer
     // to be used for randomization of that frame's position
 
     std::deque<std::vector<std::pair<unsigned short, RandomizedSequenceDescription>>> m_randomizedSequenceWindow;
-    
 
     size_t m_currentRangeBeginChunkIdx;
     size_t m_currentRangeEndChunkIdx;
@@ -92,7 +91,7 @@ public:
         while (globalts < globalte)
         {
             sequence = GetRandomizedSequenceDescription(globalts);
-            if (sequence.m_original->m_numberOfSamples + globalts < globalte)
+            if (sequence.m_original->m_numberOfSamples + globalts <= globalte)
             {
                 result.push_back(sequence);
             }
@@ -125,7 +124,7 @@ public:
 
         // Find the smallest chunk index whose windowbegin exceeds the chunk index
         // of the frame position (globalte - 1). We will randomize up to this chunk
-        // as the final position of (globalte - 1) is guaranteed to have been determined 
+        // as the final position of (globalte - 1) is guaranteed to have been determined
         // when all frames up to that chunk have been randomized
 
         size_t lastFramePosChunkIdx = GetChunkIndexOf(globalte - 1);
@@ -691,8 +690,8 @@ bool PartialBlockRandomizer::GetNextSequenceDescriptions(size_t sampleCount, std
     }
     assert(sampleCount != 0);
 
-    m_sequenceRandomizer->RandomizeSequenceForRange(m_globalSamplePosition, m_globalSamplePosition + sampleCount + 1);
-    std::vector<RandomizedSequenceDescription> sequences = m_sequenceRandomizer->GetSequencesForRange(m_globalSamplePosition, m_globalSamplePosition + sampleCount + 1);
+    m_sequenceRandomizer->RandomizeSequenceForRange(m_globalSamplePosition, m_globalSamplePosition + sampleCount);
+    std::vector<RandomizedSequenceDescription> sequences = m_sequenceRandomizer->GetSequencesForRange(m_globalSamplePosition, m_globalSamplePosition + sampleCount);
 
     for (const auto& s : sequences)
     {
