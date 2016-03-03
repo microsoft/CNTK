@@ -157,7 +157,7 @@ class Test:
         try:
           assert(type(predicate(flavor='foo', device='bar', os='foobar', build_sku='qux')) == bool)
         except Exception as e:
-          six.print_(("Can't parse tag predicate expression in {0} ({1}):\n{2}".format(pathToYmlFile, pythonExpr, e)))
+          six.print_("Can't parse tag predicate expression in {0} ({1}):\n{2}".format(pathToYmlFile, pythonExpr, e))
           raise e
 
         # saving generated lambda into tags dictionary
@@ -208,7 +208,7 @@ class Test:
       with open(baselineFile, "r") as f:
         baseline = f.read().split("\n")
         if args.verbose:
-           six.print_(("Baseline: " + baselineFile))
+           six.print_("Baseline: " + baselineFile)
 
     # Before running the test, pre-creating TestCaseRunResult object for each test case
     # and compute filtered lines from baseline file.
@@ -257,7 +257,7 @@ class Test:
     logFile = os.path.join(runDir, "output.txt")
     allLines = []
     if args.verbose:
-      six.print_((self.fullName + ":>" + logFile))
+      six.print_(self.fullName + ":>" + logFile)
     with open(logFile, "w") as output:
       cmdLine = ["bash", "-c", self.testDir + "/run-test 2>&1"]
       process = subprocess.Popen(cmdLine, stdout=subprocess.PIPE)
@@ -271,7 +271,7 @@ class Test:
           line=line[:len(line)-1]
 
         if args.verbose:
-          six.print_((self.fullName + ": " + line))
+          six.print_(self.fullName + ": " + line)
 
         if args.dry_run:
           print (line)
@@ -315,7 +315,7 @@ class Test:
 
       if result.succeeded:
        if args.verbose:
-         six.print_(("Updating baseline file " + baselineFile))
+         six.print_("Updating baseline file " + baselineFile)
        with open(baselineFile, "w") as f:
          f.write("\n".join(allLines))
 
@@ -405,8 +405,8 @@ class TestCase:
                                "Output:   {1}\n"
                               ).format(expected, line)
           if verbose:
-            six.print_(("[FAILED]: Testcase " + self.name))
-            six.print_(("Baseline: " + expected))
+            six.print_("[FAILED]: Testcase " + self.name)
+            six.print_("Baseline: " + expected)
      
           # also show all failed patterns
           for p in failedPatterns:
@@ -551,9 +551,9 @@ def listCommand(args):
                    testsByTag[tag] = set([test.fullName])
   for tag in sorted(testsByTag.keys()):
     if tag=="*":
-      six.print_((' '.join(sorted(testsByTag[tag]))))
+      six.print_(' '.join(sorted(testsByTag[tag])))
     else:
-      six.print_((tag + ": " + ' '.join(sorted(testsByTag[tag]))))
+      six.print_(tag + ": " + ' '.join(sorted(testsByTag[tag])))
 
 # Runs given test(s) or all tests
 def runCommand(args):
@@ -576,12 +576,12 @@ def runCommand(args):
   os.environ["TEST_ROOT_DIR"] = os.path.dirname(os.path.realpath(sys.argv[0]))
 
   print ("CNTK Test Driver is started")
-  six.print_(("Running tests:  " + " ".join([y.fullName for y in testsToRun])))
-  six.print_(("Build location: " + args.build_location))
-  six.print_(("Build SKU:      " + args.build_sku))
-  six.print_(("Run location:   " + args.run_dir))
-  six.print_(("Flavors:        " + " ".join(flavors)))
-  six.print_(("Devices:        " + " ".join(devices)))
+  six.print_("Running tests:  " + " ".join([y.fullName for y in testsToRun]))
+  six.print_("Build location: " + args.build_location)
+  six.print_("Build SKU:      " + args.build_sku)
+  six.print_("Run location:   " + args.run_dir)
+  six.print_("Flavors:        " + " ".join(flavors))
+  six.print_("Devices:        " + " ".join(devices))
   if (args.update_baseline):
     print ("*** Running in automatic baseline update mode ***")
   print ("")
@@ -615,30 +615,30 @@ def runCommand(args):
           if result.succeeded:
             succeededCount = succeededCount + 1
             # in no-verbose mode this will be printed in the same line as 'Running test...'
-            six.print_(("[OK] {0:.2f} sec".format(result.duration)))
+            six.print_("[OK] {0:.2f} sec".format(result.duration))
           else:
-            six.print_(("[FAILED] {0:.2f} sec".format(result.duration)))
+            six.print_("[FAILED] {0:.2f} sec".format(result.duration))
           # Showing per-test-case results:
           for testCaseRunResult in result.testCaseRunResults:
             if testCaseRunResult.succeeded:
               # Printing 'OK' test cases only in verbose mode
               if (args.verbose):
-                six.print_((" [OK] " + testCaseRunResult.testCaseName));
+                six.print_(" [OK] " + testCaseRunResult.testCaseName)
             else:
               # 'FAILED' + detailed diagnostics with proper indendtation
-              six.print_((" [FAILED] " + testCaseRunResult.testCaseName));
+              six.print_(" [FAILED] " + testCaseRunResult.testCaseName)
               if testCaseRunResult.diagnostics:
                 for line in testCaseRunResult.diagnostics.split('\n'):
                   six.print_("    " + line);
               # In non-verbose mode log wasn't piped to the stdout, showing log file path for conveniencce
                
           if not result.succeeded and not args.verbose and result.logFile:
-            six.print_(("  See log file for details: " + result.logFile))
+            six.print_("  See log file for details: " + result.logFile)
         
   if args.update_baseline:
-    six.print_(("{0}/{1} baselines updated, {2} failed".format(succeededCount, totalCount, totalCount - succeededCount)))
+    six.print_("{0}/{1} baselines updated, {2} failed".format(succeededCount, totalCount, totalCount - succeededCount))
   else:
-    six.print_(("{0}/{1} tests passed, {2} failed".format(succeededCount, totalCount, totalCount - succeededCount)))
+    six.print_("{0}/{1} tests passed, {2} failed".format(succeededCount, totalCount, totalCount - succeededCount))
   if succeededCount != totalCount:
     sys.exit(10)
 
