@@ -215,7 +215,7 @@ std::vector<std::wstring> ConfigHelper::GetFeaturePaths()
     vector<wstring> filelist;
     fprintf(stderr, "Reading script file %ls ...", scriptPath.c_str());
 
-    std::ifstream scp(scriptPath);
+    std::ifstream scp(msra::strfun::utf8(scriptPath).c_str());
     std::string line;
     while (std::getline(scp, line))
     {

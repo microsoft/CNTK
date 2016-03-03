@@ -43,6 +43,8 @@ struct RandomizedSequenceDescription
     const RandomizedChunk* m_chunk;
 };
 
+class SequenceRandomizer;
+
 // The class represents a randomizer that uses a partial timeline for randomization.
 class PartialBlockRandomizer : public Transformer
 {
