@@ -145,7 +145,7 @@ private:
   float stepsize_;
   std::vector<T> storage_;
   std::vector<T> smooth_gradient_first_;
-  std::vector<T> smooth_gradient_first_;
+  std::vector<T> smooth_gradient_second_;
   size_t size_; // number of element with type T
 };
 }
