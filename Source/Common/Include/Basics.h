@@ -69,10 +69,10 @@ __declspec_noreturn static inline void ThrowFormatted(const char* format, ...)
     fprintf(stderr, "\nAbout to throw exception '%s'\n", buffer);
 #endif
     //Microsoft::MSR::CNTK::ExceptionWithCallStack<E>::PrintCallStack();
-    // Note: The call stack will suppress this function and its call site (XXXError()).
+    // Note: The call stack will skip 2 levels to suppress this function and its call sites (XXXError()).
     //       If more layers are added here, it would have to be adjusted.
     // TODO: Change ExceptionWithCallStack to take a parameter how many levels to skip.
-    throw ExceptionWithCallStack<E>(buffer, ExceptionWithCallStack<E>::GetCallStack());
+    throw ExceptionWithCallStack<E>(buffer, ExceptionWithCallStack<E>::GetCallStack(/*skipLevels=*/2, /*makeFunctionNamesStandOut=*/true));
 };
 #pragma warning(pop)
 

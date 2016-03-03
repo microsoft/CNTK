@@ -507,8 +507,11 @@ template class SparseInputValue<double>;
 
 // -----------------------------------------------------------------------
 // LookupTableNode (embedding matrix, bag-of-word representation of the inputs)
-// implements an embedding, assuming a specific representation of the input data
-// ... TODO: document this
+// Implements an embedding. The input vector can consist of multiple stacked
+// This is a tensor product where the matrix width may be an integer fraction of the features.
+// If it is, then the matrix will be replicated.
+// This is the same as if the input data were a tensor where the same matrix is applied to each column of the tensor.
+// TimesNode can do that.
 // -----------------------------------------------------------------------
 
 template <class ElemType>
@@ -588,7 +591,7 @@ public:
         if (cols0 * wordsInEachSample != rows1)
             LogicError("LookupTableNode: rows of input 1 is not a multiple of cols of input 0. This usually happens when the feature dimension is not specified as that in the network definition of look-up-table dimension size.");
 
-        auto input1Reshaped = input1.Reshaped(rows1 / wordsInEachSample, cols1 * wordsInEachSample);
+        auto input1Reshaped = input1.Reshaped(rows1 / wordsInEachSample, cols1 * wordsInEachSample); // BUGBUG: Won't work for sparse.
 
         auto functionValuesReshaped = functionValues.Reshaped(input0.GetNumRows(), input1Reshaped.GetNumCols());
         functionValuesReshaped.AssignProductOf(input0, false, input1Reshaped, false);
