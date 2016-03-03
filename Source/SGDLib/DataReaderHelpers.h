@@ -396,7 +396,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 {
                     wstring nodeName = node->GetName();
                     shared_ptr<ComputationNode<ElemType>> pLearnableNode = node;
-                    auto funvalue = pLearnableNode->Value(); // gradient may not be allocated when this function is first called
+                    auto& funvalue = pLearnableNode->Value(); // gradient may not be allocated when this function is first called
                     size_t nrow = funvalue.GetNumRows();
                     size_t ncol = funvalue.GetNumCols();
                     if (m_cachedGradient.find(nodeName) == m_cachedGradient.end())

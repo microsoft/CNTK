@@ -398,9 +398,9 @@ public:
         if (flags & CopyNodeFlags::copyNodeValue)
         {
             auto node = dynamic_pointer_cast<InvStdDevNode<ElemType>>(nodeP);
-            node->m_mean = m_mean;
-            node->m_var = m_var;
-            node->m_temp = m_temp;
+            node->m_mean.SetValue(m_mean);
+            node->m_var.SetValue(m_var);
+            node->m_temp.SetValue(m_temp);
         }
     }
 

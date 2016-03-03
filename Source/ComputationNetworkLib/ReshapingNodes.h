@@ -621,7 +621,7 @@ public:
         // BUGBUG: This should use the memshare mechanism.
         // TODO: use tensor lib, then this will be easy, no memsharing needed
         Matrix<ElemType> diag(gradientValues.GetNumRows(), gradientValues.GetNumCols(), gradientValues.GetDeviceId());
-        diag = gradientValues;
+        diag.SetValue(gradientValues);
         diag.Resize(gradientValues.GetNumCols(), 1);
 
         inputGradientValues.SetValue(0);

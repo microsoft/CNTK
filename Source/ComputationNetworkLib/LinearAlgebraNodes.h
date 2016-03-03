@@ -556,8 +556,8 @@ public:
         if (flags & CopyNodeFlags::copyNodeValue)
         {
             auto node = dynamic_pointer_cast<DiagTimesNode<ElemType>>(nodeP);
-            *node->m_innerproduct = *m_innerproduct;
-            *node->m_rightGradient = *m_rightGradient;
+            node->m_innerproduct->SetValue(*m_innerproduct);
+            node->m_rightGradient->SetValue(*m_rightGradient);
         }
     }
     // request matrices that are needed for gradient computation
@@ -895,11 +895,11 @@ public:
         if (flags & CopyNodeFlags::copyNodeValue)
         {
             auto node = dynamic_pointer_cast<CosDistanceNode<ElemType>>(nodeP);
-            *node->m_invNorm0 = *m_invNorm0;
-            *node->m_invNorm1 = *m_invNorm1;
-            *node->m_leftTerm = *m_leftTerm;
-            *node->m_rightTerm = *m_rightTerm;
-            *node->m_temp = *m_temp;
+            node->m_invNorm0->SetValue(*m_invNorm0);
+            node->m_invNorm1->SetValue(*m_invNorm1);
+            node->m_leftTerm->SetValue(*m_leftTerm);
+            node->m_rightTerm->SetValue(*m_rightTerm);
+            node->m_temp->SetValue(*m_temp);
         }
     }
     // request matrices needed to do node function value evaluation
@@ -1212,12 +1212,12 @@ public:
         if (flags & CopyNodeFlags::copyNodeValue)
         {
             auto node = dynamic_pointer_cast<CosDistanceWithNegativeSamplesNode<ElemType>>(nodeP);
-            *node->m_invNorm0 = *m_invNorm0;
-            *node->m_invNorm1 = *m_invNorm1;
-            *node->m_invNormSquare = *m_invNormSquare;
-            *node->m_leftTerm = *m_leftTerm;
-            *node->m_rightTerm = *m_rightTerm;
-            *node->m_temp = *m_temp;
+            node->m_invNorm0->SetValue(*m_invNorm0);
+            node->m_invNorm1->SetValue(*m_invNorm1);
+            node->m_invNormSquare->SetValue(*m_invNormSquare);
+            node->m_leftTerm->SetValue(*m_leftTerm);
+            node->m_rightTerm->SetValue(*m_rightTerm);
+            node->m_temp->SetValue(*m_temp);
         }
     }
     // request matrices needed to do node function value evaluation
