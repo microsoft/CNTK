@@ -286,15 +286,9 @@ public:
         m_format = matrixFormatDense;
         m_computeDevice = CPUDEVICE;
     }
-    ~BaseMatrix()
-    {
-        Clear();
-    }
 
 protected:
-    void Clear()
-    {
-    }
+    void Clear() {}
 
     void ZeroInit()
     {

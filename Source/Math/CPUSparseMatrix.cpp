@@ -1284,8 +1284,7 @@ MATH_API File& operator<<(File& stream, const CPUSparseMatrix<ElemType>& us)
 
     stream.PutMarker(fileMarkerBeginSection, std::wstring(L"BMAT"));
     stream << sizeof(ElemType);
-	std::wstring s(L"nnmatrix");
-	stream << s;
+	stream << std::wstring(L"nnmatrix"); // Note this is needed for compatability, and could potentially be an empty string
 
     size_t nz, numRows, numCols;
     size_t compressedSize = us.SecondaryIndexCount();

@@ -485,10 +485,10 @@ public:
         stream >> elsize;
         if (sizeof(ElemType) != elsize)
             LogicError("Template argument size doesn't match those in file");
-        std::wstring matrixName;
+        std::wstring matrixNameDummy; // Note this is not used anymore, just a dummy for compatability.
         size_t numRows, numCols;
         int format;
-        stream >> matrixName >> format >> numRows >> numCols;
+        stream >> matrixNameDummy >> format >> numRows >> numCols;
         ElemType* d_array = new ElemType[numRows * numCols];
         for (size_t i = 0; i < numRows * numCols; ++i)
             stream >> d_array[i];
@@ -502,6 +502,7 @@ public:
         stream.PutMarker(fileMarkerBeginSection, std::wstring(L"BMAT"));
         stream << sizeof(ElemType);
 
+        // TODO: This is now ignored on input, so we can should change to an empty string. This might break parsing, and must be tested first
         std::wstring s = std::wstring(L"unnamed");
         int format = us.m_format;
         stream << s << format;
