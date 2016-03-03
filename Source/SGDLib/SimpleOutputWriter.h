@@ -16,6 +16,7 @@
 #include <stdexcept>
 #include <fstream>
 #include <cstdio>
+#include "ProgressTracing.h"
 
 using namespace std;
 
@@ -103,6 +104,8 @@ public:
         size_t totalEpochSamples = 0;
         std::map<std::wstring, void*, nocase_compare> outputMatrices;
 
+        const size_t numIterationsBeforePrintingProgress = 100;
+        size_t numItersSinceLastPrintOfProgress = 0;
         size_t actualMBSize;
         while (DataReaderHelpers::GetMinibatchIntoNetwork<ElemType>(dataReader, m_net, nullptr, false, false, inputMatrices, actualMBSize))
         {
@@ -125,6 +128,17 @@ public:
                 dataWriter.SaveData(0, outputMatrices, actualMBSize, actualMBSize, 0);
 
             totalEpochSamples += actualMBSize;
+
+            if (ProgressTracing::GetTracingFlag())
+            {
+                numItersSinceLastPrintOfProgress++;
+                if (numItersSinceLastPrintOfProgress >= numIterationsBeforePrintingProgress)
+                {
+                    // TODO: For now just print 0.0 instead of calculating actual progress
+                    printf("PROGRESS: %.2f%%\n", 0.0f);
+                    numItersSinceLastPrintOfProgress = 0;
+                }
+            }
 
             // call DataEnd function in dataReader to do
             // reader specific process if sentence ending is reached
@@ -221,6 +235,8 @@ public:
         std::string valueFormatString = "%" + formattingOptions.precisionFormat + formatChar; // format string used in fprintf() for formatting the values
 
         size_t actualMBSize;
+        const size_t numIterationsBeforePrintingProgress = 100;
+        size_t numItersSinceLastPrintOfProgress = 0;
         while (DataReaderHelpers::GetMinibatchIntoNetwork<ElemType>(dataReader, m_net, nullptr, false, false, inputMatrices, actualMBSize))
         {
             ComputationNetwork::BumpEvalTimeStamp(inputNodes);
@@ -333,6 +349,17 @@ public:
             totalEpochSamples += actualMBSize;
 
             fprintf(stderr, "Minibatch[%lu]: ActualMBSize = %lu\n", ++numMBsRun, actualMBSize);
+
+            if (ProgressTracing::GetTracingFlag())
+            {
+                numItersSinceLastPrintOfProgress++;
+                if (numItersSinceLastPrintOfProgress >= numIterationsBeforePrintingProgress)
+                {
+                    // TODO: For now just print 0.0 instead of calculating actual progress
+                    printf("PROGRESS: %.2f%%\n", 0.0f);
+                    numItersSinceLastPrintOfProgress = 0;
+                }
+            }
 
             // call DataEnd function in dataReader to do
             // reader specific process if sentence ending is reached
