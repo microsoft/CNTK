@@ -5,7 +5,8 @@
 # Generating CNTK Binary drops in Jenkins environment
 
 # Command line parameters
-# Verbose is automatically enabled
+# Verbose command line parameter (-verbose) is automatically added
+# because of CmdletBinding
 [CmdletBinding()]
 param
 (
@@ -30,7 +31,7 @@ If (-not $targetConfig) {Throw "targetConfig" + $usage}
 If (-not $sharePath) {Throw "sharePath" + $usage}
 
 # Set Verbose mode
-if ($verbose)
+If ($verbose)
 {
 	 $VerbosePreference = "continue"
 }
@@ -57,14 +58,17 @@ $sharePath = Join-Path $sharePath -ChildPath $targetConfig
 
 
 # Make binary drop folder
-New-Item -Path $baseDropPath -ItemType "directory"
+New-Item -Path $baseDropPath -ItemType directory
 
 # Copy build binaries
 Write-Verbose "Copying build binaries ..."
 Copy-Item $buildPath -Recurse -Destination $baseDropPath\cntk
 
 # Clean unwanted items
-If (Test-Path $baseDropPath\cntk\UnitTests) {Remove-Item $baseDropPath\cntk\UnitTests -Recurse}
+If (Test-Path $baseDropPath\cntk\UnitTests)
+{
+	Remove-Item $baseDropPath\cntk\UnitTests -Recurse
+}
 Remove-Item $baseDropPath\cntk\*test*.exe
 Remove-Item $baseDropPath\cntk\*.pdb
 Remove-Item $baseDropPath\cntk\*.lib
@@ -78,9 +82,16 @@ Copy-Item Examples -Recurse -Destination $baseDropPath\Examples
 # Copy all items from the share
 # For whatever reason Copy-Item in the line below does not work
 # Copy-Item $sharePath"\*"  -Recurse -Destination $baseDropPath
-# Copying with Robocopy
+# Copying with Robocopy. Maximum 2 retries, 30 sec waiting times in between
 Write-Verbose "Copying dependencies and other files from Remote Share ..."
-robocopy $sharePath $baseDropPath /s /e
+robocopy $sharePath $baseDropPath /s /e /r:2 /w:30
+# Check that Robocopy finished OK.
+# Any exit code greater than 7 indicates error
+# See http://ss64.com/nt/robocopy-exit.html
+If ($LastExitCode -gt 7)
+{
+	Throw "Copying from Remote Share failed. Robocopy exit code is " + $LastExitCode
+}
 
 Write-Verbose "Making ZIP and cleaning up..."
 
@@ -91,4 +102,7 @@ Add-Type -assembly "system.io.compression.filesystem"
 [io.compression.zipfile]::CreateFromDirectory($source, $destination)
 
 # Remove ZIP sources
-If (Test-Path $basePath) {Remove-Item $basePath -Recurse}
+If (Test-Path $basePath)
+{
+	Remove-Item $basePath -Recurse
+}
