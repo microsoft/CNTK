@@ -76,9 +76,16 @@ MLFDataDeserializer::MLFDataDeserializer(CorpusDescriptorPtr corpus, const Confi
     description.m_isValid = true;
     size_t totalFrames = 0;
 
+    auto& stringRegistry = corpus->GetStringRegistry();
     for (const auto& l : labels)
     {
-        description.m_key.major = l.first;
+        if (!stringRegistry.Contains(l.first))
+        {
+            continue;
+        }
+
+        description.m_key.major = stringRegistry.GetIdByValue(l.first);
+
         const auto& utterance = l.second;
         description.m_sequenceStart = m_classIds.size();
         description.m_isValid = true;

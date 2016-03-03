@@ -26,7 +26,8 @@ HTKDataDeserializer::HTKDataDeserializer(
     const std::wstring& featureName)
     : m_ioFeatureDimension(0),
       m_samplePeriod(0),
-      m_verbosity(0)
+      m_verbosity(0),
+      m_corpus(corpus)
 {
     bool frameMode = feature.Find("frameMode", "true");
     if (!frameMode)
@@ -51,11 +52,11 @@ HTKDataDeserializer::HTKDataDeserializer(
 
     m_utterances.reserve(numSequences);
     size_t totalFrames = 0;
+    auto& stringRegistry = m_corpus->GetStringRegistry();
     foreach_index (i, featureFiles)
     {
         UtteranceDescription description(std::move(msra::asr::htkfeatreader::parsedpath(featureFiles[i])));
         size_t numberOfFrames = description.GetNumberOfFrames();
-        description.m_id = i;
 
         // we need at least 2 frames for boundary markers to work
         if (numberOfFrames < 2)
@@ -71,8 +72,13 @@ HTKDataDeserializer::HTKDataDeserializer(
             description.m_numberOfSamples = numberOfFrames;
         }
 
-        m_utterances.push_back(description);
-        totalFrames += description.m_numberOfSamples;
+        if (description.m_isValid)
+        {
+            size_t id = stringRegistry.AddValue(description.GetKey());
+            description.SetId(id);
+            m_utterances.push_back(description);
+            totalFrames += description.m_numberOfSamples;
+        }
     }
 
     m_totalNumberOfFrames = totalFrames;
@@ -173,17 +179,15 @@ std::vector<SequenceDescriptionPtr> HTKDataDeserializer::GetSequencesForChunk(si
     std::vector<SequenceDescriptionPtr> result;
     const HTKChunkDescription& chunk = m_chunks[chunkId];
     result.reserve(chunk.GetTotalFrames());
-
     size_t id = 0;
     for (size_t i = 0; i < chunk.GetNumberOfUtterances(); ++i)
     {
         auto utterance = chunk.GetUtterance(i);
-
-        std::wstring key = utterance->GetKey();
+        size_t major = utterance->GetId();
         for (size_t k = 0; k < utterance->m_numberOfSamples; ++k)
         {
             auto f = std::make_shared<Frame>(utterance);
-            f->m_key.major = key;
+            f->m_key.major = major;
             f->m_key.minor = k;
             f->m_id = id++;
             f->m_chunkId = utterance->m_chunkId;
