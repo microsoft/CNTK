@@ -142,6 +142,7 @@ namespace Microsoft {
 					std::transform(m_deltaArray, m_deltaArray + m_totalModelSize, m_deltaArray, std::bind1st(std::multiplies<ElemType>(), factor));
 
 					m_sharedArray->Add(m_deltaArray, m_totalModelSize);
+					multiverso::MV_Barrier();
 					m_sharedArray->Get(m_deltaArray, m_totalModelSize);
 
 				}
