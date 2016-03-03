@@ -27,8 +27,7 @@ std::vector<IDataDeserializerPtr> CreateDeserializers(const ConfigParameters& re
         InvalidArgument("Network needs at least 1 feature and 1 label specified.");
     }
 
-    std::vector<std::wstring> sequences = ConfigHelper(readerConfig(featureNames.front())).GetFeaturePaths();
-    CorpusDescriptorPtr corpus = std::make_shared<CorpusDescriptor>(std::move(sequences));
+    CorpusDescriptorPtr corpus = std::make_shared<CorpusDescriptor>();
 
     std::vector<IDataDeserializerPtr> featureDeserializers;
     std::vector<IDataDeserializerPtr> labelDeserializers;
