@@ -215,14 +215,14 @@ std::vector<std::wstring> ConfigHelper::GetFeaturePaths()
     vector<wstring> filelist;
     fprintf(stderr, "Reading script file %ls ...", scriptPath.c_str());
 
-    size_t n = 0;
-    for (msra::files::textreader reader(scriptPath); reader;)
+    std::ifstream scp(scriptPath);
+    std::string line;
+    while (std::getline(scp, line))
     {
-        filelist.push_back(reader.wgetline());
-        n++;
+        filelist.push_back(msra::strfun::utf16(line));
     }
 
-    fprintf(stderr, " %d entries\n", static_cast<int>(n));
+    fprintf(stderr, " %d entries\n", static_cast<int>(filelist.size()));
 
     // post processing file list :
     //  - if users specified PrefixPath, add the prefix to each of path in filelist
