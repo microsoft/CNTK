@@ -130,31 +130,6 @@ HTKDataDeserializer::HTKDataDeserializer(
     // After changing the timeline interface they must never referred to by a sequential id, only by chunk/within-chunk index
     // because they are asked on the chunk anyway.
 
-    m_frames.reserve(totalFrames);
-    foreach_index(i, m_utterances)
-    {
-        if (!m_utterances[i].m_isValid)
-        {
-            continue;
-        }
-
-        std::wstring key = m_utterances[i].GetKey();
-        for (size_t k = 0; k < m_utterances[i].m_numberOfSamples; ++k)
-        {
-            Frame f(&m_utterances[i]);
-            f.m_key.major = key;
-            f.m_key.minor = k;
-            f.m_id = m_frames.size();
-            f.m_chunkId = m_utterances[i].m_chunkId;
-            f.m_numberOfSamples = 1;
-            f.m_frameIndex = k;
-            f.m_isValid = true;
-            m_frames.push_back(f);
-
-            m_sequences.push_back(&m_frames[f.m_id]);
-        }
-    }
-
     m_weakChunks.resize(m_chunks.size());
 
     StreamDescriptionPtr stream = std::make_shared<StreamDescription>();
@@ -195,6 +170,8 @@ std::vector<SequenceDescriptionPtr> HTKDataDeserializer::GetSequencesForChunk(si
 {
     std::vector<SequenceDescriptionPtr> result;
     const HTKChunkDescription& chunk = m_chunks[chunkId];
+    result.reserve(chunk.GetTotalFrames());
+
     size_t id = 0;
     for (size_t i = 0; i < chunk.GetNumberOfUtterances(); ++i)
     {
@@ -327,7 +304,6 @@ typedef std::shared_ptr<HTKSequenceData> HTKSequenceDataPtr;
 
 std::vector<SequenceDataPtr> HTKDataDeserializer::GetSequenceById(size_t chunkId, size_t id)
 {
-    //const auto& frame = m_frames[id];
     //UtteranceDescription* utterance = frame.m_utterence;
 
     const auto& chunkDescription = m_chunks[chunkId];
