@@ -112,6 +112,11 @@ public:
         return result;
     }
 
+    bool IsChunkInRange(size_t chunkIdx) const
+    {
+        return chunkIdx >= m_currentRangeBeginChunkIdx && chunkIdx < m_currentRangeEndChunkIdx;
+    }
+
     void RandomizeSequenceForRange(size_t globalts, size_t globalte)
     {
         assert(globalts < globalte);
@@ -268,9 +273,24 @@ public:
         return GetRandomizedSequenceBySequenceId(sequenceId).second;
     }
 
-    void SetSequencePositionTo(size_t globalSample)
+    void SetSequencePositionTo(size_t globalSample, size_t sweep)
     {
         size_t globaltsChunkIdx = GetChunkIndexOf(globalSample);
+        if (!this->IsChunkInRange(globaltsChunkIdx))
+        {
+            Reset(sweep + 1);
+            size_t start = m_nextFramePosNotYetRandomized;
+            size_t end = globalSample;
+            if (start == end)
+            {
+                end += 1;
+            }
+
+            // TODO: should not really require the data here, this can lead to many chunks in memory.
+            RandomizeSequenceForRange(start, end);
+        }
+
+        assert(globaltsChunkIdx >= m_currentRangeBeginChunkIdx);
         assert(globaltsChunkIdx < m_currentRangeEndChunkIdx);
 
         size_t sampleOffsetInsideChunk = globalSample - m_randomizedChunks[globaltsChunkIdx].m_samplePositionStart;
@@ -291,6 +311,33 @@ public:
         }
 
         m_currentSequencePosition = sequenceId + m_randomizedChunks[globaltsChunkIdx].m_sequencePositionStart;
+    }
+
+    size_t GetChunkIndexOf(size_t t)
+    {
+        //assert(t >= m_randomizedChunks[m_currentRangeBeginChunkIdx].m_samplePositionStart);
+        size_t low = 0; // m_currentRangeBeginChunkIdx; can be done more efficient?
+        size_t high = m_randomizedChunks.size() - 1;
+        while (high > low)
+        {
+            size_t mid = (high + low) / 2;
+            if (t >= m_randomizedChunks[mid].globalte())
+            {
+                low = mid + 1;
+            }
+            else if (t < m_randomizedChunks[mid].m_samplePositionStart)
+            {
+                assert(mid > 0);
+                high = mid - 1;
+            }
+            else
+            {
+                return mid;
+            }
+        }
+
+        assert((high == low) && ((t >= m_randomizedChunks[low].m_samplePositionStart) && (t < m_randomizedChunks[low].globalte())));
+        return low;
     }
 
 private:
@@ -314,33 +361,6 @@ private:
         m_randomizedSequenceWindow.push_back(std::move(chunkSequences));
         m_randomizedSequenceWindowChunks[chunkIdx] = m_parent.m_deserializer->GetChunk(chunk.m_original->id);
         m_currentRangeEndChunkIdx++;
-    }
-
-    size_t GetChunkIndexOf(size_t t)
-    {
-        assert(t >= m_randomizedChunks[m_currentRangeBeginChunkIdx].m_samplePositionStart);
-        size_t low = m_currentRangeBeginChunkIdx;
-        size_t high = m_randomizedChunks.size() - 1;
-        while (high > low)
-        {
-            size_t mid = (high + low) / 2;
-            if (t >= m_randomizedChunks[mid].globalte())
-            {
-                low = mid + 1;
-            }
-            else if (t < m_randomizedChunks[mid].m_samplePositionStart)
-            {
-                assert(mid > 0);
-                high = mid - 1;
-            }
-            else
-            {
-                return mid;
-            }
-        }
-
-        assert((high == low) && ((t >= m_randomizedChunks[low].m_samplePositionStart) && (t < m_randomizedChunks[low].globalte())));
-        return low;
     }
 
     unsigned short& TimestampToRandomizedChunkIndex(size_t globalts)
@@ -451,11 +471,11 @@ void PartialBlockRandomizer::StartEpoch(const EpochConfiguration& config)
     }
 
     m_globalSamplePosition = m_epochSize * config.m_epochIndex;
-    RandomizeForGlobalSamplePosition(m_globalSamplePosition);
-    m_sequenceRandomizer->SetSequencePositionTo(m_globalSamplePosition);
+    PrepareNewSweepIfNeeded(m_globalSamplePosition);
+    m_sequenceRandomizer->SetSequencePositionTo(m_globalSamplePosition, m_sweep);
 }
 
-void PartialBlockRandomizer::RandomizeForGlobalSamplePosition(size_t samplePosition)
+void PartialBlockRandomizer::PrepareNewSweepIfNeeded(size_t samplePosition)
 {
     size_t sweep = samplePosition / m_sweepTotalNumberOfSamples;
     if (m_sweep != sweep)
@@ -464,16 +484,6 @@ void PartialBlockRandomizer::RandomizeForGlobalSamplePosition(size_t samplePosit
         m_sweepStartInSamples = sweep * m_sweepTotalNumberOfSamples;
         RandomizeChunks();
         m_sequenceRandomizer->Reset(m_sweep + 1);
-
-        size_t start = m_sweepStartInSamples;
-        size_t end = samplePosition;
-        if (start == end)
-        {
-            // need at least to randomize the first sequences.
-            end += 1;
-        }
-
-        m_sequenceRandomizer->RandomizeSequenceForRange(start, end);
     }
 }
 
@@ -638,7 +648,7 @@ Sequences PartialBlockRandomizer::GetNextSequences(size_t sampleCount)
 
 bool PartialBlockRandomizer::GetNextSequenceDescriptions(size_t sampleCount, std::vector<RandomizedSequenceDescription>& result)
 {
-    RandomizeForGlobalSamplePosition(m_globalSamplePosition);
+    PrepareNewSweepIfNeeded(m_globalSamplePosition);
 
     // Check epoch.
     if (m_globalSamplePosition - m_config.m_epochIndex * m_epochSize + sampleCount >= m_epochSize)
@@ -651,7 +661,7 @@ bool PartialBlockRandomizer::GetNextSequenceDescriptions(size_t sampleCount, std
         return true;
     }
 
-    // Check sweep if rerandomization is needed.
+    // Check that we do not go over the sweep.
     size_t sweepPosition = m_globalSamplePosition % m_sweepTotalNumberOfSamples;
     if (sweepPosition + sampleCount >= m_sweepTotalNumberOfSamples)
     {
