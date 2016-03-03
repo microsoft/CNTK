@@ -81,7 +81,7 @@ public:
                 1,
                 i / numSequencesPerChunks,
                 true,
-                { std::wstring(L""), i }
+                { 0, i }
             });
             m_sequenceDescriptions.push_back(&m_descriptions[i]);
         }

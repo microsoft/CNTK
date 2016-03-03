@@ -74,6 +74,8 @@ private:
     // Streams exposed by this deserializer.
     std::vector<StreamDescriptionPtr> m_streams;
 
+    CorpusDescriptorPtr m_corpus;
+
     int m_verbosity;
     size_t m_totalNumberOfFrames;
 

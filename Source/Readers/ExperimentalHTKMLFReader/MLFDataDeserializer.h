@@ -51,7 +51,7 @@ private:
     std::vector<SequenceDataPtr> GetSequenceById(size_t sequenceId);
 
     // Key to sequence map.
-    std::map<wstring, size_t> m_keyToSequence;
+    std::map<size_t, size_t> m_keyToSequence;
 
     // Array of all labels.
     msra::dbn::biggrowablevector<msra::dbn::CLASSIDTYPE> m_classIds;

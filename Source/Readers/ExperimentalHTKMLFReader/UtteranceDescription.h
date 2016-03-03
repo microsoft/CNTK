@@ -43,6 +43,16 @@ public:
         return filename.substr(0, filename.find_last_of(L"."));
     }
 
+    size_t GetId() const
+    {
+        return m_id;
+    }
+
+    void SetId(size_t id)
+    {
+        m_id = id;
+    }
+
     size_t GetIndexInsideChunk() const
     {
         return m_indexInsideChunk;

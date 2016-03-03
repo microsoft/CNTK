@@ -14,7 +14,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 // Both strings and integers are supported.
 struct KeyType
 {
-    std::wstring major;
+    size_t major;
     size_t minor;
 };
 
