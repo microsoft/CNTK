@@ -10,6 +10,39 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
+// Currently in-memory, can be externalized.
+class StringRegistry
+{
+public:
+    size_t AddValue(const std::wstring& value)
+    {
+        assert(!Contains(value));
+        auto iter = m_values.insert(std::make_pair(value, m_indexedValues.size()));
+        m_indexedValues.push_back(&((iter.first)->first));
+        return m_indexedValues.size() - 1;
+    }
+
+    size_t GetIdByValue(const std::wstring& value)
+    {
+        assert(Contains(value));
+        return m_values[value];
+    }
+
+    const std::wstring& GetValueById(size_t id)
+    {
+        return *m_indexedValues[id];
+    }
+
+    bool Contains(const std::wstring& value)
+    {
+        return m_values.find(value) != m_values.end();
+    }
+
+private:
+    std::map<std::wstring, size_t> m_values;
+    std::vector<const std::wstring*> m_indexedValues;
+};
+
 // Represents a full corpus.
 // Defines which sequences should participate in the reading.
 // TODO: Currently it is only a skeleton class.
@@ -18,7 +51,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 class CorpusDescriptor
 {
 public:
-    CorpusDescriptor(std::vector<std::wstring>&& sequences) : m_sequences(sequences)
+    CorpusDescriptor()
     {
     }
 
@@ -29,8 +62,13 @@ public:
         return true;
     }
 
+    StringRegistry& GetStringRegistry()
+    {
+        return m_stringRegistry;
+    }
+
 private:
-    std::vector<std::wstring> m_sequences;
+    StringRegistry m_stringRegistry;
 };
 
 typedef std::shared_ptr<CorpusDescriptor> CorpusDescriptorPtr;
