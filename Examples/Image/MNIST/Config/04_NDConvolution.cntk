@@ -10,10 +10,8 @@ OutputDir = "$RootDir$/Output"
 ModelDir  = "$OutputDir$/Models"
 
 deviceId = 0
+# NDConvolution nodes support cudnn layout only both on GPU and CPU.
 imageLayout = "cudnn"
-# override the above as follows when running on CPU:
-# deviceId = -1
-# imageLayout = "legacy"
 
 command = train:test
 
@@ -42,8 +40,8 @@ train = [
         // macros
         NDConvReLULayer(inp, kW, kH, inMap, outMap, hStride, vStride, wScale, bValue) = [  // ReLU non-linearity
             convW = Parameter(outMap, kW * kH * inMap, init="uniform", initValueScale=wScale, initOnCPUOnly=false)
-            //conv = NDConvolution(convW, inp, (kW : kH : inMap), (1 : 1 : outMap), stride=1, sharing=true, autoPadding=true, lowerPad=1, imageLayout=if useCuDnn then "cudnn" else "legacy")
-            conv = NDConvolution(convW, inp, (kW : kH : inMap), (1 : 1 : outMap), stride=1, sharing=true, autoPadding=false, lowerPad=(2 : 2 : 0), imageLayout=if useCuDnn then "cudnn" else "legacy")
+            //conv = NDConvolution(convW, inp, (kW : kH : inMap), (1 : 1 : outMap), stride=1, sharing=true, autoPadding=true, lowerPad=1, imageLayout="cudnn")
+            conv = NDConvolution(convW, inp, (kW : kH : inMap), (1 : 1 : outMap), stride=1, sharing=true, autoPadding=false, lowerPad=(2 : 2 : 0), imageLayout="cudnn")
             convB = if useCuDnn
                     then ParameterTensor((1 : 1 : outMap), init="fixedValue", value=bValue)
                     else Parameter(outMap, 1,              init="fixedValue", value=bValue)

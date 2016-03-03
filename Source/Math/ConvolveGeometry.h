@@ -26,6 +26,16 @@ public:
     using IntVec = std::vector<int>;
     using BoolVec = std::vector<bool>;
 
+    const TensorShape& InputShape() const { return m_inputShape; }
+    const TensorShape& OutputShape() const { return m_outputShape; }
+    const TensorShape& KernelShape() const { return m_kernelShape; }
+    const TensorShape& MapCount() const { return m_mapCount; }
+    const TensorShape& Stride() const { return m_stride; }
+    const BoolVec& Sharing() const { return m_sharing; }
+    const BoolVec& AutoPad() const { return m_autoPad; }
+    const TensorShape& LowerPad() const { return m_lowerPad; }
+    const TensorShape& UpperPad() const { return m_upperPad; }
+
     // Maps from a "row" (index of output cell) to its base "col" (index of input cell). For a given row,
     // the cols that contribute to it are { MpRowCol[row] + Indices[i0 + 1 + i] | 0 <= i < Indices[i0] },
     // where i0 = MpRowIndices[row].

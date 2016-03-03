@@ -108,6 +108,17 @@ public:
         Base::CopyTo(nodeP, newName, flags);
         if (flags & CopyNodeFlags::copyNodeValue)
         {
+            auto node = dynamic_pointer_cast<NDConvolutionNode<ElemType>>(nodeP);
+            node->m_kernelShape = m_kernelShape;
+            node->m_kernelShape = m_kernelShape;
+            node->m_mapCount = m_mapCount;
+            node->m_stride = m_stride;
+            node->m_sharing = m_sharing;
+            node->m_autoPad = m_autoPad;
+            node->m_lowerPad = m_lowerPad;
+            node->m_upperPad = m_upperPad;
+            node->m_imageLayout = m_imageLayout;
+            node->m_maxTempMemSizeInSamples = m_maxTempMemSizeInSamples;
         }
     }
 
@@ -117,11 +128,27 @@ public:
 
     virtual bool OutputUsedInComputingInputNodesGradients() const override
     {
+        // The NDConvolutionNode does not require its output value for computing
+        // the gradients of its input nodes
         return false;
     }
 
     void ForwardProp(const FrameRange& fr) override
     {
+        const Matrix<ElemType>& input0 = Input(0)->ValueAsMatrix();
+        Matrix<ElemType> sliceInput1Value = Input(1)->ValueFor(fr);
+        Matrix<ElemType> sliceOutputValue = ValueFor(fr);
+
+        // update the tensor dimension w.r.t. number of samples
+        size_t batchSize = sliceInput1Value.GetNumCols();
+#if NANCHECK
+        input0.HasNan("Convolution-input0");
+        sliceInput1Value.HasNan("Convolution-input1");
+#endif
+        m_convEng->Forward(sliceInput1Value, input0, sliceOutputValue, *m_tempMatrix);
+#if NANCHECK
+        sliceOutputValue.HasNan("Convolution");
+#endif
     }
 
     void Validate(bool isFinalValidationPass) override
@@ -144,9 +171,12 @@ public:
 
         if (isFinalValidationPass)
         {
-            ConvolveGeometry g(inputShape, m_kernelShape, m_mapCount, m_stride,
-                               m_sharing, m_autoPad, m_lowerPad, m_upperPad);
-            UNUSED(g);
+            if (m_convEng == nullptr)
+            {
+                auto g = std::make_unique<ConvolveGeometry>(inputShape, m_kernelShape, m_mapCount, m_stride,
+                                                            m_sharing, m_autoPad, m_lowerPad, m_upperPad);
+                m_convEng = ConvolutionEngine<ElemType>::Create(std::move(g), m_deviceId, m_imageLayout);
+            }
         }
     }
 
@@ -186,6 +216,8 @@ private:
     TensorShape m_upperPad;
 
     size_t m_maxTempMemSizeInSamples;
+
+    std::unique_ptr<ConvolutionEngine<ElemType>> m_convEng;
 };
 
 // -----------------------------------------------------------------------

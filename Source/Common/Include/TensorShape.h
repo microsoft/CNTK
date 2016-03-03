@@ -746,6 +746,10 @@ static inline ImageLayoutKind ImageLayoutKindFrom(const wstring& s)
 struct ImageDimensions
 {
     size_t m_width, m_height, m_numChannels;
+    size_t w() const { return m_width;       }
+    size_t h() const { return m_height;      }
+    size_t c() const { return m_numChannels; }
+
     // interpret TensorShape as image
     ImageDimensions(const TensorShape& shape, ImageLayoutKind imageLayoutKind)
     {
