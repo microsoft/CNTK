@@ -139,7 +139,7 @@ public:
 
         // Find the smallest chunk index whose windowbegin exceeds the chunk index
         // of the frame position (globalte - 1). We will randomize up to this chunk
-        // as the final position of (globalte - 1) is guaranteed to have been determined 
+        // as the final position of (globalte - 1) is guaranteed to have been determined
         // when all frames up to that chunk have been randomized
 
         size_t lastFramePosChunkIdx = GetChunkIndexOf(globalte - 1);
