@@ -94,6 +94,7 @@ private:
     int m_verbosity;
     size_t m_randomizationRangeInSamples; // full window
     DistributionMode m_distributionMode;
+    size_t m_sweepTotalNumberOfSamples;
 
 
     bool GetNextSequenceDescriptions(size_t sampleCount, std::vector<RandomizedSequenceDescription>& result);
