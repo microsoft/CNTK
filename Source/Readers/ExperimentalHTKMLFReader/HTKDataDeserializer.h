@@ -60,11 +60,6 @@ private:
     // All utterance descriptions.
     std::vector<UtteranceDescription> m_utterances;
 
-    // All frame descriptions.
-    // TODO: This will be changed when the timeline is asked in chunks.
-    std::vector<Frame> m_frames;
-    SequenceDescriptions m_sequences;
-
     // Type of the features.
     ElementType m_elementType;
 
