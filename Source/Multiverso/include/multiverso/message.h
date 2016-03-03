@@ -19,6 +19,7 @@ enum MsgType {
   Control_Reply_Barrier = -33,
   Control_Register = 34,
   Control_Reply_Register = -34,
+  // user define code should greater than 1024
   Default = 0
 };
 

@@ -57,6 +57,7 @@ public:
       (*out)[dst][0].As<Key>(counts[dst]) = keys.As<Key>(i);
       if (kv.size() == 2) 
         (*out)[dst][1].As<Val>(counts[dst]) = kv[1].As<Val>(i);
+      ++counts[dst];
     }
     return static_cast<int>(out->size());
   }

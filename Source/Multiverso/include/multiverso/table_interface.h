@@ -34,9 +34,12 @@ public:
     std::unordered_map<int, std::vector<Blob> >* out) = 0;
 
   virtual void ProcessReplyGet(std::vector<Blob>&) = 0;
+  
+  const std::string name() { return std::string(typeid(this).name());};
 
   // add user defined data structure
 private:
+  std::string table_name_;
   int table_id_;
   std::unordered_map<int, Waiter*> waitings_;
   std::atomic_int msg_id_;
@@ -49,6 +52,11 @@ public:
   virtual void ProcessAdd(const std::vector<Blob>& data) = 0;
   virtual void ProcessGet(const std::vector<Blob>& data,
     std::vector<Blob>* result) = 0;
+
+  const std::string name() { return std::string(typeid(this).name());};
+  
+  // add user defined server process logic 
+  void Process(const std::string instruction, const std::vector<Blob>& data, std::vector<Blob>* result = nullptr);
 
   // add user defined server storage data structure
 };
