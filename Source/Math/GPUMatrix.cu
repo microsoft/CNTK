@@ -418,7 +418,6 @@ void GPUMatrix<ElemType>::ZeroInit(int deviceId)
     m_numRows = 0;
     m_numCols = 0;
     m_elemSizeAllocated = 0;
-    m_matrixName = NULL;
     m_format = matrixFormatDense;
     m_externalBuffer = false;
 }
@@ -428,13 +427,6 @@ GPUMatrix<ElemType>::GPUMatrix(int deviceId)
 {
     ZeroInit(deviceId);
 };
-
-//matrixName is used to verify that correct matrix is read.
-template <class ElemType>
-GPUMatrix<ElemType>::GPUMatrix(FILE* f, const char* matrixName, int /*deviceId*/)
-{
-    ReadFromFile(f, matrixName);
-}
 
 template <class ElemType>
 GPUMatrix<ElemType>::GPUMatrix(const size_t numRows, const size_t numCols, int deviceId)
@@ -463,7 +455,6 @@ GPUMatrix<ElemType>::GPUMatrix(const GPUMatrix<ElemType>& deepCopyFrom)
 {
     ZeroInit(deepCopyFrom.m_computeDevice);
     SetValue(deepCopyFrom);
-    SetMatrixName(deepCopyFrom.m_matrixName);
 }
 
 template <class ElemType>
@@ -473,7 +464,6 @@ GPUMatrix<ElemType>::GPUMatrix(GPUMatrix<ElemType>&& moveFrom)
     m_numCols = moveFrom.m_numCols;
     m_computeDevice = moveFrom.m_computeDevice;
     m_pArray = moveFrom.m_pArray; // shallow copy the pointer
-    m_matrixName = moveFrom.m_matrixName;
     m_elemSizeAllocated = moveFrom.m_elemSizeAllocated;
     m_format = moveFrom.m_format;
     m_externalBuffer = moveFrom.m_externalBuffer;
@@ -489,7 +479,6 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::operator=(const GPUMatrix<ElemType>& d
     if (this != &deepCopyFrom)
     {
         SetValue(deepCopyFrom);
-        SetMatrixName(deepCopyFrom.m_matrixName);
     }
     return *this;
 }
@@ -606,7 +595,6 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignColumnSlice(const GPUMatrix<Elem
     m_pArray = fromMatrix.m_pArray + startColumn * m_numRows;
 
     m_elemSizeAllocated = GetNumElements();
-    m_matrixName = NULL;
     m_format = fromMatrix.m_format;
 
     return *this;
@@ -927,7 +915,6 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignTransposeOf(const GPUMatrix<Elem
     }
     m_numRows = a.m_numCols;
     m_numCols = a.m_numRows;
-    SetMatrixName(a.GetMatrixName());
     return *this;
 }
 
@@ -1041,7 +1028,6 @@ void GPUMatrix<ElemType>::SetValue(const size_t numRows, const size_t numCols, i
         m_numCols = numCols;
         m_pArray = pArray;
         m_elemSizeAllocated = GetNumElements();
-        m_matrixName = NULL;
         m_format = matrixFormatDense;
         m_externalBuffer = true;
         m_computeDevice = deviceId;
@@ -2742,21 +2728,6 @@ template <class ElemType>
 void GPUMatrix<ElemType>::Print(const char* matrixName /*=nullptr*/) const
 {
     Print(matrixName, 0, GetNumRows() - 1, 0, GetNumCols() - 1);
-}
-
-// file I/O
-//matrixName is used to verify that correct matrix is read.
-template <class ElemType>
-void GPUMatrix<ElemType>::ReadFromFile(FILE*, const char* /*matrixName*/)
-{
-    NOT_IMPLEMENTED;
-}
-
-//matrixName is used to verify that correct matrix is read.
-template <class ElemType>
-void GPUMatrix<ElemType>::WriteToFile(FILE*, const char* /*matrixName*/)
-{
-    NOT_IMPLEMENTED;
 }
 
 //helpfer function used for convolution neural network

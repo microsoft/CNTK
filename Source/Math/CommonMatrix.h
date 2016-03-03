@@ -261,10 +261,6 @@ public:
     {
         m_externalBuffer = !own;
     }
-    wchar_t* GetMatrixName() const
-    {
-        return m_matrixName;
-    }
     size_t NzCount() const
     {
         return m_nz;
@@ -283,16 +279,6 @@ public:
             LogicError("VerifySize: expected matrix size %lu x %lu, but it is %lu x %lu",
                        rows, cols, GetNumRows(), GetNumCols());
     }
-    void SetMatrixName(const wchar_t* s)
-    {
-        Clear();
-        if (s != nullptr)
-        {
-            size_t n = wcslen(s);
-            m_matrixName = new wchar_t[n + 1];
-            wmemcpy(m_matrixName, s, n + 1);
-        }
-    }
 
     BaseMatrix()
     {
@@ -308,8 +294,6 @@ public:
 protected:
     void Clear()
     {
-        delete[] m_matrixName;
-        m_matrixName = nullptr;
     }
 
     void ZeroInit()
@@ -321,7 +305,6 @@ protected:
         m_externalBuffer    = false;
         m_pArray            = nullptr;
         m_nz                = 0;
-        m_matrixName        = nullptr;
     }
 
     // copy all metadata (but not content taht pArray points to)
@@ -337,7 +320,6 @@ protected:
         m_externalBuffer    = other.m_externalBuffer;
         m_pArray            = other.m_pArray;
         m_nz                = other.m_nz;
-        m_matrixName        = other.m_matrixName;
     }
 
 protected:
@@ -351,7 +333,6 @@ protected:
     bool m_externalBuffer; // is the buffer used by this matrix,
     ElemType* m_pArray;
     size_t m_nz;                           // Number of non-zero elements for sparse matrices (unused in other formats)
-    wchar_t* m_matrixName;                 // TODO: Use std::wstring?
 };
 
 }}}

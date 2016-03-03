@@ -289,42 +289,6 @@ Matrix<ElemType>::Matrix(BaseMatrix<ElemType>* baseMatrix, ElemType* pArray, DEV
     m_baseMatrix->SetArray(pArray);
 }
 
-//matrixName is used to verify that correct matrix is read.
-template <class ElemType>
-Matrix<ElemType>::Matrix(FILE* f, const char* matrixName, DEVICEID_TYPE deviceId, const MatrixType matrixType)
-{
-    Init(deviceId);
-
-    if (matrixType == MatrixType::SPARSE)
-    {
-        if (m_preferredDeviceId == CPUDEVICE)
-        {
-            NOT_IMPLEMENTED;
-            // m_CPUSparseMatrix = new CPUSparseMatrix<ElemType>(f,matrixName);
-            SetDataLocation(CPU, SPARSE);
-        }
-        else
-        {
-            NOT_IMPLEMENTED;
-            // m_GPUSparseMatrix = new GPUSparseMatrix<ElemType>(f,matrixName, m_preferredDeviceId);
-            SetDataLocation(GPU, SPARSE);
-        }
-    }
-    else
-    {
-        if (m_preferredDeviceId == CPUDEVICE)
-        {
-            m_CPUMatrix = new CPUMatrix<ElemType>(f, matrixName);
-            SetDataLocation(CPU, DENSE);
-        }
-        else
-        {
-            m_GPUMatrix = new GPUMatrix<ElemType>(f, matrixName, m_preferredDeviceId);
-            SetDataLocation(GPU, DENSE);
-        }
-    }
-}
-
 template <class ElemType>
 Matrix<ElemType>::Matrix(const size_t numRows, const size_t numCols, DEVICEID_TYPE deviceId, const MatrixType matrixType, const MatrixFormat matrixFormat)
 {
@@ -3400,39 +3364,6 @@ void Matrix<ElemType>::VectorMin(Matrix<ElemType>& minIndexes, Matrix<ElemType>&
 #pragma endregion Member BLAS Functions
 
 #pragma region Other helper Functions
-
-template <class ElemType>
-wchar_t* Matrix<ElemType>::GetMatrixName() const
-{
-    return m_baseMatrix->GetMatrixName();
-}
-
-template <class ElemType>
-void Matrix<ElemType>::SetMatrixName(const wchar_t* s)
-{
-    if (m_currentDataLocation == CurrentDataLocation::BOTH)
-    {
-        if (GetMatrixType() == MatrixType::DENSE)
-        {
-            m_CPUMatrix->SetMatrixName(s);
-            m_GPUMatrix->SetMatrixName(s);
-        }
-        else if (GetMatrixType() == MatrixType::SPARSE)
-        {
-            m_CPUSparseMatrix->SetMatrixName(s);
-            m_GPUSparseMatrix->SetMatrixName(s);
-        }
-    }
-    else
-    {
-        DISPATCH_MATRIX_ON_FLAG(this,
-                                nullptr,
-                                m_CPUMatrix->SetMatrixName(s),
-                                m_GPUMatrix->SetMatrixName(s),
-                                m_CPUSparseMatrix->SetMatrixName(s),
-                                m_GPUSparseMatrix->SetMatrixName(s));
-    }
-}
 
 template <class ElemType>
 int Matrix<ElemType>::GetDeviceId() const

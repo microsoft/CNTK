@@ -27,7 +27,6 @@ class MATH_API CPUSparseMatrix : public BaseMatrix<ElemType>
     using Base::m_computeDevice;
     using Base::m_externalBuffer;
     using Base::m_format;
-    using Base::m_matrixName;
     using Base::m_numCols;
     using Base::m_numRows;
     using Base::m_nz;
@@ -38,7 +37,6 @@ class MATH_API CPUSparseMatrix : public BaseMatrix<ElemType>
 public:
     using Base::OwnBuffer;
     using Base::IsEmpty;
-    using Base::SetMatrixName;
 
 private:
     void ZeroInit();
@@ -168,7 +166,6 @@ public:
     ElemType SumOfElements() const;    // sum of all elements
 
 public:
-    // void Print(const char* /*matrixName*/) const { NOT_IMPLEMENTED; }
     void Print(const char* matrixName, ptrdiff_t rowStart, ptrdiff_t rowEnd, ptrdiff_t colStart, ptrdiff_t colEnd) const;
     void Print(const char* matrixName = NULL) const; // print whole matrix. can be expensive
 

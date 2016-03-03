@@ -157,7 +157,6 @@ CPUSparseMatrix<ElemType>::CPUSparseMatrix(const CPUSparseMatrix<ElemType>& deep
     ZeroInit();
     if (!deepCopyFrom.IsEmpty())
         SetValue(deepCopyFrom);
-    SetMatrixName(deepCopyFrom.m_matrixName);
 }
 
 // assignment operator, deep copy
@@ -167,7 +166,6 @@ CPUSparseMatrix<ElemType>& CPUSparseMatrix<ElemType>::operator=(const CPUSparseM
     Clear();
     if (!deepCopyFrom.IsEmpty())
         SetValue(deepCopyFrom);
-    SetMatrixName(deepCopyFrom.m_matrixName);
     return *this;
 }
 
@@ -234,8 +232,6 @@ void CPUSparseMatrix<ElemType>::ReleaseMemory()
     // In that case we shouldn't free anything.
     if (!m_externalBuffer)
     {
-        delete[] m_matrixName;
-
         if (m_format == MatrixFormat::matrixFormatSparseCSC || m_format == MatrixFormat::matrixFormatSparseCSR)
         {
             delete[] m_pArray;
@@ -384,7 +380,6 @@ CPUSparseMatrix<ElemType> CPUSparseMatrix<ElemType>::ColumnSlice(size_t startCol
     CPUSparseMatrix<ElemType> slice(m_format);
     slice.m_numRows = m_numRows;
     slice.m_numCols = numCols;
-    // BUGBUG: m_matrixName?
     // BUGBUG: m_sliceViewOffset?
     slice.m_externalBuffer    = true;
     slice.m_sliceOf           = const_cast<CPUSparseMatrix<ElemType>*>(this); // BUGBUG: ColumnSlice() returns a reference to a mutable matrix, even if itself is 'const'; should not be.
@@ -1275,8 +1270,6 @@ MATH_API File& operator>>(File& stream, CPUSparseMatrix<ElemType>& us)
     }
     stream.GetMarker(fileMarkerEndSection, std::wstring(L"EMAT"));
 
-    us.SetMatrixName(matrixName.c_str());
-
     return stream;
 }
 
@@ -1291,15 +1284,8 @@ MATH_API File& operator<<(File& stream, const CPUSparseMatrix<ElemType>& us)
 
     stream.PutMarker(fileMarkerBeginSection, std::wstring(L"BMAT"));
     stream << sizeof(ElemType);
-    if (us.GetMatrixName() == nullptr)
-    {
-        std::wstring s(L"nnmatrix");
-        stream << s;
-    }
-    else
-    {
-        stream << us.GetMatrixName();
-    }
+	std::wstring s(L"nnmatrix");
+	stream << s;
 
     size_t nz, numRows, numCols;
     size_t compressedSize = us.SecondaryIndexCount();
@@ -1342,6 +1328,7 @@ template CPUSparseMatrix<char>::CPUSparseMatrix(CPUSparseMatrix<char> const&);
 template CPUSparseMatrix<char>::CPUSparseMatrix(CPUSparseMatrix<char>&&);
 template CPUSparseMatrix<char>& CPUSparseMatrix<char>::operator=(CPUSparseMatrix<char>&& moveFrom);
 template void CPUSparseMatrix<char>::SetValue(size_t, size_t, char);
+template void CPUSparseMatrix<char>::SetValue(CPUSparseMatrix<char> const&);
 template char* CPUSparseMatrix<char>::BufferPointer() const;
 template void CPUSparseMatrix<char>::Reset(void);
 template CPUSparseMatrix<char>::~CPUSparseMatrix();

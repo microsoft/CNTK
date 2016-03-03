@@ -103,7 +103,6 @@ public:
     static const int MaxGpus = 8; // support up to 8 GPUs
     using BaseMatrix<ElemType>::m_computeDevice;
     using BaseMatrix<ElemType>::m_elemSizeAllocated;
-    using BaseMatrix<ElemType>::m_matrixName;
     using BaseMatrix<ElemType>::m_format;
     using BaseMatrix<ElemType>::m_externalBuffer;
     using BaseMatrix<ElemType>::m_nz;
@@ -113,7 +112,6 @@ public:
     using BaseMatrix<ElemType>::GetArray;
     using BaseMatrix<ElemType>::GetNumRows;
     using BaseMatrix<ElemType>::GetNumCols;
-    using BaseMatrix<ElemType>::SetMatrixName;
 
 private:
     static cublasHandle_t s_cuHandle[MaxGpus];
@@ -139,7 +137,6 @@ private:
 
 public:
     explicit GPUMatrix(int deviceId);
-    GPUMatrix(FILE* f, const char* matrixName, int deviceId);
     GPUMatrix(const size_t numRows, const size_t numCols, int deviceId);
     GPUMatrix(const size_t numRows, const size_t numCols, int deviceId, ElemType* pArray, const size_t matrixFlags = matrixFlagNormal);
     GPUMatrix(const GPUMatrix<ElemType>& deepCopyFrom);
@@ -372,9 +369,6 @@ public:
     void Print(const char* matrixName, size_t rowStart, size_t rowEnd, size_t colStart, size_t colEnd) const;
     void Print(const char* matrixName = NULL) const; // print whole matrix. can be expensive
 
-    void ReadFromFile(FILE* f, const char* matrixName); // matrixName is used to verify that correct matrix is read.
-    void WriteToFile(FILE* f, const char* matrixName);  // matrixName is used to verify that correct matrix is read.
-
     GPUMatrix<ElemType>& AssignPackedConvolutionInput(const GPUMatrix<ElemType>& inputSubBatch,
                                                       const size_t inputWidth, const size_t inputHeight, const size_t inputChannels,
                                                       const size_t outputWidth, const size_t outputHeight, const size_t outputChannels,
@@ -501,9 +495,6 @@ public:
         stream.GetMarker(fileMarkerEndSection, std::wstring(L"EMAT"));
         us.SetValue(numRows, numCols, us.GetComputeDeviceId(), d_array, matrixFlagNormal | format);
         delete[] d_array;
-        us.m_matrixName = new wchar_t[matrixName.length() + 1];
-        wmemcpy(us.m_matrixName, matrixName.c_str(), matrixName.length() + 1);
-        // us.m_matrixName = matrixName;
         return stream;
     }
     friend File& operator<<(File& stream, const GPUMatrix<ElemType>& us)
@@ -511,7 +502,7 @@ public:
         stream.PutMarker(fileMarkerBeginSection, std::wstring(L"BMAT"));
         stream << sizeof(ElemType);
 
-        std::wstring s = (us.m_matrixName == NULL) ? std::wstring(L"unnamed") : std::wstring(us.m_matrixName);
+        std::wstring s = std::wstring(L"unnamed");
         int format = us.m_format;
         stream << s << format;
 
