@@ -11,7 +11,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 Bundler::Bundler(
     const ConfigParameters& readerConfig,
     IDataDeserializerPtr driver,
-    std::vector<IDataDeserializerPtr> deserializers)
+    std::vector<IDataDeserializerPtr> deserializers,
+    bool cleanse)
     : m_deserializers(deserializers), m_driver(driver)
 {
     UNUSED(readerConfig);
@@ -27,12 +28,27 @@ Bundler::Bundler(
     }
 
     m_streams = streams;
-    CreateChunkDescriptions();
+    CreateChunkDescriptions(cleanse);
 }
 
-void Bundler::CreateChunkDescriptions()
+void Bundler::CreateChunkDescriptions(bool cleanse)
 {
     auto chunks = m_driver->GetChunkDescriptions();
+    m_chunks.reserve(chunks.size());
+
+    if (!cleanse)
+    {
+        for (const auto& c : chunks)
+        {
+            auto cd = std::make_shared<BundlerChunkDescription>();
+            cd->numberOfSamples = c->numberOfSamples;
+            cd->numberOfSequences = c->numberOfSequences;
+            cd->id = m_chunks.size();
+            cd->m_original = c;
+            m_chunks.push_back(cd);
+        }
+        return;
+    }
 
     for (size_t chunkIndex = 0; chunkIndex < chunks.size(); ++chunkIndex)
     {
