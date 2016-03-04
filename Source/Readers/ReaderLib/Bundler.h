@@ -36,12 +36,12 @@ public:
     Bundler(const ConfigParameters& readerConfig, IDataDeserializerPtr driver, std::vector<IDataDeserializerPtr> deserializers, bool cleanse);
 
     virtual ChunkDescriptions GetChunkDescriptions() override;
-    virtual std::vector<SequenceDescriptionPtr> GetSequencesForChunk(size_t chunkId) override;
+    virtual std::vector<SequenceDescription> GetSequencesForChunk(size_t chunkId) override;
     virtual size_t GetTotalNumberOfSamples() override;
     virtual size_t GetTotalNumberOfSequences() override;
 
     // Retrieves description of a single sequence given its key.
-    virtual const SequenceDescription* GetSequenceDescriptionByKey(const KeyType& key) override;
+    virtual SequenceDescription GetSequenceDescriptionByKey(const KeyType& key) override;
 
     // Describes bundled streams of the underlying data deserializers.
     virtual std::vector<StreamDescriptionPtr> GetStreamDescriptions() const override;
