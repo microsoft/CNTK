@@ -541,14 +541,6 @@ void PartialBlockRandomizer::RandomizeChunks()
         sequencePosition += numberOfSequences;
     }
 
-    // Add sentinel
-  /*  RandomizedChunk sentinel;
-    sentinel.m_original = nullptr;
-    sentinel.m_randomizationWindow.m_begin = SIZE_MAX;
-    sentinel.m_randomizationWindow.m_end = SIZE_MAX;
-    m_randomizedChunks.push_back(sentinel);
-    assert(m_originalChunks.size() + 1 == m_randomizedChunks.size());*/
-
     // For each chunk, compute the randomization range (w.r.t. the randomized chunk sequence)
     size_t halfWindowRange = m_randomizationRangeInSamples / 2;
     for (size_t chunkId = 0; chunkId < m_originalChunks.size(); chunkId++)
@@ -582,31 +574,7 @@ void PartialBlockRandomizer::RandomizeChunks()
             chunk.m_randomizationWindow.m_end++;
         }
     }
-
-    //m_randomizedChunks.resize(m_randomizedChunks.size() - 1); // remove sentinel.
 }
-/*
-bool PartialBlockRandomizer::RandomizeIfNewSweepIsEntered()
-{
-    // Check that StartEpoch() was called
-    assert(m_sequencePositionInSweep != SIZE_MAX);
-
-    if (m_sequencePositionInSweep >= m_numSequences)
-    {
-        if (m_verbosity > 0)
-            std::cerr << __FUNCTION__ << ": re-randomizing for sweep " << m_sweep
-            << " in " << (m_frameMode ? "frame" : "utterance") << " mode" << endl;
-        m_sweep++;
-        m_sweepStartInSamples += m_numSamples;
-        Randomize();
-        m_sequenceRandomizer->Reset(m_sweep);
-        m_sequencePositionInSweep -= m_numSequences;
-        assert(m_sequencePositionInSweep < m_numSequences); // cannot jump ahead more than a sweep
-        return true;
-    };
-
-    return false;
-}*/
 
 Sequences PartialBlockRandomizer::GetNextSequences(size_t sampleCount)
 {
@@ -618,29 +586,6 @@ Sequences PartialBlockRandomizer::GetNextSequences(size_t sampleCount)
     {
         return result;
     }
-    /*
-    std::map<size_t, ChunkPtr> chunks;
-    std::set<size_t> tracked;
-    for (auto s: sequences)
-    {
-        size_t chunkIndex = s.m_original->m_chunkId;
-        if (tracked.find(chunkIndex) != tracked.end())
-        {
-            continue;
-        }
-
-        auto chunk = m_chunks.find(chunkIndex);
-        if (chunk != m_chunks.end())
-        {
-            chunks[chunkIndex] = chunk->second;
-            tracked.insert(chunkIndex);
-        }
-        else
-        {
-            chunks[chunkIndex] = m_deserializer->GetChunk(chunkIndex);
-        }
-    }
-    std::swap(chunks, m_chunks);*/
 
     result.m_data.resize(m_streams.size(), std::vector<SequenceDataPtr>(sequences.size()));
 
@@ -717,6 +662,4 @@ bool PartialBlockRandomizer::GetNextSequenceDescriptions(size_t sampleCount, std
     return false;
 }
 
-}
-}
-}
+}}}
