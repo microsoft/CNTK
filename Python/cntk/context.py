@@ -1,5 +1,9 @@
+import os
+
+
 CNTK_TRAIN_TEMPLATE_PATH = os.path.join(os.path.dirname(__file__), "cntk_train_template.cntk")
 CNTK_PREDICT_TEMPLATE_PATH = os.path.join(os.path.dirname(__file__), "cntk_predict_template.cntk")
+_FLOATX = 'float32'
 
 if "CNTK_EXECUTABLE_PATH" not in os.environ:
     raise ValueError("you need to point environmental variable 'CNTK_EXECUTABLE_PATH' to the CNTK binary")

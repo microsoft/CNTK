@@ -67,6 +67,7 @@ class Input(Node):
         self.get_output_shape=lambda : shape
 
     def get_cntk_param_string(self, param_variable_names=None):
+        pass
 
 class LearnableParameter(Node):
     def __init__(self, **kwargs):
