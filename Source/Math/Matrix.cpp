@@ -5008,7 +5008,6 @@ template Matrix<char>::Matrix(const size_t numRows, const size_t numCols, DEVICE
 template Matrix<char>::Matrix(const size_t numRows, const size_t numCols, char* pArray, DEVICEID_TYPE deviceId, const size_t matrixFlags, const size_t nnz);
 template Matrix<char>::~Matrix();
 template Matrix<char>& Matrix<char>::operator=(Matrix<char>&& moveFrom);
-template Matrix<char>& Matrix<char>::operator=(const Matrix<char>& deepCopyFrom);
 template char* Matrix<char>::BufferPointer() const;
 template int Matrix<char>::GetDeviceId() const;
 template size_t Matrix<char>::GetNumElements() const;

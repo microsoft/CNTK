@@ -992,8 +992,10 @@ void ComputationNetwork::PerformSVDecomposition(const map<wstring, float>& SVDCo
             shared_ptr<ComputationNode<ElemType>> pLeft = AddNodeToNetWithElemType(New<LearnableParameter<ElemType>>(m_deviceId, leftChildName, m, r));
             shared_ptr<ComputationNode<ElemType>> pRight = AddNodeToNetWithElemType(New<LearnableParameter<ElemType>>(m_deviceId, rightChildName, r, n));
 
-            pLeft->ValueAsMatrix() = std::move(redU);
-            pRight->ValueAsMatrix() = std::move(redVT);
+            // TODO: We should be able to move instead of copy but it currently isn't strightforward
+            // due to redU and redVT being slices
+            pLeft->ValueAsMatrix() = redU.DeepClone();
+            pRight->ValueAsMatrix() = redVT.DeepClone();
 
             shared_ptr<ComputationNode<ElemType>> pTimes = AddNodeToNetAndAttachInputs(New<TimesNode<ElemType>>(m_deviceId, name + L"-SVD"), pLeft, pRight);
 

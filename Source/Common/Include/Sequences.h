@@ -115,7 +115,7 @@ struct MBLayout
         m_numParallelSequences = other->m_numParallelSequences;
         m_sequences = other->m_sequences;
         m_numFramesDeclared = other->m_numFramesDeclared;
-        m_numGapFrames = other->m_numFramesDeclared;
+        m_numGapFrames = other->m_numGapFrames;
 
         m_distanceToStart.SetValue(other->m_distanceToStart);
         m_distanceToEnd.SetValue(other->m_distanceToEnd);
@@ -138,7 +138,7 @@ struct MBLayout
         m_numParallelSequences = other->m_numParallelSequences;
         m_sequences = std::move(other->m_sequences);
         m_numFramesDeclared = other->m_numFramesDeclared;
-        m_numGapFrames = other->m_numFramesDeclared;
+        m_numGapFrames = other->m_numGapFrames;
 
         m_distanceToStart = std::move(other->m_distanceToStart);
         m_distanceToEnd = std::move(other->m_distanceToEnd);
