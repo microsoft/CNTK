@@ -515,6 +515,8 @@ Matrix<ElemType>::Matrix(Matrix<ElemType>&& moveFrom)
 template <class ElemType>
 Matrix<ElemType>& Matrix<ElemType>::operator=(Matrix<ElemType>&& moveFrom)
 {
+    if (this == &moveFrom)
+        LogicError("Matrix: Move assignment into itself is forbidden.");
     ReleaseMemory(); // free held memory if any
 #if 1
     // shallow-copy all members

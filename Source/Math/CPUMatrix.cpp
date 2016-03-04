@@ -3593,7 +3593,7 @@ struct PrintRange
         {
             begin = (size_t)first;
             end = (size_t)last + 1;
-            if (end > total)    // allow SIZE_MAX, meaning to end
+            if (end > total)    // allow INT_MAX, meaning to end
                 end = total;
             skipBegin = end;
             skipEnd = end;

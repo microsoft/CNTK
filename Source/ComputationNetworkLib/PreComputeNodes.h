@@ -261,9 +261,10 @@ public:
             totalNumSamples = 1; // 0/0=1 in this context
         ElemType alpha =                   1.0f / totalNumSamples;
         ElemType beta  = (ElemType)m_numSamples / totalNumSamples;
-#if 1
+#define MEANVAR_TENSOR_SUPPORT 2 // 0=old code; 1=tensor for mean estimate only; 2=tensor for mean and var estimate  --will removed in next commit
+#if MEANVAR_TENSOR_SUPPORT > 0
         size_t rank = DetermineElementwiseTensorRank();
-        auto mean  = ValueTensorFor(rank, FrameRange()); // mean is formed directly in our m_value
+        auto mean  =           ValueTensorFor(rank, FrameRange()); // mean is formed directly in our m_value
         auto input = Input(0)->ValueTensorFor(rank, fr);
 
         mean.DoCopyOf(beta, input, alpha);
@@ -346,14 +347,17 @@ public:
         // set gaps to zero, since we are reducing in time
         Input(0)->MaskMissingValueColumnsToZero(fr);
 
-        //m_temp.SetValue(m_mean); // old mean
+#if MEANVAR_TENSOR_SUPPORT < 2
+        m_temp.SetValue(m_mean); // old mean
+        auto& samples = Input(0)->Value();
+#endif
         size_t numNewSamples = Input(0)->GetMBLayout()->GetActualNumSamples();
         size_t totalNumSamples = m_numSamples + numNewSamples;
         if (totalNumSamples == 0)
             totalNumSamples = 1; // 0/0=1 in this context
         ElemType alpha =                   1.0f / totalNumSamples;
         ElemType beta  = (ElemType)m_numSamples / totalNumSamples;
-#if 1
+#if MEANVAR_TENSOR_SUPPORT > 0
         size_t rank = DetermineElementwiseTensorRank();
         auto input    = Input(0)->ValueTensorFor(        rank, fr);
         auto mean     =            DataTensorFor(m_mean, rank, FrameRange());
@@ -361,39 +365,44 @@ public:
         auto var      =            DataTensorFor(m_var,  rank, FrameRange());
 
         // preserve the old mean value for the next step
+#if MEANVAR_TENSOR_SUPPORT > 1
         temp.AssignCopyOf(mean);
+#endif
 
         // accumulate the mean
         mean.DoCopyOf(beta, input, alpha); // Note: This reduces over samples.
 #else
-        auto& samples = Input(0)->Value();
         Matrix<ElemType>::MultiplyAndWeightedAdd(alpha, samples, false,
                                                  ConstOnes(Input(0)->Value().GetNumCols(), 1, samples.GetDeviceId()),
                                                  false, beta, m_mean);
 #endif
 
         // compute the correction term
-#if 1
+#if MEANVAR_TENSOR_SUPPORT > 1
         // var += (oldMean - newMean)^2
-        temp.DoCopyOf(1.0f, mean, -1.0f); // subtract new 'mean' from the old one
-        var .DoSqrOf (1.0f, temp,  1.0f); // add the square
+        temp.AddCopyOf(mean, -1.0f); // subtract new 'mean' from the old one
+        var.AddSqrOf(temp);          // add the square
 
         // var += (input - mean)^2
-        auto& temp2 = temp;                    // another temp variable, for which we can reuse the first one
-        temp2.AssignDifferenceOf(input, mean); // Note: This also reduces over samples.
-        var.DoSqrOf(beta, temp2, alpha);
+//Input(0)->Value().Print("input before", -3, -3, 0, INT_MAX);
+//m_mean.Print("mean before", -3, -3, -5, -5);
+//m_var.Print("var before", -3, -3, -5, -5);
+        var.DoSqrOfDifferenceOf(beta, input, mean, alpha); // this reduces as well
+//m_var.Print("var after", -3, -3, -5, -5);
 #else
         // var += (oldMean - newMean)^2
         m_temp -= m_mean;
         m_temp.AssignElementPowerOf(m_temp, 2);
         m_var  += m_temp;
 
-        m_temp.AssignDifferenceOf(Input(0)->Value(), m_mean);
-        m_temp.AssignElementPowerOf(m_temp, 2);
+        m_temp.AssignDifferenceOf(Input(0)->Value(), m_mean); // this is not reduced
+        m_temp.AssignElementPowerOf(m_temp, 2);               // elementwise per sample
 
+m_var.Print("var before 1", -3, -3, -5, -5);
         Matrix<ElemType>::MultiplyAndWeightedAdd(alpha, m_temp, false,
                                                  ConstOnes(Input(0)->Value().GetNumCols(), 1, samples.GetDeviceId()),
                                                  false, beta, m_var);
+m_var.Print("var after 1", -3, -3, -5, -5);
 #endif
 
 #if NANCHECK
@@ -540,7 +549,7 @@ public:
         auto invStdDev = Input(2)->ValueTensorFor(rank, fr.AllowBroadcast());
 
         output.AssignElementwiseQuotientOf(input, invStdDev); // output = input / invStdDev
-        output.AssignDifferenceOf(output, mean);              // output += mean
+        output.AddCopyOf(mean);                               // output += mean
 #else
         // only feature (input0) and output needs to be sliced
         auto functionValues = Input(0)->ValueFor(fr);
