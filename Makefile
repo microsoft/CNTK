@@ -226,6 +226,7 @@ READER_SRC =\
 	$(SOURCEDIR)/Readers/ReaderLib/BlockRandomizer.cpp \
 	$(SOURCEDIR)/Readers/ReaderLib/Bundler.cpp \
 	$(SOURCEDIR)/Readers/ReaderLib/NoRandomizer.cpp \
+	$(SOURCEDIR)/Readers/ReaderLib/PartialBlockRandomizer.cpp \
 	$(SOURCEDIR)/Readers/ReaderLib/ReaderShim.cpp \
 	$(SOURCEDIR)/Readers/ReaderLib/SampleModePacker.cpp \
 
