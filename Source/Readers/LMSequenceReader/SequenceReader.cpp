@@ -1747,8 +1747,9 @@ size_t BatchSequenceReader<ElemType>::DetermineSequencesToProcess()
         // and count tokens
         numTokens += m_parser.mSentenceIndex2SentenceInfo[seq].sLen;
     }
-    // if all are already done, we will return sln=0
-    fprintf(stderr, "DetermineSequencesToProcess: %d sequences of len %d, %d tokens\n", (int) mToProcess.size(), (int) sln, (int) numTokens);
+    // if all were already done, we will get here with sln=0 and return that
+
+    //fprintf(stderr, "DetermineSequencesToProcess: %d sequences of len %d, %d tokens\n", (int) mToProcess.size(), (int) sln, (int) numTokens);
 
     return sln;
 }

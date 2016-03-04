@@ -357,6 +357,8 @@ public:
     Matrix<ElemType>& InplaceAbs();
     Matrix<ElemType>& AssignAbsOf(const Matrix<ElemType>& a);
 
+    // TODO: rename these to InPlaceFloor() and -Ceil() (I never know what it means to truncate a bottom)
+    //       And also document and implement that sparse matrices can only truncate towards 0.
     Matrix<ElemType>& InplaceTruncateBottom(const ElemType threshold);
     Matrix<ElemType>& AssignTruncateBottomOf(const Matrix<ElemType>& a, const ElemType threshold);
     Matrix<ElemType>& InplaceTruncateTop(const ElemType threshold);

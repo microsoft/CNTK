@@ -47,7 +47,7 @@ public:
     virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
     {
         size_t rank = DetermineElementwiseTensorRank();
-        auto result = ValueTensorFor(rank, fr);
+        auto result =           ValueTensorFor(rank, fr);
         auto input0 = Input(0)->ValueTensorFor(rank, fr.AllowBroadcast());
         auto input1 = Input(1)->ValueTensorFor(rank, fr.AllowBroadcast());
         result.AssignSumOf(input0, input1);
@@ -56,7 +56,7 @@ public:
     virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
     {
         size_t rank = DetermineElementwiseTensorRank();
-        auto gradient = GradientTensorFor(rank, fr);
+        auto gradient      =                    GradientTensorFor(rank, fr);
         auto inputGradient = Input(inputIndex)->GradientTensorFor(rank, fr.AllowBroadcast());
 
         // if reduction then mask the respective input(s) (zero out the gaps)
@@ -77,12 +77,8 @@ template class PlusNode<double>;
 template <class ElemType>
 class MinusNode : public BinaryElementWiseNode<ElemType>
 {
-    typedef BinaryElementWiseNode<ElemType> Base;
-    UsingBinaryElementwiseNodeBaseMembers;
-    static const std::wstring TypeName()
-    {
-        return L"Minus";
-    }
+    typedef BinaryElementWiseNode<ElemType> Base; UsingBinaryElementwiseNodeBaseMembers;
+    static const std::wstring TypeName() { return L"Minus"; }
 
 public:
     DeclareConstructorFromConfigWithNumInputs(MinusNode);
@@ -95,7 +91,7 @@ public:
     {
         ElemType sign = inputIndex == 0 ? 1.0f : -1.0f;
         size_t rank = DetermineElementwiseTensorRank();
-        auto gradient = GradientTensorFor(rank, fr);
+        auto gradient      =                    GradientTensorFor(rank, fr);
         auto inputGradient = Input(inputIndex)->GradientTensorFor(rank, fr.AllowBroadcast());
 
         // if reduction then mask the respective input(s) (zero out the gaps)
@@ -108,7 +104,7 @@ public:
     virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
     {
         size_t rank = DetermineElementwiseTensorRank();
-        auto result = ValueTensorFor(rank, fr);
+        auto result =           ValueTensorFor(rank, fr);
         auto input0 = Input(0)->ValueTensorFor(rank, fr.AllowBroadcast());
         auto input1 = Input(1)->ValueTensorFor(rank, fr.AllowBroadcast());
         result.AssignDifferenceOf(input0, input1);
@@ -126,12 +122,8 @@ template class MinusNode<double>;
 template <class ElemType>
 class NegateNode : public ComputationNode<ElemType>, public NumInputs<1>
 {
-    typedef ComputationNode<ElemType> Base;
-    UsingComputationNodeMembersBoilerplate;
-    static const std::wstring TypeName()
-    {
-        return L"Negate";
-    }
+    typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+    static const std::wstring TypeName() { return L"Negate"; }
 
 public:
     DeclareConstructorFromConfigWithNumInputs(NegateNode);

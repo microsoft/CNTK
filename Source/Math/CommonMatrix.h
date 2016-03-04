@@ -78,6 +78,7 @@ enum ElementWiseOperator
     opAbs,
     opSigmoid,
     opTanh,
+    opSqr,
     opSqrt,
     opExp,
     opLog,
@@ -129,6 +130,7 @@ enum ElementWiseOperator
     Macro(Abs);               \
     Macro(Sigmoid);           \
     Macro(Tanh);              \
+    Macro(Sqr);               \
     Macro(Sqrt);              \
     Macro(Exp);               \
     Macro(Log);               \

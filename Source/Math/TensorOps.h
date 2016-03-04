@@ -97,6 +97,12 @@ DECL ElemType LinearRectifierDerivative(ElemType z)
 }
 
 template <class ElemType>
+DECL ElemType Sqr(ElemType z)
+{
+    return z * z;
+}
+
+template <class ElemType>
 DECL ElemType Sqrt(ElemType z)
 {
     // BUGBUG: Why clip to 0? An invalid sqrt() should show up as a NaN in the result, instead of hiding it.
@@ -143,12 +149,6 @@ DECL ElemType LogAdd(ElemType x, ElemType y)
     }
 }
 
-template <class ElemType>
-DECL ElemType Sqr(ElemType z)
-{
-    return z * z;
-}
-
 // IndexElement reindexes a tensor along one dimension.
 // For the indexed dimension, the tensor op is prepared by setting 'a' to be broadcasting along the indexed dimension.
 // I.e. pa = &a points to the first element (as if index == 0).
@@ -188,6 +188,7 @@ DefUnaryOp(Not, !a);
 DefUnaryOp(Abs, fabs_(a));
 DefUnaryOp(Sigmoid, Sigmoid(a));
 DefUnaryOp(Tanh, tanh_(a));
+DefUnaryOp(Sqr, Sqr(a));
 DefUnaryOp(Sqrt, Sqrt(a));
 DefUnaryOp(Exp, exp_(a));
 DefUnaryOp(Log, ClippedLog(a));
