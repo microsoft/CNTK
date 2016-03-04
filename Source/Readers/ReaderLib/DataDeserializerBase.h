@@ -28,7 +28,7 @@ public:
         return m_sequences;
     }
 
-    virtual const SequenceDescription* GetSequenceDescriptionByKey(const KeyType&) override
+    virtual void GetSequenceDescriptionByKey(const KeyType&, SequenceDescription&) override
     {
         NOT_IMPLEMENTED;
     }
