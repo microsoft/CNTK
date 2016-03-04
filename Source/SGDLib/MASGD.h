@@ -301,7 +301,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     public:
         BasicModelAveragingSGD(MPIWrapper* pMPI, size_t reportFreq)
-            :IMASGD(pMPI, reportFreq)
+            :Base(pMPI, reportFreq)
         {}
 
         
