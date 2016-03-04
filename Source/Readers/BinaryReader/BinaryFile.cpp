@@ -91,6 +91,7 @@ BinaryFile::~BinaryFile()
         // the view
         iter = ReleaseView(iter, true);
     }
+    // TODO: Check for error code and throw if !std::uncaught_exception()
     CloseHandle(m_hndMapped);
 
     // if we are writing the file, truncate to actual size

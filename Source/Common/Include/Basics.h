@@ -641,6 +641,7 @@ public:
     }
     ~Plugin()
     {
+        // TODO: Check for error code and throw if !std::uncaught_exception()
         if (handle != NULL)
             dlclose(handle);
     }
