@@ -1,5 +1,6 @@
 import os
-
+import cntk.graph as graph
+import numpy as np
 
 CNTK_TRAIN_TEMPLATE_PATH = os.path.join(os.path.dirname(__file__), "cntk_train_template.cntk")
 CNTK_PREDICT_TEMPLATE_PATH = os.path.join(os.path.dirname(__file__), "cntk_predict_template.cntk")
@@ -67,7 +68,7 @@ class CNTKTrainConfig(CNTKConfig):
         
         # TODO write initialization of InputValue, so far defaulting to uniform
         # TODO use sample_weight
-        self.label_node = cn.Input(self.y.shape, var_name='labels')
+        self.label_node = graph.Input(self.y.shape, var_name='labels')
         unique_labels = np.unique(self.y)
 
         crit_node_name, output_node_name, model_desc = self._gen_model_description()
@@ -119,8 +120,7 @@ class CNTKTrainConfig(CNTKConfig):
 
         var_name = output.var_name or "v%i"%self.node_counter 
         self.node_counter+=1
-        node_name = self._name(output)
-
+        
         params = output.get_cntk_param_string(param_variable_names)
 
         line = "%s = %s(%s)"%(var_name, output.name, params)
@@ -144,7 +144,7 @@ class CNTKTrainConfig(CNTKConfig):
             # would unroll into CNTK config. Unfortunately, many of the
             # operators are not supported, which is why we test for the
             # function name for now.
-            eval_node = cn.Operator("CrossEntropy", (self.label_node, computation_root_node), 
+            eval_node = graph.Operator("CrossEntropy", (self.label_node, computation_root_node), 
                     get_output_shape=lambda x,y: x.get_shape())
         else:
             raise NotImplementedError
@@ -160,13 +160,13 @@ class CNTKTrainConfig(CNTKConfig):
 
     def execute(self):
         filename = os.path.join(self.context.directory, CNTK_TRAIN_CONFIG_FILENAME)
-        tmpl = open(cn.CNTK_TRAIN_TEMPLATE_PATH, "r").read()
+        tmpl = open(CNTK_TRAIN_TEMPLATE_PATH, "r").read()
         with open(os.path.join(self.context.directory, filename), "w") as out:
             cntk_config_content = tmpl%self
             out.write(cntk_config_content)
             
         import subprocess
-        subprocess.check_call([cn.CNTK_EXECUTABLE_PATH, "configFile=%s"%filename])
+        subprocess.check_call([CNTK_EXECUTABLE_PATH, "configFile=%s"%filename])
 
         print("Wrote to directory %s"%self.context.directory)
 
@@ -222,7 +222,7 @@ class CNTKPredictConfig(CNTKConfig):
 
     def execute(self):
         config_filename = os.path.join(self.context.directory, CNTK_PREDICT_CONFIG_FILENAME)
-        tmpl = open(cn.CNTK_PREDICT_TEMPLATE_PATH, "r").read()
+        tmpl = open(CNTK_PREDICT_TEMPLATE_PATH, "r").read()
         config_file_path=os.path.join(self.context.directory, config_filename)
         with open(config_file_path, "w") as out:
             cntk_config_content = tmpl%self
@@ -230,7 +230,7 @@ class CNTKPredictConfig(CNTKConfig):
             print("Wrote to directory %s"%self.context.directory)
             
         import subprocess
-        subprocess.check_call([cn.CNTK_EXECUTABLE_PATH, "configFile=%s"%config_filename])
+        subprocess.check_call([CNTK_EXECUTABLE_PATH, "configFile=%s"%config_filename])
 
         # We get one out.txt.<node> file per output node. CNTK supports the
         # output of multiple output nodes. We support only one here.
@@ -246,17 +246,17 @@ class CNTKPredictConfig(CNTKConfig):
 
 def fake_fit(model, ins, batch_size, np_epoch):
     #import ipdb;ipdb.set_trace()
-    with cn.Context(model) as cm:
+    with Context(model) as cm:
         cntk_config = CNTKTrainConfig(cm, model, ins, batch_size, np_epoch)
         cntk_config.execute()
 
 def fake_predict(model, ins, verbose=0):
-    with cn.Context(model) as cm:
+    with Context(model) as cm:
         cntk_config = CNTKPredictConfig(cm, model, ins)
         return cntk_config.execute()
     
 def variable(value, dtype=_FLOATX, name=None):
-    v = cn.variable(np.asarray(value, dtype=dtype), name=name)
+    v = graph.variable(np.asarray(value, dtype=dtype), name=name)
     # TODO initialize
     return v
 
