@@ -2015,7 +2015,7 @@ void SGD<ElemType>::SaveCheckPointInfo(const size_t epoch, const size_t totalSam
         {
             File fstream(tempFileName, FileOptions::fileOptionsBinary | FileOptions::fileOptionsWrite);
             fstream.PutMarker(FileMarker::fileMarkerBeginSection, L"BVersion"); 
-            fstream << CURRENT_CNTK_CHECKPOINT_VERSION; 
+            fstream << (size_t)CURRENT_CNTK_CHECKPOINT_VERSION; 
             fstream.PutMarker(FileMarker::fileMarkerEndSection, L"EVersion");
 
             fstream.PutMarker(FileMarker::fileMarkerBeginSection, L"BCKP");
