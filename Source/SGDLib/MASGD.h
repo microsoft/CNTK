@@ -295,8 +295,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<typename ElemType>
     class BasicModelAveragingSGD : public IMASGD<ElemType>
     {
-        typedef IMASGD Base; 
+        typedef IMASGD<ElemType> Base; 
         using Base::m_pMPI;
+        using Base::DownCast;
 
     public:
         BasicModelAveragingSGD(MPIWrapper* pMPI, size_t reportFreq)
