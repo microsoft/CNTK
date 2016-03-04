@@ -24,34 +24,35 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
 using namespace std;
 
-// Exception wrapper to include native call stack string
-template <class E>
-class ExceptionWithCallStack : public E
+// base class that we can catch, independent of the type parameter
+struct /*interface*/ IExceptionWithCallStackBase
 {
-private:
-    static const int MAX_CALLERS = 62;
-    static const unsigned short MAX_CALL_STACK_DEPTH = 20;
-
-public:
-    ExceptionWithCallStack(std::string& msg, std::string& callstack) : E(msg), m_callStack(callstack)
-    {}
-
-    std::string CallStack() const
-    {
-        return m_callStack.c_str();
-    }
-
-    static void PrintCallStack();
-    static std::string GetCallStack();
-    
-protected:
-    std::string m_callStack;
-
-private:
-    static void CollectCallStack(const function<void(std::string)>& write, const function<void()>& newline);
-
+    virtual const char * CallStack() const = 0;
+    virtual ~IExceptionWithCallStackBase() throw() {}
 };
 
-typedef ExceptionWithCallStack<std::runtime_error> DebugUtil;
+// Exception wrapper to include native call stack string
+template <class E>
+class ExceptionWithCallStack : public E, public IExceptionWithCallStackBase
+{
+public:
+    ExceptionWithCallStack(const std::string& msg, const std::string& callstack) :
+        E(msg), m_callStack(callstack)
+    { }
+
+    virtual const char * CallStack() const override { return m_callStack.c_str(); }
+
+    static void      PrintCallStack(size_t skipLevels = 0, bool makeFunctionNamesStandOut = false);
+    static std::string GetCallStack(size_t skipLevels = 0, bool makeFunctionNamesStandOut = false); // generate call stack as a string, which should then be passed to the constructor of this  --TODO: Why not generate it directly in the constructor?
+
+protected:
+    std::string m_callStack;
+};
+
+// some older code uses this namespace
+namespace DebugUtil
+{
+    static inline void PrintCallStack() { ExceptionWithCallStack<std::runtime_error>::PrintCallStack(0, false); }
+};
 
 }}}

@@ -23,29 +23,28 @@ template <class ElemType>
 class MATH_API GPUSparseMatrix : public BaseMatrix<ElemType>
 {
 public:
-    typedef BaseMatrix<ElemType> B;
-    using B::m_numRows;
-    using B::m_numCols;
-    using B::m_pArray;
-    using B::m_elemSizeAllocated;
-    using B::m_sliceViewOffset;
-    using B::m_nz;
-    using B::m_format;
-    using B::m_computeDevice;
-    using B::m_externalBuffer;
-    using B::m_matrixName;
-    using B::OwnBuffer;
-    using B::GetFormat;
-    using B::SetFormat;
-    using B::GetNumRows;
-    using B::GetNumCols;
-    using B::IsEmpty;
-    using B::SetComputeDeviceId;
-    using B::SetMatrixName;
-    using B::SetNzCount;
-    using B::Clear;
+    typedef BaseMatrix<ElemType> Base;
+    using Base::m_numRows;
+    using Base::m_numCols;
+    using Base::m_pArray;
+    using Base::m_elemSizeAllocated;
+    using Base::m_sliceViewOffset;
+    using Base::m_nz;
+    using Base::m_format;
+    using Base::m_computeDevice;
+    using Base::m_externalBuffer;
+    using Base::OwnBuffer;
+    using Base::GetFormat;
+    using Base::SetFormat;
+    using Base::GetNumRows;
+    using Base::GetNumCols;
+    using Base::SetComputeDeviceId;
+    using Base::SetNzCount;
+    using Base::Clear;
     // without this, base members would require to use thi-> in GCC
 public:
+    using Base::IsEmpty;
+
     GPUSparseMatrix(const size_t numRows, const size_t numCols, const size_t numNZ, DEVICEID_TYPE computeDevice, const MatrixFormat matrixFormat = MatrixFormat::matrixFormatSparseCSR);
 
     explicit GPUSparseMatrix(DEVICEID_TYPE computeDevice, const MatrixFormat matrixFormat = MatrixFormat::matrixFormatSparseCSR);
@@ -391,6 +390,7 @@ private:
     mutable void* m_tempHostBuffer; // used to copy values.
     mutable size_t m_tempHostBufferSize;
 
-    static bool do_sync;
+    GPUSparseMatrix* m_sliceOf; // if this is a slice, then this points to the owning matrix object that we sliced from
 };
-} } }
+
+}}}

@@ -320,7 +320,7 @@ void DSSMReader<ElemType>::StoreLabel(ElemType& labelStore, const LabelType& lab
 //             [out] each matrix resized if necessary containing data.
 // returns - true if there are more minibatches, false if no more minibatchs remain
 template <class ElemType>
-bool DSSMReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemType>*>& matrices)
+bool DSSMReader<ElemType>::GetMinibatch(StreamMinibatchInputs& matrices)
 {
     if (m_readNextSample >= m_totalSamples)
     {
@@ -329,9 +329,9 @@ bool DSSMReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemType>*
     // In my unit test example, the input matrices contain 5: N, S, fD, fQ and labels
     // Both N and S serve as a pre-set constant values, no need to change them
     // In this node, we only need to fill in these matrices: fD, fQ, labels
-    Matrix<ElemType>& featuresQ = *matrices[m_featuresNameQuery];
-    Matrix<ElemType>& featuresD = *matrices[m_featuresNameDoc];
-    Matrix<ElemType>& labels = *matrices[m_labelsName]; // will change this part later.
+    Matrix<ElemType>& featuresQ = matrices.GetInputMatrix<ElemType>(m_featuresNameQuery);
+    Matrix<ElemType>& featuresD = matrices.GetInputMatrix<ElemType>(m_featuresNameDoc);
+    Matrix<ElemType>& labels    = matrices.GetInputMatrix<ElemType>(m_labelsName); // will change this part later.  TODO: How?
 
     size_t actualMBSize = (m_readNextSample + m_mbSize > m_totalSamples) ? m_totalSamples - m_readNextSample : m_mbSize;
 
@@ -418,7 +418,7 @@ bool DSSMReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemType>*
 // GetLabelMapping - Gets the label mapping from integer index to label type
 // returns - a map from numeric datatype to native label type
 template <class ElemType>
-const std::map<typename IDataReader<ElemType>::LabelIdType, typename IDataReader<ElemType>::LabelType>& DSSMReader<ElemType>::GetLabelMapping(const std::wstring& sectionName)
+const std::map<IDataReader::LabelIdType, IDataReader::LabelType>& DSSMReader<ElemType>::GetLabelMapping(const std::wstring& sectionName)
 {
     if (m_cachingReader)
     {
@@ -431,7 +431,7 @@ const std::map<typename IDataReader<ElemType>::LabelIdType, typename IDataReader
 // labelMapping - mapping table from label values to IDs (must be 0-n)
 // note: for tasks with labels, the mapping table must be the same between a training run and a testing run
 template <class ElemType>
-void DSSMReader<ElemType>::SetLabelMapping(const std::wstring& /*sectionName*/, const std::map<typename IDataReader<ElemType>::LabelIdType, typename LabelType>& labelMapping)
+void DSSMReader<ElemType>::SetLabelMapping(const std::wstring& /*sectionName*/, const std::map<LabelIdType, LabelType>& labelMapping)
 {
     if (m_cachingReader)
     {

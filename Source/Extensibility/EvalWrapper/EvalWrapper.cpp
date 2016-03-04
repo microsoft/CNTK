@@ -2,7 +2,7 @@
 // Copyright (c) Microsoft. All rights reserved.
 // Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
 //
-// Wrapper.cpp -- Managed code wrapping the native EvaluateModel interface
+// EvalWrapper.cpp -- Managed code wrapping the native EvaluateModel interface
 //
 
 #include <windows.h>
@@ -245,17 +245,17 @@ private:
         if (typeid(ex) == typeid(ExceptionWithCallStack<runtime_error>))
         {
             ExceptionWithCallStack<runtime_error>& rich = dynamic_cast<ExceptionWithCallStack<runtime_error>&>((runtime_error&)ex);
-            return gcnew CNTKRuntimeException(gcnew System::String(rich.what()), gcnew System::String(rich.CallStack().c_str()));
+            return gcnew CNTKRuntimeException(gcnew System::String(rich.what()), gcnew System::String(rich.CallStack()));
         }
         else if (typeid(ex) == typeid(ExceptionWithCallStack<logic_error>))
         {
             ExceptionWithCallStack<logic_error>& rich = dynamic_cast<ExceptionWithCallStack<logic_error>&>((logic_error&)ex);
-            return gcnew CNTKLogicErrorException(gcnew System::String(ex.what()), gcnew System::String(rich.CallStack().c_str()));
+            return gcnew CNTKLogicErrorException(gcnew System::String(ex.what()), gcnew System::String(rich.CallStack()));
         }
         else if (typeid(ex) == typeid(ExceptionWithCallStack<invalid_argument>))
         {
             ExceptionWithCallStack<invalid_argument>& rich = dynamic_cast<ExceptionWithCallStack<invalid_argument>&>((invalid_argument&)ex);
-            return gcnew CNTKInvalidArgumentException(gcnew System::String(ex.what()), gcnew System::String(rich.CallStack().c_str()));
+            return gcnew CNTKInvalidArgumentException(gcnew System::String(ex.what()), gcnew System::String(rich.CallStack()));
         }
         else if (typeid(ex) == typeid(bad_alloc))
         {

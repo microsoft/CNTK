@@ -35,10 +35,8 @@ class MATH_API CPUMatrix : public BaseMatrix<ElemType>
     using B::m_elemSizeAllocated;
     using B::m_externalBuffer;
     using B::m_format;
-    using B::m_matrixName; // without this, base members would require to use thi-> in GCC
 public:
     CPUMatrix();
-    CPUMatrix(FILE* f, const char* matrixName); // matrixName is used to verify that correct matrix is read.
     CPUMatrix(const size_t numRows, const size_t numCols);
     CPUMatrix(const size_t numRows, const size_t numCols, ElemType* pArray, const size_t matrixFlags = matrixFlagNormal);
     CPUMatrix(const CPUMatrix<ElemType>& deepCopyFrom);                      // copy constructor, deep copy
@@ -55,7 +53,6 @@ public:
     using B::GetNumRows;
     using B::GetNumCols;
     using B::SetOwnBuffer;
-    using B::SetMatrixName;
 
     size_t BufferSize() const
     {
@@ -398,10 +395,6 @@ public:
             stream >> d_array[i];
         stream.GetMarker(fileMarkerEndSection, std::wstring(L"EMAT"));
         us.SetValue(numRows, numCols, d_array, matrixFlagNormal);
-        if (us.m_matrixName)
-            delete[] us.m_matrixName;
-        us.m_matrixName = new wchar_t[matrixName.length() + 1];
-        wmemcpy(us.m_matrixName, matrixName.c_str(), matrixName.length() + 1);
 
         delete[] d_array;
         return stream;
@@ -411,7 +404,7 @@ public:
         stream.PutMarker(fileMarkerBeginSection, std::wstring(L"BMAT"));
         stream << sizeof(ElemType);
 
-        std::wstring s = (us.m_matrixName == NULL) ? std::wstring(L"unnamed") : std::wstring(us.m_matrixName);
+        std::wstring s = std::wstring(L"unnamed");
         int format = us.m_format;
         stream << s << format;
 

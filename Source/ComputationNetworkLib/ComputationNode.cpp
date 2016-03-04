@@ -147,36 +147,10 @@ void ComputationNodeBase::ValidateInferBinaryInputDims()
 template <class ElemType>
 void ComputationNode<ElemType>::ValidateInferInputDimsFrom(const TensorShape& otherShape)
 {
-    if (OperationName() != OperationNameOf(LearnableParameter)) // only infer LearnableParameters (we can't propagate further)
-        return;
-
-    // see where we stand with our shape
-    bool hasMissingDims = m_sampleLayout.GetRank() == 0 || m_sampleLayout.GetNumElements() == 0;
-    if (!hasMissingDims) // all there--nothing to infer
-        return;
-
-    // infer at least one dimension
-    if (otherShape.GetRank() == 0 || otherShape.GetNumElements() == 0)
-        return; // LogicError("ValidateInferInputDimsFrom: Inferred dimensions must not be empty.");
-
-    // if no dimensions have been set at all, copy otherShape
-    // Don't verify dimensions in this case, because the node may have explicitly been defined as a vector of 0 elements.
-    bool hasAnyDim = false;
-    for (auto dim : m_sampleLayout.GetDims())
-        hasAnyDim |= dim != 0;
-    if (!hasAnyDim)
-        m_sampleLayout = otherShape;
-    else if (hasMissingDims) // we got a pre-existing shape: If it has zeroes, we fill them in from otherShape
-    {
-        if (m_sampleLayout.GetRank() != 0 && m_sampleLayout.GetRank() != otherShape.GetRank())
-            return; // LogicError("ValidateInferInputDimsFrom: Inferred dimensions must match in rank.");
-        SmallVector<size_t> newDims = m_sampleLayout.GetDims();
-        for (size_t i = 0; i < m_sampleLayout.GetRank(); i++)
-            if (newDims[i] == 0)
-                newDims[i] = otherShape[i];
-        m_sampleLayout = TensorShape(newDims);
-    }
-    fprintf(stderr, "Tensor shape of %ls %ls operation was inferred as [%s].\n", NodeName().c_str(), OperationName().c_str(), string(m_sampleLayout).c_str());
+    // we can only infer learnable parameters at this point
+    auto node = dynamic_cast<LearnableParameter<ElemType>*>(this);
+    if (node)
+        node->InferInputDimsFrom(otherShape);
 }
 
 // -----------------------------------------------------------------------
@@ -297,28 +271,34 @@ ScriptableObjects::ConfigurableRuntimeTypeRegister::Add<ComputationNodeBase> reg
 // register a boxed version of TensorShape with the ScriptableObject system
 // -----------------------------------------------------------------------
 
+// create a vector from config
+// Nested vectors are flattened, which is useful e.g. for building TensorShapes.
+template <typename E>
+static vector<E> VectorFromConfig(const ConfigValuePtr& valp)
+{
+    if (valp.Is<vector<E>>())
+        return valp.AsRef<vector<E>>(); // UNTESTED
+    else if (valp.Is<ConfigArray>())
+        return valp.AsRef<ConfigArray>().AsVector<E>([&](const wstring& msg) { valp.Fail(msg); }, /*flatten=*/true);
+    else
+        return std::vector<E>(1, (E)valp); // single element
+}
+
+// create a vector from config
+template <typename E>
+static vector<E> VectorFromConfig(const IConfigRecord& config, const wstring& paramName)
+{
+    const auto& valp = config[paramName];
+    return VectorFromConfig<E>(valp);
+}
+
 // e.g.
 // new TensorShape [ dims = 13:42 ]
 class BoxedTensorShape : public BoxOf<TensorShape>
 {
-    // create a TensorShape from config
-    static TensorShape TensorShapeFromConfig(const IConfigRecord& config)
-    {
-        const auto& valp = config[L"dims"];
-        if (valp.Is<TensorShape>())
-            return valp.AsRef<TensorShape>(); // UNTESTED
-        else if (valp.Is<ConfigArray>())
-            return TensorShape(valp.AsRef<ConfigArray>().AsVector<size_t>([&](const wstring& msg)
-                                                                          {
-                                                                              valp.Fail(msg);
-                                                                          }));
-        else
-            return TensorShape(std::vector<size_t>(1, (size_t) valp)); // single element
-    }
-
 public:
     BoxedTensorShape(const IConfigRecordPtr configp)
-        : BoxOf<TensorShape>(TensorShapeFromConfig(*configp))
+        : BoxOf<TensorShape>(TensorShape(VectorFromConfig<size_t>(*configp, L"dims")))
     {
     }
 };
@@ -326,24 +306,9 @@ public:
 template <typename E>
 class BoxedVector : public BoxOf<vector<E>>
 {
-    // create a vector from config
-    static vector<E> VectorFromConfig(const IConfigRecord& config)
-    {
-        const auto& valp = config[L"items"];
-        if (valp.Is<vector<E>>())
-            return valp.AsRef<vector<E>>(); // UNTESTED
-        else if (valp.Is<ConfigArray>())
-            return valp.AsRef<ConfigArray>().AsVector<E>([&](const wstring& msg)
-                                                         {
-                                                             valp.Fail(msg);
-                                                         });
-        else
-            return std::vector<E>(1, (E) valp); // single element
-    }
-
 public:
     BoxedVector(const IConfigRecordPtr configp)
-        : BoxOf<vector<E>>(VectorFromConfig(*configp))
+        : BoxOf<vector<E>>(VectorFromConfig<E>(*configp, L"items"))
     {
     }
 };

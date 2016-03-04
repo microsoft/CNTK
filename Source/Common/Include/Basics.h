@@ -65,13 +65,14 @@ __declspec_noreturn static inline void ThrowFormatted(const char* format, ...)
 
     va_start(args, format);
     vsprintf(buffer, format, args);
-#ifdef _DEBUG // print this to log before throwing, so we can see what the error is
+#ifdef _DEBUG // print this to log, so we can see what the error is before throwing
     fprintf(stderr, "\nAbout to throw exception '%s'\n", buffer);
 #endif
-    Microsoft::MSR::CNTK::ExceptionWithCallStack<E>::PrintCallStack();
-    std::string msg(buffer);
-    std::string callstack(Microsoft::MSR::CNTK::ExceptionWithCallStack<E>::GetCallStack());
-    throw ExceptionWithCallStack<E>(msg, callstack);
+    //Microsoft::MSR::CNTK::ExceptionWithCallStack<E>::PrintCallStack();
+    // Note: The call stack will skip 2 levels to suppress this function and its call sites (XXXError()).
+    //       If more layers are added here, it would have to be adjusted.
+    // TODO: Change ExceptionWithCallStack to take a parameter how many levels to skip.
+    throw ExceptionWithCallStack<E>(buffer, ExceptionWithCallStack<E>::GetCallStack(/*skipLevels=*/2, /*makeFunctionNamesStandOut=*/true));
 };
 #pragma warning(pop)
 
@@ -212,7 +213,7 @@ private:
     inline size_t _cprintf(const char* format, va_list args)
     {
 #ifdef _MSC_VER
-        return vsprintf_s(nullptr, 0, format, args);
+        return _vscprintf(format, args);
 #elif defined(__UNIX__)
         // TODO: Really??? Write to file in order to know the length of a string?
         FILE* dummyf = fopen("/dev/null", "wb");

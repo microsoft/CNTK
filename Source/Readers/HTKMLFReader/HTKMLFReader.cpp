@@ -122,6 +122,7 @@ void HTKMLFReader<ElemType>::PrepareForTrainingOrTesting(const ConfigRecordType&
     vector<wstring> statelistpaths;
     vector<size_t> numContextLeft;
     vector<size_t> numContextRight;
+    size_t numExpandToUtt = 0;
 
     std::vector<std::wstring> featureNames;
     std::vector<std::wstring> labelNames;
@@ -139,6 +140,12 @@ void HTKMLFReader<ElemType>::PrepareForTrainingOrTesting(const ConfigRecordType&
     {
         const ConfigRecordType& thisFeature = readerConfig(featureNames[i]);
         m_featDims.push_back(thisFeature(L"dim"));
+
+        bool expandToUtt = thisFeature(L"expandToUtterance", false); // should feature be processed as an ivector?
+        m_expandToUtt.push_back(expandToUtt);
+        if (expandToUtt)
+            numExpandToUtt++;
+
         intargvector contextWindow = thisFeature(L"contextWindow", ConfigRecordType::Array(intargvector(vector<int>{1})));
         if (contextWindow.size() == 1) // symmetric
         {
@@ -158,6 +165,10 @@ void HTKMLFReader<ElemType>::PrepareForTrainingOrTesting(const ConfigRecordType&
         {
             InvalidArgument("contextFrames must have 1 or 2 values specified, found %d", (int) contextWindow.size());
         }
+
+        if (expandToUtt && (numContextLeft[i] != 0 || numContextRight[1] != 0))
+            RuntimeError("contextWindow expansion not permitted when expandToUtterance=true");
+
         // update m_featDims to reflect the total input dimension (featDim x contextWindow), not the native feature dimension
         // that is what the lower level feature readers expect
         m_featDims[i] = m_featDims[i] * (1 + numContextLeft[i] + numContextRight[i]);
@@ -291,6 +302,12 @@ void HTKMLFReader<ElemType>::PrepareForTrainingOrTesting(const ConfigRecordType&
     if (iFeat != scriptpaths.size() || iLabel != mlfpathsmulti.size())
         RuntimeError("# of inputs files vs. # of inputs or # of output files vs # of outputs inconsistent\n");
 
+    if (iFeat == numExpandToUtt)
+        RuntimeError("At least one feature stream must be frame-based, not utterance-based");
+
+    if (m_expandToUtt[0]) // first feature stream is ivector type - that will mess up lower level feature reader
+        RuntimeError("The first feature stream in the file must be frame-based not utterance based. Please reorder the feature blocks of your config appropriately");
+
     if (readerConfig.Exists(L"randomize"))
     {
         wstring randomizeString = readerConfig.CanBeString(L"randomize") ? readerConfig(L"randomize") : wstring();
@@ -316,6 +333,9 @@ void HTKMLFReader<ElemType>::PrepareForTrainingOrTesting(const ConfigRecordType&
 
     if (readMethod == L"blockRandomize" && randomize == randomizeNone)
         InvalidArgument("'randomize' cannot be 'none' when 'readMethod' is 'blockRandomize'.");
+
+    if (readMethod == L"rollingWindow" && numExpandToUtt>0)
+        RuntimeError("rollingWindow reader does not support expandToUtt. Change to blockRandomize.\n");
 
     // read all input files (from multiple inputs)
     // TO DO: check for consistency (same number of files in each script file)
@@ -347,9 +367,18 @@ void HTKMLFReader<ElemType>::PrepareForTrainingOrTesting(const ConfigRecordType&
         {
             // first make slash consistent (sorry for linux users:this is not necessary for you)
             std::replace(rootpath.begin(), rootpath.end(), L'\\', L'/');
-            // second, remove trailling slash if there is any
-            std::wregex trailer(L"/+$");
-            rootpath = std::regex_replace(rootpath, trailer, wstring());
+
+            // second, remove trailing slash if there is any
+            // TODO: when gcc -v is 4.9 or greater, this should be: std::regex_replace(rootpath, L"\\/+$", wstring());
+            size_t stringPos = 0;
+            for (stringPos = rootpath.length() - 1; stringPos >= 0; stringPos--) {
+                if (rootpath[stringPos] != L'/')
+                {
+                    break;
+                }
+            }
+            rootpath = rootpath.substr(0, stringPos + 1);
+
             // third, join the rootpath with each entry in filelist
             if (!rootpath.empty())
             {
@@ -427,8 +456,23 @@ void HTKMLFReader<ElemType>::PrepareForTrainingOrTesting(const ConfigRecordType&
         foreach_index (i, infilesmulti[0])
         {
             msra::asr::htkfeatreader::parsedpath ppath(infilesmulti[0][i]);
-            const wstring key = regex_replace((wstring) ppath, wregex(L"\\.[^\\.\\\\/:]*$"), wstring()); // delete extension (or not if none)
-            restrictmlftokeys.insert(key);
+            const wstring ppathStr = (wstring) ppath;
+
+            // delete extension (or not if none) 
+            // TODO: when gcc -v is 4.9 or greater, this should be: regex_replace((wstring)ppath, wregex(L"\\.[^\\.\\\\/:]*$"), wstring()); 
+            int stringPos = 0;
+            for (stringPos = (int) ppathStr.length() - 1; stringPos >= 0; stringPos--) {
+                if (ppathStr[stringPos] == L'.' || ppathStr[stringPos] == L'\\' || ppathStr[stringPos] == L'/' || ppathStr[stringPos] == L':')
+                {
+                    break;
+                }
+            }
+            if (ppathStr[stringPos] == L'.') {
+                restrictmlftokeys.insert(ppathStr.substr(0, stringPos));
+            }
+            else {
+                restrictmlftokeys.insert(ppathStr);
+            }
         }
     }
     // get labels
@@ -463,7 +507,7 @@ void HTKMLFReader<ElemType>::PrepareForTrainingOrTesting(const ConfigRecordType&
 
         // now get the frame source. This has better randomization and doesn't create temp files
         bool minimizeReaderMemoryFootprint = readerConfig(L"minimizeReaderMemoryFootprint", true);
-        m_frameSource.reset(new msra::dbn::minibatchutterancesourcemulti(infilesmulti, labelsmulti, m_featDims, m_labelDims, numContextLeft, numContextRight, randomize, *m_lattices, m_latticeMap, m_frameMode, minimizeReaderMemoryFootprint));
+        m_frameSource.reset(new msra::dbn::minibatchutterancesourcemulti(infilesmulti, labelsmulti, m_featDims, m_labelDims, numContextLeft, numContextRight, randomize, *m_lattices, m_latticeMap, m_frameMode, minimizeReaderMemoryFootprint, m_expandToUtt));
         m_frameSource->setverbosity(m_verbosity);
     }
     else if (EqualCI(readMethod, L"rollingWindow"))
@@ -866,7 +910,7 @@ bool HTKMLFReader<ElemType>::GetHmmData(msra::asr::simplesenonehmm* hmm)
 // returns - true if there are more minibatches, false if no more minibatchs remain
 // TODO: Why do we have two read functions? Is one not a superset of the other?
 template <class ElemType>
-bool HTKMLFReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemType>*>& matrices)
+bool HTKMLFReader<ElemType>::GetMinibatch(StreamMinibatchInputs& matrices)
 {
     if (m_trainOrTest)
     {
@@ -879,7 +923,7 @@ bool HTKMLFReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemType
 }
 
 template <class ElemType>
-bool HTKMLFReader<ElemType>::GetMinibatchToTrainOrTest(std::map<std::wstring, Matrix<ElemType>*>& matrices)
+bool HTKMLFReader<ElemType>::GetMinibatchToTrainOrTest(StreamMinibatchInputs& matrices)
 {
     size_t id;
     size_t dim;
@@ -1056,7 +1100,7 @@ bool HTKMLFReader<ElemType>::GetMinibatchToTrainOrTest(std::map<std::wstring, Ma
                 {
                     // dereference matrix that corresponds to key (input/output name) and
                     // populate based on whether its a feature or a label
-                    Matrix<ElemType>& data = *matrices[iter->first]; // can be features or labels
+                    Matrix<ElemType>& data = matrices.GetInputMatrix<ElemType>(iter->first); // can be features or labels
                     if (m_nameToTypeMap[iter->first] == InputOutputTypes::real)
                     {
                         id = m_featureNameToIdMap[iter->first];
@@ -1130,7 +1174,7 @@ bool HTKMLFReader<ElemType>::GetMinibatchToTrainOrTest(std::map<std::wstring, Ma
                     {
                         // dereference matrix that corresponds to key (input/output name) and
                         // populate based on whether its a feature or a label
-                        Matrix<ElemType>& data = *matrices[iter->first]; // can be features or labels
+                        Matrix<ElemType>& data = matrices.GetInputMatrix<ElemType>(iter->first); // can be features or labels
 
                         if (m_nameToTypeMap[iter->first] == InputOutputTypes::real)
                         {
@@ -1194,7 +1238,7 @@ bool HTKMLFReader<ElemType>::GetMinibatchToTrainOrTest(std::map<std::wstring, Ma
                     {
                         // dereference matrix that corresponds to key (input/output name) and
                         // populate based on whether its a feature or a label
-                        Matrix<ElemType>& data = *matrices[iter->first]; // can be features or labels
+                        Matrix<ElemType>& data = matrices.GetInputMatrix<ElemType>(iter->first); // can be features or labels
 
                         if (m_nameToTypeMap[iter->first] == InputOutputTypes::real)
                         {
@@ -1331,7 +1375,7 @@ bool HTKMLFReader<ElemType>::GetMinibatchToTrainOrTest(std::map<std::wstring, Ma
             {
                 // dereference matrix that corresponds to key (input/output name) and
                 // populate based on whether its a feature or a label
-                Matrix<ElemType>& data = *matrices[iter->first]; // can be features or labels
+                Matrix<ElemType>& data = matrices.GetInputMatrix<ElemType>(iter->first); // can be features or labels
                 if (m_nameToTypeMap[iter->first] == InputOutputTypes::real)
                 {
                     id = m_featureNameToIdMap[iter->first];
@@ -1362,7 +1406,7 @@ bool HTKMLFReader<ElemType>::GetMinibatchToTrainOrTest(std::map<std::wstring, Ma
 // copy an utterance into the minibatch given a location (parallel-sequence index, start frame)
 // TODO: This should use DataFor(). But for that, DataFor() will have to move out from ComputationNode. Ah, it has!
 template <class ElemType>
-void HTKMLFReader<ElemType>::fillOneUttDataforParallelmode(std::map<std::wstring, Matrix<ElemType>*>& matrices, size_t startFr,
+void HTKMLFReader<ElemType>::fillOneUttDataforParallelmode(StreamMinibatchInputs& matrices, size_t startFr,
                                                            size_t framenum, size_t channelIndex, size_t sourceChannelIndex)
 {
     size_t id;
@@ -1370,12 +1414,11 @@ void HTKMLFReader<ElemType>::fillOneUttDataforParallelmode(std::map<std::wstring
     size_t numOfFea = m_featuresBufferMultiIO.size();
     size_t numOfLabel = m_labelsBufferMultiIO.size();
 
-    typename std::map<std::wstring, Matrix<ElemType>*>::iterator iter;
-    for (iter = matrices.begin(); iter != matrices.end(); iter++)
+    for (auto iter = matrices.begin(); iter != matrices.end(); iter++)
     {
         // dereference matrix that corresponds to key (input/output name) and
         // populate based on whether its a feature or a label
-        Matrix<ElemType>& data = *matrices[iter->first]; // can be features or labels
+        Matrix<ElemType>& data = matrices.GetInputMatrix<ElemType>(iter->first); // can be features or labels
 
         if (m_nameToTypeMap[iter->first] == InputOutputTypes::real)
         {
@@ -1431,7 +1474,7 @@ void HTKMLFReader<ElemType>::fillOneUttDataforParallelmode(std::map<std::wstring
 }
 
 template <class ElemType>
-bool HTKMLFReader<ElemType>::GetMinibatchToWrite(std::map<std::wstring, Matrix<ElemType>*>& matrices)
+bool HTKMLFReader<ElemType>::GetMinibatchToWrite(StreamMinibatchInputs& matrices)
 {
     std::map<std::wstring, size_t>::iterator iter;
     if (m_checkDictionaryKeys)
@@ -1445,12 +1488,12 @@ bool HTKMLFReader<ElemType>::GetMinibatchToWrite(std::map<std::wstring, Matrix<E
             }
         }
         /*
-                   for (auto iter=matrices.begin();iter!=matrices.end();iter++)
-                   {
-                   if (m_featureNameToIdMap.find(iter->first)==m_featureNameToIdMap.end())
-                   RuntimeError(msra::strfun::strprintf("minibatch requested for input node %ws not found in reader - cannot generate input\n",iter->first.c_str()));
-                   }
-                   */
+         for (auto iter=matrices.begin();iter!=matrices.end();iter++)
+         {
+         if (m_featureNameToIdMap.find(iter->first)==m_featureNameToIdMap.end())
+         RuntimeError(msra::strfun::strprintf("minibatch requested for input node %ws not found in reader - cannot generate input\n",iter->first.c_str()));
+         }
+         */
         m_checkDictionaryKeys = false;
     }
 
@@ -1459,6 +1502,7 @@ bool HTKMLFReader<ElemType>::GetMinibatchToWrite(std::map<std::wstring, Matrix<E
         m_fileEvalSource->Reset();
 
         // load next file (or set of files)
+        size_t nfr = 0;
         foreach_index (i, m_inputFilesMultiIO)
         {
             msra::asr::htkfeatreader reader;
@@ -1469,9 +1513,19 @@ bool HTKMLFReader<ElemType>::GetMinibatchToWrite(std::map<std::wstring, Matrix<E
             string featkind;
             unsigned int sampperiod;
             msra::util::attempt(5, [&]()
-                                {
-                                    reader.read(path, featkind, sampperiod, feat); // whole file read as columns of feature vectors
-                                });
+            {
+                reader.read(path, featkind, sampperiod, feat); // whole file read as columns of feature vectors
+            });
+            if (i == 0)
+                nfr = feat.cols();
+            else if (feat.cols() == 1 && nfr > 1)
+            { // This broadcasts a vector to be multiple columns, as needed for i-vector support
+                msra::dbn::matrix feat_col(feat);
+                feat.resize(feat.rows(), nfr);
+                for (size_t i = 0; i < feat.rows(); i++)
+                    for (size_t j = 0; j < feat.cols(); j++)
+                        feat(i, j) = feat_col(i, 0);
+            }
             fprintf(stderr, "evaluate: reading %d frames of %ls\n", (int) feat.cols(), ((wstring) path).c_str());
             m_fileEvalSource->AddFile(feat, featkind, sampperiod, i);
         }
@@ -1482,15 +1536,14 @@ bool HTKMLFReader<ElemType>::GetMinibatchToWrite(std::map<std::wstring, Matrix<E
 
         // populate input matrices
         bool first = true;
-        typename std::map<std::wstring, Matrix<ElemType>*>::iterator iter;
-        for (iter = matrices.begin(); iter != matrices.end(); iter++)
+        for (auto iter = matrices.begin(); iter != matrices.end(); iter++)
         {
             // dereference matrix that corresponds to key (input/output name) and
             // populate based on whether its a feature or a label
 
             if (m_nameToTypeMap.find(iter->first) != m_nameToTypeMap.end() && m_nameToTypeMap[iter->first] == InputOutputTypes::real)
             {
-                Matrix<ElemType>& data = *matrices[iter->first]; // can be features or labels   (TODO: Really? Didn't we just ^^^ check that it is 'real'?)
+                Matrix<ElemType>& data = matrices.GetInputMatrix<ElemType>(iter->first); // can be features or labels   (TODO: Really? Didn't we just ^^^ check that it is 'real'?)
                 size_t id = m_featureNameToIdMap[iter->first];
                 size_t dim = m_featureNameToDimMap[iter->first];
 
@@ -1710,7 +1763,7 @@ bool HTKMLFReader<ElemType>::ReNewBufferForMultiIO(size_t i)
 // GetLabelMapping - Gets the label mapping from integer to type in file
 // mappingTable - a map from numeric datatype to native label type stored as a string
 template <class ElemType>
-const std::map<typename IDataReader<ElemType>::LabelIdType, typename IDataReader<ElemType>::LabelType>& HTKMLFReader<ElemType>::GetLabelMapping(const std::wstring& /*sectionName*/)
+const std::map<IDataReader::LabelIdType, IDataReader::LabelType>& HTKMLFReader<ElemType>::GetLabelMapping(const std::wstring& /*sectionName*/)
 {
     return m_idToLabelMap;
 }
@@ -1719,7 +1772,7 @@ const std::map<typename IDataReader<ElemType>::LabelIdType, typename IDataReader
 // labelMapping - mapping table from label values to IDs (must be 0-n)
 // note: for tasks with labels, the mapping table must be the same between a training run and a testing run
 template <class ElemType>
-void HTKMLFReader<ElemType>::SetLabelMapping(const std::wstring& /*sectionName*/, const std::map<typename IDataReader<ElemType>::LabelIdType, typename IDataReader<ElemType>::LabelType>& labelMapping)
+void HTKMLFReader<ElemType>::SetLabelMapping(const std::wstring& /*sectionName*/, const std::map<IDataReader::LabelIdType, IDataReader::LabelType>& labelMapping)
 {
     m_idToLabelMap = labelMapping;
 }

@@ -29,6 +29,7 @@
 #include "ScriptableObjects.h"
 #include <map>
 #include <string>
+#include <memory>
 
 // forward-declare these lattice-related types to avoid having to include and pollute everything with lattice-related headers
 namespace msra { namespace dbn {  class latticepair; class latticesource; } }
@@ -47,15 +48,57 @@ const size_t randomizeNone = 0;
 // We use this constant as a stand in for the total number of frames in the dataset.
 const size_t requestDataSize = randomizeAuto;
 
+// this class contains the input data structures to be filled in by the GetMinibatch() call
+class StreamMinibatchInputs
+{
+    typedef map<std::wstring, MatrixBasePtr> MapType;
+    MapType matrices;
+public:
+    void AddInput(const std::wstring& nodeName, const MatrixBasePtr& matrix) { AddInputMatrix(nodeName, matrix); } // use this where entire entry is copied (UCIFastReader::GetMinibatch() async)
+    // TODO: GetInput() will return a struct
+    // access to matrix entries
+    void AddInputMatrix(const std::wstring& nodeName, const MatrixBasePtr& matrix) { matrices[nodeName] = matrix; }
+    bool HasInput(const std::wstring& nodeName) const { return matrices.find(nodeName) != matrices.end(); }
+    template<class ElemType>
+    Matrix<ElemType>& GetInputMatrix(const std::wstring& nodeName) const
+    {
+        auto iter = matrices.find(nodeName);
+        if (iter == matrices.end())
+            LogicError("GetInputMatrix: Attempted to access non-existent input stream '%ls'", nodeName.c_str());
+        assert(iter->second);
+        auto* matrixp = dynamic_cast<Matrix<ElemType>*>(iter->second.get());
+        if (!matrixp)
+        {
+            // print a rather rich error to track down a regression failure
+            auto isFloat  = !!dynamic_cast<Matrix<float>*>(iter->second.get());
+            auto isDouble = !!dynamic_cast<Matrix<double>*>(iter->second.get());
+            LogicError("GetInputMatrix<%s>: Attempted to access input stream '%ls' with wrong precision, got %s {%d,%d} instead of %s.",
+                        typeid(ElemType).name(), nodeName.c_str(), typeid(iter->second.get()).name(), (int)isFloat, (int)isDouble, typeid(Matrix<ElemType>*).name());
+        }
+        return *matrixp;
+    }
+    // iterating
+    // TODO: Abstract this.
+    MapType::iterator begin() { return matrices.begin(); }
+    MapType::iterator end()   { return matrices.end(); }
+    MapType::iterator find(const std::wstring& nodeName) { return matrices.find(nodeName); }
+    MapType::const_iterator begin() const { return matrices.begin(); }
+    MapType::const_iterator end()   const { return matrices.end(); }
+    MapType::const_iterator find(const std::wstring& nodeName) const { return matrices.find(nodeName); }
+    void clear() { matrices.clear(); }
+    // only used by test code:
+    void insert(std::pair<wstring, shared_ptr<MatrixBase>> pair) { matrices.insert(pair); }
+};
+
 // Data Reader interface
 // implemented by DataReader and underlying classes
-template <class ElemType>
 class DATAREADER_API IDataReader
 {
 public:
     typedef std::string  LabelType;     // surface form of an input token
     typedef unsigned int LabelIdType;   // input token mapped to an integer  --TODO: why not size_t? Does this save space?
 
+    // BUGBUG: We should not have data members in an interace!
     unsigned m_seed;
     size_t mRequestedNumParallelSequences; // number of desired parallel sequences in each minibatch
 
@@ -81,7 +124,7 @@ public:
         return StartMinibatchLoop(mbSize, epoch, requestedEpochSamples);
     }
 
-    virtual bool GetMinibatch(std::map<std::wstring, Matrix<ElemType>*>& matrices) = 0;
+    virtual bool GetMinibatch(StreamMinibatchInputs& matrices) = 0;
     virtual bool GetMinibatch4SE(std::vector<shared_ptr<const msra::dbn::latticepair>>& /*latticeinput*/, vector<size_t>& /*uids*/, vector<size_t>& /*boundaries*/, vector<size_t>& /*extrauttmap*/)
     {
         NOT_IMPLEMENTED;
@@ -121,11 +164,11 @@ public:
     {
         m_seed = seed;
     }
-    virtual bool GetProposalObs(std::map<std::wstring, Matrix<ElemType>*>*, const size_t, vector<size_t>&)
+    virtual bool GetProposalObs(StreamMinibatchInputs*, const size_t, vector<size_t>&)
     {
         return false;
     }
-    virtual void InitProposals(std::map<std::wstring, Matrix<ElemType>*>*)
+    virtual void InitProposals(StreamMinibatchInputs*)
     {
     }
     virtual bool CanReadFor(wstring /* nodeName */) // return true if this reader can output for a node with name nodeName  --TODO: const wstring&
@@ -133,7 +176,7 @@ public:
         return false;
     }
 
-    bool GetFrame(std::map<std::wstring, Matrix<ElemType>*>& /*matrices*/, const size_t /*tidx*/, vector<size_t>& /*history*/)
+    bool GetFrame(StreamMinibatchInputs& /*matrices*/, const size_t /*tidx*/, vector<size_t>& /*history*/)
     {
         NOT_IMPLEMENTED;
     }
@@ -144,7 +187,7 @@ public:
     // TODO: move this out of the reader.
     virtual bool GetMinibatchCopy(
         std::vector<std::vector<std::pair<wstring, size_t>>>& /*uttInfo*/,
-        std::map<std::wstring, Matrix<ElemType>*>& /*matrices*/,
+        StreamMinibatchInputs& /*matrices*/,
         MBLayoutPtr /*data copied here*/)
     {
         return false;
@@ -156,33 +199,26 @@ public:
     // TODO: move this out of the reader.
     virtual bool SetNetOutput(
         const std::vector<std::vector<std::pair<wstring, size_t>>>& /*uttInfo*/,
-        const Matrix<ElemType>& /*outputs*/,
+        const MatrixBase& /*outputs*/,
         const MBLayoutPtr)
     {
         return false;
     }
 };
+typedef std::shared_ptr<IDataReader> IDataReaderPtr;
 
-// GetReader - get a reader type from the DLL
-// since we have 2 reader types based on template parameters, exposes 2 exports
-// could be done directly the templated name, but that requires mangled C++ names
-template <class ElemType>
-void DATAREADER_API GetReader(IDataReader<ElemType>** preader);
-extern "C" DATAREADER_API void GetReaderF(IDataReader<float>** preader);
-extern "C" DATAREADER_API void GetReaderD(IDataReader<double>** preader);
+// GetReaderX() - get a reader type from the DLL
+// The F version gets the 'float' version, and D gets 'double'.
+extern "C" DATAREADER_API void GetReaderF(IDataReader** preader);
+extern "C" DATAREADER_API void GetReaderD(IDataReader** preader);
 
 // Data Reader class
 // interface for clients of the Data Reader
 // mirrors the IDataReader interface, except the Init method is private (use the constructor)
-template <class ElemType>
-class DataReader : public IDataReader<ElemType>, protected Plugin, public ScriptableObjects::Object
+class DataReader : public IDataReader, protected Plugin, public ScriptableObjects::Object
 {
-    typedef typename IDataReader<ElemType>::LabelType LabelType;
-    typedef typename IDataReader<ElemType>::LabelIdType LabelIdType;
-
-private:
     vector<wstring> m_ioNames;                          // TODO: why are these needed, why not loop over m_dataReaders?
-    map<wstring, IDataReader<ElemType>*> m_dataReaders; // readers
+    map<wstring, IDataReader*> m_dataReaders; // readers
 
     // Init - Reader Initialize for multiple data sets
     // config - [in] configuration parameters for the datareader
@@ -248,7 +284,7 @@ public:
     // matrices - [in] a map with named matrix types (i.e. 'features', 'labels') mapped to the corresponding matrix,
     //             [out] each matrix resized if necessary containing data.
     // returns - true if there are more minibatches, false if no more minibatchs remain
-    virtual bool GetMinibatch(std::map<std::wstring, Matrix<ElemType>*>& matrices);
+    virtual bool GetMinibatch(StreamMinibatchInputs& matrices);
     virtual bool GetMinibatch4SE(std::vector<shared_ptr<const msra::dbn::latticepair>>& latticeinput, vector<size_t>& uids, vector<size_t>& boundaries, vector<size_t>& extrauttmap);
     virtual bool GetHmmData(msra::asr::simplesenonehmm* hmm);
 
@@ -283,22 +319,22 @@ public:
     // useful if some of the computation has to happen in the reader.
     virtual bool GetMinibatchCopy(
         std::vector<std::vector<std::pair<wstring, size_t>>>& uttInfo,
-        std::map<std::wstring, Matrix<ElemType>*>& matrices,
+        StreamMinibatchInputs& matrices,
         MBLayoutPtr);
 
     // Sets the neural network output to the reader. This can be useful if some
     // of the computation has to happen in the reader.
     virtual bool SetNetOutput(
         const std::vector<std::vector<std::pair<wstring, size_t>>>& uttInfo,
-        const Matrix<ElemType>& outputs,
+        const MatrixBase& outputs,
         const MBLayoutPtr);
 
     void CopyMBLayoutTo(MBLayoutPtr pMBLayout);
 
     void SetRandomSeed(int);
 
-    bool GetProposalObs(std::map<std::wstring, Matrix<ElemType>*>*, const size_t, vector<size_t>&);
-    void InitProposals(std::map<std::wstring, Matrix<ElemType>*>* matrices);
+    bool GetProposalObs(StreamMinibatchInputs*, const size_t, vector<size_t>&);
+    void InitProposals(StreamMinibatchInputs* matrices);
 };
 
 }}}

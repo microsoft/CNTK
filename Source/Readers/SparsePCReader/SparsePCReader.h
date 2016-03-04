@@ -21,12 +21,8 @@
 namespace Microsoft { namespace MSR { namespace CNTK {
 
 template <class ElemType>
-class SparsePCReader : public IDataReader<ElemType>
+class SparsePCReader : public IDataReader
 {
-public:
-    using LabelType = typename IDataReader<ElemType>::LabelType;
-    using LabelIdType = typename IDataReader<ElemType>::LabelIdType;
-private:
     ConfigParameters m_readerConfig;
     std::wstring m_file;
     size_t m_featureCount;
@@ -77,7 +73,7 @@ public:
         InitFromConfig(config);
     }
     virtual void StartMinibatchLoop(size_t mbSize, size_t epoch, size_t requestedEpochSamples = requestDataSize);
-    virtual bool GetMinibatch(std::map<std::wstring, Matrix<ElemType>*>& matrices);
+    virtual bool GetMinibatch(StreamMinibatchInputs& matrices);
 
     size_t GetNumParallelSequences()
     {

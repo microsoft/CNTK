@@ -51,7 +51,8 @@ bool EqualInsensitive(std::string& string1, const char* string2, const char* alt
 enum MELProperty
 {
     melPropNull,
-    melPropComputeGradient,
+    melPropParameterUpdateRequired,
+    melPropLearningRateMultiplier,
     melPropFeature,
     melPropLabel,
     melPropFinalCriterion,
@@ -407,9 +408,13 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
 
         std::string propName = params[1];
         MELProperty prop = melPropNull;
-        if (EqualInsensitive(propName, "computeGradient", "needsGradient") || EqualInsensitive(propName, "needGradient"))
+        if (EqualInsensitive(propName, "needGradient", "needsGradient") || EqualInsensitive(propName, "computeGradient"))
         {
-            prop = melPropComputeGradient;
+            prop = melPropParameterUpdateRequired;  // for backward compatibility
+        }
+        else if (EqualInsensitive(propName, "learningRateMultiplier"))
+        {
+            prop = melPropLearningRateMultiplier;
         }
         else if (EqualInsensitive(propName, "feature"))
         {
@@ -460,9 +465,14 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
         {
             switch (prop)
             {
-            case melPropComputeGradient:
+            case melPropParameterUpdateRequired:  // for backward compatibility
             {
-                node->SetParameterUpdateRequired(params[2]);
+                node->SetLearningRateMultiplier((bool)params[2] ? 1.0f : 0);
+                break;
+            }
+            case melPropLearningRateMultiplier:
+            {
+                node->SetLearningRateMultiplier((float)params[2]);
                 break;
             }
             case melPropFeature:
@@ -542,9 +552,14 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
 
         std::string propName = params[1];
         MELProperty prop = melPropNull;
-        if (EqualInsensitive(propName, "ComputeGradient", "NeedsGradient"))
+
+        if (EqualInsensitive(propName, "needGradient", "needsGradient") || EqualInsensitive(propName, "computeGradient"))
         {
-            prop = melPropComputeGradient;
+            prop = melPropParameterUpdateRequired;  // for backward compatability
+        }
+        else if (EqualInsensitive(propName, "learningRateMultiplier"))
+        {
+            prop = melPropLearningRateMultiplier;
         }
         else if (EqualInsensitive(propName, "batchNormEvalMode"))
         {
@@ -566,16 +581,22 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
         {
             switch (prop)
             {
-            case melPropComputeGradient:
+            case melPropParameterUpdateRequired:  //for backward compatibility
             {
-                bool needGradient = params[2];
-                netNdl->cn->SetLearnableNodesBelowNeedGradient(needGradient, node);
+                float learningRateMultiplier = (bool)params[2] ? 1.0f : 0;
+                netNdl->cn->SetLearnableNodesBelowLearningRateMultiplier(learningRateMultiplier, node);
+                break;
+            }
+            case melPropLearningRateMultiplier:
+            {
+                float learningRateMultiplier = (float)params[2];
+                netNdl->cn->SetLearnableNodesBelowLearningRateMultiplier(learningRateMultiplier, node);
                 break;
             }
             case melPropBatchNormMode:
             {
                 bool evalMode = params[2];
-                netNdl->cn->SetBatchNormlizationNodesBelowEvalMode(evalMode, node);
+                netNdl->cn->SetBatchNormalizationNodesBelowEvalMode(evalMode, node);
                 break;
             }
             default:

@@ -166,6 +166,8 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
+MatrixBase::~MatrixBase() { }
+
 #pragma region Constructors, destructors and other static matrix builders
 
 //This function will only initialize default bland matrix. The actual matrices need to allocated
@@ -285,42 +287,6 @@ Matrix<ElemType>::Matrix(BaseMatrix<ElemType>* baseMatrix, ElemType* pArray, DEV
     }
     m_baseMatrix = baseMatrix;
     m_baseMatrix->SetArray(pArray);
-}
-
-//matrixName is used to verify that correct matrix is read.
-template <class ElemType>
-Matrix<ElemType>::Matrix(FILE* f, const char* matrixName, DEVICEID_TYPE deviceId, const MatrixType matrixType)
-{
-    Init(deviceId);
-
-    if (matrixType == MatrixType::SPARSE)
-    {
-        if (m_preferredDeviceId == CPUDEVICE)
-        {
-            NOT_IMPLEMENTED;
-            // m_CPUSparseMatrix = new CPUSparseMatrix<ElemType>(f,matrixName);
-            SetDataLocation(CPU, SPARSE);
-        }
-        else
-        {
-            NOT_IMPLEMENTED;
-            // m_GPUSparseMatrix = new GPUSparseMatrix<ElemType>(f,matrixName, m_preferredDeviceId);
-            SetDataLocation(GPU, SPARSE);
-        }
-    }
-    else
-    {
-        if (m_preferredDeviceId == CPUDEVICE)
-        {
-            m_CPUMatrix = new CPUMatrix<ElemType>(f, matrixName);
-            SetDataLocation(CPU, DENSE);
-        }
-        else
-        {
-            m_GPUMatrix = new GPUMatrix<ElemType>(f, matrixName, m_preferredDeviceId);
-            SetDataLocation(GPU, DENSE);
-        }
-    }
 }
 
 template <class ElemType>
@@ -1246,14 +1212,17 @@ void Matrix<ElemType>::SetDiagonalValue(const ElemType v)
 template <class ElemType>
 void Matrix<ElemType>::SetDiagonalValue(const Matrix<ElemType>& vector)
 {
-    if (IsEmpty() || vector.IsEmpty())
-        LogicError("SetDiagonalValue: Matrix is empty.");
-
     if (GetNumRows() != GetNumCols())
         LogicError("SetDiagonalValue: NumRows and NumCols do not agree.");
 
     if (vector.GetNumRows() != 1 && vector.GetNumCols() != 1)
-        LogicError("SetDiagonalValue: input vector must be a vector.");
+        LogicError("SetDiagonalValue: Input vector must be a vector.");
+
+    if (vector.GetNumRows() * vector.GetNumCols() != GetNumRows())
+        LogicError("SetDiagonalValue: Input vector must match matrix dimension.");
+
+    if (IsEmpty())
+        return;
 
     DecideAndMoveToRightDevice(*this, vector);
 
@@ -1287,7 +1256,7 @@ template <class ElemType>
 void Matrix<ElemType>::SetUniformRandomValue(const ElemType low, const ElemType high, unsigned long seed)
 {
     if (IsEmpty())
-        LogicError("SetUniformRandomValue: Matrix is empty.");
+        return;
 
     DISPATCH_MATRIX_ON_FLAG(this,
                             this,
@@ -1321,7 +1290,7 @@ void Matrix<ElemType>::AddGaussianRandomValue(const ElemType mean, const ElemTyp
         InvalidArgument("SetUniformRandomValue: sigma must be a positive value.");
 
     if (IsEmpty())
-        LogicError("SetUniformRandomValue: Matrix is empty.");
+        return;
 
     DISPATCH_MATRIX_ON_FLAG(this,
                             this,
@@ -1337,7 +1306,7 @@ template <class ElemType>
 void Matrix<ElemType>::SetUniformRandomMask(const ElemType maskRate, const ElemType scaleValue, unsigned long seed)
 {
     if (IsEmpty())
-        LogicError("SetUniformRandomMask: Matrix is empty.");
+        return;
 
     DISPATCH_MATRIX_ON_FLAG(this,
                             this,
@@ -3397,39 +3366,6 @@ void Matrix<ElemType>::VectorMin(Matrix<ElemType>& minIndexes, Matrix<ElemType>&
 #pragma region Other helper Functions
 
 template <class ElemType>
-wchar_t* Matrix<ElemType>::GetMatrixName() const
-{
-    return m_baseMatrix->GetMatrixName();
-}
-
-template <class ElemType>
-void Matrix<ElemType>::SetMatrixName(const wchar_t* s)
-{
-    if (m_currentDataLocation == CurrentDataLocation::BOTH)
-    {
-        if (GetMatrixType() == MatrixType::DENSE)
-        {
-            m_CPUMatrix->SetMatrixName(s);
-            m_GPUMatrix->SetMatrixName(s);
-        }
-        else if (GetMatrixType() == MatrixType::SPARSE)
-        {
-            m_CPUSparseMatrix->SetMatrixName(s);
-            m_GPUSparseMatrix->SetMatrixName(s);
-        }
-    }
-    else
-    {
-        DISPATCH_MATRIX_ON_FLAG(this,
-                                nullptr,
-                                m_CPUMatrix->SetMatrixName(s),
-                                m_GPUMatrix->SetMatrixName(s),
-                                m_CPUSparseMatrix->SetMatrixName(s),
-                                m_GPUSparseMatrix->SetMatrixName(s));
-    }
-}
-
-template <class ElemType>
 int Matrix<ElemType>::GetDeviceId() const
 {
     if (m_currentDataLocation == CurrentDataLocation::NONE)
@@ -5097,4 +5033,5 @@ template void Matrix<char>::SetValue(const char);
 template void Matrix<char>::SetValue(size_t numRows, const size_t numCols, int deviceId, char* pArray, size_t matrixFlags);
 template bool Matrix<char>::IsEmpty() const;
 template void Matrix<char>::Resize(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve, bool growOnly);
-} } }
+
+}}}

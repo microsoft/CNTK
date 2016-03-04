@@ -1,0 +1,61 @@
+modelPath=$RunDir$/models/dssm.net
+
+MBSize=4096
+LRate=0.0001
+
+# deviceId=-1 for CPU, >=0 for GPU devices
+DeviceId=-1
+
+parallelTrain=true
+
+command = train
+precision = float
+traceGPUMemoryAllocations=0
+train = [
+    action = train
+    numMBsToShowResult=10
+    deviceId=$DeviceId$
+    minibatchSize = $MBSize$
+    modelPath = $modelPath$
+    traceLevel = 1
+
+    SGD = [
+        epochSize=102399
+        learningRatesPerSample = $LRate$
+        momentumPerMB = 0.9
+        maxEpochs=3
+        ParallelTrain=[
+            parallelizationStartEpoch=1
+            parallelizationMethod=ModelAveragingSGD
+            distributedMBReading=true
+            ModelAveragingSGD=[
+                SyncFrequencyInFrames=1024
+            ]
+        ]
+
+		gradUpdateType=none
+		gradientClippingWithTruncation=true
+		clippingThresholdPerSample=1#INF
+    ]
+
+]
+
+NDLNetworkBuilder = [
+    networkDescription = $ConfigDir$/dssm.ndl
+]
+
+reader = [
+    # reader to use
+    readerType = LibSVMBinaryReader
+    miniBatchMode = Partial
+    randomize = 0
+    file = $DataDir$/train.all.bin
+]
+
+cvReader = [
+    # reader to use
+    readerType = LibSVMBinaryReader
+    miniBatchMode = Partial
+    randomize = 0
+    file = $DataDir$/train.all.bin
+]

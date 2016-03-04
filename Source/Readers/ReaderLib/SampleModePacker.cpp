@@ -77,10 +77,8 @@ Minibatch SampleModePacker::ReadMinibatch()
     auto sequences = m_transformer->GetNextSequences(m_minibatchSize);
     const auto& batch = sequences.m_data;
 
-    Minibatch minibatch;
-    minibatch.m_endOfEpoch = sequences.m_endOfEpoch;
-
-    if (batch.size() == 0)
+    Minibatch minibatch(sequences.m_endOfEpoch);
+    if (batch.empty())
     {
         return minibatch;
     }
@@ -93,10 +91,9 @@ Minibatch SampleModePacker::ReadMinibatch()
 
         auto& buffer = m_streamBuffers[streamIndex];
 
-
         auto streamMinibatch = std::make_shared<StreamMinibatch>();
         streamMinibatch->m_data = buffer.m_data.get();
-        // TODO: m_dataSize not really used and can be removed.
+        // TODO: m_dataSize not really used and can be removed (?)
         // streamMinibatch->m_dataSize = buffer.m_size;
         streamMinibatch->m_layout = layout;
 

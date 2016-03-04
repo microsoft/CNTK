@@ -118,8 +118,8 @@
     <ClCompile Include="..\..\Common\TimerUtility.cpp">
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="DataReader.cpp" />
-    <ClCompile Include="DataWriter.cpp" />
+    <ClCompile Include="Exports.cpp" />
+    <ClCompile Include="DataWriterLocal.cpp" />
     <ClCompile Include="dllmain.cpp">
       <CompileAsManaged Condition="$(DebugBuild)">false</CompileAsManaged>
       <PrecompiledHeader Condition="$(DebugBuild)">

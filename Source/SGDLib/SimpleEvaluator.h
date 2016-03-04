@@ -10,6 +10,10 @@
 #include "ComputationNetwork.h"
 #include "DataReaderHelpers.h"
 #include "TrainingNodes.h" // TODO: we should move the functions that depend on these to the .cpp
+#include "ProgressTracing.h"
+#include "DistGradHeader.h"
+#include "IDistGradAggregator.h"
+#include "SimpleDistGradAggregator.h"
 
 #include <vector>
 #include <string>
@@ -19,18 +23,29 @@ using namespace std;
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
+template <class ElemType>
+class IDistGradAggregator;
+
 // TODO: get rid of dependency on ElemType
 template <class ElemType>
 class SimpleEvaluator
 {
 public:
-    SimpleEvaluator(ComputationNetworkPtr net, const size_t numMBsToShowResult = 100, const int traceLevel = 0)
-        : m_net(net), m_numMBsToShowResult(numMBsToShowResult), m_traceLevel(traceLevel)
+    SimpleEvaluator(ComputationNetworkPtr net, const bool parallelRun, const size_t numMBsToShowResult = 100, const int traceLevel = 0, const size_t maxSamplesInRAM = SIZE_MAX,
+					const size_t numSubminiBatches = 1)
+        : m_net(net), 
+          m_numMBsToShowResult(numMBsToShowResult), 
+          m_traceLevel(traceLevel),
+          m_maxSamplesInRAM(maxSamplesInRAM), 
+          m_numSubminiBatches(numSubminiBatches), 
+          m_parallelRun(parallelRun), 
+          m_distGradAgg(nullptr),
+          m_gradHeader(nullptr)
     {
     }
 
     // returns evaluation node values per sample determined by evalNodeNames (which can include both training and eval criterion nodes)
-    vector<double> Evaluate(IDataReader<ElemType>* dataReader, const vector<wstring>& evalNodeNames, const size_t mbSize, const size_t testSize = requestDataSize)
+    vector<double> Evaluate(IDataReader* dataReader, const vector<wstring>& evalNodeNames, const size_t mbSize, const size_t testSize = requestDataSize)
     {
         // determine nodes to evaluate
         std::vector<ComputationNodeBasePtr> evalNodes;
@@ -75,11 +90,11 @@ public:
         auto& featureNodes = m_net->FeatureNodes();
         auto& labelNodes = m_net->LabelNodes();
 
-        std::map<std::wstring, Matrix<ElemType>*> inputMatrices;
-        for (size_t i = 0; i < featureNodes.size(); i++)
-            inputMatrices[featureNodes[i]->NodeName()] = &dynamic_pointer_cast<ComputationNode<ElemType>>(featureNodes[i])->Value();
-        for (size_t i = 0; i < labelNodes.size(); i++)
-            inputMatrices[labelNodes[i]->NodeName()] = &dynamic_pointer_cast<ComputationNode<ElemType>>(labelNodes[i])->Value();
+        StreamMinibatchInputs inputMatrices;
+        for (auto& node : featureNodes)
+            inputMatrices.AddInputMatrix(node->NodeName(), node->ValuePtr());
+        for (auto& node : labelNodes)
+            inputMatrices.AddInputMatrix(node->NodeName(), node->ValuePtr());
 
         // evaluate through minibatches
         size_t totalEpochSamples = 0;
@@ -92,30 +107,92 @@ public:
         for (int i = 0; i < evalResults.size(); i++)
             evalResultsLastMBs.push_back((ElemType) 0);
 
+        //TODO: we should add support for distributed reading
         dataReader->StartMinibatchLoop(mbSize, 0, testSize);
         m_net->StartEvaluateMinibatchLoop(evalNodes);
 
-        while (DataReaderHelpers::GetMinibatchIntoNetwork(*dataReader, m_net, nullptr, false, false, inputMatrices, actualMBSize))
-        {
-            ComputationNetwork::BumpEvalTimeStamp(featureNodes);
-            ComputationNetwork::BumpEvalTimeStamp(labelNodes);
+        std::vector<Matrix<ElemType>*> learnParamsGradients;
+        DataReaderHelpers::SubminibatchDispatcher<ElemType> smbDispatcher;
+        size_t numSubminibatchesNeeded = DataReaderHelpers::GetNumSubminibatchesNeeded<ElemType>(dataReader, m_maxSamplesInRAM, m_numSubminiBatches, mbSize);
 
-            // for now since we share the same label masking flag we call this on one node only
-            // Later, when we apply different labels on different nodes
-            // we need to add code to call this function multiple times, one for each criteria node
-            size_t numSamplesWithLabel = m_net->GetNumSamplesWithLabel(actualMBSize);
-            for (int i = 0; i < evalNodes.size(); i++)
+        // Passing in two empty node lists so the dispatcher can work for the evalNodes.
+        std::list<ComputationNodeBasePtr> learnableNodes;
+        std::vector<ComputationNodeBasePtr> criterionNodes;
+        if (numSubminibatchesNeeded > 1)
+            smbDispatcher.Init(m_net, learnableNodes, criterionNodes, evalNodes);
+
+        const size_t numIterationsBeforePrintingProgress = 100;
+        size_t numItersSinceLastPrintOfProgress = 0;
+        while (DataReaderHelpers::GetMinibatchIntoNetwork<ElemType>(*dataReader, m_net, nullptr, false, m_parallelRun, inputMatrices, actualMBSize))
+        {
+            size_t actualNumSubminibatches = numSubminibatchesNeeded <= 1 ? 1 : smbDispatcher.GetMinibatchIntoCache(*dataReader, *m_net, inputMatrices, numSubminibatchesNeeded);
+            for (size_t ismb = 0; ismb < actualNumSubminibatches; ismb++)
             {
-                m_net->ForwardProp(evalNodes[i]);
-                evalResults[i] += (double) evalNodes[i]->Get00Element(); // criterionNode should be a scalar
+                if (actualNumSubminibatches > 1)
+                {
+                    smbDispatcher.GetSubMinibatchToNet(ismb); // get sub-minibatch from full-size one
+                }
+
+                ComputationNetwork::BumpEvalTimeStamp(featureNodes);
+                ComputationNetwork::BumpEvalTimeStamp(labelNodes);
+
+                m_net->ForwardProp(evalNodes);
+
+                // house-keeping for sub-minibatching
+                if (actualNumSubminibatches > 1)
+                    smbDispatcher.DoneWithCurrentSubMinibatch(ismb); // page state out
+            }                                                        // end sub-minibatch loop
+
+            if (actualNumSubminibatches > 1)
+                smbDispatcher.DoneWithCurrentMinibatch();
+
+            size_t numSamplesWithLabel = m_net->GetNumSamplesWithLabel(actualMBSize);
+            size_t aggregateNumSamplesWithLabel = numSamplesWithLabel;
+            if (m_parallelRun)
+            {
+                if (m_gradHeader == nullptr)
+                {
+                    m_gradHeader = DistGradHeader::Create(evalNodes.size());
+                    m_distGradAgg = make_shared<SimpleDistGradAggregator<ElemType>>(g_mpi, false, m_traceLevel);
+                }
+
+                m_gradHeader->numEvalNode = evalNodes.size();
+                m_gradHeader->numSamples = actualMBSize;
+                m_gradHeader->numSamplesWithLabel = numSamplesWithLabel;
+                m_gradHeader->criterion = 0.0;
+                for (size_t i = 0; i < evalNodes.size(); i++)
+                    m_gradHeader->evalErrors[i] = evalNodes[i]->Get00Element();
+
+                // TODO: We are reusing the aggregation logic inside SimpleDistGradAggregator, which has a heavy dependency
+                // on the gradient matrix. At some point we should refacotr the aggregator class to be able to only calculating
+                // eval results and then remove this hack.
+                if (learnParamsGradients.size() == 0)
+                {
+                    Matrix<ElemType>* matrix = new Matrix<ElemType>((DEVICEID_TYPE)m_net->GetDeviceId());
+                    learnParamsGradients.push_back(matrix);
+                }
+
+                // Using SimpleDistAggregator for eval results only. At some point we should rename the class to be just
+                // IDistAggregator and SimpleDistAggregator.
+                m_distGradAgg->AggregateGradients(learnParamsGradients, m_gradHeader, 0);
+                aggregateNumSamplesWithLabel = m_gradHeader->numSamplesWithLabel;
+                for (size_t i = 0; i < evalResults.size(); i++)
+                    evalResults[i] += m_gradHeader->evalErrors[i];
+            }
+            else
+            {
+                for (int i = 0; i < evalNodes.size(); i++)
+                {
+                    evalResults[i] += (double)evalNodes[i]->Get00Element(); // criterionNode should be a scalar
+                }
             }
 
-            totalEpochSamples += numSamplesWithLabel;
+            totalEpochSamples += aggregateNumSamplesWithLabel;
             numMBsRun++;
 
             if (m_traceLevel > 0)
             {
-                numSamplesLastMBs += numSamplesWithLabel;
+                numSamplesLastMBs += aggregateNumSamplesWithLabel;
 
                 if (numMBsRun % m_numMBsToShowResult == 0)
                 {
@@ -127,6 +204,18 @@ public:
                     }
                     numSamplesLastMBs = 0;
                     lastMBsRun = numMBsRun;
+                }
+            }
+
+
+            if (ProgressTracing::GetTracingFlag())
+            {
+                numItersSinceLastPrintOfProgress++;
+                if (numItersSinceLastPrintOfProgress >= numIterationsBeforePrintingProgress)
+                {
+                    // TODO: For now just print 0.0 instead of calculating actual progress
+                    printf("PROGRESS: %.2f%%\n", 0.0f);
+                    numItersSinceLastPrintOfProgress = 0;
                 }
             }
 
@@ -143,9 +232,7 @@ public:
 
         // final statistics
         for (int i = 0; i < evalResultsLastMBs.size(); i++)
-        {
-            evalResultsLastMBs[i] = 0;
-        }
+            evalResultsLastMBs[i] = 0; // clear this since statistics display will subtract the previous value
 
         fprintf(stderr, "Final Results: ");
         DisplayEvalStatistics(1, numMBsRun, totalEpochSamples, evalNodes, evalResults, evalResultsLastMBs, true);
@@ -174,7 +261,7 @@ protected:
     void DisplayEvalStatistics(const size_t startMBNum, const size_t endMBNum, const size_t numSamplesLastMBs, const vector<ComputationNodeBasePtr>& evalNodes,
                                const vector<double>& evalResults, const vector<double>& evalResultsLastMBs, bool displayConvertedValue = false)
     {
-        fprintf(stderr, "Minibatch[%lu-%lu]: Samples Seen = %lu    ", startMBNum, endMBNum, numSamplesLastMBs);
+        fprintf(stderr, "Minibatch[%lu-%lu]: SamplesSeen = %lu    ", startMBNum, endMBNum, numSamplesLastMBs);
 
         for (size_t i = 0; i < evalResults.size(); i++)
         {
@@ -198,6 +285,12 @@ protected:
 protected:
     ComputationNetworkPtr m_net;
     size_t m_numMBsToShowResult;
+    size_t m_maxSamplesInRAM;
+    size_t m_numSubminiBatches;
+    bool m_parallelRun;
+
+    shared_ptr<IDistGradAggregator<ElemType>> m_distGradAgg;
+    struct DistGradHeader* m_gradHeader;
     int m_traceLevel;
     void operator=(const SimpleEvaluator&); // (not assignable)
 };

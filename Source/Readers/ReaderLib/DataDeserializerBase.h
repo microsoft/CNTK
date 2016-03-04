@@ -28,6 +28,11 @@ public:
         return m_sequences;
     }
 
+    virtual const SequenceDescription* GetSequenceDescriptionByKey(const KeyType&) override
+    {
+        NOT_IMPLEMENTED;
+    }
+
 protected:
     // Fills the timeline with sequence descriptions.
     // Inherited classes should provide the complete Sequence descriptions for all input data.

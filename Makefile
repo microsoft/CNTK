@@ -5,30 +5,31 @@
 # work to make all sources compile with GCC, and also to check for GCC-compat regressions due to
 # modifications which are currently done under Windows.
 #
-# This makefile will be extended/completed as we go.
-#
 # To use this Makefile, create a directory to build in and make a Config.make in the directory
 # that provides
-# ACML_PATH= path to ACML library installation
-#   only needed if MATHLIB=acml
-# MKL_PATH= path to MKL library installation
-#   only needed if MATHLIB=mkl
-# GDK_PATH= path to cuda gdk installation, so $(GDK_PATH)/include/nvidia/gdk/nvml.h exists
-#   defaults to /usr
-# BUILDTYPE= One of release or debug
-#   defaults to release
-# MATHLIB= One of acml or mkl
-#   defaults to acml
-# CUDA_PATH= Path to CUDA
-#   If not specified, GPU will not be enabled
-# CUB_PATH= path to NVIDIA CUB installation, so $(CUB_PATH)/cub/cub.cuh exists
-#   defaults to /usr/local/cub-1.4.1
-# CUDNN_PATH= path to NVIDIA cuDNN installation so $(CUDNN_PATH)/cuda/include/cudnn.h exists
-#   If not specified, CNTK will be be built without cuDNN.
-# KALDI_PATH= Path to Kaldi
-#   If not specified, Kaldi plugins will not be built
-# OPENCV_PATH= path to OpenCV 3.0.0 installation, so $(OPENCV_PATH) exists
-#   defaults to /usr/local/opencv-3.0.0
+#   BUILDTYPE= One of release or debug
+#     defaults to release
+#   ACML_PATH= path to ACML library installation
+#     only needed if MATHLIB=acml
+#   MKL_PATH= path to MKL library installation
+#     only needed if MATHLIB=mkl
+#   GDK_PATH= path to cuda gdk installation, so $(GDK_PATH)/include/nvidia/gdk/nvml.h exists
+#     defaults to /usr
+#   MATHLIB= One of acml or mkl
+#     defaults to acml
+#   CUDA_PATH= Path to CUDA
+#     If not specified, GPU will not be enabled
+#   CUB_PATH= path to NVIDIA CUB installation, so $(CUB_PATH)/cub/cub.cuh exists
+#     defaults to /usr/local/cub-1.4.1
+#   CUDNN_PATH= path to NVIDIA cuDNN installation so $(CUDNN_PATH)/cuda/include/cudnn.h exists
+#     If not specified, CNTK will be be built without cuDNN.
+#   KALDI_PATH= Path to Kaldi
+#     If not specified, Kaldi plugins will not be built
+#   OPENCV_PATH= path to OpenCV 3.0.0 installation, so $(OPENCV_PATH) exists
+#     defaults to /usr/local/opencv-3.0.0
+#   LIBZIP_PATH= path to libzip installation, so $(LIBZIP_PATH) exists
+#     defaults to /usr/local/
+# These can be overridden on the command line, e.g. make BUILDTYPE=debug
 
 ifndef BUILD_TOP
 BUILD_TOP=.
@@ -170,7 +171,7 @@ ifeq ("$(BUILDTYPE)","debug")
 
   CXXFLAGS += -g
   LDFLAGS += -rdynamic
-  COMMON_FLAGS += -D_DEBUG
+  COMMON_FLAGS += -D_DEBUG -DNO_SYNC
   CUFLAGS += -O0 -g -use_fast_math -lineinfo  $(GENCODE_FLAGS)
 endif
 
@@ -183,7 +184,7 @@ ifeq ("$(BUILDTYPE)","release")
 
   CXXFLAGS += -g -O4
   LDFLAGS += -rdynamic
-  COMMON_FLAGS += -DNDEBUG
+  COMMON_FLAGS += -DNDEBUG -DNO_SYNC
   CUFLAGS += -O3 -g -use_fast_math -lineinfo $(GENCODE_FLAGS)
 endif
 
@@ -221,10 +222,11 @@ $(BUILDINFO): $(GENBUILD)
 
 # Define all sources that need to be built
 READER_SRC =\
-	$(SOURCEDIR)/Readers/ReaderLib/SampleModePacker.cpp \
 	$(SOURCEDIR)/Readers/ReaderLib/BlockRandomizer.cpp \
+	$(SOURCEDIR)/Readers/ReaderLib/Bundler.cpp \
 	$(SOURCEDIR)/Readers/ReaderLib/NoRandomizer.cpp \
 	$(SOURCEDIR)/Readers/ReaderLib/ReaderShim.cpp \
+	$(SOURCEDIR)/Readers/ReaderLib/SampleModePacker.cpp \
 
 COMMON_SRC =\
 	$(SOURCEDIR)/Common/Config.cpp \
@@ -305,8 +307,8 @@ $(BINARY_READER): $(BINARYREADER_OBJ) | $(CNTKMATH_LIB)
 ########################################
 
 HTKMLFREADER_SRC =\
-	$(SOURCEDIR)/Readers/HTKMLFReader/DataReader.cpp \
-	$(SOURCEDIR)/Readers/HTKMLFReader/DataWriter.cpp \
+	$(SOURCEDIR)/Readers/HTKMLFReader/Exports.cpp \
+	$(SOURCEDIR)/Readers/HTKMLFReader/DataWriterLocal.cpp \
 	$(SOURCEDIR)/Readers/HTKMLFReader/HTKMLFReader.cpp \
 	$(SOURCEDIR)/Readers/HTKMLFReader/HTKMLFWriter.cpp \
 
@@ -317,6 +319,29 @@ ALL+=$(HTKMLFREADER)
 SRC+=$(HTKMLFREADER_SRC)
 
 $(LIBDIR)/HTKMLFReader.so: $(HTKMLFREADER_OBJ) | $(CNTKMATH_LIB)
+	@echo $(SEPARATOR)
+	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(LIBPATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH)) -o $@ $^ -l$(CNTKMATH)
+
+########################################
+# ExperimentalHTKMLFReader plugin
+########################################
+
+EXPERIMENTALHTKMLFREADER_SRC =\
+	$(SOURCEDIR)/Readers/HTKMLFReader/DataWriterLocal.cpp \
+	$(SOURCEDIR)/Readers/HTKMLFReader/HTKMLFWriter.cpp \
+	$(SOURCEDIR)/Readers/ExperimentalHTKMLFReader/ConfigHelper.cpp \
+	$(SOURCEDIR)/Readers/ExperimentalHTKMLFReader/Exports.cpp \
+	$(SOURCEDIR)/Readers/ExperimentalHTKMLFReader/HTKDataDeserializer.cpp \
+	$(SOURCEDIR)/Readers/ExperimentalHTKMLFReader/HTKMLFReader.cpp \
+	$(SOURCEDIR)/Readers/ExperimentalHTKMLFReader/MLFDataDeserializer.cpp \
+
+EXPERIMENTALHTKMLFREADER_OBJ := $(patsubst %.cpp, $(OBJDIR)/%.o, $(EXPERIMENTALHTKMLFREADER_SRC))
+
+EXPERIMENTALHTKMLFREADER:=$(LIBDIR)/ExperimentalHTKMLFReader.so
+ALL+=$(EXPERIMENTALHTKMLFREADER)
+SRC+=$(EXPERIMENTALHTKMLFREADER_SRC)
+
+$(LIBDIR)/ExperimentalHTKMLFReader.so: $(EXPERIMENTALHTKMLFREADER_OBJ) | $(CNTKMATH_LIB)
 	@echo $(SEPARATOR)
 	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(LIBPATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH)) -o $@ $^ -l$(CNTKMATH)
 
@@ -346,6 +371,7 @@ $(LMSEQUENCEREADER): $(LMSEQUENCEREADER_OBJ) | $(CNTKMATH_LIB)
 
 LUSEQUENCEREADER_SRC =\
 	$(SOURCEDIR)/Readers/LUSequenceReader/Exports.cpp \
+	$(SOURCEDIR)/Readers/LUSequenceReader/DataWriterLocal.cpp \
 	$(SOURCEDIR)/Readers/LUSequenceReader/LUSequenceParser.cpp \
 	$(SOURCEDIR)/Readers/LUSequenceReader/LUSequenceReader.cpp \
 
@@ -467,12 +493,22 @@ endif
 ########################################
 
 ifdef OPENCV_PATH
+
+IMAGE_READER_LIBS += -lopencv_core -lopencv_imgproc -lopencv_imgcodecs
+
+ifdef LIBZIP_PATH
+  CPPFLAGS += -DUSE_ZIP
+  INCLUDEPATH += $(LIBZIP_PATH)/lib/libzip/include
+  IMAGE_READER_LIBS += -lzip
+endif
+
 IMAGEREADER_SRC =\
-	$(SOURCEDIR)/Readers/ImageReader/Exports.cpp \
-	$(SOURCEDIR)/Readers/ImageReader/ImageConfigHelper.cpp \
-	$(SOURCEDIR)/Readers/ImageReader/ImageDataDeserializer.cpp \
-	$(SOURCEDIR)/Readers/ImageReader/ImageTransformers.cpp \
-	$(SOURCEDIR)/Readers/ImageReader/ImageReader.cpp \
+  $(SOURCEDIR)/Readers/ImageReader/Exports.cpp \
+  $(SOURCEDIR)/Readers/ImageReader/ImageConfigHelper.cpp \
+  $(SOURCEDIR)/Readers/ImageReader/ImageDataDeserializer.cpp \
+  $(SOURCEDIR)/Readers/ImageReader/ImageTransformers.cpp \
+  $(SOURCEDIR)/Readers/ImageReader/ImageReader.cpp \
+  $(SOURCEDIR)/Readers/ImageReader/ZipByteReader.cpp \
 
 IMAGEREADER_OBJ := $(patsubst %.cpp, $(OBJDIR)/%.o, $(IMAGEREADER_SRC))
 
@@ -485,7 +521,7 @@ LIBPATH += $(OPENCV_PATH)/lib $(OPENCV_PATH)/release/lib
 
 $(IMAGEREADER): $(IMAGEREADER_OBJ) | $(CNTKMATH_LIB)
 	@echo $(SEPARATOR)
-	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(LIBPATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH)) -o $@ $^ -l$(CNTKMATH) -lopencv_core -lopencv_imgproc -lopencv_imgcodecs
+	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(LIBPATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH)) -o $@ $^ -l$(CNTKMATH) $(IMAGE_READER_LIBS)
 endif
 
 ########################################

@@ -6,13 +6,14 @@
 //
 #pragma once
 #include "DataWriter.h"
+#include "ScriptableObjects.h"
 #include <map>
 #include <vector>
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
 template <class ElemType>
-class HTKMLFWriter : public IDataWriter<ElemType>
+class HTKMLFWriter : public IDataWriter
 {
 private:
     std::vector<size_t> outputDims;
@@ -57,5 +58,6 @@ public:
     virtual void GetSections(std::map<std::wstring, SectionType, nocase_compare>& sections);
     virtual bool SaveData(size_t recordStart, const std::map<std::wstring, void*, nocase_compare>& matrices, size_t numRecords, size_t datasetSize, size_t byteVariableSized);
     virtual void SaveMapping(std::wstring saveId, const std::map<LabelIdType, LabelType>& labelMapping);
+    virtual bool SupportMultiUtterances() const { return false; };
 };
 } } }

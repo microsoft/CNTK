@@ -194,6 +194,8 @@ void ComputationNetwork::ReadPersistableParameters(File& fstream, bool create)
         fstream >> modelVersion;
         fstream.GetMarker(FileMarker::fileMarkerEndSection, L"EVersion");
     }
+    if (modelVersion > CURRENT_CNTK_MODEL_VERSION)
+        InvalidArgument("Read: The model file has a newer format version (%d) than this CNTK version can handle (%d).", (int)modelVersion, (int)CURRENT_CNTK_MODEL_VERSION);
 
     size_t numNodes;
     fstream >> numNodes;
@@ -460,6 +462,7 @@ template <class ElemType>
     if (dropoutRate != prevDropoutRate)
     {
         fprintf(stderr, "Switching dropout rate to %.8g.\n", dropoutRate);
+        // TODO: Change this to use an interface that is independent of <ElemType>.
         list<ComputationNodeBasePtr> dropoutNodes = net->GetNodesWithType(OperationNameOf(DropoutNode), criterionNode);
         if (dropoutNodes.size() == 0 && dropoutRate > 0)
             fprintf(stderr, "WARNING: there is no dropout node.\n");

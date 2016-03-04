@@ -32,29 +32,31 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 template <class ElemType>
 class LearnableParameter : public ComputationNode<ElemType>, public NumInputs<0>
 {
-    typedef ComputationNode<ElemType> Base;
-    UsingComputationNodeMembersBoilerplate;
-    static const std::wstring TypeName()
+    typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+    static const std::wstring TypeName() { return L"LearnableParameter"; }
+
+    // BUGBUG: If called after random init, this will reset to 0.
+    // TODO: Need to remember the init parameters, and do it here.
+    void InitShape(const TensorShape& shape)
     {
-        return L"LearnableParameter";
+        SetDims(shape, false);
+        UpdateFunctionValuesSize(); // this allocates the matrix
+        Value().SetValue(0); // TODO: invalidate instead
     }
 
 public:
     LearnableParameter(DEVICEID_TYPE deviceId, const wstring& name)
         : Base(deviceId, name)
     {
-        m_parameterUpdateRequired = true;
-        m_valueSharable = false; // TODO: wasn't this a function one should call?
+        SetLearningRateMultiplier(1.0f); // enable normal learning by default
+        MarkValueNonSharable();
     }
     LearnableParameter(DEVICEID_TYPE deviceId, const wstring& name, const TensorShape& shape)
         : Base(deviceId, name)
     {
-        m_parameterUpdateRequired = true;
-        CreateMatrixIfNull(m_value);
-        m_valueSharable = false;
-        SetDims(shape, false);
-        UpdateFunctionValuesSize(); // this allocates the matrix
-        Value().SetValue(0);
+        SetLearningRateMultiplier(1.0f);
+        MarkValueNonSharable();
+        InitShape(shape);
     }
     LearnableParameter(DEVICEID_TYPE deviceId, const wstring& name, size_t rows, size_t cols)
         : LearnableParameter(deviceId, name, TensorShape(rows, cols))
@@ -65,9 +67,12 @@ public:
     {
         // TODO: Change dimensions to take a generic tensor instead. That will be a (minor) breaking change that will require fix-ups when converting from NDL to BrainScript.
         AttachInputs(configp, this->GetExpectedNumInputs());
-        // parameters[rows, [cols=1]] plus other optional parameters (needGradient=[true|false], init=[uniform|gaussian|fixedvalue], initValueScale=[1|float], value=[0|float])
-        // TODO: "needGradient" should be renamed to better match m_parameterUpdateRequired. It is also inconsistent with MEL which uses "needsGradient"
-        SetParameterUpdateRequired(configp->Get(L"needGradient"));
+        // parameters[rows, [cols=1]] plus other optional parameters (learningRateMultiplier=[1|0|float], init=[uniform|gaussian|fixedvalue], initValueScale=[1|float], value=[0|float])
+        if (configp->Exists(L"learningRateMultiplier"))
+            SetLearningRateMultiplier(configp->Get(L"learningRateMultiplier"));
+        else if (configp->Exists(L"needsGradient") || configp->Exists(L"needGradient") || configp->Exists(L"computeGradient"))
+            InvalidArgument("needsGradient|needGradient|computeGradient are not supported in BrainScript. Use learningRateMultiplier instead.");
+
         wstring initString = configp->Get(L"init");
         if (initString == L"fixedValue")
             Value().SetValue((ElemType) configp->Get(L"value"));
@@ -92,8 +97,7 @@ public:
     virtual void Save(File& fstream) const override
     {
         Base::Save(fstream);
-        fstream << m_parameterUpdateRequired;
-        fstream << (size_t) 0 /*#rows in a legacy file format*/ << (size_t) 0 /*#cols in a legacy file format*/;
+        fstream << m_learningRateMultiplier;
         m_sampleLayout.Save(fstream);
         fstream << Value();
     }
@@ -102,19 +106,31 @@ public:
     {
         Base::Load(fstream, modelVersion);
 
-        size_t rows, cols;
-        fstream >> m_parameterUpdateRequired;
-        fstream >> rows >> cols;
-
         TensorShape sampleLayout;
-        if (rows != 0) // legacy file format
-            sampleLayout = TensorShape(rows, cols);
-        else
+
+        if (modelVersion >= CNTK_MODEL_VERSION_3)
         {
-            sampleLayout.Load(fstream, /*acceptLegacyFormat=*/true);
-            if (cols > 1) // in some legacy format, last tensor dimension was split off as an explicit column dimension
-                sampleLayout.AppendInPlace(sampleLayout.GetRank(), cols);
+            fstream >> m_learningRateMultiplier;
+            sampleLayout.Load(fstream);
         }
+        else // legacy format(s)
+        {
+            bool parameterUpdateRequired;
+            fstream >> parameterUpdateRequired;
+            SetLearningRateMultiplier((float)parameterUpdateRequired);
+
+            size_t rows, cols;
+            fstream >> rows >> cols;
+            if (rows != 0) // legacy file format
+                sampleLayout = TensorShape(rows, cols);
+            else
+            {
+                sampleLayout.Load(fstream, /*acceptLegacyFormat=*/true);
+                if (cols > 1) // in some legacy format, last tensor dimension was split off as an explicit column dimension
+                    sampleLayout.AppendInPlace(sampleLayout.GetRank(), cols);
+            }
+        }
+
         LoadValue(fstream);
         SetDims(sampleLayout, false); // note: call this after LoadValue() since LoadValue() overwrites m_sampleLayout
         VerifyDataSize(Value());      // sanity check
@@ -131,7 +147,7 @@ public:
         // the random seed offset is set via the "randomSeedOffset" parameter in config
         if (initOnCPUOnly)
             Value().TransferToDeviceIfNotThereAndNotAutoPlace(CPUDEVICE, true);
-#if 1 // this more complex version is needed to repro test cases generated with an older version
+#if 1   // this more complex version is needed to repro test cases generated with an older version
         auto& value = GetSampleLayout().GetRank() > 2 ? Value() : ValueAsMatrix();
 #else
         auto& value = Value();
@@ -144,7 +160,7 @@ public:
         }
         else
         {
-            size_t inputSize = GetAsMatrixNumCols();
+            size_t inputSize = value.GetNumCols();
             ElemType randInitstd = 0.2f * initValueScale / sqrt(ElemType(inputSize));
             value.SetGaussianRandomValue(0, randInitstd, randomSeed);
         }
@@ -245,6 +261,44 @@ public:
         m_pMBLayout = nullptr; // this node does not hold mini-batch data
     }
 
+    // called from ComputationNode::ValidateInferInputDimsFrom()
+    // In case of an error, this function just backs out without updating.
+    // The caller must verify the dimensions.
+    // This is a bit weird since it is called after this node has been Validated once.
+    // BUGBUG: This will clear out any random initialization to 0. So currently this is not usable for most cases.
+    void InferInputDimsFrom(const TensorShape& otherShape)
+    {
+        const auto& thisShape = GetSampleLayout();
+
+        // see where we stand with our shape
+        bool hasMissingDims = thisShape.GetRank() == 0 || thisShape.GetNumElements() == 0;
+        if (!hasMissingDims) // all there--nothing to infer
+            return;
+    
+        // infer at least one dimension
+        if (otherShape.GetRank() == 0 || otherShape.GetNumElements() == 0)
+            return; // LogicError("ValidateInferInputDimsFrom: Inferred dimensions must not be empty.");
+    
+        // if no dimensions have been set at all, copy otherShape
+        // Don't verify dimensions in this case, because the node may have explicitly been defined as a vector of 0 elements.
+        bool hasAnyDim = false;
+        for (auto dim : thisShape.GetDims())
+            hasAnyDim |= dim != 0;
+        if (!hasAnyDim)          // just use it straight
+            InitShape(otherShape);
+        else if (hasMissingDims) // we got a pre-existing shape: If it has zeroes, we fill them in from otherShape
+        {
+            if (thisShape.GetRank() != 0 && thisShape.GetRank() != otherShape.GetRank())
+                return; // LogicError("ValidateInferInputDimsFrom: Inferred dimensions must match in rank.");
+            SmallVector<size_t> newDims = thisShape.GetDims();
+            for (size_t i = 0; i < thisShape.GetRank(); i++)
+                if (newDims[i] == 0)
+                    newDims[i] = otherShape[i];
+            InitShape(TensorShape(newDims));
+        }
+        fprintf(stderr, "%ls %ls operation: Tensor shape was inferred as [%s].\n", NodeName().c_str(), OperationName().c_str(), string(GetSampleLayout()).c_str());
+    }
+
     virtual void DumpNodeInfo(const bool printValues, const bool printMetadata, File& fstream) const override
     {
         if (printMetadata)
@@ -254,7 +308,7 @@ public:
             char str[4096];
             sprintf(str, "[%lu,%lu]  ", GetAsMatrixNumRows(), GetAsMatrixNumCols());
             fstream << string(str);
-            sprintf(str, "NeedGradient=%s", m_parameterUpdateRequired ? "true" : "false"); // TODO: update NDL to accept a better matching name as well
+            sprintf(str, "learningRateMultiplier=%f  NeedsGradient=%s", m_learningRateMultiplier, m_learningRateMultiplier>0 ? "true" : "false"); // TODO: update NDL to accept a better matching name as well
             fstream << string(str);
         }
 
@@ -278,14 +332,13 @@ class InputValueBase : public ComputationNode<ElemType>, public NumInputs<0>
     void Init(const TensorShape& sampleLayout, bool isSparse)
     {
         m_isSparse = isSparse;
-        CreateMatrixIfNull(m_value);
+        MarkValueNonSharable();
         if (isSparse)
             ConvertToSparseMatrix();
 
         SetDims(sampleLayout, HasMBLayout()); // also called when reloading a file. Then we have an MBLayout, otherwise not yet
         UpdateFunctionValuesSize();           // we must allocate the matrix so that the readers get objects with valid row dimensions (some readers expect that)
-        m_parameterUpdateRequired = false;
-        this->m_valueSharable = false;
+        SetLearningRateMultiplier(0);
     }
 
 protected:
@@ -454,18 +507,18 @@ template class SparseInputValue<double>;
 
 // -----------------------------------------------------------------------
 // LookupTableNode (embedding matrix, bag-of-word representation of the inputs)
-// implements an embedding, assuming a specific representation of the input data
+// Implements an embedding. The input vector can consist of multiple stacked
+// This is a tensor product where the matrix width may be an integer fraction of the features.
+// If it is, then the matrix will be replicated.
+// This is the same as if the input data were a tensor where the same matrix is applied to each column of the tensor.
+// TimesNode can do that.
 // -----------------------------------------------------------------------
 
 template <class ElemType>
 class LookupTableNode : public ComputationNode<ElemType>, public NumInputs<2>
 {
-    typedef ComputationNode<ElemType> Base;
-    UsingComputationNodeMembersBoilerplate;
-    static const std::wstring TypeName()
-    {
-        return L"LookupTable";
-    }
+    typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+    static const std::wstring TypeName() { return L"LookupTable"; }
 
 public:
     DeclareConstructorFromConfigWithNumInputs(LookupTableNode);
@@ -525,10 +578,10 @@ public:
 
     virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& t) override
     {
-        // input0 is the weight (each column is an embedding of one word), input 1 contains m_bnrLooked words in each column (sample)
-        Matrix<ElemType> functionValues = ValueFor(t);
-        const Matrix<ElemType>& input0 = Input(0)->ValueAsMatrix();
-        Matrix<ElemType> input1 = Input(1)->ValueFor(t);
+        // input0 is the weight (each column is an embedding of one word), input 1 contains m_nbrLooked words in each column (sample)
+        Matrix<ElemType> functionValues =           ValueFor(t);
+        const Matrix<ElemType>&  input0 = Input(0)->ValueAsMatrix();
+        Matrix<ElemType>         input1 = Input(1)->ValueFor(t);
 
         size_t rows1 = input1.GetNumRows(), cols1 = input1.GetNumCols();
         size_t cols0 = input0.GetNumCols();
@@ -538,7 +591,7 @@ public:
         if (cols0 * wordsInEachSample != rows1)
             LogicError("LookupTableNode: rows of input 1 is not a multiple of cols of input 0. This usually happens when the feature dimension is not specified as that in the network definition of look-up-table dimension size.");
 
-        auto input1Reshaped = input1.Reshaped(rows1 / wordsInEachSample, cols1 * wordsInEachSample);
+        auto input1Reshaped = input1.Reshaped(rows1 / wordsInEachSample, cols1 * wordsInEachSample); // BUGBUG: Won't work for sparse.
 
         auto functionValuesReshaped = functionValues.Reshaped(input0.GetNumRows(), input1Reshaped.GetNumCols());
         functionValuesReshaped.AssignProductOf(input0, false, input1Reshaped, false);
@@ -628,4 +681,5 @@ public:
 
 template class LookupTableNode<float>;
 template class LookupTableNode<double>;
-} } }
+
+}}}

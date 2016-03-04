@@ -288,7 +288,7 @@ ComputationNetwork::PARTraversalFlowControlNode::PARTraversalFlowControlNode(con
 {
     for (auto nodeIter = m_nestedNodes.rbegin(); nodeIter != m_nestedNodes.rend(); ++nodeIter)
     {
-        if ((*nodeIter)->NeedGradient())
+        if ((*nodeIter)->NeedsGradient())
             (*nodeIter)->ReleaseMatricesAfterBackprop(matrixPool);
     }
 }
@@ -689,10 +689,6 @@ void ComputationNetwork::MarkValueNonSharableNodes()
             {
                 node->MarkValueNonSharable();
             }
-            else
-            {
-                node->MarkValueSharable();
-            }
         }
     }
 }
@@ -832,7 +828,7 @@ void ComputationNetwork::AllocateAllMatrices(const std::vector<ComputationNodeBa
                 // PAR mode: we can allocate and immediately deallocate one by one
                 n->AllocateGradientMatricesForInputs(m_matrixPool);
                 // Root node's information will be used and should not be shared with others, also it's small (1x1)
-                if ((n != trainRootNode) && n->NeedGradient())
+                if ((n != trainRootNode) && n->NeedsGradient())
                     n->ReleaseMatricesAfterBackprop(m_matrixPool);
             }
         }

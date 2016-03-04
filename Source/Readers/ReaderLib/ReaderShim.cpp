@@ -14,7 +14,6 @@
 
 #define DATAREADER_EXPORTS // creating the exports here
 #include "DataReader.h"
-//#include "commandArgUtil.h"
 #include "ReaderShim.h"
 #include <sstream>
 
@@ -98,7 +97,7 @@ string EnumerateInputs(const map<wstring, size_t> &nameToStreamId)
 }
 
 template <class ElemType>
-bool ReaderShim<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemType>*>& matrices)
+bool ReaderShim<ElemType>::GetMinibatch(StreamMinibatchInputs& matrices)
 {
     if (m_endOfEpoch)
     {
@@ -130,6 +129,7 @@ bool ReaderShim<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemType>*
 
     if (!minibatch.m_data.empty())
     {
+        // TODO: Use alternating pinned buffer in the packer, do not copy anything, but pack into the pinned memory.
         // Copy returned minibatch to the matrices.
         for (const auto& mx : matrices)
         {
@@ -145,7 +145,11 @@ bool ReaderShim<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemType>*
             m_layout = stream->m_layout;
             size_t rowNumber = m_streams[streamId]->m_sampleLayout->GetNumElements();
 
-            FillMatrixFromStream(m_streams[streamId]->m_storageType, mx.second, rowNumber, stream);
+            auto data = reinterpret_cast<const ElemType*>(stream->m_data);
+            mx.second->SetValue(rowNumber, columnNumber, mx.second->GetDeviceId(), const_cast<ElemType*>(data), matrixFlagNormal);
+            FillMatrixFromStream(m_streams[streamId]->m_storageType, GetInputMatrix<ElemType>(mx.first), rowNumber, stream);
+            auto* data = reinterpret_cast<const ElemType*>(stream->m_data);
+            matrices.GetInputMatrix<ElemType>(mx.first).SetValue(rowNumber, columnNumber, mx.second->GetDeviceId(), const_cast<ElemType*>(data), matrixFlagNormal);
         }
     }
 

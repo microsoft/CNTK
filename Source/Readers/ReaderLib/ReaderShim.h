@@ -19,7 +19,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 typedef ReaderPtr (*ReaderFactory)(const ConfigParameters& parameters);
 
 template <class ElemType>
-class ReaderShim : public IDataReader<ElemType>
+class ReaderShim : public IDataReader
 {
 public:
     explicit ReaderShim(ReaderFactory factory);
@@ -44,7 +44,7 @@ public:
         return true;
     }
 
-    virtual bool GetMinibatch(std::map<std::wstring, Matrix<ElemType>*>& matrices) override;
+    virtual bool GetMinibatch(StreamMinibatchInputs& matrices) override;
 
     virtual bool DataEnd() override;
 

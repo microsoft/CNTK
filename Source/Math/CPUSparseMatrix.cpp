@@ -59,16 +59,13 @@
 #define BLAS_COLMAJOR (int) MatrixOrder::ColMajor,
 #endif
 
-#define SWAP(a, b)  \
-    {               \
-        (a) ^= (b); \
-        (b) ^= (a); \
-        (a) ^= (b); \
-    }
+// TODO: Move to CommonMatrix.h
 #define IDX2C(i, j, ld) (((j) * (ld)) + (i)) // 0 based indexing
+
 namespace Microsoft { namespace MSR { namespace CNTK {
 
 #pragma region Helpful Enum Definitions
+
 enum class MatrixOrder
 {
     RowMajor = 101, // row-major arrays
@@ -77,56 +74,55 @@ enum class MatrixOrder
 
 enum class MatrixTranspose : char
 {
-    NoTrans = 'N',  // trans='N'
-    Trans = 'T',    // trans='T'
-    ConjTrans = 'C' // trans='C'
+    NoTrans   = 'N', // trans='N'
+    Trans     = 'T', // trans='T'
+    ConjTrans = 'C'  // trans='C'
 };
 
 enum class SymMatrixType : char
 {
-    Up = 'U',          // symmetric matrix is stored in the upper part
-    Low = 'L',         // symmetric matrix is stored in thelower part
-    Full = 'F',        // full populated
-    NotSymmetric = 'N' // not a symmetric matrix
+    Up           = 'U', // symmetric matrix is stored in the upper part
+    Low          = 'L', // symmetric matrix is stored in thelower part
+    Full         = 'F', // full populated
+    NotSymmetric = 'N'  // not a symmetric matrix
 };
 
 enum class MatrixOpSide : char
 {
-    Left = 'L',  // left multiply
+    Left  = 'L', // left multiply
     Right = 'R', // right multiply
 };
+
 #pragma endregion Helpful Enum Definitions
 
 #pragma region Constructors and Destructor
 
-//should only be used by constructors.
-template <class ElemType>
-void CPUSparseMatrix<ElemType>::ZeroInit()
-{
-    m_numRows = 0;
-    m_numCols = 0;
-    m_elemSizeAllocated = 0;
-    m_compIndexSize = 0;
-    m_externalBuffer = false;
-    m_computeDevice = CPUDEVICE;
-    m_nz = 0;
-    m_matrixName = NULL;
+//-------------------------------------------------------------------------
+// construction and conversion
+//-------------------------------------------------------------------------
 
+// should only be used by constructors.
+template <class ElemType>
+/*private*/ void CPUSparseMatrix<ElemType>::ZeroInit()
+{
+    Base::ZeroInit();
+    m_computeDevice = CPUDEVICE;
+
+    m_sliceOf       = nullptr;
+    m_compIndexSize = 0;
     // if(m_format == MatrixFormat::matrixFormatSparseCSC || m_format == MatrixFormat::matrixFormatSparseCSR)
     {
-        m_colIdx = -1;
-        m_pArray = NULL;
-        m_unCompIndex = NULL;
-        m_compIndex = NULL;
+        m_colIdx      = -1;
+        m_unCompIndex = nullptr;
+        m_compIndex   = nullptr;
     }
     // else if (m_format == MatrixFormat::matrixFormatSparseBlockCol || m_format == MatrixFormat::matrixFormatSparseBlockRow)
     {
-        m_blockSize = 0;
+        m_blockSize     = 0;
         m_blockIdShift = 0;
-        m_pArray = NULL;
-        m_blockIds = NULL;
+        m_blockIds     = nullptr;
     }
-    m_nzValues = NULL;
+    m_nzValues = nullptr;
 }
 
 //should only be used by constructors.
@@ -144,62 +140,52 @@ void CPUSparseMatrix<ElemType>::CheckInit(const MatrixFormat format)
 template <class ElemType>
 CPUSparseMatrix<ElemType>::CPUSparseMatrix(const MatrixFormat format)
 {
-
     CheckInit(format);
 }
 
 template <class ElemType>
 CPUSparseMatrix<ElemType>::CPUSparseMatrix(const MatrixFormat format, const size_t numRows, const size_t numCols, const size_t size)
 {
-
     CheckInit(format);
     Resize(numRows, numCols, size, true, false);
 }
 
-//copy constructor, deep copy
+// copy constructor, deep copy
 template <class ElemType>
 CPUSparseMatrix<ElemType>::CPUSparseMatrix(const CPUSparseMatrix<ElemType>& deepCopyFrom)
 {
     ZeroInit();
     if (!deepCopyFrom.IsEmpty())
         SetValue(deepCopyFrom);
-    SetMatrixName(deepCopyFrom.m_matrixName);
 }
 
-//assignment operator, deep copy
+// assignment operator, deep copy
 template <class ElemType>
 CPUSparseMatrix<ElemType>& CPUSparseMatrix<ElemType>::operator=(const CPUSparseMatrix<ElemType>& deepCopyFrom)
 {
     Clear();
     if (!deepCopyFrom.IsEmpty())
         SetValue(deepCopyFrom);
-    SetMatrixName(deepCopyFrom.m_matrixName);
     return *this;
 }
 
-//move constructor, shallow copy
+// move constructor, shallow copy
 template <class ElemType>
 CPUSparseMatrix<ElemType>::CPUSparseMatrix(CPUSparseMatrix<ElemType>&& moveFrom)
 {
-    m_format = moveFrom.m_format;
-    m_numRows = moveFrom.m_numRows;
-    m_numCols = moveFrom.m_numCols;
-    m_elemSizeAllocated = moveFrom.m_elemSizeAllocated;
+    Base::ShallowCopyFrom(moveFrom);
+    // BUGBUG: This did not use to copy m_sliceViewOffset, I presume it should be copied? It is now.
+
     m_compIndexSize = moveFrom.m_compIndexSize;
-    m_externalBuffer = moveFrom.m_externalBuffer;
-    m_computeDevice = moveFrom.m_computeDevice;
-    m_nz = moveFrom.m_nz;
-    m_matrixName = moveFrom.m_matrixName;
 
-    m_colIdx = moveFrom.m_colIdx;
-    m_pArray = moveFrom.m_pArray;
-    m_nzValues = moveFrom.m_nzValues;
+    m_colIdx      = moveFrom.m_colIdx;
+    m_nzValues    = moveFrom.m_nzValues;
     m_unCompIndex = moveFrom.m_unCompIndex;
-    m_compIndex = moveFrom.m_compIndex;
+    m_compIndex   = moveFrom.m_compIndex;
 
-    m_blockSize = moveFrom.m_blockSize;
+    m_blockSize    = moveFrom.m_blockSize;
     m_blockIdShift = moveFrom.m_blockIdShift;
-    m_blockIds = moveFrom.m_blockIds;
+    m_blockIds     = moveFrom.m_blockIds;
 
     // release the pointer from the source object so that the destructor won't release it twice
     moveFrom.ZeroInit();
@@ -213,26 +199,19 @@ CPUSparseMatrix<ElemType>& CPUSparseMatrix<ElemType>::operator=(CPUSparseMatrix<
     {
         if (OwnBuffer())
             ReleaseMemory(); // always delete the data pointer since we will use the pointer from moveFrom
+        Base::ShallowCopyFrom(moveFrom);
+        // BUGBUG: This did not use to copy m_sliceViewOffset, I presume it should be copied? It is now.
 
-        m_format = moveFrom.m_format;
-        m_numRows = moveFrom.m_numRows;
-        m_numCols = moveFrom.m_numCols;
-        m_elemSizeAllocated = moveFrom.m_elemSizeAllocated;
         m_compIndexSize = moveFrom.m_compIndexSize;
-        m_externalBuffer = moveFrom.m_externalBuffer;
-        m_computeDevice = moveFrom.m_computeDevice;
-        m_nz = moveFrom.m_nz;
-        m_matrixName = moveFrom.m_matrixName;
 
-        m_colIdx = moveFrom.m_colIdx;
-        m_pArray = moveFrom.m_pArray;
-        m_nzValues = moveFrom.m_nzValues;
+        m_colIdx      = moveFrom.m_colIdx;
+        m_nzValues    = moveFrom.m_nzValues;
         m_unCompIndex = moveFrom.m_unCompIndex;
-        m_compIndex = moveFrom.m_compIndex;
+        m_compIndex   = moveFrom.m_compIndex;
 
-        m_blockSize = moveFrom.m_blockSize;
+        m_blockSize    = moveFrom.m_blockSize;
         m_blockIdShift = moveFrom.m_blockIdShift;
-        m_blockIds = moveFrom.m_blockIds;
+        m_blockIds     = moveFrom.m_blockIds;
 
         // release the pointer from the source object so that the destructor won't release it twice
         moveFrom.ZeroInit();
@@ -249,13 +228,10 @@ CPUSparseMatrix<ElemType>::~CPUSparseMatrix()
 template <class ElemType>
 void CPUSparseMatrix<ElemType>::ReleaseMemory()
 {
-    // If m_externalBuffer is true then this matrix
-    // is simply a view over another matrix. In that
-    // case we shouldn't free anything.
+    // If m_externalBuffer is true then this matrix is simply a view over another matrix.
+    // In that case we shouldn't free anything.
     if (!m_externalBuffer)
     {
-        delete[] m_matrixName;
-
         if (m_format == MatrixFormat::matrixFormatSparseCSC || m_format == MatrixFormat::matrixFormatSparseCSR)
         {
             delete[] m_pArray;
@@ -335,24 +311,26 @@ void CPUSparseMatrix<ElemType>::SetValue(const size_t row, const size_t col, con
     m_nz++;
 }
 
-//make sure call order in colume wise for CSC and row wise for CSR
+// make sure call order in colume wise for CSC and row wise for CSR
 template <class ElemType>
 void CPUSparseMatrix<ElemType>::SetValue(const CPUSparseMatrix<ElemType>& v)
 {
-    if (!OwnBuffer())
+    if (!OwnBuffer()) // TODO: GPU version allows to overwrite a view with a fresh non-view
         LogicError("Cannot modify since the buffer is managed externally.");
 
-    this->Reset();
-    m_format = v.GetFormat();
+    Reset();
+    m_format         = v.GetFormat();
+    m_externalBuffer = false;
+    m_sliceOf        = nullptr;
 
-    this->Resize(v.GetNumRows(), v.GetNumCols(), v.NzSize());
+    Resize(v.GetNumRows(), v.GetNumCols(), v.NzSize());
     m_nz = v.NzCount();
 
     if (m_nz > 0)
     {
-        memcpy(this->NzValues(), v.NzValues(), v.NzSize());
-        memcpy(this->RowLocation(), v.RowLocation(), v.RowSize());
-        memcpy(this->ColLocation(), v.ColLocation(), v.ColSize());
+        memcpy(NzValues(),    v.NzValues(),    v.NzSize());
+        memcpy(RowLocation(), v.RowLocation(), v.RowSize());
+        memcpy(ColLocation(), v.ColLocation(), v.ColSize());
     }
 }
 
@@ -402,17 +380,21 @@ CPUSparseMatrix<ElemType> CPUSparseMatrix<ElemType>::ColumnSlice(size_t startCol
     CPUSparseMatrix<ElemType> slice(m_format);
     slice.m_numRows = m_numRows;
     slice.m_numCols = numCols;
+    // BUGBUG: m_sliceViewOffset?
+    slice.m_externalBuffer    = true;
+    slice.m_sliceOf           = const_cast<CPUSparseMatrix<ElemType>*>(this); // BUGBUG: ColumnSlice() returns a reference to a mutable matrix, even if itself is 'const'; should not be.
 
     if (m_format == MatrixFormat::matrixFormatSparseCSC)
     {
-        slice.m_pArray = m_pArray;
-        slice.m_nzValues = m_pArray + m_compIndex[startColumn]; // note: m_compIndex is always against  m_pArray
-        slice.m_unCompIndex = m_unCompIndex;
-        slice.m_compIndex = m_compIndex + startColumn; // Just shift the compressed index location to the new startColumn - that's it!
-        slice.m_externalBuffer = true;
-        slice.m_nz = m_compIndex[startColumn + numCols] - m_compIndex[startColumn];
+        slice.m_pArray            = m_pArray;
+
+        slice.m_nzValues          = m_pArray + m_compIndex[startColumn]; // note: m_compIndex is always against  m_pArray
+        slice.m_unCompIndex       = m_unCompIndex;
+        slice.m_compIndex         = m_compIndex + startColumn; // Just shift the compressed index location to the new startColumn - that's it!
+        slice.m_compIndexSize     = numCols + 1;
+
+        slice.m_nz                = m_compIndex[startColumn + numCols] - m_compIndex[startColumn];
         slice.m_elemSizeAllocated = slice.m_nz;
-        slice.m_compIndexSize = numCols + 1;
     }
     else if (m_format == MatrixFormat::matrixFormatSparseBlockCol)
     {
@@ -446,13 +428,15 @@ CPUSparseMatrix<ElemType> CPUSparseMatrix<ElemType>::ColumnSlice(size_t startCol
             endColBlock = (long long) m_blockSize;
         }
 
-        slice.m_pArray = m_pArray + startColBlock * m_numRows;
-        slice.m_nzValues = slice.m_pArray;
-        slice.m_blockIds = m_blockIds + startColBlock; // the value stored in the block id is based on the original column numbers
-        slice.m_blockSize = (size_t) max((long long) 0, endColBlock - startColBlock);
+        // BUGBUG: m_elemSizeAllocated?
+        slice.m_pArray       = m_pArray + startColBlock * m_numRows;
+
+        slice.m_nzValues     = slice.m_pArray;
+        slice.m_blockIds     = m_blockIds + startColBlock; // the value stored in the block id is based on the original column numbers
+        slice.m_blockSize    = (size_t) max((long long) 0, endColBlock - startColBlock);
         slice.m_blockIdShift = m_blockIdShift + startColumn;
-        slice.m_externalBuffer = true;
-        slice.m_nz = slice.m_blockSize * m_numRows;
+
+        slice.m_nz           = slice.m_blockSize * m_numRows;
     }
 
     return slice;
@@ -461,9 +445,6 @@ CPUSparseMatrix<ElemType> CPUSparseMatrix<ElemType>::ColumnSlice(size_t startCol
 template <class ElemType>
 CPUMatrix<ElemType> CPUSparseMatrix<ElemType>::CopyColumnSliceToDense(size_t startColumn, size_t numCols) const
 {
-    // if (numCols == 0)
-    //    LogicError("The slice cannot have 0 columns.");
-
     if (startColumn + numCols > m_numCols)
         InvalidArgument("The slice (%d+%d) is out of range of the source matrix (%d).", (int) startColumn, (int) numCols, (int) m_numCols);
 
@@ -614,17 +595,21 @@ void CPUSparseMatrix<ElemType>::Resize(const size_t numRows, const size_t numCol
     }
 }
 
-//Reset matrix so it can be reused
+// Reset matrix to 0.
 template <class ElemType>
 void CPUSparseMatrix<ElemType>::Reset()
 {
+    if (!OwnBuffer())
+        LogicError("Cannot Reset since the buffer is managed externally.");
+
     m_nz = 0;
     m_colIdx = -1;
     m_blockSize = 0;
     m_blockIdShift = 0;
 }
 
-//c = alpha*op(lhs) * op(rhs) + beta*c
+// c = alpha*op(lhs) * op(rhs) + beta*c
+// dense x sparse = dense
 template <class ElemType>
 void CPUSparseMatrix<ElemType>::MultiplyAndWeightedAdd(ElemType alpha, const CPUMatrix<ElemType>& lhs, const bool transposeA,
                                                        const CPUSparseMatrix<ElemType>& rhs, const bool transposeB, ElemType beta, CPUMatrix<ElemType>& c)
@@ -711,7 +696,8 @@ void CPUSparseMatrix<ElemType>::MultiplyAndWeightedAdd(ElemType alpha, const CPU
     }
 }
 
-//c = alpha * op(lhs) * op(rhs)
+// dense x sparse = sparse
+// c = alpha * op(lhs) * op(rhs)
 template <class ElemType>
 void CPUSparseMatrix<ElemType>::MultiplyAndAdd(ElemType alpha, const CPUMatrix<ElemType>& lhs, const bool transposeA,
                                                const CPUSparseMatrix<ElemType>& rhs, const bool transposeB, CPUSparseMatrix<ElemType>& c)
@@ -807,6 +793,7 @@ void CPUSparseMatrix<ElemType>::MultiplyAndAdd(ElemType alpha, const CPUMatrix<E
     }
 }
 
+// dense += sparse
 template <class ElemType>
 void CPUSparseMatrix<ElemType>::ScaleAndAdd(const ElemType alpha, const CPUSparseMatrix<ElemType>& lhs, CPUMatrix<ElemType>& rhs)
 {
@@ -861,7 +848,7 @@ void CPUSparseMatrix<ElemType>::ScaleAndAdd(const ElemType alpha, const CPUSpars
 }
 
 template <class ElemType>
-bool CPUSparseMatrix<ElemType>::AreEqual(const CPUSparseMatrix<ElemType>& a, const CPUSparseMatrix<ElemType>& b, const ElemType threshold)
+/*static*/ bool CPUSparseMatrix<ElemType>::AreEqual(const CPUSparseMatrix<ElemType>& a, const CPUSparseMatrix<ElemType>& b, const ElemType threshold)
 {
     if (a.IsEmpty() || b.IsEmpty())
         LogicError("AreEqual: one of the input matrices is empty.");
@@ -894,6 +881,7 @@ void CPUSparseMatrix<ElemType>::NormalGrad(CPUMatrix<ElemType>& c, const ElemTyp
         c.Resize(GetNumRows(), GetNumCols());
         c.SetValue(0.0);
     }
+    // BUGBUG: dimension/ownbuffer check?
 
     if (m_format == MatrixFormat::matrixFormatSparseBlockCol || m_format == MatrixFormat::matrixFormatSparseBlockRow)
     {
@@ -927,6 +915,7 @@ ElemType CPUSparseMatrix<ElemType>::Adagrad(CPUMatrix<ElemType>& c, const bool n
         c.Resize(GetNumRows(), GetNumCols());
         c.SetValue(0.0);
     }
+    // BUGBUG: dimension/ownbuffer check?
 
     ElemType aveMultiplier = 0;
 
@@ -1156,12 +1145,12 @@ CPUSparseMatrix<ElemType>& CPUSparseMatrix<ElemType>::InplaceSoftThreshold(const
 template <class ElemType>
 ElemType CPUSparseMatrix<ElemType>::FrobeniusNorm() const
 {
-    if (this->IsEmpty())
-        LogicError("FrobeniusNorm: Matrix is empty.");
+    if (IsEmpty())
+        return 0;
 
-    ElemType v = 0;
+    ElemType v = 0; // TODO: do this in 'double'?
 
-    long m = (long) this->NzCount();
+    long m = (long) NzCount();
     const ElemType* nzValues = NzValues();
 
 //four-way unrolling
@@ -1183,8 +1172,8 @@ ElemType CPUSparseMatrix<ElemType>::FrobeniusNorm() const
 template <class ElemType>
 ElemType CPUSparseMatrix<ElemType>::SumOfAbsElements() const
 {
-    if (this->IsEmpty())
-        LogicError("SumOfAbsElements: Matrix is empty.");
+    if (IsEmpty())
+        return 0;
 
     if (sizeof(ElemType) == sizeof(double))
     {
@@ -1209,12 +1198,12 @@ ElemType CPUSparseMatrix<ElemType>::SumOfAbsElements() const
 template <class ElemType>
 ElemType CPUSparseMatrix<ElemType>::SumOfElements() const
 {
-    if (this->IsEmpty())
-        LogicError("SumOfElements: Matrix is empty.");
+    if (IsEmpty())
+        return 0;
 
-    ElemType sum = 0;
+    ElemType sum = 0; // TODO: Do this in 'double'?
 
-    long m = (long) this->NzCount();
+    long m = (long) NzCount();
     const ElemType* nzValues = NzValues();
 
 //four-way unrolling
@@ -1235,6 +1224,9 @@ ElemType CPUSparseMatrix<ElemType>::SumOfElements() const
 template <typename ElemType>
 MATH_API File& operator>>(File& stream, CPUSparseMatrix<ElemType>& us)
 {
+    if (!us.OwnBuffer())
+        LogicError("Cannot read into a managed external matrix");
+
     stream.GetMarker(fileMarkerBeginSection, std::wstring(L"BMAT"));
     size_t elsize;
     stream >> elsize;
@@ -1278,8 +1270,6 @@ MATH_API File& operator>>(File& stream, CPUSparseMatrix<ElemType>& us)
     }
     stream.GetMarker(fileMarkerEndSection, std::wstring(L"EMAT"));
 
-    us.SetMatrixName(matrixName.c_str());
-
     return stream;
 }
 
@@ -1294,15 +1284,7 @@ MATH_API File& operator<<(File& stream, const CPUSparseMatrix<ElemType>& us)
 
     stream.PutMarker(fileMarkerBeginSection, std::wstring(L"BMAT"));
     stream << sizeof(ElemType);
-    if (us.GetMatrixName() == nullptr)
-    {
-        std::wstring s(L"nnmatrix");
-        stream << s;
-    }
-    else
-    {
-        stream << us.GetMatrixName();
-    }
+	stream << std::wstring(L"nnmatrix"); // Note this is needed for compatability, and could potentially be an empty string
 
     size_t nz, numRows, numCols;
     size_t compressedSize = us.SecondaryIndexCount();
@@ -1345,10 +1327,12 @@ template CPUSparseMatrix<char>::CPUSparseMatrix(CPUSparseMatrix<char> const&);
 template CPUSparseMatrix<char>::CPUSparseMatrix(CPUSparseMatrix<char>&&);
 template CPUSparseMatrix<char>& CPUSparseMatrix<char>::operator=(CPUSparseMatrix<char>&& moveFrom);
 template void CPUSparseMatrix<char>::SetValue(size_t, size_t, char);
+template void CPUSparseMatrix<char>::SetValue(CPUSparseMatrix<char> const&);
 template char* CPUSparseMatrix<char>::BufferPointer() const;
 template void CPUSparseMatrix<char>::Reset(void);
 template CPUSparseMatrix<char>::~CPUSparseMatrix();
 template CPUSparseMatrix<char> CPUSparseMatrix<char>::ColumnSlice(size_t startColumn, size_t numCols) const;
 template CPUMatrix<char> CPUSparseMatrix<char>::CopyColumnSliceToDense(size_t startColumn, size_t numCols) const;
 template CPUSparseMatrix<char>& CPUSparseMatrix<char>::operator=(const CPUSparseMatrix<char>& deepCopyFrom);
-} } }
+
+}}}

@@ -207,7 +207,7 @@ void SparsePCReader<ElemType>::StartMinibatchLoop(size_t mbSize, size_t /*epoch*
 //             [out] each matrix resized if necessary containing data.
 // returns - true if there are more minibatches, false if no more minibatchs remain
 template <class ElemType>
-bool SparsePCReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemType>*>& matrices)
+bool SparsePCReader<ElemType>::GetMinibatch(StreamMinibatchInputs& matrices)
 {
     // get out if they didn't call StartMinibatchLoop() first
     if (m_miniBatchSize == 0)
@@ -221,11 +221,9 @@ bool SparsePCReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemTy
         return false;
 
     Matrix<ElemType>* labels = nullptr; // labels to return, or NULL if no labels in matrix set
-    auto labelEntry = matrices.find(m_labelName);
-    if (labelEntry != matrices.end())
+    if (matrices.HasInput(m_labelName))
     {
-        labels = labelEntry->second;
-
+        labels = &matrices.GetInputMatrix<ElemType>(m_labelName);
         if (labels->GetNumRows() != 1)
             RuntimeError("SparsePCReader only supports single label value per column but the network expected %d.", (int) labels->GetNumRows());
     }
@@ -282,7 +280,7 @@ bool SparsePCReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemTy
     for (int i = 0; i < m_featureCount; i++)
     {
         m_colIndices[i][j] = currIndex[i];
-        Matrix<ElemType>& features = *matrices[m_featureNames[i]];
+        Matrix<ElemType>& features = matrices.GetInputMatrix<ElemType>(m_featureNames[i]);
 
         if (features.GetFormat() != MatrixFormat::matrixFormatSparseCSC)
             features.SwitchToMatrixType(MatrixType::SPARSE, MatrixFormat::matrixFormatSparseCSC, false);
@@ -293,9 +291,7 @@ bool SparsePCReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemTy
     if (m_returnDense || m_doGradientCheck)
     {
         for (int i = 0; i < m_featureCount; i++)
-        {
-            (*matrices[m_featureNames[i]]).SwitchToMatrixType(MatrixType::DENSE, MatrixFormat::matrixFormatDense, true);
-        }
+            matrices.GetInputMatrix<ElemType>(m_featureNames[i]).SwitchToMatrixType(MatrixType::DENSE, MatrixFormat::matrixFormatDense, true);
     }
 
     if (labels)
@@ -321,7 +317,7 @@ bool SparsePCReader<ElemType>::DataEnd() { return true; }
 // GetLabelMapping - Gets the label mapping from integer index to label type
 // returns - a map from numeric datatype to native label type
 template <class ElemType>
-const std::map<typename IDataReader<ElemType>::LabelIdType, typename IDataReader<ElemType>::LabelType>& SparsePCReader<ElemType>::GetLabelMapping(const std::wstring& /*sectionName*/)
+const std::map<IDataReader::LabelIdType, IDataReader::LabelType>& SparsePCReader<ElemType>::GetLabelMapping(const std::wstring& /*sectionName*/)
 {
     return m_mapIdToLabel;
 }
@@ -330,7 +326,7 @@ const std::map<typename IDataReader<ElemType>::LabelIdType, typename IDataReader
 // labelMapping - mapping table from label values to IDs (must be 0-n)
 // note: for tasks with labels, the mapping table must be the same between a training run and a testing run
 template <class ElemType>
-void SparsePCReader<ElemType>::SetLabelMapping(const std::wstring& /*sectionName*/, const std::map<typename IDataReader<ElemType>::LabelIdType, LabelType>& labelMapping)
+void SparsePCReader<ElemType>::SetLabelMapping(const std::wstring& /*sectionName*/, const std::map<IDataReader::LabelIdType, LabelType>& labelMapping)
 {
     m_mapIdToLabel = labelMapping;
     m_mapLabelToId.clear();
