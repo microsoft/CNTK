@@ -87,7 +87,6 @@ public:
     // Elseif deviceId>=0 then the matrix will be based on GPU with specified deviceId
     explicit Matrix(DEVICEID_TYPE deviceId);
     Matrix(BaseMatrix<ElemType>* baseMatrix, ElemType* pArray, DEVICEID_TYPE deviceId);                                     // constructor for setting Matrix from a base matrix (externally managed butter pArray)
-    Matrix(FILE* f, const char* matrixName, DEVICEID_TYPE deviceId, const MatrixType matrixType = DENSE); // matrixName is used to verify that correct matrix is read.
     Matrix(const size_t numRows, const size_t numCols, DEVICEID_TYPE deviceId, const MatrixType matrixType = DENSE, const MatrixFormat matrixFormat = matrixFormatDense);
     Matrix(const size_t numRows, const size_t numCols, ElemType* pArray, DEVICEID_TYPE deviceId, const size_t matrixFlags = matrixFlagNormal, const size_t nnz = 0);
     Matrix(const Matrix<ElemType>& deepCopyFrom); // copy constructor, deep copy
@@ -156,8 +155,6 @@ public:
     {
         return GetNumElements() == 0;
     }
-    wchar_t* GetMatrixName() const;
-    void SetMatrixName(const wchar_t* s);
     bool IsEmpty() const;
     size_t BufferSize() const;
     ElemType* BufferPointer() const;
