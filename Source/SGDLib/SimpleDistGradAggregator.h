@@ -5,6 +5,7 @@
 #include <future>
 #include "GPUDataTransferer.h"
 #include "TimerUtility.h"
+#include "MatrixQuantizerImpl.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
