@@ -476,49 +476,50 @@ template void DoWriteWordAndClassInfo<double>(const ConfigParameters& config);
 template <typename ElemType>
 void DoTopologyPlot(const ConfigParameters& config)
 {
-    wstring modelPath = config(L"modelPath");
-    wstring outdot = config(L"outputDotFile");  // filename for the dot language output, if not specified, %modelpath%.dot will be used
-    wstring outRending = config(L"outputFile"); // filename for the rendered topology plot
+    wstring modelPath     = config(L"modelPath");
+    wstring outputDotFile = config(L"outputDotFile"); // filename for the dot language output, if not specified, %modelpath%.dot will be used
+    wstring outputFile    = config(L"outputFile");    // filename for the rendered topology plot
     // this can be empty, in that case no rendering will be done
     // or if this is set, renderCmd must be set, so CNTK will call re
-    wstring RenderCmd = config(L"RenderCmd"); // if this option is set, then CNTK will call the render to convert the outdotFile to a graph
+    wstring renderCmd = config(L"renderCmd"); // if this option is set, then CNTK will call the render to convert the outdotFile to a graph
     // e.g. "d:\Tools\graphviz\bin\dot.exe -Tpng -x <IN> -o<OUT>"
     //              where <IN> and <OUT> are two special placeholders
 
-    // ========================================
-    // Sec. 1 option check
-    // ========================================
-    if (outdot.empty())
-    {
-        outdot = modelPath + L".dot";
-    }
+    // output dot file defaults to modelpath.dot
+    if (outputDotFile.empty())
+        outputDotFile = modelPath + L".dot";
 
-    wstring rescmd;
-    if (!outRending.empty()) // we need to render the plot
-    {
-        std::wregex inputPlaceHolder(L"(.+)(<IN>)(.*)");
-        std::wregex outputPlaceHolder(L"(.+)(<OUT>)(.*)");
-
-        rescmd = regex_replace(RenderCmd, inputPlaceHolder, L"$1" + outdot + L"$3");
-        rescmd = regex_replace(rescmd, outputPlaceHolder, L"$1" + outRending + L"$3");
-    }
-
-    ComputationNetwork net(-1);
+    ComputationNetwork net(CPUDEVICE);
     net.Load<ElemType>(modelPath);
-    net.PlotNetworkTopology(outdot);
-    fprintf(stderr, "Output network description in dot language to %S\n", outdot.c_str());
 
-    if (!outRending.empty())
+    net.PlotNetworkTopology(outputDotFile);
+    fprintf(stderr, "Created network description in dot format: %ls\n", outputDotFile.c_str());
+
+    if (!outputFile.empty())
     {
-        fprintf(stderr, "Executing a third-part tool for rendering dot:\n%S\n", rescmd.c_str());
-#ifdef __unix__
-        const auto rc = system(msra::strfun::utf8(rescmd).c_str());
-        rc /*ignoring the result--this gets flagged by gcc if we don't save the return value*/;
-#else
-        _wsystem(rescmd.c_str());
+        if (renderCmd.empty())
+            InvalidArgument("plot: If you specify an outputFile, you also need a renderCmd.");
+#if 0 // this part is problematic under early version of gcc  (< 4.9)
+        static const wregex  inputPlaceHolder(L"(.+)(<IN>)(.*)");
+        static const wregex outputPlaceHolder(L"(.+)(<OUT>)(.*)");
+
+        // patch in the pathnames
+        renderCmd = regex_replace(renderCmd, inputPlaceHolder,  L"$1" + outputDotFile + L"$3");
+        renderCmd = regex_replace(renderCmd, outputPlaceHolder, L"$1" + outputFile    + L"$3");
 #endif
-        fprintf(stderr, "Done\n");
+        msra::strfun::ReplaceAll(renderCmd, wstring(L"<IN>"), outputDotFile);
+        msra::strfun::ReplaceAll(renderCmd, wstring(L"<OUT>"), outputFile);
     }
+
+
+        fprintf(stderr, "Executing third-party tool for rendering dot:\n%ls\n", renderCmd.c_str());
+#ifdef __unix__
+        auto rc = system(msra::strfun::utf8(renderCmd).c_str());
+        rc; // ignoring the result--this gets flagged by gcc if we don't save the return value
+#else
+        _wsystem(renderCmd.c_str());
+#endif
+        fprintf(stderr, "Done.\n");
 }
 
 template void DoTopologyPlot<float>(const ConfigParameters& config);

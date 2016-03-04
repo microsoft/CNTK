@@ -92,6 +92,8 @@ public:
         Read<ElemType>(fileName);
         // perform all further post-processing, caching, etc.
         CompileNetwork();
+        // To ensure that all the BN nodes changed to eval mode unless it's in Training mode.
+        SetBatchNormalizationNodesBelowEvalMode(true);
     }
 
     // static helper to instantiate a network from a file
@@ -328,7 +330,7 @@ public:
     void AddFeatureNode(ComputationNodeBasePtr featureNode);
     void RemoveFeatureNode(ComputationNodeBasePtr featureNode);
     void SetLearnableNodesBelowLearningRateMultiplier(const float learningRateMultiplier, const ComputationNodeBasePtr& rootNode = nullptr);
-    void SetBatchNormlizationNodesBelowEvalMode(const bool evalMode, const ComputationNodeBasePtr& rootNode = nullptr);
+    void SetBatchNormalizationNodesBelowEvalMode(const bool evalMode, const ComputationNodeBasePtr& rootNode = nullptr);
 
     // -----------------------------------------------------------------------
     // node access

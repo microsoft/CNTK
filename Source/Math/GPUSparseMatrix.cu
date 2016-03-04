@@ -145,8 +145,6 @@ template <class ElemType>
             GetNumNZElements());
     }
 
-    SetMatrixName(deepCopy.m_matrixName);
-
     // TODO: to copy other varibles used only for class based LM
 }
 
@@ -302,7 +300,6 @@ void GPUSparseMatrix<ElemType>::CopyToDenseMatrix(GPUMatrix<ElemType>& denseMatr
     }
     CUSPARSE_CALL(cusparseDestroy(cusparseHandle));
 
-    denseMatrix.SetMatrixName(m_matrixName);
 }
 
 template <class ElemType>
@@ -515,7 +512,6 @@ void GPUSparseMatrix<ElemType>::SetValue(const GPUMatrix<ElemType>& denseMatrix,
                                              (int) m_numRows, nnzPerRowOrCol, reinterpret_cast<double*>(BufferPointer()), RowLocation(), ColLocation()));
         }
     }
-    SetMatrixName(denseMatrix.GetMatrixName());
 }
 
 template <class ElemType>
@@ -525,7 +521,6 @@ GPUSparseMatrix<ElemType>& GPUSparseMatrix<ElemType>::operator=(const GPUSparseM
     if (this != &deepCopy)
         SetValue(deepCopy);
 
-    SetMatrixName(deepCopy.m_matrixName);
     return *this;
 }
 
@@ -576,9 +571,6 @@ template <class ElemType>
     // In that case we shouldn't free anything.
     if (OwnBuffer())
     {
-        delete[] m_matrixName;
-        m_matrixName = nullptr;
-
         delete[](byte*) m_tempHostBuffer;
         m_tempHostBuffer = nullptr;
 
@@ -2142,7 +2134,6 @@ GPUSparseMatrix<ElemType> GPUSparseMatrix<ElemType>::ColumnSlice(size_t startCol
     slice.m_format                   = m_format;
     slice.m_externalBuffer           = true;
     slice.m_sliceOf                  = const_cast<GPUSparseMatrix<ElemType>*>(this); // BUGBUG: ColumnSlice() returns a reference to a mutable matrix, even if itself is 'const'; should not be.
-    slice.m_matrixName               = m_matrixName;
     slice.m_blockSize                = m_blockSize;
     slice.m_rowToId                  = m_rowToId;
     slice.m_tempHostBuffer           = m_tempHostBuffer;
@@ -2189,8 +2180,6 @@ GPUMatrix<ElemType> GPUSparseMatrix<ElemType>::CopyColumnSliceToDense(size_t sta
     }
 
     CUSPARSE_CALL(cusparseDestroy(cusparseHandle));
-
-    slice.SetMatrixName(m_matrixName);
 
     return slice;
 }
@@ -2717,7 +2706,6 @@ MATH_API File& operator>>(File& stream, GPUSparseMatrix<ElemType>& us)
     }
 
     stream.GetMarker(fileMarkerEndSection, std::wstring(L"EMAT"));
-    us.SetMatrixName(matrixName.c_str());
 
     return stream;
 }
@@ -2733,15 +2721,8 @@ MATH_API File& operator<<(File& stream, const GPUSparseMatrix<ElemType>& us)
 
     stream.PutMarker(fileMarkerBeginSection, std::wstring(L"BMAT"));
     stream << sizeof(ElemType);
-    if (us.GetMatrixName() == nullptr)
-    {
-        std::wstring s(L"nnmatrix");
-        stream << s;
-    }
-    else
-    {
-        stream << us.GetMatrixName();
-    }
+	std::wstring s(L"nnmatrix");
+	stream << s;
 
     size_t nz = us.GetNumNZElements(), numElemAllocated = us.GetNumElemAllocated(), numRows = us.GetNumRows(), numCols = us.GetNumCols();
     size_t compressedSize = us.SecondaryIndexCount();

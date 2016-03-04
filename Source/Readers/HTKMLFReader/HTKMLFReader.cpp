@@ -122,6 +122,7 @@ void HTKMLFReader<ElemType>::PrepareForTrainingOrTesting(const ConfigRecordType&
     vector<wstring> statelistpaths;
     vector<size_t> numContextLeft;
     vector<size_t> numContextRight;
+    size_t numExpandToUtt = 0;
 
     std::vector<std::wstring> featureNames;
     std::vector<std::wstring> labelNames;
@@ -139,6 +140,12 @@ void HTKMLFReader<ElemType>::PrepareForTrainingOrTesting(const ConfigRecordType&
     {
         const ConfigRecordType& thisFeature = readerConfig(featureNames[i]);
         m_featDims.push_back(thisFeature(L"dim"));
+
+        bool expandToUtt = thisFeature(L"expandToUtterance", false); // should feature be processed as an ivector?
+        m_expandToUtt.push_back(expandToUtt);
+        if (expandToUtt)
+            numExpandToUtt++;
+
         intargvector contextWindow = thisFeature(L"contextWindow", ConfigRecordType::Array(intargvector(vector<int>{1})));
         if (contextWindow.size() == 1) // symmetric
         {
@@ -158,6 +165,10 @@ void HTKMLFReader<ElemType>::PrepareForTrainingOrTesting(const ConfigRecordType&
         {
             InvalidArgument("contextFrames must have 1 or 2 values specified, found %d", (int) contextWindow.size());
         }
+
+        if (expandToUtt && (numContextLeft[i] != 0 || numContextRight[1] != 0))
+            RuntimeError("contextWindow expansion not permitted when expandToUtterance=true");
+
         // update m_featDims to reflect the total input dimension (featDim x contextWindow), not the native feature dimension
         // that is what the lower level feature readers expect
         m_featDims[i] = m_featDims[i] * (1 + numContextLeft[i] + numContextRight[i]);
@@ -291,6 +302,12 @@ void HTKMLFReader<ElemType>::PrepareForTrainingOrTesting(const ConfigRecordType&
     if (iFeat != scriptpaths.size() || iLabel != mlfpathsmulti.size())
         RuntimeError("# of inputs files vs. # of inputs or # of output files vs # of outputs inconsistent\n");
 
+    if (iFeat == numExpandToUtt)
+        RuntimeError("At least one feature stream must be frame-based, not utterance-based");
+
+    if (m_expandToUtt[0]) // first feature stream is ivector type - that will mess up lower level feature reader
+        RuntimeError("The first feature stream in the file must be frame-based not utterance based. Please reorder the feature blocks of your config appropriately");
+
     if (readerConfig.Exists(L"randomize"))
     {
         wstring randomizeString = readerConfig.CanBeString(L"randomize") ? readerConfig(L"randomize") : wstring();
@@ -316,6 +333,9 @@ void HTKMLFReader<ElemType>::PrepareForTrainingOrTesting(const ConfigRecordType&
 
     if (readMethod == L"blockRandomize" && randomize == randomizeNone)
         InvalidArgument("'randomize' cannot be 'none' when 'readMethod' is 'blockRandomize'.");
+
+    if (readMethod == L"rollingWindow" && numExpandToUtt>0)
+        RuntimeError("rollingWindow reader does not support expandToUtt. Change to blockRandomize.\n");
 
     // read all input files (from multiple inputs)
     // TO DO: check for consistency (same number of files in each script file)
@@ -487,7 +507,7 @@ void HTKMLFReader<ElemType>::PrepareForTrainingOrTesting(const ConfigRecordType&
 
         // now get the frame source. This has better randomization and doesn't create temp files
         bool minimizeReaderMemoryFootprint = readerConfig(L"minimizeReaderMemoryFootprint", true);
-        m_frameSource.reset(new msra::dbn::minibatchutterancesourcemulti(infilesmulti, labelsmulti, m_featDims, m_labelDims, numContextLeft, numContextRight, randomize, *m_lattices, m_latticeMap, m_frameMode, minimizeReaderMemoryFootprint));
+        m_frameSource.reset(new msra::dbn::minibatchutterancesourcemulti(infilesmulti, labelsmulti, m_featDims, m_labelDims, numContextLeft, numContextRight, randomize, *m_lattices, m_latticeMap, m_frameMode, minimizeReaderMemoryFootprint, m_expandToUtt));
         m_frameSource->setverbosity(m_verbosity);
     }
     else if (EqualCI(readMethod, L"rollingWindow"))
@@ -1482,6 +1502,7 @@ bool HTKMLFReader<ElemType>::GetMinibatchToWrite(StreamMinibatchInputs& matrices
         m_fileEvalSource->Reset();
 
         // load next file (or set of files)
+        size_t nfr = 0;
         foreach_index (i, m_inputFilesMultiIO)
         {
             msra::asr::htkfeatreader reader;
@@ -1492,9 +1513,19 @@ bool HTKMLFReader<ElemType>::GetMinibatchToWrite(StreamMinibatchInputs& matrices
             string featkind;
             unsigned int sampperiod;
             msra::util::attempt(5, [&]()
-                                {
-                                    reader.read(path, featkind, sampperiod, feat); // whole file read as columns of feature vectors
-                                });
+            {
+                reader.read(path, featkind, sampperiod, feat); // whole file read as columns of feature vectors
+            });
+            if (i == 0)
+                nfr = feat.cols();
+            else if (feat.cols() == 1 && nfr > 1)
+            { // This broadcasts a vector to be multiple columns, as needed for i-vector support
+                msra::dbn::matrix feat_col(feat);
+                feat.resize(feat.rows(), nfr);
+                for (size_t i = 0; i < feat.rows(); i++)
+                    for (size_t j = 0; j < feat.cols(); j++)
+                        feat(i, j) = feat_col(i, 0);
+            }
             fprintf(stderr, "evaluate: reading %d frames of %ls\n", (int) feat.cols(), ((wstring) path).c_str());
             m_fileEvalSource->AddFile(feat, featkind, sampperiod, i);
         }

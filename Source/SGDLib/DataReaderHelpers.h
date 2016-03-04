@@ -185,6 +185,31 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         return selected;
     }
 
+    template<class ElemType>
+    static size_t GetNumSubminibatchesNeeded(IDataReader* dataReader,
+                                           size_t maxSamplesInRAM,
+                                           size_t numSubminibatches,
+                                           size_t tunedMBSize)
+    {
+        if (numSubminibatches > 1) // user-specified maximum number of samples
+            return numSubminibatches;
+
+        if (maxSamplesInRAM < SIZE_MAX)
+        {
+            // into how many pieces would we need to break the minibatch?
+            // TODO: The following calculation relies on the ill-devised definition of "minibatch" of the current truncated BPTT implementation. Adapt this once fixed.
+            size_t numParallelSequences = dataReader->GetNumParallelSequences();
+            size_t estimatedMBSize = tunedMBSize * numParallelSequences;
+            return (estimatedMBSize + maxSamplesInRAM - 1) / maxSamplesInRAM;
+        }
+
+        // The return value of this method decides how many subminibatch needed for the training or 
+        // eval process. The current process only starts the subminibatch loop when the calculated
+        // subminibatch number is larger than 1. So here returning 0 or 1 shares the same behavior.
+        // But the default value should still be 0 which means no subminibatch needed for this case.
+        return 0;
+    }
+
     // ===================================================================
     // SubminibatchHelpers -- helper for sub-minibatch implementation
     // TODO: Can this just exist inside SGD.cpp?

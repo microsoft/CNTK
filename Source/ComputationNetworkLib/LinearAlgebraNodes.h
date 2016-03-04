@@ -403,7 +403,8 @@ template class TransposeTimesNode<double>;
 
 // -----------------------------------------------------------------------
 // ElementTimesNode (factor1, factor2)
-// This allows broadcasting, and can thus also scale with a row, a column, or a scalar.
+// This allows broadcasting, and can thus also scale with a row, a column, or a scalar,
+// as well as mutliplying with a diagonal matrix (if represented as a column vector).
 // -----------------------------------------------------------------------
 
 template <class ElemType>
@@ -459,6 +460,7 @@ template class ElementTimesNode<double>;
 
 // -----------------------------------------------------------------------
 // DiagTimesNode (vector representing the diagonal of a square matrix, data)
+// TODO: This is redundant with ElementTimes and should be removed (with a compat stub).
 // -----------------------------------------------------------------------
 
 template <class ElemType>
@@ -586,7 +588,10 @@ template class DiagTimesNode<double>;
 
 // -----------------------------------------------------------------------
 // SumElementsNode (input)
-// sums up all elements in the input into a single scalar
+// Sums up all elements in the input across all samples into a single scalar.
+// When applied to minibatch data, this will sum across all sequences in the
+// minibatch, like a training-criterion node. This is one of the few operations
+// that cross the boundary between input sequences.
 // -----------------------------------------------------------------------
 
 template <class ElemType>
@@ -633,7 +638,8 @@ template class SumElementsNode<double>;
 
 // -----------------------------------------------------------------------
 // SumColumnElementsNode (input)
-// sums up all elements in each column of the input, reducing each column to a scalar
+// Sums up all elements in each sample (column) of the input. Every sample
+// will be reduced to a scalar. This is equivalent to multiplying with a row of ones.
 // TODO: This should be deprecated, in favor of a reduce node.
 // TODO: Implement this with the tensor library.
 // -----------------------------------------------------------------------
@@ -818,6 +824,7 @@ template class TransposeDimensionsNode<double>;
 // CosDistanceNode (left, right)
 // column-wise cos distance
 // TODO: Would it be useful to allow one of the two to be a single column?
+// TODO: Allow to reduce only over a single dimension, or a subset.
 // -----------------------------------------------------------------------
 
 template <class ElemType>
@@ -874,7 +881,7 @@ public:
         sliceOutputValue.AssignInnerProductOf(sliceInput0Value, sliceInput1Value, true);
         sliceOutputValue.ElementMultiplyWith(*m_invNorm0);
         sliceOutputValue.ElementMultiplyWith(*m_invNorm1);
-        // TODO: This formulation above allows to use the tensor lib for this, with automatic broadcasting.
+        // TODO: This formulation above would allow to use the TensorView lib for this, with automatic broadcasting.
     }
 
     virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
@@ -945,7 +952,8 @@ template class CosDistanceNode<double>;
 
 // -----------------------------------------------------------------------
 // KhatriRaoProductNode (left, right)
-// compute an outer product of column vectors (for each sample)
+// Compute an outer product of column vectors (for each sample).
+// TODO: This is a special kind of tensor product, and calls for a tensor representation.
 // -----------------------------------------------------------------------
 
 template <class ElemType>
@@ -1263,4 +1271,5 @@ private:
 
 template class CosDistanceWithNegativeSamplesNode<float>;
 template class CosDistanceWithNegativeSamplesNode<double>;
-} } }
+
+}}}

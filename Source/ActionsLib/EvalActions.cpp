@@ -57,6 +57,10 @@ static void DoEvalBase(const ConfigParameters& config, IDataReader& reader)
 
     int traceLevel = config(L"traceLevel", "0");
     size_t numMBsToShowResult = config(L"numMBsToShowResult", "100");
+    size_t maxSamplesInRAM = config(L"maxSamplesInRAM", (size_t)SIZE_MAX);
+    size_t numSubminiBatches = config(L"numSubminibatches", (size_t)1);
+    //TODO: switch to a global parallel setting for both training and evaluation.
+    bool useParallel = config(L"parallelTrain", false);
 
     ConfigArray evalNodeNames = config(L"evalNodeNames", "");
     vector<wstring> evalNodeNamesVector;
@@ -66,8 +70,8 @@ static void DoEvalBase(const ConfigParameters& config, IDataReader& reader)
     }
 
     auto net = ComputationNetwork::CreateFromFile<ElemType>(deviceId, modelPath);
-
-    SimpleEvaluator<ElemType> eval(net, numMBsToShowResult, traceLevel);
+    
+    SimpleEvaluator<ElemType> eval(net, useParallel, numMBsToShowResult, traceLevel, maxSamplesInRAM, numSubminiBatches);
     eval.Evaluate(&reader, evalNodeNamesVector, mbSize[0], epochSize);
 }
 
@@ -114,6 +118,10 @@ void DoCrossValidate(const ConfigParameters& config)
 
     int traceLevel = config(L"traceLevel", "0");
     size_t numMBsToShowResult = config(L"numMBsToShowResult", "100");
+    size_t maxSamplesInRAM = config(L"maxSamplesInRAM", (size_t)SIZE_MAX);
+    size_t numSubminiBatches = config(L"numSubminibatches", (size_t)1);
+    //TODO: switch to a global parallel setting for both training and evaluation.
+    bool useParallel = config(L"parallelTrain", false);
 
     ConfigArray evalNodeNames = config(L"evalNodeNames", "");
     vector<wstring> evalNodeNamesVector;
@@ -146,8 +154,8 @@ void DoCrossValidate(const ConfigParameters& config)
 
         cvModels.push_back(cvModelPath);
         auto net = ComputationNetwork::CreateFromFile<ElemType>(deviceId, cvModelPath);
-
-        SimpleEvaluator<ElemType> eval(net, numMBsToShowResult, traceLevel);
+        
+        SimpleEvaluator<ElemType> eval(net, useParallel, numMBsToShowResult, traceLevel, maxSamplesInRAM, numSubminiBatches);
 
         fprintf(stderr, "model %ls --> \n", cvModelPath.c_str());
         auto evalErrors = eval.Evaluate(&cvDataReader, evalNodeNamesVector, mbSize[0], epochSize);

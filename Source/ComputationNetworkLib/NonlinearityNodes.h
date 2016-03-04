@@ -90,7 +90,7 @@ public:
 // These are all implemented by single-opcode functions and can thus be declared by a macro.
 // -----------------------------------------------------------------------
 
-#pragma push_macro("DeclareUnaryTensorOp")
+#pragma push_macro("DeclareUnaryElementWiseWithOpCodeNode")
 #define DeclareUnaryElementWiseWithOpCodeNode(Name, Forward, Backward, gradientFromOutput)                                \
     template <class ElemType>                                                                                             \
     class Name##Node : public UnaryElementWiseWithOpCodeNodeBase<ElemType, op##Forward, op##Backward, gradientFromOutput> \
@@ -110,15 +110,15 @@ public:
         }                                                                                                                 \
     }
 
-//                                    Name             Forward and      Backward opcodes
-DeclareUnaryElementWiseWithOpCodeNode(Sigmoid, Sigmoid, ElementwiseProductWithSigmoidDerivativeFromOutput, true);
-DeclareUnaryElementWiseWithOpCodeNode(Tanh, Tanh, ElementwiseProductWithTanhDerivativeFromOutput, true);
+//                                    Name             Forward and      Backward opcodes                           Gradient from output?
+DeclareUnaryElementWiseWithOpCodeNode(Sigmoid,         Sigmoid,         ElementwiseProductWithSigmoidDerivativeFromOutput,         true);
+DeclareUnaryElementWiseWithOpCodeNode(Tanh,            Tanh,            ElementwiseProductWithTanhDerivativeFromOutput,            true);
 DeclareUnaryElementWiseWithOpCodeNode(RectifiedLinear, LinearRectifier, ElementwiseProductWithLinearRectifierDerivativeFromOutput, true);
-DeclareUnaryElementWiseWithOpCodeNode(Log, Log, ElementwiseProductWithLogDerivativeFromOutput, true);
-DeclareUnaryElementWiseWithOpCodeNode(Exp, Exp, ElementwiseProduct, true);
-DeclareUnaryElementWiseWithOpCodeNode(Cosine, Cosine, ElementwiseProductWithCosDerivative, false);
+DeclareUnaryElementWiseWithOpCodeNode(Log,             Log,             ElementwiseProductWithLogDerivativeFromOutput,             true);
+DeclareUnaryElementWiseWithOpCodeNode(Exp,             Exp,             ElementwiseProduct,                                        true);
+DeclareUnaryElementWiseWithOpCodeNode(Cosine,          Cosine,          ElementwiseProductWithCosDerivative,                       false);
 
-#pragma pop_macro("DeclareUnaryTensorOp")
+#pragma pop_macro("DeclareUnaryElementWiseWithOpCodeNode")
 
 // -----------------------------------------------------------------------
 // SoftmaxNodeBase (input) -- shared base of Softmax and LogSoftmax

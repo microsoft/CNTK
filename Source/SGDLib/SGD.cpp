@@ -335,6 +335,7 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
 
         // set dropout rate for this epoch
         ComputationNetwork::SetDropoutRate<ElemType>(net, criterionNodes[0], m_dropoutRates[i], prevDropoutRate, dropOutSeed);
+        net->SetBatchNormalizationNodesBelowEvalMode(false, criterionNodes[0]);
 
         // learning rate adjustment
         if (m_autoLearnRateSearchType == LearningRateSearchAlgorithm::None || i < m_learningRatesParam.size())
@@ -437,6 +438,8 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
         timer.Stop();
         double epochTime = timer.ElapsedSeconds();
 
+        net->SetBatchNormalizationNodesBelowEvalMode(true, criterionNodes[0]);
+
         if (m_useEvalCriterionControlLR && epochEvalErrors.size() > 0)
         {
             lrControlCriterion = epochEvalErrors[0];
@@ -484,40 +487,37 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
             }
         }
 
-        if ((g_mpi == nullptr) || g_mpi->IsMainNode())
+        if (validationSetDataReader != trainSetDataReader && validationSetDataReader != nullptr)
         {
-            if (validationSetDataReader != trainSetDataReader && validationSetDataReader != nullptr)
+            SimpleEvaluator<ElemType> evalforvalidation(net, g_mpi != nullptr);
+            vector<wstring> cvSetTrainAndEvalNodes;
+            if (criterionNodes.size() > 0)
             {
-                SimpleEvaluator<ElemType> evalforvalidation(net);
-                vector<wstring> cvSetTrainAndEvalNodes;
-                if (criterionNodes.size() > 0)
-                {
-                    cvSetTrainAndEvalNodes.push_back(criterionNodes[0]->NodeName());
-                }
-                if (evaluationNodes.size() > 0)
-                {
-                    cvSetTrainAndEvalNodes.push_back(evaluationNodes[0]->NodeName());
-                }
+                cvSetTrainAndEvalNodes.push_back(criterionNodes[0]->NodeName());
+            }
+            if (evaluationNodes.size() > 0)
+            {
+                cvSetTrainAndEvalNodes.push_back(evaluationNodes[0]->NodeName());
+            }
 
                 // BUGBUG: We should not use the training MB size. The training MB size is constrained by both convergence and memory. Eval is only constrained by memory.
-                vector<double> vScore = evalforvalidation.Evaluate(validationSetDataReader, cvSetTrainAndEvalNodes, m_mbSize[i]);
-                fprintf(stderr, "Finished Epoch[%2d of %d]: [Validation Set] TrainLossPerSample = %.8g", i + 1, (int) m_maxEpochs, vScore[0]);
-                if (vScore.size() > 1)
-                {
-                    fprintf(stderr, "; EvalErrPerSample = %.8g", vScore[1]);
-                }
-                fprintf(stderr, "\n");
+            vector<double> vScore = evalforvalidation.Evaluate(validationSetDataReader, cvSetTrainAndEvalNodes, m_mbSize[i]);
+            fprintf(stderr, "Finished Epoch[%2d of %d]: [Validation Set] TrainLossPerSample = %.8g", i + 1, (int) m_maxEpochs, vScore[0]);
+            if (vScore.size() > 1)
+            {
+                fprintf(stderr, "; EvalErrPerSample = %.8g", vScore[1]);
+            }
+            fprintf(stderr, "\n");
 
-                if (m_useCVSetControlLRIfCVExists)
+            if (m_useCVSetControlLRIfCVExists)
+            {
+                if (m_useEvalCriterionControlLR && vScore.size() > 1)
                 {
-                    if (m_useEvalCriterionControlLR && vScore.size() > 1)
-                    {
-                        lrControlCriterion = vScore[1];
-                    }
-                    else
-                    {
-                        lrControlCriterion = vScore[0]; // the first one is the training criterion
-                    }
+                    lrControlCriterion = vScore[1];
+                }
+                else
+                {
+                    lrControlCriterion = vScore[0]; // the first one is the training criterion
                 }
             }
         }
@@ -781,22 +781,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
     // prepare for sub-minibatching
     // Sub-minibatching is used if a single minibatch is too large to fit into GPU RAM.
     DataReaderHelpers::SubminibatchDispatcher<ElemType> smbDispatcher;
-    size_t numSubminibatchesNeeded = 0;
-    if (m_maxSamplesInRAM < SIZE_MAX || m_numSubminiBatches > 1) // user-specified maximum number of samples that fit into GPU RAM; or 0 if not enabled
-    {
-        if (m_maxSamplesInRAM < SIZE_MAX)
-        {
-            // into how many pieces would we need to break the minibatch?
-            // TODO: The following calculation relies on the ill-devised definition of "minibatch" of the current truncated BPTT implementation. Adapt this once fixed.
-            size_t numParallelSequences = trainSetDataReader->GetNumParallelSequences();
-            size_t estimatedMBSize = tunedMBSize * numParallelSequences;
-            numSubminibatchesNeeded = (size_t) std::ceil((float) estimatedMBSize / m_maxSamplesInRAM);
-        }
-        if (m_numSubminiBatches > 1)
-        {
-            numSubminibatchesNeeded = m_numSubminiBatches;
-        }
-    }
+    size_t numSubminibatchesNeeded = DataReaderHelpers::GetNumSubminibatchesNeeded<ElemType>(trainSetDataReader, m_maxSamplesInRAM, m_numSubminiBatches, tunedMBSize);
     // this is non-trivial, we need a manager object to handle this
     if (numSubminibatchesNeeded > 1)
         smbDispatcher.Init(net, learnableNodes, criterionNodes, evaluationNodes);

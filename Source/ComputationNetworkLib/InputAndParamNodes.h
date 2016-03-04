@@ -507,18 +507,18 @@ template class SparseInputValue<double>;
 
 // -----------------------------------------------------------------------
 // LookupTableNode (embedding matrix, bag-of-word representation of the inputs)
-// implements an embedding, assuming a specific representation of the input data
+// Implements an embedding. The input vector can consist of multiple stacked
+// This is a tensor product where the matrix width may be an integer fraction of the features.
+// If it is, then the matrix will be replicated.
+// This is the same as if the input data were a tensor where the same matrix is applied to each column of the tensor.
+// TimesNode can do that.
 // -----------------------------------------------------------------------
 
 template <class ElemType>
 class LookupTableNode : public ComputationNode<ElemType>, public NumInputs<2>
 {
-    typedef ComputationNode<ElemType> Base;
-    UsingComputationNodeMembersBoilerplate;
-    static const std::wstring TypeName()
-    {
-        return L"LookupTable";
-    }
+    typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+    static const std::wstring TypeName() { return L"LookupTable"; }
 
 public:
     DeclareConstructorFromConfigWithNumInputs(LookupTableNode);
@@ -578,10 +578,10 @@ public:
 
     virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& t) override
     {
-        // input0 is the weight (each column is an embedding of one word), input 1 contains m_bnrLooked words in each column (sample)
-        Matrix<ElemType> functionValues = ValueFor(t);
-        const Matrix<ElemType>& input0 = Input(0)->ValueAsMatrix();
-        Matrix<ElemType> input1 = Input(1)->ValueFor(t);
+        // input0 is the weight (each column is an embedding of one word), input 1 contains m_nbrLooked words in each column (sample)
+        Matrix<ElemType> functionValues =           ValueFor(t);
+        const Matrix<ElemType>&  input0 = Input(0)->ValueAsMatrix();
+        Matrix<ElemType>         input1 = Input(1)->ValueFor(t);
 
         size_t rows1 = input1.GetNumRows(), cols1 = input1.GetNumCols();
         size_t cols0 = input0.GetNumCols();
@@ -591,7 +591,7 @@ public:
         if (cols0 * wordsInEachSample != rows1)
             LogicError("LookupTableNode: rows of input 1 is not a multiple of cols of input 0. This usually happens when the feature dimension is not specified as that in the network definition of look-up-table dimension size.");
 
-        auto input1Reshaped = input1.Reshaped(rows1 / wordsInEachSample, cols1 * wordsInEachSample);
+        auto input1Reshaped = input1.Reshaped(rows1 / wordsInEachSample, cols1 * wordsInEachSample); // BUGBUG: Won't work for sparse.
 
         auto functionValuesReshaped = functionValues.Reshaped(input0.GetNumRows(), input1Reshaped.GetNumCols());
         functionValuesReshaped.AssignProductOf(input0, false, input1Reshaped, false);
@@ -681,4 +681,5 @@ public:
 
 template class LookupTableNode<float>;
 template class LookupTableNode<double>;
-} } }
+
+}}}
