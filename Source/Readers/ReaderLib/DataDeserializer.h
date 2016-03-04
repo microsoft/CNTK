@@ -56,6 +56,7 @@ struct SequenceDataBase
     // A non-owned pointer. The actual size is provided for particular sequences,
     // i.e. see DenseSequenceData, or SparseSequenceData.
     void* m_data;
+
 };
 typedef std::shared_ptr<SequenceDataBase> SequenceDataPtr;
 
@@ -78,6 +79,9 @@ typedef std::shared_ptr<DenseSequenceData> DenseSequenceDataPtr;
 // All samples in the sequence should have the same layout.
 struct SparseSequenceData : SequenceDataBase
 {
+    // TODO:
+    // size_t m_nnz; // total number of non-zero elements in this sequence.
+    // int32_t* m_row
     std::vector<std::vector<size_t>> m_indices;
 };
 typedef std::shared_ptr<SparseSequenceData> SparseSequenceDataPtr;

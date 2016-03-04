@@ -142,6 +142,7 @@ vector<SequenceDataPtr> TextParser::TextDataChunk::GetSequence(const size_t& seq
     {
         // all sequences in this chunk have been used up,
         // now it's time to remove it from the cache.
+        // TODO: add to list of eviction candidates.
         m_parent.m_chunkCache.erase(m_id);
     }
     return it->second;
@@ -175,6 +176,7 @@ ChunkPtr TextParser::GetChunk(size_t chunkId)
                 data->m_data = loadedData->m_buffer.data();
                 data->m_sampleLayout = m_streams[j]->m_sampleLayout;
                 data->m_numberOfSamples = loadedData->m_numberOfSamples;
+                data->m_chunk = chunk;
                 sequencePtrs[j] = data;
             }
             else
@@ -183,12 +185,14 @@ ChunkPtr TextParser::GetChunk(size_t chunkId)
                 auto data = make_shared<SparseSequenceData>();
                 data->m_data = loadedData->m_buffer.data();
                 data->m_indices = move(loadedData->m_indices);
+                data->m_chunk = chunk;
                 sequencePtrs[j] = data;
             }
         }
         chunk->m_sequencePtrMap[sequenceDescriptor.m_id] = move(sequencePtrs);
     }
 
+    // TODO: implement cache eviction. 
     m_chunkCache[chunkId] = chunk;
 
     return chunk;
@@ -914,6 +918,10 @@ void TextParser::SetMaxAllowedErrors(unsigned int maxErrors) {
 
 void TextParser::SetSkipSequenceIds(bool skip) {
     m_skipSequenceIds = skip;
+}
+
+void TextParser::SetChunkCacheSize(unsigned int size) {
+    m_chunkCacheSize = size;
 }
 
 }}}

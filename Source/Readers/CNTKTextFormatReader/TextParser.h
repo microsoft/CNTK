@@ -99,6 +99,7 @@ private:
 
     char* m_scratch; // local buffer for string parsing
 
+    unsigned int m_chunkCacheSize = 10; // number of chunks to keep in the memory
     unsigned int m_traceLevel = 0;
     unsigned int m_numAllowedErrors = 0;
     bool m_skipSequenceIds;
@@ -167,6 +168,8 @@ public:
     void SetMaxAllowedErrors(unsigned int maxErrors);
 
     void SetSkipSequenceIds(bool skip);
+
+    void SetChunkCacheSize(unsigned int size);
 };
 
 typedef std::shared_ptr<TextParser> TextParserPtr;

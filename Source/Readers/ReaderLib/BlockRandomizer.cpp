@@ -209,19 +209,24 @@ void BlockRandomizer::RandomizeIfNewSweepIsEntered()
     };
 }
 
-// This thing is rather pointless, we'll just pick up 
-// from wherever we left off and re-sweep when needed. 
-//void BlockRandomizer::RandomizeForGlobalSamplePosition(const size_t samplePosition)
-//{
-//    size_t sweep = samplePosition / m_numSamples;
-//
-//    if (m_sweep != sweep)
-//    {
-//        m_sweep = sweep;
-//        Randomize();
-//        m_sequencePositionInSweep = 0;
-//    }
-//};
+void BlockRandomizer::RandomizeForGlobalSamplePosition(const size_t samplePosition)
+{
+    size_t sweep = samplePosition / m_numSamples;
+
+    if (m_sweep != sweep)
+    {
+        m_sweep = sweep;
+        Randomize();
+    }
+
+    m_sequencePositionInSweep = 0;
+    for (size_t offsetInSamples = (samplePosition % m_numSamples), sequenceOffset = 0;
+        m_sequencePositionInSweep < m_randomTimeline.size() && sequenceOffset < offsetInSamples;
+        ++m_sequencePositionInSweep)
+    {
+        sequenceOffset += m_randomTimeline[m_sequencePositionInSweep].m_numberOfSamples;
+    }
+};
 
 //
 // Public methods
@@ -287,16 +292,10 @@ void BlockRandomizer::Initialize(TransformerPtr next, const ConfigParameters& re
     // Not used for the block randomizer.
     UNUSED(next);
     UNUSED(readerConfig);
-
-    Randomize();
-    m_sequencePositionInSweep = 0;
-    m_sweep = 0;
 }
 
 void BlockRandomizer::StartEpoch(const EpochConfiguration& config)
 {
-    // check that we've already been initialized.
-    assert(m_sweep != SIZE_MAX);
     m_workerRank = config.m_workerRank;
     m_numberOfWorkers = config.m_numberOfWorkers;
 
@@ -312,6 +311,9 @@ void BlockRandomizer::StartEpoch(const EpochConfiguration& config)
 
     // TODO add some asserts on EpochConfiguration
     m_samplePositionInEpoch = 0;
+    size_t timeframe = m_epochSize * config.m_epochIndex;
+    assert(timeframe != SIZE_MAX); // used as special value for init
+    RandomizeForGlobalSamplePosition(timeframe);
 };
 
 bool BlockRandomizer::GetNextSequenceDescriptions(size_t sampleCount, SequenceDescriptions& sequenceDescriptions)

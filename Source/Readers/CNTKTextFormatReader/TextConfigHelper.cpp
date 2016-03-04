@@ -20,14 +20,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         if (!config.ExistsCurrent(L"input")) 
         {
-            RuntimeError("CNTKTextReader configuration does not contain input section");
+            RuntimeError("CNTKTextFormatReader configuration does not contain input section");
         }
 
         const ConfigParameters& input = config(L"input");
 
         if (input.empty())
         {
-            RuntimeError("CNTKTextReader configuration contains an empty input section");
+            RuntimeError("CNTKTextFormatReader configuration contains an empty input section");
         }
 
         StreamId id = 0;

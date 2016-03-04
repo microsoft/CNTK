@@ -105,6 +105,9 @@ std::shared_ptr<Index> Indexer::Build() {
         RuntimeError("Input file is empty");
     }
 
+    // TODO: check if input contains a BOM value,
+    // skip 3 bytes in case of UTF-8, raise exception in case of UTF-16.
+
     // check the first byte and decide what to do next
     if (m_skipSequenceIds || m_bufferStart[0] == NAME_PREFIX) {
         // skip sequence id parsing, treat lines as individual sequences
