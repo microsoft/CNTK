@@ -300,8 +300,6 @@ typedef std::shared_ptr<HTKSequenceData> HTKSequenceDataPtr;
 
 void HTKDataDeserializer::GetSequenceById(size_t chunkId, size_t id, std::vector<SequenceDataPtr>& r)
 {
-    //UtteranceDescription* utterance = frame.m_utterence;
-
     const auto& chunkDescription = m_chunks[chunkId];
     size_t utteranceIndex = chunkDescription.GetUtteranceForChunkFrameIndex(id);
     UtteranceDescription* utterance = chunkDescription.GetUtterance(utteranceIndex);
