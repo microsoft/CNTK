@@ -105,7 +105,7 @@ void SampleModePacker::CopySequenceToBuffer(SequenceDataPtr sample, size_t strea
     if (stream->m_storageType == StorageType::dense)
     {
         // Expect single sample.
-        assert(sample->m_numberOfSamples == 1);
+        assert(reinterpret_cast<DenseSequenceData&>(*sample).m_numberOfSamples == 1);
 
         // Copying the sequence to its position in the buffer. Effectivly a buffer contains concatenation of samples for a stream.
         std::copy(sampleData, sampleData + sampleSize, buffer + sampleIndex * sampleSize);

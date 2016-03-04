@@ -34,12 +34,12 @@ public:
         throw std::logic_error("Not implemented");
     }
 
-    virtual std::vector<SequenceDescriptionPtr> GetSequencesForChunk(size_t)
+    virtual void GetSequencesForChunk(size_t, std::vector<SequenceDescription>&)
     {
         throw std::logic_error("Not implemented");
     }
 
-    virtual const SequenceDescription* GetSequenceDescriptionByKey(const KeyType&)
+    virtual void GetSequenceDescriptionByKey(const KeyType&, SequenceDescription&)
     {
         throw std::logic_error("Not implemented");
     }
