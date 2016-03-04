@@ -19,7 +19,7 @@
 #include <random>
 
 
-namespace Microsoft{ namespace MSR { namespace CNTK{
+namespace Microsoft { namespace MSR { namespace CNTK {
 
     enum class MAWorkerStatus
     {
@@ -51,16 +51,16 @@ namespace Microsoft{ namespace MSR { namespace CNTK{
             m_reportFrequency = freq;
         }
 
-        void OnOneEpochStart()
+        void OnEpochStart()
         {
             m_Timer.Restart(); 
             m_numSyncPerformedInCurrentEpoch = 0; 
         }
-        void OnOneEpochEnd()
+        void OnEpochEnd()
         {
             m_Timer.Stop();
         }
-        void OnPerformedMA(size_t localSamplesProcessedSinceLastSync, size_t totalSamplesProcessedSinceLastSync, float secondsOnCommunication)
+        void OnMAPerformed(size_t localSamplesProcessedSinceLastSync, size_t totalSamplesProcessedSinceLastSync, float secondsOnCommunication)
         {
             m_numSyncPerformedInCurrentEpoch++;
             m_totalSamplesProcessedSinceLastReport += totalSamplesProcessedSinceLastSync; 
@@ -96,7 +96,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK{
 
         }
     };
-    // interface for MA-SGD algorithm family 
+    // base class for MA-SGD algorithm family 
     template<typename ElemType>
     class IMASGD
     {
@@ -116,15 +116,15 @@ namespace Microsoft{ namespace MSR { namespace CNTK{
          {
          }
          
-         virtual void OnOneEpochStart(const std::list<ComputationNodeBasePtr>& /*LearnableNodes*/)
+         virtual void OnEpochStart(const std::list<ComputationNodeBasePtr>& /*LearnableNodes*/)
          {
              m_MAworkerStatus.resize(m_numWorkers);
              std::fill(m_MAworkerStatus.begin(), m_MAworkerStatus.end(), MAWorkerStatus::DataProcessing);
              g_mpi->WaitAll(); 
-             m_perfReporter.OnOneEpochStart();
+             m_perfReporter.OnEpochStart();
          }
 
-         virtual void OnOneEpochEnd(const std::list<ComputationNodeBasePtr>&    LearnableNodes,
+         virtual void OnEpochEnd(const std::list<ComputationNodeBasePtr>&    LearnableNodes,
                                     std::list<Matrix<ElemType>>&                smoothedGradient, 
                                     size_t                                      samplesSinceLastSync 
                                     )
@@ -138,14 +138,14 @@ namespace Microsoft{ namespace MSR { namespace CNTK{
              {
                  m_numSyncPerformed++;
                  ModelAggregationProcessing(samplesSinceLastSync, LearnableNodes, smoothedGradient, totalSamplesProcessed, secondsOnCommunication);
-                 m_perfReporter.OnPerformedMA(samplesSinceLastSync, totalSamplesProcessed, secondsOnCommunication);
+                 m_perfReporter.OnMAPerformed(samplesSinceLastSync, totalSamplesProcessed, secondsOnCommunication);
              }
              
              m_pMPI->WaitAll();             
-             m_perfReporter.OnOneEpochEnd();
+             m_perfReporter.OnEpochEnd();
          }
 
-         virtual bool OnArriveAtSyncPoint(
+         virtual bool OnArrivingAtSyncPoint(
             const std::list<ComputationNodeBasePtr>& LearnableNodes,        /* input/output: */
             std::list<Matrix<ElemType>>& smoothedGradient,                  /* input/output: under some setup, it will reset to zero*/
             size_t  samplesSinceLastSync                                    /* input:  samples processed since last sync on this worker only */
@@ -158,7 +158,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK{
              {
                  m_numSyncPerformed++;
                  ModelAggregationProcessing(samplesSinceLastSync, LearnableNodes, smoothedGradient, totalSamplesProcessed, secondsOnCommunication);
-                 m_perfReporter.OnPerformedMA(samplesSinceLastSync, totalSamplesProcessed, secondsOnCommunication);
+                 m_perfReporter.OnMAPerformed(samplesSinceLastSync, totalSamplesProcessed, secondsOnCommunication);
              }
              return read2Sync;
          }
@@ -173,13 +173,6 @@ namespace Microsoft{ namespace MSR { namespace CNTK{
         
 
     protected:
-        std::vector<MAWorkerStatus> m_MAworkerStatus; 
-        int                         m_numSyncPerformed; 
-        size_t                      m_numWorkers; 
-        size_t                      m_myRank;
-        MASGDPerfStats              m_perfReporter;
-        MPIWrapper*                 m_pMPI;       // TODO: to use shared_ptr in the future 
-        
         bool    somePeersHaveArrivedAtEnd()
         {
             auto iter = std::find(m_MAworkerStatus.begin(), m_MAworkerStatus.end(), MAWorkerStatus::DataEnd);
@@ -279,7 +272,6 @@ namespace Microsoft{ namespace MSR { namespace CNTK{
 
             return retval;
         }
-
         // borrow DownCast function from ComputationNetwork
         ComputationNodePtr DownCast(ComputationNodeBasePtr inode)
         {
@@ -288,32 +280,40 @@ namespace Microsoft{ namespace MSR { namespace CNTK{
                 InvalidArgument("an ComputationNodeBasePtr of mismatching precision was passed");
             return node;
         }
-    };
+
+        std::vector<MAWorkerStatus> m_MAworkerStatus; 
+        int                         m_numSyncPerformed; 
+        size_t                      m_numWorkers; 
+        size_t                      m_myRank;
+        MASGDPerfStats              m_perfReporter;
+        MPIWrapper*                 m_pMPI;       // TODO: to use shared_ptr in the future 
+        
+ };
 
 
     // Implementation of standard model averaging 
     template<typename ElemType>
-    class PlainModelAveragingSGD : public IMASGD<ElemType>
+    class BasicModelAveragingSGD : public IMASGD<ElemType>
     {
         typedef IMASGD Base; 
         using Base::m_pMPI;
 
     public:
-        PlainModelAveragingSGD(MPIWrapper* pMPI, size_t reportFreq)
+        BasicModelAveragingSGD(MPIWrapper* pMPI, size_t reportFreq)
             :IMASGD(pMPI, reportFreq)
         {}
 
         
         void ModelAggregationProcessing(
-            size_t samplesSinceLastSync,                                       /* in: */
+            size_t samplesSinceLastSync,                                       /* in */
             const std::list<ComputationNodeBasePtr>&  learnableNodes,          /* in/out */
             std::list<Matrix<ElemType>>&              smoothedGradient,        /* in/out */
             size_t&                                   totalSamplesProcessed,   /* out */
             float&                                    secondsOnCommunication   /* out */) override
         {
-            //========================================
-            // 1. communicate with other nodes to negociate contribution weights
-            //========================================
+            //----------------------------------------
+            // 1. communicate with other nodes to negotiate  contribution weights
+            //----------------------------------------
             float factor = 0;
             int   nTotalSamples = samplesSinceLastSync;
             Timer commTimer; 
@@ -352,20 +352,20 @@ namespace Microsoft{ namespace MSR { namespace CNTK{
                 // 2.1.2. normalize the weight matrix 
                 Matrix<ElemType>::Scale(factor, mat);
                 // 2.1.3. send weight matrix over MPI nodes; 
-                ElemType* px = mat.CopyToArray();
+                unique_ptr<ElemType[]> px(mat.CopyToArray());
+                //ElemType* px = mat.CopyToArray();
                 size_t    nx = mat.GetNumElements();
                 // 2.1.4. inplace sum 
                 commTimer.Restart();
-                m_pMPI->AllReduce(px, nx);
+                m_pMPI->AllReduce(px.get(), nx);
                 commTimer.Stop();
                 secondsOnCommunication += (float)commTimer.ElapsedSeconds();
                 // 2.1.5. set value 
-                pNode->Value().SetValue(mat.GetNumRows(), mat.GetNumCols(), mat.GetDeviceId(), px);
+                pNode->Value().SetValue(mat.GetNumRows(), mat.GetNumCols(), mat.GetDeviceId(), px.get());
                 // 2.1.6. clean up 
-                delete[]px;
+                //delete[]px;
             }
         }
     };
 
-
-}}}
+} } }

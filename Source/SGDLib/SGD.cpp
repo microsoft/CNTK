@@ -265,7 +265,7 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
     {
         InitDistGradAgg(evaluationNodes.size(), m_traceLevel);
     }
-    if (m_parallelizationMethod == ParallelizationMethod::ModelAveragingSGD)
+    else if (m_parallelizationMethod == ParallelizationMethod::ModelAveragingSGD)
     {
         InitModelAggregationHandler(m_syncStatsTrace);
     }
@@ -747,19 +747,10 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
     bool useParallelTrain = useGradientAggregation || useModelAveraging;
 
     // MA-related variables
-#if 0 
-    size_t nSynced = 0;
-    float nSecondsOnMASync = 0;
-    float nSecondsSinceLastMAPerfReport = 0;
-#endif
     size_t nSamplesSinceLastModelSync = 0;
-    if (useParallelTrain)
+    if (useParallelTrain && m_pMASGDHelper)
     {
-        if (m_pMASGDHelper)
-        {
-            m_pMASGDHelper->OnOneEpochStart(learnableNodes);
-        }
-        
+        m_pMASGDHelper->OnEpochStart(learnableNodes);
     }
     
 
@@ -1031,7 +1022,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
         {
             if (nSamplesSinceLastModelSync >= m_nFramesBetweenMASync)
             {
-                bool synced=m_pMASGDHelper->OnArriveAtSyncPoint(learnableNodes, smoothedGradients, nSamplesSinceLastModelSync);
+                bool synced = m_pMASGDHelper->OnArrivingAtSyncPoint(learnableNodes, smoothedGradients, nSamplesSinceLastModelSync);
                 if (synced)
                 {
                     nSamplesSinceLastModelSync = 0;
@@ -1048,7 +1039,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
         numMBsRun++;
 
         totalTimeInMBs += timer.ElapsedSeconds();
-        numSamplesLastMBs += int(aggregateNumSamplesWithLabel);
+        numSamplesLastMBs += (int)aggregateNumSamplesWithLabel;
 
         if (
 #if 0       // output the first few to see if everything started right
@@ -1164,10 +1155,12 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
 
         profiler.NextSample();
     }
+
     // --- END MAIN MINIBATCH LOOP
+
     if (useModelAveraging )
     {
-        m_pMASGDHelper->OnOneEpochEnd(learnableNodes, smoothedGradients, nSamplesSinceLastModelSync);
+        m_pMASGDHelper->OnEpochEnd(learnableNodes, smoothedGradients, nSamplesSinceLastModelSync);
         nSamplesSinceLastModelSync = 0;
     }
 
@@ -1214,6 +1207,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
         // merge epochCriterion and epochEvalErrors over nodes 
         g_mpi->AllReduce(&epochCriterion, 1);
         g_mpi->AllReduce(epochEvalErrors);
+
         // 3. modify return value 
         totalEpochSamples = totalEpochSamplesOfAllWorkers;
     }
@@ -1850,13 +1844,12 @@ void SGD<ElemType>::InitModelAggregationHandler(int traceLevel)
     if (m_parallelizationMethod == ParallelizationMethod::ModelAveragingSGD)
     {
 #ifndef BLOCKWISE_MODEL_UPDATE_FILTERING
-        // UNDER GENERAL (MIT) LICENSE 
         if (!m_pMASGDHelper)
         {
-            m_pMASGDHelper = make_shared<PlainModelAveragingSGD<ElemType>>(g_mpi, traceLevel);
+            m_pMASGDHelper = make_shared<BasicModelAveragingSGD<ElemType>>(g_mpi, traceLevel);
         }
 #else
-        // THIS PART IS UNDER RESTRICTED LICENSE 
+
 #endif 
     }
     
@@ -2024,8 +2017,8 @@ void SGD<ElemType>::SaveCheckPointInfo(const size_t epoch, const size_t totalSam
             fstream.PutMarker(FileMarker::fileMarkerBeginSection, L"BVersion"); 
             fstream << CURRENT_CNTK_CHECKPOINT_VERSION; 
             fstream.PutMarker(FileMarker::fileMarkerEndSection, L"EVersion");
-            fstream.PutMarker(FileMarker::fileMarkerBeginSection, L"BCKP");
 
+            fstream.PutMarker(FileMarker::fileMarkerBeginSection, L"BCKP");
             fstream.PutMarker(FileMarker::fileMarkerBeginSection, L"BLearnRate");
             fstream << totalSamplesSeen << learnRatePerSample << prevCriterion;
             fstream.PutMarker(FileMarker::fileMarkerEndSection, L"ELearnRate");
