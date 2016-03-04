@@ -777,7 +777,7 @@ void Matrix<ElemType>::CopySection(size_t numRows, size_t numCols, ElemType* dst
 template <class ElemType>
 Matrix<ElemType> Matrix<ElemType>::ColumnSlice(size_t startColumn, size_t numCols) const
 {
-    int devId = GetDeviceId(); // BUGBUG: Must work off current location
+    int devId = GetDeviceId();
 
     Matrix<ElemType> slice(matrixFlagDontOwnBuffer, (DEVICEID_TYPE) devId); // this already creates pointers
 
@@ -1075,7 +1075,7 @@ const ElemType Matrix<ElemType>::operator()(const size_t row, const size_t col) 
 // WARNING: This function is very slow for GPUs since it requires copying values between CPUs and GPUs.
 // In addition, if ColumnSlice is used after this function but before the values are copied back to GPU
 // the operation will fail since the memory is not managed by the slice.
-// If you don't need to modify the values, please make sure to call the const version above.
+// If you don't need to modify the values, call the const version above, or use GetValue(row,col) which does that for you.
 // TODO: Can we remove this, and have users use SetValue() instead? To avoid this potential error?
 template <class ElemType>
 ElemType& Matrix<ElemType>::operator()(const size_t row, const size_t col)
