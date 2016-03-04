@@ -68,7 +68,7 @@ HTKMLFReader::HTKMLFReader(MemoryProviderPtr provider,
     auto deserializers = CreateDeserializers(readerConfig);
     assert(deserializers.size() == 2);
 
-    auto bundler = std::make_shared<Bundler>(readerConfig, deserializers[0], deserializers);
+    auto bundler = std::make_shared<Bundler>(readerConfig, deserializers[0], deserializers, false);
 
     std::wstring readMethod = config.GetRandomizer();
     if (!AreEqualIgnoreCase(readMethod, std::wstring(L"blockRandomize")))

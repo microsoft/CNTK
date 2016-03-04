@@ -33,7 +33,7 @@ typedef std::shared_ptr<BundlerSequenceDescription> BundlerSequenceDescriptionPt
 class Bundler : public IDataDeserializer
 {
 public:
-    Bundler(const ConfigParameters& readerConfig, IDataDeserializerPtr driver, std::vector<IDataDeserializerPtr> deserializers);
+    Bundler(const ConfigParameters& readerConfig, IDataDeserializerPtr driver, std::vector<IDataDeserializerPtr> deserializers, bool cleanse);
 
     virtual ChunkDescriptions GetChunkDescriptions() override;
     virtual std::vector<SequenceDescriptionPtr> GetSequencesForChunk(size_t chunkId) override;
@@ -52,7 +52,7 @@ public:
 private:
     DISABLE_COPY_AND_MOVE(Bundler);
 
-    void CreateChunkDescriptions();
+    void CreateChunkDescriptions(bool cleanse);
 
     // Exposed bundled streams.
     std::vector<StreamDescriptionPtr> m_streams;
