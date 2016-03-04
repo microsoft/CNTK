@@ -174,9 +174,8 @@ ChunkDescriptions HTKDataDeserializer::GetChunkDescriptions()
     return chunks;
 }
 
-std::vector<SequenceDescription> HTKDataDeserializer::GetSequencesForChunk(size_t chunkId)
+void HTKDataDeserializer::GetSequencesForChunk(size_t chunkId, std::vector<SequenceDescription>& result)
 {
-    std::vector<SequenceDescription> result;
     const HTKChunkDescription& chunk = m_chunks[chunkId];
     result.reserve(chunk.GetTotalFrames());
     size_t id = 0;
@@ -196,8 +195,6 @@ std::vector<SequenceDescription> HTKDataDeserializer::GetSequencesForChunk(size_
             result.push_back(f);
         }
     }
-
-    return result;
 }
 
 size_t HTKDataDeserializer::GetTotalNumberOfSamples()
@@ -260,9 +257,9 @@ public:
         });
     }
 
-    virtual std::vector<SequenceDataPtr> GetSequence(size_t sequenceId) override
+    virtual void GetSequence(size_t sequenceId, std::vector<SequenceDataPtr>& result) override
     {
-        return m_parent->GetSequenceById(m_chunkId, sequenceId);
+        m_parent->GetSequenceById(m_chunkId, sequenceId, result);
     }
 
     ~HTKChunk()
@@ -301,7 +298,7 @@ struct HTKSequenceData : DenseSequenceData
 
 typedef std::shared_ptr<HTKSequenceData> HTKSequenceDataPtr;
 
-std::vector<SequenceDataPtr> HTKDataDeserializer::GetSequenceById(size_t chunkId, size_t id)
+void HTKDataDeserializer::GetSequenceById(size_t chunkId, size_t id, std::vector<SequenceDataPtr>& r)
 {
     //UtteranceDescription* utterance = frame.m_utterence;
 
@@ -350,10 +347,10 @@ std::vector<SequenceDataPtr> HTKDataDeserializer::GetSequenceById(size_t chunkId
         result->m_data = doubleBuffer;
     }
 
-    return std::vector<SequenceDataPtr>(1, result);
+    r.push_back(result);
 }
 
-SequenceDescription HTKDataDeserializer::GetSequenceDescriptionByKey(const KeyType&)
+void HTKDataDeserializer::GetSequenceDescriptionByKey(const KeyType&, SequenceDescription&)
 {
     LogicError("HTKDataDeserializer::GetSequenceDescriptionByKey: currently not implemented. Supported only as a primary deserializer.");
 }

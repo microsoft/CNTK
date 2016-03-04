@@ -96,7 +96,7 @@ public:
     // Gets a sequence per input by its identifier.
     // The sequence has a reference to the corresponding chunk. The chunk is not
     // deallocated till all its sequences are released.
-    virtual std::vector<SequenceDataPtr> GetSequence(size_t sequenceId) = 0;
+    virtual void GetSequence(size_t sequenceId, std::vector<SequenceDataPtr>& result) = 0;
 
     virtual ~Chunk() {};
 
@@ -125,10 +125,8 @@ public:
     virtual std::vector<StreamDescriptionPtr> GetStreamDescriptions() const = 0;
     virtual ChunkDescriptions GetChunkDescriptions() = 0;
 
-    virtual std::vector<SequenceDescription> GetSequencesForChunk(size_t chunkId) = 0;
-
-    // Retrieves description of a single sequence given its key.
-    virtual SequenceDescription GetSequenceDescriptionByKey(const KeyType& key) = 0;
+    virtual void GetSequencesForChunk(size_t chunkId, std::vector<SequenceDescription>& descriptions) = 0;
+    virtual void GetSequenceDescriptionByKey(const KeyType& key, SequenceDescription& description) = 0;
 
     virtual size_t GetTotalNumberOfSamples() = 0;
     virtual size_t GetTotalNumberOfSequences() = 0;

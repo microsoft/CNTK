@@ -24,7 +24,7 @@ public:
     virtual std::vector<StreamDescriptionPtr> GetStreamDescriptions() const override;
 
     // Retrieves sequence description by its key. Used for deserializers that are not in "primary"/"driving" mode.
-    SequenceDescription GetSequenceDescriptionByKey(const KeyType& key) override;
+    void GetSequenceDescriptionByKey(const KeyType& key, SequenceDescription& s) override;
 
     // Retrieves a chunk with data.
     // TODO: Currenty it is a single chunk => all labels are loaded into memory.
@@ -32,7 +32,7 @@ public:
     virtual ChunkPtr GetChunk(size_t) override;
 
     virtual ChunkDescriptions GetChunkDescriptions() override;
-    virtual std::vector<SequenceDescription> GetSequencesForChunk(size_t chunkId) override;
+    virtual void GetSequencesForChunk(size_t chunkId, std::vector<SequenceDescription>& s) override;
     virtual size_t GetTotalNumberOfSamples() override;
     virtual size_t GetTotalNumberOfSequences() override;
 
@@ -48,7 +48,7 @@ private:
 
     class MLFChunk;
 
-    std::vector<SequenceDataPtr> GetSequenceById(size_t sequenceId);
+    void GetSequenceById(size_t sequenceId, std::vector<SequenceDataPtr>& result);
 
     // Key to sequence map.
     std::map<size_t, size_t> m_keyToSequence;
