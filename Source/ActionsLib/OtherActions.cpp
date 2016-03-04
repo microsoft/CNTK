@@ -499,7 +499,7 @@ void DoTopologyPlot(const ConfigParameters& config)
     {
         if (renderCmd.empty())
             InvalidArgument("plot: If you specify an outputFile, you also need a renderCmd.");
-#if 0
+#if 0 // this part is problematic under early version of gcc  (< 4.9)
         static const wregex  inputPlaceHolder(L"(.+)(<IN>)(.*)");
         static const wregex outputPlaceHolder(L"(.+)(<OUT>)(.*)");
 
@@ -507,18 +507,8 @@ void DoTopologyPlot(const ConfigParameters& config)
         renderCmd = regex_replace(renderCmd, inputPlaceHolder,  L"$1" + outputDotFile + L"$3");
         renderCmd = regex_replace(renderCmd, outputPlaceHolder, L"$1" + outputFile    + L"$3");
 #endif
-        // replace <IN> substring 
-        auto pos = renderCmd.find(L"<IN>");
-        if (pos != wstring::npos)
-        {
-            renderCmd.replace(pos, 4, outputDotFile);
-        }
-        // replace <OUT> substring 
-        pos = renderCmd.find(L"<OUT>"); 
-        if (pos != wstring::npos)
-        {
-            renderCmd.replace(pos, 5, outputFile);
-        }
+        msra::strfun::ReplaceAll(renderCmd, wstring(L"<IN>"), outputDotFile);
+        msra::strfun::ReplaceAll(renderCmd, wstring(L"<OUT>"), outputFile);
     }
 
 
