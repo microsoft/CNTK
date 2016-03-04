@@ -62,8 +62,8 @@ void Bundler::CreateChunkDescriptions(bool cleanse)
             bool isValid = true;
             for (size_t deserializerIndex = 1; deserializerIndex < m_deserializers.size(); ++deserializerIndex)
             {
-                auto s = m_deserializers[deserializerIndex]->GetSequenceDescriptionByKey(sequenceDescriptions[sequenceIndex]->m_key);
-                if (!s->m_isValid)
+                auto s = m_deserializers[deserializerIndex]->GetSequenceDescriptionByKey(sequenceDescriptions[sequenceIndex].m_key);
+                if (!s.m_isValid)
                 {
                     isValid = false;
                     invalid.insert(sequenceIndex);
@@ -73,7 +73,7 @@ void Bundler::CreateChunkDescriptions(bool cleanse)
 
             if (isValid)
             {
-                numberOfSamples += sequence->m_numberOfSamples;
+                numberOfSamples += sequence.m_numberOfSamples;
                 numberOfSequences++;
             }
         }
@@ -96,12 +96,12 @@ ChunkDescriptions Bundler::GetChunkDescriptions()
     return ChunkDescriptions(m_chunks.begin(), m_chunks.end());
 }
 
-std::vector<SequenceDescriptionPtr> Bundler::GetSequencesForChunk(size_t chunkId)
+std::vector<SequenceDescription> Bundler::GetSequencesForChunk(size_t chunkId)
 {
     BundlerChunkDescriptionPtr chunk = m_chunks[chunkId];
     ChunkDescriptionPtr original = chunk->m_original;
     auto sequences = m_driver->GetSequencesForChunk(original->id);
-    std::vector<SequenceDescriptionPtr> result;
+    std::vector<SequenceDescription> result;
     result.reserve(sequences.size());
     for (size_t sequenceIndex = 0; sequenceIndex < sequences.size(); ++sequenceIndex)
     {
@@ -160,7 +160,7 @@ public:
                 continue;
             }
 
-            m_sequenceToSequence[0][sequenceIndex] = sequences[sequenceIndex]->m_id;
+            m_sequenceToSequence[0][sequenceIndex] = sequences[sequenceIndex].m_id;
             m_innerChunks[0][sequenceIndex] = drivingChunk;
         }
 
@@ -175,9 +175,9 @@ public:
                     continue;
                 }
 
-                auto s = deserializers[deserializerIndex]->GetSequenceDescriptionByKey(sequences[sequenceIndex]->m_key);
-                m_sequenceToSequence[deserializerIndex][sequenceIndex] = s->m_id;
-                m_innerChunks[deserializerIndex][sequenceIndex] = deserializers[deserializerIndex]->GetChunk(s->m_chunkId);
+                auto s = deserializers[deserializerIndex]->GetSequenceDescriptionByKey(sequences[sequenceIndex].m_key);
+                m_sequenceToSequence[deserializerIndex][sequenceIndex] = s.m_id;
+                m_innerChunks[deserializerIndex][sequenceIndex] = deserializers[deserializerIndex]->GetChunk(s.m_chunkId);
             }
         }
     }
@@ -208,7 +208,7 @@ std::vector<StreamDescriptionPtr> Bundler::GetStreamDescriptions() const
     return m_streams;
 }
 
-const SequenceDescription* Bundler::GetSequenceDescriptionByKey(const KeyType&)
+SequenceDescription Bundler::GetSequenceDescriptionByKey(const KeyType&)
 {
     throw std::logic_error("Not implemented");
 }
