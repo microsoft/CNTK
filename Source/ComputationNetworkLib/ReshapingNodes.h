@@ -615,18 +615,23 @@ public:
 
     virtual void /*ComputationNodeNonLooping::*/ BackpropToNonLooping(size_t /*inputIndex*/) override
     {
+#if 1
+        NOT_IMPLEMENTED;
+#else
+        // The Implementation below is currently broken
         auto& inputGradientValues = Input(0)->GradientAsMatrix();
         auto& gradientValues = GradientAsMatrix();
 
         // BUGBUG: This should use the memshare mechanism.
         // TODO: use tensor lib, then this will be easy, no memsharing needed
-        Matrix<ElemType> diag(gradientValues.GetNumRows(), gradientValues.GetNumCols(), gradientValues.GetDeviceId());
-        diag.SetValue(gradientValues);
+        Matrix<ElemType> diag = gradientValues.DeepClone();
+        // BUGBUG: Resize does not preserve data - should be a reinterpret operation
         diag.Resize(gradientValues.GetNumCols(), 1);
 
         inputGradientValues.SetValue(0);
         // BUGBUG: Must *add* to gradient!
         inputGradientValues.SetDiagonalValue(diag);
+#endif
     }
 
     virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }

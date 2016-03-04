@@ -95,7 +95,8 @@ public:
 
     Matrix<ElemType> DeepClone() const;
 
-    // Disallow deep copy construction and assignment
+    // Disallow deep copy construction and assignment to avoid
+    // inadvertent silent deep copying
     Matrix(const Matrix<ElemType>& deepCopyFrom) = delete;
     Matrix<ElemType>& operator=(const Matrix<ElemType>& deepCopyFrom) = delete;
 
@@ -203,6 +204,7 @@ public:
         m_baseMatrix->VerifySize(rows, cols);
     }
 
+    // TODO: Call this ShallowClone instead?
     Matrix<ElemType> AsReference() const
     {
         return ColumnSlice(0, GetNumCols());
@@ -303,6 +305,9 @@ public:
     Matrix<ElemType> operator^(ElemType alpha) const; // element-wise power
     Matrix<ElemType>& AssignElementPowerOf(const Matrix<ElemType>& a, const ElemType power);
 
+    // TODO: There are several functions below that perform an in-place operation
+    // We should prepend the names of these functions with InPlace for clearly indicating
+    // the semantics for callers.
     Matrix<ElemType>& ElementMultiplyWith(const Matrix<ElemType>& a);
     Matrix<ElemType>& AssignElementProductOf(const Matrix<ElemType>& a, const Matrix<ElemType>& b);
     Matrix<ElemType>& AddElementProductOf(const Matrix<ElemType>& a, const Matrix<ElemType>& b);

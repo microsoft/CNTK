@@ -368,11 +368,11 @@ Matrix<ElemType>::Matrix(const size_t numRows, const size_t numCols, ElemType* p
         m_baseMatrix->SetOwnBuffer(false);
 }
 
-//copy constructor, deep copy
+// copy constructor, deep copy
 template <class ElemType>
 Matrix<ElemType> Matrix<ElemType>::DeepClone() const
 {
-    return Matrix<ElemType>(*this, this->GetDeviceId());
+    return Matrix<ElemType>(*this, GetDeviceId());
 }
 
 template <class ElemType>
