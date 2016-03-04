@@ -1573,15 +1573,15 @@ public:
         m_mbCount(0), m_imageLayoutKind(ImageLayoutKind::CHW)
     {
     }
-    BatchNormalizationNode(DEVICEID_TYPE deviceId, const wstring& name, bool eval, bool spatial, double normTimeConst, double epsilon,
+	BatchNormalizationNode(DEVICEID_TYPE deviceId, const wstring& name, bool eval, bool spatial, double normalizationTimeConstant, double epsilon,
                            bool useCntkEngine, ImageLayoutKind imageLayoutKind)
-        : Base(deviceId, name), m_eval(eval), m_spatial(spatial), m_normTimeConst(normTimeConst), m_epsilon(epsilon),
+						   : Base(deviceId, name), m_eval(eval), m_spatial(spatial), m_normTimeConst(normalizationTimeConstant), m_epsilon(epsilon),
           m_useCntkEngine(useCntkEngine), m_imageLayoutKind(imageLayoutKind), m_mbCount(0)
     {
     }
     BatchNormalizationNode(const ScriptableObjects::IConfigRecordPtr configp)
         : BatchNormalizationNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"eval"), configp->Get(L"spatial"),
-                                 configp->Get(L"normTimeConst"), configp->Get(L"epsilon"), configp->Get(L"useCntkEngine"),
+                                 configp->Get(L"normalizationTimeConstant"), configp->Get(L"epsilon"), configp->Get(L"useCntkEngine"),
                                  ImageLayoutKindFrom(configp->Get(L"imageLayout")))
     {
         AttachInputs(configp, this->GetExpectedNumInputs());
