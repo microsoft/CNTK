@@ -59,7 +59,7 @@ public:
     {
     }
 
-    virtual std::vector<SequenceDataPtr> GetSequence(size_t sequenceId) override
+    virtual void GetSequence(size_t sequenceId, std::vector<SequenceDataPtr>& result) override
     {
         assert(sequenceId == m_description.m_id);
         UNUSED(sequenceId);
@@ -92,11 +92,12 @@ public:
         image->m_sampleLayout = std::make_shared<TensorShape>(dimensions.AsTensorShape(HWC));
         image->m_numberOfSamples = 1;
         image->m_chunk = shared_from_this();
+        result.push_back(image);
 
         SparseSequenceDataPtr label = std::make_shared<SparseSequenceData>();
         label->m_chunk = shared_from_this();
         m_parent.m_labelGenerator->CreateLabelFor(imageSequence.m_classId, *label);
-        return std::vector<SequenceDataPtr> { image, label };
+        result.push_back(label);
     }
 };
 
