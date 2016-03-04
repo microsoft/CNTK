@@ -26,6 +26,7 @@ except:
         PYDOT = False
 
 class Context(object):
+    import cntk.graph as graph
     def __init__(self, model):
         self.directory = os.path.abspath('_cntk_%s'%id(model))
         if os.path.exists(self.directory):
@@ -244,19 +245,15 @@ class CNTKPredictConfig(CNTKConfig):
 
         return [data]
 
-def fake_fit(model, ins, batch_size, np_epoch):
+def fit(model, ins, batch_size, np_epoch):
     #import ipdb;ipdb.set_trace()
     with Context(model) as cm:
         cntk_config = CNTKTrainConfig(cm, model, ins, batch_size, np_epoch)
         cntk_config.execute()
 
-def fake_predict(model, ins, verbose=0):
+def predict(model, ins, verbose=0):
     with Context(model) as cm:
         cntk_config = CNTKPredictConfig(cm, model, ins)
         return cntk_config.execute()
     
-def variable(value, dtype=_FLOATX, name=None):
-    v = graph.variable(np.asarray(value, dtype=dtype), name=name)
-    # TODO initialize
-    return v
 
