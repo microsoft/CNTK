@@ -25,9 +25,9 @@ public:
     MLFChunk(MLFDataDeserializer* parent) : m_parent(parent)
     {}
 
-    virtual std::vector<SequenceDataPtr> GetSequence(size_t sequenceId) override
+    virtual void GetSequence(size_t sequenceId, std::vector<SequenceDataPtr>& result) override
     {
-        return m_parent->GetSequenceById(sequenceId);
+        m_parent->GetSequenceById(sequenceId, result);
     }
 };
 
@@ -166,9 +166,8 @@ ChunkDescriptions MLFDataDeserializer::GetChunkDescriptions()
     return ChunkDescriptions{cd};
 }
 
-std::vector<SequenceDescription> MLFDataDeserializer::GetSequencesForChunk(size_t )
+void MLFDataDeserializer::GetSequencesForChunk(size_t, std::vector<SequenceDescription>& result)
 {
-    std::vector<SequenceDescription> result;
     result.reserve(m_sequences.size());
     for (size_t i = 0; i < m_sequences.size(); ++i)
     {
@@ -181,7 +180,6 @@ std::vector<SequenceDescription> MLFDataDeserializer::GetSequencesForChunk(size_
         f.m_isValid = true;
         result.push_back(f);
     }
-    return result;
 }
 
 size_t MLFDataDeserializer::GetTotalNumberOfSamples()
@@ -207,7 +205,7 @@ ChunkPtr MLFDataDeserializer::GetChunk(size_t chunkId)
     return std::make_shared<MLFChunk>(this);
 }
 
-std::vector<SequenceDataPtr> MLFDataDeserializer::GetSequenceById(size_t sequenceId)
+void MLFDataDeserializer::GetSequenceById(size_t sequenceId, std::vector<SequenceDataPtr>& result)
 {
     size_t label = m_classIds[m_frames[sequenceId].m_index];
     SparseSequenceDataPtr r = std::make_shared<SparseSequenceData>();
@@ -224,21 +222,22 @@ std::vector<SequenceDataPtr> MLFDataDeserializer::GetSequenceById(size_t sequenc
         r->m_data = &s_oneDouble;
     }
 
-    return std::vector<SequenceDataPtr> { r };
+    result.push_back(r);
 }
 
 static SequenceDescription s_InvalidSequence { 0, 0, 0, false };
 
-SequenceDescription MLFDataDeserializer::GetSequenceDescriptionByKey(const KeyType& key)
+void MLFDataDeserializer::GetSequenceDescriptionByKey(const KeyType& key, SequenceDescription& result)
 {
     auto sequenceId = m_keyToSequence.find(key.major);
     if (sequenceId == m_keyToSequence.end())
     {
-        return s_InvalidSequence;
+        result = s_InvalidSequence;
+        return;
     }
 
     size_t index = m_utteranceIndex[sequenceId->second] + key.minor;
-    return *m_sequences[index];
+    result = *m_sequences[index];
 }
 
 }}}
