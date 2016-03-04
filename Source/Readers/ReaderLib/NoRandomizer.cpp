@@ -113,7 +113,8 @@ Sequences NoRandomizer::GetNextSequences(size_t sampleCount)
 #pragma omp parallel for ordered schedule(dynamic)
     for (int i = 0; i < sequences.size(); ++i)
     {
-        auto sequence = m_chunks[sequences[i]->m_chunkId]->GetSequence(sequences[i]->m_id);
+        std::vector<SequenceDataPtr> sequence;
+        m_chunks[sequences[i]->m_chunkId]->GetSequence(sequences[i]->m_id, sequence);
 
         for (int j = 0; j < m_streams.size(); ++j)
         {

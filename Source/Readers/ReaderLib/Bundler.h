@@ -36,12 +36,12 @@ public:
     Bundler(const ConfigParameters& readerConfig, IDataDeserializerPtr driver, std::vector<IDataDeserializerPtr> deserializers, bool cleanse);
 
     virtual ChunkDescriptions GetChunkDescriptions() override;
-    virtual std::vector<SequenceDescription> GetSequencesForChunk(size_t chunkId) override;
+    virtual void GetSequencesForChunk(size_t chunkId, std::vector<SequenceDescription>& result) override;
     virtual size_t GetTotalNumberOfSamples() override;
     virtual size_t GetTotalNumberOfSequences() override;
 
     // Retrieves description of a single sequence given its key.
-    virtual SequenceDescription GetSequenceDescriptionByKey(const KeyType& key) override;
+    virtual void GetSequenceDescriptionByKey(const KeyType& key, SequenceDescription& result) override;
 
     // Describes bundled streams of the underlying data deserializers.
     virtual std::vector<StreamDescriptionPtr> GetStreamDescriptions() const override;
@@ -52,7 +52,7 @@ public:
 private:
     DISABLE_COPY_AND_MOVE(Bundler);
 
-    void CreateChunkDescriptions(bool cleanse);
+    void CreateChunkDescriptions();
 
     // Exposed bundled streams.
     std::vector<StreamDescriptionPtr> m_streams;
@@ -71,6 +71,8 @@ private:
     // Exposed sequence id to internal sequence id mapping.
     std::vector<std::vector<size_t>> m_sequenceToSequence;
 
+    // True if there should be cleaning of data between different deserializers.
+    bool m_cleanse;
 
     friend class BundlingChunk;
 };

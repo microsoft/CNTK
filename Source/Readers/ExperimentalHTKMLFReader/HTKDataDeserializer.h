@@ -25,13 +25,13 @@ public:
     virtual std::vector<StreamDescriptionPtr> GetStreamDescriptions() const override;
 
     // Retrieves sequence description by its key. Used for deserializers that are not in "primary"/"driving" mode.
-    virtual SequenceDescription GetSequenceDescriptionByKey(const KeyType& key) override;
+    virtual void GetSequenceDescriptionByKey(const KeyType& key, SequenceDescription& result) override;
 
     // Retrieves a chunk with data.
     virtual ChunkPtr GetChunk(size_t chunkId) override;
-
+    virtual void GetSequencesForChunk(size_t chunkId, std::vector<SequenceDescription>& result) override;
     virtual ChunkDescriptions GetChunkDescriptions() override;
-    virtual std::vector<SequenceDescription> GetSequencesForChunk(size_t chunkId) override;
+   
     virtual size_t GetTotalNumberOfSamples() override;
     virtual size_t GetTotalNumberOfSequences() override;
 
@@ -52,7 +52,7 @@ private:
     };
 
     class HTKChunk;
-    std::vector<SequenceDataPtr> GetSequenceById(size_t chunkId, size_t id);
+    void GetSequenceById(size_t chunkId, size_t id, std::vector<SequenceDataPtr>&);
 
     // Dimension of features.
     size_t m_dimension;

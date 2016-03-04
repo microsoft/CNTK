@@ -79,6 +79,16 @@ public:
         m_nextSequencePosNotYetRandomized(0),
         m_currentSequencePosition(0)
     {
+        size_t max = 0;
+        for (const auto& c : m_randomizedChunks)
+        {
+            if (max < c.m_original->numberOfSequences)
+            {
+                max = c.m_original->numberOfSequences;
+            }
+        }
+
+        m_bufferOriginalSequences.reserve(max);
     }
 
     std::vector<RandomizedSequenceDescription> GetSequencesForRange(size_t globalts, size_t globalte) // TODO should be simple count i suppose?
@@ -341,20 +351,23 @@ public:
     }
 
 private:
+    std::vector<SequenceDescription> m_bufferOriginalSequences;
+
     void AddRandomizedFramesForChunk(size_t chunkIdx)
     {
         assert(chunkIdx == m_currentRangeEndChunkIdx);
 
         const RandomizedChunk& chunk = m_randomizedChunks[chunkIdx];
         std::vector<std::pair<unsigned short, RandomizedSequenceDescription>> chunkSequences;
-        chunkSequences.reserve(chunk.m_original->numberOfSequences);
 
-        std::vector<SequenceDescription> originalSequences = m_parent.m_metaData->GetSequencesForChunk(chunk.m_original->id);
-        for (size_t k = 0; k < originalSequences.size(); k++)
+        m_bufferOriginalSequences.clear();
+        m_parent.m_metaData->GetSequencesForChunk(chunk.m_original->id, m_bufferOriginalSequences);
+        chunkSequences.reserve(m_bufferOriginalSequences.size());
+        for (size_t k = 0; k < m_bufferOriginalSequences.size(); k++)
         {
             RandomizedSequenceDescription s;
-            s.m_id = originalSequences[k].m_id;
-            s.m_numberOfSamples = originalSequences[k].m_numberOfSamples;
+            s.m_id = m_bufferOriginalSequences[k].m_id;
+            s.m_numberOfSamples = m_bufferOriginalSequences[k].m_numberOfSamples;
             s.m_chunk = &chunk;
             chunkSequences.push_back(std::make_pair((unsigned short)chunkIdx, s));
         }
@@ -637,7 +650,8 @@ Sequences PartialBlockRandomizer::GetNextSequences(size_t sampleCount)
     for (int i = 0; i < sequences.size(); ++i)
     {
         size_t id = sequences[i].m_id;
-        auto sequence = m_sequenceRandomizer->m_randomizedSequenceWindowChunks[sequences[i].m_chunk->m_chunkId]->GetSequence(id);
+        std::vector<SequenceDataPtr> sequence;
+        m_sequenceRandomizer->m_randomizedSequenceWindowChunks[sequences[i].m_chunk->m_chunkId]->GetSequence(id, sequence);
         for (int j = 0; j < m_streams.size(); ++j)
         {
             result.m_data[j][i] = sequence[j];
