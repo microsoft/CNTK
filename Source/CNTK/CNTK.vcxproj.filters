@@ -26,15 +26,6 @@
       <Filter>Common</Filter>
     </ClCompile>
     <ClCompile Include="CNTK.cpp" />
-    <ClCompile Include="SynchronousExecutionEngine.cpp">
-      <Filter>Model Building, from old NDL</Filter>
-    </ClCompile>
-    <ClCompile Include="NetworkDescriptionLanguage.cpp">
-      <Filter>Model Building, from old NDL</Filter>
-    </ClCompile>
-    <ClCompile Include="SimpleNetworkBuilder.cpp">
-      <Filter>Model Building, Standard Models</Filter>
-    </ClCompile>
     <ClCompile Include="..\Common\MPIWrapper.cpp">
       <Filter>MPI Interfacing</Filter>
     </ClCompile>
@@ -73,14 +64,8 @@
     <ClInclude Include="..\Common\Include\DataWriter.h">
       <Filter>Common\Include</Filter>
     </ClInclude>
-    <ClInclude Include="IExecutionEngine.h">
-      <Filter>Model Building, from old NDL</Filter>
-    </ClInclude>
     <ClInclude Include="ModelEditLanguage.h">
       <Filter>Model Editing</Filter>
-    </ClInclude>
-    <ClInclude Include="SynchronousExecutionEngine.h">
-      <Filter>Model Building, from old NDL</Filter>
     </ClInclude>
     <ClInclude Include="stdafx.h">
       <Filter>Misc</Filter>
@@ -105,18 +90,6 @@
     </ClInclude>
     <ClInclude Include="..\Common\Include\Platform.h">
       <Filter>Common\Include</Filter>
-    </ClInclude>
-    <ClInclude Include="NDLNetworkBuilder.h">
-      <Filter>Model Building, from old NDL</Filter>
-    </ClInclude>
-    <ClInclude Include="NDLUtil.h">
-      <Filter>Model Building, from old NDL</Filter>
-    </ClInclude>
-    <ClInclude Include="NetworkDescriptionLanguage.h">
-      <Filter>Model Building, from old NDL</Filter>
-    </ClInclude>
-    <ClInclude Include="SimpleNetworkBuilder.h">
-      <Filter>Model Building, Standard Models</Filter>
     </ClInclude>
     <ClInclude Include="..\Math\Matrix.h">
       <Filter>from Math</Filter>
@@ -238,9 +211,6 @@
     </Filter>
     <Filter Include="from SGDLib\SGD">
       <UniqueIdentifier>{4f06ac18-7b30-490c-b801-128bdaa99450}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Model Building, from old NDL">
-      <UniqueIdentifier>{3ddfc109-3a90-45f5-91e8-1930759cfe9d}</UniqueIdentifier>
     </Filter>
     <Filter Include="Model Building, Standard Models">
       <UniqueIdentifier>{f474b73c-05f9-43e6-997f-3ec83805c655}</UniqueIdentifier>

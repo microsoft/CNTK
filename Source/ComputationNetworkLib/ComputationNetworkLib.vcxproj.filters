@@ -37,6 +37,15 @@
     <ClCompile Include="ComputationNetworkScripting.cpp">
       <Filter>Network</Filter>
     </ClCompile>
+    <ClCompile Include="NetworkDescriptionLanguage.cpp">
+      <Filter>Model Building - NDL</Filter>
+    </ClCompile>
+    <ClCompile Include="SynchronousExecutionEngine.cpp">
+      <Filter>Model Building - NDL</Filter>
+    </ClCompile>
+    <ClCompile Include="SimpleNetworkBuilder.cpp">
+      <Filter>Model Building - Standard Models</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\Common\Include\fileutil.h">
@@ -123,6 +132,24 @@
     <ClInclude Include="TrainingNodes.h">
       <Filter>Nodes</Filter>
     </ClInclude>
+    <ClInclude Include="IExecutionEngine.h">
+      <Filter>Model Building - NDL</Filter>
+    </ClInclude>
+    <ClInclude Include="NDLNetworkBuilder.h">
+      <Filter>Model Building - NDL</Filter>
+    </ClInclude>
+    <ClInclude Include="NDLUtil.h">
+      <Filter>Model Building - NDL</Filter>
+    </ClInclude>
+    <ClInclude Include="NetworkDescriptionLanguage.h">
+      <Filter>Model Building - NDL</Filter>
+    </ClInclude>
+    <ClInclude Include="SynchronousExecutionEngine.h">
+      <Filter>Model Building - NDL</Filter>
+    </ClInclude>
+    <ClInclude Include="SimpleNetworkBuilder.h">
+      <Filter>Model Building - Standard Models</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Common">
@@ -145,6 +172,12 @@
     </Filter>
     <Filter Include="from Math">
       <UniqueIdentifier>{7d838fa4-b5a1-4b8a-b37d-823fb026055b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Model Building - NDL">
+      <UniqueIdentifier>{168a899a-6bff-4e84-b0a2-7a12e15b31b7}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Model Building - Standard Models">
+      <UniqueIdentifier>{bbe24ffc-d1a8-400c-a0e5-8f2062b35bcf}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
 </Project>
