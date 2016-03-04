@@ -148,8 +148,8 @@ class BundlingChunk : public Chunk
     Bundler* m_parent;
     size_t m_chunkId;
 
-    std::vector<std::vector<ChunkPtr>> m_innerChunks;
-    std::vector<std::vector<size_t>> m_sequenceToSequence;
+    std::vector<ChunkPtr> m_innerChunks;
+    std::vector<size_t> m_sequenceToSequence;
 
     DISABLE_COPY_AND_MOVE(BundlingChunk);
 
@@ -161,16 +161,14 @@ public:
         ChunkDescriptionPtr original = chunk->m_original;
 
         auto& deserializers = m_parent->m_deserializers;
-        m_sequenceToSequence.resize(deserializers.size());
-        m_innerChunks.resize(deserializers.size());
-
+        assert(numberOfInputs == deserializers.size());
         std::vector<SequenceDescription> sequences;
         sequences.reserve(original->numberOfSequences);
 
         m_parent->m_driver->GetSequencesForChunk(original->id, sequences);
         ChunkPtr drivingChunk = m_parent->m_driver->GetChunk(original->id);
-        m_sequenceToSequence[0].resize(sequences.size());
-        m_innerChunks[0].resize(sequences.size());
+        m_sequenceToSequence.resize(m_numberOfInputs * sequences.size());
+        m_innerChunks.resize(m_numberOfInputs * sequences.size());
         for (size_t sequenceIndex = 0; sequenceIndex < sequences.size(); ++sequenceIndex)
         {
             if (chunk->m_invalid.find(sequenceIndex) != chunk->m_invalid.end())
@@ -178,15 +176,14 @@ public:
                 continue;
             }
 
-            m_sequenceToSequence[0][sequenceIndex] = sequences[sequenceIndex].m_id;
-            m_innerChunks[0][sequenceIndex] = drivingChunk;
+            size_t currentIndex = sequenceIndex * m_numberOfInputs;
+            m_sequenceToSequence[currentIndex] = sequences[sequenceIndex].m_id;
+            m_innerChunks[currentIndex] = drivingChunk;
         }
 
         SequenceDescription s;
         for (size_t deserializerIndex = 1; deserializerIndex < m_parent->m_deserializers.size(); ++deserializerIndex)
         {
-            m_sequenceToSequence[deserializerIndex].resize(sequences.size());
-            m_innerChunks[deserializerIndex].resize(sequences.size());
             for (size_t sequenceIndex = 0; sequenceIndex < sequences.size(); ++sequenceIndex)
             {
                 if (chunk->m_invalid.find(sequenceIndex) != chunk->m_invalid.end())
@@ -194,9 +191,10 @@ public:
                     continue;
                 }
 
+                size_t currentIndex = sequenceIndex * m_numberOfInputs + deserializerIndex;
                 deserializers[deserializerIndex]->GetSequenceDescriptionByKey(sequences[sequenceIndex].m_key, s);
-                m_sequenceToSequence[deserializerIndex][sequenceIndex] = s.m_id;
-                m_innerChunks[deserializerIndex][sequenceIndex] = deserializers[deserializerIndex]->GetChunk(s.m_chunkId);
+                m_sequenceToSequence[currentIndex] = s.m_id;
+                m_innerChunks[currentIndex] = deserializers[deserializerIndex]->GetChunk(s.m_chunkId);
             }
         }
     }
@@ -204,11 +202,11 @@ public:
     virtual void GetSequence(size_t sequenceId, std::vector<SequenceDataPtr>& result) override
     {
         result.reserve(m_numberOfInputs);
-
+        size_t currentIndex = sequenceId * m_numberOfInputs;
         for (int i = 0; i < m_parent->m_deserializers.size(); ++i)
         {
-            size_t originalSequenceId = m_sequenceToSequence[i][sequenceId];
-            m_innerChunks[i][sequenceId]->GetSequence(originalSequenceId, result);
+            size_t originalSequenceId = m_sequenceToSequence[currentIndex + i];
+            m_innerChunks[currentIndex + i]->GetSequence(originalSequenceId, result);
         }
     }
 };

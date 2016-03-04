@@ -65,12 +65,6 @@ private:
 
     std::vector<BundlerChunkDescriptionPtr> m_chunks;
 
-    // Exposed sequence id to chunk mapping.
-    std::vector<std::vector<size_t>> m_sequenceToChunk;
-
-    // Exposed sequence id to internal sequence id mapping.
-    std::vector<std::vector<size_t>> m_sequenceToSequence;
-
     // True if there should be cleaning of data between different deserializers.
     bool m_cleanse;
 
