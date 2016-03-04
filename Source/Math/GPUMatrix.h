@@ -89,9 +89,9 @@ public:
 void PrepareDevice(DEVICEID_TYPE deviceId);
 
 template <class ElemType>
-class MATH_API GPUMatrix : public BaseMatrix<ElemType>
+class MATH_API GPUMatrix : public DenseBaseMatrix<ElemType>
 {
-    typedef BaseMatrix<ElemType> B;
+    typedef DenseBaseMatrix<ElemType> B;
     using B::m_numRows;
     using B::m_numCols;
     using B::m_pArray; // without this, base members would require to use thi-> in GCC
@@ -101,17 +101,17 @@ class MATH_API GPUMatrix : public BaseMatrix<ElemType>
 
 public:
     static const int MaxGpus = 8; // support up to 8 GPUs
-    using BaseMatrix<ElemType>::m_computeDevice;
-    using BaseMatrix<ElemType>::m_elemSizeAllocated;
-    using BaseMatrix<ElemType>::m_format;
-    using BaseMatrix<ElemType>::m_externalBuffer;
-    using BaseMatrix<ElemType>::m_nz;
-    using BaseMatrix<ElemType>::OwnBuffer;
-    using BaseMatrix<ElemType>::GetNumElements;
-    using BaseMatrix<ElemType>::IsEmpty;
-    using BaseMatrix<ElemType>::GetArray;
-    using BaseMatrix<ElemType>::GetNumRows;
-    using BaseMatrix<ElemType>::GetNumCols;
+    using B::m_computeDevice;
+    using B::m_elemSizeAllocated;
+    using B::m_format;
+    using B::m_externalBuffer;
+    using B::m_nz;
+    using B::OwnBuffer;
+    using B::GetNumElements;
+    using B::IsEmpty;
+    using B::GetArray;
+    using B::GetNumRows;
+    using B::GetNumCols;
 
 private:
     static cublasHandle_t s_cuHandle[MaxGpus];

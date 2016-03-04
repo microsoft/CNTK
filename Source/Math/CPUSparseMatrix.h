@@ -20,9 +20,9 @@
 namespace Microsoft { namespace MSR { namespace CNTK {
 
 template <class ElemType>
-class MATH_API CPUSparseMatrix : public BaseMatrix<ElemType>
+class MATH_API CPUSparseMatrix : public DenseBaseMatrix<ElemType>
 {
-    typedef BaseMatrix<ElemType> Base;
+    typedef DenseBaseMatrix<ElemType> Base;
     using Base::m_elemSizeAllocated;
     using Base::m_computeDevice;
     using Base::m_externalBuffer;

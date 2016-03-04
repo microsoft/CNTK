@@ -238,7 +238,7 @@ void CPUMatrix<ElemType>::Clear()
         m_pArray = nullptr;
         m_elemSizeAllocated = 0;
     }
-    BaseMatrix<ElemType>::Clear();
+    DenseBaseMatrix<ElemType>::Clear();
 
     ZeroInit();
 }

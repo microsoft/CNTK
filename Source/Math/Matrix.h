@@ -59,7 +59,7 @@ class MATH_API Matrix : public MatrixBase
 {
     typedef MatrixBase Base;
 private:
-    mutable BaseMatrix<ElemType>* m_baseMatrix;
+    mutable DenseBaseMatrix<ElemType>* m_baseMatrix;
     mutable GPUMatrix<ElemType>* m_GPUMatrix;
     mutable CPUMatrix<ElemType>* m_CPUMatrix;
     mutable GPUSparseMatrix<ElemType>* m_GPUSparseMatrix;
@@ -88,7 +88,7 @@ public:
     // If deviceId<0 then the matrix will be based in RAM (CPUMatrix)
     // Elseif deviceId>=0 then the matrix will be based on GPU with specified deviceId
     explicit Matrix(DEVICEID_TYPE deviceId);
-    Matrix(BaseMatrix<ElemType>* baseMatrix, ElemType* pArray, DEVICEID_TYPE deviceId);                                     // constructor for setting Matrix from a base matrix (externally managed butter pArray)
+    Matrix(DenseBaseMatrix<ElemType>* baseMatrix, ElemType* pArray, DEVICEID_TYPE deviceId);                                     // constructor for setting Matrix from a base matrix (externally managed butter pArray)
     Matrix(const size_t numRows, const size_t numCols, DEVICEID_TYPE deviceId, const MatrixType matrixType = DENSE, const MatrixFormat matrixFormat = matrixFormatDense);
     Matrix(const size_t numRows, const size_t numCols, ElemType* pArray, DEVICEID_TYPE deviceId, const size_t matrixFlags = matrixFlagNormal, const size_t nnz = 0);
     Matrix(const Matrix<ElemType>& deepCopyFrom); // copy constructor, deep copy

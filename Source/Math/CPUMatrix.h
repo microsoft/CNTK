@@ -25,9 +25,9 @@ double logadd(double x, double y);
 //To compy with BLAS libraries matrices are stored in ColMajor. However, by default C/C++/C# use RowMajor
 //convertion is need when passing data between CPUMatrix and C++ matrices
 template <class ElemType>
-class MATH_API CPUMatrix : public BaseMatrix<ElemType>
+class MATH_API CPUMatrix : public DenseBaseMatrix<ElemType>
 {
-    typedef BaseMatrix<ElemType> B;
+    typedef DenseBaseMatrix<ElemType> B;
     using B::m_numRows;
     using B::m_numCols;
     using B::m_pArray;

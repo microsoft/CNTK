@@ -209,22 +209,15 @@ enum MatrixFlags
     matrixFlagSetValueOnDevice = 1 << bitPosSetValueOnDevice, // SetValue() call has a buffer that is already on the device
 };
 
-// -----------------------------------------------------------------------
-// BaseMatrix -- base class for all matrix types (CPU, GPU) x (dense, sparse)
-// -----------------------------------------------------------------------
-
 template <class ElemType>
-class BaseMatrix
+class BaseMatrixView
 {
 public:
-    MatrixFormat GetFormat() const
+    BaseMatrixView()
     {
-        return m_format;
+        ZeroInit();
     }
-    void SetFormat(MatrixFormat format)
-    {
-        m_format = format;
-    }
+
     size_t GetNumRows() const
     {
         return m_numRows;
@@ -240,6 +233,83 @@ public:
     bool IsEmpty() const
     {
         return m_numRows == 0 || m_numCols == 0;
+    }
+    size_t NzCount() const
+    {
+        return m_nz;
+    }
+    void SetNzCount(const size_t nz)
+    {
+        m_nz = nz;
+    }
+    void VerifySize(size_t rows, size_t cols)
+    {
+        if (rows != GetNumRows() || cols != GetNumCols())
+            LogicError("VerifySize: expected matrix size %lu x %lu, but it is %lu x %lu",
+                       rows, cols, GetNumRows(), GetNumCols());
+    }
+
+    bool OwnBuffer() const
+    {
+        return !m_externalBuffer;
+    }
+    void SetOwnBuffer(bool own)
+    {
+        m_externalBuffer = !own;
+    }
+
+protected:
+    void Clear() {}
+
+    void ZeroInit()
+    {
+        m_numRows           = 0;
+        m_numCols           = 0;
+        m_sliceViewOffset   = 0;
+        m_externalBuffer    = false;
+        m_nz                = 0;
+	}
+
+    void ShallowCopyFrom(const BaseMatrixView<ElemType>& other)
+    {
+#if 0
+        m_numRows           = other.m_numRows;
+        m_numCols           = other.m_numCols;
+        m_sliceViewOffset   = other.m_sliceViewOffset;
+        m_externalBuffer    = other.m_externalBuffer;
+        m_nz                = other.m_nz;
+#endif
+        *this = other;
+    }
+
+protected:
+    size_t m_numRows;
+    size_t m_numCols;
+    size_t m_sliceViewOffset; // this is used to get a column slice view of a matrix in the Sparse CSC format  --TODO: move to sparse matrix implementations? Or common sparse base class?
+    bool m_externalBuffer; // is the buffer used by this matrix,
+    size_t m_nz;                           // Number of non-zero elements for sparse matrices (unused in other formats)
+    // size_t m_colStride; // really need this
+    // size_t m_offset // Is this not just m_sliceOffsetView fseide?
+};
+
+template <class ElemType>
+class BaseMatrixStorage
+{
+public:
+    BaseMatrixStorage()
+    {
+        ZeroInit();
+        m_format = matrixFormatDense;
+        m_computeDevice = CPUDEVICE;
+    }
+
+    MatrixFormat GetFormat() const
+    {
+        return m_format;
+    }
+    void SetFormat(MatrixFormat format)
+    {
+        m_format = format;
     }
     ElemType* GetArray()
     {
@@ -257,38 +327,9 @@ public:
     {
         m_computeDevice = computeId;
     }
-    bool OwnBuffer() const
-    {
-        return !m_externalBuffer;
-    }
-    void SetOwnBuffer(bool own)
-    {
-        m_externalBuffer = !own;
-    }
-    size_t NzCount() const
-    {
-        return m_nz;
-    }
-    void SetNzCount(const size_t nz)
-    {
-        m_nz = nz;
-    }
     size_t GetSizeAllocated() const
     {
         return m_elemSizeAllocated;
-    }
-    void VerifySize(size_t rows, size_t cols)
-    {
-        if (rows != GetNumRows() || cols != GetNumCols())
-            LogicError("VerifySize: expected matrix size %lu x %lu, but it is %lu x %lu",
-                       rows, cols, GetNumRows(), GetNumCols());
-    }
-
-    BaseMatrix()
-    {
-        ZeroInit();
-        m_format = matrixFormatDense;
-        m_computeDevice = CPUDEVICE;
     }
 
 protected:
@@ -296,41 +337,63 @@ protected:
 
     void ZeroInit()
     {
-        m_numRows           = 0;
-        m_numCols           = 0;
         m_elemSizeAllocated = 0;
-        m_sliceViewOffset   = 0;
-        m_externalBuffer    = false;
         m_pArray            = nullptr;
-        m_nz                = 0;
     }
 
     // copy all metadata (but not content taht pArray points to)
-    void ShallowCopyFrom(const BaseMatrix& other)
+    void ShallowCopyFrom(const BaseMatrixStorage& other)
     {
+#if 0
         m_format            = other.m_format;
         m_computeDevice     = other.m_computeDevice;
 
-        m_numRows           = other.m_numRows;
-        m_numCols           = other.m_numCols;
         m_elemSizeAllocated = other.m_elemSizeAllocated;
-        m_sliceViewOffset   = other.m_sliceViewOffset;
-        m_externalBuffer    = other.m_externalBuffer;
         m_pArray            = other.m_pArray;
-        m_nz                = other.m_nz;
+#endif
+        *this = other;
     }
 
 protected:
     MatrixFormat m_format;
     mutable DEVICEID_TYPE m_computeDevice; // current GPU device Id or CPUDEVICE
 
-    size_t m_numRows;
-    size_t m_numCols;
     size_t m_elemSizeAllocated;
-    size_t m_sliceViewOffset; // this is used to get a column slice view of a matrix in the Sparse CSC format  --TODO: move to sparse matrix implementations? Or common sparse base class?
-    bool m_externalBuffer; // is the buffer used by this matrix,
     ElemType* m_pArray;
-    size_t m_nz;                           // Number of non-zero elements for sparse matrices (unused in other formats)
+};
+
+// -----------------------------------------------------------------------
+// DenseBaseMatrix -- base class for all matrix types (CPU, GPU) x (dense, sparse)
+// -----------------------------------------------------------------------
+
+template <class ElemType>
+class DenseBaseMatrix : public BaseMatrixStorage<ElemType>, public BaseMatrixView<ElemType>
+{
+public:
+    DenseBaseMatrix() : BaseMatrixStorage<ElemType>(), BaseMatrixView<ElemType>() {}
+	DenseBaseMatrix(const DenseBaseMatrix&) = delete; // Added as per fseide direction to protect against arbitrary copies.
+	//DenseBaseMatrix& operator=(const DenseBaseMatrix&) = delete; // This currently breaks everything, as this is a deep copy.
+
+protected:
+    void Clear() 
+    {
+        BaseMatrixStorage<ElemType>::Clear();
+        BaseMatrixView<ElemType>::Clear();
+    }
+
+    void ZeroInit()
+    {
+        BaseMatrixStorage<ElemType>::ZeroInit();
+        BaseMatrixView<ElemType>::ZeroInit();
+    }
+
+    // copy all metadata (but not content taht pArray points to)
+    void ShallowCopyFrom(const DenseBaseMatrix& other)
+    {
+        BaseMatrixStorage<ElemType>::ShallowCopyFrom(other);
+        BaseMatrixView<ElemType>::ShallowCopyFrom(other);
+    }
+
 };
 
 }}}

@@ -251,9 +251,9 @@ void Matrix<ElemType>::SetDataLocation(CurrentDataLocation location, MatrixType 
 
     // Note: m_currentDataLocation may also be CurrentDataLocation::BOTH, in which case the base matrix will be GPU.
     if (m_matrixType == MatrixType::DENSE)
-        m_baseMatrix = ((m_currentDataLocation == CurrentDataLocation::CPU) ? (BaseMatrix<ElemType>*) m_CPUMatrix : (BaseMatrix<ElemType>*) m_GPUMatrix);
+        m_baseMatrix = ((m_currentDataLocation == CurrentDataLocation::CPU) ? (DenseBaseMatrix<ElemType>*) m_CPUMatrix : (DenseBaseMatrix<ElemType>*) m_GPUMatrix);
     else if (m_matrixType == MatrixType::SPARSE)
-        m_baseMatrix = ((m_currentDataLocation == CurrentDataLocation::CPU) ? (BaseMatrix<ElemType>*) m_CPUSparseMatrix : (BaseMatrix<ElemType>*) m_GPUSparseMatrix);
+        m_baseMatrix = ((m_currentDataLocation == CurrentDataLocation::CPU) ? (DenseBaseMatrix<ElemType>*) m_CPUSparseMatrix : (DenseBaseMatrix<ElemType>*) m_GPUSparseMatrix);
 
     // sanity check
     if (!m_baseMatrix && m_matrixType != MatrixType::UNDETERMINED)
@@ -298,12 +298,12 @@ Matrix<ElemType>::Matrix(DEVICEID_TYPE deviceID)
     SwitchToMatrixType(MatrixType::DENSE, MatrixFormat::matrixFormatDense, false);
 }
 
-// constructor for Matrix class to wrap an externally managed BaseMatrix
-// baseMatrix - base matrix for this element
-// pArray - pointer to current data array, will replace existing pointer in baseMatrix if != NULL
+// constructor for Matrix class to wrap an externally managed DenseBaseMatrix
+// DenseBaseMatrix - base matrix for this element
+// pArray - pointer to current data array, will replace existing pointer in DenseBaseMatrix if != NULL
 // deviceId - deviceId where the pArray exists
 template <class ElemType>
-Matrix<ElemType>::Matrix(BaseMatrix<ElemType>* baseMatrix, ElemType* pArray, DEVICEID_TYPE deviceId) // constructor for setting Matrix from a base matrix
+Matrix<ElemType>::Matrix(DenseBaseMatrix<ElemType>* baseMatrix, ElemType* pArray, DEVICEID_TYPE deviceId) // constructor for setting Matrix from a base matrix
 {
     Init(deviceId);
 
