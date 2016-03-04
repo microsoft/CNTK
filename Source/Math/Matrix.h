@@ -57,16 +57,18 @@ typedef std::shared_ptr<MatrixBase> MatrixBasePtr;
 template <class ElemType>
 class MATH_API Matrix : public MatrixBase
 {
+    typedef MatrixBase Base;
 private:
     mutable BaseMatrix<ElemType>* m_baseMatrix;
     mutable GPUMatrix<ElemType>* m_GPUMatrix;
     mutable CPUMatrix<ElemType>* m_CPUMatrix;
     mutable GPUSparseMatrix<ElemType>* m_GPUSparseMatrix;
     mutable CPUSparseMatrix<ElemType>* m_CPUSparseMatrix;
+
     mutable MatrixType m_matrixType;
     mutable CurrentDataLocation m_currentDataLocation; // Indicates which matrix is current
-    mutable DEVICEID_TYPE m_preferredDeviceId;
 
+    mutable DEVICEID_TYPE m_preferredDeviceId;
     mutable size_t m_numTimesDeviceChanged;
     mutable size_t m_numTimesMatrixTypeChanged;
     mutable int m_devicesTransferedTo[2]; // TODO: what is this for? Seems only diagnostics
@@ -106,7 +108,7 @@ public:
 
     static void SetDevice(DEVICEID_TYPE deviceId);
 
-    void Clear();
+    void ReleaseMemory();
     ~Matrix();
 
 private:
@@ -115,6 +117,7 @@ private:
     Matrix(const MatrixFlags matrixFlags, DEVICEID_TYPE deviceID);                                                               // only used internally to initialize a blank matrix
     void Init(DEVICEID_TYPE deviceID);                                                                                           // only used internally to initialize a blank matrix
     void SetDataLocation(CurrentDataLocation location, MatrixType type = UNDETERMINED) const;
+    void ShallowCopyFrom(const Matrix<ElemType>& other);
 
 public:
     MatrixType GetMatrixType() const
@@ -143,19 +146,12 @@ public:
     void TransferFromDeviceToDevice(int id_from, int id_to, bool ismoved = false, /*if false then keep source and set location to BOTH*/ bool emptyTransfer = false, bool updatePreferredDevice = true) const;
     // Same as TransferFromDeviceToDevice() but moves only if it is currently not on the target device
     void TransferToDeviceIfNotThere(int id_to, bool ismoved = false, bool emptyTransfer = false, bool updatePreferredDevice = true) const;
-    void TransferToDeviceIfNotThereAndNotAutoPlace(int id_to, bool ismoved = false, bool emptyTransfer = false, bool updatePreferredDevice = true) const;
-    CurrentDataLocation GetCurrentMatrixLocation() const
-    {
-        return m_currentDataLocation;
-    };
+    CurrentDataLocation GetCurrentMatrixLocation() const { return m_currentDataLocation; };
     void SwitchToMatrixType(MatrixType newMatrixType, MatrixFormat newMatrixFormat, bool keepValues); // sets matrix type between dense and sparse
     size_t GetNumRows() const;
     size_t GetNumCols() const;
     size_t GetNumElements() const;
-    bool HasNoElements() const
-    {
-        return GetNumElements() == 0;
-    }
+    bool HasNoElements() const { return GetNumElements() == 0; }
     wchar_t* GetMatrixName() const;
     void SetMatrixName(const wchar_t* s);
     bool IsEmpty() const;
@@ -228,6 +224,7 @@ public:
 
     const ElemType operator()(const size_t row, const size_t col) const;
     ElemType& operator()(const size_t row, const size_t col);
+    ElemType GetValue(const size_t row, const size_t col) const { return operator()(row, col); } // use this for reading on non-const objects to avoid inefficiency
     ElemType Get00Element() const;
 
     void SetValue(const ElemType v);

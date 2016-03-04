@@ -2166,11 +2166,10 @@ void BatchSequenceReader<ElemType>::GetLabelOutput(StreamMinibatchInputs& matric
         }
 #endif
     }
-    // send it back to the GPU if so desired
-    // We have a special hack here to keep it on the CPU because we know that something is inefficient later.
-    // TODO: No! Readers should not have such knowledge.
-    if (curDevId != CPUDEVICE && readerMode != ReaderMode::Class)
-        labels.TransferFromDeviceToDevice(CPUDEVICE, curDevId, false, false, false);
+    // send it back to where it came from
+    // Note: This may leave this object in BOTH locations, which is desirable for
+    // class-based models which access the information on the CPU.
+    labels.TransferFromDeviceToDevice(CPUDEVICE, curDevId, false, false, false);
 }
 
 #if 0

@@ -732,6 +732,7 @@ void File::SetPosition(uint64_t pos)
     fsetpos(m_file, pos);
 }
 
+// Load matrix from file. The file is a simple text file consisting of one line per matrix row, where each line contains the elements of the row separated by white space.
 template <class ElemType>
 /*static*/ vector<ElemType> File::LoadMatrixFromTextFile(const std::wstring& filePath, size_t& /*out*/ numRows, size_t& /*out*/ numCols)
 {
