@@ -163,7 +163,7 @@ bool File::IsTextBased()
 
 // File Destructor
 // closes the file
-// Note: this does not check for errors. Use Flush() before closing a file you are writing.
+// Note: this does not check for errors when the File corresponds to pipe stream. In this case, use Flush() before closing a file you are writing.
 File::~File(void)
 {
     if (m_pcloseNeeded)
