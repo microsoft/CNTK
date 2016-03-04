@@ -91,17 +91,17 @@ public:
         result.push_back(*sequence);
 
         int samples = (int)(globalte - globalts);
-        samples -= (int)sequence->m_original->m_numberOfSamples;
+        samples -= (int)sequence->m_numberOfSamples;
         m_currentSequencePosition++;
 
         while (samples > 0)
         {
             sequence = &GetRandomizedSequenceDescriptionBySequenceId(m_currentSequencePosition);
-            if (samples - sequence->m_original->m_numberOfSamples >= 0)
+            if (samples - sequence->m_numberOfSamples >= 0)
             {
                 result.push_back(*sequence);
                 m_currentSequencePosition++;
-                samples -= (int)sequence->m_original->m_numberOfSamples;
+                samples -= (int)sequence->m_numberOfSamples;
             }
             else
             {
@@ -300,7 +300,7 @@ public:
         size_t sequenceId = 0;
         for (size_t i = 0; i < sequences.size(); ++i)
         {
-            size_t sequenceSize = sequences[i].second.m_original->m_numberOfSamples;
+            size_t sequenceSize = sequences[i].second.m_numberOfSamples;
             if (sequenceSize + numberOfSamples > sampleOffsetInsideChunk)
             {
                 break;
@@ -349,11 +349,12 @@ private:
         std::vector<std::pair<unsigned short, RandomizedSequenceDescription>> chunkSequences;
         chunkSequences.reserve(chunk.m_original->numberOfSequences);
 
-        std::vector<SequenceDescriptionPtr> originalSequences = m_parent.m_metaData->GetSequencesForChunk(chunk.m_original->id);
+        std::vector<SequenceDescription> originalSequences = m_parent.m_metaData->GetSequencesForChunk(chunk.m_original->id);
         for (size_t k = 0; k < originalSequences.size(); k++)
         {
             RandomizedSequenceDescription s;
-            s.m_original = originalSequences[k];
+            s.m_id = originalSequences[k].m_id;
+            s.m_numberOfSamples = originalSequences[k].m_numberOfSamples;
             s.m_chunk = &chunk;
             chunkSequences.push_back(std::make_pair((unsigned short)chunkIdx, s));
         }
@@ -387,7 +388,7 @@ private:
         size_t sequenceId = 0;
         for (size_t i = 0; i < sequences.size(); ++i)
         {
-            size_t sequenceSize = sequences[i].second.m_original->m_numberOfSamples;
+            size_t sequenceSize = sequences[i].second.m_numberOfSamples;
             if (sequenceSize + numberOfSamples > sampleOffsetInsideChunk)
             {
                 break;
@@ -413,7 +414,7 @@ private:
         size_t sequenceId = 0;
         for (size_t i = 0; i < sequences.size(); ++i)
         {
-            size_t sequenceSize = sequences[i].second.m_original->m_numberOfSamples;
+            size_t sequenceSize = sequences[i].second.m_numberOfSamples;
             if (sequenceSize + numberOfSamples > sampleOffsetInsideChunk)
             {
                 break;
@@ -635,8 +636,8 @@ Sequences PartialBlockRandomizer::GetNextSequences(size_t sampleCount)
 //#pragma omp parallel for ordered schedule(dynamic)
     for (int i = 0; i < sequences.size(); ++i)
     {
-        const auto& sequenceDescription = sequences[i].m_original;
-        auto sequence = m_sequenceRandomizer->m_randomizedSequenceWindowChunks[sequences[i].m_chunk->m_chunkId]->GetSequence(sequenceDescription->m_id);
+        size_t id = sequences[i].m_id;
+        auto sequence = m_sequenceRandomizer->m_randomizedSequenceWindowChunks[sequences[i].m_chunk->m_chunkId]->GetSequence(id);
         for (int j = 0; j < m_streams.size(); ++j)
         {
             result.m_data[j][i] = sequence[j];
@@ -674,7 +675,7 @@ bool PartialBlockRandomizer::GetNextSequenceDescriptions(size_t sampleCount, std
 
     for (const auto& s : sequences)
     {
-        m_globalSamplePosition += s.m_original->m_numberOfSamples;
+        m_globalSamplePosition += s.m_numberOfSamples;
     }
 
     result.reserve(sequences.size());

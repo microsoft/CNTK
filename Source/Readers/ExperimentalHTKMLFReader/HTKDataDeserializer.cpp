@@ -174,9 +174,9 @@ ChunkDescriptions HTKDataDeserializer::GetChunkDescriptions()
     return chunks;
 }
 
-std::vector<SequenceDescriptionPtr> HTKDataDeserializer::GetSequencesForChunk(size_t chunkId)
+std::vector<SequenceDescription> HTKDataDeserializer::GetSequencesForChunk(size_t chunkId)
 {
-    std::vector<SequenceDescriptionPtr> result;
+    std::vector<SequenceDescription> result;
     const HTKChunkDescription& chunk = m_chunks[chunkId];
     result.reserve(chunk.GetTotalFrames());
     size_t id = 0;
@@ -186,14 +186,13 @@ std::vector<SequenceDescriptionPtr> HTKDataDeserializer::GetSequencesForChunk(si
         size_t major = utterance->GetId();
         for (size_t k = 0; k < utterance->m_numberOfSamples; ++k)
         {
-            auto f = std::make_shared<Frame>(utterance);
-            f->m_key.major = major;
-            f->m_key.minor = k;
-            f->m_id = id++;
-            f->m_chunkId = utterance->m_chunkId;
-            f->m_numberOfSamples = 1;
-            f->m_frameIndex = k;
-            f->m_isValid = true;
+            SequenceDescription f;
+            f.m_chunkId = utterance->m_chunkId;
+            f.m_key.major = major;
+            f.m_key.minor = k;
+            f.m_id = id++;
+            f.m_isValid = true;
+            f.m_numberOfSamples = 1;
             result.push_back(f);
         }
     }
@@ -354,7 +353,7 @@ std::vector<SequenceDataPtr> HTKDataDeserializer::GetSequenceById(size_t chunkId
     return std::vector<SequenceDataPtr>(1, result);
 }
 
-const SequenceDescription* HTKDataDeserializer::GetSequenceDescriptionByKey(const KeyType&)
+SequenceDescription HTKDataDeserializer::GetSequenceDescriptionByKey(const KeyType&)
 {
     LogicError("HTKDataDeserializer::GetSequenceDescriptionByKey: currently not implemented. Supported only as a primary deserializer.");
 }

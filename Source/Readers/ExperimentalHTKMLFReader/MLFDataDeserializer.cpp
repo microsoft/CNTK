@@ -166,21 +166,21 @@ ChunkDescriptions MLFDataDeserializer::GetChunkDescriptions()
     return ChunkDescriptions{cd};
 }
 
-std::vector<SequenceDescriptionPtr> MLFDataDeserializer::GetSequencesForChunk(size_t )
+std::vector<SequenceDescription> MLFDataDeserializer::GetSequencesForChunk(size_t )
 {
-    std::vector<SequenceDescriptionPtr> result;
+    std::vector<SequenceDescription> result;
+    result.reserve(m_sequences.size());
     for (size_t i = 0; i < m_sequences.size(); ++i)
     {
-        auto f = std::make_shared<MLFFrame>();
-        f->m_key.major = m_frames[i].m_key.major;
-        f->m_key.minor = m_frames[i].m_key.minor;
-        f->m_id = m_frames[i].m_id;
-        f->m_chunkId = m_frames[i].m_chunkId;
-        f->m_numberOfSamples = 1;
-        f->m_isValid = true;
+        SequenceDescription f;
+        f.m_key.major = m_frames[i].m_key.major;
+        f.m_key.minor = m_frames[i].m_key.minor;
+        f.m_id = m_frames[i].m_id;
+        f.m_chunkId = m_frames[i].m_chunkId;
+        f.m_numberOfSamples = 1;
+        f.m_isValid = true;
         result.push_back(f);
     }
-
     return result;
 }
 
@@ -229,16 +229,16 @@ std::vector<SequenceDataPtr> MLFDataDeserializer::GetSequenceById(size_t sequenc
 
 static SequenceDescription s_InvalidSequence { 0, 0, 0, false };
 
-const SequenceDescription* MLFDataDeserializer::GetSequenceDescriptionByKey(const KeyType& key)
+SequenceDescription MLFDataDeserializer::GetSequenceDescriptionByKey(const KeyType& key)
 {
     auto sequenceId = m_keyToSequence.find(key.major);
     if (sequenceId == m_keyToSequence.end())
     {
-        return &s_InvalidSequence;
+        return s_InvalidSequence;
     }
 
     size_t index = m_utteranceIndex[sequenceId->second] + key.minor;
-    return m_sequences[index];
+    return *m_sequences[index];
 }
 
 }}}

@@ -39,7 +39,8 @@ struct RandomizedChunk
 
 struct RandomizedSequenceDescription
 {
-    SequenceDescriptionPtr m_original;
+    size_t m_id;
+    size_t m_numberOfSamples;
     const RandomizedChunk* m_chunk;
 };
 

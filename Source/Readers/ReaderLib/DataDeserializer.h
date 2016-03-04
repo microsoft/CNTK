@@ -125,9 +125,10 @@ public:
     virtual std::vector<StreamDescriptionPtr> GetStreamDescriptions() const = 0;
     virtual ChunkDescriptions GetChunkDescriptions() = 0;
 
-    virtual std::vector<SequenceDescriptionPtr> GetSequencesForChunk(size_t chunkId) = 0;
+    virtual std::vector<SequenceDescription> GetSequencesForChunk(size_t chunkId) = 0;
+
     // Retrieves description of a single sequence given its key.
-    virtual const SequenceDescription* GetSequenceDescriptionByKey(const KeyType& key) = 0;
+    virtual SequenceDescription GetSequenceDescriptionByKey(const KeyType& key) = 0;
 
     virtual size_t GetTotalNumberOfSamples() = 0;
     virtual size_t GetTotalNumberOfSequences() = 0;
