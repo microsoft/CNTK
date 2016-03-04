@@ -1,5 +1,6 @@
+__all__ = ['Graph', 'ComputationNode', 'Input', 'Parameter']
 
-class Node(object):
+class ComputationNode(object):
     def __init__(self, name, params=None, value=None, get_output_shape=None,
             var_name=None, check=None):
         self.name = name
@@ -61,7 +62,7 @@ class Node(object):
         return "%s / params=%s / value=%s"%(self.name, self.params, self.value)
 
 
-class Input(Node):
+class Input(ComputationNode):
     def __init__(self, shape, **kwargs):
         super(Input, self).__init__('Input', **kwargs)
         self.get_output_shape=lambda : shape
@@ -69,7 +70,7 @@ class Input(Node):
     def get_cntk_param_string(self, param_variable_names=None):
         pass
 
-class LearnableParameter(Node):
+class Parameter(ComputationNode):
     def __init__(self, **kwargs):
         super(LearnableParameter, self).__init__('LearnableParameter', **kwargs)
         self.get_output_shape=lambda : kwargs['value'].shape
@@ -95,3 +96,6 @@ class LearnableParameter(Node):
 
         return params
 
+
+class Graph(object):
+    pass

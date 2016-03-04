@@ -1,10 +1,12 @@
-from graph import Node
+__all__ = ['Operator', 'times'] # TODO fill in cntk ops statically
+
+from graph import ComputationNode
 
 # Because CNTK stores the sample in a transposed form, we need to
 # switch parameters for some operators
 BIN_OPS_WITH_REVERSED_PARAMETERS = {'Times'}
 
-class Operator(Node):
+class Operator(ComputationNode):
     def __init__(self, name, params, **kwargs):
         super(Operator, self).__init__(name, params, **kwargs)
 

@@ -1,3 +1,5 @@
+__all__ = ['Context']
+
 import os
 import cntk.graph as graph
 import numpy as np
