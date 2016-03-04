@@ -155,6 +155,24 @@ MLFDataDeserializer::MLFDataDeserializer(CorpusDescriptorPtr corpus, const Confi
     stream->m_storageType = StorageType::sparse_csc;
     stream->m_elementType = m_elementType;
     m_streams.push_back(stream);
+
+    m_categories.reserve(dimension);
+    for (size_t i = 0; i < dimension; ++i)
+    {
+        SparseSequenceDataPtr category = std::make_shared<SparseSequenceData>();
+        category->m_indices.resize(1);
+        category->m_indices[0] = std::vector<size_t>{ m_categories.size() };
+        if (m_elementType == ElementType::tfloat)
+        {
+            category->m_data = &s_oneFloat;
+        }
+        else
+        {
+            assert(m_elementType == ElementType::tdouble);
+            category->m_data = &s_oneDouble;
+        }
+        m_categories.push_back(category);
+    }
 }
 
 ChunkDescriptions MLFDataDeserializer::GetChunkDescriptions()
@@ -208,21 +226,8 @@ ChunkPtr MLFDataDeserializer::GetChunk(size_t chunkId)
 void MLFDataDeserializer::GetSequenceById(size_t sequenceId, std::vector<SequenceDataPtr>& result)
 {
     size_t label = m_classIds[m_frames[sequenceId].m_index];
-    SparseSequenceDataPtr r = std::make_shared<SparseSequenceData>();
-    r->m_indices.resize(1);
-    r->m_indices[0] = std::vector<size_t>{ label };
-
-    if (m_elementType == ElementType::tfloat)
-    {
-        r->m_data = &s_oneFloat;
-    }
-    else
-    {
-        assert(m_elementType == ElementType::tdouble);
-        r->m_data = &s_oneDouble;
-    }
-
-    result.push_back(r);
+    assert(label < m_categories.size());
+    result.push_back(m_categories[label]);
 }
 
 static SequenceDescription s_InvalidSequence { 0, 0, 0, false };

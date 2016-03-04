@@ -70,6 +70,8 @@ private:
     std::vector<StreamDescriptionPtr> m_streams;
 
     size_t m_totalNumberOfFrames;
+
+    std::vector<SparseSequenceDataPtr> m_categories;
 };
 
 }}}
