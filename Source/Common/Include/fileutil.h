@@ -694,19 +694,16 @@ class auto_file_ptr
     FILE* f;
     FILE* operator=(auto_file_ptr&); // can't ref-count: no assignment
     auto_file_ptr(auto_file_ptr&);
-    // implicit close (destructor, assignment): we ignore error
     void close() throw()
     {
-        if (f)
-            try
-            {
-                if (f != stdin && f != stdout && f != stderr)
-                    ::fclose(f);
-            }
-            catch (...)
-            {
-            }
-        f = NULL;
+        if (f && f != stdin && f != stdout && f != stderr)
+        {
+            int rc = ::fclose(f);
+            if ((rc != 0) && !std::uncaught_exception())
+                RuntimeError("auto_file_ptr: failed to close file");
+
+            f = NULL;
+        }
     }
 #pragma warning(push)
 #pragma warning(disable : 4996)

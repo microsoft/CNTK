@@ -138,6 +138,9 @@
     <ClInclude Include="..\ComputationNetworkLib\TrainingNodes.h">
       <Filter>from ComputationNetworkLib\Nodes</Filter>
     </ClInclude>
+    <ClInclude Include="MASGD.h">
+      <Filter>Parallelization</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Common">

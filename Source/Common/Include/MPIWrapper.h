@@ -151,6 +151,7 @@ public:
     {
         fprintf(stderr, "~MPIWrapper\n");
         fflush(stderr);
+        // TODO: Check for error code and throw if !std::uncaught_exception()
         MPI_Finalize();
     }
 

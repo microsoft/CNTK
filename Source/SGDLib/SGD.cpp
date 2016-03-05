@@ -265,6 +265,12 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
     {
         InitDistGradAgg(evaluationNodes.size(), m_traceLevel);
     }
+    else if (m_parallelizationMethod == ParallelizationMethod::ModelAveragingSGD)
+    {
+        InitModelAggregationHandler(m_syncStatsTrace);
+    }
+    
+
     // precompute mean and invStdDev nodes and save initial model
     // When no precompute, only save if we did not load the model from a 
     // checkpoint but instead built it from a network description
@@ -742,9 +748,12 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
 
     // MA-related variables
     size_t nSamplesSinceLastModelSync = 0;
-    size_t nSynced = 0;
-    float nSecondsOnMASync = 0;
-    float nSecondsSinceLastMAPerfReport = 0;
+    if (useParallelTrain && m_pMASGDHelper)
+    {
+        m_pMASGDHelper->OnEpochStart(learnableNodes);
+    }
+    
+
 
     std::vector<Matrix<ElemType>*> learnParamsGradients;
     if (useGradientAggregation)
@@ -1011,44 +1020,18 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
         // aggregation by model averaging
         if (useModelAveraging)
         {
-            // Determine if any samples were processed across any of the ranks
+            if (nSamplesSinceLastModelSync >= m_nFramesBetweenMASync)
+            {
+                bool synced = m_pMASGDHelper->OnArrivingAtSyncPoint(learnableNodes, smoothedGradients, nSamplesSinceLastModelSync);
+                if (synced)
+                {
+                    nSamplesSinceLastModelSync = 0;
+                }
+            }
+            // prepare break condition
             if (useDistributedMBReading)
             {
-                std::array<int, 1> numNodesWithDataToProcess;
-                numNodesWithDataToProcess[0] = wasDataRead ? 1 : 0;
-                g_mpi->AllReduce(numNodesWithDataToProcess);
-
-                if (numNodesWithDataToProcess[0] == 0)
-                    noMoreSamplesToProcess = true;
-            }
-
-            if (g_mpi->NumNodesInUse() > 1)
-            {
-                size_t processedSamples = 0;
-                float secondsSinceLastSyncFinished = 0;
-                float secondsSpentOnSync = 0;
-                if (ModelAveragingProcessing(nSamplesSinceLastModelSync, learnableNodes, processedSamples,
-                                             secondsSinceLastSyncFinished, secondsSpentOnSync))
-                {
-                    // if a sync happens, do some extra work
-                    nSamplesSinceLastModelSync = 0;
-                    nSynced++;
-
-                    nSecondsOnMASync += secondsSpentOnSync;
-                    nSecondsSinceLastMAPerfReport += secondsSinceLastSyncFinished;
-
-                    if (m_syncStatsTrace > 0)
-                    {
-                        if (nSynced % m_syncStatsTrace == 0)
-                        {
-                            fprintf(stderr, "\t\t-----(model averaging stats) %d-th sync, %8.2f seconds since last report, %5.2f seconds on communication\n",
-                                    (int) nSynced, nSecondsSinceLastMAPerfReport, nSecondsOnMASync);
-                            nSecondsOnMASync = 0;
-                            nSecondsSinceLastMAPerfReport = 0;
-                        }
-                    }
-                }
-                aggregateNumSamplesWithLabel = processedSamples;
+                noMoreSamplesToProcess = !wasDataRead;
             }
         }
 
@@ -1056,7 +1039,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
         numMBsRun++;
 
         totalTimeInMBs += timer.ElapsedSeconds();
-        numSamplesLastMBs += useModelAveraging ? int(actualMBSize) : int(aggregateNumSamplesWithLabel);
+        numSamplesLastMBs += (int)aggregateNumSamplesWithLabel;
 
         if (
 #if 0       // output the first few to see if everything started right
@@ -1155,7 +1138,8 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
 
         timer.Restart();
         totalEpochSamples += aggregateNumSamplesWithLabel;
-        totalSamplesSeen += aggregateNumSamplesWithLabel;
+        if (!useModelAveraging)
+            totalSamplesSeen += aggregateNumSamplesWithLabel;
 
         // call DataEnd function
         // This signals something from SGD to the reader.
@@ -1174,15 +1158,9 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
 
     // --- END MAIN MINIBATCH LOOP
 
-    if (useModelAveraging && (g_mpi->NumNodesInUse() > 1))
+    if (useModelAveraging )
     {
-        // may not be synced after epoch finished, so do the sync here
-        int residualSampels = (int) nSamplesSinceLastModelSync;
-        g_mpi->AllReduce(&residualSampels, 1);
-        totalSamplesSeen += residualSampels;
-        totalEpochSamples += residualSampels;
-        ModelAveragingSync(nSamplesSinceLastModelSync, learnableNodes);
-        nSynced++;
+        m_pMASGDHelper->OnEpochEnd(learnableNodes, smoothedGradients, nSamplesSinceLastModelSync);
         nSamplesSinceLastModelSync = 0;
     }
 
@@ -1212,9 +1190,26 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
     // in case of model averaging, do one more final aggregation of criteria
     if (useModelAveraging && (g_mpi->NumNodesInUse() > 1))
     {
-        // merge epochCriterion and epochEvalErrors over nodes
+        // 1. total epoch samples processed by all workers
+        size_t totalEpochSamplesOfAllWorkers = totalEpochSamples;
+        g_mpi->AllReduce(&totalEpochSamplesOfAllWorkers, 1);
+        totalSamplesSeen += totalEpochSamplesOfAllWorkers;
+
+        // 2. criterion and EvalErrors 
+        localEpochCriterion *= (float)totalEpochSamples / totalEpochSamplesOfAllWorkers;
+        localEpochEvalErrors *= (float)totalEpochSamples / totalEpochSamplesOfAllWorkers;
+
+        epochCriterion = localEpochCriterion.Get00Element();
+        for (size_t i = 0; i < epochEvalErrors.size(); i++)
+        {
+            epochEvalErrors[i] = localEpochEvalErrors(0, i);
+        }
+        // merge epochCriterion and epochEvalErrors over nodes 
         g_mpi->AllReduce(&epochCriterion, 1);
         g_mpi->AllReduce(epochEvalErrors);
+
+        // 3. modify return value 
+        totalEpochSamples = totalEpochSamplesOfAllWorkers;
     }
     return totalEpochSamples;
 }
@@ -1844,108 +1839,21 @@ void SGD<ElemType>::InitDistGradAgg(int numEvalNodes, int traceLevel)
 }
 
 template <class ElemType>
-bool SGD<ElemType>::ModelAveragingProcessing(size_t nSamplesSinceLastSync, const std::list<ComputationNodeBasePtr>& learnableNodes, size_t& nProcessedFrames,
-                                             float& SecondsSinceLastSyncFinished, float& SecondsSpentOnSync)
+void SGD<ElemType>::InitModelAggregationHandler(int traceLevel)
 {
-    // ////////////////////////////////////////////////////////////////////////
-    // the current strategy is that after each minibatch, we will sync between processors
-    // to decide whether a sync need to be performed. This is definitely not optimal,
-    // which we will fix it later.
+    if (m_parallelizationMethod == ParallelizationMethod::ModelAveragingSGD)
+    {
+#ifndef BLOCKWISE_MODEL_UPDATE_FILTERING
+        if (!m_pMASGDHelper)
+        {
+            m_pMASGDHelper = make_shared<BasicModelAveragingSGD<ElemType>>(g_mpi, traceLevel);
+        }
+#else
 
-    // TODO: the way we handle timer is not very good
-    // ////////////////////////////////////////////////////////////////////////
-    static bool first = true;
-    static Timer MAtimer;
-    if (first)
-    {
-        MAtimer.Start();
-        first = false;
+#endif 
     }
-
-    char bNeedToSync = (char) 0; // use char for bool
-    if (g_mpi->IsMainNode() && nSamplesSinceLastSync >= m_nFramesBetweenMASync)
-    {
-        // only the main node can decide whether a sync need to be performed
-        bNeedToSync = (char) 1;
-    }
-    g_mpi->Bcast(&bNeedToSync, 1, g_mpi->MainNodeRank());
-    if (bNeedToSync)
-    {
-        MAtimer.Stop();
-        double elapsedsec = MAtimer.ElapsedSeconds();
-        SecondsSinceLastSyncFinished = first ? 0 : (float) elapsedsec;
-        MAtimer.Start();
-        nProcessedFrames = ModelAveragingSync((int) nSamplesSinceLastSync, learnableNodes);
-        MAtimer.Stop();
-        SecondsSpentOnSync = (float) MAtimer.ElapsedSeconds();
-
-        MAtimer.Start();
-    }
-    else
-    {
-        nProcessedFrames = 0;
-        return false;
-    }
-    return true;
+    
 }
-
-template <class ElemType>
-size_t SGD<ElemType>::ModelAveragingSync(int nSamplesSinceLastSync, const std::list<ComputationNodeBasePtr>& learnableNodes)
-{
-    if (g_mpi->NumNodesInUse() <= 1)
-    {
-        return nSamplesSinceLastSync;
-    }
-
-    // ========================================
-    // Sec. 1 calculate factor
-    // ========================================
-    float factor = 0;
-    int nTotalSamples = nSamplesSinceLastSync;
-    g_mpi->AllReduce(&nTotalSamples, 1);
-    if (nTotalSamples <= 0)
-    {
-        // prepare for overflow
-        factor = 1.0f / g_mpi->NumNodesInUse();
-    }
-    else
-    {
-        factor = (nSamplesSinceLastSync + 0.0f) / nTotalSamples;
-    }
-
-    // ========================================
-    // Sec. 2 sync models based on factor
-    // Note: this is suboptimal at the moment:
-    //       we do the averaging for each node in a sequence manner, i.e.,
-    //          (node1) GPU->CPU->MPI_AllReduce -> (node2)GPU->CPU->MPI_AllReduce
-    //       we can improve it by using a pipeline
-    //          (node1) GPU ->  CPU  ->  MPI_AllReduce
-    //          (node2)         GPU  ->  CPU            -> MPI_AllReduce
-    //          (node3)                  GPU            -> CPU              -> MPI_AllReduce
-    // ========================================
-    for (auto iter = learnableNodes.begin(); iter != learnableNodes.end(); iter++)
-    {
-        ComputationNodeBasePtr pNode = *iter;
-        if (!pNode->IsParameterUpdateRequired())
-            continue;
-
-        Matrix<ElemType>& mat = dynamic_pointer_cast<ComputationNode<ElemType>>(pNode)->Value();
-        // 1. normalize the weight matrix
-        Matrix<ElemType>::Scale(factor, mat);
-        // 2. send weight matrix over MPI nodes;
-        ElemType* px = mat.CopyToArray();
-        size_t nx = mat.GetNumElements();
-
-        // 3. inplace sum
-        g_mpi->AllReduce(px, nx);
-        mat.SetValue(mat.GetNumRows(), mat.GetNumCols(), mat.GetDeviceId(), px);
-        // 4. clean up
-        delete[] px;
-    }
-
-    return nTotalSamples;
-}
-
 // public:
 // UpdateWeightsS - static version of UpdateWeights()
 // not static since it wants to access protected methods on the SGD object
@@ -2106,8 +2014,11 @@ void SGD<ElemType>::SaveCheckPointInfo(const size_t epoch, const size_t totalSam
 
         {
             File fstream(tempFileName, FileOptions::fileOptionsBinary | FileOptions::fileOptionsWrite);
-            fstream.PutMarker(FileMarker::fileMarkerBeginSection, L"BCKP");
+            fstream.PutMarker(FileMarker::fileMarkerBeginSection, L"BVersion"); 
+            fstream << (size_t)CURRENT_CNTK_CHECKPOINT_VERSION; 
+            fstream.PutMarker(FileMarker::fileMarkerEndSection, L"EVersion");
 
+            fstream.PutMarker(FileMarker::fileMarkerBeginSection, L"BCKP");
             fstream.PutMarker(FileMarker::fileMarkerBeginSection, L"BLearnRate");
             fstream << totalSamplesSeen << learnRatePerSample << prevCriterion;
             fstream.PutMarker(FileMarker::fileMarkerEndSection, L"ELearnRate");
@@ -2153,6 +2064,16 @@ bool SGD<ElemType>::LoadCheckPointInfo(const size_t epochNumber,
 
     File fstream(checkPointFileName,
                  FileOptions::fileOptionsBinary | FileOptions::fileOptionsRead);
+
+    // version info 
+    size_t ckpVersion = CNTK_CHECKPOINT_VERSION_1; // if no version info is found -> version 1
+    if (fstream.TryGetMarker(FileMarker::fileMarkerBeginSection, L"BVersion"))
+    {
+        fstream >> ckpVersion; 
+        fstream.GetMarker(FileMarker::fileMarkerEndSection, L"EVersion");
+    }
+
+
     fstream.GetMarker(FileMarker::fileMarkerBeginSection, L"BCKP");
 
     fstream.GetMarker(FileMarker::fileMarkerBeginSection, L"BLearnRate");
