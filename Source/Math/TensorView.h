@@ -56,7 +56,7 @@ public:
     //      c.AssignDiffOf(c,a) means c -= a,
     //  and c.AddElementwiseProductOf(a, b, 1) means c += a .* b.
     // All operators support elementwise in-place operations, i.e. a, b, and c
-    // may all reference the same underlying SOB, with onee exception:
+    // may all reference the same underlying SOB, with one exception:
     // The output cannot be in-place and inverse-broadcasting at the same time.
     // E.g. with c=[10] and a=[10 x 20], c.AssignDiffOf(c,a) will fail.
     // In that case, you can use c.AddCopyOf(a,-1).

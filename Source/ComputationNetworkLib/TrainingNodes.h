@@ -712,12 +712,8 @@ template class NoiseContrastiveEstimationNode<double>;
 template <class ElemType>
 class ClassBasedCrossEntropyWithSoftmaxNode : public ComputationNodeNonLooping /*ComputationNode*/<ElemType>, public NumInputs<4>
 {
-    typedef ComputationNodeNonLooping<ElemType> Base;
-    UsingComputationNodeMembersBoilerplate;
-    static const std::wstring TypeName()
-    {
-        return L"ClassBasedCrossEntropyWithSoftmax";
-    }
+    typedef ComputationNodeNonLooping<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+    static const std::wstring TypeName() { return L"ClassBasedCrossEntropyWithSoftmax"; }
 
     // our inputs
     static const size_t LABELDATA = 0;
@@ -850,9 +846,8 @@ public:
     // -sum(left_i * log(softmax_i(right)))
     virtual void /*ComputationNodeNonLooping::*/ ForwardPropNonLooping() override
     {
-        if (Input(LABELDATA)->Value().GetDeviceId() != CPUDEVICE)
-            LogicError("ClassBasedCrossEntropyWithSoftmax (ForwardPropNonLooping()): The label matrix is not using CPU device. This will make computation slow, even though the label data is probably saved on GPU. Because of the external loop over time with explicit class id retrieved from the label matrix, the computation will be very slow if the label matrix is saved on GPU. However, this is only a constraint for label matrix and other matrices such as data are suggested to reside on GPU. ");
-        // TODO: Get the label matrix into location=Both state.
+        // get the label matrix to CPU, ideally in location=BOTH state
+        Input(LABELDATA)->Value().TransferToDeviceIfNotThere(CPUDEVICE, /*ismoved =*/ false/*means: BOTH state OK*/, /*emptyTransfer =*/ false, /*updatePreferredDevice =*/ false);
 
         auto& functionValues = Value();
 
@@ -868,11 +863,11 @@ public:
         m_totalNbrWords = ForColumnsWithClass([](size_t /*s*/, size_t /*t*/, const FrameRange& /*fr*/, size_t y_t, size_t /*c_t*/, size_t /*sz*/, size_t lft_bnd, size_t nbr_wrd)
         {
             if (nbr_wrd == 0)
-                LogicError("ClassBasedCrossEntropyWithSoftmax: Encountered a class of size 0. This sample seems to lack an NoInput flag.");
+                LogicError("ClassBasedCrossEntropyWithSoftmax: Encountered a class of size 0.");
             if (y_t < lft_bnd || y_t >= lft_bnd + nbr_wrd)
                 LogicError("ClassBasedCrossEntropyWithSoftmax: Word index out of bounds of class-member index range (word not a class member).");
         });
-        // m_totalNbrWords = total size of concatenated vector
+        // now m_totalNbrWords = total size of concatenated vector
 
         // buffer to hold the concatenated class-conditioned prob vectors
         m_softMax.Resize(1, m_totalNbrWords);
@@ -1578,15 +1573,15 @@ public:
         m_mbCount(0), m_imageLayoutKind(ImageLayoutKind::CHW)
     {
     }
-    BatchNormalizationNode(DEVICEID_TYPE deviceId, const wstring& name, bool eval, bool spatial, double normTimeConst, double epsilon,
+	BatchNormalizationNode(DEVICEID_TYPE deviceId, const wstring& name, bool eval, bool spatial, double normalizationTimeConstant, double epsilon,
                            bool useCntkEngine, ImageLayoutKind imageLayoutKind)
-        : Base(deviceId, name), m_eval(eval), m_spatial(spatial), m_normTimeConst(normTimeConst), m_epsilon(epsilon),
+						   : Base(deviceId, name), m_eval(eval), m_spatial(spatial), m_normTimeConst(normalizationTimeConstant), m_epsilon(epsilon),
           m_useCntkEngine(useCntkEngine), m_imageLayoutKind(imageLayoutKind), m_mbCount(0)
     {
     }
     BatchNormalizationNode(const ScriptableObjects::IConfigRecordPtr configp)
         : BatchNormalizationNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"eval"), configp->Get(L"spatial"),
-                                 configp->Get(L"normTimeConst"), configp->Get(L"epsilon"), configp->Get(L"useCntkEngine"),
+                                 configp->Get(L"normalizationTimeConstant"), configp->Get(L"epsilon"), configp->Get(L"useCntkEngine"),
                                  ImageLayoutKindFrom(configp->Get(L"imageLayout")))
     {
         AttachInputs(configp, this->GetExpectedNumInputs());

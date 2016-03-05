@@ -1747,8 +1747,9 @@ size_t BatchSequenceReader<ElemType>::DetermineSequencesToProcess()
         // and count tokens
         numTokens += m_parser.mSentenceIndex2SentenceInfo[seq].sLen;
     }
-    // if all are already done, we will return sln=0
-    fprintf(stderr, "DetermineSequencesToProcess: %d sequences of len %d, %d tokens\n", (int) mToProcess.size(), (int) sln, (int) numTokens);
+    // if all were already done, we will get here with sln=0 and return that
+
+    //fprintf(stderr, "DetermineSequencesToProcess: %d sequences of len %d, %d tokens\n", (int) mToProcess.size(), (int) sln, (int) numTokens);
 
     return sln;
 }
@@ -2166,11 +2167,10 @@ void BatchSequenceReader<ElemType>::GetLabelOutput(StreamMinibatchInputs& matric
         }
 #endif
     }
-    // send it back to the GPU if so desired
-    // We have a special hack here to keep it on the CPU because we know that something is inefficient later.
-    // TODO: No! Readers should not have such knowledge.
-    if (curDevId != CPUDEVICE && readerMode != ReaderMode::Class)
-        labels.TransferFromDeviceToDevice(CPUDEVICE, curDevId, false, false, false);
+    // send it back to where it came from
+    // Note: This may leave this object in BOTH locations, which is desirable for
+    // class-based models which access the information on the CPU.
+    labels.TransferFromDeviceToDevice(CPUDEVICE, curDevId, false, false, false);
 }
 
 #if 0
