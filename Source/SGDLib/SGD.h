@@ -17,8 +17,14 @@
 #include <chrono>
 #include <random>
 #include "Profiler.h"
+#include "MASGD.h"
 
 using namespace std; // ugh! TODO: get rid of this from .h files!!!
+
+#define CNTK_CHECKPOINT_VERSION_1 1     // 1 -> no version number 
+#define CNTK_CHECKPOINT_VERSION_2 2     
+#define CURRENT_CNTK_CHECKPOINT_VERSION CNTK_CHECKPOINT_VERSION_2
+
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -425,12 +431,7 @@ protected:
                          std::string prefixMsg = "");
 
     void InitDistGradAgg(int numEvalNodes, int traceLevel);
-
-    bool ModelAveragingProcessing(size_t nSamplesSinceLastSync, const std::list<ComputationNodeBasePtr>& learnableNodes, size_t& nProcessedFrames,
-                                  float& SecondsSinceLastSyncFinished, float& SecondsSpentOnSync);
-
-    size_t ModelAveragingSync(int nSamplesSinceLastSync, const std::list<ComputationNodeBasePtr>& learnableNodes);
-
+    void InitModelAggregationHandler(int traceLevel);
 public:
     // UpdateWeightsS - static version of UpdateWeights()
     static void UpdateWeightsS(const SGD* sgd, Matrix<ElemType>& functionValues,
@@ -506,6 +507,8 @@ protected:
 
     IDistGradAggregator<ElemType>* m_distGradAgg;
     struct DistGradHeader* m_gradHeader;
+
+    shared_ptr<IMASGD<ElemType>> m_pMASGDHelper;
 
 private:
     int SGDTrace(FILE* __restrict __stream, const char* __restrict __format, ...);

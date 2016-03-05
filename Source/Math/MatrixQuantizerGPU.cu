@@ -216,6 +216,7 @@ MatrixQuantizerGPU<ElemType>::~MatrixQuantizerGPU()
     }
 
     // BUGBUG: we don't destroy our streams (they are static variables); we need a static destructor, I am too lazy now
+    // TODO: Check for error code and throw if !std::uncaught_exception()
     cudaEventDestroy(m_assignCompleteEvent);
     cudaEventDestroy(m_fetchCompleteEvent);
     cudaEventDestroy(m_quantizeCompleteEvent);
@@ -355,8 +356,8 @@ GPUMatrixComputeStreamEvent::GPUMatrixComputeStreamEvent(int deviceId)
 
 GPUMatrixComputeStreamEvent::~GPUMatrixComputeStreamEvent()
 {
+    // TODO: Check for error code and throw if !std::uncaught_exception()
     cudaEventDestroy(m_mainGPUComputeStreamCUDAEvent) || "cudaEventDestroy failed";
-    ;
 }
 
 void GPUMatrixComputeStreamEvent::SynchronizeEvent()

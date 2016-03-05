@@ -163,13 +163,20 @@ bool File::IsTextBased()
 
 // File Destructor
 // closes the file
-// Note: this does not check for errors. Use Flush() before closing a file you are writing.
+// Note: this does not check for errors when the File corresponds to pipe stream. In this case, use Flush() before closing a file you are writing.
 File::~File(void)
 {
     if (m_pcloseNeeded)
+    {
+        // TODO: Check for error code and throw if !std::uncaught_exception()     
         _pclose(m_file);
+    }
     else if (m_file != stdin && m_file != stdout && m_file != stderr)
-        fclose(m_file); // (since destructors may not throw, we ignore the return code here)
+    {
+        int rc = fclose(m_file);
+        if ((rc != 0) && !std::uncaught_exception())
+            RuntimeError("File: failed to close file at %S", m_filename.c_str());
+    }
 }
 
 void File::Flush()
