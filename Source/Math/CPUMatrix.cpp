@@ -122,7 +122,6 @@ void CPUMatrix<ElemType>::ZeroInit()
     m_numRows = 0;
     m_numCols = 0;
     m_elemSizeAllocated = 0;
-    m_matrixName = NULL;
     m_format = matrixFormatDense;
     m_externalBuffer = false;
 }
@@ -131,14 +130,6 @@ template <class ElemType>
 CPUMatrix<ElemType>::CPUMatrix()
 {
     ZeroInit();
-}
-
-//matrixName is used to verify that correct matrix is read.
-template <class ElemType>
-CPUMatrix<ElemType>::CPUMatrix(FILE* f, const char* matrixName)
-{
-    ZeroInit();
-    ReadFromFile(f, matrixName);
 }
 
 // helper to allocate an array of ElemType
@@ -182,7 +173,6 @@ CPUMatrix<ElemType>::CPUMatrix(const CPUMatrix<ElemType>& deepCopyFrom)
     ZeroInit();
     if (!deepCopyFrom.IsEmpty())
         SetValue(deepCopyFrom);
-    SetMatrixName(deepCopyFrom.m_matrixName);
 }
 
 //assignment operator, deep copy
@@ -192,7 +182,6 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::operator=(const CPUMatrix<ElemType>& d
     Clear();
     if (!deepCopyFrom.IsEmpty())
         SetValue(deepCopyFrom);
-    SetMatrixName(deepCopyFrom.m_matrixName);
     return *this;
 }
 
@@ -205,7 +194,6 @@ CPUMatrix<ElemType>::CPUMatrix(CPUMatrix<ElemType>&& moveFrom)
     m_numCols = moveFrom.m_numCols;
     m_elemSizeAllocated = moveFrom.m_elemSizeAllocated;
     m_pArray = moveFrom.m_pArray; // shallow copy the pointer
-    m_matrixName = moveFrom.m_matrixName;
     m_format = moveFrom.m_format;
     m_externalBuffer = moveFrom.m_externalBuffer;
     // release the pointer from the source object so that the destructor won't release it twice

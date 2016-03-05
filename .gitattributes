@@ -14,6 +14,7 @@ Readme text
 *.bat text
 *.py text
 *.pl text
+*.ps1 text
 *.sh text eol=lf
 build-and-test text eol=lf
 configure text eol=lf

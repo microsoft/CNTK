@@ -777,12 +777,6 @@ void GPUMatrix<ElemType>::ZeroInit(int deviceId)
 template <class ElemType>
 GPUMatrix<ElemType>::GPUMatrix(int deviceId){};
 
-//matrixName is used to verify that correct matrix is read.
-template <class ElemType>
-GPUMatrix<ElemType>::GPUMatrix(FILE* f, const char* matrixName, int deviceId)
-{
-}
-
 template <class ElemType>
 GPUMatrix<ElemType>::GPUMatrix(const size_t numRows, const size_t numCols, int deviceId){};
 
@@ -1659,19 +1653,6 @@ void GPUMatrix<ElemType>::Print(const char* matrixName, size_t rowStart, size_t 
 
 template <class ElemType>
 void GPUMatrix<ElemType>::Print(const char* matrixName /*=nullptr*/) const
-{
-}
-
-// file I/O
-//matrixName is used to verify that correct matrix is read.
-template <class ElemType>
-void GPUMatrix<ElemType>::ReadFromFile(FILE* f, const char* matrixName)
-{
-}
-
-//matrixName is used to verify that correct matrix is read.
-template <class ElemType>
-void GPUMatrix<ElemType>::WriteToFile(FILE* f, const char* matrixName)
 {
 }
 

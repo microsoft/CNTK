@@ -33,14 +33,12 @@ public:
     using Base::m_format;
     using Base::m_computeDevice;
     using Base::m_externalBuffer;
-    using Base::m_matrixName;
     using Base::OwnBuffer;
     using Base::GetFormat;
     using Base::SetFormat;
     using Base::GetNumRows;
     using Base::GetNumCols;
     using Base::SetComputeDeviceId;
-    using Base::SetMatrixName;
     using Base::SetNzCount;
     using Base::Clear;
     // without this, base members would require to use thi-> in GCC
