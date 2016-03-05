@@ -369,6 +369,55 @@ public:
         }
     }
 
+    size_t GetStride(size_t dim) const
+    {
+        assert(m_stride.size() == 1 || dim < m_stride.size());
+        return m_stride[m_stride.size() == 1 ? 0 : dim];
+    }
+
+    size_t GetMapCount(size_t dim) const
+    {
+        assert(m_mapCount.size() == 1 || dim < m_mapCount.size());
+        // If the whole map count tensor was specified explicitly - return requested component.
+        if (m_mapCount.size() > 1)
+            return m_mapCount[dim];
+        // If map count tensor rank == 1 then assume it represents number of feature maps for the rightmost dimension.
+        if (dim == m_inputShape.size() - 1)
+            return m_mapCount[0];
+        return 1;
+    }
+
+    bool GetSharing(size_t dim) const
+    {
+        assert(m_sharing.size() == 1 || dim < m_sharing.size());
+        return m_sharing[m_sharing.size() == 1 ? 0 : dim];
+    }
+
+    bool GetAutoPad(size_t dim) const
+    {
+        assert(m_autoPad.size() == 1 || dim < m_autoPad.size());
+        return m_autoPad[m_autoPad.size() == 1 ? 0 : dim];
+    }
+
+    int GetLowerPad(size_t dim) const
+    {
+        if (!GetAutoPad(dim))
+            return (int)m_lowerPad[m_lowerPad.size() == 1 ? 0 : dim];
+
+        int kernSize = (int)m_kernelShape[dim];
+        int inpSize = (int)m_inputShape[dim];
+        int outSize = (int)m_outputShape[dim];
+        int stride = (int)GetStride(dim);
+
+        // Taken from computation in ConvolveGeometry ctor.
+        // Number of cells between first and last "centers", inclusive.
+        int cells = (outSize - 1) * stride + 1;
+        // Extra cells, to the left and right of "cells".
+        int extra = inpSize - cells;
+        int center = extra / 2;
+        return -(center - (kernSize - 1) / 2);
+    }
+
     static TensorShape ComputeOutputShape(const TensorShape& inputShape, const TensorShape& kernelShape, const TensorShape& mapCount, const TensorShape& stride,
                                           const BoolVec& sharing, const BoolVec& autoPad, const TensorShape& lowerPad, const TensorShape& upperPad)
     {
@@ -396,7 +445,7 @@ public:
 
             size_t delta = stride[stride.GetRank() == 1 ? 0 : i];
             if (delta > kernelShape[i])
-                InvalidArgument("NDConvolution operation requires that stride %d <= input dim %d.", (int)stride[i], (int)inputShape[i]);
+                InvalidArgument("NDConvolution operation requires that stride %d <= kernel dim %d.", (int)delta, (int)kernelShape[i]);
             
             size_t dim = inputShape[i];
             bool autoPadCur = autoPad[autoPad.size() == 1 ? 0 : i];
@@ -439,38 +488,6 @@ public:
     DISABLE_COPY_AND_MOVE(ConvolveGeometry);
 
 private:
-
-    size_t GetStride(size_t dim)
-    {
-        assert(m_stride.size() == 1 || dim < m_stride.size());
-        return m_stride[m_stride.size() == 1 ? 0 : dim];
-    }
-
-    size_t GetMapCount(size_t dim)
-    {
-        assert(m_mapCount.size() == 1 || dim < m_mapCount.size());
-        // If the whole map count tensor was specified explicitly - return requested component.
-        if (m_mapCount.size() > 1)
-            return m_mapCount[dim];
-        // If map count tensor rank == 1 then assume it represents number of feature maps for the rightmost dimension.
-        if (dim == m_inputShape.size() - 1)
-            return m_mapCount[0];
-        return 1;
-    }
-
-    bool GetSharing(size_t dim)
-    {
-        assert(m_sharing.size() == 1 || dim < m_sharing.size());
-        return m_sharing[m_sharing.size() == 1 ? 0 : dim];
-    }
-
-    bool GetAutoPad(size_t dim)
-    {
-        assert(m_autoPad.size() == 1 || dim < m_autoPad.size());
-        return m_autoPad[m_autoPad.size() == 1 ? 0 : dim];
-    }
-
-private:
     TensorShape m_inputShape;
     TensorShape m_outputShape;
     TensorShape m_kernelShape;
@@ -500,5 +517,7 @@ private:
     // is aligned with the "kernel-center" cell. Indices in "Runs" and "Indices" are relative to OriginIndex.
     int m_originIndex;
 };
+
+using ConvolveGeometryPtr = std::shared_ptr<ConvolveGeometry>;
 
 } } }

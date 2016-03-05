@@ -173,9 +173,9 @@ public:
         {
             if (m_convEng == nullptr)
             {
-                auto g = std::make_unique<ConvolveGeometry>(inputShape, m_kernelShape, m_mapCount, m_stride,
+                auto g = std::make_shared<ConvolveGeometry>(inputShape, m_kernelShape, m_mapCount, m_stride,
                                                             m_sharing, m_autoPad, m_lowerPad, m_upperPad);
-                m_convEng = ConvolutionEngine<ElemType>::Create(std::move(g), m_deviceId, m_imageLayout);
+                m_convEng = ConvolutionEngine<ElemType>::Create(g, m_deviceId, m_imageLayout);
             }
         }
     }

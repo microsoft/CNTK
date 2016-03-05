@@ -42,11 +42,6 @@ public:
     using Mat = Matrix<ElemType>;
 
 public:
-    ConvolutionEngine(std::unique_ptr<ConvolveGeometry> geometry, DEVICEID_TYPE deviceId, ImageLayoutKind imageLayout, size_t maxTempMemSizeInSamples)
-        : m_geometry(std::move(geometry)), m_deviceId(deviceId), m_imageLayout(imageLayout), m_maxTempMemSizeInSamples(maxTempMemSizeInSamples)
-    {
-        assert(m_geometry != nullptr);
-    }
     virtual ~ConvolutionEngine() = default;
 
     void Forward(size_t batchSize, const Mat& in, const Mat& filter, Mat& out, Mat& workspace);
@@ -55,12 +50,18 @@ public:
 
     void BackwardFilter(size_t batchSize, const Mat& srcGrad, const Mat& in, Mat& filter, bool allowReuse, Mat& workspace);
 
-    static std::unique_ptr<ConvolutionEngine<ElemType>> Create(std::unique_ptr<ConvolveGeometry> geometry, DEVICEID_TYPE deviceId, ImageLayoutKind imageLayout,
+    static std::unique_ptr<ConvolutionEngine<ElemType>> Create(ConvolveGeometryPtr geometry, DEVICEID_TYPE deviceId, ImageLayoutKind imageLayout,
                                                                size_t maxTempMemSizeInSamples, ConvolutionEngineKind enabledEngines = ConvolutionEngineKind::All);
 
     DISABLE_COPY_AND_MOVE(ConvolutionEngine);
 
 protected:
+    ConvolutionEngine(ConvolveGeometryPtr geometry, DEVICEID_TYPE deviceId, ImageLayoutKind imageLayout, size_t maxTempMemSizeInSamples)
+        : m_geometry(geometry), m_deviceId(deviceId), m_imageLayout(imageLayout), m_maxTempMemSizeInSamples(maxTempMemSizeInSamples)
+    {
+        assert(m_geometry != nullptr);
+    }
+
     virtual void EnsureCompatible() = 0;
 
     virtual void ForwardCore(size_t batchSize, const Mat& in, const Mat& filter, Mat& out, Mat& workspace) = 0;
@@ -70,7 +71,7 @@ protected:
     virtual void BackwardFilterCore(size_t batchSize, const Mat& srcGrad, const Mat& in, Mat& filter, bool allowReuse, Mat& workspace) = 0;
 
 protected:
-    std::unique_ptr<ConvolveGeometry> m_geometry;
+    ConvolveGeometryPtr m_geometry;
     DEVICEID_TYPE m_deviceId;
     ImageLayoutKind m_imageLayout;
     size_t m_maxTempMemSizeInSamples;
@@ -89,8 +90,8 @@ public:
     using Mat = Matrix<ElemType>;
 
 public:
-    PoolingEngine(std::unique_ptr<ConvolveGeometry> geometry, DEVICEID_TYPE deviceId, ImageLayoutKind imageLayout)
-        : m_geometry(std::move(geometry)), m_deviceId(deviceId), m_imageLayout(imageLayout)
+    PoolingEngine(ConvolveGeometryPtr geometry, DEVICEID_TYPE deviceId, ImageLayoutKind imageLayout)
+        : m_geometry(geometry), m_deviceId(deviceId), m_imageLayout(imageLayout)
     {
     }
     virtual ~PoolingEngine() = default;
@@ -106,7 +107,7 @@ protected:
     virtual void BackwardCore(size_t batchSize, PoolKind kind, const Mat& out, const Mat& srcGrad, const Mat& in, Mat& grad) = 0;
 
 protected:
-    std::unique_ptr<ConvolveGeometry> m_geometry;
+    ConvolveGeometryPtr m_geometry;
     DEVICEID_TYPE m_deviceId;
     ImageLayoutKind m_imageLayout;
 };

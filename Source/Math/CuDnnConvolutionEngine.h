@@ -9,6 +9,17 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
+template <class ElemType>
+class CuDnnConvolutionEngineFactory
+{
+public:
+    static std::unique_ptr<ConvolutionEngine<ElemType>> CreateConvEngine(ConvolveGeometryPtr geometry, DEVICEID_TYPE deviceId,
+                                                                         ImageLayoutKind imageLayout, size_t maxTempMemSizeInSamples);
+    //static PoolEnginePtr CreatePoolEngine(DEVICEID_TYPE deviceId, ImageLayoutKind imageLayout)
+
+    static bool IsSupported(DEVICEID_TYPE deviceId);
+};
+
 //template <class ElemType>
 //class CuDnnConvolutionEngineFactory : public ConvolutionEngineFactory<ElemType>
 //{
@@ -39,6 +50,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 //    static bool IsSupported(DEVICEID_TYPE deviceId);
 //};
 //
+
 // REVIEW alexeyk: wrong place. It is currently used only in unit tests but I can't add it there because of the build issues.
 // Timer that can be used to measure CUDA calls. 
 // Uses CUDA event and will synchronize(!) the stream when Stop is called.

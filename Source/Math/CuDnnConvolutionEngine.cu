@@ -7,6 +7,8 @@
 #include "CuDnnConvolutionEngine.h"
 #include "GPUMatrix.h"
 #ifdef USE_CUDNN
+#include <typeinfo>
+#include <typeindex>
 #include <cudnn.h>
 #include "CuDnnConvolutionEngine.cuh"
 
@@ -25,60 +27,234 @@ const char* CudaErrString<cudnnStatus_t>(cudnnStatus_t x)
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
-//template <class ElemType>
-//bool CuDnnConvolutionEngineFactory<ElemType>::IsSupported(DEVICEID_TYPE deviceId)
-//{
-//// REVIEW alexeyk: compile-time for now, make runtime, config-driven.
-//#ifdef USE_CUDNN
-//    cudaDeviceProp props = {0};
-//    return cudaGetDeviceProperties(&props, deviceId) == cudaSuccess && props.major >= 3;
-//#else
-//    UNUSED(deviceId);
-//    return false;
-//#endif
-//}
-
-CudaTimer::~CudaTimer()
-{
-    // TODO: Should not throw if std::uncaught_exception()
-    if (m_start != nullptr)
-        CUDA_CALL(cudaEventDestroy(reinterpret_cast<cudaEvent_t>(m_start)));
-    if (m_stop != nullptr)
-        CUDA_CALL(cudaEventDestroy(reinterpret_cast<cudaEvent_t>(m_stop)));
-}
-void CudaTimer::Start()
-{
-    cudaEvent_t start;
-    cudaEvent_t stop;
-    if (m_start != nullptr)
-        CUDA_CALL(cudaEventDestroy(reinterpret_cast<cudaEvent_t>(m_start)));
-    if (m_stop != nullptr)
-        CUDA_CALL(cudaEventDestroy(reinterpret_cast<cudaEvent_t>(m_stop)));
-    CUDA_CALL(cudaEventCreate(&start));
-    CUDA_CALL(cudaEventCreate(&stop));
-    m_start = start;
-    m_stop = stop;
-    CUDA_CALL(cudaEventRecord(start, GetStream()));
-}
-void CudaTimer::Stop()
-{
-    CUDA_CALL(cudaEventRecord(reinterpret_cast<cudaEvent_t>(m_stop), GetStream()));
-    CUDA_CALL(cudaEventSynchronize(reinterpret_cast<cudaEvent_t>(m_stop)));
-}
-float CudaTimer::Elapsed()
-{
-    float ms;
-    CUDA_CALL(cudaEventElapsedTime(&ms, reinterpret_cast<cudaEvent_t>(m_start), reinterpret_cast<cudaEvent_t>(m_stop)));
-    return ms;
-}
-
 #ifdef USE_CUDNN
 
-//static bool IsGpu(DEVICEID_TYPE deviceId)
-//{
-//    return deviceId >= 0;
-//}
-//
+static bool IsGpu(DEVICEID_TYPE deviceId)
+{
+    return deviceId >= 0;
+}
+
+class CuDnnTensor
+{
+public:
+    CuDnnTensor(const TensorShape& src, cudnnDataType_t dataType)
+        : m_tensor(nullptr)
+    {
+        CUDNN_CALL(cudnnCreateTensorDescriptor(&m_tensor));
+        // Set cuDNN tesnor dimensions. cuDNN uses row-major format while TensorShape - column major
+        // so convertsion is needed.
+        const auto& dimsSrc = src.GetDims();
+        const auto& stridesSrc = src.GetStrides();
+        SmallVector<int> dims(dimsSrc.size() + 1);
+        SmallVector<int> strides(stridesSrc.size() + 1);
+        assert(dims.size() == strides.size());
+        for (int i = 0; i < dimsSrc.size(); i++)
+        {
+            dims[dims.size() - 1 - i] = (int)dimsSrc[i];
+            strides[dims.size() - 1 - i] = (int)stridesSrc[i];
+        }
+        // Set "minibatch"(aka N) dimension.
+        dims[0] = 1;
+        strides[0] = strides[1];
+        CUDNN_CALL(cudnnSetTensorNdDescriptor(m_tensor, dataType, (int)src.GetRank() + 1, dims.data(), strides.data()));
+    }
+
+    ~CuDnnTensor()
+    {
+        if (m_tensor != nullptr)
+        {
+            cudnnDestroyTensorDescriptor(m_tensor);
+            m_tensor = nullptr;
+        }
+    }
+
+    DISABLE_COPY_AND_MOVE(CuDnnTensor);
+
+private:
+    cudnnTensorDescriptor_t m_tensor;
+};
+
+class CuDnnFilter
+{
+public:
+    CuDnnFilter(const ConvolveGeometry& geometry, cudnnDataType_t dataType)
+        : m_filter(nullptr)
+    {
+        CUDNN_CALL(cudnnCreateFilterDescriptor(&m_filter));
+        // Set cuDNN filter dimensions. cuDNN uses row-major format while TensorShape - column major
+        // so convertsion is needed.
+        const auto& filt = geometry.KernelShape();
+        const auto& maps = geometry.MapCount();
+        if (maps.GetRank() > 1 && maps[maps.GetRank() - 1] != maps.GetNumElements())
+            InvalidArgument("cuDNN does not support map tensor of this configuration.");
+        int mapCount = (int)maps[maps.GetRank() == 1 ? 0 : maps.GetRank() - 1];
+        SmallVector<int> dims(filt.GetRank() + 1);
+        for (int i = 0; i < filt.GetRank(); i++)
+            dims[dims.size() - 1 - i] = (int)filt[i];
+        // Set map count(aka K) dimension.
+        dims[0] = mapCount;
+        CUDNN_CALL(cudnnSetFilterNdDescriptor_v4(m_filter, dataType, FILTER_FORMAT, 
+                                                 (int)filt.GetRank() + 1, dims.data()));
+    }
+
+    ~CuDnnFilter()
+    {
+        if (m_filter != nullptr)
+        {
+            cudnnDestroyFilterDescriptor(m_filter);
+            m_filter = nullptr;
+        }
+    }
+
+    DISABLE_COPY_AND_MOVE(CuDnnFilter);
+
+private:
+    cudnnFilterDescriptor_t m_filter;
+};
+
+class CuDnnConv
+{
+public:
+    CuDnnConv(const ConvolveGeometry& geometry, cudnnDataType_t dataType)
+        : m_conv(nullptr)
+    {
+        CUDNN_CALL(cudnnCreateConvolutionDescriptor(&m_conv));
+        // Set cuDNN convolution parameters. cuDNN uses row-major format while TensorShape - column major
+        // so convertsion is needed.
+        SmallVector<int> stride(geometry.InputShape().GetRank());
+        SmallVector<int> pad(stride.size());
+        for (int i = 0; i < stride.size(); i++)
+        {
+            stride[stride.size() - 1 - i] = (int)geometry.GetStride(i);
+            pad[stride.size() - 1 - i] = geometry.GetLowerPad(i);
+        }
+        SmallVector<int> upscale(stride.size(), 1);
+        CUDNN_CALL(cudnnSetConvolutionNdDescriptor(m_conv, (int)stride.size(), pad.data(),
+                                                   stride.data(), upscale.data(),
+                                                   CUDNN_CROSS_CORRELATION, dataType));
+    }
+
+    ~CuDnnConv()
+    {
+        if (m_conv != nullptr)
+        {
+            cudnnDestroyConvolutionDescriptor(m_conv);
+            m_conv = nullptr;
+        }
+    }
+
+    DISABLE_COPY_AND_MOVE(CuDnnConv);
+
+private:
+    cudnnConvolutionDescriptor_t m_conv;
+};
+
+template <class ElemType>
+class CuDnnConvolutionEngine : public ConvolutionEngine<ElemType>
+{
+public:
+    using Base = ConvolutionEngine<ElemType>;
+    using typename Base::Mat;
+
+public:
+    CuDnnConvolutionEngine(ConvolveGeometryPtr geometry, DEVICEID_TYPE deviceId, ImageLayoutKind imageLayout, size_t maxTempMemSizeInSamples)
+        : Base(geometry, deviceId, imageLayout, maxTempMemSizeInSamples), m_dataType(GetDataType()), 
+        m_inT(geometry->InputShape(), m_dataType), m_outT(geometry->OutputShape(), m_dataType),
+        m_filter(*geometry, m_dataType), m_conv(*geometry, m_dataType)
+    {
+        CUDNN_CALL(cudnnCreate(&m_cudnn));
+        CUDNN_CALL(cudnnSetStream(m_cudnn, GetStream()));
+    }
+
+    ~CuDnnConvolutionEngine()
+    {
+        if (m_cudnn != nullptr)
+        {
+            cudnnDestroy(m_cudnn);
+            m_cudnn = nullptr;
+        }
+    }
+
+protected:
+    using Base::m_geometry;
+    using Base::m_deviceId;
+    using Base::m_imageLayout;
+    using Base::m_maxTempMemSizeInSamples;
+
+    void EnsureCompatible() override
+    {
+        if (m_imageLayout != ImageLayoutKind::CHW)
+            RuntimeError("cuDNN convolution engine supports only CHW/cudnn layout.");
+        if (!IsGpu(m_deviceId))
+            RuntimeError("cuDNN convolution engine supports GPU devices only.");
+    }
+
+    void ForwardCore(size_t batchSize, const Mat& in, const Mat& filter, Mat& out, Mat& workspace) override
+    {
+        UNUSED(batchSize); UNUSED(in); UNUSED(filter); UNUSED(out); UNUSED(workspace);
+
+        //// Find best algo and allocate temp buffer, if needed.
+        //auto finder = [&](int& calgo, cudnnConvolutionFwdAlgoPerf_t algoPerf[MaxAlgoCount]) -> cudnnStatus_t
+        //{
+        //    return cudnnFindConvolutionForwardAlgorithm(m_cudnn, t(inT), f(filterT), cd(convDesc), t(outT), MaxAlgoCount, &calgo, algoPerf);
+        //};
+        //FindBestAlgo(t(inT), m_fwdAlgo, finder);
+        //if (m_fwdAlgo.Algo.memory > 0)
+        //    workspace.Resize((m_fwdAlgo.Algo.memory + sizeof(ElemType) - 1) / sizeof(ElemType), 1);
+        //// Perform forward convolution operation.
+        //auto err = cudnnConvolutionForward(m_cudnn, &C::One, t(inT), ptr(in), f(filterT), ptr(filter), cd(convDesc),
+        //                                   m_fwdAlgo.Algo.algo, ptr(workspace), m_fwdAlgo.Algo.memory, &C::Zero, t(outT), ptr(out));
+        //// There might be a case where cuDNN fails due to workspace being too small, try using no-workspace algo instead.
+        //// REVIEW alexeyk: NVIDIA is currently reviewing this issue.
+        //if (CUDNN_STATUS_INVALID_VALUE == err && m_fwdAlgo.Algo.memory > 0)
+        //{
+        //    auto err2 = cudnnConvolutionForward(m_cudnn, &C::One, t(inT), ptr(in), f(filterT), ptr(filter), cd(convDesc),
+        //                                        m_fwdAlgo.NoWorkspaceAlgo, nullptr, 0, &C::Zero, t(outT), ptr(out));
+        //    // Update original error in case of success.
+        //    if (CUDNN_STATUS_SUCCESS == err2)
+        //        err = CUDNN_STATUS_SUCCESS;
+        //}
+        //CUDNN_CALL(err);
+    }
+
+    void BackwardDataCore(size_t batchSize, const Mat& srcGrad, const Mat& filter, Mat& grad, Mat& workspace) override
+    {
+        UNUSED(batchSize); UNUSED(srcGrad); UNUSED(filter); UNUSED(grad); UNUSED(workspace);
+    }
+
+    void BackwardFilterCore(size_t batchSize, const Mat& srcGrad, const Mat& in, Mat& filter, bool allowReuse, Mat& workspace) override
+    {
+        UNUSED(batchSize); UNUSED(srcGrad); UNUSED(filter); UNUSED(in); UNUSED(allowReuse); UNUSED(workspace);
+    }
+
+private:
+    static cudnnDataType_t GetDataType()
+    {
+        if (typeid(ElemType) == typeid(float))
+            return CUDNN_DATA_FLOAT;
+        else if (typeid(ElemType) == typeid(double))
+            return CUDNN_DATA_DOUBLE;
+        else
+            InvalidArgument("cuDNN engine currently supports only single and double precision data types.");
+    }
+
+private:
+    // REVIEW alexeyk: this might be static.
+    cudnnHandle_t m_cudnn;
+    cudnnDataType_t m_dataType;
+    CuDnnTensor m_inT;
+    CuDnnTensor m_outT;
+    CuDnnFilter m_filter;
+    CuDnnConv m_conv;
+};
+
+template <class ElemType>
+std::unique_ptr<ConvolutionEngine<ElemType>> CuDnnConvolutionEngineFactory<ElemType>::CreateConvEngine(
+    ConvolveGeometryPtr geometry, DEVICEID_TYPE deviceId, ImageLayoutKind imageLayout, size_t maxTempMemSizeInSamples)
+{
+    return std::make_unique<CuDnnConvolutionEngine<ElemType>>(geometry, deviceId, imageLayout, maxTempMemSizeInSamples);
+}
+
 //class CuDnnTensor4D : public ConvolutionTensor4D
 //{
 //public:
@@ -678,6 +854,54 @@ typename CuDnnConvolutionEngineFactory<ElemType>::PoolEnginePtr CuDnnConvolution
 
 #endif
 
-//template class CuDnnConvolutionEngineFactory<float>;
-//template class CuDnnConvolutionEngineFactory<double>;
+// REVIEW alexeyk: remove #ifdef once cuDNN becomes mandatory dependency.
+#ifdef USE_CUDNN
+template <class ElemType>
+bool CuDnnConvolutionEngineFactory<ElemType>::IsSupported(DEVICEID_TYPE deviceId)
+{
+    cudaDeviceProp props = {0};
+    return cudaGetDeviceProperties(&props, deviceId) == cudaSuccess && props.major >= 3;
+#else
+    UNUSED(deviceId);
+    return false;
+#endif
+}
+
+template class CuDnnConvolutionEngineFactory<float>;
+template class CuDnnConvolutionEngineFactory<double>;
+
+CudaTimer::~CudaTimer()
+{
+    // TODO: Should not throw if std::uncaught_exception()
+    if (m_start != nullptr)
+        CUDA_CALL(cudaEventDestroy(reinterpret_cast<cudaEvent_t>(m_start)));
+    if (m_stop != nullptr)
+        CUDA_CALL(cudaEventDestroy(reinterpret_cast<cudaEvent_t>(m_stop)));
+}
+void CudaTimer::Start()
+{
+    cudaEvent_t start;
+    cudaEvent_t stop;
+    if (m_start != nullptr)
+        CUDA_CALL(cudaEventDestroy(reinterpret_cast<cudaEvent_t>(m_start)));
+    if (m_stop != nullptr)
+        CUDA_CALL(cudaEventDestroy(reinterpret_cast<cudaEvent_t>(m_stop)));
+    CUDA_CALL(cudaEventCreate(&start));
+    CUDA_CALL(cudaEventCreate(&stop));
+    m_start = start;
+    m_stop = stop;
+    CUDA_CALL(cudaEventRecord(start, GetStream()));
+}
+void CudaTimer::Stop()
+{
+    CUDA_CALL(cudaEventRecord(reinterpret_cast<cudaEvent_t>(m_stop), GetStream()));
+    CUDA_CALL(cudaEventSynchronize(reinterpret_cast<cudaEvent_t>(m_stop)));
+}
+float CudaTimer::Elapsed()
+{
+    float ms;
+    CUDA_CALL(cudaEventElapsedTime(&ms, reinterpret_cast<cudaEvent_t>(m_start), reinterpret_cast<cudaEvent_t>(m_stop)));
+    return ms;
+}
+
 } } }
