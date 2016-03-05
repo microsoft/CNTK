@@ -181,6 +181,7 @@ BinaryReader<ElemType>::~BinaryReader()
 
     for (size_t i = 0; i < m_fStream.size(); i++)
     {
+        // TODO: Check for error code and throw if !std::uncaught_exception()
         fclose(m_fStream[i]);
     }
 }

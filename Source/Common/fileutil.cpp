@@ -1697,6 +1697,7 @@ public:
     }
     ~auto_find_handle()
     {
+        // TODO: Check for error code and throw if !std::uncaught_exception()
         if (h != INVALID_HANDLE_VALUE)
             ::FindClose(h);
     }

@@ -40,6 +40,7 @@ bool CuDnnConvolutionEngineFactory<ElemType>::IsSupported(DEVICEID_TYPE deviceId
 
 CudaTimer::~CudaTimer()
 {
+    // TODO: Should not throw if std::uncaught_exception()
     if (m_start != nullptr)
         CUDA_CALL(cudaEventDestroy(reinterpret_cast<cudaEvent_t>(m_start)));
     if (m_stop != nullptr)
@@ -99,6 +100,7 @@ public:
     {
         if (m_tensor != nullptr)
         {
+            // TODO: Check for error code and throw if !std::uncaught_exception()
             cudnnDestroyTensorDescriptor(m_tensor);
             m_tensor = nullptr;
         }
@@ -137,6 +139,7 @@ public:
     {
         if (m_filter != nullptr)
         {
+            // TODO: Check for error code and throw if !std::uncaught_exception()
             cudnnDestroyFilterDescriptor(m_filter);
             m_filter = nullptr;
         }
@@ -169,6 +172,7 @@ public:
     {
         if (m_conv != nullptr)
         {
+            // TODO: Check for error code and throw if !std::uncaught_exception()
             cudnnDestroyConvolutionDescriptor(m_conv);
             m_conv = nullptr;
         }
@@ -204,6 +208,7 @@ public:
     {
         if (m_pool != nullptr)
         {
+            // TODO: Check for error code and throw if !std::uncaught_exception()
             cudnnDestroyPoolingDescriptor(m_pool);
             m_pool = nullptr;
         }
@@ -283,6 +288,7 @@ public:
     {
         if (m_cudnn != nullptr)
         {
+            // TODO: Check for error code and throw if !std::uncaught_exception()
             cudnnDestroy(m_cudnn);
             m_cudnn = nullptr;
         }
@@ -535,6 +541,7 @@ public:
     {
         if (m_cudnn != nullptr)
         {
+            // TODO: Check for error code and throw if !std::uncaught_exception()
             cudnnDestroy(m_cudnn);
             m_cudnn = nullptr;
         }
