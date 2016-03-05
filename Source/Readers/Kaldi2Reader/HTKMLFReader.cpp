@@ -1582,8 +1582,7 @@ bool HTKMLFReader<ElemType>::GetMinibatchToWrite(StreamMinibatchInputs& matrices
 
         // populate input matrices
         bool first = true;
-        typename StreamMinibatchInputs::iterator iter;
-        for (iter = matrices.begin(); iter != matrices.end(); iter++)
+        for (auto iter = matrices.begin(); iter != matrices.end(); iter++)
         {
             // dereference matrix that corresponds to key (input/output name) and
             // populate based on whether its a feature or a label
@@ -1900,7 +1899,7 @@ bool HTKMLFReader<ElemType>::SetNetOutput(
     const MatrixBase& outputsb,
     const MBLayoutPtr pMBLayout)
 {
-    const auto& outputs = dymamic_cast<Matrix<ElemType>>(outputsb); // TODO: a NULL check, to be sure
+    const auto& outputs = dynamic_cast<const Matrix<ElemType>&>(outputsb); // TODO: a NULL check, to be sure
     // Set the likelihoods for the utterance with which we can comput the
     // derivatives. Note that the minibatch may only contain partial output
     // for the utterance, <m_uttDerivBuffer> takes care of "gluing" them

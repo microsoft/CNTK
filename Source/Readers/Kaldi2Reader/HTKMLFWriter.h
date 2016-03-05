@@ -42,8 +42,6 @@ private:
     };
 
 public:
-    using LabelType = typename IDataWriter<ElemType>::LabelType;
-    using LabelIdType = typename IDataWriter<ElemType>::LabelIdType;
     template <class ConfigRecordType>
     void InitFromConfig(const ConfigRecordType& writerConfig);
     virtual void Init(const ConfigParameters& config)
