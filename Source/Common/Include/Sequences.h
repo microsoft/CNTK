@@ -150,8 +150,6 @@ struct MBLayout
 
         m_columnsValidityMask = std::move(other->m_columnsValidityMask);
         m_writable = other->m_writable;
-
-        other->Init(0, 0);
     }
 
     MBLayout(const MBLayout&) = delete;
