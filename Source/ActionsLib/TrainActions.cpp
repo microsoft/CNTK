@@ -144,14 +144,12 @@ void DoTrain(const ConfigRecordType& config)
                                                  move(configDirs)); // set include paths to all paths that configs were read from; no additional configurable include paths are supported by BrainScriptNetworkBuilder
         createNetworkFn = [expr](DEVICEID_TYPE /*deviceId*/)
         {
-            // evaluate the parse tree--specifically the top-level field 'network'--which will create the network
+            // evaluate the parse tree, particularly the top-level field 'network'
+            // Evaluating it will create the network.
             let object = EvaluateField(expr, L"network");                   // this comes back as a BS::Object
             let network = dynamic_pointer_cast<ComputationNetwork>(object); // cast it
-            // This should not really fail since we constructed the source code above such that this is the right type.
-            // However, it is possible (though currently not meaningful) to locally declare a different 'precision' value.
-            // In that case, the network might come back with a different element type. We need a runtime check for that.
             if (!network)
-                RuntimeError("BuildNetworkFromDescription: network has the wrong element type (float vs. double)");
+                LogicError("BuildNetworkFromDescription: ComputationNetwork not what it was meant to be");
             // success
             return network;
         };

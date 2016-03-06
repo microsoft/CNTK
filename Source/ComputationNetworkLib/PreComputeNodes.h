@@ -85,16 +85,11 @@ public:
     virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
     {
         Base::Validate(isFinalValidationPass);
-        if (!Input(0)->HasMBLayout())
+        if (isFinalValidationPass && !Input(0)->HasMBLayout())
             InvalidArgument("%ls %ls operation requires its input to come in minibatches of samples.", NodeName().c_str(), OperationName().c_str());
-        m_pMBLayout = nullptr; // this node does not hold mini-batch data
 
-        //if (!m_hasComputed) // this node retains state, and state gets destroyed by Resize(), so we must be careful
+        m_pMBLayout = nullptr; // this node does not hold mini-batch data
         SetDims(Input(0)->GetSampleLayout(), false);
-        //else if (!GetSampleLayout().IsElementwiseCompatibleWith(Input(0)->GetSampleLayout()))
-        //    InvalidArgument("%ls %ls operation: Precomputed parameter does not match input dimensions.", NodeName().c_str(), OperationName().c_str());
-        // BUGBUG: Above is a workaround, which may be OK since m_hasComputed getting set requires Validate() to have passed.
-        //         This workaround won't guard agains corrupt files.
     }
 
     virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
@@ -107,7 +102,7 @@ public:
         }
     }
 
-    // this is for the special case: convertDBN needs this; because we initialize values directly from another well-trained model
+    // this is for the special-purpose "convertdbn" command (initialize values directly from another well-trained model)
     virtual void SideLoadFromMatrix(const Matrix<ElemType>& value)
     {
         if (value.GetNumCols() != 1)

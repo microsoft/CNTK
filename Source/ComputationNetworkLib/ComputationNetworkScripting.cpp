@@ -134,4 +134,5 @@ vector<wstring> /*IConfigRecord::*/ ComputationNetwork::GetMemberIds() const
 {
     return vector<wstring>();
 }
-} } }
+
+}}}

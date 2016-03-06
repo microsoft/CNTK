@@ -54,6 +54,7 @@ Times(A, B, outputRank=1, tag='') = new ComputationNode [ operation = 'Times' ; 
 Logistic(label, probability, tag='') = new ComputationNode [ operation = 'Logistic' ; inputs = (label : probability) /*plus the function args*/ ]
 WeightedLogistic(label, probability, instanceWeight, tag='') = new ComputationNode [ operation = 'Logistic' ; inputs = (label : probability : instanceWeight) /*plus the function args*/ ]
 ReconcileMBLayout(dataInput, layoutInput, tag='') = new ComputationNode [ operation = 'ReconcileMBLayout' ; inputs = (dataInput : layoutInput) /*plus the function args*/ ]
+CastAs (type, data) = ReconcileMBLayout (data, type) # read as CastAs<type>(data) where the cast may consist of rearranging the data w.r.t. MBLayout or broadcasting across sequence items
 Convolution(weightNode, inputValueNode, kernelWidth, kernelHeight, outputChannels, horizontalSubsample, verticalSubsample, zeroPadding = false, maxTempMemSizeInSamples = 0, imageLayout='CHW', tag='') = new ComputationNode [ operation = 'Convolution' ; inputs = (weightNode : inputValueNode) /*plus the function args*/ ]
 MaxPooling(input, windowWidth, windowHeight, horizontalSubsample, verticalSubsample, imageLayout='CHW', tag='') = new ComputationNode [ operation = 'MaxPooling' ; inputs = input /*plus the function args*/ ]
 AveragePooling(input, windowWidth, windowHeight, horizontalSubsample, verticalSubsample, imageLayout='CHW', tag='') = new ComputationNode [ operation = 'AveragePooling' ; inputs = input /*plus the function args*/ ]
@@ -106,3 +107,122 @@ BFF(in, rows, cols) = [ B = Parameter(rows, 1, init = 'fixedValue', value = 0) ;
 SBFF(in, rows, cols) = [ Eh = Sigmoid(BFF(in, rows, cols).z) ] 
 MeanVarNorm(feat) = PerDimMeanVarNormalization(feat, Mean(feat), InvStdDev(feat)) 
 LogPrior(labels) = Log(Mean(labels)) 
+
+##############################################################################
+# the more specific standard things are in a namespace called 'BS'
+# You can create shorthands for accessing these, e.g. saying B = BS.Boolean.
+# Note: Identifiers beginning with _ should be considered for library use only.
+##############################################################################
+
+BS = [
+
+##############################################################################
+# Basic constants
+##############################################################################
+
+Constants = [
+    Zero = Constant (0)
+    One  = Constant (1)
+    ZeroesLike (x) = CastAs (x, Zero) // read: Cast<x>(Zero)
+    OnesLike (x)   = CastAs (x, One)
+]
+
+##############################################################################
+# Boolean operations
+# These operations will have undefined behavior for input values != 0 or 1.
+##############################################################################
+
+# boolean helpers
+Boolean = [
+    True  = 1
+    False = 0
+
+    # basic logical operations
+    And (a,b) =         a .* b
+    Or  (a,b) = a + b - a .* b
+    Xor (a,b) = a + b - a .* b * Constant (2)
+    Not (x)   = Constants.One - x
+
+    # on each time step where clk 1, this toggles its value
+    Toggle (clk, initialValue=False) = [
+        state = Xor (PastValue (1, state, defaultHiddenActivation=initialValue), clk)
+    ].state
+
+    # select a value
+    # Note: This will be replaced by BrainScript 'if cond then thenVal else elseVal' and SwitchNode
+    If (cond, thenVal, elseVal) = cond .* thenVal + Not (cond) .* elseVal
+]
+
+##############################################################################
+# sequence operations
+# These mimic LINQ operations.
+##############################################################################
+
+Sequences = [
+    # fold left/right: Reduce entire sequence by applying binaryOp, e.g. FoldL (Plus, 0, input)
+    FoldL (binaryOp, x0, x) = _Fold (PastValue,   binaryOp, x0, x)
+    FoldR (binaryOp, x0, x) = _Fold (FutureValue, binaryOp, x0, x)
+    _Fold (binaryOp, x0, x) = [
+        acc = binaryOp (x, if Loop.IsFirst (x) then x0 else PastValue (acc))
+        out = Last (acc)
+    ].out
+    # TODO: need a version that does not require an initial value--what would that be called?
+
+    # LINQ-like operators
+    Map (lambda, x) = lambda (x)     // that one's easy
+
+    Filter (pred, x) = x  // TODO; this must be a C++ node
+
+    TakeWhile (condition, x) = Filter ( _WhilePred (condition, PastValue), x)
+    DropWhile (condition, x) = Filter (!_WhilePred (condition, PastValue), x)
+    _WhilePred(condition, DelayFn, input) =    // TODO: DelayFn should go first to allow for partial application
+    [
+        flags = B.And (condition, DelayFn (flags, initialValue=B.True))
+    ].flags
+    # TODO: do we need operations from the back?
+
+    # First and Take
+    First (x)   =  Take            (1, x)
+    Take (N, x) = _Take (PastValue, N, x)
+    _Take (DelayFn, N, x) = [
+        selected = Loop._IsWithin (DelayFn, N, x)
+        out = Filter (selected, x)
+    ].out
+
+    #FirstOrDefault (x) = ? // can empty sequences exist or even be represented by CNTK?
+
+    #Last (x)  = _Take (FutureValue, 1, x)
+
+    Average (x) = Sum (x) / Loop.Count(x)  // TODO: patch opQuotient to check 0/0 = 0
+    Sum (x) = FoldL (Plus, 0, x)
+    #Max (x) = FoldL (^.Max, ?, x) // TODO: name clash; need to implement ^.
+    #Min (x) = FoldL (^.Min, ?, x) // TODO: what's the init value?
+]
+
+##############################################################################
+# index operations
+# These refer to the loop iteration itself.
+##############################################################################
+
+Loop = [
+    # get the current iteration index w.r.t a node in a loop, such as a Delay node
+    Iteration (x) = [
+      agg = OnesLike (x) + PastValue(agg, initialValue=0) // a recurrence that sums up ones
+    ].agg
+
+    # get the total length of a sequence
+    Count(x) = Seq.Last (1, Iteration (x)) // take last item of recurrence that sums up ones
+
+    # is the current iteration the first/last of the loop?
+    IsFirst (x) = _IsWithin (PastValue,   1, x)
+    IsLast (x)  = _IsWithin (FutureValue, 1, x)
+
+    # private helpers
+    # flag whether a frame is within the first or last N frames
+    _IsWithin (DelayFn/*PastValue or FutureValue*/, N, x) = DelayFn (Constants.ZeroesLike (x)/*false*/, /*delay=*/N, initialValue=Constants.True)
+
+    # opposite of Id's "next"
+    #Last (x) = PastValue (0, x, 1)
+]
+
+] # end of BS namespace
