@@ -257,6 +257,9 @@
     <Filter Include="BrainScript\Doc">
       <UniqueIdentifier>{23e7cd74-fd60-4fb4-a925-c3dea584f176}</UniqueIdentifier>
     </Filter>
+    <Filter Include="BrainScript\CNTKCoreLib">
+      <UniqueIdentifier>{899f31fa-5906-4485-8875-14ad2c43ed8f}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <None Include="prebuild.bat">
@@ -265,5 +268,10 @@
     <None Include="BrainScript\Doc\BrainScript--extending the CNTK config language, Frank Seide August 2015.pptx">
       <Filter>BrainScript\Doc</Filter>
     </None>
+  </ItemGroup>
+  <ItemGroup>
+    <Xml Include="BrainScript\CNTKCoreLib\CNTK.core.bs">
+      <Filter>BrainScript\CNTKCoreLib</Filter>
+    </Xml>
   </ItemGroup>
 </Project>

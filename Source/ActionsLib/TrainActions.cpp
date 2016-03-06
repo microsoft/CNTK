@@ -49,9 +49,9 @@ using namespace Microsoft::MSR::CNTK;
 // ===========================================================================
 
 // TODO: decide where these should go. Also, do we need three variables?
-extern wstring standardFunctions;
-extern wstring commonMacros;
-extern wstring computationNodes;
+//extern wstring standardFunctions;
+//extern wstring commonMacros;
+//extern wstring computationNodes;
 
 // helper that returns 'float' or 'double' depending on ElemType
 template <class ElemType> static const wchar_t* ElemTypeName();
@@ -133,9 +133,15 @@ void DoTrain(const ConfigRecordType& config)
         // We prepend a few standard definitions, and also definition of deviceId and precision, which all objects will pull out again when they are being constructed.
         // BUGBUG: We are not getting TextLocations right in this way! Do we need to inject location markers into the source? Moot once we fully switch to BS
         wstring sourceCode = config.Exists(L"BrainScriptNetworkBuilder") ? config(L"BrainScriptNetworkBuilder") : config(L"ExperimentalNetworkBuilder");
-        let expr = BS::ParseConfigDictFromString(standardFunctions + computationNodes + commonMacros + msra::strfun::wstrprintf(L"deviceId = %d ; precision = '%ls' ; network = new ComputationNetwork ", (int) deviceId, ElemTypeName<ElemType>()) // TODO: check if typeid needs postprocessing
-                                                     + sourceCode,
-                                                 vector<wstring>()); // source code has the form [ ... ]
+        //FILE * f = fopen("c:/me/CNTK.core.bs", "wb");
+        //fprintf(f, "%ls", (standardFunctions + computationNodes + commonMacros).c_str());
+        //fclose(f);
+        //wstring boilerplate = standardFunctions + computationNodes + commonMacros;
+        auto configDirs = ConfigParameters::GetBrainScriptNetworkBuilderIncludePaths();
+        let expr = BS::ParseConfigDictFromString(L"include \'CNTK.core.bs\'"
+                                                 + msra::strfun::wstrprintf(L"deviceId = %d ; precision = '%ls' ; network = new ComputationNetwork ", (int)deviceId, ElemTypeName<ElemType>())
+                                                 + sourceCode,      // source code has the form [ ... ] with brackets in the string
+                                                 move(configDirs)); // set include paths to all paths that configs were read from; no additional configurable include paths are supported by BrainScriptNetworkBuilder
         createNetworkFn = [expr](DEVICEID_TYPE /*deviceId*/)
         {
             // evaluate the parse tree--specifically the top-level field 'network'--which will create the network

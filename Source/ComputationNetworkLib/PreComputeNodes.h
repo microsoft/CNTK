@@ -40,7 +40,7 @@ public:
     // interface through which this node is operated on are these two functions
 
     // check whether node has already undergone precomputation
-    virtual bool /*IPreComputeNode::*/ HasComputed() const override { m_hasComputed; }
+    virtual bool /*IPreComputeNode::*/ HasComputed() const override { return m_hasComputed; }
 
     // call this with 'false' at start and with 'true' at end
     // This is used for resetting and updating from accumulators.
@@ -89,10 +89,12 @@ public:
             InvalidArgument("%ls %ls operation requires its input to come in minibatches of samples.", NodeName().c_str(), OperationName().c_str());
         m_pMBLayout = nullptr; // this node does not hold mini-batch data
 
-        if (!m_hasComputed) // this node retains state, and state gets destroyed by Resize(), so we must be careful
-            SetDims(Input(0)->GetSampleLayout(), false);
-        else if (!GetSampleLayout().IsElementwiseCompatibleWith(Input(0)->GetSampleLayout()))
-            InvalidArgument("%ls %ls operation: Precomputed parameter does not match input dimensions.", NodeName().c_str(), OperationName().c_str());
+        //if (!m_hasComputed) // this node retains state, and state gets destroyed by Resize(), so we must be careful
+        SetDims(Input(0)->GetSampleLayout(), false);
+        //else if (!GetSampleLayout().IsElementwiseCompatibleWith(Input(0)->GetSampleLayout()))
+        //    InvalidArgument("%ls %ls operation: Precomputed parameter does not match input dimensions.", NodeName().c_str(), OperationName().c_str());
+        // BUGBUG: Above is a workaround, which may be OK since m_hasComputed getting set requires Validate() to have passed.
+        //         This workaround won't guard agains corrupt files.
     }
 
     virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
