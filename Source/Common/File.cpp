@@ -22,6 +22,7 @@
 #endif
 #ifdef __unix__
 #include <unistd.h>
+#include <linux/limits.h> // for PATH_MAX
 #endif
 
 namespace Microsoft { namespace MSR { namespace CNTK {
@@ -189,9 +190,9 @@ void File::Init(const wchar_t* filename, int fileOptions)
 #else
     // from http://stackoverflow.com/questions/4025370/can-an-executable-discover-its-own-path-linux
     pid_t pid = getpid();
-    char path[PATH_MAX];
+    char path[PATH_MAX + 1] = { 0 };
     sprintf(path, "/proc/%d/exe", pid);
-    char dest[PATH_MAX];
+    char dest[PATH_MAX + 1] = { 0 };
     if (readlink(path, dest, PATH_MAX) == -1)
         RuntimeError("GetExecutableDirectory: readlink() call failed.");
     else

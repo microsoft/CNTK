@@ -150,7 +150,7 @@ public:
     static std::wstring FileNameOf(std::wstring path);
 
     // get path of current executable
-    static std::wstring File::GetExecutablePath();
+    static std::wstring GetExecutablePath();
 
     // put operator for basic types
     template <typename T>
