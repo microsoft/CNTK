@@ -125,6 +125,7 @@ Constants = [
     One  = Constant (1)
     ZeroesLike (x) = CastAs (x, Zero) // read: Cast<x>(Zero)
     OnesLike (x)   = CastAs (x, One)
+    # is this like Sequences.Repeat?
 ]
 
 ##############################################################################
@@ -160,6 +161,7 @@ Boolean = [
 
 Sequences = [
     # fold left/right: Reduce entire sequence by applying binaryOp, e.g. FoldL (Plus, 0, input)
+    # LINQ calls this Aggregate; and may or may not specify the seed value; and allows a predicate
     FoldL (binaryOp, x0, x) = _Fold (PastValue,   binaryOp, x0, x)
     FoldR (binaryOp, x0, x) = _Fold (FutureValue, binaryOp, x0, x)
     _Fold (binaryOp, x0, x) = [
@@ -170,24 +172,38 @@ Sequences = [
 
     # LINQ-like operators
     Map (lambda, x) = lambda (x)     // that one's easy
+    # Reverse (x) is a C++ node currently called TimeReverse
 
-    Filter (pred, x) = x  // TODO; this must be a C++ node
+    Filter (pred, x) = x  // TODO: Implement this as a C++ node.
 
-    TakeWhile (condition, x) = Filter ( _WhilePred (condition, PastValue), x)
-    DropWhile (condition, x) = Filter (!_WhilePred (condition, PastValue), x)
-    _WhilePred(condition, DelayFn, input) =    // TODO: DelayFn should go first to allow for partial application
+    # sequence-altering LINQ-like operators
+    # These generate new data packing (MBLayouts)
+
+    # TakeWhile and DropWhile
+    TakeWhile (predicate, x) = Filter ( _WhilePredicate (PastValue, predicate), x)
+    DropWhile (predicate, x) = Filter (!_WhilePredicate (PastValue, predicate), x)
+    # Skip, SkipWhile--same?
+    _WhilePredicate (DelayFn, predicate, input) =
     [
-        flags = B.And (condition, DelayFn (flags, initialValue=B.True))
-    ].flags
+        whilePredicate = Boolean.And (DelayFn (whilePredicate, initialValue=Boolean.True), predicate)
+    ].whilePredicate
     # TODO: do we need operations from the back?
 
     # First and Take
-    First (x)   =  Take            (1, x)
+    # LINQ allows predicates as well.
+    First (x)   =  Take (1, x)
     Take (N, x) = _Take (PastValue, N, x)
     _Take (DelayFn, N, x) = [
         selected = Loop._IsWithin (DelayFn, N, x)
         out = Filter (selected, x)
     ].out
+    Skip (N, x) = _Skip (PastValue, N, x)
+    _Skip (DelayFn, N, x) = [ // TODO: merge with _Take
+        selected = Loop._IsWithin (DelayFn, N, x)
+        out = Filter (!selected, x)
+    ].out
+    ElementAt (n, x) = First (Skip (n, x)) // not efficient, as it filters twice. Better AND the predicates. TODO: what if n is out of range? ElementAtOrDefault
+    Single (predicate, x) = x
 
     #FirstOrDefault (x) = ? // can empty sequences exist or even be represented by CNTK?
 
@@ -197,6 +213,12 @@ Sequences = [
     Sum (x) = FoldL (Plus, 0, x)
     #Max (x) = FoldL (^.Max, ?, x) // TODO: name clash; need to implement ^.
     #Min (x) = FoldL (^.Min, ?, x) // TODO: what's the init value?
+    All (x) = FoldL (Boolean.And,  OnesLike (x), x)
+    Any (x) = FoldL (Boolean.Or, ZeroesLike (x), x)
+
+    # Join to create 2D fields for s2s attention?
+
+    # Concat  (a Zip but in sequence dimension)
 ]
 
 ##############################################################################
@@ -211,7 +233,8 @@ Loop = [
     ].agg
 
     # get the total length of a sequence
-    Count(x) = Seq.Last (1, Iteration (x)) // take last item of recurrence that sums up ones
+    # TODO: in LINQ, this is an aggregation operation, so it would be long into Sequences
+    Count(x) = Sequences.Last (1, Iteration (x)) // take last item of recurrence that sums up ones
 
     # is the current iteration the first/last of the loop?
     IsFirst (x) = _IsWithin (PastValue,   1, x)
@@ -222,7 +245,92 @@ Loop = [
     _IsWithin (DelayFn/*PastValue or FutureValue*/, N, x) = DelayFn (Constants.ZeroesLike (x)/*false*/, /*delay=*/N, initialValue=Constants.True)
 
     # opposite of Id's "next"
-    #Last (x) = PastValue (0, x, 1)
+    Previous (x) = PastValue (0, x, timeStep=1)
+]
+
+##############################################################################
+# parameter definitions
+##############################################################################
+
+Parameters =
+[
+    WeightParam(outputDim,inputDim) = Parameter(outputDim, inputDim, init='uniform', initValueScale=1, initOnCPUOnly=true, randomSeed=1)
+    BiasParam(dim)                  = ParameterTensor(dim, init='fixedValue', value=0.0)
+    ScalarParam()                   = Parameter(1, 1, init='fixedValue', value=0.0)
+
+    # route input through an extra scalar weight, for stabilization
+    Stabilize (x, enabled=true) =
+        if enabled
+        then [
+                 beta = Exp(ScalarParam())
+                 result = Scale(beta, x)
+             ].result
+        else x
+]
+
+##############################################################################
+# recurrent networks
+##############################################################################
+
+RNNs =
+[
+    # LSTMP -- LSTM function with projection and self-stabilization
+    # Projection it enabled by passing different values for outputDim and cellDim.
+    # This is the stateless version that takes the previous state as an input.
+    # It returns a dictionary with two members: h and c. prevState must be in the same format.
+    LSTMP(inputDim, outputDim, cellDim, x, prevState, enableSelfStabilization=false) =
+    [
+        _privateInnards = [       // encapsulate the privateInnards workings
+            dh = prevState.h // previous values
+            dc = prevState.c
+
+            // parameter macros--these carry their own weight matrices
+            B() = Parameters.BiasParam(cellDim)
+
+            W(v) = Parameters.WeightParam(cellDim, inputDim)  * Parameters.Stabilize (v, enabled=enableSelfStabilization) // input-to-hidden
+            H(h) = Parameters.WeightParam(cellDim, outputDim) * Parameters.Stabilize (h, enabled=enableSelfStabilization) // hidden-to-hidden
+            C(c) = Parameters.WeightParam(cellDim, 1)        .* Parameters.Stabilize (c, enabled=enableSelfStabilization) // cell-to-hiddden (note: applied elementwise)
+
+            // note: the W(x) here are all different, they all come with their own set of weights; same for H(dh), C(dc), and B()
+            it = Sigmoid(W(x) + B() + H(dh) + C(dc))           // input gate(t)
+            bit = it .* Tanh(W(x) + (H(dh) + B()))             // applied to tanh of input network
+
+            ft = Sigmoid(W(x) + B() + H(dh) + C(dc))           // forget-me-not gate(t)
+            bft = ft .* dc                                     // applied to cell(t-1)
+
+            ct = bft + bit                                     // c(t) is sum of both
+
+            ot = Sigmoid(W(x) + B() + H(dh) + C(ct))           // output gate(t)
+            ht = ot .* Tanh(ct)                                // applied to tanh(cell(t))
+        ]
+
+        // LSTM cell
+        # TODO: This is temporary test code for the new ShiftNode (until we switch PastValue() itself over)
+        #PastValueShift(dimDummy, input) = Shift(input, /*fromOffsets=*/-1, /*boundaryValue=*/Constant(0.1), dim=-1)
+        #PastValue1 = PastValue
+        #PastValue1 = PastValueShift
+
+        # our return values
+        c = _privateInnards.ct          // cell value
+        h = if outputDim != cellDim     // output/hidden state
+            then [                      // project
+                Wmr = Parameters.WeightParam(outputDim, cellDim);
+                htp = Wmr * Parameters.Stabilize (_privateInnards.ht, enabled=enableSelfStabilization)
+            ].htp         // TODO: ^^ extend BS syntax to allow to say: then [ Wmr = WeightParam(outputDim, cellDim) ] in Wmr * Stabilize (...)
+            else _privateInnards.ht // no projection
+    ]
+
+    # this implements a recurrent (stateful) LSTM with projection and self-stabilization
+    RecurrentLSTMP(inputDim, outputDim, cellDim, x, enableSelfStabilization=false) =
+    [
+        prevState =  // Loop.Previous (lstmState). BS can't apply Previous() to dictionaries, so expand it manually
+        [
+            h = Loop.Previous (lstmState.h);                     // hidden state(t-1)
+            c = Loop.Previous (lstmState.c);                     // cell(t-1)
+        ]
+        enableSelfStabilization1 = enableSelfStabilization // TODO: BS syntax needs to allow to say ^.enableSelfStabilization
+        lstmState = LSTMP(inputDim, outputDim, cellDim, x, prevState, enableSelfStabilization=enableSelfStabilization1)
+    ].lstmState.h // that's the value we return
 ]
 
 ] # end of BS namespace
