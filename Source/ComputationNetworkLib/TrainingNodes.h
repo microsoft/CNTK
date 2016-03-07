@@ -1743,10 +1743,12 @@ public:
                 expAvgFactor = (m_normTimeConst < 0) ? (1.0 / (1.0 + m_mbCount)) : 1;
             }
 
-            if (m_saveMean->GetNumElements() != runMean.GetNumElements())
-                m_saveMean->Resize(runMean.GetNumRows(), runMean.GetNumCols());
-            if (m_saveInvStdDev->GetNumElements() != runMean.GetNumElements())
-                m_saveInvStdDev->Resize(runMean.GetNumRows(), runMean.GetNumCols());
+            if (m_saveMean == nullptr)
+                fprintf(stderr, "WARNING: m_saveMean is null\n");
+            if (m_saveInvStdDev == nullptr)
+                fprintf(stderr, "WARNING: m_saveInvStdDev is null\n");
+            m_saveMean->Resize(runMean);
+            m_saveInvStdDev->Resize(runMean);
 
             m_convEng->NormalizeBatch(*m_inT, sliceInputValue, *m_scaleBiasT, scale, bias, m_spatial, expAvgFactor, runMean, runInvStdDev,
                                       sliceOutputValue, m_epsilon, *m_saveMean, *m_saveInvStdDev);
