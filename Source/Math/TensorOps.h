@@ -97,6 +97,14 @@ DECL ElemType LinearRectifierDerivative(ElemType z)
 }
 
 template <class ElemType>
+DECL ElemType Sgn(ElemType z)
+{
+    if (z > 0.0) return 1.0;
+    if (z < 0.0) return -1.0;
+    return z;
+}
+
+template <class ElemType>
 DECL ElemType Sqr(ElemType z)
 {
     return z * z;
@@ -227,6 +235,7 @@ DefBinaryOp(ElementwiseProductWithTanhDerivativeFromOutput, a*(1 - b * b));
 DefBinaryOp(ElementwiseProductWithLinearRectifierDerivativeFromOutput, b > 0 ? a : 0);
 DefBinaryOp(ElementwiseProductWithLogDerivativeFromOutput, a* exp_(-b));
 DefBinaryOp(ElementwiseProductWithCosDerivative, a * -sin_(b)); // note: b = input for cos()
+DefBinaryOp(ElementWideProductWithAbsDerivative, a * Sgn(b)); // note: b = input for abs()
 DefBinaryOp(SqrOfDifference, Sqr(a - b));
 //DefBinaryOp(Index, IndexElement(a, b, i));  // note: this one uses the third argument
 
