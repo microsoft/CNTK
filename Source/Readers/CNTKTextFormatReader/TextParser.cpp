@@ -140,66 +140,80 @@ TextParser::TextDataChunk::TextDataChunk(const ChunkDescriptor& descriptor, Text
 
 vector<SequenceDataPtr> TextParser::TextDataChunk::GetSequence(size_t sequenceId)
 {
-    assert(m_sequenceRequestCount < m_sequencePtrMap.size());
-    auto it = m_sequencePtrMap.find(sequenceId);
-    assert(it != m_sequencePtrMap.end());
-    if (++m_sequenceRequestCount == m_sequencePtrMap.size()) 
+    vector<SequenceDataPtr> sequence;
+    #pragma omp critical
     {
-        // all sequences in this chunk have been used up,
-        // now it's time to remove it from the cache.
-        // TODO: add to list of eviction candidates.
-        m_parent.m_chunkCache.erase(m_id);
+        assert(m_sequenceRequestCount < m_sequencePtrMap.size());
+        auto it = m_sequencePtrMap.find(sequenceId);
+        assert(it != m_sequencePtrMap.end());
+        if (++m_sequenceRequestCount == m_sequencePtrMap.size())
+        {
+            // all sequences in this chunk have been used up,
+            // now it's time to remove it from the cache.
+            // TODO: add to list of eviction candidates.
+            // TODO: use thread-safe data-structure.
+            m_parent.m_chunkCache.erase(m_id);
+        }
+        sequence = it->second;
     }
-    return it->second;
+    return sequence;
 }
 
 ChunkPtr TextParser::GetChunk(size_t chunkId)
 {
-    auto it = m_chunkCache.find(chunkId);
-    if (it != m_chunkCache.end()) 
+    ChunkPtr chunk;
+    #pragma omp critical
     {
-        return it->second;
-    }
-
-    const auto& chunkDescriptor = m_index->m_chunks[chunkId];
-    auto chunk = make_shared<TextDataChunk>(chunkDescriptor, *this);
-    vector<Sequence> sequences(chunkDescriptor.m_numSequences);
-    for (size_t i = 0; i < chunkDescriptor.m_numSequences; ++i)
-    {
-        size_t offset = chunkDescriptor.m_timelineOffset + i;
-        const auto& sequenceDescriptor = m_index->m_timeline[offset];
-        chunk->m_sequenceData[i] = move(LoadSequence(!m_skipSequenceIds, sequenceDescriptor));
-        const auto& sequenceData = chunk->m_sequenceData[i];
-        vector<SequenceDataPtr> sequencePtrs(m_numberOfStreams);
-        for (size_t j = 0; j < m_numberOfStreams; ++j)
+        auto it = m_chunkCache.find(chunkId);
+        if (it != m_chunkCache.end())
         {
-            const StreamInfo& stream = m_streamInfos[j];
-            if (stream.m_type == StorageType::dense)
-            {
-                DenseData* loadedData = (DenseData*)(sequenceData[j].get());
-                auto data = make_shared<DenseSequenceData>();
-                data->m_data = loadedData->m_buffer.data();
-                data->m_sampleLayout = m_streams[j]->m_sampleLayout;
-                data->m_numberOfSamples = loadedData->m_numberOfSamples;
-                data->m_chunk = chunk;
-                sequencePtrs[j] = data;
-            }
-            else
-            {
-                SparseData* loadedData = (SparseData*)(sequenceData[j].get());
-                auto data = make_shared<SparseSequenceData>();
-                data->m_data = loadedData->m_buffer.data();
-                data->m_indices = move(loadedData->m_indices);
-                data->m_chunk = chunk;
-                sequencePtrs[j] = data;
-            }
+            chunk = it->second;
         }
-        chunk->m_sequencePtrMap[sequenceDescriptor.m_id] = move(sequencePtrs);
+        else 
+        {
+            const auto& chunkDescriptor = m_index->m_chunks[chunkId];
+            auto textChunk = make_shared<TextDataChunk>(chunkDescriptor, *this);
+            vector<Sequence> sequences(chunkDescriptor.m_numSequences);
+            for (size_t i = 0; i < chunkDescriptor.m_numSequences; ++i)
+            {
+                size_t offset = chunkDescriptor.m_timelineOffset + i;
+                const auto& sequenceDescriptor = m_index->m_timeline[offset];
+                textChunk->m_sequenceData[i] = move(LoadSequence(!m_skipSequenceIds, sequenceDescriptor));
+                const auto& sequenceData = textChunk->m_sequenceData[i];
+                vector<SequenceDataPtr> sequencePtrs(m_numberOfStreams);
+                for (size_t j = 0; j < m_numberOfStreams; ++j)
+                {
+                    const StreamInfo& stream = m_streamInfos[j];
+                    if (stream.m_type == StorageType::dense)
+                    {
+                        DenseData* loadedData = (DenseData*)(sequenceData[j].get());
+                        auto data = make_shared<DenseSequenceData>();
+                        data->m_data = loadedData->m_buffer.data();
+                        data->m_sampleLayout = m_streams[j]->m_sampleLayout;
+                        data->m_numberOfSamples = loadedData->m_numberOfSamples;
+                        data->m_chunk = textChunk;
+                        data->m_id = sequenceDescriptor.m_id;
+                        sequencePtrs[j] = data;
+                    }
+                    else
+                    {
+                        SparseData* loadedData = (SparseData*)(sequenceData[j].get());
+                        auto data = make_shared<SparseSequenceData>();
+                        data->m_data = loadedData->m_buffer.data();
+                        data->m_indices = move(loadedData->m_indices);
+                        data->m_chunk = textChunk;
+                        data->m_id = sequenceDescriptor.m_id;
+                        sequencePtrs[j] = data;
+                    }
+                }
+                textChunk->m_sequencePtrMap[sequenceDescriptor.m_id] = move(sequencePtrs);
+            }
+
+            // TODO: implement cache eviction. 
+            m_chunkCache[chunkId] = textChunk;
+            chunk = textChunk;
+        }
     }
-
-    // TODO: implement cache eviction. 
-    m_chunkCache[chunkId] = chunk;
-
     return chunk;
 }
 
