@@ -13,7 +13,7 @@ fi
 
 # cntkrun <CNTK config file name> <additional CNTK args>
 DeleteModelsAfterTest=0
-cntkrun cntk.cntk 'reader=[readerType=ExperimentalHTKMLFReader] reader=[prefetch=true]' || exit $?
+cntkrun cntk.cntk 'speechTrain=[reader=[readerType=ExperimentalHTKMLFReader]]' || exit $?
 echo === Deleting last epoch data
 rm $TEST_RUN_DIR/models/*.dnn
 echo ==== Re-running from checkpoint
