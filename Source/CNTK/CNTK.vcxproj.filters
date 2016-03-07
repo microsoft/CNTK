@@ -212,9 +212,6 @@
     <Filter Include="from SGDLib\SGD">
       <UniqueIdentifier>{4f06ac18-7b30-490c-b801-128bdaa99450}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Model Building, Standard Models">
-      <UniqueIdentifier>{f474b73c-05f9-43e6-997f-3ec83805c655}</UniqueIdentifier>
-    </Filter>
     <Filter Include="from Math">
       <UniqueIdentifier>{ebc74fe7-4a25-46e7-87a8-121881ef9124}</UniqueIdentifier>
     </Filter>
