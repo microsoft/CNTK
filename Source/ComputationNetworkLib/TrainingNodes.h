@@ -1659,6 +1659,11 @@ public:
         }
     }
 
+    void SetNormalizationTimeConstant(const double normalizationTimeConstant)
+    {
+        m_normTimeConst = normalizationTimeConstant;
+    }
+
     void BackpropTo(const size_t inputIndex, const FrameRange& fr) override
     {
         if (m_eval)
