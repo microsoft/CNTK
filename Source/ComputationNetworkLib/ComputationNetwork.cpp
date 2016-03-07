@@ -939,7 +939,7 @@ void ComputationNetwork::PerformSVDecomposition(const map<wstring, float>& SVDCo
             shared_ptr<ComputationNode<ElemType>> pNode = dynamic_pointer_cast<LearnableParameter<ElemType>>(m_nameToNodeMap[name]);
 
             // Step 1. do SVD decomposition
-            Matrix<ElemType> A = pNode->ValueAsMatrix();
+            Matrix<ElemType> A = pNode->ValueAsMatrix().DeepClone();
 
             // it is a vector, no need to do it
             if (A.GetNumCols() == 1 || A.GetNumRows() == 1)
@@ -1017,8 +1017,10 @@ void ComputationNetwork::PerformSVDecomposition(const map<wstring, float>& SVDCo
             shared_ptr<ComputationNode<ElemType>> pLeft = AddNodeToNetWithElemType(New<LearnableParameter<ElemType>>(m_deviceId, leftChildName, m, r));
             shared_ptr<ComputationNode<ElemType>> pRight = AddNodeToNetWithElemType(New<LearnableParameter<ElemType>>(m_deviceId, rightChildName, r, n));
 
-            pLeft->ValueAsMatrix() = redU;
-            pRight->ValueAsMatrix() = redVT;
+            // TODO: We should be able to move instead of copy but it currently isn't strightforward
+            // due to redU and redVT being slices
+            pLeft->ValueAsMatrix() = redU.DeepClone();
+            pRight->ValueAsMatrix() = redVT.DeepClone();
 
             shared_ptr<ComputationNode<ElemType>> pTimes = AddNodeToNetAndAttachInputs(New<TimesNode<ElemType>>(m_deviceId, name + L"-SVD"), pLeft, pRight);
 
@@ -1238,9 +1240,8 @@ void ComputationNetwork::SaveToDbnFile(ComputationNetworkPtr net, const std::wst
     ComputationNodeBasePtr meanNode = normalizationNodes.front()->GetInputs()[1];
     ComputationNodeBasePtr stdNode = normalizationNodes.front()->GetInputs()[2];
     
-    Matrix<ElemType> meanNodeMatrix = meanNode->As<ComputationNode<ElemType>>()->Value();
-    Matrix<ElemType> stdNodeMatrix = stdNode->As<ComputationNode<ElemType>>()->Value();
-    Matrix<ElemType> invStdNodeMatrix(stdNodeMatrix.ElementInverse());
+    Matrix<ElemType> meanNodeMatrix = meanNode->As<ComputationNode<ElemType>>()->Value().DeepClone();
+    Matrix<ElemType> invStdNodeMatrix(std::move(stdNode->As<ComputationNode<ElemType>>()->Value().DeepClone().ElementInverse()));
 
     std::vector<ComputationNodeBasePtr> priorNodes = WhereNode(net->GetAllNodes(), GetAllPriorNodes);
     if (priorNodes.size() != 1)
@@ -1323,7 +1324,7 @@ void ComputationNetwork::SaveToDbnFile(ComputationNetworkPtr net, const std::wst
         }
 
         // Write out the main weight matrix
-        auto weight = (layer->Node->As<ComputationNode<ElemType>>()->Value());
+        auto weight = (layer->Node->As<ComputationNode<ElemType>>()->Value().DeepClone());
         auto transpose = weight.Transpose();
         PutMatrix(&transpose, "W");
 

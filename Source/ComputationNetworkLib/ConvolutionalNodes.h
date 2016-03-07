@@ -144,7 +144,7 @@ public:
 
             node->m_imageLayoutKind = m_imageLayoutKind;
 
-            *node->m_tempMatrix = *m_tempMatrix;
+            node->m_tempMatrix->SetValue(*m_tempMatrix);
         }
     }
 

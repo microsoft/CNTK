@@ -46,13 +46,13 @@ BOOST_FIXTURE_TEST_CASE(MatrixSparseTimesDense, RandomSeedFixture)
     mAdense.AssignTruncateBottomOf(Matrix<float>::RandomUniform(dim1, dim2, c_deviceIdZero, -3.0f, 0.1f, IncrementCounter()), 0);
 
     // MATRIX mAsparse becomes sparse
-    Matrix<float> mAsparse(mAdense);
+    Matrix<float> mAsparse(mAdense.DeepClone());
     mAsparse.SwitchToMatrixType(MatrixType::SPARSE, matrixFormatSparseCSR, true);
 
     // DENSE
     Matrix<float> mB = Matrix<float>::RandomGaussian(dim2, dim3, c_deviceIdZero, 1.0f, 4.0f, IncrementCounter());
     Matrix<float> mC = Matrix<float>::RandomGaussian(dim1, dim3, c_deviceIdZero, 1.0f, 2.0f, IncrementCounter());
-    Matrix<float> mD(mC);
+    Matrix<float> mD(mC.DeepClone());
 
     float alpha = 0.3f;
     float beta = 2.0f;
@@ -72,12 +72,12 @@ BOOST_FIXTURE_TEST_CASE(MatrixDenseTimesSparse, RandomSeedFixture)
     Matrix<float> mAdense(c_deviceIdZero);
     mAdense.AssignTruncateBottomOf(Matrix<float>::RandomUniform(dim1, dim2, c_deviceIdZero, -3.0f, 0.1f, IncrementCounter()), 0);
 
-    Matrix<float> mAsparse(mAdense);
+    Matrix<float> mAsparse(mAdense.DeepClone());
     mAsparse.SwitchToMatrixType(MatrixType::SPARSE, matrixFormatSparseCSC, true);
 
     Matrix<float> mB = Matrix<float>::RandomGaussian(dim2, dim1, c_deviceIdZero, 1.0f, 4.0f, IncrementCounter());
     Matrix<float> mC = Matrix<float>::RandomGaussian(dim2, dim2, c_deviceIdZero, 1.0f, 2.0f, IncrementCounter());
-    Matrix<float> mD(mC);
+    Matrix<float> mD(mC.DeepClone());
 
     bool transposeA = false, transposeB = false;
     float alpha = 0.3f;
@@ -102,12 +102,12 @@ BOOST_FIXTURE_TEST_CASE(CPUMatrixDenseTimesSparse, RandomSeedFixture)
     Matrix<float> mAdense(CPUDEVICE);
     mAdense.AssignTruncateBottomOf(Matrix<float>::RandomUniform(dim1, dim2, c_deviceIdZero, -3.0f, 0.1f, IncrementCounter()), 0);
 
-    Matrix<float> mAsparse(mAdense);
+    Matrix<float> mAsparse(mAdense.DeepClone());
     mAsparse.SwitchToMatrixType(MatrixType::SPARSE, matrixFormatSparseCSC, true);
 
     Matrix<float> mB = Matrix<float>::RandomGaussian(dim2, dim1, CPUDEVICE, 1, 4, IncrementCounter());
     Matrix<float> mC = Matrix<float>::RandomGaussian(dim2, dim2, CPUDEVICE, 1, 2, IncrementCounter());
-    Matrix<float> mD(mC);
+    Matrix<float> mD(mC.DeepClone());
 
     bool transposeA = false, transposeB = false;
     float alpha = 0.3f;
@@ -157,17 +157,17 @@ BOOST_FIXTURE_TEST_CASE(MatrixSparseTimesSparse, RandomSeedFixture)
 {
     Matrix<float> mAdense(c_deviceIdZero);
     mAdense.AssignTruncateBottomOf(Matrix<float>::RandomUniform(dim1, dim2, c_deviceIdZero, -3.0f, 0.1f, IncrementCounter()), 0);
-    Matrix<float> mAsparse(mAdense);
+    Matrix<float> mAsparse(mAdense.DeepClone());
     mAsparse.SwitchToMatrixType(MatrixType::SPARSE, matrixFormatSparseCSR, true);
 
     Matrix<float> mBdense(c_deviceIdZero);
     mBdense.AssignTruncateBottomOf(Matrix<float>::RandomUniform(dim2, dim1, c_deviceIdZero, -5.0f, 0.4f, IncrementCounter()), 0);
-    Matrix<float> mBsparse(mBdense);
+    Matrix<float> mBsparse(mBdense.DeepClone());
     mBsparse.SwitchToMatrixType(MatrixType::SPARSE, matrixFormatSparseCSR, true);
 
     Matrix<float> mCdense(c_deviceIdZero);
     mCdense.AssignTruncateBottomOf(Matrix<float>::RandomUniform(dim1, dim1, c_deviceIdZero, -4.0f, 0.2f, IncrementCounter()), 0);
-    Matrix<float> mCsparse(mCdense);
+    Matrix<float> mCsparse(mCdense.DeepClone());
     mCsparse.SwitchToMatrixType(MatrixType::SPARSE, matrixFormatSparseCSR, true);
 
     bool transposeA = false, transposeB = false;
@@ -193,11 +193,11 @@ BOOST_FIXTURE_TEST_CASE(MatrixSparsePlusSparse, RandomSeedFixture)
 {
     Matrix<float> mAdense(c_deviceIdZero);
     mAdense.AssignTruncateBottomOf(Matrix<float>::RandomUniform(dim1, dim2, c_deviceIdZero, -3.0f, 0.1f, IncrementCounter()), 0);
-    Matrix<float> mAsparse(mAdense);
+    Matrix<float> mAsparse(mAdense.DeepClone());
 
     Matrix<float> mBdense(c_deviceIdZero);
     mBdense.AssignTruncateBottomOf(Matrix<float>::RandomUniform(dim1, dim2, c_deviceIdZero, -5.0f, 0.4f, IncrementCounter()), 0);
-    Matrix<float> mBsparse(mBdense);
+    Matrix<float> mBsparse(mBdense.DeepClone());
 
     float alpha = 1.0f * rand() / RAND_MAX;
     Matrix<float>::ScaleAndAdd(alpha, mAdense, mBdense);
@@ -217,7 +217,7 @@ BOOST_FIXTURE_TEST_CASE(MatrixDensePlusSparse, RandomSeedFixture)
 
     Matrix<float> mBdense(c_deviceIdZero);
     mBdense.AssignTruncateBottomOf(Matrix<float>::RandomUniform(dim1, dim2, c_deviceIdZero, -5.0f, 0.4f, IncrementCounter()), 0);
-    Matrix<float> mBsparse(mBdense);
+    Matrix<float> mBsparse(mBdense.DeepClone());
 
     float alpha = 1.0f * rand() / RAND_MAX;
     Matrix<float>::ScaleAndAdd(alpha, mAdense, mBdense);
@@ -233,11 +233,11 @@ BOOST_FIXTURE_TEST_CASE(MatrixSparsePlusDense, RandomSeedFixture)
 {
     Matrix<float> mAdense(c_deviceIdZero);
     mAdense.AssignTruncateBottomOf(Matrix<float>::RandomUniform(dim1, dim2, c_deviceIdZero, -3.0f, 0.1f, IncrementCounter()), 0);
-    Matrix<float> mAsparse(mAdense);
+    Matrix<float> mAsparse(mAdense.DeepClone());
 
     Matrix<float> mBdense(c_deviceIdZero);
     mBdense.AssignTruncateBottomOf(Matrix<float>::RandomUniform(dim1, dim2, c_deviceIdZero, -5.0f, 0.4f, IncrementCounter()), 0);
-    Matrix<float> Bd1(mBdense);
+    Matrix<float> Bd1(mBdense.DeepClone());
 
     float alpha = 1.0f * rand() / RAND_MAX;
     Matrix<float>::ScaleAndAdd(alpha, mAdense, mBdense);
@@ -252,12 +252,12 @@ BOOST_FIXTURE_TEST_CASE(MatrixSparseElementWisePower, RandomSeedFixture)
 {
     Matrix<float> mAdense(c_deviceIdZero);
     mAdense.AssignTruncateBottomOf(Matrix<float>::RandomUniform(dim1, dim2, c_deviceIdZero, -3.0f, 0.1f, IncrementCounter()), 0);
-    Matrix<float> mAsparse(mAdense);
+    Matrix<float> mAsparse(mAdense.DeepClone());
     mAsparse.SwitchToMatrixType(MatrixType::SPARSE, matrixFormatSparseCSR, true);
 
     Matrix<float> mBdense(c_deviceIdZero);
     mBdense.AssignTruncateBottomOf(Matrix<float>::RandomUniform(dim1, dim2, c_deviceIdZero, -5.0f, 0.4f, IncrementCounter()), 0);
-    Matrix<float> mBsparse(mBdense);
+    Matrix<float> mBsparse(mBdense.DeepClone());
     mBsparse.SwitchToMatrixType(MatrixType::SPARSE, matrixFormatSparseCSR, true);
 
     mAdense ^= 2.3f;

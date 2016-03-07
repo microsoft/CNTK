@@ -173,8 +173,8 @@ MatrixBase::~MatrixBase() { }
 #pragma region Constructors, destructors and other static matrix builders
 
 // Initialize all members over virgin memory.
-// This function will only initialize default bland matrix. The actual matrices need to allocated
-// after calling this function and flags need to set correctly by calling SetDataLocation.
+//This function will only initialize default bland matrix. The actual matrices need to allocated
+//after calling this function and flags need to set correctly by calling SetDataLocation.
 // This clears out the entire object and brings it into destructable state.
 // Note: Keep this in sync with member definition and ShallowCopyFrom().
 template <class ElemType>
@@ -189,8 +189,8 @@ void Matrix<ElemType>::Init(DEVICEID_TYPE deviceId)
     m_matrixType          = MatrixType::UNDETERMINED;
     m_currentDataLocation = CurrentDataLocation::NONE;
 
-    m_preferredDeviceId   = deviceId;
-    m_numTimesDeviceChanged     = 0;
+    m_preferredDeviceId = deviceId;
+    m_numTimesDeviceChanged = 0;
     m_numTimesMatrixTypeChanged = 0;
     m_devicesTransferedTo[1]    = m_devicesTransferedTo[0] = CPUDEVICE - 1; // (some value that is different from any valid value)
 }
@@ -242,7 +242,6 @@ void Matrix<ElemType>::SetDataLocation(CurrentDataLocation location, MatrixType 
         if (!OwnBuffer()) // this means we should not have written into it in the first place, so fail now (better late than never)
             LogicError("SetDataLocation: A non-owning object cannot be written to in BOTH state.");
     }
-
     m_currentDataLocation = location;
 
     // set the matrix type if passed in
@@ -254,7 +253,6 @@ void Matrix<ElemType>::SetDataLocation(CurrentDataLocation location, MatrixType 
         m_baseMatrix = ((m_currentDataLocation == CurrentDataLocation::CPU) ? (BaseMatrix<ElemType>*) m_CPUMatrix : (BaseMatrix<ElemType>*) m_GPUMatrix);
     else if (m_matrixType == MatrixType::SPARSE)
         m_baseMatrix = ((m_currentDataLocation == CurrentDataLocation::CPU) ? (BaseMatrix<ElemType>*) m_CPUSparseMatrix : (BaseMatrix<ElemType>*) m_GPUSparseMatrix);
-
     // sanity check
     if (!m_baseMatrix && m_matrixType != MatrixType::UNDETERMINED)
         LogicError("SetDataLocation: new m_baseMatrix must not be NULL.");
@@ -418,9 +416,9 @@ Matrix<ElemType>::Matrix(const size_t numRows, const size_t numCols, ElemType* p
 
 //copy constructor, deep copy
 template <class ElemType>
-Matrix<ElemType>::Matrix(const Matrix<ElemType>& deepCopyFrom)
-    : Matrix(deepCopyFrom, deepCopyFrom.GetDeviceId())
+Matrix<ElemType> Matrix<ElemType>::DeepClone() const
 {
+    return Matrix<ElemType>(*this, GetDeviceId());
 }
 
 template <class ElemType>
@@ -445,22 +443,13 @@ Matrix<ElemType>::Matrix(const Matrix<ElemType>& deepCopyFrom, DEVICEID_TYPE dev
     m_preferredDeviceId = deepCopyFrom.m_preferredDeviceId;
 }
 
-//assignment operator, deep copy
-template <class ElemType>
-Matrix<ElemType>& Matrix<ElemType>::operator=(const Matrix<ElemType>& deepCopyFrom)
-{
-    if (this != &deepCopyFrom)
-    {
-        SetValue(deepCopyFrom);
-    }
-    return *this;
-}
 
-// move constructor, shallow copy
+//move constructor, shallow copy
 template <class ElemType>
 Matrix<ElemType>::Matrix(Matrix<ElemType>&& moveFrom)
 {
-    Init((DEVICEID_TYPE)moveFrom.GetDeviceId());
+    Init((DEVICEID_TYPE) moveFrom.GetDeviceId());
+
 #if 1
     operator=(move(moveFrom));
 #else
@@ -475,7 +464,7 @@ Matrix<ElemType>::Matrix(Matrix<ElemType>&& moveFrom)
 #endif
 }
 
-// move assignment operator, shallow copy
+//move assignment operator, shallow copy
 template <class ElemType>
 Matrix<ElemType>& Matrix<ElemType>::operator=(Matrix<ElemType>&& moveFrom)
 {
@@ -515,12 +504,12 @@ void Matrix<ElemType>::ReleaseMemory()
     delete m_GPUMatrix;
     delete m_GPUSparseMatrix;
     delete m_CPUSparseMatrix;
-    m_CPUMatrix       = nullptr;
-    m_GPUMatrix       = nullptr;
+    m_CPUMatrix = nullptr;
+    m_GPUMatrix = nullptr;
     m_GPUSparseMatrix = nullptr;
     m_CPUSparseMatrix = nullptr;
 
-    m_matrixType          = MatrixType::UNDETERMINED;
+    m_matrixType = MatrixType::UNDETERMINED;
     m_currentDataLocation = CurrentDataLocation::NONE;
 }
 
@@ -657,7 +646,7 @@ void Matrix<ElemType>::ShiftBy(int numShift)
         {
             Matrix<ElemType> inp = ColumnSlice(i + numShift, 1);
             Matrix<ElemType> out = ColumnSlice(i, 1);
-            out = inp;
+            out.SetValue(inp);
         }
         for (size_t i = 0; i < min(GetNumCols(), -numShift); i++)
             ColumnSlice(i, 1).SetValue(0);
@@ -859,7 +848,7 @@ Matrix<ElemType> Matrix<ElemType>::Diagonal() const
 }
 
 template <class ElemType>
-Matrix<ElemType> Matrix<ElemType>::AssignDiagonalValuesTo(Matrix<ElemType>& diag) const
+void Matrix<ElemType>::AssignDiagonalValuesTo(Matrix<ElemType>& diag) const
 {
     int devId = GetDeviceId();
     DecideAndMoveToRightDevice(*this, diag);
@@ -906,7 +895,6 @@ Matrix<ElemType> Matrix<ElemType>::AssignDiagonalValuesTo(Matrix<ElemType>& diag
     else
         LogicError("Undetermined matrix type");
 
-    return diag;
 }
 
 //this function will change the matrix type between DENSE and SPARSE.
@@ -1034,13 +1022,13 @@ const ElemType Matrix<ElemType>::operator()(const size_t row, const size_t col) 
                                          nullptr,
                                          return m_CPUMatrix->operator()(row, col),
                                          _transferFromDeviceToDevice(GetDeviceId(), CPUDEVICE, false); return m_CPUMatrix->operator()(row, col),
-                                         NOT_IMPLEMENTED,
-                                         NOT_IMPLEMENTED);
+                                                NOT_IMPLEMENTED,
+                                                NOT_IMPLEMENTED);
 }
 
-// WARNING: This function is very slow for GPUs since it requires copying values between CPUs and GPUs.
-// In addition, if ColumnSlice is used after this function but before the values are copied back to GPU
-// the operation will fail since the memory is not managed by the slice.
+//WARNING: This function is very slow for GPUs since it requires copying values between CPUs and GPUs.
+//In addition, if ColumnSlice is used after this function but before the values are copied back to GPU
+//the operation will fail since the memory is not managed by the slice.
 // If you don't need to modify the values, to call the const version above, or GetValue(row,col) which does that for you unambiguously.
 // TODO: Can we remove this, and have users use SetValue() instead? To avoid this potential error?
 template <class ElemType>
@@ -1050,8 +1038,8 @@ ElemType& Matrix<ElemType>::operator()(const size_t row, const size_t col)
                                          nullptr,
                                          return m_CPUMatrix->operator()(row, col),
                                          _transferFromDeviceToDevice(GetDeviceId(), CPUDEVICE, false); SetDataLocation(CPU, DENSE); return m_CPUMatrix->operator()(row, col),
-                                         NOT_IMPLEMENTED,
-                                         NOT_IMPLEMENTED);
+                                                                             NOT_IMPLEMENTED,
+                                                                             NOT_IMPLEMENTED);
 }
 
 template <class ElemType>
@@ -1114,8 +1102,8 @@ void Matrix<ElemType>::SetValue(const DeviceBoundNumber<ElemType>& db_number)
                             this,
                             m_CPUMatrix->SetValue(*db_number.ExposePointer2Value()),
                             {
-                                if (GetDeviceId() != db_number.GetDeviceId())
-                                   RuntimeError("Matrix and device bound number must be on the same device");
+                            if (GetDeviceId() != db_number.GetDeviceId())
+                                RuntimeError("Matrix and device bound number must be on the same device");
                                 m_GPUMatrix->SetValue(db_number.ExposePointer2Value());
                             },
                             NOT_IMPLEMENTED,
@@ -1539,7 +1527,7 @@ Matrix<ElemType> Matrix<ElemType>::RepMat(const Matrix<ElemType>& frmMat, const 
     Matrix<ElemType> c(nRows, newCols, frmMat.GetDeviceId());
     for (size_t i = 0; i < colRatio; i++)
     {
-        c.ColumnSlice(i * nCols, nCols) = frmMat;
+        c.ColumnSlice(i * nCols, nCols).SetValue(frmMat);
     }
 
     return c;
@@ -1654,7 +1642,7 @@ Matrix<ElemType> Matrix<ElemType>::operator+(const Matrix<ElemType>& a) const
 {
     if (GetNumElements() == 1)
     {
-        Matrix<ElemType> c(a);
+        Matrix<ElemType> c(a.DeepClone());
 
         DISPATCH_MATRIX_ON_FLAG(this,
                                 &c,
@@ -1666,7 +1654,7 @@ Matrix<ElemType> Matrix<ElemType>::operator+(const Matrix<ElemType>& a) const
     }
     else if (a.GetNumElements() == 1)
     {
-        Matrix<ElemType> c(*this);
+        Matrix<ElemType> c(this->DeepClone());
 
         DISPATCH_MATRIX_ON_FLAG(&a,
                                 &c,
@@ -1678,7 +1666,7 @@ Matrix<ElemType> Matrix<ElemType>::operator+(const Matrix<ElemType>& a) const
     }
     else
     {
-        Matrix<ElemType> c(*this); // this implementation will introduce a copy overhead. but make resue of the code
+        Matrix<ElemType> c(this->DeepClone()); // this implementation will introduce a copy overhead. but make resue of the code
         c += a;
         return c;
     }
@@ -1934,7 +1922,7 @@ Matrix<ElemType>& Matrix<ElemType>::operator-=(const Matrix<ElemType>& a)
 template <class ElemType>
 Matrix<ElemType> Matrix<ElemType>::operator-(const Matrix<ElemType>& a) const
 {
-    Matrix<ElemType> c(*this); // this implementation will introduce a copy overhead. but make resue of the code
+    Matrix<ElemType> c(this->DeepClone()); // this implementation will introduce a copy overhead. but make resue of the code
     ScaleAndAdd(-1, a, c);
     return c;
 }
@@ -1988,9 +1976,9 @@ Matrix<ElemType>& Matrix<ElemType>::AssignProductOf(const Matrix<ElemType>& a, c
     if (a.GetNumElements() == 1)
     {
         if (transposeB)
-            (*this) = AssignTransposeOf(b);
+            AssignTransposeOf(b);
         else
-            (*this) = b;
+            this->SetValue(b);
 
         DISPATCH_MATRIX_ON_FLAG(this,
                                 nullptr,
@@ -2002,9 +1990,9 @@ Matrix<ElemType>& Matrix<ElemType>::AssignProductOf(const Matrix<ElemType>& a, c
     else if (b.GetNumElements() == 1)
     {
         if (transposeA)
-            (*this) = AssignTransposeOf(a);
+            AssignTransposeOf(a);
         else
-            (*this) = a;
+            this->SetValue(a);
 
         DISPATCH_MATRIX_ON_FLAG(this,
                                 nullptr,
@@ -2865,7 +2853,7 @@ Matrix<ElemType>& Matrix<ElemType>::AssignTruncateBottomOf(const Matrix<ElemType
     {
         if (!isfinite((float) threshold))
         {
-            (*this) = a;
+            this->SetValue(a);
             return *this;
         }
     }
@@ -2873,7 +2861,7 @@ Matrix<ElemType>& Matrix<ElemType>::AssignTruncateBottomOf(const Matrix<ElemType
     {
         if (!isfinite(threshold))
         {
-            (*this) = a;
+            this->SetValue(a);
             return *this;
         }
     }
@@ -2929,7 +2917,7 @@ Matrix<ElemType>& Matrix<ElemType>::AssignTruncateTopOf(const Matrix<ElemType>& 
     {
         if (!isfinite((float) threshold))
         {
-            (*this) = a;
+            this->SetValue(a);
             return *this;
         }
     }
@@ -2937,7 +2925,7 @@ Matrix<ElemType>& Matrix<ElemType>::AssignTruncateTopOf(const Matrix<ElemType>& 
     {
         if (!isfinite(threshold))
         {
-            (*this) = a;
+            this->SetValue(a);
             return *this;
         }
     }
@@ -4006,7 +3994,7 @@ void Matrix<ElemType>::SVD(const Matrix<ElemType>& A, Matrix<ElemType>& SIGMA, M
 
     DISPATCH_MATRIX_ON_FLAG(&A,
                             nullptr,
-                            Matrix<ElemType> tA = A;
+                            Matrix<ElemType> tA = A.DeepClone();
                             CPUMatrix<ElemType>::SVD(*tA.m_CPUMatrix, *SIGMA.m_CPUMatrix, *U.m_CPUMatrix, *VT.m_CPUMatrix, *W.m_CPUMatrix);
                             SIGMA.SetDataLocation(CPU);
                             U.SetDataLocation(CPU);
@@ -5084,7 +5072,6 @@ template Matrix<char>::Matrix(const size_t numRows, const size_t numCols, DEVICE
 template Matrix<char>::Matrix(const size_t numRows, const size_t numCols, char* pArray, DEVICEID_TYPE deviceId, const size_t matrixFlags, const size_t nnz);
 template Matrix<char>::~Matrix();
 template Matrix<char>& Matrix<char>::operator=(Matrix<char>&& moveFrom);
-template Matrix<char>& Matrix<char>::operator=(const Matrix<char>& deepCopyFrom);
 template char* Matrix<char>::BufferPointer() const;
 template int Matrix<char>::GetDeviceId() const;
 template size_t Matrix<char>::GetNumElements() const;
@@ -5094,6 +5081,7 @@ template size_t Matrix<char>::GetNumRows() const;
 template size_t Matrix<char>::GetNumCols() const;
 template void Matrix<char>::SetValue(const char);
 template void Matrix<char>::SetValue(size_t numRows, const size_t numCols, int deviceId, char* pArray, size_t matrixFlags);
+template void Matrix<char>::SetValue(const Matrix<char>&, MatrixFormat);
 template bool Matrix<char>::IsEmpty() const;
 template void Matrix<char>::Resize(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve, bool growOnly);
 

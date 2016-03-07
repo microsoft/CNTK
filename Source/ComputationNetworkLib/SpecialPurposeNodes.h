@@ -564,9 +564,9 @@ public:
         {
             auto node = dynamic_pointer_cast<SequenceWithSoftmaxNode<ElemType>>(nodeP);
 
-            *node->m_logSoftmaxOfRight = *m_logSoftmaxOfRight;
-            *node->m_softmaxOfRight = *m_softmaxOfRight;
-            *node->m_gammaFromLattice = *m_gammaFromLattice;
+            node->m_logSoftmaxOfRight->SetValue(*m_logSoftmaxOfRight);
+            node->m_softmaxOfRight->SetValue(*m_softmaxOfRight);
+            node->m_gammaFromLattice->SetValue(*m_gammaFromLattice);
             node->m_fsSmoothingWeight = m_fsSmoothingWeight;
             node->m_frameDropThreshold = m_frameDropThreshold;
             node->m_doReferenceAlignment = m_doReferenceAlignment;
