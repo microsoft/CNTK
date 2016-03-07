@@ -135,6 +135,7 @@
     <ClInclude Include="..\Common\Include\Sequences.h" />
     <ClInclude Include="..\Common\Include\TimerUtility.h" />
     <ClInclude Include="Actions.h" />
+    <ClInclude Include="NetworkCreator.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\Common\File.cpp">

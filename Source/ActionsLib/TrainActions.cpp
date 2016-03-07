@@ -10,6 +10,7 @@
 #include "stdafx.h"
 #include "Basics.h"
 #include "Actions.h"
+#include "NetworkCreator.h"
 #include "ComputationNetwork.h"
 #include "ComputationNode.h"
 #include "DataReader.h"
@@ -48,35 +49,11 @@ using namespace Microsoft::MSR::CNTK;
 // DoTrain() - implements CNTK "train" command
 // ===========================================================================
 
-// TODO: decide where these should go. Also, do we need three variables?
-//extern wstring standardFunctions;
-//extern wstring commonMacros;
-//extern wstring computationNodes;
-
 // helper that returns 'float' or 'double' depending on ElemType
 template <class ElemType> static const wchar_t* ElemTypeName();
 template <> /*static*/ const wchar_t* ElemTypeName<float>()  { return L"float"; }
 template <> /*static*/ const wchar_t* ElemTypeName<double>() { return L"double"; }
 
-function<ComputationNetworkPtr(DEVICEID_TYPE)> GetCreateNetworkFn(const ScriptableObjects::IConfigRecord& config)
-{
-    // createNetwork() is a BrainScript lambda that creates the model
-    // We create a C++ wrapper around it, which we then pass to Train().
-    auto createNetworkConfigLambda = config[L"createNetwork"].AsPtr<ScriptableObjects::ConfigLambda>();
-    return [createNetworkConfigLambda](DEVICEID_TYPE /*deviceId*/)
-    {
-        // execute the lambda
-        vector<ScriptableObjects::ConfigValuePtr> args; // this lambda has no arguments
-        ScriptableObjects::ConfigLambda::NamedParams namedArgs;
-        let netValue = createNetworkConfigLambda->Apply(move(args), move(namedArgs), L"BuildNetworkFromDescription");
-        // typecast the result to the desired type
-        return netValue.AsPtr<ComputationNetwork>();
-    };
-}
-function<ComputationNetworkPtr(DEVICEID_TYPE)> GetCreateNetworkFn(const ConfigParameters&)
-{
-    NOT_IMPLEMENTED;
-} // old CNTK config does not support lambdas
 
 // function to create an object of a certain type, using both old CNTK config and BrainScript
 template <class C>
@@ -103,57 +80,7 @@ void DoTrain(const ConfigRecordType& config)
     // We have several ways to create that network.
     function<ComputationNetworkPtr(DEVICEID_TYPE)> createNetworkFn;
 
-    if (config.Exists(L"createNetwork"))
-    {
-        createNetworkFn = GetCreateNetworkFn(config); // (we need a separate function needed due to template code)
-    }
-    else if (config.Exists(L"SimpleNetworkBuilder"))
-    {
-        const ConfigRecordType& simpleNetworkBuilderConfig(config(L"SimpleNetworkBuilder"));
-        auto netBuilder = make_shared<SimpleNetworkBuilder<ElemType>>(simpleNetworkBuilderConfig); // parses the configuration and stores it in the SimpleNetworkBuilder object
-        createNetworkFn = [netBuilder](DEVICEID_TYPE deviceId)
-        {
-            return shared_ptr<ComputationNetwork>(netBuilder->BuildNetworkFromDescription()); // this operates based on the configuration saved above
-        };
-    }
-    // legacy NDL
-    else if (config.Exists(L"NDLNetworkBuilder"))
-    {
-        const ConfigRecordType& ndlNetworkBuilderConfig(config(L"NDLNetworkBuilder"));
-        shared_ptr<NDLBuilder<ElemType>> netBuilder = make_shared<NDLBuilder<ElemType>>(ndlNetworkBuilderConfig);
-        createNetworkFn = [netBuilder](DEVICEID_TYPE deviceId)
-        {
-            return shared_ptr<ComputationNetwork>(netBuilder->BuildNetworkFromDescription());
-        };
-    }
-    // legacy test mode for BrainScript. Will go away once we fully integrate with BS.
-    else if (config.Exists(L"BrainScriptNetworkBuilder") || config.Exists(L"ExperimentalNetworkBuilder" /*legacy name*/))
-    {
-        // We interface with outer old CNTK config by taking the inner part, which we get as a string, as BrainScript.
-        // We prepend a few standard definitions, and also definition of deviceId and precision, which all objects will pull out again when they are being constructed.
-        // BUGBUG: We are not getting TextLocations right in this way! Do we need to inject location markers into the source? Moot once we fully switch to BS
-        wstring sourceCode = config.Exists(L"BrainScriptNetworkBuilder") ? config(L"BrainScriptNetworkBuilder") : config(L"ExperimentalNetworkBuilder");
-        auto configDirs = ConfigParameters::GetBrainScriptNetworkBuilderIncludePaths();
-        let expr = BS::ParseConfigDictFromString(L"include \'cntk.core.bs\'"     // Note: Using lowercase here to match the Linux name of the CNTK exe.
-                                                 + msra::strfun::wstrprintf(L"deviceId = %d ; precision = '%ls' ; network = new ComputationNetwork ", (int)deviceId, ElemTypeName<ElemType>())
-                                                 + sourceCode,      // source code has the form [ ... ] with brackets in the string
-                                                 move(configDirs)); // set include paths to all paths that configs were read from; no additional configurable include paths are supported by BrainScriptNetworkBuilder
-        createNetworkFn = [expr](DEVICEID_TYPE /*deviceId*/)
-        {
-            // evaluate the parse tree, particularly the top-level field 'network'
-            // Evaluating it will create the network.
-            let object = EvaluateField(expr, L"network");                   // this comes back as a BS::Object
-            let network = dynamic_pointer_cast<ComputationNetwork>(object); // cast it
-            if (!network)
-                LogicError("BuildNetworkFromDescription: ComputationNetwork not what it was meant to be");
-            // success
-            return network;
-        };
-    }
-    else
-    {
-        RuntimeError("No network builder found in the config file. NDLNetworkBuilder or SimpleNetworkBuilde must be specified");
-    }
+    createNetworkFn = GetNetworkFactory<ConfigRecordType, ElemType>(config);
 
     auto dataReader = CreateObject<DataReader>(config, L"reader");
 

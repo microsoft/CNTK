@@ -54,6 +54,9 @@
     <ClInclude Include="Actions.h">
       <Filter>Actions</Filter>
     </ClInclude>
+    <ClInclude Include="NetworkCreator.h">
+      <Filter>Actions</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Common">
