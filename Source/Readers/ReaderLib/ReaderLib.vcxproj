@@ -78,8 +78,10 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="Bundler.h" />
+    <ClInclude Include="ChunkRandomizer.h" />
     <ClInclude Include="DataDeserializerBase.h" />
     <ClInclude Include="PartialBlockRandomizer.h" />
+    <ClInclude Include="SequenceRandomizer.h" />
     <ClInclude Include="TransformerBase.h" />
     <ClInclude Include="BlockRandomizer.h" />
     <ClInclude Include="NoRandomizer.h" />
@@ -96,10 +98,12 @@
   <ItemGroup>
     <ClCompile Include="Bundler.cpp" />
     <ClCompile Include="BlockRandomizer.cpp" />
+    <ClCompile Include="ChunkRandomizer.cpp" />
     <ClCompile Include="NoRandomizer.cpp" />
     <ClCompile Include="PartialBlockRandomizer.cpp" />
     <ClCompile Include="SampleModePacker.cpp" />
     <ClCompile Include="ReaderShim.cpp" />
+    <ClCompile Include="SequenceRandomizer.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

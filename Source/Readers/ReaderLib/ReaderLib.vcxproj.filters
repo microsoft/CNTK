@@ -46,6 +46,12 @@
     <ClInclude Include="PartialBlockRandomizer.h">
       <Filter>Randomizers</Filter>
     </ClInclude>
+    <ClInclude Include="ChunkRandomizer.h">
+      <Filter>Randomizers</Filter>
+    </ClInclude>
+    <ClInclude Include="SequenceRandomizer.h">
+      <Filter>Randomizers</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="BlockRandomizer.cpp">
@@ -64,6 +70,12 @@
       <Filter>Deserializers</Filter>
     </ClCompile>
     <ClCompile Include="PartialBlockRandomizer.cpp">
+      <Filter>Randomizers</Filter>
+    </ClCompile>
+    <ClCompile Include="ChunkRandomizer.cpp">
+      <Filter>Randomizers</Filter>
+    </ClCompile>
+    <ClCompile Include="SequenceRandomizer.cpp">
       <Filter>Randomizers</Filter>
     </ClCompile>
   </ItemGroup>
