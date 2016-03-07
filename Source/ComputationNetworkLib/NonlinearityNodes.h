@@ -117,6 +117,7 @@ DeclareUnaryElementWiseWithOpCodeNode(RectifiedLinear, LinearRectifier, Elementw
 DeclareUnaryElementWiseWithOpCodeNode(Log,             Log,             ElementwiseProductWithLogDerivativeFromOutput,             true);
 DeclareUnaryElementWiseWithOpCodeNode(Exp,             Exp,             ElementwiseProduct,                                        true);
 DeclareUnaryElementWiseWithOpCodeNode(Cosine,          Cosine,          ElementwiseProductWithCosDerivative,                       false);
+DeclareUnaryElementWiseWithOpCodeNode(Abs,             Abs,             ElementwiseProductWithAbsDerivative,                       false);
 
 #pragma pop_macro("DeclareUnaryElementWiseWithOpCodeNode")
 

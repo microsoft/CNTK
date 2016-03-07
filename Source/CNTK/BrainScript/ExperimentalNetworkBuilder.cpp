@@ -79,6 +79,7 @@ L"ParameterTensor(dims, learningRateMultiplier = 1.0, init = 'uniform'/*|fixedVa
 #ifdef COMING_SOON
     TernaryStandardNode(CRF, labelVectorSequence, positionDependenScoreVectorSequence, transitionScores) // TODO: better names
 #endif
+    UnaryStandardNode(Abs, x)
     QuaternaryStandardNode(ClassBasedCrossEntropyWithSoftmax, labelClassDescriptorVectorSequence, mainInputInfo, mainWeight, classLogProbsBeforeSoftmax)
     // BUGBUG: the commented-out ones are not mentioned in the CNTK book, nor are their parameters documented in the source code
     BinaryStandardNode(ColumnElementTimes, aVectorSequence, anotherVectorSequence)
