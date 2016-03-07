@@ -12,6 +12,7 @@
 #include "Actions.h"
 #include "ComputationNetwork.h"
 #include "ComputationNode.h"
+#include "NetworkCreator.h"
 #include "DataReader.h"
 #include "DataWriter.h"
 #include "Config.h"
@@ -218,7 +219,7 @@ void DoWriteOutput(const ConfigParameters& config)
 
     DEVICEID_TYPE deviceId = DeviceFromConfig(config);
     ConfigArray minibatchSize = config(L"minibatchSize", "2048");
-    wstring modelPath = config(L"modelPath");
+    wstring modelPath = config(L"modelPath", "");
     intargvector mbSize = minibatchSize;
 
     size_t epochSize = config(L"epochSize", "0");
@@ -229,22 +230,37 @@ void DoWriteOutput(const ConfigParameters& config)
 
     ConfigArray outputNodeNames = config(L"outputNodeNames", "");
     vector<wstring> outputNodeNamesVector;
+    
+    ComputationNetworkPtr net;
 
-    // Note this is required since the user might specify OutputNodeNames in the config, so don't use CreateFromFile,
-	// instead we build the network ourselves.
-    auto net = make_shared<ComputationNetwork>(deviceId);
-    net->Read<ElemType>(modelPath);
-
-    if (outputNodeNames.size() > 0)
+    if (!modelPath.empty())
     {
-        net->OutputNodes().clear();
-        for (int i = 0; i < outputNodeNames.size(); ++i)
+        // Note this is required since the user might specify OutputNodeNames in the config, so don't use CreateFromFile,
+        // instead we build the network ourselves.
+        net = make_shared<ComputationNetwork>(deviceId);
+        net->Read<ElemType>(modelPath);
+
+        if (outputNodeNames.size() > 0)
         {
-            outputNodeNamesVector.push_back(outputNodeNames[i]);
-            net->OutputNodes().emplace_back(net->GetNodeFromName(outputNodeNames[i]));
+            net->OutputNodes().clear();
+            for (int i = 0; i < outputNodeNames.size(); ++i)
+            {
+                outputNodeNamesVector.push_back(outputNodeNames[i]);
+                net->OutputNodes().emplace_back(net->GetNodeFromName(outputNodeNames[i]));
+            }
         }
+        net->CompileNetwork();
     }
-    net->CompileNetwork();
+    else
+    {
+        // The modelPath is empty, attempt to build the network
+        // determine the network-creation function
+        // We have several ways to create that network.
+        function<ComputationNetworkPtr(DEVICEID_TYPE)> createNetworkFn;
+
+        createNetworkFn = GetNetworkFactory<ConfigParameters, ElemType>(config);
+        net = createNetworkFn(deviceId);
+    }
 
     SimpleOutputWriter<ElemType> writer(net, 1);
 

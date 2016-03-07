@@ -22,6 +22,9 @@
     <ClCompile Include="SpecialPurposeActions.cpp">
       <Filter>Actions</Filter>
     </ClCompile>
+    <ClCompile Include="NetworkCreator.cpp">
+      <Filter>Actions</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\Common\Include\fileutil.h">

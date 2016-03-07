@@ -9,10 +9,11 @@
 
 #include "stdafx.h"
 #include "Basics.h"
+
 #include "Actions.h"
-#include "NetworkCreator.h"
 #include "ComputationNetwork.h"
 #include "ComputationNode.h"
+#include "NetworkCreator.h"
 #include "DataReader.h"
 #include "DataWriter.h"
 #include "SimpleNetworkBuilder.h"
@@ -48,12 +49,6 @@ using namespace Microsoft::MSR::CNTK;
 // ===========================================================================
 // DoTrain() - implements CNTK "train" command
 // ===========================================================================
-
-// helper that returns 'float' or 'double' depending on ElemType
-template <class ElemType> static const wchar_t* ElemTypeName();
-template <> /*static*/ const wchar_t* ElemTypeName<float>()  { return L"float"; }
-template <> /*static*/ const wchar_t* ElemTypeName<double>() { return L"double"; }
-
 
 // function to create an object of a certain type, using both old CNTK config and BrainScript
 template <class C>

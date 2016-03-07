@@ -145,6 +145,7 @@
       <PrecompiledHeader Condition="$(DebugBuild)">NotUsing</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="..\Common\TimerUtility.cpp" />
+    <ClCompile Include="NetworkCreator.cpp" />
     <ClCompile Include="SpecialPurposeActions.cpp" />
     <ClCompile Include="EvalActions.cpp" />
     <ClCompile Include="OtherActions.cpp" />
