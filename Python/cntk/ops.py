@@ -1,6 +1,5 @@
-__all__ = ['Operator', 'times'] # TODO fill in cntk ops statically
 
-from graph import ComputationNode
+from cntk.graph import ComputationNode
 
 # Because CNTK stores the sample in a transposed form, we need to
 # switch parameters for some operators

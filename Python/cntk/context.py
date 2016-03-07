@@ -1,5 +1,3 @@
-__all__ = ['Context']
-
 import os
 import cntk.graph as graph
 import numpy as np
@@ -28,7 +26,6 @@ except:
         PYDOT = False
 
 class Context(object):
-    import cntk.graph as graph
     def __init__(self, model):
         self.directory = os.path.abspath('_cntk_%s'%id(model))
         if os.path.exists(self.directory):
