@@ -441,6 +441,12 @@ shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Cos(c
 }
 
 template <class ElemType>
+shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Abs(const ComputationNodePtr a, const std::wstring nodeName)
+{
+    return net.AddNodeToNetAndAttachInputs(New<AbsNode<ElemType>>(net.GetDeviceId(), nodeName), a);
+}
+
+template <class ElemType>
 shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Hardmax(const ComputationNodePtr a, const std::wstring nodeName)
 {
     return net.AddNodeToNetAndAttachInputs(New<HardmaxNode<ElemType>>(net.GetDeviceId(), nodeName), a);
