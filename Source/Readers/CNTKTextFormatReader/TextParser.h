@@ -48,7 +48,7 @@ private:
         TextDataChunk(const ChunkDescriptor& descriptor, TextParser& parent);
 
         // Gets sequences by id.
-        std::vector<SequenceDataPtr> GetSequence(const size_t& sequenceId) override;
+        std::vector<SequenceDataPtr> GetSequence(size_t sequenceId) override;
 
         std::map<size_t, std::vector<SequenceDataPtr>> m_sequencePtrMap;
         // Buffer to store the actual data.
@@ -160,8 +160,11 @@ public:
     // Description of streams that this data deserializer provides.
     std::vector<StreamDescriptionPtr> GetStreamDescriptions() const override;
 
-    // Gets a chunk.
+    // Retrieves a chunk of data.
     ChunkPtr GetChunk(size_t chunkId) override;
+
+    // Retrieves total number of chunks this deserializer can produce.
+    size_t GetTotalNumberOfChunks() override;
 
     void SetTraceLevel(unsigned int traceLevel);
 

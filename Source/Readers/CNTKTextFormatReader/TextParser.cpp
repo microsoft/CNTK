@@ -112,6 +112,11 @@ vector<StreamDescriptionPtr> TextParser::GetStreamDescriptions() const
     return m_streams;
 }
 
+size_t TextParser::GetTotalNumberOfChunks() 
+{
+    return m_index->m_chunks.size();
+}
+
 void TextParser::FillSequenceDescriptions(SequenceDescriptions& timeline) const
 {
     timeline.resize(m_index->m_timeline.size());
@@ -133,7 +138,7 @@ TextParser::TextDataChunk::TextDataChunk(const ChunkDescriptor& descriptor, Text
     m_sequenceRequestCount = 0;
 }
 
-vector<SequenceDataPtr> TextParser::TextDataChunk::GetSequence(const size_t& sequenceId)
+vector<SequenceDataPtr> TextParser::TextDataChunk::GetSequence(size_t sequenceId)
 {
     assert(m_sequenceRequestCount < m_sequencePtrMap.size());
     auto it = m_sequencePtrMap.find(sequenceId);
