@@ -1,4 +1,4 @@
-\\storage.gcr.philly.selfhost.corp.microsoft.com\public\CNTKTestData\Image\tiny\black.jpg	0
-\\storage.gcr.philly.selfhost.corp.microsoft.com\public\CNTKTestData\Image\tiny\blue.jpg	1
-\\storage.gcr.philly.selfhost.corp.microsoft.com\public\CNTKTestData\Image\tiny\green.jpg	2
-\\storage.gcr.philly.selfhost.corp.microsoft.com\public\CNTKTestData\Image\tiny\red.jpg	3
+images\black.jpg	0
+images\blue.jpg	1
+images\green.jpg	2
+images\red.jpg	3
