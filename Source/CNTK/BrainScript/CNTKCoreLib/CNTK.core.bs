@@ -123,9 +123,15 @@ BS = [
 Constants = [
     Zero = Constant (0)
     One  = Constant (1)
-    ZeroesLike (x) = CastAs (x, Zero) // read: Cast<x>(Zero)
-    OnesLike (x)   = CastAs (x, One)
+    # BUGBUG: ZeroesLike() would recreate the full dimension of x. Well, no need if it considers broadcasting. But still wrong if we want to broadcast a vector of different tensor dim.
+    #ZeroesLike (x) = CastAs (x, Zero) // read: Cast<x>(Zero)
+    #OnesLike (x)   = CastAs (x, One)
+    # CastAs() does not implement broadcasting
+    ZeroesLike (x) = RowSlice (0, 1, x) .* Zero  // hack: get one row of input and multiply with zero
+    OnesLike (x) = ZeroesLike (x) + One
     # is this like Sequences.Repeat?
+    True  = 1
+    False = 0
 ]
 
 ##############################################################################
@@ -185,7 +191,7 @@ Sequences = [
     # Skip, SkipWhile--same?
     _WhilePredicate (DelayFn, predicate, input) =
     [
-        whilePredicate = Boolean.And (DelayFn (whilePredicate, initialValue=Boolean.True), predicate)
+        whilePredicate = Boolean.And (DelayFn (whilePredicate, defaultHiddenActivation=Boolean.True), predicate)
     ].whilePredicate
     # TODO: do we need operations from the back?
 
@@ -229,7 +235,7 @@ Sequences = [
 Loop = [
     # get the current iteration index w.r.t a node in a loop, such as a Delay node
     Iteration (x) = [
-      agg = OnesLike (x) + PastValue(agg, initialValue=0) // a recurrence that sums up ones
+      agg = OnesLike (x) + PastValue(agg, defaultHiddenActivation=0) // a recurrence that sums up ones
     ].agg
 
     # get the total length of a sequence
@@ -242,7 +248,7 @@ Loop = [
 
     # private helpers
     # flag whether a frame is within the first or last N frames
-    _IsWithin (DelayFn/*PastValue or FutureValue*/, N, x) = DelayFn (Constants.ZeroesLike (x)/*false*/, /*delay=*/N, initialValue=Constants.True)
+    _IsWithin (DelayFn/*PastValue or FutureValue*/, N, x) = DelayFn (0, Constants.ZeroesLike (x)/*false*/, timeStep=N, defaultHiddenActivation=Constants.True)
 
     # opposite of Id's "next"
     Previous (x) = PastValue (0, x, timeStep=1)
@@ -254,9 +260,9 @@ Loop = [
 
 Parameters =
 [
-    WeightParam(outputDim,inputDim) = Parameter(outputDim, inputDim, init='uniform', initValueScale=1, initOnCPUOnly=true, randomSeed=1)
-    BiasParam(dim)                  = ParameterTensor(dim, init='fixedValue', value=0.0)
-    ScalarParam()                   = Parameter(1, 1, init='fixedValue', value=0.0)
+    WeightParam (outputDim, inputDim) = Parameter (outputDim, inputDim, init='uniform', initValueScale=1, initOnCPUOnly=true, randomSeed=1)
+    BiasParam (dim)                   = ParameterTensor (dim, init='fixedValue', value=0.0)
+    ScalarParam()                     = Parameter (1, 1, init='fixedValue', value=0.0)
 
     # route input through an extra scalar weight, for stabilization
     Stabilize (x, enabled=true) =
@@ -278,7 +284,9 @@ RNNs =
     # Projection it enabled by passing different values for outputDim and cellDim.
     # This is the stateless version that takes the previous state as an input.
     # It returns a dictionary with two members: h and c. prevState must be in the same format.
-    LSTMP(inputDim, outputDim, cellDim, x, prevState, enableSelfStabilization=false) =
+    // TODO: Standardize on one parameter order. Is first dimension the output (like in math, strcpy, or functional style) or the input (listing inputs first)?
+    //       If we change this, we'd need to fix the LSTM end-to-end test.
+    LSTMP (inputDim, outputDim, cellDim, x, prevState, enableSelfStabilization=false) =
     [
         _privateInnards = [       // encapsulate the privateInnards workings
             dh = prevState.h // previous values
@@ -287,21 +295,21 @@ RNNs =
             // parameter macros--these carry their own weight matrices
             B() = Parameters.BiasParam(cellDim)
 
-            W(v) = Parameters.WeightParam(cellDim, inputDim)  * Parameters.Stabilize (v, enabled=enableSelfStabilization) // input-to-hidden
-            H(h) = Parameters.WeightParam(cellDim, outputDim) * Parameters.Stabilize (h, enabled=enableSelfStabilization) // hidden-to-hidden
-            C(c) = Parameters.WeightParam(cellDim, 1)        .* Parameters.Stabilize (c, enabled=enableSelfStabilization) // cell-to-hiddden (note: applied elementwise)
+            W(v) = Parameters.WeightParam (cellDim, inputDim)  * Parameters.Stabilize (v, enabled=enableSelfStabilization) // input-to-hidden
+            H(h) = Parameters.WeightParam (cellDim, outputDim) * Parameters.Stabilize (h, enabled=enableSelfStabilization) // hidden-to-hidden
+            C(c) = Parameters.WeightParam (cellDim, 1)        .* Parameters.Stabilize (c, enabled=enableSelfStabilization) // cell-to-hiddden (note: applied elementwise)
 
             // note: the W(x) here are all different, they all come with their own set of weights; same for H(dh), C(dc), and B()
-            it = Sigmoid(W(x) + B() + H(dh) + C(dc))           // input gate(t)
-            bit = it .* Tanh(W(x) + (H(dh) + B()))             // applied to tanh of input network
+            it = Sigmoid (W(x) + B() + H(dh) + C(dc))          // input gate(t)
+            bit = it .* Tanh (W(x) + (H(dh) + B()))            // applied to tanh of input network
 
-            ft = Sigmoid(W(x) + B() + H(dh) + C(dc))           // forget-me-not gate(t)
+            ft = Sigmoid (W(x) + B() + H(dh) + C(dc))          // forget-me-not gate(t)
             bft = ft .* dc                                     // applied to cell(t-1)
 
             ct = bft + bit                                     // c(t) is sum of both
 
-            ot = Sigmoid(W(x) + B() + H(dh) + C(ct))           // output gate(t)
-            ht = ot .* Tanh(ct)                                // applied to tanh(cell(t))
+            ot = Sigmoid (W(x) + B() + H(dh) + C(ct))          // output gate(t)
+            ht = ot .* Tanh (ct)                               // applied to tanh(cell(t))
         ]
 
         // LSTM cell
@@ -321,7 +329,7 @@ RNNs =
     ]
 
     # this implements a recurrent (stateful) LSTM with projection and self-stabilization
-    RecurrentLSTMP(inputDim, outputDim, cellDim, x, enableSelfStabilization=false) =
+    RecurrentLSTMP (inputDim, outputDim, cellDim, x, enableSelfStabilization=false) =
     [
         prevState =  // Loop.Previous (lstmState). BS can't apply Previous() to dictionaries, so expand it manually
         [
@@ -329,7 +337,7 @@ RNNs =
             c = Loop.Previous (lstmState.c);                     // cell(t-1)
         ]
         enableSelfStabilization1 = enableSelfStabilization // TODO: BS syntax needs to allow to say ^.enableSelfStabilization
-        lstmState = LSTMP(inputDim, outputDim, cellDim, x, prevState, enableSelfStabilization=enableSelfStabilization1)
+        lstmState = LSTMP (inputDim, outputDim, cellDim, x, prevState, enableSelfStabilization=enableSelfStabilization1)
     ].lstmState.h // that's the value we return
 ]
 
