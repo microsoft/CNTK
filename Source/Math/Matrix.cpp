@@ -299,7 +299,7 @@ Matrix<ElemType>::Matrix(DEVICEID_TYPE deviceID)
 }
 
 // constructor for Matrix class to wrap an externally managed DenseBaseMatrix
-// DenseBaseMatrix - base matrix for this element
+// baseMatrix - base matrix for this element
 // pArray - pointer to current data array, will replace existing pointer in DenseBaseMatrix if != NULL
 // deviceId - deviceId where the pArray exists
 template <class ElemType>

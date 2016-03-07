@@ -209,6 +209,10 @@ enum MatrixFlags
     matrixFlagSetValueOnDevice = 1 << bitPosSetValueOnDevice, // SetValue() call has a buffer that is already on the device
 };
 
+// -----------------------------------------------------------------------
+// DenseBaseMatrix -- Class which enables a view into data storage.
+// -----------------------------------------------------------------------
+
 template <class ElemType>
 class BaseMatrixView
 {
@@ -218,30 +222,15 @@ public:
         ZeroInit();
     }
 
-    size_t GetNumRows() const
-    {
-        return m_numRows;
-    }
-    size_t GetNumCols() const
-    {
-        return m_numCols;
-    }
-    size_t GetNumElements() const
-    {
-        return m_numRows * m_numCols;
-    }
-    bool IsEmpty() const
-    {
-        return m_numRows == 0 || m_numCols == 0;
-    }
-    size_t NzCount() const
-    {
-        return m_nz;
-    }
-    void SetNzCount(const size_t nz)
-    {
-        m_nz = nz;
-    }
+    size_t GetNumRows() const { return m_numRows; }
+    size_t GetNumCols() const { return m_numCols; }
+    size_t GetNumElements() const { return m_numRows * m_numCols; }
+    bool IsEmpty() const { return m_numRows == 0 || m_numCols == 0; }
+    size_t NzCount() const { return m_nz; }
+    void SetNzCount(const size_t nz) { m_nz = nz; }
+    bool OwnBuffer() const { return !m_externalBuffer; }
+    void SetOwnBuffer(bool own) { m_externalBuffer = !own; }
+
     void VerifySize(size_t rows, size_t cols)
     {
         if (rows != GetNumRows() || cols != GetNumCols())
@@ -249,17 +238,9 @@ public:
                        rows, cols, GetNumRows(), GetNumCols());
     }
 
-    bool OwnBuffer() const
-    {
-        return !m_externalBuffer;
-    }
-    void SetOwnBuffer(bool own)
-    {
-        m_externalBuffer = !own;
-    }
-
 protected:
     void Clear() {}
+    void ShallowCopyFrom(const BaseMatrixView<ElemType>& other) { *this = other; }
 
     void ZeroInit()
     {
@@ -268,18 +249,6 @@ protected:
         m_sliceViewOffset   = 0;
         m_externalBuffer    = false;
         m_nz                = 0;
-	}
-
-    void ShallowCopyFrom(const BaseMatrixView<ElemType>& other)
-    {
-#if 0
-        m_numRows           = other.m_numRows;
-        m_numCols           = other.m_numCols;
-        m_sliceViewOffset   = other.m_sliceViewOffset;
-        m_externalBuffer    = other.m_externalBuffer;
-        m_nz                = other.m_nz;
-#endif
-        *this = other;
     }
 
 protected:
@@ -289,8 +258,12 @@ protected:
     bool m_externalBuffer; // is the buffer used by this matrix,
     size_t m_nz;                           // Number of non-zero elements for sparse matrices (unused in other formats)
     // size_t m_colStride; // really need this
-    // size_t m_offset // Is this not just m_sliceOffsetView fseide?
+    // size_t m_offset 
 };
+
+// -----------------------------------------------------------------------
+// BaseMatrixStorage -- Class that encompases all storage for the matrix.
+// -----------------------------------------------------------------------
 
 template <class ElemType>
 class BaseMatrixStorage
@@ -303,55 +276,23 @@ public:
         m_computeDevice = CPUDEVICE;
     }
 
-    MatrixFormat GetFormat() const
-    {
-        return m_format;
-    }
-    void SetFormat(MatrixFormat format)
-    {
-        m_format = format;
-    }
-    ElemType* GetArray()
-    {
-        return m_pArray;
-    }
-    void SetArray(ElemType* parray)
-    {
-        m_pArray = parray;
-    }
-    virtual DEVICEID_TYPE GetComputeDeviceId() const
-    {
-        return m_computeDevice;
-    }
-    void SetComputeDeviceId(const DEVICEID_TYPE computeId) const
-    {
-        m_computeDevice = computeId;
-    }
-    size_t GetSizeAllocated() const
-    {
-        return m_elemSizeAllocated;
-    }
+    MatrixFormat GetFormat() const { return m_format; }
+    void SetFormat(MatrixFormat format) { m_format = format; }
+    ElemType* GetArray() { return m_pArray; }
+    void SetArray(ElemType* parray) { m_pArray = parray; }
+    virtual DEVICEID_TYPE GetComputeDeviceId() const { return m_computeDevice; }
+    void SetComputeDeviceId(const DEVICEID_TYPE computeId) const { m_computeDevice = computeId; }
+    size_t GetSizeAllocated() const { return m_elemSizeAllocated; }
 
 protected:
     void Clear() {}
+    // copy all metadata (but not content that pArray points to)
+    void ShallowCopyFrom(const BaseMatrixStorage& other) { *this = other; }
 
     void ZeroInit()
     {
         m_elemSizeAllocated = 0;
         m_pArray            = nullptr;
-    }
-
-    // copy all metadata (but not content taht pArray points to)
-    void ShallowCopyFrom(const BaseMatrixStorage& other)
-    {
-#if 0
-        m_format            = other.m_format;
-        m_computeDevice     = other.m_computeDevice;
-
-        m_elemSizeAllocated = other.m_elemSizeAllocated;
-        m_pArray            = other.m_pArray;
-#endif
-        *this = other;
     }
 
 protected:
@@ -363,7 +304,9 @@ protected:
 };
 
 // -----------------------------------------------------------------------
-// DenseBaseMatrix -- base class for all matrix types (CPU, GPU) x (dense, sparse)
+// DenseBaseMatrix -- base class for dense matrices (CPU, GPU)
+// Eventually this should be fixed so that DenseBaseMatrix extends BaseMatrixView,
+// and owns a shared_ptr<BaseMatrixStorage>, like the sparse version.
 // -----------------------------------------------------------------------
 
 template <class ElemType>
@@ -371,8 +314,8 @@ class DenseBaseMatrix : public BaseMatrixStorage<ElemType>, public BaseMatrixVie
 {
 public:
     DenseBaseMatrix() : BaseMatrixStorage<ElemType>(), BaseMatrixView<ElemType>() {}
-	DenseBaseMatrix(const DenseBaseMatrix&) = delete; // Added as per fseide direction to protect against arbitrary copies.
-	//DenseBaseMatrix& operator=(const DenseBaseMatrix&) = delete; // This currently breaks everything, as this is a deep copy.
+    DenseBaseMatrix(const DenseBaseMatrix&) = delete; // Protect against deep copies.
+    //DenseBaseMatrix& operator=(const DenseBaseMatrix&) = delete; // This currently breaks everything, as this is a deep copy.
 
 protected:
     void Clear() 

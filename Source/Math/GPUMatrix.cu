@@ -529,7 +529,7 @@ void GPUMatrix<ElemType>::Clear()
             m_elemSizeAllocated = 0;
         }
     }
-    DenseBaseMatrix<ElemType>::Clear();
+    Base::Clear();
 
     ZeroInit(m_computeDevice);
 }

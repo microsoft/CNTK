@@ -27,14 +27,14 @@ double logadd(double x, double y);
 template <class ElemType>
 class MATH_API CPUMatrix : public DenseBaseMatrix<ElemType>
 {
-    typedef DenseBaseMatrix<ElemType> B;
-    using B::m_numRows;
-    using B::m_numCols;
-    using B::m_pArray;
-    using B::m_computeDevice;
-    using B::m_elemSizeAllocated;
-    using B::m_externalBuffer;
-    using B::m_format;
+    typedef DenseBaseMatrix<ElemType> Base;
+    using Base::m_numRows;
+    using Base::m_numCols;
+    using Base::m_pArray;
+    using Base::m_computeDevice;
+    using Base::m_elemSizeAllocated;
+    using Base::m_externalBuffer;
+    using Base::m_format;
 public:
     CPUMatrix();
     CPUMatrix(const size_t numRows, const size_t numCols);
@@ -47,12 +47,12 @@ public:
     ~CPUMatrix();
 
 public:
-    using B::OwnBuffer;
-    using B::GetNumElements;
-    using B::IsEmpty;
-    using B::GetNumRows;
-    using B::GetNumCols;
-    using B::SetOwnBuffer;
+    using Base::OwnBuffer;
+    using Base::GetNumElements;
+    using Base::IsEmpty;
+    using Base::GetNumRows;
+    using Base::GetNumCols;
+    using Base::SetOwnBuffer;
 
     size_t BufferSize() const
     {
