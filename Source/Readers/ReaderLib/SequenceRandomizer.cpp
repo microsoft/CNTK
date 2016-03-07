@@ -218,6 +218,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         m_currentSequencePosition = 0;
         m_currentChunkPosition = 0;
+        m_currentFramePosition = 0;
     }
 
     void SequenceRandomizer::SetSequencePositionTo(size_t offset, size_t sweep)
