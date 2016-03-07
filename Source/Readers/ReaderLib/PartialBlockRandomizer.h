@@ -9,48 +9,16 @@
 
 #include "Transformer.h"
 #include "DataDeserializer.h"
+#include "ChunkRandomizer.h"
+#include "SequenceRandomizer.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
-
-struct ClosedOpenInterval
-{
-    size_t m_begin;
-    size_t m_end;
-};
-
-struct RandomizedChunk
-{
-    size_t m_chunkId;
-    const ChunkDescription* m_original;
-    size_t m_samplePositionStart;
-    size_t m_sequencePositionStart;
-    ClosedOpenInterval m_randomizationWindow;
-
-    size_t globalte() const
-    {
-        return m_original->numberOfSamples + m_samplePositionStart;
-    }
-
-    size_t PositionEnd() const
-    {
-        return m_original->numberOfSequences + m_sequencePositionStart;
-    }
-};
-
-struct RandomizedSequenceDescription
-{
-    size_t m_id;
-    size_t m_numberOfSamples;
-    const RandomizedChunk* m_chunk;
-};
-
-class SequenceRandomizer;
 
 // The class represents a randomizer that uses a partial timeline for randomization.
 class PartialBlockRandomizer : public Transformer
 {
 public:
-    enum class DistributionMode 
+    enum class DistributionMode
     {
         chunk,
         sequence
@@ -61,8 +29,7 @@ public:
         size_t randomizationRangeInSamples,
         IDataDeserializerPtr deserializer,
         DistributionMode distributionMode,
-        bool useLegacyRandomization,
-        IMetaDataPtr metadata);
+        bool useLegacyRandomization);
 
     virtual ~PartialBlockRandomizer()
     {
@@ -77,42 +44,29 @@ public:
     }
 
 private:
+    void RetrieveDataChunks();
+    bool GetNextSequenceDescriptions(size_t sampleCount, std::vector<RandomizedSequenceDescription>& result);
+    void PrepareNewSweepIfNeeded(size_t samplePosition);
+
     size_t m_globalSamplePosition;
     EpochConfiguration m_config;
-    ChunkDescriptions m_originalChunks;
+    size_t m_epochSize;
 
     size_t m_sweep;
     size_t m_sweepStartInSamples;
 
-    friend class SequenceRandomizer;
-    std::shared_ptr<SequenceRandomizer> m_sequenceRandomizer;
-    std::map<size_t, ChunkPtr> m_chunks;
     IDataDeserializerPtr m_deserializer;
-    std::vector<RandomizedChunk> m_randomizedChunks;    // (includes a sentinel)
+    ChunkRandomizerPtr m_chunkRandomizer;
+    SequenceRandomizerPtr m_sequenceRandomizer;
     std::vector<StreamDescriptionPtr> m_streams;
-    IMetaDataPtr m_metaData;
+
+    std::map<size_t, ChunkPtr> m_chunks;
+    size_t m_lastSeenChunk;
 
     // General configuration
-    bool m_useLegacyRandomization;
     int m_verbosity;
-    size_t m_randomizationRangeInSamples; // full window
     DistributionMode m_distributionMode;
     size_t m_sweepTotalNumberOfSamples;
-
-
-    bool GetNextSequenceDescriptions(size_t sampleCount, std::vector<RandomizedSequenceDescription>& result);
-
-    // Per-epoch configuration
-    size_t m_epochSize;
-    size_t m_samplePositionInEpoch;
-
-    // Per-randomization-sweep information
-    size_t m_sequencePositionInSweep;
-
-    void RandomizeChunks();
-
-    void RandomizeForGlobalSamplePosition(size_t samplePosition);
-    void PrepareNewSweepIfNeeded(size_t samplePosition);
 };
 
 }}}
