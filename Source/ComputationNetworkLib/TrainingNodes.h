@@ -85,7 +85,7 @@ public:
         if (flags & CopyNodeFlags::copyNodeValue)
         {
             auto node = dynamic_pointer_cast<SquareErrorNode<ElemType>>(nodeP);
-            *node->m_leftMinusRight = *m_leftMinusRight;
+            node->m_leftMinusRight->SetValue(*m_leftMinusRight);
         }
     }
 
@@ -214,8 +214,8 @@ public:
         if (flags & CopyNodeFlags::copyNodeValue)
         {
             auto node = dynamic_pointer_cast<CrossEntropyWithSoftmaxNode<ElemType>>(nodeP);
-            *node->m_logSoftmaxOfRight = *m_logSoftmaxOfRight;
-            *node->m_softmaxOfRight = *m_softmaxOfRight;
+            node->m_logSoftmaxOfRight->SetValue(*m_logSoftmaxOfRight);
+            node->m_softmaxOfRight->SetValue(*m_softmaxOfRight);
         }
     }
 
@@ -325,8 +325,8 @@ public:
         if (flags & CopyNodeFlags::copyNodeValue)
         {
             auto node = dynamic_pointer_cast<CrossEntropyNode<ElemType>>(nodeP);
-            *node->m_logOfRight = *m_logOfRight;
-            *node->m_leftDivRight = *m_leftDivRight;
+            node->m_logOfRight->SetValue(*m_logOfRight);
+            node->m_leftDivRight->SetValue(*m_leftDivRight);
         }
     }
 
@@ -430,7 +430,7 @@ public:
         if (flags & CopyNodeFlags::copyNodeValue)
         {
             auto node = dynamic_pointer_cast<MatrixL1RegNode<ElemType>>(nodeP);
-            *node->m_gradientOfL1Norm = *m_gradientOfL1Norm;
+            node->m_gradientOfL1Norm->SetValue(*m_gradientOfL1Norm);
         }
     }
 
@@ -855,7 +855,7 @@ public:
         assert(m_nbrCls == Input(CLASSPROBINDATA)->GetSampleMatrixNumRows());
 
         // compute the class posteriors
-        m_clsLogSoftmax = Input(CLASSPROBINDATA)->Value();
+        m_clsLogSoftmax.SetValue(Input(CLASSPROBINDATA)->Value());
         m_clsLogSoftmax.InplaceLogSoftmax(true);   // log
         m_clsSoftmax.AssignExpOf(m_clsLogSoftmax); // non-log
 
@@ -1325,7 +1325,7 @@ public:
         const Matrix<ElemType>& classOneProbabilities = Input(1)->ValueFor(fr);
         Matrix<ElemType>& classZeroLabels = *m_classZeroLabels;
 
-        Matrix<ElemType> ones = ConstOnes(classOneLabels.GetNumRows(), classOneLabels.GetNumCols(), classOneLabels.GetDeviceId());
+        Matrix<ElemType> ones = ConstOnes(classOneLabels.GetNumRows(), classOneLabels.GetNumCols(), classOneLabels.GetDeviceId()).DeepClone();
 
         // compute the indices for the class 0 indices
         classZeroLabels.AssignDifferenceOf(ones, classOneLabels);
@@ -1404,9 +1404,9 @@ public:
         if (flags & CopyNodeFlags::copyNodeValue)
         {
             auto node = dynamic_pointer_cast<LogisticNode<ElemType>>(nodeP);
-            *node->m_classZeroLabels = *m_classZeroLabels;
-            *node->m_result = *m_result;
-            *node->m_temp = *m_temp;
+            node->m_classZeroLabels->SetValue(*m_classZeroLabels);
+            node->m_result->SetValue(*m_result);
+            node->m_temp->SetValue(*m_temp);
         }
     }
 
