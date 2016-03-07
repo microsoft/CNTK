@@ -701,8 +701,8 @@ public:
     virtual void /*ComputationNodeNonLooping::*/ ForwardPropNonLooping() override
     {
         Value().VerifySize(1, 1);
-        Input(0)->Value().VerifySize(1, 1);
-        Value().SetValue(Input(0)->Value());
+        assert(Input(0)->Value().GetNumRows() == 1);
+        Value().SetValue(Input(0)->Value().SumOfElements());
 #if NANCHECK
         Value().HasNan("DummyCriterionNode");
 #endif
@@ -715,15 +715,17 @@ public:
 
         if (Input(0)->OperationName() != L"InputValue")
             LogicError("DummyCriterionNode criterion requires the first input to be computed objectives.");
-        if (Input(0)->OperationName() != L"InputValue")
-            LogicError("DummyCriterionNode criterion requires the first input to be computed derivatives.");
+        if (Input(1)->OperationName() != L"InputValue")
+            LogicError("DummyCriterionNode criterion requires the second input to be computed derivatives.");
         if (isFinalValidationPass)
         {
-            if (Input(0)->GetSampleMatrixNumRows() != 1)
-                LogicError("DummyCriterionNode criterion requires the first input to have dimension 1.");
-            if (Input(0)->GetSampleMatrixNumRows() == 0 || Input(1)->GetSampleMatrixNumRows() == 0 || Input(2)->GetSampleMatrixNumRows() == 0)
+            if (Input(0)->GetSampleMatrixNumRows() == 0
+                || Input(1)->GetSampleMatrixNumRows() == 0
+                || Input(2)->GetSampleMatrixNumRows() == 0)
                 LogicError("DummyCriterionNode operation: one of the operands has 0 elements.");
-            if (Input(1)->GetSampleMatrixNumRows() != Input(2)->GetSampleMatrixNumRows())
+            if (Input(1)->GetSampleMatrixNumRows() != Input(2)->GetSampleMatrixNumRows()
+                || Input(0)->GetSampleMatrixNumCols() != Input(2)->GetSampleMatrixNumCols()
+                || Input(1)->GetSampleMatrixNumCols() != Input(2)->GetSampleMatrixNumCols())
                 LogicError("The Matrix dimension in the DummyCriterionNode operation does not match.");
         }
 
