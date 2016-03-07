@@ -13,6 +13,8 @@
 #include "DataReader.h"
 #include <random>
 
+#include <omp.h>
+
 namespace Microsoft { namespace MSR { namespace CNTK {
 
 static inline size_t rand(const size_t begin, const size_t end)
@@ -285,6 +287,8 @@ BlockRandomizer::BlockRandomizer(int verbosity, size_t randomizationRangeInSampl
 
     // Frame mode to the randomizer just means there are only single-sample sequences
     m_frameMode = (maxNumberOfSamples == 1);
+
+    m_streams = m_deserializer->GetStreamDescriptions();
 }
 
 void BlockRandomizer::Initialize(TransformerPtr next, const ConfigParameters& readerConfig)
@@ -354,7 +358,8 @@ bool BlockRandomizer::GetNextSequenceDescriptions(size_t sampleCount, SequenceDe
         m_sequencePositionInSweep++;
     }
 
-    assert(m_samplePositionInEpoch == nextSamplePositionInEpoch);    
+    // TODO: fix me.
+    //assert(m_samplePositionInEpoch == nextSamplePositionInEpoch);    
 
     return m_epochSize <= m_samplePositionInEpoch;
 }
@@ -379,14 +384,19 @@ Sequences BlockRandomizer::GetNextSequences(size_t sampleCount)
     // TODO: Currenlty simply releasing the chunk. Should preserve them for complete window and release only when they are not needed.
     // For current implementation of image reader it does no matter because chunk = image.
     // We have to reassamble the exposed result from sequences drawn from diffrent chunks.
-    result.m_data.resize(sequenceDescriptions.size());
+    result.m_data.resize(m_streams.size(), std::vector<SequenceDataPtr>(sequenceDescriptions.size()));
 
     // TODO: Should prefetching be done on a single thread?
 #pragma omp parallel for ordered schedule(dynamic)
     for (int i = 0; i < sequenceDescriptions.size(); ++i)
     {
         ChunkPtr chunk = m_deserializer->GetChunk(sequenceDescriptions[i]->m_chunkId);
-        result.m_data[i] = chunk->GetSequence(sequenceDescriptions[i]->m_id);
+        auto sequence = chunk->GetSequence(sequenceDescriptions[i]->m_id);
+
+        for (int j = 0; j < m_streams.size(); ++j)
+        {
+            result.m_data[j][i] = sequence[j];
+        }
     }
 
     return result;

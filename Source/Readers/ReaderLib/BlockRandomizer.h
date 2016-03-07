@@ -85,6 +85,7 @@ private:
     std::vector<RandomizedChunk> m_randomizedChunks;    // (includes a sentinel)
     std::vector<size_t> m_sequencePositionToChunkIndex; // TODO find on m_randomizedChunks instead?
     std::vector<SequenceDescription> m_randomTimeline;
+    std::vector<StreamDescriptionPtr> m_streams;
 
     // Check that timeline has only valid sequences of non-zero length
     // with incrementing IDs and non-decreasing chunk identifiers.
