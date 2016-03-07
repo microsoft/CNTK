@@ -29,30 +29,9 @@ public:
     // Get sequences by specified ids. Order of returned sequences corresponds to the order of provided ids.
     virtual ChunkPtr GetChunk(size_t chunkId) override;
 
-    virtual ChunkDescriptions GetChunkDescriptions() override 
-    {
-        throw std::logic_error("Not implemented");
-    }
-
-    virtual void GetSequencesForChunk(size_t, std::vector<SequenceDescription>&)
-    {
-        throw std::logic_error("Not implemented");
-    }
-
-    virtual void GetSequenceDescriptionByKey(const KeyType&, SequenceDescription&)
-    {
-        throw std::logic_error("Not implemented");
-    }
-
-    virtual size_t GetTotalNumberOfSamples()
-    {
-        throw std::logic_error("Not implemented");
-    }
-
-    virtual size_t GetTotalNumberOfSequences()
-    {
-        throw std::logic_error("Not implemented");
-    }
+    virtual ChunkDescriptions GetChunkDescriptions() override;
+    virtual void GetSequencesForChunk(size_t, std::vector<SequenceDescription>&);
+    virtual void GetSequenceDescriptionByKey(const KeyType&, SequenceDescription&);
 
 protected:
     void FillSequenceDescriptions(SequenceDescriptions& timeline) const override;

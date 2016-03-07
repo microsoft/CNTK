@@ -37,8 +37,6 @@ public:
 
     virtual ChunkDescriptions GetChunkDescriptions() override;
     virtual void GetSequencesForChunk(size_t chunkId, std::vector<SequenceDescription>& result) override;
-    virtual size_t GetTotalNumberOfSamples() override;
-    virtual size_t GetTotalNumberOfSequences() override;
 
     // Retrieves description of a single sequence given its key.
     virtual void GetSequenceDescriptionByKey(const KeyType& key, SequenceDescription& result) override;

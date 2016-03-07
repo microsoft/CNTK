@@ -117,25 +117,6 @@ struct ChunkDescription
 typedef std::shared_ptr<ChunkDescription> ChunkDescriptionPtr;
 typedef std::vector<ChunkDescriptionPtr> ChunkDescriptions;
 
-class IMetaData
-{
-public:
-    // Describes streams this data deserializer can produce. Streams correspond to network inputs.
-    // TODO: Introduce the interface to reduce the size of the sequences available at any point in time (chunks/sequences).
-    virtual std::vector<StreamDescriptionPtr> GetStreamDescriptions() const = 0;
-    virtual ChunkDescriptions GetChunkDescriptions() = 0;
-
-    virtual void GetSequencesForChunk(size_t chunkId, std::vector<SequenceDescription>& descriptions) = 0;
-    virtual void GetSequenceDescriptionByKey(const KeyType& key, SequenceDescription& description) = 0;
-
-    virtual size_t GetTotalNumberOfSamples() = 0;
-    virtual size_t GetTotalNumberOfSequences() = 0;
-
-    virtual ~IMetaData() {};
-};
-
-typedef std::shared_ptr<IMetaData> IMetaDataPtr;
-
 //////////////////////////////////////////////////////////////////////////////////////////////////
 // Interface all data deserializers should implement.
 // Data deserializers are intimately familiar with a particular input formats and responsible for bringing
@@ -144,9 +125,15 @@ typedef std::shared_ptr<IMetaData> IMetaDataPtr;
 // streams. Examples of data include image data deserializer or htkmlf data deserializer.
 // TODO: This interface will become ABI and deserializers can be implemented in different languages, i.e. Python.
 //////////////////////////////////////////////////////////////////////////////////////////////////
-class IDataDeserializer : public IMetaData
+class IDataDeserializer
 {
 public:
+    virtual std::vector<StreamDescriptionPtr> GetStreamDescriptions() const = 0;
+
+    virtual ChunkDescriptions GetChunkDescriptions() = 0;
+    virtual void GetSequencesForChunk(size_t chunkId, std::vector<SequenceDescription>& descriptions) = 0;
+    virtual void GetSequenceDescriptionByKey(const KeyType& key, SequenceDescription& description) = 0;
+
     virtual ChunkPtr GetChunk(size_t chunkId) = 0;
     virtual ~IDataDeserializer() {};
 };

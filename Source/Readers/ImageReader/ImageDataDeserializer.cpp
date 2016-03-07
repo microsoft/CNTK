@@ -135,6 +135,32 @@ ImageDataDeserializer::ImageDataDeserializer(const ConfigParameters& config)
     CreateSequenceDescriptions(configHelper.GetMapPath(), labelDimension);
 }
 
+ChunkDescriptions ImageDataDeserializer::GetChunkDescriptions()
+{
+    ChunkDescriptions result;
+    for (auto const& s : m_imageSequences)
+    {
+        ChunkDescriptionPtr chunk = std::make_shared<ChunkDescription>();
+        chunk->id = s.m_chunkId;
+        chunk->numberOfSamples = 1;
+        chunk->numberOfSequences = 1;
+        result.push_back(chunk);
+    }
+
+    return result;
+}
+
+void ImageDataDeserializer::GetSequencesForChunk(size_t chunkId, std::vector<SequenceDescription>& result)
+{
+    // Currently a single sequence per chunk.
+    result.push_back(m_imageSequences[chunkId]);
+}
+
+void ImageDataDeserializer::GetSequenceDescriptionByKey(const KeyType& key, SequenceDescription& result)
+{
+    result = m_imageSequences[key.major];
+}
+
 void ImageDataDeserializer::CreateSequenceDescriptions(std::string mapPath, size_t labelDimension)
 {
     UNUSED(labelDimension);
@@ -166,6 +192,8 @@ void ImageDataDeserializer::CreateSequenceDescriptions(std::string mapPath, size
         description.m_chunkId = lineIndex;
         description.m_path = imagePath;
         description.m_classId = std::stoi(classId);
+        description.m_key.major = description.m_id;
+        description.m_key.minor = 0;
 
         if (description.m_classId >= labelDimension)
         {

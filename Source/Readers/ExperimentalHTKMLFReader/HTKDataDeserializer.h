@@ -31,9 +31,6 @@ public:
     virtual ChunkPtr GetChunk(size_t chunkId) override;
     virtual void GetSequencesForChunk(size_t chunkId, std::vector<SequenceDescription>& result) override;
     virtual ChunkDescriptions GetChunkDescriptions() override;
-   
-    virtual size_t GetTotalNumberOfSamples() override;
-    virtual size_t GetTotalNumberOfSequences() override;
 
 private:
     DISABLE_COPY_AND_MOVE(HTKDataDeserializer);

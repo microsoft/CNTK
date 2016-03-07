@@ -33,8 +33,6 @@ public:
 
     virtual ChunkDescriptions GetChunkDescriptions() override;
     virtual void GetSequencesForChunk(size_t chunkId, std::vector<SequenceDescription>& s) override;
-    virtual size_t GetTotalNumberOfSamples() override;
-    virtual size_t GetTotalNumberOfSequences() override;
 
 private:
     DISABLE_COPY_AND_MOVE(MLFDataDeserializer);

@@ -130,7 +130,7 @@ void Bundler::GetSequencesForChunk(size_t chunkId, std::vector<SequenceDescripti
     }
     std::swap(sequences, result);
 }
-
+/*
 size_t Bundler::GetTotalNumberOfSamples()
 {
     return m_driver->GetTotalNumberOfSamples();
@@ -139,7 +139,7 @@ size_t Bundler::GetTotalNumberOfSamples()
 size_t Bundler::GetTotalNumberOfSequences()
 {
     return m_driver->GetTotalNumberOfSequences();
-}
+}*/
 
 // Represents a chunk that has poibters to the underlying deserialzer chunks.
 class BundlingChunk : public Chunk
