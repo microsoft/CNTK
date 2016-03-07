@@ -64,7 +64,7 @@ private:
         size_t m_sequenceRequestCount;
     };
 
-
+    typedef std::shared_ptr<TextDataChunk> TextChunkPtr;
 
     enum TraceLevel {
         Error = 0,
@@ -76,8 +76,6 @@ private:
         StorageType m_type;
         size_t m_sampleDimension;
     };
-
-    static const auto BUFFER_SIZE = 256 * 1024;
 
     const std::wstring m_filename;
     FILE* m_file = nullptr;
@@ -99,7 +97,8 @@ private:
 
     char* m_scratch; // local buffer for string parsing
 
-    unsigned int m_chunkCacheSize = 10; // number of chunks to keep in the memory
+    int64_t m_chunkSize = 0;
+    unsigned int m_chunkCacheSize = 0; // number of chunks to keep in the memory
     unsigned int m_traceLevel = 0;
     unsigned int m_numAllowedErrors = 0;
     bool m_skipSequenceIds;
@@ -108,7 +107,7 @@ private:
     std::vector<StreamDescriptionPtr> m_streams;
 
     // A map of currently loaded chunks
-    std::map<size_t, ChunkPtr> m_chunkCache;
+    std::map<size_t, TextChunkPtr> m_chunkCache;
 
     // throws runtime exception when number of parsing erros is 
     // greater than the specified threshold
@@ -144,13 +143,15 @@ private:
 
     Sequence LoadSequence(bool verifyId, const SequenceDescriptor& descriptor);
 
+    TextParser(const std::wstring& filename, const vector<StreamDescriptor>& streams);
+
     TextParser(const TextParser&) = delete;
     TextParser& operator=(const TextParser&) = delete;
 protected:
     void FillSequenceDescriptions(SequenceDescriptions& timeline) const override;
 
 public:
-    TextParser(const std::wstring& filename, const vector<StreamDescriptor>& streams);
+    TextParser(const TextConfigHelper& helper);
 
     ~TextParser();
 
@@ -171,6 +172,8 @@ public:
     void SetMaxAllowedErrors(unsigned int maxErrors);
 
     void SetSkipSequenceIds(bool skip);
+
+    void SetChunkSize(int64_t size);
 
     void SetChunkCacheSize(unsigned int size);
 };

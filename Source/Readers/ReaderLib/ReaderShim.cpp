@@ -143,7 +143,6 @@ bool ReaderShim<ElemType>::GetMinibatch(StreamMinibatchInputs& matrices)
             const auto& stream = minibatch.m_data[streamId];
             m_numParallelSequences = stream->m_layout->GetNumParallelSequences();
             size_t rowNumber = m_streams[streamId]->m_sampleLayout->GetNumElements();
-            
             auto& layout = matrices.GetInputLayout<ElemType>(mx.first);
             layout.CopyFrom(stream->m_layout);
 
