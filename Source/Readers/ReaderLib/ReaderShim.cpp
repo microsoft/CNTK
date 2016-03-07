@@ -144,12 +144,8 @@ bool ReaderShim<ElemType>::GetMinibatch(StreamMinibatchInputs& matrices)
             const auto& stream = minibatch.m_data[streamId];
             m_layout = stream->m_layout;
             size_t rowNumber = m_streams[streamId]->m_sampleLayout->GetNumElements();
-
-            auto data = reinterpret_cast<const ElemType*>(stream->m_data);
-            mx.second->SetValue(rowNumber, columnNumber, mx.second->GetDeviceId(), const_cast<ElemType*>(data), matrixFlagNormal);
-            FillMatrixFromStream(m_streams[streamId]->m_storageType, GetInputMatrix<ElemType>(mx.first), rowNumber, stream);
-            auto* data = reinterpret_cast<const ElemType*>(stream->m_data);
-            matrices.GetInputMatrix<ElemType>(mx.first).SetValue(rowNumber, columnNumber, mx.second->GetDeviceId(), const_cast<ElemType*>(data), matrixFlagNormal);
+            auto& matrix = matrices.GetInputMatrix<ElemType>(mx.first);
+            FillMatrixFromStream(m_streams[streamId]->m_storageType, &matrix, rowNumber, stream);
         }
     }
 
