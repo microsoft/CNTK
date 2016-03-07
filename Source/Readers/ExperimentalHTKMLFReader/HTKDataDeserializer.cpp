@@ -197,16 +197,6 @@ void HTKDataDeserializer::GetSequencesForChunk(size_t chunkId, std::vector<Seque
     }
 }
 
-size_t HTKDataDeserializer::GetTotalNumberOfSamples()
-{
-    return m_totalNumberOfFrames;
-}
-
-size_t HTKDataDeserializer::GetTotalNumberOfSequences()
-{
-    return m_totalNumberOfFrames;
-}
-
 std::vector<StreamDescriptionPtr> HTKDataDeserializer::GetStreamDescriptions() const
 {
     return m_streams;

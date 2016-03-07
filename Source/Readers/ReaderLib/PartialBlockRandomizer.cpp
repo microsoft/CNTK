@@ -36,12 +36,17 @@ PartialBlockRandomizer::PartialBlockRandomizer(
 
     m_streams = m_deserializer->GetStreamDescriptions();
     m_sequenceRandomizer = std::make_shared<SequenceRandomizer>(m_deserializer, m_chunkRandomizer);
+
+    m_sweepTotalNumberOfSamples = 0;
+    for (auto const & chunk : m_deserializer->GetChunkDescriptions())
+    {
+        m_sweepTotalNumberOfSamples += chunk->numberOfSamples;
+    }
 }
 
 void PartialBlockRandomizer::StartEpoch(const EpochConfiguration& config)
 {
     m_config = config;
-    m_sweepTotalNumberOfSamples = m_deserializer->GetTotalNumberOfSamples();
     if (config.m_totalEpochSizeInSamples == requestDataSize)
     {
         m_epochSize = m_sweepTotalNumberOfSamples;

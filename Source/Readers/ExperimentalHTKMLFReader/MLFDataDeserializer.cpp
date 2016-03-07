@@ -200,17 +200,6 @@ void MLFDataDeserializer::GetSequencesForChunk(size_t, std::vector<SequenceDescr
     }
 }
 
-size_t MLFDataDeserializer::GetTotalNumberOfSamples()
-{
-    assert(m_sequences.size() == m_totalNumberOfFrames);
-    return m_totalNumberOfFrames;
-}
-
-size_t MLFDataDeserializer::GetTotalNumberOfSequences()
-{
-    return MLFDataDeserializer::GetTotalNumberOfSamples();
-}
-
 std::vector<StreamDescriptionPtr> MLFDataDeserializer::GetStreamDescriptions() const
 {
     return m_streams;

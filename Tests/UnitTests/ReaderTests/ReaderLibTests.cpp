@@ -125,16 +125,6 @@ public:
         throw std::logic_error("Not implemented");
     }
 
-    virtual size_t GetTotalNumberOfSamples() override
-    {
-        throw std::logic_error("Not implemented");
-    }
-
-    virtual size_t GetTotalNumberOfSequences() override
-    {
-        throw std::logic_error("Not implemented");
-    }
-
     MockDeserializer(const MockDeserializer&) = delete;
     MockDeserializer& operator=(const MockDeserializer&) = delete;
 };
