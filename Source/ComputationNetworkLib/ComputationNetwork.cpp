@@ -478,6 +478,27 @@ template <class ElemType>
     }
 }
 
+template <class ElemType>
+/*static*/ void ComputationNetwork::SetBatchNormalizationTimeConstant(ComputationNetworkPtr net, const ComputationNodeBasePtr& criterionNode, const double normalizationTimeConstant, double& prevNormalizationTimeConstant)
+{
+    if (normalizationTimeConstant != prevNormalizationTimeConstant && normalizationTimeConstant != numeric_limits<double>::infinity())
+    {
+        fprintf(stderr, "Switching batch normalization time constant to %.8g.\n", normalizationTimeConstant);
+        // TODO: Change this to use an interface that is independent of <ElemType>.
+        list<ComputationNodeBasePtr> batchNormalizationNodes = net->GetNodesWithType(OperationNameOf(BatchNormalizationNode), criterionNode);
+        if (batchNormalizationNodes.size() == 0 && normalizationTimeConstant != numeric_limits<double>::infinity())
+            fprintf(stderr, "WARNING: there is no batch normalization node.\n");
+        else
+            for (auto nodeIter = batchNormalizationNodes.begin(); nodeIter != batchNormalizationNodes.end(); nodeIter++)
+            {
+                auto node = dynamic_pointer_cast<BatchNormalizationNode<ElemType>>(*nodeIter);
+                node->SetNormalizationTimeConstant(normalizationTimeConstant);
+            }
+
+        prevNormalizationTimeConstant = normalizationTimeConstant;
+    }
+}
+
 //set sequence training parameters, e.g. smoothing weight, frame drop threshhold
 template <class ElemType>
 void ComputationNetwork::SetSeqParam(ComputationNetworkPtr net,
@@ -1331,6 +1352,7 @@ template void ComputationNetwork::Read<float>(const wstring& fileName);
 template void ComputationNetwork::ReadPersistableParameters<float>(File& fstream, bool create);
 template void ComputationNetwork::PerformSVDecomposition<float>(const map<wstring, float>& SVDConfig, size_t alignedsize);
 template /*static*/ void ComputationNetwork::SetDropoutRate<float>(ComputationNetworkPtr net, const ComputationNodeBasePtr& criterionNode, const double dropoutRate, double& prevDropoutRate, unsigned long& dropOutSeed);
+template /*static*/ void ComputationNetwork::SetBatchNormalizationTimeConstant<float>(ComputationNetworkPtr net, const ComputationNodeBasePtr& criterionNode, const double normalizationTimeConstant, double& prevNormalizationTimeConstant);
 template void ComputationNetwork::SetSeqParam<float>(ComputationNetworkPtr net, const ComputationNodeBasePtr criterionNode, const double& hsmoothingWeight, const double& frameDropThresh, const bool& doreferencealign,
                                                      const double& amf, const double& lmf, const double& wp, const double& bMMIfactor, const bool& sMBR);
 template void ComputationNetwork::SaveToDbnFile<float>(ComputationNetworkPtr net, const std::wstring& fileName) const;
@@ -1340,6 +1362,7 @@ template void ComputationNetwork::Read<double>(const wstring& fileName);
 template void ComputationNetwork::ReadPersistableParameters<double>(File& fstream, bool create);
 template void ComputationNetwork::PerformSVDecomposition<double>(const map<wstring, float>& SVDConfig, size_t alignedsize);
 template /*static*/ void ComputationNetwork::SetDropoutRate<double>(ComputationNetworkPtr net, const ComputationNodeBasePtr& criterionNode, const double dropoutRate, double& prevDropoutRate, unsigned long& dropOutSeed);
+template /*static*/ void ComputationNetwork::SetBatchNormalizationTimeConstant<double>(ComputationNetworkPtr net, const ComputationNodeBasePtr& criterionNode, const double normalizationTimeConstant, double& prevNormalizationTimeConstant);
 template void ComputationNetwork::SetSeqParam<double>(ComputationNetworkPtr net, const ComputationNodeBasePtr criterionNode, const double& hsmoothingWeight, const double& frameDropThresh, const bool& doreferencealign,
                                                       const double& amf, const double& lmf, const double& wp, const double& bMMIfactor, const bool& sMBR);
 template void ComputationNetwork::SaveToDbnFile<double>(ComputationNetworkPtr net, const std::wstring& fileName) const;
