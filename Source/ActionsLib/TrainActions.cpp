@@ -127,18 +127,14 @@ void DoTrain(const ConfigRecordType& config)
         };
     }
     // legacy test mode for BrainScript. Will go away once we fully integrate with BS.
-    else if (config.Exists(L"BrainScriptNetworkBuilder") || config.Exists(L"ExperimentalNetworkBuilder" /*legacy*/))
+    else if (config.Exists(L"BrainScriptNetworkBuilder") || config.Exists(L"ExperimentalNetworkBuilder" /*legacy name*/))
     {
         // We interface with outer old CNTK config by taking the inner part, which we get as a string, as BrainScript.
         // We prepend a few standard definitions, and also definition of deviceId and precision, which all objects will pull out again when they are being constructed.
         // BUGBUG: We are not getting TextLocations right in this way! Do we need to inject location markers into the source? Moot once we fully switch to BS
         wstring sourceCode = config.Exists(L"BrainScriptNetworkBuilder") ? config(L"BrainScriptNetworkBuilder") : config(L"ExperimentalNetworkBuilder");
-        //FILE * f = fopen("c:/me/CNTK.core.bs", "wb");
-        //fprintf(f, "%ls", (standardFunctions + computationNodes + commonMacros).c_str());
-        //fclose(f);
-        //wstring boilerplate = standardFunctions + computationNodes + commonMacros;
         auto configDirs = ConfigParameters::GetBrainScriptNetworkBuilderIncludePaths();
-        let expr = BS::ParseConfigDictFromString(L"include \'CNTK.core.bs\'"
+        let expr = BS::ParseConfigDictFromString(L"include \'cntk.core.bs\'"     // Note: Using lowercase here to match the Linux name of the CNTK exe.
                                                  + msra::strfun::wstrprintf(L"deviceId = %d ; precision = '%ls' ; network = new ComputationNetwork ", (int)deviceId, ElemTypeName<ElemType>())
                                                  + sourceCode,      // source code has the form [ ... ] with brackets in the string
                                                  move(configDirs)); // set include paths to all paths that configs were read from; no additional configurable include paths are supported by BrainScriptNetworkBuilder

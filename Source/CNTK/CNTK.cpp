@@ -435,7 +435,8 @@ int wmainWithBS(int argc, wchar_t* argv[]) // called from wmain which is a wrapp
 
     // compile the BrainScript
     wstring bs = L"[\n";
-    bs += L"include \'CNTK.core.bs'"; // start with including the standard macros
+    bs += L"include \'cntk.core.bs'"; // start with including the standard macros
+    // Note: Using lowercase ^^ here to match the Linux name of the CNTK exe.
     //bs += standardFunctions + computationNodes + commonMacros + L"\n";
     for (const auto& sourceFile : sourceFiles)
         bs += L"include " + PathToBSStringLiteral(sourceFile) + L"\n";
