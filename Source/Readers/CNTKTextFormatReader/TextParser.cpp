@@ -27,6 +27,18 @@ enum State {
     Exponent
 };
 
+TextParser::TextParser(const TextConfigHelper& helper) 
+    : TextParser(helper.GetFilePath(), helper.GetStreams())
+{
+    SetTraceLevel(helper.GetTraceLevel());
+    SetMaxAllowedErrors(helper.GetMaxAllowedErrors());
+    SetChunkCacheSize(helper.GetNumChunksToCache());
+    SetChunkSize(helper.GetChunkSize());
+    SetSkipSequenceIds(helper.ShouldSkipSequenceIds());
+
+    Initialize();
+}
+
 TextParser::TextParser(const std::wstring& filename, const vector<StreamDescriptor>& streams) 
     : m_filename(filename),
     m_numberOfStreams(streams.size()),
@@ -68,8 +80,6 @@ TextParser::TextParser(const std::wstring& filename, const vector<StreamDescript
 
     m_bufferStart = new char[BUFFER_SIZE + 1];
     m_scratch = new char[m_maxAliasLength + 1];
-
-    Initialize();
 }
 
 TextParser::~TextParser() 
@@ -112,6 +122,11 @@ vector<StreamDescriptionPtr> TextParser::GetStreamDescriptions() const
     return m_streams;
 }
 
+size_t TextParser::GetTotalNumberOfChunks() 
+{
+    return m_index->m_chunks.size();
+}
+
 void TextParser::FillSequenceDescriptions(SequenceDescriptions& timeline) const
 {
     timeline.resize(m_index->m_timeline.size());
@@ -133,68 +148,95 @@ TextParser::TextDataChunk::TextDataChunk(const ChunkDescriptor& descriptor, Text
     m_sequenceRequestCount = 0;
 }
 
-vector<SequenceDataPtr> TextParser::TextDataChunk::GetSequence(const size_t& sequenceId)
+vector<SequenceDataPtr> TextParser::TextDataChunk::GetSequence(size_t sequenceId)
 {
-    assert(m_sequenceRequestCount < m_sequencePtrMap.size());
     auto it = m_sequencePtrMap.find(sequenceId);
     assert(it != m_sequencePtrMap.end());
-    if (++m_sequenceRequestCount == m_sequencePtrMap.size()) 
-    {
-        // all sequences in this chunk have been used up,
-        // now it's time to remove it from the cache.
-        // TODO: add to list of eviction candidates.
-        m_parent.m_chunkCache.erase(m_id);
-    }
+#pragma omp atomic
+    ++m_sequenceRequestCount;
     return it->second;
 }
 
 ChunkPtr TextParser::GetChunk(size_t chunkId)
 {
-    auto it = m_chunkCache.find(chunkId);
-    if (it != m_chunkCache.end()) 
+    ChunkPtr chunk;
+    #pragma omp critical
     {
-        return it->second;
-    }
-
-    const auto& chunkDescriptor = m_index->m_chunks[chunkId];
-    auto chunk = make_shared<TextDataChunk>(chunkDescriptor, *this);
-    vector<Sequence> sequences(chunkDescriptor.m_numSequences);
-    for (size_t i = 0; i < chunkDescriptor.m_numSequences; ++i)
-    {
-        size_t offset = chunkDescriptor.m_timelineOffset + i;
-        const auto& sequenceDescriptor = m_index->m_timeline[offset];
-        chunk->m_sequenceData[i] = move(LoadSequence(!m_skipSequenceIds, sequenceDescriptor));
-        const auto& sequenceData = chunk->m_sequenceData[i];
-        vector<SequenceDataPtr> sequencePtrs(m_numberOfStreams);
-        for (size_t j = 0; j < m_numberOfStreams; ++j)
+        auto it = m_chunkCache.find(chunkId);
+        if (it != m_chunkCache.end())
         {
-            const StreamInfo& stream = m_streamInfos[j];
-            if (stream.m_type == StorageType::dense)
-            {
-                DenseData* loadedData = (DenseData*)(sequenceData[j].get());
-                auto data = make_shared<DenseSequenceData>();
-                data->m_data = loadedData->m_buffer.data();
-                data->m_sampleLayout = m_streams[j]->m_sampleLayout;
-                data->m_numberOfSamples = loadedData->m_numberOfSamples;
-                data->m_chunk = chunk;
-                sequencePtrs[j] = data;
-            }
-            else
-            {
-                SparseData* loadedData = (SparseData*)(sequenceData[j].get());
-                auto data = make_shared<SparseSequenceData>();
-                data->m_data = loadedData->m_buffer.data();
-                data->m_indices = move(loadedData->m_indices);
-                data->m_chunk = chunk;
-                sequencePtrs[j] = data;
-            }
+            chunk = it->second;
         }
-        chunk->m_sequencePtrMap[sequenceDescriptor.m_id] = move(sequencePtrs);
+        else 
+        {
+            const auto& chunkDescriptor = m_index->m_chunks[chunkId];
+            auto textChunk = make_shared<TextDataChunk>(chunkDescriptor, *this);
+            vector<Sequence> sequences(chunkDescriptor.m_numSequences);
+            for (size_t i = 0; i < chunkDescriptor.m_numSequences; ++i)
+            {
+                size_t offset = chunkDescriptor.m_timelineOffset + i;
+                const auto& sequenceDescriptor = m_index->m_timeline[offset];
+                textChunk->m_sequenceData[i] = move(LoadSequence(!m_skipSequenceIds, sequenceDescriptor));
+                const auto& sequenceData = textChunk->m_sequenceData[i];
+                vector<SequenceDataPtr> sequencePtrs(m_numberOfStreams);
+                for (size_t j = 0; j < m_numberOfStreams; ++j)
+                {
+                    const StreamInfo& stream = m_streamInfos[j];
+                    if (stream.m_type == StorageType::dense)
+                    {
+                        DenseData* loadedData = (DenseData*)(sequenceData[j].get());
+                        auto data = make_shared<DenseSequenceData>();
+                        data->m_data = loadedData->m_buffer.data();
+                        data->m_sampleLayout = m_streams[j]->m_sampleLayout;
+                        data->m_numberOfSamples = loadedData->m_numberOfSamples;
+                        data->m_chunk = textChunk;
+                        data->m_id = sequenceDescriptor.m_id;
+                        sequencePtrs[j] = data;
+                    }
+                    else
+                    {
+                        SparseData* loadedData = (SparseData*)(sequenceData[j].get());
+                        auto data = make_shared<SparseSequenceData>();
+                        data->m_data = loadedData->m_buffer.data();
+                        data->m_indices = move(loadedData->m_indices);
+                        data->m_chunk = textChunk;
+                        data->m_id = sequenceDescriptor.m_id;
+                        sequencePtrs[j] = data;
+                    }
+                }
+                textChunk->m_sequencePtrMap[sequenceDescriptor.m_id] = move(sequencePtrs);
+            }
+
+            if (m_chunkCacheSize > 0 && m_chunkCache.size() == m_chunkCacheSize) 
+            {
+                size_t candidateId = SIZE_MAX;
+                int64_t minNumSequencesLeft = SIZE_MAX;
+                for (const auto& it : m_chunkCache) 
+                {
+                    const auto& chunk = *(it.second.get());
+                    size_t numSequencesUsed = 0;
+                    #pragma omp atomic
+                    numSequencesUsed += chunk.m_sequenceRequestCount;
+                    int64_t numSequencesLeft = chunk.m_sequenceData.size() - numSequencesUsed;
+                    if (numSequencesLeft < minNumSequencesLeft)
+                    {
+                        minNumSequencesLeft = numSequencesLeft;
+                        candidateId = it.first;
+                    }
+                }
+                assert(candidateId != SIZE_MAX);
+                m_chunkCache.erase(candidateId);
+            }
+
+
+            if (m_chunkCacheSize > 0) 
+            {
+                m_chunkCache[chunkId] = textChunk;
+            }
+
+            chunk = textChunk;
+        }
     }
-
-    // TODO: implement cache eviction. 
-    m_chunkCache[chunkId] = chunk;
-
     return chunk;
 }
 
@@ -920,8 +962,13 @@ void TextParser::SetSkipSequenceIds(bool skip) {
     m_skipSequenceIds = skip;
 }
 
+
 void TextParser::SetChunkCacheSize(unsigned int size) {
     m_chunkCacheSize = size;
+}
+
+void TextParser::SetChunkSize(int64_t size) {
+    m_chunkSize = size;
 }
 
 }}}

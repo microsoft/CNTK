@@ -31,22 +31,12 @@ TextReader::TextReader(MemoryProviderPtr provider,
         omp_set_num_threads(threadCount);
     }
 
-    m_parser = std::shared_ptr<TextParser>(
-        new TextParser(configHelper.GetFilePath(), configHelper.GetStreams()));
-
-    m_parser->SetTraceLevel(configHelper.GetTraceLevel());
-    m_parser->SetMaxAllowedErrors(configHelper.GetMaxAllowedErrors());
-    if (configHelper.ShouldSkipSequenceIds()) 
-    {
-        m_parser->SetSkipSequenceIds(true);
-    }
-
-    m_parser->Initialize();
+    m_parser = make_shared<TextParser>(configHelper);
 
     TransformerPtr randomizer;
     if (configHelper.ShouldRandomize())
     {
-        randomizer = std::make_shared<BlockRandomizer>(0, SIZE_MAX, m_parser);
+        randomizer = make_shared<BlockRandomizer>(0, SIZE_MAX, m_parser);
     }
     else
     {

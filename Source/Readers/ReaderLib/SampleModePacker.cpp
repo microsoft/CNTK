@@ -83,11 +83,14 @@ Minibatch SampleModePacker::ReadMinibatch()
         return minibatch;
     }
 
+    assert(m_numberOfStreams == batch.size());
+
     for (int streamIndex = 0; streamIndex < m_numberOfStreams; ++streamIndex)
     {
+        const auto& streamBatch = batch[streamIndex];
         const auto& type = m_outputStreams[streamIndex]->m_storageType;
         auto layout = (type == StorageType::dense) ?
-            PackDenseStream(batch, streamIndex) : PackSparseStream(batch, streamIndex);
+            PackDenseStream(streamBatch, streamIndex) : PackSparseStream(streamBatch, streamIndex);
 
         auto& buffer = m_streamBuffers[streamIndex];
 
@@ -111,13 +114,12 @@ size_t SampleModePacker::GetSampleSize(StreamDescriptionPtr stream)
 }
 
 
-size_t SampleModePacker::GetMaxSequenceLength(const SequenceBatch& batch, size_t streamIndex)
+size_t SampleModePacker::GetMaxSequenceLength(const StreamBatch& batch, size_t streamIndex)
 {
     size_t maxLength = 0;
     const StorageType type = m_inputStreams[streamIndex]->m_storageType;
-    for (const auto& sequences : batch)
+    for (const auto& sequence : batch)
     {
-        const auto& sequence = sequences[streamIndex];
         size_t numSamples = 0;
         if (type == StorageType::dense)
         {
@@ -136,7 +138,7 @@ size_t SampleModePacker::GetMaxSequenceLength(const SequenceBatch& batch, size_t
 }
 
 
-MBLayoutPtr SampleModePacker::PackDenseStream(const SequenceBatch& batch, size_t streamIndex)
+MBLayoutPtr SampleModePacker::PackDenseStream(const StreamBatch& batch, size_t streamIndex)
 {
     assert(m_outputStreams[streamIndex]->m_storageType == StorageType::dense);
 
@@ -162,13 +164,7 @@ MBLayoutPtr SampleModePacker::PackDenseStream(const SequenceBatch& batch, size_t
 
     for (size_t sequenceIndex = 0; sequenceIndex < numSequences; ++sequenceIndex)
     {
-        assert(m_numberOfStreams == batch[sequenceIndex].size());
-
-        // it'd be nicer if all sequences from a particular stream were
-        // stored in a single vector, i.e. sequence = batch[streamIndex][sequenceIndex]
-        // In which case, there's actually no need to pass the whole batch 
-        // inside this method
-        const auto& sequence = batch[sequenceIndex][streamIndex];
+        const auto& sequence = batch[sequenceIndex];
         char* source = reinterpret_cast<char*>(sequence->m_data);
         size_t numSamples = 0;
 
@@ -217,7 +213,7 @@ MBLayoutPtr SampleModePacker::PackDenseStream(const SequenceBatch& batch, size_t
         // We don't do any packing per se, instead we create MB with 
         // the the number of parallel sequences equal to the number of 
         // Sequences in the batch.
-        mbLayout->AddSequence(NEW_SEQUENCE_ID, sequenceIndex, 0, numSamples);
+        mbLayout->AddSequence(sequence->m_id, sequenceIndex, 0, numSamples);
         if (numSamples < maxSequenceLength)
         {
             mbLayout->AddGap(sequenceIndex, numSamples, maxSequenceLength);
@@ -226,7 +222,7 @@ MBLayoutPtr SampleModePacker::PackDenseStream(const SequenceBatch& batch, size_t
     return mbLayout;
 }
 
-MBLayoutPtr SampleModePacker::PackSparseStream(const SequenceBatch& batch, size_t streamIndex)
+MBLayoutPtr SampleModePacker::PackSparseStream(const StreamBatch& batch, size_t streamIndex)
 {
     assert(m_outputStreams[streamIndex]->m_storageType == StorageType::sparse_csc);
 
@@ -257,8 +253,8 @@ MBLayoutPtr SampleModePacker::PackSparseStream(const SequenceBatch& batch, size_
     sparseColumnIndices.push_back(0);
     // This whole thing will disappear, once SparseSequenceData is refactored 
     // to contain nnz and proper type (int32_t) for the indices.
-    for (const auto& sequences : batch) {
-        const auto& sequence = sequences[streamIndex];
+    for (const auto& sequence : batch) 
+    {
         const auto& sparseSequence = reinterpret_cast<const SparseSequenceData&>(*sequence);
 
         size_t nnz = 0;
@@ -301,13 +297,7 @@ MBLayoutPtr SampleModePacker::PackSparseStream(const SequenceBatch& batch, size_
 
     for (size_t sequenceIndex = 0; sequenceIndex < numSequences; ++sequenceIndex)
     {
-        assert(m_numberOfStreams == batch[sequenceIndex].size());
-
-        // it'd be nicer if all sequences from a particular stream were
-        // stored in a single vector, i.e. sequence = batch[streamIndex][sequenceIndex]
-        // In which case, there's actually no need to pass the whole batch 
-        // inside this metod
-        const auto& sequence = batch[sequenceIndex][streamIndex];
+        const auto& sequence = batch[sequenceIndex];
         auto data = reinterpret_cast<const char*>(sequence->m_data);
 
         size_t numSamples = 0;
@@ -320,7 +310,7 @@ MBLayoutPtr SampleModePacker::PackSparseStream(const SequenceBatch& batch, size_
         // We don't do any packing per se, instead we create MB with 
         // the number of parallel sequences equal to the number of 
         // Sequences in the batch.
-        mbLayout->AddSequence(NEW_SEQUENCE_ID, sequenceIndex, 0, numSamples);
+        mbLayout->AddSequence(sequence->m_id, sequenceIndex, 0, numSamples);
         if (numSamples < maxSequenceLength)
         {
             mbLayout->AddGap(sequenceIndex, numSamples, maxSequenceLength);

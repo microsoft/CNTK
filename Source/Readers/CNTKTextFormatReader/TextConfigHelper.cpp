@@ -112,8 +112,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         m_skipSequenceIds = config(L"skipSequenceIds", false);
         m_maxErrors = config(L"maxErrors", 0);
         m_traceLevel = config(L"traceLevel", 0);
-
-        //TODO: chunk_size (if ever need chunks).
+        m_chunkSize = config(L"chunkSize", 32 * 1024 * 1024); // 32 MB by default
+        m_chunkCacheSize = config(L"chunkCacheSize", 32); // GB of memory in total
     }
 
     const wstring& TextConfigHelper::GetFilePath() const
@@ -151,4 +151,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         return m_traceLevel;
     }
 
+    int64_t TextConfigHelper::GetChunkSize() const 
+    {
+        return m_chunkSize;
+    }
+
+    unsigned int TextConfigHelper::GetNumChunksToCache() const
+    {
+        return m_chunkCacheSize;
+    }
 }}}

@@ -37,15 +37,15 @@ public:
     Minibatch ReadMinibatch();
 
 private:
-    typedef std::vector<std::vector<SequenceDataPtr>> SequenceBatch;
+    typedef std::vector<SequenceDataPtr> StreamBatch; 
 
     size_t GetSampleSize(StreamDescriptionPtr stream);
 
-    MBLayoutPtr PackDenseStream(const SequenceBatch& batch, size_t streamIndex);
-    MBLayoutPtr PackSparseStream(const SequenceBatch& batch, size_t streamIndex);
+    MBLayoutPtr PackDenseStream(const StreamBatch& batch, size_t streamIndex);
+    MBLayoutPtr PackSparseStream(const StreamBatch& batch, size_t streamIndex);
 
     // Returns the length in samples of the longest sequence of the specified stream.
-    size_t GetMaxSequenceLength(const SequenceBatch& batch, size_t streamIndex);
+    size_t GetMaxSequenceLength(const StreamBatch& batch, size_t streamIndex);
 
     MemoryProviderPtr m_memoryProvider;
     TransformerPtr m_transformer;
