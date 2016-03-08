@@ -360,41 +360,11 @@ protected:
 // -----------------------------------------------------------------------
 
 template <class ElemType>
-class SparseMatrixStorage
+class SparseMatrixStorage : public BaseMatrixStorage<ElemType>
 {
 public:
-    SparseMatrixStorage()
-    {
-        ZeroInit();
-        m_format = matrixFormatDense;
-        m_computeDevice = CPUDEVICE;
-    }
+    SparseMatrixStorage() : BaseMatrixStorage() { }
 
-    MatrixFormat GetFormat() const { return m_format; }
-    void SetFormat(MatrixFormat format) { m_format = format; }
-    ElemType* GetArray() { return m_pArray; }
-    void SetArray(ElemType* parray) { m_pArray = parray; }
-    virtual DEVICEID_TYPE GetComputeDeviceId() const { return m_computeDevice; }
-    void SetComputeDeviceId(const DEVICEID_TYPE computeId) const { m_computeDevice = computeId; }
-    size_t GetSizeAllocated() const { return m_elemSizeAllocated; }
-
-protected:
-    void Clear() {}
-    // copy all metadata (but not content that pArray points to)
-    void ShallowCopyFrom(const SparseMatrixStorage& other) { *this = other; }
-
-    void ZeroInit()
-    {
-        m_elemSizeAllocated = 0;
-        m_pArray            = nullptr;
-    }
-
-protected:
-    MatrixFormat m_format;
-    mutable DEVICEID_TYPE m_computeDevice; // current GPU device Id or CPUDEVICE
-
-    size_t m_elemSizeAllocated;
-    ElemType* m_pArray;
 };
 
 // -----------------------------------------------------------------------
