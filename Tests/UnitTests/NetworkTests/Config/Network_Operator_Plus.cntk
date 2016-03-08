@@ -1,0 +1,37 @@
+RootDir = ".."
+DataDir = "$RootDir$/Data"
+OutputDir = "$RootDir$/Output"
+
+command=Predict
+
+deviceId=-1                            
+FeatureDimension=1
+
+Predict=[
+    action="write"
+    run=NDLNetworkBuilder
+
+    NDLNetworkBuilder=[
+        features = Input($FeatureDimension$, 1)
+        v1 = Constant(1)
+        v2 = Plus(features, v1)
+  
+        FeatureNodes=(features)
+        OutputNodes=(v2)
+      ]   
+    ]
+
+    reader = [
+        readerType = "UCIFastReader"
+        file = "$DataDir$/Network_Operator_Plus_Data.txt"
+        randomize = "none"
+        verbosity = 1
+        
+        features=[
+            start = 0
+            dim = $FeatureDimension$
+        ]
+    ]
+    
+    outputPath = "$OutputDir$/out.txt"        # dump the output as text
+]

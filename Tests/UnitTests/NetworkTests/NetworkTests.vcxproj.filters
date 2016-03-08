@@ -1,0 +1,71 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClInclude Include="stdafx.h" />
+    <ClInclude Include="targetver.h" />
+    <ClInclude Include="Common\NetworkTestHelper.h">
+      <Filter>Common</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="stdafx.cpp" />
+    <ClCompile Include="OperatorEvaluation.cpp" />
+    <ClCompile Include="..\..\..\Source\Common\ExceptionWithCallStack.cpp">
+      <Filter>Common</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Source\Common\Config.cpp">
+      <Filter>Common</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Source\Common\DataReader.cpp">
+      <Filter>Common</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Source\Common\DataWriter.cpp">
+      <Filter>Common</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Source\Common\MPIWrapper.cpp">
+      <Filter>Common</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Source\CNTK\BrainScript\BrainScriptParser.cpp">
+      <Filter>From BrainScript</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Source\CNTK\BrainScript\BrainScriptEvaluator.cpp">
+      <Filter>From BrainScript</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Source\CNTK\BrainScript\BrainScriptTest.cpp">
+      <Filter>From BrainScript</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Source\CNTK\BrainScript\ExperimentalNetworkBuilder.cpp">
+      <Filter>From BrainScript</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="Config">
+      <UniqueIdentifier>{c432195d-2778-4d83-96e6-fe6a4cda71be}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Control">
+      <UniqueIdentifier>{8dae3bf6-0483-4829-bb0f-8b03a958fb55}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Data">
+      <UniqueIdentifier>{ad78db4c-665d-4d7e-b65a-a76636af8d68}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Common">
+      <UniqueIdentifier>{2dbf6bfe-1a4e-4641-94a8-853743fb0542}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="From BrainScript">
+      <UniqueIdentifier>{90cee75b-2e8b-4cfb-b05b-b223d105f2ed}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Config\Network_Operator_Plus.cntk">
+      <Filter>Config</Filter>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="Control\Network_Operator_Plus_Control.txt">
+      <Filter>Control</Filter>
+    </Text>
+    <Text Include="Data\Network_Operator_Plus_Data.txt">
+      <Filter>Data</Filter>
+    </Text>
+  </ItemGroup>
+</Project>
