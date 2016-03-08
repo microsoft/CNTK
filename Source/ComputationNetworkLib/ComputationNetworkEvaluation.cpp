@@ -508,8 +508,9 @@ void ComputationNetwork::ValidateNetwork()
     // set up MBLayout links of inputs (all others get propagated upwards through Validate())
     // TODO: Once we support mismatching layouts, this will be more involved. For now, everything shares the one layout that the Network knows about.
     for (auto node : InputNodes(nullptr))
-        node->LinkToMBLayout(m_pMBLayout);
-
+    {
+        node->LinkToMBLayout(make_shared<MBLayout>(1, 0));
+    }
     // we call all nodes' Validate() in order to validate, that is, set up MBLayout and FunctionValues dimension
     // A problem is that recurrent loops may require partial validation.
     // Nodes validated on partial input (i.e. some children not yet validated) will be revisited.

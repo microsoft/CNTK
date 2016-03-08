@@ -53,11 +53,17 @@ class StreamMinibatchInputs
 {
     typedef map<std::wstring, MatrixBasePtr> MapType;
     MapType matrices;
+    map<std::wstring, MBLayoutPtr> layouts;
+   // TODO: replace all of the above with
+   // typedef map<std::wstring, std::pair<MatrixBasePtr, MBLayoutPtr>> InputType;
+   // InputType m_input;
 public:
     void AddInput(const std::wstring& nodeName, const MatrixBasePtr& matrix) { AddInputMatrix(nodeName, matrix); } // use this where entire entry is copied (UCIFastReader::GetMinibatch() async)
     // TODO: GetInput() will return a struct
     // access to matrix entries
-    void AddInputMatrix(const std::wstring& nodeName, const MatrixBasePtr& matrix) { matrices[nodeName] = matrix; }
+    // TODO: merge both AddInputXXX into a single AddInput;
+    void AddInputMatrix(const std::wstring& nodeName, const MatrixBasePtr& matrix) { matrices[nodeName] = matrix; }   
+    void AddInputLayout(const std::wstring& nodeName, const MBLayoutPtr& layout) { layouts[nodeName] = layout; }
     bool HasInput(const std::wstring& nodeName) const { return matrices.find(nodeName) != matrices.end(); }
     template<class ElemType>
     Matrix<ElemType>& GetInputMatrix(const std::wstring& nodeName) const
@@ -76,6 +82,15 @@ public:
                         typeid(ElemType).name(), nodeName.c_str(), typeid(iter->second.get()).name(), (int)isFloat, (int)isDouble, typeid(Matrix<ElemType>*).name());
         }
         return *matrixp;
+    }
+    template<class ElemType>
+    MBLayout& GetInputLayout(const std::wstring& nodeName) const
+    {
+        auto iter = layouts.find(nodeName);
+        if (iter == layouts.end())
+            LogicError("GetInputMatrix: Attempted to access non-existent input stream '%ls'", nodeName.c_str());
+        assert(iter->second);
+        return *(iter->second.get());
     }
     // iterating
     // TODO: Abstract this.

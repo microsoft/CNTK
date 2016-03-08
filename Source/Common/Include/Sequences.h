@@ -794,8 +794,10 @@ static inline std::pair<size_t, size_t> ColumnRangeWithMBLayoutFor(size_t numCol
         if (fr.m_broadcastAllowed && !pMBLayout && numCols == 1)
             return std::pair<size_t, size_t>(0, numCols);
         if (fr.m_pMBLayout && pMBLayout && *fr.m_pMBLayout == *pMBLayout)
-            LogicError("DataFor: fr's MBLayout inconsistent with matrix. They are compatible though--are you missing a ReconcileMBLayout operation?");
+            // LogicError("DataFor: fr's MBLayout inconsistent with matrix. They are compatible though--are you missing a ReconcileMBLayout operation?");
+            ; // Nodes have different pointers, but identical layouts, do nothing.
         else
+            // TODO: N:M relationships between inputs?
             LogicError("DataFor: fr's MBLayout inconsistent with matrix");
     }
     // if FrameRange refers to whole minibatch (map mode)

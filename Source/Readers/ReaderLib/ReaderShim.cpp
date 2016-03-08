@@ -23,7 +23,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
 template <class ElemType>
 ReaderShim<ElemType>::ReaderShim(ReaderFactory factory)
-    : m_layout(make_shared<MBLayout>()), m_factory(factory)
+    : m_factory(factory)
 {
 }
 
@@ -38,8 +38,7 @@ void ReaderShim<ElemType>::Init(const ConfigParameters& config)
     // otherwise deferring - synchronous execution during .get() call
     m_launchType = prefetch ? launch::async : launch::deferred;
 
-    auto numSeqsPerMBForAllEpochs = numberOfuttsPerMinibatchForAllEpochs;
-    m_layout->Init(numSeqsPerMBForAllEpochs[0], 0);
+    m_numParallelSequences = numberOfuttsPerMinibatchForAllEpochs[0];
 
     m_reader = m_factory(config);
     m_streams = m_reader->GetStreamDescriptions();
@@ -142,8 +141,12 @@ bool ReaderShim<ElemType>::GetMinibatch(StreamMinibatchInputs& matrices)
             size_t streamId = m_nameToStreamId[mx.first];
             
             const auto& stream = minibatch.m_data[streamId];
-            m_layout = stream->m_layout;
+            m_numParallelSequences = stream->m_layout->GetNumParallelSequences();
             size_t rowNumber = m_streams[streamId]->m_sampleLayout->GetNumElements();
+            
+            auto& layout = matrices.GetInputLayout<ElemType>(mx.first);
+            layout.CopyFrom(stream->m_layout);
+
             auto& matrix = matrices.GetInputMatrix<ElemType>(mx.first);
             FillMatrixFromStream(m_streams[streamId]->m_storageType, &matrix, rowNumber, stream);
         }
@@ -193,13 +196,13 @@ bool ReaderShim<ElemType>::DataEnd() { return false; } // Note: Return value nev
 template <class ElemType>
 void ReaderShim<ElemType>::CopyMBLayoutTo(MBLayoutPtr layout)
 {
-    layout->CopyFrom(m_layout);
+   // do nothing.
 }
 
 template <class ElemType>
 size_t ReaderShim<ElemType>::GetNumParallelSequences()
 {
-    return m_layout->GetNumParallelSequences();
+    return m_numParallelSequences;
 }
 
 template class ReaderShim<float>;

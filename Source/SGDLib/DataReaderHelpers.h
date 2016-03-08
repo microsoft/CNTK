@@ -61,9 +61,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             trainSetDataReader.GetMinibatch4SE(*latticeinput, *uids, *boundaries, *extrauttmap);
         }
 
+        // TODO: remove this
         // get layout meta-data
         trainSetDataReader.CopyMBLayoutTo(pMBLayout);
 
+        // TODO: this needs to be updated.
         // decimate if needed. Decimation happens in-place.
         if (!useDistributedMBReading && useParallelTrain)
             DecimateMinibatchInPlace<ElemType>(inputMatrices, g_mpi->NumNodesInUse(), g_mpi->CurrentNodeRank(), net->GetMBLayoutPtr());
