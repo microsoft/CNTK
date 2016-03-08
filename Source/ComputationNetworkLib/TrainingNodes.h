@@ -1748,10 +1748,12 @@ public:
                 expAvgFactor = (m_normTimeConst < 0) ? (1.0 / (1.0 + m_mbCount)) : 1;
             }
 
-            if (m_saveMean->GetNumElements() != runMean.GetNumElements())
-                m_saveMean->Resize(runMean.GetNumRows(), runMean.GetNumCols());
-            if (m_saveInvStdDev->GetNumElements() != runMean.GetNumElements())
-                m_saveInvStdDev->Resize(runMean.GetNumRows(), runMean.GetNumCols());
+            if (m_saveMean == nullptr)
+                fprintf(stderr, "WARNING: m_saveMean is null\n");
+            if (m_saveInvStdDev == nullptr)
+                fprintf(stderr, "WARNING: m_saveInvStdDev is null\n");
+            m_saveMean->Resize(runMean);
+            m_saveInvStdDev->Resize(runMean);
 
             m_convEng->NormalizeBatch(*m_inT, sliceInputValue, *m_scaleBiasT, scale, bias, m_spatial, expAvgFactor, runMean, runInvStdDev,
                                       sliceOutputValue, m_epsilon, *m_saveMean, *m_saveInvStdDev);
@@ -1814,7 +1816,7 @@ public:
     void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool) override
     {
         Base::RequestMatricesBeforeForwardProp(matrixPool);
-        if (!m_eval)
+        //if (!m_eval)
         {
             RequestMatrixFromPool(m_saveMean, matrixPool);
             RequestMatrixFromPool(m_saveInvStdDev, matrixPool);
@@ -1824,7 +1826,7 @@ public:
     void RequestMatricesBeforeBackprop(MatrixPool& matrixPool) override
     {
         Base::RequestMatricesBeforeBackprop(matrixPool);
-        if (!m_eval)
+        //if (!m_eval)
         {
             RequestMatrixFromPool(m_dScale, matrixPool);
             RequestMatrixFromPool(m_dBias, matrixPool);
@@ -1834,7 +1836,7 @@ public:
     void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool) override
     {
         Base::ReleaseMatricesAfterBackprop(matrixPool);
-        if (!m_eval)
+        //if (!m_eval)
         {
             ReleaseMatrixToPool(m_saveMean, matrixPool);
             ReleaseMatrixToPool(m_saveInvStdDev, matrixPool);
