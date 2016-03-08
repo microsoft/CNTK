@@ -1398,10 +1398,10 @@ void HTKMLFReader<ElemType>::CopyMinibatchFromBufferToMatrix(
             {
                 if (m_getMinibatchCopy)
                 {
-                    if (data.GetNumCols() != m_currentMBSize * m_numberOfuttsPerMinibatch)
+                    assert(m_currentMBSize * m_numberOfuttsPerMinibatch == m_pMBLayout->GetNumCols());
+                    if (data.GetNumCols() != m_pMBLayout->GetNumCols())
                     {
-                        matrices.GetInputMatrix<ElemType>(iter->first).Resize(data.GetNumRows(),
-                                                                    m_currentMBSize * m_numberOfuttsPerMinibatch);
+                        data.Resize(data.GetNumRows(), m_pMBLayout->GetNumCols());
                     }
                     matrices.GetInputMatrix<ElemType>(iter->first).SetValue(0);
                 }
@@ -1416,15 +1416,17 @@ void HTKMLFReader<ElemType>::CopyMinibatchFromBufferToMatrix(
             {
                 if (m_getMinibatchCopy)
                 {
-                    if (data.GetNumCols() != 1)
+                    assert(m_currentMBSize * m_numberOfuttsPerMinibatch == m_pMBLayout->GetNumCols());
+                    if (data.GetNumCols() != m_pMBLayout->GetNumCols())
                     {
-                        data.Resize(1, 1);
+                        data.Resize(1, m_pMBLayout->GetNumCols());
                     }
                     data.SetValue(0);
                 }
                 else
                 {
                     m_uttDerivBuffer->GetObjective(m_minibatchUttInfo,
+                                                   m_pMBLayout,
                                                    &matrices.GetInputMatrix<ElemType>(iter->first)); // TODO: use a reference instead of a ptr
                 }
             }
@@ -1466,18 +1468,19 @@ void HTKMLFReader<ElemType>::CopyMinibatchToMatrix(
         {
             if (m_nameToTypeMap.at(iter->first) == InputOutputTypes::readerDeriv)
             {
-                if (data.GetNumCols() != m_currentMBSize * m_numberOfuttsPerMinibatch)
+                assert(m_currentMBSize * m_numberOfuttsPerMinibatch == m_pMBLayout->GetNumCols());
+                if (data.GetNumCols() != m_pMBLayout->GetNumCols())
                 {
-                    data.Resize(data.GetNumRows(),
-                                m_currentMBSize * m_numberOfuttsPerMinibatch);
+                    data.Resize(data.GetNumRows(), m_pMBLayout->GetNumCols());
                 }
                 data.SetValue(0);
             }
             else if (m_nameToTypeMap.at(iter->first) == InputOutputTypes::readerObj)
             {
-                if (data.GetNumCols() != 1)
+                assert(m_currentMBSize * m_numberOfuttsPerMinibatch == m_pMBLayout->GetNumCols());
+                if (data.GetNumCols() != m_pMBLayout->GetNumCols())
                 {
-                    data.Resize(1, 1);
+                    data.Resize(1, m_pMBLayout->GetNumCols());
                 }
                 data.SetValue(0);
             }
