@@ -18,8 +18,8 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Test {
 //using ConvFact = ConvolutionEngineFactory<float>;
 //using ConvFactPtr = std::unique_ptr<ConvolutionEngineFactory<float>>;
 //using ConvFactSPtr = std::shared_ptr<ConvolutionEngineFactory<float>>;
-//using vec = std::vector<float>;
 //using Tensor4DPtr = ConvFact::Tensor4DPtr;
+using vec = std::vector<float>;
 
 using ConvEng = ConvolutionEngine<float>;
 
@@ -38,14 +38,14 @@ const float Err<float>::Abs = 1.192092896e-07f;
 template <>
 const double Err<double>::Abs = 2.2204460492503131e-016;
 
-//static bool AreEqual(float a, float b, float maxRelError, float maxAbsError)
-//{
-//    float diff = std::abs(a - b);
-//    if (diff <= maxAbsError)
-//        return true;
-//    float largest = std::max(std::abs(a), std::abs(b));
-//    return diff < largest * maxRelError;
-//}
+static bool AreEqual(float a, float b, float maxRelError, float maxAbsError)
+{
+    float diff = std::abs(a - b);
+    if (diff <= maxAbsError)
+        return true;
+    float largest = std::max(std::abs(a), std::abs(b));
+    return diff < largest * maxRelError;
+}
 //static bool AreEqual(double a, double b, double maxRelError, double maxAbsError)
 //{
 //    double diff = std::abs(a - b);
@@ -79,6 +79,16 @@ static bool CheckEqual(const Matrix<T>& result, const Matrix<T>& reference, std:
     return count == 0;
 }
 
+size_t CountNans(const SingleMatrix& src)
+{
+    size_t n = 0;
+    foreach_coord (i, j, src)
+    {
+        n += std::isnan(src(i, j)) ? 1 : 0;
+    }
+    return n;
+}
+
 std::vector<ConvolveGeometryPtr> GenerateConvTestConfigs()
 {
     std::vector<ConvolveGeometryPtr> res;
@@ -105,7 +115,7 @@ std::vector<ConvolveGeometryPtr> GenerateConvTestConfigs()
     //    }
     //}
     res.push_back(std::make_shared<ConvolveGeometry>(TensorShape(5, 5, 1),
-        TensorShape(3, 3, 1), TensorShape(3), TensorShape(1, 1, 1),
+        TensorShape(3, 3, 1), TensorShape(2), TensorShape(1, 1, 1),
         ConvolveGeometry::BoolVec(1, true), ConvolveGeometry::BoolVec(1, true),
         TensorShape(0), TensorShape(0)));
     return res;
@@ -115,16 +125,64 @@ BOOST_AUTO_TEST_SUITE(ConvolutionSuite)
 
 BOOST_AUTO_TEST_CASE(ConvolutionForward)
 {
-    int baseDeviceId = 0;
-    for (auto engKind : {ConvolutionEngineKind::Default})
+    std::mt19937 rng(0);
+    std::uniform_int_distribution<> batchSizeRnd(1, 8);
+    std::normal_distribution<float> nd;
+
+    auto initMat = [&](SingleMatrix& buf, size_t r, size_t c, vec& data) -> SingleMatrix
     {
-        for (int deviceId : {0})
+        data.resize(r * 3 * c);
+        std::fill(begin(data), end(data), std::numeric_limits<float>::quiet_NaN());
+        std::generate(begin(data) + r * c, begin(data) + 2 * r * c, [&] { return nd(rng); });
+        buf.SetValue(r, 3 * c, buf.GetDeviceId(), data.data());
+        // Get center slice.
+        return buf.ColumnSlice(c, c);
+    };
+
+    int baseDeviceId = 0;
+    auto engKind = ConvolutionEngineKind::Default;
+    for (int deviceId : {0})
+    {
+        for (const auto& g : GenerateConvTestConfigs())
         {
-            for (const auto& g : GenerateConvTestConfigs())
-            {
-                auto baseEng = ConvEng::Create(g, baseDeviceId, ImageLayoutKind::CHW, 0, ConvolutionEngineKind::CuDnn);
-                auto testEng = ConvEng::Create(g, deviceId, ImageLayoutKind::CHW, 0, engKind);
-            }
+            auto baseEng = ConvEng::Create(g, baseDeviceId, ImageLayoutKind::CHW, 0, ConvolutionEngineKind::CuDnn);
+            auto testEng = ConvEng::Create(g, deviceId, ImageLayoutKind::CHW, 0, engKind);
+
+            size_t n = batchSizeRnd(rng);
+            vec buf;
+            buf.resize(g->InputShape().GetNumElements() * n);
+            std::generate(begin(buf), end(buf), [&] { return nd(rng); });
+            SingleMatrix in(g->InputShape().GetNumElements(), n, buf.data(), deviceId, matrixFlagNormal);
+
+            size_t mapCount = g->GetMapCount(g->InputShape().GetRank() - 1);
+            buf.resize(g->KernelShape().GetNumElements() * mapCount);
+            std::generate(begin(buf), end(buf), [&] { return nd(rng); });
+            SingleMatrix filter(mapCount, g->KernelShape().GetNumElements(), buf.data(), deviceId, matrixFlagNormal);
+
+            size_t coutRow = g->OutputShape().GetNumElements();
+            SingleMatrix outBuf(deviceId);
+            SingleMatrix out = initMat(outBuf, coutRow, n, buf);
+            SingleMatrix outExp(out);
+
+            SingleMatrix workspace(deviceId);
+
+            testEng->Forward(n, in, filter, out, workspace);
+            baseEng->Forward(n, in, filter, outExp, workspace);
+
+            std::stringstream tmsg;
+            tmsg << "input: " << (std::string)g->InputShape() << ", filter: " << (std::string)g->KernelShape() << ", batch: " << n;
+            std::string msg = " are not equal, " + tmsg.str();
+            std::string msgNan = " has NaNs, " + tmsg.str();
+            std::string msgNotNan = " has buffer overflow/underflow, " + tmsg.str();
+
+            float relErr = Err<float>::Rel;
+            float absErr = Err<float>::Abs;
+            std::string emsg;
+
+            BOOST_REQUIRE_MESSAGE(!out.HasNan("out"), "out" << msgNan);
+            BOOST_REQUIRE_MESSAGE(CheckEqual(out, outExp, emsg, relErr * 16, absErr * 8), "out" << msg << ". " << emsg);
+            BOOST_REQUIRE_MESSAGE(CountNans(outBuf) == coutRow * 2 * n, "out" << msgNotNan);
+
         }
     }
 }

@@ -12,20 +12,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 template <class ElemType>
 void ConvolutionEngine<ElemType>::Forward(size_t batchSize, const Mat& in, const Mat& filter, Mat& out, Mat& workspace)
 {
-    const auto& inT = m_geometry->InputShape();
-    const auto& outT = m_geometry->OutputShape();
-    assert(inT.GetNumElements() == in.GetNumRows());
-    assert(outT.GetNumElements() == out.GetNumRows());
+    const auto& g = *m_geometry;
+    assert(g.InputShape().GetNumElements() == in.GetNumRows());
+    assert(g.OutputShape().GetNumElements() == out.GetNumRows());
     assert(batchSize == in.GetNumCols());
     assert(batchSize == out.GetNumCols());
-    //assert(filterT.k() == filter.GetNumRows());
-    //assert(filterT.w() * filterT.h() * filterT.c() == filter.GetNumCols());
-    //assert(inT.c() == filterT.c());
-    //assert(outT.c() == filterT.k());
+    assert(g.KernelShape().GetNumElements() * g.MapCount().GetNumElements() == filter.GetNumElements());
 #ifdef NDEBUG
-    UNUSED(inT);
-    UNUSED(outT);
-    UNUSED(filterT);
+    UNUSED(g);
 #endif
 
     EnsureCompatible();
@@ -35,20 +29,14 @@ void ConvolutionEngine<ElemType>::Forward(size_t batchSize, const Mat& in, const
 template <class ElemType>
 void ConvolutionEngine<ElemType>::BackwardData(size_t batchSize, const Mat& srcGrad, const Mat& filter, Mat& grad, Mat& workspace)
 {
-    const auto& inT = m_geometry->InputShape();
-    const auto& outT = m_geometry->OutputShape();
-    assert(inT.GetNumElements() == grad.GetNumRows());
-    assert(outT.GetNumElements() == srcGrad.GetNumRows());
+    const auto& g = *m_geometry;
+    assert(g.InputShape().GetNumElements() == grad.GetNumRows());
+    assert(g.OutputShape().GetNumElements() == srcGrad.GetNumRows());
     assert(batchSize == srcGrad.GetNumCols());
     assert(batchSize == grad.GetNumCols());
-    //assert(filterT.k() == filter.GetNumRows());
-    //assert(filterT.w() * filterT.h() * filterT.c() == filter.GetNumCols());
-    //assert(srcGradT.c() == filterT.k());
-    //assert(gradT.c() == filterT.c());
+    assert(g.KernelShape().GetNumElements() * g.MapCount().GetNumElements() == filter.GetNumElements());
 #ifdef NDEBUG
-    UNUSED(inT);
-    UNUSED(outT);
-    UNUSED(filterT);
+    UNUSED(g);
 #endif
 
     EnsureCompatible();
@@ -58,20 +46,14 @@ void ConvolutionEngine<ElemType>::BackwardData(size_t batchSize, const Mat& srcG
 template <class ElemType>
 void ConvolutionEngine<ElemType>::BackwardFilter(size_t batchSize, const Mat& srcGrad, const Mat& in, Mat& filter, bool allowReuse, Mat& workspace)
 {
-    const auto& inT = m_geometry->InputShape();
-    const auto& outT = m_geometry->OutputShape();
-    assert(inT.GetNumElements() == in.GetNumRows());
-    assert(outT.GetNumElements() == srcGrad.GetNumRows());
+    const auto& g = *m_geometry;
+    assert(g.InputShape().GetNumElements() == in.GetNumRows());
+    assert(g.OutputShape().GetNumElements() == srcGrad.GetNumRows());
     assert(batchSize == in.GetNumCols());
     assert(batchSize == srcGrad.GetNumCols());
-    //assert(srcGradT.c() == filterT.k());
-    //assert(inT.c() == filterT.c());
-    //assert(filterT.k() == filter.GetNumRows());
-    //assert(filterT.w() * filterT.h() * filterT.c() == filter.GetNumCols());
+    assert(g.KernelShape().GetNumElements() * g.MapCount().GetNumElements() == filter.GetNumElements());
 #ifdef NDEBUG
-    UNUSED(inT);
-    UNUSED(outT);
-    UNUSED(filterT);
+    UNUSED(g);
 #endif
 
     EnsureCompatible();
