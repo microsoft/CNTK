@@ -907,9 +907,9 @@ public:
         if (flags & CopyNodeFlags::copyNodeValue)
         {
             auto node = DownCast(nodeP);
-            *node->m_value = *m_value;
+            node->m_value->SetValue(*m_value);
             if (m_gradient)
-                *node->m_gradient = *m_gradient;
+                node->m_gradient->SetValue(*m_gradient);
             else
                 node->m_gradient = nullptr;
         }

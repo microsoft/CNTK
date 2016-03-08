@@ -91,11 +91,16 @@ public:
     Matrix(BaseMatrix<ElemType>* baseMatrix, ElemType* pArray, DEVICEID_TYPE deviceId);                                     // constructor for setting Matrix from a base matrix (externally managed butter pArray)
     Matrix(const size_t numRows, const size_t numCols, DEVICEID_TYPE deviceId, const MatrixType matrixType = DENSE, const MatrixFormat matrixFormat = matrixFormatDense);
     Matrix(const size_t numRows, const size_t numCols, ElemType* pArray, DEVICEID_TYPE deviceId, const size_t matrixFlags = matrixFlagNormal, const size_t nnz = 0);
-    Matrix(const Matrix<ElemType>& deepCopyFrom); // copy constructor, deep copy
     Matrix(const Matrix<ElemType>& deepCopyFrom, DEVICEID_TYPE deviceId);
-    Matrix<ElemType>& operator=(const Matrix<ElemType>& deepCopyFrom);                      // assignment operator, deep copy
     Matrix(Matrix<ElemType>&& moveFrom);                                                    // move constructor, shallow copy
-    Matrix<ElemType>& operator=(Matrix<ElemType>&& moveFrom);                               // move coment operator, shallow copy
+    Matrix<ElemType>& operator=(Matrix<ElemType>&& moveFrom);                               // move assignment operator, shallow copy
+
+    Matrix<ElemType> DeepClone() const;
+
+    // Disallow deep copy construction and assignment to avoid
+    // inadvertent silent deep copying
+    Matrix(const Matrix<ElemType>& deepCopyFrom) = delete;
+    Matrix<ElemType>& operator=(const Matrix<ElemType>& deepCopyFrom) = delete;
 
     static Matrix<ElemType> Ones(const size_t rows, const size_t cols, DEVICEID_TYPE deviceId);
     static Matrix<ElemType> Zeros(const size_t rows, const size_t cols, DEVICEID_TYPE deviceId);
@@ -176,7 +181,7 @@ public:
     void CopyColumnsStrided(const Matrix<ElemType>& fromMatrix, size_t numCols, size_t srcNumColsStride, size_t destNumColsStride);
 
     Matrix<ElemType> Diagonal() const;
-    Matrix<ElemType> AssignDiagonalValuesTo(Matrix<ElemType>& diag) const;
+    void AssignDiagonalValuesTo(Matrix<ElemType>& diag) const;
     void ShiftBy(int numShift);
 
     // TODO: all these scalars should be passed as doubles and cast down inside
@@ -195,6 +200,7 @@ public:
         m_baseMatrix->VerifySize(rows, cols);
     }
 
+    // TODO: Call this ShallowClone instead?
     Matrix<ElemType> AsReference() const
     {
         return ColumnSlice(0, GetNumCols());
@@ -296,6 +302,9 @@ public:
     Matrix<ElemType> operator^(ElemType alpha) const; // element-wise power
     Matrix<ElemType>& AssignElementPowerOf(const Matrix<ElemType>& a, const ElemType power);
 
+    // TODO: There are several functions below that perform an in-place operation
+    // We should prepend the names of these functions with InPlace for clearly indicating
+    // the semantics for callers.
     Matrix<ElemType>& ElementMultiplyWith(const Matrix<ElemType>& a);
     Matrix<ElemType>& AssignElementProductOf(const Matrix<ElemType>& a, const Matrix<ElemType>& b);
     Matrix<ElemType>& AddElementProductOf(const Matrix<ElemType>& a, const Matrix<ElemType>& b);
