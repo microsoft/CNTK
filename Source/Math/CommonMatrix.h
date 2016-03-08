@@ -210,7 +210,7 @@ enum MatrixFlags
 };
 
 // -----------------------------------------------------------------------
-// DenseBaseMatrix -- Class which enables a view into data storage.
+// BaseMatrixView -- Class which enables a view into data storage.
 // -----------------------------------------------------------------------
 
 template <class ElemType>
@@ -241,6 +241,58 @@ public:
 protected:
     void Clear() {}
     void ShallowCopyFrom(const BaseMatrixView<ElemType>& other) { *this = other; }
+
+    void ZeroInit()
+    {
+        m_numRows           = 0;
+        m_numCols           = 0;
+        m_sliceViewOffset   = 0;
+        m_externalBuffer    = false;
+        m_nz                = 0;
+    }
+
+protected:
+    size_t m_numRows;
+    size_t m_numCols;
+    size_t m_sliceViewOffset; // this is used to get a column slice view of a matrix in the Sparse CSC format  --TODO: move to sparse matrix implementations? Or common sparse base class?
+    bool m_externalBuffer; // is the buffer used by this matrix,
+    size_t m_nz;                           // Number of non-zero elements for sparse matrices (unused in other formats)
+    // size_t m_colStride; // really need this
+    // size_t m_offset 
+};
+
+// -----------------------------------------------------------------------
+// SparseMatrixView -- Class which enables a view into sparse data storage.
+// -----------------------------------------------------------------------
+
+template <class ElemType>
+class SparseMatrixView
+{
+public:
+    SparseMatrixView()
+    {
+        ZeroInit();
+    }
+
+    size_t GetNumRows() const { return m_numRows; }
+    size_t GetNumCols() const { return m_numCols; }
+    size_t GetNumElements() const { return m_numRows * m_numCols; }
+    bool IsEmpty() const { return m_numRows == 0 || m_numCols == 0; }
+    size_t NzCount() const { return m_nz; }
+    void SetNzCount(const size_t nz) { m_nz = nz; }
+    bool OwnBuffer() const { return !m_externalBuffer; }
+    void SetOwnBuffer(bool own) { m_externalBuffer = !own; }
+
+    void VerifySize(size_t rows, size_t cols)
+    {
+        if (rows != GetNumRows() || cols != GetNumCols())
+            LogicError("VerifySize: expected matrix size %lu x %lu, but it is %lu x %lu",
+                       rows, cols, GetNumRows(), GetNumCols());
+    }
+
+protected:
+    void Clear() {}
+    void ShallowCopyFrom(const SparseMatrixView<ElemType>& other) { *this = other; }
 
     void ZeroInit()
     {
@@ -312,29 +364,67 @@ protected:
 template <class ElemType>
 class DenseBaseMatrix : public BaseMatrixStorage<ElemType>, public BaseMatrixView<ElemType>
 {
+    typedef BaseMatrixStorage<ElemType> Storage;
+    typedef BaseMatrixView<ElemType> View;
 public:
-    DenseBaseMatrix() : BaseMatrixStorage<ElemType>(), BaseMatrixView<ElemType>() {}
+    DenseBaseMatrix() : Storage(), View() {}
     DenseBaseMatrix(const DenseBaseMatrix&) = delete; // Protect against deep copies.
     //DenseBaseMatrix& operator=(const DenseBaseMatrix&) = delete; // This currently breaks everything, as this is a deep copy.
 
 protected:
     void Clear() 
     {
-        BaseMatrixStorage<ElemType>::Clear();
-        BaseMatrixView<ElemType>::Clear();
+        Storage::Clear();
+        View::Clear();
     }
 
     void ZeroInit()
     {
-        BaseMatrixStorage<ElemType>::ZeroInit();
-        BaseMatrixView<ElemType>::ZeroInit();
+        Storage::ZeroInit();
+        View::ZeroInit();
     }
 
     // copy all metadata (but not content taht pArray points to)
     void ShallowCopyFrom(const DenseBaseMatrix& other)
     {
-        BaseMatrixStorage<ElemType>::ShallowCopyFrom(other);
-        BaseMatrixView<ElemType>::ShallowCopyFrom(other);
+        Storage::ShallowCopyFrom(other);
+        View::ShallowCopyFrom(other);
+    }
+
+};
+
+// -----------------------------------------------------------------------
+// SparseBaseMatrix -- base class for sparse matrices (CPU, GPU)
+// -----------------------------------------------------------------------
+
+template <class ElemType>
+class SparseBaseMatrix : public BaseMatrixStorage<ElemType>, public SparseMatrixView<ElemType>
+{
+    typedef BaseMatrixStorage<ElemType> Storage;
+    typedef SparseMatrixView<ElemType> View;
+public:
+    SparseBaseMatrix() : Storage(), View() {}
+    SparseBaseMatrix(const SparseBaseMatrix&) = delete; // Protect against deep copies.
+    //DenseBaseMatrix& operator=(const DenseBaseMatrix&) = delete; // This currently breaks everything, as this is a deep copy.
+
+protected:
+    void Clear()
+    {
+        Storage::Clear();
+        View::Clear();
+    }
+
+    void ZeroInit()
+    {
+        Storage::ZeroInit();
+        View::ZeroInit();
+    }
+
+    // copy all metadata (but not content taht pArray points to)
+    void ShallowCopyFrom(const SparseBaseMatrix& other)
+    {
+        Storage::ShallowCopyFrom(other);
+        View::ShallowCopyFrom(other);
     }
 
 };

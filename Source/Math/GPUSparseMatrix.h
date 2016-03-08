@@ -20,10 +20,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 // int rowIdxStart[m_numRows+1]
 
 template <class ElemType>
-class MATH_API GPUSparseMatrix : public DenseBaseMatrix<ElemType>
+class MATH_API GPUSparseMatrix : public SparseBaseMatrix<ElemType>
 {
 public:
-    typedef DenseBaseMatrix<ElemType> Base;
+    typedef SparseBaseMatrix<ElemType> Base;
     using Base::m_numRows;
     using Base::m_numCols;
     using Base::m_pArray;
