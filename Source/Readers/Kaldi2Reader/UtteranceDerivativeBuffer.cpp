@@ -91,7 +91,7 @@ bool UtteranceDerivativeBuffer<ElemType>::SetLikelihood(
     ProcessUttInfo(uttInfo, pMBLayout, &uttInfoInMinibatch);
 
     // Checks if we need to move data to CPU.
-    Matrix<ElemType> logLikelihood(logLikelihoodIn);
+    Matrix<ElemType> logLikelihood = logLikelihoodIn.DeepClone();
     if (logLikelihood.GetDeviceId() >= 0)
     {
         logLikelihood.TransferFromDeviceToDevice(
@@ -114,7 +114,7 @@ bool UtteranceDerivativeBuffer<ElemType>::SetLikelihood(
                 tmpUttUnit.streamID = i;
                 tmpUttUnit.logLikelihood.Resize(logLikelihood.GetNumRows(),
                                                 tmpUttUnit.uttLength);
-                m_uttPool[uttID] = tmpUttUnit;
+                m_uttPool[uttID] = std::move(tmpUttUnit);
             }
 
             // Sets the likelihood and computes derivatives.

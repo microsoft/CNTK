@@ -32,6 +32,7 @@ private:
             progress = 0;
             streamID = 0;
         }
+
     };
 
     bool m_needLikelihood;
