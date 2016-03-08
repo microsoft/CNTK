@@ -1811,7 +1811,7 @@ public:
     void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool) override
     {
         Base::RequestMatricesBeforeForwardProp(matrixPool);
-        if (!m_eval)
+        //if (!m_eval)
         {
             RequestMatrixFromPool(m_saveMean, matrixPool);
             RequestMatrixFromPool(m_saveInvStdDev, matrixPool);
@@ -1821,7 +1821,7 @@ public:
     void RequestMatricesBeforeBackprop(MatrixPool& matrixPool) override
     {
         Base::RequestMatricesBeforeBackprop(matrixPool);
-        if (!m_eval)
+        //if (!m_eval)
         {
             RequestMatrixFromPool(m_dScale, matrixPool);
             RequestMatrixFromPool(m_dBias, matrixPool);
@@ -1831,7 +1831,7 @@ public:
     void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool) override
     {
         Base::ReleaseMatricesAfterBackprop(matrixPool);
-        if (!m_eval)
+        //if (!m_eval)
         {
             ReleaseMatrixToPool(m_saveMean, matrixPool);
             ReleaseMatrixToPool(m_saveInvStdDev, matrixPool);
