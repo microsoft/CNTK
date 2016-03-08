@@ -870,9 +870,11 @@ public:
             return ndlNode;
         }
 
-        auto found = token.find_first_not_of("+-.0123456789eE");
-        // see if it's a numeric constant
-        if (found == npos)
+		char* pEnd;
+		strtod(token.c_str(), &pEnd);
+
+		// see if it's a numeric constant
+		if (pEnd[0] == 0)
         {
             ndlNode = new NDLNode<ElemType>("", token, this, ndlTypeConstant);
         }
