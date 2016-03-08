@@ -134,11 +134,7 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <None Include="Config\Network_Operator_Plus.cntk">
-      <DeploymentContent>false</DeploymentContent>
-    </None>
-  </ItemGroup>
-  <ItemGroup>
+    <Text Include="Config\Network_Operator_Plus.cntk" />
     <Text Include="Control\Network_Operator_Plus_Control.txt" />
     <Text Include="Data\Network_Operator_Plus_Data.txt" />
   </ItemGroup>
