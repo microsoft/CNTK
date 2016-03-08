@@ -83,9 +83,9 @@ cntkrun()
   mkdir -p $modelsDir || exit $?
 
   if [[ $MPIMode == 0 ]]; then
-    run "$BinaryPath" $CNTKArgs
+    run /usr/bin/valgrind --tool=massif "$BinaryPath" $CNTKArgs
   else
-    run "$MPI_BINARY" $MPIArgs $BinaryPath $CNTKArgs
+    run "$MPI_BINARY" $MPIArgs /usr/bin/valgrind --tool=massif $BinaryPath $CNTKArgs
   fi
   if [[ $DeleteModelsAfterTest == 1 ]]; then
     [ -d $modelsDir ] && rm -rf "$modelsDir"
