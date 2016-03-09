@@ -52,6 +52,11 @@ class AbstractContext(object, metaclass=ABCMeta):
     
     '''
     '''        
+    def _generate_predict_config(self):
+        pass 
+    
+    '''
+    '''        
     def _generate_eval_config(self):
         pass        
         
@@ -68,9 +73,15 @@ class AbstractContext(object, metaclass=ABCMeta):
         pass     
     
     '''
+    '''
+    @abstractmethod
+    def predict(self, reader):
+        pass     
+    
+    '''
     '''    
     @abstractmethod
-    def eval(self, reader):
+    def eval(self, node, reader):
         pass 
     
 '''
@@ -92,10 +103,16 @@ class Context(AbstractContext):
     def test(self, reader):
         self._generate_test_config() 
         #TODO: run exe
+
+    '''
+    '''    
+    def predict(self, reader):
+        self._generate_predict_config() 
+        #TODO: run exe
     
     '''
     '''    
-    def eval(self, reader):
+    def eval(self, node, reader):
         self._generate_eval_config() 
         #TODO: run exe
 
