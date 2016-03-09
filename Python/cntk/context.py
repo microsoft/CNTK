@@ -32,7 +32,8 @@ class AbstractContext(object, metaclass=ABCMeta):
         else:
             os.mkdir(self.directory)
         
-        self.macros = []        
+        self.macros = []  
+        self.graph = graph
         self.optimizer = optimizer
         self.device_id = device_id
         
