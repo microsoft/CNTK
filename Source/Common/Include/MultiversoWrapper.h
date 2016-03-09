@@ -60,7 +60,6 @@ namespace Microsoft {
 					double adjustcoef = 0.2,
 					size_t adjustnbmb = 600)
 				{
-					TestMultipleThread();
 					m_modelSyncCount = 0;
 					m_adjustLearningRateAtBeginningType = adjusttype;
 					m_adjustCoefficient = adjustcoef;
@@ -317,7 +316,7 @@ namespace Microsoft {
 					assert(!m_isInitialized);
 					m_isInitialized = true;
 
-                    multiverso::Log::ResetLogLevel(multiverso::LogLevel::Debug);
+                    // multiverso::Log::ResetLogLevel(multiverso::LogLevel::Debug);
 					multiverso::MV_Init();
 
 					//weights
@@ -381,54 +380,6 @@ namespace Microsoft {
 					return f;
 				}
 
-#define ARRAY_SIZE 4683776
-				void TestMultipleThread()
-				{
-					using namespace multiverso;
-					Log::Info("Test Multiple threads \n");
-					std::mt19937_64 eng{ std::random_device{}() };
-					std::uniform_int_distribution<> dist{ 5, 10000 };
-					std::this_thread::sleep_for(std::chrono::milliseconds{ dist(eng) });
-					MV_Init();
-
-					ArrayWorker<float>* shared_array = new ArrayWorker<float>(ARRAY_SIZE);
-					ArrayServer<float>* server_array = new ArrayServer<float>(ARRAY_SIZE);
-					std::thread* m_prefetchThread = nullptr;
-					MV_Barrier();
-					Log::Info("Create tables OK\n");
-
-					std::vector<float> delta(ARRAY_SIZE);
-					while (true){
-						if (m_prefetchThread != nullptr && m_prefetchThread->joinable())
-						{
-							m_prefetchThread->join();
-							delete m_prefetchThread;
-							m_prefetchThread = nullptr;
-						}
-
-						std::fill(delta.begin(), delta.end(), 0.0f);
-						for (int i = 0; i < ARRAY_SIZE; ++i)
-						{
-							std::mt19937_64 eng{ std::random_device{}() };
-							std::uniform_real_distribution<float> dist{ -1, 1 };
-							delta[i] = dist(eng);
-						}
-						m_prefetchThread = new std::thread([&](){
-
-							std::mt19937_64 eng{ std::random_device{}() };
-							std::uniform_int_distribution<> dist{ 5, 50000 };
-							std::this_thread::sleep_for(std::chrono::milliseconds{ dist(eng) });
-							shared_array->Add(delta.data(), ARRAY_SIZE);
-							shared_array->Get(delta.data(), ARRAY_SIZE);
-							Log::Info("Rank %d Get OK\n", MV_Rank());
-							for (int i = 0; i < 10; ++i)
-								std::cout << delta[i] << " "; std::cout << std::endl;
-						});
-
-					}
-					delete server_array;
-					MV_ShutDown();
-				}
 				multiverso::ArrayWorker<ElemType>* m_sharedArray;
 				multiverso::ArrayServer<ElemType>* m_serverArray;
 				thread * m_prefetchThread;
