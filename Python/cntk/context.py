@@ -1,5 +1,6 @@
-import os
 from abc import ABCMeta, abstractmethod
+import os
+import subprocess
 
 _FLOATX = 'float32'
 if "CNTK_EXECUTABLE_PATH" not in os.environ:
@@ -11,7 +12,9 @@ CNTK_TEST_TEMPLATE_PATH = os.path.join(os.path.dirname(__file__), "cntk_test_tem
 CNTK_PREDICT_TEMPLATE_PATH = os.path.join(os.path.dirname(__file__), "cntk_predict_template.cntk")
 CNTK_EVAL_TEMPLATE_PATH = os.path.join(os.path.dirname(__file__), "cntk_eval_template.cntk")
 CNTK_TRAIN_CONFIG_FILENAME = "train.cntk"
+CNTK_TEST_CONFIG_FILENAME = "test.cntk"
 CNTK_PREDICT_CONFIG_FILENAME = "predict.cntk"
+CNTK_EVAL_CONFIG_FILENAME = "eval.cntk"
 CNTK_OUTPUT_FILENAME="out.txt"
 
 '''This is the abstract CNTK context. It provides an API to run CNTK actions
@@ -105,34 +108,45 @@ class AbstractContext(object, metaclass=ABCMeta):
 '''This is a sub-class of AbstractContext, use it to run CNTK locally.
 '''
 class Context(AbstractContext):    
+    '''Calls the CNTK exe
+    :param config_file_name: the name of the configuration file
+    :param config_content: a string containing the configuration
+    '''
+    def _call_cntk(self, config_file_name, config_content):
+        filename = os.path.join(self.directory, config_file_name)        
+        with open(os.path.join(self.context.directory, filename), "w") as out:
+            out.write(config_content)            
+        subprocess.check_call([CNTK_EXECUTABLE_PATH, "configFile=%s"%filename])        
+    
+    
     '''Run the train action locally.
     :param reader: the reader used to provide the training data.
     '''
     def train(self, reader):
-        self._generate_train_config() 
-        #TODO: run exe
+        config_content = self._generate_train_config()         
+        self._call_cntk(CNTK_TRAIN_CONFIG_FILENAME, config_content)        
     
     '''Run the test action locally.
     :param reader: the reader used to provide the testing data.
     '''    
     def test(self, reader):
-        self._generate_test_config() 
-        #TODO: run exe
+        config_content = self._generate_test_config() 
+        self._call_cntk(CNTK_TEST_CONFIG_FILENAME, config_content) 
 
     '''Run the write action locally, use the trained model of this context.
     :param reader: the reader used to provide the prediction data.
     '''    
     def predict(self, reader):
-        self._generate_predict_config() 
-        #TODO: run exe
+        config_content = self._generate_predict_config() 
+        self._call_cntk(CNTK_PREDICT_CONFIG_FILENAME, config_content) 
     
     '''Run the write action locally to evaluate the passed node.
     :param reader: the reader used to provide the prediction data.
     :param node: the node to evaluate.
     '''    
     def eval(self, node, reader):
-        self._generate_eval_config() 
-        #TODO: run exe
+        config_content = self._generate_eval_config() 
+        self._call_cntk(CNTK_EVAL_CONFIG_FILENAME, config_content) 
 
 '''This is a sub-class of AbstractContext, use it to submit your wokrloads to the cluster.
 '''
