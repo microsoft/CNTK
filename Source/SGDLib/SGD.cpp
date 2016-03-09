@@ -2392,7 +2392,7 @@ SGDParams::SGDParams(const ConfigRecordType& configSGD, size_t sizeofElemType)
 
     m_dropoutRates = configSGD(L"dropoutRate", ConfigRecordType::Array(doubleargvector(vector<double>{0.0})));
     m_batchNormalizationTimeConstant = configSGD(L"batchNormalizationTimeConstant", ConfigRecordType::Array(doubleargvector(vector<double>{std::numeric_limits<double>::infinity()})));
-    m_setBNToEvalModeAfterEpochNumber = configSGD(L"setBNToEvalModeAfterEpochNumber", std::numeric_limits<int>::infinity());
+    m_setBNToEvalModeAfterEpochNumber = configSGD(L"setBNToEvalModeAfterEpochNumber", std::numeric_limits<int>::max());
 
     GradientsUpdateType gradUpdateType = ParseGradUpdateType(configSGD(L"gradUpdateType", L"None"));
     double gaussianNoiseInjecStd = configSGD(L"gaussianNoiseInjectStd", 0.0);
