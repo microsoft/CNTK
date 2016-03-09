@@ -4085,6 +4085,36 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AddAveragePoolingGradient(const CPUMat
 }
 #pragma endregion Other Helper Functions
 
+template <class ElemType>
+void CPUMatrix<ElemType>::NDConvolutionForward(const CPUMatrix<ElemType>& filter, const int* mpRowCol, const int* mpRowIwht,
+                              const int* mpRowRun, const int* runs, CPUMatrix<ElemType>& output) const
+{
+    for (size_t sample = 0; sample < output.GetNumCols(); sample++)
+    {
+        for (size_t row = 0; row < output.GetNumRows(); row++)
+        {
+            int colBase = mpRowCol[row];
+            int ivBase = mpRowIwht[row];
+            assert(0 <= colBase && colBase < GetNumRows());
+
+            ElemType sum = 0;
+            int i0 = mpRowRun[row];
+            int skip = runs[i0++];
+            int size = runs[i0++];
+            int imask = i0 + size;
+            for (int i = 0; i < size; i++)
+            {
+                if (runs[imask + i] == 0)
+                    continue;
+                int dcol = runs[i0 + i];
+                assert(0 <= colBase + dcol && colBase + dcol < GetNumRows());
+                sum += filter.BufferPointer()[ivBase + skip + i] * (*this)(colBase + dcol, sample);
+            }
+            output(row, sample) = sum;
+        }
+    }
+}
+
 #pragma region Static BLAS Functions
 
 /// <summary>Matrix-matrix multiply with col-major matrices (a and b may be transposed): c = alpha * op(a) * op(b) + beta*c</summary>

@@ -54,7 +54,7 @@ public:
         }
         // Set "minibatch"(aka N) dimension.
         dims[0] = 1;
-        strides[0] = strides[1];
+        strides[0] = strides[1] * dims[1];
         CUDNN_CALL(cudnnSetTensorNdDescriptor(m_tensor, dataType, (int)dims.size(), dims.data(), strides.data()));
     }
 
@@ -66,7 +66,7 @@ public:
         int strides[MaxDims];
         int nbDims = 0;
         cudnnDataType_t dataType;
-        // According to NVIDIA, Get/Set functions are very fast so it's safe to call them often.
+        // According to NVIDIA, Get/Set functions are very fast so it's safe to call them in a loop.
         CUDNN_CALL(cudnnGetTensorNdDescriptor(m_tensor, MaxDims, &dataType, &nbDims, dims, strides));
         assert(nbDims <= MaxDims);
         dims[0] = (int)batchSize;

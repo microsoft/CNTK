@@ -17,6 +17,7 @@ void ConvolutionEngine<ElemType>::Forward(size_t batchSize, const Mat& in, const
     assert(g.OutputShape().GetNumElements() == out.GetNumRows());
     assert(batchSize == in.GetNumCols());
     assert(batchSize == out.GetNumCols());
+    // REVIEW alexeyk: add shape-aware asserts?
     assert(g.KernelShape().GetNumElements() * g.MapCount().GetNumElements() == filter.GetNumElements());
 #ifdef NDEBUG
     UNUSED(g);
@@ -183,19 +184,32 @@ void ConvolutionEngine<ElemType>::BackwardFilter(size_t batchSize, const Mat& sr
 //}
 
 //------------------------------------------------------------------
-// Default convolution engine implementation.
+// Reference convolution engine implementation.
+// This engine supports arbitrary convolution geometry but does not provide efficient implementation.
+// Its main purpose is to serve as a baseline for optmized engines (e.g. cuDNN) that 
+// usually implement only a subset of a general convolution geometry.
 //------------------------------------------------------------------
 template <class ElemType>
-class DefaultConvolutionEngine : public ConvolutionEngine<ElemType>
+class ReferenceConvolutionEngine : public ConvolutionEngine<ElemType>
 {
 public:
     using Base = ConvolutionEngine<ElemType>;
     using typename Base::Mat;
 
 public:
-    DefaultConvolutionEngine(ConvolveGeometryPtr geometry, DEVICEID_TYPE deviceId, ImageLayoutKind imageLayout, size_t maxTempMemSizeInSamples)
-        : Base(geometry, deviceId, imageLayout, maxTempMemSizeInSamples)
+    ReferenceConvolutionEngine(ConvolveGeometryPtr geometry, DEVICEID_TYPE deviceId, ImageLayoutKind imageLayout, size_t maxTempMemSizeInSamples)
+        : Base(geometry, deviceId, imageLayout, maxTempMemSizeInSamples), 
+        m_mpRowCol(geometry->MpRowCol().data()), m_mpRowIwht(geometry->MpRowIwht().data()),
+        m_mpRowRun(geometry->MpRowRun().data()), m_runs(geometry->Runs().data())
     {
+        const auto& g = *geometry;
+        if (deviceId >= 0)
+        {
+            m_mpRowCol = TracingGPUMemoryAllocator::Allocate<int>(deviceId, g.MpRowCol().size(), g.MpRowCol().data());
+            m_mpRowIwht = TracingGPUMemoryAllocator::Allocate<int>(deviceId, g.MpRowIwht().size(), g.MpRowIwht().data());
+            m_mpRowRun = TracingGPUMemoryAllocator::Allocate<int>(deviceId, g.MpRowRun().size(), g.MpRowRun().data());
+            m_runs = TracingGPUMemoryAllocator::Allocate<int>(deviceId, g.Runs().size(), g.Runs().data());
+        }
     }
 
 protected:
@@ -207,12 +221,13 @@ protected:
     void EnsureCompatible() override
     {
         if (m_imageLayout != ImageLayoutKind::CHW)
-            RuntimeError("Default convolution engine supports only CHW/cudnn layout.");
+            RuntimeError("Reference convolution engine supports only CHW/cudnn layout.");
     }
 
     void ForwardCore(size_t batchSize, const Mat& in, const Mat& filter, Mat& out, Mat& workspace) override
     {
         UNUSED(batchSize); UNUSED(in); UNUSED(filter); UNUSED(out); UNUSED(workspace);
+        in.NDConvolutionForward(filter, m_mpRowCol, m_mpRowIwht, m_mpRowRun, m_runs, out);
     }
 
     void BackwardDataCore(size_t batchSize, const Mat& srcGrad, const Mat& filter, Mat& grad, Mat& workspace) override
@@ -224,6 +239,12 @@ protected:
     {
         UNUSED(batchSize); UNUSED(srcGrad); UNUSED(filter); UNUSED(in); UNUSED(allowReuse); UNUSED(workspace);
     }
+
+private:
+    const int* m_mpRowCol;
+    const int* m_mpRowIwht;
+    const int* m_mpRowRun;
+    const int* m_runs;
 };
 
 //------------------------------------------------------------------
@@ -711,10 +732,10 @@ std::unique_ptr<ConvolutionEngine<ElemType>> ConvolutionEngine<ElemType>::Create
         return CuDnnConvolutionEngineFactory<ElemType>::CreateConvEngine(geometry, deviceId, imageLayout, maxTempMemSizeInSamples);
     }
 
-    if (!isEnabled(ConvolutionEngineKind::Default))
-        RuntimeError("Default convolution is disabled and no other engine supports such configuratin (or disabled).");
-    fprintf(stderr, "Using default convolution engine.\n");
-    return std::make_unique<DefaultConvolutionEngine<ElemType>>(geometry, deviceId, imageLayout, maxTempMemSizeInSamples);
+    if (!isEnabled(ConvolutionEngineKind::Reference))
+        RuntimeError("Reference convolution is disabled and no other engine supports such configuratin (or disabled).");
+    fprintf(stderr, "Using reference convolution engine.\n");
+    return std::make_unique<ReferenceConvolutionEngine<ElemType>>(geometry, deviceId, imageLayout, maxTempMemSizeInSamples);
 }
 
 //template <class ElemType>

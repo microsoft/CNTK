@@ -24,12 +24,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
 enum class ConvolutionEngineKind
 {
-    None    = 0,
-    Default = 1 << 0,
-    CuDnn   = 1 << 1,
-    Legacy  = 1 << 2,
+    None      = 0,
+    Reference = 1,
+    CuDnn     = 1 << 1,
+    Legacy    = 1 << 2,
 
-    All     = Default | CuDnn | Legacy
+    All     = Reference | CuDnn | Legacy
 };
 
 #pragma warning(push)

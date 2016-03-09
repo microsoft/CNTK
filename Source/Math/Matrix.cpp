@@ -3987,6 +3987,21 @@ Matrix<ElemType>& Matrix<ElemType>::AddAveragePoolingGradient(const Matrix<ElemT
 
 #pragma endregion Other Helper Functions
 
+template <class ElemType>
+void Matrix<ElemType>::NDConvolutionForward(const Matrix<ElemType>& filter, const int* mpRowCol, const int* mpRowIwht,
+                              const int* mpRowRun, const int* runs, Matrix<ElemType>& output) const
+{
+    DecideAndMoveToRightDevice(*this, output);
+
+    DISPATCH_MATRIX_ON_FLAG(this,
+                            this,
+                            m_CPUMatrix->NDConvolutionForward(*(filter.m_CPUMatrix), mpRowCol, mpRowIwht, mpRowRun, runs, *(output.m_CPUMatrix)),
+                            m_GPUMatrix->NDConvolutionForward(*(filter.m_GPUMatrix), mpRowCol, mpRowIwht, mpRowRun, runs, *(output.m_GPUMatrix)),
+                            NOT_IMPLEMENTED,
+                            NOT_IMPLEMENTED);
+
+}
+
 #pragma region Static BLAS Functions
 
 template <class ElemType>

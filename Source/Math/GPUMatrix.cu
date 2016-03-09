@@ -135,7 +135,7 @@ AllocatedElemType* TracingGPUMemoryAllocator::Allocate(int deviceId, size_t numR
 }
 
 template <typename AllocatedElemType>
-AllocatedElemType* TracingGPUMemoryAllocator::Allocate(int deviceId, size_t numElements)
+AllocatedElemType* TracingGPUMemoryAllocator::Allocate(int deviceId, size_t numElements, const AllocatedElemType* src)
 {
     if (IsTraceEnabled())
     {
@@ -145,7 +145,10 @@ AllocatedElemType* TracingGPUMemoryAllocator::Allocate(int deviceId, size_t numE
     }
 
     AllocatedElemType* deviceBufferPtr = AllocateNoTrace<AllocatedElemType>(deviceId, numElements);
-
+    // Do the copy in the default stream.
+    if (src != nullptr)
+        CUDA_CALL(cudaMemcpy((void*)deviceBufferPtr, src, sizeof(AllocatedElemType) * numElements, cudaMemcpyHostToDevice));
+    
     if (IsTraceEnabled())
     {
         fprintf(stderr, "Allocated DeviceBufferPointer = %p\n", (void*)deviceBufferPtr);
@@ -3001,6 +3004,13 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AddAveragePoolingGradient(const GPUMat
 
 #pragma endregion Other helper functions
 
+template <class ElemType>
+void GPUMatrix<ElemType>::NDConvolutionForward(const GPUMatrix<ElemType>& filter, const int* mpRowCol, const int* mpRowIwht,
+                              const int* mpRowRun, const int* runs, GPUMatrix<ElemType>& output) const
+{
+    UNUSED(filter); UNUSED(mpRowCol); UNUSED(mpRowIwht); UNUSED(mpRowRun); UNUSED(runs); UNUSED(output);
+}
+
 #pragma region Static BLAS Functions
 // float/double overloads of cublasSgemm()/cublasDgemm()
 static cublasStatus_t cublas_gemm(cublasHandle_t handle, cublasOperation_t transa, cublasOperation_t transb, int m, int n, int k, const float* alpha, const float* A, int lda, const float* B, int ldb, const float* beta, float* C, int ldc)
@@ -4216,12 +4226,12 @@ template void GPUMatrix<char>::SetValue(const char);
 template void GPUMatrix<char>::SetValue(const size_t numRows, const size_t numCols, int deviceId, char* pArray, size_t matrixFlags);
 template void GPUMatrix<char>::SetValue(GPUMatrix<char> const&);
 
-template int* TracingGPUMemoryAllocator::Allocate<int>(int, size_t);
-template size_t* TracingGPUMemoryAllocator::Allocate<size_t>(int, size_t);
-template long* TracingGPUMemoryAllocator::Allocate<long>(int, size_t);
-template char* TracingGPUMemoryAllocator::Allocate<char>(int, size_t);
-template float* TracingGPUMemoryAllocator::Allocate<float>(int, size_t);
-template double* TracingGPUMemoryAllocator::Allocate<double>(int, size_t);
+template int* TracingGPUMemoryAllocator::Allocate<int>(int, size_t, const int*);
+template size_t* TracingGPUMemoryAllocator::Allocate<size_t>(int, size_t, const size_t*);
+template long* TracingGPUMemoryAllocator::Allocate<long>(int, size_t, const long*);
+template char* TracingGPUMemoryAllocator::Allocate<char>(int, size_t, const char*);
+template float* TracingGPUMemoryAllocator::Allocate<float>(int, size_t, const float*);
+template double* TracingGPUMemoryAllocator::Allocate<double>(int, size_t, const double*);
 
 template void TracingGPUMemoryAllocator::Free<int>(int, int*, bool);
 template void TracingGPUMemoryAllocator::Free<size_t>(int, size_t*, bool);

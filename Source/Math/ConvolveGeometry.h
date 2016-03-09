@@ -449,21 +449,21 @@ public:
             
             size_t dim = inputShape[i];
             bool autoPadCur = autoPad[autoPad.size() == 1 ? 0 : i];
+            size_t lo = lowerPad[lowerPad.size() == 1 ? 0 : i];
+            size_t hi = upperPad[upperPad.size() == 1 ? 0 : i];
             if (autoPadCur)
             {
                 dim += kernelShape[i] - 1;
             }
             else
             {
-                size_t lo = lowerPad[lowerPad.size() == 1 ? 0 : i];
-                size_t hi = upperPad[upperPad.size() == 1 ? 0 : i];
                 dim += lo + hi;
             }
             size_t dimOut = (dim - kernelShape[i]) / delta + 1;
-            if (!autoPadCur)
+            // When LowerPad and/or UpperPad are specified (i.e. > 0), we insist that the kernel applications
+            // fill the entire space.
+            if (!autoPadCur && (lo > 0 || hi > 0))
             {
-                // When LowerPad and/or UpperPad are specified, we insist that the kernel applications
-                // fill the entire space.
                 size_t size = (dimOut - 1) * delta + kernelShape[i];
                 if (size != dim)
                     InvalidArgument("NDConvolution requires that kernel fills the entire space if auto-padding is disabled.");
@@ -483,6 +483,26 @@ public:
         assert((sizeOut % mapCountTotal) == 0);
 
         return dimsOut;
+    }
+
+    // Used in unit tests and during debugging.
+    operator std::string() const
+    {
+        std::ostringstream res;
+        res << "Input: " << (string)InputShape();
+        res << ", Output: " << (string)OutputShape();
+        res << ", Filter: " << (string)KernelShape();
+        res << ", Map: " << (string)MapCount();
+        res << ", Stride: " << (string)Stride();
+        res << ", Sharing: (";
+        std::copy(begin(Sharing()), end(Sharing()) - 1, std::ostream_iterator<bool>(res, ", "));
+        res << Sharing().back() << ")";
+        res << ", AutoPad: (";
+        std::copy(begin(AutoPad()), end(AutoPad()) - 1, std::ostream_iterator<bool>(res, ", "));
+        res << AutoPad().back() << ")";
+        res << ", LowerPad: " << (string)LowerPad();
+        res << ", UpperPad: " << (string)UpperPad();
+        return res.str();
     }
 
     DISABLE_COPY_AND_MOVE(ConvolveGeometry);
