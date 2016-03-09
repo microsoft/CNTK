@@ -1,6 +1,7 @@
-from .._fetch_ops import REGEX_COMPNODE, CompNodeOperator
+from .._fetch_ops import *
 
 import pytest
+
 @pytest.mark.parametrize("input_line, expected", [
     # Format of expected: [OperatorName, [(OperandName_1, OperandInitValue_1), ...]]
 (r"Times(A, B, outputRank=1, tag='') = new ComputationNode [ operation = 'Times' ; inputs = ( A : B ) /*plus the function args*/ ]",
@@ -13,9 +14,9 @@ import pytest
 (r"LearnableParameter(rows, cols, learningRateMultiplier = 1.0, init = 'uniform'/*|fixedValue|gaussian|fromFile*/, initValueScale = 1, value = 0, initFromFilePath = '', initOnCPUOnly=true, randomSeed=-1, tag='') = new ComputationNode [ operation = 'LearnableParameter' ; shape = new TensorShape [ dims = (rows : cols) ] /*plus the function args*/ ]",
     ['LearnableParameter', [('rows', None), ('cols', None), ('learningRateMultiplier', 1.0), ('init', 'uniform'), ('initValueScale', 1), ('value', 0), ('initFromFilePath', ''), ('initOnCPUOnly', True), ('randomSeed', -1)]]),
 ])
-def test_parsing_comp_nodes(input_line, expected):
-    comp_node = REGEX_COMPNODE.match(input_line)
-    po = CompNodeOperator(comp_node)
+def test_parsing_comp_node(input_line, expected):
+    match = REGEX_COMPNODE.match(input_line)
+    po = CompNodeOperator(match)
 
     assert po.name == expected[0]
     assert len(po.operands) == len(expected[1])
@@ -23,3 +24,20 @@ def test_parsing_comp_nodes(input_line, expected):
     for po_op, (exp_op, exp_init) in zip(po.operands, expected[1]):
         assert po_op.name == exp_op
         assert po_op.init_value == exp_init
+
+@pytest.mark.parametrize("input_line, expected", [
+(r"Constant(val, rows = 1, cols = 1, tag='') = Parameter(rows, cols, learningRateMultiplier = 0, init = 'fixedValue', value = val)", 
+    ['Constant', [('value', None), ('rows', 1), ('cols', 1)]]), # note that we changed 'val' to 'value'
+])
+def test_parsing_inst_node(input_line, expected):
+    match = REGEX_INSTANTIATION.match(input_line)
+    po = InstantiationOperator(match)
+
+    assert po.name == expected[0]
+    assert len(po.operands) == len(expected[1])
+
+    for po_op, (exp_op, exp_init) in zip(po.operands, expected[1]):
+        assert po_op.name == exp_op
+        assert po_op.init_value == exp_init
+
+

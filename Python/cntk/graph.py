@@ -1,100 +1,90 @@
 
 class ComputationNode(object):
-    def __init__(self, name, params=None, value=None, get_output_shape=None,
-            var_name=None, check=None):
+    def __init__(self, name, params=None):
         self.name = name
         self.params = params
-        self.value = value
-        self.get_output_shape = get_output_shape
-        self.var_name = var_name
-
-        if check:
-            #print("name=%s params=%s"%(name, str(params)))
-            assert check(*params)
+        self.var_name = None
 
     def __add__(self, other):
-        return Operator("Plus", (self, other),
-                get_output_shape=lambda a,b: a.get_shape(),
-                check=plus_check
-                )
+        return Plus(self, other)
 
     def __radd__(self, other):
-        return Operator("Plus", (other, self),
-                get_output_shape=lambda a,b: a.get_shape(),
-                check=plus_check
-                )
+        return Plus(other, self)
 
-    def __mul__(self, other):
-        return times(self, other)
+    def __matmul__(self, other):
+        # NOTE supported in Python 3.5
+        return Times(self, other)
 
-    def __truediv__(self, other):
-        return Operator("**Divide**", (self, other),
-                get_output_shape=lambda a,b: np.asarray(a).shape
-                )
+    def __rmatmul__(self, other):
+        # NOTE supported in Python 3.5
+        return Times(other, self)
 
-    def __rtruediv__(self, other):
-        return Operator("**Divide**", (other, self),
-                get_output_shape=lambda a,b: np.asarray(a).shape
-                )
+    # TODO more __operators__
 
-    def get_cntk_param_string(self, param_variable_names=None):
-        return ""
-
-    def get_value(self):
-        return self.value
-
-    def get_shape(self):
-        if self.value is not None:
-            return self.value.shape
-        else:
-            if self.params:
-                print("params: "+str(self.params))
-
-                return self.get_output_shape(*self.params)
-            else:
-                return self.get_output_shape()
-
-    def eval(self, **kw):
-        raise NotImplementedError
-
-    def __str__(self):
-        return "%s / params=%s / value=%s"%(self.name, self.params, self.value)
-
-
-class Input(ComputationNode):
-    def __init__(self, shape, **kwargs):
-        super(Input, self).__init__('Input', **kwargs)
-        self.get_output_shape=lambda : shape
-
-    def get_cntk_param_string(self, param_variable_names=None):
-        pass
-
-class Parameter(ComputationNode):
-    def __init__(self, **kwargs):
-        super(LearnableParameter, self).__init__('LearnableParameter', **kwargs)
-        self.get_output_shape=lambda : kwargs['value'].shape
-
-    def get_cntk_param_string(self, param_variable_names=None):
-        if len(param_variable_names)!=0:
-            raise ValueError("expected no parameter variable names",
-                    param_variable_names)
-
-        shape = self.get_output_shape()
-
-        # TODO this makes only sense as the first layer for a
-        # classification problem.
-        if len(shape)==1:
-            params = "$NumOfClasses$" 
-        elif len(shape)==2:
-            # TODO have layer's output_dim and input_dim a word on this
-            rows = shape[0] 
-            cols = shape[0]
-            params = "%s, %s"%(rows, cols)
-        else:
-            raise ValueError("expected either 1 or 2-dimensional shape", shape) 
-
+    def _get_cntk_param_string(self, param_variable_names=None):
+        params = ", ".join(param_variable_names)
         return params
 
+    def eval(self, **kw):
+        graph.eval(self, kw)
+
+    def __str__(self):
+        return "%s / params=%s"%(self.name, self.params)
+
+    def _to_description(self, desc=None, node_counter=0):
+        if desc is None:
+            desc = []
+        param_variable_names = []
+        if self.params:
+            for p_name in self.params:
+                p_value = self.__dict__[p_name]
+                if hasattr(p_value, '_to_description') and p_name:
+                    child_var, node_counter, child_desc = p_value._to_description(desc, node_counter)
+                    param_variable_names.append(child_var)
+                else:
+                    if isinstance(p_value, bool):
+                        p_value = str(p_value).lower()
+                    elif isinstance(p_value, str):
+                        p_value = "'%s'"%p_value
+                    
+                    param_variable_names.append('%s=%s'%(p_name, p_value))
+
+        var_name = self.var_name or "v%i"%node_counter 
+        node_counter += 1
+        
+        params = self._get_cntk_param_string(param_variable_names)
+
+        line = "%s = %s(%s)"%(var_name, self.name, params)
+        desc.append(line)
+
+        return var_name, node_counter, desc
+
+    def to_description(self):
+        var_name, node_counter, desc = self._to_description()
+        return "\n".join(desc)
+
+
+
+class Label(ComputationNode):
+    def __init__(self, dims):
+        super(Label, self).__init__('Input', params=('dims', 'tag'))
+        self.dims = dims
+        self.tag = 'label'
 
 class Graph(object):
-    pass
+    def __init__(self):
+        super(Graph, self).__init__()
+        # TODO maintain self.root_node
+
+    def to_description(self, root_node, **kw):
+        return root_node.to_description()
+
+    def eval(self, root_node, **kw):
+        if root_node is None:
+            root_node = self.root_node
+        model_description = self.to_description(root_node)
+        # TODO pull in context for config file generation, etc.
+
+
+# importing at the end of the file to work around circular imports
+from cntk.ops import *
