@@ -1115,6 +1115,35 @@ void ComputationNetwork::SaveToDbnFile(ComputationNetworkPtr net, const std::wst
 
         return node->OperationName() == OperationNameOf(LearnableParameter) && (lowerName.find(L"prior") != wstring::npos);
     };
+    auto FindReplicationContext = [](std::vector<ElemType>& arr)->int
+    {
+        for (int i = 25; i >= 1; i--)
+        {
+            int ctx = i * 2 + 1;
+            if (arr.size() % ctx != 0)
+                continue;
+
+            int baseLen = arr.size() / ctx;
+            bool matched = true;
+
+            for (int k = 1; k < ctx && matched; k++)
+            {
+                for (int j = 0; j < baseLen; j++)
+                {
+                    if (arr[j] != arr[k * baseLen + j])
+                    {
+                        matched = false;
+                        break;
+                    }
+                }
+            }
+
+            if (matched)
+                return ctx;
+        }
+
+        return 1;
+    };
 
     // Get output node
     std::list<ComputationNodeBasePtr> outputNodes = net->GetNodesWithType(OperationNameOf(ErrorPredictionNode));
@@ -1245,7 +1274,12 @@ void ComputationNetwork::SaveToDbnFile(ComputationNetworkPtr net, const std::wst
     
     Matrix<ElemType> meanNodeMatrix = meanNode->As<ComputationNode<ElemType>>()->Value().DeepClone();
     Matrix<ElemType> invStdNodeMatrix(std::move(stdNode->As<ComputationNode<ElemType>>()->Value().DeepClone().ElementInverse()));
+    std::vector<ElemType> arr(invStdNodeMatrix.GetNumElements());
+    ElemType* refArr = &arr[0];
+    size_t arrSize = arr.size();
+    invStdNodeMatrix.CopyToArray(refArr, arrSize);
 
+    int ctx = FindReplicationContext(arr);
     std::vector<ComputationNodeBasePtr> priorNodes = WhereNode(net->GetAllNodes(), GetAllPriorNodes);
     if (priorNodes.size() != 1)
     {
@@ -1293,14 +1327,14 @@ void ComputationNetwork::SaveToDbnFile(ComputationNetworkPtr net, const std::wst
 
     // write out the data
     // Dump DBN header
-    PutString("DBN\ncomment=dbn finetune epoch 121\niter.state.frameacc=61.327412\niter.state.logp=0.090508");
+    PutString("DBN");
     PutTag("BDBN");
     PutInt(0);                                                                              // a version number
     PutInt(static_cast<int>(dbnLayers.size()));                                             // number of layers
 
     // Dump feature norm
-    PutMatrixConverted(&meanNodeMatrix, meanNodeMatrix.GetNumRows() / 4, "gmean", [](float v) { return v; });
-    PutMatrixConverted(&invStdNodeMatrix, invStdNodeMatrix.GetNumRows() / 4, "gstddev", [](float v) { return v; });
+    PutMatrixConverted(&meanNodeMatrix, meanNodeMatrix.GetNumRows() / ctx, "gmean", [](float v) { return v; });
+    PutMatrixConverted(&invStdNodeMatrix, invStdNodeMatrix.GetNumRows() / ctx, "gstddev", [](float v) { return v; });
 
     PutTag("BNET");
     auto lastOne = dbnLayers.end();
