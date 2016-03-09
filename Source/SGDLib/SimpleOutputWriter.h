@@ -257,7 +257,7 @@ public:
                     fprintfOrDie(f, "%s", sequenceSeparator.c_str());
 
                 auto pnode = dynamic_pointer_cast<ComputationNode<ElemType>>(onode);
-                pnode->WriteMinibatchWithFormatting(f, formattingOptions.transpose, formattingOptions.isCategoryLabel, labelMapping,
+                pnode->WriteMinibatchWithFormatting(f, SIZE_MAX, SIZE_MAX, formattingOptions.transpose, formattingOptions.isCategoryLabel, labelMapping,
                                                     sequenceSeparator, sequencePrologue, sequenceEpilogue, elementSeparator, sampleSeparator,
                                                     valueFormatString);
             } // end loop over nodes

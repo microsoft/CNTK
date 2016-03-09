@@ -71,6 +71,12 @@ void SGD<ElemType>::Train(function<ComputationNetworkPtr(DEVICEID_TYPE)> createN
     startEpoch = max(startEpoch, 0);
     m_needAdaptRegularization = false;
 
+    // set tracing flags
+    for (const auto& traceNodeName : m_traceNodeNamesReal)
+        net->GetNodeFromName(traceNodeName)->EnableNodeTracing(false);
+    for (const auto& traceNodeName : m_traceNodeNamesCategory)
+        net->GetNodeFromName(traceNodeName)->EnableNodeTracing(true);
+
     TrainOrAdaptModel(startEpoch, net, loadNetworkFromCheckpoint, net, nullptr, trainSetDataReader, validationSetDataReader);
 }
 
@@ -2585,4 +2591,5 @@ SGDParams::SGDParams(const ScriptableObjects::IConfigRecordPtr configp)
 
 // register SGD<> with the ScriptableObject system
 ScriptableObjects::ConfigurableRuntimeTypeRegister::AddFloatDouble<SGD<float>, SGD<double>> registerSGDOptimizer(L"SGDOptimizer");
-} } }
+
+}}}

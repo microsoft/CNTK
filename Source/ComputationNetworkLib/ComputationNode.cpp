@@ -231,7 +231,7 @@ template <class ElemType>
 
 // write out the content of a node in formatted/readable form
 template <class ElemType>
-void ComputationNode<ElemType>::WriteMinibatchWithFormatting(FILE* f, bool transpose, bool isCategoryLabel, const std::vector<std::string>& labelMapping,
+void ComputationNode<ElemType>::WriteMinibatchWithFormatting(FILE* f, size_t onlyUpToRow, size_t onlyUpToT, bool transpose, bool isCategoryLabel, const std::vector<std::string>& labelMapping,
                                                              const string& sequenceSeparator, const string& sequencePrologue, const string& sequenceEpilogue, const string& elementSeparator, const string& sampleSeparator,
                                                              const string& valueFormatString) const
 {
@@ -295,19 +295,31 @@ void ComputationNode<ElemType>::WriteMinibatchWithFormatting(FILE* f, bool trans
             }
             dim = 1; // ignore remaining dimensions
         }
-        size_t iend    = transpose ? dim : T;
-        size_t jend    = transpose ?   T : dim;
-        size_t istride = transpose ?         1 : colStride;
-        size_t jstride = transpose ? colStride : 1;
+        let iend    = transpose ?         dim : T;         // true dimension of the data to print
+        let jend    = transpose ?           T : dim;
+        let istop   = transpose ? onlyUpToRow : onlyUpToT; // we stop at these dimensions (for debugging, one often needs only the first few values of those huge matrices)
+        let jstop   = transpose ?   onlyUpToT : onlyUpToRow;
+        let istride = transpose ?           1 : colStride;
+        let jstride = transpose ?   colStride : 1;
         for (size_t j = 0; j < jend; j++)
         {
             if (j > 0)
                 fprintfOrDie(f, "%s", sampleSeparator.c_str());
+            if (j == jstop)
+            {
+                fprintf(f, "..."); // 'nuff said
+                break;
+            }
             for (size_t i = 0; i < iend; i++)
             {
                 if (i > 0)
                     fprintfOrDie(f, "%s", elementSeparator.c_str());
-                if (formatChar == 'f') // print as real number
+                if (i == istop)
+                {
+                    fprintf(f, "...");
+                    break;
+                }
+                else if (formatChar == 'f') // print as real number
                 {
                     double dval = pCurValue[i * istride + j * jstride];
                     fprintfOrDie(f, valueFormatString.c_str(), dval);

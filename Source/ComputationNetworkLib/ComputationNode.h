@@ -162,6 +162,15 @@ struct ComputationNetworkOwnedNodeState
     virtual void MarkValueSharable() { m_valueSharable = true; }
     bool IsValueSharable() const { return m_valueSharable; }
 
+    // tracing flags
+    // Enable to print the value of the function-value matrix in somewhat readable format.
+    // These are public since you are meant to set these flags manually in the debugger or temporarily poke into them from code as needed.
+    bool m_traceNodeValue = false;
+    bool m_traceNodeValueAsCategoryLabel = false;
+    size_t m_traceNodeValueUpToDim = 5;
+    size_t m_traceNodeValueUpToT = 5;
+    void EnableNodeTracing(bool isCategoryLabel) { m_traceNodeValue = true; m_traceNodeValueAsCategoryLabel = isCategoryLabel; }
+
 protected:                // TODO: should be fully encapsulated here
 
     bool m_needsGradient; // true if this node or any children need a gradient to be computed (for own consumption or propagation to somewhere in the child tree)
@@ -1306,6 +1315,7 @@ public:
         Value().Print(msra::strfun::utf8(NodeName()), 0, min(Value().GetNumRows()-1, 4), 0, min(Value().GetNumCols()-1, 4));
 #endif
         InvalidateMissingValueColumns(FrameRange(m_pMBLayout)); // blast NaNs into columns that are gaps in a packed layout
+        Trace();
     }
 #endif
 
@@ -1496,9 +1506,19 @@ public:
 
     virtual void DumpNodeInfo(const bool /*printValues*/, const bool /*printMetadata*/, File& fstream) const;
     // helper for SimpleOutWriter, living in here to be able to use in debugging
-    void WriteMinibatchWithFormatting(FILE* f, bool transpose, bool isCategoryLabel, const std::vector<std::string>& labelMapping,
+    void WriteMinibatchWithFormatting(FILE* f, size_t onlyUpToRow, size_t onlyUpToT, bool transpose, bool isCategoryLabel, const std::vector<std::string>& labelMapping,
                                       const std::string& sequenceSeparator, const std::string& sequencePrologue, const std::string& sequenceEpilogue, const std::string& elementSeparator, const std::string& sampleSeparator,
                                       const std::string& valueFormatString) const;
+    void Trace()
+    {
+        if (m_traceNodeValue)
+        {
+            fprintf(stderr, "Trace --> %ls = %ls -> [%s%s]\n", NodeName().c_str(), OperationName().c_str(), string(GetSampleLayout()).c_str(), HasMBLayout() ? " x *" : "");
+            WriteMinibatchWithFormatting(stderr, m_traceNodeValueUpToDim, m_traceNodeValueUpToT, true/*transpose*/, m_traceNodeValueAsCategoryLabel, std::vector<std::string>(),
+                                         ""/*sequenceSeparator*/, "  "/*sequencePrologue*/, "\n"/*sequenceEpilogue*/, " "/*elementSeparator*/, "\n  "/*sampleSeparator*/,
+                                         "%13.10f"/*valueFormatString*/);
+        }
+    }
 
 protected:
 
