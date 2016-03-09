@@ -135,7 +135,7 @@
     <ClInclude Include="..\Common\Include\Sequences.h" />
     <ClInclude Include="..\Common\Include\TimerUtility.h" />
     <ClInclude Include="Actions.h" />
-    <ClInclude Include="NetworkCreator.h" />
+    <ClInclude Include="NetworkFactory.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\Common\File.cpp">
@@ -145,7 +145,7 @@
       <PrecompiledHeader Condition="$(DebugBuild)">NotUsing</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="..\Common\TimerUtility.cpp" />
-    <ClCompile Include="NetworkCreator.cpp" />
+    <ClCompile Include="NetworkFactory.cpp" />
     <ClCompile Include="SpecialPurposeActions.cpp" />
     <ClCompile Include="EvalActions.cpp" />
     <ClCompile Include="OtherActions.cpp" />

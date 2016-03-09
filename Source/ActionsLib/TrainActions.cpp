@@ -13,7 +13,7 @@
 #include "Actions.h"
 #include "ComputationNetwork.h"
 #include "ComputationNode.h"
-#include "NetworkCreator.h"
+#include "NetworkFactory.h"
 #include "DataReader.h"
 #include "DataWriter.h"
 #include "SimpleNetworkBuilder.h"

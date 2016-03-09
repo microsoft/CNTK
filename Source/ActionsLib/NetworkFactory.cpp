@@ -2,11 +2,11 @@
 // Copyright (c) Microsoft. All rights reserved.
 // Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
 //
-// NetworkCreator.cpp -- CNTK network creation related functions
+// NetworkFactory.cpp -- CNTK network creation related functions
 //
 
 #include "stdafx.h"
-#include "NetworkCreator.h"
+#include "NetworkFactory.h"
 
 template <> /*static*/ const wchar_t* ElemTypeName<float>()  {
     return L"float";

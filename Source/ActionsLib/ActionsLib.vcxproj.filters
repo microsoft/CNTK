@@ -22,7 +22,7 @@
     <ClCompile Include="SpecialPurposeActions.cpp">
       <Filter>Actions</Filter>
     </ClCompile>
-    <ClCompile Include="NetworkCreator.cpp">
+    <ClCompile Include="NetworkFactory.cpp">
       <Filter>Actions</Filter>
     </ClCompile>
   </ItemGroup>
@@ -57,7 +57,7 @@
     <ClInclude Include="Actions.h">
       <Filter>Actions</Filter>
     </ClInclude>
-    <ClInclude Include="NetworkCreator.h">
+    <ClInclude Include="NetworkFactory.h">
       <Filter>Actions</Filter>
     </ClInclude>
   </ItemGroup>
