@@ -1,9 +1,9 @@
 #ifndef MULTIVERSO_ARRAY_TABLE_H_
 #define MULTIVERSO_ARRAY_TABLE_H_
 
+#include "multiverso/multiverso.h"
 #include "multiverso/table_interface.h"
 #include "multiverso/util/log.h"
-#include "multiverso/zoo.h"
 
 namespace multiverso {
 
@@ -14,15 +14,15 @@ class ArrayWorker : public WorkerTable {
 public:
   explicit ArrayWorker(size_t size) : WorkerTable(), size_(size) {
     // table_.resize(size);
-    num_server_ = Zoo::Get()->num_servers();
+    num_server_ = MV_NumServers(); 
     server_offsets_.push_back(0);
-    CHECK(size_ > Zoo::Get()->num_servers()); // not support too small size vector
-    int length = static_cast<int>(size_) / Zoo::Get()->num_servers();
-    for (int i = 1; i < Zoo::Get()->num_servers(); ++i) {
+    CHECK(size_ > MV_NumServers()); 
+    int length = static_cast<int>(size_) / MV_NumServers();
+    for (int i = 1; i < MV_NumServers(); ++i) {
       server_offsets_.push_back(i * length); // may not balance
     }
     server_offsets_.push_back(size_);
-	Log::Debug("worker %d create arrayTable with %d elements.\n", Zoo::Get()->rank(), size);
+	Log::Debug("worker %d create arrayTable with %d elements.\n", MV_Rank(), size);
   }
 
   // std::vector<T>& raw() { return table_; }
@@ -36,7 +36,7 @@ public:
     int all_key = -1;
     Blob whole_table(&all_key, sizeof(int));
     WorkerTable::Get(whole_table); 
-    Log::Debug("worker %d getting all parameters.\n", Zoo::Get()->rank());
+    Log::Debug("worker %d getting all parameters.\n", MV_Rank());
   }
 
   // Add all element
@@ -47,7 +47,7 @@ public:
     Blob key(&all_key, sizeof(int));
     Blob val(data, sizeof(T) * size);
     WorkerTable::Add(key, val);
-    Log::Debug("worker %d adding parameters with size of %d.\n", Zoo::Get()->rank(), size);
+    Log::Debug("worker %d adding parameters with size of %d.\n", MV_Rank(), size);
   }
 
   int Partition(const std::vector<Blob>& kv,
@@ -71,8 +71,6 @@ public:
     CHECK(reply_data[1].size<T>() == (server_offsets_[id+1] - server_offsets_[id]));
 
     memcpy(data_ + server_offsets_[id], reply_data[1].data(), reply_data[1].size());
-    // memcpy(table_.data() + server_offsets_[id], //  * sizeof(T), 
-    //  reply_data[1].data(), reply_data[1].size());
   }
   
 private:
@@ -89,10 +87,10 @@ template <typename T>
 class ArrayServer : public ServerTable {
 public:
   explicit ArrayServer(size_t size) : ServerTable() {
-    server_id_ = Zoo::Get()->rank();
-    size_ = size / Zoo::Get()->size();
-    if (server_id_ == Zoo::Get()->num_servers()-1) { // last server 
-      size_ += size % Zoo::Get()->num_servers();
+    server_id_ = MV_Rank();
+    size_ = size / MV_NumServers(); 
+    if (server_id_ == MV_NumServers() - 1) { // last server 
+      size_ += size % MV_NumServers();
     }
     storage_.resize(size_);
 	Log::Debug("server %d create arrayTable with %d elements of %d elements.\n", server_id_, size_, size);
@@ -118,6 +116,15 @@ public:
     Blob value(storage_.data(), sizeof(T) * size_);
     result->push_back(key);
     result->push_back(value);
+  }
+
+  void DumpTable(std::ofstream& os){
+    for (int i = 0; i < storage_.size(); ++i)
+      os << storage_[i] << ' ';
+  }
+  void RecoverTable(std::ifstream& in){
+    for (int i = 0; i < storage_.size(); ++i)
+      in >> storage_[i];
   }
 
 private:

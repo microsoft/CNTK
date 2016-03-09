@@ -40,7 +40,7 @@ public:
     size_t size() const { return size_; }
 
     void Wait() {
-      CHECK_NOTNULL(msg_.get());
+      // CHECK_NOTNULL(msg_.get());
       int count = static_cast<int>(handles_.size());
       MPI_Status* status = new MPI_Status[count];
       MV_MPI_CALL(MPI_Waitall(count, handles_.data(), status));
@@ -48,7 +48,7 @@ public:
     }
 
     int Test() {
-      CHECK_NOTNULL(msg_.get());
+      // CHECK_NOTNULL(msg_.get());
       int count = static_cast<int>(handles_.size());
       MPI_Status* status = new MPI_Status[count];
       int flag;
@@ -85,8 +85,19 @@ public:
       name().c_str(), rank(), size());
   }
 
-  void Finalize() override { MPI_Finalize(); }
+  void Finalize() override { inited_ = 0; MPI_Finalize(); }
 
+  int Bind(int rank, char* endpoint) override { 
+    Log::Fatal("Shouldn't call this in MPI Net\n"); 
+	return -1;
+  }
+
+  int Connect(int* ranks, char* endpoints[], int size) override { 
+    Log::Fatal("Shouldn't call this in MPI Net\n"); 
+	return -1;
+  }
+  
+  bool active() const { return inited_ != 0; }
   int rank() const override { return rank_; }
   int size() const override { return size_; }
   std::string name() const override { return "MPI"; }
@@ -110,6 +121,29 @@ public:
   //  return size;
   //}
 
+  //size_t Send(MessagePtr& msg) override {
+  //  if (msg.get()) { send_queue_.Push(msg); }
+  //  
+  //  if (last_handle_.get() != nullptr && !last_handle_->Test()) {
+  //    // Last msg is still on the air
+  //    return 0;
+  //  }
+
+  //  // send over, free the last msg
+  //  last_handle_.reset();
+
+  //  // if there is more msg to send
+  //  if (send_queue_.Empty()) return 0;
+  //  
+  //  // Send a front msg of send queue
+  //  last_handle_.reset(new MPIMsgHandle()); 
+  //  MessagePtr sending_msg;
+  //  CHECK(send_queue_.TryPop(sending_msg));
+  //  last_handle_->set_msg(sending_msg);
+  //  size_t size = SendAsync(last_handle_->msg(), last_handle_.get());
+  //  return size;
+  //}
+
   size_t Send(MessagePtr& msg) override {
     if (msg.get()) { send_queue_.Push(msg); }
     
@@ -128,21 +162,88 @@ public:
     last_handle_.reset(new MPIMsgHandle()); 
     MessagePtr sending_msg;
     CHECK(send_queue_.TryPop(sending_msg));
-    last_handle_->set_msg(sending_msg);
-    size_t size = SendAsync(last_handle_->msg(), last_handle_.get());
+
+    size_t size = SerializeAndSend(sending_msg, last_handle_.get());
     return size;
   }
+
+  //size_t Recv(MessagePtr* msg) override {
+  //  MPI_Status status;
+  //  int flag;
+  //  // non-blocking probe whether message comes
+  //  MV_MPI_CALL(MPI_Iprobe(MPI_ANY_SOURCE, 0, MPI_COMM_WORLD, &flag, &status));
+  //  int count;
+  //  MV_MPI_CALL(MPI_Get_count(&status, MPI_BYTE, &count));
+  //  if (!flag) return 0;
+  //  CHECK(count == Message::kHeaderSize);
+  //  return RecvMsgFrom(status.MPI_SOURCE, msg);
+  //}
 
   size_t Recv(MessagePtr* msg) override {
     MPI_Status status;
     int flag;
     // non-blocking probe whether message comes
     MV_MPI_CALL(MPI_Iprobe(MPI_ANY_SOURCE, 0, MPI_COMM_WORLD, &flag, &status));
+    if (!flag) return 0;
     int count;
     MV_MPI_CALL(MPI_Get_count(&status, MPI_BYTE, &count));
-    if (!flag) return 0;
-    CHECK(count == Message::kHeaderSize);
-    return RecvMsgFrom(status.MPI_SOURCE, msg);
+    if (count > recv_size_) {
+      recv_buffer_ = (char*)realloc(recv_buffer_, count);
+      recv_size_ = count;
+    }
+    // CHECK(count == Message::kHeaderSize);
+    return RecvAndDeserialize(status.MPI_SOURCE, count, msg);
+  }
+
+  size_t SerializeAndSend(MessagePtr& msg, MPIMsgHandle* msg_handle) {
+
+    CHECK_NOTNULL(msg_handle);
+    size_t size = sizeof(int) + Message::kHeaderSize;
+    for (auto& data : msg->data()) size += sizeof(int) + data.size();
+    if (size > send_size_) {
+      send_buffer_ = (char*)realloc(send_buffer_, size);
+      send_size_ = size;
+    }
+    memcpy(send_buffer_, msg->header(), Message::kHeaderSize);
+    char* p = send_buffer_ + Message::kHeaderSize;
+    for (auto& data : msg->data()) {
+      int s = data.size();
+      memcpy(p, &s, sizeof(int));
+      p += sizeof(int);
+      memcpy(p, data.data(), s);
+      p += s;
+    }
+    int over = -1;
+    memcpy(p, &over, sizeof(int));
+
+    MPI_Request handle;
+    MV_MPI_CALL(MPI_Isend(send_buffer_, size, MPI_BYTE, msg->dst(), 0, MPI_COMM_WORLD, &handle));
+    msg_handle->add_handle(handle);
+    return size;
+  }
+
+  size_t RecvAndDeserialize(int src, int count, MessagePtr* msg_ptr) {
+    if (!msg_ptr->get()) msg_ptr->reset(new Message());
+    MessagePtr& msg = *msg_ptr;
+    msg->data().clear();
+    MPI_Status status;
+    MV_MPI_CALL(MPI_Recv(recv_buffer_, count,
+      MPI_BYTE, src, 0, MPI_COMM_WORLD, &status));
+    char* p = recv_buffer_;
+    int s;
+    memcpy(msg->header(), p, Message::kHeaderSize);
+    p += Message::kHeaderSize;
+    memcpy(&s, p, sizeof(int));
+    p += sizeof(int);
+    while (s != -1) {
+      Blob data(s);
+      memcpy(data.data(), p, data.size());
+      msg->Push(data);
+      p += data.size();
+      memcpy(&s, p, sizeof(int));
+      p += sizeof(int);
+    }
+    return count;
   }
 
   int thread_level_support() override { 
@@ -215,6 +316,10 @@ private:
   // std::queue<MPIMsgHandle *> msg_handles_;
   std::unique_ptr<MPIMsgHandle> last_handle_;
   MtQueue<MessagePtr> send_queue_;
+  char* send_buffer_;
+  int send_size_;
+  char* recv_buffer_;
+  int recv_size_;
 };
 
 }

@@ -1,7 +1,6 @@
 #ifndef MULTIVERSO_NET_ZMQ_NET_H_
 #define MULTIVERSO_NET_ZMQ_NET_H_
 
-// #define MULTIVERSO_USE_ZMQ
 #ifdef MULTIVERSO_USE_ZMQ
 
 #include "multiverso/net.h"
@@ -22,6 +21,7 @@ public:
   // argv[2]: port used
   void Init(int* argc, char** argv) override {
     // get machine file 
+    if (active_) return;
     CHECK(*argc > 2);
     std::vector<std::string> machine_lists;
     ParseMachineFile(argv[1], &machine_lists);
@@ -37,31 +37,73 @@ public:
 
     for (auto ip : machine_lists) {
       if (local_ip.find(ip) != local_ip.end()) { // my rank
-        rank_ = static_cast<int>(requester_.size());
-        requester_.push_back(nullptr);
-        responder_ = zmq_socket(context_, ZMQ_DEALER);
-        int rc = zmq_bind(responder_, 
+        rank_ = static_cast<int>(senders_.size());
+        senders_.push_back(nullptr);
+        receiver_ = zmq_socket(context_, ZMQ_DEALER);
+        int rc = zmq_bind(receiver_, 
           ("tcp://" + ip + ":" + std::to_string(port)).c_str());
         CHECK(rc == 0);
       } else {
-        void* requester = zmq_socket(context_, ZMQ_DEALER);
-        int rc = zmq_connect(requester, 
+        void* senders = zmq_socket(context_, ZMQ_DEALER);
+        int rc = zmq_connect(senders, 
           ("tcp://" + ip + ":" + std::to_string(port)).c_str());
         CHECK(rc == 0);
-        requester_.push_back(requester);
+        senders_.push_back(senders);
       }
     }
-    CHECK_NOTNULL(responder_);
+    CHECK_NOTNULL(receiver_);
+    active_ = true;
     Log::Info("%s net util inited, rank = %d, size = %d\n",
       name().c_str(), rank(), size());
   }
 
+  virtual int Bind(int rank, char* endpoint) override {
+    rank_ = rank;
+    std::string ip_port(endpoint);
+    if (context_ == nullptr) { context_ = zmq_ctx_new(); }
+    CHECK_NOTNULL(context_);
+    receiver_ = zmq_socket(context_, ZMQ_DEALER);
+    int rc = zmq_bind(receiver_, ("tcp://" + ip_port).c_str());
+    if (rc == 0) {
+      return 0;
+    }
+    else {
+      Log::Error("Failed to bind the socket for receiver, ip:port = %s\n", 
+                 endpoint);
+      return -1;
+    }
+  }
+
+  // Connect with other endpoints
+  virtual int Connect(int* ranks, char* endpoints[], int size) override {
+    CHECK_NOTNULL(receiver_);
+    CHECK_NOTNULL(context_);
+    size_ = size + 1;
+    senders_.resize(size_);
+    for (int i = 0; i < size; ++i) {
+      int rank = ranks[i];
+      std::string ip_port(endpoints[i]);
+      senders_[rank] = zmq_socket(context_, ZMQ_DEALER);
+      int rc = zmq_connect(senders_[rank], ("tcp://" + ip_port).c_str());
+      if (rc != 0) {
+        Log::Error("Failed to connect the socket for sender, rank = %d, " 
+                    "ip:port = %s\n", rank, endpoints[i]);
+        return -1;
+      }
+    }
+    active_ = true;
+    return 0;
+  }
+
   void Finalize() override {
-    zmq_close(responder_);
-    for (auto& p : requester_) if (p) zmq_close(p);
+    active_ = false;
+    zmq_term(context_);
+    zmq_close(receiver_);
+    for (auto& p : senders_) if (p) zmq_close(p);
     zmq_ctx_destroy(context_);
   }
 
+  bool active() const override { return active_; }
   int rank() const override { return rank_; }
   int size() const override { return size_; }
   std::string name() const override { return "ZeroMQ"; }
@@ -69,7 +111,7 @@ public:
   size_t Send(MessagePtr& msg) override {
     size_t size = 0;
     int dst = msg->dst();
-    void* socket = requester_[dst];
+    void* socket = senders_[dst];
     CHECK_NOTNULL(socket);
     int send_size;
     send_size = zmq_send(socket, msg->header(), 
@@ -102,25 +144,25 @@ public:
     MessagePtr& msg = *msg_ptr;
     msg->data().clear();
     CHECK(msg.get());
-    recv_size = zmq_recv(responder_, msg->header(), Message::kHeaderSize, 0);
+    recv_size = zmq_recv(receiver_, msg->header(), Message::kHeaderSize, 0);
     if (recv_size < 0) { return -1; }
     CHECK(Message::kHeaderSize == recv_size);
 
     size += recv_size;
-    zmq_getsockopt(responder_, ZMQ_RCVMORE, &more, &more_size);
+    zmq_getsockopt(receiver_, ZMQ_RCVMORE, &more, &more_size);
 
     while (more) {
-      recv_size = zmq_recv(responder_, &blob_size, sizeof(size_t), 0);
+      recv_size = zmq_recv(receiver_, &blob_size, sizeof(size_t), 0);
       CHECK(recv_size == sizeof(size_t));
       size += recv_size;
-      zmq_getsockopt(responder_, ZMQ_RCVMORE, &more, &more_size);
+      zmq_getsockopt(receiver_, ZMQ_RCVMORE, &more, &more_size);
       CHECK(more);
       Blob blob(blob_size);
-      recv_size = zmq_recv(responder_, blob.data(), blob.size(), 0);
+      recv_size = zmq_recv(receiver_, blob.data(), blob.size(), 0);
       CHECK(recv_size == blob_size);
       size += recv_size;
       msg->Push(blob);
-      zmq_getsockopt(responder_, ZMQ_RCVMORE, &more, &more_size);
+      zmq_getsockopt(receiver_, ZMQ_RCVMORE, &more, &more_size);
     }
     return size;
   }
@@ -152,10 +194,10 @@ private:
     fclose(file);
   }
 
-
+  bool active_;
   void* context_;
-  void* responder_;
-  std::vector<void*> requester_;
+  void* receiver_;
+  std::vector<void*> senders_;
   int rank_;
   int size_;
 };

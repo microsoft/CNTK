@@ -23,11 +23,11 @@ public:
   static Zoo* Get() { static Zoo zoo; return &zoo; };
 
   // Start all actors
-  void Start(int* argc, char** argv, int role);
+  void Start(int* argc, char** argv, int role, bool restart);
   // Stop all actors
   void Stop(bool finalize_net);
 
-  void Barrier();
+  void Barrier(const int& iter = -1);
 
   void SendTo(const std::string& name, MessagePtr&);
   void Receive(MessagePtr& msg);
@@ -36,8 +36,16 @@ public:
   int size() const;
 
   // TODO(to change)
-  int worker_rank() const;
-  int server_rank() const;
+  int worker_rank() const { return nodes_[rank()].worker_id; }
+  int server_rank() const { return nodes_[rank()].server_id; }
+
+  int worker_id_to_rank(int worker_id) const { 
+    return worker_id_to_rank_[worker_id]; 
+  }
+
+  int server_id_to_rank(int server_id) const {
+    return server_id_to_rank_[server_id];
+  }
 
   int num_workers() const { return num_workers_; }
   int num_servers() const { return num_servers_; }
@@ -50,6 +58,8 @@ public:
     CHECK(zoo_[name] == nullptr);
     zoo_[name] = actor;
   }
+  
+  int RestoreTable(const std::string& dump_file_path);
 private:
   // private constructor
   Zoo();
@@ -62,8 +72,14 @@ private:
   NetInterface* net_util_;
 
   std::vector<Node> nodes_;
+  std::vector<int> server_id_to_rank_;
+  std::vector<int> worker_id_to_rank_;
+
   int num_workers_;
   int num_servers_;
+
+  bool restart_;
+  int dump_each_k_;
 };
 
 }

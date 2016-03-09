@@ -124,6 +124,7 @@ public:
   * \return -1 if fail on creating the log file, or 0 otherwise.
   */
   static int ResetLogFile(std::string filename);
+  // TODO(feiga): use a env variable to represent log level 
   /*!
   * \brief Resets the minimal log level. It is INFO by default.
   * \param level The new minimal log level.

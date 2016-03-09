@@ -133,6 +133,21 @@ public:
     result->push_back(value);
   }
 
+  void DumpTable(std::ofstream& os){
+    os << smooth_momentum_ << ' ';
+    for (int i = 0; i < storage_.size(); ++i)
+      os << storage_[i] << ' ';
+    for (int i = 0; i < smooth_gradient_.size(); ++i)
+      os << smooth_gradient_[i] << ' ';
+  }
+  void RecoverTable(std::ifstream& in){
+    in >> smooth_momentum_;
+    for (int i = 0; i < storage_.size(); ++i)
+      in >> storage_[i];
+    for (int i = 0; i < smooth_gradient_.size(); ++i)
+      in >> smooth_gradient_[i];
+  }
+
 private:
   int server_id_;
   float smooth_momentum_;

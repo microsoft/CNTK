@@ -1,7 +1,6 @@
 #ifndef MULTIVERSO_TABLE_INTERFACE_H_
 #define MULTIVERSO_TABLE_INTERFACE_H_
 
-#include <atomic>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -42,18 +41,21 @@ private:
   std::string table_name_;
   int table_id_;
   std::unordered_map<int, Waiter*> waitings_;
-  std::atomic_int msg_id_;
+  int msg_id_;
 };
 
 // discribe the server parameter storage data structure and related method
 class ServerTable {
 public:
   ServerTable();
+  virtual ~ServerTable() {}
   virtual void ProcessAdd(const std::vector<Blob>& data) = 0;
   virtual void ProcessGet(const std::vector<Blob>& data,
-    std::vector<Blob>* result) = 0;
+                          std::vector<Blob>* result) = 0;
+  virtual void DumpTable(std::ofstream& os) = 0;
+  virtual void RecoverTable(std::ifstream& in) = 0;
 
-  const std::string name() { return std::string(typeid(this).name());};
+  const std::string name() const { return std::string(typeid(this).name());};
   
   // add user defined server process logic 
   void Process(const std::string instruction, const std::vector<Blob>& data, std::vector<Blob>* result = nullptr);
@@ -64,7 +66,7 @@ public:
 // TODO(feiga): provide better table creator method
 // Abstract Factory to create server and worker
 class TableFactory {
-  //  static TableFactory* GetTableFactory();
+  // static TableFactory* GetTableFactory();
   virtual WorkerTable* CreateWorker() = 0;
   virtual ServerTable* CreateServer() = 0;
   static TableFactory* fatory_;

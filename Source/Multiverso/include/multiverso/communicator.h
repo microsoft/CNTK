@@ -12,7 +12,8 @@ class Communicator : public Actor {
 public:
   Communicator();
 
-  ~Communicator() {}
+  ~Communicator();
+
 private:
   void Main() override;
   // Process message received from other actors, either send to other nodes, or

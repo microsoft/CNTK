@@ -22,6 +22,11 @@ public:
   }
 
   // Construct from external memory. Will copy a new piece
+  Blob(const void* data, size_t size) : size_(size) {
+    data_.reset(new char[size]);
+    memcpy(data_.get(), data, size_);
+  }
+
   Blob(void* data, size_t size) : size_(size) {
     data_.reset(new char[size]);
     memcpy(data_.get(), data, size_);

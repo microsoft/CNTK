@@ -16,8 +16,17 @@ enum NetThreadLevel {
 class NetInterface {
 public:
   static NetInterface* Get();
+
   virtual void Init(int* argc = nullptr, char** argv = nullptr) = 0;
+
   virtual void Finalize() = 0;
+
+  // Bind with a specific endpoint
+  virtual int  Bind(int rank, char* endpoint) = 0;
+  // Connect with other endpoints
+  virtual int  Connect(int* rank, char* endpoints[], int size) = 0;
+
+  virtual bool active() const = 0;
 
   virtual std::string name() const = 0;
   virtual int size() const = 0;
