@@ -1,3 +1,4 @@
+#if 0 // this entire file can be removed once CNTK.core.bs works
 // ExperimentalNetworkBuilder.cpp -- interface to new version of NDL (and config) parser  --fseide
 
 #define _CRT_NONSTDC_NO_DEPRECATE // make VS accept POSIX functions without _
@@ -130,3 +131,4 @@ L"ParameterTensor(dims, learningRateMultiplier = 1.0, init = 'uniform'/*|fixedVa
     //BinaryStandardNode(ParallelNode)
     //BinaryStandardNode(StrideTimesNode)
     ;
+#endif

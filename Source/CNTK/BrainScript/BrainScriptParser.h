@@ -20,10 +20,10 @@ using namespace std;
 
 struct SourceFile // content of one source file  (only in this header because TextLocation's private member uses it)
 {
-    /*const*/ wstring path;                                        // where it came from
-    /*const*/ vector<wstring> lines;                               // source code lines
-    SourceFile(wstring location, wstring text);                    // from string, e.g. command line
-    SourceFile(wstring path, const vector<wstring>& includePaths); // from file
+    /*const*/ wstring path;                     // where it came from
+    /*const*/ vector<wstring> lines;            // source code lines
+    SourceFile(wstring location, wstring text); // from string, e.g. command line
+    SourceFile(wstring path);                   // from file
 };
 
 struct TextLocation // position in the text. Lightweight value struct that we can copy around, even into dictionaries etc., for error messages
@@ -135,6 +135,7 @@ typedef Expression::ExpressionPtr ExpressionPtr; // circumvent some circular def
 
 // access the parser through one of these functions
 ExpressionPtr ParseConfigDictFromString(wstring text, vector<wstring>&& includePaths);          // parses a list of dictionary members, returns a dictionary expression
-ExpressionPtr ParseConfigDictFromFile(wstring path, vector<wstring>&& includePaths);            // likewise, but from a file path
+//ExpressionPtr ParseConfigDictFromFile(wstring path, vector<wstring> includePaths);              // likewise, but from a file path
 ExpressionPtr ParseConfigExpression(const wstring& sourceText, vector<wstring>&& includePaths); // parses a single expression from sourceText, which is meant to contain an include statement, hence includePaths
-} } } // namespaces
+
+}}}

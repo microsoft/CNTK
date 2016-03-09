@@ -902,4 +902,5 @@ template <class V>
 {
     return static_cast<const std::vector<typename V::value_type> &>(vec);
 } // use this specifically for XXXargvector
-} } } // end namespaces
+
+}}} // end namespaces

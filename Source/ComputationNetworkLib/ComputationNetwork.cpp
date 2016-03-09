@@ -1374,4 +1374,5 @@ template void ComputationNetwork::SaveToDbnFile<double>(ComputationNetworkPtr ne
 
 // register ComputationNetwork with the ScriptableObject system
 ScriptableObjects::ConfigurableRuntimeTypeRegister::Add<ComputationNetwork> registerComputationNetwork(L"ComputationNetwork");
-} } }
+
+}}}
