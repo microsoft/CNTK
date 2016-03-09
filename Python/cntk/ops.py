@@ -1,6 +1,4 @@
-__all__ = ['Operator', 'times'] # TODO fill in cntk ops statically
-
-from graph import ComputationNode
+from .graph import ComputationNode
 
 # Because CNTK stores the sample in a transposed form, we need to
 # switch parameters for some operators
@@ -58,13 +56,13 @@ def softmax(x):
 
 def mean(x, axis=None, keepdims=False):
     # TODO check axes
-    return cn.Operator("Mean", (x,),
+    return Operator("Mean", (x,),
             #TODO axis
             get_output_shape=lambda a : a.get_shape()[:-1] # TODO
             )
 
 def categorical_crossentropy(output, target):
-    return cn.Operator("CrossEntropy", (output, target), 
+    return Operator("CrossEntropy", (output, target), 
             get_output_shape=lambda a,b: a.get_shape()[:-1]
             ) 
 

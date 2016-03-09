@@ -1,18 +1,13 @@
-__all__ = ['Context']
-
 import os
-import cntk.graph as graph
 import numpy as np
 
-CNTK_TRAIN_TEMPLATE_PATH = os.path.join(os.path.dirname(__file__), "cntk_train_template.cntk")
-CNTK_PREDICT_TEMPLATE_PATH = os.path.join(os.path.dirname(__file__), "cntk_predict_template.cntk")
 _FLOATX = 'float32'
-
 if "CNTK_EXECUTABLE_PATH" not in os.environ:
     raise ValueError("you need to point environmental variable 'CNTK_EXECUTABLE_PATH' to the CNTK binary")
 
 CNTK_EXECUTABLE_PATH = os.environ['CNTK_EXECUTABLE_PATH']
-
+CNTK_TRAIN_TEMPLATE_PATH = os.path.join(os.path.dirname(__file__), "cntk_train_template.cntk")
+CNTK_PREDICT_TEMPLATE_PATH = os.path.join(os.path.dirname(__file__), "cntk_predict_template.cntk")
 CNTK_TRAIN_CONFIG_FILENAME = "train.cntk"
 CNTK_PREDICT_CONFIG_FILENAME = "predict.cntk"
 CNTK_OUTPUT_FILENAME="out.txt"
@@ -29,53 +24,27 @@ except:
 
 class Context(object):
     import cntk.graph as graph
-    def __init__(self, model):
-        self.directory = os.path.abspath('_cntk_%s'%id(model))
+    def __init__(self, desc):
+        
+        self.directory = os.path.abspath('_cntk_%s'%id(desc))
         if os.path.exists(self.directory):
             print("Directory '%s' already exists - overwriting data."%self.directory) 
         else:
             os.mkdir(self.directory)
 
-    def __enter__(self):
-        return self
-
-    def __exit__(self, exc_type, exc_value, exc_tb):
-        pass
-
-class CNTKConfig(dict):
-    # Abstract class
-    def __init__(self, context, keras_model):
-        self.context = context
-        self.model = keras_model
-
-        self['ModelPath'] = os.path.join(self.context.directory, 'Model', 'model.dnn')
+        ''' TODO: re-factor
+        self['ModelDescription'] = desc
+        self['ModelPath'] = os.path.join(self.directory, 'Model', 'model.dnn')
         self["FeatureDimension"] = self.X.shape[1]
         self["LabelDimension"] = self.y.shape[1]
         self['LabelType'] = "category" # TODO
 
-    def execute(self):
-        raise NotImplementedError
-
-class CNTKTrainConfig(CNTKConfig):
-    # Parsing Keras model and data to come up with necessary
-    # template fields for cntk_template.cntk
-
-    def __init__(self, context, keras_model, input_data, batch_size, nb_epoch):
-        self.X, self.y, self.sample_weight = input_data # sample_weight not used
-
-        super(CNTKTrainConfig, self).__init__(context, keras_model)
-
-        from keras.optimizers import SGD
-        if not isinstance(self.model.optimizer, SGD):
-            raise ValueError("only SGD is supported on CNTK", self.model.optimizer)
-        
-        # TODO write initialization of InputValue, so far defaulting to uniform
-        # TODO use sample_weight
+               
         self.label_node = graph.Input(self.y.shape, var_name='labels')
         unique_labels = np.unique(self.y)
 
         crit_node_name, output_node_name, model_desc = self._gen_model_description()
-        self['ModelDescription'] = model_desc
+        
         self['CriteriaNodes'] = crit_node_name
         self['EvalNodes'] = "DUMMY"
         self['OutputNodes'] = output_node_name
@@ -87,7 +56,24 @@ class CNTKTrainConfig(CNTKConfig):
         self['MinibatchSize'] = batch_size
         self['LearningRate'] = self.model.optimizer.lr.get_value()
         self['MaxEpochs'] = nb_epoch
+        
+        
+        #Predict
+        self.X, self.y = input_data       
+        self.y = np.expand_dims(self.y, 1)        
+        self['PredictInputFile'] = self._get_test_file()
+        self['PredictOutputFile'] = self._get_output_file()        
+        self['LabelMappingFile'] = self._get_label_mapping_file()                    
+        
+        ''' 
 
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, exc_tb):
+        pass
+
+    #TODO: refactor those methods
     def _get_train_file(self):        
         data = np.hstack([self.X, self.y])
         filename = os.path.join(self.context.directory, 'input.txt')
@@ -196,18 +182,6 @@ class CNTKTrainConfig(CNTKConfig):
             g.add_edge(pydot.Edge(child, node))
 
         return var_name, node
-
-class CNTKPredictConfig(CNTKConfig):
-    
-    def __init__(self, context, keras_model, input_data):
-        self.X, self.y = input_data       
-        self.y = np.expand_dims(self.y, 1)
-
-        super(CNTKPredictConfig, self).__init__(context, keras_model)
-        
-        self['PredictInputFile'] = self._get_test_file()
-        self['PredictOutputFile'] = self._get_output_file()        
-        self['LabelMappingFile'] = self._get_label_mapping_file()            
     
     def _get_test_file(self):                        
         data = np.hstack([self.X, self.y])
@@ -220,9 +194,7 @@ class CNTKPredictConfig(CNTKConfig):
     def _get_output_file(self):
         return os.path.join(self.context.directory, CNTK_OUTPUT_FILENAME)
     
-    def _get_label_mapping_file(self):        
-        return os.path.join(self.context.directory, 'labelMap.txt')
-
+    ''' TODO: re-implement predict as other actions as part of the context
     def execute(self):
         config_filename = os.path.join(self.context.directory, CNTK_PREDICT_CONFIG_FILENAME)
         tmpl = open(CNTK_PREDICT_TEMPLATE_PATH, "r").read()
@@ -246,16 +218,15 @@ class CNTKPredictConfig(CNTKConfig):
         data = np.loadtxt(out_filenames[0])
 
         return [data]
-
+    '''
+    
 def fit(model, ins, batch_size, np_epoch):
     #import ipdb;ipdb.set_trace()
-    with Context(model) as cm:
-        cntk_config = CNTKTrainConfig(cm, model, ins, batch_size, np_epoch)
-        cntk_config.execute()
+    with Context(model) as cm:        
+        cm.execute()
 
 def predict(model, ins, verbose=0):
-    with Context(model) as cm:
-        cntk_config = CNTKPredictConfig(cm, model, ins)
-        return cntk_config.execute()
+    with Context(model) as cm:        
+        cm.execute()
     
 
