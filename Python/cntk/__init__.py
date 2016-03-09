@@ -1,3 +1,5 @@
+__version__ = '1.5'
+
 from .context import *
 import cntk.graph
 from .graph import *
