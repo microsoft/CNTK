@@ -63,7 +63,6 @@ train = [
     SimpleNetworkBuilder = [
         rnnType = "CLASSLSTM"
         recurrentLayer = 1      # number of recurrent layers
-        nodeType = "sigmoid"    # TODO: Why do we need this? It's an LSTM without dense FF layers
 
         trainingCriterion = "classCrossEntropyWithSoftmax"
         evalCriterion     = "classCrossEntropyWithSoftmax"
