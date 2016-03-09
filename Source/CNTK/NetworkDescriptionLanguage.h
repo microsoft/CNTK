@@ -874,7 +874,7 @@ public:
 		strtod(token.c_str(), &pEnd);
 
 		// see if it's a numeric constant
-		if (pEnd[0] == 0)
+		if (*pEnd == 0)
         {
             ndlNode = new NDLNode<ElemType>("", token, this, ndlTypeConstant);
         }
