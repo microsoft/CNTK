@@ -12,6 +12,12 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Test {
 
 BOOST_AUTO_TEST_SUITE(GPUMatrixSuite)
 
+#if 0
+// TODO
+// These tests currently don't reliably run and need rework.
+// When re-enabling please make sure they run reliably by testing
+// in several runs and on multiple machines.
+
 // Requires GPU
 BOOST_FIXTURE_TEST_CASE(MatrixDataSynchronization_DefaultBehaviorTestForConstructors, RandomSeedFixture)
 {
@@ -106,6 +112,8 @@ BOOST_FIXTURE_TEST_CASE(MatrixDataSynchronization_GravitatingTowardsPreferredDev
     BOOST_CHECK_EQUAL(CurrentDataLocation::GPU, matrixB.GetCurrentMatrixLocation());
     BOOST_CHECK_EQUAL(CurrentDataLocation::GPU, matrixC.GetCurrentMatrixLocation());
 }
+
+#endif
 
 BOOST_AUTO_TEST_SUITE_END()
 }

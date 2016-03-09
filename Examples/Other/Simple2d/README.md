@@ -40,6 +40,17 @@ e.g. running from the Simple2d folder using:
 
 The output folder will be created inside Simple2d/.
 
+To train on on multiple GPUs, CNTK must be run as an MPI job, for example:
+
+`mpiexec -hostfile hosts.txt cntk configFile=Config/Multigpu.cntk currentDirectory=Data`
+
+where `hosts.txt` file contains a list of hosts to run the MPI job. Depending on your MPI implementation, you may need to configure your environment accordingly, please refer to respective MPI documentation for more details.
+In case you have multiple GPUs on a single box, you can use the following command to run jobs on a single machine:
+
+`mpiexec -n 4 cntk configFile=Config/Multigpu.cntk currentDirectory=Data`
+
+This will launch 4 instances of CNTK.
+
 ## Details
 
 ### Config files
