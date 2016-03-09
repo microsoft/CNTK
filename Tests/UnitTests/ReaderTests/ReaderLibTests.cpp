@@ -8,6 +8,7 @@
 #include "BlockRandomizer.h"
 #include "NoRandomizer.h"
 #include "DataDeserializer.h"
+#include <PartialBlockRandomizer.h>
 
 using namespace Microsoft::MSR::CNTK;
 
@@ -117,7 +118,8 @@ public:
 
     virtual ChunkDescriptions GetChunkDescriptions() override
     {
-        throw std::logic_error("Not implemented");
+        std::vector<ChunkDescriptionPtr> result;
+        return std::move(result);
     }
 
     virtual void GetSequencesForChunk(size_t, std::vector<SequenceDescription>&) override
@@ -129,20 +131,21 @@ public:
     MockDeserializer& operator=(const MockDeserializer&) = delete;
 };
 
-BOOST_AUTO_TEST_CASE(BlockRandomizerInstantiate)
+BOOST_AUTO_TEST_CASE(PartialBlockRandomizerInstantiate)
 {
     std::vector<float> data;
     auto mockDeserializer = std::make_shared<MockDeserializer>(0, 0, data);
 
-    auto randomizer = std::make_shared<BlockRandomizer>(0, SIZE_MAX, mockDeserializer);
+    auto randomizer = std::make_shared<PartialBlockRandomizer>(0, SIZE_MAX, mockDeserializer, PartialBlockRandomizer::DistributionMode::chunk, false);
 }
+
 /*
 BOOST_AUTO_TEST_CASE(BlockRandomizerOneEpoch)
 {
     std::vector<float> data { 0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0 };
     auto mockDeserializer = std::make_shared<MockDeserializer>(5, 2, data);
 
-    auto randomizer = std::make_shared<BlockRandomizer>(0, SIZE_MAX, mockDeserializer);
+    auto randomizer = std::make_shared<PartialBlockRandomizer>(0, SIZE_MAX, mockDeserializer, PartialBlockRandomizer::DistributionMode::chunk, false);
 
     EpochConfiguration epochConfiguration;
     epochConfiguration.m_numberOfWorkers = 1;
