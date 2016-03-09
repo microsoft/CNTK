@@ -1495,10 +1495,15 @@ public:
     // -----------------------------------------------------------------------
 
     virtual void DumpNodeInfo(const bool /*printValues*/, const bool /*printMetadata*/, File& fstream) const;
+    // helper for SimpleOutWriter, living in here to be able to use in debugging
+    void WriteMinibatchWithFormatting(FILE* f, bool transpose, bool isCategoryLabel, const std::vector<std::string>& labelMapping,
+                                      const std::string& sequenceSeparator, const std::string& sequencePrologue, const std::string& sequenceEpilogue, const std::string& elementSeparator, const std::string& sampleSeparator,
+                                      const std::string& valueFormatString) const;
 
 protected:
 
     // print node values
+    // This is used for dumping model parameters, not minibatch data.
     void PrintNodeValuesToFile(const bool printValues, const bool printMetadata, File& fstream) const
     {
         if (printValues)

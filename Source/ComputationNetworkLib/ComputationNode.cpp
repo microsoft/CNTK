@@ -229,6 +229,109 @@ template <class ElemType>
     }
 }
 
+// write out the content of a node in formatted/readable form
+template <class ElemType>
+void ComputationNode<ElemType>::WriteMinibatchWithFormatting(FILE* f, bool transpose, bool isCategoryLabel, const std::vector<std::string>& labelMapping,
+                                                             const string& sequenceSeparator, const string& sequencePrologue, const string& sequenceEpilogue, const string& elementSeparator, const string& sampleSeparator,
+                                                             const string& valueFormatString) const
+{
+    // get it (into a flat CPU-side vector)
+    const Matrix<ElemType>& outputValues = Value();
+    size_t tempArraySize = 0;
+    ElemType* tempArray = nullptr;
+    outputValues.CopyToArray(tempArray, tempArraySize);
+
+    // process all sequences one by one
+    auto pMBLayout = GetMBLayout();
+    if (!pMBLayout) // no MBLayout: We are printing aggregates (or LearnableParameters?)
+    {
+        pMBLayout = make_shared<MBLayout>();
+        pMBLayout->InitAsFrameMode(1); // treat this as if we have one single sample
+        // TODO: This can be done more efficiently, if ever needed.
+    }
+    const auto& sequences = pMBLayout->GetAllSequences();
+    size_t colStride = pMBLayout->GetNumParallelSequences() * outputValues.GetNumRows(); // how to get from one column to the next
+    size_t width = pMBLayout->GetNumTimeSteps();
+    for (size_t s = 0; s < sequences.size(); s++)
+    {
+        const auto& seqInfo = sequences[s];
+        size_t tBegin = seqInfo.tBegin >= 0 ? seqInfo.tBegin : 0;
+        size_t tEnd = seqInfo.tEnd <= width ? seqInfo.tEnd : width;
+
+        // current sequence is a matrix with 'colStride' beginning at the following pointer
+        ElemType* pCurValue = tempArray + s * outputValues.GetNumRows() + seqInfo.tBegin;
+
+        if (s > 0)
+            fprintfOrDie(f, "%s", sequenceSeparator.c_str());
+        fprintfOrDie(f, "%s", sequencePrologue.c_str());
+
+        // output it according to our format specification
+        let formatChar = valueFormatString.back();
+        size_t dim = outputValues.GetNumRows();
+        size_t T = tEnd - tBegin;
+        if (isCategoryLabel)
+        {
+            if (formatChar == 's') // verify label dimension
+            {
+                if (outputValues.GetNumRows() != labelMapping.size())
+                    InvalidArgument("write: Row dimension %d does not match number of entries %d in labelMappingFile", (int)dim, (int)labelMapping.size());
+            }
+            // update the matrix in-place from one-hot (or max) to index
+            // find the max in each column
+            for (size_t j = 0; j < T; j++)
+            {
+                double maxPos = -1;
+                double maxVal = 0;
+                for (size_t i = 0; i < dim; i++)
+                {
+                    double val = pCurValue[i + j * dim * colStride];
+                    if (maxPos < 0 || val >= maxVal)
+                    {
+                        maxPos = (double)i;
+                        maxVal = val;
+                    }
+                }
+                pCurValue[0 + j * colStride] = (ElemType)maxPos; // overwrite first element in-place
+            }
+            dim = 1; // ignore remaining dimensions
+        }
+        size_t iend    = transpose ? dim : T;
+        size_t jend    = transpose ?   T : dim;
+        size_t istride = transpose ?         1 : colStride;
+        size_t jstride = transpose ? colStride : 1;
+        for (size_t j = 0; j < jend; j++)
+        {
+            if (j > 0)
+                fprintfOrDie(f, "%s", sampleSeparator.c_str());
+            for (size_t i = 0; i < iend; i++)
+            {
+                if (i > 0)
+                    fprintfOrDie(f, "%s", elementSeparator.c_str());
+                if (formatChar == 'f') // print as real number
+                {
+                    double dval = pCurValue[i * istride + j * jstride];
+                    fprintfOrDie(f, valueFormatString.c_str(), dval);
+                }
+                else if (formatChar == 'u') // print category as integer index
+                {
+                    unsigned int uval = (unsigned int)pCurValue[i * istride + j * jstride];
+                    fprintfOrDie(f, valueFormatString.c_str(), uval);
+                }
+                else if (formatChar == 's') // print category as a label string
+                {
+                    size_t uval = (size_t)pCurValue[i * istride + j * jstride];
+                    assert(uval < labelMapping.size());
+                    const char * sval = labelMapping[uval].c_str();
+                    fprintfOrDie(f, valueFormatString.c_str(), sval);
+                }
+            }
+        }
+        fprintfOrDie(f, "%s", sequenceEpilogue.c_str());
+    } // end loop over sequences
+
+    delete[] tempArray;
+}
+
 // -----------------------------------------------------------------------
 // instantiate the core class templates
 // -----------------------------------------------------------------------
