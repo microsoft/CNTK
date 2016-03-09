@@ -85,7 +85,7 @@ public:
         if (flags & CopyNodeFlags::copyNodeValue)
         {
             auto node = dynamic_pointer_cast<SquareErrorNode<ElemType>>(nodeP);
-            *node->m_leftMinusRight = *m_leftMinusRight;
+            node->m_leftMinusRight->SetValue(*m_leftMinusRight);
         }
     }
 
@@ -214,8 +214,8 @@ public:
         if (flags & CopyNodeFlags::copyNodeValue)
         {
             auto node = dynamic_pointer_cast<CrossEntropyWithSoftmaxNode<ElemType>>(nodeP);
-            *node->m_logSoftmaxOfRight = *m_logSoftmaxOfRight;
-            *node->m_softmaxOfRight = *m_softmaxOfRight;
+            node->m_logSoftmaxOfRight->SetValue(*m_logSoftmaxOfRight);
+            node->m_softmaxOfRight->SetValue(*m_softmaxOfRight);
         }
     }
 
@@ -325,8 +325,8 @@ public:
         if (flags & CopyNodeFlags::copyNodeValue)
         {
             auto node = dynamic_pointer_cast<CrossEntropyNode<ElemType>>(nodeP);
-            *node->m_logOfRight = *m_logOfRight;
-            *node->m_leftDivRight = *m_leftDivRight;
+            node->m_logOfRight->SetValue(*m_logOfRight);
+            node->m_leftDivRight->SetValue(*m_leftDivRight);
         }
     }
 
@@ -430,7 +430,7 @@ public:
         if (flags & CopyNodeFlags::copyNodeValue)
         {
             auto node = dynamic_pointer_cast<MatrixL1RegNode<ElemType>>(nodeP);
-            *node->m_gradientOfL1Norm = *m_gradientOfL1Norm;
+            node->m_gradientOfL1Norm->SetValue(*m_gradientOfL1Norm);
         }
     }
 
@@ -855,7 +855,7 @@ public:
         assert(m_nbrCls == Input(CLASSPROBINDATA)->GetSampleMatrixNumRows());
 
         // compute the class posteriors
-        m_clsLogSoftmax = Input(CLASSPROBINDATA)->Value();
+        m_clsLogSoftmax.SetValue(Input(CLASSPROBINDATA)->Value());
         m_clsLogSoftmax.InplaceLogSoftmax(true);   // log
         m_clsSoftmax.AssignExpOf(m_clsLogSoftmax); // non-log
 
@@ -1325,7 +1325,7 @@ public:
         const Matrix<ElemType>& classOneProbabilities = Input(1)->ValueFor(fr);
         Matrix<ElemType>& classZeroLabels = *m_classZeroLabels;
 
-        Matrix<ElemType> ones = ConstOnes(classOneLabels.GetNumRows(), classOneLabels.GetNumCols(), classOneLabels.GetDeviceId());
+        Matrix<ElemType> ones = ConstOnes(classOneLabels.GetNumRows(), classOneLabels.GetNumCols(), classOneLabels.GetDeviceId()).DeepClone();
 
         // compute the indices for the class 0 indices
         classZeroLabels.AssignDifferenceOf(ones, classOneLabels);
@@ -1404,9 +1404,9 @@ public:
         if (flags & CopyNodeFlags::copyNodeValue)
         {
             auto node = dynamic_pointer_cast<LogisticNode<ElemType>>(nodeP);
-            *node->m_classZeroLabels = *m_classZeroLabels;
-            *node->m_result = *m_result;
-            *node->m_temp = *m_temp;
+            node->m_classZeroLabels->SetValue(*m_classZeroLabels);
+            node->m_result->SetValue(*m_result);
+            node->m_temp->SetValue(*m_temp);
         }
     }
 
@@ -1659,6 +1659,11 @@ public:
         }
     }
 
+    void SetNormalizationTimeConstant(const double normalizationTimeConstant)
+    {
+        m_normTimeConst = normalizationTimeConstant;
+    }
+
     void BackpropTo(const size_t inputIndex, const FrameRange& fr) override
     {
         if (m_eval)
@@ -1743,10 +1748,12 @@ public:
                 expAvgFactor = (m_normTimeConst < 0) ? (1.0 / (1.0 + m_mbCount)) : 1;
             }
 
-            if (m_saveMean->GetNumElements() != runMean.GetNumElements())
-                m_saveMean->Resize(runMean.GetNumRows(), runMean.GetNumCols());
-            if (m_saveInvStdDev->GetNumElements() != runMean.GetNumElements())
-                m_saveInvStdDev->Resize(runMean.GetNumRows(), runMean.GetNumCols());
+            if (m_saveMean == nullptr)
+                fprintf(stderr, "WARNING: m_saveMean is null\n");
+            if (m_saveInvStdDev == nullptr)
+                fprintf(stderr, "WARNING: m_saveInvStdDev is null\n");
+            m_saveMean->Resize(runMean);
+            m_saveInvStdDev->Resize(runMean);
 
             m_convEng->NormalizeBatch(*m_inT, sliceInputValue, *m_scaleBiasT, scale, bias, m_spatial, expAvgFactor, runMean, runInvStdDev,
                                       sliceOutputValue, m_epsilon, *m_saveMean, *m_saveInvStdDev);
@@ -1809,7 +1816,7 @@ public:
     void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool) override
     {
         Base::RequestMatricesBeforeForwardProp(matrixPool);
-        if (!m_eval)
+        //if (!m_eval)
         {
             RequestMatrixFromPool(m_saveMean, matrixPool);
             RequestMatrixFromPool(m_saveInvStdDev, matrixPool);
@@ -1819,7 +1826,7 @@ public:
     void RequestMatricesBeforeBackprop(MatrixPool& matrixPool) override
     {
         Base::RequestMatricesBeforeBackprop(matrixPool);
-        if (!m_eval)
+        //if (!m_eval)
         {
             RequestMatrixFromPool(m_dScale, matrixPool);
             RequestMatrixFromPool(m_dBias, matrixPool);
@@ -1829,7 +1836,7 @@ public:
     void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool) override
     {
         Base::ReleaseMatricesAfterBackprop(matrixPool);
-        if (!m_eval)
+        //if (!m_eval)
         {
             ReleaseMatrixToPool(m_saveMean, matrixPool);
             ReleaseMatrixToPool(m_saveInvStdDev, matrixPool);

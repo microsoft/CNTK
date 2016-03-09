@@ -1553,6 +1553,7 @@ public:
 
 typedef argvector<int> intargvector;
 typedef argvector<float> floatargvector;
+typedef argvector<double> doubleargvector;
 typedef argvector<std::wstring> stringargvector;
 
 }}}

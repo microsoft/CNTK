@@ -349,7 +349,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 // 2.1 model averaging
                 auto pNode = DownCast(pBaseNode);
                 // 2.1.1. average model from individual models 
-                Matrix<ElemType> mat(pNode->Value()); // pNode->Value returns lvalue, so a deep copy is invoked here
+                Matrix<ElemType> mat(pNode->Value().DeepClone()); // pNode->Value returns lvalue, so a deep copy is invoked here
                 // 2.1.2. normalize the weight matrix 
                 Matrix<ElemType>::Scale(factor, mat);
                 // 2.1.3. send weight matrix over MPI nodes; 

@@ -425,7 +425,7 @@ BOOST_AUTO_TEST_CASE(MaxPoolBackward)
         eng->Forward(*inT, in, *poolT, *outT, out);
 
         // For gradients, use the same values as outputs.
-        SingleMatrix srcGrad(out);
+        SingleMatrix srcGrad(out.DeepClone());
         SingleMatrix grad(inW * inH * cmap, n, deviceId);
         grad.SetValue(1);
 
@@ -541,7 +541,7 @@ BOOST_AUTO_TEST_CASE(AvgPoolBackward)
         eng->Forward(*inT, in, *poolT, *outT, out);
 
         // For gradients, use the same values as outputs.
-        SingleMatrix srcGrad(out);
+        SingleMatrix srcGrad(out.DeepClone());
         SingleMatrix grad(inW * inH * cmap, n, deviceId);
         grad.SetValue(1);
 
@@ -671,21 +671,21 @@ BOOST_AUTO_TEST_CASE(BatchNormalizationForwardTrain)
 
             SingleMatrix runMeanBuf(deviceId);
             SingleMatrix runMean = initMat(runMeanBuf, crowScaleBias, 1, buf);
-            SingleMatrix runMeanExp(runMean);
+            SingleMatrix runMeanExp(runMean.DeepClone());
             SingleMatrix runInvStdDevBuf(deviceId);
             SingleMatrix runInvStdDev = initMat(runInvStdDevBuf, crowScaleBias, 1, buf);
-            SingleMatrix runInvStdDevExp(runInvStdDev);
+            SingleMatrix runInvStdDevExp(runInvStdDev.DeepClone());
 
             SingleMatrix saveMeanBuf(deviceId);
             SingleMatrix saveMean = initMat(saveMeanBuf, crowScaleBias, 1, buf);
-            SingleMatrix saveMeanExp(saveMean);
+            SingleMatrix saveMeanExp(saveMean.DeepClone());
             SingleMatrix saveInvStdDevBuf(deviceId);
             SingleMatrix saveInvStdDev = initMat(saveInvStdDevBuf, crowScaleBias, 1, buf);
-            SingleMatrix saveInvStdDevExp(saveInvStdDev);
+            SingleMatrix saveInvStdDevExp(saveInvStdDev.DeepClone());
 
             SingleMatrix outBuf(deviceId);
             SingleMatrix out = initMat(outBuf, crow, ccol, buf);
-            SingleMatrix outExp(out);
+            SingleMatrix outExp(out.DeepClone());
 
             CudaTimer time1;
             time1.Start();
@@ -800,7 +800,7 @@ BOOST_AUTO_TEST_CASE(BatchNormalizationForwardInference)
 
             SingleMatrix outBuf(deviceId);
             SingleMatrix out = initMat(outBuf, crow, ccol, buf);
-            SingleMatrix outExp(out);
+            SingleMatrix outExp(out.DeepClone());
 
             CudaTimer time1;
             time1.Start();
@@ -982,14 +982,14 @@ BOOST_AUTO_TEST_CASE(BatchNormalizationBackward)
 
             SingleMatrix dScaleBuf(deviceId);
             SingleMatrix dScale = initMat(dScaleBuf, crowScaleBias, 1, buf);
-            SingleMatrix dScaleExp(dScale);
+            SingleMatrix dScaleExp(dScale.DeepClone());
             SingleMatrix dBiasBuf(deviceId);
             SingleMatrix dBias = initMat(dBiasBuf, crowScaleBias, 1, buf);
-            SingleMatrix dBiasExp(dBias);
+            SingleMatrix dBiasExp(dBias.DeepClone());
 
             SingleMatrix dxBuf(deviceId);
             SingleMatrix dx = initMat(dxBuf, crow, ccol, buf);
-            SingleMatrix dxExp(dx);
+            SingleMatrix dxExp(dx.DeepClone());
 
             CudaTimer time1;
             time1.Start();

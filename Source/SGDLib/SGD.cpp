@@ -309,6 +309,7 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
 
     unsigned long dropOutSeed = 1;
     double prevDropoutRate = 0;
+    double prevNormalizationTimeConstant = std::numeric_limits<double>::infinity();
 
     bool learnRateReduced = false;
 
@@ -341,7 +342,12 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
 
         // set dropout rate for this epoch
         ComputationNetwork::SetDropoutRate<ElemType>(net, criterionNodes[0], m_dropoutRates[i], prevDropoutRate, dropOutSeed);
-        net->SetBatchNormalizationNodesBelowEvalMode(false, criterionNodes[0]);
+        ComputationNetwork::SetBatchNormalizationTimeConstant<ElemType>(net, criterionNodes[0], m_batchNormalizationTimeConstant[i], prevNormalizationTimeConstant);
+        
+        if (i < m_setBNToEvalModeAfterEpochNumber)
+            net->SetBatchNormalizationNodesBelowEvalMode(false, criterionNodes[0]);
+        else
+            net->SetBatchNormalizationNodesBelowEvalMode(true, criterionNodes[0]);
 
         // learning rate adjustment
         if (m_autoLearnRateSearchType == LearningRateSearchAlgorithm::None || i < m_learningRatesParam.size())
@@ -2384,7 +2390,9 @@ SGDParams::SGDParams(const ConfigRecordType& configSGD, size_t sizeofElemType)
     m_seqGammarCalcbMMIFactor = configSGD(L"seqGammarBMMIFactor", 0.0);
     m_seqGammarCalcWP = configSGD(L"seqGammarWordPen", 0.0);
 
-    m_dropoutRates = configSGD(L"dropoutRate", ConfigRecordType::Array(floatargvector(vector<float>{0.0f})));
+    m_dropoutRates = configSGD(L"dropoutRate", ConfigRecordType::Array(doubleargvector(vector<double>{0.0})));
+    m_batchNormalizationTimeConstant = configSGD(L"batchNormalizationTimeConstant", ConfigRecordType::Array(doubleargvector(vector<double>{std::numeric_limits<double>::infinity()})));
+    m_setBNToEvalModeAfterEpochNumber = configSGD(L"setBNToEvalModeAfterEpochNumber", std::numeric_limits<int>::infinity());
 
     GradientsUpdateType gradUpdateType = ParseGradUpdateType(configSGD(L"gradUpdateType", L"None"));
     double gaussianNoiseInjecStd = configSGD(L"gaussianNoiseInjectStd", 0.0);

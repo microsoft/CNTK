@@ -389,6 +389,9 @@ public:
     static void SetDropoutRate(ComputationNetworkPtr net, const ComputationNodeBasePtr& criterionNode, const double dropoutRate, double& prevDropoutRate, unsigned long& dropOutSeed);
 
     template <class ElemType>
+    static void SetBatchNormalizationTimeConstant(ComputationNetworkPtr net, const ComputationNodeBasePtr& criterionNode, const double normalizationTimeConstant, double& prevNormalizationTimeConstant);
+
+    template <class ElemType>
     static void SetSeqParam(ComputationNetworkPtr net,
                             const ComputationNodeBasePtr criterionNode,
                             const double& hsmoothingWeight,

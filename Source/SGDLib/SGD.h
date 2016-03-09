@@ -203,7 +203,9 @@ protected:
     size_t m_minibatchSizeTuningFrequency;
     size_t m_minibatchSizeTuningMax;
 
-    floatargvector m_dropoutRates;
+    doubleargvector m_dropoutRates;
+    doubleargvector m_batchNormalizationTimeConstant;
+    int m_setBNToEvalModeAfterEpochNumber;
     size_t m_maxTempMemSizeInSamplesForCNN;
 
     int m_traceLevel;
