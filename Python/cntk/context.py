@@ -39,8 +39,21 @@ class AbstractContext(object, metaclass=ABCMeta):
     '''    
     def add_macro(self, path):        
         self.macros.append(path)    
-        
-            
+
+    '''
+    '''        
+    def _generate_train_config(self):
+        pass        
+    
+    '''
+    '''        
+    def _generate_test_config(self):
+        pass        
+    
+    '''
+    '''        
+    def _generate_eval_config(self):
+        pass        
         
     '''
     '''
@@ -51,13 +64,13 @@ class AbstractContext(object, metaclass=ABCMeta):
     '''
     '''
     @abstractmethod
-    def infer(self, reader):
+    def test(self, reader):
         pass     
     
     '''
     '''    
     @abstractmethod
-    def test(self, reader):
+    def eval(self, reader):
         pass 
     
 '''
@@ -71,17 +84,20 @@ class Context(AbstractContext):
     '''
     '''    
     def train(self, reader):
-        pass 
-    
-    '''
-    '''    
-    def infer(self, reader):
-        pass     
+        self._generate_train_config() 
+        #TODO: run exe
     
     '''
     '''    
     def test(self, reader):
-        pass 
+        self._generate_test_config() 
+        #TODO: run exe
+    
+    '''
+    '''    
+    def eval(self, reader):
+        self._generate_eval_config() 
+        #TODO: run exe
 
 '''
 '''
