@@ -1,3 +1,4 @@
+
 class ComputationNode(object):
     def __init__(self, name, params=None, value=None, get_output_shape=None,
             var_name=None, check=None):

@@ -23,10 +23,8 @@ except:
         PYDOT = False
 
 class Context(object):
-    import cntk.graph as graph
-    def __init__(self, desc):
-        
-        self.directory = os.path.abspath('_cntk_%s'%id(desc))
+    def __init__(self, model):
+        self.directory = os.path.abspath('_cntk_%s'%id(model))
         if os.path.exists(self.directory):
             print("Directory '%s' already exists - overwriting data."%self.directory) 
         else:

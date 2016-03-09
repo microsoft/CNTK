@@ -1,4 +1,5 @@
-from .graph import ComputationNode
+
+from cntk.graph import ComputationNode
 
 # Because CNTK stores the sample in a transposed form, we need to
 # switch parameters for some operators
