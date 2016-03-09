@@ -156,7 +156,7 @@ void File::Init(const wchar_t* filename, int fileOptions)
 #else
     auto pos = path.find_last_of(L"/");
     if (pos != path.npos)
-        path.erase(pos - 1);
+        path.erase(pos);
     else // if no directory path at all, use current directory
         return L".";
 #endif
