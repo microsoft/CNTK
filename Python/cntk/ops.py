@@ -433,4 +433,3 @@ class Transpose(TransposeDimensions):
     def __init__(self, x, name='Transpose'):
         super(Transpose, self).__init__(x, 1, 2, name=name)
         self.params=['x']
-
