@@ -128,7 +128,7 @@ public:
     MockDeserializer(const MockDeserializer&) = delete;
     MockDeserializer& operator=(const MockDeserializer&) = delete;
 };
-/*
+
 BOOST_AUTO_TEST_CASE(BlockRandomizerInstantiate)
 {
     std::vector<float> data;
@@ -136,7 +136,7 @@ BOOST_AUTO_TEST_CASE(BlockRandomizerInstantiate)
 
     auto randomizer = std::make_shared<BlockRandomizer>(0, SIZE_MAX, mockDeserializer);
 }
-
+/*
 BOOST_AUTO_TEST_CASE(BlockRandomizerOneEpoch)
 {
     std::vector<float> data { 0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0 };
@@ -241,7 +241,6 @@ BOOST_AUTO_TEST_CASE(BlockRandomizerOneEpochLegacyRandomization)
     BOOST_CHECK_EQUAL_COLLECTIONS(expected.begin(), expected.end(),
                                   actual.begin(), actual.end());
 }
-*/
 BOOST_AUTO_TEST_CASE(NoRandomizerOneEpoch)
 {
     std::vector<float> data { 0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0 };
@@ -276,6 +275,7 @@ BOOST_AUTO_TEST_CASE(NoRandomizerOneEpoch)
     BOOST_CHECK_EQUAL_COLLECTIONS(data.begin(), data.end(),
                                   actual.begin(), actual.end());
 }
+*/
 
 BOOST_AUTO_TEST_SUITE_END()
 
