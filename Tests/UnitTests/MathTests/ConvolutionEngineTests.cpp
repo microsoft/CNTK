@@ -152,7 +152,7 @@ BOOST_AUTO_TEST_CASE(ConvolutionForward)
             auto baseEng = ConvEng::Create(g, baseDeviceId, ImageLayoutKind::CHW, 0, ConvolutionEngineKind::CuDnn);
             auto testEng = ConvEng::Create(g, deviceId, ImageLayoutKind::CHW, 0, engKind);
 
-            size_t n = 1;//batchSizeRnd(rng);
+            size_t n = batchSizeRnd(rng);
             vec buf;
             buf.resize(g->InputShape().GetNumElements() * n);
             std::generate(begin(buf), end(buf), [&] { return nd(rng); });
