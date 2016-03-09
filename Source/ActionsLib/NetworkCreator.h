@@ -26,7 +26,7 @@ extern wstring commonMacros;
 extern wstring computationNodes;
 
 // helper that returns 'float' or 'double' depending on ElemType
-template <class ElemType> /*static*/ const wchar_t* ElemTypeName();
+template <typename ElemType> /*static*/ const wchar_t* ElemTypeName();
 
 function<ComputationNetworkPtr(DEVICEID_TYPE)> GetCreateNetworkFn(const ScriptableObjects::IConfigRecord& config);
 

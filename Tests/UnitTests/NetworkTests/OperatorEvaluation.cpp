@@ -27,11 +27,10 @@ BOOST_FIXTURE_TEST_SUITE(NetworkTestSuite, OperatorFixture)
 
 BOOST_AUTO_TEST_CASE(NetworkOperatorPlus)
 {
-    wstring configFileName(L"../config/Network_Operator_Plus.cntk");
-    string baseFileName("../Control/Network_Operator_Plus_Control.txt");
-    string outputFileName("../output/out.txt.v2");
-
-    HelperRunNetworkTest<float>(configFileName, baseFileName, outputFileName);
+    HelperRunNetworkTest<float>(
+        L"../Config/Network_Operator_Plus.cntk" /*config*/,
+        "../Control/Network_Operator_Plus_Control.txt" /*control*/,
+        "../Output/out.txt.v2" /*output*/);
 };
 
 }
