@@ -72,11 +72,15 @@ class AbstractContext(object, metaclass=ABCMeta):
         """                
         raise NotImplementedError 
     
-    def _generate_eval_config(self, node):
+    def _generate_eval_config(self, node, reader):
         """Generates the configuration file for write action.
         :param node: the node to evaluate. 
         """                
-        raise NotImplementedError        
+        tmpl = open(CNTK_EVAL_TEMPLATE_PATH, "r").read()
+        reader_config = reader.generate_config()
+        output_filename = os.path.join(self.context.directory, CNTK_OUTPUT_FILENAME)
+        return tmp%['reader':reader_config, 'outputFile':output_filename]
+        
         
     @abstractmethod
     def train(self, reader):
@@ -149,7 +153,7 @@ class Context(AbstractContext):
         :param reader: the reader used to provide the prediction data.
         :param node: the node to evaluate.
         """            
-        config_content = self._generate_eval_config() 
+        config_content = self._generate_eval_config(node, reader) 
         self._call_cntk(CNTK_EVAL_CONFIG_FILENAME, config_content) 
 
 class ClusterContext(AbstractContext):

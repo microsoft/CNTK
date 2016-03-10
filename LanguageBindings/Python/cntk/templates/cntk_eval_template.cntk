@@ -7,7 +7,7 @@ Eval=[
 	action="write"
 	
 	reader = [
-		"%(PredictInputFile)s"
+		"%(reader)s"
 	]	
 	outputPath = "%(outputFile)s"
 ]
