@@ -56,7 +56,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             StreamDescriptor stream;
             stream.m_id = id++;
             stream.m_name = name;
-            stream.m_sampleSize = input(L"dim");
+            stream.m_sampleDimension = input(L"dim");
             string type = input(L"format");
 
             if (AreEqualIgnoreCase(type, "dense"))

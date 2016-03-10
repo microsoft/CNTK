@@ -149,6 +149,7 @@ bool ReaderShim<ElemType>::GetMinibatch(StreamMinibatchInputs& matrices)
             size_t streamId = m_nameToStreamId[mx.first];
             
             const auto& stream = minibatch.m_data[streamId];
+            // TODO: assert that num sequences is the same across all streams
             m_numParallelSequences = stream->m_layout->GetNumParallelSequences();
             size_t rowNumber = m_streams[streamId]->m_sampleLayout->GetNumElements();
             auto& layout = matrices.GetInputLayout<ElemType>(mx.first);
@@ -209,7 +210,7 @@ bool ReaderShim<ElemType>::DataEnd() { return false; } // Note: Return value nev
 template <class ElemType>
 void ReaderShim<ElemType>::CopyMBLayoutTo(MBLayoutPtr layout)
 {
-   // do nothing.
+    layout->CopyFrom(make_shared<MBLayout>(0, 0));
 }
 
 template <class ElemType>

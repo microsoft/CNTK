@@ -251,8 +251,14 @@ public:
     // -----------------------------------------------------------------------
 
     // Note: this is also used to copy MBLayouts into our existing MBLayout instance, which is a somewhat questionable design.
-    const MBLayoutPtr& GetMBLayoutPtr() { return m_pMBLayout; }
-    size_t GetNumParallelSequences() const { return m_pMBLayout->GetNumParallelSequences(); }
+    const MBLayoutPtr& GetMBLayoutPtr()
+    {
+        return m_pMBLayout;
+    }
+    size_t GetNumParallelSequences() const
+    {
+        return m_pMBLayout->GetNumParallelSequences();
+    }
 
     // determine the actual MB size from the feature nodes
     // This returns max number of columns over the feature nodes.
@@ -284,7 +290,8 @@ public:
     // TODO: Instead of passing numAllSamples in here, we should determine it from the inputs in case of no layout. Or simply forbid this case.
     size_t GetNumSamplesWithLabel(const size_t numAllSamples) const
     {
-        if (m_pMBLayout)
+        if (m_pMBLayout && 
+            !(m_pMBLayout->GetNumParallelSequences() == 0 && m_pMBLayout->GetNumTimeSteps() == 0))
             return m_pMBLayout->GetActualNumSamples();
         else
             return numAllSamples; // TODO: Return the actual number of samples, by inquiring our own input nodes; then eliminate the numAllSamples parameter.

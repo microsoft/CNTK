@@ -71,10 +71,10 @@ TextParser<ElemType>::TextParser(const std::wstring& filename, const vector<Stre
         }
         m_aliasToIdMap[alias] = i;
         m_streamInfos[i].m_type = stream.m_storageType;
-        m_streamInfos[i].m_sampleDimension = stream.m_sampleSize;
+        m_streamInfos[i].m_sampleDimension = stream.m_sampleDimension;
 
         auto streamDescription = std::make_shared<StreamDescription>(stream);
-        streamDescription->m_sampleLayout = std::make_shared<TensorShape>(stream.m_sampleSize);
+        streamDescription->m_sampleLayout = std::make_shared<TensorShape>(stream.m_sampleDimension);
         m_streams.push_back(streamDescription);
     }
 
