@@ -17,20 +17,22 @@ CNTK_PREDICT_CONFIG_FILENAME = "predict.cntk"
 CNTK_EVAL_CONFIG_FILENAME = "eval.cntk"
 CNTK_OUTPUT_FILENAME="out.txt"
 
-'''This is the abstract CNTK context. It provides an API to run CNTK actions
-'''
-class AbstractContext(object, metaclass=ABCMeta):
+#TODO: add validate method
+#TODO: overload action methods to support numpy matrices as inputs
 
-    '''AbstractContext Constructer
-    :param name: context name
-    :param graph: the computational graph to be used for training, testing and prediction
-    :param optimizer: the SGD optimizer to use for training
-    :param device_id: whether to use CPU or a specific GPU. -1 for CPU larger values
-    are the GPUs indices.
+class AbstractContext(object, metaclass=ABCMeta):
+    '''This is the abstract CNTK context. It provides an API to run CNTK actions
     '''
-	#TODO: add validate method
-    #TODO: overload action methods to support numpy matrices as inputs
     def __init__(self, name, graph = None, optimizer = None, device_id = -1):
+        '''AbstractContext Constructer
+        
+        :param name: context name
+        :param graph: the computational graph to be used for training, testing and prediction
+        :param optimizer: the SGD optimizer to use for training
+        :param device_id: whether to use CPU or a specific GPU. -1 for CPU larger values
+        are the GPUs indices.
+        
+        '''
         self.directory = os.path.abspath('_cntk_%s'%id(name))
         if os.path.exists(self.directory):
             print("Directory '%s' already exists - overwriting data."%self.directory) 
@@ -48,109 +50,109 @@ class AbstractContext(object, metaclass=ABCMeta):
     def __exit__(self, exc_type, exc_value, exc_tb):
         pass    
     
-    '''Add a macro file to be referenced from all configurations of this context.
-    :param path: path of the macro file.    
-    '''    
     def add_macro(self, path):        
+        '''Add a macro file to be referenced from all configurations of this context.
+        :param path: path of the macro file.    
+        '''            
         self.macros.append(path)    
 
-    '''Generates the configuration file for the train action.
-    '''        
     def _generate_train_config(self):
+        '''Generates the configuration file for the train action.
+        '''                
         raise NotImplementedError        
     
-    '''Generates the configuration file for the test action.
-    '''        
     def _generate_test_config(self):
+        '''Generates the configuration file for the test action.
+        '''                
         raise NotImplementedError        
     
-    '''Generates the configuration file for the write action.
-    It uses the context's trained model.
-    '''        
     def _generate_predict_config(self):
+        '''Generates the configuration file for the write action.
+        It uses the context's trained model.
+        '''                
         raise NotImplementedError 
     
-    '''Generates the configuration file for write action.
-    :param node: the node to evaluate. 
-    '''        
     def _generate_eval_config(self, node):
+        '''Generates the configuration file for write action.
+        :param node: the node to evaluate. 
+        '''                
         raise NotImplementedError        
         
-    '''Abstract method for the action train.
-    :param reader: the reader to use for this action.
-    '''
     @abstractmethod
     def train(self, reader):
+        '''Abstract method for the action train.
+        :param reader: the reader to use for this action.
+        '''        
         pass 
     
-    '''Abstract method for the action test.
-    :param reader: the reader to use for this action.
-    '''
     @abstractmethod
     def test(self, reader):
+        '''Abstract method for the action test.
+        :param reader: the reader to use for this action.
+        '''        
         pass     
     
-    '''Abstract method for the action write. It evaluated the trained model on 
-    the data provided by the reader.
-    :param reader: the reader to use for this action.
-    '''
     @abstractmethod
     def predict(self, reader):
+        '''Abstract method for the action write. It evaluated the trained model on 
+        the data provided by the reader.
+        :param reader: the reader to use for this action.
+        '''        
         pass     
     
-    '''Abstract method for the action write. It evaluated the passed node on the
-    data provided by the reader.
-    :param node: the node to evaluate.
-    :param reader: the reader to use for this action.
-    '''    
     @abstractmethod
     def eval(self, node, reader):
+        '''Abstract method for the action write. It evaluated the passed node on the
+        data provided by the reader.
+        :param node: the node to evaluate.
+        :param reader: the reader to use for this action.
+        '''            
         pass 
     
-'''This is a sub-class of AbstractContext, use it to run CNTK locally.
-'''
 class Context(AbstractContext):    
-    '''Calls the CNTK exe
-    :param config_file_name: the name of the configuration file
-    :param config_content: a string containing the configuration
+    '''This is a sub-class of AbstractContext, use it to run CNTK locally.
     '''
+    
     def _call_cntk(self, config_file_name, config_content):
+        '''Calls the CNTK exe
+        :param config_file_name: the name of the configuration file
+        :param config_content: a string containing the configuration
+        '''
         filename = os.path.join(self.directory, config_file_name)        
         with open(os.path.join(self.context.directory, filename), "w") as out:
             out.write(config_content)            
         subprocess.check_call([CNTK_EXECUTABLE_PATH, "configFile=%s"%filename])        
     
-    
-    '''Run the train action locally.
-    :param reader: the reader used to provide the training data.
-    '''
     def train(self, reader):
+        '''Run the train action locally.
+        :param reader: the reader used to provide the training data.
+        '''        
         config_content = self._generate_train_config()         
         self._call_cntk(CNTK_TRAIN_CONFIG_FILENAME, config_content)        
     
-    '''Run the test action locally.
-    :param reader: the reader used to provide the testing data.
-    '''    
     def test(self, reader):
+        '''Run the test action locally.
+        :param reader: the reader used to provide the testing data.
+        '''            
         config_content = self._generate_test_config() 
         self._call_cntk(CNTK_TEST_CONFIG_FILENAME, config_content) 
 
-    '''Run the write action locally, use the trained model of this context.
-    :param reader: the reader used to provide the prediction data.
-    '''    
     def predict(self, reader):
+        '''Run the write action locally, use the trained model of this context.
+        :param reader: the reader used to provide the prediction data.
+        '''            
         config_content = self._generate_predict_config() 
         self._call_cntk(CNTK_PREDICT_CONFIG_FILENAME, config_content) 
     
-    '''Run the write action locally to evaluate the passed node.
-    :param reader: the reader used to provide the prediction data.
-    :param node: the node to evaluate.
-    '''    
     def eval(self, node, reader):
+        '''Run the write action locally to evaluate the passed node.
+        :param reader: the reader used to provide the prediction data.
+        :param node: the node to evaluate.
+        '''            
         config_content = self._generate_eval_config() 
         self._call_cntk(CNTK_EVAL_CONFIG_FILENAME, config_content) 
 
-'''This is a sub-class of AbstractContext, use it to submit your workloads to the cluster.
-'''
 class ClusterContext(AbstractContext):
+    '''This is a sub-class of AbstractContext, use it to submit your workloads to the cluster.
+    '''    
     pass
