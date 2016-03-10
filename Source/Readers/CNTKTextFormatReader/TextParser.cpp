@@ -370,6 +370,27 @@ Sequence<ElemType> TextParser<ElemType>::LoadSequence(bool verifyId, const Seque
             sequenceDsc.m_id, numRowsRead, expectedRowCount);
     }
 
+    // Double check if there are empty input streams.
+    // TODO this handling needs to be graceful, but currently CNTK complains when we return empty sequences.
+    bool hasEmptyInputs = false;
+
+    for (size_t i = 0; i < sequence.size(); ++i)
+    {
+        if (sequence[i]->m_numberOfSamples == 0)
+        {
+            fprintf(stderr,
+                "ERROR: While reading input %" PRIu64 ""
+                " in sequence id = %" PRIu64 
+                " at file offset = %" PRId64 ": Input is empty.\n", i + 1, sequenceDsc.m_id, GetFileOffset());
+            hasEmptyInputs = true;
+        }
+    }
+
+    if (hasEmptyInputs)
+    {
+        RuntimeError("Could not read input file. Bailing out.");
+    }
+
     return sequence;
 }
 
