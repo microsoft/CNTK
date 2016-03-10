@@ -252,8 +252,9 @@ void SynchronousNodeEvaluator<ElemType>::Evaluate(NDLNode<ElemType>* node, const
             size_t img_width = node->GetOptionalParameter("imageWidth", "0");
             size_t img_height = node->GetOptionalParameter("imageHeight", "0");
             size_t img_channels = node->GetOptionalParameter("imageChannels", "0");
+            ImageLayoutKind imageLayoutKind = ImageLayoutKindFrom(node->GetOptionalParameter("imageLayout", "HWC"));
 
-            nodePtr = builder.LegacyReshape(NULL, num_rows, ImageDimensions::AsTensorShape(img_width, img_height, img_channels, ImageLayoutKind::HWC /*legacy*/), name); // BUGBUG: use a tensor descriptor instead
+            nodePtr = builder.LegacyReshape(NULL, num_rows, ImageDimensions::AsTensorShape(img_width, img_height, img_channels, imageLayoutKind), name);
         }
     }
     else if (cnNodeType == OperationNameOf(PastValueNode) ||
