@@ -13,6 +13,9 @@ static inline bool operator==(const std::pair<double,size_t>& a, double b) { ass
 // ^^ workaround until this line in AggregateGradientsImpl() gets updated: assert(headerCPU->evalErrors[i] == 0);
 #include "AllReduceDistGradAggregator.h"
 #endif
+#ifdef BLOCK_MOMENTUM
+#include "BlockMomentumSGD.h"
+#endif 
 #include "SimpleDistGradAggregator.h"
 #include "ProgressTracing.h"
 
@@ -279,9 +282,10 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
     {
         InitDistGradAgg(evaluationNodes.size(), m_traceLevel);
     }
-    else if (GetParallelizationMethod() == ParallelizationMethod::ModelAveragingSGD)
+    else if (GetParallelizationMethod() == ParallelizationMethod::ModelAveragingSGD || 
+             GetParallelizationMethod() == ParallelizationMethod::BlockMomentumSGD)
     {
-        InitModelAggregationHandler(m_syncStatsTrace);
+        InitModelAggregationHandler(m_syncStatsTrace, net->GetDeviceId());
     }
     
     // precompute mean and invStdDev nodes and save initial model
@@ -756,9 +760,11 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
 
     bool useGradientAggregation = ((GetParallelizationMethod() == ParallelizationMethod::DataParallelSGD) &&
                                    (epochNumber >= m_parallelizationStartEpochNum));
-    bool useModelAveraging = ((GetParallelizationMethod() == ParallelizationMethod::ModelAveragingSGD) &&
+    bool useModelAggergation = ((GetParallelizationMethod() == ParallelizationMethod::ModelAveragingSGD || 
+                                 GetParallelizationMethod() == ParallelizationMethod::BlockMomentumSGD) 
+                                &&
                               (epochNumber >= m_parallelizationStartEpochNum));
-    bool useParallelTrain = useGradientAggregation || useModelAveraging;
+    bool useParallelTrain = useGradientAggregation || useModelAggergation;
 
     // MA-related variables
     size_t nSamplesSinceLastModelSync = 0;
@@ -1041,7 +1047,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
         }
 
         // aggregation by model averaging
-        if (useModelAveraging)
+        if (useModelAggergation)
         {
             if (nSamplesSinceLastModelSync >= m_nFramesBetweenMASync)
             {
@@ -1154,8 +1160,8 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
 
         timer.Restart();
         totalEpochSamples += aggregateNumSamplesWithLabel;
-        //if (!useModelAveraging)
-        //    totalSamplesSeen += aggregateNumSamplesWithLabel;
+        if (!useModelAggergation)
+            totalSamplesSeen += aggregateNumSamplesWithLabel;
 
         // call DataEnd function
         // This signals something from SGD to the reader.
@@ -1174,7 +1180,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
 
     // --- END MAIN MINIBATCH LOOP
 
-    if (useModelAveraging )
+    if (useModelAggergation )
     {
         m_pMASGDHelper->OnEpochEnd(learnableNodes, smoothedGradients, nSamplesSinceLastModelSync);
         nSamplesSinceLastModelSync = 0;
@@ -1190,12 +1196,12 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
     }
 
     // in case of model averaging, do one more final aggregation of criteria
-    if (useModelAveraging && (m_mpi->NumNodesInUse() > 1))
+    if (useModelAggergation && (m_mpi->NumNodesInUse() > 1))
     {
         // 1. total epoch samples processed by all workers
         size_t totalEpochSamplesOfAllWorkers = totalEpochSamples;
         m_mpi->AllReduce(&totalEpochSamplesOfAllWorkers, 1);
-        //totalSamplesSeen += totalEpochSamplesOfAllWorkers;
+        totalSamplesSeen += totalEpochSamplesOfAllWorkers;
 
         // get criteria for this worker
         assert(!useGradientAggregation); // (otherwise the data would not be in localEpochCriterion)
@@ -1844,20 +1850,23 @@ void SGD<ElemType>::InitDistGradAgg(int numEvalNodes, int traceLevel)
 }
 
 template <class ElemType>
-void SGD<ElemType>::InitModelAggregationHandler(int traceLevel)
+void SGD<ElemType>::InitModelAggregationHandler(int traceLevel, DEVICEID_TYPE devID)
 {
-    if (GetParallelizationMethod() == ParallelizationMethod::ModelAveragingSGD)
+    if (GetParallelizationMethod() == ParallelizationMethod::ModelAveragingSGD && !m_pMASGDHelper)
     {
-#ifndef BLOCKWISE_MODEL_UPDATE_FILTERING
-        if (!m_pMASGDHelper)
-        {
-            m_pMASGDHelper = make_shared<BasicModelAveragingSGD<ElemType>>(m_mpi, traceLevel);
-        }
-#else
 
+        m_pMASGDHelper = make_shared<BasicModelAveragingSGD<ElemType>>(m_mpi, traceLevel, devID);
+    }
+    if (GetParallelizationMethod() == ParallelizationMethod::BlockMomentumSGD)
+    {
+#ifndef BLOCK_MOMENTUM
+            RuntimeError("Block Momentum is not supported in the main CNTK repo. You need to enable 1bit submodule.");
+#else
+            m_pMASGDHelper = make_shared<BlockMomentumSGD<ElemType>>(m_mpi, traceLevel, devID, 
+                                    m_useNesterovBlockMomentum, m_resetSGDMomentum, 
+                                    m_blockMomentum, m_blockLearningRate, m_blockMomentumAsTimeConstant);
 #endif 
     }
-    
 }
 // public:
 // UpdateWeightsS - static version of UpdateWeights()
@@ -2043,7 +2052,8 @@ void SGD<ElemType>::SaveCheckPointInfo(const size_t epoch, const size_t totalSam
             fstream.PutMarker(FileMarker::fileMarkerEndSection, L"EGradient");
 
             fstream.PutMarker(FileMarker::fileMarkerEndSection, L"ECKP");
-
+            if (m_pMASGDHelper && m_pMASGDHelper->RequiresToSaveToCheckPoint())
+                m_pMASGDHelper->SaveToCheckPoint(fstream);
             // Ensuring that data is written
             fstream.Flush();
         }
@@ -2126,6 +2136,13 @@ void SGD<ElemType>::LoadCheckPointInfo(const size_t epochNumber,
     fstream.GetMarker(FileMarker::fileMarkerEndSection, L"EGradient");
 
     fstream.GetMarker(FileMarker::fileMarkerEndSection, L"ECKP");
+
+    if (m_pMASGDHelper && m_pMASGDHelper->RequiresToSaveToCheckPoint())
+    {
+        m_pMASGDHelper->LoadFromCheckPoint(fstream);
+    }
+
+    return true;
 }
 
 template <class ElemType>
@@ -2314,7 +2331,8 @@ static ParallelizationMethod ParseParallelizationMethod(const wstring& s)
     if      (EqualCI(s, L"") || EqualCI(s, L"none")) return ParallelizationMethod::None;
     else if (EqualCI(s, L"DataParallelSGD"))         return ParallelizationMethod::DataParallelSGD;
     else if (EqualCI(s, L"ModelAveragingSGD"))       return ParallelizationMethod::ModelAveragingSGD;
-    else InvalidArgument("ParseParallelizationMethod: Invalid Parallelization Method. Valid values are (none | dataParallelSGD | modelAveragingSGD)");
+    else if (EqualCI(s, L"BlockMomentumSGD"))        return ParallelizationMethod::BlockMomentumSGD;
+    else InvalidArgument("ParseParallelizationMethod: Invalid Parallelization Method. Valid values are (none | DataParallelSGD | ModelAveragingSGD | BlockMomentumSGD)");
 }
 
 static LearningRateSearchAlgorithm ParseLearningRateSearchType(const wstring& s)
@@ -2585,7 +2603,64 @@ SGDParams::SGDParams(const ConfigRecordType& configSGD, size_t sizeofElemType)
         if (configParallelTrain.Exists(L"ModelAveragingSGD"))
         {
             const ConfigRecordType& configMASGD(configParallelTrain(L"ModelAveragingSGD", ConfigRecordType::Record()));
-            m_nFramesBetweenMASync = configMASGD(L"syncFrequencyInFrames", (size_t) 40000);
+            m_nFramesBetweenMASync = 40000;
+            m_nFramesBetweenMASync = configMASGD(L"syncPeriodInSamples", (size_t)40000);
+#if 1  // legacy option 
+            if (configMASGD.Exists(L"syncFrequencyInFrames"))
+            {
+                m_nFramesBetweenMASync = configMASGD(L"syncFrequencyInFrames");
+            }
+#endif
+
+        }
+
+        if (configParallelTrain.Exists(L"BlockMomentumSGD"))
+        {
+#ifndef BLOCK_MOMENTUM
+            InvalidArgument("BlockMomentumSGD is not enabled in this version.\n"); 
+#else
+            const ConfigRecordType& configBMSGD(configParallelTrain(L"BlockMomentumSGD", ConfigRecordType::Record()));
+            m_nFramesBetweenMASync = configBMSGD(L"syncPeriodInSamples", 120000);
+            m_resetSGDMomentum = configBMSGD(L"resetSGDMomentum", true);
+            m_useNesterovBlockMomentum = configBMSGD(L"useNestrovMomentum", true);
+            m_blockLearningRate = configBMSGD(L"blockLearningRate", 1.0); 
+
+            if (configBMSGD.Exists(L"blockMomentumPerSync") && configBMSGD.Exists(L"blockMomentumAsTimeConstant"))
+            {
+                InvalidArgument("It is only allowed to set either blockMomentumPerSync or blockMomentumAsTimeConstant, not both of them");
+            }
+            if (configBMSGD.Exists(L"blockMomentumAsTimeConstant"))
+            {
+                m_blockMomentumAsTimeConstant = configBMSGD(L"blockMomentumAsTimeConstant"); 
+                m_blockMomentum = exp(-(double)m_nFramesBetweenMASync / m_blockMomentumAsTimeConstant); 
+            }
+            if (configBMSGD.Exists(L"blockMomentumPerSync"))
+            {
+                m_blockMomentum = configBMSGD(L"blockMomentumPerSync");
+                m_blockMomentumAsTimeConstant = -(double)m_nFramesBetweenMASync / log(m_blockMomentum);
+            }
+            if (!configBMSGD.Exists(L"blockMomentumPerSync") && !configBMSGD.Exists(L"blockMomentumAsTimeConstant"))
+            {
+                m_blockMomentum = -1.0; 
+                m_blockMomentumAsTimeConstant = -1.0 ; // marking them not specified by user 
+            }
+#if 0  // m_mpi is initialized later, so moving this after m_mpi is initialized 
+            if (!configBMSGD.Exists(L"blockMomentumPerSync") && !configBMSGD.Exists(L"blockMomentumAsTimeConstant")) // user does not specify it 
+            {
+                m_blockMomentum = 1.0 - 1.0 / m_mpi->NumNodesInUse();
+                m_blockMomentumAsTimeConstant = - (double)m_nFramesBetweenMASync / log(m_blockMomentum); 
+            }
+            // argument checking 
+            if (m_blockMomentum <= 0.0 || m_blockMomentum >= 1.0)
+            {
+                InvalidArgument("BlockMomentumPerSync=%.2f, but it should be in the (0,1) range\n", m_blockMomentum); 
+            }
+            if ((1 - m_blockMomentum)*m_blockLearningRate*m_mpi->NumNodesInUse() >= 2.0)
+            {
+                fprintf(stderr,"WARNING: (1-blockMomentumPerSync)*blockLearningRate is larger than 2*numWorkers, there coudl be overshooting!");
+            }
+#endif 
+#endif 
         }
     }
 }

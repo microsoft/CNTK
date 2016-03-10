@@ -59,6 +59,7 @@ enum class ParallelizationMethod : int
     DataParallelSGD = 1,
     ModelAveragingSGD = (1 << 1),
     ModelParallelSGD = (1 << 2), // Currently unsupported
+    BlockMomentumSGD = (1 << 3), 
 };
 
 // configuration parameters associated with RMSProp learning algorithm
@@ -262,8 +263,13 @@ protected:
     bool m_bufferedAsyncGradientAggregation;
     bool m_zeroThresholdFor1Bit;
 
-    // Parallel training related with MA
+    // Parallel training related with MA / BM
     size_t m_nFramesBetweenMASync;
+    bool   m_resetSGDMomentum; 
+    bool   m_useNesterovBlockMomentum;
+    double m_blockLearningRate; 
+    double m_blockMomentum; 
+    double m_blockMomentumAsTimeConstant;
 
     bool m_needAveMultiplier;
     double m_L2RegWeight;
@@ -331,6 +337,26 @@ public:
 
         if (m_mpi == nullptr)
             m_parallelizationMethod = ParallelizationMethod::None;
+
+        if (m_parallelizationMethod == ParallelizationMethod::BlockMomentumSGD)
+        {
+            if (m_blockMomentumAsTimeConstant < 0 && m_blockMomentum < 0)
+            {
+                // user has not specifies it 
+                m_blockMomentum = 1 - 1.0/ m_mpi->NumNodesInUse(); 
+                m_blockMomentumAsTimeConstant = -(double)m_nFramesBetweenMASync / log(m_blockMomentum);
+                // final argument checking in case of user specifying a bad parameter 
+                if (m_blockMomentum <= 0.0 || m_blockMomentum >= 1.0)
+                {
+                    InvalidArgument("BlockMomentumPerSync=%.2f, but it should be in the (0,1) range\n", m_blockMomentum);
+                }
+                if ((1 - m_blockMomentum)*m_blockLearningRate*m_mpi->NumNodesInUse() >= 2.0)
+                {
+                    fprintf(stderr, "WARNING: (1-blockMomentumPerSync)*blockLearningRate is larger than 2*numWorkers, there coudl be overshooting!");
+                }
+            }
+        }
+        
     }
 
     void Train(function<ComputationNetworkPtr(DEVICEID_TYPE)> createNetworkFn, DEVICEID_TYPE deviceId,
@@ -461,7 +487,7 @@ protected:
                          const std::string& prefixMsg = "");
 
     void InitDistGradAgg(int numEvalNodes, int traceLevel);
-    void InitModelAggregationHandler(int traceLevel);
+    void InitModelAggregationHandler(int traceLevel, DEVICEID_TYPE devID);
 public:
     // UpdateWeightsS - static version of UpdateWeights()
     static void UpdateWeightsS(const SGD* sgd, Matrix<ElemType>& functionValues,
