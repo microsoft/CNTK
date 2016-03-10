@@ -218,7 +218,17 @@ void ComputationNetwork::ReadPersistableParameters(File& fstream, bool create)
         if (create) // loaded from scratch
             AddNodeToNet(node);
         else                      // reloaded existing
-            node->Validate(true); // nothing that propagates should have changed  --TODO: have a more rigid mechanism to prevent resizing; this should only reload the model parameters
+        {
+            let old = node->GetSampleLayout();
+            let changed = ValidateNode(node, /*isFinalValidationPass=*/true);
+            if (changed)
+            {
+                let upd = node->GetSampleLayout();
+                fprintf(stderr, "ValidateSubNetwork: %ls %ls operation changed, from [%s] to [%s].", node->NodeName().c_str(), node->OperationName().c_str(),
+                    string(old).c_str(), string(upd).c_str());
+                //LogicError("ValidateSubNetwork: %ls %ls operation changed during reload or re-validation.", node->NodeName().c_str(), node->OperationName().c_str());
+            }
+        }
     }
 
     fstream.GetMarker(FileMarker::fileMarkerEndSection, L"ENodeList");

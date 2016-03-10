@@ -167,7 +167,8 @@ public:
 
         // BUGBUG: I got an error in when reloading persistent parameterse for a model that had dimension specified as 0, which did not get re-inferred correctly.
         //         We should either simply not write this parameter out at all (since it can always be inferred), or write the tensor shape.
-        SetDims(TensorShape(rows), HasMBLayout() /*may be true on reload (roll-back)*/); // tensor shape will be overwritten in Validate()  --TODO: We should serialize it here.
+        if (GetSampleLayout().GetNumElements() != rows) // legacy format: if #rows matches then assume current tensor shape is up to date
+            SetDims(TensorShape(rows), HasMBLayout() /*may be true on reload (roll-back)*/); // tensor shape will be overwritten in Validate()  --TODO: We should serialize it here.
         m_delayedValue.Resize(rows, 0);                                                  // Note: If we try to access history in first minibatch, we shall crash. It would be a consequence of a missing sentence-begin flag
 
         if (modelVersion >= CNTK_MODEL_VERSION_2)

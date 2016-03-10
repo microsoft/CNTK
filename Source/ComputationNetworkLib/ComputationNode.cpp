@@ -307,7 +307,7 @@ void ComputationNode<ElemType>::WriteMinibatchWithFormatting(FILE* f, size_t onl
                 fprintfOrDie(f, "%s", sampleSeparator.c_str());
             if (j == jstop)
             {
-                fprintf(f, "..."); // 'nuff said
+                fprintf(f, "... (%d more)", (int)(jend - jstop)); // 'nuff said
                 break;
             }
             for (size_t i = 0; i < iend; i++)

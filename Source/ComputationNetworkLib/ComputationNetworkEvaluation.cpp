@@ -579,6 +579,36 @@ static pair<TensorShape, bool> GetDims(const ComputationNodeBasePtr& node)
     return make_pair(node->GetSampleLayout(), node->HasMBLayout());
 }
 
+bool ComputationNetwork::ValidateNode(ComputationNodeBasePtr node, bool isFinalValidationPass) const
+{
+    const auto& children = node->GetInputs();
+
+    // keep state
+    MBLayoutPtr oldMBLayoutPtr = node->GetMBLayout();
+    auto dim = GetDims(node);
+    vector<pair<TensorShape, bool>> childDims;
+    for (auto& child : children)
+        childDims.push_back(GetDims(child));
+    auto sampleLayout = node->GetSampleLayout();
+    // We do call validate(final) as many times as needed, since stuff may have changed underneath.
+    node->Validate(isFinalValidationPass /*final*/); // all nodes have been visited: do verification instead of just inference
+    // also take the opportunity to propagate m_needsGradient
+    auto needsGradient = node->m_needsGradient;
+    for (auto& child : children) // TODO: do we need a check that this is stable if isFinalValidationPass?
+        node->m_needsGradient |= child->m_needsGradient;
+    // check state --node will be valid if all nodes have been visited and node has not been updated
+    bool unchanged = true;
+    unchanged &= (oldMBLayoutPtr == node->GetMBLayout());
+    unchanged &= (dim == GetDims(node));
+    vector<pair<TensorShape, bool>> newChildDims;
+    for (auto& child : children)
+        newChildDims.push_back(GetDims(child));
+    unchanged &= (childDims == newChildDims);
+    unchanged &= (sampleLayout == node->GetSampleLayout());
+    unchanged &= (needsGradient == node->m_needsGradient);
+    return !unchanged;
+}
+
 void ComputationNetwork::ValidateNodes(list<ComputationNodeBasePtr> nodes, bool isFinalValidationPass, size_t& todo)
 {
     todo = 0; // returns how many nodes are to be redone
@@ -596,35 +626,15 @@ void ComputationNetwork::ValidateNodes(list<ComputationNodeBasePtr> nodes, bool 
         }
         // if there is not at least one visited child
         bool valid = false;
-        if (hasVisitedChild || isLeaf)
+        if (hasVisitedChild || isLeaf) // got at least one child: it makes sense to call Validate()
         {
-            // got at least one child: it makes sense to call Validate()
-            // keep state
-            MBLayoutPtr oldMBLayoutPtr = node->GetMBLayout();
-            auto dim = GetDims(node);
-            vector<pair<TensorShape, bool>> childDims;
-            for (auto& child : children)
-                childDims.push_back(GetDims(child));
-            auto sampleLayout = node->GetSampleLayout();
-            // We do call validate(final) as many times as needed, since stuff may have changed underneath.
+            // TODO: PrintSelfBeforeValidation() into a function returning a string, and print all in a single line (also when it throws; print & rethrow).
             node->PrintSelfBeforeValidation();
-            node->Validate(isFinalValidationPass /*final*/); // all nodes have been visited: do verification instead of just inference
-            fprintf(stderr, " -> [%s%s]", string(node->GetSampleLayout()).c_str(), node->HasMBLayout() ? " x *" : "");
+            bool unchanged = !ValidateNode(node, isFinalValidationPass);
             node->m_visited = true;
-            // also take the opportunity to propagate m_needsGradient
-            auto needsGradient = node->m_needsGradient;
-            for (auto& child : children) // TODO: do we need a check that this is stable if isFinalValidationPass?
-                node->m_needsGradient |= child->m_needsGradient;
-            // check state --node will be valid if all nodes have been visited and node has not been updated
-            bool unchanged = true;
-            unchanged &= (oldMBLayoutPtr == node->GetMBLayout());
-            unchanged &= (dim == GetDims(node));
-            vector<pair<TensorShape, bool>> newChildDims;
-            for (auto& child : children)
-                newChildDims.push_back(GetDims(child));
-            unchanged &= (childDims == newChildDims);
-            unchanged &= (sampleLayout == node->GetSampleLayout());
-            unchanged &= (needsGradient == node->m_needsGradient);
+            fprintf(stderr, "[%s%s]", string(node->GetSampleLayout()).c_str(), node->HasMBLayout() ? " x *" : "");
+            // print the new type
+            // sanity checks
             if (isFinalValidationPass && !unchanged)
                 LogicError("ValidateSubNetwork: %ls %ls operation changed during final validation.", node->NodeName().c_str(), node->OperationName().c_str());
             if (isFinalValidationPass && !allChildrenVisited)

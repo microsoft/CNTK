@@ -268,8 +268,8 @@ Parameters =
     Stabilize (x, enabled=true) =
         if enabled
         then [
-                 beta = Exp(ScalarParam())
-                 result = Scale(beta, x)
+                 beta = Exp (ScalarParam())
+                 result = Scale (beta, x)
              ].result
         else x
 ]

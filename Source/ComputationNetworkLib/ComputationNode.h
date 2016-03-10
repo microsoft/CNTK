@@ -167,8 +167,8 @@ struct ComputationNetworkOwnedNodeState
     // These are public since you are meant to set these flags manually in the debugger or temporarily poke into them from code as needed.
     bool m_traceNodeValue = false;
     bool m_traceNodeValueAsCategoryLabel = false;
-    size_t m_traceNodeValueUpToDim = 5;
-    size_t m_traceNodeValueUpToT = 5;
+    size_t m_traceNodeValueUpToDim = 3; // 3 should be enough to see simple patterns such as all values are identical or out of range
+    size_t m_traceNodeValueUpToT = 8;   // 8 time steps fit comfortably into a normal-sized console
     void EnableNodeTracing(bool isCategoryLabel) { m_traceNodeValue = true; m_traceNodeValueAsCategoryLabel = isCategoryLabel; }
 
 protected:                // TODO: should be fully encapsulated here
@@ -1513,8 +1513,9 @@ public:
     {
         if (m_traceNodeValue)
         {
-            fprintf(stderr, "Trace --> %ls = %ls -> [%s%s]\n", NodeName().c_str(), OperationName().c_str(), string(GetSampleLayout()).c_str(), HasMBLayout() ? " x *" : "");
-            WriteMinibatchWithFormatting(stderr, m_traceNodeValueUpToDim, m_traceNodeValueUpToT, true/*transpose*/, m_traceNodeValueAsCategoryLabel, std::vector<std::string>(),
+            const auto shape = GetTensorShape(DetermineElementwiseTensorRank());
+            fprintf(stderr, "Trace --> %ls = %ls -> [%s]\n", NodeName().c_str(), OperationName().c_str(), string(shape).c_str());
+            WriteMinibatchWithFormatting(stderr, m_traceNodeValueUpToDim, m_traceNodeValueUpToT, false/*transpose*/, m_traceNodeValueAsCategoryLabel, std::vector<std::string>(),
                                          ""/*sequenceSeparator*/, "  "/*sequencePrologue*/, "\n"/*sequenceEpilogue*/, " "/*elementSeparator*/, "\n  "/*sampleSeparator*/,
                                          "%13.10f"/*valueFormatString*/);
         }

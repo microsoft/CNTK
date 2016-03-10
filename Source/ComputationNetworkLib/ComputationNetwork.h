@@ -165,6 +165,7 @@ public:
 private:
     void ValidateNetwork();
     void ValidateNodes(list<ComputationNodeBasePtr> nodes, bool isFinalValidationPass, size_t& todo);
+    bool ValidateNode(ComputationNodeBasePtr node, bool isFinalValidationPass) const;
     void MarkValueNonSharableNodes();
 
 private:
