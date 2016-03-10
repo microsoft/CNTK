@@ -9,6 +9,7 @@
 #include <map>
 #include "Transformer.h"
 #include "DataDeserializer.h"
+#include "SequenceRandomizer.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -32,21 +33,32 @@ public:
     }
 
 private:
+    std::vector<SequenceDescription> GetNextSequenceDescriptions(size_t sampleCount);
+    size_t GetChunkIndexOf(size_t t);
+    void PrepareNewSweepIfNeeded(size_t samplePosition);
+
     // Deserializer and information on the original timeline
     IDataDeserializerPtr m_deserializer;
-
-    // Initial timeline.
-    SequenceDescriptions m_timeline;
 
     // Stream descriptions
     std::vector<StreamDescriptionPtr> m_streams;
 
     // Epoch configuration
     EpochConfiguration m_config;
-    size_t m_samplePositionInEpoch;
-    size_t m_sequencePosition;
 
+    ChunkDescriptions m_chunkDescriptions;
+    std::vector<size_t> m_chunkSampleOffset;
+    std::vector<size_t> m_chunkSequenceOffset;
+
+    std::vector<SequenceDescription> m_sequenceWindow;
     std::map<size_t, ChunkPtr> m_chunks;
+
+    size_t m_globalSamplePosition;
+    size_t m_samplePositionInEpoch;
+    size_t m_totalNumberOfSamples;
+    size_t m_currentSequencePositionInChunk;
+    size_t m_currentChunkPosition;
+    size_t m_sweep;
 };
 
 }}}
