@@ -6,6 +6,8 @@ deviceId=-1
 Eval=[
 	action="write"
 	
+    %(ModelDescription)s
+
 	reader = [
 		"%(reader)s"
 	]	
