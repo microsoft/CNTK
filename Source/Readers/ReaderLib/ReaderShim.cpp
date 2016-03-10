@@ -98,6 +98,13 @@ string EnumerateInputs(const map<wstring, size_t> &nameToStreamId)
 template <class ElemType>
 bool ReaderShim<ElemType>::GetMinibatch(StreamMinibatchInputs& matrices)
 {
+    size_t size = std::distance(begin(matrices), end(matrices));
+    if (size != m_nameToStreamId.size())
+    {
+        RuntimeError("Number of input nodes (%zd) does not match the expected number (%zd).",
+            size, m_nameToStreamId.size());
+    }
+
     if (m_endOfEpoch)
     {
         return false;
@@ -135,7 +142,8 @@ bool ReaderShim<ElemType>::GetMinibatch(StreamMinibatchInputs& matrices)
             if (m_nameToStreamId.find(mx.first) == m_nameToStreamId.end())
             {
                 string inputNames = EnumerateInputs(m_nameToStreamId);
-                RuntimeError("Could not map input '%s' to the reader. Reader outputs only [%s].", utf8(mx.first.c_str()).c_str(), inputNames.c_str());
+                RuntimeError("Could not map input '%ls' to the reader. Reader outputs only [%s].", 
+                    mx.first.c_str(), inputNames.c_str());
             }
 
             size_t streamId = m_nameToStreamId[mx.first];
@@ -143,11 +151,16 @@ bool ReaderShim<ElemType>::GetMinibatch(StreamMinibatchInputs& matrices)
             const auto& stream = minibatch.m_data[streamId];
             m_numParallelSequences = stream->m_layout->GetNumParallelSequences();
             size_t rowNumber = m_streams[streamId]->m_sampleLayout->GetNumElements();
-            
             auto& layout = matrices.GetInputLayout<ElemType>(mx.first);
             layout.CopyFrom(stream->m_layout);
 
             auto& matrix = matrices.GetInputMatrix<ElemType>(mx.first);
+            auto expectedRowNumber = matrix.GetNumRows();
+            if (expectedRowNumber > 0 && expectedRowNumber != rowNumber)
+            {
+                RuntimeError("Sample size (%d) for input '%ls' does not match the expected size (%d).", 
+                    (int) rowNumber, mx.first.c_str(), (int) expectedRowNumber);
+            }
             FillMatrixFromStream(m_streams[streamId]->m_storageType, &matrix, rowNumber, stream);
         }
     }

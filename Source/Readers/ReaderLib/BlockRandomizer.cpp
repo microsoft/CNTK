@@ -30,16 +30,16 @@ bool BlockRandomizer::TimelineIsValidForRandomization(const SequenceDescriptions
     SequenceDescription previous = { SIZE_MAX, 0, 0, true };
 
     auto it = std::find_if_not(timeline.begin(), timeline.end(),
-                               [&](const SequenceDescription* current)
-                               {
-                                   bool result = current->m_isValid
-                                       && previous.m_id + 1 == current->m_id
-                                       && previous.m_chunkId <= current->m_chunkId
-                                       && current->m_chunkId <= previous.m_chunkId + 1
-                                       && 0 < current->m_numberOfSamples;
-                                   previous = *current;
-                                   return result;
-                               });
+        [&](const SequenceDescription* current)
+    {
+        bool result = current->m_isValid
+            && previous.m_id + 1 == current->m_id
+            && previous.m_chunkId <= current->m_chunkId
+            && current->m_chunkId <= previous.m_chunkId + 1
+            && 0 < current->m_numberOfSamples;
+        previous = *current;
+        return result;
+    });
     return it == timeline.end();
 }
 
@@ -55,7 +55,7 @@ void BlockRandomizer::RandomizeChunks()
 
     std::mt19937 m_rng(static_cast<int>(m_sweep));
 
-    std::shuffle(randomizedChunkIndices.begin(), randomizedChunkIndices.end(), m_rng);
+        std::shuffle(randomizedChunkIndices.begin(), randomizedChunkIndices.end(), m_rng);
 
     // Place randomized chunks on global time line
     m_randomizedChunks.clear();
@@ -70,13 +70,13 @@ void BlockRandomizer::RandomizeChunks()
         const size_t numSamples =
             m_chunkInformation[originalChunkIndex + 1].m_samplePositionStart -
             m_chunkInformation[originalChunkIndex].m_samplePositionStart;
-        m_randomizedChunks.push_back(RandomizedChunk { sequencePosition, samplePosition, originalChunkIndex });
+        m_randomizedChunks.push_back(RandomizedChunk{ sequencePosition, samplePosition, originalChunkIndex });
         samplePosition += numSamples;
         sequencePosition += numSequences;
     }
 
     // Add sentinel
-    m_randomizedChunks.push_back(RandomizedChunk { sequencePosition, samplePosition, SIZE_MAX });
+    m_randomizedChunks.push_back(RandomizedChunk{ sequencePosition, samplePosition, SIZE_MAX });
 
     // For each chunk, compute the randomization range (w.r.t. the randomized chunk sequence)
     size_t halfWindowRange = m_randomizationRangeInSamples / 2;
@@ -98,7 +98,7 @@ void BlockRandomizer::RandomizeChunks()
             chunk.m_windowBegin++; // too early
         // TODO m_randomizedChunks[chunk.windowend + 1].info.samplePositionStart - m_randomizedChunks[chunk.windowbegin].info.samplePositionStart < m_randomizationRangeInSamples
         while (chunk.m_windowEnd < m_numChunks &&
-               m_randomizedChunks[chunk.m_windowEnd + 1].m_info.m_samplePositionStart - chunk.m_info.m_samplePositionStart < halfWindowRange)
+            m_randomizedChunks[chunk.m_windowEnd + 1].m_info.m_samplePositionStart - chunk.m_info.m_samplePositionStart < halfWindowRange)
             chunk.m_windowEnd++; // got more space
     }
 
@@ -106,12 +106,12 @@ void BlockRandomizer::RandomizeChunks()
     m_sequencePositionToChunkIndex.clear();
     m_sequencePositionToChunkIndex.reserve(m_numSequences);
     for (size_t k = 0; k < m_numChunks; k++)
-    {
+{
         const size_t numSequences =
             m_randomizedChunks[k + 1].m_info.m_sequencePositionStart -
             m_randomizedChunks[k].m_info.m_sequencePositionStart;
         for (size_t i = 0; i < numSequences; i++)
-        {
+    {
             m_sequencePositionToChunkIndex.push_back(k);
         }
     }
@@ -234,15 +234,20 @@ void BlockRandomizer::RandomizeForGlobalSamplePosition(const size_t samplePositi
 // Public methods
 //
 
-BlockRandomizer::BlockRandomizer(int verbosity, size_t randomizationRangeInSamples, IDataDeserializerPtr deserializer)
-    : m_verbosity(verbosity),
-      m_randomizationRangeInSamples(randomizationRangeInSamples),
-      m_distributionMode(DistributionMode::sequences),
-      m_deserializer(deserializer),
-      m_sweep(SIZE_MAX),
-      m_sequencePositionInSweep(SIZE_MAX),
-      m_samplePositionInEpoch(SIZE_MAX),
-      m_epochSize(SIZE_MAX)
+BlockRandomizer::BlockRandomizer(int verbosity,
+    size_t randomizationRangeInSamples,
+    IDataDeserializerPtr deserializer,
+    DistributionMode distributionMode,
+    bool ) :
+    m_verbosity(verbosity),
+    m_randomizationRangeInSamples(randomizationRangeInSamples),
+    m_deserializer(deserializer),
+    m_distributionMode(distributionMode),
+    //m_useLegacyRandomization(useLegacyRandomization),
+    m_sweep(SIZE_MAX),
+    m_sequencePositionInSweep(SIZE_MAX),
+    m_samplePositionInEpoch(SIZE_MAX),
+    m_epochSize(SIZE_MAX)
 {
     assert(deserializer != nullptr);
     const SequenceDescriptions& timeline = m_deserializer->GetSequenceDescriptions();
@@ -264,8 +269,8 @@ BlockRandomizer::BlockRandomizer(int verbosity, size_t randomizationRangeInSampl
     assert(m_chunkInformation.size() == 0);
     m_chunkInformation.reserve(m_numChunks + 1);
     m_chunkInformation.insert(m_chunkInformation.begin(),
-                              m_numChunks + 1,
-                              ChunkInformation{SIZE_MAX, SIZE_MAX});
+        m_numChunks + 1,
+        ChunkInformation{ SIZE_MAX, SIZE_MAX });
 
     size_t maxNumberOfSamples = 0;
 
@@ -283,7 +288,7 @@ BlockRandomizer::BlockRandomizer(int verbosity, size_t randomizationRangeInSampl
     }
 
     // Add sentinel
-    m_chunkInformation[m_numChunks] = {m_numSequences, m_numSamples};
+    m_chunkInformation[m_numChunks] = { m_numSequences, m_numSamples };
 
     // Frame mode to the randomizer just means there are only single-sample sequences
     m_frameMode = (maxNumberOfSamples == 1);
@@ -323,7 +328,7 @@ void BlockRandomizer::StartEpoch(const EpochConfiguration& config)
 bool BlockRandomizer::GetNextSequenceDescriptions(size_t sampleCount, SequenceDescriptions& sequenceDescriptions)
 {
     assert(sequenceDescriptions.size() == 0);
-    assert(sampleCount < m_numSamples); 
+    assert(sampleCount <= m_numSamples);
     assert(m_samplePositionInEpoch < m_epochSize);
 
     size_t nextSamplePositionInEpoch = std::min(m_epochSize, m_samplePositionInEpoch + sampleCount);
@@ -331,32 +336,32 @@ bool BlockRandomizer::GetNextSequenceDescriptions(size_t sampleCount, SequenceDe
     assert(m_numberOfWorkers == 1); // TODO needs implementation
 
     while (m_samplePositionInEpoch < nextSamplePositionInEpoch)
-    {
+            {
         RandomizeIfNewSweepIsEntered();
 
-        const auto& seqDesc = m_randomTimeline[m_sequencePositionInSweep];
+                const auto& seqDesc = m_randomTimeline[m_sequencePositionInSweep];
 
         size_t workItemId;
 
         if (m_distributionMode == DistributionMode::chunks)
-        {
+                    {
             workItemId = seqDesc.m_chunkId;
         }
         else 
-        {
+                        {
             assert(m_distributionMode == DistributionMode::sequences);
             workItemId = seqDesc.m_id;
-        }
+                        }
         
         if ((workItemId % m_numberOfWorkers) == m_workerRank)
         {
             // Got one, collect it
             sequenceDescriptions.push_back(m_deserializer->GetSequenceDescriptions()[seqDesc.m_id]);
-        }
+                    }
 
-        m_samplePositionInEpoch += seqDesc.m_numberOfSamples;
-        m_sequencePositionInSweep++;
-    }
+                m_samplePositionInEpoch += seqDesc.m_numberOfSamples;
+                m_sequencePositionInSweep++;
+        }
 
     // TODO: fix me.
     //assert(m_samplePositionInEpoch == nextSamplePositionInEpoch);    
@@ -387,7 +392,7 @@ Sequences BlockRandomizer::GetNextSequences(size_t sampleCount)
     result.m_data.resize(m_streams.size(), std::vector<SequenceDataPtr>(sequenceDescriptions.size()));
 
     // TODO: Should prefetching be done on a single thread?
-#pragma omp parallel for ordered schedule(dynamic)
+    #pragma omp parallel for ordered schedule(dynamic)
     for (int i = 0; i < sequenceDescriptions.size(); ++i)
     {
         ChunkPtr chunk = m_deserializer->GetChunk(sequenceDescriptions[i]->m_chunkId);
@@ -402,4 +407,4 @@ Sequences BlockRandomizer::GetNextSequences(size_t sampleCount)
     return result;
 };
 
-} } }
+}}}

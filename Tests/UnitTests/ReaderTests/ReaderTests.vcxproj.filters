@@ -34,6 +34,7 @@
       <Filter>Common</Filter>
     </ClCompile>
     <ClCompile Include="ImageReaderTests.cpp" />
+    <ClCompile Include="CNTKTextFormatReaderTests.cpp" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Common">
@@ -182,6 +183,36 @@
     <Text Include="Data\ImageReaderZip_map.txt">
       <Filter>Data</Filter>
     </Text>
+    <Text Include="Control\CNTKTextFormatReaderSimple_Control.txt">
+      <Filter>Control</Filter>
+    </Text>
+    <Text Include="Data\CNTKTextFormatReaderSimple_Train.txt">
+      <Filter>Data</Filter>
+    </Text>
+    <Text Include="Control\CNTKTextFormatReaderMNIST_Control.txt">
+      <Filter>Control</Filter>
+    </Text>
+    <Text Include="Data\CNTKTextFormatReaderMNIST_Train.txt">
+      <Filter>Data</Filter>
+    </Text>
+    <Text Include="Data\CNTKTextFormatReader1x100_Train.txt">
+      <Filter>Data</Filter>
+    </Text>
+    <Text Include="Data\CNTKTextFormatReader1x10_MI_Train.txt">
+      <Filter>Data</Filter>
+    </Text>
+    <Text Include="Control\CNTKTextFormatReader1x100_1_Control.txt">
+      <Filter>Control</Filter>
+    </Text>
+    <Text Include="Control\CNTKTextFormatReader1x100_1_Output.txt">
+      <Filter>Control</Filter>
+    </Text>
+    <Text Include="Control\CNTKTextFormatReader1x10_MI_1_Control.txt">
+      <Filter>Control</Filter>
+    </Text>
+    <Text Include="Control\CNTKTextFormatReader1x10_MI_2_Control.txt">
+      <Filter>Control</Filter>
+    </Text>
   </ItemGroup>
   <ItemGroup>
     <Image Include="Data\images\black.jpg">
@@ -206,6 +237,18 @@
     </None>
     <None Include="Data\images\simple.zip">
       <Filter>Data\images</Filter>
+    </None>
+    <None Include="Config\CNTKTextFormatReaderSimple_Config.cntk">
+      <Filter>Config</Filter>
+    </None>
+    <None Include="Config\CNTKTextFormatReaderMNIST_Config.cntk">
+      <Filter>Config</Filter>
+    </None>
+    <None Include="Config\CNTKTextFormatReader1x10_MI_Config.cntk">
+      <Filter>Config</Filter>
+    </None>
+    <None Include="Config\CNTKTextFormatReader1x100_Config.cntk">
+      <Filter>Config</Filter>
     </None>
   </ItemGroup>
 </Project>

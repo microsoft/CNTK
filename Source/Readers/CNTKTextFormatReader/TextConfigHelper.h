@@ -29,12 +29,18 @@ public:
 
     bool ShouldRandomize() const;
 
+    ElementType GetElementType() const;
+
     bool ShouldSkipSequenceIds() const;
 
     unsigned int GetMaxAllowedErrors() const;
 
     unsigned int GetTraceLevel() const;
 
+    int64_t GetChunkSize() const;
+
+    unsigned int GetNumChunksToCache() const;
+    
     void ParseStreamConfig(const ConfigParameters& config, std::vector<StreamDescriptor>& streams);
 
 private:
@@ -45,10 +51,12 @@ private:
     std::vector<StreamDescriptor> m_streams;
     int m_cpuThreadCount;
     bool m_randomize;
+    ElementType m_elementType;
     bool m_skipSequenceIds;
     unsigned int m_maxErrors;
     unsigned int m_traceLevel;
-
+    int64_t m_chunkSize; // chunks size in bytes
+    unsigned int m_chunkCacheSize; // number of chunks to keep in the memory
 };
 
 } } }

@@ -30,6 +30,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             RuntimeError("CNTKTextFormatReader configuration contains an empty input section");
         }
 
+        m_elementType = ElementType::tfloat;
+        string precision = config.Find("precision", "float");
+        if (AreEqualIgnoreCase(precision, "double"))
+        {
+            m_elementType = ElementType::tdouble;
+        }
+        else if (!AreEqualIgnoreCase(precision, "float"))
+        {
+            RuntimeError("Not supported precision '%s'. Expected 'double' or 'float'.", precision.c_str());
+        }
+
         StreamId id = 0;
         map<string, wstring> aliasToInputMap;
         for (const pair<string, ConfigParameters>& section : input)
@@ -84,8 +95,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 aliasToInputMap[stream.m_alias] = stream.m_name;
             }
 
-            // TODO: add double support (with an optional "precision" parameter)
-            stream.m_elementType = ElementType::tfloat;
+            stream.m_elementType = m_elementType;
             m_streams.push_back(stream);
         }
 
@@ -112,8 +122,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         m_skipSequenceIds = config(L"skipSequenceIds", false);
         m_maxErrors = config(L"maxErrors", 0);
         m_traceLevel = config(L"traceLevel", 0);
-
-        //TODO: chunk_size (if ever need chunks).
+        m_chunkSize = config(L"chunkSize", 32 * 1024 * 1024); // 32 MB by default
+        m_chunkCacheSize = config(L"chunkCacheSize", 32); // GB of memory in total
     }
 
     const wstring& TextConfigHelper::GetFilePath() const
@@ -151,4 +161,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         return m_traceLevel;
     }
 
+    int64_t TextConfigHelper::GetChunkSize() const 
+    {
+        return m_chunkSize;
+    }
+
+    unsigned int TextConfigHelper::GetNumChunksToCache() const
+    {
+        return m_chunkCacheSize;
+    }
+
+    ElementType TextConfigHelper::GetElementType() const
+    {
+        return m_elementType;
+    }
 }}}

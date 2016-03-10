@@ -30,27 +30,24 @@ TextReader::TextReader(MemoryProviderPtr provider,
     {
         omp_set_num_threads(threadCount);
     }
-
-    m_parser = std::shared_ptr<TextParser>(
-        new TextParser(configHelper.GetFilePath(), configHelper.GetStreams()));
-
-    m_parser->SetTraceLevel(configHelper.GetTraceLevel());
-    m_parser->SetMaxAllowedErrors(configHelper.GetMaxAllowedErrors());
-    if (configHelper.ShouldSkipSequenceIds()) 
+    
+    if (configHelper.GetElementType() == ElementType::tfloat) 
     {
-        m_parser->SetSkipSequenceIds(true);
+        m_deserializer = shared_ptr<IDataDeserializer>(new TextParser<float>(configHelper));
     }
-
-    m_parser->Initialize();
+    else 
+    {
+        m_deserializer = shared_ptr<IDataDeserializer>(new TextParser<double>(configHelper));
+    }
 
     TransformerPtr randomizer;
     if (configHelper.ShouldRandomize())
     {
-        randomizer = std::make_shared<BlockRandomizer>(0, SIZE_MAX, m_parser);
+        randomizer = make_shared<BlockRandomizer>(0, SIZE_MAX, m_deserializer);
     }
     else
     {
-        randomizer = std::make_shared<NoRandomizer>(m_parser);
+        randomizer = std::make_shared<NoRandomizer>(m_deserializer);
     }
 
     randomizer->Initialize(nullptr, config);
@@ -60,7 +57,7 @@ TextReader::TextReader(MemoryProviderPtr provider,
 
 std::vector<StreamDescriptionPtr> TextReader::GetStreamDescriptions()
 {
-    return m_parser->GetStreamDescriptions();
+    return m_deserializer->GetStreamDescriptions();
 }
 
 void TextReader::StartEpoch(const EpochConfiguration& config)

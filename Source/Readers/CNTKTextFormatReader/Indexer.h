@@ -11,7 +11,6 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
-// TODO: merge this with the TextParser
 class Indexer 
 {
 private:
