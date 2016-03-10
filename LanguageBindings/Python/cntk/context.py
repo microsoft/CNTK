@@ -1,6 +1,7 @@
 from abc import ABCMeta, abstractmethod
 import os
 import subprocess
+import numpy as np
 
 _FLOATX = 'float32'
 if "CNTK_EXECUTABLE_PATH" not in os.environ:
