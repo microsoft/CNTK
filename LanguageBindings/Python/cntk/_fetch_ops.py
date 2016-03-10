@@ -10,10 +10,11 @@ DIRNAME_OF_THIS_FILE = os.path.abspath(os.path.dirname(__file__))
 # BrainSCript's node definitions
 CNTKCORE_DEFS = os.path.abspath(os.path.join(DIRNAME_OF_THIS_FILE, 'CNTK.core.bs'))
 
-#REGEX = re.compile('ComputationNodePtr\s+(.*);', re.MULTILINE)
+REGEX_STANDARD = re.compile(r'(?P<operator>\w+)\((?P<operands>.*?)\) = .*')
 REGEX_COMPNODE = re.compile(r'(?P<operator>\w+)\((?P<operands>.*?)\) = new ComputationNode \[')
 REGEX_ALIAS = re.compile(r'(?P<operator>\w+) = (?P<alias>\w+)\s*(//.*|)')
 REGEX_INSTANTIATION = re.compile(r'(?P<operator>\w+)\((?P<operands>.*?)\) = (?P<inst_operator>\w+)\s*\((?P<inst_operands>.*?)\)\s*(//.*|)')
+
 REGEX_COMMENT = re.compile(r'/\*.*\*/')
 
 OPERANDS_TO_IGNORE = {"tag=''"}
@@ -42,7 +43,10 @@ class Operand(object):
 
 # BrainScript parameter names are not always consisten. Here, we fix the
 # obvious misnamings.
-SMOOTH_NAMING = { 'val': 'value' }
+SMOOTH_NAMING = {\
+        'val': 'value',
+        'from': 'from_'
+        }
 
 class CompNodeOperator(object):
     COMP_NODE_TEMPLATE = """\
@@ -127,9 +131,15 @@ class %(name)s(%(inst_operator)s):
         for operand in raw_inst_operands:
             parts = operand.split('=')
             if len(parts)==1:
-                inst_operands.append(parts[0].strip())
+                elem = parts[0].strip()
+                if ':' in elem:
+                    elem = "'<not yet supported>'"
+                inst_operands.append(elem)
             elif len(parts)==2:
-                inst_operands.append('%s=%s'%(parts[0].strip(), self._smooth(parts[1].strip())))
+                init = parts[1].strip()
+                if ':' in init:
+                    init = "'<not yet supported>'"
+                inst_operands.append('%s=%s'%(parts[0].strip(), self._smooth(init)))
             else:
                 raise ValueError('Did not expect more than 1 equal sign: %s'%operand)
 
@@ -155,6 +165,7 @@ def convert_bs_to_python(bs_fn, py_fn):
         pyf.write(OPS_PREAMBLE)
         
         in_computation_node_section = False
+        in_standard_node_section = False
 
         for line in open(bs_fn, 'r'):
             if line.startswith('# '):
@@ -163,22 +174,34 @@ def convert_bs_to_python(bs_fn, py_fn):
                 else:
                     in_computation_node_section = False
 
-            if not in_computation_node_section:
-                continue
+                if line.startswith('# standard functions'): 
+                    in_standard_node_section = True
+                else:
+                    in_standard_node_section = False
 
-            comp_match = REGEX_COMPNODE.match(line)
-            if comp_match:
-                po = CompNodeOperator(comp_match)
-                pyf.write(str(po)+'\n')
-                continue
+            if in_standard_node_section:
+                standard_match = REGEX_STANDARD.match(line)
+                if standard_match:
+                    po = CompNodeOperator(standard_match)
+                    pyf.write(str(po)+'\n')
+                    continue
 
-            alias_match = REGEX_ALIAS.match(line)
-            if alias_match:
-                alias_ops.append(alias_match)
+            if in_computation_node_section:
+                comp_match = REGEX_COMPNODE.match(line)
+                if comp_match:
+                    po = CompNodeOperator(comp_match)
+                    pyf.write(str(po)+'\n')
+                    continue
 
-            instantiation_match = REGEX_INSTANTIATION.match(line)
-            if instantiation_match:
-                inst_ops.append(instantiation_match)
+                alias_match = REGEX_ALIAS.match(line)
+                if alias_match:
+                    alias_ops.append(alias_match)
+                    continue
+
+                instantiation_match = REGEX_INSTANTIATION.match(line)
+                if instantiation_match:
+                    inst_ops.append(instantiation_match)
+                    continue
 
         for match in alias_ops:
             pyf.write(str(AliasOperator(match))+'\n')

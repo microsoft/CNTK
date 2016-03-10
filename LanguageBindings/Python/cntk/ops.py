@@ -2,6 +2,86 @@
 
 from cntk.graph import ComputationNode
 
+class Print(ComputationNode):
+    def __init__(self, value, format='', name='Print'):
+        super(Print, self).__init__(params=['value', 'format'], name=name)
+        self.value = value
+        self.format = format
+
+class Debug(ComputationNode):
+    def __init__(self, value, say='', enabled=True, name='Debug'):
+        super(Debug, self).__init__(params=['value', 'say', 'enabled'], name=name)
+        self.value = value
+        self.say = say
+        self.enabled = enabled
+
+class Format(ComputationNode):
+    def __init__(self, value, format, name='Format'):
+        super(Format, self).__init__(params=['value', 'format'], name=name)
+        self.value = value
+        self.format = format
+
+class Replace(ComputationNode):
+    def __init__(self, s, from_, to, name='Replace'):
+        super(Replace, self).__init__(params=['s', 'from_', 'to'], name=name)
+        self.s = s
+        self.from_ = from_
+        self.to = to
+
+class Substr(ComputationNode):
+    def __init__(self, s, begin, num, name='Substr'):
+        super(Substr, self).__init__(params=['s', 'begin', 'num'], name=name)
+        self.s = s
+        self.begin = begin
+        self.num = num
+
+class Chr(ComputationNode):
+    def __init__(self, c, name='Chr'):
+        super(Chr, self).__init__(params=['c'], name=name)
+        self.c = c
+
+class Length(ComputationNode):
+    def __init__(self, x, name='Length'):
+        super(Length, self).__init__(params=['x'], name=name)
+        self.x = x
+
+class Ceil(ComputationNode):
+    def __init__(self, x, name='Ceil'):
+        super(Ceil, self).__init__(params=['x'], name=name)
+        self.x = x
+
+class Round(ComputationNode):
+    def __init__(self, x, name='Round'):
+        super(Round, self).__init__(params=['x'], name=name)
+        self.x = x
+
+class Abs(ComputationNode):
+    def __init__(self, x, name='Abs'):
+        super(Abs, self).__init__(params=['x'], name=name)
+        self.x = x
+
+class Sign(ComputationNode):
+    def __init__(self, x, name='Sign'):
+        super(Sign, self).__init__(params=['x'], name=name)
+        self.x = x
+
+class Min(ComputationNode):
+    def __init__(self, a, b, name='Min'):
+        super(Min, self).__init__(params=['a', 'b'], name=name)
+        self.a = a
+        self.b = b
+
+class Max(ComputationNode):
+    def __init__(self, a, b, name='Max'):
+        super(Max, self).__init__(params=['a', 'b'], name=name)
+        self.a = a
+        self.b = b
+
+class Fac(ComputationNode):
+    def __init__(self, n, name='Fac'):
+        super(Fac, self).__init__(params=['n'], name=name)
+        self.n = n
+
 class LearnableParameter(ComputationNode):
     def __init__(self, rows, cols, learningRateMultiplier=1.0, init='uniform', initValueScale=1, value=0, initFromFilePath='', initOnCPUOnly=True, randomSeed=-1, name='LearnableParameter'):
         super(LearnableParameter, self).__init__(params=['rows', 'cols', 'learningRateMultiplier', 'init', 'initValueScale', 'value', 'initFromFilePath', 'initOnCPUOnly', 'randomSeed'], name=name)
@@ -426,10 +506,11 @@ class FlattenDimensions(NewReshape):
 
 class SplitDimension(ReshapeDimension):
     def __init__(self, x, dim, N, name='SplitDimension'):
-        super(SplitDimension, self).__init__(x, dim, N, name=name)
+        super(SplitDimension, self).__init__(x, dim, '<not yet supported>', name=name)
         self.params=['x', 'dim', 'N']
 
 class Transpose(TransposeDimensions):
     def __init__(self, x, name='Transpose'):
         super(Transpose, self).__init__(x, 1, 2, name=name)
         self.params=['x']
+

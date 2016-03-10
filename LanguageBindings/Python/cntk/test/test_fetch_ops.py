@@ -41,3 +41,26 @@ def test_parsing_inst_node(input_line, expected):
         assert po_op.init_value == exp_init
 
 
+@pytest.mark.parametrize("input_line, expected", [
+(r"Length(x) = new NumericFunction [ what = 'Length' ; arg = x ]", 
+    ['Length', [('x', None)]]),
+
+(r"Ceil(x) = -Floor(-x)", 
+    ['Ceil', [('x', None)]]),
+
+(r"Round(x) = Floor(x+0.5)", 
+    ['Round', [('x', None)]]),
+
+(r"Abs(x) = if x >= 0 then x else -x", 
+    ['Abs', [('x', None)]]),
+])
+def test_parsing_standard_node(input_line, expected):
+    match = REGEX_STANDARD.match(input_line)
+    po = CompNodeOperator(match)
+
+    assert po.name == expected[0]
+    assert len(po.operands) == len(expected[1])
+
+    for po_op, (exp_op, exp_init) in zip(po.operands, expected[1]):
+        assert po_op.name == exp_op
+        assert po_op.init_value == exp_init
