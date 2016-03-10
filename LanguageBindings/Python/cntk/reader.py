@@ -46,7 +46,6 @@ class UCIFastReader(AbstractReader):
         """Generate the reader configuration block
         """
         template = '''
-        	reader = [
         		readerType = "%(readerType)s"
         		file = "%(file)s"
         		randomize = "none"
@@ -64,7 +63,6 @@ class UCIFastReader(AbstractReader):
                     labelDim="%(numOfClasses)s"        			
                     labelMappingFile="%(labelMappingFile)s" 
         		]
-          ]
         '''
                             
         config = template%self
