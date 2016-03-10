@@ -870,11 +870,11 @@ public:
             return ndlNode;
         }
 
-		char* pEnd;
-		strtod(token.c_str(), &pEnd);
+        char* pEnd;
+        strtod(token.c_str(), &pEnd);
 
-		// see if it's a numeric constant
-		if (*pEnd == 0)
+        // see if it's a numeric constant
+        if (*pEnd == 0)
         {
             ndlNode = new NDLNode<ElemType>("", token, this, ndlTypeConstant);
         }
