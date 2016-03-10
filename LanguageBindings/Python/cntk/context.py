@@ -78,8 +78,13 @@ class AbstractContext(object, metaclass=ABCMeta):
         """                
         tmpl = open(CNTK_EVAL_TEMPLATE_PATH, "r").read()
         reader_config = reader.generate_config()
-        output_filename = os.path.join(self.context.directory, CNTK_OUTPUT_FILENAME)
-        return tmp%{'reader':reader_config, 'outputFile':output_filename}
+        output_filename = os.path.join(self.directory, CNTK_OUTPUT_FILENAME)
+        tmpl_dict = {
+                'reader':reader_config,
+                'outputFile':output_filename,
+                'ModelDescription':node.to_description()
+                } 
+        return tmpl%tmpl_dict
         
         
     @abstractmethod
@@ -123,7 +128,7 @@ class Context(AbstractContext):
         :param config_content: a string containing the configuration
         """
         filename = os.path.join(self.directory, config_file_name)        
-        with open(os.path.join(self.context.directory, filename), "w") as out:
+        with open(os.path.join(self.directory, filename), "w") as out:
             out.write(config_content)            
         subprocess.check_call([CNTK_EXECUTABLE_PATH, "configFile=%s"%filename])        
     
@@ -155,6 +160,16 @@ class Context(AbstractContext):
         """            
         config_content = self._generate_eval_config(node, reader) 
         self._call_cntk(CNTK_EVAL_CONFIG_FILENAME, config_content) 
+
+        import glob
+        out_file_wildcard = os.path.join(self.directory, CNTK_OUTPUT_FILENAME+'.*')
+        out_filenames = glob.glob(out_file_wildcard)
+        if len(out_filenames)!=1:
+            raise ValueError('expected exactly one file starting with "%s", but got %s'%(CNTK_OUTPUT_FILENAME, out_filenames))
+
+        data = np.loadtxt(out_filenames[0])
+
+        return data
 
 class ClusterContext(AbstractContext):
     """This is a sub-class of AbstractContext, use it to submit your workloads to the cluster.
