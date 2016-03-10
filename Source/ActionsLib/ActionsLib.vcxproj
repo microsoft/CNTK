@@ -140,6 +140,7 @@
     <ClInclude Include="NDLUtil.h" />
     <ClInclude Include="NetworkDescriptionLanguage.h" />
     <ClInclude Include="SimpleNetworkBuilder.h" />
+    <ClInclude Include="SynchronousExecutionEngine.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\Common\File.cpp">
@@ -155,6 +156,7 @@
     <ClCompile Include="SpecialPurposeActions.cpp" />
     <ClCompile Include="EvalActions.cpp" />
     <ClCompile Include="OtherActions.cpp" />
+    <ClCompile Include="SynchronousExecutionEngine.cpp" />
     <ClCompile Include="TrainActions.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

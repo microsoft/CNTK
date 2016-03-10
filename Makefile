@@ -525,7 +525,6 @@ CNTK_SRC =\
 	$(SOURCEDIR)/CNTK/CNTK.cpp \
 	$(SOURCEDIR)/CNTK/ModelEditLanguage.cpp \
 	$(SOURCEDIR)/CNTK/tests.cpp \
-	$(SOURCEDIR)/ComputationNetworkLib/SynchronousExecutionEngine.cpp \
 	$(SOURCEDIR)/ComputationNetworkLib/ComputationNode.cpp \
 	$(SOURCEDIR)/ComputationNetworkLib/ComputationNetwork.cpp \
 	$(SOURCEDIR)/ComputationNetworkLib/ComputationNetworkEvaluation.cpp \
@@ -542,6 +541,7 @@ CNTK_SRC =\
     $(SOURCEDIR)/ActionsLib/NetworkFactory.cpp \
 	$(SOURCEDIR)/ActionsLib/NetworkDescriptionLanguage.cpp \
 	$(SOURCEDIR)/ActionsLib/SimpleNetworkBuilder.cpp \
+	$(SOURCEDIR)/ActionsLib/SynchronousExecutionEngine.cpp \
 	$(SOURCEDIR)/SequenceTrainingLib/latticeforwardbackward.cpp \
 	$(SOURCEDIR)/SequenceTrainingLib/parallelforwardbackward.cpp \
 	$(SOURCEDIR)/CNTK/BrainScript/BrainScriptEvaluator.cpp \

@@ -25,11 +25,14 @@
     <ClCompile Include="NetworkFactory.cpp">
       <Filter>Actions</Filter>
     </ClCompile>
+    <ClCompile Include="SimpleNetworkBuilder.cpp">
+      <Filter>Model Building - Standard Models</Filter>
+    </ClCompile>
     <ClCompile Include="NetworkDescriptionLanguage.cpp">
       <Filter>Model Building - NDL</Filter>
     </ClCompile>
-    <ClCompile Include="SimpleNetworkBuilder.cpp">
-      <Filter>Model Building - Standard Models</Filter>
+    <ClCompile Include="SynchronousExecutionEngine.cpp">
+      <Filter>Model Building - NDL</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -72,11 +75,14 @@
     <ClInclude Include="NDLUtil.h">
       <Filter>Model Building - NDL</Filter>
     </ClInclude>
+    <ClInclude Include="SimpleNetworkBuilder.h">
+      <Filter>Model Building - Standard Models</Filter>
+    </ClInclude>
     <ClInclude Include="NetworkDescriptionLanguage.h">
       <Filter>Model Building - NDL</Filter>
     </ClInclude>
-    <ClInclude Include="SimpleNetworkBuilder.h">
-      <Filter>Model Building - Standard Models</Filter>
+    <ClInclude Include="SynchronousExecutionEngine.h">
+      <Filter>Model Building - NDL</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
