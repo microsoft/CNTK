@@ -108,7 +108,7 @@ struct /*interface*/ IComputationNode
 
     // --- optional overrides for more informative logging
 
-    virtual void PrintSelfBeforeValidation() const = 0; // called in validation loop right before Validate()
+    virtual std::string FormatOperationPrototype(const std::string& extraArgs) const = 0; // format the operation into a "prototype" (listing dimensions and parameters)
     virtual void DumpNodeInfo(const bool /*printValues*/, const bool /*printMetadata*/, File& fstream) const = 0;
 
 protected:
@@ -592,7 +592,7 @@ public:
     /*HasName::*/ void SetName(const std::wstring& newName) override // also for use by ExperimentalNetworkBuilder
     {
         m_nodeName = newName;
-        fprintf(stderr, "Node --> %ls = %ls\n", NodeName().c_str(), OperationName().c_str()), fflush(stderr);
+        //fprintf(stderr, "Node --> %ls : %ls\n", NodeName().c_str(), OperationName().c_str()), fflush(stderr);
     }
 
     bool NeedsGradient() const { return m_needsGradient; }
@@ -786,36 +786,7 @@ public:
     virtual void PrintSelf(bool printMatrices = false) const = 0;
 
     // called in validation loop right before Validate()
-    virtual void /*IComputationNode::*/ PrintSelfBeforeValidation() const
-    {
-        fprintf(stderr, "\nValidating --> %ls = %ls", NodeName().c_str(), OperationName().c_str());
-
-        if (!IsLeaf())
-        {
-            fprintf(stderr, "(");
-            for (size_t i = 0; i < GetNumInputs(); i++)
-            {
-                const auto& child = m_inputs[i];
-                if (i > 0)
-                    fprintf(stderr, ", ");
-
-                if (child == nullptr)
-                {
-                    fprintf(stderr, "NULL");
-                    continue;
-                }
-
-                const char* mbSizeMark = child->m_pMBLayout ? " x *" : "";
-                if (child->m_sampleLayout.GetRank() == 3 && (child->m_sampleLayout[1] != 1 || child->m_sampleLayout[0] != 1)) // looks like an image: use WHC notation
-                    fprintf(stderr, "%ls[%s%s {W=%lu, H=%lu, C=%lu}]", child->NodeName().c_str(), string(child->m_sampleLayout).c_str(), mbSizeMark,
-                            child->m_sampleLayout[1], child->m_sampleLayout[2], child->m_sampleLayout[0]);
-                // BUGBUG: This ^^ will print based on the old legacy layout, and we have no way of knowing here whether that is correct.
-                else
-                    fprintf(stderr, "%ls[%s%s]", child->NodeName().c_str(), string(child->m_sampleLayout).c_str(), mbSizeMark);
-            }
-            fprintf(stderr, ")");
-        }
-    }
+    virtual std::string /*IComputationNode::*/ FormatOperationPrototype(const std::string& extraArgs) const;
 
     // helper for topology plot: enumerate arcs that can be reached starting from the current node's children
     typedef std::pair<ComputationNodeBasePtr, ComputationNodeBasePtr> ComputationArc;
@@ -1300,11 +1271,11 @@ public:
         VerifyDataSize(Value());
     }
 
-#ifdef _DEBUG
     // NaN checks
     virtual void /*IComputationNode::*/ EndForwardProp() override
     {
         Base::EndForwardProp();
+#ifdef _DEBUG
 #ifdef TRACK_GAP_NANS
         MaskMissingValueColumnsToZero(FrameRange(m_pMBLayout)); // HasNaN() operates on a whole matrix, so first flatten all gaps to 0
         if (Value().HasNan("EndForwardProp"))
@@ -1315,9 +1286,10 @@ public:
         Value().Print(msra::strfun::utf8(NodeName()), 0, min(Value().GetNumRows()-1, 4), 0, min(Value().GetNumCols()-1, 4));
 #endif
         InvalidateMissingValueColumns(FrameRange(m_pMBLayout)); // blast NaNs into columns that are gaps in a packed layout
+#endif
+        // tracing
         Trace();
     }
-#endif
 
 #if 0   // (keep it around in case we need to add stuff in the future)
         virtual void /*IComputationNode::*/BeginBackprop() override
@@ -1511,10 +1483,9 @@ public:
                                       const std::string& valueFormatString) const;
     void Trace()
     {
-        if (m_traceNodeValue)
+        if (m_traceNodeValue+1)
         {
-            const auto shape = GetTensorShape(DetermineElementwiseTensorRank());
-            fprintf(stderr, "Trace --> %ls = %ls -> [%s]\n", NodeName().c_str(), OperationName().c_str(), string(shape).c_str());
+            fprintf(stderr, "Trace --> %s\n", FormatOperationPrototype("").c_str());
             WriteMinibatchWithFormatting(stderr, m_traceNodeValueUpToDim, m_traceNodeValueUpToT, false/*transpose*/, m_traceNodeValueAsCategoryLabel, std::vector<std::string>(),
                                          ""/*sequenceSeparator*/, "  "/*sequencePrologue*/, "\n"/*sequenceEpilogue*/, " "/*elementSeparator*/, "\n  "/*sampleSeparator*/,
                                          "%13.10f"/*valueFormatString*/);
@@ -1720,7 +1691,7 @@ public:
     virtual std::wstring ToString(void) const override { NOT_IMPLEMENTED; }
     // these are meant to be called during computation, so provide dummy implementations
     virtual bool RequiresPreCompute() const override { return false; } // return true if the node's value should be computed before the normal training. e.g., mean and invStd of input features.
-    virtual void PrintSelfBeforeValidation() const override { }
+    virtual std::string FormatOperationPrototype(const std::string& extraArgs) const override { return ""; }
     virtual void DumpNodeInfo(const bool /*printValues*/, const bool /*printMetadata*/, File& fstream) const override {}
 
 protected: public:                                     // needed in ComputationNetwork::FindInRecurrentLoops(), which really should be part of SEQTraversalFlowControlNode
@@ -1847,7 +1818,7 @@ protected:                                                                      
     using Base::MarkValueNonSharable;                                                                                                                    \
     using Base::OutputUsedInComputingInputNodesGradients;                                                                                                \
     using Base::PrintNodeValuesToFile;                                                                                                                   \
-    using Base::PrintSelfBeforeValidation;                                                                                                               \
+    using Base::FormatOperationPrototype;                                                                                                               \
     using Base::ReleaseMatricesAfterBackprop;                                                                                                            \
     using Base::ReleaseMatricesAfterForwardProp;                                                                                                         \
     using Base::ReleaseMatrixToPool;                                                                                                                     \

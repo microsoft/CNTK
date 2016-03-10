@@ -533,10 +533,9 @@ public:
         fstream >> m_numRepeat;
     }
 
-    virtual void PrintSelfBeforeValidation() const override
+    virtual std::string FormatOperationPrototype(const std::string& extraArgs) const override
     {
-        Base::PrintSelfBeforeValidation();
-        fprintf(stderr, ", numRepeats=%lu", m_numRepeat);
+        return Base::FormatOperationPrototype(extraArgs + msra::strfun::strprintf(", numRepeats=%lu", m_numRepeat));
     }
 
     virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
@@ -847,22 +846,9 @@ public:
         m_targetImageLayout.Save(fstream);
     }
 
-    virtual void /*IComputationNode::*/ PrintSelfBeforeValidation() const override
+    virtual std::string /*IComputationNode::*/ FormatOperationPrototype(const std::string& extraArgs) const override
     {
-        fprintf(stderr, "\nValidating --> %ls = %ls", NodeName().c_str(), OperationName().c_str());
-        fprintf(stderr, "(");
-        for (size_t i = 0; i < GetNumInputs(); i++)
-        {
-            ComputationNodePtr child = Input(i);
-            if (i > 0)
-                fprintf(stderr, ", ");
-            if (!child)
-                fprintf(stderr, "NULL");
-            else
-                fprintf(stderr, "%ls[%s%s]", child->NodeName().c_str(), string(child->GetSampleLayout()).c_str(), child->HasMBLayout() ? " x *" : "");
-        }
-        fprintf(stderr, ", NumOfRows=%lu, imageWidth=%lu, imageHeight=%lu, imageChannels=%lu)", m_numTargetRows, m_targetImageLayout[1], m_targetImageLayout[2], m_targetImageLayout[0]);
-        // BUGBUG: This interpretaion as image dims is only correct for the 'legacy format, not for cudnn.
+        return Base::FormatOperationPrototype(extraArgs + msra::strfun::strprintf(", NumOfRows=%lu, imageWidth=%lu, imageHeight=%lu, imageChannels=%lu)", m_numTargetRows, m_targetImageLayout[1], m_targetImageLayout[2], m_targetImageLayout[0]));
     }
 
     // TODO: Clarify/resolve the semantic overlap between BeginForwardProp() and UpdateFunctionMBSize().

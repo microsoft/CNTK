@@ -527,16 +527,16 @@ void ComputationNetwork::ValidateNetwork()
     //    Keep going through the list until all nodes have been validated and all inputs have been validated as well.
     //  - validate (final)              // final means consistency checks
     //    Fail if any change during this stage.
-    size_t pass = 0;
+    size_t pass = 1;
     size_t toValidate = nodes.size();
     while (toValidate > 0)
     {
-        pass++;
         fprintf(stderr, "\n\nValidating network. %d nodes to process in pass %d.\n", (int) toValidate, (int) pass);
-        ValidateNodes(nodes, false /*isFinalValidationPass*/, toValidate);
+        toValidate = ValidateNodes(nodes, /*isFirstPass=*/pass == 1, false /*isFinalValidationPass*/);
+        pass++;
     }
     fprintf(stderr, "\n\nValidating network, final pass.\n");
-    ValidateNodes(nodes, true /*isFinalValidationPass*/, toValidate);
+    toValidate = ValidateNodes(nodes, /*isFirstPass=*/pass == 1, true /*isFinalValidationPass*/);
     if (toValidate != 0)
         LogicError("ValidateSubNetwork: ValidateNodes(true) unexpectedly returned with work left to do.");
 
@@ -609,9 +609,11 @@ bool ComputationNetwork::ValidateNode(ComputationNodeBasePtr node, bool isFinalV
     return !unchanged;
 }
 
-void ComputationNetwork::ValidateNodes(list<ComputationNodeBasePtr> nodes, bool isFinalValidationPass, size_t& todo)
+// perform one pass of validation over the topologically-sorted node set
+// returns how many nodes either could not yet be validated yet or have changed and thus must be redone
+size_t ComputationNetwork::ValidateNodes(list<ComputationNodeBasePtr> nodes, bool isFirstPass, bool isFinalValidationPass)
 {
-    todo = 0; // returns how many nodes are to be redone
+    size_t todo = 0;
     for (auto& node : nodes)
     {
         const auto& children = node->GetInputs();
@@ -628,11 +630,21 @@ void ComputationNetwork::ValidateNodes(list<ComputationNodeBasePtr> nodes, bool 
         bool valid = false;
         if (hasVisitedChild || isLeaf) // got at least one child: it makes sense to call Validate()
         {
-            // TODO: PrintSelfBeforeValidation() into a function returning a string, and print all in a single line (also when it throws; print & rethrow).
-            node->PrintSelfBeforeValidation();
-            bool unchanged = !ValidateNode(node, isFinalValidationPass);
+            string prevPrototype = node->FormatOperationPrototype("");
+            bool unchanged;
+            try
+            {
+                unchanged = !ValidateNode(node, isFinalValidationPass);
+                string updatedPrototype = node->FormatOperationPrototype("");
+                if (isFirstPass || !unchanged || prevPrototype != updatedPrototype)
+                    fprintf(stderr, "Validating --> %s\n", updatedPrototype.c_str());
+            }
+            catch (...) // if validation failed then print the prototype anyway so one can see the input args
+            {
+                fprintf(stderr, "Validating --> %s FAILED\n", prevPrototype.c_str());
+                throw;
+            }
             node->m_visited = true;
-            fprintf(stderr, "[%s%s]", string(node->GetSampleLayout()).c_str(), node->HasMBLayout() ? " x *" : "");
             // print the new type
             // sanity checks
             if (isFinalValidationPass && !unchanged)
@@ -646,6 +658,7 @@ void ComputationNetwork::ValidateNodes(list<ComputationNodeBasePtr> nodes, bool 
         if (!valid)
             todo++;
     }
+    return todo;
 }
 
 // -----------------------------------------------------------------------

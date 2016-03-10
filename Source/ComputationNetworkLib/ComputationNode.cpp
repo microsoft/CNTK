@@ -208,6 +208,69 @@ TensorShape ComputationNodeBase::GetTensorSliceFor(size_t rank, const FrameRange
 // others
 // -----------------------------------------------------------------------
 
+/*virtual*/ string ComputationNodeBase::FormatOperationPrototype(const string& extraArgs) const
+{
+    string prototype;
+    prototype += msra::strfun::strprintf("%ls = %ls", NodeName().c_str(), OperationName().c_str());
+
+    // arguments of operation
+    if (IsLeaf())
+        prototype += "()";
+    else
+    {
+        prototype += " (";
+        for (size_t i = 0; i < GetNumInputs(); i++)
+        {
+            const auto& child = m_inputs[i];
+            if (i > 0)
+                prototype += ", ";
+
+            if (child)
+                prototype += msra::strfun::strprintf("%ls", child->NodeName().c_str());
+            else
+                prototype += "NULL";
+        }
+        prototype += extraArgs;
+        prototype += ")";
+    }
+
+    // type (tensor dimensions) of operation
+    prototype += " : ";
+
+    if (!IsLeaf())
+    {
+        //prototype += "(";
+        for (size_t i = 0; i < GetNumInputs(); i++)
+        {
+            const auto& child = m_inputs[i];
+            if (i > 0)
+                prototype += ", ";
+
+            if (child == nullptr)
+            {
+                prototype += "NULL";
+                continue;
+            }
+
+            const char* mbSizeMark = child->m_pMBLayout ? " x *" : "";
+#if 0
+            if (child->m_sampleLayout.GetRank() == 3 && (child->m_sampleLayout[1] != 1 || child->m_sampleLayout[0] != 1)) // looks like an image: use WHC notation
+                prototype += msra::strfun::strprintf("%ls[%s%s {W=%lu, H=%lu, C=%lu}]", child->NodeName().c_str(), string(child->m_sampleLayout).c_str(), mbSizeMark,
+                child->m_sampleLayout[1], child->m_sampleLayout[2], child->m_sampleLayout[0]);
+            // BUGBUG: This ^^ will print based on the old legacy layout, and we have no way of knowing here whether that is correct.
+            else
+#endif
+                prototype += msra::strfun::strprintf("[%s%s]", string(child->m_sampleLayout).c_str(), mbSizeMark);
+        }
+        prototype += extraArgs;
+        //prototype += ")";
+    }
+
+    prototype += msra::strfun::strprintf(" -> [%s%s]", string(GetSampleLayout()).c_str(), HasMBLayout() ? " x *" : "");
+
+    return prototype;
+}
+
 template <class ElemType>
 /*virtual*/ void ComputationNode<ElemType>::DumpNodeInfo(const bool /*printValues*/, const bool printMetadata, File& fstream) const
 {
