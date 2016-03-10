@@ -119,7 +119,7 @@ void ComputationNodeBase::ValidateBinaryReduce(bool isFinalValidationPass)
     if (isFinalValidationPass &&
         !(Input(0)->GetSampleLayout().IsElementwiseCompatibleWith(Input(1)->GetSampleLayout()) &&
         // TODO: is this correct? Do both inputs need to have a layout? Fix error message.
-         (Input(0)->HasMBLayout() && Input(1)->HasMBLayout())))
+         (Input(0)->HasMBLayout() == Input(1)->HasMBLayout())))
         LogicError("The Matrix dimensions or MB layout in the %ls %ls operation do not match.", NodeName().c_str(), OperationName().c_str());
     SetDims(TensorShape(1), false);
 }

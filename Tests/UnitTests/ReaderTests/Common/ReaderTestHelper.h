@@ -236,6 +236,7 @@ struct ReaderFixture
             features.push_back(make_shared<Matrix<ElemType>>(0));
             wstring name = numFeatureFiles > 1 ? L"features" + std::to_wstring(i + 1) : L"features";
             map.insert(make_pair(name, features[i]));
+            map.AddInputLayout(name, make_shared<MBLayout>(1, 0));
         }
 
         for (auto i = 0; i < numLabelFiles; i++)
@@ -243,6 +244,7 @@ struct ReaderFixture
             labels.push_back(make_shared<Matrix<ElemType>>(0));
             wstring name = numLabelFiles > 1 ? L"labels" + std::to_wstring(i + 1) : L"labels";
             map.insert(make_pair(name, labels[i]));
+            map.AddInputLayout(name, make_shared<MBLayout>(1, 0));
         }
 
         // Setup output file

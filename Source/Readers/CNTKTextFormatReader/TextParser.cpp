@@ -71,10 +71,10 @@ TextParser<ElemType>::TextParser(const std::wstring& filename, const vector<Stre
         }
         m_aliasToIdMap[alias] = i;
         m_streamInfos[i].m_type = stream.m_storageType;
-        m_streamInfos[i].m_sampleDimension = stream.m_sampleSize;
+        m_streamInfos[i].m_sampleDimension = stream.m_sampleDimension;
 
         auto streamDescription = std::make_shared<StreamDescription>(stream);
-        streamDescription->m_sampleLayout = std::make_shared<TensorShape>(stream.m_sampleSize);
+        streamDescription->m_sampleLayout = std::make_shared<TensorShape>(stream.m_sampleDimension);
         m_streams.push_back(streamDescription);
     }
 
@@ -251,10 +251,11 @@ ChunkPtr TextParser<ElemType>::GetChunk(size_t chunkId)
 template <class ElemType>
 void TextParser<ElemType>::IncrementNumberOfErrorsOrDie() 
 {
-    if (--m_numAllowedErrors <= 0)
+    if (m_numAllowedErrors == 0)
     {
         RuntimeError("Reached maximum allowed number of reader errors");
     }
+    --m_numAllowedErrors;
 }
 
 template <class ElemType>
@@ -367,6 +368,27 @@ Sequence<ElemType> TextParser<ElemType>::LoadSequence(bool verifyId, const Seque
             "INFO: finished loading sequence (id = %" PRIu64 "),"
             " successfully read %" PRIu64 " out of expected %" PRIu64 " rows\n",
             sequenceDsc.m_id, numRowsRead, expectedRowCount);
+    }
+
+    // Double check if there are empty input streams.
+    // TODO this handling needs to be graceful, but currently CNTK complains when we return empty sequences.
+    bool hasEmptyInputs = false;
+
+    for (size_t i = 0; i < sequence.size(); ++i)
+    {
+        if (sequence[i]->m_numberOfSamples == 0)
+        {
+            fprintf(stderr,
+                "ERROR: While reading input %" PRIu64 ""
+                " in sequence id = %" PRIu64 
+                " at file offset = %" PRId64 ": Input is empty.\n", i + 1, sequenceDsc.m_id, GetFileOffset());
+            hasEmptyInputs = true;
+        }
+    }
+
+    if (hasEmptyInputs)
+    {
+        RuntimeError("Could not read input file. Bailing out.");
     }
 
     return sequence;

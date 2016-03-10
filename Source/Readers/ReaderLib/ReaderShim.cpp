@@ -101,8 +101,8 @@ bool ReaderShim<ElemType>::GetMinibatch(StreamMinibatchInputs& matrices)
     size_t size = std::distance(begin(matrices), end(matrices));
     if (size != m_nameToStreamId.size())
     {
-        RuntimeError("Number of input nodes (%zd) does not match the expected number (%zd).",
-            size, m_nameToStreamId.size());
+        RuntimeError("Number of input nodes (%d) does not match the expected number (%d).",
+            (int)size, (int)m_nameToStreamId.size());
     }
 
     if (m_endOfEpoch)
@@ -149,6 +149,7 @@ bool ReaderShim<ElemType>::GetMinibatch(StreamMinibatchInputs& matrices)
             size_t streamId = m_nameToStreamId[mx.first];
             
             const auto& stream = minibatch.m_data[streamId];
+            // TODO: assert that num sequences is consistent across all streams
             m_numParallelSequences = stream->m_layout->GetNumParallelSequences();
             size_t rowNumber = m_streams[streamId]->m_sampleLayout->GetNumElements();
             auto& layout = matrices.GetInputLayout<ElemType>(mx.first);
@@ -209,7 +210,7 @@ bool ReaderShim<ElemType>::DataEnd() { return false; } // Note: Return value nev
 template <class ElemType>
 void ReaderShim<ElemType>::CopyMBLayoutTo(MBLayoutPtr layout)
 {
-   // do nothing.
+    layout->CopyFrom(make_shared<MBLayout>(0, 0));
 }
 
 template <class ElemType>
