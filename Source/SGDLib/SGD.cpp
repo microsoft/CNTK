@@ -2186,8 +2186,8 @@ bool SGD<ElemType>::GradientCheck(ComputationNetworkPtr net,
         for (size_t itry = 0; itry < min((size_t) 50, node->Value().GetNumElements()); itry++)
         {
             // no support to sparse matrix yet
-            int irow = (int) fmod(rand(), node->Gradient().GetNumRows() - 1);
-            int icol = (int) fmod(rand(), node->Gradient().GetNumCols() - 1);
+            int irow = (int)fmod(rand(), node->Value().GetNumRows() - 1);
+            int icol = (int)fmod(rand(), node->Value().GetNumCols() - 1);
             irow = max(0, irow);
             icol = max(0, icol);
 
