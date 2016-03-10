@@ -37,14 +37,8 @@
     <ClCompile Include="ComputationNetworkScripting.cpp">
       <Filter>Network</Filter>
     </ClCompile>
-    <ClCompile Include="NetworkDescriptionLanguage.cpp">
-      <Filter>Model Building - NDL</Filter>
-    </ClCompile>
     <ClCompile Include="SynchronousExecutionEngine.cpp">
       <Filter>Model Building - NDL</Filter>
-    </ClCompile>
-    <ClCompile Include="SimpleNetworkBuilder.cpp">
-      <Filter>Model Building - Standard Models</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -132,23 +126,8 @@
     <ClInclude Include="TrainingNodes.h">
       <Filter>Nodes</Filter>
     </ClInclude>
-    <ClInclude Include="IExecutionEngine.h">
-      <Filter>Model Building - NDL</Filter>
-    </ClInclude>
-    <ClInclude Include="NDLNetworkBuilder.h">
-      <Filter>Model Building - NDL</Filter>
-    </ClInclude>
-    <ClInclude Include="NDLUtil.h">
-      <Filter>Model Building - NDL</Filter>
-    </ClInclude>
-    <ClInclude Include="NetworkDescriptionLanguage.h">
-      <Filter>Model Building - NDL</Filter>
-    </ClInclude>
     <ClInclude Include="SynchronousExecutionEngine.h">
       <Filter>Model Building - NDL</Filter>
-    </ClInclude>
-    <ClInclude Include="SimpleNetworkBuilder.h">
-      <Filter>Model Building - Standard Models</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

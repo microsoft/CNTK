@@ -25,6 +25,12 @@
     <ClCompile Include="NetworkFactory.cpp">
       <Filter>Actions</Filter>
     </ClCompile>
+    <ClCompile Include="NetworkDescriptionLanguage.cpp">
+      <Filter>Model Building - NDL</Filter>
+    </ClCompile>
+    <ClCompile Include="SimpleNetworkBuilder.cpp">
+      <Filter>Model Building - Standard Models</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\Common\Include\fileutil.h">
@@ -60,6 +66,21 @@
     <ClInclude Include="NetworkFactory.h">
       <Filter>Actions</Filter>
     </ClInclude>
+    <ClInclude Include="IExecutionEngine.h">
+      <Filter>Model Building - NDL</Filter>
+    </ClInclude>
+    <ClInclude Include="NDLNetworkBuilder.h">
+      <Filter>Model Building - NDL</Filter>
+    </ClInclude>
+    <ClInclude Include="NDLUtil.h">
+      <Filter>Model Building - NDL</Filter>
+    </ClInclude>
+    <ClInclude Include="NetworkDescriptionLanguage.h">
+      <Filter>Model Building - NDL</Filter>
+    </ClInclude>
+    <ClInclude Include="SimpleNetworkBuilder.h">
+      <Filter>Model Building - Standard Models</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Common">
@@ -70,6 +91,12 @@
     </Filter>
     <Filter Include="Actions">
       <UniqueIdentifier>{db4af610-ad50-4fc4-a494-2d4a3bcc6809}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Model Building - NDL">
+      <UniqueIdentifier>{b38ac95e-c750-4dcf-b067-cfcdad261cb3}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Model Building - Standard Models">
+      <UniqueIdentifier>{d8c1ab4c-6926-4c8f-9e2e-bc5f4c87e831}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
 </Project>

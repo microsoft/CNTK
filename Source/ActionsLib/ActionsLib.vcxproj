@@ -135,7 +135,12 @@
     <ClInclude Include="..\Common\Include\Sequences.h" />
     <ClInclude Include="..\Common\Include\TimerUtility.h" />
     <ClInclude Include="Actions.h" />
+    <ClInclude Include="IExecutionEngine.h" />
+    <ClInclude Include="NDLNetworkBuilder.h" />
+    <ClInclude Include="NDLUtil.h" />
+    <ClInclude Include="NetworkDescriptionLanguage.h" />
     <ClInclude Include="NetworkFactory.h" />
+    <ClInclude Include="SimpleNetworkBuilder.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\Common\File.cpp">
@@ -145,7 +150,9 @@
       <PrecompiledHeader Condition="$(DebugBuild)">NotUsing</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="..\Common\TimerUtility.cpp" />
+    <ClCompile Include="NetworkDescriptionLanguage.cpp" />
     <ClCompile Include="NetworkFactory.cpp" />
+    <ClCompile Include="SimpleNetworkBuilder.cpp" />
     <ClCompile Include="SpecialPurposeActions.cpp" />
     <ClCompile Include="EvalActions.cpp" />
     <ClCompile Include="OtherActions.cpp" />
