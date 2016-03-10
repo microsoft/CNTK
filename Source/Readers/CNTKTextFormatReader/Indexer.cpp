@@ -12,10 +12,6 @@ using std::string;
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
-//TODO: use fdadvise(fd, 0, 0, FADVISE_SEQUENTIAL) if possible
-// also, take at look at http://git.savannah.gnu.org/cgit/coreutils.git/tree/src/wc.c
-
-
 Indexer::Indexer(FILE* file, bool skipSequenceIds, int64_t chunkSize) : m_maxChunkSize(chunkSize) {
     if (!file) {
         RuntimeError("Input file not open for reading");
@@ -90,12 +86,10 @@ std::shared_ptr<Index> Indexer::BuildFromLines() {
         }
     }
 
-    return shared_ptr<Index>(new Index
-    { 
+    return make_shared<Index>(
         !m_skipSequenceIds,
-        std::move(m_timeline), 
-        std::move(m_chunks)
-    });
+        std::move(m_timeline),
+        std::move(m_chunks));
 }
 
 
@@ -105,8 +99,12 @@ std::shared_ptr<Index> Indexer::Build() {
         RuntimeError("Input file is empty");
     }
 
-    // TODO: check if input contains a BOM value,
-    // skip 3 bytes in case of UTF-8, raise exception in case of UTF-16.
+    if ((m_bufferEnd - m_bufferStart > 3) && 
+        (m_bufferStart[0] == '\xEF' && m_bufferStart[1] == '\xBB' && m_bufferStart[2] == '\xBF'))
+    {
+        // input file contains UTF-8 BOM value, skip it.
+        m_pos += 3;
+    }
 
     // check the first byte and decide what to do next
     if (m_skipSequenceIds || m_bufferStart[0] == NAME_PREFIX) {
@@ -115,7 +113,7 @@ std::shared_ptr<Index> Indexer::Build() {
     }
 
     size_t id = 0;
-    int64_t offset = m_fileOffsetStart;
+    int64_t offset = m_fileOffsetStart + (m_pos - m_bufferStart);
     // read the very first sequence id
     if (!GetNextSequenceId(id)) {
         RuntimeError("Expected a sequence id at the offset %" PRIi64 ", none was found.",
@@ -146,12 +144,11 @@ std::shared_ptr<Index> Indexer::Build() {
     // calculate the byte size for the last sequence
     sd.m_byteSize = m_fileOffsetEnd - sd.m_fileOffset;
     UpdateTimeline(sd);
-    return shared_ptr<Index>(new Index
-    {
+
+    return make_shared<Index>(
         !m_skipSequenceIds,
-        std::move(m_timeline), // TODO: shrink_to_fit
-        std::move(m_chunks)
-    });
+        std::move(m_timeline), // TODO: shrink_to_fit?
+        std::move(m_chunks));
 }
 
 

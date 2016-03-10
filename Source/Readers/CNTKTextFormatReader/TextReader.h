@@ -30,8 +30,7 @@ public:
     Minibatch ReadMinibatch() override;
 
 private:
-    
-    TextParserPtr m_parser;
+    IDataDeserializerPtr m_deserializer;
 
     // A head transformer in a list of transformers.
     TransformerPtr m_transformer;

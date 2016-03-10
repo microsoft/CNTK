@@ -234,15 +234,20 @@ void BlockRandomizer::RandomizeForGlobalSamplePosition(const size_t samplePositi
 // Public methods
 //
 
-BlockRandomizer::BlockRandomizer(int verbosity, size_t randomizationRangeInSamples, IDataDeserializerPtr deserializer)
-    : m_verbosity(verbosity),
-      m_randomizationRangeInSamples(randomizationRangeInSamples),
-      m_distributionMode(DistributionMode::sequences),
-      m_deserializer(deserializer),
-      m_sweep(SIZE_MAX),
-      m_sequencePositionInSweep(SIZE_MAX),
-      m_samplePositionInEpoch(SIZE_MAX),
-      m_epochSize(SIZE_MAX)
+BlockRandomizer::BlockRandomizer(int verbosity,
+    size_t randomizationRangeInSamples,
+    IDataDeserializerPtr deserializer,
+    DistributionMode distributionMode,
+    bool ) :
+    m_verbosity(verbosity),
+    m_randomizationRangeInSamples(randomizationRangeInSamples),
+    m_deserializer(deserializer),
+    m_distributionMode(distributionMode),
+    //m_useLegacyRandomization(useLegacyRandomization),
+    m_sweep(SIZE_MAX),
+    m_sequencePositionInSweep(SIZE_MAX),
+    m_samplePositionInEpoch(SIZE_MAX),
+    m_epochSize(SIZE_MAX)
 {
     assert(deserializer != nullptr);
     const SequenceDescriptions& timeline = m_deserializer->GetSequenceDescriptions();
@@ -323,7 +328,7 @@ void BlockRandomizer::StartEpoch(const EpochConfiguration& config)
 bool BlockRandomizer::GetNextSequenceDescriptions(size_t sampleCount, SequenceDescriptions& sequenceDescriptions)
 {
     assert(sequenceDescriptions.size() == 0);
-    assert(sampleCount < m_numSamples); 
+    assert(sampleCount <= m_numSamples); 
     assert(m_samplePositionInEpoch < m_epochSize);
 
     size_t nextSamplePositionInEpoch = std::min(m_epochSize, m_samplePositionInEpoch + sampleCount);

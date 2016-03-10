@@ -22,7 +22,7 @@ void StreamBuffer::Allocate(MemoryProviderPtr memoryProvider, size_t capacity)
         reinterpret_cast<char*>(memoryProvider->Alloc(1, capacity)),
         [memoryProvider](char* p)
     {
-        memoryProvider->Free(p);
+            memoryProvider->Free(p);
     });
     Reset();
 }

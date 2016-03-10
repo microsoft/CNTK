@@ -27,7 +27,8 @@ enum State {
     Exponent
 };
 
-TextParser::TextParser(const TextConfigHelper& helper) 
+template <class ElemType>
+TextParser<ElemType>::TextParser(const TextConfigHelper& helper)
     : TextParser(helper.GetFilePath(), helper.GetStreams())
 {
     SetTraceLevel(helper.GetTraceLevel());
@@ -39,7 +40,8 @@ TextParser::TextParser(const TextConfigHelper& helper)
     Initialize();
 }
 
-TextParser::TextParser(const std::wstring& filename, const vector<StreamDescriptor>& streams) 
+template <class ElemType>
+TextParser<ElemType>::TextParser(const std::wstring& filename, const vector<StreamDescriptor>& streams) 
     : m_filename(filename),
     m_numberOfStreams(streams.size()),
     m_streamInfos(m_numberOfStreams)
@@ -82,7 +84,8 @@ TextParser::TextParser(const std::wstring& filename, const vector<StreamDescript
     m_scratch = new char[m_maxAliasLength + 1];
 }
 
-TextParser::~TextParser() 
+template <class ElemType>
+TextParser<ElemType>::~TextParser() 
 {
     delete[] m_bufferStart;
     delete[] m_scratch;
@@ -92,7 +95,8 @@ TextParser::~TextParser()
     }
 }
 
-void TextParser::Initialize()
+template <class ElemType>
+void TextParser<ElemType>::Initialize()
 {
     if (m_index) 
     {
@@ -116,18 +120,20 @@ void TextParser::Initialize()
     m_fileOffsetEnd = position;
 }
 
-
-vector<StreamDescriptionPtr> TextParser::GetStreamDescriptions() const
+template <class ElemType>
+vector<StreamDescriptionPtr> TextParser<ElemType>::GetStreamDescriptions() const
 {
     return m_streams;
 }
 
-size_t TextParser::GetTotalNumberOfChunks() 
+template <class ElemType>
+size_t TextParser<ElemType>::GetTotalNumberOfChunks() 
 {
     return m_index->m_chunks.size();
 }
 
-void TextParser::FillSequenceDescriptions(SequenceDescriptions& timeline) const
+template <class ElemType>
+void TextParser<ElemType>::FillSequenceDescriptions(SequenceDescriptions& timeline) const
 {
     timeline.resize(m_index->m_timeline.size());
     std::transform(
@@ -140,15 +146,16 @@ void TextParser::FillSequenceDescriptions(SequenceDescriptions& timeline) const
     });
 }
 
-TextParser::TextDataChunk::TextDataChunk(const ChunkDescriptor& descriptor, TextParser& parent) 
-    : m_sequenceData(descriptor.m_numSequences),
-    m_parent(parent)
+template <class ElemType>
+TextParser<ElemType>::TextDataChunk::TextDataChunk(const ChunkDescriptor& descriptor) 
+    : m_sequenceData(descriptor.m_numSequences)
 {
     m_id = descriptor.m_id;
     m_sequenceRequestCount = 0;
 }
 
-vector<SequenceDataPtr> TextParser::TextDataChunk::GetSequence(size_t sequenceId)
+template <class ElemType>
+vector<SequenceDataPtr> TextParser<ElemType>::TextDataChunk::GetSequence(size_t sequenceId)
 {
     auto it = m_sequencePtrMap.find(sequenceId);
     assert(it != m_sequencePtrMap.end());
@@ -157,7 +164,8 @@ vector<SequenceDataPtr> TextParser::TextDataChunk::GetSequence(size_t sequenceId
     return it->second;
 }
 
-ChunkPtr TextParser::GetChunk(size_t chunkId)
+template <class ElemType>
+ChunkPtr TextParser<ElemType>::GetChunk(size_t chunkId)
 {
     ChunkPtr chunk;
     #pragma omp critical
@@ -170,8 +178,8 @@ ChunkPtr TextParser::GetChunk(size_t chunkId)
         else 
         {
             const auto& chunkDescriptor = m_index->m_chunks[chunkId];
-            auto textChunk = make_shared<TextDataChunk>(chunkDescriptor, *this);
-            vector<Sequence> sequences(chunkDescriptor.m_numSequences);
+            auto textChunk = make_shared<TextDataChunk>(chunkDescriptor);
+            vector<Sequence<ElemType>> sequences(chunkDescriptor.m_numSequences);
             for (size_t i = 0; i < chunkDescriptor.m_numSequences; ++i)
             {
                 size_t offset = chunkDescriptor.m_timelineOffset + i;
@@ -184,7 +192,7 @@ ChunkPtr TextParser::GetChunk(size_t chunkId)
                     const StreamInfo& stream = m_streamInfos[j];
                     if (stream.m_type == StorageType::dense)
                     {
-                        DenseData* loadedData = (DenseData*)(sequenceData[j].get());
+                        DenseData<ElemType>* loadedData = (DenseData<ElemType>*)(sequenceData[j].get());
                         auto data = make_shared<DenseSequenceData>();
                         data->m_data = loadedData->m_buffer.data();
                         data->m_sampleLayout = m_streams[j]->m_sampleLayout;
@@ -195,7 +203,7 @@ ChunkPtr TextParser::GetChunk(size_t chunkId)
                     }
                     else
                     {
-                        SparseData* loadedData = (SparseData*)(sequenceData[j].get());
+                        SparseData<ElemType>* loadedData = (SparseData<ElemType>*)(sequenceData[j].get());
                         auto data = make_shared<SparseSequenceData>();
                         data->m_data = loadedData->m_buffer.data();
                         data->m_indices = move(loadedData->m_indices);
@@ -240,7 +248,8 @@ ChunkPtr TextParser::GetChunk(size_t chunkId)
     return chunk;
 }
 
-void TextParser::IncrementNumberOfErrorsOrDie() 
+template <class ElemType>
+void TextParser<ElemType>::IncrementNumberOfErrorsOrDie() 
 {
     if (--m_numAllowedErrors <= 0)
     {
@@ -248,7 +257,8 @@ void TextParser::IncrementNumberOfErrorsOrDie()
     }
 }
 
-bool TextParser::Fill() 
+template <class ElemType>
+bool TextParser<ElemType>::Fill() 
 {
     size_t bytesRead = fread(m_bufferStart, 1, BUFFER_SIZE, m_file);
     
@@ -267,7 +277,8 @@ bool TextParser::Fill()
     return true;
 }
 
-void TextParser::SetFileOffset(int64_t offset)
+template <class ElemType>
+void TextParser<ElemType>::SetFileOffset(int64_t offset)
 {
     int rc = _fseeki64(m_file, offset, SEEK_SET);
     if (rc) {
@@ -280,7 +291,8 @@ void TextParser::SetFileOffset(int64_t offset)
     Fill();
 }
 
-Sequence TextParser::LoadSequence(bool verifyId, const SequenceDescriptor& sequenceDsc) {
+template <class ElemType>
+Sequence<ElemType> TextParser<ElemType>::LoadSequence(bool verifyId, const SequenceDescriptor& sequenceDsc) {
     auto fileOffset = sequenceDsc.m_fileOffset;
 
     if (fileOffset < m_fileOffsetStart || fileOffset > m_fileOffsetEnd)
@@ -302,17 +314,18 @@ Sequence TextParser::LoadSequence(bool verifyId, const SequenceDescriptor& seque
         }
     }
 
-    Sequence sequence;
+    Sequence<ElemType> sequence;
 
     // TODO: reuse loaded sequences instead of creating new ones!
     for (auto const & stream : m_streamInfos) {
         if (stream.m_type == StorageType::dense)
         {
-            sequence.push_back(unique_ptr<DenseData>(new DenseData(stream.m_sampleDimension * sequenceDsc.m_numberOfSamples)));
+            sequence.push_back(unique_ptr<DenseData<ElemType>>(
+                new DenseData<ElemType>(stream.m_sampleDimension * sequenceDsc.m_numberOfSamples)));
         }
         else
         {
-            sequence.push_back(unique_ptr<SparseData>(new SparseData()));
+            sequence.push_back(unique_ptr<SparseData<ElemType>>(new SparseData<ElemType>()));
         }
     }
 
@@ -360,7 +373,8 @@ Sequence TextParser::LoadSequence(bool verifyId, const SequenceDescriptor& seque
 }
 
 // read one whole line of input 
-bool TextParser::ReadRow(Sequence& sequence, int64_t& bytesToRead) {
+template <class ElemType>
+bool TextParser<ElemType>::ReadRow(Sequence<ElemType>& sequence, int64_t& bytesToRead) {
     bool found = false;
     while (bytesToRead && CanRead())
     {
@@ -392,8 +406,8 @@ bool TextParser::ReadRow(Sequence& sequence, int64_t& bytesToRead) {
 
         if (stream.m_type == StorageType::dense)
         {
-            DenseData* data = (DenseData*)(sequence[id].get());
-            vector<float>& values = data->m_buffer;
+            DenseData<ElemType>* data = (DenseData<ElemType>*)(sequence[id].get());
+            vector<ElemType>& values = data->m_buffer;
             size_t size = values.size();
             // TODO: assert that size % stream.sampleSize == 0.
             if (!ReadDenseSample(values, stream.m_sampleDimension, bytesToRead)) {
@@ -411,8 +425,8 @@ bool TextParser::ReadRow(Sequence& sequence, int64_t& bytesToRead) {
         }
         else
         {
-            SparseData* data = (SparseData*)(sequence[id].get());
-            vector<float>& values = data->m_buffer;
+            SparseData<ElemType>* data = (SparseData<ElemType>*)(sequence[id].get());
+            vector<ElemType>& values = data->m_buffer;
             size_t size = values.size();
             vector<size_t> indices;
             if (!ReadSparseSample(values, indices, bytesToRead)) {
@@ -442,7 +456,8 @@ bool TextParser::ReadRow(Sequence& sequence, int64_t& bytesToRead) {
     return false;
 }
 
-bool TextParser::GetInputId(size_t& id, int64_t& bytesToRead)
+template <class ElemType>
+bool TextParser<ElemType>::GetInputId(size_t& id, int64_t& bytesToRead)
 {
     char* scratchIndex = m_scratch;
 
@@ -531,11 +546,11 @@ bool TextParser::GetInputId(size_t& id, int64_t& bytesToRead)
     return false;
 }
 
-
-bool TextParser::ReadDenseSample(vector<float>& values, size_t sampleSize, int64_t& bytesToRead)
+template <class ElemType>
+bool TextParser<ElemType>::ReadDenseSample(vector<ElemType>& values, size_t sampleSize, int64_t& bytesToRead)
 {
     size_t counter = 0;
-    float value;
+    ElemType value;
 
     while (bytesToRead && CanRead())
     {
@@ -601,10 +616,11 @@ bool TextParser::ReadDenseSample(vector<float>& values, size_t sampleSize, int64
     return false;
 }
 
-bool TextParser::ReadSparseSample(std::vector<float>& values, std::vector<size_t>& indices, int64_t& bytesToRead)
+template <class ElemType>
+bool TextParser<ElemType>::ReadSparseSample(std::vector<ElemType>& values, std::vector<size_t>& indices, int64_t& bytesToRead)
 {
     size_t index;
-    float value;
+    ElemType value;
 
     while (bytesToRead && CanRead())
     {
@@ -680,7 +696,8 @@ bool TextParser::ReadSparseSample(std::vector<float>& values, std::vector<size_t
     return false;
 }
 
-void TextParser::SkipToNextValue(int64_t& bytesToRead)
+template <class ElemType>
+void TextParser<ElemType>::SkipToNextValue(int64_t& bytesToRead)
 {
     while (bytesToRead && CanRead())
     {
@@ -695,7 +712,8 @@ void TextParser::SkipToNextValue(int64_t& bytesToRead)
     }
 }
 
-void TextParser::SkipToNextInput(int64_t& bytesToRead)
+template <class ElemType>
+void TextParser<ElemType>::SkipToNextInput(int64_t& bytesToRead)
 {
     while (bytesToRead && CanRead())
     {
@@ -710,7 +728,8 @@ void TextParser::SkipToNextInput(int64_t& bytesToRead)
     }
 }
 
-bool TextParser::ReadUint64(size_t& id, int64_t& bytesToRead) {
+template <class ElemType>
+bool TextParser<ElemType>::ReadUint64(size_t& id, int64_t& bytesToRead) {
     id = 0;
     bool found = false;
     while (bytesToRead && CanRead())
@@ -754,14 +773,15 @@ bool TextParser::ReadUint64(size_t& id, int64_t& bytesToRead) {
 
 
 
-// TODO: templatize, better precision?
+// TODO: better precision (at the moment we're at parity with UCIFast)?
 // Assumes that bytesToRead is greater than the number of characters 
 // in the string representation of the floating point number
 // (i.e., the string is followed by one of the delimiters)
 // Post condition: m_pos points to the first character that 
 // cannot be parsed as part of a floating point number.
 // Returns true if parsing was successful.
-bool TextParser::ReadRealNumber(float& value, int64_t& bytesToRead)
+template <class ElemType>
+bool TextParser<ElemType>::ReadRealNumber(ElemType& value, int64_t& bytesToRead)
 {
     State state = State::Init;
     double coefficient = .0, number = .0, divider = .0;
@@ -832,7 +852,7 @@ bool TextParser::ReadRealNumber(float& value, int64_t& bytesToRead)
             }
             else
             {
-                value = static_cast<float>((negative) ? -number : number);
+                value = static_cast<ElemType>((negative) ? -number : number);
                 return true;
             }
             break;
@@ -846,7 +866,7 @@ bool TextParser::ReadRealNumber(float& value, int64_t& bytesToRead)
             }
             else
             {
-                value = static_cast<float>((negative) ? -number : number);
+                value = static_cast<ElemType>((negative) ? -number : number);
                 return true;
             }
             break;
@@ -871,7 +891,7 @@ bool TextParser::ReadRealNumber(float& value, int64_t& bytesToRead)
             else
             {
                 coefficient += (number / divider);
-                value = static_cast<float>((negative) ? -coefficient : coefficient);
+                value = static_cast<ElemType>((negative) ? -coefficient : coefficient);
                 return true;
             }
             break;
@@ -927,7 +947,7 @@ bool TextParser::ReadRealNumber(float& value, int64_t& bytesToRead)
             }
             else {
                 double exponent = (negative) ? -number : number;
-                value = static_cast<float>(coefficient * pow(10.0, exponent));
+                value = static_cast<ElemType>(coefficient * pow(10.0, exponent));
                 return true;
             }
             break;
@@ -950,25 +970,31 @@ bool TextParser::ReadRealNumber(float& value, int64_t& bytesToRead)
     return false;
 }
 
-void TextParser::SetTraceLevel(unsigned int traceLevel) {
+template <class ElemType>
+void TextParser<ElemType>::SetTraceLevel(unsigned int traceLevel) {
     m_traceLevel = traceLevel;
 }
 
-void TextParser::SetMaxAllowedErrors(unsigned int maxErrors) {
+template <class ElemType>
+void TextParser<ElemType>::SetMaxAllowedErrors(unsigned int maxErrors) {
     m_numAllowedErrors = maxErrors;
 }
 
-void TextParser::SetSkipSequenceIds(bool skip) {
+template <class ElemType>
+void TextParser<ElemType>::SetSkipSequenceIds(bool skip) {
     m_skipSequenceIds = skip;
 }
 
-
-void TextParser::SetChunkCacheSize(unsigned int size) {
+template <class ElemType>
+void TextParser<ElemType>::SetChunkCacheSize(unsigned int size) {
     m_chunkCacheSize = size;
 }
 
-void TextParser::SetChunkSize(int64_t size) {
+template <class ElemType>
+void TextParser<ElemType>::SetChunkSize(int64_t size) {
     m_chunkSize = size;
 }
 
+template class TextParser<float>;
+template class TextParser<double>;
 }}}

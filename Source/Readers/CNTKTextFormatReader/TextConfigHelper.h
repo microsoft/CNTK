@@ -29,6 +29,8 @@ public:
 
     bool ShouldRandomize() const;
 
+    ElementType GetElementType() const;
+
     bool ShouldSkipSequenceIds() const;
 
     unsigned int GetMaxAllowedErrors() const;
@@ -49,6 +51,7 @@ private:
     std::vector<StreamDescriptor> m_streams;
     int m_cpuThreadCount;
     bool m_randomize;
+    ElementType m_elementType;
     bool m_skipSequenceIds;
     unsigned int m_maxErrors;
     unsigned int m_traceLevel;
