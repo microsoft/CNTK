@@ -40,10 +40,7 @@ class UCIFastReader(AbstractReader):
         self["LabelsStart"] = labels_start
         self["NumOfClasses"] = num_of_classes          
         self["LabelMappingFile"] = label_mapping_file
-        if (custom_delimiter is not None):
-            self["CustomDelimiter"] = 'customDelimiter = "{0}"'.format(custom_delimiter)
-        else:
-            self["CustomDelimiter"] = None
+        self["CustomDelimiter"] = custom_delimiter
 
     def generate_config(self):
         """Generate the reader configuration block
@@ -55,12 +52,12 @@ class UCIFastReader(AbstractReader):
         		verbosity = 1          
                '''
                
-        if self['customDelimiter']:
+        if self['CustomDelimiter']:
             template += '''
-               customDelimiter=%(customDelimiter)s
+               customDelimiter=%(CustomDelimiter)s
                '''
 
-        if self['featuresStart']:
+        if self['FeaturesStart']:
             template += '''               
         		features=[
         			start = "%(FeaturesStart)s"
@@ -68,7 +65,7 @@ class UCIFastReader(AbstractReader):
         		]
                 '''
         
-        if self['labelsStart']:
+        if self['LabelsStart']:
             template += '''
 
         		labels=[

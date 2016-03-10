@@ -4,7 +4,7 @@
 command=Train
 
 modelPath="%(ModelPath)s"		
-deviceId=-1						   
+deviceId=%(DevideId)s					   
 
 Train=[
 	action="train"
@@ -25,7 +25,7 @@ Train=[
 	]
 	
 	reader = [
-		"%(Reader)s"
+		%(Reader)s
 	]	
 ]
 

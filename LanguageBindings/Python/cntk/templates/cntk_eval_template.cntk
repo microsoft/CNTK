@@ -2,7 +2,8 @@
 # Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 command=Eval
-deviceId=-1						    
+deviceId=%(DevideId)s	
+				   
 Eval=[
 	action="write"
 	run=NDLNetworkBuilder
@@ -12,7 +13,7 @@ Eval=[
 	]
 	
 	reader = [
-		"%(Reader)s"
+		%(Reader)s
 	]	
 	
 	outputPath = "%(OutputFile)s"

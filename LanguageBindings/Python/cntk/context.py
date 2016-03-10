@@ -43,6 +43,7 @@ class AbstractContext(object, metaclass=ABCMeta):
         else:
             os.mkdir(self.directory)
         
+        self.name = name
         self.macros = []  
         self.graph = graph
         self.optimizer = optimizer
@@ -68,9 +69,16 @@ class AbstractContext(object, metaclass=ABCMeta):
         """                
         tmpl = open(CNTK_TRAIN_TEMPLATE_PATH, "r").read()
         reader_config = reader.generate_config()
-        output_filename = os.path.join(self.context.directory, CNTK_OUTPUT_FILENAME)
-        return tmpl%{'modelDescription': self.graph.to_description(), 'reader':reader_config, 'outputFile':output_filename}
-    
+        model_filename = os.path.join(self.directory, 'Models', self.name)
+        tmpl_dict = {
+                'DevideId':self.device_id,
+                'ModelDescription':self.graph.to_description(),
+                'ModelModelPath': model_filename,
+                'Reader':reader_config,
+                'SGD':self.optimizer.generate_config(),
+                } 
+        return tmpl%tmpl_dict
+        
     def _generate_test_config(self, reader):
         """Generates the configuration file for the test action.
         """                
@@ -90,6 +98,7 @@ class AbstractContext(object, metaclass=ABCMeta):
         reader_config = reader.generate_config()
         output_filename = os.path.join(self.directory, CNTK_OUTPUT_FILENAME)
         tmpl_dict = {
+                'DevideId':self.device_id,
                 'Reader':reader_config,
                 'OutputFile':output_filename,
                 'ModelDescription':node.to_description()
@@ -173,7 +182,7 @@ class Context(AbstractContext):
         import glob
         out_file_wildcard = os.path.join(self.directory, CNTK_OUTPUT_FILENAME+'.*')
         out_filenames = glob.glob(out_file_wildcard)
-        if len(out_filenames)!=1:
+        if len(out_filenames) != 1:
             raise ValueError('expected exactly one file starting with "%s", but got %s'%(CNTK_OUTPUT_FILENAME, out_filenames))
 
         data = np.loadtxt(out_filenames[0])
