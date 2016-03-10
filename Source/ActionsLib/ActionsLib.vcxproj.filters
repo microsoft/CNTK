@@ -63,9 +63,6 @@
     <ClInclude Include="Actions.h">
       <Filter>Actions</Filter>
     </ClInclude>
-    <ClInclude Include="NetworkFactory.h">
-      <Filter>Actions</Filter>
-    </ClInclude>
     <ClInclude Include="IExecutionEngine.h">
       <Filter>Model Building - NDL</Filter>
     </ClInclude>

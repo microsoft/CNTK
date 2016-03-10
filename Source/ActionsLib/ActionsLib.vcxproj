@@ -139,7 +139,6 @@
     <ClInclude Include="NDLNetworkBuilder.h" />
     <ClInclude Include="NDLUtil.h" />
     <ClInclude Include="NetworkDescriptionLanguage.h" />
-    <ClInclude Include="NetworkFactory.h" />
     <ClInclude Include="SimpleNetworkBuilder.h" />
   </ItemGroup>
   <ItemGroup>
