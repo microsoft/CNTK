@@ -31,15 +31,19 @@ class ComputationNode(object):
     def __str__(self):
         return "%s / params=%s"%(self.name, self.params)
 
-    def _to_description(self, desc=None, node_counter=0):
-        if desc is None:
-            desc = []
+    def _to_description(self, desc, unrolled_nodes, node_counter=0):
         param_variable_names = []
         if self.params:
             for p_name in self.params:
                 p_value = self.__dict__[p_name]
                 if hasattr(p_value, '_to_description') and p_name:
-                    child_var, node_counter, child_desc = p_value._to_description(desc, node_counter)
+                    if p_value in unrolled_nodes:
+                        # we have seen this node already, so just retrieve its
+                        # name
+                        child_var = unrolled_nodes[p_value]
+                    else:
+                        child_var, node_counter, child_desc = p_value._to_description(desc, unrolled_nodes, node_counter)
+                        unrolled_nodes[p_value] = child_var
                     param_variable_names.append(child_var)
                 else:
                     if isinstance(p_value, bool):
@@ -60,7 +64,8 @@ class ComputationNode(object):
         return var_name, node_counter, desc
 
     def to_description(self):
-        var_name, node_counter, desc = self._to_description()
+        unrolled_nodes = {}
+        var_name, node_counter, desc = self._to_description(desc=[], unrolled_nodes=unrolled_nodes)
         return "\n".join(desc)
 
 
