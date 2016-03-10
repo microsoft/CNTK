@@ -455,6 +455,10 @@ public:
 
     void NDConvolutionForward(const Matrix<ElemType>& filter, const Matrix<int>& mpRowCol, const Matrix<int>& mpRowIwht,
                               const Matrix<int>& mpRowRun, const Matrix<int>& runs, Matrix<ElemType>& output) const;
+    void NDConvolutionBackwardData(const Matrix<ElemType>& filter, const Matrix<int>& mpRowCol, const Matrix<int>& mpRowIwht,
+                                   const Matrix<int>& mpRowRun, const Matrix<int>& runs, Matrix<ElemType>& grad) const;
+    void NDConvolutionBackwardFilter(const Matrix<ElemType>& in, const Matrix<int>& mpRowCol, const Matrix<int>& mpRowIwht,
+                                     const Matrix<int>& mpRowRun, const Matrix<int>& runs, Matrix<ElemType>& filterGrad) const;
 
 public:
     // TODO: why are these not static? And why are they here?

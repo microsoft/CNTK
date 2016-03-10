@@ -218,21 +218,21 @@ protected:
             RuntimeError("Reference convolution engine supports only CHW/cudnn layout.");
     }
 
-    void ForwardCore(size_t batchSize, const Mat& in, const Mat& filter, Mat& out, Mat& workspace) override
+    void ForwardCore(size_t /*batchSize*/, const Mat& in, const Mat& filter, Mat& out, Mat& /*workspace*/) override
     {
-        UNUSED(batchSize); UNUSED(in); UNUSED(filter); UNUSED(out); UNUSED(workspace);
         in.NDConvolutionForward(filter, m_mpRowCol, m_mpRowIwht, m_mpRowRun, m_runs, out);
     }
 
-    void BackwardDataCore(size_t batchSize, const Mat& srcGrad, const Mat& filter, Mat& grad, Mat& workspace) override
+    void BackwardDataCore(size_t /*batchSize*/, const Mat& srcGrad, const Mat& filter, Mat& grad, Mat& /*workspace*/) override
     {
-        UNUSED(batchSize); UNUSED(srcGrad); UNUSED(filter); UNUSED(grad); UNUSED(workspace);
+        srcGrad.NDConvolutionBackwardData(filter, m_mpRowCol, m_mpRowIwht, m_mpRowRun, m_runs, grad);
     }
 
-    void BackwardFilterCore(size_t batchSize, const Mat& srcGrad, const Mat& in, Mat& filter, bool allowReuse, Mat& workspace) override
+    void BackwardFilterCore(size_t /*batchSize*/, const Mat& srcGrad, const Mat& in, Mat& filterGrad, bool /*allowReuse*/, Mat& /*workspace*/) override
     {
-        UNUSED(batchSize); UNUSED(srcGrad); UNUSED(filter); UNUSED(in); UNUSED(allowReuse); UNUSED(workspace);
+        srcGrad.NDConvolutionBackwardData(in, m_mpRowCol, m_mpRowIwht, m_mpRowRun, m_runs, filterGrad);
     }
+
 private:
     static bool IsGpu(DEVICEID_TYPE deviceId)
     {
@@ -406,7 +406,7 @@ protected:
         assert(batchSize == srcGrad.GetNumCols());
     }
 
-    void BackwardFilterCore(size_t batchSize, const Mat& srcGrad, const Mat& in, Mat& filter, bool allowReuse, Mat& workspace) override
+    void BackwardFilterCore(size_t batchSize, const Mat& srcGrad, const Mat& in, Mat& filterGrad, bool allowReuse, Mat& workspace) override
     {
         size_t packedInputRows = m_filterT.w() * m_filterT.h() * m_filterT.c();
         size_t packedInputColsPerSample = m_outT.w() * m_outT.h();
@@ -428,7 +428,7 @@ protected:
 
         if (numSubBatches == 1 && allowReuse && !m_gpuSparseOpt) // reuse packed input from evaluation step if it's not changed by either subbatch or recurrent steps.
             // REVIEW alexeyk: the following makes an assumption that data in workspace was filled by Forward call and remained unchanged. Find way to enforce/verify that.
-            Matrix<ElemType>::MultiplyAndAdd(srcGradTmp, false, workspace, true, filter);
+            Matrix<ElemType>::MultiplyAndAdd(srcGradTmp, false, workspace, true, filterGrad);
         else
         {
             for (size_t i = 0; i < numSubBatches; i++)
@@ -453,9 +453,9 @@ protected:
                     Matrix<ElemType> outputGradientSubBatchReordered = Matrix<ElemType>::Zeros(smallBatchSize * m_outT.h() * m_outT.w(), m_outT.c(), outputGradientSubBatch.GetDeviceId());
                     Matrix<ElemType>::TensorShuffleScaleAndAdd(0.0f, outputGradientSubBatch.Transpose(), 1, m_outT.w(), 1, smallBatchSize * m_outT.h(), m_outT.c(), 1.0f, outputGradientSubBatchReordered, outputGradientSubBatchReordered);
 
-                    filter.Reshape(m_outT.c() * m_filterT.w(), m_inT.c());
-                    Matrix<ElemType>::ConvolveAndWeightedAdd(1, outputGradientSubBatchReordered, true, inputSubBatchSparseReordered, false, 1, filter, smallBatchSize * m_inT.h(), m_strideT.w(), m_padding, false);
-                    filter.Reshape(m_outT.c(), m_inT.c() * m_filterT.w());
+                    filterGrad.Reshape(m_outT.c() * m_filterT.w(), m_inT.c());
+                    Matrix<ElemType>::ConvolveAndWeightedAdd(1, outputGradientSubBatchReordered, true, inputSubBatchSparseReordered, false, 1, filterGrad, smallBatchSize * m_inT.h(), m_strideT.w(), m_padding, false);
+                    filterGrad.Reshape(m_outT.c(), m_inT.c() * m_filterT.w());
                 }
                 else
                 {
@@ -468,7 +468,7 @@ protected:
                                                            m_filterT.w(), m_filterT.h(), m_strideT.w(), m_strideT.h(),
                                                            m_padding);
 
-                    Matrix<ElemType>::MultiplyAndAdd(outputGradientSubBatch, false, workspace, true, filter);
+                    Matrix<ElemType>::MultiplyAndAdd(outputGradientSubBatch, false, workspace, true, filterGrad);
                 }
             }
         }

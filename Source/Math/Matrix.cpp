@@ -3992,9 +3992,13 @@ void Matrix<ElemType>::NDConvolutionForward(const Matrix<ElemType>& filter, cons
                                             const Matrix<int>& mpRowRun, const Matrix<int>& runs, Matrix<ElemType>& output) const
 {
     assert(mpRowCol.GetNumCols() == 1);
+    assert(mpRowIwht.GetNumCols() == 1);
+    assert(mpRowRun.GetNumCols() == 1);
+    assert(runs.GetNumCols() == 1);
 
     DecideAndMoveToRightDevice(*this, output);
 
+    // REVIEW alexeyk: add sparse version.
     DISPATCH_MATRIX_ON_FLAG(this,
                             this,
                             m_CPUMatrix->NDConvolutionForward(*(filter.m_CPUMatrix), *(mpRowCol.m_CPUMatrix), *(mpRowIwht.m_CPUMatrix),
@@ -4003,7 +4007,50 @@ void Matrix<ElemType>::NDConvolutionForward(const Matrix<ElemType>& filter, cons
                                                              *(mpRowRun.m_GPUMatrix), *(runs.m_GPUMatrix), *(output.m_GPUMatrix)),
                             NOT_IMPLEMENTED,
                             NOT_IMPLEMENTED);
+}
 
+template <class ElemType>
+void Matrix<ElemType>::NDConvolutionBackwardData(const Matrix<ElemType>& filter, const Matrix<int>& mpRowCol, const Matrix<int>& mpRowIwht,
+                                                 const Matrix<int>& mpRowRun, const Matrix<int>& runs, Matrix<ElemType>& grad) const
+{
+    assert(mpRowCol.GetNumCols() == 1);
+    assert(mpRowIwht.GetNumCols() == 1);
+    assert(mpRowRun.GetNumCols() == 1);
+    assert(runs.GetNumCols() == 1);
+
+    DecideAndMoveToRightDevice(*this, grad);
+
+    // REVIEW alexeyk: add sparse version.
+    DISPATCH_MATRIX_ON_FLAG(this,
+                            this,
+                            m_CPUMatrix->NDConvolutionBackwardData(*(filter.m_CPUMatrix), *(mpRowCol.m_CPUMatrix), *(mpRowIwht.m_CPUMatrix),
+                                                                   *(mpRowRun.m_CPUMatrix), *(runs.m_CPUMatrix), *(grad.m_CPUMatrix)),
+                            m_GPUMatrix->NDConvolutionBackwardData(*(filter.m_GPUMatrix), *(mpRowCol.m_GPUMatrix), *(mpRowIwht.m_GPUMatrix),
+                                                                   *(mpRowRun.m_GPUMatrix), *(runs.m_GPUMatrix), *(grad.m_GPUMatrix)),
+                            NOT_IMPLEMENTED,
+                            NOT_IMPLEMENTED);
+}
+
+template <class ElemType>
+void Matrix<ElemType>::NDConvolutionBackwardFilter(const Matrix<ElemType>& in, const Matrix<int>& mpRowCol, const Matrix<int>& mpRowIwht,
+                                                   const Matrix<int>& mpRowRun, const Matrix<int>& runs, Matrix<ElemType>& filterGrad) const
+{
+    assert(mpRowCol.GetNumCols() == 1);
+    assert(mpRowIwht.GetNumCols() == 1);
+    assert(mpRowRun.GetNumCols() == 1);
+    assert(runs.GetNumCols() == 1);
+
+    DecideAndMoveToRightDevice(*this, filterGrad);
+
+    // REVIEW alexeyk: add sparse version.
+    DISPATCH_MATRIX_ON_FLAG(this,
+                            this,
+                            m_CPUMatrix->NDConvolutionBackwardFilter(*(in.m_CPUMatrix), *(mpRowCol.m_CPUMatrix), *(mpRowIwht.m_CPUMatrix),
+                                                                     *(mpRowRun.m_CPUMatrix), *(runs.m_CPUMatrix), *(filterGrad.m_CPUMatrix)),
+                            m_GPUMatrix->NDConvolutionBackwardFilter(*(in.m_GPUMatrix), *(mpRowCol.m_GPUMatrix), *(mpRowIwht.m_GPUMatrix),
+                                                                     *(mpRowRun.m_GPUMatrix), *(runs.m_GPUMatrix), *(filterGrad.m_GPUMatrix)),
+                            NOT_IMPLEMENTED,
+                            NOT_IMPLEMENTED);
 }
 
 #pragma region Static BLAS Functions

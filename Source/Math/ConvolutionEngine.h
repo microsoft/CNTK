@@ -48,7 +48,7 @@ public:
 
     void BackwardData(size_t batchSize, const Mat& srcGrad, const Mat& filter, Mat& grad, Mat& workspace);
 
-    void BackwardFilter(size_t batchSize, const Mat& srcGrad, const Mat& in, Mat& filter, bool allowReuse, Mat& workspace);
+    void BackwardFilter(size_t batchSize, const Mat& srcGrad, const Mat& in, Mat& filterGrad, bool allowReuse, Mat& workspace);
 
     static std::unique_ptr<ConvolutionEngine<ElemType>> Create(ConvolveGeometryPtr geometry, DEVICEID_TYPE deviceId, ImageLayoutKind imageLayout,
                                                                size_t maxTempMemSizeInSamples, ConvolutionEngineKind enabledEngines = ConvolutionEngineKind::All);
@@ -68,7 +68,7 @@ protected:
 
     virtual void BackwardDataCore(size_t batchSize, const Mat& srcGrad, const Mat& filter, Mat& grad, Mat& workspace) = 0;
 
-    virtual void BackwardFilterCore(size_t batchSize, const Mat& srcGrad, const Mat& in, Mat& filter, bool allowReuse, Mat& workspace) = 0;
+    virtual void BackwardFilterCore(size_t batchSize, const Mat& srcGrad, const Mat& in, Mat& filterGrad, bool allowReuse, Mat& workspace) = 0;
 
 protected:
     ConvolveGeometryPtr m_geometry;

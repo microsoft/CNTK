@@ -10,15 +10,15 @@
 namespace Microsoft { namespace MSR { namespace CNTK {
 
 // Notes:
-// * ConvolveGeometry represents the application of one or more rectangular "kernels" (all of the same size)
+// * ConvolveGeometry represents the application of one or more rectangular "filters" (all of the same size)
 //   to a rectangular input to produce a rectangular output.
 // * A "cell" in the rectangular input is identified by a single coordinate called a "col" (for column).
 // * A "cell" in the rectangular output is identified by a single coordinate called a "row".
-// * The kernels may involve weights, in which case MpRowIwht indicates the starting index of the weights
+// * The filters may involve weights, in which case MpRowIwht indicates the starting index of the weights
 //   used for a given output cell.
 // The overall idea of ConvolveGeometry is to precompute maps that can be used to apply convolutions of
-// arbitrary configuration and dimension. In such case the generic implementation becomes very simple and invariant
-// wrt convolution configuration and dimensionality. For specific cases like 2D convolutions and full sharing,
+// arbitrary configurations and dimensions. In such case the generic implementation becomes very simple and invariant
+// wrt convolution configuration and dimensionality. For specific cases like 2D/3D convolutions and full sharing,
 // highly optimized implementations (e.g. cuDNN) are used.
 class ConvolveGeometry final
 {
@@ -28,7 +28,7 @@ public:
 
     const TensorShape& InputShape() const { return m_inputShape; }
     const TensorShape& OutputShape() const { return m_outputShape; }
-    const TensorShape& KernelShape() const { return m_kernelShape; }
+    const TensorShape& KernelShape() const { return m_filterShape; }
     const TensorShape& MapCount() const { return m_mapCount; }
     const TensorShape& Stride() const { return m_stride; }
     const BoolVec& Sharing() const { return m_sharing; }
@@ -54,30 +54,30 @@ public:
     // This ensures that accessing the corresponding neuron value doesn't fault and that
     // backprop operations write the correct value last (any previous writes won't change
     // the value).
-    // NOTE: The first (zeroth) run is always the "full" kernel run. Also, MpRowRun can be empty,
-    // indicating that all values are zero (all outputs use the "full" kernel run).
+    // NOTE: The first (zeroth) run is always the "full" filter run. Also, MpRowRun can be empty,
+    // indicating that all values are zero (all outputs use the "full" filter run).
     const IntVec& MpRowRun() const { return m_mpRowRun; }
     const IntVec& Runs() const { return m_runs; }
 
     // Maps from a "row" (index of output cell) to its starting index in Indices. Note that "Runs" is intended
-    // for kernels that have weights, while "Indices" is intended for kernels that don't need to access weights.
+    // for filters that have weights, while "Indices" is intended for filters that don't need to access weights.
     // As a result, the encoding in Indices is simpler and more direct.
     // A run in Indices consists of:
     // * item count
     // * relative indices into source (item count of these)
-    // NOTE: The first run of indices is always the "full" kernel run. Also, MpRowIndices can be empty,
-    // indicating that all values are zero (all outputs use the "full" kernel run).
+    // NOTE: The first run of indices is always the "full" filter run. Also, MpRowIndices can be empty,
+    // indicating that all values are zero (all outputs use the "full" filter run).
     const IntVec&  MpRowIndices() const { return m_mpRowIndices; }
     const IntVec&  Indices() const { return m_indices; }
 
-    ConvolveGeometry(const TensorShape& inputShape, const TensorShape& kernelShape, const TensorShape& mapCount, const TensorShape& stride,
+    ConvolveGeometry(const TensorShape& inputShape, const TensorShape& filterShape, const TensorShape& mapCount, const TensorShape& stride,
                      const BoolVec& sharing, const BoolVec& autoPad, const TensorShape& lowerPad, const TensorShape& upperPad)
-                     : m_inputShape(inputShape), m_kernelShape(kernelShape), m_mapCount(mapCount), m_stride(stride), m_sharing(sharing),
+                     : m_inputShape(inputShape), m_filterShape(filterShape), m_mapCount(mapCount), m_stride(stride), m_sharing(sharing),
                      m_autoPad(autoPad), m_lowerPad(lowerPad), m_upperPad(upperPad)
     {
         // Note: this ctor is a bit long so sit back and relax.
 
-        assert(m_inputShape.GetRank() == m_kernelShape.GetRank());
+        assert(m_inputShape.GetRank() == m_filterShape.GetRank());
         assert(m_mapCount.GetRank() == 1 || m_mapCount.GetRank() == m_inputShape.GetRank());
         assert(m_stride.GetRank() == 1 || m_stride.GetRank() == m_inputShape.GetRank());
         assert(m_sharing.size() == 1 || m_sharing.size() == m_inputShape.GetRank());
@@ -85,17 +85,17 @@ public:
         assert(m_lowerPad.GetRank() == 1 || m_lowerPad.GetRank() == m_inputShape.GetRank());
         assert(m_upperPad.GetRank() == 1 || m_upperPad.GetRank() == m_inputShape.GetRank());
         
-        m_outputShape = ComputeOutputShape(m_inputShape, m_kernelShape, m_mapCount, m_stride,
+        m_outputShape = ComputeOutputShape(m_inputShape, m_filterShape, m_mapCount, m_stride,
                                            m_sharing, m_autoPad, m_lowerPad, m_upperPad);
         assert(m_inputShape.GetRank() == m_outputShape.GetRank());
 
         size_t dimCount = inputShape.GetRank();
-        size_t kernelSize = kernelShape.GetNumElements();
+        size_t filterSize = filterShape.GetNumElements();
 
-        // Compute the total number of kernels.
-        size_t kernelCount = 1;
+        // Compute the total number of filters.
+        size_t filterCount = 1;
         for (size_t i = 0; i < dimCount; i++)
-            kernelCount *= !GetSharing(i) ? m_outputShape[i] : GetMapCount(i);
+            filterCount *= !GetSharing(i) ? m_outputShape[i] : GetMapCount(i);
 
         // Compute the "Start" indices.
         m_start.resize(dimCount);
@@ -118,11 +118,11 @@ public:
             int hi = GetAutoPad(i) ? 0 : (int)m_upperPad[m_upperPad.size() == 1 ? 0 : i];
             if (lo != 0 || hi != 0)
             {
-                assert(extra + lo + hi + 1 == m_kernelShape[i]);
-                // Compute the number of cells on the left and right parts of the kernel,
-                // not counting the "kernel-center" cell. If m_kernelShape[i] is even, the extra cell is
+                assert(extra + lo + hi + 1 == m_filterShape[i]);
+                // Compute the number of cells on the left and right parts of the filter,
+                // not counting the "filter-center" cell. If m_filterShape[i] is even, the extra cell is
                 // placed on the right (the center is shifted to the left).
-                int right = (int)m_kernelShape[i] - 1;
+                int right = (int)m_filterShape[i] - 1;
                 int left = right / 2;
                 right -= left;
                 assert(left <= right);
@@ -139,14 +139,14 @@ public:
 #ifdef _DEBUG
                 // If we're padding then extra should be covered.
                 bool padded = GetAutoPad(i);
-                assert(!padded || extra + 1 <= m_kernelShape[i]);
+                assert(!padded || extra + 1 <= m_filterShape[i]);
                 // If we're not padding then, we should stay within the input dimension.
-                assert(padded || extra + 1 >= m_kernelShape[i]);
+                assert(padded || extra + 1 >= m_filterShape[i]);
 
-                // Compute the number of cells on the left and right parts of the kernel,
-                // not counting the "kernel-center" cell. If m_kernelShape[i] is even, the extra cell is
+                // Compute the number of cells on the left and right parts of the filter,
+                // not counting the "filter-center" cell. If m_filterShape[i] is even, the extra cell is
                 // placed on the right (the center is shifted to the left).
-                int right = (int)m_kernelShape[i] - 1;
+                int right = (int)m_filterShape[i] - 1;
                 int left = right / 2;
                 right -= left;
                 assert(0 <= left);
@@ -164,27 +164,27 @@ public:
             }
 
             m_startIndex = m_startIndex * (int)m_inputShape[i] + m_start[i];
-            m_originIndex = m_originIndex * (int)m_inputShape[i] + ((int)m_kernelShape[i] - 1) / 2;
+            m_originIndex = m_originIndex * (int)m_inputShape[i] + ((int)m_filterShape[i] - 1) / 2;
         }
         
-        // Compute support, mapping from the index into the kernel to offset into source.
-        // Support consists of the column deltas of the kernels, as offsets from MpRowCol[row].
-        IntVec support(kernelSize);
-        std::vector<IntVec> kernelCoords(kernelSize);
-        for (int idx = 0; idx < kernelSize; idx++)
+        // Compute support, mapping from the index into the filter to offset into source.
+        // Support consists of the column deltas of the filters, as offsets from MpRowCol[row].
+        IntVec support(filterSize);
+        std::vector<IntVec> filterCoords(filterSize);
+        for (int idx = 0; idx < filterSize; idx++)
         {
-            kernelCoords[idx].resize(dimCount);
+            filterCoords[idx].resize(dimCount);
             int ivSrc = 0;
             int factor = 1;
             int cur = idx;
             for (size_t i = 0; i < dimCount; i++)
             {
                 assert(cur >= 0);
-                int d = (int)m_kernelShape[i];
+                int d = (int)m_filterShape[i];
                 assert(d > 0);
                 int coord = cur % d;
                 cur /= d;
-                kernelCoords[idx][i] = coord;
+                filterCoords[idx][i] = coord;
                 ivSrc += factor * coord;
                 factor *= (int)m_inputShape[i];
             }
@@ -207,23 +207,23 @@ public:
         int keyInterior = 0;
         for (size_t i = 0; i < dimCount; i++)
         {
-            int width = (int)m_kernelShape[i];
+            int width = (int)m_filterShape[i];
             keyInterior = keyInterior * width + (width - 1) / 2;
         }
 
-        m_runs.resize(2 * kernelSize + 2, -1);
-        m_indices.resize(kernelSize + 1);
+        m_runs.resize(2 * filterSize + 2, -1);
+        m_indices.resize(filterSize + 1);
         m_runs[0] = 0; // Skip count
-        m_runs[1] = (int)kernelSize; // Count of entries
-        m_indices[0] = (int)kernelSize;
-        for (size_t i = 0; i < kernelSize; i++)
+        m_runs[1] = (int)filterSize; // Count of entries
+        m_indices[0] = (int)filterSize;
+        for (size_t i = 0; i < filterSize; i++)
         {
             m_runs[2 + i] = support[i];
             m_indices[1 + i] = support[i];
         }
 
         // Working buffer for masks.
-        IntVec masks(kernelSize);
+        IntVec masks(filterSize);
 
         // Map from key to pair of starting locations in Runs and Indices.
         std::map<int, std::pair<int, int>>  mpkeystarts;
@@ -232,7 +232,7 @@ public:
         IntVec dkey(dimCount);
         for (size_t row = 0; row < outputSize; row++)
         {
-            // Compute the kernel number, column, and key.
+            // Compute the filter number, column, and key.
             // REVIEW alexeyk: Seems like there should be a simpler and faster way, without starting
             // from scratch for each output (row)....
             int kern = 0;
@@ -269,7 +269,7 @@ public:
                 col += factorCol * coord;
                 factorCol *= (int)m_inputShape[i];
 
-                int width = (int)m_kernelShape[i];
+                int width = (int)m_filterShape[i];
                 int half = (width - 1) / 2;
                 int min = coord - half;
                 int lim = min + width;
@@ -286,7 +286,7 @@ public:
             }
             assert(cur == 0);
             assert(0 <= kern);
-            assert(kern < kernelCount);
+            assert(kern < filterCount);
             assert(0 <= col);
             assert(col < m_inputShape.GetNumElements());
 
@@ -297,9 +297,9 @@ public:
                 mpkeystarts[key] = starts;
 
                 int indexCount = 0;
-                for (int idx = 0; idx < kernelSize; idx++)
+                for (int idx = 0; idx < filterSize; idx++)
                 {
-                    const auto& coords = kernelCoords[idx];
+                    const auto& coords = filterCoords[idx];
                     int mask = 0;
                     for (int i = (int)dimCount; ; )
                     {
@@ -312,7 +312,7 @@ public:
                         int k = dkey[i] + coords[i];
                         if (k < 0)
                             break;
-                        if (k >= m_kernelShape[i])
+                        if (k >= m_filterShape[i])
                             break;
                     }
                     assert(mask == 0 || mask == -1);
@@ -323,7 +323,7 @@ public:
                 int skip = 0;
                 while (masks[skip] == 0)
                     skip++;
-                int count = (int)kernelSize;
+                int count = (int)filterSize;
                 while (masks[count - 1] == 0)
                     count--;
 
@@ -363,9 +363,9 @@ public:
                 m_mpRowIndices[row] = (*startsIter).second.second;
             }
             assert(0 <= kern);
-            assert(kern < kernelCount);
+            assert(kern < filterCount);
             m_mpRowCol[row] = col;
-            m_mpRowIwht[row] = kern * (int)kernelSize;
+            m_mpRowIwht[row] = kern * (int)filterSize;
         }
     }
 
@@ -404,7 +404,7 @@ public:
         if (!GetAutoPad(dim))
             return (int)m_lowerPad[m_lowerPad.size() == 1 ? 0 : dim];
 
-        int kernSize = (int)m_kernelShape[dim];
+        int kernSize = (int)m_filterShape[dim];
         int inpSize = (int)m_inputShape[dim];
         int outSize = (int)m_outputShape[dim];
         int stride = (int)GetStride(dim);
@@ -418,11 +418,11 @@ public:
         return -(center - (kernSize - 1) / 2);
     }
 
-    static TensorShape ComputeOutputShape(const TensorShape& inputShape, const TensorShape& kernelShape, const TensorShape& mapCount, const TensorShape& stride,
+    static TensorShape ComputeOutputShape(const TensorShape& inputShape, const TensorShape& filterShape, const TensorShape& mapCount, const TensorShape& stride,
                                           const BoolVec& sharing, const BoolVec& autoPad, const TensorShape& lowerPad, const TensorShape& upperPad)
     {
-        if (inputShape.GetRank() != kernelShape.GetRank())
-            InvalidArgument("Convolution input and kernel tensors must have the same rank.");
+        if (inputShape.GetRank() != filterShape.GetRank())
+            InvalidArgument("Convolution input and filter tensors must have the same rank.");
         if (mapCount.GetRank() != 1 && inputShape.GetRank() != mapCount.GetRank())
             InvalidArgument("Convolution map tensor must have rank 1 or the same as the input tensor.");
         if (stride.GetRank() != 1 && inputShape.GetRank() != stride.GetRank())
@@ -440,12 +440,12 @@ public:
         for (size_t i = 0; i < inputShape.GetRank(); i++)
         {
             assert(inputShape[i] >= 1);
-            if (kernelShape[i] > inputShape[i])
-                InvalidArgument("NDConvolution operation requires that kernel dim %d <= input dim %d.", (int)kernelShape[i], (int)inputShape[i]);
+            if (filterShape[i] > inputShape[i])
+                InvalidArgument("NDConvolution operation requires that filter dim %d <= input dim %d.", (int)filterShape[i], (int)inputShape[i]);
 
             size_t delta = stride[stride.GetRank() == 1 ? 0 : i];
-            if (delta > kernelShape[i])
-                InvalidArgument("NDConvolution operation requires that stride %d <= kernel dim %d.", (int)delta, (int)kernelShape[i]);
+            if (delta > filterShape[i])
+                InvalidArgument("NDConvolution operation requires that stride %d <= filter dim %d.", (int)delta, (int)filterShape[i]);
             
             size_t dim = inputShape[i];
             bool autoPadCur = autoPad[autoPad.size() == 1 ? 0 : i];
@@ -453,20 +453,20 @@ public:
             size_t hi = upperPad[upperPad.size() == 1 ? 0 : i];
             if (autoPadCur)
             {
-                dim += kernelShape[i] - 1;
+                dim += filterShape[i] - 1;
             }
             else
             {
                 dim += lo + hi;
             }
-            size_t dimOut = (dim - kernelShape[i]) / delta + 1;
-            // When LowerPad and/or UpperPad are specified (i.e. > 0), we insist that the kernel applications
+            size_t dimOut = (dim - filterShape[i]) / delta + 1;
+            // When LowerPad and/or UpperPad are specified (i.e. > 0), we insist that the filter applications
             // fill the entire space.
             if (!autoPadCur && (lo > 0 || hi > 0))
             {
-                size_t size = (dimOut - 1) * delta + kernelShape[i];
+                size_t size = (dimOut - 1) * delta + filterShape[i];
                 if (size != dim)
-                    InvalidArgument("NDConvolution requires that kernel fills the entire space if auto-padding is disabled.");
+                    InvalidArgument("NDConvolution requires that filter fills the entire space if auto-padding is disabled.");
             }
             if (mapCount.size() > 1)
                 dimOut *= mapCount[i];
@@ -510,7 +510,7 @@ public:
 private:
     TensorShape m_inputShape;
     TensorShape m_outputShape;
-    TensorShape m_kernelShape;
+    TensorShape m_filterShape;
     TensorShape m_mapCount;
     TensorShape m_stride;
     BoolVec m_sharing;
@@ -530,11 +530,11 @@ private:
     IntVec m_runs;
     IntVec m_mpRowIndices;
     IntVec m_indices;
-    // The indices of the first ("top-left-most") "kernel-center" cell in the source.
+    // The indices of the first ("top-left-most") "filter-center" cell in the source.
     IntVec m_start;
     int m_startIndex;
-    // When the first kernel cell is aligned with the first source cell, this is the index of the input cell that
-    // is aligned with the "kernel-center" cell. Indices in "Runs" and "Indices" are relative to OriginIndex.
+    // When the first filter cell is aligned with the first source cell, this is the index of the input cell that
+    // is aligned with the "filter-center" cell. Indices in "Runs" and "Indices" are relative to OriginIndex.
     int m_originIndex;
 };
 

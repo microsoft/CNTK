@@ -285,7 +285,7 @@ protected:
                                                 ptr(workspace), m_backDataAlgo.Algo.memory, &C::One, m_inT, ptr(grad)));
     }
 
-    void BackwardFilterCore(size_t batchSize, const Mat& srcGrad, const Mat& in, Mat& filter, bool /*allowReuse*/, Mat& workspace) override
+    void BackwardFilterCore(size_t batchSize, const Mat& srcGrad, const Mat& in, Mat& filterGrad, bool /*allowReuse*/, Mat& workspace) override
     {
         // Find best algo and allocate temp buffer, if needed.
         auto finder = [this](int& calgo, cudnnConvolutionBwdFilterAlgoPerf_t algoPerf[MaxAlgoCount]) -> cudnnStatus_t
@@ -297,7 +297,7 @@ protected:
             workspace.Resize((m_backFiltAlgo.Algo.memory + sizeof(ElemType) - 1) / sizeof(ElemType), 1);
         // Compute gradients with respect to the output tensor (data).
         CUDNN_CALL(cudnnConvolutionBackwardFilter(m_cudnn, &C::One, m_inT, ptr(in), m_outT, ptr(srcGrad), m_conv, m_backFiltAlgo.Algo.algo,
-                                                  ptr(workspace), m_backFiltAlgo.Algo.memory, &C::One, m_filterT, ptr(filter)));
+                                                  ptr(workspace), m_backFiltAlgo.Algo.memory, &C::One, m_filterT, ptr(filterGrad)));
     }
 
 private:
