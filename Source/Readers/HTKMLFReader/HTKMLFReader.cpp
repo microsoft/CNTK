@@ -168,7 +168,7 @@ void HTKMLFReader<ElemType>::PrepareForTrainingOrTesting(const ConfigRecordType&
             InvalidArgument("contextFrames must have 1 or 2 values specified, found %d", (int) contextWindow.size());
         }
 
-        if (expandToUtt && (numContextLeft[i] != 0 || numContextRight[1] != 0))
+        if (expandToUtt && (numContextLeft[i] != 0 || numContextRight[i] != 0))
             RuntimeError("contextWindow expansion not permitted when expandToUtterance=true");
 
         // update m_featDims to reflect the total input dimension (featDim x contextWindow), not the native feature dimension
