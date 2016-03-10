@@ -445,11 +445,11 @@ $(SPARSEPCREADER): $(SPARSEPCREADER_OBJ) | $(CNTKMATH_LIB)
 ########################################
 
 CNTKTEXTFORMATREADER_SRC =\
-	$(SOURCEDIR)/Readers/TextReader/Exports.cpp \
-	$(SOURCEDIR)/Readers/TextReader/Indexer.cpp \
-	$(SOURCEDIR)/Readers/TextReader/TextParser.cpp \
-	$(SOURCEDIR)/Readers/TextReader/TextReader.cpp \
-	$(SOURCEDIR)/Readers/TextReader/TextConfigHelper.cpp \
+	$(SOURCEDIR)/Readers/CNTKTextFormatReader/Exports.cpp \
+	$(SOURCEDIR)/Readers/CNTKTextFormatReader/Indexer.cpp \
+	$(SOURCEDIR)/Readers/CNTKTextFormatReader/TextParser.cpp \
+	$(SOURCEDIR)/Readers/CNTKTextFormatReader/TextReader.cpp \
+	$(SOURCEDIR)/Readers/CNTKTextFormatReader/TextConfigHelper.cpp \
 
 CNTKTEXTFORMATREADER_OBJ := $(patsubst %.cpp, $(OBJDIR)/%.o, $(CNTKTEXTFORMATREADER_SRC))
 

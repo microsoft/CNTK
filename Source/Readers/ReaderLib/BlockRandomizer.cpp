@@ -13,7 +13,6 @@
 #include "DataReader.h"
 #include <random>
 
-#include <omp.h>
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -55,7 +54,7 @@ void BlockRandomizer::RandomizeChunks()
 
     std::mt19937 m_rng(static_cast<int>(m_sweep));
 
-        std::shuffle(randomizedChunkIndices.begin(), randomizedChunkIndices.end(), m_rng);
+    std::shuffle(randomizedChunkIndices.begin(), randomizedChunkIndices.end(), m_rng);
 
     // Place randomized chunks on global time line
     m_randomizedChunks.clear();
@@ -106,12 +105,12 @@ void BlockRandomizer::RandomizeChunks()
     m_sequencePositionToChunkIndex.clear();
     m_sequencePositionToChunkIndex.reserve(m_numSequences);
     for (size_t k = 0; k < m_numChunks; k++)
-{
+    {
         const size_t numSequences =
             m_randomizedChunks[k + 1].m_info.m_sequencePositionStart -
             m_randomizedChunks[k].m_info.m_sequencePositionStart;
         for (size_t i = 0; i < numSequences; i++)
-    {
+        {
             m_sequencePositionToChunkIndex.push_back(k);
         }
     }
@@ -238,8 +237,8 @@ BlockRandomizer::BlockRandomizer(int verbosity,
     size_t randomizationRangeInSamples,
     IDataDeserializerPtr deserializer,
     DistributionMode distributionMode,
-    bool ) :
-    m_verbosity(verbosity),
+    bool ) 
+    : m_verbosity(verbosity),
     m_randomizationRangeInSamples(randomizationRangeInSamples),
     m_deserializer(deserializer),
     m_distributionMode(distributionMode),
@@ -336,32 +335,31 @@ bool BlockRandomizer::GetNextSequenceDescriptions(size_t sampleCount, SequenceDe
     assert(m_numberOfWorkers == 1); // TODO needs implementation
 
     while (m_samplePositionInEpoch < nextSamplePositionInEpoch)
-            {
+    {
         RandomizeIfNewSweepIsEntered();
 
-                const auto& seqDesc = m_randomTimeline[m_sequencePositionInSweep];
-
+        const auto& seqDesc = m_randomTimeline[m_sequencePositionInSweep];
         size_t workItemId;
 
         if (m_distributionMode == DistributionMode::chunks)
-                    {
+        {
             workItemId = seqDesc.m_chunkId;
         }
         else 
-                        {
+        {
             assert(m_distributionMode == DistributionMode::sequences);
             workItemId = seqDesc.m_id;
-                        }
+        }
         
         if ((workItemId % m_numberOfWorkers) == m_workerRank)
         {
             // Got one, collect it
             sequenceDescriptions.push_back(m_deserializer->GetSequenceDescriptions()[seqDesc.m_id]);
-                    }
-
-                m_samplePositionInEpoch += seqDesc.m_numberOfSamples;
-                m_sequencePositionInSweep++;
         }
+
+        m_samplePositionInEpoch += seqDesc.m_numberOfSamples;
+        m_sequencePositionInSweep++;
+    }
 
     // TODO: fix me.
     //assert(m_samplePositionInEpoch == nextSamplePositionInEpoch);    

@@ -374,7 +374,7 @@ private:
     size_t m_numFramesDeclared;
     size_t m_numGapFrames;
 
-    // Lookup tables for determining whether any sequence at time t is a boundary or gap.
+    // Lookup tables for determining whether any sequence at time t is a identical layouts, do noboundary or gap.
     // An optional time delay can be given, then the test is whether going from t to (t + time delay) crosses a boundary.
     // The purpose is for knowing when to reset state of a recurrent node.
     //
@@ -793,12 +793,10 @@ static inline std::pair<size_t, size_t> ColumnRangeWithMBLayoutFor(size_t numCol
         // Currently, the only 'outer' loop we have is to have no layout.
         if (fr.m_broadcastAllowed && !pMBLayout && numCols == 1)
             return std::pair<size_t, size_t>(0, numCols);
-        if (fr.m_pMBLayout && pMBLayout && *fr.m_pMBLayout == *pMBLayout)
-            // LogicError("DataFor: fr's MBLayout inconsistent with matrix. They are compatible though--are you missing a ReconcileMBLayout operation?");
-            ; // Nodes have different pointers, but identical layouts, do nothing.
-        else
-            // TODO: N:M relationships between inputs?
+        if (fr.m_pMBLayout && pMBLayout && *fr.m_pMBLayout != *pMBLayout)
+            // TODO: N:M relationships between inputs
             LogicError("DataFor: fr's MBLayout inconsistent with matrix");
+           
     }
     // if FrameRange refers to whole minibatch (map mode)
     // or if we don't even have a layout

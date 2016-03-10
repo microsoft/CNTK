@@ -53,15 +53,12 @@ class StreamMinibatchInputs
 {
     typedef map<std::wstring, MatrixBasePtr> MapType;
     MapType matrices;
-    map<std::wstring, MBLayoutPtr> layouts;
-   // TODO: replace all of the above with
-   // typedef map<std::wstring, std::pair<MatrixBasePtr, MBLayoutPtr>> InputType;
-   // InputType m_input;
+    map<std::wstring, MBLayoutPtr> layouts; // TODO: refactor
 public:
     void AddInput(const std::wstring& nodeName, const MatrixBasePtr& matrix) { AddInputMatrix(nodeName, matrix); } // use this where entire entry is copied (UCIFastReader::GetMinibatch() async)
     // TODO: GetInput() will return a struct
     // access to matrix entries
-    // TODO: merge both AddInputXXX into a single AddInput;
+    // TODO: refactor
     void AddInputMatrix(const std::wstring& nodeName, const MatrixBasePtr& matrix) { matrices[nodeName] = matrix; }   
     void AddInputLayout(const std::wstring& nodeName, const MBLayoutPtr& layout) { layouts[nodeName] = layout; }
     bool HasInput(const std::wstring& nodeName) const { return matrices.find(nodeName) != matrices.end(); }

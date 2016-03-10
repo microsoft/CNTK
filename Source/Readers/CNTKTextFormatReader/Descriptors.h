@@ -17,8 +17,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     struct StreamDescriptor : StreamDescription 
     {
         std::string m_alias; // corresponding short name used in the input data (only relevant for input streams)
-        // TODO: rename to m_sampleDimension
-        size_t m_sampleSize; // number of elements in the sample (same as m_sampleLayout->GetNumElements())
+        size_t m_sampleDimension; // number of elements in the sample (same as m_sampleLayout->GetNumElements())
     };
 
     // Sequence metadata
@@ -53,9 +52,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         Index(bool hasSequenceIds, 
             std::vector<SequenceDescriptor> timeline,
             std::vector<ChunkDescriptor> chunks) 
-            : m_hasSequenceIds(hasSequenceIds),
-            m_timeline(timeline),
-            m_chunks(chunks)
+            : m_hasSequenceIds(hasSequenceIds), m_timeline(timeline), m_chunks(chunks)
         {
         }
 

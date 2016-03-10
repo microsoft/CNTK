@@ -61,14 +61,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             trainSetDataReader.GetMinibatch4SE(*latticeinput, *uids, *boundaries, *extrauttmap);
         }
 
-        // TODO: remove this
+        // TODO: move this into shim for the old readers.
+        // New readers will reset this to (0,0) (they cannot modify the pointer itself). 
         // get layout meta-data
         trainSetDataReader.CopyMBLayoutTo(pMBLayout);
 
-        // TODO: this needs to be updated.
+        // TODO: move this into shim for the old readers.
         // decimate if needed. Decimation happens in-place.
         if (!useDistributedMBReading && useParallelTrain)
+        {
+            assert(!(pMBLayout->GetNumParallelSequences() == 0 && pMBLayout->GetNumTimeSteps()==0));
             DecimateMinibatchInPlace<ElemType>(inputMatrices, g_mpi->NumNodesInUse(), g_mpi->CurrentNodeRank(), net->GetMBLayoutPtr());
+        }
 
         // reader will have resized input node's m_value directly. Nodes must be notified to do necessary internal state updates from that.
         // TODO: This is a stopgap. SGD will at some point change from sets of matrices to sets of nodes. Then this will become much simpler.
