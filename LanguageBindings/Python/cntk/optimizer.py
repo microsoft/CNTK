@@ -23,10 +23,7 @@ class SGD(dict):
         If you want your learning rate to vary in function of the minibatch size,
         you can use  learningRatesPerSample  instead of  learningRatesPerMB . This
         will automatically increase the learning rate for the minibatch when the
-        minibatch size increases, that is, the value defined here will be multiplied
-        by the minibatch size to get the learning rate. You can use different values
-        for different epochs, e.g., 0.008*10:0.002 means use the learning rate 0.008
-        for the first 10 epochs and then 0.002 for the rest. 
+        minibatch size increases. 
         
         :param momentum_per_mb: The default value is 0.9. Different values can
         be given to different epochs. It is important to note that CNTK has a particular
@@ -49,3 +46,9 @@ class SGD(dict):
         self["momentumPerSample"] = momentum_per_sample
         self["maxEpochs"] = max_epochs
         self["dropoutRate"] = dropout_rate
+        
+    def generate_config(self):
+        """Generate the SGD configuration block
+        """
+        
+        

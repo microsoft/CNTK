@@ -27,43 +27,41 @@ class UCIFastReader(AbstractReader):
     def __init__(self, file, features_dim, labels_dim, features_start, labels_start, \
                 num_of_classes, label_mapping_file, custom_delimiter = None):
         """ Reader constructor    
-        """    
-            
-        self["readerType"] = self.__class__.__name__
-        self["file"] = file 
-        self["featuresDim"] = features_dim
-        self["labelsDim"] = labels_dim
-        self["featuresStart"] = features_start
-        self["labelsStart"] = labels_start
-        self["numOfClasses"] = num_of_classes          
-        self["labelMappingFile"] = label_mapping_file
+        """                
+        self["ReaderType"] = self.__class__.__name__
+        self["File"] = file 
+        self["FeaturesDim"] = features_dim
+        self["LabelsDim"] = labels_dim
+        self["FeaturesStart"] = features_start
+        self["LabelsStart"] = labels_start
+        self["NumOfClasses"] = num_of_classes          
+        self["LabelMappingFile"] = label_mapping_file
         if (custom_delimiter is not None):
-            self["customDelimiter"] = 'customDelimiter = "{0}"'.format(custom_delimiter)
+            self["CustomDelimiter"] = 'customDelimiter = "{0}"'.format(custom_delimiter)
         else:
-            self["customDelimiter"] = None
+            self["CustomDelimiter"] = None
 
     def generate_config(self):
         """Generate the reader configuration block
         """
         template = '''
-        		readerType = "%(readerType)s"
-        		file = "%(file)s"
+        		readerType = "%(ReaderType)s"
+        		file = "%(File)s"
         		randomize = "none"
         		verbosity = 1          
-               %(customDelimiter)s
+               %(CustomDelimiter)s
                
         		features=[
-        			start = "%(featuresStart)s"
-        			dim = "%(featuresDim)s"
+        			start = "%(FeaturesStart)s"
+        			dim = "%(FeaturesDim)s"
         		]
         	
         		labels=[
-        			start = "%(labelsStart)s"
-        			dim = "%(labelsDim)s"		          
-                    labelDim="%(numOfClasses)s"        			
-                    labelMappingFile="%(labelMappingFile)s" 
-        		]
-        '''
+        			start = "%(LabelsStart)s"
+        			dim = "%(LabelsDim)s"		          
+                    labelDim="%(NumOfClasses)s"        			
+                    labelMappingFile="%(LabelMappingFile)s" 
+        		]'''
                             
         config = template%self
         return config 

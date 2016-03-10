@@ -100,8 +100,6 @@ class ComputationNode(object):
         var_name, node_counter, desc = self._to_description(desc=[], unrolled_nodes=unrolled_nodes)
         return "\n".join(desc)
 
-
-
 class Label(ComputationNode):
     def __init__(self, dims):
         super(Label, self).__init__('Input', params=('dims', 'tag'))
