@@ -1666,8 +1666,12 @@ public:
 
     void BackpropTo(const size_t inputIndex, const FrameRange& fr) override
     {
-        if (m_eval)
-            LogicError("BatchNormalization does not compute derivatives in inference mode.");
+        static bool m_evalWarningIssued = false;  //make sure we only print warning once
+        if (m_eval && !m_evalWarningIssued)
+        {
+            fprintf(stderr, "WARNING: You turned BatchNormalization to evaluation mode during training. Please make sure this is intended.\n");
+            m_evalWarningIssued = true;
+        }
 
         if (inputIndex == 0) // derivative with respect to the input.
         {
