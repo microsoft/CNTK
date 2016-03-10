@@ -11,6 +11,18 @@ class ComputationNode(object):
     def __radd__(self, other):
         return Plus(other, self)
 
+    def __sub__(self, other):
+        return Minus(self, other)
+
+    def __rsub__(self, other):
+        return Minus(other, self)
+
+    def __mul__(self, other):
+        return ElementTimes(self, other)
+
+    def __rmul__(self, other):
+        return ElementTimes(other, self)
+
     def __matmul__(self, other):
         # NOTE supported in Python 3.5
         return Times(self, other)
@@ -18,6 +30,26 @@ class ComputationNode(object):
     def __rmatmul__(self, other):
         # NOTE supported in Python 3.5
         return Times(other, self)
+
+    def __abs__(self):
+        return Abs(self)
+
+    def __getitem__(self, so):
+        if so.stop == None:
+            raise ValueError('The stop index has to be provided')
+
+        if isinstance(so, int):
+            return RowSlice(self, so, 1)
+
+        elif isinstance(so, slice):
+            if so.step not in {1, None}:
+                raise ValueError("RowSlice does not support strides")
+
+            start = so.start or 0
+
+            return RowSlice(self, start, so.stop - start)
+
+
 
     # TODO more __operators__
 
