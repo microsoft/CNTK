@@ -402,8 +402,8 @@ public:
                                                    const size_t outputWidth, const size_t outputHeight, const size_t outputSizePerSample,
                                                    const size_t windowWidth, const size_t windowHeight, const size_t horizontalSubsample, const size_t verticalSubsample);
 
-    void NDConvolutionForward(const GPUMatrix<ElemType>& filter, const int* mpRowCol, const int* mpRowIwht,
-                              const int* mpRowRun, const int* runs, GPUMatrix<ElemType>& output) const;
+    void NDConvolutionForward(const GPUMatrix<ElemType>& filter, const GPUMatrix<int>& mpRowCol, const GPUMatrix<int>& mpRowIwht,
+                              const GPUMatrix<int>& mpRowRun, const GPUMatrix<int>& runs, GPUMatrix<ElemType>& output) const;
 
 public:
     // static BLAS functions

@@ -453,8 +453,8 @@ public:
                                                 const size_t outputWidth, const size_t outputHeight, const size_t outputSizePerSample,
                                                 const size_t windowWidth, const size_t windowHeight, const size_t horizontalSubsample, const size_t verticalSubsample);
 
-    void NDConvolutionForward(const Matrix<ElemType>& filter, const int* mpRowCol, const int* mpRowIwht,
-                              const int* mpRowRun, const int* runs, Matrix<ElemType>& output) const;
+    void NDConvolutionForward(const Matrix<ElemType>& filter, const Matrix<int>& mpRowCol, const Matrix<int>& mpRowIwht,
+                              const Matrix<int>& mpRowRun, const Matrix<int>& runs, Matrix<ElemType>& output) const;
 
 public:
     // TODO: why are these not static? And why are they here?

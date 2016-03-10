@@ -3988,15 +3988,19 @@ Matrix<ElemType>& Matrix<ElemType>::AddAveragePoolingGradient(const Matrix<ElemT
 #pragma endregion Other Helper Functions
 
 template <class ElemType>
-void Matrix<ElemType>::NDConvolutionForward(const Matrix<ElemType>& filter, const int* mpRowCol, const int* mpRowIwht,
-                              const int* mpRowRun, const int* runs, Matrix<ElemType>& output) const
+void Matrix<ElemType>::NDConvolutionForward(const Matrix<ElemType>& filter, const Matrix<int>& mpRowCol, const Matrix<int>& mpRowIwht,
+                                            const Matrix<int>& mpRowRun, const Matrix<int>& runs, Matrix<ElemType>& output) const
 {
+    assert(mpRowCol.GetNumCols() == 1);
+
     DecideAndMoveToRightDevice(*this, output);
 
     DISPATCH_MATRIX_ON_FLAG(this,
                             this,
-                            m_CPUMatrix->NDConvolutionForward(*(filter.m_CPUMatrix), mpRowCol, mpRowIwht, mpRowRun, runs, *(output.m_CPUMatrix)),
-                            m_GPUMatrix->NDConvolutionForward(*(filter.m_GPUMatrix), mpRowCol, mpRowIwht, mpRowRun, runs, *(output.m_GPUMatrix)),
+                            m_CPUMatrix->NDConvolutionForward(*(filter.m_CPUMatrix), *(mpRowCol.m_CPUMatrix), *(mpRowIwht.m_CPUMatrix),
+                                                              *(mpRowRun.m_CPUMatrix), *(runs.m_CPUMatrix), *(output.m_CPUMatrix)),
+                            m_GPUMatrix->NDConvolutionForward(*(filter.m_GPUMatrix), *(mpRowCol.m_GPUMatrix), *(mpRowIwht.m_GPUMatrix),
+                                                             *(mpRowRun.m_GPUMatrix), *(runs.m_GPUMatrix), *(output.m_GPUMatrix)),
                             NOT_IMPLEMENTED,
                             NOT_IMPLEMENTED);
 
@@ -5122,5 +5126,7 @@ template void Matrix<char>::SetValue(size_t numRows, const size_t numCols, int d
 template void Matrix<char>::SetValue(const Matrix<char>&, MatrixFormat);
 template bool Matrix<char>::IsEmpty() const;
 template void Matrix<char>::Resize(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve, bool growOnly);
+
+template Matrix<int>::Matrix(const size_t, const size_t, int*, DEVICEID_TYPE, const size_t, const size_t);
 
 }}}

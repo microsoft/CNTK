@@ -107,7 +107,7 @@ std::vector<ConvolveGeometryPtr> GenerateConvTestConfigs()
                         {
                             // Note: must use sharing=false in channel dimension otherwise geometry will not be cuDNN compatible but cuDNN won't fail.
                             res.push_back(std::make_shared<ConvolveGeometry>(TensorShape(inW, max(kH, inW) + 1, inC),
-                                TensorShape(kW, kH, inC), TensorShape(mapCount), TensorShape(stride, stride, 1),
+                                TensorShape(kW, kH, inC), TensorShape(mapCount), TensorShape(stride, stride, inC),
                                 ConvolveGeometry::BoolVec{true},
                                 ConvolveGeometry::BoolVec{(kW & 1) != 0, (kH & 1) != 0, false},
                                 TensorShape(0), TensorShape(0)));
@@ -158,7 +158,7 @@ BOOST_AUTO_TEST_CASE(ConvolutionForward)
             std::generate(begin(buf), end(buf), [&] { return nd(rng); });
             SingleMatrix inB(g->InputShape().GetNumElements(), n, buf.data(), baseDeviceId, matrixFlagNormal);
             SingleMatrix inT(g->InputShape().GetNumElements(), n, buf.data(), deviceId, matrixFlagNormal);
-
+            
             size_t mapCount = g->GetMapCount(g->InputShape().GetRank() - 1);
             buf.resize(g->KernelShape().GetNumElements() * mapCount);
             std::generate(begin(buf), end(buf), [&] { return nd(rng); });
@@ -170,10 +170,11 @@ BOOST_AUTO_TEST_CASE(ConvolutionForward)
             SingleMatrix outT = initMat(outBuf, coutRow, n, buf);
             SingleMatrix outB(outT.DeepClone(), baseDeviceId);
 
-            SingleMatrix workspace(deviceId);
+            SingleMatrix workspaceT(deviceId);
+            SingleMatrix workspaceB(baseDeviceId);
             
-            testEng->Forward(n, inT, filterT, outT, workspace);
-            baseEng->Forward(n, inB, filterB, outB, workspace);
+            testEng->Forward(n, inT, filterT, outT, workspaceT);
+            baseEng->Forward(n, inB, filterB, outB, workspaceB);
             
             std::stringstream tmsg;
             tmsg << "Geometry: " << (std::string)(*g) << ", Batch: " << n;

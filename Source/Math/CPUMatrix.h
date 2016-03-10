@@ -317,8 +317,8 @@ public:
                                                    const size_t outputWidth, const size_t outputHeight, const size_t outputSizePerSample,
                                                    const size_t windowWidth, const size_t windowHeight, const size_t horizontalSubsample, const size_t verticalSubsample);
 
-    void NDConvolutionForward(const CPUMatrix<ElemType>& filter, const int* mpRowCol, const int* mpRowIwht,
-                              const int* mpRowRun, const int* runs, CPUMatrix<ElemType>& output) const;
+    void NDConvolutionForward(const CPUMatrix<ElemType>& filter, const CPUMatrix<int>& mpRowCol, const CPUMatrix<int>& mpRowIwht,
+                              const CPUMatrix<int>& mpRowRun, const CPUMatrix<int>& runs, CPUMatrix<ElemType>& output) const;
 
 public:
     static int SetNumThreads(int numThreads); // note: this does not depend on <ElemType>, i.e. you can call it on any <ElemType>

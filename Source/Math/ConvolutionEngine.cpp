@@ -199,17 +199,11 @@ public:
 public:
     ReferenceConvolutionEngine(ConvolveGeometryPtr geometry, DEVICEID_TYPE deviceId, ImageLayoutKind imageLayout, size_t maxTempMemSizeInSamples)
         : Base(geometry, deviceId, imageLayout, maxTempMemSizeInSamples), 
-        m_mpRowCol(geometry->MpRowCol().data()), m_mpRowIwht(geometry->MpRowIwht().data()),
-        m_mpRowRun(geometry->MpRowRun().data()), m_runs(geometry->Runs().data())
+        m_mpRowCol(geometry->MpRowCol().size(), 1, const_cast<int*>(geometry->MpRowCol().data()), deviceId, IsGpu(deviceId) ? matrixFlagNormal : matrixFlagDontOwnBuffer),
+        m_mpRowIwht(geometry->MpRowIwht().size(), 1, const_cast<int*>(geometry->MpRowIwht().data()), deviceId, IsGpu(deviceId) ? matrixFlagNormal : matrixFlagDontOwnBuffer),
+        m_mpRowRun(geometry->MpRowRun().size(), 1, const_cast<int*>(geometry->MpRowRun().data()), deviceId, IsGpu(deviceId) ? matrixFlagNormal : matrixFlagDontOwnBuffer),
+        m_runs(geometry->Runs().size(), 1, const_cast<int*>(geometry->Runs().data()), deviceId, IsGpu(deviceId) ? matrixFlagNormal : matrixFlagDontOwnBuffer)
     {
-        const auto& g = *geometry;
-        if (deviceId >= 0)
-        {
-            m_mpRowCol = TracingGPUMemoryAllocator::Allocate<int>(deviceId, g.MpRowCol().size(), g.MpRowCol().data());
-            m_mpRowIwht = TracingGPUMemoryAllocator::Allocate<int>(deviceId, g.MpRowIwht().size(), g.MpRowIwht().data());
-            m_mpRowRun = TracingGPUMemoryAllocator::Allocate<int>(deviceId, g.MpRowRun().size(), g.MpRowRun().data());
-            m_runs = TracingGPUMemoryAllocator::Allocate<int>(deviceId, g.Runs().size(), g.Runs().data());
-        }
     }
 
 protected:
@@ -239,12 +233,17 @@ protected:
     {
         UNUSED(batchSize); UNUSED(srcGrad); UNUSED(filter); UNUSED(in); UNUSED(allowReuse); UNUSED(workspace);
     }
+private:
+    static bool IsGpu(DEVICEID_TYPE deviceId)
+    {
+        return deviceId >= 0;
+    }
 
 private:
-    const int* m_mpRowCol;
-    const int* m_mpRowIwht;
-    const int* m_mpRowRun;
-    const int* m_runs;
+    Matrix<int> m_mpRowCol;
+    Matrix<int> m_mpRowIwht;
+    Matrix<int> m_mpRowRun;
+    Matrix<int> m_runs;
 };
 
 //------------------------------------------------------------------

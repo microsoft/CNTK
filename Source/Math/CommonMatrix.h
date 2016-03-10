@@ -50,7 +50,7 @@ public:
     static AllocatedElemType* Allocate(int deviceId, size_t numRows, size_t numCols);
 
     template <typename AllocatedElemType>
-    static AllocatedElemType* Allocate(int deviceId, size_t numElements, const AllocatedElemType* src = nullptr);
+    static AllocatedElemType* Allocate(int deviceId, size_t numElements);
 
     template <typename AllocatedElemType>
     static void Free(int deviceId, AllocatedElemType* bufferPtr, bool ignoreCUDARetCode = false);

@@ -213,7 +213,7 @@ public:
 
 public:
     CuDnnConvolutionEngine(ConvolveGeometryPtr geometry, DEVICEID_TYPE deviceId, ImageLayoutKind imageLayout, size_t maxTempMemSizeInSamples)
-        : Base(geometry, deviceId, imageLayout, maxTempMemSizeInSamples), m_dataType(GetDataType()), 
+        : Base(geometry, deviceId, imageLayout, maxTempMemSizeInSamples), m_cudnn(nullptr), m_dataType(GetDataType()), 
         m_inT(geometry->InputShape(), m_dataType), m_outT(geometry->OutputShape(), m_dataType),
         m_filterT(*geometry, m_dataType), m_conv(*geometry, m_dataType)
     {
@@ -384,7 +384,7 @@ private:
         }
     };
 
-    // REVIEW alexeyk: m_cudnn might be static.
+    // REVIEW alexeyk: is it safe to make m_cudnn might be static?
     cudnnHandle_t m_cudnn;
     cudnnDataType_t m_dataType;
     CuDnnTensor m_inT;

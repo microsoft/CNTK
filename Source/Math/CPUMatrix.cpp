@@ -4086,27 +4086,27 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AddAveragePoolingGradient(const CPUMat
 #pragma endregion Other Helper Functions
 
 template <class ElemType>
-void CPUMatrix<ElemType>::NDConvolutionForward(const CPUMatrix<ElemType>& filter, const int* mpRowCol, const int* mpRowIwht,
-                              const int* mpRowRun, const int* runs, CPUMatrix<ElemType>& output) const
+void CPUMatrix<ElemType>::NDConvolutionForward(const CPUMatrix<ElemType>& filter, const CPUMatrix<int>& mpRowCol, const CPUMatrix<int>& mpRowIwht,
+                                               const CPUMatrix<int>& mpRowRun, const CPUMatrix<int>& runs, CPUMatrix<ElemType>& output) const
 {
     for (size_t sample = 0; sample < output.GetNumCols(); sample++)
     {
         for (size_t row = 0; row < output.GetNumRows(); row++)
         {
-            int colBase = mpRowCol[row];
-            int ivBase = mpRowIwht[row];
+            int colBase = mpRowCol(row, 0);
+            int ivBase = mpRowIwht(row, 0);
             assert(0 <= colBase && colBase < GetNumRows());
 
             ElemType sum = 0;
-            int i0 = mpRowRun[row];
-            int skip = runs[i0++];
-            int size = runs[i0++];
+            int i0 = mpRowRun(row, 0);
+            int skip = runs(i0++, 0);
+            int size = runs(i0++, 0);
             int imask = i0 + size;
             for (int i = 0; i < size; i++)
             {
-                if (runs[imask + i] == 0)
+                if (runs(imask + i, 0) == 0)
                     continue;
-                int dcol = runs[i0 + i];
+                int dcol = runs(i0 + i, 0);
                 assert(0 <= colBase + dcol && colBase + dcol < GetNumRows());
                 sum += filter.BufferPointer()[ivBase + skip + i] * (*this)(colBase + dcol, sample);
             }
@@ -5973,4 +5973,8 @@ template void CPUMatrix<char>::SetValue(const char);
 template void CPUMatrix<char>::SetValue(const size_t numRows, const size_t numCols, char* pArray, size_t matrixFlags);
 template void CPUMatrix<char>::SetValue(CPUMatrix<char> const&);
 template void CPUMatrix<char>::Resize(const size_t numRows, const size_t numCols, bool growOnly);
+
+template CPUMatrix<int>::CPUMatrix(const size_t, const size_t, int*, const size_t);
+template CPUMatrix<int>::~CPUMatrix();
+
 } } }
