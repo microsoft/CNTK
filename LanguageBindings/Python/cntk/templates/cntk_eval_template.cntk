@@ -5,13 +5,17 @@ command=Eval
 deviceId=-1						    
 Eval=[
 	action="write"
-	
-    %(ModelDescription)s
+	run=NDLNetworkBuilder
 
+    NDLNetworkBuilder=[
+		%(ModelDescription)s
+	]
+	
 	reader = [
-		%(reader)s
+		"%(Reader)s"
 	]	
-	outputPath = "%(outputFile)s"
+	
+	outputPath = "%(OutputFile)s"
 ]
 
 

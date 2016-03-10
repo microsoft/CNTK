@@ -19,6 +19,7 @@ CNTK_OUTPUT_FILENAME="out.txt"
 
 #TODO: add validate method
 #TODO: overload action methods to support numpy matrices as inputs
+#TODO: overload action methods to have versions that do not need reader or numpy inputs
 
 class AbstractContext(object, metaclass=ABCMeta):
     """This is the abstract CNTK context. It provides an API to run CNTK actions
@@ -61,17 +62,20 @@ class AbstractContext(object, metaclass=ABCMeta):
         """            
         self.macros.append(path)    
 
-    def _generate_train_config(self):
+    def _generate_train_config(self, reader):
         """Generates the configuration file for the train action.
         """                
-        raise NotImplementedError        
+        tmpl = open(CNTK_TRAIN_TEMPLATE_PATH, "r").read()
+        reader_config = reader.generate_config()
+        output_filename = os.path.join(self.context.directory, CNTK_OUTPUT_FILENAME)
+        return tmpl%{'modelDescription': self.graph.to_description(), 'reader':reader_config, 'outputFile':output_filename}
     
-    def _generate_test_config(self):
+    def _generate_test_config(self, reader):
         """Generates the configuration file for the test action.
         """                
         raise NotImplementedError        
     
-    def _generate_predict_config(self):
+    def _generate_predict_config(self, reader):
         """Generates the configuration file for the write action.
         It uses the context's trained model.
         """                
@@ -85,13 +89,12 @@ class AbstractContext(object, metaclass=ABCMeta):
         reader_config = reader.generate_config()
         output_filename = os.path.join(self.directory, CNTK_OUTPUT_FILENAME)
         tmpl_dict = {
-                'reader':reader_config,
-                'outputFile':output_filename,
+                'Reader':reader_config,
+                'OutputFile':output_filename,
                 'ModelDescription':node.to_description()
                 } 
         return tmpl%tmpl_dict
-        
-        
+                
     @abstractmethod
     def train(self, reader):
         """Abstract method for the action train.
@@ -141,21 +144,21 @@ class Context(AbstractContext):
         """Run the train action locally.
         :param reader: the reader used to provide the training data.
         """        
-        config_content = self._generate_train_config()         
+        config_content = self._generate_train_config(reader)         
         self._call_cntk(CNTK_TRAIN_CONFIG_FILENAME, config_content)        
     
     def test(self, reader):
         """Run the test action locally.
         :param reader: the reader used to provide the testing data.
         """            
-        config_content = self._generate_test_config() 
+        config_content = self._generate_test_config(reader) 
         self._call_cntk(CNTK_TEST_CONFIG_FILENAME, config_content) 
 
     def predict(self, reader):
         """Run the write action locally, use the trained model of this context.
         :param reader: the reader used to provide the prediction data.
         """            
-        config_content = self._generate_predict_config() 
+        config_content = self._generate_predict_config(reader) 
         self._call_cntk(CNTK_PREDICT_CONFIG_FILENAME, config_content) 
     
     def eval(self, node, reader):

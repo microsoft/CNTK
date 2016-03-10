@@ -101,8 +101,6 @@ class ComputationNode(object):
         desc.append("OutputNodes=(%s)"%var_name)
         return "\n".join(desc)
 
-
-
 class Label(ComputationNode):
     def __init__(self, dims):
         super(Label, self).__init__('Input', params=('dims', 'tag'))

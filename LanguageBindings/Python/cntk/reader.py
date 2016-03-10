@@ -31,41 +31,40 @@ class UCIFastReader(AbstractReader):
             label_mapping_file=None, \
             custom_delimiter = None):
         """ Reader constructor    
-        """    
-            
-        self["readerType"] = self.__class__.__name__
-        self["filename"] = filename 
-        self["featuresDim"] = features_dim
-        self["labelsDim"] = labels_dim
-        self["featuresStart"] = features_start
-        self["labelsStart"] = labels_start
-        self["numOfClasses"] = num_of_classes          
-        self["labelMappingFile"] = label_mapping_file
+        """                
+        self["ReaderType"] = self.__class__.__name__
+        self["FileName"] = filename
+        self["FeaturesDim"] = features_dim
+        self["LabelsDim"] = labels_dim
+        self["FeaturesStart"] = features_start
+        self["LabelsStart"] = labels_start
+        self["NumOfClasses"] = num_of_classes          
+        self["LabelMappingFile"] = label_mapping_file
         if (custom_delimiter is not None):
-            self["customDelimiter"] = 'customDelimiter = "{0}"'.format(custom_delimiter)
+            self["CustomDelimiter"] = 'customDelimiter = "{0}"'.format(custom_delimiter)
         else:
-            self["customDelimiter"] = None
+            self["CustomDelimiter"] = None
 
     def generate_config(self):
         """Generate the reader configuration block
         """
         template = '''
-        		readerType = "%(readerType)s"
-        		file = "%(filename)s"
+        		readerType = "%(ReaderType)s"
+        		file = "%(FileName)s"
         		randomize = "none"
         		verbosity = 1          
                '''
+               
         if self['customDelimiter']:
             template += '''
                customDelimiter=%(customDelimiter)s
                '''
 
         if self['featuresStart']:
-            template += '''
-               
+            template += '''               
         		features=[
-        			start = "%(featuresStart)s"
-        			dim = "%(featuresDim)s"
+        			start = "%(FeaturesStart)s"
+        			dim = "%(FeaturesDim)s"
         		]
                 '''
         
@@ -73,12 +72,11 @@ class UCIFastReader(AbstractReader):
             template += '''
 
         		labels=[
-        			start = "%(labelsStart)s"
-        			dim = "%(labelsDim)s"		          
-                    labelDim="%(numOfClasses)s"        			
-                    labelMappingFile="%(labelMappingFile)s" 
-        		]
-                '''
+        			start = "%(LabelsStart)s"
+        			dim = "%(LabelsDim)s"		          
+                    labelDim="%(NumOfClasses)s"        			
+                    labelMappingFile="%(LabelMappingFile)s" 
+        		]'''
                             
         return template%self
     
