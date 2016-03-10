@@ -45,9 +45,9 @@ def test_overload_exception():
         C(range(0,10))[0:3:2]
 
 @pytest.mark.parametrize("root_node, expected", [
-    (Input(2), "v0 = Input(dims=2, tag='feature')"),
-    (Label(2), "v0 = Input(dims=2, tag='label')"),
-    (Plus(C(0), C(1)), "v0 = Constant(value=0, rows=1, cols=1)\nv1 = Constant(value=1, rows=1, cols=1)\nv2 = Plus(v0, v1)"),
+    (Input(2), "v0 = Input(dims=2, tag='feature')\nOutputNodes=(v0)"),
+    (Label(2), "v0 = Input(dims=2, tag='label')\nOutputNodes=(v0)"),
+    (Plus(C(0), C(1)), "v0 = Constant(value=0, rows=1, cols=1)\nv1 = Constant(value=1, rows=1, cols=1)\nv2 = Plus(v0, v1)\nOutputNodes=(v2)"),
     ])
 def test_description(root_node, expected):
     assert root_node.to_description() == expected
@@ -55,6 +55,6 @@ def test_description(root_node, expected):
 def test_graph_with_same_node_twice():
     v0 = C(1)
     root_node = Plus(v0, v0)
-    expected = 'v0 = Constant(value=1, rows=1, cols=1)\nv1 = Plus(v0, v0)'
+    expected = 'v0 = Constant(value=1, rows=1, cols=1)\nv1 = Plus(v0, v0)\nOutputNodes=(v1)'
     assert root_node.to_description() == expected
 
