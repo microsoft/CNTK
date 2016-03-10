@@ -28,6 +28,8 @@ class AbstractContext(object, metaclass=ABCMeta):
     :param device_id: whether to use CPU or a specific GPU. -1 for CPU larger values
     are the GPUs indices.
     '''
+	#TODO: add validate method
+    #TODO: overload action methods to support numpy matrices as inputs
     def __init__(self, name, graph = None, optimizer = None, device_id = -1):
         self.directory = os.path.abspath('_cntk_%s'%id(name))
         if os.path.exists(self.directory):
@@ -148,7 +150,7 @@ class Context(AbstractContext):
         config_content = self._generate_eval_config() 
         self._call_cntk(CNTK_EVAL_CONFIG_FILENAME, config_content) 
 
-'''This is a sub-class of AbstractContext, use it to submit your wokrloads to the cluster.
+'''This is a sub-class of AbstractContext, use it to submit your workloads to the cluster.
 '''
 class ClusterContext(AbstractContext):
     pass
