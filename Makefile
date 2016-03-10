@@ -512,9 +512,10 @@ ifeq (,$(wildcard Source/1BitSGD/*.h))
   $(error Build with 1bit-SGD was requested but cannot find the code. Please check https://github.com/Microsoft/CNTK/wiki/Enabling-1bit-SGD for instructions)
 endif
 
-  INCLUDEPATH += $(SOURCEDIR)/1BitSGD
+  INCLUDEPATH += $(SOURCEDIR)/1BitSGD $(SOURCEDIR)/BlockMomentum
 
-  COMMON_FLAGS += -DQUANTIZED_GRADIENT_AGGREGATION
+  COMMON_FLAGS += -DQUANTIZED_GRADIENT_AGGREGATION -DBLOCKWISE_MODEL_UPDATE_FILTERING 
+  # temporarily adding to 1bit, need to work with others to fix it
 endif
 
 ########################################
