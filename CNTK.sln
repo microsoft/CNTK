@@ -1099,12 +1099,12 @@ Global
 		{9BD0A711-0BBD-45B6-B81C-053F03C26CFB}.Release_CpuOnly|x64.Build.0 = Release_CpuOnly|x64
 		{9BD0A711-0BBD-45B6-B81C-053F03C26CFB}.Release|x64.ActiveCfg = Release|x64
 		{9BD0A711-0BBD-45B6-B81C-053F03C26CFB}.Release|x64.Build.0 = Release|x64
-		{CDA96AA3-3252-4978-A0BF-2ACD670823CB}.Debug_CpuOnly|x64.ActiveCfg = Debug|x64
-		{CDA96AA3-3252-4978-A0BF-2ACD670823CB}.Debug_CpuOnly|x64.Build.0 = Debug|x64
+		{CDA96AA3-3252-4978-A0BF-2ACD670823CB}.Debug_CpuOnly|x64.ActiveCfg = Debug_CpuOnly|x64
+		{CDA96AA3-3252-4978-A0BF-2ACD670823CB}.Debug_CpuOnly|x64.Build.0 = Debug_CpuOnly|x64
 		{CDA96AA3-3252-4978-A0BF-2ACD670823CB}.Debug|x64.ActiveCfg = Debug|x64
 		{CDA96AA3-3252-4978-A0BF-2ACD670823CB}.Debug|x64.Build.0 = Debug|x64
-		{CDA96AA3-3252-4978-A0BF-2ACD670823CB}.Release_CpuOnly|x64.ActiveCfg = Release|x64
-		{CDA96AA3-3252-4978-A0BF-2ACD670823CB}.Release_CpuOnly|x64.Build.0 = Release|x64
+		{CDA96AA3-3252-4978-A0BF-2ACD670823CB}.Release_CpuOnly|x64.ActiveCfg = Release_CpuOnly|x64
+		{CDA96AA3-3252-4978-A0BF-2ACD670823CB}.Release_CpuOnly|x64.Build.0 = Release_CpuOnly|x64
 		{CDA96AA3-3252-4978-A0BF-2ACD670823CB}.Release|x64.ActiveCfg = Release|x64
 		{CDA96AA3-3252-4978-A0BF-2ACD670823CB}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
