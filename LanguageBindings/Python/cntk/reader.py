@@ -13,7 +13,7 @@ class AbstractReader(dict, metaclass=ABCMeta):
 class UCIFastReader(AbstractReader):        
     """This is the reader class
     
-    :param file: data file path
+    :param filename: data file path
     :param features_dim: number of feature columns
     :param labels_dim: number of label columns
     :param features_start: the index of the first feature column
@@ -24,12 +24,16 @@ class UCIFastReader(AbstractReader):
     :param custom_delimiter: the default is space and tab, you can specify other delimiters to be used
     """
     
-    def __init__(self, file, features_dim, labels_dim, features_start, labels_start, \
-                num_of_classes, label_mapping_file, custom_delimiter = None):
+    def __init__(self, filename, \
+            features_dim=None, labels_dim=None, \
+            features_start=None, labels_start=None, \
+            num_of_classes=None, \
+            label_mapping_file=None, \
+            custom_delimiter = None):
         """ Reader constructor    
         """                
         self["ReaderType"] = self.__class__.__name__
-        self["File"] = file 
+        self["FileName"] = filename
         self["FeaturesDim"] = features_dim
         self["LabelsDim"] = labels_dim
         self["FeaturesStart"] = features_start
@@ -46,16 +50,27 @@ class UCIFastReader(AbstractReader):
         """
         template = '''
         		readerType = "%(ReaderType)s"
-        		file = "%(File)s"
+        		file = "%(FileName)s"
         		randomize = "none"
         		verbosity = 1          
-               %(CustomDelimiter)s
+               '''
                
+        if self['customDelimiter']:
+            template += '''
+               customDelimiter=%(customDelimiter)s
+               '''
+
+        if self['featuresStart']:
+            template += '''               
         		features=[
         			start = "%(FeaturesStart)s"
         			dim = "%(FeaturesDim)s"
         		]
-        	
+                '''
+        
+        if self['labelsStart']:
+            template += '''
+
         		labels=[
         			start = "%(LabelsStart)s"
         			dim = "%(LabelsDim)s"		          
@@ -63,6 +78,22 @@ class UCIFastReader(AbstractReader):
                     labelMappingFile="%(LabelMappingFile)s" 
         		]'''
                             
-        config = template%self
-        return config 
+        return template%self
     
+def NumPyReader(data, filename): 
+    """
+    This is the reader class for bare Python arrays.
+    """
+    
+    import numpy as np
+    data = np.asarray(data)
+    format_str = ' '.join(['%f']*data.shape[1])
+    np.savetxt(filename, data, delimiter=' ', newline='\r\n', fmt=format_str)
+
+    return UCIFastReader(\
+            filename, 
+            # Features are stored per column, but CNTK transforms them and uses
+            # them per row. That's why we take the number of columns here.
+            features_dim=data.shape[1], labels_dim=None, \
+            features_start=0, labels_start=None, \
+            num_of_classes=None, label_mapping_file=None)

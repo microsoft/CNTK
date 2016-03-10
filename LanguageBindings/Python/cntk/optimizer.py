@@ -51,4 +51,5 @@ class SGD(dict):
         """Generate the SGD configuration block
         """
         
-        
+        for k,v in self.item():
+            pass
