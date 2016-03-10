@@ -866,22 +866,6 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Model1", "Model1", "{48C2A9
 		Tests\EndToEndTests\ModelExport\Model1\testcases.yml = Tests\EndToEndTests\ModelExport\Model1\testcases.yml
 	EndProjectSection
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Model2", "Model2", "{82E4A6BC-BAA5-4991-B7A7-19EF6F561133}"
-	ProjectSection(SolutionItems) = preProject
-		Tests\EndToEndTests\ModelExport\Model2\2.cntk = Tests\EndToEndTests\ModelExport\Model2\2.cntk
-		Tests\EndToEndTests\ModelExport\Model2\baseline.txt = Tests\EndToEndTests\ModelExport\Model2\baseline.txt
-		Tests\EndToEndTests\ModelExport\Model2\run-test = Tests\EndToEndTests\ModelExport\Model2\run-test
-		Tests\EndToEndTests\ModelExport\Model2\testcases.yml = Tests\EndToEndTests\ModelExport\Model2\testcases.yml
-	EndProjectSection
-EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Model3", "Model3", "{E7860D1F-856F-46C5-A856-6390F931F976}"
-	ProjectSection(SolutionItems) = preProject
-		Tests\EndToEndTests\ModelExport\Model3\3.cntk = Tests\EndToEndTests\ModelExport\Model3\3.cntk
-		Tests\EndToEndTests\ModelExport\Model3\baseline.txt = Tests\EndToEndTests\ModelExport\Model3\baseline.txt
-		Tests\EndToEndTests\ModelExport\Model3\run-test = Tests\EndToEndTests\ModelExport\Model3\run-test
-		Tests\EndToEndTests\ModelExport\Model3\testcases.yml = Tests\EndToEndTests\ModelExport\Model3\testcases.yml
-	EndProjectSection
-EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "AlexNet", "AlexNet", "{2B1046A1-0140-43B7-B3DC-CF7DEEE1009E}"
 	ProjectSection(SolutionItems) = preProject
 		Tests\EndToEndTests\Image\AlexNet\add_top5_layer.mel = Tests\EndToEndTests\Image\AlexNet\add_top5_layer.mel
@@ -1221,8 +1205,6 @@ Global
 		{08A05A9A-4E45-42D5-83FA-719E99C04A30} = {6E565B48-1923-49CE-9787-9BBB9D96F4C5}
 		{715C0E2D-6FF6-4B26-9E49-1C68920CFAF6} = {08A05A9A-4E45-42D5-83FA-719E99C04A30}
 		{48C2A9DE-FB2C-4724-9ADC-744216D79BCF} = {08A05A9A-4E45-42D5-83FA-719E99C04A30}
-		{82E4A6BC-BAA5-4991-B7A7-19EF6F561133} = {08A05A9A-4E45-42D5-83FA-719E99C04A30}
-		{E7860D1F-856F-46C5-A856-6390F931F976} = {08A05A9A-4E45-42D5-83FA-719E99C04A30}
 		{2B1046A1-0140-43B7-B3DC-CF7DEEE1009E} = {8071EF60-30F7-4A77-81AA-ADCA0E18B1E3}
 	EndGlobalSection
 EndGlobal
