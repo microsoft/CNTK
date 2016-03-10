@@ -23,13 +23,15 @@ CNTK_OUTPUT_FILENAME="out.txt"
 class AbstractContext(object, metaclass=ABCMeta):
     """This is the abstract CNTK context. It provides an API to run CNTK actions
     """
-    def __init__(self, name, graph = None, optimizer = None, device_id = -1):
+    def __init__(self, name, graph = None, optimizer = None, device_id = -1,
+            clean_up=True):
         """AbstractContext Constructer
         
         :param name: context name
         :param graph: the computational graph to be used for training, testing and prediction
         :param optimizer: the SGD optimizer to use for training
         :param device_id: whether to use CPU or a specific GPU. -1 for CPU larger values
+        :param clean_up: whether the temporary directory should be removed when the context is left
         are the GPUs indices.
         
         """
@@ -43,12 +45,15 @@ class AbstractContext(object, metaclass=ABCMeta):
         self.graph = graph
         self.optimizer = optimizer
         self.device_id = device_id
+        self.clean_up = clean_up
         
     def __enter__(self):
         return self
 
     def __exit__(self, exc_type, exc_value, exc_tb):
-        pass    
+        if self.clean_up:
+            import shutil
+            shutil.rmtree(self.directory)
     
     def add_macro(self, path):        
         """Add a macro file to be referenced from all configurations of this context.
