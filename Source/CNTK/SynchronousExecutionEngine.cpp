@@ -206,7 +206,7 @@ void SynchronousNodeEvaluator<ElemType>::Evaluate(NDLNode<ElemType>* node, const
     else if (cnNodeType == OperationNameOf(RowRepeatNode))
     {
         if (parameter.size() != 2)
-            RuntimeError("RowRepeat should have two parameters. Usage: RowRepeat(origNodeName, numRepeats.");
+            RuntimeError("RowRepeat should have two parameters. Usage: RowRepeat(origNodeName, numRepeats).");
 
         nodeParamCount = 1;
         nodeParamStart = 0;
@@ -238,8 +238,8 @@ void SynchronousNodeEvaluator<ElemType>::Evaluate(NDLNode<ElemType>* node, const
     }
     else if (cnNodeType == L"Reshape" /*OperationNameOf(ReshapeNode)*/)
     {
-        if (parameter.size() < 2 || parameter.size() > 5)
-            RuntimeError("Reshape should have two to five parameters. Usage: Reshape(origNodeName, numRows, [imageWidth=], [imageHeight=], [imageChannels=].");
+        if (parameter.size() != 2)
+            RuntimeError("Reshape should have two parameters. Usage: Reshape(origNodeName, numRows, [imageWidth=], [imageHeight=], [imageChannels=].");
 
         nodeParamCount = 1;
         nodeParamStart = 0;
