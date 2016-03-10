@@ -102,12 +102,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         typedef shared_ptr<ComputationNode<ElemType>> ComputationNodePtr;
      public:
-         IMASGD(MPIWrapper* pMPI, size_t perfReportFreq)
+         IMASGD(MPIWrapper* pMPI, size_t perfReportFreq, size_t devID)
              :m_MAworkerStatus(pMPI->NumNodesInUse(), MAWorkerStatus::NOTSTARTED), 
              m_numSyncPerformed(0), 
              m_numWorkers(pMPI->NumNodesInUse()), 
              m_myRank(pMPI->CurrentNodeRank()),
              m_pMPI(pMPI), 
+             m_preferredDeviceID(devID),
              m_perfReporter(pMPI->CurrentNodeRank(), pMPI->NumNodesInUse())
          {
              m_perfReporter.SetReportFrequency(perfReportFreq);
@@ -170,7 +171,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
              size_t&                                   totalSamplesProcessed,   /* out */
              float&                                    secondsOnCommunication   /* out */) = 0; 
          
-        
+         virtual bool requireCheckPointSaving()
+         {
+             return false;
+         }
+         virtual void SaveToCheckPoint(File& fstream)
+         {
+             return; 
+         }
+         virtual void LoadFromCheckPoint(File& fstream)
+         {
+             return;
+         }
+         
 
     protected:
         bool    somePeersHaveArrivedAtEnd()
@@ -287,6 +300,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         size_t                      m_myRank;
         MASGDPerfStats              m_perfReporter;
         MPIWrapper*                 m_pMPI;       // TODO: to use shared_ptr in the future 
+        DEVICEID_TYPE               m_preferredDeviceID;
         
  };
 
@@ -300,8 +314,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         using Base::DownCast;
 
     public:
-        BasicModelAveragingSGD(MPIWrapper* pMPI, size_t reportFreq)
-            :Base(pMPI, reportFreq)
+        BasicModelAveragingSGD(MPIWrapper* pMPI, size_t reportFreq, DEVICEID_TYPE devID)
+            :Base(pMPI, reportFreq, devID)
         {}
 
         

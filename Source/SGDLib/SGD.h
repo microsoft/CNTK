@@ -245,6 +245,9 @@ protected:
 
     // Parallel training related with MA
     size_t m_nFramesBetweenMASync;
+    bool   m_useBMUF; 
+    bool   m_resetSGDMomentum; 
+    double m_blockMomentum; 
 
     bool m_needAveMultiplier;
     double m_L2RegWeight;
@@ -433,7 +436,7 @@ protected:
                          std::string prefixMsg = "");
 
     void InitDistGradAgg(int numEvalNodes, int traceLevel);
-    void InitModelAggregationHandler(int traceLevel);
+    void InitModelAggregationHandler(int traceLevel, DEVICEID_TYPE devID);
 public:
     // UpdateWeightsS - static version of UpdateWeights()
     static void UpdateWeightsS(const SGD* sgd, Matrix<ElemType>& functionValues,
