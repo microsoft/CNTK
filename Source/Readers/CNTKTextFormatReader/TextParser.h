@@ -12,18 +12,18 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
-
+template <class ElemType>
 struct Data 
 {
     virtual ~Data() {};
 
     size_t m_numberOfSamples = 0;
-    std::vector<float> m_buffer;
+    std::vector<ElemType> m_buffer;
 };
 
-struct DenseData : Data 
+template <class ElemType>
+struct DenseData : Data<ElemType>
 {
-
     // capacity = expected number of samples * sample size
     DenseData(size_t capacity)
     {
@@ -31,30 +31,30 @@ struct DenseData : Data
     }
 };
 
-struct SparseData : Data 
+template <class ElemType>
+struct SparseData : Data<ElemType>
 {
     std::vector<std::vector<size_t>> m_indices;
 };
 
-// should these be shared pointers instead?
-typedef std::vector<std::unique_ptr<Data>> Sequence;
+template <class ElemType>
+using Sequence = std::vector<std::unique_ptr<Data<ElemType>>>;
 
 // TODO: more details when tracing warnings 
 // (e.g., buffer content around the char that triggered the warning)
+template <class ElemType>
 class TextParser : public DataDeserializerBase {
 private:
     class TextDataChunk : public Chunk, public std::enable_shared_from_this<TextDataChunk> {
     public:
-        TextDataChunk(const ChunkDescriptor& descriptor, TextParser& parent);
+        TextDataChunk(const ChunkDescriptor& descriptor);
 
         // Gets sequences by id.
         std::vector<SequenceDataPtr> GetSequence(size_t sequenceId) override;
 
         std::map<size_t, std::vector<SequenceDataPtr>> m_sequencePtrMap;
         // Buffer to store the actual data.
-        std::vector<Sequence> m_sequenceData;
-
-        TextParser& m_parent;
+        std::vector<Sequence<ElemType>> m_sequenceData;
 
         // chunk id (copied from the descriptor)
         size_t m_id; 
@@ -125,23 +125,20 @@ private:
     // reads an alias/name and converts it to an internal stream id (= stream index).
     bool GetInputId(size_t& id, int64_t& bytesToRead);
 
-    //TODO: use a template here
-    bool ReadRealNumber(float& value, int64_t& bytesToRead);
+    bool ReadRealNumber(ElemType& value, int64_t& bytesToRead);
 
     bool ReadUint64(size_t& index, int64_t& bytesToRead);
 
-    bool ReadDenseSample(std::vector<float>& values, size_t sampleSize, int64_t& bytesToRead);
+    bool ReadDenseSample(std::vector<ElemType>& values, size_t sampleSize, int64_t& bytesToRead);
 
-    bool ReadSparseSample(std::vector<float>& values, std::vector<size_t>& indices, int64_t& bytesToRead);
+    bool ReadSparseSample(std::vector<ElemType>& values, std::vector<size_t>& indices, int64_t& bytesToRead);
 
     // read one whole row (terminated by a row delimiter) of samples
-    bool ReadRow(Sequence& sequence, int64_t& bytesToRead);
+    bool ReadRow(Sequence<ElemType>& sequence, int64_t& bytesToRead);
 
     bool inline CanRead() { return m_pos != m_bufferEnd || Fill(); }
 
-    std::vector<Sequence> LoadChunk(const ChunkDescriptor& chunk);
-
-    Sequence LoadSequence(bool verifyId, const SequenceDescriptor& descriptor);
+    Sequence<ElemType> LoadSequence(bool verifyId, const SequenceDescriptor& descriptor);
 
     TextParser(const std::wstring& filename, const vector<StreamDescriptor>& streams);
 
@@ -177,6 +174,4 @@ public:
 
     void SetChunkCacheSize(unsigned int size);
 };
-
-typedef std::shared_ptr<TextParser> TextParserPtr;
 }}}

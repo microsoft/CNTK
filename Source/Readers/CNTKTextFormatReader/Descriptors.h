@@ -50,6 +50,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     struct Index 
     {
+        Index(bool hasSequenceIds, 
+            std::vector<SequenceDescriptor> timeline,
+            std::vector<ChunkDescriptor> chunks) 
+            : m_hasSequenceIds(hasSequenceIds),
+            m_timeline(timeline),
+            m_chunks(chunks)
+        {
+        }
+
         bool m_hasSequenceIds; // true when input contains sequence id column
         std::vector<SequenceDescriptor> m_timeline;
         std::vector<ChunkDescriptor> m_chunks;
