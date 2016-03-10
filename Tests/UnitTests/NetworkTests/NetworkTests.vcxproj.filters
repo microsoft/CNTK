@@ -56,16 +56,14 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <None Include="Config\Network_Operator_Plus.cntk">
-      <Filter>Config</Filter>
-    </None>
-  </ItemGroup>
-  <ItemGroup>
     <Text Include="Control\Network_Operator_Plus_Control.txt">
       <Filter>Control</Filter>
     </Text>
     <Text Include="Data\Network_Operator_Plus_Data.txt">
       <Filter>Data</Filter>
+    </Text>
+    <Text Include="Config\Network_Operator_Plus.cntk">
+      <Filter>Config</Filter>
     </Text>
   </ItemGroup>
 </Project>

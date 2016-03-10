@@ -6,7 +6,7 @@
 //
 
 #include "stdafx.h"
-#include "NetworkFactory.h"
+#include "Actions.h"
 
 template <> /*static*/ const wchar_t* ElemTypeName<float>()  {
     return L"float";

@@ -59,7 +59,7 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup>
     <LinkIncremental>false</LinkIncremental>
-    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);..\..\..\Source\Common\include;..\..\..\Source\Math;..\..\..\Source\ActionsLib;..\..\..\Source\CNTK\BrainScript;$(IncludePath)</IncludePath>
+    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);..\..\..\Source\Common\include;..\..\..\Source\Math;..\..\..\Source\ActionsLib;..\..\..\Source\ComputationNetworkLib;..\..\..\Source\CNTK\BrainScript;$(IncludePath)</IncludePath>
     <LibraryPath>$(OutDir);$(VC_LibraryPath_x64);$(WindowsSDK_LibraryPath_x64);$(LibraryPath)</LibraryPath>
     <OutDir>$(OutDir)\UnitTests\</OutDir>
   </PropertyGroup>
@@ -77,7 +77,7 @@
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>$(BOOST_LIB_PATH);$(OutDir)..\;</AdditionalLibraryDirectories>
-      <AdditionalDependencies>actionslib.lib;computationnetworklib.lib;sequencetraininglib.lib;Math.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>math.lib;actionslib.lib;computationnetworklib.lib;sequencetraininglib.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <OptimizeReferences>true</OptimizeReferences>
     </Link>
   </ItemDefinitionGroup>
@@ -88,8 +88,8 @@
       <AdditionalIncludeDirectories>$(BOOST_INCLUDE_PATH);"c:\Program Files\NVIDIA Corporation\GDK\gdk_win7_amd64_release\nvml\include"</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
-      <DelayLoadDLLs>Math.dll; msmpi.dll; nvml.dll; cudart64_70.dll</DelayLoadDLLs>
-      <AdditionalLibraryDirectories>$(BOOST_LIB_PATH);$(OutDir)..\;"c:\Program Files\NVIDIA Corporation\GDK\gdk_win7_amd64_release\nvml\lib"</AdditionalLibraryDirectories>
+      <DelayLoadDLLs>math.dll;msmpi.dll; nvml.dll; cudart64_70.dll</DelayLoadDLLs>
+      <AdditionalLibraryDirectories>$(BOOST_LIB_PATH);$(OutDir);"c:\Program Files\NVIDIA Corporation\GDK\gdk_win7_amd64_release\nvml\lib"</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="$(ReleaseBuild)">
@@ -104,8 +104,8 @@
     </ClCompile>
     <Link>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
-      <DelayLoadDLLs>Math.dll; msmpi.dll; nvml.dll; cudart64_70.dll</DelayLoadDLLs>
-      <AdditionalLibraryDirectories>$(BOOST_LIB_PATH);$(OutDir)..\;"c:\Program Files\NVIDIA Corporation\GDK\gdk_win7_amd64_release\nvml\lib"</AdditionalLibraryDirectories>
+      <DelayLoadDLLs>math.dll;msmpi.dll; nvml.dll; cudart64_70.dll</DelayLoadDLLs>
+      <AdditionalLibraryDirectories>$(BOOST_LIB_PATH);$(OutDir);"c:\Program Files\NVIDIA Corporation\GDK\gdk_win7_amd64_release\nvml\lib"</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="$(CpuOnlyBuild)">

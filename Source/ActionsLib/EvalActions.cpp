@@ -12,7 +12,6 @@
 #include "Actions.h"
 #include "ComputationNetwork.h"
 #include "ComputationNode.h"
-#include "NetworkFactory.h"
 #include "DataReader.h"
 #include "DataWriter.h"
 #include "Config.h"

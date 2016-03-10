@@ -10,12 +10,36 @@
 #include "Config.h"
 #include "ScriptableObjects.h"
 #include "DataReader.h"
+#include "ComputationNetwork.h"
+#include "BrainScriptEvaluator.h"
+#include "BrainScriptParser.h"
+#include "SimpleNetworkBuilder.h"
+#include "NDLNetworkBuilder.h"
 
 // ===========================================================================
 // implementations of all the commands of CNTK
 // ===========================================================================
 
+#ifndef let
+#define let const auto
+#endif
+
+using namespace std;
+using namespace Microsoft::MSR;
 using namespace Microsoft::MSR::CNTK; // TODO: we should not have this in a header
+
+// TODO: decide where these should go. Also, do we need three variables?
+extern wstring standardFunctions;
+extern wstring commonMacros;
+extern wstring computationNodes;
+
+// helper that returns 'float' or 'double' depending on ElemType
+template <typename ElemType> /*static*/ const wchar_t* ElemTypeName();
+
+function<ComputationNetworkPtr(DEVICEID_TYPE)> GetCreateNetworkFn(const ScriptableObjects::IConfigRecord& config);
+
+template <class ConfigRecordType, typename ElemType>
+function<ComputationNetworkPtr(DEVICEID_TYPE)> GetNetworkFactory(const ConfigRecordType& config);
 
 // training (TrainActions.cpp)
 template <class ConfigRecordType, typename ElemType>
