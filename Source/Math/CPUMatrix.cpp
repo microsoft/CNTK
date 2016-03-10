@@ -4089,7 +4089,8 @@ template <class ElemType>
 void CPUMatrix<ElemType>::NDConvolutionForward(const CPUMatrix<ElemType>& filter, const CPUMatrix<int>& mpRowCol, const CPUMatrix<int>& mpRowIwht,
                                                const CPUMatrix<int>& mpRowRun, const CPUMatrix<int>& runs, CPUMatrix<ElemType>& output) const
 {
-    for (size_t sample = 0; sample < output.GetNumCols(); sample++)
+#pragma omp parallel for
+    for (int64_t sample = 0; sample < (int64_t)output.GetNumCols(); sample++)
     {
         for (size_t row = 0; row < output.GetNumRows(); row++)
         {
@@ -4119,14 +4120,62 @@ template <class ElemType>
 void CPUMatrix<ElemType>::NDConvolutionBackwardData(const CPUMatrix<ElemType>& filter, const CPUMatrix<int>& mpRowCol, const CPUMatrix<int>& mpRowIwht,
                                                     const CPUMatrix<int>& mpRowRun, const CPUMatrix<int>& runs, CPUMatrix<ElemType>& grad) const
 {
-    UNUSED(filter); UNUSED(mpRowCol); UNUSED(mpRowIwht); UNUSED(mpRowRun); UNUSED(runs); UNUSED(grad);
+#pragma omp parallel for
+    for (int64_t sample = 0; sample < (int64_t)GetNumCols(); sample++)
+    {
+        for (size_t row = 0; row < GetNumRows(); row++)
+        {
+            int colBase = mpRowCol(row, 0);
+            int ivBase = mpRowIwht(row, 0);
+            assert(0 <= colBase && colBase < grad.GetNumRows());
+
+            ElemType curGrad = (*this)(row, sample);
+
+            int i0 = mpRowRun(row, 0);
+            int skip = runs(i0++, 0);
+            int size = runs(i0++, 0);
+            int imask = i0 + size;
+            for (int i = 0; i < size; i++)
+            {
+                if (runs(imask + i, 0) == 0)
+                    continue;
+                int dcol = runs(i0 + i, 0);
+                assert(0 <= colBase + dcol && colBase + dcol < grad.GetNumRows());
+                grad(colBase + dcol, sample) += curGrad * filter.BufferPointer()[ivBase + skip + i];
+            }
+        }
+    }
 }
 
 template <class ElemType>
 void CPUMatrix<ElemType>::NDConvolutionBackwardFilter(const CPUMatrix<ElemType>& in, const CPUMatrix<int>& mpRowCol, const CPUMatrix<int>& mpRowIwht,
                                                       const CPUMatrix<int>& mpRowRun, const CPUMatrix<int>& runs, CPUMatrix<ElemType>& filterGrad) const
 {
-    UNUSED(in); UNUSED(mpRowCol); UNUSED(mpRowIwht); UNUSED(mpRowRun); UNUSED(runs); UNUSED(filterGrad);
+    // Do NOT parallelize these loops!
+    for (size_t sample = 0; sample < GetNumCols(); sample++)
+    {
+        for (size_t row = 0; row < GetNumRows(); row++)
+        {
+            int colBase = mpRowCol(row, 0);
+            int ivBase = mpRowIwht(row, 0);
+            assert(0 <= colBase && colBase < in.GetNumRows());
+
+            ElemType curGrad = (*this)(row, sample);
+
+            int i0 = mpRowRun(row, 0);
+            int skip = runs(i0++, 0);
+            int size = runs(i0++, 0);
+            int imask = i0 + size;
+            for (int i = 0; i < size; i++)
+            {
+                if (runs(imask + i, 0) == 0)
+                    continue;
+                int dcol = runs(i0 + i, 0);
+                assert(0 <= colBase + dcol && colBase + dcol < in.GetNumRows());
+                filterGrad.BufferPointer()[ivBase + skip + i] += curGrad * in(colBase + dcol, sample);
+            }
+        }
+    }
 }
 
 #pragma region Static BLAS Functions

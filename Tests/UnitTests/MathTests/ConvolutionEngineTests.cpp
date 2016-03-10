@@ -130,7 +130,7 @@ BOOST_AUTO_TEST_SUITE(ConvolutionSuite)
 BOOST_AUTO_TEST_CASE(ConvolutionForward)
 {
     std::mt19937 rng(0);
-    std::uniform_int_distribution<> batchSizeRnd(1, 8);
+    std::uniform_int_distribution<> batchSizeG(1, 8);
     std::normal_distribution<float> nd;
 
     auto initMat = [&](SingleMatrix& buf, size_t r, size_t c, vec& data) -> SingleMatrix
@@ -152,7 +152,7 @@ BOOST_AUTO_TEST_CASE(ConvolutionForward)
             auto baseEng = ConvEng::Create(g, baseDeviceId, ImageLayoutKind::CHW, 0, ConvolutionEngineKind::CuDnn);
             auto testEng = ConvEng::Create(g, deviceId, ImageLayoutKind::CHW, 0, engKind);
 
-            size_t n = batchSizeRnd(rng);
+            size_t n = batchSizeG(rng);
             vec buf;
             buf.resize(g->InputShape().GetNumElements() * n);
             std::generate(begin(buf), end(buf), [&] { return nd(rng); });
@@ -165,16 +165,16 @@ BOOST_AUTO_TEST_CASE(ConvolutionForward)
             SingleMatrix filterB(mapCount, g->KernelShape().GetNumElements(), buf.data(), baseDeviceId, matrixFlagNormal);
             SingleMatrix filterT(mapCount, g->KernelShape().GetNumElements(), buf.data(), deviceId, matrixFlagNormal);
 
-            size_t coutRow = g->OutputShape().GetNumElements();
+            size_t crowOut = g->OutputShape().GetNumElements();
             SingleMatrix outBuf(deviceId);
-            SingleMatrix outT = initMat(outBuf, coutRow, n, buf);
+            SingleMatrix outT = initMat(outBuf, crowOut, n, buf);
             SingleMatrix outB(outT.DeepClone(), baseDeviceId);
 
             SingleMatrix workspaceT(deviceId);
             SingleMatrix workspaceB(baseDeviceId);
             
-            testEng->Forward(n, inT, filterT, outT, workspaceT);
-            baseEng->Forward(n, inB, filterB, outB, workspaceB);
+            testEng->Forward(inT, filterT, outT, workspaceT);
+            baseEng->Forward(inB, filterB, outB, workspaceB);
             
             std::stringstream tmsg;
             tmsg << "Geometry: " << (std::string)(*g) << ", Batch: " << n;
@@ -187,9 +187,141 @@ BOOST_AUTO_TEST_CASE(ConvolutionForward)
             std::string emsg;
 
             BOOST_REQUIRE_MESSAGE(!outT.HasNan("out"), "out" << msgNan);
-            BOOST_REQUIRE_MESSAGE(CheckEqual(outT, outB, emsg, relErr * 16, absErr * 8), "out" << msg << ". " << emsg);
-            BOOST_REQUIRE_MESSAGE(CountNans(outBuf) == coutRow * 2 * n, "out" << msgNotNan);
+            BOOST_REQUIRE_MESSAGE(CheckEqual(outT, outB, emsg, relErr, absErr * 8), "out" << msg << ". " << emsg);
+            BOOST_REQUIRE_MESSAGE(CountNans(outBuf) == crowOut * 2 * n, "out" << msgNotNan);
+        }
+    }
+}
 
+BOOST_AUTO_TEST_CASE(ConvolutionBackwardData)
+{
+    std::mt19937 rng(0);
+    std::uniform_int_distribution<> batchSizeG(1, 8);
+    std::normal_distribution<float> nd;
+
+    auto initMat = [&](SingleMatrix& buf, size_t r, size_t c, vec& data) -> SingleMatrix
+    {
+        data.resize(r * 3 * c);
+        std::fill(begin(data), end(data), std::numeric_limits<float>::quiet_NaN());
+        std::generate(begin(data) + r * c, begin(data) + 2 * r * c, [&] { return nd(rng); });
+        buf.SetValue(r, 3 * c, buf.GetDeviceId(), data.data());
+        // Get center slice.
+        return buf.ColumnSlice(c, c);
+    };
+
+    int baseDeviceId = 0;
+    auto engKind = ConvolutionEngineKind::Reference;
+    for (int deviceId : {-1})
+    {
+        for (const auto& g : GenerateConvTestConfigs())
+        {
+            auto baseEng = ConvEng::Create(g, baseDeviceId, ImageLayoutKind::CHW, 0, ConvolutionEngineKind::CuDnn);
+            auto testEng = ConvEng::Create(g, deviceId, ImageLayoutKind::CHW, 0, engKind);
+
+            size_t n = batchSizeG(rng);
+            vec buf;
+            buf.resize(g->OutputShape().GetNumElements() * n);
+            std::generate(begin(buf), end(buf), [&] { return nd(rng); });
+            SingleMatrix srcGradB(g->OutputShape().GetNumElements(), n, buf.data(), baseDeviceId, matrixFlagNormal);
+            SingleMatrix srcGradT(g->OutputShape().GetNumElements(), n, buf.data(), deviceId, matrixFlagNormal);
+            
+            size_t mapCount = g->GetMapCount(g->InputShape().GetRank() - 1);
+            buf.resize(g->KernelShape().GetNumElements() * mapCount);
+            std::generate(begin(buf), end(buf), [&] { return nd(rng); });
+            SingleMatrix filterB(mapCount, g->KernelShape().GetNumElements(), buf.data(), baseDeviceId, matrixFlagNormal);
+            SingleMatrix filterT(mapCount, g->KernelShape().GetNumElements(), buf.data(), deviceId, matrixFlagNormal);
+            
+            size_t crowGrad = g->InputShape().GetNumElements();
+            SingleMatrix gradBuf(deviceId);
+            SingleMatrix gradT = initMat(gradBuf, crowGrad, n, buf);
+            SingleMatrix gradB(gradT.DeepClone(), baseDeviceId);
+
+            SingleMatrix workspaceT(deviceId);
+            SingleMatrix workspaceB(baseDeviceId);
+            
+            testEng->BackwardData(srcGradT, filterT, gradT, workspaceT);
+            baseEng->BackwardData(srcGradB, filterB, gradB, workspaceB);
+            
+            std::stringstream tmsg;
+            tmsg << "Geometry: " << (std::string)(*g) << ", Batch: " << n;
+            std::string msg = " are not equal, " + tmsg.str();
+            std::string msgNan = " has NaNs, " + tmsg.str();
+            std::string msgNotNan = " has buffer overflow/underflow, " + tmsg.str();
+
+            float relErr = Err<float>::Rel;
+            float absErr = Err<float>::Abs;
+            std::string emsg;
+
+            BOOST_REQUIRE_MESSAGE(!gradT.HasNan("grad"), "grad" << msgNan);
+            BOOST_REQUIRE_MESSAGE(CheckEqual(gradT, gradB, emsg, relErr * 4, absErr * 8), "grad" << msg << ". " << emsg);
+            BOOST_REQUIRE_MESSAGE(CountNans(gradBuf) == crowGrad * 2 * n, "grad" << msgNotNan);
+        }
+    }
+}
+
+BOOST_AUTO_TEST_CASE(ConvolutionBackwardFilter)
+{
+    std::mt19937 rng(0);
+    std::uniform_int_distribution<> batchSizeG(1, 8);
+    std::normal_distribution<float> nd;
+
+    auto initMat = [&](SingleMatrix& buf, size_t r, size_t c, vec& data) -> SingleMatrix
+    {
+        data.resize(r * 3 * c);
+        std::fill(begin(data), end(data), std::numeric_limits<float>::quiet_NaN());
+        std::generate(begin(data) + r * c, begin(data) + 2 * r * c, [&] { return nd(rng); });
+        buf.SetValue(r, 3 * c, buf.GetDeviceId(), data.data());
+        // Get center slice.
+        return buf.ColumnSlice(c, c);
+    };
+
+    int baseDeviceId = 0;
+    auto engKind = ConvolutionEngineKind::Reference;
+    for (int deviceId : {-1})
+    {
+        for (const auto& g : GenerateConvTestConfigs())
+        {
+            auto baseEng = ConvEng::Create(g, baseDeviceId, ImageLayoutKind::CHW, 0, ConvolutionEngineKind::CuDnn);
+            auto testEng = ConvEng::Create(g, deviceId, ImageLayoutKind::CHW, 0, engKind);
+
+            size_t n = batchSizeG(rng);
+            vec buf;
+            buf.resize(g->InputShape().GetNumElements() * n);
+            std::generate(begin(buf), end(buf), [&] { return nd(rng); });
+            SingleMatrix inB(g->InputShape().GetNumElements(), n, buf.data(), baseDeviceId, matrixFlagNormal);
+            SingleMatrix inT(g->InputShape().GetNumElements(), n, buf.data(), deviceId, matrixFlagNormal);
+
+            buf.resize(g->OutputShape().GetNumElements() * n);
+            std::generate(begin(buf), end(buf), [&] { return nd(rng); });
+            SingleMatrix gradB(g->OutputShape().GetNumElements(), n, buf.data(), baseDeviceId, matrixFlagNormal);
+            SingleMatrix gradT(g->OutputShape().GetNumElements(), n, buf.data(), deviceId, matrixFlagNormal);
+
+            size_t mapCount = g->GetMapCount(g->InputShape().GetRank() - 1);
+            buf.resize(g->KernelShape().GetNumElements() * mapCount);
+            std::generate(begin(buf), end(buf), [&] { return nd(rng); });
+            SingleMatrix filterBuf(deviceId);
+            SingleMatrix filterT = initMat(filterBuf, mapCount, g->KernelShape().GetNumElements(), buf);
+            SingleMatrix filterB(filterT.DeepClone(), baseDeviceId);
+
+            SingleMatrix workspaceT(deviceId);
+            SingleMatrix workspaceB(baseDeviceId);
+            
+            testEng->BackwardFilter(gradT, inT, filterT, false, workspaceT);
+            baseEng->BackwardFilter(gradB, inB, filterB, false, workspaceB);
+            
+            std::stringstream tmsg;
+            tmsg << "Geometry: " << (std::string)(*g) << ", Batch: " << n;
+            std::string msg = " are not equal, " + tmsg.str();
+            std::string msgNan = " has NaNs, " + tmsg.str();
+            std::string msgNotNan = " has buffer overflow/underflow, " + tmsg.str();
+
+            float relErr = Err<float>::Rel;
+            float absErr = Err<float>::Abs;
+            std::string emsg;
+
+            BOOST_REQUIRE_MESSAGE(!filterT.HasNan("filter"), "filter" << msgNan);
+            BOOST_REQUIRE_MESSAGE(CheckEqual(filterT, filterB, emsg, relErr * 2, absErr * 8), "filter" << msg << ". " << emsg);
+            BOOST_REQUIRE_MESSAGE(CountNans(filterBuf) == filterT.GetNumElements() * 2, "filter" << msgNotNan);
         }
     }
 }

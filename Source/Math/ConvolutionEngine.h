@@ -44,11 +44,11 @@ public:
 public:
     virtual ~ConvolutionEngine() = default;
 
-    void Forward(size_t batchSize, const Mat& in, const Mat& filter, Mat& out, Mat& workspace);
+    void Forward(const Mat& in, const Mat& filter, Mat& out, Mat& workspace);
 
-    void BackwardData(size_t batchSize, const Mat& srcGrad, const Mat& filter, Mat& grad, Mat& workspace);
+    void BackwardData(const Mat& srcGrad, const Mat& filter, Mat& grad, Mat& workspace);
 
-    void BackwardFilter(size_t batchSize, const Mat& srcGrad, const Mat& in, Mat& filterGrad, bool allowReuse, Mat& workspace);
+    void BackwardFilter(const Mat& srcGrad, const Mat& in, Mat& filterGrad, bool allowReuse, Mat& workspace);
 
     static std::unique_ptr<ConvolutionEngine<ElemType>> Create(ConvolveGeometryPtr geometry, DEVICEID_TYPE deviceId, ImageLayoutKind imageLayout,
                                                                size_t maxTempMemSizeInSamples, ConvolutionEngineKind enabledEngines = ConvolutionEngineKind::All);
@@ -96,8 +96,8 @@ public:
     }
     virtual ~PoolingEngine() = default;
 
-    void Forward(size_t batchSize, PoolKind kind, const Mat& in, Mat& out);
-    void Backward(size_t batchSize, PoolKind kind, const Mat& out, const Mat& srcGrad, const Mat& in, Mat& grad);
+    void Forward(PoolKind kind, const Mat& in, Mat& out);
+    void Backward(PoolKind kind, const Mat& out, const Mat& srcGrad, const Mat& in, Mat& grad);
 
     DISABLE_COPY_AND_MOVE(PoolingEngine);
 

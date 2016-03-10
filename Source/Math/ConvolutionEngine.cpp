@@ -10,11 +10,12 @@
 namespace Microsoft { namespace MSR { namespace CNTK {
 
 template <class ElemType>
-void ConvolutionEngine<ElemType>::Forward(size_t batchSize, const Mat& in, const Mat& filter, Mat& out, Mat& workspace)
+void ConvolutionEngine<ElemType>::Forward(const Mat& in, const Mat& filter, Mat& out, Mat& workspace)
 {
     const auto& g = *m_geometry;
     assert(g.InputShape().GetNumElements() == in.GetNumRows());
     assert(g.OutputShape().GetNumElements() == out.GetNumRows());
+    size_t batchSize = in.GetNumCols();
     assert(batchSize == in.GetNumCols());
     assert(batchSize == out.GetNumCols());
     // REVIEW alexeyk: add shape-aware asserts?
@@ -28,11 +29,12 @@ void ConvolutionEngine<ElemType>::Forward(size_t batchSize, const Mat& in, const
 }
 
 template <class ElemType>
-void ConvolutionEngine<ElemType>::BackwardData(size_t batchSize, const Mat& srcGrad, const Mat& filter, Mat& grad, Mat& workspace)
+void ConvolutionEngine<ElemType>::BackwardData(const Mat& srcGrad, const Mat& filter, Mat& grad, Mat& workspace)
 {
     const auto& g = *m_geometry;
     assert(g.InputShape().GetNumElements() == grad.GetNumRows());
     assert(g.OutputShape().GetNumElements() == srcGrad.GetNumRows());
+    size_t batchSize = srcGrad.GetNumCols();
     assert(batchSize == srcGrad.GetNumCols());
     assert(batchSize == grad.GetNumCols());
     assert(g.KernelShape().GetNumElements() * g.MapCount().GetNumElements() == filter.GetNumElements());
@@ -45,11 +47,12 @@ void ConvolutionEngine<ElemType>::BackwardData(size_t batchSize, const Mat& srcG
 }
 
 template <class ElemType>
-void ConvolutionEngine<ElemType>::BackwardFilter(size_t batchSize, const Mat& srcGrad, const Mat& in, Mat& filter, bool allowReuse, Mat& workspace)
+void ConvolutionEngine<ElemType>::BackwardFilter(const Mat& srcGrad, const Mat& in, Mat& filter, bool allowReuse, Mat& workspace)
 {
     const auto& g = *m_geometry;
     assert(g.InputShape().GetNumElements() == in.GetNumRows());
     assert(g.OutputShape().GetNumElements() == srcGrad.GetNumRows());
+    size_t batchSize = in.GetNumCols();
     assert(batchSize == in.GetNumCols());
     assert(batchSize == srcGrad.GetNumCols());
     assert(g.KernelShape().GetNumElements() * g.MapCount().GetNumElements() == filter.GetNumElements());
@@ -230,7 +233,7 @@ protected:
 
     void BackwardFilterCore(size_t /*batchSize*/, const Mat& srcGrad, const Mat& in, Mat& filterGrad, bool /*allowReuse*/, Mat& /*workspace*/) override
     {
-        srcGrad.NDConvolutionBackwardData(in, m_mpRowCol, m_mpRowIwht, m_mpRowRun, m_runs, filterGrad);
+        srcGrad.NDConvolutionBackwardFilter(in, m_mpRowCol, m_mpRowIwht, m_mpRowRun, m_runs, filterGrad);
     }
 
 private:
@@ -536,8 +539,9 @@ template class ConvolutionEngine<double>;
 //------------------------------------------------------------------
 
 template <class ElemType>
-void PoolingEngine<ElemType>::Forward(size_t batchSize, PoolKind kind, const Mat& in, Mat& out)
+void PoolingEngine<ElemType>::Forward(PoolKind kind, const Mat& in, Mat& out)
 {
+    size_t batchSize = in.GetNumCols();
     //assert(inT.w() * inT.h() * inT.c() == in.GetNumRows());
     //assert(inT.n() == in.GetNumCols());
     //assert(outT.w() * outT.h() * outT.c() == out.GetNumRows());
@@ -548,8 +552,9 @@ void PoolingEngine<ElemType>::Forward(size_t batchSize, PoolKind kind, const Mat
 }
 
 template <class ElemType>
-void PoolingEngine<ElemType>::Backward(size_t batchSize, PoolKind kind, const Mat& out, const Mat& srcGrad, const Mat& in, Mat& grad)
+void PoolingEngine<ElemType>::Backward(PoolKind kind, const Mat& out, const Mat& srcGrad, const Mat& in, Mat& grad)
 {
+    size_t batchSize = srcGrad.GetNumCols();
     //assert(outT.w() * outT.h() * outT.c() == out.GetNumRows());
     //assert(outT.n() == out.GetNumCols());
     //assert(out.GetNumRows() == srcGrad.GetNumRows());
@@ -705,14 +710,14 @@ std::unique_ptr<ConvolutionEngine<ElemType>> ConvolutionEngine<ElemType>::Create
     // Note: in some cases do not throw exception even if parameters do not match as Create
     // can be called from places like MEL with default parameters and never be used. 
     // The check will be done later in engine's EnsureCompatible call if the egnine is actually used.
-    
+    auto engStr = (std::string)(*geometry);
     // Only legacy engine supports HWC layout.
     if (imageLayout == ImageLayoutKind::HWC)
     {
         if (!isEnabled(ConvolutionEngineKind::Legacy))
             RuntimeError("Trying to use Legacy convolution engine when it's disabled.");
         // REVIEW alexeyk: should honor m_traceLevel here.
-        fprintf(stderr, "Using legacy convolution engine.\n");
+        fprintf(stderr, "Using legacy convolution engine for geometry %s.\n", engStr.c_str());
         return std::make_unique<LegacyConvolutionEngine<ElemType>>(geometry, deviceId, imageLayout, maxTempMemSizeInSamples);
     }
 
@@ -727,13 +732,13 @@ std::unique_ptr<ConvolutionEngine<ElemType>> ConvolutionEngine<ElemType>::Create
         std::find(begin(sharing), end(sharing), false) == sharing.end() &&
         mapCount.GetNumElements() == mapCount[mapCount.GetRank() - 1])
     {
-        fprintf(stderr, "Using cuDNN convolution engine.\n");
+        fprintf(stderr, "Using cuDNN convolution engine for geometry %s.\n", engStr.c_str());
         return CuDnnConvolutionEngineFactory<ElemType>::CreateConvEngine(geometry, deviceId, imageLayout, maxTempMemSizeInSamples);
     }
 
     if (!isEnabled(ConvolutionEngineKind::Reference))
         RuntimeError("Reference convolution is disabled and no other engine supports such configuratin (or disabled).");
-    fprintf(stderr, "Using reference convolution engine.\n");
+    fprintf(stderr, "Using reference convolution engine for geometry %s.\n", engStr.c_str());
     return std::make_unique<ReferenceConvolutionEngine<ElemType>>(geometry, deviceId, imageLayout, maxTempMemSizeInSamples);
 }
 
