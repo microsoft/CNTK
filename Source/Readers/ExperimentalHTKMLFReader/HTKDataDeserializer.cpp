@@ -58,27 +58,19 @@ HTKDataDeserializer::HTKDataDeserializer(
         UtteranceDescription description(std::move(msra::asr::htkfeatreader::parsedpath(featureFiles[i])));
         size_t numberOfFrames = description.GetNumberOfFrames();
 
-        // we need at least 2 frames for boundary markers to work
+        // TODO: we need at least 2 frames for boundary markers to work
+        // TODO: this should be removed when MLF deserializer is rewritten.
         if (numberOfFrames < 2)
         {
             fprintf(stderr, "HTKDataDeserializer::HTKDataDeserializer: skipping utterance with %d frames because it has less than 2 frames: %ls\n",
                 (int)numberOfFrames, description.GetKey().c_str());
-            description.m_isValid = false;
-            description.m_numberOfSamples = 0;
-        }
-        else
-        {
-            description.m_isValid = true;
-            description.m_numberOfSamples = numberOfFrames;
+            continue;
         }
 
-        if (description.m_isValid)
-        {
-            size_t id = stringRegistry.AddValue(description.GetKey());
-            description.SetId(id);
-            m_utterances.push_back(description);
-            totalFrames += description.m_numberOfSamples;
-        }
+        size_t id = stringRegistry.AddValue(description.GetKey());
+        description.SetId(id);
+        m_utterances.push_back(description);
+        totalFrames += numberOfFrames;
     }
 
     m_totalNumberOfFrames = totalFrames;
@@ -89,7 +81,7 @@ HTKDataDeserializer::HTKDataDeserializer(
         static_cast<size_t>(0),
         [](size_t sum, const UtteranceDescription& s)
         {
-            return s.m_numberOfSamples + sum;
+            return s.GetNumberOfFrames() + sum;
         });
 
     const size_t MaxUtterancesPerChunk = 65535;
@@ -122,7 +114,7 @@ HTKDataDeserializer::HTKDataDeserializer(
         HTKChunkDescription& currentchunk = m_chunks.back();
         m_utterances[i].SetIndexInsideChunk(currentchunk.GetNumberOfUtterances());
         currentchunk.Add(&m_utterances[i]); // move it out from our temp array into the chunk
-        m_utterances[i].m_chunkId = chunkId;
+        m_utterances[i].SetChunkId(chunkId);
         m_utterances[i].SetStartFrameInsideChunk(startFrameInsideChunk);
         startFrameInsideChunk += m_utterances[i].GetNumberOfFrames();
     }
@@ -183,10 +175,10 @@ void HTKDataDeserializer::GetSequencesForChunk(size_t chunkId, std::vector<Seque
     {
         auto utterance = chunk.GetUtterance(i);
         size_t major = utterance->GetId();
-        for (size_t k = 0; k < utterance->m_numberOfSamples; ++k)
+        for (size_t k = 0; k < utterance->GetNumberOfFrames(); ++k)
         {
             SequenceDescription f;
-            f.m_chunkId = utterance->m_chunkId;
+            f.m_chunkId = utterance->GetChunkId();
             f.m_key.major = major;
             f.m_key.minor = k;
             f.m_id = id++;
