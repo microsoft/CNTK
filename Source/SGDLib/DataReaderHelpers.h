@@ -65,6 +65,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // New readers will reset this to (0,0) (they cannot modify the pointer itself). 
         // get layout meta-data
         trainSetDataReader.CopyMBLayoutTo(pMBLayout);
+
+        // TODO: move this into shim for the old readers.
+        // decimate if needed. Decimation happens in-place.
+        if (!useDistributedMBReading && useParallelTrain &&
+            !(pMBLayout->GetNumParallelSequences() == 0 && pMBLayout->GetNumTimeSteps() == 0))
+        {
+            DecimateMinibatchInPlace<ElemType>(inputMatrices, g_mpi->NumNodesInUse(), g_mpi->CurrentNodeRank(), net->GetMBLayoutPtr());
+        }
+
         if (!(pMBLayout->GetNumParallelSequences() == 0 && pMBLayout->GetNumTimeSteps() == 0))
         {
             // we are dealing with an old reader.
@@ -72,14 +81,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 node->GetMBLayout()->CopyFrom(pMBLayout);
             for (auto& node : net->LabelNodes())
                 node->GetMBLayout()->CopyFrom(pMBLayout);
-        }
-
-        // TODO: move this into shim for the old readers.
-        // decimate if needed. Decimation happens in-place.
-        if (!useDistributedMBReading && useParallelTrain)
-        {
-            assert(!(pMBLayout->GetNumParallelSequences() == 0 && pMBLayout->GetNumTimeSteps()==0));
-            DecimateMinibatchInPlace<ElemType>(inputMatrices, g_mpi->NumNodesInUse(), g_mpi->CurrentNodeRank(), net->GetMBLayoutPtr());
         }
 
         // reader will have resized input node's m_value directly. Nodes must be notified to do necessary internal state updates from that.
