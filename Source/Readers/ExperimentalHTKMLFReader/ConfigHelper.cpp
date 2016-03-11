@@ -207,7 +207,7 @@ std::wstring ConfigHelper::GetRandomizer()
     return randomizer;
 }
 
-std::vector<std::wstring> ConfigHelper::GetFeaturePaths()
+std::vector<std::wstring> ConfigHelper::GetUtterancePaths()
 {
     std::wstring scriptPath = m_config(L"scpFile");
     std::wstring rootPath = m_config(L"prefixPathInSCP", L"");

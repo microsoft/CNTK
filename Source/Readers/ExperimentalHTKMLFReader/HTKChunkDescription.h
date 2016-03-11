@@ -18,7 +18,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 class HTKChunkDescription
 {
     // All utterances in the chunk.
-    std::vector<UtteranceDescription*> m_utteranceSet;
+    std::vector<UtteranceDescription> m_utteranceSet;
 
     // Stores all frames of the chunk consecutively (mutable since this is a cache).
     mutable msra::dbn::matrix m_frames;
@@ -42,7 +42,7 @@ public:
     }
 
     // Adds an utterance to the chunk.
-    void Add(UtteranceDescription* utterance)
+    void Add(UtteranceDescription&& utterance)
     {
         if (IsInRam())
         {
@@ -50,8 +50,8 @@ public:
         }
 
         m_firstFrames.push_back(m_totalFrames);
-        m_totalFrames += utterance->GetNumberOfFrames();
-        m_utteranceSet.push_back(utterance);
+        m_totalFrames += utterance.GetNumberOfFrames();
+        m_utteranceSet.push_back(std::move(utterance));
     }
 
     // Gets total number of frames in the chunk.
@@ -63,7 +63,7 @@ public:
     // Get utterance description by its index.
     const UtteranceDescription* GetUtterance(size_t index) const
     {
-        return m_utteranceSet[index];
+        return &m_utteranceSet[index];
     }
 
     // Get utterance by the absolute frame index in chunk.
@@ -72,9 +72,9 @@ public:
     {
         struct Comp
         {
-            bool operator () (size_t fi, const UtteranceDescription* a)
+            bool operator () (size_t fi, const UtteranceDescription& a)
             {
-                return fi < a->GetStartFrameIndexInsideChunk();
+                return fi < a.GetStartFrameIndexInsideChunk();
             }
         };
 
@@ -122,7 +122,7 @@ public:
             {
                 // read features for this file
                 auto framesWrapper = GetUtteranceFrames(i);
-                reader.read(m_utteranceSet[i]->GetPath(), featureKind, samplePeriod, framesWrapper);
+                reader.read(m_utteranceSet[i].GetPath(), featureKind, samplePeriod, framesWrapper);
             }
 
             if (verbosity)
