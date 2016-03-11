@@ -108,7 +108,7 @@ ComputationNetworkPtr GetModelFromConfig(const ConfigRecordType& config, vector<
         net = make_shared<ComputationNetwork>(deviceId);
         net->Read<ElemType>(modelPath);
 
-        ConfigArray outputNodeNames = config(L"outputNodeNames", "");
+        ConfigArray outputNodeNames = config(L"outputNodeNames", ConfigArray(""));
 
         if (outputNodeNames.size() > 0)
         {
