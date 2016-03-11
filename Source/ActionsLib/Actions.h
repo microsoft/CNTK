@@ -28,11 +28,6 @@ using namespace std;
 using namespace Microsoft::MSR;
 using namespace Microsoft::MSR::CNTK; // TODO: we should not have this in a header
 
-// TODO: decide where these should go. Also, do we need three variables?
-extern wstring standardFunctions;
-extern wstring commonMacros;
-extern wstring computationNodes;
-
 // helper that returns 'float' or 'double' depending on ElemType
 template <typename ElemType> /*static*/ const wchar_t* ElemTypeName();
 
