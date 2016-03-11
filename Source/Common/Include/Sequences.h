@@ -278,6 +278,34 @@ public:
         return !(*this == other);
     } // duh
 
+    operator std::string() const
+    {
+        std::string s = std::string("{numTimeSteps:") 
+                        + std::to_string(m_numTimeSteps)
+                        + ", numParallelSequences:" 
+                        + std::to_string(m_numParallelSequences)
+                        + ", sequences:[";
+
+        bool first = true;
+        for (const auto seq : m_sequences)
+        {
+            if (!first)
+                s.append(", ");
+            s.append("{seqId:");
+            s.append(std::to_string(seq.seqId));
+            s.append(", s:");
+            s.append(std::to_string(seq.s));
+            s.append(", begin:");
+            s.append(std::to_string(seq.tBegin));
+            s.append(", end:");
+            s.append(std::to_string(seq.tEnd));
+            s.append("}");
+            first = false;
+        }
+        s.append("]}");
+        return s;
+    }
+
     // -------------------------------------------------------------------
     // building (adding sequences or gaps)
     // -------------------------------------------------------------------
