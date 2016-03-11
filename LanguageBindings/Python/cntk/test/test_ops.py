@@ -1,8 +1,9 @@
 # Here should all the functional operator tests go.
 
 import pytest
-from ..context import Context
+from ..context import get_context
 from ..graph import *
+from ..reader import *
 
 # keeping things short
 C = Constant
@@ -28,9 +29,10 @@ C = Constant
     (abs(C(3)), 3),
 
     ])
-def test_overload_eval(root_node, expected):
-    with Context(root_node) as ctx:
-        result = ctx.eval(root_node, None) 
-        assert result == expected
+def test_overload_eval(root_node, expected, tmpdir):
+    with get_context() as ctx:
+        ctx.clean_up = False
+        result = ctx.eval(root_node, None)
+        assert np.all(result == data)
 
     

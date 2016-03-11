@@ -3,6 +3,7 @@ import os
 import subprocess
 import numpy as np
 
+
 _FLOATX = 'float32'
 if "CNTK_EXECUTABLE_PATH" not in os.environ:
     raise ValueError("you need to point environmental variable 'CNTK_EXECUTABLE_PATH' to the CNTK binary")
@@ -56,15 +57,19 @@ class AbstractContext(object, metaclass=ABCMeta):
         
         self.name = name
         self.macros = []  
-        self.graph = graph
+        self.graph = graph or Graph()
         self.optimizer = optimizer
         self.device_id = device_id
         self.clean_up = clean_up
         
     def __enter__(self):
+        _CONTEXT[self.name] = self
+
         return self
 
     def __exit__(self, exc_type, exc_value, exc_tb):
+        del _CONTEXT[self.name]
+
         if self.clean_up:
             import shutil
             shutil.rmtree(self.directory)
@@ -83,7 +88,7 @@ class AbstractContext(object, metaclass=ABCMeta):
         model_filename = os.path.join(self.directory, 'Models', self.name)
         tmpl_dict = {
                 'DevideId':self.device_id,
-                'ModelDescription':self.graph.to_description(),
+                'ModelDescription':self.graph.to_graph_description(),
                 'ModelModelPath': model_filename,
                 'Reader':reader_config,
                 'SGD':self.optimizer.generate_config(),
@@ -101,18 +106,74 @@ class AbstractContext(object, metaclass=ABCMeta):
         """                
         raise NotImplementedError 
     
-    def _generate_eval_config(self, node, reader):
+    def _generate_eval_config(self, root_node, input_map):
         """Generates the configuration file for write action.
         :param node: the node to evaluate. 
         """                
+        not_assigned = []
+
+        for node in self.graph.feature_nodes:
+            if node not in input_map:
+                not_assigned.append(node)
+
+        if not_assigned:
+            raise ValueError('Cannot create the configuration, because the ' +
+            'following input nodes are missing corresponding input readers: ' +
+            ", ".join(not_assigned))
+
+        # TODO to corresponding tests for label_nodes (e.g. do we have a label
+        # mapping per label node, etc.)
+
+        # TODO factor out reader config output so that train/test can use it
+        model_description = root_node.to_graph_description()
+
+        if not self.graph.feature_nodes:
+            #import ipdb;ipdb.set_trace()
+            # add dummy input to keep CNTK happy 
+            # TODO relieve this requirement
+            
+            data = [[1,2], [3,4]]
+            fn = os.path.join(self.directory, 'dummy_input.txt')
+            from .reader import NumPyReader
+            reader = NumPyReader(data, fn)
+            from .ops import Input
+            dummy_input_node = Input(2, ctx=self)
+            dummy_input_node.var_name='dummy_node'
+            input_map = {dummy_input_node:(reader, (0,2))}
+            model_description += "\ndummy_node=Input(2, 1, tag='feature')"
+
         tmpl = open(CNTK_EVAL_TEMPLATE_PATH, "r").read()
-        reader_config = reader.generate_config()
+        readers = set() 
+        node_dimensions = []
+        for node, (reader, dims) in input_map.items():
+            if not node.var_name:
+                raise ValueError("Node '%s' does not have a variable name assigned yet."%str(node))
+
+            start, num_dims = dims
+            node_dimensions.append('''\
+%s = [
+               start=%i
+               dim=%i
+           ]'''%(node.var_name, start, num_dims))
+                        
+
+            readers.add(reader)
+
+        node_dimensions = "\n".join(node_dimensions)
+
+        # make sure every reader is configured only once
+        reader_configs = []
+        for reader in readers:
+            reader_configs.append(reader.generate_config())
+        reader_configs = "\n".join(reader_configs)
+
         output_filename = os.path.join(self.directory, CNTK_OUTPUT_FILENAME)
         tmpl_dict = {
                 'DevideId':self.device_id,
-                'Reader':reader_config,
+                'NodeDimensions':node_dimensions,
+                'Reader':reader_configs,
                 'OutputFile':output_filename,
-                'ModelDescription':node.to_description()
+                'ModelDescription':model_description
                 } 
         return tmpl%tmpl_dict
                 
@@ -159,6 +220,7 @@ class Context(AbstractContext):
         filename = os.path.join(self.directory, config_file_name)        
         with open(os.path.join(self.directory, filename), "w") as out:
             out.write(config_content)            
+
         subprocess.check_call([CNTK_EXECUTABLE_PATH, "configFile=%s"%filename])        
     
     def train(self, reader):
@@ -182,12 +244,12 @@ class Context(AbstractContext):
         config_content = self._generate_predict_config(reader) 
         self._call_cntk(CNTK_PREDICT_CONFIG_FILENAME, config_content) 
     
-    def eval(self, node, reader):
+    def eval(self, node, input_map):
         """Run the write action locally to evaluate the passed node.
-        :param reader: the reader used to provide the prediction data.
+        :param input_map: mapping of input node to (reader, (start_dim, num_dim))
         :param node: the node to evaluate.
         """            
-        config_content = self._generate_eval_config(node, reader) 
+        config_content = self._generate_eval_config(node, input_map) 
         self._call_cntk(CNTK_EVAL_CONFIG_FILENAME, config_content) 
 
         import glob
@@ -204,3 +266,5 @@ class ClusterContext(AbstractContext):
     """This is a sub-class of AbstractContext, use it to submit your workloads to the cluster.
     """    
     pass
+
+from .graph import Graph

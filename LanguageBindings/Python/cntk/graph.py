@@ -8,6 +8,18 @@ class ComputationNode(object):
         # context is used to get the graph, readers, etc.
         self.context = ctx or get_context()
 
+        if self._is_feature():
+            self.context.graph.add_feature(self)
+
+        if self._is_label():
+            self.context.graph.add_label(self)
+
+    def _is_feature(self):
+        return hasattr(self, 'tag') and self.tag == 'feature'
+
+    def _is_label(self):
+        return hasattr(self, 'tag') and self.tag == 'label'
+
     def __add__(self, other):
         return Plus(self, other)
 
@@ -55,16 +67,15 @@ class ComputationNode(object):
     # TODO more __operators__
 
     def _get_cntk_param_string(self, param_variable_names=None):
-        params = ", ".join(param_variable_names)
-        return params
+        return ", ".join(param_variable_names)
 
-    def eval(self, **kw):
-        graph.eval(self, kw)
+    def eval(self, input_map, **kw):
+        graph.eval(self, input_map, kw)
 
     def __str__(self):
         return "%s / params=%s"%(self.name, self.params)
 
-    def _to_description(self, desc, unrolled_nodes, node_counter=0):
+    def _to_description_unroll(self, desc, unrolled_nodes, node_counter=0):
         param_variable_names = []
         if self.params:
             for p_name in self.params:
@@ -75,7 +86,7 @@ class ComputationNode(object):
                         # name
                         child_var = unrolled_nodes[p_value]
                     else:
-                        child_var, node_counter, child_desc = p_value._to_description(desc, unrolled_nodes, node_counter)
+                        child_var, node_counter, child_desc = p_value._to_description_unroll(desc, unrolled_nodes, node_counter)
                         unrolled_nodes[p_value] = child_var
                     param_variable_names.append(child_var)
                 else:
@@ -84,24 +95,50 @@ class ComputationNode(object):
                     elif isinstance(p_value, str):
                         p_value = "'%s'"%p_value
                     
-                    param_variable_names.append('%s=%s'%(p_name, p_value))
+                    # TODO check whether flattening tuples in operator
+                    # definitions is ok in all cases (e.g. dims=(2,1))
+                    if type(p_value) in [list, tuple]:
+                        if len(p_value) == 1:
+                            p_value = p_value[0]
+                        else:
+                            p_value = ", ".join(p_value)
 
-        var_name = self.var_name or "v%i"%node_counter 
+                    param_variable_names.append('%s'%p_value)
+
+        self.var_name = self.var_name or "v%i"%node_counter 
         node_counter += 1
         
         params = self._get_cntk_param_string(param_variable_names)
 
-        line = "%s = %s(%s)"%(var_name, self.name, params)
+        line = "%s = %s(%s)"%(self.var_name, self.name, params)
         desc.append(line)
 
-        return var_name, node_counter, desc
+        return self.var_name, node_counter, desc
+
+    def _to_description(self):
+        unrolled_nodes = {}
+        var_name, node_counter, desc = self._to_description_unroll(desc=[], unrolled_nodes=unrolled_nodes)
+
+        return var_name, node_counter, desc 
 
     def to_description(self):
-        unrolled_nodes = {}
-        var_name, node_counter, desc = self._to_description(desc=[], unrolled_nodes=unrolled_nodes)
+        var_name, node_counter, desc = self._to_description()
+
+        return "\n".join(desc)
+
+    def to_graph_description(self, dummy_required=False):
+        var_name, node_counter, desc = self._to_description()
 
         # FIXME we currently assume that the last node is also the root node -
+        feature_nodes = self.context.graph.feature_nodes.copy()
+
+        if dummy_required:
+            var_name += ',dummy_node'
+            feature_nodes.add('dummy_node')
+
         desc.append("OutputNodes=(%s)"%var_name)
+        if feature_nodes:
+            desc.append("FeatureNodes=(%s)"%','.join(node.var_name for node in feature_nodes))
 
         return "\n".join(desc)
 
@@ -114,16 +151,19 @@ class Label(ComputationNode):
 class Graph(object):
     def __init__(self):
         super(Graph, self).__init__()
+        self.feature_nodes = set()
+        self.label_nodes = set()
         # TODO maintain self.root_node
+
+    def add_feature(self, node):
+        self.feature_nodes.add(node)
+
+    def add_label(self, node):
+        self.labels_nodes.add(node)
 
     def to_description(self, root_node, **kw):
         return root_node.to_description()
 
-    def eval(self, root_node, **kw):
-        if root_node is None:
-            root_node = self.root_node
-        model_description = self.to_description(root_node)
-        # TODO pull in context for config file generation, etc.
 
 
 # importing at the end of the file to work around circular imports

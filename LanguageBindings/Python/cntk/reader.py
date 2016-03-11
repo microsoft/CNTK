@@ -10,6 +10,11 @@ class AbstractReader(dict, metaclass=ABCMeta):
         """
         raise NotImplementedError 
 
+    # required so that instances can be put into a set
+    def __hash__(self): return hash(id(self))
+    def __eq__(self, x): return x is self
+    def __ne__(self, x): return x is not self
+
 class UCIFastReader(AbstractReader):        
     """This is the reader class
     
