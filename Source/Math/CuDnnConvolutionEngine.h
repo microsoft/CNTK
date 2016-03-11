@@ -16,7 +16,7 @@ public:
     static std::unique_ptr<ConvolutionEngine<ElemType>> Create(ConvolveGeometryPtr geometry, DEVICEID_TYPE deviceId, 
                                                                ImageLayoutKind imageLayout, size_t maxTempMemSizeInSamples,
                                                                PoolKind poolKind);
-    static bool IsSupported(DEVICEID_TYPE deviceId);
+    static bool IsSupported(ConvolveGeometryPtr geometry, DEVICEID_TYPE deviceId, PoolKind poolKind);
 };
 
 //template <class ElemType>

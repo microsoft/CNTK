@@ -67,6 +67,7 @@ public:
     // * relative indices into source (item count of these)
     // NOTE: The first run of indices is always the "full" filter run. Also, MpRowIndices can be empty,
     // indicating that all values are zero (all outputs use the "full" filter run).
+    // In addition, all items in Indices are valid source indices so no masking is required in subsequent computation.
     const IntVec&  MpRowIndices() const { return m_mpRowIndices; }
     const IntVec&  Indices() const { return m_indices; }
 

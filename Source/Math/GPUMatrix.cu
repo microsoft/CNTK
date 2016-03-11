@@ -3022,6 +3022,32 @@ void GPUMatrix<ElemType>::NDConvolutionBackwardFilter(const GPUMatrix<ElemType>&
     UNUSED(in); UNUSED(mpRowCol); UNUSED(mpRowIwht); UNUSED(mpRowRun); UNUSED(runs); UNUSED(filterGrad);
 }
 
+template <class ElemType>
+void GPUMatrix<ElemType>::NDMaxPoolingForward(const GPUMatrix<int>& mpRowCol, const GPUMatrix<int>& mpRowIndices, const GPUMatrix<int>& indices, GPUMatrix<ElemType>& output) const
+{
+    UNUSED(mpRowCol); UNUSED(mpRowIndices); UNUSED(indices); UNUSED(output);
+}
+
+template <class ElemType>
+void GPUMatrix<ElemType>::NDMaxPoolingBackward(const GPUMatrix<ElemType>& out, const GPUMatrix<ElemType>& in,
+                                               const GPUMatrix<int>& mpRowCol, const GPUMatrix<int>& mpRowIndices, const GPUMatrix<int>& indices,
+                                               GPUMatrix<ElemType>& grad) const
+{
+    UNUSED(out); UNUSED(in); UNUSED(mpRowCol); UNUSED(mpRowIndices); UNUSED(indices); UNUSED(grad);
+}
+
+template <class ElemType>
+void GPUMatrix<ElemType>::NDAveragePoolingForward(const GPUMatrix<int>& mpRowCol, const GPUMatrix<int>& mpRowIndices, const GPUMatrix<int>& indices, GPUMatrix<ElemType>& output) const
+{
+    UNUSED(mpRowCol); UNUSED(mpRowIndices); UNUSED(indices); UNUSED(output);
+}
+
+template <class ElemType>
+void GPUMatrix<ElemType>::NDAveragePoolingBackward(const GPUMatrix<int>& mpRowCol, const GPUMatrix<int>& mpRowIndices, const GPUMatrix<int>& indices, GPUMatrix<ElemType>& grad) const
+{
+    UNUSED(mpRowCol); UNUSED(mpRowIndices); UNUSED(indices); UNUSED(grad);
+}
+
 #pragma region Static BLAS Functions
 // float/double overloads of cublasSgemm()/cublasDgemm()
 static cublasStatus_t cublas_gemm(cublasHandle_t handle, cublasOperation_t transa, cublasOperation_t transb, int m, int n, int k, const float* alpha, const float* A, int lda, const float* B, int ldb, const float* beta, float* C, int ldc)

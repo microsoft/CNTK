@@ -324,6 +324,15 @@ public:
     void NDConvolutionBackwardFilter(const CPUMatrix<ElemType>& in, const CPUMatrix<int>& mpRowCol, const CPUMatrix<int>& mpRowIwht,
                                      const CPUMatrix<int>& mpRowRun, const CPUMatrix<int>& runs, CPUMatrix<ElemType>& filterGrad) const;
 
+    void NDMaxPoolingForward(const CPUMatrix<int>& mpRowCol, const CPUMatrix<int>& mpRowIndices, const CPUMatrix<int>& indices, CPUMatrix<ElemType>& output) const;
+    void NDMaxPoolingBackward(const CPUMatrix<ElemType>& out, const CPUMatrix<ElemType>& in,
+                              const CPUMatrix<int>& mpRowCol, const CPUMatrix<int>& mpRowIndices, const CPUMatrix<int>& indices,
+                              CPUMatrix<ElemType>& grad) const;
+
+    void NDAveragePoolingForward(const CPUMatrix<int>& mpRowCol, const CPUMatrix<int>& mpRowIndices, const CPUMatrix<int>& indices, CPUMatrix<ElemType>& output) const;
+    void NDAveragePoolingBackward(const CPUMatrix<int>& mpRowCol, const CPUMatrix<int>& mpRowIndices, const CPUMatrix<int>& indices,
+                                  CPUMatrix<ElemType>& grad) const;
+
 public:
     static int SetNumThreads(int numThreads); // note: this does not depend on <ElemType>, i.e. you can call it on any <ElemType>
 

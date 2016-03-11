@@ -125,6 +125,45 @@ std::vector<ConvolveGeometryPtr> GenerateConvTestConfigs()
     return res;
 }
 
+std::vector<ConvolveGeometryPtr> GeneratePoolTestConfigs()
+{
+    std::vector<ConvolveGeometryPtr> res;
+    for (size_t kW : {1, 2, 3})
+    {
+        for (size_t kH : {1, 2, 3})
+        {
+            for (size_t inW : {kW, 2 * kW, 2 * kW - 1})
+            {
+                for (size_t inC : {1, 3})
+                {
+                    for (size_t stride : {1, min((int)kW, min((int)kH, 2))})
+                    {
+                        // Note: must always use autopadding otherwise there might be configurations that 
+                        // require negative padding that cuDNN does not support.
+                        res.push_back(std::make_shared<ConvolveGeometry>(TensorShape(inW, max(kH, inW) + 1, inC),
+                            TensorShape(kW, kH, 1), TensorShape(1), TensorShape(stride, stride, 1),
+                            ConvolveGeometry::BoolVec{true},
+                            ConvolveGeometry::BoolVec{true, true, false},
+                            TensorShape(0), TensorShape(0)));
+                    }
+                }
+            }
+        }
+    }
+    // For debugging.
+    // Ordinary pooling.
+    res.push_back(std::make_shared<ConvolveGeometry>(TensorShape(4, 4, 1),
+        TensorShape(2, 2, 1), TensorShape(1), TensorShape(2, 2, 1),
+        ConvolveGeometry::BoolVec{true}, ConvolveGeometry::BoolVec{true, true, false},
+        TensorShape(0), TensorShape(0)));
+    // Overlapped with padding.
+    res.push_back(std::make_shared<ConvolveGeometry>(TensorShape(4, 4, 1),
+        TensorShape(3, 3, 1), TensorShape(1), TensorShape(2, 2, 1),
+        ConvolveGeometry::BoolVec{true}, ConvolveGeometry::BoolVec{true, true, false},
+        TensorShape(0), TensorShape(0)));
+    return res;
+}
+
 BOOST_AUTO_TEST_SUITE(ConvolutionSuite)
 
 BOOST_AUTO_TEST_CASE(ConvolutionForward)
@@ -149,8 +188,8 @@ BOOST_AUTO_TEST_CASE(ConvolutionForward)
     {
         for (const auto& g : GenerateConvTestConfigs())
         {
-            auto baseEng = ConvEng::Create(g, baseDeviceId, ImageLayoutKind::CHW, 0, ConvolutionEngineKind::CuDnn);
-            auto testEng = ConvEng::Create(g, deviceId, ImageLayoutKind::CHW, 0, engKind);
+            auto baseEng = ConvEng::Create(g, baseDeviceId, ImageLayoutKind::CHW, 0, PoolKind::None, ConvolutionEngineKind::CuDnn);
+            auto testEng = ConvEng::Create(g, deviceId, ImageLayoutKind::CHW, 0, PoolKind::None, engKind);
 
             size_t n = batchSizeG(rng);
             vec buf;
@@ -215,8 +254,8 @@ BOOST_AUTO_TEST_CASE(ConvolutionBackwardData)
     {
         for (const auto& g : GenerateConvTestConfigs())
         {
-            auto baseEng = ConvEng::Create(g, baseDeviceId, ImageLayoutKind::CHW, 0, ConvolutionEngineKind::CuDnn);
-            auto testEng = ConvEng::Create(g, deviceId, ImageLayoutKind::CHW, 0, engKind);
+            auto baseEng = ConvEng::Create(g, baseDeviceId, ImageLayoutKind::CHW, 0, PoolKind::None, ConvolutionEngineKind::CuDnn);
+            auto testEng = ConvEng::Create(g, deviceId, ImageLayoutKind::CHW, 0, PoolKind::None, engKind);
 
             size_t n = batchSizeG(rng);
             vec buf;
@@ -281,8 +320,8 @@ BOOST_AUTO_TEST_CASE(ConvolutionBackwardFilter)
     {
         for (const auto& g : GenerateConvTestConfigs())
         {
-            auto baseEng = ConvEng::Create(g, baseDeviceId, ImageLayoutKind::CHW, 0, ConvolutionEngineKind::CuDnn);
-            auto testEng = ConvEng::Create(g, deviceId, ImageLayoutKind::CHW, 0, engKind);
+            auto baseEng = ConvEng::Create(g, baseDeviceId, ImageLayoutKind::CHW, 0, PoolKind::None, ConvolutionEngineKind::CuDnn);
+            auto testEng = ConvEng::Create(g, deviceId, ImageLayoutKind::CHW, 0, PoolKind::None, engKind);
 
             size_t n = batchSizeG(rng);
             vec buf;
@@ -344,14 +383,14 @@ BOOST_AUTO_TEST_CASE(PoolingForward)
 
     int baseDeviceId = 0;
     auto engKind = ConvolutionEngineKind::Reference;
-    for (auto kind : {PoolKind::Max, PoolKind::Max})
+    for (auto kind : {PoolKind::Max, PoolKind::Average})
     {
         for (int deviceId : {-1})
         {
-            for (const auto& g : GenerateConvTestConfigs())
+            for (const auto& g : GeneratePoolTestConfigs())
             {
-                auto baseEng = ConvEng::Create(g, baseDeviceId, ImageLayoutKind::CHW, 0, ConvolutionEngineKind::CuDnn);
-                auto testEng = ConvEng::Create(g, deviceId, ImageLayoutKind::CHW, 0, engKind);
+                auto baseEng = ConvEng::Create(g, baseDeviceId, ImageLayoutKind::CHW, 0, kind, ConvolutionEngineKind::CuDnn);
+                auto testEng = ConvEng::Create(g, deviceId, ImageLayoutKind::CHW, 0, kind, engKind);
 
                 size_t n = batchSizeG(rng);
                 vec buf;
@@ -365,11 +404,11 @@ BOOST_AUTO_TEST_CASE(PoolingForward)
                 SingleMatrix outT = initMat(outBuf, crowOut, n, buf);
                 SingleMatrix outB(outT.DeepClone(), baseDeviceId);
 
-                testEng->ForwardPooling(kind, inT, outT);
-                baseEng->ForwardPooling(kind, inB, outB);
+                testEng->ForwardPooling(inT, outT);
+                baseEng->ForwardPooling(inB, outB);
 
                 std::stringstream tmsg;
-                tmsg << "Geometry: " << (std::string)(*g) << ", Batch: " << n;
+                tmsg << "Geometry: " << (std::string)(*g) << ", Pool: " << (int)kind << ", Batch: " << n;
                 std::string msg = " are not equal, " + tmsg.str();
                 std::string msgNan = " has NaNs, " + tmsg.str();
                 std::string msgNotNan = " has buffer overflow/underflow, " + tmsg.str();
@@ -381,6 +420,78 @@ BOOST_AUTO_TEST_CASE(PoolingForward)
                 BOOST_REQUIRE_MESSAGE(!outT.HasNan("out"), "out" << msgNan);
                 BOOST_REQUIRE_MESSAGE(CheckEqual(outT, outB, emsg, relErr, absErr * 8), "out" << msg << ". " << emsg);
                 BOOST_REQUIRE_MESSAGE(CountNans(outBuf) == crowOut * 2 * n, "out" << msgNotNan);
+            }
+        }
+    }
+}
+
+BOOST_AUTO_TEST_CASE(PoolingBackward)
+{
+    std::mt19937 rng(0);
+    std::uniform_int_distribution<> batchSizeG(1, 8);
+    std::normal_distribution<float> nd;
+
+    auto initMat = [&](SingleMatrix& buf, size_t r, size_t c, vec& data) -> SingleMatrix
+    {
+        data.resize(r * 3 * c);
+        std::fill(begin(data), end(data), std::numeric_limits<float>::quiet_NaN());
+        std::generate(begin(data) + r * c, begin(data) + 2 * r * c, [&] { return nd(rng); });
+        buf.SetValue(r, 3 * c, buf.GetDeviceId(), data.data());
+        // Get center slice.
+        return buf.ColumnSlice(c, c);
+    };
+
+    int baseDeviceId = 0;
+    auto engKind = ConvolutionEngineKind::Reference;
+    for (auto kind : {PoolKind::Max, PoolKind::Average})
+    {
+        for (int deviceId : {-1})
+        {
+            for (const auto& g : GeneratePoolTestConfigs())
+            {
+                auto baseEng = ConvEng::Create(g, baseDeviceId, ImageLayoutKind::CHW, 0, kind, ConvolutionEngineKind::CuDnn);
+                auto testEng = ConvEng::Create(g, deviceId, ImageLayoutKind::CHW, 0, kind, engKind);
+
+                size_t n = batchSizeG(rng);
+                vec buf;
+                size_t crowIn = g->InputShape().GetNumElements();
+                buf.resize(crowIn * n);
+                std::generate(begin(buf), end(buf), [&] { return nd(rng); });
+                SingleMatrix inB(crowIn, n, buf.data(), baseDeviceId, matrixFlagNormal);
+                SingleMatrix inT(crowIn, n, buf.data(), deviceId, matrixFlagNormal);
+
+                size_t crowOut = g->OutputShape().GetNumElements();
+                buf.resize(crowOut * n);
+                std::generate(begin(buf), end(buf), [&] { return nd(rng); });
+                SingleMatrix srcGradB(crowOut, n, buf.data(), baseDeviceId, matrixFlagNormal);
+                SingleMatrix srcGradT(crowOut, n, buf.data(), deviceId, matrixFlagNormal);
+                // Do not generate for out as it will be replaced anyway.
+                SingleMatrix outB(crowOut, n, buf.data(), baseDeviceId, matrixFlagNormal);
+                SingleMatrix outT(crowOut, n, buf.data(), deviceId, matrixFlagNormal);
+
+                testEng->ForwardPooling(inT, outT);
+                baseEng->ForwardPooling(inB, outB);
+
+                SingleMatrix gradBuf(deviceId);
+                SingleMatrix gradT = initMat(gradBuf, crowIn, n, buf);
+                SingleMatrix gradB(gradT.DeepClone(), baseDeviceId);
+
+                testEng->BackwardPooling(outT, srcGradT, inT, gradT);
+                baseEng->BackwardPooling(outB, srcGradB, inB, gradB);
+
+                std::stringstream tmsg;
+                tmsg << "Geometry: " << (std::string)(*g) << ", Pool: " << (int)kind << ", Batch: " << n;
+                std::string msg = " are not equal, " + tmsg.str();
+                std::string msgNan = " has NaNs, " + tmsg.str();
+                std::string msgNotNan = " has buffer overflow/underflow, " + tmsg.str();
+
+                float relErr = Err<float>::Rel;
+                float absErr = Err<float>::Abs;
+                std::string emsg;
+
+                BOOST_REQUIRE_MESSAGE(!gradT.HasNan("grad"), "grad" << msgNan);
+                BOOST_REQUIRE_MESSAGE(CheckEqual(gradT, gradB, emsg, relErr, absErr * 8), "grad" << msg << ". " << emsg);
+                BOOST_REQUIRE_MESSAGE(CountNans(gradBuf) == crowIn * 2 * n, "grad" << msgNotNan);
             }
         }
     }

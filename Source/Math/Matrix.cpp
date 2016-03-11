@@ -4053,6 +4053,84 @@ void Matrix<ElemType>::NDConvolutionBackwardFilter(const Matrix<ElemType>& in, c
                             NOT_IMPLEMENTED);
 }
 
+template <class ElemType>
+void Matrix<ElemType>::NDMaxPoolingForward(const Matrix<int>& mpRowCol, const Matrix<int>& mpRowIndices, const Matrix<int>& indices, Matrix<ElemType>& output) const
+{
+    assert(mpRowCol.GetNumCols() == 1);
+    assert(mpRowIndices.GetNumCols() == 1);
+    assert(indices.GetNumCols() == 1);
+
+    DecideAndMoveToRightDevice(*this, output);
+
+    // REVIEW alexeyk: add sparse version.
+    DISPATCH_MATRIX_ON_FLAG(this,
+                            this,
+                            m_CPUMatrix->NDMaxPoolingForward(*(mpRowCol.m_CPUMatrix), *(mpRowIndices.m_CPUMatrix), *(indices.m_CPUMatrix), *(output.m_CPUMatrix)),
+                            m_GPUMatrix->NDMaxPoolingForward(*(mpRowCol.m_GPUMatrix), *(mpRowIndices.m_GPUMatrix), *(indices.m_GPUMatrix), *(output.m_GPUMatrix)),
+                            NOT_IMPLEMENTED,
+                            NOT_IMPLEMENTED);
+}
+
+template <class ElemType>
+void Matrix<ElemType>::NDMaxPoolingBackward(const Matrix<ElemType>& out, const Matrix<ElemType>& in,
+                                            const Matrix<int>& mpRowCol, const Matrix<int>& mpRowIndices, const Matrix<int>& indices,
+                                            Matrix<ElemType>& grad) const
+{
+    assert(mpRowCol.GetNumCols() == 1);
+    assert(mpRowIndices.GetNumCols() == 1);
+    assert(indices.GetNumCols() == 1);
+
+    DecideAndMoveToRightDevice(*this, grad);
+
+    // REVIEW alexeyk: add sparse version.
+    DISPATCH_MATRIX_ON_FLAG(this,
+                            this,
+                            m_CPUMatrix->NDMaxPoolingBackward(*(out.m_CPUMatrix), *(in.m_CPUMatrix),
+                                                              *(mpRowCol.m_CPUMatrix), *(mpRowIndices.m_CPUMatrix), *(indices.m_CPUMatrix),
+                                                              *(grad.m_CPUMatrix)),
+                            m_GPUMatrix->NDMaxPoolingBackward(*(out.m_GPUMatrix), *(in.m_GPUMatrix),
+                                                              *(mpRowCol.m_GPUMatrix), *(mpRowIndices.m_GPUMatrix), *(indices.m_GPUMatrix),
+                                                              *(grad.m_GPUMatrix)),
+                            NOT_IMPLEMENTED,
+                            NOT_IMPLEMENTED);
+}
+
+template <class ElemType>
+void Matrix<ElemType>::NDAveragePoolingForward(const Matrix<int>& mpRowCol, const Matrix<int>& mpRowIndices, const Matrix<int>& indices, Matrix<ElemType>& output) const
+{
+    assert(mpRowCol.GetNumCols() == 1);
+    assert(mpRowIndices.GetNumCols() == 1);
+    assert(indices.GetNumCols() == 1);
+
+    DecideAndMoveToRightDevice(*this, output);
+
+    // REVIEW alexeyk: add sparse version.
+    DISPATCH_MATRIX_ON_FLAG(this,
+                            this,
+                            m_CPUMatrix->NDAveragePoolingForward(*(mpRowCol.m_CPUMatrix), *(mpRowIndices.m_CPUMatrix), *(indices.m_CPUMatrix), *(output.m_CPUMatrix)),
+                            m_GPUMatrix->NDAveragePoolingForward(*(mpRowCol.m_GPUMatrix), *(mpRowIndices.m_GPUMatrix), *(indices.m_GPUMatrix), *(output.m_GPUMatrix)),
+                            NOT_IMPLEMENTED,
+                            NOT_IMPLEMENTED);
+}
+
+template <class ElemType>
+void Matrix<ElemType>::NDAveragePoolingBackward(const Matrix<int>& mpRowCol, const Matrix<int>& mpRowIndices, const Matrix<int>& indices, Matrix<ElemType>& grad) const
+{
+    assert(mpRowCol.GetNumCols() == 1);
+    assert(mpRowIndices.GetNumCols() == 1);
+    assert(indices.GetNumCols() == 1);
+
+    DecideAndMoveToRightDevice(*this, grad);
+
+    // REVIEW alexeyk: add sparse version.
+    DISPATCH_MATRIX_ON_FLAG(this,
+                            this,
+                            m_CPUMatrix->NDAveragePoolingBackward(*(mpRowCol.m_CPUMatrix), *(mpRowIndices.m_CPUMatrix), *(indices.m_CPUMatrix), *(grad.m_CPUMatrix)),
+                            m_GPUMatrix->NDAveragePoolingBackward(*(mpRowCol.m_GPUMatrix), *(mpRowIndices.m_GPUMatrix), *(indices.m_GPUMatrix), *(grad.m_GPUMatrix)),
+                            NOT_IMPLEMENTED,
+                            NOT_IMPLEMENTED);
+}
+
 #pragma region Static BLAS Functions
 
 template <class ElemType>

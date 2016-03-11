@@ -4178,6 +4178,116 @@ void CPUMatrix<ElemType>::NDConvolutionBackwardFilter(const CPUMatrix<ElemType>&
     }
 }
 
+template <class ElemType>
+void CPUMatrix<ElemType>::NDMaxPoolingForward(const CPUMatrix<int>& mpRowCol, const CPUMatrix<int>& mpRowIndices, const CPUMatrix<int>& indices, CPUMatrix<ElemType>& output) const
+{
+#pragma omp parallel for
+    for (int64_t sample = 0; sample < (int64_t)output.GetNumCols(); sample++)
+    {
+        for (size_t row = 0; row < output.GetNumRows(); row++)
+        {
+            int colBase = mpRowCol(row, 0);
+            assert(0 <= colBase && colBase < GetNumRows());
+
+            assert(std::numeric_limits<ElemType>::has_infinity);
+            ElemType res = -std::numeric_limits<ElemType>::infinity();
+
+            int i0 = mpRowIndices(row, 0);
+            int size = indices(i0++, 0);
+            assert(size > 0);
+            for (int i = 0; i < size; i++)
+            {
+                int dcol = indices(i0 + i, 0);
+                assert(0 <= colBase + dcol && colBase + dcol < GetNumRows());
+                res = std::max(res, (*this)(colBase + dcol, sample));
+            }
+            output(row, sample) = res;
+        }
+    }
+}
+
+template <class ElemType>
+void CPUMatrix<ElemType>::NDMaxPoolingBackward(const CPUMatrix<ElemType>& out, const CPUMatrix<ElemType>& in,
+                                               const CPUMatrix<int>& mpRowCol, const CPUMatrix<int>& mpRowIndices, const CPUMatrix<int>& indices,
+                                               CPUMatrix<ElemType>& grad) const
+{
+//#pragma omp parallel for
+    for (int64_t sample = 0; sample < (int64_t)GetNumCols(); sample++)
+    {
+        for (size_t row = 0; row < GetNumRows(); row++)
+        {
+            int colBase = mpRowCol(row, 0);
+            assert(0 <= colBase && colBase < grad.GetNumRows());
+
+            int i0 = mpRowIndices(row, 0);
+            int size = indices(i0++, 0);
+            assert(size > 0);
+            ElemType g = (*this)(row, sample);
+            ElemType m = out(row, sample);
+            for (int i = 0; i < size; i++)
+            {
+                int dcol = indices(i0 + i, 0);
+                assert(0 <= colBase + dcol && colBase + dcol < grad.GetNumRows());
+                if (in(colBase + dcol, sample) >= m)
+                    grad(colBase + dcol, sample) += g;
+            }
+        }
+    }
+}
+
+template <class ElemType>
+void CPUMatrix<ElemType>::NDAveragePoolingForward(const CPUMatrix<int>& mpRowCol, const CPUMatrix<int>& mpRowIndices, const CPUMatrix<int>& indices, CPUMatrix<ElemType>& output) const
+{
+#pragma omp parallel for
+    for (int64_t sample = 0; sample < (int64_t)output.GetNumCols(); sample++)
+    {
+        for (size_t row = 0; row < output.GetNumRows(); row++)
+        {
+            int colBase = mpRowCol(row, 0);
+            assert(0 <= colBase && colBase < GetNumRows());
+
+            ElemType sum = 0;
+
+            int i0 = mpRowIndices(row, 0);
+            int size = indices(i0++, 0);
+            assert(size > 0);
+            for (int i = 0; i < size; i++)
+            {
+                int dcol = indices(i0 + i, 0);
+                assert(0 <= colBase + dcol && colBase + dcol < GetNumRows());
+                sum += (*this)(colBase + dcol, sample);
+            }
+            // Note that we divide by size which is the number of actual elements (does not include padding).
+            output(row, sample) = sum / size;
+        }
+    }
+}
+
+template <class ElemType>
+void CPUMatrix<ElemType>::NDAveragePoolingBackward(const CPUMatrix<int>& mpRowCol, const CPUMatrix<int>& mpRowIndices, const CPUMatrix<int>& indices, CPUMatrix<ElemType>& grad) const
+{
+#pragma omp parallel for
+    for (int64_t sample = 0; sample < (int64_t)GetNumCols(); sample++)
+    {
+        for (size_t row = 0; row < GetNumRows(); row++)
+        {
+            int colBase = mpRowCol(row, 0);
+            assert(0 <= colBase && colBase < grad.GetNumRows());
+
+            int i0 = mpRowIndices(row, 0);
+            int size = indices(i0++, 0);
+            assert(size > 0);
+            ElemType g = (*this)(row, sample) / size;
+            for (int i = 0; i < size; i++)
+            {
+                int dcol = indices(i0 + i, 0);
+                assert(0 <= colBase + dcol && colBase + dcol < grad.GetNumRows());
+                grad(colBase + dcol, sample) += g;
+            }
+        }
+    }
+}
+
 #pragma region Static BLAS Functions
 
 /// <summary>Matrix-matrix multiply with col-major matrices (a and b may be transposed): c = alpha * op(a) * op(b) + beta*c</summary>

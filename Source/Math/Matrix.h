@@ -460,6 +460,14 @@ public:
     void NDConvolutionBackwardFilter(const Matrix<ElemType>& in, const Matrix<int>& mpRowCol, const Matrix<int>& mpRowIwht,
                                      const Matrix<int>& mpRowRun, const Matrix<int>& runs, Matrix<ElemType>& filterGrad) const;
 
+    void NDMaxPoolingForward(const Matrix<int>& mpRowCol, const Matrix<int>& mpRowIndices, const Matrix<int>& indices, Matrix<ElemType>& output) const;
+    void NDMaxPoolingBackward(const Matrix<ElemType>& out, const Matrix<ElemType>& in,
+                              const Matrix<int>& mpRowCol, const Matrix<int>& mpRowIndices, const Matrix<int>& indices,
+                              Matrix<ElemType>& grad) const;
+
+    void NDAveragePoolingForward(const Matrix<int>& mpRowCol, const Matrix<int>& mpRowIndices, const Matrix<int>& indices, Matrix<ElemType>& output) const;
+    void NDAveragePoolingBackward(const Matrix<int>& mpRowCol, const Matrix<int>& mpRowIndices, const Matrix<int>& indices, Matrix<ElemType>& grad) const;
+
 public:
     // TODO: why are these not static? And why are they here?
     ElemType Exp10(ElemType num);

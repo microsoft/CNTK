@@ -254,6 +254,7 @@ protected:
     using Base::m_deviceId;
     using Base::m_imageLayout;
     using Base::m_maxTempMemSizeInSamples;
+    using Base::m_poolKind;
 
     void EnsureCompatible() override
     {
@@ -304,12 +305,31 @@ protected:
 
     void ForwardPoolingCore(const Mat& in, Mat& out) override
     {
-        UNUSED(in); UNUSED(out);
+        if (m_poolKind == PoolKind::Max)
+        {
+            in.NDMaxPoolingForward(m_mpRowCol, *m_mpRowIndices, *m_indices, out);
+        }
+        else if (m_poolKind == PoolKind::Average)
+        {
+            in.NDAveragePoolingForward(m_mpRowCol, *m_mpRowIndices, *m_indices, out);
+        }
+        else
+            InvalidArgument("Pooling type %d is not supported.", (int)m_poolKind);
+
     }
 
     void BackwardPoolingCore(const Mat& out, const Mat& srcGrad, const Mat& in, Mat& grad) override
     {
-        UNUSED(in); UNUSED(out); UNUSED(srcGrad); UNUSED(grad);
+        if (m_poolKind == PoolKind::Max)
+        {
+            srcGrad.NDMaxPoolingBackward(out, in, m_mpRowCol, *m_mpRowIndices, *m_indices, grad);
+        }
+        else if (m_poolKind == PoolKind::Average)
+        {
+            srcGrad.NDAveragePoolingBackward(m_mpRowCol, *m_mpRowIndices, *m_indices, grad);
+        }
+        else
+            InvalidArgument("Pooling type %d is not supported.", (int)m_poolKind);
     }
 
 private:
@@ -356,6 +376,7 @@ protected:
     using Base::m_deviceId;
     using Base::m_imageLayout;
     using Base::m_maxTempMemSizeInSamples;
+    using Base::m_poolKind;
 
     void EnsureCompatible() override
     {
@@ -685,15 +706,8 @@ std::unique_ptr<ConvolutionEngine<ElemType>> ConvolutionEngine<ElemType>::Create
     }
 
     // Check if we can use cuDNN engine. Do not need to validate tensors as ConvolveGeometry has already done that.
-    // cuDNN supports 2D and 3D convolutions at the moment with full sharing.
-    // In case map count size > 1, then it should have all ones except last dimension.
-    const auto& sharing = geometry->Sharing();
-    const auto& mapCount = geometry->MapCount();
     if (isEnabled(ConvolutionEngineKind::CuDnn) &&
-        CuDnnConvolutionEngineFactory<ElemType>::IsSupported(deviceId) &&
-        geometry->InputShape().GetRank() <= 4 &&
-        std::find(begin(sharing), end(sharing), false) == sharing.end() &&
-        mapCount.GetNumElements() == mapCount[mapCount.GetRank() - 1])
+        CuDnnConvolutionEngineFactory<ElemType>::IsSupported(geometry, deviceId, poolKind))
     {
         fprintf(stderr, "Using cuDNN convolution engine for geometry %s.\n", engStr.c_str());
         return CuDnnConvolutionEngineFactory<ElemType>::Create(geometry, deviceId, imageLayout, maxTempMemSizeInSamples, poolKind);
