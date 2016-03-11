@@ -9,7 +9,7 @@
 #include "Config.h"
 #include "CorpusDescriptor.h"
 #include "UtteranceDescription.h"
-#include "ChunkDescription.h"
+#include "HTKChunkDescription.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 

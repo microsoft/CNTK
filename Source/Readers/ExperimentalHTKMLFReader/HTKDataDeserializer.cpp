@@ -292,7 +292,7 @@ void HTKDataDeserializer::GetSequenceById(size_t chunkId, size_t id, std::vector
 {
     const auto& chunkDescription = m_chunks[chunkId];
     size_t utteranceIndex = chunkDescription.GetUtteranceForChunkFrameIndex(id);
-    UtteranceDescription* utterance = chunkDescription.GetUtterance(utteranceIndex);
+    const UtteranceDescription* utterance = chunkDescription.GetUtterance(utteranceIndex);
     auto utteranceFrames = chunkDescription.GetUtteranceFrames(utteranceIndex);
     size_t frameIndex = id - utterance->GetStartFrameIndexInsideChunk();
 

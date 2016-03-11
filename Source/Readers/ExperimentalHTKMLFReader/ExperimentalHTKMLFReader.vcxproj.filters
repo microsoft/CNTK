@@ -48,10 +48,10 @@
       <Filter>Common\Include</Filter>
     </ClInclude>
     <ClInclude Include="UtteranceDescription.h" />
-    <ClInclude Include="ChunkDescription.h" />
     <ClInclude Include="..\..\Common\Include\ExceptionWithCallStack.h">
       <Filter>Common\Include</Filter>
     </ClInclude>
+    <ClInclude Include="HTKChunkDescription.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Common">
