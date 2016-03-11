@@ -14,7 +14,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 NoRandomizer::NoRandomizer(IDataDeserializerPtr deserializer)
     : m_deserializer(deserializer),
       m_samplePositionInEpoch(0),
-      m_sweep(SIZE_MAX)
+      m_currentChunkPosition(SIZE_MAX),
+      m_globalSamplePosition(0),
+      m_totalNumberOfSamples(0),
+      m_currentSequencePositionInChunk(0)
 {
     assert(deserializer != nullptr);
     m_streams = m_deserializer->GetStreamDescriptions();

@@ -58,7 +58,6 @@ private:
     size_t m_totalNumberOfSamples;
     size_t m_currentSequencePositionInChunk;
     size_t m_currentChunkPosition;
-    size_t m_sweep;
 };
 
 }}}
