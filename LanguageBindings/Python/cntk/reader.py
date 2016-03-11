@@ -84,7 +84,7 @@ class UCIFastReader(AbstractReader):
     
 def NumPyReader(data, filename): 
     """
-    This is the reader class for bare Python arrays.
+    This is a convenience function that wraps Python arrays.
     """
     
     import numpy as np
