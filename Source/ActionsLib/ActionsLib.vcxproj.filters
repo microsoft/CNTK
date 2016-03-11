@@ -31,7 +31,7 @@
     <ClCompile Include="NetworkDescriptionLanguage.cpp">
       <Filter>Model Building - NDL</Filter>
     </ClCompile>
-    <ClCompile Include="SynchronousExecutionEngine.cpp">
+    <ClCompile Include="NDLNetworkBuilder.cpp">
       <Filter>Model Building - NDL</Filter>
     </ClCompile>
   </ItemGroup>
@@ -79,9 +79,6 @@
       <Filter>Model Building - Standard Models</Filter>
     </ClInclude>
     <ClInclude Include="NetworkDescriptionLanguage.h">
-      <Filter>Model Building - NDL</Filter>
-    </ClInclude>
-    <ClInclude Include="SynchronousExecutionEngine.h">
       <Filter>Model Building - NDL</Filter>
     </ClInclude>
   </ItemGroup>

@@ -4145,7 +4145,7 @@ virtual void Evaluate(NDLNode<ElemType>* node, const wstring& baseName,
 
 \end_inset
 
-function in the SynchronousExecutionEngine.h file to handle special parameters.
+function in the NDLNetworkBuilder.h file to handle special parameters.
  
 \end_layout
 

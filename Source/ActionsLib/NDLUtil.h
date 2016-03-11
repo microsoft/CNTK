@@ -8,7 +8,7 @@
 #include "Basics.h"
 #include "NetworkDescriptionLanguage.h"
 #include "ComputationNetwork.h"
-#include "SynchronousExecutionEngine.h"
+#include "NDLNetworkBuilder.h"
 #include <string>
 #include "Config.h"
 #include <stdexcept>
@@ -96,7 +96,7 @@ public:
             if (dumpFileName != L"")
                 m_net->DumpAllNodesToFile(false, true, dumpFileName);
         }
-        SynchronousNodeEvaluator<ElemType> ndlEvaluator(m_net);
+        NDLNodeEvaluatorImpl<ElemType> ndlEvaluator(m_net);
         NDLNode<ElemType>* lastNode = script->Evaluate(ndlEvaluator, L"", ndlPass, skipThrough);
         if (ndlPass == ndlPassResolve)
             SetOutputNodes(script);
@@ -156,7 +156,7 @@ public:
     }
 
     // SetOutputNodes - Set the output nodes for the Computational Network
-    // NOTE: seems to be specific to SynchronousExecutionEngine, should be in a derived class for that execution engine
+    // NOTE: seems to be specific to NDLBuilderImpl, should be in a derived class for that execution engine
     void SetOutputNodes(NDLScript<ElemType>* script)
     {
         // NOTE: all optional parameter nodes (i.e. tag="feature") have already been processed in ProcessOptionalParameters()

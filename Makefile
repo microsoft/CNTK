@@ -541,7 +541,7 @@ CNTK_SRC =\
     $(SOURCEDIR)/ActionsLib/NetworkFactory.cpp \
 	$(SOURCEDIR)/ActionsLib/NetworkDescriptionLanguage.cpp \
 	$(SOURCEDIR)/ActionsLib/SimpleNetworkBuilder.cpp \
-	$(SOURCEDIR)/ActionsLib/SynchronousExecutionEngine.cpp \
+	$(SOURCEDIR)/ActionsLib/NDLNetworkBuilder.cpp \
 	$(SOURCEDIR)/SequenceTrainingLib/latticeforwardbackward.cpp \
 	$(SOURCEDIR)/SequenceTrainingLib/parallelforwardbackward.cpp \
 	$(SOURCEDIR)/CNTK/BrainScript/BrainScriptEvaluator.cpp \
