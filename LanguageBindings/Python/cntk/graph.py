@@ -1,9 +1,12 @@
+from .context import get_context
 
 class ComputationNode(object):
-    def __init__(self, name, params=None):
+    def __init__(self, name, params=None, ctx=None):
         self.name = name
         self.params = params
         self.var_name = None
+        # context is used to get the graph, readers, etc.
+        self.context = ctx or get_context()
 
     def __add__(self, other):
         return Plus(self, other)
@@ -48,8 +51,6 @@ class ComputationNode(object):
             start = so.start or 0
 
             return RowSlice(self, start, so.stop - start)
-
-
 
     # TODO more __operators__
 
@@ -98,12 +99,15 @@ class ComputationNode(object):
     def to_description(self):
         unrolled_nodes = {}
         var_name, node_counter, desc = self._to_description(desc=[], unrolled_nodes=unrolled_nodes)
+
+        # FIXME we currently assume that the last node is also the root node -
         desc.append("OutputNodes=(%s)"%var_name)
+
         return "\n".join(desc)
 
 class Label(ComputationNode):
-    def __init__(self, dims):
-        super(Label, self).__init__('Input', params=('dims', 'tag'))
+    def __init__(self, dims, ctx=None):
+        super(Label, self).__init__('Input', params=('dims', 'tag'), ctx=ctx)
         self.dims = dims
         self.tag = 'label'
 

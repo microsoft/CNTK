@@ -22,6 +22,17 @@ CNTK_OUTPUT_FILENAME="out.txt"
 #TODO: overload action methods to support numpy matrices as inputs
 #TODO: overload action methods to have versions that do not need reader or numpy inputs
 
+_CONTEXT = {}
+def get_context(model_or_path=None):
+    # TODO: we need more sanity in the model handling here
+    if model_or_path is None:
+        model_or_path = 'default'
+
+    if model_or_path not in _CONTEXT:
+        _CONTEXT[model_or_path] = Context(model_or_path)
+
+    return _CONTEXT[model_or_path] 
+
 class AbstractContext(object, metaclass=ABCMeta):
     """This is the abstract CNTK context. It provides an API to run CNTK actions
     """
