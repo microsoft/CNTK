@@ -65,32 +65,32 @@ function<ComputationNetworkPtr(DEVICEID_TYPE)> GetNetworkFactory(const ConfigRec
         };
     }
     // legacy test mode for BrainScript. Will go away once we fully integrate with BS.
-    else if (config.Exists(L"BrainScriptNetworkBuilder") || config.Exists(L"ExperimentalNetworkBuilder" /*legacy*/))
+    else if (config.Exists(L"BrainScriptNetworkBuilder") || config.Exists(L"ExperimentalNetworkBuilder" /*legacy name*/))
     {
         // We interface with outer old CNTK config by taking the inner part, which we get as a string, as BrainScript.
         // We prepend a few standard definitions, and also definition of deviceId and precision, which all objects will pull out again when they are being constructed.
         // BUGBUG: We are not getting TextLocations right in this way! Do we need to inject location markers into the source? Moot once we fully switch to BS
         wstring sourceCode = config.Exists(L"BrainScriptNetworkBuilder") ? config(L"BrainScriptNetworkBuilder") : config(L"ExperimentalNetworkBuilder");
-        let expr = BS::ParseConfigDictFromString(standardFunctions + computationNodes + commonMacros + msra::strfun::wstrprintf(L"deviceId = %d ; precision = '%ls' ; network = new ComputationNetwork ", (int)deviceId, ElemTypeName<ElemType>()) // TODO: check if typeid needs postprocessing
-                                                 + sourceCode,
-                                                 vector<wstring>()); // source code has the form [ ... ]
+        auto configDirs = ConfigParameters::GetBrainScriptNetworkBuilderIncludePaths();
+        let expr = BS::ParseConfigDictFromString(L"include \'cntk.core.bs\'"     // Note: Using lowercase here to match the Linux name of the CNTK exe.
+                                                 + msra::strfun::wstrprintf(L"deviceId = %d ; precision = '%ls' ; network = new ComputationNetwork ", (int)deviceId, ElemTypeName<ElemType>())
+                                                 + sourceCode,      // source code has the form [ ... ] with brackets in the string
+                                                 move(configDirs)); // set include paths to all paths that configs were read from; no additional configurable include paths are supported by BrainScriptNetworkBuilder
         return [expr](DEVICEID_TYPE /*deviceId*/)
         {
-            // evaluate the parse tree--specifically the top-level field 'network'--which will create the network
+            // evaluate the parse tree, particularly the top-level field 'network'
+            // Evaluating it will create the network.
             let object = EvaluateField(expr, L"network");                   // this comes back as a BS::Object
             let network = dynamic_pointer_cast<ComputationNetwork>(object); // cast it
-            // This should not really fail since we constructed the source code above such that this is the right type.
-            // However, it is possible (though currently not meaningful) to locally declare a different 'precision' value.
-            // In that case, the network might come back with a different element type. We need a runtime check for that.
             if (!network)
-                RuntimeError("BuildNetworkFromDescription: network has the wrong element type (float vs. double)");
+                LogicError("BuildNetworkFromDescription: ComputationNetwork not what it was meant to be");
             // success
             return network;
         };
     }
     else
     {
-        RuntimeError("No network builder found in the config file. NDLNetworkBuilder or SimpleNetworkBuilde must be specified");
+        RuntimeError("No network builder found in the config file. NDLNetworkBuilder or SimpleNetworkBuilder must be specified");
     }
 }
 
