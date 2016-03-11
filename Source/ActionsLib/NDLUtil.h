@@ -17,6 +17,9 @@ using namespace std;
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
+template <typename ElemType>
+class NDLNodeEvaluatorImpl;
+
 template <class ElemType>
 class NDLUtil
 {
