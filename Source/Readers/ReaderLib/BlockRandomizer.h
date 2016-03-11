@@ -110,4 +110,4 @@ private:
 
     bool GetNextSequenceDescriptions(size_t sampleCount, SequenceDescriptions& sequences);
 };
-} } }
+}}}

@@ -157,12 +157,12 @@ TextParser<ElemType>::TextDataChunk::TextDataChunk(const ChunkDescriptor& descri
 template <class ElemType>
 vector<SequenceDataPtr> TextParser<ElemType>::TextDataChunk::GetSequence(size_t sequenceId)
 {
-    auto it = m_sequencePtrMap.find(sequenceId);
-    assert(it != m_sequencePtrMap.end());
+        auto it = m_sequencePtrMap.find(sequenceId);
+        assert(it != m_sequencePtrMap.end());
 #pragma omp atomic
     ++m_sequenceRequestCount;
     return it->second;
-}
+    }
 
 template <class ElemType>
 ChunkPtr TextParser<ElemType>::GetChunk(size_t chunkId)
@@ -239,7 +239,7 @@ ChunkPtr TextParser<ElemType>::GetChunk(size_t chunkId)
 
             if (m_chunkCacheSize > 0) 
             {
-                m_chunkCache[chunkId] = textChunk;
+            m_chunkCache[chunkId] = textChunk;
             }
 
             chunk = textChunk;
