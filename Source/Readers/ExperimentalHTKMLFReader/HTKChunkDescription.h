@@ -60,37 +60,29 @@ public:
         return m_totalFrames;
     }
 
-    // Get number of frames in a sequences identified by the index.
-    size_t GetUtteranceNumberOfFrames(size_t index) const
-    {
-        return m_utteranceSet[index]->GetNumberOfFrames();
-    }
-
-    UtteranceDescription* GetUtterance(size_t index) const
+    // Get utterance description by its index.
+    const UtteranceDescription* GetUtterance(size_t index) const
     {
         return m_utteranceSet[index];
     }
 
+    // Get utterance by the absolute frame index in chunk.
+    // Uses the upper bound to do the binary search among sequences of the chunk.
     size_t GetUtteranceForChunkFrameIndex(size_t frameIndex) const
     {
-        struct PositionConverter
+        struct Comp
         {
-            size_t m_position;
-            PositionConverter(const UtteranceDescription* u) : m_position(u->GetStartFrameIndexInsideChunk()) {};
-            PositionConverter(size_t position) : m_position(position) {};
+            bool operator () (size_t fi, const UtteranceDescription* a)
+            {
+                return fi < a->GetStartFrameIndexInsideChunk();
+            }
         };
 
-        PositionConverter p(frameIndex);
-        auto result = std::lower_bound(m_utteranceSet.begin(), m_utteranceSet.end(), p,
-                                       [](const PositionConverter& a, const PositionConverter& b)
-        {
-            return a.m_position <= b.m_position;
-        });
-
+        auto result = std::upper_bound(m_utteranceSet.begin(), m_utteranceSet.end(), frameIndex, Comp());
         return result - 1 - m_utteranceSet.begin();
     }
 
-    // Returns frames of a given utterance.
+    // Returns all frames of a given utterance.
     msra::dbn::matrixstripe GetUtteranceFrames(size_t index) const
     {
         if (!IsInRam())
@@ -99,7 +91,7 @@ public:
         }
 
         const size_t ts = m_firstFrames[index];
-        const size_t n = GetUtteranceNumberOfFrames(index);
+        const size_t n = GetUtterance(index)->GetNumberOfFrames();
         return msra::dbn::matrixstripe(m_frames, ts, n);
     }
 
