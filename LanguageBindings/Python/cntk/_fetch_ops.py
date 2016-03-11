@@ -52,8 +52,8 @@ class CompNodeOperator(object):
     COMP_NODE_TEMPLATE = """\
 class %(name)s(ComputationNode):
     def __init__(self, %(signature)s, name='%(name)s', ctx=None):
-        super(%(name)s, self).__init__(params=[%(paramlist)s], name=name, ctx=ctx)
 %(initialization)s
+        super(%(name)s, self).__init__(params=[%(paramlist)s], name=name, ctx=ctx)
 """
     def _smooth(self, name):
         if name in SMOOTH_NAMING:
@@ -119,8 +119,8 @@ class InstantiationOperator(CompNodeOperator):
     INST_NODE_TEMPLATE = """\
 class %(name)s(%(inst_operator)s):
     def __init__(self, %(signature)s, name='%(name)s', ctx=None):
-        super(%(name)s, self).__init__(%(inst_operands)s, name=name, ctx=ctx)
         self.params=[%(paramlist)s]
+        super(%(name)s, self).__init__(%(inst_operands)s, name=name, ctx=ctx)
 """
 
     def __init__(self, match):
