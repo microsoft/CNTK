@@ -57,12 +57,12 @@ class UCIFastReader(AbstractReader):
         		verbosity = 1          
                '''
                
-        if self['CustomDelimiter']:
+        if self['CustomDelimiter'] is not None:
             template += '''
                customDelimiter=%(CustomDelimiter)s
                '''
         # BUG: in case of features_start = 0
-        if self['FeaturesStart']:
+        if self['FeaturesStart'] is not None:
             template += '''               
         		features=[
         			start = "%(FeaturesStart)s"
@@ -70,7 +70,7 @@ class UCIFastReader(AbstractReader):
         		]
                 '''
         
-        if self['LabelsStart']:
+        if self['LabelsStart'] is not None:
             template += '''
 
         		labels=[
@@ -84,7 +84,7 @@ class UCIFastReader(AbstractReader):
     
 def NumPyReader(data, filename): 
     """
-    This is the reader class for bare Python arrays.
+    This is a convenience function that wraps Python arrays.
     """
     
     import numpy as np
