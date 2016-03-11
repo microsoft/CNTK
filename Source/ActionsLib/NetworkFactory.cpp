@@ -139,7 +139,5 @@ template function<ComputationNetworkPtr(DEVICEID_TYPE)> GetNetworkFactory<Script
 template function<ComputationNetworkPtr(DEVICEID_TYPE)> GetNetworkFactory<ScriptableObjects::IConfigRecord, double>(const ScriptableObjects::IConfigRecord& config);
 template function<ComputationNetworkPtr(DEVICEID_TYPE)> GetNetworkFactory<ConfigParameters, float>(const ConfigParameters& config);
 template function<ComputationNetworkPtr(DEVICEID_TYPE)> GetNetworkFactory<ConfigParameters, double>(const ConfigParameters& config);
-template ComputationNetworkPtr GetModelFromConfig<ScriptableObjects::IConfigRecord, float>(const ScriptableObjects::IConfigRecord& config, vector<wstring>& outputNodeNamesVector);
-template ComputationNetworkPtr GetModelFromConfig<ScriptableObjects::IConfigRecord, double>(const ScriptableObjects::IConfigRecord& config, vector<wstring>& outputNodeNamesVector);
 template ComputationNetworkPtr GetModelFromConfig<ConfigParameters, float>(const ConfigParameters& config, vector<wstring>& outputNodeNamesVector);
 template ComputationNetworkPtr GetModelFromConfig<ConfigParameters, double>(const ConfigParameters& config, vector<wstring>& outputNodeNamesVector);
