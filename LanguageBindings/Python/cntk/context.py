@@ -108,7 +108,8 @@ class AbstractContext(object, metaclass=ABCMeta):
     
     def _generate_eval_config(self, root_node, input_map):
         """Generates the configuration file for write action.
-        :param node: the node to evaluate. 
+        :param root_node: the node to evaluate. 
+        :param input_map: map from feature node to reader, dimensions
         """                
         not_assigned = []
 
