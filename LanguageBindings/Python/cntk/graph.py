@@ -75,6 +75,23 @@ class ComputationNode(object):
     def __str__(self):
         return "%s / params=%s"%(self.name, self.params)
 
+    def _param_to_brainscript(self, p_name, p_value):
+        if isinstance(p_value, bool):
+            p_value = str(p_value).lower()
+        elif isinstance(p_value, str):
+            p_value = "'%s'"%p_value
+        elif type(p_value) in [list, tuple]:
+            # FIXME here we assume that all dims are of TensorShape
+            if p_name=='dims':
+                p_value = ":".join(v for v in p_value)
+            else:
+                raise ValueError('Sequence initialization is only allowed for'+
+                 ' parameter "dims" and not "%s"'%p_name)
+        else:
+            p_value = str(p_value)
+
+        return p_value
+
     def _to_description_unroll(self, desc, unrolled_nodes, node_counter=0):
         param_variable_names = []
         if self.params:
@@ -90,20 +107,7 @@ class ComputationNode(object):
                         unrolled_nodes[p_value] = child_var
                     param_variable_names.append(child_var)
                 else:
-                    if isinstance(p_value, bool):
-                        p_value = str(p_value).lower()
-                    elif isinstance(p_value, str):
-                        p_value = "'%s'"%p_value
-                    
-                    # TODO check whether flattening tuples in operator
-                    # definitions is ok in all cases (e.g. dims=(2,1))
-                    if type(p_value) in [list, tuple]:
-                        if len(p_value) == 1:
-                            p_value = p_value[0]
-                        else:
-                            p_value = ", ".join(p_value)
-
-                    param_variable_names.append('%s'%p_value)
+                    param_variable_names.append(self._param_to_brainscript(p_name, p_value))
 
         self.var_name = self.var_name or "v%i"%node_counter 
         node_counter += 1
