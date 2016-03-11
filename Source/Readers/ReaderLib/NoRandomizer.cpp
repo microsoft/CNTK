@@ -89,7 +89,7 @@ void NoRandomizer::StartEpoch(const EpochConfiguration& config)
         m_currentSequencePositionInChunk = 0;
 
         // Dropping all chunk data from previous epoch
-        while (m_chunkStartPosition < m_chunkEndPosition)
+        while (m_chunkStartPosition != m_chunkEndPosition)
         {
             m_chunks[m_chunkStartPosition] = nullptr;
             m_chunkStartPosition = (m_chunkStartPosition + 1) % m_chunkDescriptions.size();
@@ -205,7 +205,7 @@ Sequences NoRandomizer::GetNextSequences(size_t sampleCount)
         return result;
     }
 
-    while (m_chunkStartPosition < m_chunkEndPosition && m_chunkStartPosition != descriptions[start].m_chunkId)
+    while (m_chunkStartPosition != m_chunkEndPosition && m_chunkStartPosition != descriptions[start].m_chunkId)
     {
         m_chunks[m_chunkStartPosition] = nullptr;
         m_chunkStartPosition = (m_chunkStartPosition + 1) % m_chunkDescriptions.size();
