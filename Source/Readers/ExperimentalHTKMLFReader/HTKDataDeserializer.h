@@ -5,39 +5,40 @@
 
 #pragma once
 
-#include "DataDeserializer.h"
+#include "DataDeserializerBase.h"
 #include "Config.h"
 #include "CorpusDescriptor.h"
 #include "UtteranceDescription.h"
 #include "HTKChunkDescription.h"
+#include "ConfigHelper.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
 // Class represents an HTK deserializer.
 // Provides a set of chunks/sequences to the upper layers.
-class HTKDataDeserializer : public IDataDeserializer
+class HTKDataDeserializer : public DataDeserializerBase
 {
 public:
     HTKDataDeserializer(CorpusDescriptorPtr corpus, const ConfigParameters& featureConfig, const std::wstring& featureName);
 
-    // Describes streams this data deserializer can produce. Streams correspond to network inputs.
-    // Produces a single stream of HTK features.
-    virtual std::vector<StreamDescriptionPtr> GetStreamDescriptions() const override;
-
-    // Retrieves sequence description by its key. Used for deserializers that are not in "primary"/"driving" mode.
-    virtual void GetSequenceDescriptionByKey(const KeyType& key, SequenceDescription& result) override;
-
-    // Retrieves a chunk with data.
-    virtual ChunkPtr GetChunk(size_t chunkId) override;
-    virtual void GetSequencesForChunk(size_t chunkId, std::vector<SequenceDescription>& result) override;
+    // Get information about chunks.
     virtual ChunkDescriptions GetChunkDescriptions() override;
+
+    // Get information about particular chunk.
+    virtual void GetSequencesForChunk(size_t chunkId, std::vector<SequenceDescription>& result) override;
+
+    // Retrieves data for a chunk.
+    virtual ChunkPtr GetChunk(size_t chunkId) override;
 
 private:
     DISABLE_COPY_AND_MOVE(HTKDataDeserializer);
 
+    void InitializeChunkDescriptions(ConfigHelper& config);
+    void InitializeStreams(const std::wstring& featureName);
+    void InitializeFeatureInformation();
+
     // Represents a frame.
     // TODO: Change the structure to descrease the memory footprint.
-    // TOOD: SequenceDescription should become an interfaces and be requested only for current chunks.
     struct Frame : SequenceDescription
     {
         Frame(UtteranceDescription* u) : m_utterence(u), m_frameIndex(0)
@@ -54,22 +55,19 @@ private:
     // Dimension of features.
     size_t m_dimension;
 
-    // All utterance descriptions.
-    std::vector<UtteranceDescription> m_utterances;
-
     // Type of the features.
     ElementType m_elementType;
 
     // Chunk descriptions.
     std::vector<HTKChunkDescription> m_chunks;
+
     // Weak pointers on existing chunks.
+    // If randomizer asks the same chunk twice we do not need to recreate
+    // the chunk if we already uploaded it in memory.
     std::vector<std::weak_ptr<Chunk>> m_weakChunks;
 
     // Augmentation window.
     std::pair<size_t, size_t> m_augmentationWindow;
-
-    // Streams exposed by this deserializer.
-    std::vector<StreamDescriptionPtr> m_streams;
 
     CorpusDescriptorPtr m_corpus;
 

@@ -208,30 +208,6 @@ void ImageDataDeserializer::CreateSequenceDescriptions(std::string mapPath, size
     }
 }
 
-size_t ImageDataDeserializer::GetTotalNumberOfChunks()
-{
-    // Currently we use one chunk per image.
-    return m_imageSequences.size();
-}
-
-std::vector<StreamDescriptionPtr> ImageDataDeserializer::GetStreamDescriptions() const
-{
-    return m_streams;
-}
-
-void ImageDataDeserializer::FillSequenceDescriptions(SequenceDescriptions& timeline) const
-{
-    timeline.resize(m_imageSequences.size());
-    std::transform(
-        m_imageSequences.begin(),
-        m_imageSequences.end(),
-        timeline.begin(),
-        [](const ImageSequenceDescription& desc)
-        {
-            return &desc;
-        });
-}
-
 ChunkPtr ImageDataDeserializer::GetChunk(size_t chunkId)
 {
     auto sequenceDescription = m_imageSequences[chunkId];

@@ -49,8 +49,8 @@ public:
     // Gets mlf file paths from the configuraiton.
     std::vector<std::wstring> GetMlfPaths();
 
-    // Gets feature file paths from the configuration.
-    std::vector<std::wstring> GetFeaturePaths();
+    // Gets utterance paths from the configuration.
+    std::vector<std::wstring> GetUtterancePaths();
 
     // Gets randomization window.
     size_t GetRandomizationWindow();
