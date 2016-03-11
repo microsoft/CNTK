@@ -49,21 +49,21 @@ void SGD<ElemType>::Train(function<ComputationNetworkPtr(DEVICEID_TYPE)> createN
     }
 
     wstring modelFileName = GetModelNameForEpoch(int(startEpoch) - 1);
-    bool loadNetworkFromCheckpoint = false;
-    if (startEpoch >= 0)
-    {
-        loadNetworkFromCheckpoint = true;
-        fprintf(stderr, "Starting from checkpoint. Loading network from '%ls'.\n", modelFileName.c_str());
-    }
+    bool loadNetworkFromCheckpoint = startEpoch >= 0;
+    if (loadNetworkFromCheckpoint)
+        fprintf(stderr, "\nStarting from checkpoint. Loading network from '%ls'.\n", modelFileName.c_str());
+    else
+        fprintf(stderr, "\nCreating virgin network.\n");
 
     // create or load from checkpoint
     shared_ptr<ComputationNetwork> net = !loadNetworkFromCheckpoint ? createNetworkFn(deviceId) : ComputationNetwork::CreateFromFile<ElemType>(deviceId, modelFileName);
 
     // log the device we are computing on
+    fprintf(stderr, "%s model with %d nodes", loadNetworkFromCheckpoint ? "Loaded" : "Created", (int)net->GetTotalNumberOfNodes());
     if (net->GetDeviceId() < 0)
-        fprintf(stderr, "\nSGD using CPU.\n");
+        fprintf(stderr, " on CPU.\n");
     else
-        fprintf(stderr, "\nSGD using GPU %d.\n", (int) net->GetDeviceId());
+        fprintf(stderr, " on GPU %d.\n", (int) net->GetDeviceId());
 
     // TODO: BUGBUG: if not starting from checkpoint, need to synchronize initial model
     // strategy should be to run the initializer above on mpiRank==0, and then broadcast parameters.

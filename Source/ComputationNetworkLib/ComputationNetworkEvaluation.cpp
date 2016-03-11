@@ -430,7 +430,7 @@ void ComputationNetwork::CompileNetwork()
     // STEP: Some final details.
     ResetEvalTimeStamps(); // invalidate all m_value fields. Really belongs into StartEvaluateMinibatchLoop()
 
-    fprintf(stderr, "\nPost-processing network complete.\n");
+    fprintf(stderr, "\nPost-processing network complete.\n\n");
     m_isCompiled = true;
 }
 
@@ -531,11 +531,11 @@ void ComputationNetwork::ValidateNetwork()
     size_t toValidate = nodes.size();
     while (toValidate > 0)
     {
-        fprintf(stderr, "\n\nValidating network. %d nodes to process in pass %d.\n", (int) toValidate, (int) pass);
+        fprintf(stderr, "\nValidating network. %d nodes to process in pass %d.\n\n", (int) toValidate, (int) pass);
         toValidate = ValidateNodes(nodes, /*isFirstPass=*/pass == 1, false /*isFinalValidationPass*/);
         pass++;
     }
-    fprintf(stderr, "\n\nValidating network, final pass.\n");
+    fprintf(stderr, "\nValidating network, final pass.\n\n");
     toValidate = ValidateNodes(nodes, /*isFirstPass=*/pass == 1, true /*isFinalValidationPass*/);
     if (toValidate != 0)
         LogicError("ValidateSubNetwork: ValidateNodes(true) unexpectedly returned with work left to do.");

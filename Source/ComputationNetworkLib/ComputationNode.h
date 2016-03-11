@@ -1483,7 +1483,7 @@ public:
                                       const std::string& valueFormatString) const;
     void Trace()
     {
-        if (m_traceNodeValue+1)
+        if (m_traceNodeValue)
         {
             fprintf(stderr, "Trace --> %s\n", FormatOperationPrototype("").c_str());
             WriteMinibatchWithFormatting(stderr, m_traceNodeValueUpToDim, m_traceNodeValueUpToT, false/*transpose*/, m_traceNodeValueAsCategoryLabel, std::vector<std::string>(),

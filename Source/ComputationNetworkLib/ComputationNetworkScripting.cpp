@@ -107,10 +107,6 @@ ComputationNetwork::ComputationNetwork(const IConfigRecordPtr configp)
 
     // perform all necessary post-processing
     CompileNetwork();
-#if 1
-    wstring args = ToString();
-    fprintf(stderr, "%ls\n", args.c_str());
-#endif
 }
 
 // ===================================================================

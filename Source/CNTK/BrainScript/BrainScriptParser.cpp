@@ -184,7 +184,7 @@ public:
 
     __declspec_noreturn static void Fail(wstring msg, TextLocation where)
     {
-        Microsoft::MSR::CNTK::DebugUtil::PrintCallStack();
+        //Microsoft::MSR::CNTK::DebugUtil::PrintCallStack();
         throw CodeSourceException(msg, where);
     }
 
@@ -375,7 +375,7 @@ public:
 private:
     __declspec_noreturn static void Fail(wstring msg, Token where)
     {
-        Microsoft::MSR::CNTK::DebugUtil::PrintCallStack();
+        //Microsoft::MSR::CNTK::DebugUtil::PrintCallStack();
         throw LexerException(msg, where.beginLocation);
     }
 
@@ -606,7 +606,7 @@ class Parser : public Lexer
 
     __declspec_noreturn static void Fail(const wstring& msg, Token where)
     {
-        Microsoft::MSR::CNTK::DebugUtil::PrintCallStack();
+        //Microsoft::MSR::CNTK::DebugUtil::PrintCallStack();
         throw ParseException(msg, where.beginLocation);
     }
 
