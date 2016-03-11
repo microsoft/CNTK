@@ -94,7 +94,52 @@ function<ComputationNetworkPtr(DEVICEID_TYPE)> GetNetworkFactory(const ConfigRec
     }
 }
 
+template <class ConfigRecordType, typename ElemType>
+ComputationNetworkPtr GetModelFromConfig(const ConfigRecordType& config, vector<wstring>& outputNodeNamesVector)
+{
+    DEVICEID_TYPE deviceId = DeviceFromConfig(config);
+    wstring modelPath = config(L"modelPath", L"");
+    ComputationNetworkPtr net(nullptr);
+
+    if (!modelPath.empty())
+    {
+        // Note this is required since the user might specify OutputNodeNames in the config, so don't use CreateFromFile,
+        // instead we build the network ourselves.
+        net = make_shared<ComputationNetwork>(deviceId);
+        net->Read<ElemType>(modelPath);
+
+        ConfigArray outputNodeNames = config(L"outputNodeNames", "");
+
+        if (outputNodeNames.size() > 0)
+        {
+            net->OutputNodes().clear();
+            for (int i = 0; i < outputNodeNames.size(); ++i)
+            {
+                outputNodeNamesVector.push_back(outputNodeNames[i]);
+                net->OutputNodes().emplace_back(net->GetNodeFromName(outputNodeNames[i]));
+            }
+        }
+        net->CompileNetwork();
+    }
+    else
+    {
+        // The modelPath is empty, attempt to build the network
+        // determine the network-creation function
+        // We have several ways to create that network.
+        function<ComputationNetworkPtr(DEVICEID_TYPE)> createNetworkFn;
+
+        createNetworkFn = GetNetworkFactory<ConfigRecordType, ElemType>(config);
+        net = createNetworkFn(deviceId);
+    }
+
+    return net;
+}
+
 template function<ComputationNetworkPtr(DEVICEID_TYPE)> GetNetworkFactory<ScriptableObjects::IConfigRecord, float>(const ScriptableObjects::IConfigRecord& config);
 template function<ComputationNetworkPtr(DEVICEID_TYPE)> GetNetworkFactory<ScriptableObjects::IConfigRecord, double>(const ScriptableObjects::IConfigRecord& config);
 template function<ComputationNetworkPtr(DEVICEID_TYPE)> GetNetworkFactory<ConfigParameters, float>(const ConfigParameters& config);
 template function<ComputationNetworkPtr(DEVICEID_TYPE)> GetNetworkFactory<ConfigParameters, double>(const ConfigParameters& config);
+template ComputationNetworkPtr GetModelFromConfig<ScriptableObjects::IConfigRecord, float>(const ScriptableObjects::IConfigRecord& config, vector<wstring>& outputNodeNamesVector);
+template ComputationNetworkPtr GetModelFromConfig<ScriptableObjects::IConfigRecord, double>(const ScriptableObjects::IConfigRecord& config, vector<wstring>& outputNodeNamesVector);
+template ComputationNetworkPtr GetModelFromConfig<ConfigParameters, float>(const ConfigParameters& config, vector<wstring>& outputNodeNamesVector);
+template ComputationNetworkPtr GetModelFromConfig<ConfigParameters, double>(const ConfigParameters& config, vector<wstring>& outputNodeNamesVector);

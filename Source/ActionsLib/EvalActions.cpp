@@ -216,9 +216,7 @@ void DoWriteOutput(const ConfigParameters& config)
 
     DataReader testDataReader(readerConfig);
 
-    DEVICEID_TYPE deviceId = DeviceFromConfig(config);
     ConfigArray minibatchSize = config(L"minibatchSize", "2048");
-    wstring modelPath = config(L"modelPath", "");
     intargvector mbSize = minibatchSize;
 
     size_t epochSize = config(L"epochSize", "0");
@@ -227,39 +225,10 @@ void DoWriteOutput(const ConfigParameters& config)
         epochSize = requestDataSize;
     }
 
-    ConfigArray outputNodeNames = config(L"outputNodeNames", "");
     vector<wstring> outputNodeNamesVector;
-    
+
     ComputationNetworkPtr net;
-
-    if (!modelPath.empty())
-    {
-        // Note this is required since the user might specify OutputNodeNames in the config, so don't use CreateFromFile,
-        // instead we build the network ourselves.
-        net = make_shared<ComputationNetwork>(deviceId);
-        net->Read<ElemType>(modelPath);
-
-        if (outputNodeNames.size() > 0)
-        {
-            net->OutputNodes().clear();
-            for (int i = 0; i < outputNodeNames.size(); ++i)
-            {
-                outputNodeNamesVector.push_back(outputNodeNames[i]);
-                net->OutputNodes().emplace_back(net->GetNodeFromName(outputNodeNames[i]));
-            }
-        }
-        net->CompileNetwork();
-    }
-    else
-    {
-        // The modelPath is empty, attempt to build the network
-        // determine the network-creation function
-        // We have several ways to create that network.
-        function<ComputationNetworkPtr(DEVICEID_TYPE)> createNetworkFn;
-
-        createNetworkFn = GetNetworkFactory<ConfigParameters, ElemType>(config);
-        net = createNetworkFn(deviceId);
-    }
+    net = GetModelFromConfig<ConfigParameters, ElemType>(config, outputNodeNamesVector);
 
     SimpleOutputWriter<ElemType> writer(net, 1);
 

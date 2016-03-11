@@ -36,6 +36,9 @@ function<ComputationNetworkPtr(DEVICEID_TYPE)> GetCreateNetworkFn(const Scriptab
 template <class ConfigRecordType, typename ElemType>
 function<ComputationNetworkPtr(DEVICEID_TYPE)> GetNetworkFactory(const ConfigRecordType& config);
 
+template <class ConfigRecordType, typename ElemType>
+ComputationNetworkPtr GetModelFromConfig(const ConfigRecordType& config, vector<wstring>& outputNodeNamesVector);
+
 // training (TrainActions.cpp)
 template <class ConfigRecordType, typename ElemType>
 void DoTrain(const ConfigRecordType& config);
