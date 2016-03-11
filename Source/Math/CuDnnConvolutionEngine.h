@@ -13,10 +13,9 @@ template <class ElemType>
 class CuDnnConvolutionEngineFactory
 {
 public:
-    static std::unique_ptr<ConvolutionEngine<ElemType>> CreateConvEngine(ConvolveGeometryPtr geometry, DEVICEID_TYPE deviceId,
-                                                                         ImageLayoutKind imageLayout, size_t maxTempMemSizeInSamples);
-    //static PoolEnginePtr CreatePoolEngine(DEVICEID_TYPE deviceId, ImageLayoutKind imageLayout)
-
+    static std::unique_ptr<ConvolutionEngine<ElemType>> Create(ConvolveGeometryPtr geometry, DEVICEID_TYPE deviceId, 
+                                                               ImageLayoutKind imageLayout, size_t maxTempMemSizeInSamples,
+                                                               PoolKind poolKind);
     static bool IsSupported(DEVICEID_TYPE deviceId);
 };
 

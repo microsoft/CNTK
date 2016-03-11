@@ -178,6 +178,54 @@ private:
     cudnnConvolutionDescriptor_t m_conv;
 };
 
+class CuDnnPool
+{
+public:
+    CuDnnPool(const ConvolveGeometry& geometry, PoolKind kind)
+        : m_pool(nullptr)
+    {
+        assert(kind == PoolKind::Max || kind == PoolKind::Average);
+
+        CUDNN_CALL(cudnnCreatePoolingDescriptor(&m_pool));
+        // Set cuDNN pooling parameters. cuDNN uses row-major format while TensorShape - column-major
+        // so conversion is required. Same as in convolution descriptor, cuDNN uses 2D descriptors
+        // for 3D inputs.
+        SmallVector<int> dims(geometry.InputShape().GetRank() - 1);
+        SmallVector<int> stride(dims.size());
+        SmallVector<int> pad(stride.size());
+        int j = (int)dims.size() - 1;
+        for (int i = 0; i < stride.size(); i++, j--)
+        {
+            dims[j] = (int)geometry.KernelShape()[i];
+            stride[j] = (int)geometry.GetStride(i);
+            pad[j] = geometry.GetLowerPad(i);
+        }
+
+        CUDNN_CALL(cudnnSetPoolingNdDescriptor(m_pool,
+                                               kind == PoolKind::Max ? CUDNN_POOLING_MAX : CUDNN_POOLING_AVERAGE_COUNT_EXCLUDE_PADDING,
+                                               (int)dims.size(), dims.data(), pad.data(), stride.data()));
+    }
+
+    ~CuDnnPool()
+    {
+        if (m_pool != nullptr)
+        {
+            cudnnDestroyPoolingDescriptor(m_pool);
+            m_pool = nullptr;
+        }
+    }
+
+    operator cudnnPoolingDescriptor_t() const
+    {
+        return m_pool;
+    }
+
+    DISABLE_COPY_AND_MOVE(CuDnnPool);
+
+private:
+    cudnnPoolingDescriptor_t m_pool;
+};
+
 template <typename ElemType>
 static ElemType* ptr(Matrix<ElemType>& src)
 {
@@ -212,8 +260,9 @@ public:
     using typename Base::Mat;
 
 public:
-    CuDnnConvolutionEngine(ConvolveGeometryPtr geometry, DEVICEID_TYPE deviceId, ImageLayoutKind imageLayout, size_t maxTempMemSizeInSamples)
-        : Base(geometry, deviceId, imageLayout, maxTempMemSizeInSamples), m_cudnn(nullptr), m_dataType(GetDataType()), 
+    CuDnnConvolutionEngine(ConvolveGeometryPtr geometry, DEVICEID_TYPE deviceId, ImageLayoutKind imageLayout, size_t maxTempMemSizeInSamples, PoolKind poolKind)
+        : Base(geometry, deviceId, imageLayout, maxTempMemSizeInSamples, poolKind),
+        m_cudnn(nullptr), m_dataType(GetDataType()), 
         m_inT(geometry->InputShape(), m_dataType), m_outT(geometry->OutputShape(), m_dataType),
         m_filterT(*geometry, m_dataType), m_conv(*geometry, m_dataType)
     {
@@ -244,8 +293,13 @@ protected:
             RuntimeError("cuDNN convolution engine supports GPU devices only.");
     }
 
-    void ForwardCore(size_t batchSize, const Mat& in, const Mat& filter, Mat& out, Mat& workspace) override
+    void EnsureConvolutionInitialized() override
     {
+    }
+
+    void ForwardCore(const Mat& in, const Mat& filter, Mat& out, Mat& workspace) override
+    {
+        size_t batchSize = in.GetNumCols();
         // Find best algo and allocate temp buffer, if needed.
         auto finder = [this](int& calgo, cudnnConvolutionFwdAlgoPerf_t algoPerf[MaxAlgoCount]) -> cudnnStatus_t
         {
@@ -270,8 +324,9 @@ protected:
         CUDNN_CALL(err);
     }
 
-    void BackwardDataCore(size_t batchSize, const Mat& srcGrad, const Mat& filter, Mat& grad, Mat& workspace) override
+    void BackwardDataCore(const Mat& srcGrad, const Mat& filter, Mat& grad, Mat& workspace) override
     {
+        size_t batchSize = srcGrad.GetNumCols();
         // Find best algo and allocate temp buffer, if needed.
         auto finder = [this](int& calgo, cudnnConvolutionBwdDataAlgoPerf_t algoPerf[MaxAlgoCount]) -> cudnnStatus_t
         {
@@ -285,8 +340,9 @@ protected:
                                                 ptr(workspace), m_backDataAlgo.Algo.memory, &C::One, m_inT, ptr(grad)));
     }
 
-    void BackwardFilterCore(size_t batchSize, const Mat& srcGrad, const Mat& in, Mat& filterGrad, bool /*allowReuse*/, Mat& workspace) override
+    void BackwardFilterCore(const Mat& srcGrad, const Mat& in, Mat& filterGrad, bool /*allowReuse*/, Mat& workspace) override
     {
+        size_t batchSize = in.GetNumCols();
         // Find best algo and allocate temp buffer, if needed.
         auto finder = [this](int& calgo, cudnnConvolutionBwdFilterAlgoPerf_t algoPerf[MaxAlgoCount]) -> cudnnStatus_t
         {
@@ -298,6 +354,21 @@ protected:
         // Compute gradients with respect to the output tensor (data).
         CUDNN_CALL(cudnnConvolutionBackwardFilter(m_cudnn, &C::One, m_inT, ptr(in), m_outT, ptr(srcGrad), m_conv, m_backFiltAlgo.Algo.algo,
                                                   ptr(workspace), m_backFiltAlgo.Algo.memory, &C::One, m_filterT, ptr(filterGrad)));
+    }
+
+    void EnsurePoolingInitialized() override
+    {
+    }
+
+    void ForwardPoolingCore(const Mat& in, Mat& out) override
+    {
+        CUDNN_CALL(cudnnPoolingForward(m_cudnn, *(m_pool), &C::One, m_inT, ptr(in), &C::Zero, m_outT, ptr(out)));
+    }
+
+    void BackwardPoolingCore(const Mat& out, const Mat& srcGrad, const Mat& in, Mat& grad) override
+    {
+        CUDNN_CALL(cudnnPoolingBackward(m_cudnn, *(m_pool), &C::One, m_outT, ptr(out), m_outT, ptr(srcGrad),
+                                        m_inT, ptr(in), &C::One, m_inT, ptr(grad)));
     }
 
 private:
@@ -391,6 +462,7 @@ private:
     CuDnnTensor m_outT;
     CuDnnFilter m_filterT;
     CuDnnConv m_conv;
+    std::unique_ptr<CuDnnPool> m_pool;
 
     ConvAlgoInfo<cudnnConvolutionFwdAlgoPerf_t> m_fwdAlgo;
     ConvAlgoInfo<cudnnConvolutionBwdDataAlgoPerf_t> m_backDataAlgo;
@@ -398,10 +470,10 @@ private:
 };
 
 template <class ElemType>
-std::unique_ptr<ConvolutionEngine<ElemType>> CuDnnConvolutionEngineFactory<ElemType>::CreateConvEngine(
-    ConvolveGeometryPtr geometry, DEVICEID_TYPE deviceId, ImageLayoutKind imageLayout, size_t maxTempMemSizeInSamples)
+std::unique_ptr<ConvolutionEngine<ElemType>> CuDnnConvolutionEngineFactory<ElemType>::Create(
+    ConvolveGeometryPtr geometry, DEVICEID_TYPE deviceId, ImageLayoutKind imageLayout, size_t maxTempMemSizeInSamples, PoolKind poolKind)
 {
-    return std::make_unique<CuDnnConvolutionEngine<ElemType>>(geometry, deviceId, imageLayout, maxTempMemSizeInSamples);
+    return std::make_unique<CuDnnConvolutionEngine<ElemType>>(geometry, deviceId, imageLayout, maxTempMemSizeInSamples, poolKind);
 }
 
 //class CuDnnTensor4D : public ConvolutionTensor4D

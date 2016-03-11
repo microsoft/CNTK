@@ -326,6 +326,66 @@ BOOST_AUTO_TEST_CASE(ConvolutionBackwardFilter)
     }
 }
 
+BOOST_AUTO_TEST_CASE(PoolingForward)
+{
+    std::mt19937 rng(0);
+    std::uniform_int_distribution<> batchSizeG(1, 8);
+    std::normal_distribution<float> nd;
+
+    auto initMat = [&](SingleMatrix& buf, size_t r, size_t c, vec& data) -> SingleMatrix
+    {
+        data.resize(r * 3 * c);
+        std::fill(begin(data), end(data), std::numeric_limits<float>::quiet_NaN());
+        std::generate(begin(data) + r * c, begin(data) + 2 * r * c, [&] { return nd(rng); });
+        buf.SetValue(r, 3 * c, buf.GetDeviceId(), data.data());
+        // Get center slice.
+        return buf.ColumnSlice(c, c);
+    };
+
+    int baseDeviceId = 0;
+    auto engKind = ConvolutionEngineKind::Reference;
+    for (auto kind : {PoolKind::Max, PoolKind::Max})
+    {
+        for (int deviceId : {-1})
+        {
+            for (const auto& g : GenerateConvTestConfigs())
+            {
+                auto baseEng = ConvEng::Create(g, baseDeviceId, ImageLayoutKind::CHW, 0, ConvolutionEngineKind::CuDnn);
+                auto testEng = ConvEng::Create(g, deviceId, ImageLayoutKind::CHW, 0, engKind);
+
+                size_t n = batchSizeG(rng);
+                vec buf;
+                buf.resize(g->InputShape().GetNumElements() * n);
+                std::generate(begin(buf), end(buf), [&] { return nd(rng); });
+                SingleMatrix inB(g->InputShape().GetNumElements(), n, buf.data(), baseDeviceId, matrixFlagNormal);
+                SingleMatrix inT(g->InputShape().GetNumElements(), n, buf.data(), deviceId, matrixFlagNormal);
+
+                size_t crowOut = g->OutputShape().GetNumElements();
+                SingleMatrix outBuf(deviceId);
+                SingleMatrix outT = initMat(outBuf, crowOut, n, buf);
+                SingleMatrix outB(outT.DeepClone(), baseDeviceId);
+
+                testEng->ForwardPooling(kind, inT, outT);
+                baseEng->ForwardPooling(kind, inB, outB);
+
+                std::stringstream tmsg;
+                tmsg << "Geometry: " << (std::string)(*g) << ", Batch: " << n;
+                std::string msg = " are not equal, " + tmsg.str();
+                std::string msgNan = " has NaNs, " + tmsg.str();
+                std::string msgNotNan = " has buffer overflow/underflow, " + tmsg.str();
+
+                float relErr = Err<float>::Rel;
+                float absErr = Err<float>::Abs;
+                std::string emsg;
+
+                BOOST_REQUIRE_MESSAGE(!outT.HasNan("out"), "out" << msgNan);
+                BOOST_REQUIRE_MESSAGE(CheckEqual(outT, outB, emsg, relErr, absErr * 8), "out" << msg << ". " << emsg);
+                BOOST_REQUIRE_MESSAGE(CountNans(outBuf) == crowOut * 2 * n, "out" << msgNotNan);
+            }
+        }
+    }
+}
+
 BOOST_AUTO_TEST_SUITE_END()
 
 //static int GetNumOut(int i, int k, int s, bool pad)

@@ -16,16 +16,17 @@ void ConvolutionEngine<ElemType>::Forward(const Mat& in, const Mat& filter, Mat&
     assert(g.InputShape().GetNumElements() == in.GetNumRows());
     assert(g.OutputShape().GetNumElements() == out.GetNumRows());
     size_t batchSize = in.GetNumCols();
-    assert(batchSize == in.GetNumCols());
     assert(batchSize == out.GetNumCols());
     // REVIEW alexeyk: add shape-aware asserts?
     assert(g.KernelShape().GetNumElements() * g.MapCount().GetNumElements() == filter.GetNumElements());
 #ifdef NDEBUG
     UNUSED(g);
+    UNUSED(batchSize);
 #endif
 
     EnsureCompatible();
-    ForwardCore(batchSize, in, filter, out, workspace);
+    EnsureConvolutionInitialized();
+    ForwardCore(in, filter, out, workspace);
 }
 
 template <class ElemType>
@@ -35,15 +36,16 @@ void ConvolutionEngine<ElemType>::BackwardData(const Mat& srcGrad, const Mat& fi
     assert(g.InputShape().GetNumElements() == grad.GetNumRows());
     assert(g.OutputShape().GetNumElements() == srcGrad.GetNumRows());
     size_t batchSize = srcGrad.GetNumCols();
-    assert(batchSize == srcGrad.GetNumCols());
     assert(batchSize == grad.GetNumCols());
     assert(g.KernelShape().GetNumElements() * g.MapCount().GetNumElements() == filter.GetNumElements());
 #ifdef NDEBUG
     UNUSED(g);
+    UNUSED(batchSize);
 #endif
 
     EnsureCompatible();
-    BackwardDataCore(batchSize, srcGrad, filter, grad, workspace);
+    EnsureConvolutionInitialized();
+    BackwardDataCore(srcGrad, filter, grad, workspace);
 }
 
 template <class ElemType>
@@ -53,15 +55,56 @@ void ConvolutionEngine<ElemType>::BackwardFilter(const Mat& srcGrad, const Mat& 
     assert(g.InputShape().GetNumElements() == in.GetNumRows());
     assert(g.OutputShape().GetNumElements() == srcGrad.GetNumRows());
     size_t batchSize = in.GetNumCols();
-    assert(batchSize == in.GetNumCols());
     assert(batchSize == srcGrad.GetNumCols());
     assert(g.KernelShape().GetNumElements() * g.MapCount().GetNumElements() == filter.GetNumElements());
 #ifdef NDEBUG
     UNUSED(g);
+    UNUSED(batchSize);
 #endif
 
     EnsureCompatible();
-    BackwardFilterCore(batchSize, srcGrad, in, filter, allowReuse, workspace);
+    EnsureConvolutionInitialized();
+    BackwardFilterCore(srcGrad, in, filter, allowReuse, workspace);
+}
+
+template <class ElemType>
+void ConvolutionEngine<ElemType>::ForwardPooling(const Mat& in, Mat& out)
+{
+    const auto& g = *m_geometry;
+    assert(g.InputShape().GetNumElements() == in.GetNumRows());
+    assert(g.OutputShape().GetNumElements() == out.GetNumRows());
+    size_t batchSize = in.GetNumCols();
+    assert(batchSize == out.GetNumCols());
+#ifdef NDEBUG
+    UNUSED(g);
+    UNUSED(batchSize);
+#endif
+
+    EnsureCompatible();
+    EnsurePoolingInitialized();
+    ForwardPoolingCore(in, out);
+}
+
+template <class ElemType>
+void ConvolutionEngine<ElemType>::BackwardPooling(const Mat& out, const Mat& srcGrad, const Mat& in, Mat& grad)
+{
+    const auto& g = *m_geometry;
+    assert(g.InputShape().GetNumElements() == grad.GetNumRows());
+    assert(g.InputShape().GetNumElements() == in.GetNumRows());
+    assert(g.OutputShape().GetNumElements() == srcGrad.GetNumRows());
+    assert(g.OutputShape().GetNumElements() == out.GetNumRows());
+    size_t batchSize = out.GetNumCols();
+    assert(batchSize == srcGrad.GetNumCols());
+    assert(batchSize == in.GetNumCols());
+    assert(batchSize == grad.GetNumCols());
+#ifdef NDEBUG
+    UNUSED(g);
+    UNUSED(batchSize);
+#endif
+
+    EnsureCompatible();
+    EnsurePoolingInitialized();
+    BackwardPoolingCore(out, srcGrad, in, grad);
 }
 
 //template <class ElemType>
@@ -200,12 +243,9 @@ public:
     using typename Base::Mat;
 
 public:
-    ReferenceConvolutionEngine(ConvolveGeometryPtr geometry, DEVICEID_TYPE deviceId, ImageLayoutKind imageLayout, size_t maxTempMemSizeInSamples)
-        : Base(geometry, deviceId, imageLayout, maxTempMemSizeInSamples), 
-        m_mpRowCol(geometry->MpRowCol().size(), 1, const_cast<int*>(geometry->MpRowCol().data()), deviceId, IsGpu(deviceId) ? matrixFlagNormal : matrixFlagDontOwnBuffer),
-        m_mpRowIwht(geometry->MpRowIwht().size(), 1, const_cast<int*>(geometry->MpRowIwht().data()), deviceId, IsGpu(deviceId) ? matrixFlagNormal : matrixFlagDontOwnBuffer),
-        m_mpRowRun(geometry->MpRowRun().size(), 1, const_cast<int*>(geometry->MpRowRun().data()), deviceId, IsGpu(deviceId) ? matrixFlagNormal : matrixFlagDontOwnBuffer),
-        m_runs(geometry->Runs().size(), 1, const_cast<int*>(geometry->Runs().data()), deviceId, IsGpu(deviceId) ? matrixFlagNormal : matrixFlagDontOwnBuffer)
+    ReferenceConvolutionEngine(ConvolveGeometryPtr geometry, DEVICEID_TYPE deviceId, ImageLayoutKind imageLayout, size_t maxTempMemSizeInSamples, PoolKind poolKind)
+        : Base(geometry, deviceId, imageLayout, maxTempMemSizeInSamples, poolKind), 
+        m_mpRowCol(geometry->MpRowCol().size(), 1, const_cast<int*>(geometry->MpRowCol().data()), deviceId, IsGpu(deviceId) ? matrixFlagNormal : matrixFlagDontOwnBuffer)
     {
     }
 
@@ -221,19 +261,55 @@ protected:
             RuntimeError("Reference convolution engine supports only CHW/cudnn layout.");
     }
 
-    void ForwardCore(size_t /*batchSize*/, const Mat& in, const Mat& filter, Mat& out, Mat& /*workspace*/) override
+    void EnsureConvolutionInitialized() override
     {
-        in.NDConvolutionForward(filter, m_mpRowCol, m_mpRowIwht, m_mpRowRun, m_runs, out);
+        if (m_mpRowIwht == nullptr)
+        {
+            auto flags = IsGpu(m_deviceId) ? matrixFlagNormal : matrixFlagDontOwnBuffer;
+            m_mpRowIwht = std::make_unique<Matrix<int>>(m_geometry->MpRowIwht().size(), 1, 
+                                                        const_cast<int*>(m_geometry->MpRowIwht().data()), m_deviceId, flags);
+            m_mpRowRun = std::make_unique<Matrix<int>>(m_geometry->MpRowRun().size(), 1,
+                                                       const_cast<int*>(m_geometry->MpRowRun().data()), m_deviceId, flags);
+            m_runs = std::make_unique<Matrix<int>>(m_geometry->Runs().size(), 1, 
+                                                   const_cast<int*>(m_geometry->Runs().data()), m_deviceId, flags);
+        }
     }
 
-    void BackwardDataCore(size_t /*batchSize*/, const Mat& srcGrad, const Mat& filter, Mat& grad, Mat& /*workspace*/) override
+    void ForwardCore(const Mat& in, const Mat& filter, Mat& out, Mat& /*workspace*/) override
     {
-        srcGrad.NDConvolutionBackwardData(filter, m_mpRowCol, m_mpRowIwht, m_mpRowRun, m_runs, grad);
+        in.NDConvolutionForward(filter, m_mpRowCol, *m_mpRowIwht, *m_mpRowRun, *m_runs, out);
     }
 
-    void BackwardFilterCore(size_t /*batchSize*/, const Mat& srcGrad, const Mat& in, Mat& filterGrad, bool /*allowReuse*/, Mat& /*workspace*/) override
+    void BackwardDataCore(const Mat& srcGrad, const Mat& filter, Mat& grad, Mat& /*workspace*/) override
     {
-        srcGrad.NDConvolutionBackwardFilter(in, m_mpRowCol, m_mpRowIwht, m_mpRowRun, m_runs, filterGrad);
+        srcGrad.NDConvolutionBackwardData(filter, m_mpRowCol, *m_mpRowIwht, *m_mpRowRun, *m_runs, grad);
+    }
+
+    void BackwardFilterCore(const Mat& srcGrad, const Mat& in, Mat& filterGrad, bool /*allowReuse*/, Mat& /*workspace*/) override
+    {
+        srcGrad.NDConvolutionBackwardFilter(in, m_mpRowCol, *m_mpRowIwht, *m_mpRowRun, *m_runs, filterGrad);
+    }
+
+    void EnsurePoolingInitialized() override
+    {
+        if (m_indices == nullptr)
+        {
+            auto flags = IsGpu(m_deviceId) ? matrixFlagNormal : matrixFlagDontOwnBuffer;
+            m_mpRowIndices = std::make_unique<Matrix<int>>(m_geometry->MpRowIndices().size(), 1,
+                                                           const_cast<int*>(m_geometry->MpRowIndices().data()), m_deviceId, flags);
+            m_indices = std::make_unique<Matrix<int>>(m_geometry->Indices().size(), 1,
+                                                      const_cast<int*>(m_geometry->Indices().data()), m_deviceId, flags);
+        }
+    }
+
+    void ForwardPoolingCore(const Mat& in, Mat& out) override
+    {
+        UNUSED(in); UNUSED(out);
+    }
+
+    void BackwardPoolingCore(const Mat& out, const Mat& srcGrad, const Mat& in, Mat& grad) override
+    {
+        UNUSED(in); UNUSED(out); UNUSED(srcGrad); UNUSED(grad);
     }
 
 private:
@@ -243,10 +319,16 @@ private:
     }
 
 private:
+    using IntMatPtr = std::unique_ptr<Matrix<int>>;
+
     Matrix<int> m_mpRowCol;
-    Matrix<int> m_mpRowIwht;
-    Matrix<int> m_mpRowRun;
-    Matrix<int> m_runs;
+    // Convolution-specific maps.
+    IntMatPtr m_mpRowIwht;
+    IntMatPtr m_mpRowRun;
+    IntMatPtr m_runs;
+    // Pooling-specific maps.
+    IntMatPtr m_mpRowIndices;
+    IntMatPtr m_indices;
 };
 
 //------------------------------------------------------------------
@@ -260,8 +342,8 @@ public:
     using typename Base::Mat;
 
 public:
-    LegacyConvolutionEngine(ConvolveGeometryPtr geometry, DEVICEID_TYPE deviceId, ImageLayoutKind imageLayout, size_t maxTempMemSizeInSamples)
-        : Base(geometry, deviceId, imageLayout, maxTempMemSizeInSamples), 
+    LegacyConvolutionEngine(ConvolveGeometryPtr geometry, DEVICEID_TYPE deviceId, ImageLayoutKind imageLayout, size_t maxTempMemSizeInSamples, PoolKind poolKind)
+        : Base(geometry, deviceId, imageLayout, maxTempMemSizeInSamples, poolKind), 
         m_inT(m_geometry->InputShape(), imageLayout), m_outT(m_geometry->OutputShape(), imageLayout),
         m_filterT(m_geometry->KernelShape(), imageLayout), m_strideT(m_geometry->Stride(), imageLayout)
     {
@@ -289,8 +371,13 @@ protected:
             RuntimeError("Legacy convolution engine does not support precise padding.");
     }
 
-    void ForwardCore(size_t batchSize, const Mat& in, const Mat& filter, Mat& out, Mat& workspace) override
+    void EnsureConvolutionInitialized() override
     {
+    }
+
+    void ForwardCore(const Mat& in, const Mat& filter, Mat& out, Mat& workspace) override
+    {
+        size_t batchSize = in.GetNumCols();
         size_t packedInputRows = m_filterT.w() * m_filterT.h() * m_filterT.c();
         size_t packedInputColsPerSample = m_outT.w() * m_outT.h();
         size_t outputSizePerChannel = packedInputColsPerSample;
@@ -370,8 +457,9 @@ protected:
         assert(batchSize == out.GetNumCols());
     }
 
-    void BackwardDataCore(size_t batchSize, const Mat& srcGrad, const Mat& filter, Mat& grad, Mat& workspace) override
+    void BackwardDataCore(const Mat& srcGrad, const Mat& filter, Mat& grad, Mat& workspace) override
     {
+        size_t batchSize = srcGrad.GetNumCols();
         size_t packedInputRows = m_filterT.w() * m_filterT.h() * m_filterT.c();
         size_t packedInputColsPerSample = m_outT.w() * m_outT.h();
         size_t outputSizePerChannel = packedInputColsPerSample;
@@ -409,8 +497,9 @@ protected:
         assert(batchSize == srcGrad.GetNumCols());
     }
 
-    void BackwardFilterCore(size_t batchSize, const Mat& srcGrad, const Mat& in, Mat& filterGrad, bool allowReuse, Mat& workspace) override
+    void BackwardFilterCore(const Mat& srcGrad, const Mat& in, Mat& filterGrad, bool allowReuse, Mat& workspace) override
     {
+        size_t batchSize = in.GetNumCols();
         size_t packedInputRows = m_filterT.w() * m_filterT.h() * m_filterT.c();
         size_t packedInputColsPerSample = m_outT.w() * m_outT.h();
         size_t outputSizePerChannel = packedInputColsPerSample;
@@ -480,6 +569,47 @@ protected:
         assert(batchSize == srcGrad.GetNumCols());
     }
 
+    void EnsurePoolingInitialized() override
+    {
+    }
+
+    void ForwardPoolingCore(const Mat& in, Mat& out) override
+    {
+        if (m_poolKind == PoolKind::Max)
+        {
+            out.AssignMaxPoolingResult(in, m_inT.c(), m_inT.w(), m_inT.h(), m_inT.w() * m_inT.h() * m_inT.c(),
+                                       m_outT.w(), m_outT.h(), m_outT.w() * m_outT.h() * m_outT.c(),
+                                       m_filterT.w(), m_filterT.h(), m_strideT.w(), m_strideT.h());
+        }
+        else if (m_poolKind == PoolKind::Average)
+        {
+            out.AssignAveragePoolingResult(in, m_inT.c(), m_inT.w(), m_inT.h(), m_inT.w() * m_inT.h() * m_inT.c(),
+                                           m_outT.w(), m_outT.h(), m_outT.w() * m_outT.h() * m_outT.c(),
+                                           m_filterT.w(), m_filterT.h(), m_strideT.w(), m_strideT.h());
+        }
+        else
+            InvalidArgument("Pooling type %d is not supported.", (int)m_poolKind);
+    }
+
+    void BackwardPoolingCore(const Mat& out, const Mat& srcGrad, const Mat& in, Mat& grad) override
+    {
+        if (m_poolKind == PoolKind::Max)
+        {
+            grad.AddMaxPoolingGradient(srcGrad, in, out,
+                                       m_inT.c(), m_inT.w(), m_inT.h(), m_inT.w() * m_inT.h() * m_inT.c(),
+                                       m_outT.w(), m_outT.h(), m_outT.w() * m_outT.h() * m_outT.c(),
+                                       m_filterT.w(), m_filterT.h(), m_strideT.w(), m_strideT.h());
+        }
+        else if (m_poolKind == PoolKind::Average)
+        {
+            grad.AddAveragePoolingGradient(srcGrad, m_inT.c(), m_inT.w(), m_inT.h(), m_inT.w() * m_inT.h() * m_inT.c(),
+                                           m_outT.w(), m_outT.h(), m_outT.w() * m_outT.h() * m_outT.c(),
+                                           m_filterT.w(), m_filterT.h(), m_strideT.w(), m_strideT.h());
+        }
+        else
+            InvalidArgument("Pooling type %d is not supported.", (int)m_poolKind);
+    }
+
 //    void EnsureCompatibleBatchNorm(bool spatial) override
 //    {
 //        if (m_deviceId >= 0)
@@ -534,177 +664,10 @@ private:
 template class ConvolutionEngine<float>;
 template class ConvolutionEngine<double>;
 
-//------------------------------------------------------------------
-// Pooling engine.
-//------------------------------------------------------------------
-
-template <class ElemType>
-void PoolingEngine<ElemType>::Forward(PoolKind kind, const Mat& in, Mat& out)
-{
-    size_t batchSize = in.GetNumCols();
-    //assert(inT.w() * inT.h() * inT.c() == in.GetNumRows());
-    //assert(inT.n() == in.GetNumCols());
-    //assert(outT.w() * outT.h() * outT.c() == out.GetNumRows());
-    //assert(outT.n() == out.GetNumCols());
-
-    EnsureCompatible();
-    ForwardCore(batchSize, kind, in, out);
-}
-
-template <class ElemType>
-void PoolingEngine<ElemType>::Backward(PoolKind kind, const Mat& out, const Mat& srcGrad, const Mat& in, Mat& grad)
-{
-    size_t batchSize = srcGrad.GetNumCols();
-    //assert(outT.w() * outT.h() * outT.c() == out.GetNumRows());
-    //assert(outT.n() == out.GetNumCols());
-    //assert(out.GetNumRows() == srcGrad.GetNumRows());
-    //assert(out.GetNumCols() == srcGrad.GetNumCols());
-    //assert(inT.w() * inT.h() * inT.c() == in.GetNumRows());
-    //assert(inT.n() == in.GetNumCols());
-    //assert(in.GetNumRows() == grad.GetNumRows());
-    //assert(in.GetNumCols() == grad.GetNumCols());
-
-    EnsureCompatible();
-    BackwardCore(batchSize, kind, out, srcGrad, in, grad);
-}
-
-//------------------------------------------------------------------
-// Default pooling engine implementation.
-//------------------------------------------------------------------
-template <class ElemType>
-class DefaultPoolingEngine : public PoolingEngine<ElemType>
-{
-public:
-    using Base = PoolingEngine<ElemType>;
-    using typename Base::Mat;
-
-public:
-    DefaultPoolingEngine(ConvolveGeometryPtr geometry, DEVICEID_TYPE deviceId, ImageLayoutKind imageLayout)
-        : Base(geometry, deviceId, imageLayout)
-    {
-    }
-
-protected:
-    using Base::m_geometry;
-    using Base::m_deviceId;
-    using Base::m_imageLayout;
-
-    void EnsureCompatible() override
-    {
-        if (m_imageLayout != ImageLayoutKind::CHW)
-            RuntimeError("Default pooling engine supports only CHW/cudnn layout.");
-    }
-
-    void ForwardCore(size_t batchSize, PoolKind kind, const Mat& in, Mat& out) override
-    {
-        //if (poolDesc.kind() == PoolDesc::PoolKind::Max)
-        //{
-        //    out.AssignMaxPoolingResult(in, inT.c(), inT.w(), inT.h(), inT.w() * inT.h() * inT.c(),
-        //                               outT.w(), outT.h(), outT.w() * outT.h() * outT.c(),
-        //                               poolDesc.w(), poolDesc.h(), poolDesc.wStride(), poolDesc.hStride());
-        //}
-        //else if (poolDesc.kind() == PoolDesc::PoolKind::Average)
-        //{
-        //    out.AssignAveragePoolingResult(in, inT.c(), inT.w(), inT.h(), inT.w() * inT.h() * inT.c(),
-        //                                   outT.w(), outT.h(), outT.w() * outT.h() * outT.c(),
-        //                                   poolDesc.w(), poolDesc.h(), poolDesc.wStride(), poolDesc.hStride());
-        //}
-        //else
-        //    InvalidArgument("Pooling type %d is not supported.", (int)poolDesc.kind());
-    }
-
-    void BackwardCore(size_t batchSize, PoolKind kind, const Mat& out, const Mat& srcGrad, const Mat& in, Mat& grad) override
-    {
-        //if (poolDesc.kind() == PoolDesc::PoolKind::Max)
-        //{
-        //    grad.AddMaxPoolingGradient(srcGrad, in, out,
-        //                               inT.c(), inT.w(), inT.h(), inT.w() * inT.h() * inT.c(),
-        //                               outT.w(), outT.h(), outT.w() * outT.h() * outT.c(),
-        //                               poolDesc.w(), poolDesc.h(), poolDesc.wStride(), poolDesc.hStride());
-        //}
-        //else if (poolDesc.kind() == PoolDesc::PoolKind::Average)
-        //{
-        //    grad.AddAveragePoolingGradient(srcGrad, inT.c(), inT.w(), inT.h(), inT.w() * inT.h() * inT.c(),
-        //                                   outT.w(), outT.h(), outT.w() * outT.h() * outT.c(),
-        //                                   poolDesc.w(), poolDesc.h(), poolDesc.wStride(), poolDesc.hStride());
-        //}
-        //else
-        //    InvalidArgument("Pooling type %d is not supported.", (int)poolDesc.kind());
-    }
-};
-
-//------------------------------------------------------------------
-// Legacy pooling engine implementation.
-//------------------------------------------------------------------
-template <class ElemType>
-class LegacyPoolingEngine : public PoolingEngine<ElemType>
-{
-public:
-    using Base = PoolingEngine<ElemType>;
-    using typename Base::Mat;
-
-public:
-    LegacyPoolingEngine(ConvolveGeometryPtr geometry, DEVICEID_TYPE deviceId, ImageLayoutKind imageLayout)
-        : Base(geometry, deviceId, imageLayout)
-    {
-    }
-
-protected:
-    using Base::m_geometry;
-    using Base::m_deviceId;
-    using Base::m_imageLayout;
-
-    void EnsureCompatible() override
-    {
-        if (m_imageLayout != ImageLayoutKind::HWC)
-            RuntimeError("Legacy pooling engine supports only HWC/legacy layout.");
-    }
-
-    void ForwardCore(size_t batchSize, PoolKind kind, const Mat& in, Mat& out) override
-    {
-        //if (poolDesc.kind() == PoolDesc::PoolKind::Max)
-        //{
-        //    out.AssignMaxPoolingResult(in, inT.c(), inT.w(), inT.h(), inT.w() * inT.h() * inT.c(),
-        //                               outT.w(), outT.h(), outT.w() * outT.h() * outT.c(),
-        //                               poolDesc.w(), poolDesc.h(), poolDesc.wStride(), poolDesc.hStride());
-        //}
-        //else if (poolDesc.kind() == PoolDesc::PoolKind::Average)
-        //{
-        //    out.AssignAveragePoolingResult(in, inT.c(), inT.w(), inT.h(), inT.w() * inT.h() * inT.c(),
-        //                                   outT.w(), outT.h(), outT.w() * outT.h() * outT.c(),
-        //                                   poolDesc.w(), poolDesc.h(), poolDesc.wStride(), poolDesc.hStride());
-        //}
-        //else
-        //    InvalidArgument("Pooling type %d is not supported.", (int)poolDesc.kind());
-    }
-
-    void BackwardCore(size_t batchSize, PoolKind kind, const Mat& out, const Mat& srcGrad, const Mat& in, Mat& grad) override
-    {
-        //if (poolDesc.kind() == PoolDesc::PoolKind::Max)
-        //{
-        //    grad.AddMaxPoolingGradient(srcGrad, in, out,
-        //                               inT.c(), inT.w(), inT.h(), inT.w() * inT.h() * inT.c(),
-        //                               outT.w(), outT.h(), outT.w() * outT.h() * outT.c(),
-        //                               poolDesc.w(), poolDesc.h(), poolDesc.wStride(), poolDesc.hStride());
-        //}
-        //else if (poolDesc.kind() == PoolDesc::PoolKind::Average)
-        //{
-        //    grad.AddAveragePoolingGradient(srcGrad, inT.c(), inT.w(), inT.h(), inT.w() * inT.h() * inT.c(),
-        //                                   outT.w(), outT.h(), outT.w() * outT.h() * outT.c(),
-        //                                   poolDesc.w(), poolDesc.h(), poolDesc.wStride(), poolDesc.hStride());
-        //}
-        //else
-        //    InvalidArgument("Pooling type %d is not supported.", (int)poolDesc.kind());
-    }
-};
-
-template class PoolingEngine<float>;
-template class PoolingEngine<double>;
-
 template <class ElemType>
 std::unique_ptr<ConvolutionEngine<ElemType>> ConvolutionEngine<ElemType>::Create(ConvolveGeometryPtr geometry, DEVICEID_TYPE deviceId,
-                                                                                 ImageLayoutKind imageLayout, size_t maxTempMemSizeInSamples, 
-                                                                                 ConvolutionEngineKind enabledEngines = ConvolutionEngineKind::All)
+                                                                                 ImageLayoutKind imageLayout, size_t maxTempMemSizeInSamples, PoolKind poolKind,
+                                                                                 ConvolutionEngineKind enabledEngines)
 {
     auto isEnabled = [=](ConvolutionEngineKind eng) { return ((int)enabledEngines & (int)eng) != 0; };
     // Note: in some cases do not throw exception even if parameters do not match as Create
@@ -718,7 +681,7 @@ std::unique_ptr<ConvolutionEngine<ElemType>> ConvolutionEngine<ElemType>::Create
             RuntimeError("Trying to use Legacy convolution engine when it's disabled.");
         // REVIEW alexeyk: should honor m_traceLevel here.
         fprintf(stderr, "Using legacy convolution engine for geometry %s.\n", engStr.c_str());
-        return std::make_unique<LegacyConvolutionEngine<ElemType>>(geometry, deviceId, imageLayout, maxTempMemSizeInSamples);
+        return std::make_unique<LegacyConvolutionEngine<ElemType>>(geometry, deviceId, imageLayout, maxTempMemSizeInSamples, poolKind);
     }
 
     // Check if we can use cuDNN engine. Do not need to validate tensors as ConvolveGeometry has already done that.
@@ -733,93 +696,13 @@ std::unique_ptr<ConvolutionEngine<ElemType>> ConvolutionEngine<ElemType>::Create
         mapCount.GetNumElements() == mapCount[mapCount.GetRank() - 1])
     {
         fprintf(stderr, "Using cuDNN convolution engine for geometry %s.\n", engStr.c_str());
-        return CuDnnConvolutionEngineFactory<ElemType>::CreateConvEngine(geometry, deviceId, imageLayout, maxTempMemSizeInSamples);
+        return CuDnnConvolutionEngineFactory<ElemType>::Create(geometry, deviceId, imageLayout, maxTempMemSizeInSamples, poolKind);
     }
 
     if (!isEnabled(ConvolutionEngineKind::Reference))
         RuntimeError("Reference convolution is disabled and no other engine supports such configuratin (or disabled).");
     fprintf(stderr, "Using reference convolution engine for geometry %s.\n", engStr.c_str());
-    return std::make_unique<ReferenceConvolutionEngine<ElemType>>(geometry, deviceId, imageLayout, maxTempMemSizeInSamples);
+    return std::make_unique<ReferenceConvolutionEngine<ElemType>>(geometry, deviceId, imageLayout, maxTempMemSizeInSamples, poolKind);
 }
-
-//template <class ElemType>
-//class DefaultConvolutionEngineFactory : public ConvolutionEngineFactory<ElemType>
-//{
-//public:
-//    using Base = ConvolutionEngineFactory<ElemType>;
-//    using typename Base::Tensor4D;
-//    using typename Base::Tensor4DPtr;
-//    using typename Base::Filter;
-//    using typename Base::FilterPtr;
-//    using typename Base::ConvDesc;
-//    using typename Base::ConvDescPtr;
-//    using typename Base::PoolDesc;
-//    using typename Base::PoolDescPtr;
-//
-//    using typename Base::ConvEnginePtr;
-//    using typename Base::PoolEnginePtr;
-//
-//public:
-//    Tensor4DPtr CreateTensor(size_t w, size_t h, size_t c, size_t n) override
-//    {
-//        return std::make_unique<ConvolutionTensor4D>(w, h, c, n);
-//    }
-//
-//    FilterPtr CreateFilter(size_t w, size_t h, size_t c, size_t k) override
-//    {
-//        return std::make_unique<Filter>(w, h, c, k);
-//    }
-//
-//    ConvDescPtr CreateConvDescriptor(const Tensor4D& /*inT*/, const Filter& /*filterT*/,
-//                                     size_t wStride, size_t hStride, bool padding) override
-//    {
-//        return std::make_unique<ConvDesc>(wStride, hStride, padding);
-//    }
-//
-//    PoolDescPtr CreatePoolDescriptor(typename PoolDesc::PoolKind kind, size_t w, size_t h, size_t wStride, size_t hStride, size_t wPad, size_t hPad) override
-//    {
-//        return std::make_unique<PoolDesc>(kind, w, h, wStride, hStride, wPad, hPad);
-//    }
-//
-//    ConvEnginePtr CreateConvEngine(DEVICEID_TYPE deviceId, ImageLayoutKind imageLayout, size_t maxTempMemSizeInSamples, BatchNormImpl bnImpl) override
-//    {
-//        return std::make_unique<DefaultConvolutionEngine<ElemType>>(deviceId, imageLayout, maxTempMemSizeInSamples, bnImpl);
-//    }
-//
-//    PoolEnginePtr CreatePoolEngine(DEVICEID_TYPE deviceId, ImageLayoutKind imageLayout) override
-//    {
-//        return std::make_unique<LegacyPoolingEngine<ElemType>>(deviceId, imageLayout);
-//    }
-//};
-//
-//template <class ElemType>
-//std::unique_ptr<ConvolutionEngineFactory<ElemType>> ConvolutionEngineFactory<ElemType>::Create(DEVICEID_TYPE deviceId, EngineType engType, ImageLayoutKind imageLayoutKind)
-//{
-//    if (engType == EngineType::Auto)
-//    {
-//        // REVIEW alexeyk: make cuDNN default when running on GPU and compiled with cuDNN, add config parameter to enable runtime switch between implementations.
-//        if (deviceId >= 0 && CuDnnConvolutionEngineFactory<ElemType>::IsSupported(deviceId) && imageLayoutKind == ImageLayoutKind::CHW)
-//            return Create(deviceId, EngineType::CuDnn, imageLayoutKind);
-//        else
-//            return Create(deviceId, EngineType::Legacy, imageLayoutKind);
-//    }
-//    else if (engType == EngineType::CuDnn)
-//    {
-//        if (imageLayoutKind != ImageLayoutKind::CHW)
-//            InvalidArgument("ConvolutionEngineFactory: ImageLayout '%s' is not compatible with the cuDNN engine.", ToString(imageLayoutKind).c_str());
-//        if (deviceId >= 0 && CuDnnConvolutionEngineFactory<ElemType>::IsSupported(deviceId))
-//            return std::make_unique<CuDnnConvolutionEngineFactory<ElemType>>();
-//        RuntimeError("cuDNN convolution engine is not supported, check the device id and whether the code was compiled with cuDNN.");
-//    }
-//    else if (engType == EngineType::Legacy)
-//    {
-//        return std::make_unique<DefaultConvolutionEngineFactory<ElemType>>();
-//    }
-//
-//    RuntimeError("Not supported convolution engine type: %d.", (int)engType);
-//}
-//
-//template class ConvolutionEngineFactory<float>;
-//template class ConvolutionEngineFactory<double>;
 
 }}}
