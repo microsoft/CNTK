@@ -88,8 +88,8 @@ class AbstractContext(object, metaclass=ABCMeta):
         model_filename = os.path.join(self.directory, 'Models', self.name)
         tmpl_dict = {
                 'DevideId':self.device_id,
-                'ModelDescription':self.graph.to_graph_description(),
-                'ModelModelPath': model_filename,
+                'ModelDescription':self.graph.root_to_description(),
+                'ModelPath': model_filename,
                 'Reader':reader_config,
                 'SGD':self.optimizer.generate_config(),
                 } 

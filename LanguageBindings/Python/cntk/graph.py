@@ -149,20 +149,29 @@ class Label(ComputationNode):
         self.tag = 'label'
 
 class Graph(object):
-    def __init__(self):
+    def __init__(self, root_node = None):
         super(Graph, self).__init__()
         self.feature_nodes = set()
         self.label_nodes = set()
-        # TODO maintain self.root_node
+        self.root_node = root_node
 
     def add_feature(self, node):
         self.feature_nodes.add(node)
 
     def add_label(self, node):
-        self.labels_nodes.add(node)
+        self.label_nodes.add(node)
 
-    def to_description(self, root_node, **kw):
-        return root_node.to_description()
+    def to_description(self, node, **kw):
+        return node.to_description()
+        
+    def root_to_description(self, **kw):
+        return self.root_node.to_description()
+        
+    def to_graph_description(self, node, **kw):
+        return node.to_graph_description()
+        
+    def root_to_graph_description(self, **kw):
+        return self.root_node.to_graph_description()
 
 
 

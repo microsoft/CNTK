@@ -52,6 +52,6 @@ class SGD(dict):
         """
         
         config = []
-        for k,v in self.item():
+        for k,v in self.items():
             config.append('{0} = {1}\r\n'.format(k,v))
         return ''.join(config)

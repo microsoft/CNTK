@@ -11,13 +11,7 @@ Train=[
 	run=NDLNetworkBuilder
 
     NDLNetworkBuilder=[
-		%(ModelDescription)s
-  
-        #FeatureNodes=(%(FeatureNodes)s)
-        #LabelNodes=(%(LabelNodes)s)
-        #CriteriaNodes=(%(CriteriaNodes)s)
-        #EvalNodes=(%(EvalNodes)s)
-        #OutputNodes=(%(OutputNodes)s)
+		%(ModelDescription)s  
     ]
 	
 	SGD = [	
