@@ -7,10 +7,7 @@
 
 using namespace Microsoft::MSR::CNTK;
 
-namespace Microsoft {
-namespace MSR {
-namespace CNTK {
-namespace Test {
+namespace Microsoft { namespace MSR { namespace CNTK { namespace Test {
 
 // Fixture specific to the operators
 struct OperatorFixture : DataFixture
@@ -22,7 +19,6 @@ struct OperatorFixture : DataFixture
 };
 
 // Use SpeechReaderFixture for most tests
-// Some of them (e.g. 10, will use different data, thus a different fixture)
 BOOST_FIXTURE_TEST_SUITE(NetworkTestSuite, OperatorFixture)
 
 BOOST_AUTO_TEST_CASE(NetworkOperatorPlus)
@@ -33,8 +29,4 @@ BOOST_AUTO_TEST_CASE(NetworkOperatorPlus)
         "../Output/out.txt.v2" /*output*/);
 };
 
-}
-}
-}
-}
-}
+}}}}}
