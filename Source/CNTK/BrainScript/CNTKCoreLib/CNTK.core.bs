@@ -92,6 +92,7 @@ Scale(scalarScalingFactor, matrix, tag='') = new ComputationNode [ operation = '
 Sigmoid(z, tag='') = new ComputationNode [ operation = 'Sigmoid' ; inputs = z /*plus the function args*/ ]
 Softmax(z, tag='') = new ComputationNode [ operation = 'Softmax' ; inputs = z /*plus the function args*/ ]
 Hardmax(z, tag='') = new ComputationNode [ operation = 'Hardmax' ; inputs = z /*plus the function args*/ ]
+Sqrt(z, tag='') = new ComputationNode [ operation = 'Sqrt' ; inputs = z /*plus the function args*/ ]
 SquareError(aMatrix, anotherMatrix, tag='') = new ComputationNode [ operation = 'SquareError' ; inputs = (aMatrix : anotherMatrix) /*plus the function args*/ ]
 SumColumnElements(z, tag='') = new ComputationNode [ operation = 'SumColumnElements' ; inputs = z /*plus the function args*/ ]
 SumElements(matrix, tag='') = new ComputationNode [ operation = 'SumElements' ; inputs = matrix /*plus the function args*/ ]
