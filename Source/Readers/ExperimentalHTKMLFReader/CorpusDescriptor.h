@@ -7,13 +7,21 @@
 
 #include <string>
 #include <memory>
+#include <vector>
+#include <map>
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
-// Currently in-memory, can be externalized.
+// This class represents a string registry to share strings between different deserializers if needed.
+// It associates a unique key for a given string.
+// Currently it is implemented in-memory, but can be unloaded to external disk if needed.
 class StringRegistry
 {
 public:
+    StringRegistry()
+    {}
+
+    // Adds string value to the registry.
     size_t AddValue(const std::wstring& value)
     {
         assert(!Contains(value));
@@ -22,23 +30,29 @@ public:
         return m_indexedValues.size() - 1;
     }
 
-    size_t GetIdByValue(const std::wstring& value)
+    // Get integer id of the string value.
+    size_t GetIdByValue(const std::wstring& value) const
     {
         assert(Contains(value));
-        return m_values[value];
+        return m_values.find(value)->second;
     }
 
-    const std::wstring& GetValueById(size_t id)
+    // Get string value by its integer id.
+    const std::wstring& GetValueById(size_t id) const
     {
+        assert(Contains(value));
         return *m_indexedValues[id];
     }
 
-    bool Contains(const std::wstring& value)
+    // Checks whether the value exists.
+    bool Contains(const std::wstring& value) const
     {
         return m_values.find(value) != m_values.end();
     }
 
 private:
+    DISABLE_COPY_AND_MOVE(StringRegistry);
+
     std::map<std::wstring, size_t> m_values;
     std::vector<const std::wstring*> m_indexedValues;
 };
@@ -46,14 +60,13 @@ private:
 // Represents a full corpus.
 // Defines which sequences should participate in the reading.
 // TODO: Currently it is only a skeleton class.
-// TODO: For HtkMlf it will be based on the set of sequences from the SCP file.
+// TODO: For HtkMlf it can be based on the set of sequences from the SCP file.
 // TODO: Extract an interface.
 class CorpusDescriptor
 {
 public:
     CorpusDescriptor()
-    {
-    }
+    {}
 
     // Checks if the specified sequence should be used for reading.
     bool IsIncluded(const std::wstring& sequenceKey)
@@ -62,12 +75,15 @@ public:
         return true;
     }
 
+    // Gets string registry
     StringRegistry& GetStringRegistry()
     {
         return m_stringRegistry;
     }
 
 private:
+    DISABLE_COPY_AND_MOVE(CorpusDescriptor);
+
     StringRegistry m_stringRegistry;
 };
 

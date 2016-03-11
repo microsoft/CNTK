@@ -12,7 +12,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
 // This class represents a descriptor for a single utterance.
 // It is only used internally by the HTK deserializer.
-class UtteranceDescription : public SequenceDescription
+class UtteranceDescription
 {
     // Archive filename and frame range in that file.
     msra::asr::htkfeatreader::parsedpath m_path;
@@ -20,10 +20,12 @@ class UtteranceDescription : public SequenceDescription
     // Index of the utterance inside the chunk.
     size_t m_indexInsideChunk;
     size_t m_startFrameIndexInsideChunk;
+    size_t m_chunkId;
+    size_t m_id;
 
 public:
     UtteranceDescription(msra::asr::htkfeatreader::parsedpath&& path)
-        : m_path(std::move(path)), m_indexInsideChunk(0), m_startFrameIndexInsideChunk(0)
+        : m_path(std::move(path)), m_indexInsideChunk(0), m_startFrameIndexInsideChunk(0), m_chunkId(SIZE_MAX)
     {
     }
 
@@ -43,15 +45,11 @@ public:
         return filename.substr(0, filename.find_last_of(L"."));
     }
 
-    size_t GetId() const
-    {
-        return m_id;
-    }
+    size_t GetId() const  { return m_id; }
+    void SetId(size_t id) { m_id = id; }
 
-    void SetId(size_t id)
-    {
-        m_id = id;
-    }
+    size_t GetChunkId() const  { return m_chunkId; }
+    void SetChunkId(size_t id) { m_chunkId = id; }
 
     size_t GetIndexInsideChunk() const
     {
