@@ -35,7 +35,6 @@ public:
 private:
     std::vector<SequenceDescription> GetNextSequenceDescriptions(size_t sampleCount);
     size_t GetChunkIndexOf(size_t t);
-    void PrepareNewSweepIfNeeded(size_t samplePosition);
 
     // Deserializer and information on the original timeline
     IDataDeserializerPtr m_deserializer;
@@ -46,18 +45,23 @@ private:
     // Epoch configuration
     EpochConfiguration m_config;
 
+    // Chunk descriptions.
     ChunkDescriptions m_chunkDescriptions;
     std::vector<size_t> m_chunkSampleOffset;
-    std::vector<size_t> m_chunkSequenceOffset;
 
+    // Current window of chunks.
+    std::vector<ChunkPtr> m_chunks;
+    size_t m_chunkStartPosition;
+    size_t m_chunkEndPosition;
+
+    // Current window of sequence descriptions.
     std::vector<SequenceDescription> m_sequenceWindow;
-    std::map<size_t, ChunkPtr> m_chunks;
+    size_t m_currentSequencePositionInChunk;
+    size_t m_currentChunkPosition;
 
     size_t m_globalSamplePosition;
     size_t m_samplePositionInEpoch;
     size_t m_totalNumberOfSamples;
-    size_t m_currentSequencePositionInChunk;
-    size_t m_currentChunkPosition;
 };
 
 }}}

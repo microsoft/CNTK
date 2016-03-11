@@ -17,23 +17,23 @@ NoRandomizer::NoRandomizer(IDataDeserializerPtr deserializer)
       m_currentChunkPosition(SIZE_MAX),
       m_globalSamplePosition(0),
       m_totalNumberOfSamples(0),
-      m_currentSequencePositionInChunk(0)
+      m_currentSequencePositionInChunk(0),
+      m_chunkStartPosition(0),
+      m_chunkEndPosition(0)
 {
     assert(deserializer != nullptr);
     m_streams = m_deserializer->GetStreamDescriptions();
     m_chunkDescriptions = m_deserializer->GetChunkDescriptions();
 
     size_t sampleCount = 0;
-    size_t sequenceCount = 0;
     for (const auto& chunk : m_chunkDescriptions)
     {
         m_chunkSampleOffset.push_back(sampleCount);
-        m_chunkSequenceOffset.push_back(sequenceCount);
         sampleCount += chunk->numberOfSamples;
-        sequenceCount += chunk->numberOfSequences;
     }
 
     m_totalNumberOfSamples = sampleCount;
+    m_chunks.resize(m_chunkDescriptions.size());
 }
 
 void NoRandomizer::Initialize(TransformerPtr, const ConfigParameters&)
@@ -87,6 +87,16 @@ void NoRandomizer::StartEpoch(const EpochConfiguration& config)
 
         m_deserializer->GetSequencesForChunk(m_currentChunkPosition, m_sequenceWindow);
         m_currentSequencePositionInChunk = 0;
+
+        // Dropping all chunk data from previous epoch
+        while (m_chunkStartPosition < m_chunkEndPosition)
+        {
+            m_chunks[m_chunkStartPosition] = nullptr;
+            m_chunkStartPosition = (m_chunkStartPosition + 1) % m_chunkDescriptions.size();
+        }
+
+        m_chunkStartPosition = 0;
+        m_chunkEndPosition = 0;
     }
 
     size_t sampleOffsetInsideChunk = localSamplePosition - m_chunkSampleOffset[m_currentChunkPosition];
@@ -187,59 +197,38 @@ Sequences NoRandomizer::GetNextSequences(size_t sampleCount)
 
     std::vector<SequenceDescription> descriptions = GetNextSequenceDescriptions(sampleCount);
 
-    // GetDescriptions.
-
-
     size_t start = descriptions.size() * m_config.m_workerRank / m_config.m_numberOfWorkers;
     size_t end = descriptions.size() * (m_config.m_workerRank + 1) / m_config.m_numberOfWorkers;
     size_t subsetSize = end - start;
-
-    std::vector<size_t> chunkIds;
-    SequenceDescriptions sequences;
-    sequences.reserve(subsetSize);
-    size_t previousChunk = SIZE_MAX;
-    for (size_t i = start; i < end; ++i)
-    {
-        const auto& sequence = descriptions[i];
-        sequences.push_back(&sequence);
-
-        if (previousChunk != sequence.m_chunkId)
-        {
-            chunkIds.push_back(sequence.m_chunkId);
-            previousChunk = sequence.m_chunkId;
-        }
-    }
-
-    if (sequences.size() == 0)
+    if (subsetSize == 0)
     {
         return result;
     }
 
-    std::map<size_t, ChunkPtr> chunks;
-    for (size_t id : chunkIds)
+    while (m_chunkStartPosition < m_chunkEndPosition && m_chunkStartPosition != descriptions[start].m_chunkId)
     {
-        auto chunk = m_chunks.find(id);
-        if (chunk == m_chunks.end())
+        m_chunks[m_chunkStartPosition] = nullptr;
+        m_chunkStartPosition = (m_chunkStartPosition + 1) % m_chunkDescriptions.size();
+    }
+
+    for (size_t i = 0; i < subsetSize; ++i)
+    {
+        size_t chunkId = (m_chunkEndPosition - 1) % m_chunkDescriptions.size();
+        if (m_chunkStartPosition == m_chunkEndPosition || descriptions[start + i].m_chunkId != chunkId)
         {
-            chunks[id] = m_deserializer->GetChunk(id);
-        }
-        else
-        {
-            chunks[id] = chunk->second;
+            m_chunks[m_chunkEndPosition] = m_deserializer->GetChunk(descriptions[start + i].m_chunkId);
+            m_chunkEndPosition = (m_chunkEndPosition + 1) % m_chunkDescriptions.size();
         }
     }
 
-    m_chunks.swap(chunks);
-
     // TODO: Not clear whether batching will make sense for this.
     // We have to re-assemble the exposed result from sequences from different chunks.
-    result.m_data.resize(m_streams.size(), std::vector<SequenceDataPtr>(sequences.size()));
+    result.m_data.resize(m_streams.size(), std::vector<SequenceDataPtr>(subsetSize));
 #pragma omp parallel for ordered schedule(dynamic)
-    for (int i = 0; i < sequences.size(); ++i)
+    for (int i = 0; i < subsetSize; ++i)
     {
         std::vector<SequenceDataPtr> sequence;
-        m_chunks[sequences[i]->m_chunkId]->GetSequence(sequences[i]->m_id, sequence);
-
+        m_chunks[descriptions[start + i].m_chunkId]->GetSequence(descriptions[start + i].m_id, sequence);
         for (int j = 0; j < m_streams.size(); ++j)
         {
             result.m_data[j][i] = sequence[j];
