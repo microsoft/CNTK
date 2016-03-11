@@ -13,7 +13,7 @@
 #include "Matrix.h"
 #include "NDLUtil.h"
 #include "ScriptableObjects.h"
-#include "BestGPU.h"
+#include "BestGpu.h"
 #include <stdexcept>
 
 using namespace std;
