@@ -61,7 +61,7 @@ class UCIFastReader(AbstractReader):
             template += '''
                customDelimiter=%(CustomDelimiter)s
                '''
-
+        # BUG: in case of features_start = 0
         if self['FeaturesStart']:
             template += '''               
         		features=[
