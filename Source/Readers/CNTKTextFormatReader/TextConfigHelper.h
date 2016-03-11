@@ -37,16 +37,15 @@ public:
 
     unsigned int GetTraceLevel() const;
 
-    int64_t GetChunkSize() const;
+    size_t GetChunkSize() const;
 
     unsigned int GetNumChunksToCache() const;
     
     void ParseStreamConfig(const ConfigParameters& config, std::vector<StreamDescriptor>& streams);
 
-private:
-    TextConfigHelper(const TextConfigHelper&) = delete;
-    TextConfigHelper& operator=(const TextConfigHelper&) = delete;
+    DISABLE_COPY_AND_MOVE(TextConfigHelper);
 
+private:
     std::wstring m_filepath;
     std::vector<StreamDescriptor> m_streams;
     int m_cpuThreadCount;
@@ -55,7 +54,7 @@ private:
     bool m_skipSequenceIds;
     unsigned int m_maxErrors;
     unsigned int m_traceLevel;
-    int64_t m_chunkSize; // chunks size in bytes
+    size_t m_chunkSizeBytes; // chunks size in bytes
     unsigned int m_chunkCacheSize; // number of chunks to keep in the memory
 };
 

@@ -19,6 +19,7 @@ private:
     int64_t m_fileOffsetStart;
     int64_t m_fileOffsetEnd;
 
+    unique_ptr<char[]> m_buffer;
     char* m_bufferStart = nullptr;
     char* m_bufferEnd = nullptr;
     char* m_pos = nullptr; // buffer index
@@ -28,7 +29,7 @@ private:
     bool m_skipSequenceIds; // true, when input contains one sequence per line 
                             // and sequence id column can be skipped.
 
-    const int64_t m_maxChunkSize; // maximum permited chunk size;
+    const size_t m_maxChunkSize; // maximum permited chunk size;
 
     std::vector<SequenceDescriptor> m_timeline;
     std::vector<ChunkDescriptor> m_chunks;
@@ -57,15 +58,12 @@ private:
     std::shared_ptr<Index> BuildFromLines();
 
 
-    int64_t GetFileOffset() { return m_fileOffsetStart + (m_pos - m_bufferStart); }
+    int64_t GetFileOffset();
 
-    Indexer(const Indexer&) = delete;
-    Indexer& operator=(const Indexer&) = delete;
+    DISABLE_COPY_AND_MOVE(Indexer);
 
 public:
-    Indexer(FILE* file, bool skipSequenceIds, int64_t chunkSize = 32 * 1024 * 1024);
-
-    ~Indexer();
+    Indexer(FILE* file, bool skipSequenceIds, size_t chunkSize = 32 * 1024 * 1024);
 
     // Reads the input file building an index of sequence metadata.
     std::shared_ptr<Index> Build();

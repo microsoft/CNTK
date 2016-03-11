@@ -15,164 +15,165 @@ using std::map;
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
-    TextConfigHelper::TextConfigHelper(const ConfigParameters& config)
+TextConfigHelper::TextConfigHelper(const ConfigParameters& config)
+{
+    if (!config.ExistsCurrent(L"input"))
     {
+        RuntimeError("CNTKTextFormatReader configuration does not contain input section");
+    }
 
-        if (!config.ExistsCurrent(L"input")) 
+    const ConfigParameters& input = config(L"input");
+
+    if (input.empty())
+    {
+        RuntimeError("CNTKTextFormatReader configuration contains an empty input section");
+    }
+
+    m_elementType = ElementType::tfloat;
+    string precision = config.Find("precision", "float");
+    if (AreEqualIgnoreCase(precision, "double"))
+    {
+        m_elementType = ElementType::tdouble;
+    }
+    else if (!AreEqualIgnoreCase(precision, "float"))
+    {
+        RuntimeError("Not supported precision '%s'. Expected 'double' or 'float'.", precision.c_str());
+    }
+
+    StreamId id = 0;
+    map<string, wstring> aliasToInputMap;
+    for (const pair<string, ConfigParameters>& section : input)
+    {
+        ConfigParameters input = section.second;
+        const wstring& name = msra::strfun::utf16(section.first);
+
+        if (!input.ExistsCurrent(L"dim") || !input.ExistsCurrent(L"format"))
         {
-            RuntimeError("CNTKTextFormatReader configuration does not contain input section");
+            RuntimeError("Input section for input '%ls' does not specify all the required parameters, "
+                "\"dim\" and \"format\".", name.c_str());
         }
 
-        const ConfigParameters& input = config(L"input");
+        StreamDescriptor stream;
+        stream.m_id = id++;
+        stream.m_name = name;
+        stream.m_sampleDimension = input(L"dim");
+        string type = input(L"format");
 
-        if (input.empty())
+        if (AreEqualIgnoreCase(type, "dense"))
         {
-            RuntimeError("CNTKTextFormatReader configuration contains an empty input section");
+            stream.m_storageType = StorageType::dense;
         }
-
-        m_elementType = ElementType::tfloat;
-        string precision = config.Find("precision", "float");
-        if (AreEqualIgnoreCase(precision, "double"))
+        else if (AreEqualIgnoreCase(type, "sparse"))
         {
-            m_elementType = ElementType::tdouble;
-        }
-        else if (!AreEqualIgnoreCase(precision, "float"))
-        {
-            RuntimeError("Not supported precision '%s'. Expected 'double' or 'float'.", precision.c_str());
-        }
-
-        StreamId id = 0;
-        map<string, wstring> aliasToInputMap;
-        for (const pair<string, ConfigParameters>& section : input)
-        {
-            ConfigParameters input = section.second;
-            const wstring& name = msra::strfun::utf16(section.first);
-
-            if (!input.ExistsCurrent(L"dim") || !input.ExistsCurrent(L"format")) {
-                RuntimeError("Input section for input '%ls' does not specify all the required parameters, "
-                    "\"dim\" and \"format\".", name.c_str());
-            }
-
-            StreamDescriptor stream;
-            stream.m_id = id++;
-            stream.m_name = name;
-            stream.m_sampleDimension = input(L"dim");
-            string type = input(L"format");
-
-            if (AreEqualIgnoreCase(type, "dense"))
-            {
-                stream.m_storageType = StorageType::dense;
-            }
-            else if (AreEqualIgnoreCase(type, "sparse"))
-            {
-                stream.m_storageType = StorageType::sparse_csc;
-            }
-            else
-            {
-                RuntimeError("'format' parameter must be set either to 'dense' or 'sparse'");
-            }
-
-            // alias is optional
-            if (input.ExistsCurrent(L"alias")) {
-                stream.m_alias = input(L"alias");
-                if (stream.m_alias.empty()) 
-                {
-                    RuntimeError("Alias value for input '%ls' is empty", name.c_str());
-                }
-            }
-            else 
-            {
-                stream.m_alias = section.first;
-            }
-
-            if (aliasToInputMap.find(stream.m_alias) != aliasToInputMap.end()) 
-            {
-                RuntimeError("Alias %s is already mapped to input %ls.", 
-                    stream.m_alias, aliasToInputMap[stream.m_alias]);
-            }
-            else
-            {
-                aliasToInputMap[stream.m_alias] = stream.m_name;
-            }
-
-            stream.m_elementType = m_elementType;
-            m_streams.push_back(stream);
-        }
-
-
-
-        m_filepath = msra::strfun::utf16(config(L"file"));
-
-        string rand = config(L"randomize", "auto");
-
-        if (AreEqualIgnoreCase(rand, "auto"))
-        {
-            m_randomize = true;
-        }
-        else if (AreEqualIgnoreCase(rand, "none"))
-        {
-            m_randomize = false;
+            stream.m_storageType = StorageType::sparse_csc;
         }
         else
         {
-            RuntimeError("'randomize' parameter must be set to 'auto' or 'none'");
+            RuntimeError("'format' parameter must be set either to 'dense' or 'sparse'");
         }
 
-        m_cpuThreadCount = config(L"numCPUThreads", 0);
-        m_skipSequenceIds = config(L"skipSequenceIds", false);
-        m_maxErrors = config(L"maxErrors", 0);
-        m_traceLevel = config(L"traceLevel", 0);
-        m_chunkSize = config(L"chunkSize", 32 * 1024 * 1024); // 32 MB by default
-        m_chunkCacheSize = config(L"chunkCacheSize", 32); // GB of memory in total
+        // alias is optional
+        if (input.ExistsCurrent(L"alias"))
+        {
+            stream.m_alias = input(L"alias");
+            if (stream.m_alias.empty())
+            {
+                RuntimeError("Alias value for input '%ls' is empty", name.c_str());
+            }
+        }
+        else
+        {
+            stream.m_alias = section.first;
+        }
+
+        if (aliasToInputMap.find(stream.m_alias) != aliasToInputMap.end())
+        {
+            RuntimeError("Alias %s is already mapped to input %ls.",
+                stream.m_alias.c_str(), aliasToInputMap[stream.m_alias].c_str());
+        }
+        else
+        {
+            aliasToInputMap[stream.m_alias] = stream.m_name;
+        }
+
+        stream.m_elementType = m_elementType;
+        m_streams.push_back(stream);
     }
 
-    const wstring& TextConfigHelper::GetFilePath() const
+
+
+    m_filepath = msra::strfun::utf16(config(L"file"));
+
+    string rand = config(L"randomize", "auto");
+
+    if (AreEqualIgnoreCase(rand, "auto"))
     {
-        return m_filepath;
+        m_randomize = true;
+    }
+    else if (AreEqualIgnoreCase(rand, "none"))
+    {
+        m_randomize = false;
+    }
+    else
+    {
+        RuntimeError("'randomize' parameter must be set to 'auto' or 'none'");
     }
 
-    int TextConfigHelper::GetCpuThreadCount() const
-    {
-        return m_cpuThreadCount;
-    }
+    m_cpuThreadCount = config(L"numCPUThreads", 0);
+    m_skipSequenceIds = config(L"skipSequenceIds", false);
+    m_maxErrors = config(L"maxErrors", 0);
+    m_traceLevel = config(L"traceLevel", 0);
+    m_chunkSizeBytes = config(L"chunkSizeInBytes", 32 * 1024 * 1024); // 32 MB by default
+    m_chunkCacheSize = config(L"numChunksToCache", 32); // 32 * 32 MB = 1 GB of memory in total
+}
 
-    bool TextConfigHelper::ShouldRandomize() const
-    {
-        return m_randomize;
-    }
+const wstring& TextConfigHelper::GetFilePath() const
+{
+    return m_filepath;
+}
 
-    const vector<StreamDescriptor>& TextConfigHelper::GetStreams() const
-    {
-        return m_streams;
-    }
+int TextConfigHelper::GetCpuThreadCount() const
+{
+    return m_cpuThreadCount;
+}
 
-    bool TextConfigHelper::ShouldSkipSequenceIds() const
-    {
-        return m_skipSequenceIds;
-    }
+bool TextConfigHelper::ShouldRandomize() const
+{
+    return m_randomize;
+}
 
-    unsigned int TextConfigHelper::GetMaxAllowedErrors() const
-    {
-        return m_maxErrors;
-    }
+const vector<StreamDescriptor>& TextConfigHelper::GetStreams() const
+{
+    return m_streams;
+}
 
-    unsigned int TextConfigHelper::GetTraceLevel() const
-    {
-        return m_traceLevel;
-    }
+bool TextConfigHelper::ShouldSkipSequenceIds() const
+{
+    return m_skipSequenceIds;
+}
 
-    int64_t TextConfigHelper::GetChunkSize() const 
-    {
-        return m_chunkSize;
-    }
+unsigned int TextConfigHelper::GetMaxAllowedErrors() const
+{
+    return m_maxErrors;
+}
 
-    unsigned int TextConfigHelper::GetNumChunksToCache() const
-    {
-        return m_chunkCacheSize;
-    }
+unsigned int TextConfigHelper::GetTraceLevel() const
+{
+    return m_traceLevel;
+}
 
-    ElementType TextConfigHelper::GetElementType() const
-    {
-        return m_elementType;
-    }
+size_t TextConfigHelper::GetChunkSize() const
+{
+    return m_chunkSizeBytes;
+}
+
+unsigned int TextConfigHelper::GetNumChunksToCache() const
+{
+    return m_chunkCacheSize;
+}
+
+ElementType TextConfigHelper::GetElementType() const
+{
+    return m_elementType;
+}
 }}}

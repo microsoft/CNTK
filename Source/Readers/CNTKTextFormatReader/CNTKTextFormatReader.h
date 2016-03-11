@@ -14,10 +14,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 // Implementation of the text reader.
 // Effectively the class represents a factory for connecting the packer,
 // transformers and the deserializer together.
-class TextReader : public Reader
+class CNTKTextFormatReader : public Reader
 {
 public:
-    TextReader(MemoryProviderPtr provider,
+    CNTKTextFormatReader(MemoryProviderPtr provider,
         const ConfigParameters& parameters);
 
     // Description of streams that this reader provides.

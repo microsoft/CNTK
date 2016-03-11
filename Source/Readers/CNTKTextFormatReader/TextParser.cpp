@@ -218,14 +218,14 @@ ChunkPtr TextParser<ElemType>::GetChunk(size_t chunkId)
             if (m_chunkCacheSize > 0 && m_chunkCache.size() == m_chunkCacheSize) 
             {
                 size_t candidateId = SIZE_MAX;
-                int64_t minNumSequencesLeft = SIZE_MAX;
+                size_t minNumSequencesLeft = SIZE_MAX;
                 for (const auto& it : m_chunkCache) 
                 {
                     const auto& chunk = *(it.second.get());
                     size_t numSequencesUsed = 0;
                     #pragma omp atomic
                     numSequencesUsed += chunk.m_sequenceRequestCount;
-                    int64_t numSequencesLeft = chunk.m_sequenceData.size() - numSequencesUsed;
+                    size_t numSequencesLeft = chunk.m_sequenceData.size() - numSequencesUsed;
                     if (numSequencesLeft < minNumSequencesLeft)
                     {
                         minNumSequencesLeft = numSequencesLeft;
@@ -294,7 +294,7 @@ void TextParser<ElemType>::SetFileOffset(int64_t offset)
 
 template <class ElemType>
 Sequence<ElemType> TextParser<ElemType>::LoadSequence(bool verifyId, const SequenceDescriptor& sequenceDsc) {
-    auto fileOffset = sequenceDsc.m_fileOffset;
+    auto fileOffset = sequenceDsc.m_fileOffsetBytes;
 
     if (fileOffset < m_fileOffsetStart || fileOffset > m_fileOffsetEnd)
     {
@@ -304,7 +304,7 @@ Sequence<ElemType> TextParser<ElemType>::LoadSequence(bool verifyId, const Seque
 
     size_t bufferOffset = fileOffset - m_fileOffsetStart;
     m_pos = m_bufferStart + bufferOffset;
-    int64_t bytesToRead = sequenceDsc.m_byteSize;
+    size_t bytesToRead = sequenceDsc.m_byteSize;
 
 
     if (verifyId) {
@@ -396,7 +396,7 @@ Sequence<ElemType> TextParser<ElemType>::LoadSequence(bool verifyId, const Seque
 
 // read one whole line of input 
 template <class ElemType>
-bool TextParser<ElemType>::ReadRow(Sequence<ElemType>& sequence, int64_t& bytesToRead) {
+bool TextParser<ElemType>::ReadRow(Sequence<ElemType>& sequence, size_t& bytesToRead) {
     bool found = false;
     while (bytesToRead && CanRead())
     {
@@ -479,7 +479,7 @@ bool TextParser<ElemType>::ReadRow(Sequence<ElemType>& sequence, int64_t& bytesT
 }
 
 template <class ElemType>
-bool TextParser<ElemType>::GetInputId(size_t& id, int64_t& bytesToRead)
+bool TextParser<ElemType>::GetInputId(size_t& id, size_t& bytesToRead)
 {
     char* scratchIndex = m_scratch;
 
@@ -569,7 +569,7 @@ bool TextParser<ElemType>::GetInputId(size_t& id, int64_t& bytesToRead)
 }
 
 template <class ElemType>
-bool TextParser<ElemType>::ReadDenseSample(vector<ElemType>& values, size_t sampleSize, int64_t& bytesToRead)
+bool TextParser<ElemType>::ReadDenseSample(vector<ElemType>& values, size_t sampleSize, size_t& bytesToRead)
 {
     size_t counter = 0;
     ElemType value;
@@ -639,7 +639,7 @@ bool TextParser<ElemType>::ReadDenseSample(vector<ElemType>& values, size_t samp
 }
 
 template <class ElemType>
-bool TextParser<ElemType>::ReadSparseSample(std::vector<ElemType>& values, std::vector<size_t>& indices, int64_t& bytesToRead)
+bool TextParser<ElemType>::ReadSparseSample(std::vector<ElemType>& values, std::vector<size_t>& indices, size_t& bytesToRead)
 {
     size_t index;
     ElemType value;
@@ -719,7 +719,7 @@ bool TextParser<ElemType>::ReadSparseSample(std::vector<ElemType>& values, std::
 }
 
 template <class ElemType>
-void TextParser<ElemType>::SkipToNextValue(int64_t& bytesToRead)
+void TextParser<ElemType>::SkipToNextValue(size_t& bytesToRead)
 {
     while (bytesToRead && CanRead())
     {
@@ -735,7 +735,7 @@ void TextParser<ElemType>::SkipToNextValue(int64_t& bytesToRead)
 }
 
 template <class ElemType>
-void TextParser<ElemType>::SkipToNextInput(int64_t& bytesToRead)
+void TextParser<ElemType>::SkipToNextInput(size_t& bytesToRead)
 {
     while (bytesToRead && CanRead())
     {
@@ -751,7 +751,7 @@ void TextParser<ElemType>::SkipToNextInput(int64_t& bytesToRead)
 }
 
 template <class ElemType>
-bool TextParser<ElemType>::ReadUint64(size_t& id, int64_t& bytesToRead) {
+bool TextParser<ElemType>::ReadUint64(size_t& id, size_t& bytesToRead) {
     id = 0;
     bool found = false;
     while (bytesToRead && CanRead())
@@ -803,7 +803,7 @@ bool TextParser<ElemType>::ReadUint64(size_t& id, int64_t& bytesToRead) {
 // cannot be parsed as part of a floating point number.
 // Returns true if parsing was successful.
 template <class ElemType>
-bool TextParser<ElemType>::ReadRealNumber(ElemType& value, int64_t& bytesToRead)
+bool TextParser<ElemType>::ReadRealNumber(ElemType& value, size_t& bytesToRead)
 {
     State state = State::Init;
     double coefficient = .0, number = .0, divider = .0;
@@ -1013,8 +1013,8 @@ void TextParser<ElemType>::SetChunkCacheSize(unsigned int size) {
 }
 
 template <class ElemType>
-void TextParser<ElemType>::SetChunkSize(int64_t size) {
-    m_chunkSize = size;
+void TextParser<ElemType>::SetChunkSize(size_t size) {
+    m_chunkSizeBytes = size;
 }
 
 template class TextParser<float>;

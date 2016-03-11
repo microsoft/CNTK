@@ -28,8 +28,8 @@ MNIST_Test = [
         #maxErrors = 0 -- default value
         traceLevel = 1
         
-        chunkSize = 10000 # should be enough for ~ 10 samples.
-        chunkCacheSize = 10
+        chunkSizeInBytes = 10000 # should be enough for ~ 10 samples.
+        numChunksToCache = 10
 
         input = [
 

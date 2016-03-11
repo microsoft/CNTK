@@ -16,13 +16,13 @@
       <Filter>Common</Filter>
     </ClCompile>
     <ClCompile Include="dllmain.cpp" />
-    <ClCompile Include="TextReader.cpp" />
     <ClCompile Include="TextConfigHelper.cpp" />
     <ClCompile Include="..\..\Common\Config.cpp">
       <Filter>Common</Filter>
     </ClCompile>
     <ClCompile Include="Indexer.cpp" />
     <ClCompile Include="TextParser.cpp" />
+    <ClCompile Include="CNTKTextFormatReader.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="stdafx.h" />
@@ -39,12 +39,12 @@
     <ClInclude Include="..\..\Common\Include\fileutil.h">
       <Filter>Common\Include</Filter>
     </ClInclude>
-    <ClInclude Include="TextReader.h" />
     <ClInclude Include="TextConfigHelper.h" />
     <ClInclude Include="Descriptors.h" />
     <ClInclude Include="Indexer.h" />
     <ClInclude Include="TextReaderConstants.h" />
     <ClInclude Include="TextParser.h" />
+    <ClInclude Include="CNTKTextFormatReader.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Common">

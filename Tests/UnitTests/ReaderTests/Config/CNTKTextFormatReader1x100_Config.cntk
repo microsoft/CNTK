@@ -31,8 +31,8 @@ traceLevel = 1
         #maxErrors = 0 -- default value
         traceLevel = 1
         
-        chunkSize = 10000 # ~ 3 full sequences (30 samples)
-        chunkCacheSize = 5
+        chunkSizeInBytes = 10000 # ~ 3 full sequences (30 samples)
+        numChunksToCache = 5
 
         input = [
 

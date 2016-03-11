@@ -27,7 +27,7 @@ struct DenseData : Data<ElemType>
     // capacity = expected number of samples * sample size
     DenseData(size_t capacity)
     {
-        m_buffer.reserve(capacity);
+        Data<ElemType>::m_buffer.reserve(capacity);
     }
 };
 
@@ -97,7 +97,7 @@ private:
 
     char* m_scratch; // local buffer for string parsing
 
-    int64_t m_chunkSize = 0;
+    size_t m_chunkSizeBytes = 0;
     unsigned int m_chunkCacheSize = 0; // number of chunks to keep in the memory
     unsigned int m_traceLevel = 0;
     unsigned int m_numAllowedErrors = 0;
@@ -115,26 +115,26 @@ private:
 
     void SetFileOffset(int64_t position);
 
-    void SkipToNextValue(int64_t& bytesToRead);
-    void SkipToNextInput(int64_t& bytesToRead);
+    void SkipToNextValue(size_t& bytesToRead);
+    void SkipToNextInput(size_t& bytesToRead);
 
     bool Fill();
 
     int64_t GetFileOffset() { return m_fileOffsetStart + (m_pos - m_bufferStart); }
 
     // reads an alias/name and converts it to an internal stream id (= stream index).
-    bool GetInputId(size_t& id, int64_t& bytesToRead);
+    bool GetInputId(size_t& id, size_t& bytesToRead);
 
-    bool ReadRealNumber(ElemType& value, int64_t& bytesToRead);
+    bool ReadRealNumber(ElemType& value, size_t& bytesToRead);
 
-    bool ReadUint64(size_t& index, int64_t& bytesToRead);
+    bool ReadUint64(size_t& index, size_t& bytesToRead);
 
-    bool ReadDenseSample(std::vector<ElemType>& values, size_t sampleSize, int64_t& bytesToRead);
+    bool ReadDenseSample(std::vector<ElemType>& values, size_t sampleSize, size_t& bytesToRead);
 
-    bool ReadSparseSample(std::vector<ElemType>& values, std::vector<size_t>& indices, int64_t& bytesToRead);
+    bool ReadSparseSample(std::vector<ElemType>& values, std::vector<size_t>& indices, size_t& bytesToRead);
 
     // read one whole row (terminated by a row delimiter) of samples
-    bool ReadRow(Sequence<ElemType>& sequence, int64_t& bytesToRead);
+    bool ReadRow(Sequence<ElemType>& sequence, size_t& bytesToRead);
 
     bool inline CanRead() { return m_pos != m_bufferEnd || Fill(); }
 
@@ -142,8 +142,7 @@ private:
 
     TextParser(const std::wstring& filename, const vector<StreamDescriptor>& streams);
 
-    TextParser(const TextParser&) = delete;
-    TextParser& operator=(const TextParser&) = delete;
+    DISABLE_COPY_AND_MOVE(TextParser);
 protected:
     void FillSequenceDescriptions(SequenceDescriptions& timeline) const override;
 
@@ -170,7 +169,7 @@ public:
 
     void SetSkipSequenceIds(bool skip);
 
-    void SetChunkSize(int64_t size);
+    void SetChunkSize(size_t size);
 
     void SetChunkCacheSize(unsigned int size);
 };

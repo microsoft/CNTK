@@ -4,7 +4,7 @@
 //
 
 #include "stdafx.h"
-#include "TextReader.h"
+#include "CNTKTextFormatReader.h"
 #include "Config.h"
 #include "TextConfigHelper.h"
 #include "BlockRandomizer.h"
@@ -14,7 +14,7 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
-TextReader::TextReader(MemoryProviderPtr provider,
+CNTKTextFormatReader::CNTKTextFormatReader(MemoryProviderPtr provider,
     const ConfigParameters& config)
     :m_provider(provider)
 {
@@ -55,12 +55,12 @@ TextReader::TextReader(MemoryProviderPtr provider,
     m_transformer = randomizer;
 }
 
-std::vector<StreamDescriptionPtr> TextReader::GetStreamDescriptions()
+std::vector<StreamDescriptionPtr> CNTKTextFormatReader::GetStreamDescriptions()
 {
     return m_deserializer->GetStreamDescriptions();
 }
 
-void TextReader::StartEpoch(const EpochConfiguration& config)
+void CNTKTextFormatReader::StartEpoch(const EpochConfiguration& config)
 {
     if (config.m_totalEpochSizeInSamples <= 0)
     {
@@ -75,7 +75,7 @@ void TextReader::StartEpoch(const EpochConfiguration& config)
         GetStreamDescriptions());
 }
 
-Minibatch TextReader::ReadMinibatch()
+Minibatch CNTKTextFormatReader::ReadMinibatch()
 {
     assert(m_packer != nullptr);
     return m_packer->ReadMinibatch();
