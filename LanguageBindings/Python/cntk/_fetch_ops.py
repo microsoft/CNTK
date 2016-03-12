@@ -52,8 +52,9 @@ class CompNodeOperator(object):
     COMP_NODE_TEMPLATE = """\
 class %(name)s(ComputationNode):
     def __init__(self, %(signature)s, name='%(name)s', ctx=None):
-%(initialization)s
         super(%(name)s, self).__init__(params=[%(paramlist)s], name=name, ctx=ctx)
+%(initialization)s
+        self.params_with_defaults = [%(params_with_defaults)s]
 """
     def _smooth(self, name):
         if name in SMOOTH_NAMING:
@@ -84,14 +85,17 @@ class %(name)s(ComputationNode):
 
         self.paramlist = ", ".join(("'%s'"%op.name for op in self.operands))
 
-        # Ensure that arguments with default values are not followed by
-        # arguments without default values.
         default_init_started = False
+        params_with_defaults = []
         for op in self.operands:
             if op.init_value is not None:
+                params_with_defaults.append("'%s'"%op.name)
                 default_init_started = True
+            # Ensure that arguments with default values are not followed by
+            # arguments without default values.
             assert op.init_value is None or default_init_started
 
+        self.params_with_defaults = ', '.join(params_with_defaults)
 
     def __str__(self):
         return self.COMP_NODE_TEMPLATE%self.__dict__
@@ -119,8 +123,9 @@ class InstantiationOperator(CompNodeOperator):
     INST_NODE_TEMPLATE = """\
 class %(name)s(%(inst_operator)s):
     def __init__(self, %(signature)s, name='%(name)s', ctx=None):
-        self.params=[%(paramlist)s]
         super(%(name)s, self).__init__(%(inst_operands)s, name=name, ctx=ctx)
+        self.params=[%(paramlist)s]
+        self.params_with_defaults = [%(params_with_defaults)s]
 """
 
     def __init__(self, match):
