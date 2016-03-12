@@ -506,7 +506,7 @@ public:
         //   1. The source is a 3-tensor with shape 1x1xM
         //   2. The target is a vector (i.e., a 2-tensor with shape Nx1)
         //   3. Both targets have the same number of elements
-        //   4. The number of elements in the target (N) is the same as the number of elelemtns in the source (M)
+        //   4. The number of elements in the target (N) is the same as the number of elements in the source (M)
         // Note: This is somewhat ugly [Jasha Droppo].
 
         auto dimsA = Input(0)->GetSampleLayout().GetDims();
