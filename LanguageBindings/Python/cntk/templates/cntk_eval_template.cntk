@@ -6,9 +6,9 @@ deviceId=%(DevideId)s
 				   
 Eval=[
 	action="write"
-	run=NDLNetworkBuilder
+	run=BrainScriptNetworkBuilder
 
-    NDLNetworkBuilder=[
+    BrainScriptNetworkBuilder=[
 		%(ModelDescription)s
 	]
 	

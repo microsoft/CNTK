@@ -8,9 +8,9 @@ deviceId=%(DevideId)s
 
 Train=[
 	action="train"
-	run=NDLNetworkBuilder
+	run=BrainScriptNetworkBuilder
 
-    NDLNetworkBuilder=[
+    BrainScriptNetworkBuilder=[
 		%(ModelDescription)s  
     ]
 	
