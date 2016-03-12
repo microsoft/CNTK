@@ -143,7 +143,8 @@ template <class ElemType>
         for (size_t t = 0; t < seq.GetNumTimeSteps(); t++)
             buf[outMBLayout->GetColumnIndex(seq, t)] = (ElemType)indexSequence[t];
     }
-    Value().SetValue(outMBLayout->GetNumParallelSequences(), outMBLayout->GetNumTimeSteps(), Input(0)->Value().GetDeviceId(), buf.data(), MatrixFormat::matrixFormatColMajor);
+    // the result will be kept in CPUDEVICE, since most likely we will access it again in PackedIndexNode
+    Value().SetValue(outMBLayout->GetNumParallelSequences(), outMBLayout->GetNumTimeSteps(), CPUDEVICE, buf.data(), MatrixFormat::matrixFormatColMajor);
 }
 
 template <class ElemType>
