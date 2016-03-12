@@ -38,7 +38,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_blockMomentum = blockMomentum; 
             m_resetSGDMomentumAfterAggregation = resetSGDM; 
             fprintf(stderr, "Parallel training (%d workers) using BlockMomentum: useNesterovMomentum=true, blockMomentum=%6.4f, resetSGDMomentum=%s, preferredDeviceID=%d\n",
-                m_pMPI->NumNodesInUse(),
+                (int)m_pMPI->NumNodesInUse(),
                 m_blockMomentum,
                 m_resetSGDMomentumAfterAggregation ? "true" : "false", 
                 m_preferredDeviceID
