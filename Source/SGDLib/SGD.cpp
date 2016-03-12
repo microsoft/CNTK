@@ -261,11 +261,11 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
         prevLearnRates[i] = -1.0;
     }
 
-    if (m_parallelizationMethod == ParallelizationMethod::DataParallelSGD)
+    if (GetParallelizationMethod() == ParallelizationMethod::DataParallelSGD)
     {
         InitDistGradAgg(evaluationNodes.size(), m_traceLevel);
     }
-    else if (m_parallelizationMethod == ParallelizationMethod::ModelAveragingSGD)
+    else if (GetParallelizationMethod() == ParallelizationMethod::ModelAveragingSGD)
     {
         InitModelAggregationHandler(m_syncStatsTrace);
     }
@@ -278,12 +278,15 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
     {
         // Synchronize all ranks before writing the model to ensure that
         // everyone is done loading the model
-        if (g_mpi != nullptr)
+        if (m_mpi != nullptr)
         {
-            g_mpi->WaitAll();
+            m_mpi->WaitAll();
         }
 
-        net->Save(GetModelNameForEpoch(int(startEpoch) - 1));
+        // In case of parallel training only the main node should we saving the model to prevent
+        // the parallel training nodes from colliding to write the same file
+        if ((m_mpi == nullptr) || m_mpi->IsMainNode())
+            net->Save(GetModelNameForEpoch(int(startEpoch) - 1));
     }
 
     bool learnRateInitialized = false;
@@ -332,9 +335,9 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
     {
         // Synchronize all ranks before proceeding to ensure that
         // rank 0 has finished writing the previous model file
-        if (g_mpi != nullptr)
+        if (m_mpi != nullptr)
         {
-            g_mpi->WaitAll();
+            m_mpi->WaitAll();
         }
 
         Timer timer;
@@ -384,7 +387,10 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
                     i + 1, learnRatePerSample, m_minLearnRate);
             if (m_autoLearnRateSearchType != LearningRateSearchAlgorithm::None)
             {
-                net->Save(m_modelPath);
+                // In case of parallel training only the main node should we saving the model to prevent
+                // the parallel training nodes from colliding to write the same file
+                if ((m_mpi == nullptr) || m_mpi->IsMainNode())
+                    net->Save(m_modelPath);
             }
             break;
         }
@@ -501,7 +507,7 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
 
         if (validationSetDataReader != trainSetDataReader && validationSetDataReader != nullptr)
         {
-            SimpleEvaluator<ElemType> evalforvalidation(net, g_mpi != nullptr);
+            SimpleEvaluator<ElemType> evalforvalidation(net, m_mpi);
             vector<wstring> cvSetTrainAndEvalNodes;
             if (criterionNodes.size() > 0)
             {
@@ -535,10 +541,10 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
         }
 
         // broadcast epochCriterion to make sure each processor will have the same learning rate schedule
-        if ((m_parallelizationMethod == ParallelizationMethod::ModelAveragingSGD) && (g_mpi->NumNodesInUse() > 1))
+        if ((GetParallelizationMethod() == ParallelizationMethod::ModelAveragingSGD) && (m_mpi->NumNodesInUse() > 1))
         {
-            g_mpi->Bcast(&epochCriterion, 1, g_mpi->MainNodeRank());
-            g_mpi->Bcast(&lrControlCriterion, 1, g_mpi->MainNodeRank());
+            m_mpi->Bcast(&epochCriterion, 1, m_mpi->MainNodeRank());
+            m_mpi->Bcast(&lrControlCriterion, 1, m_mpi->MainNodeRank());
         }
 
         bool loadedPrevModel = false;
@@ -587,7 +593,10 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
                     }
                     else
                     {
-                        net->Save(GetModelNameForEpoch(i, true));
+                        // In case of parallel training only the main node should we saving the model to prevent
+                        // the parallel training nodes from colliding to write the same file
+                        if ((m_mpi == nullptr) || m_mpi->IsMainNode())
+                            net->Save(GetModelNameForEpoch(i, true));
 
                         fprintf(stderr, "Finished training and saved final model\n\n");
                         break;
@@ -634,13 +643,13 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
         // Synchronize all ranks before proceeding to ensure that
         // nobody tries reading the checkpoint file at the same time
         // as rank 0 deleting it below
-        if (g_mpi != nullptr)
+        if (m_mpi != nullptr)
         {
-            g_mpi->WaitAll();
+            m_mpi->WaitAll();
         }
 
         // persist model and check-point info
-        if ((g_mpi == nullptr) || g_mpi->IsMainNode())
+        if ((m_mpi == nullptr) || m_mpi->IsMainNode())
         {
             SaveCheckPointInfo(i, totalSamplesSeen, learnRatePerSample, smoothedGradients, prevCriterion, chosenMinibatchSize);
             auto modelName = GetModelNameForEpoch(i);
@@ -677,9 +686,9 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
 
     // Synchronize all ranks before proceeding to ensure that
     // rank 0 has finished writing the model file
-    if (g_mpi != nullptr)
+    if (m_mpi != nullptr)
     {
-        g_mpi->WaitAll();
+        m_mpi->WaitAll();
     }
 
     // progress tracing for compute cluster management
@@ -746,9 +755,9 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
     localEpochCriterion.SetValue(0);
     localEpochEvalErrors.SetValue(0);
 
-    bool useGradientAggregation = ((m_parallelizationMethod == ParallelizationMethod::DataParallelSGD) &&
+    bool useGradientAggregation = ((GetParallelizationMethod() == ParallelizationMethod::DataParallelSGD) &&
                                    (epochNumber >= m_parallelizationStartEpochNum));
-    bool useModelAveraging = ((m_parallelizationMethod == ParallelizationMethod::ModelAveragingSGD) &&
+    bool useModelAveraging = ((GetParallelizationMethod() == ParallelizationMethod::ModelAveragingSGD) &&
                               (epochNumber >= m_parallelizationStartEpochNum));
     bool useParallelTrain = useGradientAggregation || useModelAveraging;
 
@@ -778,8 +787,8 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                                    trainSetDataReader->SupportsDistributedMBRead();
     if (useDistributedMBReading)
     {
-        trainSetDataReader->StartDistributedMinibatchLoop(tunedMBSize, epochNumber, g_mpi->CurrentNodeRank(),
-                                                          g_mpi->NumNodesInUse(), epochSize);
+        trainSetDataReader->StartDistributedMinibatchLoop(tunedMBSize, epochNumber, m_mpi->CurrentNodeRank(),
+                                                          m_mpi->NumNodesInUse(), epochSize);
     }
     else
     {
@@ -813,7 +822,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
     if (useGradientAggregation)
     {
         fprintf(stderr, ", DataParallelSGD training (MyRank = %d, NumNodes = %d, NumGradientBits = %d)",
-                (int) g_mpi->CurrentNodeRank(), (int) g_mpi->NumNodesInUse(), (int) m_numGradientBits);
+                (int) m_mpi->CurrentNodeRank(), (int) m_mpi->NumNodesInUse(), (int) m_numGradientBits);
         if (m_bufferedAsyncGradientAggregation)
         {
             fprintf(stderr, ", BufferedAsyncGradientAggregation is ENABLED");
@@ -844,7 +853,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
         // TODO: is it guaranteed that the GPU is already completed at this point, is it safe to overwrite the buffers?
         size_t actualMBSize = 0;
         bool wasDataRead = DataReaderHelpers::GetMinibatchIntoNetwork<ElemType>(*trainSetDataReader, net, criterionNodes[0],
-                                                                      useDistributedMBReading, useParallelTrain, *inputMatrices, actualMBSize);
+                                                                                useDistributedMBReading, useParallelTrain, *inputMatrices, actualMBSize, m_mpi);
         if (!wasDataRead && (!useDistributedMBReading || noMoreSamplesToProcess)) // in case of distributed reading, we do a few more loops until all ranks have completed
             break;                                                                // end of epoch
 
@@ -1194,11 +1203,11 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
     }
 
     // in case of model averaging, do one more final aggregation of criteria
-    if (useModelAveraging && (g_mpi->NumNodesInUse() > 1))
+    if (useModelAveraging && (m_mpi->NumNodesInUse() > 1))
     {
         // 1. total epoch samples processed by all workers
         size_t totalEpochSamplesOfAllWorkers = totalEpochSamples;
-        g_mpi->AllReduce(&totalEpochSamplesOfAllWorkers, 1);
+        m_mpi->AllReduce(&totalEpochSamplesOfAllWorkers, 1);
         totalSamplesSeen += totalEpochSamplesOfAllWorkers;
 
         // 2. criterion and EvalErrors 
@@ -1211,8 +1220,8 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
             epochEvalErrors[i] = localEpochEvalErrors(0, i);
         }
         // merge epochCriterion and epochEvalErrors over nodes 
-        g_mpi->AllReduce(&epochCriterion, 1);
-        g_mpi->AllReduce(epochEvalErrors);
+        m_mpi->AllReduce(&epochCriterion, 1);
+        m_mpi->AllReduce(epochEvalErrors);
 
         // 3. modify return value 
         totalEpochSamples = totalEpochSamplesOfAllWorkers;
@@ -1298,7 +1307,7 @@ bool SGD<ElemType>::PreCompute(ComputationNetworkPtr net,
     const size_t numIterationsBeforePrintingProgress = 100;
     size_t numItersSinceLastPrintOfProgress = 0;
     size_t actualMBSizeDummy;
-    while (DataReaderHelpers::GetMinibatchIntoNetwork<ElemType>(*trainSetDataReader, net, nullptr, false, false, *inputMatrices, actualMBSizeDummy))
+    while (DataReaderHelpers::GetMinibatchIntoNetwork<ElemType>(*trainSetDataReader, net, nullptr, false, false, *inputMatrices, actualMBSizeDummy, m_mpi))
     {
         // TODO: move these into GetMinibatchIntoNetwork()  --but those are passed around; necessary? Can't we get them from 'net'?
         ComputationNetwork::BumpEvalTimeStamp(featureNodes);
@@ -1821,19 +1830,19 @@ int SGD<ElemType>::SGDTrace(FILE* __restrict __stream, const char* __restrict __
 template <class ElemType>
 void SGD<ElemType>::InitDistGradAgg(int numEvalNodes, int traceLevel)
 {
-    if (m_parallelizationMethod == ParallelizationMethod::DataParallelSGD)
+    if (GetParallelizationMethod() == ParallelizationMethod::DataParallelSGD)
     {
         if (m_distGradAgg == nullptr)
         {
 #ifdef QUANTIZED_GRADIENT_AGGREGATION
-            m_distGradAgg = new AllReduceDistGradAggregator<ElemType>(g_mpi, m_numGradientBits, m_zeroThresholdFor1Bit, true /*useQuantizationForSelfStripe*/, m_bufferedAsyncGradientAggregation, traceLevel, m_syncStatsTrace);
+            m_distGradAgg = new AllReduceDistGradAggregator<ElemType>(m_mpi, m_numGradientBits, m_zeroThresholdFor1Bit, true /*useQuantizationForSelfStripe*/, m_bufferedAsyncGradientAggregation, traceLevel, m_syncStatsTrace);
 #else
             if (m_numGradientBits != (8 * sizeof(ElemType)))
             {
                 RuntimeError("Gradient quantization is unsupported in CNTK binaries built without quantized gradient aggregation support!");
             }
 
-            m_distGradAgg = new SimpleDistGradAggregator<ElemType>(g_mpi, m_bufferedAsyncGradientAggregation, m_syncStatsTrace);
+            m_distGradAgg = new SimpleDistGradAggregator<ElemType>(m_mpi, m_bufferedAsyncGradientAggregation, m_syncStatsTrace);
 #endif // !QUANTIZED_GRADIENT_AGGREGATION
         }
 
@@ -1847,12 +1856,12 @@ void SGD<ElemType>::InitDistGradAgg(int numEvalNodes, int traceLevel)
 template <class ElemType>
 void SGD<ElemType>::InitModelAggregationHandler(int traceLevel)
 {
-    if (m_parallelizationMethod == ParallelizationMethod::ModelAveragingSGD)
+    if (GetParallelizationMethod() == ParallelizationMethod::ModelAveragingSGD)
     {
 #ifndef BLOCKWISE_MODEL_UPDATE_FILTERING
         if (!m_pMASGDHelper)
         {
-            m_pMASGDHelper = make_shared<BasicModelAveragingSGD<ElemType>>(g_mpi, traceLevel);
+            m_pMASGDHelper = make_shared<BasicModelAveragingSGD<ElemType>>(m_mpi, traceLevel);
         }
 #else
 
@@ -2011,7 +2020,7 @@ void SGD<ElemType>::SaveCheckPointInfo(const size_t epoch, const size_t totalSam
 {
     // In case of parallel training only the main node should we saving the checkpoint to prevent
     // the parallel training nodes from colliding to write the same file
-    if ((g_mpi == nullptr) || g_mpi->IsMainNode())
+    if ((m_mpi == nullptr) || m_mpi->IsMainNode())
     {
         wstring checkPointFileName = GetCheckPointFileNameForEpoch(int(epoch));
         // Saving into temporary file and then renaming it to the checkPointFileName
@@ -2538,7 +2547,7 @@ SGDParams::SGDParams(const ConfigRecordType& configSGD, size_t sizeofElemType)
     m_parallelizationStartEpochNum = 0;
     m_nFramesBetweenMASync = 40000; // default 40k frames
 
-    if ((g_mpi != nullptr) && configSGD.Exists(L"ParallelTrain"))
+    if (configSGD.Exists(L"ParallelTrain"))
     {
         const ConfigRecordType& configParallelTrain(configSGD(L"ParallelTrain", ConfigRecordType::Record()));
         m_parallelizationMethod = ParseParallelizationMethod(configParallelTrain(L"parallelizationMethod", L"none"));

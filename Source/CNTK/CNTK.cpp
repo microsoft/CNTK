@@ -56,9 +56,6 @@
 #define let const auto
 #endif
 
-// TODO: Get rid of these globals
-Microsoft::MSR::CNTK::MPIWrapper* g_mpi = nullptr;
-
 // TODO: Temporary mechanism to enable memory sharing for
 // node output value matrices. This will go away when the
 // sharing is ready to be enabled by default
@@ -154,9 +151,13 @@ static void DisableLegacyUsage(const ConfigParameters& TopLevelConfig, const Con
     }
 }
 
+// When running in parallel with MPI, only commands in 'commandstoRunOnAllRanks' should
+// be run in parallel across multiple ranks. Others should only run on rank 0
+const std::set<std::string> commandstoRunOnAllRanks = { "train", "trainRNN", "adapt", "test", "eval", "cv", "devtest" };
+
 // process the command
 template <typename ElemType>
-void DoCommands(const ConfigParameters& config)
+void DoCommands(const ConfigParameters& config, const shared_ptr<MPIWrapper>& mpi)
 {
     ConfigArray command = config(L"command", "train");
 
@@ -197,7 +198,7 @@ void DoCommands(const ConfigParameters& config)
     std::cerr << "CNTKCommandTrainInfo: CNTKNoMoreCommands_Total : " << fullTotalMaxEpochs << endl;
 
     // set up progress tracing for compute cluster management
-    if (progressTracing && ((g_mpi == nullptr) || g_mpi->IsMainNode()))
+    if (progressTracing && ((mpi == nullptr) || mpi->IsMainNode()))
     {
         ProgressTracing::SetTracingFlag();
         ProgressTracing::TraceTotalNumberOfSteps(fullTotalMaxEpochs); // enable tracing, using this as the total number of epochs
@@ -212,7 +213,7 @@ void DoCommands(const ConfigParameters& config)
         ConfigParameters commandParams(config(command[i]));
         ConfigArray action = commandParams("action", "train");
 
-        if (progressTracing && ((g_mpi == nullptr) || g_mpi->IsMainNode()))
+        if (progressTracing && ((mpi == nullptr) || mpi->IsMainNode()))
         {
             ProgressTracing::SetStepOffset(fullEpochsOffset); // this is the epoch number that SGD will log relative to
         }
@@ -231,74 +232,81 @@ void DoCommands(const ConfigParameters& config)
             fprintf(stderr, "#%*s#\n", (int)(strlen(delim) - 2), "");
             fprintf(stderr, "%s\n\n", delim);
 
-            if (thisAction == "train" || thisAction == "trainRNN")
+            if ((mpi == nullptr) || (commandstoRunOnAllRanks.find(thisAction) != commandstoRunOnAllRanks.end()) || mpi->IsMainNode())
             {
-                std::cerr << "CNTKCommandTrainBegin: " + command[i] << endl;
-                DoTrain<ConfigParameters, ElemType>(commandParams);
-                std::cerr << "CNTKCommandTrainEnd: " + command[i] << endl;
-                fullEpochsOffset += GetMaxEpochs(commandParams);
-            }
-            else if (thisAction == "adapt")
-            {
-                DoAdapt<ElemType>(commandParams);
-            }
-            else if (thisAction == "test" || thisAction == "eval")
-            {
-                DoEval<ElemType>(commandParams);
-            }
-            else if (thisAction == "edit")
-            {
-                DoEdit<ElemType>(commandParams);
-            }
-            else if (thisAction == "cv")
-            {
-                DoCrossValidate<ElemType>(commandParams);
-            }
-            else if (thisAction == "write")
-            {
-                DoWriteOutput<ElemType>(commandParams);
-            }
-            else if (thisAction == "devtest")
-            {
-                TestCn<ElemType>(config); // for "devtest" action pass the root config instead
-            }
-            else if (thisAction == "dumpnode")
-            {
-                DumpNodeInfo<ElemType>(commandParams);
-            }
-            else if (thisAction == "convertdbn")
-            {
-                DoConvertFromDbn<ElemType>(commandParams);
-            }
-            else if (thisAction == "exportdbn")
-            {
-                DoExportToDbn<ElemType>(commandParams);
-            }
-            else if (thisAction == "createLabelMap")
-            {
-                DoCreateLabelMap<ElemType>(commandParams);
-            }
-            else if (thisAction == "writeWordAndClass")
-            {
-                DoWriteWordAndClassInfo<ElemType>(commandParams);
-            }
-            else if (thisAction == "plot")
-            {
-                DoTopologyPlot<ElemType>(commandParams);
-            }
-            else if (thisAction == "SVD")
-            {
-                DoParameterSVD<ElemType>(commandParams);
-            }
-            else
-            {
-                RuntimeError("unknown action: %s  in command set: %s", thisAction.c_str(), command[i].c_str());
+                if (thisAction == "train" || thisAction == "trainRNN")
+                {
+                    std::cerr << "CNTKCommandTrainBegin: " + command[i] << endl;
+                    DoTrain<ConfigParameters, ElemType>(commandParams);
+                    std::cerr << "CNTKCommandTrainEnd: " + command[i] << endl;
+                    fullEpochsOffset += GetMaxEpochs(commandParams);
+                }
+                else if (thisAction == "adapt")
+                {
+                    DoAdapt<ElemType>(commandParams);
+                }
+                else if (thisAction == "test" || thisAction == "eval")
+                {
+                    DoEval<ElemType>(commandParams);
+                }
+                else if (thisAction == "edit")
+                {
+                    DoEdit<ElemType>(commandParams);
+                }
+                else if (thisAction == "cv")
+                {
+                    DoCrossValidate<ElemType>(commandParams);
+                }
+                else if (thisAction == "write")
+                {
+                    DoWriteOutput<ElemType>(commandParams);
+                }
+                else if (thisAction == "devtest")
+                {
+                    TestCn<ElemType>(config); // for "devtest" action pass the root config instead
+                }
+                else if (thisAction == "dumpnode")
+                {
+                    DumpNodeInfo<ElemType>(commandParams);
+                }
+                else if (thisAction == "convertdbn")
+                {
+                    DoConvertFromDbn<ElemType>(commandParams);
+                }
+                else if (thisAction == "exportdbn")
+                {
+                    DoExportToDbn<ElemType>(commandParams);
+                }
+                else if (thisAction == "createLabelMap")
+                {
+                    DoCreateLabelMap<ElemType>(commandParams);
+                }
+                else if (thisAction == "writeWordAndClass")
+                {
+                    DoWriteWordAndClassInfo<ElemType>(commandParams);
+                }
+                else if (thisAction == "plot")
+                {
+                    DoTopologyPlot<ElemType>(commandParams);
+                }
+                else if (thisAction == "SVD")
+                {
+                    DoParameterSVD<ElemType>(commandParams);
+                }
+                else
+                {
+                    RuntimeError("unknown action: %s  in command set: %s", thisAction.c_str(), command[i].c_str());
+                }
             }
 
             fprintf(stderr, "\nAction \"%s\" complete.\n\n", thisAction.c_str());
 
             NDLScript<ElemType> ndlScript;
             ndlScript.ClearGlobal(); // clear global macros between commands
+
+            // Synchronize all ranks before proceeding to next action/command
+            if (mpi != nullptr)
+                mpi->WaitAll();
         }
     }
 }
@@ -459,10 +467,10 @@ int wmainWithBS(int argc, wchar_t* argv[]) // called from wmain which is a wrapp
         InvalidArgument("Legacy name 'type' no longer allowed. Use 'precision'.");
 
     // parallel training
-    g_mpi = nullptr;
+    shared_ptr<Microsoft::MSR::CNTK::MPIWrapper> mpi;
     bool paralleltrain = config(L"parallelTrain", false);
     if (paralleltrain)
-        g_mpi = new MPIWrapper();
+        mpi = MPIWrapper::GetInstance(true /*create*/);
 
     g_shareNodeValueMatrices = config(L"shareNodeValueMatrices", false);
 
@@ -476,7 +484,7 @@ int wmainWithBS(int argc, wchar_t* argv[]) // called from wmain which is a wrapp
         logpath += L".log";     // TODO: why do we need to append this here?
 
         if (paralleltrain)
-            logpath += msra::strfun::wstrprintf(L"rank%d", (int) g_mpi->CurrentNodeRank());
+            logpath += msra::strfun::wstrprintf(L"rank%d", (int) mpi->CurrentNodeRank());
 
         RedirectStdErr(logpath);
         fprintf(stderr, "%ls\n", startupMessage.c_str());
@@ -495,7 +503,7 @@ int wmainWithBS(int argc, wchar_t* argv[]) // called from wmain which is a wrapp
     bool progressTracing = config(L"progressTracing", false);
     size_t fullTotalMaxEpochs = 1; // BUGBUG: BS does not allow me to read out the max epochs parameters, as that would instantiate and thus execute the objects
     // set up progress tracing for compute cluster management
-    if (progressTracing && ((g_mpi == nullptr) || g_mpi->IsMainNode()))
+    if (progressTracing && ((mpi == nullptr) || mpi->IsMainNode()))
         ProgressTracing::TraceTotalNumberOfSteps(fullTotalMaxEpochs); // enable tracing, using this as the total number of epochs
 
     // MAIN LOOP that executes the actions
@@ -508,6 +516,8 @@ int wmainWithBS(int argc, wchar_t* argv[]) // called from wmain which is a wrapp
         const ScriptableObjects::ConfigArray& actions = actionsVal;
         for (int i = actions.GetIndexRange().first; i <= actions.GetIndexRange().second; i++)
         {
+            // TODO: When running in parallel with MPI, only commands in 'commandstoRunOnAllRanks' should
+            // be run in parallel across multiple ranks. Others should only run on rank 0
             actions.At(i, [](const wstring&)
                        {
                        }); // this will evaluate and thus execute the action
@@ -525,7 +535,7 @@ int wmainWithBS(int argc, wchar_t* argv[]) // called from wmain which is a wrapp
     }
     fprintf(stderr, "COMPLETED\n"), fflush(stderr);
 
-    delete g_mpi;
+    MPIWrapper::DeleteInstance();
     return EXIT_SUCCESS;
 }
 
@@ -546,12 +556,10 @@ int wmainOldCNTKConfig(int argc, wchar_t* argv[]) // called from wmain which is 
     ConfigArray command = config(L"command", "train");
 
     // paralleltrain training
-    g_mpi = nullptr;
+    shared_ptr<Microsoft::MSR::CNTK::MPIWrapper> mpi;
     bool paralleltrain = config(L"parallelTrain", "false");
     if (paralleltrain)
-    {
-        g_mpi = new MPIWrapper();
-    }
+        mpi = MPIWrapper::GetInstance(true /*create*/);
 
     g_shareNodeValueMatrices = config(L"shareNodeValueMatrices", false);
 
@@ -569,7 +577,7 @@ int wmainOldCNTKConfig(int argc, wchar_t* argv[]) // called from wmain which is 
         if (paralleltrain)
         {
             std::wostringstream oss;
-            oss << g_mpi->CurrentNodeRank();
+            oss << mpi->CurrentNodeRank();
             logpath += L"rank" + oss.str();
         }
         RedirectStdErr(logpath);
@@ -616,9 +624,9 @@ int wmainOldCNTKConfig(int argc, wchar_t* argv[]) // called from wmain which is 
 
     fprintf(stderr, "\nPrecision = \"%s\"\n", type.c_str());
     if (type == "float")
-        DoCommands<float>(config);
+        DoCommands<float>(config, mpi);
     else if (type == "double")
-        DoCommands<double>(config);
+        DoCommands<double>(config, mpi);
     else
         RuntimeError("CNTK: Invalid precision string: \"%s\", must be \"float\" or \"double\"", type.c_str());
 
@@ -631,7 +639,7 @@ int wmainOldCNTKConfig(int argc, wchar_t* argv[]) // called from wmain which is 
     }
     fprintf(stderr, "COMPLETED\n"), fflush(stderr);
 
-    delete g_mpi;
+    MPIWrapper::DeleteInstance();
     return EXIT_SUCCESS;
 }
 

@@ -31,14 +31,14 @@ template <class ElemType>
 class SimpleEvaluator
 {
 public:
-    SimpleEvaluator(ComputationNetworkPtr net, const bool parallelRun, const size_t numMBsToShowResult = 100, const int traceLevel = 0, const size_t maxSamplesInRAM = SIZE_MAX,
-					const size_t numSubminiBatches = 1)
+    SimpleEvaluator(ComputationNetworkPtr net, const std::shared_ptr<MPIWrapper>& mpi, const size_t numMBsToShowResult = 100, const int traceLevel = 0, const size_t maxSamplesInRAM = SIZE_MAX,
+                    const size_t numSubminiBatches = 1)
         : m_net(net), 
           m_numMBsToShowResult(numMBsToShowResult), 
           m_traceLevel(traceLevel),
           m_maxSamplesInRAM(maxSamplesInRAM), 
           m_numSubminiBatches(numSubminiBatches), 
-          m_parallelRun(parallelRun), 
+          m_mpi(mpi), 
           m_distGradAgg(nullptr),
           m_gradHeader(nullptr)
     {
@@ -123,7 +123,7 @@ public:
 
         const size_t numIterationsBeforePrintingProgress = 100;
         size_t numItersSinceLastPrintOfProgress = 0;
-        while (DataReaderHelpers::GetMinibatchIntoNetwork<ElemType>(*dataReader, m_net, nullptr, false, m_parallelRun, inputMatrices, actualMBSize))
+        while (DataReaderHelpers::GetMinibatchIntoNetwork<ElemType>(*dataReader, m_net, nullptr, false, m_mpi != nullptr, inputMatrices, actualMBSize, m_mpi))
         {
             size_t actualNumSubminibatches = numSubminibatchesNeeded <= 1 ? 1 : smbDispatcher.GetMinibatchIntoCache(*dataReader, *m_net, inputMatrices, numSubminibatchesNeeded);
             for (size_t ismb = 0; ismb < actualNumSubminibatches; ismb++)
@@ -148,12 +148,12 @@ public:
 
             size_t numSamplesWithLabel = m_net->GetNumSamplesWithLabel(actualMBSize);
             size_t aggregateNumSamplesWithLabel = numSamplesWithLabel;
-            if (m_parallelRun)
+            if (m_mpi != nullptr)
             {
                 if (m_gradHeader == nullptr)
                 {
                     m_gradHeader = DistGradHeader::Create(evalNodes.size());
-                    m_distGradAgg = make_shared<SimpleDistGradAggregator<ElemType>>(g_mpi, false, m_traceLevel);
+                    m_distGradAgg = make_shared<SimpleDistGradAggregator<ElemType>>(m_mpi, false, m_traceLevel);
                 }
 
                 m_gradHeader->numEvalNode = evalNodes.size();
@@ -287,7 +287,7 @@ protected:
     size_t m_numMBsToShowResult;
     size_t m_maxSamplesInRAM;
     size_t m_numSubminiBatches;
-    bool m_parallelRun;
+    std::shared_ptr<MPIWrapper> m_mpi;
 
     shared_ptr<IDistGradAggregator<ElemType>> m_distGradAgg;
     struct DistGradHeader* m_gradHeader;
