@@ -318,6 +318,8 @@ void ComputationNode<ElemType>::WriteMinibatchWithFormatting(FILE* f, size_t onl
     for (size_t s = 0; s < sequences.size(); s++)
     {
         const auto& seqInfo = sequences[s];
+        if (seqInfo.seqId == GAP_SEQUENCE_ID) // nothing in gaps to print
+            continue;
         size_t tBegin = seqInfo.tBegin >= 0 ? seqInfo.tBegin : 0;
         size_t tEnd = seqInfo.tEnd <= width ? seqInfo.tEnd : width;
 
@@ -370,7 +372,7 @@ void ComputationNode<ElemType>::WriteMinibatchWithFormatting(FILE* f, size_t onl
                 fprintfOrDie(f, "%s", sampleSeparator.c_str());
             if (j == jstop)
             {
-                fprintf(f, "... (%d more)", (int)(jend - jstop)); // 'nuff said
+                fprintf(f, "...+%d", (int)(jend - jstop)); // 'nuff said
                 break;
             }
             for (size_t i = 0; i < iend; i++)
@@ -379,7 +381,7 @@ void ComputationNode<ElemType>::WriteMinibatchWithFormatting(FILE* f, size_t onl
                     fprintfOrDie(f, "%s", elementSeparator.c_str());
                 if (i == istop)
                 {
-                    fprintf(f, "...");
+                    fprintf(f, "...+%d", (int)(iend - istop));
                     break;
                 }
                 else if (formatChar == 'f') // print as real number

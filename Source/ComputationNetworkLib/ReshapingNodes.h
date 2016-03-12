@@ -572,7 +572,7 @@ template class RowRepeatNode<float>;
 template class RowRepeatNode<double>;
 
 // -----------------------------------------------------------------------
-// WhereNode -- extract indices of non-0 values in a sequence
+// WhereNode(cond) -- extract indices of non-0 values in a sequence
 // As this implies a runtime-vale dependent reduction in dimension, it can
 // only be applied to time sequences, and not other tensor dimensions.
 // The result will have a different MBLayout reflecting the shortened result sequences.
@@ -603,6 +603,41 @@ private:
     std::vector<std::vector<size_t>>   m_indexSequenceBuffer; // [sequenceIndex][t] for creating the result sequences
     std::vector<size_t>               m_rowAllocationsBuffer; // [row] for determining new MBLayout packing
     std::vector<std::pair<size_t, size_t>> m_placementBuffer; // [sequenceIndex] assigned location for a sequence
+};
+
+// -----------------------------------------------------------------------
+// PackedIndexNode(targetObject, indexSequence) -- convert sequence indices
+// to internal packed column indices w.r.t. targetObject.
+// Intended use is
+//  - Gather  (cond, x) = GatherPacked  (PackedIndex (x, Where (xCond)), x)
+//  - Scatter (cond, y) = ScatterPacked (PackedIndex (y, Where (yCond)), y)
+// This maps sequence-specific time indices t to GetColumnIndex(seq,t),
+// as input for subsequent GatherPacked() or ScatterPacked() operations.
+// -----------------------------------------------------------------------
+
+template <class ElemType>
+class PackedIndexNode : public ComputationNodeNonLooping<ElemType>, public NumInputs<2>
+{
+    typedef ComputationNodeNonLooping<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+    static const std::wstring TypeName() { return L"PackedIndex"; }
+
+    // our inputs
+    static const size_t TARGETDATA = 0;
+    static const size_t INDEXDATA  = 1;
+
+public:
+    DeclareConstructorFromConfigWithNumInputs(PackedIndexNode);
+    PackedIndexNode(DEVICEID_TYPE deviceId, const wstring& name) :
+        Base(deviceId, name)
+    {
+        m_learningRateMultiplier = 0.0f;    // we cannot backprop; this will disable it
+        // TODO: This ^^ is a bit of a hack. Do we need a better mechanism for nodes to tell that they cannot backprop? We will have more of those.
+        //       This might even not work, need to track down how this is inferred/propagated upwards. It is really only for LearnableParameters.
+    }
+
+    virtual void /*ComputationNodeNonLooping::*/ ForwardPropNonLooping() override;
+    virtual void /*ComputationNodeNonLooping::*/ BackpropToNonLooping(size_t /*inputIndex*/) override;
+    virtual void Validate(bool isFinalValidationPass) override;
 };
 
 // -----------------------------------------------------------------------

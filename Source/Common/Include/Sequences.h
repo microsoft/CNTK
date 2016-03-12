@@ -328,7 +328,7 @@ public:
     }
 
     // find a sequence by its id
-    const SequenceInfo &FindSequence(UniqueSequenceId seqId) const
+    const SequenceInfo& FindSequence(UniqueSequenceId seqId) const
     {
         for (const auto &seqInfo : m_sequences)
             if (seqInfo.seqId == seqId)
@@ -373,11 +373,14 @@ public:
     {
         if (t > seq.GetNumTimeSteps())
             LogicError("GetColumnIndex: t out of sequence bounds.");
-        ptrdiff_t tIn = (ptrdiff_t)t + seq.tBegin;
+        if (seq.s > GetNumParallelSequences())
+            LogicError("GetColumnIndex: seq.s out of sequence bounds."); // can only happen if 'seq' does not come out of our own m_sequences array, which is verboten
+        ptrdiff_t tIn = (ptrdiff_t)t + seq.tBegin;       // shifted time index
         if (tIn < 0 || (size_t)tIn >= GetNumTimeSteps())
             LogicError("GetColumnIndex: Attempted to access a time step that is accessing a portion of a sequence that is not included in current minibatch."); // we may encounter this for truncated BPTT
         size_t col = (size_t)tIn * GetNumParallelSequences() + seq.s;
-        return (size_t)col;
+        assert(col < GetNumCols());
+        return col;
     }
 
 private:

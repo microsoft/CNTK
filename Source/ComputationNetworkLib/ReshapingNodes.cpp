@@ -144,7 +144,7 @@ template <class ElemType>
             buf[outMBLayout->GetColumnIndex(seq, t)] = (ElemType)indexSequence[t];
     }
     // the result will be kept in CPUDEVICE, since most likely we will access it again in PackedIndexNode
-    Value().SetValue(outMBLayout->GetNumParallelSequences(), outMBLayout->GetNumTimeSteps(), CPUDEVICE, buf.data(), MatrixFormat::matrixFormatColMajor);
+    Value().SetValue(1, outMBLayout->GetNumCols(), CPUDEVICE, buf.data(), MatrixFormat::matrixFormatColMajor);
 }
 
 template <class ElemType>
@@ -172,5 +172,60 @@ template <class ElemType>
 
 template class WhereNode<float>;
 template class WhereNode<double>;
+
+template <class ElemType>
+/*virtual*/ void PackedIndexNode<ElemType>::ForwardPropNonLooping() /*override*/
+{
+    let& targetMBLayout = Input(TARGETDATA)->GetMBLayout(); // only used for index conversion
+    let& indexMBLayout  = Input(INDEXDATA)->GetMBLayout();
+    let&  index  = Input(INDEXDATA)->Value(); // per-seq index values that are to be mapped
+    auto& result =                   Value(); // packed index values as mapped to targetData's layout
+    // loop over targetSequences
+    // Input matrix contains time indices for each sequence that refer to frames inside that sequence.
+    // We replace every per-sequence index by the resolved column index w.r.t. the same MBLayout.
+    let& targetSequences = targetMBLayout->GetAllSequences();
+    for (size_t i = 0; i < targetSequences.size(); i++)
+    {
+        let& targetSeq = targetSequences[i];
+        if (targetSeq.seqId == GAP_SEQUENCE_ID)
+            continue;
+        let& indexSeq = indexMBLayout->FindSequence(targetSeq.seqId);          // find corresponding entry in indexMBLayout
+        for (size_t tIndex = 0; tIndex < indexSeq.GetNumTimeSteps(); tIndex++) // map all index values in index sequence
+        {
+            let jIndex  = indexMBLayout->GetColumnIndex(indexSeq, tIndex);    // map time index to actual location in the matrix storage object
+            let tTarget = (size_t)index(0, jIndex);                           // the new time location (relative to target sequence)
+            let jTarget = targetMBLayout->GetColumnIndex(targetSeq, tTarget); // map new time index as well. This performs a range check.
+            result(0, jIndex) = (ElemType)jTarget;
+        }
+    }
+}
+
+template <class ElemType>
+/*virtual*/ void PackedIndexNode<ElemType>::BackpropToNonLooping(size_t /*inputIndex*/) /*override*/
+{
+    // we cannot backprop through a condition
+    // Can we?
+    return;
+}
+
+template <class ElemType>
+/*virtual*/ void PackedIndexNode<ElemType>::Validate(bool isFinalValidationPass) /*override*/
+{
+    ComputationNodeBase::Validate(isFinalValidationPass);
+
+    // inherit both MBLayout and sample dimension (scalar) from indexData
+    // Because we map (per-seq) index sequence to (packed) index sequence. Target is only for index calculation.
+    m_pMBLayout = Input(INDEXDATA)->GetMBLayout();
+    if (isFinalValidationPass && (!Input(INDEXDATA)->HasMBLayout() || !Input(TARGETDATA)->HasMBLayout()))
+        LogicError("%ls %ls operation requires both inputs to be minibatch data (must have MBLayouts).", NodeName().c_str(), OperationName().c_str());
+
+    if (isFinalValidationPass && Input(INDEXDATA)->GetSampleLayout().GetNumElements() != 1)
+        InvalidArgument("%ls %ls operation requires the second argument (indexData) to be a scalar sequence.", NodeName().c_str(), OperationName().c_str());
+
+    SetDims(Input(INDEXDATA));
+}
+
+template class PackedIndexNode<float>;
+template class PackedIndexNode<double>;
 
 }}}
