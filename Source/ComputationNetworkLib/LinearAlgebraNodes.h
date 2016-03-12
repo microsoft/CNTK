@@ -64,6 +64,15 @@ public:
 
         inputGradient.AddCopyOf(gradient);
     }
+
+    virtual void DumpNodeInfo(const bool printValues, const bool printMetadata, File& fstream) const override
+    {
+        Base::DumpNodeInfo(printValues, printMetadata, fstream);
+        char str[4096];
+        sprintf(str, "learningRateMultiplier=%f  NeedsGradient=%s orignialNG=%s", 
+            m_learningRateMultiplier, m_learningRateMultiplier > 0 ? "true" : "false", m_needsGradient ? "true" : "false"); // TODO: update NDL to accept a better matching name as well
+        fstream << string(str);
+    }
 };
 
 template class PlusNode<float>;
@@ -277,6 +286,27 @@ public:
             // Note: This is non-ambiguous w.r.t. valid new configurations because this condition would otherwise just be considered an error.
             //       But it will fail to discover trailing reduction dimensions that are 1. We assume that no such legacy models exist.
             // Note: This is very ugly [Wayne Xiong]. I agree [fseide].
+            //if (dimsA.size() == 2 && !transpose && m_outputRank == 1 && dimsA[1] != dimsB[0] && dimsB[0] == 1)
+            //{
+            //    for (size_t k = 0; k < dimsB.size(); k++)
+            //    {
+            //        if (dimsB[k] == 1) continue;
+            //        if (dimsB[k] == dimsA[1])
+            //        {
+            //            // OK, we have an explanation: Patch dimsA and back-patch the sample layout of Input(0)
+            //            numReductionDims = 1;
+            //            dimsB.resize(dimsB.size() - k);
+            //            for (size_t kk = 0; kk < numReductionDims; kk++)
+            //                dimsB[kk] = dimsA[m_outputRank + kk];
+            //            Input(1)->SetDims(TensorShape(dimsB), false);
+            //            fprintf(stderr, "\n%ls %ls operation: For legacy compatibility, the sample layout of right input (%ls %ls operation) was patched to [%s] (from [%s])\n",
+            //                NodeName().c_str(), OperationName().c_str(), Input(1)->NodeName().c_str(), Input(1)->OperationName().c_str(), string(Input(1)->GetSampleLayout()).c_str(), dimsBstring.c_str());
+            //            dimsBstring = string(Input(1)->GetSampleLayout()); // for error messages
+            //            break; // we will continue with this patched up model from here on
+            //        }
+            //    }
+            //}
+            
             if (dimsA.size() == 2 && !transpose && m_outputRank == 1 && dimsA[1] != dimsB[0])
             {
                 // search whether we can interpret dimsA[1] as the flattening of the first dimensions
@@ -350,6 +380,15 @@ public:
         // we need to call base allocation at end since we will need to allocate special ones first
         // so that the default allocator will not allocate it again.
         Base::AllocateGradientMatricesForInputs(matrixPool);
+    }
+
+    virtual void DumpNodeInfo(const bool printValues, const bool printMetadata, File& fstream) const override
+    {
+        Base::DumpNodeInfo(printValues, printMetadata, fstream);
+        char str[4096];
+        sprintf(str, "learningRateMultiplier=%f  NeedsGradient=%s orignialNG=%s",
+            m_learningRateMultiplier, m_learningRateMultiplier > 0 ? "true" : "false", m_needsGradient ? "true" : "false");
+        fstream << string(str);
     }
 
 private:

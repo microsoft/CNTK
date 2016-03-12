@@ -65,7 +65,7 @@ ComputationNodeBasePtr ComputationNetwork::CopyNode(const ComputationNetwork& fr
 
 // only copy a complete independent tree
 // when node name exists
-void ComputationNetwork::CopySubTree(const ComputationNetwork& fromNet,
+void ComputationNetwork::CopySubTree(ComputationNetwork& fromNet,
                                      const std::wstring fromName, std::wstring toNamePrefix,
                                      const CopyNodeFlags flags)
 {
@@ -75,8 +75,7 @@ void ComputationNetwork::CopySubTree(const ComputationNetwork& fromNet,
         LogicError("CopySubTree: you cannot copy a tree without copying the node values.");
 
     ComputationNodeBasePtr fromRoot = fromNet.GetNodeFromName(fromName);
-
-    for (const auto& fromNode : GetEvalOrder(fromRoot)) // BUGBUG: This probably will fail because the precomputed eval orders are invalid at this point.
+    for (const auto& fromNode : fromNet.GetEvalOrder(fromRoot)) // BUGBUG: This probably will fail because the precomputed eval orders are invalid at this point.
     {
         wstring fromNodeName = fromNode->NodeName();
         wstring toNodeName = toNamePrefix + fromNodeName;

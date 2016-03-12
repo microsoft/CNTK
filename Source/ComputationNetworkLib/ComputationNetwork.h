@@ -320,7 +320,7 @@ public:
     // -----------------------------------------------------------------------
 
     ComputationNodeBasePtr CopyNode(const ComputationNetwork& fromNet, const std::wstring fromName, std::wstring toName, const CopyNodeFlags flags);
-    void CopySubTree(const ComputationNetwork& fromNet, const std::wstring fromName, std::wstring toNamePrefix, const CopyNodeFlags flags);
+    void CopySubTree(ComputationNetwork& fromNet, const std::wstring fromName, std::wstring toNamePrefix, const CopyNodeFlags flags);
     void CopyInputs(const std::wstring fromName, std::wstring toName);
     void RenameNode(const std::wstring& nodeNameOrig, const std::wstring& nodeNameNew);
     void RenameNode(ComputationNodeBasePtr node, const std::wstring& newNodeName);

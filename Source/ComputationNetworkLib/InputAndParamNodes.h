@@ -315,7 +315,8 @@ public:
             char str[4096];
             sprintf(str, "[%lu,%lu]  ", GetAsMatrixNumRows(), GetAsMatrixNumCols());
             fstream << string(str);
-            sprintf(str, "learningRateMultiplier=%f  NeedsGradient=%s", m_learningRateMultiplier, m_learningRateMultiplier>0 ? "true" : "false"); // TODO: update NDL to accept a better matching name as well
+            sprintf(str, "learningRateMultiplier=%f  NeedsGradient=%s originalNG=%s", 
+                m_learningRateMultiplier, m_learningRateMultiplier>0 ? "true" : "false", m_needsGradient ? "true" : "false"); // TODO: update NDL to accept a better matching name as well
             fstream << string(str);
         }
 
