@@ -7,7 +7,7 @@ LocalMacros = [
     ImageC = 3
     LabelDim = 10
 
-    features = ImageInput(ImageW, ImageH, ImageC, tag = feature, imageLayout = "cudnn")
+    features = ImageInput(ImageW, ImageH, ImageC, tag = feature, imageLayout = $imageLayout$)
     labels = Input(LabelDim, tag = label)
     
     convWScale = 7.07
@@ -101,7 +101,7 @@ DNN=[
     poolH = 8
     poolhStride = 1
     poolvStride = 1
-    pool = AveragePooling(rn3_18, poolW, poolH, poolhStride, poolvStride, imageLayout = "cudnn")
+    pool = AveragePooling(rn3_18, poolW, poolH, poolhStride, poolvStride, imageLayout = $imageLayout$)
 
     ol = DnnLastLayer(cMap3, labelDim, pool, fc1WScale, fc1BValue)
     

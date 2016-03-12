@@ -54,16 +54,15 @@ writeWordAndClassInfo = [
 
 train = [
     action = "train"
-    minibatchSize = 128:256:512
+    minibatchSize = 128:256:512 # TODO: Why is this here and not inside SGD?
     traceLevel = 1
     epochSize = 0               # (for quick tests, this can be overridden with something small)
-    defaultHiddenActivity = 0.1
+    defaultHiddenActivity = 0.1 # default value for hidden states--is this used by SimpleNetworkBuilder?
     useValidation = true
 
     SimpleNetworkBuilder = [
-        rnnType = "CLASSLSTM"
+        rnnType = "CLASSLSTM"   # TODO: camelCase
         recurrentLayer = 1      # number of recurrent layers
-        nodeType = "sigmoid"    # TODO: Why do we need this? It's an LSTM without dense FF layers
 
         trainingCriterion = "classCrossEntropyWithSoftmax"
         evalCriterion     = "classCrossEntropyWithSoftmax"

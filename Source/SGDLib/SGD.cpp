@@ -2186,8 +2186,8 @@ bool SGD<ElemType>::GradientCheck(ComputationNetworkPtr net,
         for (size_t itry = 0; itry < min((size_t) 50, node->Value().GetNumElements()); itry++)
         {
             // no support to sparse matrix yet
-            int irow = (int) fmod(rand(), node->Gradient().GetNumRows() - 1);
-            int icol = (int) fmod(rand(), node->Gradient().GetNumCols() - 1);
+            int irow = (int)fmod(rand(), node->Value().GetNumRows() - 1);
+            int icol = (int)fmod(rand(), node->Value().GetNumCols() - 1);
             irow = max(0, irow);
             icol = max(0, icol);
 
@@ -2392,7 +2392,7 @@ SGDParams::SGDParams(const ConfigRecordType& configSGD, size_t sizeofElemType)
 
     m_dropoutRates = configSGD(L"dropoutRate", ConfigRecordType::Array(doubleargvector(vector<double>{0.0})));
     m_batchNormalizationTimeConstant = configSGD(L"batchNormalizationTimeConstant", ConfigRecordType::Array(doubleargvector(vector<double>{std::numeric_limits<double>::infinity()})));
-    m_setBNToEvalModeAfterEpochNumber = configSGD(L"setBNToEvalModeAfterEpochNumber", std::numeric_limits<int>::infinity());
+    m_setBNToEvalModeAfterEpochNumber = configSGD(L"setBNToEvalModeAfterEpochNumber", std::numeric_limits<int>::max());
 
     GradientsUpdateType gradUpdateType = ParseGradUpdateType(configSGD(L"gradUpdateType", L"None"));
     double gaussianNoiseInjecStd = configSGD(L"gaussianNoiseInjectStd", 0.0);

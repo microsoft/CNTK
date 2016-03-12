@@ -1,3 +1,4 @@
+#if 0 // this entire file can be removed once CNTK.core.bs works
 // ExperimentalNetworkBuilder.cpp -- interface to new version of NDL (and config) parser  --fseide
 
 #define _CRT_NONSTDC_NO_DEPRECATE // make VS accept POSIX functions without _
@@ -20,7 +21,6 @@ wstring standardFunctions =
     L"Length(x) = new NumericFunction [ what = 'Length' ; arg = x ] \n"
     L"Ceil(x) = -Floor(-x) \n"
     L"Round(x) = Floor(x+0.5) \n"
-    L"Abs(x) = if x >= 0 then x else -x \n"
     L"Sign(x) = if x > 0 then 1 else if x < 0 then -1 else 0 \n"
     L"Min(a,b) = if a < b then a else b \n"
     L"Max(a,b) = if a > b then a else b \n"
@@ -79,6 +79,7 @@ L"ParameterTensor(dims, learningRateMultiplier = 1.0, init = 'uniform'/*|fixedVa
 #ifdef COMING_SOON
     TernaryStandardNode(CRF, labelVectorSequence, positionDependenScoreVectorSequence, transitionScores) // TODO: better names
 #endif
+    UnaryStandardNode(Abs, x)
     QuaternaryStandardNode(ClassBasedCrossEntropyWithSoftmax, labelClassDescriptorVectorSequence, mainInputInfo, mainWeight, classLogProbsBeforeSoftmax)
     // BUGBUG: the commented-out ones are not mentioned in the CNTK book, nor are their parameters documented in the source code
     BinaryStandardNode(ColumnElementTimes, aVectorSequence, anotherVectorSequence)
@@ -130,3 +131,4 @@ L"ParameterTensor(dims, learningRateMultiplier = 1.0, init = 'uniform'/*|fixedVa
     //BinaryStandardNode(ParallelNode)
     //BinaryStandardNode(StrideTimesNode)
     ;
+#endif

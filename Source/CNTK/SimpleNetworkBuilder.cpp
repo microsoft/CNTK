@@ -217,6 +217,7 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildRNNFromDescription()
             else
             {
                 output = SimpleNetworkBuilder<ElemType>::ApplyNonlinearFunction(builder.Plus(builder.Times(u, input), b), 0);
+                // TODO: Why the ^^ namespace?
                 // output = builder.Times(u, input);
             }
 

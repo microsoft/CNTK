@@ -8,7 +8,13 @@ ModelDir = "$OutputDir$/Models"
 ndlMacros="$ConfigDir$/Macros.ndl"
 
 precision="float"
-deviceId="auto"
+
+deviceId = 0
+imageLayout = "cudnn"
+# override the above as follows when running on CPU:
+# deviceId = -1
+# imageLayout = "legacy"
+
 prefetch="true"
 parallelTrain="false"
 

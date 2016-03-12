@@ -315,10 +315,10 @@ public:
                 auto& dimA = dimsA[k];
                 auto& dimB = dimsB[k - m_outputRank];
                 if (isFinalValidationPass && dimB == 0)
-                    InvalidArgument("%ls %ls operation: Right [%s] operand must have zero dimensions.", NodeName().c_str(), OperationName().c_str(), dimsBstring.c_str());
+                    InvalidArgument("%ls %ls operation: Right [%s] operand must not have zero dimensions.", NodeName().c_str(), OperationName().c_str(), dimsBstring.c_str());
                 else if (dimA == 0)
                     dimA = dimB; // infer dimension
-                else if (dimA != dimB)
+                else if (isFinalValidationPass && dimA != dimB)
                     InvalidArgument("%ls %ls operation: Left [%s] and right [%s] operands' shapes are not compatible.", NodeName().c_str(), OperationName().c_str(), dimsAstring.c_str(), dimsBstring.c_str());
             }
 

@@ -1352,9 +1352,7 @@ public:
                 // fprintf(stderr, "Backprop: %ls %ls operation -> child %d %ls %ls\n", NodeName().c_str(), OperationName().c_str(), (int)i, child->NodeName().c_str(), child->OperationName().c_str());
                 if (!m_needsGradient)
                     LogicError("%ls %ls operation has m_needsGradient set to false but children require it.", NodeName().c_str(), OperationName().c_str());
-#ifdef DISPLAY_DEBUG
-                fprintf(stderr, "    [%lu]: %ls(%ls)\n", i, child->OperationName().c_str(), child->NodeName().c_str());
-#endif
+
 #if DUMPOUTPUT
                 fprintf(stderr, "Backprop%d_%ls\n", i, NodeName().c_str());
 #endif
@@ -1372,10 +1370,6 @@ public:
                 // fprintf(stderr, "BackpropTo %d %d %ls %ls\n", (int)fr.timeIdxInSeq, (int)i, NodeName().c_str(), OperationName().c_str());
                 BackpropTo(i, fr); // this computes partial wrt to the child and sums the gradient value in the child
             }
-#ifdef DISPLAY_DEBUG
-            else
-                fprintf(stderr, "    [%lu]: %s(%s) (no gradient needed so don't compute for)\n", i, child->OperationName().c_str(), child->NodeName().c_str());
-#endif
         }
     }
 

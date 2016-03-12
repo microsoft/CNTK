@@ -108,9 +108,6 @@ public:
     void Save(const std::wstring& fileName, const FileOptions fileFormat = FileOptions::fileOptionsBinary) const;
     void SaveEdited(const std::wstring& fileName, const FileOptions fileFormat = FileOptions::fileOptionsBinary);
 
-    template <class ElemType>
-    void SaveToDbnFile(ComputationNetworkPtr net, const std::wstring& fileName) const;
-
 private:
 
     void SaveToFileImpl(const std::wstring& fileName, const FileOptions fileFormat) const;
@@ -533,6 +530,9 @@ public:
 
     template <class ElemType>
     void PerformSVDecomposition(const map<wstring, float>& SVDConfig, size_t AlignedSize);
+
+    template <class ElemType>
+    void SaveToDbnFile(ComputationNetworkPtr net, const std::wstring& fileName) const;
 
     // -----------------------------------------------------------------------
     // construction

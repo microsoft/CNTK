@@ -122,11 +122,19 @@
     <Link>
       <DelayLoadDLLs>Math.dll; msmpi.dll;</DelayLoadDLLs>
     </Link>
+    <PostBuildEvent>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release_CpuOnly|x64'">Copying dependencies</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release_CpuOnly|x64'">xcopy /I /D /Y $(ProjectDir)BrainScript\CNTKCoreLib\CNTK.core.bs $(TargetDir)</Command>
+    </PostBuildEvent>
+    <PostBuildEvent>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug_CpuOnly|x64'">Copying dependencies</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug_CpuOnly|x64'">xcopy /I /D /Y $(ProjectDir)BrainScript\CNTKCoreLib\CNTK.core.bs $(TargetDir)</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="$(GpuBuild)">
     <PostBuildEvent>
-      <Command>if exist "%ProgramW6432%\NVIDIA Corporation\NVSMI" xcopy /I /D /Y "%ProgramW6432%\NVIDIA Corporation\NVSMI\nvml*.dll" $(TargetDir)</Command>
-      <Message>Copying NVidia GDK extension DLL to target folder</Message>
+      <Command>xcopy /I /D /Y $(ProjectDir)BrainScript\CNTKCoreLib\CNTK.core.bs $(TargetDir) &amp;&amp; if exist "%ProgramW6432%\NVIDIA Corporation\NVSMI" xcopy /I /D /Y "%ProgramW6432%\NVIDIA Corporation\NVSMI\nvml*.dll" $(TargetDir)</Command>
+      <Message>Copying dependencies</Message>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
@@ -211,6 +219,17 @@
     <ClCompile Include="tests.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <Xml Include="BrainScript\CNTKCoreLib\CNTK.core.bs">
+      <FileType>Document</FileType>
+      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</DeploymentContent>
+      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug_CpuOnly|x64'">true</DeploymentContent>
+      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</DeploymentContent>
+      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Release_CpuOnly|x64'">true</DeploymentContent>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug_CpuOnly|x64'">false</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release_CpuOnly|x64'">false</ExcludedFromBuild>
+    </Xml>
     <None Include="BrainScript\Doc\BrainScript--extending the CNTK config language, Frank Seide August 2015.pptx" />
     <None Include="prebuild.bat" />
   </ItemGroup>

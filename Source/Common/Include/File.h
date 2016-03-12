@@ -122,13 +122,6 @@ public:
     bool IsWhiteSpace(bool skip = false);
     int EndOfLineOrEOF(bool skip = false);
 
-    // test whether a file exists
-    template<class String>
-    static bool Exists(const String& filename);
-
-    // make intermediate directories
-    template<class String>
-    static void MakeIntermediateDirs(const String& filename);
 
     // TryGetText - for text value, try and get a particular type
     // returns - true if value returned, otherwise false, can't parse
@@ -142,6 +135,22 @@ public:
     void GetLine(std::string& str);
     void GetLines(std::vector<std::wstring>& lines);
     void GetLines(std::vector<std::string>& lines);
+
+    // static helpers
+    // test whether a file exists
+    template<class String>
+    static bool Exists(const String& filename);
+
+    // make intermediate directories
+    template<class String>
+    static void MakeIntermediateDirs(const String& filename);
+
+    // determine the directory and naked file name for a given pathname
+    static std::wstring DirectoryPathOf(std::wstring path);
+    static std::wstring FileNameOf(std::wstring path);
+
+    // get path of current executable
+    static std::wstring GetExecutablePath();
 
     // put operator for basic types
     template <typename T>
