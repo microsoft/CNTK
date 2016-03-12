@@ -156,6 +156,7 @@
     <ClInclude Include="..\Common\Include\TensorShape.h" />
     <ClInclude Include="..\Common\Include\File.h" />
     <ClInclude Include="..\Common\Include\fileutil.h" />
+    <ClInclude Include="BatchNormalizationEngine.h" />
     <ClInclude Include="CommonMatrix.h" />
     <ClInclude Include="ConvolutionEngine.h" />
     <ClInclude Include="ConvolveGeometry.h" />
@@ -189,6 +190,7 @@
     <ClCompile Include="..\Common\fileutil.cpp">
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="BatchNormalizationEngine.cpp" />
     <ClCompile Include="ConvolutionEngine.cpp" />
     <ClCompile Include="CPUSparseMatrix.cpp" />
     <ClCompile Include="CUDAPageLockedMemAllocator.cpp" />

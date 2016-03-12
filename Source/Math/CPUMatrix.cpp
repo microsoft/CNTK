@@ -4288,6 +4288,13 @@ void CPUMatrix<ElemType>::NDAveragePoolingBackward(const CPUMatrix<int>& mpRowCo
     }
 }
 
+template <class ElemType>
+void CPUMatrix<ElemType>::BatchNormalizationForward(const CPUMatrix<ElemType>& scale, const CPUMatrix<ElemType>& bias, double expAvgFactor, CPUMatrix<ElemType>& runMean, CPUMatrix<ElemType>& runInvStdDev,
+                                                    CPUMatrix<ElemType>& out, double epsilon, CPUMatrix<ElemType>& saveMean, CPUMatrix<ElemType>& saveInvStdDev) const
+{
+    UNUSED(scale); UNUSED(bias); UNUSED(expAvgFactor); UNUSED(runMean); UNUSED(runInvStdDev); UNUSED(out); UNUSED(epsilon); UNUSED(saveMean); UNUSED(saveInvStdDev);
+}
+
 #pragma region Static BLAS Functions
 
 /// <summary>Matrix-matrix multiply with col-major matrices (a and b may be transposed): c = alpha * op(a) * op(b) + beta*c</summary>

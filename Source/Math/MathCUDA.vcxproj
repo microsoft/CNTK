@@ -143,6 +143,7 @@ if exist "$(CuDnnDll)" (xcopy /Y "$(CuDnnDll)" $(OutputPath))
   <ItemGroup>
     <ClInclude Include="..\Common\Include\File.h" />
     <ClInclude Include="..\Common\Include\fileutil.h" />
+    <ClInclude Include="CntkBatchNormalization.cuh" />
     <ClInclude Include="ColumnQuantizer.h" />
     <ClInclude Include="CommonMatrix.h" />
     <ClInclude Include="cudabasetypes.h" />
@@ -151,7 +152,6 @@ if exist "$(CuDnnDll)" (xcopy /Y "$(CuDnnDll)" $(OutputPath))
     <ClInclude Include="cudalatticeops.cu.h" />
     <ClInclude Include="cudalatticeops.h" />
     <ClInclude Include="cudalib.h" />
-    <ClInclude Include="CuDnnConvolutionEngine.cuh" />
     <ClInclude Include="CuDnnConvolutionEngine.h" />
     <ClInclude Include="GPUDataTransferer.h" />
     <ClInclude Include="GPUTensor.h" />

@@ -468,6 +468,9 @@ public:
     void NDAveragePoolingForward(const Matrix<int>& mpRowCol, const Matrix<int>& mpRowIndices, const Matrix<int>& indices, Matrix<ElemType>& output) const;
     void NDAveragePoolingBackward(const Matrix<int>& mpRowCol, const Matrix<int>& mpRowIndices, const Matrix<int>& indices, Matrix<ElemType>& grad) const;
 
+    void BatchNormalizationForward(const Matrix<ElemType>& scale, const Matrix<ElemType>& bias, double expAvgFactor, Matrix<ElemType>& runMean, Matrix<ElemType>& runInvStdDev,
+                                   Matrix<ElemType>& out, double epsilon, Matrix<ElemType>& saveMean, Matrix<ElemType>& saveInvStdDev) const;
+
 public:
     // TODO: why are these not static? And why are they here?
     ElemType Exp10(ElemType num);

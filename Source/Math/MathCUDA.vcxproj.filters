@@ -107,8 +107,8 @@
     <ClInclude Include="GPUDataTransferer.h">
       <Filter>GPU</Filter>
     </ClInclude>
-    <ClInclude Include="CuDnnConvolutionEngine.cuh">
-      <Filter>GPU\Convolution</Filter>
+    <ClInclude Include="CntkBatchNormalization.cuh">
+      <Filter>GPU\BatchNormalization</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -149,6 +149,9 @@
     </Filter>
     <Filter Include="GPU\Convolution">
       <UniqueIdentifier>{3155488f-128f-494e-858d-459b4cc9fab7}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="GPU\BatchNormalization">
+      <UniqueIdentifier>{639ff4b6-39b5-4a5b-8856-ee918eeea91e}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
 </Project>

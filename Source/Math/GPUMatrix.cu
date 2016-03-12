@@ -24,6 +24,7 @@
 #include "cublas_v2.h"
 #include <assert.h>
 #include <memory>
+#include "CntkBatchNormalization.cuh"
 
 #pragma comment(lib, "cudart.lib") // instruct linker to reference these libs
 #pragma comment(lib, "cublas.lib")
@@ -3046,6 +3047,13 @@ template <class ElemType>
 void GPUMatrix<ElemType>::NDAveragePoolingBackward(const GPUMatrix<int>& mpRowCol, const GPUMatrix<int>& mpRowIndices, const GPUMatrix<int>& indices, GPUMatrix<ElemType>& grad) const
 {
     UNUSED(mpRowCol); UNUSED(mpRowIndices); UNUSED(indices); UNUSED(grad);
+}
+
+template <class ElemType>
+void GPUMatrix<ElemType>::BatchNormalizationForward(const GPUMatrix<ElemType>& scale, const GPUMatrix<ElemType>& bias, double expAvgFactor, GPUMatrix<ElemType>& runMean, GPUMatrix<ElemType>& runInvStdDev,
+                                                    GPUMatrix<ElemType>& out, double epsilon, GPUMatrix<ElemType>& saveMean, GPUMatrix<ElemType>& saveInvStdDev) const
+{
+    UNUSED(scale); UNUSED(bias); UNUSED(expAvgFactor); UNUSED(runMean); UNUSED(runInvStdDev); UNUSED(out); UNUSED(epsilon); UNUSED(saveMean); UNUSED(saveInvStdDev);
 }
 
 #pragma region Static BLAS Functions
