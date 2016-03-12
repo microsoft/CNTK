@@ -19,9 +19,7 @@ class UCIFastReader(AbstractReader):
     """This is the reader class
     
     :param filename: data file path
-    :param features_dim: number of feature columns
     :param labels_dim: number of label columns
-    :param features_start: the index of the first feature column
     :param labels_start: the index of the first label column
     :param num_of_classes: the number of classes
     :param label_mapping_file: 
@@ -30,8 +28,8 @@ class UCIFastReader(AbstractReader):
     """
     
     def __init__(self, filename, \
-            features_dim=None, labels_dim=None, \
-            features_start=None, labels_start=None, \
+            labels_dim=None, \
+            labels_start=None, \
             num_of_classes=None, \
             label_mapping_file=None, \
             custom_delimiter = None):
@@ -39,9 +37,7 @@ class UCIFastReader(AbstractReader):
         """                
         self["ReaderType"] = self.__class__.__name__
         self["FileName"] = filename
-        self["FeaturesDim"] = features_dim
         self["LabelsDim"] = labels_dim
-        self["FeaturesStart"] = features_start
         self["LabelsStart"] = labels_start
         self["NumOfClasses"] = num_of_classes          
         self["LabelMappingFile"] = label_mapping_file
@@ -61,14 +57,6 @@ class UCIFastReader(AbstractReader):
             template += '''
                customDelimiter=%(CustomDelimiter)s
                '''
-        # BUG: in case of features_start = 0
-        if self['FeaturesStart'] is not None:
-            template += '''               
-        		features=[
-        			start = "%(FeaturesStart)s"
-        			dim = "%(FeaturesDim)s"
-        		]
-                '''
         
         if self['LabelsStart'] is not None:
             template += '''
@@ -94,8 +82,6 @@ def NumPyReader(data, filename):
 
     return UCIFastReader(\
             filename, 
-            # Features are stored per column, but CNTK transforms them and uses
-            # them per row. That's why we take the number of columns here.
-            features_dim=data.shape[1], labels_dim=None, \
-            features_start=0, labels_start=None, \
+            labels_dim=None, \
+            labels_start=None, \
             num_of_classes=None, label_mapping_file=None)
