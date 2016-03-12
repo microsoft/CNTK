@@ -24,15 +24,18 @@ CNTK_OUTPUT_FILENAME="out.txt"
 #TODO: overload action methods to have versions that do not need reader or numpy inputs
 
 _CONTEXT = {}
-def get_context(model_or_path=None):
+def get_context(handle='default'):
     # TODO: we need more sanity in the model handling here
-    if model_or_path is None:
-        model_or_path = 'default'
+    if handle not in _CONTEXT:
+        _CONTEXT[handle] = Context(handle)
 
-    if model_or_path not in _CONTEXT:
-        _CONTEXT[model_or_path] = Context(model_or_path)
+    return _CONTEXT[handle] 
 
-    return _CONTEXT[model_or_path] 
+def get_new_context():
+    while True:
+        new_handle = str(np.random.random())[2:]
+        if new_handle not in _CONTEXT:
+            return get_context(new_handle)
 
 class AbstractContext(object, metaclass=ABCMeta):
     """This is the abstract CNTK context. It provides an API to run CNTK actions
@@ -49,7 +52,13 @@ class AbstractContext(object, metaclass=ABCMeta):
         are the GPUs indices.
         
         """
-        self.directory = os.path.abspath('_cntk_%s'%id(name))
+        if isinstance(name, str):
+            tmpdir = name
+        else:
+            tmpdir = id(name)
+
+        self.directory = os.path.abspath('_cntk_%s'%tmpdir)
+
         if os.path.exists(self.directory):
             print("Directory '%s' already exists - overwriting data."%self.directory) 
         else:
@@ -106,29 +115,29 @@ class AbstractContext(object, metaclass=ABCMeta):
         """                
         raise NotImplementedError 
     
-    def _generate_eval_config(self, root_node, input_map):
-        """Generates the configuration file for write action.
-        :param root_node: the node to evaluate. 
-        :param input_map: map from feature node to reader, dimensions
-        """                
+    def _check_input_is_assigned(self, input_map):
         not_assigned = []
 
-        for node in self.graph.feature_nodes:
+        for node in self.graph.input_nodes:
             if node not in input_map:
-                not_assigned.append(node)
+                not_assigned.append('%s/%s'%(node.var_name,node.name))
 
         if not_assigned:
             raise ValueError('Cannot create the configuration, because the ' +
             'following input nodes are missing corresponding input readers: ' +
             ", ".join(not_assigned))
 
-        # TODO to corresponding tests for label_nodes (e.g. do we have a label
-        # mapping per label node, etc.)
+    def _generate_eval_config(self, root_node, input_map):
+        """Generates the configuration file for write action.
+        :param root_node: the node to evaluate. 
+        :param input_map: map from input node to reader, dimensions
+        """                
+        self._check_input_is_assigned(input_map)
 
         # TODO factor out reader config output so that train/test can use it
         model_description = root_node.to_graph_description()
 
-        if not self.graph.feature_nodes:
+        if not self.graph.input_nodes:
             #import ipdb;ipdb.set_trace()
             # add dummy input to keep CNTK happy 
             # TODO relieve this requirement
@@ -141,7 +150,7 @@ class AbstractContext(object, metaclass=ABCMeta):
             dummy_input_node = Input(2, ctx=self)
             dummy_input_node.var_name='dummy_node'
             input_map = {dummy_input_node:(reader, (0,2))}
-            model_description += "\ndummy_node=Input(2, 1, tag='feature')"
+            model_description += "\ndummy_node=Input(2, tag='output')"
 
         tmpl = open(CNTK_EVAL_TEMPLATE_PATH, "r").read()
         readers = set() 
@@ -250,12 +259,17 @@ class Context(AbstractContext):
         :param input_map: mapping of input node to (reader, (start_dim, num_dim))
         :param node: the node to evaluate.
         """            
+        # FIXME manually setting the tag to output might have side-effects
+        node.tag = 'output'
         config_content = self._generate_eval_config(node, input_map) 
         self._call_cntk(CNTK_EVAL_CONFIG_FILENAME, config_content) 
 
         import glob
         out_file_wildcard = os.path.join(self.directory, CNTK_OUTPUT_FILENAME+'.*')
         out_filenames = glob.glob(out_file_wildcard)
+        
+        out_filenames = [f for f in out_filenames if not f.endswith('out.txt.dummy_node')]
+
         if len(out_filenames) != 1:
             raise ValueError('expected exactly one file starting with "%s", but got %s'%(CNTK_OUTPUT_FILENAME, out_filenames))
 

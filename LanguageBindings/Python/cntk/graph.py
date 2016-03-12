@@ -8,41 +8,59 @@ class ComputationNode(object):
         # context is used to get the graph, readers, etc.
         self.context = ctx or get_context()
 
-        if self._is_feature():
-            self.context.graph.add_feature(self)
+        if self._is_input():
+            self.context.graph.add_input(self)
 
-        if self._is_label():
-            self.context.graph.add_label(self)
-
-    def _is_feature(self):
-        return hasattr(self, 'tag') and self.tag == 'feature'
-
-    def _is_label(self):
-        return hasattr(self, 'tag') and self.tag == 'label'
+    def _is_input(self):
+        return isinstance(self, Input)
 
     def __add__(self, other):
+        if not isinstance(other, ComputationNode):
+            # TODO: in case of non-scalars we have to pull in a reader
+            other = Constant(other)
         return Plus(self, other)
 
     def __radd__(self, other):
+        if not isinstance(other, ComputationNode):
+            # TODO: in case of non-scalars we have to pull in a reader
+            other = Constant(other)
         return Plus(other, self)
 
     def __sub__(self, other):
+        if not isinstance(other, ComputationNode):
+            # TODO: in case of non-scalars we have to pull in a reader
+            other = Constant(other)
         return Minus(self, other)
 
     def __rsub__(self, other):
+        if not isinstance(other, ComputationNode):
+            # TODO: in case of non-scalars we have to pull in a reader
+            other = Constant(other)
         return Minus(other, self)
 
     def __mul__(self, other):
+        if not isinstance(other, ComputationNode):
+            # TODO: in case of non-scalars we have to pull in a reader
+            other = Constant(other)
         return ElementTimes(self, other)
 
     def __rmul__(self, other):
+        if not isinstance(other, ComputationNode):
+            # TODO: in case of non-scalars we have to pull in a reader
+            other = Constant(other)
         return ElementTimes(other, self)
 
     def __matmul__(self, other):
+        if not isinstance(other, ComputationNode):
+            # TODO: in case of non-scalars we have to pull in a reader
+            other = Constant(other)
         # NOTE supported in Python 3.5
         return Times(self, other)
 
     def __rmatmul__(self, other):
+        if not isinstance(other, ComputationNode):
+            # TODO: in case of non-scalars we have to pull in a reader
+            other = Constant(other)
         # NOTE supported in Python 3.5
         return Times(other, self)
 
@@ -70,7 +88,7 @@ class ComputationNode(object):
         return ", ".join(param_variable_names)
 
     def eval(self, input_map, **kw):
-        graph.eval(self, input_map, kw)
+        self.context.eval(self, input_map, kw)
 
     def __str__(self):
         return "%s / params=%s"%(self.name, self.params)
@@ -90,7 +108,13 @@ class ComputationNode(object):
         else:
             p_value = str(p_value)
 
-        return p_value
+        
+        if p_name in self.params_with_defaults:
+            param = '%s=%s'%(p_name, p_value)
+        else:
+            param = p_value
+
+        return param
 
     def _to_description_unroll(self, desc, unrolled_nodes, node_counter=0):
         param_variable_names = []
@@ -108,6 +132,9 @@ class ComputationNode(object):
                     param_variable_names.append(child_var)
                 else:
                     param_variable_names.append(self._param_to_brainscript(p_name, p_value))
+
+        if hasattr(self, 'tag') and 'tag' not in self.params:
+            param_variable_names.append("tag='output'")
 
         self.var_name = self.var_name or "v%i"%node_counter 
         node_counter += 1
@@ -130,40 +157,19 @@ class ComputationNode(object):
 
         return "\n".join(desc)
 
-    def to_graph_description(self, dummy_required=False):
+    def to_graph_description(self):
         var_name, node_counter, desc = self._to_description()
 
-        # FIXME we currently assume that the last node is also the root node -
-        feature_nodes = self.context.graph.feature_nodes.copy()
-
-        if dummy_required:
-            var_name += ',dummy_node'
-            feature_nodes.add('dummy_node')
-
-        desc.append("OutputNodes=(%s)"%var_name)
-        if feature_nodes:
-            desc.append("FeatureNodes=(%s)"%','.join(node.var_name for node in feature_nodes))
-
         return "\n".join(desc)
-
-class Label(ComputationNode):
-    def __init__(self, dims, ctx=None):
-        super(Label, self).__init__('Input', params=('dims', 'tag'), ctx=ctx)
-        self.dims = dims
-        self.tag = 'label'
 
 class Graph(object):
     def __init__(self, root_node = None):
         super(Graph, self).__init__()
-        self.feature_nodes = set()
-        self.label_nodes = set()
+        self.input_nodes = set()
         self.root_node = root_node
 
-    def add_feature(self, node):
-        self.feature_nodes.add(node)
-
-    def add_label(self, node):
-        self.label_nodes.add(node)
+    def add_input(self, node):
+        self.input_nodes.add(node)
 
     def to_description(self, node, **kw):
         return node.to_description()
