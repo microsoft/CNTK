@@ -40,14 +40,19 @@ def get_new_context():
 class AbstractContext(object, metaclass=ABCMeta):
     """This is the abstract CNTK context. It provides an API to run CNTK actions
     """
-    def __init__(self, name, graph = None, optimizer = None, device_id = -1,
-            clean_up=True):
+    def __init__(self, name, 
+                 graph = None, 
+                 optimizer = None, 
+                 device_id = -1, 
+                 root_node = None,
+                 clean_up=True):
         """AbstractContext Constructer
         
         :param name: context name
         :param graph: the computational graph to be used for training, testing and prediction
         :param optimizer: the SGD optimizer to use for training
         :param device_id: whether to use CPU or a specific GPU. -1 for CPU larger values
+        :param root_node: the top node of the graph
         :param clean_up: whether the temporary directory should be removed when the context is left
         are the GPUs indices.
         
@@ -66,10 +71,11 @@ class AbstractContext(object, metaclass=ABCMeta):
         
         self.name = name
         self.macros = []  
-        self.graph = graph or Graph()
         self.optimizer = optimizer
         self.device_id = device_id
         self.clean_up = clean_up
+        self.input_nodes = set()
+        self.root_node = root_node
         
     def __enter__(self):
         _CONTEXT[self.name] = self
@@ -82,6 +88,15 @@ class AbstractContext(object, metaclass=ABCMeta):
         if self.clean_up:
             import shutil
             shutil.rmtree(self.directory)
+    
+    def add_input(self, node):
+        self.input_nodes.add(node)
+
+    def to_description(self, node, **kw):
+        return node.to_description()
+        
+    def root_to_description(self, **kw):
+        return self.root_node.to_description()    
     
     def add_macro(self, path):        
         """Add a macro file to be referenced from all configurations of this context.
@@ -97,7 +112,7 @@ class AbstractContext(object, metaclass=ABCMeta):
         model_filename = os.path.join(self.directory, 'Models', self.name)
         tmpl_dict = {
                 'DevideId':self.device_id,
-                'ModelDescription':self.graph.root_to_description(),
+                'ModelDescription':self.root_to_description(),
                 'ModelPath': model_filename,
                 'Reader':reader_config,
                 'SGD':self.optimizer.generate_config(),
@@ -114,11 +129,11 @@ class AbstractContext(object, metaclass=ABCMeta):
         It uses the context's trained model.
         """                
         raise NotImplementedError 
-    
+            
     def _check_input_is_assigned(self, input_map):
         not_assigned = []
 
-        for node in self.graph.input_nodes:
+        for node in self.input_nodes:
             if node not in input_map:
                 not_assigned.append('%s/%s'%(node.var_name,node.name))
 
@@ -127,6 +142,7 @@ class AbstractContext(object, metaclass=ABCMeta):
             'following input nodes are missing corresponding input readers: ' +
             ", ".join(not_assigned))
 
+    #TODO: re-implement with a propoer design in mind.
     def _generate_eval_config(self, root_node, input_map):
         """Generates the configuration file for write action.
         :param root_node: the node to evaluate. 
@@ -135,9 +151,9 @@ class AbstractContext(object, metaclass=ABCMeta):
         self._check_input_is_assigned(input_map)
 
         # TODO factor out reader config output so that train/test can use it
-        model_description = root_node.to_graph_description()
+        model_description = root_node.to_description()
 
-        if not self.graph.input_nodes:
+        if not self.input_nodes:
             #import ipdb;ipdb.set_trace()
             # add dummy input to keep CNTK happy 
             # TODO relieve this requirement
@@ -155,6 +171,9 @@ class AbstractContext(object, metaclass=ABCMeta):
         tmpl = open(CNTK_EVAL_TEMPLATE_PATH, "r").read()
         readers = set() 
         node_dimensions = []
+        
+        #TODO: all we need to configure a reader block for an input is dims and name
+        # we do not need yet a reader on to. it is getting complex between many readers, input_nodes and input_map        
         for node, (reader, dims) in input_map.items():
             if not node.var_name:
                 raise ValueError("Node '%s' does not have a variable name assigned yet."%str(node))
@@ -281,5 +300,3 @@ class ClusterContext(AbstractContext):
     """This is a sub-class of AbstractContext, use it to submit your workloads to the cluster.
     """    
     pass
-
-from .graph import Graph

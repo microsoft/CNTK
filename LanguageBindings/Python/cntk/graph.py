@@ -1,5 +1,6 @@
 from .context import get_context
 
+#TODO: add tags to all Nodes' contstructors
 class ComputationNode(object):
     def __init__(self, name, params=None, ctx=None):
         self.name = name
@@ -9,7 +10,7 @@ class ComputationNode(object):
         self.context = ctx or get_context()
 
         if self._is_input():
-            self.context.graph.add_input(self)
+            self.context.add_input(self)
 
     def _is_input(self):
         return isinstance(self, Input)
@@ -156,34 +157,6 @@ class ComputationNode(object):
         var_name, node_counter, desc = self._to_description()
 
         return "\n".join(desc)
-
-    def to_graph_description(self):
-        var_name, node_counter, desc = self._to_description()
-
-        return "\n".join(desc)
-
-class Graph(object):
-    def __init__(self, root_node = None):
-        super(Graph, self).__init__()
-        self.input_nodes = set()
-        self.root_node = root_node
-
-    def add_input(self, node):
-        self.input_nodes.add(node)
-
-    def to_description(self, node, **kw):
-        return node.to_description()
-        
-    def root_to_description(self, **kw):
-        return self.root_node.to_description()
-        
-    def to_graph_description(self, node, **kw):
-        return node.to_graph_description()
-        
-    def root_to_graph_description(self, **kw):
-        return self.root_node.to_graph_description()
-
-
-
+   
 # importing at the end of the file to work around circular imports
 from cntk.ops import *
