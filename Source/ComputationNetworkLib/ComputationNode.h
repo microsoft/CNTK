@@ -276,6 +276,7 @@ public:
     ComputationNodeBase(DEVICEID_TYPE deviceId, const wstring& name)
         : m_deviceId(deviceId), m_outputNeededDuringBackprop(true), m_learningRateMultiplier(0), m_gradientInitialized(false), m_nodeName(name == L"" ? CreateUniqNodeName() : name)
     {
+        // TODO: should m_learningRateMultiplier be set to 0? Or should every node have a way to add its own say on the learning rate for all its inputs?
     }
     virtual ~ComputationNodeBase()
     {

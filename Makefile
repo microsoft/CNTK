@@ -529,6 +529,7 @@ CNTK_SRC =\
 	$(SOURCEDIR)/CNTK/SynchronousExecutionEngine.cpp \
 	$(SOURCEDIR)/CNTK/tests.cpp \
 	$(SOURCEDIR)/ComputationNetworkLib/ComputationNode.cpp \
+	$(SOURCEDIR)/ComputationNetworkLib/ReshapingNodes.cpp \
 	$(SOURCEDIR)/ComputationNetworkLib/ComputationNetwork.cpp \
 	$(SOURCEDIR)/ComputationNetworkLib/ComputationNetworkEvaluation.cpp \
 	$(SOURCEDIR)/ComputationNetworkLib/ComputationNetworkAnalysis.cpp \

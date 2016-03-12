@@ -852,16 +852,10 @@ void CPUMatrix<ElemType>::SetValue(const size_t numRows, const size_t numCols, E
     {
         Resize(numRows, numCols);
 
-        if (IsEmpty())
+        if (!IsEmpty())
         {
-            InvalidArgument("NumRows or NumCols is 0. Nothing to copy");
-        }
-        else
-        {
-            if (!(matrixFlags & matrixFormatRowMajor)) // compatible to internal structure
-            {
+            if (!(matrixFlags & matrixFormatRowMajor)) // compatible with internal structure
                 memcpy(m_pArray, pArray, GetNumElements() * sizeof(ElemType));
-            }
             else // need to transpose
             {
                 auto& us = *this;
@@ -900,9 +894,6 @@ void CPUMatrix<ElemType>::SetValue(const size_t numRows, const size_t numCols, E
 template <class ElemType>
 void CPUMatrix<ElemType>::SetDiagonalValue(const ElemType v)
 {
-    if (IsEmpty())
-        LogicError("SetDiagonalValue: Matrix is empty.");
-
     if (GetNumRows() != GetNumCols())
         LogicError("SetDiagonalValue: NumRows and NumCols do not agree.");
 

@@ -124,27 +124,12 @@ private:
     void ShallowCopyFrom(const Matrix<ElemType>& other);
 
 public:
-    MatrixType GetMatrixType() const
-    {
-        return m_matrixType;
-    }
-    MatrixFormat GetFormat() const
-    {
-        return m_baseMatrix->GetFormat();
-    }
-    bool OwnBuffer() const
-    {
-        return m_baseMatrix->OwnBuffer();
-    }
+    MatrixType GetMatrixType() const { return m_matrixType; }
+    MatrixFormat GetFormat() const { return m_baseMatrix->GetFormat(); }
+    bool OwnBuffer() const { return m_baseMatrix->OwnBuffer(); }
     int GetDeviceId() const; // -1 if CPU, otherwise GPU CUDA device id
-    DEVICEID_TYPE GetPreferredDeviceId() const
-    {
-        return m_preferredDeviceId;
-    }; // -1 if CPU, otherwise GPU CUDA device id
-    void SetPreferredDeviceId(DEVICEID_TYPE preferredDeviceId)
-    {
-        m_preferredDeviceId = preferredDeviceId;
-    }
+    DEVICEID_TYPE GetPreferredDeviceId() const { return m_preferredDeviceId; }; // -1 if CPU, otherwise GPU CUDA device id
+    void SetPreferredDeviceId(DEVICEID_TYPE preferredDeviceId) { m_preferredDeviceId = preferredDeviceId; }
     // Moves matrix from device id_from to device with id_to.
     // If emptyTransfer=true, then no data is ever moved, just corresponding GPU/CPU matrices are deleted and then created using empty constructor
     void TransferFromDeviceToDevice(int id_from, int id_to, bool ismoved = false, /*if false then keep source and set location to BOTH*/ bool emptyTransfer = false, bool updatePreferredDevice = true) const;
@@ -235,12 +220,12 @@ public:
     void SetValue(const Matrix<ElemType>& deepCopyFrom, const MatrixFormat format = matrixFormatSparseCSR); // BUGBUG: default for 'format' is unexpected
     void SetValue(const size_t numRows, const size_t numCols, int deviceId, ElemType* pArray, const size_t matrixFlags = matrixFlagNormal);
     void SetValue(const size_t rIdx, const size_t cIdx, ElemType val); // set matrix sparsely
-    void SetValue(const size_t numRows, const size_t numCols, std::initializer_list<ElemType> l)
+    void SetValue(const size_t numRows, const size_t numCols, std::initializer_list<ElemType> l) // SetValue(2,3, {1,2,3,  4,5,6});
     {
         std::vector<ElemType> vals(l);
         assert(vals.size() == numRows * numCols);
         SetValue(numRows, numCols, GetDeviceId(), vals.data(), matrixFormatRowMajor);
-    } // SetValue(2,3, {1,2,3,  4,5,6});
+    }
     static ElemType MakeNan(size_t payload);
     void Invalidate()
     {
@@ -271,35 +256,35 @@ public:
     Matrix<ElemType>& AssignTransposeOf(const Matrix<ElemType>& a);
 
     Matrix<ElemType>& operator+=(const ElemType alpha);
-    Matrix<ElemType> operator+(const ElemType alpha) const;
+    Matrix<ElemType>  operator+(const ElemType alpha) const;
     Matrix<ElemType>& AssignSumOf(const ElemType alpha, const Matrix<ElemType>& a);
 
     Matrix<ElemType>& operator+=(const Matrix<ElemType>& a);
-    Matrix<ElemType> operator+(const Matrix<ElemType>& a) const;
+    Matrix<ElemType>  operator+(const Matrix<ElemType>& a) const;
     Matrix<ElemType>& AssignSumOf(const Matrix<ElemType>& a, const Matrix<ElemType>& b);
 
     Matrix<ElemType>& operator-=(const ElemType alpha);
-    Matrix<ElemType> operator-(const ElemType alpha) const;
+    Matrix<ElemType>  operator-(const ElemType alpha) const;
     Matrix<ElemType>& AssignDifferenceOf(const ElemType alpha, const Matrix<ElemType>& a);
     Matrix<ElemType>& AssignDifferenceOf(const Matrix<ElemType>& a, const ElemType alpha);
 
     Matrix<ElemType>& operator-=(const Matrix<ElemType>& a);
-    Matrix<ElemType> operator-(const Matrix<ElemType>& a) const;
+    Matrix<ElemType>  operator-(const Matrix<ElemType>& a) const;
     Matrix<ElemType>& AssignDifferenceOf(const Matrix<ElemType>& a, const Matrix<ElemType>& b);
 
     Matrix<ElemType>& operator*=(const ElemType alpha);
-    Matrix<ElemType> operator*(const ElemType alpha) const;
+    Matrix<ElemType>  operator*(const ElemType alpha) const;
     Matrix<ElemType>& AssignProductOf(const ElemType alpha, const Matrix<ElemType>& a);
 
-    Matrix<ElemType> operator*(const Matrix<ElemType>& a) const;
+    Matrix<ElemType>  operator*(const Matrix<ElemType>& a) const;
     Matrix<ElemType>& AssignProductOf(const Matrix<ElemType>& a, const bool transposeA, const Matrix<ElemType>& b, const bool transposeB); // this = a * b
     Matrix<ElemType>& Assign1x1ProductOf(const Matrix<ElemType>& a1x1, const Matrix<ElemType>& b);                                         // this = a * b, where a is 1x1
 
     Matrix<ElemType>& operator/=(ElemType alpha);
-    Matrix<ElemType> operator/(ElemType alpha) const;
+    Matrix<ElemType>  operator/(ElemType alpha) const;
 
     Matrix<ElemType>& operator^=(ElemType alpha);     // element-wise power
-    Matrix<ElemType> operator^(ElemType alpha) const; // element-wise power
+    Matrix<ElemType>  operator^(ElemType alpha) const; // element-wise power
     Matrix<ElemType>& AssignElementPowerOf(const Matrix<ElemType>& a, const ElemType power);
 
     // TODO: There are several functions below that perform an in-place operation

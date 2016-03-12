@@ -364,6 +364,22 @@ public:
         return false;
     }
 
+    // -------------------------------------------------------------------
+    // indexing
+    // -------------------------------------------------------------------
+
+    // get the matrix-column index for a given time step in a given sequence
+    size_t GetColumnIndex(const SequenceInfo& seq, size_t t) const
+    {
+        if (t > seq.GetNumTimeSteps())
+            LogicError("GetColumnIndex: t out of sequence bounds.");
+        ptrdiff_t tIn = (ptrdiff_t)t + seq.tBegin;
+        if (tIn < 0 || (size_t)tIn >= GetNumTimeSteps())
+            LogicError("GetColumnIndex: Attempted to access a time step that is accessing a portion of a sequence that is not included in current minibatch."); // we may encounter this for truncated BPTT
+        size_t col = (size_t)tIn * GetNumParallelSequences() + seq.s;
+        return (size_t)col;
+    }
+
 private:
     // we are trying to access content--this verifies that the structure is consistent
     // All frames must now be declared.

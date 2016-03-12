@@ -561,20 +561,8 @@ public:
         Input(0)->GradientFor(fr).AddToRowRepeatValuesOf(GradientFor(fr), m_numRepeat);
     }
 
-    virtual bool OutputUsedInComputingInputNodesGradients() const override
-    {
-        // The RowRepeatNode does not require its output value for computing
-        // the gradients of its input nodes
-        return false;
-    }
-
-    virtual bool InputUsedInComputingInputNodesGradients(size_t childIndex) const override
-    {
-        // The RowRepeatNode does not require any of it's input's values for computing
-        // the gradients of its input nodes
-        UNREFERENCED_PARAMETER(childIndex);
-        return false;
-    }
+    virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }
+    virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override { return false; }
 
 private:
     size_t m_numRepeat;
@@ -584,18 +572,48 @@ template class RowRepeatNode<float>;
 template class RowRepeatNode<double>;
 
 // -----------------------------------------------------------------------
+// WhereNode -- extract indices of non-0 values in a sequence
+// As this implies a runtime-vale dependent reduction in dimension, it can
+// only be applied to time sequences, and not other tensor dimensions.
+// The result will have a different MBLayout reflecting the shortened result sequences.
+// -----------------------------------------------------------------------
+
+template <class ElemType>
+class WhereNode : public ComputationNodeNonLooping<ElemType>, public NumInputs<1>
+{
+    typedef ComputationNodeNonLooping<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+    static const std::wstring TypeName() { return L"Where"; }
+
+public:
+    DeclareConstructorFromConfigWithNumInputs(WhereNode);
+    WhereNode(DEVICEID_TYPE deviceId, const wstring& name) :
+        Base(deviceId, name)
+    {
+        m_learningRateMultiplier = 0.0f;    // we cannot backprop; this will disable it
+        // TODO: This ^^ is a bit of a hack. Do we need a better mechanism for nodes to tell that they cannot backprop? We will have more of those.
+        //       This might even not work, need to track down how this is inferred/propagated upwards. It is really only for LearnableParameters.
+    }
+
+    virtual void /*ComputationNodeNonLooping::*/ ForwardPropNonLooping() override;
+    virtual void /*ComputationNodeNonLooping::*/ BackpropToNonLooping(size_t /*inputIndex*/) override;
+    virtual void Validate(bool isFinalValidationPass) override;
+
+private:
+    // buffers for creating the result sequences (kept as object state to avoid memory allocations)
+    std::vector<std::vector<size_t>>   m_indexSequenceBuffer; // [sequenceIndex][t] for creating the result sequences
+    std::vector<size_t>               m_rowAllocationsBuffer; // [row] for determining new MBLayout packing
+    std::vector<std::pair<size_t, size_t>> m_placementBuffer; // [sequenceIndex] assigned location for a sequence
+};
+
+// -----------------------------------------------------------------------
 // DiagonalNode -- extract diagonal elements of a square matrix into a row vector
 // -----------------------------------------------------------------------
 
 template <class ElemType>
 class DiagonalNode : public ComputationNodeNonLooping<ElemType>, public NumInputs<1>
 {
-    typedef ComputationNodeNonLooping<ElemType> Base;
-    UsingComputationNodeMembersBoilerplate;
-    static const std::wstring TypeName()
-    {
-        return L"Diagonal";
-    }
+    typedef ComputationNodeNonLooping<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+    static const std::wstring TypeName() { return L"Diagonal"; }
 
 public:
     DeclareConstructorFromConfigWithNumInputs(DiagonalNode);
@@ -642,7 +660,7 @@ public:
         m_pMBLayout = nullptr;
 
         if (isFinalValidationPass && Input(0)->HasMBLayout())
-            InvalidArgument("%ls %ls operation cannot operate on minibatch data (which have a layout)", NodeName().c_str(), OperationName().c_str());
+            InvalidArgument("%ls %ls operation cannot operate on minibatch data (which have a layout).", NodeName().c_str(), OperationName().c_str());
 
         size_t dim = Input(0)->GetAsMatrixNumCols();
         if (isFinalValidationPass && dim != Input(0)->GetAsMatrixNumRows())

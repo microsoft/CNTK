@@ -137,20 +137,8 @@ public:
         Input(0)->GradientFor(fr) -= GradientFor(fr);
     }
 
-    virtual bool OutputUsedInComputingInputNodesGradients() const override
-    {
-        // The NegateNode does not require its output value for computing
-        // the gradients of its input nodes
-        return false;
-    }
-
-    virtual bool InputUsedInComputingInputNodesGradients(size_t childIndex) const override
-    {
-        // The NegateNode does not require any of it's input's values for computing
-        // the gradients of its input nodes
-        UNREFERENCED_PARAMETER(childIndex);
-        return false;
-    }
+    virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }
+    virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override { return false; }
 
     virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
     {
@@ -460,10 +448,7 @@ public:
         inputGradient.AddElementwiseProductOf(gradient, otherInputValue);
     }
 
-    virtual bool InputUsedInComputingInputNodesGradients(size_t childIndex) const override
-    {
-        return true;
-    }
+    virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override { return true; }
 
     virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
     {
@@ -689,20 +674,8 @@ public:
         sliceInputGrad += sliceOutputGrad; // here the assumption is that sliceOutputGrad is a row vector
     }
 
-    virtual bool OutputUsedInComputingInputNodesGradients() const override
-    {
-        // The SumColumnElementsNode does not require its output value for computing
-        // the gradients of its input nodes
-        return false;
-    }
-
-    virtual bool InputUsedInComputingInputNodesGradients(size_t childIndex) const override
-    {
-        // The SumColumnElementsNode does not require any of it's input's values for computing
-        // the gradients of its input nodes
-        UNREFERENCED_PARAMETER(childIndex);
-        return false;
-    }
+    virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }
+    virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override { return false; }
 
     virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
     {

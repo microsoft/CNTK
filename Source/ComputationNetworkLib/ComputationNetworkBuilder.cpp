@@ -95,6 +95,7 @@ static shared_ptr<ComputationNode<ElemType>> CreateStandardNode(const std::wstri
     else if (nodeType == OperationNameOf(TimesNode))                            return New<TimesNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(TransposeDimensionsNode))              return New<TransposeDimensionsNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(TransposeTimesNode))                   return New<TransposeTimesNode<ElemType>>(forward<_Types>(_Args)...);
+    else if (nodeType == OperationNameOf(WhereNode))                            return New<WhereNode<ElemType>>(forward<_Types>(_Args)...);
     // legacy names we also support for back compat of model-files
     else if (nodeType == L"ColumnElementTimes")                                 return New<ElementTimesNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == L"Delay")                                              return New<PastValueNode<ElemType>>(forward<_Types>(_Args)...);

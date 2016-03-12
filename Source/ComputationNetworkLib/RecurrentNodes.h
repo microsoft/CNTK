@@ -232,20 +232,8 @@ public:
         }
     }
 
-    virtual bool OutputUsedInComputingInputNodesGradients() const override
-    {
-        // The DelayedValueNode does not require its output value for computing
-        // the gradients of its input nodes
-        return false;
-    }
-
-    virtual bool InputUsedInComputingInputNodesGradients(size_t childIndex) const override
-    {
-        // The DelayedValueNode does not require any of it's input's values for computing
-        // the gradients of its input nodes
-        UNREFERENCED_PARAMETER(childIndex);
-        return false;
-    }
+    virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }
+    virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override { return false; }
 
     virtual void EndForwardProp() override // called after last iteration step of ForwardProp()
     {

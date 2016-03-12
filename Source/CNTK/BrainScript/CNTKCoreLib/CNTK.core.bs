@@ -98,6 +98,7 @@ SumElements(matrix, tag='') = new ComputationNode [ operation = 'SumElements' ; 
 Tanh(z, tag='') = new ComputationNode [ operation = 'Tanh' ; inputs = z /*plus the function args*/ ]
 TimeReverse(vectorSequence, tag='') = new ComputationNode [ operation = 'TimeReverse' ; inputs = vectorSequence /*plus the function args*/ ]
 TransposeTimes(leftMatrix, rightMatrix, tag='') = new ComputationNode [ operation = 'TransposeTimes' ; inputs = (leftMatrix : rightMatrix) /*plus the function args*/ ]
+Where(cond, tag='') = new ComputationNode [ operation = 'Where' ; inputs = cond /*plus the function args*/ ]
 
 ##############################################################################
 # common macros

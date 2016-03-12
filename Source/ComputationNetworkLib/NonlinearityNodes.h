@@ -230,13 +230,7 @@ public:
     {
     }
 
-    virtual bool InputUsedInComputingInputNodesGradients(size_t childIndex) const override
-    {
-        // The plus node does not require any of it's input's values for computing
-        // the gradients of its input nodes
-        UNREFERENCED_PARAMETER(childIndex);
-        return false;
-    }
+    virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override { return false; }
 
     /*virtual*/ void BackpropToV(Matrix<ElemType>& gradient, const Matrix<ElemType>& inputFunctionValues, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues, const Matrix<ElemType>& functionValues)
     {
@@ -304,13 +298,7 @@ public:
     {
     }
 
-    virtual bool InputUsedInComputingInputNodesGradients(size_t childIndex) const override
-    {
-        // The plus node does not require any of it's input's values for computing
-        // the gradients of its input nodes
-        UNREFERENCED_PARAMETER(childIndex);
-        return false;
-    }
+    virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override { return false; }
 
     /*virtual*/ void BackpropToV(Matrix<ElemType>& gradient, const Matrix<ElemType>& inputFunctionValues, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues, const Matrix<ElemType>& functionValues)
     {
