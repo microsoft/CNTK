@@ -40,8 +40,7 @@ C = Constant
     ])
 def test_overload_eval(root_node, expected, tmpdir):
     with get_new_context() as ctx:
-        assert not ctx.graph.input_nodes 
-        #ctx.clean_up = False
+        assert not ctx.input_nodes 
         result = ctx.eval(root_node, {})
         assert np.all(result == expected)
 

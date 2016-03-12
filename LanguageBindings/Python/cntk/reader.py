@@ -19,6 +19,8 @@ class UCIFastReader(AbstractReader):
     """This is the reader class
     
     :param filename: data file path
+    :param features_dim: number of label columns
+    :param features_start: the index of the first label column    
     :param labels_dim: number of label columns
     :param labels_start: the index of the first label column
     :param num_of_classes: the number of classes
@@ -28,6 +30,8 @@ class UCIFastReader(AbstractReader):
     """
     
     def __init__(self, filename, \
+            features_dim = None, \
+            features_start= None, \
             labels_dim=None, \
             labels_start=None, \
             num_of_classes=None, \
@@ -39,6 +43,8 @@ class UCIFastReader(AbstractReader):
         self["FileName"] = filename
         self["LabelsDim"] = labels_dim
         self["LabelsStart"] = labels_start
+        self["FeaturesDim"] = features_dim
+        self["FeaturesStart"] = features_start
         self["NumOfClasses"] = num_of_classes          
         self["LabelMappingFile"] = label_mapping_file
         self["CustomDelimiter"] = custom_delimiter
@@ -57,6 +63,15 @@ class UCIFastReader(AbstractReader):
             template += '''
                customDelimiter=%(CustomDelimiter)s
                '''
+        #TODO: generalize the reader to take n features sequences and m label sequences
+        if self['FeaturesStart'] is not None:
+            template += '''
+
+        		features=[
+        			start = "%(FeaturesStart)s"
+        			dim = "%(FeaturesDim)s"		          
+        		]'''
+        
         
         if self['LabelsStart'] is not None:
             template += '''
