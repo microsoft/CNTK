@@ -30,7 +30,9 @@ C = Constant
     (C(2)*(C(3)+C(1.2)), 8.4),
 
     # __abs__
-    #(abs(C(-3)), 3),
+    # uncomennt, once Abs() as ComputationNode is moved from standard function
+    # to ComputationNode
+    #(abs(C(-3)), 3), 
     #(abs(C(3)), 3),
 
     # more complex stuff
@@ -39,7 +41,7 @@ C = Constant
 def test_overload_eval(root_node, expected, tmpdir):
     with get_new_context() as ctx:
         assert not ctx.graph.input_nodes 
-        ctx.clean_up = False
+        #ctx.clean_up = False
         result = ctx.eval(root_node, {})
         assert np.all(result == expected)
 
