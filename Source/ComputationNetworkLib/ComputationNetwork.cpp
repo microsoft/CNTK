@@ -64,7 +64,11 @@ void ComputationNetwork::ClearNetwork()
     //         Once we allow that (BrainScript editing), we need proper cycle detectors. Luckily, we know our cycles, so it won't be too hard.
     //         Or just use weak ptrs.
     for (auto& iter : m_nameToNodeMap)
-        iter.second->DetachInputs();
+    {
+        auto& node = iter.second;
+        node->SetEnvironment(nullptr);
+        node->DetachInputs();
+    }
 
     m_nameToNodeMap.clear();
 
@@ -1022,7 +1026,7 @@ void ComputationNetwork::PerformSVDecomposition(const map<wstring, float>& SVDCo
             redVT.ColumnElementMultiplyWith(redS);
 
             // Step 2. create two new Parameter nodes and one Times node
-            wstring leftChildName = name + L"-U";
+            wstring leftChildName = name + L"-U";  // BUGBUG: With BrainScript, node names must be proper identifieres/variable expressions. We can't have '-' in node names.
             wstring rightChildName = name + L"-V";
             shared_ptr<ComputationNode<ElemType>> pLeft = AddNodeToNetWithElemType(New<LearnableParameter<ElemType>>(m_deviceId, leftChildName, m, r));
             shared_ptr<ComputationNode<ElemType>> pRight = AddNodeToNetWithElemType(New<LearnableParameter<ElemType>>(m_deviceId, rightChildName, r, n));

@@ -11,6 +11,7 @@
 #include "Sequences.h"
 #include "TensorShape.h"
 #include "MatrixPool.h"
+#include "ComputationEnvironment.h"
 
 #include <unordered_set>
 #include <map>
@@ -610,6 +611,14 @@ public:
     // return true if the node's value should be computed before the normal training. e.g., mean and invStd of input features.
     virtual bool /*IComputationNode::*/ RequiresPreCompute() const { return false; }
 
+    const ComputationEnvironment& Environment()
+    {
+        if (!m_environment)
+            LogicError("Environment: No environment has been set.");
+        return *m_environment;
+    }
+    void SetEnvironment(ComputationEnvironmentPtr environment) { m_environment = environment; }
+
     // -----------------------------------------------------------------------
     // validation
     // -----------------------------------------------------------------------
@@ -815,6 +824,10 @@ protected:
     // For nodes that do not carry data, the last tensor index of m_sampleLayout is the number of columns.
     TensorShape m_sampleLayout; // sample layout
     MBLayoutPtr m_pMBLayout;
+
+    // environment information
+    // This structure is shared with the ComputationNetwork that this node lives in
+    ComputationEnvironmentPtr m_environment;
 
     // flags related to gradient propagation
     float m_learningRateMultiplier;    // update parameters? Only used for LearnableParameters.    --TODO: Should we make this a member of LearnableParameters actually? And require a type cast? Currently it is read out for all leaves.
@@ -1962,4 +1975,5 @@ public:
 #define UsingBinaryElementwiseNodeBaseMembers UsingComputationNodeMembersBoilerplate;
 
 #pragma endregion base computation class
-} } }
+
+}}}

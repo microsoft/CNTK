@@ -112,6 +112,7 @@ public:
     using BaseMatrix<ElemType>::GetArray;
     using BaseMatrix<ElemType>::GetNumRows;
     using BaseMatrix<ElemType>::GetNumCols;
+    using BaseMatrix<ElemType>::VerifySize;
 
 private:
     static cublasHandle_t s_cuHandle[MaxGpus];
