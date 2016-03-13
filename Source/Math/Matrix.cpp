@@ -1080,7 +1080,7 @@ Matrix<ElemType>& Matrix<ElemType>::DoGatherColumnsOf(ElemType beta, const Matri
     DISPATCH_MATRIX_ON_FLAG(&a,
         this,
         m_CPUMatrix->DoGatherColumnsOf(beta, *m.m_CPUMatrix, *a.m_CPUMatrix, alpha),
-        NOT_IMPLEMENTED, //m_GPUMatrix->DoGatherColumnsOf(beta, *m.m_GPUMatrix, *a.m_GPUMatrix, alpha),
+        m_GPUMatrix->DoGatherColumnsOf(beta, *m.m_GPUMatrix, *a.m_GPUMatrix, alpha),
         NOT_IMPLEMENTED,
         NOT_IMPLEMENTED);
 
@@ -1099,7 +1099,7 @@ Matrix<ElemType>& Matrix<ElemType>::DoScatterColumnsOf(ElemType beta, const Matr
     DISPATCH_MATRIX_ON_FLAG(&a,
         this,
         m_CPUMatrix->DoScatterColumnsOf(beta, *m.m_CPUMatrix, *a.m_CPUMatrix, alpha),
-        NOT_IMPLEMENTED, //m_GPUMatrix->DoScatterColumnsOf(beta, *m.m_GPUMatrix, *a.m_GPUMatrix, alpha),
+        m_GPUMatrix->DoScatterColumnsOf(beta, *m.m_GPUMatrix, *a.m_GPUMatrix, alpha),
         NOT_IMPLEMENTED,
         NOT_IMPLEMENTED);
 
@@ -1167,10 +1167,12 @@ template <class ElemType>
 void Matrix<ElemType>::MaskColumnsValue(const Matrix<char>& columnsMask, ElemType val)
 {
     if (GetNumCols() != columnsMask.GetNumCols())
-        RuntimeError("Matrix and column mask must have equal number of columns");
+        RuntimeError("MaskColumnsValue: Matrix and column mask must have equal number of columns.");
 
-    if (GetDeviceId() != columnsMask.GetDeviceId())
-        RuntimeError("Matrix and column mask must be on the same device");
+    if (GetCurrentMatrixLocation() == CPU && (columnsMask.GetCurrentMatrixLocation() == CPU || columnsMask.GetCurrentMatrixLocation() == BOTH))
+        ; // OK
+    else if (GetDeviceId() != columnsMask.GetDeviceId() && columnsMask.GetCurrentMatrixLocation() != BOTH)
+        RuntimeError("MaskColumnsValue: Matrix and column mask must be on the same device.");
 
     DISPATCH_MATRIX_ON_FLAG(this,
                             this,
@@ -3470,7 +3472,8 @@ int Matrix<ElemType>::GetDeviceId() const
 // The inputs are only distinguished in that a's GPU takes precedence over b's in case they differ.
 // TODO: This is called somewhat inconsistently, sometimes with a=*this, sometimes with b=*this.
 template <class ElemType>
-void Matrix<ElemType>::DecideAndMoveToRightDevice(const Matrix<ElemType>& a, const Matrix<ElemType>& b)
+template <class ElemType2>
+void Matrix<ElemType>::DecideAndMoveToRightDevice(const Matrix<ElemType>& a, const Matrix<ElemType2>& b)
 {
     int deviceIdA = a.GetDeviceId(), deviceIdB = b.GetDeviceId();
     if (deviceIdA == deviceIdB)
@@ -3541,21 +3544,21 @@ void Matrix<ElemType>::DecideAndMoveToRightDevice(const Matrix<ElemType>& a, con
 }
 
 template <class ElemType>
-void Matrix<ElemType>::_transferToDevice(int to_id, bool ismoved /*= true*/, bool emptyTransfer /* = false*/) const
+void Matrix<ElemType>::_transferToDevice(int to_id, bool isBeingMoved /*= true*/, bool emptyTransfer /* = false*/) const
 {
     int from_id = GetDeviceId();
     if (to_id == from_id) // nothing to do
         return;
 
     if (OwnBuffer())
-        _transferFromDeviceToDevice(from_id, to_id, ismoved, emptyTransfer);
+        _transferFromDeviceToDevice(from_id, to_id, isBeingMoved, emptyTransfer);
     else
         RuntimeError("Cannot move externally owned matrices to the preferred device.");
 }
 
 // this function performs data transfer and updates data location, but not the device that is stored with it
 template <class ElemType>
-void Matrix<ElemType>::_transferFromDeviceToDevice(int from_id, int to_id, bool ismoved /*= true*/, bool emptyTransfer /* = false*/) const
+void Matrix<ElemType>::_transferFromDeviceToDevice(int from_id, int to_id, bool isBeingMoved /*= true*/, bool emptyTransfer /* = false*/) const
 {
     if (from_id < 0)
         from_id = CPUDEVICE;
@@ -3606,7 +3609,7 @@ void Matrix<ElemType>::_transferFromDeviceToDevice(int from_id, int to_id, bool 
                 m_GPUSparseMatrix->SetValue(*m_CPUSparseMatrix);
             }
 
-            if (ismoved)
+            if (isBeingMoved)
             {
                 delete m_CPUSparseMatrix;
                 m_CPUSparseMatrix = NULL;
@@ -3632,7 +3635,7 @@ void Matrix<ElemType>::_transferFromDeviceToDevice(int from_id, int to_id, bool 
                     m_GPUSparseMatrix->CopyToCPUSparseMatrix(*m_CPUSparseMatrix);
                 }
 
-                if (ismoved)
+                if (isBeingMoved)
                 {
                     delete m_GPUSparseMatrix;
                     m_GPUSparseMatrix = NULL;
@@ -3666,7 +3669,7 @@ void Matrix<ElemType>::_transferFromDeviceToDevice(int from_id, int to_id, bool 
             {
                 m_GPUMatrix = new GPUMatrix<ElemType>(to_id);
             }
-            if (ismoved)
+            if (isBeingMoved)
             {
                 delete m_CPUMatrix;
                 m_CPUMatrix = NULL;
@@ -3698,7 +3701,7 @@ void Matrix<ElemType>::_transferFromDeviceToDevice(int from_id, int to_id, bool 
                     m_CPUMatrix = new CPUMatrix<ElemType>();
                 }
 
-                if (ismoved)
+                if (isBeingMoved)
                 {
                     delete m_GPUMatrix;
                     m_GPUMatrix = NULL;
@@ -3718,9 +3721,9 @@ void Matrix<ElemType>::_transferFromDeviceToDevice(int from_id, int to_id, bool 
 }
 
 template <class ElemType>
-void Matrix<ElemType>::TransferFromDeviceToDevice(int from_id, int to_id, bool ismoved, bool emptyTransfer/* = false*/, bool updatePreferredDevice/* = true*/) const
+void Matrix<ElemType>::TransferFromDeviceToDevice(int from_id, int to_id, bool isBeingMoved, bool emptyTransfer/* = false*/, bool updatePreferredDevice/* = true*/) const
 {
-    _transferFromDeviceToDevice(from_id, to_id, ismoved, emptyTransfer);
+    _transferFromDeviceToDevice(from_id, to_id, isBeingMoved, emptyTransfer);
     if (updatePreferredDevice)
         m_preferredDeviceId = GetDeviceId();
 }
@@ -5126,7 +5129,8 @@ template char* Matrix<char>::BufferPointer() const;
 template int Matrix<char>::GetDeviceId() const;
 template size_t Matrix<char>::GetNumElements() const;
 template Matrix<char> Matrix<char>::ColumnSlice(size_t startColumn, size_t numCols) const;
-template void Matrix<char>::_transferToDevice(int id_to, bool ismoved, bool emptyTransfer) const;
+template void Matrix<char>::_transferToDevice(int id_to, bool isBeingMoved, bool emptyTransfer) const;
+template void Matrix<char>::TransferToDeviceIfNotThere(int id_to, bool isBeingMoved, bool emptyTransfer, bool updatePreferredDevice) const;
 template size_t Matrix<char>::GetNumRows() const;
 template size_t Matrix<char>::GetNumCols() const;
 template void Matrix<char>::SetValue(const char);

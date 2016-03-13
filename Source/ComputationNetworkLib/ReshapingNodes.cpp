@@ -89,6 +89,7 @@ template <class ElemType>
             buf[outMBLayout->GetColumnIndex(seq, t)] = (ElemType)indexSequence[t];
     }
     // the result will be kept in CPUDEVICE, since most likely we will access it again in PackedIndexNode
+    Value().TransferToDeviceIfNotThere(CPUDEVICE, /*isBeingMoved=*/ true, /*emptyTransfer=*/ true, /*updatePreferredDevice=*/ true);
     Value().SetValue(1, outMBLayout->GetNumCols(), CPUDEVICE, buf.data(), MatrixFormat::matrixFormatColMajor);
 }
 

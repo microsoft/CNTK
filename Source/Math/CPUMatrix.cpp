@@ -709,7 +709,7 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::DoGatherColumnsOf(ElemType beta, const
         Resize(a.GetNumRows(), m.GetNumCols());
 
     auto& us = *this;
-//#pragma omp parallel for // TODO: Depending in circumstance, it may be more efficient to parallelize over rows.
+#pragma omp parallel for // TODO: Depending in circumstance, it may be more efficient to parallelize over rows.
     foreach_column(jOut, us)
     {
         auto jInF = m(0, jOut); // this is the column we need to get
@@ -750,7 +750,7 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::DoScatterColumnsOf(ElemType beta, cons
         size_t jOut = (size_t)jOutF;
         if (jOut >= GetNumCols())
             InvalidArgument("DoGatherColumnsOf: Map out of bounds.");
-        ScaleAndAddColumn(beta, &us(0, jOut), &a(0, jIn), us.GetNumRows(), alpha);
+        ScaleAndAddColumn(/*beta=*/(ElemType)1, &us(0, jOut), &a(0, jIn), us.GetNumRows(), alpha);
     }
 
     return *this;

@@ -74,10 +74,11 @@ private:
     mutable int m_devicesTransferedTo[2]; // TODO: what is this for? Seems only diagnostics
 
     // Moves matrix from device id_from to device with id_to. This method doesn't change preferred device Id
-    void _transferFromDeviceToDevice(int id_from, int id_to, bool ismoved = true, bool emptyTransfer = false) const;
+    void _transferFromDeviceToDevice(int id_from, int id_to, bool isBeingMoved = true, bool emptyTransfer = false) const;
     // Moves matrix from current device to device with id_to. This method doesn't change preferred device Id
-    void _transferToDevice(int id_to, bool ismoved = true, bool emptyTransfer = false) const;
-    static void DecideAndMoveToRightDevice(const Matrix<ElemType>& a, const Matrix<ElemType>& b);
+    void _transferToDevice(int id_to, bool isBeingMoved = true, bool emptyTransfer = false) const;
+    template <class ElemType2>
+    static void DecideAndMoveToRightDevice(const Matrix<ElemType>& a, const Matrix<ElemType2>& b);
     static void DecideAndMoveToRightDevice(const Matrix<ElemType>& a, const Matrix<ElemType>& b, const Matrix<ElemType>& c);
     static void DecideAndMoveToRightDevice(const Matrix<ElemType>& a, const Matrix<ElemType>& b, const Matrix<ElemType>& c, const Matrix<ElemType>& d);
     static void CopyElementsFromDenseToSparse(CPUMatrix<ElemType>& from, CPUSparseMatrix<ElemType>& dest);
@@ -132,9 +133,9 @@ public:
     void SetPreferredDeviceId(DEVICEID_TYPE preferredDeviceId) { m_preferredDeviceId = preferredDeviceId; }
     // Moves matrix from device id_from to device with id_to.
     // If emptyTransfer=true, then no data is ever moved, just corresponding GPU/CPU matrices are deleted and then created using empty constructor
-    void TransferFromDeviceToDevice(int id_from, int id_to, bool ismoved = false, /*if false then keep source and set location to BOTH*/ bool emptyTransfer = false, bool updatePreferredDevice = true) const;
+    void TransferFromDeviceToDevice(int id_from, int id_to, bool isBeingMoved = false, /*if false then keep source and set location to BOTH*/ bool emptyTransfer = false, bool updatePreferredDevice = true) const;
     // Same as TransferFromDeviceToDevice() but moves only if it is currently not on the target device
-    void TransferToDeviceIfNotThere(int id_to, bool ismoved = false, bool emptyTransfer = false, bool updatePreferredDevice = true) const;
+    void TransferToDeviceIfNotThere(int id_to, bool isBeingMoved = false, bool emptyTransfer = false, bool updatePreferredDevice = true) const;
     CurrentDataLocation GetCurrentMatrixLocation() const { return m_currentDataLocation; };
     void SwitchToMatrixType(MatrixType newMatrixType, MatrixFormat newMatrixFormat, bool keepValues); // sets matrix type between dense and sparse
     size_t GetNumRows() const;
