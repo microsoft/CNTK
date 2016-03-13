@@ -175,6 +175,60 @@ public:
         m_writable = true;
     }
 
+    // packing algorithm
+    //  - width: maximum width of structure; set to maximum over sequence lengths
+    //  - inputSequences: vector of input SequenceInfo records (only seqId and GetNumTimeSteps() are used)
+    //  - [out] *pMBLayout: MBLayout that describes the created packed sequence set
+    //  - placement, rowAllocations: temp buffers (passed in to be able to optimize memory allocations)
+    template<typename SequenceInfoVector>
+    void InitAsPackedSequences(const SequenceInfoVector& inputSequences,
+                               /*temp buffer*/std::vector<std::pair<size_t, size_t>>& placement,
+                               /*temp buffer*/std::vector<size_t> rowAllocations)
+    {
+        placement.resize(inputSequences.size()); // [sequence index] result goes here (entries are invalid for gaps)
+        // determine width of MBLayout
+        size_t width = 0;
+        for (size_t i = 0; i < inputSequences.size(); i++)
+            if (inputSequences[i].seqId == GAP_SEQUENCE_ID)
+                continue;
+            else if (width < inputSequences[i].GetNumTimeSteps())
+                width = inputSequences[i].GetNumTimeSteps();
+        // allocate
+        rowAllocations.clear();             // [row] we build rows one by one
+        for (size_t i = 0; i < inputSequences.size(); i++)
+        {
+            if (inputSequences[i].seqId == GAP_SEQUENCE_ID)
+                continue;
+            let len = inputSequences[i].GetNumTimeSteps();
+            // first see if we find a row that has enough space
+            // TODO: Should we use a proper priority_queue?
+            size_t s;
+            for (s = 0; s < rowAllocations.size(); s++)
+                if (rowAllocations[s] + len <= width)
+                    break; // yep, it fits
+            // we did not find a s that fit then create a new one
+            if (s == rowAllocations.size())
+                rowAllocations.push_back(0);
+            // sequence goes to (s, rowAllocations[s])
+            placement[i] = make_pair(s, rowAllocations[s]);
+            // and allocate it
+            rowAllocations[s] += len;
+        }
+        // create MBLayout
+        Init(rowAllocations.size(), width);
+        for (size_t i = 0; i < inputSequences.size(); i++)
+        {
+            if (inputSequences[i].seqId == GAP_SEQUENCE_ID)
+                continue;
+            size_t s, tBegin; tie
+            (s, tBegin) = placement[i];
+            AddSequence(inputSequences[i].seqId, s, (ptrdiff_t)tBegin, tBegin + inputSequences[i].GetNumTimeSteps());
+        }
+        // need to fill the gaps as well
+        for (size_t s = 0; s < rowAllocations.size(); s++)
+            AddGap(s, (size_t)rowAllocations[s], width);
+    }
+
     // -------------------------------------------------------------------
     // accessors
     // -------------------------------------------------------------------
@@ -1003,7 +1057,7 @@ static inline std::pair<DimensionVector, DimensionVector> TensorSliceWithMBLayou
 // 'Reduce' style operations--the criterion nodes and gradient computation--call this.
 // Warning: The layout used here must match the matrix. E.g. don't pass a child's matrix from a criterion node (use Input(x)->MaskMissing{Values,Gradient}ColumnsToZero() instead.
 template <class ElemType>
-static inline void MaskMissingColumnsTo(Matrix<ElemType> &matrixToMask, const MBLayoutPtr &pMBLayout, const FrameRange &fr, ElemType val)
+static inline void MaskMissingColumnsTo(Matrix<ElemType>& matrixToMask, const MBLayoutPtr& pMBLayout, const FrameRange& fr, ElemType val)
 {
     if (pMBLayout && pMBLayout->HasGaps(fr))
     {
@@ -1013,11 +1067,12 @@ static inline void MaskMissingColumnsTo(Matrix<ElemType> &matrixToMask, const MB
             auto matrixSliceToMask  = DataWithMBLayoutFor(matrixToMask, fr, pMBLayout);
             TensorView<ElemType>(matrixSliceToMask).DoMaskNegativeOf(0, TensorView<ElemType>(matrixSliceToMask), TensorView<ElemType>(maskSlice), 1); val;
 #else
-        const auto &maskMatrix = pMBLayout->GetColumnsValidityMask(matrixToMask.GetDeviceId());
+        const auto& maskMatrix = pMBLayout->GetColumnsValidityMask(matrixToMask.GetDeviceId());
         auto maskSlice = DataWithMBLayoutFor(maskMatrix, fr, pMBLayout);
         auto matrixSliceToMask = DataWithMBLayoutFor(matrixToMask, fr, pMBLayout);
         matrixSliceToMask.MaskColumnsValue(maskSlice, val);
 #endif
     }
 }
-} } }
+
+}}}

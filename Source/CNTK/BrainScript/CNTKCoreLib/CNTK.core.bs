@@ -61,6 +61,7 @@ AveragePooling(input, windowWidth, windowHeight, horizontalSubsample, verticalSu
 ColumnwiseCrossProduct = KhatriRaoProduct // deprecated 
 ClassificationError = ErrorPrediction 
 Delay = PastValue 
+
 BatchNormalization(input, scale, bias, runMean, runInvStdDev, eval, spatial, normalizationTimeConstant = 0, epsilon = 0.00001, useCntkEngine = true, imageLayout='CHW', tag='') = new ComputationNode [ operation = 'BatchNormalization' ; inputs = (input : scale : bias : runMean : runInvStdDev) /*plus the function args*/ ]
 ClassBasedCrossEntropyWithSoftmax(labelClassDescriptorVectorSequence, mainInputInfo, mainWeight, classLogProbsBeforeSoftmax, tag='') = new ComputationNode [ operation = 'ClassBasedCrossEntropyWithSoftmax' ; inputs = (labelClassDescriptorVectorSequence : mainInputInfo : mainWeight : classLogProbsBeforeSoftmax) /*plus the function args*/ ]
 ColumnElementTimes(aVectorSequence, anotherVectorSequence, tag='') = new ComputationNode [ operation = 'ColumnElementTimes' ; inputs = (aVectorSequence : anotherVectorSequence) /*plus the function args*/ ]
@@ -76,6 +77,7 @@ Dropout(activationVectorSequence, tag='') = new ComputationNode [ operation = 'D
 ElementTimes(aMatrix, anotherMatrix, tag='') = new ComputationNode [ operation = 'ElementTimes' ; inputs = (aMatrix : anotherMatrix) /*plus the function args*/ ]
 ErrorPrediction(labelVectorSequence, outVectorSequence, tag='') = new ComputationNode [ operation = 'ErrorPrediction' ; inputs = (labelVectorSequence : outVectorSequence) /*plus the function args*/ ]
 Exp(x, tag='') = new ComputationNode [ operation = 'Exp' ; inputs = x /*plus the function args*/ ]
+GatherPacked(indexSequence, sourceData, tag='') = new ComputationNode [ operation = 'GatherPacked' ; inputs = (indexSequence : sourceData) /*plus the function args*/ ]
 GMMLogLikelihood(unnormalizedPriorVector, meansAsRows, logStdDevAsRows, dataVectorSequence, tag='') = new ComputationNode [ operation = 'GMMLogLikelihood' ; inputs = (unnormalizedPriorVector : meansAsRows : logStdDevAsRows : dataVectorSequence) /*plus the function args*/ ]
 InvStdDev(dataVectorSequence, tag='') = new ComputationNode [ operation = 'InvStdDev' ; inputs = dataVectorSequence /*plus the function args*/ ]
 KhatriRaoProduct(leftMatrix, rightMatrix, tag='') = new ComputationNode [ operation = 'KhatriRaoProduct' ; inputs = (leftMatrix : rightMatrix) /*plus the function args*/ ]
@@ -93,6 +95,7 @@ Plus(leftMatrix, rightMatrix, tag='') = new ComputationNode [ operation = 'Plus'
 RectifiedLinear(z, tag='') = new ComputationNode [ operation = 'RectifiedLinear' ; inputs = z /*plus the function args*/ ]
 Scale(scalarScalingFactor, matrix, tag='') = new ComputationNode [ operation = 'Scale' ; inputs = (scalarScalingFactor : matrix) /*plus the function args*/ ]
 // TODO: Scale = ElementTimes
+ScatterPacked(cond, indexSequence, sourceData, tag='') = new ComputationNode [ operation = 'ScatterPacked' ; inputs = (cond : indexSequence : sourceData) /*plus the function args*/ ]
 Sigmoid(z, tag='') = new ComputationNode [ operation = 'Sigmoid' ; inputs = z /*plus the function args*/ ]
 Softmax(z, tag='') = new ComputationNode [ operation = 'Softmax' ; inputs = z /*plus the function args*/ ]
 Hardmax(z, tag='') = new ComputationNode [ operation = 'Hardmax' ; inputs = z /*plus the function args*/ ]
@@ -185,19 +188,21 @@ Sequences = [
     Map (lambda, x) = lambda (x)     // that one's easy
     # Reverse (x) is a C++ node currently called TimeReverse
 
-    Filter (pred, x) = x  // TODO: Implement this as a C++ node.
+    # Gather and Scatter
+    # We go through 3 nodes each to take advantage of x
+    Gather  (cond, x) =  GatherPacked (      PackedIndex (x, Where (cond)), x)
+    Scatter (cond, y) = ScatterPacked (cond, PackedIndex (y, Where (cond)), y)
 
     # sequence-altering LINQ-like operators
     # These generate new data packing (MBLayouts)
 
     # TakeWhile and DropWhile
     TakeWhile (predicate, x) = Filter ( _WhilePredicate (PastValue, predicate), x)
-    DropWhile (predicate, x) = Filter (!_WhilePredicate (PastValue, predicate), x)
-    # Skip, SkipWhile--same?
+    SkipWhile (predicate, x) = Filter (!_WhilePredicate (PastValue, predicate), x)
     _WhilePredicate (DelayFn, predicate, input) =
     [
-        whilePredicate = Boolean.And (DelayFn (whilePredicate, defaultHiddenActivation=Boolean.True), predicate)
-    ].whilePredicate
+        whilePredicateRec = Boolean.And (DelayFn (whilePredicateRec, defaultHiddenActivation=Boolean.True), predicate)
+    ].whilePredicateRec
     # TODO: do we need operations from the back?
 
     # First and Take
@@ -206,14 +211,18 @@ Sequences = [
     Take (N, x) = _Take (PastValue, N, x)
     _Take (DelayFn, N, x) = [
         selected = Loop._IsWithin (DelayFn, N, x)
-        out = Filter (selected, x)
+        out = Gather (selected, x)
     ].out
     Skip (N, x) = _Skip (PastValue, N, x)
     _Skip (DelayFn, N, x) = [ // TODO: merge with _Take
         selected = Loop._IsWithin (DelayFn, N, x)
-        out = Filter (!selected, x)
+        out = Gather (!selected, x)
     ].out
-    ElementAt (n, x) = First (Skip (n, x)) // not efficient, as it filters twice. Better AND the predicates. TODO: what if n is out of range? ElementAtOrDefault
+    ElementAt (n, x) = [ // not efficient, as it filters twice. Better AND the predicates. TODO: what if n is out of range? ElementAtOrDefault
+        startMask = Skip (n, x)                     // ...000111...
+        mask = startMask - PastValue (0, startMask) // ...000100...
+        out = Gather (mask, x)
+    ]
     Single (predicate, x) = x
 
     #FirstOrDefault (x) = ? // can empty sequences exist or even be represented by CNTK?

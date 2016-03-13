@@ -27,61 +27,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 // Where(bitVector) -- extract indices of non-0 values in a sequence
 // -----------------------------------------------------------------------
 
-// TODO: move to MBLayout as a static method
-// packing algorithm
-//  - width: maximum width of structure; set to maximum over sequence lengths
-//  - inputSequences: vector of input SequenceInfo records (only seqId and GetNumTimeSteps() are used)
-//  - [out] *pMBLayout: MBLayout that describes the created packed sequence set
-//  - placement, rowAllocations: temp buffers (passed in to be able to optimize memory allocations)
-template<typename SequenceInfoVector>
-static void PackSequences(const SequenceInfoVector& inputSequences,
-    /*ref->out*/MBLayoutPtr pMBLayout,
-    /*temp buffer*/std::vector<std::pair<size_t, size_t>>& placement,
-    /*temp buffer*/std::vector<size_t> rowAllocations)
-{
-    placement.resize(inputSequences.size()); // [sequence index] result goes here (entries are invalid for gaps)
-    // determine width of MBLayout
-    size_t width = 0;
-    for (size_t i = 0; i < inputSequences.size(); i++)
-        if (inputSequences[i].seqId == GAP_SEQUENCE_ID)
-            continue;
-        else if (width < inputSequences[i].GetNumTimeSteps())
-            width = inputSequences[i].GetNumTimeSteps();
-    // allocate
-    rowAllocations.clear();             // [row] we build rows one by one
-    for (size_t i = 0; i < inputSequences.size(); i++)
-    {
-        if (inputSequences[i].seqId == GAP_SEQUENCE_ID)
-            continue;
-        let len = inputSequences[i].GetNumTimeSteps();
-        // first see if we find a row that has enough space
-        size_t s;
-        for (s = 0; s < rowAllocations.size(); s++)
-            if (rowAllocations[s] + len <= width)
-                break; // yep, it fits
-        // we did not find a s that fit then create a new one
-        if (s == rowAllocations.size())
-            rowAllocations.push_back(0);
-        // sequence goes to (s, rowAllocations[s])
-        placement[i] = make_pair(s, rowAllocations[s]);
-        // and allocate it
-        rowAllocations[s] += len;
-    }
-    // create MBLayout
-    pMBLayout->Init(rowAllocations.size(), width);
-    for (size_t i = 0; i < inputSequences.size(); i++)
-    {
-        if (inputSequences[i].seqId == GAP_SEQUENCE_ID)
-            continue;
-        size_t s, tBegin; tie
-        (s, tBegin) = placement[i];
-        pMBLayout->AddSequence(inputSequences[i].seqId, s, (ptrdiff_t)tBegin, tBegin + inputSequences[i].GetNumTimeSteps());
-    }
-    // need to fill the gaps as well
-    for (size_t s = 0; s < rowAllocations.size(); s++)
-        pMBLayout->AddGap(s, (size_t)rowAllocations[s], width);
-}
-
 // wrapper class to pass MBLayout sequence vector to PackSequences()
 struct SequenceLengthVector
 {
@@ -131,7 +76,7 @@ template <class ElemType>
     }
     // create a new MBLayout
     let& outMBLayout = GetMBLayout();
-    PackSequences(SequenceLengthVector(sequences, indexSequences), outMBLayout, /*temp*/m_placementBuffer, /*temp*/m_rowAllocationsBuffer);
+    outMBLayout->InitAsPackedSequences(SequenceLengthVector(sequences, indexSequences), /*temp*/m_placementBuffer, /*temp*/m_rowAllocationsBuffer);
     // copy to output
     vector<ElemType> buf(outMBLayout->GetNumCols(), numeric_limits<ElemType>::quiet_NaN()); // STL cannot easily avoid initializing, so we might as well init with NaN for gaps
     for (size_t i = 0; i < sequences.size(); i++)
@@ -173,29 +118,33 @@ template <class ElemType>
 template class WhereNode<float>;
 template class WhereNode<double>;
 
+// -----------------------------------------------------------------------
+// PackedIndexNode(targetObject, indexSequence) -- map sequence
+// -----------------------------------------------------------------------
+
 template <class ElemType>
 /*virtual*/ void PackedIndexNode<ElemType>::ForwardPropNonLooping() /*override*/
 {
-    let& targetMBLayout = Input(TARGETDATA)->GetMBLayout(); // only used for index conversion
+    let& sourceMBLayout = Input(SOURCEDATA)->GetMBLayout(); // only used for index conversion
     let& indexMBLayout  = Input(INDEXDATA)->GetMBLayout();
     let&  index  = Input(INDEXDATA)->Value(); // per-seq index values that are to be mapped
-    auto& result =                   Value(); // packed index values as mapped to targetData's layout
-    // loop over targetSequences
+    auto& result =                   Value(); // packed index values as mapped to sourceData's layout
+    // loop over sourceSequences
     // Input matrix contains time indices for each sequence that refer to frames inside that sequence.
     // We replace every per-sequence index by the resolved column index w.r.t. the same MBLayout.
-    let& targetSequences = targetMBLayout->GetAllSequences();
-    for (size_t i = 0; i < targetSequences.size(); i++)
+    let& sourceSequences = sourceMBLayout->GetAllSequences();
+    for (size_t i = 0; i < sourceSequences.size(); i++)
     {
-        let& targetSeq = targetSequences[i];
-        if (targetSeq.seqId == GAP_SEQUENCE_ID)
+        let& sourceSeq = sourceSequences[i];
+        if (sourceSeq.seqId == GAP_SEQUENCE_ID)
             continue;
-        let& indexSeq = indexMBLayout->FindSequence(targetSeq.seqId);          // find corresponding entry in indexMBLayout
+        let& indexSeq = indexMBLayout->FindSequence(sourceSeq.seqId);          // find corresponding entry in indexMBLayout
         for (size_t tIndex = 0; tIndex < indexSeq.GetNumTimeSteps(); tIndex++) // map all index values in index sequence
         {
             let jIndex  = indexMBLayout->GetColumnIndex(indexSeq, tIndex);    // map time index to actual location in the matrix storage object
-            let tTarget = (size_t)index(0, jIndex);                           // the new time location (relative to target sequence)
-            let jTarget = targetMBLayout->GetColumnIndex(targetSeq, tTarget); // map new time index as well. This performs a range check.
-            result(0, jIndex) = (ElemType)jTarget;
+            let tSource = (size_t)index(0, jIndex);                           // the new time location (relative to source sequence)
+            let jSource = sourceMBLayout->GetColumnIndex(sourceSeq, tSource); // map new time index as well. This performs a range check.
+            result(0, jIndex) = (ElemType)jSource;
         }
     }
 }
@@ -216,7 +165,7 @@ template <class ElemType>
     // inherit both MBLayout and sample dimension (scalar) from indexData
     // Because we map (per-seq) index sequence to (packed) index sequence. Target is only for index calculation.
     m_pMBLayout = Input(INDEXDATA)->GetMBLayout();
-    if (isFinalValidationPass && (!Input(INDEXDATA)->HasMBLayout() || !Input(TARGETDATA)->HasMBLayout()))
+    if (isFinalValidationPass && (!Input(INDEXDATA)->HasMBLayout() || !Input(SOURCEDATA)->HasMBLayout()))
         LogicError("%ls %ls operation requires both inputs to be minibatch data (must have MBLayouts).", NodeName().c_str(), OperationName().c_str());
 
     if (isFinalValidationPass && Input(INDEXDATA)->GetSampleLayout().GetNumElements() != 1)
@@ -227,5 +176,101 @@ template <class ElemType>
 
 template class PackedIndexNode<float>;
 template class PackedIndexNode<double>;
+
+// -----------------------------------------------------------------------
+// GatherPackedNode(packedIndex, sourceData) -- gather operation
+// -----------------------------------------------------------------------
+
+template <class ElemType>
+/*virtual*/ void GatherPackedNode<ElemType>::ForwardPropNonLooping() /*override*/
+{
+    Input(INDEXDATA)->MaskMissingValueColumnsTo(FrameRange(Input(INDEXDATA)->GetMBLayout()), -1); // indicates an invalid column to Gather/Scatter
+    let&  index  = Input(INDEXDATA)->Value();  // column indices to copy from
+    let&  source = Input(SOURCEDATA)->Value(); // source data to copy
+    auto& output =                    Value(); // output goes here
+    output.DoGatherColumnsOf(/*beta=*/0, index, source, /*alpha=*/1);
+}
+
+template <class ElemType>
+/*virtual*/ void GatherPackedNode<ElemType>::BackpropToNonLooping(size_t inputIndex) /*override*/
+{
+    if (inputIndex == SOURCEDATA)
+    {
+        let&  index          = Input(INDEXDATA)->Value();     // column indices to copy from
+        auto& sourceGradient = Input(SOURCEDATA)->Gradient(); // source to propagate the gradient intpu
+        auto& outputGradient =                    Gradient(); // output gradient to propagate
+        sourceGradient.DoScatterColumnsOf(/*beta=*/1, index, outputGradient, /*alpha=*/1);
+    }
+}
+
+template <class ElemType>
+/*virtual*/ void GatherPackedNode<ElemType>::Validate(bool isFinalValidationPass) /*override*/
+{
+    ComputationNodeBase::Validate(isFinalValidationPass);
+
+    // inherit MBLayout from indexData
+    m_pMBLayout = Input(INDEXDATA)->GetMBLayout();
+    if (isFinalValidationPass && (!Input(INDEXDATA)->HasMBLayout() || !Input(SOURCEDATA)->HasMBLayout()))
+        LogicError("%ls %ls operation requires both inputs to be minibatch data (must have MBLayouts).", NodeName().c_str(), OperationName().c_str());
+
+    if (isFinalValidationPass && Input(INDEXDATA)->GetSampleLayout().GetNumElements() != 1)
+        InvalidArgument("%ls %ls operation requires the first argument (indexData) to be a scalar sequence.", NodeName().c_str(), OperationName().c_str());
+
+    // inherit tensor dimension from sourceData
+    SetDims(Input(SOURCEDATA));
+}
+
+template class GatherPackedNode<float>;
+template class GatherPackedNode<double>;
+
+// -----------------------------------------------------------------------
+// ScatterPackedNode(layoutData, packedIndex, sourceData) -- scatter operation
+// -----------------------------------------------------------------------
+
+template <class ElemType>
+/*virtual*/ void ScatterPackedNode<ElemType>::ForwardPropNonLooping() /*override*/
+{
+    if (*Input(INDEXDATA)->GetMBLayout() != *Input(SOURCEDATA)->GetMBLayout())
+        InvalidArgument("%ls %ls operation requires the minibatch layout of index and source data to be the same.", NodeName().c_str(), OperationName().c_str());
+    Input(INDEXDATA)->MaskMissingValueColumnsTo(FrameRange(Input(INDEXDATA)->GetMBLayout()), -1); // indicates an invalid column to Gather/Scatter
+    let&  index = Input(INDEXDATA)->Value();  // column indices to copy from
+    let&  source = Input(SOURCEDATA)->Value(); // source data to copy
+    auto& output =                    Value(); // output goes here
+    output.DoScatterColumnsOf(/*beta=*/0, index, source, /*alpha=*/1);
+}
+
+template <class ElemType>
+/*virtual*/ void ScatterPackedNode<ElemType>::BackpropToNonLooping(size_t inputIndex) /*override*/
+{
+    if (inputIndex == SOURCEDATA)
+    {
+        let&  index          = Input(INDEXDATA)->Value();     // column indices to copy from
+        auto& sourceGradient = Input(SOURCEDATA)->Gradient(); // source to propagate the gradient input
+        auto& outputGradient =                    Gradient(); // output gradient to propagate
+        sourceGradient.DoGatherColumnsOf(/*beta=*/1, index, outputGradient, /*alpha=*/1);
+    }
+}
+
+template <class ElemType>
+/*virtual*/ void ScatterPackedNode<ElemType>::Validate(bool isFinalValidationPass) /*override*/
+{
+    ComputationNodeBase::Validate(isFinalValidationPass);
+
+    // inherit MBLayout from layoutData (that's the only thing we use it for)
+    m_pMBLayout = Input(LAYOUTDATA)->GetMBLayout();
+    if (isFinalValidationPass && (!Input(LAYOUTDATA)->HasMBLayout() || !Input(INDEXDATA)->HasMBLayout() || !Input(SOURCEDATA)->HasMBLayout()))
+        LogicError("%ls %ls operation requires all inputs to be minibatch data (must have MBLayouts).", NodeName().c_str(), OperationName().c_str());
+
+    if (isFinalValidationPass && Input(INDEXDATA)->GetSampleLayout().GetNumElements() != 1)
+        InvalidArgument("%ls %ls operation requires the second argument (indexData) to be a scalar sequence.", NodeName().c_str(), OperationName().c_str());
+
+    // TODO: We also know that indexData and sourceData must have the same MBLayout. But that is checked at runtime.
+
+    // inherit tensor dimension from sourceData
+    SetDims(Input(SOURCEDATA));
+}
+
+template class ScatterPackedNode<float>;
+template class ScatterPackedNode<double>;
 
 }}}

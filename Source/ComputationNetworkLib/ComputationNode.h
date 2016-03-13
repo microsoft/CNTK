@@ -1057,6 +1057,12 @@ public:
         MaskMissingColumnsToZero(*m_gradient, m_pMBLayout, fr);
     }
 
+    // for index vectors: Invalid entries must be set to -1.
+    void MaskMissingValueColumnsTo(const FrameRange& fr, ElemType val)
+    {
+        MaskMissingColumnsTo(*m_value, m_pMBLayout, fr, val);
+    }
+
     // for debugging, set the gaps to NaN instead (to track whether it bubbles up somewhere)
     void InvalidateMissingValueColumns(const FrameRange& fr) override final
     {

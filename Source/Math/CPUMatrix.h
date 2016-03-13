@@ -53,6 +53,7 @@ public:
     using B::GetNumRows;
     using B::GetNumCols;
     using B::SetOwnBuffer;
+    using B::VerifySize;
 
     size_t BufferSize() const
     {
@@ -120,35 +121,38 @@ public:
     CPUMatrix<ElemType> Transpose();
     CPUMatrix<ElemType>& AssignTransposeOf(const CPUMatrix<ElemType>& a);
 
+    CPUMatrix<ElemType>& DoGatherColumnsOf (ElemType beta, const CPUMatrix<ElemType>& m, const CPUMatrix<ElemType>& a, ElemType alpha);
+    CPUMatrix<ElemType>& DoScatterColumnsOf(ElemType beta, const CPUMatrix<ElemType>& m, const CPUMatrix<ElemType>& a, ElemType alpha);
+
     CPUMatrix<ElemType>& operator+=(const ElemType alpha);
-    CPUMatrix<ElemType> operator+(const ElemType alpha) const;
+    CPUMatrix<ElemType>  operator+(const ElemType alpha) const;
     CPUMatrix<ElemType>& AssignSumOf(const ElemType alpha, const CPUMatrix<ElemType>& a);
 
     CPUMatrix<ElemType>& operator+=(const CPUMatrix<ElemType>& a);
-    CPUMatrix<ElemType> operator+(const CPUMatrix<ElemType>& a) const;
+    CPUMatrix<ElemType>  operator+(const CPUMatrix<ElemType>& a) const;
     CPUMatrix<ElemType>& AssignSumOf(const CPUMatrix<ElemType>& a, const CPUMatrix<ElemType>& b);
 
     CPUMatrix<ElemType>& operator-=(const ElemType alpha);
-    CPUMatrix<ElemType> operator-(const ElemType alpha) const;
+    CPUMatrix<ElemType>  operator-(const ElemType alpha) const;
     CPUMatrix<ElemType>& AssignDifferenceOf(const ElemType alpha, const CPUMatrix<ElemType>& a);
     CPUMatrix<ElemType>& AssignDifferenceOf(const CPUMatrix<ElemType>& a, const ElemType alpha);
 
     CPUMatrix<ElemType>& operator-=(const CPUMatrix<ElemType>& a);
-    CPUMatrix<ElemType> operator-(const CPUMatrix<ElemType>& a) const;
+    CPUMatrix<ElemType>  operator-(const CPUMatrix<ElemType>& a) const;
     CPUMatrix<ElemType>& AssignDifferenceOf(const CPUMatrix<ElemType>& a, const CPUMatrix<ElemType>& b);
 
     CPUMatrix<ElemType>& operator*=(const ElemType alpha);
-    CPUMatrix<ElemType> operator*(const ElemType alpha) const;
+    CPUMatrix<ElemType>  operator*(const ElemType alpha) const;
     CPUMatrix<ElemType>& AssignProductOf(const ElemType alpha, const CPUMatrix<ElemType>& a);
 
-    CPUMatrix<ElemType> operator*(const CPUMatrix<ElemType>& a) const;
+    CPUMatrix<ElemType>  operator*(const CPUMatrix<ElemType>& a) const;
     CPUMatrix<ElemType>& AssignProductOf(const CPUMatrix<ElemType>& a, const bool transposeA, const CPUMatrix<ElemType>& b, const bool transposeB);
 
     CPUMatrix<ElemType>& operator/=(ElemType alpha);
-    CPUMatrix<ElemType> operator/(ElemType alpha) const;
+    CPUMatrix<ElemType>  operator/(ElemType alpha) const;
 
     CPUMatrix<ElemType>& operator^=(ElemType alpha);     // element-wise power
-    CPUMatrix<ElemType> operator^(ElemType alpha) const; // element-wise power
+    CPUMatrix<ElemType>  operator^(ElemType alpha) const; // element-wise power
     CPUMatrix<ElemType>& AssignElementPowerOf(const CPUMatrix<ElemType>& a, const ElemType power);
 
     CPUMatrix<ElemType>& ElementMultiplyWith(const CPUMatrix<ElemType>& a);

@@ -46,12 +46,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 template <class ElemType>
 class ReshapeNode : public UnaryElementWiseNode<ElemType>
 {
-    typedef UnaryElementWiseNode<ElemType> Base;
-    UsingUnaryElementwiseNodeBaseMembers;
-    static const std::wstring TypeName()
-    {
-        return L"Reshape";
-    }
+    typedef UnaryElementWiseNode<ElemType> Base; UsingUnaryElementwiseNodeBaseMembers;
+    static const std::wstring TypeName() { return L"Reshape"; }
 
 public:
     ReshapeNode(DEVICEID_TYPE deviceId, const wstring& name, const TensorShape& replacementSampleLayout = TensorShape(), int beginDim = 1, int endDim = 0)
@@ -185,12 +181,8 @@ template class ReshapeNode<double>;
 template <class ElemType>
 class ReconcileMBLayoutNode : public ComputationNode<ElemType>, public NumInputs<2>
 {
-    typedef ComputationNode<ElemType> Base;
-    UsingComputationNodeMembersBoilerplate;
-    static const std::wstring TypeName()
-    {
-        return L"ReconcileMBLayout";
-    }
+    typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+    static const std::wstring TypeName() { return L"ReconcileMBLayout"; }
 
 public:
     DeclareConstructorFromConfigWithNumInputs(ReconcileMBLayoutNode);
@@ -241,13 +233,13 @@ template class ReconcileMBLayoutNode<double>;
 // -----------------------------------------------------------------------
 // RowSliceNode (input)
 // This node extracts a slice of the first tensor dimension (row).
+// TODO: Extend to specifying the axis. Time slicing would have to be done in BrainScript using Gather.
 // -----------------------------------------------------------------------
 
 template <class ElemType>
 class RowSliceNode : public ComputationNode<ElemType>, public NumInputs<1>
 {
-    typedef ComputationNode<ElemType> Base;
-    UsingComputationNodeMembersBoilerplate;
+    typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
     static const std::wstring TypeName() { return L"RowSlice"; }
 
 public:
@@ -351,8 +343,7 @@ template class RowSliceNode<double>;
 template <class ElemType>
 class RowStackNode : public ComputationNode<ElemType> // note: not deriving from NumInputs<> like most other nodes, because this one takes a variable number of inputs
 {
-    typedef ComputationNode<ElemType> Base;
-    UsingComputationNodeMembersBoilerplate;
+    typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
     static const std::wstring TypeName() { return L"RowStack"; }
 
 public:
@@ -492,12 +483,8 @@ template class RowStackNode<double>;
 template <class ElemType>
 class RowRepeatNode : public ComputationNode<ElemType>, public NumInputs<1>
 {
-    typedef ComputationNode<ElemType> Base;
-    UsingComputationNodeMembersBoilerplate;
-    static const std::wstring TypeName()
-    {
-        return L"RowRepeat";
-    }
+    typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+    static const std::wstring TypeName() { return L"RowRepeat"; }
 
 public:
     RowRepeatNode(DEVICEID_TYPE deviceId, const wstring& name, size_t numRepeats = 1)
@@ -589,13 +576,12 @@ public:
     WhereNode(DEVICEID_TYPE deviceId, const wstring& name) :
         Base(deviceId, name)
     {
-        m_learningRateMultiplier = 0.0f;    // we cannot backprop; this will disable it
-        // TODO: This ^^ is a bit of a hack. Do we need a better mechanism for nodes to tell that they cannot backprop? We will have more of those.
-        //       This might even not work, need to track down how this is inferred/propagated upwards. It is really only for LearnableParameters.
     }
 
     virtual void /*ComputationNodeNonLooping::*/ ForwardPropNonLooping() override;
     virtual void /*ComputationNodeNonLooping::*/ BackpropToNonLooping(size_t /*inputIndex*/) override;
+    virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }
+    virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override { return false; }
     virtual void Validate(bool isFinalValidationPass) override;
 
 private:
@@ -610,7 +596,7 @@ private:
 // to internal packed column indices w.r.t. targetObject.
 // Intended use is
 //  - Gather  (cond, x) = GatherPacked  (PackedIndex (x, Where (xCond)), x)
-//  - Scatter (cond, y) = ScatterPacked (PackedIndex (y, Where (yCond)), y)
+//  - Scatter (cond, y) = ScatterPacked (yCond, PackedIndex (y, Where (yCond)), y)
 // This maps sequence-specific time indices t to GetColumnIndex(seq,t),
 // as input for subsequent GatherPacked() or ScatterPacked() operations.
 // -----------------------------------------------------------------------
@@ -622,7 +608,7 @@ class PackedIndexNode : public ComputationNodeNonLooping<ElemType>, public NumIn
     static const std::wstring TypeName() { return L"PackedIndex"; }
 
     // our inputs
-    static const size_t TARGETDATA = 0;
+    static const size_t SOURCEDATA = 0;
     static const size_t INDEXDATA  = 1;
 
 public:
@@ -630,13 +616,78 @@ public:
     PackedIndexNode(DEVICEID_TYPE deviceId, const wstring& name) :
         Base(deviceId, name)
     {
-        m_learningRateMultiplier = 0.0f;    // we cannot backprop; this will disable it
-        // TODO: This ^^ is a bit of a hack. Do we need a better mechanism for nodes to tell that they cannot backprop? We will have more of those.
-        //       This might even not work, need to track down how this is inferred/propagated upwards. It is really only for LearnableParameters.
     }
 
     virtual void /*ComputationNodeNonLooping::*/ ForwardPropNonLooping() override;
     virtual void /*ComputationNodeNonLooping::*/ BackpropToNonLooping(size_t /*inputIndex*/) override;
+    virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }
+    virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override { return false; }
+    virtual void Validate(bool isFinalValidationPass) override;
+};
+
+// -----------------------------------------------------------------------
+// GatherPackedNode(packedIndex, sourceData) -- gather operation
+// Copies subset of samples pointed to by packedIndex from sourceData.
+// Sequence lengths are equal to those from packedIndex.
+// PackedIndex must have been created with PackedIndex() node, and is
+// otherwise opaque to users.
+// -----------------------------------------------------------------------
+
+template <class ElemType>
+class GatherPackedNode : public ComputationNodeNonLooping<ElemType>, public NumInputs<2>
+{
+    typedef ComputationNodeNonLooping<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+    static const std::wstring TypeName() { return L"GatherPacked"; }
+
+    // our inputs
+    static const size_t INDEXDATA = 0;
+    static const size_t SOURCEDATA = 1;
+
+public:
+    DeclareConstructorFromConfigWithNumInputs(GatherPackedNode);
+    GatherPackedNode(DEVICEID_TYPE deviceId, const wstring& name) :
+        Base(deviceId, name)
+    {
+    }
+
+    virtual void /*ComputationNodeNonLooping::*/ ForwardPropNonLooping() override;
+    virtual void /*ComputationNodeNonLooping::*/ BackpropToNonLooping(size_t inputIndex) override;
+    virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }
+    virtual bool InputUsedInComputingInputNodesGradients(size_t childIndex) const override { return childIndex == INDEXDATA; }
+    virtual void Validate(bool isFinalValidationPass) override;
+};
+
+// -----------------------------------------------------------------------
+// ScatterPackedNode(layoutData, packedIndex, sourceData) -- scatter operation
+// Copies sourceData to sample positions pointed to by packedIndex.
+// The first arg, 'layoutData', is used only to determine sequence lengths,
+// and should be the same that was used to Where().
+// PackedIndex must have been created with PackedIndex() node, and is
+// otherwise opaque to users.
+// -----------------------------------------------------------------------
+
+template <class ElemType>
+class ScatterPackedNode : public ComputationNodeNonLooping<ElemType>, public NumInputs<3>
+{
+    typedef ComputationNodeNonLooping<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+    static const std::wstring TypeName() { return L"ScatterPacked"; }
+
+    // our inputs
+    static const size_t LAYOUTDATA = 0;
+    static const size_t INDEXDATA  = 1;
+    static const size_t SOURCEDATA = 2;
+
+public:
+    DeclareConstructorFromConfigWithNumInputs(ScatterPackedNode);
+    ScatterPackedNode(DEVICEID_TYPE deviceId, const wstring& name) :
+        Base(deviceId, name)
+    {
+    }
+
+    virtual void /*ComputationNodeNonLooping::*/ ForwardPropNonLooping() override;
+    virtual void /*ComputationNodeNonLooping::*/ BackpropToNonLooping(size_t inputIndex) override;
+    virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }
+    virtual bool InputUsedInComputingInputNodesGradients(size_t childIndex) const override { return childIndex == INDEXDATA; }
     virtual void Validate(bool isFinalValidationPass) override;
 };
 

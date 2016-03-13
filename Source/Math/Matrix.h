@@ -176,7 +176,7 @@ public:
     ElemType RmsProp(Matrix<ElemType>& gradients, ElemType RMS_GAMMA, ElemType RMS_WGT_INC, ElemType RMS_WGT_MAX, ElemType RMS_WGT_DEC, ElemType RMS_WGT_MIN, const bool needAveMultiplier);
 
     void Resize(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve = 10000, bool growOnly = true); // by default we only reallocate if need to grow
-    void Resize(const Matrix<ElemType>& other)
+    void Resize(const Matrix<ElemType>& other) // TODO: Should this carry over numNZElemToReserve for sparse matrices?
     {
         Resize(other.GetNumRows(), other.GetNumCols());
     }
@@ -254,6 +254,9 @@ public:
 
     Matrix<ElemType> Transpose(); // This method doesn't change state of Matrix. It should be a const function
     Matrix<ElemType>& AssignTransposeOf(const Matrix<ElemType>& a);
+
+    Matrix<ElemType>& DoGatherColumnsOf (ElemType beta, const Matrix<ElemType>& m, const Matrix<ElemType>& a, ElemType alpha);
+    Matrix<ElemType>& DoScatterColumnsOf(ElemType beta, const Matrix<ElemType>& m, const Matrix<ElemType>& a, ElemType alpha);
 
     Matrix<ElemType>& operator+=(const ElemType alpha);
     Matrix<ElemType>  operator+(const ElemType alpha) const;

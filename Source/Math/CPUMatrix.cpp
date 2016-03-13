@@ -677,6 +677,85 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignTransposeOf(const CPUMatrix<Elem
     return *this;
 }
 
+// dst[i] = src[i] * alpha + dst[i] * beta
+// scale a column vector and add it to another
+// The usual special case: If beta = 0, then dst[] is not read, and may be uninitialized or NaN.
+template <class ElemType>
+static void ScaleAndAddColumn(ElemType beta, ElemType* dst, const ElemType* src, size_t numRows, ElemType alpha)
+{
+    if (alpha != 1) // rare case: just do the full thing
+        for (size_t i = 0; i < numRows; i++)
+            dst[i] = beta * dst[i] + alpha * src[i];
+    else if (beta == 1) // used in backprop
+        for (size_t i = 0; i < numRows; i++)
+            dst[i] += src[i];
+    else if (beta == 0) // plain assignment
+        memcpy(dst, src, sizeof(ElemType) * numRows);
+    else // alpha=1, arbitrary beta: also rare case
+        for (size_t i = 0; i < numRows; i++)
+            dst[i] = beta * dst[i] + src[i];
+}
+
+// *this[:,j] = a[:,m[j]] * alpha + *this[:,j] * beta
+template <class ElemType>
+CPUMatrix<ElemType>& CPUMatrix<ElemType>::DoGatherColumnsOf(ElemType beta, const CPUMatrix<ElemType>& m, const CPUMatrix<ElemType>& a, ElemType alpha)
+{
+    if (m.GetNumRows() != 1) // index is 1-dimensional only
+        InvalidArgument("DoGatherColumnsOf: Map must be a row vector.");
+
+    if (beta)
+        VerifySize(a.GetNumRows(), m.GetNumCols());
+    else
+        Resize(a.GetNumRows(), m.GetNumCols());
+
+    auto& us = *this;
+//#pragma omp parallel for // TODO: Depending in circumstance, it may be more efficient to parallelize over rows.
+    foreach_column(jOut, us)
+    {
+        auto jInF = m(0, jOut); // this is the column we need to get
+        if (jInF < 0)           // negative index means gap
+            continue;
+        size_t jIn = (size_t)jInF;
+        if (jIn >= a.GetNumCols())
+            InvalidArgument("DoGatherColumnsOf: Map out of bounds.");
+        ScaleAndAddColumn(beta, &us(0,jOut), &a(0,jIn), us.GetNumRows(), alpha);
+    }
+
+    return *this;
+}
+
+// *this[:,m[j]] = a[:,j] * alpha + *this[:,m[j]] * beta
+template <class ElemType>
+CPUMatrix<ElemType>& CPUMatrix<ElemType>::DoScatterColumnsOf(ElemType beta, const CPUMatrix<ElemType>& m, const CPUMatrix<ElemType>& a, ElemType alpha)
+{
+    if (m.GetNumRows() != 1) // index is 1-dimensional only
+        InvalidArgument("DoScatterColumnsOf: Map must be a row vector.");
+    if (m.GetNumCols() != a.GetNumCols())
+        InvalidArgument("DoScatterColumnsOf: Map must have width of input vector.");
+    if (a.GetNumRows() != GetNumRows())
+        InvalidArgument("DoScatterColumnsOf: Output must have same height as input vector.");
+
+    auto& us = *this;
+
+    // pre-scale with beta upfront
+    // Scatter may add more than one source column to the same target, so we must pre-scale with beta, and then just keep adding.
+    Scale(beta, us); // if beta is 0, then this will be a memset()
+
+#pragma omp parallel for // TODO: Depending in circumstance, it may be more efficient to parallelize over rows.
+    foreach_column(jIn, a)
+    {
+        auto jOutF = m(0, jIn); // this is the column we copy/add into
+        if (jOutF < 0)          // negative index means gap
+            continue;
+        size_t jOut = (size_t)jOutF;
+        if (jOut >= GetNumCols())
+            InvalidArgument("DoGatherColumnsOf: Map out of bounds.");
+        ScaleAndAddColumn(beta, &us(0, jOut), &a(0, jIn), us.GetNumRows(), alpha);
+    }
+
+    return *this;
+}
+
 template <class ElemType>
 void CPUMatrix<ElemType>::SetValue(const ElemType v)
 {
@@ -4629,7 +4708,7 @@ void CPUMatrix<ElemType>::AssignScaledDifference(const CPUMatrix<ElemType>& alph
 /// <param name="a">Input matrix</param>
 /// <param name="c">Resulting matrix, user is responsible for allocating this</param>
 template <class ElemType>
-void CPUMatrix<ElemType>::Scale(ElemType alpha, const CPUMatrix<ElemType>& a, CPUMatrix<ElemType>& c)
+/*static*/ void CPUMatrix<ElemType>::Scale(ElemType alpha, const CPUMatrix<ElemType>& a, CPUMatrix<ElemType>& c)
 {
     if (a.IsEmpty())
         LogicError("Scale:  Input matrix a is empty.");
@@ -4639,6 +4718,12 @@ void CPUMatrix<ElemType>::Scale(ElemType alpha, const CPUMatrix<ElemType>& a, CP
 
     assert(m > 0 && n > 0); // converting from size_t to int may cause overflow
     c.Resize(m, n);
+
+    if (alpha == 0)
+    {
+        memset(c.m_pArray, 0, sizeof(ElemType) * c.GetNumElements());
+        return;
+    }
 
     long size = (long) c.GetNumElements();
 #pragma omp parallel for
@@ -4650,7 +4735,7 @@ void CPUMatrix<ElemType>::Scale(ElemType alpha, const CPUMatrix<ElemType>& a, CP
         c.m_pArray[i + 2] = alpha * a.m_pArray[i + 2];
         c.m_pArray[i + 3] = alpha * a.m_pArray[i + 3];
     }
-    // handle remaining stuffs
+    // remaining elements
     for (long i = size & ~3; i < size; i++)
     {
         c.m_pArray[i] = alpha * a.m_pArray[i];
@@ -4661,7 +4746,7 @@ void CPUMatrix<ElemType>::Scale(ElemType alpha, const CPUMatrix<ElemType>& a, CP
 /// <param name="alpha">Scalar</param>
 /// <param name="a">Input matrix</param>
 template <class ElemType>
-void CPUMatrix<ElemType>::Scale(ElemType alpha, CPUMatrix<ElemType>& a)
+/*static*/ void CPUMatrix<ElemType>::Scale(ElemType alpha, CPUMatrix<ElemType>& a)
 {
     if (a.IsEmpty())
         LogicError("Scale:  Input matrix a is empty.");
@@ -4673,10 +4758,14 @@ void CPUMatrix<ElemType>::Scale(ElemType alpha, CPUMatrix<ElemType>& a)
 
     assert(m > 0 && n > 0 && len > 0); // converting from size_t to int may cause overflow
 
-    if (sizeof(ElemType) == sizeof(double))
+    if (alpha == 0 && incx == 1)
+    {
+        memset(a.m_pArray, 0, sizeof(ElemType) * len);
+    }
+    else if (sizeof(ElemType) == sizeof(double))
     {
 #ifdef USE_ACML
-        dscal(len, alpha, reinterpret_cast<double*>(a.m_pArray), incx);
+        dscal(len, alpha, reinterpret_cast<double*>(a.m_pArray), incx); // TODO: Use overloads.
 #else
         cblas_dscal(len, alpha, reinterpret_cast<double*>(a.m_pArray), incx);
 #endif
@@ -4696,7 +4785,7 @@ void CPUMatrix<ElemType>::Scale(ElemType alpha, CPUMatrix<ElemType>& a)
 /// <param name="alpha">1x1 matrix</param>
 /// <param name="a">Input matrix</param>
 template <class ElemType>
-void CPUMatrix<ElemType>::Scale(CPUMatrix<ElemType> alpha, CPUMatrix<ElemType>& a)
+/*static*/ void CPUMatrix<ElemType>::Scale(CPUMatrix<ElemType> alpha, CPUMatrix<ElemType>& a)
 {
     if (a.IsEmpty())
         LogicError("Scale:  Input matrix a is empty.");
