@@ -611,7 +611,7 @@ public:
     // return true if the node's value should be computed before the normal training. e.g., mean and invStd of input features.
     virtual bool /*IComputationNode::*/ RequiresPreCompute() const { return false; }
 
-    const ComputationEnvironment& Environment()
+    const ComputationEnvironment& Environment() const
     {
         if (!m_environment)
             LogicError("Environment: No environment has been set.");
@@ -1799,6 +1799,7 @@ protected:                                                                      
     using Base::DetermineElementwiseTensorRank;                                                                                                          \
     using Base::DumpNodeInfo;                                                                                                                            \
     using Base::EnumerateNodes;                                                                                                                          \
+    using Base::Environment;                                                                                                                             \
     using Base::ForwardProp;                                                                                                                             \
     using Base::GetAsMatrixNumCols;                                                                                                                      \
     using Base::GetAsMatrixNumRows;                                                                                                                      \

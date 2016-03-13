@@ -66,6 +66,9 @@ static bool SetGradientToScalarOne(ComputationNodeBasePtr nodep)
 //  - Backprop() for the training criterion
 void ComputationNetwork::Backprop(const ComputationNodeBasePtr rootNode) // training criterion to compute the gradients for
 {
+    if (!Environment().IsTraining())
+        LogicError("Backprop: Requires network is to be in training mode.");
+
     // reset all gradients to zero (actually, internally, this is lazy, but we don't care here)
     ZeroGradients(rootNode);
 

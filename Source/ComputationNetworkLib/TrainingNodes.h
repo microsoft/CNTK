@@ -370,12 +370,8 @@ template class CrossEntropyNode<double>;
 template <class ElemType>
 class MatrixL1RegNode : public ComputationNodeNonLooping /*ComputationNode*/<ElemType>, public NumInputs<1>
 {
-    typedef ComputationNodeNonLooping<ElemType> Base;
-    UsingComputationNodeMembersBoilerplate;
-    static const std::wstring TypeName()
-    {
-        return L"MatrixL1Reg";
-    }
+    typedef ComputationNodeNonLooping<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+    static const std::wstring TypeName() { return L"MatrixL1Reg"; }
 
 public:
     DeclareConstructorFromConfigWithNumInputs(MatrixL1RegNode);
@@ -384,7 +380,7 @@ public:
     {
     }
 
-    virtual void BackpropToNonLooping(size_t inputIndex) override // scale by number of cols (or samples)
+    virtual void /*ComputationNodeNonLooping::*/ BackpropToNonLooping(size_t inputIndex) override // scale by number of cols (or samples)
     {
         FrameRange fr(Input(0)->GetMBLayout());
         assert(inputIndex == 0);
@@ -463,12 +459,8 @@ template class MatrixL1RegNode<double>;
 template <class ElemType>
 class MatrixL2RegNode : public ComputationNodeNonLooping /*ComputationNode*/<ElemType>, public NumInputs<1>
 {
-    typedef ComputationNodeNonLooping<ElemType> Base;
-    UsingComputationNodeMembersBoilerplate;
-    static const std::wstring TypeName()
-    {
-        return L"MatrixL2Reg";
-    }
+    typedef ComputationNodeNonLooping<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+    static const std::wstring TypeName() { return L"MatrixL2Reg"; }
 
 public:
     DeclareConstructorFromConfigWithNumInputs(MatrixL2RegNode);
@@ -477,7 +469,7 @@ public:
     {
     }
 
-    virtual void BackpropToNonLooping(size_t inputIndex) override // scale by number of cols (or samples)
+    virtual void /*ComputationNodeNonLooping::*/ BackpropToNonLooping(size_t inputIndex) override // scale by number of cols (or samples)
     {
         FrameRange fr(Input(0)->GetMBLayout());
         assert(inputIndex == 0);

@@ -253,11 +253,13 @@ public:
     {
     }
 
-    virtual void /*ComputationNode::*/ BackpropTo(const size_t /*inputIndex*/, const FrameRange&) override
-    {
-    }
     virtual void /*ComputationNode::*/ ForwardProp(const FrameRange&) override
     {
+    }
+
+    virtual void /*ComputationNode::*/ BackpropTo(const size_t /*inputIndex*/, const FrameRange&) override
+    {
+        LogicError("%ls %ls operation is a leaf node. BackpropTo() should never be called.", NodeName().c_str(), OperationName().c_str());
     }
 
     virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
@@ -410,10 +412,12 @@ public:
 
     virtual void /*ComputationNode::*/ ForwardProp(const FrameRange&) override
     {
+        // we have been filled by the Reader
     }
+
     virtual void /*ComputationNode::*/ BackpropTo(const size_t /*inputIndex*/, const FrameRange&)
     {
-        LogicError("InputValueBase::BackpropTo() should never be called.");
+        LogicError("%ls is a leaf node. BackpropTo() should never be called.", NodeName().c_str());
     }
 
     virtual void DumpNodeInfo(const bool printValues, const bool printMetadata, File& fstream) const override
@@ -509,6 +513,90 @@ public:
 
 template class SparseInputValue<float>;
 template class SparseInputValue<double>;
+
+// -----------------------------------------------------------------------
+// EnvironmentInput (propertyName) -- read out environment properties
+// Such as whether we are currently training or evaluating, which can affect
+// behavior, such as seq-2-seq decoding.
+// -----------------------------------------------------------------------
+
+template <class ElemType>
+class EnvironmentInputNode : public ComputationNodeNonLooping<ElemType>, public NumInputs<0>
+{
+    typedef ComputationNodeNonLooping<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+    static const std::wstring TypeName() { return L"EnvironmentInput"; }
+
+public:
+    EnvironmentInputNode(DEVICEID_TYPE deviceId, const wstring& name, const wstring& propertyName = L"") :
+        Base(deviceId, name), m_propertyName(propertyName)
+    {
+    }
+    EnvironmentInputNode(const ScriptableObjects::IConfigRecordPtr configp)
+        : EnvironmentInputNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"propertyName"))
+    {
+    }
+
+    virtual void Save(File& fstream) const override
+    {
+        Base::Save(fstream);
+        fstream << m_propertyName;
+    }
+
+    virtual void Load(File& fstream, size_t modelVersion) override
+    {
+        Base::Load(fstream, modelVersion);
+        fstream >> m_propertyName;
+    }
+
+private:
+    ElemType ReadOutVariable() const
+    {
+        const auto& e = Environment();
+        if (m_propertyName == L"isTraining")
+            return (ElemType)e.IsTraining();
+        else
+            InvalidArgument("EnvironmentInput: There is no environment property '%ls'", m_propertyName.c_str());
+    }
+
+public:
+    // TODO: Noone else overrides this method. So is this the right mechanism?
+    //       On the other hand, we are also the only leaf that needs to update itself.
+    virtual bool /*ComputationNodeBase::*/ IsOutOfDateWrtInputs() const override { return true; }
+
+    virtual void /*IComputationNode::*/ BeginForwardProp() override
+    {
+        // We are a leaf, so UpdateFunctionValuesSize() won't be called for us.
+        UpdateFunctionValuesSize();
+        Base::BeginForwardProp();
+    }
+
+    virtual void /*ComputationNodeNonLooping::*/ ForwardPropNonLooping() override
+    {
+        ElemType val = ReadOutVariable();
+        Value().VerifySize(1, 1);
+        Value().SetValue(val);
+    }
+
+    virtual void /*ComputationNodeNonLooping::*/ BackpropToNonLooping(size_t /*inputIndex*/) override
+    {
+        LogicError("%ls %ls operation is a leaf node. BackpropTo() should never be called.", NodeName().c_str(), OperationName().c_str());
+    }
+    virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }
+    virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override { return false; }
+
+    virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
+    {
+        ReadOutVariable(); // read out the value once, with the purpose of validating the variableName
+        Base::Validate(isFinalValidationPass);
+        // this node does not hold mini-batch data
+        m_pMBLayout = nullptr;
+        // for now, anything this node returns is a scalar
+        SetDims(TensorShape(1), false);
+    }
+
+private:
+    wstring m_propertyName;
+};
 
 // -----------------------------------------------------------------------
 // LookupTableNode (embedding matrix, bag-of-word representation of the inputs)

@@ -87,6 +87,8 @@ public:
 
     void WriteOutput(IDataReader& dataReader, size_t mbSize, IDataWriter& dataWriter, const std::vector<std::wstring>& outputNodeNames, size_t numOutputSamples = requestDataSize, bool doUnitTest = false)
     {
+        ScopedNetworkOperationMode modeGuard(m_net, NetworkOperationMode::inferring);
+
         std::vector<ComputationNodeBasePtr> outputNodes = DetermineOutputNodes(outputNodeNames);
         std::vector<ComputationNodeBasePtr> inputNodes  = DetermineInputNodes(outputNodes);
 
@@ -190,6 +192,8 @@ public:
     // TODO: Remove code dup with above function by creating a fake Writer object and then calling the other function.
     void WriteOutput(IDataReader& dataReader, size_t mbSize, std::wstring outputPath, const std::vector<std::wstring>& outputNodeNames, const WriteFormattingOptions & formattingOptions, size_t numOutputSamples = requestDataSize)
     {
+        ScopedNetworkOperationMode modeGuard(m_net, NetworkOperationMode::inferring);
+
         std::vector<ComputationNodeBasePtr> outputNodes = DetermineOutputNodes(outputNodeNames);
         std::vector<ComputationNodeBasePtr> inputNodes = DetermineInputNodes(outputNodes);
 

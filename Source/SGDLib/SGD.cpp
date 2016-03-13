@@ -732,6 +732,8 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                                     /*in/out*/ size_t& totalSamplesSeen,
                                     std::string prefixMsg)
 {
+    ScopedNetworkOperationMode modeGuard(net, NetworkOperationMode::training);
+
     double totalTimeInMBs = 0; // use double since timer has sub-microsecond time resolution
     double epochCriterionLastMBs = 0;
 
@@ -764,8 +766,6 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
     {
         m_pMASGDHelper->OnEpochStart(learnableNodes);
     }
-    
-
 
     std::vector<Matrix<ElemType>*> learnParamsGradients;
     if (useGradientAggregation)
@@ -1287,13 +1287,15 @@ bool SGD<ElemType>::PreCompute(ComputationNetworkPtr net,
         fprintf(stderr, "\tNodeName: %ls\n", (node->NodeName()).c_str());
 
     // compute
+    ScopedNetworkOperationMode modeGuard(net, NetworkOperationMode::preComputing);
+
     // trainSetDataReader->StartMinibatchLoop(m_mbSize[0],  0 , requestDataSize);
     // trainSetDataReader->StartMinibatchLoop(m_mbSize[0],  0 , m_epochSize); // only based on one epoch
     // [1/12/2015 erw] to support large dataset, we usually partition whole dataset into several epoch's,
     // so we need to use all the data to do precomputing
     if (m_useAllDataForPreComputedNode) // using all the data
         trainSetDataReader->StartMinibatchLoop(m_mbSize[0], 0);
-    else // using only one epoch
+    else // using only one epoch. Note: One epoch is often enough for feature mean/stddev, but not for estimating priors.
         trainSetDataReader->StartMinibatchLoop(m_mbSize[0], 0, m_epochSize);
     net->StartEvaluateMinibatchLoop(nodes);
 
@@ -2179,9 +2181,11 @@ bool SGD<ElemType>::GradientCheck(ComputationNetworkPtr net,
                                   const std::list<ComputationNodeBasePtr>& learnableNodes,
                                   int npos)
 {
-    vector<string> errMsgs;
+    ScopedNetworkOperationMode modeGuard(net, NetworkOperationMode::training);
 
     net->StartEvaluateMinibatchLoop(criterionNodes[npos]);
+
+    vector<string> errMsgs; // TODO: These are created but actually not returned, only their count is checked.
 
     // gradient checking
     for (auto nodeIter = learnableNodes.begin(); nodeIter != learnableNodes.end(); nodeIter++)
@@ -2264,7 +2268,7 @@ bool SGD<ElemType>::GradientCheck(ComputationNetworkPtr net,
         }
     }
 
-    return errMsgs.size() == 0;
+    return errMsgs.empty();
 }
 
 template class SGD<float>;

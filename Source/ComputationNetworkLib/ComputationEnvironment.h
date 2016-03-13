@@ -6,27 +6,56 @@
 #pragma once
 
 #include "Basics.h"
-
 #include <memory>
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
 // ===========================================================================
-// ComputationEnvironment -- computation graph and operations
+// ComputationEnvironment -- global network properties of interest to nodes
 // ===========================================================================
 
+// mode that the network is currently used in, which affects node behavior
 enum class NetworkOperationMode
 {
-    unspecified,
-    training,
-    inferring,
-    precomputing
+    training,    // training mode specifically means nodes should behave like training (e.g. Dropout should be active)
+    inferring,   // inferring (e.g. BatchNorm should not update mean estimates)
+    preComputing // precomputation is a part of training where most nodes should behave like they are inferring
 };
 
+// class to store global properties of the network that are of interest to the nodes
+// For example, a network can be in 'training' or 'inference' mode, which affects what nodes like Dropout and BN do,
+// or what the seq-2-seq decoder feedback signal is.
 struct ComputationEnvironment
 {
-    NetworkOperationMode networkOperationMode = NetworkOperationMode::unspecified;
+    // networkOperationMode tells whether we are training or inferring, which affects some nodes' behavior
+    NetworkOperationMode networkOperationMode = NetworkOperationMode::inferring; // by default, a network is always able to infer
+    bool IsTraining()     const { return networkOperationMode == NetworkOperationMode::training; }
+    bool IsPreComputing() const { return networkOperationMode == NetworkOperationMode::preComputing; }
+
+    // more properties should be added here as needed
 };
-typedef shared_ptr<ComputationEnvironment> ComputationEnvironmentPtr;
+typedef std::shared_ptr<ComputationEnvironment> ComputationEnvironmentPtr;
+
+// RAII wrapper for setting and reverting ComputationEnvironment::networkOperationMode
+// E.g. ScopedNetworkOperationMode modeGuard(net, NetworkOperationMode::training);
+// will set the mode until the end of the scope, and then revert to its old value automatically.
+class ScopedNetworkOperationMode
+{
+    ComputationEnvironment& m_environment;
+    NetworkOperationMode m_previousNetworkOperationMode;
+    void operator=(const ScopedNetworkOperationMode&) = delete;
+public:
+    template<class ComputationNetwork> // using template to avoid dependency
+    ScopedNetworkOperationMode(const std::shared_ptr<ComputationNetwork>& net, NetworkOperationMode networkOperationMode) :
+        m_environment(net->Environment())
+    {
+        m_previousNetworkOperationMode = m_environment.networkOperationMode;
+        m_environment.networkOperationMode = networkOperationMode;
+    }
+    ~ScopedNetworkOperationMode() // destructor restores the previous mode
+    {
+        m_environment.networkOperationMode = m_previousNetworkOperationMode;
+    }
+};
 
 }}}

@@ -386,9 +386,16 @@ public:
     }
 
     // -----------------------------------------------------------------------
+    // environment properties
+    // -----------------------------------------------------------------------
+
+    ComputationEnvironment& Environment() const { return *m_environment; }
+
+    // -----------------------------------------------------------------------
     // functions to pass on specific SGD options to nodes
     // -----------------------------------------------------------------------
 
+    // TODO: Why are all these static, but then take a network as the first argument? --> make them class members
     template <class ElemType>
     static void SetDropoutRate(ComputationNetworkPtr net, const ComputationNodeBasePtr& criterionNode, const double dropoutRate, double& prevDropoutRate, unsigned long& dropOutSeed);
 
@@ -398,7 +405,7 @@ public:
     template <class ElemType>
     static void SetSeqParam(ComputationNetworkPtr net,
                             const ComputationNodeBasePtr criterionNode,
-                            const double& hsmoothingWeight,
+                            const double& hsmoothingWeight, // TODO: Why are all these passed by reference?
                             const double& frameDropThresh,
                             const bool& doreferencealign,
                             const double& amf = 14.0f,
@@ -406,6 +413,7 @@ public:
                             const double& wp = 0.0f,
                             const double& bMMIfactor = 0.0f,
                             const bool& sMBR = false);
+
     static void SetMaxTempMemSizeForCNN(ComputationNetworkPtr net, const ComputationNodeBasePtr& criterionNode, const size_t maxTempMemSizeInSamples);
 
     // -----------------------------------------------------------------------
@@ -472,12 +480,6 @@ public:
     size_t GetTotalNumberOfNodes() const
     {
         return m_nameToNodeMap.size();
-    }
-
-    // TODO: could be a dup
-    std::map<const std::wstring, ComputationNodeBasePtr, nocase_compare>& GetNameToNodeMap() // specially for ExperimentalNetworkBuilder; don't use this otherwise
-    {
-        return m_nameToNodeMap;
     }
 
     std::vector<ComputationNodeBasePtr> GetAllNodes() const
@@ -595,13 +597,14 @@ public:
     }
 
     // add a node to the network unless it's already there
-    ComputationNodeBasePtr AddNodeToNetIfNotYet(const ComputationNodeBasePtr& nodePtr)
+    // Returns false if the node was already there.
+    bool AddNodeToNetIfNotYet(const ComputationNodeBasePtr& nodePtr)
     {
         auto result = m_nameToNodeMap.insert(make_pair(nodePtr->NodeName(), nodePtr));
         if (!result.second && result.first->second != nodePtr) // if there's already one under this name, it better be nodePtr
             RuntimeError("AddNodeToNetIfNotYet: Duplicated computation node name.");
         nodePtr->SetEnvironment(m_environment); // (note: redundant if already part of the network)
-        return nodePtr; // allows e.g. return AddNodeToNet(New...);
+        return result.second;
     }
 
     // remove a node from the network's node set
