@@ -3,7 +3,7 @@
 // This uses Multiverso.h which requires 
 // the header files in ..\Multiverso\include
 #include <multiverso/multiverso.h>
-#include <multiverso/table/array_table.h>
+#include <multiverso/table/matrix_table.h>
 #pragma comment(lib, "IMultiverso.lib")
 
 #ifndef CPUONLY
@@ -137,8 +137,8 @@ namespace Microsoft {
 				
 					std::transform(m_deltaArray, m_deltaArray + m_totalModelSize, m_deltaArray, std::bind1st(std::multiplies<ElemType>(), factor));
 
-					m_sharedArray->Add(m_deltaArray, m_totalModelSize);
-					m_sharedArray->Get(m_deltaArray, m_totalModelSize);
+					m_matrixArray->Add(m_deltaArray, m_totalModelSize);
+					m_matrixArray->Get(m_deltaArray, m_totalModelSize);
 
 				}
 
@@ -217,8 +217,8 @@ namespace Microsoft {
 							// lr decay
 							std::transform(m_deltaArray, m_deltaArray + m_totalModelSize, m_deltaArray, std::bind1st(std::multiplies<ElemType>(), factor));
 
-							m_sharedArray->Add(m_deltaArray, m_totalModelSize);
-							m_sharedArray->Get(m_cpuAsyncBuffer[t_cacheIdx], m_totalModelSize);
+							m_matrixArray->Add(m_deltaArray, m_totalModelSize);
+							m_matrixArray->Get(m_cpuAsyncBuffer[t_cacheIdx], m_totalModelSize);
 
 							// copy parameters from CPU buffer to GPU buffer
 							for (int widx = 0; widx < m_tableCount; widx++)
@@ -242,8 +242,8 @@ namespace Microsoft {
 
 							std::transform(m_deltaArray, m_deltaArray + m_totalModelSize, m_cpuAsyncBuffer[t_cacheIdx], m_deltaArray, std::minus<ElemType>());
 							std::transform(m_deltaArray, m_deltaArray + m_totalModelSize, m_deltaArray, std::bind1st(std::multiplies<ElemType>(), factor));
-							m_sharedArray->Add(m_deltaArray, m_totalModelSize);
-							m_sharedArray->Get(m_cpuAsyncBuffer[t_cacheIdx], m_totalModelSize);
+							m_matrixArray->Add(m_deltaArray, m_totalModelSize);
+							m_matrixArray->Get(m_cpuAsyncBuffer[t_cacheIdx], m_totalModelSize);
 
 						});
 #endif
@@ -266,8 +266,8 @@ namespace Microsoft {
 						// lr decay
 						std::transform(m_deltaArray, m_deltaArray + m_totalModelSize, m_deltaArray, std::bind1st(std::multiplies<ElemType>(), factor));
 
-						m_sharedArray->Add(m_deltaArray, m_totalModelSize);
-						m_sharedArray->Get(m_cpuAsyncBuffer[0], m_totalModelSize);
+						m_matrixArray->Add(m_deltaArray, m_totalModelSize);
+						m_matrixArray->Get(m_cpuAsyncBuffer[0], m_totalModelSize);
 
 						i = 0;
 						for (auto nodeIter = learnableNodes.begin(); nodeIter != learnableNodes.end(); nodeIter++, i++)
@@ -314,12 +314,19 @@ namespace Microsoft {
                     //multiverso::Log::ResetLogLevel(multiverso::LogLevel::Debug);
 					multiverso::MV_Init();
 
+					m_matrixArray = new std::vector< multiverso::MatrixWorkerTable<ElemType>*>(learnableNodes.size());
+					m_serverArray = new std::vector< multiverso::MatrixServerTable<ElemType>*>(learnableNodes.size());
 					//weights
 					for (auto nodeIter = learnableNodes.begin(); nodeIter != learnableNodes.end(); nodeIter++)
 					{
 						ComputationNodePtr node = dynamic_pointer_cast<ComputationNode<ElemType>>(*nodeIter);
 						Matrix<ElemType> &mat = node->Value();
 						size_t layerSize = mat.GetNumElements();
+						size_t layerRowSize = mat.GetNumRows();
+						size_t layerColSize = mat.GetNumCols();
+						
+						m_matrixArray->push_back(new multiverso::MatrixWorkerTable<ElemType>(layerRowSize, layerColSize));
+						m_serverArray->push_back(new multiverso::MatrixServerTable<ElemType>(layerRowSize, layerColSize));
 
 						m_tableLength.push_back(layerSize);
 					}
@@ -329,8 +336,7 @@ namespace Microsoft {
 					// cacluate total of learnable node's size
 					m_totalModelSize = accumulate(m_tableLength.begin(), m_tableLength.end(), 0);
  
-					m_sharedArray = new multiverso::ArrayWorker<ElemType>(m_totalModelSize);
-					m_serverArray = new multiverso::ArrayServer<ElemType>(m_totalModelSize);
+
 					
 					multiverso::MV_Barrier();
 
@@ -374,8 +380,8 @@ namespace Microsoft {
 					}
 					return f;
 				}
-				multiverso::ArrayWorker<ElemType>* m_sharedArray;
-				multiverso::ArrayServer<ElemType>* m_serverArray;
+				std::vector< multiverso::MatrixWorkerTable<ElemType>*>* m_matrixArray;
+				std::vector< multiverso::MatrixServerTable<ElemType>*>* m_serverArray;
 				thread * m_prefetchThread;
 				bool m_isInitialized;
 
