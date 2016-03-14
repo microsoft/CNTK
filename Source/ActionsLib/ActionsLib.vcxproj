@@ -135,7 +135,6 @@
     <ClInclude Include="..\Common\Include\Sequences.h" />
     <ClInclude Include="..\Common\Include\TimerUtility.h" />
     <ClInclude Include="Actions.h" />
-    <ClInclude Include="IExecutionEngine.h" />
     <ClInclude Include="NDLNetworkBuilder.h" />
     <ClInclude Include="NDLUtil.h" />
     <ClInclude Include="NetworkDescriptionLanguage.h" />

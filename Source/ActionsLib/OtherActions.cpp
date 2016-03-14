@@ -10,6 +10,7 @@
 #include "stdafx.h"
 #include "Basics.h"
 #include "Actions.h"
+#include "DataReader.h"
 #include "ComputationNetwork.h"
 #include "ComputationNode.h"
 #include "Config.h"

@@ -7,6 +7,11 @@
 
 #include "stdafx.h"
 #include "Actions.h"
+#include "SimpleNetworkBuilder.h"
+#include "NDLNetworkBuilder.h"
+#include "ScriptableObjects.h"
+#include "BrainScriptEvaluator.h"
+#include "BrainScriptParser.h"
 
 template <> /*static*/ const wchar_t* ElemTypeName<float>()  {
     return L"float";

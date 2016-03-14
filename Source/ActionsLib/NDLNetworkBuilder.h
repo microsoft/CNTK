@@ -6,7 +6,6 @@
 #include "NetworkDescriptionLanguage.h"
 #include "ComputationNetwork.h"
 #include "ComputationNetworkBuilder.h"
-#include "IExecutionEngine.h"
 #include "Basics.h"
 #include <string>
 #include "DataReader.h"
@@ -334,7 +333,7 @@ private:
 // NDLBuilderImpl
 // TODO JC Refactor eligible methods and members into abstract base class.
 template <typename ElemType>
-class NDLBuilderImpl : public IExecutionEngine<ElemType>
+class NDLBuilderImpl
 {
 public:
     NDLBuilderImpl(DEVICEID_TYPE deviceId, unsigned long randomSeedOffset = 0)
@@ -409,7 +408,7 @@ public:
     }
 
     void Init(
-        IExecutionEngine<ElemType>* executionEngine,
+        NDLBuilderImpl<ElemType>* executionEngine,
         const std::wstring& networkConfig,
         const std::string& configParams,
         const std::wstring& dumpFileName,
@@ -583,7 +582,7 @@ public:
 
 private:
     ComputationNetworkPtr m_net;
-    IExecutionEngine<ElemType>* m_executionEngine;
+    NDLBuilderImpl<ElemType>* m_executionEngine;
     std::wstring m_networkConfig;
     std::wstring m_dumpFileName;
     std::string m_initialConfig;

@@ -8,13 +8,9 @@
 
 #include "Basics.h"
 #include "Config.h"
-#include "ScriptableObjects.h"
-#include "DataReader.h"
+#include "CommonMatrix.h"
 #include "ComputationNetwork.h"
-#include "BrainScriptEvaluator.h"
-#include "BrainScriptParser.h"
-#include "SimpleNetworkBuilder.h"
-#include "NDLNetworkBuilder.h"
+
 
 // ===========================================================================
 // implementations of all the commands of CNTK
