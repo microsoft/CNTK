@@ -8,7 +8,7 @@
 #define _CRT_SECURE_NO_WARNINGS // "secure" CRT not available on all platforms  --add this at the top of all CPP files that give "function or variable may be unsafe" warnings
 
 #include "NetworkDescriptionLanguage.h"
-#include "SynchronousExecutionEngine.h"
+#include "NDLNetworkBuilder.h"
 #include "InputAndParamNodes.h"
 #include "LinearAlgebraNodes.h"
 #include "NonlinearityNodes.h"

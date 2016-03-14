@@ -16,7 +16,6 @@
 #include "DataWriter.h"
 #include "SimpleNetworkBuilder.h"
 #include "NDLNetworkBuilder.h"
-#include "SynchronousExecutionEngine.h"
 #include "ModelEditLanguage.h"
 #include "CPUMatrix.h" // used for SetNumThreads()
 #include "CommonMatrix.h"

@@ -18,7 +18,7 @@
 #include "SGD.h"
 #include "SimpleEvaluator.h"
 #include "NetworkDescriptionLanguage.h"
-#include "SynchronousExecutionEngine.h"
+#include "NDLNetworkBuilder.h"
 
 using namespace std;
 using namespace Microsoft::MSR::CNTK;
@@ -213,7 +213,7 @@ void TestMacros(const ConfigParameters& configBase)
 {
     NDLScript<ElemType> script = configBase("ndlFull");
     ComputationNetworkPtr net = make_shared<ComputationNetwork>();
-    SynchronousNodeEvaluator<ElemType> nodeEvaluator(net);
+    NDLNodeEvaluatorImpl<ElemType> nodeEvaluator(net);
     script.Evaluate(nodeEvaluator, L"", ndlPassInitial);
 }
 
