@@ -8,18 +8,23 @@ import re
 DIRNAME_OF_THIS_FILE = os.path.abspath(os.path.dirname(__file__))
 
 # BrainSCript's node definitions
-CNTKCORE_DEFS = os.path.abspath(os.path.join(DIRNAME_OF_THIS_FILE, 'CNTK.core.bs'))
+CNTKCORE_DEFS = os.path.abspath(
+    os.path.join(DIRNAME_OF_THIS_FILE, 'CNTK.core.bs'))
 
 REGEX_STANDARD = re.compile(r'(?P<operator>\w+)\((?P<operands>.*?)\) = .*')
-REGEX_COMPNODE = re.compile(r'(?P<operator>\w+)\((?P<operands>.*?)\) = new ComputationNode \[')
+REGEX_COMPNODE = re.compile(
+    r'(?P<operator>\w+)\((?P<operands>.*?)\) = new ComputationNode \[')
 REGEX_ALIAS = re.compile(r'(?P<operator>\w+) = (?P<alias>\w+)\s*(//.*|)')
-REGEX_INSTANTIATION = re.compile(r'(?P<operator>\w+)\((?P<operands>.*?)\) = (?P<inst_operator>\w+)\s*\((?P<inst_operands>.*?)\)\s*(//.*|)')
+REGEX_INSTANTIATION = re.compile(
+    r'(?P<operator>\w+)\((?P<operands>.*?)\) = (?P<inst_operator>\w+)\s*\((?P<inst_operands>.*?)\)\s*(//.*|)')
 
 REGEX_COMMENT = re.compile(r'/\*.*\*/')
 
 OPERANDS_TO_IGNORE = {"tag=''"}
 
+
 class Operand(object):
+
     def __init__(self, name, init_value):
         self.name = name
 
@@ -28,7 +33,7 @@ class Operand(object):
         else:
             init_value = REGEX_COMMENT.sub('', init_value)
 
-            if init_value[0]=="'" and init_value[-1]=="'":
+            if init_value[0] == "'" and init_value[-1] == "'":
                 self.init_value = init_value[1:-1]
             else:
                 if init_value.lower() == 'false':
@@ -43,10 +48,11 @@ class Operand(object):
 
 # BrainScript parameter names are not always consisten. Here, we fix the
 # obvious misnamings.
-SMOOTH_NAMING = {\
-        'val': 'value',
-        'from': 'from_'
-        }
+SMOOTH_NAMING = {
+    'val': 'value',
+    'from': 'from_'
+}
+
 
 class CompNodeOperator(object):
     COMP_NODE_TEMPLATE = """\
@@ -56,11 +62,11 @@ class %(name)s(ComputationNode):
 %(initialization)s
         self.params_with_defaults = [%(params_with_defaults)s]
 """
+
     def _smooth(self, name):
         if name in SMOOTH_NAMING:
             return SMOOTH_NAMING[name]
         return name
-
 
     def __init__(self, comp_match):
         self.name = comp_match.group('operator')
@@ -72,24 +78,27 @@ class %(name)s(ComputationNode):
                 continue
 
             parts = op.split('=')
-            if len(parts)==1:
-                self.operands.append(Operand(self._smooth(parts[0].strip()), None))
-            elif len(parts)==2:
-                self.operands.append(Operand(self._smooth(parts[0].strip()), parts[1].strip()))
+            if len(parts) == 1:
+                self.operands.append(
+                    Operand(self._smooth(parts[0].strip()), None))
+            elif len(parts) == 2:
+                self.operands.append(
+                    Operand(self._smooth(parts[0].strip()), parts[1].strip()))
             else:
                 raise ValueError('Did not expect this format')
 
         self.signature = ", ".join(self.sig(op) for op in self.operands)
 
-        self.initialization = "\n".join((" "*8 + "self.%s = %s"%(op.name, op.name) for op in self.operands)) 
+        self.initialization = "\n".join(
+            (" " * 8 + "self.%s = %s" % (op.name, op.name) for op in self.operands))
 
-        self.paramlist = ", ".join(("'%s'"%op.name for op in self.operands))
+        self.paramlist = ", ".join(("'%s'" % op.name for op in self.operands))
 
         default_init_started = False
         params_with_defaults = []
         for op in self.operands:
             if op.init_value is not None:
-                params_with_defaults.append("'%s'"%op.name)
+                params_with_defaults.append("'%s'" % op.name)
                 default_init_started = True
             # Ensure that arguments with default values are not followed by
             # arguments without default values.
@@ -98,7 +107,7 @@ class %(name)s(ComputationNode):
         self.params_with_defaults = ', '.join(params_with_defaults)
 
     def __str__(self):
-        return self.COMP_NODE_TEMPLATE%self.__dict__
+        return self.COMP_NODE_TEMPLATE % self.__dict__
 
     def sig(self, op):
         name, init = op.name, op.init_value
@@ -106,17 +115,19 @@ class %(name)s(ComputationNode):
             return name
 
         if type(init) == str:
-            return "%s='%s'"%(op.name, op.init_value) 
+            return "%s='%s'" % (op.name, op.init_value)
         else:
-            return "%s=%s"%(op.name, op.init_value) 
+            return "%s=%s" % (op.name, op.init_value)
+
 
 class AliasOperator(object):
+
     def __init__(self, alias_match):
         self.operator = alias_match.group('operator')
         self.alias = alias_match.group('alias')
 
     def __str__(self):
-        return "%(operator)s = %(alias)s"%self.__dict__
+        return "%(operator)s = %(alias)s" % self.__dict__
 
 
 class InstantiationOperator(CompNodeOperator):
@@ -135,23 +146,25 @@ class %(name)s(%(inst_operator)s):
         inst_operands = []
         for operand in raw_inst_operands:
             parts = operand.split('=')
-            if len(parts)==1:
+            if len(parts) == 1:
                 elem = parts[0].strip()
                 if ':' in elem:
                     elem = "'<not yet supported>'"
                 inst_operands.append(elem)
-            elif len(parts)==2:
+            elif len(parts) == 2:
                 init = parts[1].strip()
                 if ':' in init:
                     init = "'<not yet supported>'"
-                inst_operands.append('%s=%s'%(parts[0].strip(), self._smooth(init)))
+                inst_operands.append(
+                    '%s=%s' % (parts[0].strip(), self._smooth(init)))
             else:
-                raise ValueError('Did not expect more than 1 equal sign: %s'%operand)
+                raise ValueError(
+                    'Did not expect more than 1 equal sign: %s' % operand)
 
         self.inst_operands = ', '.join(inst_operands)
 
     def __str__(self):
-        return self.INST_NODE_TEMPLATE%self.__dict__
+        return self.INST_NODE_TEMPLATE % self.__dict__
 
 OPS_PREAMBLE = """\
 # This file is auto-generated by _fetch_ops.py.
@@ -159,6 +172,7 @@ OPS_PREAMBLE = """\
 from cntk.graph import ComputationNode
 
 """
+
 
 def convert_bs_to_python(bs_fn, py_fn):
     # We have to append these at the end to make sure, because the
@@ -168,7 +182,7 @@ def convert_bs_to_python(bs_fn, py_fn):
 
     with open(py_fn, 'w') as pyf:
         pyf.write(OPS_PREAMBLE)
-        
+
         in_computation_node_section = False
         in_standard_node_section = False
 
@@ -179,7 +193,7 @@ def convert_bs_to_python(bs_fn, py_fn):
                 else:
                     in_computation_node_section = False
 
-                if line.startswith('# standard functions'): 
+                if line.startswith('# standard functions'):
                     in_standard_node_section = True
                 else:
                     in_standard_node_section = False
@@ -188,14 +202,14 @@ def convert_bs_to_python(bs_fn, py_fn):
                 standard_match = REGEX_STANDARD.match(line)
                 if standard_match:
                     po = CompNodeOperator(standard_match)
-                    pyf.write(str(po)+'\n')
+                    pyf.write(str(po) + '\n')
                     continue
 
             if in_computation_node_section:
                 comp_match = REGEX_COMPNODE.match(line)
                 if comp_match:
                     po = CompNodeOperator(comp_match)
-                    pyf.write(str(po)+'\n')
+                    pyf.write(str(po) + '\n')
                     continue
 
                 alias_match = REGEX_ALIAS.match(line)
@@ -209,12 +223,11 @@ def convert_bs_to_python(bs_fn, py_fn):
                     continue
 
         for match in alias_ops:
-            pyf.write(str(AliasOperator(match))+'\n')
+            pyf.write(str(AliasOperator(match)) + '\n')
 
         for match in inst_ops:
-            pyf.write(str(InstantiationOperator(match))+'\n')
+            pyf.write(str(InstantiationOperator(match)) + '\n')
 
 
-if __name__=='__main__':
+if __name__ == '__main__':
     convert_bs_to_python(CNTKCORE_DEFS, "ops.py")
-

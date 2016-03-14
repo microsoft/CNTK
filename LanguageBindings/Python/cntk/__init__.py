@@ -6,6 +6,3 @@ from .objectives import *
 from .ops import *
 from .optimizer import *
 from .reader import *
-
-
-
