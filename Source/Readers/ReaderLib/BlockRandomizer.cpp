@@ -5,7 +5,7 @@
 
 #define _CRT_SECURE_NO_WARNINGS
 
-#include "PartialBlockRandomizer.h"
+#include "BlockRandomizer.h"
 #include <algorithm>
 #include <utility>
 #include <deque>
@@ -16,7 +16,7 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
-PartialBlockRandomizer::PartialBlockRandomizer(
+BlockRandomizer::BlockRandomizer(
     int verbosity,
     size_t randomizationRangeInSamples,
     IDataDeserializerPtr deserializer,
@@ -46,7 +46,7 @@ PartialBlockRandomizer::PartialBlockRandomizer(
 }
 
 // Start a new epoch.
-void PartialBlockRandomizer::StartEpoch(const EpochConfiguration& config)
+void BlockRandomizer::StartEpoch(const EpochConfiguration& config)
 {
     m_config = config;
     if (config.m_totalEpochSizeInSamples == requestDataSize)
@@ -68,7 +68,7 @@ void PartialBlockRandomizer::StartEpoch(const EpochConfiguration& config)
 }
 
 // Prepares a new sweep if needed.
-void PartialBlockRandomizer::PrepareNewSweepIfNeeded(size_t samplePosition)
+void BlockRandomizer::PrepareNewSweepIfNeeded(size_t samplePosition)
 {
     size_t sweep = samplePosition / m_sweepTotalNumberOfSamples;
     if (m_sweep != sweep)
@@ -89,7 +89,7 @@ void PartialBlockRandomizer::PrepareNewSweepIfNeeded(size_t samplePosition)
 }
 
 // Gets next sequences not exceeding sampleCount.
-Sequences PartialBlockRandomizer::GetNextSequences(size_t sampleCount)
+Sequences BlockRandomizer::GetNextSequences(size_t sampleCount)
 {
     // Get next sequence descriptions.
     Sequences result;
@@ -136,7 +136,7 @@ Sequences PartialBlockRandomizer::GetNextSequences(size_t sampleCount)
 
 // Get next sequence descriptions that do not exceed sample count.
 // Returns true if epoch end is reached.
-bool PartialBlockRandomizer::GetNextSequenceDescriptions(size_t sampleCount, std::vector<RandomizedSequenceDescription>& result)
+bool BlockRandomizer::GetNextSequenceDescriptions(size_t sampleCount, std::vector<RandomizedSequenceDescription>& result)
 {
     PrepareNewSweepIfNeeded(m_globalSamplePosition);
 
@@ -166,7 +166,7 @@ bool PartialBlockRandomizer::GetNextSequenceDescriptions(size_t sampleCount, std
 }
 
 // Decimates sequences and load/unloads chunks using infromation of the SequenceRandomizer.
-void PartialBlockRandomizer::Decimate(const std::vector<RandomizedSequenceDescription>& all, std::vector<RandomizedSequenceDescription>& decimated)
+void BlockRandomizer::Decimate(const std::vector<RandomizedSequenceDescription>& all, std::vector<RandomizedSequenceDescription>& decimated)
 {
     // Swap remove all old chunks and add new ones.
     // Require all data in chunks.
@@ -202,7 +202,7 @@ void PartialBlockRandomizer::Decimate(const std::vector<RandomizedSequenceDescri
 }
 
 // Retrives chunk data based on the window information provided by SequenceRandomizer
-void PartialBlockRandomizer::RetrieveDataChunks()
+void BlockRandomizer::RetrieveDataChunks()
 {
     const auto& window = m_sequenceRandomizer->GetChunkWindow();
     if (window.back().m_chunkId == m_lastSeenChunkId)

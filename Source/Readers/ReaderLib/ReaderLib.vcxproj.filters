@@ -40,13 +40,13 @@
     <ClInclude Include="Bundler.h">
       <Filter>Deserializers</Filter>
     </ClInclude>
-    <ClInclude Include="PartialBlockRandomizer.h">
-      <Filter>Randomizers</Filter>
-    </ClInclude>
     <ClInclude Include="ChunkRandomizer.h">
       <Filter>Randomizers</Filter>
     </ClInclude>
     <ClInclude Include="SequenceRandomizer.h">
+      <Filter>Randomizers</Filter>
+    </ClInclude>
+    <ClInclude Include="BlockRandomizer.h">
       <Filter>Randomizers</Filter>
     </ClInclude>
   </ItemGroup>
@@ -63,13 +63,13 @@
     <ClCompile Include="Bundler.cpp">
       <Filter>Deserializers</Filter>
     </ClCompile>
-    <ClCompile Include="PartialBlockRandomizer.cpp">
-      <Filter>Randomizers</Filter>
-    </ClCompile>
     <ClCompile Include="ChunkRandomizer.cpp">
       <Filter>Randomizers</Filter>
     </ClCompile>
     <ClCompile Include="SequenceRandomizer.cpp">
+      <Filter>Randomizers</Filter>
+    </ClCompile>
+    <ClCompile Include="BlockRandomizer.cpp">
       <Filter>Randomizers</Filter>
     </ClCompile>
   </ItemGroup>
