@@ -135,7 +135,7 @@ class ComputationNode(object):
                     param_variable_names.append(self._param_to_brainscript(p_name, p_value))
 
         if hasattr(self, 'tag') and 'tag' not in self.params:
-            param_variable_names.append("tag='output'")
+            param_variable_names.append("tag='%s'"%self.tag)
 
         self.var_name = self.var_name or "v%i"%node_counter 
         node_counter += 1
