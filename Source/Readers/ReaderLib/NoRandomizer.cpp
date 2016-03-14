@@ -126,7 +126,6 @@ std::vector<SequenceDescription> NoRandomizer::GetNextSequenceDescriptions(size_
     int samples = (int)sampleCount;
 
     std::vector<SequenceDescription> result;
-    result.reserve(sampleCount);
 
     do
     {
