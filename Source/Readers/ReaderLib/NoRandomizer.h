@@ -38,8 +38,7 @@ private:
     // Get chunk index for the sample offset from the beginning of the sweep.
     size_t GetChunkIndexOf(size_t samplePosition);
 
-    // Moves the cursor to the next chunk, if last sequence has been reached in the current.
-    void MoveToNextChunkIfNeeded(size_t sequenceOffsetInsideChunk);
+    // Moves the cursor to the sequence possibly updating the chunk.
     void MoveToNextSequence();
 
     IDataDeserializerPtr m_deserializer;
@@ -57,12 +56,10 @@ private:
     // m_chunkSampleOffset for each chunk contains the sample offset in the sweep where the chunk begins.
     std::vector<size_t> m_chunkSampleOffset;
 
-    // Current window of chunks.
-    std::vector<ChunkPtr> m_chunks;
-    // Chunk id that identifies the start of the window.
-    size_t m_chunkStartPosition;
-    // Chunk id that identifies the end of the window.
-    size_t m_chunkEndPosition;
+    // Current chunk data.
+    ChunkPtr m_currentChunk;
+    // Current chunk data id.
+    size_t m_currentChunkId;
 
     // Current window of sequence descriptions.
     std::vector<SequenceDescription> m_sequenceWindow;
@@ -71,6 +68,7 @@ private:
     size_t m_currentSequencePositionInChunk;
 
     // Current chunk position that the randomizer works with.
+    // An index inside the m_chunkDescriptions.
     size_t m_currentChunkPosition;
 
     // Global sample position.

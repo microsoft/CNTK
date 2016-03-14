@@ -17,9 +17,7 @@ NoRandomizer::NoRandomizer(IDataDeserializerPtr deserializer)
       m_currentChunkPosition(SIZE_MAX),
       m_globalSamplePosition(0),
       m_totalNumberOfSamples(0),
-      m_currentSequencePositionInChunk(0),
-      m_chunkStartPosition(0),
-      m_chunkEndPosition(0)
+      m_currentSequencePositionInChunk(0)
 {
     assert(deserializer != nullptr);
     m_streams = m_deserializer->GetStreamDescriptions();
@@ -28,12 +26,14 @@ NoRandomizer::NoRandomizer(IDataDeserializerPtr deserializer)
     size_t sampleCount = 0;
     for (const auto& chunk : m_chunkDescriptions)
     {
+        // Check that position corresponds to chunk id.
+        assert(m_chunkSampleOffset.size() == chunk->id);
+
         m_chunkSampleOffset.push_back(sampleCount);
         sampleCount += chunk->numberOfSamples;
     }
 
     m_totalNumberOfSamples = sampleCount;
-    m_chunks.resize(m_chunkDescriptions.size());
 }
 
 void NoRandomizer::Initialize(TransformerPtr, const ConfigParameters&)
@@ -62,15 +62,9 @@ void NoRandomizer::StartEpoch(const EpochConfiguration& config)
     size_t chunkIndex = GetChunkIndexOf(sweepSamplePosition);
     if (chunkIndex != m_currentChunkPosition)
     {
-        // Dropping all chunk data from previous epoch
-        while (m_chunkStartPosition != m_chunkEndPosition)
-        {
-            m_chunks[m_chunkStartPosition] = nullptr;
-            m_chunkStartPosition = (m_chunkStartPosition + 1) % m_chunkDescriptions.size();
-        }
-
-        // No data has been loaded yet, putting the data window to empty.
-        m_chunkStartPosition = m_chunkEndPosition = 0;
+        // unloading everything.
+        m_currentChunkId = SIZE_MAX;
+        m_currentChunk = nullptr;
 
         // Need to load descriptions for the new current chunk.
         m_currentChunkPosition = chunkIndex;
@@ -173,40 +167,25 @@ Sequences NoRandomizer::GetNextSequences(size_t sampleCount)
         return result;
     }
 
-    // Drop all chunk data that are not required anymore - the onces that have id less than
-    // the head of retrieved sequence descriptions.
-    while (m_chunkStartPosition != m_chunkEndPosition && m_chunkStartPosition != descriptions[start].m_chunkId)
-    {
-        m_chunks[m_chunkStartPosition] = nullptr;
-        m_chunkStartPosition = (m_chunkStartPosition + 1) % m_chunkDescriptions.size();
-    }
-
-    // Load the chunks required by the sequence descriptions.
-    for (size_t i = 0; i < subsetSize; ++i)
-    {
-        size_t lastLoadedChunkId = (m_chunkEndPosition - 1) % m_chunkDescriptions.size();
-        if (m_chunkStartPosition == m_chunkEndPosition || descriptions[start + i].m_chunkId != lastLoadedChunkId)
-        {
-            m_chunks[m_chunkEndPosition] = m_deserializer->GetChunk(descriptions[start + i].m_chunkId);
-            m_chunkEndPosition = (m_chunkEndPosition + 1) % m_chunkDescriptions.size();
-        }
-    }
-
-    // TODO: Not clear whether batching will make sense for this.
-    // We have to re-assemble the exposed result from sequences from different chunks.
     result.m_data.resize(m_streams.size(), std::vector<SequenceDataPtr>(subsetSize));
-#pragma omp parallel for ordered schedule(dynamic)
     for (int i = 0; i < subsetSize; ++i)
     {
         std::vector<SequenceDataPtr> sequence;
-        m_chunks[descriptions[start + i].m_chunkId]->GetSequence(descriptions[start + i].m_id, sequence);
+        const auto& sequenceDescription = descriptions[start + i];
+        if (sequenceDescription.m_chunkId != m_currentChunkId)
+        {
+            m_currentChunk = m_deserializer->GetChunk(sequenceDescription.m_chunkId);
+            m_currentChunkId = sequenceDescription.m_chunkId;
+        }
+
+        m_currentChunk->GetSequence(sequenceDescription.m_id, sequence);
         for (int j = 0; j < m_streams.size(); ++j)
         {
             result.m_data[j][i] = sequence[j];
         }
     }
-    return result;
 
+    return result;
 }
 
 } } }
