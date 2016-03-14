@@ -30,7 +30,7 @@ PartialBlockRandomizer::PartialBlockRandomizer(
       m_globalSamplePosition(SIZE_MAX),
       m_sweepTotalNumberOfSamples(0),
       m_lastSeenChunk(SIZE_MAX),
-      m_chunkRandomizer(std::make_shared<ChunkRandomizer>(deserializer, useLegacyRandomization, randomizationRangeInSamples))
+      m_chunkRandomizer(std::make_shared<ChunkRandomizer>(deserializer, randomizationRangeInSamples, useLegacyRandomization))
 {
     assert(deserializer != nullptr);
 

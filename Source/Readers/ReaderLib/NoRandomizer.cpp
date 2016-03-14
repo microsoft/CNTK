@@ -42,28 +42,8 @@ void NoRandomizer::Initialize(TransformerPtr, const ConfigParameters&)
 
 size_t NoRandomizer::GetChunkIndexOf(size_t samplePosition)
 {
-    size_t low = 0;
-    size_t high = m_chunkDescriptions.size() - 1;
-    while (high > low)
-    {
-        size_t mid = (high + low) / 2;
-        if (samplePosition >= m_chunkSampleOffset[mid] + m_chunkDescriptions[mid]->numberOfSamples)
-        {
-            low = mid + 1;
-        }
-        else if (samplePosition < m_chunkSampleOffset[mid])
-        {
-            assert(mid > 0);
-            high = mid - 1;
-        }
-        else
-        {
-            return mid;
-        }
-    }
-
-    assert((high == low) && ((samplePosition >= m_chunkSampleOffset[low]) && (samplePosition < m_chunkSampleOffset[low] + m_chunkDescriptions[low]->numberOfSamples)));
-    return low;
+    auto result = std::upper_bound(m_chunkSampleOffset.begin(), m_chunkSampleOffset.end(), samplePosition);
+    return result - 1 - m_chunkSampleOffset.begin();
 }
 
 void NoRandomizer::StartEpoch(const EpochConfiguration& config)
@@ -77,17 +57,11 @@ void NoRandomizer::StartEpoch(const EpochConfiguration& config)
 
     m_samplePositionInEpoch = 0;
     m_globalSamplePosition = m_config.m_totalEpochSizeInSamples * config.m_epochIndex;
-    size_t localSamplePosition = m_globalSamplePosition % m_totalNumberOfSamples;
+    size_t sweepSamplePosition = m_globalSamplePosition % m_totalNumberOfSamples;
 
-    size_t chunkIndex = GetChunkIndexOf(localSamplePosition);
+    size_t chunkIndex = GetChunkIndexOf(sweepSamplePosition);
     if (chunkIndex != m_currentChunkPosition)
     {
-        m_currentChunkPosition = chunkIndex;
-        m_sequenceWindow.clear();
-
-        m_deserializer->GetSequencesForChunk(m_currentChunkPosition, m_sequenceWindow);
-        m_currentSequencePositionInChunk = 0;
-
         // Dropping all chunk data from previous epoch
         while (m_chunkStartPosition != m_chunkEndPosition)
         {
@@ -95,11 +69,18 @@ void NoRandomizer::StartEpoch(const EpochConfiguration& config)
             m_chunkStartPosition = (m_chunkStartPosition + 1) % m_chunkDescriptions.size();
         }
 
-        m_chunkStartPosition = 0;
-        m_chunkEndPosition = 0;
+        // No data has been loaded yet, putting the data window to empty.
+        m_chunkStartPosition = m_chunkEndPosition = 0;
+
+        // Need to load descriptions for the new current chunk.
+        m_currentChunkPosition = chunkIndex;
+        m_currentSequencePositionInChunk = 0;
+        m_sequenceWindow.clear();
+        m_deserializer->GetSequencesForChunk(m_currentChunkPosition, m_sequenceWindow);
     }
 
-    size_t sampleOffsetInsideChunk = localSamplePosition - m_chunkSampleOffset[m_currentChunkPosition];
+    // Moving current sequence inside the chunk to match the sample offset.
+    size_t sampleOffsetInsideChunk = sweepSamplePosition - m_chunkSampleOffset[m_currentChunkPosition];
     size_t numberOfSamples = 0;
     size_t sequenceId = 0;
 
@@ -109,6 +90,7 @@ void NoRandomizer::StartEpoch(const EpochConfiguration& config)
         size_t sequenceSize = m_sequenceWindow[i].m_numberOfSamples;
         if (sequenceSize + numberOfSamples > sampleOffsetInsideChunk)
         {
+            // We have found our sequence.
             break;
         }
 
@@ -117,29 +99,17 @@ void NoRandomizer::StartEpoch(const EpochConfiguration& config)
     }
 
     m_currentSequencePositionInChunk = sequenceId;
+    assert(m_chunkDescriptions[m_currentChunkPosition]->numberOfSequences > m_currentSequencePositionInChunk);
 };
 
-std::vector<SequenceDescription> NoRandomizer::GetNextSequenceDescriptions(size_t sampleCount)
+// Moving the cursor to the next sequence. Possibly updating the chunk information if needed.
+void NoRandomizer::MoveToNextSequence()
 {
-    assert(m_sequenceWindow.size() != 0);
-
-    // Decimation is done based only on sequence ids
-    int samples = (int)sampleCount;
-
-    std::vector<SequenceDescription> descriptions;
-    descriptions.reserve(sampleCount);
-
-    size_t sequenceOffsetInsideChunk = m_currentSequencePositionInChunk;
-    SequenceDescription sequence = m_sequenceWindow[m_currentSequencePositionInChunk];
-
-    descriptions.push_back(sequence);
-
-    samples -= (int)sequence.m_numberOfSamples;
-    m_currentSequencePositionInChunk++;
+    SequenceDescription& sequence = m_sequenceWindow[m_currentSequencePositionInChunk];
     m_samplePositionInEpoch += sequence.m_numberOfSamples;
     m_globalSamplePosition += sequence.m_numberOfSamples;
 
-    if (sequenceOffsetInsideChunk + 1 >= m_chunkDescriptions[m_currentChunkPosition]->numberOfSequences)
+    if (m_currentSequencePositionInChunk + 1 >= m_chunkDescriptions[m_currentChunkPosition]->numberOfSequences)
     {
         // Moving to the next chunk.
         m_currentChunkPosition = (m_currentChunkPosition + 1) % m_chunkDescriptions.size();
@@ -147,35 +117,34 @@ std::vector<SequenceDescription> NoRandomizer::GetNextSequenceDescriptions(size_
         m_sequenceWindow.clear();
         m_deserializer->GetSequencesForChunk(m_currentChunkPosition, m_sequenceWindow);
     }
-
-    while (samples > 0)
+    else
     {
-        sequenceOffsetInsideChunk = m_currentSequencePositionInChunk;
-        sequence = m_sequenceWindow[sequenceOffsetInsideChunk];
-        if (samples - (int)sequence.m_numberOfSamples >= 0)
-        {
-            descriptions.push_back(sequence);
-            m_currentSequencePositionInChunk++;
-            samples -= (int)sequence.m_numberOfSamples;
-            m_samplePositionInEpoch += sequence.m_numberOfSamples;
-            m_globalSamplePosition += sequence.m_numberOfSamples;
-
-            if (sequenceOffsetInsideChunk + 1 >= m_chunkDescriptions[m_currentChunkPosition]->numberOfSequences)
-            {
-                // Moving to the next chunk.
-                m_currentChunkPosition = (m_currentChunkPosition + 1) % m_chunkDescriptions.size();
-                m_sequenceWindow.clear();
-                m_deserializer->GetSequencesForChunk(m_currentChunkPosition, m_sequenceWindow);
-                m_currentSequencePositionInChunk = 0;
-            }
-        }
-        else
-        {
-            break;
-        }
+        m_currentSequencePositionInChunk++;
     }
+}
 
-    return descriptions;
+// Gets next sequence descriptions with total size less than sampleCount.
+std::vector<SequenceDescription> NoRandomizer::GetNextSequenceDescriptions(size_t sampleCount)
+{
+    assert(m_sequenceWindow.size() != 0);
+    assert(m_chunkDescriptions[m_currentChunkPosition]->numberOfSequences > m_currentSequencePositionInChunk);
+
+    int samples = (int)sampleCount;
+
+    std::vector<SequenceDescription> result;
+    result.reserve(sampleCount);
+
+    do
+    {
+        const SequenceDescription& sequence = m_sequenceWindow[m_currentSequencePositionInChunk];
+        result.push_back(sequence);
+        samples -= (int)sequence.m_numberOfSamples;
+
+        MoveToNextSequence();
+    }
+    // Check whether the next sequence fits into the sample count, if not, exit.
+    while (samples - (int)m_sequenceWindow[m_currentSequencePositionInChunk].m_numberOfSamples >= 0);
+    return result;
 }
 
 Sequences NoRandomizer::GetNextSequences(size_t sampleCount)
@@ -188,15 +157,14 @@ Sequences NoRandomizer::GetNextSequences(size_t sampleCount)
     }
 
     // Check that we do not go over the sweep.
+    // TODO: This preserves the old behavior. Could be done differently in the future.
     size_t sweepPosition = m_globalSamplePosition % m_totalNumberOfSamples;
-    if (sweepPosition + sampleCount >= m_totalNumberOfSamples)
-    {
-        sampleCount = m_totalNumberOfSamples - sweepPosition;
-    }
+    sampleCount = std::min(sampleCount, m_totalNumberOfSamples - sweepPosition);
     assert(sampleCount != 0);
 
     std::vector<SequenceDescription> descriptions = GetNextSequenceDescriptions(sampleCount);
 
+    // Retrieve only sequences that are required by this worker.
     size_t start = descriptions.size() * m_config.m_workerRank / m_config.m_numberOfWorkers;
     size_t end = descriptions.size() * (m_config.m_workerRank + 1) / m_config.m_numberOfWorkers;
     size_t subsetSize = end - start;
@@ -205,16 +173,19 @@ Sequences NoRandomizer::GetNextSequences(size_t sampleCount)
         return result;
     }
 
+    // Drop all chunk data that are not required anymore - the onces that have id less than
+    // the head of retrieved sequence descriptions.
     while (m_chunkStartPosition != m_chunkEndPosition && m_chunkStartPosition != descriptions[start].m_chunkId)
     {
         m_chunks[m_chunkStartPosition] = nullptr;
         m_chunkStartPosition = (m_chunkStartPosition + 1) % m_chunkDescriptions.size();
     }
 
+    // Load the chunks required by the sequence descriptions.
     for (size_t i = 0; i < subsetSize; ++i)
     {
-        size_t chunkId = (m_chunkEndPosition - 1) % m_chunkDescriptions.size();
-        if (m_chunkStartPosition == m_chunkEndPosition || descriptions[start + i].m_chunkId != chunkId)
+        size_t lastLoadedChunkId = (m_chunkEndPosition - 1) % m_chunkDescriptions.size();
+        if (m_chunkStartPosition == m_chunkEndPosition || descriptions[start + i].m_chunkId != lastLoadedChunkId)
         {
             m_chunks[m_chunkEndPosition] = m_deserializer->GetChunk(descriptions[start + i].m_chunkId);
             m_chunkEndPosition = (m_chunkEndPosition + 1) % m_chunkDescriptions.size();

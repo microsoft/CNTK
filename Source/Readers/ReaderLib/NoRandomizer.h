@@ -14,10 +14,9 @@
 namespace Microsoft { namespace MSR { namespace CNTK {
 
 // The class represents a randomizer that does not randomize input (identity function over the original timeline).
-// This class is used for inference and for training where the training data has already been pre - randomized.
+// Used training where the training data has already been pre - randomized.
 // TODO: currently this code moved from the old block randomizer.
 // TODO: The class will be further refactored and common based will be extracted with BlockRandomizer.
-// TODO: Currently works only for frame mode (numberOfSample in sequence == 1) and without chunking
 // TODO: This layering will be changed, when we move transformers under the randomizer, it won't be a transformer anymore.
 class NoRandomizer : public Transformer
 {
@@ -33,10 +32,16 @@ public:
     }
 
 private:
+    // Gets next sequence descriptions with total size less than sampleCount.
     std::vector<SequenceDescription> GetNextSequenceDescriptions(size_t sampleCount);
-    size_t GetChunkIndexOf(size_t t);
 
-    // Deserializer and information on the original timeline
+    // Get chunk index for the sample offset from the beginning of the sweep.
+    size_t GetChunkIndexOf(size_t samplePosition);
+
+    // Moves the cursor to the next chunk, if last sequence has been reached in the current.
+    void MoveToNextChunkIfNeeded(size_t sequenceOffsetInsideChunk);
+    void MoveToNextSequence();
+
     IDataDeserializerPtr m_deserializer;
 
     // Stream descriptions
@@ -47,20 +52,34 @@ private:
 
     // Chunk descriptions.
     ChunkDescriptions m_chunkDescriptions;
+
+    // m_chunkDescription defines the complete sweep of samples: [0 .. N]
+    // m_chunkSampleOffset for each chunk contains the sample offset in the sweep where the chunk begins.
     std::vector<size_t> m_chunkSampleOffset;
 
     // Current window of chunks.
     std::vector<ChunkPtr> m_chunks;
+    // Chunk id that identifies the start of the window.
     size_t m_chunkStartPosition;
+    // Chunk id that identifies the end of the window.
     size_t m_chunkEndPosition;
 
     // Current window of sequence descriptions.
     std::vector<SequenceDescription> m_sequenceWindow;
+
+    // Current sequence position the randomizer works with.
     size_t m_currentSequencePositionInChunk;
+
+    // Current chunk position that the randomizer works with.
     size_t m_currentChunkPosition;
 
+    // Global sample position.
     size_t m_globalSamplePosition;
+
+    // Current sample position in the epoch.
     size_t m_samplePositionInEpoch;
+
+    // Total number of samples in the sweep.
     size_t m_totalNumberOfSamples;
 };
 
