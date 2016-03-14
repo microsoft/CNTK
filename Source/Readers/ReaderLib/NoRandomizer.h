@@ -71,7 +71,7 @@ private:
     // An index inside the m_chunkDescriptions.
     size_t m_currentChunkPosition;
 
-    // Global sample position.
+    // Global sample position on the timeline.
     size_t m_globalSamplePosition;
 
     // Current sample position in the epoch.

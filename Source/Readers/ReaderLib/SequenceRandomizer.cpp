@@ -50,8 +50,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         m_bufferOriginalSequences.reserve(max);
     }
 
-    std::vector<RandomizedSequenceDescription> SequenceRandomizer::GetSequencesForRange(size_t sampleCount)
+    std::vector<RandomizedSequenceDescription> SequenceRandomizer::GetNextSequenceDescriptions(size_t sampleCount)
     {
+        RandomizeSequenceForRange(sampleCount);
+
         int samples = (int)sampleCount;
 
         std::vector<RandomizedSequenceDescription> result;

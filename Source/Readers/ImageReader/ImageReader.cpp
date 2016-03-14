@@ -39,7 +39,7 @@ ImageReader::ImageReader(MemoryProviderPtr provider,
     TransformerPtr randomizer;
     if (configHelper.ShouldRandomize())
     {
-        randomizer = std::make_shared<PartialBlockRandomizer>(0, SIZE_MAX, deserializer, PartialBlockRandomizer::DistributionMode::sequence, false);
+        randomizer = std::make_shared<PartialBlockRandomizer>(0, SIZE_MAX, deserializer, PartialBlockRandomizer::DecimationMode::sequence, false);
     }
     else
     {

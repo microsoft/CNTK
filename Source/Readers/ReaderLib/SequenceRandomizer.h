@@ -43,9 +43,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         size_t m_currentChunkPosition;
         size_t m_currentFramePosition;
 
-        size_t m_workerRank;
-        size_t m_numberOfWorkers;
-
         std::vector<SequenceDescription> m_bufferOriginalSequences;
 
     public:
@@ -53,17 +50,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             IDataDeserializerPtr deserializer,
             ChunkRandomizerPtr chunkRandomizer);
 
-        void SetWorker(size_t workerRank, size_t numberOfWorkers)
-        {
-            assert(workerRank < numberOfWorkers);
-            m_workerRank = workerRank;
-            m_numberOfWorkers = numberOfWorkers;
-        }
-
         void Reset(size_t seed);
         void SetSequencePositionTo(size_t globalSample, size_t sweep);
 
-        std::vector<RandomizedSequenceDescription> GetSequencesForRange(size_t sampleCount);
+        std::vector<RandomizedSequenceDescription> GetNextSequenceDescriptions(size_t sampleCount);
         void RandomizeSequenceForRange(size_t sampleCount);
 
         const std::deque<RandomizedChunk>& GetChunkWindow() const
