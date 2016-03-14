@@ -43,11 +43,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         m_originalChunks = m_deserializer->GetChunkDescriptions();
     }
 
+    // Gets randomized chunks.
     const std::vector<RandomizedChunk>& ChunkRandomizer::GetRandomizedChunks() const
     {
         return m_randomizedChunks;
     }
 
+    // Randomizes chunks depending on the mode (legacy or not) and calculates randomization windows.
     void ChunkRandomizer::Randomize(unsigned int seed)
     {
         std::vector<size_t> randomizedChunkIndices;
@@ -67,7 +69,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             std::shuffle(randomizedChunkIndices.begin(), randomizedChunkIndices.end(), m_rng);
         }
 
-        // Place randomized chunks on global timeline
+        // Place randomized chunks on the timeline
         m_randomizedChunks.clear();
         m_randomizedChunks.reserve(m_originalChunks.size());
         size_t samplePosition = 0;
@@ -105,6 +107,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 chunk.m_randomizationWindow.m_begin = m_randomizedChunks[chunkId - 1].m_randomizationWindow.m_begin; // might be too early
                 chunk.m_randomizationWindow.m_end = m_randomizedChunks[chunkId - 1].m_randomizationWindow.m_end; // might have more space
             }
+
+            // TODO: uncomment after rebase!
+            // chunk.m_randomizationWindow.m_end = std::max(chunk.m_randomizationWindow.m_end, chunk.m_randomizationWindow.m_begin + 1);
 
             // Need to adapt now.
             while (chunk.m_samplePositionStart - m_randomizedChunks[chunk.m_randomizationWindow.m_begin].m_samplePositionStart > halfWindowRange)

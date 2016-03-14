@@ -40,7 +40,7 @@ public:
     // Get string value by its integer id.
     const std::wstring& GetValueById(size_t id) const
     {
-        assert(Contains(value));
+        assert(id < m_indexedValues.size());
         return *m_indexedValues[id];
     }
 

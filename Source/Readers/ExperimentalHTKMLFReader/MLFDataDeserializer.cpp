@@ -79,6 +79,8 @@ MLFDataDeserializer::MLFDataDeserializer(CorpusDescriptorPtr corpus, const Confi
     auto& stringRegistry = corpus->GetStringRegistry();
     for (const auto& l : labels)
     {
+        // Currently the string registry contains only utterances described in scp.
+        // So here we skip all others.
         if (!stringRegistry.Contains(l.first))
         {
             continue;
@@ -122,6 +124,7 @@ MLFDataDeserializer::MLFDataDeserializer(CorpusDescriptorPtr corpus, const Confi
         m_utteranceIndex.push_back(m_frames.size());
         m_keyToSequence[description.m_key.major] = m_utteranceIndex.size() - 1;
 
+        // TODO: Should be created by chunks only.
         MLFFrame f;
         f.m_chunkId = 0;
         f.m_numberOfSamples = 1;
@@ -133,21 +136,15 @@ MLFDataDeserializer::MLFDataDeserializer(CorpusDescriptorPtr corpus, const Confi
             f.m_key.minor = k;
             f.m_index = description.m_sequenceStart + k;
             m_frames.push_back(f);
-            m_sequences.push_back(&m_frames[f.m_id]);
         }
     }
 
     m_totalNumberOfFrames = totalFrames;
 
-    m_sequences.reserve(m_frames.size());
-    for (int i = 0; i < m_frames.size(); ++i)
-    {
-        m_sequences.push_back(&m_frames[i]);
-    }
-
-    fprintf(stderr, "MLFDataDeserializer::MLFDataDeserializer: read %d sequences\n", (int)m_sequences.size());
+    fprintf(stderr, "MLFDataDeserializer::MLFDataDeserializer: read %d sequences\n", (int)m_frames.size());
     fprintf(stderr, "MLFDataDeserializer::MLFDataDeserializer: read %d utterances\n", (int)m_keyToSequence.size());
 
+    // Initializing stream description - a single stream of MLF data.
     StreamDescriptionPtr stream = std::make_shared<StreamDescription>();
     stream->m_id = 0;
     stream->m_name = name;
@@ -156,6 +153,7 @@ MLFDataDeserializer::MLFDataDeserializer(CorpusDescriptorPtr corpus, const Confi
     stream->m_elementType = m_elementType;
     m_streams.push_back(stream);
 
+    // Initializing array of labels.
     m_categories.reserve(dimension);
     for (size_t i = 0; i < dimension; ++i)
     {
@@ -175,19 +173,22 @@ MLFDataDeserializer::MLFDataDeserializer(CorpusDescriptorPtr corpus, const Confi
     }
 }
 
+// Currently MLF has a single chunk.
+// TODO: This will be changed when the deserializer properly supports chunking.
 ChunkDescriptions MLFDataDeserializer::GetChunkDescriptions()
 {
     auto cd = std::make_shared<ChunkDescription>();
     cd->id = 0;
-    cd->numberOfSequences = m_sequences.size();
-    cd->numberOfSamples = m_sequences.size();
+    cd->numberOfSequences = m_frames.size();
+    cd->numberOfSamples = m_frames.size();
     return ChunkDescriptions{cd};
 }
 
+// Gets sequences for a particular chunk.
 void MLFDataDeserializer::GetSequencesForChunk(size_t, std::vector<SequenceDescription>& result)
 {
-    result.reserve(m_sequences.size());
-    for (size_t i = 0; i < m_sequences.size(); ++i)
+    result.reserve(m_frames.size());
+    for (size_t i = 0; i < m_frames.size(); ++i)
     {
         SequenceDescription f;
         f.m_key.major = m_frames[i].m_key.major;
@@ -198,11 +199,6 @@ void MLFDataDeserializer::GetSequencesForChunk(size_t, std::vector<SequenceDescr
         f.m_isValid = true;
         result.push_back(f);
     }
-}
-
-std::vector<StreamDescriptionPtr> MLFDataDeserializer::GetStreamDescriptions() const
-{
-    return m_streams;
 }
 
 ChunkPtr MLFDataDeserializer::GetChunk(size_t chunkId)
@@ -231,7 +227,7 @@ void MLFDataDeserializer::GetSequenceDescriptionByKey(const KeyType& key, Sequen
     }
 
     size_t index = m_utteranceIndex[sequenceId->second] + key.minor;
-    result = *m_sequences[index];
+    result = m_frames[index];
 }
 
 }}}
