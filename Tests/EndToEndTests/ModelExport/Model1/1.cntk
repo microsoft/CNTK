@@ -1,0 +1,25 @@
+# deviceId = 0
+#imageLayout = "cudnn"
+
+ deviceId = -1
+ imageLayout = "legacy"
+
+precision = "float"
+modelPath = "1_model.cntk"
+dbnModelPath = "1_export.dbn"
+
+# uncomment the following line to write logs to a file 
+#stderr = "cntkSpeech.out"
+traceLevel=1
+numMBsToShowResult=500
+
+command = export
+
+#######################################
+#  EXPORT CONFIG                      #
+#######################################
+
+export = [
+    action = "exportdbn"
+    ]
+]

@@ -453,8 +453,8 @@ public:
 #if 1         // no gradient flows to log LLs (but otherwise we leave it to user if, e.g., another node propagates a gradient into there)
             ; // gradient does not flow here
 #else
-            Input(inputIndex)->SetParameterUpdateRequired(false);
-            Input(inputIndex)->Gradient().SetValue(0.0);
+            Input(inputIndex)->SetLearningRateMultiplier(0);
+            Input(inputIndex)->Gradient().SetValue(0.0); // BUGBUG: Gradients must always be added, since nodes may have multiple parents.
 #endif
         }
         else
@@ -564,9 +564,9 @@ public:
         {
             auto node = dynamic_pointer_cast<SequenceWithSoftmaxNode<ElemType>>(nodeP);
 
-            *node->m_logSoftmaxOfRight = *m_logSoftmaxOfRight;
-            *node->m_softmaxOfRight = *m_softmaxOfRight;
-            *node->m_gammaFromLattice = *m_gammaFromLattice;
+            node->m_logSoftmaxOfRight->SetValue(*m_logSoftmaxOfRight);
+            node->m_softmaxOfRight->SetValue(*m_softmaxOfRight);
+            node->m_gammaFromLattice->SetValue(*m_gammaFromLattice);
             node->m_fsSmoothingWeight = m_fsSmoothingWeight;
             node->m_frameDropThreshold = m_frameDropThreshold;
             node->m_doReferenceAlignment = m_doReferenceAlignment;
@@ -872,9 +872,9 @@ public:
         {
             auto node = dynamic_pointer_cast<CTCwithSoftmaxNode<ElemType>>(nodeP);
 
-            *node->m_logSoftmaxOfRight = *m_logSoftmaxOfRight;
-            *node->m_softmaxOfRight = *m_softmaxOfRight;
-            *node->m_CTCposterior = *m_CTCposterior;
+            node->m_logSoftmaxOfRight->SetValue(*m_logSoftmaxOfRight);
+            node->m_softmaxOfRight->SetValue(*m_softmaxOfRight);
+            node->m_CTCposterior->SetValue(*m_CTCposterior);
             node->m_blanknum = m_blanknum;
         }
     }

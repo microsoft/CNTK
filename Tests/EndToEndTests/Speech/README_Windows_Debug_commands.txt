@@ -52,14 +52,27 @@ COMMAND:    currentDirectory=\\storage.ccp.philly.selfhost.corp.microsoft.com\pu
 
 --- MNIST:
 
+COMMAND:    configFile=$(SolutionDir)Examples/Image/MNIST/Config/01_OneHidden.cntk  currentDirectory=$(SolutionDir)Tests/EndToEndTests/Image/Data  RunDir=$(SolutionDir)Tests/EndToEndTests/RunDir/Image/MNIST_01_OneHidden  DataDir=$(SolutionDir)Tests/EndToEndTests/Image/Data  ConfigDir=$(SolutionDir)Examples/Image/MNIST/Config  OutputDir=$(SolutionDir)Tests/EndToEndTests/RunDir/Image/MNIST_01_OneHidden  DeviceId=0  MNISTtrain=[reader=[file=$(SolutionDir)Tests/EndToEndTests/Image/Data/Train.txt]]  MNISTtest=[reader=[file=$(SolutionDir)Tests/EndToEndTests/Image/Data/Test.txt]]  MNISTtrain=[SGD=[maxEpochs=1]]  MNISTtrain=[SGD=[epochSize=100]]  MNISTtrain=[reader=[randomize=none]]  imageLayout="cudnn"  makeMode=false
+
+COMMAND:    configFile=$(SolutionDir)Examples/Image/MNIST/Config/02_Convolution.cntk  currentDirectory=$(SolutionDir)Tests/EndToEndTests/Image/Data  RunDir=$(SolutionDir)Tests/EndToEndTests/RunDir/Image/MNIST_02_Convolution  DataDir=$(SolutionDir)Tests/EndToEndTests/Image/Data  ConfigDir=$(SolutionDir)Examples/Image/MNIST/Config  OutputDir=$(SolutionDir)Tests/EndToEndTests/RunDir/Image/MNIST_02_Convolution  DeviceId=0  train=[reader=[file=$(SolutionDir)Tests/EndToEndTests/Image/Data/Train.txt]]  MNISTtest=[reader=[file=$(SolutionDir)Tests/EndToEndTests/Image/Data/Test.txt]]  train=[SGD=[maxEpochs=1]]  train=[SGD=[epochSize=100]]  train=[reader=[randomize=none]]  imageLayout="cudnn"  makeMode=false
+
 TODO out-of-date:
 COMMAND:     currentDirectory=$(SolutionDir)ExampleSetups\Image\MNIST  configFile=02_Conv.cntk configName=02_Conv
 
 --- Image/QuickE2E:
 
-COMMAND:     configFile=$(SolutionDir)Tests\EndToEndTests\Image\QuickE2E\cntk.cntk  RunDir=$(SolutionDir)Tests\EndToEndTests\Image\_run  DataDir=$(SolutionDir)Tests\EndToEndTests\Image\Data  ConfigDir=$(SolutionDir)Tests\EndToEndTests\Image\QuickE2E  stderr=$(SolutionDir)Tests\EndToEndTests\RunDir\Image\QuickE2E\models\cntkImage.dnn.log  DeviceId=0  useCuDnn=false   makeMode=false
+COMMAND:     configFile=$(SolutionDir)Tests/EndToEndTests/Image/QuickE2E/cntk.cntk  RunDir=$(SolutionDir)Tests/EndToEndTests/Image/_run  DataDir=$(SolutionDir)Tests/EndToEndTests/Image/Data  ConfigDir=$(SolutionDir)Tests/EndToEndTests/Image/QuickE2E  stderr=$(SolutionDir)Tests/EndToEndTests/RunDir/Image/QuickE2E/models/cntkImage.dnn.log  DeviceId=0  useCuDnn=false   makeMode=false
+
+--- Other/Simple2d:
+
+COMMAND:     configFile=$(SolutionDir)Examples/Other/Simple2d/Config/Simple.cntk  RunDir=$(SolutionDir)Examples/Other/Simple2d/_run  DataDir=$(SolutionDir)Examples/Other/Simple2d/Data  ConfigDir=$(SolutionDir)Examples/Other/Simple2d/Config  stderr=$(SolutionDir)Examples/Other/Simple2d/_run/Simple.log  DeviceId=0  useCuDnn=false   makeMode=false
+
+--- Text/RNN:
+
+COMMAND:    configFile=$(SolutionDir)Examples/Text/PennTreebank/Config/rnn.cntk  RunDir=$(SolutionDir)Examples/Text/PennTreebank/_run  RootDir=$(SolutionDir)Examples/Text/PennTreebank/_run  DataDir=$(SolutionDir)Examples/Text/PennTreebank/Data  ConfigDir=$(SolutionDir)Examples/Text/PennTreebank/Config  stderr=$(SolutionDir)Examples/Text/PennTreebank/_run/Simple.log  train=[SGD=[maxEpochs=1]]  train=[epochSize=2048]]  confVocabSize=1000  DeviceId=0  makeMode=false
+# append this for small set: trainFile=ptb.small.train.txt  validFile=ptb.small.valid.txt testFile=ptb.small.test.txt
 
 Simple test
 -----------
 
-COMMAND:     currentDirectory=$(SolutionDir)Demos\Simple  configFile=Simple.cntk  stderr=RunDir\Simple.cntk.log  RootDir=$(SolutionDir)  DeviceNumber=-1
+COMMAND:     currentDirectory=$(SolutionDir)Demos/Simple  configFile=Simple.cntk  stderr=RunDir/Simple.cntk.log  RootDir=$(SolutionDir)  DeviceNumber=-1

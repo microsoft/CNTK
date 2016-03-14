@@ -19,7 +19,6 @@ bool EqualInsensitive(std::wstring& string1, const std::wstring& string2, const 
 // string1 - [in,out] string to compare, if comparision is equal and at least half the full node name will replace with full node name
 // allowUndeterminedVariable - [out] set to true if undetermined variables (symbols yet to be defined) are allowed here
 // return - true if function name found
-template <typename ElemType>
 bool CheckFunction(std::string& p_nodeType, bool* allowUndeterminedVariable = nullptr);
 
 // NDLType - Network Description Language node type
@@ -520,7 +519,7 @@ public:
             std::string functionName = param;
             // check for function name, a function may have two valid names
             // in which case 'functionName' will get the default node name returned
-            if (CheckFunction<ElemType>(functionName))
+            if (CheckFunction(functionName))
             {
                 RuntimeError("NDLScript: Macro %s includes a parameter %s, which is also the name of a function. Parameter names may not be the same as function names.", macroName.c_str(), param.c_str());
             }
@@ -791,7 +790,7 @@ public:
         std::string functionName = name;
         // check for function name, a function may have two valid names
         // in which case 'functionName' will get the default node name returned
-        if (CheckFunction<ElemType>(functionName))
+        if (CheckFunction(functionName))
         {
             NDLNode<ElemType>* ndlNode = new NDLNode<ElemType>("", functionName, this, ndlTypeFunction);
             return ndlNode;
@@ -871,9 +870,11 @@ public:
             return ndlNode;
         }
 
-        auto found = token.find_first_not_of("+-.0123456789eE");
+        char* pEnd;
+        strtod(token.c_str(), &pEnd);
+
         // see if it's a numeric constant
-        if (found == npos)
+        if (*pEnd == 0)
         {
             ndlNode = new NDLNode<ElemType>("", token, this, ndlTypeConstant);
         }
@@ -1013,7 +1014,7 @@ public:
 
             // check to make sure variable name isn't a valid function name as well
             string strTemp = key;
-            if (CheckFunction<ElemType>(strTemp))
+            if (CheckFunction(strTemp))
                 RuntimeError("variable %s is invalid, it is reserved because it is also the name of a function", key.c_str());
 
             tokenStart = keyEnd;

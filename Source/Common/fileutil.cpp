@@ -17,6 +17,8 @@
 #define _CRT_SECURE_CPP_OVERLOAD_STANDARD_NAMES 1
 #include "Basics.h"
 #include "fileutil.h"
+#include "ProgressTracing.h"
+
 #ifdef __unix__
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -606,9 +608,17 @@ void renameOrDie(const std::string& from, const std::string& to)
     // Delete destination file if it exists
     // WORKAROUND: "rename" should do this but this is a workaround
     // to the HDFS FUSE implementation's bug of failing to do so
+    // workaround for FUSE rename when running on Philly
+    if (ProgressTracing::GetTracingFlag())
+    {
+        fprintf(stderr, "rename %s to %s\n", from.c_str(), to.c_str());
+    }    
+    
     unlinkOrDie(to);
     if (rename(from.c_str(), to.c_str()) != 0)
+    {
         RuntimeError("error renaming file '%s': %s", from.c_str(), strerror(errno));
+    }
 #endif
 }
 
@@ -1010,6 +1020,7 @@ bool fskipwspace(FILE* f)
 
 // fskipNewLine(): skip all white space until end of line incl. the newline
 // skip - skip the end of line if true, otherwise leave the end of line (but eat any leading space)
+// returns false, true, or EOF
 int fskipNewline(FILE* f, bool skip)
 {
     int c;
@@ -1041,40 +1052,6 @@ int fskipNewline(FILE* f, bool skip)
         return (int) found;
     }
     // if we get here we saw a newline
-    return (int) true;
-}
-
-// fskipwNewLine(): skip all white space until end of line incl. the newline
-// skip - skip the end of line if true, otherwise leave the end of line (but eat any leading space)
-int fskipwNewline(FILE* f, bool skip)
-{
-    // TODO: we should redefine this to write UTF-16 (which matters on GCC which defines wchar_t as 32 bit)
-    wint_t c;
-    bool found = false;
-    // skip white space
-
-    do
-    {
-        c = fgetwc(f);
-    } while (c == L' ' || c == L'\t');
-
-    if (c == L'\r' || c == L'\n') // accept any style of newline
-    {
-        found = true;
-        if (skip)
-            c = fgetwc(f);
-    }
-
-    if ((found && !skip) || !(c == L'\r' || c == L'\n'))
-    {
-        if (c == WEOF)
-            return found ? (int) true : EOF;
-        wint_t rc = ungetwc(c, f);
-        if (rc != c)
-            RuntimeError("error in ungetwc(): %s", strerror(errno));
-        return (int) found;
-    }
-    // if we get here we saw a double newline
     return (int) true;
 }
 
@@ -1720,6 +1697,7 @@ public:
     }
     ~auto_find_handle()
     {
+        // TODO: Check for error code and throw if !std::uncaught_exception()
         if (h != INVALID_HANDLE_VALUE)
             ::FindClose(h);
     }
@@ -1936,53 +1914,35 @@ bool msra::files::fuptodate(const wstring& target, const wstring& input, bool in
     return targettime >= inputtime; // note: uses an overload for WIN32 FILETIME (in Linux, FILETIME=time_t=size_t)
 }
 
-/// separate string by separator
-vector<string> sep_string(const string& istr, const string& sep)
+// separate string by separator
+template<class String>
+vector<String> SplitString(const String& str, const String& sep)
 {
-    string str = istr;
-    str = trim(str);
-    vector<string> vstr;
-    string csub;
+    vector<String> vstr;
+    String csub;
     size_t ifound = 0;
     size_t ifoundlast = ifound;
-    ifound = str.find(sep, ifound);
-    while (ifound != std::string::npos)
+    ifound = str.find_first_of(sep, ifound);
+    while (ifound != String::npos)
     {
         csub = str.substr(ifoundlast, ifound - ifoundlast);
-        vstr.push_back(trim(csub));
+        if (!csub.empty())
+            vstr.push_back(csub);
 
         ifoundlast = ifound + 1;
-        ifound = str.find(sep, ifoundlast);
+        ifound = str.find_first_of(sep, ifoundlast);
     }
-    csub = str.substr(ifoundlast, str.length() - ifoundlast);
-    vstr.push_back(trim(csub));
+    ifound = str.length();
+    csub = str.substr(ifoundlast, ifound - ifoundlast);
+    if (!csub.empty())
+        vstr.push_back(csub);
 
     return vstr;
 }
 
-/// separate string by separator
-vector<wstring> wsep_string(const wstring& istr, const wstring& sep)
-{
-    wstring str = istr;
-    str = wtrim(str);
-    vector<wstring> vstr;
-    wstring csub;
-    size_t ifound = 0;
-    size_t ifoundlast = ifound;
-    ifound = str.find(sep, ifound);
-    while (ifound != std::wstring::npos)
-    {
-        csub = str.substr(ifoundlast, ifound - ifoundlast);
-        vstr.push_back(wtrim(csub));
+template vector<string>  SplitString(const  string& istr, const  string& sep);
+template vector<wstring> SplitString(const wstring& istr, const wstring& sep);
 
-        ifoundlast = ifound + 1;
-        ifound = str.find(sep, ifoundlast);
-    }
-    csub = str.substr(ifoundlast, str.length() - ifoundlast);
-    vstr.push_back(wtrim(csub));
-
-    return vstr;
-}
 static inline std::string wcstombs(const std::wstring& p) // output: MBCS
 {
     size_t len = p.length();

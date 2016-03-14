@@ -9,10 +9,19 @@
 #include "Config.h" // for intargvector
 #include "CUDAPageLockedMemAllocator.h"
 
+#include "htkfeatio.h" // for reading HTK features
+#ifdef _WIN32
+#include "latticearchive.h" // for reading HTK phoneme lattices (MMI training)
+#endif
+#include "simplesenonehmm.h" // for MMI scoring
+#include "msra_mgram.h"      // for unigram scores of ground-truth path in sequence training
+#include "rollingwindowsource.h" // minibatch sources
+#include "chunkevalsource.h"
+
 namespace Microsoft { namespace MSR { namespace CNTK {
 
 template <class ElemType>
-class HTKMLFReader : public IDataReader<ElemType>
+class HTKMLFReader : public IDataReader
 {
 private:
     const static size_t m_htkRandomizeAuto = 0;
@@ -31,7 +40,7 @@ private:
     intargvector m_numSeqsPerMBForAllEpochs;
     size_t m_numSeqsPerMB;      // requested number of parallel sequences
     size_t m_mbNumTimeSteps;    // number of time steps  to fill/filled (note: for frame randomization, this the #frames, and not 1 as later reported)
-    size_t m_mbMaxNumTimeSteps; // max time steps we take in a MB layout; any setence longer than this max will be discarded (and a warning will be issued )
+    size_t m_mbMaxNumTimeSteps; // max time steps we take in a MB layout; any sentence longer than this max will be discarded (and a warning will be issued )
                                 // this is used to prevent CUDA out-of memory errors
 
     vector<size_t> m_numFramesToProcess; // [seq index] number of frames available (left to return) in each parallel sequence
@@ -41,8 +50,8 @@ private:
     size_t m_extraNumSeqs;
     bool m_noData;
     bool m_trainOrTest; // if false, in file writing mode
-    using LabelType = typename IDataReader<ElemType>::LabelType;
-    using LabelIdType = typename IDataReader<ElemType>::LabelIdType;
+    using IDataReader::LabelType;
+    using IDataReader::LabelIdType;
 
     std::map<LabelIdType, LabelType> m_idToLabelMap;
 
@@ -87,6 +96,7 @@ private:
     size_t m_inputFileIndex;
     std::vector<size_t> m_featDims;
     std::vector<size_t> m_labelDims;
+    std::vector<bool> m_expandToUtt; // support for i-vector type of input - single fram should be applied to entire utterance
 
     std::vector<std::vector<std::vector<ElemType>>> m_labelToTargetMapMultiIO;
 
@@ -97,11 +107,11 @@ private:
     template <class ConfigRecordType>
     void PrepareForWriting(const ConfigRecordType& config);
 
-    bool GetMinibatchToTrainOrTest(std::map<std::wstring, Matrix<ElemType>*>& matrices);
+    bool GetMinibatchToTrainOrTest(StreamMinibatchInputs& matrices);
     bool GetMinibatch4SEToTrainOrTest(std::vector<shared_ptr<const msra::dbn::latticepair>>& latticeinput, vector<size_t>& uids, vector<size_t>& boundaries, std::vector<size_t>& extrauttmap);
     bool GetMinibatch4CTCToTrainOrTest(vector<size_t> &boundaries, vector<size_t> &extrauttmap);
-    void fillOneUttDataforParallelmode(std::map<std::wstring, Matrix<ElemType>*>& matrices, size_t startFr, size_t framenum, size_t channelIndex, size_t sourceChannelIndex);
-    bool GetMinibatchToWrite(std::map<std::wstring, Matrix<ElemType>*>& matrices);
+    void fillOneUttDataforParallelmode(StreamMinibatchInputs& matrices, size_t startFr, size_t framenum, size_t channelIndex, size_t sourceChannelIndex); // TODO: PascalCase()
+    bool GetMinibatchToWrite(StreamMinibatchInputs& matrices);
 
     void StartMinibatchLoopToTrainOrTest(size_t mbSize, size_t epoch, size_t subsetNum, size_t numSubsets, size_t requestedEpochSamples = requestDataSize);
     void StartMinibatchLoopToWrite(size_t mbSize, size_t epoch, size_t requestedEpochSamples = requestDataSize);
@@ -174,7 +184,7 @@ public:
 
     virtual void StartDistributedMinibatchLoop(size_t mbSize, size_t epoch, size_t subsetNum, size_t numSubsets, size_t requestedEpochSamples = requestDataSize) override;
 
-    virtual bool GetMinibatch(std::map<std::wstring, Matrix<ElemType>*>& matrices);
+    virtual bool GetMinibatch(StreamMinibatchInputs& matrices);
     virtual const std::map<LabelIdType, LabelType>& GetLabelMapping(const std::wstring& sectionName);
     virtual void SetLabelMapping(const std::wstring& sectionName, const std::map<LabelIdType, LabelType>& labelMapping);
     virtual bool GetData(const std::wstring& sectionName, size_t numRecords, void* data, size_t& dataBufferSize, size_t recordStart = 0);
@@ -182,15 +192,12 @@ public:
     virtual bool GetMinibatch4CTC(vector<size_t> &boundaries, vector<size_t> &extrauttmap);
     virtual bool GetHmmData(msra::asr::simplesenonehmm* hmm);
 
-    virtual bool DataEnd(EndDataType endDataType);
+    virtual bool DataEnd();
     void CopyMBLayoutTo(MBLayoutPtr);
     void SetSentenceEndInBatch(vector<size_t>& /*sentenceEnd*/);
     void SetSentenceEnd(int /*actualMbSize*/){};
     void SetRandomSeed(int){NOT_IMPLEMENTED};
 
-    bool RequireSentenceSeg() const override
-    {
-        return !m_frameMode;
-    };
+    //bool RequireSentenceSeg() const override { return !m_frameMode; };
 };
 } } }

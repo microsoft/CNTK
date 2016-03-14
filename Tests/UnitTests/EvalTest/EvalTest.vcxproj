@@ -105,15 +105,12 @@
     </ClCompile>
     <ClCompile Include="..\..\..\Source\Common\DataReader.cpp" />
     <ClCompile Include="..\..\..\Source\Common\Eval.cpp" />
+    <ClCompile Include="..\..\..\Source\Common\ExceptionWithCallStack.cpp" />
     <ClCompile Include="..\..\..\Source\Common\File.cpp">
       <PrecompiledHeader Condition="$(DebugBuild)">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="$(ReleaseBuild)">NotUsing</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="..\..\..\Source\Common\fileutil.cpp">
-      <PrecompiledHeader Condition="$(DebugBuild)">NotUsing</PrecompiledHeader>
-      <PrecompiledHeader Condition="$(ReleaseBuild)">NotUsing</PrecompiledHeader>
-    </ClCompile>
-    <ClCompile Include="..\..\..\Source\Common\DebugUtil.cpp">
       <PrecompiledHeader Condition="$(DebugBuild)">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="$(ReleaseBuild)">NotUsing</PrecompiledHeader>
     </ClCompile>

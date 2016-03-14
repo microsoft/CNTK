@@ -324,18 +324,20 @@ static ConfigValuePtr NodeOp(const ExpressionPtr &e, ConfigValuePtr leftVal, Con
     // When they fetch their parameters, they should only look in this record, not in any parent scope (if they don't find what they are looking for, it's a bug in this routine here).
     // The values themselves are already in ConfigValuePtr form, so we won't need any scope lookups there either.
     config->Add(L"operation", MakeFailFn(e->location), ConfigValuePtr(make_shared<String>(operationName), MakeFailFn(e->location), exprPath));
+    let leftFailFn = leftVal.GetFailFn(); // report any error for this Constant object as belonging to the scalar factor's expression
     vector<ConfigValuePtr> inputs;
     if (operationName == L"Scale")
     {
         // if we scale, the first operand is a Double, and we must convert that into a 1x1 Constant
         // TODO: apply this more generally to all operators
         auto constantConfig = make_shared<ConfigRecord>(config, MakeFailFn(e->location));
-        let leftFailFn = leftVal.GetFailFn(); // report any error for this Constant object as belonging to the scalar factor's expression
-        constantConfig->Add(L"operation", leftFailFn, ConfigValuePtr(make_shared<String>(L"Constant"), leftFailFn, exprPath));
-        let one = MakePrimitiveConfigValuePtr(1.0, leftVal.GetFailFn(), exprPath);
+        constantConfig->Add(L"operation", leftFailFn, ConfigValuePtr(make_shared<String>(L"LearnableParameter"), leftFailFn, exprPath));
+        let one = MakePrimitiveConfigValuePtr(1.0, leftFailFn, exprPath);
         constantConfig->Add(L"rows", leftFailFn, one);
         constantConfig->Add(L"cols", leftFailFn, one);
+        //constantConfig->Add(L"shape", leftFailFn, one);  // BUGBUG: rows,cols is no longer right, we need a TensorShape here
         constantConfig->Add(L"value", leftFailFn, leftVal);
+        constantConfig->Add(L"learningRateMultiplier", leftFailFn, MakePrimitiveConfigValuePtr(0.0f, leftFailFn, exprPath));
         let value = ConfigValuePtr(rtInfo->construct(constantConfig), leftFailFn, exprPath);
         let valueWithName = dynamic_cast<HasName *>(value.get());
         if (valueWithName)
@@ -345,8 +347,13 @@ static ConfigValuePtr NodeOp(const ExpressionPtr &e, ConfigValuePtr leftVal, Con
     inputs.push_back(leftVal);
     if (operationName != L"Negate") // Negate only has one input (rightVal is a nullptr)
         inputs.push_back(rightVal);
-    config->Add(L"inputs", leftVal.GetFailFn(), ConfigValuePtr(make_shared<ConfigArray>(0, move(inputs)), leftVal.GetFailFn(), exprPath));
-    config->Add(L"tag", leftVal.GetFailFn(), ConfigValuePtr(make_shared<String>(), leftVal.GetFailFn(), exprPath)); // infix nodes have no tag
+    config->Add(L"inputs", leftFailFn, ConfigValuePtr(make_shared<ConfigArray>(0, move(inputs)), leftFailFn, exprPath));
+    config->Add(L"tag", leftFailFn, ConfigValuePtr(make_shared<String>(), leftFailFn, exprPath)); // infix nodes have no tag
+    if (operationName == L"Times")
+    {
+        let one = MakePrimitiveConfigValuePtr(1.0, leftFailFn, exprPath);
+        config->Add(L"outputRank", leftFailFn, one);
+    }
     // instantiate the ComputationNode
     let value = ConfigValuePtr(rtInfo->construct(config), MakeFailFn(e->location), exprPath);
     let valueWithName = dynamic_cast<HasName *>(value.get());
@@ -374,25 +381,26 @@ static ConfigValuePtr BadOp(const ExpressionPtr &e, ConfigValuePtr, ConfigValueP
 // lookup table for infix operators
 // This lists all infix operators with lambdas for evaluating them.
 static map<wstring, InfixOps> infixOps =
-    {
-        // symbol  PrettyName      NumbersOp StringsOp BoolOp ComputeNodeOp DictOp
-        {L"with", InfixOps(L"With", NumOp, BadOp, BadOp, NodeOp, DictOp)},
-        {L"*", InfixOps(L"Times", NumOp, BadOp, BadOp, NodeOp, BadOp)},
-        {L"/", InfixOps(L"Div", NumOp, BadOp, BadOp, BadOp, BadOp)},
-        {L".*", InfixOps(L"DotTimes", BadOp, BadOp, BadOp, NodeOp, BadOp)},
-        {L"**", InfixOps(L"Pow", NumOp, BadOp, BadOp, BadOp, BadOp)},
-        {L"%", InfixOps(L"Mod", NumOp, BadOp, BadOp, BadOp, BadOp)},
-        {L"+", InfixOps(L"Plus", NumOp, StrOp, BadOp, NodeOp, BadOp)},
-        {L"-", InfixOps(L"Minus", NumOp, BadOp, BadOp, NodeOp, BadOp)},
-        {L"==", InfixOps(L"Equal", NumOp, StrOp, BoolOp, BadOp, BadOp)},
-        {L"!=", InfixOps(L"NotEqual", NumOp, StrOp, BoolOp, BadOp, BadOp)},
-        {L"<", InfixOps(L"LT", NumOp, StrOp, BoolOp, BadOp, BadOp)},
-        {L">", InfixOps(L"GT", NumOp, StrOp, BoolOp, BadOp, BadOp)},
-        {L"<=", InfixOps(L"LE", NumOp, StrOp, BoolOp, BadOp, BadOp)},
-        {L">=", InfixOps(L"GT", NumOp, StrOp, BoolOp, BadOp, BadOp)},
-        {L"&&", InfixOps(L"And", BadOp, BadOp, BoolOp, BadOp, BadOp)},
-        {L"||", InfixOps(L"Or", BadOp, BadOp, BoolOp, BadOp, BadOp)},
-        {L"^", InfixOps(L"Xor", BadOp, BadOp, BoolOp, BadOp, BadOp)}};
+{
+    // symbol  PrettyName                NumbersOp StringsOp BoolOp  ComputeNodeOp DictOp
+    { L"with", InfixOps(L"With",         NumOp,    BadOp,    BadOp,  NodeOp,       DictOp) },
+    { L"*",    InfixOps(L"Times",        NumOp,    BadOp,    BadOp,  NodeOp,       BadOp) },
+    { L"/",    InfixOps(L"Div",          NumOp,    BadOp,    BadOp,  BadOp,        BadOp) },
+    { L".*",   InfixOps(L"ElementTimes", BadOp,    BadOp,    BadOp,  NodeOp,       BadOp) },
+    { L"**",   InfixOps(L"Pow",          NumOp,    BadOp,    BadOp,  BadOp,        BadOp) },
+    { L"%",    InfixOps(L"Mod",          NumOp,    BadOp,    BadOp,  BadOp,        BadOp) },
+    { L"+",    InfixOps(L"Plus",         NumOp,    StrOp,    BadOp,  NodeOp,       BadOp) },
+    { L"-",    InfixOps(L"Minus",        NumOp,    BadOp,    BadOp,  NodeOp,       BadOp) },
+    { L"==",   InfixOps(L"Equal",        NumOp,    StrOp,    BoolOp, BadOp,        BadOp) },
+    { L"!=",   InfixOps(L"NotEqual",     NumOp,    StrOp,    BoolOp, BadOp,        BadOp) },
+    { L"<",    InfixOps(L"LT",           NumOp,    StrOp,    BoolOp, BadOp,        BadOp) },
+    { L">",    InfixOps(L"GT",           NumOp,    StrOp,    BoolOp, BadOp,        BadOp) },
+    { L"<=",   InfixOps(L"LE",           NumOp,    StrOp,    BoolOp, BadOp,        BadOp) },
+    { L">=",   InfixOps(L"GT",           NumOp,    StrOp,    BoolOp, BadOp,        BadOp) },
+    { L"&&",   InfixOps(L"And",          BadOp,    BadOp,    BoolOp, BadOp,        BadOp) },
+    { L"||",   InfixOps(L"Or",           BadOp,    BadOp,    BoolOp, BadOp,        BadOp) },
+    { L"^",    InfixOps(L"Xor",          BadOp,    BadOp,    BoolOp, BadOp,        BadOp) }
+};
 
 // -----------------------------------------------------------------------
 // thunked (delayed) evaluation
@@ -786,18 +794,6 @@ static wstring FormatConfigValue(ConfigValuePtr arg, const wstring &how);
 // TODO: RegexReplace()
 class StringFunction : public String
 {
-    // actual operations that we perform
-    static wstring Replace(wstring s, const wstring &what, const wstring &withwhat)
-    {
-        wstring res = s;
-        auto pos = res.find(what);
-        while (pos != wstring::npos)
-        {
-            res = res.substr(0, pos) + withwhat + res.substr(pos + what.size());
-            pos = res.find(what, pos + withwhat.size());
-        }
-        return res;
-    }
     static wstring Substr(const wstring &s, int ibegin, int inum)
     {
         // negative index indexes from end; index may exceed
@@ -822,7 +818,7 @@ public:
         else if (what == L"Substr")
             us = Substr(arg, config[L"pos"], config[L"chars"]);
         else if (what == L"Replace")
-            us = Replace(arg, config[L"replacewhat"], config[L"withwhat"]);
+            us = msra::strfun::ReplaceAll<wstring>(arg, config[L"replacewhat"], config[L"withwhat"]);
         else
             whatArg.Fail(L"unknown 'what' value to StringFunction: " + what);
     }
@@ -913,7 +909,7 @@ public:
                 us = (double) ((wstring &) arg).size();
             else // otherwise expect an array
             {
-                let arr = (ConfigArray) arg;
+                let & arr = arg.AsRef<ConfigArray>();
                 let range = arr.GetIndexRange();
                 us = (double) (range.second + 1 - range.first);
             }

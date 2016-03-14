@@ -28,7 +28,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 //  - just replaces metadata m_sampleLayout, does not change data values
 //  - one dimension may be specified as 0 and will be inferred
 //  - optional beginDim/endDim denote to only replace a sub-range of dims, for implementing ReshapeDimension() and FlattenRank()
-//  - may not be applied to time; use Permute() or Transpose()
 //
 // Derived operations:
 //
@@ -41,9 +40,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 //
 // SplitDimension(x, dim, N) = ReshapeDimension(x, dim, 0:N)
 //  - splits a dimension into a new tensor dimension, injecting them into a new dimension
-//  - to split stacked frames into a new time dimension:
-//    insert new time dim with ReshapeDimension(., -1, 0:1), SplitDimension(., dim, N), Transpose(., dim+1, -1), then Select(., dim+1, 0) away the new time dim
-//    This would make 4 copies presently. We may need a compound C++ node for now.
 //  - note: to split into multiple outputs (like tf.split()), use a BrainScript loop with Slice().
 // -----------------------------------------------------------------------
 
@@ -166,14 +162,8 @@ public:
         Input(inputIndex)->GradientFor(fr).SetValue(GradientFor(fr));
     }
 
-    virtual bool OutputUsedInComputingInputNodesGradients() const override
-    {
-        return false;
-    }
-    virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override
-    {
-        return false;
-    }
+    virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }
+    virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override { return false; }
 
 private:
     TensorShape m_replacementSampleLayout; // user-specified dimensions to replace dimensions [beginDim, endDim]
@@ -258,16 +248,11 @@ class RowSliceNode : public ComputationNode<ElemType>, public NumInputs<1>
 {
     typedef ComputationNode<ElemType> Base;
     UsingComputationNodeMembersBoilerplate;
-    static const std::wstring TypeName()
-    {
-        return L"RowSlice";
-    }
+    static const std::wstring TypeName() { return L"RowSlice"; }
 
 public:
     RowSliceNode(DEVICEID_TYPE deviceId, const wstring& name, size_t startIndex = 0, size_t numRows = 0)
-        : Base(deviceId, name),
-          m_startIndex(startIndex),
-          m_sliceHeight(numRows)
+        : Base(deviceId, name), m_startIndex(startIndex), m_sliceHeight(numRows)
     {
     }
 
@@ -290,12 +275,17 @@ public:
     {
         Base::Load(fstream, modelVersion);
         fstream >> m_startIndex >> m_sliceHeight;
+        int dim; // preparation for future extension that stores a dimension along which we slice
+        if (modelVersion >= CNTK_MODEL_VERSION_3)
+            fstream >> dim;
     }
 
     virtual void Save(File& fstream) const override
     {
         Base::Save(fstream);
         fstream << m_startIndex << m_sliceHeight;
+        int dim = 1; // preparation for future extension that stores a dimension along which we slice
+        fstream << dim;
     }
 
 private:
@@ -355,7 +345,7 @@ template class RowSliceNode<double>;
 // RowStackNode (input0, input1, ...)
 // stacks multiple inputs on top of each other
 // The inputs will be spliced w.r.t. their first tensor dimension (the "row" dimension).
-// TODO: This is very close to the planned SpliceNode (just make m_spliceDim configurable) except for splicing along time.
+// TODO: This is very close to the planned SpliceNode (just make m_spliceDim actually configurable) except for splicing along time.
 // -----------------------------------------------------------------------
 
 template <class ElemType>
@@ -363,17 +353,12 @@ class RowStackNode : public ComputationNode<ElemType> // note: not deriving from
 {
     typedef ComputationNode<ElemType> Base;
     UsingComputationNodeMembersBoilerplate;
-    static const std::wstring TypeName()
-    {
-        return L"RowStack";
-    }
-
-    static const size_t m_spliceDim = 0;    // tensor dimension according to which to stack  --TODO: Make this a parameter.
+    static const std::wstring TypeName() { return L"RowStack"; }
 
 public:
     DeclareConstructorFromConfig(RowStackNode);
-    RowStackNode(DEVICEID_TYPE deviceId, const wstring& name)
-        : Base(deviceId, name)
+    RowStackNode(DEVICEID_TYPE deviceId, const wstring& name, int spliceDim = 1/*TODO: complete this*/)
+        : Base(deviceId, name), m_spliceDim(spliceDim)
     {
     }
 
@@ -387,18 +372,33 @@ public:
         }
     }
 
-private:
+    virtual void Load(File& fstream, size_t modelVersion) override
+    {
+        Base::Load(fstream, modelVersion);
+        if (modelVersion >= CNTK_MODEL_VERSION_3)
+            fstream >> m_spliceDim;
+        else
+            m_spliceDim = 1;
+    }
 
+    virtual void Save(File& fstream) const override
+    {
+        Base::Save(fstream);
+        fstream << m_spliceDim;
+    }
+
+private:
     // changes the result slice (which includes all stacked inputs) to the stripe that matches where one of the inputs goes
     TensorShape NarrowToStripe(const TensorShape & resultSlice, size_t inputIndex)
     {
         auto resultSubSlice = resultSlice;
-        resultSubSlice.NarrowTo(m_spliceDim, m_firstIndices[inputIndex], m_firstIndices[inputIndex + 1]);
+        assert(m_spliceDim > 0);
+        size_t index = (size_t)m_spliceDim - 1;
+        resultSubSlice.NarrowTo(index, m_firstIndices[inputIndex], m_firstIndices[inputIndex + 1]);
         return resultSubSlice;
     }
 
 public:
-
     virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
     {
         size_t rank = DetermineElementwiseTensorRank();
@@ -436,16 +436,18 @@ public:
         // All dimensions but the last must be the same. (In a future version, we should be able to stack along any given dimension.)
 
         // determine maximum rank (we can stack tensors with lower rank, which will have their dimensions paded to max automatically)
-        size_t maxRank = m_spliceDim + 1; // spliceDim may exceed all of them, which will create a new dimension, e.g. stacking column vectors into a matrix
+        assert(m_spliceDim > 0);
+        size_t index = (size_t)m_spliceDim - 1;
+        size_t maxRank = index + 1; // spliceDim may exceed all of them, which will create a new dimension, e.g. stacking column vectors into a matrix
         for (int i = 0; i < GetNumInputs(); i++)
             if (maxRank < Input(i)->GetSampleLayout().GetRank())
                 maxRank = Input(i)->GetSampleLayout().GetRank();
 
         // the following loop does multiple things:
-        //  - count total dimension along m_spliceDim, and form associated m_firstIndices[] array
+        //  - count total dimension along index, and form associated m_firstIndices[] array
         //  - verify all other dimension's compatibility (we allow broadcasting)
         auto dims = Input(0)->GetSampleLayout().PadRank(maxRank).GetDims(); // dimensions padded to max rank; start with dims of first input
-        dims[m_spliceDim] = 0;                                              // this dimension is created, while all others are verified for consistency
+        dims[index] = 0;                                                    // this dimension is created, while all others are verified for consistency
         m_firstIndices.assign(1, 0);                                        // accumulative splice dimension; start with 0
         for (int i = 0; i < GetNumInputs(); i++)
         {
@@ -454,11 +456,11 @@ public:
             for (size_t k = 0; k < maxRank; k++)
             {
                 size_t dim = shape.GetDimPadded(k);
-                if (k == m_spliceDim)
+                if (k == index)
                 {
                     // accumulate the spliced dimension
-                    dims[m_spliceDim] += dim;
-                    m_firstIndices.push_back(dims[m_spliceDim]);    // and remember it
+                    dims[index] += dim;
+                    m_firstIndices.push_back(dims[index]);    // and remember it
                 }
                 else
                 {
@@ -476,7 +478,8 @@ public:
     }
 
 private:
-    std::vector<size_t> m_firstIndices;  // start row number in the stacked matrix of each input (child) (cumsum of matrix heights); plus one final entry that equals the total dimension
+    std::vector<size_t> m_firstIndices; // start row number in the stacked matrix of each input (child) (cumsum of matrix heights); plus one final entry that equals the total dimension
+    int m_spliceDim;                    // tensor dimension according to which to stack (1-based)
 };
 
 template class RowStackNode<float>;
@@ -612,18 +615,23 @@ public:
 
     virtual void /*ComputationNodeNonLooping::*/ BackpropToNonLooping(size_t /*inputIndex*/) override
     {
+#if 1
+        NOT_IMPLEMENTED;
+#else
+        // The Implementation below is currently broken
         auto& inputGradientValues = Input(0)->GradientAsMatrix();
         auto& gradientValues = GradientAsMatrix();
 
         // BUGBUG: This should use the memshare mechanism.
         // TODO: use tensor lib, then this will be easy, no memsharing needed
-        Matrix<ElemType> diag(gradientValues.GetNumRows(), gradientValues.GetNumCols(), gradientValues.GetDeviceId());
-        diag = gradientValues;
+        Matrix<ElemType> diag = gradientValues.DeepClone();
+        // BUGBUG: Resize does not preserve data - should be a reinterpret operation
         diag.Resize(gradientValues.GetNumCols(), 1);
 
         inputGradientValues.SetValue(0);
         // BUGBUG: Must *add* to gradient!
         inputGradientValues.SetDiagonalValue(diag);
+#endif
     }
 
     virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }
@@ -754,7 +762,7 @@ public:
 
 #define UsingReinterpretNodeBaseMembers UsingComputationNodeMembersBoilerplate
 
-// TODO: This ReshapeNode is currently not used. Its function will be taken over by Transpose and the Reshape that follows this one below.
+// TODO: This ReshapeNode should no longer be used. Its function will be taken over by Transpose and the Reshape that follows this one below.
 
 // -----------------------------------------------------------------------
 // LegacyReshapeNode (input) -- reinterpret input matrix as having different dimensions
@@ -1090,7 +1098,6 @@ reshaping
         - just replaces metadata m_sampleLayout
         - one dimension may be specified as 0 and will be inferred
         - optional beginDim/endDim denote to only replace a sub-range of dims, for implementing ReshapeDimension() and FlattenRank()
-        - may not be applied to time; use Permute() or Transpose()
     - ReshapeDimension(x, dim, tensorShape) = Reshape(x, tensorShape, beginDim=dim, endDim=dim+1)
        - reinterprets one dimension as multiple, where the number of elements remains the same
        - one of the new dimensions may be specified as 0 and will be inferred
@@ -1098,9 +1105,6 @@ reshaping
        - replace two or more consecutive dims by a single dim with the same number of elements
     - SplitDimension(x, dim, N) = ReshapeDimension(x, dim, 0:N)
        - splits a dimension into a new tensor dimension, injecting them into a new dimension
-       - to split stacked frames into a new time dimension:
-         insert new time dim with ReshapeDimension(., -1, 0:1), SplitDimension(., dim, N), Transpose(., dim+1, -1), then Select(., dim+1, 0) away the new time dim
-         This would make 4 copies presently. We may need a compound C++ node for now.
        - note: to split into multiple outputs (like tf.split()), use a BrainScript loop with Slice().
  - Slicing   --all implemented in C++ by SliceNode
     - Slice(x, dim, begin, end, stride=1, phase=0)
@@ -1144,16 +1148,15 @@ reshaping
        - generalizes CNTK RowRepeat(x, numRepeats) = Repeat(x, 1, numRepeats)
        - to repeat multiple, specify vectors, e.g. Repeat(x, dim1:dim2, numRepeats1:numRepeats2)
        - like tf.tile() and Matlab's repmat()
- - Transposition (permuting dims):   --implemented in C++ by PermuteDimensionsNode
-    - PermuteDimensionsOf(x, dim1:dim2:...:dimN)
-       - dims are rotated to dim2:dim3:...:dimN:dim1; other dims remain untouched
-         To rotate the other way round, specify them in opposite order.
-         We specify it this way to be able to reference the time dimension without having to know the rank of the m_sampleLayout.
-       - time dims must have a constant duration for all items in the minibatch
-       - internally implemented with tensor lib by shuffling dimensions with their strides  --TODO: check if TensorShape optimization is still correct
-    - Transpose(x, dim1, dim2) = PermuteDimensions(x, dim1:dim2)
-       - any two dimensions; including time (must have constant duration)
+ - Transposition
+    - TransposeDimensions (input, dim1, dim2)
+       - swaps index dimensions dim1 and dim2. The values are 1-based; 1 stands for the leading dimension.
+       - new dimensions can be created; e.g. a column vector can be transposed into a row vector, which is a [1 x N] tensor
+       - transposing into the time dimension is currently not supported
+       - internally implemented with tensor lib by shuffling dimensions with their strides
+       - input may be minibatch data or not
        - like torch.transpose()
+    - Transpose (input) = TransposeDimensions (input, 1, 2)
  - Re-indexing:   --implemented by ReindexRankNode and SliceNode
     - ReindexDimension(x, dim, indexVector)
        - splice x[..., indexVector[0], ...], x[..., indexVector[1], ...], etc. with indexVector[.] at given dim
@@ -1161,6 +1164,7 @@ reshaping
     - DownsampleDimension(x, dim, n, phase=0) = Slice(x, dim, 0, 0, stride=n)
        - select every n-th element, starting with index 'phase'
        - time dims allowed. Phase is then a modulus w.r.t. where a sequence is inside the minibatch (may require a ReconcileLayout() before to match layouts)
+       - TODO: use a bool vector for the time dimensions
     - ReverseDimension(x, dim) = Slice(x, dim, -1, 0, stride=-1)
        - reverses the direction of a dim
        - when applied to time dims, this creates a new layout (which is also flipped)

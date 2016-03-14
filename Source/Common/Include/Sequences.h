@@ -109,17 +109,52 @@ struct MBLayout
 
     // copy the content of another MBLayoutPtr over
     // Use this instead of actual assignment to make it super-obvious that this is not copying the pointer but actual content. The pointer is kept fixed.
-    void CopyFrom(const MBLayoutPtr &other)
+    void CopyFrom(const MBLayoutPtr& other)
     {
-        *this = *other;
+        m_numTimeSteps = other->m_numTimeSteps;
+        m_numParallelSequences = other->m_numParallelSequences;
+        m_sequences = other->m_sequences;
+        m_numFramesDeclared = other->m_numFramesDeclared;
+        m_numGapFrames = other->m_numGapFrames;
+
+        m_distanceToStart.SetValue(other->m_distanceToStart);
+        m_distanceToEnd.SetValue(other->m_distanceToEnd);
+
+        m_distanceToNearestStart = other->m_distanceToNearestStart;
+        m_distanceToNearestEnd = other->m_distanceToNearestEnd;
+
+        m_timeStepHasGap = other->m_timeStepHasGap;
+
+        m_columnsValidityMask.SetValue(other->m_columnsValidityMask);
+        m_writable = other->m_writable;
     }
+
+    // Destructive copy that steals ownership if the content, like std::move()
+    // Note: For some reason the VC++ compiler does not generate the 
+    // move assignment and we have to do this ourselves
     void MoveFrom(MBLayoutPtr other)
     {
-        *this = move(*other);
-        other->Init(0, 0);
-    } // destructive copy that steals ownership if the content, like std::move()
-private:
-    MBLayout &operator=(const MBLayout &) = default; // make this private --use CopyFrom() instead, which makes it very clear that it's copying content, not copying the reference
+        m_numTimeSteps = other->m_numTimeSteps;
+        m_numParallelSequences = other->m_numParallelSequences;
+        m_sequences = std::move(other->m_sequences);
+        m_numFramesDeclared = other->m_numFramesDeclared;
+        m_numGapFrames = other->m_numGapFrames;
+
+        m_distanceToStart = std::move(other->m_distanceToStart);
+        m_distanceToEnd = std::move(other->m_distanceToEnd);
+
+        m_distanceToNearestStart = std::move(other->m_distanceToNearestStart);
+        m_distanceToNearestEnd = std::move(other->m_distanceToNearestEnd);
+
+        m_timeStepHasGap = std::move(other->m_timeStepHasGap);
+
+        m_columnsValidityMask = std::move(other->m_columnsValidityMask);
+        m_writable = other->m_writable;
+    }
+
+    MBLayout(const MBLayout&) = delete;
+    MBLayout& operator=(const MBLayout&) = delete;
+
 public:
     // resize and reset all frames to None (note: this is an invalid state and must be fixed by caller afterwards)
     void Init(size_t numParallelSequences, size_t numTimeSteps)

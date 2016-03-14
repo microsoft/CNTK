@@ -536,6 +536,8 @@ def listCommand(args):
         for device in args.devices:
            for os in args.oses:
              for build_sku in args.buildSKUs:
+               if build_sku=="cpu" and device=="gpu":
+                 continue
                tag = test.matchesTag(args.tag, flavor, device, os, build_sku) if args.tag else '*'
                if tag:
                  if tag in testsByTag.keys():
@@ -586,6 +588,8 @@ def runCommand(args):
       for device in devices:
         for build_sku in args.buildSKUs:
           if args.tag and args.tag != '' and not test.matchesTag(args.tag, flavor, device, 'windows' if windows else 'linux', build_sku):
+            continue
+          if build_sku=="cpu" and device=="gpu":
             continue
           totalCount = totalCount + 1
           if len(test.testCases)==0:
@@ -699,6 +703,9 @@ if (args.build_sku):
     print >>sys.stderr, "--build-sku must be one of", args.buildSKUs
     sys.exit(1)
   args.buildSKUs = [args.build_sku]
+  if args.build_sku == "cpu" and args.devices == ["gpu"]:
+    print >>sys.stderr, "Invalid combination: --build-sku cpu and --device gpu"
+    sys.exit(1)
 
 if args.func == runCommand and not args.build_location:
   args.build_location = os.path.realpath(os.path.join(thisDir, "../..", "x64" if windows else "build/"))

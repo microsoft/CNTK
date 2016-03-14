@@ -32,13 +32,14 @@ void DoCommand(const ConfigParameters& configRoot)
     ConfigParameters configSgd = config("SGD");
     std::wstring modelPath = configSgd("modelPath");
 
-    std::map<std::wstring, Matrix<ElemType>*> inputMatrices;
-    std::map<std::wstring, Matrix<ElemType>*> outputMatrices;
+    StreamMinibatchInputs inputMatrices;
+    StreamMinibatchInputs outputMatrices;
     std::wstring inputName = L"features";
     std::wstring outputName = L"CE.BFF.FF.P";
     int deviceId = 0;
-    Matrix<ElemType>* matrix = inputMatrices[inputName] = new Matrix<ElemType>(dimFeatures, mbSize, deviceId);
-    outputMatrices[outputName] = new Matrix<ElemType>(dimLabels, mbSize, deviceId);
+    auto matrix = make_shared<Matrix<ElemType>>(dimFeatures, mbSize, deviceId);
+    inputMatrices.AddInputMatrix(inputName, matrix);
+    outputMatrices.AddInputMatrix(outputName, make_shared<Matrix<ElemType>>(dimLabels, mbSize, deviceId));
 
     std::map<std::wstring, std::vector<ElemType>*> input;
     std::map<std::wstring, std::vector<ElemType>*> output;
@@ -47,7 +48,7 @@ void DoCommand(const ConfigParameters& configRoot)
 
     Eval<ElemType> eval(config);
 
-    DataReader<ElemType>* dataReader = new DataReader<ElemType>(readerConfig);
+    auto dataReader = make_shared<DataReader>(readerConfig);
     eval.LoadModel(modelPath);
     dataReader->StartMinibatchLoop(mbSize, 0, epochSize);
     eval.StartEvaluateMinibatchLoop(outputName);

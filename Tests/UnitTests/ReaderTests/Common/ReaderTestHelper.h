@@ -146,8 +146,8 @@ struct ReaderFixture
     template <class ElemType>
     void HelperWriteReaderContentToFile(
         ofstream& outputFile,
-        DataReader<ElemType>& dataReader,
-        std::map<std::wstring, Matrix<ElemType>*>& map,
+        DataReader& dataReader,
+        StreamMinibatchInputs& map,
         size_t epochs,
         size_t mbSize,
         size_t epochSize,
@@ -173,14 +173,14 @@ struct ReaderFixture
                 for (auto i = 0; i < numFeatureFiles; i++)
                 {
                     wstring name = numFeatureFiles > 1 ? L"features" + std::to_wstring(i + 1) : L"features";
-                    OutputMatrix(*map.at(name), outputFile);
+                    OutputMatrix(map.GetInputMatrix<ElemType>(name), outputFile);
                 }
 
                 // Process the Label Matri(x|ces)
                 for (auto i = 0; i < numLabelFiles; i++)
                 {
                     wstring name = numLabelFiles > 1 ? L"labels" + std::to_wstring(i + 1) : L"labels";
-                    OutputMatrix(*map.at(name), outputFile);
+                    OutputMatrix(map.GetInputMatrix<ElemType>(name), outputFile);
                 }
             }
         }
@@ -225,24 +225,24 @@ struct ReaderFixture
         const ConfigParameters simpleDemoConfig = config(testSectionName);
         const ConfigParameters readerConfig = simpleDemoConfig(readerSectionName);
 
-        DataReader<ElemType> dataReader(readerConfig);
+        DataReader dataReader(readerConfig);
 
-        std::map<std::wstring, Matrix<ElemType>*> map;
-        std::vector<Matrix<ElemType>*> features;
-        std::vector<Matrix<ElemType>*> labels;
+        StreamMinibatchInputs map;
+        std::vector<shared_ptr<Matrix<ElemType>>> features;
+        std::vector<shared_ptr<Matrix<ElemType>>> labels;
 
         for (auto i = 0; i < numFeatureFiles; i++)
         {
-            features.push_back(new Matrix<ElemType>(0));
+            features.push_back(make_shared<Matrix<ElemType>>(0));
             wstring name = numFeatureFiles > 1 ? L"features" + std::to_wstring(i + 1) : L"features";
-            map.insert(std::pair<wstring, Matrix<ElemType>*>(name, features[i]));
+            map.insert(make_pair(name, features[i]));
         }
 
         for (auto i = 0; i < numLabelFiles; i++)
         {
-            labels.push_back(new Matrix<ElemType>(0));
+            labels.push_back(make_shared<Matrix<ElemType>>(0));
             wstring name = numLabelFiles > 1 ? L"labels" + std::to_wstring(i + 1) : L"labels";
-            map.insert(std::pair<wstring, Matrix<ElemType>*>(name, labels[i]));
+            map.insert(make_pair(name, labels[i]));
         }
 
         // Setup output file
@@ -250,7 +250,7 @@ struct ReaderFixture
         ofstream outputFile(testDataFilePath, ios::out);
 
         // Perform the data reading
-        HelperWriteReaderContentToFile(outputFile, dataReader, map, epochs, mbSize, epochSize, numFeatureFiles, numLabelFiles, subsetNum, numSubsets);
+        HelperWriteReaderContentToFile<ElemType>(outputFile, dataReader, map, epochs, mbSize, epochSize, numFeatureFiles, numLabelFiles, subsetNum, numSubsets);
 
         outputFile.close();
 
@@ -264,6 +264,31 @@ struct ReaderFixture
 
         BOOST_CHECK_EQUAL_COLLECTIONS(beginStream1, endStream1, beginStream2, endStream2);
     }
+
+    // Helper function to run a Reader test and catch an expected exception.
+    // configFileName       : the file name for the config file
+    // testSectionName      : the section name for the test inside the config file
+    // readerSectionName    : the reader field name in the test section
+    template <class ElemType, class ExceptionType>
+    void HelperRunReaderTestWithException(
+        string configFileName,
+        string testSectionName,
+        string readerSectionName)
+    {
+        std::wstring configFN(configFileName.begin(), configFileName.end());
+        std::wstring configFileCommand(L"configFile=" + configFN);
+
+        wchar_t* arg[2]{L"CNTK", &configFileCommand[0]};
+        ConfigParameters config;
+        const std::string rawConfigString = ConfigParameters::ParseCommandLine(2, arg, config);
+
+        config.ResolveVariables(rawConfigString);
+        const ConfigParameters simpleDemoConfig = config(testSectionName);
+        const ConfigParameters readerConfig = simpleDemoConfig(readerSectionName);
+
+        BOOST_CHECK_THROW(DataReader dataReader(readerConfig), ExceptionType);
+    }
 };
 }
-} } }
+
+}}}

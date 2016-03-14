@@ -31,8 +31,6 @@
 #pragma warning(disable : 4127) // conditional expression is constant; "if (sizeof(ElemType)==sizeof(float))" triggers this
 #pragma warning(disable : 4702) // unreachable code; triggered for unknown reasons
 
-extern bool do_sync;
-
 #ifdef _WIN32
 // thread local storage to access the current stream, initalize to default stream
 __declspec(thread)
@@ -501,17 +499,9 @@ static void LaunchTensorOp(ElemType beta, array<ElemType*, N> pointerVector, Ele
 
     // launch the kernel
     CUDA_LONG NN = (CUDA_LONG) numElements; // linear space identifying each individual input element
-    cudaEvent_t done = nullptr;
-    if (do_sync)
-        CUDA_CALL(cudaEventCreate(&done));
+    SyncGuard syncGuard;
     GridDim grid(NN);
     _launchTensorOp<ElemType, N, /*M=*/0, K><<<grid.m_blocksPerGrid, grid.m_threadsPerBlock, 0, t_stream>>>(beta, pointers, alpha, op, regularOpStrides, regularStrides, grid.m_N, reducingOpDims, reducingStrides);
-    if (do_sync)
-        CUDA_CALL(cudaEventRecord(done));
-    if (do_sync)
-        CUDA_CALL(cudaEventSynchronize(done));
-    if (do_sync)
-        CUDA_CALL(cudaEventDestroy(done));
 }
 
 // -----------------------------------------------------------------------
@@ -550,9 +540,7 @@ static void LaunchTensorOpWithReduction(ElemType beta, array<ElemType*, N> point
 
     // launch the kernel
     CUDA_LONG NN = (CUDA_LONG) numElements; // linear space identifying each individual input element
-    cudaEvent_t done = nullptr;
-    if (do_sync)
-        CUDA_CALL(cudaEventCreate(&done));
+    SyncGuard syncGuard;
 
     // do some optimization for reductions
     // Cases:
@@ -598,7 +586,7 @@ static void LaunchTensorOpWithReduction(ElemType beta, array<ElemType*, N> point
 
         if (beta == 1 || numBlocksZ == 1)
         {
-            _launchTensorOpWithReduction<ElemType, N, M, K><<<dim3(numBlocksX, numBlocksY, numBlocksZ), numThreadsX, numThreadsX * sizeof(ReduceElemType), t_stream>>>(/*beta=*/1, pointers, alpha, op, regularOpStrides, regularStrides, NN, reducingOpDims, reducingStrides, 0, reductionChunkSize);
+            _launchTensorOpWithReduction<ElemType, N, M, K><<<dim3(numBlocksX, numBlocksY, numBlocksZ), numThreadsX, numThreadsX * sizeof(ReduceElemType), t_stream>>>(beta, pointers, alpha, op, regularOpStrides, regularStrides, NN, reducingOpDims, reducingStrides, 0, reductionChunkSize);
         }
         else
         {
@@ -613,12 +601,6 @@ static void LaunchTensorOpWithReduction(ElemType beta, array<ElemType*, N> point
         // we got enough elements to generate: do one element per thread, and reduction inside
         _launchTensorOp<ElemType, N, M, K><<<grid.m_blocksPerGrid, grid.m_threadsPerBlock, 0, t_stream>>>(beta, pointers, alpha, op, regularOpStrides, regularStrides, grid.m_N, reducingOpDims, reducingStrides);
     }
-    if (do_sync)
-        CUDA_CALL(cudaEventRecord(done));
-    if (do_sync)
-        CUDA_CALL(cudaEventSynchronize(done));
-    if (do_sync)
-        CUDA_CALL(cudaEventDestroy(done));
 }
 
 // -----------------------------------------------------------------------
@@ -677,9 +659,7 @@ void LaunchUnaryTensorOp(ElemType beta, const ElemType* pa, ElemType* pb, ElemTy
         else                                                                                                                                 \
             return _launchUnaryTensorOp<ElemType, Functor##oper><<<grid.m_blocksPerGrid, grid.m_threadsPerBlock, 0, t_stream>>>(beta, pa, pb, alpha, NN);
 
-    cudaEvent_t done = nullptr;
-    if (do_sync)
-        CUDA_CALL(cudaEventCreate(&done));
+    SyncGuard syncGuard;
     GridDim grid(NN);
     switch (op)
     {
@@ -687,12 +667,6 @@ void LaunchUnaryTensorOp(ElemType beta, const ElemType* pa, ElemType* pb, ElemTy
     default:
         LogicError("LaunchTensorOp1: Unknown op code %d.", (int) op);
     }
-    if (do_sync)
-        CUDA_CALL(cudaEventRecord(done));
-    if (do_sync)
-        CUDA_CALL(cudaEventSynchronize(done));
-    if (do_sync)
-        CUDA_CALL(cudaEventDestroy(done));
 }
 
 // -----------------------------------------------------------------------
@@ -778,8 +752,7 @@ template void TensorOpN<double, 4>(double beta, array<double*, 4> pointers, doub
 
 template void LaunchUnaryTensorOp(float beta, const float* pa, float* pb, float alpha, ElementWiseOperator op, size_t regularOpDim);
 template void LaunchUnaryTensorOp(double beta, const double* pa, double* pb, double alpha, ElementWiseOperator op, size_t regularOpDim);
-}
-}
-}
+
+}}}
 
 #endif // CPUONLY

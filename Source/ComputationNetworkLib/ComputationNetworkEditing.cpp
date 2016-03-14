@@ -298,9 +298,9 @@ void ComputationNetwork::RemoveFeatureNode(ComputationNodeBasePtr featureNode)
     m_nameToNodeMap.erase(nodeName);
 }
 
-// sets m_parameterUpdateRequired in all LearnableParameters feeding into the passed rootNode
-// Called from MEL  --TODO: correct?
-void ComputationNetwork::SetLearnableNodesBelowNeedGradient(const bool needGradient, const ComputationNodeBasePtr& rootNode)
+// sets m_learningRateMultiplier in all LearnableParameters feeding into the passed rootNode
+// Called from MEL
+void ComputationNetwork::SetLearnableNodesBelowLearningRateMultiplier(const float learningRateMultiplier, const ComputationNodeBasePtr& rootNode)
 {
     // find nodes from all available nodes
     if (rootNode == nullptr)
@@ -309,7 +309,7 @@ void ComputationNetwork::SetLearnableNodesBelowNeedGradient(const bool needGradi
         {
             ComputationNodeBasePtr node = nodeIter->second;
             if (node->OperationName() == OperationNameOf(LearnableParameter))
-                node->SetParameterUpdateRequired(needGradient);
+                node->SetLearningRateMultiplier(learningRateMultiplier);
         }
     }
     else
@@ -318,12 +318,12 @@ void ComputationNetwork::SetLearnableNodesBelowNeedGradient(const bool needGradi
         for (const auto& node : GetEvalOrder(rootNode))
         {
             if (node->OperationName() == OperationNameOf(LearnableParameter))
-                node->SetParameterUpdateRequired(needGradient);
+                node->SetLearningRateMultiplier(learningRateMultiplier);
         }
     }
 }
 
-void ComputationNetwork::SetBatchNormlizationNodesBelowEvalMode(const bool evalMode, const ComputationNodeBasePtr& rootNode /* = nullptr */)
+void ComputationNetwork::SetBatchNormalizationNodesBelowEvalMode(const bool evalMode, const ComputationNodeBasePtr& rootNode /* = nullptr */)
 {
     vector<ComputationNodeBasePtr> nodes;
     if (rootNode == nullptr)

@@ -13,7 +13,7 @@
 namespace Microsoft { namespace MSR { namespace CNTK {
 
 template <class ElemType>
-class HTKMLFWriter : public IDataWriter<ElemType>
+class HTKMLFWriter : public IDataWriter
 {
 private:
     std::vector<size_t> outputDims;
@@ -36,8 +36,6 @@ private:
     };
 
 public:
-    using LabelType = typename IDataWriter<ElemType>::LabelType;
-    using LabelIdType = typename IDataWriter<ElemType>::LabelIdType;
     template <class ConfigRecordType>
     void InitFromConfig(const ConfigRecordType& writerConfig);
     virtual void Init(const ConfigParameters& config)
@@ -52,5 +50,6 @@ public:
     virtual void GetSections(std::map<std::wstring, SectionType, nocase_compare>& sections);
     virtual bool SaveData(size_t recordStart, const std::map<std::wstring, void*, nocase_compare>& matrices, size_t numRecords, size_t datasetSize, size_t byteVariableSized);
     virtual void SaveMapping(std::wstring saveId, const std::map<LabelIdType, LabelType>& labelMapping);
+    virtual bool SupportMultiUtterances() const { return false; };
 };
 } } }

@@ -43,21 +43,27 @@ public:
     {
     }
 
-// -------------------------------------------------------------------
-// elementwise operations
-// Result goes into 'this', and can optionally be added to the existing value.
-// E.g. c.DoSumOf(beta,a,b,alpha) means c := beta * c + alpha * (a + b),
-//      c.AssignDiffOf(c,a) means c -= a,
-//  and c.AddElementwiseProductOf(a, b, 1) means c += a .* b.
-// All operators support elementwise in-place operations, i.e. a, b, and c
-// may all reference the same underlying SOB, with onee exception:
-// The output cannot be in-place and inverse-broadcasting at the same time.
-// E.g. with c=[10] and a=[10 x 20], c.AssignDiffOf(c,a) will fail.
-// In that case, you can use c.AddCopyOf(a,-1).
-// Aliasing is not detected, so don't pass distinct TensorView objects that
-// reference overlapping but not identical slices.
-// If beta == 0, c is not read out, i.e. it can be uninitialized or contain NaNs.
-// -------------------------------------------------------------------
+    // reshaped view
+    TensorView<ElemType> Reshaped(const TensorShape& shape) const
+    {
+        return TensorView(*this, shape);
+    }
+
+    // -------------------------------------------------------------------
+    // elementwise operations
+    // Result goes into 'this', and can optionally be added to the existing value.
+    // E.g. c.DoSumOf(beta,a,b,alpha) means c := beta * c + alpha * (a + b),
+    //      c.AssignDiffOf(c,a) means c -= a,
+    //  and c.AddElementwiseProductOf(a, b, 1) means c += a .* b.
+    // All operators support elementwise in-place operations, i.e. a, b, and c
+    // may all reference the same underlying SOB, with one exception:
+    // The output cannot be in-place and inverse-broadcasting at the same time.
+    // E.g. with c=[10] and a=[10 x 20], c.AssignDiffOf(c,a) will fail.
+    // In that case, you can use c.AddCopyOf(a,-1).
+    // Aliasing is not detected, so don't pass distinct TensorView objects that
+    // reference overlapping but not identical slices.
+    // If beta == 0, c is not read out, i.e. it can be uninitialized or contain NaNs.
+    // -------------------------------------------------------------------
 
 #pragma push_macro("DeclareUnaryTensorOp")
 #define DeclareUnaryTensorOp(oper)                                        \
@@ -115,27 +121,34 @@ public:
 
     static void Test();
 
-    void DoUnaryOpOf(ElemType beta, const TensorView& a, ElemType alpha, ElementWiseOperator op);
-    void DoBinaryOpOf(ElemType beta, const TensorView& a, const TensorView& b, ElemType alpha, ElementWiseOperator op);
+    void DoUnaryOpOf  (ElemType beta, const TensorView& a,                                           ElemType alpha, ElementWiseOperator op);
+    void DoBinaryOpOf (ElemType beta, const TensorView& a, const TensorView& b,                      ElemType alpha, ElementWiseOperator op);
     void DoTernaryOpOf(ElemType beta, const TensorView& a, const TensorView& b, const TensorView& c, ElemType alpha, ElementWiseOperator op);
+
+    // -------------------------------------------------------------------
+    // matrix product -- GEMM for flattened tensors
+    // Result goes into 'this', and can optionally be added to the existing value.
+    // [I x J x K x L] * [K x L x M x N] -> [I x J x M x N] reducing over (K,L)
+    // Reduction range is inferred from tensor ranks.
+    // [I x J], [K x L], and [M x N] must each be dense.
+    // Being a matrix product, the output cannot be in-place.
+    // If beta == 0, c is not read out, i.e. it can be uninitialized or contain NaNs.
+    // -------------------------------------------------------------------
+
+    void DoMatrixProductOf    (ElemType beta, bool transC, const TensorView& a, bool transA, const TensorView& b, bool transB, ElemType alpha);
+    void AssignMatrixProductOf(               bool transC, const TensorView& a, bool transA, const TensorView& b, bool transB, ElemType alpha = 1.0f) { DoMatrixProductOf(0,    transC, a, transA, b, transB, alpha); }
+    void AddMatrixProductOf   (               bool transC, const TensorView& a, bool transA, const TensorView& b, bool transB, ElemType alpha = 1.0f) { DoMatrixProductOf(1.0f, transC, a, transA, b, transB, alpha); }
+
+    Matrix/*ref*/<ElemType> AsMatrix() const;
 
 private:
     // -------------------------------------------------------------------
     // accessors
     // -------------------------------------------------------------------
 
-    const Matrix<ElemType>& GetSOB() const
-    {
-        return m_sob;
-    }
-    Matrix<ElemType>& GetSOB()
-    {
-        return m_sob;
-    }
-    const TensorShape& GetShape() const
-    {
-        return m_shape;
-    }
+    const Matrix<ElemType>& GetSOB() const { return m_sob; }
+    Matrix<ElemType>&       GetSOB()       { return m_sob; }
+    const TensorShape& GetShape() const { return m_shape; }
 
     // -------------------------------------------------------------------
     // sob members
@@ -143,10 +156,8 @@ private:
 
     Matrix<ElemType> m_sob; // Storage OBject that holds the data that is being viewed with this TensorView. This is really a reference (not owing the buffer).
     TensorShape m_shape;    // the meta-data that describes the data's shape and/or access pattern
-    // TODO: use a reference here or not? With a reference, we can hide more info in here such as cuDNN handles
 };
-}
-}
-}
+
+}}}
 
 #pragma warning(pop)

@@ -5,14 +5,14 @@
 RootDir = ".."
 
 ConfigDir = "$RootDir$/Config"
-DataDir = "$RootDir$/Data"
+DataDir   = "$RootDir$/Data"
 OutputDir = "$RootDir$/Output"
-ModelDir = "$OutputDir$/Models"
+ModelDir  = "$OutputDir$/Models"
 
 # deviceId=-1 for CPU, >=0 for GPU devices, "auto" chooses the best GPU, or CPU if no usable GPU is available
 deviceId = -1
 
-command = Simple_Demo_Train:Simple_Demo_Test
+command = Simple_Demo_Train:Simple_Demo_Test:Simple_Demo_Output
 
 precision = "float"
 traceLevel = 1
@@ -129,6 +129,25 @@ Simple_Demo_Output=[
             labelMappingFile = "$DataDir$/SimpleMapping.txt"
         ]
     ]
-	
-    outputPath = "$OutputDir$/SimpleOutput"    # Dump output as text
+
+    outputNodeNames = PosteriorProb : labels    # Select the nodes to print. If this is not given, the nodes tagged as "output" are printed instead.
+
+    outputPath = "$OutputDir$/SimpleOutput"     # Path to write to. ".NODENAME" will be appended.
+    #outputPath = "-"                           # As an alternative, this prints to stdout.
+
+    # extra formatting options
+    # This is configured to print the classified and ground-truth labels.
+    # To write out the actual posterior probabilities, comment out this section.
+    format = [
+        type = "category"                                # This finds the highest-scoring entry and prints its index.
+        labelMappingFile = "$DataDir$/SimpleMapping.txt" # Specifying this as well will translate the index into a string.
+        sequenceEpilogue = "\t// %s\n"                   # Append this on every line, %s = node name. Useful when printing to stdout.
+
+        # How to implement simple error counting with this (cd into $OutputDir$ first):
+        #    grep PosteriorProb SimpleOutput.PosteriorProb | awk '{print $1}' > P
+        #    grep labels        SimpleOutput.labels        | awk '{print $1}' > L
+        #    diff L P | grep "<" | wc -l
+        #    wc -l P
+        # The ratio of the two numbers gives the same error rate as ErrorPrediction/Sample in the log.
+    ]
 ]

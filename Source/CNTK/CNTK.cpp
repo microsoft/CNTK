@@ -92,6 +92,7 @@ std::string WCharToString(const wchar_t* wst)
     return s;
 }
 
+// TODO: This is an action, it should be moved into ActionsLib.
 template <typename ElemType>
 void DumpNodeInfo(const ConfigParameters& config)
 {
@@ -101,10 +102,15 @@ void DumpNodeInfo(const ConfigParameters& config)
     wstring defOutFilePath = modelPath + L"." + nodeName + L".txt";
     wstring outputFile = config(L"outputFile", defOutFilePath);
     bool printValues = config(L"printValues", true);
+    bool printMetadata = config(L"printMetadata", true);
+    if (!printValues && !printMetadata)
+    {
+        InvalidArgument("printValues and printMetadata: Since both are set to false, there will be nothing to dump");
+    }
 
-    ComputationNetwork net(-1); // always use CPU
-    net.Load<ElemType>(modelPath);
-    net.DumpNodeInfoToFile(nodeName, printValues, outputFile, nodeNameRegexStr);
+    ComputationNetwork net(-1);    // always use CPU
+    net.Load<ElemType>(modelPath); // TODO: we have a function now to combine this and the previous line
+    net.DumpNodeInfoToFile(nodeName, printValues, printMetadata, outputFile, nodeNameRegexStr);
 }
 
 size_t GetMaxEpochs(const ConfigParameters& configParams)
@@ -159,12 +165,12 @@ void DoCommands(const ConfigParameters& config)
 
     if (numCPUThreads > 0)
     {
-        std::cerr << "Using " << numCPUThreads << " CPU threads" << endl;
+        std::cerr << "Using " << numCPUThreads << " CPU threads." << endl;
     }
 
     bool progressTracing = config(L"progressTracing", false);
 
-    // temporary hack to prevent users from failling for a small breaking change related to the "truncated" flag (will be redone bigger and better some day)
+    // temporary hack to prevent users from failing due to a small breaking change related to the "truncated" flag (will be redone bigger and better some day)
     DisableLegacyUsage(config, command);
 
     // summarize command info upfront in the log and stdout
@@ -193,6 +199,7 @@ void DoCommands(const ConfigParameters& config)
     // set up progress tracing for compute cluster management
     if (progressTracing && ((g_mpi == nullptr) || g_mpi->IsMainNode()))
     {
+        ProgressTracing::SetTracingFlag();
         ProgressTracing::TraceTotalNumberOfSteps(fullTotalMaxEpochs); // enable tracing, using this as the total number of epochs
     }
 
@@ -213,65 +220,82 @@ void DoCommands(const ConfigParameters& config)
         // determine the action to perform, and do it
         for (int j = 0; j < action.size(); j++)
         {
-            if (action[j] == "train" || action[j] == "trainRNN")
+            string thisAction = action[j];
+
+            // print a banner to visually separate each action in the log
+            const char* delim = "##############################################################################";
+            const char* prefix = "Action ";
+            fprintf(stderr, "\n%s\n", delim);
+            fprintf(stderr, "#%*s#\n", (int)(strlen(delim) - 2), "");
+            fprintf(stderr, "# %s\"%s\"%*s #\n", prefix, thisAction.c_str(), (int)(strlen(delim) - strlen(prefix) - thisAction.size() - 6), "");
+            fprintf(stderr, "#%*s#\n", (int)(strlen(delim) - 2), "");
+            fprintf(stderr, "%s\n\n", delim);
+
+            if (thisAction == "train" || thisAction == "trainRNN")
             {
                 std::cerr << "CNTKCommandTrainBegin: " + command[i] << endl;
                 DoTrain<ConfigParameters, ElemType>(commandParams);
                 std::cerr << "CNTKCommandTrainEnd: " + command[i] << endl;
                 fullEpochsOffset += GetMaxEpochs(commandParams);
             }
-            else if (action[j] == "adapt")
+            else if (thisAction == "adapt")
             {
                 DoAdapt<ElemType>(commandParams);
             }
-            else if (action[j] == "test" || action[j] == "eval")
+            else if (thisAction == "test" || thisAction == "eval")
             {
                 DoEval<ElemType>(commandParams);
             }
-            else if (action[j] == "edit")
+            else if (thisAction == "edit")
             {
                 DoEdit<ElemType>(commandParams);
             }
-            else if (action[j] == "cv")
+            else if (thisAction == "cv")
             {
                 DoCrossValidate<ElemType>(commandParams);
             }
-            else if (action[j] == "write")
+            else if (thisAction == "write")
             {
                 DoWriteOutput<ElemType>(commandParams);
             }
-            else if (action[j] == "devtest")
+            else if (thisAction == "devtest")
             {
                 TestCn<ElemType>(config); // for "devtest" action pass the root config instead
             }
-            else if (action[j] == "dumpnode")
+            else if (thisAction == "dumpnode")
             {
                 DumpNodeInfo<ElemType>(commandParams);
             }
-            else if (action[j] == "convertdbn")
+            else if (thisAction == "convertdbn")
             {
                 DoConvertFromDbn<ElemType>(commandParams);
             }
-            else if (action[j] == "createLabelMap")
+            else if (thisAction == "exportdbn")
+            {
+                DoExportToDbn<ElemType>(commandParams);
+            }
+            else if (thisAction == "createLabelMap")
             {
                 DoCreateLabelMap<ElemType>(commandParams);
             }
-            else if (action[j] == "writeWordAndClass")
+            else if (thisAction == "writeWordAndClass")
             {
                 DoWriteWordAndClassInfo<ElemType>(commandParams);
             }
-            else if (action[j] == "plot")
+            else if (thisAction == "plot")
             {
                 DoTopologyPlot<ElemType>(commandParams);
             }
-            else if (action[j] == "SVD")
+            else if (thisAction == "SVD")
             {
                 DoParameterSVD<ElemType>(commandParams);
             }
             else
             {
-                RuntimeError("unknown action: %s  in command set: %s", action[j].c_str(), command[i].c_str());
+                RuntimeError("unknown action: %s  in command set: %s", thisAction.c_str(), command[i].c_str());
             }
+
+            fprintf(stderr, "\nAction \"%s\" complete.\n\n", thisAction.c_str());
 
             NDLScript<ElemType> ndlScript;
             ndlScript.ClearGlobal(); // clear global macros between commands
@@ -367,9 +391,9 @@ static wstring PathToBSStringLiteral(const wstring& path) // quote a pathname fo
 }
 
 // TODO: decide where these should go. Also, do we need three variables?
-extern wstring standardFunctions;
-extern wstring commonMacros;
-extern wstring computationNodes;
+//extern wstring standardFunctions;
+//extern wstring commonMacros;
+//extern wstring computationNodes;
 
 int wmainWithBS(int argc, wchar_t* argv[]) // called from wmain which is a wrapper that catches & reports Win32 exceptions
 {
@@ -381,7 +405,7 @@ int wmainWithBS(int argc, wchar_t* argv[]) // called from wmain which is a wrapp
     wstring startupMessage = msra::strfun::wstrprintf(L"running on %ls at %ls\n", msra::strfun::utf16(GetHostName()).c_str(), msra::strfun::utf16(TimeDateStamp()).c_str());
     startupMessage += msra::strfun::wstrprintf(L"command line: %ls", exePath.c_str());
     for (const auto& arg : args)
-        startupMessage += L" " + arg;
+        startupMessage += L"  " + arg;
 
     fprintf(stderr, "%ls\n", startupMessage.c_str());
 
@@ -411,7 +435,9 @@ int wmainWithBS(int argc, wchar_t* argv[]) // called from wmain which is a wrapp
 
     // compile the BrainScript
     wstring bs = L"[\n";
-    bs += standardFunctions + computationNodes + commonMacros + L"\n"; // start with standard macros
+    bs += L"include \'cntk.core.bs'"; // start with including the standard macros
+    // Note: Using lowercase ^^ here to match the Linux name of the CNTK exe.
+    //bs += standardFunctions + computationNodes + commonMacros + L"\n";
     for (const auto& sourceFile : sourceFiles)
         bs += L"include " + PathToBSStringLiteral(sourceFile) + L"\n";
     bs += L"\n]\n";
@@ -556,9 +582,7 @@ int wmainOldCNTKConfig(int argc, wchar_t* argv[]) // called from wmain which is 
     fprintf(stderr, "running on %s at %s\n", GetHostName().c_str(), timestamp.c_str());
     fprintf(stderr, "command line: \n");
     for (int i = 0; i < argc; i++)
-    {
-        fprintf(stderr, "%s ", WCharToString(argv[i]).c_str());
-    }
+        fprintf(stderr, "%*s%ls", i > 0 ? 2 : 0, "", argv[i]); // use 2 spaces for better visual separability
 
     // This simply merges all the different config parameters specified (eg, via config files or via command line directly),
     // and prints it.
@@ -578,7 +602,7 @@ int wmainOldCNTKConfig(int argc, wchar_t* argv[]) // called from wmain which is 
     config.dumpWithResolvedVariables();
     fprintf(stderr, "<<<<<<<<<<<<<<<<<<<< PROCESSED CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<\n");
 
-    fprintf(stderr, "command: ");
+    fprintf(stderr, "Commands: ");
     for (int i = 0; i < command.size(); i++)
     {
         fprintf(stderr, "%s ", command[i].c_str());
@@ -588,25 +612,17 @@ int wmainOldCNTKConfig(int argc, wchar_t* argv[]) // called from wmain which is 
     std::string type = config(L"precision", "float");
     // accept old precision key for backward compatibility
     if (config.Exists("type"))
-    {
-        type = config(L"type", "float");
-    }
+        InvalidArgument("CNTK: Use of 'type' parameter is deprecated, it is called 'precision' now.");
 
-    fprintf(stderr, "\nprecision = %s\n", type.c_str());
+    fprintf(stderr, "\nPrecision = \"%s\"\n", type.c_str());
     if (type == "float")
-    {
         DoCommands<float>(config);
-    }
     else if (type == "double")
-    {
         DoCommands<double>(config);
-    }
     else
-    {
-        RuntimeError("invalid precision specified: %s", type.c_str());
-    }
+        RuntimeError("CNTK: Invalid precision string: \"%s\", must be \"float\" or \"double\"", type.c_str());
 
-    // still here , write a DoneFile if necessary
+    // if completed then write a DoneFile if requested
     if (!DoneFile.empty())
     {
         FILE* fp = fopenOrDie(DoneFile.c_str(), L"w");
@@ -638,7 +654,11 @@ int wmain1(int argc, wchar_t* argv[]) // called from wmain which is a wrapper th
     {
         PrintBuiltInfo(); // print build info directly in case that user provides zero argument (convenient for checking build type)
         if (argc <= 1)
-            InvalidArgument("No command-line argument given.");
+        {
+            fprintf(stderr, "No command-line argument given.\n");
+            PrintUsageInfo();
+            return EXIT_FAILURE;
+        }
         // detect legacy CNTK configuration
         bool isOldCNTKConfig = false;
         for (int i = 0; i < argc && !isOldCNTKConfig; i++)
@@ -650,20 +670,23 @@ int wmain1(int argc, wchar_t* argv[]) // called from wmain which is a wrapper th
     }
     catch (const ScriptableObjects::ScriptingException& err)
     {
-        fprintf(stderr, "EXCEPTION occurred: %s\n", err.what());
+        fprintf(stderr, "\nEXCEPTION occurred: %s\n", err.what());
         err.PrintError();
+        return EXIT_FAILURE;
+    }
+    catch (const IExceptionWithCallStackBase& err)
+    {
+        fprintf(stderr, "\nEXCEPTION occurred: %s\n%s", dynamic_cast<const std::exception&>(err).what(), err.CallStack());
         return EXIT_FAILURE;
     }
     catch (const std::exception& err)
     {
-        fprintf(stderr, "EXCEPTION occurred: %s\n", err.what());
-        PrintUsageInfo();
+        fprintf(stderr, "\nEXCEPTION occurred: %s\n", err.what());
         return EXIT_FAILURE;
     }
     catch (...)
     {
-        fprintf(stderr, "Unknown ERROR occurred");
-        PrintUsageInfo();
+        fprintf(stderr, "\nUnknown ERROR occurred\n");
         return EXIT_FAILURE;
     }
 }

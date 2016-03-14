@@ -12,16 +12,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 // Evaluation Writer class
 // interface to pass to evaluation DLL
 template <class ElemType>
-class EvalWriter : public IDataWriter<ElemType>
+class EvalWriter : public IDataWriter
 {
-    typedef typename IDataWriter<ElemType>::LabelType LabelType;
-    typedef typename IDataWriter<ElemType>::LabelIdType LabelIdType;
-
-private:
     std::map<std::wstring, std::vector<ElemType>*>* m_outputs; // our output data
     std::map<std::wstring, size_t>* m_dimensions;              // the number of rows for the output data
     size_t m_recordCount;                                      // count of records in this data
     size_t m_currentRecord;                                    // next record number to read
+
 public:
     // Method to setup the data for the reader
     void SetData(std::map<std::wstring, std::vector<ElemType>*>* outputs, std::map<std::wstring, size_t>* dimensions)
@@ -116,11 +113,11 @@ public:
             size_t index = m_currentRecord * rows;
             size_t numberToCopy = rows * numRecords;
             data->resize(index + numberToCopy);
-            void* dataPtr = (void*) ((ElemType*) data->data() + index);
-            size_t dataSize = numberToCopy * sizeof(ElemType);
-            void* mat = &(*matrix)(0, 0);
-            size_t matSize = matrix->GetNumElements() * sizeof(ElemType);
-            memcpy_s(dataPtr, dataSize, mat, matSize);
+            ElemType* dataPtr = ((ElemType*)data->data()) + index;
+            if (matrix->GetNumElements() > numberToCopy)
+                RuntimeError("The output matrix being saved has more data than the numRecords (%d) requested to be saved", (int)numRecords);
+
+            matrix->CopyToArray(dataPtr, numberToCopy);
         }
 
         // increment our record pointer
@@ -130,5 +127,9 @@ public:
         return (m_currentRecord >= m_recordCount);
     }
     virtual void SaveMapping(std::wstring saveId, const std::map<typename EvalWriter<ElemType>::LabelIdType, typename EvalWriter<ElemType>::LabelType>& /*labelMapping*/){};
+    virtual bool SupportMultiUtterances() const
+    {
+        return false;
+    };
 };
 } } }

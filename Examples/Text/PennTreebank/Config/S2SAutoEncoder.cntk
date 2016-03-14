@@ -1,0 +1,642 @@
+####################
+# WORK IN PROGRESS #
+# WORK IN PROGRESS #
+# WORK IN PROGRESS #
+####################
+
+# Command line to run in debugger:
+# configFile=$(SolutionDir)Examples/Text/PennTreebank/Config/S2SAutoEncoder.cntk  RunDir=$(SolutionDir)Examples/Text/PennTreebank/_run  RootDir=$(SolutionDir)Examples/Text/PennTreebank/_run  DataDir=$(SolutionDir)Examples/Text/PennTreebank/Data  ConfigDir=$(SolutionDir)Examples/Text/PennTreebank/Config  stderr=$(SolutionDir)Examples/Text/PennTreebank/_run/Simple.log  train=[SGD=[maxEpochs=1]]  train=[epochSize=2048]]  confVocabSize=1000  DeviceId=0  makeMode=false
+# Append this for small set:
+# trainFile=ptb.small.train.txt  validFile=ptb.small.valid.txt testFile=ptb.small.test.txt
+
+# It implements a sequence-to-sequence based auto-encoder.
+# It encodes an entire sentence into a flat vector, and tries to regenerate it.
+# Meant to be useful mainly understanding how to do sequence-to-sequence in CNTK.
+
+# Parameters can be overwritten on the command line
+# for example: cntk configFile=myConfigFile RootDir=../.. 
+# For running from Visual Studio add
+# currentDirectory=$(SolutionDir)/<path to corresponding data folder> 
+RootDir = ".."
+
+ConfigDir = "$RootDir$/Config"
+DataDir   = "$RootDir$/Data"
+CacheDir  = "$RootDir$/Data/cache"
+OutputDir = "$RootDir$/Output"
+ModelDir  = "$OutputDir$/Models"
+
+# deviceId=-1 for CPU, >=0 for GPU devices, "auto" chooses the best GPU, or CPU if no usable GPU is available
+deviceId = "auto"
+
+command = writeWordAndClassInfo:train:test:write
+
+precision  = "float"
+traceLevel = 1
+modelPath  = "$ModelDir$/S2SAutoEncoder.dnn"
+
+# uncomment the following line to write logs to a file
+#stderr=$OutputDir$/rnnOutput
+
+numCPUThreads = 1
+
+confVocabSize = 10000
+confClassSize = 50
+useStabilizer = true
+
+trainFile = "ptb.train.txt"
+validFile = "ptb.valid.txt"
+testFile  = "ptb.test.txt"
+
+#######################################
+#  network definition                 #
+#######################################
+
+BrainScriptNetworkBuilder = [
+
+    # import some namespaces
+    RecurrentLSTMP = BS.RNNs.RecurrentLSTMP
+    Parameters = BS.Parameters
+    Loop = BS.Loop
+    Boolean = BS.Boolean
+
+    # define an LSTM with a per-sequence initialization value
+    # TODO: Not currently used. Move to BS library once tested.
+    RecurrentLSTMPWithInitValue (inputDim, outputDim, cellDim, x, initValue, enableSelfStabilization=false) =
+    [
+        prevState =  // Loop.Previous (lstmState). BS can't apply Previous() to dictionaries, so expand it manually
+        [
+            h = Loop.Previous (lstmState.h);                     // hidden state(t-1)
+            c = Loop.Previous (lstmState.c);                     // cell(t-1)
+        ]
+        # resettable LSTM function
+        lstmState =
+        [
+            // apply the LSTM function to the input state; for first frame, we will ignore the output
+            enableSelfStabilization1 = enableSelfStabilization // TODO: BS syntax needs to allow to say ^.enableSelfStabilization
+            lstmState1 = LSTMP (inputDim, outputDim, cellDim, x, prevState, enableSelfStabilization=enableSelfStabilization1)
+
+            // the actual LSTM state (incl. its output) gets overwritten in the first frame by the initValue
+            isFirst = Loop.IsFirst (x)
+            h = Boolean.If (isFirst, initValue, lstmState1.h); // hidden state(t-1)
+            c = Boolean.If (isFirst, initValue, lstmState1.c); // cell(t-1)
+        ]
+    ].lstmState.h // that's the value we return
+
+    # import general config options from outside config values
+    vocabDim = $confVocabSize$
+    nbrClass = $confClassSize$
+
+    useStabilizer = $useStabilizer$
+
+    embeddingDim = 300
+    hiddenDim    = 200
+
+    encoderDims[i:0..0] = hiddenDim # this defines the number of hidden layers in each
+    decoderDims[i:0..0] = hiddenDim # both are one LSTM layer only for now
+
+    # inputs
+    #input = SparseInput(vocabDim, tag='feature');  # BUGBUG: RowSlice() not working for sparse, need to extend TensorView
+    input = Input(vocabDim, tag='feature');
+    # for an auto-encoder, both are the same
+    labels = input
+
+    # embedding
+    E = Parameters.WeightParam (vocabDim, embeddingDim) # note: this is assumed to be applied transposed, hence the swapped dimensions
+    Embed (x) = TransposeTimes (E, Parameters.Stabilize (x,  enabled=useStabilizer)) # embeddings are linear, so better stabilize. We really should use BatchNorm.
+    inputEmbedded  = Embed (input)
+    labelsEmbedded = Embed (labels)
+
+    # encoder (processes user input)
+    encoderOutputLayer = Length (encoderDims)-1
+    encoder[i:0..encoderOutputLayer] =
+        RecurrentLSTMP(if i == 0 then embeddingDim else encoderDims[i-1],
+                       encoderDims[i], encoderDims[i],
+                       if i == 0 then inputEmbedded else encoder[i-1],
+                       enableSelfStabilization=useStabilizer)
+    encoderOutput = encoder[encoderOutputLayer]
+
+    # that last frame should be fed as an additional input to every decoder step
+    # (This is the NYU model, not the Google model where the thought vector is the initial state.)
+    thoughtVector =
+    [
+        x = encoderOutput
+        result = Boolean.If (Loop.IsLast (x),      // if last entry
+                 /*then*/ x,                       // then copy that
+                 /*else*/ FutureValue (0, result)) // else just propagate to the front
+    ].result
+    thoughtVectorDim = decoderDims[decoderOutputLayer]
+
+    # decoder
+    # The decoder starts with hidden state 0
+    # and takes as input (thoughtVector; previous word).
+    decoderOutputLayer = Length (decoderDims)-1
+    decoder[i:0..decoderOutputLayer] =
+        if i == 0
+        then RecurrentLSTMP (thoughtVectorDim + embeddingDim, decoderDims[i], decoderDims[i],
+                             RowStack (thoughtVector : Loop.Previous (labelsEmbedded)),
+                             enableSelfStabilization=useStabilizer)
+        else RecurrentLSTMP (decoderDims[i-1], decoderDims[i], decoderDims[i],
+                             decoder[i-1],
+                             enableSelfStabilization=useStabilizer)
+    decoderDim = decoderDims[decoderOutputLayer]
+    decoderOutput = decoder[decoderOutputLayer]
+
+    # and add a softmax layer on top
+    W(x) = Parameters.WeightParam (vocabDim, decoderDim) * Parameters.Stabilize (x, enabled=useStabilizer)
+    B = Parameters.BiasParam (vocabDim)
+
+    z = W(decoderOutput) + B; // top-level input to Softmax
+
+    # training criteria
+    # The target is the full sequence including <s> and </s>.
+    ce  = CrossEntropyWithSoftmax(labels, z, tag='criterion') // this is the training objective
+    wer = ErrorPrediction(labels, z, tag='eval')              // this also gets tracked
+]
+
+#######################################
+# shared reader definition            #
+#######################################
+
+reader = [
+    readerType = LMSequenceReader
+    #randomize = "auto" # gets ignored
+    mode = "softmax"
+    nbruttsineachrecurrentiter = 0      # 0 means auto-fill given minibatch size
+    cacheBlockSize = 100000000          # read block size. This value is large enough to load entire corpus at once
+
+    # word class info
+    wordclass = "$ModelDir$/vocab.txt"
+
+    #### write definition
+    # if writerType is set, we will cache to a binary file
+    # if the binary file exists, we will use it instead of parsing this file
+    #writerType = BinaryReader
+    wfile = $CacheDir$\sequenceSentence.bin
+    # if calculated size would be bigger, that is used instead
+    wsize = 256
+    #wrecords - number of records we should allocate space for in the file
+    # files cannot be expanded, so this should be large enough. If known modify this element in config before creating file
+    wrecords = 1000
+    #windowSize - number of records we should include in BinaryWriter window
+    windowSize = 10000
+
+    file = "$DataDir$/$trainFile$"
+
+    # additional features sections
+    # For input labels, we need both 'features' and the first labels section (called 'inputLabelsDef' below)
+    input = [
+        dim = 0     # no (explicit) labels   ...labelDim correct??
+        ### write definition
+        sectionType = "data"
+    ]
+    # labels sections
+    # TODO: seems we must specify two labels (in and out), but labelType = "none" is allowed
+    # labels sections  --this is required, but our labels are extracted from the inLabels
+    inputLabelsDef = [ # BUGBUG: Make sure that this section name comes before the dummy output labels alphabetically
+        dim = 1
+
+        # vocabulary size
+        labelType = "category"
+        labelDim = "$confVocabSize$"
+        labelMappingFile = "$OutputDir$/sentenceLabels.txt"
+        beginSequence = "<s>"
+        endSequence   = "</s>"
+
+        #### Write definition ####
+        # sizeof(unsigned) which is the label index type
+        elementSize=4
+        sectionType=labels
+        mapping = [
+          #redefine number of records for this section, since we don't need to save it for each data record
+          wrecords=11
+          #variable size so use an average string size
+          elementSize=10
+          sectionType=labelMapping
+        ]
+        category = [
+          dim=11
+          #elementSize=sizeof(ElemType) is default
+          sectionType=categoryLabels
+        ]
+    ]
+    outputDummy = [
+        labelType = "none"
+    ]
+]
+
+#######################################
+#  PREPARATION CONFIG                 #
+#######################################
+
+writeWordAndClassInfo = [
+    action = "writeWordAndClass"
+    inputFile = "$DataDir$/$trainFile$"
+    beginSequence = "</s>"
+    endSequence   = "</s>"
+    outputVocabFile = "$ModelDir$/vocab.txt"
+    outputWord2Cls  = "$ModelDir$/word2cls.txt"
+    outputCls2Index = "$ModelDir$/cls2idx.txt"
+    vocabSize = "$confVocabSize$"
+    nbrClass = "$confClassSize$"
+    cutoff = 0
+    printValues = true
+]
+
+#######################################
+#  TRAINING CONFIG                    #
+#######################################
+
+train = [
+    action = "train"
+    traceLevel = 1
+    epochSize = 0               # (for quick tests, this can be overridden with something small)
+    useValidation = false  # true  # TODO: need to adapt cvReader as well
+
+    #BrainScriptNetworkBuilder is defined in outer scope
+
+    SGD = [
+        minibatchSize = 128:256:512 # TODO: Why is this here and not inside SGD?
+        learningRatesPerSample = 0.1
+        momentumPerMB = 0
+        gradientClippingWithTruncation = true   # TODO: clip and truncate? What is the difference?
+        clippingThresholdPerSample = 15.0
+        maxEpochs = 16
+        numMBsToShowResult = 100
+        gradUpdateType = "none" # FSAdaGrad?
+        loadBestModel = true
+
+        # settings for Auto Adjust Learning Rate
+        AutoAdjust = [
+            autoAdjustLR = "adjustAfterEpoch"
+            reduceLearnRateIfImproveLessThan = 0.001
+            continueReduce = false
+            increaseLearnRateIfImproveMoreThan = 1000000000
+            learnRateDecreaseFactor = 0.5
+            learnRateIncreaseFactor = 1.382
+            numMiniBatch4LRSearch = 100
+            numPrevLearnRates = 5
+            numBestSearchEpoch = 1
+        ]
+
+        dropoutRate = 0.0
+    ]
+
+    # if a cvReader section is specified, SGD will use this to compute the CV criterion
+    # TODO: adapt this
+    _hidden_cvReader = [
+        # reader to use
+        readerType = "LMSequenceReader"
+        randomize = "none"
+        nbruttsineachrecurrentiter = 0  # 0 means fill up the minibatch with as many parallel sequences as fit
+        cacheBlockSize = 2000000        # just load it all
+
+        # word class info
+        wordclass = "$ModelDir$/vocab.txt"
+
+        # if writerType is set, we will cache to a binary file
+        # if the binary file exists, we will use it instead of parsing this file
+        # writerType = "BinaryReader"
+
+        # write definition
+        wfile = "$OutputDir$/sequenceSentence.valid.bin"
+        
+        # wsize - inital size of the file in MB
+        # if calculated size would be bigger, that is used instead
+        wsize = 256
+
+        # wrecords - number of records we should allocate space for in the file
+        # files cannot be expanded, so this should be large enough. If known modify this element in config before creating file
+        wrecords = 1000
+        
+        # windowSize - number of records we should include in BinaryWriter window
+        windowSize = "$confVocabSize$"
+
+        file = "$DataDir$/$validFile$"
+
+        # additional features sections
+        # for now store as expanded category data (including label in)
+        features = [
+            # sentence has no features, so need to set dimension to zero
+            dim = 0
+            # write definition
+            sectionType = "data"
+        ]
+        
+        # labels sections
+        # it should be the same as that in the training set
+        labelIn = [
+            dim = 1
+
+            # vocabulary size
+            labelDim = "$confVocabSize$"
+            labelMappingFile = "$OutputDir$/sentenceLabels.out.txt"
+            
+            labelType = "Category"
+            beginSequence = "</s>"
+            endSequence = "</s>"
+
+            # Write definition
+            # sizeof(unsigned) which is the label index type
+            elementSize = 4
+            sectionType = "labels"
+            
+            mapping = [
+                # redefine number of records for this section, since we don't need to save it for each data record
+                wrecords = 11
+                # variable size so use an average string size
+                elementSize = 10
+                sectionType = "labelMapping"
+            ]
+            
+            category = [
+                dim = 11
+                # elementSize = sizeof(ElemType) is default
+                sectionType = "categoryLabels"
+            ]
+        ]
+        
+        #labels sections
+        labels = [
+            dim = 1
+            
+            labelType = "NextWord"
+            beginSequence = "O"
+            endSequence = "O"
+
+            # vocabulary size
+            labelDim = "$confVocabSize$"
+            labelMappingFile = "$OutputDir$/sentenceLabels.out.txt"
+            
+            # Write definition
+            # sizeof(unsigned) which is the label index type
+            elementSize = 4
+            sectionType = "labels"
+
+            mapping = [
+                # redefine number of records for this section, since we don't need to save it for each data record
+                wrecords = 3
+                # variable size so use an average string size
+                elementSize = 10
+                sectionType = "labelMapping"
+            ]
+            
+            category = [
+                dim = 3
+                # elementSize = sizeof(ElemType) is default
+                sectionType = "categoryLabels"
+            ]
+        ]
+    ]
+]
+
+#######################################
+#  TEST CONFIG                        #
+#######################################
+
+test = [
+    action = "eval"
+
+    # correspond to the number of words/characteres to train in a minibatch
+    minibatchSize = 8192                # choose as large as memory allows for maximum GPU concurrency
+    # need to be small since models are updated for each minibatch
+    traceLevel = 1
+    epochSize = 0
+
+    reader = [
+        # reader to use
+        readerType = "LMSequenceReader"
+        randomize = "none"
+        nbruttsineachrecurrentiter = 0  # 0 means fill up the minibatch with as many parallel sequences as fit
+        cacheBlockSize = 2000000        # just load it all
+
+        # word class info
+        wordclass = "$ModelDir$/vocab.txt"
+
+        # if writerType is set, we will cache to a binary file
+        # if the binary file exists, we will use it instead of parsing this file
+        # writerType = "BinaryReader"
+
+        # write definition
+        wfile = "$OutputDir$/sequenceSentence.bin"
+        # wsize - inital size of the file in MB
+        # if calculated size would be bigger, that is used instead
+        wsize = 256
+
+        # wrecords - number of records we should allocate space for in the file
+        # files cannot be expanded, so this should be large enough. If known modify this element in config before creating file
+        wrecords = 1000
+        
+        # windowSize - number of records we should include in BinaryWriter window
+        windowSize = "$confVocabSize$"
+
+        file = "$DataDir$/$testFile$"
+
+        # additional features sections
+        # for now store as expanded category data (including label in)
+        features = [
+            # sentence has no features, so need to set dimension to zero
+            dim = 0
+            # write definition
+            sectionType = "data"
+        ]
+        
+        #labels sections
+        labelIn = [
+            dim = 1
+
+            # vocabulary size
+            labelDim = "$confVocabSize$"
+            labelMappingFile = "$OutputDir$/sentenceLabels.txt"
+            
+            labelType = "Category"
+            beginSequence = "</s>"
+            endSequence = "</s>"
+
+            # Write definition
+            # sizeof(unsigned) which is the label index type
+            elementSize = 4
+            sectionType = "labels"
+            
+            mapping = [
+                # redefine number of records for this section, since we don't need to save it for each data record
+                wrecords = 11
+                # variable size so use an average string size
+                elementSize = 10
+                sectionType = "labelMapping"
+            ]
+            
+            category = [
+                dim = 11
+                # elementSize = sizeof(ElemType) is default
+                sectionType = "categoryLabels"
+            ]
+        ]
+        
+        #labels sections
+        labels = [
+            dim = 1
+            labelType = "NextWord"
+            beginSequence = "O"
+            endSequence = "O"
+
+            # vocabulary size
+            labelDim = "$confVocabSize$"
+
+            labelMappingFile = "$OutputDir$/sentenceLabels.out.txt"
+            # Write definition
+            # sizeof(unsigned) which is the label index type
+            elementSize = 4
+            sectionType = "labels"
+            
+            mapping = [
+                # redefine number of records for this section, since we don't need to save it for each data record
+                wrecords = 3
+                # variable size so use an average string size
+                elementSize = 10
+                sectionType = "labelMapping"
+            ]
+            
+            category = [
+                dim = 3
+                # elementSize = sizeof(ElemType) is default
+                sectionType = "categoryLabels"
+            ]
+        ]
+    ]
+]
+
+#######################################
+#  WRITE CONFIG                       #
+#######################################
+
+# This will write out the log sentence probabilities
+#   log P(W) = sum_i P(w_n | w_1..w_n-1)
+# of all test sentences in the form log P(W)=<value>, one line per test
+# sentence.
+#
+# This is accomplished by writing out the value of the CE criterion, which
+# is an aggregate over all words in a minibatch. By presenting each sentence
+# as a separate minibatch, the CE criterion is equal to the log sentence prob.
+#
+# This can be used for N-best rescoring if you prepare your N-best hypotheses
+# as an input file with one line of text per hypothesis, where the output is
+# the corresponding log probabilities, one value per line, in the same order.
+
+write = [
+    action = "write"
+
+    outputPath = "$OutputDir$/Write"
+    #outputPath = "-"                    # "-" will write to stdout; useful for debugging
+    outputNodeNames = TrainNodeClassBasedCrossEntropy # when processing one sentence per minibatch, this is the sentence posterior
+    format = [
+        sequencePrologue = "log P(W)="    # (using this to demonstrate some formatting strings)
+        type = "real"
+    ]
+
+    minibatchSize = 8192                # choose this to be big enough for the longest sentence
+    # need to be small since models are updated for each minibatch
+    traceLevel = 1
+    epochSize = 0
+
+    reader = [
+        # reader to use
+        readerType = "LMSequenceReader"
+        randomize = "none"              # BUGBUG: This is ignored.
+        nbruttsineachrecurrentiter = 1  # one sentence per minibatch
+        cacheBlockSize = 1              # workaround to disable randomization
+
+        # word class info
+        wordclass = "$ModelDir$/vocab.txt"
+
+        # if writerType is set, we will cache to a binary file
+        # if the binary file exists, we will use it instead of parsing this file
+        # writerType = "BinaryReader"
+
+        # write definition
+        wfile = "$OutputDir$/sequenceSentence.bin"
+        # wsize - inital size of the file in MB
+        # if calculated size would be bigger, that is used instead
+        wsize = 256
+
+        # wrecords - number of records we should allocate space for in the file
+        # files cannot be expanded, so this should be large enough. If known modify this element in config before creating file
+        wrecords = 1000
+        
+        # windowSize - number of records we should include in BinaryWriter window
+        windowSize = "$confVocabSize$"
+
+        file = "$DataDir$/$testFile$"
+
+        # additional features sections
+        # for now store as expanded category data (including label in)
+        features = [
+            # sentence has no features, so need to set dimension to zero
+            dim = 0
+            # write definition
+            sectionType = "data"
+        ]
+        
+        #labels sections
+        labelIn = [
+            dim = 1
+
+            # vocabulary size
+            labelDim = "$confVocabSize$"
+            labelMappingFile = "$OutputDir$/sentenceLabels.txt"
+            
+            labelType = "Category"
+            beginSequence = "</s>"
+            endSequence = "</s>"
+
+            # Write definition
+            # sizeof(unsigned) which is the label index type
+            elementSize = 4
+            sectionType = "labels"
+            
+            mapping = [
+                # redefine number of records for this section, since we don't need to save it for each data record
+                wrecords = 11
+                # variable size so use an average string size
+                elementSize = 10
+                sectionType = "labelMapping"
+            ]
+            
+            category = [
+                dim = 11
+                # elementSize = sizeof(ElemType) is default
+                sectionType = "categoryLabels"
+            ]
+        ]
+        
+        #labels sections
+        labels = [
+            dim = 1
+            labelType = "NextWord"
+            beginSequence = "O"
+            endSequence = "O"
+
+            # vocabulary size
+            labelDim = "$confVocabSize$"
+
+            labelMappingFile = "$OutputDir$/sentenceLabels.out.txt"
+            # Write definition
+            # sizeof(unsigned) which is the label index type
+            elementSize = 4
+            sectionType = "labels"
+            
+            mapping = [
+                # redefine number of records for this section, since we don't need to save it for each data record
+                wrecords = 3
+                # variable size so use an average string size
+                elementSize = 10
+                sectionType = "labelMapping"
+            ]
+            
+            category = [
+                dim = 3
+                # elementSize = sizeof(ElemType) is default
+                sectionType = "categoryLabels"
+            ]
+        ]
+    ]
+]

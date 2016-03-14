@@ -13,9 +13,6 @@
     <ClCompile Include="..\Common\fileutil.cpp">
       <Filter>Common</Filter>
     </ClCompile>
-    <ClCompile Include="..\Common\DebugUtil.cpp">
-      <Filter>Common</Filter>
-    </ClCompile>
     <ClCompile Include="ModelEditLanguage.cpp">
       <Filter>Model Editing</Filter>
     </ClCompile>
@@ -59,12 +56,12 @@
     <ClCompile Include="BrainScript\ExperimentalNetworkBuilder.cpp">
       <Filter>BrainScript</Filter>
     </ClCompile>
+    <ClCompile Include="..\Common\ExceptionWithCallStack.cpp">
+      <Filter>Common</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\Common\Include\fileutil.h">
-      <Filter>Common\Include</Filter>
-    </ClInclude>
-    <ClInclude Include="..\Common\Include\DebugUtil.h">
       <Filter>Common\Include</Filter>
     </ClInclude>
     <ClInclude Include="..\Common\Include\File.h">
@@ -196,6 +193,9 @@
     <ClInclude Include="..\Common\Include\StringUtil.h">
       <Filter>Common\Include</Filter>
     </ClInclude>
+    <ClInclude Include="..\Common\Include\ExceptionWithCallStack.h">
+      <Filter>Common\Include</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Text Include="modelEditor.txt">
@@ -257,6 +257,9 @@
     <Filter Include="BrainScript\Doc">
       <UniqueIdentifier>{23e7cd74-fd60-4fb4-a925-c3dea584f176}</UniqueIdentifier>
     </Filter>
+    <Filter Include="BrainScript\CNTKCoreLib">
+      <UniqueIdentifier>{899f31fa-5906-4485-8875-14ad2c43ed8f}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <None Include="prebuild.bat">
@@ -265,5 +268,10 @@
     <None Include="BrainScript\Doc\BrainScript--extending the CNTK config language, Frank Seide August 2015.pptx">
       <Filter>BrainScript\Doc</Filter>
     </None>
+  </ItemGroup>
+  <ItemGroup>
+    <Xml Include="BrainScript\CNTKCoreLib\CNTK.core.bs">
+      <Filter>BrainScript\CNTKCoreLib</Filter>
+    </Xml>
   </ItemGroup>
 </Project>

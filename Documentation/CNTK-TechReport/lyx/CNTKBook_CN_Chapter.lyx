@@ -4023,7 +4023,7 @@ In many cases, not all the gradients need to be computed.
  updated and thus it is unnecessary to compute the gradients with regard
  to these parameters.
  We can reduce the gradient computation by keeping a 
-\begin_inset Formula $needGradient$
+\begin_inset Formula $needsGradient$
 \end_inset
 
  flag for each node.
@@ -4032,7 +4032,7 @@ In many cases, not all the gradients need to be computed.
  
 \begin_inset CommandInset ref
 LatexCommand ref
-reference "alg:CN-NeedGradient"
+reference "alg:CN-needsGradient"
 
 \end_inset
 
@@ -4047,7 +4047,7 @@ reference "alg:CN-ForwardOrder-DAG"
  and 
 \begin_inset CommandInset ref
 LatexCommand ref
-reference "alg:CN-NeedGradient"
+reference "alg:CN-needsGradient"
 
 \end_inset
 
@@ -4101,7 +4101,7 @@ status collapsed
 
 \end_inset
 
-UpdateNeedGradientFlag
+UpdateneedsGradientFlag
 \begin_inset ERT
 status collapsed
 
@@ -4427,7 +4427,7 @@ State
 
  call 
 \noun on
-UpdateNeedGradientFlag
+UpdateneedsGradientFlag
 \noun default
 (
 \begin_inset Formula $c$
@@ -4511,7 +4511,7 @@ status open
 \end_inset
 
 
-\begin_inset Formula $node.AnyChildNeedGradient()$
+\begin_inset Formula $node.AnyChildneedsGradient()$
 \end_inset
 
 
@@ -4566,7 +4566,7 @@ State
 \noun default
 \color inherit
  
-\begin_inset Formula $node.needGradient\leftarrow true$
+\begin_inset Formula $node.needsGradient\leftarrow true$
 \end_inset
 
 
@@ -4626,7 +4626,7 @@ State
 \noun default
 \color inherit
  
-\begin_inset Formula $node.needGradient\leftarrow false$
+\begin_inset Formula $node.needsGradient\leftarrow false$
 \end_inset
 
 
@@ -4730,14 +4730,14 @@ end{algorithmic}
 
 \begin_layout Plain Layout
 Update the 
-\begin_inset Formula $needGradient$
+\begin_inset Formula $needsGradient$
 \end_inset
 
  flag recursively.
  
 \begin_inset CommandInset label
 LatexCommand label
-name "alg:CN-NeedGradient"
+name "alg:CN-needsGradient"
 
 \end_inset
 

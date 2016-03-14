@@ -40,8 +40,8 @@ train = [
         ]
 
         DNNSigmoidLayer(inDim, outDim, x, parmScale) = [        // Sigmoid non-linearity
-            W = Parameter(outDim, inDim, init="uniform", initValueScale=parmScale, initOnCPUOnly=false) 
-            b = Parameter(outDim, 1,     init="uniform", initValueScale=parmScale, initOnCPUOnly=false) 
+            W = ParameterTensor((outDim : inDim), init="uniform", initValueScale=parmScale, initOnCPUOnly=false) 
+            b = ParameterTensor( outDim,          init="uniform", initValueScale=parmScale, initOnCPUOnly=false) 
             t = Times(W, x)
             z = Plus(t, b)
             out = Sigmoid(z)
@@ -98,7 +98,8 @@ train = [
 
         h1Dim = 128
         # DNNSigmoidLayer and DNNLayer are defined in Macros.ndl
-        h1 = DNNSigmoidLayer(512, h1Dim, pool2, 1).out
+        h1 = DNNSigmoidLayer(if useCuDnn then (4 : 4 : cMap2/*cudnn: CHW*/) else (cMap2 : 4 : 4/*legacy: HWC*/), h1Dim, pool2, 1).out
+        # Note: 'CHW' and 'HWC' refer to row-major representations, while CNTK uses column-major, so must specify the values in reverse order
         ol = DNNLayer(h1Dim, labelDim, h1, 1).out
 
         ce = CrossEntropyWithSoftmax(labels, ol, tag="criterion")

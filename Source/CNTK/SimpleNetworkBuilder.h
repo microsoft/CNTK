@@ -142,11 +142,11 @@ public:
         ConfigArray rLayerSizes = config("recurrentLayer", "");
         intargvector recurrentLayers = rLayerSizes;
         m_recurrentLayers = recurrentLayers;
-        m_defaultHiddenActivity = config("defaultHiddenActivity", "0.1");
-        ConfigArray str_rnnType = config("rnnType", L"SIMPLENET");
+        m_defaultHiddenActivity = config("defaultHiddenActivity", "0.1"); // TODO: spelling, should be -Activation
+        ConfigArray str_rnnType = config("rnnType", L"SIMPLENET"); // TODO: camelCase
 
         m_maOrder = config("maOrder", "0");
-        m_lookupTableOrder = config("lookupTableOrder", "0");
+        m_lookupTableOrder = config("lookupTableOrder", "0"); // TODO: What is this?
 
         ConfigArray sSizes = config("streamSizes", "");
         m_streamSizes = sSizes;
@@ -155,31 +155,32 @@ public:
         // support.
         m_lookupTabelOrderSizes = sSizes;
 
-        m_labelEmbeddingSize = config("labelEmbeddingSize", "10");
+        m_labelEmbeddingSize   = config("labelEmbeddingSize",   "10");
         m_constForgetGateValue = config("constForgetGateValue", "false");
-        m_constInputGateValue = config("constInputGateValue", "false");
+        m_constInputGateValue  = config("constInputGateValue",  "false");
         m_constOutputGateValue = config("constOutputGateValue", "false");
 
         m_forgetGateInitVal = config("forgetGateInitVal", "-1");
-        m_inputGateInitVal = config("inputGateInitVal", "-1");
+        m_inputGateInitVal  = config("inputGateInitVal",  "-1");
         m_outputGateInitVal = config("outputGateInitVal", "-1");
 
         m_sparse_input = config("sparseinput", "false");
 
+        // TODO: use EqualCI(), and use camelCase, e.g. classLSTM
         stringargvector strType = str_rnnType;
-        if (std::find(strType.begin(), strType.end(), L"SIMPLENET") != strType.end())
+             if (std::find(strType.begin(), strType.end(), L"SIMPLENET") != strType.end()) // TODO: camelCase
             m_standardNetworkKind = FFDNNKind;
-        else if (std::find(strType.begin(), strType.end(), L"SIMPLERNN") != strType.end())
+        else if (std::find(strType.begin(), strType.end(), L"SIMPLERNN") != strType.end()) // TODO: camelCase
             m_standardNetworkKind = RNNKind;
         else if (std::find(strType.begin(), strType.end(), L"LSTM") != strType.end())
             m_standardNetworkKind = LSTMKind;
-        else if (std::find(strType.begin(), strType.end(), L"CLASSLM") != strType.end())
+        else if (std::find(strType.begin(), strType.end(), L"CLASSLM") != strType.end()) // TODO: camelCase
             m_standardNetworkKind = ClassEntropyRNNKind;
         else if (std::find(strType.begin(), strType.end(), L"LBLM") != strType.end())
             m_standardNetworkKind = LogBilinearNetworkKind;
         else if (std::find(strType.begin(), strType.end(), L"NPLM") != strType.end())
             m_standardNetworkKind = DNNLMNetworkKind;
-        else if (std::find(strType.begin(), strType.end(), L"CLASSLSTM") != strType.end())
+        else if (std::find(strType.begin(), strType.end(), L"CLASSLSTM") != strType.end()) // TODO: camelCase
             m_standardNetworkKind = ClassLSTMNetworkKind;
         else if (std::find(strType.begin(), strType.end(), L"NCELSTM") != strType.end())
             m_standardNetworkKind = NCELSTMNetworkKind;
@@ -199,7 +200,7 @@ public:
 
         ElemType initValueScale = config("initValueScale", "1.0");
 
-        ConfigArray layerTypes = config("layerTypes", L"Sigmoid");
+        ConfigArray layerTypes = config("layerTypes", L"Sigmoid"); // TODO: camelCase
         stringargvector nonlinearFunctions = layerTypes;
 
         bool uniformInit = config("uniformInit", "true");

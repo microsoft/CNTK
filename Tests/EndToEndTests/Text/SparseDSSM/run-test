@@ -1,0 +1,50 @@
+#!/bin/bash
+
+. $TEST_ROOT_DIR/run-test-common
+
+# This test uses a large dataset which is not part of the CNTK repository itself
+# We use the dataset from an external location specified using an environment variable
+if [[ "$CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY" == "" || ! -d "$CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY" ]]; then
+  echo 'This test uses external data that is not part of the CNTK repository. Environment variable CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY must be set to point to the external test data location'
+  exit 1
+fi
+
+if [ "$OS" == "Windows_NT" ]; then
+    DataSourceDir=`cygpath -au $CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY`/Text/SparseDSSM
+else
+    DataSourceDir=$CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY/Text/SparseDSSM
+fi
+
+# Copy the test data to the test run directory
+DataDir=$TEST_RUN_DIR/TestData
+mkdir $DataDir
+cp -R $DataSourceDir/* $DataDir || exit $?
+
+
+ConfigDir=$TEST_DIR/
+LogFileName=stderr
+Instances=4
+NumCPUThreads=$(threadsPerInstance $Instances)
+
+# cntkrun <CNTK config file name> <additional CNTK args>
+cntkmpirun "-n $Instances" dssm.cntk "numCPUThreads=$NumCPUThreads"
+ExitCode=$?
+sed 's/^/MPI Rank 0: /' $TEST_RUN_DIR/"$LogFileName"_train.logrank0
+sed 's/^/MPI Rank 1: /' $TEST_RUN_DIR/"$LogFileName"_train.logrank1
+sed 's/^/MPI Rank 2: /' $TEST_RUN_DIR/"$LogFileName"_train.logrank2
+sed 's/^/MPI Rank 3: /' $TEST_RUN_DIR/"$LogFileName"_train.logrank3
+if [ "$ExitCode" != "0" ]; then
+    exit $ExitCode
+fi
+echo === Deleting last epoch data
+rm $TEST_RUN_DIR/models/*.net || exit $?
+echo ==== Re-running from checkpoint
+DeleteExistingModels=0
+# cntkrun <CNTK config file name> <additional CNTK args>
+cntkmpirun "-n $Instances" dssm.cntk "numCPUThreads=$NumCPUThreads"
+ExitCode=$?
+sed 's/^/MPI Rank 0: /' $TEST_RUN_DIR/"$LogFileName"_train.logrank0
+sed 's/^/MPI Rank 1: /' $TEST_RUN_DIR/"$LogFileName"_train.logrank1
+sed 's/^/MPI Rank 2: /' $TEST_RUN_DIR/"$LogFileName"_train.logrank2
+sed 's/^/MPI Rank 3: /' $TEST_RUN_DIR/"$LogFileName"_train.logrank3
+exit $ExitCode

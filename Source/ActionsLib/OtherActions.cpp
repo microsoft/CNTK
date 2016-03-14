@@ -24,6 +24,7 @@
 #include <queue>
 #include <set>
 #include <memory>
+#include <map>
 
 #ifndef let
 #define let const auto
@@ -46,7 +47,6 @@ void DoCreateLabelMap(const ConfigParameters& config)
     ConfigParameters configSection(config(section));
     ConfigParameters readerConfig(configSection("reader"));
     readerConfig.Insert("allowMapCreation", "true");
-    DEVICEID_TYPE deviceId = CPUDEVICE;
     size_t minibatchSize = config(L"minibatchSize", "2048");
     int traceLevel = config(L"traceLevel", "0");
     std::vector<std::wstring> featureNames;
@@ -54,10 +54,10 @@ void DoCreateLabelMap(const ConfigParameters& config)
     GetFileConfigNames(readerConfig, featureNames, labelNames);
 
     // setup minibatch matrices
-    Matrix<ElemType> featuresMatrix(deviceId);
-    Matrix<ElemType> labelsMatrix(deviceId);
-    std::map<std::wstring, Matrix<ElemType>*> matrices;
-    matrices[featureNames[0]] = &featuresMatrix;
+    auto featuresMatrix = make_shared<Matrix<ElemType>>(CPUDEVICE);
+    auto labelsMatrix   = make_shared<Matrix<ElemType>>(CPUDEVICE);
+    StreamMinibatchInputs matrices;
+    matrices.AddInputMatrix(featureNames[0], featuresMatrix);
     if (labelNames.size() == 0)
         RuntimeError("CreateLabelMap: no labels found to process");
 
@@ -66,23 +66,17 @@ void DoCreateLabelMap(const ConfigParameters& config)
     for (const std::wstring& labelsName : labelNames)
     {
         // take the last label file defined (the other one might be input)
-        matrices[labelsName] = &labelsMatrix;
+        matrices.AddInputMatrix(labelsName, labelsMatrix);
 
         // get the label mapping file name
         ConfigParameters labelConfig(readerConfig(labelsName));
         std::string labelMappingFile;
         if (labelConfig.ExistsCurrent(L"labelMappingFile"))
-        {
             labelMappingFile = labelConfig(L"labelMappingFile");
-        }
         else if (readerConfig.ExistsCurrent(L"labelMappingFile"))
-        {
             labelMappingFile = labelConfig(L"labelMappingFile");
-        }
         else
-        {
             RuntimeError("CreateLabelMap: No labelMappingFile defined");
-        }
 
         if (fexists(labelMappingFile))
         {
@@ -91,13 +85,12 @@ void DoCreateLabelMap(const ConfigParameters& config)
         }
         fprintf(stderr, "CreateLabelMap: Creating the mapping file '%s' \n", labelMappingFile.c_str());
 
-        DataReader<ElemType> dataReader(readerConfig);
-
+        DataReader dataReader(readerConfig);
         dataReader.StartMinibatchLoop(minibatchSize, 0, requestDataSize);
         int count = 0;
         while (dataReader.GetMinibatch(matrices))
         {
-            Matrix<ElemType>& features = *matrices[featureNames[0]];
+            Matrix<ElemType>& features = matrices.GetInputMatrix<ElemType>(featureNames[0]);
             count += features.GetNumCols();
             if (traceLevel > 1)
                 fprintf(stderr, "."); // progress meter
@@ -212,6 +205,7 @@ template void DoParameterSVD<double>(const ConfigParameters& config);
 // DoWriteWordAndClassInfo() - implements CNTK "writeWordAndClass" command
 // ===========================================================================
 
+// BUGBUG: This should compare both elements (first one is the word name). This current version leads to different sorting and thus class definitions with VS and gcc.
 template <typename T>
 struct compare_second
 {
@@ -221,86 +215,115 @@ struct compare_second
     }
 };
 
-///
-/// for action writeWordAndClassInfo
-///
-/// read training text file
-///
-/// the outputs are the vocabulary, word2class and class2idx file with the information below
-///     vocabulary format is as follows
-///       0      42068  </s>    0
-///       1      50770  the 0
-///       2      45020  <unk>   1
-///       the first column is word index
-///       the last column is class index of the word
-///       the second column and the third column are for information purpose and
-///       are not really used in generating outputs for later process in the neural networks training
-///
-///    wrd2cls in dense matrix in[vocab_size X 1].it maps a word to its class id.
-///    cls2idx in dense matrix in[nbr_cls X 1].it maps a class to its first word index.
-///
-/// to be used for class-based entropy, the outputs have the following assumptions
-/// A1 : words are sorted so that words that are in the same class are together
-///    i.e., wrds2cls[0] <= wrd2cls[1] <= ... <= wrd2cls[vocab_size - 1]
-/// A2 : class ids are sorted so that cls2idx[0] < cls2idx[1] < cls2idx[2] < ... < cls2idx[nbr_cls - 1]
+// This converts the training text file into a special format that encodes class information.
+//
+// The outputs are the vocabulary, word2class and class2idx file with the information below:
+//     vocabulary format is as follows
+//       0      42068  </s>    0
+//       1      50770  the 0
+//       2      45020  <unk>   1
+//       the first column is word index
+//       the last column is class index of the word
+//       the second column and the third column are for information purpose and
+//       are not really used in generating outputs for later process in the neural networks training
+//
+//    wrd2cls in dense matrix in[vocab_size X 1].it maps a word to its class id.
+//    cls2idx in dense matrix in[nbr_cls X 1].it maps a class to its first word index.
+//
+// This format is for use with class-based entropy. The following assumptions are made:
+// A1 : words are sorted so that words that are in the same class are together
+//    i.e., wrds2cls[0] <= wrd2cls[1] <= ... <= wrd2cls[vocab_size - 1]
+// A2 : class ids are sorted so that cls2idx[0] < cls2idx[1] < cls2idx[2] < ... < cls2idx[nbr_cls - 1]
 template <typename ElemType>
 void DoWriteWordAndClassInfo(const ConfigParameters& config)
 {
-    string inputFile = config(L"inputFile"); // training text file without <unk>
-    string outputWord2Cls = config(L"outputWord2Cls");
-    string outputVocabFile = config(L"outputVocabFile");
-    string outputCls2Index = config(L"outputCls2Index");
     size_t vocabSize = config(L"vocabSize");
-    int nbrCls = config(L"nbrClass", "0");
+    int nbrCls = config(L"nbrClass", "0"); // TODO: why int and not size_t?
     int cutoff = config(L"cutoff", "1");
 
-    DEVICEID_TYPE deviceId = CPUDEVICE;
-    Matrix<ElemType> wrd2cls(deviceId);
-    Matrix<ElemType> cls2idx(deviceId);
+    string inputFile = config(L"inputFile"); // training text file without <unk>
+    string outputVocabFile = config(L"outputVocabFile");
+    string outputWord2Cls  = nbrCls > 0 ? config(L"outputWord2Cls")  : string();
+    string outputCls2Index = nbrCls > 0 ? config(L"outputCls2Index") : string();
 
-    // FILE *fp = fopen(inputFile.c_str(), "rt");
-    ifstream fp(inputFile.c_str());
-    if (!fp)
-    {
-        RuntimeError("inputFile cannot be read");
-    }
+    string unkWord       = config(L"unk", "<unk>");
+    string beginSequence = config(L"beginSequence", "");
+    string endSequence   = config(L"endSequence",   "");
+    // legacy: Old version hard-coded "</s>" for ^^ both of these.
+    //         For a while, do not fall back to defaults but rather have users fix their scripts.
+    if (beginSequence.empty() || endSequence.empty())
+        InvalidArgument("Please specify parameters 'beginSequence' and 'endSequence'.");
 
+    std::cerr     << "Vocabulary file:    " << outputVocabFile << std::endl;
     if (nbrCls > 0)
     {
-        cls2idx.Resize(nbrCls, 1);
+        std::cerr << "Word-to-class map:  " << outputWord2Cls  << std::endl;
+        std::cerr << "Class-to-index map: " << outputCls2Index << std::endl;
     }
-    std::unordered_map<string, double> v_count;
+    std::cerr << std::endl;
+    
+    // check whether we are already up-to-date
+    bool makeMode = config(L"makeMode", true);
+    if (makeMode)
+    {
+        bool done = msra::files::fuptodate(s2ws(outputVocabFile), s2ws(inputFile), /*inputRequired=*/false);
+        if (nbrCls > 0)
+        {
+            done &= msra::files::fuptodate(s2ws(outputWord2Cls),  s2ws(inputFile), /*inputRequired=*/false);
+            done &= msra::files::fuptodate(s2ws(outputCls2Index), s2ws(inputFile), /*inputRequired=*/false);
+        }
+        if (done)
+        {
+            std::cerr << "All output files up to date.\n";
+            return;
+        }
+    }
 
-    // get line
+    Matrix<ElemType> wrd2cls(CPUDEVICE);
+    Matrix<ElemType> cls2idx(CPUDEVICE);
+
+    ifstream fp(inputFile.c_str()); // TODO: use class File, as to support pipes
+    if (!fp)
+        RuntimeError("Failed to open input file: %s", inputFile.c_str());
+    cerr << "Reading input file inputFile: " << inputFile << std::endl;
+
+    if (nbrCls > 0)
+        cls2idx.Resize(nbrCls, 1);
+
+#if 1
+    std::unordered_map<string, double> v_count;
+#else
+    // TODO: For unknown reasons, this gives a very different result (PPL of 500 instead of 190). Should be tracked down.
+    std::map<string, double> v_count;
+    v_count[beginSequence] = 0;  // get these into the table upfront into position 0 (and 1 if different)
+    v_count[endSequence]   = 0;
+#endif
+
+    // process input line by line
     string str;
     vector<string> vstr;
     long long prevClsIdx = -1;
     string token;
+    const string beginSequencePattern = beginSequence + " ";
+    const string endSequencePattern   = " " + endSequence;
     while (getline(fp, str))
     {
         str.erase(0, str.find_first_not_of(' ')); // prefixing spaces
         str.erase(str.find_last_not_of(' ') + 1); // surfixing spaces
-        int sposition = str.find("</s> ");
-        int eposition = str.find(" </s>");
-        if (sposition == str.npos)
-        {
-            str = "</s> " + str;
-        }
 
-        if (eposition == str.npos)
-        {
-            str = str + " </s>";
-        }
+        if (!beginSequence.empty() && str.find(beginSequencePattern) == str.npos)
+            str = beginSequencePattern + str;
+
+        if (!endSequence.empty() && str.find(endSequencePattern) == str.npos)
+            str = str + endSequencePattern;
 
         vstr = msra::strfun::split(str, "\t ");
         for (int i = 1; i < vstr.size(); i++)
-        {
             v_count[vstr[i]]++;
-        }
     }
     fp.close();
 
-    std::cerr << "no truncated vocabulary: " << v_count.size() << std::endl;
+    std::cerr << "Vocabulary size " << v_count.size() << ".\n";
 
     std::vector<std::string> m_words;
     std::set<std::string> m_remained_words;
@@ -315,22 +338,20 @@ void DoWriteWordAndClassInfo(const ConfigParameters& config)
 
     size_t wordCountLessCutoff = v_count.size();
     if (cutoff > 0)
-        for (std::unordered_map<std::string, double>::iterator iter = v_count.begin(); iter != v_count.end(); iter++)
+        for (const auto& iter : v_count)
         {
-            if (iter->second <= cutoff)
-            {
+            if (iter.second <= cutoff)
                 wordCountLessCutoff--;
-            }
         }
     if (wordCountLessCutoff <= 0)
-        RuntimeError("no word remained after cutoff");
+        RuntimeError("No word remained after cutoff with threshold %d.", (int)cutoff);
 
     if (vocabSize > wordCountLessCutoff)
     {
-        std::cerr << "warning: actual vocabulary size is less than required." << endl;
+        std::cerr << "Warning: actual vocabulary size is less than required." << endl;
         std::cerr << "\t\tRequired vocabulary size:" << vocabSize << endl;
-        std::cerr << "\t\tActural vocabulary size:" << v_count.size() << endl;
-        std::cerr << "\t\tActural vocabulary size after cutoff:" << wordCountLessCutoff << endl;
+        std::cerr << "\t\tActual vocabulary size:" << v_count.size() << endl;
+        std::cerr << "\t\tActual vocabulary size after cutoff:" << wordCountLessCutoff << endl;
         std::cerr << "\t\tWe will change to actual vocabulary size: " << wordCountLessCutoff << endl;
         vocabSize = wordCountLessCutoff;
     }
@@ -345,7 +366,7 @@ void DoWriteWordAndClassInfo(const ConfigParameters& config)
         size++;
         std::string word = q.top().first;
         double freq = q.top().second;
-        if (word == "<unk>")
+        if (word == unkWord)
         {
             unkCount += freq;
             actual_vocab_size++;
@@ -358,24 +379,19 @@ void DoWriteWordAndClassInfo(const ConfigParameters& config)
         unkCount += q.top().second;
         q.pop();
     }
-    removed["<unk>"] = unkCount;
+    removed[unkWord] = unkCount;
     std::priority_queue<stringdouble, std::vector<stringdouble>, compare_second<stringdouble>>
         p(compare_second<stringdouble>(), std::vector<stringdouble>(removed.begin(), removed.end()));
-    cerr << "p.size():" << p.size() << endl;
     m_count.resize(removed.size());
     double total = 0;
     double dd = 0;
     if (nbrCls > 0)
     {
-        for (std::unordered_map<std::string, double>::iterator iter = removed.begin(); iter != removed.end(); iter++)
-        {
-            total += iter->second;
-        }
+        for (const auto& iter : removed)
+            total += iter.second;
 
-        for (std::unordered_map<std::string, double>::iterator iter = removed.begin(); iter != removed.end(); iter++)
-        {
-            dd += sqrt(iter->second / total);
-        }
+        for (const auto& iter : removed)
+            dd += sqrt(iter.second / total);
     }
 
     double df = 0;
@@ -390,14 +406,10 @@ void DoWriteWordAndClassInfo(const ConfigParameters& config)
         {
             df += sqrt(freq / total) / dd;
             if (df > 1)
-            {
                 df = 1;
-            }
 
             if (df > 1.0 * (class_id + 1) / nbrCls && class_id < nbrCls)
-            {
                 class_id++;
-            }
         }
 
         size_t wid = m_words.size();
@@ -407,9 +419,7 @@ void DoWriteWordAndClassInfo(const ConfigParameters& config)
 
         m_count[wid] = freq;
         if (nbrCls > 0)
-        {
             m_class[wid] = class_id;
-        }
         p.pop();
     }
 
@@ -428,33 +438,33 @@ void DoWriteWordAndClassInfo(const ConfigParameters& config)
         }
         ofvocab << "     " << i << "\t     " << m_count[i] << "\t" << m_words[i] << "\t" << clsIdx << std::endl;
     }
-
     ofvocab.close();
+    std::cerr << "Created vocabulary file with " << v_count.size() << " entries.\n";
+
     if (nbrCls > 0)
     {
         // write the outputs
+        // TODO: use safe-save, i.e. write to temp name and rename at the end
         msra::files::make_intermediate_dirs(s2ws(outputWord2Cls));
-        ofstream ofp(outputWord2Cls.c_str());
-        if (!ofp)
-            RuntimeError("cannot write to %s", outputWord2Cls.c_str());
+        ofstream owfp(outputWord2Cls.c_str());
+        if (!owfp)
+            RuntimeError("Failed to write to %s", outputWord2Cls.c_str());
         for (size_t r = 0; r < wrd2cls.GetNumRows(); r++)
-            ofp << (int) wrd2cls(r, 0) << endl;
-        ofp.close();
+            owfp << (int) wrd2cls(r, 0) << endl;
+        owfp.close();
+        std::cerr << "Created word-to-class map with " << wrd2cls.GetNumRows() << " entries.\n";
 
         msra::files::make_intermediate_dirs(s2ws(outputCls2Index));
-        ofp.open(outputCls2Index.c_str());
-        if (!ofp)
-        {
-            RuntimeError("cannot write to %s", outputCls2Index.c_str());
-        }
-
+        ofstream ocfp(outputCls2Index.c_str());
+        if (!ocfp)
+            RuntimeError("Failed to write to %s", outputCls2Index.c_str());
         for (size_t r = 0; r < cls2idx.GetNumRows(); r++)
-        {
-            ofp << (int) cls2idx(r, 0) << endl;
-        }
-        ofp.close();
+            ocfp << (int) cls2idx(r, 0) << endl;
+        ocfp.close();
+        std::cerr << "Created class-to-index map with " << cls2idx.GetNumRows() << " entries.\n";
     }
 }
+
 template void DoWriteWordAndClassInfo<float>(const ConfigParameters& config);
 template void DoWriteWordAndClassInfo<double>(const ConfigParameters& config);
 
@@ -466,49 +476,50 @@ template void DoWriteWordAndClassInfo<double>(const ConfigParameters& config);
 template <typename ElemType>
 void DoTopologyPlot(const ConfigParameters& config)
 {
-    wstring modelPath = config(L"modelPath");
-    wstring outdot = config(L"outputDotFile");  // filename for the dot language output, if not specified, %modelpath%.dot will be used
-    wstring outRending = config(L"outputFile"); // filename for the rendered topology plot
+    wstring modelPath     = config(L"modelPath");
+    wstring outputDotFile = config(L"outputDotFile"); // filename for the dot language output, if not specified, %modelpath%.dot will be used
+    wstring outputFile    = config(L"outputFile");    // filename for the rendered topology plot
     // this can be empty, in that case no rendering will be done
     // or if this is set, renderCmd must be set, so CNTK will call re
-    wstring RenderCmd = config(L"RenderCmd"); // if this option is set, then CNTK will call the render to convert the outdotFile to a graph
+    wstring renderCmd = config(L"renderCmd"); // if this option is set, then CNTK will call the render to convert the outdotFile to a graph
     // e.g. "d:\Tools\graphviz\bin\dot.exe -Tpng -x <IN> -o<OUT>"
     //              where <IN> and <OUT> are two special placeholders
 
-    // ========================================
-    // Sec. 1 option check
-    // ========================================
-    if (outdot.empty())
-    {
-        outdot = modelPath + L".dot";
-    }
+    // output dot file defaults to modelpath.dot
+    if (outputDotFile.empty())
+        outputDotFile = modelPath + L".dot";
 
-    wstring rescmd;
-    if (!outRending.empty()) // we need to render the plot
-    {
-        std::wregex inputPlaceHolder(L"(.+)(<IN>)(.*)");
-        std::wregex outputPlaceHolder(L"(.+)(<OUT>)(.*)");
-
-        rescmd = regex_replace(RenderCmd, inputPlaceHolder, L"$1" + outdot + L"$3");
-        rescmd = regex_replace(rescmd, outputPlaceHolder, L"$1" + outRending + L"$3");
-    }
-
-    ComputationNetwork net(-1);
+    ComputationNetwork net(CPUDEVICE);
     net.Load<ElemType>(modelPath);
-    net.PlotNetworkTopology(outdot);
-    fprintf(stderr, "Output network description in dot language to %S\n", outdot.c_str());
 
-    if (!outRending.empty())
+    net.PlotNetworkTopology(outputDotFile);
+    fprintf(stderr, "Created network description in dot format: %ls\n", outputDotFile.c_str());
+
+    if (!outputFile.empty())
     {
-        fprintf(stderr, "Executing a third-part tool for rendering dot:\n%S\n", rescmd.c_str());
-#ifdef __unix__
-        const auto rc = system(msra::strfun::utf8(rescmd).c_str());
-        rc /*ignoring the result--this gets flagged by gcc if we don't save the return value*/;
-#else
-        _wsystem(rescmd.c_str());
+        if (renderCmd.empty())
+            InvalidArgument("plot: If you specify an outputFile, you also need a renderCmd.");
+#if 0 // this part is problematic under early version of gcc  (< 4.9)
+        static const wregex  inputPlaceHolder(L"(.+)(<IN>)(.*)");
+        static const wregex outputPlaceHolder(L"(.+)(<OUT>)(.*)");
+
+        // patch in the pathnames
+        renderCmd = regex_replace(renderCmd, inputPlaceHolder,  L"$1" + outputDotFile + L"$3");
+        renderCmd = regex_replace(renderCmd, outputPlaceHolder, L"$1" + outputFile    + L"$3");
 #endif
-        fprintf(stderr, "Done\n");
+        msra::strfun::ReplaceAll(renderCmd, wstring(L"<IN>"), outputDotFile);
+        msra::strfun::ReplaceAll(renderCmd, wstring(L"<OUT>"), outputFile);
     }
+
+
+        fprintf(stderr, "Executing third-party tool for rendering dot:\n%ls\n", renderCmd.c_str());
+#ifdef __unix__
+        auto rc = system(msra::strfun::utf8(renderCmd).c_str());
+        rc; // ignoring the result--this gets flagged by gcc if we don't save the return value
+#else
+        _wsystem(renderCmd.c_str());
+#endif
+        fprintf(stderr, "Done.\n");
 }
 
 template void DoTopologyPlot<float>(const ConfigParameters& config);

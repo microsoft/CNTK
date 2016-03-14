@@ -214,14 +214,6 @@ ElemType GPUSparseMatrix<ElemType>::Adagrad(GPUMatrix<ElemType>& c, const bool n
 //template<class ElemType>
 //void GPUSparseMatrix<ElemType>::FSAdagrad(CPUMatrix<ElemType>& gradients, CPUMatrix<ElemType>&, ElemType, ElemType, ElemType, ElemType) { }
 
-#ifdef NO_SYNC
-template <class ElemType>
-bool GPUSparseMatrix<ElemType>::do_sync = false;
-#else
-template <class ElemType>
-bool GPUSparseMatrix<ElemType>::do_sync = true;
-#endif
-
 template <class ElemType>
 void GPUSparseMatrix<ElemType>::MultiplyAndWeightedAdd(ElemType alpha, const GPUSparseMatrix<ElemType>& a, const bool transposeA,
                                                        const GPUMatrix<ElemType>& b, const bool transposeD, ElemType beta, GPUMatrix<ElemType>& c)
@@ -785,12 +777,6 @@ void GPUMatrix<ElemType>::ZeroInit(int deviceId)
 template <class ElemType>
 GPUMatrix<ElemType>::GPUMatrix(int deviceId){};
 
-//matrixName is used to verify that correct matrix is read.
-template <class ElemType>
-GPUMatrix<ElemType>::GPUMatrix(FILE* f, const char* matrixName, int deviceId)
-{
-}
-
 template <class ElemType>
 GPUMatrix<ElemType>::GPUMatrix(const size_t numRows, const size_t numCols, int deviceId){};
 
@@ -1307,7 +1293,20 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignSequenceError(const ElemType hsm
 {
     return *this;
 }
+template <class ElemType>
+GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignCTCScore(const GPUMatrix<ElemType>& prob, GPUMatrix<ElemType>& alpha, GPUMatrix<ElemType>& beta, const std::vector<size_t> phoneseq,
+    const std::vector<size_t> phonebound, ElemType &totalscore, const size_t framenum, size_t blanknum, const bool isColWise)
+{
+    return *this;
+}
 
+template <class ElemType>
+GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignCTCScore_m(const GPUMatrix<ElemType>& prob, GPUMatrix<ElemType>& alpha, GPUMatrix<ElemType>& beta,
+    GPUMatrix<ElemType> phoneseq, ElemType &totalscore, std::vector<size_t>& uttMap, std::vector<size_t> & uttBeginFrame, std::vector<size_t> & uttFrameNum,
+    std::vector<size_t> & uttPhoneNum, size_t samplesInRecurrentStep, const size_t maxframenum, const bool isColWise)
+{
+    return *this;
+}
 template <class ElemType>
 GPUMatrix<ElemType>& GPUMatrix<ElemType>::InplaceSqrt()
 {
@@ -1667,19 +1666,6 @@ void GPUMatrix<ElemType>::Print(const char* matrixName, size_t rowStart, size_t 
 
 template <class ElemType>
 void GPUMatrix<ElemType>::Print(const char* matrixName /*=nullptr*/) const
-{
-}
-
-// file I/O
-//matrixName is used to verify that correct matrix is read.
-template <class ElemType>
-void GPUMatrix<ElemType>::ReadFromFile(FILE* f, const char* matrixName)
-{
-}
-
-//matrixName is used to verify that correct matrix is read.
-template <class ElemType>
-void GPUMatrix<ElemType>::WriteToFile(FILE* f, const char* matrixName)
 {
 }
 
@@ -2154,13 +2140,13 @@ typename CuDnnConvolutionEngineFactory<ElemType>::PoolDescPtr CuDnnConvolutionEn
 }
 
 template <class ElemType>
-typename CuDnnConvolutionEngineFactory<ElemType>::ConvEnginePtr CuDnnConvolutionEngineFactory<ElemType>::CreateConvEngine(DEVICEID_TYPE, size_t, BatchNormImpl)
+typename CuDnnConvolutionEngineFactory<ElemType>::ConvEnginePtr CuDnnConvolutionEngineFactory<ElemType>::CreateConvEngine(DEVICEID_TYPE, ImageLayoutKind, size_t, BatchNormImpl)
 {
     RuntimeError("The code is compiled with CPUONLY macro.");
 }
 
 template <class ElemType>
-typename CuDnnConvolutionEngineFactory<ElemType>::PoolEnginePtr CuDnnConvolutionEngineFactory<ElemType>::CreatePoolEngine(DEVICEID_TYPE)
+typename CuDnnConvolutionEngineFactory<ElemType>::PoolEnginePtr CuDnnConvolutionEngineFactory<ElemType>::CreatePoolEngine(DEVICEID_TYPE, ImageLayoutKind)
 {
     RuntimeError("The code is compiled with CPUONLY macro.");
 }

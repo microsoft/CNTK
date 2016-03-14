@@ -3,13 +3,16 @@
 //     Copyright (c) Microsoft Corporation.  All rights reserved.
 // </copyright>
 //
-#pragma once
+
+#pragma  once 
 
 #include "Basics.h"
 #include "ComputationNetwork.h"
 #include "Config.h"
 #include "SGD.h"
 #include "Matrix.h"
+#include "MPIWrapper.h"
+#include "TimerUtility.h"
 #include <vector>
 #include <string>
 #include <stdexcept>
@@ -17,354 +20,371 @@
 #include <random>
 
 
-namespace Microsoft{ namespace MSR { namespace CNTK{
+namespace Microsoft { namespace MSR { namespace CNTK {
 
-template<typename ElemType>
-class MASGD
-{
-    typedef shared_ptr<ComputationNode<ElemType>> ComputationNodePtr; 
-public:
-    //========================================
-    // Constructor and Initializer 
-    //========================================
-    MASGD(bool useNestrovBlockMomentum, double blockMomentum, bool resetSGDMomentum)
+    enum class MAWorkerStatus
     {
-        m_useNesterovBlockMomentum = useNestrovBlockMomentum; 
-        m_blockMomentum = blockMomentum;
-        if (blockMomentum > 0 && blockMomentum <= 1.0)
-        {
-            m_useBMUF = true; 
-        }
-        m_resetSGDMomentum = resetSGDMomentum; 
-        fprintf(stderr, "Parallel training using MA-SGD: useBMUF=%s, useNesterovMomentum=%s, blockMomentum=%6.4f, resetSGDMomentum=%s\n",
-            m_blockMomentum > 1e-6 ? "true" : "false", 
-            m_useNesterovBlockMomentum ? "true" : "false", 
-            m_blockMomentum, 
-            m_resetSGDMomentum ? "true" : "false"
-            );
-    }
-    //========================================
-    // Interface 
-    //========================================
-    void Initialize(const std::list<ComputationNodeBasePtr>& LearnableNodes)
+        DataProcessing = 0,
+        DataEnd = 1, 
+        NOTSTARTED = 2 
+    };
+
+    class MASGDPerfStats
     {
-        if (!m_useBMUF)
-            return; 
+    private:
+        size_t m_numWorkers; 
+        size_t m_myRank; 
+        size_t m_numSyncPerformedInCurrentEpoch; 
+        size_t m_reportFrequency; 
+        size_t m_totalSamplesProcessedSinceLastReport; 
+        size_t m_localSamplesProcessedSinceLastReport; 
+        Timer  m_Timer; 
 
-        for (auto& pNode : LearnableNodes)
+    public:
+        MASGDPerfStats(size_t myRank, size_t numWorkers):
+            m_numWorkers(numWorkers), m_myRank(myRank), m_numSyncPerformedInCurrentEpoch(0), m_reportFrequency(1)
         {
-            if (!pNode->IsParameterUpdateRequired())
-            {
-                continue;
-            }
-            wstring name = pNode->NodeName();
-            auto pnode =  DownCast(pNode); 
-            auto pvalue = make_shared<Matrix<ElemType>>(pnode->Value().GetDeviceId());
-            auto pSmoothedGrad = make_shared<Matrix<ElemType>>(pnode->Value().GetDeviceId());
-            pvalue->SetValue(pnode->Value());
-            pSmoothedGrad->Resize(pvalue->GetNumRows(), pvalue->GetNumCols());
-            pSmoothedGrad->SetValue((ElemType)0.0);
-            m_prevParameters[name] = pvalue; 
-            m_blockLevelSmoothedGradient[name] = pSmoothedGrad; 
+            m_Timer.Start();
         }
-    }
-    void PerformModelAveragingUpdate(const std::list<ComputationNodeBasePtr>& LearnableNodes,     /* input/output: */
-        std::list<Matrix<ElemType>>& smoothedGradient,   /* input/output: under some setup, it will reset to zero*/
-        size_t  samplesSinceLastSync,                          /* input:  samples processed since last sync on this worker only */
-        size_t& samplesProcessed                               /* output: total samples processed on all the workers */
-        )
+
+        void SetReportFrequency(size_t freq)
+        {
+            m_reportFrequency = freq;
+        }
+
+        void OnEpochStart()
+        {
+            m_Timer.Restart(); 
+            m_numSyncPerformedInCurrentEpoch = 0; 
+        }
+        void OnEpochEnd()
+        {
+            m_Timer.Stop();
+        }
+        void OnMAPerformed(size_t localSamplesProcessedSinceLastSync, size_t totalSamplesProcessedSinceLastSync, float secondsOnCommunication)
+        {
+            m_numSyncPerformedInCurrentEpoch++;
+            m_totalSamplesProcessedSinceLastReport += totalSamplesProcessedSinceLastSync; 
+            m_localSamplesProcessedSinceLastReport += localSamplesProcessedSinceLastSync; 
+            if ( m_reportFrequency > 0 && m_numSyncPerformedInCurrentEpoch % m_reportFrequency == 0)
+            {
+                ReportMAPerfStats(
+                    m_totalSamplesProcessedSinceLastReport, 
+                    m_localSamplesProcessedSinceLastReport, 
+                    secondsOnCommunication
+                );
+
+                m_totalSamplesProcessedSinceLastReport = 0; 
+                m_localSamplesProcessedSinceLastReport = 0; 
+            }
+        }
+
+        void ReportMAPerfStats( size_t totalSamplesProcessedSinceLastReport, 
+                                size_t localSamplesProcessedSinceLastReport, 
+                                float secondOnCommunication)
+        {
+            m_Timer.Stop(); 
+            double secondsSinceLastReport = m_Timer.ElapsedSeconds(); 
+            m_Timer.Restart(); 
+
+            float totalThroughput = secondsSinceLastReport > 0 ? (float)totalSamplesProcessedSinceLastReport / ((float)secondsSinceLastReport * 1000.0f) : 0.0f ; 
+            float throughputPerWorker = totalThroughput / m_numWorkers; 
+
+            string prefix = "\t\t(model aggregation stats) %d-th sync: %8.2f seconds since last report (%.2f seconds on comm.); %d samples processed by %d workers (%d by me);\n"
+                            "\t\t(model aggregation stats) %d-th sync: totalThroughput = %.2fk samplesPerSecond , throughputPerWorker = %.2fk samplesPerSecond\n";
+            fprintf(stderr, prefix.c_str(), (int)m_numSyncPerformedInCurrentEpoch, secondsSinceLastReport, secondOnCommunication, (int)totalSamplesProcessedSinceLastReport, (int)m_numWorkers, (int)localSamplesProcessedSinceLastReport,
+                                            (int)m_numSyncPerformedInCurrentEpoch, totalThroughput, throughputPerWorker); 
+
+        }
+    };
+    // base class for MA-SGD algorithm family 
+    template<typename ElemType>
+    class IMASGD
     {
-        if (m_resetSGDMomentum)
+        typedef shared_ptr<ComputationNode<ElemType>> ComputationNodePtr;
+     public:
+         IMASGD(MPIWrapper* pMPI, size_t perfReportFreq, size_t devID)
+             :m_MAworkerStatus(pMPI->NumNodesInUse(), MAWorkerStatus::NOTSTARTED), 
+             m_numSyncPerformed(0), 
+             m_numWorkers(pMPI->NumNodesInUse()), 
+             m_myRank(pMPI->CurrentNodeRank()),
+             m_pMPI(pMPI), 
+             m_preferredDeviceID(devID),
+             m_perfReporter(pMPI->CurrentNodeRank(), pMPI->NumNodesInUse())
+         {
+             m_perfReporter.SetReportFrequency(perfReportFreq);
+         }
+         virtual ~IMASGD()
+         {
+         }
+         
+         virtual void OnEpochStart(const std::list<ComputationNodeBasePtr>& /*LearnableNodes*/)
+         {
+             m_MAworkerStatus.resize(m_numWorkers);
+             std::fill(m_MAworkerStatus.begin(), m_MAworkerStatus.end(), MAWorkerStatus::DataProcessing);
+             g_mpi->WaitAll(); 
+             m_perfReporter.OnEpochStart();
+         }
+
+         virtual void OnEpochEnd(const std::list<ComputationNodeBasePtr>&    LearnableNodes,
+                                    std::list<Matrix<ElemType>>&                smoothedGradient, 
+                                    size_t                                      samplesSinceLastSync 
+                                    )
+         {
+             m_MAworkerStatus[m_myRank] = MAWorkerStatus::DataEnd;
+             bool read2sync=UpdateWorkerStatus(MAWorkerStatus::DataEnd);
+             // assert(read2sync); 
+             size_t totalSamplesProcessed = 0;
+             float secondsOnCommunication = 0.0f; 
+             if (read2sync)
+             {
+                 m_numSyncPerformed++;
+                 ModelAggregationProcessing(samplesSinceLastSync, LearnableNodes, smoothedGradient, totalSamplesProcessed, secondsOnCommunication);
+                 m_perfReporter.OnMAPerformed(samplesSinceLastSync, totalSamplesProcessed, secondsOnCommunication);
+             }
+             
+             m_pMPI->WaitAll();             
+             m_perfReporter.OnEpochEnd();
+         }
+
+         virtual bool OnArrivingAtSyncPoint(
+            const std::list<ComputationNodeBasePtr>& LearnableNodes,        /* input/output: */
+            std::list<Matrix<ElemType>>& smoothedGradient,                  /* input/output: under some setup, it will reset to zero*/
+            size_t  samplesSinceLastSync                                    /* input:  samples processed since last sync on this worker only */
+             )
+         {
+             bool read2Sync=UpdateWorkerStatus(MAWorkerStatus::DataProcessing);
+             size_t totalSamplesProcessed=0; 
+             float secondsOnCommunication = 0.0f;
+             if (read2Sync)
+             {
+                 m_numSyncPerformed++;
+                 ModelAggregationProcessing(samplesSinceLastSync, LearnableNodes, smoothedGradient, totalSamplesProcessed, secondsOnCommunication);
+                 m_perfReporter.OnMAPerformed(samplesSinceLastSync, totalSamplesProcessed, secondsOnCommunication);
+             }
+             return read2Sync;
+         }
+         
+         virtual void ModelAggregationProcessing(
+             size_t samplesSinceLastSync,                                       /* in: */
+             const std::list<ComputationNodeBasePtr>&  learnableNodes,          /* in/out */
+             std::list<Matrix<ElemType>>&              smoothedGradient,        /* in/out */
+             size_t&                                   totalSamplesProcessed,   /* out */
+             float&                                    secondsOnCommunication   /* out */) = 0; 
+         
+         virtual bool requireCheckPointSaving()
+         {
+             return false;
+         }
+         virtual void SaveToCheckPoint(File& fstream)
+         {
+             return; 
+         }
+         virtual void LoadFromCheckPoint(File& fstream)
+         {
+             return;
+         }
+         
+
+    protected:
+        bool    somePeersHaveArrivedAtEnd()
         {
-            for (Matrix<ElemType>& x : smoothedGradient)
-            {
-                x.SetValue((ElemType)0);
-            }
+            auto iter = std::find(m_MAworkerStatus.begin(), m_MAworkerStatus.end(), MAWorkerStatus::DataEnd);
+            return iter != m_MAworkerStatus.end();
         }
-        if (g_mpi->NumNodesInUse() <= 1) // we should not arrive here 
+        bool    UpdateWorkerStatus(MAWorkerStatus myStatus)
         {
-            samplesProcessed = samplesSinceLastSync; 
-            return;  // do nothing here 
-        }
-
-        //========================================
-        // 1. communicate with other nodes to negoticate contribution weights
-        //========================================
-        float factor = 0;
-        int   nTotalSamples = samplesSinceLastSync; 
-        g_mpi->AllReduce(&nTotalSamples, 1);
-        if (nTotalSamples <= 0)
-        {
-            // prepare for overflow 
-            factor = 1.0f / g_mpi->NumNodesInUse();
-            samplesProcessed = samplesSinceLastSync * g_mpi->NumNodesInUse(); 
-            // give an estimated one 
-        }
-        else
-        {
-            factor = (samplesSinceLastSync + 0.0f) / nTotalSamples;
-            samplesProcessed = nTotalSamples; 
-        }
-
-
-        //========================================
-        // 2. process for each individual node
-        //========================================
-        for (auto& pBaseNode : LearnableNodes)
-        {
-            if (!pBaseNode->IsParameterUpdateRequired())
+            bool retval = false;
+            m_MAworkerStatus[m_myRank] = myStatus;
+            if (myStatus == MAWorkerStatus::DataEnd)
             {
-                continue;
-            }
-            wstring name = pBaseNode->NodeName(); 
-            if (m_useBMUF && (m_prevParameters.find(name) == m_prevParameters.end() || m_blockLevelSmoothedGradient.find(name) == m_blockLevelSmoothedGradient.end()))
-            {
-                LogicError("Cannot find block information for node %ls. Contact erw@microsoft.com\n", name.c_str()); 
-            }
-
-            // 2.1 model aggregation 
-            auto pNode = DownCast(pBaseNode); 
-            // 2.1.1. aggregate model from individual models 
-            Matrix<ElemType> mat (pNode->Value());
-            // 2.1.2. normalize the weight matrix 
-            Matrix<ElemType>::Scale(factor, mat);
-            // 2.1.3. send weight matrix over MPI nodes; 
-            ElemType* px = mat.CopyToArray();
-            size_t    nx = mat.GetNumElements();
-            // 2.1.4. inplace sum 
-            g_mpi->AllReduce(px, nx);
-            mat.SetValue(mat.GetNumRows(), mat.GetNumCols(), mat.GetDeviceId(), px);
-            // 2.1.5. clean up 
-            delete[]px;
-
-            // 2.2 deal with momentum 
-            if (m_useBMUF && m_blockMomentum > 0)
-            {
-                // some alias for better readability 
-                Matrix<ElemType>& V = *m_blockLevelSmoothedGradient[name];       // smoothed graident 
-                Matrix<ElemType>& W = pNode->Value();                           // model value 
-                Matrix<ElemType>& preW = *m_prevParameters[name];               // prev model value 
-                Matrix<ElemType>& negG = mat;                                   // negative gradient
-                negG -= preW;
-                // 2.2.1 update block level smoothed gradient 
-                Matrix<ElemType>::Scale((ElemType)m_blockMomentum, V); 
-                V -= negG;                                                  // V=\eta*V+G
-                // 2.2.2 update global model 
-                W.SetValue(*m_prevParameters[name]); 
-                if (m_useNesterovBlockMomentum)
+                // in this case, we always return true 
+                vector<MPI_Request> sendRequests(m_numWorkers);
+                int sentSignal = (int)MAWorkerStatus::DataEnd;
+                // 1. send my status to notify peers 
+                for (int dest = 0; dest < (int)m_numWorkers; dest++)
                 {
-                    Matrix<ElemType>::ScaleAndAdd((ElemType)-m_blockMomentum, V, W); 
-                    W += negG;      // W=W-\eta*V-G;
+                    if (dest != m_myRank)
+                    {
+                        MPI_Isend(&sentSignal, 1, MPI_INT, dest, m_numSyncPerformed, m_pMPI->Communicator() , &sendRequests[dest]);
+                    }
                 }
-                else
+                // 2. recv others 
+                for (int src = 0; src < m_numWorkers; src++)
                 {
-                    W += negG;      // W=W-G;
+                    if (src != m_myRank && m_MAworkerStatus[src] == MAWorkerStatus::DataProcessing)
+                    {
+                        int recvSignal = 0;
+                        MPI_Status status;
+                        MPI_Recv(&recvSignal, 1, MPI_INT, src, m_numSyncPerformed, m_pMPI->Communicator(), &status);
+                        m_MAworkerStatus[src] = (MAWorkerStatus)recvSignal;
+#if 0
+                        assert(status.MPI_SOURCE == src);
+                        assert(status.MPI_TAG == m_numSyncPerformed);
+#endif 
+                    }
                 }
-                // 2.2.3 update prev model parameter
-                preW = W;
-
+                // 3. make sure sending operation finished 
+                for (int dest = 0; dest < m_numWorkers; dest++)
+                {
+                    if (dest != m_myRank)
+                    {
+                        MPI_Wait(&sendRequests[dest], MPI_STATUS_IGNORE);
+                    }
+                }
+                retval = true; 
+            }
+            else if (myStatus == MAWorkerStatus::DataProcessing)
+            {
+                // in this case, we return true if all nodes are ready to sync (meaning all of them are in DataProcessing State)
+                // otherwise, return false
+                retval = false;
+                if (!somePeersHaveArrivedAtEnd())
+                {
+                    int sentSignal = (int)MAWorkerStatus::DataProcessing; 
+                    vector<MPI_Request> sendRequests(m_numWorkers); 
+                    // 1. send my status to peers 
+                    for (int dest = 0; dest < (int)m_numWorkers; dest++)
+                    {
+                        if (dest != m_myRank)
+                        {
+                            MPI_Isend(&sentSignal, 1, MPI_INT, dest, m_numSyncPerformed, m_pMPI->Communicator(), &sendRequests[dest]);
+                        }
+                    }
+                    // 2. recv status from others (blocking call)
+                    for (int src = 0; src < (int)m_numWorkers; src++)
+                    {
+                        if (src != m_myRank)
+                        {
+                            int recvSignal = 0;
+                            MPI_Status status;
+                            MPI_Recv(&recvSignal, 1, MPI_INT, src, m_numSyncPerformed, m_pMPI->Communicator(), &status);
+#if 0 
+                            // for debugging purpose, to be removed when mature 
+                            assert(status.MPI_SOURCE == src);
+                            assert(status.MPI_TAG == m_numSyncPerformed);
+#endif 
+                            m_MAworkerStatus[src] = (MAWorkerStatus)recvSignal;
+                        }
+                    }
+                    // 3. makes sure the sending operation has completed 
+                    for (int dest = 0; dest < (int)m_numWorkers;  dest++)
+                    {
+                        if (dest != m_myRank)
+                        {
+                            MPI_Wait(&sendRequests[dest], MPI_STATUS_IGNORE);
+                        }
+                    }
+                    // 4. check peer status again
+                    retval = !somePeersHaveArrivedAtEnd(); 
+                }
             }
             else
             {
-                // plain MA
-                pNode->Value().SetValue(mat);
+                LogicError("UpdateWorkerStatus cannot accept WorkerStatus other than DataProcessing or DataEnd\n");
             }
+
+            return retval;
+        }
+        // borrow DownCast function from ComputationNetwork
+        ComputationNodePtr DownCast(ComputationNodeBasePtr inode)
+        {
+            ComputationNodePtr node = dynamic_pointer_cast<ComputationNode<ElemType>>(inode);
+            if (!node)
+                InvalidArgument("an ComputationNodeBasePtr of mismatching precision was passed");
+            return node;
         }
 
+        std::vector<MAWorkerStatus> m_MAworkerStatus; 
+        int                         m_numSyncPerformed; 
+        size_t                      m_numWorkers; 
+        size_t                      m_myRank;
+        MASGDPerfStats              m_perfReporter;
+        MPIWrapper*                 m_pMPI;       // TODO: to use shared_ptr in the future 
+        DEVICEID_TYPE               m_preferredDeviceID;
+        
+ };
 
-    }
-    void OnOneEpochFinished(const std::list<ComputationNodeBasePtr>& LearnableNodes)
+
+    // Implementation of standard model averaging 
+    template<typename ElemType>
+    class BasicModelAveragingSGD : public IMASGD<ElemType>
     {
-        if (m_useBMUF && m_useNesterovBlockMomentum)
+        typedef IMASGD<ElemType> Base; 
+        using Base::m_pMPI;
+        using Base::DownCast;
+
+    public:
+        BasicModelAveragingSGD(MPIWrapper* pMPI, size_t reportFreq, DEVICEID_TYPE devID)
+            :Base(pMPI, reportFreq, devID)
         {
-            for (auto& pNode : LearnableNodes)
+            fprintf(stderr, "Parallel training (%d workers) using BasicModelAveraging\n",(int)m_pMPI->NumNodesInUse());
+        }
+
+        
+        void ModelAggregationProcessing(
+            size_t samplesSinceLastSync,                                       /* in */
+            const std::list<ComputationNodeBasePtr>&  learnableNodes,          /* in/out */
+            std::list<Matrix<ElemType>>&              smoothedGradient,        /* in/out */
+            size_t&                                   totalSamplesProcessed,   /* out */
+            float&                                    secondsOnCommunication   /* out */) override
+        {
+            //----------------------------------------
+            // 1. communicate with other nodes to negotiate  contribution weights
+            //----------------------------------------
+            float factor = 0;
+            int   nTotalSamples = samplesSinceLastSync;
+            Timer commTimer; 
+            secondsOnCommunication = 0.0f;
+            commTimer.Start();
+            m_pMPI->AllReduce(&nTotalSamples, 1);
+            commTimer.Stop();
+            secondsOnCommunication += (float)commTimer.ElapsedSeconds();
+
+            if (nTotalSamples <= 0)
             {
-                auto pnode = DownCast(pNode);
-                wstring name = pNode->NodeName();
-                if (m_blockLevelSmoothedGradient.find(name) == m_blockLevelSmoothedGradient.end())
+                // prepare for overflow 
+                factor = 1.0f / g_mpi->NumNodesInUse();
+                totalSamplesProcessed = samplesSinceLastSync * m_pMPI->NumNodesInUse();
+                // give an estimated one 
+            }
+            else
+            {
+                factor = (samplesSinceLastSync + 0.0f) / nTotalSamples;
+                totalSamplesProcessed = nTotalSamples;
+            }
+
+            //========================================
+            // 2. process for each individual node
+            //========================================
+            for (auto& pBaseNode : learnableNodes)
+            {
+                if (!pBaseNode->IsParameterUpdateRequired())
                 {
-                    LogicError("Cannot find block information for node %ls. Contact erw@microsoft.com\n", name.c_str());
+                    continue;
                 }
-                Matrix<ElemType>& W = pnode->Value();
-                Matrix<ElemType> V(*m_blockLevelSmoothedGradient[name]);
-                Matrix<ElemType>::Scale((ElemType)m_blockMomentum, V);
-                W += V;
+                // 2.1 model averaging
+                auto pNode = DownCast(pBaseNode);
+                // 2.1.1. average model from individual models 
+                Matrix<ElemType> mat(pNode->Value().DeepClone()); // pNode->Value returns lvalue, so a deep copy is invoked here
+                // 2.1.2. normalize the weight matrix 
+                Matrix<ElemType>::Scale(factor, mat);
+                // 2.1.3. send weight matrix over MPI nodes; 
+                unique_ptr<ElemType[]> px(mat.CopyToArray());
+                //ElemType* px = mat.CopyToArray();
+                size_t    nx = mat.GetNumElements();
+                // 2.1.4. inplace sum 
+                commTimer.Restart();
+                m_pMPI->AllReduce(px.get(), nx);
+                commTimer.Stop();
+                secondsOnCommunication += (float)commTimer.ElapsedSeconds();
+                // 2.1.5. set value 
+                pNode->Value().SetValue(mat.GetNumRows(), mat.GetNumCols(), mat.GetDeviceId(), px.get());
+                // 2.1.6. clean up 
+                //delete[]px;
             }
         }
-    }
-    void OnOneEpochStarted(const std::list<ComputationNodeBasePtr>& LearnableNodes)
-    {
-        if (m_useBMUF && m_useNesterovBlockMomentum)
-        {
-            for (auto& pNode : LearnableNodes)
-            {
-                auto pnode = DownCast(pNode);
-                wstring name = pNode->NodeName();
-                if (m_blockLevelSmoothedGradient.find(name) == m_blockLevelSmoothedGradient.end())
-                {
-                    LogicError("Cannot find block information for node %ls. Contact erw@microsoft.com\n", name.c_str());
-                }
-                Matrix<ElemType>& W = pnode->Value();
-                Matrix<ElemType> V(*m_blockLevelSmoothedGradient[name]);
-                Matrix<ElemType>::Scale((ElemType)m_blockMomentum, V);
-                W -= V;
-            }
-        }
-    }
-    bool AttempToLoadFromFile(const size_t epoch, const wstring& modelPath, DEVICEID_TYPE devID)
-    {
-        wstring ckpfile = GetMASGDCheckPointFileNameForEpoch(epoch, modelPath);
-        if (fexists(ckpfile))
-        {
-            LoadFromMASGDCheckPoint(epoch, modelPath, devID);
-            fprintf(stderr, "Loading MA-SGD info from check point file %s\n", msra::strfun::utf8(ckpfile).c_str());
-            return true;
-        }
-        else
-        {
-            return false;
-        }
-    }
-    void SaveToMASGDCheckPoint(const size_t epoch, const wstring& modelPath) const
-    {
-        if ((g_mpi == nullptr) || g_mpi->IsMainNode())
-        {
-            wstring toFile = GetMASGDCheckPointFileNameForEpoch(epoch, modelPath);
-            wstring toFileTemp = toFile + L".tmp";
-            {
-                File fstream(toFileTemp, FileOptions::fileOptionsBinary | FileOptions::fileOptionsWrite);
-                fstream.PutMarker(FileMarker::fileMarkerBeginSection, L"BCKP");
+    };
 
-                fstream.PutMarker(FileMarker::fileMarkerBeginSection, L"BOptions");
-                fstream << m_useBMUF << m_useNesterovBlockMomentum << m_resetSGDMomentum;
-                fstream.PutMarker(FileMarker::fileMarkerEndSection, L"EOptions");
-
-                fstream.PutMarker(FileMarker::fileMarkerBeginSection, L"BMomentum");
-                fstream << m_blockMomentum;
-                fstream.PutMarker(FileMarker::fileMarkerEndSection, L"EMomentum");
-
-                fstream.PutMarker(FileMarker::fileMarkerBeginSection, L"BParam");
-                SaveParameters(fstream, m_prevParameters);
-                SaveParameters(fstream, m_blockLevelSmoothedGradient);
-                fstream.PutMarker(FileMarker::fileMarkerBeginSection, L"EParam");
-
-                fstream.PutMarker(FileMarker::fileMarkerBeginSection, L"ECKP");
-
-            }
-            renameOrDie(toFileTemp, toFile);
-        }
-    }
-
-
-    // consistent naming of check point file 
-    static wstring GetMASGDCheckPointFileNameForEpoch(size_t epoch, wstring modelPath) 
-    {
-        return GetModelNameForEpoch(epoch, modelPath) + L".MAckp";
-    }
-
-private:
-    bool    m_useBMUF;
-    bool    m_useNesterovBlockMomentum;
-    bool    m_resetSGDMomentum; 
-    double  m_blockMomentum;
-    map<wstring, shared_ptr<Matrix<ElemType>> >     m_prevParameters; 
-    map<wstring, shared_ptr<Matrix<ElemType>> >     m_blockLevelSmoothedGradient;
-    // m_prevParameters holds model parameters before the next sync and after the last sync , required by BMUF
-
-    // borrow DownCast function from ComputationNetwork
-    ComputationNodePtr DownCast(ComputationNodeBasePtr inode)
-    {
-        ComputationNodePtr node = dynamic_pointer_cast<ComputationNode<ElemType>>(inode);
-        if (!node)
-            InvalidArgument("an ComputationNodeBasePtr of mismatching precision was passed");
-        return node;
-    }
-    // borrowed and modified from SGD
-    static wstring GetModelNameForEpoch(const int epoch, wstring modelPath) 
-    {
-        int epoch1Base = epoch + 1;
-        wstring w = msra::strfun::wstrprintf(L"%ls.%d", modelPath.c_str(), (int)epoch1Base);
-        return w;
-    }
-    
-    // helper function to save/load map<wstring, shared_ptr<Matrix<ElemType>> structure 
-    void SaveParameters(File& f, const map<wstring, shared_ptr<Matrix<ElemType>>>& parameters) const 
-    {
-        // save sizeof(ElemType)
-        unsigned int size = sizeof(ElemType); 
-        f << size; 
-        // save number of pairs 
-        unsigned int numPairs = parameters.size();
-        f << numPairs;
-        for (auto& x : parameters)
-        {
-            f << x.first; 
-            f << *x.second;
-        }
-        f.Flush(); 
-        return;
-    }
-    void LoadParameters(File& f, map<wstring, shared_ptr<Matrix<ElemType>>>& parameters, DEVICEID_TYPE deviceID )
-    {
-        unsigned int size = 0; 
-        unsigned int pair = 0; 
-        f >> size; 
-        f >> pair; 
-        if (size != sizeof(ElemType))
-        {
-            LogicError("Mismatched ElemType in loading MASGD checkpoint. Expecting %s, while loading element size=%d\n",
-                sizeof(ElemType) == 4 ? "float" : "double",
-                size
-                ); 
-        }
-        parameters.clear(); 
-        for (size_t i = 0; i < pair; i++)
-        {
-            wstring name; 
-            f >> name; 
-            shared_ptr<Matrix<ElemType>> mat = make_shared<Matrix<ElemType>>(deviceID);
-            f >> *mat; 
-            parameters[name] = mat;
-        }
-
-    }
-    // helper function to actually load/save checkpoint 
-    void LoadFromMASGDCheckPoint(const size_t epoch, const wstring modelPath, DEVICEID_TYPE devID)
-    {
-        if ((g_mpi == nullptr) || g_mpi->IsMainNode())
-        {
-            wstring fromFile = GetMASGDCheckPointFileNameForEpoch(epoch, modelPath);
-            File fstream(fromFile, FileOptions::fileOptionsBinary | FileOptions::fileOptionsRead);
-            {
-                fstream.GetMarker(FileMarker::fileMarkerBeginSection, L"BCKP");
-
-                fstream.GetMarker(FileMarker::fileMarkerBeginSection, L"BOptions");
-                fstream >> m_useBMUF >> m_useNesterovBlockMomentum >> m_resetSGDMomentum;
-                fstream.GetMarker(FileMarker::fileMarkerEndSection, L"EOptions");
-
-                fstream.GetMarker(FileMarker::fileMarkerBeginSection, L"BMomentum");
-                fstream >> m_blockMomentum;
-                fstream.GetMarker(FileMarker::fileMarkerEndSection, L"EMomentum");
-                // logical change 
-                if (m_blockMomentum < 0 || m_blockMomentum > 1.0)
-                {
-                    LogicError("Error in loading MASGD checkpoint: loading a momentum %f, but expect a block-momentum in [0,1].\n",
-                        m_blockMomentum);
-                }
-
-                fstream.GetMarker(FileMarker::fileMarkerBeginSection, L"BParam");
-                LoadParameters(fstream, m_prevParameters, devID);
-                LoadParameters(fstream, m_blockLevelSmoothedGradient, devID);
-                fstream.GetMarker(FileMarker::fileMarkerBeginSection, L"EParam");
-
-                fstream.GetMarker(FileMarker::fileMarkerEndSection, L"ECKP");
-            }
-        }
-    }
-
-
-};
-
-}}}
-
+} } }
 

@@ -643,19 +643,25 @@ public:
     // get element when knowing that the bounds are correct, e.g. looping over the item range returned by GetItemRange()
     const ConfigValuePtr &At(int index) const
     {
-        return At(index, [](const std::wstring &)
-                  {
-                      LogicError("ConfigArray::At(): Index unexpectedly out of bounds.");
-                  });
+        return At(index, [](const std::wstring &) { LogicError("ConfigArray::At(): Index unexpectedly out of bounds."); });
     }
     // get an entire array into a std::vector. Note that this will force all values to be evaluated.
     template <typename C, typename FAILFN>
-    std::vector<C> AsVector(const FAILFN &Fail) const
+    std::vector<C> AsVector(const FAILFN &Fail, bool flatten = false) const
     {
         std::vector<C> res;
         res.reserve(GetSize(Fail));
-        for (const auto &val : values)
-            res.push_back(val.ResolveValue()); // resolve upon access
+        for (const auto& valp : values)
+        {
+            valp.ResolveValue(); // resolve upon access
+            if (!flatten || !valp.Is<ConfigArray>())
+                res.push_back(valp);
+            else // special case: flatten nested vectors (only if 'flatten')
+            {
+                std::vector<C> subVector = valp.AsRef<ConfigArray>().AsVector<C>(Fail, flatten);
+                res.insert(res.end(), subVector.begin(), subVector.end());
+            }
+        }
         return res;
     }
 };
@@ -896,4 +902,5 @@ template <class V>
 {
     return static_cast<const std::vector<typename V::value_type> &>(vec);
 } // use this specifically for XXXargvector
-} } } // end namespaces
+
+}}} // end namespaces

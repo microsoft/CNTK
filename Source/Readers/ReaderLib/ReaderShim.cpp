@@ -14,7 +14,6 @@
 
 #define DATAREADER_EXPORTS // creating the exports here
 #include "DataReader.h"
-//#include "commandArgUtil.h"
 #include "ReaderShim.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
@@ -48,7 +47,7 @@ void ReaderShim<ElemType>::Init(const ConfigParameters& config)
 }
 
 template <class ElemType>
-void ReaderShim<ElemType>::StartMinibatchLoop(size_t mbSize, size_t epoch, size_t requestedEpochSamples = requestDataSize)
+void ReaderShim<ElemType>::StartMinibatchLoop(size_t mbSize, size_t epoch, size_t requestedEpochSamples)
 {
     return StartDistributedMinibatchLoop(mbSize, epoch, 0, 1, requestedEpochSamples);
 }
@@ -71,6 +70,12 @@ void ReaderShim<ElemType>::StartDistributedMinibatchLoop(
     m_reader->StartEpoch(config);
     m_endOfEpoch = false;
 
+    // For adaptive minibatch, make sure there are no outstanding reads.
+    if (m_prefetchTask.valid())
+    {
+        m_prefetchTask.wait();
+    }
+
     m_prefetchTask = std::async(m_launchType, [this]()
     {
         return m_reader->ReadMinibatch();
@@ -78,7 +83,7 @@ void ReaderShim<ElemType>::StartDistributedMinibatchLoop(
 }
 
 template <class ElemType>
-bool ReaderShim<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemType>*>& matrices)
+bool ReaderShim<ElemType>::GetMinibatch(StreamMinibatchInputs& matrices)
 {
     if (m_endOfEpoch)
     {
@@ -110,6 +115,7 @@ bool ReaderShim<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemType>*
 
     if (!minibatch.m_data.empty())
     {
+        // TODO: Use alternating pinned buffer in the packer, do not copy anything, but pack into the pinned memory.
         // Copy returned minibatch to the matrices.
         for (const auto& mx : matrices)
         {
@@ -117,13 +123,13 @@ bool ReaderShim<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemType>*
             size_t streamId = m_nameToStreamId[mx.first];
 
             const auto& stream = minibatch.m_data[streamId];
-            m_layout = stream->m_layout;
+            m_layout->CopyFrom(stream->m_layout);
 
             size_t columnNumber = m_layout->GetNumCols();
             size_t rowNumber = m_streams[streamId]->m_sampleLayout->GetNumElements();
 
-            auto data = reinterpret_cast<const ElemType*>(stream->m_data);
-            mx.second->SetValue(rowNumber, columnNumber, mx.second->GetDeviceId(), const_cast<ElemType*>(data), matrixFlagNormal);
+            auto* data = reinterpret_cast<const ElemType*>(stream->m_data);
+            matrices.GetInputMatrix<ElemType>(mx.first).SetValue(rowNumber, columnNumber, mx.second->GetDeviceId(), const_cast<ElemType*>(data), matrixFlagNormal);
         }
     }
 
@@ -136,10 +142,7 @@ bool ReaderShim<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemType>*
 }
 
 template <class ElemType>
-bool ReaderShim<ElemType>::DataEnd(EndDataType /*endDataType*/)
-{
-    return false;
-}
+bool ReaderShim<ElemType>::DataEnd() { return false; } // Note: Return value never used.
 
 template <class ElemType>
 void ReaderShim<ElemType>::CopyMBLayoutTo(MBLayoutPtr layout)
