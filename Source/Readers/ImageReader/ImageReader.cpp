@@ -8,7 +8,7 @@
 #include "Config.h"
 #include "ImageConfigHelper.h"
 #include "ImageTransformers.h"
-#include "PartialBlockRandomizer.h"
+#include "BlockRandomizer.h"
 #include "NoRandomizer.h"
 #include "ImageDataDeserializer.h"
 #include <omp.h>
@@ -39,7 +39,7 @@ ImageReader::ImageReader(MemoryProviderPtr provider,
     TransformerPtr randomizer;
     if (configHelper.ShouldRandomize())
     {
-        randomizer = std::make_shared<PartialBlockRandomizer>(0, 1, deserializer, PartialBlockRandomizer::DecimationMode::sequence, false);
+        randomizer = std::make_shared<BlockRandomizer>(0, 1, deserializer, BlockRandomizer::DecimationMode::sequence, false);
     }
     else
     {

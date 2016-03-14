@@ -32,7 +32,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 // Actual randomization happens in ChunkRandomizer and SequenceRandomizer.
 // TODO: The behavior can be simplified by only randomizing sequences forward.
 // TODO: The layering will be changed, when we move transformers under the randomizer, it won't be a transformer anymore.
-class PartialBlockRandomizer : public Transformer
+class BlockRandomizer : public Transformer
 {
 public:
     // Currently, decimation based on sequences or chunks is supported.
@@ -42,7 +42,7 @@ public:
         sequence
     };
 
-    PartialBlockRandomizer(
+    BlockRandomizer(
         int verbosity,
         size_t randomizationRangeInSamples,
         IDataDeserializerPtr deserializer,

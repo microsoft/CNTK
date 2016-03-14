@@ -77,7 +77,7 @@ HTKMLFReader::HTKMLFReader(MemoryProviderPtr provider,
     }
 
     int verbosity = readerConfig(L"verbosity", 2);
-    m_randomizer = std::make_shared<PartialBlockRandomizer>(verbosity, window, bundler, PartialBlockRandomizer::DecimationMode::chunk, true /* useLegacyRandomization */);
+    m_randomizer = std::make_shared<BlockRandomizer>(verbosity, window, bundler, BlockRandomizer::DecimationMode::chunk, true /* useLegacyRandomization */);
     m_randomizer->Initialize(nullptr, readerConfig);
 
     // Create output stream descriptions (all dense)

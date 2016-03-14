@@ -7,7 +7,7 @@
 
 #include "NoRandomizer.h"
 #include "DataDeserializer.h"
-#include "PartialBlockRandomizer.h"
+#include "BlockRandomizer.h"
 
 using namespace Microsoft::MSR::CNTK;
 
@@ -148,20 +148,20 @@ public:
     MockDeserializer& operator=(const MockDeserializer&) = delete;
 };
 
-BOOST_AUTO_TEST_CASE(PartialBlockRandomizerInstantiate)
+BOOST_AUTO_TEST_CASE(BlockRandomizerInstantiate)
 {
     std::vector<float> data;
     auto mockDeserializer = std::make_shared<MockDeserializer>(0, 0, data);
 
-    auto randomizer = std::make_shared<PartialBlockRandomizer>(0, SIZE_MAX, mockDeserializer, PartialBlockRandomizer::DecimationMode::chunk, false);
+    auto randomizer = std::make_shared<BlockRandomizer>(0, SIZE_MAX, mockDeserializer, BlockRandomizer::DecimationMode::chunk, false);
 }
 
-BOOST_AUTO_TEST_CASE(PartialBlockRandomizerOneEpoch)
+BOOST_AUTO_TEST_CASE(BlockRandomizerOneEpoch)
 {
     std::vector<float> data { 0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0 };
     auto mockDeserializer = std::make_shared<MockDeserializer>(5, 2, data);
 
-    auto randomizer = std::make_shared<PartialBlockRandomizer>(0, SIZE_MAX, mockDeserializer, PartialBlockRandomizer::DecimationMode::chunk, false);
+    auto randomizer = std::make_shared<BlockRandomizer>(0, SIZE_MAX, mockDeserializer, BlockRandomizer::DecimationMode::chunk, false);
 
     EpochConfiguration epochConfiguration;
     epochConfiguration.m_numberOfWorkers = 1;
@@ -189,15 +189,15 @@ BOOST_AUTO_TEST_CASE(PartialBlockRandomizerOneEpoch)
                                   actual.begin(), actual.end());
 }
 
-BOOST_AUTO_TEST_CASE(PartialBlockRandomizerOneEpochLegacyRandomization)
+BOOST_AUTO_TEST_CASE(BlockRandomizerOneEpochLegacyRandomization)
 {
     std::vector<float> data { 0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0 };
     auto mockDeserializer = std::make_shared<MockDeserializer>(5, 2, data);
 
-    auto randomizer = std::make_shared<PartialBlockRandomizer>(0,
+    auto randomizer = std::make_shared<BlockRandomizer>(0,
         SIZE_MAX,
         mockDeserializer,
-        PartialBlockRandomizer::DecimationMode::sequence,
+        BlockRandomizer::DecimationMode::sequence,
         true);
 
     EpochConfiguration epochConfiguration;
