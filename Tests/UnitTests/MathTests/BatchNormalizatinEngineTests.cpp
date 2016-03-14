@@ -10,8 +10,8 @@
 #include "../../../Source/Math/Matrix.h"
 #include "../../../Source/Math/CPUMatrix.h"
 #include "../../../Source/Math/GPUMatrix.h"
-#include "../../../Source/Math/CuDnnConvolutionEngine.h"
 #include "../../../Source/Math/BatchNormalizationEngine.h"
+#include "../../../Source/Math/CuDnnFactories.h"
 #include "common.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK { namespace Test {
@@ -19,9 +19,9 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Test {
 using vec = std::vector<float>;
 using BNEng = BatchNormEngine<float>;
 
-std::vector<std::tuple<TensorShape, TensorShape, bool, double>> GenerateBNTestConfigs()
+std::vector<std::tuple<TensorShape, TensorShape, size_t, bool, double>> GenerateBNTestConfigs()
 {
-    std::vector<std::tuple<TensorShape, TensorShape, bool, double>> res;
+    std::vector<std::tuple<TensorShape, TensorShape, size_t, bool, double>> res;
     // REVIEW alexeyk: how to test batches > 512? cuDNN does not support that so there is no baseline.
     double expAvgFactor = 1;
     // Per activation (non-spatial)
@@ -33,7 +33,7 @@ std::vector<std::tuple<TensorShape, TensorShape, bool, double>> GenerateBNTestCo
             {
                 for (size_t w : {6, 17, 126, 2048})
                 {
-                    res.push_back(std::make_tuple(TensorShape(w, h, c, n), TensorShape(w, h, c, 1), false, expAvgFactor));
+                    res.push_back(std::make_tuple(TensorShape(w, h, c), TensorShape(w, h, c), n, false, expAvgFactor));
                 }
             }
         }
@@ -47,21 +47,21 @@ std::vector<std::tuple<TensorShape, TensorShape, bool, double>> GenerateBNTestCo
             {
                 for (size_t w : {2, 11, 16})
                 {
-                    res.push_back(std::make_tuple(TensorShape(w, h, c, n), TensorShape(1, 1, c, 1), true, expAvgFactor));
+                    res.push_back(std::make_tuple(TensorShape(w, h, c), TensorShape(1, 1, c), n, true, expAvgFactor));
                 }
             }
         }
     }
     // For perf testing (similar to first layers of ResNet).
-    res.push_back(std::make_tuple(TensorShape(56, 56, 64, 64), TensorShape(1, 1, 64, 1), true, expAvgFactor));
+    res.push_back(std::make_tuple(TensorShape(56, 56, 64), TensorShape(1, 1, 64), 64, true, expAvgFactor));
     // Next test will fail in cuDNN due to bug we discovered (and reported to NVIDIA).
     //res.push_back(std::make_tuple(std::move(fact.CreateTensor(2, 2, 2048, 2)), true));
-    res.push_back(std::make_tuple(TensorShape(2, 2, 2048, 64), TensorShape(1, 1, 2048, 1), true, expAvgFactor));
+    res.push_back(std::make_tuple(TensorShape(2, 2, 2048), TensorShape(1, 1, 2048), 64, true, expAvgFactor));
 
     // Test running mean/isd.
     expAvgFactor = 0.1;
-    res.push_back(std::make_tuple(TensorShape(2, 2, 2, 8), TensorShape(2, 2, 2, 1), false, expAvgFactor));
-    res.push_back(std::make_tuple(TensorShape(2, 2, 2, 8), TensorShape(1, 1, 2, 1), true, expAvgFactor));
+    res.push_back(std::make_tuple(TensorShape(2, 2, 2), TensorShape(2, 2, 2), 8, false, expAvgFactor));
+    res.push_back(std::make_tuple(TensorShape(2, 2, 2), TensorShape(1, 1, 2), 8, true, expAvgFactor));
 
     return res;
 }
@@ -83,51 +83,56 @@ BOOST_AUTO_TEST_CASE(BatchNormalizationForwardTrain)
         return buf.ColumnSlice(c, c);
     };
 
+    int baseDeviceId = 0;
     for (int deviceId : {0})
     {
         for (const auto& cfg : GenerateBNTestConfigs())
         {
             const auto& inOutT = std::get<0>(cfg);
             const auto& scaleT = std::get<1>(cfg);
-            bool spatial = std::get<2>(cfg);
-            double expAvg = std::get<3>(cfg);
+            size_t batchSize = std::get<2>(cfg);
+            bool spatial = std::get<3>(cfg);
+            double expAvg = std::get<4>(cfg);
             double eps = 1e-5; // CUDNN_BN_MIN_EPSILON
 
-            auto engCudnn = BNEng::Create(deviceId, inOutT, scaleT, spatial, ImageLayoutKind::CHW, BatchNormEngineKind::CuDnn);
+            auto engCudnn = BNEng::Create(baseDeviceId, inOutT, scaleT, spatial, ImageLayoutKind::CHW, BatchNormEngineKind::CuDnn);
             auto engCntk = BNEng::Create(deviceId, inOutT, scaleT, spatial, ImageLayoutKind::CHW, BatchNormEngineKind::Cntk);
 
             size_t crow = inOutT[0] * inOutT[1] * inOutT[2];
-            size_t ccol = inOutT[3];
+            size_t ccol = batchSize;
 
             vec buf(crow * ccol);
             std::generate(begin(buf), end(buf), [&] { return nd(rng); });
             SingleMatrix in(crow, ccol, buf.data(), deviceId, matrixFlagNormal);
+            SingleMatrix inB(crow, ccol, buf.data(), baseDeviceId, matrixFlagNormal);
 
             size_t crowScaleBias = scaleT.GetNumElements();
             buf.resize(crowScaleBias);
 
             std::generate(begin(buf), end(buf), [&] { return nd(rng); });
             SingleMatrix scale(crowScaleBias, 1, buf.data(), deviceId, matrixFlagNormal);
+            SingleMatrix scaleB(crowScaleBias, 1, buf.data(), baseDeviceId, matrixFlagNormal);
             std::generate(begin(buf), end(buf), [&] { return nd(rng); });
             SingleMatrix bias(crowScaleBias, 1, buf.data(), deviceId, matrixFlagNormal);
+            SingleMatrix biasB(crowScaleBias, 1, buf.data(), baseDeviceId, matrixFlagNormal);
 
             SingleMatrix runMeanBuf(deviceId);
             SingleMatrix runMean = initMat(runMeanBuf, crowScaleBias, 1, buf);
-            SingleMatrix runMeanExp(runMean.DeepClone(), deviceId);
+            SingleMatrix runMeanB(runMean.DeepClone(), baseDeviceId);
             SingleMatrix runInvStdDevBuf(deviceId);
             SingleMatrix runInvStdDev = initMat(runInvStdDevBuf, crowScaleBias, 1, buf);
-            SingleMatrix runInvStdDevExp(runInvStdDev.DeepClone(), deviceId);
+            SingleMatrix runInvStdDevB(runInvStdDev.DeepClone(), baseDeviceId);
 
             SingleMatrix saveMeanBuf(deviceId);
             SingleMatrix saveMean = initMat(saveMeanBuf, crowScaleBias, 1, buf);
-            SingleMatrix saveMeanExp(saveMean.DeepClone(), deviceId);
+            SingleMatrix saveMeanB(saveMean.DeepClone(), baseDeviceId);
             SingleMatrix saveInvStdDevBuf(deviceId);
             SingleMatrix saveInvStdDev = initMat(saveInvStdDevBuf, crowScaleBias, 1, buf);
-            SingleMatrix saveInvStdDevExp(saveInvStdDev.DeepClone(), deviceId);
+            SingleMatrix saveInvStdDevB(saveInvStdDev.DeepClone(), baseDeviceId);
 
             SingleMatrix outBuf(deviceId);
             SingleMatrix out = initMat(outBuf, crow, ccol, buf);
-            SingleMatrix outExp(out.DeepClone(), deviceId);
+            SingleMatrix outB(out.DeepClone(), baseDeviceId);
 
             CudaTimer time1;
             time1.Start();
@@ -136,9 +141,9 @@ BOOST_AUTO_TEST_CASE(BatchNormalizationForwardTrain)
 
             CudaTimer time2;
             time2.Start();
-            engCudnn->Forward(in, scale, bias, expAvg, runMean, runInvStdDev, out, eps, saveMean, saveInvStdDev);
+            engCudnn->Forward(inB, scaleB, biasB, expAvg, runMeanB, runInvStdDevB, outB, eps, saveMeanB, saveInvStdDevB);
             time2.Stop();
-
+            
             std::stringstream tmsg;
             tmsg << "inOut tensor: " << (std::string)inOutT << ", scaleBias tensor: " << (std::string)scaleT
                  << ", spatial = " << (spatial ? "true" : "false")
@@ -152,24 +157,24 @@ BOOST_AUTO_TEST_CASE(BatchNormalizationForwardTrain)
             std::string emsg;
 
             BOOST_REQUIRE_MESSAGE(!out.HasNan("out"), "out" << msgNan);
-            BOOST_REQUIRE_MESSAGE(CheckEqual(out, outExp, emsg, relErr, absErr * 20), "out" << msg << ". " << emsg);
+            BOOST_REQUIRE_MESSAGE(CheckEqual(out, outB, emsg, relErr, absErr * 20), "out" << msg << ". " << emsg);
             BOOST_REQUIRE_MESSAGE(CountNans(outBuf) == crow * 2 * ccol, "out" << msgNotNan);
             // REVIEW alexeyk: add cases for testing numerical stability.
 
             BOOST_REQUIRE_MESSAGE(!runMean.HasNan("runMean"), "runMean" << msgNan);
-            BOOST_REQUIRE_MESSAGE(CheckEqual(runMean, runMeanExp, emsg, relErr, absErr), "runMean" << msg << ". " << emsg);
+            BOOST_REQUIRE_MESSAGE(CheckEqual(runMean, runMeanB, emsg, relErr, absErr), "runMean" << msg << ". " << emsg);
             BOOST_REQUIRE_MESSAGE(CountNans(runMeanBuf) == crowScaleBias * 2, "runMean" << msgNotNan);
 
             BOOST_REQUIRE_MESSAGE(!runInvStdDev.HasNan("runInvStdDev"), "runInvStdDev" << msgNan);
-            BOOST_REQUIRE_MESSAGE(CheckEqual(runInvStdDev, runInvStdDevExp, emsg, relErr, absErr), "runInvStdDev" << msg << ". " << emsg);
+            BOOST_REQUIRE_MESSAGE(CheckEqual(runInvStdDev, runInvStdDevB, emsg, relErr, absErr), "runInvStdDev" << msg << ". " << emsg);
             BOOST_REQUIRE_MESSAGE(CountNans(runInvStdDevBuf) == crowScaleBias * 2, "runInvStdDev" << msgNotNan);
 
             BOOST_REQUIRE_MESSAGE(!saveMean.HasNan("saveMean"), "saveMean" << msgNan);
-            BOOST_REQUIRE_MESSAGE(CheckEqual(saveMean, saveMeanExp, emsg, relErr, absErr), "saveMean" << msg << ". " << emsg);
+            BOOST_REQUIRE_MESSAGE(CheckEqual(saveMean, saveMeanB, emsg, relErr, absErr), "saveMean" << msg << ". " << emsg);
             BOOST_REQUIRE_MESSAGE(CountNans(saveMeanBuf) == crowScaleBias * 2, "saveMean" << msgNotNan);
 
             BOOST_REQUIRE_MESSAGE(!saveInvStdDev.HasNan("saveInvStdDev"), "saveInvStdDev" << msgNan);
-            BOOST_REQUIRE_MESSAGE(CheckEqual(saveInvStdDev, saveInvStdDevExp, emsg, relErr, absErr), "saveInvStdDev" << msg << ". " << emsg);
+            BOOST_REQUIRE_MESSAGE(CheckEqual(saveInvStdDev, saveInvStdDevB, emsg, relErr, absErr), "saveInvStdDev" << msg << ". " << emsg);
             BOOST_REQUIRE_MESSAGE(CountNans(saveInvStdDevBuf) == crowScaleBias * 2, "saveInvStdDev" << msgNotNan);
 
 #ifndef _DEBUG

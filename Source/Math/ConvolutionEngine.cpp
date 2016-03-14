@@ -5,7 +5,7 @@
 
 #include "stdafx.h"
 #include "ConvolutionEngine.h"
-#include "CuDnnConvolutionEngine.h"
+#include "CuDnnFactories.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -707,7 +707,7 @@ std::unique_ptr<ConvolutionEngine<ElemType>> ConvolutionEngine<ElemType>::Create
 
     // Check if we can use cuDNN engine. Do not need to validate tensors as ConvolveGeometry has already done that.
     if (isEnabled(ConvolutionEngineKind::CuDnn) &&
-        CuDnnConvolutionEngineFactory<ElemType>::IsSupported(geometry, deviceId, poolKind))
+        CuDnnConvolutionEngineFactory<ElemType>::IsSupported(geometry, poolKind))
     {
         fprintf(stderr, "Using cuDNN convolution engine for geometry %s.\n", engStr.c_str());
         return CuDnnConvolutionEngineFactory<ElemType>::Create(geometry, deviceId, imageLayout, maxTempMemSizeInSamples, poolKind);

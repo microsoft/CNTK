@@ -3053,7 +3053,30 @@ template <class ElemType>
 void GPUMatrix<ElemType>::BatchNormalizationForward(const GPUMatrix<ElemType>& scale, const GPUMatrix<ElemType>& bias, double expAvgFactor, GPUMatrix<ElemType>& runMean, GPUMatrix<ElemType>& runInvStdDev,
                                                     GPUMatrix<ElemType>& out, double epsilon, GPUMatrix<ElemType>& saveMean, GPUMatrix<ElemType>& saveInvStdDev) const
 {
-    UNUSED(scale); UNUSED(bias); UNUSED(expAvgFactor); UNUSED(runMean); UNUSED(runInvStdDev); UNUSED(out); UNUSED(epsilon); UNUSED(saveMean); UNUSED(saveInvStdDev);
+    bool spatial = GetNumRows() != scale.GetNumRows();
+    size_t vectorSize = GetNumRows();
+    size_t spatialSize = spatial ? (GetNumRows() / scale.GetNumRows()) : 1;
+    size_t batchSize = GetNumCols();
+
+    assert(0 < vectorSize && vectorSize <= std::numeric_limits<int>::max());
+    assert(0 < batchSize  && batchSize  <= std::numeric_limits<int>::max());
+
+    SyncGuard syncGuard;
+    if (spatial)
+    {
+        Call<ComputeSpatialBatchMeanAndInvStdDev, ElemType>(spatialSize, vectorSize, spatialSize, batchSize, m_pArray, 
+                                                            expAvgFactor, runMean.m_pArray, runInvStdDev.m_pArray, epsilon, 
+                                                            saveMean.m_pArray, saveInvStdDev.m_pArray, GetStream());
+    }
+    else
+    {
+        Call<ComputeBatchMeanAndInvStdDev, ElemType>(vectorSize, vectorSize, batchSize, m_pArray,
+                                                     expAvgFactor, runMean.m_pArray, runInvStdDev.m_pArray, epsilon,
+                                                     saveMean.m_pArray, saveInvStdDev.m_pArray, GetStream());
+    }
+    Call<NormalizeBatchTraining, ElemType>(spatial ? spatialSize : vectorSize, vectorSize, spatialSize, batchSize,
+                                            spatial, m_pArray, out.m_pArray, scale.m_pArray, bias.m_pArray,
+                                            saveMean.m_pArray, saveInvStdDev.m_pArray, GetStream());
 }
 
 #pragma region Static BLAS Functions

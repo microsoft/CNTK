@@ -11,7 +11,7 @@
 #include "../../../Source/Math/CPUMatrix.h"
 #include "../../../Source/Math/GPUMatrix.h"
 #include "../../../Source/Math/ConvolutionEngine.h"
-#include "../../../Source/Math/CuDnnConvolutionEngine.h"
+#include "../../../Source/Math/CuDnnFactories.h"
 #include "common.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK { namespace Test {

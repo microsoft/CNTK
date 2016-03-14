@@ -4,12 +4,11 @@
 //
 
 #include "stdafx.h"
-#include "CuDnnConvolutionEngine.h"
+#include "CuDnnFactories.h"
 #include "GPUMatrix.h"
-#ifdef USE_CUDNN
 #include <typeinfo>
 #include <typeindex>
-#include <cudnn.h>
+#include "CuDnnCommon.h"
 
 template <>
 const char* CudaErrString<cudnnStatus_t>(cudnnStatus_t x)
@@ -22,75 +21,13 @@ const char* CudaErrString<cudnnStatus_t>(cudnnStatus_t x)
 // CNTK with cuDNN by default uses NCHW formats for both inputs/outputs and filters.
 #define TENSOR_FORMAT CUDNN_TENSOR_NCHW
 #define FILTER_FORMAT CUDNN_TENSOR_NCHW
-#endif
 
 namespace Microsoft { namespace MSR { namespace CNTK {
-
-#ifdef USE_CUDNN
 
 static bool IsGpu(DEVICEID_TYPE deviceId)
 {
     return deviceId >= 0;
 }
-
-class CuDnnTensor
-{
-public:
-    CuDnnTensor(const TensorShape& src, cudnnDataType_t dataType)
-        : m_tensor(nullptr)
-    {
-        CUDNN_CALL(cudnnCreateTensorDescriptor(&m_tensor));
-        // Set cuDNN tensor dimensions. cuDNN uses row-major format while TensorShape - column-major
-        // so conversion is required. N dimension will be set to 1.
-        const auto& stridesSrc = src.GetStrides();
-        SmallVector<int> dims(src.GetRank() + 1);
-        SmallVector<int> strides(stridesSrc.size() + 1);
-        assert(dims.size() == strides.size());
-        for (int i = 0; i < src.GetRank(); i++)
-        {
-            dims[dims.size() - 1 - i] = (int)src[i];
-            strides[dims.size() - 1 - i] = (int)stridesSrc[i];
-        }
-        // Set "minibatch"(aka N) dimension.
-        dims[0] = 1;
-        strides[0] = strides[1] * dims[1];
-        CUDNN_CALL(cudnnSetTensorNdDescriptor(m_tensor, dataType, (int)dims.size(), dims.data(), strides.data()));
-    }
-
-    void UpdateBatchSize(size_t batchSize)
-    {
-        // Currently cuDNN supports only 2D and 3D convlutions anyway (so max 5D tensors).
-        const int MaxDims = 5;
-        int dims[MaxDims];
-        int strides[MaxDims];
-        int nbDims = 0;
-        cudnnDataType_t dataType;
-        // According to NVIDIA, Get/Set functions are very fast so it's safe to call them in a loop.
-        CUDNN_CALL(cudnnGetTensorNdDescriptor(m_tensor, MaxDims, &dataType, &nbDims, dims, strides));
-        assert(nbDims <= MaxDims);
-        dims[0] = (int)batchSize;
-        CUDNN_CALL(cudnnSetTensorNdDescriptor(m_tensor, dataType, nbDims, dims, strides));
-    }
-
-    ~CuDnnTensor()
-    {
-        if (m_tensor != nullptr)
-        {
-            cudnnDestroyTensorDescriptor(m_tensor);
-            m_tensor = nullptr;
-        }
-    }
-
-    operator cudnnTensorDescriptor_t() const
-    {
-        return m_tensor;
-    }
-
-    DISABLE_COPY_AND_MOVE(CuDnnTensor);
-
-private:
-    cudnnTensorDescriptor_t m_tensor;
-};
 
 class CuDnnFilter
 {
@@ -226,32 +163,6 @@ private:
     cudnnPoolingDescriptor_t m_pool;
 };
 
-template <typename ElemType>
-static ElemType* ptr(Matrix<ElemType>& src)
-{
-    return src.BufferPointer();
-}
-template <typename ElemType>
-static const ElemType* ptr(const Matrix<ElemType>& src)
-{
-    return src.BufferPointer();
-}
-
-template <typename ElemType>
-struct Consts
-{
-    static const ElemType Zero;
-    static const ElemType One;
-};
-template <>
-const float Consts<float>::One = 1;
-template <>
-const double Consts<double>::One = 1;
-template <>
-const float Consts<float>::Zero = 0;
-template <>
-const double Consts<double>::Zero = 0;
-
 template <class ElemType>
 class CuDnnConvolutionEngine : public ConvolutionEngine<ElemType>
 {
@@ -260,22 +171,18 @@ public:
     using typename Base::Mat;
 
 public:
-    CuDnnConvolutionEngine(ConvolveGeometryPtr geometry, DEVICEID_TYPE deviceId, ImageLayoutKind imageLayout, size_t maxTempMemSizeInSamples, PoolKind poolKind)
-        : Base(geometry, deviceId, imageLayout, maxTempMemSizeInSamples, poolKind),
-        m_cudnn(nullptr), m_dataType(GetDataType()), 
-        m_inT(geometry->InputShape(), m_dataType), m_outT(geometry->OutputShape(), m_dataType)
+    CuDnnConvolutionEngine(ConvolveGeometryPtr geometry, DEVICEID_TYPE deviceId, ImageLayoutKind imageLayout,
+                           size_t maxTempMemSizeInSamples, PoolKind poolKind)
+                           : Base(geometry, deviceId, imageLayout, maxTempMemSizeInSamples, poolKind),
+                           m_cudnn(CuDnn::Instance()),
+                           m_dataType(CuDnnTensor::GetDataType<ElemType>()),
+                           m_inT(geometry->InputShape(), m_dataType),
+                           m_outT(geometry->OutputShape(), m_dataType)
     {
-        CUDNN_CALL(cudnnCreate(&m_cudnn));
-        CUDNN_CALL(cudnnSetStream(m_cudnn, GetStream()));
     }
 
     ~CuDnnConvolutionEngine()
     {
-        if (m_cudnn != nullptr)
-        {
-            cudnnDestroy(m_cudnn);
-            m_cudnn = nullptr;
-        }
     }
 
 protected:
@@ -307,19 +214,19 @@ protected:
         // Find best algo and allocate temp buffer, if needed.
         auto finder = [this](int& calgo, cudnnConvolutionFwdAlgoPerf_t algoPerf[MaxAlgoCount]) -> cudnnStatus_t
         {
-            return cudnnFindConvolutionForwardAlgorithm(m_cudnn, m_inT, *m_filterT, *m_conv, m_outT, MaxAlgoCount, &calgo, algoPerf);
+            return cudnnFindConvolutionForwardAlgorithm(*m_cudnn, m_inT, *m_filterT, *m_conv, m_outT, MaxAlgoCount, &calgo, algoPerf);
         };
         FindBestAlgo(batchSize, m_fwdAlgo, finder);
         if (m_fwdAlgo.Algo.memory > 0)
             workspace.Resize((m_fwdAlgo.Algo.memory + sizeof(ElemType) - 1) / sizeof(ElemType), 1);
         // Perform forward convolution operation.
-        auto err = cudnnConvolutionForward(m_cudnn, &C::One, m_inT, ptr(in), *m_filterT, ptr(filter), *m_conv,
+        auto err = cudnnConvolutionForward(*m_cudnn, &C::One, m_inT, ptr(in), *m_filterT, ptr(filter), *m_conv,
                                            m_fwdAlgo.Algo.algo, ptr(workspace), m_fwdAlgo.Algo.memory, &C::Zero, m_outT, ptr(out));
         // There might be a case where cuDNN fails due to workspace being too small, try using no-workspace algo instead.
         // REVIEW alexeyk: NVIDIA is currently reviewing this issue.
         if (CUDNN_STATUS_INVALID_VALUE == err && m_fwdAlgo.Algo.memory > 0)
         {
-            auto err2 = cudnnConvolutionForward(m_cudnn, &C::One, m_inT, ptr(in), *m_filterT, ptr(filter), *m_conv,
+            auto err2 = cudnnConvolutionForward(*m_cudnn, &C::One, m_inT, ptr(in), *m_filterT, ptr(filter), *m_conv,
                                                 m_fwdAlgo.NoWorkspaceAlgo, nullptr, 0, &C::Zero, m_outT, ptr(out));
             // Update original error in case of success.
             if (CUDNN_STATUS_SUCCESS == err2)
@@ -334,13 +241,13 @@ protected:
         // Find best algo and allocate temp buffer, if needed.
         auto finder = [this](int& calgo, cudnnConvolutionBwdDataAlgoPerf_t algoPerf[MaxAlgoCount]) -> cudnnStatus_t
         {
-            return cudnnFindConvolutionBackwardDataAlgorithm(m_cudnn, *m_filterT, m_outT, *m_conv, m_inT, MaxAlgoCount, &calgo, algoPerf);
+            return cudnnFindConvolutionBackwardDataAlgorithm(*m_cudnn, *m_filterT, m_outT, *m_conv, m_inT, MaxAlgoCount, &calgo, algoPerf);
         };
         FindBestAlgo(batchSize, m_backDataAlgo, finder);
         if (m_backDataAlgo.Algo.memory > 0)
             workspace.Resize((m_backDataAlgo.Algo.memory + sizeof(ElemType) - 1) / sizeof(ElemType), 1);
         // Compute gradients with respect to the output tensor (data).
-        CUDNN_CALL(cudnnConvolutionBackwardData(m_cudnn, &C::One, *m_filterT, ptr(filter), m_outT, ptr(srcGrad), *m_conv, m_backDataAlgo.Algo.algo,
+        CUDNN_CALL(cudnnConvolutionBackwardData(*m_cudnn, &C::One, *m_filterT, ptr(filter), m_outT, ptr(srcGrad), *m_conv, m_backDataAlgo.Algo.algo,
                                                 ptr(workspace), m_backDataAlgo.Algo.memory, &C::One, m_inT, ptr(grad)));
     }
 
@@ -350,13 +257,13 @@ protected:
         // Find best algo and allocate temp buffer, if needed.
         auto finder = [this](int& calgo, cudnnConvolutionBwdFilterAlgoPerf_t algoPerf[MaxAlgoCount]) -> cudnnStatus_t
         {
-            return cudnnFindConvolutionBackwardFilterAlgorithm(m_cudnn, m_inT, m_outT, *m_conv, *m_filterT, MaxAlgoCount, &calgo, algoPerf);
+            return cudnnFindConvolutionBackwardFilterAlgorithm(*m_cudnn, m_inT, m_outT, *m_conv, *m_filterT, MaxAlgoCount, &calgo, algoPerf);
         };
         FindBestAlgo(batchSize, m_backFiltAlgo, finder);
         if (m_backFiltAlgo.Algo.memory > 0)
             workspace.Resize((m_backFiltAlgo.Algo.memory + sizeof(ElemType) - 1) / sizeof(ElemType), 1);
         // Compute gradients with respect to the output tensor (data).
-        CUDNN_CALL(cudnnConvolutionBackwardFilter(m_cudnn, &C::One, m_inT, ptr(in), m_outT, ptr(srcGrad), *m_conv, m_backFiltAlgo.Algo.algo,
+        CUDNN_CALL(cudnnConvolutionBackwardFilter(*m_cudnn, &C::One, m_inT, ptr(in), m_outT, ptr(srcGrad), *m_conv, m_backFiltAlgo.Algo.algo,
                                                   ptr(workspace), m_backFiltAlgo.Algo.memory, &C::One, *m_filterT, ptr(filterGrad)));
     }
 
@@ -371,7 +278,7 @@ protected:
         size_t batchSize = in.GetNumCols();
         m_inT.UpdateBatchSize(batchSize);
         m_outT.UpdateBatchSize(batchSize);
-        CUDNN_CALL(cudnnPoolingForward(m_cudnn, *(m_pool), &C::One, m_inT, ptr(in), &C::Zero, m_outT, ptr(out)));
+        CUDNN_CALL(cudnnPoolingForward(*m_cudnn, *(m_pool), &C::One, m_inT, ptr(in), &C::Zero, m_outT, ptr(out)));
     }
 
     void BackwardPoolingCore(const Mat& out, const Mat& srcGrad, const Mat& in, Mat& grad) override
@@ -379,7 +286,7 @@ protected:
         size_t batchSize = in.GetNumCols();
         m_inT.UpdateBatchSize(batchSize);
         m_outT.UpdateBatchSize(batchSize);
-        CUDNN_CALL(cudnnPoolingBackward(m_cudnn, *(m_pool), &C::One, m_outT, ptr(out), m_outT, ptr(srcGrad),
+        CUDNN_CALL(cudnnPoolingBackward(*m_cudnn, *(m_pool), &C::One, m_outT, ptr(out), m_outT, ptr(srcGrad),
                                         m_inT, ptr(in), &C::One, m_inT, ptr(grad)));
     }
 
@@ -387,16 +294,6 @@ private:
     using C = Consts<ElemType>;
 
     static const int MaxAlgoCount = 10;
-
-    static cudnnDataType_t GetDataType()
-    {
-        if (typeid(ElemType) == typeid(float))
-            return CUDNN_DATA_FLOAT;
-        else if (typeid(ElemType) == typeid(double))
-            return CUDNN_DATA_DOUBLE;
-        else
-            InvalidArgument("cuDNN engine currently supports only single and double precision data types.");
-    }
 
     template <typename TAlgo, typename TFinder>
     void FindBestAlgo(size_t batchSize, TAlgo& algo, TFinder finder)
@@ -437,6 +334,17 @@ private:
             algo.NoWorkspaceAlgo = (*res).algo;
     }
 
+    template <typename ElemType>
+    static ElemType* ptr(Matrix<ElemType>& src)
+    {
+        return src.BufferPointer();
+    }
+    template <typename ElemType>
+    static const ElemType* ptr(const Matrix<ElemType>& src)
+    {
+        return src.BufferPointer();
+    }
+
 private:
     template <typename T>
     struct ConvAlgoInfo
@@ -467,8 +375,7 @@ private:
         }
     };
 
-    // REVIEW alexeyk: is it safe to make m_cudnn static?
-    cudnnHandle_t m_cudnn;
+    CuDnn::ptr_t m_cudnn;
     cudnnDataType_t m_dataType;
     CuDnnTensor m_inT;
     CuDnnTensor m_outT;
@@ -688,12 +595,12 @@ std::unique_ptr<ConvolutionEngine<ElemType>> CuDnnConvolutionEngineFactory<ElemT
 //        : Base(deviceId, imageLayout), m_maxTempMemSizeInSamples(maxTempMemSizeInSamples), m_bnImpl(bnImpl), m_stream(GetStream()), m_cudnn(nullptr)
 //    {
 //        CUDNN_CALL(cudnnCreate(&m_cudnn));
-//        CUDNN_CALL(cudnnSetStream(m_cudnn, m_stream));
+//        CUDNN_CALL(cudnnSetStream(*m_cudnn, m_stream));
 //    }
 //
 //    ~CuDnnConvolutionEngine()
 //    {
-//        if (m_cudnn != nullptr)
+//        if (*m_cudnn != nullptr)
 //        {
 //            cudnnDestroy(m_cudnn);
 //            m_cudnn = nullptr;
@@ -1047,56 +954,11 @@ std::unique_ptr<ConvolutionEngine<ElemType>> CuDnnConvolutionEngineFactory<ElemT
 //    return std::make_unique<CuDnnPoolingEngine<ElemType>>(deviceId, imageLayout);
 //}
 //
-#else
 
 template <class ElemType>
-typename CuDnnConvolutionEngineFactory<ElemType>::Tensor4DPtr CuDnnConvolutionEngineFactory<ElemType>::CreateTensor(size_t, size_t, size_t, size_t)
+bool CuDnnConvolutionEngineFactory<ElemType>::IsSupported(ConvolveGeometryPtr geometry, PoolKind poolKind)
 {
-    RuntimeError("The code is compiled without USE_CUDNN macro.");
-}
-
-template <class ElemType>
-typename CuDnnConvolutionEngineFactory<ElemType>::FilterPtr CuDnnConvolutionEngineFactory<ElemType>::CreateFilter(size_t, size_t, size_t, size_t)
-{
-    RuntimeError("The code is compiled without USE_CUDNN macro.");
-}
-
-template <class ElemType>
-typename CuDnnConvolutionEngineFactory<ElemType>::ConvDescPtr CuDnnConvolutionEngineFactory<ElemType>::CreateConvDescriptor(
-    const Tensor4D&, const Filter&, size_t, size_t, bool)
-{
-    RuntimeError("The code is compiled without USE_CUDNN macro.");
-}
-
-template <class ElemType>
-typename CuDnnConvolutionEngineFactory<ElemType>::PoolDescPtr CuDnnConvolutionEngineFactory<ElemType>::CreatePoolDescriptor(
-    typename PoolDesc::PoolKind, size_t, size_t, size_t, size_t, size_t, size_t)
-{
-    RuntimeError("The code is compiled without USE_CUDNN macro.");
-}
-
-template <class ElemType>
-typename CuDnnConvolutionEngineFactory<ElemType>::ConvEnginePtr CuDnnConvolutionEngineFactory<ElemType>::CreateConvEngine(DEVICEID_TYPE, ImageLayoutKind, size_t, BatchNormImpl)
-{
-    RuntimeError("The code is compiled without USE_CUDNN macro.");
-}
-
-template <class ElemType>
-typename CuDnnConvolutionEngineFactory<ElemType>::PoolEnginePtr CuDnnConvolutionEngineFactory<ElemType>::CreatePoolEngine(DEVICEID_TYPE, ImageLayoutKind)
-{
-    RuntimeError("The code is compiled without USE_CUDNN macro.");
-}
-
-#endif
-
-// REVIEW alexeyk: remove #ifdef once cuDNN becomes mandatory dependency.
-template <class ElemType>
-bool CuDnnConvolutionEngineFactory<ElemType>::IsSupported(ConvolveGeometryPtr geometry, DEVICEID_TYPE deviceId, PoolKind poolKind)
-{
-#ifdef USE_CUDNN
-    cudaDeviceProp props = {0};
-    if (cudaGetDeviceProperties(&props, deviceId) != cudaSuccess || props.major < 3)
-        return false;
+    // REVIEW alexeyk: IsSupported check should be performed by cuDNN itself. Is there a good way to do that?
 
     const auto& input = geometry->InputShape();
     const auto& filter = geometry->KernelShape();
@@ -1110,10 +972,6 @@ bool CuDnnConvolutionEngineFactory<ElemType>::IsSupported(ConvolveGeometryPtr ge
             mapCount.GetNumElements() == mapCount[mapCount.GetRank() - 1] &&
             (poolKind == PoolKind::None || 
              input.GetRank() <= 3 && (filter.GetRank() < 3 || filter[2] == 1)));
-#else
-    UNUSED(deviceId);
-    return false;
-#endif
 }
 
 template class CuDnnConvolutionEngineFactory<float>;

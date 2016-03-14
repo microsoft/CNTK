@@ -6,6 +6,7 @@
 #pragma once
 
 #include "ConvolutionEngine.h"
+#include "BatchNormalizationEngine.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -16,7 +17,16 @@ public:
     static std::unique_ptr<ConvolutionEngine<ElemType>> Create(ConvolveGeometryPtr geometry, DEVICEID_TYPE deviceId, 
                                                                ImageLayoutKind imageLayout, size_t maxTempMemSizeInSamples,
                                                                PoolKind poolKind);
-    static bool IsSupported(ConvolveGeometryPtr geometry, DEVICEID_TYPE deviceId, PoolKind poolKind);
+    static bool IsSupported(ConvolveGeometryPtr geometry, PoolKind poolKind);
+};
+
+template <class ElemType>
+class CuDnnBatchNormEngineFactory
+{
+public:
+    static std::unique_ptr<BatchNormEngine<ElemType>> Create(DEVICEID_TYPE deviceId, const TensorShape& inOutT,
+                                                             const TensorShape& scaleBiasT, bool spatial,
+                                                             ImageLayoutKind imageLayout);
 };
 
 //template <class ElemType>

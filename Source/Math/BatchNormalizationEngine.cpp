@@ -5,6 +5,7 @@
 
 #include "stdafx.h"
 #include "BatchNormalizationEngine.h"
+#include "CuDnnFactories.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -12,6 +13,29 @@ template <class ElemType>
 void BatchNormEngine<ElemType>::Forward(const Mat& in, const Mat& scale, const Mat& bias, double expAvgFactor, Mat& runMean, Mat& runInvStdDev,
                                         Mat& out, double epsilon, Mat& saveMean, Mat& saveInvStdDev)
 {
+    assert(in.GetNumRows() == out.GetNumRows());
+    assert(in.GetNumCols() == out.GetNumCols());
+    assert(std::isfinite(epsilon) && epsilon > 0);
+    assert(std::isfinite(expAvgFactor) && (0 < expAvgFactor && expAvgFactor <= 1));
+    if (!m_spatial)
+    {
+        assert(in.GetNumRows() == scale.GetNumRows());
+        assert(in.GetNumRows() == bias.GetNumRows());
+        assert(in.GetNumRows() == runMean.GetNumRows());
+        assert(in.GetNumRows() == runInvStdDev.GetNumRows());
+        assert(in.GetNumRows() == saveMean.GetNumRows());
+        assert(in.GetNumRows() == saveInvStdDev.GetNumRows());
+    }
+    else
+    {
+        assert((in.GetNumRows() % scale.GetNumRows()) == 0);
+        assert((in.GetNumRows() % bias.GetNumRows()) == 0);
+        assert((in.GetNumRows() % runMean.GetNumRows()) == 0);
+        assert((in.GetNumRows() % runInvStdDev.GetNumRows()) == 0);
+        assert((in.GetNumRows() % saveMean.GetNumRows()) == 0);
+        assert((in.GetNumRows() % saveInvStdDev.GetNumRows()) == 0);
+    }
+
     EnsureCompatible();
     ForwardCore(in, scale, bias, expAvgFactor, runMean, runInvStdDev, out, epsilon, saveMean, saveInvStdDev);
 }
@@ -75,7 +99,7 @@ std::unique_ptr<BatchNormEngine<ElemType>> BatchNormEngine<ElemType>::Create(DEV
     if (isEnabled(BatchNormEngineKind::CuDnn))
     {
         fprintf(stderr, "Using cuDNN batch normalization engine.\n");
-        return std::make_unique<CntkBatchNormEngine<ElemType>>(deviceId, inOutT, scaleBiasT, spatial, imageLayout);
+        return CuDnnBatchNormEngineFactory<ElemType>::Create(deviceId, inOutT, scaleBiasT, spatial, imageLayout);
     }
 
     RuntimeError("Failed to find appropriate batch normalization engine.");
