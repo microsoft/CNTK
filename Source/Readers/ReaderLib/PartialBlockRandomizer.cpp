@@ -20,16 +20,16 @@ PartialBlockRandomizer::PartialBlockRandomizer(
     int verbosity,
     size_t randomizationRangeInSamples,
     IDataDeserializerPtr deserializer,
-    DistributionMode distributionMode,
+    DecimationMode decimationMode,
     bool useLegacyRandomization)
     : m_verbosity(verbosity),
       m_deserializer(deserializer),
-      m_distributionMode(distributionMode),
+      m_decimationMode(decimationMode),
       m_sweep(SIZE_MAX),
       m_epochSize(SIZE_MAX),
       m_globalSamplePosition(SIZE_MAX),
       m_sweepTotalNumberOfSamples(0),
-      m_lastSeenChunk(SIZE_MAX),
+      m_lastSeenChunkId(SIZE_MAX),
       m_chunkRandomizer(std::make_shared<ChunkRandomizer>(deserializer, randomizationRangeInSamples, useLegacyRandomization))
 {
     assert(deserializer != nullptr);
@@ -37,6 +37,7 @@ PartialBlockRandomizer::PartialBlockRandomizer(
     m_streams = m_deserializer->GetStreamDescriptions();
     m_sequenceRandomizer = std::make_shared<SequenceRandomizer>(m_deserializer, m_chunkRandomizer);
 
+    // Calculate total number of samples.
     m_sweepTotalNumberOfSamples = 0;
     for (auto const & chunk : m_deserializer->GetChunkDescriptions())
     {
@@ -44,6 +45,7 @@ PartialBlockRandomizer::PartialBlockRandomizer(
     }
 }
 
+// Start a new epoch.
 void PartialBlockRandomizer::StartEpoch(const EpochConfiguration& config)
 {
     m_config = config;
@@ -56,12 +58,16 @@ void PartialBlockRandomizer::StartEpoch(const EpochConfiguration& config)
         m_epochSize = config.m_totalEpochSizeInSamples;
     }
 
-    m_sequenceRandomizer->SetWorker(config.m_workerRank, config.m_numberOfWorkers);
+    // Calculates global sample position.
     m_globalSamplePosition = m_epochSize * config.m_epochIndex;
     PrepareNewSweepIfNeeded(m_globalSamplePosition);
+
+    // Sets sequence cursor to the sequence that corresponds to the global sample position.
+    // If last epoch ended in the middle of a sequence, the cursor is moved to the next sequence in the sweep.
     m_sequenceRandomizer->SetSequencePositionTo(m_globalSamplePosition % m_sweepTotalNumberOfSamples, m_sweep);
 }
 
+// Prepares a new sweep if needed.
 void PartialBlockRandomizer::PrepareNewSweepIfNeeded(size_t samplePosition)
 {
     size_t sweep = samplePosition / m_sweepTotalNumberOfSamples;
@@ -69,38 +75,55 @@ void PartialBlockRandomizer::PrepareNewSweepIfNeeded(size_t samplePosition)
     {
         m_sweep = sweep;
         m_sweepStartInSamples = sweep * m_sweepTotalNumberOfSamples;
+
+        // Rerandomizing the chunks.
         m_chunkRandomizer->Randomize((unsigned int)m_sweep);
+
+        // Resetting seqeunce randomizer.
         m_sequenceRandomizer->Reset(m_sweep + 1);
+
+        // Unloading all chunk data from memory.
         m_chunks.clear();
-        m_lastSeenChunk = SIZE_MAX;
+        m_lastSeenChunkId = SIZE_MAX;
     }
 }
 
+// Gets next sequences not exceeding sampleCount.
 Sequences PartialBlockRandomizer::GetNextSequences(size_t sampleCount)
 {
+    // Get next sequence descriptions.
     Sequences result;
     std::vector<RandomizedSequenceDescription> sequences;
     result.m_endOfEpoch = GetNextSequenceDescriptions(sampleCount, sequences);
-
     if (sequences.size() == 0)
     {
         return result;
     }
 
-    result.m_data.resize(m_streams.size(), std::vector<SequenceDataPtr>(sequences.size()));
+    // Decimate.
+    std::vector<RandomizedSequenceDescription> decimated;
+    decimated.reserve(sequences.size());
+    Decimate(sequences, decimated);
+    if (decimated.size() == 0)
+    {
+        return result;
+    }
+
+    result.m_data.resize(m_streams.size(), std::vector<SequenceDataPtr>(decimated.size()));
 
     // TODO: This will be changed, when we move transformers under the randomizer.
     // TODO: Randomizer won't should not deal with multithreading.
 #pragma omp parallel for ordered schedule(dynamic)
-    for (int i = 0; i < sequences.size(); ++i)
+    for (int i = 0; i < decimated.size(); ++i)
     {
-        const auto& description = sequences[i];
+        const auto& description = decimated[i];
         std::vector<SequenceDataPtr> sequence;
         auto it = m_chunks.find(description.m_chunk->m_chunkId);
         if (it == m_chunks.end())
         {
             LogicError("Invalid chunk requested.");
         }
+
         it->second->GetSequence(description.m_id, sequence);
         for (int j = 0; j < m_streams.size(); ++j)
         {
@@ -111,14 +134,17 @@ Sequences PartialBlockRandomizer::GetNextSequences(size_t sampleCount)
     return result;
 }
 
+// Get next sequence descriptions that do not exceed sample count.
+// Returns true if epoch end is reached.
 bool PartialBlockRandomizer::GetNextSequenceDescriptions(size_t sampleCount, std::vector<RandomizedSequenceDescription>& result)
 {
     PrepareNewSweepIfNeeded(m_globalSamplePosition);
 
     // Check epoch.
-    if (m_globalSamplePosition - m_config.m_epochIndex * m_epochSize + sampleCount >= m_epochSize)
+    size_t epochStart = m_config.m_epochIndex * m_epochSize;
+    if (m_globalSamplePosition - epochStart + sampleCount >= m_epochSize)
     {
-        sampleCount = m_epochSize - m_globalSamplePosition + m_config.m_epochIndex * m_epochSize;
+        sampleCount = epochStart + m_epochSize - m_globalSamplePosition;
     }
 
     if (sampleCount <= 0)
@@ -134,56 +160,61 @@ bool PartialBlockRandomizer::GetNextSequenceDescriptions(size_t sampleCount, std
     }
     assert(sampleCount != 0);
 
-    m_sequenceRandomizer->RandomizeSequenceForRange(sampleCount);
-    std::vector<RandomizedSequenceDescription> sequences = m_sequenceRandomizer->GetSequencesForRange(sampleCount);
+    // Randomizing sequences
+    result = m_sequenceRandomizer->GetNextSequenceDescriptions(sampleCount);
+    return false;
+}
 
+// Decimates sequences and load/unloads chunks using infromation of the SequenceRandomizer.
+void PartialBlockRandomizer::Decimate(const std::vector<RandomizedSequenceDescription>& all, std::vector<RandomizedSequenceDescription>& decimated)
+{
     // Swap remove all old chunks and add new ones.
     // Require all data in chunks.
     RetrieveDataChunks();
 
-    for (const auto& s : sequences)
+    // Moving the cursor to the end of read sequences.
+    for (const auto& sequence : all)
     {
-        m_globalSamplePosition += s.m_numberOfSamples;
+        m_globalSamplePosition += sequence.m_numberOfSamples;
     }
 
-    result.reserve(sequences.size());
-    if (m_distributionMode == DistributionMode::chunk)
+    decimated.reserve(all.size());
+    if (m_decimationMode == DecimationMode::chunk)
     {
-        for (const auto& sequence : sequences)
+        for (const auto& sequence : all)
         {
             if (sequence.m_chunk->m_chunkId % m_config.m_numberOfWorkers == m_config.m_workerRank)
             {
-                result.push_back(sequence);
+                decimated.push_back(sequence);
             }
         }
     }
-    else if (m_distributionMode == DistributionMode::sequence)
+    else if (m_decimationMode == DecimationMode::sequence)
     {
-        size_t strideBegin = sampleCount * m_config.m_workerRank / m_config.m_numberOfWorkers;
-        size_t strideEnd = sampleCount * (m_config.m_workerRank + 1) / m_config.m_numberOfWorkers;
-        result.assign(sequences.begin() + strideBegin, sequences.begin() + strideEnd);
+        size_t strideBegin = all.size() * m_config.m_workerRank / m_config.m_numberOfWorkers;
+        size_t strideEnd = all.size() * (m_config.m_workerRank + 1) / m_config.m_numberOfWorkers;
+        decimated.assign(all.begin() + strideBegin, all.begin() + strideEnd);
     }
     else
     {
         LogicError("Not supported mode.");
     }
-
-    return false;
 }
 
+// Retrives chunk data based on the window information provided by SequenceRandomizer
 void PartialBlockRandomizer::RetrieveDataChunks()
 {
     const auto& window = m_sequenceRandomizer->GetChunkWindow();
-    if (window.back().m_chunkId == m_lastSeenChunk)
+    if (window.back().m_chunkId == m_lastSeenChunkId)
     {
         return; // nothing to retrieve.
     }
 
-    m_lastSeenChunk = window.back().m_chunkId;
+    m_lastSeenChunkId = window.back().m_chunkId;
     std::map<size_t, ChunkPtr> chunks;
     for (auto const& chunk : window)
     {
-        if (m_distributionMode == DistributionMode::chunk && chunk.m_chunkId % m_config.m_numberOfWorkers != m_config.m_workerRank)
+        if (m_decimationMode == DecimationMode::chunk && chunk.m_chunkId % m_config.m_numberOfWorkers != m_config.m_workerRank)
         {
             continue;
         }

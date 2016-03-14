@@ -154,7 +154,7 @@ BOOST_AUTO_TEST_CASE(PartialBlockRandomizerInstantiate)
     std::vector<float> data;
     auto mockDeserializer = std::make_shared<MockDeserializer>(0, 0, data);
 
-    auto randomizer = std::make_shared<PartialBlockRandomizer>(0, SIZE_MAX, mockDeserializer, PartialBlockRandomizer::DistributionMode::chunk, false);
+    auto randomizer = std::make_shared<PartialBlockRandomizer>(0, SIZE_MAX, mockDeserializer, PartialBlockRandomizer::DecimationMode::chunk, false);
 }
 
 BOOST_AUTO_TEST_CASE(PartialBlockRandomizerOneEpoch)
@@ -162,7 +162,7 @@ BOOST_AUTO_TEST_CASE(PartialBlockRandomizerOneEpoch)
     std::vector<float> data { 0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0 };
     auto mockDeserializer = std::make_shared<MockDeserializer>(5, 2, data);
 
-    auto randomizer = std::make_shared<PartialBlockRandomizer>(0, SIZE_MAX, mockDeserializer, PartialBlockRandomizer::DistributionMode::chunk, false);
+    auto randomizer = std::make_shared<PartialBlockRandomizer>(0, SIZE_MAX, mockDeserializer, PartialBlockRandomizer::DecimationMode::chunk, false);
 
     EpochConfiguration epochConfiguration;
     epochConfiguration.m_numberOfWorkers = 1;
@@ -198,7 +198,7 @@ BOOST_AUTO_TEST_CASE(PartialBlockRandomizerOneEpochLegacyRandomization)
     auto randomizer = std::make_shared<PartialBlockRandomizer>(0,
         SIZE_MAX,
         mockDeserializer,
-        PartialBlockRandomizer::DistributionMode::sequence,
+        PartialBlockRandomizer::DecimationMode::sequence,
         true);
 
     EpochConfiguration epochConfiguration;
