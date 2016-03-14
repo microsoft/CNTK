@@ -13,8 +13,6 @@ Eval=[
 	]
 	
 	reader = [
-        %(NodeDimensions)s
-
 		%(Reader)s
 	]	
 	

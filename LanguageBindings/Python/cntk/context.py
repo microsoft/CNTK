@@ -104,7 +104,7 @@ class AbstractContext(object, metaclass=ABCMeta):
         """            
         self.macros.append(path)    
 
-    def _generate_train_config(self, reader):
+    def _generate_train_config(self, input_map):
         """Generates the configuration file for the train action.
         """                
         tmpl = open(CNTK_TRAIN_TEMPLATE_PATH, "r").read()
@@ -114,7 +114,7 @@ class AbstractContext(object, metaclass=ABCMeta):
                 'DevideId':self.device_id,
                 'ModelDescription':self.root_to_description(),
                 'ModelPath': model_filename,
-                'Reader':reader_config,
+                'Reader':self._generate_reader_config(input_map),
                 'SGD':self.optimizer.generate_config(),
                 } 
         return tmpl%tmpl_dict
@@ -142,33 +142,7 @@ class AbstractContext(object, metaclass=ABCMeta):
             'following input nodes are missing corresponding input readers: ' +
             ", ".join(not_assigned))
 
-    #TODO: re-implement with a propoer design in mind.
-    def _generate_eval_config(self, root_node, input_map):
-        """Generates the configuration file for write action.
-        :param root_node: the node to evaluate. 
-        :param input_map: map from input node to reader, dimensions
-        """                
-        self._check_input_is_assigned(input_map)
-
-        # TODO factor out reader config output so that train/test can use it
-        model_description = root_node.to_description()
-
-        if not self.input_nodes:
-            #import ipdb;ipdb.set_trace()
-            # add dummy input to keep CNTK happy 
-            # TODO relieve this requirement
-            
-            data = [[1,2], [3,4]]
-            fn = os.path.join(self.directory, 'dummy_input.txt')
-            from .reader import NumPyReader
-            reader = NumPyReader(data, fn)
-            from .ops import Input
-            dummy_input_node = Input(2, ctx=self)
-            dummy_input_node.var_name='dummy_node'
-            input_map = {dummy_input_node:(reader, (0,2))}
-            model_description += "\ndummy_node=Input(2, tag='output')"
-
-        tmpl = open(CNTK_EVAL_TEMPLATE_PATH, "r").read()
+    def _generate_reader_config(self, input_map):
         readers = set() 
         node_dimensions = []
         
@@ -196,20 +170,49 @@ class AbstractContext(object, metaclass=ABCMeta):
             reader_configs.append(reader.generate_config())
         reader_configs = "\n".join(reader_configs)
 
+        
+        return "%s\n\n%s"%(node_dimensions, reader_configs)
+
+
+    #TODO: re-implement with a propoer design in mind.
+    def _generate_eval_config(self, root_node, input_map):
+        """Generates the configuration file for write action.
+        :param root_node: the node to evaluate. 
+        :param input_map: mapping of input node to (reader, (start_dim, num_dim))
+        """                
+        self._check_input_is_assigned(input_map)
+
+        # TODO factor out reader config output so that train/test can use it
+        model_description = root_node.to_description()
+
+        if not self.input_nodes:
+            # add dummy input to keep CNTK happy 
+            # TODO relieve this requirement
+            
+            data = [[1,2], [3,4]]
+            fn = os.path.join(self.directory, 'dummy_input.txt')
+            from .reader import NumPyReader
+            reader = NumPyReader(data, fn)
+            from .ops import Input
+            dummy_input_node = Input(2, ctx=self)
+            dummy_input_node.var_name='dummy_node'
+            input_map = {dummy_input_node:(reader, (0,2))}
+            model_description += "\ndummy_node=Input(2, tag='output')"
+
+        tmpl = open(CNTK_EVAL_TEMPLATE_PATH, "r").read()
         output_filename = os.path.join(self.directory, CNTK_OUTPUT_FILENAME)
         tmpl_dict = {
-                'DevideId':self.device_id,
-                'NodeDimensions':node_dimensions,
-                'Reader':reader_configs,
-                'OutputFile':output_filename,
-                'ModelDescription':model_description
+                'DevideId': self.device_id,
+                'Reader': self._generate_reader_config(input_map),
+                'OutputFile': output_filename,
+                'ModelDescription': model_description
                 } 
         return tmpl%tmpl_dict
                 
     @abstractmethod
-    def train(self, reader):
+    def train(self, input_map):
         """Abstract method for the action train.
-        :param reader: the reader to use for this action.
+        :param input_map: mapping of input node to (reader, (start_dim, num_dim))
         """        
         pass 
     
@@ -252,9 +255,9 @@ class Context(AbstractContext):
 
         subprocess.check_call([CNTK_EXECUTABLE_PATH, "configFile=%s"%filename])        
     
-    def train(self, reader):
+    def train(self, input_map):
         """Run the train action locally.
-        :param reader: the reader used to provide the training data.
+        :param input_map: mapping of input node to (reader, (start_dim, num_dim))
         """        
         config_content = self._generate_train_config(reader)         
         self._call_cntk(CNTK_TRAIN_CONFIG_FILENAME, config_content)        
