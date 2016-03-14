@@ -228,7 +228,6 @@ BOOST_AUTO_TEST_CASE(PartialBlockRandomizerOneEpochLegacyRandomization)
                                   actual.begin(), actual.end());
 }
 
-/*
 BOOST_AUTO_TEST_CASE(NoRandomizerOneEpoch)
 {
     std::vector<float> data { 0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0 };
@@ -256,14 +255,14 @@ BOOST_AUTO_TEST_CASE(NoRandomizerOneEpoch)
             auto data = reinterpret_cast<DenseSequenceData&>(*sequences.m_data[0][0]);
             BOOST_CHECK_EQUAL(data.m_numberOfSamples, 1);
             actual.push_back(*((float*)data.m_data));
-
         }
+
         BOOST_CHECK_EQUAL(sequences.m_endOfEpoch, (10 <= i));
     }
+
     BOOST_CHECK_EQUAL_COLLECTIONS(data.begin(), data.end(),
                                   actual.begin(), actual.end());
 }
-*/
 
 BOOST_AUTO_TEST_SUITE_END()
 
