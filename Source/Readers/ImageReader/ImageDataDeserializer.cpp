@@ -135,12 +135,14 @@ ImageDataDeserializer::ImageDataDeserializer(const ConfigParameters& config)
     CreateSequenceDescriptions(configHelper.GetMapPath(), labelDimension);
 }
 
+// Descriptions of chunks exposed by the image reader.
 ChunkDescriptions ImageDataDeserializer::GetChunkDescriptions()
 {
     ChunkDescriptions result;
+    result.reserve(m_imageSequences.size());
     for (auto const& s : m_imageSequences)
     {
-        ChunkDescriptionPtr chunk = std::make_shared<ChunkDescription>();
+        auto chunk = std::make_shared<ChunkDescription>();
         chunk->id = s.m_chunkId;
         chunk->numberOfSamples = 1;
         chunk->numberOfSequences = 1;
@@ -154,11 +156,6 @@ void ImageDataDeserializer::GetSequencesForChunk(size_t chunkId, std::vector<Seq
 {
     // Currently a single sequence per chunk.
     result.push_back(m_imageSequences[chunkId]);
-}
-
-void ImageDataDeserializer::GetSequenceDescriptionByKey(const KeyType& key, SequenceDescription& result)
-{
-    result = m_imageSequences[key.major];
 }
 
 void ImageDataDeserializer::CreateSequenceDescriptions(std::string mapPath, size_t labelDimension)

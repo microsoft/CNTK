@@ -19,8 +19,11 @@ class UtteranceDescription
 
     // Index of the utterance inside the chunk.
     size_t m_indexInsideChunk;
+    // Position of the first frame of the utterance inside the chunk.
     size_t m_startFrameIndexInsideChunk;
+    // Chunk id.
     size_t m_chunkId;
+    // Utterance id.
     size_t m_id;
 
 public:

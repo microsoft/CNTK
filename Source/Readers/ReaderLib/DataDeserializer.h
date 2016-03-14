@@ -10,8 +10,7 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
-// Sequence key, used for correlations between sequences of different deserializers.
-// Both strings and integers are supported.
+// Sequence key, used for correlations between sequences between different deserializers.
 struct KeyType
 {
     size_t major;
@@ -107,10 +106,14 @@ private:
     DISABLE_COPY_AND_MOVE(Chunk);
 };
 
+// Represents a chunk description.
 struct ChunkDescription
 {
+    // Chunk id.
     size_t id;
+    // Number of samples in the chunk.
     size_t numberOfSamples;
+    // Number of sequences in the chunk.
     size_t numberOfSequences;
 };
 
@@ -128,13 +131,23 @@ typedef std::vector<ChunkDescriptionPtr> ChunkDescriptions;
 class IDataDeserializer
 {
 public:
+    // Gets stream descriptions for all streams this deserializer exposes.
     virtual std::vector<StreamDescriptionPtr> GetStreamDescriptions() const = 0;
 
+    // Gets chunk descriptions this deserializer exposes.
     virtual ChunkDescriptions GetChunkDescriptions() = 0;
+
+    // Gets sequence descriptions for a given a chunk.
     virtual void GetSequencesForChunk(size_t chunkId, std::vector<SequenceDescription>& descriptions) = 0;
+
+    // Gets sequence description by its key.
+    // Used by deserializers not in driving/primary mode.
+    // TODO: Possibly move this out into a separate interface.
     virtual void GetSequenceDescriptionByKey(const KeyType& key, SequenceDescription& description) = 0;
 
+    // Gets chunk data given its id.
     virtual ChunkPtr GetChunk(size_t chunkId) = 0;
+
     virtual ~IDataDeserializer() {};
 };
 

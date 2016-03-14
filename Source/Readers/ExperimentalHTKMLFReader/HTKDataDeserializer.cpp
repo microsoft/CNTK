@@ -134,7 +134,7 @@ void HTKDataDeserializer::InitializeChunkDescriptions(ConfigHelper& config)
         m_totalNumberOfFrames / (double)m_chunks.size());
 }
 
-// Describing exposed stream.
+// Describes exposed stream - a single stream of htk features.
 void HTKDataDeserializer::InitializeStreams(const std::wstring& featureName)
 {
     StreamDescriptionPtr stream = std::make_shared<StreamDescription>();
@@ -147,7 +147,7 @@ void HTKDataDeserializer::InitializeStreams(const std::wstring& featureName)
 }
 
 // Reading information about the features from the first file.
-// All features among all files should have the same properties.
+// This information is used later to check that all features among all files have the same properties.
 void HTKDataDeserializer::InitializeFeatureInformation()
 {
     msra::util::attempt(5, [&]()
@@ -177,6 +177,7 @@ ChunkDescriptions HTKDataDeserializer::GetChunkDescriptions()
 }
 
 // Gets sequences for a particular chunk.
+// This information is used by the randomizer to fill in current windows of sequences.
 void HTKDataDeserializer::GetSequencesForChunk(size_t chunkId, std::vector<SequenceDescription>& result)
 {
     const HTKChunkDescription& chunk = m_chunks[chunkId];
@@ -186,6 +187,7 @@ void HTKDataDeserializer::GetSequencesForChunk(size_t chunkId, std::vector<Seque
     {
         auto utterance = chunk.GetUtterance(i);
         size_t major = utterance->GetId();
+        // Because it is a frame mode, creating sequences for each frame.
         for (size_t k = 0; k < utterance->GetNumberOfFrames(); ++k)
         {
             SequenceDescription f;
@@ -230,8 +232,6 @@ private:
 // It is up to the randomizer to decide when to release a particular chunk.
 class HTKDataDeserializer::HTKChunk : public Chunk
 {
-    HTKDataDeserializer* m_parent;
-    size_t m_chunkId;
 public:
     HTKChunk(HTKDataDeserializer* parent, size_t chunkId) : m_parent(parent), m_chunkId(chunkId)
     {
@@ -245,18 +245,26 @@ public:
         });
     }
 
+    // Gets data for the sequnce.
     virtual void GetSequence(size_t sequenceId, std::vector<SequenceDataPtr>& result) override
     {
         m_parent->GetSequenceById(m_chunkId, sequenceId, result);
     }
 
+    // Unloads the data from memory.
     ~HTKChunk()
     {
         auto& chunkDescription = m_parent->m_chunks[m_chunkId];
         chunkDescription.ReleaseData();
     }
+
+private:
+    DISABLE_COPY_AND_MOVE(HTKDataDeserializer::HTKChunk);
+    HTKDataDeserializer* m_parent;
+    size_t m_chunkId;
 };
 
+// Gets a data chunk with the specified chunk id.
 ChunkPtr HTKDataDeserializer::GetChunk(size_t chunkId)
 {
     if (!m_weakChunks[chunkId].expired())
@@ -269,6 +277,9 @@ ChunkPtr HTKDataDeserializer::GetChunk(size_t chunkId)
     return chunk;
 };
 
+// This class stores sequence data for HTK,
+//     - for floats: a simple pointer to the chunk data
+//     - for doubles: allocated array of doubles which is freed when the sequence is no longer used.
 struct HTKSequenceData : DenseSequenceData
 {
     msra::dbn::matrix m_buffer;
@@ -276,6 +287,8 @@ struct HTKSequenceData : DenseSequenceData
     ~HTKSequenceData()
     {
         msra::dbn::matrixstripe frame(m_buffer, 0, m_buffer.cols());
+
+        // Checking if m_data just a pointer in to the 
         if (m_data != &frame(0, 0))
         {
             delete[] reinterpret_cast<double*>(m_data);
@@ -286,6 +299,7 @@ struct HTKSequenceData : DenseSequenceData
 
 typedef std::shared_ptr<HTKSequenceData> HTKSequenceDataPtr;
 
+// Get a sequence by its chunk id and id.
 void HTKDataDeserializer::GetSequenceById(size_t chunkId, size_t id, std::vector<SequenceDataPtr>& r)
 {
     const auto& chunkDescription = m_chunks[chunkId];
@@ -308,13 +322,11 @@ void HTKDataDeserializer::GetSequenceById(size_t chunkId, size_t id, std::vector
 
     HTKSequenceDataPtr result = std::make_shared<HTKSequenceData>();
     result->m_buffer.resize(m_dimension, 1);
-    const std::vector<char> noBoundaryFlags; // dummy
+    const std::vector<char> noBoundaryFlags; // TODO: dummy, currently to boundaries supported.
     msra::dbn::augmentneighbors(utteranceFramesWrapper, noBoundaryFlags, frameIndex, leftExtent, rightExtent, result->m_buffer, 0);
 
     result->m_numberOfSamples = 1;
     msra::dbn::matrixstripe stripe(result->m_buffer, 0, result->m_buffer.cols());
-    const size_t dimensions = stripe.rows();
-
     if (m_elementType == ElementType::tfloat)
     {
         result->m_data = &stripe(0, 0);
@@ -322,6 +334,7 @@ void HTKDataDeserializer::GetSequenceById(size_t chunkId, size_t id, std::vector
     else
     {
         assert(m_elementType == ElementType::tdouble);
+        const size_t dimensions = stripe.rows();
         double *doubleBuffer = new double[dimensions];
         const float *floatBuffer = &stripe(0, 0);
 
@@ -336,4 +349,4 @@ void HTKDataDeserializer::GetSequenceById(size_t chunkId, size_t id, std::vector
     r.push_back(result);
 }
 
-} } }
+}}}

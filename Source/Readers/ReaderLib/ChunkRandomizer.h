@@ -10,43 +10,64 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
+    // Represents an interval closed on the left and opened on the right.
     struct ClosedOpenInterval
     {
         size_t m_begin;
         size_t m_end;
     };
 
+    // Information about randomized chunk.
     struct RandomizedChunk
     {
+        // Chunk id.
         size_t m_chunkId;
+        // Pointer to the original chunk.
         const ChunkDescription* m_original;
+        // Position of the first sample of the chunk in the input.
         size_t m_samplePositionStart;
+        // Position of the first sequence of the chunk in the input.
         size_t m_sequencePositionStart;
+        // Randomization window for this chunk.
         ClosedOpenInterval m_randomizationWindow;
 
+        // Position of the last sample of the chunk in the input.
         size_t SampleEndPosition() const
         {
             return m_original->numberOfSamples + m_samplePositionStart;
         }
 
+        // Position of the last sequence of the chunk in the input.
         size_t SequenceEndPosition() const
         {
             return m_original->numberOfSequences + m_sequencePositionStart;
         }
     };
 
+    // Randomizes a set of chunks and calculates their possible randomization windows.
+    // TODO: Currently, we have to preserve the same behavior for randomization in order to make all tests pass.
+    // TODO: Randomization can be made simpler if we randomize only forwards.
     class ChunkRandomizer
     {
-        IDataDeserializerPtr m_deserializer;
-        std::vector<RandomizedChunk> m_randomizedChunks;
-        std::vector<ChunkDescriptionPtr> m_originalChunks;
-        bool m_legacy;
-        size_t m_randomizationRangeInSamples;
-
     public:
         ChunkRandomizer(IDataDeserializerPtr deserializer, bool legacy, size_t randomizationRangeInSamples);
+
+        // Gets randomized chunks.
         const std::vector<RandomizedChunk>& GetRandomizedChunks() const;
+
+        // Randomizes chunks based on the seed.
         void Randomize(unsigned int seed);
+
+    private:
+        IDataDeserializerPtr m_deserializer;
+        // Randomized chunks.
+        std::vector<RandomizedChunk> m_randomizedChunks;
+        // Original chunks.
+        std::vector<ChunkDescriptionPtr> m_originalChunks;
+        // Whether to use legacy mode for randomization.
+        bool m_legacy;
+        // Randomization range in samples.
+        size_t m_randomizationRangeInSamples;
     };
 
     typedef std::shared_ptr<ChunkRandomizer> ChunkRandomizerPtr;

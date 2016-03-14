@@ -31,25 +31,15 @@ public:
     virtual ChunkPtr GetChunk(size_t chunkId) override;
 
 private:
+    class HTKChunk;
     DISABLE_COPY_AND_MOVE(HTKDataDeserializer);
 
+    // Initialization functions.
     void InitializeChunkDescriptions(ConfigHelper& config);
     void InitializeStreams(const std::wstring& featureName);
     void InitializeFeatureInformation();
 
-    // Represents a frame.
-    // TODO: Change the structure to descrease the memory footprint.
-    struct Frame : SequenceDescription
-    {
-        Frame(UtteranceDescription* u) : m_utterence(u), m_frameIndex(0)
-        {
-        }
-
-        UtteranceDescription* m_utterence;
-        size_t m_frameIndex;
-    };
-
-    class HTKChunk;
+    // Gets sequence by its chunk id and id inside the chunk.
     void GetSequenceById(size_t chunkId, size_t id, std::vector<SequenceDataPtr>&);
 
     // Dimension of features.
@@ -72,6 +62,8 @@ private:
     CorpusDescriptorPtr m_corpus;
 
     int m_verbosity;
+
+    // Total number of frames.
     size_t m_totalNumberOfFrames;
 
     // Auxiliary data for checking against the data in the feature file.
