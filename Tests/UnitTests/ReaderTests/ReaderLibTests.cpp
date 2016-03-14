@@ -5,10 +5,9 @@
 
 #include "stdafx.h"
 
-#include "BlockRandomizer.h"
 #include "NoRandomizer.h"
 #include "DataDeserializer.h"
-#include <PartialBlockRandomizer.h>
+#include "PartialBlockRandomizer.h"
 
 using namespace Microsoft::MSR::CNTK;
 
