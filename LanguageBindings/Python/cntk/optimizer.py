@@ -4,7 +4,7 @@ class SGD(dict):
     
     def __init__(self, epoch_size = 0, minibatch_size = 1, learning_ratesPerMB = "0.1", \
                  learning_rates_per_sample = None, momentum_per_mb = "0.9",  \
-                 momentum_per_sample = None, max_epochs = 5, dropout_rate = ""):
+                 momentum_per_sample = None, max_epochs = 5, dropout_rate = None):
         """ SGD constructor
         
         :param epoch_size: the number of samples to use in each epoch. An intermediate
@@ -53,5 +53,6 @@ class SGD(dict):
         
         config = []
         for k,v in self.items():
-            config.append('{0} = {1}\r\n'.format(k,v))
+            if (v is not None):
+                config.append('{0} = {1}\r\n'.format(k,v))
         return ''.join(config)

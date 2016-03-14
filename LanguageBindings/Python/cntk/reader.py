@@ -67,7 +67,7 @@ class UCIFastReader(AbstractReader):
         if self['FeaturesStart'] is not None:
             template += '''
 
-        		features=[
+        		v2=[
         			start = "%(FeaturesStart)s"
         			dim = "%(FeaturesDim)s"		          
         		]'''
@@ -76,7 +76,7 @@ class UCIFastReader(AbstractReader):
         if self['LabelsStart'] is not None:
             template += '''
 
-        		labels=[
+        		v0=[
         			start = "%(LabelsStart)s"
         			dim = "%(LabelsDim)s"		          
                     labelDim="%(NumOfClasses)s"        			
