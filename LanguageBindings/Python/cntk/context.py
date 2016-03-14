@@ -143,6 +143,12 @@ class AbstractContext(object, metaclass=ABCMeta):
             ", ".join(not_assigned))
 
     def _generate_reader_config(self, input_map):
+        '''
+        Generates the reader configuration including the dimensions of the
+        individual nodes that will be fed by the readers.
+        '''
+        # Putting readers into a set to make sure every reader is configured
+        # only once.
         readers = set() 
         node_dimensions = []
         
@@ -152,24 +158,17 @@ class AbstractContext(object, metaclass=ABCMeta):
             if not node.var_name:
                 raise ValueError("Node '%s' does not have a variable name assigned yet."%str(node))
 
-            start, num_dims = dims
-            node_dimensions.append('''\
-%s = [
+            start_index, num_dims = dims
+            node_dimensions.append('''
+            %s = [
                start=%i
                dim=%i
-           ]'''%(node.var_name, start, num_dims))
-                        
+           ]'''%(node.var_name, start_index, num_dims))
 
             readers.add(reader)
 
-        node_dimensions = "\n".join(node_dimensions)
-
-        # make sure every reader is configured only once
-        reader_configs = []
-        for reader in readers:
-            reader_configs.append(reader.generate_config())
-        reader_configs = "\n".join(reader_configs)
-
+        node_dimensions = '\n'.join(node_dimensions)
+        reader_configs = '\n'.join([r.generate_config() for r in readers])
         
         return "%s\n\n%s"%(node_dimensions, reader_configs)
 

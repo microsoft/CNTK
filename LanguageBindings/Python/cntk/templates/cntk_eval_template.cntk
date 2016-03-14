@@ -13,7 +13,7 @@ Eval=[
 	]
 	
 	reader = [
-		%(Reader)s
+%(Reader)s
 	]	
 	
 	outputPath = "%(OutputFile)s"
