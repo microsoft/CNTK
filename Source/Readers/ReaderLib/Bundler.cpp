@@ -8,6 +8,15 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
+// Represents bundled chunk description with possible cleansed data.
+struct Bundler::BundlerChunkDescription : public ChunkDescription
+{
+    ChunkDescriptionPtr m_original;
+
+    // Sequences that are invalid in at least one deserializer.
+    std::set<size_t> m_invalid;
+};
+
 Bundler::Bundler(
     const ConfigParameters& readerConfig,
     IDataDeserializerPtr driver,

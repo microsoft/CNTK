@@ -72,6 +72,7 @@ private:
     size_t m_currentChunkPosition;
 
     // Global sample position on the timeline.
+    // TODO: possible recalculate it base on samplePositionInEpoch.
     size_t m_globalSamplePosition;
 
     // Current sample position in the epoch.

@@ -12,17 +12,6 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
-// Represents bundled chunk description with possible cleansed data.
-struct BundlerChunkDescription : public ChunkDescription
-{
-    ChunkDescriptionPtr m_original;
-
-    // Sequences that are invalid in at least one deserializer.
-    std::set<size_t> m_invalid;
-};
-
-typedef std::shared_ptr<BundlerChunkDescription> BundlerChunkDescriptionPtr;
-
 // Class represents an bundler of several deserializers.
 // In case when only a single deserializer is used, the bundler can be omitted and 
 // no performance penalty is paid.
@@ -41,8 +30,11 @@ public:
     virtual ChunkPtr GetChunk(size_t chunkId) override;
 
 private:
-    class BundlingChunk;
     DISABLE_COPY_AND_MOVE(Bundler);
+
+    class BundlingChunk;
+    struct BundlerChunkDescription;
+    typedef std::shared_ptr<BundlerChunkDescription> BundlerChunkDescriptionPtr;
 
     // Creates chunk descriptions based on chunks of underlying deserializers.
     void CreateChunkDescriptions();
