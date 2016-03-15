@@ -119,7 +119,7 @@ class AbstractContext(object, metaclass=ABCMeta):
         '''
         self.macros.append(path)
 
-    def _generate_train_config(self, input_map):
+    def _generate_train_config(self, reader):
         '''
         Generates the configuration file for the train action.
         '''
@@ -130,7 +130,7 @@ class AbstractContext(object, metaclass=ABCMeta):
             'DevideId': self.device_id,
             'ModelDescription': description,
             'ModelPath': model_filename,
-            'Reader': self._generate_reader_config(input_map),
+            'Reader': reader.generate_config(),
             'SGD': self.optimizer.generate_config(),
         }
         return tmpl % tmpl_dict
@@ -283,12 +283,12 @@ class Context(AbstractContext):
         subprocess.check_call(
             [CNTK_EXECUTABLE_PATH, "configFile=%s" % filename])
 
-    def train(self, input_map):
+    def train(self, reader):
         '''
         Run the train action locally.
         :param input_map: mapping of input node to (reader, (start_dim, num_dim))
         '''
-        config_content = self._generate_train_config(input_map)
+        config_content = self._generate_train_config(reader)
         self._call_cntk(CNTK_TRAIN_CONFIG_FILENAME, config_content)
 
     def test(self, reader):
