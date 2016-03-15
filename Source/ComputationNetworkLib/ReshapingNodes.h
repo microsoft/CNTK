@@ -560,7 +560,7 @@ template class RowRepeatNode<double>;
 
 // -----------------------------------------------------------------------
 // WhereNode(cond) -- extract indices of non-0 values in a sequence
-// As this implies a runtime-vale dependent reduction in dimension, it can
+// As this implies a runtime-value dependent reduction in dimension, it can
 // only be applied to time sequences, and not other tensor dimensions.
 // The result will have a different MBLayout reflecting the shortened result sequences.
 // -----------------------------------------------------------------------

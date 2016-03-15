@@ -73,9 +73,9 @@ void SGD<ElemType>::Train(function<ComputationNetworkPtr(DEVICEID_TYPE)> createN
 
     // set tracing flags
     for (const auto& traceNodeName : m_traceNodeNamesReal)
-        net->GetNodeFromName(traceNodeName)->EnableNodeTracing(false);
+        net->GetNodeFromName(traceNodeName)->EnableNodeTracing(/*isCategoryLabel=*/false);
     for (const auto& traceNodeName : m_traceNodeNamesCategory)
-        net->GetNodeFromName(traceNodeName)->EnableNodeTracing(true);
+        net->GetNodeFromName(traceNodeName)->EnableNodeTracing(/*isCategoryLabel=*/true);
 
     TrainOrAdaptModel(startEpoch, net, loadNetworkFromCheckpoint, net, nullptr, trainSetDataReader, validationSetDataReader);
 }

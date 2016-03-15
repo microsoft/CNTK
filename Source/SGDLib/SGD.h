@@ -507,7 +507,8 @@ protected:
     wstring m_evalCriterionNodeName;
 
     // enable tracing. Nodes listed here get their m_traceNodeValue and m_traceNodeValueAsCategoryLabel flags set
-    vector<wstring> m_traceNodeNamesReal, m_traceNodeNamesCategory;
+    vector<wstring> m_traceNodeNamesReal;
+    vector<wstring> m_traceNodeNamesCategory;
 
     size_t m_prevChosenMinibatchSize;
     double m_lastFinishedEpochTrainLoss;

@@ -32,17 +32,17 @@ struct SequenceLengthVector
 {
     typedef vector<vector<size_t>> SequenceVector;
     typedef MBLayout::SequenceInfo SequenceInfo;
-    const SequenceVector& sequenceVector;       // 
-    const vector<SequenceInfo>& sequenceInfo;    // original sequence info (for seqId)
-    SequenceLengthVector(const vector<SequenceInfo>& sequenceInfo, const SequenceVector& sequenceVector) : sequenceInfo(sequenceInfo), sequenceVector(sequenceVector) { }
-    size_t size() const { return sequenceInfo.size(); }
+    const SequenceVector& m_sequenceVector;        // vector of sequences (to get sequence length)
+    const vector<SequenceInfo>& m_sequenceInfo;    // original sequence info (for seqId)
+    SequenceLengthVector(const vector<SequenceInfo>& sequenceInfo, const SequenceVector& sequenceVector) : m_sequenceInfo(sequenceInfo), m_sequenceVector(sequenceVector) { }
+    size_t size() const { return m_sequenceInfo.size(); }
     MBLayout::SequenceInfo operator[](size_t i) const // return a descriptor of the new sequence
     {
         SequenceInfo seq;
-        seq.seqId = sequenceInfo[i].seqId;
+        seq.seqId = m_sequenceInfo[i].seqId;
         seq.s = i;
         seq.tBegin = 0;
-        seq.tEnd = sequenceVector[i].size();
+        seq.tEnd = m_sequenceVector[i].size();
         return seq;
     }
     void operator=(const SequenceLengthVector&) = delete;
