@@ -92,7 +92,7 @@ class UCIFastReader(AbstractReader):
                 labelMappingFile="%(LabelMappingFile)s" 
             ]'''
 
-        if self.inputs_def is not None:
+        if self.inputs_def is not None:f
             for (name, start, dim) in self.inputs_def:                
                 template += '''
             {0}=[
