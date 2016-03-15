@@ -6,7 +6,7 @@
 
 #include "Basics.h"
 #include "ComputationNode.h"
-#include "ConvolutionEngine.h"
+#include "BatchNormalizationEngine.h"
 
 #include <map>
 #include <string>
@@ -1657,16 +1657,12 @@ public:
             const Matrix<ElemType>& scale = Input(1)->Value();
             const Matrix<ElemType>& bias = Input(2)->Value();
 
-            size_t batchSize = sliceInputValue.GetNumCols();
-            m_inT->setN(batchSize);
-            assert(m_convEng != nullptr);
-
             auto sliceInputGrad = Input(0)->GradientFor(fr);
             m_dScale->Resize(scale);
             m_dBias->Resize(bias);
             // Compute all derivatives in one step. Save derivatives with respect to scale and bias in temp matrices.
-            m_convEng->BackwardNormalizeBatch(*m_inT, sliceInputValue, sliceOutputGrad, sliceInputGrad, *m_scaleBiasT, scale, m_spatial,
-                                              *m_saveMean, *m_saveInvStdDev, *m_dScale, *m_dBias);
+            m_bnEng->Backward(sliceInputValue, sliceOutputGrad, sliceInputGrad, scale,
+                              *m_saveMean, *m_saveInvStdDev, *m_dScale, *m_dBias);
         }
         else if (inputIndex == 1) // derivative with respect to the scale
         {
@@ -1707,14 +1703,11 @@ public:
 
         Matrix<ElemType> sliceOutputValue = ValueFor(fr);
 
-        size_t batchSize = sliceInputValue.GetNumCols();
-        m_inT->setN(batchSize);
-        assert(m_convEng != nullptr);
 #if NANCHECK
         sliceInputValue.HasNan("BatchNormalization-input");
 #endif
         if (m_eval)
-            m_convEng->NormalizeBatchInference(*m_inT, sliceInputValue, *m_scaleBiasT, scale, bias, m_spatial, runMean, runInvStdDev, sliceOutputValue);
+            m_bnEng->NormalizeBatchInference(sliceInputValue, scale, bias, runMean, runInvStdDev, sliceOutputValue);
         else
         {
             double expAvgFactor;
@@ -1736,8 +1729,8 @@ public:
             m_saveMean->Resize(runMean);
             m_saveInvStdDev->Resize(runMean);
 
-            m_convEng->NormalizeBatch(*m_inT, sliceInputValue, *m_scaleBiasT, scale, bias, m_spatial, expAvgFactor, runMean, runInvStdDev,
-                                      sliceOutputValue, m_epsilon, *m_saveMean, *m_saveInvStdDev);
+            m_bnEng->Forward(sliceInputValue, scale, bias, expAvgFactor, runMean, runInvStdDev,
+                             sliceOutputValue, m_epsilon, *m_saveMean, *m_saveInvStdDev);
 
             m_mbCount++;
         }
@@ -1772,24 +1765,10 @@ public:
 
             auto shape = GetSampleLayout();
 
-            if (m_factory == nullptr)
-                m_factory = ConvolutionEngineFactory<ElemType>::Create(m_deviceId, ConvolutionEngineFactory<ElemType>::EngineType::Auto, m_imageLayoutKind);
-            if (m_convEng == nullptr)
-                m_convEng = m_factory->CreateConvEngine(m_deviceId, m_imageLayoutKind, 0, m_useCntkEngine ? BatchNormImpl::Cntk : BatchNormImpl::CuDnn);
-            if (m_spatial)
+            if (m_bnEng == nullptr)
             {
-                auto dims = ImageDimensions(shape, m_imageLayoutKind);
-                if (m_inT == nullptr)
-                    m_inT = m_factory->CreateTensor(dims.m_width, dims.m_height, dims.m_numChannels, 1);
-                if (m_scaleBiasT == nullptr)
-                    m_scaleBiasT = m_factory->CreateTensor(1, 1, dims.m_numChannels, 1);
-            }
-            else
-            {
-                if (m_inT == nullptr)
-                    m_inT = m_factory->CreateTensor(shape.GetNumElements(), 1, 1, 1);
-                if (m_scaleBiasT == nullptr)
-                    m_scaleBiasT = m_factory->CreateTensor(shape.GetNumElements(), 1, 1, 1);
+                m_bnEng = BatchNormEngine<ElemType>::Create(m_deviceId, shape, m_spatial, m_imageLayoutKind,
+                                                            m_useCntkEngine ? BatchNormEngineKind::Cntk : BatchNormEngineKind::CuDnn);
             }
         }
     }
@@ -1869,10 +1848,7 @@ private:
     // Stores bias derivatives.
     shared_ptr<Matrix<ElemType>> m_dBias;
 
-    std::unique_ptr<ConvolutionEngineFactory<ElemType>> m_factory;
-    std::unique_ptr<ConvolutionEngine<ElemType>> m_convEng;
-    std::unique_ptr<ConvolutionTensor4D> m_inT;
-    std::unique_ptr<ConvolutionTensor4D> m_scaleBiasT;
+    std::unique_ptr<BatchNormEngine<ElemType>> m_bnEng;
 };
 
 template class BatchNormalizationNode<float>;

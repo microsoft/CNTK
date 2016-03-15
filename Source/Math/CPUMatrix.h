@@ -335,6 +335,9 @@ public:
 
     void BatchNormalizationForward(const CPUMatrix<ElemType>& scale, const CPUMatrix<ElemType>& bias, double expAvgFactor, CPUMatrix<ElemType>& runMean, CPUMatrix<ElemType>& runInvStdDev,
                                    CPUMatrix<ElemType>& out, double epsilon, CPUMatrix<ElemType>& saveMean, CPUMatrix<ElemType>& saveInvStdDev) const;
+    void BatchNormalizationForwardInference(const CPUMatrix<ElemType>& scale, const CPUMatrix<ElemType>& bias, const CPUMatrix<ElemType>& runMean, const CPUMatrix<ElemType>& runInvStdDev, CPUMatrix<ElemType>& out) const;
+    void BatchNormalizationBackward(const CPUMatrix<ElemType>& in, CPUMatrix<ElemType>& grad, const CPUMatrix<ElemType>& scale, const CPUMatrix<ElemType>& saveMean, const CPUMatrix<ElemType>& saveInvStdDev,
+                                    CPUMatrix<ElemType>& scaleGrad, CPUMatrix<ElemType>& biasGrad) const;
 
 public:
     static int SetNumThreads(int numThreads); // note: this does not depend on <ElemType>, i.e. you can call it on any <ElemType>

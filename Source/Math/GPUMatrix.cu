@@ -3053,6 +3053,8 @@ template <class ElemType>
 void GPUMatrix<ElemType>::BatchNormalizationForward(const GPUMatrix<ElemType>& scale, const GPUMatrix<ElemType>& bias, double expAvgFactor, GPUMatrix<ElemType>& runMean, GPUMatrix<ElemType>& runInvStdDev,
                                                     GPUMatrix<ElemType>& out, double epsilon, GPUMatrix<ElemType>& saveMean, GPUMatrix<ElemType>& saveInvStdDev) const
 {
+    assert((GetNumRows() % scale.GetNumRows()) == 0);
+
     bool spatial = GetNumRows() != scale.GetNumRows();
     size_t vectorSize = GetNumRows();
     size_t spatialSize = spatial ? (GetNumRows() / scale.GetNumRows()) : 1;
@@ -3064,8 +3066,8 @@ void GPUMatrix<ElemType>::BatchNormalizationForward(const GPUMatrix<ElemType>& s
     SyncGuard syncGuard;
     if (spatial)
     {
-        Call<ComputeSpatialBatchMeanAndInvStdDev, ElemType>(spatialSize, vectorSize, spatialSize, batchSize, m_pArray, 
-                                                            expAvgFactor, runMean.m_pArray, runInvStdDev.m_pArray, epsilon, 
+        Call<ComputeSpatialBatchMeanAndInvStdDev, ElemType>(spatialSize, vectorSize, spatialSize, batchSize, m_pArray,
+                                                            expAvgFactor, runMean.m_pArray, runInvStdDev.m_pArray, epsilon,
                                                             saveMean.m_pArray, saveInvStdDev.m_pArray, GetStream());
     }
     else
@@ -3075,8 +3077,59 @@ void GPUMatrix<ElemType>::BatchNormalizationForward(const GPUMatrix<ElemType>& s
                                                      saveMean.m_pArray, saveInvStdDev.m_pArray, GetStream());
     }
     Call<NormalizeBatchTraining, ElemType>(spatial ? spatialSize : vectorSize, vectorSize, spatialSize, batchSize,
-                                            spatial, m_pArray, out.m_pArray, scale.m_pArray, bias.m_pArray,
-                                            saveMean.m_pArray, saveInvStdDev.m_pArray, GetStream());
+                                           spatial, m_pArray, out.m_pArray, scale.m_pArray, bias.m_pArray,
+                                           saveMean.m_pArray, saveInvStdDev.m_pArray, GetStream());
+}
+
+template <class ElemType>
+void GPUMatrix<ElemType>::BatchNormalizationForwardInference(const GPUMatrix<ElemType>& scale, const GPUMatrix<ElemType>& bias, 
+                                                             const GPUMatrix<ElemType>& runMean, const GPUMatrix<ElemType>& runInvStdDev,
+                                                             GPUMatrix<ElemType>& out) const
+{
+    assert((GetNumRows() % scale.GetNumRows()) == 0);
+
+    bool spatial = GetNumRows() != scale.GetNumRows();
+    size_t vectorSize = GetNumRows();
+    size_t spatialSize = spatial ? (GetNumRows() / scale.GetNumRows()) : 1;
+    size_t batchSize = GetNumCols();
+
+    assert(0 < vectorSize && vectorSize <= std::numeric_limits<int>::max());
+    assert(0 < batchSize  && batchSize  <= std::numeric_limits<int>::max());
+
+    SyncGuard syncGuard;
+    Call<NormalizeBatchTraining, ElemType>(spatial ? spatialSize : vectorSize, vectorSize, spatialSize, batchSize,
+                                           spatial, m_pArray, out.m_pArray, scale.m_pArray, bias.m_pArray,
+                                           runMean.m_pArray, runInvStdDev.m_pArray, GetStream());
+}
+
+template <class ElemType>
+void GPUMatrix<ElemType>::BatchNormalizationBackward(const GPUMatrix<ElemType>& in, GPUMatrix<ElemType>& grad, const GPUMatrix<ElemType>& scale, 
+                                                     const GPUMatrix<ElemType>& saveMean, const GPUMatrix<ElemType>& saveInvStdDev,
+                                                     GPUMatrix<ElemType>& scaleGrad, GPUMatrix<ElemType>& biasGrad) const
+{
+    assert((GetNumRows() % scale.GetNumRows()) == 0);
+
+    bool spatial = GetNumRows() != scale.GetNumRows();
+    size_t vectorSize = GetNumRows();
+    size_t spatialSize = spatial ? (GetNumRows() / scale.GetNumRows()) : 1;
+    size_t batchSize = GetNumCols();
+
+    assert(0 < vectorSize && vectorSize <= std::numeric_limits<int>::max());
+    assert(0 < batchSize  && batchSize  <= std::numeric_limits<int>::max());
+
+    SyncGuard syncGuard;
+    if (spatial)
+    {
+        Call<ComputeSpatialScaleAndBiasGradients, ElemType>(spatialSize, vectorSize, spatialSize, batchSize, in.m_pArray, m_pArray, scaleGrad.m_pArray, biasGrad.m_pArray,
+                                                            saveMean.m_pArray, saveInvStdDev.m_pArray, GetStream());
+    }
+    else
+    {
+        Call<ComputeScaleAndBiasGradients, ElemType>(vectorSize, vectorSize, batchSize, in.m_pArray, m_pArray, scaleGrad.m_pArray, biasGrad.m_pArray,
+                                                     saveMean.m_pArray, saveInvStdDev.m_pArray, GetStream());
+    }
+    Call<BackpropagateBatchNormGradients, ElemType>(spatial ? spatialSize : vectorSize, vectorSize, spatialSize, batchSize, spatial,
+                                                    in.m_pArray, m_pArray, grad.m_pArray, scale.m_pArray, scaleGrad.m_pArray, biasGrad.m_pArray, saveMean.m_pArray, saveInvStdDev.m_pArray, GetStream());
 }
 
 #pragma region Static BLAS Functions

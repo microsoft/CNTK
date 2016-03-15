@@ -470,6 +470,9 @@ public:
 
     void BatchNormalizationForward(const Matrix<ElemType>& scale, const Matrix<ElemType>& bias, double expAvgFactor, Matrix<ElemType>& runMean, Matrix<ElemType>& runInvStdDev,
                                    Matrix<ElemType>& out, double epsilon, Matrix<ElemType>& saveMean, Matrix<ElemType>& saveInvStdDev) const;
+    void BatchNormalizationForwardInference(const Matrix<ElemType>& scale, const Matrix<ElemType>& bias, const Matrix<ElemType>& runMean, const Matrix<ElemType>& runInvStdDev, Matrix<ElemType>& out) const;
+    void BatchNormalizationBackward(const Matrix<ElemType>& in, Matrix<ElemType>& grad, const Matrix<ElemType>& scale, const Matrix<ElemType>& saveMean, const Matrix<ElemType>& saveInvStdDev,
+                                    Matrix<ElemType>& scaleGrad, Matrix<ElemType>& biasGrad) const;
 
 public:
     // TODO: why are these not static? And why are they here?

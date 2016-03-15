@@ -20,11 +20,11 @@ public:
 
 public:
     CuDnnBatchNormEngine(DEVICEID_TYPE deviceId, const TensorShape& inOutT,
-                        const TensorShape& scaleBiasT, bool spatial, ImageLayoutKind imageLayout)
-                        : Base(deviceId, inOutT, scaleBiasT, spatial, imageLayout),
+                        bool spatial, ImageLayoutKind imageLayout)
+                        : Base(deviceId, inOutT, spatial, imageLayout),
                         m_cudnn(CuDnn::Instance()),
-                        m_inOutCuDnnT(inOutT, CuDnnTensor::GetDataType<ElemType>()),
-                        m_scaleBiasCuDnnT(scaleBiasT, CuDnnTensor::GetDataType<ElemType>())
+                        m_inOutCuDnnT(GetInOutTensor(inOutT), CuDnnTensor::GetDataType<ElemType>()),
+                        m_scaleBiasCuDnnT(GetScaleBiasTensor(inOutT, spatial), CuDnnTensor::GetDataType<ElemType>())
     {
     }
 
@@ -32,13 +32,14 @@ protected:
     using Base::m_deviceId;
     using Base::m_imageLayout;
     using Base::m_inOutT;
-    using Base::m_scaleBiasT;
     using Base::m_spatial;
 
     void EnsureCompatible() override
     {
         if (m_spatial && m_imageLayout == ImageLayoutKind::HWC)
             InvalidArgument("cuDNN batch normalization supports only cudnn(CHW) layout.");
+        if (m_inOutT.GetRank() > 4)
+            InvalidArgument("cuDNN batch normalization supports tensors of max 4 dimensions.");
     }
 
     void ForwardCore(const Mat& in, const Mat& scale, const Mat& bias, double expAvgFactor, Mat& runMean, Mat& runInvStdDev,
@@ -53,6 +54,29 @@ protected:
             epsilon, ptr(saveMean), ptr(saveInvStdDev)));
     }
 
+    void ForwardInferenceCore(const Mat& in, const Mat& scale, const Mat& bias, const Mat& runMean, const Mat& runInvStdDev, Mat& out) override
+    {
+        m_inOutCuDnnT.UpdateBatchSize(in.GetNumCols());
+        cudnnBatchNormMode_t mode = m_spatial ? CUDNN_BATCHNORM_SPATIAL : CUDNN_BATCHNORM_PER_ACTIVATION;
+        CUDNN_CALL(cudnnBatchNormalizationForwardInference(*m_cudnn, mode, &C::One, &C::Zero, m_inOutCuDnnT, ptr(in), m_inOutCuDnnT, ptr(out),
+            m_scaleBiasCuDnnT, ptr(scale), ptr(bias), ptr(runMean), ptr(runInvStdDev), CUDNN_BN_MIN_EPSILON));
+    }
+
+    void BackwardCore(const Mat& in, const Mat& srcGrad, Mat& grad, const Mat& scale, const Mat& saveMean, const Mat& saveInvStdDev,
+                      Mat& scaleGrad, Mat& biasGrad) override
+    {
+        m_inOutCuDnnT.UpdateBatchSize(srcGrad.GetNumCols());
+        cudnnBatchNormMode_t mode = m_spatial ? CUDNN_BATCHNORM_SPATIAL : CUDNN_BATCHNORM_PER_ACTIVATION;
+        // REVIEW alexeyk: remove once Philly is upgraded to prod version.
+#if CUDNN_PATCHLEVEL >= 7
+        CUDNN_CALL(cudnnBatchNormalizationBackward(*m_cudnn, mode, &C::One, &C::One, &C::One, &C::One, m_inOutCuDnnT, ptr(in), m_inOutCuDnnT, ptr(srcGrad), m_inOutCuDnnT, ptr(grad),
+            m_scaleBiasCuDnnT, ptr(scale), ptr(scaleGrad), ptr(biasGrad), CUDNN_BN_MIN_EPSILON, ptr(saveMean), ptr(saveInvStdDev)));
+#else
+        CUDNN_CALL(cudnnBatchNormalizationBackward(*m_cudnn, mode, &C::One, &C::One, m_inOutCuDnnT, ptr(in), m_inOutCuDnnT, ptr(srcGrad), m_inOutCuDnnT, ptr(grad),
+            m_scaleBiasCuDnnT, ptr(scale), ptr(scaleGrad), ptr(biasGrad), CUDNN_BN_MIN_EPSILON, ptr(saveMean), ptr(saveInvStdDev)));
+#endif
+    }
+
 private:
     template <typename ElemType>
     static ElemType* ptr(Matrix<ElemType>& src)
@@ -63,6 +87,29 @@ private:
     static const ElemType* ptr(const Matrix<ElemType>& src)
     {
         return src.BufferPointer();
+    }
+
+    static TensorShape GetInOutTensor(const TensorShape& inOutT)
+    {
+        // cuDNN supports only 3D and 4D tensors (in cuDNN docs it's 4D and 5D dues to N dimension)
+        // even for non-spatial inputs so expand the tensor if needed.
+        if (inOutT.GetRank() > 2)
+            return inOutT;
+        SmallVector<size_t> v(std::max(inOutT.GetRank(), (size_t)3), 1);
+        for (size_t i = 0; i < inOutT.GetRank(); i++)
+            v[i] = inOutT[i];
+        return TensorShape(v);
+    }
+
+    static TensorShape GetScaleBiasTensor(const TensorShape& inOutT, bool spatial)
+    {
+        if (!spatial)
+            return GetInOutTensor(inOutT);
+
+        const auto& t = GetInOutTensor(inOutT);
+        SmallVector<size_t> v(t.GetRank(), 1);
+        v[v.size() - 1] = t[t.GetRank() - 1];
+        return TensorShape(v);
     }
 
 private:
@@ -78,13 +125,46 @@ template class CuDnnBatchNormEngine<double>;
 
 template <typename ElemType>
 std::unique_ptr<BatchNormEngine<ElemType>> CuDnnBatchNormEngineFactory<ElemType>::Create(DEVICEID_TYPE deviceId, const TensorShape& inOutT,
-                                                                                         const TensorShape& scaleBiasT, bool spatial,
-                                                                                         ImageLayoutKind imageLayout)
+                                                                                         bool spatial, ImageLayoutKind imageLayout)
 {
-    return std::make_unique<CuDnnBatchNormEngine<ElemType>>(deviceId, inOutT, scaleBiasT, spatial, imageLayout);
+    return std::make_unique<CuDnnBatchNormEngine<ElemType>>(deviceId, inOutT, spatial, imageLayout);
 }
 
 template class CuDnnBatchNormEngineFactory<float>;
 template class CuDnnBatchNormEngineFactory<double>;
+
+CudaTimer::~CudaTimer()
+{
+    // TODO: Should not throw if std::uncaught_exception()
+    if (m_start != nullptr)
+        CUDA_CALL(cudaEventDestroy(reinterpret_cast<cudaEvent_t>(m_start)));
+    if (m_stop != nullptr)
+        CUDA_CALL(cudaEventDestroy(reinterpret_cast<cudaEvent_t>(m_stop)));
+}
+void CudaTimer::Start()
+{
+    cudaEvent_t start;
+    cudaEvent_t stop;
+    if (m_start != nullptr)
+        CUDA_CALL(cudaEventDestroy(reinterpret_cast<cudaEvent_t>(m_start)));
+    if (m_stop != nullptr)
+        CUDA_CALL(cudaEventDestroy(reinterpret_cast<cudaEvent_t>(m_stop)));
+    CUDA_CALL(cudaEventCreate(&start));
+    CUDA_CALL(cudaEventCreate(&stop));
+    m_start = start;
+    m_stop = stop;
+    CUDA_CALL(cudaEventRecord(start, GetStream()));
+}
+void CudaTimer::Stop()
+{
+    CUDA_CALL(cudaEventRecord(reinterpret_cast<cudaEvent_t>(m_stop), GetStream()));
+    CUDA_CALL(cudaEventSynchronize(reinterpret_cast<cudaEvent_t>(m_stop)));
+}
+float CudaTimer::Elapsed()
+{
+    float ms;
+    CUDA_CALL(cudaEventElapsedTime(&ms, reinterpret_cast<cudaEvent_t>(m_start), reinterpret_cast<cudaEvent_t>(m_stop)));
+    return ms;
+}
 
 } } }

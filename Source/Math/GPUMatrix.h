@@ -419,6 +419,9 @@ public:
 
     void BatchNormalizationForward(const GPUMatrix<ElemType>& scale, const GPUMatrix<ElemType>& bias, double expAvgFactor, GPUMatrix<ElemType>& runMean, GPUMatrix<ElemType>& runInvStdDev,
                                    GPUMatrix<ElemType>& out, double epsilon, GPUMatrix<ElemType>& saveMean, GPUMatrix<ElemType>& saveInvStdDev) const;
+    void BatchNormalizationForwardInference(const GPUMatrix<ElemType>& scale, const GPUMatrix<ElemType>& bias, const GPUMatrix<ElemType>& runMean, const GPUMatrix<ElemType>& runInvStdDev, GPUMatrix<ElemType>& out) const;
+    void BatchNormalizationBackward(const GPUMatrix<ElemType>& in, GPUMatrix<ElemType>& grad, const GPUMatrix<ElemType>& scale, const GPUMatrix<ElemType>& saveMean, const GPUMatrix<ElemType>& saveInvStdDev,
+                                    GPUMatrix<ElemType>& scaleGrad, GPUMatrix<ElemType>& biasGrad) const;
 
 public:
     // static BLAS functions

@@ -13,31 +13,48 @@ template <class ElemType>
 void BatchNormEngine<ElemType>::Forward(const Mat& in, const Mat& scale, const Mat& bias, double expAvgFactor, Mat& runMean, Mat& runInvStdDev,
                                         Mat& out, double epsilon, Mat& saveMean, Mat& saveInvStdDev)
 {
-    assert(in.GetNumRows() == out.GetNumRows());
+    assert(in.GetNumRows() == m_inOutT.GetNumElements());
+    assert(out.GetNumRows() == m_inOutT.GetNumElements());
     assert(in.GetNumCols() == out.GetNumCols());
     assert(std::isfinite(epsilon) && epsilon > 0);
     assert(std::isfinite(expAvgFactor) && (0 < expAvgFactor && expAvgFactor <= 1));
     if (!m_spatial)
     {
-        assert(in.GetNumRows() == scale.GetNumRows());
-        assert(in.GetNumRows() == bias.GetNumRows());
-        assert(in.GetNumRows() == runMean.GetNumRows());
-        assert(in.GetNumRows() == runInvStdDev.GetNumRows());
-        assert(in.GetNumRows() == saveMean.GetNumRows());
-        assert(in.GetNumRows() == saveInvStdDev.GetNumRows());
+        assert(m_inOutT.GetNumElements() == scale.GetNumRows());
+        assert(m_inOutT.GetNumElements() == bias.GetNumRows());
+        assert(m_inOutT.GetNumElements() == runMean.GetNumRows());
+        assert(m_inOutT.GetNumElements() == runInvStdDev.GetNumRows());
+        assert(m_inOutT.GetNumElements() == saveMean.GetNumRows());
+        assert(m_inOutT.GetNumElements() == saveInvStdDev.GetNumRows());
     }
     else
     {
-        assert((in.GetNumRows() % scale.GetNumRows()) == 0);
-        assert((in.GetNumRows() % bias.GetNumRows()) == 0);
-        assert((in.GetNumRows() % runMean.GetNumRows()) == 0);
-        assert((in.GetNumRows() % runInvStdDev.GetNumRows()) == 0);
-        assert((in.GetNumRows() % saveMean.GetNumRows()) == 0);
-        assert((in.GetNumRows() % saveInvStdDev.GetNumRows()) == 0);
+        assert((m_inOutT.GetNumElements() % scale.GetNumRows()) == 0);
+        assert((m_inOutT.GetNumElements() % bias.GetNumRows()) == 0);
+        assert((m_inOutT.GetNumElements() % runMean.GetNumRows()) == 0);
+        assert((m_inOutT.GetNumElements() % runInvStdDev.GetNumRows()) == 0);
+        assert((m_inOutT.GetNumElements() % saveMean.GetNumRows()) == 0);
+        assert((m_inOutT.GetNumElements() % saveInvStdDev.GetNumRows()) == 0);
     }
 
     EnsureCompatible();
     ForwardCore(in, scale, bias, expAvgFactor, runMean, runInvStdDev, out, epsilon, saveMean, saveInvStdDev);
+}
+
+template <class ElemType>
+void BatchNormEngine<ElemType>::ForwardInference(const Mat& in, const Mat& scale, const Mat& bias,
+                                                 const Mat& runMean, const Mat& runInvStdDev, Mat& out)
+{
+    EnsureCompatible();
+    ForwardInferenceCore(in, scale, bias, runMean, runInvStdDev, out);
+}
+
+template <class ElemType>
+void BatchNormEngine<ElemType>::Backward(const Mat& in, const Mat& srcGrad, Mat& grad, const Mat& scale, 
+                                         const Mat& saveMean, const Mat& saveInvStdDev, Mat& scaleGrad, Mat& biasGrad)
+{
+    EnsureCompatible();
+    BackwardCore(in, srcGrad, grad, scale, saveMean, saveInvStdDev, scaleGrad, biasGrad);
 }
 
 template class BatchNormEngine<float>;
@@ -52,8 +69,8 @@ public:
 
 public:
     CntkBatchNormEngine(DEVICEID_TYPE deviceId, const TensorShape& inOutT,
-                        const TensorShape& scaleBiasT, bool spatial, ImageLayoutKind imageLayout)
-                        : Base(deviceId, inOutT, scaleBiasT, spatial, imageLayout)
+                        bool spatial, ImageLayoutKind imageLayout)
+                        : Base(deviceId, inOutT, spatial, imageLayout)
     {
     }
 
@@ -61,7 +78,6 @@ protected:
     using Base::m_deviceId;
     using Base::m_imageLayout;
     using Base::m_inOutT;
-    using Base::m_scaleBiasT;
     using Base::m_spatial;
 
     void EnsureCompatible() override
@@ -75,34 +91,47 @@ protected:
     {
         in.BatchNormalizationForward(scale, bias, expAvgFactor, runMean, runInvStdDev, out, epsilon, saveMean, saveInvStdDev);
     }
+
+    void ForwardInferenceCore(const Mat& in, const Mat& scale, const Mat& bias, const Mat& runMean, const Mat& runInvStdDev, Mat& out) override
+    {
+        in.BatchNormalizationForwardInference(scale, bias, runMean, runInvStdDev, out);
+    }
+
+    void BackwardCore(const Mat& in, const Mat& srcGrad, Mat& grad, const Mat& scale, const Mat& saveMean, const Mat& saveInvStdDev,
+                      Mat& scaleGrad, Mat& biasGrad) override
+    {
+        srcGrad.BatchNormalizationBackward(in, grad, scale, saveMean, saveInvStdDev, scaleGrad, biasGrad);
+    }
 };
 
 template class CntkBatchNormEngine<float>;
 template class CntkBatchNormEngine<double>;
 
+template <typename T>
+bool HasFlag(T src, T testFlag)
+{
+    return ((int)src & (int)testFlag) != 0;
+}
+
 template <class ElemType>
 std::unique_ptr<BatchNormEngine<ElemType>> BatchNormEngine<ElemType>::Create(DEVICEID_TYPE deviceId, const TensorShape& inOutT,
-                                                                             const TensorShape& scaleBiasT, bool spatial, ImageLayoutKind imageLayout,
+                                                                             bool spatial, ImageLayoutKind imageLayout,
                                                                              BatchNormEngineKind enabledEngines = BatchNormEngineKind::All)
 {
-    if (spatial && imageLayout == ImageLayoutKind::HWC)
-        InvalidArgument("Batch normalization is not supported for legacy(HWC) layout. Please use cudnn(CHW) layout instead.");
-
-    auto isEnabled = [=](BatchNormEngineKind eng) { return ((int)enabledEngines & (int)eng) != 0; };
     // Use CNTK as default batch norm engine.
-    if (isEnabled(BatchNormEngineKind::Cntk))
+    if (HasFlag(enabledEngines, BatchNormEngineKind::Cntk))
     {
         fprintf(stderr, "Using CNTK batch normalization engine.\n");
-        return std::make_unique<CntkBatchNormEngine<ElemType>>(deviceId, inOutT, scaleBiasT, spatial, imageLayout);
+        return std::make_unique<CntkBatchNormEngine<ElemType>>(deviceId, inOutT, spatial, imageLayout);
     }
 
-    if (isEnabled(BatchNormEngineKind::CuDnn))
+    if (HasFlag(enabledEngines, BatchNormEngineKind::CuDnn))
     {
         fprintf(stderr, "Using cuDNN batch normalization engine.\n");
-        return CuDnnBatchNormEngineFactory<ElemType>::Create(deviceId, inOutT, scaleBiasT, spatial, imageLayout);
+        return CuDnnBatchNormEngineFactory<ElemType>::Create(deviceId, inOutT, spatial, imageLayout);
     }
 
-    RuntimeError("Failed to find appropriate batch normalization engine.");
+    RuntimeError("Could not find appropriate batch normalization engine.");
 }
 
 } } }

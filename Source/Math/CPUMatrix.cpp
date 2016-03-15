@@ -4293,7 +4293,51 @@ void CPUMatrix<ElemType>::BatchNormalizationForward(const CPUMatrix<ElemType>& s
                                                     CPUMatrix<ElemType>& out, double epsilon, CPUMatrix<ElemType>& saveMean, CPUMatrix<ElemType>& saveInvStdDev) const
 {
     UNUSED(scale); UNUSED(bias); UNUSED(expAvgFactor); UNUSED(runMean); UNUSED(runInvStdDev); UNUSED(out); UNUSED(epsilon); UNUSED(saveMean); UNUSED(saveInvStdDev);
+    RuntimeError("Not yet implemented.");
 }
+
+template <class ElemType>
+void CPUMatrix<ElemType>::BatchNormalizationForwardInference(const CPUMatrix<ElemType>& scale, const CPUMatrix<ElemType>& bias, 
+                                                             const CPUMatrix<ElemType>& runMean, const CPUMatrix<ElemType>& runInvStdDev,
+                                                             CPUMatrix<ElemType>& out) const
+{
+    assert((GetNumRows() % scale.GetNumRows()) == 0);
+
+    bool spatial = GetNumRows() != scale.GetNumRows();
+    if (spatial)
+    {
+        size_t spatialSize = GetNumRows() / scale.GetNumRows();
+#pragma omp parallel for
+        for (long icol = 0; icol < out.GetNumCols(); icol++)
+        {
+            for (long irow = 0; irow < out.GetNumRows(); irow++)
+            {
+                size_t imap = irow / spatialSize;
+                out(irow, icol) = scale(imap, 0) * ((*this)(irow, icol) - runMean(imap, 0)) * runInvStdDev(imap, 0) + bias(imap, 0);
+            }
+        }
+    }
+    else
+    {
+#pragma omp parallel for
+        for (long icol = 0; icol < out.GetNumCols(); icol++)
+        {
+            for (long irow = 0; irow < out.GetNumRows(); irow++)
+            {
+                out(irow, icol) = scale(irow, 0) * ((*this)(irow, icol) - runMean(irow, 0)) * runInvStdDev(irow, 0) + bias(irow, 0);
+            }
+        }
+    }
+}
+
+template <class ElemType>
+void CPUMatrix<ElemType>::BatchNormalizationBackward(const CPUMatrix<ElemType>& in, CPUMatrix<ElemType>& grad, const CPUMatrix<ElemType>& scale, const CPUMatrix<ElemType>& saveMean, const CPUMatrix<ElemType>& saveInvStdDev,
+                                                     CPUMatrix<ElemType>& scaleGrad, CPUMatrix<ElemType>& biasGrad) const
+{
+    UNUSED(in); UNUSED(grad); UNUSED(scale); UNUSED(saveMean); UNUSED(saveInvStdDev); UNUSED(scaleGrad); UNUSED(biasGrad);
+    RuntimeError("Not yet implemented.");
+}
+
 
 #pragma region Static BLAS Functions
 
