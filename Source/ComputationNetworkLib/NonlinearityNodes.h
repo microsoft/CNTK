@@ -369,25 +369,18 @@ public:
 
     /*virtual*/ void BackpropToV(Matrix<ElemType>& gradient, const Matrix<ElemType>& inputFunctionValues, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues, const Matrix<ElemType>& functionValues) override
     {
-        gradient;
-        inputFunctionValues;
-        inputGradientValues;
-        gradientValues;
-        LogicError("Hardmax is not differentiable and is used for evaluation only.");
+        gradient; inputFunctionValues; inputGradientValues; gradientValues;
+        // Hardmax cannot back-propagate a gradient.
+        // We must not forbid this function to be called, though, since Hardmax may be running
+        // as part of a recurrent decoding loop. Sequence-to-sequence models run the Hardmax
+        // node inside the training without back-propagating into them.
     }
 
-    virtual bool OutputUsedInComputingInputNodesGradients() const override
-    {
-        return false;
-    }
-    virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override
-    {
-        return false;
-    }
+    virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }
+    virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override { return false; }
 
     /*virtual*/ void ForwardPropV(Matrix<ElemType>& functionValues, const Matrix<ElemType>& inputFunctionValues) override
     {
-        // TODO: temp solution, we need to write a math function specifically for this
         functionValues.AssignHardmaxOf(inputFunctionValues, true);
     }
 };
@@ -395,4 +388,4 @@ public:
 template class HardmaxNode<float>;
 template class HardmaxNode<double>;
 
-} } }
+}}}

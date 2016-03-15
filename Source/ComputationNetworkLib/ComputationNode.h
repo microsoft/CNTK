@@ -1339,47 +1339,7 @@ public:
 
     // this is the entry point from Network; while it will call virtual BackpropTo() into the actual node implementation
     // TODO: move to -Base (or -Network?)
-    void Backprop(const FrameRange& fr, bool childrenInThisLoop, bool childrenInOuterLoop) override
-    {
-        if (fr.IsAllFrames() && IsPartOfLoop() && childrenInThisLoop)
-            LogicError("%ls %ls operation: Backprop called with whole-batch FrameRange on node that participates in a loop", NodeName().c_str(), OperationName().c_str());
-
-        for (size_t i = 0; i < m_inputs.size(); i++)
-        {
-            ComputationNodePtr child = Input(i);
-            if (child->m_needsGradient &&
-                (childrenInThisLoop && child->IsPartOfLoop() == IsPartOfLoop() ||
-                 childrenInOuterLoop && child->IsPartOfLoop() != IsPartOfLoop()))
-            {
-                // fprintf(stderr, "Backprop: %ls %ls operation -> child %d %ls %ls\n", NodeName().c_str(), OperationName().c_str(), (int)i, child->NodeName().c_str(), child->OperationName().c_str());
-                if (!m_needsGradient)
-                    LogicError("%ls %ls operation has m_needsGradient set to false but children require it.", NodeName().c_str(), OperationName().c_str());
-#ifdef DISPLAY_DEBUG
-                fprintf(stderr, "    [%lu]: %ls(%ls)\n", i, child->OperationName().c_str(), child->NodeName().c_str());
-#endif
-#if DUMPOUTPUT
-                fprintf(stderr, "Backprop%d_%ls\n", i, NodeName().c_str());
-#endif
-                child->LazyZeroGradient(); // set gradient to 0 if this is the first time
-
-                // If we propagate from a loop to a node that is outside the loop, we are not efficient.
-                // This case is handled by SEQTraversalFlowControlNode::Backprop().
-                // The check below is to verify that.
-                if (IsPartOfLoop() && !child->IsPartOfLoop() && !fr.IsAllFrames())
-                {
-                    LogicError("Backprop: Inefficiency: %ls %ls operation in loop propagates gradient to non-loop %ls %ls\n",
-                               NodeName().c_str(), OperationName().c_str(), child->NodeName().c_str(), child->OperationName().c_str());
-                }
-
-                // fprintf(stderr, "BackpropTo %d %d %ls %ls\n", (int)fr.timeIdxInSeq, (int)i, NodeName().c_str(), OperationName().c_str());
-                BackpropTo(i, fr); // this computes partial wrt to the child and sums the gradient value in the child
-            }
-#ifdef DISPLAY_DEBUG
-            else
-                fprintf(stderr, "    [%lu]: %s(%s) (no gradient needed so don't compute for)\n", i, child->OperationName().c_str(), child->NodeName().c_str());
-#endif
-        }
-    }
+    void Backprop(const FrameRange& fr, bool childrenInThisLoop, bool childrenInOuterLoop) override;
 
     // TODO: why of the inputs, and not the node itself?
     void /*ComputationNodeBase::*/ ZeroGradientsOfInputs() override // clears the lazy-init flags (LazyZeroGradient() actually clears the values lazily)

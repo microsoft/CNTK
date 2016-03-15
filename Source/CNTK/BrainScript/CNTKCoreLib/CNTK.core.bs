@@ -191,8 +191,8 @@ Sequences = [
 
     # Gather and Scatter
     # We go through 3 nodes each to take advantage of x
-    Gather  (cond, x) =  GatherPacked (      PackedIndex (x, Where (cond)), x)
-    Scatter (cond, y) = ScatterPacked (cond, PackedIndex (y, Where (cond)), y)
+    Gather  (cond, x) =  GatherPacked (      PackedIndex (x, Where (cond)), x) # 'cond' matches 'x'
+    Scatter (cond, y) = ScatterPacked (cond, PackedIndex (y, Where (cond)), y) # 'cond' matches the result
 
     # sequence-altering LINQ-like operators
     # These generate new data packing (MBLayouts)
@@ -214,10 +214,10 @@ Sequences = [
         selected = Loop._IsWithin (DelayFn, N, x)
         out = Gather (selected, x)
     ].out
-    Skip (N, x) = _Skip (PastValue, N, x)
+    Skip (N, x) = if N > 0 then _Skip (PastValue, N, x) else x
     _Skip (DelayFn, N, x) = [ // TODO: merge with _Take
         selected = Loop._IsWithin (DelayFn, N, x)
-        out = Gather (!selected, x)
+        out = Gather (Boolean.Not (selected), x)
     ].out
     ElementAt (n, x) = [ // not efficient, as it filters twice. Better AND the predicates. TODO: what if n is out of range? ElementAtOrDefault
         startMask = Skip (n, x)                     // ...000111...
@@ -228,10 +228,9 @@ Sequences = [
 
     #FirstOrDefault (x) = ? // can empty sequences exist or even be represented by CNTK?
 
-    #Last (x)  = _Take (FutureValue, 1, x)
-
     Average (x) = Sum (x) / Loop.Count(x)  // TODO: patch opQuotient to check 0/0 = 0
-    Sum (x) = FoldL (Plus, 0, x)
+    Sum (x)    = FoldL (Plus,    0, x)
+    LogSum (x) = FoldL (LogPlus, 0, x)
     #Max (x) = FoldL (^.Max, ?, x) // TODO: name clash; need to implement ^.
     #Min (x) = FoldL (^.Min, ?, x) // TODO: what's the init value?
     All (x) = FoldL (Boolean.And,  OnesLike (x), x)

@@ -19,6 +19,59 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 using namespace std;
 
 // -----------------------------------------------------------------------
+// subroutines for evaluation
+// -----------------------------------------------------------------------
+
+template<class ElemType>
+void ComputationNode<ElemType>::Backprop(const FrameRange& fr, bool childrenInThisLoop, bool childrenInOuterLoop) /*override*/
+{
+    // Normally our gradient matrix was created as an input of another node.
+    // This does not happen though in the special case of a node inside a loop
+    // that no consumer outside depends on. Those might get topologically sorted
+    // after nodes that propagate outside of the loop, and thus, in the last
+    // time step of the sequence, have not yet received a gradient from a parent
+    // and thus may not have had their gradient matrices allocated.
+    if (m_needsGradient)
+        LazyZeroGradient(); // set gradient to 0 if this is the first time
+
+    if (fr.IsAllFrames() && IsPartOfLoop() && childrenInThisLoop)
+        LogicError("%ls %ls operation: Backprop called with whole-batch FrameRange on node that participates in a loop", NodeName().c_str(), OperationName().c_str());
+
+    for (size_t i = 0; i < m_inputs.size(); i++)
+    {
+        ComputationNodePtr child = Input(i);
+        if (child->m_needsGradient &&
+            ((childrenInThisLoop  && child->IsPartOfLoop() == IsPartOfLoop()) ||
+             (childrenInOuterLoop && child->IsPartOfLoop() != IsPartOfLoop()) ))
+        {
+            // fprintf(stderr, "Backprop: %ls %ls operation -> child %d %ls %ls\n", NodeName().c_str(), OperationName().c_str(), (int)i, child->NodeName().c_str(), child->OperationName().c_str());
+            if (!m_needsGradient)
+                LogicError("%ls %ls operation has m_needsGradient set to false but children require it.", NodeName().c_str(), OperationName().c_str());
+#if DUMPOUTPUT
+            fprintf(stderr, "Backprop%d_%ls\n", i, NodeName().c_str());
+#endif
+            child->LazyZeroGradient(); // set gradient to 0 if this is the first time
+
+            // If we propagate from a loop to a node that is outside the loop, we are not efficient.
+            // This case is handled by SEQTraversalFlowControlNode::Backprop().
+            // The check below is to verify that.
+            if (IsPartOfLoop() && !child->IsPartOfLoop() && !fr.IsAllFrames())
+            {
+                LogicError("Backprop: Inefficiency: %ls %ls operation in loop propagates gradient to non-loop %ls %ls\n",
+                           NodeName().c_str(), OperationName().c_str(), child->NodeName().c_str(), child->OperationName().c_str());
+            }
+
+            // fprintf(stderr, "BackpropTo %d %d %ls %ls\n", (int)fr.timeIdxInSeq, (int)i, NodeName().c_str(), OperationName().c_str());
+            BackpropTo(i, fr); // this computes partial wrt to the child and sums the gradient value in the child
+        }
+#ifdef DISPLAY_DEBUG
+        else
+            fprintf(stderr, "    [%lu]: %s(%s) (no gradient needed so don't compute for)\n", i, child->OperationName().c_str(), child->NodeName().c_str());
+#endif
+    }
+}
+
+// -----------------------------------------------------------------------
 // subroutines for Validate() implementations
 // -----------------------------------------------------------------------
 
@@ -116,10 +169,14 @@ void ComputationNodeBase::ValidateBinaryReduce(bool isFinalValidationPass)
     ComputationNodeBase::Validate(isFinalValidationPass);
     m_pMBLayout = nullptr; // this node does not hold mini-batch data
     ValidateInferBinaryInputDims();
-    if (isFinalValidationPass &&
-        !(Input(0)->GetSampleLayout().IsElementwiseCompatibleWith(Input(1)->GetSampleLayout()) && // TODO: Do we need broadcasting for these cases?
-          (Input(0)->GetMBLayout() == Input(1)->GetMBLayout() || !Input(0)->HasMBLayout() || !Input(1)->HasMBLayout())))
-        LogicError("The Matrix dimensions or MB layout in the %ls %ls operation do not match.", NodeName().c_str(), OperationName().c_str());
+    if (isFinalValidationPass)
+    {
+        // inputs must have identical layouts and must be minibatch data
+        if (!(Input(0)->GetSampleLayout().IsElementwiseCompatibleWith(Input(1)->GetSampleLayout())))
+            LogicError("The Matrix dimensions in the %ls %ls operation do not match.", NodeName().c_str(), OperationName().c_str());
+        if (Input(0)->GetMBLayout() != Input(1)->GetMBLayout() || !Input(0)->HasMBLayout() || !Input(1)->HasMBLayout())
+            LogicError("The MB layout in the %ls %ls operation do not match.", NodeName().c_str(), OperationName().c_str());
+    }
     SetDims(TensorShape(1), false);
 }
 
