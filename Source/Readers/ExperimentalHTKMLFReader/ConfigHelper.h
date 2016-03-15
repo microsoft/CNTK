@@ -50,7 +50,7 @@ public:
     std::vector<std::wstring> GetMlfPaths();
 
     // Gets utterance paths from the configuration.
-    std::vector<std::wstring> GetUtterancePaths();
+    std::vector<std::wstring> GetSequencePaths();
 
     // Gets randomization window.
     size_t GetRandomizationWindow();

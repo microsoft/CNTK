@@ -20,10 +20,12 @@ std::vector<std::wstring> htkfeatreader::parsedpath::archivePathStringVector;
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
+using namespace std;
+
 HTKDataDeserializer::HTKDataDeserializer(
     CorpusDescriptorPtr corpus,
     const ConfigParameters& feature,
-    const std::wstring& featureName)
+    const wstring& featureName)
     : m_ioFeatureDimension(0),
       m_samplePeriod(0),
       m_verbosity(0),
@@ -58,13 +60,13 @@ HTKDataDeserializer::HTKDataDeserializer(
 void HTKDataDeserializer::InitializeChunkDescriptions(ConfigHelper& config)
 {
     // Read utterance descriptions.
-    std::vector<std::wstring> paths = config.GetUtterancePaths();
-    std::vector<UtteranceDescription> utterances;
+    vector<wstring> paths = config.GetSequencePaths();
+    vector<UtteranceDescription> utterances;
     utterances.reserve(paths.size());
     auto& stringRegistry = m_corpus->GetStringRegistry();
     for (const auto& u : paths)
     {
-        UtteranceDescription description(std::move(msra::asr::htkfeatreader::parsedpath(u)));
+        UtteranceDescription description(move(msra::asr::htkfeatreader::parsedpath(u)));
         size_t numberOfFrames = description.GetNumberOfFrames();
 
         // TODO: we need at least 2 frames for boundary markers to work
@@ -113,12 +115,10 @@ void HTKDataDeserializer::InitializeChunkDescriptions(ConfigHelper& config)
         }
 
         // append utterance to last chunk
-        HTKChunkDescription& currentchunk = m_chunks.back();
-        utterances[i].SetIndexInsideChunk(currentchunk.GetNumberOfUtterances());
-        utterances[i].SetChunkId(chunkId);
-        utterances[i].SetStartFrameInsideChunk(startFrameInsideChunk);
+        HTKChunkDescription& currentChunk = m_chunks.back();
+        utterances[i].AssignToChunk(chunkId, currentChunk.GetNumberOfUtterances(), startFrameInsideChunk);
         startFrameInsideChunk += utterances[i].GetNumberOfFrames();
-        currentchunk.Add(std::move(utterances[i]));
+        currentChunk.Add(move(utterances[i]));
     }
 
     // Creating a table of weak pointers to chunks,
@@ -135,12 +135,12 @@ void HTKDataDeserializer::InitializeChunkDescriptions(ConfigHelper& config)
 }
 
 // Describes exposed stream - a single stream of htk features.
-void HTKDataDeserializer::InitializeStreams(const std::wstring& featureName)
+void HTKDataDeserializer::InitializeStreams(const wstring& featureName)
 {
-    StreamDescriptionPtr stream = std::make_shared<StreamDescription>();
+    StreamDescriptionPtr stream = make_shared<StreamDescription>();
     stream->m_id = 0;
     stream->m_name = featureName;
-    stream->m_sampleLayout = std::make_shared<TensorShape>(m_dimension);
+    stream->m_sampleLayout = make_shared<TensorShape>(m_dimension);
     stream->m_elementType = m_elementType;
     stream->m_storageType = StorageType::dense;
     m_streams.push_back(stream);
@@ -167,7 +167,7 @@ ChunkDescriptions HTKDataDeserializer::GetChunkDescriptions()
 
     for (size_t i = 0; i < m_chunks.size(); ++i)
     {
-        auto cd = std::make_shared<ChunkDescription>();
+        auto cd = make_shared<ChunkDescription>();
         cd->id = i;
         cd->numberOfSamples = m_chunks[i].GetTotalFrames();
         cd->numberOfSequences = m_chunks[i].GetTotalFrames();
@@ -178,7 +178,7 @@ ChunkDescriptions HTKDataDeserializer::GetChunkDescriptions()
 
 // Gets sequences for a particular chunk.
 // This information is used by the randomizer to fill in current windows of sequences.
-void HTKDataDeserializer::GetSequencesForChunk(size_t chunkId, std::vector<SequenceDescription>& result)
+void HTKDataDeserializer::GetSequencesForChunk(size_t chunkId, vector<SequenceDescription>& result)
 {
     const HTKChunkDescription& chunk = m_chunks[chunkId];
     result.reserve(chunk.GetTotalFrames());
@@ -246,7 +246,7 @@ public:
     }
 
     // Gets data for the sequnce.
-    virtual void GetSequence(size_t sequenceId, std::vector<SequenceDataPtr>& result) override
+    virtual void GetSequence(size_t sequenceId, vector<SequenceDataPtr>& result) override
     {
         m_parent->GetSequenceById(m_chunkId, sequenceId, result);
     }
@@ -272,7 +272,7 @@ ChunkPtr HTKDataDeserializer::GetChunk(size_t chunkId)
         return m_weakChunks[chunkId].lock();
     }
 
-    auto chunk = std::make_shared<HTKChunk>(this, chunkId);
+    auto chunk = make_shared<HTKChunk>(this, chunkId);
     m_weakChunks[chunkId] = chunk;
     return chunk;
 };
@@ -297,10 +297,10 @@ struct HTKSequenceData : DenseSequenceData
     }
 };
 
-typedef std::shared_ptr<HTKSequenceData> HTKSequenceDataPtr;
+typedef shared_ptr<HTKSequenceData> HTKSequenceDataPtr;
 
 // Get a sequence by its chunk id and id.
-void HTKDataDeserializer::GetSequenceById(size_t chunkId, size_t id, std::vector<SequenceDataPtr>& r)
+void HTKDataDeserializer::GetSequenceById(size_t chunkId, size_t id, vector<SequenceDataPtr>& r)
 {
     const auto& chunkDescription = m_chunks[chunkId];
     size_t utteranceIndex = chunkDescription.GetUtteranceForChunkFrameIndex(id);
@@ -320,9 +320,9 @@ void HTKDataDeserializer::GetSequenceById(size_t chunkId, size_t id, std::vector
         leftExtent = rightExtent = msra::dbn::augmentationextent(utteranceFramesWrapper[0].size(), m_dimension);
     }
 
-    HTKSequenceDataPtr result = std::make_shared<HTKSequenceData>();
+    HTKSequenceDataPtr result = make_shared<HTKSequenceData>();
     result->m_buffer.resize(m_dimension, 1);
-    const std::vector<char> noBoundaryFlags; // TODO: dummy, currently to boundaries supported.
+    const vector<char> noBoundaryFlags; // TODO: dummy, currently to boundaries supported.
     msra::dbn::augmentneighbors(utteranceFramesWrapper, noBoundaryFlags, frameIndex, leftExtent, rightExtent, result->m_buffer, 0);
 
     result->m_numberOfSamples = 1;

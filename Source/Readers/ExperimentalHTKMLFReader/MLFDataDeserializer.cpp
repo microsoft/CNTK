@@ -86,7 +86,7 @@ MLFDataDeserializer::MLFDataDeserializer(CorpusDescriptorPtr corpus, const Confi
             continue;
         }
 
-        description.m_key.major = stringRegistry.GetIdByValue(l.first);
+        description.m_key.major = stringRegistry[l.first];
 
         const auto& utterance = l.second;
         description.m_sequenceStart = m_classIds.size();

@@ -49,6 +49,9 @@
     <ClInclude Include="BlockRandomizer.h">
       <Filter>Randomizers</Filter>
     </ClInclude>
+    <ClInclude Include="StringToIdMap.h">
+      <Filter>Utils</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="NoRandomizer.cpp">
