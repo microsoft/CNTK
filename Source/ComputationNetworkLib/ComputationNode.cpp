@@ -116,11 +116,23 @@ void ComputationNodeBase::ValidateBinaryReduce(bool isFinalValidationPass)
     ComputationNodeBase::Validate(isFinalValidationPass);
     m_pMBLayout = nullptr; // this node does not hold mini-batch data
     ValidateInferBinaryInputDims();
-    if (isFinalValidationPass &&
-        !(Input(0)->GetSampleLayout().IsElementwiseCompatibleWith(Input(1)->GetSampleLayout()) &&
-        // TODO: is this correct? Do both inputs need to have a layout? Fix error message.
-         (Input(0)->HasMBLayout() == Input(1)->HasMBLayout())))
-        LogicError("The Matrix dimensions or MB layout in the %ls %ls operation do not match.", NodeName().c_str(), OperationName().c_str());
+
+    if (isFinalValidationPass)
+    {
+        auto op = [this]() { return std::wstring(L"node " + NodeName() + L" (" + OperationName().c_str() + L" operation)"); };
+
+        if (!(Input(0)->GetSampleLayout().IsElementwiseCompatibleWith(Input(1)->GetSampleLayout())))
+        {
+            std::string s1 = Input(0)->GetSampleLayout();
+            std::string s2 = Input(0)->GetSampleLayout();
+            LogicError("The tensor dimensions in the inputs of %ls do not match. %s != %s", op().c_str(), s1.c_str(), s2.c_str());
+        }
+        else if (!(Input(0)->HasMBLayout()))
+            LogicError("Expected MBLayout in Input 0 of %ls.", op().c_str());
+        else if (!(Input(1)->HasMBLayout()))
+            LogicError("Expected MBLayout in Input 1 of %ls.", op().c_str());
+        // Shape of the MBLayouts is checked at runtime.
+    }
     SetDims(TensorShape(1), false);
 }
 
