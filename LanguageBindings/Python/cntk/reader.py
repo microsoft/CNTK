@@ -1,4 +1,5 @@
 from abc import ABCMeta, abstractmethod
+from .graph import ComputationNode
 
 
 class AbstractReader(dict, metaclass=ABCMeta):
@@ -31,8 +32,8 @@ class UCIFastReader(AbstractReader):
     :param label_mapping_file: 
         the mapping file path, it can be simply with all the possible classes, one per line
     :param custom_delimiter: the default is space and tab, you can specify other delimiters to be used        
-    :param inputs_def: is a list of tuples (input_name, input_start, input_dim)
-        input_name: the name of the input in the network definition
+    :param inputs_def: is a list of tuples (name_or_node, input_start, input_dim)
+        name_or_node: the name of the input in the network definition or the node itself
         input_start: the start column   
         input_dim: the number of columns
     """
@@ -57,16 +58,16 @@ class UCIFastReader(AbstractReader):
         self["CustomDelimiter"] = custom_delimiter
         self.inputs_def = inputs_def or []
 
-    def add_input(self, input_name, input_start, input_dim):
+    def add_input(self, name_or_node, input_start, input_dim):
         """Add an input to the reader
-        :param input_name: the name of the input in the network definition
+        :param name_or_node: either name of the input in the network definition or the node itself
         :param input_start: the start column   
         :param input_dim: the number of columns
         """
-        if (not (input_name and input_start and input_dim)):
+        if (not (name_or_node and input_start and input_dim)):
             raise ValueError("one of the parameters of add_input is None or empty string") 
-            
-        self.inputs_def.append((input_name, input_start, input_dim))
+        
+        self.inputs_def.append((name_or_node, input_start, input_dim))
         
     def generate_config(self):
         """Generate the reader configuration block
@@ -92,8 +93,12 @@ class UCIFastReader(AbstractReader):
                 labelMappingFile="%(LabelMappingFile)s" 
             ]'''
 
-        if self.inputs_def is not None:f
-            for (name, start, dim) in self.inputs_def:                
+        if self.inputs_def is not None:
+            for (name_or_node, start, dim) in self.inputs_def:                
+                if (isinstance(name_or_node, ComputationNode)):
+                    name = name_or_node.var_name
+                else:
+                    name = name_or_node
                 template += '''
             {0}=[
                 start = {1}
