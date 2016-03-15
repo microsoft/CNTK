@@ -429,6 +429,47 @@ public:
         Input(1)->ValidateInferInputDimsFrom(Input(0)->GetSampleLayout());
         Input(2)->ValidateInferInputDimsFrom(Input(0)->GetSampleLayout());
 
+
+#if 1
+        // support for legacy models when the mean and variance vectors were stored as column vectors (N,1)
+        // This code will copy the shape of Input(0) (source) to Input(1) and Input(2) (target) if:
+        //   1. The source is a 3-tensor with shape 1x1xM
+        //   2. The target is a vector (i.e., a 2-tensor with shape Nx1)
+        //   3. Both targets have the same number of elements
+        //   4. The number of elements in the target (N) is the same as the number of elements in the source (M)
+        // Note: This is somewhat ugly [Jasha Droppo].
+
+        auto dimsA = Input(0)->GetSampleLayout().GetDims();
+        auto dimsB = Input(1)->GetSampleLayout().GetDims();
+        auto dimsC = Input(2)->GetSampleLayout().GetDims();
+
+        if (
+            // Test condition 1.
+            (dimsA.size() == 3 && dimsA[0] == 1 && dimsA[1] == 1) &&
+            // Test condition 2.
+            (dimsB.size() == 2 && dimsB[1] == 1) &&
+            (dimsC.size() == 2 && dimsC[1] == 1) &&
+            // Test condition 3. and condition 4.
+            (dimsB[0] == dimsC[0] && dimsB[0] == dimsA[2])
+            )
+        {
+            // for error messages
+            string dimsBstring = string(Input(1)->GetSampleLayout());
+            string dimsCstring = string(Input(2)->GetSampleLayout());
+
+            // reshape Input(1)
+            Input(1)->SetDims(TensorShape(dimsA), false);
+            fprintf(stderr, "\n%ls %ls operation: For legacy compatibility, the sample layout of second input (%ls %ls operation) was patched to [%s] (from [%s])\n",
+                NodeName().c_str(), OperationName().c_str(), Input(1)->NodeName().c_str(), Input(1)->OperationName().c_str(), string(Input(1)->GetSampleLayout()).c_str(), dimsBstring.c_str());
+
+            // reshape Input(2)
+            Input(2)->SetDims(TensorShape(dimsA), false);
+            fprintf(stderr, "\n%ls %ls operation: For legacy compatibility, the sample layout of third input (%ls %ls operation) was patched to [%s] (from [%s])\n",
+                NodeName().c_str(), OperationName().c_str(), Input(2)->NodeName().c_str(), Input(2)->OperationName().c_str(), string(Input(2)->GetSampleLayout()).c_str(), dimsCstring.c_str());
+        }
+
+#endif
+
         if (isFinalValidationPass)
         {
             if (!Input(0)->GetSampleLayout().IsElementwiseCompatibleWith(Input(1)->GetSampleLayout()) || !Input(0)->GetSampleLayout().IsElementwiseCompatibleWith(Input(2)->GetSampleLayout()))
