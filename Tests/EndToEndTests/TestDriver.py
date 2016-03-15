@@ -594,6 +594,8 @@ def runCommand(args):
         for build_sku in args.buildSKUs:
           if args.tag and args.tag != '' and not test.matchesTag(args.tag, flavor, device, 'windows' if windows else 'linux', build_sku):
             continue
+          if build_sku=="cpu" and device=="gpu":
+            continue
           totalCount = totalCount + 1
           if len(test.testCases)==0:
             # forcing verbose mode (showing all output) for all test which are based on exit code (no pattern-based test cases)
@@ -706,6 +708,9 @@ if (args.build_sku):
     six.print_("--build-sku must be one of", args.buildSKUs, file=sys.stderr)
     sys.exit(1)
   args.buildSKUs = [args.build_sku]
+  if args.build_sku == "cpu" and args.devices == ["gpu"]:
+    print >>sys.stderr, "Invalid combination: --build-sku cpu and --device gpu"
+    sys.exit(1)
 
 if args.func == runCommand and not args.build_location:
   args.build_location = os.path.realpath(os.path.join(thisDir, "../..", "x64" if windows else "build/"))
