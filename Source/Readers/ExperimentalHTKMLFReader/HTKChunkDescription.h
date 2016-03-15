@@ -70,15 +70,11 @@ public:
     // Uses the upper bound to do the binary search among sequences of the chunk.
     size_t GetUtteranceForChunkFrameIndex(size_t frameIndex) const
     {
-        struct Comp
-        {
-            bool operator () (size_t fi, const UtteranceDescription& a)
-            {
-                return fi < a.GetStartFrameIndexInsideChunk();
-            }
-        };
-
-        auto result = std::upper_bound(m_utteranceSet.begin(), m_utteranceSet.end(), frameIndex, Comp());
+        auto result = std::upper_bound(
+            m_utteranceSet.begin(),
+            m_utteranceSet.end(), 
+            frameIndex, 
+            [](size_t fi, const UtteranceDescription& a) { return fi < a.GetStartFrameIndexInsideChunk(); });
         return result - 1 - m_utteranceSet.begin();
     }
 

@@ -19,7 +19,7 @@ class UtteranceDescription
 
     // Index of the utterance inside the chunk.
     size_t m_indexInsideChunk;
-    // Position of the first frame of the utterance inside the chunk.
+    // Position of the first sample of the utterance inside the chunk.
     size_t m_startFrameIndexInsideChunk;
     // Chunk id.
     size_t m_chunkId;
@@ -48,26 +48,19 @@ public:
         return filename.substr(0, filename.find_last_of(L"."));
     }
 
+    void AssignToChunk(size_t chunkId, size_t indexInsideChunk, size_t frameInsideChunk)
+    {
+        m_chunkId = chunkId;
+        m_indexInsideChunk = indexInsideChunk;
+        m_startFrameIndexInsideChunk = frameInsideChunk;
+    }
+
     size_t GetId() const  { return m_id; }
     void SetId(size_t id) { m_id = id; }
 
     size_t GetChunkId() const  { return m_chunkId; }
-    void SetChunkId(size_t id) { m_chunkId = id; }
-
-    size_t GetIndexInsideChunk() const
-    {
-        return m_indexInsideChunk;
-    }
-
-    void SetIndexInsideChunk(size_t indexInsideChunk)
-    {
-        m_indexInsideChunk = indexInsideChunk;
-    }
-
-    size_t GetStartFrameIndexInsideChunk() const
-    {
-        return m_startFrameIndexInsideChunk;
-    }
+    size_t GetIndexInsideChunk() const { return m_indexInsideChunk;}
+    size_t GetStartFrameIndexInsideChunk() const { return m_startFrameIndexInsideChunk; }
 
     void SetStartFrameInsideChunk(size_t startFrameIndexInsideChunk)
     {

@@ -82,6 +82,7 @@
     <ClInclude Include="DataDeserializerBase.h" />
     <ClInclude Include="BlockRandomizer.h" />
     <ClInclude Include="SequenceRandomizer.h" />
+    <ClInclude Include="StringToIdMap.h" />
     <ClInclude Include="TransformerBase.h" />
     <ClInclude Include="NoRandomizer.h" />
     <ClInclude Include="CudaMemoryProvider.h" />
