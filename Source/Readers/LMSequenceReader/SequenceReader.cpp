@@ -1506,6 +1506,7 @@ void BatchSequenceReader<ElemType>::InitFromConfig(const ConfigRecordType& reade
             }
             else
             {
+                fprintf(stderr, "LMSequenceReader: Label mapping will be created internally on the fly because the labelMappingFile was not found: %ls\n", labelPath.c_str());
                 if (wClassFile != L"")
                 {
 #if 0
@@ -1538,6 +1539,7 @@ void BatchSequenceReader<ElemType>::InitFromConfig(const ConfigRecordType& reade
                 }
                 labelInfo.mapName = labelPath;
                 labelInfo.fileToWrite = labelPath; // mapping path denotes an output: write the mapping here at the end
+                // BUGBUG: This facility is not functional. No file is being created.
             }
         }
 

@@ -298,11 +298,13 @@ void ComputationNode<ElemType>::WriteMinibatchWithFormatting(FILE* f, size_t onl
                                                              const string& sequenceSeparator, const string& sequencePrologue, const string& sequenceEpilogue, const string& elementSeparator, const string& sampleSeparator,
                                                              const string& valueFormatString) const
 {
-    // get it (into a flat CPU-side vector)
+    // get minibatch matrix -> matData, matRows, matStride
     const Matrix<ElemType>& outputValues = Value();
-    size_t tempArraySize = 0;
-    ElemType* tempArray = nullptr;
-    outputValues.CopyToArray(tempArray, tempArraySize);
+    let matRows   = outputValues.GetNumRows();
+    let matStride = matRows; // how to get from one column to the next
+    ElemType* matData = nullptr;
+    size_t matDataSize = 0;
+    outputValues.CopyToArray(matData, matDataSize);
 
     // process all sequences one by one
     auto pMBLayout = GetMBLayout();
@@ -312,19 +314,21 @@ void ComputationNode<ElemType>::WriteMinibatchWithFormatting(FILE* f, size_t onl
         pMBLayout->InitAsFrameMode(1); // treat this as if we have one single sample
         // TODO: This can be done more efficiently, if ever needed.
     }
-    const auto& sequences = pMBLayout->GetAllSequences();
-    size_t colStride = pMBLayout->GetNumParallelSequences() * outputValues.GetNumRows(); // how to get from one column to the next
-    size_t width = pMBLayout->GetNumTimeSteps();
+    let& sequences = pMBLayout->GetAllSequences();
+    let  width     = pMBLayout->GetNumTimeSteps();
     for (size_t s = 0; s < sequences.size(); s++)
     {
         const auto& seqInfo = sequences[s];
         if (seqInfo.seqId == GAP_SEQUENCE_ID) // nothing in gaps to print
             continue;
-        size_t tBegin = seqInfo.tBegin >= 0 ? seqInfo.tBegin : 0;
-        size_t tEnd = seqInfo.tEnd <= width ? seqInfo.tEnd : width;
+        let tBegin = seqInfo.tBegin >= 0     ? seqInfo.tBegin : 0;
+        let tEnd   = seqInfo.tEnd   <= width ? seqInfo.tEnd   : width;
 
-        // current sequence is a matrix with 'colStride' beginning at the following pointer
-        ElemType* pCurValue = tempArray + s * outputValues.GetNumRows() + seqInfo.tBegin;
+        // get sequence matrix -> seqData, seqRows, seqCols, seqStride
+        let  seqData   = matData + pMBLayout->GetColumnIndex(seqInfo, 0) * matStride;
+        auto seqRows   = matRows;
+        let  seqCols   = tEnd - tBegin;
+        let  seqStride = pMBLayout->GetNumParallelSequences() * matStride;
 
         if (s > 0)
             fprintfOrDie(f, "%s", sequenceSeparator.c_str());
@@ -332,40 +336,39 @@ void ComputationNode<ElemType>::WriteMinibatchWithFormatting(FILE* f, size_t onl
 
         // output it according to our format specification
         let formatChar = valueFormatString.back();
-        size_t dim = outputValues.GetNumRows();
-        size_t T = tEnd - tBegin;
-        if (isCategoryLabel)
+        if (isCategoryLabel) // if is category then find the max value and output its index (possibly mapped to a string)
         {
             if (formatChar == 's') // verify label dimension
             {
                 if (outputValues.GetNumRows() != labelMapping.size())
-                    InvalidArgument("write: Row dimension %d does not match number of entries %d in labelMappingFile", (int)dim, (int)labelMapping.size());
+                    InvalidArgument("write: Row dimension %d does not match number of entries %d in labelMappingFile", (int)seqRows, (int)labelMapping.size());
             }
             // update the matrix in-place from one-hot (or max) to index
             // find the max in each column
-            for (size_t j = 0; j < T; j++)
+            for (size_t j = 0; j < seqCols; j++) // loop over all time steps of the sequence
             {
-                double maxPos = -1;
+                double maxLoc = -1;
                 double maxVal = 0;
-                for (size_t i = 0; i < dim; i++)
+                for (size_t i = 0; i < seqRows; i++) // loop over rows
                 {
-                    double val = pCurValue[i + j * dim * colStride];
-                    if (maxPos < 0 || val >= maxVal)
+                    let val = seqData[i + j * seqStride];
+                    if (maxLoc < 0 || val >= maxVal)
                     {
-                        maxPos = (double)i;
+                        maxLoc = (double)i;
                         maxVal = val;
                     }
                 }
-                pCurValue[0 + j * colStride] = (ElemType)maxPos; // overwrite first element in-place
+                seqData[0 + j * seqStride] = (ElemType)maxLoc; // overwrite first element in-place
             }
-            dim = 1; // ignore remaining dimensions
+            seqRows = 1; // ignore remaining dimensions
         }
-        let iend    = transpose ?         dim : T;         // true dimension of the data to print
-        let jend    = transpose ?           T : dim;
+        // bounds for printing
+        let iend    = transpose ?     seqRows : seqCols;         // true dimension of the data to print
+        let jend    = transpose ?     seqCols : seqRows;
         let istop   = transpose ? onlyUpToRow : onlyUpToT; // we stop at these dimensions (for debugging, one often needs only the first few values of those huge matrices)
         let jstop   = transpose ?   onlyUpToT : onlyUpToRow;
-        let istride = transpose ?           1 : colStride;
-        let jstride = transpose ?   colStride : 1;
+        let istride = transpose ?           1 : seqStride;
+        let jstride = transpose ?   seqStride : 1;
         for (size_t j = 0; j < jend; j++)
         {
             if (j > 0)
@@ -384,19 +387,18 @@ void ComputationNode<ElemType>::WriteMinibatchWithFormatting(FILE* f, size_t onl
                     fprintf(f, "...+%d", (int)(iend - istop));
                     break;
                 }
-                else if (formatChar == 'f') // print as real number
+                double dval = seqData[i * istride + j * jstride];
+                if (formatChar == 'f') // print as real number
                 {
-                    double dval = pCurValue[i * istride + j * jstride];
                     fprintfOrDie(f, valueFormatString.c_str(), dval);
                 }
                 else if (formatChar == 'u') // print category as integer index
                 {
-                    unsigned int uval = (unsigned int)pCurValue[i * istride + j * jstride];
-                    fprintfOrDie(f, valueFormatString.c_str(), uval);
+                    fprintfOrDie(f, valueFormatString.c_str(), (unsigned int)dval);
                 }
                 else if (formatChar == 's') // print category as a label string
                 {
-                    size_t uval = (size_t)pCurValue[i * istride + j * jstride];
+                    size_t uval = (size_t)dval;
                     assert(uval < labelMapping.size());
                     const char * sval = labelMapping[uval].c_str();
                     fprintfOrDie(f, valueFormatString.c_str(), sval);
@@ -406,7 +408,7 @@ void ComputationNode<ElemType>::WriteMinibatchWithFormatting(FILE* f, size_t onl
         fprintfOrDie(f, "%s", sequenceEpilogue.c_str());
     } // end loop over sequences
 
-    delete[] tempArray;
+    delete[] matData;
 }
 
 // -----------------------------------------------------------------------
