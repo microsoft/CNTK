@@ -124,7 +124,6 @@ class AbstractContext(object, metaclass=ABCMeta):
         Generates the configuration file for the train action.
         '''
         tmpl = open(CNTK_TRAIN_TEMPLATE_PATH, "r").read()
-        reader_config = reader.generate_config()
         model_filename = os.path.join(self.directory, 'Models', self.name)
         tmpl_dict = {
             'DevideId': self.device_id,
@@ -288,7 +287,7 @@ class Context(AbstractContext):
         Run the train action locally.
         :param input_map: mapping of input node to (reader, (start_dim, num_dim))
         '''
-        config_content = self._generate_train_config(reader)
+        config_content = self._generate_train_config(input_map)
         self._call_cntk(CNTK_TRAIN_CONFIG_FILENAME, config_content)
 
     def test(self, reader):
