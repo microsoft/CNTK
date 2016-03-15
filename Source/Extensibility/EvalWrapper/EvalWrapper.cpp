@@ -109,6 +109,28 @@ public:
         }
     }
 
+    /// <summary>Creates a network based from the network description in the configuration</summary>
+    /// <param name="networkDescription">The configuration file containing the network description</param>
+    void CreateNetwork(String^ networkDescription)
+    {
+        if (m_eval == nullptr)
+        {
+            throw gcnew ObjectDisposedException("Object has been disposed.");
+        }
+
+        msclr::interop::marshal_context context;
+        const std::string stdNetworkDescription = context.marshal_as<std::string>(networkDescription);
+
+        try
+        {
+            m_eval->CreateNetwork(stdNetworkDescription);
+        }
+        catch (const exception& ex)
+        {
+            throw GetCustomException(ex);
+        }
+    }
+
     /// <summary>Evaluates the model against input data and retrieves the output layer data</summary>
     /// <param name="inputs"></param>
     /// <param name="outputs"></param>
@@ -355,12 +377,14 @@ void emit()
     f.Evaluate(nullptr, nullptr);
     f.Evaluate(nullptr, "", 0);
     f.LoadModel("");
+    f.CreateNetwork("");
 
     IEvaluateModelManagedD d;
     d.Init("");
     d.Evaluate(nullptr, nullptr);
     d.Evaluate(nullptr, "", 0);
     d.LoadModel("");
+    d.CreateNetwork("");
 }
 
 }}}}}

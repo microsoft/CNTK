@@ -40,6 +40,10 @@ public:
     // modelFileName - file holding the model to load
     virtual void LoadModel(const std::wstring& modelFileName);
 
+    // CreateNetwork - create a network based on the network description
+    // networkDescription - network description
+    virtual void CreateNetwork(const std::string& networkDescription);
+
     // GetNodeDimensions - Get the node dimensions of the specified nodes
     // dimensions - map from name of node to dimension of the node
     // nodeGroup - type of node we are requesting (input/output/specified)

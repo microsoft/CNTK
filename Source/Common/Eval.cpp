@@ -103,6 +103,14 @@ void Eval<ElemType>::LoadModel(const std::wstring& modelFileName)
     m_eval->LoadModel(modelFileName);
 }
 
+// CreateNetwork - create the network from the specified description
+// networkDescription - network description
+template <class ElemType>
+void Eval<ElemType>::CreateNetwork(const std::string& networkDescription)
+{
+    m_eval->CreateNetwork(networkDescription);
+}
+
 // GetNodeDimensions - Get the node dimensions of the specified nodes
 // dimensions - map from name of node to dimension of the node
 // nodeGroup - type of node we are requesting (input/output/specified)

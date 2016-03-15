@@ -48,13 +48,13 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="$(DebugBuild)">
     <LinkIncremental>true</LinkIncremental>
-    <IncludePath>..\SGDLib;..\ComputationNetworkLib;..\SequenceTrainingLib;..\Math;..\Common\Include;..\CNTK\BrainScript;$(MSMPI_INC);$(VCInstallDir)include;$(WindowsSDK_IncludePath)</IncludePath>
+    <IncludePath>..\SGDLib;..\ComputationNetworkLib;..\SequenceTrainingLib;..\Math;..\Common\Include;..\CNTK\BrainScript;..\ActionsLib;$(MSMPI_INC);$(VCInstallDir)include;$(WindowsSDK_IncludePath)</IncludePath>
     <LibraryPath>..\ComputationNetworkLib;..\Math;$(MSMPI_LIB64);$(VCInstallDir)lib\amd64;$(WindowsSDK_LibraryPath_x64);$(Platform);$(SolutionDir)$(Platform)\$(Configuration)\</LibraryPath>
     <TargetName>EvalDll</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="$(ReleaseBuild)">
     <LinkIncremental>false</LinkIncremental>
-    <IncludePath>..\SGDLib;..\ComputationNetworkLib;..\SequenceTrainingLib;..\Math;..\Common\Include;..\CNTK\BrainScript;$(MSMPI_INC);$(CUDA_PATH)\include;$(VCInstallDir)include;$(WindowsSDK_IncludePath)</IncludePath>
+    <IncludePath>..\SGDLib;..\ComputationNetworkLib;..\SequenceTrainingLib;..\Math;..\Common\Include;..\CNTK\BrainScript;..\ActionsLib;$(MSMPI_INC);$(CUDA_PATH)\include;$(VCInstallDir)include;$(WindowsSDK_IncludePath)</IncludePath>
     <LibraryPath>..\ComputationNetworkLib;..\Math;$(MSMPI_LIB64);$(CUDA_PATH)\lib\$(Platform);$(VCInstallDir)lib\amd64;$(WindowsSDK_LibraryPath_x64);$(Platform);$(SolutionDir)$(Platform)\$(Configuration)\</LibraryPath>
     <TargetName>EvalDll</TargetName>
   </PropertyGroup>
@@ -76,7 +76,7 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>ComputationNetworkLib.lib; Math.lib; kernel32.lib; user32.lib; shell32.lib; SequenceTrainingLib.lib; %(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>ComputationNetworkLib.lib; Math.lib; ActionsLib.lib; kernel32.lib; user32.lib; shell32.lib; SequenceTrainingLib.lib; %(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>"c:\Program Files\NVIDIA Corporation\GDK\gdk_win7_amd64_release\nvml\lib"</AdditionalLibraryDirectories>
       <DelayLoadDLLs>Math.dll; nvml.dll; cudart64_70.dll</DelayLoadDLLs>
     </Link>
@@ -102,7 +102,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalDependencies>ComputationNetworkLib.lib; Math.lib; kernel32.lib; user32.lib; shell32.lib; SequenceTrainingLib.lib; %(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>ComputationNetworkLib.lib; Math.lib; ActionsLib.lib; kernel32.lib; user32.lib; shell32.lib; SequenceTrainingLib.lib; %(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>"c:\Program Files\NVIDIA Corporation\GDK\gdk_win7_amd64_release\nvml\lib"</AdditionalLibraryDirectories>
       <Profile>true</Profile>
       <DelayLoadDLLs>Math.dll; nvml.dll; cudart64_70.dll</DelayLoadDLLs>

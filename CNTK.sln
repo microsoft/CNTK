@@ -543,6 +543,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Simple2d", "Simple2d", "{D2
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "NdlExamples", "NdlExamples", "{FC573A62-6DAE-40A4-8153-520C8571A007}"
 	ProjectSection(SolutionItems) = preProject
+		Examples\Other\NdlExamples\AddOperator.ndl = Examples\Other\NdlExamples\AddOperator.ndl
 		Examples\Other\NdlExamples\NDLExamples.ndl = Examples\Other\NdlExamples\NDLExamples.ndl
 	EndProjectSection
 EndProject

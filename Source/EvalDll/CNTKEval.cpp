@@ -11,6 +11,7 @@
 #include "CNTKEval.h"
 #include "CPUMatrix.h" // for SetNumThreads()
 #include "SimpleOutputWriter.h"
+#include "NDLNetworkBuilder.h"
 #ifdef LEAKDETECT
 #include <vld.h> // leak detection
 #endif
@@ -75,6 +76,21 @@ void CNTKEval<ElemType>::LoadModel(const std::wstring& modelFileName)
     DEVICEID_TYPE deviceId = DeviceFromConfig(m_config);
     fprintf(stderr, "DeviceID=%d\n", (int) deviceId);
     m_net = ComputationNetwork::CreateFromFile<ElemType>(deviceId, modelFileName);
+}
+
+// CreateNetwork - create a network based on the network description
+// networkDescription - network description
+template <class ElemType>
+void CNTKEval<ElemType>::CreateNetwork(const std::string& networkDescription)
+{
+    ConfigParameters config;
+    config.Parse(networkDescription);
+    auto netBuilder = make_shared<NDLBuilder<ElemType>>(config);
+    m_net = netBuilder->BuildNetworkFromDescription();
+    if (m_net == nullptr)
+    {
+        // TODO: Throw appropriate exception
+    }
 }
 
 // GetNodeDimensions - Get the node dimensions of the specified nodes
