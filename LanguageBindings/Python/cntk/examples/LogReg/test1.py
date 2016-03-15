@@ -5,7 +5,7 @@ from cntk import *
 
 if (__name__ == "__main__"):
     x = Input(2)
-    y = Input(3, tag='label')
+    y = Input(3)
     w = LearnableParameter(3, 2)
     b = LearnableParameter(3, 1)
     t = Times(w, x)
@@ -16,7 +16,16 @@ if (__name__ == "__main__"):
 
     reader = UCIFastReader(
         "Train-3Classes.txt", "2", "0", "1", "2", "3", "SimpleMapping-3Classes.txt")
+    #reader.add_input(x, 0, 2)
+    #reader.add_input(y, 2, 1)
+
     my_sgd = SGD(
         epoch_size=0, minibatch_size=25, learning_ratesPerMB=0.1, max_epochs=3)
-    with Context('demo', optimizer=my_sgd, root_node=ec, clean_up=False) as ctx:
-        ctx.train({ec: (reader, (0, 2))})
+
+    with Context('demo', optimizer=my_sgd, root_node= ec, clean_up=False) as ctx:
+        input_map = {x: (reader, (0, 2)), y: (reader, (2, 1))}
+        ctx.train(input_map)
+
+        #import ipdb;ipdb.set_trace()
+        result = ctx.eval(out, input_map)
+        print(result)

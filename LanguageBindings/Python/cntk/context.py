@@ -125,9 +125,10 @@ class AbstractContext(object, metaclass=ABCMeta):
         '''
         tmpl = open(CNTK_TRAIN_TEMPLATE_PATH, "r").read()
         model_filename = os.path.join(self.directory, 'Models', self.name)
+        description, has_inputs = self.to_description()
         tmpl_dict = {
             'DevideId': self.device_id,
-            'ModelDescription': self.to_description(),
+            'ModelDescription': description,
             'ModelPath': model_filename,
             'Reader': self._generate_reader_config(input_map),
             'SGD': self.optimizer.generate_config(),
@@ -201,9 +202,9 @@ class AbstractContext(object, metaclass=ABCMeta):
         self._check_input_is_assigned(input_map)
 
         # TODO factor out reader config output so that train/test can use it
-        model_description = root_node.to_description()
+        model_description, has_input = root_node.to_description()
 
-        if not self.input_nodes:
+        if not has_input:
             # add dummy input to keep CNTK happy
             # TODO relieve this requirement
 
@@ -212,7 +213,7 @@ class AbstractContext(object, metaclass=ABCMeta):
             from .reader import NumPyReader
             reader = NumPyReader(data, fn)
             from .ops import Input
-            dummy_input_node = Input(2, ctx=self)
+            dummy_input_node = Input(2)
             dummy_input_node.var_name = 'dummy_node'
             input_map = {dummy_input_node: (reader, (0, 2))}
             model_description += "\ndummy_node=Input(2, tag='output')"
