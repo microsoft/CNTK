@@ -1,4 +1,3 @@
-
 class ComputationNode(object):
     '''
     Base class for all nodes and operators. Provides a NumPy-like interface
@@ -6,6 +5,10 @@ class ComputationNode(object):
     '''
 
     def __init__(self, name, params=None, var_name=None):
+        if not isinstance(name, str):
+            raise ValueError("Parameter 'name' has to be a string and not '%s'"%type(name))
+        if var_name is not None and not isinstance(var_name, str):
+            raise ValueError("Parameter 'var_name' has to be a string and not '%s'"%type(var_name))
         self.name = name
         self.params = params
         self.var_name = var_name
@@ -100,7 +103,7 @@ class ComputationNode(object):
                 p_value = ":".join(v for v in p_value)
             else:
                 raise ValueError('Sequence initialization is only allowed for' +
-                                 ' parameter "dims" and not "%s"' % p_name)
+                                 ' parameters dims and not "%s"' % p_name)
         else:
             p_value = str(p_value)
 
@@ -116,16 +119,26 @@ class ComputationNode(object):
         if self.params:
             for p_name in self.params:
                 p_value = self.__dict__[p_name]
-                if hasattr(p_value, '_to_description') and p_name:
-                    if p_value in unrolled_nodes:
-                        # we have seen this node already, so just retrieve its
-                        # name
-                        child_var = unrolled_nodes[p_value]
+                if hasattr(p_value, '_to_description') and p_name or \
+                        p_name == 'inputs':
+                        # TODO this is under the assumption that RowStack's
+                        # inputs parameter gets a tuple of inputs
+
+                    if p_name == 'inputs':
+                        inputs = p_value
                     else:
-                        child_var, node_counter, child_desc = p_value._to_description_unroll(
-                            desc, unrolled_nodes, inputs, node_counter)
-                        unrolled_nodes[p_value] = child_var
-                    param_variable_names.append(child_var)
+                        inputs = [p_value]
+
+                    for p_value in inputs:
+                        if p_value in unrolled_nodes:
+                            # we have seen this node already, so just retrieve its
+                            # name
+                            child_var = unrolled_nodes[p_value]
+                        else:
+                            child_var, node_counter, child_desc = p_value._to_description_unroll(
+                                desc, unrolled_nodes, inputs, node_counter)
+                            unrolled_nodes[p_value] = child_var
+                        param_variable_names.append(child_var)
                 else:
                     param_variable_names.append(
                         self._param_to_brainscript(p_name, p_value))
