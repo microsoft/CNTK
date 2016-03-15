@@ -211,6 +211,11 @@ void BlockRandomizer::RetrieveDataChunks()
     }
 
     m_lastSeenChunkId = window.back().m_chunkId;
+
+    // in the loop we are building a new map of currently loaded chunks:
+    // we are iterating thru all chunks in the window and if they are not in m_chunks map - 
+    // they get requested from the deserializer.
+    // There could be some chunks in the m_chunks that are not required anymore, by swapping the chunks with m_chunks, we are removing those.
     std::map<size_t, ChunkPtr> chunks;
     for (auto const& chunk : window)
     {
@@ -230,6 +235,7 @@ void BlockRandomizer::RetrieveDataChunks()
         }
     }
 
+    // Swapping current chunks in the m_chunks, by that removing all stale and remembering newly loaded.
     m_chunks.swap(chunks);
 }
 
