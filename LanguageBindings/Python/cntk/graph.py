@@ -1,9 +1,11 @@
 from .context import get_context
 
-# TODO: add tags to all Nodes' contstructors
-
 
 class ComputationNode(object):
+    '''
+    Base class for all nodes and operators. Provides a NumPy-like interface
+    with operators that are converted to CNTK operators.
+    '''
 
     def __init__(self, name, params=None, ctx=None):
         self.name = name
@@ -91,9 +93,6 @@ class ComputationNode(object):
     def _get_cntk_param_string(self, param_variable_names=None):
         return ", ".join(param_variable_names)
 
-    def eval(self, input_map, **kw):
-        self.context.eval(self, input_map, kw)
-
     def __str__(self):
         return "%s / params=%s" % (self.name, self.params)
 
@@ -159,6 +158,10 @@ class ComputationNode(object):
         return var_name, node_counter, desc
 
     def to_description(self):
+        '''
+        Generate CNTK configuration for this node including the configuration
+        for all dependent child nodes.
+        '''
         var_name, node_counter, desc = self._to_description()
 
         return "\n".join(desc)
