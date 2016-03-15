@@ -1405,10 +1405,10 @@ void HTKMLFReader<ElemType>::CopyMinibatchFromBufferToMatrix(
             {
                 if (m_getMinibatchCopy)
                 {
-                    if (data.GetNumCols() != m_currentMBSize * m_numberOfuttsPerMinibatch)
+                    assert(m_currentMBSize * m_numberOfuttsPerMinibatch == m_pMBLayout->GetNumCols());
+                    if (data.GetNumCols() != m_pMBLayout->GetNumCols())
                     {
-                        matrices.GetInputMatrix<ElemType>(iter->first).Resize(data.GetNumRows(),
-                                                                    m_currentMBSize * m_numberOfuttsPerMinibatch);
+                        data.Resize(data.GetNumRows(), m_pMBLayout->GetNumCols());
                     }
                     matrices.GetInputMatrix<ElemType>(iter->first).SetValue(0);
                 }
@@ -1423,15 +1423,17 @@ void HTKMLFReader<ElemType>::CopyMinibatchFromBufferToMatrix(
             {
                 if (m_getMinibatchCopy)
                 {
-                    if (data.GetNumCols() != 1)
+                    assert(m_currentMBSize * m_numberOfuttsPerMinibatch == m_pMBLayout->GetNumCols());
+                    if (data.GetNumCols() != m_pMBLayout->GetNumCols())
                     {
-                        data.Resize(1, 1);
+                        data.Resize(1, m_pMBLayout->GetNumCols());
                     }
                     data.SetValue(0);
                 }
                 else
                 {
                     m_uttDerivBuffer->GetObjective(m_minibatchUttInfo,
+                                                   m_pMBLayout,
                                                    &matrices.GetInputMatrix<ElemType>(iter->first)); // TODO: use a reference instead of a ptr
                 }
             }
@@ -1473,18 +1475,19 @@ void HTKMLFReader<ElemType>::CopyMinibatchToMatrix(
         {
             if (m_nameToTypeMap.at(iter->first) == InputOutputTypes::readerDeriv)
             {
-                if (data.GetNumCols() != m_currentMBSize * m_numberOfuttsPerMinibatch)
+                assert(m_currentMBSize * m_numberOfuttsPerMinibatch == m_pMBLayout->GetNumCols());
+                if (data.GetNumCols() != m_pMBLayout->GetNumCols())
                 {
-                    data.Resize(data.GetNumRows(),
-                                m_currentMBSize * m_numberOfuttsPerMinibatch);
+                    data.Resize(data.GetNumRows(), m_pMBLayout->GetNumCols());
                 }
                 data.SetValue(0);
             }
             else if (m_nameToTypeMap.at(iter->first) == InputOutputTypes::readerObj)
             {
-                if (data.GetNumCols() != 1)
+                assert(m_currentMBSize * m_numberOfuttsPerMinibatch == m_pMBLayout->GetNumCols());
+                if (data.GetNumCols() != m_pMBLayout->GetNumCols())
                 {
-                    data.Resize(1, 1);
+                    data.Resize(1, m_pMBLayout->GetNumCols());
                 }
                 data.SetValue(0);
             }
@@ -1589,8 +1592,7 @@ bool HTKMLFReader<ElemType>::GetMinibatchToWrite(StreamMinibatchInputs& matrices
 
         // populate input matrices
         bool first = true;
-        typename StreamMinibatchInputs::iterator iter;
-        for (iter = matrices.begin(); iter != matrices.end(); iter++)
+        for (auto iter = matrices.begin(); iter != matrices.end(); iter++)
         {
             // dereference matrix that corresponds to key (input/output name) and
             // populate based on whether its a feature or a label
@@ -1907,7 +1909,7 @@ bool HTKMLFReader<ElemType>::SetNetOutput(
     const MatrixBase& outputsb,
     const MBLayoutPtr pMBLayout)
 {
-    const auto& outputs = dymamic_cast<Matrix<ElemType>>(outputsb); // TODO: a NULL check, to be sure
+    const auto& outputs = dynamic_cast<const Matrix<ElemType>&>(outputsb); // TODO: a NULL check, to be sure
     // Set the likelihoods for the utterance with which we can comput the
     // derivatives. Note that the minibatch may only contain partial output
     // for the utterance, <m_uttDerivBuffer> takes care of "gluing" them
