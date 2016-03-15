@@ -24,7 +24,7 @@ class UCIFastReader(AbstractReader):
 
     """This is the reader class
     :param filename: data file path
-    :param label_node_name: the name of the labels node in the network
+    :param labels_node_name: the name of the labels node in the network
     :param labels_dim: number of label columns
     :param labels_start: the index of the first label column
     :param num_of_classes: the number of classes
@@ -38,7 +38,7 @@ class UCIFastReader(AbstractReader):
     """
 
     def __init__(self, filename,
-                 label_node_name="labels",
+                 labels_node_name="labels",
                  labels_dim=None,
                  labels_start=None,
                  num_of_classes=None,                 
@@ -49,6 +49,7 @@ class UCIFastReader(AbstractReader):
         """
         self["ReaderType"] = self.__class__.__name__
         self["FileName"] = filename
+        self["LabelsNodeName"] = labels_node_name
         self["LabelsDim"] = labels_dim
         self["LabelsStart"] = labels_start            
         self["NumOfClasses"] = num_of_classes
@@ -84,7 +85,7 @@ class UCIFastReader(AbstractReader):
                
         if self['LabelsStart'] is not None:
             template += '''
-            labels=[
+            %(LabelsNodeName)s=[
                 start = "%(LabelsStart)s"
                 dim = "%(LabelsDim)s"
                 labelDim="%(NumOfClasses)s"        			

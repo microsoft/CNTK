@@ -129,7 +129,7 @@ class AbstractContext(object, metaclass=ABCMeta):
             'DevideId': self.device_id,
             'ModelDescription': self.to_description(),
             'ModelPath': model_filename,
-            'Reader': reader_config,
+            'Reader': reader.generate_config(),
             'SGD': self.optimizer.generate_config(),
         }
         return tmpl % tmpl_dict
@@ -287,7 +287,7 @@ class Context(AbstractContext):
         Run the train action locally.
         :param input_map: mapping of input node to (reader, (start_dim, num_dim))
         '''
-        config_content = self._generate_train_config(input_map)
+        config_content = self._generate_train_config(reader)
         self._call_cntk(CNTK_TRAIN_CONFIG_FILENAME, config_content)
 
     def test(self, reader):
