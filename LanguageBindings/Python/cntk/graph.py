@@ -1,5 +1,3 @@
-from .context import get_context
-
 
 class ComputationNode(object):
     '''
@@ -7,15 +5,10 @@ class ComputationNode(object):
     with operators that are converted to CNTK operators.
     '''
 
-    def __init__(self, name, params=None, ctx=None):
+    def __init__(self, name, params=None, var_name=None):
         self.name = name
         self.params = params
-        self.var_name = None
-        # context is used to get the graph, readers, etc.
-        self.context = ctx or get_context()
-
-        if self._is_input():
-            self.context.add_input(self)
+        self.var_name = var_name
 
     def _is_input(self):
         return isinstance(self, Input)
@@ -118,7 +111,7 @@ class ComputationNode(object):
 
         return param
 
-    def _to_description_unroll(self, desc, unrolled_nodes, node_counter=0):
+    def _to_description_unroll(self, desc, unrolled_nodes, inputs, node_counter=0):
         param_variable_names = []
         if self.params:
             for p_name in self.params:
@@ -130,12 +123,15 @@ class ComputationNode(object):
                         child_var = unrolled_nodes[p_value]
                     else:
                         child_var, node_counter, child_desc = p_value._to_description_unroll(
-                            desc, unrolled_nodes, node_counter)
+                            desc, unrolled_nodes, inputs, node_counter)
                         unrolled_nodes[p_value] = child_var
                     param_variable_names.append(child_var)
                 else:
                     param_variable_names.append(
                         self._param_to_brainscript(p_name, p_value))
+
+        if self._is_input():
+            inputs.add(self)
 
         if hasattr(self, 'tag') and 'tag' not in self.params:
             param_variable_names.append("tag='%s'" % self.tag)
@@ -152,19 +148,20 @@ class ComputationNode(object):
 
     def _to_description(self):
         unrolled_nodes = {}
+        inputs=set()
         var_name, node_counter, desc = self._to_description_unroll(
-            desc=[], unrolled_nodes=unrolled_nodes)
+            desc=[], unrolled_nodes=unrolled_nodes, inputs=inputs)
 
-        return var_name, node_counter, desc
+        return var_name, node_counter, desc, len(inputs)>0
 
     def to_description(self):
         '''
         Generate CNTK configuration for this node including the configuration
         for all dependent child nodes.
         '''
-        var_name, node_counter, desc = self._to_description()
+        var_name, node_counter, desc, has_inputs = self._to_description()
 
-        return "\n".join(desc)
+        return "\n".join(desc), has_inputs
 
 # importing at the end of the file to work around circular imports
 from cntk.ops import *

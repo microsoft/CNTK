@@ -52,11 +52,13 @@ def test_overload_exception():
      "v0 = Constant(0, rows=1, cols=1)\nv1 = Constant(1, rows=1, cols=1)\nv2 = Plus(v0, v1)"),
 ])
 def test_description(root_node, expected):
-    assert root_node.to_description() == expected
+    description, has_inputs = root_node.to_description() 
+    assert description == expected
 
 
 def test_graph_with_same_node_twice():
     v0 = C(1)
     root_node = Plus(v0, v0)
     expected = 'v0 = Constant(1, rows=1, cols=1)\nv1 = Plus(v0, v0)'
-    assert root_node.to_description() == expected
+    description, has_inputs = root_node.to_description() 
+    assert description == expected

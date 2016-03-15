@@ -57,8 +57,8 @@ SMOOTH_NAMING = {
 class CompNodeOperator(object):
     COMP_NODE_TEMPLATE = """\
 class %(name)s(ComputationNode):
-    def __init__(self, %(signature)s, name='%(name)s', ctx=None):
-        super(%(name)s, self).__init__(params=[%(paramlist)s], name=name, ctx=ctx)
+    def __init__(self, %(signature)s, name='%(name)s', var_name=None):
+        super(%(name)s, self).__init__(params=[%(paramlist)s], name=name, var_name=var_name)
 %(initialization)s
         self.params_with_defaults = [%(params_with_defaults)s]
 """
@@ -133,8 +133,8 @@ class AliasOperator(object):
 class InstantiationOperator(CompNodeOperator):
     INST_NODE_TEMPLATE = """\
 class %(name)s(%(inst_operator)s):
-    def __init__(self, %(signature)s, name='%(name)s', ctx=None):
-        super(%(name)s, self).__init__(%(inst_operands)s, name=name, ctx=ctx)
+    def __init__(self, %(signature)s, name='%(name)s', var_name=None):
+        super(%(name)s, self).__init__(%(inst_operands)s, name=name, var_name=var_name)
         self.params=[%(paramlist)s]
         self.params_with_defaults = [%(params_with_defaults)s]
 """

@@ -13,7 +13,8 @@ def test_NumPyReader(tmpdir):
     fn = str(tmpdir / 'test.txt')
     reader = NumPyReader(data, fn)
 
+    node = Input(2)
+
     with Context('test', clean_up=False) as ctx:
-        node = Input(2, ctx=ctx)
         result = ctx.eval(node, {node: (reader, (0, 2))})
         assert np.all(result == data)
