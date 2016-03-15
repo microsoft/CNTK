@@ -13,9 +13,7 @@ Eval=[
 	]
 	
 	reader = [
-        %(NodeDimensions)s
-
-		%(Reader)s
+%(Reader)s
 	]	
 	
 	outputPath = "%(OutputFile)s"
