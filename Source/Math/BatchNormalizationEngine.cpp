@@ -36,6 +36,12 @@ void BatchNormEngine<ElemType>::Forward(const Mat& in, const Mat& scale, const M
         assert((m_inOutT.GetNumElements() % saveMean.GetNumRows()) == 0);
         assert((m_inOutT.GetNumElements() % saveInvStdDev.GetNumRows()) == 0);
     }
+    assert(scale.GetNumCols() == 1);
+    assert(bias.GetNumCols() == 1);
+    assert(runMean.GetNumCols() == 1);
+    assert(runInvStdDev.GetNumCols() == 1);
+    assert(saveMean.GetNumCols() == 1);
+    assert(saveInvStdDev.GetNumCols() == 1);
 
     EnsureCompatible();
     ForwardCore(in, scale, bias, expAvgFactor, runMean, runInvStdDev, out, epsilon, saveMean, saveInvStdDev);
