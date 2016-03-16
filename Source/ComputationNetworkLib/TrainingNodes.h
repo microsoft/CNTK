@@ -1707,7 +1707,7 @@ public:
         sliceInputValue.HasNan("BatchNormalization-input");
 #endif
         if (m_eval)
-            m_bnEng->NormalizeBatchInference(sliceInputValue, scale, bias, runMean, runInvStdDev, sliceOutputValue);
+            m_bnEng->ForwardInference(sliceInputValue, scale, bias, runMean, runInvStdDev, sliceOutputValue);
         else
         {
             double expAvgFactor;

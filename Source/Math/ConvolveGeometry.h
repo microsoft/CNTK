@@ -482,7 +482,10 @@ public:
         size_t mapCountTotal = mapCount.GetNumElements();
         size_t sizeOut = dimsOut.GetNumElements();
         assert((sizeOut % mapCountTotal) == 0);
-
+#ifdef NDEBUG
+        UNUSED(mapCountTotal);
+        UNUSED(sizeOut);
+#endif
         return dimsOut;
     }
 

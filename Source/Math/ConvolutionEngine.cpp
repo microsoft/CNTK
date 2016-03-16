@@ -364,11 +364,16 @@ public:
 public:
     LegacyConvolutionEngine(ConvolveGeometryPtr geometry, DEVICEID_TYPE deviceId, ImageLayoutKind imageLayout, size_t maxTempMemSizeInSamples, PoolKind poolKind)
         : Base(geometry, deviceId, imageLayout, maxTempMemSizeInSamples, poolKind), 
-        m_inT(m_geometry->InputShape(), imageLayout), m_outT(m_geometry->OutputShape(), imageLayout),
-        m_filterT(m_geometry->KernelShape(), imageLayout), m_strideT(m_geometry->Stride(), imageLayout)
+        m_inT(m_geometry->InputShape(), ImageLayoutKind::CHW), m_outT(m_geometry->OutputShape(), ImageLayoutKind::CHW),
+        m_filterT(m_geometry->KernelShape(), ImageLayoutKind::CHW), m_strideT(m_geometry->Stride(), ImageLayoutKind::CHW)
     {
-        // Only auto-padding is supported in legacy engine. Validation will be done later in EnsureCompatible.
-        m_padding = m_geometry->AutoPad().size() == 0 || m_geometry->AutoPad()[0];
+        // Legacy engine uses a non-standard formula to compute padding (it may "overpad")
+        // so default auto-padding of ConvolveGeometry does not work here and instead
+        // precise padding is used.
+        const auto& lowerPad = m_geometry->LowerPad();
+        const auto& upperPad = m_geometry->UpperPad();
+        m_padding = (m_geometry->AutoPad().size() == 0 || !m_geometry->AutoPad()[0]) &&
+                     (lowerPad.size() == 1 && upperPad.size() == 1 && lowerPad[0] > 0);
     }
 
 protected:
@@ -384,12 +389,8 @@ protected:
             RuntimeError("Legacy convolution engine supports only HWC/legacy layout.");
 
         const auto& autoPad = m_geometry->AutoPad();
-        if (autoPad.size() > 1 && (autoPad[0] != autoPad[1]))
-            RuntimeError("Legacy convolution engine does not support different padding in different dimensions.");
-        const auto& lowerPad = m_geometry->LowerPad();
-        const auto& upperPad = m_geometry->UpperPad();
-        if (lowerPad.size() != 1 || lowerPad[0] != 0 || upperPad.size() != 1 || upperPad[0] != 0)
-            RuntimeError("Legacy convolution engine does not support precise padding.");
+        if (autoPad.size() > 0 && autoPad[0])
+            RuntimeError("Legacy convolution engine supports precise padding via LowerPad/UpperPad parameters only.");
     }
 
     void EnsureConvolutionInitialized() override
@@ -631,46 +632,6 @@ protected:
             InvalidArgument("Pooling type %d is not supported.", (int)m_poolKind);
     }
 
-//    void EnsureCompatibleBatchNorm(bool spatial) override
-//    {
-//        if (m_deviceId >= 0)
-//            InvalidArgument("This engine does not support batch normalization on GPUs.");
-//        if (m_bnImpl != BatchNormImpl::Cntk)
-//            InvalidArgument("Only CNTK batch normalization implementation is supported by this engine.");
-//        if (spatial && m_imageLayout != ImageLayoutKind::CHW)
-//            InvalidArgument("This engine batch normalization currently supports only CHW data layout for convolutional nodes.");
-//    }
-//
-//    void NormalizeBatchInferenceCore(const Tensor4D& inT, const Mat& in, const Tensor4D& scaleBiasT, const Mat& scale, const Mat& bias,
-//                                 bool spatial, const Mat& runMean, const Mat& runInvStdDev, Mat& out) override
-//    {
-//        UNUSED(scaleBiasT);
-//        if (spatial)
-//        {
-//            size_t spatialSize = inT.w() * inT.h();
-//#pragma omp parallel for
-//            for (long icol = 0; icol < out.GetNumCols(); icol++)
-//            {
-//                for (long irow = 0; irow < out.GetNumRows(); irow++)
-//                {
-//                    size_t imap = irow / spatialSize;
-//                    out(irow, icol) = scale(imap, 0) * (in(irow, icol) - runMean(imap, 0)) * runInvStdDev(imap, 0) + bias(imap, 0);
-//                }
-//            }
-//        }
-//        else
-//        {
-//#pragma omp parallel for
-//            for (long icol = 0; icol < out.GetNumCols(); icol++)
-//            {
-//                for (long irow = 0; irow < out.GetNumRows(); irow++)
-//                {
-//                    out(irow, icol) = scale(irow, 0) * (in(irow, icol) - runMean(irow, 0)) * runInvStdDev(irow, 0) + bias(irow, 0);
-//                }
-//            }
-//        }
-//    }
-
 private:
     ImageDimensions m_inT;
     ImageDimensions m_outT;
@@ -701,7 +662,7 @@ std::unique_ptr<ConvolutionEngine<ElemType>> ConvolutionEngine<ElemType>::Create
         if (!isEnabled(ConvolutionEngineKind::Legacy))
             RuntimeError("Trying to use Legacy convolution engine when it's disabled.");
         // REVIEW alexeyk: should honor m_traceLevel here.
-        fprintf(stderr, "Using legacy convolution engine for geometry %s.\n", engStr.c_str());
+        fprintf(stderr, "\nUsing legacy convolution engine for geometry %s.\n", engStr.c_str());
         return std::make_unique<LegacyConvolutionEngine<ElemType>>(geometry, deviceId, imageLayout, maxTempMemSizeInSamples, poolKind);
     }
 
@@ -709,13 +670,13 @@ std::unique_ptr<ConvolutionEngine<ElemType>> ConvolutionEngine<ElemType>::Create
     if (isEnabled(ConvolutionEngineKind::CuDnn) &&
         CuDnnConvolutionEngineFactory<ElemType>::IsSupported(geometry, poolKind))
     {
-        fprintf(stderr, "Using cuDNN convolution engine for geometry %s.\n", engStr.c_str());
+        fprintf(stderr, "\nUsing cuDNN convolution engine for geometry %s.\n", engStr.c_str());
         return CuDnnConvolutionEngineFactory<ElemType>::Create(geometry, deviceId, imageLayout, maxTempMemSizeInSamples, poolKind);
     }
 
     if (!isEnabled(ConvolutionEngineKind::Reference))
         RuntimeError("Reference convolution is disabled and no other engine supports such configuratin (or disabled).");
-    fprintf(stderr, "Using reference convolution engine for geometry %s.\n", engStr.c_str());
+    fprintf(stderr, "\nUsing reference convolution engine for geometry %s.\n", engStr.c_str());
     return std::make_unique<ReferenceConvolutionEngine<ElemType>>(geometry, deviceId, imageLayout, maxTempMemSizeInSamples, poolKind);
 }
 

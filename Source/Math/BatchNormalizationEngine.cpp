@@ -121,13 +121,13 @@ std::unique_ptr<BatchNormEngine<ElemType>> BatchNormEngine<ElemType>::Create(DEV
     // Use CNTK as default batch norm engine.
     if (HasFlag(enabledEngines, BatchNormEngineKind::Cntk))
     {
-        fprintf(stderr, "Using CNTK batch normalization engine.\n");
+        fprintf(stderr, "\nUsing CNTK batch normalization engine.\n");
         return std::make_unique<CntkBatchNormEngine<ElemType>>(deviceId, inOutT, spatial, imageLayout);
     }
 
     if (HasFlag(enabledEngines, BatchNormEngineKind::CuDnn))
     {
-        fprintf(stderr, "Using cuDNN batch normalization engine.\n");
+        fprintf(stderr, "\nUsing cuDNN batch normalization engine.\n");
         return CuDnnBatchNormEngineFactory<ElemType>::Create(deviceId, inOutT, spatial, imageLayout);
     }
 

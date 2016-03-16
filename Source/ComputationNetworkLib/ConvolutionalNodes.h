@@ -124,6 +124,20 @@ public:
 
     void BackpropTo(const size_t inputIndex, const FrameRange& fr) override
     {
+        auto sliceOutputGrad = GradientFor(fr);
+        auto sliceInput1Value = Input(1)->ValueFor(fr);
+
+        if (inputIndex == 0) // derivative with respect to the weight matrix
+        {
+            auto& grad = Input(0)->GradientAsMatrix();
+            m_convEng->BackwardFilter(sliceOutputGrad, sliceInput1Value, grad, fr.IsAllFrames(), *m_tempMatrix);
+        }
+        else if (inputIndex == 1) // derivative with respect to the input feature
+        {
+            auto& input0 = Input(0)->ValueAsMatrix();
+            auto sliceInput1Grad = Input(1)->GradientFor(fr);
+            m_convEng->BackwardData(sliceOutputGrad, input0, sliceInput1Grad, *m_tempMatrix);
+        }
     }
 
     virtual bool OutputUsedInComputingInputNodesGradients() const override
@@ -139,8 +153,6 @@ public:
         Matrix<ElemType> sliceInput1Value = Input(1)->ValueFor(fr);
         Matrix<ElemType> sliceOutputValue = ValueFor(fr);
 
-        // update the tensor dimension w.r.t. number of samples
-        size_t batchSize = sliceInput1Value.GetNumCols();
 #if NANCHECK
         input0.HasNan("Convolution-input0");
         sliceInput1Value.HasNan("Convolution-input1");
@@ -175,7 +187,7 @@ public:
             {
                 auto g = std::make_shared<ConvolveGeometry>(inputShape, m_kernelShape, m_mapCount, m_stride,
                                                             m_sharing, m_autoPad, m_lowerPad, m_upperPad);
-                m_convEng = ConvolutionEngine<ElemType>::Create(g, m_deviceId, m_imageLayout);
+                m_convEng = ConvolutionEngine<ElemType>::Create(g, m_deviceId, m_imageLayout, m_maxTempMemSizeInSamples);
             }
         }
     }
@@ -183,16 +195,25 @@ public:
     void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool) override
     {
         Base::RequestMatricesBeforeForwardProp(matrixPool);
+        RequestMatrixFromPool(m_tempMatrix, matrixPool);
+    }
+
+    void ReleaseMatricesAfterForwardProp(MatrixPool& matrixPool) override
+    {
+        Base::ReleaseMatricesAfterForwardProp(matrixPool);
+        ReleaseMatrixToPool(m_tempMatrix, matrixPool);
     }
 
     void RequestMatricesBeforeBackprop(MatrixPool& matrixPool) override
     {
         Base::RequestMatricesBeforeBackprop(matrixPool);
+        RequestMatrixFromPool(m_tempMatrix, matrixPool);
     }
 
     void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool) override
     {
         Base::ReleaseMatricesAfterBackprop(matrixPool);
+        ReleaseMatrixToPool(m_tempMatrix, matrixPool);
     }
 
 private:
@@ -216,6 +237,7 @@ private:
     TensorShape m_upperPad;
 
     size_t m_maxTempMemSizeInSamples;
+    shared_ptr<Matrix<ElemType>> m_tempMatrix;
 
     std::unique_ptr<ConvolutionEngine<ElemType>> m_convEng;
 };
@@ -287,7 +309,6 @@ public:
           m_imageLayoutKind(imageLayoutKind)
     {
         SetDims(ImageDimensions::AsTensorShape(1, 1, m_outputChannels, m_imageLayoutKind), 0); // TODO: necessary?
-        m_factory = ConvolutionEngineFactory<ElemType>::Create(deviceId, ConvolutionEngineFactory<ElemType>::EngineType::Auto, m_imageLayoutKind);
     }
     ConvolutionNode(const ScriptableObjects::IConfigRecordPtr configp)
         : ConvolutionNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"kernelWidth"), configp->Get(L"kernelHeight"), configp->Get(L"outputChannels"),
@@ -318,7 +339,6 @@ public:
         m_outputChannels = outputChannels;
         SetDims(ImageDimensions::AsTensorShape(1, 1, m_outputChannels, m_imageLayoutKind), HasMBLayout()); // TODO: needed?
         fstream >> m_zeroPadding >> m_maxTempMemSizeInSamples;
-        m_factory = ConvolutionEngineFactory<ElemType>::Create(GetDeviceId(), ConvolutionEngineFactory<ElemType>::EngineType::Auto, m_imageLayoutKind);
     }
 
     void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
@@ -348,20 +368,16 @@ public:
         auto sliceOutputGrad = GradientFor(fr);
         auto sliceInput1Value = Input(1)->ValueFor(fr);
 
-        size_t batchSize = sliceInput1Value.GetNumCols();
-        m_inT->setN(batchSize);
-        m_outT->setN(batchSize);
-        assert(m_convEng != nullptr);
         if (inputIndex == 0) // derivative with respect to the weight matrix
         {
             auto& grad = Input(0)->GradientAsMatrix();
-            m_convEng->BackwardFilter(*m_outT, sliceOutputGrad, *m_inT, sliceInput1Value, *m_convDesc, *m_filterT, grad, fr.IsAllFrames(), *m_tempMatrix);
+            m_convEng->BackwardFilter(sliceOutputGrad, sliceInput1Value, grad, fr.IsAllFrames(), *m_tempMatrix);
         }
         else if (inputIndex == 1) // derivative with respect to the input feature
         {
             auto& input0 = Input(0)->ValueAsMatrix();
             auto sliceInput1Grad = Input(1)->GradientFor(fr);
-            m_convEng->BackwardData(*m_outT, sliceOutputGrad, *m_filterT, input0, *m_convDesc, *m_inT, sliceInput1Grad, *m_tempMatrix);
+            m_convEng->BackwardData(sliceOutputGrad, input0, sliceInput1Grad, *m_tempMatrix);
         }
     }
 
@@ -379,15 +395,11 @@ public:
         Matrix<ElemType> sliceOutputValue = ValueFor(fr);
 
         // update the tensor dimension w.r.t. number of samples
-        size_t batchSize = sliceInput1Value.GetNumCols();
-        m_inT->setN(batchSize);
-        m_outT->setN(batchSize);
-        assert(m_convEng != nullptr);
 #if NANCHECK
         input0.HasNan("Convolution-input0");
         sliceInput1Value.HasNan("Convolution-input1");
 #endif
-        m_convEng->Forward(*m_inT, sliceInput1Value, *m_filterT, input0, *m_convDesc, *m_outT, sliceOutputValue, *m_tempMatrix);
+        m_convEng->Forward(sliceInput1Value, input0, sliceOutputValue, *m_tempMatrix);
 #if NANCHECK
         sliceOutputValue.HasNan("Convolution");
 #endif
@@ -427,25 +439,22 @@ public:
         if (isFinalValidationPass)
         {
             // set up the various engines and descriptor objects
-            // REVIEW alexeyk: is there a better place to create engines?
-            assert(m_factory);
-            // if (m_factory == nullptr)
-            //    m_factory = ConvolutionEngineFactory<ElemType>::Create(m_deviceId, ConvolutionEngineFactory<ElemType>::EngineType::Auto, m_imageLayoutKind);
-            // TODO: This seems to expose too much internal knowlegde of the engine to the ConvolutionNode().
-            //       Why not just pass everything to the engine creator, and get one object that holds everything.
             if (m_convEng == nullptr)
-                m_convEng = m_factory->CreateConvEngine(m_deviceId, m_imageLayoutKind, m_maxTempMemSizeInSamples, BatchNormImpl::Cntk);
-            if (m_inT == nullptr)
-                m_inT = m_factory->CreateTensor(inDims.m_width, inDims.m_height, inDims.m_numChannels, 1);
-            if (m_filterT == nullptr)
-                m_filterT = m_factory->CreateFilter(m_kernelWidth, m_kernelHeight, inDims.m_numChannels, m_outputChannels);
-            if (m_outT == nullptr)
-                m_outT = m_factory->CreateTensor(outDims.m_width, outDims.m_height, outDims.m_numChannels, 1);
-            if (m_convDesc == nullptr)
-                m_convDesc = m_factory->CreateConvDescriptor(*m_inT, *m_filterT, m_horizontalSubsample, m_verticalSubsample, m_zeroPadding);
-            // REVIEW alexeyk: create per-channel bias (shared across all pixels). Consider adding other types of biases.
-            if (m_biasT == nullptr)
-                m_biasT = m_factory->CreateTensor(1, 1, outDims.m_numChannels, 1);
+            {
+                // Note that ConvolveGeometry always uses CHW layout.
+                auto pad = TensorShape(m_zeroPadding ? m_kernelWidth / 2 : 0,
+                                       m_zeroPadding ? m_kernelHeight / 2 : 0,
+                                       0);
+                auto g = std::make_shared<ConvolveGeometry>(inDims.AsTensorShape(ImageLayoutKind::CHW),
+                                                            TensorShape(m_kernelWidth, m_kernelHeight, inDims.m_numChannels),
+                                                            TensorShape(m_outputChannels),
+                                                            TensorShape(m_horizontalSubsample, m_verticalSubsample, inDims.m_numChannels),
+                                                            ConvolveGeometry::BoolVec{true},
+                                                            // Note: this will have pad=true in channel dimension so must use inDims.m_numChannels stride in c dimension of the stride tensor.
+                                                            ConvolveGeometry::BoolVec{m_zeroPadding && (m_imageLayoutKind == ImageLayoutKind::CHW)},
+                                                            pad, pad);
+                m_convEng = ConvolutionEngine<ElemType>::Create(g, m_deviceId, m_imageLayoutKind, m_maxTempMemSizeInSamples);
+            }
         }
     }
 
@@ -498,14 +507,7 @@ private:
 
     ImageLayoutKind m_imageLayoutKind; // how to interpret the tensor (which dimensions are X/Y and C)
 
-    std::unique_ptr<ConvolutionEngineFactory<ElemType>> m_factory;
     std::unique_ptr<ConvolutionEngine<ElemType>> m_convEng;
-
-    std::unique_ptr<ConvolutionTensor4D> m_inT;
-    std::unique_ptr<ConvolutionFilter> m_filterT;
-    std::unique_ptr<ConvolutionTensor4D> m_outT;
-    std::unique_ptr<ConvolutionDescriptor> m_convDesc;
-    std::unique_ptr<ConvolutionTensor4D> m_biasT;
 };
 
 template class ConvolutionNode<float>;
@@ -539,7 +541,6 @@ public:
           m_verticalSubsample(verticalSubsample),
           m_imageLayoutKind(imageLayoutKind)
     {
-        m_factory = ConvolutionEngineFactory<ElemType>::Create(deviceId, ConvolutionEngineFactory<ElemType>::EngineType::Auto, m_imageLayoutKind);
     }
     PoolingNodeBase(const ScriptableObjects::IConfigRecordPtr configp)
         : PoolingNodeBase(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"windowWidth"), configp->Get(L"windowHeight"), configp->Get(L"horizontalSubsample"), configp->Get(L"verticalSubsample"), ImageLayoutKindFrom(configp->Get(L"imageLayout")))
@@ -562,8 +563,7 @@ public:
         uint32_t imageLayoutKind, windowWidth;
         fstream >> windowWidth >> imageLayoutKind >> m_windowHeight >> m_horizontalSubsample >> m_verticalSubsample;
         m_windowWidth = windowWidth;
-        m_imageLayoutKind = (ImageLayoutKind) imageLayoutKind;
-        m_factory = ConvolutionEngineFactory<ElemType>::Create(GetDeviceId(), ConvolutionEngineFactory<ElemType>::EngineType::Auto, m_imageLayoutKind);
+        m_imageLayoutKind = (ImageLayoutKind)imageLayoutKind;
     }
 
     void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
@@ -594,12 +594,7 @@ public:
         Matrix<ElemType> sliceInput0Value = Input(0)->ValueFor(fr);
         Matrix<ElemType> sliceOutputValue = ValueFor(fr);
 
-        size_t batchSize = sliceInput0Value.GetNumCols();
-        m_inT->setN(batchSize);
-        m_outT->setN(batchSize);
-        assert(m_poolEng != nullptr);
-        assert(m_poolDesc != nullptr);
-        m_poolEng->Backward(*m_outT, sliceOutputValue, sliceOutputGrad, *m_poolDesc, *m_inT, sliceInput0Value, sliceInput0Grad);
+        m_convEng->BackwardPooling(sliceOutputValue, sliceOutputGrad, sliceInput0Value, sliceInput0Grad);
     }
 
     void ForwardProp(const FrameRange& fr) override
@@ -607,12 +602,7 @@ public:
         Matrix<ElemType> sliceInput0Value = Input(0)->ValueFor(fr);
         Matrix<ElemType> sliceOutputValue = ValueFor(fr);
 
-        size_t batchSize = sliceInput0Value.GetNumCols();
-        m_inT->setN(batchSize);
-        m_outT->setN(batchSize);
-        assert(m_poolEng != nullptr);
-        assert(m_poolDesc != nullptr);
-        m_poolEng->Forward(*m_inT, sliceInput0Value, *m_poolDesc, *m_outT, sliceOutputValue);
+        m_convEng->ForwardPooling(sliceInput0Value, sliceOutputValue);
     }
 
     void Validate(bool isFinalValidationPass) override
@@ -639,16 +629,14 @@ public:
         if (isFinalValidationPass)
         {
             // set up various engines and descriptor objects
-            // REVIEW alexeyk: is there a better place to create engines?
-            assert(m_factory);
-            // if (m_factory == nullptr)
-            //    m_factory = ConvolutionEngineFactory<ElemType>::Create(m_deviceId, ConvolutionEngineFactory<ElemType>::EngineType::Auto, m_imageLayoutKind);
-            if (m_poolEng == nullptr)
-                m_poolEng = m_factory->CreatePoolEngine(m_deviceId, m_imageLayoutKind);
-            if (m_inT == nullptr)
-                m_inT = m_factory->CreateTensor(inDims.m_width, inDims.m_height, inDims.m_numChannels, 1);
-            if (m_outT == nullptr)
-                m_outT = m_factory->CreateTensor(outDims.m_width, outDims.m_height, outDims.m_numChannels, 1);
+            m_geometry = std::make_shared<ConvolveGeometry>(inDims.AsTensorShape(m_imageLayoutKind),
+                                                            ImageDimensions(m_windowWidth, m_windowHeight, 1).AsTensorShape(m_imageLayoutKind),
+                                                            TensorShape(1),
+                                                            ImageDimensions(m_horizontalSubsample, m_verticalSubsample, 1).AsTensorShape(m_imageLayoutKind),
+                                                            ConvolveGeometry::BoolVec{true},
+                                                            ConvolveGeometry::BoolVec{false},
+                                                            TensorShape(0),
+                                                            TensorShape(0));
         }
     }
 
@@ -679,12 +667,8 @@ protected:
 
     ImageLayoutKind m_imageLayoutKind; // how to interpret the tensor (which dimensions are X/Y and C)
 
-    std::unique_ptr<ConvolutionEngineFactory<ElemType>> m_factory;
-    std::unique_ptr<PoolingEngine<ElemType>> m_poolEng;
-
-    std::unique_ptr<ConvolutionTensor4D> m_inT;
-    std::unique_ptr<ConvolutionTensor4D> m_outT;
-    std::unique_ptr<PoolingDescriptor> m_poolDesc;
+    ConvolveGeometryPtr m_geometry;
+    std::unique_ptr<ConvolutionEngine<ElemType>> m_convEng;
 };
 
 // add this at the start of each derived class, to get access to the members of ComputationNode
@@ -693,8 +677,8 @@ protected:
     UsingComputationNodeMembersBoilerplate; \
     \
 protected:                                  \
-    using Base::m_factory;                  \
-    using Base::m_poolDesc;                 \
+    using Base::m_geometry;                 \
+    using Base::m_convEng;                  \
     using Base::m_windowWidth;              \
     using Base::m_windowHeight;             \
     using Base::m_horizontalSubsample;      \
@@ -735,8 +719,8 @@ public:
     void Validate(bool isFinalValidationPass) override
     {
         Base::Validate(isFinalValidationPass);
-        if (isFinalValidationPass && m_poolDesc == nullptr)
-            m_poolDesc = m_factory->CreatePoolDescriptor(PoolingDescriptor::PoolKind::Max, m_windowWidth, m_windowHeight, m_horizontalSubsample, m_verticalSubsample, 0, 0);
+        if (isFinalValidationPass && m_convEng == nullptr)
+            m_convEng = ConvolutionEngine<ElemType>::Create(m_geometry, m_deviceId, m_imageLayoutKind, 0, PoolKind::Max);
     }
 };
 
@@ -774,8 +758,8 @@ public:
     void Validate(bool isFinalValidationPass) override
     {
         Base::Validate(isFinalValidationPass);
-        if (isFinalValidationPass && m_poolDesc == nullptr)
-            m_poolDesc = m_factory->CreatePoolDescriptor(PoolingDescriptor::PoolKind::Average, m_windowWidth, m_windowHeight, m_horizontalSubsample, m_verticalSubsample, 0, 0);
+        if (isFinalValidationPass && m_convEng == nullptr)
+            m_convEng = ConvolutionEngine<ElemType>::Create(m_geometry, m_deviceId, m_imageLayoutKind, 0, PoolKind::Average);
     }
 };
 
