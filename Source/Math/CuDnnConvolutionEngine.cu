@@ -212,7 +212,11 @@ protected:
         {
             return cudnnFindConvolutionForwardAlgorithm(*m_cudnn, m_inT, *m_filterT, *m_conv, m_outT, MaxAlgoCount, &calgo, algoPerf);
         };
-        FindBestAlgo(batchSize, m_fwdAlgo, finder);
+        auto staticFinder = [this](cudnnConvolutionFwdAlgo_t& algo) -> cudnnStatus_t
+        {
+            return cudnnGetConvolutionForwardAlgorithm(*m_cudnn, m_inT, *m_filterT, *m_conv, m_outT, CUDNN_CONVOLUTION_FWD_NO_WORKSPACE, 0, &algo);
+        };
+        FindBestAlgo(batchSize, m_fwdAlgo, finder, staticFinder);
         if (m_fwdAlgo.Algo.memory > 0)
             workspace.Resize((m_fwdAlgo.Algo.memory + sizeof(ElemType) - 1) / sizeof(ElemType), 1);
         // Perform forward convolution operation.
@@ -239,7 +243,11 @@ protected:
         {
             return cudnnFindConvolutionBackwardDataAlgorithm(*m_cudnn, *m_filterT, m_outT, *m_conv, m_inT, MaxAlgoCount, &calgo, algoPerf);
         };
-        FindBestAlgo(batchSize, m_backDataAlgo, finder);
+        auto staticFinder = [this](cudnnConvolutionBwdDataAlgo_t& algo) -> cudnnStatus_t
+        {
+            return cudnnGetConvolutionBackwardDataAlgorithm(*m_cudnn, *m_filterT, m_outT, *m_conv, m_inT, CUDNN_CONVOLUTION_BWD_DATA_NO_WORKSPACE, 0, &algo);
+        };
+        FindBestAlgo(batchSize, m_backDataAlgo, finder, staticFinder);
         if (m_backDataAlgo.Algo.memory > 0)
             workspace.Resize((m_backDataAlgo.Algo.memory + sizeof(ElemType) - 1) / sizeof(ElemType), 1);
         // Compute gradients with respect to the output tensor (data).
@@ -255,7 +263,11 @@ protected:
         {
             return cudnnFindConvolutionBackwardFilterAlgorithm(*m_cudnn, m_inT, m_outT, *m_conv, *m_filterT, MaxAlgoCount, &calgo, algoPerf);
         };
-        FindBestAlgo(batchSize, m_backFiltAlgo, finder);
+        auto staticFinder = [this](cudnnConvolutionBwdFilterAlgo_t& algo) -> cudnnStatus_t
+        {
+            return cudnnGetConvolutionBackwardFilterAlgorithm(*m_cudnn, m_inT, m_outT, *m_conv, *m_filterT, CUDNN_CONVOLUTION_BWD_FILTER_NO_WORKSPACE, 0, &algo);
+        };
+        FindBestAlgo(batchSize, m_backFiltAlgo, finder, staticFinder);
         if (m_backFiltAlgo.Algo.memory > 0)
             workspace.Resize((m_backFiltAlgo.Algo.memory + sizeof(ElemType) - 1) / sizeof(ElemType), 1);
         // Compute gradients with respect to the output tensor (data).
@@ -291,8 +303,8 @@ private:
 
     static const int MaxAlgoCount = 10;
 
-    template <typename TAlgo, typename TFinder>
-    void FindBestAlgo(size_t batchSize, TAlgo& algo, TFinder finder)
+    template <typename TAlgo, typename TFinder, typename TStaticFinder>
+    void FindBestAlgo(size_t batchSize, TAlgo& algo, TFinder finder, TStaticFinder staticFinder)
     {
         if (!algo.NeedAutotuning(batchSize))
             return;
@@ -301,7 +313,22 @@ private:
         using CuDnnAlgoT = decltype(TAlgo::Algo);
         CuDnnAlgoT algoPerf[MaxAlgoCount];
         int calgo = 0;
-        CUDNN_CALL(finder(calgo, algoPerf));
+        cudnnStatus_t err = finder(calgo, algoPerf);
+        // Alloc failed - usually means cuDNN runtime auto-tuner could not allocate workspace.
+        // In such case, use static auto-tuner with no workspace.
+        if (err == CUDNN_STATUS_ALLOC_FAILED)
+        {
+            decltype(CuDnnAlgoT::algo) noMemAlgo;
+            CUDNN_CALL(staticFinder(noMemAlgo));
+            algo.CurMBSize = batchSize;
+            algo.Algo = algoPerf[0];
+            algo.Algo.algo = noMemAlgo;
+            algo.Algo.memory = 0;
+            algo.Algo.status = CUDNN_STATUS_SUCCESS;
+            algo.NoWorkspaceAlgo = noMemAlgo;
+            return;
+        }
+        CUDNN_CALL(err);
         assert(calgo > 0);
         size_t inputSampleSize = m_geometry->InputShape().GetNumElements();
         size_t maxMem = m_maxTempMemSizeInSamples == 0 ? (std::numeric_limits<size_t>::max)() : inputSampleSize * m_maxTempMemSizeInSamples * sizeof(ElemType);
