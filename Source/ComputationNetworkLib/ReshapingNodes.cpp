@@ -172,7 +172,7 @@ template <class ElemType>
     if (isFinalValidationPass && Input(INDEXDATA)->GetSampleLayout().GetNumElements() != 1)
         InvalidArgument("%ls %ls operation requires the second argument (indexData) to be a scalar sequence.", NodeName().c_str(), OperationName().c_str());
 
-    SetDims(Input(INDEXDATA));
+    SetDims(Input(INDEXDATA)->GetSampleLayout(), HasMBLayout());
 }
 
 template class PackedIndexNode<float>;
@@ -218,7 +218,7 @@ template <class ElemType>
         InvalidArgument("%ls %ls operation requires the first argument (indexData) to be a scalar sequence.", NodeName().c_str(), OperationName().c_str());
 
     // inherit tensor dimension from sourceData
-    SetDims(Input(SOURCEDATA));
+    SetDims(Input(SOURCEDATA)->GetSampleLayout(), HasMBLayout());
 }
 
 template class GatherPackedNode<float>;
@@ -268,7 +268,7 @@ template <class ElemType>
     // TODO: We also know that indexData and sourceData must have the same MBLayout. But that is checked at runtime.
 
     // inherit tensor dimension from sourceData
-    SetDims(Input(SOURCEDATA));
+    SetDims(Input(SOURCEDATA)->GetSampleLayout(), HasMBLayout());
 }
 
 template class ScatterPackedNode<float>;
