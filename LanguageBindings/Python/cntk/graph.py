@@ -127,12 +127,12 @@ class ComputationNode(object):
                     if p_name == 'inputs' and isinstance(self, RowStack):
                         # Special treatment for special operator.
                         # Used like RowStack(v0:v1:v2)
-                        inputs = p_value
+                        inputs_param = p_value
                     else:
-                        inputs = [p_value]
+                        inputs_param = [p_value]
 
                     input_nodes_vars = []
-                    for p_value in inputs:
+                    for p_value in inputs_param:
                         if p_value in unrolled_nodes:
                             # we have seen this node already, so just retrieve its
                             # name
