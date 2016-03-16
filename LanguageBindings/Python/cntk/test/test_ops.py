@@ -53,7 +53,7 @@ def test_overload_eval(root_node, expected, tmpdir):
     with get_new_context() as ctx:
         #ctx.clean_up = False
         assert not ctx.input_nodes
-        result = ctx.eval(root_node, {})
+        result = ctx.eval(root_node)
         expected = np.asarray(expected)
         assert result.shape == expected.shape
         assert np.all(result == expected)

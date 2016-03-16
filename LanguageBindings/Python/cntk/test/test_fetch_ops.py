@@ -1,4 +1,4 @@
-from .._fetch_ops import *
+from ..utils._fetch_ops import *
 
 import pytest
 

@@ -64,7 +64,7 @@ class UCIFastReader(AbstractReader):
         :param input_start: the start column   
         :param input_dim: the number of columns
         """
-        if (not (name_or_node and input_start and input_dim)):
+        if not name_or_node or input_start is None or input_dim is None:
             raise ValueError("one of the parameters of add_input is None or empty string") 
         
         self.inputs_def.append((name_or_node, input_start, input_dim))

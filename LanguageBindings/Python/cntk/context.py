@@ -2,6 +2,7 @@ from abc import ABCMeta, abstractmethod
 import os
 import subprocess
 import numpy as np
+import shutil as sh
 
 
 _FLOATX = 'float32'
@@ -103,9 +104,6 @@ class AbstractContext(object, metaclass=ABCMeta):
             import shutil
             shutil.rmtree(self.directory)
 
-    def add_input(self, node):
-        self.input_nodes.add(node)
-
     def to_description(self):
         '''
         Generating the CNTK configuration for the root node.
@@ -127,10 +125,17 @@ class AbstractContext(object, metaclass=ABCMeta):
         :param override_existing: if the folder exists already override it
         '''
         
-        
+        model_dir = os.path.join(self.directory, 'Models')
+        if os.path.exists(model_dir) and os.listdir(model_dir) == []:
+            if override_existing:                
+                print ("Overriding the existing models")
+                sh.rmtree(model_dir)
+            else:
+                raise Exception("Directory '%s' already exists, set the flag override_existing to true if you want to override it"
+                    %self.directory)        
         
         tmpl = open(CNTK_TRAIN_TEMPLATE_PATH, "r").read()
-        model_filename = os.path.join(self.directory, 'Models', self.name)
+        model_filename = os.path.join(model_dir, self.name)
         description, has_inputs = self.to_description()
         tmpl_dict = {
             'DevideId': self.device_id,
@@ -144,93 +149,59 @@ class AbstractContext(object, metaclass=ABCMeta):
     def _generate_test_config(self, reader):
         '''
         Generates the configuration file for the test action.
-        '''
-        raise NotImplementedError
+        '''        
+        tmpl = open(CNTK_TEST_TEMPLATE_PATH, "r").read()
+        model_filename = os.path.join(self.directory, 'Models', self.name)
+        tmpl_dict = {
+            'DevideId': self.device_id,
+            'ModelPath': model_filename,
+            'Reader': reader.generate_config(),
+        }
+        return tmpl % tmpl_dict
 
     def _generate_predict_config(self, reader):
         '''
         Generates the configuration file for the write action.
         It uses the context's trained model.
         '''
-        raise NotImplementedError
-
-    def _check_input_is_assigned(self, input_map):
-        not_assigned = []
-
-        for node in self.input_nodes:
-            if node not in input_map:
-                not_assigned.append('%s/%s' % (node.var_name, node.name))
-
-        if not_assigned:
-            raise ValueError('Cannot create the configuration, because the ' +
-                             'following input nodes are missing corresponding input readers: ' +
-                             ", ".join(not_assigned))
-
-    def _generate_reader_config(self, input_map):
-        '''
-        Generates the reader configuration including the dimensions of the
-        individual nodes that will be fed by the readers.
-        '''
-        # Putting readers into a set to make sure every reader is configured
-        # only once.
-        readers = set()
-        node_dimensions = []
-
-        # TODO: all we need to configure a reader block for an input is dims and name
-        # we do not need yet a reader on to. it is getting complex between many
-        # readers, input_nodes and input_map
-        for node, (reader, dims) in input_map.items():
-            if not node.var_name:
-                raise ValueError(
-                    "Node '%s' does not have a variable name assigned yet." % str(node))
-
-            start_index, num_dims = dims
-            node_dimensions.append('''
-            %s = [
-               start=%i
-               dim=%i
-           ]''' % (node.var_name, start_index, num_dims))
-
-            readers.add(reader)
-
-        node_dimensions = '\n'.join(node_dimensions)
-        reader_configs = '\n'.join([r.generate_config() for r in readers])
-
-        return "%s\n\n%s" % (node_dimensions, reader_configs)
-
-    # TODO: re-implement with a propoer design in mind.
-    def _generate_eval_config(self, root_node, input_map):
+        tmpl = open(CNTK_PREDICT_TEMPLATE_PATH, "r").read()
+        model_filename = os.path.join(self.directory, 'Models', self.name)
+        output_filename_base = os.path.join(self.directory, 'Outputs', self.name)
+        tmpl_dict = {
+            'DevideId': self.device_id,
+            'ModelPath': model_filename,
+            'PredictOutputFile': output_filename_base,
+            'Reader': reader.generate_config(),
+        }
+        return tmpl % tmpl_dict
+    
+    def _generate_eval_config(self, root_node, reader):
         '''
         Generates the configuration file for write action.
         :param root_node: the node to evaluate. 
-        :param input_map: mapping of input node to (reader, (start_dim, num_dim))
-        '''
-        self._check_input_is_assigned(input_map)
-
-        # TODO factor out reader config output so that train/test can use it
+        :param reader: the reader used to load the data, None if the network does not have input
+        '''        
         model_description, has_input = root_node.to_description()
 
-        if not has_input:
+        if (not has_input) and (reader is None):
             # add dummy input to keep CNTK happy
             # TODO relieve this requirement
-
             data = [[1, 2], [3, 4]]
             fn = os.path.join(self.directory, 'dummy_input.txt')
             from .reader import NumPyReader
             reader = NumPyReader(data, fn)
             from .ops import Input
-            dummy_input_node = Input(2)
-            dummy_input_node.var_name = 'dummy_node'
-            input_map = {dummy_input_node: (reader, (0, 2))}
+            dummy_input_node = Input(2, var_name='dummy_node')
+            reader.add_input(dummy_input_node, 0, 2)                        
             model_description += "\ndummy_node=Input(2, tag='output')"
 
         tmpl = open(CNTK_EVAL_TEMPLATE_PATH, "r").read()
         output_filename = os.path.join(self.directory, CNTK_OUTPUT_FILENAME)
         tmpl_dict = {
-            'DevideId': self.device_id,
-            'Reader': self._generate_reader_config(input_map),
+            'DevideId': self.device_id,            
             'OutputFile': output_filename,
-            'ModelDescription': model_description
+            'ModelDescription': model_description,
+            'Reader': reader.generate_config(),
         }
         return tmpl % tmpl_dict
 
@@ -260,7 +231,7 @@ class AbstractContext(object, metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def eval(self, node, reader):
+    def eval(self, node, reader=None):
         '''
         Abstract method for the action write. It evaluated the passed node on the
         data provided by the reader.
@@ -309,12 +280,12 @@ class Context(AbstractContext):
     def predict(self, reader):
         '''
         Run the write action locally, use the trained model of this context.
-        :param reader: the reader used to provide the prediction data.
+        :param reader: the reader used to provide the evaluation data.
         '''
         config_content = self._generate_predict_config(reader)
         self._call_cntk(CNTK_PREDICT_CONFIG_FILENAME, config_content)
 
-    def eval(self, node, input_map):
+    def eval(self, node, reader=None):
         '''
         Run the write action locally to evaluate the passed node.
         :param input_map: mapping of input node to (reader, (start_dim, num_dim))
@@ -322,7 +293,7 @@ class Context(AbstractContext):
         '''
         # FIXME manually setting the tag to output might have side-effects
         node.tag = 'output'
-        config_content = self._generate_eval_config(node, input_map)
+        config_content = self._generate_eval_config(node, reader)
         self._call_cntk(CNTK_EVAL_CONFIG_FILENAME, config_content)
 
         import glob
