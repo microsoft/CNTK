@@ -147,7 +147,7 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
             {
                 // The examples assume the executable is running from the data folder
                 // We switch the current directory to the data folder (assuming the executable is in the <CNTK>/x64/Debug|Release folder
-                string workingDirectory = Path.Combine(initialDirectory, @"..\..\Examples\Other\NDlExamples");
+                string workingDirectory = Path.Combine(initialDirectory, @"..\..\Examples\Other\Simple2d\Config");
                 Environment.CurrentDirectory = initialDirectory;
 
                 List<float> outputs;
@@ -158,7 +158,7 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
                     model.Init("deviceId=0");
 
                     // Create the network
-                    string networkDescription = GetFileContents(Path.Combine(workingDirectory, @"AddOperator.ndl"));
+                    string networkDescription = GetFileContents(Path.Combine(workingDirectory, @"AddOperatorConstant.cntk"));
                     model.CreateNetwork(networkDescription);
 
                     // Generate random input values in the appropriate structure and size

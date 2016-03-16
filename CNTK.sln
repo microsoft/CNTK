@@ -544,11 +544,14 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "NdlExamples", "NdlExamples", "{FC573A62-6DAE-40A4-8153-520C8571A007}"
 	ProjectSection(SolutionItems) = preProject
 		Examples\Other\NdlExamples\AddOperator.ndl = Examples\Other\NdlExamples\AddOperator.ndl
+		Examples\Other\NdlExamples\AddOperatorConstant.ndl = Examples\Other\NdlExamples\AddOperatorConstant.ndl
 		Examples\Other\NdlExamples\NDLExamples.ndl = Examples\Other\NdlExamples\NDLExamples.ndl
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Config", "Config", "{1E37CE40-556D-4693-B58C-F8D4CE349BB7}"
 	ProjectSection(SolutionItems) = preProject
+		Examples\Other\Simple2d\Config\AddOperatorConstant.cntk = Examples\Other\Simple2d\Config\AddOperatorConstant.cntk
+		Examples\Other\Simple2d\Config\AddOperatorConstantNoInput.cntk = Examples\Other\Simple2d\Config\AddOperatorConstantNoInput.cntk
 		Examples\Other\Simple2d\Config\Multigpu.cntk = Examples\Other\Simple2d\Config\Multigpu.cntk
 		Examples\Other\Simple2d\Config\Simple.cntk = Examples\Other\Simple2d\Config\Simple.cntk
 	EndProjectSection

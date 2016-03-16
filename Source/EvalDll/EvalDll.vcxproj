@@ -140,6 +140,8 @@
     <ClInclude Include="CNTKEval.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\CNTK\BrainScript\BrainScriptEvaluator.cpp" />
+    <ClCompile Include="..\CNTK\BrainScript\BrainScriptParser.cpp" />
     <ClCompile Include="..\Common\Config.cpp" />
     <ClCompile Include="..\Common\Eval.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>

@@ -1,0 +1,28 @@
+# deviceId=-1 for CPU, >=0 for GPU devices, "auto" chooses the best GPU, or CPU if no usable GPU is available
+deviceId = -1
+
+command = Add_Operator_Constant
+
+precision = "float"
+traceLevel = 1
+outputNodeNames = AddResult
+
+#######################################
+#  NETWORK CONFIG                     #
+#######################################
+
+# Notation xxx:yyy*n:zzz is equivalent to xxx, then yyy repeated n times, then zzz
+# Example: 10:20*3:5 is equivalent to 10:20:20:20:5
+run=NDLNetworkBuilder
+NDLNetworkBuilder=[
+          v1 = Constant(1)
+          v2 = Constant(2)
+          ol = Plus(v1, v2)
+
+          FeatureNodes=(v1)
+          OutputNodes=(ol)
+	]
+    
+Add_Operator_Constant = [
+    action = "write"
+]

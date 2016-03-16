@@ -8,6 +8,7 @@
 #include "stdafx.h"
 #define EVAL_EXPORTS // creating the exports here
 #include "Eval.h"
+#include "Actions.h"
 #include "CNTKEval.h"
 #include "CPUMatrix.h" // for SetNumThreads()
 #include "SimpleOutputWriter.h"
@@ -85,8 +86,10 @@ void CNTKEval<ElemType>::CreateNetwork(const std::string& networkDescription)
 {
     ConfigParameters config;
     config.Parse(networkDescription);
-    auto netBuilder = make_shared<NDLBuilder<ElemType>>(config);
-    m_net = netBuilder->BuildNetworkFromDescription();
+    auto networkFactory = GetNetworkFactory<ConfigParameters, ElemType>(config);
+    DEVICEID_TYPE deviceId = DeviceFromConfig(config);
+
+    m_net = networkFactory(deviceId);
     if (m_net == nullptr)
     {
         // TODO: Throw appropriate exception
