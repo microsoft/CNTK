@@ -68,6 +68,9 @@ private:
     // Array of available categories.
     // We do no allocate data for all input sequences, only returning a pointer to existing category.
     std::vector<SparseSequenceDataPtr> m_categories;
+
+    // Flag that indicates whether a single speech frames should be exposed as a sequence.
+    bool m_frameMode;
 };
 
 }}}
