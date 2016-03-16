@@ -255,6 +255,7 @@ MATH_SRC =\
 	$(SOURCEDIR)/Math/TensorView.cpp \
 	$(SOURCEDIR)/Math/CUDAPageLockedMemAllocator.cpp \
 	$(SOURCEDIR)/Math/ConvolutionEngine.cpp \
+        $(SOURCEDIR)/Math/BatchNormalizationEngine.cpp \
 
 ifdef CUDA_PATH
 MATH_SRC +=\
@@ -263,7 +264,9 @@ MATH_SRC +=\
 	$(SOURCEDIR)/Math/GPUSparseMatrix.cu \
 	$(SOURCEDIR)/Math/GPUWatcher.cu \
 	$(SOURCEDIR)/Math/MatrixQuantizerGPU.cu \
+        $(SOURCEDIR)/Math/CuDnnCommon.cu \
 	$(SOURCEDIR)/Math/CuDnnConvolutionEngine.cu \
+        $(SOURCEDIR)/Math/CuDnnBatchNormalization.cu \
 	$(SOURCEDIR)/Math/GPUDataTransferer.cpp \
 
 else

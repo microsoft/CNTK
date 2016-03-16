@@ -6,6 +6,7 @@
 
 #include "Basics.h"
 #include "TensorShape.h"
+#include <iterator>
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 

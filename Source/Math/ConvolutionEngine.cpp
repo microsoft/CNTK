@@ -521,9 +521,6 @@ private:
     bool m_gpuSparse1D;
 };
 
-template class ConvolutionEngine<float>;
-template class ConvolutionEngine<double>;
-
 template <class ElemType>
 std::unique_ptr<ConvolutionEngine<ElemType>> ConvolutionEngine<ElemType>::Create(ConvolveGeometryPtr geometry, DEVICEID_TYPE deviceId,
                                                                                  ImageLayoutKind imageLayout, size_t maxTempMemSizeInSamples, PoolKind poolKind,
@@ -557,5 +554,9 @@ std::unique_ptr<ConvolutionEngine<ElemType>> ConvolutionEngine<ElemType>::Create
     fprintf(stderr, "\nUsing reference convolution engine for geometry %s.\n", engStr.c_str());
     return std::make_unique<ReferenceConvolutionEngine<ElemType>>(geometry, deviceId, imageLayout, maxTempMemSizeInSamples, poolKind);
 }
+
+
+template class ConvolutionEngine<float>;
+template class ConvolutionEngine<double>;
 
 }}}

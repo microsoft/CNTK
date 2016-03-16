@@ -78,13 +78,11 @@ protected:
     }
 
 private:
-    template <typename ElemType>
-    static ElemType* ptr(Matrix<ElemType>& src)
+    static ElemType* ptr(Mat& src)
     {
         return src.BufferPointer();
     }
-    template <typename ElemType>
-    static const ElemType* ptr(const Matrix<ElemType>& src)
+    static const ElemType* ptr(const Mat& src)
     {
         return src.BufferPointer();
     }

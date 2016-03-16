@@ -685,6 +685,7 @@ protected:                                  \
     using Base::m_verticalSubsample;        \
     using Base::m_inputSizePerSample;       \
     using Base::m_outputSizePerSample;      \
+    using Base::m_imageLayoutKind;          \
     \
 public:
 

@@ -186,6 +186,7 @@ protected:
     using Base::m_deviceId;
     using Base::m_imageLayout;
     using Base::m_maxTempMemSizeInSamples;
+    using Base::m_poolKind;
 
     void EnsureCompatible() override
     {
@@ -357,13 +358,11 @@ private:
             algo.NoWorkspaceAlgo = (*res).algo;
     }
 
-    template <typename ElemType>
-    static ElemType* ptr(Matrix<ElemType>& src)
+    static ElemType* ptr(Mat& src)
     {
         return src.BufferPointer();
     }
-    template <typename ElemType>
-    static const ElemType* ptr(const Matrix<ElemType>& src)
+    static const ElemType* ptr(const Mat& src)
     {
         return src.BufferPointer();
     }

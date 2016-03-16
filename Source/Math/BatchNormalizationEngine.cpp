@@ -63,9 +63,6 @@ void BatchNormEngine<ElemType>::Backward(const Mat& in, const Mat& srcGrad, Mat&
     BackwardCore(in, srcGrad, grad, scale, saveMean, saveInvStdDev, scaleGrad, biasGrad);
 }
 
-template class BatchNormEngine<float>;
-template class BatchNormEngine<double>;
-
 template <class ElemType>
 class CntkBatchNormEngine : public BatchNormEngine<ElemType>
 {
@@ -122,7 +119,7 @@ bool HasFlag(T src, T testFlag)
 template <class ElemType>
 std::unique_ptr<BatchNormEngine<ElemType>> BatchNormEngine<ElemType>::Create(DEVICEID_TYPE deviceId, const TensorShape& inOutT,
                                                                              bool spatial, ImageLayoutKind imageLayout,
-                                                                             BatchNormEngineKind enabledEngines = BatchNormEngineKind::All)
+                                                                             BatchNormEngineKind enabledEngines)
 {
     // Use CNTK as default batch norm engine.
     if (HasFlag(enabledEngines, BatchNormEngineKind::Cntk))
@@ -139,5 +136,8 @@ std::unique_ptr<BatchNormEngine<ElemType>> BatchNormEngine<ElemType>::Create(DEV
 
     RuntimeError("Could not find appropriate batch normalization engine.");
 }
+
+template class BatchNormEngine<float>;
+template class BatchNormEngine<double>;
 
 } } }
