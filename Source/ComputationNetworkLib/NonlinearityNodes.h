@@ -27,7 +27,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 // only inputs (but not // function values) are used.
 // -----------------------------------------------------------------------
 
-template <class ElemType, ElementWiseOperator opForward, ElementWiseOperator opBackward, bool gradientFromOutput>
+template <class ElemType, ElementWiseOperator opForward, ElementWiseOperator opBackward, bool gradientFromOutput, bool gradientFromInput>
 class UnaryElementWiseWithOpCodeNodeBase : public ComputationNode<ElemType>, public NumInputs<1>
 {
     typedef ComputationNode<ElemType> Base;
@@ -74,7 +74,7 @@ public:
     }
     virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override
     {
-        return !gradientFromOutput;
+        return gradientFromInput;
     }
 };
 
@@ -91,35 +91,35 @@ public:
 // -----------------------------------------------------------------------
 
 #pragma push_macro("DeclareUnaryElementWiseWithOpCodeNode")
-#define DeclareUnaryElementWiseWithOpCodeNode(Name, Forward, Backward, gradientFromOutput)                                \
-    template <class ElemType>                                                                                             \
-    class Name##Node : public UnaryElementWiseWithOpCodeNodeBase<ElemType, op##Forward, op##Backward, gradientFromOutput> \
-    {                                                                                                                     \
-        typedef UnaryElementWiseWithOpCodeNodeBase<ElemType, op##Forward, op##Backward, gradientFromOutput> Base;         \
-        UnaryElementWiseWithOpCodeNodeBaseMembers;                                                                        \
-        static const std::wstring TypeName()                                                                              \
-        {                                                                                                                 \
-            return L## #Name;                                                                                             \
-        }                                                                                                                 \
-                                                                                                                          \
-    public:                                                                                                               \
-        DeclareConstructorFromConfigWithNumInputs(Name##Node);                                                            \
-        Name##Node(DEVICEID_TYPE deviceId, const wstring& Name)                                                           \
-            : Base(deviceId, Name)                                                                                        \
-        {                                                                                                                 \
-        }                                                                                                                 \
+#define DeclareUnaryElementWiseWithOpCodeNode(Name, Forward, Backward, gradientFromOutput, gradientFromInput)                                \
+    template <class ElemType>                                                                                                                \
+    class Name##Node : public UnaryElementWiseWithOpCodeNodeBase<ElemType, op##Forward, op##Backward, gradientFromOutput, gradientFromInput> \
+    {                                                                                                                                        \
+        typedef UnaryElementWiseWithOpCodeNodeBase<ElemType, op##Forward, op##Backward, gradientFromOutput, gradientFromInput> Base;         \
+        UnaryElementWiseWithOpCodeNodeBaseMembers;                                                                                           \
+        static const std::wstring TypeName()                                                                                                 \
+        {                                                                                                                                    \
+            return L## #Name;                                                                                                                \
+        }                                                                                                                                    \
+                                                                                                                                             \
+    public:                                                                                                                                  \
+        DeclareConstructorFromConfigWithNumInputs(Name##Node);                                                                               \
+        Name##Node(DEVICEID_TYPE deviceId, const wstring& Name)                                                                              \
+            : Base(deviceId, Name)                                                                                                           \
+        {                                                                                                                                    \
+        }                                                                                                                                    \
     }
 
-//                                    Name             Forward and      Backward opcodes                           Gradient from output?
-DeclareUnaryElementWiseWithOpCodeNode(Sigmoid,         Sigmoid,         ElementwiseProductWithSigmoidDerivativeFromOutput,         true);
-DeclareUnaryElementWiseWithOpCodeNode(Tanh,            Tanh,            ElementwiseProductWithTanhDerivativeFromOutput,            true);
-DeclareUnaryElementWiseWithOpCodeNode(RectifiedLinear, LinearRectifier, ElementwiseProductWithLinearRectifierDerivativeFromOutput, true);
-DeclareUnaryElementWiseWithOpCodeNode(Log,             Log,             ElementwiseProductWithLogDerivativeFromOutput,             true);
-DeclareUnaryElementWiseWithOpCodeNode(Exp,             Exp,             ElementwiseProduct,                                        true);
-DeclareUnaryElementWiseWithOpCodeNode(Cosine,          Cosine,          ElementwiseProductWithCosDerivative,                       false);
-DeclareUnaryElementWiseWithOpCodeNode(Abs,             Abs,             ElementwiseProductWithAbsDerivative,                       false);
-DeclareUnaryElementWiseWithOpCodeNode(Negate,          Negate,          Negate,                                                    false);
-DeclareUnaryElementWiseWithOpCodeNode(Sqrt,            Sqrt,            ElementwiseProductWithSqrtDerivative,                      true);
+//                                    Name             Forward and      Backward opcodes                           Gradient from output?  Gradient from input?
+DeclareUnaryElementWiseWithOpCodeNode(Sigmoid,         Sigmoid,         ElementwiseProductWithSigmoidDerivativeFromOutput,         true,               false);
+DeclareUnaryElementWiseWithOpCodeNode(Tanh,            Tanh,            ElementwiseProductWithTanhDerivativeFromOutput,            true,               false);
+DeclareUnaryElementWiseWithOpCodeNode(RectifiedLinear, LinearRectifier, ElementwiseProductWithLinearRectifierDerivativeFromOutput, true,               false);
+DeclareUnaryElementWiseWithOpCodeNode(Log,             Log,             ElementwiseProductWithLogDerivativeFromOutput,             true,               false);
+DeclareUnaryElementWiseWithOpCodeNode(Exp,             Exp,             ElementwiseProduct,                                        true,               false);
+DeclareUnaryElementWiseWithOpCodeNode(Cosine,          Cosine,          ElementwiseProductWithCosDerivative,                       false,              true);
+DeclareUnaryElementWiseWithOpCodeNode(Abs,             Abs,             ElementwiseProductWithAbsDerivative,                       false,              true);
+DeclareUnaryElementWiseWithOpCodeNode(Negate,          Negate,          Negate,                                                    false,              false);
+DeclareUnaryElementWiseWithOpCodeNode(Sqrt,            Sqrt,            ElementwiseProductWithSqrtDerivative,                      true,               false);
 
 #pragma pop_macro("DeclareUnaryElementWiseWithOpCodeNode")
 
