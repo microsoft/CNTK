@@ -9,9 +9,14 @@ class ComputationNode(object):
             raise ValueError("Parameter 'name' has to be a string and not '%s'"%type(name))
         if var_name is not None and not isinstance(var_name, str):
             raise ValueError("Parameter 'var_name' has to be a string and not '%s'"%type(var_name))
+                
         self.name = name
         self.params = params
         self.var_name = var_name
+        self.consumers = []
+        for p in self.params:
+            if hasattr(p, 'consumers'):
+                p.consumers.append(self)
 
     def _is_input(self):
         return isinstance(self, Input)
@@ -129,7 +134,7 @@ class ComputationNode(object):
                         # Used like RowStack(v0:v1:v2)
                         inputs = p_value
                     else:
-                        inputs = [p_value]
+                        inputs = set([p_value])
 
                     input_nodes_vars = []
                     for p_value in inputs:

@@ -67,7 +67,7 @@ class AbstractContext(object, metaclass=ABCMeta):
         :param device_id: whether to use CPU or a specific GPU. -1 for CPU larger values
         :param root_node: the top node of the graph
         :param clean_up: whether the temporary directory should be removed when the context is left
-        are the GPUs indices.
+        are the GPUs indices.        
 
         '''
         if isinstance(name, str):
@@ -78,7 +78,7 @@ class AbstractContext(object, metaclass=ABCMeta):
         self.directory = os.path.abspath('_cntk_%s' % tmpdir)
 
         if os.path.exists(self.directory):
-            print("Directory '%s' already exists - overwriting data." %
+            print("Directory '%s' already exists" %
                   self.directory)
         else:
             os.mkdir(self.directory)
@@ -116,13 +116,19 @@ class AbstractContext(object, metaclass=ABCMeta):
         '''
         Add a macro file to be referenced from all configurations of this context.
         :param path: path of the macro file.    
+        :
         '''
         self.macros.append(path)
 
-    def _generate_train_config(self, reader):
+    def _generate_train_config(self, reader, override_existing):
         '''
         Generates the configuration file for the train action.
+        :param reader: the reader to use for reading the data
+        :param override_existing: if the folder exists already override it
         '''
+        
+        
+        
         tmpl = open(CNTK_TRAIN_TEMPLATE_PATH, "r").read()
         model_filename = os.path.join(self.directory, 'Models', self.name)
         description, has_inputs = self.to_description()
@@ -283,12 +289,13 @@ class Context(AbstractContext):
         subprocess.check_call(
             [CNTK_EXECUTABLE_PATH, "configFile=%s" % filename])
 
-    def train(self, reader):
+    def train(self, reader, override_existing = True):
         '''
         Run the train action locally.
         :param input_map: mapping of input node to (reader, (start_dim, num_dim))
+        :param override_existing: if the folder exists already override it
         '''
-        config_content = self._generate_train_config(reader)
+        config_content = self._generate_train_config(reader, override_existing)
         self._call_cntk(CNTK_TRAIN_CONFIG_FILENAME, config_content)
 
     def test(self, reader):
