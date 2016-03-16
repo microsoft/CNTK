@@ -189,30 +189,19 @@ public:
 
     operator std::string() const
     {
-        std::string s = std::string("{numTimeSteps:") 
-                        + std::to_string(m_numTimeSteps)
-                        + ", numParallelSequences:" 
-                        + std::to_string(m_numParallelSequences)
-                        + ", sequences:[";
+        std::stringstream s;
+        s << "{numTimeSteps:" << m_numTimeSteps << ", numParallelSequences:" << m_numParallelSequences << ", sequences:[";
 
         bool first = true;
-        for (const auto seq : m_sequences)
+        for (const auto &seq : m_sequences)
         {
             if (!first)
-                s.append(", ");
-            s.append("{seqId:");
-            s.append(std::to_string(seq.seqId));
-            s.append(", s:");
-            s.append(std::to_string(seq.s));
-            s.append(", begin:");
-            s.append(std::to_string(seq.tBegin));
-            s.append(", end:");
-            s.append(std::to_string(seq.tEnd));
-            s.append("}");
+                s << ", ";
+            s << "{seqId:" << seq.seqId << ", s:" << seq.s <<", begin:" << seq.tBegin << ", end:" << seq.tEnd << "}";
             first = false;
         }
-        s.append("]}");
-        return s;
+        s << "]}";
+        return s.str();
     }
 
     // -------------------------------------------------------------------
@@ -823,8 +812,8 @@ static inline std::pair<size_t, size_t> ColumnRangeWithMBLayoutFor(size_t numCol
             return std::pair<size_t, size_t>(0, numCols);
         if (fr.m_pMBLayout && pMBLayout && *fr.m_pMBLayout != *pMBLayout)
             // TODO: N:M relationships between inputs
-            LogicError("DataFor: fr's MBLayout inconsistent with matrix");
-           
+            LogicError("DataFor: FrameRange's MBLayout inconsistent with matrix: %s vs. %s",
+                       static_cast<string>(*(fr.m_pMBLayout)).c_str(), static_cast<string>(*(pMBLayout)).c_str());
     }
     // if FrameRange refers to whole minibatch (map mode)
     // or if we don't even have a layout
@@ -915,9 +904,11 @@ static inline std::pair<DimensionVector, DimensionVector> TensorSliceWithMBLayou
         if (fr.m_pMBLayout /*get data for a loop*/ && !pMBLayout /*'data' is not samples*/ && fr.m_broadcastAllowed /*we're OK with that*/)
             ; // the time dimension is broadcasting--leave it as is
         else if (fr.m_pMBLayout && pMBLayout && *fr.m_pMBLayout == *pMBLayout)
-            LogicError("DataFor: fr's MBLayout inconsistent with matrix. They are compatible though--are you missing a ReconcileMBLayout operation?");
+            LogicError("DataFor: FrameRange's MBLayout inconsistent with matrix. They are compatible though--are you missing a ReconcileMBLayout operation? %s vs. %s", 
+                       static_cast<string>(*(fr.m_pMBLayout)).c_str(), static_cast<string>(*(pMBLayout)).c_str());
         else
-            LogicError("DataFor: fr's MBLayout inconsistent with matrix");
+            LogicError("DataFor: FrameRange's MBLayout inconsistent with matrix: %s vs. %s", 
+                       static_cast<string>(*(fr.m_pMBLayout)).c_str(), static_cast<string>(*(pMBLayout)).c_str());
     }
     // if FrameRange refers to whole minibatch (map mode)
     // or if we don't even have a layout
@@ -954,7 +945,7 @@ static inline std::pair<DimensionVector, DimensionVector> TensorSliceWithMBLayou
             {
                 size_t s = fr.seqIndex;
                 if (s >= result.second[sequenceDim])
-                    LogicError("DataFor: FrameRange specifies a paralllel-sequence index that is out of range.");
+                    LogicError("DataFor: FrameRange specifies a parallel-sequence index that is out of range.");
                 result.first[sequenceDim] = (ElemType)s;
                 result.second[sequenceDim] = (ElemType)s + 1;
             }
