@@ -204,13 +204,13 @@
     <Text Include="Control\CNTKTextFormatReader1x100_1_Control.txt">
       <Filter>Control</Filter>
     </Text>
-    <Text Include="Control\CNTKTextFormatReader1x100_1_Output.txt">
-      <Filter>Control</Filter>
-    </Text>
     <Text Include="Control\CNTKTextFormatReader1x10_MI_1_Control.txt">
       <Filter>Control</Filter>
     </Text>
     <Text Include="Control\CNTKTextFormatReader1x10_MI_2_Control.txt">
+      <Filter>Control</Filter>
+    </Text>
+    <Text Include="Control\CNTKTextFormatReader1x1_1_Control.txt">
       <Filter>Control</Filter>
     </Text>
   </ItemGroup>
@@ -248,6 +248,9 @@
       <Filter>Config</Filter>
     </None>
     <None Include="Config\CNTKTextFormatReader1x100_Config.cntk">
+      <Filter>Config</Filter>
+    </None>
+    <None Include="Config\CNTKTextFormatReader1x1_Config.cntk">
       <Filter>Config</Filter>
     </None>
   </ItemGroup>

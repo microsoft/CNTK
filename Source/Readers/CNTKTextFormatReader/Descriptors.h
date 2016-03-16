@@ -14,13 +14,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     typedef size_t SequenceId;
     typedef size_t TimelineOffset;
 
+    // Stream (input) metadata. This text-reader specific descriptor adds two 
+    // additional fields: stream alias (name prefix in each sample) and expected
+    // sample dimension.
     struct StreamDescriptor : StreamDescription 
     {
-        std::string m_alias; // corresponding short name used in the input data (only relevant for input streams)
-        size_t m_sampleDimension; // number of elements in the sample (same as m_sampleLayout->GetNumElements())
+        std::string m_alias; // sample name prefix used in the input data
+        size_t m_sampleDimension; // expected number of elements in a sample
+                                  // (can be omitted for sparse input)
     };
 
-    // Sequence metadata
+    // Sequence metadata. This text-reader specific descriptor adds two additional
+    // fields: file offset and size in bytes. Both are required to efficiently 
+    // locate and retrieve a sequence from file, given a sequence descriptor.
     struct SequenceDescriptor : SequenceDescription
     {
         SequenceDescriptor() 
@@ -38,15 +44,21 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         size_t m_byteSize; // size in bytes
     };
 
-    // Chunk metadata
+    // Chunk metadata, similar to the sequence descriptor above, 
+    // but used to facilitate indexing and retrieval of blobs of input data of
+    // some user-specified size.
     struct ChunkDescriptor
     {
         size_t m_id; 
         size_t m_byteSize; // size in bytes
         size_t m_numSequences; // number of sequences in this chunk
-        TimelineOffset m_timelineOffset; // offset into the timeline
+        TimelineOffset m_timelineOffset; // offset into the timeline -- timeline index of
+                                         // the very first sequence from this chunk.
     };
 
+    // The index comprises two timelines with different granularities. One is 
+    // is a collection of sequences, the other -- of chunks. 
+    // TODO: needs to be refactored to support partial timeline.
     struct Index 
     {
         Index(bool hasSequenceIds, 
@@ -60,4 +72,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         std::vector<SequenceDescriptor> m_timeline;
         std::vector<ChunkDescriptor> m_chunks;
     };
+
+    typedef std::shared_ptr<Index> IndexPtr;
 }}}

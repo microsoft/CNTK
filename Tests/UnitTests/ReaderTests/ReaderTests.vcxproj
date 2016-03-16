@@ -149,9 +149,9 @@
     <Text Include="Config\ImageReaderSimple_Config.cntk" />
     <Text Include="Config\UCIFastReaderSimpleDataLoop_Config.cntk" />
     <Text Include="Control\CNTKTextFormatReader1x100_1_Control.txt" />
-    <Text Include="Control\CNTKTextFormatReader1x100_1_Output.txt" />
     <Text Include="Control\CNTKTextFormatReader1x10_MI_1_Control.txt" />
     <Text Include="Control\CNTKTextFormatReader1x10_MI_2_Control.txt" />
+    <Text Include="Control\CNTKTextFormatReader1x1_1_Control.txt" />
     <Text Include="Control\CNTKTextFormatReaderMNIST_Control.txt" />
     <Text Include="Control\CNTKTextFormatReaderSimple_Control.txt" />
     <Text Include="Control\HTKMLFReaderSimpleDataLoop10_20_Control.txt" />
@@ -186,6 +186,7 @@
   <ItemGroup>
     <None Include="Config\CNTKTextFormatReader1x10_MI_Config.cntk" />
     <None Include="Config\CNTKTextFormatReader1x100_Config.cntk" />
+    <None Include="Config\CNTKTextFormatReader1x1_Config.cntk" />
     <None Include="Config\CNTKTextFormatReaderSimple_Config.cntk" />
     <None Include="Config\CNTKTextFormatReaderMNIST_Config.cntk" />
     <None Include="Config\ImageReaderZip_Config.cntk" />

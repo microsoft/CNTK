@@ -125,12 +125,6 @@
       <PrecompiledHeader>Create</PrecompiledHeader>
     </ClCompile>
   </ItemGroup>
-  <ItemGroup>
-    <None Include="SampleReaderConfig.cntk" />
-  </ItemGroup>
-  <ItemGroup>
-    <Text Include="SampleInput.txt" />
-  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets" />
 </Project>

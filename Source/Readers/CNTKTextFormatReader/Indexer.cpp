@@ -12,32 +12,30 @@ using std::string;
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
-Indexer::Indexer(FILE* file, bool skipSequenceIds, size_t chunkSize)
-    : m_maxChunkSize(chunkSize), m_buffer(new char[BUFFER_SIZE + 1])
+Indexer::Indexer(FILE* file, bool skipSequenceIds, size_t chunkSize) :
+    m_file(file),
+    m_fileOffsetStart(0),
+    m_fileOffsetEnd(0),
+    m_buffer(new char[BUFFER_SIZE + 1]),
+    m_bufferStart(nullptr),
+    m_bufferEnd(nullptr),
+    m_pos(nullptr),
+    m_done(false),
+    m_skipSequenceIds(skipSequenceIds),
+    m_maxChunkSize(chunkSize)
 {
-    if (file == nullptr)
+    if (m_file == nullptr)
     {
         RuntimeError("Input file not open for reading");
     }
-    m_file = file;
-    m_bufferStart = m_buffer.get();
-    m_fileOffsetStart = 0;
-    m_fileOffsetEnd = 0;
-    m_done = false;
-    m_skipSequenceIds = skipSequenceIds;
     m_chunks.push_back({});
 }
 
-int64_t Indexer::GetFileOffset()
-{
-    return m_fileOffsetStart + (m_pos - m_bufferStart);
-}
-
-void Indexer::Fill()
+void Indexer::RefillBuffer()
 {
     if (!m_done)
     {
-        size_t bytesRead = fread(m_bufferStart, 1, BUFFER_SIZE, m_file);
+        size_t bytesRead = fread(m_buffer.get(), 1, BUFFER_SIZE, m_file);
         if (bytesRead == (size_t)-1)
             RuntimeError("Could not read from the input file.");
         if (bytesRead == 0)
@@ -48,6 +46,7 @@ void Indexer::Fill()
         {
             m_fileOffsetStart = m_fileOffsetEnd;
             m_fileOffsetEnd += bytesRead;
+            m_bufferStart = m_buffer.get();
             m_pos = m_bufferStart;
             m_bufferEnd = m_bufferStart + bytesRead;
         }
@@ -58,13 +57,12 @@ void Indexer::UpdateTimeline(SequenceDescriptor& sd)
 {
     assert(!m_chunks.empty());
     ChunkDescriptor* chunk = &m_chunks.back();
-    TimelineOffset timelineOffset = m_timeline.size();
     if (chunk->m_byteSize > 0 && (chunk->m_byteSize + sd.m_byteSize) > m_maxChunkSize)
     {
         m_chunks.push_back({});
         chunk = &m_chunks.back();
         chunk->m_id = m_chunks.size() - 1;
-        chunk->m_timelineOffset = timelineOffset;
+        chunk->m_timelineOffset = m_timeline.size();
     }
     chunk->m_byteSize += sd.m_byteSize;
     chunk->m_numSequences++;
@@ -73,11 +71,12 @@ void Indexer::UpdateTimeline(SequenceDescriptor& sd)
     m_timeline.push_back(sd);
 }
 
-std::shared_ptr<Index> Indexer::BuildFromLines()
+IndexPtr Indexer::BuildFromLines()
 {
+    assert(m_pos == m_bufferStart);
     m_skipSequenceIds = true;
     size_t lines = 0;
-    int64_t offset = m_fileOffsetStart;
+    int64_t offset = GetFileOffset();
     while (!m_done)
     {
         m_pos = (char*)memchr(m_pos, ROW_DELIMITER, m_bufferEnd - m_pos);
@@ -88,15 +87,16 @@ std::shared_ptr<Index> Indexer::BuildFromLines()
             sd.m_numberOfSamples = 1;
             sd.m_isValid = true;
             sd.m_fileOffsetBytes = offset;
-            sd.m_byteSize = (m_fileOffsetEnd - (m_bufferEnd - m_pos)) - offset + 1;
-            offset += sd.m_byteSize;
+            offset = GetFileOffset() + 1;
+            sd.m_byteSize = offset - sd.m_fileOffsetBytes;
+            // TODO: ignore empty lines.
             UpdateTimeline(sd);
             ++m_pos;
             ++lines;
         }
         else
         {
-            Fill();
+            RefillBuffer();
         }
     }
 
@@ -107,9 +107,9 @@ std::shared_ptr<Index> Indexer::BuildFromLines()
 }
 
 
-std::shared_ptr<Index> Indexer::Build()
+IndexPtr Indexer::Build()
 {
-    Fill(); // read the first block of data
+    RefillBuffer(); // read the first block of data
     if (m_done)
     {
         RuntimeError("Input file is empty");
@@ -120,6 +120,8 @@ std::shared_ptr<Index> Indexer::Build()
     {
         // input file contains UTF-8 BOM value, skip it.
         m_pos += 3;
+        m_fileOffsetStart += 3;
+        m_bufferStart += 3;
     }
 
     // check the first byte and decide what to do next
@@ -130,7 +132,7 @@ std::shared_ptr<Index> Indexer::Build()
     }
 
     size_t id = 0;
-    int64_t offset = m_fileOffsetStart + (m_pos - m_bufferStart);
+    int64_t offset = GetFileOffset();
     // read the very first sequence id
     if (!GetNextSequenceId(id))
     {
@@ -145,7 +147,7 @@ std::shared_ptr<Index> Indexer::Build()
     while (!m_done)
     {
         SkipLine(); // ignore whatever is left on this line.
-        offset = m_fileOffsetStart + (m_pos - m_bufferStart); // a new line starts at this offset;
+        offset = GetFileOffset(); // a new line starts at this offset;
         sd.m_numberOfSamples++;
 
         if (!m_done && GetNextSequenceId(id) && id != sd.m_id)
@@ -181,11 +183,11 @@ void Indexer::SkipLine()
             //found a new-line character
             if (++m_pos == m_bufferEnd)
             {
-                Fill();
+                RefillBuffer();
             }
             return;
         }
-        Fill();
+        RefillBuffer();
     }
 }
 
@@ -205,7 +207,7 @@ bool Indexer::GetNextSequenceId(size_t& id)
                 return found;
             }
 
-            if (c < '0' || c > '9')
+            if (!isdigit(c))
             {
                 // TODO: ignore malformed sequences
                 RuntimeError("Unexpected character('%c')"
@@ -224,7 +226,7 @@ bool Indexer::GetNextSequenceId(size_t& id)
             }
             ++m_pos;
         }
-        Fill();
+        RefillBuffer();
     }
 
     // TODO: ignore malformed sequences

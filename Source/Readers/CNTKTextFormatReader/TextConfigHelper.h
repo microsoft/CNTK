@@ -20,35 +20,30 @@ public:
     explicit TextConfigHelper(const ConfigParameters& config);
 
     // Get all input streams that are specified in the configuration.
-    const std::vector<StreamDescriptor>& GetStreams() const;
+    const vector<StreamDescriptor>& GetStreams() const { return m_streams; }
 
     // Get full path to the input file.
-    const std::wstring& GetFilePath() const;
+    const wstring& GetFilePath() const { return m_filepath; }
 
-    int GetCpuThreadCount() const;
+    bool ShouldRandomize() const { return m_randomize; }
 
-    bool ShouldRandomize() const;
+    bool ShouldSkipSequenceIds() const { return m_skipSequenceIds; }
 
-    ElementType GetElementType() const;
+    unsigned int GetMaxAllowedErrors() const { return m_maxErrors; }
 
-    bool ShouldSkipSequenceIds() const;
+    unsigned int GetTraceLevel() const { return m_traceLevel; }
 
-    unsigned int GetMaxAllowedErrors() const;
+    size_t GetChunkSize() const { return m_chunkSizeBytes; }
 
-    unsigned int GetTraceLevel() const;
+    unsigned int GetNumChunksToCache() const { return m_chunkCacheSize; }
 
-    size_t GetChunkSize() const;
-
-    unsigned int GetNumChunksToCache() const;
-    
-    void ParseStreamConfig(const ConfigParameters& config, std::vector<StreamDescriptor>& streams);
+    ElementType GetElementType() const { return m_elementType; }
 
     DISABLE_COPY_AND_MOVE(TextConfigHelper);
 
 private:
     std::wstring m_filepath;
     std::vector<StreamDescriptor> m_streams;
-    int m_cpuThreadCount;
     bool m_randomize;
     ElementType m_elementType;
     bool m_skipSequenceIds;

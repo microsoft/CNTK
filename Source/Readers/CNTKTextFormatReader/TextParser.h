@@ -5,147 +5,18 @@
 
 #pragma once
 
-#include <array>
 #include "DataDeserializerBase.h"
 #include "Descriptors.h"
 #include "TextConfigHelper.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
-template <class ElemType>
-struct Data 
-{
-    virtual ~Data() {};
-
-    size_t m_numberOfSamples = 0;
-    std::vector<ElemType> m_buffer;
-};
-
-template <class ElemType>
-struct DenseData : Data<ElemType>
-{
-    // capacity = expected number of samples * sample size
-    DenseData(size_t capacity)
-    {
-        Data<ElemType>::m_buffer.reserve(capacity);
-    }
-};
-
-template <class ElemType>
-struct SparseData : Data<ElemType>
-{
-    std::vector<std::vector<size_t>> m_indices;
-};
-
-template <class ElemType>
-using Sequence = std::vector<std::unique_ptr<Data<ElemType>>>;
+class CNTKTextFormatReaderTestRunner;
 
 // TODO: more details when tracing warnings 
 // (e.g., buffer content around the char that triggered the warning)
 template <class ElemType>
 class TextParser : public DataDeserializerBase {
-private:
-    class TextDataChunk : public Chunk, public std::enable_shared_from_this<TextDataChunk> {
-    public:
-        TextDataChunk(const ChunkDescriptor& descriptor);
-
-        // Gets sequences by id.
-        std::vector<SequenceDataPtr> GetSequence(size_t sequenceId) override;
-
-        std::map<size_t, std::vector<SequenceDataPtr>> m_sequencePtrMap;
-        // Buffer to store the actual data.
-        std::vector<Sequence<ElemType>> m_sequenceData;
-
-        // chunk id (copied from the descriptor)
-        size_t m_id; 
-        // Keeps track of how many times GetSequence was called.
-        // When this counter value reaches the number of sequences in 
-        // the this chunk, it can be safely unloaded.
-        size_t m_sequenceRequestCount;
-    };
-
-    typedef std::shared_ptr<TextDataChunk> TextChunkPtr;
-
-    enum TraceLevel {
-        Error = 0,
-        Warning = 1,
-        Info = 2
-    };
-
-    struct StreamInfo {
-        StorageType m_type;
-        size_t m_sampleDimension;
-    };
-
-    const std::wstring m_filename;
-    FILE* m_file = nullptr;
-
-    const size_t m_numberOfStreams;
-    std::vector<StreamInfo> m_streamInfos;
-
-    size_t m_maxAliasLength;
-    std::map<std::string, size_t> m_aliasToIdMap;
-
-    std::shared_ptr<Index> m_index = nullptr;
-
-    int64_t m_fileOffsetStart;
-    int64_t m_fileOffsetEnd;
-
-    char* m_bufferStart = nullptr;
-    char* m_bufferEnd = nullptr;
-    char* m_pos = nullptr; // buffer index
-
-    char* m_scratch; // local buffer for string parsing
-
-    size_t m_chunkSizeBytes = 0;
-    unsigned int m_chunkCacheSize = 0; // number of chunks to keep in the memory
-    unsigned int m_traceLevel = 0;
-    unsigned int m_numAllowedErrors = 0;
-    bool m_skipSequenceIds;
-    
-    // All streams this reader provides.
-    std::vector<StreamDescriptionPtr> m_streams;
-
-    // A map of currently loaded chunks
-    std::map<size_t, TextChunkPtr> m_chunkCache;
-
-    // throws runtime exception when number of parsing erros is 
-    // greater than the specified threshold
-    void IncrementNumberOfErrorsOrDie();
-
-    void SetFileOffset(int64_t position);
-
-    void SkipToNextValue(size_t& bytesToRead);
-    void SkipToNextInput(size_t& bytesToRead);
-
-    bool Fill();
-
-    int64_t GetFileOffset() { return m_fileOffsetStart + (m_pos - m_bufferStart); }
-
-    // reads an alias/name and converts it to an internal stream id (= stream index).
-    bool GetInputId(size_t& id, size_t& bytesToRead);
-
-    bool ReadRealNumber(ElemType& value, size_t& bytesToRead);
-
-    bool ReadUint64(size_t& index, size_t& bytesToRead);
-
-    bool ReadDenseSample(std::vector<ElemType>& values, size_t sampleSize, size_t& bytesToRead);
-
-    bool ReadSparseSample(std::vector<ElemType>& values, std::vector<size_t>& indices, size_t& bytesToRead);
-
-    // read one whole row (terminated by a row delimiter) of samples
-    bool ReadRow(Sequence<ElemType>& sequence, size_t& bytesToRead);
-
-    bool inline CanRead() { return m_pos != m_bufferEnd || Fill(); }
-
-    Sequence<ElemType> LoadSequence(bool verifyId, const SequenceDescriptor& descriptor);
-
-    TextParser(const std::wstring& filename, const vector<StreamDescriptor>& streams);
-
-    DISABLE_COPY_AND_MOVE(TextParser);
-protected:
-    void FillSequenceDescriptions(SequenceDescriptions& timeline) const override;
-
 public:
     TextParser(const TextConfigHelper& helper);
 
@@ -162,6 +33,129 @@ public:
 
     // Retrieves total number of chunks this deserializer can produce.
     size_t GetTotalNumberOfChunks() override;
+protected:
+    void FillSequenceDescriptions(SequenceDescriptions& timeline) const override;
+
+private:
+    // A buffer to keep data for all samples in a (variable length) sequence 
+    // from a single input stream.
+    struct InputStreamBuffer
+    {
+        virtual ~InputStreamBuffer() {};
+
+        size_t m_numberOfSamples = 0;
+        std::vector<ElemType> m_buffer;
+    };
+
+    struct DenseInputStreamBuffer : InputStreamBuffer
+    {
+        // capacity = expected number of samples * sample size
+        DenseInputStreamBuffer(size_t capacity)
+        {
+            InputStreamBuffer::m_buffer.reserve(capacity);
+        }
+    };
+
+    // In case of sparse input, we also need a vector of 
+    // indices (one index for each input value) and a vector 
+    // of NNZ counts (one for each sample).
+    struct SparseInputStreamBuffer : InputStreamBuffer
+    {
+        std::vector<size_t> m_indices;
+        std::vector<size_t> m_nnzCounts;
+    };
+
+    // A sequence buffer is a vector that contains an input buffer for each input stream.
+    typedef std::vector<std::unique_ptr<InputStreamBuffer>> SequenceBuffer;
+
+    // A chunk of input data in the text format.
+    class TextDataChunk;
+    
+    typedef std::shared_ptr<TextDataChunk> TextChunkPtr;
+
+    enum TraceLevel 
+    {
+        Error = 0,
+        Warning = 1,
+        Info = 2
+    };
+
+    const std::wstring m_filename;
+    FILE* m_file;
+
+    // An internal structure to assist with copying from input stream buffers into
+    // into sequence data in a proper format.
+    struct StreamInfo;
+    std::vector<StreamInfo> m_streamInfos;
+
+    size_t m_maxAliasLength;
+    std::map<std::string, size_t> m_aliasToIdMap;
+
+    IndexPtr m_index;
+
+    int64_t m_fileOffsetStart;
+    int64_t m_fileOffsetEnd;
+
+    // TODO: not DRY (same in the Indexer), needs refactoring
+    unique_ptr<char[]> m_buffer;
+    const char* m_bufferStart;
+    const char* m_bufferEnd;
+    const char* m_pos; // buffer index
+
+    unique_ptr<char[]> m_scratch; // local buffer for string parsing
+
+    size_t m_chunkSizeBytes;
+    unsigned int m_chunkCacheSize; // number of chunks to keep in the memory
+    unsigned int m_traceLevel;
+    unsigned int m_numAllowedErrors;
+    bool m_skipSequenceIds;
+    
+    // All streams this reader provides.
+    std::vector<StreamDescriptionPtr> m_streams;
+
+    // A map of currently loaded chunks
+    // TODO: remove caching once partial randomization is in master.
+    std::map<size_t, TextChunkPtr> m_chunkCache;
+
+    // throws runtime exception when number of parsing errors is 
+    // greater than the specified threshold
+    void IncrementNumberOfErrorsOrDie();
+
+    void SetFileOffset(int64_t position);
+
+    void SkipToNextValue(size_t& bytesToRead);
+    void SkipToNextInput(size_t& bytesToRead);
+
+    bool RefillBuffer();
+
+    int64_t GetFileOffset() const { return m_fileOffsetStart + (m_pos - m_bufferStart); }
+
+    // Reads an alias/name and converts it to an internal stream id (= stream index).
+    bool GetInputId(size_t& id, size_t& bytesToRead);
+
+    bool ReadRealNumber(ElemType& value, size_t& bytesToRead);
+
+    bool ReadUint64(size_t& value, size_t& bytesToRead);
+
+    // Reads dense sample values into the provided vector.
+    bool ReadDenseSample(std::vector<ElemType>& values, size_t sampleSize, size_t& bytesToRead);
+
+    // Reads sparse sample values and corresponging indices into the provided vectors.
+    bool ReadSparseSample(std::vector<ElemType>& values, std::vector<size_t>& indices, size_t& bytesToRead);
+
+    // Reads one whole row (terminated by a row delimiter) of samples
+    bool ReadRow(SequenceBuffer& sequence, size_t& bytesToRead);
+
+    // Returns true if there's still data available.
+    bool inline CanRead() { return m_pos != m_bufferEnd || RefillBuffer(); }
+
+    // Given a descriptor, retrieves the data for the corresponging sequence from the file.
+    SequenceBuffer LoadSequence(bool verifyId, const SequenceDescriptor& descriptor);
+
+    // Given a descriptor, retrieves the data for the corresponging chunk from the file.
+    void LoadChunk(TextChunkPtr& chunk, const ChunkDescriptor& descriptor);
+
+    TextParser(const std::wstring& filename, const vector<StreamDescriptor>& streams);
 
     void SetTraceLevel(unsigned int traceLevel);
 
@@ -172,5 +166,9 @@ public:
     void SetChunkSize(size_t size);
 
     void SetChunkCacheSize(unsigned int size);
+
+    friend class CNTKTextFormatReaderTestRunner;
+
+    DISABLE_COPY_AND_MOVE(TextParser);
 };
 }}}

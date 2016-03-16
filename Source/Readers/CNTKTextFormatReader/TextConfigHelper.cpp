@@ -23,19 +23,22 @@ TextConfigHelper::TextConfigHelper(const ConfigParameters& config)
     }
 
     const ConfigParameters& input = config(L"input");
-
+    
     if (input.empty())
     {
         RuntimeError("CNTKTextFormatReader configuration contains an empty input section");
     }
 
-    m_elementType = ElementType::tfloat;
     string precision = config.Find("precision", "float");
     if (AreEqualIgnoreCase(precision, "double"))
     {
         m_elementType = ElementType::tdouble;
     }
-    else if (!AreEqualIgnoreCase(precision, "float"))
+    else if (AreEqualIgnoreCase(precision, "float"))
+    {
+        m_elementType = ElementType::tfloat;
+    }
+    else
     {
         RuntimeError("Not supported precision '%s'. Expected 'double' or 'float'.", precision.c_str());
     }
@@ -45,7 +48,7 @@ TextConfigHelper::TextConfigHelper(const ConfigParameters& config)
     for (const pair<string, ConfigParameters>& section : input)
     {
         ConfigParameters input = section.second;
-        const wstring& name = msra::strfun::utf16(section.first);
+        wstring name = msra::strfun::utf16(section.first);
 
         if (!input.ExistsCurrent(L"dim") || !input.ExistsCurrent(L"format"))
         {
@@ -100,8 +103,6 @@ TextConfigHelper::TextConfigHelper(const ConfigParameters& config)
         m_streams.push_back(stream);
     }
 
-
-
     m_filepath = msra::strfun::utf16(config(L"file"));
 
     string rand = config(L"randomize", "auto");
@@ -119,7 +120,6 @@ TextConfigHelper::TextConfigHelper(const ConfigParameters& config)
         RuntimeError("'randomize' parameter must be set to 'auto' or 'none'");
     }
 
-    m_cpuThreadCount = config(L"numCPUThreads", 0);
     m_skipSequenceIds = config(L"skipSequenceIds", false);
     m_maxErrors = config(L"maxErrors", 0);
     m_traceLevel = config(L"traceLevel", 0);
@@ -127,53 +127,4 @@ TextConfigHelper::TextConfigHelper(const ConfigParameters& config)
     m_chunkCacheSize = config(L"numChunksToCache", 32); // 32 * 32 MB = 1 GB of memory in total
 }
 
-const wstring& TextConfigHelper::GetFilePath() const
-{
-    return m_filepath;
-}
-
-int TextConfigHelper::GetCpuThreadCount() const
-{
-    return m_cpuThreadCount;
-}
-
-bool TextConfigHelper::ShouldRandomize() const
-{
-    return m_randomize;
-}
-
-const vector<StreamDescriptor>& TextConfigHelper::GetStreams() const
-{
-    return m_streams;
-}
-
-bool TextConfigHelper::ShouldSkipSequenceIds() const
-{
-    return m_skipSequenceIds;
-}
-
-unsigned int TextConfigHelper::GetMaxAllowedErrors() const
-{
-    return m_maxErrors;
-}
-
-unsigned int TextConfigHelper::GetTraceLevel() const
-{
-    return m_traceLevel;
-}
-
-size_t TextConfigHelper::GetChunkSize() const
-{
-    return m_chunkSizeBytes;
-}
-
-unsigned int TextConfigHelper::GetNumChunksToCache() const
-{
-    return m_chunkCacheSize;
-}
-
-ElementType TextConfigHelper::GetElementType() const
-{
-    return m_elementType;
-}
 }}}

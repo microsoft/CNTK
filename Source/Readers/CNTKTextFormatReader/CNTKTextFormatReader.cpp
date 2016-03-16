@@ -10,26 +10,14 @@
 #include "BlockRandomizer.h"
 #include "NoRandomizer.h"
 #include "TextParser.h"
-#include <omp.h>
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
 CNTKTextFormatReader::CNTKTextFormatReader(MemoryProviderPtr provider,
-    const ConfigParameters& config)
-    :m_provider(provider)
+    const ConfigParameters& config) :
+    m_provider(provider)
 {
-    // In the future, deserializers and transformers will be dynamically loaded
-    // from external libraries based on the configuration/brain script.
-    // We will provide ability to implement the transformer and
-    // deserializer interface not only in C++ but in scripting languages as well.
-
     TextConfigHelper configHelper(config);
-
-    int threadCount = configHelper.GetCpuThreadCount();
-    if (threadCount > 0)
-    {
-        omp_set_num_threads(threadCount);
-    }
     
     if (configHelper.GetElementType() == ElementType::tfloat) 
     {
