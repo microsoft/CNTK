@@ -9,6 +9,7 @@
 
 #include "ModelEditLanguage.h"
 #include "ConvolutionalNodes.h"
+#include "InputAndParamNodes.h"
 #include <map>
 
 namespace Microsoft { namespace MSR { namespace CNTK {

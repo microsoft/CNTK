@@ -3007,6 +3007,7 @@ void GPUMatrix<ElemType>::NDConvolutionForward(const GPUMatrix<ElemType>& filter
                                                const GPUMatrix<int>& mpRowRun, const GPUMatrix<int>& runs, GPUMatrix<ElemType>& output) const
 {
     UNUSED(filter); UNUSED(mpRowCol); UNUSED(mpRowIwht); UNUSED(mpRowRun); UNUSED(runs); UNUSED(output);
+    RuntimeError("Not yet implemented.");
 }
 
 template <class ElemType>
@@ -3014,6 +3015,7 @@ void GPUMatrix<ElemType>::NDConvolutionBackwardData(const GPUMatrix<ElemType>& f
                                                     const GPUMatrix<int>& mpRowRun, const GPUMatrix<int>& runs, GPUMatrix<ElemType>& grad) const
 {
     UNUSED(filter); UNUSED(mpRowCol); UNUSED(mpRowIwht); UNUSED(mpRowRun); UNUSED(runs); UNUSED(grad);
+    RuntimeError("Not yet implemented.");
 }
 
 template <class ElemType>
@@ -3021,12 +3023,14 @@ void GPUMatrix<ElemType>::NDConvolutionBackwardFilter(const GPUMatrix<ElemType>&
                                                       const GPUMatrix<int>& mpRowRun, const GPUMatrix<int>& runs, GPUMatrix<ElemType>& filterGrad) const
 {
     UNUSED(in); UNUSED(mpRowCol); UNUSED(mpRowIwht); UNUSED(mpRowRun); UNUSED(runs); UNUSED(filterGrad);
+    RuntimeError("Not yet implemented.");
 }
 
 template <class ElemType>
 void GPUMatrix<ElemType>::NDMaxPoolingForward(const GPUMatrix<int>& mpRowCol, const GPUMatrix<int>& mpRowIndices, const GPUMatrix<int>& indices, GPUMatrix<ElemType>& output) const
 {
     UNUSED(mpRowCol); UNUSED(mpRowIndices); UNUSED(indices); UNUSED(output);
+    RuntimeError("Not yet implemented.");
 }
 
 template <class ElemType>
@@ -3035,18 +3039,21 @@ void GPUMatrix<ElemType>::NDMaxPoolingBackward(const GPUMatrix<ElemType>& out, c
                                                GPUMatrix<ElemType>& grad) const
 {
     UNUSED(out); UNUSED(in); UNUSED(mpRowCol); UNUSED(mpRowIndices); UNUSED(indices); UNUSED(grad);
+    RuntimeError("Not yet implemented.");
 }
 
 template <class ElemType>
 void GPUMatrix<ElemType>::NDAveragePoolingForward(const GPUMatrix<int>& mpRowCol, const GPUMatrix<int>& mpRowIndices, const GPUMatrix<int>& indices, GPUMatrix<ElemType>& output) const
 {
     UNUSED(mpRowCol); UNUSED(mpRowIndices); UNUSED(indices); UNUSED(output);
+    RuntimeError("Not yet implemented.");
 }
 
 template <class ElemType>
 void GPUMatrix<ElemType>::NDAveragePoolingBackward(const GPUMatrix<int>& mpRowCol, const GPUMatrix<int>& mpRowIndices, const GPUMatrix<int>& indices, GPUMatrix<ElemType>& grad) const
 {
     UNUSED(mpRowCol); UNUSED(mpRowIndices); UNUSED(indices); UNUSED(grad);
+    RuntimeError("Not yet implemented.");
 }
 
 template <class ElemType>

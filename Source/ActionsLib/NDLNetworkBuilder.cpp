@@ -14,6 +14,7 @@
 #include "ConvolutionalNodes.h"
 #include "NonlinearityNodes.h"
 #include "ReshapingNodes.h"
+#include "InputAndParamNodes.h"
 #include "TensorShape.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {

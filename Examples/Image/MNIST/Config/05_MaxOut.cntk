@@ -16,15 +16,14 @@ imageLayout = "cudnn"
 command = train:test
 
 precision = "float"
-modelPath = "$ModelDir$/04_NDConvolution"
+modelPath = "$ModelDir$/05_MaxOut"
 
 # uncomment the following line to write logs to a file 
-stderr = "$OutputDir$/04_NDConvolution_out"
+stderr = "$OutputDir$/05_MaxOut_out"
 traceLevel=1
 numMBsToShowResult=500
 
 prefetch=true
-useCuDnn=true
 
 #######################################
 #  TRAINING CONFIG                    #
@@ -35,34 +34,22 @@ train = [
 
     BrainScriptNetworkBuilder = [
 
-        useCuDnn = $useCuDnn$
-
         // Macros
         NDConvReLULayer(inp, kW, kH, inMap, outMap, hStride, vStride, wScale, bValue) = [  // ReLU non-linearity
             convW = Parameter(outMap, kW * kH * inMap, init="uniform", initValueScale=wScale, initOnCPUOnly=false)
-            conv = NDConvolution(convW, inp, (kW : kH : inMap), (1 : 1 : outMap), stride=(hStride : vStride : inMap), sharing=true, autoPadding=true, imageLayout="$imageLayout$")
-            convB = if useCuDnn
-                    then ParameterTensor((1 : 1 : outMap), init="fixedValue", value=bValue)
-                    else Parameter(outMap, 1,              init="fixedValue", value=bValue)
+            conv  = NDConvolution(convW, inp, (kW : kH : inMap), (1 : 1 : outMap), stride=(hStride : vStride : inMap), sharing=true, autoPadding=true, imageLayout="$imageLayout$")
+            convB = ParameterTensor((1 : 1 : outMap), init="fixedValue", value=bValue)
             convPlusB = Plus(conv, convB);
             out = RectifiedLinear(convPlusB);
         ]
 
-        NDMaxPoolLayer(inp, kW, kH, inMap, hStride, vStride) = [
-            out = NDPooling(inp, (kW : kH : 1), poolKind='max', stride=(hStride : vStride : 1), autoPadding=true, imageLayout="$imageLayout$")
+        NDMaxPoolLayer(inp, kW, kH, kD, inMap, hS, vS, dS) = [
+            out = NDPooling(inp, (kW : kH : kD), poolKind='max', stride=(hS : vS : dS), autoPadding=(true : true : false), imageLayout="$imageLayout$")
         ]
 
-        DNNImageSigmoidLayer(inW, inH, inC, outDim, x, parmScale) = [
+        DNNImageLayer(inW, inH, inC, outDim, x, parmScale) = [
             W = ParameterTensor((outDim: inW : inH : inC), init="uniform", initValueScale=parmScale)
             b = LearnableParameter(outDim, 1,              init="uniform", initValueScale=parmScale) 
-            t = Times(W, x)
-            z = Plus(t, b)
-            out = Sigmoid(z)
-        ]
-
-        DNNLayer(inDim, outDim, x, parmScale) = [               // no non-linearity, as input for SoftMax
-            W = Parameter(outDim, inDim, init="uniform", initValueScale=parmScale, initOnCPUOnly=false)
-            b = Parameter(outDim, 1,     init="uniform", initValueScale=parmScale, initOnCPUOnly=false)
             t = Times(W, x)
             out = Plus(t, b)
         ]
@@ -78,37 +65,54 @@ train = [
         labels = Input(labelDim, tag="label")
 
         # conv1
-        kW1 = 5
-        kH1 = 5
-        cMap1 = 16
-        hStride1 = 1
-        vStride1 = 1
-        conv1 = NDConvReLULayer(featScaled, kW1, kH1, 1, cMap1, hStride1, vStride1, 10, 1).out
+        kW1 = 8
+        kH1 = 8
+        cMap1 = 96
+        hS1 = 1
+        vS1 = 1
+        conv1 = NDConvReLULayer(featScaled, kW1, kH1, 1, cMap1, hS1, vS1, 10, 1).out
 
-        pool1W = 2
-        pool1H = 2
-        pool1hStride = 2
-        pool1vStride = 2
-        pool1 = NDMaxPoolLayer(conv1, pool1W, pool1H, cMap1, pool1hStride, pool1vStride).out
+        pool1W = 4
+        pool1H = 4
+        pool1D = 2
+        pool1hS = 2
+        pool1vS = 2
+        pool1dS = 2
+        pool1 = NDMaxPoolLayer(conv1, pool1W, pool1H, pool1D, cMap1, pool1hS, pool1vS, pool1dS).out
 
         # conv2
-        kW2 = 5
-        kH2 = 5
-        cMap2 = 32
-        hStride2 = 1
-        vStride2 = 1
-        conv2 = NDConvReLULayer(pool1, kW2, kH2, cMap1, cMap2, hStride2, vStride2, 10, 1).out
+        kW2 = 8
+        kH2 = 8
+        cMap2 = 96
+        hS2 = 1
+        vS2 = 1
+        conv2 = NDConvReLULayer(pool1, kW2, kH2, cMap1 / pool1dS, cMap2, hS2, vS2, 10, 1).out
 
-        pool2W = 2
-        pool2H = 2
-        pool2hStride = 2
-        pool2vStride = 2
-        pool2 = NDMaxPoolLayer(conv2, pool2W, pool2H, cMap2, pool2hStride, pool2vStride).out
+        pool2W = 4
+        pool2H = 4
+        pool2D = 2
+        pool2hS = 2
+        pool2vS = 2
+        pool2dS = 2
+        pool2 = NDMaxPoolLayer(conv2, pool2W, pool2H, pool2D, cMap2, pool2hS, pool2vS, pool2dS).out
 
-        h1Dim = 128
-        # DNNSigmoidLayer and DNNLayer are defined in Macros.ndl
-        h1 = DNNImageSigmoidLayer(7, 7, cMap2, h1Dim, pool2, 1).out
-        ol = DNNLayer(h1Dim, labelDim, h1, 1).out
+        # conv3
+        kW3 = 5
+        kH3 = 5
+        cMap3 = 96
+        hS3 = 1
+        vS3 = 1
+        conv3 = NDConvReLULayer(pool2, kW3, kH3, cMap2 / pool2dS, cMap3, hS3, vS3, 10, 1).out
+
+        pool3W = 2
+        pool3H = 2
+        pool3D = 4
+        pool3hS = 2
+        pool3vS = 2
+        pool3dS = 4
+        pool3 = NDMaxPoolLayer(conv3, pool3W, pool3H, pool3D, cMap3, pool3hS, pool3vS, pool3dS).out
+
+        ol = DNNImageLayer(4, 4, cMap3 / pool3dS, labelDim, pool3, 1).out
 
         ce = CrossEntropyWithSoftmax(labels, ol, tag="criterion")
         err = ErrorPrediction(labels, ol, tag="eval")

@@ -7,26 +7,13 @@
 #include "Basics.h"
 #include "Matrix.h"
 #include "ComputationNode.h"
-#include "InputAndParamNodes.h"
 #include "ConvolutionEngine.h"
-
-#include <unordered_set>
-#include <map>
-#include <string>
-#include <vector>
-#include <stdexcept>
-#include <list>
-#include <memory>
-#include <algorithm>
-#include <assert.h>
-#include <atomic>
-#include <sstream>
-#include <iostream>
+#include "StringUtil.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
 template <class ElemType>
-class NDConvolutionNode : public ComputationNode<ElemType>, public NumInputs<2>
+class NDConvolutionNode : public ComputationNode<ElemType>
 {
     typedef ComputationNode<ElemType> Base;
     UsingComputationNodeMembersBoilerplate;
@@ -42,18 +29,18 @@ public:
     }
     NDConvolutionNode(DEVICEID_TYPE deviceId, const wstring& name, const TensorShape& kernelShape, const TensorShape& mapCount, const TensorShape& strideShape,
                       const std::vector<bool>& sharing, const std::vector<bool>& autoPadding, const TensorShape& lowerPad, const TensorShape& upperPad,
-                      ImageLayoutKind imageLayout, size_t maxTempMemSizeInSamples)
+                      ImageLayoutKind imageLayout, size_t maxTempMemSizeInSamples, const std::wstring& poolKind)
         : Base(deviceId, name), m_kernelShape(kernelShape), m_mapCount(mapCount), m_stride(strideShape), m_sharing(sharing),
         m_autoPad(autoPadding), m_lowerPad(lowerPad), m_upperPad(upperPad),
-        m_imageLayout(imageLayout), m_maxTempMemSizeInSamples(maxTempMemSizeInSamples)
+        m_imageLayout(imageLayout), m_maxTempMemSizeInSamples(maxTempMemSizeInSamples), m_poolKind(PoolKindFrom(poolKind))
     {
     }
     NDConvolutionNode(const ScriptableObjects::IConfigRecordPtr configp)
         : NDConvolutionNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"kernelShape"), configp->Get(L"mapCount"), configp->Get(L"strideShape"),
         configp->Get(L"dimSharing"), configp->Get(L"dimPadding"), configp->Get(L"dimPadLower"), configp->Get(L"dimPadUpper"),
-        ImageLayoutKindFrom(configp->Get(L"imageLayout")), configp->Get(L"maxTempMemSizeInSamples"))
+        ImageLayoutKindFrom(configp->Get(L"imageLayout")), configp->Get(L"maxTempMemSizeInSamples") , configp->Get(L"pool"))
     {
-        AttachInputs(configp, this->GetExpectedNumInputs());
+        AttachInputs(configp, GetExpectedNumInputs());
     }
 
 public:
@@ -72,6 +59,7 @@ public:
         m_upperPad.Save(fstream);
         fstream << (int32_t)m_imageLayout;
         fstream << m_maxTempMemSizeInSamples;
+        fstream << (int32_t)m_poolKind;
     }
 
     void Load(File& fstream, size_t modelVersion) override
@@ -101,6 +89,9 @@ public:
         fstream >> layout;
         m_imageLayout = (ImageLayoutKind)layout;
         fstream >> m_maxTempMemSizeInSamples;
+        int32_t k;
+        fstream >> k;
+        m_poolKind = (PoolKind)k;
     }
 
     void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
@@ -109,7 +100,6 @@ public:
         if (flags & CopyNodeFlags::copyNodeValue)
         {
             auto node = dynamic_pointer_cast<NDConvolutionNode<ElemType>>(nodeP);
-            node->m_kernelShape = m_kernelShape;
             node->m_kernelShape = m_kernelShape;
             node->m_mapCount = m_mapCount;
             node->m_stride = m_stride;
@@ -125,41 +115,63 @@ public:
     void BackpropTo(const size_t inputIndex, const FrameRange& fr) override
     {
         auto sliceOutputGrad = GradientFor(fr);
-        auto sliceInput1Value = Input(1)->ValueFor(fr);
 
-        if (inputIndex == 0) // derivative with respect to the weight matrix
+        if (m_poolKind == PoolKind::None)
         {
-            auto& grad = Input(0)->GradientAsMatrix();
-            m_convEng->BackwardFilter(sliceOutputGrad, sliceInput1Value, grad, fr.IsAllFrames(), *m_tempMatrix);
+            if (inputIndex == 0) // derivative with respect to the weight matrix
+            {
+                auto& grad = Input(0)->GradientAsMatrix();
+                auto sliceInput1Value = Input(1)->ValueFor(fr);
+                m_convEng->BackwardFilter(sliceOutputGrad, sliceInput1Value, grad, fr.IsAllFrames(), *m_tempMatrix);
+            }
+            else if (inputIndex == 1) // derivative with respect to the input feature
+            {
+                auto& input0 = Input(0)->ValueAsMatrix();
+                auto sliceInput1Grad = Input(1)->GradientFor(fr);
+                m_convEng->BackwardData(sliceOutputGrad, input0, sliceInput1Grad, *m_tempMatrix);
+            }
         }
-        else if (inputIndex == 1) // derivative with respect to the input feature
+        else
         {
-            auto& input0 = Input(0)->ValueAsMatrix();
-            auto sliceInput1Grad = Input(1)->GradientFor(fr);
-            m_convEng->BackwardData(sliceOutputGrad, input0, sliceInput1Grad, *m_tempMatrix);
+            Matrix<ElemType> sliceInput0Grad = Input(0)->GradientFor(fr);
+
+            Matrix<ElemType> sliceInput0Value = Input(0)->ValueFor(fr);
+            Matrix<ElemType> sliceOutputValue = ValueFor(fr);
+
+            m_convEng->BackwardPooling(sliceOutputValue, sliceOutputGrad, sliceInput0Value, sliceInput0Grad);
         }
     }
 
     virtual bool OutputUsedInComputingInputNodesGradients() const override
     {
-        // The NDConvolutionNode does not require its output value for computing
-        // the gradients of its input nodes
-        return false;
+        // The NDConvolutionNode requires output values only for max pooling.
+        return m_poolKind == PoolKind::Max;
     }
 
     void ForwardProp(const FrameRange& fr) override
     {
-        const Matrix<ElemType>& input0 = Input(0)->ValueAsMatrix();
-        Matrix<ElemType> sliceInput1Value = Input(1)->ValueFor(fr);
         Matrix<ElemType> sliceOutputValue = ValueFor(fr);
 
+        if (m_poolKind == PoolKind::None)
+        {
+            const Matrix<ElemType>& input0 = Input(0)->ValueAsMatrix();
+            Matrix<ElemType> sliceInput1Value = Input(1)->ValueFor(fr);
 #if NANCHECK
-        input0.HasNan("Convolution-input0");
-        sliceInput1Value.HasNan("Convolution-input1");
+            input0.HasNan("Convolution-input0");
+            sliceInput1Value.HasNan("Convolution-input1");
 #endif
-        m_convEng->Forward(sliceInput1Value, input0, sliceOutputValue, *m_tempMatrix);
+            m_convEng->Forward(sliceInput1Value, input0, sliceOutputValue, *m_tempMatrix);
+        }
+        else
+        {
+            const Matrix<ElemType>& input0 = Input(0)->ValueFor(fr);
 #if NANCHECK
-        sliceOutputValue.HasNan("Convolution");
+            input0.HasNan("Convolution-input0");
+#endif
+            m_convEng->ForwardPooling(input0, sliceOutputValue);
+        }
+#if NANCHECK
+            sliceOutputValue.HasNan("Convolution");
 #endif
     }
 
@@ -176,7 +188,7 @@ public:
                 "and make sure input data layout is CHW");
         }
 
-        auto inputShape = GetInputSampleLayout(1);
+        auto inputShape = GetInputSampleLayout(GetExpectedNumInputs() - 1);
         auto dimsOut = ConvolveGeometry::ComputeOutputShape(inputShape, m_kernelShape, m_mapCount, m_stride,
                                                             m_sharing, m_autoPad, m_lowerPad, m_upperPad);
         SetDims(dimsOut, true);
@@ -187,7 +199,8 @@ public:
             {
                 auto g = std::make_shared<ConvolveGeometry>(inputShape, m_kernelShape, m_mapCount, m_stride,
                                                             m_sharing, m_autoPad, m_lowerPad, m_upperPad);
-                m_convEng = ConvolutionEngine<ElemType>::Create(g, m_deviceId, m_imageLayout, m_maxTempMemSizeInSamples);
+                m_convEng = ConvolutionEngine<ElemType>::Create(g, m_deviceId, m_imageLayout,
+                                                                m_maxTempMemSizeInSamples, m_poolKind);
             }
         }
     }
@@ -195,18 +208,6 @@ public:
     void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool) override
     {
         Base::RequestMatricesBeforeForwardProp(matrixPool);
-        RequestMatrixFromPool(m_tempMatrix, matrixPool);
-    }
-
-    void ReleaseMatricesAfterForwardProp(MatrixPool& matrixPool) override
-    {
-        Base::ReleaseMatricesAfterForwardProp(matrixPool);
-        ReleaseMatrixToPool(m_tempMatrix, matrixPool);
-    }
-
-    void RequestMatricesBeforeBackprop(MatrixPool& matrixPool) override
-    {
-        Base::RequestMatricesBeforeBackprop(matrixPool);
         RequestMatrixFromPool(m_tempMatrix, matrixPool);
     }
 
@@ -226,6 +227,23 @@ private:
     VersionInfo m_version;
 
 private:
+    PoolKind PoolKindFrom(const wstring& s)
+    {
+        if (s.empty() || AreEqualIgnoreCase(s, L"none"))
+            return PoolKind::None;
+        if (AreEqualIgnoreCase(s, L"max"))
+            return PoolKind::Max;
+        if (AreEqualIgnoreCase(s, L"average"))
+            return PoolKind::Average;
+        InvalidArgument("Unknown pooling kind: '%ls'. Supported values: 'none', 'max', 'average'.");
+    }
+
+    size_t GetExpectedNumInputs() const
+    {
+        return m_poolKind == PoolKind::None ? 2 : 1;
+    }
+
+private:
     ImageLayoutKind m_imageLayout;
 
     TensorShape m_kernelShape;
@@ -238,6 +256,8 @@ private:
 
     size_t m_maxTempMemSizeInSamples;
     shared_ptr<Matrix<ElemType>> m_tempMatrix;
+
+    PoolKind m_poolKind;
 
     std::unique_ptr<ConvolutionEngine<ElemType>> m_convEng;
 };
