@@ -1641,7 +1641,8 @@ void GPUSparseMatrix<ElemType>::ScaleAndAdd(ElemType alpha, const GPUSparseMatri
     SyncGuard syncGuard;
     // Step 1
     bool inOutParameter = (&b == &c);
-    c.PrepareBuffer(m, n, !inOutParameter, [&](GPUSPARSE_INDEX_TYPE* csrRowPtrC) -> size_t
+    c.PrepareBuffer(m, n, !inOutParameter, 
+                    [&](GPUSPARSE_INDEX_TYPE* csrRowPtrC) -> size_t
                     {
                         int nnzTotal = -1;
                         CUSPARSE_CALL(cusparseXcsrgeamNnz(cusparseHandle, m, n, descrA, nnzA, a.RowLocation(), a.ColLocation(), descrB, nnzB, b.RowLocation(), b.ColLocation(), descrC, csrRowPtrC, &nnzTotal));

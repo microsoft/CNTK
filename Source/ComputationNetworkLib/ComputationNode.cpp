@@ -464,6 +464,7 @@ void ComputationNode<ElemType>::WriteMinibatchWithFormatting(FILE* f, size_t onl
         }
         fprintfOrDie(f, "%s", sequenceEpilogue.c_str());
     } // end loop over sequences
+    fflushOrDie(f);
 
     delete[] matData;
 }

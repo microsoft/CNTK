@@ -182,17 +182,19 @@ public:
     //  - placement, rowAllocations: temp buffers (passed in to be able to optimize memory allocations)
     template<typename SequenceInfoVector>
     void InitAsPackedSequences(const SequenceInfoVector& inputSequences,
-                               /*temp buffer*/std::vector<std::pair<size_t, size_t>>& placement,
-                               /*temp buffer*/std::vector<size_t> rowAllocations)
+        /*temp buffer*/std::vector<std::pair<size_t, size_t>>& placement,
+        /*temp buffer*/std::vector<size_t> rowAllocations)
     {
         placement.resize(inputSequences.size()); // [sequence index] result goes here (entries are invalid for gaps)
         // determine width of MBLayout
         size_t width = 0;
         for (size_t i = 0; i < inputSequences.size(); i++)
+        {
             if (inputSequences[i].seqId == GAP_SEQUENCE_ID)
                 continue;
             else if (width < inputSequences[i].GetNumTimeSteps())
                 width = inputSequences[i].GetNumTimeSteps();
+        }
         // allocate
         rowAllocations.clear();             // [row] we build rows one by one
         for (size_t i = 0; i < inputSequences.size(); i++)

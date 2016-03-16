@@ -7,7 +7,7 @@ ndlMnistMacros = [
     ImageC = 3
     LabelDim = 10
 
-    features = ImageInput(ImageW, ImageH, ImageC, tag = feature, imageLayout = "cudnn")
+    features = ImageInput(ImageW, ImageH, ImageC, tag = feature, imageLayout = $imageLayout$)
     featOffs = Const(128)
     featScaled = Minus(features, featOffs)
     labels = Input(LabelDim, tag = label)
@@ -45,7 +45,7 @@ DNN=[
     pool1H = 3
     pool1hStride = 2
     pool1vStride = 2
-    pool1 = MaxPooling(conv1, pool1W, pool1H, pool1hStride, pool1vStride, imageLayout = "cudnn")
+    pool1 = MaxPooling(conv1, pool1W, pool1H, pool1hStride, pool1vStride, imageLayout = $imageLayout$)
 
     # conv2
     kW2 = 5
@@ -61,7 +61,7 @@ DNN=[
     pool2H = 3
     pool2hStride = 2
     pool2vStride = 2
-    pool2 = MaxPooling(conv2, pool2W, pool2H, pool2hStride, pool2vStride, imageLayout = "cudnn")
+    pool2 = MaxPooling(conv2, pool2W, pool2H, pool2hStride, pool2vStride, imageLayout = $imageLayout$)
 
     # conv3
     kW3 = 5
@@ -77,10 +77,10 @@ DNN=[
     pool3H = 3
     pool3hStride = 2
     pool3vStride = 2
-    pool3 = MaxPooling(conv3, pool3W, pool3H, pool3hStride, pool3vStride, imageLayout = "cudnn")
+    pool3 = MaxPooling(conv3, pool3W, pool3H, pool3hStride, pool3vStride, imageLayout = $imageLayout$)
 
     hiddenDim = 64
-    h1 = DnnBNReLULayer(576, hiddenDim, pool3, fc1WScale, fc1BValue, scValue, bnTimeConst)
+    h1 = DnnImageBNReLULayer(3, 3, cMap3, hiddenDim, pool3, fc1WScale, fc1BValue, scValue, bnTimeConst)
     ol = DNNLastLayer(hiddenDim, labelDim, h1, fc2WScale, fc2BValue)
     
     CE = CrossEntropyWithSoftmax(labels, ol, tag = Criteria)

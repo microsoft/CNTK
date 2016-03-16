@@ -43,8 +43,8 @@ confVocabSize = 10000
 confClassSize = 50
 useStabilizer = true
 
-#trainFile = "ptb.train.txt"
-trainFile = "ptb.small.train.txt"
+trainFile = "ptb.train.txt"
+#trainFile = "ptb.small.train.txt"
 validFile = "ptb.valid.txt"
 #validFile = "ptb.small.valid.txt"
 testFile  = "ptb.test.txt"
@@ -355,7 +355,7 @@ train = [
     #BrainScriptNetworkBuilder is defined in outer scope
 
     SGD = [
-        minibatchSize = 128:256:512
+        minibatchSize = 128*2:256:512
         learningRatesPerSample = 0.01
         #momentumPerMB = 0
         momentumAsTimeConstant = 2500
@@ -491,14 +491,14 @@ test = [
 write = [
     action = "write"
 
-    outputPath = "$OutputDir$/Write"
-    #outputPath = "-"                    # "-" will write to stdout; useful for debugging
-    outputNodeNames = z # when processing one sentence per minibatch, this is the sentence posterior
+    #outputPath = "$OutputDir$/Write"
+    outputPath = "-"                    # "-" will write to stdout; useful for debugging
+    outputNodeNames = z1.out:labels1 # when processing one sentence per minibatch, this is the sentence posterior
     format = [
         type = "category"
         transpose = false
         labelMappingFile = "$ModelDir$/vocab.wl"
-        #sequencePrologue = "log P(W)="    # (using this to demonstrate some formatting strings)
+        sequenceEpilogue = "\t// %s\n"
     ]
 
     minibatchSize = 8192                # choose this to be big enough for the longest sentence
@@ -513,12 +513,12 @@ write = [
         # everything below here is duplicated from 'reader'
         readerType = LMSequenceReader
         mode = "softmax"
-        nbruttsineachrecurrentiter = 1      # 0 means auto-fill given minibatch size
-        cacheBlockSize = 1 #00000000          # read block size. This value is large enough to load entire corpus at once
-    
+        nbruttsineachrecurrentiter = 0      # 0 means auto-fill given minibatch size
+        cacheBlockSize = 100000000          # read block size. This value is large enough to load entire corpus at once
+
         # word class info
         wordclass = "$ModelDir$/vocab.txt"
-    
+
         #### write definition
         # if writerType is set, we will cache to a binary file
         # if the binary file exists, we will use it instead of parsing this file
@@ -544,14 +544,14 @@ write = [
         # labels sections  --this is required, but our labels are extracted from the inLabels
         inputLabelsDef = [ # BUGBUG: Make sure that this section name comes before the dummy output labels alphabetically
             dim = 1
-    
+
             # vocabulary size
             labelType = "category"
             labelDim = "$confVocabSize$"
             labelMappingFile = "$ModelDir$/vocab.wl"
             beginSequence = "</s>"
             endSequence   = "</s>"
-    
+
             #### Write definition ####
             # sizeof(unsigned) which is the label index type
             elementSize=4

@@ -5,72 +5,77 @@ DataDir = "$RootDir$"
 OutputDir = "$RootDir$/Output"
 ModelDir = "$OutputDir$/Models"
 
-ndlMacros="$ConfigDir$/Macros.ndl"
+ndlMacros = "$ConfigDir$/Macros.ndl"
 
-precision="float"
-deviceId="auto"
-prefetch="true"
+precision = "float"
+deviceId = 0
+imageLayout = "cudnn"
+# override the above as follows when running on CPU:
+# deviceId = -1
+# imageLayout = "legacy"
 
-command=Train:Test
+prefetch = "true"
 
-modelPath="$ModelDir$/01_Convolution"
+command = Train:Test
 
-stderr="$OutputDir$/01_Conv"
-traceLevel=1
-numMBsToShowResult=500
+modelPath = "$ModelDir$/01_Convolution"
 
-Train=[
-    action="train"
+stderr = "$OutputDir$/01_Conv"
+traceLevel = 1
+numMBsToShowResult = 500
 
-     NDLNetworkBuilder=[
-        networkDescription="$ConfigDir$/01_Convolution.ndl"
+Train = [
+    action = "train"
+
+     NDLNetworkBuilder = [
+        networkDescription = "$ConfigDir$/01_Convolution.ndl"
     ]
     
-    SGD=[
-        epochSize=49984
-        minibatchSize=64
-        learningRatesPerMB=0.01*10:0.003*10:0.001
-        momentumPerMB=0.9*20:0.99
-        maxEpochs=30
-        L2RegWeight=0.03
-        dropoutRate=0*5:0.5
+    SGD = [
+        epochSize = 49984
+        minibatchSize = 64
+        learningRatesPerMB = 0.01*10:0.003*10:0.001
+        momentumPerMB = 0.9*20:0.99
+        maxEpochs = 30
+        L2RegWeight = 0.03
+        dropoutRate = 0*5:0.5
     ]
     
-    reader=[
-        readerType="UCIFastReader"
-        file="$DataDir$/Train.txt"
-        randomize="auto"
-        features=[
-            dim=3072
-            start=1
+    reader = [
+        readerType = "UCIFastReader"
+        file = "$DataDir$/Train.txt"
+        randomize = "auto"
+        features = [
+            dim = 3072
+            start = 1
         ]
-        labels=[
-            dim=1
-            start=0
-            labelDim=10
-            labelMappingFile="$DataDir$/labelsmap.txt"
+        labels = [
+            dim = 1
+            start = 0
+            labelDim = 10
+            labelMappingFile = "$DataDir$/labelsmap.txt"
         ]
     ]    
 ]
 
-Test=[
-    action="test"
+Test = [
+    action = "test"
     # Set minibatch size for testing.
-    minibatchSize=16
+    minibatchSize = 16
 
-    reader=[
-        readerType="UCIFastReader"
-        file="$DataDir$/Test.txt"
-        randomize="none"
-        features=[
-            dim=3072
-            start=1
+    reader = [
+        readerType = "UCIFastReader"
+        file = "$DataDir$/Test.txt"
+        randomize = "none"
+        features = [
+            dim = 3072
+            start = 1
         ]
-        labels=[
-            dim=1
-            start=0
-            labelDim=10
-            labelMappingFile="$DataDir$/labelsmap.txt"
+        labels = [
+            dim = 1
+            start = 0
+            labelDim = 10
+            labelMappingFile = "$DataDir$/labelsmap.txt"
         ]
     ]    
 ]

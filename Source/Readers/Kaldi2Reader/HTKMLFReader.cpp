@@ -888,7 +888,8 @@ bool HTKMLFReader<ElemType>::PopulateUtteranceInMinibatch(
     for (auto iter = matrices.begin(); iter != matrices.end(); iter++)
     {
         if (m_nameToTypeMap[iter->first] == InputOutputTypes::real)
-        { // Features.
+        { 
+            // Features.
             size_t id = m_featureNameToIdMap[iter->first];
             size_t dim = m_featureNameToDimMap[iter->first];
 
@@ -898,14 +899,16 @@ bool HTKMLFReader<ElemType>::PopulateUtteranceInMinibatch(
                 m_featuresBufferAllocatedMultiIO[id] = dim * mbSize * m_numberOfuttsPerMinibatch;
             }
             else if (m_featuresBufferAllocatedMultiIO[id] < dim * mbSize * m_numberOfuttsPerMinibatch)
-            { // Buffer too small, we have to increase it.
+            { 
+                // Buffer too small, we have to increase it.
                 delete[] m_featuresBufferMultiIO[id];
                 m_featuresBufferMultiIO[id] = new ElemType[dim * mbSize * m_numberOfuttsPerMinibatch];
                 m_featuresBufferAllocatedMultiIO[id] = dim * mbSize * m_numberOfuttsPerMinibatch;
             }
 
             if (sizeof(ElemType) == sizeof(float))
-            { // For float, we copy entire column.
+            { 
+                // For float, we copy entire column.
                 for (size_t j = startFrame, k = 0; j < endFrame; j++, k++)
                 {
                     memcpy_s(&m_featuresBufferMultiIO[id][((k + mbOffset) * m_numberOfuttsPerMinibatch + uttIndex) * dim],
@@ -915,18 +918,21 @@ bool HTKMLFReader<ElemType>::PopulateUtteranceInMinibatch(
                 }
             }
             else
-            { // For double, we have to copy element by element.
+            { 
+                // For double, we have to copy element by element.
                 for (size_t j = startFrame, k = 0; j < endFrame; j++, k++)
                 {
                     for (int d = 0; d < dim; d++)
                     {
-                        m_featuresBufferMultiIO[id][((k + mbOffset) * m_numberOfuttsPerMinibatch + uttIndex) * dim + d] = m_featuresBufferMultiUtt[uttIndex][j * dim + d + m_featuresStartIndexMultiUtt[id + uttIndex * numOfFea]];
+                        m_featuresBufferMultiIO[id][((k + mbOffset) * m_numberOfuttsPerMinibatch + uttIndex) * dim + d] = 
+                            m_featuresBufferMultiUtt[uttIndex][j * dim + d + m_featuresStartIndexMultiUtt[id + uttIndex * numOfFea]];
                     }
                 }
             }
         }
         else if (m_nameToTypeMap[iter->first] == InputOutputTypes::category)
-        { // Labels.
+        { 
+            // Labels.
             size_t id = m_labelNameToIdMap[iter->first];
             size_t dim = m_labelNameToDimMap[iter->first];
 
@@ -946,7 +952,8 @@ bool HTKMLFReader<ElemType>::PopulateUtteranceInMinibatch(
             {
                 for (int d = 0; d < dim; d++)
                 {
-                    m_labelsBufferMultiIO[id][((k + mbOffset) * m_numberOfuttsPerMinibatch + uttIndex) * dim + d] = m_labelsBufferMultiUtt[uttIndex][j * dim + d + m_labelsStartIndexMultiUtt[id + uttIndex * numOfLabel]];
+                    m_labelsBufferMultiIO[id][((k + mbOffset) * m_numberOfuttsPerMinibatch + uttIndex) * dim + d] = 
+                        m_labelsBufferMultiUtt[uttIndex][j * dim + d + m_labelsStartIndexMultiUtt[id + uttIndex * numOfLabel]];
                 }
             }
         }
@@ -1398,10 +1405,10 @@ void HTKMLFReader<ElemType>::CopyMinibatchFromBufferToMatrix(
             {
                 if (m_getMinibatchCopy)
                 {
-                    if (data.GetNumCols() != m_currentMBSize * m_numberOfuttsPerMinibatch)
+                    assert(m_currentMBSize * m_numberOfuttsPerMinibatch == m_pMBLayout->GetNumCols());
+                    if (data.GetNumCols() != m_pMBLayout->GetNumCols())
                     {
-                        matrices.GetInputMatrix<ElemType>(iter->first).Resize(data.GetNumRows(),
-                                                                    m_currentMBSize * m_numberOfuttsPerMinibatch);
+                        data.Resize(data.GetNumRows(), m_pMBLayout->GetNumCols());
                     }
                     matrices.GetInputMatrix<ElemType>(iter->first).SetValue(0);
                 }
@@ -1416,15 +1423,17 @@ void HTKMLFReader<ElemType>::CopyMinibatchFromBufferToMatrix(
             {
                 if (m_getMinibatchCopy)
                 {
-                    if (data.GetNumCols() != 1)
+                    assert(m_currentMBSize * m_numberOfuttsPerMinibatch == m_pMBLayout->GetNumCols());
+                    if (data.GetNumCols() != m_pMBLayout->GetNumCols())
                     {
-                        data.Resize(1, 1);
+                        data.Resize(1, m_pMBLayout->GetNumCols());
                     }
                     data.SetValue(0);
                 }
                 else
                 {
                     m_uttDerivBuffer->GetObjective(m_minibatchUttInfo,
+                                                   m_pMBLayout,
                                                    &matrices.GetInputMatrix<ElemType>(iter->first)); // TODO: use a reference instead of a ptr
                 }
             }
@@ -1466,18 +1475,19 @@ void HTKMLFReader<ElemType>::CopyMinibatchToMatrix(
         {
             if (m_nameToTypeMap.at(iter->first) == InputOutputTypes::readerDeriv)
             {
-                if (data.GetNumCols() != m_currentMBSize * m_numberOfuttsPerMinibatch)
+                assert(m_currentMBSize * m_numberOfuttsPerMinibatch == m_pMBLayout->GetNumCols());
+                if (data.GetNumCols() != m_pMBLayout->GetNumCols())
                 {
-                    data.Resize(data.GetNumRows(),
-                                m_currentMBSize * m_numberOfuttsPerMinibatch);
+                    data.Resize(data.GetNumRows(), m_pMBLayout->GetNumCols());
                 }
                 data.SetValue(0);
             }
             else if (m_nameToTypeMap.at(iter->first) == InputOutputTypes::readerObj)
             {
-                if (data.GetNumCols() != 1)
+                assert(m_currentMBSize * m_numberOfuttsPerMinibatch == m_pMBLayout->GetNumCols());
+                if (data.GetNumCols() != m_pMBLayout->GetNumCols())
                 {
-                    data.Resize(1, 1);
+                    data.Resize(1, m_pMBLayout->GetNumCols());
                 }
                 data.SetValue(0);
             }
@@ -1582,8 +1592,7 @@ bool HTKMLFReader<ElemType>::GetMinibatchToWrite(StreamMinibatchInputs& matrices
 
         // populate input matrices
         bool first = true;
-        typename StreamMinibatchInputs::iterator iter;
-        for (iter = matrices.begin(); iter != matrices.end(); iter++)
+        for (auto iter = matrices.begin(); iter != matrices.end(); iter++)
         {
             // dereference matrix that corresponds to key (input/output name) and
             // populate based on whether its a feature or a label
@@ -1900,7 +1909,7 @@ bool HTKMLFReader<ElemType>::SetNetOutput(
     const MatrixBase& outputsb,
     const MBLayoutPtr pMBLayout)
 {
-    const auto& outputs = dymamic_cast<Matrix<ElemType>>(outputsb); // TODO: a NULL check, to be sure
+    const auto& outputs = dynamic_cast<const Matrix<ElemType>&>(outputsb); // TODO: a NULL check, to be sure
     // Set the likelihoods for the utterance with which we can comput the
     // derivatives. Note that the minibatch may only contain partial output
     // for the utterance, <m_uttDerivBuffer> takes care of "gluing" them

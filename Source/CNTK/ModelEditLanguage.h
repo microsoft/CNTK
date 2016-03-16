@@ -9,7 +9,7 @@
 #include "ComputationNetwork.h"
 #include "ComputationNetworkBuilder.h"
 #include "NetworkDescriptionLanguage.h"
-#include "SynchronousExecutionEngine.h"
+#include "NDLNetworkBuilder.h"
 #include "NDLUtil.h"
 #include <stdarg.h>
 

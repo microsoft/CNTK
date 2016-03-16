@@ -138,14 +138,6 @@ void ComputationNetwork::FormRecurrentLoops(const ComputationNodeBasePtr& rootNo
         ReorderLoops(reorderedNodes, recurrentNodes, noRecurrentNodes); // group nodes in loops together
 
         UpdateEvalOrder(rootNode, reorderedNodes);
-
-#ifdef DISPLAY_DEBUG
-        fprintf(stderr, "Reordered nodes\n");
-        for (auto itr = nodes.begin(); itr != nodes.end(); itr++)
-        {
-            fprintf(stderr, "%ls\n", (*itr)->NodeName().c_str());
-        }
-#endif
     }
 
     // log the loops
