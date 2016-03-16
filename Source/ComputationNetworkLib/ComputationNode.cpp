@@ -123,7 +123,11 @@ void ComputationNodeBase::ValidateBinaryZip(bool isFinalValidationPass, bool all
     if (isFinalValidationPass &&
         Input(0)->GetMBLayout() != Input(1)->GetMBLayout() && Input(0)->HasMBLayout() && Input(1)->HasMBLayout())
     {
+<<<<<<< HEAD
         LogicError("%ls: Minibatch layouts are not the same between arguments and might get out of sync during runtime. If this is by design, use ReconcileMBLayout() to forward layouts between nodes.", NodeDescription().c_str());
+=======
+        LogicError("%ls: MB layouts do not match.", NodeDescription().c_str());
+>>>>>>> 4d688a1... Better error reporting
     }
 
     // result has tensor shape with dimensions being the max over both
@@ -144,8 +148,8 @@ void ComputationNodeBase::ValidateBinaryZip(bool isFinalValidationPass, bool all
         else if (dim1 == 1)                                // if [1] is broadcasting
             ;                                              // dims is already correct
         else if (isFinalValidationPass && dim1 != dims[k]) // no broadcasting: they must match
-            InvalidArgument("%ls %ls operation: Input dimensions [%s] and [%s] are not compatible.",
-                            NodeName().c_str(), OperationName().c_str(), string(shape0).c_str(), string(shape1).c_str());
+            InvalidArgument("%ls: Input dimensions [%s] and [%s] are not compatible.",
+                            NodeDescription().c_str(), string(shape0).c_str(), string(shape1).c_str());
     }
 
     SetDims(TensorShape(dims), HasMBLayout());

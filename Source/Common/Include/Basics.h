@@ -61,10 +61,13 @@ template <class E>
 __declspec_noreturn static inline void ThrowFormatted(const char* format, ...)
 {
     va_list args;
-    char buffer[1024];
+    const size_t bufferSize = 1024;
+    char buffer[bufferSize];
 
     va_start(args, format);
-    vsprintf(buffer, format, args);
+    int written = vsnprintf(buffer, bufferSize, format, args);
+    if (written >= bufferSize - 1)
+        sprintf(buffer + bufferSize - 6, "[...]");
 #ifdef _DEBUG // print this to log, so we can see what the error is before throwing
     fprintf(stderr, "\nAbout to throw exception '%s'\n", buffer);
 #endif

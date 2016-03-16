@@ -416,9 +416,9 @@ private:
     void CheckTensorIsMatrix() const
     {
         if (HasMBLayout())
-            LogicError("%ls %ls operation: Minibatch data cannot be interpreted as a single 2D tensor.", NodeName().c_str(), OperationName().c_str());
+            LogicError("%ls: Minibatch data cannot be interpreted as a single 2D tensor.", NodeDescription().c_str());
         else if (m_sampleLayout.GetRank() < 1 || m_sampleLayout.GetRank() > 2) // note: scalars are not stored as tensors of rank 0, but rather as 1-dim vectors. TODO: clean this up some day
-            LogicError("%ls %ls operation: Sample [%s] is not a column vector or matrix (1D or 2D tensor).", NodeName().c_str(), OperationName().c_str(), string(m_sampleLayout).c_str());
+            LogicError("%ls: Sample [%s] is not a column vector or matrix (1D or 2D tensor).", NodeDescription().c_str(), string(m_sampleLayout).c_str());
     }
 public:
     size_t GetAsMatrixNumRows() const
@@ -437,7 +437,7 @@ public:
     void SetDims(const TensorShape& sampleLayout, bool isMinibatch)
     {
         if (HasMBLayout() != isMinibatch)
-            LogicError("SetDims: MBLayout must be set first, before calling this function, for %ls %ls operation.", NodeName().c_str(), OperationName().c_str());
+            LogicError("%ls: SetDims: MBLayout must be set first, before calling this function.", NodeDescription().c_str());
         m_sampleLayout = sampleLayout;
     }
     // copy dimensions (rows, cols, sample layout) from another node
@@ -456,8 +456,8 @@ public:
     {
         if (m_sampleLayout.GetDims() != shape.GetDims() || HasMBLayout() != isMinibatch)
         {
-            LogicError("VerifyDims: %ls %ls operation expected a %s of [%s], but it is a %s of [%s]",
-                       NodeName().c_str(), OperationName().c_str(),
+            LogicError("%ls: VerifyDims: Expected a %s of [%s], but it is a %s of [%s]",
+                       NodeDescription().c_str(),
                        isMinibatch ? "minibatch" : "tensor", string(shape).c_str(),
                        HasMBLayout() ? "minibatch" : "tensor", string(m_sampleLayout).c_str());
         }
@@ -491,7 +491,7 @@ protected: public: // ...the following should be protected, but nodes inquire ab
     size_t GetNumTimeSteps() const
     {
         if (!m_pMBLayout)
-            LogicError("GetNumTimeSteps: invalid to call on a node without MB layout"); // since it has no notion of time
+            LogicError("%ls: GetNumTimeSteps: invalid to call on a node without MB layout", NodeDescription().c_str()); // since it has no notion of time
         return m_pMBLayout->GetNumTimeSteps();
     }
 
@@ -603,7 +603,7 @@ public:
     void SetLearningRateMultiplier(float f) 
     { 
         if (f < 0)
-            InvalidArgument("LearningRateMultiplier should be non-negative. You are tring to set it to %f.", f);
+            InvalidArgument("%ls: LearningRateMultiplier should be non-negative. You are tring to set it to %f.", NodeDescription().c_str(), f);
         m_learningRateMultiplier = f; 
     }
     float GetLearningRateMultiplier() const { return m_learningRateMultiplier; }
@@ -631,14 +631,14 @@ public:
         for (size_t i = 0; i < m_inputs.size(); i++)
         {
             if (!m_inputs[i])
-                RuntimeError("Validate: Input [%d] of %ls node '%ls' is empty (NULL, not connected).", (int) i, OperationName().c_str(), NodeName().c_str());
+                RuntimeError("%ls: Validate: Input [%d] is empty (NULL, not connected).", NodeDescription().c_str(), (int)i);
         }
         // check for empty inputs
         if (isFinalValidationPass)
         {
             for (const auto& child : m_inputs)
                 if (child->GetSampleMatrixNumRows() == 0)
-                    RuntimeError("%ls %ls operation: input %ls %ls has 0 elements.", NodeName().c_str(), OperationName().c_str(), child->NodeName().c_str(), child->OperationName().c_str());
+                    RuntimeError("%ls: input %ls %ls has 0 elements.", NodeDescription().c_str(), child->NodeName().c_str(), child->OperationName().c_str());
         }
     }
 
@@ -781,7 +781,7 @@ public:
     {
         auto p = dynamic_cast<N*>(this);
         if (!p)
-            LogicError("Attempted to type-cast node %ls %ls to %s, which is not possible.", NodeName().c_str(), OperationName().c_str(), typeid(N).name());
+            LogicError("%ls: Attempted to type-cast node to %s, which is not possible.", NodeDescription().c_str(), typeid(N).name());
         return p;
     }
     template <typename N>
@@ -803,6 +803,12 @@ public:
     typedef std::pair<ComputationNodeBasePtr, ComputationNodeBasePtr> ComputationArc;
     // TODO: This should be a method of ComputationNetwork, not ComputationNode.
     void EnumerateArcs(std::unordered_set<ComputationNodeBasePtr>& visited, std::list<ComputationArc>& arcs);
+
+    // Helper for generating error messages and the like
+    const std::wstring NodeDescription() const
+    { 
+        return std::wstring(L"Node '") + NodeName().c_str() + L"' (" + OperationName().c_str() + L" operation)"; 
+    };
 
 protected:
 
@@ -1119,7 +1125,7 @@ private:
     __declspec_noreturn
     void Rethrow(const std::exception & e)
     {
-        string what = msra::strfun::strprintf("%s, for %ls %ls operation.", e.what(), NodeName().c_str(), OperationName().c_str());
+        string what = msra::strfun::strprintf("%ls: %s", NodeDescription().c_str(), e.what());
         RethrowAs<std::runtime_error>   (e, what);
         RethrowAs<std::logic_error>     (e, what);
         RethrowAs<std::invalid_argument>(e, what);
@@ -1622,14 +1628,14 @@ public:
         if (fr.IsAllFrames())
             ForwardPropNonLooping();
         else
-            LogicError("%s node should never be in a loop.", typeid(*this).name());
+            LogicError("%ls: %s node should never be in a loop.", Base::NodeDescription().c_str(), typeid(*this).name());
     }
     void BackpropTo(const size_t inputIndex, const FrameRange& fr) override final
     {
         if (fr.IsAllFrames())
             BackpropToNonLooping(inputIndex);
         else
-            LogicError("%s node should never be in a loop.", typeid(*this).name());
+            LogicError("%ls: %s node should never be in a loop.", Base::NodeDescription().c_str(), typeid(*this).name());
     }
 
     // non-looping node types instead implement these functions
@@ -1802,6 +1808,7 @@ protected:                                                                      
     using Base::MaskedGradientFor;                                                                                                                       \
     using Base::MaskedValueFor;                                                                                                                          \
     using Base::MarkValueNonSharable;                                                                                                                    \
+    using Base::NodeDescription;                                                                                                                         \
     using Base::OutputUsedInComputingInputNodesGradients;                                                                                                \
     using Base::PrintNodeValuesToFile;                                                                                                                   \
     using Base::FormatOperationPrototype;                                                                                                               \
