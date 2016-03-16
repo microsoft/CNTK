@@ -99,7 +99,7 @@ class ComputationNode(object):
             p_value = "'%s'" % p_value
         elif type(p_value) in [list, tuple]:
             # FIXME here we assume that all dims are of TensorShape
-            if p_name == 'dims':
+            if p_name in ['dims', 'inputs']:
                 p_value = ":".join(v for v in p_value)
             else:
                 raise ValueError('Sequence initialization is only allowed for' +
@@ -124,11 +124,14 @@ class ComputationNode(object):
                         # TODO this is under the assumption that RowStack's
                         # inputs parameter gets a tuple of inputs
 
-                    if p_name == 'inputs':
+                    if p_name == 'inputs' and isinstance(self, RowStack):
+                        # Special treatment for special operator.
+                        # Used like RowStack(v0:v1:v2)
                         inputs = p_value
                     else:
                         inputs = [p_value]
 
+                    input_nodes_vars = []
                     for p_value in inputs:
                         if p_value in unrolled_nodes:
                             # we have seen this node already, so just retrieve its
@@ -138,7 +141,9 @@ class ComputationNode(object):
                             child_var, node_counter, child_desc = p_value._to_description_unroll(
                                 desc, unrolled_nodes, inputs, node_counter)
                             unrolled_nodes[p_value] = child_var
-                        param_variable_names.append(child_var)
+                        input_nodes_vars.append(child_var)
+
+                    param_variable_names.append(':'.join(input_nodes_vars))
                 else:
                     param_variable_names.append(
                         self._param_to_brainscript(p_name, p_value))
