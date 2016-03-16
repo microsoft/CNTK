@@ -1,0 +1,34 @@
+# Copyright (c) Microsoft. All rights reserved.
+# Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+command=Predict
+
+modelPath="E:\CNTK\LanguageBindings\Python\cntk\utils\_cntk_demoxyfffff63\Models\demoxyfffff63"		
+deviceId=-1					   		    
+
+Predict=[
+	action="write"
+	
+	reader = [
+		
+            readerType = "UCIFastReader"
+            file = "E:\CNTK\LanguageBindings\Python\Train-3Classes.txt"
+            randomize = "none"
+            verbosity = 1          
+            
+            v0=[
+                start = "2"
+                dim = "1"
+                labelDim="3"        			
+                labelMappingFile="E:\CNTK\LanguageBindings\Python\SimpleMapping-3Classes.txt" 
+            ]
+            v2=[
+                start = 0
+                dim = 2		          
+            ]
+	]
+	
+	outputPath = "E:\CNTK\LanguageBindings\Python\cntk\utils\_cntk_demoxyfffff63\Outputs\demoxyfffff63"		# dump the output as text
+]
+
+

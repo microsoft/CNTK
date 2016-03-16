@@ -1,0 +1,51 @@
+# Copyright (c) Microsoft. All rights reserved.
+# Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+command=Train
+
+modelPath="E:\CNTK\LanguageBindings\Python\cntk\utils\_cntk_demoxyfffff63\Models\demoxyfffff63"		
+deviceId=-1					   
+
+Train=[
+	action="train"
+	run=BrainScriptNetworkBuilder
+
+    BrainScriptNetworkBuilder=[
+		v0 = Input(3, tag='label')
+v1 = LearnableParameter(3, 2, learningRateMultiplier=1.0, init='uniform', initValueScale=1, value=0, initFromFilePath='', initOnCPUOnly=true, randomSeed=-1)
+v2 = Input(2, tag='feature')
+v3 = Times(v1, v2, outputRank=1)
+v4 = LearnableParameter(3, 1, learningRateMultiplier=1.0, init='uniform', initValueScale=1, value=0, initFromFilePath='', initOnCPUOnly=true, randomSeed=-1)
+v5 = Plus(v3, v4, tag='output')
+v6 = CrossEntropyWithSoftmax(v0, v5, tag='criterion')  
+    ]
+	
+	SGD = [	
+		epochSize = 0
+learningRatesPerMB = 0.1
+minibatchSize = 25
+momentumPerMB = 0.9
+maxEpochs = 3
+
+	]
+	
+	reader = [
+		
+            readerType = "UCIFastReader"
+            file = "E:\CNTK\LanguageBindings\Python\Train-3Classes.txt"
+            randomize = "none"
+            verbosity = 1          
+            
+            v0=[
+                start = "2"
+                dim = "1"
+                labelDim="3"        			
+                labelMappingFile="E:\CNTK\LanguageBindings\Python\SimpleMapping-3Classes.txt" 
+            ]
+            v2=[
+                start = 0
+                dim = 2		          
+            ]
+	]	
+]
+
