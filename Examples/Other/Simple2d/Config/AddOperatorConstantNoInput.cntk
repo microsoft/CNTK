@@ -1,5 +1,5 @@
 # deviceId=-1 for CPU, >=0 for GPU devices, "auto" chooses the best GPU, or CPU if no usable GPU is available
-deviceId = -1
+deviceId = 0
 
 command = Add_Operator_Constant
 
@@ -19,7 +19,12 @@ NDLNetworkBuilder=[
           v2 = Constant(2)
           ol = Plus(v1, v2)
 
+# Although the FeatureNodes are NOT used during a Network Feed Forward Read
+# the NDL Parser still wants it there
+# Once the NDL Parser is updated, the following declaration, and this 
+# comment may be removed
           FeatureNodes=(v1)
+
           OutputNodes=(ol)
 	]
     

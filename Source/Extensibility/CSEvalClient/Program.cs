@@ -49,6 +49,9 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
             Console.WriteLine("\n====== EvaluateNetworkSingleLayer ========");
             EvaluateNetworkSingleLayer();
 
+            Console.WriteLine("\n====== EvaluateNetworkSingleLayerNoInput ========");
+            EvaluateNetworkSingleLayerNoInput();
+
             Console.WriteLine("Press <Enter> to terminate.");
             Console.ReadLine();
         }
@@ -166,6 +169,45 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
 
                     // We can call the evaluate method and get back the results (single layer)...
                     outputs = model.Evaluate(inputs, "ol", 1);
+                }
+
+                OutputResults("ol", outputs);
+            }
+            catch (CNTKException ex)
+            {
+                Console.WriteLine("Error: {0}\nNative CallStack: {1}\n Inner Exception: {2}", ex.Message, ex.NativeCallStack, ex.InnerException != null ? ex.InnerException.Message : "No Inner Exception");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Error: {0}\nCallStack: {1}\n Inner Exception: {2}", ex.Message, ex.StackTrace, ex.InnerException != null ? ex.InnerException.Message : "No Inner Exception");
+            }
+        }
+
+        /// <summary>
+        /// Evaluates a network (without a model and without input) and obtains a single layer output
+        /// </summary>
+        private static void EvaluateNetworkSingleLayerNoInput()
+        {
+            try
+            {
+                // The examples assume the executable is running from the data folder
+                // We switch the current directory to the data folder (assuming the executable is in the <CNTK>/x64/Debug|Release folder
+                string workingDirectory = Path.Combine(initialDirectory, @"..\..\Examples\Other\Simple2d\Config");
+                Environment.CurrentDirectory = initialDirectory;
+
+                List<float> outputs;
+
+                using (var model = new IEvaluateModelManagedF())
+                {
+                    // Initialize model evaluator
+                    model.Init("deviceId=0");
+
+                    // Create the network
+                    string networkDescription = GetFileContents(Path.Combine(workingDirectory, @"AddOperatorConstantNoInput.cntk"));
+                    model.CreateNetwork(networkDescription);
+
+                    // We can call the evaluate method and get back the results (single layer)...
+                    outputs = model.Evaluate("ol", 1);
                 }
 
                 OutputResults("ol", outputs);

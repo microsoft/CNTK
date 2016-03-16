@@ -58,6 +58,10 @@ public:
     // outputs - map from node name to output vector, outputs vectors need to be preallocated by caller, sizing will happen during evaluation
     virtual void Evaluate(std::map<std::wstring, std::vector<ElemType>*>& inputs, std::map<std::wstring, std::vector<ElemType>*>& outputs);
 
+    // Evaluate - Evalute using the model with the given inputs and outputs
+    // outputs - map from node name to output vector, outputs vectors need to be preallocated by caller, sizing will happen during evaluation
+    virtual void Evaluate(std::map<std::wstring, std::vector<ElemType>*>& outputs);
+
     virtual void Init(const std::string& config);
     virtual void Destroy();
     virtual void ResetState();

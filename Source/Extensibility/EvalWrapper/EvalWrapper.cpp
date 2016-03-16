@@ -131,6 +131,75 @@ public:
         }
     }
 
+    /// <summary>Evaluates the model using a single forward feed pass and retrieves the output layer data</summary>
+    /// <param name="outputKey"></param>
+    /// <param name="outputSize"></param>
+    /// <returns>Results for specified layer</returns>
+    List<ElemType>^ Evaluate(String^ outputKey, int outputSize)
+    {
+        if (m_eval == nullptr)
+        {
+            throw gcnew ObjectDisposedException("Object has been disposed.");
+        }
+
+        std::map<std::wstring, std::vector<ElemType>*> stdOutputs;
+
+
+        try
+        {
+            std::vector<shared_ptr<std::vector<ElemType>>> sharedOutputVectors;
+
+            List<ElemType>^ outputs = gcnew List<ElemType>(outputSize);
+            for (int i = 0; i < outputSize; i++)
+            {
+                outputs->Add(*(gcnew ElemType));
+            }
+
+            Dictionary<String^, List<ElemType>^>^ outputMap = gcnew Dictionary<String^, List<ElemType>^>();
+            outputMap->Add(outputKey, outputs);
+
+            for each (auto item in outputMap)
+            {
+                pin_ptr<const WCHAR> key = PtrToStringChars(item.Key);
+                shared_ptr<std::vector<ElemType>> ptr = CopyList(item.Value);
+                sharedOutputVectors.push_back(ptr);
+                stdOutputs.insert(MapEntry(key, ptr.get()));
+            }
+
+            try
+            {
+                m_eval->Evaluate(stdOutputs);
+            }
+            catch (const exception& ex)
+            {
+                throw GetCustomException(ex);
+            }
+
+            auto enumerator = outputMap->Keys->GetEnumerator();
+            for (auto& map_item : stdOutputs)
+            {
+                // Retrieve the layer key
+                enumerator.MoveNext();
+                String^ key = enumerator.Current;
+
+                std::vector<ElemType> &refVec = *(map_item.second);
+                int index = 0;
+
+                // Copy output to CLI structure
+                for (auto& vec : refVec)
+                {
+                    outputMap[key][index++] = vec;
+                }
+            }
+
+            return outputMap[outputKey];
+        }
+        catch (Exception^)
+        {
+            throw;
+        }
+    }
+
     /// <summary>Evaluates the model against input data and retrieves the output layer data</summary>
     /// <param name="inputs"></param>
     /// <param name="outputs"></param>
@@ -376,6 +445,7 @@ void emit()
     f.Init("");
     f.Evaluate(nullptr, nullptr);
     f.Evaluate(nullptr, "", 0);
+    f.Evaluate("", 0);
     f.LoadModel("");
     f.CreateNetwork("");
 
@@ -383,6 +453,7 @@ void emit()
     d.Init("");
     d.Evaluate(nullptr, nullptr);
     d.Evaluate(nullptr, "", 0);
+    d.Evaluate("", 0);
     d.LoadModel("");
     d.CreateNetwork("");
 }

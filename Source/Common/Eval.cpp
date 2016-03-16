@@ -137,6 +137,14 @@ void Eval<ElemType>::Evaluate(std::map<std::wstring, std::vector<ElemType>*>& in
     m_eval->Evaluate(inputs, outputs);
 }
 
+// Evaluate - Evaluate using the network without input and provide the outputs
+// outputs - map from node name to output vector, outputs vectors need to be preallocated by caller, sizing will happen during evaluation
+template <class ElemType>
+void Eval<ElemType>::Evaluate(std::map<std::wstring, std::vector<ElemType>*>& outputs)
+{
+    m_eval->Evaluate(outputs);
+}
+
 // ResetState - Reset the cell state when we get the start of an utterance
 template <class ElemType>
 void Eval<ElemType>::ResetState()

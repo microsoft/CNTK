@@ -176,19 +176,44 @@ void CNTKEval<ElemType>::Evaluate(std::map<std::wstring, std::vector<ElemType>*>
     GetNodeDimensions(m_dimensions, nodeInput);
     m_reader->SetData(&inputs, &m_dimensions);
     m_reader->SetBoundary(m_start);
-    // create the reader if necessary
+    
+    // create the writer if necessary
     if (m_writer == nullptr)
     {
         m_writer = new EvalWriter<ElemType>(config);
     }
-
-    // now set the data in the reader
+    // now set the data in the writer
     GetNodeDimensions(m_dimensions, nodeOutput);
     m_writer->SetData(&outputs, &m_dimensions);
 
     // call the evaluator
     SimpleOutputWriter<ElemType> eval(m_net);
     eval.WriteOutput(*m_reader, minibatchSize, *m_writer, outNodeNames);
+}
+
+// Evaluate - Evalute using the model with the given inputs and outputs
+// outputs - map from node name to output vector, outputs vectors need to be preallocated by caller, sizing will happen during evaluation
+template <class ElemType>
+void CNTKEval<ElemType>::Evaluate(std::map<std::wstring, std::vector<ElemType>*>& outputs)
+{
+    // get the evaluation names from the output string
+    vector<wstring> outNodeNames;
+
+    ConfigParameters config;
+
+    // create the writer if necessary
+    if (m_writer == nullptr)
+    {
+        m_writer = new EvalWriter<ElemType>(config);
+    }
+
+    // now set the data in the writer
+    GetNodeDimensions(m_dimensions, nodeOutput);
+    m_writer->SetData(&outputs, &m_dimensions);
+
+    // call the evaluator
+    SimpleOutputWriter<ElemType> eval(m_net);
+    eval.WriteOutput(*m_writer, outNodeNames);
 }
 
 // ResetState - Reset the cell state when we get start of an utterance

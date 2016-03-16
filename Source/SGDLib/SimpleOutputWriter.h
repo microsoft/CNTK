@@ -151,6 +151,28 @@ public:
         // clean up
     }
 
+    // Perform a single forward pass to obtain the output values from a network
+    void WriteOutput(IDataWriter& dataWriter, const std::vector<std::wstring>& outputNodeNames, size_t numOutputSamples = requestDataSize, bool doUnitTest = false)
+    {
+        std::vector<ComputationNodeBasePtr> outputNodes = DetermineOutputNodes(outputNodeNames);
+
+        // allocate memory for forward computation
+        m_net->AllocateAllMatrices({}, outputNodes, nullptr);
+
+        m_net->StartEvaluateMinibatchLoop(outputNodes);
+
+        std::map<std::wstring, void*, nocase_compare> outputMatrices;
+
+        for (int i = 0; i < outputNodes.size(); i++)
+        {
+            m_net->ForwardProp(outputNodes[i]);
+            outputMatrices[outputNodes[i]->NodeName()] = (void*)(&dynamic_pointer_cast<ComputationNode<ElemType>>(outputNodes[i])->Value());
+        }
+
+        // TODO: What should the data size be?
+        dataWriter.SaveData(0, outputMatrices, 1, 1, 0);
+    }
+
     // pass this to WriteOutput() (to file-path, below) to specify how the output should be formatted
     struct WriteFormattingOptions
     {
