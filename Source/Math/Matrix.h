@@ -182,7 +182,6 @@ public:
 
     Matrix<ElemType> Diagonal() const;
     void AssignDiagonalValuesTo(Matrix<ElemType>& diag) const;
-    void ShiftBy(int numShift);
 
     // TODO: all these scalars should be passed as doubles and cast down inside
     void NormalGrad(Matrix<ElemType>& gradients, Matrix<ElemType>& functionValues, const ElemType learnRatePerSample, const ElemType momentum, const bool useNAG);
