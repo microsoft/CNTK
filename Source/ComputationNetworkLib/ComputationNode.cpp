@@ -31,8 +31,8 @@ void ComputationNode<ElemType>::Backprop(const FrameRange& fr, bool childrenInTh
     // after nodes that propagate outside of the loop, and thus, in the last
     // time step of the sequence, have not yet received a gradient from a parent
     // and thus may not have had their gradient matrices allocated.
-    if (m_needsGradient)
-        LazyZeroGradient(); // set gradient to 0 if this is the first time
+    //if (m_needsGradient)
+    //    LazyZeroGradient(); // set gradient to 0 if this is the first time
 
     if (fr.IsAllFrames() && IsPartOfLoop() && childrenInThisLoop)
         LogicError("%ls %ls operation: Backprop called with whole-batch FrameRange on node that participates in a loop", NodeName().c_str(), OperationName().c_str());
