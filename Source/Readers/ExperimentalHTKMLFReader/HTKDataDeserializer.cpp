@@ -259,7 +259,7 @@ public:
     }
 
 private:
-    DISABLE_COPY_AND_MOVE(HTKDataDeserializer::HTKChunk);
+    DISABLE_COPY_AND_MOVE(HTKChunk);
     HTKDataDeserializer* m_parent;
     size_t m_chunkId;
 };
