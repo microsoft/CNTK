@@ -565,6 +565,19 @@ template class RowRepeatNode<double>;
 // The result will have a different MBLayout reflecting the shortened result sequences.
 // -----------------------------------------------------------------------
 
+/* Notes on Where(), PackedIndex(), and Gather-/ScatterPacked():
+This is one of the few nodes that creates new MBLayouts inside this system.
+This node is meant to operate jointly with PackedIndexNode.
+The difference between Index and PackedIndex is that Index is in human-readable
+form referring to indices WITHIN a sequence (since NDL and BS only talk about individual
+sequences and never expose anything cross-sequence, except for aggregates like CE or BN.
+PackedIndex maps that to the internal lookup table that has strides resolved etc.
+The reason that PackedIndex is separate from Gather/ScatterPacked is that the GPU has no
+access to the STL-heavy MBLayout. So PackedIndex applies the relevant information from
+the MBLayout into a GPU object that then drives the memory-copy operations in Gather()
+and Scatter().
+*/
+
 template <class ElemType>
 class WhereNode : public ComputationNodeNonLooping<ElemType>, public NumInputs<1>
 {
