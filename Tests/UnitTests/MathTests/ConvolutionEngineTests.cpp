@@ -85,6 +85,12 @@ std::vector<ConvolveGeometryPtr> GenerateConvTestConfigs()
         TensorShape(3, 3, 1), TensorShape(8), TensorShape(1, 2, 1),
         ConvolveGeometry::BoolVec{true}, ConvolveGeometry::BoolVec{true, true, false},
         TensorShape(0), TensorShape(0)));
+
+    // 1x1 convolution (shortcuts in ResNet).
+    res.push_back(std::make_shared<ConvolveGeometry>(TensorShape(16, 16, 2),
+        TensorShape(1, 1, 2), TensorShape(1), TensorShape(2, 2, 1),
+        ConvolveGeometry::BoolVec{true}, ConvolveGeometry::BoolVec{false},
+        TensorShape(0, 0, 0), TensorShape(0)));
     return res;
 }
 
@@ -189,7 +195,7 @@ BOOST_AUTO_TEST_CASE(ConvolutionForward)
             std::string emsg;
 
             BOOST_REQUIRE_MESSAGE(!out.HasNan("out"), "out" << msgNan);
-            BOOST_REQUIRE_MESSAGE(CheckEqual(out, outB, emsg, relErr, absErr * 8), "out" << msg << ". " << emsg);
+            BOOST_REQUIRE_MESSAGE(CheckEqual(out, outB, emsg, relErr * 4, absErr * 8), "out" << msg << ". " << emsg);
             BOOST_REQUIRE_MESSAGE(CountNans(outBuf) == crowOut * 2 * n, "out" << msgNotNan);
         }
     }

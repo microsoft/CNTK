@@ -446,9 +446,6 @@ public:
                 InvalidArgument("NDConvolution operation requires that kernel dim %d <= input dim %d.", (int)kernelShape[i], (int)inputShape[i]);
 
             size_t delta = stride[stride.GetRank() == 1 ? 0 : i];
-            if (delta > kernelShape[i])
-                InvalidArgument("NDConvolution operation requires that stride %d <= kernel dim %d.", (int)delta, (int)kernelShape[i]);
-            
             size_t dim = inputShape[i];
             bool autoPadCur = autoPad[autoPad.size() == 1 ? 0 : i];
             size_t lo = lowerPad[lowerPad.size() == 1 ? 0 : i];

@@ -1,23 +1,23 @@
-ConvBNLayerW(W, inp, kW, kH, inMap, outMap, hStride, vStride, bValue, scValue, bnTimeConst) =
+ConvBNLayerW(W, inp, kW, kH, inMap, outMap, hStride, vStride, pad, bValue, scValue, bnTimeConst) =
 [
     b = Parameter(outMap, 1, init = "fixedValue", value = bValue)
     sc = Parameter(outMap, 1, init = "fixedValue", value = scValue)
     m = Parameter(outMap, 1, init = "fixedValue", value = 0, learningRateMultiplier = 0)
     isd = Parameter(outMap, 1, init = "fixedValue", value = 0, learningRateMultiplier = 0)
     
-    c = NDConvolution(W, inp, (kW : kH : inMap), (1 : 1 : outMap), stride=(hStride : vStride : inMap), autoPadding = (true : true : false), imageLayout = "cudnn")
+    c = NDConvolution(W, inp, (kW : kH : inMap), (1 : 1 : outMap), stride = (hStride : vStride : inMap), autoPadding = (pad : pad : false), imageLayout = "cudnn")
     out = BatchNormalization(c, sc, b, m, isd, false, true, normalizationTimeConstant = bnTimeConst, epsilon = 0.000000001, imageLayout = "cudnn")
 ]
 
-ConvBNLayer(inp, kW, kH, inMap, outMap, hStride, vStride, wScale, bValue, scValue, bnTimeConst) =
+ConvBNLayer(inp, kW, kH, inMap, outMap, hStride, vStride, pad, wScale, bValue, scValue, bnTimeConst) =
 [
-    W = Parameter(outMap, kW * kH * inMap, init = "gaussian", initValueScale = wScale)
-    out = ConvBNLayerW(W, inp, kW, kH, inMap, outMap, hStride, vStride, bValue, scValue, bnTimeConst).out
+    W = LearnableParameter(outMap, kW * kH * inMap, init = "gaussian", initValueScale = wScale)
+    out = ConvBNLayerW(W, inp, kW, kH, inMap, outMap, hStride, vStride, pad, bValue, scValue, bnTimeConst).out
 ]
 
-ConvBNReLULayer(inp, kW, kH, inMap, outMap, hStride, vStride, wScale, bValue, scValue, bnTimeConst) =
+ConvBNReLULayer(inp, kW, kH, inMap, outMap, hStride, vStride, pad, wScale, bValue, scValue, bnTimeConst) =
 [
-    c = ConvBNLayer(inp, kW, kH, inMap, outMap, hStride, vStride, wScale, bValue, scValue, bnTimeConst).out
+    c = ConvBNLayer(inp, kW, kH, inMap, outMap, hStride, vStride, pad, wScale, bValue, scValue, bnTimeConst).out
     out = RectifiedLinear(c)
 ]
 
@@ -25,9 +25,9 @@ ConvBNReLULayer(inp, kW, kH, inMap, outMap, hStride, vStride, wScale, bValue, sc
 ResNetNode2A(inp, kW, kH, inMap, outMap, wScale, bValue, scValue, bnTimeConst) =
 [
     # First convolution layer.
-    c1 = ConvBNReLULayer(inp, kW, kH, inMap, outMap, 1, 1, wScale, bValue, scValue, bnTimeConst).out
+    c1 = ConvBNReLULayer(inp, kW, kH, inMap, outMap, 1, 1, true, wScale, bValue, scValue, bnTimeConst).out
     # Second convolution layer, no ReLU.
-    c2 = ConvBNLayer(c1, kW, kH, inMap, outMap, 1, 1, wScale, bValue, scValue, bnTimeConst).out
+    c2 = ConvBNLayer(c1, kW, kH, inMap, outMap, 1, 1, true, wScale, bValue, scValue, bnTimeConst).out
     # Identity shortcut.
     p = Plus(c2, inp)
     out = RectifiedLinear(p)
@@ -37,12 +37,27 @@ ResNetNode2A(inp, kW, kH, inMap, outMap, wScale, bValue, scValue, bnTimeConst) =
 ResNetNode2AInc(inp, kW, kH, inMap, outMap, wScale, bValue, scValue, bnTimeConst, Wproj) =
 [
     # First convolution layer.
-    c1 = ConvBNReLULayer(inp, kW, kH, inMap, outMap, 2, 2, wScale, bValue, scValue, bnTimeConst).out
+    c1 = ConvBNReLULayer(inp, kW, kH, inMap, outMap, 2, 2, true, wScale, bValue, scValue, bnTimeConst).out
     # Second convolution layer, no ReLU.
-    c2 = ConvBNLayer(c1, kW, kH, outMap, outMap, 1, 1, wScale, bValue, scValue, bnTimeConst).out
+    c2 = ConvBNLayer(c1, kW, kH, outMap, outMap, 1, 1, true, wScale, bValue, scValue, bnTimeConst).out
     
     # Projection convolution layer.
-    c_proj = ConvBNLayerW(Wproj, inp, 1, 1, inMap, outMap, 2, 2, bValue, scValue, bnTimeConst).out
+    c_proj = ConvBNLayerW(Wproj, inp, 1, 1, inMap, outMap, 2, 2, false, bValue, scValue, bnTimeConst).out
+    
+    p = Plus(c2, c_proj)
+    out = RectifiedLinear(p)
+]
+
+# Standard building block for ResNet with padding (option B).
+ResNetNode2BInc(inp, kW, kH, inMap, outMap, wScale, bValue, scValue, bnTimeConst) =
+[
+    # First convolution layer.
+    c1 = ConvBNReLULayer(inp, kW, kH, inMap, outMap, 2, 2, true, wScale, bValue, scValue, bnTimeConst).out
+    # Second convolution layer, no ReLU.
+    c2 = ConvBNLayer(c1, kW, kH, outMap, outMap, 1, 1, true, wScale, bValue, scValue, bnTimeConst).out
+    
+    # Projection convolution layer.
+    c_proj = ConvBNLayer(inp, 1, 1, inMap, outMap, 2, 2, false, wScale, bValue, scValue, bnTimeConst).out
     
     p = Plus(c2, c_proj)
     out = RectifiedLinear(p)
@@ -52,11 +67,11 @@ ResNetNode2AInc(inp, kW, kH, inMap, outMap, wScale, bValue, scValue, bnTimeConst
 ResNetNode3A(inp, inMap, convMap, outMap, convWCount, wScale, bValue, scValue, bnTimeConst) =
 [
     # 1x1 reducing convolution.
-    c1 = ConvBNReLULayer(inp, convMap, inMap, 1, 1, 1, 1, wScale, bValue, scValue, bnTimeConst).out
+    c1 = ConvBNReLULayer(inp, convMap, inMap, 1, 1, 1, 1, false, wScale, bValue, scValue, bnTimeConst).out
     # 3x3 convolution.
-    c2 = ConvBNReLULayer(c1, convMap, convWCount, 3, 3, 1, 1, wScale, bValue, scValue, bnTimeConst).out
+    c2 = ConvBNReLULayer(c1, convMap, convWCount, 3, 3, 1, 1, true, wScale, bValue, scValue, bnTimeConst).out
     # 1x1 expanding convolution, no ReLU.
-    c3 = ConvBNLayer(c2, outMap, convMap, 1, 1, 1, 1, wScale, bValue, scValue, bnTimeConst).out
+    c3 = ConvBNLayer(c2, outMap, convMap, 1, 1, 1, 1, false, wScale, bValue, scValue, bnTimeConst).out
     
     p = Plus(c3, inp)
     out = RectifiedLinear(p)
@@ -65,13 +80,13 @@ ResNetNode3A(inp, inMap, convMap, outMap, convWCount, wScale, bValue, scValue, b
 ResNetNode3AInc(inp, inMap, convMap, outMap, convWCount, wScale, bValue, scValue, bnTimeConst, wProj, projStride) =
 [
     # 1x1 reducing convolution.
-    c1 = ConvBNReLULayer(inp, convMap, inMap, 1, 1, projStride, projStride, wScale, bValue, scValue, bnTimeConst).out
+    c1 = ConvBNReLULayer(inp, convMap, inMap, 1, 1, projStride, projStride, false, wScale, bValue, scValue, bnTimeConst).out
     # 3x3 convolution.
-    c2 = ConvBNReLULayer(c1, convMap, convWCount, 3, 3, 1, 1, wScale, bValue, scValue, bnTimeConst).out
+    c2 = ConvBNReLULayer(c1, convMap, convWCount, 3, 3, 1, 1, true, wScale, bValue, scValue, bnTimeConst).out
     # 1x1 expanding convolution, no ReLU.
-    c3 = ConvBNLayer(c2, outMap, convMap, 1, 1, 1, 1, wScale, bValue, scValue, bnTimeConst).out
+    c3 = ConvBNLayer(c2, outMap, convMap, 1, 1, 1, 1, false, wScale, bValue, scValue, bnTimeConst).out
     # Input-to-output mapping convolution.
-    c_proj = ConvBNLayerW(wProj, inp, outMap, 1, 1, projStride, projStride, wScale, bValue, scValue, bnTimeConst).out
+    c_proj = ConvBNLayerW(wProj, inp, outMap, 1, 1, projStride, projStride, false, wScale, bValue, scValue, bnTimeConst).out
     
     p = Plus(c3, c_proj)
     out = RectifiedLinear(p)
@@ -80,13 +95,13 @@ ResNetNode3AInc(inp, inMap, convMap, outMap, convWCount, wScale, bValue, scValue
 ResNetNode3BInc(inp, inMap, convMap, outMap, convWCount, wScale, bValue, scValue, bnTimeConst, projStride) =
 [
     # 1x1 reducing convolution.
-    c1 = ConvBNReLULayer(inp, convMap, inMap, 1, 1, projStride, projStride, wScale, bValue, scValue, bnTimeConst).out
+    c1 = ConvBNReLULayer(inp, convMap, inMap, 1, 1, projStride, projStride, false, wScale, bValue, scValue, bnTimeConst).out
     # 3x3 convolution.
-    c2 = ConvBNReLULayer(c1, convMap, convWCount, 3, 3, 1, 1, wScale, bValue, scValue, bnTimeConst).out
+    c2 = ConvBNReLULayer(c1, convMap, convWCount, 3, 3, 1, 1, true, wScale, bValue, scValue, bnTimeConst).out
     # 1x1 expanding convolution, no ReLU.
-    c3 = ConvBNLayer(c2, outMap, convMap, 1, 1, 1, 1, wScale, bValue, scValue, bnTimeConst).out
+    c3 = ConvBNLayer(c2, outMap, convMap, 1, 1, 1, 1, false, wScale, bValue, scValue, bnTimeConst).out
     # Input-to-output mapping convolution.
-    c_proj = ConvBNLayer(inp, outMap, inMap, 1, 1, projStride, projStride, wScale, bValue, scValue, bnTimeConst).out
+    c_proj = ConvBNLayer(inp, outMap, inMap, 1, 1, projStride, projStride, false, wScale, bValue, scValue, bnTimeConst).out
     
     p = Plus(c3, c_proj)
     out = RectifiedLinear(p)

@@ -18,10 +18,6 @@ stderr="$OutputDir$/ResNet_34"
 traceLevel=1
 numMBsToShowResult=500
 
-Proj64to128Filename = "$ConfigDir$/64to128.txt"
-Proj128to256Filename = "$ConfigDir$/128to256.txt"
-Proj256to512Filename = "$ConfigDir$/256to512.txt"
-
 Train=[
     action="train"
     modelPath="$ModelDir$/ResNet_34"
@@ -60,7 +56,7 @@ Train=[
 
         conv1WScale = 0.6
         cMap1 = 64
-        conv1 = ConvBNReLULayer(features, 7, 7, ImageC, cMap1, 2, 2, conv1WScale, convBValue, scValue, bnTimeConst).out
+        conv1 = ConvBNReLULayer(features, 7, 7, ImageC, cMap1, 2, 2, true, conv1WScale, convBValue, scValue, bnTimeConst).out
         # Max pooling
         pool1W = 3
         pool1H = 3
@@ -73,15 +69,13 @@ Train=[
         rn1_3 = ResNetNode2A(rn1_2, kW, kH, cMap1, cMap1, convWScale, convBValue, scValue, bnTimeConst).out
 
         cMap2 = 128
-        rn2_1_Wproj = Parameter(cMap2, cMap1, init = "fromFile", initFromFilePath = "$Proj64to128Filename$", needGradient = false)
-        rn2_1 = ResNetNode2AInc(rn1_3, kW, kH, cMap1, cMap2, convWScale, convBValue, scValue, bnTimeConst, rn2_1_Wproj).out
+        rn2_1 = ResNetNode2BInc(rn1_3, kW, kH, cMap1, cMap2, convWScale, convBValue, scValue, bnTimeConst).out
         rn2_2 = ResNetNode2A(   rn2_1, kW, kH, cMap2, cMap2, convWScale, convBValue, scValue, bnTimeConst).out
         rn2_3 = ResNetNode2A(   rn2_2, kW, kH, cMap2, cMap2, convWScale, convBValue, scValue, bnTimeConst).out
         rn2_4 = ResNetNode2A(   rn2_3, kW, kH, cMap2, cMap2, convWScale, convBValue, scValue, bnTimeConst).out
 
         cMap3 = 256
-        rn3_1_Wproj = Parameter(cMap3, cMap2, init = "fromFile", initFromFilePath = "$Proj128to256Filename$", needGradient = false)
-        rn3_1 = ResNetNode2AInc(rn2_4, kW, kH, cMap2, cMap3, convWScale, convBValue, scValue, bnTimeConst, rn3_1_Wproj)
+        rn3_1 = ResNetNode2BInc(rn2_4, kW, kH, cMap2, cMap3, convWScale, convBValue, scValue, bnTimeConst).out
         rn3_2 = ResNetNode2A(   rn3_1, kW, kH, cMap3, cMap3, convWScale, convBValue, scValue, bnTimeConst).out
         rn3_3 = ResNetNode2A(   rn3_2, kW, kH, cMap3, cMap3, convWScale, convBValue, scValue, bnTimeConst).out
         rn3_4 = ResNetNode2A(   rn3_3, kW, kH, cMap3, cMap3, convWScale, convBValue, scValue, bnTimeConst).out
@@ -89,8 +83,7 @@ Train=[
         rn3_6 = ResNetNode2A(   rn3_5, kW, kH, cMap3, cMap3, convWScale, convBValue, scValue, bnTimeConst).out
 
         cMap4 = 512
-        rn4_1_Wproj = Parameter(cMap4, cMap3, init = "fromFile", initFromFilePath = "$Proj256to512Filename$", needGradient = false)
-        rn4_1 = ResNetNode2AInc(rn3_6, kW, kH, cMap3, cMap4, convWScale, convBValue, scValue, bnTimeConst, rn4_1_Wproj)
+        rn4_1 = ResNetNode2BInc(rn3_6, kW, kH, cMap3, cMap4, convWScale, convBValue, scValue, bnTimeConst).out
         rn4_2 = ResNetNode2A(   rn4_1, kW, kH, cMap4, cMap4, convWScale, convBValue, scValue, bnTimeConst).out
         rn4_3 = ResNetNode2A(   rn4_2, kW, kH, cMap4, cMap4, convWScale, convBValue, scValue, bnTimeConst).out
 
@@ -101,7 +94,7 @@ Train=[
         pool2vs = 1
         pool5 = AveragePooling(rn4_3, pool2W, pool2H, pool2hs, pool2vs, imageLayout = "cudnn")
 
-        ol = DnnLayer(cMap1, LabelDim, pool5, fcWScale, fcBValue).out
+        ol = DnnLayer(cMap4, LabelDim, pool5, fcWScale, fcBValue).out
     
         CE = CrossEntropyWithSoftmax(labels, ol, tag = "criteria")
         Err = ErrorPrediction(labels, ol, tag = "eval")
