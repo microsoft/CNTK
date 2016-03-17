@@ -75,7 +75,10 @@ private:
     {
         StreamMinibatchInputs inputMatrices;
         for (auto& node : inputNodes)
+        {
             inputMatrices.AddInputMatrix(node->NodeName(), node->ValuePtr());
+            inputMatrices.AddInputLayout(node->NodeName(), node->GetMBLayout());
+        }
         return inputMatrices;
     }
 

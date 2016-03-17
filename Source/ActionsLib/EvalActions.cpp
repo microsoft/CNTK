@@ -211,7 +211,8 @@ template <typename ElemType>
 void DoWriteOutput(const ConfigParameters& config)
 {
     ConfigParameters readerConfig(config(L"reader"));
-    readerConfig.Insert("traceLevel", config(L"traceLevel", "0"));
+    // Why?
+    //readerConfig.Insert("traceLevel", config(L"traceLevel", "0"));
     readerConfig.Insert("randomize", "None"); // we don't want randomization when output results
 
     DataReader testDataReader(readerConfig);
