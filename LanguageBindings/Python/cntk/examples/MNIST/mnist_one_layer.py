@@ -1,3 +1,7 @@
+import sys
+import os
+sys.path.insert(0, r"E:\cntk\LanguageBindings\Python")
+
 from cntk import *
 
 # =====================================================================================
@@ -37,24 +41,25 @@ if (__name__ == "__main__"):
     ec = CrossEntropyWithSoftmax(labels, out)
     ec.tag = 'criterion'
 
-        
-    # Build the reader        
-    r = UCIFastReader(filename="E:\CNTK\LanguageBindings\Python\cntk\examples\MNIST\Data\Train-28x28.txt", 
+    data_dir = "E:\CNTK\LanguageBindings\Python\cntk\examples\MNIST\Data"
+    # Build the reader            
+    r = UCIFastReader(filename=os.path.join(data_dir, "Train-28x28.txt"), 
                       labels_node_name='labels', 
                       labels_dim=1, 
                       labels_start=0, 
                       num_of_classes=label_dim, 
-                      label_mapping_file="E:\CNTK\LanguageBindings\Python\cntk\examples\MNIST\Data\labelsmap.txt")
+                      label_mapping_file=os.path.join(data_dir, os.path.join(data_dir, "labelsmap.txt")))
     
     # Add the input node to the reader
     r.add_input(features, 1, feat_dim)
     
-    # Build the optimizer
-    my_sgd = SGD(epoch_size = 60000, minibatch_size = 32, learning_ratesPerMB = 0.1, max_epochs = 30, momentum_per_mb = 0)
+    # Build the optimizer (settings are scaled down)
+    my_sgd = SGD(epoch_size = 600, minibatch_size = 32, learning_ratesPerMB = 0.1, max_epochs = 5, momentum_per_mb = 0)
     
     # Create a context or re-use if already there
     with Context('mnist_one_layer', optimizer= my_sgd, root_node= ec, clean_up=False) as ctx:            
         # CNTK actions
-        ctx.train(r, False)        
-        #ctx.test(r)        
-        #ctx.predict(r)       
+        ctx.train(r, False)
+        r["FileName"] = os.path.join(data_dir, "Test-28x28.txt")
+        ctx.test(r)        
+        ctx.predict(r)       

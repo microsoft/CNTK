@@ -86,9 +86,9 @@ class UCIFastReader(AbstractReader):
         if self['LabelsStart'] is not None:
             template += '''
             %(LabelsNodeName)s=[
-                start = "%(LabelsStart)s"
-                dim = "%(LabelsDim)s"
-                labelDim="%(NumOfClasses)s"        			
+                start = %(LabelsStart)s
+                dim = %(LabelsDim)s
+                labelDim=%(NumOfClasses)s
                 labelMappingFile="%(LabelMappingFile)s" 
             ]'''
 
