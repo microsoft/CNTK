@@ -157,23 +157,13 @@ public:
         {
             const Matrix<ElemType>& input0 = Input(0)->ValueAsMatrix();
             Matrix<ElemType> sliceInput1Value = Input(1)->ValueFor(fr);
-#if NANCHECK
-            input0.HasNan("Convolution-input0");
-            sliceInput1Value.HasNan("Convolution-input1");
-#endif
             m_convEng->Forward(sliceInput1Value, input0, sliceOutputValue, *m_tempMatrix);
         }
         else
         {
             const Matrix<ElemType>& input0 = Input(0)->ValueFor(fr);
-#if NANCHECK
-            input0.HasNan("Convolution-input0");
-#endif
             m_convEng->ForwardPooling(input0, sliceOutputValue);
         }
-#if NANCHECK
-            sliceOutputValue.HasNan("Convolution");
-#endif
     }
 
     void Validate(bool isFinalValidationPass) override
@@ -184,15 +174,15 @@ public:
         if (m_imageLayout != ImageLayoutKind::CHW)
         {
             InvalidArgument(
-                "NDConvolution supports only cuDNN (CHW) data layout. "
+                "%ls %ls supports only cuDNN (CHW) data layout. "
                 "Please specify imageLayout=\"cudnn\" in NDConvolution node in your BrainScript "
-                "and make sure input data layout is CHW");
+                "and make sure input data layout is CHW", NodeName().c_str(), OperationName().c_str());
         }
 
         auto inputShape = GetInputSampleLayout(GetExpectedNumInputs() - 1);
         auto dimsOut = ConvolveGeometry::ComputeOutputShape(inputShape, m_kernelShape, m_mapCount, m_stride,
                                                             m_sharing, m_autoPad, m_lowerPad, m_upperPad);
-        SetDims(dimsOut, true);
+        SetDims(dimsOut, HasMBLayout());
 
         if (isFinalValidationPass)
         {

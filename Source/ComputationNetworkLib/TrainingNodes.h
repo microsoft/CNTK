@@ -1703,9 +1703,6 @@ public:
 
         Matrix<ElemType> sliceOutputValue = ValueFor(fr);
 
-#if NANCHECK
-        sliceInputValue.HasNan("BatchNormalization-input");
-#endif
         if (m_eval)
             m_bnEng->ForwardInference(sliceInputValue, scale, bias, runMean, runInvStdDev, sliceOutputValue);
         else
@@ -1734,13 +1731,6 @@ public:
 
             m_mbCount++;
         }
-#if NANCHECK
-        sliceOutputValue.HasNan("BatchNormalization-output");
-        runMean.HasNan("BatchNormalization-runMean");
-        runInvStdDev.HasNan("BatchNormalization-runInvStdDev");
-        m_saveMean->HasNan("BatchNormalization-saveMean");
-        m_saveInvStdDev->HasNan("BatchNormalization-saveInvStdDev");
-#endif
     }
 
     void Validate(bool isFinalValidationPass) override
