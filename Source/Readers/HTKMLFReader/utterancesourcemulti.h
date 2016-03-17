@@ -143,6 +143,7 @@ class minibatchutterancesourcemulti : public minibatchsource
             try // this function supports retrying since we read from the unrealible network, i.e. do not return in a broken state
             {
                 msra::asr::htkfeatreader reader; // feature reader (we reinstantiate it for each block, i.e. we reopen the file actually)
+				auto_timer pageintimer;
                 // if this is the first feature read ever, we explicitly open the first file to get the information such as feature dimension
                 if (featdim == 0)
                 {
@@ -165,7 +166,7 @@ class minibatchutterancesourcemulti : public minibatchsource
                 }
                 // fprintf (stderr, "\n");
                 if (verbosity)
-                    fprintf(stderr, "requiredata: %d utterances read\n", (int) utteranceset.size());
+					fprintf(stderr, "requiredata: %d utterances read, time usage = %.8g \n", (int)utteranceset.size(), (double)pageintimer);
             }
             catch (...)
             {
