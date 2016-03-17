@@ -343,11 +343,6 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
             g_mpi->WaitAll();
         }
 
-		if (m_parallelizationMethod == ParallelizationMethod::DataParallelASGD && m_nEpochBarrier[i] > 0 && i % m_nEpochBarrier[i] == 0)
-		{
-			m_multiverso->WaitAsyncBuffer();
-			m_multiverso->WaitAll();
-		}
 
         Timer timer;
         timer.Start();
@@ -641,7 +636,7 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
         // Synchronize all ranks before proceeding to ensure that
         // nobody tries reading the checkpoint file at the same time
         // as rank 0 deleting it below
-			if (g_mpi != nullptr && m_parallelizationMethod != ParallelizationMethod::DataParallelASGD)
+		if (g_mpi != nullptr && m_parallelizationMethod != ParallelizationMethod::DataParallelASGD)
         {
             g_mpi->WaitAll();
         }
@@ -682,7 +677,7 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
 
     // Synchronize all ranks before proceeding to ensure that
     // rank 0 has finished writing the model file
-		if (g_mpi != nullptr && m_parallelizationMethod != ParallelizationMethod::DataParallelASGD)
+	if (g_mpi != nullptr && m_parallelizationMethod != ParallelizationMethod::DataParallelASGD)
     {
         g_mpi->WaitAll();
     }
@@ -1101,6 +1096,12 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
 
 		if (useASGD && g_mpi->NumNodesInUse() > 1)
 		{
+			if (m_parallelizationMethod == ParallelizationMethod::DataParallelASGD && m_nEpochBarrier[epochNumber] > 0 && epochNumber % m_nEpochBarrier[epochNumber] == 0)
+			{
+				m_multiverso->WaitAsyncBuffer();
+				m_multiverso->WaitAll();
+			}
+
 			// Determine if any samples were processed across any of the ranks
 			if (useDistributedMBReading)
 			{
