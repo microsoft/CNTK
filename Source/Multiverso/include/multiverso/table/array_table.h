@@ -118,15 +118,6 @@ public:
     result->push_back(value);
   }
 
-  void DumpTable(std::ofstream& os){
-    for (int i = 0; i < storage_.size(); ++i)
-      os << storage_[i] << ' ';
-  }
-  void RecoverTable(std::ifstream& in){
-    for (int i = 0; i < storage_.size(); ++i)
-      in >> storage_[i];
-  }
-
 private:
   int server_id_;
   // T* storage_;

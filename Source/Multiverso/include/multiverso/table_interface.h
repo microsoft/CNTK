@@ -52,8 +52,6 @@ public:
   virtual void ProcessAdd(const std::vector<Blob>& data) = 0;
   virtual void ProcessGet(const std::vector<Blob>& data,
                           std::vector<Blob>* result) = 0;
-  virtual void DumpTable(std::ofstream& os) = 0;
-  virtual void RecoverTable(std::ifstream& in) = 0;
 
   const std::string name() const { return std::string(typeid(this).name());};
   

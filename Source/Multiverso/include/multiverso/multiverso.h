@@ -1,8 +1,6 @@
 #ifndef MULTIVERSO_INCLUDE_MULTIVERSO_H_
 #define MULTIVERSO_INCLUDE_MULTIVERSO_H_
 
-#include <string>
-
 namespace multiverso {
 
 enum Role {
@@ -14,10 +12,9 @@ enum Role {
 
 void MV_Init(int* argc = nullptr, 
              char* argv[] = nullptr, 
-             int role = All,
-             bool restart = false);
+             int role = All);
 
-void MV_Barrier(int iter = -1);
+void MV_Barrier();
 
 void MV_ShutDown(bool finalize_mpi = true);
 
@@ -32,8 +29,6 @@ int  MV_ServerId();
 
 int  MV_WorkerIdToRank(int worker_id);
 int  MV_ServerIdToRank(int server_id);
-
-int MV_RestoreTable(const std::string& dump_file_path);
 
 // --- Net API -------------------------------------------------------------- //
 // NOTE(feiga): these API is only used for specific situation.

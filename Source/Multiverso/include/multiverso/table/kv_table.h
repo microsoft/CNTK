@@ -99,23 +99,6 @@ public:
       table_[keys.As<Key>(i)] += vals.As<Val>(i);
     }
   }
-
-  void DumpTable(std::ofstream& os){
-    os << table_.size() << ' ';
-    for (auto& i : table_){
-      os << i.first << ' ' << i.second << ' ';
-    }
-  }
-  void RecoverTable(std::ifstream& in){
-    int count;
-    Key k;
-    Val v;
-    in >> count;
-    for (int i = 0; i < count; ++i){//may get wrong when Key or Val is char?
-      in >> k >> v;
-      table_[k] = v;
-    }
-  }
 private:
   std::unordered_map<Key, Val> table_;
 };

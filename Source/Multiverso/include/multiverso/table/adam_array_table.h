@@ -138,29 +138,6 @@ public:
     result->push_back(value);
   }
 
-  void DumpTable(std::ofstream& os){
-    os << decay_momentum_rate_first_ << ' ';
-    os << decay_momentum_rate_second_ << ' ';
-    os << stepsize_ << ' ';
-    for (int i = 0; i < storage_[i].size(); ++i)
-      os << storage_[i] << ' ';
-    for (int i = 0; i < smooth_gradient_first_.size(); ++i)
-      os << smooth_gradient_first_[i] << ' ';
-    for (int i = 0; i < smooth_gradient_second_.size(); ++i)
-      os << smooth_gradient_second_[i] << ' ';
-  }
-  void RecoverTable(std::ifstream& in){
-    in >> decay_momentum_rate_first_;
-    in >> decay_momentum_rate_second_;
-    in >> stepsize_;
-    for (int i = 0; i < storage_[i].size(); ++i)
-      in >> storage_[i];
-    for (int i = 0; i < smooth_gradient_first_.size(); ++i)
-      in >> smooth_gradient_first_[i];
-    for (int i = 0; i < smooth_gradient_second_.size(); ++i)
-      in >> smooth_gradient_second_[i];
-  }
-
 private:
   int server_id_;
   float decay_momentum_rate_first_;

@@ -23,11 +23,11 @@ public:
   static Zoo* Get() { static Zoo zoo; return &zoo; };
 
   // Start all actors
-  void Start(int* argc, char** argv, int role, bool restart);
+  void Start(int* argc, char** argv, int role);
   // Stop all actors
   void Stop(bool finalize_net);
 
-  void Barrier(const int& iter = -1);
+  void Barrier();
 
   void SendTo(const std::string& name, MessagePtr&);
   void Receive(MessagePtr& msg);
@@ -58,8 +58,6 @@ public:
     CHECK(zoo_[name] == nullptr);
     zoo_[name] = actor;
   }
-  
-  int RestoreTable(const std::string& dump_file_path);
 private:
   // private constructor
   Zoo();
@@ -77,9 +75,6 @@ private:
 
   int num_workers_;
   int num_servers_;
-
-  bool restart_;
-  int dump_each_k_;
 };
 
 }
