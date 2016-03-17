@@ -69,7 +69,7 @@ private:
     IndexPtr BuildFromLines();
 
     // Returns current offset in the input file (in bytes). 
-    int64_t Indexer::GetFileOffset() const { return m_fileOffsetStart + (m_pos - m_bufferStart); }
+    int64_t GetFileOffset() const { return m_fileOffsetStart + (m_pos - m_bufferStart); }
 
     DISABLE_COPY_AND_MOVE(Indexer);
 };
