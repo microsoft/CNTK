@@ -54,7 +54,8 @@ namespace Microsoft {
 					bool isAsyncBuffered = true,
 					AdjustLearningRateatBeginning adjusttype = AdjustLearningRateatBeginning::None,
 					double adjustcoef = 0.2,
-					size_t adjustnbmb = 600)
+					size_t adjustnbmb = 600,
+					int traceLevel = 0)
 				{
 					m_modelSyncCount = 0;
 					m_adjustLearningRateAtBeginningType = adjusttype;
@@ -82,6 +83,9 @@ namespace Microsoft {
 						m_cacheSwapIndex[i] = (i + 1) % m_localCacheNumber;
 
 					m_prefetchThread = nullptr;
+
+					if (traceLevel > 3)
+						multiverso::Log::ResetLogLevel(multiverso::LogLevel::Debug);
 
 					MultiversoInit(learnableNodes);
 				}
@@ -137,24 +141,18 @@ namespace Microsoft {
 				
 					std::transform(m_deltaArray, m_deltaArray + m_totalModelSize, m_deltaArray, std::bind1st(std::multiplies<ElemType>(), factor));
 
-					i = 0; 
-					for (auto nodeIter = learnableNodes.begin(); nodeIter != learnableNodes.end(); nodeIter++, i++)
+					for (int widx = 0; widx < m_tableCount; widx++)
 					{
-						ElemType* px = m_deltaArray + m_tableOffsets[i];
-						auto multiversoMatrix = m_matrixArray->at(i);
-						fprintf(stdout, "model init add table length :%d! offset: %d\n", m_tableLength[i], m_tableOffsets[i]);
-						fflush(stdout);
-						multiversoMatrix->Add(px, m_tableLength[i]);
+						auto multiversoMatrix = m_matrixArray->at(widx);
+						ElemType* px = m_deltaArray + m_tableOffsets[widx];
+						multiversoMatrix->Add(px, m_tableLength[widx]);
 					}
 					WaitAll(); // initial model for every client should be identical
-					i = 0; 
-					for (auto nodeIter = learnableNodes.begin(); nodeIter != learnableNodes.end(); nodeIter++, i++)
+					for (int widx = 0; widx < m_tableCount; widx++)
 					{
-						ElemType* px = m_deltaArray + m_tableOffsets[i];
-						auto multiversoMatrix = m_matrixArray->at(i);
-						fprintf(stdout, "model init get table length :%d! offset: %d\n", m_tableLength[i], m_tableOffsets[i]);
-						fflush(stdout);
-						multiversoMatrix->Get(px, m_tableLength[i]);
+						auto multiversoMatrix = m_matrixArray->at(widx);
+						ElemType* px = m_deltaArray + m_tableOffsets[widx];
+						multiversoMatrix->Get(px, m_tableLength[widx]);
 					}
 				}
 
@@ -232,22 +230,15 @@ namespace Microsoft {
 
 							// lr decay
 							std::transform(m_deltaArray, m_deltaArray + m_totalModelSize, m_deltaArray, std::bind1st(std::multiplies<ElemType>(), factor));
-							i = 0;
-							for (auto multiversoMatrix = m_matrixArray->begin(); multiversoMatrix != m_matrixArray->end(); multiversoMatrix++, i++)
+							for (int widx = 0; widx < m_tableCount; widx++)
 							{
-								ElemType* px = m_deltaArray + m_tableOffsets[i];
-								fprintf(stdout, "rank %d :model push&pull add table length :%d!, offset:%d\n", multiverso::MV_Rank(),  m_tableLength[i], m_tableOffsets[i]);
-								fflush(stdout);
-								(*multiversoMatrix)->Add(px, m_tableLength[i]);
+								auto multiversoMatrix = m_matrixArray->at(widx);
+								ElemType* px = m_deltaArray + m_tableOffsets[widx];
+								ElemType* py = m_cpuAsyncBuffer[t_cacheIdx] + m_tableOffsets[widx];
+								multiversoMatrix->Add(px, m_tableLength[widx]);
+								multiversoMatrix->Get(py, m_tableLength[widx]);
 							}
-							i = 0;
-							for (auto multiversoMatrix = m_matrixArray->begin(); multiversoMatrix != m_matrixArray->end(); multiversoMatrix++, i++)
-							{
-								ElemType* py = m_cpuAsyncBuffer[t_cacheIdx] + m_tableOffsets[i];
-								fprintf(stdout, "rank %d :model push&pull get table length :%d!, offset:%d\n", multiverso::MV_Rank(), m_tableLength[i], m_tableOffsets[i]);
-								fflush(stdout);
-								(*multiversoMatrix)->Get(py, m_tableLength[i]);
-							}
+
 							//m_matrixArray->Add(m_deltaArray, m_totalModelSize);
 							//m_matrixArray->Get(m_cpuAsyncBuffer[t_cacheIdx], m_totalModelSize);
 
@@ -273,14 +264,13 @@ namespace Microsoft {
 
 							std::transform(m_deltaArray, m_deltaArray + m_totalModelSize, m_cpuAsyncBuffer[t_cacheIdx], m_deltaArray, std::minus<ElemType>());
 							std::transform(m_deltaArray, m_deltaArray + m_totalModelSize, m_deltaArray, std::bind1st(std::multiplies<ElemType>(), factor));
-							int i = 0;
-							for (auto nodeIter = learnableNodes.begin(); nodeIter != learnableNodes.end(); nodeIter++, i++)
+							for (int widx = 0; widx < m_tableCount; widx++)
 							{
-								ElemType* px = m_deltaArray + m_tableOffsets[i];
-								ElemType* py = m_cpuAsyncBuffer[t_cacheIdx] + m_tableOffsets[i];
-								auto multiversoMatrix = m_matrixArray->at(i);
-								multiversoMatrix->Add(px, m_tableLength[i]);
-								multiversoMatrix->Get(py, m_tableLength[i]);
+								auto multiversoMatrix = m_matrixArray->at(widx);
+								ElemType* px = m_deltaArray + m_tableOffsets[widx];
+								ElemType* py = m_cpuAsyncBuffer[t_cacheIdx] + m_tableOffsets[widx];
+								multiversoMatrix->Add(px, m_tableLength[widx]);
+								multiversoMatrix->Get(py, m_tableLength[widx]);
 							}
 							//m_matrixArray->Add(m_deltaArray, m_totalModelSize);
 							//m_matrixArray->Get(m_cpuAsyncBuffer[t_cacheIdx], m_totalModelSize);
@@ -305,14 +295,13 @@ namespace Microsoft {
 
 						// lr decay
 						std::transform(m_deltaArray, m_deltaArray + m_totalModelSize, m_deltaArray, std::bind1st(std::multiplies<ElemType>(), factor));
-						i = 0;
-						for (auto nodeIter = learnableNodes.begin(); nodeIter != learnableNodes.end(); nodeIter++, i++)
+						for (int widx = 0; widx < m_tableCount; widx++)
 						{
-							ElemType* px = m_deltaArray + m_tableOffsets[i];
-							ElemType* py = m_cpuAsyncBuffer[0] + m_tableOffsets[i];
-							auto multiversoMatrix = m_matrixArray->at(i);
-							multiversoMatrix->Add(px, m_tableLength[i]);
-							multiversoMatrix->Get(py, m_tableLength[i]);
+							auto multiversoMatrix = m_matrixArray->at(widx);
+							ElemType* px = m_deltaArray + m_tableOffsets[widx];
+							ElemType* py = m_cpuAsyncBuffer[0] + m_tableOffsets[widx];
+							multiversoMatrix->Add(px, m_tableLength[widx]);
+							multiversoMatrix->Get(py, m_tableLength[widx]);
 						}
 						//m_matrixArray->Add(m_deltaArray, m_totalModelSize);
 						//m_matrixArray->Get(m_cpuAsyncBuffer[0], m_totalModelSize);
@@ -359,7 +348,6 @@ namespace Microsoft {
 					assert(!m_isInitialized);
 					m_isInitialized = true;
 
-                    multiverso::Log::ResetLogLevel(multiverso::LogLevel::Debug);
 					multiverso::MV_Init();
 
 					m_matrixArray = new std::vector< multiverso::MatrixWorkerTable<ElemType>*>();
@@ -373,7 +361,6 @@ namespace Microsoft {
 						size_t layerRowSize = mat.GetNumRows();
 						size_t layerColSize = mat.GetNumCols();
 						
-						printf("create layer with %d row, %d col, size = %d\n", layerRowSize, layerColSize, layerSize);
 						m_matrixArray->push_back(new multiverso::MatrixWorkerTable<ElemType>(layerRowSize, layerColSize));
 						m_serverArray->push_back(new multiverso::MatrixServerTable<ElemType>(layerRowSize, layerColSize));
 

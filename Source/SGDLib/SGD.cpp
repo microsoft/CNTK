@@ -327,7 +327,8 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
 			m_isPipeline,
 			m_adjustlearningrateatbeginning,
 			m_adjustcoefficient,
-			m_adjustnbminibatch);
+			m_adjustnbminibatch,
+			m_traceLevel);
 		m_multiverso->InitModel(learnableNodes);
 		m_multiversoBarrier = false;
 		m_multiverso->WaitAll();
