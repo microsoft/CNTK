@@ -95,13 +95,6 @@ Eval<ElemType>::~Eval()
     }
 }
 
-// LoadModel - load a model from the specified path
-// modelFileName - file holding the model to load
-template <class ElemType>
-void Eval<ElemType>::LoadModel(const std::wstring& modelFileName)
-{
-    m_eval->LoadModel(modelFileName);
-}
 
 // CreateNetwork - create the network from the specified description
 // networkDescription - network description

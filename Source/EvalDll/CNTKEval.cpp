@@ -46,11 +46,6 @@ void CNTKEval<ElemType>::Init(const std::string& config)
 {
     m_start = 0;
     m_config.Parse(config);
-    if (m_config.Exists("modelPath"))
-    {
-        std::wstring path = m_config("modelPath");
-        LoadModel(path);
-    }
     size_t nThreads = m_config("numCPUThreads", "1");
     CPUMatrix<ElemType>::SetNumThreads(nThreads);
 
@@ -69,16 +64,6 @@ void CNTKEval<ElemType>::Destroy()
     delete this;
 }
 
-// LoadModel - load a model from the specified path
-// modelFileName - file holding the model to load
-template <class ElemType>
-void CNTKEval<ElemType>::LoadModel(const std::wstring& modelFileName)
-{
-    DEVICEID_TYPE deviceId = DeviceFromConfig(m_config);
-    fprintf(stderr, "DeviceID=%d\n", (int) deviceId);
-    m_net = ComputationNetwork::CreateFromFile<ElemType>(deviceId, modelFileName);
-}
-
 // CreateNetwork - create a network based on the network description
 // networkDescription - network description
 template <class ElemType>
@@ -86,13 +71,13 @@ void CNTKEval<ElemType>::CreateNetwork(const std::string& networkDescription)
 {
     ConfigParameters config;
     config.Parse(networkDescription);
-    auto networkFactory = GetNetworkFactory<ConfigParameters, ElemType>(config);
-    DEVICEID_TYPE deviceId = DeviceFromConfig(config);
 
-    m_net = networkFactory(deviceId);
+    std::vector<wstring> outputNodeNames;
+    m_net = GetModelFromConfig<ConfigParameters, ElemType>(config, outputNodeNames);
+    
     if (m_net == nullptr)
     {
-        // TODO: Throw appropriate exception
+        LogicError("Unable to construct network from description");
     }
 }
 

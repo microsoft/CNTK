@@ -14,19 +14,19 @@ using System.Net.Configuration;
 namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
 {
     /// <summary>
-    /// Program for running model evaluations using the CLIWrapper
+    /// Program for demonstrating how to run model evaluations using the CLIWrapper
     /// </summary>
     /// <description>
     /// This program is a managed client using the CLIWrapper to run the model evaluator in CTNK.
-    /// It uses one of the examples provided in CNTK for evaluating the model associated with the example.
+    /// There are four cases shown in this program related to model loading/network creation and evaluation.
+    /// The first two use the trained model from one of the examples provided in the CNTK source code.
     /// In order to run this program the model must already exist in the example. To create the model,
     /// first run the example in <CNTK>/Examples/Image/MNIST. Once the model file 01_OneHidden is created,
     /// you can run this client.
-    /// This example also shows evaluating a network without first training the model. This is accomplished
-    /// by creating the network and evaluating a single forward pass.
-    /// This client also shows two methods for obtaining the output results from the evaluation, the first as
-    /// return values from the Evaluate method call (which only returns a single layer output), and the second
-    /// by passing the allocated output layers to the evaluate method.
+    /// The last two cases show how to evaluate a network without first training the model. This is accomplished
+    /// by building the network and evaluating a single forward pass.
+    /// This program also shows how to obtaining the output results from the evaluation, either as the default output layer,
+    /// or by specifying one or more layers as outputs.
     /// </description>
     class Program
     {
@@ -76,7 +76,7 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
 
                     // Load model
                     string modelFilePath = Path.Combine(Environment.CurrentDirectory, @"..\Output\Models\01_OneHidden");
-                    model.LoadModel(modelFilePath);
+                    model.CreateNetwork(string.Format("deviceId=-1\nmodelPath=\"{0}\"", modelFilePath));
 
                     // Generate random input values in the appropriate structure and size
                     var inputs = GetDictionary("features", 28*28, 255);
@@ -118,7 +118,7 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
 
                     // Load model
                     string modelFilePath = Path.Combine(Environment.CurrentDirectory, @"..\Output\Models\01_OneHidden");
-                    model.LoadModel(modelFilePath);
+                    model.CreateNetwork(string.Format("deviceId=-1\nmodelPath=\"{0}\"", modelFilePath));
 
                     // Generate random input values in the appropriate structure and size
                     var inputs = GetDictionary("features", 28*28, 255);
@@ -158,7 +158,7 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
                 using (var model = new IEvaluateModelManagedF())
                 {
                     // Initialize model evaluator
-                    model.Init("deviceId=0");
+                    model.Init("deviceId=-1");
 
                     // Create the network
                     string networkDescription = GetFileContents(Path.Combine(workingDirectory, @"AddOperatorConstant.cntk"));
@@ -200,7 +200,7 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
                 using (var model = new IEvaluateModelManagedF())
                 {
                     // Initialize model evaluator
-                    model.Init("deviceId=0");
+                    model.Init("deviceId=-1");
 
                     // Create the network
                     string networkDescription = GetFileContents(Path.Combine(workingDirectory, @"AddOperatorConstantNoInput.cntk"));

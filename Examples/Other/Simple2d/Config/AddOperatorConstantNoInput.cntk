@@ -1,5 +1,5 @@
 # deviceId=-1 for CPU, >=0 for GPU devices, "auto" chooses the best GPU, or CPU if no usable GPU is available
-deviceId = 0
+deviceId = -1
 
 command = Add_Operator_Constant
 

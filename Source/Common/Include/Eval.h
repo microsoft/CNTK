@@ -43,7 +43,6 @@ public:
     virtual void Init(const std::string& config) = 0;
     virtual void Destroy() = 0;
 
-    virtual void LoadModel(const std::wstring& modelFileName) = 0;
     virtual void CreateNetwork(const std::string& networkDescription) = 0;
     virtual void GetNodeDimensions(std::map<std::wstring, size_t>& dimensions, NodeGroup nodeGroup) = 0;
     virtual void StartEvaluateMinibatchLoop(const std::wstring& outputNodeName) = 0;
@@ -83,10 +82,6 @@ public:
     // minibatchSize=1024 (minibatch size used during evaluation if < passed data size)
     Eval(const std::string& config);
     virtual ~Eval();
-
-    // LoadModel - load a model from the specified path
-    // modelFileName - file holding the model to load
-    virtual void LoadModel(const std::wstring& modelFileName);
 
     // CreateNetwork - create a network based on the network description
     // networkDescription - network description

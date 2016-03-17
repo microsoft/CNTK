@@ -88,27 +88,6 @@ public:
         }
     }
 
-    /// <summary>Loads a model file</summary>
-    /// <param name="modelFileName">The model file name to load</param>
-    void LoadModel(String^ modelFileName)
-    {
-        if (m_eval == nullptr)
-        {
-            throw gcnew ObjectDisposedException("Object has been disposed.");
-        }
-
-        pin_ptr<const WCHAR> stdModelPath = PtrToStringChars(modelFileName);
-
-        try
-        {
-            m_eval->LoadModel(stdModelPath);
-        }
-        catch (const exception& ex)
-        {
-            throw GetCustomException(ex);
-        }
-    }
-
     /// <summary>Creates a network based from the network description in the configuration</summary>
     /// <param name="networkDescription">The configuration file containing the network description</param>
     void CreateNetwork(String^ networkDescription)
@@ -446,7 +425,6 @@ void emit()
     f.Evaluate(nullptr, nullptr);
     f.Evaluate(nullptr, "", 0);
     f.Evaluate("", 0);
-    f.LoadModel("");
     f.CreateNetwork("");
 
     IEvaluateModelManagedD d;
@@ -454,7 +432,6 @@ void emit()
     d.Evaluate(nullptr, nullptr);
     d.Evaluate(nullptr, "", 0);
     d.Evaluate("", 0);
-    d.LoadModel("");
     d.CreateNetwork("");
 }
 

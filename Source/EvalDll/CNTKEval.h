@@ -36,10 +36,6 @@ public:
     {
     }
 
-    // LoadModel - load a model from the specified path
-    // modelFileName - file holding the model to load
-    virtual void LoadModel(const std::wstring& modelFileName);
-
     // CreateNetwork - create a network based on the network description
     // networkDescription - network description
     virtual void CreateNetwork(const std::string& networkDescription);
