@@ -40,8 +40,8 @@ void ComputationNodeBase::InferMBLayoutFromInputsForStandardCase()
         else if (!pMBLayout) // first non-NULL layout: just copy it
             pMBLayout = child->m_pMBLayout;
         else if (pMBLayout != child->m_pMBLayout) // got a layout--compare whether it is the same
-            RuntimeError("InferMBLayoutFromInputsForStandardCase: Found inconsistent layout in %ls %ls operation, mismatch detected for child %ls %ls.",
-                         NodeName().c_str(), OperationName().c_str(), child->NodeName().c_str(), child->OperationName().c_str());
+            RuntimeError("%ls: InferMBLayoutFromInputsForStandardCase: Found inconsistent layout, mismatch detected for child %ls %ls.",
+                         NodeDescription().c_str(), child->NodeName().c_str(), child->OperationName().c_str());
     }
     // all are consistent: install it
     LinkToMBLayout(pMBLayout);
@@ -70,7 +70,7 @@ void ComputationNodeBase::ValidateBinaryZip(bool isFinalValidationPass, bool all
     if (isFinalValidationPass &&
         Input(0)->GetMBLayout() != Input(1)->GetMBLayout() && Input(0)->HasMBLayout() && Input(1)->HasMBLayout())
     {
-        LogicError("MB layouts in the %ls %ls operation do not match.", NodeName().c_str(), OperationName().c_str());
+        LogicError("%ls: MB layouts do not match.", NodeDescription().c_str());
     }
 
     // result has tensor shape with dimensions being the max over both
@@ -91,8 +91,8 @@ void ComputationNodeBase::ValidateBinaryZip(bool isFinalValidationPass, bool all
         else if (dim1 == 1)                                // if [1] is broadcasting
             ;                                              // dims is already correct
         else if (isFinalValidationPass && dim1 != dims[k]) // no broadcasting: they must match
-            InvalidArgument("%ls %ls operation: Input dimensions [%s] and [%s] are not compatible.",
-                            NodeName().c_str(), OperationName().c_str(), string(shape0).c_str(), string(shape1).c_str());
+            InvalidArgument("%ls: Input dimensions [%s] and [%s] are not compatible.",
+                            NodeDescription().c_str(), string(shape0).c_str(), string(shape1).c_str());
     }
 
     SetDims(TensorShape(dims), HasMBLayout());
@@ -116,11 +116,22 @@ void ComputationNodeBase::ValidateBinaryReduce(bool isFinalValidationPass)
     ComputationNodeBase::Validate(isFinalValidationPass);
     m_pMBLayout = nullptr; // this node does not hold mini-batch data
     ValidateInferBinaryInputDims();
-    if (isFinalValidationPass &&
-        !(Input(0)->GetSampleLayout().IsElementwiseCompatibleWith(Input(1)->GetSampleLayout()) &&
-        // TODO: is this correct? Do both inputs need to have a layout? Fix error message.
-         (Input(0)->HasMBLayout() == Input(1)->HasMBLayout())))
-        LogicError("The Matrix dimensions or MB layout in the %ls %ls operation do not match.", NodeName().c_str(), OperationName().c_str());
+
+    if (isFinalValidationPass)
+    {
+        if (!(Input(0)->GetSampleLayout().IsElementwiseCompatibleWith(Input(1)->GetSampleLayout())))
+        {
+            std::string s1 = Input(0)->GetSampleLayout();
+            std::string s2 = Input(1)->GetSampleLayout();
+            // BUGBUG: Allow broadcasting?
+            LogicError("%ls: The tensor dimensions in the inputs do not match. %s != %s", NodeDescription().c_str(), s1.c_str(), s2.c_str());
+        }
+        else if (!(Input(0)->HasMBLayout()))
+            LogicError("%ls: Expected MBLayout in Input 0.", NodeDescription().c_str());
+        else if (!(Input(1)->HasMBLayout()))
+            LogicError("%ls: Expected MBLayout in Input 1.", NodeDescription().c_str());
+        // Shape of the MBLayouts is checked at runtime.
+    }
     SetDims(TensorShape(1), false);
 }
 
