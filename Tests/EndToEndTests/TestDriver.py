@@ -95,7 +95,13 @@
 # matching against all test-cases/pattern simulteneously
 #
 
-import sys, os, argparse, traceback, yaml, subprocess, random, re, time, six
+import sys, os, argparse, traceback, yaml, subprocess, random, re, time
+
+try:
+  import six
+except ImportError:
+  print("Python package 'six' not installed. Please run 'pip install six'.")
+  sys.exit(1)
 
 thisDir = os.path.dirname(os.path.realpath(__file__))
 windows = os.getenv("OS")=="Windows_NT"
@@ -543,6 +549,8 @@ def listCommand(args):
         for device in args.devices:
            for os in args.oses:
              for build_sku in args.buildSKUs:
+               if build_sku=="cpu" and device=="gpu":
+                 continue
                tag = test.matchesTag(args.tag, flavor, device, os, build_sku) if args.tag else '*'
                if tag:
                  if tag in list(testsByTag.keys()):
