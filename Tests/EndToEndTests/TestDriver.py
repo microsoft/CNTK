@@ -240,8 +240,6 @@ class Test:
         os.environ["TEST_CNTK_BINARY"] = os.path.join(args.build_location, (flavor + "_CpuOnly"), "cntk.exe")
       else:
         os.environ["TEST_CNTK_BINARY"] = os.path.join(args.build_location, flavor, "cntk.exe")
-      if not os.path.exists(os.environ["TEST_CNTK_BINARY"]):
-        raise ValueError("the cntk executable does not does not exist at path '%s'"%os.environ["TEST_CNTK_BINARY"]) 
       os.environ["MPI_BINARY"] = os.path.join(os.environ["MSMPI_BIN"], "mpiexec.exe")
     else:
       tempPath = os.path.join(args.build_location, args.build_sku, flavor, "bin", "cntk")
@@ -252,6 +250,8 @@ class Test:
             break
       os.environ["TEST_CNTK_BINARY"] = tempPath
       os.environ["MPI_BINARY"] = "mpiexec"
+    if not os.path.exists(os.environ["TEST_CNTK_BINARY"]):
+      raise ValueError("the cntk executable does not exist at path '%s'"%os.environ["TEST_CNTK_BINARY"]) 
     os.environ["TEST_DIR"] = self.testDir
     os.environ["TEST_DATA_DIR"] = self.dataDir
     os.environ["TEST_RUN_DIR"] = runDir
