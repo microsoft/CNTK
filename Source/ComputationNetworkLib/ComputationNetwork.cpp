@@ -90,17 +90,11 @@ void ComputationNetwork::SaveEdited(const wstring& fileName, const FileOptions f
 void ComputationNetwork::Save(const wstring& fileName, const FileOptions fileFormat) const
 {
     VerifyIsCompiled("Save");
-    // In case of parallel training only the main node should we saving the model to prevent
-    // the parallel training nodes from colliding to write the same file
-    // TODO: This does not belong here.
-    if ((g_mpi == nullptr) || g_mpi->IsMainNode())
-    {
-        // Saving into temporary file and then renaming it to the requested fileName
-        // This is a standard trick to avoid havign corrupted model files if process dies during writing
-        wstring tmpFileName = fileName + L".tmp";
-        SaveToFileImpl(tmpFileName, fileFormat);
-        renameOrDie(tmpFileName, fileName);
-    }
+    // Saving into temporary file and then renaming it to the requested fileName
+    // This is a standard trick to avoid havign corrupted model files if process dies during writing
+    wstring tmpFileName = fileName + L".tmp";
+    SaveToFileImpl(tmpFileName, fileFormat);
+    renameOrDie(tmpFileName, fileName);
 }
 
 // TODO: how does the file distinguish float vs double nodes?

@@ -143,6 +143,14 @@ protected:
         return pow(m_momentumParam[epoch], 1.0 / FixUpEffectiveMBSize(m_momentumSpecifiedForMBSize[epoch], numParallelSequences));
     }
 
+    ParallelizationMethod GetParallelizationMethod() const
+    {
+        if (m_mpi == nullptr)
+            return ParallelizationMethod::None;
+
+        return m_parallelizationMethod;
+    }
+
     // only true when the user specify LearningRatePerMB and the number of parallel utterances in Reader > 1
     // bool m_needToNormalizeLRByParallUtterance;          // TODO: should go away
     // bool m_needToNormalizeMomentumByParallUtterance;
@@ -228,6 +236,8 @@ protected:
     bool m_useAllDataForPreComputedNode;
 
     // Parallel training
+    std::shared_ptr<MPIWrapper> m_mpi;
+
     ParallelizationMethod m_parallelizationMethod;
     bool m_enableDistributedMBReading;
     int m_parallelizationStartEpochNum;
@@ -303,6 +313,14 @@ public:
     SGD(const ScriptableObjects::IConfigRecordPtr configp)
         : SGD(*configp)
     {
+    }
+
+    void InitMPI(const std::shared_ptr<MPIWrapper>& mpi)
+    {
+        m_mpi = mpi;
+
+        if (m_mpi == nullptr)
+            m_parallelizationMethod = ParallelizationMethod::None;
     }
 
     void Train(function<ComputationNetworkPtr(DEVICEID_TYPE)> createNetworkFn, DEVICEID_TYPE deviceId,

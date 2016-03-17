@@ -102,7 +102,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         typedef shared_ptr<ComputationNode<ElemType>> ComputationNodePtr;
      public:
-         IMASGD(MPIWrapper* pMPI, size_t perfReportFreq)
+         IMASGD(const std::shared_ptr<MPIWrapper>& pMPI, size_t perfReportFreq)
              :m_MAworkerStatus(pMPI->NumNodesInUse(), MAWorkerStatus::NOTSTARTED), 
              m_numSyncPerformed(0), 
              m_numWorkers(pMPI->NumNodesInUse()), 
@@ -120,7 +120,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
          {
              m_MAworkerStatus.resize(m_numWorkers);
              std::fill(m_MAworkerStatus.begin(), m_MAworkerStatus.end(), MAWorkerStatus::DataProcessing);
-             g_mpi->WaitAll(); 
+             m_pMPI->WaitAll(); 
              m_perfReporter.OnEpochStart();
          }
 
@@ -286,8 +286,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         size_t                      m_numWorkers; 
         size_t                      m_myRank;
         MASGDPerfStats              m_perfReporter;
-        MPIWrapper*                 m_pMPI;       // TODO: to use shared_ptr in the future 
-        
+        std::shared_ptr<MPIWrapper> m_pMPI;
  };
 
 
@@ -300,7 +299,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         using Base::DownCast;
 
     public:
-        BasicModelAveragingSGD(MPIWrapper* pMPI, size_t reportFreq)
+        BasicModelAveragingSGD(const std::shared_ptr<MPIWrapper>& pMPI, size_t reportFreq)
             :Base(pMPI, reportFreq)
         {}
 
@@ -327,7 +326,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (nTotalSamples <= 0)
             {
                 // prepare for overflow 
-                factor = 1.0f / g_mpi->NumNodesInUse();
+                factor = 1.0f / m_pMPI->NumNodesInUse();
                 totalSamplesProcessed = samplesSinceLastSync * m_pMPI->NumNodesInUse();
                 // give an estimated one 
             }

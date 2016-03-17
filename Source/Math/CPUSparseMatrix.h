@@ -59,11 +59,6 @@ public:
     void SetValue(const size_t row, const size_t col, ElemType val);
     void SetValue(const CPUSparseMatrix<ElemType>& /*val*/);
 
-    void ShiftBy(int /*numShift*/)
-    {
-        NOT_IMPLEMENTED;
-    }
-
     size_t BufferSize() const
     {
         return m_elemSizeAllocated * sizeof(ElemType);

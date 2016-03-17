@@ -92,6 +92,7 @@ void DoTrain(const ConfigRecordType& config)
         optimizer = make_shared<SGD<ElemType>>(configSGD);
     }
 
+    optimizer->InitMPI(MPIWrapper::GetInstance());
     optimizer->Train(createNetworkFn, deviceId, dataReader.get(), cvDataReader.get(), makeMode);
 }
 
@@ -161,6 +162,7 @@ void DoAdapt(const ConfigParameters& config)
 
     SGD<ElemType> sgd(configSGD);
 
+    sgd.InitMPI(MPIWrapper::GetInstance());
     sgd.Adapt(origModelFileName, refNodeName, dataReader.get(), cvDataReader.get(), deviceId, makeMode);
 }
 

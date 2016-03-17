@@ -8,17 +8,16 @@
 #include "stdafx.h"
 #define EVAL_EXPORTS // creating the exports here
 #include "Eval.h"
+#include "Actions.h"
 #include "CNTKEval.h"
 #include "CPUMatrix.h" // for SetNumThreads()
 #include "SimpleOutputWriter.h"
+#include "NDLNetworkBuilder.h"
 #ifdef LEAKDETECT
 #include <vld.h> // leak detection
 #endif
 #include "BestGpu.h"
 #include "MPIWrapper.h"
-
-// TODO: Get rid of this global
-Microsoft::MSR::CNTK::MPIWrapper* g_mpi = nullptr;
 
 // TODO: Temporary mechanism to enable memory sharing for
 // node output value matrices. This will go away when the
@@ -47,11 +46,6 @@ void CNTKEval<ElemType>::Init(const std::string& config)
 {
     m_start = 0;
     m_config.Parse(config);
-    if (m_config.Exists("modelPath"))
-    {
-        std::wstring path = m_config("modelPath");
-        LoadModel(path);
-    }
     size_t nThreads = m_config("numCPUThreads", "1");
     CPUMatrix<ElemType>::SetNumThreads(nThreads);
 
@@ -70,14 +64,21 @@ void CNTKEval<ElemType>::Destroy()
     delete this;
 }
 
-// LoadModel - load a model from the specified path
-// modelFileName - file holding the model to load
+// CreateNetwork - create a network based on the network description
+// networkDescription - network description
 template <class ElemType>
-void CNTKEval<ElemType>::LoadModel(const std::wstring& modelFileName)
+void CNTKEval<ElemType>::CreateNetwork(const std::string& networkDescription)
 {
-    DEVICEID_TYPE deviceId = DeviceFromConfig(m_config);
-    fprintf(stderr, "DeviceID=%d\n", (int) deviceId);
-    m_net = ComputationNetwork::CreateFromFile<ElemType>(deviceId, modelFileName);
+    ConfigParameters config;
+    config.Parse(networkDescription);
+
+    std::vector<wstring> outputNodeNames;
+    m_net = GetModelFromConfig<ConfigParameters, ElemType>(config, outputNodeNames);
+    
+    if (m_net == nullptr)
+    {
+        LogicError("Unable to construct network from description");
+    }
 }
 
 // GetNodeDimensions - Get the node dimensions of the specified nodes
@@ -160,19 +161,44 @@ void CNTKEval<ElemType>::Evaluate(std::map<std::wstring, std::vector<ElemType>*>
     GetNodeDimensions(m_dimensions, nodeInput);
     m_reader->SetData(&inputs, &m_dimensions);
     m_reader->SetBoundary(m_start);
-    // create the reader if necessary
+    
+    // create the writer if necessary
     if (m_writer == nullptr)
     {
         m_writer = new EvalWriter<ElemType>(config);
     }
-
-    // now set the data in the reader
+    // now set the data in the writer
     GetNodeDimensions(m_dimensions, nodeOutput);
     m_writer->SetData(&outputs, &m_dimensions);
 
     // call the evaluator
     SimpleOutputWriter<ElemType> eval(m_net);
     eval.WriteOutput(*m_reader, minibatchSize, *m_writer, outNodeNames);
+}
+
+// Evaluate - Evalute using the model with the given inputs and outputs
+// outputs - map from node name to output vector, outputs vectors need to be preallocated by caller, sizing will happen during evaluation
+template <class ElemType>
+void CNTKEval<ElemType>::Evaluate(std::map<std::wstring, std::vector<ElemType>*>& outputs)
+{
+    // get the evaluation names from the output string
+    vector<wstring> outNodeNames;
+
+    ConfigParameters config;
+
+    // create the writer if necessary
+    if (m_writer == nullptr)
+    {
+        m_writer = new EvalWriter<ElemType>(config);
+    }
+
+    // now set the data in the writer
+    GetNodeDimensions(m_dimensions, nodeOutput);
+    m_writer->SetData(&outputs, &m_dimensions);
+
+    // call the evaluator
+    SimpleOutputWriter<ElemType> eval(m_net);
+    eval.WriteOutput(*m_writer, outNodeNames);
 }
 
 // ResetState - Reset the cell state when we get start of an utterance

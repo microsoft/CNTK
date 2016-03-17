@@ -91,6 +91,7 @@ static shared_ptr<ComputationNode<ElemType>> CreateStandardNode(const std::wstri
 #endif
     else if (nodeType == OperationNameOf(SigmoidNode))                          return New<SigmoidNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(SoftmaxNode))                          return New<SoftmaxNode<ElemType>>(forward<_Types>(_Args)...);
+    else if (nodeType == OperationNameOf(SqrtNode))                             return New<SqrtNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(SquareErrorNode))                      return New<SquareErrorNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(LogisticNode))                         return New<LogisticNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(SumColumnElementsNode))                return New<SumColumnElementsNode<ElemType>>(forward<_Types>(_Args)...);
@@ -468,6 +469,12 @@ template <class ElemType>
 shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::LogSoftmax(const ComputationNodePtr a, const std::wstring nodeName)
 {
     return net.AddNodeToNetAndAttachInputs(New<LogSoftmaxNode<ElemType>>(net.GetDeviceId(), nodeName), a);
+}
+
+template <class ElemType>
+shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Sqrt(const ComputationNodePtr a, const std::wstring nodeName)
+{
+    return net.AddNodeToNetAndAttachInputs(New<SqrtNode<ElemType>>(net.GetDeviceId(), nodeName), a);
 }
 
 template <class ElemType>

@@ -30,7 +30,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                         bool useDistributedMBReading,
                                         bool useParallelTrain,
                                         StreamMinibatchInputs& inputMatrices,
-                                        size_t& actualMBSize)
+                                        size_t& actualMBSize, 
+                                        const std::shared_ptr<MPIWrapper>& mpi)
     {
         auto pMBLayout = net->GetMBLayoutPtr();
         // Reading consists of a sequence of Reader API calls:
@@ -66,7 +67,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         // decimate if needed. Decimation happens in-place.
         if (!useDistributedMBReading && useParallelTrain)
-            DecimateMinibatchInPlace<ElemType>(inputMatrices, g_mpi->NumNodesInUse(), g_mpi->CurrentNodeRank(), net->GetMBLayoutPtr());
+            DecimateMinibatchInPlace<ElemType>(inputMatrices, mpi->NumNodesInUse(), mpi->CurrentNodeRank(), net->GetMBLayoutPtr());
 
         // reader will have resized input node's m_value directly. Nodes must be notified to do necessary internal state updates from that.
         // TODO: This is a stopgap. SGD will at some point change from sets of matrices to sets of nodes. Then this will become much simpler.

@@ -115,46 +115,6 @@ template class MinusNode<float>;
 template class MinusNode<double>;
 
 // -----------------------------------------------------------------------
-// NegateNode (input)
-// computes the negative of its input
-// -----------------------------------------------------------------------
-
-template <class ElemType>
-class NegateNode : public ComputationNode<ElemType>, public NumInputs<1>
-{
-    typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
-    static const std::wstring TypeName() { return L"Negate"; }
-
-public:
-    DeclareConstructorFromConfigWithNumInputs(NegateNode);
-    NegateNode(DEVICEID_TYPE deviceId, const wstring& name)
-        : Base(deviceId, name)
-    {
-    }
-
-    virtual void /*ComputationNode::*/ BackpropTo(const size_t /*inputIndex*/, const FrameRange& fr) override
-    {
-        Input(0)->GradientFor(fr) -= GradientFor(fr);
-    }
-
-    virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }
-    virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override { return false; }
-
-    virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
-    {
-        ValueFor(fr).AssignDifferenceOf(0, Input(0)->ValueFor(fr));
-    }
-
-    virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
-    {
-        ValidateUnaryMap(isFinalValidationPass);
-    }
-};
-
-template class NegateNode<float>;
-template class NegateNode<double>;
-
-// -----------------------------------------------------------------------
 // TimesNodeBase (A, B, outputRank=1)
 // shared code of TimesNode and TransposeTimesNode (which transposes A)
 // Right operand and output can have MB layout, while left operand cannot.

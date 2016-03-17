@@ -43,10 +43,11 @@ public:
     virtual void Init(const std::string& config) = 0;
     virtual void Destroy() = 0;
 
-    virtual void LoadModel(const std::wstring& modelFileName) = 0;
+    virtual void CreateNetwork(const std::string& networkDescription) = 0;
     virtual void GetNodeDimensions(std::map<std::wstring, size_t>& dimensions, NodeGroup nodeGroup) = 0;
     virtual void StartEvaluateMinibatchLoop(const std::wstring& outputNodeName) = 0;
     virtual void Evaluate(std::map<std::wstring, std::vector<ElemType>*>& inputs, std::map<std::wstring, std::vector<ElemType>*>& outputs) = 0;
+    virtual void Evaluate(std::map<std::wstring, std::vector<ElemType>*>& outputs) = 0;
     virtual void ResetState() = 0;
 };
 
@@ -82,9 +83,9 @@ public:
     Eval(const std::string& config);
     virtual ~Eval();
 
-    // LoadModel - load a model from the specified path
-    // modelFileName - file holding the model to load
-    virtual void LoadModel(const std::wstring& modelFileName);
+    // CreateNetwork - create a network based on the network description
+    // networkDescription - network description
+    virtual void CreateNetwork(const std::string& networkDescription);
 
     // GetNodeDimensions - Get the node dimensions of the specified nodes
     // dimensions - map from name of node to dimension of the node
@@ -95,10 +96,15 @@ public:
     // ouputNodeName - name of node that will be evaluated
     virtual void StartEvaluateMinibatchLoop(const std::wstring& outputNodeName);
 
-    // Evaluate - Evalute using the model with the given inputs and outputs
+    // Evaluate - Evaluate using the model with the given inputs and outputs
     // inputs - map from node name to input vector
     // outputs - map from node name to output vector, outputs vectors need to be preallocated by caller, sizing will happen during evaluation
     virtual void Evaluate(std::map<std::wstring, std::vector<ElemType>*>& inputs, std::map<std::wstring, std::vector<ElemType>*>& outputs);
+
+    // Evaluate - Evaluate using the network without input, and provide the outputs
+    // outputs - map from node name to output vector, outputs vectors need to be preallocated by caller, sizing will happen during evaluation
+    virtual void Evaluate(std::map<std::wstring, std::vector<ElemType>*>& outputs);
+
     virtual void Init(const std::string& config);
     virtual void ResetState();
 };

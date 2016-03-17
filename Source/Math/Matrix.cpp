@@ -634,37 +634,6 @@ void Matrix<ElemType>::Write(File& stream) const
 #pragma region Basic Operators
 
 template <class ElemType>
-void Matrix<ElemType>::ShiftBy(int numShift)
-{
-    assert(numShift > 0);
-
-    int devId = GetDeviceId();
-
-    if (GetMatrixType() == MatrixType::DENSE)
-    {
-        for (size_t i = GetNumCols() - 1; i >= -numShift; i--)
-        {
-            Matrix<ElemType> inp = ColumnSlice(i + numShift, 1);
-            Matrix<ElemType> out = ColumnSlice(i, 1);
-            out.SetValue(inp);
-        }
-        for (size_t i = 0; i < min(GetNumCols(), -numShift); i++)
-            ColumnSlice(i, 1).SetValue(0);
-    }
-    else if (GetMatrixType() == MatrixType::SPARSE)
-    {
-        if (devId == CPUDEVICE)
-        {
-            m_CPUSparseMatrix->ShiftBy(numShift);
-        }
-        else
-            NOT_IMPLEMENTED;
-    }
-    else
-        LogicError("Undetermined matrix type");
-}
-
-template <class ElemType>
 size_t Matrix<ElemType>::BufferSize() const
 {
     DISPATCH_MATRIX_ON_FLAG(this,

@@ -128,7 +128,7 @@ struct ReaderFixture
 
         for (auto j = 0; j < numItems; j++)
         {
-            outputFile << pItem[j] << (j % numRows ? "\n" : " ");
+            outputFile << pItem[j] << ((j + 1) % numRows == 0 ? "\n" : " ");
         }
     }
 
