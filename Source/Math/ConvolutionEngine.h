@@ -43,11 +43,11 @@ public:
 public:
     virtual ~ConvolutionEngine() = default;
 
-    void Forward(const Mat& in, const Mat& filter, Mat& out, Mat& workspace);
+    void Forward(const Mat& in, const Mat& kernel, Mat& out, Mat& workspace);
 
-    void BackwardData(const Mat& srcGrad, const Mat& filter, Mat& grad, Mat& workspace);
+    void BackwardData(const Mat& srcGrad, const Mat& kernel, Mat& grad, Mat& workspace);
 
-    void BackwardFilter(const Mat& srcGrad, const Mat& in, Mat& filterGrad, bool allowReuse, Mat& workspace);
+    void BackwardKernel(const Mat& srcGrad, const Mat& in, Mat& kernelGrad, bool allowReuse, Mat& workspace);
 
     void ForwardPooling(const Mat& in, Mat& out);
 
@@ -69,11 +69,11 @@ protected:
 
     virtual void EnsureConvolutionInitialized() = 0;
 
-    virtual void ForwardCore(const Mat& in, const Mat& filter, Mat& out, Mat& workspace) = 0;
+    virtual void ForwardCore(const Mat& in, const Mat& kernel, Mat& out, Mat& workspace) = 0;
 
-    virtual void BackwardDataCore(const Mat& srcGrad, const Mat& filter, Mat& grad, Mat& workspace) = 0;
+    virtual void BackwardDataCore(const Mat& srcGrad, const Mat& kernel, Mat& grad, Mat& workspace) = 0;
 
-    virtual void BackwardFilterCore(const Mat& srcGrad, const Mat& in, Mat& filterGrad, bool allowReuse, Mat& workspace) = 0;
+    virtual void BackwardKernelCore(const Mat& srcGrad, const Mat& in, Mat& kernelGrad, bool allowReuse, Mat& workspace) = 0;
 
     virtual void EnsurePoolingInitialized() = 0;
 

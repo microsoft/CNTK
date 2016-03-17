@@ -10,7 +10,7 @@
 namespace Microsoft { namespace MSR { namespace CNTK {
 
 template <class ElemType>
-void ConvolutionEngine<ElemType>::Forward(const Mat& in, const Mat& filter, Mat& out, Mat& workspace)
+void ConvolutionEngine<ElemType>::Forward(const Mat& in, const Mat& kernel, Mat& out, Mat& workspace)
 {
     const auto& g = *m_geometry;
     assert(g.InputShape().GetNumElements() == in.GetNumRows());
@@ -18,7 +18,7 @@ void ConvolutionEngine<ElemType>::Forward(const Mat& in, const Mat& filter, Mat&
     size_t batchSize = in.GetNumCols();
     assert(batchSize == out.GetNumCols());
     // REVIEW alexeyk: add shape-aware asserts?
-    assert(g.KernelShape().GetNumElements() * g.MapCount().GetNumElements() == filter.GetNumElements());
+    assert(g.KernelShape().GetNumElements() * g.MapCount().GetNumElements() == kernel.GetNumElements());
 #ifdef NDEBUG
     UNUSED(g);
     UNUSED(batchSize);
@@ -26,18 +26,18 @@ void ConvolutionEngine<ElemType>::Forward(const Mat& in, const Mat& filter, Mat&
 
     EnsureCompatible();
     EnsureConvolutionInitialized();
-    ForwardCore(in, filter, out, workspace);
+    ForwardCore(in, kernel, out, workspace);
 }
 
 template <class ElemType>
-void ConvolutionEngine<ElemType>::BackwardData(const Mat& srcGrad, const Mat& filter, Mat& grad, Mat& workspace)
+void ConvolutionEngine<ElemType>::BackwardData(const Mat& srcGrad, const Mat& kernel, Mat& grad, Mat& workspace)
 {
     const auto& g = *m_geometry;
     assert(g.InputShape().GetNumElements() == grad.GetNumRows());
     assert(g.OutputShape().GetNumElements() == srcGrad.GetNumRows());
     size_t batchSize = srcGrad.GetNumCols();
     assert(batchSize == grad.GetNumCols());
-    assert(g.KernelShape().GetNumElements() * g.MapCount().GetNumElements() == filter.GetNumElements());
+    assert(g.KernelShape().GetNumElements() * g.MapCount().GetNumElements() == kernel.GetNumElements());
 #ifdef NDEBUG
     UNUSED(g);
     UNUSED(batchSize);
@@ -45,18 +45,18 @@ void ConvolutionEngine<ElemType>::BackwardData(const Mat& srcGrad, const Mat& fi
 
     EnsureCompatible();
     EnsureConvolutionInitialized();
-    BackwardDataCore(srcGrad, filter, grad, workspace);
+    BackwardDataCore(srcGrad, kernel, grad, workspace);
 }
 
 template <class ElemType>
-void ConvolutionEngine<ElemType>::BackwardFilter(const Mat& srcGrad, const Mat& in, Mat& filter, bool allowReuse, Mat& workspace)
+void ConvolutionEngine<ElemType>::BackwardKernel(const Mat& srcGrad, const Mat& in, Mat& kernel, bool allowReuse, Mat& workspace)
 {
     const auto& g = *m_geometry;
     assert(g.InputShape().GetNumElements() == in.GetNumRows());
     assert(g.OutputShape().GetNumElements() == srcGrad.GetNumRows());
     size_t batchSize = in.GetNumCols();
     assert(batchSize == srcGrad.GetNumCols());
-    assert(g.KernelShape().GetNumElements() * g.MapCount().GetNumElements() == filter.GetNumElements());
+    assert(g.KernelShape().GetNumElements() * g.MapCount().GetNumElements() == kernel.GetNumElements());
 #ifdef NDEBUG
     UNUSED(g);
     UNUSED(batchSize);
@@ -64,7 +64,7 @@ void ConvolutionEngine<ElemType>::BackwardFilter(const Mat& srcGrad, const Mat& 
 
     EnsureCompatible();
     EnsureConvolutionInitialized();
-    BackwardFilterCore(srcGrad, in, filter, allowReuse, workspace);
+    BackwardKernelCore(srcGrad, in, kernel, allowReuse, workspace);
 }
 
 template <class ElemType>
@@ -154,19 +154,19 @@ protected:
         }
     }
 
-    void ForwardCore(const Mat& in, const Mat& filter, Mat& out, Mat& /*workspace*/) override
+    void ForwardCore(const Mat& in, const Mat& kernel, Mat& out, Mat& /*workspace*/) override
     {
-        in.NDConvolutionForward(filter, m_mpRowCol, *m_mpRowIwht, *m_mpRowRun, *m_runs, out);
+        in.NDConvolutionForward(kernel, m_mpRowCol, *m_mpRowIwht, *m_mpRowRun, *m_runs, out);
     }
 
-    void BackwardDataCore(const Mat& srcGrad, const Mat& filter, Mat& grad, Mat& /*workspace*/) override
+    void BackwardDataCore(const Mat& srcGrad, const Mat& kernel, Mat& grad, Mat& /*workspace*/) override
     {
-        srcGrad.NDConvolutionBackwardData(filter, m_mpRowCol, *m_mpRowIwht, *m_mpRowRun, *m_runs, grad);
+        srcGrad.NDConvolutionBackwardData(kernel, m_mpRowCol, *m_mpRowIwht, *m_mpRowRun, *m_runs, grad);
     }
 
-    void BackwardFilterCore(const Mat& srcGrad, const Mat& in, Mat& filterGrad, bool /*allowReuse*/, Mat& /*workspace*/) override
+    void BackwardKernelCore(const Mat& srcGrad, const Mat& in, Mat& kernelGrad, bool /*allowReuse*/, Mat& /*workspace*/) override
     {
-        srcGrad.NDConvolutionBackwardFilter(in, m_mpRowCol, *m_mpRowIwht, *m_mpRowRun, *m_runs, filterGrad);
+        srcGrad.NDConvolutionBackwardKernel(in, m_mpRowCol, *m_mpRowIwht, *m_mpRowRun, *m_runs, kernelGrad);
     }
 
     void EnsurePoolingInitialized() override
@@ -243,7 +243,7 @@ public:
     LegacyConvolutionEngine(ConvolveGeometryPtr geometry, DEVICEID_TYPE deviceId, ImageLayoutKind imageLayout, size_t maxTempMemSizeInSamples, PoolKind poolKind)
         : Base(geometry, deviceId, imageLayout, maxTempMemSizeInSamples, poolKind), 
         m_inT(m_geometry->InputShape(), ImageLayoutKind::CHW), m_outT(m_geometry->OutputShape(), ImageLayoutKind::CHW),
-        m_filterT(m_geometry->KernelShape(), ImageLayoutKind::CHW), m_strideT(m_geometry->Stride(), ImageLayoutKind::CHW)
+        m_kernelT(m_geometry->KernelShape(), ImageLayoutKind::CHW), m_strideT(m_geometry->Stride(), ImageLayoutKind::CHW)
     {
         // Legacy engine uses a non-standard formula to compute padding (it may "overpad")
         // so default auto-padding of ConvolveGeometry does not work here and instead
@@ -275,10 +275,10 @@ protected:
     {
     }
 
-    void ForwardCore(const Mat& in, const Mat& filter, Mat& out, Mat& workspace) override
+    void ForwardCore(const Mat& in, const Mat& kernel, Mat& out, Mat& workspace) override
     {
         size_t batchSize = in.GetNumCols();
-        size_t packedInputRows = m_filterT.w() * m_filterT.h() * m_filterT.c();
+        size_t packedInputRows = m_kernelT.w() * m_kernelT.h() * m_kernelT.c();
         size_t packedInputColsPerSample = m_outT.w() * m_outT.h();
         size_t outputSizePerChannel = packedInputColsPerSample;
         // size_t packedInputDim = packedInputRows * packedInputColsPerSample; // size of each packed input sample
@@ -286,11 +286,11 @@ protected:
 
         size_t maxTempMemSizeInSamples = (m_maxTempMemSizeInSamples == 0 ? batchSize : m_maxTempMemSizeInSamples);
 
-        assert(filter.GetNumCols() == packedInputRows && filter.GetNumRows() == m_outT.c());
+        assert(kernel.GetNumCols() == packedInputRows && kernel.GetNumRows() == m_outT.c());
         UNUSED(packedInputRows);
 
         // GPU and 1-dimensional image
-        m_gpuSparseOpt = (m_filterT.h() == 1 &&
+        m_gpuSparseOpt = (m_kernelT.h() == 1 &&
                           in.GetCurrentMatrixLocation() == CurrentDataLocation::GPU &&
                           m_strideT.w() == 1 &&
                           !m_padding &&
@@ -326,12 +326,12 @@ protected:
 
             if (m_gpuSparseOpt)
             {
-                if (m_filterT.w() * m_inT.c() != filter.GetNumCols())
+                if (m_kernelT.w() * m_inT.c() != kernel.GetNumCols())
                     LogicError("Kernel width and weight matrix dimensions don't match.");
 
                 inputSubBatch.Reshape(m_inT.c() * m_inT.w(), m_inT.h() * smallBatchSize);
                 Mat outputSubBatch = out.ColumnSlice(startSampleId, m_outT.h() * smallBatchSize);
-                Mat::ConvolveAndWeightedAdd(1, filter, false, inputSubBatch, false, 0, outputSubBatch,
+                Mat::ConvolveAndWeightedAdd(1, kernel, false, inputSubBatch, false, 0, outputSubBatch,
                                             static_cast<int>(m_inT.c()), m_strideT.w(), m_padding, true);
             }
             else
@@ -340,14 +340,14 @@ protected:
                 workspace.AssignPackedConvolutionInput(inputSubBatch,
                                                        m_inT.w(), m_inT.h(), m_inT.c(),
                                                        m_outT.w(), m_outT.h(), m_outT.c(),
-                                                       m_filterT.w(), m_filterT.h(), m_strideT.w(), m_strideT.h(),
+                                                       m_kernelT.w(), m_kernelT.h(), m_strideT.w(), m_strideT.h(),
                                                        m_padding);
 
                 Mat outputSubBatch = out.ColumnSlice(outputSizePerChannel * startSampleId, outputSizePerChannel * smallBatchSize);
 
                 // workspace.Resize(packedInputRows, packedInputColsPerSample * smallBatchSize);
                 // BUGBUG: This ^^ destroys the content of the matrix. Also it seems not to change the size. Does it? Should this be a Reshape()?
-                Mat::Multiply(filter, false, workspace, false, outputSubBatch);
+                Mat::Multiply(kernel, false, workspace, false, outputSubBatch);
             }
         }
 
@@ -357,10 +357,10 @@ protected:
         assert(batchSize == out.GetNumCols());
     }
 
-    void BackwardDataCore(const Mat& srcGrad, const Mat& filter, Mat& grad, Mat& workspace) override
+    void BackwardDataCore(const Mat& srcGrad, const Mat& kernel, Mat& grad, Mat& workspace) override
     {
         size_t batchSize = srcGrad.GetNumCols();
-        size_t packedInputRows = m_filterT.w() * m_filterT.h() * m_filterT.c();
+        size_t packedInputRows = m_kernelT.w() * m_kernelT.h() * m_kernelT.c();
         size_t packedInputColsPerSample = m_outT.w() * m_outT.h();
         size_t outputSizePerChannel = packedInputColsPerSample;
         // size_t packedInputDim = packedInputRows * packedInputColsPerSample; // size of each packed input sample
@@ -383,13 +383,13 @@ protected:
 
             workspace.Resize(packedInputRows, packedInputColsPerSample * smallBatchSize);
             Matrix<ElemType> outputGradientSubBatch = srcGradTmp.ColumnSlice(startSampleId * outputSizePerChannel, smallBatchSize * outputSizePerChannel);
-            Matrix<ElemType>::Multiply(filter, true, outputGradientSubBatch, false, workspace);
+            Matrix<ElemType>::Multiply(kernel, true, outputGradientSubBatch, false, workspace);
 
             Matrix<ElemType> inputGradientSubBatch = grad.ColumnSlice(startSampleId, smallBatchSize);
             workspace.UnpackConvolutionInput(inputGradientSubBatch,
                                              m_inT.w(), m_inT.h(), m_inT.c(),
                                              m_outT.w(), m_outT.h(), m_outT.c(),
-                                             m_filterT.w(), m_filterT.h(), m_strideT.w(), m_strideT.h(),
+                                             m_kernelT.w(), m_kernelT.h(), m_strideT.w(), m_strideT.h(),
                                              m_padding);
         }
 
@@ -397,10 +397,10 @@ protected:
         assert(batchSize == srcGrad.GetNumCols());
     }
 
-    void BackwardFilterCore(const Mat& srcGrad, const Mat& in, Mat& filterGrad, bool allowReuse, Mat& workspace) override
+    void BackwardKernelCore(const Mat& srcGrad, const Mat& in, Mat& kernelGrad, bool allowReuse, Mat& workspace) override
     {
         size_t batchSize = in.GetNumCols();
-        size_t packedInputRows = m_filterT.w() * m_filterT.h() * m_filterT.c();
+        size_t packedInputRows = m_kernelT.w() * m_kernelT.h() * m_kernelT.c();
         size_t packedInputColsPerSample = m_outT.w() * m_outT.h();
         size_t outputSizePerChannel = packedInputColsPerSample;
         // size_t packedInputDim = packedInputRows * packedInputColsPerSample; // size of each packed input sample
@@ -420,7 +420,7 @@ protected:
 
         if (numSubBatches == 1 && allowReuse && !m_gpuSparseOpt) // reuse packed input from evaluation step if it's not changed by either subbatch or recurrent steps.
             // REVIEW alexeyk: the following makes an assumption that data in workspace was filled by Forward call and remained unchanged. Find way to enforce/verify that.
-            Matrix<ElemType>::MultiplyAndAdd(srcGradTmp, false, workspace, true, filterGrad);
+            Matrix<ElemType>::MultiplyAndAdd(srcGradTmp, false, workspace, true, kernelGrad);
         else
         {
             for (size_t i = 0; i < numSubBatches; i++)
@@ -445,9 +445,9 @@ protected:
                     Matrix<ElemType> outputGradientSubBatchReordered = Matrix<ElemType>::Zeros(smallBatchSize * m_outT.h() * m_outT.w(), m_outT.c(), outputGradientSubBatch.GetDeviceId());
                     Matrix<ElemType>::TensorShuffleScaleAndAdd(0.0f, outputGradientSubBatch.Transpose(), 1, m_outT.w(), 1, smallBatchSize * m_outT.h(), m_outT.c(), 1.0f, outputGradientSubBatchReordered, outputGradientSubBatchReordered);
 
-                    filterGrad.Reshape(m_outT.c() * m_filterT.w(), m_inT.c());
-                    Matrix<ElemType>::ConvolveAndWeightedAdd(1, outputGradientSubBatchReordered, true, inputSubBatchSparseReordered, false, 1, filterGrad, smallBatchSize * m_inT.h(), m_strideT.w(), m_padding, false);
-                    filterGrad.Reshape(m_outT.c(), m_inT.c() * m_filterT.w());
+                    kernelGrad.Reshape(m_outT.c() * m_kernelT.w(), m_inT.c());
+                    Matrix<ElemType>::ConvolveAndWeightedAdd(1, outputGradientSubBatchReordered, true, inputSubBatchSparseReordered, false, 1, kernelGrad, smallBatchSize * m_inT.h(), m_strideT.w(), m_padding, false);
+                    kernelGrad.Reshape(m_outT.c(), m_inT.c() * m_kernelT.w());
                 }
                 else
                 {
@@ -457,10 +457,10 @@ protected:
                     workspace.AssignPackedConvolutionInput(inputSubBatch,
                                                            m_inT.w(), m_inT.h(), m_inT.c(),
                                                            m_outT.w(), m_outT.h(), m_outT.c(),
-                                                           m_filterT.w(), m_filterT.h(), m_strideT.w(), m_strideT.h(),
+                                                           m_kernelT.w(), m_kernelT.h(), m_strideT.w(), m_strideT.h(),
                                                            m_padding);
 
-                    Matrix<ElemType>::MultiplyAndAdd(outputGradientSubBatch, false, workspace, true, filterGrad);
+                    Matrix<ElemType>::MultiplyAndAdd(outputGradientSubBatch, false, workspace, true, kernelGrad);
                 }
             }
         }
@@ -479,13 +479,13 @@ protected:
         {
             out.AssignMaxPoolingResult(in, m_inT.c(), m_inT.w(), m_inT.h(), m_inT.w() * m_inT.h() * m_inT.c(),
                                        m_outT.w(), m_outT.h(), m_outT.w() * m_outT.h() * m_outT.c(),
-                                       m_filterT.w(), m_filterT.h(), m_strideT.w(), m_strideT.h());
+                                       m_kernelT.w(), m_kernelT.h(), m_strideT.w(), m_strideT.h());
         }
         else if (m_poolKind == PoolKind::Average)
         {
             out.AssignAveragePoolingResult(in, m_inT.c(), m_inT.w(), m_inT.h(), m_inT.w() * m_inT.h() * m_inT.c(),
                                            m_outT.w(), m_outT.h(), m_outT.w() * m_outT.h() * m_outT.c(),
-                                           m_filterT.w(), m_filterT.h(), m_strideT.w(), m_strideT.h());
+                                           m_kernelT.w(), m_kernelT.h(), m_strideT.w(), m_strideT.h());
         }
         else
             InvalidArgument("Pooling type %d is not supported.", (int)m_poolKind);
@@ -498,13 +498,13 @@ protected:
             grad.AddMaxPoolingGradient(srcGrad, in, out,
                                        m_inT.c(), m_inT.w(), m_inT.h(), m_inT.w() * m_inT.h() * m_inT.c(),
                                        m_outT.w(), m_outT.h(), m_outT.w() * m_outT.h() * m_outT.c(),
-                                       m_filterT.w(), m_filterT.h(), m_strideT.w(), m_strideT.h());
+                                       m_kernelT.w(), m_kernelT.h(), m_strideT.w(), m_strideT.h());
         }
         else if (m_poolKind == PoolKind::Average)
         {
             grad.AddAveragePoolingGradient(srcGrad, m_inT.c(), m_inT.w(), m_inT.h(), m_inT.w() * m_inT.h() * m_inT.c(),
                                            m_outT.w(), m_outT.h(), m_outT.w() * m_outT.h() * m_outT.c(),
-                                           m_filterT.w(), m_filterT.h(), m_strideT.w(), m_strideT.h());
+                                           m_kernelT.w(), m_kernelT.h(), m_strideT.w(), m_strideT.h());
         }
         else
             InvalidArgument("Pooling type %d is not supported.", (int)m_poolKind);
@@ -513,7 +513,7 @@ protected:
 private:
     ImageDimensions m_inT;
     ImageDimensions m_outT;
-    ImageDimensions m_filterT;
+    ImageDimensions m_kernelT;
     ImageDimensions m_strideT;
     bool m_padding;
 

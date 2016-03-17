@@ -453,12 +453,12 @@ public:
                                                 const size_t outputWidth, const size_t outputHeight, const size_t outputSizePerSample,
                                                 const size_t windowWidth, const size_t windowHeight, const size_t horizontalSubsample, const size_t verticalSubsample);
 
-    void NDConvolutionForward(const Matrix<ElemType>& filter, const Matrix<int>& mpRowCol, const Matrix<int>& mpRowIwht,
+    void NDConvolutionForward(const Matrix<ElemType>& kernel, const Matrix<int>& mpRowCol, const Matrix<int>& mpRowIwht,
                               const Matrix<int>& mpRowRun, const Matrix<int>& runs, Matrix<ElemType>& output) const;
-    void NDConvolutionBackwardData(const Matrix<ElemType>& filter, const Matrix<int>& mpRowCol, const Matrix<int>& mpRowIwht,
+    void NDConvolutionBackwardData(const Matrix<ElemType>& kernel, const Matrix<int>& mpRowCol, const Matrix<int>& mpRowIwht,
                                    const Matrix<int>& mpRowRun, const Matrix<int>& runs, Matrix<ElemType>& grad) const;
-    void NDConvolutionBackwardFilter(const Matrix<ElemType>& in, const Matrix<int>& mpRowCol, const Matrix<int>& mpRowIwht,
-                                     const Matrix<int>& mpRowRun, const Matrix<int>& runs, Matrix<ElemType>& filterGrad) const;
+    void NDConvolutionBackwardKernel(const Matrix<ElemType>& in, const Matrix<int>& mpRowCol, const Matrix<int>& mpRowIwht,
+                                     const Matrix<int>& mpRowRun, const Matrix<int>& runs, Matrix<ElemType>& kernelGrad) const;
 
     void NDMaxPoolingForward(const Matrix<int>& mpRowCol, const Matrix<int>& mpRowIndices, const Matrix<int>& indices, Matrix<ElemType>& output) const;
     void NDMaxPoolingBackward(const Matrix<ElemType>& out, const Matrix<ElemType>& in,

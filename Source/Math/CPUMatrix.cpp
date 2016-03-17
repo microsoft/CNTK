@@ -4086,7 +4086,7 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AddAveragePoolingGradient(const CPUMat
 #pragma endregion Other Helper Functions
 
 template <class ElemType>
-void CPUMatrix<ElemType>::NDConvolutionForward(const CPUMatrix<ElemType>& filter, const CPUMatrix<int>& mpRowCol, const CPUMatrix<int>& mpRowIwht,
+void CPUMatrix<ElemType>::NDConvolutionForward(const CPUMatrix<ElemType>& kernel, const CPUMatrix<int>& mpRowCol, const CPUMatrix<int>& mpRowIwht,
                                                const CPUMatrix<int>& mpRowRun, const CPUMatrix<int>& runs, CPUMatrix<ElemType>& output) const
 {
 #pragma omp parallel for
@@ -4109,7 +4109,7 @@ void CPUMatrix<ElemType>::NDConvolutionForward(const CPUMatrix<ElemType>& filter
                     continue;
                 int dcol = runs(i0 + i, 0);
                 assert(0 <= colBase + dcol && colBase + dcol < GetNumRows());
-                sum += filter.BufferPointer()[ivBase + skip + i] * (*this)(colBase + dcol, sample);
+                sum += kernel.BufferPointer()[ivBase + skip + i] * (*this)(colBase + dcol, sample);
             }
             output(row, sample) = sum;
         }
@@ -4117,7 +4117,7 @@ void CPUMatrix<ElemType>::NDConvolutionForward(const CPUMatrix<ElemType>& filter
 }
 
 template <class ElemType>
-void CPUMatrix<ElemType>::NDConvolutionBackwardData(const CPUMatrix<ElemType>& filter, const CPUMatrix<int>& mpRowCol, const CPUMatrix<int>& mpRowIwht,
+void CPUMatrix<ElemType>::NDConvolutionBackwardData(const CPUMatrix<ElemType>& kernel, const CPUMatrix<int>& mpRowCol, const CPUMatrix<int>& mpRowIwht,
                                                     const CPUMatrix<int>& mpRowRun, const CPUMatrix<int>& runs, CPUMatrix<ElemType>& grad) const
 {
 #pragma omp parallel for
@@ -4141,15 +4141,15 @@ void CPUMatrix<ElemType>::NDConvolutionBackwardData(const CPUMatrix<ElemType>& f
                     continue;
                 int dcol = runs(i0 + i, 0);
                 assert(0 <= colBase + dcol && colBase + dcol < grad.GetNumRows());
-                grad(colBase + dcol, sample) += curGrad * filter.BufferPointer()[ivBase + skip + i];
+                grad(colBase + dcol, sample) += curGrad * kernel.BufferPointer()[ivBase + skip + i];
             }
         }
     }
 }
 
 template <class ElemType>
-void CPUMatrix<ElemType>::NDConvolutionBackwardFilter(const CPUMatrix<ElemType>& in, const CPUMatrix<int>& mpRowCol, const CPUMatrix<int>& mpRowIwht,
-                                                      const CPUMatrix<int>& mpRowRun, const CPUMatrix<int>& runs, CPUMatrix<ElemType>& filterGrad) const
+void CPUMatrix<ElemType>::NDConvolutionBackwardKernel(const CPUMatrix<ElemType>& in, const CPUMatrix<int>& mpRowCol, const CPUMatrix<int>& mpRowIwht,
+                                                      const CPUMatrix<int>& mpRowRun, const CPUMatrix<int>& runs, CPUMatrix<ElemType>& kernelGrad) const
 {
     // Do NOT parallelize these loops!
     for (size_t sample = 0; sample < GetNumCols(); sample++)
@@ -4172,7 +4172,7 @@ void CPUMatrix<ElemType>::NDConvolutionBackwardFilter(const CPUMatrix<ElemType>&
                     continue;
                 int dcol = runs(i0 + i, 0);
                 assert(0 <= colBase + dcol && colBase + dcol < in.GetNumRows());
-                filterGrad.BufferPointer()[ivBase + skip + i] += curGrad * in(colBase + dcol, sample);
+                kernelGrad.BufferPointer()[ivBase + skip + i] += curGrad * in(colBase + dcol, sample);
             }
         }
     }

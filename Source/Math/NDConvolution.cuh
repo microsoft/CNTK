@@ -52,6 +52,85 @@ __global__ void kNDConvolutionForward(int batchSize, const ElemType* __restrict_
 }
 
 template <typename ElemType>
+__global__ void kNDConvolutionBackwardData(int batchSize, const ElemType* __restrict__ kernel,
+                                           const int* mpRowCol, const int* mpRowIwht,
+                                           const int* mpRowRun, const int* __restrict__ runs,
+                                           const ElemType* __restrict__ srcGrad, int srcVecSize,
+                                           ElemType* grad, int dstVecSize)
+{
+    int row = blockIdx.x * blockDim.x + threadIdx.x;
+    if (row >= srcVecSize)
+        return;
+
+    srcGrad += blockIdx.y * srcVecSize;
+    grad += blockIdx.y * dstVecSize;
+
+    for (int sample = blockIdx.y; sample < batchSize; sample += gridDim.y)
+    {
+        int colBase = mpRowCol[row];
+        int ivBase = mpRowIwht[row];
+        assert(0 <= colBase && colBase < dstVecSize);
+
+        ElemType g = srcGrad[row];
+        int i0 = mpRowRun[row];
+        int skip = runs[i0++];
+        int size = runs[i0++];
+        int imask = i0 + size;
+        for (int i = 0; i < size; i++)
+        {
+            if (runs[imask + i] == 0)
+                continue;
+            int dcol = runs[i0 + i];
+            assert(0 <= colBase + dcol && colBase + dcol < dstVecSize);
+            atomicAdd(&grad[colBase + dcol], g * kernel[ivBase + skip + i]);
+        }
+
+        srcGrad += blockDim.y * srcVecSize;
+        grad += blockDim.y * dstVecSize;
+    }
+}
+
+template <typename ElemType>
+__global__ void kNDConvolutionBackwardKernel(int batchSize, int inVecSize, int outVecSize,
+                                             const ElemType* __restrict__ in,
+                                             const int* mpRowCol, const int* mpRowIwht,
+                                             const int* mpRowRun, const int* __restrict__ runs,
+                                             const ElemType* __restrict__ srcGrad,
+                                             ElemType* kernelGrad)
+{
+    int row = blockIdx.x * blockDim.x + threadIdx.x;
+    if (row >= outVecSize)
+        return;
+
+    in += blockIdx.y * inVecSize;
+    srcGrad += blockIdx.y * outVecSize;
+
+    for (int sample = blockIdx.y; sample < batchSize; sample += gridDim.y)
+    {
+        int colBase = mpRowCol[row];
+        int ivBase = mpRowIwht[row];
+        assert(0 <= colBase && colBase < inVecSize);
+
+        ElemType g = srcGrad[row];
+        int i0 = mpRowRun[row];
+        int skip = runs[i0++];
+        int size = runs[i0++];
+        int imask = i0 + size;
+        for (int i = 0; i < size; i++)
+        {
+            if (runs[imask + i] == 0)
+                continue;
+            int dcol = runs[i0 + i];
+            assert(0 <= colBase + dcol && colBase + dcol < inVecSize);
+            atomicAdd(&kernelGrad[ivBase + skip + i], g * in[colBase + dcol]);
+        }
+
+        in += blockDim.y * inVecSize;
+        srcGrad += blockDim.y * outVecSize;
+    }
+}
+
+template <typename ElemType>
 __global__ void kNDMaxPoolingForward(int batchSize, const int* mpRowCol, const int* mpRowIndices, const int* indices,
                                      const ElemType* __restrict__ src, int srcVecSize,
                                      ElemType* dst, int dstVecSize)

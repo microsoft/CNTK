@@ -3004,31 +3004,40 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AddAveragePoolingGradient(const GPUMat
 #pragma endregion Other helper functions
 
 template <class ElemType>
-void GPUMatrix<ElemType>::NDConvolutionForward(const GPUMatrix<ElemType>& filter, const GPUMatrix<int>& mpRowCol, const GPUMatrix<int>& mpRowIwht,
+void GPUMatrix<ElemType>::NDConvolutionForward(const GPUMatrix<ElemType>& kernel, const GPUMatrix<int>& mpRowCol, const GPUMatrix<int>& mpRowIwht,
                                                const GPUMatrix<int>& mpRowRun, const GPUMatrix<int>& runs, GPUMatrix<ElemType>& output) const
 {
     const int BlockSize = 128;
     auto gdim = dim3((output.GetNumRows() + BlockSize - 1)/ BlockSize, std::min((int)GetNumCols(), 65535));
     PrepareDevice();
     SyncGuard syncGuard;
-    kNDConvolutionForward<<<gdim, BlockSize, 0, t_stream>>>((int)GetNumCols(), filter.m_pArray, mpRowCol.m_pArray, mpRowIwht.m_pArray, mpRowRun.m_pArray,
+    kNDConvolutionForward<<<gdim, BlockSize, 0, t_stream>>>((int)GetNumCols(), kernel.m_pArray, mpRowCol.m_pArray, mpRowIwht.m_pArray, mpRowRun.m_pArray,
                                                             runs.m_pArray, m_pArray, (int)GetNumRows(), output.m_pArray, (int)output.GetNumRows());
 }
 
 template <class ElemType>
-void GPUMatrix<ElemType>::NDConvolutionBackwardData(const GPUMatrix<ElemType>& filter, const GPUMatrix<int>& mpRowCol, const GPUMatrix<int>& mpRowIwht,
+void GPUMatrix<ElemType>::NDConvolutionBackwardData(const GPUMatrix<ElemType>& kernel, const GPUMatrix<int>& mpRowCol, const GPUMatrix<int>& mpRowIwht,
                                                     const GPUMatrix<int>& mpRowRun, const GPUMatrix<int>& runs, GPUMatrix<ElemType>& grad) const
 {
-    UNUSED(filter); UNUSED(mpRowCol); UNUSED(mpRowIwht); UNUSED(mpRowRun); UNUSED(runs); UNUSED(grad);
-    RuntimeError("Not yet implemented.");
+    const int BlockSize = 128;
+    auto gdim = dim3((GetNumRows() + BlockSize - 1)/ BlockSize, std::min((int)GetNumCols(), 65535));
+    PrepareDevice();
+    SyncGuard syncGuard;
+    kNDConvolutionBackwardData<<<gdim, BlockSize, 0, t_stream>>>((int)GetNumCols(), kernel.m_pArray, mpRowCol.m_pArray, mpRowIwht.m_pArray, mpRowRun.m_pArray,
+                                                                 runs.m_pArray, m_pArray, (int)GetNumRows(), grad.m_pArray, (int)grad.GetNumRows());
 }
 
 template <class ElemType>
-void GPUMatrix<ElemType>::NDConvolutionBackwardFilter(const GPUMatrix<ElemType>& in, const GPUMatrix<int>& mpRowCol, const GPUMatrix<int>& mpRowIwht,
-                                                      const GPUMatrix<int>& mpRowRun, const GPUMatrix<int>& runs, GPUMatrix<ElemType>& filterGrad) const
+void GPUMatrix<ElemType>::NDConvolutionBackwardKernel(const GPUMatrix<ElemType>& in, const GPUMatrix<int>& mpRowCol, const GPUMatrix<int>& mpRowIwht,
+                                                      const GPUMatrix<int>& mpRowRun, const GPUMatrix<int>& runs, GPUMatrix<ElemType>& kernelGrad) const
 {
-    UNUSED(in); UNUSED(mpRowCol); UNUSED(mpRowIwht); UNUSED(mpRowRun); UNUSED(runs); UNUSED(filterGrad);
-    RuntimeError("Not yet implemented.");
+    const int BlockSize = 128;
+    auto gdim = dim3((GetNumRows() + BlockSize - 1)/ BlockSize, std::min((int)GetNumCols(), 65535));
+    PrepareDevice();
+    SyncGuard syncGuard;
+    kNDConvolutionBackwardKernel<<<gdim, BlockSize, 0, t_stream>>>((int)GetNumCols(), (int)in.GetNumRows(), (int)GetNumRows(),
+                                                                   in.m_pArray, mpRowCol.m_pArray, mpRowIwht.m_pArray, mpRowRun.m_pArray,
+                                                                   runs.m_pArray, m_pArray, kernelGrad.m_pArray);
 }
 
 template <class ElemType>

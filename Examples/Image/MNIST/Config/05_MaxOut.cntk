@@ -34,10 +34,13 @@ train = [
 
     BrainScriptNetworkBuilder = [
 
+        MaxNorm = 0.9
+
         // Macros
         NDConvLayer(inp, kW, kH, inMap, outMap, hStride, vStride, wScale, bValue) = [  // ReLU non-linearity
             convW = Parameter(outMap, kW * kH * inMap, init="uniform", initValueScale=wScale, initOnCPUOnly=false)
-            conv  = NDConvolution(convW, inp, (kW : kH : inMap), (1 : 1 : outMap), stride=(hStride : vStride : inMap), sharing=true, autoPadding=true, imageLayout="$imageLayout$")
+            convWClipped = Scale(Min(1, MaxNorm / MatrixL2Reg(convW)), convW)
+            conv  = NDConvolution(convWClipped, inp, (kW : kH : inMap), (1 : 1 : outMap), stride=(hStride : vStride : inMap), sharing=true, autoPadding=true, imageLayout="$imageLayout$")
             convB = ParameterTensor((1 : 1 : outMap), init="fixedValue", value=bValue)
             out = Plus(conv, convB);
         ]

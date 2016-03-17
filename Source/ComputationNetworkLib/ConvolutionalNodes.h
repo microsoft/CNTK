@@ -122,7 +122,7 @@ public:
             {
                 auto& grad = Input(0)->GradientAsMatrix();
                 auto sliceInput1Value = Input(1)->ValueFor(fr);
-                m_convEng->BackwardFilter(sliceOutputGrad, sliceInput1Value, grad, fr.IsAllFrames(), *m_tempMatrix);
+                m_convEng->BackwardKernel(sliceOutputGrad, sliceInput1Value, grad, fr.IsAllFrames(), *m_tempMatrix);
             }
             else if (inputIndex == 1) // derivative with respect to the input feature
             {
@@ -235,7 +235,7 @@ private:
             return PoolKind::Max;
         if (AreEqualIgnoreCase(s, L"average"))
             return PoolKind::Average;
-        InvalidArgument("Unknown pooling kind: '%ls'. Supported values: 'none', 'max', 'average'.");
+        InvalidArgument("Unknown pooling kind: '%ls'. Supported values: 'none', 'max', 'average'.", s.c_str());
     }
 
     size_t GetExpectedNumInputs() const
@@ -391,7 +391,7 @@ public:
         if (inputIndex == 0) // derivative with respect to the weight matrix
         {
             auto& grad = Input(0)->GradientAsMatrix();
-            m_convEng->BackwardFilter(sliceOutputGrad, sliceInput1Value, grad, fr.IsAllFrames(), *m_tempMatrix);
+            m_convEng->BackwardKernel(sliceOutputGrad, sliceInput1Value, grad, fr.IsAllFrames(), *m_tempMatrix);
         }
         else if (inputIndex == 1) // derivative with respect to the input feature
         {
