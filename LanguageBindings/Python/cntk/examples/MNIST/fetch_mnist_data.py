@@ -53,6 +53,8 @@ if __name__ == "__main__":
     trnData = loadData('http://yann.lecun.com/exdb/mnist/train-images-idx3-ubyte.gz', 60000)
     trnLbl = loadLabels('http://yann.lecun.com/exdb/mnist/train-labels-idx1-ubyte.gz', 60000)
     trn = np.hstack((trnLbl, trnData))
+    if not os.path.exists('./Data'):
+        os.mkdir('./Data')
     print ('Writing train text file...')
     np.savetxt(r'./Data/Train-28x28.txt', trn, fmt = '%u', delimiter='\t')
     print ('Done.')
