@@ -1,42 +1,60 @@
-#sys.path.insert(0, "E:\CNTK\LanguageBindings\Python")
+from cntk import *
 
-from ..cntk import *
+# =====================================================================================
+# MNIST Example, one hidden layer neural network
+# =====================================================================================
 
+def dnn_sigmoid_layer(in_dim, out_dim, x, param_scale):
+    W = LearnableParameter(out_dim, in_dim, initValueScale=param_scale) 
+    b = LearnableParameter(out_dim, 1, initValueScale=param_scale) 
+    t = Times(W, x)
+    z = Plus(t, b)
+    return Sigmoid(z)
+
+def dnn_layer(in_dim, out_dim, x, param_scale):
+    W = LearnableParameter(out_dim, in_dim, initValueScale=param_scale)
+    b = LearnableParameter(out_dim, 1, initValueScale=param_scale)
+    t = Times(W, x)
+    return Plus(t, b)
+    
 if (__name__ == "__main__"):
     
-    # =====================================================================================
-    # Softmax Regression with UCIFastReader
-    # =====================================================================================
-    
     # Network definition 
+    feat_dim=784
+    label_dim=10
+    hidden_dim=200
     
-    x = Input(2)    
-    y= Input(3, tag = 'label')    
-    w = LearnableParameter(3,2)
-    b = LearnableParameter(3,1) 
-    t = Times(w,x)    
-    out = Plus(t, b)
+    features = Input(feat_dim, var_name='features')
+    feat_scale = Constant(0.00390625)
+    feats_scaled = Scale(feat_scale, features)
+    
+    labels = Input(label_dim, tag='label', var_name='labels')
+    
+    h1 = dnn_sigmoid_layer(feat_dim, hidden_dim, feats_scaled, 1)    
+    out = dnn_layer(hidden_dim, label_dim, h1, 1)
     out.tag = 'output'
-    ec = CrossEntropyWithSoftmax(y, out)
+    
+    ec = CrossEntropyWithSoftmax(labels, out)
     ec.tag = 'criterion'
 
+        
     # Build the reader        
-    r = UCIFastReader(filename="E:\CNTK\LanguageBindings\Python\Train-3Classes.txt", 
-                      labels_node_name="v0", 
+    r = UCIFastReader(filename="E:\CNTK\LanguageBindings\Python\cntk\examples\MNIST\Data\Train-28x28.txt", 
+                      labels_node_name='labels', 
                       labels_dim=1, 
-                      labels_start=2, 
-                      num_of_classes=3, 
-                      label_mapping_file="E:\CNTK\LanguageBindings\Python\SimpleMapping-3Classes.txt")
+                      labels_start=0, 
+                      num_of_classes=label_dim, 
+                      label_mapping_file="E:\CNTK\LanguageBindings\Python\cntk\examples\MNIST\Data\labelsmap.txt")
     
     # Add the input node to the reader
-    r.add_input(x, "0", 2)
+    r.add_input(features, 1, feat_dim)
     
     # Build the optimizer
-    my_sgd = SGD(epoch_size = 0, minibatch_size = 25, learning_ratesPerMB = 0.1, max_epochs = 3)
+    my_sgd = SGD(epoch_size = 60000, minibatch_size = 32, learning_ratesPerMB = 0.1, max_epochs = 30, momentum_per_mb = 0)
     
     # Create a context or re-use if already there
-    with Context('demo1', optimizer= my_sgd, root_node= ec, clean_up=False) as ctx:            
+    with Context('mnist_one_layer', optimizer= my_sgd, root_node= ec, clean_up=False) as ctx:            
         # CNTK actions
         ctx.train(r, False)        
-        ctx.test(r)        
-        ctx.predict(r)       
+        #ctx.test(r)        
+        #ctx.predict(r)       
