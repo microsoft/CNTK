@@ -36,6 +36,7 @@ public:
     std::vector<SequenceDataPtr> GetSequence(size_t sequenceId) override;
 
     std::map<size_t, std::vector<SequenceDataPtr>> m_sequencePtrMap;
+
     // Buffer to store the actual data.
     std::vector<SequenceBuffer> m_sequences;
 
@@ -132,7 +133,7 @@ void TextParser<ElemType>::Initialize()
         return;
     }
 
-    m_index = Indexer(m_file, m_skipSequenceIds).Build();
+    m_index = Indexer(m_file, m_skipSequenceIds, m_chunkSizeBytes).Build();
 
     // it's still possible that the actual input data does not have sequence id column.
     m_skipSequenceIds = !m_index->m_hasSequenceIds; 

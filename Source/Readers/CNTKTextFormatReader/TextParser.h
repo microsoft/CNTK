@@ -11,6 +11,7 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
+template <class ElemType>
 class CNTKTextFormatReaderTestRunner;
 
 // TODO: more details when tracing warnings 
@@ -41,7 +42,10 @@ private:
     // from a single input stream.
     struct InputStreamBuffer
     {
-        virtual ~InputStreamBuffer() {};
+        virtual ~InputStreamBuffer()
+        {
+            ;
+        };
 
         size_t m_numberOfSamples = 0;
         std::vector<ElemType> m_buffer;
@@ -167,7 +171,7 @@ private:
 
     void SetChunkCacheSize(unsigned int size);
 
-    friend class CNTKTextFormatReaderTestRunner;
+    friend class CNTKTextFormatReaderTestRunner<ElemType>;
 
     DISABLE_COPY_AND_MOVE(TextParser);
 };

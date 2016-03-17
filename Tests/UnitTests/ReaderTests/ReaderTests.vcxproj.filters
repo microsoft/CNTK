@@ -213,6 +213,9 @@
     <Text Include="Control\CNTKTextFormatReader1x1_1_Control.txt">
       <Filter>Control</Filter>
     </Text>
+    <Text Include="Data\CNTKTextFormatReader1x1_Train.txt">
+      <Filter>Data</Filter>
+    </Text>
   </ItemGroup>
   <ItemGroup>
     <Image Include="Data\images\black.jpg">
@@ -251,6 +254,9 @@
       <Filter>Config</Filter>
     </None>
     <None Include="Config\CNTKTextFormatReader1x1_Config.cntk">
+      <Filter>Config</Filter>
+    </None>
+    <None Include="Config\CNTKTextFormatReaderMultiInput_Config.cntk">
       <Filter>Config</Filter>
     </None>
   </ItemGroup>

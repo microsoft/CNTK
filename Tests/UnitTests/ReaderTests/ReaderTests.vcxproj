@@ -170,6 +170,7 @@
     <Text Include="Control\UCIFastReaderSimpleDataLoop_Control.txt" />
     <Text Include="Data\CNTKTextFormatReader1x100_Train.txt" />
     <Text Include="Data\CNTKTextFormatReader1x10_MI_Train.txt" />
+    <Text Include="Data\CNTKTextFormatReader1x1_Train.txt" />
     <Text Include="Data\CNTKTextFormatReaderMNIST_Train.txt" />
     <Text Include="Data\CNTKTextFormatReaderSimple_Train.txt" />
     <Text Include="Data\ImageReaderSimple_map.txt" />
@@ -187,6 +188,7 @@
     <None Include="Config\CNTKTextFormatReader1x10_MI_Config.cntk" />
     <None Include="Config\CNTKTextFormatReader1x100_Config.cntk" />
     <None Include="Config\CNTKTextFormatReader1x1_Config.cntk" />
+    <None Include="Config\CNTKTextFormatReaderMultiInput_Config.cntk" />
     <None Include="Config\CNTKTextFormatReaderSimple_Config.cntk" />
     <None Include="Config\CNTKTextFormatReaderMNIST_Config.cntk" />
     <None Include="Config\ImageReaderZip_Config.cntk" />
