@@ -24,7 +24,6 @@ traceLevel=1
 numMBsToShowResult=500
 
 prefetch=true
-useCuDnn=true
 
 #######################################
 #  TRAINING CONFIG                    #
@@ -35,15 +34,11 @@ train = [
 
     BrainScriptNetworkBuilder = [
 
-        useCuDnn = $useCuDnn$
-
         // Macros
         NDConvReLULayer(inp, kW, kH, inMap, outMap, hStride, vStride, wScale, bValue) = [  // ReLU non-linearity
             convW = Parameter(outMap, kW * kH * inMap, init="uniform", initValueScale=wScale, initOnCPUOnly=false)
             conv = NDConvolution(convW, inp, (kW : kH : inMap), (1 : 1 : outMap), stride=(hStride : vStride : inMap), sharing=true, autoPadding=true, imageLayout="$imageLayout$")
-            convB = if useCuDnn
-                    then ParameterTensor((1 : 1 : outMap), init="fixedValue", value=bValue)
-                    else Parameter(outMap, 1,              init="fixedValue", value=bValue)
+            convB = ParameterTensor((1 : 1 : outMap), init="fixedValue", value=bValue)
             convPlusB = Plus(conv, convB);
             out = RectifiedLinear(convPlusB);
         ]

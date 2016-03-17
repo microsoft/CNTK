@@ -537,7 +537,7 @@ std::unique_ptr<ConvolutionEngine<ElemType>> ConvolutionEngine<ElemType>::Create
         if (!isEnabled(ConvolutionEngineKind::Legacy))
             RuntimeError("Trying to use Legacy convolution engine when it's disabled.");
         // REVIEW alexeyk: should honor m_traceLevel here.
-        fprintf(stderr, "\nUsing legacy convolution engine for geometry %s.\n", engStr.c_str());
+        fprintf(stderr, "\nUsing legacy convolution engine for geometry: %s.\n", engStr.c_str());
         return std::make_unique<LegacyConvolutionEngine<ElemType>>(geometry, deviceId, imageLayout, maxTempMemSizeInSamples, poolKind);
     }
 
@@ -545,13 +545,13 @@ std::unique_ptr<ConvolutionEngine<ElemType>> ConvolutionEngine<ElemType>::Create
     if (isEnabled(ConvolutionEngineKind::CuDnn) &&
         CuDnnConvolutionEngineFactory<ElemType>::IsSupported(geometry, poolKind))
     {
-        fprintf(stderr, "\nUsing cuDNN convolution engine for geometry %s.\n", engStr.c_str());
+        fprintf(stderr, "\nUsing cuDNN convolution engine for geometry: %s.\n", engStr.c_str());
         return CuDnnConvolutionEngineFactory<ElemType>::Create(geometry, deviceId, imageLayout, maxTempMemSizeInSamples, poolKind);
     }
 
     if (!isEnabled(ConvolutionEngineKind::Reference))
         RuntimeError("Reference convolution is disabled and no other engine supports such configuratin (or disabled).");
-    fprintf(stderr, "\nUsing reference convolution engine for geometry %s.\n", engStr.c_str());
+    fprintf(stderr, "\nUsing reference convolution engine for geometry: %s.\n", engStr.c_str());
     return std::make_unique<ReferenceConvolutionEngine<ElemType>>(geometry, deviceId, imageLayout, maxTempMemSizeInSamples, poolKind);
 }
 

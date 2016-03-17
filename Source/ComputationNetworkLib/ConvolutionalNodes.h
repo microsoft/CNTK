@@ -109,6 +109,7 @@ public:
             node->m_upperPad = m_upperPad;
             node->m_imageLayout = m_imageLayout;
             node->m_maxTempMemSizeInSamples = m_maxTempMemSizeInSamples;
+            node->m_poolKind = m_poolKind;
         }
     }
 
