@@ -334,7 +334,7 @@ template class RowSliceNode<float>;
 template class RowSliceNode<double>;
 
 // -----------------------------------------------------------------------
-// RowStackNode (input0, input1, ...)
+// RowStack (input0, input1, ...)
 // stacks multiple inputs on top of each other
 // The inputs will be spliced w.r.t. their first tensor dimension (the "row" dimension).
 // TODO: This is very close to the planned SpliceNode (just make m_spliceDim actually configurable) except for splicing along time.

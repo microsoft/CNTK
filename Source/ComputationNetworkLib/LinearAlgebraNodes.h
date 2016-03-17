@@ -389,6 +389,9 @@ template class TimesNode<double>;
 // Right operand and output can have MB layout, while left operand cannot.
 // This differs from TimesNode in that A is transposed, where A must be a
 // rank-1 or rank-2 tensor.
+// A common use of transposition is trace(X'X) where X is a matrix of samples.
+// This can NOT be implemented with this node. Instead, use
+// SumColumnElements (ElementTimes (X, X))
 // -----------------------------------------------------------------------
 
 template <class ElemType>
@@ -698,7 +701,7 @@ template class SumColumnElementsNode<float>;
 template class SumColumnElementsNode<double>;
 
 // -----------------------------------------------------------------------
-// TransposeDimensionsNode (input, dim1, dim2)
+// TransposeDimensions (input, dim1, dim2)
 //  - swaps index dimensions dim1 and dim2. The values are 1-based; 1 stands for the leading dimension.
 //  - new dimensions can be created; e.g. a column vector can be transposed into a row vector, which is a [1 x N] tensor
 //  - transposing into the time dimension is currently not supported
@@ -710,8 +713,7 @@ template class SumColumnElementsNode<double>;
 template <class ElemType>
 class TransposeDimensionsNode : public ComputationNode /*ComputationNode*/<ElemType>, public NumInputs<1>
 {
-    typedef ComputationNode<ElemType> Base;
-    UsingComputationNodeMembersBoilerplate;
+    typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
     static const std::wstring TypeName() { return L"TransposeDimensions"; }
 
 public:
