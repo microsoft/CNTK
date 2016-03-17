@@ -119,6 +119,9 @@
     <ClInclude Include="CuDnnCommon.h">
       <Filter>GPU\CuDnn</Filter>
     </ClInclude>
+    <ClInclude Include="NDConvolution.cuh">
+      <Filter>GPU\Convolution</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="GPUMatrix.h">

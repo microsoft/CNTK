@@ -627,72 +627,6 @@ struct NormalizeBatchTraining
     }
 };
 
-
-//template <typename ElemType>
-//cudaError_t BatchNormalizationForwardTraining(const Tensor4D& t, bool spatial, const ElemType* x, ElemType* y,
-//                                                const ElemType* bnScale, const ElemType* bnBias, double expAvgFactor, ElemType* runMean, ElemType* runInvStdDev,
-//                                                double epsilon, ElemType* saveMean, ElemType* saveInvStdDev, cudaStream_t stream)
-//{
-//    assert(nullptr != x);
-//    assert(nullptr != y);
-//    assert(nullptr != bnScale);
-//    assert(nullptr != bnBias);
-//    assert(std::isfinite(epsilon) && epsilon > 0);
-//    assert(std::isfinite(expAvgFactor) && expAvgFactor > 0);
-//    assert(nullptr != runMean);
-//    assert(nullptr != runInvStdDev);
-//    assert(nullptr != saveMean);
-//    assert(nullptr != saveInvStdDev);
-//
-//    size_t vectorSize = t.w() * t.h() * t.c();
-//    size_t spatialSize = spatial ? t.w() * t.h() : 1;
-//    size_t batchSize = t.n();
-//    assert(0 < vectorSize && vectorSize <= std::numeric_limits<int>::max());
-//    assert(0 < batchSize  && batchSize  <= std::numeric_limits<int>::max());
-//
-//    if (spatial)
-//    {
-//        Call<ComputeSpatialBatchMeanAndInvStdDev, ElemType>(spatialSize, vectorSize, spatialSize, batchSize, x, 
-//                                                            expAvgFactor, runMean, runInvStdDev, epsilon, saveMean, saveInvStdDev, stream);
-//        cudaError_t err = GetLastCudaError();
-//        if (cudaSuccess != err)
-//            return err;
-//    }
-//    else
-//    {
-//        Call<ComputeBatchMeanAndInvStdDev, ElemType>(vectorSize, vectorSize, batchSize, x,
-//                                                        expAvgFactor, runMean, runInvStdDev, epsilon, saveMean, saveInvStdDev, stream);
-//        cudaError_t err = GetLastCudaError();
-//        if (cudaSuccess != err)
-//            return err;
-//    }
-//    Call<NormalizeBatchTraining, ElemType>(spatial ? spatialSize : vectorSize, vectorSize, spatialSize, batchSize,
-//                                            spatial, x, y, bnScale, bnBias, saveMean, saveInvStdDev, stream);
-//    return GetLastCudaError();
-//}
-
-//template <typename ElemType>
-//cudaError_t BatchNormalizationForwardInference(const Tensor4D& t, bool spatial, const ElemType* x, ElemType* y, const ElemType* bnScale,
-//                                                const ElemType* bnBias, const ElemType* runMean, const ElemType* runInvStdDev, cudaStream_t stream)
-//{
-//    assert(nullptr != x);
-//    assert(nullptr != y);
-//    assert(nullptr != bnScale);
-//    assert(nullptr != bnBias);
-//    assert(nullptr != runMean);
-//    assert(nullptr != runInvStdDev);
-//
-//    size_t vectorSize = t.w() * t.h() * t.c();
-//    size_t spatialSize = spatial ? t.w() * t.h() : 1;
-//    size_t batchSize = t.n();
-//    assert(0 < vectorSize && vectorSize <= std::numeric_limits<int>::max());
-//    assert(0 < batchSize  && batchSize  <= std::numeric_limits<int>::max());
-//
-//    Call<NormalizeBatchTraining, ElemType>(spatial ? spatialSize : vectorSize, vectorSize, spatialSize, batchSize,
-//                                            spatial, x, y, bnScale, bnBias, runMean, runInvStdDev, stream);
-//    return GetLastCudaError();
-//}
-
 //--------------------------------------------------------------------
 // Backpropagation
 // BatchNormalizationBackward back-propagates derivatives of batch normalization function
@@ -1033,45 +967,5 @@ struct BackpropagateBatchNormGradients
         }
     }
 };
-
-//template <typename ElemType>
-//cudaError_t BatchNormalizationBackward(const Tensor4D& t, bool spatial, const ElemType* x, const ElemType* dy, ElemType* dx, const ElemType* bnScale,
-//                                        ElemType* dScale, ElemType* dBias, const ElemType* saveMean, const ElemType* saveInvStdDev, cudaStream_t stream)
-//{
-//    assert(nullptr != x);
-//    assert(nullptr != dy);
-//    assert(nullptr != dx);
-//    assert(nullptr != bnScale);
-//    assert(nullptr != dScale);
-//    assert(nullptr != dBias);
-//    assert(nullptr != saveMean);
-//    assert(nullptr != saveInvStdDev);
-//
-//    size_t vectorSize = t.w() * t.h() * t.c();
-//    size_t spatialSize = spatial ? t.w() * t.h() : 1;
-//    size_t batchSize = t.n();
-//    assert(0 < vectorSize && vectorSize <= std::numeric_limits<int>::max());
-//    assert(0 < batchSize  && batchSize  <= std::numeric_limits<int>::max());
-//
-//    if (spatial)
-//    {
-//        Call<ComputeSpatialScaleAndBiasGradients, ElemType>(spatialSize, vectorSize, spatialSize, batchSize, x, dy, dScale, dBias, 
-//                                                            saveMean, saveInvStdDev, stream);
-//        cudaError_t err = GetLastCudaError();
-//        if (cudaSuccess != err)
-//            return err;
-//    }
-//    else
-//    {
-//        Call<ComputeScaleAndBiasGradients, ElemType>(vectorSize, vectorSize, batchSize, x, dy, dScale, dBias, 
-//                                                        saveMean, saveInvStdDev, stream);
-//        cudaError_t err = GetLastCudaError();
-//        if (cudaSuccess != err)
-//            return err;
-//    }
-//    Call<BackpropagateBatchNormGradients, ElemType>(spatial ? spatialSize : vectorSize, vectorSize, spatialSize, batchSize, spatial, 
-//                                                    x, dy, dx, bnScale, dScale, dBias, saveMean, saveInvStdDev, stream);
-//    return GetLastCudaError();
-//}
 
 } } }

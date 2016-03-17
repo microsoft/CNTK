@@ -20,7 +20,6 @@ using vec = std::vector<float>;
 
 using ConvEng = ConvolutionEngine<float>;
 
-// REVIEW alexeyk: move AreEqual/CountNans to some common cpp file.
 bool AreEqual(float a, float b, float maxRelError, float maxAbsError)
 {
     float diff = std::abs(a - b);
@@ -79,6 +78,11 @@ std::vector<ConvolveGeometryPtr> GenerateConvTestConfigs()
     // For debugging.
     res.push_back(std::make_shared<ConvolveGeometry>(TensorShape(3, 3, 1),
         TensorShape(3, 3, 1), TensorShape(2), TensorShape(1, 1, 1),
+        ConvolveGeometry::BoolVec{true}, ConvolveGeometry::BoolVec{true, true, false},
+        TensorShape(0), TensorShape(0)));
+
+    res.push_back(std::make_shared<ConvolveGeometry>(TensorShape(16, 16, 1),
+        TensorShape(3, 3, 1), TensorShape(8), TensorShape(1, 2, 1),
         ConvolveGeometry::BoolVec{true}, ConvolveGeometry::BoolVec{true, true, false},
         TensorShape(0), TensorShape(0)));
     return res;
@@ -143,7 +147,7 @@ BOOST_AUTO_TEST_CASE(ConvolutionForward)
 
     int baseDeviceId = 0;
     auto engKind = ConvolutionEngineKind::Reference;
-    for (int deviceId : {-1})
+    for (int deviceId : {-1, 0})
     {
         for (const auto& g : GenerateConvTestConfigs())
         {
@@ -154,24 +158,24 @@ BOOST_AUTO_TEST_CASE(ConvolutionForward)
             vec buf;
             buf.resize(g->InputShape().GetNumElements() * n);
             std::generate(begin(buf), end(buf), [&] { return nd(rng); });
+            SingleMatrix in(g->InputShape().GetNumElements(), n, buf.data(), deviceId, matrixFlagNormal);
             SingleMatrix inB(g->InputShape().GetNumElements(), n, buf.data(), baseDeviceId, matrixFlagNormal);
-            SingleMatrix inT(g->InputShape().GetNumElements(), n, buf.data(), deviceId, matrixFlagNormal);
             
             size_t mapCount = g->GetMapCount(g->InputShape().GetRank() - 1);
             buf.resize(g->KernelShape().GetNumElements() * mapCount);
             std::generate(begin(buf), end(buf), [&] { return nd(rng); });
+            SingleMatrix filter(mapCount, g->KernelShape().GetNumElements(), buf.data(), deviceId, matrixFlagNormal);
             SingleMatrix filterB(mapCount, g->KernelShape().GetNumElements(), buf.data(), baseDeviceId, matrixFlagNormal);
-            SingleMatrix filterT(mapCount, g->KernelShape().GetNumElements(), buf.data(), deviceId, matrixFlagNormal);
 
             size_t crowOut = g->OutputShape().GetNumElements();
             SingleMatrix outBuf(deviceId);
-            SingleMatrix outT = initMat(outBuf, crowOut, n, buf);
-            SingleMatrix outB(outT.DeepClone(), baseDeviceId);
+            SingleMatrix out = initMat(outBuf, crowOut, n, buf);
+            SingleMatrix outB(out.DeepClone(), baseDeviceId);
 
-            SingleMatrix workspaceT(deviceId);
+            SingleMatrix workspace(deviceId);
             SingleMatrix workspaceB(baseDeviceId);
             
-            testEng->Forward(inT, filterT, outT, workspaceT);
+            testEng->Forward(in, filter, out, workspace);
             baseEng->Forward(inB, filterB, outB, workspaceB);
             
             std::stringstream tmsg;
@@ -184,8 +188,8 @@ BOOST_AUTO_TEST_CASE(ConvolutionForward)
             float absErr = Err<float>::Abs;
             std::string emsg;
 
-            BOOST_REQUIRE_MESSAGE(!outT.HasNan("out"), "out" << msgNan);
-            BOOST_REQUIRE_MESSAGE(CheckEqual(outT, outB, emsg, relErr, absErr * 8), "out" << msg << ". " << emsg);
+            BOOST_REQUIRE_MESSAGE(!out.HasNan("out"), "out" << msgNan);
+            BOOST_REQUIRE_MESSAGE(CheckEqual(out, outB, emsg, relErr, absErr * 8), "out" << msg << ". " << emsg);
             BOOST_REQUIRE_MESSAGE(CountNans(outBuf) == crowOut * 2 * n, "out" << msgNotNan);
         }
     }
@@ -344,7 +348,7 @@ BOOST_AUTO_TEST_CASE(PoolingForward)
     auto engKind = ConvolutionEngineKind::Reference;
     for (auto kind : {PoolKind::Max, PoolKind::Average})
     {
-        for (int deviceId : {-1})
+        for (int deviceId : {-1, 0})
         {
             for (const auto& g : GeneratePoolTestConfigs())
             {
@@ -355,15 +359,15 @@ BOOST_AUTO_TEST_CASE(PoolingForward)
                 vec buf;
                 buf.resize(g->InputShape().GetNumElements() * n);
                 std::generate(begin(buf), end(buf), [&] { return nd(rng); });
+                SingleMatrix in(g->InputShape().GetNumElements(), n, buf.data(), deviceId, matrixFlagNormal);
                 SingleMatrix inB(g->InputShape().GetNumElements(), n, buf.data(), baseDeviceId, matrixFlagNormal);
-                SingleMatrix inT(g->InputShape().GetNumElements(), n, buf.data(), deviceId, matrixFlagNormal);
 
                 size_t crowOut = g->OutputShape().GetNumElements();
                 SingleMatrix outBuf(deviceId);
-                SingleMatrix outT = initMat(outBuf, crowOut, n, buf);
-                SingleMatrix outB(outT.DeepClone(), baseDeviceId);
+                SingleMatrix out = initMat(outBuf, crowOut, n, buf);
+                SingleMatrix outB(out.DeepClone(), baseDeviceId);
 
-                testEng->ForwardPooling(inT, outT);
+                testEng->ForwardPooling(in, out);
                 baseEng->ForwardPooling(inB, outB);
 
                 std::stringstream tmsg;
@@ -376,8 +380,8 @@ BOOST_AUTO_TEST_CASE(PoolingForward)
                 float absErr = Err<float>::Abs;
                 std::string emsg;
 
-                BOOST_REQUIRE_MESSAGE(!outT.HasNan("out"), "out" << msgNan);
-                BOOST_REQUIRE_MESSAGE(CheckEqual(outT, outB, emsg, relErr, absErr * 8), "out" << msg << ". " << emsg);
+                BOOST_REQUIRE_MESSAGE(!out.HasNan("out"), "out" << msgNan);
+                BOOST_REQUIRE_MESSAGE(CheckEqual(out, outB, emsg, relErr, absErr * 8), "out" << msg << ". " << emsg);
                 BOOST_REQUIRE_MESSAGE(CountNans(outBuf) == crowOut * 2 * n, "out" << msgNotNan);
             }
         }
@@ -404,7 +408,7 @@ BOOST_AUTO_TEST_CASE(PoolingBackward)
     auto engKind = ConvolutionEngineKind::Reference;
     for (auto kind : {PoolKind::Max, PoolKind::Average})
     {
-        for (int deviceId : {-1})
+        for (int deviceId : {-1, 0})
         {
             for (const auto& g : GeneratePoolTestConfigs())
             {
@@ -417,25 +421,25 @@ BOOST_AUTO_TEST_CASE(PoolingBackward)
                 buf.resize(crowIn * n);
                 std::generate(begin(buf), end(buf), [&] { return nd(rng); });
                 SingleMatrix inB(crowIn, n, buf.data(), baseDeviceId, matrixFlagNormal);
-                SingleMatrix inT(crowIn, n, buf.data(), deviceId, matrixFlagNormal);
+                SingleMatrix in(crowIn, n, buf.data(), deviceId, matrixFlagNormal);
 
                 size_t crowOut = g->OutputShape().GetNumElements();
                 buf.resize(crowOut * n);
                 std::generate(begin(buf), end(buf), [&] { return nd(rng); });
                 SingleMatrix srcGradB(crowOut, n, buf.data(), baseDeviceId, matrixFlagNormal);
-                SingleMatrix srcGradT(crowOut, n, buf.data(), deviceId, matrixFlagNormal);
+                SingleMatrix srcGrad(crowOut, n, buf.data(), deviceId, matrixFlagNormal);
                 // Do not generate for out as it will be replaced anyway.
                 SingleMatrix outB(crowOut, n, buf.data(), baseDeviceId, matrixFlagNormal);
-                SingleMatrix outT(crowOut, n, buf.data(), deviceId, matrixFlagNormal);
+                SingleMatrix out(crowOut, n, buf.data(), deviceId, matrixFlagNormal);
 
-                testEng->ForwardPooling(inT, outT);
+                testEng->ForwardPooling(in, out);
                 baseEng->ForwardPooling(inB, outB);
 
                 SingleMatrix gradBuf(deviceId);
-                SingleMatrix gradT = initMat(gradBuf, crowIn, n, buf);
-                SingleMatrix gradB(gradT.DeepClone(), baseDeviceId);
+                SingleMatrix grad = initMat(gradBuf, crowIn, n, buf);
+                SingleMatrix gradB(grad.DeepClone(), baseDeviceId);
 
-                testEng->BackwardPooling(outT, srcGradT, inT, gradT);
+                testEng->BackwardPooling(out, srcGrad, in, grad);
                 baseEng->BackwardPooling(outB, srcGradB, inB, gradB);
 
                 std::stringstream tmsg;
@@ -448,8 +452,8 @@ BOOST_AUTO_TEST_CASE(PoolingBackward)
                 float absErr = Err<float>::Abs;
                 std::string emsg;
 
-                BOOST_REQUIRE_MESSAGE(!gradT.HasNan("grad"), "grad" << msgNan);
-                BOOST_REQUIRE_MESSAGE(CheckEqual(gradT, gradB, emsg, relErr, absErr * 8), "grad" << msg << ". " << emsg);
+                BOOST_REQUIRE_MESSAGE(!grad.HasNan("grad"), "grad" << msgNan);
+                BOOST_REQUIRE_MESSAGE(CheckEqual(grad, gradB, emsg, relErr, absErr * 8), "grad" << msg << ". " << emsg);
                 BOOST_REQUIRE_MESSAGE(CountNans(gradBuf) == crowIn * 2 * n, "grad" << msgNotNan);
             }
         }

@@ -25,6 +25,7 @@
 #include <assert.h>
 #include <memory>
 #include "CntkBatchNormalization.cuh"
+#include "NDConvolution.cuh"
 
 #pragma comment(lib, "cudart.lib") // instruct linker to reference these libs
 #pragma comment(lib, "cublas.lib")
@@ -3006,8 +3007,12 @@ template <class ElemType>
 void GPUMatrix<ElemType>::NDConvolutionForward(const GPUMatrix<ElemType>& filter, const GPUMatrix<int>& mpRowCol, const GPUMatrix<int>& mpRowIwht,
                                                const GPUMatrix<int>& mpRowRun, const GPUMatrix<int>& runs, GPUMatrix<ElemType>& output) const
 {
-    UNUSED(filter); UNUSED(mpRowCol); UNUSED(mpRowIwht); UNUSED(mpRowRun); UNUSED(runs); UNUSED(output);
-    RuntimeError("Not yet implemented.");
+    const int BlockSize = 128;
+    auto gdim = dim3((output.GetNumRows() + BlockSize - 1)/ BlockSize, std::min((int)GetNumCols(), 65535));
+    PrepareDevice();
+    SyncGuard syncGuard;
+    kNDConvolutionForward<<<gdim, BlockSize, 0, t_stream>>>((int)GetNumCols(), filter.m_pArray, mpRowCol.m_pArray, mpRowIwht.m_pArray, mpRowRun.m_pArray,
+                                                            runs.m_pArray, m_pArray, (int)GetNumRows(), output.m_pArray, (int)output.GetNumRows());
 }
 
 template <class ElemType>
@@ -3029,8 +3034,12 @@ void GPUMatrix<ElemType>::NDConvolutionBackwardFilter(const GPUMatrix<ElemType>&
 template <class ElemType>
 void GPUMatrix<ElemType>::NDMaxPoolingForward(const GPUMatrix<int>& mpRowCol, const GPUMatrix<int>& mpRowIndices, const GPUMatrix<int>& indices, GPUMatrix<ElemType>& output) const
 {
-    UNUSED(mpRowCol); UNUSED(mpRowIndices); UNUSED(indices); UNUSED(output);
-    RuntimeError("Not yet implemented.");
+    const int BlockSize = 128;
+    auto gdim = dim3((output.GetNumRows() + BlockSize - 1)/ BlockSize, std::min((int)GetNumCols(), 65535));
+    PrepareDevice();
+    SyncGuard syncGuard;
+    kNDMaxPoolingForward<<<gdim, BlockSize, 0, t_stream>>>((int)GetNumCols(), mpRowCol.m_pArray, mpRowIndices.m_pArray, indices.m_pArray,
+                                                           m_pArray, (int)GetNumRows(), output.m_pArray, (int)output.GetNumRows());
 }
 
 template <class ElemType>
@@ -3038,22 +3047,35 @@ void GPUMatrix<ElemType>::NDMaxPoolingBackward(const GPUMatrix<ElemType>& out, c
                                                const GPUMatrix<int>& mpRowCol, const GPUMatrix<int>& mpRowIndices, const GPUMatrix<int>& indices,
                                                GPUMatrix<ElemType>& grad) const
 {
-    UNUSED(out); UNUSED(in); UNUSED(mpRowCol); UNUSED(mpRowIndices); UNUSED(indices); UNUSED(grad);
-    RuntimeError("Not yet implemented.");
+    const int BlockSize = 128;
+    auto gdim = dim3((GetNumRows() + BlockSize - 1)/ BlockSize, std::min((int)GetNumCols(), 65535));
+    PrepareDevice();
+    SyncGuard syncGuard;
+    kNDMaxPoolingBackward<<<gdim, BlockSize, 0, t_stream>>>((int)GetNumCols(), out.m_pArray, in.m_pArray,
+                                                            mpRowCol.m_pArray, mpRowIndices.m_pArray, indices.m_pArray,
+                                                            m_pArray, (int)GetNumRows(), grad.m_pArray, (int)grad.GetNumRows());
 }
 
 template <class ElemType>
 void GPUMatrix<ElemType>::NDAveragePoolingForward(const GPUMatrix<int>& mpRowCol, const GPUMatrix<int>& mpRowIndices, const GPUMatrix<int>& indices, GPUMatrix<ElemType>& output) const
 {
-    UNUSED(mpRowCol); UNUSED(mpRowIndices); UNUSED(indices); UNUSED(output);
-    RuntimeError("Not yet implemented.");
+    const int BlockSize = 128;
+    auto gdim = dim3((output.GetNumRows() + BlockSize - 1)/ BlockSize, std::min((int)GetNumCols(), 65535));
+    PrepareDevice();
+    SyncGuard syncGuard;
+    kNDAveragePoolingForward<<<gdim, BlockSize, 0, t_stream>>>((int)GetNumCols(), mpRowCol.m_pArray, mpRowIndices.m_pArray, indices.m_pArray,
+                                                               m_pArray, (int)GetNumRows(), output.m_pArray, (int)output.GetNumRows());
 }
 
 template <class ElemType>
 void GPUMatrix<ElemType>::NDAveragePoolingBackward(const GPUMatrix<int>& mpRowCol, const GPUMatrix<int>& mpRowIndices, const GPUMatrix<int>& indices, GPUMatrix<ElemType>& grad) const
 {
-    UNUSED(mpRowCol); UNUSED(mpRowIndices); UNUSED(indices); UNUSED(grad);
-    RuntimeError("Not yet implemented.");
+    const int BlockSize = 128;
+    auto gdim = dim3((GetNumRows() + BlockSize - 1)/ BlockSize, std::min((int)GetNumCols(), 65535));
+    PrepareDevice();
+    SyncGuard syncGuard;
+    kNDAveragePoolingBackward<<<gdim, BlockSize, 0, t_stream>>>((int)GetNumCols(), mpRowCol.m_pArray, mpRowIndices.m_pArray, indices.m_pArray,
+                                                                m_pArray, (int)GetNumRows(), grad.m_pArray, (int)grad.GetNumRows());
 }
 
 template <class ElemType>

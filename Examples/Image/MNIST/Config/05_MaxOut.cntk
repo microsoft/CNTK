@@ -35,12 +35,11 @@ train = [
     BrainScriptNetworkBuilder = [
 
         // Macros
-        NDConvReLULayer(inp, kW, kH, inMap, outMap, hStride, vStride, wScale, bValue) = [  // ReLU non-linearity
+        NDConvLayer(inp, kW, kH, inMap, outMap, hStride, vStride, wScale, bValue) = [  // ReLU non-linearity
             convW = Parameter(outMap, kW * kH * inMap, init="uniform", initValueScale=wScale, initOnCPUOnly=false)
             conv  = NDConvolution(convW, inp, (kW : kH : inMap), (1 : 1 : outMap), stride=(hStride : vStride : inMap), sharing=true, autoPadding=true, imageLayout="$imageLayout$")
             convB = ParameterTensor((1 : 1 : outMap), init="fixedValue", value=bValue)
-            convPlusB = Plus(conv, convB);
-            out = RectifiedLinear(convPlusB);
+            out = Plus(conv, convB);
         ]
 
         NDMaxPoolLayer(inp, kW, kH, kD, inMap, hS, vS, dS) = [
@@ -64,13 +63,15 @@ train = [
         featScaled = Scale(featScale, features)
         labels = Input(labelDim, tag="label")
 
+        wScale = 0.001
+
         # conv1
         kW1 = 8
         kH1 = 8
         cMap1 = 96
         hS1 = 1
         vS1 = 1
-        conv1 = NDConvReLULayer(featScaled, kW1, kH1, 1, cMap1, hS1, vS1, 10, 1).out
+        conv1 = NDConvLayer(featScaled, kW1, kH1, 1, cMap1, hS1, vS1, wScale, 1).out
 
         pool1W = 4
         pool1H = 4
@@ -86,7 +87,7 @@ train = [
         cMap2 = 96
         hS2 = 1
         vS2 = 1
-        conv2 = NDConvReLULayer(pool1, kW2, kH2, cMap1 / pool1dS, cMap2, hS2, vS2, 10, 1).out
+        conv2 = NDConvLayer(pool1, kW2, kH2, cMap1 / pool1dS, cMap2, hS2, vS2, wScale, 1).out
 
         pool2W = 4
         pool2H = 4
@@ -102,7 +103,7 @@ train = [
         cMap3 = 96
         hS3 = 1
         vS3 = 1
-        conv3 = NDConvReLULayer(pool2, kW3, kH3, cMap2 / pool2dS, cMap3, hS3, vS3, 10, 1).out
+        conv3 = NDConvLayer(pool2, kW3, kH3, cMap2 / pool2dS, cMap3, hS3, vS3, wScale, 1).out
 
         pool3W = 2
         pool3H = 2
@@ -122,7 +123,7 @@ train = [
     SGD = [
         epochSize = 60000
         minibatchSize = 32
-        learningRatesPerMB = 0.1
+        learningRatesPerMB = 0.001
         momentumPerMB = 0*10:0.7
         maxEpochs = 15
     ]

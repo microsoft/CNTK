@@ -4211,7 +4211,7 @@ void CPUMatrix<ElemType>::NDMaxPoolingBackward(const CPUMatrix<ElemType>& out, c
                                                const CPUMatrix<int>& mpRowCol, const CPUMatrix<int>& mpRowIndices, const CPUMatrix<int>& indices,
                                                CPUMatrix<ElemType>& grad) const
 {
-//#pragma omp parallel for
+#pragma omp parallel for
     for (int64_t sample = 0; sample < (int64_t)GetNumCols(); sample++)
     {
         for (size_t row = 0; row < GetNumRows(); row++)
