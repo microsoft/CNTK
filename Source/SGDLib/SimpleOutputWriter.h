@@ -317,6 +317,21 @@ public:
         } // end loop over sequences
     }
 
+    void InsertNode(std::vector<ComputationNodeBasePtr>& allNodes, ComputationNodeBasePtr parent, ComputationNodeBasePtr newNode)
+    {
+        newNode->SetInput(0, parent); // Why did this move from public to protected in ComputationNode?
+        for (auto node : allNodes)
+        {
+            size_t i = 0;
+            for (auto n : node->GetInputs())
+            {
+                if (n == parent)
+                    node->SetInput(i, newNode);
+                ++i;
+            }
+        }
+    }
+
     // TODO: Remove code dup with above function by creating a fake Writer object and then calling the other function.
     void WriteOutput(IDataReader& dataReader, size_t mbSize, std::wstring outputPath, const std::vector<std::wstring>& outputNodeNames, const WriteFormattingOptions & formattingOptions, size_t numOutputSamples = requestDataSize, bool nodeUnitTest = false)
     {
@@ -328,48 +343,42 @@ public:
 
         if (nodeUnitTest)
         {
-            // Gradients are not passed on to inputs. Need to hook an identity function in between.
-            ComputationNetworkBuilder<ElemType> builder(*m_net);
-
-            auto allNodes = m_net->GetAllNodes();
-            for (auto inputNode : inputNodes)
-            {
-                auto parent = dynamic_pointer_cast<ComputationNode<ElemType>>(inputNode);
-                auto newNode = builder.Identity(parent, inputNode->NodeName() + L".grad");
-                newNode->SetLearningRateMultiplier(1.0); // Force gradient update.
-                dynamic_pointer_cast<ComputationNodeBase>(newNode)->SetInput(0, parent); // Why did this move from public to protected in ComputationNode?
-                for (auto node : allNodes)
-                {
-                    size_t i = 0;
-                    for (auto n : node->GetInputs())
-                    {
-                        if (n == inputNode)
-                            node->SetInput(i, newNode);
-                        ++i;
-                    }
-                }
-                gradientNodes.push_back(newNode);
-            }
-
             // Unit test only makes sense for one output node.
             if (outputNodes.size() > 1)
                 Warning("Expected exactly 1 output node for unit test, got %d. Using only the first.");
             else if (outputNodes.size() == 0)
                 RuntimeError("Expected exactly 1 output node for unit test, got 0");
 
-            // Update the evaluation order.
+            // Make sure we can actually run the backward pass.
+            m_net->Environment().m_networkOperationMode = NetworkOperationMode::training;
+
+            // Set up machinery to output gradients alongside forward pass output
+            // Gradients are not passed on to inputs. Need to hook an identity function in between.
+            ComputationNetworkBuilder<ElemType> builder(*m_net);
+            auto allInputs = inputNodes;
+            auto allParameters = m_net->LearnableParameterNodes(outputNodes[0]);
+            allInputs.insert(allInputs.end(), allParameters.begin(), allParameters.end());
+
+            auto allNodes = m_net->GetAllNodes();
+            for (auto inputNode : allInputs)
+            {
+                auto parent = dynamic_pointer_cast<ComputationNode<ElemType>>(inputNode);
+                auto newNode = builder.Identity(parent, inputNode->NodeName() + L".grad");
+                newNode->SetLearningRateMultiplier(1.0); // Forces gradient update. Otherwise, backprop might get pruned from this path.
+                InsertNode(allNodes, parent, newNode);
+                gradientNodes.push_back(newNode);
+            }
+
+            // Update the evaluation order, and other things.
             m_net->CompileNetwork();
             
-            m_net->DumpAllNodesToFile(false, true, L"network.txt");
-            // Allocate memory for forward computation. In case of unit test, treat the output node
+            // Allocate memory for forward and backward computation. In case of unit test, treat the output node
             // like a criterion node. Submitting a node as parameter 3 here will allocate the gradients.
             m_net->AllocateAllMatrices({}, outputNodes, outputNodes[0]);
         }
         else
             m_net->AllocateAllMatrices({}, outputNodes, nullptr); // Don't allocate for backward pass
 
-        m_net->DumpAllNodesToFile(false, true, L"network.txt");
-        
         StreamMinibatchInputs inputMatrices = RetrieveInputMatrices(inputNodes);
         
         // load a label mapping if requested
@@ -461,10 +470,16 @@ public:
                     ComputationNodeBasePtr inode = inodeFile.first;
                     shared_ptr<File> file = inodeFile.second;
                     Matrix<ElemType>& gradient = dynamic_pointer_cast<ComputationNode<ElemType>>(inode)->Gradient();
-                    assert(&gradient != null);
-                    char formatChar = !formattingOptions.isCategoryLabel ? 'f' : !formattingOptions.labelMappingFile.empty() ? 's' : 'u';
-                    std::string valueFormatString = "%" + formattingOptions.precisionFormat + formatChar; // format string used in fprintf() for formatting the values
-                    WriteMatrix(*file, gradient, inode->NodeName() + L"__Gradient", inode->GetMBLayout(), formattingOptions, formatChar, valueFormatString, labelMapping, numMBsRun);
+                    if (&gradient == nullptr)
+                    {
+                        fprintf(stderr, "Warning: Gradient of node '%s' is empty. Not used in backward pass?", msra::strfun::utf8(inode->NodeName().c_str()));
+                    }
+                    else
+                    {
+                        char formatChar = !formattingOptions.isCategoryLabel ? 'f' : !formattingOptions.labelMappingFile.empty() ? 's' : 'u';
+                        std::string valueFormatString = "%" + formattingOptions.precisionFormat + formatChar; // format string used in fprintf() for formatting the values
+                        WriteMatrix(*file, gradient, inode->NodeName(), inode->GetMBLayout(), formattingOptions, formatChar, valueFormatString, labelMapping, numMBsRun);
+                    }
                 }
             }
             totalEpochSamples += actualMBSize;
@@ -500,7 +515,6 @@ public:
             iter.second->Flush();
         for (auto & iter : outputStreamsForGradients)
             iter.second->Flush();
-
     }
 
 private:
