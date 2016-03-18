@@ -7,7 +7,7 @@
 
 #include "TextParser.h"
 #include "Reader.h"
-#include "SampleModePacker.h"
+#include "TextPacker.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 

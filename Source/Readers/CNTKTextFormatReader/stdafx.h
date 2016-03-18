@@ -11,6 +11,7 @@
 
 #include "Platform.h"
 #define _CRT_SECURE_NO_WARNINGS // "secure" CRT not available on all platforms
+#define _SCL_SECURE_NO_WARNINGS
 #include "targetver.h"
 #ifdef __WINDOWS__
 #include "windows.h"
