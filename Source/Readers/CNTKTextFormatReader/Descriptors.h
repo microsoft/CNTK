@@ -26,14 +26,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // locate and retrieve a sequence from file, given a sequence descriptor.
     struct SequenceDescriptor : SequenceDescription
     {
-        SequenceDescriptor() 
+        SequenceDescriptor() : SequenceDescription({}), m_fileOffsetBytes(0),
+            m_byteSize(0)
         {
-            m_id = 0;
-            m_numberOfSamples = 0;
-            m_chunkId = 0;
-            m_isValid = false;
-            m_fileOffsetBytes = 0;
-            m_byteSize = 0;
         }
         // size_t m_numberOfSamples -- number of samples in the sequence (largest count among all inputs)
         // in case of text data this value == number of rows this sequence spans over.
@@ -46,6 +41,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // some user-specified size.
     struct ChunkDescriptor : ChunkDescription
     { 
+        ChunkDescriptor() : ChunkDescription({}), m_byteSize(0) {}
         // TODO: if we don't want to keep the whole index 
         // (metadata for all sequences in memory), we should not
         // leave this empty when building a chunk index, and only
