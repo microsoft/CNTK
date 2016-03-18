@@ -19,8 +19,11 @@ else
   exit 3
 fi
 
-diff $OUTPUT_BASELINE $TEST_RUN_DIR/Output.ScaledLogLikelihood > $TEST_RUN_DIR/output.diff || exit $?
+diff $OUTPUT_BASELINE $TEST_RUN_DIR/Output.ScaledLogLikelihood > $TEST_RUN_DIR/output.diff
+ExitCode=$?
 if [ -s $TEST_RUN_DIR/output.diff ]; then
-  echo "Error: Output of write command does not match baseline output. See $TEST_RUN_DIR/output.diff" 1>&2
-  exit 1
+  echo "Error: Output of write command does not match baseline output. See $TEST_RUN_DIR/output.diff"
 fi
+
+exit $ExitCode
+
