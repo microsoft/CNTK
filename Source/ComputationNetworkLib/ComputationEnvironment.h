@@ -28,10 +28,9 @@ enum class NetworkOperationMode
 struct ComputationEnvironment
 {
     // networkOperationMode tells whether we are training or inferring, which affects some nodes' behavior
-    NetworkOperationMode networkOperationMode = NetworkOperationMode::inferring; // by default, a network is always able to infer
-    bool IsTraining()     const { return networkOperationMode == NetworkOperationMode::training; }
-    bool IsPreComputing() const { return networkOperationMode == NetworkOperationMode::preComputing; }
-
+    NetworkOperationMode m_networkOperationMode = NetworkOperationMode::inferring; // by default, a network is always able to infer
+    bool IsTraining()     const { return m_networkOperationMode == NetworkOperationMode::training; }
+    bool IsPreComputing() const { return m_networkOperationMode == NetworkOperationMode::preComputing; }
     // more properties should be added here as needed
 };
 typedef std::shared_ptr<ComputationEnvironment> ComputationEnvironmentPtr;
@@ -49,12 +48,12 @@ public:
     ScopedNetworkOperationMode(const std::shared_ptr<ComputationNetwork>& net, NetworkOperationMode networkOperationMode) :
         m_environment(net->Environment())
     {
-        m_previousNetworkOperationMode = m_environment.networkOperationMode;
-        m_environment.networkOperationMode = networkOperationMode;
+        m_previousNetworkOperationMode = m_environment.m_networkOperationMode;
+        m_environment.m_networkOperationMode = networkOperationMode;
     }
     ~ScopedNetworkOperationMode() // destructor restores the previous mode
     {
-        m_environment.networkOperationMode = m_previousNetworkOperationMode;
+        m_environment.m_networkOperationMode = m_previousNetworkOperationMode;
     }
 };
 
