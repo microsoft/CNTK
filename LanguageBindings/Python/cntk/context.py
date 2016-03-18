@@ -87,7 +87,6 @@ class AbstractContext(object, metaclass=ABCMeta):
             os.mkdir(self.directory)
 
         self.name = name
-        self.macros = []
         self.optimizer = optimizer
         self.device_id = device_id
         self.clean_up = clean_up
@@ -111,14 +110,6 @@ class AbstractContext(object, metaclass=ABCMeta):
         Generating the CNTK configuration for the root node.
         '''
         return self.root_node.to_description()
-
-    def add_macro(self, path):
-        '''
-        Add a macro file to be referenced from all configurations of this context.
-        :param path: path of the macro file.    
-        :
-        '''
-        self.macros.append(path)
 
     def _generate_train_config(self, reader, override_existing):
         '''
