@@ -52,9 +52,9 @@ static bool SetGradientToScalarOne(ComputationNodeBasePtr nodep)
     bool hasMatchingType = (node != nullptr);
     if (hasMatchingType)
     {
-        node->Value().VerifySize(1, 1);
-        node->Gradient().Resize(1, 1);
-        node->Gradient().SetValue((ElemType) 1.0);
+        Matrix<ElemType>& grad = node->Gradient();
+        grad.Resize(node->Value());
+        grad.SetValue((ElemType) 1.0);
     }
     return hasMatchingType;
 }
@@ -409,6 +409,10 @@ void ComputationNetwork::CompileNetwork()
     FormEvalOrder(nullptr); // form the global one
     for (auto& node : m_allRoots)
         FormEvalOrder(node);
+
+    // We might be after an edit operation. Make sure we initialize from scratch.
+    m_inputValues.clear();
+    m_learnableParameters.clear();
 
     // STEP: form the m_inputValues and m_learnableParameters sets for this rootNode
     CollectInputAndLearnableParameters(nullptr);

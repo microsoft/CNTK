@@ -17,6 +17,7 @@
 #include <fstream>
 #include <cstdio>
 #include "ProgressTracing.h"
+#include "ComputationNetworkBuilder.h"
 
 using namespace std;
 
@@ -85,7 +86,7 @@ public:
     {
     }
 
-    void WriteOutput(IDataReader& dataReader, size_t mbSize, IDataWriter& dataWriter, const std::vector<std::wstring>& outputNodeNames, size_t numOutputSamples = requestDataSize, bool doUnitTest = false)
+    void WriteOutput(IDataReader& dataReader, size_t mbSize, IDataWriter& dataWriter, const std::vector<std::wstring>& outputNodeNames, size_t numOutputSamples = requestDataSize, bool doWriterUnitTest = false)
     {
         ScopedNetworkOperationMode modeGuard(m_net, NetworkOperationMode::inferring);
 
@@ -119,7 +120,7 @@ public:
                 outputMatrices[outputNodes[i]->NodeName()] = (void*) (&dynamic_pointer_cast<ComputationNode<ElemType>>(outputNodes[i])->Value());
             }
 
-            if (doUnitTest)
+            if (doWriterUnitTest)
             {
                 std::map<std::wstring, void*, nocase_compare> inputMatricesUnitTest;
                 for (auto iter = inputMatrices.begin(); iter != inputMatrices.end(); iter++)
@@ -211,19 +212,166 @@ public:
         }
     };
 
+    void WriteMatrix(FILE* f, const Matrix<ElemType> &outputValues, std::wstring nodeName, MBLayoutPtr pMBLayout, 
+        const WriteFormattingOptions & formattingOptions, char formatChar, std::string valueFormatString, std::vector<std::string>& labelMapping,
+        size_t numMBsRun)
+    {
+        size_t tempArraySize = 0;
+
+        ElemType* tempArray = new ElemType[outputValues.GetNumElements()];
+
+        if (!pMBLayout) // no MBLayout: We are printing aggregates (or LearnableParameters?)
+        {
+            pMBLayout = make_shared<MBLayout>();
+            pMBLayout->InitAsFrameMode(1); // treat this as if we have one single sample
+        }
+
+        // Todo: Sparse needs to be treated differently.
+        outputValues.CopyToArray(tempArray, tempArraySize);
+
+        // sequence separator
+        const auto sequenceSeparator = formattingOptions.Processed(nodeName, formattingOptions.sequenceSeparator);
+        const auto sequencePrologue = formattingOptions.Processed(nodeName, formattingOptions.sequencePrologue);
+        const auto sequenceEpilogue = formattingOptions.Processed(nodeName, formattingOptions.sequenceEpilogue);
+        const auto elementSeparator = formattingOptions.Processed(nodeName, formattingOptions.elementSeparator);
+        const auto sampleSeparator = formattingOptions.Processed(nodeName, formattingOptions.sampleSeparator);
+
+        const auto& sequences = pMBLayout->GetAllSequences();
+        size_t colStride = pMBLayout->GetNumParallelSequences() * outputValues.GetNumRows(); // how to get from one column to the next
+        size_t width = pMBLayout->GetNumTimeSteps();
+        for (size_t s = 0; s < sequences.size(); s++)
+        {
+            const auto& seqInfo = sequences[s];
+            size_t tBegin = seqInfo.tBegin >= 0 ? seqInfo.tBegin : 0;
+            size_t tEnd = seqInfo.tEnd <= width ? seqInfo.tEnd : width;
+
+            // current sequence is a matrix with 'colStride' beginning at the following pointer
+            ElemType* pCurValue = tempArray + s * outputValues.GetNumRows() + seqInfo.tBegin;
+
+            if ((numMBsRun > 0 || s > 0) && !sequenceSeparator.empty())
+                fprintfOrDie(f, "%s", sequenceSeparator.c_str());
+            fprintfOrDie(f, "%s", sequencePrologue.c_str());
+
+            // output it according to our format specification
+            size_t dim = outputValues.GetNumRows();
+            size_t T = tEnd - tBegin;
+            if (formattingOptions.isCategoryLabel)
+            {
+                if (formatChar == 's') // verify label dimension
+                {
+                    if (outputValues.GetNumRows() != labelMapping.size())
+                        InvalidArgument("write: Row dimension %d does not match number of entries %d in labelMappingFile '%ls'", (int)dim, (int)labelMapping.size(), formattingOptions.labelMappingFile.c_str());
+                }
+                // update the matrix in-place from one-hot (or max) to index
+                // find the max in each column
+                for (size_t j = 0; j < T; j++)
+                {
+                    double maxPos = -1;
+                    double maxVal = 0;
+                    for (size_t i = 0; i < dim; i++)
+                    {
+                        double val = pCurValue[i + j * dim * colStride];
+                        if (maxPos < 0 || val >= maxVal)
+                        {
+                            maxPos = (double)i;
+                            maxVal = val;
+                        }
+                    }
+                    pCurValue[0 + j * colStride] = (ElemType)maxPos; // overwrite first element in-place
+                }
+                dim = 1; // ignore remaining dimensions
+            }
+            size_t iend = formattingOptions.transpose ? dim : T;
+            size_t jend = formattingOptions.transpose ? T : dim;
+            size_t istride = formattingOptions.transpose ? 1 : colStride;
+            size_t jstride = formattingOptions.transpose ? colStride : 1;
+            for (size_t j = 0; j < jend; j++)
+            {
+                if (j > 0)
+                    fprintfOrDie(f, "%s", sampleSeparator.c_str());
+                for (size_t i = 0; i < iend; i++)
+                {
+                    if (i > 0)
+                        fprintfOrDie(f, "%s", elementSeparator.c_str());
+                    if (formatChar == 'f') // print as real number
+                    {
+                        double dval = pCurValue[i * istride + j * jstride];
+                        fprintfOrDie(f, valueFormatString.c_str(), dval);
+                    }
+                    else if (formatChar == 'u') // print category as integer index
+                    {
+                        unsigned int uval = (unsigned int)pCurValue[i * istride + j * jstride];
+                        fprintfOrDie(f, valueFormatString.c_str(), uval);
+                    }
+                    else if (formatChar == 's') // print category as a label string
+                    {
+                        size_t uval = (size_t)pCurValue[i * istride + j * jstride];
+                        assert(uval < labelMapping.size());
+                        const char * sval = labelMapping[uval].c_str();
+                        fprintfOrDie(f, valueFormatString.c_str(), sval);
+                    }
+                }
+            }
+            fprintfOrDie(f, "%s", sequenceEpilogue.c_str());
+            delete[] tempArray;
+        } // end loop over sequences
+    }
+
     // TODO: Remove code dup with above function by creating a fake Writer object and then calling the other function.
-    void WriteOutput(IDataReader& dataReader, size_t mbSize, std::wstring outputPath, const std::vector<std::wstring>& outputNodeNames, const WriteFormattingOptions & formattingOptions, size_t numOutputSamples = requestDataSize)
+    void WriteOutput(IDataReader& dataReader, size_t mbSize, std::wstring outputPath, const std::vector<std::wstring>& outputNodeNames, const WriteFormattingOptions & formattingOptions, size_t numOutputSamples = requestDataSize, bool nodeUnitTest = false)
     {
         ScopedNetworkOperationMode modeGuard(m_net, NetworkOperationMode::inferring);
 
         std::vector<ComputationNodeBasePtr> outputNodes = DetermineOutputNodes(outputNodeNames);
         std::vector<ComputationNodeBasePtr> inputNodes = DetermineInputNodes(outputNodes);
+        std::vector<ComputationNodeBasePtr> gradientNodes;
 
-        // allocate memory for forward computation
-        m_net->AllocateAllMatrices({}, outputNodes, nullptr);
+        if (nodeUnitTest)
+        {
+            // Gradients are not passed on to inputs. Need to hook an identity function in between.
+            ComputationNetworkBuilder<ElemType> builder(*m_net);
 
+            auto allNodes = m_net->GetAllNodes();
+            for (auto inputNode : inputNodes)
+            {
+                auto parent = dynamic_pointer_cast<ComputationNode<ElemType>>(inputNode);
+                auto newNode = builder.Identity(parent, inputNode->NodeName() + L".grad");
+                newNode->SetLearningRateMultiplier(1.0); // Force gradient update.
+                dynamic_pointer_cast<ComputationNodeBase>(newNode)->SetInput(0, parent); // Why did this move from public to protected in ComputationNode?
+                for (auto node : allNodes)
+                {
+                    size_t i = 0;
+                    for (auto n : node->GetInputs())
+                    {
+                        if (n == inputNode)
+                            node->SetInput(i, newNode);
+                        ++i;
+                    }
+                }
+                gradientNodes.push_back(newNode);
+            }
+
+            // Unit test only makes sense for one output node.
+            if (outputNodes.size() > 1)
+                Warning("Expected exactly 1 output node for unit test, got %d. Using only the first.");
+            else if (outputNodes.size() == 0)
+                RuntimeError("Expected exactly 1 output node for unit test, got 0");
+
+            // Update the evaluation order.
+            m_net->CompileNetwork();
+            
+            m_net->DumpAllNodesToFile(false, true, L"network.txt");
+            // Allocate memory for forward computation. In case of unit test, treat the output node
+            // like a criterion node. Submitting a node as parameter 3 here will allocate the gradients.
+            m_net->AllocateAllMatrices({}, outputNodes, outputNodes[0]);
+        }
+        else
+            m_net->AllocateAllMatrices({}, outputNodes, nullptr); // Don't allocate for backward pass
+
+        m_net->DumpAllNodesToFile(false, true, L"network.txt");
+        
         StreamMinibatchInputs inputMatrices = RetrieveInputMatrices(inputNodes);
-
+        
         // load a label mapping if requested
         std::vector<std::string> labelMapping;
         if (formattingOptions.isCategoryLabel && !formattingOptions.labelMappingFile.empty())
@@ -239,6 +387,19 @@ public:
                 nodeOutputPath += L"." + onode->NodeName();
             auto f = make_shared<File>(nodeOutputPath, fileOptionsWrite | fileOptionsText);
             outputStreams[onode] = f;
+        }
+
+        std::map<ComputationNodeBasePtr, shared_ptr<File>> outputStreamsForGradients;
+        if (nodeUnitTest)
+        {
+            for (auto & node : gradientNodes)
+            {
+                std::wstring nodeOutputPath = outputPath;
+                if (nodeOutputPath != L"-")
+                    nodeOutputPath += L"." + node->NodeName();
+                auto f = make_shared<File>(nodeOutputPath, fileOptionsWrite | fileOptionsText);
+                outputStreamsForGradients[node] = f;
+            }
         }
 
         // evaluate with minibatches
@@ -286,8 +447,26 @@ public:
                 pnode->WriteMinibatchWithFormatting(f, SIZE_MAX, SIZE_MAX, formattingOptions.transpose, formattingOptions.isCategoryLabel, labelMapping,
                                                     sequenceSeparator, sequencePrologue, sequenceEpilogue, elementSeparator, sampleSeparator,
                                                     valueFormatString);
+                if (nodeUnitTest)
+                {
+                    m_net->Backprop(onode);
+                }
+
             } // end loop over nodes
 
+            if (nodeUnitTest)
+            {
+                for (auto & inodeFile : outputStreamsForGradients)
+                {
+                    ComputationNodeBasePtr inode = inodeFile.first;
+                    shared_ptr<File> file = inodeFile.second;
+                    Matrix<ElemType>& gradient = dynamic_pointer_cast<ComputationNode<ElemType>>(inode)->Gradient();
+                    assert(&gradient != null);
+                    char formatChar = !formattingOptions.isCategoryLabel ? 'f' : !formattingOptions.labelMappingFile.empty() ? 's' : 'u';
+                    std::string valueFormatString = "%" + formattingOptions.precisionFormat + formatChar; // format string used in fprintf() for formatting the values
+                    WriteMatrix(*file, gradient, inode->NodeName() + L"__Gradient", inode->GetMBLayout(), formattingOptions, formatChar, valueFormatString, labelMapping, numMBsRun);
+                }
+            }
             totalEpochSamples += actualMBSize;
 
             fprintf(stderr, "Minibatch[%lu]: ActualMBSize = %lu\n", ++numMBsRun, actualMBSize);
@@ -308,9 +487,9 @@ public:
             dataReader.DataEnd();
         } // end loop over minibatches
 
-        for (auto & onode : outputNodes)
+        for (auto & stream : outputStreams)
         {
-            FILE * f = *outputStreams[onode];
+            FILE * f = *stream.second;
             fprintfOrDie(f, "%s", formattingOptions.epilogue.c_str());
         }
 
@@ -319,6 +498,9 @@ public:
         // flush all files (where we can catch errors) so that we can then destruct the handle cleanly without error
         for (auto & iter : outputStreams)
             iter.second->Flush();
+        for (auto & iter : outputStreamsForGradients)
+            iter.second->Flush();
+
     }
 
 private:
