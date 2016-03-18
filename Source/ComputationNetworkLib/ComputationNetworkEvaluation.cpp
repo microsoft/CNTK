@@ -701,6 +701,9 @@ void ComputationNetwork::AllocateAllMatrices(const std::vector<ComputationNodeBa
                                              const std::vector<ComputationNodeBasePtr>& outValueRootNodes,
                                              ComputationNodeBasePtr trainRootNode)
 {
+    if (AreMatricesAllocated())
+        return;
+
     // Allocate memory for forward/backward computation
     fprintf(stderr, "\n\nAllocating matrices for forward and/or backward propagation.\n");
 
@@ -833,6 +836,8 @@ void ComputationNetwork::AllocateAllMatrices(const std::vector<ComputationNodeBa
             }
         }
     }
+
+    m_areMatricesAllocated = true;
 }
 
 void ComputationNetwork::ReleaseMatricesAfterEvalForChildren(ComputationNodeBasePtr n, std::unordered_map<ComputationNodeBasePtr, int>& parentCount)

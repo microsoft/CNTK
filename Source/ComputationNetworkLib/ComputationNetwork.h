@@ -46,6 +46,7 @@ public:
     ComputationNetwork()
         : m_randomSeedOffset(0),
           m_isCompiled(false),
+          m_areMatricesAllocated(false),
           m_pMBLayout(make_shared<MBLayout>())
     {
     }
@@ -169,6 +170,7 @@ private:
     void CollectInputAndLearnableParameters(const ComputationNodeBasePtr& rootNode);
     void CollectInputAndLearnableParametersRec(const ComputationNodeBasePtr& node, set<ComputationNodeBasePtr>& visited, list<ComputationNodeBasePtr>& inputs, list<ComputationNodeBasePtr>& learnableParameters);
     bool IsCompiled() const { return m_isCompiled; }
+    bool AreMatricesAllocated() const { return m_areMatricesAllocated; }
     void VerifyIsCompiled(const char* where) const;
 public:
     void AllocateAllMatrices(const std::vector<ComputationNodeBasePtr>& evalRootNodes, const std::vector<ComputationNodeBasePtr>& outValueRootNodes, ComputationNodeBasePtr trainRootNode);
@@ -884,6 +886,7 @@ private:
 
     // cache for evaluation ordering:
     bool m_isCompiled; // CompileNetwork has been called
+    bool m_areMatricesAllocated; // AllocateAllMatrices has been called
 
     // cached network iterations
     std::map<const ComputationNodeBasePtr, std::list<ComputationNodeBasePtr>> m_evalOrders; // [out node] flat depth-first traversal starting from out node
