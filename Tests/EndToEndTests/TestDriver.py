@@ -95,7 +95,7 @@
 # matching against all test-cases/pattern simulteneously
 #
 
-import sys, os, argparse, traceback, yaml, subprocess, random, re, time
+import sys, os, argparse, traceback, yaml, subprocess, random, re, time, stat
 
 try:
   import six
