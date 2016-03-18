@@ -231,9 +231,9 @@ void DoWriteOutput(const ConfigParameters& config)
     if (config.Exists("writer"))
     {
         ConfigParameters writerConfig(config(L"writer"));
-        bool bWriterUnittest = writerConfig(L"unittest", "false");
+        bool writerUnittest = writerConfig(L"unittest", "false");
         DataWriter testDataWriter(writerConfig);
-        writer.WriteOutput(testDataReader, mbSize[0], testDataWriter, outputNodeNamesVector, epochSize, bWriterUnittest);
+        writer.WriteOutput(testDataReader, mbSize[0], testDataWriter, outputNodeNamesVector, epochSize, writerUnittest);
     }
     else if (config.Exists("outputPath"))
     {
@@ -264,7 +264,9 @@ void DoWriteOutput(const ConfigParameters& config)
             formattingOptions.precisionFormat   = formatConfig(L"precisionFormat",   formattingOptions.precisionFormat);
         }
 
-        writer.WriteOutput(testDataReader, mbSize[0], outputPath, outputNodeNamesVector, formattingOptions, epochSize);
+        bool nodeUnitTest = config(L"nodeUnitTest", "false");
+
+        writer.WriteOutput(testDataReader, mbSize[0], outputPath, outputNodeNamesVector, formattingOptions, epochSize, nodeUnitTest);
     }
     else
         InvalidArgument("write command: You must specify either 'writer'or 'outputPath'");

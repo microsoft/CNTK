@@ -58,6 +58,7 @@ static shared_ptr<ComputationNode<ElemType>> CreateStandardNode(const std::wstri
     else if (nodeType == OperationNameOf(GMMLogLikelihoodNode))                 return New<GMMLogLikelihoodNode<ElemType>>(forward<_Types>(_Args)...);
 #endif
     else if (nodeType == OperationNameOf(HardmaxNode))                          return New<HardmaxNode<ElemType>>(forward<_Types>(_Args)...);
+    else if (nodeType == OperationNameOf(IdentityNode))                         return New<IdentityNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(InvStdDevNode))                        return New<InvStdDevNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(KhatriRaoProductNode))                 return New<KhatriRaoProductNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(LogNode))                              return New<LogNode<ElemType>>(forward<_Types>(_Args)...);
@@ -397,6 +398,12 @@ template <class ElemType>
 shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Mean(const ComputationNodePtr a, const std::wstring nodeName)
 {
     return net.AddNodeToNetAndAttachInputs(New<MeanNode<ElemType>>(net.GetDeviceId(), nodeName), a);
+}
+
+template <class ElemType>
+shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Identity(const ComputationNodePtr a, const std::wstring& nodeName)
+{
+    return net.AddNodeToNetAndAttachInputs(New<IdentityNode<ElemType>>(net.GetDeviceId(), nodeName), a);
 }
 
 template <class ElemType>
