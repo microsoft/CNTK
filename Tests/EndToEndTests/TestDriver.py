@@ -265,9 +265,10 @@ class Test:
     if args.verbose:
       six.print_(self.fullName + ":>" + logFile)
     with open(logFile, "w") as output:
-      testScript = self.testDir + "/run-test"
-      st = os.stat(testScript)
-      os.chmod(testScript, st.st_mode | stat.S_IEXEC | stat.S_IXOTH)
+      if not windows:
+        testScript = self.testDir + "/run-test"
+        st = os.stat(testScript)
+        os.chmod(testScript, st.st_mode | stat.S_IEXEC | stat.S_IXOTH)
       cmdLine = ["bash", "-c", self.testDir + "/run-test 2>&1"]
       process = subprocess.Popen(cmdLine, stdout=subprocess.PIPE)
 
