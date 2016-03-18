@@ -91,7 +91,7 @@ void ComputationNetwork::FormRecurrentLoops(const ComputationNodeBasePtr& rootNo
             const auto& node = iter->m_nestedNodes[j];
             for (size_t i = 0; i < node->GetNumInputs(); i++)
             {
-                if (node->Input(i)->m_loopId == node->m_loopId && GetRecurrenceSteppingDirection(node) == 0)
+                if (node->Input(i)->m_loopId == node->m_loopId && GetRecurrenceSteppingDirection(node) == 0/*not a Delay node*/)
                 {
                     // assert(node->Input(i)->m_indexInLoop == 0);                    // No. It seems this variable really counts the number of parents.
                     node->Input(i)->m_indexInLoop++; // BUGBUG: this is bumping up the m_indexInLoop, but I don't think it is initialized anywhere other than PurgeStateForFormingRecurrentLoops(). i-1?

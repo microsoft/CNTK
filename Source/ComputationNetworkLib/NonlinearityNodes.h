@@ -64,7 +64,8 @@ public:
         auto sliceOutputGrad = GradientTensorFor(rank, fr);               // propagate from this one...
         auto sliceInputGrad = Input(0)->GradientTensorFor(rank, fr);      // ...to this one
 
-// we expect a constant conditional expression here -- suppress the warning that leads to an error
+        // we expect a constant conditional expression here -- suppress the warning that leads to an error
+        // TODO: alternative: assign to a non-const variable and test that.
 #pragma warning( push )
 #pragma warning( disable : 4127 )
         if (opType == UnaryGradient) 
@@ -251,13 +252,7 @@ public:
     {
     }
 
-    virtual bool InputUsedInComputingInputNodesGradients(size_t childIndex) const override
-    {
-        // The plus node does not require any of it's input's values for computing
-        // the gradients of its input nodes
-        UNREFERENCED_PARAMETER(childIndex);
-        return false;
-    }
+    virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override { return false; }
 
     /*virtual*/ void BackpropToV(Matrix<ElemType>& gradient, const Matrix<ElemType>& inputFunctionValues, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues, const Matrix<ElemType>& functionValues)
     {
@@ -325,13 +320,7 @@ public:
     {
     }
 
-    virtual bool InputUsedInComputingInputNodesGradients(size_t childIndex) const override
-    {
-        // The plus node does not require any of it's input's values for computing
-        // the gradients of its input nodes
-        UNREFERENCED_PARAMETER(childIndex);
-        return false;
-    }
+    virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override { return false; }
 
     /*virtual*/ void BackpropToV(Matrix<ElemType>& gradient, const Matrix<ElemType>& inputFunctionValues, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues, const Matrix<ElemType>& functionValues)
     {
@@ -402,25 +391,18 @@ public:
 
     /*virtual*/ void BackpropToV(Matrix<ElemType>& gradient, const Matrix<ElemType>& inputFunctionValues, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues, const Matrix<ElemType>& functionValues) override
     {
-        gradient;
-        inputFunctionValues;
-        inputGradientValues;
-        gradientValues;
-        LogicError("Hardmax is not differentiable and is used for evaluation only.");
+        gradient; inputFunctionValues; inputGradientValues; gradientValues;
+        // Hardmax cannot back-propagate a gradient.
+        // We must not forbid this function to be called, though, since Hardmax may be running
+        // as part of a recurrent decoding loop. Sequence-to-sequence models run the Hardmax
+        // node inside the training without back-propagating into them.
     }
 
-    virtual bool OutputUsedInComputingInputNodesGradients() const override
-    {
-        return false;
-    }
-    virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override
-    {
-        return false;
-    }
+    virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }
+    virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override { return false; }
 
     /*virtual*/ void ForwardPropV(Matrix<ElemType>& functionValues, const Matrix<ElemType>& inputFunctionValues) override
     {
-        // TODO: temp solution, we need to write a math function specifically for this
         functionValues.AssignHardmaxOf(inputFunctionValues, true);
     }
 };
@@ -428,4 +410,4 @@ public:
 template class HardmaxNode<float>;
 template class HardmaxNode<double>;
 
-} } }
+}}}

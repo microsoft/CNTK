@@ -919,10 +919,119 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignTransposeOf(const GPUMatrix<Elem
 }
 
 template <class ElemType>
+__global__ void _doGatherColumnsOf(ElemType* us, size_t usStride, const ElemType beta, const ElemType* m, size_t mStride, const ElemType* a, size_t aStride, size_t aCols, const ElemType alpha)
+{
+    size_t i    = threadIdx.x; // index into 'us' and 'a'
+    size_t jOut =  blockIdx.x; // index into 'us' and 'm'
+
+    auto jInF = m[jOut * mStride]; // this is the column we need to get
+    if (jInF < 0)                  // negative index means gap
+        return;
+    size_t jIn = (size_t)jInF;
+    if (jIn >= aCols)
+        return; // actually a failure
+
+    const ElemType& ra  =  a[i + jIn  *  aStride];
+    ElemType&       rus = us[i + jOut * usStride];
+
+    ElemType res = ra * alpha;
+    if (beta != 0)
+        res += rus * beta;
+    rus = res;
+}
+
+// *this[:,j] = a[:,m[j]] * alpha + *this[:,j] * beta
+template <class ElemType>
+GPUMatrix<ElemType>& GPUMatrix<ElemType>::DoGatherColumnsOf(ElemType beta, const GPUMatrix<ElemType>& m, const GPUMatrix<ElemType>& a, ElemType alpha)
+{
+    if (m.GetNumRows() != 1) // index is 1-dimensional only
+        InvalidArgument("DoGatherColumnsOf: Map must be a row vector.");
+
+    if (beta)
+        VerifySize(a.GetNumRows(), m.GetNumCols());
+    else
+        Resize(a.GetNumRows(), m.GetNumCols());
+
+    if (m.GetComputeDeviceId() != a.GetComputeDeviceId() || GetComputeDeviceId() != a.GetComputeDeviceId())
+        InvalidArgument("All matrices must be on the same GPU");
+    a.PrepareDevice();
+
+    SyncGuard syncGuard;
+    _doGatherColumnsOf<ElemType> << <GetNumCols(), GetNumRows(), 0, t_stream >> >(m_pArray, GetNumRows(), beta, m.m_pArray, 1, a.m_pArray, a.GetNumRows(), a.GetNumCols(), alpha);
+
+    return *this;
+}
+
+template <class ElemType>
+__global__ void _doScatterColumnsOf(ElemType* us, size_t usStride, size_t usCols, const ElemType* m, size_t mStride, const ElemType* a, size_t aStride, const ElemType alpha)
+{
+    size_t i   = threadIdx.x; // index into 'a' and 'us'
+    size_t jIn =  blockIdx.x; // index into 'a' and 'm'
+
+    auto jOutF = m[jIn * mStride]; // this is the column we copy/add into
+    if (jOutF < 0)                 // negative index means gap
+        return;
+    size_t jOut = (size_t)jOutF;
+    if (jOut >= usCols)
+        return; // actually a failure
+
+    const ElemType& ra  =  a[i + jIn  *  aStride];
+    ElemType&       rus = us[i + jOut * usStride];
+
+    ElemType res = ra * alpha;
+#if 0 // this is not the reason. Some stupid bad index.
+    rus += res;
+#else
+    atomicAdd(&rus, res);
+#endif
+    // Note: atomicAdd() is supposed to be fast in case of no conflict (the simple case of Scatter())
+}
+
+// little helper for debugging
+template <class ElemType>
+static void Peek(const GPUMatrix<ElemType>& m, const char* which)
+{
+    size_t rows = m.GetNumRows();
+    size_t cols = m.GetNumCols();
+    ElemType buf[100] = { 0 };
+    size_t n = min(rows * cols, _countof(buf));
+    cudaMemcpy(buf, m.BufferPointer(), sizeof(ElemType) * n, cudaMemcpyDeviceToHost);
+    UNUSED(which); UNUSED(rows); UNUSED(cols); sin(1.0f); // set breakpoint here
+}
+
+// *this[:,m[j]] = a[:,j] * alpha + *this[:,m[j]] * beta
+template <class ElemType>
+GPUMatrix<ElemType>& GPUMatrix<ElemType>::DoScatterColumnsOf(ElemType beta, const GPUMatrix<ElemType>& m, const GPUMatrix<ElemType>& a, ElemType alpha)
+{
+    if (m.GetNumRows() != 1) // index is 1-dimensional only
+        InvalidArgument("DoScatterColumnsOf: Map must be a row vector.");
+    if (m.GetNumCols() != a.GetNumCols())
+        InvalidArgument("DoScatterColumnsOf: Map must have width of input vector.");
+    if (a.GetNumRows() != GetNumRows())
+        InvalidArgument("DoScatterColumnsOf: Output must have same height as input vector.");
+
+    if (m.GetComputeDeviceId() != a.GetComputeDeviceId() || GetComputeDeviceId() != a.GetComputeDeviceId())
+        InvalidArgument("All matrices must be on the same GPU");
+    a.PrepareDevice();
+
+    auto& us = *this;
+    //Peek(us, "us"); Peek(m, "m"); Peek(a, "a");
+
+    // pre-scale with beta upfront
+    // Scatter may add more than one source column to the same target, so we must pre-scale with beta, and then just keep adding.
+    Scale(beta, us); // if beta is 0, then this will be a memset()
+
+    SyncGuard syncGuard;
+    _doScatterColumnsOf<ElemType> << <a.GetNumCols(), a.GetNumRows(), 0, t_stream >> >(m_pArray, GetNumRows(), GetNumCols(), m.m_pArray, 1, a.m_pArray, a.GetNumRows(), alpha);
+
+    return *this;
+}
+
+template <class ElemType>
 void GPUMatrix<ElemType>::SetValue(const ElemType v)
 {
     if (IsEmpty())
-        LogicError("SetValue: Matrix is empty.");
+        return;
 
     CUDA_LONG N = (CUDA_LONG) GetNumElements();
 
@@ -2979,7 +3088,7 @@ void GPUMatrix<ElemType>::Multiply(const GPUMatrix<ElemType>& a, const GPUMatrix
 /// <param name="a">Input matrix</param>
 /// <param name="c">Resulting matrix, user is responsible for allocating this</param>
 template <class ElemType>
-void GPUMatrix<ElemType>::ScaleAndAdd(ElemType alpha, const GPUMatrix<ElemType>& a, GPUMatrix<ElemType>& c)
+/*static*/ void GPUMatrix<ElemType>::ScaleAndAdd(ElemType alpha, const GPUMatrix<ElemType>& a, GPUMatrix<ElemType>& c)
 {
     if (a.GetComputeDeviceId() != c.GetComputeDeviceId())
     {
@@ -2987,6 +3096,8 @@ void GPUMatrix<ElemType>::ScaleAndAdd(ElemType alpha, const GPUMatrix<ElemType>&
     }
     else
     {
+        if (a.IsEmpty() && c.IsEmpty())
+            return;
         a.PrepareDevice();
         if (a.IsEmpty() || c.IsEmpty())
             LogicError("ScaleAndAdd:  one of the input matrices is empty.");
@@ -3088,7 +3199,7 @@ void GPUMatrix<ElemType>::ScaleAndAdd(ElemType alpha, const GPUMatrix<ElemType>&
 /// <param name="b">Input matrix</param>
 /// <param name="c">Resulting matrix, user is responsible for allocating this</param>
 template <class ElemType>
-void GPUMatrix<ElemType>::ScaleAndAdd(ElemType alpha, const GPUMatrix<ElemType>& a, const GPUMatrix<ElemType>& b, GPUMatrix<ElemType>& c)
+/*static*/ void GPUMatrix<ElemType>::ScaleAndAdd(ElemType alpha, const GPUMatrix<ElemType>& a, const GPUMatrix<ElemType>& b, GPUMatrix<ElemType>& c)
 {
     if (a.GetComputeDeviceId() != c.GetComputeDeviceId() || a.GetComputeDeviceId() != b.GetComputeDeviceId())
     {
@@ -3096,6 +3207,8 @@ void GPUMatrix<ElemType>::ScaleAndAdd(ElemType alpha, const GPUMatrix<ElemType>&
     }
     else
     {
+        if (a.IsEmpty() && b.IsEmpty())
+            return;
         a.PrepareDevice();
         if (a.IsEmpty() || b.IsEmpty())
             LogicError("ScaleAndAdd:  one of the input matrices is empty.");
@@ -3321,8 +3434,14 @@ void GPUMatrix<ElemType>::AddElementToElement(const GPUMatrix<ElemType>& a, cons
 }
 
 template <class ElemType>
-void GPUMatrix<ElemType>::Scale(ElemType alpha, GPUMatrix<ElemType>& a)
+/*static*/ void GPUMatrix<ElemType>::Scale(ElemType alpha, GPUMatrix<ElemType>& a)
 {
+    if (alpha == 0) // if 0 then do not access the value, so that we can use this to multiply uninitialized matrices with beta=0
+    {
+        CUDA_CALL(cudaMemset(a.m_pArray, 0, a.m_numRows * a.m_numCols * sizeof(ElemType)));
+        return;
+    }
+
     cublasHandle_t cuHandle = GetCublasHandle(a.GetComputeDeviceId());
     if (sizeof(ElemType) == sizeof(float))
     {
@@ -3341,7 +3460,7 @@ void GPUMatrix<ElemType>::Scale(ElemType alpha, GPUMatrix<ElemType>& a)
 }
 
 template <class ElemType>
-void GPUMatrix<ElemType>::Scale(GPUMatrix<ElemType>& alpha, GPUMatrix<ElemType>& a)
+/*static*/ void GPUMatrix<ElemType>::Scale(GPUMatrix<ElemType>& alpha, GPUMatrix<ElemType>& a)
 {
     if (alpha.GetNumElements() != 1)
     {
@@ -3366,11 +3485,8 @@ void GPUMatrix<ElemType>::Scale(GPUMatrix<ElemType>& alpha, GPUMatrix<ElemType>&
 }
 
 template <class ElemType> // c = alpha * a
-void GPUMatrix<ElemType>::Scale(ElemType alpha, const GPUMatrix<ElemType>& a, GPUMatrix<ElemType>& c)
+/*static*/ void GPUMatrix<ElemType>::Scale(ElemType alpha, const GPUMatrix<ElemType>& a, GPUMatrix<ElemType>& c)
 {
-    if (a.IsEmpty())
-        LogicError("Scale:  Input matrix a is empty.");
-
     c = a;
     Scale(alpha, c);
 }

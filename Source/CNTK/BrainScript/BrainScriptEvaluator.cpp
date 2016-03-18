@@ -53,7 +53,7 @@ public:
 
 __declspec_noreturn static inline void EvaluationError(const wstring &msg, TextLocation where)
 {
-    Microsoft::MSR::CNTK::DebugUtil::PrintCallStack();
+    //Microsoft::MSR::CNTK::DebugUtil::PrintCallStack();
     throw EvaluationException(msg, where);
 }
 
@@ -768,7 +768,7 @@ void Do(ExpressionPtr e)
 
 shared_ptr<Object> EvaluateField(ExpressionPtr e, const wstring &id)
 {
-    return RecordLookup(e, id, e->location, nullptr /*scope for evaluating 'e'*/, L"$"); // we evaluate the member 'do'
+    return RecordLookup(e, id, e->location, nullptr /*scope for evaluating 'e'*/, L""); // we evaluate the member 'do'
 }
 
 ConfigValuePtr Evaluate(ExpressionPtr e)

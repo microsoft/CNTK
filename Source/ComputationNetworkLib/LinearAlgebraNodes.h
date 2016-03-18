@@ -349,6 +349,9 @@ template class TimesNode<double>;
 // Right operand and output can have MB layout, while left operand cannot.
 // This differs from TimesNode in that A is transposed, where A must be a
 // rank-1 or rank-2 tensor.
+// A common use of transposition is trace(X'X) where X is a matrix of samples.
+// This can NOT be implemented with this node. Instead, use
+// SumColumnElements (ElementTimes (X, X))
 // -----------------------------------------------------------------------
 
 template <class ElemType>
@@ -408,10 +411,7 @@ public:
         inputGradient.AddElementwiseProductOf(gradient, otherInputValue);
     }
 
-    virtual bool InputUsedInComputingInputNodesGradients(size_t childIndex) const override
-    {
-        return true;
-    }
+    virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override { return true; }
 
     virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
     {
@@ -637,20 +637,8 @@ public:
         sliceInputGrad += sliceOutputGrad; // here the assumption is that sliceOutputGrad is a row vector
     }
 
-    virtual bool OutputUsedInComputingInputNodesGradients() const override
-    {
-        // The SumColumnElementsNode does not require its output value for computing
-        // the gradients of its input nodes
-        return false;
-    }
-
-    virtual bool InputUsedInComputingInputNodesGradients(size_t childIndex) const override
-    {
-        // The SumColumnElementsNode does not require any of it's input's values for computing
-        // the gradients of its input nodes
-        UNREFERENCED_PARAMETER(childIndex);
-        return false;
-    }
+    virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }
+    virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override { return false; }
 
     virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
     {
@@ -673,7 +661,7 @@ template class SumColumnElementsNode<float>;
 template class SumColumnElementsNode<double>;
 
 // -----------------------------------------------------------------------
-// TransposeDimensionsNode (input, dim1, dim2)
+// TransposeDimensions (input, dim1, dim2)
 //  - swaps index dimensions dim1 and dim2. The values are 1-based; 1 stands for the leading dimension.
 //  - new dimensions can be created; e.g. a column vector can be transposed into a row vector, which is a [1 x N] tensor
 //  - transposing into the time dimension is currently not supported
@@ -685,8 +673,7 @@ template class SumColumnElementsNode<double>;
 template <class ElemType>
 class TransposeDimensionsNode : public ComputationNode /*ComputationNode*/<ElemType>, public NumInputs<1>
 {
-    typedef ComputationNode<ElemType> Base;
-    UsingComputationNodeMembersBoilerplate;
+    typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
     static const std::wstring TypeName() { return L"TransposeDimensions"; }
 
 public:

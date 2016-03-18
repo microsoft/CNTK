@@ -112,6 +112,7 @@ public:
     using BaseMatrix<ElemType>::GetArray;
     using BaseMatrix<ElemType>::GetNumRows;
     using BaseMatrix<ElemType>::GetNumCols;
+    using BaseMatrix<ElemType>::VerifySize;
 
 private:
     static cublasHandle_t s_cuHandle[MaxGpus];
@@ -209,6 +210,9 @@ public:
 
     GPUMatrix<ElemType> Transpose() const;
     GPUMatrix<ElemType>& AssignTransposeOf(const GPUMatrix<ElemType>& a);
+
+    GPUMatrix<ElemType>& DoGatherColumnsOf (ElemType beta, const GPUMatrix<ElemType>& m, const GPUMatrix<ElemType>& a, ElemType alpha);
+    GPUMatrix<ElemType>& DoScatterColumnsOf(ElemType beta, const GPUMatrix<ElemType>& m, const GPUMatrix<ElemType>& a, ElemType alpha);
 
     GPUMatrix<ElemType>& operator+=(const ElemType alpha);
     GPUMatrix<ElemType> operator+(const ElemType alpha) const;

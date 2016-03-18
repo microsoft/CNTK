@@ -37,6 +37,9 @@
     <ClCompile Include="ComputationNetworkScripting.cpp">
       <Filter>Network</Filter>
     </ClCompile>
+    <ClCompile Include="ReshapingNodes.cpp">
+      <Filter>Nodes</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\Common\Include\fileutil.h">
@@ -123,6 +126,9 @@
     <ClInclude Include="TrainingNodes.h">
       <Filter>Nodes</Filter>
     </ClInclude>
+    <ClInclude Include="ComputationEnvironment.h">
+      <Filter>Environment</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Common">
@@ -145,6 +151,9 @@
     </Filter>
     <Filter Include="from Math">
       <UniqueIdentifier>{7d838fa4-b5a1-4b8a-b37d-823fb026055b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Environment">
+      <UniqueIdentifier>{ed685e39-b7dd-4546-a865-149664fa71a4}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
 </Project>

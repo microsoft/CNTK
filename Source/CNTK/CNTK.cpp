@@ -586,11 +586,13 @@ int wmainOldCNTKConfig(int argc, wchar_t* argv[]) // called from wmain which is 
     std::string timestamp = TimeDateStamp();
 
     // dump config info
-    fprintf(stderr, "running on %s at %s\n", GetHostName().c_str(), timestamp.c_str());
-    fprintf(stderr, "command line: \n");
+    fprintf(stderr, "\nRunning on %s at %s\n", GetHostName().c_str(), timestamp.c_str());
+    fprintf(stderr, "Command line: \n");
     for (int i = 0; i < argc; i++)
         fprintf(stderr, "%*s%ls", i > 0 ? 2 : 0, "", argv[i]); // use 2 spaces for better visual separability
+    fprintf(stderr, "\n\n");
 
+#if 1 //def _DEBUG
     // This simply merges all the different config parameters specified (eg, via config files or via command line directly),
     // and prints it.
     fprintf(stderr, "\n\n>>>>>>>>>>>>>>>>>>>> RAW CONFIG (VARIABLES NOT RESOLVED) >>>>>>>>>>>>>>>>>>>>\n");
@@ -608,12 +610,12 @@ int wmainOldCNTKConfig(int argc, wchar_t* argv[]) // called from wmain which is 
     fprintf(stderr, "\n>>>>>>>>>>>>>>>>>>>> PROCESSED CONFIG WITH ALL VARIABLES RESOLVED >>>>>>>>>>>>>>>>>>>>\n");
     config.dumpWithResolvedVariables();
     fprintf(stderr, "<<<<<<<<<<<<<<<<<<<< PROCESSED CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<\n");
+#endif
 
-    fprintf(stderr, "Commands: ");
+    fprintf(stderr, "Commands:");
     for (int i = 0; i < command.size(); i++)
-    {
-        fprintf(stderr, "%s ", command[i].c_str());
-    }
+        fprintf(stderr, " %s", command[i].c_str());
+    fprintf(stderr, "\n");
 
     // run commands
     std::string type = config(L"precision", "float");
@@ -621,7 +623,7 @@ int wmainOldCNTKConfig(int argc, wchar_t* argv[]) // called from wmain which is 
     if (config.Exists("type"))
         InvalidArgument("CNTK: Use of 'type' parameter is deprecated, it is called 'precision' now.");
 
-    fprintf(stderr, "\nPrecision = \"%s\"\n", type.c_str());
+    fprintf(stderr, "Precision = \"%s\"\n", type.c_str());
     if (type == "float")
         DoCommands<float>(config, mpi);
     else if (type == "double")

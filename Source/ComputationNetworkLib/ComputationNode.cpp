@@ -19,6 +19,59 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 using namespace std;
 
 // -----------------------------------------------------------------------
+// subroutines for evaluation
+// -----------------------------------------------------------------------
+
+template<class ElemType>
+void ComputationNode<ElemType>::Backprop(const FrameRange& fr, bool childrenInThisLoop, bool childrenInOuterLoop) /*override*/
+{
+    // Normally our gradient matrix was created as an input of another node.
+    // This does not happen though in the special case of a node inside a loop
+    // that no consumer outside depends on. Those might get topologically sorted
+    // after nodes that propagate outside of the loop, and thus, in the last
+    // time step of the sequence, have not yet received a gradient from a parent
+    // and thus may not have had their gradient matrices allocated.
+    //if (m_needsGradient)
+    //    LazyZeroGradient(); // set gradient to 0 if this is the first time
+
+    if (fr.IsAllFrames() && IsPartOfLoop() && childrenInThisLoop)
+        LogicError("%ls %ls operation: Backprop called with whole-batch FrameRange on node that participates in a loop", NodeName().c_str(), OperationName().c_str());
+
+    for (size_t i = 0; i < m_inputs.size(); i++)
+    {
+        ComputationNodePtr child = Input(i);
+        if (child->m_needsGradient &&
+            ((childrenInThisLoop  && child->IsPartOfLoop() == IsPartOfLoop()) ||
+             (childrenInOuterLoop && child->IsPartOfLoop() != IsPartOfLoop()) ))
+        {
+            // fprintf(stderr, "Backprop: %ls %ls operation -> child %d %ls %ls\n", NodeName().c_str(), OperationName().c_str(), (int)i, child->NodeName().c_str(), child->OperationName().c_str());
+            if (!m_needsGradient)
+                LogicError("%ls %ls operation has m_needsGradient set to false but children require it.", NodeName().c_str(), OperationName().c_str());
+#if DUMPOUTPUT
+            fprintf(stderr, "Backprop%d_%ls\n", i, NodeName().c_str());
+#endif
+            child->LazyZeroGradient(); // set gradient to 0 if this is the first time
+
+            // If we propagate from a loop to a node that is outside the loop, we are not efficient.
+            // This case is handled by SEQTraversalFlowControlNode::Backprop().
+            // The check below is to verify that.
+            if (IsPartOfLoop() && !child->IsPartOfLoop() && !fr.IsAllFrames())
+            {
+                LogicError("Backprop: Inefficiency: %ls %ls operation in loop propagates gradient to non-loop %ls %ls\n",
+                           NodeName().c_str(), OperationName().c_str(), child->NodeName().c_str(), child->OperationName().c_str());
+            }
+
+            // fprintf(stderr, "BackpropTo %d %d %ls %ls\n", (int)fr.timeIdxInSeq, (int)i, NodeName().c_str(), OperationName().c_str());
+            BackpropTo(i, fr); // this computes partial wrt to the child and sums the gradient value in the child
+        }
+#ifdef DISPLAY_DEBUG
+        else
+            fprintf(stderr, "    [%lu]: %s(%s) (no gradient needed so don't compute for)\n", i, child->OperationName().c_str(), child->NodeName().c_str());
+#endif
+    }
+}
+
+// -----------------------------------------------------------------------
 // subroutines for Validate() implementations
 // -----------------------------------------------------------------------
 
@@ -116,10 +169,14 @@ void ComputationNodeBase::ValidateBinaryReduce(bool isFinalValidationPass)
     ComputationNodeBase::Validate(isFinalValidationPass);
     m_pMBLayout = nullptr; // this node does not hold mini-batch data
     ValidateInferBinaryInputDims();
-    if (isFinalValidationPass &&
-        !(Input(0)->GetSampleLayout().IsElementwiseCompatibleWith(Input(1)->GetSampleLayout()) && // TODO: Do we need broadcasting for these cases?
-          (Input(0)->GetMBLayout() == Input(1)->GetMBLayout() || !Input(0)->HasMBLayout() || !Input(1)->HasMBLayout())))
-        LogicError("The Matrix dimensions or MB layout in the %ls %ls operation do not match.", NodeName().c_str(), OperationName().c_str());
+    if (isFinalValidationPass)
+    {
+        // inputs must have identical layouts and must be minibatch data
+        if (!(Input(0)->GetSampleLayout().IsElementwiseCompatibleWith(Input(1)->GetSampleLayout())))
+            LogicError("The Matrix dimensions in the %ls %ls operation do not match.", NodeName().c_str(), OperationName().c_str());
+        if (Input(0)->GetMBLayout() != Input(1)->GetMBLayout() || !Input(0)->HasMBLayout() || !Input(1)->HasMBLayout())
+            LogicError("The MB layout in the %ls %ls operation do not match.", NodeName().c_str(), OperationName().c_str());
+    }
     SetDims(TensorShape(1), false);
 }
 
@@ -208,6 +265,69 @@ TensorShape ComputationNodeBase::GetTensorSliceFor(size_t rank, const FrameRange
 // others
 // -----------------------------------------------------------------------
 
+/*virtual*/ string ComputationNodeBase::FormatOperationPrototype(const string& extraArgs) const
+{
+    string prototype;
+    prototype += msra::strfun::strprintf("%ls = %ls", NodeName().c_str(), OperationName().c_str());
+
+    // arguments of operation
+    if (IsLeaf())
+        prototype += "()";
+    else
+    {
+        prototype += " (";
+        for (size_t i = 0; i < GetNumInputs(); i++)
+        {
+            const auto& child = m_inputs[i];
+            if (i > 0)
+                prototype += ", ";
+
+            if (child)
+                prototype += msra::strfun::strprintf("%ls", child->NodeName().c_str());
+            else
+                prototype += "NULL";
+        }
+        prototype += extraArgs;
+        prototype += ")";
+    }
+
+    // type (tensor dimensions) of operation
+    prototype += " : ";
+
+    if (!IsLeaf())
+    {
+        //prototype += "(";
+        for (size_t i = 0; i < GetNumInputs(); i++)
+        {
+            const auto& child = m_inputs[i];
+            if (i > 0)
+                prototype += ", ";
+
+            if (child == nullptr)
+            {
+                prototype += "NULL";
+                continue;
+            }
+
+            const char* mbSizeMark = child->m_pMBLayout ? " x *" : "";
+#if 0
+            if (child->m_sampleLayout.GetRank() == 3 && (child->m_sampleLayout[1] != 1 || child->m_sampleLayout[0] != 1)) // looks like an image: use WHC notation
+                prototype += msra::strfun::strprintf("%ls[%s%s {W=%lu, H=%lu, C=%lu}]", child->NodeName().c_str(), string(child->m_sampleLayout).c_str(), mbSizeMark,
+                child->m_sampleLayout[1], child->m_sampleLayout[2], child->m_sampleLayout[0]);
+            // BUGBUG: This ^^ will print based on the old legacy layout, and we have no way of knowing here whether that is correct.
+            else
+#endif
+                prototype += msra::strfun::strprintf("[%s%s]", string(child->m_sampleLayout).c_str(), mbSizeMark);
+        }
+        prototype += extraArgs;
+        //prototype += ")";
+    }
+
+    prototype += msra::strfun::strprintf(" -> [%s%s]", string(GetSampleLayout()).c_str(), HasMBLayout() ? " x *" : "");
+
+    return prototype;
+}
+
 template <class ElemType>
 /*virtual*/ void ComputationNode<ElemType>::DumpNodeInfo(const bool /*printValues*/, const bool printMetadata, File& fstream) const
 {
@@ -227,6 +347,126 @@ template <class ElemType>
             fstream << wstring(L")");
         }
     }
+}
+
+// write out the content of a node in formatted/readable form
+template <class ElemType>
+void ComputationNode<ElemType>::WriteMinibatchWithFormatting(FILE* f, size_t onlyUpToRow, size_t onlyUpToT, bool transpose, bool isCategoryLabel, const std::vector<std::string>& labelMapping,
+                                                             const string& sequenceSeparator, const string& sequencePrologue, const string& sequenceEpilogue, const string& elementSeparator, const string& sampleSeparator,
+                                                             const string& valueFormatString) const
+{
+    // get minibatch matrix -> matData, matRows, matStride
+    const Matrix<ElemType>& outputValues = Value();
+    let matRows   = outputValues.GetNumRows();
+    let matStride = matRows; // how to get from one column to the next
+    ElemType* matData = nullptr;
+    size_t matDataSize = 0;
+    outputValues.CopyToArray(matData, matDataSize);
+
+    // process all sequences one by one
+    auto pMBLayout = GetMBLayout();
+    if (!pMBLayout) // no MBLayout: We are printing aggregates (or LearnableParameters?)
+    {
+        pMBLayout = make_shared<MBLayout>();
+        pMBLayout->InitAsFrameMode(1); // treat this as if we have one single sample
+        // TODO: This can be done more efficiently, if ever needed.
+    }
+    let& sequences = pMBLayout->GetAllSequences();
+    let  width     = pMBLayout->GetNumTimeSteps();
+    for (size_t s = 0; s < sequences.size(); s++)
+    {
+        const auto& seqInfo = sequences[s];
+        if (seqInfo.seqId == GAP_SEQUENCE_ID) // nothing in gaps to print
+            continue;
+        let tBegin = seqInfo.tBegin >= 0     ? seqInfo.tBegin : 0;
+        let tEnd   = seqInfo.tEnd   <= width ? seqInfo.tEnd   : width;
+
+        // get sequence matrix -> seqData, seqRows, seqCols, seqStride
+        let  seqData   = matData + pMBLayout->GetColumnIndex(seqInfo, 0) * matStride;
+        auto seqRows   = matRows;
+        let  seqCols   = tEnd - tBegin;
+        let  seqStride = pMBLayout->GetNumParallelSequences() * matStride;
+
+        if (s > 0)
+            fprintfOrDie(f, "%s", sequenceSeparator.c_str());
+        fprintfOrDie(f, "%s", sequencePrologue.c_str());
+
+        // output it according to our format specification
+        let formatChar = valueFormatString.back();
+        if (isCategoryLabel) // if is category then find the max value and output its index (possibly mapped to a string)
+        {
+            if (formatChar == 's') // verify label dimension
+            {
+                if (outputValues.GetNumRows() != labelMapping.size())
+                    InvalidArgument("write: Row dimension %d does not match number of entries %d in labelMappingFile", (int)seqRows, (int)labelMapping.size());
+            }
+            // update the matrix in-place from one-hot (or max) to index
+            // find the max in each column
+            for (size_t j = 0; j < seqCols; j++) // loop over all time steps of the sequence
+            {
+                double maxLoc = -1;
+                double maxVal = 0;
+                for (size_t i = 0; i < seqRows; i++) // loop over rows
+                {
+                    let val = seqData[i + j * seqStride];
+                    if (maxLoc < 0 || val >= maxVal)
+                    {
+                        maxLoc = (double)i;
+                        maxVal = val;
+                    }
+                }
+                seqData[0 + j * seqStride] = (ElemType)maxLoc; // overwrite first element in-place
+            }
+            seqRows = 1; // ignore remaining dimensions
+        }
+        // bounds for printing
+        let iend    = transpose ?     seqRows : seqCols;         // true dimension of the data to print
+        let jend    = transpose ?     seqCols : seqRows;
+        let istop   = transpose ? onlyUpToRow : onlyUpToT; // we stop at these dimensions (for debugging, one often needs only the first few values of those huge matrices)
+        let jstop   = transpose ?   onlyUpToT : onlyUpToRow;
+        let istride = transpose ?           1 : seqStride;
+        let jstride = transpose ?   seqStride : 1;
+        for (size_t j = 0; j < jend; j++)
+        {
+            if (j > 0)
+                fprintfOrDie(f, "%s", sampleSeparator.c_str());
+            if (j == jstop)
+            {
+                fprintf(f, "...+%d", (int)(jend - jstop)); // 'nuff said
+                break;
+            }
+            for (size_t i = 0; i < iend; i++)
+            {
+                if (i > 0)
+                    fprintfOrDie(f, "%s", elementSeparator.c_str());
+                if (i == istop)
+                {
+                    fprintf(f, "...+%d", (int)(iend - istop));
+                    break;
+                }
+                double dval = seqData[i * istride + j * jstride];
+                if (formatChar == 'f') // print as real number
+                {
+                    fprintfOrDie(f, valueFormatString.c_str(), dval);
+                }
+                else if (formatChar == 'u') // print category as integer index
+                {
+                    fprintfOrDie(f, valueFormatString.c_str(), (unsigned int)dval);
+                }
+                else if (formatChar == 's') // print category as a label string
+                {
+                    size_t uval = (size_t)dval;
+                    assert(uval < labelMapping.size());
+                    const char * sval = labelMapping[uval].c_str();
+                    fprintfOrDie(f, valueFormatString.c_str(), sval);
+                }
+            }
+        }
+        fprintfOrDie(f, "%s", sequenceEpilogue.c_str());
+    } // end loop over sequences
+    fflushOrDie(f);
+
+    delete[] matData;
 }
 
 // -----------------------------------------------------------------------

@@ -137,6 +137,7 @@
     <ClInclude Include="..\Common\Include\Sequences.h" />
     <ClInclude Include="..\Common\Include\TimerUtility.h" />
     <ClInclude Include="..\Math\Matrix.h" />
+    <ClInclude Include="ComputationEnvironment.h" />
     <ClInclude Include="ComputationNetwork.h" />
     <ClInclude Include="ComputationNetworkBuilder.h" />
     <ClInclude Include="ComputationNode.h" />
@@ -170,6 +171,7 @@
     <ClCompile Include="ComputationNetworkEvaluation.cpp" />
     <ClCompile Include="ComputationNetworkScripting.cpp" />
     <ClCompile Include="ComputationNode.cpp" />
+    <ClCompile Include="ReshapingNodes.cpp" />
     <ClCompile Include="stdafx.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

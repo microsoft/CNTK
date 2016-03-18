@@ -135,6 +135,7 @@ typedef Expression::ExpressionPtr ExpressionPtr; // circumvent some circular def
 
 // access the parser through one of these functions
 ExpressionPtr ParseConfigDictFromString(wstring text, vector<wstring>&& includePaths);          // parses a list of dictionary members, returns a dictionary expression
+// TODO: These rvalue references are no longer adding value, change to const<>&
 //ExpressionPtr ParseConfigDictFromFile(wstring path, vector<wstring> includePaths);              // likewise, but from a file path
 ExpressionPtr ParseConfigExpression(const wstring& sourceText, vector<wstring>&& includePaths); // parses a single expression from sourceText, which is meant to contain an include statement, hence includePaths
 

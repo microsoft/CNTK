@@ -35,6 +35,7 @@ Input(dims, tag='feature') = new ComputationNode [ operation = 'InputValue' ; sh
 SparseInput(dims, tag='feature') = new ComputationNode [ operation = 'SparseInputValue' ; shape = new TensorShape [ /*dims*/ ] ; isImage = false /*plus the function args*/ ]
 ImageInput(imageWidth, imageHeight, imageChannels, imageLayout='CHW', tag='feature') = new ComputationNode [ operation = 'InputValue' ; isImage = true /*plus the function args*/ ]
 SparseImageInput(imageWidth, imageHeight, imageChannels, imageLayout='CHW', tag='feature') = new ComputationNode [ operation = 'SparseInputValue' ; isImage = true /*plus the function args*/ ]
+EnvironmentInput(propertyName, tag='') = new ComputationNode [ operation = 'EnvironmentInput' /*plus the function args*/ ]
 Constant(val, rows = 1, cols = 1, tag='') = Parameter(rows, cols, learningRateMultiplier = 0, init = 'fixedValue', value = val) 
 PastValue(dims, input, timeStep = 1, defaultHiddenActivation = 0.1, tag='') = new ComputationNode [ operation = 'PastValue' ; inputs = input ; shape = new TensorShape [ /*dims*/ ] /*plus the function args*/ ]
 FutureValue(dims, input, timeStep = 1, defaultHiddenActivation = 0.1, tag='') = new ComputationNode [ operation = 'FutureValue' ; inputs = input ; shape = new TensorShape [ /*dims*/ ] /*plus the function args*/ ]
@@ -60,20 +61,24 @@ AveragePooling(input, windowWidth, windowHeight, horizontalSubsample, verticalSu
 ColumnwiseCrossProduct = KhatriRaoProduct // deprecated 
 ClassificationError = ErrorPrediction 
 Delay = PastValue 
+
 BatchNormalization(input, scale, bias, runMean, runInvStdDev, eval, spatial, normalizationTimeConstant = 0, epsilon = 0.00001, useCntkEngine = true, imageLayout='CHW', tag='') = new ComputationNode [ operation = 'BatchNormalization' ; inputs = (input : scale : bias : runMean : runInvStdDev) /*plus the function args*/ ]
 Abs(x, tag='') = new ComputationNode [ operation = 'Abs' ; inputs = x /*plus the function args*/ ]
 ClassBasedCrossEntropyWithSoftmax(labelClassDescriptorVectorSequence, mainInputInfo, mainWeight, classLogProbsBeforeSoftmax, tag='') = new ComputationNode [ operation = 'ClassBasedCrossEntropyWithSoftmax' ; inputs = (labelClassDescriptorVectorSequence : mainInputInfo : mainWeight : classLogProbsBeforeSoftmax) /*plus the function args*/ ]
 ColumnElementTimes(aVectorSequence, anotherVectorSequence, tag='') = new ComputationNode [ operation = 'ColumnElementTimes' ; inputs = (aVectorSequence : anotherVectorSequence) /*plus the function args*/ ]
+// TODO: ColumnElementTimes = ElementTimes
 CosDistance(aVectorSequence, anotherVectorSequence, tag='') = new ComputationNode [ operation = 'CosDistance' ; inputs = (aVectorSequence : anotherVectorSequence) /*plus the function args*/ ]
 CosDistanceWithNegativeSamples(aVectorSequence, anotherVectorSequence, numShifts, numNegSamples, tag='') = new ComputationNode [ operation = 'CosDistanceWithNegativeSamples' ; inputs = (aVectorSequence : anotherVectorSequence : numShifts : numNegSamples) /*plus the function args*/ ]
 Cosine(x, tag='') = new ComputationNode [ operation = 'Cosine' ; inputs = x /*plus the function args*/ ]
 CrossEntropy(refProbVectorSequence, outProbVectorSequence, tag='') = new ComputationNode [ operation = 'CrossEntropy' ; inputs = (refProbVectorSequence : outProbVectorSequence) /*plus the function args*/ ]
 CrossEntropyWithSoftmax(labelVectorSequence, outProbVectorSequence, tag='') = new ComputationNode [ operation = 'CrossEntropyWithSoftmax' ; inputs = (labelVectorSequence : outProbVectorSequence) /*plus the function args*/ ]
 DiagTimes(diagonalMatrixAsColumnVector, matrix, tag='') = new ComputationNode [ operation = 'DiagTimes' ; inputs = (diagonalMatrixAsColumnVector : matrix) /*plus the function args*/ ]
+// TODO: DiagTimes = ElementTimes
 Dropout(activationVectorSequence, tag='') = new ComputationNode [ operation = 'Dropout' ; inputs = activationVectorSequence /*plus the function args*/ ]
 ElementTimes(aMatrix, anotherMatrix, tag='') = new ComputationNode [ operation = 'ElementTimes' ; inputs = (aMatrix : anotherMatrix) /*plus the function args*/ ]
 ErrorPrediction(labelVectorSequence, outVectorSequence, tag='') = new ComputationNode [ operation = 'ErrorPrediction' ; inputs = (labelVectorSequence : outVectorSequence) /*plus the function args*/ ]
 Exp(x, tag='') = new ComputationNode [ operation = 'Exp' ; inputs = x /*plus the function args*/ ]
+GatherPacked(indexSequence, sourceData, tag='') = new ComputationNode [ operation = 'GatherPacked' ; inputs = (indexSequence : sourceData) /*plus the function args*/ ]
 GMMLogLikelihood(unnormalizedPriorVector, meansAsRows, logStdDevAsRows, dataVectorSequence, tag='') = new ComputationNode [ operation = 'GMMLogLikelihood' ; inputs = (unnormalizedPriorVector : meansAsRows : logStdDevAsRows : dataVectorSequence) /*plus the function args*/ ]
 InvStdDev(dataVectorSequence, tag='') = new ComputationNode [ operation = 'InvStdDev' ; inputs = dataVectorSequence /*plus the function args*/ ]
 KhatriRaoProduct(leftMatrix, rightMatrix, tag='') = new ComputationNode [ operation = 'KhatriRaoProduct' ; inputs = (leftMatrix : rightMatrix) /*plus the function args*/ ]
@@ -84,11 +89,14 @@ MatrixL2Reg(matrix, tag='') = new ComputationNode [ operation = 'MatrixL2Reg' ; 
 Mean(dataVectorSequence, tag='') = new ComputationNode [ operation = 'Mean' ; inputs = dataVectorSequence /*plus the function args*/ ]
 Minus(leftMatrix, rightMatrix, tag='') = new ComputationNode [ operation = 'Minus' ; inputs = (leftMatrix : rightMatrix) /*plus the function args*/ ]
 Negate(input, tag='') = new ComputationNode [ operation = 'Negate' ; inputs = input /*plus the function args*/ ]
+PackedIndex(targetObject, indexSequence, tag='') = new ComputationNode [ operation = 'PackedIndex' ; inputs = (targetObject : indexSequence) /*plus the function args*/ ]
 PerDimMeanVarDeNormalization(dataVectorSequence, meanVector, invStdDevVector, tag='') = new ComputationNode [ operation = 'PerDimMeanVarDeNormalization' ; inputs = (dataVectorSequence : meanVector : invStdDevVector) /*plus the function args*/ ]
 PerDimMeanVarNormalization(dataVectorSequence, meanVector, invStdDevVector, tag='') = new ComputationNode [ operation = 'PerDimMeanVarNormalization' ; inputs = (dataVectorSequence : meanVector : invStdDevVector) /*plus the function args*/ ]
 Plus(leftMatrix, rightMatrix, tag='') = new ComputationNode [ operation = 'Plus' ; inputs = (leftMatrix : rightMatrix) /*plus the function args*/ ]
 RectifiedLinear(z, tag='') = new ComputationNode [ operation = 'RectifiedLinear' ; inputs = z /*plus the function args*/ ]
 Scale(scalarScalingFactor, matrix, tag='') = new ComputationNode [ operation = 'Scale' ; inputs = (scalarScalingFactor : matrix) /*plus the function args*/ ]
+// TODO: Scale = ElementTimes
+ScatterPacked(cond, indexSequence, sourceData, tag='') = new ComputationNode [ operation = 'ScatterPacked' ; inputs = (cond : indexSequence : sourceData) /*plus the function args*/ ]
 Sigmoid(z, tag='') = new ComputationNode [ operation = 'Sigmoid' ; inputs = z /*plus the function args*/ ]
 Softmax(z, tag='') = new ComputationNode [ operation = 'Softmax' ; inputs = z /*plus the function args*/ ]
 Hardmax(z, tag='') = new ComputationNode [ operation = 'Hardmax' ; inputs = z /*plus the function args*/ ]
@@ -99,6 +107,7 @@ SumElements(matrix, tag='') = new ComputationNode [ operation = 'SumElements' ; 
 Tanh(z, tag='') = new ComputationNode [ operation = 'Tanh' ; inputs = z /*plus the function args*/ ]
 TimeReverse(vectorSequence, tag='') = new ComputationNode [ operation = 'TimeReverse' ; inputs = vectorSequence /*plus the function args*/ ]
 TransposeTimes(leftMatrix, rightMatrix, tag='') = new ComputationNode [ operation = 'TransposeTimes' ; inputs = (leftMatrix : rightMatrix) /*plus the function args*/ ]
+Where(cond, tag='') = new ComputationNode [ operation = 'Where' ; inputs = cond /*plus the function args*/ ]
 
 ##############################################################################
 # common macros
@@ -181,19 +190,21 @@ Sequences = [
     Map (lambda, x) = lambda (x)     // that one's easy
     # Reverse (x) is a C++ node currently called TimeReverse
 
-    Filter (pred, x) = x  // TODO: Implement this as a C++ node.
+    # Gather and Scatter
+    # We go through 3 nodes each to take advantage of x
+    Gather  (cond, x) =  GatherPacked (      PackedIndex (x, Where (cond)), x) # 'cond' matches 'x'
+    Scatter (cond, y) = ScatterPacked (cond, PackedIndex (y, Where (cond)), y) # 'cond' matches the result
 
     # sequence-altering LINQ-like operators
     # These generate new data packing (MBLayouts)
 
     # TakeWhile and DropWhile
     TakeWhile (predicate, x) = Filter ( _WhilePredicate (PastValue, predicate), x)
-    DropWhile (predicate, x) = Filter (!_WhilePredicate (PastValue, predicate), x)
-    # Skip, SkipWhile--same?
+    SkipWhile (predicate, x) = Filter (!_WhilePredicate (PastValue, predicate), x)
     _WhilePredicate (DelayFn, predicate, input) =
     [
-        whilePredicate = Boolean.And (DelayFn (whilePredicate, defaultHiddenActivation=Boolean.True), predicate)
-    ].whilePredicate
+        whilePredicateRec = Boolean.And (DelayFn (whilePredicateRec, defaultHiddenActivation=Boolean.True), predicate)
+    ].whilePredicateRec
     # TODO: do we need operations from the back?
 
     # First and Take
@@ -202,22 +213,25 @@ Sequences = [
     Take (N, x) = _Take (PastValue, N, x)
     _Take (DelayFn, N, x) = [
         selected = Loop._IsWithin (DelayFn, N, x)
-        out = Filter (selected, x)
+        out = Gather (selected, x)
     ].out
-    Skip (N, x) = _Skip (PastValue, N, x)
+    Skip (N, x) = if N > 0 then _Skip (PastValue, N, x) else x
     _Skip (DelayFn, N, x) = [ // TODO: merge with _Take
         selected = Loop._IsWithin (DelayFn, N, x)
-        out = Filter (!selected, x)
+        out = Gather (Boolean.Not (selected), x)
     ].out
-    ElementAt (n, x) = First (Skip (n, x)) // not efficient, as it filters twice. Better AND the predicates. TODO: what if n is out of range? ElementAtOrDefault
+    ElementAt (n, x) = [ // not efficient, as it filters twice. Better AND the predicates. TODO: what if n is out of range? ElementAtOrDefault
+        startMask = Skip (n, x)                     // ...000111...
+        mask = startMask - PastValue (0, startMask) // ...000100...
+        out = Gather (mask, x)
+    ]
     Single (predicate, x) = x
 
     #FirstOrDefault (x) = ? // can empty sequences exist or even be represented by CNTK?
 
-    #Last (x)  = _Take (FutureValue, 1, x)
-
     Average (x) = Sum (x) / Loop.Count(x)  // TODO: patch opQuotient to check 0/0 = 0
-    Sum (x) = FoldL (Plus, 0, x)
+    Sum (x)    = FoldL (Plus,    0, x)
+    LogSum (x) = FoldL (LogPlus, 0, x)
     #Max (x) = FoldL (^.Max, ?, x) // TODO: name clash; need to implement ^.
     #Min (x) = FoldL (^.Min, ?, x) // TODO: what's the init value?
     All (x) = FoldL (Boolean.And,  OnesLike (x), x)
@@ -269,8 +283,8 @@ Parameters =
     Stabilize (x, enabled=true) =
         if enabled
         then [
-                 beta = Exp(ScalarParam())
-                 result = Scale(beta, x)
+                 beta = Exp (ScalarParam())
+                 result = Scale (beta, x)
              ].result
         else x
 ]

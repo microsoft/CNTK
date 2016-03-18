@@ -46,6 +46,8 @@ public:
     // This is used for resetting and updating from accumulators.
     virtual void /*IPreComputeNode::*/ MarkComputed(const bool hasComputed) override
     {
+        if (!Environment().IsPreComputing())
+            LogicError("MarkComputed: Network must be in preComputing mode.");
         m_hasComputed = hasComputed;
     }
 

@@ -18,14 +18,14 @@ using namespace std;
 namespace Microsoft { namespace MSR { namespace CNTK {
 
 #define FUNCTIONOPEN "("
-#define OPENBRACES "[{(\""
-#define CLOSINGBRACES "]})\""
+#define OPENBRACES    "[{(\"" // all opening braces
+#define CLOSINGBRACES "]})\"" // and matching closing ones
 
 static const std::string::size_type npos = (std::string::size_type) -1;
 
 // These are the constants associated with the "ResolveVariables" method.
-static const char* openBraceVar = "$";
-static const char* closingBraceVar = "$";
+static const char* openBraceVar    = "$"; // beginning of a var
+static const char* closingBraceVar = "$"; // end of a var
 static const char* forbiddenCharactersInVarName = ",/<>?;':\"[]{}\\|!@#%^&*()+=~` \t\n";
 static const char* forbiddenCharactersInVarNameEscapeWhitespace = ",/<>?;':\"[]{}\\|!@#%^&*()+=~` \\t\\n";
 static const std::size_t openBraceVarSize = strlen(openBraceVar);
@@ -357,23 +357,19 @@ public:
     // str - string to search
     // tokenStart - start location in the string to search
     // returns: character position of matching closing brace, string::npos if no brace present at start position
-    // BUGBUG: This seems to only work for one kind of braces at a time. Nested other braces are not
-    // understood. Also, braces in strings are not protected. [fseide]
-    static std::string::size_type FindBraces(const std::string& str, std::string::size_type tokenStart)
+    static size_t FindBraces(const std::string& str, const size_t tokenStart)
     {
         const auto len = str.length();
         // start is outside (or rather, at end of string): no brace here
         if (tokenStart >= len)
-        {
             return npos;
-        }
 
         // open braces and quote
-        static const std::string openBraces = OPENBRACES;
+        static const std::string openBraces    = OPENBRACES;    // currently "[{(\""
         // close braces and quote
         static const std::string closingBraces = CLOSINGBRACES;
 
-        const auto charsToLookFor = closingBraces + openBraces; // all chars we match for
+        static const auto charsToLookFor = closingBraces + openBraces; // all chars we match for
 
         // get brace index for first character of input string
         const auto braceFound = openBraces.find(str[tokenStart]);

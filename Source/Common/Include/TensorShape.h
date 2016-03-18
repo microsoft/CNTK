@@ -785,4 +785,5 @@ struct ImageDimensions
         return AsTensorShape(m_width, m_height, m_numChannels, imageLayoutKind);
     }
 };
-} } }
+
+}}}
