@@ -65,12 +65,9 @@ ComputationNetwork::ComputationNetwork(const IConfigRecordPtr configp)
         workList.pop_front();
 
         // add to set
-        let res = m_nameToNodeMap.insert(make_pair(node->NodeName(), node));
-        if (!res.second) // not inserted: we already got this one
-            if (res.first->second == node)
-                continue; // the same
-            else          // oops, a different node with the same name
-                LogicError("ComputationNetwork: multiple nodes with the same NodeName() '%ls'", node->NodeName().c_str());
+        let wasAdded = AddNodeToNetIfNotYet(node);
+        if (!wasAdded) // node already there (above will fail if there is a different node with the same name)
+            continue;
 
         // If node derives from ILateAttachingNode() then it has unresolved inputs. Resolve them now.
         // This may generate a whole new load of nodes, including nodes which in turn have late init.
@@ -107,10 +104,6 @@ ComputationNetwork::ComputationNetwork(const IConfigRecordPtr configp)
 
     // perform all necessary post-processing
     CompileNetwork();
-#if 1
-    wstring args = ToString();
-    fprintf(stderr, "%ls\n", args.c_str());
-#endif
 }
 
 // ===================================================================

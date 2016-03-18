@@ -64,7 +64,11 @@ void ComputationNetwork::ClearNetwork()
     //         Once we allow that (BrainScript editing), we need proper cycle detectors. Luckily, we know our cycles, so it won't be too hard.
     //         Or just use weak ptrs.
     for (auto& iter : m_nameToNodeMap)
-        iter.second->DetachInputs();
+    {
+        auto& node = iter.second;
+        node->SetEnvironment(nullptr);
+        node->DetachInputs();
+    }
 
     m_nameToNodeMap.clear();
 
@@ -86,17 +90,11 @@ void ComputationNetwork::SaveEdited(const wstring& fileName, const FileOptions f
 void ComputationNetwork::Save(const wstring& fileName, const FileOptions fileFormat) const
 {
     VerifyIsCompiled("Save");
-    // In case of parallel training only the main node should we saving the model to prevent
-    // the parallel training nodes from colliding to write the same file
-    // TODO: This does not belong here.
-    if ((g_mpi == nullptr) || g_mpi->IsMainNode())
-    {
-        // Saving into temporary file and then renaming it to the requested fileName
-        // This is a standard trick to avoid havign corrupted model files if process dies during writing
-        wstring tmpFileName = fileName + L".tmp";
-        SaveToFileImpl(tmpFileName, fileFormat);
-        renameOrDie(tmpFileName, fileName);
-    }
+    // Saving into temporary file and then renaming it to the requested fileName
+    // This is a standard trick to avoid havign corrupted model files if process dies during writing
+    wstring tmpFileName = fileName + L".tmp";
+    SaveToFileImpl(tmpFileName, fileFormat);
+    renameOrDie(tmpFileName, fileName);
 }
 
 // TODO: how does the file distinguish float vs double nodes?
@@ -218,7 +216,17 @@ void ComputationNetwork::ReadPersistableParameters(File& fstream, bool create)
         if (create) // loaded from scratch
             AddNodeToNet(node);
         else                      // reloaded existing
-            node->Validate(true); // nothing that propagates should have changed  --TODO: have a more rigid mechanism to prevent resizing; this should only reload the model parameters
+        {
+            let old = node->GetSampleLayout();
+            let changed = ValidateNode(node, /*isFinalValidationPass=*/true);
+            if (changed)
+            {
+                let upd = node->GetSampleLayout();
+                fprintf(stderr, "ValidateSubNetwork: %ls %ls operation changed, from [%s] to [%s].", node->NodeName().c_str(), node->OperationName().c_str(),
+                    string(old).c_str(), string(upd).c_str());
+                //LogicError("ValidateSubNetwork: %ls %ls operation changed during reload or re-validation.", node->NodeName().c_str(), node->OperationName().c_str());
+            }
+        }
     }
 
     fstream.GetMarker(FileMarker::fileMarkerEndSection, L"ENodeList");
@@ -1012,7 +1020,7 @@ void ComputationNetwork::PerformSVDecomposition(const map<wstring, float>& SVDCo
             redVT.ColumnElementMultiplyWith(redS);
 
             // Step 2. create two new Parameter nodes and one Times node
-            wstring leftChildName = name + L"-U";
+            wstring leftChildName = name + L"-U";  // BUGBUG: With BrainScript, node names must be proper identifieres/variable expressions. We can't have '-' in node names.
             wstring rightChildName = name + L"-V";
             shared_ptr<ComputationNode<ElemType>> pLeft = AddNodeToNetWithElemType(New<LearnableParameter<ElemType>>(m_deviceId, leftChildName, m, r));
             shared_ptr<ComputationNode<ElemType>> pRight = AddNodeToNetWithElemType(New<LearnableParameter<ElemType>>(m_deviceId, rightChildName, r, n));

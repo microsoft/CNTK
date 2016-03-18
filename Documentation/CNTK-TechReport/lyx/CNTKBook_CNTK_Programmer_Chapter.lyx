@@ -3136,11 +3136,6 @@ virtual void Validate()
 
 \begin_layout Plain Layout
 
-    PrintSelfBeforeValidation();
-\end_layout
-
-\begin_layout Plain Layout
-
             
 \end_layout
 

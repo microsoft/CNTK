@@ -66,6 +66,9 @@ static bool SetGradientToScalarOne(ComputationNodeBasePtr nodep)
 //  - Backprop() for the training criterion
 void ComputationNetwork::Backprop(const ComputationNodeBasePtr rootNode) // training criterion to compute the gradients for
 {
+    if (!Environment().IsTraining())
+        LogicError("Backprop: Requires network is to be in training mode.");
+
     // reset all gradients to zero (actually, internally, this is lazy, but we don't care here)
     ZeroGradients(rootNode);
 
@@ -430,7 +433,7 @@ void ComputationNetwork::CompileNetwork()
     // STEP: Some final details.
     ResetEvalTimeStamps(); // invalidate all m_value fields. Really belongs into StartEvaluateMinibatchLoop()
 
-    fprintf(stderr, "\nPost-processing network complete.\n");
+    fprintf(stderr, "\nPost-processing network complete.\n\n");
     m_isCompiled = true;
 }
 
@@ -528,16 +531,16 @@ void ComputationNetwork::ValidateNetwork()
     //    Keep going through the list until all nodes have been validated and all inputs have been validated as well.
     //  - validate (final)              // final means consistency checks
     //    Fail if any change during this stage.
-    size_t pass = 0;
+    size_t pass = 1;
     size_t toValidate = nodes.size();
     while (toValidate > 0)
     {
+        fprintf(stderr, "\nValidating network. %d nodes to process in pass %d.\n\n", (int) toValidate, (int) pass);
+        toValidate = ValidateNodes(nodes, /*isFirstPass=*/pass == 1, false /*isFinalValidationPass*/);
         pass++;
-        fprintf(stderr, "\n\nValidating network. %d nodes to process in pass %d.\n", (int) toValidate, (int) pass);
-        ValidateNodes(nodes, false /*isFinalValidationPass*/, toValidate);
     }
-    fprintf(stderr, "\n\nValidating network, final pass.\n");
-    ValidateNodes(nodes, true /*isFinalValidationPass*/, toValidate);
+    fprintf(stderr, "\nValidating network, final pass.\n\n");
+    toValidate = ValidateNodes(nodes, /*isFirstPass=*/pass == 1, true /*isFinalValidationPass*/);
     if (toValidate != 0)
         LogicError("ValidateSubNetwork: ValidateNodes(true) unexpectedly returned with work left to do.");
 
@@ -580,9 +583,41 @@ static pair<TensorShape, bool> GetDims(const ComputationNodeBasePtr& node)
     return make_pair(node->GetSampleLayout(), node->HasMBLayout());
 }
 
-void ComputationNetwork::ValidateNodes(list<ComputationNodeBasePtr> nodes, bool isFinalValidationPass, size_t& todo)
+bool ComputationNetwork::ValidateNode(ComputationNodeBasePtr node, bool isFinalValidationPass) const
 {
-    todo = 0; // returns how many nodes are to be redone
+    const auto& children = node->GetInputs();
+
+    // keep state
+    MBLayoutPtr oldMBLayoutPtr = node->GetMBLayout();
+    auto dim = GetDims(node);
+    vector<pair<TensorShape, bool>> childDims;
+    for (auto& child : children)
+        childDims.push_back(GetDims(child));
+    auto sampleLayout = node->GetSampleLayout();
+    // We do call validate(final) as many times as needed, since stuff may have changed underneath.
+    node->Validate(isFinalValidationPass /*final*/); // all nodes have been visited: do verification instead of just inference
+    // also take the opportunity to propagate m_needsGradient
+    auto needsGradient = node->m_needsGradient;
+    for (auto& child : children) // TODO: do we need a check that this is stable if isFinalValidationPass?
+        node->m_needsGradient |= child->m_needsGradient;
+    // check state --node will be valid if all nodes have been visited and node has not been updated
+    bool unchanged = true;
+    unchanged &= (oldMBLayoutPtr == node->GetMBLayout());
+    unchanged &= (dim == GetDims(node));
+    vector<pair<TensorShape, bool>> newChildDims;
+    for (auto& child : children)
+        newChildDims.push_back(GetDims(child));
+    unchanged &= (childDims == newChildDims);
+    unchanged &= (sampleLayout == node->GetSampleLayout());
+    unchanged &= (needsGradient == node->m_needsGradient);
+    return !unchanged;
+}
+
+// perform one pass of validation over the topologically-sorted node set
+// returns how many nodes either could not yet be validated yet or have changed and thus must be redone
+size_t ComputationNetwork::ValidateNodes(list<ComputationNodeBasePtr> nodes, bool isFirstPass, bool isFinalValidationPass)
+{
+    size_t todo = 0;
     for (auto& node : nodes)
     {
         const auto& children = node->GetInputs();
@@ -597,35 +632,25 @@ void ComputationNetwork::ValidateNodes(list<ComputationNodeBasePtr> nodes, bool 
         }
         // if there is not at least one visited child
         bool valid = false;
-        if (hasVisitedChild || isLeaf)
+        if (hasVisitedChild || isLeaf) // got at least one child: it makes sense to call Validate()
         {
-            // got at least one child: it makes sense to call Validate()
-            // keep state
-            MBLayoutPtr oldMBLayoutPtr = node->GetMBLayout();
-            auto dim = GetDims(node);
-            vector<pair<TensorShape, bool>> childDims;
-            for (auto& child : children)
-                childDims.push_back(GetDims(child));
-            auto sampleLayout = node->GetSampleLayout();
-            // We do call validate(final) as many times as needed, since stuff may have changed underneath.
-            node->PrintSelfBeforeValidation();
-            node->Validate(isFinalValidationPass /*final*/); // all nodes have been visited: do verification instead of just inference
-            fprintf(stderr, " -> [%s%s]", string(node->GetSampleLayout()).c_str(), node->HasMBLayout() ? " x *" : "");
+            string prevPrototype = node->FormatOperationPrototype("");
+            bool unchanged;
+            try
+            {
+                unchanged = !ValidateNode(node, isFinalValidationPass);
+                string updatedPrototype = node->FormatOperationPrototype("");
+                if (isFirstPass || !unchanged || prevPrototype != updatedPrototype)
+                    fprintf(stderr, "Validating --> %s\n", updatedPrototype.c_str());
+            }
+            catch (...) // if validation failed then print the prototype anyway so one can see the input args
+            {
+                fprintf(stderr, "Validating --> %s FAILED\n", prevPrototype.c_str());
+                throw;
+            }
             node->m_visited = true;
-            // also take the opportunity to propagate m_needsGradient
-            auto needsGradient = node->m_needsGradient;
-            for (auto& child : children) // TODO: do we need a check that this is stable if isFinalValidationPass?
-                node->m_needsGradient |= child->m_needsGradient;
-            // check state --node will be valid if all nodes have been visited and node has not been updated
-            bool unchanged = true;
-            unchanged &= (oldMBLayoutPtr == node->GetMBLayout());
-            unchanged &= (dim == GetDims(node));
-            vector<pair<TensorShape, bool>> newChildDims;
-            for (auto& child : children)
-                newChildDims.push_back(GetDims(child));
-            unchanged &= (childDims == newChildDims);
-            unchanged &= (sampleLayout == node->GetSampleLayout());
-            unchanged &= (needsGradient == node->m_needsGradient);
+            // print the new type
+            // sanity checks
             if (isFinalValidationPass && !unchanged)
                 LogicError("ValidateSubNetwork: %ls %ls operation changed during final validation.", node->NodeName().c_str(), node->OperationName().c_str());
             if (isFinalValidationPass && !allChildrenVisited)
@@ -637,6 +662,7 @@ void ComputationNetwork::ValidateNodes(list<ComputationNodeBasePtr> nodes, bool 
         if (!valid)
             todo++;
     }
+    return todo;
 }
 
 // -----------------------------------------------------------------------

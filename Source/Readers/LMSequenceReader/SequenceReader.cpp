@@ -1506,6 +1506,7 @@ void BatchSequenceReader<ElemType>::InitFromConfig(const ConfigRecordType& reade
             }
             else
             {
+                fprintf(stderr, "LMSequenceReader: Label mapping will be created internally on the fly because the labelMappingFile was not found: %ls\n", labelPath.c_str());
                 if (wClassFile != L"")
                 {
 #if 0
@@ -1538,6 +1539,7 @@ void BatchSequenceReader<ElemType>::InitFromConfig(const ConfigRecordType& reade
                 }
                 labelInfo.mapName = labelPath;
                 labelInfo.fileToWrite = labelPath; // mapping path denotes an output: write the mapping here at the end
+                // BUGBUG: This facility is not functional. No file is being created.
             }
         }
 
@@ -1578,7 +1580,7 @@ void BatchSequenceReader<ElemType>::Reset()
 {
     mProcessed.clear();
     mToProcess.clear();
-    mLastProcssedSentenceId = 0;
+    mLastProcessedSentenceId = 0;
     mPosInSentence = 0;
     mLastPosInSentence = 0;
     mNumRead = 0;
@@ -1651,6 +1653,7 @@ void BatchSequenceReader<ElemType>::StartMinibatchLoop(size_t mbSize, size_t epo
     // we use epochSize, which might not be set yet, so use a default value for allocations if not yet set
     size_t epochSize = m_epochSize == requestDataSize ? 1000 : m_epochSize;
     m_epoch = epoch;
+    m_randomSeed = (unsigned int)m_epoch;
     m_mbStartSample = epoch * m_epochSize;
     m_epochSamplesReturned = 0;     // counter to know when we returned one epoch
 
@@ -1700,7 +1703,7 @@ size_t BatchSequenceReader<ElemType>::DetermineSequencesToProcess()
             int mp = (int) mToProcess[s];
             if (mProcessed[mp])
             {
-                mLastProcssedSentenceId = mp;
+                mLastProcessedSentenceId = mp;
                 mLastPosInSentence = 0;
                 allDone = true;
                 break;
@@ -1722,7 +1725,7 @@ size_t BatchSequenceReader<ElemType>::DetermineSequencesToProcess()
     size_t maxToProcess = mRequestedNumParallelSequences > 0 ? mRequestedNumParallelSequences : SIZE_MAX; // if mRequestedNumParallelSequences is 0 then we go by MB size
     size_t maxTokens    = mRequestedNumParallelSequences > 0 ?                       SIZE_MAX : m_mbSize;
     size_t numTokens = 0;  // token counter
-    for (size_t seq = mLastProcssedSentenceId;
+    for (size_t seq = mLastProcessedSentenceId;
          seq < mNumRead &&                 // hit end of buffer
          mToProcess.size() < maxToProcess; // hit parallel-sequence limit
          seq++)
@@ -1791,14 +1794,14 @@ bool BatchSequenceReader<ElemType>::GetMinibatchData(size_t& /*out*/ firstPosInS
 #ifdef _MSC_VER // make some old configurations reproducable (m_cacheBlockSize used to be a constant)  --TODO: remove in a few months
         if (m_cacheBlockSize == 50000)
         {
+            srand(++m_randomSeed); // TODO: older code did not have that; so no idea what random seed was used
             std::random_shuffle(m_parser.mSentenceIndex2SentenceInfo.begin(), m_parser.mSentenceIndex2SentenceInfo.end());
             // Note: random_shuffle is deprecated since C++14.
         }
         else // new configs use a wider randomization
 #endif
         {
-            std::random_device rd;
-            std::mt19937 g(rd());
+            std::mt19937 g(++m_randomSeed); // random seed is initialized to epoch, but gets incremented for intermediate reshuffles
             std::shuffle(m_parser.mSentenceIndex2SentenceInfo.begin(), m_parser.mSentenceIndex2SentenceInfo.end(), g);
         }
 

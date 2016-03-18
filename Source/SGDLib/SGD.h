@@ -143,6 +143,14 @@ protected:
         return pow(m_momentumParam[epoch], 1.0 / FixUpEffectiveMBSize(m_momentumSpecifiedForMBSize[epoch], numParallelSequences));
     }
 
+    ParallelizationMethod GetParallelizationMethod() const
+    {
+        if (m_mpi == nullptr)
+            return ParallelizationMethod::None;
+
+        return m_parallelizationMethod;
+    }
+
     // only true when the user specify LearningRatePerMB and the number of parallel utterances in Reader > 1
     // bool m_needToNormalizeLRByParallUtterance;          // TODO: should go away
     // bool m_needToNormalizeMomentumByParallUtterance;
@@ -228,6 +236,8 @@ protected:
     bool m_useAllDataForPreComputedNode;
 
     // Parallel training
+    std::shared_ptr<MPIWrapper> m_mpi;
+
     ParallelizationMethod m_parallelizationMethod;
     bool m_enableDistributedMBReading;
     int m_parallelizationStartEpochNum;
@@ -288,6 +298,8 @@ public:
           // m_validateAfterModelReloading(configSGD(L"validateAfterModelReloading", true)),
           m_trainCriterionNodeName((const wstring&) configSGD(L"trainCriterionNodeName", L"")),
           m_evalCriterionNodeName((const wstring&) configSGD(L"evalCriterionNodeName", L"")),
+          m_traceNodeNamesReal(configSGD(L"traceNodeNamesReal", ConfigRecordType::Array(stringargvector()))),
+          m_traceNodeNamesCategory(configSGD(L"traceNodeNamesCategory", ConfigRecordType::Array(stringargvector()))),
           m_prevChosenMinibatchSize(0),
           m_lastFinishedEpochTrainLoss(0.0),
           m_distGradAgg(nullptr),
@@ -301,6 +313,14 @@ public:
     SGD(const ScriptableObjects::IConfigRecordPtr configp)
         : SGD(*configp)
     {
+    }
+
+    void InitMPI(const std::shared_ptr<MPIWrapper>& mpi)
+    {
+        m_mpi = mpi;
+
+        if (m_mpi == nullptr)
+            m_parallelizationMethod = ParallelizationMethod::None;
     }
 
     void Train(function<ComputationNetworkPtr(DEVICEID_TYPE)> createNetworkFn, DEVICEID_TYPE deviceId,
@@ -504,6 +524,10 @@ protected:
     wstring m_trainCriterionNodeName;
     wstring m_evalCriterionNodeName;
 
+    // enable tracing. Nodes listed here get their m_traceNodeValue and m_traceNodeValueAsCategoryLabel flags set
+    vector<wstring> m_traceNodeNamesReal;
+    vector<wstring> m_traceNodeNamesCategory;
+
     size_t m_prevChosenMinibatchSize;
     double m_lastFinishedEpochTrainLoss;
 
@@ -515,4 +539,5 @@ protected:
 private:
     int SGDTrace(FILE* __restrict __stream, const char* __restrict __format, ...);
 };
-} } }
+
+}}}

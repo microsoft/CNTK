@@ -206,7 +206,7 @@ void NDLNodeEvaluatorImpl<ElemType>::Evaluate(NDLNode<ElemType>* node, const wst
     else if (cnNodeType == OperationNameOf(RowRepeatNode))
     {
         if (parameter.size() != 2)
-            RuntimeError("RowRepeat should have two parameters. Usage: RowRepeat(origNodeName, numRepeats.");
+            RuntimeError("RowRepeat should have two parameters. Usage: RowRepeat(origNodeName, numRepeats).");
 
         nodeParamCount = 1;
         nodeParamStart = 0;
@@ -238,8 +238,8 @@ void NDLNodeEvaluatorImpl<ElemType>::Evaluate(NDLNode<ElemType>* node, const wst
     }
     else if (cnNodeType == L"Reshape" /*OperationNameOf(ReshapeNode)*/)
     {
-        if (parameter.size() < 2 || parameter.size() > 5)
-            RuntimeError("Reshape should have two to five parameters. Usage: Reshape(origNodeName, numRows, [imageWidth=], [imageHeight=], [imageChannels=].");
+        if (parameter.size() != 2)
+            RuntimeError("Reshape should have two parameters. Usage: Reshape(origNodeName, numRows, [imageWidth=], [imageHeight=], [imageChannels=].");
 
         nodeParamCount = 1;
         nodeParamStart = 0;
@@ -252,8 +252,9 @@ void NDLNodeEvaluatorImpl<ElemType>::Evaluate(NDLNode<ElemType>* node, const wst
             size_t img_width = node->GetOptionalParameter("imageWidth", "0");
             size_t img_height = node->GetOptionalParameter("imageHeight", "0");
             size_t img_channels = node->GetOptionalParameter("imageChannels", "0");
+            ImageLayoutKind imageLayoutKind = ImageLayoutKindFrom(node->GetOptionalParameter("imageLayout", "HWC"));
 
-            nodePtr = builder.LegacyReshape(NULL, num_rows, ImageDimensions::AsTensorShape(img_width, img_height, img_channels, ImageLayoutKind::HWC /*legacy*/), name); // BUGBUG: use a tensor descriptor instead
+            nodePtr = builder.LegacyReshape(NULL, num_rows, ImageDimensions::AsTensorShape(img_width, img_height, img_channels, imageLayoutKind), name);
         }
     }
     else if (cnNodeType == OperationNameOf(PastValueNode) ||

@@ -9,7 +9,7 @@ template <class ElemType>
 class IDistGradAggregator
 {
 public:
-    IDistGradAggregator(MPIWrapper* mpi)
+    IDistGradAggregator(const std::shared_ptr<MPIWrapper>& mpi)
         : m_mpi(mpi)
     {
     }
@@ -37,7 +37,7 @@ public:
     }
 
 protected:
-    MPIWrapper* m_mpi;
+    std::shared_ptr<MPIWrapper> m_mpi;
 };
 
 #define UsingIDistGradAggregatorMembers           \

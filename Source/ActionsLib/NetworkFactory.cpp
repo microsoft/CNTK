@@ -75,12 +75,28 @@ function<ComputationNetworkPtr(DEVICEID_TYPE)> GetNetworkFactory(const ConfigRec
         // We interface with outer old CNTK config by taking the inner part, which we get as a string, as BrainScript.
         // We prepend a few standard definitions, and also definition of deviceId and precision, which all objects will pull out again when they are being constructed.
         // BUGBUG: We are not getting TextLocations right in this way! Do we need to inject location markers into the source? Moot once we fully switch to BS
-        wstring sourceCode = config.Exists(L"BrainScriptNetworkBuilder") ? config(L"BrainScriptNetworkBuilder") : config(L"ExperimentalNetworkBuilder");
-        auto configDirs = ConfigParameters::GetBrainScriptNetworkBuilderIncludePaths();
-        let expr = BS::ParseConfigDictFromString(L"include \'cntk.core.bs\'"     // Note: Using lowercase here to match the Linux name of the CNTK exe.
-                                                 + msra::strfun::wstrprintf(L"deviceId = %d ; precision = '%ls' ; network = new ComputationNetwork ", (int)deviceId, ElemTypeName<ElemType>())
-                                                 + sourceCode,      // source code has the form [ ... ] with brackets in the string
-                                                 move(configDirs)); // set include paths to all paths that configs were read from; no additional configurable include paths are supported by BrainScriptNetworkBuilder
+        wstring sourceOfNetwork = config.Exists(L"BrainScriptNetworkBuilder") ? config(L"BrainScriptNetworkBuilder") : config(L"ExperimentalNetworkBuilder");
+        if (sourceOfNetwork.find_first_of(L"([") != 0)
+            InvalidArgument("BrainScript network description must be either a BS expression in ( ) or a config record in [ ]");
+
+        // set the include paths to all paths that configs were read from; no additional configurable include paths are supported by BrainScriptNetworkBuilder
+        auto includePaths = ConfigParameters::GetBrainScriptNetworkBuilderIncludePaths();
+
+        // inject additional items into the source code
+        // We support two ways of specifying the network in BrainScript:
+        //  - BrainScriptNetworkBuilder = ( any BS expression that evaluates to a ComputationNetwork )
+        //  - BrainScriptNetworkBuilder = [ constructor parameters for a ComputationNetwork ]
+        if (sourceOfNetwork[0] == '[') // if [ ] form then we turn it into ComputationNetwork by constructing a ComputationNetwork from it
+            sourceOfNetwork = L"new ComputationNetwork " + sourceOfNetwork;
+        let sourceOfBS = msra::strfun::wstrprintf(L"include \'cntk.core.bs\'\n" // include our core lib. Note: Using lowercase here to match the Linux name of the CNTK exe.
+                                                  L"deviceId = %d\n"            // deviceId as passed in
+                                                  L"precision = '%ls'\n"        // 'float' or 'double'
+                                                  L"network = %ls",             // source code of expression that evaluates to a ComputationNetwork
+                                                  (int)deviceId, ElemTypeName<ElemType>(), sourceOfNetwork.c_str());
+        let expr = BS::ParseConfigDictFromString(sourceOfBS, move(includePaths));
+
+        // the rest is done in a lambda that is only evaluated when a virgin network is needed
+        // Note that evaluating the BrainScript *is* instantiating the network, so the evaluate call must be inside the lambda.
         return [expr](DEVICEID_TYPE /*deviceId*/)
         {
             // evaluate the parse tree, particularly the top-level field 'network'

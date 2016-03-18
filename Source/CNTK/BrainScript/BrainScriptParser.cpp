@@ -184,7 +184,7 @@ public:
 
     __declspec_noreturn static void Fail(wstring msg, TextLocation where)
     {
-        Microsoft::MSR::CNTK::DebugUtil::PrintCallStack();
+        //Microsoft::MSR::CNTK::DebugUtil::PrintCallStack();
         throw CodeSourceException(msg, where);
     }
 
@@ -375,7 +375,7 @@ public:
 private:
     __declspec_noreturn static void Fail(wstring msg, Token where)
     {
-        Microsoft::MSR::CNTK::DebugUtil::PrintCallStack();
+        //Microsoft::MSR::CNTK::DebugUtil::PrintCallStack();
         throw LexerException(msg, where.beginLocation);
     }
 
@@ -606,7 +606,7 @@ class Parser : public Lexer
 
     __declspec_noreturn static void Fail(const wstring& msg, Token where)
     {
-        Microsoft::MSR::CNTK::DebugUtil::PrintCallStack();
+        //Microsoft::MSR::CNTK::DebugUtil::PrintCallStack();
         throw ParseException(msg, where.beginLocation);
     }
 
@@ -651,24 +651,13 @@ public:
         : Lexer(move(includePaths))
     {
         infixPrecedence = map<wstring, int>{
-            {L".", 100}, {L"[", 100}, {L"(", 100}, // also sort-of infix operands...
-            {L"*", 10},
-            {L"/", 10},
-            {L".*", 10},
-            {L"**", 10},
-            {L"%", 10},
-            {L"+", 9},
-            {L"-", 9},
-            {L"with", 9},
-            {L"==", 8},
-            {L"!=", 8},
-            {L"<", 8},
-            {L"<=", 8},
-            {L">", 8},
-            {L">=", 8},
+            {L".", 99}, {L"[", 99}, {L"(",   99}, // also sort-of infix operands...
+            {L"*", 10}, {L"/", 10}, {L".*",  10}, {L"**", 10}, {L"%", 10},
+            {L"+",  9}, {L"-",  9}, {L"with", 9}, {L"==",  8},
+            {L"!=", 8}, {L"<",  8}, {L"<=",   8}, {L">",   8}, {L">=", 8},
             {L"&&", 7},
             {L"||", 6},
-            {L":", 5},
+            {L":",  5},
             {L"=>", 0},
         };
         SetSourceFile(move(sourceFile));

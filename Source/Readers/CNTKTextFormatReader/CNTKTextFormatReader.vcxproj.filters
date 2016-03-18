@@ -53,8 +53,5 @@
     <Filter Include="Common\Include">
       <UniqueIdentifier>{C6F55578-121A-4D7C-8F57-4172BC5C463B}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Components">
-      <UniqueIdentifier>{cd83b8ab-5916-457f-8bd4-546264cbd0d6}</UniqueIdentifier>
-    </Filter>
   </ItemGroup>
 </Project>

@@ -30,7 +30,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                         bool useDistributedMBReading,
                                         bool useParallelTrain,
                                         StreamMinibatchInputs& inputMatrices,
-                                        size_t& actualMBSize)
+                                        size_t& actualMBSize, 
+                                        const std::shared_ptr<MPIWrapper>& mpi)
     {
         auto pMBLayout = net->GetMBLayoutPtr();
         // Reading consists of a sequence of Reader API calls:
@@ -71,7 +72,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (!useDistributedMBReading && useParallelTrain &&
             !(pMBLayout->GetNumParallelSequences() == 0 && pMBLayout->GetNumTimeSteps() == 0))
         {
-            DecimateMinibatchInPlace<ElemType>(inputMatrices, g_mpi->NumNodesInUse(), g_mpi->CurrentNodeRank(), net->GetMBLayoutPtr());
+            DecimateMinibatchInPlace<ElemType>(inputMatrices, mpi->NumNodesInUse(), mpi->CurrentNodeRank(), net->GetMBLayoutPtr());
         }
 
         if (!(pMBLayout->GetNumParallelSequences() == 0 && pMBLayout->GetNumTimeSteps() == 0))

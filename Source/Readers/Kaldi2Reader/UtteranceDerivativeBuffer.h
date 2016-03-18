@@ -32,6 +32,7 @@ private:
             progress = 0;
             streamID = 0;
         }
+
     };
 
     bool m_needLikelihood;
@@ -87,6 +88,7 @@ public:
     // Gets the computed objectives for given utterance.
     bool GetObjective(
         const std::vector<std::vector<std::pair<wstring, size_t>>>& uttInfo,
+        const MBLayoutPtr pMBLayout,
         Matrix<ElemType>* objectivesIn);
 
     bool HasResourceForDerivative(const wstring& uttID) const;

@@ -12,6 +12,7 @@
 
 #include "ComputationNode.h"
 #include "ScriptableObjects.h"
+#include "ComputationEnvironment.h"
 
 #include <map>
 #include <string>
@@ -43,10 +44,11 @@ public:
     // construction
     // -----------------------------------------------------------------------
 
-    ComputationNetwork()
-        : m_randomSeedOffset(0),
-          m_isCompiled(false),
-          m_pMBLayout(make_shared<MBLayout>())
+    ComputationNetwork() :
+        m_randomSeedOffset(0),
+        m_isCompiled(false),
+        m_pMBLayout(make_shared<MBLayout>()),
+        m_environment(make_shared<ComputationEnvironment>())
     {
     }
     ComputationNetwork(DEVICEID_TYPE deviceId)
@@ -161,7 +163,8 @@ public:
 
 private:
     void ValidateNetwork();
-    void ValidateNodes(list<ComputationNodeBasePtr> nodes, bool isFinalValidationPass, size_t& todo);
+    size_t ValidateNodes(list<ComputationNodeBasePtr> nodes, bool isFirstPass, bool isFinalValidationPass);
+    bool ValidateNode(ComputationNodeBasePtr node, bool isFinalValidationPass) const;
     void MarkValueNonSharableNodes();
 
 private:
@@ -285,6 +288,7 @@ public:
 
     // this counts the actual number of frames in a minibatch (not counting gaps in parallel sequences)
     // TODO: Instead of passing numAllSamples in here, we should determine it from the inputs in case of no layout. Or simply forbid this case.
+    // BUGBUG: With variable-length sequences, this can no longer be a network method.
     size_t GetNumSamplesWithLabel(const size_t numAllSamples) const
     {
         if (m_pMBLayout && 
@@ -332,7 +336,7 @@ public:
     void ReplaceLeafNode(wstring oldNodeName, ComputationNodeBasePtr newNode);
     void ReplaceFinalCriterionNode(wstring oldNodeName, ComputationNodeBasePtr newNode);
     void AddFeatureNode(ComputationNodeBasePtr featureNode);
-    void RemoveFeatureNode(ComputationNodeBasePtr featureNode);
+    ComputationNodeBasePtr RemoveFeatureNode(ComputationNodeBasePtr featureNode);
     void SetLearnableNodesBelowLearningRateMultiplier(const float learningRateMultiplier, const ComputationNodeBasePtr& rootNode = nullptr);
     void SetBatchNormalizationNodesBelowEvalMode(const bool evalMode, const ComputationNodeBasePtr& rootNode = nullptr);
 
@@ -386,9 +390,16 @@ public:
     }
 
     // -----------------------------------------------------------------------
+    // environment properties
+    // -----------------------------------------------------------------------
+
+    ComputationEnvironment& Environment() const { return *m_environment; }
+
+    // -----------------------------------------------------------------------
     // functions to pass on specific SGD options to nodes
     // -----------------------------------------------------------------------
 
+    // TODO: Why are all these static, but then take a network as the first argument? --> make them class members
     template <class ElemType>
     static void SetDropoutRate(ComputationNetworkPtr net, const ComputationNodeBasePtr& criterionNode, const double dropoutRate, double& prevDropoutRate, unsigned long& dropOutSeed);
 
@@ -398,7 +409,7 @@ public:
     template <class ElemType>
     static void SetSeqParam(ComputationNetworkPtr net,
                             const ComputationNodeBasePtr criterionNode,
-                            const double& hsmoothingWeight,
+                            const double& hsmoothingWeight, // TODO: Why are all these passed by reference?
                             const double& frameDropThresh,
                             const bool& doreferencealign,
                             const double& amf = 14.0f,
@@ -406,6 +417,7 @@ public:
                             const double& wp = 0.0f,
                             const double& bMMIfactor = 0.0f,
                             const bool& sMBR = false);
+
     static void SetMaxTempMemSizeForCNN(ComputationNetworkPtr net, const ComputationNodeBasePtr& criterionNode, const size_t maxTempMemSizeInSamples);
 
     // -----------------------------------------------------------------------
@@ -472,12 +484,6 @@ public:
     size_t GetTotalNumberOfNodes() const
     {
         return m_nameToNodeMap.size();
-    }
-
-    // TODO: could be a dup
-    std::map<const std::wstring, ComputationNodeBasePtr, nocase_compare>& GetNameToNodeMap() // specially for ExperimentalNetworkBuilder; don't use this otherwise
-    {
-        return m_nameToNodeMap;
     }
 
     std::vector<ComputationNodeBasePtr> GetAllNodes() const
@@ -572,15 +578,14 @@ public:
     // TODO: move these close to where they are used
 
     // add a node to m_nameToNodeMap[], which is our node holder
+    // This only adds the node to the network's node set, without considering linkage.
     // Duplicate node names are rejected.
     ComputationNodeBasePtr AddNodeToNet(const ComputationNodeBasePtr& nodePtr)
     {
-        // found
-        // TODO: use .insert() and test result.second == false means not inserted since already exists
-        if (m_nameToNodeMap.find(nodePtr->NodeName()) != m_nameToNodeMap.end())
-            RuntimeError("Duplicated computation node name.");
-
-        m_nameToNodeMap[nodePtr->NodeName()] = nodePtr;
+        auto result = m_nameToNodeMap.insert(make_pair(nodePtr->NodeName(), nodePtr));
+        if (!result.second)
+            RuntimeError("AddNodeToNet: Duplicated computation node name.");
+        nodePtr->SetEnvironment(m_environment);
         return nodePtr; // allows e.g. return AddNodeToNet(New...);
     }
     // TODO: not very nice--need to fix way more outside to get this right
@@ -596,6 +601,28 @@ public:
         nodePtr->AttachInputs(std::forward<_Types>(_Args)...);
         return AddNodeToNetWithElemType(nodePtr);
         // return nodePtr; // allows e.g. return AddNodeToNetAndAttachInputs(New..., inputs);
+    }
+
+    // add a node to the network unless it's already there
+    // Returns false if the node was already there.
+    bool AddNodeToNetIfNotYet(const ComputationNodeBasePtr& nodePtr)
+    {
+        auto result = m_nameToNodeMap.insert(make_pair(nodePtr->NodeName(), nodePtr));
+        if (!result.second && result.first->second != nodePtr) // if there's already one under this name, it better be nodePtr
+            RuntimeError("AddNodeToNetIfNotYet: Duplicated computation node name.");
+        nodePtr->SetEnvironment(m_environment); // (note: redundant if already part of the network)
+        return result.second;
+    }
+
+    // remove a node from the network's node set
+    // This does NOT update any links referencing it, or node groups.
+    // TODO: We should verify that indeed this node is not referenced by other nodes or node groups,
+    //       nor that this node references any node inside the network.
+    ComputationNodeBasePtr RemoveNodeFromNet(const ComputationNodeBasePtr& node)
+    {
+        node->SetEnvironment(nullptr);
+        m_nameToNodeMap.erase(node->NodeName());
+        return node;
     }
 
 public:
@@ -853,7 +880,7 @@ public:
         m_randomSeedOffset = value;
     }
 
-protected:
+private://protected:
     DEVICEID_TYPE m_deviceId; // TODO: is this shared by all nodes?
     unsigned long m_randomSeedOffset;
 
@@ -875,8 +902,11 @@ protected:
 
     // used for sentence boundary information passed from reader to reset RNN state
     // specify how the minibatch is packed for each sample
-    // TODO: This will change once we allow for multiple inconsistent layouts.
+    // BUGBUG: With variable-length inconsistent layouts, this can no longer be a network property.
     MBLayoutPtr m_pMBLayout; // note that this must be installed before doing anything that needs it (default leaves a nullptr)
+
+    // environment information that nodes may want to inquire, e.g. to know whether we are training
+    ComputationEnvironmentPtr m_environment;
 
 private:
     // -----------------------------------------------------------------------
@@ -914,8 +944,5 @@ template class Matrix<double>;
 // TODOs:
 //  - automatic inference of time window w.r.t. delay nodes (and related nodes such as a temporal pooling)
 //  - have overrides of RuntimeError etc. in ComputationNode, which prepend the error string with the node name and operation
-//  - code prettification:
-//     - sort all node implementations' methods into the same order; esp, ForwardProp() comes before partial
-//     - sort important nodes first; move unused/experimental nodes into source files named accordingly
 
-} } }
+}}}
