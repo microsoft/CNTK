@@ -30,8 +30,8 @@ C = Constant
     (abs(C(0)), Abs),
 
     # __getitem__
-    (C(range(0, 10))[2:5], RowSlice),
-    (C(range(0, 10))[:5], RowSlice),
+    (C(np.arange(0, 10))[2:5], RowSlice),
+    (C(np.arange(0, 10))[:5], RowSlice),
 
 ])
 def test_overload_types(root_node, expected):
@@ -52,13 +52,15 @@ def test_overload_exception():
      "v0 = Constant(0, rows=1, cols=1)\nv1 = Constant(1, rows=1, cols=1)\nv2 = Plus(v0, v1)"),
 ])
 def test_description(root_node, expected):
-    description, has_inputs = root_node.to_description() 
+    description, has_inputs, readers = root_node.to_description() 
     assert description == expected
+    assert readers == []
 
 
 def test_graph_with_same_node_twice():
     v0 = C(1)
     root_node = Plus(v0, v0)
     expected = 'v0 = Constant(1, rows=1, cols=1)\nv1 = Plus(v0, v0)'
-    description, has_inputs = root_node.to_description() 
+    description, has_inputs, readers = root_node.to_description() 
     assert description == expected
+    assert readers == []

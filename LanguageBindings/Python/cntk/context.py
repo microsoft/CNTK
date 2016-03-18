@@ -4,6 +4,8 @@ import subprocess
 import numpy as np
 import shutil as sh
 
+from cntk.graph import ComputationNode
+
 
 _FLOATX = 'float32'
 if "CNTK_EXECUTABLE_PATH" not in os.environ:
@@ -136,12 +138,15 @@ class AbstractContext(object, metaclass=ABCMeta):
         
         tmpl = open(CNTK_TRAIN_TEMPLATE_PATH, "r").read()
         model_filename = os.path.join(model_dir, self.name)
-        description, has_inputs = self.to_description()
+        description, has_inputs, readers = self.to_description()
+        if reader:
+            readers.append(reader)
+
         tmpl_dict = {
             'DevideId': self.device_id,
             'ModelDescription': description,
             'ModelPath': model_filename,
-            'Reader': reader.generate_config(),
+            'Reader': '\n'.join(r.generate_config() for r in readers),
             'SGD': self.optimizer.generate_config(),
         }
         return tmpl % tmpl_dict
@@ -181,11 +186,13 @@ class AbstractContext(object, metaclass=ABCMeta):
         :param root_node: the node to evaluate. 
         :param reader: the reader used to load the data, None if the network does not have input
         '''        
-        model_description, has_input = root_node.to_description()
+        model_description, has_input, readers = root_node.to_description()
+        if reader:
+            readers.append(reader)
 
-        if (not has_input) and (reader is None):
+        if not has_input and not readers:
             # add dummy input to keep CNTK happy
-            # TODO relieve this requirement
+            # TODO relieve this requirement on CNTK side
             data = [[1, 2], [3, 4]]
             fn = os.path.join(self.directory, 'dummy_input.txt')
             from .reader import NumPyReader
@@ -194,6 +201,7 @@ class AbstractContext(object, metaclass=ABCMeta):
             dummy_input_node = Input(2, var_name='dummy_node')
             reader.add_input(dummy_input_node, 0, 2)                        
             model_description += "\ndummy_node=Input(2, tag='output')"
+            readers.append(reader)
 
         tmpl = open(CNTK_EVAL_TEMPLATE_PATH, "r").read()
         output_filename = os.path.join(self.directory, CNTK_OUTPUT_FILENAME)
@@ -201,7 +209,7 @@ class AbstractContext(object, metaclass=ABCMeta):
             'DevideId': self.device_id,            
             'OutputFile': output_filename,
             'ModelDescription': model_description,
-            'Reader': reader.generate_config(),
+            'Reader': '\n'.join(r.generate_config() for r in readers),
         }
         return tmpl % tmpl_dict
 
@@ -292,6 +300,8 @@ class Context(AbstractContext):
         :param node: the node to evaluate.
         '''
         # FIXME manually setting the tag to output might have side-effects
+        if not isinstance(node, ComputationNode):
+            raise ValueError('node is not of type ComputationNode, but %s'%type(node))
         node.tag = 'output'
         config_content = self._generate_eval_config(node, reader)
         self._call_cntk(CNTK_EVAL_CONFIG_FILENAME, config_content)

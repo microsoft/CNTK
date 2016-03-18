@@ -1,4 +1,6 @@
 from abc import ABCMeta, abstractmethod
+import numpy as np
+
 from .graph import ComputationNode
 
 
@@ -177,9 +179,15 @@ def NumPyReader(data, filename):
     This is a factory that wraps Python arrays with a UCIFastReader.
     """
 
-    import numpy as np
     data = np.asarray(data)
-    format_str = ' '.join(['%f'] * data.shape[1])
+    if len(data.shape) == 1:
+        num_cols = 1
+    elif len(data.shape) == 2:
+        num_cols = data.shape[1]
+    else:
+        raise ValueError('NumPyReader does not support >2 dimensions')
+
+    format_str = ' '.join(['%f'] * num_cols)
     np.savetxt(filename, data, delimiter=' ', newline='\r\n', fmt=format_str)
 
     return UCIFastReader(
@@ -187,3 +195,4 @@ def NumPyReader(data, filename):
         labels_dim=None,
         labels_start=None,
         num_of_classes=None, label_mapping_file=None)
+

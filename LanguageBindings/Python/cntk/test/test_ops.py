@@ -9,6 +9,15 @@ from ..reader import *
 # keeping things short
 C = Constant
 
+def _test(root_node, expected):
+    with get_new_context() as ctx:
+        #ctx.clean_up = False
+        assert not ctx.input_nodes
+        result = ctx.eval(root_node)
+        expected = np.asarray(expected)
+        assert result.shape == expected.shape
+        assert np.all(result == expected)
+
 @pytest.mark.parametrize('root_node, expected', [
     # __add__ / __radd__
     (C(0) + C(1), 1),
@@ -38,6 +47,7 @@ C = Constant
 
     # special treatment of inputs in RowStack 
     (RowStack((C(1), C(2))), [1,2]),
+    # the following test fails because Constant() ignores the cols parameter
     #(RowStack((C(1, rows=2, cols=2), C(2, rows=2, cols=2))), [[1,1,2,2], [1,1,2,2]])
 
     # __abs__
@@ -49,11 +59,19 @@ C = Constant
     # more complex stuff
     #(Plus(C(5), 3), 8),
 ])
-def test_overload_eval(root_node, expected, tmpdir):
-    with get_new_context() as ctx:
-        #ctx.clean_up = False
-        assert not ctx.input_nodes
-        result = ctx.eval(root_node)
-        expected = np.asarray(expected)
-        assert result.shape == expected.shape
-        assert np.all(result == expected)
+def test_overload_eval(root_node, expected):
+    _test(root_node, expected)
+
+@pytest.mark.parametrize('root_node, expected', [
+    # __add__ / __radd__
+    (C(np.asarray([[1,2]]))+0, [1,2]),
+    (C(np.asarray([[1,2]]))+.1, [1.1,2.1]),
+    (C(np.asarray([[1,2],[3,4]]))+.1, [[1.1,2.1],[3.1,4.1]]),
+    (C(np.asarray([[1,2],[3,4]]))*2, [[2,4],[6,8]]),
+    #(C(0) + 1, 1),
+    #(0 + C(1), 1),
+
+])
+def test_ops_on_numpy(root_node, expected, tmpdir):
+    _test(root_node, expected)
+

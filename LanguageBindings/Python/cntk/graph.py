@@ -1,3 +1,5 @@
+import numpy as np
+
 class ComputationNode(object):
     '''
     Base class for all nodes and operators. Provides a NumPy-like interface
@@ -17,6 +19,11 @@ class ComputationNode(object):
         for p in self.params:
             if hasattr(p, 'consumers'):
                 p.consumers.append(self)
+
+        # Some nodes require a special reader. In that case, they can set the
+        # reader
+        # FIXME currently is only UCIFastReader supported
+        self.reader = None
 
     def _is_input(self):
         return isinstance(self, Input)
@@ -119,7 +126,8 @@ class ComputationNode(object):
 
         return param
 
-    def _to_description_unroll(self, desc, unrolled_nodes, inputs, node_counter=0):
+    def _to_description_unroll(self, desc, unrolled_nodes, inputs,
+            readers, node_counter=0):
         param_variable_names = []
         if self.params:
             for p_name in self.params:
@@ -144,7 +152,7 @@ class ComputationNode(object):
                             child_var = unrolled_nodes[p_value]
                         else:
                             child_var, node_counter, child_desc = p_value._to_description_unroll(
-                                desc, unrolled_nodes, inputs, node_counter)
+                                desc, unrolled_nodes, inputs, readers, node_counter)
                             unrolled_nodes[p_value] = child_var
                         input_nodes_vars.append(child_var)
 
@@ -152,6 +160,9 @@ class ComputationNode(object):
                 else:
                     param_variable_names.append(
                         self._param_to_brainscript(p_name, p_value))
+
+        if self.reader:
+            readers.append(self.reader)
 
         if self._is_input():
             inputs.add(self)
@@ -172,19 +183,81 @@ class ComputationNode(object):
     def _to_description(self):
         unrolled_nodes = {}
         inputs=set()
+        readers=[]
         var_name, node_counter, desc = self._to_description_unroll(
-            desc=[], unrolled_nodes=unrolled_nodes, inputs=inputs)
+            desc=[], 
+            unrolled_nodes=unrolled_nodes, 
+            inputs=inputs,
+            readers=readers)
 
-        return var_name, node_counter, desc, len(inputs)>0
+        return var_name, node_counter, desc, len(inputs)>0, readers
 
     def to_description(self):
         '''
         Generate CNTK configuration for this node including the configuration
         for all dependent child nodes.
         '''
-        var_name, node_counter, desc, has_inputs = self._to_description()
+        var_name, node_counter, desc, has_inputs, readers = self._to_description()
 
-        return "\n".join(desc), has_inputs
+        return "\n".join(desc), has_inputs, readers
 
-# importing at the end of the file to work around circular imports
+# importing after defining ComputationNode to work around circular imports
 from cntk.ops import *
+import cntk.ops # to have a separate namespace when we want to override below
+
+# redefine some operators to work with NumPy and sequences as input
+
+def _get_input_node(value):
+    # FIXME We need to better manage the context. How can we get hold
+    # of the overall context without having to always pass it
+    # explicitly?
+    if len(value.shape)>2:
+        raise ValueError('NumPy arrays with more than 2 dimensions are not yet supported')
+
+    from cntk.context import get_context 
+    import tempfile
+    # We have to use NamedTemporaryFile and close it, because when using the
+    # obvious first choice, mkstemp(), would later fail in cntk.exe because the
+    # file would still be locked.
+    f = tempfile.NamedTemporaryFile(prefix='_input_', suffix='.txt', dir=get_context().directory, delete = False)
+    f.close()
+
+    #import ipdb;ipdb.set_trace()
+    from cntk.reader import NumPyReader
+    input_node = Input(2)
+    input_node.reader = NumPyReader(value, f.name)
+    input_node.reader.add_input(input_node, 0,2)
+
+    return input_node
+
+def Constant(value, **kw):
+    '''
+    Defining Constant as a factor override that creates either a Constant()
+    operator or an Input() operator based on the type of the `value`.
+
+    In case the `value` is a scalar, a normal CNTK Constant() operator is
+    returned.
+
+    In case the `value` is a list of NumPy arrays, a CNTK Input() operator is
+    returned, interpreting every element as a sequence of tensors.
+      
+    In case the `value` is a NumPy array, a CNTK Input() operator is
+    returned, interpreting it as a dense tensor.
+
+    '''
+
+    if np.isscalar(value):
+        return cntk.ops.Constant(value, **kw)
+    else:
+        if isinstance(value, list):
+            if len(value)!=1:
+                raise ValueError('Right now, only instances of length 1 are allowed')
+
+            return _get_input_node(value[0])
+
+        elif isinstance(value, np.ndarray):
+            return _get_input_node(value)
+
+        else:
+            raise ValueError('value type is not supported: %s'%type(value))
+
