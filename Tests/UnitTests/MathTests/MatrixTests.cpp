@@ -728,6 +728,9 @@ BOOST_FIXTURE_TEST_CASE(MatrixAssignXOf, RandomSeedFixture)
     {
         BOOST_CHECK_EQUAL(c(i, j), a(i, j) - b(i, j));
     }
+    a.TransferToDeviceIfNotThere(c_deviceIdZero, true, false, true);
+    b.TransferToDeviceIfNotThere(c_deviceIdZero, true, false, true);
+    c.TransferToDeviceIfNotThere(c_deviceIdZero, true, false, true);
 
     float x = 234.2f;
     c.AssignDifferenceOf(a, x);
@@ -735,12 +738,18 @@ BOOST_FIXTURE_TEST_CASE(MatrixAssignXOf, RandomSeedFixture)
     {
         BOOST_CHECK_EQUAL(c(i, j), a(i, j) - x);
     }
+    a.TransferToDeviceIfNotThere(c_deviceIdZero, true, false, true);
+    b.TransferToDeviceIfNotThere(c_deviceIdZero, true, false, true);
+    c.TransferToDeviceIfNotThere(c_deviceIdZero, true, false, true);
 
     c.AssignDifferenceOf(x, a);
     foreach_coord (i, j, c)
     {
         BOOST_CHECK_EQUAL(c(i, j), x - a(i, j));
     }
+    a.TransferToDeviceIfNotThere(c_deviceIdZero, true, false, true);
+    b.TransferToDeviceIfNotThere(c_deviceIdZero, true, false, true);
+    c.TransferToDeviceIfNotThere(c_deviceIdZero, true, false, true);
 
     c.AssignDifferenceOf(1, a);
     foreach_coord (i, j, c)
@@ -748,6 +757,9 @@ BOOST_FIXTURE_TEST_CASE(MatrixAssignXOf, RandomSeedFixture)
         BOOST_CHECK_EQUAL(c(i, j), 1 - a(i, j));
     }
     // 
+    a.TransferToDeviceIfNotThere(c_deviceIdZero, true, false, true);
+    b.TransferToDeviceIfNotThere(c_deviceIdZero, true, false, true);
+    c.TransferToDeviceIfNotThere(c_deviceIdZero, true, false, true);
 
     // AssignElementProductOf
     c.AssignElementProductOf(a, b);
@@ -755,6 +767,9 @@ BOOST_FIXTURE_TEST_CASE(MatrixAssignXOf, RandomSeedFixture)
     {
         BOOST_CHECK_EQUAL(c(i, j), a(i, j) * b(i, j));
     }
+    a.TransferToDeviceIfNotThere(c_deviceIdZero, true, false, true);
+    b.TransferToDeviceIfNotThere(c_deviceIdZero, true, false, true);
+    c.TransferToDeviceIfNotThere(c_deviceIdZero, true, false, true);
 
     // AddElementProductOf
     Matrix<float> c_copy(c.DeepClone());

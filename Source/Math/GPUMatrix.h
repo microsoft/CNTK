@@ -91,19 +91,19 @@ void PrepareDevice(DEVICEID_TYPE deviceId);
 template <class ElemType>
 class MATH_API GPUMatrix : public BaseMatrix<ElemType>
 {
-    typedef BaseMatrix<ElemType> B;
-    using B::m_numRows;
-    using B::m_numCols;
-    using B::m_pArray; // without this, base members would require to use thi-> in GCC
+    typedef BaseMatrix<ElemType> Base;
+    using Base::m_numRows;
+    using Base::m_numCols;
+    //using B::m_pArray; // without this, base members would require to use thi-> in GCC
 
     template <typename T>
     friend class GPUMatrix;
 
 public:
     static const int MaxGpus = 8; // support up to 8 GPUs
-    using BaseMatrix<ElemType>::m_computeDevice;
-    using BaseMatrix<ElemType>::m_elemSizeAllocated;
-    using BaseMatrix<ElemType>::m_format;
+    //using BaseMatrix<ElemType>::m_computeDevice;
+    //using BaseMatrix<ElemType>::m_elemSizeAllocated;
+    //using BaseMatrix<ElemType>::m_format;
     using BaseMatrix<ElemType>::m_externalBuffer;
     using BaseMatrix<ElemType>::m_nz;
     using BaseMatrix<ElemType>::OwnBuffer;
@@ -131,6 +131,7 @@ private:
     size_t LocateColumn(const size_t j) const;
     void Clear();
     void ZeroInit(int deviceId);
+    void ZeroInit() { Base::ZeroInit(); }
 
     std::unique_ptr<GPUMatrix<ElemType>> GetOrCreateWorkspace() const;
     void ReleaseWorkspace(std::unique_ptr<GPUMatrix<ElemType>> src) const;
@@ -146,7 +147,7 @@ public:
     ~GPUMatrix(void);
 
     static void SetDevice(DEVICEID_TYPE deviceId);
-    int GetComputeDeviceId() const;
+    //int GetComputeDeviceId() const;
     DEVICEID_TYPE PrepareDevice(DEVICEID_TYPE deviceId = -1) const;
 
     static cublasHandle_t GetCublasHandle(int computeDevice = -1);
@@ -171,7 +172,7 @@ public:
     }
     ElemType* BufferPointer() const
     {
-        return m_pArray;
+        return GetArray() + m_sliceViewOffset;
     }
 
     ElemType Adagrad(GPUMatrix<ElemType>& gradients, const bool needAveMultiplier);
@@ -504,7 +505,7 @@ public:
 
         // TODO: This is now ignored on input, so we can should change to an empty string. This might break parsing, and must be tested first
         std::wstring s = std::wstring(L"unnamed");
-        int format = us.m_format;
+        int format = us.GetFormat();
         stream << s << format;
 
         stream << us.m_numRows << us.m_numCols;

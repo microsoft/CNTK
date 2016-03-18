@@ -728,6 +728,7 @@ int wmain(int argc, wchar_t* argv[]) // wmain wrapper that reports Win32 excepti
         else if (code == EXCEPTION_STACK_OVERFLOW)     msg = ": Stack overflow";
         else if (code == EXCEPTION_DLL_NOT_FOUND)      msg = ": Module not found";
         fprintf(stderr, "CNTK: Caught Win32 exception 0x%08x%s.\n", (unsigned int)code, msg);
+		Microsoft::MSR::CNTK::DebugUtil::PrintCallStack();
         fflush(stderr);
         exit(EXIT_FAILURE);
     }

@@ -139,7 +139,8 @@ public:
         if (inputIndex == 0) // left derivative
         {
 #if DUMPOUTPUT
-            *m_logSoftmaxOfRight.Print("CrossEntropyWithSoftmax Partial-logSoftmaxOfRight");
+            //(*m_logSoftmaxOfRight).Print("CrossEntropyWithSoftmax Partial-logSoftmaxOfRight");
+            (*(m_logSoftmaxOfRight.get())).Print("CrossEntropyWithSoftmax Partial-logSoftmaxOfRight");
             Gradient().Print("CrossEntropyWithSoftmax Partial-gradientValues");
             Input(0)->GradientFor(fr).Print("CrossEntropyWithSoftmaxNode Partial-Left-in");
 #endif
@@ -154,7 +155,8 @@ public:
         else if (inputIndex == 1) // right derivative
         {
 #if DUMPOUTPUT
-            *m_softmaxOfRight.Print("CrossEntropyWithSoftmax Partial-softmaxOfRight");
+            //*m_softmaxOfRight.Print("CrossEntropyWithSoftmax Partial-softmaxOfRight");
+            (*(m_softmaxOfRight.get())).Print("CrossEntropyWithSoftmax Partial-softmaxOfRight");
             Input(0)->ValueFor(fr).Print("CrossEntropyWithSoftmax Partial-inputFunctionValues");
             Gradient().Print("CrossEntropyWithSoftmax Partial-gradientValues");
             Input(1)->GradientFor(fr).Print("CrossEntropyWithSoftmaxNode Partial-Right-in");
@@ -310,7 +312,7 @@ public:
         Value().AssignInnerProductOfMatrices(Input(0)->MaskedValueFor(fr), *m_logOfRight);
         Value() *= -1;
 #if NANCHECK
-        functionValues.HasNan("CrossEntropy");
+        Value().HasNan("CrossEntropy");
 #endif
     }
 

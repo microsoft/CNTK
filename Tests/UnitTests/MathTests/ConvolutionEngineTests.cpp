@@ -638,7 +638,7 @@ BOOST_AUTO_TEST_CASE(BatchNormalizationForwardTrain)
         std::generate(begin(data) + r * c, begin(data) + 2 * r * c, [&] { return nd(rng); });
         buf.SetValue(r, 3 * c, buf.GetDeviceId(), data.data());
         // Get center slice.
-        return buf.ColumnSlice(c, c);
+        return buf.ColumnSlice(c, c).DeepClone();
     };
 
     for (int deviceId : {0})
@@ -764,7 +764,7 @@ BOOST_AUTO_TEST_CASE(BatchNormalizationForwardInference)
         std::generate(begin(data) + r * c, begin(data) + 2 * r * c, [&] { return nd(rng); });
         buf.SetValue(r, 3 * c, buf.GetDeviceId(), data.data());
         // Get center slice.
-        return buf.ColumnSlice(c, c);
+        return buf.ColumnSlice(c, c).DeepClone();
     };
 
     for (int deviceId : {0})
@@ -944,7 +944,7 @@ BOOST_AUTO_TEST_CASE(BatchNormalizationBackward)
         std::generate(begin(data) + r * c, begin(data) + 2 * r * c, [&] { return nd(rng); });
         buf.SetValue(r, 3 * c, buf.GetDeviceId(), data.data());
         // Get center slice.
-        return buf.ColumnSlice(c, c);
+        return buf.ColumnSlice(c, c).DeepClone();
     };
 
     for (int deviceId : {0})

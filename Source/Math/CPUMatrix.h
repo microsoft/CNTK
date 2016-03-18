@@ -30,11 +30,11 @@ class MATH_API CPUMatrix : public BaseMatrix<ElemType>
     typedef BaseMatrix<ElemType> B;
     using B::m_numRows;
     using B::m_numCols;
-    using B::m_pArray;
-    using B::m_computeDevice;
-    using B::m_elemSizeAllocated;
+    //using B::m_pArray;
+    //using B::m_computeDevice;
+    //using B::m_elemSizeAllocated;
     using B::m_externalBuffer;
-    using B::m_format;
+    //using B::m_format;
 public:
     CPUMatrix();
     CPUMatrix(const size_t numRows, const size_t numCols);
@@ -60,7 +60,8 @@ public:
     }
     ElemType* BufferPointer() const
     {
-        return m_pArray;
+        assert(GetArray() != nullptr);
+        return GetArray() + m_sliceViewOffset;
     }
 
     CPUMatrix<ElemType> ColumnSlice(size_t startColumn, size_t numCols) const;
@@ -89,15 +90,15 @@ public:
 
     inline ElemType& operator()(const size_t row, const size_t col)
     {
-        return m_pArray[LocateElement(row, col)];
+        return BufferPointer()[LocateElement(row, col)];
     }
     inline const ElemType& operator()(const size_t row, const size_t col) const
     {
-        return m_pArray[LocateElement(row, col)];
+        return BufferPointer()[LocateElement(row, col)];
     }
     inline ElemType Get00Element() const
     {
-        return m_pArray[0];
+        return BufferPointer()[0];
     }
 
     void SetValue(const ElemType v);
@@ -405,12 +406,12 @@ public:
         stream << sizeof(ElemType);
 
         std::wstring s = std::wstring(L"unnamed");
-        int format = us.m_format;
+        int format = us.GetFormat();
         stream << s << format;
 
         stream << us.m_numRows << us.m_numCols;
         for (size_t i = 0; i < us.GetNumElements(); ++i)
-            stream << us.m_pArray[i];
+            stream << us.GetArray()[i];
         stream.PutMarker(fileMarkerEndSection, std::wstring(L"EMAT"));
         return stream;
     }
@@ -447,7 +448,7 @@ protected:
     size_t LocateColumn(const size_t j) const;
 
 private:
-    void ZeroInit(); // should only be used by constructors.
+    //void ZeroInit(); // should only be used by constructors.
     void Clear();
 };
 

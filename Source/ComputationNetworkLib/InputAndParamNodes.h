@@ -560,7 +560,12 @@ public:
         inputFunctionValues.Reshape(rows1 / wordsInEachSample, cols1 * wordsInEachSample);
         gradientValues.Reshape(rowsp / wordsInEachSample, colsp * wordsInEachSample);
 
+        gradientValues.HasNan("lookuptable node - backprop left - gradientValues");
+        inputFunctionValues.HasNan("lookuptable node - backprop left - inputFunctionValues");
+
         Matrix<ElemType>::MultiplyAndAdd(gradientValues, false, inputFunctionValues, true, inputGradientValues);
+
+        inputGradientValues.HasNan("lookuptable node - backprop left - inputGradientValues");
 
         inputFunctionValues.Reshape(rows1, cols1);
         gradientValues.Reshape(rowsp, colsp);
@@ -575,7 +580,12 @@ public:
         inputGradientValues.Reshape(rows1 / wordsInEachSample, cols1 * wordsInEachSample);
         gradientValues.Reshape(rowsp / wordsInEachSample, colsp * wordsInEachSample);
 
+        gradientValues.HasNan("lookuptable node - backprop right - gradientValues");
+        inputFunctionValues.HasNan("lookuptable node - backprop right - inputFunctionValues");
+
         Matrix<ElemType>::MultiplyAndAdd(inputFunctionValues, true, gradientValues, false, inputGradientValues);
+
+        inputGradientValues.HasNan("lookuptable node - backprop right - inputGradientValues");
 
         inputGradientValues.Reshape(rows1, cols1);
         gradientValues.Reshape(rowsp, colsp);

@@ -470,7 +470,7 @@ Matrix<ElemType>& Matrix<ElemType>::operator=(Matrix<ElemType>&& moveFrom)
 {
     if (this == &moveFrom)
         LogicError("Matrix: Move assignment into itself is forbidden.");
-    ReleaseMemory(); // free held memory if any
+    //ReleaseMemory(); // free held memory if any
 #if 1
     // shallow-copy all members
     ShallowCopyFrom(moveFrom);
@@ -4219,6 +4219,8 @@ template <class ElemType>
                                 NOT_IMPLEMENTED,
                                 GPUSparseMatrix<ElemType> b = move(*c.m_GPUSparseMatrix);
                                 GPUSparseMatrix<ElemType>::ScaleAndAdd(alpha, *a.m_GPUSparseMatrix, 1, b, *c.m_GPUSparseMatrix));
+                                //*c.m_GPUSparseMatrix = std::move(GPUSparseMatrix<ElemType>::ScaleAndAdd(alpha, *a.m_GPUSparseMatrix, 1, *c.m_GPUSparseMatrix));
+
     }
     else
     {

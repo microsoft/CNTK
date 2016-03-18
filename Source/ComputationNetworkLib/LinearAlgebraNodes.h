@@ -1119,7 +1119,7 @@ public:
                     Matrix<ElemType>::ConductRowElementMultiplyWithShift(temp, in1, leftTerm, currshift, true);
                 }
 
-                leftTerm = leftTerm - rightTerm;
+                leftTerm -= rightTerm;
 
                 temp.GetARowByIndex(thisGradientValues, m);
 

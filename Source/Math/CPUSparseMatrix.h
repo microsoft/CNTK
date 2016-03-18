@@ -23,14 +23,14 @@ template <class ElemType>
 class MATH_API CPUSparseMatrix : public BaseMatrix<ElemType>
 {
     typedef BaseMatrix<ElemType> Base;
-    using Base::m_elemSizeAllocated;
-    using Base::m_computeDevice;
+    //using Base::m_elemSizeAllocated;
+    //using Base::m_computeDevice;
     using Base::m_externalBuffer;
-    using Base::m_format;
+    //using Base::m_format;
     using Base::m_numCols;
     using Base::m_numRows;
     using Base::m_nz;
-    using Base::m_pArray; // without this, base members would require to use thi-> in GCC
+    //using Base::m_pArray; // without this, base members would require to use thi-> in GCC
     using Base::Clear;
     using Base::NzCount;
 
@@ -41,7 +41,7 @@ public:
 private:
     void ZeroInit();
     void CheckInit(const MatrixFormat format);
-    void ReleaseMemory();
+    //void ReleaseMemory();
 
 public:
     explicit CPUSparseMatrix(const MatrixFormat format);
@@ -66,12 +66,13 @@ public:
 
     size_t BufferSize() const
     {
-        return m_elemSizeAllocated * sizeof(ElemType);
+        return GetSizeAllocated() * sizeof(ElemType);
     }
     ElemType* BufferPointer() const;
+    ElemType* BufferPointer();
     inline size_t GetNumElemAllocated() const
     {
-        return m_elemSizeAllocated;
+        return GetSizeAllocated();
     }
 
     CPUSparseMatrix<ElemType> ColumnSlice(size_t startColumn, size_t numCols) const;
@@ -129,16 +130,16 @@ public:
             RuntimeError("Position outside matrix dimensions");
         }
 
-        if (m_format == MatrixFormat::matrixFormatSparseCSC)
+        if (GetFormat() == MatrixFormat::matrixFormatSparseCSC)
         {
-            size_t start = m_compIndex[col];
-            size_t end = m_compIndex[col + 1];
+            size_t start = SecondaryIndexLocation()[col];
+            size_t end = SecondaryIndexLocation()[col + 1];
             for (size_t p = start; p < end; p++)
             {
-                size_t i = m_unCompIndex[p];
+                size_t i = MajorIndexLocation()[p];
                 if (i == row)
                 {
-                    return m_pArray[p];
+                    return ((ElemType*)GetArray())[p];
                 }
             }
 
@@ -172,11 +173,13 @@ public:
 public:
     const ElemType* NzValues() const
     {
-        return m_nzValues;
+        //return m_nzValues;
+        return BufferPointer();
     }
     inline ElemType* NzValues()
     {
-        return m_nzValues;
+        //return m_nzValues;
+        return BufferPointer();
     }
     size_t NzSize() const
     {
@@ -185,7 +188,8 @@ public:
 
     CPUSPARSE_INDEX_TYPE* MajorIndexLocation() const
     {
-        return m_unCompIndex;
+        //return m_unCompIndex;
+        return GetUnCompIndex() + GetCompIndex()[m_sliceViewOffset];
     } // this is the major index, row/col ids in CSC/CSR format
     size_t MajorIndexCount() const
     {
@@ -198,13 +202,14 @@ public:
 
     CPUSPARSE_INDEX_TYPE* SecondaryIndexLocation() const
     {
-        return m_compIndex;
+        //return m_compIndex;
+        return GetCompIndex() + m_sliceViewOffset;
     } // this is the compressed index, col/row in CSC/CSR format
     size_t SecondaryIndexCount() const
     {
-        if (m_format & matrixFormatCompressed)
+        if (GetFormat() & matrixFormatCompressed)
         {
-            size_t cnt = (m_format & matrixFormatRowMajor) ? m_numRows : m_numCols;
+            size_t cnt = (GetFormat() & matrixFormatRowMajor) ? m_numRows : m_numCols;
             if (cnt > 0)
                 cnt++; // add an extra element on the end for the "max" value
             return cnt;
@@ -221,22 +226,23 @@ public:
     // the column and row locations will swap based on what format we are in. Full index always follows the data array
     CPUSPARSE_INDEX_TYPE* RowLocation() const
     {
-        return (m_format & matrixFormatRowMajor) ? SecondaryIndexLocation() : MajorIndexLocation();
+        return (GetFormat() & matrixFormatRowMajor) ? SecondaryIndexLocation() : MajorIndexLocation();
     }
     size_t RowSize() const
     {
-        return (m_format & matrixFormatRowMajor) ? SecondaryIndexSize() : MajorIndexSize();
+        return (GetFormat() & matrixFormatRowMajor) ? SecondaryIndexSize() : MajorIndexSize();
     }
     CPUSPARSE_INDEX_TYPE* ColLocation() const
     {
-        return (m_format & matrixFormatRowMajor) ? MajorIndexLocation() : SecondaryIndexLocation();
+        return (GetFormat() & matrixFormatRowMajor) ? MajorIndexLocation() : SecondaryIndexLocation();
     }
     size_t ColSize() const
     {
-        return (m_format & matrixFormatRowMajor) ? MajorIndexSize() : SecondaryIndexSize();
+        return (GetFormat() & matrixFormatRowMajor) ? MajorIndexSize() : SecondaryIndexSize();
     } // actual number of bytes in use
 
 private:
+    /*
     int m_colIdx; // used to SetValue()
     size_t m_compIndexSize;
     ElemType* m_nzValues;
@@ -250,6 +256,7 @@ private:
     size_t m_blockIdShift; // used to get efficient slice, actual col = blockIds[j] - m_blockIdShift
 
     CPUSparseMatrix* m_sliceOf; // if this is a slice, then this points to the owning matrix object that we sliced from
+	*/
 };
 
 typedef CPUSparseMatrix<float> CPUSingleSparseMatrix;

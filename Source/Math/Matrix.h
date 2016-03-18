@@ -136,6 +136,10 @@ public:
     {
         return m_baseMatrix->OwnBuffer();
     }
+    void SetArray(ElemType* ptr) const
+    {
+        return m_baseMatrix->SetArray(ptr);
+    }
     int GetDeviceId() const; // -1 if CPU, otherwise GPU CUDA device id
     DEVICEID_TYPE GetPreferredDeviceId() const
     {
