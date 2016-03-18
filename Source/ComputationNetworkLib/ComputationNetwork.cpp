@@ -60,12 +60,15 @@ void ComputationNetwork::ClearNetwork()
         groupIter->clear();
 
     // break cycles
-    // BUGBUG: This only works if nodes are not shared across networks.
-    //         Once we allow that (BrainScript editing), we need proper cycle detectors. Luckily, we know our cycles, so it won't be too hard.
-    //         Or just use weak ptrs.
+    // Note: During editing, new networks may be constructed by "sharing" portions of other networks. Nodes cannot, however, be shared during evaluation.
+    // I.e. the networks that are shared from can no longer be evaluated, but they must still be releasable.
+    // Hence we must only break cycles for nodes that have not been taken over into another network. We know from their m_environment pointer.
+    // (The correct way to do this is to use weak pointers, but that's too intrusive a change for now.)
     for (auto& iter : m_nameToNodeMap)
     {
         auto& node = iter.second;
+        if (node->GetEnvironmentPtr() != m_environment)
+            continue; // was taken over by another network
         node->SetEnvironment(nullptr);
         node->DetachInputs();
     }
@@ -115,6 +118,20 @@ void ComputationNetwork::SaveToFileImpl(const wstring& fileName, const FileOptio
     for (auto nodeIter = m_nameToNodeMap.begin(); nodeIter != m_nameToNodeMap.end(); nodeIter++)
     {
         ComputationNodeBasePtr nodePtr = nodeIter->second;
+        // type
+#if CURRENT_CNTK_MODEL_VERSION >= CNTK_MODEL_VERSION_5
+        wstring precision;
+        if (nodePtr->Is<ComputationNode<float>>())
+            precision = ElemTypeName<float>();
+        else if (nodePtr->Is<ComputationNode<double>>())
+            precision = ElemTypeName<double>();
+        else LogicError("Unexpected node type.");
+        fstream << precision;
+#endif
+        fstream << nodePtr->OperationName();
+        // name
+        fstream << nodePtr->NodeName();
+        // content
         nodePtr->Save(fstream);
     }
 
@@ -178,9 +195,9 @@ void ComputationNetwork::SaveToFileImpl(const wstring& fileName, const FileOptio
 }
 
 // load the section of nodes that contain persistable parameters
-// This is used for reloading a model without recreating it, e.g. during training.
+// This is also used for reloading a model without recreating it, e.g. during training.
 // TODO: Why not just reload it? Because SGD::Train() holds pointers to the parameters directly? That should be fixed.
-template <class ElemType>
+template <class ElemType> // ElemType is the default for models prior to CNTK_MODEL_VERSION_5; after that, it is serialized, and ElemType is ignored
 void ComputationNetwork::ReadPersistableParameters(File& fstream, bool create)
 {
     fstream.GetMarker(FileMarker::fileMarkerBeginSection, L"BCN");
@@ -202,14 +219,24 @@ void ComputationNetwork::ReadPersistableParameters(File& fstream, bool create)
     fstream.GetMarker(FileMarker::fileMarkerBeginSection, L"BNodeList");
     for (size_t i = 0; i < numNodes; i++)
     {
+        wstring precision;
+        if (modelVersion >= CNTK_MODEL_VERSION_5)
+            fstream >> precision; // "float" or "double"; default is "" meaning <ElemType> as passed in from outside
+
         wstring opName, nodeName;
         fstream >> opName >> nodeName;
 
         ComputationNodeBasePtr node;
-        if (create) // loading from scratch
-            node = ComputationNetworkBuilder<ElemType>::NewNode(opName, m_deviceId, nodeName);
-        else // reloading existing
+        if (!create) // reloading existing
             node = GetNodeFromName(nodeName);
+        else if (precision == L"float")
+            node = ComputationNetworkBuilder<float>::NewNode(opName, m_deviceId, nodeName);
+        else if (precision == L"double")
+            node = ComputationNetworkBuilder<double>::NewNode(opName, m_deviceId, nodeName);
+        else if (precision == L"") // old file format: default to <ElemType>
+            node = ComputationNetworkBuilder<ElemType>::NewNode(opName, m_deviceId, nodeName);
+        else
+            RuntimeError("Read: Unexpected precision tag '%ls'", precision.c_str());
 
         node->Load(fstream, modelVersion);
 
@@ -234,7 +261,7 @@ void ComputationNetwork::ReadPersistableParameters(File& fstream, bool create)
 
 // deserialize the model
 // This does not post-process the model (CompileNetwork()). Use Load() instead.
-template <class ElemType>
+template <class ElemType> // for ReadPersistableParameters()
 void ComputationNetwork::Read(const wstring& fileName)
 {
     ClearNetwork();

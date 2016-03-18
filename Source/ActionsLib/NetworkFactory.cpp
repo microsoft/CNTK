@@ -13,13 +13,6 @@
 #include "BrainScriptEvaluator.h"
 #include "BrainScriptParser.h"
 
-template <> /*static*/ const wchar_t* ElemTypeName<float>()  {
-    return L"float";
-}
-template <> /*static*/ const wchar_t* ElemTypeName<double>() {
-    return L"double";
-}
-
 function<ComputationNetworkPtr(DEVICEID_TYPE)> GetCreateNetworkFn(const ScriptableObjects::IConfigRecord& config)
 {
     // createNetwork() is a BrainScript lambda that creates the model

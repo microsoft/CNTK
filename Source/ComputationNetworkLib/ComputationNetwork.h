@@ -568,7 +568,7 @@ protected:
     // -----------------------------------------------------------------------
 
 public:
-    // TODO: move these close to where they are used
+    // TODO: move these to ComputationNetworkBuilder.cpp
 
     // add a node to m_nameToNodeMap[], which is our node holder
     // This only adds the node to the network's node set, without considering linkage.
@@ -929,6 +929,11 @@ private:
     MatrixPool m_matrixPool;
 };
 typedef ComputationNetwork::ComputationNetworkPtr ComputationNetworkPtr;
+
+// helper that returns 'float' or 'double' depending on ElemType
+template <typename ElemType> static inline const wchar_t* ElemTypeName();
+template <> static inline const wchar_t* ElemTypeName<float>()  { return L"float"; }
+template <> static inline const wchar_t* ElemTypeName<double>() { return L"double"; }
 
 // The following emits the class and enables the BaseMatrix<double> to be available (used by EvalDll)
 // The corresponding Matrix<float> is emitted in the SetDeviceId function above.

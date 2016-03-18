@@ -356,4 +356,13 @@ RNNs =
     ].lstmState.h // that's the value we return
 ]
 
+##############################################################################
+# Network operations
+# These operations will have undefined behavior for input values != 0 or 1.
+##############################################################################
+
+Network = [
+    Load(pathName) = new ComputationNetworkFromFile [ /*pathName; also needs 'precision' somewhere*/ ]
+]
+
 ] # end of BS namespace

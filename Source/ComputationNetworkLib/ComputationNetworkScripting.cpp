@@ -39,8 +39,8 @@ using namespace Microsoft::MSR::ScriptableObjects;
 // ===================================================================
 
 // construct a ComputationNetwork from a ConfigRecord
-ComputationNetwork::ComputationNetwork(const IConfigRecordPtr configp)
-    : ComputationNetwork()
+ComputationNetwork::ComputationNetwork(const IConfigRecordPtr configp) :
+    ComputationNetwork()
 {
     let& config = *configp;
 
@@ -127,5 +127,28 @@ vector<wstring> /*IConfigRecord::*/ ComputationNetwork::GetMemberIds() const
 {
     return vector<wstring>();
 }
+
+// ===================================================================
+// scripting wrapper to construct ComputationNetwork from file (aka 'load')
+// ===================================================================
+
+template<class ElemType>
+class ComputationNetworkFromFile : public ComputationNetwork
+{
+public:
+    ComputationNetworkFromFile(const IConfigRecordPtr configp) :
+        ComputationNetwork()
+    {
+        let& config = *configp;
+
+        DEVICEID_TYPE deviceId = (DEVICEID_TYPE)(int)config[L"deviceId"];
+        SetDeviceId(deviceId);
+
+        wstring pathName = config[L"pathName"];
+        Load<ElemType>(pathName); // note that for CNTK_MODEL_VERSION_5 and above, 'ElemType' is ignored
+    }
+};
+
+ScriptableObjects::ConfigurableRuntimeTypeRegister::AddFloatDouble<ComputationNetworkFromFile<float>, ComputationNetworkFromFile<double>> registerComputationNetwork(L"ComputationNetworkFromFile");
 
 }}}

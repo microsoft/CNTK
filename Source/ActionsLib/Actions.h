@@ -24,9 +24,6 @@ using namespace std;
 using namespace Microsoft::MSR;
 using namespace Microsoft::MSR::CNTK; // TODO: we should not have this in a header
 
-// helper that returns 'float' or 'double' depending on ElemType
-template <typename ElemType> /*static*/ const wchar_t* ElemTypeName();
-
 function<ComputationNetworkPtr(DEVICEID_TYPE)> GetCreateNetworkFn(const ScriptableObjects::IConfigRecord& config);
 
 template <class ConfigRecordType, typename ElemType>

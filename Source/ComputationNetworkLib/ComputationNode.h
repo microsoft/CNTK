@@ -33,7 +33,8 @@
 #define CNTK_MODEL_VERSION_2 2
 #define CNTK_MODEL_VERSION_3 3
 #define CNTK_MODEL_VERSION_4 4 // PastValue
-#define CURRENT_CNTK_MODEL_VERSION CNTK_MODEL_VERSION_4
+#define CNTK_MODEL_VERSION_5 5 // ElemType tag in model file
+#define CURRENT_CNTK_MODEL_VERSION CNTK_MODEL_VERSION_5
 
 extern bool g_shareNodeValueMatrices;
 
@@ -309,13 +310,14 @@ public:
 
     virtual void Load(File& /*fstream*/, size_t /*modelVersion*/)
     {
-        // it is assumed that OperationName and NodeName have already been consumed--some asymmetry between Save and Load
-        // base class has nothing to load
+        // it is assumed that OperationName and NodeName have already been consumed
+        // base class has nothing else to load
     }
 
-    virtual void Save(File& fstream) const
+    virtual void Save(File& /*fstream*/) const
     {
-        fstream << OperationName() << NodeName();
+        // it is assumed that OperationName and NodeName have already been saved
+        // base class has nothing else to save
     }
 
     std::wstring CreateUniqNodeName() const
@@ -618,7 +620,8 @@ public:
             LogicError("Environment: No environment has been set.");
         return *m_environment;
     }
-    void SetEnvironment(ComputationEnvironmentPtr environment) { m_environment = environment; }
+    ComputationEnvironmentPtr GetEnvironmentPtr() const { return m_environment; }
+    void SetEnvironment(ComputationEnvironmentPtr environment) { auto old = m_environment = environment; }
 
     // -----------------------------------------------------------------------
     // validation
