@@ -3,8 +3,11 @@
 // Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
 //
 
+#pragma once
+
 #include "DataDeserializer.h"
 #include "../HTKMLFReader/htkfeatio.h"
+#include "UtteranceDescription.h"
 #include "ssematrix.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
@@ -12,10 +15,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 // Class represents a description of an HTK chunk.
 // It is only used internally by the HTK deserializer.
 // Can exist without associated data and provides methods for requiring/releasing chunk data.
-class ChunkDescription
+class HTKChunkDescription
 {
     // All utterances in the chunk.
-    std::vector<UtteranceDescription*> m_utteranceSet;
+    std::vector<UtteranceDescription> m_utteranceSet;
 
     // Stores all frames of the chunk consecutively (mutable since this is a cache).
     mutable msra::dbn::matrix m_frames;
@@ -28,7 +31,7 @@ class ChunkDescription
     size_t m_totalFrames;
 
 public:
-    ChunkDescription() : m_totalFrames(0)
+    HTKChunkDescription() : m_totalFrames(0)
     {
     }
 
@@ -39,7 +42,7 @@ public:
     }
 
     // Adds an utterance to the chunk.
-    void Add(UtteranceDescription* utterance)
+    void Add(UtteranceDescription&& utterance)
     {
         if (IsInRam())
         {
@@ -47,8 +50,8 @@ public:
         }
 
         m_firstFrames.push_back(m_totalFrames);
-        m_totalFrames += utterance->GetNumberOfFrames();
-        m_utteranceSet.push_back(utterance);
+        m_totalFrames += utterance.GetNumberOfFrames();
+        m_utteranceSet.push_back(std::move(utterance));
     }
 
     // Gets total number of frames in the chunk.
@@ -57,13 +60,25 @@ public:
         return m_totalFrames;
     }
 
-    // Get number of frames in a sequences identified by the index.
-    size_t GetUtteranceNumberOfFrames(size_t index) const
+    // Get utterance description by its index.
+    const UtteranceDescription* GetUtterance(size_t index) const
     {
-        return m_utteranceSet[index]->GetNumberOfFrames();
+        return &m_utteranceSet[index];
     }
 
-    // Returns frames of a given utterance.
+    // Get utterance by the absolute frame index in chunk.
+    // Uses the upper bound to do the binary search among sequences of the chunk.
+    size_t GetUtteranceForChunkFrameIndex(size_t frameIndex) const
+    {
+        auto result = std::upper_bound(
+            m_utteranceSet.begin(),
+            m_utteranceSet.end(), 
+            frameIndex, 
+            [](size_t fi, const UtteranceDescription& a) { return fi < a.GetStartFrameIndexInsideChunk(); });
+        return result - 1 - m_utteranceSet.begin();
+    }
+
+    // Returns all frames of a given utterance.
     msra::dbn::matrixstripe GetUtteranceFrames(size_t index) const
     {
         if (!IsInRam())
@@ -72,7 +87,7 @@ public:
         }
 
         const size_t ts = m_firstFrames[index];
-        const size_t n = GetUtteranceNumberOfFrames(index);
+        const size_t n = GetUtterance(index)->GetNumberOfFrames();
         return msra::dbn::matrixstripe(m_frames, ts, n);
     }
 
@@ -103,7 +118,7 @@ public:
             {
                 // read features for this file
                 auto framesWrapper = GetUtteranceFrames(i);
-                reader.read(m_utteranceSet[i]->GetPath(), featureKind, samplePeriod, framesWrapper);
+                reader.read(m_utteranceSet[i].GetPath(), featureKind, samplePeriod, framesWrapper);
             }
 
             if (verbosity)

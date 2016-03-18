@@ -23,12 +23,6 @@
     <ClCompile Include="Indexer.cpp" />
     <ClCompile Include="TextParser.cpp" />
     <ClCompile Include="CNTKTextFormatReader.cpp" />
-    <ClCompile Include="TextBlockRandomizer.cpp">
-      <Filter>Components</Filter>
-    </ClCompile>
-    <ClCompile Include="TextPacker.cpp">
-      <Filter>Components</Filter>
-    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="stdafx.h" />
@@ -51,12 +45,6 @@
     <ClInclude Include="TextReaderConstants.h" />
     <ClInclude Include="TextParser.h" />
     <ClInclude Include="CNTKTextFormatReader.h" />
-    <ClInclude Include="TextBlockRandomizer.h">
-      <Filter>Components</Filter>
-    </ClInclude>
-    <ClInclude Include="TextPacker.h">
-      <Filter>Components</Filter>
-    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Common">

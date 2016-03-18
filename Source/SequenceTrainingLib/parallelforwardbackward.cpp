@@ -574,11 +574,11 @@ struct parallelstateimpl
     // template<class ElemType>
     void setloglls(const Microsoft::MSR::CNTK::Matrix<float>& loglls)
     {
-        *cudalogLLs = loglls;
+        cudalogLLs->SetValue(loglls);
     }
     void getgamma(Microsoft::MSR::CNTK::Matrix<float>& loglls)
     {
-        loglls = *errorsignalgpu;
+        loglls.SetValue(*errorsignalgpu);
     }
     template <class edgealignments>
     void copyalignments(edgealignments& edgeAlignments)

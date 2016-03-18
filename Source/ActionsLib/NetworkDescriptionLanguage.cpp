@@ -8,7 +8,7 @@
 #define _CRT_SECURE_NO_WARNINGS // "secure" CRT not available on all platforms  --add this at the top of all CPP files that give "function or variable may be unsafe" warnings
 
 #include "NetworkDescriptionLanguage.h"
-#include "SynchronousExecutionEngine.h"
+#include "NDLNetworkBuilder.h"
 #include "InputAndParamNodes.h"
 #include "LinearAlgebraNodes.h"
 #include "NonlinearityNodes.h"
@@ -149,7 +149,8 @@ bool CheckFunction(std::string& p_nodeType, bool* allowUndeterminedVariable)
 
     wstring nodeType = msra::strfun::utf16(p_nodeType);
     bool ret = false;
-    if (EqualInsensitive(nodeType, OperationNameOf(AveragePoolingNode))) ret = true;
+         if (EqualInsensitive(nodeType, OperationNameOf(AbsNode))) ret = true;
+    else if (EqualInsensitive(nodeType, OperationNameOf(AveragePoolingNode))) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(BatchNormalizationNode))) ret = true;
 #ifdef COMING_SOON
     else if (EqualInsensitive(nodeType, OperationNameOf(CRFNode), L"CRF")) ret = true;

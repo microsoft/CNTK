@@ -165,6 +165,8 @@ public:
         size_t rows, colsDummy;
         fstream >> rows >> colsDummy;
 
+        // BUGBUG: I got an error in when reloading persistent parameterse for a model that had dimension specified as 0, which did not get re-inferred correctly.
+        //         We should either simply not write this parameter out at all (since it can always be inferred), or write the tensor shape.
         SetDims(TensorShape(rows), HasMBLayout() /*may be true on reload (roll-back)*/); // tensor shape will be overwritten in Validate()  --TODO: We should serialize it here.
         m_delayedValue.Resize(rows, 0);                                                  // Note: If we try to access history in first minibatch, we shall crash. It would be a consequence of a missing sentence-begin flag
 
@@ -254,7 +256,7 @@ public:
         //  - we don't need to keep anything if all sequences are closed (sentence end)
         //    This condition includes full-sequence mode.
         // TODO: Can we optimize this and only copy if there is a sequence spanning across the end of the MB? And add a check to BeginForwardProp() to make sure we got one if there is a boundary at the start?
-        m_delayedValue = Input(0)->Value();
+        m_delayedValue.SetValue(Input(0)->Value());
         if (!m_delayedActivationMBLayout)
             m_delayedActivationMBLayout = make_shared<MBLayout>();
         m_delayedActivationMBLayout->CopyFrom(m_pMBLayout);
@@ -379,7 +381,7 @@ public:
             auto node = dynamic_pointer_cast<DelayedValueNodeBase<ElemType, direction /*, SequenceStart_or_End*/>>(nodeP);
             node->m_timeStep = m_timeStep;
             node->m_initialActivationValue = m_initialActivationValue;
-            node->m_delayedValue = m_delayedValue;
+            node->m_delayedValue.SetValue(m_delayedValue);
             if (m_delayedActivationMBLayout)
                 (node->m_delayedActivationMBLayout = make_shared<MBLayout>())->CopyFrom(m_delayedActivationMBLayout);
             else

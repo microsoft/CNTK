@@ -22,15 +22,14 @@ class ImageDataDeserializer : public DataDeserializerBase
 public:
     explicit ImageDataDeserializer(const ConfigParameters& config);
 
-    // Description of streams that this data deserializer provides.
-    std::vector<StreamDescriptionPtr> GetStreamDescriptions() const override;
-    virtual size_t GetTotalNumberOfChunks() override;
-
-    // Get sequences by specified ids. Order of returned sequences corresponds to the order of provided ids.
+    // Gets sequences by specified ids. Order of returned sequences corresponds to the order of provided ids.
     virtual ChunkPtr GetChunk(size_t chunkId) override;
 
-protected:
-    void FillSequenceDescriptions(SequenceDescriptions& timeline) const override;
+    // Gets chunk descriptions.
+    virtual ChunkDescriptions GetChunkDescriptions() override;
+
+    // Gets sequence descriptions for the chunk.
+    virtual void GetSequencesForChunk(size_t, std::vector<SequenceDescription>&);
 
 private:
     // Creates a set of sequence descriptions.

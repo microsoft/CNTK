@@ -58,6 +58,7 @@ public:
     void Release()
     {
         assert(m_handle != NULL);
+        // TODO: Check for error code and throw if !std::uncaught_exception()
         ::ReleaseMutex(m_handle);
         ::CloseHandle(m_handle);
         m_handle = NULL;
@@ -180,6 +181,7 @@ public:
         m_lock.l_type = F_UNLCK;
         // Now removing the lock and closing the file descriptor
         // waiting processes will be notified
+        // TODO: Check for error code and throw if !std::uncaught_exception()
         fcntl(m_fd, F_SETLKW, &m_lock);
         close(m_fd);
         m_fd = -1;

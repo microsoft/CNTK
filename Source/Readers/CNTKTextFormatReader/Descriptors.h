@@ -11,9 +11,6 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
-    typedef size_t SequenceId;
-    typedef size_t TimelineOffset;
-
     // Stream (input) metadata. This text-reader specific descriptor adds two 
     // additional fields: stream alias (name prefix in each sample) and expected
     // sample dimension.
@@ -47,31 +44,22 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // Chunk metadata, similar to the sequence descriptor above, 
     // but used to facilitate indexing and retrieval of blobs of input data of
     // some user-specified size.
-    struct ChunkDescriptor
-    {
-        size_t m_id; 
+    struct ChunkDescriptor : ChunkDescription
+    { 
+        // TODO: if we don't want to keep the whole index 
+        // (metadata for all sequences in memory), we should not
+        // leave this empty when building a chunk index, and only
+        // fill it out when the chunk needs to be loaded 
+        // (the indexer will have to do a second pass for this chunk).
+        std::vector<SequenceDescriptor> m_sequences;
+        
         size_t m_byteSize; // size in bytes
-        size_t m_numSequences; // number of sequences in this chunk
-        TimelineOffset m_timelineOffset; // offset into the timeline -- timeline index of
-                                         // the very first sequence from this chunk.
     };
 
-    // The index comprises two timelines with different granularities. One is 
-    // is a collection of sequences, the other -- of chunks. 
-    // TODO: needs to be refactored to support partial timeline.
-    struct Index 
-    {
-        Index(bool hasSequenceIds, 
-            std::vector<SequenceDescriptor> timeline,
-            std::vector<ChunkDescriptor> chunks) 
-            : m_hasSequenceIds(hasSequenceIds), m_timeline(timeline), m_chunks(chunks)
-        {
-        }
+    typedef shared_ptr<ChunkDescriptor> ChunkDescriptorPtr;
 
-        bool m_hasSequenceIds; // true when input contains sequence id column
-        std::vector<SequenceDescriptor> m_timeline;
-        std::vector<ChunkDescriptor> m_chunks;
-    };
-
-    typedef std::shared_ptr<Index> IndexPtr;
+    // A collection of chunk descriptors, each containing
+    // a collection of sequence descriptors for the corresponding
+    // chunk of the input data. 
+    typedef std::vector<ChunkDescriptor> Index;
 }}}

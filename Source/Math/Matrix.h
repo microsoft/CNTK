@@ -57,16 +57,18 @@ typedef std::shared_ptr<MatrixBase> MatrixBasePtr;
 template <class ElemType>
 class MATH_API Matrix : public MatrixBase
 {
+    typedef MatrixBase Base;
 private:
     mutable BaseMatrix<ElemType>* m_baseMatrix;
     mutable GPUMatrix<ElemType>* m_GPUMatrix;
     mutable CPUMatrix<ElemType>* m_CPUMatrix;
     mutable GPUSparseMatrix<ElemType>* m_GPUSparseMatrix;
     mutable CPUSparseMatrix<ElemType>* m_CPUSparseMatrix;
+
     mutable MatrixType m_matrixType;
     mutable CurrentDataLocation m_currentDataLocation; // Indicates which matrix is current
-    mutable DEVICEID_TYPE m_preferredDeviceId;
 
+    mutable DEVICEID_TYPE m_preferredDeviceId;
     mutable size_t m_numTimesDeviceChanged;
     mutable size_t m_numTimesMatrixTypeChanged;
     mutable int m_devicesTransferedTo[2]; // TODO: what is this for? Seems only diagnostics
@@ -89,11 +91,16 @@ public:
     Matrix(BaseMatrix<ElemType>* baseMatrix, ElemType* pArray, DEVICEID_TYPE deviceId);                                     // constructor for setting Matrix from a base matrix (externally managed butter pArray)
     Matrix(const size_t numRows, const size_t numCols, DEVICEID_TYPE deviceId, const MatrixType matrixType = DENSE, const MatrixFormat matrixFormat = matrixFormatDense);
     Matrix(const size_t numRows, const size_t numCols, ElemType* pArray, DEVICEID_TYPE deviceId, const size_t matrixFlags = matrixFlagNormal, const size_t nnz = 0);
-    Matrix(const Matrix<ElemType>& deepCopyFrom); // copy constructor, deep copy
     Matrix(const Matrix<ElemType>& deepCopyFrom, DEVICEID_TYPE deviceId);
-    Matrix<ElemType>& operator=(const Matrix<ElemType>& deepCopyFrom);                      // assignment operator, deep copy
     Matrix(Matrix<ElemType>&& moveFrom);                                                    // move constructor, shallow copy
-    Matrix<ElemType>& operator=(Matrix<ElemType>&& moveFrom);                               // move coment operator, shallow copy
+    Matrix<ElemType>& operator=(Matrix<ElemType>&& moveFrom);                               // move assignment operator, shallow copy
+
+    Matrix<ElemType> DeepClone() const;
+
+    // Disallow deep copy construction and assignment to avoid
+    // inadvertent silent deep copying
+    Matrix(const Matrix<ElemType>& deepCopyFrom) = delete;
+    Matrix<ElemType>& operator=(const Matrix<ElemType>& deepCopyFrom) = delete;
 
     static Matrix<ElemType> Ones(const size_t rows, const size_t cols, DEVICEID_TYPE deviceId);
     static Matrix<ElemType> Zeros(const size_t rows, const size_t cols, DEVICEID_TYPE deviceId);
@@ -105,7 +112,7 @@ public:
 
     static void SetDevice(DEVICEID_TYPE deviceId);
 
-    void Clear();
+    void ReleaseMemory();
     ~Matrix();
 
 private:
@@ -114,6 +121,7 @@ private:
     Matrix(const MatrixFlags matrixFlags, DEVICEID_TYPE deviceID);                                                               // only used internally to initialize a blank matrix
     void Init(DEVICEID_TYPE deviceID);                                                                                           // only used internally to initialize a blank matrix
     void SetDataLocation(CurrentDataLocation location, MatrixType type = UNDETERMINED) const;
+    void ShallowCopyFrom(const Matrix<ElemType>& other);
 
 public:
     MatrixType GetMatrixType() const
@@ -142,19 +150,12 @@ public:
     void TransferFromDeviceToDevice(int id_from, int id_to, bool ismoved = false, /*if false then keep source and set location to BOTH*/ bool emptyTransfer = false, bool updatePreferredDevice = true) const;
     // Same as TransferFromDeviceToDevice() but moves only if it is currently not on the target device
     void TransferToDeviceIfNotThere(int id_to, bool ismoved = false, bool emptyTransfer = false, bool updatePreferredDevice = true) const;
-    void TransferToDeviceIfNotThereAndNotAutoPlace(int id_to, bool ismoved = false, bool emptyTransfer = false, bool updatePreferredDevice = true) const;
-    CurrentDataLocation GetCurrentMatrixLocation() const
-    {
-        return m_currentDataLocation;
-    };
+    CurrentDataLocation GetCurrentMatrixLocation() const { return m_currentDataLocation; };
     void SwitchToMatrixType(MatrixType newMatrixType, MatrixFormat newMatrixFormat, bool keepValues); // sets matrix type between dense and sparse
     size_t GetNumRows() const;
     size_t GetNumCols() const;
     size_t GetNumElements() const;
-    bool HasNoElements() const
-    {
-        return GetNumElements() == 0;
-    }
+    bool HasNoElements() const { return GetNumElements() == 0; }
     bool IsEmpty() const;
     size_t BufferSize() const;
     ElemType* BufferPointer() const;
@@ -180,7 +181,7 @@ public:
     void CopyColumnsStrided(const Matrix<ElemType>& fromMatrix, size_t numCols, size_t srcNumColsStride, size_t destNumColsStride);
 
     Matrix<ElemType> Diagonal() const;
-    Matrix<ElemType> AssignDiagonalValuesTo(Matrix<ElemType>& diag) const;
+    void AssignDiagonalValuesTo(Matrix<ElemType>& diag) const;
     void ShiftBy(int numShift);
 
     // TODO: all these scalars should be passed as doubles and cast down inside
@@ -199,6 +200,7 @@ public:
         m_baseMatrix->VerifySize(rows, cols);
     }
 
+    // TODO: Call this ShallowClone instead?
     Matrix<ElemType> AsReference() const
     {
         return ColumnSlice(0, GetNumCols());
@@ -225,6 +227,7 @@ public:
 
     const ElemType operator()(const size_t row, const size_t col) const;
     ElemType& operator()(const size_t row, const size_t col);
+    ElemType GetValue(const size_t row, const size_t col) const { return operator()(row, col); } // use this for reading on non-const objects to avoid inefficiency
     ElemType Get00Element() const;
 
     void SetValue(const ElemType v);
@@ -299,6 +302,9 @@ public:
     Matrix<ElemType> operator^(ElemType alpha) const; // element-wise power
     Matrix<ElemType>& AssignElementPowerOf(const Matrix<ElemType>& a, const ElemType power);
 
+    // TODO: There are several functions below that perform an in-place operation
+    // We should prepend the names of these functions with InPlace for clearly indicating
+    // the semantics for callers.
     Matrix<ElemType>& ElementMultiplyWith(const Matrix<ElemType>& a);
     Matrix<ElemType>& AssignElementProductOf(const Matrix<ElemType>& a, const Matrix<ElemType>& b);
     Matrix<ElemType>& AddElementProductOf(const Matrix<ElemType>& a, const Matrix<ElemType>& b);
@@ -357,6 +363,8 @@ public:
     Matrix<ElemType>& InplaceAbs();
     Matrix<ElemType>& AssignAbsOf(const Matrix<ElemType>& a);
 
+    // TODO: rename these to InPlaceFloor() and -Ceil() (I never know what it means to truncate a bottom)
+    //       And also document and implement that sparse matrices can only truncate towards 0.
     Matrix<ElemType>& InplaceTruncateBottom(const ElemType threshold);
     Matrix<ElemType>& AssignTruncateBottomOf(const Matrix<ElemType>& a, const ElemType threshold);
     Matrix<ElemType>& InplaceTruncateTop(const ElemType threshold);

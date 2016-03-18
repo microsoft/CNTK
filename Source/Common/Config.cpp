@@ -62,6 +62,8 @@ std::string ConfigParameters::ParseCommandLine(int argc, wchar_t* argv[], Config
                     // if haven't already read this file, read it
                     resolvedConfigFiles.push_back(filePath);
                     configString += config.ReadConfigFile(filePath);
+                    // remember all config directories, for use as include paths by BrainScriptNetworkBuilder
+                    GetBrainScriptNetworkBuilderIncludePaths().push_back(File::DirectoryPathOf(msra::strfun::utf16(filePath)));
                 }
                 else
                     RuntimeError("Cannot specify same config file multiple times at the command line.");
@@ -305,4 +307,5 @@ void TrimQuotes(std::string& str)
     if (str.front() == '"' && str.back() == '"')
         str = str.substr(1, str.size() - 2);
 }
-} } }
+
+}}}

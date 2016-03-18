@@ -72,6 +72,12 @@ void ReaderShim<ElemType>::StartDistributedMinibatchLoop(
     m_reader->StartEpoch(config);
     m_endOfEpoch = false;
 
+    // For adaptive minibatch, make sure there are no outstanding reads.
+    if (m_prefetchTask.valid())
+    {
+        m_prefetchTask.wait();
+    }
+
     m_prefetchTask = std::async(m_launchType, [this]()
     {
         return m_reader->ReadMinibatch();

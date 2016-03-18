@@ -78,6 +78,7 @@ enum ElementWiseOperator
     opAbs,
     opSigmoid,
     opTanh,
+    opSqr,
     opSqrt,
     opExp,
     opLog,
@@ -110,6 +111,8 @@ enum ElementWiseOperator
     opElementwiseProductWithLinearRectifierDerivativeFromOutput,
     opElementwiseProductWithLogDerivativeFromOutput,
     opElementwiseProductWithCosDerivative,
+    opElementwiseProductWithAbsDerivative,
+    opSqrOfDifference,
     // binary ops for indexing
     // opIndex,
     // ternary
@@ -129,6 +132,7 @@ enum ElementWiseOperator
     Macro(Abs);               \
     Macro(Sigmoid);           \
     Macro(Tanh);              \
+    Macro(Sqr);               \
     Macro(Sqrt);              \
     Macro(Exp);               \
     Macro(Log);               \
@@ -157,7 +161,9 @@ enum ElementWiseOperator
     Macro(ElementwiseProductWithTanhDerivativeFromOutput);            \
     Macro(ElementwiseProductWithLinearRectifierDerivativeFromOutput); \
     Macro(ElementwiseProductWithLogDerivativeFromOutput);             \
-    Macro(ElementwiseProductWithCosDerivative); \
+    Macro(ElementwiseProductWithCosDerivative);                       \
+    Macro(ElementwiseProductWithAbsDerivative);                       \
+    Macro(SqrOfDifference);                                           \
     //Macro(Index);
 
 #define ForAllTernaryOps(Macro) \

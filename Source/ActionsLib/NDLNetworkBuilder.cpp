@@ -8,7 +8,7 @@
 #define _CRT_SECURE_NO_WARNINGS // "secure" CRT not available on all platforms  --add this at the top of all CPP files that give "function or variable may be unsafe" warnings
 
 #include "Basics.h"
-#include "SynchronousExecutionEngine.h"
+#include "NDLNetworkBuilder.h"
 #include "LinearAlgebraNodes.h"
 #include "RecurrentNodes.h"
 #include "ConvolutionalNodes.h"
@@ -21,7 +21,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 using namespace std;
 
 template <class ElemType>
-void SynchronousNodeEvaluator<ElemType>::Evaluate(NDLNode<ElemType>* node, const wstring& baseName, const NDLPass pass)
+void NDLNodeEvaluatorImpl<ElemType>::Evaluate(NDLNode<ElemType>* node, const wstring& baseName, const NDLPass pass)
 {
     ComputationNetworkBuilder<ElemType> builder(*m_net);
 
@@ -482,7 +482,7 @@ void SynchronousNodeEvaluator<ElemType>::Evaluate(NDLNode<ElemType>* node, const
 // ProcessTensorShapeParameters - assume positional parameters starting from position i are tensor dimensions--parse those.
 // Is isImage then must be a 3D tensor, which is interpreted as (W,H,C), and optional parameter 'imageLayout' says how.
 template <class ElemType>
-TensorShape SynchronousNodeEvaluator<ElemType>::ProcessTensorShapeParameters(const NDLNode<ElemType>* node, const vector<void*>& params, size_t& i, bool isImage, const wstring& cnNodeType /*for error messages only*/)
+TensorShape NDLNodeEvaluatorImpl<ElemType>::ProcessTensorShapeParameters(const NDLNode<ElemType>* node, const vector<void*>& params, size_t& i, bool isImage, const wstring& cnNodeType /*for error messages only*/)
 {
     // gather dims
     vector<size_t> dims;
@@ -507,7 +507,7 @@ TensorShape SynchronousNodeEvaluator<ElemType>::ProcessTensorShapeParameters(con
     return TensorShape(dims);
 }
 
-template class SynchronousExecutionEngine<float>;
-template class SynchronousExecutionEngine<double>;
+template class NDLBuilderImpl<float>;
+template class NDLBuilderImpl<double>;
 
 }}}

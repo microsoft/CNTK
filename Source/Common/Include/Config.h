@@ -1198,6 +1198,13 @@ public:
 
     static std::string ParseCommandLine(int argc, wchar_t* argv[], ConfigParameters& config);
 
+    // support for BrainScriptNetworkBuilder: It needs the config directories in order to know where to include files from.
+    static vector<wstring>& GetBrainScriptNetworkBuilderIncludePaths()
+    {
+        static vector<wstring> allConfigDirs;
+        return allConfigDirs;
+    }
+
     // dump for debugging purposes
     void dump() const
     {
@@ -1546,5 +1553,7 @@ public:
 
 typedef argvector<int> intargvector;
 typedef argvector<float> floatargvector;
+typedef argvector<double> doubleargvector;
 typedef argvector<std::wstring> stringargvector;
-} } }
+
+}}}

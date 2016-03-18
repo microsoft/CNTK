@@ -26,15 +26,6 @@
       <Filter>Common</Filter>
     </ClCompile>
     <ClCompile Include="CNTK.cpp" />
-    <ClCompile Include="SynchronousExecutionEngine.cpp">
-      <Filter>Model Building, from old NDL</Filter>
-    </ClCompile>
-    <ClCompile Include="NetworkDescriptionLanguage.cpp">
-      <Filter>Model Building, from old NDL</Filter>
-    </ClCompile>
-    <ClCompile Include="SimpleNetworkBuilder.cpp">
-      <Filter>Model Building, Standard Models</Filter>
-    </ClCompile>
     <ClCompile Include="..\Common\MPIWrapper.cpp">
       <Filter>MPI Interfacing</Filter>
     </ClCompile>
@@ -73,14 +64,8 @@
     <ClInclude Include="..\Common\Include\DataWriter.h">
       <Filter>Common\Include</Filter>
     </ClInclude>
-    <ClInclude Include="IExecutionEngine.h">
-      <Filter>Model Building, from old NDL</Filter>
-    </ClInclude>
     <ClInclude Include="ModelEditLanguage.h">
       <Filter>Model Editing</Filter>
-    </ClInclude>
-    <ClInclude Include="SynchronousExecutionEngine.h">
-      <Filter>Model Building, from old NDL</Filter>
     </ClInclude>
     <ClInclude Include="stdafx.h">
       <Filter>Misc</Filter>
@@ -105,18 +90,6 @@
     </ClInclude>
     <ClInclude Include="..\Common\Include\Platform.h">
       <Filter>Common\Include</Filter>
-    </ClInclude>
-    <ClInclude Include="NDLNetworkBuilder.h">
-      <Filter>Model Building, from old NDL</Filter>
-    </ClInclude>
-    <ClInclude Include="NDLUtil.h">
-      <Filter>Model Building, from old NDL</Filter>
-    </ClInclude>
-    <ClInclude Include="NetworkDescriptionLanguage.h">
-      <Filter>Model Building, from old NDL</Filter>
-    </ClInclude>
-    <ClInclude Include="SimpleNetworkBuilder.h">
-      <Filter>Model Building, Standard Models</Filter>
     </ClInclude>
     <ClInclude Include="..\Math\Matrix.h">
       <Filter>from Math</Filter>
@@ -239,12 +212,6 @@
     <Filter Include="from SGDLib\SGD">
       <UniqueIdentifier>{4f06ac18-7b30-490c-b801-128bdaa99450}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Model Building, from old NDL">
-      <UniqueIdentifier>{3ddfc109-3a90-45f5-91e8-1930759cfe9d}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Model Building, Standard Models">
-      <UniqueIdentifier>{f474b73c-05f9-43e6-997f-3ec83805c655}</UniqueIdentifier>
-    </Filter>
     <Filter Include="from Math">
       <UniqueIdentifier>{ebc74fe7-4a25-46e7-87a8-121881ef9124}</UniqueIdentifier>
     </Filter>
@@ -257,6 +224,9 @@
     <Filter Include="BrainScript\Doc">
       <UniqueIdentifier>{23e7cd74-fd60-4fb4-a925-c3dea584f176}</UniqueIdentifier>
     </Filter>
+    <Filter Include="BrainScript\CNTKCoreLib">
+      <UniqueIdentifier>{899f31fa-5906-4485-8875-14ad2c43ed8f}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <None Include="prebuild.bat">
@@ -265,5 +235,10 @@
     <None Include="BrainScript\Doc\BrainScript--extending the CNTK config language, Frank Seide August 2015.pptx">
       <Filter>BrainScript\Doc</Filter>
     </None>
+  </ItemGroup>
+  <ItemGroup>
+    <Xml Include="BrainScript\CNTKCoreLib\CNTK.core.bs">
+      <Filter>BrainScript\CNTKCoreLib</Filter>
+    </Xml>
   </ItemGroup>
 </Project>

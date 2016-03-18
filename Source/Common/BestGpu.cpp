@@ -306,6 +306,7 @@ BestGpu::~BestGpu()
 
     if (m_nvmlData)
     {
+        // TODO: Check for error code and throw if !std::uncaught_exception()
         nvmlShutdown();
     }
 }

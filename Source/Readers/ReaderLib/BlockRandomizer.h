@@ -9,105 +9,114 @@
 
 #include "Transformer.h"
 #include "DataDeserializer.h"
+#include "ChunkRandomizer.h"
+#include "SequenceRandomizer.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
-// The class represents a randomizer that does randomization based on chunks/sequences inside a set of chunk.
-// TODO: currently this code moved from the old block randomizer.
-// The class will be further refactored and common based will be extracted with NoRandomizer.
-// Currently works only for frame mode (numberOfSample in sequence == 1)
+// A randomizer that firstly randomizes chunks and then sequences inside a rolling window of chunks.
+// Uses ChunkRandomizer to randomize chunk descriptions and SequenceRandomizer to randomize sequence descriptions inside a window of chunks.
+// It requires only a window of sequence descriptions and corresponding chunk data.
+// The code is based on the old block randomizer and it preserves the same behavior to pass all available tests.
+// The high-level algorithm is:
+//     When next sequences are requested (limited by the sampleCount), the following steps are performed:
+//         1) if a new sweep is entered, randomize chunk descriptions using ChunkRandomizer, also precalculate randomization windows for all 
+//            chunk descriptions
+//         2) if a new chunk is entered, using SequenceRandomizer identify a window of chunks and requested their sequence descriptions from deserializer.
+//         3) randomize sequence descriptions inside the window 
+//         4) return sequence descriptions not exceeding sampleCount/minibatch limit
+//         5) decimate sequence descriptions based on the worker rank
+//         6) request chunks of data based on decimated sequences and return sequence data
+//
+// This class is responsible for decimation and loading the data chunks in to memory.
+// Actual randomization happens in ChunkRandomizer and SequenceRandomizer.
+// TODO: The behavior can be simplified by only randomizing sequences forward.
+// TODO: The layering will be changed, when we move transformers under the randomizer, it won't be a transformer anymore.
 class BlockRandomizer : public Transformer
 {
 public:
-    enum class DistributionMode {
-        // both modes are round-robin, but granularities are different
-        chunks = 0, // assign work items at the chunk-granularity 
-        // (different chunks to different workers)
-        chunk_modulus = 0, // TODO: remove
-        sequences = 1, // assign work items at the sequence-granularity 
-        // (different sequences to different workers)
-        sequences_strides = 1 // TODO: remove
+    // Currently, decimation based on sequences or chunks is supported.
+    enum class DecimationMode
+    {
+        chunk,
+        sequence
     };
 
-    BlockRandomizer(int verbosity,
+    BlockRandomizer(
+        int verbosity,
         size_t randomizationRangeInSamples,
         IDataDeserializerPtr deserializer,
-        DistributionMode distributionMode = DistributionMode::sequences_strides,
-        bool useLegacyRandomization = false);
+        DecimationMode decimationMode,
+        bool useLegacyRandomization);
 
-    virtual ~BlockRandomizer()
-    {
-    }
+    virtual void Initialize(TransformerPtr, const ConfigParameters&) override {};
 
-    virtual void Initialize(TransformerPtr next, const ConfigParameters& readerConfig) override;
+    // Starts a new epoch.
     virtual void StartEpoch(const EpochConfiguration& config) override;
+
+    // Gets next sequences.
     virtual Sequences GetNextSequences(size_t sampleCount) override;
+
+    // Gets stream descriptions.
     virtual std::vector<StreamDescriptionPtr> GetStreamDescriptions() const override
     {
         return m_deserializer->GetStreamDescriptions();
     }
 
 private:
-    // Structure for per-chunk information
-    struct ChunkInformation
-    {
-        size_t m_sequencePositionStart;
-        size_t m_samplePositionStart;
-    };
+    // Retrieve data for chunks.
+    void RetrieveDataChunks();
 
-    // Structure that will be maintained for each randomized chunk
-    struct RandomizedChunk
-    {
-        struct ChunkInformation m_info; // sample positions are global // TODO could drop 'global' requirement?
+    // Get next sequence descriptions that do not exceed sample count.
+    // Returns true if epoch end is reached.
+    bool GetNextSequenceDescriptions(size_t sampleCount, std::vector<RandomizedSequenceDescription>& result);
 
-        size_t m_originalChunkIndex;
+    // Decimates sequence descriptions and loads chunks of data.
+    void Decimate(const std::vector<RandomizedSequenceDescription>& all, std::vector<RandomizedSequenceDescription>& decimated);
 
-        // Randomization range (in randomized chunk positions; right-side open)
-        size_t m_windowBegin;
-        size_t m_windowEnd;
-    };
+    // Prepares a new sweep if needed.
+    void PrepareNewSweepIfNeeded(size_t samplePosition);
+
+    // Global sample position on the timeline.
+    size_t m_globalSamplePosition;
+
+    // Configuration of the epoch.
+    EpochConfiguration m_config;
+
+    // Epoch size.
+    size_t m_epochSize;
+
+    // Current sweep.
+    size_t m_sweep;
+
+    // Global position of the current sweep in samples.
+    size_t m_sweepStartInSamples;
+
+    // Total number of samples in a sweep.
+    size_t m_sweepTotalNumberOfSamples;
+
+    IDataDeserializerPtr m_deserializer;
+
+    // Chunk randomizer.
+    ChunkRandomizerPtr m_chunkRandomizer;
+
+    // Sequence randomizer.
+    SequenceRandomizerPtr m_sequenceRandomizer;
+
+    // Exposed streams.
+    std::vector<StreamDescriptionPtr> m_streams;
+
+    // A map of data chunks.
+    std::map<size_t, ChunkPtr> m_chunks;
+
+    // Last seen data chunk id.
+    size_t m_lastSeenChunkId;
+
+    // Decimation mode.
+    DecimationMode m_decimationMode;
 
     // General configuration
     int m_verbosity;
-    size_t m_randomizationRangeInSamples; // full window
-    DistributionMode m_distributionMode;
-
-    // Deserializer and information on the original timeline
-    IDataDeserializerPtr m_deserializer;
-    size_t m_numSequences;
-    size_t m_numChunks;
-    size_t m_numSamples;
-    bool m_frameMode;                                 // true iff only single-sample sequences
-    std::vector<ChunkInformation> m_chunkInformation; // (includes a sentinel)
-
-    // Per-epoch configuration
-    size_t m_workerRank;
-    size_t m_numberOfWorkers;
-    size_t m_epochSize;
-    size_t m_samplePositionInEpoch;
-
-    // Per-randomization-sweep information
-    size_t m_sweep;
-    size_t m_sequencePositionInSweep;
-    std::vector<RandomizedChunk> m_randomizedChunks;    // (includes a sentinel)
-    std::vector<size_t> m_sequencePositionToChunkIndex; // TODO find on m_randomizedChunks instead?
-    std::vector<SequenceDescription> m_randomTimeline;
-    std::vector<StreamDescriptionPtr> m_streams;
-
-    // Check that timeline has only valid sequences of non-zero length
-    // with incrementing IDs and non-decreasing chunk identifiers.
-    bool TimelineIsValidForRandomization(const SequenceDescriptions& timeline) const;
-
-    void RandomizeChunks();
-
-    bool IsValidForPosition(size_t targetPosition, const SequenceDescription& seqDesc) const;
-
-    void Randomize();
-
-    void RandomizeForGlobalSamplePosition(const size_t samplePosition);
-
-    void RandomizeIfNewSweepIsEntered();
-
-    bool GetNextSequenceDescriptions(size_t sampleCount, SequenceDescriptions& sequences);
 };
+
 }}}

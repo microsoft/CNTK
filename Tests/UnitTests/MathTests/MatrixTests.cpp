@@ -92,7 +92,7 @@ BOOST_FIXTURE_TEST_CASE(MatrixDeepCopy, RandomSeedFixture)
     BOOST_CHECK_EQUAL(b.GetNumRows(), 50);
     BOOST_CHECK_EQUAL(b.GetNumCols(), 100);
 
-    b = a;
+    b.SetValue(a);
     BOOST_CHECK_EQUAL(a.GetNumRows(), 0);
     BOOST_CHECK_EQUAL(a.GetNumCols(), 0);
     BOOST_CHECK_EQUAL(b.GetNumRows(), 0);
@@ -107,7 +107,7 @@ BOOST_FIXTURE_TEST_CASE(MatrixDeepCopy, RandomSeedFixture)
     b(2, 3) = 9;
     BOOST_CHECK_EQUAL(b(2, 3), 9);
 
-    b = a;
+    b.SetValue(a);
     BOOST_CHECK_EQUAL(a.GetNumRows(), 0);
     BOOST_CHECK_EQUAL(a.GetNumCols(), 0);
     BOOST_CHECK_EQUAL(b.GetNumRows(), 0);
@@ -500,7 +500,7 @@ BOOST_FIXTURE_TEST_CASE(MatrixAddAndSub, RandomSeedFixture)
     m3 = m1 - 10;
     BOOST_CHECK(m3.IsEqualTo(m0));
 
-    SingleMatrix m33(m3);
+    SingleMatrix m33(m3.DeepClone());
     m3 += 10;
     BOOST_CHECK(m3.IsEqualTo(m1));
 
@@ -545,7 +545,7 @@ BOOST_FIXTURE_TEST_CASE(MatrixElementOps, RandomSeedFixture)
     BOOST_CHECK(m3.IsEqualTo(m1, c_epsilonFloatE4));
 
     SingleMatrix m4 = SingleMatrix::Zeros(2, 3, c_deviceIdZero);
-    m4 = m4.AddElementProductOf(m0, m00);
+    m4.SetValue(m4.AddElementProductOf(m0, m00));
     BOOST_CHECK(m4.IsEqualTo(m1, c_epsilonFloatE4));
 
     m3 = m0 ^ 4;
@@ -697,7 +697,7 @@ BOOST_FIXTURE_TEST_CASE(MatrixColumnElementMultiply, RandomSeedFixture)
 
     Matrix<float> m = Matrix<float>::RandomUniform(429, 1024, c_deviceIdZero, -3.4f, 1, IncrementCounter());
     Matrix<float> a = Matrix<float>::Ones(429, 1, c_deviceIdZero);
-    Matrix<float> mCopy(m);
+    Matrix<float> mCopy(m.DeepClone());
 
     m.ColumnElementMultiplyWith(a);
     BOOST_CHECK(mCopy.IsEqualTo(m, c_epsilonFloatE4));
@@ -757,7 +757,7 @@ BOOST_FIXTURE_TEST_CASE(MatrixAssignXOf, RandomSeedFixture)
     }
 
     // AddElementProductOf
-    Matrix<float> c_copy(c);
+    Matrix<float> c_copy(c.DeepClone());
     c.AddElementProductOf(a, b);
     foreach_coord (i, j, c)
     {
@@ -789,7 +789,7 @@ BOOST_FIXTURE_TEST_CASE(MatrixAssignXOf, RandomSeedFixture)
     }
 
     Matrix<float> m3 = Matrix<float>::RandomUniform(42, 12, c_deviceIdZero, -5, 2, IncrementCounter());
-    Matrix<float> m4(m3);
+    Matrix<float> m4(m3.DeepClone());
     m3.AddSignOf(m1);
     foreach_coord (i, j, m3)
     {

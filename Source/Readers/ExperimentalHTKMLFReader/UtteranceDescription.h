@@ -3,6 +3,8 @@
 // Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
 //
 
+#pragma once
+
 #include "DataDeserializer.h"
 #include "../HTKMLFReader/htkfeatio.h"
 
@@ -10,17 +12,23 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
 // This class represents a descriptor for a single utterance.
 // It is only used internally by the HTK deserializer.
-class UtteranceDescription : public SequenceDescription
+class UtteranceDescription
 {
     // Archive filename and frame range in that file.
     msra::asr::htkfeatreader::parsedpath m_path;
 
     // Index of the utterance inside the chunk.
     size_t m_indexInsideChunk;
+    // Position of the first sample of the utterance inside the chunk.
+    size_t m_startFrameIndexInsideChunk;
+    // Chunk id.
+    size_t m_chunkId;
+    // Utterance id.
+    size_t m_id;
 
 public:
     UtteranceDescription(msra::asr::htkfeatreader::parsedpath&& path)
-        : m_path(std::move(path)), m_indexInsideChunk(0)
+        : m_path(std::move(path)), m_indexInsideChunk(0), m_startFrameIndexInsideChunk(0), m_chunkId(SIZE_MAX)
     {
     }
 
@@ -40,14 +48,23 @@ public:
         return filename.substr(0, filename.find_last_of(L"."));
     }
 
-    size_t GetIndexInsideChunk() const
+    void AssignToChunk(size_t chunkId, size_t indexInsideChunk, size_t frameInsideChunk)
     {
-        return m_indexInsideChunk;
+        m_chunkId = chunkId;
+        m_indexInsideChunk = indexInsideChunk;
+        m_startFrameIndexInsideChunk = frameInsideChunk;
     }
 
-    void SetIndexInsideChunk(size_t indexInsideChunk)
+    size_t GetId() const  { return m_id; }
+    void SetId(size_t id) { m_id = id; }
+
+    size_t GetChunkId() const  { return m_chunkId; }
+    size_t GetIndexInsideChunk() const { return m_indexInsideChunk;}
+    size_t GetStartFrameIndexInsideChunk() const { return m_startFrameIndexInsideChunk; }
+
+    void SetStartFrameInsideChunk(size_t startFrameIndexInsideChunk)
     {
-        m_indexInsideChunk = indexInsideChunk;
+        m_startFrameIndexInsideChunk = startFrameIndexInsideChunk;
     }
 };
 

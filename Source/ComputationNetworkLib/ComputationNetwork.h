@@ -108,9 +108,6 @@ public:
     void Save(const std::wstring& fileName, const FileOptions fileFormat = FileOptions::fileOptionsBinary) const;
     void SaveEdited(const std::wstring& fileName, const FileOptions fileFormat = FileOptions::fileOptionsBinary);
 
-    template <class ElemType>
-    void SaveToDbnFile(ComputationNetworkPtr net, const std::wstring& fileName) const;
-
 private:
 
     void SaveToFileImpl(const std::wstring& fileName, const FileOptions fileFormat) const;
@@ -396,6 +393,9 @@ public:
     static void SetDropoutRate(ComputationNetworkPtr net, const ComputationNodeBasePtr& criterionNode, const double dropoutRate, double& prevDropoutRate, unsigned long& dropOutSeed);
 
     template <class ElemType>
+    static void SetBatchNormalizationTimeConstant(ComputationNetworkPtr net, const ComputationNodeBasePtr& criterionNode, const double normalizationTimeConstant, double& prevNormalizationTimeConstant);
+
+    template <class ElemType>
     static void SetSeqParam(ComputationNetworkPtr net,
                             const ComputationNodeBasePtr criterionNode,
                             const double& hsmoothingWeight,
@@ -537,6 +537,9 @@ public:
 
     template <class ElemType>
     void PerformSVDecomposition(const map<wstring, float>& SVDConfig, size_t AlignedSize);
+
+    template <class ElemType>
+    void SaveToDbnFile(ComputationNetworkPtr net, const std::wstring& fileName) const;
 
     // -----------------------------------------------------------------------
     // construction

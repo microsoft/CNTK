@@ -17,9 +17,12 @@
 #ifdef _WIN32
 #define NOMINMAX
 #include "Windows.h"
+#include <Pathcch.h>
+#pragma comment(lib, "Pathcch.lib")
 #endif
 #ifdef __unix__
 #include <unistd.h>
+#include <linux/limits.h> // for PATH_MAX
 #endif
 
 namespace Microsoft { namespace MSR { namespace CNTK {
@@ -140,6 +143,63 @@ void File::Init(const wchar_t* filename, int fileOptions)
                 });
 }
 
+// determine the directory for a given pathname
+// (wstring only for now; feel free to make this a template if needed)
+/*static*/ wstring File::DirectoryPathOf(wstring path)
+{
+#if WIN32
+    auto hr = PathCchRemoveFileSpec(&path[0], path.size());
+    if (hr == S_OK) // done
+        path.resize(wcslen(&path[0]));
+    else if (hr == S_FALSE) // nothing to remove: use .
+        path = L".";
+#else
+    auto pos = path.find_last_of(L"/");
+    if (pos != path.npos)
+        path.erase(pos);
+    else // if no directory path at all, use current directory
+        return L".";
+#endif
+    return path;
+}
+
+// determine the file name for a given pathname
+// (wstring only for now; feel free to make this a template if needed)
+/*static*/ wstring File::FileNameOf(wstring path)
+{
+#if WIN32
+    static const wstring delim = L"\\:/";
+#else
+    static const wstring delim = L"/";
+#endif
+    auto pos = path.find_last_of(delim);
+    if (pos != path.npos)
+        return path.substr(pos + 1);
+    else // no directory path
+        return path;
+}
+
+// get path of current executable
+/*static*/ wstring File::GetExecutablePath()
+{
+#if WIN32
+    wchar_t path[33000];
+    if (GetModuleFileNameW(NULL, path, _countof(path)) == 0)
+        LogicError("GetExecutablePath: GetModuleFileNameW() unexpectedly failed.");
+    return path;
+#else
+    // from http://stackoverflow.com/questions/4025370/can-an-executable-discover-its-own-path-linux
+    pid_t pid = getpid();
+    char path[PATH_MAX + 1] = { 0 };
+    sprintf(path, "/proc/%d/exe", pid);
+    char dest[PATH_MAX + 1] = { 0 };
+    if (readlink(path, dest, PATH_MAX) == -1)
+        RuntimeError("GetExecutableDirectory: readlink() call failed.");
+    else
+        return msra::strfun::utf16(dest);
+#endif
+}
+
 // skip to given delimiter character
 void File::SkipToDelimiter(int delim)
 {
@@ -163,13 +223,20 @@ bool File::IsTextBased()
 
 // File Destructor
 // closes the file
-// Note: this does not check for errors. Use Flush() before closing a file you are writing.
+// Note: this does not check for errors when the File corresponds to pipe stream. In this case, use Flush() before closing a file you are writing.
 File::~File(void)
 {
     if (m_pcloseNeeded)
+    {
+        // TODO: Check for error code and throw if !std::uncaught_exception()     
         _pclose(m_file);
+    }
     else if (m_file != stdin && m_file != stdout && m_file != stderr)
-        fclose(m_file); // (since destructors may not throw, we ignore the return code here)
+    {
+        int rc = fclose(m_file);
+        if ((rc != 0) && !std::uncaught_exception())
+            RuntimeError("File: failed to close file at %S", m_filename.c_str());
+    }
 }
 
 void File::Flush()
@@ -732,6 +799,7 @@ void File::SetPosition(uint64_t pos)
     fsetpos(m_file, pos);
 }
 
+// Load matrix from file. The file is a simple text file consisting of one line per matrix row, where each line contains the elements of the row separated by white space.
 template <class ElemType>
 /*static*/ vector<ElemType> File::LoadMatrixFromTextFile(const std::wstring& filePath, size_t& /*out*/ numRows, size_t& /*out*/ numCols)
 {

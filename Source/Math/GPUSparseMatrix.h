@@ -74,14 +74,17 @@ public:
     {
         return m_format != matrixFormatSparseCSC ? m_pArray : m_pArray + SecondaryIndexValueAt(0);
     }
+
     inline ElemType* NzValues()
     {
         return m_format != matrixFormatSparseCSC ? m_pArray : m_pArray + SecondaryIndexValueAt(0);
     }
+
     inline size_t NzSize() const
     {
         return sizeof(ElemType) * m_nz;
     } // actual number of element bytes in use
+
     inline size_t GetNumNZElements() const
     {
         return m_nz;
@@ -102,6 +105,7 @@ public:
     {
         return MajorIndexCount(m_numRows, m_numCols, m_nz, m_format);
     }
+
     size_t MajorIndexCount(const size_t numRows, const size_t numCols, const size_t numNZ, const MatrixFormat format) const
     {
         if (format == matrixFormatSparseBlockCol)
@@ -111,6 +115,7 @@ public:
         else
             return numNZ;
     }
+
     size_t MajorIndexSize() const // actual number of major index bytes in use
     {
         return sizeof(GPUSPARSE_INDEX_TYPE) * MajorIndexCount();
@@ -126,6 +131,7 @@ public:
             return MajorIndexLocation() + m_elemSizeAllocated + m_sliceViewOffset;
         // return MajorIndexLocation() + m_elemSizeAllocated + m_sliceViewOffset;
     }
+
     size_t SecondaryIndexCount(const size_t numRows, const size_t numCols, const size_t numNZReserved, const MatrixFormat format) const
     {
         if (format == matrixFormatSparseBlockCol)
@@ -160,14 +166,17 @@ public:
     {
         return m_totalBufferSizeAllocated;
     }
+
     inline ElemType* BufferPointer() const
     {
         return m_pArray;
     }
+
     inline size_t GetNumElemAllocated() const
     {
         return m_elemSizeAllocated;
     }
+
     inline size_t GetSizeElemAllocated() const
     {
         return sizeof(ElemType) * m_elemSizeAllocated;
@@ -181,6 +190,7 @@ public:
 
         return (m_format & matrixFormatRowMajor) ? SecondaryIndexLocation() : MajorIndexLocation();
     }
+
     size_t RowSize() const // actual number of bytes in use
     {
         // not a valid function for other formats
@@ -188,6 +198,7 @@ public:
 
         return (m_format & matrixFormatRowMajor) ? SecondaryIndexSize() : MajorIndexSize();
     }
+
     GPUSPARSE_INDEX_TYPE* ColLocation() const
     {
         // not a valid function for other formats
@@ -195,6 +206,7 @@ public:
 
         return (m_format & matrixFormatRowMajor) ? MajorIndexLocation() : SecondaryIndexLocation();
     }
+
     size_t ColSize() const // actual number of bytes in use
     {
         // not a valid function for other formats
@@ -202,6 +214,7 @@ public:
 
         return (m_format & matrixFormatRowMajor) ? MajorIndexSize() : SecondaryIndexSize();
     }
+
     GPUSPARSE_INDEX_TYPE SecondaryIndexValueAt(size_t idx) const;
     GPUSPARSE_INDEX_TYPE* BlockId2ColOrRow() const
     {
@@ -209,12 +222,14 @@ public:
         assert(m_format == matrixFormatSparseBlockCol || m_format == matrixFormatSparseBlockRow);
         return MajorIndexLocation();
     }
+
     GPUSPARSE_INDEX_TYPE* ColOrRow2BlockId() const
     {
         // not a valid function for other formats
         assert(m_format == matrixFormatSparseBlockCol || m_format == matrixFormatSparseBlockRow);
         return SecondaryIndexLocation();
     }
+
     void SetValue(const GPUSparseMatrix<ElemType>& deepCopyFrom);
     void SetValue(const CPUSparseMatrix<ElemType>& deepCopyFrom);
     void SetValue(const GPUMatrix<ElemType>& denseMatrix, const MatrixFormat matrixFormat);

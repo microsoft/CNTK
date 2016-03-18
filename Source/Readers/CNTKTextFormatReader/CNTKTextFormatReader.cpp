@@ -7,7 +7,7 @@
 #include "CNTKTextFormatReader.h"
 #include "Config.h"
 #include "TextConfigHelper.h"
-#include "TextBlockRandomizer.h"
+#include "BlockRandomizer.h"
 #include "NoRandomizer.h"
 #include "TextParser.h"
 
@@ -31,7 +31,8 @@ CNTKTextFormatReader::CNTKTextFormatReader(MemoryProviderPtr provider,
     TransformerPtr randomizer;
     if (configHelper.ShouldRandomize())
     {
-        randomizer = make_shared<TextBlockRandomizer>(0, SIZE_MAX, m_deserializer);
+        randomizer = make_shared<BlockRandomizer>(0, SIZE_MAX, m_deserializer, 
+            BlockRandomizer::DecimationMode::sequence, false);
     }
     else
     {
@@ -56,7 +57,7 @@ void CNTKTextFormatReader::StartEpoch(const EpochConfiguration& config)
     }
 
     m_transformer->StartEpoch(config);
-    m_packer = std::make_shared<TextPacker>(
+    m_packer = std::make_shared<SampleModePacker>(
         m_provider,
         m_transformer,
         config.m_minibatchSizeInSamples,

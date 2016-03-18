@@ -47,7 +47,7 @@ public:
     virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
     {
         size_t rank = DetermineElementwiseTensorRank();
-        auto result = ValueTensorFor(rank, fr);
+        auto result =           ValueTensorFor(rank, fr);
         auto input0 = Input(0)->ValueTensorFor(rank, fr.AllowBroadcast());
         auto input1 = Input(1)->ValueTensorFor(rank, fr.AllowBroadcast());
         result.AssignSumOf(input0, input1);
@@ -56,7 +56,7 @@ public:
     virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
     {
         size_t rank = DetermineElementwiseTensorRank();
-        auto gradient = GradientTensorFor(rank, fr);
+        auto gradient      =                    GradientTensorFor(rank, fr);
         auto inputGradient = Input(inputIndex)->GradientTensorFor(rank, fr.AllowBroadcast());
 
         // if reduction then mask the respective input(s) (zero out the gaps)
@@ -77,12 +77,8 @@ template class PlusNode<double>;
 template <class ElemType>
 class MinusNode : public BinaryElementWiseNode<ElemType>
 {
-    typedef BinaryElementWiseNode<ElemType> Base;
-    UsingBinaryElementwiseNodeBaseMembers;
-    static const std::wstring TypeName()
-    {
-        return L"Minus";
-    }
+    typedef BinaryElementWiseNode<ElemType> Base; UsingBinaryElementwiseNodeBaseMembers;
+    static const std::wstring TypeName() { return L"Minus"; }
 
 public:
     DeclareConstructorFromConfigWithNumInputs(MinusNode);
@@ -95,7 +91,7 @@ public:
     {
         ElemType sign = inputIndex == 0 ? 1.0f : -1.0f;
         size_t rank = DetermineElementwiseTensorRank();
-        auto gradient = GradientTensorFor(rank, fr);
+        auto gradient      =                    GradientTensorFor(rank, fr);
         auto inputGradient = Input(inputIndex)->GradientTensorFor(rank, fr.AllowBroadcast());
 
         // if reduction then mask the respective input(s) (zero out the gaps)
@@ -108,7 +104,7 @@ public:
     virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
     {
         size_t rank = DetermineElementwiseTensorRank();
-        auto result = ValueTensorFor(rank, fr);
+        auto result =           ValueTensorFor(rank, fr);
         auto input0 = Input(0)->ValueTensorFor(rank, fr.AllowBroadcast());
         auto input1 = Input(1)->ValueTensorFor(rank, fr.AllowBroadcast());
         result.AssignDifferenceOf(input0, input1);
@@ -126,12 +122,8 @@ template class MinusNode<double>;
 template <class ElemType>
 class NegateNode : public ComputationNode<ElemType>, public NumInputs<1>
 {
-    typedef ComputationNode<ElemType> Base;
-    UsingComputationNodeMembersBoilerplate;
-    static const std::wstring TypeName()
-    {
-        return L"Negate";
-    }
+    typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+    static const std::wstring TypeName() { return L"Negate"; }
 
 public:
     DeclareConstructorFromConfigWithNumInputs(NegateNode);
@@ -283,6 +275,34 @@ public:
             if (numReductionDims > dimsB.size())
                 InvalidArgument("%ls %ls operation: right argument shape [%s] has too few dimensions for outputRank %d.", NodeName().c_str(), OperationName().c_str(), dimsBstring.c_str(), (int)m_outputRank);
 
+#if 1       // support for legacy models when only the matrix dimensions had to match
+            // Note: This is non-ambiguous w.r.t. valid new configurations because this condition would otherwise just be considered an error.
+            //       But it will fail to discover trailing reduction dimensions that are 1. We assume that no such legacy models exist.
+            // Note: This is very ugly [Wayne Xiong]. I agree [fseide].
+            if (dimsA.size() == 2 && !transpose && m_outputRank == 1 && dimsA[1] != dimsB[0])
+            {
+                // search whether we can interpret dimsA[1] as the flattening of the first dimensions
+                size_t dim = 1;
+                for (size_t k = 0; k < dimsB.size(); k++)
+                {
+                    dim *= dimsB[k];
+                    if (dim == dimsA[1])
+                    {
+                        // OK, we have an explanation: Patch dimsA and back-patch the sample layout of Input(0)
+                        numReductionDims = k + 1;
+                        dimsA.resize(m_outputRank + numReductionDims);
+                        for (size_t kk = 0; kk < numReductionDims; kk++)
+                            dimsA[m_outputRank + kk] = dimsB[kk];
+                        Input(0)->SetDims(TensorShape(dimsA), false);
+                        fprintf(stderr, "\n%ls %ls operation: For legacy compatibility, the sample layout of left input (%ls %ls operation) was patched to [%s] (from [%s])\n",
+                                NodeName().c_str(), OperationName().c_str(), Input(0)->NodeName().c_str(), Input(0)->OperationName().c_str(), string(Input(0)->GetSampleLayout()).c_str(), dimsAstring.c_str());
+                        dimsAstring = string(Input(0)->GetSampleLayout()); // for error messages
+                        break; // we will continue with this patched up model from here on
+                    }
+                }
+            }
+#endif
+
             // validate or automatically infer dimension inference for learnable parameters
             for (size_t k = 0; k < m_outputRank; k++) // outputRank dimensions cannot be inferred
                 if (dimsA[k] == 0)
@@ -295,10 +315,10 @@ public:
                 auto& dimA = dimsA[k];
                 auto& dimB = dimsB[k - m_outputRank];
                 if (isFinalValidationPass && dimB == 0)
-                    InvalidArgument("%ls %ls operation: Right [%s] operand must have zero dimensions.", NodeName().c_str(), OperationName().c_str(), dimsBstring.c_str());
+                    InvalidArgument("%ls %ls operation: Right [%s] operand must not have zero dimensions.", NodeName().c_str(), OperationName().c_str(), dimsBstring.c_str());
                 else if (dimA == 0)
                     dimA = dimB; // infer dimension
-                else if (dimA != dimB)
+                else if (isFinalValidationPass && dimA != dimB)
                     InvalidArgument("%ls %ls operation: Left [%s] and right [%s] operands' shapes are not compatible.", NodeName().c_str(), OperationName().c_str(), dimsAstring.c_str(), dimsBstring.c_str());
             }
 
@@ -558,8 +578,8 @@ public:
         if (flags & CopyNodeFlags::copyNodeValue)
         {
             auto node = dynamic_pointer_cast<DiagTimesNode<ElemType>>(nodeP);
-            *node->m_innerproduct = *m_innerproduct;
-            *node->m_rightGradient = *m_rightGradient;
+            node->m_innerproduct->SetValue(*m_innerproduct);
+            node->m_rightGradient->SetValue(*m_rightGradient);
         }
     }
     // request matrices that are needed for gradient computation
@@ -902,11 +922,11 @@ public:
         if (flags & CopyNodeFlags::copyNodeValue)
         {
             auto node = dynamic_pointer_cast<CosDistanceNode<ElemType>>(nodeP);
-            *node->m_invNorm0 = *m_invNorm0;
-            *node->m_invNorm1 = *m_invNorm1;
-            *node->m_leftTerm = *m_leftTerm;
-            *node->m_rightTerm = *m_rightTerm;
-            *node->m_temp = *m_temp;
+            node->m_invNorm0->SetValue(*m_invNorm0);
+            node->m_invNorm1->SetValue(*m_invNorm1);
+            node->m_leftTerm->SetValue(*m_leftTerm);
+            node->m_rightTerm->SetValue(*m_rightTerm);
+            node->m_temp->SetValue(*m_temp);
         }
     }
     // request matrices needed to do node function value evaluation
@@ -1220,12 +1240,12 @@ public:
         if (flags & CopyNodeFlags::copyNodeValue)
         {
             auto node = dynamic_pointer_cast<CosDistanceWithNegativeSamplesNode<ElemType>>(nodeP);
-            *node->m_invNorm0 = *m_invNorm0;
-            *node->m_invNorm1 = *m_invNorm1;
-            *node->m_invNormSquare = *m_invNormSquare;
-            *node->m_leftTerm = *m_leftTerm;
-            *node->m_rightTerm = *m_rightTerm;
-            *node->m_temp = *m_temp;
+            node->m_invNorm0->SetValue(*m_invNorm0);
+            node->m_invNorm1->SetValue(*m_invNorm1);
+            node->m_invNormSquare->SetValue(*m_invNormSquare);
+            node->m_leftTerm->SetValue(*m_leftTerm);
+            node->m_rightTerm->SetValue(*m_rightTerm);
+            node->m_temp->SetValue(*m_temp);
         }
     }
     // request matrices needed to do node function value evaluation

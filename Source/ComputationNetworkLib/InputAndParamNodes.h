@@ -146,7 +146,7 @@ public:
 
         // the random seed offset is set via the "randomSeedOffset" parameter in config
         if (initOnCPUOnly)
-            Value().TransferToDeviceIfNotThereAndNotAutoPlace(CPUDEVICE, true);
+            Value().TransferToDeviceIfNotThere(CPUDEVICE, true);
 #if 1   // this more complex version is needed to repro test cases generated with an older version
         auto& value = GetSampleLayout().GetRank() > 2 ? Value() : ValueAsMatrix();
 #else
@@ -165,7 +165,7 @@ public:
             value.SetGaussianRandomValue(0, randInitstd, randomSeed);
         }
         if (initOnCPUOnly)
-            Value().TransferToDeviceIfNotThereAndNotAutoPlace(m_deviceId, true);
+            Value().TransferToDeviceIfNotThere(m_deviceId, true);
     }
 
     // initialize by reading a matrix from a text file
@@ -175,6 +175,9 @@ public:
         auto array = File::LoadMatrixFromTextFile<ElemType>(initFromFilePath, numRows, numCols);
 
         // infer tensor dimensions from input file if not set
+        // Note: The mapping of dimensions of the input matrix to tensor dimensions are somewhat confusing.
+        //       The file contains a 2D matrix (one row per text line) that is saved into our column-major representation.
+        //       That representation is then reshaped into a column-major tensor.
         if (GetSampleLayout().GetNumElements() == 0)    // at least one dimension is 0
         {
             auto dims = GetSampleLayout().GetDims();
@@ -208,6 +211,8 @@ public:
             SetDims(TensorShape(dims), false);
         }
 
+        // BUGBUG: We should allow to read an arbitrary tensor from a single-column file.
+        //         Currently, this would cause a matrix/tensor dimension mismatch.
         Value().SetValue(numRows, numCols, m_deviceId, array.data(), matrixFlagNormal);
         VerifyDataSize(Value());      // sanity check
     }
@@ -591,7 +596,7 @@ public:
         if (cols0 * wordsInEachSample != rows1)
             LogicError("LookupTableNode: rows of input 1 is not a multiple of cols of input 0. This usually happens when the feature dimension is not specified as that in the network definition of look-up-table dimension size.");
 
-        auto input1Reshaped = input1.Reshaped(rows1 / wordsInEachSample, cols1 * wordsInEachSample); // BUGBUG: Won't work for sparse.
+        auto input1Reshaped = input1.Reshaped(rows1 / wordsInEachSample, cols1 * wordsInEachSample); // BUGBUG: Won't work for sparse. Also kills BOTH state that we would like to retain.
 
         auto functionValuesReshaped = functionValues.Reshaped(input0.GetNumRows(), input1Reshaped.GetNumCols());
         functionValuesReshaped.AssignProductOf(input0, false, input1Reshaped, false);

@@ -40,7 +40,7 @@ private:
     intargvector m_numSeqsPerMBForAllEpochs;
     size_t m_numSeqsPerMB;      // requested number of parallel sequences
     size_t m_mbNumTimeSteps;    // number of time steps  to fill/filled (note: for frame randomization, this the #frames, and not 1 as later reported)
-    size_t m_mbMaxNumTimeSteps; // max time steps we take in a MB layout; any setence longer than this max will be discarded (and a warning will be issued )
+    size_t m_mbMaxNumTimeSteps; // max time steps we take in a MB layout; any sentence longer than this max will be discarded (and a warning will be issued )
                                 // this is used to prevent CUDA out-of memory errors
 
     vector<size_t> m_numFramesToProcess; // [seq index] number of frames available (left to return) in each parallel sequence

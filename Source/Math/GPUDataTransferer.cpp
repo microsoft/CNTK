@@ -98,6 +98,7 @@ template <class ElemType>
 GPUDataTransferer<ElemType>::~GPUDataTransferer()
 {
     // BUGBUG: we don't destroy our streams (they are static variables); we need a static destructor, I am too lazy now
+    // TODO: Check for error code and throw if !std::uncaught_exception()
     cudaEventDestroy(m_assignCompleteEvent);
     cudaEventDestroy(m_fetchCompleteEvent);
 }

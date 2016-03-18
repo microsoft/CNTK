@@ -85,7 +85,7 @@ public:
         if (flags & CopyNodeFlags::copyNodeValue)
         {
             auto node = dynamic_pointer_cast<SquareErrorNode<ElemType>>(nodeP);
-            *node->m_leftMinusRight = *m_leftMinusRight;
+            node->m_leftMinusRight->SetValue(*m_leftMinusRight);
         }
     }
 
@@ -214,8 +214,8 @@ public:
         if (flags & CopyNodeFlags::copyNodeValue)
         {
             auto node = dynamic_pointer_cast<CrossEntropyWithSoftmaxNode<ElemType>>(nodeP);
-            *node->m_logSoftmaxOfRight = *m_logSoftmaxOfRight;
-            *node->m_softmaxOfRight = *m_softmaxOfRight;
+            node->m_logSoftmaxOfRight->SetValue(*m_logSoftmaxOfRight);
+            node->m_softmaxOfRight->SetValue(*m_softmaxOfRight);
         }
     }
 
@@ -325,8 +325,8 @@ public:
         if (flags & CopyNodeFlags::copyNodeValue)
         {
             auto node = dynamic_pointer_cast<CrossEntropyNode<ElemType>>(nodeP);
-            *node->m_logOfRight = *m_logOfRight;
-            *node->m_leftDivRight = *m_leftDivRight;
+            node->m_logOfRight->SetValue(*m_logOfRight);
+            node->m_leftDivRight->SetValue(*m_leftDivRight);
         }
     }
 
@@ -430,7 +430,7 @@ public:
         if (flags & CopyNodeFlags::copyNodeValue)
         {
             auto node = dynamic_pointer_cast<MatrixL1RegNode<ElemType>>(nodeP);
-            *node->m_gradientOfL1Norm = *m_gradientOfL1Norm;
+            node->m_gradientOfL1Norm->SetValue(*m_gradientOfL1Norm);
         }
     }
 
@@ -712,12 +712,8 @@ template class NoiseContrastiveEstimationNode<double>;
 template <class ElemType>
 class ClassBasedCrossEntropyWithSoftmaxNode : public ComputationNodeNonLooping /*ComputationNode*/<ElemType>, public NumInputs<4>
 {
-    typedef ComputationNodeNonLooping<ElemType> Base;
-    UsingComputationNodeMembersBoilerplate;
-    static const std::wstring TypeName()
-    {
-        return L"ClassBasedCrossEntropyWithSoftmax";
-    }
+    typedef ComputationNodeNonLooping<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+    static const std::wstring TypeName() { return L"ClassBasedCrossEntropyWithSoftmax"; }
 
     // our inputs
     static const size_t LABELDATA = 0;
@@ -850,9 +846,8 @@ public:
     // -sum(left_i * log(softmax_i(right)))
     virtual void /*ComputationNodeNonLooping::*/ ForwardPropNonLooping() override
     {
-        if (Input(LABELDATA)->Value().GetDeviceId() != CPUDEVICE)
-            LogicError("ClassBasedCrossEntropyWithSoftmax (ForwardPropNonLooping()): The label matrix is not using CPU device. This will make computation slow, even though the label data is probably saved on GPU. Because of the external loop over time with explicit class id retrieved from the label matrix, the computation will be very slow if the label matrix is saved on GPU. However, this is only a constraint for label matrix and other matrices such as data are suggested to reside on GPU. ");
-        // TODO: Get the label matrix into location=Both state.
+        // get the label matrix to CPU, ideally in location=BOTH state
+        Input(LABELDATA)->Value().TransferToDeviceIfNotThere(CPUDEVICE, /*ismoved =*/ false/*means: BOTH state OK*/, /*emptyTransfer =*/ false, /*updatePreferredDevice =*/ false);
 
         auto& functionValues = Value();
 
@@ -860,7 +855,7 @@ public:
         assert(m_nbrCls == Input(CLASSPROBINDATA)->GetSampleMatrixNumRows());
 
         // compute the class posteriors
-        m_clsLogSoftmax = Input(CLASSPROBINDATA)->Value();
+        m_clsLogSoftmax.SetValue(Input(CLASSPROBINDATA)->Value());
         m_clsLogSoftmax.InplaceLogSoftmax(true);   // log
         m_clsSoftmax.AssignExpOf(m_clsLogSoftmax); // non-log
 
@@ -868,11 +863,11 @@ public:
         m_totalNbrWords = ForColumnsWithClass([](size_t /*s*/, size_t /*t*/, const FrameRange& /*fr*/, size_t y_t, size_t /*c_t*/, size_t /*sz*/, size_t lft_bnd, size_t nbr_wrd)
         {
             if (nbr_wrd == 0)
-                LogicError("ClassBasedCrossEntropyWithSoftmax: Encountered a class of size 0. This sample seems to lack an NoInput flag.");
+                LogicError("ClassBasedCrossEntropyWithSoftmax: Encountered a class of size 0.");
             if (y_t < lft_bnd || y_t >= lft_bnd + nbr_wrd)
                 LogicError("ClassBasedCrossEntropyWithSoftmax: Word index out of bounds of class-member index range (word not a class member).");
         });
-        // m_totalNbrWords = total size of concatenated vector
+        // now m_totalNbrWords = total size of concatenated vector
 
         // buffer to hold the concatenated class-conditioned prob vectors
         m_softMax.Resize(1, m_totalNbrWords);
@@ -1330,7 +1325,7 @@ public:
         const Matrix<ElemType>& classOneProbabilities = Input(1)->ValueFor(fr);
         Matrix<ElemType>& classZeroLabels = *m_classZeroLabels;
 
-        Matrix<ElemType> ones = ConstOnes(classOneLabels.GetNumRows(), classOneLabels.GetNumCols(), classOneLabels.GetDeviceId());
+        Matrix<ElemType> ones = ConstOnes(classOneLabels.GetNumRows(), classOneLabels.GetNumCols(), classOneLabels.GetDeviceId()).DeepClone();
 
         // compute the indices for the class 0 indices
         classZeroLabels.AssignDifferenceOf(ones, classOneLabels);
@@ -1409,9 +1404,9 @@ public:
         if (flags & CopyNodeFlags::copyNodeValue)
         {
             auto node = dynamic_pointer_cast<LogisticNode<ElemType>>(nodeP);
-            *node->m_classZeroLabels = *m_classZeroLabels;
-            *node->m_result = *m_result;
-            *node->m_temp = *m_temp;
+            node->m_classZeroLabels->SetValue(*m_classZeroLabels);
+            node->m_result->SetValue(*m_result);
+            node->m_temp->SetValue(*m_temp);
         }
     }
 
@@ -1578,15 +1573,15 @@ public:
         m_mbCount(0), m_imageLayoutKind(ImageLayoutKind::CHW)
     {
     }
-    BatchNormalizationNode(DEVICEID_TYPE deviceId, const wstring& name, bool eval, bool spatial, double normTimeConst, double epsilon,
+	BatchNormalizationNode(DEVICEID_TYPE deviceId, const wstring& name, bool eval, bool spatial, double normalizationTimeConstant, double epsilon,
                            bool useCntkEngine, ImageLayoutKind imageLayoutKind)
-        : Base(deviceId, name), m_eval(eval), m_spatial(spatial), m_normTimeConst(normTimeConst), m_epsilon(epsilon),
+						   : Base(deviceId, name), m_eval(eval), m_spatial(spatial), m_normTimeConst(normalizationTimeConstant), m_epsilon(epsilon),
           m_useCntkEngine(useCntkEngine), m_imageLayoutKind(imageLayoutKind), m_mbCount(0)
     {
     }
     BatchNormalizationNode(const ScriptableObjects::IConfigRecordPtr configp)
         : BatchNormalizationNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"eval"), configp->Get(L"spatial"),
-                                 configp->Get(L"normTimeConst"), configp->Get(L"epsilon"), configp->Get(L"useCntkEngine"),
+                                 configp->Get(L"normalizationTimeConstant"), configp->Get(L"epsilon"), configp->Get(L"useCntkEngine"),
                                  ImageLayoutKindFrom(configp->Get(L"imageLayout")))
     {
         AttachInputs(configp, this->GetExpectedNumInputs());
@@ -1664,10 +1659,19 @@ public:
         }
     }
 
+    void SetNormalizationTimeConstant(const double normalizationTimeConstant)
+    {
+        m_normTimeConst = normalizationTimeConstant;
+    }
+
     void BackpropTo(const size_t inputIndex, const FrameRange& fr) override
     {
-        if (m_eval)
-            LogicError("BatchNormalization does not compute derivatives in inference mode.");
+        static bool m_evalWarningIssued = false;  //make sure we only print warning once
+        if (m_eval && !m_evalWarningIssued)
+        {
+            fprintf(stderr, "WARNING: You turned BatchNormalization to evaluation mode during training. Please make sure this is intended.\n");
+            m_evalWarningIssued = true;
+        }
 
         if (inputIndex == 0) // derivative with respect to the input.
         {
@@ -1748,10 +1752,12 @@ public:
                 expAvgFactor = (m_normTimeConst < 0) ? (1.0 / (1.0 + m_mbCount)) : 1;
             }
 
-            if (m_saveMean->GetNumElements() != runMean.GetNumElements())
-                m_saveMean->Resize(runMean.GetNumRows(), runMean.GetNumCols());
-            if (m_saveInvStdDev->GetNumElements() != runMean.GetNumElements())
-                m_saveInvStdDev->Resize(runMean.GetNumRows(), runMean.GetNumCols());
+            if (m_saveMean == nullptr)
+                fprintf(stderr, "WARNING: m_saveMean is null\n");
+            if (m_saveInvStdDev == nullptr)
+                fprintf(stderr, "WARNING: m_saveInvStdDev is null\n");
+            m_saveMean->Resize(runMean);
+            m_saveInvStdDev->Resize(runMean);
 
             m_convEng->NormalizeBatch(*m_inT, sliceInputValue, *m_scaleBiasT, scale, bias, m_spatial, expAvgFactor, runMean, runInvStdDev,
                                       sliceOutputValue, m_epsilon, *m_saveMean, *m_saveInvStdDev);
@@ -1814,7 +1820,7 @@ public:
     void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool) override
     {
         Base::RequestMatricesBeforeForwardProp(matrixPool);
-        if (!m_eval)
+        //if (!m_eval)
         {
             RequestMatrixFromPool(m_saveMean, matrixPool);
             RequestMatrixFromPool(m_saveInvStdDev, matrixPool);
@@ -1824,7 +1830,7 @@ public:
     void RequestMatricesBeforeBackprop(MatrixPool& matrixPool) override
     {
         Base::RequestMatricesBeforeBackprop(matrixPool);
-        if (!m_eval)
+        //if (!m_eval)
         {
             RequestMatrixFromPool(m_dScale, matrixPool);
             RequestMatrixFromPool(m_dBias, matrixPool);
@@ -1834,7 +1840,7 @@ public:
     void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool) override
     {
         Base::ReleaseMatricesAfterBackprop(matrixPool);
-        if (!m_eval)
+        //if (!m_eval)
         {
             ReleaseMatrixToPool(m_saveMean, matrixPool);
             ReleaseMatrixToPool(m_saveInvStdDev, matrixPool);

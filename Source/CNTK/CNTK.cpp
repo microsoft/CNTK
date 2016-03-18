@@ -16,7 +16,6 @@
 #include "DataWriter.h"
 #include "SimpleNetworkBuilder.h"
 #include "NDLNetworkBuilder.h"
-#include "SynchronousExecutionEngine.h"
 #include "ModelEditLanguage.h"
 #include "CPUMatrix.h" // used for SetNumThreads()
 #include "CommonMatrix.h"
@@ -391,9 +390,9 @@ static wstring PathToBSStringLiteral(const wstring& path) // quote a pathname fo
 }
 
 // TODO: decide where these should go. Also, do we need three variables?
-extern wstring standardFunctions;
-extern wstring commonMacros;
-extern wstring computationNodes;
+//extern wstring standardFunctions;
+//extern wstring commonMacros;
+//extern wstring computationNodes;
 
 int wmainWithBS(int argc, wchar_t* argv[]) // called from wmain which is a wrapper that catches & reports Win32 exceptions
 {
@@ -435,7 +434,9 @@ int wmainWithBS(int argc, wchar_t* argv[]) // called from wmain which is a wrapp
 
     // compile the BrainScript
     wstring bs = L"[\n";
-    bs += standardFunctions + computationNodes + commonMacros + L"\n"; // start with standard macros
+    bs += L"include \'cntk.core.bs'"; // start with including the standard macros
+    // Note: Using lowercase ^^ here to match the Linux name of the CNTK exe.
+    //bs += standardFunctions + computationNodes + commonMacros + L"\n";
     for (const auto& sourceFile : sourceFiles)
         bs += L"include " + PathToBSStringLiteral(sourceFile) + L"\n";
     bs += L"\n]\n";
