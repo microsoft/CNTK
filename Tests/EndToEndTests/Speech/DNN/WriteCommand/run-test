@@ -1,0 +1,26 @@
+#!/bin/bash
+
+. $TEST_ROOT_DIR/run-test-common
+
+# cntkrun <CNTK config file name> <additional CNTK args>
+cntkrun cntk.cntk 'shareNodeValueMatrices=true' || exit $?
+
+OUTPUT_BASELINE=$TEST_DIR/Output.ScaledLogLikelihood
+if [ "$OS" == "Windows_NT" ]; then
+  OUTPUT_BASELINE=$OUTPUT_BASELINE.windows
+fi
+
+if [ "$TEST_DEVICE" == "cpu" ]; then
+  OUTPUT_BASELINE=$OUTPUT_BASELINE.cpu
+elif [ "$TEST_DEVICE" == "gpu" ]; then
+  OUTPUT_BASELINE=$OUTPUT_BASELINE.gpu
+else
+  echo "Error: Unknown TEST_DEVICE specified!"
+  exit 3
+fi
+
+diff $OUTPUT_BASELINE $TEST_RUN_DIR/Output.ScaledLogLikelihood > $TEST_RUN_DIR/output.diff || exit $?
+if [ -s $TEST_RUN_DIR/output.diff ]; then
+  echo "Error: Output of write command does not match baseline output. See $TEST_RUN_DIR/output.diff" 1>&2
+  exit 1
+fi

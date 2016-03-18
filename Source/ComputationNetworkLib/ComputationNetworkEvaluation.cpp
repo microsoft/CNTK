@@ -645,50 +645,60 @@ void ComputationNetwork::ValidateNodes(list<ComputationNodeBasePtr> nodes, bool 
 void ComputationNetwork::MarkValueNonSharableNodes()
 {
     const auto& nodes = GetEvalOrder(nullptr);
-    std::map<wstring, bool> allLeafDescendentsAreParameters;
+    std::map<wstring, bool> allLeafDescendentsAreParametersOrPreComputeNodes;
     std::list<ComputationNodeBasePtr> allLearnableParameters = GetNodesWithType(OperationNameOf(LearnableParameter));
     // note that: we cannot use m_learnableParameters because we need all parameters node, regardless whether it requires update or not
+
+    std::list<ComputationNodeBasePtr> allPreComputeNodes;
+    for (const auto& node : nodes)
+    {
+        auto pcnode = dynamic_pointer_cast<IPreComputeNode>(node);
+        if (pcnode)
+            allPreComputeNodes.push_back(node);
+    }
 
     for (auto& node : nodes)
     {
         auto children = node->GetInputs();
         wstring myname = node->NodeName();
-        bool allParameters = true;
+        bool allParametersOrPreComputeNodes = true;
 
         if (children.size()) // we don't do the check for leaf node, cause all the possible leaf nodes (input/parameters/precompute node) are marked as non-sharable already
         {
-            for (auto child : children)
+            if (std::find(allPreComputeNodes.begin(), allPreComputeNodes.end(), node) == allPreComputeNodes.end())
             {
-                wstring ChildName = child->NodeName();
-                if (allLeafDescendentsAreParameters.find(ChildName) == allLeafDescendentsAreParameters.end())
+                for (auto child : children)
                 {
-                    // not found, means it is a leaf node (we are at eval order )
-                    assert(child->IsLeaf() || child->IsPartOfLoop());
-                    if (std::find(allLearnableParameters.begin(), allLearnableParameters.end(), child) != allLearnableParameters.end())
+                    wstring ChildName = child->NodeName();
+                    if (allLeafDescendentsAreParametersOrPreComputeNodes.find(ChildName) == allLeafDescendentsAreParametersOrPreComputeNodes.end())
                     {
-                        allLeafDescendentsAreParameters[ChildName] = true;
+                        // not found, means it is a leaf node (we are at eval order )
+                        assert(child->IsLeaf() || child->IsPartOfLoop());
+                        if (std::find(allLearnableParameters.begin(), allLearnableParameters.end(), child) != allLearnableParameters.end())
+                        {
+                            allLeafDescendentsAreParametersOrPreComputeNodes[ChildName] = true;
+                        }
+                        else
+                        {
+                            allParametersOrPreComputeNodes = false;
+                            allLeafDescendentsAreParametersOrPreComputeNodes[ChildName] = false;
+                            break;
+                        }
                     }
                     else
                     {
-                        allParameters = false;
-                        allLeafDescendentsAreParameters[ChildName] = false;
-                        break;
-                    }
-                }
-                else
-                {
-                    if (allLeafDescendentsAreParameters[ChildName] == false)
-                    {
-                        allParameters = false;
-                        break;
+                        if (allLeafDescendentsAreParametersOrPreComputeNodes[ChildName] == false)
+                        {
+                            allParametersOrPreComputeNodes = false;
+                            break;
+                        }
                     }
                 }
             }
-            allLeafDescendentsAreParameters[myname] = allParameters;
-            if (allParameters)
-            {
+
+            allLeafDescendentsAreParametersOrPreComputeNodes[myname] = allParametersOrPreComputeNodes;
+            if (allParametersOrPreComputeNodes)
                 node->MarkValueNonSharable();
-            }
         }
     }
 }
