@@ -160,7 +160,9 @@ shared_ptr<ComputationNodeBase> NewComputationNodeFromConfig(const Microsoft::MS
     // add a tag
     // Tags are used to declare special node types to ComputationNetwork.
     // For now we support only a single tag, but we could in the future easily extend this to an array of tags.
-    node->SetTag(configp->Get(L"tag"));
+    wstring tag = configp->Get(L"tag");
+    if (!tag.empty())
+        node->SetTag(tag);
     return node;
 }
 
