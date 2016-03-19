@@ -177,21 +177,22 @@ CPUSparseMatrix<ElemType>::CPUSparseMatrix(CPUSparseMatrix<ElemType>&& moveFrom)
     Base::ShallowCopyFrom(moveFrom);
     // BUGBUG: This did not use to copy m_sliceViewOffset, I presume it should be copied? It is now.
 
-    //m_compIndexSize = moveFrom.m_compIndexSize;
+    /*
+    m_compIndexSize = moveFrom.m_compIndexSize;
 
-    //m_colIdx      = moveFrom.m_colIdx;
-    //m_nzValues    = moveFrom.m_nzValues;
-    //m_unCompIndex = moveFrom.m_unCompIndex;
-    //m_compIndex   = moveFrom.m_compIndex;
+    m_colIdx      = moveFrom.m_colIdx;
+    m_nzValues    = moveFrom.m_nzValues;
+    m_unCompIndex = moveFrom.m_unCompIndex;
+    m_compIndex   = moveFrom.m_compIndex;
 
-    //m_blockSize    = moveFrom.m_blockSize;
-    //m_blockIdShift = moveFrom.m_blockIdShift;
-    //m_blockIds     = moveFrom.m_blockIds;
-    m_base = moveFrom.m_base;
+    m_blockSize    = moveFrom.m_blockSize;
+    m_blockIdShift = moveFrom.m_blockIdShift;
+    m_blockIds     = moveFrom.m_blockIds;
+	*/
+    m_sob = moveFrom.m_sob;
 
     // release the pointer from the source object so that the destructor won't release it twice
-    moveFrom.m_base = nullptr;
-    moveFrom.ZeroInit();
+    moveFrom.ZeroValues();
 }
 
 //move assignment operator, shallow copy
@@ -201,26 +202,27 @@ CPUSparseMatrix<ElemType>& CPUSparseMatrix<ElemType>::operator=(CPUSparseMatrix<
     if (this != &moveFrom)
     {
         if (OwnBuffer())
-            m_base = nullptr;
+            m_sob = nullptr;
             //ReleaseMemory(); // always delete the data pointer since we will use the pointer from moveFrom
         Base::ShallowCopyFrom(moveFrom);
         // BUGBUG: This did not use to copy m_sliceViewOffset, I presume it should be copied? It is now.
 
-        //m_compIndexSize = moveFrom.m_compIndexSize;
+        /*
+        m_compIndexSize = moveFrom.m_compIndexSize;
 
-        //m_colIdx      = moveFrom.m_colIdx;
-        //m_nzValues    = moveFrom.m_nzValues;
-        //m_unCompIndex = moveFrom.m_unCompIndex;
-        //m_compIndex   = moveFrom.m_compIndex;
+        m_colIdx      = moveFrom.m_colIdx;
+        m_nzValues    = moveFrom.m_nzValues;
+        m_unCompIndex = moveFrom.m_unCompIndex;
+        m_compIndex   = moveFrom.m_compIndex;
 
-        //m_blockSize    = moveFrom.m_blockSize;
-        //m_blockIdShift = moveFrom.m_blockIdShift;
-        //m_blockIds     = moveFrom.m_blockIds;
-        m_base = moveFrom.m_base;
+        m_blockSize    = moveFrom.m_blockSize;
+        m_blockIdShift = moveFrom.m_blockIdShift;
+        m_blockIds     = moveFrom.m_blockIds;
+		*/
+        m_sob = moveFrom.m_sob;
 
         // release the pointer from the source object so that the destructor won't release it twice
-        moveFrom.m_base = nullptr;
-        moveFrom.ZeroInit();
+        moveFrom.ZeroValues();
     }
     return *this;
 }
@@ -229,7 +231,7 @@ template <class ElemType>
 CPUSparseMatrix<ElemType>::~CPUSparseMatrix()
 {
     //ReleaseMemory();
-    m_base = nullptr;
+    ZeroValues();
 }
 
 /*
@@ -387,13 +389,14 @@ CPUSparseMatrix<ElemType> CPUSparseMatrix<ElemType>::ColumnSlice(size_t startCol
         NOT_IMPLEMENTED;
 
     CPUSparseMatrix<ElemType> slice(GetFormat());
-    slice.m_numRows = m_numRows;
-    slice.m_numCols = numCols;
+    slice.ShallowCopyFrom(*this);
+
+    slice.m_numCols             = numCols;
     // BUGBUG: m_sliceViewOffset?
     //slice.m_externalBuffer    = true;
-    slice.m_base              = m_base;
     //slice.m_sliceOf           = const_cast<CPUSparseMatrix<ElemType>*>(this); // BUGBUG: ColumnSlice() returns a reference to a mutable matrix, even if itself is 'const'; should not be.
 
+    slice.m_sob              = m_sob;
     if (GetFormat() == MatrixFormat::matrixFormatSparseCSC)
     {
         slice.m_sliceViewOffset   = m_sliceViewOffset + startColumn;
@@ -1361,6 +1364,7 @@ template CPUSparseMatrix<char>& CPUSparseMatrix<char>::operator=(CPUSparseMatrix
 template void CPUSparseMatrix<char>::SetValue(size_t, size_t, char);
 template void CPUSparseMatrix<char>::SetValue(CPUSparseMatrix<char> const&);
 template char* CPUSparseMatrix<char>::BufferPointer() const;
+template char* CPUSparseMatrix<char>::BufferPointer();
 template void CPUSparseMatrix<char>::Reset(void);
 template CPUSparseMatrix<char>::~CPUSparseMatrix();
 template CPUSparseMatrix<char> CPUSparseMatrix<char>::ColumnSlice(size_t startColumn, size_t numCols) const;

@@ -26,25 +26,47 @@ public:
     typedef BaseMatrix<ElemType> Base;
     using Base::m_numRows;
     using Base::m_numCols;
-    //using Base::m_pArray;
-    //using Base::m_elemSizeAllocated;
     using Base::m_sliceViewOffset;
     using Base::m_nz;
-    //using Base::m_format;
-    //using Base::m_computeDevice;
     using Base::m_externalBuffer;
-    using Base::OwnBuffer;
-    using Base::GetFormat;
-    using Base::SetFormat;
-    using Base::GetNumRows;
-    using Base::GetNumCols;
+    using Base::SetArray;
+    using Base::GetNumStorageRows;
+    using Base::SetNumStorageRows;
+    using Base::GetNumStorageCols;
+    using Base::SetNumStorageCols;
     using Base::SetComputeDeviceId;
     using Base::SetNzCount;
     using Base::Clear;
+    using Base::SetSizeAllocated;
+    using Base::GetSizeAllocated;
+    using Base::ZeroInit;
+    using Base::ZeroValues;
+    using Base::m_sob;
+    using Base::ShallowCopyFrom;
+    using Base::SetBufferSizeAllocated;
+    using Base::GetBlockSize;
+    using Base::SetBlockSize;
+    using Base::GetTempHostBuffer;
+    using Base::SetTempHostBuffer;
+    using Base::GetTempHostBufferSize;
+    using Base::SetTempHostBufferSize;
+    using Base::BufferSizeAllocated;
+    using Base::GetRowToId;
     // without this, base members would require to use thi-> in GCC
 public:
+    using Base::SetRowToId;
+    using Base::GetComputeDeviceId;
+    using Base::GetArray;
+    using Base::GetNumRows;
+    using Base::GetNumCols;
+    using Base::GetNumElements;
+    using Base::OwnBuffer;
+    using Base::GetFormat;
+    using Base::SetFormat;
     using Base::IsEmpty;
 
+
+public:
     GPUSparseMatrix(const size_t numRows, const size_t numCols, const size_t numNZ, DEVICEID_TYPE computeDevice, const MatrixFormat matrixFormat = MatrixFormat::matrixFormatSparseCSR);
 
     explicit GPUSparseMatrix(DEVICEID_TYPE computeDevice, const MatrixFormat matrixFormat = MatrixFormat::matrixFormatSparseCSR);

@@ -23,19 +23,50 @@ template <class ElemType>
 class MATH_API CPUSparseMatrix : public BaseMatrix<ElemType>
 {
     typedef BaseMatrix<ElemType> Base;
-    //using Base::m_elemSizeAllocated;
-    //using Base::m_computeDevice;
-    using Base::m_externalBuffer;
-    //using Base::m_format;
-    using Base::m_numCols;
     using Base::m_numRows;
+    using Base::m_numCols;
+    using Base::m_sliceViewOffset;
     using Base::m_nz;
-    //using Base::m_pArray; // without this, base members would require to use thi-> in GCC
+    using Base::m_externalBuffer;
+    using Base::SetArray;
+    using Base::GetNumStorageRows;
+    using Base::SetNumStorageRows;
+    using Base::GetNumStorageCols;
+    using Base::SetNumStorageCols;
+    using Base::SetComputeDeviceId;
     using Base::Clear;
+    using Base::SetSizeAllocated;
+    using Base::GetSizeAllocated;
+    using Base::GetCompIndex;
+    using Base::SetCompIndex;
+    using Base::GetUnCompIndex;
+    using Base::SetUnCompIndex;
+    using Base::GetCompIndexSize;
+    using Base::SetCompIndexSize;
+    using Base::GetColIdx;
+    using Base::SetColIdx;
+    using Base::GetBlockSize;
+    using Base::SetBlockSize;
+    using Base::GetBlockIds;
+    using Base::SetBlockIds;
+    using Base::GetBlockIdShift;
+    using Base::SetBlockIdShift;
+    using Base::ZeroInit;
+    using Base::ZeroValues;
+    using Base::m_sob;
+    using Base::ShallowCopyFrom;
     using Base::NzCount;
-
+    
 public:
+    using Base::SetNzCount;
+    using Base::GetComputeDeviceId;
+    using Base::GetArray;
+    using Base::GetNumRows;
+    using Base::GetNumCols;
+    using Base::GetNumElements;
     using Base::OwnBuffer;
+    using Base::GetFormat;
+    using Base::SetFormat;
     using Base::IsEmpty;
 
 private:
@@ -53,8 +84,6 @@ public:
     ~CPUSparseMatrix();
 
 public:
-    using Base::GetNumCols;
-    using Base::GetNumRows;
 
     void SetValue(const size_t row, const size_t col, ElemType val);
     void SetValue(const CPUSparseMatrix<ElemType>& /*val*/);

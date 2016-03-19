@@ -27,14 +27,40 @@ double logadd(double x, double y);
 template <class ElemType>
 class MATH_API CPUMatrix : public BaseMatrix<ElemType>
 {
-    typedef BaseMatrix<ElemType> B;
-    using B::m_numRows;
-    using B::m_numCols;
-    //using B::m_pArray;
-    //using B::m_computeDevice;
-    //using B::m_elemSizeAllocated;
-    using B::m_externalBuffer;
-    //using B::m_format;
+    typedef BaseMatrix<ElemType> Base;
+    using Base::m_numRows;
+    using Base::m_numCols;
+    using Base::m_sliceViewOffset;
+    using Base::m_nz;
+    using Base::m_externalBuffer;
+    using Base::SetArray;
+    using Base::GetNumStorageRows;
+    using Base::SetNumStorageRows;
+    using Base::GetNumStorageCols;
+    using Base::SetNumStorageCols;
+    using Base::SetComputeDeviceId;
+    using Base::SetNzCount;
+    using Base::Clear;
+    using Base::SetOwnBuffer;
+    using Base::SetSizeAllocated;
+    using Base::GetSizeAllocated;
+    using Base::ZeroInit;
+    using Base::ZeroValues;
+    using Base::m_sob;
+    using Base::ShallowCopyFrom;
+
+public:
+    using Base::GetComputeDeviceId;
+    using Base::GetArray;
+    using Base::GetNumRows;
+    using Base::GetNumCols;
+    using Base::GetNumElements;
+    using Base::OwnBuffer;
+    using Base::GetFormat;
+    using Base::SetFormat;
+    using Base::IsEmpty;
+
+
 public:
     CPUMatrix();
     CPUMatrix(const size_t numRows, const size_t numCols);
@@ -47,12 +73,6 @@ public:
     ~CPUMatrix();
 
 public:
-    using B::OwnBuffer;
-    using B::GetNumElements;
-    using B::IsEmpty;
-    using B::GetNumRows;
-    using B::GetNumCols;
-    using B::SetOwnBuffer;
 
     size_t BufferSize() const
     {

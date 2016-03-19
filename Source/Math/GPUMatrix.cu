@@ -256,14 +256,12 @@ cublasHandle_t _initCUBLAS(int devId)
     return cuHandle;
 }
 
-/**/
 template <class ElemType>
 void GPUMatrix<ElemType>::SetDevice(DEVICEID_TYPE deviceId)
 {
     assert(deviceId >= 0);
     CUDA_CALL(cudaSetDevice(deviceId));
 }
-/**/
 
 // PrepareDevice - Setup the correct cuda context for an operation
 // deviceId - the device on which the operation will take place
@@ -331,7 +329,7 @@ void GPUMatrix<ElemType>::ChangeDeviceTo(DEVICEID_TYPE to_id)
         LogicError("Cannot change device on Managed external matrix");
     if (to_id == CPUDEVICE)
         LogicError("to_id must be valid GPU");
-    if (GetComputeDeviceId()== to_id)
+    if (GetComputeDeviceId() == to_id)
         return;
 
     ElemType* d_dst = TracingGPUMemoryAllocator::Allocate<ElemType>(to_id, m_numRows, m_numCols);
@@ -351,7 +349,7 @@ void GPUMatrix<ElemType>::ChangeDeviceTo(DEVICEID_TYPE to_id)
             {
                 CUDA_CALL(cudaStatus);
             }
-            CUDA_CALL(cudaMemcpyPeer(d_dst, to_id, GetArray(), GetComputeDeviceId(), sizeof(ElemType) * m_numRows * m_numCols));
+            CUDA_CALL(cudaMemcpyPeer(d_dst, to_id, BufferPointer(), GetComputeDeviceId(), sizeof(ElemType) * m_numRows * m_numCols));
         }
         else
         {
@@ -360,7 +358,7 @@ void GPUMatrix<ElemType>::ChangeDeviceTo(DEVICEID_TYPE to_id)
             ElemType* h_dst = NULL;
             PrepareDevice();
             CUDA_CALL(cudaMallocHost((void**) &h_dst, sizeof(ElemType) * m_numRows * m_numCols));
-            CUDA_CALL(cudaMemcpy(h_dst, GetArray(), sizeof(ElemType) * m_numRows * m_numCols, cudaMemcpyDeviceToHost));
+            CUDA_CALL(cudaMemcpy(h_dst, BufferPointer(), sizeof(ElemType) * m_numRows * m_numCols, cudaMemcpyDeviceToHost));
             PrepareDevice((DEVICEID_TYPE) to_id);
             CUDA_CALL(cudaMemcpy(d_dst, h_dst, sizeof(ElemType) * m_numRows * m_numCols, cudaMemcpyHostToDevice));
             CUDA_CALL(cudaFreeHost(h_dst));
@@ -415,15 +413,6 @@ void GPUMatrix<ElemType>::performElementWiseFunction(ElementWiseOperator kind, c
 template <class ElemType>
 void GPUMatrix<ElemType>::ZeroInit(int deviceId)
 {
-    BaseMatrix<ElemType>::ZeroInit();
-    //BaseMatrix<ElemType>::ZeroStorageInit();
-    SetComputeDeviceId(deviceId);
-    //m_base = make_shared<BaseMatrixStorage<ElemType>>(matrixFormatDense, deviceId);
-    /*
-	SetFormat(matrixFormatDense);
-    SetComputeDeviceId(deviceId);
-    m_externalBuffer = false;
-	*/
     /*
     m_pArray = nullptr;
     m_computeDevice = deviceId;
@@ -433,6 +422,8 @@ void GPUMatrix<ElemType>::ZeroInit(int deviceId)
     m_format = matrixFormatDense;
     m_externalBuffer = false;
 	*/
+    BaseMatrix<ElemType>::ZeroInit();
+    SetComputeDeviceId(deviceId);
 }
 
 template <class ElemType>
@@ -455,7 +446,7 @@ GPUMatrix<ElemType>::GPUMatrix(const size_t numRows, const size_t numCols, int d
     {
         /*
         m_pArray = TracingGPUMemoryAllocator::Allocate<ElemType>(m_computeDevice, m_numRows, m_numCols);
-        CUDA_CALL(cudaMemset(m_pArray, 0, sizeof(ElemType) * GetSizeAllocated()));
+        CUDA_CALL(cudaMemset(m_pArray, 0, sizeof(ElemType) * m_elemSizeAllocated));
 		*/
         SetArray(TracingGPUMemoryAllocator::Allocate<ElemType>(GetComputeDeviceId(), m_numRows, m_numCols));
         CUDA_CALL(cudaMemset(GetArray(), 0, sizeof(ElemType) * GetSizeAllocated()));
@@ -467,43 +458,18 @@ GPUMatrix<ElemType>::GPUMatrix(const size_t numRows, const size_t numCols, int d
 {
     ZeroInit(deviceId);
     SetValue(numRows, numCols, deviceId, pArray, matrixFlags);
-    SetNumStorageRows(numRows);
-    SetNumStorageCols(numCols);
-    SetSizeAllocated(GetNumElements());
 };
 
 template <class ElemType>
 GPUMatrix<ElemType>::GPUMatrix(const GPUMatrix<ElemType>& deepCopyFrom)
 {
-    /*
-    if (deepCopy)
-    {
-		ZeroInit(deepCopyFrom.GetComputeDeviceId());
-        SetValue(deepCopyFrom);
-    }
-    else
-    {
-	*/
-        //ShallowCopyFrom(deepCopyFrom);
     ZeroInit();
 	SetValue(deepCopyFrom);
-    //}
 }
 
 template <class ElemType>
 GPUMatrix<ElemType>::GPUMatrix(GPUMatrix<ElemType>&& moveFrom)
 {
-    /*
-    m_numRows = moveFrom.m_numRows;
-    m_numCols = moveFrom.m_numCols;
-    //m_computeDevice = moveFrom.m_computeDevice;
-    //m_pArray = moveFrom.m_pArray; // shallow copy the pointer
-    //SetSizeAllocated(moveFrom.GetSizeAllocated());
-    //m_format = moveFrom.m_format;
-    m_base = moveFrom.m_base;
-    m_externalBuffer = moveFrom.m_externalBuffer;
-	*/
-    ShallowCopyFrom(moveFrom);
     /*
     m_numRows = moveFrom.m_numRows;
     m_numCols = moveFrom.m_numCols;
@@ -514,11 +480,8 @@ GPUMatrix<ElemType>::GPUMatrix(GPUMatrix<ElemType>&& moveFrom)
     m_externalBuffer = moveFrom.m_externalBuffer;
 	*/
 
-    // release the pointer from the source object so that the destructor won't release it twice
-	// BUGBUGBUG: Note this is ZeroInit not ZeroInit(deviceId)! Thus it calls BaseMatrix ZeroInit()
-	// Very confusing.
-    moveFrom.m_base = nullptr;
-    moveFrom.ZeroInit();
+    ShallowCopyFrom(moveFrom);
+    moveFrom.ZeroValues();
 }
 
 //assignment operator, deep copy
@@ -543,21 +506,7 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::operator=(GPUMatrix<ElemType>&& moveFr
         {
             TracingGPUMemoryAllocator::Free<ElemType>(m_computeDevice, m_pArray);
         }
-		*/
-        ShallowCopyFrom(moveFrom);
-        /*
-        m_numRows = moveFrom.m_numRows;
-        m_numCols = moveFrom.m_numCols;
-        m_base = moveFrom.m_base;
-        m_externalBuffer = moveFrom.m_externalBuffer;
-		*/
-        /*
-        SetSizeAllocated(moveFrom.GetSizeAllocated());
-        m_pArray = moveFrom.m_pArray;
-        m_computeDevice = moveFrom.m_computeDevice;
-        m_format = moveFrom.m_format;
-		*/
-        /*
+
         m_numRows = moveFrom.m_numRows;
         m_numCols = moveFrom.m_numCols;
         m_elemSizeAllocated = moveFrom.m_elemSizeAllocated;
@@ -567,9 +516,8 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::operator=(GPUMatrix<ElemType>&& moveFr
         m_externalBuffer = moveFrom.m_externalBuffer;
 		*/
 
-        // release the pointer from the source object so that the destructor won't release it twice
-        moveFrom.m_base = nullptr;
-        moveFrom.ZeroInit();
+        ShallowCopyFrom(moveFrom);
+        moveFrom.ZeroValues();
     }
     return *this;
 }
@@ -585,7 +533,7 @@ template <class ElemType>
 void GPUMatrix<ElemType>::Clear()
 {
     //if (OwnBuffer() && m_pArray != NULL)
-    if (OwnBuffer() && m_base != nullptr)
+    if (OwnBuffer() && m_sob != nullptr)
     {
         if (GetComputeDeviceId()>= 0)
         {
@@ -641,7 +589,7 @@ GPUMatrix<ElemType> GPUMatrix<ElemType>::ColumnSlice(size_t startColumn, size_t 
     //    LogicError("The slice cannot have 0 columns.");
 
     if (startColumn + numCols > GetNumCols())
-        InvalidArgument("The slice (%d+%d) is out of range of the source matrix (%d).", (int) startColumn, (int) numCols, (int) GetNumStorageCols());
+        InvalidArgument("The slice (%d+%d) is out of range of the source matrix (%d).", (int) startColumn, (int) numCols, (int) GetNumCols());
 
     //GPUMatrix<ElemType> slice(m_numRows, numCols, m_computeDevice, m_pArray + startColumn * m_numRows, matrixFlagDontOwnBuffer);
     GPUMatrix<ElemType> slice(GetComputeDeviceId());
@@ -660,7 +608,7 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignColumnSlice(const GPUMatrix<Elem
         LogicError("The slice cannot have 0 columns.");
 
     if (startColumn + numCols > fromMatrix.GetNumCols())
-        InvalidArgument("The slice (%d+%d) is out of range of the source matrix (%d).", (int) startColumn, (int) numCols, (int) fromMatrix.GetNumStorageCols());
+        InvalidArgument("The slice (%d+%d) is out of range of the source matrix (%d).", (int) startColumn, (int) numCols, (int) fromMatrix.GetNumCols());
 
     Clear();
 
@@ -674,7 +622,7 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignColumnSlice(const GPUMatrix<Elem
     m_numCols = numCols;
     m_pArray = fromMatrix.m_pArray + startColumn * m_numRows;
 
-    SetSizeAllocated(GetNumElements());
+    m_elemSizeAllocated = GetNumElements();
     m_format = fromMatrix.m_format;
 	*/
 
@@ -694,7 +642,7 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::SetColumnSlice(const GPUMatrix<ElemTyp
         LogicError("The number of rows in source and destination matrices do not match");
 
     if (m_numRows * numCols > 0) // TODO: remove if unnecessary
-        CUDA_CALL(cudaMemcpy(GetArray() + m_sliceViewOffset + LocateColumn(startColumn), fromMatrix.BufferPointer(), sizeof(ElemType) * m_numRows * numCols, cudaMemcpyDeviceToDevice));
+        CUDA_CALL(cudaMemcpy(BufferPointer() + m_sliceViewOffset + LocateColumn(startColumn), fromMatrix.BufferPointer(), sizeof(ElemType) * m_numRows * numCols, cudaMemcpyDeviceToDevice));
     return *this;
 }
 
@@ -1068,7 +1016,7 @@ void GPUMatrix<ElemType>::SetColumn(const ElemType* colPointer, size_t colInd)
         LogicError("SetValue: Matrix is empty.");
     if (colPointer == NULL)
         return;
-    CUDA_CALL(cudaMemcpy(GetArray() + LocateColumn(colInd), colPointer, sizeof(ElemType) * m_numRows, cudaMemcpyHostToDevice));
+    CUDA_CALL(cudaMemcpy(BufferPointer() + LocateColumn(colInd), colPointer, sizeof(ElemType) * m_numRows, cudaMemcpyHostToDevice));
 }
 
 template <class ElemType>
@@ -1078,7 +1026,7 @@ void GPUMatrix<ElemType>::SetColumn(const GPUMatrix<ElemType>& valMat, size_t co
         LogicError("SetColumn: Matrix is empty.");
     if (valMat.GetNumCols() != 1)
         LogicError("SetColumn: only support one column matrix now.");
-    CUDA_CALL(cudaMemcpy(GetArray() + LocateColumn(colInd), valMat.BufferPointer(), sizeof(ElemType) * m_numRows, cudaMemcpyDeviceToDevice));
+    CUDA_CALL(cudaMemcpy(BufferPointer() + LocateColumn(colInd), valMat.BufferPointer(), sizeof(ElemType) * m_numRows, cudaMemcpyDeviceToDevice));
 }
 
 template <class ElemType>
@@ -1088,22 +1036,13 @@ void GPUMatrix<ElemType>::SetValue(const GPUMatrix<ElemType>& deepCopyFrom)
         return;
 
     /*
-    if (deepCopyFrom.GetNumRows() != m_numRows || deepCopyFrom.GetNumCols() != m_numCols)
-    {
-        RuntimeError("Error in GPUMatrix::SetValue. Cannot set value because source matrix (%d x %d) is not the same size as destination matrix (%d x %d).", deepCopyFrom.GetNumRows(), deepCopyFrom.GetNumCols(), m_numRows, m_numCols);
-    }
-	*/
-    /*
-    Resize(deepCopyFrom.GetNumStorageRows(), deepCopyFrom.GetNumStorageCols());
-    SetFormat(deepCopyFrom.GetFormat()); // copy the format over just to be sure
-    size_t cpSize = deepCopyFrom.GetNumStorageRows() * deepCopyFrom.GetNumStorageCols();
+    Resize(deepCopyFrom.GetNumRows(), deepCopyFrom.GetNumCols());
+    m_format = deepCopyFrom.m_format; // copy the format over just to be sure
+    size_t cpSize = deepCopyFrom.GetNumRows() * deepCopyFrom.GetNumCols();
     if (cpSize != 0)
         CUDA_CALL(cudaMemcpy(GetArray(), deepCopyFrom.GetArray(), cpSize * sizeof(ElemType), cudaMemcpyDeviceToDevice));
-		*/
+	*/
                 
-    //m_base            = deepCopyFrom.m_base;
-    //ShallowCopyFrom(deepCopyFrom);
-    //m_base = make_shared<BaseMatrixStorage<ElemType>>(deepCopyFrom.GetFormat(), deepCopyFrom.GetComputeDeviceId());
     if (GetNumRows() != deepCopyFrom.GetNumRows() || GetNumCols() != deepCopyFrom.GetNumCols())
     {
         m_numRows = deepCopyFrom.m_numRows;
@@ -1112,19 +1051,7 @@ void GPUMatrix<ElemType>::SetValue(const GPUMatrix<ElemType>& deepCopyFrom)
     }
     if (!deepCopyFrom.IsEmpty())
 		SetValue(deepCopyFrom.GetNumRows(), deepCopyFrom.GetNumCols(), deepCopyFrom.GetComputeDeviceId(), deepCopyFrom.BufferPointer(), matrixFlagSetValueOnDevice);
-    //m_sliceViewOffset = 0;
 }
-
-/*
-A0 = [10 x 10]
-A1 = [10 x 5]
-
-B0 = [10 x 10]
-B1 = [10 x 5]
-
-B0.SetValue(A1);
-B1.SetValue(A1)
-*/
 
 template <class ElemType>
 void GPUMatrix<ElemType>::SetValue(const size_t numRows, const size_t numCols, int deviceId, ElemType* pArray, size_t matrixFlags)
@@ -1139,12 +1066,18 @@ void GPUMatrix<ElemType>::SetValue(const size_t numRows, const size_t numCols, i
         }
         m_numRows = numRows;
         m_numCols = numCols;
+        /*
+        m_pArray = pArray;
+        m_elemSizeAllocated = GetNumElements();
+        m_format = matrixFormatDense;
+        m_externalBuffer = true;
+        m_computeDevice = deviceId;
+		*/
         SetArray(pArray);
         SetSizeAllocated(GetNumElements());
         SetFormat(matrixFormatDense);
         SetNumStorageRows(numRows);
         SetNumStorageCols(numCols);
-        //m_externalBuffer = true;
         SetComputeDeviceId(deviceId);
     }
     else
@@ -1306,7 +1239,7 @@ ElemType GPUMatrix<ElemType>::Adagrad(GPUMatrix<ElemType>& gradients, const bool
 
     ElemType* multipliers = nullptr;
     if (needAveMultiplier)
-        multipliers = BufferPointer()+ n; // temp memory used to store multipliers,
+        multipliers = BufferPointer() + n; // temp memory used to store multipliers,
 
     int blocksPerGrid = (n + GridDim::maxThreadsPerBlock - 1) / GridDim::maxThreadsPerBlock;
     _adagrad<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock>>>(BufferPointer(), gradients.BufferPointer(), n, multipliers);
@@ -1378,8 +1311,8 @@ ElemType GPUMatrix<ElemType>::RmsProp(GPUMatrix<ElemType>& gradients,
         SetValue(0.0);
 
         ElemType* avars = BufferPointer();         // accumulated variances for RMS scaling
-        ElemType* signs = BufferPointer()+ n;     // sign of previous gradient
-        ElemType* steps = BufferPointer()+ 2 * n; // current step size
+        ElemType* signs = BufferPointer() + n;     // sign of previous gradient
+        ElemType* steps = BufferPointer() + 2 * n; // current step size
         // BufferPointer()+3*n is temp memory used to store multipliers, no need to initialize
 
         _rmsprop_init<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock>>>(avars, signs, steps, gradients.BufferPointer(), n);
@@ -1387,12 +1320,12 @@ ElemType GPUMatrix<ElemType>::RmsProp(GPUMatrix<ElemType>& gradients,
     assert(GetNumRows() == gradients.GetNumRows() && GetNumCols() == numColsNeeded);
 
     ElemType* avars = BufferPointer();         // accumulated variances for RMS scaling
-    ElemType* signs = BufferPointer()+ n;     // sign of previous gradient
-    ElemType* steps = BufferPointer()+ 2 * n; // current step size
+    ElemType* signs = BufferPointer() + n;     // sign of previous gradient
+    ElemType* steps = BufferPointer() + 2 * n; // current step size
 
     ElemType* multipliers = nullptr;
     if (needAveMultiplier)
-        multipliers = BufferPointer()+ 3 * n; // temp memory used to store multipliers,
+        multipliers = BufferPointer() + 3 * n; // temp memory used to store multipliers,
 
     if (!upd_gpu)
     {
@@ -1438,7 +1371,7 @@ template <class ElemType>
 void GPUMatrix<ElemType>::Reshape(const size_t numRows, const size_t numCols)
 {
     assert(numRows * numCols == GetNumElements());
-    if (numRows * numCols != GetNumRows() * GetNumCols())
+    if (numRows * numCols != GetNumElements())
         InvalidArgument("Reshape: total number of elements does not match.");
 
     m_numRows = numRows;
@@ -1496,7 +1429,7 @@ size_t GPUMatrix<ElemType>::LocateElement(const size_t row, const size_t col) co
 template <class ElemType>
 size_t GPUMatrix<ElemType>::LocateColumn(const size_t col) const
 {
-    assert(col == 0 || col < m_base->GetNumStorageCols());
+    assert(col < GetNumCols());
     return col * m_numRows; // matrix in column-wise storage
 }
 
@@ -1917,28 +1850,28 @@ void GPUMatrix<ElemType>::AssignNoiseContrastiveEstimation(const GPUMatrix<ElemT
         p = p / 2;
 
     _computeNceOutput<ElemType><<<this->GetNumElements() / 2, p>>>(
-        this->GetArray(),
+        this->BufferPointer(),
         sampleCount,
         m_numRows / 2,
-        my_a.GetArray(), // a
+        my_a.BufferPointer(), // a
         a.GetNumRows(),
-        my_b.GetArray(), // b
-        my_bias.GetArray(),
-        tmp.GetArray()); // tmp
+        my_b.BufferPointer(), // b
+        my_bias.BufferPointer(),
+        tmp.BufferPointer()); // tmp
 
     p = 512;
     while (p / 2 > this->GetNumElements() / 2)
         p = p / 2;
     // summing up objective must be done in one block
     _assignNoiseContrastiveEstimation<ElemType><<<1, p>>>(
-        this->GetArray(),
+        this->BufferPointer(),
         sampleCount,
         m_numRows / 2,
-        my_a.GetArray(),
+        my_a.BufferPointer(),
         a.GetNumCols(),
-        my_b.GetArray(),
-        tmp.GetArray(),
-        c.GetArray());
+        my_b.BufferPointer(),
+        tmp.BufferPointer(),
+        c.BufferPointer());
 }
 
 template <class ElemType>
@@ -1954,14 +1887,14 @@ void GPUMatrix<ElemType>::AssignNCEDerivative(GPUMatrix<ElemType>& tmp, const GP
         p = p / 2;
 
     _assignNceDerivativeNew<ElemType><<<(tmp.GetNumElements() + p - 1) / p, p>>>(
-        GetArray(),
+        BufferPointer(),
         tmp.GetNumCols(),
         m_numRows / 2,
-        my_a.GetArray(),
+        my_a.BufferPointer(),
         a.GetNumRows(),
-        my_b.GetArray(),
-        tmp.GetArray(),
-        c.GetArray(),
+        my_b.BufferPointer(),
+        tmp.BufferPointer(),
+        c.BufferPointer(),
         inputIndex);
 }
 
@@ -1976,10 +1909,10 @@ void GPUMatrix<ElemType>::AssignSoftmaxSum(const GPUMatrix<ElemType>& a, GPUMatr
         p = p / 2;
 
     _assignSoftmaxSum<ElemType><<<1, p>>>(
-        my_a.GetArray(),
+        my_a.BufferPointer(),
         width,
-        GetArray(),
-        c.GetArray());
+        BufferPointer(),
+        c.BufferPointer());
 }
 
 template <class ElemType>

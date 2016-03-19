@@ -567,7 +567,7 @@ GPUSparseMatrix<ElemType>& GPUSparseMatrix<ElemType>::operator=(GPUSparseMatrix<
 template <class ElemType>
 GPUSparseMatrix<ElemType>::~GPUSparseMatrix()
 {
-    m_base = nullptr;
+    ZeroValues();
 }
 
 /*
@@ -1630,7 +1630,7 @@ void GPUSparseMatrix<ElemType>::ScaleAndAdd(ElemType alpha, const GPUSparseMatri
     {
         NOT_IMPLEMENTED;
     }
-    if (c.m_base == nullptr)
+    if (c.m_sob == nullptr)
         c.ZeroInit(a.GetFormat(), a.GetComputeDeviceId());
 
     if (a.GetNumCols() != b.GetNumCols() || a.GetNumRows() != b.GetNumRows())
@@ -2151,13 +2151,13 @@ GPUSparseMatrix<ElemType> GPUSparseMatrix<ElemType>::ColumnSlice(size_t startCol
     slice.ShallowCopyFrom(*this);
     slice.m_numCols                  = numCols;
     slice.m_nz                       = (numCols == m_numCols) ? m_nz : SecondaryIndexValueAt(startColumn + numCols) - SecondaryIndexValueAt(startColumn);
-    slice.m_sliceViewOffset          = startColumn; // Just shift the compressed index location to the new startColumn - that's it!
+    slice.m_sliceViewOffset          = m_sliceViewOffset + startColumn; // Just shift the compressed index location to the new startColumn - that's it!
     /*
     slice.m_computeDevice            = m_computeDevice;
     slice.m_numRows                  = m_numRows;
     slice.m_numCols                  = numCols;
     slice.m_nz                       = (numCols == m_numCols) ? m_nz : SecondaryIndexValueAt(startColumn + numCols) - SecondaryIndexValueAt(startColumn);
-    slice.SetSizeAllocated(GetSizeAllocated());
+    slice.m_elemSizeAllocated        = m_elemSizeAllocated;
     slice.m_totalBufferSizeAllocated = m_totalBufferSizeAllocated;
     slice.m_pArray                   = m_pArray;
     slice.m_format                   = m_format;

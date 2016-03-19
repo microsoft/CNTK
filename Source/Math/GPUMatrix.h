@@ -94,24 +94,42 @@ class MATH_API GPUMatrix : public BaseMatrix<ElemType>
     typedef BaseMatrix<ElemType> Base;
     using Base::m_numRows;
     using Base::m_numCols;
+    using Base::m_sliceViewOffset;
+    using Base::m_nz;
+    using Base::m_externalBuffer;
+    using Base::SetArray;
+    using Base::GetNumStorageRows;
+    using Base::SetNumStorageRows;
+    using Base::GetNumStorageCols;
+    using Base::SetNumStorageCols;
+    using Base::SetComputeDeviceId;
+    using Base::SetNzCount;
+    using Base::Clear;
+    using Base::SetSizeAllocated;
+    using Base::GetSizeAllocated;
+    using Base::ZeroInit;
+    using Base::ZeroValues;
+    using Base::m_sob;
+    using Base::ShallowCopyFrom;
+    using Base::ReleaseStorageMemory;
     //using B::m_pArray; // without this, base members would require to use thi-> in GCC
 
     template <typename T>
     friend class GPUMatrix;
 
 public:
+    using Base::GetComputeDeviceId;
+    using Base::GetArray;
+    using Base::GetNumRows;
+    using Base::GetNumCols;
+    using Base::GetNumElements;
+    using Base::OwnBuffer;
+    using Base::GetFormat;
+    using Base::SetFormat;
+    using Base::IsEmpty;
+
+public:
     static const int MaxGpus = 8; // support up to 8 GPUs
-    //using BaseMatrix<ElemType>::m_computeDevice;
-    //using BaseMatrix<ElemType>::m_elemSizeAllocated;
-    //using BaseMatrix<ElemType>::m_format;
-    using BaseMatrix<ElemType>::m_externalBuffer;
-    using BaseMatrix<ElemType>::m_nz;
-    using BaseMatrix<ElemType>::OwnBuffer;
-    using BaseMatrix<ElemType>::GetNumElements;
-    using BaseMatrix<ElemType>::IsEmpty;
-    using BaseMatrix<ElemType>::GetArray;
-    using BaseMatrix<ElemType>::GetNumRows;
-    using BaseMatrix<ElemType>::GetNumCols;
 
 private:
     static cublasHandle_t s_cuHandle[MaxGpus];

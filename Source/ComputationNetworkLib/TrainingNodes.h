@@ -139,7 +139,6 @@ public:
         if (inputIndex == 0) // left derivative
         {
 #if DUMPOUTPUT
-            //(*m_logSoftmaxOfRight).Print("CrossEntropyWithSoftmax Partial-logSoftmaxOfRight");
             (*(m_logSoftmaxOfRight.get())).Print("CrossEntropyWithSoftmax Partial-logSoftmaxOfRight");
             Gradient().Print("CrossEntropyWithSoftmax Partial-gradientValues");
             Input(0)->GradientFor(fr).Print("CrossEntropyWithSoftmaxNode Partial-Left-in");
@@ -155,7 +154,6 @@ public:
         else if (inputIndex == 1) // right derivative
         {
 #if DUMPOUTPUT
-            //*m_softmaxOfRight.Print("CrossEntropyWithSoftmax Partial-softmaxOfRight");
             (*(m_softmaxOfRight.get())).Print("CrossEntropyWithSoftmax Partial-softmaxOfRight");
             Input(0)->ValueFor(fr).Print("CrossEntropyWithSoftmax Partial-inputFunctionValues");
             Gradient().Print("CrossEntropyWithSoftmax Partial-gradientValues");
