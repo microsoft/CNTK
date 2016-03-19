@@ -158,10 +158,9 @@ shared_ptr<ComputationNodeBase> NewComputationNodeFromConfig(const Microsoft::MS
     else
         RuntimeError("NewStandardNode: Invalid value '%ls' for 'precision' parameter. Must be 'float' or 'double'.", precision.c_str());
     // add a tag
-    // Tags are used to declare special node types tp ComputationNetwork.
-    const auto nodeWithTag = dynamic_pointer_cast<ScriptableObjects::WithTag>(node);
-    if (nodeWithTag)
-        nodeWithTag->SetTag(configp->Get(L"tag"));
+    // Tags are used to declare special node types to ComputationNetwork.
+    // For now we support only a single tag, but we could in the future easily extend this to an array of tags.
+    node->SetTag(configp->Get(L"tag"));
     return node;
 }
 

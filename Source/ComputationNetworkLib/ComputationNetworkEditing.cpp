@@ -235,41 +235,32 @@ void ComputationNetwork::ReplaceLeafNode(wstring oldNodeName, ComputationNodeBas
 }
 
 // add a new criterion node and at the same time orphan the previous one (it won't be removed)
+// The newNode can have the same name and come with pre-connected inputs, which will be used to connect to existing nodes of the same name.
 // BUGBUG: Can this operate on both new and existing nodes?
 void ComputationNetwork::ReplaceFinalCriterionNode(wstring oldNodeName, ComputationNodeBasePtr newNode)
 {
     InvalidateCompiledNetwork();
 
-    // checks if the node is a criterion node
-    int index = -1;
-    for (int i = 0; i < m_criterionNodes.size(); ++i)
-    {
-        if (m_criterionNodes[i]->NodeName() == oldNodeName)
-        {
-            index = i;
-            break;
-        }
-    }
-    if (index == -1)
+    // remove old criterion node
+    // BUGBUG: The old node is not removed from the network. Seems strangely inconsistent.
+    bool wasThere = RemoveFromNodeGroup(L"criterion", GetNodeFromName(oldNodeName));
+    if (!wasThere)
         RuntimeError("ReplaceFinalCriterionNode: The node to be replaced is not a criterion node.");
 
     // replace children
+    // This looks for nodes in the network that have the same name as its current inputs, and then relinks its inputs to those.
+    // I.e. this allows to move a node from network to another and reconnect by the names if its inputs.
     for (int i = 0; i < newNode->GetNumInputs(); ++i)
     {
         if (m_nameToNodeMap.find(newNode->GetInputs()[i]->NodeName()) == m_nameToNodeMap.end())
-            RuntimeError("Child node does not exist.");
+            RuntimeError("Child node %ls is not part of the network.", newNode->GetInputs()[i]->NodeName().c_str());
         newNode->SetInput(i, m_nameToNodeMap[newNode->GetInputs()[i]->NodeName()]);
-        // TODO: Remove the strange indirection through nameToNodeMap, just use the ptr directly?
     }
 
     // add it to the network
     AddNodeToNetIfNotYet(newNode);
 
-    // remove the node we are replacing from this group
-    // BUGBUG: The old node is not removed from the network. Seems strangely inconsistent.
-    RemoveFromNodeGroup(m_criterionNodes[index]);
-
-    // add it to criterion node list
+    // add new node to criterion node group
     AddToNodeGroup(L"criterion", newNode);
 }
 

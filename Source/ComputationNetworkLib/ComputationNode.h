@@ -263,7 +263,7 @@ class ComputationNodeBase : public IComputationNode,
                             public /*protected*/ ComputationNetworkOwnedNodeState, // TODO: figure the 'protected' business out, somehow the 'friend' thing does not work
                             public TimeStamp,                                      // for time-stamp management
                             public ScriptableObjects::ComputationNodeObject,
-                            public ScriptableObjects::WithTag,
+                            public ScriptableObjects::WithTags,
                             public ScriptableObjects::HasName,
                             public ScriptableObjects::HasToString,
                             //public ScriptableObjects::IConfigRecord, // make members accessible as BS expressions

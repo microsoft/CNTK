@@ -75,14 +75,16 @@ ComputationNetwork::ComputationNetwork(const IConfigRecordPtr configp) :
         if (lateAttachingNode)
             lateAttachingNode->LateAttachInputs();
 
-        // add it to the respective node group based on the tag
-        auto tag = node->GetTag();
-#if 0   // TODO: reenable this for back compat after we verified that at least none of our Jenkins tests use these anymore
-        // legacy names
-        if      (tag == L"criteria") tag = L"criterion";
-        else if (tag == L"eval"    ) tag = L"evaluation";
+        // add it to the respective node groups based on the tags
+        for (auto tag : node->GetTags())
+        {
+#if 0       // TODO: reenable this for back compat after we verified that at least none of our Jenkins tests use these anymore
+            // map legacy names
+            if      (tag == L"criteria") tag = L"criterion";
+            else if (tag == L"eval"    ) tag = L"evaluation";
 #endif
-        AddToNodeGroup(tag, node); // tag may be empty, or may have been set by array parameters
+            AddToNodeGroup(tag, node); // tag may be empty, or may have been set by array parameters
+        }
 
         // traverse children: append them to the end of the work list
         let& children = node->GetInputs();
@@ -109,30 +111,6 @@ const ScriptableObjects::ConfigValuePtr& /*IConfigRecord::*/ ComputationNetwork:
         RuntimeError("Network does not contain a node called '%ls'", id.c_str());
     return *valuep;
 }
-
-#if 0 // unused, remove
-static void RecoverTagFromNodeGroup(const ComputationNodeBasePtr& node, const std::vector<ComputationNodeBasePtr>& nodeList, const std::wstring& tag)
-{
-    // search nodeList
-    for (auto& listNode : nodeList)
-    {
-        if (listNode == node)
-        {
-            // found it: set the tag
-            let nodeWithTag = dynamic_pointer_cast<WithTag>(node);
-            if (nodeWithTag)
-            {
-                let currentTag = nodeWithTag->GetTag();
-                if (!currentTag.empty() && currentTag != tag)
-                    RuntimeError("%ls %ls operation is in two node groups ('%ls' and '%ls'), which is unsupported.", node->NodeName().c_str(), node->OperationName().c_str(), currentTag.c_str(), tag.c_str());
-                nodeWithTag->SetTag(tag);
-            }
-            else LogicError("RecoverTagFromNodeGroup: Unexpected type.");
-            return;
-        }
-    }
-}
-#endif
 
 const ScriptableObjects::ConfigValuePtr* /*IConfigRecord::*/ ComputationNetwork::Find(const wstring& id) const // returns nullptr if not found
 {

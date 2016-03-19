@@ -71,8 +71,8 @@ void MELScript<ElemType>::SetGroupTag(ComputationNodeBasePtr nodeProp, Computati
 {
     if (set)
         cn->AddToNodeGroup(groupTag, nodeProp);
-    else if (groupTag == nodeProp->GetTag()) // remove: only if it is part of this node group, otherwise ignore
-        cn->RemoveFromNodeGroup(nodeProp);
+    else
+        cn->RemoveFromNodeGroup(groupTag, nodeProp);
 }
 
 // ProcessNDLScript - Process the NDL script

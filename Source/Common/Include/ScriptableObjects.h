@@ -8,6 +8,7 @@
 #include <memory>     // for shared_ptr<>
 #include <functional> // for function<>
 #include <map>
+#include <set>
 
 namespace Microsoft { namespace MSR { namespace ScriptableObjects {
 
@@ -173,24 +174,35 @@ struct HasToString
 };
 
 // -----------------------------------------------------------------------
-// WithTag -- trait to give an object a tag std::string
+// WithTags -- trait to give an object a set of tag strings
 // -----------------------------------------------------------------------
 
-class WithTag
+class WithTags : std::set<std::wstring>
 {
-    std::wstring m_tag;
-
 public:
-    WithTag()
+    WithTags()
     {
     }
-    void SetTag(const std::wstring &tag)
+    bool SetTag(const std::wstring &tag)
     {
-        m_tag = tag;
+        auto res = insert(tag);
+        return res.second; // true if was not there before
     }
-    const std::wstring &GetTag() const
+    bool ClearTag(const std::wstring &tag)
     {
-        return m_tag;
+        auto iter = find(tag);
+        if (iter == end())
+            return false;
+        erase(iter);
+        return true; // indicates that we used to have this tag
+    }
+    bool HasTag(const std::wstring &tag) const
+    {
+        return find(tag) != end();
+    }
+    const std::set<std::wstring>& GetTags() const
+    {
+        return *this;
     }
 };
 

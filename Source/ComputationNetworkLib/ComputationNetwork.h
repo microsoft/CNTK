@@ -466,42 +466,37 @@ public:
     // add a node to a node group
     void AddToNodeGroup(const std::wstring& groupTag, const ComputationNodeBasePtr& node)
     {
-        // empty tag is OK, means don't do anything (allows for some more regular code outside)
-        if (groupTag.empty())
-            return;
         // determine the node group by its group tag string
         auto& nodeGroup = GetNodeGroup(groupTag);
         // if node is already in the list then we are done
-        const auto& currentTag = node->GetTag();
-        if (currentTag == groupTag) // if not, that's an error, which we will throw below
+        if (node->HasTag(groupTag))
         {
-            for (const auto& groupNode : nodeGroup)
+            for (const auto& groupNode : nodeGroup) // TODO: is there an STL algorithm?
                 if (groupNode == node)
                     return;
+            // we get here if the node has the tag but is not in the node group yet
         }
         // verify and update the node's tag
-        if (currentTag.empty())
-            node->SetTag(groupTag);
-        else if (currentTag != groupTag) // a node can only have one tag, i.e. one node-group membership
-            RuntimeError("%ls %ls operation is in two node groups ('%ls' and '%ls'), which is unsupported.", node->NodeName().c_str(), node->OperationName().c_str(), currentTag.c_str(), groupTag.c_str());
+        bool wasNotSetYet = node->SetTag(groupTag);
         // add to the node group
-        nodeGroup.push_back(node);
+        if (wasNotSetYet)
+            nodeGroup.push_back(node);
     }
 
     // remove a node from its node group
-    void RemoveFromNodeGroup(const ComputationNodeBasePtr& node)
+    // Returns true if the node was there.
+    bool RemoveFromNodeGroup(const std::wstring& groupTag, const ComputationNodeBasePtr& node)
     {
-        const auto& groupTag = node->GetTag();
-        if (groupTag.empty())
-            return;
+        bool wasActuallySet = node->ClearTag(groupTag);
+        if (!wasActuallySet) // if node was not member of the group, we are done
+            return false;
         auto& nodeGroup = GetNodeGroup(groupTag);
-        for (size_t i = 0; i < nodeGroup.size(); i++)
+        for (auto iter = nodeGroup.begin(); iter != nodeGroup.end(); iter++)
         {
-            if (nodeGroup[i] == node)
+            if (*iter == node)
             {
-                nodeGroup.erase(nodeGroup.begin() + i); //TODO: use iterator
-                node->SetTag(L""); // and untag it
-                return;
+                nodeGroup.erase(iter);
+                return true;
             }
         }
         LogicError("RemoveFromNodeGroup: %ls %ls operation not found in its node group '%ls'.", node->NodeName().c_str(), node->OperationName().c_str(), groupTag.c_str());

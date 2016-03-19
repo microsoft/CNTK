@@ -1295,7 +1295,7 @@ bool SGD<ElemType>::PreCompute(ComputationNetworkPtr net,
 
     fprintf(stderr, "\nPrecomputing --> %lu PreCompute nodes found.\n\n", nodes.size());
     for (const auto & node : nodes)
-        fprintf(stderr, "\tNodeName: %ls\n", (node->NodeName()).c_str());
+        fprintf(stderr, "\t%ls = %ls()\n", node->NodeName().c_str(), node->OperationName().c_str());
 
     // compute
     ScopedNetworkOperationMode modeGuard(net, NetworkOperationMode::preComputing);
