@@ -680,8 +680,8 @@ ElemType* Matrix<ElemType>::BufferPointer() const
 {
     DISPATCH_MATRIX_ON_FLAG(this,
                             nullptr,
-                            return m_baseMatrix->GetArray(),
-                            return m_baseMatrix->GetArray(),
+                            return m_CPUMatrix->BufferPointer(),
+                            return m_GPUMatrix->BufferPointer(),
                             return m_CPUSparseMatrix->BufferPointer(),
                             return (ElemType*) m_GPUSparseMatrix->BufferPointer());
 }
