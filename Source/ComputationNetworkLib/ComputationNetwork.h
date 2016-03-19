@@ -477,10 +477,9 @@ public:
             // we get here if the node has the tag but is not in the node group yet
         }
         // verify and update the node's tag
-        bool wasNotSetYet = node->SetTag(groupTag);
+        node->SetTag(groupTag);
         // add to the node group
-        if (wasNotSetYet)
-            nodeGroup.push_back(node);
+        nodeGroup.push_back(node);
     }
 
     // remove a node from its node group
