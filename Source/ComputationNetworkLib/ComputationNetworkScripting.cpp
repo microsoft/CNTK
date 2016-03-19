@@ -79,20 +79,18 @@ ComputationNetwork::ComputationNetwork(const IConfigRecordPtr configp) :
         let nodeWithTag = dynamic_pointer_cast<WithTag>(node);
         if (nodeWithTag)
         {
-            wstring tag = nodeWithTag->GetTag();
-            if (tag == L"feature")
-                FeatureNodes().push_back(node);
-            else if (tag == L"label")
-                LabelNodes().push_back(node);
-            else if (tag == L"criterion" || tag == L"criteria")
-                FinalCriterionNodes().push_back(node); // 'criteria' is wrong (plural); we keep it for compat
-            else if (!_wcsnicmp(tag.c_str(), L"eval", 4))
-                EvaluationNodes().push_back(node); // eval*
-            else if (tag == L"output")
-                OutputNodes().push_back(node);
-            else if (!tag.empty())
-                RuntimeError("ComputationNetwork: unknown tag '%ls'", tag.c_str());
-            // TODO: are there nodes without tag? Where do they go?
+            let& tag = nodeWithTag->GetTag();
+            if      (tag == L"feature")          FeatureNodes().push_back(node);
+            else if (tag == L"label")              LabelNodes().push_back(node);
+            else if (tag == L"criterion") FinalCriterionNodes().push_back(node);
+            else if (tag == L"evaluation")    EvaluationNodes().push_back(node);
+            else if (tag == L"output")            OutputNodes().push_back(node);
+#if 0
+            // legacy names. TODO: We don't actually need to support these in BS
+            else if (tag == L"criteria")              FinalCriterionNodes().push_back(node); // 'criteria' is wrong (plural); we keep it for compat
+            else if (!_wcsnicmp(tag.c_str(), L"eval", 4)) EvaluationNodes().push_back(node); // eval*
+#endif
+            else if (!tag.empty()) RuntimeError("ComputationNetwork: unknown tag '%ls'", tag.c_str());
         }
 
         // traverse children: append them to the end of the work list
@@ -110,22 +108,80 @@ ComputationNetwork::ComputationNetwork(const IConfigRecordPtr configp) :
 // behave like a config
 // This allows to access nodes inside a network as if it was an IConfigRecord.
 // This is meant to be used by whatever we will replace MEL.
-// TODO: implement this
+// TODO: Is there more than nodes that we want to return? Node groups? deviceId?
 // ===================================================================
 
 const ScriptableObjects::ConfigValuePtr& /*IConfigRecord::*/ ComputationNetwork::operator[](const wstring& id) const // e.g. confRec[L"message"]
 {
-    id;
-    RuntimeError("unknown class parameter"); // (for now)
+    let* valuep = Find(id);
+    if (!valuep)
+        RuntimeError("Network does not contain a node called '%ls'", id.c_str());
+    return *valuep;
 }
+
+static void RecoverTagFromNodeGroup(const ComputationNodeBasePtr& node, const std::vector<ComputationNodeBasePtr>& nodeList, const std::wstring& tag)
+{
+    // search nodeList
+    for (auto& listNode : nodeList)
+    {
+        if (listNode == node)
+        {
+            // found it: set the tag
+            let nodeWithTag = dynamic_pointer_cast<WithTag>(node);
+            if (nodeWithTag)
+            {
+                let currentTag = nodeWithTag->GetTag();
+                if (!currentTag.empty() && currentTag != tag)
+                    RuntimeError("%ls %ls operation is in two node groups ('%ls' and '%ls'), which is unsupported.", node->NodeName().c_str(), node->OperationName().c_str(), currentTag.c_str(), tag.c_str());
+                nodeWithTag->SetTag(tag);
+            }
+            else LogicError("RecoverTagFromNodeGroup: Unexpected type.");
+            return;
+        }
+    }
+}
+
 const ScriptableObjects::ConfigValuePtr* /*IConfigRecord::*/ ComputationNetwork::Find(const wstring& id) const // returns nullptr if not found
 {
-    id;
-    return nullptr; // (for now)
+    let iter = m_nameToNodeMap.find(id);
+    if (iter == m_nameToNodeMap.end())
+        return nullptr; // no such node
+    const ComputationNodeBasePtr& node = iter->second;
+    // TODO: What is the expressionPath?
+    // We have a small problem: We want to return a ComputationNodeBasePtr, but must return the *address* of a ConfigValuePtr.
+    // Hence, we will create this ConfigValuePtr upon first access and hold it in a map, and furtheron return that map entry.
+    let& mapIter = m_nodesAsConfigValues.find(node);
+    if (mapIter != m_nodesAsConfigValues.end())
+        return &mapIter->second;
+    // not in the cache yet: create it
+    // First, we need to recover its tag from the node groups.
+    // TODO: This will only catch the explicitly referenced ones. Need to rething the tags/groups.
+    RecoverTagFromNodeGroup(node, m_features     , L"feature"   );
+    RecoverTagFromNodeGroup(node, m_labels       , L"label"     );
+    RecoverTagFromNodeGroup(node, m_finalCriteria, L"criterion" );
+    RecoverTagFromNodeGroup(node, m_evalNodes    , L"evaluation");
+    RecoverTagFromNodeGroup(node, m_outputNodes  , L"output"    );
+    // Now create it.
+    auto nodeName = node->NodeName();   // failFn lambda below holds a copy of the name for the error message. Let's not hold an unneccessary shared_ptr to the node, risking cycles & stuff.
+    auto valuep = ConfigValuePtr(static_pointer_cast<Object>(node), [nodeName](const std::wstring &) { LogicError("ComputationNetwork: Failed to retrieve node '%ls'.", nodeName.c_str()); }, node->NodeName());
+    let res = m_nodesAsConfigValues.insert(make_pair(node, move(valuep)));
+    assert(&res.first->second == &m_nodesAsConfigValues.find(node)->second);
+    assert(res.second);        // this says whether it has been inserted. It better be.
+    return &res.first->second; // this is the cached ConfigValuePtr
 }
+
 vector<wstring> /*IConfigRecord::*/ ComputationNetwork::GetMemberIds() const
 {
-    return vector<wstring>();
+    vector<wstring> nodeNames;
+    for (let& iter : m_nameToNodeMap)
+    {
+        const ComputationNodeBasePtr& node = iter.second;
+        const wstring& nodeName = node->NodeName();
+        if (nodeName.find_first_of(L".[$")) // only expose the top-level names
+            continue;
+        nodeNames.push_back(nodeName);
+    }
+    return nodeNames;
 }
 
 // ===================================================================
@@ -149,6 +205,6 @@ public:
     }
 };
 
-ScriptableObjects::ConfigurableRuntimeTypeRegister::AddFloatDouble<ComputationNetworkFromFile<float>, ComputationNetworkFromFile<double>> registerComputationNetwork(L"ComputationNetworkFromFile");
+ScriptableObjects::ConfigurableRuntimeTypeRegister::AddFloatDouble<ComputationNetworkFromFile<float>, ComputationNetworkFromFile<double>> registerComputationNetworkFromFile(L"ComputationNetworkFromFile");
 
 }}}

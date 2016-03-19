@@ -435,6 +435,14 @@ public:
         return iter->second;
     }
 
+    inline std::vector<ComputationNodeBasePtr> CriterionNodesFrom(const wstring& criterionNodeName)
+    {
+        ComputationNodeBasePtr node = GetNodeFromName(criterionNodeName);
+        if (node->HasMBLayout() || node->GetSampleLayout().GetNumElements() != 1)
+            InvalidArgument("%ls %ls operation is not a valid training or eval criterion node.", node->NodeName().c_str(), node->OperationName().c_str());
+        return std::vector<ComputationNodeBasePtr>{node};
+    }
+
     // these are specified as such by the user
     inline std::vector<ComputationNodeBasePtr>& FeatureNodes()
     {
@@ -452,15 +460,6 @@ public:
     {
         return m_finalCriteria;
     }
-
-    inline std::vector<ComputationNodeBasePtr> CriterionNodesFrom(const wstring& criterionNodeName)
-    {
-        ComputationNodeBasePtr node = GetNodeFromName(criterionNodeName);
-        if (node->HasMBLayout() || node->GetSampleLayout().GetNumElements() != 1)
-            InvalidArgument("%ls %ls operation is not a valid training or eval criterion node.", node->NodeName().c_str(), node->OperationName().c_str());
-        return std::vector<ComputationNodeBasePtr>{node};
-    }
-
     inline std::vector<ComputationNodeBasePtr>& EvaluationNodes()
     {
         return m_evalNodes;
@@ -482,11 +481,8 @@ public:
     std::vector<ComputationNodeBasePtr> GetAllNodes() const
     {
         std::vector<ComputationNodeBasePtr> nodes;
-        for (auto nodeIter = m_nameToNodeMap.begin(); nodeIter != m_nameToNodeMap.end(); nodeIter++)
-        {
-            ComputationNodeBasePtr node = nodeIter->second;
-            nodes.push_back(node);
-        }
+        for (const auto& iter : m_nameToNodeMap)
+            nodes.push_back(iter.second);
         return nodes;
     }
 
@@ -883,11 +879,11 @@ private://protected:
     // node groups
     // These are specified by the user by means of tags or explicitly listing the node groups.
     // TODO: Are these meant to be disjoint?
-    std::vector<ComputationNodeBasePtr> m_features;
-    std::vector<ComputationNodeBasePtr> m_labels;
-    std::vector<ComputationNodeBasePtr> m_finalCriteria;
-    std::vector<ComputationNodeBasePtr> m_evalNodes;
-    std::vector<ComputationNodeBasePtr> m_outputNodes;
+    std::vector<ComputationNodeBasePtr> m_features;      // tag="feature"
+    std::vector<ComputationNodeBasePtr> m_labels;        // tag="label"
+    std::vector<ComputationNodeBasePtr> m_finalCriteria; // tag="criterion"
+    std::vector<ComputationNodeBasePtr> m_evalNodes;     // tag="eval"
+    std::vector<ComputationNodeBasePtr> m_outputNodes;   // tag="output"
     vector<std::vector<ComputationNodeBasePtr>*> GetAllNodeGroups() // get all groups to allow to iterate over all of them ...continue
     {
         return vector<std::vector<ComputationNodeBasePtr>*>{&m_features, &m_labels, &m_finalCriteria, &m_evalNodes, &m_outputNodes};
@@ -927,6 +923,10 @@ private:
     // pool for matrices that can be shared across nodes
     // TODO: does this apply to anything else besides temporary node-internal intermediate results? What, for example?
     MatrixPool m_matrixPool;
+
+private:
+    // cached return values from IConfigRecord implementation
+    mutable std::map<ComputationNodeBasePtr, ScriptableObjects::ConfigValuePtr> m_nodesAsConfigValues; // we return references to ConfigValuePtr objects
 };
 typedef ComputationNetwork::ComputationNetworkPtr ComputationNetworkPtr;
 

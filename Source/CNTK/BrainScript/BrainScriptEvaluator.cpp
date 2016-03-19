@@ -174,7 +174,7 @@ static ConfigValuePtr RecordLookup(const ExpressionPtr &recordExpr, const wstrin
     // that is, variables inside that expression--often a single variable referencing something in the current scope--
     // will be looked up there.
     // Now, the identifier on the other hand is looked up in the record and *its* scope (parent chain).
-    let record = AsPtr<ConfigRecord>(Evaluate(recordExpr, scope, exprPath, L""), recordExpr, L"record");
+    let record = AsPtr<IConfigRecord>(Evaluate(recordExpr, scope, exprPath, L""), recordExpr, L"record");
     return ResolveIdentifier(id, idLocation, record /*resolve in scope of record; *not* the current scope*/);
 }
 

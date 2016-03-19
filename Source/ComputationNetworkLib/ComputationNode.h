@@ -266,6 +266,7 @@ class ComputationNodeBase : public IComputationNode,
                             public ScriptableObjects::WithTag,
                             public ScriptableObjects::HasName,
                             public ScriptableObjects::HasToString,
+                            //public ScriptableObjects::IConfigRecord, // make members accessible as BS expressions
                             public std::enable_shared_from_this<ComputationNodeBase>
 {
     // note: enable_shared_from_this<> allows to create a shared_ptr from a raw pointer to this that is correctly aware of all other shared_ptrs (same ref count)

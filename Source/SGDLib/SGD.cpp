@@ -155,6 +155,11 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
     fprintf(stderr, "\nTraining criterion node(s):\n");
     for (const auto& node : criterionNodes)
         fprintf(stderr, "\t%ls = %ls\n", node->NodeName().c_str(), node->OperationName().c_str());
+    if (criterionNodes.empty())
+    {
+        fprintf(stderr, "\t(none)\n");
+        InvalidArgument("TrainOrAdaptModel: No criterion node was specified.");
+    }
 
     // determine evaluationNodes from GetEvalCriterionNodes(), ensuring each criterion is only logged once
     std::vector<ComputationNodeBasePtr> evaluationNodes;
