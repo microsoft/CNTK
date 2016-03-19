@@ -88,7 +88,7 @@ public:
         m_netNdlDefault = move(melScript.m_netNdlDefault);
     }
     void ProcessNDLScript(NetNdl<ElemType>* netNdl, NDLPass ndlPassUntil = ndlPassAll, bool fullValidate = false);
-    void SetProperty(ComputationNodeBasePtr nodeProp, vector<ComputationNodeBasePtr>& propArray, bool set);
+    void SetGroupTag(ComputationNodeBasePtr nodeProp, ComputationNetworkPtr cn, const std::wstring& groupTag, bool set);
     void CallFunction(const std::string& name, const ConfigParamList& params);
 
     // ParseName - Parse the name and find positions of the wildcard matches

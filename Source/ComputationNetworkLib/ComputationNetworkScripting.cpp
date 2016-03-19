@@ -76,22 +76,13 @@ ComputationNetwork::ComputationNetwork(const IConfigRecordPtr configp) :
             lateAttachingNode->LateAttachInputs();
 
         // add it to the respective node group based on the tag
-        let nodeWithTag = dynamic_pointer_cast<WithTag>(node);
-        if (nodeWithTag)
-        {
-            let& tag = nodeWithTag->GetTag();
-            if      (tag == L"feature")          FeatureNodes().push_back(node);
-            else if (tag == L"label")              LabelNodes().push_back(node);
-            else if (tag == L"criterion") FinalCriterionNodes().push_back(node);
-            else if (tag == L"evaluation")    EvaluationNodes().push_back(node);
-            else if (tag == L"output")            OutputNodes().push_back(node);
-#if 0
-            // legacy names. TODO: We don't actually need to support these in BS
-            else if (tag == L"criteria")              FinalCriterionNodes().push_back(node); // 'criteria' is wrong (plural); we keep it for compat
-            else if (!_wcsnicmp(tag.c_str(), L"eval", 4)) EvaluationNodes().push_back(node); // eval*
+        auto tag = node->GetTag();
+#if 0   // TODO: reenable this for back compat after we verified that at least none of our Jenkins tests use these anymore
+        // legacy names
+        if      (tag == L"criteria") tag = L"criterion";
+        else if (tag == L"eval"    ) tag = L"evaluation";
 #endif
-            else if (!tag.empty()) RuntimeError("ComputationNetwork: unknown tag '%ls'", tag.c_str());
-        }
+        AddToNodeGroup(tag, node); // tag may be empty, or may have been set by array parameters
 
         // traverse children: append them to the end of the work list
         let& children = node->GetInputs();
@@ -119,6 +110,7 @@ const ScriptableObjects::ConfigValuePtr& /*IConfigRecord::*/ ComputationNetwork:
     return *valuep;
 }
 
+#if 0 // unused, remove
 static void RecoverTagFromNodeGroup(const ComputationNodeBasePtr& node, const std::vector<ComputationNodeBasePtr>& nodeList, const std::wstring& tag)
 {
     // search nodeList
@@ -140,6 +132,7 @@ static void RecoverTagFromNodeGroup(const ComputationNodeBasePtr& node, const st
         }
     }
 }
+#endif
 
 const ScriptableObjects::ConfigValuePtr* /*IConfigRecord::*/ ComputationNetwork::Find(const wstring& id) const // returns nullptr if not found
 {
@@ -154,14 +147,6 @@ const ScriptableObjects::ConfigValuePtr* /*IConfigRecord::*/ ComputationNetwork:
     if (mapIter != m_nodesAsConfigValues.end())
         return &mapIter->second;
     // not in the cache yet: create it
-    // First, we need to recover its tag from the node groups.
-    // TODO: This will only catch the explicitly referenced ones. Need to rething the tags/groups.
-    RecoverTagFromNodeGroup(node, m_features     , L"feature"   );
-    RecoverTagFromNodeGroup(node, m_labels       , L"label"     );
-    RecoverTagFromNodeGroup(node, m_finalCriteria, L"criterion" );
-    RecoverTagFromNodeGroup(node, m_evalNodes    , L"evaluation");
-    RecoverTagFromNodeGroup(node, m_outputNodes  , L"output"    );
-    // Now create it.
     auto nodeName = node->NodeName();   // failFn lambda below holds a copy of the name for the error message. Let's not hold an unneccessary shared_ptr to the node, risking cycles & stuff.
     auto valuep = ConfigValuePtr(static_pointer_cast<Object>(node), [nodeName](const std::wstring &) { LogicError("ComputationNetwork: Failed to retrieve node '%ls'.", nodeName.c_str()); }, node->NodeName());
     let res = m_nodesAsConfigValues.insert(make_pair(node, move(valuep)));

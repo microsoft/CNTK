@@ -126,11 +126,18 @@ ComputationNetworkPtr GetModelFromConfig(const ConfigRecordType& config, vector<
 
         if (outputNodeNames.size() > 0)
         {
-            net->OutputNodes().clear();
+            while (!net->OutputNodes().empty())
+                net->RemoveFromNodeGroup(net->OutputNodes()[0]);
             for (int i = 0; i < outputNodeNames.size(); ++i)
             {
                 outputNodeNamesVector.push_back(outputNodeNames[i]);
-                net->OutputNodes().emplace_back(net->GetNodeFromName(outputNodeNames[i]));
+                let& node = net->GetNodeFromName(outputNodeNames[i]);
+#if 1           // BUGBUG: We need to implement multiple-group memberships in order to be able to write out features directly.
+                if (node->GetTag() == L"feature" || node->GetTag() == L"label")
+                    InvalidArgument("outputNodeNames: %ls %ls operation is a %ls node. Sorry, we can't output %ls nodes at present.", node->NodeName().c_str(), node->OperationName().c_str(), node->GetTag().c_str(), node->GetTag().c_str());
+#endif
+                net->RemoveFromNodeGroup(node); // node may be part of another group; get it out from there
+                net->AddToNodeGroup(L"output", node);
             }
         }
         net->CompileNetwork();

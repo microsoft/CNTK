@@ -62,25 +62,17 @@ enum MELProperty
     melPropBatchNormMode
 };
 
-// SetProperty - Set the Property on the passed node
+// SetGroupTag - Set the group tag on a node
 // nodeProp - node on which the property will be set/cleared
-// propArray - Array which contains all nodes that are associated with a particular property
+// grouptag - node will be added to/removed from this group
 // set - true if property is to be added, false if property is deleted
 template <typename ElemType>
-void MELScript<ElemType>::SetProperty(ComputationNodeBasePtr nodeProp, vector<ComputationNodeBasePtr>& propArray, bool set)
+void MELScript<ElemType>::SetGroupTag(ComputationNodeBasePtr nodeProp, ComputationNetworkPtr cn, const std::wstring& groupTag, bool set)
 {
-    auto found = propArray.begin();
-    for (; found != propArray.end() && *found != nodeProp; ++found)
-        ; // loop until you find the node, or the end
-
-    if (set && found == propArray.end())
-    {
-        propArray.push_back(nodeProp);
-    }
-    else if (!set && found != propArray.end())
-    {
-        propArray.erase(found);
-    }
+    if (set)
+        cn->AddToNodeGroup(groupTag, nodeProp);
+    else if (groupTag == nodeProp->GetTag()) // remove: only if it is part of this node group, otherwise ignore
+        cn->RemoveFromNodeGroup(nodeProp);
 }
 
 // ProcessNDLScript - Process the NDL script
@@ -408,50 +400,27 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
 
         std::string propName = params[1];
         MELProperty prop = melPropNull;
-        if (EqualInsensitive(propName, "needGradient", "needsGradient") || EqualInsensitive(propName, "computeGradient"))
-        {
+#if 1   // legacy
+        // legacy names for some properties
+        if      (EqualInsensitive(propName, "finalCriterion", "Criteria")) propName = "criterion";
+        else if (EqualInsensitive(propName, "eval"))                       propName = "evaluation";
+        // legacy property that now works differently
+        else if (EqualInsensitive(propName, "needGradient", "needsGradient") || EqualInsensitive(propName, "computeGradient"))
             prop = melPropParameterUpdateRequired;  // for backward compatibility
-        }
-        else if (EqualInsensitive(propName, "learningRateMultiplier"))
-        {
-            prop = melPropLearningRateMultiplier;
-        }
-        else if (EqualInsensitive(propName, "feature"))
-        {
-            prop = melPropFeature;
-        }
-        else if (EqualInsensitive(propName, "label"))
-        {
-            prop = melPropLabel;
-        }
-        else if (EqualInsensitive(propName, "criterion") || /*legacy:*/EqualInsensitive(propName, "finalCriterion", "Criteria"))
-        {
-            prop = melPropFinalCriterion;
-        }
-        else if (EqualInsensitive(propName, "multiSeq", "reqMultiSeqHandling")) // legacy
-        {
-            fprintf(stderr, "WARNING: '%s' property is defunct and will be ignored.\n", propName.c_str());
-        }
-        else if (EqualInsensitive(propName, "evaluation", "eval")) // TODO: choose one
-        {
-            prop = melPropEvaluation;
-        }
-        else if (EqualInsensitive(propName, "batchNormEvalMode"))
-        {
-            prop = melPropBatchNormMode;
-        }
-        else if (EqualInsensitive(propName, "output"))
-        {
-            prop = melPropOutput;
-        }
-        else if (EqualInsensitive(propName, "recurrent"))
-        {
-            prop = melPropRecurrent;
-        }
         else
-        {
-            RuntimeError("Invalid property, %s, is not supported", propName.c_str());
-        }
+#endif
+
+        // map property name to property enum
+        // Please keep this table sorted.
+             if (EqualInsensitive(propName, "batchNormEvalMode"))      prop = melPropBatchNormMode;
+        else if (EqualInsensitive(propName, "criterion"))              prop = melPropFinalCriterion;
+        else if (EqualInsensitive(propName, "evaluation"))             prop = melPropEvaluation;
+        else if (EqualInsensitive(propName, "feature"))                prop = melPropFeature;
+        else if (EqualInsensitive(propName, "label"))                  prop = melPropLabel;
+        else if (EqualInsensitive(propName, "learningRateMultiplier")) prop = melPropLearningRateMultiplier;
+        else if (EqualInsensitive(propName, "output"))                 prop = melPropOutput;
+        else if (EqualInsensitive(propName, "recurrent"))              prop = melPropRecurrent;
+        else InvalidArgument("Invalid property, %s, is not supported", propName.c_str());
 
         // get the nodes
         NetNdl<ElemType>* netNdl;
@@ -478,31 +447,31 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
             case melPropFeature:
             {
                 bool set = params[2];
-                SetProperty(node, cn->FeatureNodes(), set);
+                SetGroupTag(node, cn, L"feature", set);
                 break;
             }
             case melPropLabel:
             {
                 bool set = params[2];
-                SetProperty(node, cn->LabelNodes(), set);
+                SetGroupTag(node, cn, L"label", set);
                 break;
             }
             case melPropFinalCriterion:
             {
                 bool set = params[2];
-                SetProperty(node, cn->FinalCriterionNodes(), set);
+                SetGroupTag(node, cn, L"criterion", set);
                 break;
             }
             case melPropEvaluation:
             {
                 bool set = params[2];
-                SetProperty(node, cn->EvaluationNodes(), set);
+                SetGroupTag(node, cn, L"evaluation", set);
                 break;
             }
             case melPropOutput:
             {
                 bool set = params[2];
-                SetProperty(node, cn->OutputNodes(), set);
+                SetGroupTag(node, cn, L"output", set);
                 break;
             }
             case melPropRecurrent:

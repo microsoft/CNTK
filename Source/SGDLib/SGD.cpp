@@ -148,9 +148,9 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
                                       IDataReader* trainSetDataReader,
                                       IDataReader* validationSetDataReader)
 {
-    auto& featureNodes = net->FeatureNodes();
-    auto& labelNodes = net->LabelNodes();
-    auto& criterionNodes = GetTrainCriterionNodes(net);
+    let& featureNodes = net->FeatureNodes();
+    let& labelNodes = net->LabelNodes();
+    let& criterionNodes = GetTrainCriterionNodes(net);
 
     fprintf(stderr, "\nTraining criterion node(s):\n");
     for (const auto& node : criterionNodes)
@@ -257,9 +257,7 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
 
     std::vector<wstring> evalNodeNames;
     for (size_t i = 0; i < evaluationNodes.size(); i++)
-    {
         evalNodeNames.push_back(evaluationNodes[i]->NodeName());
-    }
 
     size_t totalSamplesSeen = 0;
     double learnRatePerSample = 0.5f / m_mbSize[startEpoch];
@@ -280,7 +278,6 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
     {
         InitModelAggregationHandler(m_syncStatsTrace);
     }
-    
 
     // precompute mean and invStdDev nodes and save initial model
     // When no precompute, only save if we did not load the model from a 
@@ -1256,7 +1253,7 @@ static map<ComputationNetworkPtr, vector<ComputationNodeBasePtr>> tmpCriterionNo
 // TODO: test this, then remove this comment
 
 template <class ElemType>
-std::vector<ComputationNodeBasePtr>& SGD<ElemType>::GetTrainCriterionNodes(ComputationNetworkPtr net)
+const std::vector<ComputationNodeBasePtr>& SGD<ElemType>::GetTrainCriterionNodes(ComputationNetworkPtr net)
 {
     if (!m_trainCriterionNodeName.empty())
     {
@@ -1268,7 +1265,7 @@ std::vector<ComputationNodeBasePtr>& SGD<ElemType>::GetTrainCriterionNodes(Compu
 }
 
 template <class ElemType>
-std::vector<ComputationNodeBasePtr>& SGD<ElemType>::GetEvalCriterionNodes(ComputationNetworkPtr net)
+const std::vector<ComputationNodeBasePtr>& SGD<ElemType>::GetEvalCriterionNodes(ComputationNetworkPtr net)
 {
     if (!m_evalCriterionNodeName.empty())
     {
@@ -1284,8 +1281,8 @@ std::vector<ComputationNodeBasePtr>& SGD<ElemType>::GetEvalCriterionNodes(Comput
 template <class ElemType>
 bool SGD<ElemType>::PreCompute(ComputationNetworkPtr net,
                                IDataReader* trainSetDataReader,
-                               std::vector<ComputationNodeBasePtr>& featureNodes,
-                               std::vector<ComputationNodeBasePtr>& labelNodes,
+                               const std::vector<ComputationNodeBasePtr>& featureNodes,
+                               const std::vector<ComputationNodeBasePtr>& labelNodes,
                                StreamMinibatchInputs* inputMatrices)
 {
     std::list<ComputationNodeBasePtr> nodes = net->GetNodesRequiringPreComputation(); // this tests all HasComputed() flags

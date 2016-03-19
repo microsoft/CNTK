@@ -334,8 +334,8 @@ public:
 
 protected:
 
-    std::vector<ComputationNodeBasePtr>& GetTrainCriterionNodes(ComputationNetworkPtr net);
-    std::vector<ComputationNodeBasePtr>& GetEvalCriterionNodes(ComputationNetworkPtr net);
+    const std::vector<ComputationNodeBasePtr>& GetTrainCriterionNodes(ComputationNetworkPtr net);
+    const std::vector<ComputationNodeBasePtr>& GetEvalCriterionNodes(ComputationNetworkPtr net);
 
     void TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
                            bool networkLoadedFromCheckpoint,
@@ -349,8 +349,8 @@ protected:
     // return true if precomputation is executed.
     bool PreCompute(ComputationNetworkPtr net,
                     IDataReader* trainSetDataReader,
-                    std::vector<ComputationNodeBasePtr>& featureNodes,
-                    std::vector<ComputationNodeBasePtr>& labelNodes,
+                    const std::vector<ComputationNodeBasePtr>& featureNodes,
+                    const std::vector<ComputationNodeBasePtr>& labelNodes,
                     StreamMinibatchInputs* inputMatrices);
 
     // return a reasonable initial learning rate based on the initial mbsize

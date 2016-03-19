@@ -329,7 +329,7 @@ public:
     void ReplaceLeafNode(wstring oldNodeName, ComputationNodeBasePtr newNode);
     void ReplaceFinalCriterionNode(wstring oldNodeName, ComputationNodeBasePtr newNode);
     void AddFeatureNode(ComputationNodeBasePtr featureNode);
-    ComputationNodeBasePtr RemoveFeatureNode(ComputationNodeBasePtr featureNode);
+    //ComputationNodeBasePtr RemoveFeatureNode(ComputationNodeBasePtr featureNode);
     void SetLearnableNodesBelowLearningRateMultiplier(const float learningRateMultiplier, const ComputationNodeBasePtr& rootNode = nullptr);
     void SetBatchNormalizationNodesBelowEvalMode(const bool evalMode, const ComputationNodeBasePtr& rootNode = nullptr);
 
@@ -444,29 +444,67 @@ public:
     }
 
     // these are specified as such by the user
-    inline std::vector<ComputationNodeBasePtr>& FeatureNodes()
+    const std::vector<ComputationNodeBasePtr>& FeatureNodes()        const { return m_featureNodes   ; }
+    const std::vector<ComputationNodeBasePtr>& LabelNodes()          const { return m_labelNodes     ; }
+    const std::vector<ComputationNodeBasePtr>& FinalCriterionNodes() const { return m_criterionNodes ; }
+    const std::vector<ComputationNodeBasePtr>& EvaluationNodes()     const { return m_evaluationNodes; }
+    const std::vector<ComputationNodeBasePtr>& OutputNodes()         const { return m_outputNodes    ; }
+
+private:
+    // determine the node-group array by the group tag
+    std::vector<ComputationNodeBasePtr>& GetNodeGroup(const std::wstring& groupTag)
     {
-        return m_features;
+        if      (groupTag == L"feature"   ) return m_featureNodes;
+        else if (groupTag == L"label"     ) return m_labelNodes;
+        else if (groupTag == L"criterion" ) return m_criterionNodes;
+        else if (groupTag == L"evaluation") return m_evaluationNodes;
+        else if (groupTag == L"output"    ) return m_outputNodes;
+        else InvalidArgument("Invalid group tag '%ls', must be one of 'feature', 'label', 'criterion', 'evaluation', 'output'.", groupTag.c_str());
     }
-    inline const std::vector<ComputationNodeBasePtr>& FeatureNodes() const
+
+public:
+    // add a node to a node group
+    void AddToNodeGroup(const std::wstring& groupTag, const ComputationNodeBasePtr& node)
     {
-        return m_features;
+        // empty tag is OK, means don't do anything (allows for some more regular code outside)
+        if (groupTag.empty())
+            return;
+        // determine the node group by its group tag string
+        auto& nodeGroup = GetNodeGroup(groupTag);
+        // if node is already in the list then we are done
+        const auto& currentTag = node->GetTag();
+        if (currentTag == groupTag) // if not, that's an error, which we will throw below
+        {
+            for (const auto& groupNode : nodeGroup)
+                if (groupNode == node)
+                    return;
+        }
+        // verify and update the node's tag
+        if (currentTag.empty())
+            node->SetTag(groupTag);
+        else if (currentTag != groupTag) // a node can only have one tag, i.e. one node-group membership
+            RuntimeError("%ls %ls operation is in two node groups ('%ls' and '%ls'), which is unsupported.", node->NodeName().c_str(), node->OperationName().c_str(), currentTag.c_str(), groupTag.c_str());
+        // add to the node group
+        nodeGroup.push_back(node);
     }
-    inline std::vector<ComputationNodeBasePtr>& LabelNodes()
+
+    // remove a node from its node group
+    void RemoveFromNodeGroup(const ComputationNodeBasePtr& node)
     {
-        return m_labels;
-    }
-    inline std::vector<ComputationNodeBasePtr>& FinalCriterionNodes()
-    {
-        return m_finalCriteria;
-    }
-    inline std::vector<ComputationNodeBasePtr>& EvaluationNodes()
-    {
-        return m_evalNodes;
-    }
-    inline std::vector<ComputationNodeBasePtr>& OutputNodes()
-    {
-        return m_outputNodes;
+        const auto& groupTag = node->GetTag();
+        if (groupTag.empty())
+            return;
+        auto& nodeGroup = GetNodeGroup(groupTag);
+        for (size_t i = 0; i < nodeGroup.size(); i++)
+        {
+            if (nodeGroup[i] == node)
+            {
+                nodeGroup.erase(nodeGroup.begin() + i); //TODO: use iterator
+                node->SetTag(L""); // and untag it
+                return;
+            }
+        }
+        LogicError("RemoveFromNodeGroup: %ls %ls operation not found in its node group '%ls'.", node->NodeName().c_str(), node->OperationName().c_str(), groupTag.c_str());
     }
 
     // -----------------------------------------------------------------------
@@ -869,7 +907,7 @@ public:
         m_randomSeedOffset = value;
     }
 
-private://protected:
+private:
     DEVICEID_TYPE m_deviceId; // TODO: is this shared by all nodes?
     unsigned long m_randomSeedOffset;
 
@@ -879,14 +917,14 @@ private://protected:
     // node groups
     // These are specified by the user by means of tags or explicitly listing the node groups.
     // TODO: Are these meant to be disjoint?
-    std::vector<ComputationNodeBasePtr> m_features;      // tag="feature"
-    std::vector<ComputationNodeBasePtr> m_labels;        // tag="label"
-    std::vector<ComputationNodeBasePtr> m_finalCriteria; // tag="criterion"
-    std::vector<ComputationNodeBasePtr> m_evalNodes;     // tag="eval"
-    std::vector<ComputationNodeBasePtr> m_outputNodes;   // tag="output"
+    std::vector<ComputationNodeBasePtr> m_featureNodes;    // tag="feature"
+    std::vector<ComputationNodeBasePtr> m_labelNodes;      // tag="label"
+    std::vector<ComputationNodeBasePtr> m_criterionNodes;  // tag="criterion"
+    std::vector<ComputationNodeBasePtr> m_evaluationNodes; // tag="evaluation"
+    std::vector<ComputationNodeBasePtr> m_outputNodes;     // tag="output"
     vector<std::vector<ComputationNodeBasePtr>*> GetAllNodeGroups() // get all groups to allow to iterate over all of them ...continue
     {
-        return vector<std::vector<ComputationNodeBasePtr>*>{&m_features, &m_labels, &m_finalCriteria, &m_evalNodes, &m_outputNodes};
+        return vector<std::vector<ComputationNodeBasePtr>*>{&m_featureNodes, &m_labelNodes, &m_criterionNodes, &m_evaluationNodes, &m_outputNodes};
     }
 
     // used for sentence boundary information passed from reader to reset RNN state

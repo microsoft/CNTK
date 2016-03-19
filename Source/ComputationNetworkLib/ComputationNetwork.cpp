@@ -156,35 +156,33 @@ void ComputationNetwork::SaveToFileImpl(const wstring& fileName, const FileOptio
     fstream.PutMarker(FileMarker::fileMarkerBeginSection, L"BRootNodes");
 
     fstream.PutMarker(FileMarker::fileMarkerBeginSection, L"BFeatureNodes");
-    fstream << m_features.size();
-    for (size_t i = 0; i < m_features.size(); i++)
-        fstream << m_features[i]->NodeName();
+    fstream << m_featureNodes.size();
+    for (size_t i = 0; i < m_featureNodes.size(); i++)
+        fstream << m_featureNodes[i]->NodeName();
     fstream.PutMarker(FileMarker::fileMarkerEndSection, L"EFeatureNodes");
 
     fstream.PutMarker(FileMarker::fileMarkerBeginSection, L"BLabelNodes");
-    fstream << m_labels.size();
-    for (size_t i = 0; i < m_labels.size(); i++)
-        fstream << m_labels[i]->NodeName();
+    fstream << m_labelNodes.size();
+    for (size_t i = 0; i < m_labelNodes.size(); i++)
+        fstream << m_labelNodes[i]->NodeName();
     fstream.PutMarker(FileMarker::fileMarkerEndSection, L"ELabelNodes");
 
     fstream.PutMarker(FileMarker::fileMarkerBeginSection, L"BCriterionNodes");
-    fstream << m_finalCriteria.size();
-    for (size_t i = 0; i < m_finalCriteria.size(); i++)
-        fstream << m_finalCriteria[i]->NodeName();
+    fstream << m_criterionNodes.size();
+    for (size_t i = 0; i < m_criterionNodes.size(); i++)
+        fstream << m_criterionNodes[i]->NodeName();
     fstream.PutMarker(FileMarker::fileMarkerEndSection, L"ECriterionNodes");
 
     fstream.PutMarker(FileMarker::fileMarkerBeginSection, L"BEvalNodes");
-    fstream << m_evalNodes.size();
-    for (size_t i = 0; i < m_evalNodes.size(); i++)
-        fstream << m_evalNodes[i]->NodeName();
+    fstream << m_evaluationNodes.size();
+    for (size_t i = 0; i < m_evaluationNodes.size(); i++)
+        fstream << m_evaluationNodes[i]->NodeName();
     fstream.PutMarker(FileMarker::fileMarkerEndSection, L"EEvalNodes");
 
     fstream.PutMarker(FileMarker::fileMarkerBeginSection, L"BOutputNodes");
     fstream << m_outputNodes.size();
     for (size_t i = 0; i < m_outputNodes.size(); i++)
-    {
         fstream << m_outputNodes[i]->NodeName();
-    }
     fstream.PutMarker(FileMarker::fileMarkerEndSection, L"EOutputNodes");
 
     fstream.PutMarker(FileMarker::fileMarkerEndSection, L"ERootNodes");
@@ -310,7 +308,7 @@ void ComputationNetwork::Read(const wstring& fileName)
             for (size_t i = 0; i < num; i++)
             {
                 fstream >> nodeName;
-                m_features.push_back(GetNodeFromName(nodeName));
+                AddToNodeGroup(L"feature", GetNodeFromName(nodeName));
             }
             fstream.GetMarker(FileMarker::fileMarkerEndSection, L"EFeatureNodes");
         }
@@ -321,7 +319,7 @@ void ComputationNetwork::Read(const wstring& fileName)
             for (size_t i = 0; i < num; i++)
             {
                 fstream >> nodeName;
-                m_labels.push_back(GetNodeFromName(nodeName));
+                AddToNodeGroup(L"label", GetNodeFromName(nodeName));
             }
         }
         // BUGBUG: Should this be inside the block?
@@ -334,7 +332,7 @@ void ComputationNetwork::Read(const wstring& fileName)
             for (size_t i = 0; i < num; i++)
             {
                 fstream >> nodeName;
-                m_finalCriteria.push_back(GetNodeFromName(nodeName));
+                AddToNodeGroup(L"criterion", GetNodeFromName(nodeName));
             }
 
             if (!fstream.TryGetMarker(FileMarker::fileMarkerEndSection, L"ECriteriaNodes" /*legacy*/))
@@ -359,7 +357,7 @@ void ComputationNetwork::Read(const wstring& fileName)
             for (size_t i = 0; i < num; i++)
             {
                 fstream >> nodeName;
-                m_evalNodes.push_back(GetNodeFromName(nodeName));
+                AddToNodeGroup(L"evaluation", GetNodeFromName(nodeName));
             }
             fstream.GetMarker(FileMarker::fileMarkerEndSection, L"EEvalNodes");
         }
@@ -370,7 +368,7 @@ void ComputationNetwork::Read(const wstring& fileName)
             for (size_t i = 0; i < num; i++)
             {
                 fstream >> nodeName;
-                m_outputNodes.push_back(GetNodeFromName(nodeName));
+                AddToNodeGroup(L"output", GetNodeFromName(nodeName));
             }
             fstream.GetMarker(FileMarker::fileMarkerEndSection, L"EOutputNodes");
         }
@@ -749,11 +747,11 @@ void ComputationNetwork::DescribeNetworkUsingDot(list<ComputationArc>& arcs,
     // learnable parameters:
     fstream << FormSpecialNodes(dotcfg.m_LearnableParameterStyle, learnableParameters);
     // features
-    fstream << FormSpecialNodes(dotcfg.m_featuresStyle, m_features);
+    fstream << FormSpecialNodes(dotcfg.m_featuresStyle, m_featureNodes);
     // labels
-    fstream << FormSpecialNodes(dotcfg.m_labelsStyle, m_labels);
+    fstream << FormSpecialNodes(dotcfg.m_labelsStyle, m_labelNodes);
     // critera
-    fstream << FormSpecialNodes(dotcfg.m_CriteriaStyle, m_finalCriteria);
+    fstream << FormSpecialNodes(dotcfg.m_CriteriaStyle, m_criterionNodes);
     // pre-compute nodes
     fstream << FormSpecialNodes(dotcfg.m_PrecomputingNodeStyle, PreComputedNodes);
     // PastValue nodes
@@ -784,7 +782,7 @@ void ComputationNetwork::DescribeNetworkUsingDot(list<ComputationArc>& arcs,
     fstream << L"subgraph {\n";
     fstream << L"\t\t rank=source ; ";
     line.clear();
-    for (const auto& x : m_features)
+    for (const auto& x : m_featureNodes)
         line = line + msra::strfun::wstrprintf(L"\"%ls\" ", x->GetName().c_str());
     fstream << line << L"\n}\n";
 
@@ -792,11 +790,11 @@ void ComputationNetwork::DescribeNetworkUsingDot(list<ComputationArc>& arcs,
     fstream << L"subgraph {\n";
     fstream << L"\t\t rank=sink ; ";
     line.clear();
-    for (const auto& x : m_finalCriteria)
+    for (const auto& x : m_criterionNodes)
         line = line + msra::strfun::wstrprintf(L"\"%ls\" ", x->GetName().c_str());
     for (const auto& x : m_outputNodes)
         line = line + msra::strfun::wstrprintf(L"\"%ls\" ", x->GetName().c_str());
-    for (const auto& x : m_evalNodes)
+    for (const auto& x : m_evaluationNodes)
         line = line + msra::strfun::wstrprintf(L"\"%ls\" ", x->GetName().c_str());
 
     fstream << line << L"\n}\n";
@@ -859,7 +857,7 @@ void ComputationNetwork::PlotNetworkTopology(const wstring outputFile) //  [1/13
 
     for (auto groupIter : GetAllNodeGroups())
     {
-        // note: this will also loop over m_features and m_labels, which will do nothing since they have no inputs
+        // note: this will also loop over m_featureNodes and m_labelNodes, which will do nothing since they have no inputs
         // TODO: test whether that is true
         const auto& group = *groupIter;
         for (size_t i = 0; i < group.size(); i++)

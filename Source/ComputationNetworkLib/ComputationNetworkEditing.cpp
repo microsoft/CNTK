@@ -242,16 +242,16 @@ void ComputationNetwork::ReplaceFinalCriterionNode(wstring oldNodeName, Computat
 
     // checks if the node is a criterion node
     int index = -1;
-    for (int i = 0; i < m_finalCriteria.size(); ++i)
+    for (int i = 0; i < m_criterionNodes.size(); ++i)
     {
-        if (m_finalCriteria[i]->NodeName() == oldNodeName)
+        if (m_criterionNodes[i]->NodeName() == oldNodeName)
         {
             index = i;
             break;
         }
     }
     if (index == -1)
-        RuntimeError("ReplaceFinalCriterionNode: the node to be replaced is not a criterion node.");
+        RuntimeError("ReplaceFinalCriterionNode: The node to be replaced is not a criterion node.");
 
     // replace children
     for (int i = 0; i < newNode->GetNumInputs(); ++i)
@@ -265,8 +265,12 @@ void ComputationNetwork::ReplaceFinalCriterionNode(wstring oldNodeName, Computat
     // add it to the network
     AddNodeToNetIfNotYet(newNode);
 
+    // remove the node we are replacing from this group
+    // BUGBUG: The old node is not removed from the network. Seems strangely inconsistent.
+    RemoveFromNodeGroup(m_criterionNodes[index]);
+
     // add it to criterion node list
-    m_finalCriteria[index] = newNode;
+    AddToNodeGroup(L"criterion", newNode);
 }
 
 void ComputationNetwork::AddFeatureNode(ComputationNodeBasePtr featureNode)
@@ -274,9 +278,10 @@ void ComputationNetwork::AddFeatureNode(ComputationNodeBasePtr featureNode)
     InvalidateCompiledNetwork();
 
     AddNodeToNet(featureNode);
-    m_features.push_back(featureNode);
+    AddToNodeGroup(L"feature", featureNode);
 }
 
+#if 0 // unused--delete
 // We only remove the node from the net, not destruct it.
 ComputationNodeBasePtr ComputationNetwork::RemoveFeatureNode(ComputationNodeBasePtr featureNode)
 {
@@ -286,7 +291,7 @@ ComputationNodeBasePtr ComputationNetwork::RemoveFeatureNode(ComputationNodeBase
     if (!NodeNameExists(nodeName))
         RuntimeError("RemoveFeatureNode: feature node does not exist.");
 
-    // removes links
+    // remove links to this node
     for (auto nodeIter = m_nameToNodeMap.begin(); nodeIter != m_nameToNodeMap.end(); ++nodeIter)
     {
         ComputationNodeBasePtr node = nodeIter->second;
@@ -302,12 +307,14 @@ ComputationNodeBasePtr ComputationNetwork::RemoveFeatureNode(ComputationNodeBase
     }
 
     // Removes from feature list.
-    auto search = std::find(m_features.begin(), m_features.end(), featureNode);
-    if (search != m_features.end())
-        m_features.erase(search);
+    auto search = std::find(m_featureNodes.begin(), m_featureNodes.end(), featureNode);
+    if (search != m_featureNodes.end())
+        m_featureNodes.erase(search);
 
+    // note: we don't bother resetting the tag since the node is gone
     return RemoveNodeFromNet(featureNode);
 }
+#endif
 
 // sets m_learningRateMultiplier in all LearnableParameters feeding into the passed rootNode
 // Called from MEL

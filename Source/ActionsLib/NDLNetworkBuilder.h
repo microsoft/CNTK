@@ -283,29 +283,19 @@ public:
                 continue;
 
             std::string value = param->GetValue();
-            if (EqualCI(value, "feature"))   SetOutputNode(m_net->FeatureNodes(), compNode);
-            else if (EqualCI(value, "label"))     SetOutputNode(m_net->LabelNodes(), compNode);
-            else if (EqualCI(value, "criterion")) SetOutputNode(m_net->FinalCriterionNodes(), compNode);
-            else if (!_strnicmp(value.c_str(), "eval", 4))   SetOutputNode(m_net->EvaluationNodes(), compNode); // only compare the first 4 characters. Yikes!!
-            else if (EqualCI(value, "output"))    SetOutputNode(m_net->OutputNodes(), compNode);
-            // legacy
-            else if (EqualCI(value, "criteria"))  SetOutputNode(m_net->FinalCriterionNodes(), compNode); // legacy (mis-spelled)
-            else if (EqualCI(value, "multiSeq"))  fprintf(stderr, "'multiSeq' tag is defunct.\n");
-        }
-    }
 
-    // SetOutputNode - Set the output node, checks to see if it already exists first
-    // nodeGroup - group vector to add to
-    // compNode - computation node to add
-    // TODO: It seems that this is also applied to other tyoes of nodes, so the name of this function is wrong.
-    static void SetOutputNode(std::vector<ComputationNodeBasePtr>& nodeGroup, ComputationNodePtr compNode)
-    {
-        for (const auto& node : nodeGroup)
-        {
-            if (node == compNode)
-                return;
+            // deal with legacy
+            if      (EqualCI(value, "multiSeq")) continue;                       // ignored (no longer needed)
+            else if (EqualCI(value, "criteria"))           value = "criterion";  // legacy (mis-spelled)
+            else if (!_strnicmp(value.c_str(), "eval", 4)) value = "evaluation"; // only compare the first 4 characters. Yikes!!
+
+            // map all to lowercase
+            std::wstring lvalue = std::wstring(value.begin(), value.end());
+            std::transform(lvalue.begin(), lvalue.end(), lvalue.begin(), ::tolower); // note: may crash for chars >127. Don't use those.
+
+            // add to the respective node group
+            m_net->AddToNodeGroup(lvalue, compNode);
         }
-        nodeGroup.push_back(compNode);
     }
 
     // FindSymbol - Search the nodes for a fully quantified symbol
