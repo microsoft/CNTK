@@ -23,7 +23,7 @@ m1=[
     L2 = RBFF(L1, HDim, HDim)
     L3 = RBFF(L2, HDim, HDim)
     CE = SMBFF(L3, LDim, HDim, labels, tag="criterion")
-    Err=ErrorPrediction(labels, CE.BFF.FF.P, tag="eval")
+    Err=ErrorPrediction(labels, CE.BFF.FF.P, tag="evaluation")
 
     # rootNodes defined here
     OutputNodes=(CE.BFF.FF.P)

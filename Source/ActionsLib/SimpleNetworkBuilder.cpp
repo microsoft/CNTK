@@ -1657,7 +1657,9 @@ shared_ptr<ComputationNode<ElemType>> SimpleNetworkBuilder<ElemType>::ApplyNonli
 }
 
 template <class ElemType>
-shared_ptr<ComputationNode<ElemType>> SimpleNetworkBuilder<ElemType>::AddTrainAndEvalCriterionNodes(ComputationNodePtr input, ComputationNodePtr label, ComputationNodePtr matrix, const std::wstring trainNodeName, const std::wstring evalNodeName, ComputationNodePtr clspostprob, ComputationNodePtr trans)
+shared_ptr<ComputationNode<ElemType>> SimpleNetworkBuilder<ElemType>::AddTrainAndEvalCriterionNodes(ComputationNodePtr input, ComputationNodePtr label, ComputationNodePtr matrix,
+                                                                                                    const std::wstring trainNodeName, const std::wstring evalNodeName,
+                                                                                                    ComputationNodePtr clspostprob, ComputationNodePtr trans)
 {
     ComputationNetworkBuilder<ElemType> builder(*m_net);
 
