@@ -68,9 +68,8 @@ def test_overload_eval(root_node, expected):
     (C(np.asarray([[1,2]]))+.1, [1.1,2.1]),
     (C(np.asarray([[1,2],[3,4]]))+.1, [[1.1,2.1],[3.1,4.1]]),
     (C(np.asarray([[1,2],[3,4]]))*2, [[2,4],[6,8]]),
-    #(C(0) + 1, 1),
-    #(0 + C(1), 1),
-
+    (2*C(np.asarray([[1,2],[3,4]])), [[2,4],[6,8]]),
+    (C(np.asarray([[1,2],[3,4]]))*C(np.asarray([[1,2],[3,4]])), [[1,4],[9,16]]),
 ])
 def test_ops_on_numpy(root_node, expected, tmpdir):
     _test(root_node, expected)
