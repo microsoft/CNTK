@@ -92,7 +92,7 @@ void ComputationNodeBase::InferMBLayoutFromInputsForStandardCase()
             ;
         else if (!pMBLayout) // first non-NULL layout: just copy it
             pMBLayout = child->m_pMBLayout;
-        else if (pMBLayout != child->m_pMBLayout) // got a layout--compare whether it is the same
+        else if (*pMBLayout != *child->m_pMBLayout) // got a layout--compare whether it is the same
             RuntimeError("%ls: InferMBLayoutFromInputsForStandardCase: Found inconsistent layout, mismatch detected for child %ls %ls.",
                          NodeDescription().c_str(), child->NodeName().c_str(), child->OperationName().c_str());
     }
@@ -121,7 +121,7 @@ void ComputationNodeBase::ValidateBinaryZip(bool isFinalValidationPass, bool all
     ValidateInferBinaryInputDims();
 
     if (isFinalValidationPass &&
-        Input(0)->GetMBLayout() != Input(1)->GetMBLayout() && Input(0)->HasMBLayout() && Input(1)->HasMBLayout())
+        *Input(0)->GetMBLayout() != *Input(1)->GetMBLayout() && Input(0)->HasMBLayout() && Input(1)->HasMBLayout())
     {
         LogicError("%ls: MB layouts do not match.", NodeDescription().c_str());
     }
@@ -359,20 +359,22 @@ template <class ElemType>
 
 // write out the content of a node in formatted/readable form
 template <class ElemType>
-void ComputationNode<ElemType>::WriteMinibatchWithFormatting(FILE* f, size_t onlyUpToRow, size_t onlyUpToT, bool transpose, bool isCategoryLabel, const std::vector<std::string>& labelMapping,
-                                                             const string& sequenceSeparator, const string& sequencePrologue, const string& sequenceEpilogue, const string& elementSeparator, const string& sampleSeparator,
-                                                             const string& valueFormatString) const
+void ComputationNode<ElemType>::WriteMinibatchWithFormatting(FILE* f, size_t onlyUpToRow, size_t onlyUpToT, bool transpose, bool isCategoryLabel, 
+                                                             const std::vector<std::string>& labelMapping, const string& sequenceSeparator, 
+                                                             const string& sequencePrologue, const string& sequenceEpilogue,
+                                                             const string& elementSeparator, const string& sampleSeparator,
+                                                             const string& valueFormatString,
+                                                             bool outputGradient) const
 {
     // get minibatch matrix -> matData, matRows, matStride
-    const Matrix<ElemType>& outputValues = Value();
+    const Matrix<ElemType>& outputValues = outputGradient ? Gradient() : Value();
     let matRows   = outputValues.GetNumRows();
     let matStride = matRows; // how to get from one column to the next
-    ElemType* matData = nullptr;
-    size_t matDataSize = 0;
-    outputValues.CopyToArray(matData, matDataSize);
+    std::unique_ptr<ElemType[]> matDataPtr(outputValues.CopyToArray());
+    ElemType* matData = matDataPtr.get();
 
     // process all sequences one by one
-    auto pMBLayout = GetMBLayout();
+    MBLayoutPtr pMBLayout = outputGradient ? MBLayoutPtr(nullptr) : GetMBLayout();
     if (!pMBLayout) // no MBLayout: We are printing aggregates (or LearnableParameters?)
     {
         pMBLayout = make_shared<MBLayout>();
@@ -473,8 +475,6 @@ void ComputationNode<ElemType>::WriteMinibatchWithFormatting(FILE* f, size_t onl
         fprintfOrDie(f, "%s", sequenceEpilogue.c_str());
     } // end loop over sequences
     fflushOrDie(f);
-
-    delete[] matData;
 }
 
 // -----------------------------------------------------------------------
