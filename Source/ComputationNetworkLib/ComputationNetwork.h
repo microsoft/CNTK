@@ -36,7 +36,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 // ComputationNetwork -- computation graph and operations
 // ===========================================================================
 
-class ComputationNetwork : public ScriptableObjects::Object, public ScriptableObjects::HasToString, public ScriptableObjects::IConfigRecord
+class ComputationNetwork :
+    public ScriptableObjects::Object,
+    public ScriptableObjects::HasToString,
+    public ScriptableObjects::CustomConfigRecord
 {
 public:
     typedef shared_ptr<ComputationNetwork> ComputationNetworkPtr;
@@ -782,8 +785,7 @@ public:
     // -----------------------------------------------------------------------
 
     // pretend to be a ConfigRecord
-    const ScriptableObjects::ConfigValuePtr& /*IConfigRecord::*/ operator[](const wstring& id) const override; // e.g. confRec[L"message"]
-    const ScriptableObjects::ConfigValuePtr* /*IConfigRecord::*/ Find(const wstring& id) const override;       // returns nullptr if not found
+    void /*CustomConfigRecord::*/ LazyCreateConfigMember(const wstring& id) const override;
     vector<wstring> /*IConfigRecord::*/ GetMemberIds() const override;
 
     // create a somewhat readable representation, aimed at diagnostics/debugging
@@ -975,10 +977,6 @@ private:
     // pool for matrices that can be shared across nodes
     // TODO: does this apply to anything else besides temporary node-internal intermediate results? What, for example?
     MatrixPool m_matrixPool;
-
-private:
-    // cached return values from IConfigRecord implementation
-    mutable std::map<ComputationNodeBasePtr, ScriptableObjects::ConfigValuePtr> m_nodesAsConfigValues; // we return references to ConfigValuePtr objects
 };
 typedef ComputationNetwork::ComputationNetworkPtr ComputationNetworkPtr;
 

@@ -87,20 +87,6 @@ public:
     {
     }
 
-    virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
-    {
-        ElemType sign = inputIndex == 0 ? 1.0f : -1.0f;
-        size_t rank = DetermineElementwiseTensorRank();
-        auto gradient      =                    GradientTensorFor(rank, fr);
-        auto inputGradient = Input(inputIndex)->GradientTensorFor(rank, fr.AllowBroadcast());
-
-        // if reduction then mask the respective input(s) (zero out the gaps)
-        if (Input(inputIndex)->ReducesInTimeWrt(shared_from_this()))
-            MaskMissingGradientColumnsToZero(fr);
-
-        inputGradient.AddCopyOf(gradient, sign);
-    }
-
     virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
     {
         size_t rank = DetermineElementwiseTensorRank();
@@ -109,10 +95,78 @@ public:
         auto input1 = Input(1)->ValueTensorFor(rank, fr.AllowBroadcast());
         result.AssignDifferenceOf(input0, input1);
     }
+
+    virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
+    {
+        size_t rank = DetermineElementwiseTensorRank();
+        auto gradient      =                    GradientTensorFor(rank, fr);
+        auto inputGradient = Input(inputIndex)->GradientTensorFor(rank, fr.AllowBroadcast());
+
+        // if reduction then mask the respective input(s) (zero out the gaps)
+        if (Input(inputIndex)->ReducesInTimeWrt(shared_from_this()))
+            MaskMissingGradientColumnsToZero(fr);
+
+        ElemType sign = inputIndex == 0 ? 1.0f : -1.0f;
+        inputGradient.AddCopyOf(gradient, sign);
+    }
 };
 
 template class MinusNode<float>;
 template class MinusNode<double>;
+
+// -----------------------------------------------------------------------
+// ElementTimesNode (factor1, factor2)
+// This allows broadcasting, and can thus also scale with a row, a column, or a scalar,
+// as well as mutliplying with a diagonal matrix (if represented as a column vector).
+// -----------------------------------------------------------------------
+
+template <class ElemType>
+class ElementTimesNode : public BinaryElementWiseNode<ElemType>
+{
+    typedef BinaryElementWiseNode<ElemType> Base;
+    UsingBinaryElementwiseNodeBaseMembers;
+    static const std::wstring TypeName()
+    {
+        return L"ElementTimes";
+    }
+
+public:
+    DeclareConstructorFromConfigWithNumInputs(ElementTimesNode);
+    ElementTimesNode(DEVICEID_TYPE deviceId, const wstring& name)
+        : Base(deviceId, name)
+    {
+    }
+
+    virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
+    {
+        size_t rank = DetermineElementwiseTensorRank();
+        auto result =           ValueTensorFor(rank, fr);
+        auto input0 = Input(0)->ValueTensorFor(rank, fr.AllowBroadcast());
+        auto input1 = Input(1)->ValueTensorFor(rank, fr.AllowBroadcast());
+        result.AssignElementwiseProductOf(input0, input1);
+    }
+
+    virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
+    {
+        size_t rank = DetermineElementwiseTensorRank();
+        auto gradient        =                     GradientTensorFor(rank, fr);
+        auto inputGradient   =  Input(inputIndex)->GradientTensorFor(rank, fr.AllowBroadcast());
+        auto otherInputValue = Input(1 - inputIndex)->ValueTensorFor(rank, fr.AllowBroadcast());
+
+        // if reduction then mask the respective input(s) (zero out the gaps)
+        if (Input(inputIndex)->ReducesInTimeWrt(shared_from_this()))
+            MaskMissingGradientColumnsToZero(fr);
+        if (Input(inputIndex)->ReducesInTimeWrt(Input(1 - inputIndex)))
+            Input(1 - inputIndex)->MaskMissingValueColumnsToZero(fr);
+
+        inputGradient.AddElementwiseProductOf(gradient, otherInputValue);
+    }
+
+    virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override { return true; }
+};
+
+template class ElementTimesNode<float>;
+template class ElementTimesNode<double>;
 
 // -----------------------------------------------------------------------
 // TimesNodeBase (A, B, outputRank=1)
@@ -371,60 +425,6 @@ public:
 
 template class TransposeTimesNode<float>;
 template class TransposeTimesNode<double>;
-
-// -----------------------------------------------------------------------
-// ElementTimesNode (factor1, factor2)
-// This allows broadcasting, and can thus also scale with a row, a column, or a scalar,
-// as well as mutliplying with a diagonal matrix (if represented as a column vector).
-// -----------------------------------------------------------------------
-
-template <class ElemType>
-class ElementTimesNode : public BinaryElementWiseNode<ElemType>
-{
-    typedef BinaryElementWiseNode<ElemType> Base;
-    UsingBinaryElementwiseNodeBaseMembers;
-    static const std::wstring TypeName()
-    {
-        return L"ElementTimes";
-    }
-
-public:
-    DeclareConstructorFromConfigWithNumInputs(ElementTimesNode);
-    ElementTimesNode(DEVICEID_TYPE deviceId, const wstring& name)
-        : Base(deviceId, name)
-    {
-    }
-
-    virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
-    {
-        size_t rank = DetermineElementwiseTensorRank();
-        auto gradient = GradientTensorFor(rank, fr);
-        auto inputGradient = Input(inputIndex)->GradientTensorFor(rank, fr.AllowBroadcast());
-        auto otherInputValue = Input(1 - inputIndex)->ValueTensorFor(rank, fr.AllowBroadcast());
-
-        // if reduction then mask the respective input(s) (zero out the gaps)
-        if (Input(inputIndex)->ReducesInTimeWrt(shared_from_this()))
-            MaskMissingGradientColumnsToZero(fr);
-        if (Input(inputIndex)->ReducesInTimeWrt(Input(1 - inputIndex)))
-            Input(1 - inputIndex)->MaskMissingValueColumnsToZero(fr);
-
-        inputGradient.AddElementwiseProductOf(gradient, otherInputValue);
-    }
-
-    virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override { return true; }
-
-    virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
-    {
-        size_t rank = DetermineElementwiseTensorRank();
-        auto result = ValueTensorFor(rank, fr);
-        auto input0 = Input(0)->ValueTensorFor(rank, fr.AllowBroadcast());
-        auto input1 = Input(1)->ValueTensorFor(rank, fr.AllowBroadcast());
-        result.AssignElementwiseProductOf(input0, input1);
-    }
-};
-
-template class ElementTimesNode<float>;
-template class ElementTimesNode<double>;
 
 // -----------------------------------------------------------------------
 // DiagTimesNode (vector representing the diagonal of a square matrix, data)

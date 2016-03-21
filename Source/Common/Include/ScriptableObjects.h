@@ -754,6 +754,59 @@ public:
 typedef shared_ptr<ConfigLambda> ConfigLambdaPtr;
 
 // -----------------------------------------------------------------------
+// CustomConfigRecord -- helper for implementors of IConfigRecord
+// Custom classes that implement IConfigRecord can derive from this to make
+// it easier to manage the simulated config record.
+// -----------------------------------------------------------------------
+
+struct CustomConfigRecord : public IConfigRecord // any class that exposes config can derive from this
+{
+    const ConfigValuePtr& /*IConfigRecord::*/ operator[](const std::wstring& id) const override // e.g. confRec[L"message"]
+    {
+        const auto* valuep = Find(id);
+        if (!valuep)
+            RuntimeError("Unknown configuration-record member '%ls'", id.c_str());
+        return *valuep;
+    }
+
+    const ConfigValuePtr* /*IConfigRecord::*/ Find(const std::wstring& id) const // returns nullptr if not found
+    {
+        const auto& mapIter = members.find(id);
+        if (mapIter != members.end())
+            return &mapIter->second;
+        LazyCreateConfigMember(id);
+        const auto& mapIter2 = members.find(id);
+        if (mapIter2 != members.end())
+            return &mapIter2->second;
+        else
+            return nullptr;
+    }
+
+    void InsertConfigMember(const std::wstring& id, ConfigValuePtr&& valuep) const/*because it is called from Find() which is const*/
+    {
+        const auto res = members.insert(make_pair(id, move(valuep)));
+        assert(&res.first->second == &members.find(id)->second);
+        assert(res.second);        // this says whether it has been inserted. It better be.
+    }
+
+    // call this whenever anything changes about this node
+    // Once we use a ComputationNode as a config record, we are in immutable BS world.
+    // So we should not really need to ever call this.
+    // However, we *must* call it at least in DetachInputs() in order to break cyclic dependencies.
+    void ClearConfigMemberCache()
+    {
+        members.clear();
+    }
+
+    // user of this class must implement LazyCreateConfigMember() and GetMemberIds()
+    virtual void LazyCreateConfigMember(const std::wstring &id) const = 0;
+
+protected:
+    // cached return values from IConfigRecord implementation
+    mutable std::map<std::wstring, ScriptableObjects::ConfigValuePtr> members; // [id] -> cached ConfigValuePtr
+};
+
+// -----------------------------------------------------------------------
 // ConfigurableRuntimeType -- interface to scriptable runtime types
 // -----------------------------------------------------------------------
 
@@ -825,7 +878,9 @@ public:
             Register(typeId, std::move(rtInfo));
         }
     };
+
     // to register a class that exists in dual precisions (Something<ElemType>>, use this one instead
+    // ConfigurableRuntimeTypeRegister::AddFloatDouble<ClassName<float>,ClassName<double>> registerClassName(L"ClassName")l
     template <class Cfloat, class Cdouble>
     struct AddFloatDouble
     {
@@ -870,15 +925,9 @@ inline std::vector<T> IConfigRecord::operator()(const std::wstring &id, const st
         return std::vector<T>(1, (const T &) *valp); // scalar value
     const ConfigArray &arr = *valp;                  // actual array
 #if 1                                                // TODO: test whether this works correctly w.r.t. typecasting
-    return arr.AsVector<T>([&](const std::wstring &msg)
-                           {
-                               valp->Fail(msg);
-                           });
+    return arr.AsVector<T>([&](const std::wstring &msg) { valp->Fail(msg); });
 #else
-    const auto size = arr.GetSize([&](const std::wstring &msg)
-                                  {
-                                      valp->Fail(msg);
-                                  });
+    const auto size = arr.GetSize([&](const std::wstring &msg) { valp->Fail(msg); });
     std::vector<T> res(size);
     for (int i = 0; i < size; i++)
         res[i] = (const T &) arr.At(i);

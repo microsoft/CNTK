@@ -154,33 +154,17 @@ void ComputationNetwork::ConstructFromRoots(DEVICEID_TYPE deviceId, deque<Comput
 // TODO: Is there more than nodes that we want to return? Node groups? deviceId?
 // ===================================================================
 
-const ScriptableObjects::ConfigValuePtr& /*IConfigRecord::*/ ComputationNetwork::operator[](const wstring& id) const // e.g. confRec[L"message"]
-{
-    let* valuep = Find(id);
-    if (!valuep)
-        RuntimeError("Network does not contain a node called '%ls'", id.c_str());
-    return *valuep;
-}
-
-const ScriptableObjects::ConfigValuePtr* /*IConfigRecord::*/ ComputationNetwork::Find(const wstring& id) const // returns nullptr if not found
+// not in the cache yet: create it (or not if no such member)
+void /*CustomConfigRecord::*/ ComputationNetwork::LazyCreateConfigMember(const wstring& id) const /*override*/
 {
     let iter = m_nameToNodeMap.find(id);
     if (iter == m_nameToNodeMap.end())
-        return nullptr; // no such node
+        return; // no such node
     const ComputationNodeBasePtr& node = iter->second;
     // TODO: What is the expressionPath?
-    // We have a small problem: We want to return a ComputationNodeBasePtr, but must return the *address* of a ConfigValuePtr.
-    // Hence, we will create this ConfigValuePtr upon first access and hold it in a map, and furtheron return that map entry.
-    let& mapIter = m_nodesAsConfigValues.find(node);
-    if (mapIter != m_nodesAsConfigValues.end())
-        return &mapIter->second;
-    // not in the cache yet: create it
-    auto nodeName = node->NodeName();   // failFn lambda below holds a copy of the name for the error message. Let's not hold an unneccessary shared_ptr to the node, risking cycles & stuff.
-    auto valuep = ConfigValuePtr(static_pointer_cast<Object>(node), [nodeName](const std::wstring &) { LogicError("ComputationNetwork: Failed to retrieve node '%ls'.", nodeName.c_str()); }, node->NodeName());
-    let res = m_nodesAsConfigValues.insert(make_pair(node, move(valuep)));
-    assert(&res.first->second == &m_nodesAsConfigValues.find(node)->second);
-    assert(res.second);        // this says whether it has been inserted. It better be.
-    return &res.first->second; // this is the cached ConfigValuePtr
+    let& nodeName = node->NodeName();   // failFn lambda below holds a copy of the name for the error message. Let's not hold an unneccessary shared_ptr to the node, risking cycles & stuff.
+    auto valuep = ConfigValuePtr(node, [nodeName](const std::wstring &) { LogicError("ComputationNetwork: Failed to retrieve node '%ls'.", nodeName.c_str()); }, node->NodeName());
+    InsertConfigMember(id, move(valuep));
 }
 
 vector<wstring> /*IConfigRecord::*/ ComputationNetwork::GetMemberIds() const

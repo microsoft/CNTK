@@ -105,6 +105,7 @@ Sqrt(z, tag='') = new ComputationNode [ operation = 'Sqrt' ; inputs = z /*plus t
 SquareError(aMatrix, anotherMatrix, tag='') = new ComputationNode [ operation = 'SquareError' ; inputs = (aMatrix : anotherMatrix) /*plus the function args*/ ]
 SumColumnElements(z, tag='') = new ComputationNode [ operation = 'SumColumnElements' ; inputs = z /*plus the function args*/ ]
 SumElements(matrix, tag='') = new ComputationNode [ operation = 'SumElements' ; inputs = matrix /*plus the function args*/ ]
+Pass(z, tag='') = new ComputationNode [ operation = 'Pass' ; inputs = z /*plus the function args*/ ]
 Tanh(z, tag='') = new ComputationNode [ operation = 'Tanh' ; inputs = z /*plus the function args*/ ]
 TimeReverse(vectorSequence, tag='') = new ComputationNode [ operation = 'TimeReverse' ; inputs = vectorSequence /*plus the function args*/ ]
 TransposeTimes(leftMatrix, rightMatrix, tag='') = new ComputationNode [ operation = 'TransposeTimes' ; inputs = (leftMatrix : rightMatrix) /*plus the function args*/ ]
@@ -368,7 +369,8 @@ Network = [
 
     Editing = [
         // Create a lambda that returns its argument unless that argument == 'old', then it will return 'replacement'
-        Replace (old, replacement) = (node => if IsSameObject (node, old) then replacement else node)
+        ReplaceLinksToNode (old, replacement) = (node => if IsSameObject (node, old) then replacement else node)
+        ReplaceLinksToNamedNode (name, replacement) = (node => if node.name == name then replacement else node)
     ]
 ]
 

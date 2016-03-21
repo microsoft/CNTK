@@ -17,27 +17,43 @@
 namespace Microsoft { namespace MSR { namespace CNTK {
 
 using namespace std;
+using namespace ScriptableObjects;
 
 // ===================================================================
 // behave like a config
 // This allows to access nodes inside a network as if it was an IConfigRecord.
 // This is meant to be used by whatever we will replace MEL.
-// TODO: implement this
 // ===================================================================
 
-const ScriptableObjects::ConfigValuePtr& /*IConfigRecord::*/ ComputationNodeBase::operator[](const wstring& id) const // e.g. confRec[L"message"]
+// not in the cache yet: create it (or not if no such member)
+void /*CustomConfigRecord::*/ ComputationNodeBase::LazyCreateConfigMember(const wstring& id) const /*override*/
 {
-    id;
-    RuntimeError("unknown class parameter"); // (for now)
+    if (id == L"name")
+    {
+        InsertConfigMember(id, ConfigValuePtr(make_shared<String>(NodeName()), [](const std::wstring &) { LogicError("should not get here"); }, L""));
+    }
+    else if (id == L"operation")
+    {
+        InsertConfigMember(id, ConfigValuePtr(make_shared<String>(OperationName()), [](const std::wstring &) { LogicError("should not get here"); }, L""));
+    }
+    // TODO: Think through what tags mean. Do we allow user-named tags? Is it a set or a single string? If set, then how to compare?
+    //else if (id == L"tag")
+    //{
+    //}
+    else if (id == L"inputs")
+    {
+        std::vector<ConfigValuePtr> inputsAsValues;
+        for (let& input : GetInputs())
+            inputsAsValues.push_back(ConfigValuePtr(input, [](const std::wstring &) { LogicError("should not get here"); }, L""));
+        let& arr = make_shared<ScriptableObjects::ConfigArray>(0, move(inputsAsValues));
+        InsertConfigMember(id, ConfigValuePtr(arr, [](const std::wstring &) { LogicError("should not get here"); }, L""));
+    }
+    // any other id does not exist, don't create any entry for it
 }
-const ScriptableObjects::ConfigValuePtr* /*IConfigRecord::*/ ComputationNodeBase::Find(const wstring& id) const // returns nullptr if not found
-{
-    id;
-    return nullptr; // (for now)
-}
+
 vector<wstring> /*IConfigRecord::*/ ComputationNodeBase::GetMemberIds() const
 {
-    return vector<wstring>{ L"name", L"operation", L"inputs" };
+    return vector<wstring>{ L"name", L"operation", /*L"tag", */L"inputs" };
 }
 
 }}}

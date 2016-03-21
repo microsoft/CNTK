@@ -270,7 +270,7 @@ class ComputationNodeBase : public IComputationNode,
                             public ScriptableObjects::WithTags,
                             public ScriptableObjects::HasName,
                             public ScriptableObjects::HasToString,
-                            public ScriptableObjects::IConfigRecord, // make members accessible as BS expressions
+                            public ScriptableObjects::CustomConfigRecord, // make members accessible as BS expressions
                             public std::enable_shared_from_this<ComputationNodeBase>
 {
     // note: enable_shared_from_this<> allows to create a shared_ptr from a raw pointer to this that is correctly aware of all other shared_ptrs (same ref count)
@@ -310,6 +310,7 @@ public:
             ComputationNetworkOwnedNodeState::CopyTo(*node);
             TimeStamp::CopyTo(*node);
         }
+        node->ClearConfigMemberCache();
     }
 
     virtual ComputationNodeBasePtr Duplicate(const std::wstring& newName = L"", const CopyNodeFlags flags = CopyNodeFlags::copyNodeAll) const = 0;   // (called on here implemented by ComputationNode<ElemType>
@@ -531,8 +532,10 @@ public:
     // attaching/detaching inputs
     virtual void AttachInputs(const std::vector<ComputationNodeBasePtr>& inputs) = 0;
 
+    // Note: This function is used to break cyclic references.
     virtual void DetachInputs()
     {
+        ClearConfigMemberCache(); // cached config may also hold pointers, must clear, too
         m_inputs.clear();
     }
 
@@ -552,10 +555,7 @@ public:
                 ScriptableObjects::ConfigArrayPtr inputsArray = *inputsArg;
                 const auto range = inputsArray->GetIndexRange();
                 for (int i = range.first; i <= range.second; i++) // pull them. This will resolve all of them.
-                    inputs.push_back(inputsArray->At(i, [](const wstring&)
-                                                     {
-                                                         LogicError("GetInputs: out of bounds index while iterating??");
-                                                     }));
+                    inputs.push_back(inputsArray->At(i, [](const wstring&) { LogicError("GetInputs: out of bounds index while iterating??"); }));
             }
         }
         return inputs;
@@ -577,6 +577,7 @@ public:
     void SetNodeName(const std::wstring& nodeName) { m_nodeName = nodeName; }
     /*HasName::*/ void SetName(const std::wstring& newName) override // also for use by ExperimentalNetworkBuilder
     {
+        ClearConfigMemberCache();
         m_nodeName = newName;
         //fprintf(stderr, "Node --> %ls : %ls\n", NodeName().c_str(), OperationName().c_str()), fflush(stderr);
     }
@@ -602,7 +603,7 @@ public:
         return *m_environment;
     }
     ComputationEnvironmentPtr GetEnvironmentPtr() const { return m_environment; }
-    void SetEnvironment(ComputationEnvironmentPtr environment) { auto old = m_environment = environment; }
+    void SetEnvironment(ComputationEnvironmentPtr environment) { m_environment = environment; }
 
     // -----------------------------------------------------------------------
     // validation
@@ -758,9 +759,8 @@ public:
     // -----------------------------------------------------------------------
 
     // pretend to be a ConfigRecord
-    const ScriptableObjects::ConfigValuePtr& /*IConfigRecord::*/ operator[](const wstring& id) const override; // e.g. confRec[L"message"]
-    const ScriptableObjects::ConfigValuePtr* /*IConfigRecord::*/ Find(const wstring& id) const override;       // returns nullptr if not found
-    vector<wstring> /*IConfigRecord::*/ GetMemberIds() const override;
+    void /*CustomConfigRecord::*/ LazyCreateConfigMember(const std::wstring& id) const override;
+    std::vector<std::wstring> /*IConfigRecord::*/ GetMemberIds() const override;
 
     // -----------------------------------------------------------------------
     // miscellaneous
@@ -973,6 +973,7 @@ public:
         wstring name = NodeName();
         name; // (for easier debugging)
 #endif
+        ClearConfigMemberCache();
         const auto* pNumInputs = dynamic_cast<INumInputs*>(this); // if this class also derives from NumInputs<N> then N is the expected number of inputs
         if (pNumInputs && pNumInputs->GetExpectedNumInputs() != inputs.size())
             RuntimeError("%ls operation '%ls' expects %d inputs (given: %d)", OperationName().c_str(), NodeName().c_str(), (int) pNumInputs->GetExpectedNumInputs(), (int) inputs.size());
@@ -1029,6 +1030,8 @@ protected:
 
     void /*ComputationNodeBase::*/ SetInput(const size_t childIndex, const ComputationNodeBasePtr& inode) override
     {
+        ClearConfigMemberCache();
+
         const ComputationNodePtr node = DownCast(inode);
 
         // require first nodes specified before the second to avoid null nodes condition.
