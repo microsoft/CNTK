@@ -45,6 +45,9 @@ struct SequenceDataBase
     SequenceDataBase() : m_data(nullptr) { }
     virtual ~SequenceDataBase() = default;
 
+    // Sequence id.
+    size_t m_id;
+
     ChunkPtr m_chunk;
     // A non-owned pointer. The actual size is provided for particular sequences,
     // i.e. see DenseSequenceData, or SparseSequenceData.
