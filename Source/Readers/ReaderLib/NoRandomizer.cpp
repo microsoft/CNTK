@@ -27,7 +27,7 @@ NoRandomizer::NoRandomizer(IDataDeserializerPtr deserializer)
     for (const auto& chunk : m_chunkDescriptions)
     {
         // Check that position corresponds to chunk id.
-        assert(m_chunkSampleOffset.size() == chunk->id);
+        assert(m_chunkSampleOffset.size() == chunk->m_id);
 
         m_chunkSampleOffset.push_back(sampleCount);
         sampleCount += chunk->m_numberOfSamples;
@@ -93,7 +93,7 @@ void NoRandomizer::StartEpoch(const EpochConfiguration& config)
     }
 
     m_currentSequencePositionInChunk = sequenceId;
-    assert(m_chunkDescriptions[m_currentChunkPosition]->numberOfSequences > m_currentSequencePositionInChunk);
+    assert(m_chunkDescriptions[m_currentChunkPosition]->m_numberOfSequences > m_currentSequencePositionInChunk);
 };
 
 // Moving the cursor to the next sequence. Possibly updating the chunk information if needed.
@@ -121,7 +121,7 @@ void NoRandomizer::MoveToNextSequence()
 std::vector<SequenceDescription> NoRandomizer::GetNextSequenceDescriptions(size_t sampleCount)
 {
     assert(m_sequenceWindow.size() != 0);
-    assert(m_chunkDescriptions[m_currentChunkPosition]->numberOfSequences > m_currentSequencePositionInChunk);
+    assert(m_chunkDescriptions[m_currentChunkPosition]->m_numberOfSequences > m_currentSequencePositionInChunk);
 
     int samples = (int)sampleCount;
 
