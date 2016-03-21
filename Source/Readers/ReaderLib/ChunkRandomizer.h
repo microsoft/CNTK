@@ -34,13 +34,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // Position of the last sample of the chunk in the input.
         size_t SampleEndPosition() const
         {
-            return m_original->numberOfSamples + m_samplePositionStart;
+            return m_original->m_numberOfSamples + m_samplePositionStart;
         }
 
         // Position of the last sequence of the chunk in the input.
         size_t SequenceEndPosition() const
         {
-            return m_original->numberOfSequences + m_sequencePositionStart;
+            return m_original->m_numberOfSequences + m_sequencePositionStart;
         }
     };
 

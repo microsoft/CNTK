@@ -29,7 +29,7 @@ public:
     virtual ChunkDescriptions GetChunkDescriptions() override;
 
     // Gets sequence descriptions for the chunk.
-    virtual void GetSequencesForChunk(size_t, std::vector<SequenceDescription>&);
+    virtual void GetSequencesForChunk(size_t, std::vector<SequenceDescription>&) override;
 
 private:
     // Creates a set of sequence descriptions.

@@ -13,8 +13,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 // Sequence key, used for correlations between sequences between different deserializers.
 struct KeyType
 {
-    size_t major;
-    size_t minor;
+    size_t m_major;
+    size_t m_minor;
 };
 
 class Chunk;
@@ -33,7 +33,7 @@ struct SequenceDescription
     bool m_isValid;           // Indicates whether the sequence is valid.
     KeyType m_key;            // Sequence key, used for correlations between sequences of different deserializers.
 };
-typedef std::vector<const SequenceDescription*> SequenceDescriptions;
+
 typedef std::shared_ptr<SequenceDescription> SequenceDescriptionPtr;
 
 // Defines sequence data and its layout.
@@ -113,11 +113,11 @@ private:
 struct ChunkDescription
 {
     // Chunk id.
-    size_t id;
+    size_t m_id;
     // Number of samples in the chunk.
-    size_t numberOfSamples;
+    size_t m_numberOfSamples;
     // Number of sequences in the chunk.
-    size_t numberOfSequences;
+    size_t m_numberOfSequences;
 };
 
 typedef std::shared_ptr<ChunkDescription> ChunkDescriptionPtr;

@@ -30,7 +30,7 @@ NoRandomizer::NoRandomizer(IDataDeserializerPtr deserializer)
         assert(m_chunkSampleOffset.size() == chunk->id);
 
         m_chunkSampleOffset.push_back(sampleCount);
-        sampleCount += chunk->numberOfSamples;
+        sampleCount += chunk->m_numberOfSamples;
     }
 
     m_totalNumberOfSamples = sampleCount;
@@ -103,7 +103,7 @@ void NoRandomizer::MoveToNextSequence()
     m_samplePositionInEpoch += sequence.m_numberOfSamples;
     m_globalSamplePosition += sequence.m_numberOfSamples;
 
-    if (m_currentSequencePositionInChunk + 1 >= m_chunkDescriptions[m_currentChunkPosition]->numberOfSequences)
+    if (m_currentSequencePositionInChunk + 1 >= m_chunkDescriptions[m_currentChunkPosition]->m_numberOfSequences)
     {
         // Moving to the next chunk.
         m_currentChunkPosition = (m_currentChunkPosition + 1) % m_chunkDescriptions.size();

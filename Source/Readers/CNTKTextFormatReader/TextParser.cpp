@@ -175,9 +175,9 @@ ChunkDescriptions TextParser<ElemType>::GetChunkDescriptions()
     {
         result.push_back(shared_ptr<ChunkDescription>(
             new ChunkDescription {
-                chunk.id,
-                chunk.numberOfSamples,
-                chunk.numberOfSequences
+                chunk.m_id,
+                chunk.m_numberOfSamples,
+                chunk.m_numberOfSequences
         }));
     }
 
@@ -207,9 +207,9 @@ void TextParser<ElemType>::GetSequencesForChunk(size_t chunkId, std::vector<Sequ
 template <class ElemType>
 TextParser<ElemType>::TextDataChunk::TextDataChunk(const ChunkDescriptor& descriptor)
 {
-    m_id = descriptor.id;
+    m_id = descriptor.m_id;
     m_sequenceRequestCount = 0;
-    m_sequences.reserve(descriptor.numberOfSequences);
+    m_sequences.reserve(descriptor.m_numberOfSequences);
 }
 
 template <class ElemType>
