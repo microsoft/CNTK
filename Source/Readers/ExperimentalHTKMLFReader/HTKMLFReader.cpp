@@ -27,8 +27,7 @@ std::vector<IDataDeserializerPtr> CreateDeserializers(const ConfigParameters& re
         InvalidArgument("Network needs at least 1 feature and 1 label specified.");
     }
 
-    std::vector<std::wstring> sequences = ConfigHelper(readerConfig(featureNames.front())).GetFeaturePaths();
-    CorpusDescriptorPtr corpus = std::make_shared<CorpusDescriptor>(std::move(sequences));
+    CorpusDescriptorPtr corpus = std::make_shared<CorpusDescriptor>();
 
     std::vector<IDataDeserializerPtr> featureDeserializers;
     std::vector<IDataDeserializerPtr> labelDeserializers;
@@ -69,7 +68,7 @@ HTKMLFReader::HTKMLFReader(MemoryProviderPtr provider,
     auto deserializers = CreateDeserializers(readerConfig);
     assert(deserializers.size() == 2);
 
-    auto bundler = std::make_shared<Bundler>(readerConfig, deserializers[0], deserializers);
+    auto bundler = std::make_shared<Bundler>(readerConfig, deserializers[0], deserializers, false);
 
     std::wstring readMethod = config.GetRandomizer();
     if (!AreEqualIgnoreCase(readMethod, std::wstring(L"blockRandomize")))
@@ -78,7 +77,7 @@ HTKMLFReader::HTKMLFReader(MemoryProviderPtr provider,
     }
 
     int verbosity = readerConfig(L"verbosity", 2);
-    m_randomizer = std::make_shared<BlockRandomizer>(verbosity, window, bundler, BlockRandomizer::DistributionMode::chunk_modulus, true /* useLegacyRandomization */);
+    m_randomizer = std::make_shared<BlockRandomizer>(verbosity, window, bundler, BlockRandomizer::DecimationMode::chunk, true /* useLegacyRandomization */);
     m_randomizer->Initialize(nullptr, readerConfig);
 
     // Create output stream descriptions (all dense)

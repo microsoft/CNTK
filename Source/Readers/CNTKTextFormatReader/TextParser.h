@@ -8,9 +8,11 @@
 #include "DataDeserializerBase.h"
 #include "Descriptors.h"
 #include "TextConfigHelper.h"
+#include "Indexer.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
+template <class ElemType>
 class CNTKTextFormatReaderTestRunner;
 
 // TODO: more details when tracing warnings 
@@ -18,30 +20,28 @@ class CNTKTextFormatReaderTestRunner;
 template <class ElemType>
 class TextParser : public DataDeserializerBase {
 public:
-    TextParser(const TextConfigHelper& helper);
+    explicit TextParser(const TextConfigHelper& helper);
 
     ~TextParser();
 
     // Builds an index of the input data.
     void Initialize();
 
-    // Description of streams that this data deserializer provides.
-    std::vector<StreamDescriptionPtr> GetStreamDescriptions() const override;
-
     // Retrieves a chunk of data.
     ChunkPtr GetChunk(size_t chunkId) override;
 
-    // Retrieves total number of chunks this deserializer can produce.
-    size_t GetTotalNumberOfChunks() override;
-protected:
-    void FillSequenceDescriptions(SequenceDescriptions& timeline) const override;
+    // Get information about chunks.
+    ChunkDescriptions GetChunkDescriptions() override;
+
+    // Get information about particular chunk.
+    void GetSequencesForChunk(size_t chunkId, std::vector<SequenceDescription>& result) override;
 
 private:
     // A buffer to keep data for all samples in a (variable length) sequence 
     // from a single input stream.
     struct InputStreamBuffer
     {
-        virtual ~InputStreamBuffer() {};
+        virtual ~InputStreamBuffer() { };
 
         size_t m_numberOfSamples = 0;
         std::vector<ElemType> m_buffer;
@@ -91,7 +91,7 @@ private:
     size_t m_maxAliasLength;
     std::map<std::string, size_t> m_aliasToIdMap;
 
-    IndexPtr m_index;
+    std::unique_ptr<Indexer> m_indexer;
 
     int64_t m_fileOffsetStart;
     int64_t m_fileOffsetEnd;
@@ -109,9 +109,6 @@ private:
     unsigned int m_traceLevel;
     unsigned int m_numAllowedErrors;
     bool m_skipSequenceIds;
-    
-    // All streams this reader provides.
-    std::vector<StreamDescriptionPtr> m_streams;
 
     // A map of currently loaded chunks
     // TODO: remove caching once partial randomization is in master.
@@ -167,7 +164,7 @@ private:
 
     void SetChunkCacheSize(unsigned int size);
 
-    friend class CNTKTextFormatReaderTestRunner;
+    friend class CNTKTextFormatReaderTestRunner<ElemType>;
 
     DISABLE_COPY_AND_MOVE(TextParser);
 };
