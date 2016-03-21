@@ -384,6 +384,9 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
             inputNodes[i - 1] = nodeFrom[0];
         }
 
+#if 1
+        nodeTo[0]->AttachInputs(inputNodes);
+#else   // TODO: delete this
         if (inputNodes.size() == 1)
             nodeTo[0]->AttachInputs(inputNodes[0]);
         else if (inputNodes.size() == 2)
@@ -392,6 +395,7 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
             nodeTo[0]->AttachInputs(inputNodes[0], inputNodes[1], inputNodes[2]);
         else
             RuntimeError("SetNodeInputs(): You specified more than 3 input nodes.");
+#endif
     }
     else if (EqualInsensitive(name, "SetProperty"))
     {

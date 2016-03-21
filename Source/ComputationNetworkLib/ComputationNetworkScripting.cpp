@@ -87,10 +87,10 @@ void ComputationNetwork::ConstructFromRoots(DEVICEID_TYPE deviceId, deque<Comput
     }
 
     // process work list
-    // Also call FinalizeInit where we must.
+    // Also call LateAttachInputs() where needed.
     while (!workList.empty())
     {
-        auto node = workList.front();
+        let node = workList.front();
         workList.pop_front();
 
         // add to set

@@ -1045,7 +1045,7 @@ void ComputationNetwork::PerformSVDecomposition(const map<wstring, float>& SVDCo
             redVT.ColumnElementMultiplyWith(redS);
 
             // Step 2. create two new Parameter nodes and one Times node
-            wstring leftChildName = name + L"-U";  // BUGBUG: With BrainScript, node names must be proper identifieres/variable expressions. We can't have '-' in node names.
+            wstring leftChildName = name + L"-U";  // BUGBUG: With BrainScript, node names must be proper identifiers/variable expressions. We can't have '-' in node names.
             wstring rightChildName = name + L"-V";
             shared_ptr<ComputationNode<ElemType>> pLeft = AddNodeToNetWithElemType(New<LearnableParameter<ElemType>>(m_deviceId, leftChildName, m, r));
             shared_ptr<ComputationNode<ElemType>> pRight = AddNodeToNetWithElemType(New<LearnableParameter<ElemType>>(m_deviceId, rightChildName, r, n));
@@ -1055,7 +1055,7 @@ void ComputationNetwork::PerformSVDecomposition(const map<wstring, float>& SVDCo
             pLeft->ValueAsMatrix() = redU.DeepClone();
             pRight->ValueAsMatrix() = redVT.DeepClone();
 
-            shared_ptr<ComputationNode<ElemType>> pTimes = AddNodeToNetAndAttachInputs(New<TimesNode<ElemType>>(m_deviceId, name + L"-SVD"), pLeft, pRight);
+            shared_ptr<ComputationNode<ElemType>> pTimes = AddNodeToNetAndAttachInputs(New<TimesNode<ElemType>>(m_deviceId, name + L"-SVD"), { pLeft, pRight });
 
             // Step 3. remove old node
             ReplaceLeafNode(name, pTimes);

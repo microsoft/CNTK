@@ -337,7 +337,7 @@ public:
     TimesNode(const ScriptableObjects::IConfigRecordPtr configp)
         : TimesNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"outputRank"))
     {
-        AttachInputs(configp, this->GetExpectedNumInputs());
+        AttachInputsFromConfig(configp, this->GetExpectedNumInputs());
     }
 };
 
@@ -684,7 +684,7 @@ public:
     TransposeDimensionsNode(const ScriptableObjects::IConfigRecordPtr configp)
         : TransposeDimensionsNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"dim1"), configp->Get(L"dim2"))
     {
-        AttachInputs(configp, this->GetExpectedNumInputs());
+        AttachInputsFromConfig(configp, this->GetExpectedNumInputs());
     }
 
     void Save(File& fstream) const

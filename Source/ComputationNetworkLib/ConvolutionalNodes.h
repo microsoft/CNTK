@@ -100,7 +100,7 @@ public:
                           configp->Get(L"zeroPadding"), configp->Get(L"maxTempMemSizeInSamples"))
     {
         // weightNodeName, inputValueNodeName, kernelWidth, kernelHeight, outputChannels, horizontalSubsample, verticalSubsample, zeroPadding = false, maxTempMemSizeInSamples = 0
-        AttachInputs(configp, this->GetExpectedNumInputs());
+        AttachInputsFromConfig(configp, this->GetExpectedNumInputs());
     }
 
     void Save(File& fstream) const override
@@ -350,7 +350,7 @@ public:
         : PoolingNodeBase(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"windowWidth"), configp->Get(L"windowHeight"), configp->Get(L"horizontalSubsample"), configp->Get(L"verticalSubsample"), ImageLayoutKindFrom(configp->Get(L"imageLayout")))
     {
         // input, windowWidth, windowHeight, horizontalSubsample, verticalSubsample
-        AttachInputs(configp, this->GetExpectedNumInputs());
+        AttachInputsFromConfig(configp, this->GetExpectedNumInputs());
     }
 
     void Save(File& fstream) const override

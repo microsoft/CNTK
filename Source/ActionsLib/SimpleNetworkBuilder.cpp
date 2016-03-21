@@ -211,7 +211,7 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildRNNFromDescription()
                     builder.Plus(
                         builder.Times(u, input), builder.Times(w, pastValue)),
                     0);
-                pastValue->AttachInputs(output);
+                pastValue->AttachInputs({ output });
                 recur_idx++;
             }
             else
@@ -243,7 +243,7 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildRNNFromDescription()
                         builder.Plus(
                             builder.Times(u, input), builder.Times(w, pastValue)),
                         0);
-                    pastValue->AttachInputs(output);
+                    pastValue->AttachInputs({ output });
                     recur_idx++;
                 }
                 else
@@ -324,7 +324,7 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildClassEntropyRNNFromDe
                     builder.Plus(
                         builder.Times(u, input), builder.Times(w, pastValue)),
                     0);
-                pastValue->AttachInputs(output);
+                pastValue->AttachInputs({ output });
                 recur_idx++;
             }
             else
@@ -354,7 +354,7 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildClassEntropyRNNFromDe
                         builder.Plus(
                             builder.Times(u, input), builder.Times(w, pastValue)),
                         0);
-                    pastValue->AttachInputs(output);
+                    pastValue->AttachInputs({ output });
                     recur_idx++;
                 }
                 else
@@ -553,7 +553,7 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildLogBilinearNetworkFro
             pastValueXI =
                 builder.PastValue(NULL, m_defaultHiddenActivity, m_layerSizes[0], ik, msra::strfun::wstrprintf(L"pastValue%d", ik));
             pastValueXI->SetLearningRateMultiplier(0);
-            pastValueXI->AttachInputs(input);
+            pastValueXI->AttachInputs({ input });
             // TODO: to figure out sparse matrix size
             Wxi = builder.CreateLearnableParameter(msra::strfun::wstrprintf(L"DD%d", ik), m_layerSizes[0], m_layerSizes[0]);
             m_net->InitLearnableParameters(Wxi, m_uniformInit, randomSeed++, m_initValueScale);
@@ -582,7 +582,7 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildLogBilinearNetworkFro
                 pastValue = builder.PastValue(NULL, m_defaultHiddenActivity, m_layerSizes[i + 1], 1);
                 output = builder.Plus(builder.Times(w, pastValue), input);
 
-                pastValue->AttachInputs(output);
+                pastValue->AttachInputs({ output });
                 input = output;
                 recur_idx++;
             }
@@ -655,10 +655,10 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildDNNLMNetworkFromDescr
             pastValueXII = builder.PastValue(NULL, m_defaultHiddenActivity, m_layerSizes[0], 2);
             pastValueXIII = builder.PastValue(NULL, m_defaultHiddenActivity, m_layerSizes[0], 3);
             pastValueXIV = builder.PastValue(NULL, m_defaultHiddenActivity, m_layerSizes[0], 4);
-            pastValueXI->AttachInputs(input);
-            pastValueXII->AttachInputs(input);
-            pastValueXIII->AttachInputs(input);
-            pastValueXIV->AttachInputs(input);
+            pastValueXI->AttachInputs({ input });
+            pastValueXII->AttachInputs({ input });
+            pastValueXIII->AttachInputs({ input });
+            pastValueXIV->AttachInputs({ input });
 
             if (m_recurrentLayers.size() > 0 && m_recurrentLayers[recur_idx] == 1)
             {
@@ -719,7 +719,7 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildDNNLMNetworkFromDescr
                     std::list<ComputationNodeBasePtr> recurrent_loop;
                     pastValue = builder.PastValue(NULL, m_defaultHiddenActivity, m_layerSizes[i + 1], 1);
                     output = SimpleNetworkBuilder<ElemType>::ApplyNonlinearFunction(builder.Plus(builder.Times(u, input), builder.Times(w, pastValue)), i);
-                    pastValue->AttachInputs(output);
+                    pastValue->AttachInputs({ output });
                     recur_idx++;
                 }
                 else
@@ -933,13 +933,13 @@ shared_ptr<ComputationNode<ElemType>> /*ComputationNodePtr*/ SimpleNetworkBuilde
         output = builder.ElementTimes(ot, builder.Tanh(ct));
     }
 
-    pastValueHO->AttachInputs(output);
-    pastValueHI->AttachInputs(output);
-    pastValueHF->AttachInputs(output);
-    pastValueHC->AttachInputs(output);
-    pastValueCI->AttachInputs(ct);
-    pastValueCF->AttachInputs(ct);
-    pastValueCC->AttachInputs(ct);
+    pastValueHO->AttachInputs({ output });
+    pastValueHI->AttachInputs({ output });
+    pastValueHF->AttachInputs({ output });
+    pastValueHC->AttachInputs({ output });
+    pastValueCI->AttachInputs({ ct });
+    pastValueCF->AttachInputs({ ct });
+    pastValueCC->AttachInputs({ ct });
 
     if (m_addDropoutNodes)
         input = builder.Dropout(output);
@@ -1613,7 +1613,7 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildNetworkFromDbnFile(co
         // output = builder.Log(output);
 
         scaledLogLikelihood = builder.CreateComputationNode(OperationNameOf(MinusNode), L"ScaledLogLikelihood");
-        scaledLogLikelihood->AttachInputs(output, input);
+        scaledLogLikelihood->AttachInputs({ output, input });
         m_net->AddToNodeGroup(L"output", scaledLogLikelihood);
     }
     else
@@ -1795,4 +1795,4 @@ EvalCriterion ParseEvalCriterionString(wstring s)
     else LogicError("evalCriterion: Invalid trainingCriterion value. Valid values are (errorPrediction | crossEntropyWithSoftmax | squareError | logistic | sequenceWithSoftmax)");
 }
 
-} } }
+}}}

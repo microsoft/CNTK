@@ -636,10 +636,10 @@ public:
         return dynamic_pointer_cast<N>(AddNodeToNet(node));
     }
 
-    template <class N, class... _Types>
-    shared_ptr<N> AddNodeToNetAndAttachInputs(const shared_ptr<N> nodePtr, _Types&&... _Args)
+    template <class N>
+    shared_ptr<N> AddNodeToNetAndAttachInputs(const shared_ptr<N> nodePtr, const std::vector<ComputationNodeBasePtr>& inputs)
     {
-        nodePtr->AttachInputs(std::forward<_Types>(_Args)...);
+        nodePtr->AttachInputs(inputs);
         return AddNodeToNetWithElemType(nodePtr);
         // return nodePtr; // allows e.g. return AddNodeToNetAndAttachInputs(New..., inputs);
     }

@@ -270,7 +270,7 @@ class ComputationNodeBase : public IComputationNode,
                             public ScriptableObjects::WithTags,
                             public ScriptableObjects::HasName,
                             public ScriptableObjects::HasToString,
-                            //public ScriptableObjects::IConfigRecord, // make members accessible as BS expressions
+                            public ScriptableObjects::IConfigRecord, // make members accessible as BS expressions
                             public std::enable_shared_from_this<ComputationNodeBase>
 {
     // note: enable_shared_from_this<> allows to create a shared_ptr from a raw pointer to this that is correctly aware of all other shared_ptrs (same ref count)
@@ -281,8 +281,9 @@ public:
     // constructors, copying, (de-)serialization
     // -----------------------------------------------------------------------
 
-    ComputationNodeBase(DEVICEID_TYPE deviceId, const wstring& name)
-        : m_deviceId(deviceId), m_outputNeededDuringBackprop(true), m_learningRateMultiplier(0), m_gradientInitialized(false), m_nodeName(name == L"" ? CreateUniqNodeName() : name)
+    ComputationNodeBase(DEVICEID_TYPE deviceId, const wstring& name) :
+        m_deviceId(deviceId), m_outputNeededDuringBackprop(true), m_learningRateMultiplier(0),
+        m_gradientInitialized(false), m_nodeName(name == L"" ? CreateUniqNodeName() : name)
     {
         // TODO: should m_learningRateMultiplier be set to 0? Or should every node have a way to add its own say on the learning rate for all its inputs?
     }
@@ -529,31 +530,6 @@ public:
 
     // attaching/detaching inputs
     virtual void AttachInputs(const std::vector<ComputationNodeBasePtr>& inputs) = 0;
-    // convenience versions that take individual arguments
-    void AttachInputs(const ComputationNodeBasePtr& singleInput)
-    {
-        AttachInputs(std::vector<ComputationNodeBasePtr>{singleInput});
-    }
-    void AttachInputs(const ComputationNodeBasePtr& leftInput, const ComputationNodeBasePtr& rightInput)
-    {
-        AttachInputs(std::vector<ComputationNodeBasePtr>{leftInput, rightInput});
-    }
-    void AttachInputs(const ComputationNodeBasePtr& leftInput, const ComputationNodeBasePtr& middleInput, const ComputationNodeBasePtr& rightInput)
-    {
-        AttachInputs(std::vector<ComputationNodeBasePtr>{leftInput, middleInput, rightInput});
-    }
-    void AttachInputs(const ComputationNodeBasePtr& firstInput, const ComputationNodeBasePtr& secondInput, const ComputationNodeBasePtr& thirdInput, const ComputationNodeBasePtr& fourthInput)
-    {
-        AttachInputs(std::vector<ComputationNodeBasePtr>{firstInput, secondInput, thirdInput, fourthInput});
-    }
-    void AttachInputs(const ComputationNodeBasePtr& firstInput, const ComputationNodeBasePtr& secondInput, const ComputationNodeBasePtr& thirdInput, const ComputationNodeBasePtr& fourthInput, const ComputationNodeBasePtr& fifthInput)
-    {
-        AttachInputs(std::vector<ComputationNodeBasePtr>{firstInput, secondInput, thirdInput, fourthInput, fifthInput});
-    }
-    void AttachInputs(const ComputationNodeBasePtr& firstInput, const ComputationNodeBasePtr& secondInput, const ComputationNodeBasePtr& thirdInput, const ComputationNodeBasePtr& fourthInput, const ComputationNodeBasePtr& fifthInput, const ComputationNodeBasePtr& sixthInput)
-    {
-        AttachInputs(std::vector<ComputationNodeBasePtr>{firstInput, secondInput, thirdInput, fourthInput, fifthInput, sixthInput});
-    }
 
     virtual void DetachInputs()
     {
@@ -759,7 +735,6 @@ public:
     }
 
 private:
-
     // Recursive part of EnumerateNodes().
     void EnumerateNodesRec(std::unordered_set<ComputationNodeBasePtr>& visited, std::list<ComputationNodeBasePtr>& result) /*const*/ // const not working due to shared_from_this()
     {
@@ -778,6 +753,14 @@ private:
     }
 
 public:
+    // -----------------------------------------------------------------------
+    // scripting integration
+    // -----------------------------------------------------------------------
+
+    // pretend to be a ConfigRecord
+    const ScriptableObjects::ConfigValuePtr& /*IConfigRecord::*/ operator[](const wstring& id) const override; // e.g. confRec[L"message"]
+    const ScriptableObjects::ConfigValuePtr* /*IConfigRecord::*/ Find(const wstring& id) const override;       // returns nullptr if not found
+    vector<wstring> /*IConfigRecord::*/ GetMemberIds() const override;
 
     // -----------------------------------------------------------------------
     // miscellaneous
@@ -940,17 +923,17 @@ public:
     // creation from configuration
     // Nodes with NumInputs<> should say DeclareConstructorFromConfigWithNumInputs(ClassName), and nodes without DeclareConstructorFromConfig(ClassName).
     // The macro will forward to the regular constructor of the node (which may do more than just calling the base constructor), and then attach the inputs from config.
-#define DeclareConstructorFromConfigWithNumInputs(C)         \
-    C(const ScriptableObjects::IConfigRecordPtr configp)     \
-        : C(configp->Get(L"deviceId"), L"<placeholder>")     \
-    {                                                        \
-        AttachInputs(configp, this->GetExpectedNumInputs()); \
+#define DeclareConstructorFromConfigWithNumInputs(C)                   \
+    C(const ScriptableObjects::IConfigRecordPtr configp)               \
+        : C(configp->Get(L"deviceId"), L"<placeholder>")               \
+    {                                                                  \
+        AttachInputsFromConfig(configp, this->GetExpectedNumInputs()); \
     }
-#define DeclareConstructorFromConfig(C)                  \
-    C(const ScriptableObjects::IConfigRecordPtr configp) \
-        : C(configp->Get(L"deviceId"), L"<placeholder>") \
-    {                                                    \
-        AttachInputs(configp);                           \
+#define DeclareConstructorFromConfig(C)                            \
+    C(const ScriptableObjects::IConfigRecordPtr configp)           \
+        : C(configp->Get(L"deviceId"), L"<placeholder>")           \
+    {                                                              \
+        AttachInputsFromConfig(configp);                           \
     }
 
     // helper to load m_value from a stream
@@ -1004,7 +987,7 @@ public:
 protected:
 
     // AttachInputs() from config
-    void AttachInputs(const ScriptableObjects::IConfigRecordPtr configp, size_t expectedNumInputs = SIZE_MAX)
+    void AttachInputsFromConfig(const ScriptableObjects::IConfigRecordPtr configp, size_t expectedNumInputs = SIZE_MAX)
     {
         const auto inputs = GetInputsFromConfig(configp);
         if (expectedNumInputs != SIZE_MAX)
@@ -1862,6 +1845,7 @@ protected:                                                                      
     \
 public:                                                                                                                                                  \
     using Base::AttachInputs;                                                                                                                            \
+    using Base::AttachInputsFromConfig;                                                                                                                  \
     using Base::CreateGradientMatrixIfNull;                                                                                                              \
     using Base::NodeName;                                                                                                                                \
     using Base::RequiresPreCompute;                                                                                                                      \

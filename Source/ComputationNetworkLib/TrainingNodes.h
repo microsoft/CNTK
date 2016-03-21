@@ -1555,7 +1555,7 @@ public:
                                  configp->Get(L"normalizationTimeConstant"), configp->Get(L"epsilon"), configp->Get(L"useCntkEngine"),
                                  ImageLayoutKindFrom(configp->Get(L"imageLayout")))
     {
-        AttachInputs(configp, this->GetExpectedNumInputs());
+        AttachInputsFromConfig(configp, this->GetExpectedNumInputs());
     }
 
     void Save(File& fstream) const override
@@ -1872,4 +1872,4 @@ private:
 template class BatchNormalizationNode<float>;
 template class BatchNormalizationNode<double>;
 
-} } }
+}}}

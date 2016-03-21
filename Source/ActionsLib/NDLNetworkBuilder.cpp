@@ -444,6 +444,12 @@ void NDLNodeEvaluatorImpl<ElemType>::Evaluate(NDLNode<ElemType>* node, const wst
         }
         else
         {
+#if 1
+            vector<ComputationNodeBasePtr> inputNodes;
+            for (let& in : inputs)
+                inputNodes.push_back(ComputationNode<ElemType>::FromVoidPtr(in));
+            nodePtr->AttachInputs(inputNodes);
+#else       // TODO: delete this
             switch (inputs.size())
             {
             // TODO: just use a vector attach
@@ -470,6 +476,7 @@ void NDLNodeEvaluatorImpl<ElemType>::Evaluate(NDLNode<ElemType>* node, const wst
                     RuntimeError("Invalid number of parameters name = '%s' call = '%s'\n", node->GetName().c_str(), node->GetValue().c_str());
                 break;
             }
+#endif
         }
         // process common optional parameters (currently only "tag");
         ProcessOptionalParameters(node);

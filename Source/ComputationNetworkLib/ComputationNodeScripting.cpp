@@ -25,7 +25,6 @@ using namespace std;
 // TODO: implement this
 // ===================================================================
 
-#if 0
 const ScriptableObjects::ConfigValuePtr& /*IConfigRecord::*/ ComputationNodeBase::operator[](const wstring& id) const // e.g. confRec[L"message"]
 {
     id;
@@ -40,6 +39,5 @@ vector<wstring> /*IConfigRecord::*/ ComputationNodeBase::GetMemberIds() const
 {
     return vector<wstring>{ L"name", L"operation", L"inputs" };
 }
-#endif
 
 }}}

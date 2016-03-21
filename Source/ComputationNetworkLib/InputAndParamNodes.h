@@ -66,7 +66,7 @@ public:
         : LearnableParameter(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"shape"))
     {
         // TODO: Change dimensions to take a generic tensor instead. That will be a (minor) breaking change that will require fix-ups when converting from NDL to BrainScript.
-        AttachInputs(configp, this->GetExpectedNumInputs());
+        AttachInputsFromConfig(configp, this->GetExpectedNumInputs());
         // parameters[rows, [cols=1]] plus other optional parameters (learningRateMultiplier=[1|0|float], init=[uniform|gaussian|fixedvalue], initValueScale=[1|float], value=[0|float])
         if (configp->Exists(L"learningRateMultiplier"))
             SetLearningRateMultiplier(configp->Get(L"learningRateMultiplier"));
@@ -365,7 +365,7 @@ protected:
     InputValueBase(const ScriptableObjects::IConfigRecordPtr configp, bool isSparse)
         : Base(configp->Get(L"deviceId"), L"<placeholder>")
     {
-        AttachInputs(configp, this->GetExpectedNumInputs());
+        AttachInputsFromConfig(configp, this->GetExpectedNumInputs());
         bool isImage = configp->Get(L"isImage");
         if (!isImage)
             Init(configp->Get(L"shape"), isSparse);
