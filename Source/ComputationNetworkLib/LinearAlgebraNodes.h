@@ -71,6 +71,57 @@ template class PlusNode<float>;
 template class PlusNode<double>;
 
 // -----------------------------------------------------------------------
+// LogPlusNode (summand1, summand2)
+// -----------------------------------------------------------------------
+
+template <class ElemType>
+class LogPlusNode : public BinaryElementWiseNode<ElemType>
+{
+    typedef BinaryElementWiseNode<ElemType> Base;
+    UsingBinaryElementwiseNodeBaseMembers;
+    static const std::wstring TypeName()
+    {
+        return L"LogPlus";
+    }
+
+public:
+    DeclareConstructorFromConfigWithNumInputs(LogPlusNode);
+    LogPlusNode(DEVICEID_TYPE deviceId, const wstring& name)
+        : Base(deviceId, name)
+    {
+    }
+
+    virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
+    {
+        size_t rank = DetermineElementwiseTensorRank();
+        auto result = ValueTensorFor(rank, fr);
+        auto input0 = Input(0)->ValueTensorFor(rank, fr.AllowBroadcast());
+        auto input1 = Input(1)->ValueTensorFor(rank, fr.AllowBroadcast());
+        result.AssignLogSumOf(input0, input1);
+    }
+
+    virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
+    {
+        size_t rank = DetermineElementwiseTensorRank();
+        auto gradient = GradientTensorFor(rank, fr);
+        auto input0 = Input(0)->ValueTensorFor(rank, fr.AllowBroadcast());
+        auto input1 = Input(1)->ValueTensorFor(rank, fr.AllowBroadcast());
+        auto inputGradient = Input(0)->GradientTensorFor(rank, fr);
+
+        // if reduction then mask the respective input(s) (zero out the gaps)
+        if (Input(inputIndex)->ReducesInTimeWrt(shared_from_this()))
+            MaskMissingGradientColumnsToZero(fr);
+        if (Input(inputIndex)->ReducesInTimeWrt(Input(1 - inputIndex)))
+            Input(1 - inputIndex)->MaskMissingValueColumnsToZero(fr);
+
+        inputGradient.AddLogSumDerivativeOf(gradient, input0, input1);
+    }
+};
+
+template class LogPlusNode<float>;
+template class LogPlusNode<double>;
+
+// -----------------------------------------------------------------------
 // MinusNode (minuend, subtrahend)
 // -----------------------------------------------------------------------
 

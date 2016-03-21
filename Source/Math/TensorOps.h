@@ -254,6 +254,8 @@ DefBinaryOp(SqrOfDifference, Sqr(a - b));
 
 DefTernaryOp(Cond, a ? b : c);
 DefTernaryOp(Clip, a < b ? b : (a > c ? c : a));
+DefTernaryOp(LogSumDerivative, a * Sigmoid(c - b));
+
 #pragma pop_macro("DefTernaryOp")
 }
 }
