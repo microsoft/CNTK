@@ -72,54 +72,55 @@ enum ElementWiseOperator
     // nullary
     opConstOne,
     // unary (or binary with constant parameter)
-    opCopy,
-    opNegate,
-    opNot,
-    opAbs,
-    opSigmoid,
-    opTanh,
-    opSqr,
-    opSqrt,
-    opExp,
-    opLog,
-    opLinearRectifier,
-    opCosine,
-    // unary ops for use by Matrix class only (there is no TensorView implementation)
-    opSigmoidDerivative,
-    opLinearRectifierDerivative,
-    opNegativeSine,
-    // binary
-    opSum,
-    opDifference,
-    opElementwiseProduct,
-    opElementwiseQuotient,
-    opLogSum,
-    opMax,
-    opMin,
-    opEQ,
-    opNE,
-    opGT,
-    opLT,
-    opGE,
-    opLE,
-    opAnd,
-    opOr,
-    opXor,
-    opMaskNegative,
-    opElementwiseProductWithSigmoidDerivativeFromOutput,
-    opElementwiseProductWithTanhDerivativeFromOutput,
-    opElementwiseProductWithLinearRectifierDerivativeFromOutput,
-    opElementwiseProductWithLogDerivativeFromOutput,
-    opElementwiseProductWithCosDerivative,
-    opElementwiseProductWithAbsDerivative,
-    opElementwiseProductWithSqrtDerivative,
-    opSqrOfDifference,
-    // binary ops for indexing
-    // opIndex,
-    // ternary
-    opCond /*a ? b : c*/,
-    opClip /*clip a within interval b..c*/
-    // Note: not all that's implemented in CNTK ComputationNodes has an opcode yet.
+opCopy,
+opNegate,
+opNot,
+opAbs,
+opSigmoid,
+opTanh,
+opSqr,
+opSqrt,
+opExp,
+opLog,
+opLinearRectifier,
+opCosine,
+// unary ops for use by Matrix class only (there is no TensorView implementation)
+opSigmoidDerivative,
+opLinearRectifierDerivative,
+opNegativeSine,
+// binary
+opSum,
+opDifference,
+opElementwiseProduct,
+opElementwiseQuotient,
+opLogSum,
+opMax,
+opMin,
+opEQ,
+opNE,
+opGT,
+opLT,
+opGE,
+opLE,
+opAnd,
+opOr,
+opXor,
+opMaskNegative,
+opElementwiseProductWithSigmoidDerivativeFromOutput,
+opElementwiseProductWithTanhDerivativeFromOutput,
+opElementwiseProductWithLinearRectifierDerivativeFromOutput,
+opElementwiseProductWithLogDerivativeFromOutput,
+opElementwiseProductWithCosDerivative,
+opElementwiseProductWithAbsDerivative,
+opElementwiseProductWithSqrtDerivative,
+opSqrOfDifference,
+// binary ops for indexing
+// opIndex,
+// ternary
+opCond /*a ? b : c*/,
+opClip, /*clip a within interval b..c*/
+opLogSumDerivative
+// Note: not all that's implemented in CNTK ComputationNodes has an opcode yet.
 };
 
 // helper to apply a C macro for all operations of each kind
@@ -170,7 +171,8 @@ enum ElementWiseOperator
 
 #define ForAllTernaryOps(Macro) \
     Macro(Cond);                \
-    Macro(Clip);
+    Macro(Clip);                \
+    Macro(LogSumDerivative);   \
 
 // -----------------------------------------------------------------------
 // various enums to describe
