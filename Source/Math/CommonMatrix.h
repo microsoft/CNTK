@@ -76,6 +76,7 @@ enum ElementWiseOperator
     opNegate,
     opNot,
     opAbs,
+    opReciprocal,
     opSigmoid,
     opTanh,
     opSqr,
@@ -113,6 +114,7 @@ enum ElementWiseOperator
     opElementwiseProductWithCosDerivative,
     opElementwiseProductWithAbsDerivative,
     opElementwiseProductWithSqrtDerivative,
+    opElementwiseProductWithReciprocalDerivative,
     opSqrOfDifference,
     // binary ops for indexing
     // opIndex,
@@ -131,6 +133,7 @@ enum ElementWiseOperator
     Macro(Negate);            \
     Macro(Not);               \
     Macro(Abs);               \
+    Macro(Reciprocal);        \
     Macro(Sigmoid);           \
     Macro(Tanh);              \
     Macro(Sqr);               \
@@ -164,6 +167,7 @@ enum ElementWiseOperator
     Macro(ElementwiseProductWithLogDerivativeFromOutput);             \
     Macro(ElementwiseProductWithCosDerivative);                       \
     Macro(ElementwiseProductWithAbsDerivative);                       \
+    Macro(ElementwiseProductWithReciprocalDerivative);                \
     Macro(ElementwiseProductWithSqrtDerivative);                      \
     Macro(SqrOfDifference);                                           \
     //Macro(Index);

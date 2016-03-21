@@ -236,6 +236,7 @@ DefBinaryOp(ElementwiseProductWithLinearRectifierDerivativeFromOutput, b > 0 ? a
 DefBinaryOp(ElementwiseProductWithLogDerivativeFromOutput, a* exp_(-b));
 DefBinaryOp(ElementwiseProductWithCosDerivative, a * -sin_(b)); // note: b = input for cos()
 DefBinaryOp(ElementwiseProductWithAbsDerivative, a * Sgn(b)); // note: b = input for abs()
+DefBinaryOp(ElementwiseProductWithReciprocalDerivative, a * -Sqr(b)); // b = output
 DefBinaryOp(ElementwiseProductWithSqrtDerivative, a / (2 * b)); // b = output; d/dx sqrt(x) = 1/(2 * sqrt(x)) --> note this is the same as ElementwiseQuotient w a constant; if more show up like this we should add more template params
 DefBinaryOp(SqrOfDifference, Sqr(a - b));
 //DefBinaryOp(Index, IndexElement(a, b, i));  // note: this one uses the third argument
