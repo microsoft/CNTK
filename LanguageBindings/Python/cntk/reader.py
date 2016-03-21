@@ -145,13 +145,13 @@ class CNTKTextFormatReader(AbstractReader):
     def generate_config(self):
         """Generate the reader configuration block
         """
-        template = '''
+        template = '''\
             readerType = "%(ReaderType)s"
             file = "%(FileName)s"                
             '''
 
         if self.inputs_def is not None:
-            template += '''
+            template += '''\
             input = [
             '''
             
@@ -162,7 +162,7 @@ class CNTKTextFormatReader(AbstractReader):
                 else:
                     name = name_or_node
                     a = alias
-                template += '''
+                template += '''\
                 {0}=[
                     alias = "{1}"                
                     dim = {2}		          

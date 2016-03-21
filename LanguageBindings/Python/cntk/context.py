@@ -1,10 +1,13 @@
 from abc import ABCMeta, abstractmethod
 import os
+import re
+import sys
 import subprocess
 import numpy as np
 import shutil as sh
 
 from cntk.graph import ComputationNode
+from cntk.ops import NewReshape
 
 
 _FLOATX = 'float32'
@@ -256,8 +259,18 @@ class Context(AbstractContext):
         with open(os.path.join(self.directory, filename), "w") as out:
             out.write(config_content)
 
-        subprocess.check_call(
-            [CNTK_EXECUTABLE_PATH, "configFile=%s" % filename])
+        try:
+            output = subprocess.check_output(
+                [CNTK_EXECUTABLE_PATH, "configFile=%s" % filename],
+                stderr=subprocess.STDOUT)
+        except subprocess.CalledProcessError as e:
+            print(e.output.decode("utf-8"), file=open('error.txt', 'w'))
+            raise
+
+        if not output:
+            raise ValueError('no output returned')
+
+        return output.decode("utf-8")
 
     def train(self, reader, override_existing = True):
         '''
@@ -266,7 +279,7 @@ class Context(AbstractContext):
         :param override_existing: if the folder exists already override it
         '''
         config_content = self._generate_train_config(reader, override_existing)
-        self._call_cntk(CNTK_TRAIN_CONFIG_FILENAME, config_content)
+        output = self._call_cntk(CNTK_TRAIN_CONFIG_FILENAME, config_content)
 
     def test(self, reader):
         '''
@@ -274,7 +287,7 @@ class Context(AbstractContext):
         :param reader: the reader used to provide the testing data.
         '''
         config_content = self._generate_test_config(reader)
-        self._call_cntk(CNTK_TEST_CONFIG_FILENAME, config_content)
+        output = self._call_cntk(CNTK_TEST_CONFIG_FILENAME, config_content)
 
     def predict(self, reader):
         '''
@@ -282,34 +295,77 @@ class Context(AbstractContext):
         :param reader: the reader used to provide the evaluation data.
         '''
         config_content = self._generate_predict_config(reader)
-        self._call_cntk(CNTK_PREDICT_CONFIG_FILENAME, config_content)
+        output = self._call_cntk(CNTK_PREDICT_CONFIG_FILENAME, config_content)
+
+    '''
+    Regular expression to parse the shape information of the nodes out of
+    CNTK's output
+    '''
+    VAR_SHAPE_REGEX = re.compile('^Validating --> (?P<var_name>[^ ]+) = [^>]*> \[(?P<shape>[^]]+)')
+    SHAPE_STRIDE_REGEX = re.compile('\{.*?\}')
+
+    @staticmethod
+    def _parse_shapes_from_output(output):
+        '''
+        Parse CNTK's output and look for shape information that is then passed
+        as a dictionary {var_name -> shape tuple}
+        '''
+        var_shape = {}
+        for line in output.split('\n'):
+            mo = Context.VAR_SHAPE_REGEX.match(line)
+            if not mo:
+                continue
+            var_name, shape = mo.group('var_name'), mo.group('shape')
+
+            shape_list = []
+            for x in Context.SHAPE_STRIDE_REGEX.sub('', shape).split('x'):
+                x = x.strip()
+                if x != '*':
+                    shape_list.append(int(x))
+
+            var_shape[var_name] = tuple(shape_list)
+
+        return var_shape
+            
+    def _eval(self, node, reader):
+        # FIXME manually setting the tag to output might have side-effects
+        node.tag = 'output'
+        config_content = self._generate_eval_config(node, reader)
+        output = self._call_cntk(CNTK_EVAL_CONFIG_FILENAME, config_content)
+        shapes = Context._parse_shapes_from_output(output)
+
+        out_name = os.path.join(self.directory, CNTK_OUTPUT_FILENAME + '.' + node.var_name)
+        data = np.loadtxt(out_name)
+
+        return data, shapes
 
     def eval(self, node, reader=None):
         '''
-        Run the write action locally to evaluate the passed node.
-        :param input_map: mapping of input node to (reader, (start_dim, num_dim))
+        Run the write action locally to evaluate the passed node and returning
+        the data it produced.
+
         :param node: the node to evaluate.
         '''
-        # FIXME manually setting the tag to output might have side-effects
         if not isinstance(node, ComputationNode):
             raise ValueError('node is not of type ComputationNode, but %s'%type(node))
-        node.tag = 'output'
-        config_content = self._generate_eval_config(node, reader)
-        self._call_cntk(CNTK_EVAL_CONFIG_FILENAME, config_content)
 
-        import glob
-        out_file_wildcard = os.path.join(
-            self.directory, CNTK_OUTPUT_FILENAME + '.*')
-        out_filenames = glob.glob(out_file_wildcard)
+        data, shapes = self._eval(node, reader)
 
-        out_filenames = [
-            f for f in out_filenames if not f.endswith('out.txt.dummy_node')]
+        expected_size = np.multiply.reduce(shapes[node.var_name])
+        expected_shape = shapes[node.var_name]
 
-        if len(out_filenames) != 1:
-            raise ValueError('expected exactly one file starting with "%s", but got %s' % (
-                CNTK_OUTPUT_FILENAME, out_filenames))
+        if data.size != expected_size:
+            # For some reason the CNTK write action has issues with multi-row
+            # output. So we have to CNTK reshape it to one row and do it again,
+            # but then NumPy reshape using node's expected shape.
 
-        data = np.loadtxt(out_filenames[0])
+            reshaped = NewReshape(node, expected_size)
+            data, _ = self._eval(reshaped, reader)
+
+        if not (len(expected_shape)==2 and expected_shape[1] == 1):
+            # CNTK outputs e.g. [2 x 1] although it is just a vector.
+            # TODO find better way to distinguis between 
+            data = data.reshape(expected_shape)
 
         return data
 
