@@ -45,16 +45,16 @@ extern bool g_shareNodeValueMatrices;
 // helper mode for debugging
 // If TRACK_GAP_NANS is defined then initialize layout gaps to NaN and do NaN checks. Also do detailed logging of node computations.
 // #define TRACK_GAP_NANS
+// TODO: Make this a trace option, e.g. enabled by the ComputeEnvironment.
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
 enum CopyNodeFlags // flags to be passed to the CopyTo() function
 {
-    copyNodeNull = 0,                 // invalid value
-    copyNodeValue = 1,                // copy everything but the children links
-    copyNodeChildren = 2,             // only copy over children links
-    copyNodeAll = 3,                  // copy everything
-    copyNodeChildrenCrossNetwork = 4, // allow a cross network child copy
+    copyNodeValue          = 1, // copy everything except for the input links
+    copyNodeInputLinks     = 2, // copy over input links
+    copyNodeAll            = 3, // copy everything
+    copyNodeAcrossNetworks = 4  // allow a cross network child copy
 };
 
 #pragma region base computation class
@@ -70,7 +70,7 @@ struct /*interface*/ IComputationNode
 
     // --- these must be implemented by each node
 
-    virtual ComputationNodeBase* NewThis(DEVICEID_TYPE deviceId, const wstring& name) = 0;
+    virtual ComputationNodeBase* NewThis(DEVICEID_TYPE deviceId, const wstring& name) const = 0;
     // TODO: OperationName calls static TypeName which does not match the actual type names in that the 'Node' is missing.
     virtual const std::wstring OperationName() const = 0;
 #define OperationNameOf(T) (T<float>::TypeName()) // convenience macro
@@ -154,9 +154,13 @@ struct ComputationNetworkOwnedNodeState
 
     void CopyTo(ComputationNetworkOwnedNodeState& other) const
     {
-        // TODO: is that really all we copy? (this is a result of refactoring, so it seems yes indeed). Should we at least ClearCache()?
-        other.m_isPartOfLoop = m_isPartOfLoop;
-        other.m_needsGradient = m_needsGradient;
+        other.m_isPartOfLoop                  = m_isPartOfLoop;
+        other.m_needsGradient                 = m_needsGradient;
+        other.m_valueSharable                 = m_valueSharable;
+        other.m_traceNodeValue                = m_traceNodeValue;
+        other.m_traceNodeValueAsCategoryLabel = m_traceNodeValueAsCategoryLabel;
+        other.m_traceNodeValueUpToDim         = m_traceNodeValueUpToDim;
+        other.m_traceNodeValueUpToT           = m_traceNodeValueUpToT;
     }
 
     bool IsPartOfLoop() const { return m_isPartOfLoop; }
@@ -290,7 +294,7 @@ public:
     {
         if (OperationName() != node->OperationName())
             RuntimeError("Cannot copy from one node type to another node type");
-        if (flags & CopyNodeFlags::copyNodeChildren)
+        if (flags & CopyNodeFlags::copyNodeInputLinks)
         {
             node->m_inputs = m_inputs;
         }
@@ -307,7 +311,7 @@ public:
         }
     }
 
-    virtual ComputationNodeBasePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) = 0;   // (called on here implemented by ComputationNode<ElemType>
+    virtual ComputationNodeBasePtr Duplicate(const std::wstring& newName = L"", const CopyNodeFlags flags = CopyNodeFlags::copyNodeAll) const = 0;   // (called on here implemented by ComputationNode<ElemType>
 
     virtual void Load(File& /*fstream*/, size_t /*modelVersion*/)
     {
@@ -906,20 +910,30 @@ public:
         if (flags & CopyNodeFlags::copyNodeValue)
         {
             auto node = DownCast(nodeP);
-            node->m_value->SetValue(*m_value);
+            if (m_value)
+            {
+                node->CreateValueMatrixIfNull();
+                node->m_value->SetValue(*m_value);
+            }
+            else
+                node->m_value = nullptr;
             if (m_gradient)
+            {
+                node->CreateGradientMatrixIfNull();
                 node->m_gradient->SetValue(*m_gradient);
+            }
             else
                 node->m_gradient = nullptr;
         }
     }
 
     // duplicate a node
-    ComputationNodeBasePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags)
+    // Create a copy of a ComputationNode object. Inputs will be shared. Values (and gradients if applicable) are copied.
+    ComputationNodeBasePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const override
     {
         const std::wstring& name = (newName == L"") ? NodeName() : newName;
-        ComputationNodeBasePtr node(NewThis(m_deviceId, name)); // NewThis() is a virtual function that creates a new node of the actual type of 'this'
-        node->CopyTo(shared_from_this(), newName, flags);       // note: shared_from_this() is the base class, but CopyTo() up-casts it as needed
+        ComputationNodeBasePtr node(NewThis(m_deviceId, name));  // NewThis() is a virtual function that creates a new node of the actual type of 'this'
+        CopyTo(node, name, flags);
         return node;
     }
 
@@ -1419,6 +1433,11 @@ public:
         }
     }
 
+    void CreateValueMatrixIfNull()
+    {
+        CreateMatrixIfNull(m_value);
+    }
+
     void CreateGradientMatrixIfNull()
     {
         CreateMatrixIfNull(m_gradient);
@@ -1654,12 +1673,12 @@ public:
 #pragma warning(disable : 4100)
     // these are meant to be implemented by ComputationNode<ElemType> but should never be called on traversal nodes
     // TODO: There are too many of these. This indicates improper class hierarchies.
-    virtual ComputationNodeBase* NewThis(DEVICEID_TYPE deviceId, const wstring& name) override { NOT_IMPLEMENTED; }
+    virtual ComputationNodeBase* NewThis(DEVICEID_TYPE deviceId, const wstring& name) const override { NOT_IMPLEMENTED; }
     virtual void Validate(bool isFinalValidationPass) override { NOT_IMPLEMENTED; }
     virtual void Save(File& fstream) const override { NOT_IMPLEMENTED; }
     virtual void Load(File& /*fstream*/, size_t /*modelVersion*/) override { NOT_IMPLEMENTED; }
     virtual void CopyTo(ComputationNodeBasePtr node, const std::wstring& newName, const CopyNodeFlags flags) const override { NOT_IMPLEMENTED; }
-    virtual ComputationNodeBasePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) override { NOT_IMPLEMENTED; }
+    virtual ComputationNodeBasePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const override { NOT_IMPLEMENTED; }
     virtual double Get00Element() const override { NOT_IMPLEMENTED; }
     virtual MatrixBasePtr ValuePtr() const override { NOT_IMPLEMENTED; }
     virtual void UpdateFunctionMBSize() override { NOT_IMPLEMENTED; }
@@ -1849,16 +1868,13 @@ public:                                                                         
     using Base::ValueAsMatrix;                                                                                                                           \
     using Base::Value;
 
-#define ComputationNodeBoilerplate                                                             \
-    \
-protected: /* some boilerplate goes here */                                                    \
-    virtual const std::wstring OperationName() const override                                  \
-    {                                                                                          \
-        return TypeName();                                                                     \
-    }                                                                                          \
-    virtual ComputationNodeBase* NewThis(DEVICEID_TYPE deviceId, const wstring& name) override \
-    {                                                                                          \
-        return new typename std::remove_reference<decltype(*this)>::type(deviceId, name);      \
+#define ComputationNodeBoilerplate                                                                                \
+protected: /* some boilerplate goes here */                                                                       \
+    virtual const std::wstring OperationName() const override { return TypeName(); }                              \
+    virtual ComputationNodeBase* NewThis(DEVICEID_TYPE deviceId, const wstring& name) const override              \
+    {                                                                                                             \
+        const ComputationNodeBase* p = new typename std::remove_reference<decltype(*this)>::type(deviceId, name); \
+        return const_cast<ComputationNodeBase*>(p);                                                               \
     }
 
 #define UsingComputationNodeMembersBoilerplate \

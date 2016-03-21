@@ -356,7 +356,7 @@ public:
     virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
     {
         Base::CopyTo(nodeP, newName, flags);
-        if (flags & CopyNodeFlags::copyNodeChildren)
+        if (flags & CopyNodeFlags::copyNodeInputLinks)
         {
             auto node = dynamic_pointer_cast<RowStackNode<ElemType>>(nodeP);
             node->m_firstIndices = m_firstIndices;

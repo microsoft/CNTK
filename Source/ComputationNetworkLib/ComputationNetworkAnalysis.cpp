@@ -400,4 +400,4 @@ static int DetermineLoopDirection(const std::vector<ComputationNodeBasePtr>& nes
     return steppingDirection;
 }
 
-} } }
+}}}

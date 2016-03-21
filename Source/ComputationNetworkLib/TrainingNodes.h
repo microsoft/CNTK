@@ -18,42 +18,23 @@
 namespace Microsoft { namespace MSR { namespace CNTK {
 
 // -----------------------------------------------------------------------
-/// SquareErrorNode (left, right)
+// SquareErrorNode (left, right)
+// = SumElements ((left - right) .* (left - right))
+// Note: to save computation the gradient may be scaled by an constant.
+// TODO: ^^ Dig out what that constant is and document it here. "may be scaled"??
 // -----------------------------------------------------------------------
-
-//note: to save computation the gradient may be scaled by an constant.
 
 template <class ElemType>
 class SquareErrorNode : public ComputationNodeNonLooping /*ComputationNode*/<ElemType>, public NumInputs<2>
 {
-    typedef ComputationNodeNonLooping<ElemType> Base;
-    UsingComputationNodeMembersBoilerplate;
-    static const std::wstring TypeName()
-    {
-        return L"SquareError";
-    }
+    typedef ComputationNodeNonLooping<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+    static const std::wstring TypeName() { return L"SquareError"; }
 
 public:
     DeclareConstructorFromConfigWithNumInputs(SquareErrorNode);
     SquareErrorNode(DEVICEID_TYPE deviceId, const wstring& name)
         : Base(deviceId, name)
     {
-    }
-
-    virtual void BackpropToNonLooping(size_t inputIndex) override
-    {
-        FrameRange fr(Input(0)->GetMBLayout());
-        auto gradient = Input(inputIndex)->GradientFor(fr);
-        Matrix<ElemType>::Multiply1x1AndWeightedAdd(inputIndex == 0 ? 1.0f : -1.0f, Gradient() /*1x1*/, *m_leftMinusRight, 1.0f, gradient);
-    }
-
-    virtual bool OutputUsedInComputingInputNodesGradients() const override
-    {
-        return false;
-    }
-    virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override
-    {
-        return false;
     }
 
     virtual void UpdateFunctionMBSize() override
@@ -73,6 +54,16 @@ public:
         Value().HasNan("SquareError");
 #endif
     }
+
+    virtual void BackpropToNonLooping(size_t inputIndex) override
+    {
+        FrameRange fr(Input(0)->GetMBLayout());
+        auto gradient = Input(inputIndex)->GradientFor(fr);
+        Matrix<ElemType>::Multiply1x1AndWeightedAdd(inputIndex == 0 ? 1.0f : -1.0f, Gradient() /*1x1*/, *m_leftMinusRight, 1.0f, gradient);
+    }
+
+    virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }
+    virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override { return false; }
 
     virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
     {
@@ -1254,7 +1245,7 @@ private:
 #endif
 
 // -----------------------------------------------------------------------
-// LogisticNode (labels, prediction, weight)
+// Logistic (labels, prediction, weight)
 // calculates: -sum(left * log(right) + (1-left)*log(1-right)) (optionally * weight)
 // -----------------------------------------------------------------------
 

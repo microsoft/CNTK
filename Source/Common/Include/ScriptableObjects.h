@@ -676,6 +676,18 @@ public:
         }
         return res;
     }
+
+    // helper function: get a vector from config that may be a scalar, a ConfigArray, or nested ConfigArrays meant to be flattened
+    template <typename E>
+    static vector<E> FlattenedVectorFrom(const ConfigValuePtr& valp)
+    {
+        if (valp.Is<vector<E>>())
+            return valp.AsRef<vector<E>>(); // UNTESTED
+        else if (valp.Is<ConfigArray>())
+            return valp.AsRef<ConfigArray>().AsVector<E>([&](const wstring& msg) { valp.Fail(msg); }, /*flatten=*/true);
+        else
+            return std::vector<E>(1, (E)valp); // single element
+    }
 };
 typedef shared_ptr<ConfigArray> ConfigArrayPtr;
 
@@ -710,7 +722,7 @@ public:
     } // used for expression naming
     // what this function does is call f() held in this object with the given arguments except optional arguments are verified and fall back to their defaults if not given
     // The arguments are rvalue references, which allows us to pass Thunks, which is important to allow stuff with circular references like CNTK's DelayedNode.
-    ConfigValuePtr Apply(std::vector<ConfigValuePtr> &&args, NamedParams &&namedArgs, const std::wstring &exprName)
+    ConfigValuePtr Apply(std::vector<ConfigValuePtr> &&args, NamedParams &&namedArgs, const std::wstring &exprName) const
     {
         NamedParams actualNamedArgs;
         // actualNamedArgs is a filtered version of namedArgs that contains all optional args listed in namedParams,

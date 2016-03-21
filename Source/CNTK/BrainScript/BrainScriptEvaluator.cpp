@@ -222,61 +222,41 @@ __declspec_noreturn static void InvalidInfixOpTypes(ExpressionPtr e)
 template <typename T>
 static ConfigValuePtr CompOp(const ExpressionPtr &e, const T &left, const T &right, const IConfigRecordPtr &, const wstring &exprPath)
 {
-    if (e->op == L"==")
-        return MakePrimitiveConfigValuePtr(left == right, MakeFailFn(e->location), exprPath);
-    else if (e->op == L"!=")
-        return MakePrimitiveConfigValuePtr(left != right, MakeFailFn(e->location), exprPath);
-    else if (e->op == L"<")
-        return MakePrimitiveConfigValuePtr(left < right, MakeFailFn(e->location), exprPath);
-    else if (e->op == L">")
-        return MakePrimitiveConfigValuePtr(left > right, MakeFailFn(e->location), exprPath);
-    else if (e->op == L"<=")
-        return MakePrimitiveConfigValuePtr(left <= right, MakeFailFn(e->location), exprPath);
-    else if (e->op == L">=")
-        return MakePrimitiveConfigValuePtr(left >= right, MakeFailFn(e->location), exprPath);
-    else
-        LogicError("unexpected infix op");
+    if      (e->op == L"==") return MakePrimitiveConfigValuePtr(left == right, MakeFailFn(e->location), exprPath);
+    else if (e->op == L"!=") return MakePrimitiveConfigValuePtr(left != right, MakeFailFn(e->location), exprPath);
+    else if (e->op == L"<")  return MakePrimitiveConfigValuePtr(left < right, MakeFailFn(e->location), exprPath);
+    else if (e->op == L">")  return MakePrimitiveConfigValuePtr(left > right, MakeFailFn(e->location), exprPath);
+    else if (e->op == L"<=") return MakePrimitiveConfigValuePtr(left <= right, MakeFailFn(e->location), exprPath);
+    else if (e->op == L">=") return MakePrimitiveConfigValuePtr(left >= right, MakeFailFn(e->location), exprPath);
+    else LogicError("unexpected infix op");
 }
 static ConfigValuePtr NumOp(const ExpressionPtr &e, ConfigValuePtr leftVal, ConfigValuePtr rightVal, const IConfigRecordPtr &scope, const wstring &exprPath)
 {
     let left = leftVal.AsRef<Double>();
     let right = rightVal.AsRef<Double>();
-    if (e->op == L"+")
-        return MakePrimitiveConfigValuePtr(left + right, MakeFailFn(e->location), exprPath);
-    else if (e->op == L"-")
-        return MakePrimitiveConfigValuePtr(left - right, MakeFailFn(e->location), exprPath);
-    else if (e->op == L"*")
-        return MakePrimitiveConfigValuePtr(left * right, MakeFailFn(e->location), exprPath);
-    else if (e->op == L"/")
-        return MakePrimitiveConfigValuePtr(left / right, MakeFailFn(e->location), exprPath);
-    else if (e->op == L"%")
-        return MakePrimitiveConfigValuePtr(fmod(left, right), MakeFailFn(e->location), exprPath);
-    else if (e->op == L"**")
-        return MakePrimitiveConfigValuePtr(pow(left, right), MakeFailFn(e->location), exprPath);
-    else
-        return CompOp<double>(e, left, right, scope, exprPath);
+    if      (e->op == L"+")  return MakePrimitiveConfigValuePtr(left + right, MakeFailFn(e->location), exprPath);
+    else if (e->op == L"-")  return MakePrimitiveConfigValuePtr(left - right, MakeFailFn(e->location), exprPath);
+    else if (e->op == L"*")  return MakePrimitiveConfigValuePtr(left * right, MakeFailFn(e->location), exprPath);
+    else if (e->op == L"/")  return MakePrimitiveConfigValuePtr(left / right, MakeFailFn(e->location), exprPath);
+    else if (e->op == L"%")  return MakePrimitiveConfigValuePtr(fmod(left, right), MakeFailFn(e->location), exprPath);
+    else if (e->op == L"**") return MakePrimitiveConfigValuePtr(pow(left, right), MakeFailFn(e->location), exprPath);
+    else return CompOp<double>(e, left, right, scope, exprPath);
 };
 static ConfigValuePtr StrOp(const ExpressionPtr &e, ConfigValuePtr leftVal, ConfigValuePtr rightVal, const IConfigRecordPtr &scope, const wstring &exprPath)
 {
     let left = leftVal.AsRef<String>();
     let right = rightVal.AsRef<String>();
-    if (e->op == L"+")
-        return ConfigValuePtr(make_shared<String>(left + right), MakeFailFn(e->location), exprPath);
-    else
-        return CompOp<wstring>(e, left, right, scope, exprPath);
+    if (e->op == L"+") return ConfigValuePtr(make_shared<String>(left + right), MakeFailFn(e->location), exprPath);
+    else return CompOp<wstring>(e, left, right, scope, exprPath);
 };
 static ConfigValuePtr BoolOp(const ExpressionPtr &e, ConfigValuePtr leftVal, ConfigValuePtr rightVal, const IConfigRecordPtr &scope, const wstring &exprPath)
 {
     let left = leftVal.AsRef<Bool>();
     //let right = rightVal.AsRef<Bool>();   // we do this inline, as to get the same short-circuit semantics as C++ (if rightVal is thunked, it will remain so unless required for this operation)
-    if (e->op == L"||")
-        return MakePrimitiveConfigValuePtr(left || rightVal.AsRef<Bool>(), MakeFailFn(e->location), exprPath);
-    else if (e->op == L"&&")
-        return MakePrimitiveConfigValuePtr(left && rightVal.AsRef<Bool>(), MakeFailFn(e->location), exprPath);
-    else if (e->op == L"^")
-        return MakePrimitiveConfigValuePtr(left ^ rightVal.AsRef<Bool>(), MakeFailFn(e->location), exprPath);
-    else
-        return CompOp<bool>(e, left, rightVal.AsRef<Bool>(), scope, exprPath);
+    if      (e->op == L"||") return MakePrimitiveConfigValuePtr(left || rightVal.AsRef<Bool>(), MakeFailFn(e->location), exprPath);
+    else if (e->op == L"&&") return MakePrimitiveConfigValuePtr(left && rightVal.AsRef<Bool>(), MakeFailFn(e->location), exprPath);
+    else if (e->op == L"^")  return MakePrimitiveConfigValuePtr(left ^ rightVal.AsRef<Bool>(), MakeFailFn(e->location), exprPath);
+    else return CompOp<bool>(e, left, rightVal.AsRef<Bool>(), scope, exprPath);
 };
 // NodeOps handle the magic CNTK types, that is, infix operations between ComputeNode objects.
 // TODO: we should have automagic up-casting of 'double' values to Constant() nodes, e.g. to allow to say "1 - P" where P is a node.
@@ -820,7 +800,7 @@ public:
         else if (what == L"Replace")
             us = msra::strfun::ReplaceAll<wstring>(arg, config[L"replacewhat"], config[L"withwhat"]);
         else
-            whatArg.Fail(L"unknown 'what' value to StringFunction: " + what);
+            whatArg.Fail(L"Unknown 'what' value to StringFunction: " + what);
     }
 };
 
@@ -873,11 +853,7 @@ static wstring FormatConfigValue(ConfigValuePtr arg, const wstring &how)
         {
             if (i > range.first)
                 result.append(L"\n");
-            result.append(FormatConfigValue(arr->At(i, [](const wstring &)
-                                                    {
-                                                        LogicError("FormatConfigValue: out of bounds index while iterating??");
-                                                    }),
-                                            how));
+            result.append(FormatConfigValue(arr->At(i, [](const wstring &) { LogicError("FormatConfigValue: out of bounds index while iterating??"); }), how));
         }
         return HasToString::NestString(result, L'(', false, L')');
     }
@@ -893,8 +869,8 @@ static wstring FormatConfigValue(ConfigValuePtr arg, const wstring &how)
 class NumericFunction : public BoxOf<Double>
 {
 public:
-    NumericFunction(const IConfigRecordPtr &configp)
-        : BoxOf<Double>(0.0)
+    NumericFunction(const IConfigRecordPtr &configp) :
+        BoxOf<Double>(0.0)
     {
         let &config = *configp;
         double &us = *this; // we write to this
@@ -915,7 +891,35 @@ public:
             }
         }
         else
-            whatArg.Fail(L"unknown 'what' value to NumericFunction: " + what);
+            whatArg.Fail(L"Unknown 'what' value to NumericFunction: " + what);
+    }
+};
+
+// CompareFunctions
+//  - IsSameObject()
+class CompareFunction : public BoxOf<Bool>
+{
+public:
+    CompareFunction(const IConfigRecordPtr &configp) :
+        BoxOf<Bool>(false)
+    {
+        let &config = *configp;
+        bool &us = *this; // we write to this
+        let argsArg = config[L"args"];
+        let whatArg = config[L"what"];
+        wstring what = whatArg;
+        if (what == L"IsSameObject")
+        {
+            let& args = argsArg.AsRef<ConfigArray>();
+            auto range = args.GetIndexRange();
+            if (range.second != range.first+1)
+                argsArg.Fail(L"IsSameObject expects two arguments");
+            let arg1 = args.At(range.first ).AsPtr<Object>();
+            let arg2 = args.At(range.second).AsPtr<Object>();
+            us = arg1.get() == arg2.get();
+        }
+        else
+            whatArg.Fail(L"Unknown 'what' value to CompareFunction: " + what);
     }
 };
 
@@ -986,13 +990,14 @@ template <>
 // =======================================================================
 
 // Functions
-static ScriptableObjects::ConfigurableRuntimeTypeRegister::Add<StringFunction> registerStringFunction(L"StringFunction");
+static ScriptableObjects::ConfigurableRuntimeTypeRegister::Add<StringFunction>  registerStringFunction(L"StringFunction");
 static ScriptableObjects::ConfigurableRuntimeTypeRegister::Add<NumericFunction> registerNumericFunction(L"NumericFunction");
+static ScriptableObjects::ConfigurableRuntimeTypeRegister::Add<CompareFunction> registerCompareFunction(L"CompareFunction");
 // Actions
-static ScriptableObjects::ConfigurableRuntimeTypeRegister::Add<PrintAction> registerPrintAction(L"PrintAction");
-static ScriptableObjects::ConfigurableRuntimeTypeRegister::Add<FailAction> registerFailAction(L"FailAction");
+static ScriptableObjects::ConfigurableRuntimeTypeRegister::Add<PrintAction>     registerPrintAction(L"PrintAction");
+static ScriptableObjects::ConfigurableRuntimeTypeRegister::Add<FailAction>      registerFailAction(L"FailAction");
 // Special
-static ScriptableObjects::ConfigurableRuntimeTypeRegister::Add<Debug> registerDebug(L"Debug");
+static ScriptableObjects::ConfigurableRuntimeTypeRegister::Add<Debug>           registerDebug(L"Debug");
 
 // main TODO items:
 //  - break Evaluate() to optimize stack usage

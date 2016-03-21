@@ -19,6 +19,7 @@
 #include <stdexcept>
 #include <list>
 #include <vector>
+#include <deque>
 #include <algorithm>
 #include <fstream>
 #include <sstream>
@@ -73,6 +74,10 @@ public:
 
     DEVICEID_TYPE GetDeviceId() const { return m_deviceId; }
 
+protected:
+    void ConstructFromRoots(DEVICEID_TYPE deviceId, std::deque<ComputationNodeBasePtr>&& roots, const map<ComputationNodeBasePtr, ComputationNodeBasePtr>& replacements);
+
+public:
     // -----------------------------------------------------------------------
     // (de-)serialization
     // -----------------------------------------------------------------------
@@ -518,6 +523,21 @@ public:
         return nodes;
     }
 
+    // determine parent map (this is needed in some editing steps)
+    // Returns a map[node] -> set of parent nodes.
+    std::map<ComputationNodeBasePtr, std::set<ComputationNodeBasePtr>> CreateParentsMap() const
+    {
+        std::map<ComputationNodeBasePtr, std::set<ComputationNodeBasePtr>> parents; // use a set because a node may have the same input multiple times, e.g. to compute x^2 as x.*x
+        for (const auto& iter : m_nameToNodeMap)
+        {
+            const auto& node = iter.second;
+            parents[node]; // make sure there is an entry for every parent
+            for (const auto& child : node->GetInputs())
+                parents[child].insert(node);
+        }
+        return parents;
+    }
+
     std::list<ComputationNodeBasePtr> GetNodesWithType(const wstring typeName, const ComputationNodeBasePtr& rootNode = nullptr)
     {
         std::list<ComputationNodeBasePtr> nodesWithType;
@@ -601,19 +621,19 @@ public:
     // add a node to m_nameToNodeMap[], which is our node holder
     // This only adds the node to the network's node set, without considering linkage.
     // Duplicate node names are rejected.
-    ComputationNodeBasePtr AddNodeToNet(const ComputationNodeBasePtr& nodePtr)
+    ComputationNodeBasePtr AddNodeToNet(const ComputationNodeBasePtr& node)
     {
-        auto result = m_nameToNodeMap.insert(make_pair(nodePtr->NodeName(), nodePtr));
+        auto result = m_nameToNodeMap.insert(make_pair(node->NodeName(), node));
         if (!result.second)
-            RuntimeError("AddNodeToNet: Duplicated computation node name.");
-        nodePtr->SetEnvironment(m_environment);
-        return nodePtr; // allows e.g. return AddNodeToNet(New...);
+            RuntimeError("AddNodeToNet: Duplicated name for %ls %ls operation.", node->NodeName().c_str(), node->OperationName().c_str());
+        node->SetEnvironment(m_environment);
+        return node; // allows e.g. return AddNodeToNet(New...);
     }
     // TODO: not very nice--need to fix way more outside to get this right
     template <class N>
-    shared_ptr<N> AddNodeToNetWithElemType(const shared_ptr<N> nodePtr)
+    shared_ptr<N> AddNodeToNetWithElemType(const shared_ptr<N> node)
     {
-        return dynamic_pointer_cast<N>(AddNodeToNet(nodePtr));
+        return dynamic_pointer_cast<N>(AddNodeToNet(node));
     }
 
     template <class N, class... _Types>
@@ -626,12 +646,12 @@ public:
 
     // add a node to the network unless it's already there
     // Returns false if the node was already there.
-    bool AddNodeToNetIfNotYet(const ComputationNodeBasePtr& nodePtr)
+    bool AddNodeToNetIfNotYet(const ComputationNodeBasePtr& node)
     {
-        auto result = m_nameToNodeMap.insert(make_pair(nodePtr->NodeName(), nodePtr));
-        if (!result.second && result.first->second != nodePtr) // if there's already one under this name, it better be nodePtr
-            RuntimeError("AddNodeToNetIfNotYet: Duplicated computation node name.");
-        nodePtr->SetEnvironment(m_environment); // (note: redundant if already part of the network)
+        auto result = m_nameToNodeMap.insert(make_pair(node->NodeName(), node));
+        if (!result.second && result.first->second != node) // if there's already one under this name, it better be node
+            RuntimeError("AddNodeToNetIfNotYet: Duplicated name for %ls %ls operation.", node->NodeName().c_str(), node->OperationName().c_str());
+        node->SetEnvironment(m_environment); // (note: redundant if already part of the network)
         return result.second;
     }
 

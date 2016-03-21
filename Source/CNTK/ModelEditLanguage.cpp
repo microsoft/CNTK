@@ -322,7 +322,7 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
             std::wstring nodeName = node->NodeName();
             std::wstring toNodeName = name.second;
 
-            netNdlTo->cn->CopyNode(*netNdlFrom->cn, nodeName, toNodeName, CopyNodeFlags::copyNodeChildren);
+            netNdlTo->cn->CopyNode(*netNdlFrom->cn, nodeName, toNodeName, CopyNodeFlags::copyNodeInputLinks);
         }
     }
     else if (EqualInsensitive(name, "SetNodeInput", "SetInput"))

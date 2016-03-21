@@ -27,6 +27,8 @@ using namespace Microsoft::MSR::CNTK; // TODO: we should not have this in a head
 function<ComputationNetworkPtr(DEVICEID_TYPE)> GetCreateNetworkFn(const ScriptableObjects::IConfigRecord& config);
 
 template <class ConfigRecordType, typename ElemType>
+bool TryGetNetworkFactory(const ConfigRecordType& config, function<ComputationNetworkPtr(DEVICEID_TYPE)>& createNetworkFn);
+template <class ConfigRecordType, typename ElemType>
 function<ComputationNetworkPtr(DEVICEID_TYPE)> GetNetworkFactory(const ConfigRecordType& config);
 
 template <class ConfigRecordType, typename ElemType>

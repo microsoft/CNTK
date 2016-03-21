@@ -38,8 +38,8 @@ ComputationNodeBasePtr ComputationNetwork::CopyNode(const ComputationNetwork& fr
     ComputationNodeBasePtr pToNode;
 
     // don't allow cross network child copy unless caller explicity handles children fixup
-    if ((flags & CopyNodeFlags::copyNodeChildren) &&
-        this != &fromNet && !(flags & CopyNodeFlags::copyNodeChildrenCrossNetwork))
+    if ((flags & CopyNodeFlags::copyNodeInputLinks) &&
+        this != &fromNet && !(flags & CopyNodeFlags::copyNodeAcrossNetworks))
     {
         LogicError("CopyNode: Copying node children across network is invalid.");
     }
@@ -85,7 +85,7 @@ void ComputationNetwork::CopySubTree(const ComputationNetwork& fromNet,
                                                  toNodeName,
                                                  CopyNodeFlags::copyNodeValue);
 
-        if (flags & CopyNodeFlags::copyNodeChildren)
+        if (flags & CopyNodeFlags::copyNodeInputLinks)
         {
             // copy the children structure but use the new nodes generated
             for (int i = 0; i < fromNode->GetNumInputs(); i++)
@@ -97,7 +97,7 @@ void ComputationNetwork::CopySubTree(const ComputationNetwork& fromNet,
 // you can only copy inputs from nodes in the same network
 void ComputationNetwork::CopyInputs(const std::wstring fromName, std::wstring toName)
 {
-    CopyNode(*this, fromName, toName, CopyNodeFlags::copyNodeChildren);
+    CopyNode(*this, fromName, toName, CopyNodeFlags::copyNodeInputLinks);
 }
 
 // RenameNode - Rename a node to another name

@@ -511,34 +511,13 @@ ScriptableObjects::ConfigurableRuntimeTypeRegister::Add<ComputationNodeBase> reg
 // register a boxed version of TensorShape with the ScriptableObject system
 // -----------------------------------------------------------------------
 
-// create a vector from config
-// Nested vectors are flattened, which is useful e.g. for building TensorShapes.
-template <typename E>
-static vector<E> VectorFromConfig(const ConfigValuePtr& valp)
-{
-    if (valp.Is<vector<E>>())
-        return valp.AsRef<vector<E>>(); // UNTESTED
-    else if (valp.Is<ConfigArray>())
-        return valp.AsRef<ConfigArray>().AsVector<E>([&](const wstring& msg) { valp.Fail(msg); }, /*flatten=*/true);
-    else
-        return std::vector<E>(1, (E)valp); // single element
-}
-
-// create a vector from config
-template <typename E>
-static vector<E> VectorFromConfig(const IConfigRecord& config, const wstring& paramName)
-{
-    const auto& valp = config[paramName];
-    return VectorFromConfig<E>(valp);
-}
-
 // e.g.
 // new TensorShape [ dims = 13:42 ]
 class BoxedTensorShape : public BoxOf<TensorShape>
 {
 public:
-    BoxedTensorShape(const IConfigRecordPtr configp)
-        : BoxOf<TensorShape>(TensorShape(VectorFromConfig<size_t>(*configp, L"dims")))
+    BoxedTensorShape(const IConfigRecordPtr configp) :
+        BoxOf<TensorShape>(TensorShape(ConfigArray::FlattenedVectorFrom<size_t>(configp->Get(L"dims"))))
     {
     }
 };
@@ -547,8 +526,8 @@ template <typename E>
 class BoxedVector : public BoxOf<vector<E>>
 {
 public:
-    BoxedVector(const IConfigRecordPtr configp)
-        : BoxOf<vector<E>>(VectorFromConfig<E>(*configp, L"items"))
+    BoxedVector(const IConfigRecordPtr configp) :
+        BoxOf<vector<E>>(ConfigArray::FlattenedVectorFrom<E>(configp->Get(L"items")))
     {
     }
 };

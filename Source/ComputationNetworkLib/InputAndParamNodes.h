@@ -447,12 +447,8 @@ private:
 template <class ElemType>
 class InputValue : public InputValueBase<ElemType>
 {
-    typedef InputValueBase<ElemType> Base;
-    UsingComputationNodeMembersBoilerplate;
-    static const std::wstring TypeName()
-    {
-        return L"InputValue";
-    }
+    typedef InputValueBase<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+    static const std::wstring TypeName() { return L"InputValue"; }
 
 public:
     InputValue(DEVICEID_TYPE deviceId, const wstring& name)
