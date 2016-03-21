@@ -202,6 +202,7 @@ DefUnaryOp(Exp, exp_(a));
 DefUnaryOp(Log, ClippedLog(a));
 DefUnaryOp(LinearRectifier, a > 0 ? a : 0);
 DefUnaryOp(Cosine, cos_(a));
+DefUnaryOp(Reciprocal, a == 0 ? 0 : 1 / a);
 #pragma pop_macro("DefUnaryOp")
 
 #pragma push_macro("DefBinaryOp")
