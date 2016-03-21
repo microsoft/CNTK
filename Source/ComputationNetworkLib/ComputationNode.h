@@ -1458,10 +1458,14 @@ public:
     // -----------------------------------------------------------------------
 
     virtual void DumpNodeInfo(const bool /*printValues*/, const bool /*printMetadata*/, File& fstream) const;
+
     // helper for SimpleOutWriter, living in here to be able to use in debugging
-    void WriteMinibatchWithFormatting(FILE* f, size_t onlyUpToRow, size_t onlyUpToT, bool transpose, bool isCategoryLabel, const std::vector<std::string>& labelMapping,
-                                      const std::string& sequenceSeparator, const std::string& sequencePrologue, const std::string& sequenceEpilogue, const std::string& elementSeparator, const std::string& sampleSeparator,
-                                      const std::string& valueFormatString) const;
+    void WriteMinibatchWithFormatting(FILE* f, size_t onlyUpToRow, size_t onlyUpToT, bool transpose, bool isCategoryLabel, 
+                                      const std::vector<std::string>& labelMapping, const std::string& sequenceSeparator, 
+                                      const std::string& sequencePrologue, const std::string& sequenceEpilogue, const std::string& elementSeparator,
+                                      const std::string& sampleSeparator, const std::string& valueFormatString,
+                                      bool outputGradient = false) const;
+
     void Trace()
     {
         if (m_traceNodeValue)
