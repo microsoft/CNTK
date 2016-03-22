@@ -262,7 +262,7 @@ public:
         {
             // Unit test only makes sense for one output node.
             if (outputNodes.size() != 1)
-                RuntimeError("Expected exactly 1 output node for unit test, got %d.", outputNodes.size());
+                RuntimeError("Expected exactly 1 output node for unit test, got %d.", (int)outputNodes.size());
 
             // Set up machinery to output gradients alongside forward pass output
             // Gradients are not passed on to inputs. Need to hook an identity function in between.
@@ -358,7 +358,7 @@ public:
                     Matrix<ElemType>& gradient = node->Gradient();
                     if (&gradient == nullptr)
                     {
-                        fprintf(stderr, "Warning: Gradient of node '%s' is empty. Not used in backward pass?", msra::strfun::utf8(node->NodeName().c_str()));
+                        fprintf(stderr, "Warning: Gradient of node '%s' is empty. Not used in backward pass?", msra::strfun::utf8(node->NodeName().c_str()).c_str());
                     }
                     else
                     {
