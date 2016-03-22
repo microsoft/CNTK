@@ -124,22 +124,22 @@ class ParameterTensor(ComputationNode):
         self.params_with_defaults = ['learningRateMultiplier', 'init', 'initValueScale', 'value', 'initFromFilePath', 'initOnCPUOnly', 'randomSeed']
 
 class Input(ComputationNode):
-    def __init__(self, dims, tag='feature', name='Input', var_name=None):
-        super(Input, self).__init__(params=['dims', 'tag'], name=name, var_name=var_name)
+    def __init__(self, dims, tag='feature', name='Input', var_name=None, reader=None):
+        super(Input, self).__init__(params=['dims', 'tag'], name=name, var_name=var_name, reader=reader)
         self.dims = dims
         self.tag = tag
         self.params_with_defaults = ['tag']
 
 class SparseInput(ComputationNode):
-    def __init__(self, dims, tag='feature', name='SparseInput', var_name=None):
-        super(SparseInput, self).__init__(params=['dims', 'tag'], name=name, var_name=var_name)
+    def __init__(self, dims, tag='feature', name='SparseInput', var_name=None, reader=None):
+        super(SparseInput, self).__init__(params=['dims', 'tag'], name=name, var_name=var_name, reader=reader)
         self.dims = dims
         self.tag = tag
         self.params_with_defaults = ['tag']
 
 class ImageInput(ComputationNode):
-    def __init__(self, imageWidth, imageHeight, imageChannels, imageLayout='CHW', tag='feature', name='ImageInput', var_name=None):
-        super(ImageInput, self).__init__(params=['imageWidth', 'imageHeight', 'imageChannels', 'imageLayout', 'tag'], name=name, var_name=var_name)
+    def __init__(self, imageWidth, imageHeight, imageChannels, imageLayout='CHW', tag='feature', name='ImageInput', var_name=None, reader=None):
+        super(ImageInput, self).__init__(params=['imageWidth', 'imageHeight', 'imageChannels', 'imageLayout', 'tag'], name=name, var_name=var_name, reader=reader)
         self.imageWidth = imageWidth
         self.imageHeight = imageHeight
         self.imageChannels = imageChannels
@@ -148,8 +148,8 @@ class ImageInput(ComputationNode):
         self.params_with_defaults = ['imageLayout', 'tag']
 
 class SparseImageInput(ComputationNode):
-    def __init__(self, imageWidth, imageHeight, imageChannels, imageLayout='CHW', tag='feature', name='SparseImageInput', var_name=None):
-        super(SparseImageInput, self).__init__(params=['imageWidth', 'imageHeight', 'imageChannels', 'imageLayout', 'tag'], name=name, var_name=var_name)
+    def __init__(self, imageWidth, imageHeight, imageChannels, imageLayout='CHW', tag='feature', name='SparseImageInput', var_name=None, reader=None):
+        super(SparseImageInput, self).__init__(params=['imageWidth', 'imageHeight', 'imageChannels', 'imageLayout', 'tag'], name=name, var_name=var_name, reader=reader)
         self.imageWidth = imageWidth
         self.imageHeight = imageHeight
         self.imageChannels = imageChannels

@@ -6,7 +6,7 @@ class ComputationNode(object):
     with operators that are converted to CNTK operators.
     '''
 
-    def __init__(self, name, params=None, var_name=None):
+    def __init__(self, name, params=None, var_name=None, reader=None):
         if not isinstance(name, str):
             raise ValueError("Parameter 'name' has to be a string and not '%s'"%type(name))
         if var_name is not None and not isinstance(var_name, str):
@@ -15,6 +15,7 @@ class ComputationNode(object):
         self.name = name
         self.params = params
         self.var_name = var_name
+        self.reader=reader
         self.consumers = []
         for p in self.params:
             if hasattr(p, 'consumers'):

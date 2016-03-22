@@ -22,6 +22,8 @@ REGEX_COMMENT = re.compile(r'/\*.*\*/')
 
 OPERANDS_TO_IGNORE = {"tag=''"}
 
+INPUT_NODES = ['Input', 'SparseInput', 'ImageInput', 'SparseImageInput']
+
 
 class Operand(object):
 
@@ -57,8 +59,8 @@ SMOOTH_NAMING = {
 class CompNodeOperator(object):
     COMP_NODE_TEMPLATE = """\
 class %(name)s(ComputationNode):
-    def __init__(self, %(signature)s, name='%(name)s', var_name=None):
-        super(%(name)s, self).__init__(params=[%(paramlist)s], name=name, var_name=var_name)
+    def __init__(self, %(signature)s, name='%(name)s', var_name=None%(reader_arg)s):
+        super(%(name)s, self).__init__(params=[%(paramlist)s], name=name, var_name=var_name%(reader_arg_super)s)
 %(initialization)s
         self.params_with_defaults = [%(params_with_defaults)s]
 """
@@ -70,6 +72,14 @@ class %(name)s(ComputationNode):
 
     def __init__(self, comp_match):
         self.name = comp_match.group('operator')
+        
+        if self.name in INPUT_NODES:
+            self.reader_arg = ', reader=None'
+            self.reader_arg_super = ', reader=reader'
+        else:
+            self.reader_arg = ''
+            self.reader_arg_super = ''
+        
         self.raw_operands = comp_match.group('operands')
 
         self.operands = []
@@ -133,8 +143,8 @@ class AliasOperator(object):
 class InstantiationOperator(CompNodeOperator):
     INST_NODE_TEMPLATE = """\
 class %(name)s(%(inst_operator)s):
-    def __init__(self, %(signature)s, name='%(name)s', var_name=None):
-        super(%(name)s, self).__init__(%(inst_operands)s, name=name, var_name=var_name)
+    def __init__(self, %(signature)s, name='%(name)s', var_name=None%(reader_arg)s):
+        super(%(name)s, self).__init__(%(inst_operands)s, name=name, var_name=var_name%(reader_arg_super)s)
         self.params=[%(paramlist)s]
         self.params_with_defaults = [%(params_with_defaults)s]
 """
