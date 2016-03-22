@@ -173,9 +173,9 @@ enum ElementWiseOperator
     Macro(SqrOfDifference);                                           \
     //Macro(Index);
 
-#define ForAllTernaryOps(Macro) \
-    Macro(Cond);                \
-    Macro(Clip);                \
+#define ForAllTernaryOps(Macro)                    \
+    Macro(Cond);                                   \
+    Macro(Clip);                                   \
     Macro(ElementwiseProductWithLogSumDerivative);
 
 // -----------------------------------------------------------------------
