@@ -81,7 +81,7 @@ void ComputationNode<ElemType>::Backprop(const FrameRange& fr, bool childrenInTh
 //  - with the exception of NULL layouts (e.g. TimesNode)
 //  - all layouts may be NULL (e.g. W' = W * Exp(Stabilizer))
 //  - if there are more than one different layouts involved, this function will fail
-void ComputationNodeBase::InferMBLayoutFromInputsForStandardCase()
+void ComputationNodeBase::InferMBLayoutFromInputsForStandardCase(bool isFinalValidationPass)
 {
     MBLayoutPtr pMBLayout; // start with NULL layout
     for (auto child : m_inputs)
@@ -92,7 +92,7 @@ void ComputationNodeBase::InferMBLayoutFromInputsForStandardCase()
             ;
         else if (!pMBLayout) // first non-NULL layout: just copy it
             pMBLayout = child->m_pMBLayout;
-        else if (pMBLayout != child->m_pMBLayout) // got a layout--compare whether it is the same
+        else if (pMBLayout != child->m_pMBLayout && isFinalValidationPass) // got a layout--compare whether it is the same
             RuntimeError("InferMBLayoutFromInputsForStandardCase: Found inconsistent layout in %ls %ls operation, mismatch detected for child %ls %ls.",
                          NodeName().c_str(), OperationName().c_str(), child->NodeName().c_str(), child->OperationName().c_str());
     }
@@ -105,7 +105,7 @@ void ComputationNodeBase::ValidateUnaryMap(bool isFinalValidationPass)
 {
     assert(m_inputs.size() == 1);
     ComputationNodeBase::Validate(isFinalValidationPass);
-    InferMBLayoutFromInputsForStandardCase();
+    InferMBLayoutFromInputsForStandardCase(isFinalValidationPass);
     SetDims(Input(0));
 }
 
@@ -116,7 +116,7 @@ void ComputationNodeBase::ValidateBinaryZip(bool isFinalValidationPass, bool all
 {
     assert(m_inputs.size() == 2);
     ComputationNodeBase::Validate(isFinalValidationPass);
-    InferMBLayoutFromInputsForStandardCase();
+    InferMBLayoutFromInputsForStandardCase(isFinalValidationPass);
 
     ValidateInferBinaryInputDims();
 
@@ -193,7 +193,7 @@ void ComputationNodeBase::ValidateInferBinaryInputDims()
     assert(m_inputs.size() >= 2);
     for (size_t index = 0; index < 2; index++)
     {
-        auto in = Input(index);
+        auto in    = Input(    index);
         auto other = Input(1 - index);
         // borrow any unset dimension on one input from the other input
         in->ValidateInferInputDimsFrom(other->GetSampleLayout());

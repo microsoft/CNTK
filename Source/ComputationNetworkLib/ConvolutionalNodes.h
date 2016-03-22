@@ -201,7 +201,7 @@ public:
     void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
     {
         Base::Validate(isFinalValidationPass);
-        InferMBLayoutFromInputsForStandardCase();
+        InferMBLayoutFromInputsForStandardCase(isFinalValidationPass);
 
         // get input and output tensor shape and interpret as image dimensions
         auto inDims = ImageDimensions(GetInputSampleLayout(1), m_imageLayoutKind);
@@ -423,7 +423,7 @@ public:
     void Validate(bool isFinalValidationPass) override
     {
         Base::Validate(isFinalValidationPass);
-        InferMBLayoutFromInputsForStandardCase();
+        InferMBLayoutFromInputsForStandardCase(isFinalValidationPass);
 
         // get input tensor shape and interpret as image dimensions
         auto inDims = ImageDimensions(GetInputSampleLayout(0), m_imageLayoutKind);

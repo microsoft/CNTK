@@ -223,7 +223,7 @@ void DoWriteOutput(const ConfigParameters& config)
 
     vector<wstring> outputNodeNamesVector;
 
-    auto net = GetModelFromConfig<ConfigParameters, ElemType>(config, outputNodeNamesVector);
+    let net = GetModelFromConfig<ConfigParameters, ElemType>(config, outputNodeNamesVector);
 
     SimpleOutputWriter<ElemType> writer(net, 1);
 
