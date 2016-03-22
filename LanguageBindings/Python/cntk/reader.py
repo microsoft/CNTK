@@ -175,6 +175,8 @@ class CNTKTextFormatReader(AbstractReader):
         return template % self
 
 def NumPyReader(data, filename):
+    #TODO: get rid of this
+    
     """
     This is a factory that wraps Python arrays with a UCIFastReader.
     """

@@ -26,6 +26,15 @@ class ComputationNode(object):
         # FIXME currently is only UCIFastReader supported
         self.reader = None
 
+class InputComputationNode(ComputationNode):
+    '''
+    Base class for all input nodes nodes and operators. Provides methods to attach
+    a reader to an input node
+    '''
+    def attach_text_format_reader(filename, input_dim, format='dense', alias=None):
+        Text
+        
+    
     def _is_input(self):
         return isinstance(self, Input)
 
