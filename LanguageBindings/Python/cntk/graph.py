@@ -25,18 +25,6 @@ class ComputationNode(object):
         # reader
         # FIXME currently is only UCIFastReader supported
         self.reader = None
-
-class InputComputationNode(ComputationNode):
-    '''
-    Base class for all input nodes nodes and operators. Provides methods to attach
-    a reader to an input node
-    '''
-    
-    def attach_text_format_reader(filename, input_dim, format='dense', alias=None):
-        pass
-    
-    def attach_uci_fast_reader(filename, input_dim, format='dense', alias=None):
-        pass
     
     def _is_input(self):
         return isinstance(self, Input)
@@ -214,9 +202,22 @@ class InputComputationNode(ComputationNode):
 
         return "\n".join(desc), has_inputs, readers
 
+class InputComputationNode(ComputationNode):
+    '''
+    Base class for all input nodes nodes and operators. Provides methods to attach
+    a reader to an input node
+    '''
+    
+    def attach_text_format_reader(filename, input_dim, format='dense', alias=None):
+        pass
+    
+    def attach_uci_fast_reader(filename, input_dim, format='dense', alias=None):
+        pass
+
 # importing after defining ComputationNode to work around circular imports
 from cntk.ops import *
 import cntk.ops # to have a separate namespace when we want to override below
+from .reader import UCIFastReader, CNTKTextFormatReader
 
 # redefine some operators to work with NumPy and sequences as input
 
