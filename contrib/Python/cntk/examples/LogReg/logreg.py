@@ -23,7 +23,7 @@ if (__name__ == "__main__"):
         epoch_size=0, minibatch_size=25, learning_ratesPerMB=0.1, max_epochs=3)
 
     with Context('demo', optimizer=my_sgd, root_node=ec, clean_up=False) as ctx:
-        ctx.train()
+        ctx.train(None)
 
         result = ctx.eval(out)
         print(result[:3])
