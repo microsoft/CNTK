@@ -18,17 +18,16 @@ class ComputationNode(object):
                 
         self.name = name
         self.params = params
-        self.var_name = var_name
-        self.reader = reader
-
+        self.var_name = var_name        
         self.consumers = []
         for p in self.params:
             if hasattr(p, 'consumers'):
                 p.consumers.append(self)
-
-
+                
+        self.reader = None
+    
     def _is_input(self):
-        return isinstance(self, cntk.ops.Input)
+        return isinstance(self, InputComputationNode) 
 
     def __add__(self, other):
         if not isinstance(other, ComputationNode):
@@ -193,7 +192,18 @@ class ComputationNode(object):
             readers=readers)
 
         return var_name, node_counter, desc, len(inputs)>0, readers
-
+    
+    def _dedupe_readers(self, readers):
+        readers_map = {}        
+        for r in readers:            
+            filename = r['FileName']            
+            if filename in readers_map:                                
+                readers_map[filename].inputs_def.extend(r.inputs_def)
+            else:
+                readers_map[filename] = r
+                
+        return [r for r in readers_map.values()]
+    
     def to_description(self):
         '''
         Generate CNTK configuration for this node including the configuration
@@ -201,11 +211,55 @@ class ComputationNode(object):
         '''
         var_name, node_counter, desc, has_inputs, readers = self._to_description()
 
-        return "\n".join(desc), has_inputs, readers
+        return "\n".join(desc), has_inputs, self._dedupe_readers(readers)
 
+class InputComputationNode(ComputationNode):
+    '''
+    Base class for all non-image input nodes nodes and operators. Provides methods to attach
+    a reader to an input node
+    '''
+    
+    def attach_text_format_reader(self, filename, input_alias=None, format='dense'):
+        '''
+        attach a TextFormatReader to the node
+        '''
+        self.reader = CNTKTextFormatReader(filename)
+        self.reader.add_input(self, input_alias, self.dims, format)
+    
+    def attach_uci_fast_reader(self, 
+                               filename, 
+                               input_start,  
+                               islabel = False,
+                               num_label_cols=None,                 
+                               label_mapping_file=None,
+                               custom_delimiter=None):        
+        '''
+        attach a UCIFastReader to the node
+        '''
+        self.reader = UCIFastReader(filename, custom_delimiter)    
+                    
+        if islabel:
+            self.reader.add_input(self, input_start, num_label_cols, self.dims, label_mapping_file)                
+        else:
+            self.reader.add_input(self, input_start, self.dims)
+        
+
+class ImageInputComputationNode(ComputationNode):
+    '''
+    Base class for all image input nodes nodes and operators. Provides methods to attach
+    a reader to an input node
+    '''
+    
+    def attach_image_reader(self, filename, **kw):
+        '''
+        attach a TextFormatReader to the node
+        '''
+        raise NotImplementedError
+        
 # importing after defining ComputationNode to work around circular imports
 from cntk.ops import *
 import cntk.ops # to have a separate namespace when we want to override below
+from .reader import UCIFastReader, CNTKTextFormatReader
 
 # redefine some operators to work with NumPy and sequences as input
 
