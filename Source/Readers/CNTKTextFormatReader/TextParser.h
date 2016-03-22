@@ -12,6 +12,8 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
+typedef GPUSPARSE_INDEX_TYPE IndexType;
+
 template <class ElemType>
 class CNTKTextFormatReaderTestRunner;
 
@@ -61,8 +63,9 @@ private:
     // of NNZ counts (one for each sample).
     struct SparseInputStreamBuffer : InputStreamBuffer
     {
-        std::vector<size_t> m_indices;
-        std::vector<size_t> m_nnzCounts;
+        IndexType m_totalNnzCount = 0;
+        std::vector<IndexType> m_indices;
+        std::vector<IndexType> m_nnzCounts;
     };
 
     // A sequence buffer is a vector that contains an input buffer for each input stream.
@@ -138,7 +141,7 @@ private:
     bool ReadDenseSample(std::vector<ElemType>& values, size_t sampleSize, size_t& bytesToRead);
 
     // Reads sparse sample values and corresponging indices into the provided vectors.
-    bool ReadSparseSample(std::vector<ElemType>& values, std::vector<size_t>& indices, size_t& bytesToRead);
+    bool ReadSparseSample(std::vector<ElemType>& values, std::vector<IndexType>& indices, size_t& bytesToRead);
 
     // Reads one whole row (terminated by a row delimiter) of samples
     bool ReadRow(SequenceBuffer& sequence, size_t& bytesToRead);

@@ -21,7 +21,7 @@ struct StreamBuffer
     void Allocate(MemoryProviderPtr memoryProvider, size_t capacity);
     void Copy(const char*, size_t size);
     void Fill(size_t size, char value);
-    void Reset(); // moves m_index to the beginnig of the buffer, and sets the m_size to 0.
+    void Reset(); // moves m_index to the beginning of the buffer, and sets the m_size to 0.
 };
 
 // A sample packer that densely packs samples in parallel for GPU consumptions.
@@ -44,8 +44,8 @@ private:
     MBLayoutPtr PackDenseStream(const StreamBatch& batch, size_t streamIndex);
     MBLayoutPtr PackSparseStream(const StreamBatch& batch, size_t streamIndex);
 
-    // Returns the length in samples of the longest sequence of the specified stream.
-    size_t GetMaxSequenceLength(const StreamBatch& batch, size_t streamIndex);
+    // Returns the length in samples of the longest sequence in the batch.
+    size_t GetMaxSequenceLength(const StreamBatch& batch);
 
     MemoryProviderPtr m_memoryProvider;
     TransformerPtr m_transformer;

@@ -4,11 +4,15 @@
 //
 
 #include "stdafx.h"
+#include <limits>
+#include <inttypes.h>
 #include "MLFDataDeserializer.h"
 #include "ConfigHelper.h"
 #include "../HTKMLFReader/htkfeatio.h"
 #include "../HTKMLFReader/msra_mgram.h"
 #include "latticearchive.h"
+
+#undef max
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -151,13 +155,25 @@ MLFDataDeserializer::MLFDataDeserializer(CorpusDescriptorPtr corpus, const Confi
     stream->m_elementType = m_elementType;
     m_streams.push_back(stream);
 
+
+    if (dimension > numeric_limits<IndexType>::max())
+    {
+        RuntimeError("Label dimension (" PRIu64 ") exceeds the maximum allowed "
+            "value (" PRIu64 ")\n", dimension, (size_t)numeric_limits<IndexType>::max());
+    }
+
     // Initializing array of labels.
     m_categories.reserve(dimension);
+    m_categoryIndicies.reserve(dimension);
     for (size_t i = 0; i < dimension; ++i)
     {
         SparseSequenceDataPtr category = std::make_shared<SparseSequenceData>();
-        category->m_indices.resize(1);
-        category->m_indices[0] = std::vector<size_t>{ m_categories.size() };
+        m_categoryIndicies.push_back(static_cast<IndexType>(i));
+        category->m_indices = &(m_categoryIndicies[i]);
+        category->m_nnzCounts.resize(1);
+        category->m_nnzCounts[0] = 1;
+        category->m_totalNnzCount = 1;
+        category->m_numberOfSamples = 1;
         if (m_elementType == ElementType::tfloat)
         {
             category->m_data = &s_oneFloat;
