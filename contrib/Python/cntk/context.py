@@ -394,4 +394,4 @@ class ClusterContext(AbstractContext):
     '''
 	This is a sub-class of AbstractContext, use it to submit your workloads to the cluster.
     '''
-    raise NotImplementedError
+    pass
