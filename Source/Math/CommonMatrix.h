@@ -76,6 +76,7 @@ enum ElementWiseOperator
     opNegate,
     opNot,
     opAbs,
+    opReciprocal,
     opSigmoid,
     opTanh,
     opSqr,
@@ -113,12 +114,14 @@ enum ElementWiseOperator
     opElementwiseProductWithCosDerivative,
     opElementwiseProductWithAbsDerivative,
     opElementwiseProductWithSqrtDerivative,
+    opElementwiseProductWithReciprocalDerivative,
     opSqrOfDifference,
     // binary ops for indexing
     // opIndex,
     // ternary
     opCond /*a ? b : c*/,
-    opClip /*clip a within interval b..c*/
+    opClip, /*clip a within interval b..c*/
+    opElementwiseProductWithLogSumDerivative
     // Note: not all that's implemented in CNTK ComputationNodes has an opcode yet.
 };
 
@@ -131,6 +134,7 @@ enum ElementWiseOperator
     Macro(Negate);            \
     Macro(Not);               \
     Macro(Abs);               \
+    Macro(Reciprocal);        \
     Macro(Sigmoid);           \
     Macro(Tanh);              \
     Macro(Sqr);               \
@@ -164,13 +168,15 @@ enum ElementWiseOperator
     Macro(ElementwiseProductWithLogDerivativeFromOutput);             \
     Macro(ElementwiseProductWithCosDerivative);                       \
     Macro(ElementwiseProductWithAbsDerivative);                       \
+    Macro(ElementwiseProductWithReciprocalDerivative);                \
     Macro(ElementwiseProductWithSqrtDerivative);                      \
     Macro(SqrOfDifference);                                           \
     //Macro(Index);
 
-#define ForAllTernaryOps(Macro) \
-    Macro(Cond);                \
-    Macro(Clip);
+#define ForAllTernaryOps(Macro)                    \
+    Macro(Cond);                                   \
+    Macro(Clip);                                   \
+    Macro(ElementwiseProductWithLogSumDerivative);
 
 // -----------------------------------------------------------------------
 // various enums to describe

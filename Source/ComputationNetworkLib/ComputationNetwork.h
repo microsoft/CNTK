@@ -50,7 +50,8 @@ public:
 
     ComputationNetwork() :
         m_randomSeedOffset(0),
-        m_isCompiled(false),
+          m_isCompiled(false),
+          m_areMatricesAllocated(false),
         m_pMBLayout(make_shared<MBLayout>()),
         m_environment(make_shared<ComputationEnvironment>())
     {
@@ -180,6 +181,7 @@ private:
     void CollectInputAndLearnableParameters(const ComputationNodeBasePtr& rootNode);
     void CollectInputAndLearnableParametersRec(const ComputationNodeBasePtr& node, set<ComputationNodeBasePtr>& visited, list<ComputationNodeBasePtr>& inputs, list<ComputationNodeBasePtr>& learnableParameters);
     bool IsCompiled() const { return m_isCompiled; }
+    bool AreMatricesAllocated() const { return m_areMatricesAllocated; }
     void VerifyIsCompiled(const char* where) const;
 public:
     void AllocateAllMatrices(const std::vector<ComputationNodeBasePtr>& evalRootNodes, const std::vector<ComputationNodeBasePtr>& outValueRootNodes, ComputationNodeBasePtr trainRootNode);
@@ -418,7 +420,6 @@ public:
                             const double& wp = 0.0f,
                             const double& bMMIfactor = 0.0f,
                             const bool& sMBR = false);
-
     static void SetMaxTempMemSizeForCNN(ComputationNetworkPtr net, const ComputationNodeBasePtr& criterionNode, const size_t maxTempMemSizeInSamples);
 
     // -----------------------------------------------------------------------
@@ -517,6 +518,7 @@ public:
     {
         return m_nameToNodeMap.size();
     }
+
 
     std::vector<ComputationNodeBasePtr> GetAllNodes() const
     {
@@ -668,7 +670,6 @@ public:
         m_nameToNodeMap.erase(node->NodeName());
         return node;
     }
-
 public:
     // -----------------------------------------------------------------------
     // evaluation
@@ -950,7 +951,6 @@ private:
 
     // environment information that nodes may want to inquire, e.g. to know whether we are training
     ComputationEnvironmentPtr m_environment;
-
 private:
     // -----------------------------------------------------------------------
     // the following members are all result of post-processing by CompileNetwork()
@@ -964,6 +964,7 @@ private:
 
     // cache for evaluation ordering:
     bool m_isCompiled; // CompileNetwork has been called
+    bool m_areMatricesAllocated; // AllocateAllMatrices has been called
 
     // cached network iterations
     std::map<const ComputationNodeBasePtr, std::list<ComputationNodeBasePtr>> m_evalOrders; // [out node] flat depth-first traversal starting from out node
@@ -993,4 +994,4 @@ template class Matrix<double>;
 //  - automatic inference of time window w.r.t. delay nodes (and related nodes such as a temporal pooling)
 //  - have overrides of RuntimeError etc. in ComputationNode, which prepend the error string with the node name and operation
 
-}}}
+} } }

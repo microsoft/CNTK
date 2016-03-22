@@ -21,14 +21,13 @@ Indexer::Indexer(FILE* file, bool skipSequenceIds, size_t chunkSize) :
     m_bufferEnd(nullptr),
     m_pos(nullptr),
     m_done(false),
-    m_skipSequenceIds(skipSequenceIds),
+    m_hasSequenceIds(!skipSequenceIds),
     m_maxChunkSize(chunkSize)
 {
     if (m_file == nullptr)
     {
         RuntimeError("Input file not open for reading");
     }
-    m_chunks.push_back({});
 }
 
 void Indexer::RefillBuffer()
@@ -53,7 +52,7 @@ void Indexer::RefillBuffer()
     }
 }
 
-void Indexer::UpdateTimeline(SequenceDescriptor& sd)
+void Indexer::AddSequence(SequenceDescriptor& sd)
 {
     assert(!m_chunks.empty());
     ChunkDescriptor* chunk = &m_chunks.back();
@@ -62,19 +61,18 @@ void Indexer::UpdateTimeline(SequenceDescriptor& sd)
         m_chunks.push_back({});
         chunk = &m_chunks.back();
         chunk->m_id = m_chunks.size() - 1;
-        chunk->m_timelineOffset = m_timeline.size();
     }
     chunk->m_byteSize += sd.m_byteSize;
-    chunk->m_numSequences++;
+    chunk->m_numberOfSequences++;
+    chunk->m_numberOfSamples += sd.m_numberOfSamples;
     sd.m_chunkId = chunk->m_id;
-
-    m_timeline.push_back(sd);
+    chunk->m_sequences.push_back(sd);
 }
 
-IndexPtr Indexer::BuildFromLines()
+void Indexer::BuildFromLines()
 {
     assert(m_pos == m_bufferStart);
-    m_skipSequenceIds = true;
+    m_hasSequenceIds = false;
     size_t lines = 0;
     int64_t offset = GetFileOffset();
     while (!m_done)
@@ -90,7 +88,7 @@ IndexPtr Indexer::BuildFromLines()
             offset = GetFileOffset() + 1;
             sd.m_byteSize = offset - sd.m_fileOffsetBytes;
             // TODO: ignore empty lines.
-            UpdateTimeline(sd);
+            AddSequence(sd);
             ++m_pos;
             ++lines;
         }
@@ -99,16 +97,23 @@ IndexPtr Indexer::BuildFromLines()
             RefillBuffer();
         }
     }
-
-    return make_shared<Index>(
-        !m_skipSequenceIds,
-        std::move(m_timeline),
-        std::move(m_chunks));
 }
 
-
-IndexPtr Indexer::Build()
+void Indexer::Build()
 {
+    if (!m_chunks.empty())
+    {
+        return;
+    }
+    
+    if (m_maxChunkSize > 0)
+    {
+        auto fileSize = filesize(m_file);
+        m_chunks.reserve((fileSize + m_maxChunkSize - 1) / m_maxChunkSize);
+    }
+
+    m_chunks.push_back({});
+
     RefillBuffer(); // read the first block of data
     if (m_done)
     {
@@ -125,10 +130,11 @@ IndexPtr Indexer::Build()
     }
 
     // check the first byte and decide what to do next
-    if (m_skipSequenceIds || m_bufferStart[0] == NAME_PREFIX)
+    if (!m_hasSequenceIds || m_bufferStart[0] == NAME_PREFIX)
     {
         // skip sequence id parsing, treat lines as individual sequences
-        return BuildFromLines();
+        BuildFromLines();
+        return;
     }
 
     size_t id = 0;
@@ -154,7 +160,7 @@ IndexPtr Indexer::Build()
         {
             // found a new sequence, which starts at the [offset] bytes into the file
             sd.m_byteSize = offset - sd.m_fileOffsetBytes;
-            UpdateTimeline(sd);
+            AddSequence(sd);
             sd = {};
             sd.m_id = id;
             sd.m_fileOffsetBytes = offset;
@@ -164,12 +170,7 @@ IndexPtr Indexer::Build()
 
     // calculate the byte size for the last sequence
     sd.m_byteSize = m_fileOffsetEnd - sd.m_fileOffsetBytes;
-    UpdateTimeline(sd);
-
-    return make_shared<Index>(
-        !m_skipSequenceIds,
-        std::move(m_timeline), // TODO: shrink_to_fit?
-        std::move(m_chunks));
+    AddSequence(sd);
 }
 
 

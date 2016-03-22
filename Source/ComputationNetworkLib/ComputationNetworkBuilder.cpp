@@ -77,6 +77,7 @@ static shared_ptr<ComputationNode<ElemType>> CreateStandardNode(const std::wstri
     else if (nodeType == OperationNameOf(PassNode))                             return New<PassNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(PlusNode))                             return New<PlusNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(ReconcileMBLayoutNode))                return New<ReconcileMBLayoutNode<ElemType>>(forward<_Types>(_Args)...);
+    else if (nodeType == OperationNameOf(ReciprocalNode))                       return New<ReciprocalNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(RectifiedLinearNode))                  return New<RectifiedLinearNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(ReshapeNode))                          return New<ReshapeNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(RowRepeatNode))                        return New<RowRepeatNode<ElemType>>(forward<_Types>(_Args)...);
@@ -470,6 +471,12 @@ template <class ElemType>
 shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::LogSoftmax(const ComputationNodePtr a, const std::wstring nodeName)
 {
     return net.AddNodeToNetAndAttachInputs(New<LogSoftmaxNode<ElemType>>(net.GetDeviceId(), nodeName), { a });
+}
+
+template <class ElemType>
+shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Reciprocal(const ComputationNodePtr a, const std::wstring nodeName)
+{
+    return net.AddNodeToNetAndAttachInputs(New<ReciprocalNode<ElemType>>(net.GetDeviceId(), nodeName), a);
 }
 
 template <class ElemType>

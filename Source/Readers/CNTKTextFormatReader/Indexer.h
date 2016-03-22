@@ -19,10 +19,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 class Indexer 
 {
 public:
-    Indexer(FILE* file, bool skipSequenceIds, size_t chunkSize = 32 * 1024 * 1024);
+    Indexer(FILE* file, bool skipSequenceIds = false, size_t chunkSize = 32 * 1024 * 1024);
 
-    // Reads the input file building an index of sequence metadata.
-    IndexPtr Build();
+    // Reads the input file, building and index of chunks and corresponding
+    // sequences.
+    void Build();
+
+    // Returns input data index (chunk and sequence metadata)
+    const Index& GetIndex() const { return m_chunks; }
+
+    // True, when input does not have the sequence id column
+    // or when sequence id column was ignored during indexing
+    // (by passing skipSequenceIds = true to the constructor).
+    bool HasSequenceIds() const { return m_hasSequenceIds; }
 
 private:
     FILE* m_file;
@@ -37,18 +46,18 @@ private:
 
     bool m_done; // true, when all input was processed
 
-    bool m_skipSequenceIds; // true, when input contains one sequence per line 
-                            // and sequence id column can be skipped.
+    bool m_hasSequenceIds; // true, when input contains one sequence per line 
+                           // or when sequence id column was ignored during indexing.
 
     const size_t m_maxChunkSize; // maximum permitted chunk size;
 
-    std::vector<SequenceDescriptor> m_timeline; // a collection of sequence descriptors
     std::vector<ChunkDescriptor> m_chunks; // a collection of chunk descriptors
 
-    // Assigns an appropriate chunk id to the sequence descriptor,
+    // Adds sequence (metadata) to the index. Additionally, it
+    // assigns an appropriate chunk id to the sequence descriptor,
     // ensures that chunks do not exceed the maximum allowed size
     // (except when a sequence size is greater than the maximum chunk size)
-    void UpdateTimeline(SequenceDescriptor& sd);
+    void AddSequence(SequenceDescriptor& sd);
 
     // fills up the buffer with data from file, all previously buffered data
     // will be overwritten.
@@ -64,9 +73,10 @@ private:
     // Otherwise, writes sequence id value to the provided reference, returns true.
     bool GetNextSequenceId(size_t& id);
 
-    // Builds timeline, treating each line as an individual sequence.
-    // Does not do any sequence parsing, instead uses line number as the corresponding sequence id.
-    IndexPtr BuildFromLines();
+    // Build a chunk/sequence index, treating each line as an individual sequence.
+    // Does not do any sequence parsing, instead uses line number as 
+    // the corresponding sequence id.
+    void BuildFromLines();
 
     // Returns current offset in the input file (in bytes). 
     int64_t GetFileOffset() const { return m_fileOffsetStart + (m_pos - m_bufferStart); }
