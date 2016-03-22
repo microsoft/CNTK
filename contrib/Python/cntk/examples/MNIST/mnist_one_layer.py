@@ -1,6 +1,6 @@
 import sys
 import os
-sys.path.insert(0, r"E:\cntk\LanguageBindings\Python")
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..'))
 
 from cntk import *
 
@@ -11,7 +11,6 @@ from cntk import *
 def dnn_sigmoid_layer(in_dim, out_dim, x, param_scale):
     W = LearnableParameter(out_dim, in_dim, initValueScale=param_scale) 
     b = LearnableParameter(out_dim, 1, initValueScale=param_scale) 
-    #c = Convolution()
     t = Times(W, x)
     z = Plus(t, b)
     return Sigmoid(z)
