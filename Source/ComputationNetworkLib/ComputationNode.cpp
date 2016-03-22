@@ -92,8 +92,8 @@ void ComputationNodeBase::InferMBLayoutFromInputsForStandardCase()
             ;
         else if (!pMBLayout) // first non-NULL layout: just copy it
             pMBLayout = child->m_pMBLayout;
-        else if (*pMBLayout != *child->m_pMBLayout) // got a layout--compare whether it is the same
-            RuntimeError("%ls: InferMBLayoutFromInputsForStandardCase: Found inconsistent layout, mismatch detected for child %ls %ls.",
+        else if (pMBLayout != child->m_pMBLayout) // got a layout--compare whether it is the same
+            RuntimeError("%ls: InferMBLayoutFromInputsForStandardCase: Expected minibatch layouts to be the same between all children. Child '%ls' (%ls) uses a different layout than previously checked children and might get out of sync during runtime. If this is by design, use ReconcileMBLayout() to forward layouts between nodes.",
                          NodeDescription().c_str(), child->NodeName().c_str(), child->OperationName().c_str());
     }
     // all are consistent: install it
@@ -121,9 +121,9 @@ void ComputationNodeBase::ValidateBinaryZip(bool isFinalValidationPass, bool all
     ValidateInferBinaryInputDims();
 
     if (isFinalValidationPass &&
-        *Input(0)->GetMBLayout() != *Input(1)->GetMBLayout() && Input(0)->HasMBLayout() && Input(1)->HasMBLayout())
+        Input(0)->GetMBLayout() != Input(1)->GetMBLayout() && Input(0)->HasMBLayout() && Input(1)->HasMBLayout())
     {
-        LogicError("%ls: MB layouts do not match.", NodeDescription().c_str());
+        LogicError("%ls: Minibatch layouts are not the same between arguments and might get out of sync during runtime. If this is by design, use ReconcileMBLayout() to forward layouts between nodes.", NodeDescription().c_str());
     }
 
     // result has tensor shape with dimensions being the max over both
@@ -374,7 +374,7 @@ void ComputationNode<ElemType>::WriteMinibatchWithFormatting(FILE* f, size_t onl
     ElemType* matData = matDataPtr.get();
 
     // process all sequences one by one
-    MBLayoutPtr pMBLayout = outputGradient ? MBLayoutPtr(nullptr) : GetMBLayout();
+    MBLayoutPtr pMBLayout = GetMBLayout();
     if (!pMBLayout) // no MBLayout: We are printing aggregates (or LearnableParameters?)
     {
         pMBLayout = make_shared<MBLayout>();

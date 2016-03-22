@@ -410,11 +410,9 @@ void ComputationNetwork::CompileNetwork()
     for (auto& node : m_allRoots)
         FormEvalOrder(node);
 
-    // We might be after an edit operation. Make sure we initialize from scratch.
+    // STEP: form the m_inputValues and m_learnableParameters sets for this rootNode
     m_inputValues.clear();
     m_learnableParameters.clear();
-
-    // STEP: form the m_inputValues and m_learnableParameters sets for this rootNode
     CollectInputAndLearnableParameters(nullptr);
     for (const auto& root : m_allRoots)
         CollectInputAndLearnableParameters(root);

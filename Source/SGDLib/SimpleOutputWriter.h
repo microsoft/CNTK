@@ -210,7 +210,7 @@ public:
             fragment = msra::strfun::ReplaceAll<std::string>(fragment, "\\n", "\n");
             fragment = msra::strfun::ReplaceAll<std::string>(fragment, "\\r", "\r");
             fragment = msra::strfun::ReplaceAll<std::string>(fragment, "\\t", "\t");
-            fragment = msra::strfun::ReplaceAll<std::string>(fragment, "\\s", " ");
+            fragment = msra::strfun::ReplaceAll<std::string>(fragment, "\\s", " "); // Config might strip spaces.
             if (fragment.find("%s") != fragment.npos)
                 fragment = msra::strfun::ReplaceAll<std::string>(fragment, "%s", msra::strfun::utf8(nodeName));
             if (fragment.find("%n") != fragment.npos)
@@ -225,10 +225,10 @@ public:
         size_t numMBsRun, bool gradient)
     {
         const auto sequenceSeparator = formattingOptions.Processed(node->NodeName(), formattingOptions.sequenceSeparator, numMBsRun);
-        const auto sequencePrologue = formattingOptions.Processed(node->NodeName(), formattingOptions.sequencePrologue, numMBsRun);
-        const auto sequenceEpilogue = formattingOptions.Processed(node->NodeName(), formattingOptions.sequenceEpilogue, numMBsRun);
-        const auto elementSeparator = formattingOptions.Processed(node->NodeName(), formattingOptions.elementSeparator, numMBsRun);
-        const auto sampleSeparator = formattingOptions.Processed(node->NodeName(), formattingOptions.sampleSeparator, numMBsRun);
+        const auto sequencePrologue =  formattingOptions.Processed(node->NodeName(), formattingOptions.sequencePrologue,  numMBsRun);
+        const auto sequenceEpilogue =  formattingOptions.Processed(node->NodeName(), formattingOptions.sequenceEpilogue,  numMBsRun);
+        const auto elementSeparator =  formattingOptions.Processed(node->NodeName(), formattingOptions.elementSeparator,  numMBsRun);
+        const auto sampleSeparator =   formattingOptions.Processed(node->NodeName(), formattingOptions.sampleSeparator,   numMBsRun);
 
         node->WriteMinibatchWithFormatting(f, SIZE_MAX, SIZE_MAX, formattingOptions.transpose, formattingOptions.isCategoryLabel, labelMapping,
             sequenceSeparator, sequencePrologue, sequenceEpilogue, elementSeparator, sampleSeparator,
@@ -237,7 +237,7 @@ public:
 
     void InsertNode(std::vector<ComputationNodeBasePtr>& allNodes, ComputationNodeBasePtr parent, ComputationNodeBasePtr newNode)
     {
-        newNode->SetInput(0, parent); // Why did this move from public to protected in ComputationNode?
+        newNode->SetInput(0, parent);
         for (auto node : allNodes)
         {
             size_t i = 0;
@@ -278,7 +278,7 @@ public:
             for (auto inputNode : allInputs)
             {
                 auto parent = dynamic_pointer_cast<ComputationNode<ElemType>>(inputNode);
-                auto newNode = builder.Identity(parent, inputNode->NodeName() + L".grad");
+                auto newNode = builder.Pass(parent, inputNode->NodeName() + L".grad");
                 newNode->SetLearningRateMultiplier(1.0); // Forces gradient update. Otherwise, backprop might get pruned from this path.
                 InsertNode(allNodes, parent, newNode);
                 gradientNodes.push_back(dynamic_pointer_cast<ComputationNode<ElemType>>(newNode));
