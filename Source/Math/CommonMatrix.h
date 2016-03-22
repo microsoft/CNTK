@@ -119,7 +119,7 @@ opSqrOfDifference,
 // ternary
 opCond /*a ? b : c*/,
 opClip, /*clip a within interval b..c*/
-opLogSumDerivative
+opElementwiseProductWithLogSumDerivative
 // Note: not all that's implemented in CNTK ComputationNodes has an opcode yet.
 };
 
@@ -172,7 +172,7 @@ opLogSumDerivative
 #define ForAllTernaryOps(Macro) \
     Macro(Cond);                \
     Macro(Clip);                \
-    Macro(LogSumDerivative);   \
+    Macro(ElementwiseProductWithLogSumDerivative);
 
 // -----------------------------------------------------------------------
 // various enums to describe

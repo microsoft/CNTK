@@ -252,11 +252,9 @@ DefBinaryOp(SqrOfDifference, Sqr(a - b));
 
 DefTernaryOp(Cond, a ? b : c);
 DefTernaryOp(Clip, a < b ? b : (a > c ? c : a));
-DefTernaryOp(LogSumDerivative, a * Sigmoid(c - b));
+DefTernaryOp(ElementwiseProductWithLogSumDerivative, a * Sigmoid(c - b));
 
 #pragma pop_macro("DefTernaryOp")
-}
-}
-}
+}}}
 #pragma pop_macro("DECL")
 #pragma pop_macro("TENSOR_OPS_DECL")

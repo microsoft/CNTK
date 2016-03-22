@@ -94,7 +94,7 @@ public:
     virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
     {
         size_t rank = DetermineElementwiseTensorRank();
-        auto result = ValueTensorFor(rank, fr);
+        auto result =           ValueTensorFor(rank, fr);
         auto input0 = Input(0)->ValueTensorFor(rank, fr.AllowBroadcast());
         auto input1 = Input(1)->ValueTensorFor(rank, fr.AllowBroadcast());
         result.AssignLogSumOf(input0, input1);
@@ -103,10 +103,10 @@ public:
     virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
     {
         size_t rank = DetermineElementwiseTensorRank();
-        auto gradient = GradientTensorFor(rank, fr);
-        auto input0 = Input(0)->ValueTensorFor(rank, fr.AllowBroadcast());
-        auto input1 = Input(1)->ValueTensorFor(rank, fr.AllowBroadcast());
-        auto inputGradient = Input(0)->GradientTensorFor(rank, fr);
+        auto gradient      =                    GradientTensorFor(rank, fr);
+        auto inputGradient = Input(inputIndex)->GradientTensorFor(rank, fr.AllowBroadcast());
+        auto input0        = Input(0)->ValueTensorFor(rank, fr.AllowBroadcast());
+        auto input1        = Input(1)->ValueTensorFor(rank, fr.AllowBroadcast());        
 
         // if reduction then mask the respective input(s) (zero out the gaps)
         if (Input(inputIndex)->ReducesInTimeWrt(shared_from_this()))
@@ -114,7 +114,7 @@ public:
         if (Input(inputIndex)->ReducesInTimeWrt(Input(1 - inputIndex)))
             Input(1 - inputIndex)->MaskMissingValueColumnsToZero(fr);
 
-        inputGradient.AddLogSumDerivativeOf(gradient, input0, input1);
+        inputGradient.AddElementwiseProductWithLogSumDerivativeOf(gradient, input0, input1);
     }
 };
 
