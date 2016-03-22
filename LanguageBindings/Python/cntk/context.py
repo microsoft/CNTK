@@ -129,7 +129,7 @@ class AbstractContext(object, metaclass=ABCMeta):
         
         tmpl = open(CNTK_TRAIN_TEMPLATE_PATH, "r").read()
         model_filename = os.path.join(model_dir, self.name)
-        description, has_inputs, readers = self.to_description()
+        description, has_inputs, readers = self.to_description()        
         if reader:
             readers.append(reader)
 
