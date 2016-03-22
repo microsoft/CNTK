@@ -1,5 +1,5 @@
 import numpy as np
-import scipy as sp
+import scipy.sparse as sparse
 
 def _tuple_to_cntk_shape(shape):
     return ':'.join(str(v) for v in shape)
@@ -281,10 +281,9 @@ def _seq_to_text_format(sequences, alias):
     first_elem = sequences[0]
     if isinstance(first_elem, np.ndarray):
         seq_to_str = _dense_seq_to_str
-    elif sp.sparse.issparse(first_elem):
+    elif sparse.issparse(first_elem):
         seq_to_str = _sparse_seq_to_str
     else:
-        #import ipdb;ipdb.set_trace()
         raise ValueError('sequence elements have to be of type numpy.ndarray (dense) or dictionary (sparse), you gave "%s"'%str(first_elem))
 
     lines = []
@@ -326,7 +325,7 @@ def _get_constant_node(value, **kw):
         # 1D list: interpret as one scalar per sample
         value = value[:,np.newaxis]
 
-    if sp.sparse.issparse(value):
+    if sparse.issparse(value):
         raise ValueError('only dense data is supported')
 
     with open(tf.name, 'w') as f:
