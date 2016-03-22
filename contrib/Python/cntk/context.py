@@ -208,7 +208,7 @@ class AbstractContext(object, metaclass=ABCMeta):
         return tmpl % tmpl_dict
 
     @abstractmethod
-    def train(self, reader):
+    def train(self, reader=None):
         '''
         Abstract method for the action train.
         :param reader: the reader to use for this action. Alternatively, you
@@ -217,7 +217,7 @@ class AbstractContext(object, metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def test(self, reader):
+    def test(self, reader=None):
         '''
         Abstract method for the action test.
         :param reader: the reader to use for this action. Alternatively, you
@@ -226,7 +226,7 @@ class AbstractContext(object, metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def predict(self, reader):
+    def predict(self, reader=None):
         '''
         Abstract method for the action write. It evaluated the trained model on 
         the data provided by the reader.
@@ -283,7 +283,7 @@ class Context(AbstractContext):
 
         return output.decode("utf-8")
 
-    def train(self, reader, override_existing = True):
+    def train(self, reader=None, override_existing = True):
         '''
         Run the train action locally.
         :param reader: the reader to use for this action. Alternatively, you
@@ -293,7 +293,7 @@ class Context(AbstractContext):
         config_content = self._generate_train_config(reader, override_existing)
         output = self._call_cntk(CNTK_TRAIN_CONFIG_FILENAME, config_content)
 
-    def test(self, reader):
+    def test(self, reader=None):
         '''
         Run the test action locally.
         :param reader: the reader to use for this action. Alternatively, you
@@ -302,7 +302,7 @@ class Context(AbstractContext):
         config_content = self._generate_test_config(reader)
         output = self._call_cntk(CNTK_TEST_CONFIG_FILENAME, config_content)
 
-    def predict(self, reader):
+    def predict(self, reader=None):
         '''
         Run the write action locally, use the trained model of this context.
         :param reader: the reader to use for this action. Alternatively, you
@@ -374,7 +374,8 @@ class Context(AbstractContext):
         expected_size = np.multiply.reduce(shapes[node.var_name])
         expected_shape = shapes[node.var_name]
 
-        if data.size != expected_size:
+        receieved_all = data.size == expected_size
+        if not receieved_all: 
             # For some reason the CNTK write action has issues with multi-row
             # output. So we have to CNTK reshape it to one row and do it again,
             # but then NumPy reshape using node's expected shape.
