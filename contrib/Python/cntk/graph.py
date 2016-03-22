@@ -257,8 +257,8 @@ class ImageInputComputationNode(ComputationNode):
         raise NotImplementedError
         
 # importing after defining ComputationNode to work around circular imports
-from cntk.ops import *
-import cntk.ops # to have a separate namespace when we want to override below
+from cntk.cntk1_ops import *
+from cntk import cntk1_ops # to have a separate namespace when we want to override below
 from .reader import UCIFastReader, CNTKTextFormatReader
 
 # redefine some operators to work with NumPy and sequences as input
@@ -340,7 +340,7 @@ def _get_constant_node(value, **kw):
     var_name = kw.pop('var_name', None)
 
     from cntk.reader import CNTKTextFormatReader
-    param_node = cntk.ops.LearnableParameter(
+    param_node = cntk1_ops.LearnableParameter(
             size,
             1,  
             learningRateMultiplier=0.0,
@@ -348,7 +348,7 @@ def _get_constant_node(value, **kw):
             initFromFilePath=tf.name, 
             **kw) 
 
-    reshape_node = cntk.ops.NewReshape(param_node,
+    reshape_node = cntk1_ops.NewReshape(param_node,
             dims=value.shape,
             var_name=var_name)
 
@@ -386,7 +386,7 @@ def _get_input_node(value, **kw):
         f.write(_seq_to_text_format(value, alias))
 
     from cntk.reader import CNTKTextFormatReader
-    input_node = cntk.ops.Input(value.shape, **kw)
+    input_node = cntk1_ops.Input(value.shape, **kw)
     input_node.reader = CNTKTextFormatReader(tf.name)
     # In case we have the shape (2,3), which will be initialized at Input() as
     # '2:3', we have 2*3 = 6 dimensions when flattened out for the reader. Note
@@ -467,7 +467,7 @@ def constant(value, **kw):
     Non-scalar values are interpreted as sparse when they contain a colon.
     '''
     if np.isscalar(value):
-        return cntk.ops.Constant(value, **kw)
+        return cntk1_ops.Constant(value, **kw)
     else:
         if is_tensor(value):
             return _get_constant_node(value, **kw)

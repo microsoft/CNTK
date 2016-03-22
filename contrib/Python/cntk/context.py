@@ -7,7 +7,7 @@ import numpy as np
 import shutil as sh
 
 from cntk.graph import ComputationNode
-from cntk.ops import NewReshape
+from cntk.cntk1_ops import NewReshape
 
 
 _FLOATX = 'float32'
@@ -191,7 +191,7 @@ class AbstractContext(object, metaclass=ABCMeta):
             fn = os.path.join(self.directory, 'dummy_input.txt')
             from .reader import NumPyReader
             reader = NumPyReader(data, fn)
-            from .ops import Input
+            from .cntk1_ops import Input
             dummy_input_node = Input(2, var_name='dummy_node')
             reader.add_input(dummy_input_node, 0, 2)                        
             model_description += "\ndummy_node=Input(2, tag='output')"

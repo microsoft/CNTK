@@ -4,7 +4,7 @@ import pytest
 from ..reader import *
 from ..graph import *
 from ..context import *
-from .. import ops
+from .. import cntk1_ops
 
 allclose = np.testing.assert_allclose
 
@@ -13,7 +13,7 @@ def test_NumPyReader(tmpdir):
     fn = str(tmpdir / 'test.txt')
     reader = NumPyReader(data, fn)
 
-    input_node = ops.Input(2, var_name='testInput')
+    input_node = cntk1_ops.Input(2, var_name='testInput')
     reader.add_input(input_node, 0,2)
     out = input_node + 2
 

@@ -1,12 +1,4 @@
-import os
-import pytest
-
-from ..reader import *
-from ..graph import *
 from ..context import *
-from .. import ops
-
-allclose = np.testing.assert_allclose
 
 def test_parse_shapes():
 	output = '''\
