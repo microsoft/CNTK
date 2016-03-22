@@ -121,10 +121,29 @@ function<ComputationNetworkPtr(DEVICEID_TYPE)> GetNetworkFactory(const ConfigRec
         return createNetworkFn;
 }
 
+// helper to remove all existing Output nodes and replace them by a new given set
+static void PatchOutputNodes(const ComputationNetworkPtr& net, const ConfigArray& outputNodeNames, vector<wstring>& outputNodeNamesVector)
+{
+    // clear out current list of outputNodes
+    while (!net->OutputNodes().empty())
+        net->RemoveFromNodeGroup(L"output", net->OutputNodes().back());
+    // and insert the desired nodes instead
+    for (int i = 0; i < outputNodeNames.size(); ++i)
+    {
+        outputNodeNamesVector.push_back(outputNodeNames[i]);
+        let& node = net->GetNodeFromName(outputNodeNames[i]);
+        net->AddToNodeGroup(L"output", node);
+    }
+}
+
 template <class ConfigRecordType, typename ElemType>
 ComputationNetworkPtr GetModelFromConfig(const ConfigRecordType& config, vector<wstring>& outputNodeNamesVector)
 {
     DEVICEID_TYPE deviceId = DeviceFromConfig(config);
+
+    ConfigArray outputNodeNames = config(L"outputNodeNames", ConfigArray(""));
+
+    ComputationNetworkPtr net;
 
     // first try if a NetworkBuilder is present
     function<ComputationNetworkPtr(DEVICEID_TYPE)> createNetworkFn;
@@ -132,36 +151,29 @@ ComputationNetworkPtr GetModelFromConfig(const ConfigRecordType& config, vector<
     if (gotIt)
     {
         // We have several ways to create a network.
-        return createNetworkFn(deviceId);
+        net = createNetworkFn(deviceId);
+        if (outputNodeNames.size() > 0)
+        {
+            net->InvalidateCompiledNetwork();
+            PatchOutputNodes(net, outputNodeNames, outputNodeNamesVector);
+            net->CompileNetwork();
+            // BUGBUG: This will generate double Validation output in the log
+        }
     }
     else // no NetworkBuilder given: load from 'modelPath'
     {
         wstring modelPath = config(L"modelPath");
 
-        // We don't use CreateFromFile() here since the user might specify OutputNodeNames in the config, so,
-        // instead we build the network ourselves.
-        ComputationNetworkPtr net = make_shared<ComputationNetwork>(deviceId);
+        // We don't use CreateFromFile() here since the user might specify OutputNodeNames in the config.
+        // By not compiling the network before patching, we avoid double log output for validation.
+        net = make_shared<ComputationNetwork>(deviceId);
         net->Read<ElemType>(modelPath);
-
-        ConfigArray outputNodeNames = config(L"outputNodeNames", ConfigArray(""));
-
         if (outputNodeNames.size() > 0)
-        {
-            // clear out current list of outputNodes
-            while (!net->OutputNodes().empty())
-                net->RemoveFromNodeGroup(L"output", net->OutputNodes().back());
-            // and insert the desired nodes instead
-            for (int i = 0; i < outputNodeNames.size(); ++i)
-            {
-                outputNodeNamesVector.push_back(outputNodeNames[i]);
-                let& node = net->GetNodeFromName(outputNodeNames[i]);
-                net->AddToNodeGroup(L"output", node);
-            }
-        }
+            PatchOutputNodes(net, outputNodeNames, outputNodeNamesVector);
         net->CompileNetwork();
-
-        return net;
     }
+
+    return net;
 }
 
 template function<ComputationNetworkPtr(DEVICEID_TYPE)> GetNetworkFactory<ScriptableObjects::IConfigRecord, float>(const ScriptableObjects::IConfigRecord& config);
