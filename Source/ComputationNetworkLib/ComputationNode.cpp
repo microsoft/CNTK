@@ -171,11 +171,18 @@ void ComputationNodeBase::ValidateBinaryReduce(bool isFinalValidationPass)
     ValidateInferBinaryInputDims();
     if (isFinalValidationPass)
     {
-        // inputs must have identical layouts and must be minibatch data
         if (!(Input(0)->GetSampleLayout().IsElementwiseCompatibleWith(Input(1)->GetSampleLayout())))
-            LogicError("The Matrix dimensions in the %ls %ls operation do not match.", NodeName().c_str(), OperationName().c_str());
-        if (Input(0)->GetMBLayout() != Input(1)->GetMBLayout() || !Input(0)->HasMBLayout() || !Input(1)->HasMBLayout())
-            LogicError("The MB layout in the %ls %ls operation do not match.", NodeName().c_str(), OperationName().c_str());
+        {
+            std::string s1 = Input(0)->GetSampleLayout();
+            std::string s2 = Input(1)->GetSampleLayout();
+            // BUGBUG: Allow broadcasting?
+            LogicError("%ls: The tensor dimensions in the inputs do not match. %s != %s", NodeDescription().c_str(), s1.c_str(), s2.c_str());
+        }
+        else if (!(Input(0)->HasMBLayout()))
+            LogicError("%ls: Expected MBLayout in Input 0.", NodeDescription().c_str());
+        else if (!(Input(1)->HasMBLayout()))
+            LogicError("%ls: Expected MBLayout in Input 1.", NodeDescription().c_str());
+        // Shape of the MBLayouts is checked at runtime.
     }
     SetDims(TensorShape(1), false);
 }
