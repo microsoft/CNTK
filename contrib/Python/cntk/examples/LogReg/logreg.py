@@ -26,4 +26,4 @@ if (__name__ == "__main__"):
         ctx.train()
 
         result = ctx.eval(out)
-        print(result[:3])
+        print(result.argmax(axis=1))
