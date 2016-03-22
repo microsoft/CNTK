@@ -95,7 +95,6 @@ public:
     ComputationNodePtr GMMLogLikelihood(const ComputationNodePtr unnormedPrior, const ComputationNodePtr mean, const ComputationNodePtr logStddev, const ComputationNodePtr feature, const std::wstring nodeName = L"");
 #endif
     ComputationNodePtr Hardmax(const ComputationNodePtr a, const std::wstring nodeName = L"");
-    ComputationNodePtr Identity(const ComputationNodePtr a, const std::wstring& nodeName = L"");
     ComputationNodePtr InvStdDev(const ComputationNodePtr a, const std::wstring nodeName = L"");
     ComputationNodePtr KhatriRaoProduct(const ComputationNodePtr a, const ComputationNodePtr b, const std::wstring nodeName = L"");
     ComputationNodePtr Log(const ComputationNodePtr a, const std::wstring nodeName = L"");
@@ -109,6 +108,7 @@ public:
     ComputationNodePtr Minus(const ComputationNodePtr a, const ComputationNodePtr b, const std::wstring nodeName = L"");
     ComputationNodePtr Negate(const ComputationNodePtr a, const std::wstring nodeName = L"");
     ComputationNodePtr NoiseContrastiveEstimation(const ComputationNodePtr label, const ComputationNodePtr prediction, const ComputationNodePtr input_weight, const ComputationNodePtr input_bias, const std::wstring nodeName = L"", NCEEvalMode mode = NCEEvalMode::None);
+    ComputationNodePtr Pass(const ComputationNodePtr a, const std::wstring& nodeName = L"");
     ComputationNodePtr PastValue(const ComputationNodePtr a, const float initHiddenActivity, const size_t row_size, size_t timeStep, const std::wstring nodeName = L"");
     ComputationNodePtr PerDimMeanVarDeNormalization(const ComputationNodePtr feature, const ComputationNodePtr mean, const ComputationNodePtr InvStdDev, const std::wstring nodeName = L"");
     ComputationNodePtr PerDimMeanVarNormalization(const ComputationNodePtr feature, const ComputationNodePtr mean, const ComputationNodePtr InvStdDev, const std::wstring nodeName = L"");
