@@ -77,6 +77,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="BpttPacker.h" />
     <ClInclude Include="Bundler.h" />
     <ClInclude Include="ChunkRandomizer.h" />
     <ClInclude Include="DataDeserializerBase.h" />
@@ -98,6 +99,7 @@
     <ClInclude Include="Transformer.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="BpttPacker.cpp" />
     <ClCompile Include="Bundler.cpp" />
     <ClCompile Include="ChunkRandomizer.cpp" />
     <ClCompile Include="NoRandomizer.cpp" />
