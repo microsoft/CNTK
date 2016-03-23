@@ -93,8 +93,8 @@ void ComputationNodeBase::InferMBLayoutFromInputsForStandardCase()
         else if (!pMBLayout) // first non-NULL layout: just copy it
             pMBLayout = child->m_pMBLayout;
         else if (pMBLayout != child->m_pMBLayout) // got a layout--compare whether it is the same
-            RuntimeError("InferMBLayoutFromInputsForStandardCase: Found inconsistent layout in %ls %ls operation, mismatch detected for child %ls %ls.",
-                         NodeName().c_str(), OperationName().c_str(), child->NodeName().c_str(), child->OperationName().c_str());
+            RuntimeError("%ls: InferMBLayoutFromInputsForStandardCase: Expected minibatch layouts to be the same between all children. Child '%ls' (%ls) uses a different layout than previously checked children and might get out of sync during runtime. If this is by design, use ReconcileMBLayout() to forward layouts between nodes.",
+                         NodeDescription().c_str(), child->NodeName().c_str(), child->OperationName().c_str());
     }
     // all are consistent: install it
     LinkToMBLayout(pMBLayout);
@@ -123,7 +123,7 @@ void ComputationNodeBase::ValidateBinaryZip(bool isFinalValidationPass, bool all
     if (isFinalValidationPass &&
         Input(0)->GetMBLayout() != Input(1)->GetMBLayout() && Input(0)->HasMBLayout() && Input(1)->HasMBLayout())
     {
-        LogicError("MB layouts in the %ls %ls operation do not match.", NodeName().c_str(), OperationName().c_str());
+        LogicError("%ls: Minibatch layouts are not the same between arguments and might get out of sync during runtime. If this is by design, use ReconcileMBLayout() to forward layouts between nodes.", NodeDescription().c_str());
     }
 
     // result has tensor shape with dimensions being the max over both
@@ -144,8 +144,8 @@ void ComputationNodeBase::ValidateBinaryZip(bool isFinalValidationPass, bool all
         else if (dim1 == 1)                                // if [1] is broadcasting
             ;                                              // dims is already correct
         else if (isFinalValidationPass && dim1 != dims[k]) // no broadcasting: they must match
-            InvalidArgument("%ls %ls operation: Input dimensions [%s] and [%s] are not compatible.",
-                            NodeName().c_str(), OperationName().c_str(), string(shape0).c_str(), string(shape1).c_str());
+            InvalidArgument("%ls: Input dimensions [%s] and [%s] are not compatible.",
+                            NodeDescription().c_str(), string(shape0).c_str(), string(shape1).c_str());
     }
 
     SetDims(TensorShape(dims), HasMBLayout());
@@ -171,11 +171,18 @@ void ComputationNodeBase::ValidateBinaryReduce(bool isFinalValidationPass)
     ValidateInferBinaryInputDims();
     if (isFinalValidationPass)
     {
-        // inputs must have identical layouts and must be minibatch data
         if (!(Input(0)->GetSampleLayout().IsElementwiseCompatibleWith(Input(1)->GetSampleLayout())))
-            LogicError("The Matrix dimensions in the %ls %ls operation do not match.", NodeName().c_str(), OperationName().c_str());
-        if (Input(0)->GetMBLayout() != Input(1)->GetMBLayout() || !Input(0)->HasMBLayout() || !Input(1)->HasMBLayout())
-            LogicError("The MB layout in the %ls %ls operation do not match.", NodeName().c_str(), OperationName().c_str());
+        {
+            std::string s1 = Input(0)->GetSampleLayout();
+            std::string s2 = Input(1)->GetSampleLayout();
+            // BUGBUG: Allow broadcasting?
+            LogicError("%ls: The tensor dimensions in the inputs do not match. %s != %s", NodeDescription().c_str(), s1.c_str(), s2.c_str());
+        }
+        else if (!(Input(0)->HasMBLayout()))
+            LogicError("%ls: Expected MBLayout in Input 0.", NodeDescription().c_str());
+        else if (!(Input(1)->HasMBLayout()))
+            LogicError("%ls: Expected MBLayout in Input 1.", NodeDescription().c_str());
+        // Shape of the MBLayouts is checked at runtime.
     }
     SetDims(TensorShape(1), false);
 }
@@ -351,20 +358,22 @@ template <class ElemType>
 
 // write out the content of a node in formatted/readable form
 template <class ElemType>
-void ComputationNode<ElemType>::WriteMinibatchWithFormatting(FILE* f, size_t onlyUpToRow, size_t onlyUpToT, bool transpose, bool isCategoryLabel, const std::vector<std::string>& labelMapping,
-                                                             const string& sequenceSeparator, const string& sequencePrologue, const string& sequenceEpilogue, const string& elementSeparator, const string& sampleSeparator,
-                                                             const string& valueFormatString) const
+void ComputationNode<ElemType>::WriteMinibatchWithFormatting(FILE* f, size_t onlyUpToRow, size_t onlyUpToT, bool transpose, bool isCategoryLabel, 
+                                                             const std::vector<std::string>& labelMapping, const string& sequenceSeparator, 
+                                                             const string& sequencePrologue, const string& sequenceEpilogue,
+                                                             const string& elementSeparator, const string& sampleSeparator,
+                                                             const string& valueFormatString,
+                                                             bool outputGradient) const
 {
     // get minibatch matrix -> matData, matRows, matStride
-    const Matrix<ElemType>& outputValues = Value();
+    const Matrix<ElemType>& outputValues = outputGradient ? Gradient() : Value();
     let matRows   = outputValues.GetNumRows();
     let matStride = matRows; // how to get from one column to the next
-    ElemType* matData = nullptr;
-    size_t matDataSize = 0;
-    outputValues.CopyToArray(matData, matDataSize);
+    std::unique_ptr<ElemType[]> matDataPtr(outputValues.CopyToArray());
+    ElemType* matData = matDataPtr.get();
 
     // process all sequences one by one
-    auto pMBLayout = GetMBLayout();
+    MBLayoutPtr pMBLayout = GetMBLayout();
     if (!pMBLayout) // no MBLayout: We are printing aggregates (or LearnableParameters?)
     {
         pMBLayout = make_shared<MBLayout>();
@@ -465,8 +474,6 @@ void ComputationNode<ElemType>::WriteMinibatchWithFormatting(FILE* f, size_t onl
         fprintfOrDie(f, "%s", sequenceEpilogue.c_str());
     } // end loop over sequences
     fflushOrDie(f);
-
-    delete[] matData;
 }
 
 // -----------------------------------------------------------------------
