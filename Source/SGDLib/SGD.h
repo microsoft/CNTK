@@ -236,7 +236,7 @@ protected:
     bool m_useAllDataForPreComputedNode;
 
     // Parallel training
-    std::shared_ptr<MPIWrapper> m_mpi;
+    MPIWrapperPtr m_mpi;
 
     ParallelizationMethod m_parallelizationMethod;
     bool m_enableDistributedMBReading;
@@ -315,7 +315,7 @@ public:
     {
     }
 
-    void InitMPI(const std::shared_ptr<MPIWrapper>& mpi)
+    void InitMPI(const MPIWrapperPtr& mpi)
     {
         m_mpi = mpi;
 

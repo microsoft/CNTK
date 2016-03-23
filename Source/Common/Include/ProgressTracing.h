@@ -112,5 +112,23 @@ public:
 
         printf("EVALERR: %.7f%%\n", err);
     }
+
+    // This prints a PROGRESS message with a percentage value of 0 to prevent timeouts on Philly
+    // when executing long running non-training operations like PreCompute, CV, Eval, and Write
+    static size_t TraceFakeProgress(size_t numIterationsBeforePrintingProgress, size_t numItersSinceLastPrintOfProgress)
+    {
+        size_t newNumItersSinceLastPrintOfProgress = numItersSinceLastPrintOfProgress;
+        if (GetTracingFlag())
+        {
+            newNumItersSinceLastPrintOfProgress++;
+            if (newNumItersSinceLastPrintOfProgress >= numIterationsBeforePrintingProgress)
+            {
+                printf("PROGRESS: %.2f%%\n", 0.0f);
+                newNumItersSinceLastPrintOfProgress = 0;
+            }
+        }
+
+        return newNumItersSinceLastPrintOfProgress;
+    }
 };
 } } }

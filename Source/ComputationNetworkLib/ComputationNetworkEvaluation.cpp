@@ -678,8 +678,7 @@ void ComputationNetwork::MarkValueNonSharableNodes()
     std::list<ComputationNodeBasePtr> allPreComputeNodes;
     for (const auto& node : nodes)
     {
-        auto pcnode = dynamic_pointer_cast<IPreComputeNode>(node);
-        if (pcnode)
+        if (node->Is<IPreComputeNode>())
             allPreComputeNodes.push_back(node);
     }
 
