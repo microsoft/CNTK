@@ -16,8 +16,8 @@ typedef GPUSPARSE_INDEX_TYPE IndexType;
 // Sequence key, used for correlations between sequences between different deserializers.
 struct KeyType
 {
-    size_t major;
-    size_t minor;
+    size_t m_major;
+    size_t m_minor;
 };
 
 class Chunk;
@@ -36,7 +36,7 @@ struct SequenceDescription
     bool m_isValid;           // Indicates whether the sequence is valid.
     KeyType m_key;            // Sequence key, used for correlations between sequences of different deserializers.
 };
-typedef std::vector<const SequenceDescription*> SequenceDescriptions;
+
 typedef std::shared_ptr<SequenceDescription> SequenceDescriptionPtr;
 
 // Defines sequence data and its layout.
@@ -49,14 +49,13 @@ struct SequenceDataBase
     virtual ~SequenceDataBase() = default;
 
     // Sequence id.
-    size_t m_id;  // TODO: check that all readers set this? 
+    size_t m_id;
     size_t m_numberOfSamples;      // Number of samples in the sequence
 
     ChunkPtr m_chunk;
     // A non-owned pointer. The actual size is provided for particular sequences,
     // i.e. see DenseSequenceData, or SparseSequenceData.
     void* m_data;
-
 };
 typedef std::shared_ptr<SequenceDataBase> SequenceDataPtr;
 
@@ -119,11 +118,11 @@ private:
 struct ChunkDescription
 {
     // Chunk id.
-    size_t id;
+    size_t m_id;
     // Number of samples in the chunk.
-    size_t numberOfSamples;
+    size_t m_numberOfSamples;
     // Number of sequences in the chunk.
-    size_t numberOfSequences;
+    size_t m_numberOfSequences;
 };
 
 typedef std::shared_ptr<ChunkDescription> ChunkDescriptionPtr;

@@ -41,7 +41,7 @@ BlockRandomizer::BlockRandomizer(
     m_sweepTotalNumberOfSamples = 0;
     for (auto const & chunk : m_deserializer->GetChunkDescriptions())
     {
-        m_sweepTotalNumberOfSamples += chunk->numberOfSamples;
+        m_sweepTotalNumberOfSamples += chunk->m_numberOfSamples;
     }
 }
 
@@ -224,14 +224,14 @@ void BlockRandomizer::RetrieveDataChunks()
             continue;
         }
 
-        auto it = m_chunks.find(chunk.m_original->id);
+        auto it = m_chunks.find(chunk.m_original->m_id);
         if (it != m_chunks.end())
         {
             chunks[chunk.m_chunkId] = it->second;
         }
         else
         {
-            chunks[chunk.m_chunkId] = m_deserializer->GetChunk(chunk.m_original->id);
+            chunks[chunk.m_chunkId] = m_deserializer->GetChunk(chunk.m_original->m_id);
         }
     }
 

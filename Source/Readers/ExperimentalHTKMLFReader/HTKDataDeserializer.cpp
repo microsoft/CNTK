@@ -168,9 +168,9 @@ ChunkDescriptions HTKDataDeserializer::GetChunkDescriptions()
     for (size_t i = 0; i < m_chunks.size(); ++i)
     {
         auto cd = make_shared<ChunkDescription>();
-        cd->id = i;
-        cd->numberOfSamples = m_chunks[i].GetTotalFrames();
-        cd->numberOfSequences = m_chunks[i].GetTotalFrames();
+        cd->m_id = i;
+        cd->m_numberOfSamples = m_chunks[i].GetTotalFrames();
+        cd->m_numberOfSequences = m_chunks[i].GetTotalFrames();
         chunks.push_back(cd);
     }
     return chunks;
@@ -192,8 +192,8 @@ void HTKDataDeserializer::GetSequencesForChunk(size_t chunkId, vector<SequenceDe
         {
             SequenceDescription f;
             f.m_chunkId = chunkId;
-            f.m_key.major = major;
-            f.m_key.minor = k;
+            f.m_key.m_major = major;
+            f.m_key.m_minor = k;
             f.m_id = offsetInChunk++;
             f.m_isValid = true;
             f.m_numberOfSamples = 1;

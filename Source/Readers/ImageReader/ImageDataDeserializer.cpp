@@ -156,9 +156,9 @@ ChunkDescriptions ImageDataDeserializer::GetChunkDescriptions()
     for (auto const& s : m_imageSequences)
     {
         auto chunk = std::make_shared<ChunkDescription>();
-        chunk->id = s.m_chunkId;
-        chunk->numberOfSamples = 1;
-        chunk->numberOfSequences = 1;
+        chunk->m_id = s.m_chunkId;
+        chunk->m_numberOfSamples = 1;
+        chunk->m_numberOfSequences = 1;
         result.push_back(chunk);
     }
 
@@ -202,8 +202,8 @@ void ImageDataDeserializer::CreateSequenceDescriptions(std::string mapPath, size
         description.m_chunkId = lineIndex;
         description.m_path = imagePath;
         description.m_classId = std::stoi(classId);
-        description.m_key.major = description.m_id;
-        description.m_key.minor = 0;
+        description.m_key.m_major = description.m_id;
+        description.m_key.m_minor = 0;
 
         if (description.m_classId >= labelDimension)
         {

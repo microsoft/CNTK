@@ -77,8 +77,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         for (size_t chunkIndex = 0; chunkIndex < m_originalChunks.size(); chunkIndex++)
         {
             const size_t originalChunkIndex = randomizedChunkIndices[chunkIndex];
-            const size_t numberOfSamples = m_originalChunks[originalChunkIndex]->numberOfSamples;
-            const size_t numberOfSequences = m_originalChunks[originalChunkIndex]->numberOfSequences;
+            const size_t numberOfSamples = m_originalChunks[originalChunkIndex]->m_numberOfSamples;
+            const size_t numberOfSequences = m_originalChunks[originalChunkIndex]->m_numberOfSequences;
 
             RandomizedChunk randomizedChunk;
             randomizedChunk.m_chunkId = chunkIndex;

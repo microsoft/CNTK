@@ -521,8 +521,8 @@ void DoTopologyPlot(const ConfigParameters& config)
         renderCmd = regex_replace(renderCmd, inputPlaceHolder,  L"$1" + outputDotFile + L"$3");
         renderCmd = regex_replace(renderCmd, outputPlaceHolder, L"$1" + outputFile    + L"$3");
 #endif
-        msra::strfun::ReplaceAll(renderCmd, wstring(L"<IN>"), outputDotFile);
-        msra::strfun::ReplaceAll(renderCmd, wstring(L"<OUT>"), outputFile);
+        renderCmd = msra::strfun::ReplaceAll(renderCmd, wstring(L"<IN>"), outputDotFile);
+        renderCmd = msra::strfun::ReplaceAll(renderCmd, wstring(L"<OUT>"), outputFile);
     }
 
 

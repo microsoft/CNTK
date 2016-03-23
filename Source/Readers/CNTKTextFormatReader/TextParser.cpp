@@ -174,12 +174,12 @@ ChunkDescriptions TextParser<ElemType>::GetChunkDescriptions()
     ChunkDescriptions result;
     result.reserve(index.size());
     for (auto const& chunk : index)
-    {
+{
         result.push_back(shared_ptr<ChunkDescription>(
             new ChunkDescription {
-                chunk.id,
-                chunk.numberOfSamples,
-                chunk.numberOfSequences
+                chunk.m_id,
+                chunk.m_numberOfSamples,
+                chunk.m_numberOfSequences
         }));
     }
 
@@ -192,26 +192,26 @@ void TextParser<ElemType>::GetSequencesForChunk(size_t chunkId, std::vector<Sequ
     const auto& index = m_indexer->GetIndex();
     const auto& chunk = index[chunkId];
     result.reserve(chunk.m_sequences.size());
-    
+
     for (auto const& s : chunk.m_sequences)
-    {
+{
         result.push_back(
-        { 
+    {
             s.m_id, 
             s.m_numberOfSamples,
             s.m_chunkId,
             s.m_isValid,
             s.m_key
-        });
-    }
+    });
+}
 }
 
 template <class ElemType>
 TextParser<ElemType>::TextDataChunk::TextDataChunk(const ChunkDescriptor& descriptor)
 {
-    m_id = descriptor.id;
+    m_id = descriptor.m_id;
     m_sequenceRequestCount = 0;
-    m_sequences.reserve(descriptor.numberOfSequences);
+    m_sequences.reserve(descriptor.m_numberOfSequences);
 }
 
 template <class ElemType>

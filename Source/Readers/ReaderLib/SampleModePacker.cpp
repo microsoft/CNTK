@@ -122,7 +122,7 @@ size_t SampleModePacker::GetMaxSequenceLength(const StreamBatch& batch)
     for (const auto& sequence : batch)
     {
         maxLength = max(maxLength, sequence->m_numberOfSamples);
-    }
+        }
     return maxLength;
 }
 
@@ -234,7 +234,7 @@ MBLayoutPtr SampleModePacker::PackSparseStream(const StreamBatch& batch, size_t 
         const auto& sequence = batch[sequenceIndex];
         const auto& sparseSequence = reinterpret_cast<const SparseSequenceData&>(*sequence);
         nnzCount += sparseSequence.m_totalNnzCount;
-        
+
         // We don't do any packing per se (yet), instead we create MB with 
         // the number of parallel sequences equal to the number of 
         // Sequences in the batch.
@@ -243,8 +243,8 @@ MBLayoutPtr SampleModePacker::PackSparseStream(const StreamBatch& batch, size_t 
         if (numSamples < maxSequenceLength)
         {
             mbLayout->AddGap(sequenceIndex, numSamples, maxSequenceLength);
+            }
         }
-    }
 
     if (nnzCount > numeric_limits<IndexType>::max())
     {
@@ -285,11 +285,11 @@ MBLayoutPtr SampleModePacker::PackSparseStream(const StreamBatch& batch, size_t 
 
     for (int sampleIndex = 0; sampleIndex < maxSequenceLength; ++sampleIndex)
     {
-        for (size_t sequenceIndex = 0; sequenceIndex < numSequences; ++sequenceIndex)
-        {
+    for (size_t sequenceIndex = 0; sequenceIndex < numSequences; ++sequenceIndex)
+    {
             sparseColumnIndices.push_back(columnOffset);
 
-            const auto& sequence = batch[sequenceIndex];
+        const auto& sequence = batch[sequenceIndex];
             if (sampleIndex >= sequence->m_numberOfSamples)
             {
                 continue;
