@@ -13,15 +13,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
 struct StreamBuffer
 {
+    size_t m_size; // buffer size in bytes.
+    MemoryProviderPtr m_memoryProvider;
     std::shared_ptr<char> m_data; // contiguous array of data.
-    size_t m_capacity; // capacity of the buffer in bytes.
-    size_t m_size; // the actual size of the data in buffer in bytes (m_size <= m_capacity)
-    char* m_index; // points to the beginning of the unused portion of the buffer
-    StreamBuffer() : m_capacity(0), m_size(0), m_index(nullptr) { }
-    void Allocate(MemoryProviderPtr memoryProvider, size_t capacity);
-    void Copy(const char*, size_t size);
-    void Fill(size_t size, char value);
-    void Reset(); // moves m_index to the beginning of the buffer, and sets the m_size to 0.
+    
+    StreamBuffer(MemoryProviderPtr m_memoryProvider) :
+        m_size(0), m_memoryProvider(m_memoryProvider), m_data(nullptr)
+    {
+    }
+    void Resize(size_t newSize);
 };
 
 // A sample packer that densely packs samples in parallel for GPU consumptions.
@@ -44,10 +44,11 @@ private:
     MBLayoutPtr PackDenseStream(const StreamBatch& batch, size_t streamIndex);
     MBLayoutPtr PackSparseStream(const StreamBatch& batch, size_t streamIndex);
 
+    MBLayoutPtr CreateMBLayout(const StreamBatch& batch);
+
     // Returns the length in samples of the longest sequence in the batch.
     size_t GetMaxSequenceLength(const StreamBatch& batch);
 
-    MemoryProviderPtr m_memoryProvider;
     TransformerPtr m_transformer;
     size_t m_numberOfStreams;
 
