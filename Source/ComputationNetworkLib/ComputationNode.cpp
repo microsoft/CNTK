@@ -123,11 +123,7 @@ void ComputationNodeBase::ValidateBinaryZip(bool isFinalValidationPass, bool all
     if (isFinalValidationPass &&
         Input(0)->GetMBLayout() != Input(1)->GetMBLayout() && Input(0)->HasMBLayout() && Input(1)->HasMBLayout())
     {
-<<<<<<< HEAD
         LogicError("%ls: Minibatch layouts are not the same between arguments and might get out of sync during runtime. If this is by design, use ReconcileMBLayout() to forward layouts between nodes.", NodeDescription().c_str());
-=======
-        LogicError("%ls: MB layouts do not match.", NodeDescription().c_str());
->>>>>>> 4d688a1... Better error reporting
     }
 
     // result has tensor shape with dimensions being the max over both
