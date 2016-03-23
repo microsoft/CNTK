@@ -1,3 +1,4 @@
+from abc import ABCMeta, abstractmethod
 import numpy as np
 import scipy.sparse as sparse
 
@@ -27,7 +28,7 @@ class ComputationNode(object):
         self.reader = None
     
     def _is_input(self):
-        return isinstance(self, InputComputationNode) 
+        return isinstance(self, InputComputationNodeBase) 
 
     def __add__(self, other):
         if not isinstance(other, ComputationNode):
@@ -127,13 +128,13 @@ class ComputationNode(object):
 
         return param
 
-    def _to_description_unroll(self, desc, unrolled_nodes, inputs,
+    def _to_config_recursively(self, desc, unrolled_nodes, inputs,
             readers, node_counter=0):
         param_variable_names = []
         if self.params:
             for p_name in self.params:
                 p_value = self.__dict__[p_name]
-                if hasattr(p_value, '_to_description') and p_name or \
+                if hasattr(p_value, '_to_config') and p_name or \
                         p_name == 'inputs':
                         # TODO this is under the assumption that RowStack's
                         # inputs parameter gets a tuple of inputs
@@ -152,7 +153,7 @@ class ComputationNode(object):
                             # name
                             child_var = unrolled_nodes[p_value]
                         else:
-                            child_var, node_counter, child_desc = p_value._to_description_unroll(
+                            child_var, node_counter, child_desc = p_value._to_config_recursively(
                                 desc, unrolled_nodes, inputs, readers, node_counter)
                             unrolled_nodes[p_value] = child_var
                         input_nodes_vars.append(child_var)
@@ -181,11 +182,14 @@ class ComputationNode(object):
 
         return self.var_name, node_counter, desc
 
-    def _to_description(self):
+    def _to_config(self):
+        '''
+        Helper method to generate the CNTK configuration for this node.
+        '''
         unrolled_nodes = {}
         inputs=set()
         readers=[]
-        var_name, node_counter, desc = self._to_description_unroll(
+        var_name, node_counter, desc = self._to_config_recursively(
             desc=[], 
             unrolled_nodes=unrolled_nodes, 
             inputs=inputs,
@@ -204,16 +208,16 @@ class ComputationNode(object):
                 
         return [r for r in readers_map.values()]
     
-    def to_description(self):
+    def to_config(self):
         '''
         Generate CNTK configuration for this node including the configuration
         for all dependent child nodes.
         '''
-        var_name, node_counter, desc, has_inputs, readers = self._to_description()
+        var_name, node_counter, desc, has_inputs, readers = self._to_config()
 
         return "\n".join(desc), has_inputs, self._dedupe_readers(readers)
 
-class InputComputationNode(ComputationNode):
+class InputComputationNodeBase(ComputationNode, metaclass=ABCMeta):
     '''
     Base class for all non-image input nodes nodes and operators. Provides methods to attach
     a reader to an input node
@@ -244,7 +248,7 @@ class InputComputationNode(ComputationNode):
             self.reader.add_input(self, input_start, self.dims)
         
 
-class ImageInputComputationNode(ComputationNode):
+class ImageInputComputationNodeBase(ComputationNode, metaclass=ABCMeta):
     '''
     Base class for all image input nodes nodes and operators. Provides methods to attach
     a reader to an input node
@@ -361,10 +365,10 @@ def _get_input_node(value, **kw):
     from cntk.context import get_context 
     import tempfile
 
-    # We have to use NamedTemporaryFile and close it, because when using the
-    # obvious first choice, mkstemp(), would later fail in cntk.exe because the
-    # file would still be locked.
-    tf = tempfile.NamedTemporaryFile(prefix='_input_', suffix='.txt', dir=get_context().directory, delete = False)
+    # We have to use NamedTemporaryFile and close it, because the obvious first
+    # choice, mkstemp(), would later fail in cntk.exe because the file would still be locked.
+    tf = tempfile.NamedTemporaryFile(prefix='_input_', suffix='.txt', 
+            dir=get_context().directory, delete = False)
     tf.close()
 
     if isinstance(value, list):

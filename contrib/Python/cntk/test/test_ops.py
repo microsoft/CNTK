@@ -55,8 +55,9 @@ def _test(root_node, expected, clean_up=True):
     # __abs__
     # uncomennt, once Abs() as ComputationNode is moved from standard function
     # to ComputationNode
-    #(abs(C(-3)), 3),
-    #(abs(C(3)), 3),
+    (abs(C(-3)), 3),
+    (abs(C(3)), 3),
+    (abs(C([[-1,2],[50,-0]])), [[1,2],[50,0]]),
 
     # more complex stuff
     #(Plus(C(5), 3), 8),

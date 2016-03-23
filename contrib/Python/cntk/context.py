@@ -8,22 +8,20 @@ import shutil as sh
 
 from cntk.graph import ComputationNode
 from cntk.cntk1_ops import NewReshape
+from cntk.utils import CNTK_EXECUTABLE_PATH
 
 
 _FLOATX = 'float32'
-if "CNTK_EXECUTABLE_PATH" not in os.environ:
-    raise ValueError(
-        "you need to point environmental variable 'CNTK_EXECUTABLE_PATH' to the CNTK binary")
 
-CNTK_EXECUTABLE_PATH = os.environ['CNTK_EXECUTABLE_PATH']
+CNTK_TEMPLATE_DIR = os.path.join(os.path.dirname(__file__), "templates")
 CNTK_TRAIN_TEMPLATE_PATH = os.path.join(
-    os.path.dirname(__file__), "templates", "cntk_train_template.cntk")
+        CNTK_TEMPLATE_DIR, "cntk_train_template.cntk")
 CNTK_TEST_TEMPLATE_PATH = os.path.join(
-    os.path.dirname(__file__), "templates", "cntk_test_template.cntk")
+        CNTK_TEMPLATE_DIR, "cntk_test_template.cntk")
 CNTK_PREDICT_TEMPLATE_PATH = os.path.join(
-    os.path.dirname(__file__), "templates", "cntk_predict_template.cntk")
+        CNTK_TEMPLATE_DIR, "cntk_predict_template.cntk")
 CNTK_EVAL_TEMPLATE_PATH = os.path.join(
-    os.path.dirname(__file__), "templates", "cntk_eval_template.cntk")
+        CNTK_TEMPLATE_DIR, "cntk_eval_template.cntk")
 CNTK_TRAIN_CONFIG_FILENAME = "train.cntk"
 CNTK_TEST_CONFIG_FILENAME = "test.cntk"
 CNTK_PREDICT_CONFIG_FILENAME = "predict.cntk"
@@ -108,11 +106,11 @@ class AbstractContext(object, metaclass=ABCMeta):
             import shutil
             shutil.rmtree(self.directory)
 
-    def to_description(self):
+    def to_config(self):
         '''
         Generates the CNTK configuration for the root node.
         '''
-        return self.root_node.to_description()
+        return self.root_node.to_config()
 
     def _generate_train_config(self, reader, override_existing):
         '''
@@ -132,7 +130,7 @@ class AbstractContext(object, metaclass=ABCMeta):
         
         tmpl = open(CNTK_TRAIN_TEMPLATE_PATH, "r").read()
         model_filename = os.path.join(model_dir, self.name)
-        description, has_inputs, readers = self.to_description()        
+        description, has_inputs, readers = self.to_config()        
         if reader:
             readers.append(reader)
 
@@ -180,7 +178,7 @@ class AbstractContext(object, metaclass=ABCMeta):
         :param root_node: the node to evaluate. 
         :param reader: the reader used to load the data, None if the network does not have input
         '''        
-        model_description, has_input, readers = root_node.to_description()
+        model_description, has_input, readers = root_node.to_config()
         if reader:
             readers.append(reader)
 
