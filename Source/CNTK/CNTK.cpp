@@ -197,7 +197,7 @@ void DoCommands(const ConfigParameters& config, const shared_ptr<MPIWrapper>& mp
     std::cerr << "CNTKCommandTrainInfo: CNTKNoMoreCommands_Total : " << fullTotalMaxEpochs << endl;
 
     // set up progress tracing for compute cluster management
-    if (progressTracing && ((mpi == nullptr) || mpi->IsMainNode()))
+    if (progressTracing && (!mpi || mpi->IsMainNode()))
     {
         ProgressTracing::SetTracingFlag();
         ProgressTracing::TraceTotalNumberOfSteps(fullTotalMaxEpochs); // enable tracing, using this as the total number of epochs
@@ -304,7 +304,7 @@ void DoCommands(const ConfigParameters& config, const shared_ptr<MPIWrapper>& mp
             ndlScript.ClearGlobal(); // clear global macros between commands
 
             // Synchronize all ranks before proceeding to next action/command
-            if (mpi != nullptr)
+            if (mpi)
                 mpi->WaitAll();
         }
     }

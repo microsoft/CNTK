@@ -1326,16 +1326,7 @@ bool SGD<ElemType>::PreCompute(ComputationNetworkPtr net,
 
         net->ForwardProp(nodes);
 
-        if (ProgressTracing::GetTracingFlag())
-        {
-            numItersSinceLastPrintOfProgress++;
-            if (numItersSinceLastPrintOfProgress >= numIterationsBeforePrintingProgress)
-            {
-                // TODO: For now just print 0.0 instead of calculating actual progress
-                printf("PROGRESS: %.2f%%\n", 0.0f);
-                numItersSinceLastPrintOfProgress = 0;
-            }
-        }
+        numItersSinceLastPrintOfProgress = ProgressTracing::TraceFakeProgress(numIterationsBeforePrintingProgress, numItersSinceLastPrintOfProgress);
     }
 
     // finalize

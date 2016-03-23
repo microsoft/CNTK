@@ -679,8 +679,7 @@ void ComputationNetwork::MarkValueNonSharableNodes()
     std::list<ComputationNodeBasePtr> allPreComputeNodes;
     for (const auto& node : nodes)
     {
-        auto pcnode = dynamic_pointer_cast<IPreComputeNode>(node);
-        if (pcnode)
+        if (node->Is<IPreComputeNode>())
             allPreComputeNodes.push_back(node);
     }
 
@@ -694,41 +693,41 @@ void ComputationNetwork::MarkValueNonSharableNodes()
         {
             if (std::find(allPreComputeNodes.begin(), allPreComputeNodes.end(), node) == allPreComputeNodes.end())
             {
-                for (auto child : children)
-                {
-                    wstring ChildName = child->NodeName();
+            for (auto child : children)
+            {
+                wstring ChildName = child->NodeName();
                     if (allLeafDescendentsAreParametersOrPreComputeNodes.find(ChildName) == allLeafDescendentsAreParametersOrPreComputeNodes.end())
+                {
+                    // not found, means it is a leaf node (we are at eval order )
+                    assert(child->IsLeaf() || child->IsPartOfLoop());
+                    if (std::find(allLearnableParameters.begin(), allLearnableParameters.end(), child) != allLearnableParameters.end())
                     {
-                        // not found, means it is a leaf node (we are at eval order )
-                        assert(child->IsLeaf() || child->IsPartOfLoop());
-                        if (std::find(allLearnableParameters.begin(), allLearnableParameters.end(), child) != allLearnableParameters.end())
-                        {
                             allLeafDescendentsAreParametersOrPreComputeNodes[ChildName] = true;
-                        }
-                        else
-                        {
-                            allParametersOrPreComputeNodes = false;
-                            allLeafDescendentsAreParametersOrPreComputeNodes[ChildName] = false;
-                            break;
-                        }
                     }
                     else
                     {
-                        if (allLeafDescendentsAreParametersOrPreComputeNodes[ChildName] == false)
-                        {
                             allParametersOrPreComputeNodes = false;
-                            break;
-                        }
+                            allLeafDescendentsAreParametersOrPreComputeNodes[ChildName] = false;
+                        break;
                     }
                 }
+                else
+                {
+                        if (allLeafDescendentsAreParametersOrPreComputeNodes[ChildName] == false)
+                    {
+                            allParametersOrPreComputeNodes = false;
+                        break;
+                    }
+                }
+            }
             }
 
             allLeafDescendentsAreParametersOrPreComputeNodes[myname] = allParametersOrPreComputeNodes;
             if (allParametersOrPreComputeNodes)
                 node->MarkValueNonSharable();
+            }
         }
     }
-}
 
 // this function will need to be called before actual validation and execution to
 // predetermine how to share matrices to reduce memory usage.

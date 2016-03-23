@@ -105,7 +105,7 @@ void Indexer::Build()
     {
         return;
     }
-    
+
     if (m_maxChunkSize > 0)
     {
         auto fileSize = filesize(m_file);

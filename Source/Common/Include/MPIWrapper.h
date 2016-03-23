@@ -50,6 +50,9 @@ static int operator||(int rc, const MpiFail &what)
     RuntimeError("%s", what.c_str());
 }
 
+class MPIWrapper;
+typedef std::shared_ptr<MPIWrapper> MPIWrapperPtr;
+
 class MPIWrapper : public std::enable_shared_from_this<MPIWrapper>
 {
     int m_myRank;
@@ -59,7 +62,7 @@ class MPIWrapper : public std::enable_shared_from_this<MPIWrapper>
     // MPI communicator that reflects the current subset selection
     MPI_Comm m_currentComm;
 
-    static std::shared_ptr<MPIWrapper> s_mpi;
+    static MPIWrapperPtr s_mpi;
 
     // MPI_Init() with delay-loading the msmpi.dll (possibly causing a failure if missing; we want to catch that)
     int MPI_Init_DL()
@@ -223,7 +226,7 @@ private:
 
 public:
 
-    static std::shared_ptr<MPIWrapper> GetInstance(bool create = false)
+    static MPIWrapperPtr GetInstance(bool create = false)
     {
         static bool initialized = false;
         if (create)
