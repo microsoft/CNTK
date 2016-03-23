@@ -661,6 +661,7 @@ template class SumElementsNode<double>;
 // will be reduced to a scalar. This is equivalent to multiplying with a row of ones.
 // TODO: This should be deprecated, in favor of a reduce node.
 // TODO: Implement this with the tensor library.
+//       axis=0: all elements; axis>0: only that axis; axis<0: time (implemented in BS)
 // -----------------------------------------------------------------------
 
 template <class ElemType>

@@ -28,19 +28,31 @@ using namespace ScriptableObjects;
 // not in the cache yet: create it (or not if no such member)
 void /*CustomConfigRecord::*/ ComputationNodeBase::LazyCreateConfigMember(const wstring& id) const /*override*/
 {
-    if (id == L"name")
+    if (id == L"name") // node name
     {
         InsertConfigMember(id, ConfigValuePtr(make_shared<String>(NodeName()), [](const std::wstring &) { LogicError("should not get here"); }, L""));
     }
-    else if (id == L"operation")
+    else if (id == L"operation") // type ('operation' parameter to ComputationNode BS constructor)
     {
         InsertConfigMember(id, ConfigValuePtr(make_shared<String>(OperationName()), [](const std::wstring &) { LogicError("should not get here"); }, L""));
+    }
+    else if (id == L"dim") // scalar dimension (#elements) per sample
+    {
+        // Note: When freshly creating models, dimensions may not have been inferred yet.
+        size_t dim = GetSampleLayout().GetNumElements();
+        if (dim == 0)
+            InvalidArgument("%ls.dim: The node's dimensions are not known yet.", NodeName().c_str());
+        InsertConfigMember(id, MakePrimitiveConfigValuePtr((double) dim, [](const std::wstring &) { LogicError("should not get here"); }, L""));
+    }
+    else if (id == L"dims") // tensor dimension vector
+    {
+        NOT_IMPLEMENTED;
     }
     // TODO: Think through what tags mean. Do we allow user-named tags? Is it a set or a single string? If set, then how to compare?
     //else if (id == L"tag")
     //{
     //}
-    else if (id == L"inputs")
+    else if (id == L"inputs" || id == OperationName() + L"Args") // e.g. node.PlusArg[0] = alternative for node.inputs[0] that shows a user that this is a Plus node
     {
         std::vector<ConfigValuePtr> inputsAsValues;
         for (let& input : GetInputs())
@@ -53,7 +65,7 @@ void /*CustomConfigRecord::*/ ComputationNodeBase::LazyCreateConfigMember(const 
 
 vector<wstring> /*IConfigRecord::*/ ComputationNodeBase::GetMemberIds() const
 {
-    return vector<wstring>{ L"name", L"operation", /*L"tag", */L"inputs" };
+    return vector<wstring>{ L"name", L"operation", L"dim", L"dims", /*L"tag", */L"inputs", OperationName() + L"Args" };
 }
 
 }}}

@@ -113,7 +113,7 @@ void ComputationNetwork::ConstructFromRoots(DEVICEID_TYPE deviceId, deque<Comput
         // add it to the respective node groups based on the tags
         for (auto tag : node->GetTags())
         {
-#if 0       // TODO: reenable this for back compat after we verified that at least none of our Jenkins tests use these anymore
+#if 1       // we keep this for a while (we already verified that our samples no longer use this)
             // map legacy names
             if      (tag == L"criteria") tag = L"criterion";
             else if (tag == L"eval"    ) tag = L"evaluation";
@@ -199,6 +199,7 @@ public:
         SetDeviceId(deviceId);
 
         wstring pathName = config[L"pathName"];
+        fprintf(stderr, "Load: Loading model file: %ls", pathName.c_str());
         Load<ElemType>(pathName); // note that for CNTK_MODEL_VERSION_5 and above, 'ElemType' is ignored
     }
 };
@@ -292,7 +293,7 @@ public:
                 replacements[parent] = parent->Duplicate();
                 // and put this parent into the workList, so that we will gets its parent in turn, etc.
                 workList.push_back(parent);
-#ifdef _DEBUG
+#if 0 //def _DEBUG
                 fprintf(stderr, "\t%ls = %ls() --> relink %ls\n", parent->NodeName().c_str(), parent->OperationName().c_str(), replacements[parent]->NodeName().c_str());
 #endif
             }
