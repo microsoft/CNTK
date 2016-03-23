@@ -35,6 +35,46 @@ BOOST_AUTO_TEST_CASE(ImageReaderSimple)
         1);
 }
 
+BOOST_AUTO_TEST_CASE(ImageReaderBadMap)
+{
+    BOOST_REQUIRE_EXCEPTION(
+        HelperRunReaderTest<float>(
+            testDataPath() + "/Config/ImageReaderBadMap_Config.cntk",
+            testDataPath() + "/Control/ImageReaderSimple_Control.txt",
+            testDataPath() + "/Control/ImageReaderSimple_Output.txt",
+            "Simple_Test",
+            "reader",
+            4,
+            4,
+            1,
+            1,
+            0,
+            0,
+            1),
+            std::runtime_error,
+            [](std::runtime_error const& ex) { return string("Invalid map file format, must contain 2 tab-delimited columns, line 2 in file ./ImageReaderBadMap_map.txt.") == ex.what(); });
+}
+
+BOOST_AUTO_TEST_CASE(ImageReaderBadLabel)
+{
+    BOOST_REQUIRE_EXCEPTION(
+        HelperRunReaderTest<float>(
+            testDataPath() + "/Config/ImageReaderBadLabel_Config.cntk",
+            testDataPath() + "/Control/ImageReaderSimple_Control.txt",
+            testDataPath() + "/Control/ImageReaderSimple_Output.txt",
+            "Simple_Test",
+            "reader",
+            4,
+            4,
+            1,
+            1,
+            0,
+            0,
+            1),
+            std::runtime_error,
+            [](std::runtime_error const& ex) { return string("Cannot parse label value on line 1, second column, in file ./ImageReaderBadLabel_map.txt.") == ex.what(); });
+}
+
 BOOST_AUTO_TEST_CASE(ImageReaderZip)
 {
     HelperRunReaderTest<float>(

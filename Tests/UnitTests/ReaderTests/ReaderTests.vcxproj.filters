@@ -216,6 +216,9 @@
     <Text Include="Data\CNTKTextFormatReader1x1_Train.txt">
       <Filter>Data</Filter>
     </Text>
+    <Text Include="Data\ImageReaderBadLabel_map.txt">
+      <Filter>Data</Filter>
+    </Text>
   </ItemGroup>
   <ItemGroup>
     <Image Include="Data\images\black.jpg">
