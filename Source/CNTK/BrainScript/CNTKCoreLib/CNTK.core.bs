@@ -41,13 +41,14 @@ Constant(val, rows = 1, cols = 1, tag='') = Parameter(rows, cols, learningRateMu
 PastValue(dims, input, timeStep = 1, defaultHiddenActivation = 0.1, tag='') = new ComputationNode [ operation = 'PastValue' ; inputs = input ; shape = new TensorShape [ /*dims*/ ] /*plus the function args*/ ]
 FutureValue(dims, input, timeStep = 1, defaultHiddenActivation = 0.1, tag='') = new ComputationNode [ operation = 'FutureValue' ; inputs = input ; shape = new TensorShape [ /*dims*/ ] /*plus the function args*/ ]
 Shift(input, fromOffset, boundaryValue, boundaryMode=-1/*context*/, dim=-1, tag='') = new ComputationNode [ operation = 'Shift' ; inputs = (input : boundaryValue) /*plus the function args*/ ]
-RowSlice(startIndex, numRows, input, tag='') = new ComputationNode [ operation = 'RowSlice' ; inputs = input /*plus the function args*/ ]
+RowSlice(beginIndex, numRows, input, tag='') = new ComputationNode [ operation = 'Slice' ; endIndex = beginIndex + numRows; axis = 1/*row*/; inputs = input /*plus the function args*/ ]
 RowRepeat(input, numRepeats, tag='') = new ComputationNode [ operation = 'RowRepeat' ; inputs = input /*plus the function args*/ ]
 RowStack(inputs, tag='') = new ComputationNode [ operation = 'RowStack' /*plus the function args*/ ]
 Reshape(input, numRows, imageWidth = 0, imageHeight = 0, imageChannels = 0, tag='') = new ComputationNode [ operation = 'LegacyReshape' ; inputs = input /*plus the function args*/ ]
 NewReshape(input, dims, beginDim=0, endDim=0, tag='') = new ComputationNode [ operation = 'Reshape' ; inputs = input ; shape = new TensorShape [ /*dims*/ ] /*plus the function args*/ ]
 ReshapeDimension(x, dim, tensorShape) = NewReshape(x, tensorShape, beginDim=dim, endDim=dim + 1) 
 FlattenDimensions(x, dim, num) = NewReshape(x, 0, beginDim=dim, endDim=dim + num) 
+#Slice(beginIndex, endIndex, input, axis=1, tag='') = new ComputationNode [ operation = 'Slice' ; endIndex = beginIndex + numRows; inputs = input /*plus the function args*/ ]
 SplitDimension(x, dim, N) = ReshapeDimension(x, dim, 0:N) 
 TransposeDimensions(input, dim1, dim2, tag='') = new ComputationNode [ operation = 'TransposeDimensions' ; inputs = input /*plus the function args*/ ]
 Transpose(x) = TransposeDimensions(x, 1, 2)

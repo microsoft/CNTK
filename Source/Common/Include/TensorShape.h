@@ -455,11 +455,6 @@ public:
                 return false;
         return true;
     }
-    // legacy helper function for RowSliceNode. Will go away.
-    bool IsVectorStoredAsImage() const
-    {
-        return GetRank() == 3 && m_dims[0] == 1 && m_dims[1] == 1;
-    }
 
     // indexing
     // Determines the offset into the underlying element array for a given multi-dimensional index.

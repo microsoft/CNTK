@@ -185,7 +185,7 @@ void NDLNodeEvaluatorImpl<ElemType>::Evaluate(NDLNode<ElemType>* node, const wst
             nodePtr->Value().SetValue(val);
         }
     }
-    else if (cnNodeType == OperationNameOf(RowSliceNode))
+    else if (cnNodeType == L"RowSlice") // Note: This now maps onto SliceNode which specifies the end differently.
     {
         if (parameter.size() != 3)
             RuntimeError("RowSlice should have three parameters. Usage: RowSlice(startRowIndex, numRows, origNodeName.");

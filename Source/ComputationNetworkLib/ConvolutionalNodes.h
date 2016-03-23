@@ -30,9 +30,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 // -----------------------------------------------------------------------
 
 // Convolutions (incl. pooling) support two different storage formats:
-// BUGBUG: These are currently hard-selected depending on circumstances, without being reflected in TensoShape.
 //
-// * legacy mode (CPU and GPU without cudnn): Channels are tuples of scalars
+// * legacy ("HWC") mode (CPU and GPU without cudnn): Channels are tuples of scalars
 //
 //    This follows "high performance convolutional neural networks for document processing" by Kumar Chellapilla, Sidde Puri, and Patrice Simard.
 //    Each sample is stored as a column-major matrix (height, width) of float[numChannels] (r00, g00, b00, r10, g10, b10, r01, g01, b01, r11, g11, b11).
@@ -41,7 +40,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 //     - output : [C' x W' x H'     x T]  or  ARRAY[1..T] OF                ARRAY[1..H'] OF ARRAY[1..W'] OF ARRAY[1..C']
 //     - filter : [C' x W" x H" x C    ]  or                 ARRAY[1..C] OF ARRAY[1..H"] OF ARRAY[1..W"] OF ARRAY[1..C']
 //
-// * GPU with cudnn: Channels are planes
+// * cudnn ("CHW") mode (GPU only): Channels are planes
 //
 //     - input :   [W  x H  x C       x T]   or  ARRAY[1..T] OF                 ARRAY[1..C]  OF ARRAY[1..H]  OF ARRAY[1..W]
 //     - output :  [W' x H' x      C' x T]   or  ARRAY[1..T] OF ARRAY[1..C'] OF                 ARRAY[1..H'] OF ARRAY[1..W']
@@ -58,12 +57,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 template <class ElemType>
 class ConvolutionNode : public ComputationNode<ElemType>, public NumInputs<2>
 {
-    typedef ComputationNode<ElemType> Base;
-    UsingComputationNodeMembersBoilerplate;
-    static const std::wstring TypeName()
-    {
-        return L"Convolution";
-    }
+    typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+    static const std::wstring TypeName() { return L"Convolution"; }
 
 public:
     ConvolutionNode(DEVICEID_TYPE deviceId, const wstring& name)

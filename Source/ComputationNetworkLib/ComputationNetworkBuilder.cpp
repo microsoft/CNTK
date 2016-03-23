@@ -80,7 +80,6 @@ static shared_ptr<ComputationNode<ElemType>> CreateStandardNode(const std::wstri
     else if (nodeType == OperationNameOf(RectifiedLinearNode))                  return New<RectifiedLinearNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(ReshapeNode))                          return New<ReshapeNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(RowRepeatNode))                        return New<RowRepeatNode<ElemType>>(forward<_Types>(_Args)...);
-    else if (nodeType == OperationNameOf(RowSliceNode))                         return New<RowSliceNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(RowStackNode))                         return New<RowStackNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(ScatterPackedNode))                    return New<ScatterPackedNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(SequenceWithSoftmaxNode))              return New<SequenceWithSoftmaxNode<ElemType>>(forward<_Types>(_Args)...);
@@ -91,6 +90,7 @@ static shared_ptr<ComputationNode<ElemType>> CreateStandardNode(const std::wstri
     else if (nodeType == OperationNameOf(ShiftNode))                            return New<ShiftNode<ElemType>>(forward<_Types>(_Args)...);
 #endif
     else if (nodeType == OperationNameOf(SigmoidNode))                          return New<SigmoidNode<ElemType>>(forward<_Types>(_Args)...);
+    else if (nodeType == OperationNameOf(SliceNode))                            return New<SliceNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(SoftmaxNode))                          return New<SoftmaxNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(SqrtNode))                             return New<SqrtNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(SquareErrorNode))                      return New<SquareErrorNode<ElemType>>(forward<_Types>(_Args)...);
@@ -109,6 +109,7 @@ static shared_ptr<ComputationNode<ElemType>> CreateStandardNode(const std::wstri
     else if (nodeType == L"PerDimMeanVarNormalizationNode")                     return New<PerDimMeanVarNormalizationNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == L"PerDimMeanVarDeNormalizationNode")                   return New<PerDimMeanVarDeNormalizationNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == L"RowElementTimes")                                    return New<ElementTimesNode<ElemType>>(forward<_Types>(_Args)...);
+    else if (nodeType == L"RowSlice")                                           return New<SliceNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == L"Scale")                                              return New<ElementTimesNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == L"Transpose")                                          return New<TransposeDimensionsNode<ElemType>>(forward<_Types>(_Args)...);
 #if 1
@@ -595,7 +596,7 @@ shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Futur
 template <class ElemType>
 shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::RowSlice(const ComputationNodePtr a, const size_t start_index, const size_t num_rows, const std::wstring nodeName)
 {
-    return net.AddNodeToNetAndAttachInputs(New<RowSliceNode<ElemType>>(net.GetDeviceId(), nodeName, start_index, num_rows), { a });
+    return net.AddNodeToNetAndAttachInputs(New<SliceNode<ElemType>>(net.GetDeviceId(), nodeName, (int)start_index, (int)(start_index + num_rows)), { a });
 }
 
 template <class ElemType>

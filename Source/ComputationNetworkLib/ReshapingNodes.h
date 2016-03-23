@@ -231,25 +231,25 @@ template class ReconcileMBLayoutNode<float>;
 template class ReconcileMBLayoutNode<double>;
 
 // -----------------------------------------------------------------------
-// RowSliceNode (input)
+// SliceNode (input)
 // This node extracts a slice of the first tensor dimension (row).
-// TODO: Extend to specifying the axis. Time slicing would have to be done in BrainScript using Gather.
+// TODO: Implement parametrizable m_axis. Time slicing would have to be done in BrainScript using Gather.
 // -----------------------------------------------------------------------
 
 template <class ElemType>
-class RowSliceNode : public ComputationNode<ElemType>, public NumInputs<1>
+class SliceNode : public ComputationNode<ElemType>, public NumInputs<1>
 {
     typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
-    static const std::wstring TypeName() { return L"RowSlice"; }
+    static const std::wstring TypeName() { return L"Slice"; }
 
 public:
-    RowSliceNode(DEVICEID_TYPE deviceId, const wstring& name, size_t startIndex = 0, size_t numRows = 0)
-        : Base(deviceId, name), m_startIndex(startIndex), m_sliceHeight(numRows)
+    SliceNode(DEVICEID_TYPE deviceId, const wstring& name, int beginIndex = 0, int endIndex = 0)
+        : Base(deviceId, name), m_beginIndex(beginIndex), m_endIndex(endIndex), m_axis(1)
     {
     }
 
-    RowSliceNode(const ScriptableObjects::IConfigRecordPtr configp)
-        : RowSliceNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"startIndex"), configp->Get(L"numRows"))
+    SliceNode(const ScriptableObjects::IConfigRecordPtr configp)
+        : SliceNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"beginIndex"), configp->Get(L"endIndex"))
     {
         AttachInputsFromConfig(configp, this->GetExpectedNumInputs());
     }
@@ -257,27 +257,29 @@ public:
     virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
     {
         Base::CopyTo(nodeP, newName, flags);
-        auto node = dynamic_pointer_cast<RowSliceNode<ElemType>>(nodeP);
+        auto node = dynamic_pointer_cast<SliceNode<ElemType>>(nodeP);
 
-        node->m_startIndex = m_startIndex;
-        node->m_sliceHeight = m_sliceHeight;
+        node->m_beginIndex = m_beginIndex;
+        node->m_endIndex   = m_endIndex;
+        node->m_axis       = m_axis;
     }
 
     virtual void Load(File& fstream, size_t modelVersion) override
     {
         Base::Load(fstream, modelVersion);
-        fstream >> m_startIndex >> m_sliceHeight;
-        int dim; // preparation for future extension that stores a dimension along which we slice
+        ptrdiff_t beginIndex, height;
+        fstream >> beginIndex >> height; // legacy format stored end-begin
+        m_beginIndex = (int)beginIndex;
+        m_endIndex = (int)(beginIndex + height);
         if (modelVersion >= CNTK_MODEL_VERSION_3)
-            fstream >> dim;
+            fstream >> m_axis;
     }
 
     virtual void Save(File& fstream) const override
     {
         Base::Save(fstream);
-        fstream << m_startIndex << m_sliceHeight;
-        int dim = 1; // preparation for future extension that stores a dimension along which we slice
-        fstream << dim;
+        fstream << (ptrdiff_t)m_beginIndex << (ptrdiff_t)(m_endIndex - m_beginIndex); // legacy file format stores end-begin
+        fstream << m_axis;
     }
 
 private:
@@ -286,7 +288,7 @@ private:
     TensorShape GetInputSlice(size_t rank, const FrameRange & fr) const
     {
         auto inputSlice = Input(0)->GetTensorSliceFor(rank, fr);    // input must be narrowed down
-        inputSlice.NarrowTo(0, m_startIndex, m_startIndex + m_sliceHeight);
+        inputSlice.NarrowTo(0, m_beginIndex, m_endIndex);
         return inputSlice;
     }
 
@@ -317,21 +319,22 @@ public:
         InferMBLayoutFromInputsForStandardCase(isFinalValidationPass);
 
         auto sampleLayout = Input(0)->GetSampleLayout();
-        if (isFinalValidationPass && sampleLayout[0] < m_startIndex + m_sliceHeight)
-            RuntimeError("%ls %ls operation: m_startIndex + m_sliceHeight (%d) exceeds number of rows in the input ([%s]).", NodeName().c_str(), OperationName().c_str(), (int)(m_startIndex + m_sliceHeight), string(sampleLayout).c_str());
+        if (isFinalValidationPass && sampleLayout[0] < m_endIndex)
+            RuntimeError("%ls %ls operation: m_endIndex (%d) exceeds number of rows in the input ([%s]).", NodeName().c_str(), OperationName().c_str(), m_endIndex, string(sampleLayout).c_str());
 
-        if (sampleLayout[0] >= m_startIndex + m_sliceHeight)    // (this guards against failing an out-of-bounds error if not isFinalValidationPass)
-            sampleLayout.NarrowTo(0, m_startIndex, m_startIndex + m_sliceHeight);
+        if (sampleLayout[0] >= m_endIndex)    // (this guards against failing an out-of-bounds error if not isFinalValidationPass)
+            sampleLayout.NarrowTo(0, m_beginIndex, m_endIndex);
 
         SetDims(TensorShape(sampleLayout.GetDims()), HasMBLayout());
     }
 
 private:
-    size_t m_startIndex, m_sliceHeight;
+    int m_beginIndex, m_endIndex; // 'int' because negative indices are allowed, to index from end Python-style
+    int m_axis;                   // note: axes are 1-based
 };
 
-template class RowSliceNode<float>;
-template class RowSliceNode<double>;
+template class SliceNode<float>;
+template class SliceNode<double>;
 
 // -----------------------------------------------------------------------
 // RowStack (input0, input1, ...)
