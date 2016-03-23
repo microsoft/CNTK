@@ -106,6 +106,7 @@ ifdef CUDA_PATH
 # Set up CUDA includes and libraries
   INCLUDEPATH += $(CUDA_PATH)/include
   LIBPATH += $(CUDA_PATH)/lib64
+  LIBPATH += $(CUDA_PATH)/lib64/stubs
   LIBS += -lcublas -lcudart -lcuda -lcurand -lcusparse -lnvidia-ml
 
 # Set up cuDNN if needed
