@@ -59,7 +59,7 @@ public:
     {
     }
 
-    virtual std::vector<SequenceDataPtr> GetSequence(size_t sequenceId) override
+    virtual void GetSequence(size_t sequenceId, std::vector<SequenceDataPtr>& result) override
     {
         assert(sequenceId == m_description.m_id);
         UNUSED(sequenceId);
@@ -92,11 +92,12 @@ public:
         image->m_sampleLayout = std::make_shared<TensorShape>(dimensions.AsTensorShape(HWC));
         image->m_numberOfSamples = 1;
         image->m_chunk = shared_from_this();
+        result.push_back(image);
 
         SparseSequenceDataPtr label = std::make_shared<SparseSequenceData>();
         label->m_chunk = shared_from_this();
         m_parent.m_labelGenerator->CreateLabelFor(imageSequence.m_classId, *label);
-        return std::vector<SequenceDataPtr> { image, label };
+        result.push_back(label);
     }
 };
 
@@ -134,6 +135,29 @@ ImageDataDeserializer::ImageDataDeserializer(const ConfigParameters& config)
     CreateSequenceDescriptions(configHelper.GetMapPath(), labelDimension);
 }
 
+// Descriptions of chunks exposed by the image reader.
+ChunkDescriptions ImageDataDeserializer::GetChunkDescriptions()
+{
+    ChunkDescriptions result;
+    result.reserve(m_imageSequences.size());
+    for (auto const& s : m_imageSequences)
+    {
+        auto chunk = std::make_shared<ChunkDescription>();
+        chunk->m_id = s.m_chunkId;
+        chunk->m_numberOfSamples = 1;
+        chunk->m_numberOfSequences = 1;
+        result.push_back(chunk);
+    }
+
+    return result;
+}
+
+void ImageDataDeserializer::GetSequencesForChunk(size_t chunkId, std::vector<SequenceDescription>& result)
+{
+    // Currently a single sequence per chunk.
+    result.push_back(m_imageSequences[chunkId]);
+}
+
 void ImageDataDeserializer::CreateSequenceDescriptions(std::string mapPath, size_t labelDimension)
 {
     UNUSED(labelDimension);
@@ -165,6 +189,8 @@ void ImageDataDeserializer::CreateSequenceDescriptions(std::string mapPath, size
         description.m_chunkId = lineIndex;
         description.m_path = imagePath;
         description.m_classId = std::stoi(classId);
+        description.m_key.m_major = description.m_id;
+        description.m_key.m_minor = 0;
 
         if (description.m_classId >= labelDimension)
         {
@@ -177,30 +203,6 @@ void ImageDataDeserializer::CreateSequenceDescriptions(std::string mapPath, size
         m_imageSequences.push_back(description);
         RegisterByteReader(description.m_id, description.m_path, knownReaders);
     }
-}
-
-size_t ImageDataDeserializer::GetTotalNumberOfChunks()
-{
-    // Currently we use one chunk per image.
-    return m_imageSequences.size();
-}
-
-std::vector<StreamDescriptionPtr> ImageDataDeserializer::GetStreamDescriptions() const
-{
-    return m_streams;
-}
-
-void ImageDataDeserializer::FillSequenceDescriptions(SequenceDescriptions& timeline) const
-{
-    timeline.resize(m_imageSequences.size());
-    std::transform(
-        m_imageSequences.begin(),
-        m_imageSequences.end(),
-        timeline.begin(),
-        [](const ImageSequenceDescription& desc)
-        {
-            return &desc;
-        });
 }
 
 ChunkPtr ImageDataDeserializer::GetChunk(size_t chunkId)

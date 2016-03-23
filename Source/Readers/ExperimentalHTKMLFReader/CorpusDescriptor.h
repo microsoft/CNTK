@@ -5,22 +5,20 @@
 
 #pragma once
 
-#include <string>
-#include <memory>
+#include "StringToIdMap.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
 // Represents a full corpus.
 // Defines which sequences should participate in the reading.
 // TODO: Currently it is only a skeleton class.
-// TODO: For HtkMlf it will be based on the set of sequences from the SCP file.
+// TODO: For HtkMlf it can be based on the set of sequences from the SCP file.
 // TODO: Extract an interface.
 class CorpusDescriptor
 {
 public:
-    CorpusDescriptor(std::vector<std::wstring>&& sequences) : m_sequences(sequences)
-    {
-    }
+    CorpusDescriptor()
+    {}
 
     // Checks if the specified sequence should be used for reading.
     bool IsIncluded(const std::wstring& sequenceKey)
@@ -29,8 +27,16 @@ public:
         return true;
     }
 
+    // Gets string registry
+    WStringToIdMap& GetStringRegistry()
+    {
+        return m_stringRegistry;
+    }
+
 private:
-    std::vector<std::wstring> m_sequences;
+    DISABLE_COPY_AND_MOVE(CorpusDescriptor);
+
+    WStringToIdMap m_stringRegistry;
 };
 
 typedef std::shared_ptr<CorpusDescriptor> CorpusDescriptorPtr;

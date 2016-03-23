@@ -33,9 +33,10 @@ public:
     explicit TextDataChunk(const ChunkDescriptor& descriptor);
 
     // Gets sequences by id.
-    std::vector<SequenceDataPtr> GetSequence(size_t sequenceId) override;
+    void GetSequence(size_t sequenceId, std::vector<SequenceDataPtr>& result) override;
 
     std::map<size_t, std::vector<SequenceDataPtr>> m_sequencePtrMap;
+
     // Buffer to store the actual data.
     std::vector<SequenceBuffer> m_sequences;
 
@@ -72,6 +73,9 @@ TextParser<ElemType>::TextParser(const std::wstring& filename, const vector<Stre
     m_filename(filename),
     m_file(nullptr),
     m_streamInfos(streams.size()),
+    m_indexer(nullptr),
+    m_fileOffsetStart(0),
+    m_fileOffsetEnd(0),
     m_buffer(new char[BUFFER_SIZE + 1]),
     m_bufferStart(nullptr),
     m_bufferEnd(nullptr),
@@ -83,13 +87,6 @@ TextParser<ElemType>::TextParser(const std::wstring& filename, const vector<Stre
     m_skipSequenceIds(false)
 {
     assert(streams.size() > 0);
-
-    m_file = fopenOrDie(m_filename, L"rbS");
-    if (funicode(m_file)) 
-    {
-        RuntimeError("Found a UTF-16 BOM at the beginning of the input file %ls. "
-            "UTF-16 encoding is currently not supported.", m_filename.c_str());
-    }
 
     m_maxAliasLength = 0;
 
@@ -127,17 +124,33 @@ TextParser<ElemType>::~TextParser()
 template <class ElemType>
 void TextParser<ElemType>::Initialize()
 {
-    if (m_index) 
+    if (m_indexer != nullptr) 
     {
         return;
     }
 
-    m_index = Indexer(m_file, m_skipSequenceIds).Build();
+    attempt(5, [this]()
+    {
+        m_file = fopenOrDie(m_filename, L"rbS");
+    });
+    
+    if (funicode(m_file))
+    {
+        RuntimeError("Found a UTF-16 BOM at the beginning of the input file %ls. "
+            "UTF-16 encoding is currently not supported.", m_filename.c_str());
+    }
+
+    m_indexer = make_unique<Indexer>(m_file, m_skipSequenceIds, m_chunkSizeBytes);
+
+    attempt(5, [this]()
+    {
+        m_indexer->Build();
+    });
 
     // it's still possible that the actual input data does not have sequence id column.
-    m_skipSequenceIds = !m_index->m_hasSequenceIds; 
+    m_skipSequenceIds = !m_indexer->HasSequenceIds();
 
-    assert(m_index);
+    assert(m_indexer != nullptr);
 
     int64_t position = _ftelli64(m_file);
     if (position == -1L)
@@ -150,48 +163,65 @@ void TextParser<ElemType>::Initialize()
 }
 
 template <class ElemType>
-vector<StreamDescriptionPtr> TextParser<ElemType>::GetStreamDescriptions() const
+ChunkDescriptions TextParser<ElemType>::GetChunkDescriptions()
 {
-    return m_streams;
-}
+    assert(m_indexer != nullptr);
 
-template <class ElemType>
-size_t TextParser<ElemType>::GetTotalNumberOfChunks() 
-{
-    return m_index->m_chunks.size();
-}
+    const auto& index = m_indexer->GetIndex();
 
-template <class ElemType>
-void TextParser<ElemType>::FillSequenceDescriptions(SequenceDescriptions& timeline) const
-{
-    timeline.resize(m_index->m_timeline.size());
-    std::transform(
-        m_index->m_timeline.begin(),
-        m_index->m_timeline.end(),
-        timeline.begin(),
-        [](const SequenceDescription& desc)
+    ChunkDescriptions result;
+    result.reserve(index.size());
+    for (auto const& chunk : index)
     {
-        return &desc;
-    });
+        result.push_back(shared_ptr<ChunkDescription>(
+            new ChunkDescription {
+                chunk.m_id,
+                chunk.m_numberOfSamples,
+                chunk.m_numberOfSequences
+        }));
+    }
+
+    return result;
 }
 
 template <class ElemType>
-TextParser<ElemType>::TextDataChunk::TextDataChunk(const ChunkDescriptor& descriptor) : 
-    m_sequences(descriptor.m_numSequences)
+void TextParser<ElemType>::GetSequencesForChunk(size_t chunkId, std::vector<SequenceDescription>& result)
+{
+    const auto& index = m_indexer->GetIndex();
+    const auto& chunk = index[chunkId];
+    result.reserve(chunk.m_sequences.size());
+    
+    for (auto const& s : chunk.m_sequences)
+    {
+        result.push_back(
+        { 
+            s.m_id, 
+            s.m_numberOfSamples,
+            s.m_chunkId,
+            s.m_isValid,
+            s.m_key
+        });
+    }
+}
+
+template <class ElemType>
+TextParser<ElemType>::TextDataChunk::TextDataChunk(const ChunkDescriptor& descriptor)
 {
     m_id = descriptor.m_id;
     m_sequenceRequestCount = 0;
+    m_sequences.reserve(descriptor.m_numberOfSequences);
 }
 
 template <class ElemType>
-vector<SequenceDataPtr> TextParser<ElemType>::TextDataChunk::GetSequence(size_t sequenceId)
+void TextParser<ElemType>::TextDataChunk::GetSequence(size_t sequenceId, std::vector<SequenceDataPtr>& result)
 {
     auto it = m_sequencePtrMap.find(sequenceId);
     assert(it != m_sequencePtrMap.end());
 //TODO: Remove pragma once new randomizer is in master.
 #pragma omp atomic
     ++m_sequenceRequestCount;
-    return it->second;
+    result.reserve(it->second.size());
+    copy(it->second.begin(), it->second.end(), back_inserter(result));
 }
 
 template <class ElemType>
@@ -208,7 +238,7 @@ ChunkPtr TextParser<ElemType>::GetChunk(size_t chunkId)
         }
         else
         {
-            const auto& chunkDescriptor = m_index->m_chunks[chunkId];
+            const auto& chunkDescriptor = m_indexer->GetIndex()[chunkId];
             auto textChunk = make_shared<TextDataChunk>(chunkDescriptor);
 
             attempt(5, [this, &textChunk, &chunkDescriptor]()
@@ -251,13 +281,10 @@ ChunkPtr TextParser<ElemType>::GetChunk(size_t chunkId)
 template <class ElemType>
 void TextParser<ElemType>::LoadChunk(TextChunkPtr& chunk, const ChunkDescriptor& descriptor)
 {
-    vector<SequenceBuffer> sequences(descriptor.m_numSequences);
-    for (size_t i = 0; i < descriptor.m_numSequences; ++i)
+    for (const auto& sequenceDescriptor : descriptor.m_sequences)
     {
-        size_t offset = descriptor.m_timelineOffset + i;
-        const auto& sequenceDescriptor = m_index->m_timeline[offset];
-        chunk->m_sequences[i] = move(LoadSequence(!m_skipSequenceIds, sequenceDescriptor));
-        const auto& sequenceData = chunk->m_sequences[i];
+        chunk->m_sequences.push_back(LoadSequence(!m_skipSequenceIds, sequenceDescriptor));
+        const auto& sequenceData = chunk->m_sequences.back();
         vector<SequenceDataPtr> sequencePtrs(m_streamInfos.size());
         for (size_t j = 0; j < m_streamInfos.size(); ++j)
         {
@@ -270,8 +297,7 @@ void TextParser<ElemType>::LoadChunk(TextChunkPtr& chunk, const ChunkDescriptor&
                 data->m_sampleLayout = m_streams[j]->m_sampleLayout;
                 data->m_numberOfSamples = input->m_numberOfSamples;
                 data->m_chunk = chunk;
-                // TODO: add m_id to the sequence data
-                //data->m_id = sequenceDescriptor.m_id;
+                data->m_id = sequenceDescriptor.m_id;
                 sequencePtrs[j] = data;
             }
             else
@@ -292,8 +318,7 @@ void TextParser<ElemType>::LoadChunk(TextChunkPtr& chunk, const ChunkDescriptor&
                 }
 
                 data->m_chunk = chunk;
-                // TODO: add m_id to the sequence data
-                //data->m_id = sequenceDescriptor.m_id;
+                data->m_id = sequenceDescriptor.m_id;
                 sequencePtrs[j] = data;
             }
         }

@@ -31,7 +31,7 @@ template <class ElemType>
 class SimpleEvaluator
 {
 public:
-    SimpleEvaluator(ComputationNetworkPtr net, const std::shared_ptr<MPIWrapper>& mpi, const size_t numMBsToShowResult = 100, const int traceLevel = 0, const size_t maxSamplesInRAM = SIZE_MAX,
+    SimpleEvaluator(ComputationNetworkPtr net, const MPIWrapperPtr& mpi, const size_t numMBsToShowResult = 100, const int traceLevel = 0, const size_t maxSamplesInRAM = SIZE_MAX,
                     const size_t numSubminiBatches = 1)
         : m_net(net), 
           m_numMBsToShowResult(numMBsToShowResult), 
@@ -210,16 +210,7 @@ public:
             }
 
 
-            if (ProgressTracing::GetTracingFlag())
-            {
-                numItersSinceLastPrintOfProgress++;
-                if (numItersSinceLastPrintOfProgress >= numIterationsBeforePrintingProgress)
-                {
-                    // TODO: For now just print 0.0 instead of calculating actual progress
-                    printf("PROGRESS: %.2f%%\n", 0.0f);
-                    numItersSinceLastPrintOfProgress = 0;
-                }
-            }
+            numItersSinceLastPrintOfProgress = ProgressTracing::TraceFakeProgress(numIterationsBeforePrintingProgress, numItersSinceLastPrintOfProgress);
 
             // call DataEnd to check if end of sentence is reached
             // datareader will do its necessary/specific process for sentence ending
@@ -289,7 +280,7 @@ protected:
     size_t m_numMBsToShowResult;
     size_t m_maxSamplesInRAM;
     size_t m_numSubminiBatches;
-    std::shared_ptr<MPIWrapper> m_mpi;
+    MPIWrapperPtr m_mpi;
 
     shared_ptr<IDistGradAggregator<ElemType>> m_distGradAgg;
     struct DistGradHeader* m_gradHeader;

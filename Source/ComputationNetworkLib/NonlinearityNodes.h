@@ -140,6 +140,8 @@ DeclareUnaryElementWiseWithOpCodeNode(Cosine,          Cosine,          Elementw
 DeclareUnaryElementWiseWithOpCodeNode(Abs,             Abs,             ElementwiseProductWithAbsDerivative,                       BinaryWithInputGradient);
 DeclareUnaryElementWiseWithOpCodeNode(Negate,          Negate,          Negate,                                                    UnaryGradient);
 DeclareUnaryElementWiseWithOpCodeNode(Sqrt,            Sqrt,            ElementwiseProductWithSqrtDerivative,                      BinaryWithOutputGradient);
+DeclareUnaryElementWiseWithOpCodeNode(Reciprocal,      Reciprocal,      ElementwiseProductWithReciprocalDerivative,                BinaryWithOutputGradient);
+DeclareUnaryElementWiseWithOpCodeNode(Pass,            Copy,            Copy,                                                      UnaryGradient);
 
 #pragma pop_macro("DeclareUnaryElementWiseWithOpCodeNode")
 

@@ -15,7 +15,7 @@ class SimpleDistGradAggregator : public IDistGradAggregator<ElemType>
     UsingIDistGradAggregatorMembers;
 
 public:
-    SimpleDistGradAggregator(const std::shared_ptr<MPIWrapper>& mpi, bool useAsyncAggregation, int syncStatsTrace)
+    SimpleDistGradAggregator(const MPIWrapperPtr& mpi, bool useAsyncAggregation, int syncStatsTrace)
         : IDistGradAggregator<ElemType>(mpi), m_useAsyncAggregation(useAsyncAggregation), m_currentEpochNumber(-1), m_bufferedGradHeader(nullptr), m_syncStatsTrace(syncStatsTrace), m_iterationCount(0)
     {
     }

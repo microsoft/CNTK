@@ -14,39 +14,25 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 class DataDeserializerBase : public IDataDeserializer
 {
 public:
-    DataDeserializerBase() : m_sequencesInitialized(false)
+    DataDeserializerBase()
     {}
 
-    // Provides description of all sequences the deserializer can produce.
-    const SequenceDescriptions& GetSequenceDescriptions() const override
-    {
-        if (!m_sequencesInitialized)
-        {
-            FillSequenceDescriptions(m_sequences);
-            m_sequencesInitialized = true;
-        }
-        return m_sequences;
-    }
-
-    virtual const SequenceDescription* GetSequenceDescriptionByKey(const KeyType&) override
+    virtual void GetSequenceDescriptionByKey(const KeyType&, SequenceDescription&) override
     {
         NOT_IMPLEMENTED;
     }
 
-protected:
-    // Fills the timeline with sequence descriptions.
-    // Inherited classes should provide the complete Sequence descriptions for all input data.
-    virtual void FillSequenceDescriptions(SequenceDescriptions& timeline) const = 0;
+    virtual std::vector<StreamDescriptionPtr> GetStreamDescriptions() const override
+    {
+        return m_streams;
+    }
 
+protected:
     // Streams this data deserializer can produce.
     std::vector<StreamDescriptionPtr> m_streams;
 
 private:
-    DataDeserializerBase(const DataDeserializerBase&) = delete;
-    DataDeserializerBase& operator=(const DataDeserializerBase&) = delete;
-
-    mutable SequenceDescriptions m_sequences;
-    mutable bool m_sequencesInitialized;
+    DISABLE_COPY_AND_MOVE(DataDeserializerBase);
 };
 
 }}}

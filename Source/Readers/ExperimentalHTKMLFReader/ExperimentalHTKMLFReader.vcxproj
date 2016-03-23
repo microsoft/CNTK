@@ -88,7 +88,7 @@
     <ClInclude Include="..\..\Common\Include\ssematrix.h" />
     <ClInclude Include="..\..\Common\Include\fileutil.h" />
     <ClInclude Include="..\..\Common\Include\ExceptionWithCallStack.h" />
-    <ClInclude Include="ChunkDescription.h" />
+    <ClInclude Include="HTKChunkDescription.h" />
     <ClInclude Include="ConfigHelper.h" />
     <ClInclude Include="CorpusDescriptor.h" />
     <ClInclude Include="HTKDataDeserializer.h" />
