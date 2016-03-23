@@ -726,7 +726,7 @@ def runCommand(args):
               # forcing verbose mode (showing all output) for all test which are based on exit code (no pattern-based test cases)
               args.verbose = True
             # Printing the test which is about to run (without terminating the line)
-            sys.stdout.write("Running test {0} ({1} {2}{3}) - ".format(test.fullName, flavor, device, pyTestLabel));
+            sys.stdout.write("Running test {0} ({1} {2} {3}{4}) - ".format(test.fullName, build_sku, flavor, device, pyTestLabel));
             if args.dry_run:
               print ("[SKIPPED] (dry-run)")
             # in verbose mode, terminate the line, since there will be a lot of output
@@ -738,7 +738,7 @@ def runCommand(args):
 
             if args.verbose:
               # writing the test name one more time (after possibly long verbose output)
-              sys.stdout.write("Test finished {0} ({1} {2}{3}) - ".format(test.fullName, flavor, device, pyTestLabel));
+              sys.stdout.write("Test finished {0} ({1} {2} {3}{4}) - ".format(test.fullName, build_sku, flavor, device, pyTestLabel));
             if result.succeeded:
               succeededCount = succeededCount + 1
               # in no-verbose mode this will be printed in the same line as 'Running test...'
