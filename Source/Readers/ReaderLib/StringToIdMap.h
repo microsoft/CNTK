@@ -16,6 +16,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 // This class represents a string registry pattern to share strings between different deserializers if needed.
 // It associates a unique key for a given string.
 // Currently it is implemented in-memory, but can be unloaded to external disk if needed.
+// TODO: Move this class to Basics.h when it is required by more than one reader.
 template<class TString>
 class TStringToIdMap
 {
@@ -35,8 +36,9 @@ public:
     // Get integer id for the string value.
     size_t operator[](const TString& value) const
     {
-        assert(Contains(value));
-        return m_values.find(value)->second;
+        const auto& it = m_values.find(value);
+        assert(it != m_values.end());
+        return it->second;
     }
 
     // Get string value by its integer id.
@@ -53,6 +55,7 @@ public:
     }
 
 private:
+    // TODO: Move NonCopyable as a separate class to Basics.h
     DISABLE_COPY_AND_MOVE(TStringToIdMap);
 
     std::map<TString, size_t> m_values;

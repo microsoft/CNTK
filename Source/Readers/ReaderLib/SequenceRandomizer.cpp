@@ -41,9 +41,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         size_t max = 0;
         for (const auto& c : m_randomizedChunks)
         {
-            if (max < c.m_original->numberOfSequences)
+            if (max < c.m_original->m_numberOfSequences)
             {
-                max = c.m_original->numberOfSequences;
+                max = c.m_original->m_numberOfSequences;
             }
         }
 
@@ -70,7 +70,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         m_currentSequencePosition++;
         m_currentSamplePosition += sequence->m_numberOfSamples;
 
-        if (sequenceOffsetInsideChunk + 1 >= m_randomizedChunks[m_currentChunkPosition].m_original->numberOfSequences)
+        if (sequenceOffsetInsideChunk + 1 >= m_randomizedChunks[m_currentChunkPosition].m_original->m_numberOfSequences)
         {
             // Moving to the next chunk.
             m_currentChunkPosition++;
@@ -87,7 +87,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 samples -= (int)sequence->m_numberOfSamples;
                 m_currentSamplePosition += sequence->m_numberOfSamples;
 
-                if (sequenceOffsetInsideChunk + 1 >= m_randomizedChunks[m_currentChunkPosition].m_original->numberOfSequences)
+                if (sequenceOffsetInsideChunk + 1 >= m_randomizedChunks[m_currentChunkPosition].m_original->m_numberOfSequences)
                 {
                     // Moving to the next chunk.
                     m_currentChunkPosition++;
@@ -333,7 +333,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         std::vector<RandomizedSequenceDescription> chunkSequences;
 
         m_bufferOriginalSequences.clear();
-        m_deserializer->GetSequencesForChunk(chunk.m_original->id, m_bufferOriginalSequences);
+        m_deserializer->GetSequencesForChunk(chunk.m_original->m_id, m_bufferOriginalSequences);
         chunkSequences.reserve(m_bufferOriginalSequences.size());
         for (size_t k = 0; k < m_bufferOriginalSequences.size(); k++)
         {
