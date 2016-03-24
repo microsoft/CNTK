@@ -325,8 +325,7 @@ void GPUMatrix<ElemType>::CopySection(size_t numRows, size_t numCols, ElemType* 
 template <class ElemType>
 void GPUMatrix<ElemType>::ChangeDeviceTo(DEVICEID_TYPE to_id)
 {
-    if (!OwnBuffer())
-        LogicError("Cannot change device on Managed external matrix");
+    VerifyWritable();
     if (to_id == CPUDEVICE)
         LogicError("to_id must be valid GPU");
     if (GetComputeDeviceId() == to_id)
@@ -533,7 +532,7 @@ template <class ElemType>
 void GPUMatrix<ElemType>::Clear()
 {
     //if (OwnBuffer() && m_pArray != NULL)
-    if (OwnBuffer() && m_sob != nullptr)
+    if (VerifyWritable() && m_sob != nullptr)
     {
         if (GetComputeDeviceId()>= 0)
         {
@@ -1043,13 +1042,15 @@ void GPUMatrix<ElemType>::SetValue(const GPUMatrix<ElemType>& deepCopyFrom)
         CUDA_CALL(cudaMemcpy(GetArray(), deepCopyFrom.GetArray(), cpSize * sizeof(ElemType), cudaMemcpyDeviceToDevice));
 	*/
                 
+    /*
     if (GetNumRows() != deepCopyFrom.GetNumRows() || GetNumCols() != deepCopyFrom.GetNumCols())
     {
         m_numRows = deepCopyFrom.m_numRows;
         m_numCols = deepCopyFrom.m_numCols;
         m_sliceViewOffset = 0;
     }
-    if (!deepCopyFrom.IsEmpty())
+	*/
+    //if (!deepCopyFrom.IsEmpty())
 		SetValue(deepCopyFrom.GetNumRows(), deepCopyFrom.GetNumCols(), deepCopyFrom.GetComputeDeviceId(), deepCopyFrom.BufferPointer(), matrixFlagSetValueOnDevice);
 }
 
@@ -1060,7 +1061,7 @@ void GPUMatrix<ElemType>::SetValue(const size_t numRows, const size_t numCols, i
     if (matrixFlags & matrixFlagDontOwnBuffer)
     {
         // free the existing array if it used to be an owned array
-        if (OwnBuffer() && GetArray() != NULL)
+        if ( GetArray() != NULL)
         {
             TracingGPUMemoryAllocator::Free<ElemType>(GetComputeDeviceId(), GetArray());
         }
@@ -1070,9 +1071,9 @@ void GPUMatrix<ElemType>::SetValue(const size_t numRows, const size_t numCols, i
         m_pArray = pArray;
         m_elemSizeAllocated = GetNumElements();
         m_format = matrixFormatDense;
-        m_externalBuffer = true;
         m_computeDevice = deviceId;
 		*/
+        SetExternalBuffer(true);
         SetArray(pArray);
         SetSizeAllocated(GetNumElements());
         SetFormat(matrixFormatDense);
@@ -1082,14 +1083,8 @@ void GPUMatrix<ElemType>::SetValue(const size_t numRows, const size_t numCols, i
     }
     else
     {
-        // if didn't previously own the buffer, wipe it clean
-        if (!OwnBuffer())
-        {
-            ZeroInit(deviceId);
-        }
-
         // if the devices are different move it now
-        if (GetComputeDeviceId()!= deviceId && deviceId >= 0)
+        if (GetComputeDeviceId() != deviceId && deviceId >= 0)
         {
             Clear();
             ZeroInit(deviceId);
@@ -1097,7 +1092,7 @@ void GPUMatrix<ElemType>::SetValue(const size_t numRows, const size_t numCols, i
 
         // now resize/allocate as necessary
         Resize(numRows, numCols);
-        m_externalBuffer = false;
+        SetExternalBuffer(false);
 
         // copy over the content to the buffer
         PrepareDevice();
@@ -1381,14 +1376,13 @@ void GPUMatrix<ElemType>::Reshape(const size_t numRows, const size_t numCols)
 template <class ElemType>
 void GPUMatrix<ElemType>::Resize(const size_t numRows, const size_t numCols, bool growOnly)
 {
+    VerifyResizable();
     if (GetNumStorageRows() == numRows && GetNumStorageCols() >= numCols)
     {
         m_numRows = numRows;
         m_numCols = numCols;
         return;
     }
-    if (!OwnBuffer())
-        InvalidArgument("Can't resize a externally managed matrix");
 
     m_numRows = numRows;
     m_numCols = numCols;
@@ -1403,8 +1397,6 @@ void GPUMatrix<ElemType>::Resize(const size_t numRows, const size_t numCols, boo
         }
         else
         {
-            // if (!OwnBuffer())
-            //    InvalidArgument("Can't resize a externally managed matrix");
             if (GetArray())
             {
                 TracingGPUMemoryAllocator::Free<ElemType>(GetComputeDeviceId(), GetArray());
@@ -3924,7 +3916,7 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignSequenceError(const ElemType hsm
 
 /// f = logadd(f, vec) to get the logadd sum of vector elments
 template <class ElemType>
-ElemType GPUMatrix<ElemType>::LogAddSumOfElements() const
+ElemType GPUMatrix<ElemType>::LogSumOfElements() const
 {
     if (this->IsEmpty())
         LogicError("SumOfElements: Matrix is empty");

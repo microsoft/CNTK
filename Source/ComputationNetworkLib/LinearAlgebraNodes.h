@@ -218,6 +218,9 @@ public:
             if (Input(1)->Value().GetMatrixType() == SPARSE && Input(0)->Gradient().GetMatrixType() == DENSE && Gradient().GetMatrixType() == DENSE)
                 Input(0)->Gradient().SwitchToMatrixType(SPARSE, MatrixFormat::matrixFormatSparseBlockCol, false);
 
+            if (Input(1)->Value().GetMatrixType() == SPARSE)
+                fprintf(stderr, "doing good\n");
+
             // this potentially computes inner products over time, so we must mask gaps to 0
             MaskMissingGradientColumnsToZero(fr);
             Input(1)->MaskMissingValueColumnsToZero(fr);

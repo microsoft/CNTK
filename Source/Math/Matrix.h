@@ -136,10 +136,6 @@ public:
     {
         return m_baseMatrix->OwnBuffer();
     }
-    void SetArray(ElemType* ptr) const
-    {
-        return m_baseMatrix->SetArray(ptr);
-    }
     int GetDeviceId() const; // -1 if CPU, otherwise GPU CUDA device id
     DEVICEID_TYPE GetPreferredDeviceId() const
     {
@@ -163,7 +159,7 @@ public:
     bool IsEmpty() const;
     size_t BufferSize() const;
     ElemType* BufferPointer() const;
-    size_t NzCount() const;
+    //size_t NzCount() const;
 
     ElemType* CopyToArray() const;                                              // allocated by the callee but need to be deleted by the caller
     size_t CopyToArray(ElemType*& arrayCopyTo, size_t& currentArraySize) const; // allocated by the callee but need to be deleted by the caller
@@ -384,7 +380,7 @@ public:
     ElemType SumOfElements() const;    // sum of all elements
     Matrix<ElemType>& AssignSumOfElements(const Matrix<ElemType>& a);
 
-    ElemType LogAddSumOfElements() const;
+    ElemType LogSumOfElements() const;
 
     Matrix<ElemType>& AssignToRowSliceValuesOf(const Matrix<ElemType>& a, const size_t startIndex, const size_t numRows);
     Matrix<ElemType>& AssignRowSliceValuesOf(const Matrix<ElemType>& a, const size_t startIndex, const size_t numRows);

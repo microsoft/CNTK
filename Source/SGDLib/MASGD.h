@@ -301,14 +301,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     public:
         BasicModelAveragingSGD(MPIWrapper* pMPI, size_t reportFreq)
-            :Base(pMPI, reportFreq), m_sob(-1)
+            :Base(pMPI, reportFreq)
         {}
 
-        ~BasicModelAveragingSGD()
-        {
-            m_sob.ReleaseMemory();
-        }
-        
         void ModelAggregationProcessing(
             size_t samplesSinceLastSync,                                       /* in */
             const std::list<ComputationNodeBasePtr>&  learnableNodes,          /* in/out */
@@ -353,31 +348,28 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 // 2.1 model averaging
                 auto pNode = DownCast(pBaseNode);
                 // 2.1.1. average model from individual models 
-                //Matrix<ElemType> mat(pNode->Value().DeepClone()); // pNode->Value returns lvalue, so a deep copy is invoked here
-                m_sob.SetValue(pNode->Value()); // pNode->Value returns lvalue, so a deep copy is invoked here
+                Matrix<ElemType> mat(pNode->Value().DeepClone()); // pNode->Value returns lvalue, so a deep copy is invoked here
+                //m_sob.SetValue(pNode->Value()); // pNode->Value returns lvalue, so a deep copy is invoked here
                 // 2.1.2. normalize the weight matrix 
-                //Matrix<ElemType>::Scale(factor, mat);
-                Matrix<ElemType>::Scale(factor, m_sob);
+                Matrix<ElemType>::Scale(factor, mat);
+                //Matrix<ElemType>::Scale(factor, m_sob);
                 // 2.1.3. send weight matrix over MPI nodes; 
-                //unique_ptr<ElemType[]> px(mat.CopyToArray());
-                unique_ptr<ElemType[]> px(m_sob.CopyToArray());
+                unique_ptr<ElemType[]> px(mat.CopyToArray());
+                //unique_ptr<ElemType[]> px(m_sob.CopyToArray());
                 //ElemType* px = mat.CopyToArray();
-                //size_t    nx = mat.GetNumElements();
-                size_t    nx = m_sob.GetNumElements();
+                size_t    nx = mat.GetNumElements();
+                //size_t    nx = m_sob.GetNumElements();
                 // 2.1.4. inplace sum 
                 commTimer.Restart();
                 m_pMPI->AllReduce(px.get(), nx);
                 commTimer.Stop();
                 secondsOnCommunication += (float)commTimer.ElapsedSeconds();
                 // 2.1.5. set value 
-                //pNode->Value().SetValue(mat.GetNumRows(), mat.GetNumCols(), mat.GetDeviceId(), px.get());
-                pNode->Value().SetValue(m_sob.GetNumRows(), m_sob.GetNumCols(), m_sob.GetDeviceId(), px.get());
+                pNode->Value().SetValue(mat.GetNumRows(), mat.GetNumCols(), mat.GetDeviceId(), px.get());
                 // 2.1.6. clean up 
                 //delete[]px;
             }
         }
-    protected:
-        Matrix<ElemType> m_sob;
 
     };
 

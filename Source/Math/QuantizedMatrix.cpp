@@ -74,7 +74,6 @@ QuantizedMatrix<ElemType>::~QuantizedMatrix()
         {
             assert(!m_quantizedData->OwnBuffer());
             m_allocator->Free(m_quantizedData->BufferPointer());
-            m_quantizedData->SetArray(nullptr);
         }
 
         delete m_quantizedData;

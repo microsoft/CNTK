@@ -324,7 +324,7 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignColumnSlice(const CPUMatrix<Elem
 
     Clear();
 
-    SetOwnBuffer(false); // memory of a slice is managed externally.
+    //SetOwnBuffer(false); // memory of a slice is managed externally.
     ShallowCopyFrom(fromMatrix);
     m_numCols = numCols;
     //m_pArray = fromMatrix.m_pArray + startColumn * m_numRows;
@@ -875,6 +875,7 @@ void CPUMatrix<ElemType>::SetValue(const CPUMatrix<ElemType>& deepCopyFrom)
     m_numRows = deepCopyFrom.m_numRows;
     m_numCols = deepCopyFrom.m_numCols;
 	*/
+    /*
     if (GetNumRows() != deepCopyFrom.GetNumRows() || GetNumCols() != deepCopyFrom.GetNumCols())
     {
         m_numRows = deepCopyFrom.m_numRows;
@@ -882,6 +883,7 @@ void CPUMatrix<ElemType>::SetValue(const CPUMatrix<ElemType>& deepCopyFrom)
         m_sliceViewOffset = 0;
     }
     if (!deepCopyFrom.IsEmpty())
+	*/
 		SetValue(deepCopyFrom.GetNumRows(), deepCopyFrom.GetNumCols(), deepCopyFrom.BufferPointer(), 0);
     /*
     ShallowCopyFrom(deepCopyFrom);
@@ -897,8 +899,8 @@ void CPUMatrix<ElemType>::SetValue(const CPUMatrix<ElemType>& deepCopyFrom)
 template <class ElemType>
 void CPUMatrix<ElemType>::SetValue(const size_t numRows, const size_t numCols, ElemType* pArray, const size_t matrixFlags)
 {
-    if (pArray == nullptr)
-        InvalidArgument("Invalid pArray.");
+    if (pArray == nullptr && numRows * numCols > 0)
+        InvalidArgument("Invalid pArray. pArray == nullptr, but %d * %d = %d.", numRows, numCols, numRows * numCols);
 
     SetFormat(matrixFormatDense);
     SetComputeDeviceId(CPUDEVICE);
@@ -916,17 +918,14 @@ void CPUMatrix<ElemType>::SetValue(const size_t numRows, const size_t numCols, E
         SetNumStorageRows(numRows);
         SetNumStorageCols(numCols);
         SetSizeAllocated(GetNumElements());
-        //m_externalBuffer = true;
+        SetExternalBuffer(true);
     }
     else
     {
         Resize(numRows, numCols);
+        SetExternalBuffer(false);
 
-        if (IsEmpty())
-        {
-            InvalidArgument("NumRows or NumCols is 0. Nothing to copy");
-        }
-        else
+        if (!IsEmpty())
         {
             if (!(matrixFlags & matrixFormatRowMajor)) // compatible to internal structure
             {
@@ -1402,7 +1401,7 @@ template <class ElemType>
 void CPUMatrix<ElemType>::Reshape(const size_t numRows, const size_t numCols)
 {
     assert(numRows * numCols == GetNumElements());
-    if (numRows * numCols != GetNumRows() * GetNumCols())
+    if (numRows * numCols != GetNumElements())
         InvalidArgument("Reshape: Total number of elements does not match.");
 
     m_numRows = numRows;
@@ -1418,6 +1417,8 @@ void CPUMatrix<ElemType>::Reshape(const size_t numRows, const size_t numCols)
 template <class ElemType>
 void CPUMatrix<ElemType>::Resize(const size_t numRows, const size_t numCols, bool growOnly /*=true*/)
 {
+    VerifyResizable();
+
     if (GetNumStorageRows() == numRows && GetNumStorageCols() >= numCols)
     {
         m_numRows = numRows;
@@ -1433,15 +1434,12 @@ void CPUMatrix<ElemType>::Resize(const size_t numRows, const size_t numCols, boo
         ElemType* pArray = nullptr;
         if (numElements > 0)
         {
-            if (!OwnBuffer())
-                LogicError("Resize: Resizing an matrix you don't own is not supported.");
             pArray = NewArray<ElemType>(numElements);
         }
         // success: update the object
-        if (OwnBuffer())
+        if (GetArray())
             delete[] GetArray();
-        else
-            assert(pArray == nullptr); // (if !OwnBuffer we can still resize to 0)
+
         SetArray(pArray);
         SetSizeAllocated(numElements);
     }
@@ -3500,9 +3498,9 @@ void CPUMatrix<ElemType>::VectorMax(CPUMatrix<ElemType>& maxIndexes, CPUMatrix<E
                               return i++;
                           });
 
-            const ElemType* curVal = BufferPointer();
-            ElemType* curIdx = maxIndexes.BufferPointer();
-            ElemType* curMax = maxValues.BufferPointer();
+            const ElemType* curVal =            BufferPointer();
+            ElemType* curIdx       = maxIndexes.BufferPointer();
+            ElemType* curMax       =  maxValues.BufferPointer();
             for (int icol = 0; icol < n; icol++, curVal += m, curIdx += topK, curMax += topK)
             {
                 // Partial sort, descending order.
@@ -4748,7 +4746,7 @@ void CPUMatrix<ElemType>::Scale(ElemType alpha, const CPUMatrix<ElemType>& a, CP
     // four-way unrolling
     for (long i = 0; i < (size & ~3); i += 4)
     {
-        cBufPtr[i] = alpha * aBufPtr[i];
+        cBufPtr[i]     = alpha * aBufPtr[i];
         cBufPtr[i + 1] = alpha * aBufPtr[i + 1];
         cBufPtr[i + 2] = alpha * aBufPtr[i + 2];
         cBufPtr[i + 3] = alpha * aBufPtr[i + 3];
@@ -4989,9 +4987,9 @@ template <class ElemType>
 void CPUMatrix<ElemType>::TensorShuffleScaleAndAdd(ElemType keepWeight, const CPUMatrix<ElemType>& a, size_t D, size_t S, size_t M, size_t K, size_t T, ElemType scaleFactor, const CPUMatrix<ElemType>& b, CPUMatrix<ElemType>& c)
 {
     size_t N = D * S * M * K * T;
-    const ElemType* pa = a.BufferPointer();
-    const ElemType* pb = b.BufferPointer();
-    ElemType* pc = c.BufferPointer();
+    const auto pa = a.BufferPointer();
+    const auto pb = b.BufferPointer();
+    auto pc = c.BufferPointer();
     // Note: This code is written to match a GPU implementation. It is not super-efficient on the CPU.
     for (size_t na = 0; na < N; na++) // loop over all elements
     {
@@ -5372,7 +5370,7 @@ double LogAddD(double x, double y)
 }
 
 template <class ElemType>
-ElemType CPUMatrix<ElemType>::LogAddSumOfElements() const
+ElemType CPUMatrix<ElemType>::LogSumOfElements() const
 {
     ElemType fAlpha = (ElemType) LZERO;
 	ElemType* bufPtr = BufferPointer();
