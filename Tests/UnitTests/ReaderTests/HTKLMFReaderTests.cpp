@@ -151,9 +151,6 @@ BOOST_AUTO_TEST_CASE(HTKMLFReaderSimpleDataLoop8)
         1);
 };
 
-/*
-This test is commented out because it causes an assertion in debug mode on:
-HTKMLFReader (BPTT) (1110)
 BOOST_AUTO_TEST_CASE(HTKMLFReaderSimpleDataLoop9)
 {
     HelperRunReaderTest<float>(
@@ -170,7 +167,7 @@ BOOST_AUTO_TEST_CASE(HTKMLFReaderSimpleDataLoop9)
         0,
         1);
 };
-*/      
+
 
 BOOST_AUTO_TEST_CASE(HTKMLFReaderSimpleDataLoop10)
 {
@@ -274,9 +271,6 @@ BOOST_AUTO_TEST_CASE(HTKMLFReaderSimpleDataLoop16)
         1);
 };
 
-/*
-This test is commented out because it causes an assertion in debug mode on:
-HTKMLFReader (BPTT) (1110)
 BOOST_AUTO_TEST_CASE(HTKMLFReaderSimpleDataLoop19)
 {
     HelperRunReaderTest<double>(
@@ -293,7 +287,6 @@ BOOST_AUTO_TEST_CASE(HTKMLFReaderSimpleDataLoop19)
         0,
         1);
 };
-*/
 
 BOOST_AUTO_TEST_CASE(HTKMLFReaderSimpleDataLoop20)
 {
