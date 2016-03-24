@@ -147,15 +147,15 @@ class ComputationNode(object):
                         inputs_param = [p_value]
 
                     input_nodes_vars = []
-                    for p_value in inputs_param:
-                        if p_value in unrolled_nodes:
+                    for pv in inputs_param:
+                        if pv in unrolled_nodes:
                             # we have seen this node already, so just retrieve its
                             # name
-                            child_var = unrolled_nodes[p_value]
+                            child_var = unrolled_nodes[pv]
                         else:
-                            child_var, node_counter, child_desc = p_value._to_config_recursively(
+                            child_var, node_counter, child_desc = pv._to_config_recursively(
                                 desc, unrolled_nodes, inputs, readers, node_counter)
-                            unrolled_nodes[p_value] = child_var
+                            unrolled_nodes[pv] = child_var
                         input_nodes_vars.append(child_var)
 
                     param_variable_names.append(_tuple_to_cntk_shape(input_nodes_vars))
@@ -164,7 +164,7 @@ class ComputationNode(object):
                         self._param_to_brainscript(p_name, p_value))
 
         if self.reader:
-            readers.append(self.reader)
+            readers.add(self.reader)
 
         if self._is_input():
             inputs.add(self)
@@ -188,7 +188,7 @@ class ComputationNode(object):
         '''
         unrolled_nodes = {}
         inputs=set()
-        readers=[]
+        readers=set()
         var_name, node_counter, desc = self._to_config_recursively(
             desc=[], 
             unrolled_nodes=unrolled_nodes, 
@@ -198,13 +198,14 @@ class ComputationNode(object):
         return var_name, node_counter, desc, len(inputs)>0, readers
     
     def _dedupe_readers(self, readers):
+        import copy
         readers_map = {}        
         for r in readers:            
             filename = r['FileName']            
             if filename in readers_map:                                
                 readers_map[filename].inputs_def.extend(r.inputs_def)
             else:
-                readers_map[filename] = r
+                readers_map[filename] = copy.deepcopy(r)
                 
         return [r for r in readers_map.values()]
     
