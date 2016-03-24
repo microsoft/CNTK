@@ -55,9 +55,9 @@ if (__name__ == "__main__"):
     my_sgd = SGD(epoch_size = 600, minibatch_size = 32, learning_ratesPerMB = 0.1, max_epochs = 5, momentum_per_mb = 0)
     
     # Create a context or re-use if already there
-    with Context('mnist_one_layer', optimizer= my_sgd, root_node= ec, clean_up=False) as ctx:            
+    with Context('mnist_one_layer', root_node= ec, clean_up=False) as ctx:            
         # CNTK actions
-        ctx.train(r)
+        ctx.train(my_sgd, r)
         r["FileName"] = os.path.join("Data", "Test-28x28.txt")
         ctx.test(r)        
         ctx.predict(r)       
