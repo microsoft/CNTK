@@ -69,6 +69,7 @@ HTKMLFReader::HTKMLFReader(MemoryProviderPtr provider,
     m_frameMode = readerConfig(L"frameMode", true);
     m_truncated = readerConfig(L"truncated", false);
     m_truncationLength = readerConfig(L"truncationLength", 0);
+    m_parallelSequences = readerConfig(L"nbruttsineachrecurrentiter", 0);
 
     if (m_frameMode && m_truncated)
     {
@@ -142,11 +143,19 @@ void HTKMLFReader::StartEpoch(const EpochConfiguration& config)
     }
     else if (m_truncated)
     {
+        size_t minibatchSize = config.m_minibatchSizeInSamples;
+        size_t truncationLength = m_truncationLength;
+        if (truncationLength == 0)
+        {
+            truncationLength = minibatchSize;
+            minibatchSize = m_parallelSequences * truncationLength;
+        }
+
         m_packer = std::make_shared<BpttPacker>(
             m_provider,
             m_randomizer,
-            config.m_minibatchSizeInSamples,
-            m_truncationLength,
+            minibatchSize,
+            truncationLength,
             m_streams);
     }
     else

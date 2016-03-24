@@ -142,10 +142,8 @@ void BpttPacker::PackSlot(size_t streamIndex, size_t slotIndex)
             slotIndex,
             0,
             m_truncationSize);
-        // Clean the slot.
-        m_sequenceBufferPerStream[streamIndex]->m_sequenceSamplePosition[slotIndex] = 0;
-        m_sequenceBufferPerStream[streamIndex]->m_preparedSequenceLength[slotIndex] -= m_sequenceBufferPerStream[streamIndex]->m_preparedSequences[slotIndex].front()->m_numberOfSamples;
-        m_sequenceBufferPerStream[streamIndex]->m_preparedSequences[slotIndex].pop_front();
+
+        // Check that nothing is in the slot.
         assert(m_sequenceBufferPerStream[streamIndex]->m_preparedSequenceLength[slotIndex] == 0);
         assert(m_sequenceBufferPerStream[streamIndex]->m_preparedSequences[slotIndex].size() == 0);
         return;
@@ -162,7 +160,7 @@ void BpttPacker::PackSlot(size_t streamIndex, size_t slotIndex)
         NEW_SEQUENCE_ID,
         slotIndex,
         -(int)samplePosition,
-        m_sequenceBufferPerStream[streamIndex]->m_preparedSequences[slotIndex].front()->m_numberOfSamples);
+        m_sequenceBufferPerStream[streamIndex]->m_preparedSequences[slotIndex].front()->m_numberOfSamples - samplePosition);
 
     // Ok, now fill in the buffer.
     for (size_t currentTimestep = 0; currentTimestep < numberOfSamples; ++currentTimestep)
@@ -195,6 +193,14 @@ void BpttPacker::PackSlot(size_t streamIndex, size_t slotIndex)
             PackSparseSample(destination, data, samplePosition, elementSize, sampleSize);
         }
         samplePosition++;
+    }
+
+    // Cleaning up the last sequence we have just read if needed.
+    if (samplePosition >= m_sequenceBufferPerStream[streamIndex]->m_preparedSequences[slotIndex].front()->m_numberOfSamples)
+    {
+        samplePosition = 0;
+        m_sequenceBufferPerStream[streamIndex]->m_preparedSequenceLength[slotIndex] -= m_sequenceBufferPerStream[streamIndex]->m_preparedSequences[slotIndex].front()->m_numberOfSamples;
+        m_sequenceBufferPerStream[streamIndex]->m_preparedSequences[slotIndex].pop_front();
     }
 
     // Adding the last gap if there are 

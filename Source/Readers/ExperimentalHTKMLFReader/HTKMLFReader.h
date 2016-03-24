@@ -55,6 +55,9 @@ private:
 
     // Truncation length for BPTT mode.
     size_t m_truncationLength;
+
+    // Parallel sequences, used for legacy configs.
+    size_t m_parallelSequences;
 };
 
 }}}
