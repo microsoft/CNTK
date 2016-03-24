@@ -119,7 +119,7 @@
     <ClInclude Include="CuDnnCommon.h">
       <Filter>GPU\CuDnn</Filter>
     </ClInclude>
-    <ClInclude Include="NDConvolution.cuh">
+    <ClInclude Include="Convolution.cuh">
       <Filter>GPU\Convolution</Filter>
     </ClInclude>
   </ItemGroup>

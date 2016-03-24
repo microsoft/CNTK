@@ -12,11 +12,11 @@
 namespace Microsoft { namespace MSR { namespace CNTK {
 
 template <typename ElemType>
-__global__ void kNDConvolutionForward(int batchSize, const ElemType* __restrict__ kernel,
-                                      const int* mpRowCol, const int* mpRowIwht,
-                                      const int* mpRowRun, const int* __restrict__ runs,
-                                      const ElemType* __restrict__ src, int srcVecSize,
-                                      ElemType* dst, int dstVecSize)
+__global__ void kConvolutionForward(int batchSize, const ElemType* __restrict__ kernel,
+                                    const int* mpRowCol, const int* mpRowIwht,
+                                    const int* mpRowRun, const int* __restrict__ runs,
+                                    const ElemType* __restrict__ src, int srcVecSize,
+                                    ElemType* dst, int dstVecSize)
 {
     int row = blockIdx.x * blockDim.x + threadIdx.x;
     if (row >= dstVecSize)
@@ -52,11 +52,11 @@ __global__ void kNDConvolutionForward(int batchSize, const ElemType* __restrict_
 }
 
 template <typename ElemType>
-__global__ void kNDConvolutionBackwardData(int batchSize, const ElemType* __restrict__ kernel,
-                                           const int* mpRowCol, const int* mpRowIwht,
-                                           const int* mpRowRun, const int* __restrict__ runs,
-                                           const ElemType* __restrict__ srcGrad, int srcVecSize,
-                                           ElemType* grad, int dstVecSize)
+__global__ void kConvolutionBackwardData(int batchSize, const ElemType* __restrict__ kernel,
+                                         const int* mpRowCol, const int* mpRowIwht,
+                                         const int* mpRowRun, const int* __restrict__ runs,
+                                         const ElemType* __restrict__ srcGrad, int srcVecSize,
+                                         ElemType* grad, int dstVecSize)
 {
     int row = blockIdx.x * blockDim.x + threadIdx.x;
     if (row >= srcVecSize)
@@ -91,12 +91,12 @@ __global__ void kNDConvolutionBackwardData(int batchSize, const ElemType* __rest
 }
 
 template <typename ElemType>
-__global__ void kNDConvolutionBackwardKernel(int batchSize, int inVecSize, int outVecSize,
-                                             const ElemType* __restrict__ in,
-                                             const int* mpRowCol, const int* mpRowIwht,
-                                             const int* mpRowRun, const int* __restrict__ runs,
-                                             const ElemType* __restrict__ srcGrad,
-                                             ElemType* kernelGrad)
+__global__ void kConvolutionBackwardKernel(int batchSize, int inVecSize, int outVecSize,
+                                           const ElemType* __restrict__ in,
+                                           const int* mpRowCol, const int* mpRowIwht,
+                                           const int* mpRowRun, const int* __restrict__ runs,
+                                           const ElemType* __restrict__ srcGrad,
+                                           ElemType* kernelGrad)
 {
     int row = blockIdx.x * blockDim.x + threadIdx.x;
     if (row >= outVecSize)
@@ -131,9 +131,9 @@ __global__ void kNDConvolutionBackwardKernel(int batchSize, int inVecSize, int o
 }
 
 template <typename ElemType>
-__global__ void kNDMaxPoolingForward(int batchSize, const int* mpRowCol, const int* mpRowIndices, const int* indices,
-                                     const ElemType* __restrict__ src, int srcVecSize,
-                                     ElemType* dst, int dstVecSize)
+__global__ void kMaxPoolingForward(int batchSize, const int* mpRowCol, const int* mpRowIndices, const int* indices,
+                                   const ElemType* __restrict__ src, int srcVecSize,
+                                   ElemType* dst, int dstVecSize)
 {
     int row = blockIdx.x * blockDim.x + threadIdx.x;
     if (row >= dstVecSize)
@@ -164,10 +164,10 @@ __global__ void kNDMaxPoolingForward(int batchSize, const int* mpRowCol, const i
 }
 
 template <typename ElemType>
-__global__ void kNDMaxPoolingBackward(int batchSize, const ElemType* out, const ElemType* in,
-                                      const int* mpRowCol, const int* mpRowIndices, const int* indices,
-                                      const ElemType* __restrict__ srcGrad, int srcVecSize,
-                                      ElemType* grad, int dstVecSize)
+__global__ void kMaxPoolingBackward(int batchSize, const ElemType* out, const ElemType* in,
+                                    const int* mpRowCol, const int* mpRowIndices, const int* indices,
+                                    const ElemType* __restrict__ srcGrad, int srcVecSize,
+                                    ElemType* grad, int dstVecSize)
 {
     int row = blockIdx.x * blockDim.x + threadIdx.x;
     if (row >= srcVecSize)
@@ -204,9 +204,9 @@ __global__ void kNDMaxPoolingBackward(int batchSize, const ElemType* out, const 
 }
 
 template <typename ElemType>
-__global__ void kNDAveragePoolingForward(int batchSize, const int* mpRowCol, const int* mpRowIndices, const int* indices,
-                                         const ElemType* __restrict__ src, int srcVecSize,
-                                         ElemType* dst, int dstVecSize)
+__global__ void kAveragePoolingForward(int batchSize, const int* mpRowCol, const int* mpRowIndices, const int* indices,
+                                       const ElemType* __restrict__ src, int srcVecSize,
+                                       ElemType* dst, int dstVecSize)
 {
     int row = blockIdx.x * blockDim.x + threadIdx.x;
     if (row >= dstVecSize)
@@ -237,9 +237,9 @@ __global__ void kNDAveragePoolingForward(int batchSize, const int* mpRowCol, con
 }
 
 template <typename ElemType>
-__global__ void kNDAveragePoolingBackward(int batchSize, const int* mpRowCol, const int* mpRowIndices, const int* indices,
-                                          const ElemType* __restrict__ srcGrad, int srcVecSize,
-                                          ElemType* grad, int dstVecSize)
+__global__ void kAveragePoolingBackward(int batchSize, const int* mpRowCol, const int* mpRowIndices, const int* indices,
+                                        const ElemType* __restrict__ srcGrad, int srcVecSize,
+                                        ElemType* grad, int dstVecSize)
 {
     int row = blockIdx.x * blockDim.x + threadIdx.x;
     if (row >= srcVecSize)

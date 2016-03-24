@@ -8,6 +8,7 @@
 #include "Matrix.h"
 #include "TensorShape.h" // for ImageLayoutKind
 #include "ConvolveGeometry.h"
+#include "StringUtil.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -53,6 +54,8 @@ public:
 
     void BackwardPooling(const Mat& out, const Mat& srcGrad, const Mat& in, Mat& grad);
 
+    std::shared_ptr<const ConvolveGeometry> Geometry() const { return m_geometry; }
+
     static std::unique_ptr<ConvolutionEngine<ElemType>> Create(ConvolveGeometryPtr geometry, DEVICEID_TYPE deviceId, ImageLayoutKind imageLayout,
                                                                size_t maxTempMemSizeInSamples, PoolKind poolKind = PoolKind::None, ConvolutionEngineKind enabledEngines = ConvolutionEngineKind::All);
 
@@ -90,5 +93,16 @@ protected:
 };
 
 #pragma warning(pop)
+
+static inline PoolKind PoolKindFrom(const wstring& s)
+{
+    if (s.empty() || AreEqualIgnoreCase(s, L"none"))
+        return PoolKind::None;
+    if (AreEqualIgnoreCase(s, L"max"))
+        return PoolKind::Max;
+    if (AreEqualIgnoreCase(s, L"average"))
+        return PoolKind::Average;
+    InvalidArgument("Unknown pooling kind: '%ls'. Supported values: 'none', 'max', 'average'.", s.c_str());
+}
 
 } } }

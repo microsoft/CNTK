@@ -4086,8 +4086,8 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AddAveragePoolingGradient(const CPUMat
 #pragma endregion Other Helper Functions
 
 template <class ElemType>
-void CPUMatrix<ElemType>::NDConvolutionForward(const CPUMatrix<ElemType>& kernel, const CPUMatrix<int>& mpRowCol, const CPUMatrix<int>& mpRowIwht,
-                                               const CPUMatrix<int>& mpRowRun, const CPUMatrix<int>& runs, CPUMatrix<ElemType>& output) const
+void CPUMatrix<ElemType>::ConvolutionForward(const CPUMatrix<ElemType>& kernel, const CPUMatrix<int>& mpRowCol, const CPUMatrix<int>& mpRowIwht,
+                                             const CPUMatrix<int>& mpRowRun, const CPUMatrix<int>& runs, CPUMatrix<ElemType>& output) const
 {
 #pragma omp parallel for
     for (int64_t sample = 0; sample < (int64_t)output.GetNumCols(); sample++)
@@ -4117,8 +4117,8 @@ void CPUMatrix<ElemType>::NDConvolutionForward(const CPUMatrix<ElemType>& kernel
 }
 
 template <class ElemType>
-void CPUMatrix<ElemType>::NDConvolutionBackwardData(const CPUMatrix<ElemType>& kernel, const CPUMatrix<int>& mpRowCol, const CPUMatrix<int>& mpRowIwht,
-                                                    const CPUMatrix<int>& mpRowRun, const CPUMatrix<int>& runs, CPUMatrix<ElemType>& grad) const
+void CPUMatrix<ElemType>::ConvolutionBackwardData(const CPUMatrix<ElemType>& kernel, const CPUMatrix<int>& mpRowCol, const CPUMatrix<int>& mpRowIwht,
+                                                  const CPUMatrix<int>& mpRowRun, const CPUMatrix<int>& runs, CPUMatrix<ElemType>& grad) const
 {
 #pragma omp parallel for
     for (int64_t sample = 0; sample < (int64_t)GetNumCols(); sample++)
@@ -4148,8 +4148,8 @@ void CPUMatrix<ElemType>::NDConvolutionBackwardData(const CPUMatrix<ElemType>& k
 }
 
 template <class ElemType>
-void CPUMatrix<ElemType>::NDConvolutionBackwardKernel(const CPUMatrix<ElemType>& in, const CPUMatrix<int>& mpRowCol, const CPUMatrix<int>& mpRowIwht,
-                                                      const CPUMatrix<int>& mpRowRun, const CPUMatrix<int>& runs, CPUMatrix<ElemType>& kernelGrad) const
+void CPUMatrix<ElemType>::ConvolutionBackwardKernel(const CPUMatrix<ElemType>& in, const CPUMatrix<int>& mpRowCol, const CPUMatrix<int>& mpRowIwht,
+                                                    const CPUMatrix<int>& mpRowRun, const CPUMatrix<int>& runs, CPUMatrix<ElemType>& kernelGrad) const
 {
     // Do NOT parallelize these loops!
     for (size_t sample = 0; sample < GetNumCols(); sample++)
@@ -4179,7 +4179,7 @@ void CPUMatrix<ElemType>::NDConvolutionBackwardKernel(const CPUMatrix<ElemType>&
 }
 
 template <class ElemType>
-void CPUMatrix<ElemType>::NDMaxPoolingForward(const CPUMatrix<int>& mpRowCol, const CPUMatrix<int>& mpRowIndices, const CPUMatrix<int>& indices, CPUMatrix<ElemType>& output) const
+void CPUMatrix<ElemType>::MaxPoolingForward(const CPUMatrix<int>& mpRowCol, const CPUMatrix<int>& mpRowIndices, const CPUMatrix<int>& indices, CPUMatrix<ElemType>& output) const
 {
 #pragma omp parallel for
     for (int64_t sample = 0; sample < (int64_t)output.GetNumCols(); sample++)
@@ -4207,9 +4207,9 @@ void CPUMatrix<ElemType>::NDMaxPoolingForward(const CPUMatrix<int>& mpRowCol, co
 }
 
 template <class ElemType>
-void CPUMatrix<ElemType>::NDMaxPoolingBackward(const CPUMatrix<ElemType>& out, const CPUMatrix<ElemType>& in,
-                                               const CPUMatrix<int>& mpRowCol, const CPUMatrix<int>& mpRowIndices, const CPUMatrix<int>& indices,
-                                               CPUMatrix<ElemType>& grad) const
+void CPUMatrix<ElemType>::MaxPoolingBackward(const CPUMatrix<ElemType>& out, const CPUMatrix<ElemType>& in,
+                                             const CPUMatrix<int>& mpRowCol, const CPUMatrix<int>& mpRowIndices, const CPUMatrix<int>& indices,
+                                             CPUMatrix<ElemType>& grad) const
 {
 #pragma omp parallel for
     for (int64_t sample = 0; sample < (int64_t)GetNumCols(); sample++)
@@ -4236,7 +4236,7 @@ void CPUMatrix<ElemType>::NDMaxPoolingBackward(const CPUMatrix<ElemType>& out, c
 }
 
 template <class ElemType>
-void CPUMatrix<ElemType>::NDAveragePoolingForward(const CPUMatrix<int>& mpRowCol, const CPUMatrix<int>& mpRowIndices, const CPUMatrix<int>& indices, CPUMatrix<ElemType>& output) const
+void CPUMatrix<ElemType>::AveragePoolingForward(const CPUMatrix<int>& mpRowCol, const CPUMatrix<int>& mpRowIndices, const CPUMatrix<int>& indices, CPUMatrix<ElemType>& output) const
 {
 #pragma omp parallel for
     for (int64_t sample = 0; sample < (int64_t)output.GetNumCols(); sample++)
@@ -4264,7 +4264,7 @@ void CPUMatrix<ElemType>::NDAveragePoolingForward(const CPUMatrix<int>& mpRowCol
 }
 
 template <class ElemType>
-void CPUMatrix<ElemType>::NDAveragePoolingBackward(const CPUMatrix<int>& mpRowCol, const CPUMatrix<int>& mpRowIndices, const CPUMatrix<int>& indices, CPUMatrix<ElemType>& grad) const
+void CPUMatrix<ElemType>::AveragePoolingBackward(const CPUMatrix<int>& mpRowCol, const CPUMatrix<int>& mpRowIndices, const CPUMatrix<int>& indices, CPUMatrix<ElemType>& grad) const
 {
 #pragma omp parallel for
     for (int64_t sample = 0; sample < (int64_t)GetNumCols(); sample++)

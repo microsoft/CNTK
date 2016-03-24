@@ -8,6 +8,7 @@
 #include "ComputationNode.h"
 #include "ComputationNetwork.h"
 #include "TrainingNodes.h" // for NCEEvalMode
+#include "ConvolutionalNodes.h" // for PoolKind
 #include "ScriptableObjects.h"
 #include "TensorShape.h"
 #include <string>
@@ -51,7 +52,15 @@ public:
     ComputationNodePtr CreateSparseInputNode(const std::wstring& inputName, const size_t rows);
     ComputationNodePtr CreateInputNode(const std::wstring& inputName, const TensorShape& sampleLayout);
     ComputationNodePtr CreateSparseInputNode(const std::wstring& inputName, const TensorShape& sampleLayout);
-    ComputationNodePtr CreateConvolutionNode(const std::wstring& nodeName, const size_t kernelWidth, const size_t kernelHeight, const size_t outputChannels, const size_t horizontalSubsample, const size_t verticalSubsample, ImageLayoutKind imageLayoutKind, const bool zeroPadding = false, const size_t maxTempMemSizeInSamples = 0);
+    ComputationNodePtr CreateConvolutionNode(const std::wstring& nodeName, const TensorShape& kernelShape, const TensorShape& mapCount, const TensorShape& strideShape,
+                                             const std::vector<bool>& sharing, const std::vector<bool>& autoPadding, const TensorShape& lowerPad, const TensorShape& upperPad,
+                                             ImageLayoutKind imageLayout, size_t maxTempMemSizeInSamples);
+    ComputationNodePtr CreateConvolutionNode(const std::wstring& nodeName, const size_t kernelWidth, const size_t kernelHeight, const size_t outputChannels, 
+                                             const size_t horizontalSubsample, const size_t verticalSubsample, 
+                                             ImageLayoutKind imageLayoutKind, const bool zeroPadding = false, const size_t maxTempMemSizeInSamples = 0);
+    ComputationNodePtr CreatePoolingNode(const std::wstring& nodeName, PoolKind poolKind, const TensorShape& kernelShape, const TensorShape& strideShape,
+                                         const std::vector<bool>& autoPadding, const TensorShape& lowerPad, const TensorShape& upperPad,
+                                         ImageLayoutKind imageLayout);
     ComputationNodePtr CreateMaxPoolingNode(const std::wstring& nodeName, const size_t windowWidth, const size_t windowHeight, const size_t horizontalSubsample, const size_t verticalSubsample, ImageLayoutKind imageLayoutKind);
     ComputationNodePtr CreateAveragePoolingNode(const std::wstring& nodeName, const size_t windowWidth, const size_t windowHeight, const size_t horizontalSubsample, const size_t verticalSubsample, ImageLayoutKind imageLayoutKind);
     // this is the catch-all for all cases not covered as special cases above
@@ -68,6 +77,17 @@ public:
                                    const size_t horizontalSubsample, const size_t verticalSubsample, ImageLayoutKind imageLayoutKind,
                                    const bool zeroPadding = false, const size_t maxTempMemSizeInSamples = 0,
                                    const std::wstring nodeName = L"");
+    ComputationNodePtr Convolution(const ComputationNodePtr weight,
+                                   const ComputationNodePtr inputValues,
+                                   const TensorShape& kernelShape, const TensorShape& mapCount, const TensorShape& strideShape,
+                                   const std::vector<bool>& sharing, const std::vector<bool>& autoPadding, const TensorShape& lowerPad, const TensorShape& upperPad,
+                                   ImageLayoutKind imageLayout, size_t maxTempMemSizeInSamples,
+                                   const std::wstring nodeName = L"");
+    ComputationNodePtr Pooling(const ComputationNodePtr inputValues, 
+                               PoolKind poolKind, const TensorShape& kernelShape, const TensorShape& strideShape,
+                               const std::vector<bool>& autoPadding, const TensorShape& lowerPad, const TensorShape& upperPad,
+                               ImageLayoutKind imageLayout,
+                               const std::wstring nodeName = L"");
     ComputationNodePtr MaxPooling(const ComputationNodePtr inputValues,
                                   const size_t windowWidth, const size_t windowHeight, const size_t horizontalSubsample, const size_t verticalSubsample, ImageLayoutKind imageLayoutKind,
                                   const std::wstring nodeName = L"");

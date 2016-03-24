@@ -8,37 +8,43 @@
 #include "Matrix.h"
 #include "ComputationNode.h"
 #include "ConvolutionEngine.h"
-#include "StringUtil.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
 template <class ElemType>
-class NDConvolutionNode : public ComputationNode<ElemType>
+class ConvolutionNode : public ComputationNode<ElemType>
 {
     typedef ComputationNode<ElemType> Base;
     UsingComputationNodeMembersBoilerplate;
     static const std::wstring TypeName()
     {
-        return L"NDConvolution";
+        return L"Convolution";
     }
 
 public:
-    NDConvolutionNode(DEVICEID_TYPE deviceId, const wstring& name)
+    ConvolutionNode(DEVICEID_TYPE deviceId, const wstring& name)
         : Base(deviceId, name)
     {
     }
-    NDConvolutionNode(DEVICEID_TYPE deviceId, const wstring& name, const TensorShape& kernelShape, const TensorShape& mapCount, const TensorShape& strideShape,
-                      const std::vector<bool>& sharing, const std::vector<bool>& autoPadding, const TensorShape& lowerPad, const TensorShape& upperPad,
-                      ImageLayoutKind imageLayout, size_t maxTempMemSizeInSamples, const std::wstring& poolKind)
-        : Base(deviceId, name), m_kernelShape(kernelShape), m_mapCount(mapCount), m_stride(strideShape), m_sharing(sharing),
-        m_autoPad(autoPadding), m_lowerPad(lowerPad), m_upperPad(upperPad),
-        m_imageLayout(imageLayout), m_maxTempMemSizeInSamples(maxTempMemSizeInSamples), m_poolKind(PoolKindFrom(poolKind))
+    ConvolutionNode(DEVICEID_TYPE deviceId, const wstring& name, const TensorShape& kernelShape, const TensorShape& mapCount, const TensorShape& strideShape,
+                    const std::vector<bool>& sharing, const std::vector<bool>& autoPadding, const TensorShape& lowerPad, const TensorShape& upperPad,
+                    ImageLayoutKind imageLayout, size_t maxTempMemSizeInSamples, PoolKind poolKind)
+                    : Base(deviceId, name), m_legacy(false), m_kernelShape(kernelShape), m_mapCount(mapCount), m_stride(strideShape), m_sharing(sharing),
+                    m_autoPad(autoPadding), m_lowerPad(lowerPad), m_upperPad(upperPad),
+                    m_imageLayout(imageLayout), m_maxTempMemSizeInSamples(maxTempMemSizeInSamples), m_poolKind(poolKind)
     {
     }
-    NDConvolutionNode(const ScriptableObjects::IConfigRecordPtr configp)
-        : NDConvolutionNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"kernelShape"), configp->Get(L"mapCount"), configp->Get(L"strideShape"),
+    ConvolutionNode(DEVICEID_TYPE deviceId, const wstring& name, const size_t kernelWidth, const size_t kernelHeight, const size_t outputChannels,
+                    const size_t horizontalSubsample, const size_t verticalSubsample, ImageLayoutKind imageLayoutKind,
+                    const bool zeroPadding, const size_t maxTempMemSizeInSamples)
+                    : Base(deviceId, name), m_legacy(true), m_kernelShape(kernelWidth, kernelHeight, 1), m_mapCount(1, 1, outputChannels),
+                    m_stride(horizontalSubsample, verticalSubsample, 1), m_autoPad(zeroPadding), m_lowerPad(0), m_upperPad(0)
+    {
+    }
+    ConvolutionNode(const ScriptableObjects::IConfigRecordPtr configp)
+        : ConvolutionNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"kernelShape"), configp->Get(L"mapCount"), configp->Get(L"strideShape"),
         configp->Get(L"dimSharing"), configp->Get(L"dimPadding"), configp->Get(L"dimPadLower"), configp->Get(L"dimPadUpper"),
-        ImageLayoutKindFrom(configp->Get(L"imageLayout")), configp->Get(L"maxTempMemSizeInSamples") , configp->Get(L"pool"))
+        ImageLayoutKindFrom(configp->Get(L"imageLayout")), configp->Get(L"maxTempMemSizeInSamples"), PoolKindFrom(configp->Get(L"pool")))
     {
         AttachInputs(configp, GetExpectedNumInputs());
     }
@@ -47,8 +53,6 @@ public:
     void Save(File& fstream) const override
     {
         Base::Save(fstream);
-
-        fstream << m_version.VerWrittenCur() << m_version.VerReadableCur();
 
         m_kernelShape.Save(fstream);
         m_mapCount.Save(fstream);
@@ -65,18 +69,6 @@ public:
     void Load(File& fstream, size_t modelVersion) override
     {
         Base::Load(fstream, modelVersion);
-
-        // Read and check version.
-        int32_t verWritten;
-        int32_t verReadable;
-        fstream >> verWritten >> verReadable;
-
-        if (verReadable > verWritten)
-            RuntimeError("Corrupt model file.");
-        if (verWritten < m_version.VerWeCanReadBack())
-            RuntimeError("Model is too old.");
-        if (verReadable > m_version.VerWrittenCur())
-            RuntimeError("Model is too new.");
 
         m_kernelShape.Load(fstream);
         m_mapCount.Load(fstream);
@@ -99,7 +91,7 @@ public:
         Base::CopyTo(nodeP, newName, flags);
         if (flags & CopyNodeFlags::copyNodeValue)
         {
-            auto node = dynamic_pointer_cast<NDConvolutionNode<ElemType>>(nodeP);
+            auto node = dynamic_pointer_cast<ConvolutionNode<ElemType>>(nodeP);
             node->m_kernelShape = m_kernelShape;
             node->m_mapCount = m_mapCount;
             node->m_stride = m_stride;
@@ -145,7 +137,7 @@ public:
 
     virtual bool OutputUsedInComputingInputNodesGradients() const override
     {
-        // The NDConvolutionNode requires output values only for max pooling.
+        // The ConvolutionNode requires output values only for max pooling.
         return m_poolKind == PoolKind::Max;
     }
 
@@ -175,7 +167,7 @@ public:
         {
             InvalidArgument(
                 "%ls %ls supports only cuDNN (CHW) data layout. "
-                "Please specify imageLayout=\"cudnn\" in NDConvolution node in your BrainScript "
+                "Please specify imageLayout=\"cudnn\" in Convolution node in your script "
                 "and make sure input data layout is CHW", NodeName().c_str(), OperationName().c_str());
         }
 
@@ -188,9 +180,9 @@ public:
         {
             if (m_convEng == nullptr)
             {
-                auto g = std::make_shared<ConvolveGeometry>(inputShape, m_kernelShape, m_mapCount, m_stride,
-                                                            m_sharing, m_autoPad, m_lowerPad, m_upperPad);
-                m_convEng = ConvolutionEngine<ElemType>::Create(g, m_deviceId, m_imageLayout,
+                auto geometry = std::make_shared<ConvolveGeometry>(inputShape, m_kernelShape, m_mapCount, m_stride,
+                                                                   m_sharing, m_autoPad, m_lowerPad, m_upperPad);
+                m_convEng = ConvolutionEngine<ElemType>::Create(geometry, m_deviceId, m_imageLayout,
                                                                 m_maxTempMemSizeInSamples, m_poolKind);
             }
         }
@@ -208,26 +200,21 @@ public:
         ReleaseMatrixToPool(m_tempMatrix, matrixPool);
     }
 
-private:
-    struct VersionInfo
+    void DumpNodeInfo(const bool printValues, const bool printMetadata, File& fstream) const override
     {
-        int32_t VerWrittenCur() const     { return 0x00010001; } // Initial
-        int32_t VerReadableCur() const    { return 0x00010001; }
-        int32_t VerWeCanReadBack() const  { return 0x00010001; }
-    };
-    VersionInfo m_version;
+        Base::DumpNodeInfo(printValues, printMetadata, fstream);
+
+        if (m_convEng != nullptr)
+            fstream << "Geometry: " << string(*m_convEng->Geometry()) << "\n";
+        fstream << "PoolKind: " << (int)m_poolKind << "\n";
+    }
+
+    void SetmMaxTempMemSizeInSamples(const size_t maxTempMemSizeInSamples)
+    {
+        m_maxTempMemSizeInSamples = maxTempMemSizeInSamples;
+    }
 
 private:
-    PoolKind PoolKindFrom(const wstring& s)
-    {
-        if (s.empty() || AreEqualIgnoreCase(s, L"none"))
-            return PoolKind::None;
-        if (AreEqualIgnoreCase(s, L"max"))
-            return PoolKind::Max;
-        if (AreEqualIgnoreCase(s, L"average"))
-            return PoolKind::Average;
-        InvalidArgument("Unknown pooling kind: '%ls'. Supported values: 'none', 'max', 'average'.", s.c_str());
-    }
 
     size_t GetExpectedNumInputs() const
     {
@@ -251,6 +238,8 @@ private:
     PoolKind m_poolKind;
 
     std::unique_ptr<ConvolutionEngine<ElemType>> m_convEng;
+
+    bool m_legacy;
 };
 
 // -----------------------------------------------------------------------
@@ -283,246 +272,243 @@ private:
 //     - 3 for color images, 1 for B&W images
 //     - for hidden layer: dimension of activation vector for each pixel
 //  - C' = output channels = dimension of activation vector for each pixel (also called N by NVidia, inconsistently)
-template <class ElemType>
-class ConvolutionNode : public ComputationNode<ElemType>, public NumInputs<2>
-{
-    typedef ComputationNode<ElemType> Base;
-    UsingComputationNodeMembersBoilerplate;
-    static const std::wstring TypeName()
-    {
-        return L"Convolution";
-    }
-
-public:
-    ConvolutionNode(DEVICEID_TYPE deviceId, const wstring& name)
-        : Base(deviceId, name),
-          m_kernelWidth(SIZE_MAX),
-          m_kernelHeight(SIZE_MAX),
-          // initialize to dummy values so we catch missing initialization
-          m_horizontalSubsample(SIZE_MAX),
-          m_verticalSubsample(SIZE_MAX),
-          m_zeroPadding(false),
-          m_maxTempMemSizeInSamples(SIZE_MAX),
-          m_imageLayoutKind(ImageLayoutKind::HWC)
-    {
-        SetDims(ImageDimensions::AsTensorShape(1, 1, 0, m_imageLayoutKind), 0);
-    }
-    ConvolutionNode(DEVICEID_TYPE deviceId, const wstring& name, const size_t kernelWidth, const size_t kernelHeight, const size_t outputChannels, const size_t horizontalSubsample, const size_t verticalSubsample, ImageLayoutKind imageLayoutKind,
-                    const bool zeroPadding = false, const size_t maxTempMemSizeInSamples = 0)
-        : Base(deviceId, name),
-          m_outputChannels(outputChannels),
-          m_kernelWidth(kernelWidth),
-          m_kernelHeight(kernelHeight),
-          m_horizontalSubsample(horizontalSubsample),
-          m_verticalSubsample(verticalSubsample),
-          m_zeroPadding(zeroPadding),
-          m_maxTempMemSizeInSamples(maxTempMemSizeInSamples),
-          m_imageLayoutKind(imageLayoutKind)
-    {
-        SetDims(ImageDimensions::AsTensorShape(1, 1, m_outputChannels, m_imageLayoutKind), 0); // TODO: necessary?
-    }
-    ConvolutionNode(const ScriptableObjects::IConfigRecordPtr configp)
-        : ConvolutionNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"kernelWidth"), configp->Get(L"kernelHeight"), configp->Get(L"outputChannels"),
-                          configp->Get(L"horizontalSubsample"), configp->Get(L"verticalSubsample"), ImageLayoutKindFrom(configp->Get(L"imageLayout")),
-                          configp->Get(L"zeroPadding"), configp->Get(L"maxTempMemSizeInSamples"))
-    {
-        // weightNodeName, inputValueNodeName, kernelWidth, kernelHeight, outputChannels, horizontalSubsample, verticalSubsample, zeroPadding = false, maxTempMemSizeInSamples = 0
-        AttachInputs(configp, this->GetExpectedNumInputs());
-    }
-
-    void Save(File& fstream) const override
-    {
-        Base::Save(fstream);
-        fstream << m_kernelWidth << m_kernelHeight << m_horizontalSubsample << m_verticalSubsample;
-        uint32_t imageLayoutKind = (uint32_t) m_imageLayoutKind;
-        uint32_t outputChannels = (uint32_t) m_outputChannels;
-        fstream << outputChannels << imageLayoutKind;
-        fstream << m_zeroPadding << m_maxTempMemSizeInSamples;
-    }
-
-    void Load(File& fstream, size_t modelVersion) override
-    {
-        Base::Load(fstream, modelVersion);
-        fstream >> m_kernelWidth >> m_kernelHeight >> m_horizontalSubsample >> m_verticalSubsample;
-        uint32_t imageLayoutKind, outputChannels;
-        fstream >> outputChannels >> imageLayoutKind;
-        m_imageLayoutKind = (ImageLayoutKind) imageLayoutKind;
-        m_outputChannels = outputChannels;
-        SetDims(ImageDimensions::AsTensorShape(1, 1, m_outputChannels, m_imageLayoutKind), HasMBLayout()); // TODO: needed?
-        fstream >> m_zeroPadding >> m_maxTempMemSizeInSamples;
-    }
-
-    void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
-    {
-        Base::CopyTo(nodeP, newName, flags);
-        if (flags & CopyNodeFlags::copyNodeValue)
-        {
-            auto node = dynamic_pointer_cast<ConvolutionNode<ElemType>>(nodeP);
-            node->m_kernelWidth = m_kernelWidth;
-            node->m_kernelHeight = m_kernelHeight;
-
-            node->m_horizontalSubsample = m_horizontalSubsample;
-            node->m_verticalSubsample = m_verticalSubsample;
-
-            node->m_zeroPadding = m_zeroPadding;
-
-            node->m_maxTempMemSizeInSamples = m_maxTempMemSizeInSamples;
-
-            node->m_imageLayoutKind = m_imageLayoutKind;
-
-            node->m_tempMatrix->SetValue(*m_tempMatrix);
-        }
-    }
-
-    void BackpropTo(const size_t inputIndex, const FrameRange& fr) override
-    {
-        auto sliceOutputGrad = GradientFor(fr);
-        auto sliceInput1Value = Input(1)->ValueFor(fr);
-
-        if (inputIndex == 0) // derivative with respect to the weight matrix
-        {
-            auto& grad = Input(0)->GradientAsMatrix();
-            m_convEng->BackwardKernel(sliceOutputGrad, sliceInput1Value, grad, fr.IsAllFrames(), *m_tempMatrix);
-        }
-        else if (inputIndex == 1) // derivative with respect to the input feature
-        {
-            auto& input0 = Input(0)->ValueAsMatrix();
-            auto sliceInput1Grad = Input(1)->GradientFor(fr);
-            m_convEng->BackwardData(sliceOutputGrad, input0, sliceInput1Grad, *m_tempMatrix);
-        }
-    }
-
-    virtual bool OutputUsedInComputingInputNodesGradients() const override
-    {
-        // The ConvolutionNode does not require its output value for computing
-        // the gradients of its input nodes
-        return false;
-    }
-
-    void ForwardProp(const FrameRange& fr) override
-    {
-        const Matrix<ElemType>& input0 = Input(0)->ValueAsMatrix();
-        Matrix<ElemType> sliceInput1Value = Input(1)->ValueFor(fr);
-        Matrix<ElemType> sliceOutputValue = ValueFor(fr);
-
-        // update the tensor dimension w.r.t. number of samples
-#if NANCHECK
-        input0.HasNan("Convolution-input0");
-        sliceInput1Value.HasNan("Convolution-input1");
-#endif
-        m_convEng->Forward(sliceInput1Value, input0, sliceOutputValue, *m_tempMatrix);
-#if NANCHECK
-        sliceOutputValue.HasNan("Convolution");
-#endif
-    }
-
-    void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
-    {
-        Base::Validate(isFinalValidationPass);
-        InferMBLayoutFromInputsForStandardCase();
-
-        // get input and output tensor shape and interpret as image dimensions
-        auto inDims = ImageDimensions(GetInputSampleLayout(1), m_imageLayoutKind);
-
-        if (isFinalValidationPass && (inDims.m_width < m_kernelWidth || inDims.m_height < m_kernelHeight))
-            InvalidArgument("%ls %ls operation requires that input width be >= kernelWidth and input height >= kernelHeight.", NodeName().c_str(), OperationName().c_str());
-
-        // determine output tensor shape
-        const int kernelWidthCenter  = m_zeroPadding ? m_kernelWidth  % 2 : m_kernelWidth;
-        const int kernelHeightCenter = m_zeroPadding ? m_kernelHeight % 2 : m_kernelHeight;
-        auto outDims = ImageDimensions(
-            (inDims.m_width  - kernelWidthCenter)  / m_horizontalSubsample + 1,
-            (inDims.m_height - kernelHeightCenter) / m_verticalSubsample   + 1,
-            m_outputChannels);
-
-        size_t weightCols = m_kernelWidth * m_kernelHeight * inDims.m_numChannels;
-
-        // check/infer input [0] (weights)
-        // BUGBUG: For now, we treat the weights as a 2D matrix. They should be a tensor proper.
-        Input(0)->ValidateInferInputDimsFrom(TensorShape(m_outputChannels, weightCols));
-
-        if (isFinalValidationPass && (Input(0)->GetAsMatrixNumCols() != weightCols || Input(0)->GetAsMatrixNumRows() != m_outputChannels))
-            LogicError("convolutionWeight matrix %ls should have dimension [%d, %d] which is [outputChannels, kernelWidth * kernelHeight * inputChannels]", Input(0)->NodeName().c_str(), (int) m_outputChannels, (int) weightCols);
-
-        // that's our dimension
-        SetDims(outDims.AsTensorShape(m_imageLayoutKind), true);
-
-        if (isFinalValidationPass)
-        {
-            // set up the various engines and descriptor objects
-            if (m_convEng == nullptr)
-            {
-                // Note that ConvolveGeometry always uses CHW layout.
-                auto pad = TensorShape(m_zeroPadding ? m_kernelWidth / 2 : 0,
-                                       m_zeroPadding ? m_kernelHeight / 2 : 0,
-                                       0);
-                auto g = std::make_shared<ConvolveGeometry>(inDims.AsTensorShape(ImageLayoutKind::CHW),
-                                                            TensorShape(m_kernelWidth, m_kernelHeight, inDims.m_numChannels),
-                                                            TensorShape(m_outputChannels),
-                                                            TensorShape(m_horizontalSubsample, m_verticalSubsample, inDims.m_numChannels),
-                                                            ConvolveGeometry::BoolVec{true},
-                                                            // Note: this will have pad=true in channel dimension so must use inDims.m_numChannels stride in c dimension of the stride tensor.
-                                                            ConvolveGeometry::BoolVec{m_zeroPadding && (m_imageLayoutKind == ImageLayoutKind::CHW)},
-                                                            pad, pad);
-                m_convEng = ConvolutionEngine<ElemType>::Create(g, m_deviceId, m_imageLayoutKind, m_maxTempMemSizeInSamples);
-            }
-        }
-    }
-
-    void DumpNodeInfo(const bool printValues, const bool printMetadata, File& fstream) const override
-    {
-        Base::DumpNodeInfo(printValues, printMetadata, fstream);
-
-        auto inDims = ImageDimensions(GetInputSampleLayout(1), m_imageLayoutKind);
-        auto outDims = ImageDimensions(m_sampleLayout, m_imageLayoutKind);
-
-        char str[4096];
-        sprintf(str, "Input[Width:%lu, Height:%lu, Channels:%lu]  \n", inDims.m_width, inDims.m_height, inDims.m_numChannels);
-        fstream << string(str);
-        sprintf(str, "Kernel[Width:%lu, Height:%lu]  SubSample[Horizontal:%lu, Vertical:%lu]\n", m_kernelWidth, m_kernelHeight, m_horizontalSubsample, m_verticalSubsample);
-        fstream << string(str);
-        sprintf(str, "Output[Width:%lu, Height:%lu, Channels:%lu]  \n", outDims.m_width, outDims.m_height, outDims.m_numChannels);
-        fstream << string(str);
-        sprintf(str, "zeroPadding=%ls  maxTempMemSizeInSamples=%lu\n", m_zeroPadding ? L"true" : L"false", m_maxTempMemSizeInSamples);
-        fstream << string(str);
-    }
-
-    void SetmMaxTempMemSizeInSamples(const size_t maxTempMemSizeInSamples)
-    {
-        m_maxTempMemSizeInSamples = maxTempMemSizeInSamples;
-    }
-
-    // request matrices needed to do node function value evaluation
-    void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool) override
-    {
-        Base::RequestMatricesBeforeForwardProp(matrixPool);
-        RequestMatrixFromPool(m_tempMatrix, matrixPool);
-    }
-
-    // release gradient and temp matrices that no longer needed after all the children's gradients are computed.
-    void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool) override
-    {
-        Base::ReleaseMatricesAfterBackprop(matrixPool);
-        ReleaseMatrixToPool(m_tempMatrix, matrixPool);
-    }
-
-private:
-    size_t m_outputChannels;
-    size_t m_kernelWidth, m_kernelHeight;
-    size_t m_horizontalSubsample, m_verticalSubsample;
-    bool m_zeroPadding;
-    bool m_1DConvolutionOnGPUSparse;
-
-    shared_ptr<Matrix<ElemType>> m_tempMatrix;
-    size_t m_maxTempMemSizeInSamples; // can change during runtime
-
-    ImageLayoutKind m_imageLayoutKind; // how to interpret the tensor (which dimensions are X/Y and C)
-
-    std::unique_ptr<ConvolutionEngine<ElemType>> m_convEng;
-};
-
-template class ConvolutionNode<float>;
-template class ConvolutionNode<double>;
+//template <class ElemType>
+//class Convolution2DNode : public ComputationNode<ElemType>, public NumInputs<2>
+//{
+//    typedef ComputationNode<ElemType> Base;
+//    UsingComputationNodeMembersBoilerplate;
+//    static const std::wstring TypeName()
+//    {
+//        return L"Convolution2D";
+//    }
+//
+//public:
+//    Convolution2DNode(DEVICEID_TYPE deviceId, const wstring& name)
+//        : Base(deviceId, name),
+//          m_kernelWidth(SIZE_MAX),
+//          m_kernelHeight(SIZE_MAX),
+//          // initialize to dummy values so we catch missing initialization
+//          m_horizontalSubsample(SIZE_MAX),
+//          m_verticalSubsample(SIZE_MAX),
+//          m_zeroPadding(false),
+//          m_maxTempMemSizeInSamples(SIZE_MAX),
+//          m_imageLayoutKind(ImageLayoutKind::HWC)
+//    {
+//        SetDims(ImageDimensions::AsTensorShape(1, 1, 0, m_imageLayoutKind), 0);
+//    }
+//    Convolution2DNode(DEVICEID_TYPE deviceId, const wstring& name, const size_t kernelWidth, const size_t kernelHeight, const size_t outputChannels, const size_t horizontalSubsample, const size_t verticalSubsample, ImageLayoutKind imageLayoutKind,
+//                    const bool zeroPadding = false, const size_t maxTempMemSizeInSamples = 0)
+//        : Base(deviceId, name),
+//          m_outputChannels(outputChannels),
+//          m_kernelWidth(kernelWidth),
+//          m_kernelHeight(kernelHeight),
+//          m_horizontalSubsample(horizontalSubsample),
+//          m_verticalSubsample(verticalSubsample),
+//          m_zeroPadding(zeroPadding),
+//          m_maxTempMemSizeInSamples(maxTempMemSizeInSamples),
+//          m_imageLayoutKind(imageLayoutKind)
+//    {
+//        SetDims(ImageDimensions::AsTensorShape(1, 1, m_outputChannels, m_imageLayoutKind), 0); // TODO: necessary?
+//    }
+//    Convolution2DNode(const ScriptableObjects::IConfigRecordPtr configp)
+//        : Convolution2DNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"kernelWidth"), configp->Get(L"kernelHeight"), configp->Get(L"outputChannels"),
+//                          configp->Get(L"horizontalSubsample"), configp->Get(L"verticalSubsample"), ImageLayoutKindFrom(configp->Get(L"imageLayout")),
+//                          configp->Get(L"zeroPadding"), configp->Get(L"maxTempMemSizeInSamples"))
+//    {
+//        // weightNodeName, inputValueNodeName, kernelWidth, kernelHeight, outputChannels, horizontalSubsample, verticalSubsample, zeroPadding = false, maxTempMemSizeInSamples = 0
+//        AttachInputs(configp, this->GetExpectedNumInputs());
+//    }
+//
+//    void Save(File& fstream) const override
+//    {
+//        Base::Save(fstream);
+//        fstream << m_kernelWidth << m_kernelHeight << m_horizontalSubsample << m_verticalSubsample;
+//        uint32_t imageLayoutKind = (uint32_t) m_imageLayoutKind;
+//        uint32_t outputChannels = (uint32_t) m_outputChannels;
+//        fstream << outputChannels << imageLayoutKind;
+//        fstream << m_zeroPadding << m_maxTempMemSizeInSamples;
+//    }
+//
+//    void Load(File& fstream, size_t modelVersion) override
+//    {
+//        Base::Load(fstream, modelVersion);
+//        fstream >> m_kernelWidth >> m_kernelHeight >> m_horizontalSubsample >> m_verticalSubsample;
+//        uint32_t imageLayoutKind, outputChannels;
+//        fstream >> outputChannels >> imageLayoutKind;
+//        m_imageLayoutKind = (ImageLayoutKind) imageLayoutKind;
+//        m_outputChannels = outputChannels;
+//        SetDims(ImageDimensions::AsTensorShape(1, 1, m_outputChannels, m_imageLayoutKind), HasMBLayout()); // TODO: needed?
+//        fstream >> m_zeroPadding >> m_maxTempMemSizeInSamples;
+//    }
+//
+//    void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
+//    {
+//        Base::CopyTo(nodeP, newName, flags);
+//        if (flags & CopyNodeFlags::copyNodeValue)
+//        {
+//            auto node = dynamic_pointer_cast<Convolution2DNode<ElemType>>(nodeP);
+//            node->m_kernelWidth = m_kernelWidth;
+//            node->m_kernelHeight = m_kernelHeight;
+//
+//            node->m_horizontalSubsample = m_horizontalSubsample;
+//            node->m_verticalSubsample = m_verticalSubsample;
+//
+//            node->m_zeroPadding = m_zeroPadding;
+//
+//            node->m_maxTempMemSizeInSamples = m_maxTempMemSizeInSamples;
+//
+//            node->m_imageLayoutKind = m_imageLayoutKind;
+//
+//            node->m_tempMatrix->SetValue(*m_tempMatrix);
+//        }
+//    }
+//
+//    void BackpropTo(const size_t inputIndex, const FrameRange& fr) override
+//    {
+//        auto sliceOutputGrad = GradientFor(fr);
+//        auto sliceInput1Value = Input(1)->ValueFor(fr);
+//
+//        if (inputIndex == 0) // derivative with respect to the weight matrix
+//        {
+//            auto& grad = Input(0)->GradientAsMatrix();
+//            m_convEng->BackwardKernel(sliceOutputGrad, sliceInput1Value, grad, fr.IsAllFrames(), *m_tempMatrix);
+//        }
+//        else if (inputIndex == 1) // derivative with respect to the input feature
+//        {
+//            auto& input0 = Input(0)->ValueAsMatrix();
+//            auto sliceInput1Grad = Input(1)->GradientFor(fr);
+//            m_convEng->BackwardData(sliceOutputGrad, input0, sliceInput1Grad, *m_tempMatrix);
+//        }
+//    }
+//
+//    virtual bool OutputUsedInComputingInputNodesGradients() const override
+//    {
+//        // The Convolution2DNode does not require its output value for computing
+//        // the gradients of its input nodes
+//        return false;
+//    }
+//
+//    void ForwardProp(const FrameRange& fr) override
+//    {
+//        const Matrix<ElemType>& input0 = Input(0)->ValueAsMatrix();
+//        Matrix<ElemType> sliceInput1Value = Input(1)->ValueFor(fr);
+//        Matrix<ElemType> sliceOutputValue = ValueFor(fr);
+//
+//        // update the tensor dimension w.r.t. number of samples
+//#if NANCHECK
+//        input0.HasNan("Convolution-input0");
+//        sliceInput1Value.HasNan("Convolution-input1");
+//#endif
+//        m_convEng->Forward(sliceInput1Value, input0, sliceOutputValue, *m_tempMatrix);
+//#if NANCHECK
+//        sliceOutputValue.HasNan("Convolution");
+//#endif
+//    }
+//
+//    void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
+//    {
+//        Base::Validate(isFinalValidationPass);
+//        InferMBLayoutFromInputsForStandardCase();
+//
+//        // get input and output tensor shape and interpret as image dimensions
+//        auto inDims = ImageDimensions(GetInputSampleLayout(1), m_imageLayoutKind);
+//
+//        if (isFinalValidationPass && (inDims.m_width < m_kernelWidth || inDims.m_height < m_kernelHeight))
+//            InvalidArgument("%ls %ls operation requires that input width be >= kernelWidth and input height >= kernelHeight.", NodeName().c_str(), OperationName().c_str());
+//
+//        // determine output tensor shape
+//        const int kernelWidthCenter  = m_zeroPadding ? m_kernelWidth  % 2 : m_kernelWidth;
+//        const int kernelHeightCenter = m_zeroPadding ? m_kernelHeight % 2 : m_kernelHeight;
+//        auto outDims = ImageDimensions(
+//            (inDims.m_width  - kernelWidthCenter)  / m_horizontalSubsample + 1,
+//            (inDims.m_height - kernelHeightCenter) / m_verticalSubsample   + 1,
+//            m_outputChannels);
+//
+//        size_t weightCols = m_kernelWidth * m_kernelHeight * inDims.m_numChannels;
+//
+//        // check/infer input [0] (weights)
+//        // BUGBUG: For now, we treat the weights as a 2D matrix. They should be a tensor proper.
+//        Input(0)->ValidateInferInputDimsFrom(TensorShape(m_outputChannels, weightCols));
+//
+//        if (isFinalValidationPass && (Input(0)->GetAsMatrixNumCols() != weightCols || Input(0)->GetAsMatrixNumRows() != m_outputChannels))
+//            LogicError("convolutionWeight matrix %ls should have dimension [%d, %d] which is [outputChannels, kernelWidth * kernelHeight * inputChannels]", Input(0)->NodeName().c_str(), (int) m_outputChannels, (int) weightCols);
+//
+//        // that's our dimension
+//        SetDims(outDims.AsTensorShape(m_imageLayoutKind), true);
+//
+//        if (isFinalValidationPass)
+//        {
+//            // set up the various engines and descriptor objects
+//            if (m_convEng == nullptr)
+//            {
+//                // Note that ConvolveGeometry always uses CHW layout.
+//                auto pad = TensorShape(m_zeroPadding ? m_kernelWidth / 2 : 0,
+//                                       m_zeroPadding ? m_kernelHeight / 2 : 0,
+//                                       0);
+//                auto geometry = std::make_shared<ConvolveGeometry>(inDims.AsTensorShape(ImageLayoutKind::CHW),
+//                                                                   TensorShape(m_kernelWidth, m_kernelHeight, inDims.m_numChannels),
+//                                                                   TensorShape(m_outputChannels),
+//                                                                   TensorShape(m_horizontalSubsample, m_verticalSubsample, inDims.m_numChannels),
+//                                                                   ConvolveGeometry::BoolVec{true},
+//                                                                   // Note: this will have pad=true in channel dimension so must use inDims.m_numChannels stride in c dimension of the stride tensor.
+//                                                                   ConvolveGeometry::BoolVec{m_zeroPadding && (m_imageLayoutKind == ImageLayoutKind::CHW)},
+//                                                                   pad, pad);
+//                m_convEng = ConvolutionEngine<ElemType>::Create(geometry, m_deviceId, m_imageLayoutKind, m_maxTempMemSizeInSamples);
+//            }
+//        }
+//    }
+//
+//    void DumpNodeInfo(const bool printValues, const bool printMetadata, File& fstream) const override
+//    {
+//        Base::DumpNodeInfo(printValues, printMetadata, fstream);
+//
+//        auto inDims = ImageDimensions(GetInputSampleLayout(1), m_imageLayoutKind);
+//        auto outDims = ImageDimensions(m_sampleLayout, m_imageLayoutKind);
+//
+//        char str[4096];
+//        sprintf(str, "Input[Width:%lu, Height:%lu, Channels:%lu]  \n", inDims.m_width, inDims.m_height, inDims.m_numChannels);
+//        fstream << string(str);
+//        sprintf(str, "Kernel[Width:%lu, Height:%lu]  SubSample[Horizontal:%lu, Vertical:%lu]\n", m_kernelWidth, m_kernelHeight, m_horizontalSubsample, m_verticalSubsample);
+//        fstream << string(str);
+//        sprintf(str, "Output[Width:%lu, Height:%lu, Channels:%lu]  \n", outDims.m_width, outDims.m_height, outDims.m_numChannels);
+//        fstream << string(str);
+//        sprintf(str, "zeroPadding=%ls  maxTempMemSizeInSamples=%lu\n", m_zeroPadding ? L"true" : L"false", m_maxTempMemSizeInSamples);
+//        fstream << string(str);
+//    }
+//
+//    void SetmMaxTempMemSizeInSamples(const size_t maxTempMemSizeInSamples)
+//    {
+//        m_maxTempMemSizeInSamples = maxTempMemSizeInSamples;
+//    }
+//
+//    // request matrices needed to do node function value evaluation
+//    void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool) override
+//    {
+//        Base::RequestMatricesBeforeForwardProp(matrixPool);
+//        RequestMatrixFromPool(m_tempMatrix, matrixPool);
+//    }
+//
+//    // release gradient and temp matrices that no longer needed after all the children's gradients are computed.
+//    void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool) override
+//    {
+//        Base::ReleaseMatricesAfterBackprop(matrixPool);
+//        ReleaseMatrixToPool(m_tempMatrix, matrixPool);
+//    }
+//
+//private:
+//    size_t m_outputChannels;
+//    size_t m_kernelWidth, m_kernelHeight;
+//    size_t m_horizontalSubsample, m_verticalSubsample;
+//    bool m_zeroPadding;
+//    bool m_1DConvolutionOnGPUSparse;
+//
+//    shared_ptr<Matrix<ElemType>> m_tempMatrix;
+//    size_t m_maxTempMemSizeInSamples; // can change during runtime
+//
+//    ImageLayoutKind m_imageLayoutKind; // how to interpret the tensor (which dimensions are X/Y and C)
+//
+//    std::unique_ptr<ConvolutionEngine<ElemType>> m_convEng;
+//};
 
 // -----------------------------------------------------------------------
 // PoolingNodeBase (input)
@@ -736,9 +722,6 @@ public:
     }
 };
 
-template class MaxPoolingNode<float>;
-template class MaxPoolingNode<double>;
-
 // -----------------------------------------------------------------------
 // AveragePoolingNode
 // -----------------------------------------------------------------------
@@ -774,8 +757,5 @@ public:
             m_convEng = ConvolutionEngine<ElemType>::Create(m_geometry, m_deviceId, m_imageLayoutKind, 0, PoolKind::Average);
     }
 };
-
-template class AveragePoolingNode<float>;
-template class AveragePoolingNode<double>;
 
 } } }

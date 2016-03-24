@@ -127,7 +127,6 @@ static shared_ptr<ComputationNode<ElemType>> CreateNode(const std::wstring& node
     if      (nodeType == OperationNameOf(AveragePoolingNode))       return New<AveragePoolingNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(BatchNormalizationNode))   return New<BatchNormalizationNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(ConvolutionNode))          return New<ConvolutionNode<ElemType>>(forward<_Types>(_Args)...);
-    else if (nodeType == OperationNameOf(NDConvolutionNode))        return New<NDConvolutionNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(SparseInputValue))         return New<SparseInputValue<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(InputValue))               return New<InputValue<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(LearnableParameter))       return New<LearnableParameter<ElemType>>(forward<_Types>(_Args)...);
@@ -229,6 +228,29 @@ shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Creat
 }
 
 template <class ElemType>
+shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::CreateConvolutionNode(const std::wstring& nodeName, const TensorShape& kernelShape, const TensorShape& mapCount,
+                                                                                                 const TensorShape& strideShape, const std::vector<bool>& sharing,
+                                                                                                 const std::vector<bool>& autoPadding, const TensorShape& lowerPad, const TensorShape& upperPad,
+                                                                                                 ImageLayoutKind imageLayout, size_t maxTempMemSizeInSamples)
+{
+    return net.AddNodeToNetWithElemType(New<ConvolutionNode<ElemType>>(net.GetDeviceId(), nodeName,
+                                                                       kernelShape, mapCount, strideShape,
+                                                                       sharing, autoPadding, lowerPad, upperPad,
+                                                                       imageLayout, maxTempMemSizeInSamples, PoolKind::None));
+}
+
+template <class ElemType>
+shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::CreatePoolingNode(const std::wstring& nodeName, PoolKind poolKind, const TensorShape& kernelShape, const TensorShape& strideShape,
+                                                                                             const std::vector<bool>& autoPadding, const TensorShape& lowerPad, const TensorShape& upperPad,
+                                                                                             ImageLayoutKind imageLayout)
+{
+    return net.AddNodeToNetWithElemType(New<ConvolutionNode<ElemType>>(net.GetDeviceId(), nodeName,
+        kernelShape, TensorShape(1), strideShape,
+        std::vector<bool>{false}, autoPadding, lowerPad, upperPad,
+        imageLayout, 0, poolKind));
+}
+
+template <class ElemType>
 shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::CreateMaxPoolingNode(const std::wstring& nodeName,
                                                                                                 const size_t windowWidth, const size_t windowHeight, const size_t horizontalSubsample, const size_t verticalSubsample, ImageLayoutKind imageLayoutKind)
 {
@@ -260,13 +282,45 @@ shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Creat
 template <class ElemType>
 shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Convolution(const ComputationNodePtr weight,
                                                                                        const ComputationNodePtr inputValues,
-                                                                                       const size_t kernelWidth, const size_t kernelHeight, const size_t outputChannels, const size_t horizontalSubsample, const size_t verticalSubsample, ImageLayoutKind imageLayoutKind, const bool zeroPadding, const size_t maxTempMemSizeInSamples,
+                                                                                       const size_t kernelWidth, const size_t kernelHeight, const size_t outputChannels, 
+                                                                                       const size_t horizontalSubsample, const size_t verticalSubsample, 
+                                                                                       ImageLayoutKind imageLayoutKind, const bool zeroPadding, const size_t maxTempMemSizeInSamples,
                                                                                        const std::wstring nodeName)
 {
     return net.AddNodeToNetAndAttachInputs(New<ConvolutionNode<ElemType>>(net.GetDeviceId(), nodeName,
                                                                           kernelWidth, kernelHeight, outputChannels, horizontalSubsample, verticalSubsample, imageLayoutKind, zeroPadding,
                                                                           maxTempMemSizeInSamples),
                                                                           weight, inputValues);
+}
+
+template <class ElemType>
+shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Convolution(const ComputationNodePtr weight,
+                                                                                       const ComputationNodePtr inputValues, 
+                                                                                       const TensorShape& kernelShape, const TensorShape& mapCount, 
+                                                                                       const TensorShape& strideShape, const std::vector<bool>& sharing,
+                                                                                       const std::vector<bool>& autoPadding, const TensorShape& lowerPad, const TensorShape& upperPad,
+                                                                                       ImageLayoutKind imageLayout, size_t maxTempMemSizeInSamples,
+                                                                                       const std::wstring nodeName)
+{
+    return net.AddNodeToNetAndAttachInputs(New<ConvolutionNode<ElemType>>(net.GetDeviceId(), nodeName,
+                                                                          kernelShape, mapCount, strideShape,
+                                                                          sharing, autoPadding, lowerPad, upperPad,
+                                                                          imageLayout, maxTempMemSizeInSamples, PoolKind::None),
+                                                                          weight, inputValues);
+}
+
+template <class ElemType>
+shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Pooling(const ComputationNodePtr inputValues,
+                                                                                   PoolKind poolKind, const TensorShape& kernelShape, const TensorShape& strideShape,
+                                                                                   const std::vector<bool>& autoPadding, const TensorShape& lowerPad, const TensorShape& upperPad,
+                                                                                   ImageLayoutKind imageLayout,
+                                                                                   const std::wstring nodeName)
+{
+    return net.AddNodeToNetAndAttachInputs(New<ConvolutionNode<ElemType>>(net.GetDeviceId(), nodeName,
+                                                                          kernelShape, TensorShape(1), strideShape,
+                                                                          std::vector<bool>{false}, autoPadding, lowerPad, upperPad,
+                                                                          imageLayout, 0, poolKind),
+                                                                          inputValues);
 }
 
 template <class ElemType>

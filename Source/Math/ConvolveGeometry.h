@@ -162,6 +162,9 @@ public:
 
                 int diff = min - ((int)m_inputShape[i] - max);
                 assert(std::abs(diff) <= 1);
+
+                UNUSED(padded);
+                UNUSED(diff);
 #endif
             }
 
@@ -443,7 +446,7 @@ public:
         {
             assert(inputShape[i] >= 1);
             if (kernelShape[i] > inputShape[i])
-                InvalidArgument("NDConvolution operation requires that kernel dim %d <= input dim %d.", (int)kernelShape[i], (int)inputShape[i]);
+                InvalidArgument("Convolution operation requires that kernel dim %d <= input dim %d.", (int)kernelShape[i], (int)inputShape[i]);
 
             size_t delta = stride[stride.GetRank() == 1 ? 0 : i];
             size_t dim = inputShape[i];
@@ -465,7 +468,7 @@ public:
             {
                 size_t size = (dimOut - 1) * delta + kernelShape[i];
                 if (size != dim)
-                    InvalidArgument("NDConvolution requires that kernel fills the entire space if auto-padding is disabled.");
+                    InvalidArgument("Convolution requires that kernel fills the entire space if auto-padding is disabled.");
             }
             if (mapCount.size() > 1)
                 dimOut *= mapCount[i];
@@ -480,10 +483,9 @@ public:
         size_t mapCountTotal = mapCount.GetNumElements();
         size_t sizeOut = dimsOut.GetNumElements();
         assert((sizeOut % mapCountTotal) == 0);
-#ifdef NDEBUG
         UNUSED(mapCountTotal);
         UNUSED(sizeOut);
-#endif
+
         return dimsOut;
     }
 

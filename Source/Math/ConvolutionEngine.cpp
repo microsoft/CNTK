@@ -156,17 +156,17 @@ protected:
 
     void ForwardCore(const Mat& in, const Mat& kernel, Mat& out, Mat& /*workspace*/) override
     {
-        in.NDConvolutionForward(kernel, m_mpRowCol, *m_mpRowIwht, *m_mpRowRun, *m_runs, out);
+        in.ConvolutionForward(kernel, m_mpRowCol, *m_mpRowIwht, *m_mpRowRun, *m_runs, out);
     }
 
     void BackwardDataCore(const Mat& srcGrad, const Mat& kernel, Mat& grad, Mat& /*workspace*/) override
     {
-        srcGrad.NDConvolutionBackwardData(kernel, m_mpRowCol, *m_mpRowIwht, *m_mpRowRun, *m_runs, grad);
+        srcGrad.ConvolutionBackwardData(kernel, m_mpRowCol, *m_mpRowIwht, *m_mpRowRun, *m_runs, grad);
     }
 
     void BackwardKernelCore(const Mat& srcGrad, const Mat& in, Mat& kernelGrad, bool /*allowReuse*/, Mat& /*workspace*/) override
     {
-        srcGrad.NDConvolutionBackwardKernel(in, m_mpRowCol, *m_mpRowIwht, *m_mpRowRun, *m_runs, kernelGrad);
+        srcGrad.ConvolutionBackwardKernel(in, m_mpRowCol, *m_mpRowIwht, *m_mpRowRun, *m_runs, kernelGrad);
     }
 
     void EnsurePoolingInitialized() override
@@ -185,11 +185,11 @@ protected:
     {
         if (m_poolKind == PoolKind::Max)
         {
-            in.NDMaxPoolingForward(m_mpRowCol, *m_mpRowIndices, *m_indices, out);
+            in.MaxPoolingForward(m_mpRowCol, *m_mpRowIndices, *m_indices, out);
         }
         else if (m_poolKind == PoolKind::Average)
         {
-            in.NDAveragePoolingForward(m_mpRowCol, *m_mpRowIndices, *m_indices, out);
+            in.AveragePoolingForward(m_mpRowCol, *m_mpRowIndices, *m_indices, out);
         }
         else
             InvalidArgument("Pooling type %d is not supported.", (int)m_poolKind);
@@ -200,11 +200,11 @@ protected:
     {
         if (m_poolKind == PoolKind::Max)
         {
-            srcGrad.NDMaxPoolingBackward(out, in, m_mpRowCol, *m_mpRowIndices, *m_indices, grad);
+            srcGrad.MaxPoolingBackward(out, in, m_mpRowCol, *m_mpRowIndices, *m_indices, grad);
         }
         else if (m_poolKind == PoolKind::Average)
         {
-            srcGrad.NDAveragePoolingBackward(m_mpRowCol, *m_mpRowIndices, *m_indices, grad);
+            srcGrad.AveragePoolingBackward(m_mpRowCol, *m_mpRowIndices, *m_indices, grad);
         }
         else
             InvalidArgument("Pooling type %d is not supported.", (int)m_poolKind);
