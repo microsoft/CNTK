@@ -1,13 +1,12 @@
 # CNTK
 
 ## Latest news
-*2016-02-29.* Added documentation for the ImageReader. Added ZIP files support to the ImageReader.
+*2016-03-24.* New Text Reader (CNTKTextFormatReader) is available
+Read description here https://github.com/Microsoft/CNTK/wiki/CNTKTextFormat-Reader
 
-*2016-02-17.* CNTK Contribution Guidelines are published.
-
-*2016-02-15.* The first part of CNTK tutorial is published.
-
-*2016-02-10.* Another binary release, containing all CNTK flavours is published.
+*2016-02-29.* Added ZIP files support to the ImageReader
+Examples: https://github.com/Microsoft/CNTK/wiki/Image-reader
+Updated build steps at https://github.com/Microsoft/CNTK/wiki/Setup-CNTK-on-your-machine
 
 See [all news](https://github.com/Microsoft/CNTK/wiki/News).
 
