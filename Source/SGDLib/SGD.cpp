@@ -217,7 +217,7 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
     // TODO: Should this be done in SGD::Adapt()?
     // TODO: Redo this leveraging that we now have shared_ptrs. It is probably even OK if both networks share feature nodes.
     // TODO: Then we can also share the MBLayout; which currently is copied by value.
-    std::vector<ComputationNodeBasePtr> refFeatureNodes;
+    std::vector<ComputationNodeBasePtr> refFeatureNodes; // we keep the original network's features here
     if (m_needAdaptRegularization && m_adaptationRegType == AdaptationRegType::KL && refNode != nullptr)
     {
         // replace input nodes in ref network by input nodes of the main network
@@ -226,7 +226,7 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
         {
             // we need to keep this info to undo this later
             // TODO: After the change to shared_ptrs, this may no longer be necessary.
-            refFeatureNodes[i] = refNet->GetNodeFromName(featureNodes[i]->NodeName());
+            refFeatureNodes[i] = refNet->GetNodeFromName(featureNodes[i]->NodeName()); // remember so that we can restore them later
             refNet->ChangeNode(featureNodes[i]->NodeName(), featureNodes[i]);
         }
         refNet->InvalidateCompiledNetwork(); // prepare to re-compile
