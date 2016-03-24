@@ -1,0 +1,32 @@
+dataDir: ../../../Data
+tags:
+     # running on every BVT job in 'L' (LSTM) leg in Debug-GPU and Release-CPU configurations:
+     - bvt-l  (build_sku == 'gpu') and ((flavor=='debug') ^ (device=='cpu'))
+     # running unconditionally on every Nightly job in 'L' leg
+     - nightly-l (build_sku == 'gpu')
+
+testCases:
+  CNTK Run must be completed:
+    patterns:
+      - ^COMPLETED
+
+  Must train epochs in exactly same order and parameters:
+    patterns:
+      - ^Starting Epoch {{integer}}
+      - learning rate per sample = {{float}}
+      - momentum = {{float,tolerance=.01%}}
+
+  Epochs must be finished with expected results:
+    patterns:
+      - ^Finished Epoch[{{integer}} of {{integer}}]
+      - TrainLossPerSample = {{float,tolerance=.1%}}
+      - EvalErrPerSample = {{float,tolerance=.1%}}
+      - AvgLearningRatePerSample = {{float,tolerance=0.001%}}
+
+  Per-minibatch training results must match:
+    patterns:
+      - ^ Epoch[{{integer}} of {{integer}}]-Minibatch[{{integer}}-{{integer}}
+      - SamplesSeen = {{integer}}
+      - TrainLossPerSample = {{float,tolerance=.1%}}
+      - EvalErr[0]PerSample = {{float,tolerance=.1%}}
+
