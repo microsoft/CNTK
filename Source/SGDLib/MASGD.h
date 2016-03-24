@@ -102,7 +102,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         typedef shared_ptr<ComputationNode<ElemType>> ComputationNodePtr;
      public:
-         IMASGD(const std::shared_ptr<MPIWrapper>& pMPI, size_t perfReportFreq)
+         IMASGD(const MPIWrapperPtr& pMPI, size_t perfReportFreq)
              :m_MAworkerStatus(pMPI->NumNodesInUse(), MAWorkerStatus::NOTSTARTED), 
              m_numSyncPerformed(0), 
              m_numWorkers(pMPI->NumNodesInUse()), 
@@ -286,7 +286,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         size_t                      m_numWorkers; 
         size_t                      m_myRank;
         MASGDPerfStats              m_perfReporter;
-        std::shared_ptr<MPIWrapper> m_pMPI;
+        MPIWrapperPtr m_pMPI;
  };
 
 
@@ -299,7 +299,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         using Base::DownCast;
 
     public:
-        BasicModelAveragingSGD(const std::shared_ptr<MPIWrapper>& pMPI, size_t reportFreq)
+        BasicModelAveragingSGD(const MPIWrapperPtr& pMPI, size_t reportFreq)
             :Base(pMPI, reportFreq)
         {}
 
