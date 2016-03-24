@@ -27,15 +27,14 @@ public:
     using Base::m_numRows;
     using Base::m_numCols;
     using Base::m_sliceViewOffset;
-    using Base::m_nz;
-    using Base::m_externalBuffer;
+    using Base::GetExternalBuffer;
+    using Base::SetExternalBuffer;
     using Base::SetArray;
     using Base::GetNumStorageRows;
     using Base::SetNumStorageRows;
     using Base::GetNumStorageCols;
     using Base::SetNumStorageCols;
     using Base::SetComputeDeviceId;
-    using Base::SetNzCount;
     using Base::Clear;
     using Base::SetSizeAllocated;
     using Base::GetSizeAllocated;
@@ -52,8 +51,10 @@ public:
     using Base::SetTempHostBufferSize;
     using Base::BufferSizeAllocated;
     using Base::GetRowToId;
+    using Base::VerifyResizable;
     // without this, base members would require to use thi-> in GCC
 public:
+    using Base::VerifyWritable;
     using Base::SetRowToId;
     using Base::GetComputeDeviceId;
     using Base::GetArray;
@@ -102,16 +103,29 @@ public:
         return GetFormat() != matrixFormatSparseCSC ? GetArray() : GetArray() + SecondaryIndexValueAt(0);
     }
 
+	GPUSPARSE_INDEX_TYPE NzCount() const
+    {
+        if (GetFormat() == matrixFormatSparseCSC || GetFormat() == matrixFormatSparseCSR )
+			return SecondaryIndexValueAt(m_numCols) - SecondaryIndexValueAt(0);
+        else if (GetFormat() == matrixFormatSparseBlockCol)
+            return (int)(m_numRows * GetBlockSize());
+        else
+			NOT_IMPLEMENTED;
+
+    }
     inline size_t NzSize() const
     {
-        return sizeof(ElemType) * m_nz;
+        return sizeof(ElemType) * NzCount();
     } // actual number of element bytes in use
 
     inline size_t GetNumNZElements() const
     {
-        return m_nz;
+        return NzCount();
     }
 
+	// The sparse matrix representation of CSC/CSR uses one large matrix (m_pArray) with offsets to the Major/Secondary index location.
+	// m_pArray [0,nz] are the nz elements, [nz+1,2*nz+1] is the major index location, and [2*nz+2,2*nz+2+ numcols/rows] is the secondary
+	// index location.
     GPUSPARSE_INDEX_TYPE* MajorIndexLocation() const // row/col ids in CSC/CSR format, blockId2col/blockId2row in BlockCol/BlockRow format
     {
         return (GPUSPARSE_INDEX_TYPE*) (GetArray() + GetSizeAllocated());
@@ -125,7 +139,7 @@ public:
     // TODO: Comment these methods more thoroughly, e.g., why it uses numNZ instead of m_elemSizeAllocated.
     size_t MajorIndexCount() const
     {
-        return MajorIndexCount(m_numRows, m_numCols, m_nz, GetFormat());
+        return MajorIndexCount(m_numRows, m_numCols, NzCount(), GetFormat());
     }
 
     size_t MajorIndexCount(const size_t numRows, const size_t numCols, const size_t numNZ, const MatrixFormat format) const
@@ -191,9 +205,10 @@ public:
     }
 	*/
 
+	// SecondaryIndexValueAt calls SecondaryIndexLocation which is already appropriately offset by m_sliceViewOffset
     inline ElemType* BufferPointer() const
     {
-        return GetArray();
+        return (GetArray() + (GetFormat() == matrixFormatSparseCSC ? SecondaryIndexValueAt(0) : 0));
     }
 
     inline size_t GetNumElemAllocated() const

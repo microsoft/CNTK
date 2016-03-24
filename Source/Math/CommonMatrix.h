@@ -222,6 +222,10 @@ enum MatrixFlags
 template <class ElemType>
 class BaseMatrixStorage : public enable_shared_from_this<BaseMatrixStorage<ElemType>>
 {
+
+private:
+    BaseMatrixStorage<ElemType>(const BaseMatrixStorage<ElemType>& ) = delete;
+    BaseMatrixStorage<ElemType>& operator=(const BaseMatrixStorage<ElemType>& ) = delete;
 public:
 
     BaseMatrixStorage() 
@@ -243,127 +247,106 @@ public:
 
     void ReleaseMemory()
     {
-        if (m_computeDevice < 0)
+        if (!m_externalBuffer)
         {
-            delete[] m_pArray;
-            m_pArray = nullptr;
-            m_nzValues = nullptr;
+            if (m_computeDevice < 0)
+            {
+                delete[] m_pArray;
+                m_pArray = nullptr;
+                m_nzValues = nullptr;
 
-            delete[] m_unCompIndex;
-            m_unCompIndex = nullptr;
+                delete[] m_unCompIndex;
+                m_unCompIndex = nullptr;
 
-            delete[] m_compIndex;
-            m_compIndex = nullptr;
+                delete[] m_compIndex;
+                m_compIndex = nullptr;
 
-            delete[] m_blockIds;
-            m_blockIds = nullptr;
-        }
-        else
-        {
+                delete[] m_blockIds;
+                m_blockIds = nullptr;
+            }
+            else
+            {
 #ifndef CPUONLY
-            if (m_pArray != nullptr)
-                TracingGPUMemoryAllocator::Free<ElemType>(m_computeDevice, m_pArray, true);
-            m_pArray = nullptr;
+                if (m_pArray != nullptr)
+                    TracingGPUMemoryAllocator::Free<ElemType>(m_computeDevice, m_pArray, true);
+                m_pArray = nullptr;
 
-            if (m_rowToId != nullptr)
-				TracingGPUMemoryAllocator::Free<GPUSPARSE_INDEX_TYPE>(m_computeDevice, m_rowToId, true);
-            m_rowToId = nullptr;
+                if (m_rowToId != nullptr)
+                    TracingGPUMemoryAllocator::Free<GPUSPARSE_INDEX_TYPE>(m_computeDevice, m_rowToId, true);
+                m_rowToId = nullptr;
 #endif
 
-            delete[](byte*) m_tempHostBuffer;
-            m_tempHostBuffer = nullptr;
+                delete[](byte*) m_tempHostBuffer;
+                m_tempHostBuffer = nullptr;
+            }
+            m_elemSizeAllocated = 0;
+            m_totalBufferSizeAllocated = 0;
         }
-        m_elemSizeAllocated = 0;
-        m_totalBufferSizeAllocated = 0;
     }
 
-    //MatrixFormat m_format;
     MatrixFormat GetFormat() const { return m_format; }
     void SetFormat(MatrixFormat format) { m_format = format; }
 
-    //mutable DEVICEID_TYPE m_computeDevice; // current GPU device Id or CPUDEVICE
-    virtual DEVICEID_TYPE GetComputeDeviceId() const { return m_computeDevice; }
+    bool GetExternalBuffer() const { return m_externalBuffer; }
+    void SetExternalBuffer(bool external) { m_externalBuffer = external; }
+
+    DEVICEID_TYPE GetComputeDeviceId() const { return m_computeDevice; }
     void SetComputeDeviceId(const DEVICEID_TYPE computeId) const { m_computeDevice = computeId; }
 
-    //size_t m_numRows;
     size_t GetNumStorageRows() const { return m_numRows; }
     void SetNumStorageRows(size_t rows) { m_numRows = rows; }
 
-    //size_t m_numCols;
     size_t GetNumStorageCols() const { return m_numCols; }
     void SetNumStorageCols(size_t cols) { m_numCols = cols; }
 
-    //size_t m_elemSizeAllocated;
     size_t GetSizeAllocated() const { return m_elemSizeAllocated; }
     void SetSizeAllocated(size_t alloc) { m_elemSizeAllocated = alloc; }
 
     size_t GetNumStorageElements() const { return m_numRows * m_numCols; }
     bool IsEmpty() const { return m_numRows == 0 || m_numCols == 0; }
 
-    //ElemType* m_pArray;
-    ElemType* GetArray() { return m_pArray; }
     ElemType* GetArray() const { return m_pArray; }
-    void SetArray(ElemType* parray) { m_pArray = parray; }
+    void SetArray(ElemType* pArray) { m_pArray = pArray; }
 
-    //size_t m_totalBufferSizeAllocated;
     size_t BufferSizeAllocated() const { return m_totalBufferSizeAllocated; }
     void SetBufferSizeAllocated(size_t alloc) { m_totalBufferSizeAllocated = alloc; }
     
-    //size_t m_blockSize;                      // block size
     size_t GetBlockSize() const { return m_blockSize; }
     void SetBlockSize(size_t blockSize) { m_blockSize = blockSize; }
 
-    //mutable GPUSPARSE_INDEX_TYPE* m_rowToId; // the id showing the order row number is observed in the nnz values.
-    GPUSPARSE_INDEX_TYPE* GetRowToId() { return m_rowToId; }
-    const GPUSPARSE_INDEX_TYPE* GetRowToId() const { return m_rowToId; }
+    GPUSPARSE_INDEX_TYPE* GetRowToId() const { return m_rowToId; }
     void SetRowToId(GPUSPARSE_INDEX_TYPE* parray) { m_rowToId = parray; }
 
-    //mutable void* m_tempHostBuffer; // used to copy values.
-    void* GetTempHostBuffer() { return m_tempHostBuffer; }
     void* GetTempHostBuffer() const { return m_tempHostBuffer; }
-    void SetTempHostBuffer(void* buffer) { m_tempHostBuffer = buffer; }
     void SetTempHostBuffer(void* buffer) const { m_tempHostBuffer = buffer; }
 
-    //mutable size_t m_tempHostBufferSize;
-    size_t GetTempHostBufferSize() { return m_tempHostBufferSize; }
     size_t GetTempHostBufferSize() const { return m_tempHostBufferSize; }
-    void SetTempHostBufferSize(size_t bufferSize) { m_tempHostBufferSize = bufferSize; }
     void SetTempHostBufferSize(size_t bufferSize) const { m_tempHostBufferSize = bufferSize; }
 
-    //int m_colIdx; // used to SetValue()
     int GetColIdx() const { return m_colIdx; }
     void SetColIdx(int idx) { m_colIdx = idx; }
 
-    //size_t m_compIndexSize;
     size_t GetCompIndexSize() const { return m_compIndexSize; }
     void SetCompIndexSize(size_t indexSize) { m_compIndexSize = indexSize; }
 
-    //ElemType* m_nzValues;
     ElemType* GetNzValues() { return m_nzValues; }
     void SetNzValues(ElemType* values) { m_nzValues = values; }
 
-    //size_t* m_blockIds;    // block ids
-    size_t* GetBlockIds() { return m_blockIds; }
-    const size_t* GetBlockIds() const { return m_blockIds; }
+    size_t* GetBlockIds() const { return m_blockIds; }
     void SetBlockIds(size_t* blockIds) { m_blockIds = blockIds; }
 
-    //size_t m_blockIdShift; // used to get efficient slice, actual col = blockIds[j] - m_blockIdShift
-    size_t GetBlockIdShift() { return m_blockIdShift; }
     size_t GetBlockIdShift() const { return m_blockIdShift; }
     void SetBlockIdShift(size_t blockIdShift) { m_blockIdShift = blockIdShift; }
 
-    //CPUSPARSE_INDEX_TYPE* m_unCompIndex; // row/col ids in CSC/CSR format
-    CPUSPARSE_INDEX_TYPE* GetUnCompIndex() { return m_unCompIndex; }
     CPUSPARSE_INDEX_TYPE* GetUnCompIndex() const { return m_unCompIndex; }
     void SetUnCompIndex(CPUSPARSE_INDEX_TYPE* parray) { m_unCompIndex = parray; }
     
-    //CPUSPARSE_INDEX_TYPE* m_compIndex;   // begin ids of col/row in CSC/CSR format
-    CPUSPARSE_INDEX_TYPE* GetCompIndex() { return m_compIndex; }
     CPUSPARSE_INDEX_TYPE* GetCompIndex() const { return m_compIndex; }
     void SetCompIndex(CPUSPARSE_INDEX_TYPE* parray) { m_compIndex = parray; }
 
 	void ZeroInit(const MatrixFormat matrixFormat = matrixFormatDense, const DEVICEID_TYPE computeDevice = -1)
     {
+        m_externalBuffer           = false;
         m_format                   = matrixFormat;
         m_computeDevice            = computeDevice;
 		m_numRows                  = 0;
@@ -371,7 +354,7 @@ public:
 		m_elemSizeAllocated        = 0;
 		m_pArray                   = nullptr;
 		m_totalBufferSizeAllocated = 0;
-		m_blockSize                = 0;                      // block size
+		m_blockSize                = 0; // block size
 		m_rowToId                  = nullptr; // the id showing the order row number is observed in the nnz values.
 		m_tempHostBuffer           = nullptr; // used to copy values.
 		m_tempHostBufferSize       = 0;
@@ -379,24 +362,29 @@ public:
 		m_compIndexSize            = 0;
 		m_nzValues                 = nullptr;
 		m_unCompIndex              = nullptr; // row/col ids in CSC/CSR format
-		m_compIndex                = nullptr;   // begin ids of col/row in CSC/CSR format
-		m_blockIds                 = nullptr;    // block ids
+		m_compIndex                = nullptr; // begin ids of col/row in CSC/CSR format
+		m_blockIds                 = nullptr; // block ids
 		m_blockIdShift             = 0; // used to get efficient slice, actual col = blockIds[j] - m_blockIdShift
     }
 
 protected:
-
-
-protected:
+	// **************************
+	// Variables requried by all matrices
+	// **************************
     MatrixFormat m_format;
     mutable DEVICEID_TYPE m_computeDevice; // current GPU device Id or CPUDEVICE
+    bool m_externalBuffer; // is the buffer used by this matrix,
 
+	// m_numRows and m_numCols should be removed
     size_t m_numRows;
     size_t m_numCols;
     size_t m_elemSizeAllocated;
     ElemType* m_pArray;
 
-	// GPU copied
+	// **************************
+	// GPUSparseMatrix variables
+	// **************************
+
     size_t m_totalBufferSizeAllocated;
 
     // used by the blockCol and blockRow format
@@ -406,9 +394,10 @@ protected:
     mutable void* m_tempHostBuffer; // used to copy values.
     mutable size_t m_tempHostBufferSize;
 
-    //GPUSparseMatrix* m_sliceOf; // if this is a slice, then this points to the owning matrix object that we sliced from
+	// **************************
+	// CPUSparseMatrix variables
+	// **************************
 
-	// CPU copied
     int m_colIdx; // used to SetValue()
     size_t m_compIndexSize;
     ElemType* m_nzValues;
@@ -421,7 +410,6 @@ protected:
     size_t* m_blockIds;    // block ids
     size_t m_blockIdShift; // used to get efficient slice, actual col = blockIds[j] - m_blockIdShift
 
-    //CPUSparseMatrix* m_sliceOf; // if this is a slice, then this points to the owning matrix object that we sliced from
 };
 
 // -----------------------------------------------------------------------
@@ -432,85 +420,61 @@ template <class ElemType>
 class MATH_API BaseMatrix
 {
 public:
-    //MatrixFormat m_format;
     MatrixFormat GetFormat() const { return m_sob->GetFormat(); }
     void SetFormat(MatrixFormat format) { m_sob->SetFormat(format); }
 
-    //mutable DEVICEID_TYPE m_computeDevice; // current GPU device Id or CPUDEVICE
-    virtual DEVICEID_TYPE GetComputeDeviceId() const { return m_sob->GetComputeDeviceId(); }
+    bool GetExternalBuffer() const { return m_sob->GetExternalBuffer(); }
+    void SetExternalBuffer(bool external) { m_sob->SetExternalBuffer(external); }
+
+    DEVICEID_TYPE GetComputeDeviceId() const { return m_sob->GetComputeDeviceId(); }
     void SetComputeDeviceId(const DEVICEID_TYPE computeId) const { m_sob->SetComputeDeviceId(computeId); }
 
-    //size_t m_numRows;
     size_t GetNumStorageRows() const { return m_sob->GetNumStorageRows(); }
     void SetNumStorageRows(size_t rows) { m_sob->SetNumStorageRows(rows); }
 
-    //size_t m_numCols;
     size_t GetNumStorageCols() const { return m_sob->GetNumStorageCols(); }
     void SetNumStorageCols(size_t cols) { m_sob->SetNumStorageCols(cols); }
 
-    //size_t m_elemSizeAllocated;
     size_t GetSizeAllocated() const { return m_sob->GetSizeAllocated(); }
     void SetSizeAllocated(size_t alloc) { m_sob->SetSizeAllocated(alloc); }
 
-    //ElemType* m_pArray;
     ElemType* GetArray() { return m_sob->GetArray(); }
     ElemType* GetArray() const { return m_sob->GetArray(); }
     void SetArray(ElemType* parray) { m_sob->SetArray(parray); }
 
-    //size_t m_totalBufferSizeAllocated;
     size_t BufferSizeAllocated() const { return m_sob->BufferSizeAllocated(); }
     void SetBufferSizeAllocated(size_t alloc) { m_sob->SetBufferSizeAllocated(alloc); }
     
-    //size_t m_blockSize;                      // block size
     size_t GetBlockSize() const { return m_sob->GetBlockSize(); }
     void SetBlockSize(size_t blockSize) { m_sob->SetBlockSize(blockSize); }
 
-    //mutable GPUSPARSE_INDEX_TYPE* m_rowToId; // the id showing the order row number is observed in the nnz values.
-    GPUSPARSE_INDEX_TYPE* GetRowToId() { return m_sob->GetRowToId(); }
-    const GPUSPARSE_INDEX_TYPE* GetRowToId() const { return m_sob->GetRowToId(); }
+    GPUSPARSE_INDEX_TYPE* GetRowToId() const { return m_sob->GetRowToId(); }
     void SetRowToId(GPUSPARSE_INDEX_TYPE* parray) { m_sob->SetRowToId(parray); }
 
-    //mutable void* m_tempHostBuffer; // used to copy values.
-    void* GetTempHostBuffer() { return m_sob->GetTempHostBuffer(); }
     void* GetTempHostBuffer() const { return m_sob->GetTempHostBuffer(); }
-    void SetTempHostBuffer(void* buffer) { m_sob->SetTempHostBuffer(buffer); }
     void SetTempHostBuffer(void* buffer) const { m_sob->SetTempHostBuffer(buffer); }
 
-    //mutable size_t m_tempHostBufferSize;
-    size_t GetTempHostBufferSize() { return m_sob->GetTempHostBufferSize(); }
     size_t GetTempHostBufferSize() const { return m_sob->GetTempHostBufferSize(); }
-    void SetTempHostBufferSize(size_t bufferSize) { m_sob->SetTempHostBufferSize(bufferSize); }
     void SetTempHostBufferSize(size_t bufferSize) const { m_sob->SetTempHostBufferSize(bufferSize); }
 
-    //int m_colIdx; // used to SetValue()
     int GetColIdx() const { return m_sob->GetColIdx(); }
     void SetColIdx(int idx) { m_sob->SetColIdx(idx); }
 
-    //size_t m_compIndexSize;
     size_t GetCompIndexSize() const { return m_sob->GetCompIndexSize(); }
     void SetCompIndexSize(size_t indexSize) { m_sob->SetCompIndexSize(indexSize); }
 
-    //ElemType* m_nzValues;
     ElemType* GetNzValues() { return m_sob->GetNzValues(); }
     void SetNzValues(ElemType* values) { m_sob->SetNzValues(values); }
 
-    //size_t* m_blockIds;    // block ids
-    size_t* GetBlockIds() { return m_sob->GetBlockIds(); }
-    const size_t* GetBlockIds() const { return m_sob->GetBlockIds(); }
+    size_t* GetBlockIds() const { return m_sob->GetBlockIds(); }
     void SetBlockIds(size_t* blockIds) const { m_sob->SetBlockIds(blockIds); }
 
-    //size_t m_blockIdShift; // used to get efficient slice, actual col = blockIds[j] - m_blockIdShift
-    size_t GetBlockIdShift() { return m_sob->GetBlockIdShift(); }
     size_t GetBlockIdShift() const { return m_sob->GetBlockIdShift(); }
     void SetBlockIdShift(size_t blockIdShift) { m_sob->SetBlockIdShift(blockIdShift); }
 
-    //CPUSPARSE_INDEX_TYPE* m_unCompIndex; // row/col ids in CSC/CSR format
-    CPUSPARSE_INDEX_TYPE* GetUnCompIndex() { return m_sob->GetUnCompIndex(); }
     CPUSPARSE_INDEX_TYPE* GetUnCompIndex() const { return m_sob->GetUnCompIndex(); }
     void SetUnCompIndex(CPUSPARSE_INDEX_TYPE* parray) { m_sob->SetUnCompIndex(parray); }
     
-    //CPUSPARSE_INDEX_TYPE* m_compIndex;   // begin ids of col/row in CSC/CSR format
-    CPUSPARSE_INDEX_TYPE* GetCompIndex() { return m_sob->GetCompIndex(); }
     CPUSPARSE_INDEX_TYPE* GetCompIndex() const { return m_sob->GetCompIndex(); }
     void SetCompIndex(CPUSPARSE_INDEX_TYPE* parray) { m_sob->SetCompIndex(parray); }
 
@@ -520,14 +484,15 @@ public:
     size_t GetNumElements() const { return m_numRows * m_numCols; }
     bool IsEmpty() const { return m_numRows == 0 || m_numCols == 0; }
 
-    bool OwnBuffer() const { return !m_externalBuffer; }
-    void SetOwnBuffer(bool own) { m_externalBuffer = !own; }
+    bool OwnBuffer() const { return !GetExternalBuffer(); }
+    void SetOwnBuffer(bool own) { SetExternalBuffer(!own); }
 
-    size_t NzCount() const { return m_nz; }
-    void SetNzCount(const size_t nz) { m_nz = nz; }
+	// TODO: Disallow non-unique ptrs to be resized.
+    bool VerifyResizable() const { return (m_sob->GetNumStorageRows() == m_numRows && m_sob->GetNumStorageCols() == m_numCols); }
+	// This is needed for Sparse Matrices to ensure they can write to the matrix. Note: writing to slices is not currently supported
+    bool VerifyWritable() const { return (m_sob->GetNumStorageRows() == m_numRows && m_sob->GetNumStorageCols() == m_numCols); }
 
-    bool VerifyResizable() { return (m_sob->GetNumStorageRows() == m_numRows && m_sob->GetNumStorageCols() == m_numCols); }
-    bool VerifyWritable() { return (m_sob->GetNumStorageRows() == m_numRows && m_sob->GetNumStorageCols() == m_numCols); }
+    bool IsView() const { return (GetNumRows() != m_sob->GetNumStorageRows() || GetNumCols() != m_sob->GetNumStorageCols() || m_sliceViewOffset != 0); }
 
     void VerifySize(size_t rows, size_t cols)
     {
@@ -564,8 +529,6 @@ public:
         m_numRows           = 0;
         m_numCols           = 0;
         m_sliceViewOffset   = 0;
-        m_externalBuffer    = false;
-        m_nz                = 0;
         m_sob               = nullptr;
     }
 	void ZeroInit(const MatrixFormat matrixFormat, const DEVICEID_TYPE computeDevice )
@@ -580,7 +543,7 @@ protected:
     void ZeroStorageInit() { m_sob->ZeroInit(); }
     void ReleaseStorageMemory() { m_sob->ReleaseMemory(); }
 
-    // copy all metadata (but not content taht pArray points to)
+    // copy all metadata (but not content that m_sob points to)
     void ShallowCopyFrom(const BaseMatrix& other) 
     {
         *this = other;
@@ -590,12 +553,9 @@ protected:
 
     size_t m_numRows;
     size_t m_numCols;
-    //size_t m_elemSizeAllocated;
     size_t m_sliceViewOffset; // this is used to get a column slice view of a matrix in the Sparse CSC format  --TODO: move to sparse matrix implementations? Or common sparse base class?
-    bool m_externalBuffer; // is the buffer used by this matrix,
-    //ElemType* m_pArray;
-    size_t m_nz;                           // Number of non-zero elements for sparse matrices (unused in other formats)
 
+	// Storage OBject containing the underlying data used by this matrix
     shared_ptr<BaseMatrixStorage<ElemType>> m_sob;
 };
 

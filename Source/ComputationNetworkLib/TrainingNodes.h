@@ -139,7 +139,7 @@ public:
         if (inputIndex == 0) // left derivative
         {
 #if DUMPOUTPUT
-            (*(m_logSoftmaxOfRight.get())).Print("CrossEntropyWithSoftmax Partial-logSoftmaxOfRight");
+            m_logSoftmaxOfRight->Print("CrossEntropyWithSoftmax Partial-logSoftmaxOfRight");
             Gradient().Print("CrossEntropyWithSoftmax Partial-gradientValues");
             Input(0)->GradientFor(fr).Print("CrossEntropyWithSoftmaxNode Partial-Left-in");
 #endif
@@ -154,7 +154,7 @@ public:
         else if (inputIndex == 1) // right derivative
         {
 #if DUMPOUTPUT
-            (*(m_softmaxOfRight.get())).Print("CrossEntropyWithSoftmax Partial-softmaxOfRight");
+            m_softmaxOfRight->Print("CrossEntropyWithSoftmax Partial-softmaxOfRight");
             Input(0)->ValueFor(fr).Print("CrossEntropyWithSoftmax Partial-inputFunctionValues");
             Gradient().Print("CrossEntropyWithSoftmax Partial-gradientValues");
             Input(1)->GradientFor(fr).Print("CrossEntropyWithSoftmaxNode Partial-Right-in");
@@ -1112,7 +1112,7 @@ public:
 
         Matrix<ElemType> a = alpha.ColumnSlice(nObs - 1, 1);
         ElemType fAlpha;
-        fAlpha = a.LogAddSumOfElements();
+        fAlpha = a.LogSumOfElements();
 
         // transition score
         ElemType tscore = 0;

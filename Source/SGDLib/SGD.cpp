@@ -1889,6 +1889,9 @@ template <class ElemType>
     // make actualMBSize is a valid value
     assert(actualMBSize > 0);
 
+    if (gradientValues.GetMatrixType() == MatrixType::SPARSE || smoothedGradient.GetMatrixType() == MatrixType::SPARSE)
+        fprintf(stderr, "still doing good.\n");
+
     // clipping gradients to prevent outliers
     sgd->ClipGradient(gradientValues, actualMBSize);
 

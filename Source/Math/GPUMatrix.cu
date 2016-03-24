@@ -325,8 +325,7 @@ void GPUMatrix<ElemType>::CopySection(size_t numRows, size_t numCols, ElemType* 
 template <class ElemType>
 void GPUMatrix<ElemType>::ChangeDeviceTo(DEVICEID_TYPE to_id)
 {
-    if (!OwnBuffer())
-        LogicError("Cannot change device on Managed external matrix");
+    VerifyWritable();
     if (to_id == CPUDEVICE)
         LogicError("to_id must be valid GPU");
     if (GetComputeDeviceId() == to_id)
@@ -533,7 +532,7 @@ template <class ElemType>
 void GPUMatrix<ElemType>::Clear()
 {
     //if (OwnBuffer() && m_pArray != NULL)
-    if (OwnBuffer() && m_sob != nullptr)
+    if (VerifyWritable() && m_sob != nullptr)
     {
         if (GetComputeDeviceId()>= 0)
         {
@@ -1043,13 +1042,15 @@ void GPUMatrix<ElemType>::SetValue(const GPUMatrix<ElemType>& deepCopyFrom)
         CUDA_CALL(cudaMemcpy(GetArray(), deepCopyFrom.GetArray(), cpSize * sizeof(ElemType), cudaMemcpyDeviceToDevice));
 	*/
                 
+    /*
     if (GetNumRows() != deepCopyFrom.GetNumRows() || GetNumCols() != deepCopyFrom.GetNumCols())
     {
         m_numRows = deepCopyFrom.m_numRows;
         m_numCols = deepCopyFrom.m_numCols;
         m_sliceViewOffset = 0;
     }
-    if (!deepCopyFrom.IsEmpty())
+	*/
+    //if (!deepCopyFrom.IsEmpty())
 		SetValue(deepCopyFrom.GetNumRows(), deepCopyFrom.GetNumCols(), deepCopyFrom.GetComputeDeviceId(), deepCopyFrom.BufferPointer(), matrixFlagSetValueOnDevice);
 }
 
@@ -1057,10 +1058,12 @@ template <class ElemType>
 void GPUMatrix<ElemType>::SetValue(const size_t numRows, const size_t numCols, int deviceId, ElemType* pArray, size_t matrixFlags)
 {
     // handle externally managed case
+	// BUGBUG: This is super super ugly, and needs to be fixed, but if matrixFlags has the right value, then we can't free anything,
+    // and everything gets wonky. This should be fixed.
     if (matrixFlags & matrixFlagDontOwnBuffer)
     {
         // free the existing array if it used to be an owned array
-        if (OwnBuffer() && GetArray() != NULL)
+        if ( GetArray() != NULL)
         {
             TracingGPUMemoryAllocator::Free<ElemType>(GetComputeDeviceId(), GetArray());
         }
@@ -1070,9 +1073,9 @@ void GPUMatrix<ElemType>::SetValue(const size_t numRows, const size_t numCols, i
         m_pArray = pArray;
         m_elemSizeAllocated = GetNumElements();
         m_format = matrixFormatDense;
-        m_externalBuffer = true;
         m_computeDevice = deviceId;
 		*/
+        SetExternalBuffer(true);
         SetArray(pArray);
         SetSizeAllocated(GetNumElements());
         SetFormat(matrixFormatDense);
@@ -1082,14 +1085,8 @@ void GPUMatrix<ElemType>::SetValue(const size_t numRows, const size_t numCols, i
     }
     else
     {
-        // if didn't previously own the buffer, wipe it clean
-        if (!OwnBuffer())
-        {
-            ZeroInit(deviceId);
-        }
-
         // if the devices are different move it now
-        if (GetComputeDeviceId()!= deviceId && deviceId >= 0)
+        if (GetComputeDeviceId() != deviceId && deviceId >= 0)
         {
             Clear();
             ZeroInit(deviceId);
@@ -1097,7 +1094,7 @@ void GPUMatrix<ElemType>::SetValue(const size_t numRows, const size_t numCols, i
 
         // now resize/allocate as necessary
         Resize(numRows, numCols);
-        m_externalBuffer = false;
+        SetExternalBuffer(false);
 
         // copy over the content to the buffer
         PrepareDevice();
@@ -1329,7 +1326,7 @@ ElemType GPUMatrix<ElemType>::RmsProp(GPUMatrix<ElemType>& gradients,
 
     if (!upd_gpu)
     {
-        ElemType upd[] = {
+        const ElemType upd[] = {
             2, 2, 0,
             2, 2, 0,
             1, 1, 1,
@@ -1342,7 +1339,7 @@ ElemType GPUMatrix<ElemType>::RmsProp(GPUMatrix<ElemType>& gradients,
         };
 
         upd_gpu = TracingGPUMemoryAllocator::Allocate<ElemType>(GetComputeDeviceId(), 27);
-        CUDA_CALL(cudaMemcpy(upd_gpu, upd, sizeof(ElemType) * 27, cudaMemcpyHostToDevice));
+        CUDA_CALL(cudaMemcpy(upd_gpu, upd, sizeof(ElemType) * _countof(upd), cudaMemcpyHostToDevice));
     }
 
     _rmsprop<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock>>>(avars, signs, steps, gradients.BufferPointer(), n,
@@ -1381,14 +1378,13 @@ void GPUMatrix<ElemType>::Reshape(const size_t numRows, const size_t numCols)
 template <class ElemType>
 void GPUMatrix<ElemType>::Resize(const size_t numRows, const size_t numCols, bool growOnly)
 {
+    VerifyResizable();
     if (GetNumStorageRows() == numRows && GetNumStorageCols() >= numCols)
     {
         m_numRows = numRows;
         m_numCols = numCols;
         return;
     }
-    if (!OwnBuffer())
-        InvalidArgument("Can't resize a externally managed matrix");
 
     m_numRows = numRows;
     m_numCols = numCols;
@@ -1403,8 +1399,6 @@ void GPUMatrix<ElemType>::Resize(const size_t numRows, const size_t numCols, boo
         }
         else
         {
-            // if (!OwnBuffer())
-            //    InvalidArgument("Can't resize a externally managed matrix");
             if (GetArray())
             {
                 TracingGPUMemoryAllocator::Free<ElemType>(GetComputeDeviceId(), GetArray());
@@ -1423,7 +1417,8 @@ template <class ElemType>
 size_t GPUMatrix<ElemType>::LocateElement(const size_t row, const size_t col) const
 {
     assert(row < m_numRows && col < m_numCols);
-    return col * m_numRows + row; // matrix in column-wise storage
+    //return col * m_numRows + row; // matrix in column-wise storage
+    return LocateColumn(col) + row; // matrix in column-wise storage
 }
 
 template <class ElemType>
@@ -1831,11 +1826,11 @@ DEF_ELEMWISE_ASSIGN_FUNC(SigmoidDerivative)
 template <class ElemType>
 void GPUMatrix<ElemType>::AssignNoiseContrastiveEstimation(const GPUMatrix<ElemType>& a,
                                                            const GPUMatrix<ElemType>& b, const GPUMatrix<ElemType>& bias, size_t sampleCount, GPUMatrix<ElemType>& tmp, GPUMatrix<ElemType>& c)
-//this: samples+probs
-// a:   hidden
-// b:   embedding
-// tmp:  softmax
-//  c: loglikelihood
+//this:   samples+probs
+// a  :   hidden
+// b  :   embedding
+// tmp:   softmax
+// c  :   loglikelihood
 {
     UNCONST(ElemType, a, my_a);
     UNCONST(ElemType, b, my_b);
@@ -1849,8 +1844,8 @@ void GPUMatrix<ElemType>::AssignNoiseContrastiveEstimation(const GPUMatrix<ElemT
     while (p / 2 > width)
         p = p / 2;
 
-    _computeNceOutput<ElemType><<<this->GetNumElements() / 2, p>>>(
-        this->BufferPointer(),
+    _computeNceOutput<ElemType><<<GetNumElements() / 2, p>>>(
+        BufferPointer(),
         sampleCount,
         m_numRows / 2,
         my_a.BufferPointer(), // a
@@ -1860,11 +1855,11 @@ void GPUMatrix<ElemType>::AssignNoiseContrastiveEstimation(const GPUMatrix<ElemT
         tmp.BufferPointer()); // tmp
 
     p = 512;
-    while (p / 2 > this->GetNumElements() / 2)
+    while (p / 2 > GetNumElements() / 2)
         p = p / 2;
     // summing up objective must be done in one block
     _assignNoiseContrastiveEstimation<ElemType><<<1, p>>>(
-        this->BufferPointer(),
+        BufferPointer(),
         sampleCount,
         m_numRows / 2,
         my_a.BufferPointer(),
@@ -3924,9 +3919,9 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignSequenceError(const ElemType hsm
 
 /// f = logadd(f, vec) to get the logadd sum of vector elments
 template <class ElemType>
-ElemType GPUMatrix<ElemType>::LogAddSumOfElements() const
+ElemType GPUMatrix<ElemType>::LogSumOfElements() const
 {
-    if (this->IsEmpty())
+    if (IsEmpty())
         LogicError("SumOfElements: Matrix is empty");
 
     ElemType* d_sum = TracingGPUMemoryAllocator::Allocate<ElemType>(GetComputeDeviceId(), 1);
@@ -3935,7 +3930,7 @@ ElemType GPUMatrix<ElemType>::LogAddSumOfElements() const
     CUDA_LONG N = (CUDA_LONG) GetNumElements();
     int blocksPerGrid = (int) ceil(((double) N) / GridDim::maxThreadsPerBlock);
 
-    _reductionLogAddSum<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock>>>(this->BufferPointer(),
+    _reductionLogAddSum<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock>>>(BufferPointer(),
                                                                                   d_sum, 1, N);
     CUDA_CALL(cudaMemcpy(&h_sum, d_sum, sizeof(ElemType), cudaMemcpyDeviceToHost));
     TracingGPUMemoryAllocator::Free<ElemType>(GetComputeDeviceId(), d_sum);

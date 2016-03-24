@@ -10,7 +10,7 @@ parallelTrain=true
 
 command = train
 precision = float
-#traceGPUMemoryAllocations=0
+traceGPUMemoryAllocations=0
 train = [
     action = train
     numMBsToShowResult=10

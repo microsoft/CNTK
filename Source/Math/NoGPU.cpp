@@ -822,13 +822,13 @@ void GPUMatrix<ElemType>::Clear()
 }
 #pragma endregion Constructors and Destructor
 
-/*
+/**
 template <class ElemType>
 int GPUMatrix<ElemType>::GetComputeDeviceId() const
 {
     return -1;
 }
-*/
+**/
 
 #pragma region Basic Operators
 template <class ElemType>
@@ -1953,7 +1953,7 @@ ElemType GPUMatrix<ElemType>::GetLearnRateForBlock_Helper(const GPUMatrix<ElemTy
 }
 
 template <class ElemType>
-ElemType GPUMatrix<ElemType>::LogAddSumOfElements() const
+ElemType GPUMatrix<ElemType>::LogSumOfElements() const
 {
     return ElemType(0);
 }

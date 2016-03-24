@@ -683,14 +683,16 @@ ElemType* Matrix<ElemType>::BufferPointer() const
                             return m_CPUMatrix->BufferPointer(),
                             return m_GPUMatrix->BufferPointer(),
                             return m_CPUSparseMatrix->BufferPointer(),
-                            return (ElemType*) m_GPUSparseMatrix->BufferPointer());
+                            return m_GPUSparseMatrix->BufferPointer());
 }
 
+/*
 template <class ElemType>
 size_t Matrix<ElemType>::NzCount() const
 {
     return m_baseMatrix->NzCount();
 }
+*/
 
 template <class ElemType>
 ElemType* Matrix<ElemType>::CopyToArray() const
@@ -3028,15 +3030,15 @@ ElemType Matrix<ElemType>::SumOfAbsElements() const
 
 //sum of all elements
 template <class ElemType>
-ElemType Matrix<ElemType>::LogAddSumOfElements() const
+ElemType Matrix<ElemType>::LogSumOfElements() const
 {
     if (IsEmpty())
-        LogicError("LogAddSumOfElements: Matrix is empty.");
+        LogicError("LogSumOfElements: Matrix is empty.");
 
     DISPATCH_MATRIX_ON_FLAG(this,
                             nullptr,
-                            return m_CPUMatrix->LogAddSumOfElements(),
-                            return m_GPUMatrix->LogAddSumOfElements(),
+                            return m_CPUMatrix->LogSumOfElements(),
+                            return m_GPUMatrix->LogSumOfElements(),
                             NOT_IMPLEMENTED,
                             NOT_IMPLEMENTED);
 }

@@ -46,6 +46,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 template <class ElemType>
 GPUSPARSE_INDEX_TYPE GPUSparseMatrix<ElemType>::SecondaryIndexValueAt(size_t idx) const
 {
+    if (idx == 0) return 0;
     GPUSPARSE_INDEX_TYPE value;
     CUDA_CALL(cudaMemcpy(&value, SecondaryIndexLocation() + idx, sizeof(GPUSPARSE_INDEX_TYPE), cudaMemcpyDeviceToHost));
 
@@ -126,9 +127,9 @@ template <class ElemType>
     deepCopy.PrepareDevice();
 
     Resize(deepCopy.m_numRows, deepCopy.m_numCols, deepCopy.GetNumNZElements(), deepCopy.GetFormat(), true, false);
-    m_externalBuffer  = false;
+    SetExternalBuffer(false);
     //m_sliceOf         = nullptr;
-    m_nz              = deepCopy.m_nz;
+    //m_nz              = deepCopy.m_nz;
     m_sliceViewOffset = 0; // reset to zero as we only start copying the indices starting from the offset in the source matrix
 
     CUDA_CALL(cudaMemcpy(BufferPointer(), deepCopy.NzValues(), NzSize(), cudaMemcpyDeviceToDevice));
@@ -151,7 +152,7 @@ template <class ElemType>
 template <class ElemType>
 void GPUSparseMatrix<ElemType>::SetValue(const GPUSparseMatrix<ElemType>& deepCopy)
 {
-    if (!OwnBuffer())
+    if (!VerifyWritable())
         LogicError("Cannot SetValue on managed external matrix");
 
     DeepCopy(deepCopy);
@@ -161,7 +162,7 @@ void GPUSparseMatrix<ElemType>::SetValue(const GPUSparseMatrix<ElemType>& deepCo
 template <class ElemType>
 void GPUSparseMatrix<ElemType>::SetValue(const CPUSparseMatrix<ElemType>& deepCopy)
 {
-    if (!OwnBuffer())
+    if (!VerifyWritable())
         LogicError("Cannot SetValue on Managed external matrix");
 
     SetFormat(deepCopy.GetFormat());
@@ -186,7 +187,7 @@ void GPUSparseMatrix<ElemType>::SetValue(const CPUSparseMatrix<ElemType>& deepCo
 template <class ElemType>
 void GPUSparseMatrix<ElemType>::CopyToCPUSparseMatrix(CPUSparseMatrix<ElemType>& cpuSparseMatrix) const
 {
-    if (!cpuSparseMatrix.OwnBuffer())
+    if (!cpuSparseMatrix.VerifyWritable())
         LogicError("Cannot CopyToCPUSparseMatrix on managed external matrix");
 
     cpuSparseMatrix.SetFormat(GetFormat());
@@ -200,7 +201,7 @@ void GPUSparseMatrix<ElemType>::CopyToCPUSparseMatrix(CPUSparseMatrix<ElemType>&
     {
         // we need to do conversion because CPUSparseMatrix uses size_t for indexes while GPUSparseMatrix uses int
         cpuSparseMatrix.Resize(GetNumRows(), GetNumCols(), GetNumElemAllocated(), true, false);
-        cpuSparseMatrix.SetNzCount(GetNumNZElements());
+        //cpuSparseMatrix.SetNzCount(GetNumNZElements());
 
         PrepareDevice();
 
@@ -226,7 +227,7 @@ void GPUSparseMatrix<ElemType>::CopyToCPUSparseMatrix(CPUSparseMatrix<ElemType>&
     {
         // we need to do conversion because CPUSparseMatrix uses size_t for indexes while GPUSparseMatrix uses int
         cpuSparseMatrix.Resize(GetNumRows(), GetNumCols(), GetNumNZElements(), true, false);
-        cpuSparseMatrix.SetNzCount(GetNumNZElements());
+        //cpuSparseMatrix.SetNzCount(GetNumNZElements());
 
         PrepareDevice();
         if (sizeof(GPUSPARSE_INDEX_TYPE) == sizeof(CPUSPARSE_INDEX_TYPE))
@@ -305,7 +306,7 @@ void GPUSparseMatrix<ElemType>::CopyToDenseMatrix(GPUMatrix<ElemType>& denseMatr
 template <class ElemType>
 void GPUSparseMatrix<ElemType>::ConvertToSparseFormat(MatrixFormat newFormat, GPUSparseMatrix<ElemType>& outMatrix) const
 {
-    if (!outMatrix.OwnBuffer())
+    if (!outMatrix.VerifyWritable())
         LogicError("Cannot ConvertToSparseFormat to managed external matrix");
 
     if (IsEmpty())
@@ -329,8 +330,8 @@ void GPUSparseMatrix<ElemType>::ConvertToSparseFormat(MatrixFormat newFormat, GP
     CUSPARSE_CALL(cusparseSetStream(cusparseHandle, t_stream));
 
     outMatrix.ChangeDeviceTo(GetComputeDeviceId());
-    outMatrix.Resize(m_numRows, m_numCols, m_nz, newFormat, true, false);
-    outMatrix.SetNzCount(m_nz);
+    outMatrix.Resize(m_numRows, m_numCols, NzCount(), newFormat, true, false);
+    //outMatrix.SetNzCount();
 
     if ((oldFormat == matrixFormatSparseCSR && newFormat == matrixFormatSparseCSC) || (oldFormat == matrixFormatSparseCSC && newFormat == matrixFormatSparseCSR))
     {
@@ -386,7 +387,7 @@ GPUMatrix<ElemType> GPUSparseMatrix<ElemType>::CopyToDenseMatrix() const
 template <class ElemType>
 void GPUSparseMatrix<ElemType>::ChangeDeviceTo(DEVICEID_TYPE to_id)
 {
-    if (!OwnBuffer())
+    if (!VerifyWritable())
         LogicError("Cannot change device on Managed external matrix");
     if (to_id == CPUDEVICE)
         LogicError("to_id must be valid GPU");
@@ -436,7 +437,7 @@ void GPUSparseMatrix<ElemType>::ChangeDeviceTo(DEVICEID_TYPE to_id)
 template <class ElemType>
 void GPUSparseMatrix<ElemType>::SetValue(const GPUMatrix<ElemType>& denseMatrix)
 {
-    if (!OwnBuffer())
+    if (!VerifyWritable())
         LogicError("Cannot SetValue on Managed external matrix");
 
     SetValue(denseMatrix, GetFormat());
@@ -445,7 +446,7 @@ void GPUSparseMatrix<ElemType>::SetValue(const GPUMatrix<ElemType>& denseMatrix)
 template <class ElemType>
 void GPUSparseMatrix<ElemType>::SetValue(const GPUMatrix<ElemType>& denseMatrix, const MatrixFormat matrixFormat)
 {
-    if (!OwnBuffer())
+    if (!VerifyWritable())
         LogicError("Cannot SetValue on Managed external matrix");
 
     if (matrixFormat != matrixFormatSparseCSR && matrixFormat != matrixFormatSparseCSC)
@@ -483,7 +484,7 @@ void GPUSparseMatrix<ElemType>::SetValue(const GPUMatrix<ElemType>& denseMatrix,
     }
 
     Resize(numRows, numCols, nnzTotalDevHostPtr, matrixFormat, true, false);
-    SetNzCount(nnzTotalDevHostPtr);
+    //SetNzCount(nnzTotalDevHostPtr);
 
     SyncGuard syncGuard;
     if (GetFormat() == MatrixFormat::matrixFormatSparseCSR)
@@ -517,7 +518,6 @@ void GPUSparseMatrix<ElemType>::SetValue(const GPUMatrix<ElemType>& denseMatrix,
 template <class ElemType>
 GPUSparseMatrix<ElemType>& GPUSparseMatrix<ElemType>::operator=(const GPUSparseMatrix<ElemType>& deepCopy)
 {
-    Clear();
     if (this != &deepCopy)
         SetValue(deepCopy);
 
@@ -574,20 +574,7 @@ GPUSparseMatrix<ElemType>::~GPUSparseMatrix()
 template <class ElemType>
 void GPUSparseMatrix<ElemType>::ReleaseMemory()
 {
-    // If OwnBuffer() is false then this matrix is a view over another matrix.
-    // In that case we shouldn't free anything.
-    if (OwnBuffer())
-    {
-        delete[](byte*) m_tempHostBuffer;
-        m_tempHostBuffer = nullptr;
-
-        TracingGPUMemoryAllocator::Free<ElemType>(GetComputeDeviceId(), GetArray());
-        SetArray(nullptr);
-
-        TracingGPUMemoryAllocator::Free<GPUSPARSE_INDEX_TYPE>(GetComputeDeviceId(), m_rowToId);
-        m_rowToId = nullptr;
-    }
-    ZeroInit(GetFormat(), GetComputeDeviceId());
+    assert(false);
 }
 */
 
@@ -597,8 +584,8 @@ void GPUSparseMatrix<ElemType>::ReleaseMemory()
 template <class ElemType>
 void GPUSparseMatrix<ElemType>::ResizeAsAndCopyIndexFrom(const GPUSparseMatrix<ElemType>& a, const bool growOnly /*= true*/)
 {
-    Resize(a.m_numRows, a.m_numCols, a.m_nz, a.GetFormat(), growOnly, false);
-    SetNzCount(a.m_nz);
+    Resize(a.m_numRows, a.m_numCols, a.NzCount(), a.GetFormat(), growOnly, false);
+    //SetNzCount(a.m_nz);
 
     CUDA_CALL(cudaMemcpy(MajorIndexLocation(), a.MajorIndexLocation(), MajorIndexSize(), cudaMemcpyDeviceToDevice));
     CUDA_CALL(cudaMemcpy(SecondaryIndexLocation(), a.SecondaryIndexLocation(), SecondaryIndexSize(), cudaMemcpyDeviceToDevice));
@@ -614,7 +601,7 @@ void GPUSparseMatrix<ElemType>::Reshape(const size_t numRows, const size_t numCo
     if (m_numRows == numRows && m_numCols == numCols)
         return;
 
-    if (!OwnBuffer())
+    if (!VerifyWritable())
         LogicError("GPUSparseMatrix::Reshape: Cannot Reshape since the buffer is managed externally.");
 
     if (GetFormat() != MatrixFormat::matrixFormatSparseCSC)
@@ -664,6 +651,8 @@ void GPUSparseMatrix<ElemType>::Reshape(const size_t numRows, const size_t numCo
 template <class ElemType>
 void GPUSparseMatrix<ElemType>::Resize(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve, const bool growOnly, bool keepExistingValues)
 {
+    if (!VerifyResizable())
+        LogicError("Cannot Resize since the buffer is managed externally.");
     Resize(numRows, numCols, numNZElemToReserve, GetFormat(), growOnly, keepExistingValues);
 }
 
@@ -672,7 +661,7 @@ void GPUSparseMatrix<ElemType>::Resize(const size_t numRows, const size_t numCol
 template <class ElemType>
 void GPUSparseMatrix<ElemType>::Resize(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve, const MatrixFormat matrixFormat, const bool growOnly /*= true*/, bool keepExistingValues /*=true*/)
 {
-    if (!OwnBuffer())
+    if (!VerifyResizable())
         LogicError("Cannot Resize since the buffer is managed externally.");
 
     if (matrixFormat != GetFormat() || m_numRows != numRows || m_numCols != numCols)
@@ -689,7 +678,7 @@ void GPUSparseMatrix<ElemType>::Resize(const size_t numRows, const size_t numCol
         {
             if (keepExistingValues)
             {
-                if (m_nz > numNZElemToReserve || BufferSizeAllocated() > bufferSizeNeeded)
+                if (NzCount() > numNZElemToReserve || BufferSizeAllocated() > bufferSizeNeeded)
                     LogicError("Resize: To keep values m_nz should <= numNZElemToReserve.");
 
                 CUDA_CALL(cudaMemcpy(pArray, BufferPointer(), GetSizeElemAllocated(), cudaMemcpyDeviceToDevice));
@@ -701,8 +690,6 @@ void GPUSparseMatrix<ElemType>::Resize(const size_t numRows, const size_t numCol
                 GPUSPARSE_INDEX_TYPE* secondaryIndexInNewBuffer = majorIndexInNewBuffer + MajorIndexCount(numRows, numCols, numNZElemToReserve, matrixFormat);
                 CUDA_CALL(cudaMemcpy(secondaryIndexInNewBuffer, SecondaryIndexLocation(), SecondaryIndexSize(), cudaMemcpyDeviceToDevice));
             }
-            else
-                m_nz = 0;
 
             TracingGPUMemoryAllocator::Free<ElemType>(GetComputeDeviceId(), GetArray());
         }
@@ -723,6 +710,7 @@ void GPUSparseMatrix<ElemType>::Resize(const size_t numRows, const size_t numCol
         SetSizeAllocated(ElemCountFromBufferSize(numRows, numCols, matrixFormat, BufferSizeAllocated()));
     }
 
+    m_sliceViewOffset = 0;
     m_numRows = numRows;
     m_numCols = numCols;
     SetNumStorageRows(numRows);
@@ -734,10 +722,10 @@ void GPUSparseMatrix<ElemType>::Resize(const size_t numRows, const size_t numCol
 template <class ElemType>
 void GPUSparseMatrix<ElemType>::Reset()
 {
-    if (!OwnBuffer())
+    if (!VerifyWritable())
         LogicError("Cannot Reset since the buffer is managed externally.");
 
-    m_nz = 0;
+    //m_nz = 0;
     SetBlockSize(0);
 }
 
@@ -746,7 +734,7 @@ template <class ElemType>
 void GPUSparseMatrix<ElemType>::SetMatrixFromCSRFormat(const GPUSPARSE_INDEX_TYPE* h_CSRRow, const GPUSPARSE_INDEX_TYPE* h_Col, const ElemType* h_Val,
                                                        const size_t nz, const size_t numRows, const size_t numCols, const bool IsOnDevice /*= false*/, const DEVICEID_TYPE devId /*= -1*/)
 {
-    if (!OwnBuffer())
+    if (!VerifyWritable())
         LogicError("Cannot Set since the buffer is managed externally.");
 
     if (h_CSRRow == nullptr || h_Col == nullptr || h_Val == nullptr)
@@ -756,7 +744,7 @@ void GPUSparseMatrix<ElemType>::SetMatrixFromCSRFormat(const GPUSPARSE_INDEX_TYP
 
     SetFormat(matrixFormatSparseCSR);
     Resize(numRows, numCols, nz, true, false);
-    SetNzCount(nz);
+    //SetNzCount(nz);
 
     cudaMemcpyKind kind = IsOnDevice ? cudaMemcpyDeviceToDevice : cudaMemcpyHostToDevice;
     CUDA_CALL(cudaMemcpy(BufferPointer(), h_Val, NzSize(), kind));
@@ -783,7 +771,7 @@ void GPUSparseMatrix<ElemType>::SetMatrixFromCSRFormat(const GPUSPARSE_INDEX_TYP
 template <class ElemType>
 void GPUSparseMatrix<ElemType>::GetMatrixFromCSRFormat(CPUSPARSE_INDEX_TYPE*& h_CSRRow, CPUSPARSE_INDEX_TYPE*& h_Col, ElemType*& h_Val, size_t& numElemAllocated, size_t& nz, size_t& numRows, size_t& numCols) const
 {
-    if (!OwnBuffer())
+    if (!VerifyWritable())
         LogicError("Cannot Set since the buffer is managed externally.");
 
     if (h_CSRRow != nullptr || h_Col != nullptr || h_Val != nullptr)
@@ -828,7 +816,7 @@ template <class ElemType>
 void GPUSparseMatrix<ElemType>::SetMatrixFromCSCFormat(const CPUSPARSE_INDEX_TYPE* h_CSCCol, const CPUSPARSE_INDEX_TYPE* h_Row, const ElemType* h_Val,
                                                        const size_t nz, const size_t numRows, const size_t numCols, const bool IsOnDevice /*= false*/, const DEVICEID_TYPE devId /*= -1*/)
 {
-    if (!OwnBuffer())
+    if (!VerifyWritable())
         LogicError("Cannot Set since the buffer is managed externally.");
 
     if (h_CSCCol == nullptr || h_Row == nullptr || h_Val == nullptr)
@@ -837,26 +825,29 @@ void GPUSparseMatrix<ElemType>::SetMatrixFromCSCFormat(const CPUSPARSE_INDEX_TYP
     SetComputeDeviceId(PrepareDevice(devId));
     SetFormat(matrixFormatSparseCSC);
     Resize(numRows, numCols, nz, true, false);
-    SetNzCount(nz);
+    //SetNzCount(nz);
 
+	// m_nz doesn't exist anymore. How are we going to deal with the NzSize, RowSize, and ColSize? Do it ourselves of course.
     cudaMemcpyKind kind = IsOnDevice ? cudaMemcpyDeviceToDevice : cudaMemcpyHostToDevice;
-    CUDA_CALL(cudaMemcpy(BufferPointer(), h_Val, NzSize(), kind));
+    CUDA_CALL(cudaMemcpy(BufferPointer(), h_Val, nz * sizeof(ElemType), kind));
 
     if (sizeof(CPUSPARSE_INDEX_TYPE) == sizeof(GPUSPARSE_INDEX_TYPE))
     {
-        CUDA_CALL(cudaMemcpy(RowLocation(), h_Row, RowSize(), kind));
-        CUDA_CALL(cudaMemcpy(ColLocation(), h_CSCCol, ColSize(), kind));
+        CUDA_CALL(cudaMemcpy(RowLocation(), h_Row, sizeof(GPUSPARSE_INDEX_TYPE) * nz, kind));
+        CUDA_CALL(cudaMemcpy(ColLocation(), h_CSCCol, sizeof(GPUSPARSE_INDEX_TYPE) * (numCols+1), kind));
+        //CUDA_CALL(cudaMemcpy(ColLocation(), h_CSCCol, ColSize(), kind));
     }
     else
     {
-        GPUSPARSE_INDEX_TYPE* pCol = (GPUSPARSE_INDEX_TYPE*) ReserveTempHostBuffer(RowSize() + ColSize());
+        size_t allocSize = sizeof(GPUSPARSE_INDEX_TYPE) * nz + sizeof(GPUSPARSE_INDEX_TYPE) * (numCols + 1);
+        GPUSPARSE_INDEX_TYPE* pCol = (GPUSPARSE_INDEX_TYPE*) ReserveTempHostBuffer(allocSize);
         GPUSPARSE_INDEX_TYPE* pRow = pCol + SecondaryIndexCount();
 
         CopyBuffer(pCol, h_CSCCol, SecondaryIndexCount());
         CopyBuffer(pRow, h_Row, MajorIndexCount());
 
-        CUDA_CALL(cudaMemcpy(RowLocation(), pRow, RowSize(), kind));
-        CUDA_CALL(cudaMemcpy(ColLocation(), pCol, ColSize(), kind));
+        CUDA_CALL(cudaMemcpy(RowLocation(), pRow, sizeof(GPUSPARSE_INDEX_TYPE) * nz, kind));
+        CUDA_CALL(cudaMemcpy(ColLocation(), pCol, sizeof(GPUSPARSE_INDEX_TYPE) * (numCols+1), kind));
     }
 }
 
@@ -1051,7 +1042,7 @@ void GPUSparseMatrix<ElemType>::ConvolveAndWeightedAdd(ElemType alpha, const GPU
 template <class ElemType>
 void GPUSparseMatrix<ElemType>::TensorShuffleScaleAndAdd(ElemType keepWeight, const GPUSparseMatrix<ElemType>& a, size_t D, size_t S, size_t M, size_t K, size_t T, ElemType scaleFactor, const GPUSparseMatrix<ElemType>& b, GPUSparseMatrix<ElemType>& c)
 {
-    if (!c.OwnBuffer())
+    if (!c.VerifyWritable())
         LogicError("Cannot modify externally managed matrix");
 
     if (a.GetComputeDeviceId() != c.GetComputeDeviceId() || b.GetComputeDeviceId() != c.GetComputeDeviceId())
@@ -1068,9 +1059,9 @@ void GPUSparseMatrix<ElemType>::TensorShuffleScaleAndAdd(ElemType keepWeight, co
         LogicError("GPUSparseMatrix<ElemType>::TensorShuffleScaleAndAdd: tensor dimensions and underlying matrix dimensions don't match");
 
     c.Resize(a.GetNumRows(), a.GetNumCols(), a.GetNumElemAllocated(), true, false);
-    c.SetNzCount(a.GetNumNZElements());
+    //c.SetNzCount(a.GetNumNZElements());
 
-    if (c.m_nz > 0)
+    if (c.NzCount() > 0)
     {
         c.PrepareDevice();
         SyncGuard syncGuard;
@@ -1098,7 +1089,7 @@ template <class ElemType>
 void GPUSparseMatrix<ElemType>::MultiplyAndAdd(ElemType alpha, const GPUMatrix<ElemType>& lhs, const bool transposeA,
                                                const GPUSparseMatrix<ElemType>& rhs, const bool transposeB, GPUSparseMatrix<ElemType>& c)
 {
-    if (!c.OwnBuffer())
+    if (!c.VerifyWritable())
         LogicError("Cannot modify since the buffer is managed externally.");
 
     if (lhs.GetComputeDeviceId() != rhs.GetComputeDeviceId())
@@ -1135,7 +1126,8 @@ void GPUSparseMatrix<ElemType>::MultiplyAndAdd(ElemType alpha, const GPUMatrix<E
         SyncGuard syncGuard;
 
         // based on the size of m_nz in rhs and numCols in the resulted matrix we use different approaches
-        if (n * 10 < GridDim::maxThreadsPerBlock * rhs.m_nz)
+        size_t rhs_nz = rhs.NzCount();
+        if (n * 10 < GridDim::maxThreadsPerBlock * rhs_nz)
         {
             c.Resize(m, n, 1, true, false); // reserve memory for BlockId2ColOrRow() and ColOrRow2BlockId()
 
@@ -1144,9 +1136,9 @@ void GPUSparseMatrix<ElemType>::MultiplyAndAdd(ElemType alpha, const GPUMatrix<E
 
             CUDA_CALL(cudaMemset(c.BlockId2ColOrRow(), 0, sizeof(GPUSPARSE_INDEX_TYPE) * (n)));
 
-            blocksPerGrid = (int) ceil(((double) rhs.m_nz) / GridDim::maxThreadsPerBlock);
+            blocksPerGrid = (int) ceil(((double) rhs_nz) / GridDim::maxThreadsPerBlock);
             _findColsWithValues<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(
-                rhs.RowLocation(), c.BlockId2ColOrRow(), rhs.m_nz);
+                rhs.RowLocation(), c.BlockId2ColOrRow(), rhs_nz);
                 
             blocksPerGrid = (int) ceil(((double) n) / GridDim::maxThreadsPerBlock);
             _determineBlockIds<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(
@@ -1161,7 +1153,7 @@ void GPUSparseMatrix<ElemType>::MultiplyAndAdd(ElemType alpha, const GPUMatrix<E
 
             size_t nnz = m * c.GetBlockSize();
             c.Resize(m, n, nnz, true, true); // we need to keep the col2blockid and blockid2col info when resizing.
-            c.m_nz = nnz;
+            //c.m_nz = nnz;
             CUDA_CALL(cudaMemset(c.BufferPointer(), 0, sizeof(ElemType) * (c.GetSizeAllocated())));
 
             LONG64 N = (LONG64) lhs.GetNumElements(); // here we process for each row in lhs and each column in rhs (==columns in lhs)
@@ -1182,7 +1174,7 @@ void GPUSparseMatrix<ElemType>::MultiplyAndAdd(ElemType alpha, const GPUMatrix<E
             c.SetBlockSize( rhs.IdentifyRowsWithValues());
             size_t nnz = m * c.GetBlockSize();
             c.Resize(m, n, nnz, true, false);
-            c.m_nz = nnz;
+            //c.m_nz = nnz;
             CUDA_CALL(cudaMemset(c.BufferPointer(), 0, sizeof(ElemType) * (c.GetSizeAllocated())));
             CUDA_CALL(cudaMemset(c.BlockId2ColOrRow(), 0, sizeof(GPUSPARSE_INDEX_TYPE) * (c.GetBlockSize())));
 
@@ -1219,12 +1211,13 @@ size_t GPUSparseMatrix<ElemType>::IdentifyRowsWithValues() const
     if (GetFormat() != matrixFormatSparseCSC)
         NOT_IMPLEMENTED;
 
+    size_t nz = NzCount();
     map<size_t, GPUSPARSE_INDEX_TYPE> indexer;
-    GPUSPARSE_INDEX_TYPE* rowToId = (GPUSPARSE_INDEX_TYPE*) ReserveTempHostBuffer(sizeof(GPUSPARSE_INDEX_TYPE) * m_nz * 2);
-    GPUSPARSE_INDEX_TYPE* h_Row = rowToId + m_nz;
-    CUDA_CALL(cudaMemcpy(h_Row, RowLocation(), sizeof(GPUSPARSE_INDEX_TYPE) * m_nz, cudaMemcpyDeviceToHost));
+    GPUSPARSE_INDEX_TYPE* rowToId = (GPUSPARSE_INDEX_TYPE*) ReserveTempHostBuffer(sizeof(GPUSPARSE_INDEX_TYPE) * nz * 2);
+    GPUSPARSE_INDEX_TYPE* h_Row = rowToId + nz;
+    CUDA_CALL(cudaMemcpy(h_Row, RowLocation(), sizeof(GPUSPARSE_INDEX_TYPE) * nz, cudaMemcpyDeviceToHost));
 
-    for (size_t i = 0; i < m_nz; i++)
+    for (size_t i = 0; i < nz; i++)
     {
         size_t row = h_Row[i];
         if (indexer.find(row) == indexer.end())
@@ -1234,7 +1227,7 @@ size_t GPUSparseMatrix<ElemType>::IdentifyRowsWithValues() const
         }
         rowToId[i] = indexer[row];
     }
-    CUDA_CALL(cudaMemcpy((void*)GetRowToId(), rowToId, sizeof(GPUSPARSE_INDEX_TYPE) * m_nz, cudaMemcpyHostToDevice));
+    CUDA_CALL(cudaMemcpy(GetRowToId(), rowToId, sizeof(GPUSPARSE_INDEX_TYPE) * nz, cudaMemcpyHostToDevice));
     return indexer.size();
 }
 
@@ -1275,7 +1268,7 @@ void GPUSparseMatrix<ElemType>::ScaleAndAdd(const ElemType alpha, const GPUSpars
 template <class ElemType>
 GPUSparseMatrix<ElemType>& GPUSparseMatrix<ElemType>::InplaceTruncate(const ElemType threshold)
 {
-    if (!OwnBuffer())
+    if (!VerifyWritable())
         LogicError("Cannot modify since the buffer is managed externally.");
 
     CUDA_LONG N = (CUDA_LONG) GetNumNZElements();
@@ -1290,7 +1283,7 @@ GPUSparseMatrix<ElemType>& GPUSparseMatrix<ElemType>::InplaceTruncate(const Elem
 template <class ElemType>
 GPUSparseMatrix<ElemType>& GPUSparseMatrix<ElemType>::InplaceSoftThreshold(const ElemType threshold)
 {
-    if (!OwnBuffer())
+    if (!VerifyWritable())
         LogicError("Cannot modify since the buffer is managed externally.");
 
     CUDA_LONG N = (CUDA_LONG) GetNumNZElements();
@@ -1306,7 +1299,7 @@ GPUSparseMatrix<ElemType>& GPUSparseMatrix<ElemType>::InplaceSoftThreshold(const
 template <class ElemType>
 void GPUSparseMatrix<ElemType>::NormalGrad(GPUMatrix<ElemType>& c, const ElemType momentum)
 {
-    if (!OwnBuffer())
+    if (!VerifyWritable())
         LogicError("Cannot modify since the buffer is managed externally.");
 
     if (c.IsEmpty())
@@ -1341,7 +1334,7 @@ void GPUSparseMatrix<ElemType>::NormalGrad(GPUMatrix<ElemType>& c, const ElemTyp
 template <class ElemType>
 ElemType GPUSparseMatrix<ElemType>::Adagrad(GPUMatrix<ElemType>& c, const bool needAveMultiplier)
 {
-    if (!OwnBuffer())
+    if (!VerifyWritable())
         LogicError("Cannot modify since the buffer is managed externally.");
 
     size_t numColsNeeded = GetNumCols();
@@ -1368,10 +1361,11 @@ ElemType GPUSparseMatrix<ElemType>::Adagrad(GPUMatrix<ElemType>& c, const bool n
     }
     else if (GetFormat() == MatrixFormat::matrixFormatSparseBlockCol || GetFormat() == MatrixFormat::matrixFormatSparseBlockRow)
     {
-        int blocksPerGrid = (m_nz + GridDim::maxThreadsPerBlock - 1) / GridDim::maxThreadsPerBlock;
-        bool colMajor = (GetFormat() == MatrixFormat::matrixFormatSparseBlockCol ? true : false);
+        size_t nz = NzCount();
+        int blocksPerGrid = (nz + GridDim::maxThreadsPerBlock - 1) / GridDim::maxThreadsPerBlock;
+        bool colMajor = GetFormat() == MatrixFormat::matrixFormatSparseBlockCol;
         size_t len = colMajor ? GetNumRows() : GetNumCols();
-        _adagrad4BlockSparse<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock>>>(c.GetArray(), c.GetNumRows(), BufferPointer(), BlockId2ColOrRow(), multipliers, colMajor, len, m_nz);
+        _adagrad4BlockSparse<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock>>>(c.GetArray(), c.GetNumRows(), BufferPointer(), BlockId2ColOrRow(), multipliers, colMajor, len, nz);
     }
     else
         NOT_IMPLEMENTED;
@@ -1379,18 +1373,19 @@ ElemType GPUSparseMatrix<ElemType>::Adagrad(GPUMatrix<ElemType>& c, const bool n
     if (!needAveMultiplier)
         return 1;
 
+	size_t nz = NzCount();
     cublasHandle_t cuHandle = GPUMatrix<ElemType>::GetCublasHandle(GetComputeDeviceId());
     if (sizeof(ElemType) == sizeof(float))
     {
         float aveMultiplier = 0;
-        CUBLAS_CALL(cublasSasum(cuHandle, (LONG64) m_nz, reinterpret_cast<float*>(multipliers), 1, &aveMultiplier));
-        return (ElemType) aveMultiplier / m_nz;
+        CUBLAS_CALL(cublasSasum(cuHandle, (LONG64) nz, reinterpret_cast<float*>(multipliers), 1, &aveMultiplier));
+        return (ElemType) aveMultiplier / nz;
     }
     else
     {
         double aveMultiplier = 0;
-        CUBLAS_CALL(cublasDasum(cuHandle, (LONG64) m_nz, reinterpret_cast<double*>(multipliers), 1, &aveMultiplier));
-        return (ElemType) aveMultiplier / m_nz;
+        CUBLAS_CALL(cublasDasum(cuHandle, (LONG64) nz, reinterpret_cast<double*>(multipliers), 1, &aveMultiplier));
+        return (ElemType) aveMultiplier / nz;
     }
 }
 
@@ -1498,7 +1493,7 @@ size_t GPUSparseMatrix<ElemType>::ElemCountFromBufferSize() const
 template <class ElemType>
 void GPUSparseMatrix<ElemType>::PrepareBuffer(size_t m, size_t n, bool canReuseBuffer, std::function<size_t(GPUSPARSE_INDEX_TYPE* csrRowPtrC)> func)
 {
-    if (!OwnBuffer())
+    if (!VerifyWritable())
         LogicError("Cannot modify since the buffer is managed externally.");
 
     if (this->GetFormat() != matrixFormatSparseCSR)
@@ -1528,7 +1523,7 @@ void GPUSparseMatrix<ElemType>::PrepareBuffer(size_t m, size_t n, bool canReuseB
 
     // now we know the number of Non-zeros in the result set, set the output size
     c.Resize(m, n, nnzC, true, false);
-    c.m_nz = nnzC;
+    //c.m_nz = nnzC;
 
     CUDA_CALL(cudaMemcpy(c.SecondaryIndexLocation(), csrRowPtrC, c.SecondaryIndexSize(), cudaMemcpyDeviceToDevice));
 
@@ -1547,7 +1542,7 @@ void GPUSparseMatrix<ElemType>::PrepareBuffer(size_t m, size_t n, bool canReuseB
 template <class ElemType>
 void GPUSparseMatrix<ElemType>::Multiply(const GPUSparseMatrix<ElemType>& S1, bool transposeS1, const GPUSparseMatrix<ElemType>& S2, bool transposeS2, GPUSparseMatrix<ElemType>& c)
 {
-    if (!c.OwnBuffer())
+    if (!c.VerifyWritable())
         LogicError("Cannot modify since the buffer is managed externally.");
 
     if (S1.GetFormat() != matrixFormatSparseCSR || S2.GetFormat() != matrixFormatSparseCSR || c.GetFormat() != matrixFormatSparseCSR)
@@ -1716,7 +1711,7 @@ void GPUSparseMatrix<ElemType>::ScaleAndAdd(ElemType alpha, const GPUMatrix<Elem
 template <class ElemType>
 void GPUSparseMatrix<ElemType>::Scale(ElemType alpha, GPUSparseMatrix<ElemType>& a)
 {
-    if (!a.OwnBuffer())
+    if (!a.VerifyWritable())
         LogicError("Cannot modify since the buffer is managed externally.");
 
     if (a.IsEmpty())
@@ -1731,7 +1726,7 @@ void GPUSparseMatrix<ElemType>::Scale(ElemType alpha, GPUSparseMatrix<ElemType>&
 template <class ElemType>
 void GPUSparseMatrix<ElemType>::ElementWisePower(ElemType alpha, const GPUSparseMatrix<ElemType>& a, GPUSparseMatrix<ElemType>& c)
 {
-    if (!c.OwnBuffer())
+    if (!c.VerifyWritable())
         LogicError("Cannot modify since the buffer is managed externally.");
 
     if (a.GetComputeDeviceId() != c.GetComputeDeviceId())
@@ -1802,8 +1797,9 @@ ElemType GPUSparseMatrix<ElemType>::InnerProductOfMatrices(const GPUSparseMatrix
     {
         NOT_IMPLEMENTED;
     }
+    size_t a_nz = a.NzCount();
     // Given sparse matrix in column major format, calculate indices for corresponding sparse vector
-    GPUSPARSE_INDEX_TYPE* vectArray = TracingGPUMemoryAllocator::Allocate<GPUSPARSE_INDEX_TYPE>(a.GetComputeDeviceId(), a.m_nz);
+    GPUSPARSE_INDEX_TYPE* vectArray = TracingGPUMemoryAllocator::Allocate<GPUSPARSE_INDEX_TYPE>(a.GetComputeDeviceId(), a_nz);
     CUDA_LONG M = n;
     CUDA_LONG N = m;
     // GPUSPARSE_INDEX_TYPE* h_vectArray= new int[a.m_nz];
@@ -1818,13 +1814,13 @@ ElemType GPUSparseMatrix<ElemType>::InnerProductOfMatrices(const GPUSparseMatrix
     ElemType res = 0;
     if (sizeof(ElemType) == sizeof(float))
     {
-        CUSPARSE_CALL(cusparseSdoti(cusparseHandle, (int) a.m_nz, reinterpret_cast<float*>(cscValA), vectArray,
+        CUSPARSE_CALL(cusparseSdoti(cusparseHandle, (int) a_nz, reinterpret_cast<float*>(cscValA), vectArray,
                                     reinterpret_cast<float*>(b.BufferPointer()),
                                     reinterpret_cast<float*>(&res), idxBase));
     }
     else
     {
-        CUSPARSE_CALL(cusparseDdoti(cusparseHandle, (int) a.m_nz, reinterpret_cast<double*>(cscValA), vectArray,
+        CUSPARSE_CALL(cusparseDdoti(cusparseHandle, (int) a_nz, reinterpret_cast<double*>(cscValA), vectArray,
                                     reinterpret_cast<double*>(b.BufferPointer()),
                                     reinterpret_cast<double*>(&res), idxBase));
     }
@@ -1946,7 +1942,7 @@ template <class ElemType>
 DEVICEID_TYPE GPUSparseMatrix<ElemType>::GetComputeDeviceId() const
 {
     // for externally managed memory the CUDA context will have the current device
-    if (!OwnBuffer())
+    if (!VerifyWritable())
     {
         DEVICEID_TYPE devId;
         CUDA_CALL(cudaGetDevice(&devId));
@@ -1961,7 +1957,7 @@ DEVICEID_TYPE GPUSparseMatrix<ElemType>::GetComputeDeviceId() const
 template <class ElemType>
 GPUMatrix<ElemType> GPUSparseMatrix<ElemType>::ElementProductOf(const GPUSparseMatrix<ElemType>& a, const GPUMatrix<ElemType>& b)
 {
-    if (!b.OwnBuffer())
+    if (!b.VerifyWritable())
         LogicError("Cannot modify since the buffer is managed externally.");
 
     if (a.GetFormat() != matrixFormatSparseCSR)
@@ -2059,7 +2055,7 @@ GPUSparseMatrix<ElemType> GPUSparseMatrix<ElemType>::Transpose() const
     PrepareDevice();
     GPUSparseMatrix c(GetComputeDeviceId(), GetFormat());
     c.Resize(n, m, nnz, GetFormat(), true, false);
-    c.m_nz = nnz;
+    //c.m_nz = nnz;
 
     cusparseHandle_t cusparseHandle = 0;
     CUSPARSE_CALL(cusparseCreate(&cusparseHandle));
@@ -2116,7 +2112,7 @@ GPUSparseMatrix<ElemType> GPUSparseMatrix<ElemType>::Transpose() const
 template <class ElemType>
 GPUSparseMatrix<ElemType>& GPUSparseMatrix<ElemType>::AssignTransposeOf(const GPUSparseMatrix<ElemType>& a)
 {
-    if (!OwnBuffer())
+    if (!VerifyWritable())
         LogicError("Cannot modify since the buffer is managed externally.");
 
     if (this == &a)
@@ -2150,7 +2146,7 @@ GPUSparseMatrix<ElemType> GPUSparseMatrix<ElemType>::ColumnSlice(size_t startCol
     GPUSparseMatrix<ElemType> slice(GetComputeDeviceId());
     slice.ShallowCopyFrom(*this);
     slice.m_numCols                  = numCols;
-    slice.m_nz                       = (numCols == m_numCols) ? m_nz : SecondaryIndexValueAt(startColumn + numCols) - SecondaryIndexValueAt(startColumn);
+    //slice.m_nz                       = (numCols == m_numCols) ? m_nz : SecondaryIndexValueAt(startColumn + numCols) - SecondaryIndexValueAt(startColumn);
     slice.m_sliceViewOffset          = m_sliceViewOffset + startColumn; // Just shift the compressed index location to the new startColumn - that's it!
     /*
     slice.m_computeDevice            = m_computeDevice;
@@ -2499,7 +2495,7 @@ GPUSparseMatrix<ElemType>& GPUSparseMatrix<ElemType>::AssignAbsOf(const GPUSpars
 template <class ElemType>
 GPUSparseMatrix<ElemType>& GPUSparseMatrix<ElemType>::InplaceTruncateBottom(const ElemType threshold)
 {
-    if (!OwnBuffer())
+    if (!VerifyWritable())
         LogicError("Cannot modify since the buffer is managed externally.");
 
     if (IsEmpty())
@@ -2514,7 +2510,7 @@ GPUSparseMatrix<ElemType>& GPUSparseMatrix<ElemType>::InplaceTruncateBottom(cons
 template <class ElemType>
 GPUSparseMatrix<ElemType>& GPUSparseMatrix<ElemType>::AssignTruncateBottomOf(const GPUSparseMatrix<ElemType>& a, const ElemType threshold)
 {
-    if (!OwnBuffer())
+    if (!VerifyWritable())
         LogicError("Cannot modify since the buffer is managed externally.");
 
     if (a.IsEmpty())
@@ -2535,7 +2531,7 @@ GPUSparseMatrix<ElemType>& GPUSparseMatrix<ElemType>::AssignTruncateBottomOf(con
 template <class ElemType>
 GPUSparseMatrix<ElemType>& GPUSparseMatrix<ElemType>::InplaceTruncateTop(const ElemType threshold)
 {
-    if (!OwnBuffer())
+    if (!VerifyWritable())
         LogicError("Cannot modify since the buffer is managed externally.");
 
     if (IsEmpty())
@@ -2550,7 +2546,7 @@ GPUSparseMatrix<ElemType>& GPUSparseMatrix<ElemType>::InplaceTruncateTop(const E
 template <class ElemType>
 GPUSparseMatrix<ElemType>& GPUSparseMatrix<ElemType>::AssignTruncateTopOf(const GPUSparseMatrix<ElemType>& a, const ElemType threshold)
 {
-    if (!OwnBuffer())
+    if (!VerifyWritable())
         LogicError("Cannot modify since the buffer is managed externally.");
 
     if (a.IsEmpty())
@@ -2571,7 +2567,7 @@ GPUSparseMatrix<ElemType>& GPUSparseMatrix<ElemType>::AssignTruncateTopOf(const 
 template <class ElemType>
 GPUSparseMatrix<ElemType>& GPUSparseMatrix<ElemType>::SetToZeroIfAbsLessThan(const ElemType threshold)
 {
-    if (!OwnBuffer())
+    if (!VerifyWritable())
         LogicError("Cannot modify since the buffer is managed externally.");
 
     if (IsEmpty())
@@ -2622,7 +2618,7 @@ void* GPUSparseMatrix<ElemType>::ReserveTempHostBuffer(const size_t sizeInByte) 
 template <class ElemType>
 void GPUSparseMatrix<ElemType>::performElementWiseFunction(ElementWiseOperator kind, const GPUSparseMatrix<ElemType>& src)
 {
-    if (!OwnBuffer())
+    if (!VerifyWritable())
         LogicError("Cannot modify since the buffer is managed externally.");
 
     CUDA_LONG N = (CUDA_LONG) GetNumNZElements();
@@ -2676,7 +2672,7 @@ template GPUSparseMatrix<char>& GPUSparseMatrix<char>::operator=(GPUSparseMatrix
 template <class ElemType>
 MATH_API File& operator>>(File& stream, GPUSparseMatrix<ElemType>& us)
 {
-    if (!us.OwnBuffer())
+    if (!us.VerifyWritable())
         LogicError("Cannot read into a managed external matrix");
 
     stream.GetMarker(fileMarkerBeginSection, std::wstring(L"BMAT"));
@@ -2698,7 +2694,7 @@ MATH_API File& operator>>(File& stream, GPUSparseMatrix<ElemType>& us)
         NOT_IMPLEMENTED;
 
     us.Resize(rownum, colnum, nz, true, false);
-    us.SetNzCount(nz);
+    //us.SetNzCount(nz);
 
     if (nz > 0)
     {

@@ -31,15 +31,14 @@ class MATH_API CPUMatrix : public BaseMatrix<ElemType>
     using Base::m_numRows;
     using Base::m_numCols;
     using Base::m_sliceViewOffset;
-    using Base::m_nz;
-    using Base::m_externalBuffer;
+    using Base::GetExternalBuffer;
+    using Base::SetExternalBuffer;
     using Base::SetArray;
     using Base::GetNumStorageRows;
     using Base::SetNumStorageRows;
     using Base::GetNumStorageCols;
     using Base::SetNumStorageCols;
     using Base::SetComputeDeviceId;
-    using Base::SetNzCount;
     using Base::Clear;
     using Base::SetOwnBuffer;
     using Base::SetSizeAllocated;
@@ -48,8 +47,10 @@ class MATH_API CPUMatrix : public BaseMatrix<ElemType>
     using Base::ZeroValues;
     using Base::m_sob;
     using Base::ShallowCopyFrom;
+    using Base::VerifyResizable;
 
 public:
+    using Base::VerifyWritable;
     using Base::GetComputeDeviceId;
     using Base::GetArray;
     using Base::GetNumRows;
@@ -80,7 +81,6 @@ public:
     }
     ElemType* BufferPointer() const
     {
-        assert(GetArray() != nullptr);
         return GetArray() + m_sliceViewOffset;
     }
 
@@ -118,7 +118,7 @@ public:
     }
     inline ElemType Get00Element() const
     {
-        return BufferPointer()[0];
+        return operator()(0, 0);
     }
 
     void SetValue(const ElemType v);
@@ -437,7 +437,7 @@ public:
     }
 
 public:
-    ElemType LogAddSumOfElements() const;
+    ElemType LogSumOfElements() const;
 
 public:
     // for RCRF

@@ -26,9 +26,9 @@ class MATH_API CPUSparseMatrix : public BaseMatrix<ElemType>
     using Base::m_numRows;
     using Base::m_numCols;
     using Base::m_sliceViewOffset;
-    using Base::m_nz;
-    using Base::m_externalBuffer;
     using Base::SetArray;
+    using Base::GetExternalBuffer;
+    using Base::SetExternalBuffer;
     using Base::GetNumStorageRows;
     using Base::SetNumStorageRows;
     using Base::GetNumStorageCols;
@@ -55,10 +55,9 @@ class MATH_API CPUSparseMatrix : public BaseMatrix<ElemType>
     using Base::ZeroValues;
     using Base::m_sob;
     using Base::ShallowCopyFrom;
-    using Base::NzCount;
-    
+    using Base::VerifyResizable;
 public:
-    using Base::SetNzCount;
+    using Base::VerifyWritable;
     using Base::GetComputeDeviceId;
     using Base::GetArray;
     using Base::GetNumRows;
@@ -210,9 +209,15 @@ public:
         //return m_nzValues;
         return BufferPointer();
     }
+
+    size_t NzCount() const
+    {
+        return GetCompIndex()[m_numCols] - GetCompIndex()[0];
+    }
+
     size_t NzSize() const
     {
-        return sizeof(ElemType) * m_nz;
+        return sizeof(ElemType) * NzCount();
     } // actual number of element bytes in use
 
     CPUSPARSE_INDEX_TYPE* MajorIndexLocation() const
@@ -222,7 +227,7 @@ public:
     } // this is the major index, row/col ids in CSC/CSR format
     size_t MajorIndexCount() const
     {
-        return m_nz;
+        return NzCount();
     }
     size_t MajorIndexSize() const
     {
@@ -244,7 +249,7 @@ public:
             return cnt;
         }
         else
-            return m_nz; // COO format
+            return NzCount(); // COO format
     }
     // get size for compressed index
     size_t SecondaryIndexSize() const

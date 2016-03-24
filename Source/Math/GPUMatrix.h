@@ -95,15 +95,14 @@ class MATH_API GPUMatrix : public BaseMatrix<ElemType>
     using Base::m_numRows;
     using Base::m_numCols;
     using Base::m_sliceViewOffset;
-    using Base::m_nz;
-    using Base::m_externalBuffer;
+    using Base::GetExternalBuffer;
+    using Base::SetExternalBuffer;
     using Base::SetArray;
     using Base::GetNumStorageRows;
     using Base::SetNumStorageRows;
     using Base::GetNumStorageCols;
     using Base::SetNumStorageCols;
     using Base::SetComputeDeviceId;
-    using Base::SetNzCount;
     using Base::Clear;
     using Base::SetSizeAllocated;
     using Base::GetSizeAllocated;
@@ -127,8 +126,10 @@ public:
     using Base::GetFormat;
     using Base::SetFormat;
     using Base::IsEmpty;
+    using Base::VerifyResizable;
 
 public:
+    using Base::VerifyWritable;
     static const int MaxGpus = 8; // support up to 8 GPUs
 
 private:
@@ -473,7 +474,7 @@ public:
 
     static ElemType GetLearnRateForBlock_Helper(const GPUMatrix<ElemType>& Gradients, const GPUMatrix<ElemType>& SmoothedGradients);
 
-    ElemType LogAddSumOfElements() const;
+    ElemType LogSumOfElements() const;
 
 public:
     GPUMatrix<ElemType>& AssignElementProductOfWithShiftNeg(const GPUMatrix<ElemType>& a, const GPUMatrix<ElemType>& b, const size_t shift, const size_t nt);
