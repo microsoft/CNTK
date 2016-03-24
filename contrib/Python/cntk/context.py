@@ -58,7 +58,6 @@ class AbstractContext(object, metaclass=ABCMeta):
 
     def __init__(self, name,
                  graph=None,
-                 optimizer=None,
                  device_id=-1,
                  root_node=None,
                  clean_up=True):
@@ -66,8 +65,7 @@ class AbstractContext(object, metaclass=ABCMeta):
         AbstractContext Constructer
 
         :param name: context name
-        :param graph: the computational graph to be used for training, testing and prediction
-        :param optimizer: the SGD optimizer to use for training
+        :param graph: the computational graph to be used for training, testing and prediction        
         :param device_id: whether to use CPU or a specific GPU. -1 for CPU larger values
         :param root_node: the top node of the graph
         :param clean_up: whether the temporary directory should be removed when the context is left
@@ -87,8 +85,7 @@ class AbstractContext(object, metaclass=ABCMeta):
         else:
             os.mkdir(self.directory)
 
-        self.name = name
-        self.optimizer = optimizer
+        self.name = name        
         self.device_id = device_id
         self.clean_up = clean_up
         self.input_nodes = set()
@@ -112,9 +109,10 @@ class AbstractContext(object, metaclass=ABCMeta):
         '''
         return self.root_node.to_config()
 
-    def _generate_train_config(self, reader, override_existing):
+    def _generate_train_config(self, optimizer, reader, override_existing):
         '''
         Generates the configuration file for the train action.
+        :param optimizer: the SGD optimizer to use for training
         :param reader: the reader to use for reading the data
         :param override_existing: if the folder exists already override it
         '''
@@ -139,7 +137,7 @@ class AbstractContext(object, metaclass=ABCMeta):
             'ModelDescription': description,
             'ModelPath': model_filename,
             'Reader': '\n'.join(r.generate_config() for r in readers),
-            'SGD': self.optimizer.generate_config(),
+            'SGD': optimizer.generate_config(),
         }
         return tmpl % tmpl_dict
 
@@ -281,14 +279,15 @@ class Context(AbstractContext):
 
         return output.decode("utf-8")
 
-    def train(self, reader=None, override_existing = True):
+    def train(self, optimizer, reader=None, override_existing = True):
         '''
         Run the train action locally.
+        :param optimizer: the SGD optimizer to use for training
         :param reader: the reader to use for this action. Alternatively, you
         can attach a reader directly to the input node.
         :param override_existing: if the folder exists already override it
         '''
-        config_content = self._generate_train_config(reader, override_existing)
+        config_content = self._generate_train_config(optimizer, reader, override_existing)
         output = self._call_cntk(CNTK_TRAIN_CONFIG_FILENAME, config_content)
 
     def test(self, reader=None):
