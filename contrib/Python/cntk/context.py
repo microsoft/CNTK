@@ -103,12 +103,6 @@ class AbstractContext(object, metaclass=ABCMeta):
             import shutil
             shutil.rmtree(self.directory)
 
-    def to_config(self):
-        '''
-        Generates the CNTK configuration for the root node.
-        '''
-        return self.root_node.to_config()
-
     def _generate_train_config(self, optimizer, reader, override_existing):
         '''
         Generates the configuration file for the train action.
@@ -128,7 +122,7 @@ class AbstractContext(object, metaclass=ABCMeta):
         
         tmpl = open(CNTK_TRAIN_TEMPLATE_PATH, "r").read()
         model_filename = os.path.join(model_dir, self.name)
-        description, has_inputs, readers = self.to_config()        
+        description, has_inputs, readers = self.root_node.to_config()        
         if reader:
             readers.append(reader)
 
@@ -147,10 +141,18 @@ class AbstractContext(object, metaclass=ABCMeta):
         '''        
         tmpl = open(CNTK_TEST_TEMPLATE_PATH, "r").read()
         model_filename = os.path.join(self.directory, 'Models', self.name)
+
+        # if no reader is passed generate the reader from the network
+        if reader:
+            reader_config = reader.generate_config()
+        else:    
+            description, has_inputs, readers = self.root_node.to_config()        
+            reader_config = '\n'.join(r.generate_config() for r in readers)         
+        
         tmpl_dict = {
             'DevideId': self.device_id,
             'ModelPath': model_filename,
-            'Reader': reader.generate_config(),
+            'Reader': reader_config,
         }
         return tmpl % tmpl_dict
 
@@ -162,11 +164,19 @@ class AbstractContext(object, metaclass=ABCMeta):
         tmpl = open(CNTK_PREDICT_TEMPLATE_PATH, "r").read()
         model_filename = os.path.join(self.directory, 'Models', self.name)
         output_filename_base = os.path.join(self.directory, 'Outputs', self.name)
+
+        # if no reader is passed generate the reader from the network
+        if reader:
+            reader_config = reader.generate_config()
+        else:    
+            description, has_inputs, readers = self.root_node.to_config()        
+            reader_config = '\n'.join(r.generate_config() for r in readers)            
+
         tmpl_dict = {
             'DevideId': self.device_id,
             'ModelPath': model_filename,
             'PredictOutputFile': output_filename_base,
-            'Reader': reader.generate_config(),
+            'Reader': reader_config,
         }
         return tmpl % tmpl_dict
     
@@ -204,7 +214,7 @@ class AbstractContext(object, metaclass=ABCMeta):
         return tmpl % tmpl_dict
 
     @abstractmethod
-    def train(self, reader=None):
+    def train(self, optimizer, reader=None, override_existing = True):
         '''
         Abstract method for the action train.
         :param reader: the reader to use for this action. Alternatively, you
@@ -288,7 +298,7 @@ class Context(AbstractContext):
         :param override_existing: if the folder exists already override it
         '''
         config_content = self._generate_train_config(optimizer, reader, override_existing)
-        output = self._call_cntk(CNTK_TRAIN_CONFIG_FILENAME, config_content)
+        return self._call_cntk(CNTK_TRAIN_CONFIG_FILENAME, config_content)
 
     def test(self, reader=None):
         '''
@@ -297,7 +307,7 @@ class Context(AbstractContext):
         can attach a reader directly to the input node.
         '''
         config_content = self._generate_test_config(reader)
-        output = self._call_cntk(CNTK_TEST_CONFIG_FILENAME, config_content)
+        return self._call_cntk(CNTK_TEST_CONFIG_FILENAME, config_content)
 
     def predict(self, reader=None):
         '''
@@ -308,7 +318,7 @@ class Context(AbstractContext):
         Returns the predicted output
         '''
         config_content = self._generate_predict_config(reader)
-        output = self._call_cntk(CNTK_PREDICT_CONFIG_FILENAME, config_content)
+        return self._call_cntk(CNTK_PREDICT_CONFIG_FILENAME, config_content)
 
     '''
     Regular expression to parse the shape information of the nodes out of
