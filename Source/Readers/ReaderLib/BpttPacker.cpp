@@ -236,8 +236,12 @@ void BpttPacker::GetSequencesToSlot(size_t slotIndex)
     }
 }
 
-void BpttPacker::PackSparseSample(void* destination, SequenceDataPtr sequence, size_t sample, size_t elementSize, size_t /*sampleSize*/)
+// Packs a sparse sample as dense.
+void BpttPacker::PackSparseSample(void* destination, SequenceDataPtr sequence, size_t sample, size_t elementSize, size_t sampleSize)
 {
+    // Setting buffer to 0.
+    memset(destination, 0, sampleSize);
+
     SparseSequenceDataPtr s = static_pointer_cast<SparseSequenceData>(sequence);
     size_t nonZeroCount = s->m_indices[sample].size();
     for (size_t nonZeroIndex = 0; nonZeroIndex < nonZeroCount; ++nonZeroIndex)
@@ -249,6 +253,7 @@ void BpttPacker::PackSparseSample(void* destination, SequenceDataPtr sequence, s
     }
 }
 
+// Packs a dense sample as dense.
 void BpttPacker::PackDenseSample(void* destination, SequenceDataPtr sequence, size_t sample, size_t /*elementSize*/, size_t sampleSize)
 {
     memcpy(destination, (char*)(sequence->m_data) + sample * sampleSize, sampleSize);
