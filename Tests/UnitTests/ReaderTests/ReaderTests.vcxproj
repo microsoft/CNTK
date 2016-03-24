@@ -174,6 +174,8 @@
     <Text Include="Data\CNTKTextFormatReaderMNIST_Train.txt" />
     <Text Include="Data\CNTKTextFormatReaderSimple_Train.txt" />
     <Text Include="Data\ImageReaderBadLabel_map.txt" />
+    <Text Include="Data\ImageReaderBadMap_map.txt" />
+    <Text Include="Data\ImageReaderLabelOutOfRange_map.txt" />
     <Text Include="Data\ImageReaderSimple_map.txt" />
     <Text Include="Data\ImageReaderZip_map.txt" />
     <Text Include="Data\UCIFastReaderSimpleDataLoop_Mapping.txt" />
@@ -191,6 +193,9 @@
     <None Include="Config\CNTKTextFormatReader1x1_Config.cntk" />
     <None Include="Config\CNTKTextFormatReaderSimple_Config.cntk" />
     <None Include="Config\CNTKTextFormatReaderMNIST_Config.cntk" />
+    <None Include="Config\ImageReaderBadLabel_Config.cntk" />
+    <None Include="Config\ImageReaderBadMap_Config.cntk" />
+    <None Include="Config\ImageReaderLabelOutOfRange_Config.cntk" />
     <None Include="Config\ImageReaderZip_Config.cntk" />
     <None Include="Data\images\chunk0.zip" />
     <None Include="Data\images\chunk1.zip" />

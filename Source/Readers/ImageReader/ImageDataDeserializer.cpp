@@ -197,10 +197,8 @@ void ImageDataDeserializer::CreateSequenceDescriptions(std::string mapPath, size
         if (description.m_classId >= labelDimension)
         {
             RuntimeError(
-                "Image '%s' has invalid class id '%d'. Expected label dimension is '%d'.",
-                mapPath.c_str(),
-                static_cast<int>(description.m_classId),
-                static_cast<int>(labelDimension));
+                "Image '%s' has invalid class id '%" PRIu64 "'. Expected label dimension is '%" PRIu64 "'. Line %" PRIu64 " in file %s.",
+                imagePath.c_str(), description.m_classId, labelDimension, lineIndex, mapPath.c_str());
         }
         m_imageSequences.push_back(description);
         RegisterByteReader(description.m_id, description.m_path, knownReaders);
