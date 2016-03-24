@@ -22,8 +22,8 @@ if (__name__ == "__main__"):
     my_sgd = SGD(
         epoch_size=0, minibatch_size=25, learning_ratesPerMB=0.1, max_epochs=3)
 
-    with Context('demo', optimizer=my_sgd, root_node=ce, clean_up=False) as ctx:
-        ctx.train(None)
+    with Context('demo', root_node=ce, clean_up=False) as ctx:
+        ctx.train(my_sgd, None)
 
-        result = ctx.eval(out)
-        print(result.argmax(axis=1))
+        #result = ctx.eval(out)
+        #print(result.argmax(axis=1))
