@@ -18,13 +18,13 @@ struct CNTKTextFormatReaderFixture : ReaderFixture
 
 BOOST_FIXTURE_TEST_SUITE(ReaderTestSuite, CNTKTextFormatReaderFixture)
 
-BOOST_AUTO_TEST_CASE(CNTKTextFormatReaderSimple)
+BOOST_AUTO_TEST_CASE(CNTKTextFormatReaderSimple_dense)
 {
     HelperRunReaderTest<float>(
-        testDataPath() + "/Config/CNTKTextFormatReaderSimple_Config.cntk",
-        testDataPath() + "/Control/CNTKTextFormatReaderSimple_Control.txt",
-        testDataPath() + "/Control/CNTKTextFormatReaderSimple_Output.txt",
-        "Simple_Test",
+        testDataPath() + "/Config/CNTKTextFormatReader_dense.cntk",
+        testDataPath() + "/Control/CNTKTextFormatReaderSimple_dense.txt",
+        testDataPath() + "/Control/CNTKTextFormatReaderSimple_dense_Output.txt",
+        "Simple",
         "reader",
         1000, // epoch size
         250,  // mb size
@@ -36,13 +36,13 @@ BOOST_AUTO_TEST_CASE(CNTKTextFormatReaderSimple)
 };
 
 
-BOOST_AUTO_TEST_CASE(CNTKTextFormatReaderMNIST)
+BOOST_AUTO_TEST_CASE(CNTKTextFormatReaderMNIST_dense)
 {
     HelperRunReaderTest<double>(
-        testDataPath() + "/Config/CNTKTextFormatReaderMNIST_Config.cntk",
-        testDataPath() + "/Control/CNTKTextFormatReaderMNIST_Control.txt",
-        testDataPath() + "/Control/CNTKTextFormatReaderMNIST_Output.txt",
-        "MNIST_Test",
+        testDataPath() + "/Config/CNTKTextFormatReader_dense.cntk",
+        testDataPath() + "/Control/CNTKTextFormatReaderMNIST_dense.txt",
+        testDataPath() + "/Control/CNTKTextFormatReaderMNIST_dense_Output.txt",
+        "MNIST",
         "reader",
         1000, // epoch size
         1000,  // mb size
@@ -53,13 +53,13 @@ BOOST_AUTO_TEST_CASE(CNTKTextFormatReaderMNIST)
         1);
 };
 
-BOOST_AUTO_TEST_CASE(CNTKTextFormatReader1x1_1)
+BOOST_AUTO_TEST_CASE(CNTKTextFormatReader1x1_1_dense)
 {
     HelperRunReaderTest<double>(
-        testDataPath() + "/Config/CNTKTextFormatReader1x1_Config.cntk",
-        testDataPath() + "/Control/CNTKTextFormatReader1x1_1_Control.txt",
-        testDataPath() + "/Control/CNTKTextFormatReader1x1_1_Output.txt",
-        "1x1_Test",
+        testDataPath() + "/Config/CNTKTextFormatReader_dense.cntk",
+        testDataPath() + "/Control/CNTKTextFormatReader1x1_1_dense.txt",
+        testDataPath() + "/Control/CNTKTextFormatReader1x1_1_dense_Output.txt",
+        "1x1",
         "reader",
         1, // epoch size
         1,  // mb size
@@ -70,13 +70,13 @@ BOOST_AUTO_TEST_CASE(CNTKTextFormatReader1x1_1)
         1);
 };
 
-BOOST_AUTO_TEST_CASE(CNTKTextFormatReader1x1_2)
+BOOST_AUTO_TEST_CASE(CNTKTextFormatReader1x1_2_dense)
 {
     HelperRunReaderTest<double>(
-        testDataPath() + "/Config/CNTKTextFormatReader1x1_Config.cntk",
-        testDataPath() + "/Control/CNTKTextFormatReader1x1_2_Control.txt",
-        testDataPath() + "/Control/CNTKTextFormatReader1x1_2_Output.txt",
-        "1x1_Test",
+        testDataPath() + "/Config/CNTKTextFormatReader_dense.cntk",
+        testDataPath() + "/Control/CNTKTextFormatReader1x1_2_dense.txt",
+        testDataPath() + "/Control/CNTKTextFormatReader1x1_2_dense_Output.txt",
+        "1x1",
         "reader",
         2, // epoch size
         1,  // mb size
@@ -87,30 +87,13 @@ BOOST_AUTO_TEST_CASE(CNTKTextFormatReader1x1_2)
         1);
 };
 
-BOOST_AUTO_TEST_CASE(CNTKTextFormatReader1x100_1)
-{
-    HelperRunReaderTest<double>(
-        testDataPath() + "/Config/CNTKTextFormatReader1x100_Config.cntk",
-        testDataPath() + "/Control/CNTKTextFormatReader1x100_1_Control.txt",
-        testDataPath() + "/Control/CNTKTextFormatReader1x100_1_Output.txt",
-        "1x100_Test",
-        "reader",
-        10, // epoch size
-        1,  // mb size
-        10,  // num epochs
-        1,
-        1,
-        0,
-        1);
-};
-
-BOOST_AUTO_TEST_CASE(CNTKTextFormatReader1x10_MI_2)
+BOOST_AUTO_TEST_CASE(CNTKTextFormatReader1x10_MI_2_dense)
 {
     HelperRunReaderTest<float>(
-        testDataPath() + "/Config/CNTKTextFormatReader1x10_MI_Config.cntk",
-        testDataPath() + "/Control/CNTKTextFormatReader1x10_MI_2_Control.txt",
-        testDataPath() + "/Control/CNTKTextFormatReader1x10_MI_2_Output.txt",
-        "1x10_MI_Test",
+        testDataPath() + "/Config/CNTKTextFormatReader_dense.cntk",
+        testDataPath() + "/Control/CNTKTextFormatReader1x10_MI_2_dense.txt",
+        testDataPath() + "/Control/CNTKTextFormatReader1x10_MI_2_dense_Output.txt",
+        "1x10_MI",
         "reader",
         7, // epoch size
         3, // mb size
@@ -121,36 +104,53 @@ BOOST_AUTO_TEST_CASE(CNTKTextFormatReader1x10_MI_2)
         1);
 };
 
-BOOST_AUTO_TEST_CASE(CNTKTextFormatReader1x100_2)
-{
-    HelperRunReaderTest<double>(
-        testDataPath() + "/Config/CNTKTextFormatReader1x100_Config.cntk",
-        testDataPath() + "/Control/CNTKTextFormatReader1x100_2_Control.txt",
-        testDataPath() + "/Control/CNTKTextFormatReader1x100_2_Output.txt",
-        "1x100_Test",
-        "reader",
-        5, // epoch size
-        3,  // mb size
-        4,  // num epochs
-        1,
-        1,
-        0,
-        1);
-};
-
-BOOST_AUTO_TEST_CASE(CNTKTextFormatReader1x10_MI_1)
+BOOST_AUTO_TEST_CASE(CNTKTextFormatReader1x10_MI_1_dense)
 {
     HelperRunReaderTest<float>(
-        testDataPath() + "/Config/CNTKTextFormatReader1x10_MI_Config.cntk",
-        testDataPath() + "/Control/CNTKTextFormatReader1x10_MI_1_Control.txt",
-        testDataPath() + "/Control/CNTKTextFormatReader1x10_MI_1_Output.txt",
-        "1x10_MI_Test",
+        testDataPath() + "/Config/CNTKTextFormatReader_dense.cntk",
+        testDataPath() + "/Control/CNTKTextFormatReader1x10_MI_1_dense.txt",
+        testDataPath() + "/Control/CNTKTextFormatReader1x10_MI_1_dense_Output.txt",
+        "1x10_MI",
         "reader",
         10, // epoch size
         1, // mb size
         3, // num epochs
         4, // num feature inputs
         3, // num label inputs
+        0,
+        1);
+};
+
+BOOST_AUTO_TEST_CASE(CNTKTextFormatReader1x100_1_dense)
+{
+    HelperRunReaderTest<double>(
+        testDataPath() + "/Config/CNTKTextFormatReader_dense.cntk",
+        testDataPath() + "/Control/CNTKTextFormatReader1x100_1_dense.txt",
+        testDataPath() + "/Control/CNTKTextFormatReader1x100_1_dense_Output.txt",
+        "1x100",
+        "reader",
+        10, // epoch size
+        1,  // mb size
+        10,  // num epochs
+        1,
+        1,
+        0,
+        1);
+};
+
+BOOST_AUTO_TEST_CASE(CNTKTextFormatReader1x100_2_dense)
+{
+    HelperRunReaderTest<double>(
+        testDataPath() + "/Config/CNTKTextFormatReader_dense.cntk",
+        testDataPath() + "/Control/CNTKTextFormatReader1x100_2_dense.txt",
+        testDataPath() + "/Control/CNTKTextFormatReader1x100_2_dense_Output.txt",
+        "1x100",
+        "reader",
+        5, // epoch size
+        3,  // mb size
+        4,  // num epochs
+        1,
+        1,
         0,
         1);
 };
