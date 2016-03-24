@@ -49,6 +49,12 @@ private:
 
     // Indicates whether the reader operates in frame mode.
     bool m_frameMode;
+
+    // Indicates whether the reader operates in truncated BPTT mode.
+    bool m_truncated;
+
+    // Truncation length for BPTT mode.
+    size_t m_truncationLength;
 };
 
 }}}

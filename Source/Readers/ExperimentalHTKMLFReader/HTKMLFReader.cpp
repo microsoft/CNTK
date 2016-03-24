@@ -13,6 +13,7 @@
 #include "StringUtil.h"
 #include "SequencePacker.h"
 #include "SampleModePacker.h"
+#include "BpttPacker.h"
 #include "BlockRandomizer.h"
 #include "NoRandomizer.h"
 
@@ -64,9 +65,17 @@ HTKMLFReader::HTKMLFReader(MemoryProviderPtr provider,
 {
     // TODO: deserializers and transformers will be dynamically loaded
     // from external libraries based on the configuration/brain script.
-    m_frameMode = readerConfig(L"frameMode", true);
-    ConfigHelper config(readerConfig);
 
+    m_frameMode = readerConfig(L"frameMode", true);
+    m_truncated = readerConfig(L"truncated", false);
+    m_truncationLength = readerConfig(L"truncationLength", 0);
+
+    if (m_frameMode && m_truncated)
+    {
+        LogicError("Truncated mode supported only for sequence training.");
+    }
+
+    ConfigHelper config(readerConfig);
     size_t window = config.GetRandomizationWindow();
     auto deserializers = CreateDeserializers(readerConfig);
     assert(deserializers.size() == 2);
@@ -129,6 +138,15 @@ void HTKMLFReader::StartEpoch(const EpochConfiguration& config)
             m_provider,
             m_randomizer,
             config.m_minibatchSizeInSamples,
+            m_streams);
+    }
+    else if (m_truncated)
+    {
+        m_packer = std::make_shared<BpttPacker>(
+            m_provider,
+            m_randomizer,
+            config.m_minibatchSizeInSamples,
+            m_truncationLength,
             m_streams);
     }
     else

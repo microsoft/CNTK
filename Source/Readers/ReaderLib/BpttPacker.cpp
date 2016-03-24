@@ -15,9 +15,9 @@ struct SequenceBuffer
 {
     SequenceBuffer(size_t parallelNumberOfSequences)
     {
-        m_preparedSequences.reserve(parallelNumberOfSequences);
-        m_preparedSequenceLength.reserve(parallelNumberOfSequences);
-        m_currentPositions.reserve(parallelNumberOfSequences);
+        m_preparedSequences.resize(parallelNumberOfSequences);
+        m_preparedSequenceLength.resize(parallelNumberOfSequences);
+        m_sequenceSamplePosition.resize(parallelNumberOfSequences);
     }
 
     bool NothingToPack() const
@@ -40,14 +40,8 @@ struct SequenceBuffer
     //  ....
     // /*sRN1*//*sRN2*//*sRN2*/
     std::vector<std::deque<SequenceDataPtr>> m_preparedSequences;
-
     std::vector<size_t> m_preparedSequenceLength;
-    std::vector<size_t> m_sequencePosition;
     std::vector<size_t> m_sequenceSamplePosition;
-
-    // Describes the position in the sequences in the matrix above from where the minibatch begins.
-    // m_currentPositions.size() == m_preparedSequences.size()
-    std::vector<size_t> m_currentPositions;
 };
 
 BpttPacker::BpttPacker(
@@ -85,10 +79,11 @@ BpttPacker::BpttPacker(
         assert(stream->m_id == m_inputStreams[i]->m_id);
         assert(GetSampleSize(m_inputStreams[i]) == GetSampleSize(stream));
 
-        m_streamBufferSizes.push_back(0);
-        m_streamBuffers.push_back(nullptr);
+        m_streamBufferSizes.push_back(m_parallelNumberOfSequences * m_truncationSize * GetSampleSize(stream));
+        m_streamBuffers.push_back(AllocateBuffer(m_parallelNumberOfSequences * m_truncationSize, GetSampleSize(stream)));
 
         m_sequenceBufferPerStream.push_back(std::make_shared<SequenceBuffer>(m_parallelNumberOfSequences));
+        m_currentLayouts.push_back(std::make_shared<MBLayout>());
     }
 
     InitializePreparedSequences();
@@ -96,7 +91,10 @@ BpttPacker::BpttPacker(
 
 void BpttPacker::InitializePreparedSequences()
 {
-    //Initializes sequences.
+    for (size_t slotIndex = 0; slotIndex < m_parallelNumberOfSequences; ++slotIndex)
+    {
+        GetSequencesToSlot(slotIndex);
+    }
 }
 
 Minibatch BpttPacker::ReadMinibatch()
@@ -113,9 +111,9 @@ Minibatch BpttPacker::ReadMinibatch()
     for (size_t streamIndex = 0; streamIndex < m_outputStreams.size(); ++streamIndex)
     {
         m_currentLayouts[streamIndex]->Init(m_parallelNumberOfSequences, m_truncationSize);
-        for (size_t sequenceIndex = 0; sequenceIndex < m_parallelNumberOfSequences; ++sequenceIndex)
+        for (size_t slotIndex = 0; slotIndex < m_parallelNumberOfSequences; ++slotIndex)
         {
-            PackSequence(streamIndex, sequenceIndex);
+            PackSlot(streamIndex, slotIndex);
         }
 
         StreamMinibatchPtr m = std::make_shared<StreamMinibatch>();
@@ -128,54 +126,66 @@ Minibatch BpttPacker::ReadMinibatch()
     return result;
 }
 
-void BpttPacker::PackSequence(size_t streamIndex, size_t slotIndex)
+void BpttPacker::PackSlot(size_t streamIndex, size_t slotIndex)
 {
-    if (m_sequenceBufferPerStream[streamIndex]->m_preparedSequenceLength[slotIndex] < m_truncationSize)
+    if (m_sequenceBufferPerStream[streamIndex]->m_preparedSequenceLength[slotIndex] - m_sequenceBufferPerStream[streamIndex]->m_sequenceSamplePosition[slotIndex] < m_truncationSize)
     {
         GetSequencesToSlot(slotIndex);
     }
 
-    size_t numberOfSamples = std::min(m_truncationSize, m_sequenceBufferPerStream[streamIndex]->m_preparedSequenceLength[slotIndex]);
+    size_t numberOfSamples = std::min(m_truncationSize, m_sequenceBufferPerStream[streamIndex]->m_preparedSequenceLength[slotIndex] - m_sequenceBufferPerStream[streamIndex]->m_sequenceSamplePosition[slotIndex]);
     if (numberOfSamples == 0)
     {
-        // Reached the end, simply return.
+        // Reached the end of the data, put all slot to gap.
+        m_currentLayouts[streamIndex]->AddSequence(
+            GAP_SEQUENCE_ID,
+            slotIndex,
+            0,
+            m_truncationSize);
+        // Clean the slot.
+        m_sequenceBufferPerStream[streamIndex]->m_sequenceSamplePosition[slotIndex] = 0;
+        m_sequenceBufferPerStream[streamIndex]->m_preparedSequenceLength[slotIndex] -= m_sequenceBufferPerStream[streamIndex]->m_preparedSequences[slotIndex].front()->m_numberOfSamples;
+        m_sequenceBufferPerStream[streamIndex]->m_preparedSequences[slotIndex].pop_front();
+        assert(m_sequenceBufferPerStream[streamIndex]->m_preparedSequenceLength[slotIndex] == 0);
+        assert(m_sequenceBufferPerStream[streamIndex]->m_preparedSequences[slotIndex].size() == 0);
         return;
     }
 
-    size_t sampleSize = 0;
+    size_t sampleSize = GetSampleSize(m_inputStreams[streamIndex]);
     size_t stride = m_parallelNumberOfSequences * sampleSize;
     StorageType storageType = m_inputStreams[streamIndex]->m_storageType;
     size_t elementSize = GetSizeByType(m_inputStreams[streamIndex]->m_elementType);
 
-    // Add initial sequence layouts???
-    size_t& sequencePosition = m_sequenceBufferPerStream[streamIndex]->m_sequencePosition[slotIndex];
     size_t& samplePosition = m_sequenceBufferPerStream[streamIndex]->m_sequenceSamplePosition[slotIndex];
 
     m_currentLayouts[streamIndex]->AddSequence(
         NEW_SEQUENCE_ID,
         slotIndex,
         -(int)samplePosition,
-        m_sequenceBufferPerStream[streamIndex]->m_preparedSequences[slotIndex][sequencePosition]->m_numberOfSamples);
+        m_sequenceBufferPerStream[streamIndex]->m_preparedSequences[slotIndex].front()->m_numberOfSamples);
 
     // Ok, now fill in the buffer.
-    for (size_t i = 0; i < numberOfSamples; ++i)
+    for (size_t currentTimestep = 0; currentTimestep < numberOfSamples; ++currentTimestep)
     {
-        if (samplePosition >= m_sequenceBufferPerStream[streamIndex]->m_preparedSequences[slotIndex][sequencePosition]->m_numberOfSamples)
+        if (samplePosition >= m_sequenceBufferPerStream[streamIndex]->m_preparedSequences[slotIndex].front()->m_numberOfSamples)
         {
             // Starting a new sequence. Have to reset current pointers and add it to the minibatch.
             samplePosition = 0;
+            m_sequenceBufferPerStream[streamIndex]->m_preparedSequenceLength[slotIndex] -= m_sequenceBufferPerStream[streamIndex]->m_preparedSequences[slotIndex].front()->m_numberOfSamples;
             m_sequenceBufferPerStream[streamIndex]->m_preparedSequences[slotIndex].pop_front();
 
             //Adding next sequence to the minibatch.
             m_currentLayouts[streamIndex]->AddSequence(
                 NEW_SEQUENCE_ID,
                 slotIndex,
-                numberOfSamples,
-                numberOfSamples + m_sequenceBufferPerStream[streamIndex]->m_preparedSequences[slotIndex][sequencePosition]->m_numberOfSamples);
+                currentTimestep,
+                currentTimestep + m_sequenceBufferPerStream[streamIndex]->m_preparedSequences[slotIndex].front()->m_numberOfSamples);
         }
 
-        auto data = m_sequenceBufferPerStream[streamIndex]->m_preparedSequences[slotIndex][sequencePosition];
-        void* destination = m_streamBuffers[streamIndex].get() + stride * i + slotIndex * sampleSize;
+        auto data = m_sequenceBufferPerStream[streamIndex]->m_preparedSequences[slotIndex].front();
+        void* destination = m_streamBuffers[streamIndex].get() + stride * currentTimestep + slotIndex * sampleSize;
+        assert(destination >= m_streamBuffers[streamIndex].get());
+        assert(destination < m_streamBuffers[streamIndex].get() + m_streamBufferSizes[streamIndex]);
         if (storageType == StorageType::dense)
         {
             PackDenseSample(destination, data, samplePosition, elementSize, sampleSize);
@@ -184,6 +194,7 @@ void BpttPacker::PackSequence(size_t streamIndex, size_t slotIndex)
         {
             PackSparseSample(destination, data, samplePosition, elementSize, sampleSize);
         }
+        samplePosition++;
     }
 
     // Adding the last gap if there are 
@@ -193,14 +204,14 @@ void BpttPacker::PackSequence(size_t streamIndex, size_t slotIndex)
             GAP_SEQUENCE_ID,
             slotIndex,
             numberOfSamples,
-            m_truncationSize - numberOfSamples);
+            m_truncationSize);
     }
 }
 
 
 void BpttPacker::GetSequencesToSlot(size_t slotIndex)
 {
-    while (m_truncationSize > m_sequenceBufferPerStream.front()->m_preparedSequenceLength[slotIndex])
+    while (m_truncationSize > m_sequenceBufferPerStream.front()->m_preparedSequenceLength[slotIndex] - m_sequenceBufferPerStream.front()->m_sequenceSamplePosition[slotIndex])
     {
         // We always need only a single sequence
         auto s = m_transformer->GetNextSequences(1);

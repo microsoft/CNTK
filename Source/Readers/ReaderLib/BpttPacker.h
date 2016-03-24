@@ -34,10 +34,9 @@ public:
 private:
     void InitializePreparedSequences();
     bool NothingToPack();
-    void PackSequence(size_t streamIndex, size_t slotIndex);
+    void PackSlot(size_t streamIndex, size_t slotIndex);
     void GetSequencesToSlot(size_t slotIndex);
 
-    void FillPreparedSequences();
     std::shared_ptr<char> AllocateBuffer(size_t numElements, size_t elementSize);
     size_t GetSampleSize(StreamDescriptionPtr stream);
     void PackSparseSample(void* destination, SequenceDataPtr sequence, size_t sample, size_t elementSize, size_t sampleSize);
