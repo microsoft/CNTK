@@ -8333,9 +8333,9 @@ SquareError
 \begin_layout Standard
 \begin_inset Formula 
 \begin{eqnarray}
-v\left(\mathbf{X},\mathbf{\mathbf{Y}}\right) & \leftarrow & \frac{1}{2}\mathrm{Tr}\left(\left(\mathbf{X}-\mathbf{Y}\right)\left(\mathbf{X}-\mathbf{Y}\right)^{T}\right)\\
-\nabla_{\mathbf{X}}^{J} & \leftarrow & \nabla_{\mathbf{X}}^{J}+\mathbf{\nabla_{n}^{\mathit{J}}}\left(\mathbf{X}-\mathbf{Y}\right)\\
-\nabla_{\mathbf{\mathbf{Y}}}^{J} & \leftarrow & \nabla_{\mathbf{\mathbf{Y}}}^{J}-\mathbf{\nabla_{n}^{\mathit{J}}}\left(\mathbf{X}-\mathbf{Y}\right).
+v\left(\mathbf{X},\mathbf{Y}\right) & \leftarrow & \mathrm{Tr}\left(\left(\mathbf{X}-\mathbf{Y}\right)\left(\mathbf{X}-\mathbf{Y}\right)^{T}\right)\\
+\nabla_{\mathbf{X}}^{J} & \leftarrow & \nabla_{\mathbf{X}}^{J}+2\mathbf{\nabla_{n}^{\mathit{J}}}\left(\mathbf{X}-\mathbf{Y}\right)\\
+\nabla_{\mathbf{Y}}^{J} & \leftarrow & \nabla_{\mathbf{Y}}^{J}-2\mathbf{\nabla_{n}^{\mathit{J}}}\left(\mathbf{X}-\mathbf{Y}\right).
 \end{eqnarray}
 
 \end_inset
@@ -8367,8 +8367,8 @@ Note that
 \color none
 \begin_inset Formula 
 \begin{eqnarray}
-\frac{\partial v}{\partial\mathbf{X}} & = & \mathbf{X}-\mathbf{Y}\\
-\frac{\partial v}{\partial\mathbf{Y}} & = & \mathbf{-\left(X-\mathbf{Y}\right)}.
+\frac{\partial v}{\partial\mathbf{X}} & = & +2\left(\mathbf{X}-\mathbf{Y}\right)\\
+\frac{\partial v}{\partial\mathbf{Y}} & = & -2\left(\mathbf{X}-\mathbf{Y}\right).
 \end{eqnarray}
 
 \end_inset
