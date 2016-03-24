@@ -10,7 +10,7 @@ enable_cuda=
 
 have_acml=no
 acml_path=
-acml_check=include/acml.h
+acml_check=ifort64/include/acml.h
 
 have_mkl=no
 mkl_path=
@@ -486,7 +486,7 @@ do
                     exit 1
                 fi
             else
-                if test $(check_dir $optarg $$libzip_check) = yes
+                if test $(check_dir $optarg $libzip_check) = yes
                 then
                     libzip_path=$optarg
                 else

@@ -123,8 +123,10 @@ else
 endif
 
 ifeq ("$(MATHLIB)","acml")
-  INCLUDEPATH += $(ACML_PATH)/include
-  LIBPATH += $(ACML_PATH)/lib
+  INCLUDEPATH += $(ACML_PATH)/ifort64/include
+  INCLUDEPATH += $(ACML_PATH)/ifort64_mp/include
+  LIBPATH += $(ACML_PATH)/ifort64/lib
+  LIBPATH += $(ACML_PATH)/ifort64_mp/lib
   LIBS += -lacml_mp -liomp5 -lm -lpthread
   COMMON_FLAGS += -DUSE_ACML
 endif
