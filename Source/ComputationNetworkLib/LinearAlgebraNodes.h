@@ -713,8 +713,8 @@ template class SumColumnElementsNode<float>;
 template class SumColumnElementsNode<double>;
 
 // -----------------------------------------------------------------------
-// TransposeDimensions (input, dim1, dim2)
-//  - swaps index dimensions dim1 and dim2. The values are 1-based; 1 stands for the leading dimension.
+// TransposeDimensions (input, axis1, axis2)
+//  - swaps index dimensions axis1 and axis2. The values are 1-based; 1 stands for the leading dimension.
 //  - new dimensions can be created; e.g. a column vector can be transposed into a row vector, which is a [1 x N] tensor
 //  - transposing into the time dimension is currently not supported
 //  - internally implemented with tensor lib by shuffling dimensions with their strides
@@ -729,12 +729,12 @@ class TransposeDimensionsNode : public ComputationNode /*ComputationNode*/<ElemT
     static const std::wstring TypeName() { return L"TransposeDimensions"; }
 
 public:
-    TransposeDimensionsNode(DEVICEID_TYPE deviceId, const wstring& name, int dim1 = 1, int dim2 = 2)
-        : Base(deviceId, name), m_dim1(dim1), m_dim2(dim2)
+    TransposeDimensionsNode(DEVICEID_TYPE deviceId, const wstring& name, int axis1 = 1, int axis2 = 2)
+        : Base(deviceId, name), m_axis1(axis1), m_axis2(axis2)
     {
     }
     TransposeDimensionsNode(const ScriptableObjects::IConfigRecordPtr configp)
-        : TransposeDimensionsNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"dim1"), configp->Get(L"dim2"))
+        : TransposeDimensionsNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"axis1"), configp->Get(L"axis2"))
     {
         AttachInputsFromConfig(configp, this->GetExpectedNumInputs());
     }
@@ -742,25 +742,25 @@ public:
     void Save(File& fstream) const
     {
         Base::Save(fstream);
-        fstream << m_dim1 << m_dim2;
+        fstream << m_axis1 << m_axis2;
     }
 
     virtual void Load(File& fstream, size_t modelVersion) override
     {
         Base::Load(fstream, modelVersion);
         if (modelVersion >= CNTK_MODEL_VERSION_3)
-            fstream >> m_dim1 >> m_dim2;
+            fstream >> m_axis1 >> m_axis2;
         else
-            m_dim1 = 1, m_dim2 = 2; // default
+            m_axis1 = 1, m_axis2 = 2; // default
     }
 
 private:
     // compute the transposed tensor shape (in-place)
     void TransposeShape(TensorShape& shape) const
     {
-        assert(m_dim1 > 0 && m_dim2 > 0);
-        size_t i = m_dim1 - 1;
-        size_t j = m_dim2 - 1;
+        assert(m_axis1 > 0 && m_axis2 > 0);
+        size_t i = m_axis1 - 1;
+        size_t j = m_axis2 - 1;
         shape.SwapDimsInPlace(i, j);
     }
 
@@ -802,10 +802,10 @@ public:
         // input shape
         auto shape = Input(0)->GetSampleLayout();
         // validate indices
-        if (m_dim1 < 1 || m_dim2 < 1)
+        if (m_axis1 < 1 || m_axis2 < 1)
             InvalidArgument("%ls %ls operation: Indices to transpose must be >= 1.", NodeName().c_str(), OperationName().c_str());
-        size_t i = m_dim1 - 1;
-        size_t j = m_dim2 - 1;
+        size_t i = m_axis1 - 1;
+        size_t j = m_axis2 - 1;
         if (i >= shape.GetRank() && j >= shape.GetRank())
             InvalidArgument("%ls %ls operation: At least one index must refer to an existing index.", NodeName().c_str(), OperationName().c_str());
         // pad
@@ -821,7 +821,7 @@ public:
     }
 
 private:
-    int m_dim1, m_dim2; // the two dimensions (axes, 1-based) to swap
+    int m_axis1, m_axis2; // the two dimensions (axes, 1-based) to swap
 };
 
 template class TransposeDimensionsNode<float>;

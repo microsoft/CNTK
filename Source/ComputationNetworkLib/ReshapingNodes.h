@@ -233,7 +233,7 @@ template class ReconcileMBLayoutNode<double>;
 // -----------------------------------------------------------------------
 // SliceNode (input)
 // This node extracts a slice of the first tensor dimension (row).
-// TODO: Implement parametrizable m_axis. Time slicing would have to be done in BrainScript using Gather.
+// This does not support slicing the time axis. That has to be done in BrainScript using Gather.
 // -----------------------------------------------------------------------
 
 template <class ElemType>
@@ -243,13 +243,13 @@ class SliceNode : public ComputationNode<ElemType>, public NumInputs<1>
     static const std::wstring TypeName() { return L"Slice"; }
 
 public:
-    SliceNode(DEVICEID_TYPE deviceId, const wstring& name, int beginIndex = 0, int endIndex = 0)
-        : Base(deviceId, name), m_beginIndex(beginIndex), m_endIndex(endIndex), m_axis(1)
+    SliceNode(DEVICEID_TYPE deviceId, const wstring& name, int beginIndex = 0, int endIndex = 0, int axis = 1)
+        : Base(deviceId, name), m_beginIndex(beginIndex), m_endIndex(endIndex), m_axis(axis)
     {
     }
 
     SliceNode(const ScriptableObjects::IConfigRecordPtr configp)
-        : SliceNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"beginIndex"), configp->Get(L"endIndex"))
+        : SliceNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"beginIndex"), configp->Get(L"endIndex"), configp->Get(L"axis"))
     {
         AttachInputsFromConfig(configp, this->GetExpectedNumInputs());
     }
@@ -258,7 +258,6 @@ public:
     {
         Base::CopyTo(nodeP, newName, flags);
         auto node = dynamic_pointer_cast<SliceNode<ElemType>>(nodeP);
-
         node->m_beginIndex = m_beginIndex;
         node->m_endIndex   = m_endIndex;
         node->m_axis       = m_axis;
@@ -268,27 +267,32 @@ public:
     {
         Base::Load(fstream, modelVersion);
         ptrdiff_t beginIndex, height;
-        fstream >> beginIndex >> height; // legacy format stored end-begin
+        fstream >> beginIndex >> height; // legacy format stored (end-begin)
         m_beginIndex = (int)beginIndex;
         m_endIndex = (int)(beginIndex + height);
         if (modelVersion >= CNTK_MODEL_VERSION_3)
             fstream >> m_axis;
+        else
+            m_axis = 1; // emulate old RowSliceNode
     }
 
     virtual void Save(File& fstream) const override
     {
         Base::Save(fstream);
-        fstream << (ptrdiff_t)m_beginIndex << (ptrdiff_t)(m_endIndex - m_beginIndex); // legacy file format stores end-begin
+        fstream << (ptrdiff_t)m_beginIndex << (ptrdiff_t)(m_endIndex - m_beginIndex); // legacy file format stores (end-begin), we keep it that way
         fstream << m_axis;
     }
 
 private:
 
+    size_t BeginIndex() const { return m_beginIndex >= 0 ? (size_t)m_beginIndex : (size_t)(m_beginIndex + Input(0)->GetSampleLayout()[m_axis - 1]); }
+    size_t EndIndex()   const { return m_endIndex   >  0 ? (size_t)m_endIndex   : (size_t)(m_endIndex   + Input(0)->GetSampleLayout()[m_axis - 1]); }
+
     // determine the tensor shape that represents slice of the input that we are taking
     TensorShape GetInputSlice(size_t rank, const FrameRange & fr) const
     {
         auto inputSlice = Input(0)->GetTensorSliceFor(rank, fr);    // input must be narrowed down
-        inputSlice.NarrowTo(0, m_beginIndex, m_endIndex);
+        inputSlice.NarrowTo(m_axis - 1, BeginIndex(), EndIndex());
         return inputSlice;
     }
 
@@ -316,14 +320,19 @@ public:
     virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
     {
         Base::Validate(isFinalValidationPass);
+
         InferMBLayoutFromInputsForStandardCase(isFinalValidationPass);
 
         auto sampleLayout = Input(0)->GetSampleLayout();
-        if (isFinalValidationPass && sampleLayout[0] < m_endIndex)
-            RuntimeError("%ls %ls operation: m_endIndex (%d) exceeds number of rows in the input ([%s]).", NodeName().c_str(), OperationName().c_str(), m_endIndex, string(sampleLayout).c_str());
+        if (m_axis < 1 || (isFinalValidationPass && m_axis > sampleLayout.GetRank()))
+            RuntimeError("%ls %ls operation: axis parameter %d must be in range 1..rank of input ([%s]).", NodeName().c_str(), OperationName().c_str(), m_axis, string(sampleLayout).c_str());
 
-        if (sampleLayout[0] >= m_endIndex)    // (this guards against failing an out-of-bounds error if not isFinalValidationPass)
-            sampleLayout.NarrowTo(0, m_beginIndex, m_endIndex);
+        if (isFinalValidationPass && (sampleLayout[m_axis - 1] < EndIndex() || EndIndex() < BeginIndex() || BeginIndex() < 0))
+            RuntimeError("%ls %ls operation: Index range [%d,%d), interpreted as [%d,%d), is invalid for input ([%s]).", NodeName().c_str(), OperationName().c_str(), m_beginIndex, m_endIndex, (int)BeginIndex(), (int)EndIndex(), string(sampleLayout).c_str());
+
+        // propagate as much as we can
+        if (isFinalValidationPass || (m_axis - 1 < sampleLayout.GetRank() && 0 <= BeginIndex() && BeginIndex() <= EndIndex() && EndIndex() <= sampleLayout[m_axis - 1])) // (the second condition guards against failing an out-of-bounds error if not isFinalValidationPass)
+            sampleLayout.NarrowTo(m_axis - 1, BeginIndex(), EndIndex());
 
         SetDims(TensorShape(sampleLayout.GetDims()), HasMBLayout());
     }

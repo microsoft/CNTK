@@ -31,8 +31,8 @@
 // version number to control how to read and write
 #define CNTK_MODEL_VERSION_1 1
 #define CNTK_MODEL_VERSION_2 2
-#define CNTK_MODEL_VERSION_3 3
-#define CNTK_MODEL_VERSION_4 4 // PastValue
+#define CNTK_MODEL_VERSION_3 3 // (Row)Slice: axis; LearnableParameter: tensor shape; Times: outputRank; TransposeDimensions: axes
+#define CNTK_MODEL_VERSION_4 4 // PastValue: tensor shape
 #define CNTK_MODEL_VERSION_5 5 // ElemType tag in model file
 #define CURRENT_CNTK_MODEL_VERSION CNTK_MODEL_VERSION_5
 
