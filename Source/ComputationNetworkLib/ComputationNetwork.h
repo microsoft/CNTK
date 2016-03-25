@@ -651,6 +651,9 @@ public:
 
     // add a node to the network unless it's already there
     // Returns false if the node was already there.
+    // If the network already contains a different node with the same name,
+    //  - then the function will fail
+    //  - unless 'makeUniqueName=true', in which case it will patch the node's name to a unique name. 
     bool AddNodeToNetIfNotYet(const ComputationNodeBasePtr& node, bool makeUniqueName = false)
     {
         auto result = m_nameToNodeMap.insert(make_pair(node->NodeName(), node));

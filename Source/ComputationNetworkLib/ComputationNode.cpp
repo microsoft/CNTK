@@ -240,8 +240,8 @@ size_t ComputationNodeBase::DetermineElementwiseTensorRank() const
 // form the actual tensor that describes the full object
 TensorShape ComputationNodeBase::GetTensorShape(size_t rank) const
 {
-    // If we have an MB layout then add the necessary dimensions. If we have none, then absorb the column dimension.
-    TensorShape tensorShape = GetSampleLayout(); // TODO: Can this tensor have arbitrary strides? In case it came out of a Slice, Reshape, or Transpose op in-place
+    // If we have an MB layout then add the necessary sequence and time axes. If we have none, then absorb the column dimension.
+    TensorShape tensorShape = GetSampleLayout(); // TODO: Do we need to expect this tensor to have arbitrary strides? In case it came out of a Slice, Reshape, or Transpose op in-place?
     if (HasMBLayout())
     {
         size_t i = rank;
@@ -268,6 +268,20 @@ TensorShape ComputationNodeBase::GetTensorSliceFor(size_t rank, const FrameRange
     tensorShape.NarrowTo(slice);
 
     return tensorShape;
+}
+
+// same but 'fr' refers to a single column, and result will not have seq/time axes
+// This is needed by TimesNode when the left argument has to be broken up into individual matrices/GEMM calls.
+TensorShape ComputationNodeBase::GetOneSampleTensorSliceFor(size_t rank, const FrameRange& fr) const
+{
+    TensorShape result = GetTensorSliceFor(rank, fr);
+    // To enable A to have an MBLayout, we need to un-pad if we have an MBLayout but only refer to a single sequence and time step.
+    // Undo the adding of (seq, time) axes that was done by GetTensorShape()
+    if (!fr.IsOneColumnWrt(GetMBLayout()))
+        LogicError("GetOneSampleTensorSliceFor: Requires 'fr' to refer to a single sample.");
+    if (HasMBLayout())
+        result.PadRankInPlace(rank); // Note: This function will verify once again that the extra dimensions have been reduced to [1 x 1]
+    return result;
 }
 
 // -----------------------------------------------------------------------

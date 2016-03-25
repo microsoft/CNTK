@@ -516,6 +516,7 @@ protected:
 public:
 
     TensorShape GetTensorSliceFor(size_t rank, const FrameRange& fr) const; // form tensor shape of the slice referenced by FrameRange. Public since nodes may call it for their inputs.
+    TensorShape GetOneSampleTensorSliceFor(size_t rank, const FrameRange& fr) const; // same but 'fr' refers to a single column, and result will not have seq/time axes
 
     // -----------------------------------------------------------------------
     // inputs

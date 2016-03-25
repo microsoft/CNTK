@@ -258,13 +258,9 @@ public:
 private:
     TensorView<ElemType> DataTensorForA(bool gradient/*instead of value*/, const FrameRange& fr) const
     {
-        if (!fr.IsOneColumnWrt(Input(0)->GetMBLayout()))
-            LogicError("DataTensorForA: Requires 'fr' to refer to a single matrix.");
-        return Input(0)->DataTensorFor(gradient ? Input(0)->Gradient() : Input(0)->Value(), Input(0)->GetSampleLayout().GetRank(), fr.AllowBroadcast());
-
-        // TODO: To enable A to have an MBLayout, we need to un-pad if we have an MBLayout but only refer to a single sequence and time step
-        //if (fr.IsOneColumnWrt(GetMBLayout()))
-        //    tensorShape.PadRankInPlace(rank);
+        // the left argument can only be applied sample by sample, and must be returned as a matrix object
+        auto tensorShape = Input(0)->GetOneSampleTensorSliceFor(Input(0)->GetSampleLayout().GetRank(), fr.AllowBroadcast());
+        return TensorView<ElemType>(gradient ? Input(0)->Gradient() : Input(0)->Value(), tensorShape);
     }
 
 public:
@@ -279,14 +275,13 @@ public:
             auto sequenceRange = fr.GetSequenceRange();
             for (auto t = timeRange.first; t < timeRange.second; t++)
                 for (auto s = sequenceRange.first; s < sequenceRange.second; s++)
-                    ForwardProp(fr.Sequence(s));
+                    ForwardProp(fr.WithTimeStep(t).Sequence(s));
             return;
         }
 
         // TensorView::DoMatrixProductOf() will reduce each tensor object into a 2D tensor (or fail if it cannot)
         // and recreate actual Matrix objects (in case of sparse, they must be identical to the original tensor storage object).
         // Transposition is applied after flattening into 2D.
-      //auto input0 = Input(0)-> DataTensorFor(Input(0)->Value(), Input(0)->GetSampleLayout().GetRank(), FrameRange(/*select entire object*/));
         auto input0 =            DataTensorForA(/*gradient*/false,                    fr);
         auto input1 = Input(1)->ValueTensorFor(Input(1)->GetSampleLayout().GetRank(), fr);
         auto output =           ValueTensorFor(          GetSampleLayout().GetRank(), fr);
@@ -302,7 +297,7 @@ public:
             auto sequenceRange = fr.GetSequenceRange();
             for (auto t = timeRange.first; t < timeRange.second; t++) // step left to right to allow to build a sparse matrix
                 for (auto s = sequenceRange.first; s < sequenceRange.second; s++)
-                    BackpropTo(inputIndex, fr.Sequence(s));
+                    BackpropTo(inputIndex, fr.WithTimeStep(t).Sequence(s));
             return;
         }
 
@@ -316,7 +311,6 @@ public:
             // this potentially computes inner products over time, so we must mask gaps to 0
             MaskMissingGradientColumnsToZero(fr);
             Input(1)->MaskMissingValueColumnsToZero(fr);
-          //auto input0Gradient = Input(0)->DataTensorFor(Input(0)->Gradient(), Input(0)->GetSampleLayout().GetRank(), FrameRange(/*select entire object*/));
             auto input0Gradient =               DataTensorForA(/*gradient=*/true,                    fr);
             auto input1         = Input(1)->   ValueTensorFor(Input(1)->GetSampleLayout().GetRank(), fr);
             auto outputGradient =           GradientTensorFor(          GetSampleLayout().GetRank(), fr);
@@ -324,7 +318,6 @@ public:
         }
         else if (inputIndex == 1) // right derivative
         {
-          //auto input0         = Input(0)->    DataTensorFor(Input(0)->Value(), Input(0)->GetSampleLayout().GetRank(), FrameRange(/*select entire object*/));
             auto input0         =               DataTensorForA(/*gradient=*/false,                   fr);
             auto input1Gradient = Input(1)->GradientTensorFor(Input(1)->GetSampleLayout().GetRank(), fr);
             auto outputGradient =           GradientTensorFor(          GetSampleLayout().GetRank(), fr);

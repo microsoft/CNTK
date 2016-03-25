@@ -691,7 +691,7 @@ public:
         else if (IsAllFrames()) return
             make_pair(0, m_pMBLayout->GetNumTimeSteps());
         else return
-            make_pair(m_timeOffset, m_timeOffset + m_timeRange);
+            make_pair(timeIdxInSeq + m_timeOffset, timeIdxInSeq + m_timeOffset + m_timeRange);
     }
 
     bool IsOneColumnWrt(const shared_ptr<MBLayout> &pMBLayout) const
