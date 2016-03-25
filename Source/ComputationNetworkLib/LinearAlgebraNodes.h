@@ -380,7 +380,7 @@ public:
             dimsC.resize(m_outputRank);    // output dims
             for (size_t k = numReductionDims; k < dimsB.size(); k++)
                 dimsC.push_back(dimsB[k]); // input dims
-            SetDims(TensorShape(dimsC), Input(1)->HasMBLayout());
+            SetDims(TensorShape(dimsC), Input(0)->HasMBLayout() || Input(1)->HasMBLayout());
 
             // update dimensions of A
             if (transpose)

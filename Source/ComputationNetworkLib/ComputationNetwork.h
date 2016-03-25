@@ -651,11 +651,18 @@ public:
 
     // add a node to the network unless it's already there
     // Returns false if the node was already there.
-    bool AddNodeToNetIfNotYet(const ComputationNodeBasePtr& node)
+    bool AddNodeToNetIfNotYet(const ComputationNodeBasePtr& node, bool makeUniqueName = false)
     {
         auto result = m_nameToNodeMap.insert(make_pair(node->NodeName(), node));
-        if (!result.second && result.first->second != node) // if there's already one under this name, it better be node
-            RuntimeError("AddNodeToNetIfNotYet: Duplicated name for %ls %ls operation.", node->NodeName().c_str(), node->OperationName().c_str());
+        // if there's already one under this name, it better be node
+        // unless user requested 'makeUniqueName', then we will modify the name
+        while (!result.second/*if already there*/ && result.first->second != node)
+        {
+            if (!makeUniqueName || node->NodeName().find_first_of(L".[]") == wstring::npos)
+                RuntimeError("AddNodeToNetIfNotYet: Duplicated name for %ls %ls operation.", node->NodeName().c_str(), node->OperationName().c_str());
+            node->SetName(L"_" + node->NodeName());
+            result = m_nameToNodeMap.insert(make_pair(node->NodeName(), node));
+        }
         node->SetEnvironment(m_environment); // (note: redundant if already part of the network)
         return result.second;
     }

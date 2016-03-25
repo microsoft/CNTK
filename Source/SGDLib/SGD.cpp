@@ -220,6 +220,7 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
     std::vector<ComputationNodeBasePtr> refFeatureNodes; // we keep the original network's features here
     if (m_needAdaptRegularization && m_adaptationRegType == AdaptationRegType::KL && refNode != nullptr)
     {
+        refNet->InvalidateCompiledNetwork(); // prepare to re-compile
         // replace input nodes in ref network by input nodes of the main network
         refFeatureNodes.resize(featureNodes.size());
         for (size_t i = 0; i < featureNodes.size(); i++)
@@ -229,7 +230,7 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
             refFeatureNodes[i] = refNet->GetNodeFromName(featureNodes[i]->NodeName()); // remember so that we can restore them later
             refNet->ChangeNode(featureNodes[i]->NodeName(), featureNodes[i]);
         }
-        refNet->InvalidateCompiledNetwork(); // prepare to re-compile
+        //const_cast<MBLayoutPtr&>(refNet->GetMBLayoutPtr()) = net->GetMBLayoutPtr(); // WORKAROUND
         refNet->CompileNetwork();
 
         // allocate memory for forward computation

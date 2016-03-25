@@ -31,13 +31,14 @@ IsSameObject(a,b) = new CompareFunction [ what = 'IsSameObject' ; args = (a : b)
 
 LearnableParameter(rows, cols, learningRateMultiplier = 1.0, init = 'uniform'/*|fixedValue|gaussian|fromFile*/, initValueScale = 1, value = 0, initFromFilePath = '', initOnCPUOnly=true, randomSeed=-1, tag='') = new ComputationNode [ operation = 'LearnableParameter' ; shape = new TensorShape [ dims = (rows : cols) ] /*plus the function args*/ ]
 Parameter = LearnableParameter // deprecated 
+# TODO: make Parameter take tensor dims?
 ParameterTensor(dims, learningRateMultiplier = 1.0, init = 'uniform'/*|fixedValue|gaussian|fromFile*/, initValueScale = 1, value = 0, initFromFilePath = '', initOnCPUOnly=true, randomSeed=-1, tag='') = new ComputationNode [ operation = 'LearnableParameter' ; shape = new TensorShape [ /*dims*/ ] /*plus the function args*/ ]
 Input(dims, tag='feature') = new ComputationNode [ operation = 'InputValue' ; shape = new TensorShape [ /*dims*/ ] ; isImage = false /*plus the function args*/ ]
 SparseInput(dims, tag='feature') = new ComputationNode [ operation = 'SparseInputValue' ; shape = new TensorShape [ /*dims*/ ] ; isImage = false /*plus the function args*/ ]
 ImageInput(imageWidth, imageHeight, imageChannels, imageLayout='CHW', tag='feature') = new ComputationNode [ operation = 'InputValue' ; isImage = true /*plus the function args*/ ]
 SparseImageInput(imageWidth, imageHeight, imageChannels, imageLayout='CHW', tag='feature') = new ComputationNode [ operation = 'SparseInputValue' ; isImage = true /*plus the function args*/ ]
 EnvironmentInput(propertyName, tag='') = new ComputationNode [ operation = 'EnvironmentInput' /*plus the function args*/ ]
-#Constant(val, dims = 1, tag='') = ParameterTensor(dims, learningRateMultiplier = 0, init = 'fixedValue', value = val) 
+ConstantTensor(val, dims, tag='') = ParameterTensor(dims, learningRateMultiplier = 0, init = 'fixedValue', value = val) 
 Constant(val, rows = 1, cols = 1, tag='') = Parameter(rows, cols, learningRateMultiplier = 0, init = 'fixedValue', value = val) 
 PastValue(dims, input, timeStep = 1, defaultHiddenActivation = 0.1, tag='') = new ComputationNode [ operation = 'PastValue' ; inputs = input ; shape = new TensorShape [ /*dims*/ ] /*plus the function args*/ ]
 FutureValue(dims, input, timeStep = 1, defaultHiddenActivation = 0.1, tag='') = new ComputationNode [ operation = 'FutureValue' ; inputs = input ; shape = new TensorShape [ /*dims*/ ] /*plus the function args*/ ]
@@ -110,7 +111,6 @@ Sqrt(z, tag='') = new ComputationNode [ operation = 'Sqrt' ; inputs = z /*plus t
 SquareError(aMatrix, anotherMatrix, tag='') = new ComputationNode [ operation = 'SquareError' ; inputs = (aMatrix : anotherMatrix) /*plus the function args*/ ]
 SumColumnElements(z, tag='') = new ComputationNode [ operation = 'SumColumnElements' ; inputs = z /*plus the function args*/ ]
 SumElements(matrix, tag='') = new ComputationNode [ operation = 'SumElements' ; inputs = matrix /*plus the function args*/ ]
-Pass(z, tag='') = new ComputationNode [ operation = 'Pass' ; inputs = z /*plus the function args*/ ]
 Tanh(z, tag='') = new ComputationNode [ operation = 'Tanh' ; inputs = z /*plus the function args*/ ]
 TimeReverse(vectorSequence, tag='') = new ComputationNode [ operation = 'TimeReverse' ; inputs = vectorSequence /*plus the function args*/ ]
 TransposeTimes(leftMatrix, rightMatrix, tag='') = new ComputationNode [ operation = 'TransposeTimes' ; inputs = (leftMatrix : rightMatrix) /*plus the function args*/ ]
@@ -138,8 +138,8 @@ BS = [
 ##############################################################################
 
 Constants = [
-    Zero = Constant (0)
-    One  = Constant (1)
+    Zero = ConstantTensor (0, 1)
+    One  = ConstantTensor (1, 1)
     # BUGBUG: ZeroesLike() would recreate the full dimension of x. Well, no need if it considers broadcasting. But still wrong if we want to broadcast a vector of different tensor dim.
     #ZeroesLike (x) = CastAs (x, Zero) // read: Cast<x>(Zero)
     #OnesLike (x)   = CastAs (x, One)
@@ -274,6 +274,7 @@ Loop = [
 
     # opposite of Id's "next"
     Previous (x) = PastValue (0, x, timeStep=1)
+    Next (x) = FutureValue (0, x, timeStep=1)
 ]
 
 ##############################################################################

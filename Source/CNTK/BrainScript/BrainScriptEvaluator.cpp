@@ -701,8 +701,8 @@ static ConfigValuePtr Evaluate(const ExpressionPtr &e, const IConfigRecordPtr &s
             let &functions = opIter->second;
             let &leftArg = e->args[0];
             let &rightArg = e->args[1];
-            let leftValPtr = Evaluate(leftArg, scope, exprPath, functions.prettyName + L"_left");
-            let rightValPtr = Evaluate(rightArg, scope, exprPath, functions.prettyName + L"_right");
+            let leftValPtr = Evaluate(leftArg, scope, exprPath, functions.prettyName + L"Args[0]");
+            let rightValPtr = Evaluate(rightArg, scope, exprPath, functions.prettyName + L"Args[1]");
             if (leftValPtr.Is<Double>() && rightValPtr.Is<Double>())
                 return functions.NumbersOp(e, leftValPtr, rightValPtr, scope, exprPath);
             else if (leftValPtr.Is<String>() && rightValPtr.Is<String>())

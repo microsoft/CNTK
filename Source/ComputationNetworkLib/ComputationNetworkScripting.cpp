@@ -94,7 +94,7 @@ void ComputationNetwork::ConstructFromRoots(DEVICEID_TYPE deviceId, deque<Comput
         workList.pop_front();
 
         // add to set
-        let wasAdded = AddNodeToNetIfNotYet(node);
+        let wasAdded = AddNodeToNetIfNotYet(node, /*makeUniqueName=*/ true);
         if (!wasAdded) // node already there (above will fail if there is a different node with the same name)
             continue;
 
