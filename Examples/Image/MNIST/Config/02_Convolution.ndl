@@ -23,8 +23,8 @@ DNN=[
     hStride1 = 1
     vStride1 = 1
     # weight[cMap1, kW1 * kH1 * inputChannels]
-    # ConvReLULayer is defined in Macros.ndl
-    conv1_act = ConvReLULayer(featScaled, cMap1, 25, kW1, kH1, hStride1, vStride1, 10, 1)
+    # Conv2DReLULayer is defined in Macros.ndl
+    conv1_act = Conv2DReLULayer(featScaled, cMap1, 25, kW1, kH1, hStride1, vStride1, 10, 1)
 
     # pool1
     pool1W = 2
@@ -40,15 +40,15 @@ DNN=[
     hStride2 = 1
     vStride2 = 1
     # weight[cMap2, kW2 * kH2 * cMap1]
-    # ConvReLULayer is defined in Macros.ndl
-    conv2_act = ConvReLULayer(pool1, cMap2, 400, kW2, kH2, hStride2, vStride2, 10, 1)
+    # ConvNDReLULayer is defined in Macros.ndl
+    conv2_act = ConvNDReLULayer(pool1, kW2, kH2, cMap1, 400, cMap2, hStride2, vStride2, 10, 1)
 
     # pool2
     pool2W = 2
     pool2H = 2
     pool2hStride = 2
     pool2vStride = 2
-    pool2 = MaxPooling(conv2_act, pool2W, pool2H, pool2hStride, pool2vStride, imageLayout=$imageLayout$)
+    pool2 = MaxNDPooling(conv2_act, pool2W, pool2H, pool2hStride, pool2vStride, imageLayout=$imageLayout$)
 
     h1Dim = 128
     # DNNImageSigmoidLayer and DNNLayer are defined in Macros.ndl
