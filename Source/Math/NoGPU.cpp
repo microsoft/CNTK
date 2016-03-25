@@ -2182,7 +2182,7 @@ std::unique_ptr<ConvolutionEngine<ElemType>> CuDnnConvolutionEngineFactory<ElemT
 }
 
 template <class ElemType>
-bool CuDnnConvolutionEngineFactory<ElemType>::IsSupported(ConvolveGeometryPtr, PoolKind)
+bool CuDnnConvolutionEngineFactory<ElemType>::IsSupported(DEVICEID_TYPE, ConvolveGeometryPtr, PoolKind)
 {
     return false;
 }
