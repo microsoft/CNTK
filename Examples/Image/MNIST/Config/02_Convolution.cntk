@@ -12,7 +12,7 @@ ModelDir  = "$OutputDir$/Models"
 deviceId = 0
 imageLayout = "cudnn"
 # override the above as follows when running on CPU:
- deviceId = -1
+# deviceId = -1
 
 command = train:test
 
