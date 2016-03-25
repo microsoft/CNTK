@@ -569,7 +569,7 @@ write = [
             m2 = BS.Network.Edit (m1, propagationEdits)
 
             # propagate LSTM state to the right top-N rank given where that rank came from in the previous time step
-            PropagateTopN (h /* or c*/) = Previous (SampleTimes (h.PastValueArgs[0], backPointers))
+            PropagateTopN (h /* or c*/) = Previous (Times (h.PastValueArgs[0], backPointers))
                 # backPointers: [Dprev, Dnew]
                 #   v--------- best came from input hyp[1]
                 #     v------- second best came from input hyp[0]
@@ -654,7 +654,7 @@ write = [
             #     +-----+z|   z denotes the accumulated path score max_w P(w|hyp[2])
             #       |0 0 0|
             #       +-----+
-            pathScores = ConstantTensor (1, (1/*output dim*/ : /*reduction dims: */vocabSize : beamDepth/*Dprev*/)) * tokenSet  # [1 x Dnew]
+            pathScores = ConstantTensor (1, (1/*output dim*/ : /*reduction dims: */vocabSize : beamDepth/*Dprev*/)) * tokenSetScores  # [1 x Dnew]
 
             # traceback
             # last state: take Hardmax over pathScores
@@ -686,10 +686,6 @@ write = [
             z = decode;
 
             # helper macros  --> move to BS.core.bs
-
-            # matrix product where A consists of MB samples, and B is multiplied from the right to every sample
-            # Note: 'transposition' here is always sample-wise.  TODO: Times node should be able to do this by itself.
-            SampleTimes (A, B) = Transpose (TransposeTimes (B, Transpose (A)))   # C = (B' * A')'
 
             FirstAndOther (firstVal, otherVals, N, axis = 1) = [
                 axis1 = axis  # TODO: Is this really necessary? Why? Then we need the syntax   axis = ^.axis or ^axis

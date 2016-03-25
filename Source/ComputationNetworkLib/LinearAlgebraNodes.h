@@ -222,7 +222,11 @@ template class ElementTimesNode<double>;
 // -----------------------------------------------------------------------
 // TimesNodeBase (A, B, outputRank=1)
 // shared code of TimesNode and TransposeTimesNode (which transposes A)
-// Right operand and output can have MB layout, while left operand cannot.
+// The common case, W * v with weights W and minibatch data v is efficiently
+// implemented as a per-minibatch BLAS GEMM call.
+// If the A is minibatch data, then this operation is currently not efficient.
+// TODO: Implement this with TensorView::DoElementwiseProductOf() and stride magic
+// TODO: Transpose flags for all matrices, inputs and outputs?
 // -----------------------------------------------------------------------
 
 template <class ElemType, bool m_transpose>
@@ -251,19 +255,57 @@ public:
             m_outputRank = 1;
     }
 
+private:
+    TensorView<ElemType> DataTensorForA(bool gradient/*instead of value*/, const FrameRange& fr) const
+    {
+        if (!fr.IsOneColumnWrt(Input(0)->GetMBLayout()))
+            LogicError("DataTensorForA: Requires 'fr' to refer to a single matrix.");
+        return Input(0)->DataTensorFor(gradient ? Input(0)->Gradient() : Input(0)->Value(), Input(0)->GetSampleLayout().GetRank(), fr.AllowBroadcast());
+
+        // TODO: To enable A to have an MBLayout, we need to un-pad if we have an MBLayout but only refer to a single sequence and time step
+        //if (fr.IsOneColumnWrt(GetMBLayout()))
+        //    tensorShape.PadRankInPlace(rank);
+    }
+
+public:
     virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
     {
+        // if A is minibatch data, then this must be performed frame-by-frame, sequence-by-sequence, one GEMM call each.
+        // This will be inefficient. We hope this will be the baseline of a future, more efficient TensorView-based implementation.
+        if (!fr.IsOneColumnWrt(Input(0)->GetMBLayout()))
+        {
+            // recursively call ourselves for each individual time and sequence
+            auto timeRange     = fr.GetTimeRange();
+            auto sequenceRange = fr.GetSequenceRange();
+            for (auto t = timeRange.first; t < timeRange.second; t++)
+                for (auto s = sequenceRange.first; s < sequenceRange.second; s++)
+                    ForwardProp(fr.Sequence(s));
+            return;
+        }
+
         // TensorView::DoMatrixProductOf() will reduce each tensor object into a 2D tensor (or fail if it cannot)
         // and recreate actual Matrix objects (in case of sparse, they must be identical to the original tensor storage object).
         // Transposition is applied after flattening into 2D.
-        auto output =           ValueTensorFor(          GetSampleLayout().GetRank(), fr);
-        auto input0 = Input(0)->ValueTensorFor(Input(0)->GetSampleLayout().GetRank(), FrameRange(/*select entire object*/));
+      //auto input0 = Input(0)-> DataTensorFor(Input(0)->Value(), Input(0)->GetSampleLayout().GetRank(), FrameRange(/*select entire object*/));
+        auto input0 =            DataTensorForA(/*gradient*/false,                    fr);
         auto input1 = Input(1)->ValueTensorFor(Input(1)->GetSampleLayout().GetRank(), fr);
+        auto output =           ValueTensorFor(          GetSampleLayout().GetRank(), fr);
         output.AssignMatrixProductOf(false/*transC*/, input0, m_transpose/*transA*/, input1, false/*transB*/);
     }
 
     virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
     {
+        // special treatment if A is minibatch data; see Forward() for comment
+        if (!fr.IsOneColumnWrt(Input(0)->GetMBLayout()))
+        {
+            auto timeRange     = fr.GetTimeRange();
+            auto sequenceRange = fr.GetSequenceRange();
+            for (auto t = timeRange.first; t < timeRange.second; t++) // step left to right to allow to build a sparse matrix
+                for (auto s = sequenceRange.first; s < sequenceRange.second; s++)
+                    BackpropTo(inputIndex, fr.Sequence(s));
+            return;
+        }
+
         if (inputIndex == 0) // left derivative
         {
             // currently we only support one combination when the input is sparse
@@ -274,28 +316,28 @@ public:
             // this potentially computes inner products over time, so we must mask gaps to 0
             MaskMissingGradientColumnsToZero(fr);
             Input(1)->MaskMissingValueColumnsToZero(fr);
-            auto outputGradient =           GradientTensorFor(          GetSampleLayout().GetRank(), fr);
-            auto input0Gradient = Input(0)->GradientTensorFor(Input(0)->GetSampleLayout().GetRank(), FrameRange(/*select entire object*/));
+          //auto input0Gradient = Input(0)->DataTensorFor(Input(0)->Gradient(), Input(0)->GetSampleLayout().GetRank(), FrameRange(/*select entire object*/));
+            auto input0Gradient =               DataTensorForA(/*gradient=*/true,                    fr);
             auto input1         = Input(1)->   ValueTensorFor(Input(1)->GetSampleLayout().GetRank(), fr);
+            auto outputGradient =           GradientTensorFor(          GetSampleLayout().GetRank(), fr);
             input0Gradient.AddMatrixProductOf(m_transpose/*transC*/, outputGradient, false/*transA*/, input1, true/*transB*/);
         }
         else if (inputIndex == 1) // right derivative
         {
-            auto outputGradient =           GradientTensorFor(          GetSampleLayout().GetRank(), fr);
-            auto input0         = Input(0)->   ValueTensorFor(Input(0)->GetSampleLayout().GetRank(), FrameRange(/*select entire object*/));
+          //auto input0         = Input(0)->    DataTensorFor(Input(0)->Value(), Input(0)->GetSampleLayout().GetRank(), FrameRange(/*select entire object*/));
+            auto input0         =               DataTensorForA(/*gradient=*/false,                   fr);
             auto input1Gradient = Input(1)->GradientTensorFor(Input(1)->GetSampleLayout().GetRank(), fr);
+            auto outputGradient =           GradientTensorFor(          GetSampleLayout().GetRank(), fr);
             input1Gradient.AddMatrixProductOf(false/*transC*/, input0, !m_transpose/*transA*/, outputGradient, false/*transB*/);
         }
     }
 
     virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }
-    // but both inputs are
+    // but both *inputs* are used, so we don't overload the InputUsed-() function which defaults to 'true'
 
     virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
     {
         Base::Validate(isFinalValidationPass);
-        if (isFinalValidationPass && Input(0)->HasMBLayout())
-            InvalidArgument("%ls %ls operation requires the first factor to not be minibatch data (must not have an MBLayout).", NodeName().c_str(), OperationName().c_str());
         InferMBLayoutFromInputsForStandardCase(isFinalValidationPass);
 
         bool transpose = m_transpose; // (assigning to a non-const variable avoids a compiler warning C4127: conditional expression is constant)
@@ -380,7 +422,7 @@ public:
             dimsC.resize(m_outputRank);    // output dims
             for (size_t k = numReductionDims; k < dimsB.size(); k++)
                 dimsC.push_back(dimsB[k]); // input dims
-            SetDims(TensorShape(dimsC), Input(0)->HasMBLayout() || Input(1)->HasMBLayout());
+            SetDims(TensorShape(dimsC), HasMBLayout());
 
             // update dimensions of A
             if (transpose)

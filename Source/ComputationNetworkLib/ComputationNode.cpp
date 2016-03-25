@@ -252,6 +252,7 @@ TensorShape ComputationNodeBase::GetTensorShape(size_t rank) const
 }
 
 // get tensor shape of the slice referenced by a given FrameRange
+// Important: This shape does carry offset and stride; it's not just dimensions.
 TensorShape ComputationNodeBase::GetTensorSliceFor(size_t rank, const FrameRange& fr) const
 {
     // form the actual tensor that describes the full object
@@ -265,6 +266,7 @@ TensorShape ComputationNodeBase::GetTensorSliceFor(size_t rank, const FrameRange
     // narrow the tensor
     // Note: Strides are honored correctly.
     tensorShape.NarrowTo(slice);
+
     return tensorShape;
 }
 
