@@ -590,21 +590,30 @@ public:
                 m_strides[k] = 0;
         return *this;
     }
-    TensorShape& PadRankInPlace(size_t desiredRank) // append or drop singleton dimensions
+    TensorShape& PadRankInPlace(size_t desiredRank) // append trailing singleton dimensions
     {
         VerifyIsDense();
-        while (desiredRank < GetRank()) // drop
-        {
-            if (m_dims.back() != 1)
-                LogicError("Pad() cannot drop non-singleton dimensions.");
-            m_strides.pop_back();
-            m_dims.pop_back();
-        }
-        while (GetRank() < desiredRank) // pad
+        if (desiredRank < GetRank()) // can't drop
+            LogicError("PadRankInPlace: desiredRank (%d) cannot be less than tensor shape's rank (%d)", (int)desiredRank, (int)GetRank());
+        else while (GetRank() < desiredRank) // pad
         {
             m_strides.push_back(GetRank() > 0 ? m_strides.back() * (ptrdiff_t)m_dims.back() : 1);
             m_dims.push_back(1);
         }
+        return *this;
+    }
+    TensorShape& TrimRankInPlace(size_t desiredRank) // drop trailing singleton dimensions
+    {
+        if (GetRank() < desiredRank) // can't pad
+            LogicError("TrimRankInPlace: desiredRank (%d) cannot be higher than tensor shape's rank (%d)", (int)desiredRank, (int)GetRank());
+        else while (desiredRank < GetRank()) // drop
+        {
+            if (m_dims.back() != 1)
+                LogicError("TrimRankInPlace() cannot drop non-singleton dimensions.");
+            m_strides.pop_back();
+            m_dims.pop_back();
+        }
+        VerifyIsDense(); // (should be OK to drop non-dense singleton dimensions, so check after dropping them)
         return *this;
     }
     TensorShape PadRank(size_t desiredRank) const // append singleton dimensions

@@ -699,7 +699,7 @@ public:
         if (!pMBLayout) return
             true; // target has no layout: This would broadcast.
         else return
-            (pMBLayout->GetNumTimeSteps()         == 1 || m_timeRange == 1) &&
+            (pMBLayout->GetNumTimeSteps()         == 1 || (!IsAllFrames() && m_timeRange == 1)) &&
             (pMBLayout->GetNumParallelSequences() == 1 || seqIndex != SIZE_MAX);
     }
 

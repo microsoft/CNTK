@@ -280,7 +280,7 @@ TensorShape ComputationNodeBase::GetOneSampleTensorSliceFor(size_t rank, const F
     if (!fr.IsOneColumnWrt(GetMBLayout()))
         LogicError("GetOneSampleTensorSliceFor: Requires 'fr' to refer to a single sample.");
     if (HasMBLayout())
-        result.PadRankInPlace(rank); // Note: This function will verify once again that the extra dimensions have been reduced to [1 x 1]
+        result.TrimRankInPlace(rank); // Note: This function will verify once again that the extra dimensions have been reduced to [1 x 1]
     return result;
 }
 

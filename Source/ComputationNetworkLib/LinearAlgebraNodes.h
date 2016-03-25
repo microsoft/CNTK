@@ -256,11 +256,17 @@ public:
     }
 
 private:
-    TensorView<ElemType> DataTensorForA(bool gradient/*instead of value*/, const FrameRange& fr) const
+    // the left argument can only be applied sample by sample, and must be returned as a matrix object
+    // (as a consequence, it then also applies to the node itself)
+    TensorView<ElemType> OneSampleTensorFor(int inputIndex, bool gradient/*instead of value*/, const FrameRange& fr)
     {
-        // the left argument can only be applied sample by sample, and must be returned as a matrix object
-        auto tensorShape = Input(0)->GetOneSampleTensorSliceFor(Input(0)->GetSampleLayout().GetRank(), fr.AllowBroadcast());
-        return TensorView<ElemType>(gradient ? Input(0)->Gradient() : Input(0)->Value(), tensorShape);
+        auto input = inputIndex < 0 ? this : Input(inputIndex).get();
+        auto& data = gradient ? input->Gradient() : input->Value();
+        size_t rank = input->GetSampleLayout().GetRank();
+        if (!Input(0)->HasMBLayout()) // left input is no MB data: run normally
+            return input->DataTensorFor(data, rank, fr);
+        auto tensorShape = input->GetOneSampleTensorSliceFor(rank, fr);
+        return TensorView<ElemType>(data, tensorShape);
     }
 
 public:
@@ -281,10 +287,11 @@ public:
 
         // TensorView::DoMatrixProductOf() will reduce each tensor object into a 2D tensor (or fail if it cannot)
         // and recreate actual Matrix objects (in case of sparse, they must be identical to the original tensor storage object).
-        // Transposition is applied after flattening into 2D.
-        auto input0 =            DataTensorForA(/*gradient*/false,                    fr);
-        auto input1 = Input(1)->ValueTensorFor(Input(1)->GetSampleLayout().GetRank(), fr);
-        auto output =           ValueTensorFor(          GetSampleLayout().GetRank(), fr);
+        // Transposition is applied after flattening into 2D, but only allowed if the input sample is 2D anyway.
+        auto input0 =       OneSampleTensorFor(0,  /*gradient=*/false,                fr.AllowBroadcast());
+        auto input1 =       OneSampleTensorFor(1,  /*gradient=*/false,                fr.AllowBroadcast());
+      //auto input1 = Input(1)->ValueTensorFor(Input(1)->GetSampleLayout().GetRank(), fr.AllowBroadcast());
+        auto output =       OneSampleTensorFor(-1, /*gradient=*/false,                fr);
         output.AssignMatrixProductOf(false/*transC*/, input0, m_transpose/*transA*/, input1, false/*transB*/);
     }
 
@@ -301,26 +308,32 @@ public:
             return;
         }
 
+        // this potentially computes inner products over time, so we must mask gaps to 0
+        if (Input(inputIndex)->ReducesInTimeWrt(shared_from_this()))
+            MaskMissingGradientColumnsToZero(fr);
+        if (Input(inputIndex)->ReducesInTimeWrt(Input(1 - inputIndex)))
+            Input(1 - inputIndex)->MaskMissingValueColumnsToZero(fr);
+
         if (inputIndex == 0) // left derivative
         {
             // currently we only support one combination when the input is sparse
             // If input data is sparse, then gradient is block sparse.
             if (Input(1)->Value().GetMatrixType() == SPARSE && Input(0)->Gradient().GetMatrixType() == DENSE && Gradient().GetMatrixType() == DENSE)
                 Input(0)->Gradient().SwitchToMatrixType(SPARSE, MatrixFormat::matrixFormatSparseBlockCol, false);
-
-            // this potentially computes inner products over time, so we must mask gaps to 0
-            MaskMissingGradientColumnsToZero(fr);
-            Input(1)->MaskMissingValueColumnsToZero(fr);
-            auto input0Gradient =               DataTensorForA(/*gradient=*/true,                    fr);
-            auto input1         = Input(1)->   ValueTensorFor(Input(1)->GetSampleLayout().GetRank(), fr);
-            auto outputGradient =           GradientTensorFor(          GetSampleLayout().GetRank(), fr);
+            auto input0Gradient =       OneSampleTensorFor(0, /*gradient=*/true,                  fr.AllowBroadcast());
+          //auto input1         = Input(1)->ValueTensorFor(Input(1)->GetSampleLayout().GetRank(), fr.AllowBroadcast());
+            auto input1         =       OneSampleTensorFor(1,  /*gradient=*/false,                fr.AllowBroadcast());
+          //auto outputGradient =        GradientTensorFor(          GetSampleLayout().GetRank(), fr);
+            auto outputGradient =       OneSampleTensorFor(-1, /*gradient=*/true,                 fr);
             input0Gradient.AddMatrixProductOf(m_transpose/*transC*/, outputGradient, false/*transA*/, input1, true/*transB*/);
         }
         else if (inputIndex == 1) // right derivative
         {
-            auto input0         =               DataTensorForA(/*gradient=*/false,                   fr);
-            auto input1Gradient = Input(1)->GradientTensorFor(Input(1)->GetSampleLayout().GetRank(), fr);
-            auto outputGradient =           GradientTensorFor(          GetSampleLayout().GetRank(), fr);
+            auto input0         =          OneSampleTensorFor(0, /*gradient=*/false,                 fr.AllowBroadcast());
+          //auto input1Gradient = Input(1)->GradientTensorFor(Input(1)->GetSampleLayout().GetRank(), fr.AllowBroadcast());
+            auto input1Gradient =          OneSampleTensorFor(1, /*gradient=*/true,                  fr.AllowBroadcast());
+          //auto outputGradient =           GradientTensorFor(          GetSampleLayout().GetRank(), fr);
+            auto outputGradient =          OneSampleTensorFor(-1, /*gradient=*/true,                 fr);
             input1Gradient.AddMatrixProductOf(false/*transC*/, input0, !m_transpose/*transA*/, outputGradient, false/*transB*/);
         }
     }
