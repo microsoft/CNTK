@@ -421,9 +421,13 @@ std::unique_ptr<ConvolutionEngine<ElemType>> CuDnnConvolutionEngineFactory<ElemT
 }
 
 template <class ElemType>
-bool CuDnnConvolutionEngineFactory<ElemType>::IsSupported(ConvolveGeometryPtr geometry, PoolKind poolKind)
+bool CuDnnConvolutionEngineFactory<ElemType>::IsSupported(DEVICEID_TYPE deviceId, ConvolveGeometryPtr geometry, PoolKind poolKind)
 {
     // REVIEW alexeyk: IsSupported check should be performed by cuDNN itself. Is there a good way to do that?
+
+    cudaDeviceProp props = {0};
+    if (cudaGetDeviceProperties(&props, deviceId) != cudaSuccess || props.major < 3)
+        return false;
 
     const auto& input = geometry->InputShape();
     const auto& kernel = geometry->KernelShape();

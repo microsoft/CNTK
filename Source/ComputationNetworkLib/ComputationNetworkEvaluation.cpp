@@ -467,7 +467,7 @@ void ComputationNetwork::DetermineSetOfAllRoots()
             auto input = node->Input(i);
             if (!input) // this may be the result of an incorrect MEL operation
             {
-                InvalidArgument("DetermineSetOfAllRoots: Input %d of %ls %ls operation if not connected, network is malformed.",
+                InvalidArgument("DetermineSetOfAllRoots: Input %d of %ls %ls operation is not connected, network is malformed.",
                                 (int) i, node->NodeName().c_str(), node->OperationName().c_str());
             }
             referencedNodes.insert(input);

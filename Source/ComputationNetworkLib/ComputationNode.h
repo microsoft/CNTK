@@ -33,7 +33,8 @@
 #define CNTK_MODEL_VERSION_2 2
 #define CNTK_MODEL_VERSION_3 3
 #define CNTK_MODEL_VERSION_4 4 // PastValue
-#define CURRENT_CNTK_MODEL_VERSION CNTK_MODEL_VERSION_4
+#define CNTK_MODEL_VERSION_5 5 // ND convolution and pooling
+#define CURRENT_CNTK_MODEL_VERSION CNTK_MODEL_VERSION_5
 
 extern bool g_shareNodeValueMatrices;
 

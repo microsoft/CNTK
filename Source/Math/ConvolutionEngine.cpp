@@ -245,13 +245,7 @@ public:
         m_inT(m_geometry->InputShape(), ImageLayoutKind::CHW), m_outT(m_geometry->OutputShape(), ImageLayoutKind::CHW),
         m_kernelT(m_geometry->KernelShape(), ImageLayoutKind::CHW), m_strideT(m_geometry->Stride(), ImageLayoutKind::CHW)
     {
-        // Legacy engine uses a non-standard formula to compute padding (it may "overpad")
-        // so default auto-padding of ConvolveGeometry does not work here and instead
-        // precise padding is used.
-        const auto& lowerPad = m_geometry->LowerPad();
-        const auto& upperPad = m_geometry->UpperPad();
-        m_padding = (m_geometry->AutoPad().size() == 0 || !m_geometry->AutoPad()[0]) &&
-                     (lowerPad.size() == 1 && upperPad.size() == 1 && lowerPad[0] > 0);
+        m_padding = m_geometry->AutoPad()[0];
     }
 
 protected:
@@ -265,10 +259,6 @@ protected:
     {
         if (m_imageLayout != ImageLayoutKind::HWC)
             RuntimeError("Legacy convolution engine supports only HWC/legacy layout.");
-
-        const auto& autoPad = m_geometry->AutoPad();
-        if (autoPad.size() > 0 && autoPad[0])
-            RuntimeError("Legacy convolution engine supports precise padding via LowerPad/UpperPad parameters only.");
     }
 
     void EnsureConvolutionInitialized() override
@@ -543,7 +533,7 @@ std::unique_ptr<ConvolutionEngine<ElemType>> ConvolutionEngine<ElemType>::Create
 
     // Check if we can use cuDNN engine. Do not need to validate tensors as ConvolveGeometry has already done that.
     if (isEnabled(ConvolutionEngineKind::CuDnn) &&
-        CuDnnConvolutionEngineFactory<ElemType>::IsSupported(geometry, poolKind))
+        CuDnnConvolutionEngineFactory<ElemType>::IsSupported(deviceId, geometry, poolKind))
     {
         fprintf(stderr, "\nUsing cuDNN convolution engine for geometry: %s.\n", engStr.c_str());
         return CuDnnConvolutionEngineFactory<ElemType>::Create(geometry, deviceId, imageLayout, maxTempMemSizeInSamples, poolKind);
@@ -554,7 +544,6 @@ std::unique_ptr<ConvolutionEngine<ElemType>> ConvolutionEngine<ElemType>::Create
     fprintf(stderr, "\nUsing reference convolution engine for geometry: %s.\n", engStr.c_str());
     return std::make_unique<ReferenceConvolutionEngine<ElemType>>(geometry, deviceId, imageLayout, maxTempMemSizeInSamples, poolKind);
 }
-
 
 template class ConvolutionEngine<float>;
 template class ConvolutionEngine<double>;

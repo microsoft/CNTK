@@ -127,6 +127,7 @@ static shared_ptr<ComputationNode<ElemType>> CreateNode(const std::wstring& node
     if      (nodeType == OperationNameOf(AveragePoolingNode))       return New<AveragePoolingNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(BatchNormalizationNode))   return New<BatchNormalizationNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(ConvolutionNode))          return New<ConvolutionNode<ElemType>>(forward<_Types>(_Args)...);
+    else if (nodeType == OperationNameOf(PoolingNode))              return New<PoolingNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(SparseInputValue))         return New<SparseInputValue<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(InputValue))               return New<InputValue<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(LearnableParameter))       return New<LearnableParameter<ElemType>>(forward<_Types>(_Args)...);
@@ -236,7 +237,7 @@ shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Creat
     return net.AddNodeToNetWithElemType(New<ConvolutionNode<ElemType>>(net.GetDeviceId(), nodeName,
                                                                        kernelShape, mapCount, strideShape,
                                                                        sharing, autoPadding, lowerPad, upperPad,
-                                                                       imageLayout, maxTempMemSizeInSamples, PoolKind::None));
+                                                                       imageLayout, maxTempMemSizeInSamples));
 }
 
 template <class ElemType>
@@ -244,10 +245,8 @@ shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Creat
                                                                                              const std::vector<bool>& autoPadding, const TensorShape& lowerPad, const TensorShape& upperPad,
                                                                                              ImageLayoutKind imageLayout)
 {
-    return net.AddNodeToNetWithElemType(New<ConvolutionNode<ElemType>>(net.GetDeviceId(), nodeName,
-        kernelShape, TensorShape(1), strideShape,
-        std::vector<bool>{false}, autoPadding, lowerPad, upperPad,
-        imageLayout, 0, poolKind));
+    return net.AddNodeToNetWithElemType(New<PoolingNode<ElemType>>(net.GetDeviceId(), nodeName,
+                                                                   poolKind, kernelShape, strideShape, autoPadding, lowerPad, upperPad, imageLayout));
 }
 
 template <class ElemType>
@@ -305,7 +304,7 @@ shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Convo
     return net.AddNodeToNetAndAttachInputs(New<ConvolutionNode<ElemType>>(net.GetDeviceId(), nodeName,
                                                                           kernelShape, mapCount, strideShape,
                                                                           sharing, autoPadding, lowerPad, upperPad,
-                                                                          imageLayout, maxTempMemSizeInSamples, PoolKind::None),
+                                                                          imageLayout, maxTempMemSizeInSamples),
                                                                           weight, inputValues);
 }
 
@@ -316,11 +315,9 @@ shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Pooli
                                                                                    ImageLayoutKind imageLayout,
                                                                                    const std::wstring nodeName)
 {
-    return net.AddNodeToNetAndAttachInputs(New<ConvolutionNode<ElemType>>(net.GetDeviceId(), nodeName,
-                                                                          kernelShape, TensorShape(1), strideShape,
-                                                                          std::vector<bool>{false}, autoPadding, lowerPad, upperPad,
-                                                                          imageLayout, 0, poolKind),
-                                                                          inputValues);
+    return net.AddNodeToNetAndAttachInputs(New<PoolingNode<ElemType>>(net.GetDeviceId(), nodeName,
+                                                                      poolKind, kernelShape, strideShape, autoPadding, lowerPad, upperPad, imageLayout),
+                                                                      inputValues);
 }
 
 template <class ElemType>

@@ -289,28 +289,37 @@ void NDLNodeEvaluatorImpl<ElemType>::Evaluate(NDLNode<ElemType>* node, const wst
                 nodePtr = builder.FutureValue(NULL, defaultHiddenActivity, rows, timeStep, name);
         }
     }
-    else if (cnNodeType == OperationNameOf(ConvolutionNode))
+    else if (cnNodeType == OperationNameOf(ConvolutionNode) || cnNodeType == OperationNameOf(PoolingNode))
     {
-        if (parameter.size() != 2 && parameter.size() != 3 && parameter.size() != 7)
+        if (parameter.size() != 3 && parameter.size() != 7)
         {
-            RuntimeError("%ls: unexpected parameter count. %ls supports 2 modes: \n"
-                         "1. 2D convolution which takes 7 fixed parameters [weightNodeName, inputValueNodeName, kernelWidth, kernelHeight, outputChannels,horizontalSubsample, verticalSubsample] \n"
-                         "and two optional parameters [zeroPadding = [false|yourvalue], maxTempMemSizeInSamples = [0|yourvalue], imageLayout = \"HWC\"|\"cudnn\"]. \n"
-                         "2. ND convolution which takes 3 fixed parameters [weightNodeName, inputValueNodeName, kernelShape] and \n"
-                         " 9 optional parameters [mapCount = [1|yourvalue], stride = [1|yourvalue], sharing = [true|yourvalue], autoPadding = [true|yourvalue], lowerPad = [0|yourvalue], upperPad = [0|yourvalue], maxTempMemSizeInSamples = [0|yourvalue], imageLayout = \"cudnn\"|\"HWC\"]. \n"
-                         "For ND convolution, parameters kernelShape, mapCount, stride, sharing, autoPadding, lowerPad, upperPad can be arrays, e.g. kernelShape={5, 5, 3}",
-                         cnNodeType.c_str(), cnNodeType.c_str());
+            if (cnNodeType == OperationNameOf(ConvolutionNode))
+            {
+                RuntimeError("%ls: unexpected parameter count. %ls supports 2 modes: \n"
+                             "1. 2D convolution which takes 7 fixed parameters [weightNodeName, inputValueNodeName, kernelWidth, kernelHeight, outputChannels,horizontalSubsample, verticalSubsample] \n"
+                             "and two optional parameters [zeroPadding = [false|yourvalue], maxTempMemSizeInSamples = [0|yourvalue], imageLayout = \"HWC\"|\"cudnn\"]. \n"
+                             "2. ND convolution which takes 3 fixed parameters [weightNodeName, inputValueNodeName, kernelShape] and \n"
+                             "9 optional parameters [mapCount = [1|yourvalue], stride = [1|yourvalue], sharing = [true|yourvalue], autoPadding = [true|yourvalue], lowerPad = [0|yourvalue], upperPad = [0|yourvalue], maxTempMemSizeInSamples = [0|yourvalue], imageLayout = \"cudnn\"|\"HWC\"]. \n"
+                             "For ND convolution, parameters kernelShape, mapCount, stride, sharing, autoPadding, lowerPad, upperPad can be arrays, e.g. kernelShape={5, 5, 3}",
+                             cnNodeType.c_str(), cnNodeType.c_str());
+            }
+            else
+            {
+                RuntimeError("%ls: unexpected parameter count. %ls 3 fixed parameters [inputValueNodeName, poolKind, kernelShape] and \n"
+                             "5 optional parameters stride = [1|yourvalue], autoPadding = [true|yourvalue], lowerPad = [0|yourvalue], upperPad = [0|yourvalue], imageLayout = \"cudnn\"|\"HWC\"]. \n"
+                             "Parameters kernelShape, stride, autoPadding, lowerPad, upperPad can be arrays, e.g. kernelShape={5, 5, 3}",
+                             cnNodeType.c_str(), cnNodeType.c_str());
+            }
         }
 
         // setup the parameter position of children so we can hook them up later
         nodeParamStart = 0;
+        nodeParamCount = cnNodeType == OperationNameOf(ConvolutionNode) ? 2 : 1;
 
         if (pass == ndlPassInitial)
         {
-            if (parameter.size() == 2 || parameter.size() == 3)
+            if (parameter.size() == 3)
             {
-                auto pool = PoolKindFrom(wstring(node->GetOptionalParameter("pool", "none")));
-                nodeParamCount = pool == PoolKind::None ? 2 : 1;
                 auto reqParams = node->GetParameters(false);
                 auto optParams = node->GetParameters(true);
                 auto paramGetter = [reqParams, node](size_t index) -> TensorShape
@@ -356,7 +365,7 @@ void NDLNodeEvaluatorImpl<ElemType>::Evaluate(NDLNode<ElemType>* node, const wst
                     return dims;
                 };
 
-                auto kernelShape = paramGetter(nodeParamCount);
+                auto kernelShape = paramGetter(reqParams.size() - 1);
                 auto mapCount = paramResolver("mapCount", 1);
                 auto stride = paramResolver("stride", 1);
                 auto sharing = boolParamResolver("sharing", true);
@@ -366,11 +375,17 @@ void NDLNodeEvaluatorImpl<ElemType>::Evaluate(NDLNode<ElemType>* node, const wst
                 ImageLayoutKind imageLayout = ImageLayoutKindFrom(node->GetOptionalParameter("imageLayout", "CHW"));
                 size_t maxTempMemSizeInSamples = node->GetOptionalParameter("maxTempMemSizeInSamples", "0");
 
+                auto pool = PoolKind::None;
+                if (cnNodeType == OperationNameOf(PoolingNode))
+                {
+                    auto parm = node->GetParentScript()->ParseVariable(reqParams[1]->GetValue(), false);
+                    pool = PoolKindFrom(wstring(parm->GetValue()));
+                }
+
                 if (pool == PoolKind::None)
                 {
                     nodePtr = builder.Convolution(NULL, NULL, kernelShape, mapCount, stride, sharing, 
-                                                  autoPad, lowerPad, upperPad, imageLayout, maxTempMemSizeInSamples,
-                                                  name);
+                                                  autoPad, lowerPad, upperPad, imageLayout, maxTempMemSizeInSamples, name);
                 }
                 else
                 {
@@ -380,7 +395,6 @@ void NDLNodeEvaluatorImpl<ElemType>::Evaluate(NDLNode<ElemType>* node, const wst
             }
             else if (parameter.size() == 7)
             {
-                nodeParamCount = 2;
                 int id = 2; // skip weightNode and inputValueNode
 
                 // evaluate only scalar parameters
