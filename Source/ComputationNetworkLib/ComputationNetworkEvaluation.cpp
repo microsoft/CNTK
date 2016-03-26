@@ -676,53 +676,62 @@ size_t ComputationNetwork::ValidateNodes(list<ComputationNodeBasePtr> nodes, boo
 void ComputationNetwork::MarkValueNonSharableNodes()
 {
     const auto& nodes = GetEvalOrder(nullptr);
-    std::map<wstring, bool> allLeafDescendentsAreParameters;
+    std::map<wstring, bool> allLeafDescendentsAreParametersOrPreComputeNodes;
     std::list<ComputationNodeBasePtr> allLearnableParameters = GetNodesWithType(OperationNameOf(LearnableParameter));
     // note that: we cannot use m_learnableParameters because we need all parameters node, regardless whether it requires update or not
+
+    std::list<ComputationNodeBasePtr> allPreComputeNodes;
+    for (const auto& node : nodes)
+    {
+        if (node->Is<IPreComputeNode>())
+            allPreComputeNodes.push_back(node);
+    }
 
     for (auto& node : nodes)
     {
         auto children = node->GetInputs();
         wstring myname = node->NodeName();
-        bool allParameters = true;
+        bool allParametersOrPreComputeNodes = true;
 
         if (children.size()) // we don't do the check for leaf node, cause all the possible leaf nodes (input/parameters/precompute node) are marked as non-sharable already
         {
+            if (std::find(allPreComputeNodes.begin(), allPreComputeNodes.end(), node) == allPreComputeNodes.end())
+            {
             for (auto child : children)
             {
                 wstring ChildName = child->NodeName();
-                if (allLeafDescendentsAreParameters.find(ChildName) == allLeafDescendentsAreParameters.end())
+                    if (allLeafDescendentsAreParametersOrPreComputeNodes.find(ChildName) == allLeafDescendentsAreParametersOrPreComputeNodes.end())
                 {
                     // not found, means it is a leaf node (we are at eval order )
                     assert(child->IsLeaf() || child->IsPartOfLoop());
                     if (std::find(allLearnableParameters.begin(), allLearnableParameters.end(), child) != allLearnableParameters.end())
                     {
-                        allLeafDescendentsAreParameters[ChildName] = true;
+                            allLeafDescendentsAreParametersOrPreComputeNodes[ChildName] = true;
                     }
                     else
                     {
-                        allParameters = false;
-                        allLeafDescendentsAreParameters[ChildName] = false;
+                            allParametersOrPreComputeNodes = false;
+                            allLeafDescendentsAreParametersOrPreComputeNodes[ChildName] = false;
                         break;
                     }
                 }
                 else
                 {
-                    if (allLeafDescendentsAreParameters[ChildName] == false)
+                        if (allLeafDescendentsAreParametersOrPreComputeNodes[ChildName] == false)
                     {
-                        allParameters = false;
+                            allParametersOrPreComputeNodes = false;
                         break;
                     }
                 }
             }
-            allLeafDescendentsAreParameters[myname] = allParameters;
-            if (allParameters)
-            {
+            }
+
+            allLeafDescendentsAreParametersOrPreComputeNodes[myname] = allParametersOrPreComputeNodes;
+            if (allParametersOrPreComputeNodes)
                 node->MarkValueNonSharable();
             }
         }
     }
-}
 
 // this function will need to be called before actual validation and execution to
 // predetermine how to share matrices to reduce memory usage.
@@ -732,6 +741,9 @@ void ComputationNetwork::AllocateAllMatrices(const std::vector<ComputationNodeBa
                                              const std::vector<ComputationNodeBasePtr>& outValueRootNodes,
                                              ComputationNodeBasePtr trainRootNode)
 {
+    if (AreMatricesAllocated())
+        return;
+
     // Allocate memory for forward/backward computation
     fprintf(stderr, "\n\nAllocating matrices for forward and/or backward propagation.\n");
 
@@ -864,6 +876,8 @@ void ComputationNetwork::AllocateAllMatrices(const std::vector<ComputationNodeBa
             }
         }
     }
+
+    m_areMatricesAllocated = true;
 }
 
 void ComputationNetwork::ReleaseMatricesAfterEvalForChildren(ComputationNodeBasePtr n, std::unordered_map<ComputationNodeBasePtr, int>& parentCount)

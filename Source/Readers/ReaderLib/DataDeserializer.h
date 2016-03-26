@@ -13,8 +13,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 // Sequence key, used for correlations between sequences between different deserializers.
 struct KeyType
 {
-    size_t major;
-    size_t minor;
+    size_t m_major;
+    size_t m_minor;
 };
 
 class Chunk;
@@ -33,7 +33,7 @@ struct SequenceDescription
     bool m_isValid;           // Indicates whether the sequence is valid.
     KeyType m_key;            // Sequence key, used for correlations between sequences of different deserializers.
 };
-typedef std::vector<const SequenceDescription*> SequenceDescriptions;
+
 typedef std::shared_ptr<SequenceDescription> SequenceDescriptionPtr;
 
 // Defines sequence data and its layout.
@@ -42,17 +42,16 @@ typedef std::shared_ptr<SequenceDescription> SequenceDescriptionPtr;
 // data deserializer or transformer can provide provides.
 struct SequenceDataBase
 {
-    SequenceDataBase() : m_id(0), m_data(nullptr) { }
+    SequenceDataBase() : m_data(nullptr) { }
     virtual ~SequenceDataBase() = default;
 
     // Sequence id.
-    size_t m_id;              
+    size_t m_id;
 
     ChunkPtr m_chunk;
     // A non-owned pointer. The actual size is provided for particular sequences,
     // i.e. see DenseSequenceData, or SparseSequenceData.
     void* m_data;
-
 };
 typedef std::shared_ptr<SequenceDataBase> SequenceDataPtr;
 
@@ -75,9 +74,6 @@ typedef std::shared_ptr<DenseSequenceData> DenseSequenceDataPtr;
 // All samples in the sequence should have the same layout.
 struct SparseSequenceData : SequenceDataBase
 {
-    // TODO:
-    // size_t m_nnz; // total number of non-zero elements in this sequence.
-    // int32_t* m_row
     std::vector<std::vector<size_t>> m_indices;
 };
 typedef std::shared_ptr<SparseSequenceData> SparseSequenceDataPtr;
@@ -117,11 +113,11 @@ private:
 struct ChunkDescription
 {
     // Chunk id.
-    size_t id;
+    size_t m_id;
     // Number of samples in the chunk.
-    size_t numberOfSamples;
+    size_t m_numberOfSamples;
     // Number of sequences in the chunk.
-    size_t numberOfSequences;
+    size_t m_numberOfSequences;
 };
 
 typedef std::shared_ptr<ChunkDescription> ChunkDescriptionPtr;

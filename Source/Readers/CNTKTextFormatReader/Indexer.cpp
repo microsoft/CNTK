@@ -60,12 +60,12 @@ void Indexer::AddSequence(SequenceDescriptor& sd)
     {
         m_chunks.push_back({});
         chunk = &m_chunks.back();
-        chunk->id = m_chunks.size() - 1;
+        chunk->m_id = m_chunks.size() - 1;
     }
     chunk->m_byteSize += sd.m_byteSize;
-    chunk->numberOfSequences++;
-    chunk->numberOfSamples += sd.m_numberOfSamples;
-    sd.m_chunkId = chunk->id;
+    chunk->m_numberOfSequences++;
+    chunk->m_numberOfSamples += sd.m_numberOfSamples;
+    sd.m_chunkId = chunk->m_id;
     chunk->m_sequences.push_back(sd);
 }
 
@@ -105,12 +105,12 @@ void Indexer::Build()
     {
         return;
     }
-    
+
     if (m_maxChunkSize > 0)
     {
         auto fileSize = filesize(m_file);
         m_chunks.reserve((fileSize + m_maxChunkSize - 1) / m_maxChunkSize);
-    }
+}
 
     m_chunks.push_back({});
 

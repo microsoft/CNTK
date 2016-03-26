@@ -31,7 +31,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                         bool useParallelTrain,
                                         StreamMinibatchInputs& inputMatrices,
                                         size_t& actualMBSize, 
-                                        const std::shared_ptr<MPIWrapper>& mpi)
+                                        const MPIWrapperPtr& mpi)
     {
         auto pMBLayout = net->GetMBLayoutPtr();
         // Reading consists of a sequence of Reader API calls:

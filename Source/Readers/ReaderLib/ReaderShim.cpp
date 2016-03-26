@@ -104,12 +104,10 @@ string EnumerateInputs(const map<wstring, size_t> &nameToStreamId)
 template <class ElemType>
 bool ReaderShim<ElemType>::GetMinibatch(StreamMinibatchInputs& matrices)
 {
-    size_t size = std::distance(begin(matrices), end(matrices));
-    if (size != m_nameToStreamId.size())
-    {
-        RuntimeError("Number of input nodes (%d) does not match the expected number (%d).",
-            (int)size, (int)m_nameToStreamId.size());
-    }
+    
+    // TODO: verify that the set of matrix names is identical 
+    // to the set of reader input names. Warn if it's a subset, throw
+    // if it's a superset.
 
     if (m_endOfEpoch)
     {

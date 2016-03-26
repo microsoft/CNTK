@@ -50,16 +50,17 @@ TextConfigHelper::TextConfigHelper(const ConfigParameters& config)
         ConfigParameters input = section.second;
         wstring name = msra::strfun::utf16(section.first);
 
-        if (!input.ExistsCurrent(L"dim") || !input.ExistsCurrent(L"format"))
+        if (!input.ExistsCurrent(L"format"))
         {
-            RuntimeError("Input section for input '%ls' does not specify all the required parameters, "
-                "\"dim\" and \"format\".", name.c_str());
+            RuntimeError("Required parameter \"format\" is not specified for input '%ls'", name.c_str());
         }
 
         StreamDescriptor stream;
         stream.m_id = id++;
         stream.m_name = name;
+
         stream.m_sampleDimension = input(L"dim");
+
         string type = input(L"format");
 
         if (AreEqualIgnoreCase(type, "dense"))

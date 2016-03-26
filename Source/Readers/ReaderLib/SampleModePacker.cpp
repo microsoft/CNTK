@@ -68,8 +68,8 @@ SampleModePacker::SampleModePacker(
         {
             RuntimeError("Dense to sparse re-packing requested for stream '%ls' is not supported.", 
                 stream->m_name.c_str());
-        }
     }
+}
 }
 
 Minibatch SampleModePacker::ReadMinibatch()
@@ -168,8 +168,8 @@ MBLayoutPtr SampleModePacker::PackDenseStream(const StreamBatch& batch, size_t s
         char* source = reinterpret_cast<char*>(sequence->m_data);
         size_t numSamples = 0;
 
-        if (stream->m_storageType == StorageType::dense)
-        {
+    if (stream->m_storageType == StorageType::dense)
+    {
             const auto& denseSequence = reinterpret_cast<DenseSequenceData&>(*sequence);
             numSamples = denseSequence.m_numberOfSamples;
             char* destination = buffer.m_data.get() + sequenceIndex * sampleSize;
@@ -180,33 +180,33 @@ MBLayoutPtr SampleModePacker::PackDenseStream(const StreamBatch& batch, size_t s
                 source += sampleSize;
                 destination += numSequences * sampleSize;                
             }           
-        }
-        else if (stream->m_storageType == StorageType::sparse_csc)
-        {
+    }
+    else if (stream->m_storageType == StorageType::sparse_csc)
+    {
             const auto& sparseSequence = reinterpret_cast<SparseSequenceData&>(*sequence);
             numSamples = sparseSequence.m_indices.size();
             char* destination = buffer.m_data.get() + sequenceIndex * sampleSize;
 
-            // Copy the non zero data to the buffer.
+        // Copy the non zero data to the buffer.
             for (size_t sampleIndex = 0; sampleIndex < numSamples; ++sampleIndex)
             {
                 const auto& indices = sparseSequence.m_indices[sampleIndex];
                 size_t nonZeroCount = indices.size();
-                for (size_t nonZeroIndex = 0; nonZeroIndex < nonZeroCount; ++nonZeroIndex)
-                {
+        for (size_t nonZeroIndex = 0; nonZeroIndex < nonZeroCount; ++nonZeroIndex)
+        {
                     size_t rowIndex = indices[nonZeroIndex];
                     size_t offset = rowIndex * elementSize;
                     assert(offset < sampleSize);
                     char* from = source + nonZeroIndex * elementSize;
                     char* to = destination + offset;
                     std::copy(from, from + elementSize, to);
-                }
+        }
                 source += sampleSize;
                 destination += numSequences * sampleSize;
             }
-        }
-        else 
-        {
+    }
+    else
+    {
             RuntimeError("Storage type %d is not supported.", (int)stream->m_storageType);
         }
 
@@ -254,7 +254,7 @@ MBLayoutPtr SampleModePacker::PackSparseStream(const StreamBatch& batch, size_t 
     // This whole thing will disappear, once SparseSequenceData is refactored 
     // to contain nnz and proper type (int32_t) for the indices.
     for (const auto& sequence : batch) 
-    {
+        {
         const auto& sparseSequence = reinterpret_cast<const SparseSequenceData&>(*sequence);
 
         size_t nnz = 0;

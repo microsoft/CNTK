@@ -135,16 +135,7 @@ public:
 
             totalEpochSamples += actualMBSize;
 
-            if (ProgressTracing::GetTracingFlag())
-            {
-                numItersSinceLastPrintOfProgress++;
-                if (numItersSinceLastPrintOfProgress >= numIterationsBeforePrintingProgress)
-                {
-                    // TODO: For now just print 0.0 instead of calculating actual progress
-                    printf("PROGRESS: %.2f%%\n", 0.0f);
-                    numItersSinceLastPrintOfProgress = 0;
-                }
-            }
+            numItersSinceLastPrintOfProgress = ProgressTracing::TraceFakeProgress(numIterationsBeforePrintingProgress, numItersSinceLastPrintOfProgress);
 
             // call DataEnd function in dataReader to do
             // reader specific process if sentence ending is reached
@@ -489,16 +480,7 @@ public:
 
             fprintf(stderr, "Minibatch[%lu]: ActualMBSize = %lu\n", ++numMBsRun, actualMBSize);
 
-            if (ProgressTracing::GetTracingFlag())
-            {
-                numItersSinceLastPrintOfProgress++;
-                if (numItersSinceLastPrintOfProgress >= numIterationsBeforePrintingProgress)
-                {
-                    // TODO: For now just print 0.0 instead of calculating actual progress
-                    printf("PROGRESS: %.2f%%\n", 0.0f);
-                    numItersSinceLastPrintOfProgress = 0;
-                }
-            }
+            numItersSinceLastPrintOfProgress = ProgressTracing::TraceFakeProgress(numIterationsBeforePrintingProgress, numItersSinceLastPrintOfProgress);
 
             // call DataEnd function in dataReader to do
             // reader specific process if sentence ending is reached

@@ -46,8 +46,8 @@ public:
         int verbosity,
         size_t randomizationRangeInSamples,
         IDataDeserializerPtr deserializer,
-        DecimationMode decimationMode,
-        bool useLegacyRandomization);
+        DecimationMode decimationMode = DecimationMode::chunk,
+        bool useLegacyRandomization = false);
 
     virtual void Initialize(TransformerPtr, const ConfigParameters&) override {};
 

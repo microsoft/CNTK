@@ -15,10 +15,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 // Class represents a description of an HTK chunk.
 // It is only used internally by the HTK deserializer.
 // Can exist without associated data and provides methods for requiring/releasing chunk data.
+// TODO: We should consider splitting data load from the description in the future versions.
 class HTKChunkDescription
 {
     // All utterances in the chunk.
-    std::vector<UtteranceDescription> m_utteranceSet;
+    std::vector<UtteranceDescription> m_utterances;
 
     // Stores all frames of the chunk consecutively (mutable since this is a cache).
     mutable msra::dbn::matrix m_frames;
@@ -38,7 +39,7 @@ public:
     // Gets number of utterances in the chunk.
     size_t GetNumberOfUtterances() const
     {
-        return m_utteranceSet.size();
+        return m_utterances.size();
     }
 
     // Adds an utterance to the chunk.
@@ -51,7 +52,7 @@ public:
 
         m_firstFrames.push_back(m_totalFrames);
         m_totalFrames += utterance.GetNumberOfFrames();
-        m_utteranceSet.push_back(std::move(utterance));
+        m_utterances.push_back(std::move(utterance));
     }
 
     // Gets total number of frames in the chunk.
@@ -63,7 +64,7 @@ public:
     // Get utterance description by its index.
     const UtteranceDescription* GetUtterance(size_t index) const
     {
-        return &m_utteranceSet[index];
+        return &m_utterances[index];
     }
 
     // Get utterance by the absolute frame index in chunk.
@@ -71,11 +72,11 @@ public:
     size_t GetUtteranceForChunkFrameIndex(size_t frameIndex) const
     {
         auto result = std::upper_bound(
-            m_utteranceSet.begin(),
-            m_utteranceSet.end(), 
+            m_utterances.begin(),
+            m_utterances.end(),
             frameIndex, 
             [](size_t fi, const UtteranceDescription& a) { return fi < a.GetStartFrameIndexInsideChunk(); });
-        return result - 1 - m_utteranceSet.begin();
+        return result - 1 - m_utterances.begin();
     }
 
     // Returns all frames of a given utterance.
@@ -114,16 +115,16 @@ public:
 
             // read all utterances; if they are in the same archive, htkfeatreader will be efficient in not closing the file
             m_frames.resize(featureDimension, m_totalFrames);
-            foreach_index(i, m_utteranceSet)
+            foreach_index(i, m_utterances)
             {
                 // read features for this file
                 auto framesWrapper = GetUtteranceFrames(i);
-                reader.read(m_utteranceSet[i].GetPath(), featureKind, samplePeriod, framesWrapper);
+                reader.read(m_utterances[i].GetPath(), featureKind, samplePeriod, framesWrapper);
             }
 
             if (verbosity)
             {
-                fprintf(stderr, "RequireData: %d utterances read\n", (int)m_utteranceSet.size());
+                fprintf(stderr, "RequireData: %d utterances read\n", (int)m_utterances.size());
             }
         }
         catch (...)

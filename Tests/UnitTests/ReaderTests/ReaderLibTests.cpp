@@ -57,7 +57,6 @@ private:
     size_t m_numSequencesPerChunk;
     std::vector<SequenceDescription> m_descriptions;
     std::vector<float>& m_data;
-    SequenceDescriptions m_sequenceDescriptions;
     std::vector<StreamDescriptionPtr> m_streams;
     TensorShapePtr m_sampleLayout;
     std::vector<ChunkDescriptionPtr> m_chunkDescriptions;
@@ -71,7 +70,6 @@ public:
     {
         size_t numSequences = numChunks * numSequencesPerChunks;
         m_descriptions.reserve(numSequences);
-        m_sequenceDescriptions.reserve(numSequences);
         assert(data.size() == numSequences);
 
         for (size_t i = 0; i < numSequences; i++)
@@ -83,7 +81,6 @@ public:
                 true,
                 { 0, i }
             });
-            m_sequenceDescriptions.push_back(&m_descriptions[i]);
         }
 
         for (size_t i = 0; i < numChunks; i++)
