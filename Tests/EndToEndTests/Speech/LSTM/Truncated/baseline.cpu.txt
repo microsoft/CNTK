@@ -9212,4 +9212,4 @@ Starting minibatch loop.
  Epoch[ 4 of 4]-Minibatch[  31-  40 of 1024]: SamplesSeen = 1630; TrainLossPerSample =  4.05378643; EvalErr[0]PerSample = 0.89018405; TotalTime = 37.74493s; TotalTimePerSample = 23.15640ms; SamplesPerSecond = 43
 Finished Epoch[ 4 of 4]: [Training Set] TrainLossPerSample = 4.0972614; EvalErrPerSample = 0.86727881; AvgLearningRatePerSample = 0.0007812500116; EpochTime=156.30584
 CNTKCommandTrainEnd: speechTrain
-COMPLETED
+__COMPLETED__

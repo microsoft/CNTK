@@ -6411,4 +6411,4 @@ evalNodeNames are not specified, using all the default evalnodes and training cr
 Allocating matrices for forward and/or backward propagation.
 Minibatch[1-20]: Samples Seen = 10000    Err: ErrorPrediction/Sample = 0.0819    CE: CrossEntropyWithSoftmax/Sample = 0.35141698    
 Final Results: Minibatch[1-20]: Samples Seen = 10000    Err: ErrorPrediction/Sample = 0.0819    CE: CrossEntropyWithSoftmax/Sample = 0.35141698    Perplexity = 1.4210798    
-COMPLETED
+__COMPLETED__

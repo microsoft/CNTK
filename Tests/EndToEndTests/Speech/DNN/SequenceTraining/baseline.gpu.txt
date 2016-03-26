@@ -9586,4 +9586,4 @@ parallelforwardbackwardlattice: 25 launches for forward, 25 launches for backwar
 dengamma value 1.062592
 Finished Epoch[ 3 of 3]: [Training Set] TrainLossPerSample = 0.082648888; EvalErrPerSample = 0.32607052; AvgLearningRatePerSample = 1.999999995e-06; EpochTime=15.94079
 CNTKCommandTrainEnd: sequenceTrain
-COMPLETED
+__COMPLETED__

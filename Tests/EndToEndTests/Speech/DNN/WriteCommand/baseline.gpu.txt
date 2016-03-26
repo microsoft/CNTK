@@ -577,4 +577,4 @@ Total Samples Evaluated = 3250
 
 Action "write" complete.
 
-COMPLETED
+__COMPLETED__

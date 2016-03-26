@@ -606,7 +606,7 @@ MPI Rank 0:  Epoch[ 3 of 3]-Minibatch[   1-  10 of 20]: SamplesSeen = 10240; Tra
 MPI Rank 0:  Epoch[ 3 of 3]-Minibatch[  11-  20 of 20]: SamplesSeen = 10240; TrainLossPerSample =  1.86656271; EvalErr[0]PerSample = 0.51748047; TotalTime = 0.34559s; TotalTimePerSample = 0.03375ms; SamplesPerSecond = 29630
 MPI Rank 0: Finished Epoch[ 3 of 3]: [Training Set] TrainLossPerSample = 1.8700806; EvalErrPerSample = 0.5184082; AvgLearningRatePerSample = 9.765625146e-05; EpochTime=0.728516
 MPI Rank 0: CNTKCommandTrainEnd: speechTrain
-MPI Rank 0: COMPLETED
+MPI Rank 0: __COMPLETED__
 MPI Rank 0: ~MPIWrapper
 MPI Rank 1: running on localhost at 2015/10/24 12:56:12
 MPI Rank 1: command line: 
@@ -1185,7 +1185,7 @@ MPI Rank 1:  Epoch[ 3 of 3]-Minibatch[   1-  10 of 20]: SamplesSeen = 10240; Tra
 MPI Rank 1:  Epoch[ 3 of 3]-Minibatch[  11-  20 of 20]: SamplesSeen = 10240; TrainLossPerSample =  1.86656271; EvalErr[0]PerSample = 0.51748047; TotalTime = 0.34559s; TotalTimePerSample = 0.03375ms; SamplesPerSecond = 29630
 MPI Rank 1: Finished Epoch[ 3 of 3]: [Training Set] TrainLossPerSample = 1.8700806; EvalErrPerSample = 0.5184082; AvgLearningRatePerSample = 9.765625146e-05; EpochTime=0.728446
 MPI Rank 1: CNTKCommandTrainEnd: speechTrain
-MPI Rank 1: COMPLETED
+MPI Rank 1: __COMPLETED__
 MPI Rank 1: ~MPIWrapper
 MPI Rank 2: running on localhost at 2015/10/24 12:56:12
 MPI Rank 2: command line: 
@@ -1764,5 +1764,5 @@ MPI Rank 2:  Epoch[ 3 of 3]-Minibatch[   1-  10 of 20]: SamplesSeen = 10240; Tra
 MPI Rank 2:  Epoch[ 3 of 3]-Minibatch[  11-  20 of 20]: SamplesSeen = 10240; TrainLossPerSample =  1.86656271; EvalErr[0]PerSample = 0.51748047; TotalTime = 0.34556s; TotalTimePerSample = 0.03375ms; SamplesPerSecond = 29632
 MPI Rank 2: Finished Epoch[ 3 of 3]: [Training Set] TrainLossPerSample = 1.8700806; EvalErrPerSample = 0.5184082; AvgLearningRatePerSample = 9.765625146e-05; EpochTime=0.728405
 MPI Rank 2: CNTKCommandTrainEnd: speechTrain
-MPI Rank 2: COMPLETED
+MPI Rank 2: __COMPLETED__
 MPI Rank 2: ~MPIWrapper
