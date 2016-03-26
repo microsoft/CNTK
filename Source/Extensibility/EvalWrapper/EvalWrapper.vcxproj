@@ -88,7 +88,7 @@
     <ClCompile Include="EvalWrapper.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\..\Common\Include\Eval.h" />
+    <ClInclude Include="..\..\Common\Include\Eval.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
