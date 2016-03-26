@@ -270,13 +270,13 @@ TensorShape ComputationNodeBase::GetTensorSliceFor(size_t rank, const FrameRange
     return tensorShape;
 }
 
-// same but 'fr' refers to a single column, and result will not have seq/time axes
+// same as GetTensorSliceFor() except that 'fr' refers to a single column, and result will not have seq/time axes
 // This is needed by TimesNode when the left argument has to be broken up into individual matrices/GEMM calls.
+// To enable its first argument to have an MBLayout, it needs to un-pad if we have an MBLayout but only refer to a single sequence and time step.
 TensorShape ComputationNodeBase::GetOneSampleTensorSliceFor(size_t rank, const FrameRange& fr) const
 {
     TensorShape result = GetTensorSliceFor(rank, fr);
-    // To enable A to have an MBLayout, we need to un-pad if we have an MBLayout but only refer to a single sequence and time step.
-    // Undo the adding of (seq, time) axes that was done by GetTensorShape()
+    // undo the adding of (seq, time) axes that was done by GetTensorShape()
     if (!fr.IsOneColumnWrt(GetMBLayout()))
         LogicError("GetOneSampleTensorSliceFor: Requires 'fr' to refer to a single sample.");
     if (HasMBLayout())

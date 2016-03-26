@@ -357,7 +357,7 @@ public:
     {
         auto iter = m_nameToNodeMap.find(name);
         if (iter == m_nameToNodeMap.end())
-            RuntimeError("GetNodeFromName: Node name %ls does not exist.", name.c_str());
+            RuntimeError("GetNodeFromName: Network has no node named '%ls'.", name.c_str());
         return iter->second;
     }
 
@@ -720,7 +720,7 @@ public:
             }
             else // node name is not found, dump all nodes
             {
-                fprintf(stderr, "Warning: node name %ls does not exist in the network. dumping all nodes.\n",
+                fprintf(stderr, "Warning: node name '%ls' does not exist in the network. dumping all nodes instead.\n",
                         nodeName.c_str());
                 DumpAllNodesToFile(printValues, printMetadata, outputFile);
             }
