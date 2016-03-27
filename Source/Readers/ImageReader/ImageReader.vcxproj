@@ -80,9 +80,9 @@
       <AdditionalDependencies>ReaderLib.lib;Math.lib;$(OpenCVLib);$(ZipLibs);%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
-      <Command>if "$(HasOpenCv)" == "true" xcopy /I /D /Y "$(OPENCV_PATH)\x64\vc12\bin\opencv_world300.dll" $(TargetDir)
+      <Command>if "$(HasOpenCv)" == "true" xcopy /I /D /Y "$(OPENCV_PATH)\x64\vc12\bin\opencv_world300.dll" "$(TargetDir)"
 if "$(UseZip)" == "true" xcopy /I /D /Y "$(ZLIB_PATH)\bin\zip.dll" "$(TargetDir)"
-if "$(UseZip)" == "true" if exist "$(ZLIB_PATH)\bin\zlib1.dll" (xcopy /I /D /Y "$(ZLIB_PATH)\bin\zlib1.dll" "$(TargetDir)") else (xcopy /I /D /Y "$(ZLIB_PATH)\bin\zlib.dll" "$(TargetDir)\zlib1.dll")
+if "$(UseZip)" == "true" if exist "$(ZLIB_PATH)\bin\zlib1.dll" (xcopy /I /D /Y "$(ZLIB_PATH)\bin\zlib1.dll" "$(TargetDir)") else (copy /Y "$(ZLIB_PATH)\bin\zlib.dll" "$(TargetDir)\zlib1.dll")
 </Command>
       <Message>Copying dependencies</Message>
     </PostBuildEvent>
@@ -110,7 +110,6 @@ if "$(UseZip)" == "true" if exist "$(ZLIB_PATH)\bin\zlib1.dll" (xcopy /I /D /Y "
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\Common\Include\basetypes.h" />
     <ClInclude Include="..\..\Common\Include\DataReader.h" />
     <ClInclude Include="..\..\Common\Include\File.h" />
     <ClInclude Include="..\..\Common\Include\fileutil.h" />

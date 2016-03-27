@@ -66,7 +66,7 @@ Train=[
             # Possible values: Center, Random. Default: Center
             cropType="Random"
             # Horizontal random flip, will be enabled by default if cropType=Random
-            #hflip=0
+            #hflip="true"
             # Crop scale ratio. Examples: cropRatio=0.9, cropRatio=0.7:0.9. Default: 1.
             cropRatio=0.875
             # Crop scale ratio jitter type.

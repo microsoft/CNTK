@@ -920,10 +920,10 @@ static inline std::pair<size_t, size_t> ColumnRangeWithMBLayoutFor(size_t numCol
         // Currently, the only 'outer' loop we have is to have no layout.
         if (fr.m_broadcastAllowed && !pMBLayout && numCols == 1)
             return std::pair<size_t, size_t>(0, numCols);
-        if (fr.m_pMBLayout && pMBLayout && *fr.m_pMBLayout != *pMBLayout)
-            // TODO: N:M relationships between inputs
-            LogicError("DataFor: FrameRange's MBLayout inconsistent with matrix: %s vs. %s",
-                       static_cast<string>(*(fr.m_pMBLayout)).c_str(), static_cast<string>(*(pMBLayout)).c_str());
+        if (fr.m_pMBLayout && pMBLayout && *fr.m_pMBLayout == *pMBLayout)
+            LogicError("DataFor: FrameRange's MBLayout inconsistent with matrix. They are compatible though--are you missing a ReconcileMBLayout operation?");
+        else
+            LogicError("DataFor: FrameRange's MBLayout inconsistent with matrix.");
     }
     // if FrameRange refers to whole minibatch (map mode)
     // or if we don't even have a layout
