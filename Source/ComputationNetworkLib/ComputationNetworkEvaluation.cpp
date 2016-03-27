@@ -695,33 +695,33 @@ void ComputationNetwork::MarkValueNonSharableNodes()
         {
             if (std::find(allPreComputeNodes.begin(), allPreComputeNodes.end(), node) == allPreComputeNodes.end())
             {
-            for (auto child : children)
-            {
-                wstring ChildName = child->NodeName();
-                    if (allLeafDescendentsAreParametersOrPreComputeNodes.find(ChildName) == allLeafDescendentsAreParametersOrPreComputeNodes.end())
+                for (auto child : children)
                 {
-                    // not found, means it is a leaf node (we are at eval order )
-                    assert(child->IsLeaf() || child->IsPartOfLoop());
-                    if (std::find(allLearnableParameters.begin(), allLearnableParameters.end(), child) != allLearnableParameters.end())
+                    wstring ChildName = child->NodeName();
+                    if (allLeafDescendentsAreParametersOrPreComputeNodes.find(ChildName) == allLeafDescendentsAreParametersOrPreComputeNodes.end())
                     {
+                        // not found, means it is a leaf node (we are at eval order )
+                        assert(child->IsLeaf() || child->IsPartOfLoop());
+                        if (std::find(allLearnableParameters.begin(), allLearnableParameters.end(), child) != allLearnableParameters.end())
+                        {
                             allLeafDescendentsAreParametersOrPreComputeNodes[ChildName] = true;
+                        }
+                        else
+                        {
+                            allParametersOrPreComputeNodes = false;
+                            allLeafDescendentsAreParametersOrPreComputeNodes[ChildName] = false;
+                            break;
+                        }
                     }
                     else
                     {
-                            allParametersOrPreComputeNodes = false;
-                            allLeafDescendentsAreParametersOrPreComputeNodes[ChildName] = false;
-                        break;
-                    }
-                }
-                else
-                {
                         if (allLeafDescendentsAreParametersOrPreComputeNodes[ChildName] == false)
-                    {
+                        {
                             allParametersOrPreComputeNodes = false;
-                        break;
+                            break;
+                        }
                     }
                 }
-            }
             }
 
             allLeafDescendentsAreParametersOrPreComputeNodes[myname] = allParametersOrPreComputeNodes;
