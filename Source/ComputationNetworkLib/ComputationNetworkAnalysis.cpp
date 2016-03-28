@@ -249,15 +249,26 @@ void ComputationNetwork::DetermineSCCsR(ComputationNodeBasePtr cur,
             //  - the first root takes the first delay node's value, the second root that of the second delay node
             //    I.e. the depth-first tree traversals enter the loop at two different places (m_sourceNode).
             //  -> Are these two loops detected as identical? (determined by m_minIndex, but m_index depends on traversal from each root, so maybe not)
-            bool bFound = false; // find a dup  --TODO: check whether there is an STL algorithm for this
-            for (const auto& iter2 : m_allSEQNodes)
+            bool bFound = false; // find a dup
+            for (let& iter : m_allSEQNodes)
             {
-                if (iter2->m_sourceNode == cur)
+                for (let& iter2 : iter->m_nestedNodes)
                 {
-                    bFound = true;
-                    break;
+                    if (iter2 == cur)
+                    {
+                        bFound = true;
+                        // validate that the loop is really the same, by a set comparison
+                        unordered_set<ComputationNodeBasePtr> newLoop     (        nestedNodes.begin(),         nestedNodes.end());
+                        unordered_set<ComputationNodeBasePtr> existingLoop(iter->m_nestedNodes.begin(), iter->m_nestedNodes.end());
+                        if (newLoop != existingLoop)
+                            LogicError("DetermineSCCsR: %ls %ls operation rediscovered in a loop, but that loop is not the same as last time.", cur->NodeName().c_str(), cur->OperationName().c_str());
+                        break;
+                    }
                 }
             }
+            if (bFound)
+                fprintf(stderr, "\nDetermineSCCsR: %ls %ls operation was discovered multiple times as as loop participant", cur->NodeName().c_str(), cur->OperationName().c_str());
+            // TODO: Once we forbid FormRecurrentLoops() from non-NULL, can we ever re-hit a loop here? If not, then turn bFound into a LogicError().
             if (!bFound)
             {
 #if 0
@@ -335,6 +346,7 @@ void ComputationNetwork::GatherLoopNodesR(const ComputationNodeBasePtr& node, un
 //  - 'nodes' is in some traversal order
 //  - that order is preserved for all nodes outside loops
 //  - each node that belongs to a loop is replaced by all nodes of that loop in loop order
+//    TODO: But where? Start? End?
 // Called only from FormRecurrentLoops().
 void ComputationNetwork::ReorderLoops(list<ComputationNodeBasePtr>& nodes,
                                       const map<int, list<ComputationNodeBasePtr>>& /*recurrentNodes*/,

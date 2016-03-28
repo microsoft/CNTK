@@ -392,6 +392,10 @@ void ComputationNetwork::CompileNetwork()
 {
     fprintf(stderr, "\nPost-processing network...\n");
 
+    // We may only get here if not !IsCompiled(). We could now verify each member to be virgin.
+    // Or just invalidate it again, which is easier and safer.
+    InvalidateCompiledNetwork();
+
     // all steps below have to be repeated for all root nodes (=nodes without parents and PreComputeNodes)
     DetermineSetOfAllRoots();
 
@@ -407,18 +411,21 @@ void ComputationNetwork::CompileNetwork()
     FormEvalOrder(nullptr); // form the global one
     for (auto& node : m_allRoots)
         FormEvalOrder(node);
+    // TODO: ^^ we should only create the NULL one, and allow to create the others lazily, by filtering the NULL one (keeping same order)?
 
     // STEP: form the m_inputValues and m_learnableParameters sets for this rootNode
-    m_inputValues.clear();
-    m_learnableParameters.clear();
     CollectInputAndLearnableParameters(nullptr);
     for (const auto& root : m_allRoots)
         CollectInputAndLearnableParameters(root);
 
+    // STEP: Establish time-axis relationships.
+    // This sets all MBLayout pointers of Input nodes according to user spec of time axes.
+    ResetMBLayouts();
+
     // STEP: Discover nested loops.
     FormRecurrentLoops(nullptr); // form the global one  --TODO: just use this; should be no need to do this for each root
     for (auto& node : m_allRoots)
-        FormRecurrentLoops(node);
+        FormRecurrentLoops(node); // BUGBUG: These calls are needed because they patch EvalOrders. Will be unnecessary once we move this out.
 
     // STEP: Form nested structure of PAR and SEQ traversal nodes.
     for (auto& node : m_allRoots)
@@ -494,6 +501,26 @@ void ComputationNetwork::DetermineSetOfAllRoots()
     });
 }
 
+// initial setup of MBLayout pointers
+//  - link all input nodes to one or more MBLayouts    --TODO: Currently only one
+//  - reset all others to nullptr, in expectation of a ValidateNetwork() pass
+// TODO: Change this to use different MBLayouts for different inputs if so configured.
+void ComputationNetwork::ResetMBLayouts()
+{
+    // reset to a well-defined MBLayout (any meaningful layout should do here)
+    // Note that Validate is never called during operation. Any actual computation will lead to MBLayout to be set.
+    m_pMBLayout->Init(1, 0);
+
+    // first reset all
+    for (auto node : GetEvalOrder(nullptr))
+        node->LinkToMBLayout(nullptr);
+
+    // then fix up inputs (all others get propagated upwards through Validate())
+    // TODO: Once we support mismatching layouts, this will be more involved. For now, everything shares the one layout that the Network knows about.
+    for (auto node : InputNodes(nullptr))
+        node->LinkToMBLayout(m_pMBLayout);
+}
+
 // -----------------------------------------------------------------------
 // validation
 // -----------------------------------------------------------------------
@@ -501,18 +528,9 @@ void ComputationNetwork::DetermineSetOfAllRoots()
 // validate sub-network needed to evalute a specific output node
 // This calls Validate() on every node in evaluation order (allowing to propagate things forwards through the net).
 // This is called lazily but once only per node until next ClearCache().
-// This also sets up MBLayout links.
+// MBLayout links are expected to have been set up already for inputs, and reset to nullptr for all other nodes.
 void ComputationNetwork::ValidateNetwork()
 {
-    // reset to a well-defined MBLayout (any meaningful layout should do here)
-    // Note that Validate is never called during operation. Any actual computation will lead to MBLayout to be set.
-    m_pMBLayout->Init(1, 0);
-
-    // set up MBLayout links of inputs (all others get propagated upwards through Validate())
-    // TODO: Once we support mismatching layouts, this will be more involved. For now, everything shares the one layout that the Network knows about.
-    for (auto node : InputNodes(nullptr))
-        node->LinkToMBLayout(m_pMBLayout);
-
     // we call all nodes' Validate() in order to validate, that is, set up MBLayout and FunctionValues dimension
     // A problem is that recurrent loops may require partial validation.
     // Nodes validated on partial input (i.e. some children not yet validated) will be revisited.

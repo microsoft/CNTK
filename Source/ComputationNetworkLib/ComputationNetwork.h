@@ -180,6 +180,7 @@ private:
     void DetermineSetOfAllRoots();
     void CollectInputAndLearnableParameters(const ComputationNodeBasePtr& rootNode);
     void CollectInputAndLearnableParametersRec(const ComputationNodeBasePtr& node, set<ComputationNodeBasePtr>& visited, list<ComputationNodeBasePtr>& inputs, list<ComputationNodeBasePtr>& learnableParameters);
+    void ResetMBLayouts();
     bool IsCompiled() const { return m_isCompiled; }
     bool AreMatricesAllocated() const { return m_areMatricesAllocated; }
     void VerifyIsCompiled(const char* where) const;
