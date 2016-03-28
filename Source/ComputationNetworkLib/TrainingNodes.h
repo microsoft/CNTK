@@ -44,7 +44,7 @@ public:
     {
         FrameRange fr(Input(0)->GetMBLayout());
         auto gradient = Input(inputIndex)->GradientFor(fr);
-        Matrix<ElemType>::Multiply1x1AndWeightedAdd(inputIndex == 0 ? 1.0f : -1.0f, Gradient() /*1x1*/, *m_leftMinusRight, 1.0f, gradient);
+        Matrix<ElemType>::Multiply1x1AndWeightedAdd(inputIndex == 0 ? 2.0f : -2.0f, Gradient() /*1x1*/, *m_leftMinusRight, 1.0f, gradient);
     }
 
     virtual bool OutputUsedInComputingInputNodesGradients() const override
@@ -68,7 +68,7 @@ public:
         MaskMissingColumnsToZero(*m_leftMinusRight, Input(0)->GetMBLayout(), fr); // we are fine since it will only be called with full minibatch.
         ElemType v = m_leftMinusRight->FrobeniusNorm();
         Value().VerifySize(1, 1);
-        Value().SetValue(v * v / 2);
+        Value().SetValue(v * v);
 #if NANCHECK
         Value().HasNan("SquareError");
 #endif
