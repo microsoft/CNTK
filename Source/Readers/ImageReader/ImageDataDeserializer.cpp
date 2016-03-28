@@ -262,6 +262,8 @@ cv::Mat FileByteReader::Read(size_t, const std::string& path)
 {
     assert(!path.empty());
 
-    return cv::imread(path, cv::IMREAD_COLOR);
+    //return cv::imread(path, cv::IMREAD_COLOR);
+    UNUSED(path);
+    return cv::Mat(256, 256, CV_8UC3);
 }
 }}}
