@@ -613,8 +613,8 @@ bool ComputationNetwork::UnitTest(bool allowFragment)
     {
         for (auto& node : FinalCriterionNodes())
         {
-            if (!allowFragment)
-                FormRecurrentLoops(node);
+            //if (!allowFragment)
+            //    FormRecurrentLoops(node);
             // this->SetActualMiniBatchSizeFromFeatures();
             if (!UnitTest(node))
                 vErrors.push_back(node->NodeName().c_str());

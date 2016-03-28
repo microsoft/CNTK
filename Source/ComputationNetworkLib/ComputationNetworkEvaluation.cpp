@@ -387,8 +387,6 @@ void ComputationNetwork::VerifyIsCompiled(const char* where) const
 // CompileNetwork() -- bring network into executable state
 // Call this after creation, load, and any modification.
 // This method sets up all members that are cleared in InvalidateCompiledNetwork();
-// TODO: This should be the only entry point, subsuming all other Validate, Build, etc. functions.
-// TODO: Related functions today do lots of stuff lazily. There are redundant calls. That will all be removed.
 // TODO: This is in a somewhat partial state in that we now have a global eval order (keyed by a nullptr), but don't use it yet.
 void ComputationNetwork::CompileNetwork()
 {

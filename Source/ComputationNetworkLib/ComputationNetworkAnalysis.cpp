@@ -37,6 +37,7 @@ static int GetRecurrenceSteppingDirection(const ComputationNodeBasePtr&);
 // TODO: In the future, this function will not take a rootNode parameter anymore.
 void ComputationNetwork::FormRecurrentLoops(const ComputationNodeBasePtr& rootNode /*or nullptr for all*/)
 {
+    //fprintf(stderr, "FormRecurrentLoops for node %ls", rootNode ? rootNode->NodeName().c_str() : L"NULL");
     // get the depth-first traversal order
     // Note: This is only used for resetting the state and resetting m_visitedOrder. I think we only need the set, not the order.
     const list<ComputationNodeBasePtr>& nodes = GetEvalOrder(rootNode);
@@ -60,11 +61,11 @@ void ComputationNetwork::FormRecurrentLoops(const ComputationNodeBasePtr& rootNo
     {
         size_t max_visitedOrderInLoop = 0;
         // TODO: I am sure there is an STL algorithm for this.
-        for (auto itr : iter->m_nestedNodes)
-            if (max_visitedOrderInLoop < itr->m_visitedOrder)
-                max_visitedOrderInLoop = itr->m_visitedOrder;
-        for (auto itr : iter->m_nestedNodes)
-            itr->m_visitedOrder = max_visitedOrderInLoop;
+        for (auto node : iter->m_nestedNodes)
+            if (max_visitedOrderInLoop < node->m_visitedOrder)
+                max_visitedOrderInLoop = node->m_visitedOrder;
+        for (auto node : iter->m_nestedNodes)
+            node->m_visitedOrder = max_visitedOrderInLoop;
     }
 
     // for reordering operation that will follow next, implant m_loopId in all nodes in all loops
@@ -130,10 +131,7 @@ void ComputationNetwork::FormRecurrentLoops(const ComputationNodeBasePtr& rootNo
         auto reorderedNodes = nodes;
 
         // first sort by the updated m_visitedOrder, which is identical for all nodes in a loop
-        reorderedNodes.sort([](const ComputationNodeBasePtr& lhs, const ComputationNodeBasePtr& rhs)
-                            {
-                                return lhs->m_visitedOrder < rhs->m_visitedOrder;
-                            });
+        reorderedNodes.sort([](const ComputationNodeBasePtr& lhs, const ComputationNodeBasePtr& rhs) { return lhs->m_visitedOrder < rhs->m_visitedOrder; });
 
         ReorderLoops(reorderedNodes, recurrentNodes, noRecurrentNodes); // group nodes in loops together
 
@@ -154,7 +152,7 @@ void ComputationNetwork::FormRecurrentLoops(const ComputationNodeBasePtr& rootNo
         fprintf(stderr, "\n");
     }
 
-#if 1
+#if 0
     // now turn this into a nested network, ready for evaluation
     if (rootNode)
         FormNestedNetwork(rootNode);
@@ -262,9 +260,15 @@ void ComputationNetwork::DetermineSCCsR(ComputationNodeBasePtr cur,
             }
             if (!bFound)
             {
+#if 0
+                intptr_t hash = 0;
+                for (let& node : nestedNodes)
+                    hash += (intptr_t)node.get();
+                fprintf(stderr, "\nDetermineSCCsR: %ls %ls operation loop[%d]: hash 0x%016x over %d nodes", cur->NodeName().c_str(), cur->OperationName().c_str(), (int)m_allSEQNodes.size(), (unsigned int)hash, (int)nestedNodes.size());
+#endif
 #if 1
                 if (loopId != m_allSEQNodes.size())
-                    LogicError("DetermineSCCsR(): inconsistent loopId (%d) vs. m_allSEQNodes.size() (%d)", (int) loopId, (int) m_allSEQNodes.size());
+                    LogicError("DetermineSCCsR: %ls %ls operation has inconsistent loopId (%d) vs. m_allSEQNodes.size() (%d)", cur->NodeName().c_str(), cur->OperationName().c_str(), (int)loopId, (int)m_allSEQNodes.size());
                 SEQTraversalFlowControlNode rInfo(m_allSEQNodes.size(), cur);
 #else
                 assert(loopId == m_allSEQNodes.size()); // BUGBUG: Only true if all loops are shared among roots. Fix: use m_allSEQNodes.size() instead
