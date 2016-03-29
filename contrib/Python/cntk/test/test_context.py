@@ -1,7 +1,8 @@
 from ..context import *
 
+
 def test_parse_shapes():
-	output = '''\
+    output = '''\
 FormNestedNetwork: WARNING: Was called twice for v3 Plus operation
 
 Validating network. 5 nodes to process in pass 1.
@@ -24,13 +25,12 @@ Validating network, final pass.
 Post-processing network complete.
 '''
 
-	expected = { 
-			'dummy_node':(2,),
-			'v0':(4,1),
-			'v1':(2,2),
-			'v2':(1,1),
-			'v3':(2,2)
-			}
+    expected = {
+        'dummy_node': (2,),
+        'v0': (4, 1),
+        'v1': (2, 2),
+        'v2': (1, 1),
+        'v3': (2, 2)
+    }
 
-	assert Context._parse_shapes_from_output(output) == expected
-
+    assert Context._parse_shapes_from_output(output) == expected
