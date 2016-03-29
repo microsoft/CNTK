@@ -1463,10 +1463,11 @@ public:
     virtual void DumpNodeInfo(const bool /*printValues*/, const bool /*printMetadata*/, File& fstream) const;
 
     // helper for SimpleOutWriter, living in here to be able to use in debugging
-    void WriteMinibatchWithFormatting(FILE* f, size_t onlyUpToRow, size_t onlyUpToT, bool transpose, bool isCategoryLabel, 
+    size_t WriteMinibatchWithFormatting(FILE* f, size_t onlyUpToRow, size_t onlyUpToT, bool transpose, bool isCategoryLabel, 
                                       const std::vector<std::string>& labelMapping, const std::string& sequenceSeparator, 
                                       const std::string& sequencePrologue, const std::string& sequenceEpilogue, const std::string& elementSeparator,
                                       const std::string& sampleSeparator, const std::string& valueFormatString,
+                                      size_t sequenceIdBase,
                                       bool outputGradient = false) const;
 
     void Trace()
@@ -1476,7 +1477,8 @@ public:
             fprintf(stderr, "Trace --> %s\n", FormatOperationPrototype("").c_str());
             WriteMinibatchWithFormatting(stderr, m_traceNodeValueUpToDim, m_traceNodeValueUpToT, false/*transpose*/, m_traceNodeValueAsCategoryLabel, std::vector<std::string>(),
                                          ""/*sequenceSeparator*/, "  "/*sequencePrologue*/, "\n"/*sequenceEpilogue*/, " "/*elementSeparator*/, "\n  "/*sampleSeparator*/,
-                                         "%13.10f"/*valueFormatString*/);
+                                         "%13.10f"/*valueFormatString*/,
+                                         0);
         }
     }
 
