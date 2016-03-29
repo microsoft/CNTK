@@ -82,11 +82,12 @@ void ComputationNetwork::FormRecurrentLoops(const ComputationNodeBasePtr& rootNo
     }
 
     // for reordering operation that will follow next, implant m_loopId in all nodes in all loops (only used for this purpose)
-    for (auto& iter : m_allSEQNodes)
-    {
-        for (auto& node : iter->m_nestedNodes)
-            node->m_loopId = iter->m_loopId; // Note: m_loopId is only used inside this source file, and only for reordering
-    }
+    //for (auto& iter : m_allSEQNodes)
+    //{
+    //    for (auto& node : iter->m_nestedNodes)
+    //        node->m_loopId = iter->m_loopId; // Note: m_loopId is only used inside this source file, and only for reordering
+    //}
+    // Commented out because this is now done when we create the SEQ entry.
 
     // TODO: Make this for loop a separate function DetermineLoopForwardOrder(). Maybe execute it when we construct m_nestedLoops, we should have all information.
     // bring every loop into a correct order w.r.t. horizontal time dependencies
@@ -249,13 +250,10 @@ void ComputationNetwork::DetermineSCCsR(ComputationNodeBasePtr cur,
     {
         // gather the list of all nodes in this loop
         vector<ComputationNodeBasePtr> nestedNodes;
-        // TODO: build array first in a local array. Only if succeeds, then construct the node off it.
         SEQTraversalFlowControlNode rInfo(m_allSEQNodes.size() /*loopId*/, cur);
         for (;;)
         {
             ComputationNodeBasePtr node = sccStack.back();
-            node->m_isPartOfLoop = true; // this is the only flag in ComputationNode that escapes FormRecurrentLoops()!
-            // TODO: ^^ We should instead remember a pointer to our loop sentinel
             sccStack.pop_back();
             node->m_inStack = false;
             nestedNodes.push_back(node);
@@ -313,6 +311,12 @@ void ComputationNetwork::DetermineSCCsR(ComputationNodeBasePtr cur,
 #endif
                 // TODO: can we prove that 'cur' == nestedNodes.front()? If so, we won't need to store it separately.
                 rInfo.m_nestedNodes = move(nestedNodes); // TODO: make these two part of the constructor
+                for (auto node : rInfo.m_nestedNodes)
+                {
+                    node->m_isPartOfLoop = true; // this is the only flag in ComputationNode that escapes FormRecurrentLoops()!
+                    // TODO: ^^ We should instead remember a pointer to our loop sentinel
+                    node->m_loopId = rInfo.m_loopId; // Note: m_loopId is only used inside this source file, and only for reordering
+                }
                 rInfo.m_steppingDirection = DetermineLoopDirection(rInfo.m_nestedNodes);
                 m_allSEQNodes.push_back(make_shared<SEQTraversalFlowControlNode>(move(rInfo)));
                 loopId++; // and count it  TODO: may be removed
