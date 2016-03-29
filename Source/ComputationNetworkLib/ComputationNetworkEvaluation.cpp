@@ -406,26 +406,31 @@ void ComputationNetwork::CompileNetwork()
     // Note: Steps below are loops over root nodes. We will gradually push those loops through to the functions,
     //       to reduce redundant operation on shared portions of the network.
 
-    // STEP: Create a depth-first tree-traversal order through original graph for every root.
-    // This is used wherever a nested structure is not relevant.
-    FormEvalOrder(nullptr); // form the global one
-    for (auto& node : m_allRoots)
-        FormEvalOrder(node);
-    // TODO: ^^ we should only create the NULL one, and allow to create the others lazily, by filtering the NULL one (keeping same order)?
+    // STEP: Create a depth-first tree-traversal order through complete graph.
+    // TODO: Do not cache this before reordering; get list & pass to FormRecurrentLoops() which reorders it, then store it (such that GetEvalOrder(nullptr) is always valid w.r.t. loops).
+    FormEvalOrder(nullptr);
 
-    // STEP: form the m_inputValues and m_learnableParameters sets for this rootNode
+    // STEP: Form the m_inputValues and m_learnableParameters sets for the entire network.
+    // Needed for ResetMBLayouts() below.
+    // TODO: Move this further down; or decide whether the 'nullptr' version is needed, other than ResetMBLayouts() which could use the global order and filter by itself.
     CollectInputAndLearnableParameters(nullptr);
-    for (const auto& root : m_allRoots)
-        CollectInputAndLearnableParameters(root);
 
     // STEP: Establish time-axis relationships.
     // This sets all MBLayout pointers of Input nodes according to user spec of time axes.
+    // TODO: Don't use m_inputValues, traverse ourselves, to remove dependency on FormEvalOrder().
     ResetMBLayouts();
 
     // STEP: Discover nested loops.
     FormRecurrentLoops(nullptr); // form the global one  --TODO: just use this; should be no need to do this for each root
-    for (auto& node : m_allRoots)
-        FormRecurrentLoops(node); // BUGBUG: These calls are needed because they patch EvalOrders. Will be unnecessary once we move this out.
+    //for (auto& node : m_allRoots)
+    //    FormRecurrentLoops(node); // BUGBUG: These calls are needed because they patch EvalOrders. Will be unnecessary once we move this out.
+
+    // STEP: Create loop-corrected depth-first traversals and cached input/parameter sets for every actual root node.
+    for (auto& root : m_allRoots)
+    {
+        FormEvalOrder(root);
+        CollectInputAndLearnableParameters(root);
+    }
 
     // STEP: Form nested structure of PAR and SEQ traversal nodes.
     for (auto& node : m_allRoots)

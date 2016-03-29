@@ -217,7 +217,8 @@ public:
     // -----------------------------------------------------------------------
 
     // determine the required order in which nodes must be computed in order to compute 'rootNode'
-    // skipPairNetwork == true is only used when called from FormRecurrentLoops()
+    // If passed nullptr, this will traverse the entire net.
+    // If passed non-null, it will take the global traveral in ITS order and sub-filter against root's dependents.
     void FormEvalOrder(const ComputationNodeBasePtr& rootNode)
     {
         if (m_evalOrders.find(rootNode) != m_evalOrders.end())
@@ -228,10 +229,22 @@ public:
                 fprintf(stderr, "FormEvalOrder: WARNING: Was called twice.\n");
         }
 
-        if (rootNode)
-            m_evalOrders[rootNode] = rootNode->EnumerateNodes();
-        else
-            m_evalOrders[rootNode] = ComputationNodeBase::EnumerateNodes(m_allRoots);
+        std::list<ComputationNodeBasePtr> evalOrder;
+        if (!rootNode) // this creates the global one
+        {
+            evalOrder = ComputationNodeBase::EnumerateNodes(m_allRoots);
+        }
+        else // this creates a subset of the global eval order of all nodes that rootNode depends on
+        {
+            auto rawTraversalForRoot = ComputationNodeBase::EnumerateNodes({ rootNode }); // traverse to find the set (we ignore the order)
+            set<ComputationNodeBasePtr> rawSet(rawTraversalForRoot.begin(), rawTraversalForRoot.end());
+            for (const auto& node : GetEvalOrder(nullptr)) // iterate over global one and pull out everything that is included in the set for rootNode
+            {
+                if (rawSet.find(node) != rawSet.end())
+                    evalOrder.push_back(node);
+            }
+        }
+        m_evalOrders[rootNode] = evalOrder;
     }
 
     // replace an existing eval order with an updated one
