@@ -373,8 +373,10 @@ template <class ElemType>
 }
 
 // write out the content of a node in formatted/readable form
+// 'transpose' means print one row per sample (non-transposed is one column per sample).
+// 'isSparse' will print all non-zero values as one row (non-transposed, which makes sense for one-hot) or column (transposed).
 template <class ElemType>
-void ComputationNode<ElemType>::WriteMinibatchWithFormatting(FILE* f, size_t onlyUpToRow, size_t onlyUpToT, bool transpose, bool isCategoryLabel, 
+void ComputationNode<ElemType>::WriteMinibatchWithFormatting(FILE* f, size_t onlyUpToRow, size_t onlyUpToT, bool transpose, bool isCategoryLabel, bool isSparse,
                                                              const std::vector<std::string>& labelMapping, const string& sequenceSeparator, 
                                                              const string& sequencePrologue, const string& sequenceEpilogue,
                                                              const string& elementSeparator, const string& sampleSeparator,
@@ -387,6 +389,7 @@ void ComputationNode<ElemType>::WriteMinibatchWithFormatting(FILE* f, size_t onl
     let matStride = matRows; // how to get from one column to the next
     std::unique_ptr<ElemType[]> matDataPtr(outputValues.CopyToArray());
     ElemType* matData = matDataPtr.get();
+    let sampleLayout = GetSampleLayout(); // this is currently only used for sparse; dense tensors are linearized
 
     // process all sequences one by one
     MBLayoutPtr pMBLayout = GetMBLayout();
@@ -417,13 +420,18 @@ void ComputationNode<ElemType>::WriteMinibatchWithFormatting(FILE* f, size_t onl
         fprintfOrDie(f, "%s", sequencePrologue.c_str());
 
         // output it according to our format specification
-        let formatChar = valueFormatString.back();
+        auto formatChar = valueFormatString.back();
         if (isCategoryLabel) // if is category then find the max value and output its index (possibly mapped to a string)
         {
             if (formatChar == 's') // verify label dimension
             {
                 if (outputValues.GetNumRows() != labelMapping.size())
-                    InvalidArgument("write: Row dimension %d does not match number of entries %d in labelMappingFile", (int)seqRows, (int)labelMapping.size());
+                {
+                    static size_t warnings = 0;
+                    if (warnings++ < 5)
+                        fprintf(stderr, "write: Row dimension %d does not match number of entries %d in labelMappingFile, not using mapping\n", (int)seqRows, (int)labelMapping.size());
+                    formatChar = 'u'; // this is a fallback
+                }
             }
             // update the matrix in-place from one-hot (or max) to index
             // find the max in each column
@@ -444,46 +452,88 @@ void ComputationNode<ElemType>::WriteMinibatchWithFormatting(FILE* f, size_t onl
             }
             seqRows = 1; // ignore remaining dimensions
         }
+        // function to print a value
+        auto print = [&](double dval)
+        {
+            if (formatChar == 'f') // print as real number
+            {
+                fprintfOrDie(f, valueFormatString.c_str(), dval);
+            }
+            else if (formatChar == 'u') // print category as integer index
+            {
+                fprintfOrDie(f, valueFormatString.c_str(), (unsigned int)dval);
+            }
+            else if (formatChar == 's') // print category as a label string
+            {
+                size_t uval = (size_t)dval;
+                assert(uval < labelMapping.size());
+                const char * sval = labelMapping[uval].c_str();
+                fprintfOrDie(f, valueFormatString.c_str(), sval);
+            }
+        };
         // bounds for printing
-        let iend    = transpose ?     seqRows : seqCols;         // true dimension of the data to print
+        let iend    = transpose ?     seqRows : seqCols;     // true dimension of the data to print
         let jend    = transpose ?     seqCols : seqRows;
-        let istop   = transpose ? onlyUpToRow : onlyUpToT; // we stop at these dimensions (for debugging, one often needs only the first few values of those huge matrices)
+        let istop   = transpose ? onlyUpToRow : onlyUpToT;   // we stop at these dimensions (for debugging, one often needs only the first few values of those huge matrices)
         let jstop   = transpose ?   onlyUpToT : onlyUpToRow;
         let istride = transpose ?           1 : seqStride;
         let jstride = transpose ?   seqStride : 1;
-        for (size_t j = 0; j < jend; j++)
+        if (isSparse)
         {
-            if (j > 0)
-                fprintfOrDie(f, "%s", sampleSeparator.c_str());
-            if (j == jstop)
+            // sparse linearizes the entire matrix into a single vector, and prints that one with coordinates
+            // TODO: This can be done more nicely. We should keep the block structure.
+            size_t numPrinted = 0;
+            for (size_t i = 0; i < iend; i++) // loop over elements --we just flatten them all out
             {
-                fprintf(f, "...+%d", (int)(jend - jstop)); // 'nuff said
-                break;
-            }
-            for (size_t i = 0; i < iend; i++)
-            {
-                if (i > 0)
-                    fprintfOrDie(f, "%s", elementSeparator.c_str());
-                if (i == istop)
+                for (size_t j = 0; j < jend; j++) // loop over rows
                 {
-                    fprintf(f, "...+%d", (int)(iend - istop));
+                    double dval = seqData[i * istride + j * jstride];
+                    if (dval == 0) // only print non-0 values
+                        continue;
+                    if (numPrinted++ > 0)
+                        fprintfOrDie(f, "%s", transpose ? sampleSeparator.c_str() : elementSeparator.c_str());
+                    if (dval != 1.0 || formatChar != 'f') // hack: we assume that we are either one-hot or never precisely hitting 1.0
+                        print(dval);
+                    fprintfOrDie(f, "[");
+                    size_t row = transpose ? i : j;
+                    size_t col = transpose ? j : i;
+                    for (size_t k = 0; k < sampleLayout.size(); k++)
+                    {
+                        if (k > 0)
+                            fprintfOrDie(f, ",");
+                        fprintfOrDie(f, "%d", row % sampleLayout[k]);
+                        if (sampleLayout[k] == labelMapping.size()) // annotate index with label if dimensions match (which may misfire once in a while)
+                            fprintfOrDie(f, "=%s", labelMapping[row % sampleLayout[k]].c_str());
+                        row /= sampleLayout[k];
+                    }
+                    if (seqInfo.GetNumTimeSteps() > 1)
+                        fprintfOrDie(f, ";%d", col);
+                    fprintfOrDie(f, "]");
+                }
+            }
+        }
+        else
+        {
+            for (size_t j = 0; j < jend; j++) // loop over output rows     --BUGBUG: row index is 'i'!! Rename these!!
+            {
+                if (j > 0)
+                    fprintfOrDie(f, "%s", sampleSeparator.c_str());
+                if (j == jstop && jstop < jend - 1) // if jstop == jend-1 we may as well just print the value instead of '...'
+                {
+                    fprintf(f, "...+%d", (int)(jend - jstop)); // 'nuff said
                     break;
                 }
-                double dval = seqData[i * istride + j * jstride];
-                if (formatChar == 'f') // print as real number
+                for (size_t i = 0; i < iend; i++) // loop over elements
                 {
-                    fprintfOrDie(f, valueFormatString.c_str(), dval);
-                }
-                else if (formatChar == 'u') // print category as integer index
-                {
-                    fprintfOrDie(f, valueFormatString.c_str(), (unsigned int)dval);
-                }
-                else if (formatChar == 's') // print category as a label string
-                {
-                    size_t uval = (size_t)dval;
-                    assert(uval < labelMapping.size());
-                    const char * sval = labelMapping[uval].c_str();
-                    fprintfOrDie(f, valueFormatString.c_str(), sval);
+                    if (i > 0)
+                        fprintfOrDie(f, "%s", elementSeparator.c_str());
+                    if (i == istop && istop < iend - 1)
+                    {
+                        fprintf(f, "...+%d", (int)(iend - istop));
+                        break;
+                    }
+                    double dval = seqData[i * istride + j * jstride];
+                    print(dval);
                 }
             }
         }

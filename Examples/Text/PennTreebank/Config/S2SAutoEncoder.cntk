@@ -556,7 +556,7 @@ write = [
             SkipFirst (x) = BS.Sequences.Skip (1, x)
 
             # replace every reference of these by PropagateTopN(of these)
-            EditToPropagateTopN (name) = (node => if node.name == name then PropagateTopN (node) else node)
+            EditToPropagateTopN (name) = (node => if node.name == name then /*PropagateTopN*/ (node) else node)
             propagationEdits[i:0..3] = // TODO: implement and use { } syntax
                 if      i == 0 then EditToPropagateTopN ('decoder[0].prevState.h')
                 else if i == 1 then EditToPropagateTopN ('decoder[0].prevState.c')
@@ -721,12 +721,23 @@ write = [
     outputPath = "-"                    # "-" will write to stdout; useful for debugging
     #outputNodeNames = z1.out:labels1 # when processing one sentence per minibatch, this is the sentence posterior
     outputNodeNames = network.beamDecodingModel.z1.out:labels1 # when processing one sentence per minibatch, this is the sentence posterior
+    #outputNodeNames = labels1:network.beamDecodingModel.expandedPathScores
+    #outputNodeNames = network.beamDecodingModel.pathScores:network.beamDecodingModel.traceback
+    #   network.beamDecodingModel.tokenSetScores
+    #   network.beamDecodingModel.pathScores
+    #   network.beamDecodingModel.traceback
+    #   network.beamDecodingModel.expandedPathScores
+
     format = [
-        type = "category"
+        type = "sparse"
         transpose = false
         labelMappingFile = "$ModelDir$/vocab.wl"
         sequenceEpilogue = "\t// %s\n"
     ]
+
+    traceNodeNamesReal = network.beamDecodingModel.pathScores:network.beamDecodingModel.tokenSetScores:network.beamDecodingModel.expandedPathScores:network.beamDecodingModel.backPointers:network.beamDecodingModel.initialPathScores.out.out.input
+    #traceNodeNamesCategory = network.beamDecodingModel.tokenSetScores
+    traceNodeNamesSparse = network.beamDecodingModel.tokenSetScores:network.beamDecodingModel.backPointers:decoderOutputEmbedded.x
 
     minibatchSize = 8192                # choose this to be big enough for the longest sentence
     # need to be small since models are updated for each minibatch

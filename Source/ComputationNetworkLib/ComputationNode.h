@@ -157,8 +157,9 @@ struct ComputationNetworkOwnedNodeState
         other.m_isPartOfLoop                  = m_isPartOfLoop;
         other.m_needsGradient                 = m_needsGradient;
         other.m_valueSharable                 = m_valueSharable;
-        other.m_traceNodeValue                = m_traceNodeValue;
+        other.m_traceNodeValueReal            = m_traceNodeValueReal;
         other.m_traceNodeValueAsCategoryLabel = m_traceNodeValueAsCategoryLabel;
+        other.m_traceNodeValueSparse          = m_traceNodeValueSparse;
         other.m_traceNodeValueUpToDim         = m_traceNodeValueUpToDim;
         other.m_traceNodeValueUpToT           = m_traceNodeValueUpToT;
     }
@@ -172,25 +173,23 @@ struct ComputationNetworkOwnedNodeState
     // tracing flags
     // Enable to print the value of the function-value matrix in somewhat readable format.
     // These are public since you are meant to set these flags manually in the debugger or temporarily poke into them from code as needed.
-    bool m_traceNodeValue = false;
+    bool m_traceNodeValueReal = false;
     bool m_traceNodeValueAsCategoryLabel = false;
+    bool m_traceNodeValueSparse = false;
     size_t m_traceNodeValueUpToDim = 3; // 3 should be enough to see simple patterns such as all values are identical or out of range
     size_t m_traceNodeValueUpToT = 8;   // 8 time steps fit comfortably into a normal-sized console
-    void EnableNodeTracing(bool isCategoryLabel) { m_traceNodeValue = true; m_traceNodeValueAsCategoryLabel = isCategoryLabel; }
+    void EnableNodeTracing(bool asReal, bool asCategoryLabel, bool asSparse) { m_traceNodeValueReal = asReal; m_traceNodeValueAsCategoryLabel = asCategoryLabel; m_traceNodeValueSparse = asSparse; }
 
 protected:                // TODO: should be fully encapsulated here
-
     bool m_needsGradient; // true if this node or any children need a gradient to be computed (for own consumption or propagation to somewhere in the child tree)
 
     bool m_valueSharable; // a flag is needed for memory share.
                           // If it is false (e.g., learnableParameters/InputValue and those nodes are solely induced by learnableParameters),
                           // it will never be released to memory pool
 private:
-
     bool m_isPartOfLoop; // true if this loop is part of a recurrent loop
 
 protected:
-
     // owned by FormRecurrentLoops() and stuff it calls, only used from inside there (FormRecurrentLoops() calls PurgeStateForFormingRecurrentLoops() at its end to make that super-clear)
     void PurgeStateForFormingRecurrentLoops()
     {
@@ -1468,7 +1467,6 @@ protected:
     }
 
 public:
-
     // -----------------------------------------------------------------------
     // miscellaneous
     // -----------------------------------------------------------------------
@@ -1476,7 +1474,7 @@ public:
     virtual void DumpNodeInfo(const bool /*printValues*/, const bool /*printMetadata*/, File& fstream) const;
 
     // helper for SimpleOutWriter, living in here to be able to use in debugging
-    void WriteMinibatchWithFormatting(FILE* f, size_t onlyUpToRow, size_t onlyUpToT, bool transpose, bool isCategoryLabel, 
+    void WriteMinibatchWithFormatting(FILE* f, size_t onlyUpToRow, size_t onlyUpToT, bool transpose, bool isCategoryLabel, bool isSparse,
                                       const std::vector<std::string>& labelMapping, const std::string& sequenceSeparator, 
                                       const std::string& sequencePrologue, const std::string& sequenceEpilogue, const std::string& elementSeparator,
                                       const std::string& sampleSeparator, const std::string& valueFormatString,
@@ -1484,17 +1482,25 @@ public:
 
     void Trace()
     {
-        if (m_traceNodeValue)
+        if (m_traceNodeValueReal || m_traceNodeValueAsCategoryLabel || m_traceNodeValueSparse)
         {
             fprintf(stderr, "Trace --> %s\n", FormatOperationPrototype("").c_str());
-            WriteMinibatchWithFormatting(stderr, m_traceNodeValueUpToDim, m_traceNodeValueUpToT, false/*transpose*/, m_traceNodeValueAsCategoryLabel, std::vector<std::string>(),
-                                         ""/*sequenceSeparator*/, "  "/*sequencePrologue*/, "\n"/*sequenceEpilogue*/, " "/*elementSeparator*/, "\n  "/*sampleSeparator*/,
-                                         "%13.10f"/*valueFormatString*/);
+            if (m_traceNodeValueReal)
+                WriteMinibatchWithFormatting(stderr, m_traceNodeValueUpToDim, m_traceNodeValueUpToT, false/*transpose*/, /*isCategoryLabel=*/false, /*isSparse=*/false, std::vector<std::string>(),
+                                             ""/*sequenceSeparator*/, "  "/*sequencePrologue*/, "\n"/*sequenceEpilogue*/, " "/*elementSeparator*/, "\n  "/*sampleSeparator*/,
+                                             "%13.10f"/*valueFormatString*/);
+            if (m_traceNodeValueAsCategoryLabel)
+                WriteMinibatchWithFormatting(stderr, m_traceNodeValueUpToDim, m_traceNodeValueUpToT, false/*transpose*/, /*isCategoryLabel=*/true,  /*isSparse=*/false, std::vector<std::string>(),
+                                             ""/*sequenceSeparator*/, "  "/*sequencePrologue*/, "\n"/*sequenceEpilogue*/, " "/*elementSeparator*/, "\n  "/*sampleSeparator*/,
+                                             "%13.10f"/*valueFormatString*/);
+            if (m_traceNodeValueSparse)
+                WriteMinibatchWithFormatting(stderr, SIZE_MAX,                SIZE_MAX,              false/*transpose*/, /*isCategoryLabel=*/false, /*isSparse=*/true, std::vector<std::string>(),
+                                             ""/*sequenceSeparator*/, "  "/*sequencePrologue*/, "\n"/*sequenceEpilogue*/, " "/*elementSeparator*/, "\n  "/*sampleSeparator*/,
+                                             "%13.10f"/*valueFormatString*/);
         }
     }
 
 protected:
-
     // print node values
     // This is used for dumping model parameters, not minibatch data.
     void PrintNodeValuesToFile(const bool printValues, const bool printMetadata, File& fstream) const

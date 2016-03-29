@@ -63,12 +63,12 @@ __declspec_noreturn static inline void ThrowFormatted(const char* format, ...)
     va_list args;
     va_start(args, format);
 
-    char buffer[1024] = { 0 }; // initialize in case vsnprintf() does a half-assed job such as a failing character conversion
-    int written = vsnprintf(buffer, _countof(buffer) - 1, format, args); // -1 because vsnprintf() does not always write a 0-terminator, although the MSDN documentation states so
+    char buffer[1024] = { 0 }; // Note: pre-VS2015 vsnprintf() is not standards-compliant and may not add a terminator
+    int written = vsnprintf(buffer, _countof(buffer) - 1, format, args); // -1 because pre-VS2015 vsnprintf() does not always write a 0-terminator
     // TODO: In case of EILSEQ error, choose between just outputting the raw format itself vs. continuing the half-completed buffer
     //if (written < 0) // an invalid wide-string conversion may lead to EILSEQ
     //    strncpy(buffer, format, _countof(buffer)
-    UNUSED(written); // vsnprintf() returns -1 in case of overflow, instead of the #characters written as claimed in the MSDN documentation states so
+    UNUSED(written); // pre-VS2015 vsnprintf() returns -1 in case of overflow, instead of the #characters written
     if (strlen(buffer)/*written*/ >= (int)_countof(buffer) - 2)
         sprintf(buffer + _countof(buffer) - 4, "...");
 #ifdef _DEBUG // print this to log, so we can see what the error is before throwing

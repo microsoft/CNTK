@@ -69,6 +69,11 @@ static void DoEvalBase(const ConfigParameters& config, IDataReader& reader)
 
     auto net = ComputationNetwork::CreateFromFile<ElemType>(deviceId, modelPath);
     
+    // set tracing flags
+    net->EnableNodeTracing(config(L"traceNodeNamesReal",     ConfigParameters::Array(stringargvector())),
+                           config(L"traceNodeNamesCategory", ConfigParameters::Array(stringargvector())),
+                           config(L"traceNodeNamesSparse",   ConfigParameters::Array(stringargvector())));
+
     SimpleEvaluator<ElemType> eval(net, MPIWrapper::GetInstance(), numMBsToShowResult, traceLevel, maxSamplesInRAM, numSubminiBatches);
     eval.Evaluate(&reader, evalNodeNamesVector, mbSize[0], epochSize);
 }
@@ -225,6 +230,11 @@ void DoWriteOutput(const ConfigParameters& config)
 
     let net = GetModelFromConfig<ConfigParameters, ElemType>(config, outputNodeNamesVector);
 
+    // set tracing flags
+    net->EnableNodeTracing(config(L"traceNodeNamesReal",     ConfigParameters::Array(stringargvector())),
+                           config(L"traceNodeNamesCategory", ConfigParameters::Array(stringargvector())),
+                           config(L"traceNodeNamesSparse",   ConfigParameters::Array(stringargvector())));
+
     SimpleOutputWriter<ElemType> writer(net, 1);
 
     if (config.Exists("writer"))
@@ -246,11 +256,11 @@ void DoWriteOutput(const ConfigParameters& config)
             if (formatConfig.ExistsCurrent("type")) // do not inherit 'type' from outer block
             {
                 string type = formatConfig(L"type");
-                if      (type == "real")     formattingOptions.isCategoryLabel = false;
+                if      (type == "real")     ; // default
                 else if (type == "category") formattingOptions.isCategoryLabel = true;
-                else                         InvalidArgument("write: type must be 'real' or 'category'");
-                if (formattingOptions.isCategoryLabel)
-                    formattingOptions.labelMappingFile = (wstring)formatConfig(L"labelMappingFile", L"");
+                else if (type == "sparse")   formattingOptions.isSparse = true;
+                else                         InvalidArgument("write: type must be 'real', 'category', or 'sparse'");
+                formattingOptions.labelMappingFile = (wstring)formatConfig(L"labelMappingFile", L"");
             }
             formattingOptions.transpose         = formatConfig(L"transpose",         formattingOptions.transpose);
             formattingOptions.prologue          = formatConfig(L"prologue",          formattingOptions.prologue);

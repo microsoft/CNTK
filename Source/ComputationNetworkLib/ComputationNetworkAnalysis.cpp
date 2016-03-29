@@ -57,8 +57,10 @@ void ComputationNetwork::FormRecurrentLoops(const ComputationNodeBasePtr& rootNo
     //     - the loop itself
     //     - consumers of the loop
     //    (consumers of the loop can never be inputs, otherwise they would be part of the loop)
+    //    This should be done by the SEQ constructor. I don't dare at present because some other code (e.g. memshare) relies on this ordering.
     //  - each loop is sorted inside
     //     - break loop graph into sub-graphs between delay nodes
+    //    This is necessary.
 
     // --- BEGIN reorder process   --TODO: eliminate this entire chunk of code; don't update EvalOrder; instead, do it only when constructing the outer PAR node
 

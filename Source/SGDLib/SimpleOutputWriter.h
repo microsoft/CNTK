@@ -171,9 +171,10 @@ public:
     struct WriteFormattingOptions
     {
         // How to interpret the data:
-        bool isCategoryLabel;          // true: find max value in column and output the index instead of the entire vector
+        bool isCategoryLabel = false;  // true: find max value in column and output the index instead of the entire vector
         std::wstring labelMappingFile; // optional dictionary for pretty-printing category labels
-        bool transpose;                // true: one line per sample, each sample (column vector) forms one line; false: one column per sample
+        bool isSparse = false;
+        bool transpose = true;         // true: one line per sample, each sample (column vector) forms one line; false: one column per sample
         // The following strings are interspersed with the data:
         // overall
         std::string prologue; // print this at the start (e.g. a global header or opening bracket)
@@ -218,7 +219,7 @@ public:
         const auto elementSeparator =  formattingOptions.Processed(node->NodeName(), formattingOptions.elementSeparator,  numMBsRun);
         const auto sampleSeparator =   formattingOptions.Processed(node->NodeName(), formattingOptions.sampleSeparator,   numMBsRun);
 
-        node->WriteMinibatchWithFormatting(f, SIZE_MAX, SIZE_MAX, formattingOptions.transpose, formattingOptions.isCategoryLabel, labelMapping,
+        node->WriteMinibatchWithFormatting(f, SIZE_MAX, SIZE_MAX, formattingOptions.transpose, formattingOptions.isCategoryLabel, formattingOptions.isSparse, labelMapping,
             sequenceSeparator, sequencePrologue, sequenceEpilogue, elementSeparator, sampleSeparator,
             valueFormatString, gradient);
     }
@@ -287,7 +288,7 @@ public:
         
         // load a label mapping if requested
         std::vector<std::string> labelMapping;
-        if (formattingOptions.isCategoryLabel && !formattingOptions.labelMappingFile.empty())
+        if ((formattingOptions.isCategoryLabel || formattingOptions.isSparse) && !formattingOptions.labelMappingFile.empty())
             File::LoadLabelFile(formattingOptions.labelMappingFile, labelMapping);
 
         // open output files

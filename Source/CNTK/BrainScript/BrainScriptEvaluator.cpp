@@ -1023,4 +1023,5 @@ static ScriptableObjects::ConfigurableRuntimeTypeRegister::Add<Debug>           
 //     - macro arg expressions get their path assigned when their thunk is created, the thunk remembers it
 //     - however, really, the thunk should get the expression path from the context it is executed in, not the context it was created in
 //     - maybe there is some clever scheme of overwriting when a result comes back? E.g. we retrieve a value but its name is not right, can we patch it up? Very tricky to find the right rules/conditions
-} } } // namespaces
+
+}}} // namespaces

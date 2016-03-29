@@ -722,6 +722,19 @@ public:
     // diagnostics
     // -----------------------------------------------------------------------
 
+    // call EnableNodeTracing() on the given nodes for real, category, and sparse printing
+    void EnableNodeTracing(const std::vector<std::wstring>& traceNodeNamesReal,
+                           const std::vector<std::wstring>& traceNodeNamesCategory,
+                           const std::vector<std::wstring>& traceNodeNamesSparse)
+    {
+        for (const auto& name : traceNodeNamesReal)
+            GetNodeFromName(name)->EnableNodeTracing(/*asReal=*/true,  /*asCategoryLabel=*/false, /*asSparse=*/false);
+        for (const auto& name : traceNodeNamesCategory)
+            GetNodeFromName(name)->EnableNodeTracing(/*asReal=*/false, /*asCategoryLabel=*/true,  /*asSparse=*/false);
+        for (const auto& name : traceNodeNamesSparse)
+            GetNodeFromName(name)->EnableNodeTracing(/*asReal=*/false, /*asCategoryLabel=*/false, /*asSparse=*/true);
+    }
+
     // if node name is not found, dump all nodes
     // otherwise dump just that node
     // This function is called from MEL, i.e. must be prepared to operate on an uncompiled network (only m_nameToNodeMap is valid).

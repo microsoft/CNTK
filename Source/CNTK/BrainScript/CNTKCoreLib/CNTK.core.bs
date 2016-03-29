@@ -11,6 +11,7 @@
 
 Print(value, format='') = new PrintAction [ what = value /*; how = format*/ ] 
 Debug(value, say = '', enabled = true) = new Debug [ /*macro arg values*/ ] 
+Fail(what) = new FailAction [ /*what*/ ]
 Format(value, format) = new StringFunction [ what = 'Format' ; arg = value ; how = format ] 
 Replace(s, from, to) = new StringFunction [ what = 'Replace' ; arg = s ; replacewhat = from ; withwhat = to ] 
 Substr(s, begin, num) = new StringFunction [ what = 'Substr' ; arg = s ; pos = begin ; chars = num ] 
@@ -43,14 +44,17 @@ Constant(val, rows = 1, cols = 1, tag='') = Parameter(rows, cols, learningRateMu
 PastValue(dims, input, timeStep = 1, defaultHiddenActivation = 0.1, tag='') = new ComputationNode [ operation = 'PastValue' ; inputs = input ; shape = new TensorShape [ /*dims*/ ] /*plus the function args*/ ]
 FutureValue(dims, input, timeStep = 1, defaultHiddenActivation = 0.1, tag='') = new ComputationNode [ operation = 'FutureValue' ; inputs = input ; shape = new TensorShape [ /*dims*/ ] /*plus the function args*/ ]
 Shift(input, fromOffset, boundaryValue, boundaryMode=-1/*context*/, dim=-1, tag='') = new ComputationNode [ operation = 'Shift' ; inputs = (input : boundaryValue) /*plus the function args*/ ]
-RowSlice(beginIndex, numRows, input, tag='') = new ComputationNode [ operation = 'Slice' ; endIndex = beginIndex + numRows; axis = 1/*row*/; inputs = input /*plus the function args*/ ]
+RowSlice(beginIndex, numRows, input, tag='') = Slice(beginIndex, beginIndex + numRows, input, axis = 1)
 RowRepeat(input, numRepeats, tag='') = new ComputationNode [ operation = 'RowRepeat' ; inputs = input /*plus the function args*/ ]
 RowStack(inputs, tag='') = new ComputationNode [ operation = 'RowStack' /*plus the function args*/ ]
 Reshape(input, numRows, imageWidth = 0, imageHeight = 0, imageChannels = 0, tag='') = new ComputationNode [ operation = 'LegacyReshape' ; inputs = input /*plus the function args*/ ]
 NewReshape(input, dims, beginAxis=0, endAxis=0, tag='') = new ComputationNode [ operation = 'Reshape' ; inputs = input ; shape = new TensorShape [ /*dims*/ ] /*plus the function args*/ ]
 ReshapeDimension(x, axis, tensorShape) = NewReshape(x, tensorShape, beginAxis=axis, endAxis=axis + 1) 
 FlattenDimensions(x, axis, num) = NewReshape(x, 0, beginAxis=axis, endAxis=axis + num) 
-#Slice(beginIndex, endIndex, input, axis=1, tag='') = new ComputationNode [ operation = 'Slice' ; endIndex = beginIndex + numRows; inputs = input /*plus the function args*/ ]
+Slice(beginIndex, endIndex, input, axis=1, tag='') =
+    if axis < 1
+    then Fail('Slice does not yet implement slicing the time axis.') // TODO: implement using Gather()
+    else new ComputationNode [ operation = 'Slice' ; inputs = input /*plus the function args*/ ]
 SplitDimension(x, axis, N) = ReshapeDimension(x, axis, 0:N) 
 TransposeDimensions(input, axis1, axis2, tag='') = new ComputationNode [ operation = 'TransposeDimensions' ; inputs = input /*plus the function args*/ ]
 Transpose(x) = TransposeDimensions(x, 1, 2)

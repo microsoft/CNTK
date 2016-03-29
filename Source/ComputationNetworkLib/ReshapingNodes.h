@@ -285,6 +285,7 @@ public:
 
 private:
 
+    // these implement numpy-style negative bound values to index from the end
     size_t BeginIndex() const { return m_beginIndex >= 0 ? (size_t)m_beginIndex : (size_t)(m_beginIndex + Input(0)->GetSampleLayout()[m_axis - 1]); }
     size_t EndIndex()   const { return m_endIndex   >  0 ? (size_t)m_endIndex   : (size_t)(m_endIndex   + Input(0)->GetSampleLayout()[m_axis - 1]); }
 

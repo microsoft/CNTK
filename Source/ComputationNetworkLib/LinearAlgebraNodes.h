@@ -258,7 +258,7 @@ public:
 private:
     // if the left argument of the matrix product (A) has a time axis, it can only be applied sample by sample
     // where each sample is treated as a separate matrix object (as a consequence, it then also applies to B and the result as well)
-    TensorView<ElemType> OneSampleTensorFor(int inputIndex, bool gradient/*instead of value*/, const FrameRange& fr)
+    TensorView<ElemType> OneSampleTensorFor(int inputIndex/*-1 for output*/, bool gradient/*instead of value*/, const FrameRange& fr)
     {
         auto input = inputIndex < 0 ? this : Input(inputIndex).get();
         auto& data = gradient ? input->Gradient() : input->Value();
