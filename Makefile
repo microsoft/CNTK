@@ -29,6 +29,8 @@
 #     defaults to /usr/local/opencv-3.0.0
 #   LIBZIP_PATH= path to libzip installation, so $(LIBZIP_PATH) exists
 #     defaults to /usr/local/
+#   OPENMPI_PATH= path to OpenMPI installation, so $(OPENMPI_PATH) exists
+#     defaults to /usr/local/openmpi-1.10.1
 # These can be overridden on the command line, e.g. make BUILDTYPE=debug
 
 ifndef BUILD_TOP
@@ -119,6 +121,11 @@ else
   DEVICE = cpu
 
   COMMON_FLAGS +=-DCPUONLY
+endif
+
+ifdef OPENMPI_PATH
+  INCLUDEPATH += $(OPENMPI_PATH)/include
+  LIBPATH += $(OPENMPI_PATH)/lib
 endif
 
 ifeq ("$(MATHLIB)","acml")
