@@ -73,7 +73,7 @@ public:
     const IntVec&  Indices() const { return m_indices; }
 
     // Number of kernels (equal to MapCount if sharing is all true values).
-    const size_t KernelCount() const{ return m_kernelCount; }
+    size_t KernelCount() const { return m_kernelCount; }
 
     ConvolveGeometry(const TensorShape& inputShape, const TensorShape& kernelShape, const TensorShape& mapCount, const TensorShape& stride,
                      const BoolVec& sharing, const BoolVec& autoPad, const TensorShape& lowerPad, const TensorShape& upperPad)
