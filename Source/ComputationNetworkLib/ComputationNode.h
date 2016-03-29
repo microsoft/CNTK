@@ -1479,8 +1479,7 @@ public:
             fprintf(stderr, "Trace --> %s\n", FormatOperationPrototype("").c_str());
             WriteMinibatchWithFormatting(stderr, m_traceNodeValueUpToDim, m_traceNodeValueUpToT, false/*transpose*/, m_traceNodeValueAsCategoryLabel, std::vector<std::string>(),
                                          ""/*sequenceSeparator*/, "  "/*sequencePrologue*/, "\n"/*sequenceEpilogue*/, " "/*elementSeparator*/, "\n  "/*sampleSeparator*/,
-                                         "%13.10f"/*valueFormatString*/,
-                                         0);
+                                         "%13.10f"/*valueFormatString*/);
         }
     }
 
