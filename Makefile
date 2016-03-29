@@ -594,8 +594,12 @@ CNTK_OBJ := $(patsubst %.cu, $(OBJDIR)/%.o, $(patsubst %.cpp, $(OBJDIR)/%.o, $(C
 
 CNTK:=$(BINDIR)/cntk
 ALL+=$(CNTK)
+SRC+=$(CNTK_SRC)
 
-$(CNTK): $(BUILDINFO)  $(CNTK_OBJ) | $(CNTKMATH_LIB)
+# Make sure buildinfo.h is generated even without dependency files
+$(OBJDIR)/Source/CNTK/CNTK.o: $(BUILDINFO)
+
+$(CNTK): $(CNTK_OBJ) | $(CNTKMATH_LIB)
 	@echo $(SEPARATOR)
 	@mkdir -p $(dir $@)
 	@echo building output for $(ARCH) with build type $(BUILDTYPE)
@@ -637,10 +641,7 @@ $(OBJDIR)/%.o : %.cpp Makefile
 	@mkdir -p $(dir $@)
 	$(CXX) -c $< -o $@ $(COMMON_FLAGS) $(CPPFLAGS) $(CXXFLAGS) $(INCLUDEPATH:%=-I%) -MD -MP -MF ${@:.o=.d}
 
-.PHONY: force clean buildall all
-
-force:	$(BUILDINFO)
-
+.PHONY: $(BUILDINFO) clean buildall all
 
 clean:
 	@echo $(SEPARATOR)
