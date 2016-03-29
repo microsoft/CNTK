@@ -184,10 +184,11 @@ BOOST_AUTO_TEST_CASE(BatchNormalizationForwardTrain)
             float elapsedCudnn = time2.Elapsed();
             // Check performance. Current version of cuDNN (v4 RC) is significanlty slower than CNTK implementation.
             // For optimal cases (vectorSize % 32 == 0 and batchSize % 32 == 0), CNTK implementation can be >5x faster than cuDNN.
+            // Production version is about the same.
             if (crow >= 32 && ccol >= 32)
             {
                 // Use conservative estimates.
-                int speedup = 2;
+                int speedup = 1;
                 BOOST_REQUIRE_MESSAGE(speedup * elapsedCntk < elapsedCudnn,
                                       "CNTK implementation (" << elapsedCntk << "ms) must be faster than cuDNN (" << elapsedCudnn << "ms) by at least " << speedup << "x, what's changed? " << tmsg.str());
             }
@@ -283,6 +284,7 @@ BOOST_AUTO_TEST_CASE(BatchNormalizationForwardInference)
             float elapsedCudnn = time2.Elapsed();
             // Check performance. Current version of cuDNN (v4 RC) is significanlty slower than CNTK implementation.
             // For optimal cases (vectorSize % 32 == 0 and batchSize % 32 == 0), CNTK implementation can be >5x faster than cuDNN.
+            // Production version is about the same.
             if (crow >= 32 && ccol >= 32)
             {
                 // Use conservative estimates.
@@ -484,10 +486,11 @@ BOOST_AUTO_TEST_CASE(BatchNormalizationBackward)
             float elapsedCudnn = time2.Elapsed();
             // Check performance. Current version of cuDNN (v4 RC) is significanlty slower than CNTK implementation.
             // For optimal cases (vectorSize % 32 == 0 and batchSize % 32 == 0), CNTK implementation can be >5x faster than cuDNN.
+            // Production version is about the same.
             if (crow >= 32 && ccol >= 32)
             {
                 // Use conservative estimates.
-                float speedup = 1.3f;
+                float speedup = 1.0f;
                 BOOST_REQUIRE_MESSAGE(speedup * elapsedCntk < elapsedCudnn,
                                       "CNTK implementation (" << elapsedCntk << "ms) must be faster than cuDNN (" << elapsedCudnn << "ms) by at least " << speedup << "x, what's changed? " << tmsg.str());
             }
