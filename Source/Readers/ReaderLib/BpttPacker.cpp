@@ -118,7 +118,6 @@ Minibatch BpttPacker::ReadMinibatch()
 
         StreamMinibatchPtr m = std::make_shared<StreamMinibatch>();
         m->m_data = m_streamBuffers[streamIndex].get();
-        m->m_dataSize = m_currentLayouts[streamIndex]->GetActualNumSamples() * GetSampleSize(m_outputStreams[streamIndex]);
         m->m_layout = m_currentLayouts[streamIndex];
         result.m_data.push_back(m);
     }
