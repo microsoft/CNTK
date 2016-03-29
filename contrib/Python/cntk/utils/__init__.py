@@ -5,3 +5,7 @@ if "CNTK_EXECUTABLE_PATH" not in os.environ:
         "you need to point environmental variable 'CNTK_EXECUTABLE_PATH' to the CNTK binary")
 
 CNTK_EXECUTABLE_PATH = os.environ['CNTK_EXECUTABLE_PATH']
+
+# Indent model description by how many spaces
+MODEL_INDENTATION = 8
+
