@@ -22,6 +22,7 @@ class AbstractReader(dict, metaclass=ABCMeta):
 
     def __ne__(self, x): return x is not self
 
+
 class UCIFastReader(AbstractReader):
 
     """This is the reader class the maps to UCIFastReader of CNTK
@@ -36,7 +37,7 @@ class UCIFastReader(AbstractReader):
         self["FileName"] = filename
         self["CustomDelimiter"] = custom_delimiter
         self.inputs_def = []
-        
+
     def add_input(self, name_or_node, input_start, input_dim, num_of_classes=None, label_mapping_file=None):
         """Add an input to the reader
         :param name_or_node: either name of the input in the network definition or the node itself
@@ -47,10 +48,11 @@ class UCIFastReader(AbstractReader):
             the mapping file path, it can be simply with all the possible classes, one per line
         """
         if not name_or_node or input_start is None or input_dim is None:
-            raise ValueError("one of the parameters of add_input is None") 
-        
-        self.inputs_def.append((name_or_node, input_start, input_dim, num_of_classes, label_mapping_file))
-        
+            raise ValueError("one of the parameters of add_input is None")
+
+        self.inputs_def.append(
+            (name_or_node, input_start, input_dim, num_of_classes, label_mapping_file))
+
     def generate_config(self):
         """Generate the reader configuration block
         """
@@ -66,14 +68,14 @@ class UCIFastReader(AbstractReader):
             template += '''\
         customDelimiter = %(CustomDelimiter)s
        '''
-               
+
         if self.inputs_def is not None:
-            for (name_or_node, start, dim, num_of_classes, map_file) in self.inputs_def:                
+            for (name_or_node, start, dim, num_of_classes, map_file) in self.inputs_def:
                 if (isinstance(name_or_node, ComputationNode)):
                     name = name_or_node.var_name
                 else:
                     name = name_or_node
-                    
+
                 template += '''\
         {0} = [
             start = {1}
@@ -83,21 +85,22 @@ class UCIFastReader(AbstractReader):
                 if num_of_classes:
                     template += '''\
             labelDim= {0}
-                '''.format(num_of_classes) 
+                '''.format(num_of_classes)
                 if map_file:
                     template += '''\
             labelMappingFile= "{0}"
-                '''.format(map_file)   
-                
+                '''.format(map_file)
+
                 template += '''\
         ]
 '''
-            
+
             template += '''\
     ]            
 '''
-            
+
         return template % self
+
 
 class CNTKTextFormatReader(AbstractReader):
 
@@ -120,12 +123,12 @@ class CNTKTextFormatReader(AbstractReader):
         format: dense or sparse
         """
         if not name_or_node or input_dim is None or format is None:
-            raise ValueError("one of the parameters of add_input is None") 
-        
+            raise ValueError("one of the parameters of add_input is None")
+
         input_alias = input_alias or name_or_node
-        
+
         self.inputs_def.append((name_or_node, input_alias, input_dim, format))
-        
+
     def generate_config(self):
         """Generate the reader configuration block
         """
@@ -138,10 +141,10 @@ class CNTKTextFormatReader(AbstractReader):
             template += '''
                 input = [
             '''
-            
-            for (name_or_node, input_alias, dim, format) in self.inputs_def:                
+
+            for (name_or_node, input_alias, dim, format) in self.inputs_def:
                 if (isinstance(name_or_node, ComputationNode)):
-                    name = name_or_node.var_name                    
+                    name = name_or_node.var_name
                 else:
                     name = name_or_node
 
@@ -149,23 +152,23 @@ class CNTKTextFormatReader(AbstractReader):
                     a = name
                 else:
                     a = input_alias
-                    
+
                 template += '''
                     {0}=[
                         alias = "{1}"                
                         dim = {2}          
                         format = "{3}"
                     ]'''.format(name, a, dim, format)
-                
+
             template += '''
                 ]
             ]
             '''
         return template % self
 
+
 def NumPyReader(data, filename):
-    #TODO: get rid of this
-    
+    # TODO: get rid of this
     """
     This is a factory that wraps Python arrays with a UCIFastReader.
     """
@@ -182,4 +185,3 @@ def NumPyReader(data, filename):
     np.savetxt(filename, data, delimiter=' ', newline='\r\n', fmt=format_str)
 
     return UCIFastReader(filename)
-

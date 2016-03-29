@@ -10,14 +10,17 @@ from ..reader import *
 C = constant
 I = input
 
+
 def _test(root_node, expected, clean_up=True):
     with get_new_context() as ctx:
         ctx.clean_up = clean_up
         assert not ctx.input_nodes
         result = ctx.eval(root_node)
         expected = np.asarray(expected)
-        assert result.shape == expected.shape or result.shape == (1,1) and expected.shape==()
+        assert result.shape == expected.shape or result.shape == (
+            1, 1) and expected.shape == ()
         assert np.all(result == expected)
+
 
 @pytest.mark.parametrize('root_node, expected', [
     # __add__ / __radd__
@@ -41,11 +44,13 @@ def _test(root_node, expected, clean_up=True):
 
     # normal ops
 
-    (C(np.ones((2,3))*3), [[3,3,3], [3,3,3]]),
-    (C(np.ones((2,3))*3)+np.vstack([np.ones(3), np.ones(3)+1]), [[4,4,4], [5,5,5]]),
-    (C(np.ones((2,3))*3)*np.vstack([np.ones(3), np.ones(3)+1]), [[3,3,3], [6,6,6]]),
+    (C(np.ones((2, 3)) * 3), [[3, 3, 3], [3, 3, 3]]),
+    (C(np.ones((2, 3)) * 3) + \
+     np.vstack([np.ones(3), np.ones(3) + 1]), [[4, 4, 4], [5, 5, 5]]),
+    (C(np.ones((2, 3)) * 3) * \
+     np.vstack([np.ones(3), np.ones(3) + 1]), [[3, 3, 3], [6, 6, 6]]),
 
-    # special treatment of inputs in RowStack 
+    # special treatment of inputs in RowStack
     # (RowStack((C(1), C(2))), [[1],[2]]), # TODO figure out the real semantic
     # of RowStack
 
@@ -57,7 +62,7 @@ def _test(root_node, expected, clean_up=True):
     # to ComputationNode
     (abs(C(-3)), 3),
     (abs(C(3)), 3),
-    (abs(C([[-1,2],[50,-0]])), [[1,2],[50,0]]),
+    (abs(C([[-1, 2], [50, -0]])), [[1, 2], [50, 0]]),
 
     # more complex stuff
     #(Plus(C(5), 3), 8),
@@ -65,20 +70,21 @@ def _test(root_node, expected, clean_up=True):
 def test_overload_eval(root_node, expected):
     _test(root_node, expected)
 
+
 @pytest.mark.parametrize('root_node, expected', [
     # __add__ / __radd__
-    (C(np.asarray([1,2]))+0, [1,2]),
-    (C(np.asarray([1,2]))+.1, [1.1,2.1]),
-    (.1+C(np.asarray([1,2])), [1.1,2.1]),
-    (C(np.asarray([1,2]))*0, [0,0]),
-    (C(np.asarray([1,2]))*.1, [0.1,0.2]),
-    (.1*C(np.asarray([1,2])), [0.1,0.2]),
-    (C(np.asarray([[1,2],[3,4]]))+.1, [[1.1,2.1],[3.1,4.1]]),
-    (C(np.asarray([[1,2],[3,4]]))*2, [[2,4],[6,8]]),
-    (2*C(np.asarray([[1,2],[3,4]])), [[2,4],[6,8]]),
-    (2*C(np.asarray([[1,2],[3,4]]))+100, [[102,104],[106,108]]),
-    (C(np.asarray([[1,2],[3,4]]))*C(np.asarray([[1,2],[3,4]])), [[1,4],[9,16]]),
+    (C(np.asarray([1, 2])) + 0, [1, 2]),
+    (C(np.asarray([1, 2])) + .1, [1.1, 2.1]),
+    (.1 + C(np.asarray([1, 2])), [1.1, 2.1]),
+    (C(np.asarray([1, 2])) * 0, [0, 0]),
+    (C(np.asarray([1, 2])) * .1, [0.1, 0.2]),
+    (.1 * C(np.asarray([1, 2])), [0.1, 0.2]),
+    (C(np.asarray([[1, 2], [3, 4]])) + .1, [[1.1, 2.1], [3.1, 4.1]]),
+    (C(np.asarray([[1, 2], [3, 4]])) * 2, [[2, 4], [6, 8]]),
+    (2 * C(np.asarray([[1, 2], [3, 4]])), [[2, 4], [6, 8]]),
+    (2 * C(np.asarray([[1, 2], [3, 4]])) + 100, [[102, 104], [106, 108]]),
+    (C(np.asarray([[1, 2], [3, 4]]))
+     * C(np.asarray([[1, 2], [3, 4]])), [[1, 4], [9, 16]]),
 ])
 def test_ops_on_numpy(root_node, expected, tmpdir):
     _test(root_node, expected, clean_up=False)
-
