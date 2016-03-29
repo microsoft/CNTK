@@ -76,10 +76,10 @@ class UCIFastReader(AbstractReader):
                 else:
                     name = name_or_node
 
-                template += '''\
+                template += '''
         {0} = [
             start = {1}
-            dim = {2}          
+            dim = {2}
             '''.format(name, start, dim)
 
                 if num_of_classes:
@@ -91,7 +91,7 @@ class UCIFastReader(AbstractReader):
             labelMappingFile= "{0}"
                 '''.format(map_file)
 
-                template += '''\
+                template += '''
         ]
 '''
 
