@@ -495,8 +495,8 @@ BOOST_AUTO_TEST_CASE(ExperimentalHTKMLFReaderSimpleDataLoop9)
 {
     HelperRunReaderTest<float>(
         testDataPath() + "/Config/ExperimentalHTKMLFReaderSimpleDataLoop9_Config.cntk",
-        testDataPath() + "/Control/HTKMLFReaderSimpleDataLoop9_19_Control.txt",
-        testDataPath() + "/Control/HTKMLFReaderSimpleDataLoop9_Output.txt",
+        testDataPath() + "/Control/ExperimentalHTKMLFReaderSimpleDataLoop9_19_Control.txt",
+        testDataPath() + "/Control/ExperimentalHTKMLFReaderSimpleDataLoop9_Output.txt",
         "Simple_Test",
         "reader",
         2000,
@@ -512,8 +512,8 @@ BOOST_AUTO_TEST_CASE(ExperimentalHTKMLFReaderSimpleDataLoop19)
 {
     HelperRunReaderTest<double>(
         testDataPath() + "/Config/ExperimentalHTKMLFReaderSimpleDataLoop19_Config.cntk",
-        testDataPath() + "/Control/HTKMLFReaderSimpleDataLoop9_19_Control.txt",
-        testDataPath() + "/Control/HTKMLFReaderSimpleDataLoop19_Output.txt",
+        testDataPath() + "/Control/ExperimentalHTKMLFReaderSimpleDataLoop9_19_Control.txt",
+        testDataPath() + "/Control/ExperimentalHTKMLFReaderSimpleDataLoop9_Output.txt",
         "Simple_Test",
         "reader",
         2000,
