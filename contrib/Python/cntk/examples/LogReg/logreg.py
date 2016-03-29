@@ -7,10 +7,11 @@ from cntk import *
 if (__name__ == "__main__"):
     X = Input(2)
     X.attach_uci_fast_reader("Train-3Classes.txt", 0)
-    
+
     y = Input(3)
-    y.attach_uci_fast_reader("Train-3Classes.txt", 2, True, 1, "SimpleMapping-3Classes.txt")
-    
+    y.attach_uci_fast_reader(
+        "Train-3Classes.txt", 2, True, 1, "SimpleMapping-3Classes.txt")
+
     W = LearnableParameter(3, 2)
     b = LearnableParameter(3, 1)
 
@@ -26,4 +27,4 @@ if (__name__ == "__main__"):
         ctx.train(my_sgd, None)
 
         #result = ctx.eval(out)
-        #print(result.argmax(axis=1))
+        # print(result.argmax(axis=1))
