@@ -6,6 +6,7 @@ deviceId=%(DevideId)s
 				   
 Eval=[
 	action="write"
+	nodeUnitTest=%(NodeUnitTest)s
 	run=BrainScriptNetworkBuilder
 
     BrainScriptNetworkBuilder=[
