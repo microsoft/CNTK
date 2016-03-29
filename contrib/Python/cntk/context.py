@@ -8,10 +8,7 @@ import shutil as sh
 
 from cntk.graph import ComputationNode
 from cntk.ops.cntk1 import NewReshape
-from cntk.utils import CNTK_EXECUTABLE_PATH
-
-
-_FLOATX = 'float32'
+from cntk.utils import CNTK_EXECUTABLE_PATH, MODEL_INDENTATION
 
 CNTK_TEMPLATE_DIR = os.path.join(os.path.dirname(__file__), "templates")
 CNTK_TRAIN_TEMPLATE_PATH = os.path.join(
@@ -202,7 +199,7 @@ class AbstractContext(object, metaclass=ABCMeta):
             from .ops.cntk1 import Input
             dummy_input_node = Input(2, var_name='dummy_node')
             reader.add_input(dummy_input_node, 0, 2)
-            model_description += "dummy_node = Input(2, tag='output')"
+            model_description += "\n" + " "*MODEL_INDENTATION + "dummy_node = Input(2, tag='output')"
             readers.append(reader)
 
         tmpl = open(CNTK_EVAL_TEMPLATE_PATH, "r").read()
