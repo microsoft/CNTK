@@ -51,71 +51,73 @@ def test_overload_exception():
     with pytest.raises(ValueError):
         C(range(0, 10))[0:3:2]
 
+def _to_list(desc):
+    return [line.strip() for line in desc.split('\n')]
 
 @pytest.mark.parametrize("root_node, expected", [
-    (C(2, var_name='c0'), "c0 = Constant(2, rows=1, cols=1)"),
-	# Input should behave as Constant in case of scalars
-	(I([1,2], var_name='i1'), "i1 = Input(2:1, tag='feature')"), 
+    (C(2, var_name='c0'), ["c0 = Constant(2, rows=1, cols=1)"]),
+    # Input should behave as Constant in case of scalars
+    (I([1,2], var_name='i1'), ["i1 = Input(2:1, tag='feature')"]), 
     (Plus(C(0), C(1)),
-     "v0 = Constant(0, rows=1, cols=1)\nv1 = Constant(1, rows=1, cols=1)\nv2 = Plus(v0, v1)"),
+        ["v0 = Constant(0, rows=1, cols=1)", "v1 = Constant(1, rows=1, cols=1)", "v2 = Plus(v0, v1)"]),
 ])
 def test_description(root_node, expected):
     description, has_inputs, readers = root_node.to_config() 
-    assert description == expected
+    assert _to_list(description) == expected
 
 def test_graph_with_same_node_twice():
     v0 = C(1)
     root_node = Plus(v0, v0)
-    expected = 'v0 = Constant(1, rows=1, cols=1)\nv1 = Plus(v0, v0)'
+    expected = ['v0 = Constant(1, rows=1, cols=1)', 'v1 = Plus(v0, v0)']
     description, has_inputs, readers = root_node.to_config() 
-    assert description == expected
+    assert _to_list(description) == expected
     assert readers == []
 
 @pytest.mark.parametrize("alias, data, expected", [
-	('', [A([1,0]), A([0,0,1,0])], ValueError), # no alias given
-	('A', [object()], ValueError), 
-	])
+    ('', [A([1,0]), A([0,0,1,0])], ValueError), # no alias given
+    ('A', [object()], ValueError), 
+    ])
 def test_sequence_conversion_exceptions(alias, data, expected):
-	with pytest.raises(expected):
-		_seq_to_text_format(data, alias=alias)
+    with pytest.raises(expected):
+        _seq_to_text_format(data, alias=alias)
 
 def test_constant_var_name():
-	var_name = 'NODE'
-	node = C([A([])], var_name=var_name)
-	assert node.var_name == var_name
+    var_name = 'NODE'
+    node = C([A([])], var_name=var_name)
+    assert node.var_name == var_name
 
 @pytest.mark.parametrize("alias, data, expected", [
-	('W', [A([])], """\
+    ('W', [A([])], """\
 0|W \
 """),
-	('W', [A([1,0]), A([0,0,1,0])], """\
+    ('W', [A([1,0]), A([0,0,1,0])], """\
 0|W 1 0
 1|W 0 0 1 0\
 """),
-	])
+    ])
 def test_sequence_conversion_dense(alias, data, expected):
-	assert _seq_to_text_format(data, alias=alias) == expected
+    assert _seq_to_text_format(data, alias=alias) == expected
 
 if False:
-	@pytest.mark.parametrize("alias, data, expected", [
-		('W', [A({})], """\
-	0|W \
-	"""),
-		('W', [{3:1, 50:1, 2:0}, {1:-5}], """\
-	0|W 2:0 3:1 50:1
-	1|W 1:-5\
-	"""),
-		])
-	def test_sequence_conversion_sparse(alias, data, expected):
-		# We use the dictionary in data to create a SciPy sparse dictionary of
-		# keys, which we then feed to the converter.
-		dok_data = []
-		for data_elem in data:
-			d = scipy.sparse.dok_matrix((100,1))
-			for k,v in data_elem.items():
-				d[k] = v
-			dok_data.append(d)
-		assert _seq_to_text_format(dok_data, alias=alias) == expected
+    @pytest.mark.parametrize("alias, data, expected", [
+        ('W', [A({})], """\
+    0|W \
+    """),
+        ('W', [{3:1, 50:1, 2:0}, {1:-5}], """\
+    0|W 2:0 3:1 50:1
+    1|W 1:-5\
+    """),
+        ])
+    def test_sequence_conversion_sparse(alias, data, expected):
+        # We use the dictionary in data to create a SciPy sparse dictionary of
+        # keys, which we then feed to the converter.
+        dok_data = []
+        for data_elem in data:
+            d = scipy.sparse.dok_matrix((100,1))
+            for k,v in data_elem.items():
+                d[k] = v
+            dok_data.append(d)
+        assert _seq_to_text_format(dok_data, alias=alias) == expected
 
 @pytest.mark.parametrize("data, expected", [
     ([], True),
@@ -125,10 +127,9 @@ if False:
     ([[A([1,2])]], False),
     ([A([1,2])], False),
     ([A([1,2]), A([])], False),
-	])
+    ])
 def test_is_tensor(data, expected):
-	#import ipdb;ipdb.set_trace()
-	assert is_tensor(data) == expected
+    assert is_tensor(data) == expected
 
 @pytest.mark.parametrize("data, expected", [
     ([], False),
@@ -138,7 +139,7 @@ def test_is_tensor(data, expected):
     ([[A([1,2])]], False),
     ([A([1,2])], True),
     ([A([1,2]), A([])], True),
-	])
+    ])
 def test_is_sequence(data, expected):
-	assert is_sequence(data) == expected
+    assert is_sequence(data) == expected
 
