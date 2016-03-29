@@ -31,6 +31,8 @@
 #     defaults to /usr/local/
 # These can be overridden on the command line, e.g. make BUILDTYPE=debug
 
+ARCH=$(shell uname)
+
 ifndef BUILD_TOP
 BUILD_TOP=.
 endif
@@ -211,9 +213,11 @@ CNTKMATH:=cntkmath
 BUILDINFO:= $(SOURCEDIR)/CNTK/buildinfo.h
 GENBUILD:=Tools/generate_build_info
 
-$(BUILDINFO): $(GENBUILD)
-	@echo creating $@ for $(ARCH) with build type $(BUILDTYPE)
-	@$(GENBUILD) $(BUILD_TOP)/Config.make
+BUILDINFO_OUTPUT := $(shell $(GENBUILD) $(BUILD_TOP)/Config.make && echo Success)
+
+ifneq ("$(BUILDINFO_OUTPUT)","Success")
+  $(error Could not generate $(BUILDINFO))
+endif
 
 
 ########################################
@@ -597,9 +601,6 @@ CNTK:=$(BINDIR)/cntk
 ALL+=$(CNTK)
 SRC+=$(CNTK_SRC)
 
-# Make sure buildinfo.h is generated even without dependency files
-$(OBJDIR)/Source/CNTK/CNTK.o: $(BUILDINFO)
-
 $(CNTK): $(CNTK_OBJ) | $(CNTKMATH_LIB)
 	@echo $(SEPARATOR)
 	@mkdir -p $(dir $@)
@@ -642,7 +643,7 @@ $(OBJDIR)/%.o : %.cpp Makefile
 	@mkdir -p $(dir $@)
 	$(CXX) -c $< -o $@ $(COMMON_FLAGS) $(CPPFLAGS) $(CXXFLAGS) $(INCLUDEPATH:%=-I%) -MD -MP -MF ${@:.o=.d}
 
-.PHONY: $(BUILDINFO) clean buildall all
+.PHONY: clean buildall all
 
 clean:
 	@echo $(SEPARATOR)
