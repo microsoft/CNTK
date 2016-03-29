@@ -2,12 +2,10 @@ from abc import ABCMeta, abstractmethod
 import numpy as np
 import scipy.sparse as sparse
 
+from .utils import MODEL_INDENTATION
 
 def _tuple_to_cntk_shape(shape):
     return ':'.join(str(v) for v in shape)
-
-# Indent model description by how many spaces
-MODEL_INDENTATION = 8
 
 
 class ComputationNode(object):
