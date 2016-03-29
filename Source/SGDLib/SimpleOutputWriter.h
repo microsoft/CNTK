@@ -325,6 +325,7 @@ public:
         while (DataReaderHelpers::GetMinibatchIntoNetwork<ElemType>(dataReader, m_net, nullptr, false, false, inputMatrices, actualMBSize, nullptr))
         {
             ComputationNetwork::BumpEvalTimeStamp(inputNodes);
+
             for (auto & onode : outputNodes)
             {
                 // compute the node value
@@ -335,10 +336,7 @@ public:
                 WriteMinibatch(file, dynamic_pointer_cast<ComputationNode<ElemType>>(onode), formattingOptions, formatChar, valueFormatString, labelMapping, numMBsRun, /* gradient */ false);
 
                 if (nodeUnitTest)
-                {
                     m_net->Backprop(onode);
-                }
-
             } // end loop over nodes
 
             if (nodeUnitTest)
