@@ -206,7 +206,7 @@ private:
     void FormRecurrentLoops(const ComputationNodeBasePtr& rootNode);
     void DetermineSCCs(const ComputationNodeBasePtr& rootNode);
     void DetermineSCCsR(ComputationNodeBasePtr cur, std::list<ComputationNodeBasePtr>& sccStack, size_t& index, size_t& loopId);
-    void DetermineLoopForwardOrder(std::unordered_set<ComputationNodeBasePtr>& visited, std::unordered_set<ComputationNodeBasePtr>& recStack, std::list<ComputationNodeBasePtr>& nodesStack, ComputationNodeBasePtr cur);
+    void DetermineLoopForwardOrderR(std::unordered_set<ComputationNodeBasePtr>& visited, std::unordered_set<ComputationNodeBasePtr>& recStack, std::list<ComputationNodeBasePtr>& nodesStack, ComputationNodeBasePtr cur);
     void GatherLoopNodesR(const ComputationNodeBasePtr& rootNode, std::unordered_set<ComputationNodeBasePtr>& visited, std::map<int, std::list<ComputationNodeBasePtr>>& recurrentResult, std::list<ComputationNodeBasePtr>& noRecurrentResult);
     void ReorderLoops(std::list<ComputationNodeBasePtr>& nodes, const std::map<int, std::list<ComputationNodeBasePtr>>& /*recurrentNodes*/, const std::list<ComputationNodeBasePtr>& /*noRecurrentNodes*/);
 
@@ -242,12 +242,20 @@ public:
         m_evalOrders[rootNode] = nodes;
     }
 
-    std::list<ComputationNodeBasePtr>& GetEvalOrder(const ComputationNodeBasePtr& rootNode)
+    // get depth-first traversal order
+    // TODO: This is currently not immutable because it gets patched w.r.t. recurrent loops. Ideally we don't patch. Need to review and verify that it is sufficient.
+    const std::list<ComputationNodeBasePtr>& GetEvalOrder(const ComputationNodeBasePtr& rootNode) const
     {
-        if (m_evalOrders.find(rootNode) == m_evalOrders.end())
+        auto iter = m_evalOrders.find(rootNode);
+        if (iter == m_evalOrders.end())
             LogicError("GetEvalOrder: Called without prior call to FormEvalOrder() for %ls %ls operation", rootNode->NodeName().c_str(), rootNode->OperationName().c_str());
+        return iter->second;
+    }
 
-        return m_evalOrders[rootNode];
+    // same as GetEvalOrder() where ordering is irrelevant
+    const std::list<ComputationNodeBasePtr>& GetAllNodesForRoot(const ComputationNodeBasePtr& rootNode) const
+    {
+        return GetEvalOrder(rootNode);
     }
 
 protected:
@@ -520,7 +528,6 @@ public:
         return m_nameToNodeMap.size();
     }
 
-
     std::vector<ComputationNodeBasePtr> GetAllNodes() const
     {
         std::vector<ComputationNodeBasePtr> nodes;
@@ -561,10 +568,8 @@ public:
         else
         {
             // for calculating a specific node
-            const std::list<ComputationNodeBasePtr>& nodes = GetEvalOrder(rootNode);
-            for (auto nodeIter = nodes.begin(); nodeIter != nodes.end(); nodeIter++)
+            for (const auto& node : GetEvalOrder(rootNode)) // TODO: verify that no use of this requires the actual eval order, then change to GetAllNodesForRoot()
             {
-                ComputationNodeBasePtr node = (*nodeIter);
                 if (node->OperationName() == typeName)
                     nodesWithType.push_back(node);
             }
@@ -691,7 +696,7 @@ public:
     // (Note that inside the nodes this only really sets a flag to do it later when needed, but that's not our concern.)
     void ZeroGradients(const ComputationNodeBasePtr& rootNode)
     {
-        for (auto& node : GetEvalOrder(rootNode)) // note: any order will do
+        for (auto& node : GetAllNodesForRoot(rootNode))
             node->ZeroGradientsOfInputs();
     }
 
@@ -856,7 +861,6 @@ protected:
         virtual bool IsOutOfDateWrtInputs() const override;
 
     public:
-        // std::vector<ComputationNodeBasePtr> m_nestedNodes;               // all nodes involved in this loop, in evaluation order
         ComputationNodeBasePtr m_sourceNode; // one of the nodes of the loop   --TODO: What is the special meaning of this node? It seems to always be a delay node.
         int m_loopId;                        // unique loop id, index in m_allSEQNodes array
         int m_steppingDirection;             // +1 if left to right (t=0..T-1), -1 if rightt to left (t=T-1..0)

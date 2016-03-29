@@ -278,19 +278,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         std::map<wstring, shared_ptr<IStatefulNode>> m_netStatefulNodes; // we need to Export/Import states of stateful nodes when we swtich subminibatches
 
     private:
-        void EnumerateStatefulNodeWithRoot(ComputationNetwork& net, ComputationNodeBasePtr root, std::map<wstring, shared_ptr<IStatefulNode>>& statefulnode)
+        void EnumerateStatefulNodesForRoot(ComputationNetwork& net, ComputationNodeBasePtr root, std::map<wstring, shared_ptr<IStatefulNode>>& statefulNodes)
         {
-            const std::list<ComputationNodeBasePtr> evalorder = net.GetEvalOrder(root);
-            for (auto& x : evalorder)
+            for (const auto& node : net.GetAllNodesForRoot(root))
             {
-                wstring name = x->GetName();
-                if (statefulnode.find(name) != statefulnode.end())
-                    continue; // already in the list
-                shared_ptr<IStatefulNode> pNode = dynamic_pointer_cast<IStatefulNode>(x);
-                if (pNode)
-                {
-                    statefulnode[name] = pNode;
-                }
+                const auto& name = node->GetName();
+                if (statefulNodes.find(name) != statefulNodes.end())
+                    continue; // already in the list  --TODO: use insert()
+                shared_ptr<IStatefulNode> pNode = dynamic_pointer_cast<IStatefulNode>(node);
+                if (pNode) // if it is an IStatefulNode then report it
+                    statefulNodes[name] = pNode;
             }
         }
 
@@ -300,13 +297,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             std::map<wstring, shared_ptr<IStatefulNode>> statefulNodes;
             for (auto& root : criterionNode)
-            {
-                EnumerateStatefulNodeWithRoot(net, root, statefulNodes);
-            }
+                EnumerateStatefulNodesForRoot(net, root, statefulNodes);
             for (auto& root : evaluationNode)
-            {
-                EnumerateStatefulNodeWithRoot(net, root, statefulNodes);
-            }
+                EnumerateStatefulNodesForRoot(net, root, statefulNodes);
             return statefulNodes;
         }
 

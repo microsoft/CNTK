@@ -324,7 +324,7 @@ void ComputationNetwork::SetLearnableNodesBelowLearningRateMultiplier(const floa
     else
     {
         // for calculating a specific node
-        for (const auto& node : GetEvalOrder(rootNode))
+        for (const auto& node : GetAllNodesForRoot(rootNode))
         {
             if (node->OperationName() == OperationNameOf(LearnableParameter))
                 node->SetLearningRateMultiplier(learningRateMultiplier);

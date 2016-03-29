@@ -423,7 +423,7 @@ bool ComputationNetwork::IsTypicalCriterionNode(ComputationNodeBasePtr nodePtr)
 list<ComputationNodeBasePtr> ComputationNetwork::GetNodesRequiringPreComputation(const ComputationNodeBasePtr& rootNode, bool checkComputed)
 {
     list<ComputationNodeBasePtr> nodes;
-    for (const auto& node : GetEvalOrder(rootNode))
+    for (const auto& node : GetEvalOrder(rootNode)) // TODO: verify that order does not matter here, then replace by GetAllNodesForRoot()
     {
         auto pcnode = dynamic_pointer_cast<IPreComputeNode>(node);
         if (pcnode)
@@ -645,8 +645,8 @@ bool ComputationNetwork::UnitTest(const ComputationNodeBasePtr& rootNode)
 {
     fprintf(stderr, "\n\n Unit test node %ls \n", rootNode->NodeName().c_str());
 
-    for (const auto& nodeIter : GetEvalOrder(rootNode))
-        if (!nodeIter->UnitTest())
+    for (const auto& node : GetAllNodesForRoot(rootNode))
+        if (!node->UnitTest())
             return false;
 
     fprintf(stderr, "\n\n");

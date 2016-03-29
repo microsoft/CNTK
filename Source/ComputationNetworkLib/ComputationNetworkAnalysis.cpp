@@ -29,7 +29,7 @@ static int GetRecurrenceSteppingDirection(const ComputationNodeBasePtr&);
 // This function analysis the networks for recurrent loops present in the computation of 'rootNode.'
 // This sets/updates:
 //  - m_allSEQNodes
-//  - ComputationNode::m_isPartOfLoop and m_loopId
+//  - ComputationNode::m_isPartOfLoop (exposed to outside as IsPartOfLoop())
 //  - the cached m_evalOrders[root], reordered to make nodes belonging to the same loop consecutive. TODO: Try not to do that.
 // Is often called before ValidateNetwork() on a root; will be called from inside ValidateNetwork() as well.
 // This function is called for multiple nodes, e.g. eval and training criterion. I.e. it must be able to add to a previous result. E.g. it does not clear the m_visited flags at start.
@@ -43,6 +43,7 @@ void ComputationNetwork::FormRecurrentLoops(const ComputationNodeBasePtr& rootNo
     const list<ComputationNodeBasePtr>& nodes = GetEvalOrder(rootNode);
 
     // initialize the node state owned by us
+    // TODO: Verify that the other call to this function is unecessary, then inline this function here.
     for (auto& node : nodes)
         node->PurgeStateForFormingRecurrentLoops();
 
@@ -50,7 +51,19 @@ void ComputationNetwork::FormRecurrentLoops(const ComputationNodeBasePtr& rootNo
     DetermineSCCs(rootNode);
     // now we have formed all loops, with all nodes assigned to a loop or none
 
+    // Two reorderings follow:
+    //  - sort global ordering into
+    //     - inputs to the loop
+    //     - the loop itself
+    //     - consumers of the loop
+    //    (consumers of the loop can never be inputs, otherwise they would be part of the loop)
+    //  - each loop is sorted inside
+    //     - break loop graph into sub-graphs between delay nodes
+
+    // --- BEGIN reorder process   --TODO: eliminate this entire chunk of code; don't update EvalOrder; instead, do it only when constructing the outer PAR node
+
     // recover m_visitedOrder in original depth-first traversal order
+    // Note: m_visitedOrder is only used inside this source file, and only for reordering.
     size_t i = 0;
     for (auto& node : nodes)
         node->m_visitedOrder = i++; // (Note: There is some redundancy between m_index and m_visitedOrder; won't fix since I rather intend to remove the whole reordering.)
@@ -68,49 +81,58 @@ void ComputationNetwork::FormRecurrentLoops(const ComputationNodeBasePtr& rootNo
             node->m_visitedOrder = max_visitedOrderInLoop;
     }
 
-    // for reordering operation that will follow next, implant m_loopId in all nodes in all loops
+    // for reordering operation that will follow next, implant m_loopId in all nodes in all loops (only used for this purpose)
     for (auto& iter : m_allSEQNodes)
     {
         for (auto& node : iter->m_nestedNodes)
-        {
-            node->m_isPartOfLoop = true; // this is the only flag in ComputationNode that escapes FormRecurrentLoops()!
-            // TODO: ^^ We should instead remember a pointer to our loop sentinel
-            node->m_loopId = iter->m_loopId;
-        }
+            node->m_loopId = iter->m_loopId; // Note: m_loopId is only used inside this source file, and only for reordering
     }
 
+    // TODO: Make this for loop a separate function DetermineLoopForwardOrder(). Maybe execute it when we construct m_nestedLoops, we should have all information.
+    // bring every loop into a correct order w.r.t. horizontal time dependencies
+    // The original graph traversal order ignores delay nodes and is not correct since it cuts traversal once it detects a node it has already processed, which is the wrong criterion.
     for (auto& iter : m_allSEQNodes)
     {
-        list<ComputationNodeBasePtr> result;
-        unordered_set<ComputationNodeBasePtr> visited;
-        unordered_set<ComputationNodeBasePtr> recStack;
+        let& nestedNodes = iter->m_nestedNodes;
 
-        // set m_indexInLoop for all nodes except recurrent nodes in all loops
-        // This value is only used in the block right after this.
-        for (size_t j = 0; j < iter->m_nestedNodes.size(); j++)
+        // set m_numNonDelayedParentsInLoop to all nodes that are part of this loop and have a non-delay-node parent
+        // This value is only used in this current block.
+        for (let& node : nodes) // reset it
         {
-            const auto& node = iter->m_nestedNodes[j];
-            for (size_t i = 0; i < node->GetNumInputs(); i++)
+            if (node->m_loopId == iter->m_loopId)
+                assert(node->m_numNonDelayedParentsInLoop == 0); // (in PurgeStateForFormingRecurrentLoops())
+        }
+        for (let& node : nestedNodes)
+        {
+            for (auto& input : node->GetInputs())
             {
-                if (node->Input(i)->m_loopId == node->m_loopId && GetRecurrenceSteppingDirection(node) == 0/*not a Delay node*/)
-                {
-                    // assert(node->Input(i)->m_indexInLoop == 0);                    // No. It seems this variable really counts the number of parents.
-                    node->Input(i)->m_indexInLoop++; // BUGBUG: this is bumping up the m_indexInLoop, but I don't think it is initialized anywhere other than PurgeStateForFormingRecurrentLoops(). i-1?
-                }
+                if (input->m_loopId == node->m_loopId && GetRecurrenceSteppingDirection(node) == 0/*not a Delay node*/)
+                    input->m_numNonDelayedParentsInLoop++; // cound #parents of 'input' that are not delay nodes
             }
         }
 
-        for (size_t i = 0; i < iter->m_nestedNodes.size(); i++)
+        // re-traverse the graph for all nestedNodes, starting with the first
+        // Then update m_nestedNodes with the re-traversed order.
+        list<ComputationNodeBasePtr> nodesStack; // sub-graph orders are concatenated here  --TODO: it's not a stack
+
+        unordered_set<ComputationNodeBasePtr> visited;
+        //unordered_set<ComputationNodeBasePtr> recStack; // only used inside 
+        for (let& node : nestedNodes)
         {
-            ComputationNodeBasePtr node = iter->m_nestedNodes[i];
-            if (visited.find(node) == visited.end() && node->m_indexInLoop == 0)
-                DetermineLoopForwardOrder(visited, recStack, result, node);
+            unordered_set<ComputationNodeBasePtr> recStack;
+            if (visited.find(node) == visited.end() && node->m_numNonDelayedParentsInLoop == 0)
+                DetermineLoopForwardOrderR(visited, recStack, nodesStack, node);
+            if (!recStack.empty())
+                LogicError("FormRecurrentLoops: DetermineLoopForwardOrderR() did not clear the stack?");
         }
 
-        // update m_nestedNodes with 'result'
-        iter->m_nestedNodes.assign(result.begin(), result.end());
+        // update m_nestedNodes with 'nodesStack'
+        // TODO: What does this do, why is it necessary?
+        iter->m_nestedNodes.assign(nodesStack.begin(), nodesStack.end());
     }
 
+    // now patch global eval order
+    // TODO: This should go away, and be done locally in PAR constructor, no need to modify global eval order  --TODO: ...or is it? What are global eval orders used for besides this?
     if (m_allSEQNodes.size() > 0)
     {
         unordered_set<ComputationNodeBasePtr> visited;
@@ -135,8 +157,10 @@ void ComputationNetwork::FormRecurrentLoops(const ComputationNodeBasePtr& rootNo
 
         ReorderLoops(reorderedNodes, recurrentNodes, noRecurrentNodes); // group nodes in loops together
 
-        UpdateEvalOrder(rootNode, reorderedNodes);
+        UpdateEvalOrder(rootNode, reorderedNodes); // TODO: Get rid of this after-the-fact patch.
     }
+
+    // --- END reorder process   --TODO: eliminate this process
 
     // log the loops
     for (auto& iter : m_allSEQNodes)
@@ -203,7 +227,7 @@ void ComputationNetwork::DetermineSCCsR(ComputationNodeBasePtr cur,
     index++;
 
     cur->m_visited = true;
-    sccStack.push_back(cur);
+    sccStack.push_back(cur); // BUGBUG?: Don't we need to pop it from the stack at the end of this function?
     cur->m_inStack = true;
 
     // set m_minIndex to min over m_lowLinks of children
@@ -229,11 +253,13 @@ void ComputationNetwork::DetermineSCCsR(ComputationNodeBasePtr cur,
         SEQTraversalFlowControlNode rInfo(m_allSEQNodes.size() /*loopId*/, cur);
         for (;;)
         {
-            ComputationNodeBasePtr w = sccStack.back();
+            ComputationNodeBasePtr node = sccStack.back();
+            node->m_isPartOfLoop = true; // this is the only flag in ComputationNode that escapes FormRecurrentLoops()!
+            // TODO: ^^ We should instead remember a pointer to our loop sentinel
             sccStack.pop_back();
-            w->m_inStack = false;
-            nestedNodes.push_back(w);
-            if (w == cur) // hit our starting point: done
+            node->m_inStack = false;
+            nestedNodes.push_back(node);
+            if (node == cur) // hit our starting point: done
                 break;
         }
         // insert loop into m_allSEQNodes
@@ -296,8 +322,10 @@ void ComputationNetwork::DetermineSCCsR(ComputationNodeBasePtr cur,
 }
 
 // recovers the processing order within a recurrent loop
+// Re-traverses the set of nodes between 'cur' and the first delay node on each branch.
+// These are the ones that must be computed in this order, or something.
 // TODO: Once we only use the nested network for recurrent traversal, this will be no longer necessary.
-void ComputationNetwork::DetermineLoopForwardOrder(unordered_set<ComputationNodeBasePtr>& visited,
+void ComputationNetwork::DetermineLoopForwardOrderR(unordered_set<ComputationNodeBasePtr>& visited,
                                                    unordered_set<ComputationNodeBasePtr>& recStack,
                                                    list<ComputationNodeBasePtr>& nodesStack,
                                                    ComputationNodeBasePtr cur)
@@ -305,18 +333,18 @@ void ComputationNetwork::DetermineLoopForwardOrder(unordered_set<ComputationNode
     if (visited.find(cur) == visited.end())
     {
         visited.insert(cur);
-        recStack.insert(cur);
+        recStack.insert(cur); // recStack is only used for detecting infinite loops below (didn't we already discover that?)
 
         if (GetRecurrenceSteppingDirection(cur) == 0) // recurrence stops at delay nodes
         {
             for (size_t i = 0; i < cur->GetNumInputs(); i++)
-                if (cur->Input(i)->m_loopId == cur->m_loopId)
-                    DetermineLoopForwardOrder(visited, recStack, nodesStack, cur->Input(i));
+                if (cur->Input(i)->m_loopId == cur->m_loopId) // ignore inputs that come from outside the loop
+                    DetermineLoopForwardOrderR(visited, recStack, nodesStack, cur->Input(i));
         }
         recStack.erase(cur);
         nodesStack.push_back(cur);
     }
-    else if (recStack.find(cur) != recStack.end())
+    else if (recStack.find(cur) != recStack.end()) // note: this is the only use of recStack
         LogicError("%ls %ls operation is part of an infinite loop that cannot be unrolled.", cur->NodeName().c_str(), cur->OperationName().c_str());
 }
 

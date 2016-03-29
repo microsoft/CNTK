@@ -196,7 +196,7 @@ protected:
     {
         m_loopId = -1;
         m_visitedOrder = -1;
-        m_indexInLoop = 0;
+        m_numNonDelayedParentsInLoop = 0;
         m_visited = false;
         m_index = -1;
         m_minIndex = -1;
@@ -206,7 +206,7 @@ protected:
     int m_loopId;       // index into m_allSEQNodes array, for use by reordering operation only
     int m_visitedOrder; // remembers order in which nodes were visited by EnumerateNodes(), but gets updated
     bool m_visited;     // note: also used by ValidateSubNetwork()
-    int m_indexInLoop;
+    int m_numNonDelayedParentsInLoop;
     // only used inside DetermineSCCs():
     int m_index;    // index denoting order in which nodes were visited in DetermineSCCs()
     int m_minIndex; // min of m_index over all nodes within a single loop

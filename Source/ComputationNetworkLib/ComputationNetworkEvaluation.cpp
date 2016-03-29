@@ -512,7 +512,7 @@ void ComputationNetwork::ResetMBLayouts()
     m_pMBLayout->Init(1, 0);
 
     // first reset all
-    for (auto node : GetEvalOrder(nullptr))
+    for (const auto& node : GetAllNodesForRoot(nullptr))
         node->LinkToMBLayout(nullptr);
 
     // then fix up inputs (all others get propagated upwards through Validate())
@@ -702,35 +702,35 @@ void ComputationNetwork::MarkValueNonSharableNodes()
 
     for (auto& node : nodes)
     {
-        auto children = node->GetInputs();
+        auto inputs = node->GetInputs();
         wstring myname = node->NodeName();
         bool allParametersOrPreComputeNodes = true;
 
-        if (children.size()) // we don't do the check for leaf node, cause all the possible leaf nodes (input/parameters/precompute node) are marked as non-sharable already
+        if (inputs.size()) // we don't do the check for leaf node, cause all the possible leaf nodes (input/parameters/precompute node) are marked as non-sharable already
         {
             if (std::find(allPreComputeNodes.begin(), allPreComputeNodes.end(), node) == allPreComputeNodes.end())
             {
-                for (auto child : children)
+                for (auto input : inputs)
                 {
-                    wstring ChildName = child->NodeName();
-                    if (allLeafDescendentsAreParametersOrPreComputeNodes.find(ChildName) == allLeafDescendentsAreParametersOrPreComputeNodes.end())
+                    const auto& inputName = input->NodeName();
+                    if (allLeafDescendentsAreParametersOrPreComputeNodes.find(inputName) == allLeafDescendentsAreParametersOrPreComputeNodes.end())
                     {
                         // not found, means it is a leaf node (we are at eval order )
-                        assert(child->IsLeaf() || child->IsPartOfLoop());
-                        if (std::find(allLearnableParameters.begin(), allLearnableParameters.end(), child) != allLearnableParameters.end())
+                        assert(input->IsLeaf() || input->IsPartOfLoop());
+                        if (std::find(allLearnableParameters.begin(), allLearnableParameters.end(), input) != allLearnableParameters.end())
                         {
-                            allLeafDescendentsAreParametersOrPreComputeNodes[ChildName] = true;
+                            allLeafDescendentsAreParametersOrPreComputeNodes[inputName] = true;
                         }
                         else
                         {
                             allParametersOrPreComputeNodes = false;
-                            allLeafDescendentsAreParametersOrPreComputeNodes[ChildName] = false;
+                            allLeafDescendentsAreParametersOrPreComputeNodes[inputName] = false;
                             break;
                         }
                     }
                     else
                     {
-                        if (allLeafDescendentsAreParametersOrPreComputeNodes[ChildName] == false)
+                        if (allLeafDescendentsAreParametersOrPreComputeNodes[inputName] == false)
                         {
                             allParametersOrPreComputeNodes = false;
                             break;
@@ -780,24 +780,23 @@ void ComputationNetwork::AllocateAllMatrices(const std::vector<ComputationNodeBa
     std::unordered_map<ComputationNodeBasePtr, std::unordered_set<ComputationNodeBasePtr>> parentsMap;
     for (auto& rootNode : forwardPropRoots)
     {
-        list<ComputationNodeBasePtr>& currentRootEvalNodes = GetEvalOrder(rootNode);
-        for (auto& currentNode : currentRootEvalNodes)
+        for (const auto& node : GetEvalOrder(rootNode))
         {
-            for (int i = 0; i < currentNode->GetNumInputs(); i++)
+            for (int i = 0; i < node->GetNumInputs(); i++)
             {
-                ComputationNodeBasePtr pNode = currentNode->GetInputs()[i];
-                parentsMap[pNode].insert(currentNode);
+                ComputationNodeBasePtr input = node->GetInputs()[i];
+                parentsMap[input].insert(node);
 
                 if (performingBackPropagation)
                 {
-                    if (outputValueNeededDuringBackProp.find(pNode) == outputValueNeededDuringBackProp.end())
-                        outputValueNeededDuringBackProp[pNode] = pNode->OutputUsedInComputingInputNodesGradients();
+                    if (outputValueNeededDuringBackProp.find(input) == outputValueNeededDuringBackProp.end())
+                        outputValueNeededDuringBackProp[input] = input->OutputUsedInComputingInputNodesGradients();
 
-                    outputValueNeededDuringBackProp[pNode] |= currentNode->InputUsedInComputingInputNodesGradients(i);
+                    outputValueNeededDuringBackProp[input] |= node->InputUsedInComputingInputNodesGradients(i);
                 }
                 else
                 {
-                    outputValueNeededDuringBackProp[pNode] = false;
+                    outputValueNeededDuringBackProp[input] = false;
                 }
             }
         }
@@ -854,7 +853,7 @@ void ComputationNetwork::AllocateAllMatrices(const std::vector<ComputationNodeBa
 
     if (trainRootNode != nullptr)
     {
-        std::list<ComputationNodeBasePtr>& backPropNodes = GetEvalOrder(trainRootNode);
+        const std::list<ComputationNodeBasePtr>& backPropNodes = GetEvalOrder(trainRootNode);
 
         // now, simulate the gradient computation order to determine how to allocate matrices
         set<ComputationNodeBasePtr> completedGradient;
