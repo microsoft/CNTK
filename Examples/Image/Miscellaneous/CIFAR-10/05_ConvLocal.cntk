@@ -15,28 +15,28 @@ imageLayout = "cudnn"
 
 prefetch = "true"
 
-command = Train:AddBNEval:Test
+command = Train:Test
 
-stderr = "$OutputDir$/02_BatchNormConv"
+modelPath = "$ModelDir$/05_ConvLocal"
+
+stderr = "$OutputDir$/05_ConvLocal"
 traceLevel = 1
-numMBsToShowResult = 500
+numMBsToShowResult = 50
 
 Train = [
     action = "train"
-    modelPath = "$ModelDir$/02_BatchNormConv"
 
      NDLNetworkBuilder = [
-        networkDescription = "$ConfigDir$/02_BatchNormConv.ndl"
+        networkDescription = "$ConfigDir$/05_ConvLocal.ndl"
     ]
     
     SGD = [
         epochSize = 49984
         minibatchSize = 64
-        learningRatesPerMB = 0.03*7:0.01
-        momentumPerMB = 0
-        maxEpochs = 10
-        L2RegWeight = 0
-        dropoutRate = 0
+        learningRatesPerMB = 0.01*10:0.003*10:0.001
+        momentumPerMB = 0.9*20:0.99
+        maxEpochs = 30
+        L2RegWeight = 0.03
     ]
     
     reader = [
@@ -57,16 +57,8 @@ Train = [
     ]    
 ]
 
-AddBNEval = [    
-    action = "edit"
-    CurModel = "$ModelDir$/02_BatchNormConv"
-    NewModel = "$ModelDir$/02_BatchNormConv.Eval"
-    editPath = "$ConfigDir$/02_BatchNormConv.mel"
-]
-
 Test = [
     action = "test"
-    modelPath = "$ModelDir$/02_BatchNormConv.Eval"
     # Set minibatch size for testing.
     minibatchSize = 16
 
@@ -82,7 +74,7 @@ Test = [
             dim = 1
             start = 0
             labelDim = 10
-            labelMappingFile = $DataDir$/labelsmap.txt
+            labelMappingFile = "$DataDir$/labelsmap.txt"
         ]
     ]    
 ]

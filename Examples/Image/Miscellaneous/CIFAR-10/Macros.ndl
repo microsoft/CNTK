@@ -7,6 +7,15 @@ ConvReLULayer(inp, outMap, inWCount, kW, kH, hStride, vStride, wScale, bValue)
     y = RectifiedLinear(p)
 ]
 
+ConvLocalReLULayer(inp, outMap, outWCount, inMap, inWCount, kW, kH, hStride, vStride, wScale, bValue)
+[
+    W = LearnableParameter(outWCount, inWCount, init = Gaussian, initValueScale = wScale)
+    b = ImageParameter(1, 1, outMap, init = fixedValue, value = bValue, imageLayout = $imageLayout$)
+    c = Convolution(W, inp, {kW, kH, inMap}, mapCount = outMap, stride = {hStride, vStride, inMap}, sharing = {false, false, false}, imageLayout = $imageLayout$)
+    p = Plus(c, b)
+    y = RectifiedLinear(p)
+]
+
 ConvBNLayerW(W, inp, outMap, kW, kH, hStride, vStride, bValue, scValue, bnTimeConst)
 [
     b = LearnableParameter(outMap, 1, init = fixedValue, value = bValue)
@@ -30,6 +39,17 @@ ConvBNReLULayer(inp, outMap, inWCount, kW, kH, hStride, vStride, wScale, bValue,
     y = RectifiedLinear(c)
 ]
 
+ProjLayer(W, inp, outMap, hStride, vStride, bValue, scValue, bnTimeConst)
+[
+    b = LearnableParameter(outMap, 1, init = fixedValue, value = bValue)
+    sc = LearnableParameter(outMap, 1, init = fixedValue, value = scValue)
+    m = LearnableParameter(outMap, 1, init = fixedValue, value = 0, learningRateMultiplier = 0)
+    isd = LearnableParameter(outMap, 1, init = fixedValue, value = 0, learningRateMultiplier = 0)
+    
+    c = Convolution(W, inp, 1, 1, outMap, hStride, vStride, zeroPadding = false, imageLayout = $imageLayout$)
+    y = BatchNormalization(c, sc, b, m, isd, eval = false, spatial = true, normalizationTimeConstant = bnTimeConst, imageLayout = $imageLayout$)
+]
+
 ResNetNode2(inp, outMap, inWCount, kW, kH, wScale, bValue, scValue, bnTimeConst)
 [
     # First convolution layer.
@@ -48,7 +68,7 @@ ResNetNode2Inc(inp, outMap, inWCount, wCount, kW, kH, wScale, bValue, scValue, b
     c2 = ConvBNLayer(c1, outMap, wCount, kW, kH, 1, 1, wScale, bValue, scValue, bnTimeConst)
     
     # Projection convolution layer.
-    c_proj = ConvBNLayerW(Wproj, inp, outMap, 1, 1, 2, 2, bValue, scValue, bnTimeConst)
+    c_proj = ProjLayer(Wproj, inp, outMap, 2, 2, bValue, scValue, bnTimeConst)
     #c_proj = Convolution(Wproj, inp, 1, 1, outMap, 2, 2, zeroPadding = false, imageLayout = $imageLayout$)
     
     p = Plus(c2, c_proj)
@@ -114,6 +134,14 @@ DnnImageBNReLULayer(inW, inH, inC, outDim, x, wScale, bValue, scValue, bnTimeCon
 DnnLastLayer(hiddenDim, labelDim, x, wScale, bValue)
 [
     W = LearnableParameter(labelDim, hiddenDim, init = Gaussian, initValueScale = wScale)
+    b = LearnableParameter(labelDim, init = fixedValue, value = bValue)
+    t = Times(W, x)
+    z = Plus(t, b)
+]
+
+DnnImageLastLayer(inW, inH, inC, labelDim, x, wScale, bValue)
+[
+    W = ImageParameter(labelDim, inW, inH, inC, init = Gaussian, initValueScale = wScale, imageLayout=$imageLayout$)
     b = LearnableParameter(labelDim, init = fixedValue, value = bValue)
     t = Times(W, x)
     z = Plus(t, b)

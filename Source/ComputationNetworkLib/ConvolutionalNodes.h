@@ -381,6 +381,13 @@ public:
                 m_convEng = ConvolutionEngine<ElemType>::Create(geometry, m_deviceId, m_imageLayout,
                                                                 m_maxTempMemSizeInSamples, m_poolKind);
             }
+
+            if (Input(0)->GetAsMatrixNumCols() != m_kernelShape.GetNumElements() ||
+                Input(0)->GetAsMatrixNumRows() != m_convEng->Geometry()->KernelCount())
+            {
+                LogicError("Convolution weight matrix %ls should have dimension [%d, %d] which is [kernelCount, kernelWidth * kernelHeight * inputChannels]",
+                           Input(0)->NodeName().c_str(), (int)m_convEng->Geometry()->KernelCount(), (int)m_kernelShape.GetNumElements());
+            }
         }
     }
 

@@ -38,8 +38,8 @@ train = [
     SGD = [
         epochSize = 60000
         minibatchSize = 32
-        learningRatesPerMB = 0.5
-        momentumPerMB = 0*10:0.7
+        learningRatesPerMB = 0.5:0.1
+        momentumPerMB = 0.9
         maxEpochs = 2
     ]
     

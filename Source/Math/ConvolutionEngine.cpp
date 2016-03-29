@@ -18,7 +18,7 @@ void ConvolutionEngine<ElemType>::Forward(const Mat& in, const Mat& kernel, Mat&
     size_t batchSize = in.GetNumCols();
     assert(batchSize == out.GetNumCols());
     // REVIEW alexeyk: add shape-aware asserts?
-    assert(g.KernelShape().GetNumElements() * g.MapCount().GetNumElements() == kernel.GetNumElements());
+    assert(g.KernelShape().GetNumElements() * g.KernelCount() == kernel.GetNumElements());
 #ifdef NDEBUG
     UNUSED(g);
     UNUSED(batchSize);
@@ -37,7 +37,7 @@ void ConvolutionEngine<ElemType>::BackwardData(const Mat& srcGrad, const Mat& ke
     assert(g.OutputShape().GetNumElements() == srcGrad.GetNumRows());
     size_t batchSize = srcGrad.GetNumCols();
     assert(batchSize == grad.GetNumCols());
-    assert(g.KernelShape().GetNumElements() * g.MapCount().GetNumElements() == kernel.GetNumElements());
+    assert(g.KernelShape().GetNumElements() * g.KernelCount() == kernel.GetNumElements());
 #ifdef NDEBUG
     UNUSED(g);
     UNUSED(batchSize);
@@ -56,7 +56,7 @@ void ConvolutionEngine<ElemType>::BackwardKernel(const Mat& srcGrad, const Mat& 
     assert(g.OutputShape().GetNumElements() == srcGrad.GetNumRows());
     size_t batchSize = in.GetNumCols();
     assert(batchSize == srcGrad.GetNumCols());
-    assert(g.KernelShape().GetNumElements() * g.MapCount().GetNumElements() == kernel.GetNumElements());
+    assert(g.KernelShape().GetNumElements() * g.KernelCount() == kernel.GetNumElements());
 #ifdef NDEBUG
     UNUSED(g);
     UNUSED(batchSize);

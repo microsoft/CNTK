@@ -72,6 +72,9 @@ public:
     const IntVec&  MpRowIndices() const { return m_mpRowIndices; }
     const IntVec&  Indices() const { return m_indices; }
 
+    // Number of kernels (equal to MapCount if sharing is all true values).
+    const size_t KernelCount() const{ return m_kernelCount; }
+
     ConvolveGeometry(const TensorShape& inputShape, const TensorShape& kernelShape, const TensorShape& mapCount, const TensorShape& stride,
                      const BoolVec& sharing, const BoolVec& autoPad, const TensorShape& lowerPad, const TensorShape& upperPad)
                      : m_inputShape(inputShape), m_kernelShape(kernelShape), m_mapCount(mapCount), m_stride(stride), m_sharing(sharing),
@@ -95,9 +98,9 @@ public:
         size_t kernelSize = kernelShape.GetNumElements();
 
         // Compute the total number of kernels.
-        size_t kernelCount = 1;
+        m_kernelCount = 1;
         for (size_t i = 0; i < dimCount; i++)
-            kernelCount *= !GetSharing(i) ? m_outputShape[i] : GetMapCount(i);
+            m_kernelCount *= !GetSharing(i) ? m_outputShape[i] : GetMapCount(i);
 
         // Compute the "Start" indices.
         m_start.resize(dimCount);
@@ -291,7 +294,7 @@ public:
             }
             assert(cur == 0);
             assert(0 <= kern);
-            assert(kern < kernelCount);
+            assert(kern < m_kernelCount);
             assert(0 <= col);
             assert(col < m_inputShape.GetNumElements());
 
@@ -368,7 +371,7 @@ public:
                 m_mpRowIndices[row] = (*startsIter).second.second;
             }
             assert(0 <= kern);
-            assert(kern < kernelCount);
+            assert(kern < m_kernelCount);
             m_mpRowCol[row] = col;
             m_mpRowIwht[row] = kern * (int)kernelSize;
         }
@@ -540,6 +543,8 @@ private:
     // When the first kernel cell is aligned with the first source cell, this is the index of the input cell that
     // is aligned with the "kernel-center" cell. Indices in "Runs" and "Indices" are relative to OriginIndex.
     int m_originIndex;
+
+    size_t m_kernelCount;
 };
 
 using ConvolveGeometryPtr = std::shared_ptr<ConvolveGeometry>;
