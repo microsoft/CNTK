@@ -224,7 +224,7 @@ void BlockRandomizer::RetrieveDataChunks()
             continue;
         }
 
-        auto it = m_chunks.find(chunk.m_original->m_id);
+        auto it = m_chunks.find(chunk.m_chunkId);
         if (it != m_chunks.end())
         {
             chunks[chunk.m_chunkId] = it->second;
