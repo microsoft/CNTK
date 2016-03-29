@@ -394,6 +394,11 @@ size_t ComputationNode<ElemType>::WriteMinibatchWithFormatting(FILE* f, size_t o
     }
     let shape = str.str();
 
+    bool sequencePrologueHasShape = sequencePrologue.find("%x") != sequencePrologue.npos;
+    bool sampleSeparatorHasShape = sampleSeparator.find("%x") != sampleSeparator.npos;
+    bool sequencePrologueHasSeqId = sequencePrologue.find("%d") != sequencePrologue.npos;
+    bool sampleSeparatorHasSeqId = sampleSeparator.find("%d") != sampleSeparator.npos;
+
     for (size_t s = 0; s < sequences.size(); s++)
     {
         const auto& seqInfo = sequences[s];
@@ -410,21 +415,25 @@ size_t ComputationNode<ElemType>::WriteMinibatchWithFormatting(FILE* f, size_t o
         let  seqStride = pMBLayout->GetNumParallelSequences() * matStride;
 
         auto seqProl = sequencePrologue;
-        auto elementSep = elementSeparator;
+        auto sampleSep = sampleSeparator;
 
-        if (sequencePrologue.find("%x") != sequencePrologue.npos || elementSeparator.find("%x") != elementSeparator.npos)
+        if (sequencePrologueHasShape || sampleSeparatorHasShape)
         {
             auto sh = msra::strfun::_strprintf<char>("%s%ld", shape.c_str(), (unsigned long long)seqInfo.GetNumTimeSteps());
-            seqProl = msra::strfun::ReplaceAll<std::string>(seqProl, "%x", sh);
-            elementSep = msra::strfun::ReplaceAll<std::string>(elementSep, "%x", sh);
-        }
-        if (sequencePrologue.find("%d") != sequencePrologue.npos || elementSeparator.find("%d") != elementSeparator.npos)
-        {
-            auto sh = msra::strfun::_strprintf<char>("%ld", (unsigned long long)seqInfo.seqId);
-            seqProl = msra::strfun::ReplaceAll<std::string>(seqProl, "%d", sh);
-            elementSep = msra::strfun::ReplaceAll<std::string>(elementSep, "%d", sh);
+            if (sequencePrologueHasShape)
+                seqProl = msra::strfun::ReplaceAll<std::string>(seqProl, "%x", sh);
+            if (sampleSeparatorHasShape)
+                sampleSep = msra::strfun::ReplaceAll<std::string>(sampleSep, "%x", sh);
         }
 
+        if (sequencePrologueHasSeqId || sampleSeparatorHasSeqId)
+        {
+            auto sh = msra::strfun::_strprintf<char>("%ld", (unsigned long long)seqInfo.seqId);
+            if (sequencePrologueHasSeqId)
+                seqProl = msra::strfun::ReplaceAll<std::string>(seqProl, "%d", sh);
+            if (sampleSeparatorHasSeqId)
+                sampleSep = msra::strfun::ReplaceAll<std::string>(sampleSep, "%d", sh);
+        }
 
         if (s > 0)
             fprintfOrDie(f, "%s", sequenceSeparator.c_str());
@@ -468,7 +477,7 @@ size_t ComputationNode<ElemType>::WriteMinibatchWithFormatting(FILE* f, size_t o
         for (size_t j = 0; j < jend; j++)
         {
             if (j > 0)
-                fprintfOrDie(f, "%s", sampleSeparator.c_str());
+                fprintfOrDie(f, "%s", sampleSep.c_str());
             if (j == jstop)
             {
                 fprintf(f, "...+%d", (int)(jend - jstop)); // 'nuff said
@@ -477,7 +486,7 @@ size_t ComputationNode<ElemType>::WriteMinibatchWithFormatting(FILE* f, size_t o
             for (size_t i = 0; i < iend; i++)
             {
                 if (i > 0)
-                    fprintfOrDie(f, "%s", elementSep.c_str());
+                    fprintfOrDie(f, "%s", elementSeparator.c_str());
                 if (i == istop)
                 {
                     fprintf(f, "...+%d", (int)(iend - istop));
