@@ -359,11 +359,12 @@ template <class ElemType>
 
 // write out the content of a node in formatted/readable form
 template <class ElemType>
-void ComputationNode<ElemType>::WriteMinibatchWithFormatting(FILE* f, size_t onlyUpToRow, size_t onlyUpToT, bool transpose, bool isCategoryLabel, 
+size_t ComputationNode<ElemType>::WriteMinibatchWithFormatting(FILE* f, size_t onlyUpToRow, size_t onlyUpToT, bool transpose, bool isCategoryLabel, 
                                                              const std::vector<std::string>& labelMapping, const string& sequenceSeparator, 
                                                              const string& sequencePrologue, const string& sequenceEpilogue,
                                                              const string& elementSeparator, const string& sampleSeparator,
                                                              const string& valueFormatString,
+                                                             size_t sequenceId,
                                                              bool outputGradient) const
 {
     // get minibatch matrix -> matData, matRows, matStride
@@ -383,11 +384,22 @@ void ComputationNode<ElemType>::WriteMinibatchWithFormatting(FILE* f, size_t onl
     }
     let& sequences = pMBLayout->GetAllSequences();
     let  width     = pMBLayout->GetNumTimeSteps();
+
+    TensorShape tensorShape = GetSampleLayout();
+    stringstream str;
+    let dims = tensorShape.GetDims();
+    for (auto dim : dims)
+    {
+        str << dim << ' ';
+    }
+    let shape = str.str();
+
     for (size_t s = 0; s < sequences.size(); s++)
     {
         const auto& seqInfo = sequences[s];
         if (seqInfo.seqId == GAP_SEQUENCE_ID) // nothing in gaps to print
             continue;
+
         let tBegin = seqInfo.tBegin >= 0     ? seqInfo.tBegin : 0;
         let tEnd   = seqInfo.tEnd   <= width ? seqInfo.tEnd   : width;
 
@@ -397,9 +409,26 @@ void ComputationNode<ElemType>::WriteMinibatchWithFormatting(FILE* f, size_t onl
         let  seqCols   = tEnd - tBegin;
         let  seqStride = pMBLayout->GetNumParallelSequences() * matStride;
 
+        auto seqProl = sequencePrologue;
+        auto elementSep = elementSeparator;
+
+        if (sequencePrologue.find("%x") != sequencePrologue.npos || elementSeparator.find("%x") != elementSeparator.npos)
+        {
+            auto sh = msra::strfun::_strprintf<char>("%s%ld", shape.c_str(), (unsigned long long)seqInfo.GetNumTimeSteps());
+            seqProl = msra::strfun::ReplaceAll<std::string>(seqProl, "%x", sh);
+            elementSep = msra::strfun::ReplaceAll<std::string>(elementSep, "%x", sh);
+        }
+        if (sequencePrologue.find("%d") != sequencePrologue.npos || elementSeparator.find("%d") != elementSeparator.npos)
+        {
+            auto sh = msra::strfun::_strprintf<char>("%ld", (unsigned long long)seqInfo.seqId);
+            seqProl = msra::strfun::ReplaceAll<std::string>(seqProl, "%d", sh);
+            elementSep = msra::strfun::ReplaceAll<std::string>(elementSep, "%d", sh);
+        }
+
+
         if (s > 0)
             fprintfOrDie(f, "%s", sequenceSeparator.c_str());
-        fprintfOrDie(f, "%s", sequencePrologue.c_str());
+        fprintfOrDie(f, "%s", seqProl.c_str());
 
         // output it according to our format specification
         let formatChar = valueFormatString.back();
@@ -448,7 +477,7 @@ void ComputationNode<ElemType>::WriteMinibatchWithFormatting(FILE* f, size_t onl
             for (size_t i = 0; i < iend; i++)
             {
                 if (i > 0)
-                    fprintfOrDie(f, "%s", elementSeparator.c_str());
+                    fprintfOrDie(f, "%s", elementSep.c_str());
                 if (i == istop)
                 {
                     fprintf(f, "...+%d", (int)(iend - istop));
@@ -475,6 +504,8 @@ void ComputationNode<ElemType>::WriteMinibatchWithFormatting(FILE* f, size_t onl
         fprintfOrDie(f, "%s", sequenceEpilogue.c_str());
     } // end loop over sequences
     fflushOrDie(f);
+
+    return sequenceId;
 }
 
 // -----------------------------------------------------------------------

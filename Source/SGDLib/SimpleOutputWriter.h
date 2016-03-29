@@ -190,9 +190,10 @@ public:
         std::string sampleSeparator;   // and this between rows
         // Optional printf precision parameter:
         std::string precisionFormat;        // printf precision, e.g. ".2" to get a "%.2f"
+        std::string shapeFormat;
 
         WriteFormattingOptions() :
-            isCategoryLabel(false), transpose(true), sequenceEpilogue("\n"), elementSeparator(" "), sampleSeparator("\n")
+            isCategoryLabel(false), transpose(true), sequenceEpilogue("\n"), elementSeparator(" "), sampleSeparator("\n"), shapeFormat("")
         { }
 
         // Process -- replace newlines and all %s by the given string
@@ -211,9 +212,9 @@ public:
         }
     };
 
-    void WriteMinibatch(FILE* f, ComputationNodePtr node, 
+    size_t WriteMinibatch(FILE* f, ComputationNodePtr node, 
         const WriteFormattingOptions & formattingOptions, char formatChar, std::string valueFormatString, std::vector<std::string>& labelMapping,
-        size_t numMBsRun, bool gradient)
+        size_t numMBsRun, size_t sequenceIdBase, bool gradient)
     {
         const auto sequenceSeparator = formattingOptions.Processed(node->NodeName(), formattingOptions.sequenceSeparator, numMBsRun);
         const auto sequencePrologue =  formattingOptions.Processed(node->NodeName(), formattingOptions.sequencePrologue,  numMBsRun);
@@ -221,9 +222,9 @@ public:
         const auto elementSeparator =  formattingOptions.Processed(node->NodeName(), formattingOptions.elementSeparator,  numMBsRun);
         const auto sampleSeparator =   formattingOptions.Processed(node->NodeName(), formattingOptions.sampleSeparator,   numMBsRun);
 
-        node->WriteMinibatchWithFormatting(f, SIZE_MAX, SIZE_MAX, formattingOptions.transpose, formattingOptions.isCategoryLabel, labelMapping,
+        return node->WriteMinibatchWithFormatting(f, SIZE_MAX, SIZE_MAX, formattingOptions.transpose, formattingOptions.isCategoryLabel, labelMapping,
             sequenceSeparator, sequencePrologue, sequenceEpilogue, elementSeparator, sampleSeparator,
-            valueFormatString, gradient);
+            valueFormatString, sequenceIdBase, gradient);
     }
 
     void InsertNode(std::vector<ComputationNodeBasePtr>& allNodes, ComputationNodeBasePtr parent, ComputationNodeBasePtr newNode)
@@ -324,11 +325,12 @@ public:
         size_t numItersSinceLastPrintOfProgress = 0;
         char formatChar = !formattingOptions.isCategoryLabel ? 'f' : !formattingOptions.labelMappingFile.empty() ? 's' : 'u';
         std::string valueFormatString = "%" + formattingOptions.precisionFormat + formatChar; // format string used in fprintf() for formatting the values
+        size_t sequenceId = 0;
 
         while (DataReaderHelpers::GetMinibatchIntoNetwork<ElemType>(dataReader, m_net, nullptr, false, false, inputMatrices, actualMBSize, nullptr))
         {
             ComputationNetwork::BumpEvalTimeStamp(inputNodes);
-
+            size_t newSequenceId = sequenceId;
             for (auto & onode : outputNodes)
             {
                 // compute the node value
@@ -336,7 +338,9 @@ public:
                 m_net->ForwardProp(onode);
 
                 FILE* file = *outputStreams[onode];
-                WriteMinibatch(file, dynamic_pointer_cast<ComputationNode<ElemType>>(onode), formattingOptions, formatChar, valueFormatString, labelMapping, numMBsRun, /* gradient */ false);
+                size_t newSeq = WriteMinibatch(file, dynamic_pointer_cast<ComputationNode<ElemType>>(onode), formattingOptions, formatChar, valueFormatString, labelMapping, numMBsRun, sequenceId, /* gradient */ false);
+                newSequenceId = max(newSequenceId, newSeq);
+
                 if (nodeUnitTest)
                 {
                     m_net->Backprop(onode);
@@ -356,7 +360,7 @@ public:
                     }
                     else
                     {
-                        WriteMinibatch(file, node, formattingOptions, formatChar, valueFormatString, labelMapping, numMBsRun, /* gradient */ true);
+                        WriteMinibatch(file, node, formattingOptions, formatChar, valueFormatString, labelMapping, numMBsRun, sequenceId, /* gradient */ true);
                     }
                 }
             }
