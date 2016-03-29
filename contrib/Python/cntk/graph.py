@@ -5,6 +5,9 @@ import scipy.sparse as sparse
 def _tuple_to_cntk_shape(shape):
     return ':'.join(str(v) for v in shape)
 
+# Indent model description by how many spaces
+MODEL_INDENTATION = 8
+
 class ComputationNode(object):
     '''
     Base class for all nodes and operators. Provides a NumPy-like interface
@@ -177,7 +180,7 @@ class ComputationNode(object):
 
         params = self._get_cntk_param_string(param_variable_names)
 
-        line = "%s = %s(%s)" % (self.var_name, self.name, params)
+        line = ' '*MODEL_INDENTATION + "%s = %s(%s)" % (self.var_name, self.name, params)
         desc.append(line)
 
         return self.var_name, node_counter, desc
@@ -262,8 +265,8 @@ class ImageInputComputationNodeBase(ComputationNode, metaclass=ABCMeta):
         raise NotImplementedError
         
 # importing after defining ComputationNode to work around circular imports
-from cntk.cntk1_ops import *
-from cntk import cntk1_ops # to have a separate namespace when we want to override below
+from cntk.ops.cntk1 import *
+from cntk.ops import cntk1 as cntk1_ops # to have a separate namespace when we want to override below
 from .reader import UCIFastReader, CNTKTextFormatReader
 
 # redefine some operators to work with NumPy and sequences as input
