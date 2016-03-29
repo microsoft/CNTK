@@ -15,13 +15,13 @@ _FLOATX = 'float32'
 
 CNTK_TEMPLATE_DIR = os.path.join(os.path.dirname(__file__), "templates")
 CNTK_TRAIN_TEMPLATE_PATH = os.path.join(
-        CNTK_TEMPLATE_DIR, "cntk_train_template.cntk")
+    CNTK_TEMPLATE_DIR, "cntk_train_template.cntk")
 CNTK_TEST_TEMPLATE_PATH = os.path.join(
-        CNTK_TEMPLATE_DIR, "cntk_test_template.cntk")
+    CNTK_TEMPLATE_DIR, "cntk_test_template.cntk")
 CNTK_PREDICT_TEMPLATE_PATH = os.path.join(
-        CNTK_TEMPLATE_DIR, "cntk_predict_template.cntk")
+    CNTK_TEMPLATE_DIR, "cntk_predict_template.cntk")
 CNTK_EVAL_TEMPLATE_PATH = os.path.join(
-        CNTK_TEMPLATE_DIR, "cntk_eval_template.cntk")
+    CNTK_TEMPLATE_DIR, "cntk_eval_template.cntk")
 CNTK_TRAIN_CONFIG_FILENAME = "train.cntk"
 CNTK_TEST_CONFIG_FILENAME = "test.cntk"
 CNTK_PREDICT_CONFIG_FILENAME = "predict.cntk"
@@ -52,6 +52,7 @@ def get_new_context():
 
 
 class AbstractContext(object, metaclass=ABCMeta):
+
     '''
     This is the abstract CNTK context. It provides an API to run CNTK actions.
     '''
@@ -85,7 +86,7 @@ class AbstractContext(object, metaclass=ABCMeta):
         else:
             os.mkdir(self.directory)
 
-        self.name = name        
+        self.name = name
         self.device_id = device_id
         self.clean_up = clean_up
         self.input_nodes = set()
@@ -110,19 +111,19 @@ class AbstractContext(object, metaclass=ABCMeta):
         :param reader: the reader to use for reading the data
         :param override_existing: if the folder exists already override it
         '''
-        
+
         model_dir = os.path.join(self.directory, 'Models')
         if os.path.exists(model_dir) and os.listdir(model_dir) == []:
-            if override_existing:                
-                print ("Overriding the existing models")
+            if override_existing:
+                print("Overriding the existing models")
                 sh.rmtree(model_dir)
             else:
                 raise Exception("Directory '%s' already exists, set the flag override_existing to true if you want to override it"
-                    %self.directory)        
-        
+                                % self.directory)
+
         tmpl = open(CNTK_TRAIN_TEMPLATE_PATH, "r").read()
         model_filename = os.path.join(model_dir, self.name)
-        description, has_inputs, readers = self.root_node.to_config()        
+        description, has_inputs, readers = self.root_node.to_config()
         if reader:
             readers.append(reader)
 
@@ -138,17 +139,17 @@ class AbstractContext(object, metaclass=ABCMeta):
     def _generate_test_config(self, reader):
         '''
         Generates the configuration file for the test action.
-        '''        
+        '''
         tmpl = open(CNTK_TEST_TEMPLATE_PATH, "r").read()
         model_filename = os.path.join(self.directory, 'Models', self.name)
 
         # if no reader is passed generate the reader from the network
         if reader:
             reader_config = reader.generate_config()
-        else:    
-            description, has_inputs, readers = self.root_node.to_config()        
-            reader_config = '\n'.join(r.generate_config() for r in readers)         
-        
+        else:
+            description, has_inputs, readers = self.root_node.to_config()
+            reader_config = '\n'.join(r.generate_config() for r in readers)
+
         tmpl_dict = {
             'DevideId': self.device_id,
             'ModelPath': model_filename,
@@ -163,14 +164,15 @@ class AbstractContext(object, metaclass=ABCMeta):
         '''
         tmpl = open(CNTK_PREDICT_TEMPLATE_PATH, "r").read()
         model_filename = os.path.join(self.directory, 'Models', self.name)
-        output_filename_base = os.path.join(self.directory, 'Outputs', self.name)
+        output_filename_base = os.path.join(
+            self.directory, 'Outputs', self.name)
 
         # if no reader is passed generate the reader from the network
         if reader:
             reader_config = reader.generate_config()
-        else:    
-            description, has_inputs, readers = self.root_node.to_config()        
-            reader_config = '\n'.join(r.generate_config() for r in readers)            
+        else:
+            description, has_inputs, readers = self.root_node.to_config()
+            reader_config = '\n'.join(r.generate_config() for r in readers)
 
         tmpl_dict = {
             'DevideId': self.device_id,
@@ -179,13 +181,13 @@ class AbstractContext(object, metaclass=ABCMeta):
             'Reader': reader_config,
         }
         return tmpl % tmpl_dict
-    
+
     def _generate_eval_config(self, root_node, reader):
         '''
         Generates the configuration file for write action.
         :param root_node: the node to evaluate. 
         :param reader: the reader used to load the data, None if the network does not have input
-        '''        
+        '''
         model_description, has_input, readers = root_node.to_config()
         if reader:
             readers.append(reader)
@@ -199,14 +201,14 @@ class AbstractContext(object, metaclass=ABCMeta):
             reader = NumPyReader(data, fn)
             from .ops.cntk1 import Input
             dummy_input_node = Input(2, var_name='dummy_node')
-            reader.add_input(dummy_input_node, 0, 2)                        
+            reader.add_input(dummy_input_node, 0, 2)
             model_description += "dummy_node = Input(2, tag='output')"
             readers.append(reader)
 
         tmpl = open(CNTK_EVAL_TEMPLATE_PATH, "r").read()
         output_filename = os.path.join(self.directory, CNTK_OUTPUT_FILENAME)
         tmpl_dict = {
-            'DevideId': self.device_id,            
+            'DevideId': self.device_id,
             'OutputFile': output_filename,
             'ModelDescription': model_description,
             'Reader': '\n'.join(r.generate_config() for r in readers),
@@ -214,7 +216,7 @@ class AbstractContext(object, metaclass=ABCMeta):
         return tmpl % tmpl_dict
 
     @abstractmethod
-    def train(self, optimizer, reader=None, override_existing = True):
+    def train(self, optimizer, reader=None, override_existing=True):
         '''
         Abstract method for the action train.
         :param reader: the reader to use for this action. Alternatively, you
@@ -289,7 +291,7 @@ class Context(AbstractContext):
 
         return output.decode("utf-8")
 
-    def train(self, optimizer, reader=None, override_existing = True):
+    def train(self, optimizer, reader=None, override_existing=True):
         '''
         Run the train action locally.
         :param optimizer: the SGD optimizer to use for training
@@ -297,7 +299,8 @@ class Context(AbstractContext):
         can attach a reader directly to the input node.
         :param override_existing: if the folder exists already override it
         '''
-        config_content = self._generate_train_config(optimizer, reader, override_existing)
+        config_content = self._generate_train_config(
+            optimizer, reader, override_existing)
         return self._call_cntk(CNTK_TRAIN_CONFIG_FILENAME, config_content)
 
     def test(self, reader=None):
@@ -324,7 +327,8 @@ class Context(AbstractContext):
     Regular expression to parse the shape information of the nodes out of
     CNTK's output
     '''
-    VAR_SHAPE_REGEX = re.compile('^Validating --> (?P<var_name>[^ ]+) = [^>]*> \[(?P<shape>[^]]+)')
+    VAR_SHAPE_REGEX = re.compile(
+        '^Validating --> (?P<var_name>[^ ]+) = [^>]*> \[(?P<shape>[^]]+)')
     SHAPE_STRIDE_REGEX = re.compile('\{.*?\}')
 
     @staticmethod
@@ -349,7 +353,7 @@ class Context(AbstractContext):
             var_shape[var_name] = tuple(shape_list)
 
         return var_shape
-            
+
     def _eval(self, node, reader):
         # FIXME manually setting the tag to output might have side-effects
         node.tag = 'output'
@@ -357,7 +361,8 @@ class Context(AbstractContext):
         output = self._call_cntk(CNTK_EVAL_CONFIG_FILENAME, config_content)
         shapes = Context._parse_shapes_from_output(output)
 
-        out_name = os.path.join(self.directory, CNTK_OUTPUT_FILENAME + '.' + node.var_name)
+        out_name = os.path.join(
+            self.directory, CNTK_OUTPUT_FILENAME + '.' + node.var_name)
         data = np.loadtxt(out_name)
 
         return data, shapes
@@ -374,7 +379,8 @@ class Context(AbstractContext):
         Returns the output generated by `node`
         '''
         if not isinstance(node, ComputationNode):
-            raise ValueError('node is not of type ComputationNode, but %s'%type(node))
+            raise ValueError(
+                'node is not of type ComputationNode, but %s' % type(node))
 
         data, shapes = self._eval(node, reader)
 
@@ -382,7 +388,7 @@ class Context(AbstractContext):
         expected_shape = shapes[node.var_name]
 
         receieved_all = data.size == expected_size
-        if not receieved_all: 
+        if not receieved_all:
             # For some reason the CNTK write action has issues with multi-row
             # output. So we have to CNTK reshape it to one row and do it again,
             # but then NumPy reshape using node's expected shape.
@@ -390,15 +396,16 @@ class Context(AbstractContext):
             reshaped = NewReshape(node, expected_size)
             data, _ = self._eval(reshaped, reader)
 
-        if not (len(expected_shape)==2 and expected_shape[1] == 1):
+        if not (len(expected_shape) == 2 and expected_shape[1] == 1):
             # CNTK outputs e.g. [2 x 1] although it is just a vector.
-            # TODO find better way to distinguis between 
+            # TODO find better way to distinguis between
             data = data.reshape(expected_shape)
 
         return data
 
 
 class ClusterContext(AbstractContext):
+
     '''
     This is a sub-class of AbstractContext, use it to submit your workloads to the cluster.
     '''

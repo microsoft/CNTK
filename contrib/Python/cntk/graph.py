@@ -2,13 +2,16 @@ from abc import ABCMeta, abstractmethod
 import numpy as np
 import scipy.sparse as sparse
 
+
 def _tuple_to_cntk_shape(shape):
     return ':'.join(str(v) for v in shape)
 
 # Indent model description by how many spaces
 MODEL_INDENTATION = 8
 
+
 class ComputationNode(object):
+
     '''
     Base class for all nodes and operators. Provides a NumPy-like interface
     with operators that are converted to CNTK operators.
@@ -16,22 +19,24 @@ class ComputationNode(object):
 
     def __init__(self, name, params=None, var_name=None, reader=None):
         if not isinstance(name, str):
-            raise ValueError("Parameter 'name' has to be a string and not '%s'"%type(name))
+            raise ValueError(
+                "Parameter 'name' has to be a string and not '%s'" % type(name))
         if var_name is not None and not isinstance(var_name, str):
-            raise ValueError("Parameter 'var_name' has to be a string and not '%s'"%type(var_name))
-                
+            raise ValueError(
+                "Parameter 'var_name' has to be a string and not '%s'" % type(var_name))
+
         self.name = name
         self.params = params
-        self.var_name = var_name        
+        self.var_name = var_name
         self.consumers = []
         for p in self.params:
             if hasattr(p, 'consumers'):
                 p.consumers.append(self)
-                
+
         self.reader = None
-    
+
     def _is_input(self):
-        return isinstance(self, InputComputationNodeBase) 
+        return isinstance(self, InputComputationNodeBase)
 
     def __add__(self, other):
         if not isinstance(other, ComputationNode):
@@ -132,7 +137,7 @@ class ComputationNode(object):
         return param
 
     def _to_config_recursively(self, desc, unrolled_nodes, inputs,
-            readers, node_counter=0):
+                               readers, node_counter=0):
         param_variable_names = []
         if self.params:
             for p_name in self.params:
@@ -146,7 +151,7 @@ class ComputationNode(object):
                         # Special treatment for special operator.
                         # Used like RowStack(v0:v1:v2)
                         inputs_param = p_value
-                    else:                        
+                    else:
                         inputs_param = [p_value]
 
                     input_nodes_vars = []
@@ -161,7 +166,8 @@ class ComputationNode(object):
                             unrolled_nodes[pv] = child_var
                         input_nodes_vars.append(child_var)
 
-                    param_variable_names.append(_tuple_to_cntk_shape(input_nodes_vars))
+                    param_variable_names.append(
+                        _tuple_to_cntk_shape(input_nodes_vars))
                 else:
                     param_variable_names.append(
                         self._param_to_brainscript(p_name, p_value))
@@ -180,7 +186,8 @@ class ComputationNode(object):
 
         params = self._get_cntk_param_string(param_variable_names)
 
-        line = ' '*MODEL_INDENTATION + "%s = %s(%s)" % (self.var_name, self.name, params)
+        line = ' ' * MODEL_INDENTATION + \
+            "%s = %s(%s)" % (self.var_name, self.name, params)
         desc.append(line)
 
         return self.var_name, node_counter, desc
@@ -190,28 +197,28 @@ class ComputationNode(object):
         Helper method to generate the CNTK configuration for this node.
         '''
         unrolled_nodes = {}
-        inputs=set()
-        readers=set()
+        inputs = set()
+        readers = set()
         var_name, node_counter, desc = self._to_config_recursively(
-            desc=[], 
-            unrolled_nodes=unrolled_nodes, 
+            desc=[],
+            unrolled_nodes=unrolled_nodes,
             inputs=inputs,
             readers=readers)
 
-        return var_name, node_counter, desc, len(inputs)>0, readers
-    
+        return var_name, node_counter, desc, len(inputs) > 0, readers
+
     def _dedupe_readers(self, readers):
         import copy
-        readers_map = {}        
-        for r in readers:            
-            filename = r['FileName']            
-            if filename in readers_map:                                
+        readers_map = {}
+        for r in readers:
+            filename = r['FileName']
+            if filename in readers_map:
                 readers_map[filename].inputs_def.extend(r.inputs_def)
             else:
                 readers_map[filename] = copy.deepcopy(r)
-                
+
         return [r for r in readers_map.values()]
-    
+
     def to_config(self):
         '''
         Generate CNTK configuration for this node including the configuration
@@ -221,52 +228,57 @@ class ComputationNode(object):
 
         return "\n".join(desc), has_inputs, self._dedupe_readers(readers)
 
+
 class InputComputationNodeBase(ComputationNode, metaclass=ABCMeta):
+
     '''
     Base class for all non-image input nodes nodes and operators. Provides methods to attach
     a reader to an input node
     '''
-    
+
     def attach_text_format_reader(self, filename, input_alias=None, format='dense'):
         '''
         attach a TextFormatReader to the node
         '''
         self.reader = CNTKTextFormatReader(filename)
         self.reader.add_input(self, input_alias, self.dims, format)
-    
-    def attach_uci_fast_reader(self, 
-                               filename, 
-                               input_start,  
-                               islabel = False,
-                               num_label_cols=None,                 
+
+    def attach_uci_fast_reader(self,
+                               filename,
+                               input_start,
+                               islabel=False,
+                               num_label_cols=None,
                                label_mapping_file=None,
-                               custom_delimiter=None):        
+                               custom_delimiter=None):
         '''
         attach a UCIFastReader to the node
         '''
-        self.reader = UCIFastReader(filename, custom_delimiter)    
-                    
+        self.reader = UCIFastReader(filename, custom_delimiter)
+
         if islabel:
-            self.reader.add_input(self, input_start, num_label_cols, self.dims, label_mapping_file)                
+            self.reader.add_input(
+                self, input_start, num_label_cols, self.dims, label_mapping_file)
         else:
             self.reader.add_input(self, input_start, self.dims)
-        
+
 
 class ImageInputComputationNodeBase(ComputationNode, metaclass=ABCMeta):
+
     '''
     Base class for all image input nodes nodes and operators. Provides methods to attach
     a reader to an input node
     '''
-    
+
     def attach_image_reader(self, filename, **kw):
         '''
         attach a TextFormatReader to the node
         '''
         raise NotImplementedError
-        
+
 # importing after defining ComputationNode to work around circular imports
 from cntk.ops.cntk1 import *
-from cntk.ops import cntk1 as cntk1_ops # to have a separate namespace when we want to override below
+# to have a separate namespace when we want to override below
+from cntk.ops import cntk1 as cntk1_ops
 from .reader import UCIFastReader, CNTKTextFormatReader
 
 # redefine some operators to work with NumPy and sequences as input
@@ -275,9 +287,11 @@ from .reader import UCIFastReader, CNTKTextFormatReader
 def _dense_seq_to_str(seq):
     return ' '.join(seq.astype(np.str))
 
+
 def _sparse_seq_to_str(seq):
-    #return ' '.join('%s:%s'%(k,seq[k]) for k in sorted(seq.items()))
+    # return ' '.join('%s:%s'%(k,seq[k]) for k in sorted(seq.items()))
     raise NotImplementedError
+
 
 def _seq_to_text_format(sequences, alias):
     '''
@@ -292,13 +306,15 @@ def _seq_to_text_format(sequences, alias):
     elif sparse.issparse(first_elem):
         seq_to_str = _sparse_seq_to_str
     else:
-        raise ValueError('sequence elements have to be of type numpy.ndarray (dense) or dictionary (sparse), you gave "%s"'%str(first_elem))
+        raise ValueError(
+            'sequence elements have to be of type numpy.ndarray (dense) or dictionary (sparse), you gave "%s"' % str(first_elem))
 
     lines = []
     for idx, seq in enumerate(sequences):
-        lines.append('%i|%s %s'%(idx, alias, seq_to_str(seq)))
+        lines.append('%i|%s %s' % (idx, alias, seq_to_str(seq)))
 
     return '\n'.join(lines)
+
 
 def _get_constant_node(value, **kw):
     '''
@@ -316,14 +332,15 @@ def _get_constant_node(value, **kw):
     # of the overall context without having to always pass it
     # explicitly?
 
-    from cntk.context import get_context 
+    from cntk.context import get_context
     import tempfile
 
     # We have to use NamedTemporaryFile and close it, because when using the
     # obvious first choice, mkstemp(), would later fail in cntk.exe because the
     # file would still be locked.
     # TODO make it same filename as alias
-    tf = tempfile.NamedTemporaryFile(prefix='_param_', suffix='.txt', dir=get_context().directory, delete = False)
+    tf = tempfile.NamedTemporaryFile(
+        prefix='_param_', suffix='.txt', dir=get_context().directory, delete=False)
     tf.close()
 
     if isinstance(value, list):
@@ -331,7 +348,7 @@ def _get_constant_node(value, **kw):
 
     if len(value.shape) == 1:
         # 1D list: interpret as one scalar per sample
-        value = value[:,np.newaxis]
+        value = value[:, np.newaxis]
 
     if sparse.issparse(value):
         raise ValueError('only dense data is supported')
@@ -348,31 +365,33 @@ def _get_constant_node(value, **kw):
 
     from cntk.reader import CNTKTextFormatReader
     param_node = cntk1_ops.LearnableParameter(
-            size,
-            1,  
-            learningRateMultiplier=0.0,
-            init='fromFile', 
-            initFromFilePath=tf.name, 
-            **kw) 
+        size,
+        1,
+        learningRateMultiplier=0.0,
+        init='fromFile',
+        initFromFilePath=tf.name,
+        **kw)
 
     reshape_node = cntk1_ops.NewReshape(param_node,
-            dims=value.shape,
-            var_name=var_name)
+                                        dims=value.shape,
+                                        var_name=var_name)
 
     return reshape_node
+
 
 def _get_input_node(value, **kw):
     # FIXME We need to better manage the context. How can we get hold
     # of the overall context without having to always pass it
     # explicitly?
 
-    from cntk.context import get_context 
+    from cntk.context import get_context
     import tempfile
 
     # We have to use NamedTemporaryFile and close it, because the obvious first
-    # choice, mkstemp(), would later fail in cntk.exe because the file would still be locked.
-    tf = tempfile.NamedTemporaryFile(prefix='_input_', suffix='.txt', 
-            dir=get_context().directory, delete = False)
+    # choice, mkstemp(), would later fail in cntk.exe because the file would
+    # still be locked.
+    tf = tempfile.NamedTemporaryFile(prefix='_input_', suffix='.txt',
+                                     dir=get_context().directory, delete=False)
     tf.close()
 
     if isinstance(value, list):
@@ -380,14 +399,14 @@ def _get_input_node(value, **kw):
 
     if len(value.shape) == 1:
         # 1D list: interpret as one scalar per sample
-        value = value[:,np.newaxis]
+        value = value[:, np.newaxis]
 
     if 'alias' in kw:
         alias = kw['alias']
-        del kw['alias'] # don't confuse with constructor's parameters
+        del kw['alias']  # don't confuse with constructor's parameters
     else:
         # TODO make sure we don't have clashes
-        alias = '_I_%i'%np.random.randint(1000) 
+        alias = '_I_%i' % np.random.randint(1000)
 
     with open(tf.name, 'w') as f:
         f.write(_seq_to_text_format(value, alias))
@@ -403,13 +422,15 @@ def _get_input_node(value, **kw):
 
     return input_node
 
+
 def is_sequence(data):
     '''
     Checks whether the data is a CNTK sequence, which is expressed in Python as
     a list of varying sized NumPy objects.
     '''
     is_list = isinstance(data, list)
-    return is_list and len(data)>0 and isinstance(data[0], np.ndarray) 
+    return is_list and len(data) > 0 and isinstance(data[0], np.ndarray)
+
 
 def is_tensor(data):
     '''
@@ -421,7 +442,7 @@ def is_tensor(data):
     if not isinstance(data, list):
         return False
 
-    while len(data)>0:
+    while len(data) > 0:
         # All but the innermost dimension's values have to be lists
         try:
             data[0][0]
@@ -436,6 +457,7 @@ def is_tensor(data):
 
     return True
 
+
 def input(value, **kw):
     '''
     Defining Input as a factory override that creates either a Constant()
@@ -446,7 +468,7 @@ def input(value, **kw):
 
     In case the `value` is a list of NumPy arrays, a CNTK Input() operator is
     returned, interpreting every element as a sequence of tensors.
-      
+
     In case the `value` is a NumPy array or list of lists, a CNTK Input()
     operator is returned, interpreting it as a dense tensor.
 
@@ -455,7 +477,8 @@ def input(value, **kw):
     if is_sequence(value) or is_tensor(value):
         return _get_input_node(value, **kw)
     else:
-        raise ValueError('value type is not supported: %s'%type(value))
+        raise ValueError('value type is not supported: %s' % type(value))
+
 
 def constant(value, **kw):
     '''
@@ -467,7 +490,7 @@ def constant(value, **kw):
 
     In case the `value` is a list of NumPy arrays, a CNTK Input() operator is
     returned, interpreting every element as a sequence of tensors.
-      
+
     In case the `value` is a NumPy array or list of lists, a CNTK Input()
     operator is returned, interpreting it as a dense tensor.
 
@@ -479,5 +502,4 @@ def constant(value, **kw):
         if is_tensor(value):
             return _get_constant_node(value, **kw)
         else:
-            raise ValueError('value type is not supported: %s'%type(value))
-
+            raise ValueError('value type is not supported: %s' % type(value))
