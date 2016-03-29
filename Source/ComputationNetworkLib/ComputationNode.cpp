@@ -359,12 +359,11 @@ template <class ElemType>
 
 // write out the content of a node in formatted/readable form
 template <class ElemType>
-size_t ComputationNode<ElemType>::WriteMinibatchWithFormatting(FILE* f, size_t onlyUpToRow, size_t onlyUpToT, bool transpose, bool isCategoryLabel, 
+void ComputationNode<ElemType>::WriteMinibatchWithFormatting(FILE* f, size_t onlyUpToRow, size_t onlyUpToT, bool transpose, bool isCategoryLabel, 
                                                              const std::vector<std::string>& labelMapping, const string& sequenceSeparator, 
                                                              const string& sequencePrologue, const string& sequenceEpilogue,
                                                              const string& elementSeparator, const string& sampleSeparator,
                                                              const string& valueFormatString,
-                                                             size_t sequenceId,
                                                              bool outputGradient) const
 {
     // get minibatch matrix -> matData, matRows, matStride
@@ -404,7 +403,6 @@ size_t ComputationNode<ElemType>::WriteMinibatchWithFormatting(FILE* f, size_t o
         const auto& seqInfo = sequences[s];
         if (seqInfo.seqId == GAP_SEQUENCE_ID) // nothing in gaps to print
             continue;
-
         let tBegin = seqInfo.tBegin >= 0     ? seqInfo.tBegin : 0;
         let tEnd   = seqInfo.tEnd   <= width ? seqInfo.tEnd   : width;
 
@@ -513,8 +511,6 @@ size_t ComputationNode<ElemType>::WriteMinibatchWithFormatting(FILE* f, size_t o
         fprintfOrDie(f, "%s", sequenceEpilogue.c_str());
     } // end loop over sequences
     fflushOrDie(f);
-
-    return sequenceId;
 }
 
 // -----------------------------------------------------------------------
