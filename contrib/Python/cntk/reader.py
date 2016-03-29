@@ -54,16 +54,17 @@ class UCIFastReader(AbstractReader):
     def generate_config(self):
         """Generate the reader configuration block
         """
-        template = ''' reader = [
-                readerType = "%(ReaderType)s"
-                file = "%(FileName)s"
-                randomize = "none"
-                verbosity = 1          
-            '''
+        template = '''\
+    reader = [
+        readerType = "%(ReaderType)s"
+        file = "%(FileName)s"
+        randomize = "none"
+        verbosity = 1
+'''
 
         if self['CustomDelimiter'] is not None:
-            template += '''
-            customDelimiter=%(CustomDelimiter)s
+            template += '''\
+        customDelimiter = %(CustomDelimiter)s
        '''
                
         if self.inputs_def is not None:
@@ -73,28 +74,28 @@ class UCIFastReader(AbstractReader):
                 else:
                     name = name_or_node
                     
-                template += '''
-                {0}=[
-                    start = {1}
-                    dim = {2}		          
+                template += '''\
+        {0} = [
+            start = {1}
+            dim = {2}          
             '''.format(name, start, dim)
 
                 if num_of_classes:
-                    template += '''
-                    labelDim= {0}
+                    template += '''\
+            labelDim= {0}
                 '''.format(num_of_classes) 
                 if map_file:
-                    template += '''
-                    labelMappingFile= "{0}"
+                    template += '''\
+            labelMappingFile= "{0}"
                 '''.format(map_file)   
                 
-                template += '''
-                ]
-            '''
+                template += '''\
+        ]
+'''
             
-            template += '''
-            ]            
-            '''
+            template += '''\
+    ]            
+'''
             
         return template % self
 
@@ -152,7 +153,7 @@ class CNTKTextFormatReader(AbstractReader):
                 template += '''
                     {0}=[
                         alias = "{1}"                
-                        dim = {2}		          
+                        dim = {2}          
                         format = "{3}"
                     ]'''.format(name, a, dim, format)
                 

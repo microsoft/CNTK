@@ -9,10 +9,10 @@ Eval=[
 	run=BrainScriptNetworkBuilder
 
     BrainScriptNetworkBuilder=[
-		%(ModelDescription)s
+%(ModelDescription)s
 	]
 	
-	%(Reader)s	
+%(Reader)s	
 	
 	outputPath = "%(OutputFile)s"
 ]
