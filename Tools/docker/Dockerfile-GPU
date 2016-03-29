@@ -54,7 +54,7 @@ RUN mkdir -p /usr/local/cudnn/cuda/include && \
     mkdir -p /usr/local/cudnn/cuda/lib64 && \
     ln -s /etc/alternatives/libcudnn_so /usr/local/cudnn/cuda/lib64/libcudnn.so
 
-RUN wget -O gdk.run -q http://developer.download.nvidia.com/compute/cuda/7.5/Prod/local_installers/cuda_352_39_gdk_linux.run && \
+RUN wget -O gdk.run -q http://developer.download.nvidia.com/compute/cuda/7_0/Prod/local_installers/cuda_346.46_gdk_linux.run && \
     chmod +x gdk.run && \
     ./gdk.run --silent && \
     rm gdk.run

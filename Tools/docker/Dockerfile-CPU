@@ -43,7 +43,6 @@ RUN wget -q -O - http://nih.at/libzip/libzip-1.1.2.tar.gz | tar -xzf - && \
     make -j"$(nproc)" install && \
     rm -rf /libzip-1.1.2
 
-
 RUN wget -q -O - https://github.com/Itseez/opencv/archive/3.0.0.tar.gz | tar -xzf - && \
     cd opencv-3.0.0 && \
     cmake -DCMAKE_BUILD_TYPE=RELEASE -DCMAKE_INSTALL_PREFIX=/usr/local/opencv-3.0.0 . && \
@@ -66,7 +65,3 @@ RUN git clone --depth=1 -b master https://github.com/Microsoft/CNTK.git . && \
      make -j1 all 
 
 ENV PATH=/cntk/build/release/bin:$PATH
-
-CMD ["/bin/bash"]
-
-
