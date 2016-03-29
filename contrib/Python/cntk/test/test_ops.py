@@ -80,5 +80,5 @@ def test_overload_eval(root_node, expected):
     (C(np.asarray([[1,2],[3,4]]))*C(np.asarray([[1,2],[3,4]])), [[1,4],[9,16]]),
 ])
 def test_ops_on_numpy(root_node, expected, tmpdir):
-    _test(root_node, expected, clean_up=True)
+    _test(root_node, expected, clean_up=False)
 
