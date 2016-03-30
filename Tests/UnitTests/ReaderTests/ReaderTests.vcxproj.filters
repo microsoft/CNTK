@@ -189,39 +189,6 @@
     <Text Include="Data\ImageReaderZip_map.txt">
       <Filter>Data</Filter>
     </Text>
-    <Text Include="Control\CNTKTextFormatReader1x1_1_dense.txt">
-      <Filter>Control\CNTKTextFormatReader</Filter>
-    </Text>
-    <Text Include="Control\CNTKTextFormatReader1x10_MI_1_dense.txt">
-      <Filter>Control\CNTKTextFormatReader</Filter>
-    </Text>
-    <Text Include="Control\CNTKTextFormatReader1x10_MI_2_dense.txt">
-      <Filter>Control\CNTKTextFormatReader</Filter>
-    </Text>
-    <Text Include="Control\CNTKTextFormatReader1x100_1_dense.txt">
-      <Filter>Control\CNTKTextFormatReader</Filter>
-    </Text>
-    <Text Include="Control\CNTKTextFormatReaderMNIST_dense.txt">
-      <Filter>Control\CNTKTextFormatReader</Filter>
-    </Text>
-    <Text Include="Control\CNTKTextFormatReaderSimple_dense.txt">
-      <Filter>Control\CNTKTextFormatReader</Filter>
-    </Text>
-    <Text Include="Data\CNTKTextFormatReader1x1_dense.txt">
-      <Filter>Data\CNTKTextFormatReader</Filter>
-    </Text>
-    <Text Include="Data\CNTKTextFormatReader1x10_MI_dense.txt">
-      <Filter>Data\CNTKTextFormatReader</Filter>
-    </Text>
-    <Text Include="Data\CNTKTextFormatReader1x100_dense.txt">
-      <Filter>Data\CNTKTextFormatReader</Filter>
-    </Text>
-    <Text Include="Data\CNTKTextFormatReaderMNIST_dense.txt">
-      <Filter>Data\CNTKTextFormatReader</Filter>
-    </Text>
-    <Text Include="Data\CNTKTextFormatReaderSimple_dense.txt">
-      <Filter>Data\CNTKTextFormatReader</Filter>
-    </Text>
     <Text Include="Data\ImageReaderBadLabel_map.txt">
       <Filter>Data</Filter>
     </Text>
@@ -230,6 +197,51 @@
     </Text>
     <Text Include="Data\ImageReaderLabelOutOfRange_map.txt">
       <Filter>Data</Filter>
+    </Text>
+    <Text Include="Data\CNTKTextFormatReader\1x1_dense.txt">
+      <Filter>Data\CNTKTextFormatReader</Filter>
+    </Text>
+    <Text Include="Data\CNTKTextFormatReader\1x1_sparse.txt">
+      <Filter>Data\CNTKTextFormatReader</Filter>
+    </Text>
+    <Text Include="Data\CNTKTextFormatReader\1x10_MI_dense.txt">
+      <Filter>Data\CNTKTextFormatReader</Filter>
+    </Text>
+    <Text Include="Data\CNTKTextFormatReader\1x100_dense.txt">
+      <Filter>Data\CNTKTextFormatReader</Filter>
+    </Text>
+    <Text Include="Data\CNTKTextFormatReader\MNIST_dense.txt">
+      <Filter>Data\CNTKTextFormatReader</Filter>
+    </Text>
+    <Text Include="Data\CNTKTextFormatReader\Simple_dense.txt">
+      <Filter>Data\CNTKTextFormatReader</Filter>
+    </Text>
+    <Text Include="Control\CNTKTextFormatReader\1x1_1_dense.txt">
+      <Filter>Control\CNTKTextFormatReader</Filter>
+    </Text>
+    <Text Include="Control\CNTKTextFormatReader\1x1_2_dense.txt">
+      <Filter>Control\CNTKTextFormatReader</Filter>
+    </Text>
+    <Text Include="Control\CNTKTextFormatReader\1x1_sparse.txt">
+      <Filter>Control\CNTKTextFormatReader</Filter>
+    </Text>
+    <Text Include="Control\CNTKTextFormatReader\1x10_MI_1_dense.txt">
+      <Filter>Control\CNTKTextFormatReader</Filter>
+    </Text>
+    <Text Include="Control\CNTKTextFormatReader\1x10_MI_2_dense.txt">
+      <Filter>Control\CNTKTextFormatReader</Filter>
+    </Text>
+    <Text Include="Control\CNTKTextFormatReader\1x100_1_dense.txt">
+      <Filter>Control\CNTKTextFormatReader</Filter>
+    </Text>
+    <Text Include="Control\CNTKTextFormatReader\1x100_2_dense.txt">
+      <Filter>Control\CNTKTextFormatReader</Filter>
+    </Text>
+    <Text Include="Control\CNTKTextFormatReader\MNIST_dense.txt">
+      <Filter>Control\CNTKTextFormatReader</Filter>
+    </Text>
+    <Text Include="Control\CNTKTextFormatReader\Simple_dense.txt">
+      <Filter>Control\CNTKTextFormatReader</Filter>
     </Text>
   </ItemGroup>
   <ItemGroup>

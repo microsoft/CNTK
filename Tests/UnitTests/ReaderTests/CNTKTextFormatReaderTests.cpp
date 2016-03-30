@@ -22,8 +22,8 @@ BOOST_AUTO_TEST_CASE(CNTKTextFormatReaderSimple_dense)
 {
     HelperRunReaderTest<float>(
         testDataPath() + "/Config/CNTKTextFormatReader_dense.cntk",
-        testDataPath() + "/Control/CNTKTextFormatReaderSimple_dense.txt",
-        testDataPath() + "/Control/CNTKTextFormatReaderSimple_dense_Output.txt",
+        testDataPath() + "/Control/CNTKTextFormatReader/Simple_dense.txt",
+        testDataPath() + "/Control/CNTKTextFormatReader/Simple_dense_Output.txt",
         "Simple",
         "reader",
         1000, // epoch size
@@ -40,8 +40,8 @@ BOOST_AUTO_TEST_CASE(CNTKTextFormatReaderMNIST_dense)
 {
     HelperRunReaderTest<double>(
         testDataPath() + "/Config/CNTKTextFormatReader_dense.cntk",
-        testDataPath() + "/Control/CNTKTextFormatReaderMNIST_dense.txt",
-        testDataPath() + "/Control/CNTKTextFormatReaderMNIST_dense_Output.txt",
+        testDataPath() + "/Control/CNTKTextFormatReader/MNIST_dense.txt",
+        testDataPath() + "/Control/CNTKTextFormatReader/MNIST_dense_Output.txt",
         "MNIST",
         "reader",
         1000, // epoch size
@@ -57,8 +57,8 @@ BOOST_AUTO_TEST_CASE(CNTKTextFormatReader1x1_1_dense)
 {
     HelperRunReaderTest<double>(
         testDataPath() + "/Config/CNTKTextFormatReader_dense.cntk",
-        testDataPath() + "/Control/CNTKTextFormatReader1x1_1_dense.txt",
-        testDataPath() + "/Control/CNTKTextFormatReader1x1_1_dense_Output.txt",
+        testDataPath() + "/Control/CNTKTextFormatReader/1x1_1_dense.txt",
+        testDataPath() + "/Control/CNTKTextFormatReader/1x1_1_dense_Output.txt",
         "1x1",
         "reader",
         1, // epoch size
@@ -74,8 +74,8 @@ BOOST_AUTO_TEST_CASE(CNTKTextFormatReader1x1_2_dense)
 {
     HelperRunReaderTest<double>(
         testDataPath() + "/Config/CNTKTextFormatReader_dense.cntk",
-        testDataPath() + "/Control/CNTKTextFormatReader1x1_2_dense.txt",
-        testDataPath() + "/Control/CNTKTextFormatReader1x1_2_dense_Output.txt",
+        testDataPath() + "/Control/CNTKTextFormatReader/1x1_2_dense.txt",
+        testDataPath() + "/Control/CNTKTextFormatReader/1x1_2_dense_Output.txt",
         "1x1",
         "reader",
         2, // epoch size
@@ -91,8 +91,8 @@ BOOST_AUTO_TEST_CASE(CNTKTextFormatReader1x10_MI_2_dense)
 {
     HelperRunReaderTest<float>(
         testDataPath() + "/Config/CNTKTextFormatReader_dense.cntk",
-        testDataPath() + "/Control/CNTKTextFormatReader1x10_MI_2_dense.txt",
-        testDataPath() + "/Control/CNTKTextFormatReader1x10_MI_2_dense_Output.txt",
+        testDataPath() + "/Control/CNTKTextFormatReader/1x10_MI_2_dense.txt",
+        testDataPath() + "/Control/CNTKTextFormatReader/1x10_MI_2_dense_Output.txt",
         "1x10_MI",
         "reader",
         7, // epoch size
@@ -108,8 +108,8 @@ BOOST_AUTO_TEST_CASE(CNTKTextFormatReader1x10_MI_1_dense)
 {
     HelperRunReaderTest<float>(
         testDataPath() + "/Config/CNTKTextFormatReader_dense.cntk",
-        testDataPath() + "/Control/CNTKTextFormatReader1x10_MI_1_dense.txt",
-        testDataPath() + "/Control/CNTKTextFormatReader1x10_MI_1_dense_Output.txt",
+        testDataPath() + "/Control/CNTKTextFormatReader/1x10_MI_1_dense.txt",
+        testDataPath() + "/Control/CNTKTextFormatReader/1x10_MI_1_dense_Output.txt",
         "1x10_MI",
         "reader",
         10, // epoch size
@@ -125,8 +125,8 @@ BOOST_AUTO_TEST_CASE(CNTKTextFormatReader1x100_1_dense)
 {
     HelperRunReaderTest<double>(
         testDataPath() + "/Config/CNTKTextFormatReader_dense.cntk",
-        testDataPath() + "/Control/CNTKTextFormatReader1x100_1_dense.txt",
-        testDataPath() + "/Control/CNTKTextFormatReader1x100_1_dense_Output.txt",
+        testDataPath() + "/Control/CNTKTextFormatReader/1x100_1_dense.txt",
+        testDataPath() + "/Control/CNTKTextFormatReader/1x100_1_dense_Output.txt",
         "1x100",
         "reader",
         10, // epoch size
@@ -142,8 +142,8 @@ BOOST_AUTO_TEST_CASE(CNTKTextFormatReader1x100_2_dense)
 {
     HelperRunReaderTest<double>(
         testDataPath() + "/Config/CNTKTextFormatReader_dense.cntk",
-        testDataPath() + "/Control/CNTKTextFormatReader1x100_2_dense.txt",
-        testDataPath() + "/Control/CNTKTextFormatReader1x100_2_dense_Output.txt",
+        testDataPath() + "/Control/CNTKTextFormatReader/1x100_2_dense.txt",
+        testDataPath() + "/Control/CNTKTextFormatReader/1x100_2_dense_Output.txt",
         "1x100",
         "reader",
         5, // epoch size

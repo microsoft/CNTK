@@ -9,7 +9,7 @@ traceLevel = 1
         readerType = "CNTKTextFormatReader"
         # Training file contains a single frame
         # (a sequence with a single sample) 
-        file = "CNTKTextFormatReader1x1_dense.txt"
+        file = "CNTKTextFormatReader/1x1_dense.txt"
 
         randomize = "auto"
         
@@ -33,7 +33,7 @@ traceLevel = 1
         # Training file contains the same sequence 
         # (with a single per-input sample from a number of feature/label inputs) 
         # repeated 10 times, 
-        file = "CNTKTextFormatReader1x10_MI_dense.txt"
+        file = "CNTKTextFormatReader/1x10_MI_dense.txt"
 
         randomize = "auto"
         
@@ -92,7 +92,7 @@ traceLevel = 1
         # Training file contains the same sequence (with a single sample) 
         # repeated 100 times. Also, it uses UTF-8 encoding and contains
         # BOM value.
-        file = "CNTKTextFormatReader1x100_dense.txt"
+        file = "CNTKTextFormatReader/1x100_dense.txt"
 
         randomize = "auto"
         
@@ -123,7 +123,7 @@ MNIST = [
     precision = "double"
     reader = [
         readerType = "CNTKTextFormatReader"
-        file = "CNTKTextFormatReaderMNIST_dense.txt"
+        file = "CNTKTextFormatReader/MNIST_dense.txt"
 
         randomize = "none"
         
@@ -154,7 +154,7 @@ Simple = [
     precision = "float"
     reader = [
         readerType = "CNTKTextFormatReader"
-        file = "CNTKTextFormatReaderSimple_dense.txt"
+        file = "CNTKTextFormatReader/Simple_dense.txt"
 
         randomize = "none"
         
