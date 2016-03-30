@@ -30,10 +30,13 @@ CNTKTextFormatReader::CNTKTextFormatReader(MemoryProviderPtr provider,
             m_deserializer = shared_ptr<IDataDeserializer>(new TextParser<double>(configHelper));
         }
 
+        size_t window = configHelper.GetRandomizationWindow();
         TransformerPtr randomizer;
-        if (configHelper.ShouldRandomize())
+        if (window > 0)
         {
-            randomizer = make_shared<BlockRandomizer>(0, SIZE_MAX, m_deserializer);
+            // Verbosity is a general config parameter, not specific to the text format reader.
+            int verbosity = config(L"verbosity", 2);
+            randomizer = make_shared<BlockRandomizer>(verbosity, window, m_deserializer);
         }
         else
         {

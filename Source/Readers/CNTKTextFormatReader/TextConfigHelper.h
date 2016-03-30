@@ -25,7 +25,7 @@ public:
     // Get full path to the input file.
     const wstring& GetFilePath() const { return m_filepath; }
 
-    bool ShouldRandomize() const { return m_randomize; }
+    size_t GetRandomizationWindow() const { return m_randomizationWindow; }
 
     bool ShouldSkipSequenceIds() const { return m_skipSequenceIds; }
 
@@ -44,7 +44,7 @@ public:
 private:
     std::wstring m_filepath;
     std::vector<StreamDescriptor> m_streams;
-    bool m_randomize;
+    size_t m_randomizationWindow;
     ElementType m_elementType;
     bool m_skipSequenceIds;
     unsigned int m_maxErrors;
