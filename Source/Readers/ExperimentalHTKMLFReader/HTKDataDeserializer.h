@@ -51,11 +51,6 @@ private:
     // Chunk descriptions.
     std::vector<HTKChunkDescription> m_chunks;
 
-    // Weak pointers on existing chunks.
-    // If randomizer asks the same chunk twice we do not need to recreate
-    // the chunk if we already uploaded it in memory.
-    std::vector<std::weak_ptr<Chunk>> m_weakChunks;
-
     // Augmentation window.
     std::pair<size_t, size_t> m_augmentationWindow;
 
