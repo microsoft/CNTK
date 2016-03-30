@@ -33,7 +33,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                         size_t& actualMBSize, 
                                         const MPIWrapperPtr& mpi)
     {
-        auto pMBLayout = net->GetMBLayoutPtr();
         // Reading consists of a sequence of Reader API calls:
         //  - GetMinibatch() --fills the inputMatrices
         //  - SetActualMiniBatchSizeFromFeatures()  --tells Network to resize the nodes' buffers
@@ -63,11 +62,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         // get layout meta-data
-        trainSetDataReader.CopyMBLayoutTo(pMBLayout);
+        trainSetDataReader.CopyMBLayoutTo(net->GetMBLayoutPtrOfNetwork());
 
         // decimate if needed. Decimation happens in-place.
         if (!useDistributedMBReading && useParallelTrain)
-            DecimateMinibatchInPlace<ElemType>(inputMatrices, mpi->NumNodesInUse(), mpi->CurrentNodeRank(), net->GetMBLayoutPtr());
+            DecimateMinibatchInPlace<ElemType>(inputMatrices, mpi->NumNodesInUse(), mpi->CurrentNodeRank(), net->GetMBLayoutPtrOfNetwork());
 
         // reader will have resized input node's m_value directly. Nodes must be notified to do necessary internal state updates from that.
         // TODO: This is a stopgap. SGD will at some point change from sets of matrices to sets of nodes. Then this will become much simpler.
@@ -370,7 +369,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                      size_t requestedSubminibatches)
         {
             // first, remember interface to the net
-            m_netMBLayoutPtr = net.GetMBLayoutPtr();
+            // BUGBUG: This will no longer be correct once we have multiple input layouts.
+            m_netMBLayoutPtr = net.GetMBLayoutPtrOfNetwork();
             m_netInputMatrixPtr = inputMatrices;
 
             // second, get data from reader, stored it in cache
@@ -385,7 +385,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     m_inputMatricesCache.GetInputMatrix<ElemType>(name).SetValue(M);
             }
             // 2. MBlayout
-            m_MBLayoutCache->CopyFrom(net.GetMBLayoutPtr());
+            m_MBLayoutCache->CopyFrom(net.GetMBLayoutPtrOfNetwork());
             size_t nParallelSequences = m_MBLayoutCache->GetNumParallelSequences();
 
             // 3. for bits in seq. training

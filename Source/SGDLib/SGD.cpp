@@ -227,7 +227,7 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
             refFeatureNodes[i] = refNet->GetNodeFromName(featureNodes[i]->NodeName()); // remember so that we can restore them later
             refNet->ChangeNode(featureNodes[i]->NodeName(), featureNodes[i]);
         }
-        //const_cast<MBLayoutPtr&>(refNet->GetMBLayoutPtr()) = net->GetMBLayoutPtr(); // WORKAROUND
+        //const_cast<MBLayoutPtr&>(refNet->GetMBLayoutPtrOfNetwork()) = net->GetMBLayoutPtrOfNetwork(); // WORKAROUND
         refNet->CompileNetwork();
 
         // allocate memory for forward computation
@@ -501,12 +501,12 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
                     learnRatePerSample, epochTime);
 
             // TODO: why these extra log messages here and not for 1 eval criterion?
-            fprintf(stderr, "Finished Epoch[%2d of %d]: Criterion Node [%ls] Per Sample = %.8g\n",
+            fprintf(stderr, "Finished Epoch[%2d of %d]:     Criterion Node [%ls] Per Sample = %.8g\n",
                     i + 1, (int) m_maxEpochs, criterionNodes[0]->NodeName().c_str(), epochCriterion);
 
             for (size_t j = 0; j < epochEvalErrors.size(); j++)
             {
-                fprintf(stderr, "Finished Epoch[%2d of %d]: Evaluation Node [%ls] Per Sample = %.8g\n",
+                fprintf(stderr, "Finished Epoch[%2d of %d]:     Evaluation Node [%ls] Per Sample = %.8g\n",
                         i + 1, (int) m_maxEpochs, evalNodeNames[j].c_str(), epochEvalErrors[j]);
             }
         }
@@ -524,7 +524,7 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
                 cvSetTrainAndEvalNodes.push_back(evaluationNodes[0]->NodeName());
             }
 
-                // BUGBUG: We should not use the training MB size. The training MB size is constrained by both convergence and memory. Eval is only constrained by memory.
+            // BUGBUG: We should not use the training MB size. The training MB size is constrained by both convergence and memory. Eval is only constrained by memory.
             vector<double> vScore = evalforvalidation.Evaluate(validationSetDataReader, cvSetTrainAndEvalNodes, m_mbSize[i]);
             fprintf(stderr, "Finished Epoch[%2d of %d]: [Validation Set] TrainLossPerSample = %.8g", i + 1, (int) m_maxEpochs, vScore[0]);
             if (vScore.size() > 1)
@@ -890,7 +890,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
             if (m_needAdaptRegularization && m_adaptationRegType == AdaptationRegType::KL && refNode)
             {
                 size_t actualMBSize2 = refNet->DetermineActualMBSizeFromFeatures();
-                refNet->GetMBLayoutPtr()->CopyFrom(net->GetMBLayoutPtr()); // TODO: This is UNTESTED (before this was missing, seemingly inconsistently)
+                refNet->GetMBLayoutPtrOfNetwork()->CopyFrom(net->GetMBLayoutPtrOfNetwork()); // TODO: This is UNTESTED (before this was missing, seemingly inconsistently)
 
                 if (actualMBSize2 != actualMBSize)
                     LogicError("TrainOneEpoch: refNet has different MB size than main net??");
@@ -946,7 +946,8 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
         } // if (actualMBSize > 0)
 
         // for progress and statistics, we should only count frames that are not gaps
-        size_t numSamplesWithLabel = wasDataRead ? net->GetNumSamplesWithLabel(actualMBSize) : 0;
+        // BUGBUG: Once we have multiple layouts, this must be done on a per-criterion basis.
+        size_t numSamplesWithLabel = wasDataRead ? net->GetNumSamplesWithLabelOfNetwork(actualMBSize) : 0;
 
         // Sum of actualMBSize across all nodes when using parallel training
         size_t aggregateNumSamples = actualMBSize;
@@ -1026,8 +1027,9 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                     if (smoothedGradient.HasNan("TrainOneEpoch/UpdateWeights(): "))
                         LogicError("%ls %ls operation has NaNs in smoothedGradient.", node->NodeName().c_str(), node->OperationName().c_str());
 #endif
+                    // BUGBUG: Access to net MBLayout can no longer be done if we have multiple input layouts
                     UpdateWeights(node, smoothedGradient, learnRatePerSample,
-                                  GetMomentumPerSample(epochNumber /*BUGBUG workaround:*/, net->GetMBLayoutPtr()->GetNumParallelSequences()), aggregateNumSamples,
+                                  GetMomentumPerSample(epochNumber /*BUGBUG workaround:*/, net->GetMBLayoutPtrOfNetwork()->GetNumParallelSequences()), aggregateNumSamples,
                                   m_L2RegWeight, m_L1RegWeight,
                                   m_needAveMultiplier, m_useNesterovMomentum);
 #ifdef _DEBUG
@@ -1783,7 +1785,8 @@ void SGD<ElemType>::AttemptUtteranceDerivativeFeatures(ComputationNetworkPtr net
         if (outputNodes.empty())
             LogicError("no output node was found.");
 
-        trainSetDataReader->CopyMBLayoutTo(net->GetMBLayoutPtr());
+        // BUGBUG: This is no longer correct once we have multiple input layouts.
+        trainSetDataReader->CopyMBLayoutTo(net->GetMBLayoutPtrOfNetwork());
         net->ForwardProp(outputNodes[0]); // only evaluate the first output
         trainSetDataReader->SetNetOutput(uttInfo,
                                          dynamic_pointer_cast<ComputationNode<ElemType>>(outputNodes[0])->Value(),

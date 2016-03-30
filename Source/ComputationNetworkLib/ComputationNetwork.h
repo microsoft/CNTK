@@ -52,7 +52,7 @@ public:
         m_randomSeedOffset(0),
           m_isCompiled(false),
           m_areMatricesAllocated(false),
-        m_pMBLayout(make_shared<MBLayout>()),
+        m_pMBLayoutOfNetwork(make_shared<MBLayout>()),
         m_environment(make_shared<ComputationEnvironment>())
     {
     }
@@ -283,8 +283,8 @@ public:
     // -----------------------------------------------------------------------
 
     // Note: this is also used to copy MBLayouts into our existing MBLayout instance, which is a somewhat questionable design.
-    const MBLayoutPtr& GetMBLayoutPtr() { return m_pMBLayout; }
-    size_t GetNumParallelSequences() const { return m_pMBLayout->GetNumParallelSequences(); }
+    // BUGBUG: This function will conflict once we have multiple input layouts in the network.
+    const MBLayoutPtr& GetMBLayoutPtrOfNetwork() { return m_pMBLayoutOfNetwork; }
 
     // determine the actual MB size from the feature nodes
     // This returns max number of columns over the feature nodes.
@@ -315,10 +315,10 @@ public:
     // this counts the actual number of frames in a minibatch (not counting gaps in parallel sequences)
     // TODO: Instead of passing numAllSamples in here, we should determine it from the inputs in case of no layout. Or simply forbid this case.
     // BUGBUG: With variable-length sequences, this can no longer be a network method.
-    size_t GetNumSamplesWithLabel(const size_t numAllSamples) const
+    size_t GetNumSamplesWithLabelOfNetwork(const size_t numAllSamples) const
     {
-        if (m_pMBLayout)
-            return m_pMBLayout->GetActualNumSamples();
+        if (m_pMBLayoutOfNetwork)
+            return m_pMBLayoutOfNetwork->GetActualNumSamples();
         else
             return numAllSamples; // TODO: Return the actual number of samples, by inquiring our own input nodes; then eliminate the numAllSamples parameter.
     }
@@ -988,7 +988,7 @@ private:
     // used for sentence boundary information passed from reader to reset RNN state
     // specify how the minibatch is packed for each sample
     // BUGBUG: With variable-length inconsistent layouts, this can no longer be a network property.
-    MBLayoutPtr m_pMBLayout; // note that this must be installed before doing anything that needs it (default leaves a nullptr)
+    MBLayoutPtr m_pMBLayoutOfNetwork; // note that this must be installed before doing anything that needs it (default leaves a nullptr)
 
     // environment information that nodes may want to inquire, e.g. to know whether we are training
     ComputationEnvironmentPtr m_environment;

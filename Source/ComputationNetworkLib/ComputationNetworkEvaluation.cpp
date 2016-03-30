@@ -514,7 +514,7 @@ void ComputationNetwork::ResetMBLayouts()
 {
     // reset to a well-defined MBLayout (any meaningful layout should do here)
     // Note that Validate is never called during operation. Any actual computation will lead to MBLayout to be set.
-    m_pMBLayout->Init(1, 0);
+    m_pMBLayoutOfNetwork->Init(1, 0);
 
     // first reset all
     for (const auto& node : GetAllNodesForRoot(nullptr))
@@ -523,7 +523,7 @@ void ComputationNetwork::ResetMBLayouts()
     // then fix up inputs (all others get propagated upwards through Validate())
     // TODO: Once we support mismatching layouts, this will be more involved. For now, everything shares the one layout that the Network knows about.
     for (auto node : InputNodes(nullptr))
-        node->LinkToMBLayout(m_pMBLayout);
+        node->LinkToMBLayout(m_pMBLayoutOfNetwork);
 }
 
 // -----------------------------------------------------------------------
@@ -587,7 +587,7 @@ void ComputationNetwork::ValidateNetwork()
     vector<ComputationNodeBasePtr> nonDefaultNodes;
     for (auto node : nodes)
     {
-        if (!(node->GetMBLayout() == m_pMBLayout))
+        if (!(node->GetMBLayout() == m_pMBLayoutOfNetwork))
             nonDefaultNodes.push_back(node);
     }
     if (!nonDefaultNodes.empty())

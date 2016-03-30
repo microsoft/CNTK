@@ -148,7 +148,8 @@ public:
             if (actualNumSubminibatches > 1)
                 smbDispatcher.DoneWithCurrentMinibatch();
 
-            size_t numSamplesWithLabel = m_net->GetNumSamplesWithLabel(actualMBSize);
+            // BUGBUG: Once we have multiple layouts, this must be done on a per-node basis.
+            size_t numSamplesWithLabel = m_net->GetNumSamplesWithLabelOfNetwork(actualMBSize);
             size_t aggregateNumSamplesWithLabel = numSamplesWithLabel;
             if (m_mpi != nullptr)
             {

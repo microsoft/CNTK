@@ -75,7 +75,7 @@ void ComputationNetwork::ClearNetwork()
 
     m_nameToNodeMap.clear();
 
-    m_pMBLayout->Init(1, 0);
+    m_pMBLayoutOfNetwork->Init(1, 0);
 }
 
 // -----------------------------------------------------------------------

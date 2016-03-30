@@ -196,8 +196,11 @@ static int GetRecurrenceSteppingDirection(const ComputationNodeBasePtr& node)
 }
 
 static int DetermineLoopDirection(const std::vector<ComputationNodeBasePtr>& nestedNodes);
+
 // get the strongly connected components from the graph
-// This sets index, lowLink, m_visited, and m_inStack.
+// This implements Tarjan's algorithm https://en.wikipedia.org/wiki/Tarjan%27s_strongly_connected_components_algorithm.
+// We include respective text from that Wikipedia page as comments for clarity.
+// This sets m_index, m_minIndex, m_visited, and m_inStack.
 void ComputationNetwork::DetermineSCCs(const ComputationNodeBasePtr& rootNode)
 {
     list<ComputationNodeBasePtr> sccStack;
@@ -225,29 +228,48 @@ void ComputationNetwork::DetermineSCCsR(ComputationNodeBasePtr cur,
     assert(!cur->m_visited);
 
     // set the index (in order of visitation)
+    // Each node is assigned a unique integer m_index, which numbers the nodes consecutively in the order in which they are discovered.
     cur->m_index = index;    // TODO: can this be used as m_visitedOrder?
     cur->m_minIndex = index; // also set m_minIndex
     index++;
 
     cur->m_visited = true;
-    sccStack.push_back(cur); // BUGBUG?: Don't we need to pop it from the stack at the end of this function?
+
+    // The nodes are placed on a stack in the order in which they are visited.
+    // When the depth-first search recursively explores a node 'cur' and its descendants,
+    // those nodes are not all necessarily popped from the stack when this recursive call returns.
+    // The crucial invariant property is that a node remains on the stack after exploration if and only if it has a path to some node earlier on the stack.
+    // At the end of the call that explores 'cur' and its descendants, we know whether 'cur' itself has a path to any node earlier on the stack.
+    // If so, the call returns, leaving 'cur' on the stack to preserve the stack invariant.
+    // If not, then 'cur' must be the root of its strongly connected component, which consists of 'cur' together with any later nodes on the stack
+    // (such nodes all have paths back to 'cur' but not to any earlier node,
+    // because if they had paths to earlier nodes then 'cur' would also have paths to earlier nodes which is false).
+    // This entire component is then popped from the stack and returned, again preserving the invariant. [Wikipedia]
+    sccStack.push_back(cur);
     cur->m_inStack = true;
 
-    // set m_minIndex to min over m_lowLinks of children
-    for (int i = 0; i < cur->GetNumInputs(); i++)
+    // set m_minIndex to min over m_minIndex of children
+    // m_minIndex (lowlink in Tarjan's notation) represents (roughly speaking) the smallest index of any node known to be reachable from 'cur', including 'cur' itself. [Wikipedia]
+    for (let& input : cur->GetInputs())
     {
-        if (!cur->Input(i)->m_visited)
+        if (!input->m_visited)
         {
-            DetermineSCCsR(cur->Input(i), sccStack, index, loopId);
-            cur->m_minIndex = min(cur->m_minIndex, cur->Input(i)->m_minIndex);
+            // successor w has not yet been visited; recurse on it
+            DetermineSCCsR(input, sccStack, index, loopId);
+            cur->m_minIndex = min(cur->m_minIndex, input->m_minIndex);
         }
-        else if (cur->Input(i)->m_inStack)
+        else if (input->m_inStack)
         {
-            cur->m_minIndex = min(cur->m_minIndex, cur->Input(i)->m_minIndex);
+            // successor w is in stack S and hence in the current SCC
+            cur->m_minIndex = min(cur->m_minIndex, input->m_minIndex);
         }
     }
 
-    // if we closed a loop then create an entry in m_allSEQNodes
+    // if 'cur' is a root node, then we closed a loop; create an entry in m_allSEQNodes
+    // 'cur' must be left on the stack if m_minIndex < m_index,
+    // whereas it must be removed as the root of a strongly connected component if m_minIndex == m_index.
+    // m_minIndex is computed during the depth-first search from 'cur' (above), as this finds the nodes that are reachable from 'cur'. [Wikipedia]
+    assert(cur->m_index <= cur->m_minIndex);
     if (cur->m_minIndex == cur->m_index) // m_minIndex is still equal to m_index, as we set it at the start of this function: we closed a loop
     {
         // gather the list of all nodes in this loop
