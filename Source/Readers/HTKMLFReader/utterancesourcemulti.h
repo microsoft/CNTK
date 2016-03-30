@@ -178,7 +178,7 @@ class minibatchutterancesourcemulti : public minibatchsource
 				if (verbosity)
 				{
 					double pageintime = (double)pageintimer;
-					fprintf(stderr, "requiredata: %d utterances read, time usage = %.8g, total frames = %d, avg speed = %.8g(frames/sec). \n", (int)utteranceset.size(), pageintime ,totalframes, (double)totalframes /pageintime);
+					fprintf(stderr, "requiredata: %d utterances read, time usage = %.8g, total frames = %zu, avg speed = %.8g(frames/sec). \n", (int)utteranceset.size(), pageintime ,totalframes, (double)totalframes /pageintime);
 				}
             }
             catch (...)
