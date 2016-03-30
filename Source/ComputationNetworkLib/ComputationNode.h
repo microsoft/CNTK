@@ -1105,7 +1105,7 @@ public:
     MatrixBasePtr ValuePtr() const override final { return m_value; }    // readers want this as a shared_ptr straight
     // Note: We cannot return a const& since returning m_value as a MatrixBasePtr is a type cast that generates a temporary. Interesting.
 
-    const std::shared_ptr<Matrix<ElemType>> GradientPtr() const override final { return m_gradient; }
+    const std::shared_ptr<Matrix<ElemType>> GradientPtr() const { return m_gradient; }
     const Matrix<ElemType>& Gradient() const { return *m_gradient; }
     Matrix<ElemType>&       Gradient()       { return *m_gradient; }
 
