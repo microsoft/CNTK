@@ -19,10 +19,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
 void EnableUTF8Support() 
 {
+    // TODO: codecvt should be supported in the latest gcc,
+    // remove the #ifdef when we move to 5.3.
 #ifdef _MSC_VER
     locale::global(locale(locale::empty(), new codecvt_utf8<wchar_t>));
 #else
-    locale::global(locale("")); // assuming the user-preferred locale supports UTF-8
+    // BUGBUG: the following assumes that the user-preferred locale supports UTF-8
+    locale::global(locale(""));
 #endif
 }
 
