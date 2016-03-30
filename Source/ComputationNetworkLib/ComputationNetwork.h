@@ -253,14 +253,8 @@ public:
     // -----------------------------------------------------------------------
 
     // Note: this is also used to copy MBLayouts into our existing MBLayout instance, which is a somewhat questionable design.
-    const MBLayoutPtr& GetMBLayoutPtr()
-    {
-        return m_pMBLayout;
-    }
-    size_t GetNumParallelSequences() const
-    {
-        return m_pMBLayout->GetNumParallelSequences();
-    }
+    const MBLayoutPtr& GetMBLayoutPtr() { return m_pMBLayout; }
+    size_t GetNumParallelSequences() const { return m_pMBLayout->GetNumParallelSequences(); }
 
     // determine the actual MB size from the feature nodes
     // This returns max number of columns over the feature nodes.

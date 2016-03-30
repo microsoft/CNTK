@@ -10,6 +10,7 @@
 #include <inttypes.h>
 #include "ImageDataDeserializer.h"
 #include "ImageConfigHelper.h"
+#include <inttypes.h>
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -192,26 +193,25 @@ void ImageDataDeserializer::CreateSequenceDescriptions(std::string mapPath, size
         std::string imagePath;
         std::string classId;
         if (!std::getline(ss, imagePath, '\t') || !std::getline(ss, classId, '\t'))
-        {
-            RuntimeError("Invalid map file format, must contain 2 tab-delimited columns: %s, line: %d.",
-                         mapPath.c_str(),
-                         static_cast<int>(lineIndex));
-        }
+            RuntimeError("Invalid map file format, must contain 2 tab-delimited columns, line %" PRIu64 " in file %s.", lineIndex, mapPath.c_str());
 
         description.m_id = lineIndex;
         description.m_chunkId = lineIndex;
         description.m_path = imagePath;
-        description.m_classId = std::stoi(classId);
+        char* eptr;
+        errno = 0;
+        size_t cid = strtoull(classId.c_str(), &eptr, 10);
+        if (classId.c_str() == eptr || errno == ERANGE)
+            RuntimeError("Cannot parse label value on line %" PRIu64 ", second column, in file %s.", lineIndex, mapPath.c_str());
+        description.m_classId = cid;
         description.m_key.m_major = description.m_id;
         description.m_key.m_minor = 0;
 
         if (description.m_classId >= labelDimension)
         {
             RuntimeError(
-                "Image '%s' has invalid class id '%d'. Expected label dimension is '%d'.",
-                mapPath.c_str(),
-                static_cast<int>(description.m_classId),
-                static_cast<int>(labelDimension));
+                "Image '%s' has invalid class id '%" PRIu64 "'. Expected label dimension is '%" PRIu64 "'. Line %" PRIu64 " in file %s.",
+                imagePath.c_str(), description.m_classId, labelDimension, lineIndex, mapPath.c_str());
         }
         m_imageSequences.push_back(description);
         RegisterByteReader(description.m_id, description.m_path, knownReaders);

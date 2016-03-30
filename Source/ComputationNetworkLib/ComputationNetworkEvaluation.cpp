@@ -52,9 +52,9 @@ static bool SetGradientToScalarOne(ComputationNodeBasePtr nodep)
     bool hasMatchingType = (node != nullptr);
     if (hasMatchingType)
     {
-        node->Value().VerifySize(1, 1);
-        node->Gradient().Resize(1, 1);
-        node->Gradient().SetValue((ElemType) 1.0);
+        Matrix<ElemType>& grad = node->Gradient();
+        grad.Resize(node->Value());
+        grad.SetValue((ElemType) 1.0);
     }
     return hasMatchingType;
 }
@@ -411,6 +411,8 @@ void ComputationNetwork::CompileNetwork()
         FormEvalOrder(node);
 
     // STEP: form the m_inputValues and m_learnableParameters sets for this rootNode
+    m_inputValues.clear();
+    m_learnableParameters.clear();
     CollectInputAndLearnableParameters(nullptr);
     for (const auto& root : m_allRoots)
         CollectInputAndLearnableParameters(root);
@@ -693,33 +695,33 @@ void ComputationNetwork::MarkValueNonSharableNodes()
         {
             if (std::find(allPreComputeNodes.begin(), allPreComputeNodes.end(), node) == allPreComputeNodes.end())
             {
-            for (auto child : children)
-            {
-                wstring ChildName = child->NodeName();
-                    if (allLeafDescendentsAreParametersOrPreComputeNodes.find(ChildName) == allLeafDescendentsAreParametersOrPreComputeNodes.end())
+                for (auto child : children)
                 {
-                    // not found, means it is a leaf node (we are at eval order )
-                    assert(child->IsLeaf() || child->IsPartOfLoop());
-                    if (std::find(allLearnableParameters.begin(), allLearnableParameters.end(), child) != allLearnableParameters.end())
+                    wstring ChildName = child->NodeName();
+                    if (allLeafDescendentsAreParametersOrPreComputeNodes.find(ChildName) == allLeafDescendentsAreParametersOrPreComputeNodes.end())
                     {
+                        // not found, means it is a leaf node (we are at eval order )
+                        assert(child->IsLeaf() || child->IsPartOfLoop());
+                        if (std::find(allLearnableParameters.begin(), allLearnableParameters.end(), child) != allLearnableParameters.end())
+                        {
                             allLeafDescendentsAreParametersOrPreComputeNodes[ChildName] = true;
+                        }
+                        else
+                        {
+                            allParametersOrPreComputeNodes = false;
+                            allLeafDescendentsAreParametersOrPreComputeNodes[ChildName] = false;
+                            break;
+                        }
                     }
                     else
                     {
-                            allParametersOrPreComputeNodes = false;
-                            allLeafDescendentsAreParametersOrPreComputeNodes[ChildName] = false;
-                        break;
-                    }
-                }
-                else
-                {
                         if (allLeafDescendentsAreParametersOrPreComputeNodes[ChildName] == false)
-                    {
+                        {
                             allParametersOrPreComputeNodes = false;
-                        break;
+                            break;
+                        }
                     }
                 }
-            }
             }
 
             allLeafDescendentsAreParametersOrPreComputeNodes[myname] = allParametersOrPreComputeNodes;

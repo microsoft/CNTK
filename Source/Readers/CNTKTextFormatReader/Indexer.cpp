@@ -110,7 +110,7 @@ void Indexer::Build()
     {
         auto fileSize = filesize(m_file);
         m_chunks.reserve((fileSize + m_maxChunkSize - 1) / m_maxChunkSize);
-}
+    }
 
     m_chunks.push_back({});
 

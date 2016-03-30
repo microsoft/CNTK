@@ -222,6 +222,15 @@
     <Text Include="Data\CNTKTextFormatReaderSimple_dense.txt">
       <Filter>Data\CNTKTextFormatReader</Filter>
     </Text>
+    <Text Include="Data\ImageReaderBadLabel_map.txt">
+      <Filter>Data</Filter>
+    </Text>
+    <Text Include="Data\ImageReaderBadMap_map.txt">
+      <Filter>Data</Filter>
+    </Text>
+    <Text Include="Data\ImageReaderLabelOutOfRange_map.txt">
+      <Filter>Data</Filter>
+    </Text>
   </ItemGroup>
   <ItemGroup>
     <Image Include="Data\images\black.jpg">
@@ -248,6 +257,15 @@
       <Filter>Data\images</Filter>
     </None>
     <None Include="Config\CNTKTextFormatReader_dense.cntk">
+      <Filter>Config</Filter>
+    </None>
+    <None Include="Config\ImageReaderBadLabel_Config.cntk">
+      <Filter>Config</Filter>
+    </None>
+    <None Include="Config\ImageReaderBadMap_Config.cntk">
+      <Filter>Config</Filter>
+    </None>
+    <None Include="Config\ImageReaderLabelOutOfRange_Config.cntk">
       <Filter>Config</Filter>
     </None>
   </ItemGroup>
