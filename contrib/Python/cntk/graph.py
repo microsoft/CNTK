@@ -1,6 +1,12 @@
 from abc import ABCMeta, abstractmethod
 import numpy as np
-import scipy.sparse as sparse
+
+# Workaround until we have switched to Anaconde with scipy support
+#import scipy.sparse as sparse 
+class sparse(object):
+    @staticmethod
+    def issparse(obj):
+        return hasattr(obj, 'todense')
 
 from .utils import MODEL_INDENTATION
 
