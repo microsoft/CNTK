@@ -347,8 +347,7 @@ public:
                 for (auto & node : gradientNodes)
                 {
                     FILE* file = *outputStreams[node];
-                    Matrix<ElemType>& gradient = node->Gradient();
-                    if (&gradient == nullptr)
+                    if (!node->GradientPtr())
                     {
                         fprintf(stderr, "Warning: Gradient of node '%s' is empty. Not used in backward pass?", msra::strfun::utf8(node->NodeName().c_str()).c_str());
                     }
