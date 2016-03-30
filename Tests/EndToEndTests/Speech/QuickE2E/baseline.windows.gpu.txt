@@ -561,7 +561,7 @@ Starting minibatch loop.
  Epoch[ 3 of 3]-Minibatch[  11-  20 of 20]: SamplesSeen = 10240; TrainLossPerSample =  1.87358818; EvalErr[0]PerSample = 0.51542969; TotalTime = 0.60551s; TotalTimePerSample = 0.05913ms; SamplesPerSecond = 16911
 Finished Epoch[ 3 of 3]: [Training Set] TrainLossPerSample = 1.8705584; EvalErrPerSample = 0.5186035; AvgLearningRatePerSample = 9.765625146e-005; EpochTime=1.428405
 CNTKCommandTrainEnd: speechTrain
-COMPLETED
+__COMPLETED__
 === Deleting last epoch data
 ==== Re-running from checkpoint
 === Running /cygdrive/e/NetScale/CNTK/git_repos/cplx_master2/x64/debug/cntk.exe configFile=E:\NetScale\CNTK\git_repos\cplx_master2\Tests\Speech\QuickE2E/cntk.config RunDir=C:\cygwin64\tmp\cntk-test-20151024140721.927553\Speech_QuickE2E@debug_gpu DataDir=E:\NetScale\CNTK\git_repos\cplx_master2\Tests\Speech\Data ConfigDir=E:\NetScale\CNTK\git_repos\cplx_master2\Tests\Speech\QuickE2E DeviceId=0
@@ -1347,4 +1347,4 @@ Starting minibatch loop.
  Epoch[ 3 of 3]-Minibatch[  11-  20 of 20]: SamplesSeen = 10240; TrainLossPerSample =  1.87358818; EvalErr[0]PerSample = 0.51542969; TotalTime = 0.86938s; TotalTimePerSample = 0.08490ms; SamplesPerSecond = 11778
 Finished Epoch[ 3 of 3]: [Training Set] TrainLossPerSample = 1.8705584; EvalErrPerSample = 0.5186035; AvgLearningRatePerSample = 9.765625146e-005; EpochTime=6.283729
 CNTKCommandTrainEnd: speechTrain
-COMPLETED
+__COMPLETED__

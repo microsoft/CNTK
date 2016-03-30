@@ -502,7 +502,7 @@ MPI Rank 0:  Epoch[ 4 of 10]-Minibatch[ 371- 380]: SamplesSeen = 250; TrainLossP
 MPI Rank 0:  Epoch[ 4 of 10]-Minibatch[ 381- 390]: SamplesSeen = 250; TrainLossPerSample =  0.20619434; EvalErr[0]PerSample = 0.11200000; TotalTime = 0.12883s; TotalTimePerSample = 0.51532ms; SamplesPerSecond = 1940
 MPI Rank 0:  Epoch[ 4 of 10]-Minibatch[ 391- 400]: SamplesSeen = 250; TrainLossPerSample =  0.14624365; EvalErr[0]PerSample = 0.06800000; TotalTime = 0.12283s; TotalTimePerSample = 0.49132ms; SamplesPerSecond = 2035
 MPI Rank 0: Finished Epoch[ 4 of 10]: [Training Set] TrainLossPerSample = 0.15907188; EvalErrPerSample = 0.077399999; AvgLearningRatePerSample = 0.00800000038; EpochTime=4.887408
-MPI Rank 0: COMPLETED
+MPI Rank 0: __COMPLETED__
 MPI Rank 0: ~MPIWrapper
 MPI Rank 1: Redirecting stderr to file C:\cygwin64\tmp\cntk-test-20150825180808.217636\ParallelTraining\NoQuantization_SinglePrecision@debug_cpu/stderr_SimpleMultiGPU.logrank1
 MPI Rank 1: -------------------------------------------------------------------
@@ -971,7 +971,7 @@ MPI Rank 1:  Epoch[ 4 of 10]-Minibatch[ 371- 380]: SamplesSeen = 250; TrainLossP
 MPI Rank 1:  Epoch[ 4 of 10]-Minibatch[ 381- 390]: SamplesSeen = 250; TrainLossPerSample =  0.20619434; EvalErr[0]PerSample = 0.11200000; TotalTime = 0.12881s; TotalTimePerSample = 0.51526ms; SamplesPerSecond = 1940
 MPI Rank 1:  Epoch[ 4 of 10]-Minibatch[ 391- 400]: SamplesSeen = 250; TrainLossPerSample =  0.14624365; EvalErr[0]PerSample = 0.06800000; TotalTime = 0.12287s; TotalTimePerSample = 0.49148ms; SamplesPerSecond = 2034
 MPI Rank 1: Finished Epoch[ 4 of 10]: [Training Set] TrainLossPerSample = 0.15907188; EvalErrPerSample = 0.077399999; AvgLearningRatePerSample = 0.00800000038; EpochTime=4.887381
-MPI Rank 1: COMPLETED
+MPI Rank 1: __COMPLETED__
 MPI Rank 1: ~MPIWrapper
 MPI Rank 2: Redirecting stderr to file C:\cygwin64\tmp\cntk-test-20150825180808.217636\ParallelTraining\NoQuantization_SinglePrecision@debug_cpu/stderr_SimpleMultiGPU.logrank2
 MPI Rank 2: -------------------------------------------------------------------
@@ -1440,7 +1440,7 @@ MPI Rank 2:  Epoch[ 4 of 10]-Minibatch[ 371- 380]: SamplesSeen = 250; TrainLossP
 MPI Rank 2:  Epoch[ 4 of 10]-Minibatch[ 381- 390]: SamplesSeen = 250; TrainLossPerSample =  0.20619434; EvalErr[0]PerSample = 0.11200000; TotalTime = 0.12898s; TotalTimePerSample = 0.51592ms; SamplesPerSecond = 1938
 MPI Rank 2:  Epoch[ 4 of 10]-Minibatch[ 391- 400]: SamplesSeen = 250; TrainLossPerSample =  0.14624365; EvalErr[0]PerSample = 0.06800000; TotalTime = 0.12295s; TotalTimePerSample = 0.49182ms; SamplesPerSecond = 2033
 MPI Rank 2: Finished Epoch[ 4 of 10]: [Training Set] TrainLossPerSample = 0.15907188; EvalErrPerSample = 0.077399999; AvgLearningRatePerSample = 0.00800000038; EpochTime=4.887366
-MPI Rank 2: COMPLETED
+MPI Rank 2: __COMPLETED__
 MPI Rank 2: ~MPIWrapper
 MPI Rank 3: Redirecting stderr to file C:\cygwin64\tmp\cntk-test-20150825180808.217636\ParallelTraining\NoQuantization_SinglePrecision@debug_cpu/stderr_SimpleMultiGPU.logrank3
 MPI Rank 3: -------------------------------------------------------------------
@@ -1909,5 +1909,5 @@ MPI Rank 3:  Epoch[ 4 of 10]-Minibatch[ 371- 380]: SamplesSeen = 250; TrainLossP
 MPI Rank 3:  Epoch[ 4 of 10]-Minibatch[ 381- 390]: SamplesSeen = 250; TrainLossPerSample =  0.20619434; EvalErr[0]PerSample = 0.11200000; TotalTime = 0.12882s; TotalTimePerSample = 0.51529ms; SamplesPerSecond = 1940
 MPI Rank 3:  Epoch[ 4 of 10]-Minibatch[ 391- 400]: SamplesSeen = 250; TrainLossPerSample =  0.14624365; EvalErr[0]PerSample = 0.06800000; TotalTime = 0.12279s; TotalTimePerSample = 0.49116ms; SamplesPerSecond = 2036
 MPI Rank 3: Finished Epoch[ 4 of 10]: [Training Set] TrainLossPerSample = 0.15907188; EvalErrPerSample = 0.077399999; AvgLearningRatePerSample = 0.00800000038; EpochTime=4.887371
-MPI Rank 3: COMPLETED
+MPI Rank 3: __COMPLETED__
 MPI Rank 3: ~MPIWrapper

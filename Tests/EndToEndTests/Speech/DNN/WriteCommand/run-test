@@ -32,7 +32,7 @@ if [ ! -e $OUTPUT_CURRENT ]; then
 fi
 
 OUTPUT_DIFF=$TEST_RUN_DIR/Output.ScaledLogLikelihood.diff
-awk '{FS=" "} function abs(x) {return ((x < 0.0) ? -x : x)} NR==FNR {for (i=1; i<=NF; i++) a[FNR][i]=$i;} NR!=FNR {for (i=1; i<=NF; i++) {if ((abs($i - a[FNR][i])/abs($i)) > 0.006) printf("Line %d, Field %d: Baseline = %f, Current = %f\n", NR, i, a[FNR][i], $i);}}' $OUTPUT_BASELINE $OUTPUT_CURRENT > $OUTPUT_DIFF
+awk '{FS=" "} function abs(x) {return ((x < 0.0) ? -x : x)} NR==FNR {for (i=1; i<=NF; i++) a[FNR][i]=$i;} NR!=FNR {for (i=1; i<=NF; i++) {if ((abs($i - a[FNR][i])/abs($i)) > 0.03) printf("Line %d, Field %d: Baseline = %f, Current = %f\n", NR, i, a[FNR][i], $i);}}' $OUTPUT_BASELINE $OUTPUT_CURRENT > $OUTPUT_DIFF || exit $?
 
 if [ -s $OUTPUT_DIFF ]; then
   echo "Error: Output of write command does not match baseline output within specified tolerance. See $OUTPUT_DIFF"

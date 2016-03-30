@@ -11,5 +11,5 @@ tags:
 testCases:
   CNTK Run must be completed:
     patterns:
-      - ^COMPLETED
+      - __COMPLETED__
 

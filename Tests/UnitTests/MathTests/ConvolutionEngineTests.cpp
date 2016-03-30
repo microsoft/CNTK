@@ -740,7 +740,7 @@ BOOST_AUTO_TEST_CASE(BatchNormalizationForwardTrain)
             if (crow >= 32 && ccol >= 32)
             {
                 // Use conservative estimates.
-                int speedup = 2;
+                float speedup = 1.5;
                 BOOST_REQUIRE_MESSAGE(speedup * elapsedCntk < elapsedCudnn,
                                       "CNTK implementation (" << elapsedCntk << "ms) must be faster than cuDNN (" << elapsedCudnn << "ms) by at least " << speedup << "x, what's changed? " << tmsg.str());
             }
@@ -835,7 +835,7 @@ BOOST_AUTO_TEST_CASE(BatchNormalizationForwardInference)
             if (crow >= 32 && ccol >= 32)
             {
                 // Use conservative estimates.
-                int speedup = 2;
+                float speedup = 1.5;
                 BOOST_REQUIRE_MESSAGE(speedup * elapsedCntk < elapsedCudnn,
                                       "CNTK implementation (" << elapsedCntk << "ms) must be faster than cuDNN (" << elapsedCudnn << "ms) by at least " << speedup << "x, what's changed? " << tmsg.str());
             }

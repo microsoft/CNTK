@@ -877,7 +877,7 @@ MPI Rank 0:  Epoch[ 4 of 4]-Minibatch[  11-  20, 100.00%]: SamplesSeen = 10240; 
 MPI Rank 0: Async gradient aggregation wait time: 0.006704
 MPI Rank 0: Finished Epoch[ 4 of 4]: [Training Set] TrainLossPerSample = 1.9047436; EvalErrPerSample = 0.52290039; AvgLearningRatePerSample = 9.7656251e-05; EpochTime=6.84798
 MPI Rank 0: CNTKCommandTrainEnd: speechTrain
-MPI Rank 0: COMPLETED
+MPI Rank 0: __COMPLETED__
 MPI Rank 0: ~MPIWrapper
 MPI Rank 1: -------------------------------------------------------------------
 MPI Rank 1: Build info: 
@@ -1727,7 +1727,7 @@ MPI Rank 1:  Epoch[ 4 of 4]-Minibatch[  11-  20, 100.00%]: SamplesSeen = 10240; 
 MPI Rank 1: Async gradient aggregation wait time: 1.3e-05
 MPI Rank 1: Finished Epoch[ 4 of 4]: [Training Set] TrainLossPerSample = 1.9047436; EvalErrPerSample = 0.52290039; AvgLearningRatePerSample = 9.7656251e-05; EpochTime=6.8934
 MPI Rank 1: CNTKCommandTrainEnd: speechTrain
-MPI Rank 1: COMPLETED
+MPI Rank 1: __COMPLETED__
 MPI Rank 1: ~MPIWrapper
 MPI Rank 2: -------------------------------------------------------------------
 MPI Rank 2: Build info: 
@@ -2577,5 +2577,5 @@ MPI Rank 2:  Epoch[ 4 of 4]-Minibatch[  11-  20, 100.00%]: SamplesSeen = 10240; 
 MPI Rank 2: Async gradient aggregation wait time: 0.004703
 MPI Rank 2: Finished Epoch[ 4 of 4]: [Training Set] TrainLossPerSample = 1.9047436; EvalErrPerSample = 0.52290039; AvgLearningRatePerSample = 9.7656251e-05; EpochTime=6.84798
 MPI Rank 2: CNTKCommandTrainEnd: speechTrain
-MPI Rank 2: COMPLETED
+MPI Rank 2: __COMPLETED__
 MPI Rank 2: ~MPIWrapper

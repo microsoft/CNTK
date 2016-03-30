@@ -684,7 +684,7 @@ MPI Rank 0: CNTKCommandTrainEnd: speechTrain
 MPI Rank 0: 
 MPI Rank 0: Action "train" complete.
 MPI Rank 0: 
-MPI Rank 0: COMPLETED
+MPI Rank 0: __COMPLETED__
 MPI Rank 0: ~MPIWrapper
 MPI Rank 1: -------------------------------------------------------------------
 MPI Rank 1: Build info: 
@@ -1301,5 +1301,5 @@ MPI Rank 1: CNTKCommandTrainEnd: speechTrain
 MPI Rank 1: 
 MPI Rank 1: Action "train" complete.
 MPI Rank 1: 
-MPI Rank 1: COMPLETED
+MPI Rank 1: __COMPLETED__
 MPI Rank 1: ~MPIWrapper

@@ -349,7 +349,7 @@ Starting minibatch loop, distributed reading is: DISABLED
  Epoch[ 3 of 3]-Minibatch[   1-  10 of 20]: SamplesSeen = 10240; TrainLossPerSample =  1.88589633; EvalErr[0]PerSample = 0.52529299; TotalTime = 0.59385s; TotalTimePerSample = 0.05799ms; SamplesPerSecond = 17243
  Epoch[ 3 of 3]-Minibatch[  11-  20 of 20]: SamplesSeen = 10240; TrainLossPerSample =  1.89380074; EvalErr[0]PerSample = 0.51816404; TotalTime = 0.51284s; TotalTimePerSample = 0.05008ms; SamplesPerSecond = 19967
 Finished Epoch[ 3 of 3]: [Training Set] TrainLossPerSample = 1.8898486; EvalErrPerSample = 0.52172852; AvgLearningRatePerSample = 9.765625146e-005; EpochTime=1.109687
-COMPLETED
+__COMPLETED__
 === Deleting last epoch data
 ==== Re-running from checkpoint
 -------------------------------------------------------------------
@@ -728,4 +728,4 @@ Validating --> EvalErrorPrediction = ErrorPrediction(labels[132, 1024], HLast[13
  Epoch[ 3 of 3]-Minibatch[   1-  10 of 20]: SamplesSeen = 10240; TrainLossPerSample =  1.88589633; EvalErr[0]PerSample = 0.52529299; TotalTime = 0.86012s; TotalTimePerSample = 0.08400ms; SamplesPerSecond = 11905
  Epoch[ 3 of 3]-Minibatch[  11-  20 of 20]: SamplesSeen = 10240; TrainLossPerSample =  1.89380074; EvalErr[0]PerSample = 0.51816404; TotalTime = 0.60616s; TotalTimePerSample = 0.05919ms; SamplesPerSecond = 16893
 Finished Epoch[ 3 of 3]: [Training Set] TrainLossPerSample = 1.8898486; EvalErrPerSample = 0.52172852; AvgLearningRatePerSample = 9.765625146e-005; EpochTime=2.711551
-COMPLETED
+__COMPLETED__
