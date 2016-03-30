@@ -11,37 +11,85 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
+// Represents a slot where we accumulate sequences from which the minibatch is created.
+// The number of slots equals number of parallel sequences we want to pack.
+struct Slot
+{
+    Slot() : m_length(0), m_sampleCursor(0)
+    {}
+
+    // Checks if slot is empty.
+    bool IsEmpty() const
+    {
+        return m_sequences.empty();
+    }
+
+    // Gets the number of available samples in the slot.
+    size_t AvailableNumberOfSamples() const
+    {
+        assert(m_length >= m_sampleCursor);
+        return m_length - m_sampleCursor;
+    }
+
+    // Adds a new sequence to the end of the slot.
+    void PushSequence(SequenceDataPtr s)
+    {
+        m_sequences.push_back(s);
+        m_length += s->m_numberOfSamples;
+    }
+
+    SequenceDataPtr FrontSequence() const
+    {
+        assert(!m_sequences.empty());
+        return m_sequences.front();
+    }
+
+    // Pops the front sequence at the beginning of the slot.
+    void PopSequence()
+    {
+        m_sampleCursor = 0;
+        m_length -= m_sequences.front()->m_numberOfSamples;
+        m_sequences.pop_front();
+    }
+
+    // Contains the current sample cursor in the first sequence(m_sequences.front()) of the slot.
+    size_t m_sampleCursor;
+
+private:
+    // Prepared sequences.
+    std::deque<SequenceDataPtr> m_sequences;
+
+    // Contains the size of the slot in samples (accumulated over all m_sequences).
+    size_t m_length;
+};
+
+// Represents a buffer of slots from which the minibatch is created.
 struct SequenceBuffer
 {
     SequenceBuffer(size_t parallelNumberOfSequences)
     {
-        m_preparedSequences.resize(parallelNumberOfSequences);
-        m_preparedSequenceLength.resize(parallelNumberOfSequences);
-        m_sequenceSamplePosition.resize(parallelNumberOfSequences);
+        // Allocates required slots.
+        m_slots.resize(parallelNumberOfSequences);
     }
 
+    // Checks whether there is more data available in any of the slots.
     bool NothingToPack() const
     {
-        auto it = std::find_if(
-            m_preparedSequences.begin(),
-            m_preparedSequences.end(),
-            [](const std::deque<SequenceDataPtr>& sequences) -> bool { return !sequences.empty(); });
-        return it == m_preparedSequences.end();
+        auto it = std::find_if(m_slots.begin(), m_slots.end(), [](const Slot& s) -> bool { return !s.IsEmpty(); });
+        return it == m_slots.end();
     }
 
-    // A matrix of prepared sequences. The number of rows(RN) = m_parallelNumberOfSequences
+    // A matrix of prepared sequences. The number of rows(RN) = m_parallelNumberOfSequences = number of slots
     // in each row we at least holding sequences to fill in the truncation length.
     // Only at the end of the epoch there could be less than truncation length number of samples in this matrix
     //
     // It looks something like that:
-    //  /***s11***/ /***s12**/
+    // slot1: /***s11***/ /***s12**/
     //  ....
-    //  /**********sM1*********/
+    // slotM: /**********sM1****/
     //  ....
-    // /*sRN1*//*sRN2*//*sRN2*/
-    std::vector<std::deque<SequenceDataPtr>> m_preparedSequences;
-    std::vector<size_t> m_preparedSequenceLength;
-    std::vector<size_t> m_sequenceSamplePosition;
+    // slotN: /*sRN1*//*sRN2*//*sRN2*/
+    std::vector<Slot> m_slots;
 };
 
 BpttPacker::BpttPacker(
@@ -49,36 +97,17 @@ BpttPacker::BpttPacker(
     TransformerPtr transformer,
     size_t minibatchSize,
     size_t truncationSize,
-    const std::vector<StreamDescriptionPtr>& streams) : m_transformer(transformer),
-    m_minibatchSize(minibatchSize),
-    m_outputStreams(streams),
-    m_memoryProvider(memoryProvider),
+    const std::vector<StreamDescriptionPtr>& streams)
+    : PackerBase(memoryProvider, transformer, minibatchSize, streams),
     m_truncationSize(truncationSize)
 {
+    // Estimating the number of parallel sequences to pack (slots) from the minibatch size and truncation size.
     m_parallelNumberOfSequences = (size_t)std::floor(m_minibatchSize / truncationSize);
-    m_inputStreams = m_transformer->GetStreamDescriptions();
-    assert(m_inputStreams.size() == m_outputStreams.size());
-    assert(
-        std::find_if(
-        m_outputStreams.begin(),
-        m_outputStreams.end(),
-        [](const StreamDescriptionPtr& s)
-        {
-            return s->m_storageType == StorageType::sparse_csc;
-        }) == m_outputStreams.end());
 
-    assert(m_minibatchSize > 0);
+    // Preparing the buffers.
     for (int i = 0; i < m_outputStreams.size(); ++i)
     {
         const auto& stream = m_outputStreams[i];
-        UNUSED(stream);
-
-        // Input and output should match in everything except for sparse/dense.
-        assert(stream->m_elementType == ElementType::tfloat || stream->m_elementType == ElementType::tdouble);
-        assert(stream->m_name == m_inputStreams[i]->m_name);
-        assert(stream->m_id == m_inputStreams[i]->m_id);
-        assert(GetSampleSize(m_inputStreams[i]) == GetSampleSize(stream));
-
         m_streamBufferSizes.push_back(m_parallelNumberOfSequences * m_truncationSize * GetSampleSize(stream));
         m_streamBuffers.push_back(AllocateBuffer(m_parallelNumberOfSequences * m_truncationSize, GetSampleSize(stream)));
 
@@ -86,14 +115,10 @@ BpttPacker::BpttPacker(
         m_currentLayouts.push_back(std::make_shared<MBLayout>());
     }
 
-    InitializePreparedSequences();
-}
-
-void BpttPacker::InitializePreparedSequences()
-{
+    // Filling in the initial set of sequences
     for (size_t slotIndex = 0; slotIndex < m_parallelNumberOfSequences; ++slotIndex)
     {
-        GetSequencesToSlot(slotIndex);
+        ReadSequencesToSlot(slotIndex);
     }
 }
 
@@ -101,13 +126,15 @@ Minibatch BpttPacker::ReadMinibatch()
 {
     Minibatch result;
 
-    // Currently all we expect sequences of identical length between different streams.
+    // Currently all we expect sequences of identical length between different streams,
+    // so it is sufficient to check a single stream only.
     if (m_sequenceBufferPerStream.front()->NothingToPack())
     {
         result.m_endOfEpoch = true;
         return result;
     }
 
+    // Iterating over the streams/slots and packing them into the minibatch.
     for (size_t streamIndex = 0; streamIndex < m_outputStreams.size(); ++streamIndex)
     {
         m_currentLayouts[streamIndex]->Init(m_parallelNumberOfSequences, m_truncationSize);
@@ -125,84 +152,88 @@ Minibatch BpttPacker::ReadMinibatch()
     return result;
 }
 
+// Packs a slot of sequences into the minibatch.
 void BpttPacker::PackSlot(size_t streamIndex, size_t slotIndex)
 {
-    if (m_sequenceBufferPerStream[streamIndex]->m_preparedSequenceLength[slotIndex] - m_sequenceBufferPerStream[streamIndex]->m_sequenceSamplePosition[slotIndex] < m_truncationSize)
+    auto& slot = m_sequenceBufferPerStream[streamIndex]->m_slots[slotIndex];
+
+    if (slot.AvailableNumberOfSamples() < m_truncationSize)
     {
-        GetSequencesToSlot(slotIndex);
+        // There is some free space in the slot, fill it in if possible.
+        ReadSequencesToSlot(slotIndex);
     }
 
-    size_t numberOfSamples = std::min(m_truncationSize, m_sequenceBufferPerStream[streamIndex]->m_preparedSequenceLength[slotIndex] - m_sequenceBufferPerStream[streamIndex]->m_sequenceSamplePosition[slotIndex]);
+    // Let's see how much samples we need to read.
+    size_t numberOfSamples = std::min(m_truncationSize, slot.AvailableNumberOfSamples());
     if (numberOfSamples == 0)
     {
-        // Reached the end of the data, put all slot to gap.
-        m_currentLayouts[streamIndex]->AddSequence(
-            GAP_SEQUENCE_ID,
-            slotIndex,
-            0,
-            m_truncationSize);
+        // Reached the end of the data, put the corresponding row in the minibatch layout to gap.
+        m_currentLayouts[streamIndex]->AddSequence(GAP_SEQUENCE_ID, slotIndex, 0, m_truncationSize);
 
-        // Check that nothing is in the slot.
-        assert(m_sequenceBufferPerStream[streamIndex]->m_preparedSequenceLength[slotIndex] == 0);
-        assert(m_sequenceBufferPerStream[streamIndex]->m_preparedSequences[slotIndex].size() == 0);
+        // Check that nothing is in the slot any more.
+        assert(slot.IsEmpty());
         return;
     }
 
     size_t sampleSize = GetSampleSize(m_inputStreams[streamIndex]);
-    size_t stride = m_parallelNumberOfSequences * sampleSize;
     StorageType storageType = m_inputStreams[streamIndex]->m_storageType;
     size_t elementSize = GetSizeByType(m_inputStreams[streamIndex]->m_elementType);
 
-    size_t& samplePosition = m_sequenceBufferPerStream[streamIndex]->m_sequenceSamplePosition[slotIndex];
+    // Distance between two samples of the same sequence in bytes.
+    size_t stride = m_parallelNumberOfSequences * sampleSize;
 
+    // Add current sequence to the minibatch layout.
     m_currentLayouts[streamIndex]->AddSequence(
         NEW_SEQUENCE_ID,
         slotIndex,
-        -(int)samplePosition,
-        m_sequenceBufferPerStream[streamIndex]->m_preparedSequences[slotIndex].front()->m_numberOfSamples - samplePosition);
+        -(int)slot.m_sampleCursor,
+        slot.FrontSequence()->m_numberOfSamples - slot.m_sampleCursor);
 
-    // Ok, now fill in the buffer.
+    // Ok, now fill in the buffer with data.
     for (size_t currentTimestep = 0; currentTimestep < numberOfSamples; ++currentTimestep)
     {
-        if (samplePosition >= m_sequenceBufferPerStream[streamIndex]->m_preparedSequences[slotIndex].front()->m_numberOfSamples)
+        // Check if reach the end of the front sequence.
+        if (slot.m_sampleCursor >= slot.FrontSequence()->m_numberOfSamples)
         {
-            // Starting a new sequence. Have to reset current pointers and add it to the minibatch.
-            samplePosition = 0;
-            m_sequenceBufferPerStream[streamIndex]->m_preparedSequenceLength[slotIndex] -= m_sequenceBufferPerStream[streamIndex]->m_preparedSequences[slotIndex].front()->m_numberOfSamples;
-            m_sequenceBufferPerStream[streamIndex]->m_preparedSequences[slotIndex].pop_front();
+            // Starting a new sequence. Have to reset current pointers and add it to the minibatch layout.
+            slot.PopSequence();
 
             //Adding next sequence to the minibatch.
             m_currentLayouts[streamIndex]->AddSequence(
                 NEW_SEQUENCE_ID,
                 slotIndex,
                 currentTimestep,
-                currentTimestep + m_sequenceBufferPerStream[streamIndex]->m_preparedSequences[slotIndex].front()->m_numberOfSamples);
+                currentTimestep + slot.FrontSequence()->m_numberOfSamples);
         }
 
-        auto data = m_sequenceBufferPerStream[streamIndex]->m_preparedSequences[slotIndex].front();
+        // Fill in the data from the first sequence in the slot.
+        auto data = slot.FrontSequence();
+        // Get buffer destination for the current sample.
         void* destination = m_streamBuffers[streamIndex].get() + stride * currentTimestep + slotIndex * sampleSize;
         assert(destination >= m_streamBuffers[streamIndex].get());
         assert(destination < m_streamBuffers[streamIndex].get() + m_streamBufferSizes[streamIndex]);
+
+        // Pack the sample.
         if (storageType == StorageType::dense)
         {
-            PackDenseSample(destination, data, samplePosition, elementSize, sampleSize);
+            PackDenseSample(destination, data, slot.m_sampleCursor, elementSize, sampleSize);
         }
-        else // sparse
+        else
         {
-            PackSparseSample(destination, data, samplePosition, elementSize, sampleSize);
+            assert(storageType == StorageType::sparse_csc);
+            PackSparseSample(destination, data, slot.m_sampleCursor, elementSize, sampleSize);
         }
-        samplePosition++;
+
+        slot.m_sampleCursor++;
     }
 
     // Cleaning up the last sequence we have just read if needed.
-    if (samplePosition >= m_sequenceBufferPerStream[streamIndex]->m_preparedSequences[slotIndex].front()->m_numberOfSamples)
+    if (slot.m_sampleCursor >= slot.FrontSequence()->m_numberOfSamples)
     {
-        samplePosition = 0;
-        m_sequenceBufferPerStream[streamIndex]->m_preparedSequenceLength[slotIndex] -= m_sequenceBufferPerStream[streamIndex]->m_preparedSequences[slotIndex].front()->m_numberOfSamples;
-        m_sequenceBufferPerStream[streamIndex]->m_preparedSequences[slotIndex].pop_front();
+        slot.PopSequence();
     }
 
-    // Adding the last gap if there are 
+    // Adding the last gap if there is one.
     if (numberOfSamples < m_truncationSize)
     {
         m_currentLayouts[streamIndex]->AddSequence(
@@ -213,66 +244,25 @@ void BpttPacker::PackSlot(size_t streamIndex, size_t slotIndex)
     }
 }
 
-
-void BpttPacker::GetSequencesToSlot(size_t slotIndex)
+void BpttPacker::ReadSequencesToSlot(size_t slotIndex)
 {
-    while (m_truncationSize > m_sequenceBufferPerStream.front()->m_preparedSequenceLength[slotIndex] - m_sequenceBufferPerStream.front()->m_sequenceSamplePosition[slotIndex])
+    const auto& slot = m_sequenceBufferPerStream.front()->m_slots[slotIndex];
+    while (m_truncationSize > slot.AvailableNumberOfSamples())
     {
-        // We always need only a single sequence
+        // We need a single sequence:
         auto s = m_transformer->GetNextSequences(1);
         if (s.m_endOfEpoch)
         {
             break;
         }
 
+        // Adding sequence to the slot for all streams.
         for (size_t i = 0; i < s.m_data.size(); ++i)
         {
-            // expects only a single sequence
             assert(s.m_data[i].size() == 1);
-            m_sequenceBufferPerStream[i]->m_preparedSequences[slotIndex].push_back(s.m_data[i].front());
-            m_sequenceBufferPerStream[i]->m_preparedSequenceLength[slotIndex] += s.m_data[i].front()->m_numberOfSamples;
+            m_sequenceBufferPerStream[i]->m_slots[slotIndex].PushSequence(s.m_data[i].front());
         }
     }
-}
-
-// Packs a sparse sample as dense.
-void BpttPacker::PackSparseSample(void* destination, SequenceDataPtr sequence, size_t sample, size_t elementSize, size_t sampleSize)
-{
-    // Setting buffer to 0.
-    memset(destination, 0, sampleSize);
-
-    SparseSequenceDataPtr s = static_pointer_cast<SparseSequenceData>(sequence);
-    size_t nonZeroCount = s->m_indices[sample].size();
-    for (size_t nonZeroIndex = 0; nonZeroIndex < nonZeroCount; ++nonZeroIndex)
-    {
-        memcpy(
-            (char*)destination + s->m_indices[sample][nonZeroIndex] * elementSize,
-            (const char*)(s->m_data) + nonZeroIndex * elementSize,
-            elementSize);
-    }
-}
-
-// Packs a dense sample as dense.
-void BpttPacker::PackDenseSample(void* destination, SequenceDataPtr sequence, size_t sample, size_t /*elementSize*/, size_t sampleSize)
-{
-    memcpy(destination, (char*)(sequence->m_data) + sample * sampleSize, sampleSize);
-}
-
-size_t BpttPacker::GetSampleSize(StreamDescriptionPtr stream)
-{
-    assert(stream != nullptr);
-    size_t elementSize = GetSizeByType(stream->m_elementType);
-    return stream->m_sampleLayout->GetNumElements() * elementSize;
-}
-
-std::shared_ptr<char> BpttPacker::AllocateBuffer(size_t numElements, size_t elementSize)
-{
-    return std::shared_ptr<char>(
-        reinterpret_cast<char*>(m_memoryProvider->Alloc(elementSize, numElements)),
-        [this](char* p)
-    {
-        m_memoryProvider->Free(p);
-    });
 }
 
 }}}

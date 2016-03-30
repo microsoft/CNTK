@@ -83,6 +83,7 @@
     <ClInclude Include="DataDeserializerBase.h" />
     <ClInclude Include="BlockRandomizer.h" />
     <ClInclude Include="Packer.h" />
+    <ClInclude Include="PackerBase.h" />
     <ClInclude Include="SequencePacker.h" />
     <ClInclude Include="SequenceRandomizer.h" />
     <ClInclude Include="StringToIdMap.h" />
@@ -104,6 +105,7 @@
     <ClCompile Include="ChunkRandomizer.cpp" />
     <ClCompile Include="NoRandomizer.cpp" />
     <ClCompile Include="BlockRandomizer.cpp" />
+    <ClCompile Include="PackerBase.cpp" />
     <ClCompile Include="SampleModePacker.cpp" />
     <ClCompile Include="ReaderShim.cpp" />
     <ClCompile Include="SequencePacker.cpp" />
