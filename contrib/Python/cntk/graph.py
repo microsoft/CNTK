@@ -173,8 +173,14 @@ class ComputationNode(object):
                     param_variable_names.append(
                         _tuple_to_cntk_shape(input_nodes_vars))
                 else:
-                    param_variable_names.append(
-                        self._param_to_brainscript(p_name, p_value))
+                    if p_name == 'input' and isinstance(p_value, str):
+                        # We have a forward reference to a node that will be
+                        # later on defined. p_value is the var_name of the
+                        # later defined node.
+                        param_variable_names.append(p_value)
+                    else:
+                        param_variable_names.append(
+                            self._param_to_brainscript(p_name, p_value))
 
         if self.reader:
             readers.add(self.reader)

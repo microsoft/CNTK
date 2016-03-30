@@ -150,3 +150,17 @@ def test_is_tensor(data, expected):
 ])
 def test_is_sequence(data, expected):
     assert is_sequence(data) == expected
+
+def test_loose_coupling():
+    from cntk.ops.cntk1 import PastValue
+    dh = PastValue(1, 'outnode')
+    out = Times(dh, Constant(2), var_name='outnode')
+
+    expected = ['v0 = PastValue(1, outnode, timeStep=1, defaultHiddenActivation=0.1)', 
+            'v1 = Constant(2, rows=1, cols=1)',
+            'outnode = Times(v0, v1, outputRank=1)']
+
+    description, has_inputs, readers = out.to_config()
+    assert _to_list(description) == expected
+
+
