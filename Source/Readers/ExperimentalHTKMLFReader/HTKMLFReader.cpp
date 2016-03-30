@@ -133,6 +133,10 @@ void HTKMLFReader::StartEpoch(const EpochConfiguration& config)
     // TODO: functionally they are the same, the only difference is how we handle
     // TODO: MBlayout and what is the perf hit for iterating/copying sequences.
     // TODO: Should do more perf tests before unifying these two.
+
+    // TODO: As the next step the packers will be moved out of the readers into the
+    // TODO: core CNTK. They are format agnostic and can be used with any type of 
+    // TODO: deserializers.
     if (m_frameMode)
     {
         m_packer = std::make_shared<SampleModePacker>(
@@ -147,6 +151,7 @@ void HTKMLFReader::StartEpoch(const EpochConfiguration& config)
         size_t truncationLength = m_truncationLength;
         if (truncationLength == 0)
         {
+            // Old config, the truncation length is specified as the minibatch size.
             truncationLength = minibatchSize;
             minibatchSize = m_parallelSequences * truncationLength;
         }
