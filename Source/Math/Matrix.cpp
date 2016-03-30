@@ -470,7 +470,6 @@ Matrix<ElemType>& Matrix<ElemType>::operator=(Matrix<ElemType>&& moveFrom)
 {
     if (this == &moveFrom)
         LogicError("Matrix: Move assignment into itself is forbidden.");
-    //ReleaseMemory(); // free held memory if any
 #if 1
     // shallow-copy all members
     ShallowCopyFrom(moveFrom);
@@ -685,14 +684,6 @@ ElemType* Matrix<ElemType>::BufferPointer() const
                             return m_CPUSparseMatrix->BufferPointer(),
                             return m_GPUSparseMatrix->BufferPointer());
 }
-
-/*
-template <class ElemType>
-size_t Matrix<ElemType>::NzCount() const
-{
-    return m_baseMatrix->NzCount();
-}
-*/
 
 template <class ElemType>
 ElemType* Matrix<ElemType>::CopyToArray() const
@@ -1911,7 +1902,9 @@ Matrix<ElemType>& Matrix<ElemType>::operator-=(const Matrix<ElemType>& a)
     DecideAndMoveToRightDevice(*this, a);
 
     DISPATCH_MATRIX_ON_FLAG(this,
-                            this, * m_CPUMatrix -= *a.m_CPUMatrix, * m_GPUMatrix -= *a.m_GPUMatrix,
+                            this, 
+                            *m_CPUMatrix -= *a.m_CPUMatrix,
+                            *m_GPUMatrix -= *a.m_GPUMatrix,
                             NOT_IMPLEMENTED,
                             NOT_IMPLEMENTED);
 

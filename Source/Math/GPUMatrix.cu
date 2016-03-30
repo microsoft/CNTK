@@ -412,15 +412,6 @@ void GPUMatrix<ElemType>::performElementWiseFunction(ElementWiseOperator kind, c
 template <class ElemType>
 void GPUMatrix<ElemType>::ZeroInit(int deviceId)
 {
-    /*
-    m_pArray = nullptr;
-    m_computeDevice = deviceId;
-    m_numRows = 0;
-    m_numCols = 0;
-    m_elemSizeAllocated = 0;
-    m_format = matrixFormatDense;
-    m_externalBuffer = false;
-	*/
     BaseMatrix<ElemType>::ZeroInit();
     SetComputeDeviceId(deviceId);
 }
@@ -438,15 +429,9 @@ GPUMatrix<ElemType>::GPUMatrix(const size_t numRows, const size_t numCols, int d
     m_numRows = numRows;
     m_numCols = numCols;
     SetSizeAllocated(GetNumElements());
-    SetNumStorageRows(numRows);
-    SetNumStorageCols(numCols);
 
     if (GetSizeAllocated() != 0)
     {
-        /*
-        m_pArray = TracingGPUMemoryAllocator::Allocate<ElemType>(m_computeDevice, m_numRows, m_numCols);
-        CUDA_CALL(cudaMemset(m_pArray, 0, sizeof(ElemType) * m_elemSizeAllocated));
-		*/
         SetArray(TracingGPUMemoryAllocator::Allocate<ElemType>(GetComputeDeviceId(), m_numRows, m_numCols));
         CUDA_CALL(cudaMemset(GetArray(), 0, sizeof(ElemType) * GetSizeAllocated()));
     }
@@ -469,16 +454,6 @@ GPUMatrix<ElemType>::GPUMatrix(const GPUMatrix<ElemType>& deepCopyFrom)
 template <class ElemType>
 GPUMatrix<ElemType>::GPUMatrix(GPUMatrix<ElemType>&& moveFrom)
 {
-    /*
-    m_numRows = moveFrom.m_numRows;
-    m_numCols = moveFrom.m_numCols;
-    m_computeDevice = moveFrom.m_computeDevice;
-    m_pArray = moveFrom.m_pArray; // shallow copy the pointer
-    m_elemSizeAllocated = moveFrom.m_elemSizeAllocated;
-    m_format = moveFrom.m_format;
-    m_externalBuffer = moveFrom.m_externalBuffer;
-	*/
-
     ShallowCopyFrom(moveFrom);
     moveFrom.ZeroValues();
 }
@@ -500,21 +475,6 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::operator=(GPUMatrix<ElemType>&& moveFr
 {
     if (this != &moveFrom)
     {
-        /*
-        if (OwnBuffer() && m_pArray)
-        {
-            TracingGPUMemoryAllocator::Free<ElemType>(m_computeDevice, m_pArray);
-        }
-
-        m_numRows = moveFrom.m_numRows;
-        m_numCols = moveFrom.m_numCols;
-        m_elemSizeAllocated = moveFrom.m_elemSizeAllocated;
-        m_pArray = moveFrom.m_pArray;
-        m_computeDevice = moveFrom.m_computeDevice;
-        m_format = moveFrom.m_format;
-        m_externalBuffer = moveFrom.m_externalBuffer;
-		*/
-
         ShallowCopyFrom(moveFrom);
         moveFrom.ZeroValues();
     }
@@ -524,7 +484,6 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::operator=(GPUMatrix<ElemType>&& moveFr
 template <class ElemType>
 GPUMatrix<ElemType>::~GPUMatrix(void)
 {
-    //Clear();
 }
 
 // Clear will clear your storage, zeroinit just drops it on the ground.
@@ -539,9 +498,6 @@ void GPUMatrix<ElemType>::Clear()
             // BUG: We do not check the CUDA return code for cudaFree here since this may get called
             // during processExit when cudaFree will fail. The destruction of CUDA objects during
             // process exit must be avoided
-            //TracingGPUMemoryAllocator::Free<ElemType>(m_computeDevice, GetArray(), true /*ignoreCUDARetCode*/);
-            //SetArray(nullptr);
-            //SetSizeAllocated(0);
             ReleaseStorageMemory();
         }
     }
@@ -550,14 +506,6 @@ void GPUMatrix<ElemType>::Clear()
     ZeroInit(GetComputeDeviceId());
 }
 #pragma endregion Constructors and Destructor
-
-/*
-template <class ElemType>
-int GPUMatrix<ElemType>::GetComputeDeviceId() const
-{
-    return m_computeDevice;
-}
-*/
 
 template <class ElemType>
 std::unique_ptr<GPUMatrix<ElemType>> GPUMatrix<ElemType>::GetOrCreateWorkspace() const
@@ -584,13 +532,9 @@ void GPUMatrix<ElemType>::ReleaseWorkspace(std::unique_ptr<GPUMatrix<ElemType>> 
 template <class ElemType>
 GPUMatrix<ElemType> GPUMatrix<ElemType>::ColumnSlice(size_t startColumn, size_t numCols) const
 {
-    // if (numCols == 0)
-    //    LogicError("The slice cannot have 0 columns.");
-
     if (startColumn + numCols > GetNumCols())
         InvalidArgument("The slice (%d+%d) is out of range of the source matrix (%d).", (int) startColumn, (int) numCols, (int) GetNumCols());
 
-    //GPUMatrix<ElemType> slice(m_numRows, numCols, m_computeDevice, m_pArray + startColumn * m_numRows, matrixFlagDontOwnBuffer);
     GPUMatrix<ElemType> slice(GetComputeDeviceId());
 
     slice.ShallowCopyFrom(*this);
@@ -614,16 +558,6 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignColumnSlice(const GPUMatrix<Elem
     ShallowCopyFrom(fromMatrix);
     m_numCols = numCols;
     m_sliceViewOffset = fromMatrix.m_sliceViewOffset + startColumn * GetNumRows();
-    /*
-    m_computeDevice = fromMatrix.m_computeDevice;
-    m_externalBuffer = true;
-    m_numRows = fromMatrix.m_numRows;
-    m_numCols = numCols;
-    m_pArray = fromMatrix.m_pArray + startColumn * m_numRows;
-
-    m_elemSizeAllocated = GetNumElements();
-    m_format = fromMatrix.m_format;
-	*/
 
     return *this;
 }
@@ -631,8 +565,6 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignColumnSlice(const GPUMatrix<Elem
 template <class ElemType>
 GPUMatrix<ElemType>& GPUMatrix<ElemType>::SetColumnSlice(const GPUMatrix<ElemType>& fromMatrix, size_t startColumn, size_t numCols)
 {
-    // if (numCols == 0)
-    //    LogicError("The slice cannot have 0 columns.");
     if (startColumn + numCols > GetNumCols())
         LogicError("The slice is out of range of the destination matrix.");
     if (numCols > fromMatrix.GetNumCols())
@@ -1034,24 +966,7 @@ void GPUMatrix<ElemType>::SetValue(const GPUMatrix<ElemType>& deepCopyFrom)
     if (this == &deepCopyFrom)
         return;
 
-    /*
-    Resize(deepCopyFrom.GetNumRows(), deepCopyFrom.GetNumCols());
-    m_format = deepCopyFrom.m_format; // copy the format over just to be sure
-    size_t cpSize = deepCopyFrom.GetNumRows() * deepCopyFrom.GetNumCols();
-    if (cpSize != 0)
-        CUDA_CALL(cudaMemcpy(GetArray(), deepCopyFrom.GetArray(), cpSize * sizeof(ElemType), cudaMemcpyDeviceToDevice));
-	*/
-                
-    /*
-    if (GetNumRows() != deepCopyFrom.GetNumRows() || GetNumCols() != deepCopyFrom.GetNumCols())
-    {
-        m_numRows = deepCopyFrom.m_numRows;
-        m_numCols = deepCopyFrom.m_numCols;
-        m_sliceViewOffset = 0;
-    }
-	*/
-    //if (!deepCopyFrom.IsEmpty())
-		SetValue(deepCopyFrom.GetNumRows(), deepCopyFrom.GetNumCols(), deepCopyFrom.GetComputeDeviceId(), deepCopyFrom.BufferPointer(), matrixFlagSetValueOnDevice);
+	SetValue(deepCopyFrom.GetNumRows(), deepCopyFrom.GetNumCols(), deepCopyFrom.GetComputeDeviceId(), deepCopyFrom.BufferPointer(), matrixFlagSetValueOnDevice);
 }
 
 template <class ElemType>
@@ -1059,7 +974,7 @@ void GPUMatrix<ElemType>::SetValue(const size_t numRows, const size_t numCols, i
 {
     // handle externally managed case
 	// BUGBUG: This is super super ugly, and needs to be fixed, but if matrixFlags has the right value, then we can't free anything,
-    // and everything gets wonky. This should be fixed.
+    // and everything gets wonky. This should be fixed, and would go away if it is made a shared_ptr.
     if (matrixFlags & matrixFlagDontOwnBuffer)
     {
         // free the existing array if it used to be an owned array
@@ -1069,18 +984,10 @@ void GPUMatrix<ElemType>::SetValue(const size_t numRows, const size_t numCols, i
         }
         m_numRows = numRows;
         m_numCols = numCols;
-        /*
-        m_pArray = pArray;
-        m_elemSizeAllocated = GetNumElements();
-        m_format = matrixFormatDense;
-        m_computeDevice = deviceId;
-		*/
         SetExternalBuffer(true);
         SetArray(pArray);
         SetSizeAllocated(GetNumElements());
         SetFormat(matrixFormatDense);
-        SetNumStorageRows(numRows);
-        SetNumStorageCols(numCols);
         SetComputeDeviceId(deviceId);
     }
     else
@@ -1379,12 +1286,8 @@ template <class ElemType>
 void GPUMatrix<ElemType>::Resize(const size_t numRows, const size_t numCols, bool growOnly)
 {
     VerifyResizable();
-    if (GetNumStorageRows() == numRows && GetNumStorageCols() >= numCols)
-    {
-        m_numRows = numRows;
-        m_numCols = numCols;
+    if (GetNumRows() == numRows && GetNumCols() == numCols)
         return;
-    }
 
     m_numRows = numRows;
     m_numCols = numCols;
@@ -1409,15 +1312,12 @@ void GPUMatrix<ElemType>::Resize(const size_t numRows, const size_t numCols, boo
         }
     }
     m_sliceViewOffset = 0;
-    SetNumStorageRows(numRows);
-    SetNumStorageCols(numCols);
 }
 
 template <class ElemType>
 size_t GPUMatrix<ElemType>::LocateElement(const size_t row, const size_t col) const
 {
     assert(row < m_numRows && col < m_numCols);
-    //return col * m_numRows + row; // matrix in column-wise storage
     return LocateColumn(col) + row; // matrix in column-wise storage
 }
 
@@ -1456,10 +1356,6 @@ GPUMatrix<ElemType> GPUMatrix<ElemType>::operator+(ElemType alpha) const
     if (IsEmpty())
         LogicError("operator+: Matrix is empty.");
 
-    /*
-    const GPUMatrix<ElemType>& us = *this;
-    GPUMatrix<ElemType> c(us);
-	*/
     GPUMatrix<ElemType> c(*this);
     c += alpha;
     return c;
@@ -1554,11 +1450,6 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignDifferenceOf(const GPUMatrix<Ele
 template <class ElemType>
 GPUMatrix<ElemType>& GPUMatrix<ElemType>::operator-=(const GPUMatrix<ElemType>& a)
 {
-    // if (a.GetNumElements() == 1)
-    //    AssignDifferenceOf(*this, a.Get00Element());
-    // else if (GetNumElements() == 1)
-    //    AssignDifferenceOf(Get00Element(), a);
-    // else
     ScaleAndAdd(-1, a, *this);
 
     return *this;

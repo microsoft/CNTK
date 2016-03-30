@@ -34,10 +34,6 @@ class MATH_API CPUMatrix : public BaseMatrix<ElemType>
     using Base::GetExternalBuffer;
     using Base::SetExternalBuffer;
     using Base::SetArray;
-    using Base::GetNumStorageRows;
-    using Base::SetNumStorageRows;
-    using Base::GetNumStorageCols;
-    using Base::SetNumStorageCols;
     using Base::SetComputeDeviceId;
     using Base::Clear;
     using Base::SetOwnBuffer;
@@ -468,7 +464,6 @@ protected:
     size_t LocateColumn(const size_t j) const;
 
 private:
-    //void ZeroInit(); // should only be used by constructors.
     void Clear();
 };
 

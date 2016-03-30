@@ -98,10 +98,6 @@ class MATH_API GPUMatrix : public BaseMatrix<ElemType>
     using Base::GetExternalBuffer;
     using Base::SetExternalBuffer;
     using Base::SetArray;
-    using Base::GetNumStorageRows;
-    using Base::SetNumStorageRows;
-    using Base::GetNumStorageCols;
-    using Base::SetNumStorageCols;
     using Base::SetComputeDeviceId;
     using Base::Clear;
     using Base::SetSizeAllocated;
@@ -166,7 +162,6 @@ public:
     ~GPUMatrix(void);
 
     static void SetDevice(DEVICEID_TYPE deviceId);
-    //int GetComputeDeviceId() const;
     DEVICEID_TYPE PrepareDevice(DEVICEID_TYPE deviceId = -1) const;
 
     static cublasHandle_t GetCublasHandle(int computeDevice = -1);

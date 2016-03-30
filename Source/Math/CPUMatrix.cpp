@@ -113,22 +113,6 @@ enum class MatrixOpSide : char
 
 #pragma region Constructors and Destructor
 
-//should only be used by constructors.
-/*
-template <class ElemType>
-void CPUMatrix<ElemType>::ZeroInit()
-{
-	Base
-    m_computeDevice = CPUDEVICE;
-    BufferPointer() = nullptr;
-    m_numRows = 0;
-    m_numCols = 0;
-    GetSizeAllocated()= 0;
-    m_format = matrixFormatDense;
-    m_externalBuffer = false;
-}
-*/
-
 template <class ElemType>
 CPUMatrix<ElemType>::CPUMatrix()
 {
@@ -161,8 +145,6 @@ CPUMatrix<ElemType>::CPUMatrix(const size_t numRows, const size_t numCols)
     if (GetSizeAllocated() != 0)
     {
         SetArray(NewArray<ElemType>(GetSizeAllocated()));
-        SetNumStorageRows(numRows);
-        SetNumStorageCols(numCols);
     }
 }
 
@@ -177,11 +159,6 @@ CPUMatrix<ElemType>::CPUMatrix(const size_t numRows, const size_t numCols, ElemT
 template <class ElemType>
 CPUMatrix<ElemType>::CPUMatrix(const CPUMatrix<ElemType>& deepCopyFrom)
 {
-    /*
-    ZeroInit();
-    if (!deepCopyFrom.IsEmpty())
-        SetValue(deepCopyFrom);
-    */
     ZeroInit();
 	SetValue(deepCopyFrom);
 }
@@ -190,19 +167,7 @@ CPUMatrix<ElemType>::CPUMatrix(const CPUMatrix<ElemType>& deepCopyFrom)
 template <class ElemType>
 CPUMatrix<ElemType>& CPUMatrix<ElemType>::operator=(const CPUMatrix<ElemType>& deepCopyFrom)
 {
-    /*
-    Clear();
-    if (!deepCopyFrom.IsEmpty())
-        SetValue(deepCopyFrom);
-    */
-	// Copy all of the members
     SetValue(deepCopyFrom);
-    /*
-    ShallowCopyFrom(deepCopyFrom);
-	// We just shallow copied m_sob, so now perform the deep copy of m_sob
-    m_sob = make_shared<BaseMatrixStorage<ElemType>>(GetFormat(), GetComputeDeviceId());
-    SetValue(deepCopyFrom.GetNumRows(), deepCopyFrom.GetNumCols(), deepCopyFrom.BufferPointer(), 0);
-	*/
     return *this;
 }
 
@@ -210,17 +175,6 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::operator=(const CPUMatrix<ElemType>& d
 template <class ElemType>
 CPUMatrix<ElemType>::CPUMatrix(CPUMatrix<ElemType>&& moveFrom)
 {
-    /*
-    //m_computeDevice = moveFrom.m_computeDevice;
-    m_numRows = moveFrom.m_numRows;
-    m_numCols = moveFrom.m_numCols;
-    m_sliceViewOffset = moveFrom.m_sliceViewOffset;
-    SetSizeAllocated(moveFrom.GetSizeAllocated());
-    //BufferPointer() = moveFrom.BufferPointer(); // shallow copy the pointer
-    m_sob = moveFrom.m_sob;
-    //m_format = moveFrom.m_format;
-    m_externalBuffer = moveFrom.m_externalBuffer;
-	*/
     ShallowCopyFrom(moveFrom);
     moveFrom.ZeroValues();
 }
@@ -231,22 +185,7 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::operator=(CPUMatrix<ElemType>&& moveFr
 {
     if (this != &moveFrom)
     {
-        /*
-        //if (OwnBuffer() && GetArray() != nullptr)
-        if (OwnBuffer() && m_sob != nullptr)
-            m_sob = nullptr; // always delete the data pointer since we will use the pointer from moveFrom
-
-        //m_computeDevice = moveFrom.m_computeDevice;
-        m_numRows = moveFrom.m_numRows;
-        m_numCols = moveFrom.m_numCols;
-        //SetSizeAllocated(moveFrom.GetSizeAllocated());
-        //m_pArray = moveFrom.m_pArray;
-        //m_format = moveFrom.m_format;
-        m_sob = moveFrom.m_sob;
-        m_externalBuffer = moveFrom.m_externalBuffer;
-		*/
         ShallowCopyFrom(moveFrom);
-
         // release the pointer from the source object so that the destructor won't release it twice
         moveFrom.ZeroValues();
     }
@@ -262,17 +201,7 @@ CPUMatrix<ElemType>::~CPUMatrix()
 template <class ElemType>
 void CPUMatrix<ElemType>::Clear()
 {
-    /*
-    if (m_sob != nullptr && OwnBuffer())
-    {
-        delete[] GetArray();
-        SetArray(nullptr);
-        SetSizeAllocated(0);
-    }
-	*/
-
     BaseMatrix<ElemType>::Clear();
-
     ZeroInit();
 }
 
@@ -283,30 +212,11 @@ void CPUMatrix<ElemType>::Clear()
 template <class ElemType>
 CPUMatrix<ElemType> CPUMatrix<ElemType>::ColumnSlice(size_t startColumn, size_t numCols) const
 {
-    // if (numCols == 0)
-    //    LogicError("The slice cannot have 0 columns.");
-
     if (startColumn + numCols > m_numCols)
         InvalidArgument("The slice (%d+%d) is out of range of the source matrix (%d).", (int) startColumn, (int) numCols, (int) m_numCols);
 
     CPUMatrix<ElemType> slice;
 
-    //slice.m_externalBuffer = true; // memory of a slice is managed externally.
-    //slice.m_numRows = m_numRows;
-    //slice.m_numCols = numCols;
-    //slice.SetSizeAllocated(slice.GetNumElements());
-    //slice.m_pArray = m_pArray + startColumn * m_numRows;
-    //slice.m_sliceViewOffset = m_sliceViewOffset + startColumn * m_numRows;
-    //slice.m_sob = m_sob;
-    //slice.m_format = m_format;
-    /*
-    slice.m_externalBuffer = true; // memory of a slice is managed externally.
-    slice.m_numRows = m_numRows;
-    slice.m_numCols = numCols;
-    slice.m_elemSizeAllocated = slice.GetNumElements();
-    slice.m_pArray = m_pArray + startColumn * m_numRows;
-    slice.m_format = m_format;
-	*/
     slice.ShallowCopyFrom(*this);
     slice.m_numCols = numCols;
     slice.m_sliceViewOffset = m_sliceViewOffset + startColumn * m_numRows;
@@ -319,20 +229,14 @@ CPUMatrix<ElemType> CPUMatrix<ElemType>::ColumnSlice(size_t startColumn, size_t 
 template <class ElemType>
 CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignColumnSlice(const CPUMatrix<ElemType>& fromMatrix, size_t startColumn, size_t numCols)
 {
-    // if (numCols == 0)
-    //    LogicError("The slice cannot have 0 columns.");
-
     if (startColumn + numCols > fromMatrix.m_numCols)
         InvalidArgument("The slice (%d+%d) is out of range of the source matrix (%d).", (int) startColumn, (int) numCols, (int) fromMatrix.m_numCols);
 
     Clear();
 
-    //SetOwnBuffer(false); // memory of a slice is managed externally.
     ShallowCopyFrom(fromMatrix);
     m_numCols = numCols;
-    //m_pArray = fromMatrix.m_pArray + startColumn * m_numRows;
     m_sliceViewOffset = fromMatrix.m_sliceViewOffset + startColumn * m_numRows;
-    //GetSizeAllocated(GetNumElements());
 
     return *this;
 }
@@ -341,8 +245,6 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignColumnSlice(const CPUMatrix<Elem
 template <class ElemType>
 CPUMatrix<ElemType>& CPUMatrix<ElemType>::SetColumnSlice(const CPUMatrix<ElemType>& fromMatrix, size_t startColumn, size_t numCols)
 {
-    // if (numCols == 0)
-    //    LogicError("The slice cannot have 0 columns.");
     if (startColumn + numCols > m_numCols)
         LogicError("The slice is out of range of the destination matrix.");
     if (numCols > fromMatrix.GetNumCols())
@@ -350,7 +252,6 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::SetColumnSlice(const CPUMatrix<ElemTyp
     if (m_numRows != fromMatrix.m_numRows)
         LogicError("The number of rows in source and destination matrices do not match");
 
-    // SetOwnBuffer(false);
     memcpy(BufferPointer() + startColumn * m_numRows, fromMatrix.BufferPointer(), numCols * m_numRows * sizeof(ElemType));
 
     return *this;
@@ -870,33 +771,7 @@ void CPUMatrix<ElemType>::SetValue(const CPUMatrix<ElemType>& deepCopyFrom)
     if (this == &deepCopyFrom)
         return;
 
-    /*
-    Resize(deepCopyFrom.GetNumStorageRows(), deepCopyFrom.GetNumStorageCols());
-    //memcpy(GetArray(), deepCopyFrom.GetArray(), deepCopyFrom.GetNumElements() * sizeof(ElemType));
-    memcpy(GetArray(), deepCopyFrom.GetArray(), deepCopyFrom.GetNumStorageRows() * deepCopyFrom.GetNumCols() * sizeof(ElemType));
-    m_sliceViewOffset = deepCopyFrom.m_sliceViewOffset;
-    m_numRows = deepCopyFrom.m_numRows;
-    m_numCols = deepCopyFrom.m_numCols;
-	*/
-    /*
-    if (GetNumRows() != deepCopyFrom.GetNumRows() || GetNumCols() != deepCopyFrom.GetNumCols())
-    {
-        m_numRows = deepCopyFrom.m_numRows;
-        m_numCols = deepCopyFrom.m_numCols;
-        m_sliceViewOffset = 0;
-    }
-    if (!deepCopyFrom.IsEmpty())
-	*/
-		SetValue(deepCopyFrom.GetNumRows(), deepCopyFrom.GetNumCols(), deepCopyFrom.BufferPointer(), 0);
-    /*
-    ShallowCopyFrom(deepCopyFrom);
-    m_sob = make_shared<BaseMatrixStorage<ElemType>>(GetFormat(), GetComputeDeviceId());
-    if (deepCopyFrom.GetArray() != nullptr)
-    {
-        SetValue(deepCopyFrom.GetNumRows(), deepCopyFrom.GetNumCols(), deepCopyFrom.BufferPointer(), 0);
-    }
-	*/
-
+	SetValue(deepCopyFrom.GetNumRows(), deepCopyFrom.GetNumCols(), deepCopyFrom.BufferPointer(), 0);
 }
 
 template <class ElemType>
@@ -917,8 +792,6 @@ void CPUMatrix<ElemType>::SetValue(const size_t numRows, const size_t numCols, E
         SetArray(pArray);
         m_numRows = numRows;
         m_numCols = numCols;
-        SetNumStorageRows(numRows);
-        SetNumStorageCols(numCols);
         SetSizeAllocated(GetNumElements());
         SetExternalBuffer(true);
     }
@@ -1421,12 +1294,8 @@ void CPUMatrix<ElemType>::Resize(const size_t numRows, const size_t numCols, boo
 {
     VerifyResizable();
 
-    if (GetNumStorageRows() == numRows && GetNumStorageCols() == numCols)
-    {
-        m_numRows = numRows;
-        m_numCols = numCols;
+    if (GetNumRows() == numRows && GetNumCols() == numCols)
         return;
-    }
 
     size_t numElements = numRows * numCols;
     if (numElements > GetSizeAllocated() ||                 // grow allocation
@@ -1447,8 +1316,6 @@ void CPUMatrix<ElemType>::Resize(const size_t numRows, const size_t numCols, boo
     }
 
     // success
-	SetNumStorageRows(numRows);
-	SetNumStorageCols(numCols);
     m_numRows = numRows;
     m_numCols = numCols;
 }
@@ -1503,7 +1370,7 @@ void CPUMatrix<ElemType>::CopySection(size_t /*numRows*/, size_t /*numCols*/, El
 template <class ElemType>
 inline size_t CPUMatrix<ElemType>::LocateColumn(const size_t col) const
 {
-    assert(col == 0 || col < GetNumStorageCols());
+    assert(col == 0 || col < GetNumCols());
     return col * m_numRows; // matrix in column-wise storage
 }
 

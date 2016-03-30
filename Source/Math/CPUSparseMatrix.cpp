@@ -108,22 +108,14 @@ template <class ElemType>
     Base::ZeroInit();
     SetComputeDeviceId(CPUDEVICE);
 
-    //m_sliceOf       = nullptr;
     SetCompIndexSize(0);
-    // if(m_format == MatrixFormat::matrixFormatSparseCSC || m_format == MatrixFormat::matrixFormatSparseCSR)
-    {
-        SetColIdx(-1);
-        SetArray(nullptr);
-        SetUnCompIndex(nullptr);
-        SetCompIndex(nullptr);
-    }
-    // else if (m_format == MatrixFormat::matrixFormatSparseBlockCol || m_format == MatrixFormat::matrixFormatSparseBlockRow)
-    {
-        SetBlockSize(0);
-        SetBlockIdShift(0);
-        SetBlockIds(nullptr);
-    }
-    //m_nzValues = nullptr;
+	SetColIdx(-1);
+	SetArray(nullptr);
+	SetUnCompIndex(nullptr);
+	SetCompIndex(nullptr);
+	SetBlockSize(0);
+	SetBlockIdShift(0);
+	SetBlockIds(nullptr);
 }
 
 //should only be used by constructors.
@@ -175,22 +167,6 @@ template <class ElemType>
 CPUSparseMatrix<ElemType>::CPUSparseMatrix(CPUSparseMatrix<ElemType>&& moveFrom)
 {
     Base::ShallowCopyFrom(moveFrom);
-    // BUGBUG: This did not use to copy m_sliceViewOffset, I presume it should be copied? It is now.
-
-    /*
-    m_compIndexSize = moveFrom.m_compIndexSize;
-
-    m_colIdx      = moveFrom.m_colIdx;
-    m_nzValues    = moveFrom.m_nzValues;
-    m_unCompIndex = moveFrom.m_unCompIndex;
-    m_compIndex   = moveFrom.m_compIndex;
-
-    m_blockSize    = moveFrom.m_blockSize;
-    m_blockIdShift = moveFrom.m_blockIdShift;
-    m_blockIds     = moveFrom.m_blockIds;
-	*/
-    m_sob = moveFrom.m_sob;
-
     // release the pointer from the source object so that the destructor won't release it twice
     moveFrom.ZeroValues();
 }
@@ -202,22 +178,6 @@ CPUSparseMatrix<ElemType>& CPUSparseMatrix<ElemType>::operator=(CPUSparseMatrix<
     if (this != &moveFrom)
     {
         Base::ShallowCopyFrom(moveFrom);
-        // BUGBUG: This did not use to copy m_sliceViewOffset, I presume it should be copied? It is now.
-
-        /*
-        m_compIndexSize = moveFrom.m_compIndexSize;
-
-        m_colIdx      = moveFrom.m_colIdx;
-        m_nzValues    = moveFrom.m_nzValues;
-        m_unCompIndex = moveFrom.m_unCompIndex;
-        m_compIndex   = moveFrom.m_compIndex;
-
-        m_blockSize    = moveFrom.m_blockSize;
-        m_blockIdShift = moveFrom.m_blockIdShift;
-        m_blockIds     = moveFrom.m_blockIds;
-		*/
-        m_sob = moveFrom.m_sob;
-
         // release the pointer from the source object so that the destructor won't release it twice
         moveFrom.ZeroValues();
     }
@@ -227,48 +187,14 @@ CPUSparseMatrix<ElemType>& CPUSparseMatrix<ElemType>::operator=(CPUSparseMatrix<
 template <class ElemType>
 CPUSparseMatrix<ElemType>::~CPUSparseMatrix()
 {
-    //ReleaseMemory();
     ZeroValues();
 }
-
-/*
-template <class ElemType>
-void CPUSparseMatrix<ElemType>::ReleaseMemory()
-{
-    // If m_externalBuffer is true then this matrix is simply a view over another matrix.
-    // In that case we shouldn't free anything.
-    if (!m_externalBuffer)
-    {
-        if (m_format == MatrixFormat::matrixFormatSparseCSC || m_format == MatrixFormat::matrixFormatSparseCSR)
-        {
-            delete[] m_pArray;
-            m_pArray = nullptr;
-            m_nzValues = nullptr;
-
-            delete[] m_unCompIndex;
-            m_unCompIndex = nullptr;
-
-            delete[] m_compIndex;
-            m_compIndex = nullptr;
-        }
-        else if (m_format == MatrixFormat::matrixFormatSparseBlockCol || m_format == MatrixFormat::matrixFormatSparseBlockRow)
-        {
-            delete[] m_pArray;
-            m_pArray = nullptr;
-            m_nzValues = nullptr;
-
-            delete[] m_blockIds;
-            m_blockIds = nullptr;
-        }
-    }
-}
-*/
 
 #pragma endregion Constructors and Destructor
 
 #pragma region Basic Operators
 
-//make sure call order in colume wise for CSC and row wise for CSR
+//make sure call order in column wise for CSC and row wise for CSR
 template <class ElemType>
 void CPUSparseMatrix<ElemType>::SetValue(const size_t row, const size_t col, const ElemType v)
 {
@@ -280,9 +206,10 @@ void CPUSparseMatrix<ElemType>::SetValue(const size_t row, const size_t col, con
         LogicError("CPUSparseMatrix:  unsupported SetValue() call.");
     }
 
-    if (GetSizeAllocated() < NzCount() + 1) // automatic resize
+    size_t nz = NzCount();
+    if (GetSizeAllocated() < nz + 1) // automatic resize
     {
-        Resize(m_numRows, m_numCols, NzCount() + 100, true, true); // allocate 100 more elelemnts and keep existing values
+        Resize(m_numRows, m_numCols, nz + 100, true, true); // allocate 100 more elelemnts and keep existing values
     }
 
     if (row < 0 || row >= m_numRows)
@@ -298,13 +225,13 @@ void CPUSparseMatrix<ElemType>::SetValue(const size_t row, const size_t col, con
     size_t r = (GetFormat() == matrixFormatSparseCSC) ? row : col;
     size_t c = (GetFormat() == matrixFormatSparseCSC) ? col : row;
 
-    BufferPointer()[NzCount()] = v;
-    MajorIndexLocation()[NzCount()] = (CPUSPARSE_INDEX_TYPE) r;
+    BufferPointer()[nz] = v;
+    MajorIndexLocation()[nz] = (CPUSPARSE_INDEX_TYPE) r;
 
     // consistency check
-    if (NzCount() > 0)
+    if (nz > 0)
     {
-        if (c == GetColIdx() && r <= MajorIndexLocation()[NzCount() - 1])
+        if (c == GetColIdx() && r <= MajorIndexLocation()[nz - 1])
         {
             LogicError("CPUSparseMatrix:  SetValue is not called properly");
         }
@@ -312,10 +239,15 @@ void CPUSparseMatrix<ElemType>::SetValue(const size_t row, const size_t col, con
 
     if (c != GetColIdx())
     {
-        SecondaryIndexLocation()[c] = CPUSPARSE_INDEX_TYPE(NzCount());
+        SecondaryIndexLocation()[c] = CPUSPARSE_INDEX_TYPE(nz);
         SetColIdx((int) c);
     }
-    SecondaryIndexLocation()[c + 1] = CPUSPARSE_INDEX_TYPE(NzCount() + 1);
+	// Note we don't have m_nz anymore. In order for the change from m_nz to
+    // NzCount to make sense, we need to propogate nz+1 to all col slices.
+    for (size_t max = c + 1; max < m_numCols + 1; max++)
+    {
+        SecondaryIndexLocation()[max] = CPUSPARSE_INDEX_TYPE(nz + 1);
+    }
     //m_nz++;
 }
 
@@ -389,26 +321,9 @@ CPUSparseMatrix<ElemType> CPUSparseMatrix<ElemType>::ColumnSlice(size_t startCol
     slice.ShallowCopyFrom(*this);
 
     slice.m_numCols             = numCols;
-    // BUGBUG: m_sliceViewOffset?
-    //slice.m_externalBuffer    = true;
-    //slice.m_sliceOf           = const_cast<CPUSparseMatrix<ElemType>*>(this); // BUGBUG: ColumnSlice() returns a reference to a mutable matrix, even if itself is 'const'; should not be.
-
-    slice.m_sob              = m_sob;
     if (GetFormat() == MatrixFormat::matrixFormatSparseCSC)
     {
         slice.m_sliceViewOffset   = m_sliceViewOffset + startColumn;
-        //slice.m_nz                = GetCompIndex()[startColumn + numCols] - GetCompIndex()[startColumn];
-        /*
-        slice.m_pArray            = m_pArray;
-
-        slice.m_nzValues          = m_pArray + m_compIndex[startColumn]; // note: m_compIndex is always against  m_pArray
-        slice.m_unCompIndex       = m_unCompIndex;
-        slice.m_compIndex         = m_compIndex + startColumn; // Just shift the compressed index location to the new startColumn - that's it!
-        slice.m_compIndexSize     = numCols + 1;
-
-        slice.m_nz                = m_compIndex[startColumn + numCols] - m_compIndex[startColumn];
-        slice.m_elemSizeAllocated = slice.m_nz;
-		*/
     }
     else if (GetFormat() == MatrixFormat::matrixFormatSparseBlockCol)
     {
@@ -442,21 +357,11 @@ CPUSparseMatrix<ElemType> CPUSparseMatrix<ElemType>::ColumnSlice(size_t startCol
             endColBlock = (long long) GetBlockSize();
         }
 
-        // BUGBUG: m_elemSizeAllocated?
-        //slice.m_pArray       = m_pArray + startColBlock * m_numRows;
         slice.m_sliceViewOffset = startColBlock;
 
-        //slice.m_nzValues     = slice.m_pArray;
-        /*
-        slice.m_blockIds     = m_blockIds + startColBlock; // the value stored in the block id is based on the original column numbers
-        slice.m_blockSize    = (size_t) max((long long) 0, endColBlock - startColBlock);
-        slice.m_blockIdShift = m_blockIdShift + startColumn;
-		*/
         slice.SetBlockIds((size_t*)GetBlockIds() + startColBlock); // the value stored in the block id is based on the original column numbers
         slice.SetBlockSize((size_t) max((long long) 0, endColBlock - startColBlock));
         slice.SetBlockIdShift(GetBlockIdShift() + startColumn);
-
-        //slice.m_nz           = slice.GetBlockSize() * m_numRows;
     }
 
     return slice;
@@ -530,7 +435,6 @@ void CPUSparseMatrix<ElemType>::SetMatrixFromCSCFormat(const CPUSPARSE_INDEX_TYP
 
     SetFormat(matrixFormatSparseCSC);
     Resize(numRows, numCols, nz, true, false);
-    //this->SetNzCount(nz);
 
     memcpy(RowLocation(), h_Row, RowSize());
     memcpy(ColLocation(), h_CSCCol, ColSize());
@@ -541,13 +445,11 @@ template <class ElemType>
 ElemType* CPUSparseMatrix<ElemType>::BufferPointer() const
 {
     return GetArray() + GetCompIndex()[m_sliceViewOffset];
-	//return (GetArray() + (GetFormat() == matrixFormatSparseCSC ? GetCompIndex()[m_sliceViewOffset] : 0));
 }
 
 template <class ElemType>
 ElemType* CPUSparseMatrix<ElemType>::BufferPointer() 
 {
-	//return (GetArray() + (GetFormat() == matrixFormatSparseCSC ? GetCompIndex()[m_sliceViewOffset] : 0));
     return GetArray() + GetCompIndex()[m_sliceViewOffset];
 }
 
@@ -578,11 +480,9 @@ void CPUSparseMatrix<ElemType>::Resize(const size_t numRows, const size_t numCol
             if (keepExistingValues && (NzCount() > numNZElemToReserve || GetCompIndexSize() > newCompIndexSize))
                 LogicError("Resize: To keep values m_nz should <= numNZElemToReserve and m_compIndexSize <= newCompIndexSize");
 
-            /**/
 			memset(pArray, 0, sizeof(ElemType) * numNZElemToReserve);
 			memset(unCompIndex, 0, sizeof(CPUSPARSE_INDEX_TYPE) * numNZElemToReserve);
 			memset(compIndex, 0, sizeof(CPUSPARSE_INDEX_TYPE) * newCompIndexSize);
-			/**/
 
             if (keepExistingValues && NzCount() > 0)
             {
@@ -597,7 +497,6 @@ void CPUSparseMatrix<ElemType>::Resize(const size_t numRows, const size_t numCol
             delete[] GetCompIndex();
 
             SetArray(pArray);
-            //m_nzValues = m_pArray; // TODO: can this ever be different?
             SetUnCompIndex(unCompIndex);
             SetCompIndex(compIndex);
         }
@@ -620,13 +519,11 @@ void CPUSparseMatrix<ElemType>::Resize(const size_t numRows, const size_t numCol
             delete[] GetBlockIds();
 
             SetArray(blockVal);
-            //m_nzValues = m_pArray;
             SetBlockIds(blockIds);
         }
 
         SetSizeAllocated(numNZElemToReserve);
         SetCompIndexSize(newCompIndexSize);
-		//m_sliceViewOffset = 0;
     }
 	SetNumStorageRows(numRows);
 	SetNumStorageCols(numCols);
@@ -639,7 +536,8 @@ void CPUSparseMatrix<ElemType>::Reset()
     if (!OwnBuffer())
         LogicError("Cannot Reset since the buffer is managed externally.");
 
-    //m_nz = 0;
+	// This is equivalent to setting m_nz = 0;
+    memset(SecondaryIndexLocation(), 0, SecondaryIndexSize());
     SetColIdx(-1);
     SetBlockSize(0);
     SetBlockIdShift(0);
@@ -812,14 +710,10 @@ void CPUSparseMatrix<ElemType>::MultiplyAndAdd(ElemType alpha, const CPUMatrix<E
                 }
             }
         }
-        //c.m_nz = ;
-
-        //if (c.m_nz > c.GetSizeAllocated())
         if (c.GetBlockSize() * m > c.GetSizeAllocated())
         {
             LogicError("sparse matrix out of range.");
         }
-        // c.SetFormat(matrixFormatSparseBlockCol);
     }
     else if (transposeA && !transposeB)
     {

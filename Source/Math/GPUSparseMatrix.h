@@ -95,18 +95,20 @@ public:
     // to be offset accordingly.
     inline const ElemType* NzValues() const
     {
-        return GetFormat() != matrixFormatSparseCSC ? GetArray() : GetArray() + SecondaryIndexValueAt(0);
+        return BufferPointer();
     }
 
     inline ElemType* NzValues()
     {
-        return GetFormat() != matrixFormatSparseCSC ? GetArray() : GetArray() + SecondaryIndexValueAt(0);
+        return BufferPointer();
     }
 
 	GPUSPARSE_INDEX_TYPE NzCount() const
     {
-        if (GetFormat() == matrixFormatSparseCSC || GetFormat() == matrixFormatSparseCSR )
+        if (GetFormat() == matrixFormatSparseCSC)
 			return SecondaryIndexValueAt(m_numCols) - SecondaryIndexValueAt(0);
+        if (GetFormat() == matrixFormatSparseCSR )
+			return SecondaryIndexValueAt(m_numRows) - SecondaryIndexValueAt(0);
         else if (GetFormat() == matrixFormatSparseBlockCol)
             return (int)(m_numRows * GetBlockSize());
         else
@@ -131,12 +133,18 @@ public:
         return (GPUSPARSE_INDEX_TYPE*) (GetArray() + GetSizeAllocated());
     }
 
+	// Note: BufferPointer is already offset by the sliceViewOffset, so we can just add the allocated size to get the start of the MajorIndexLoc
     GPUSPARSE_INDEX_TYPE* MajorIndexLocationWithSliceViewOffset() const
     {
-        return (MajorIndexLocation() + (GetFormat() == matrixFormatSparseCSC ? SecondaryIndexValueAt(0) : 0));
+        return (GPUSPARSE_INDEX_TYPE*) (BufferPointer() + GetSizeAllocated());
     }
 
-    // TODO: Comment these methods more thoroughly, e.g., why it uses numNZ instead of m_elemSizeAllocated.
+	// MajorIndexCount depends on the format.
+	//     1. SparseBlockCol: numCols
+	//     2. SparseBlockRow: numRows
+	//     3. SparseCSC/CSR : nnz
+	// Note that NzCount is the number of non-zero elements currently in use. GetSizeAllocated is the number
+	//    of nz values that will fit in the current buffer.
     size_t MajorIndexCount() const
     {
         return MajorIndexCount(m_numRows, m_numCols, NzCount(), GetFormat());
@@ -157,6 +165,7 @@ public:
         return sizeof(GPUSPARSE_INDEX_TYPE) * MajorIndexCount();
     }
 
+	// Since the m_sliceViewOffset effects BufferPointer and MajorIndexLocation differently than SecondaryIndexLocation, we compute it fully here.
     GPUSPARSE_INDEX_TYPE* SecondaryIndexLocation() const // compressed index, col/row in CSC/CSR format, col2blockId/row2blockId in BlockCol/BlockRow format
     {
         if (GetFormat() == matrixFormatSparseBlockCol)
@@ -164,7 +173,7 @@ public:
         else if (GetFormat() == matrixFormatSparseBlockRow)
             return MajorIndexLocation() + m_numRows;
         else
-            return MajorIndexLocation() + GetSizeAllocated() + m_sliceViewOffset;
+            return (GPUSPARSE_INDEX_TYPE*)(GetArray() + 2 * GetSizeAllocated() + m_sliceViewOffset);
         // return MajorIndexLocation() + m_elemSizeAllocated + m_sliceViewOffset;
     }
 
@@ -198,17 +207,11 @@ public:
         return sizeof(ElemType) * numNZ + sizeof(GPUSPARSE_INDEX_TYPE) * (MajorIndexCount(numRows, numCols, numNZ, format) + SecondaryIndexCount(numRows, numCols, numNZ, format));
     }
 
-    /*
-    inline size_t BufferSizeAllocated() const
-    {
-        return m_totalBufferSizeAllocated;
-    }
-	*/
-
 	// SecondaryIndexValueAt calls SecondaryIndexLocation which is already appropriately offset by m_sliceViewOffset
     inline ElemType* BufferPointer() const
     {
-        return (GetArray() + (GetFormat() == matrixFormatSparseCSC ? SecondaryIndexValueAt(0) : 0));
+        return (GetArray() +
+            ((GetFormat() == matrixFormatSparseCSC || GetFormat() == matrixFormatSparseCSR) ? SecondaryIndexValueAt(0) : 0));
     }
 
     inline size_t GetNumElemAllocated() const
@@ -309,7 +312,6 @@ public:
     bool IsEqualTo(const GPUMatrix<ElemType>& a, const ElemType threshold = 1e-8) const;
 
 public:
-    //virtual DEVICEID_TYPE GetComputeDeviceId(void) const;
 
     // Sets sparse matrix in CSR format. this acts as deep copy
     void SetMatrixFromCSRFormat(const CPUSPARSE_INDEX_TYPE* h_CSRRow, const CPUSPARSE_INDEX_TYPE* h_Col, const ElemType* h_Val,
@@ -426,7 +428,6 @@ private:
 private:
     void performElementWiseFunction(const ElementWiseOperator kind, const GPUSparseMatrix<ElemType>& src);
     void DeepCopy(const GPUSparseMatrix<ElemType>& deepCopyFrom);
-    //void ReleaseMemory();
     void PrepareBuffer(const size_t numRows, const size_t numCols, const bool canReuseBuffer, std::function<size_t(GPUSPARSE_INDEX_TYPE* csrRowPtrC)> func);
 
     size_t ElemCountFromBufferSize(const size_t numRows, const size_t numCols, const MatrixFormat format, const size_t totalBufferSize) const;
@@ -434,19 +435,6 @@ private:
     DEVICEID_TYPE PrepareDevice(const DEVICEID_TYPE deviceId = -1) const;
     size_t IdentifyRowsWithValues() const;
 
-private:
-    /*
-    size_t m_totalBufferSizeAllocated;
-
-    // used by the blockCol and blockRow format
-    size_t m_blockSize;                      // block size
-    mutable GPUSPARSE_INDEX_TYPE* m_rowToId; // the id showing the order row number is observed in the nnz values.
-
-    mutable void* m_tempHostBuffer; // used to copy values.
-    mutable size_t m_tempHostBufferSize;
-
-    GPUSparseMatrix* m_sliceOf; // if this is a slice, then this points to the owning matrix object that we sliced from
-	*/
 };
 
 }}}

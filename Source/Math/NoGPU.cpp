@@ -113,13 +113,6 @@ GPUSparseMatrix<ElemType>::~GPUSparseMatrix()
 {
 }
 
-/*
-template <class ElemType>
-void GPUSparseMatrix<ElemType>::ReleaseMemory()
-{
-}
-*/
-
 //ResizeAsAndCopyIndexFrom - Resize this sparse matrix to have the same element structure as the passed matrix
 // a - sparse matrix whose structure we want to clone
 // remark: this was done for element wise operations where the structure will be identical after an operation
@@ -341,14 +334,6 @@ bool GPUSparseMatrix<ElemType>::IsEqualTo(const GPUMatrix<ElemType>& /*a*/, cons
 #pragma endregion Static BLAS Functions
 
 #pragma region Member BLAS Functions
-
-/*
-template <class ElemType>
-int GPUSparseMatrix<ElemType>::GetComputeDeviceId() const
-{
-    return -1;
-}
-*/
 
 template <class ElemType>
 GPUMatrix<ElemType> GPUSparseMatrix<ElemType>::ElementProductOf(const GPUSparseMatrix<ElemType>& a, const GPUMatrix<ElemType>& /*b*/)
@@ -821,14 +806,6 @@ void GPUMatrix<ElemType>::Clear()
 {
 }
 #pragma endregion Constructors and Destructor
-
-/**
-template <class ElemType>
-int GPUMatrix<ElemType>::GetComputeDeviceId() const
-{
-    return -1;
-}
-**/
 
 #pragma region Basic Operators
 template <class ElemType>

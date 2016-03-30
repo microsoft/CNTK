@@ -71,7 +71,6 @@ public:
 private:
     void ZeroInit();
     void CheckInit(const MatrixFormat format);
-    //void ReleaseMemory();
 
 public:
     explicit CPUSparseMatrix(const MatrixFormat format);
@@ -201,18 +200,21 @@ public:
 public:
     const ElemType* NzValues() const
     {
-        //return m_nzValues;
         return BufferPointer();
     }
     inline ElemType* NzValues()
     {
-        //return m_nzValues;
         return BufferPointer();
     }
 
     size_t NzCount() const
     {
-        return GetCompIndex()[m_numCols] - GetCompIndex()[0];
+        if (GetFormat() == matrixFormatSparseCSC || GetFormat()== matrixFormatSparseCSR)
+			return GetCompIndex()[m_numCols] - GetCompIndex()[0];
+        else if (GetFormat() == matrixFormatSparseBlockCol)
+			return GetBlockSize() * GetNumRows();
+        else
+			NOT_IMPLEMENTED
     }
 
     size_t NzSize() const
@@ -222,7 +224,6 @@ public:
 
     CPUSPARSE_INDEX_TYPE* MajorIndexLocation() const
     {
-        //return m_unCompIndex;
         return GetUnCompIndex() + GetCompIndex()[m_sliceViewOffset];
     } // this is the major index, row/col ids in CSC/CSR format
     size_t MajorIndexCount() const
@@ -236,7 +237,6 @@ public:
 
     CPUSPARSE_INDEX_TYPE* SecondaryIndexLocation() const
     {
-        //return m_compIndex;
         return GetCompIndex() + m_sliceViewOffset;
     } // this is the compressed index, col/row in CSC/CSR format
     size_t SecondaryIndexCount() const
@@ -275,22 +275,6 @@ public:
         return (GetFormat() & matrixFormatRowMajor) ? MajorIndexSize() : SecondaryIndexSize();
     } // actual number of bytes in use
 
-private:
-    /*
-    int m_colIdx; // used to SetValue()
-    size_t m_compIndexSize;
-    ElemType* m_nzValues;
-
-    // non-zero values are stored in m_pArray
-    CPUSPARSE_INDEX_TYPE* m_unCompIndex; // row/col ids in CSC/CSR format
-    CPUSPARSE_INDEX_TYPE* m_compIndex;   // begin ids of col/row in CSC/CSR format
-
-    size_t m_blockSize;    // block size
-    size_t* m_blockIds;    // block ids
-    size_t m_blockIdShift; // used to get efficient slice, actual col = blockIds[j] - m_blockIdShift
-
-    CPUSparseMatrix* m_sliceOf; // if this is a slice, then this points to the owning matrix object that we sliced from
-	*/
 };
 
 typedef CPUSparseMatrix<float> CPUSingleSparseMatrix;
