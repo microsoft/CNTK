@@ -11,7 +11,7 @@
 #include "TextParser.h"
 #include "TextReaderConstants.h"
 
-#undef max
+#undef max // max is defined in minwindef.h
 #define isSign(c) ((c == '-' || c == '+'))
 #define isE(c) ((c == 'e' || c == 'E'))
 

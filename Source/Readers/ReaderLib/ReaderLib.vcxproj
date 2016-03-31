@@ -81,6 +81,8 @@
     <ClInclude Include="ChunkRandomizer.h" />
     <ClInclude Include="DataDeserializerBase.h" />
     <ClInclude Include="BlockRandomizer.h" />
+    <ClInclude Include="Packer.h" />
+    <ClInclude Include="SequencePacker.h" />
     <ClInclude Include="SequenceRandomizer.h" />
     <ClInclude Include="StringToIdMap.h" />
     <ClInclude Include="TransformerBase.h" />
@@ -102,6 +104,7 @@
     <ClCompile Include="BlockRandomizer.cpp" />
     <ClCompile Include="SampleModePacker.cpp" />
     <ClCompile Include="ReaderShim.cpp" />
+    <ClCompile Include="SequencePacker.cpp" />
     <ClCompile Include="SequenceRandomizer.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

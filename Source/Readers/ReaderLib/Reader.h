@@ -64,7 +64,7 @@ typedef std::shared_ptr<StreamDescription> StreamDescriptionPtr;
 struct StreamMinibatch
 {
     void* m_data;         // Contiguous array of data. Can be encoded in dense or sparse formats depending on the stream description.
-    size_t m_dataSize;    // Data size in bytes.
+                          // The size is (the number of rows * number of columns in the layout) * by the element size of the stream (float/double/etc.).
     MBLayoutPtr m_layout; // Layout of the data
 };
 typedef std::shared_ptr<StreamMinibatch> StreamMinibatchPtr;

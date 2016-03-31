@@ -622,7 +622,7 @@ MPI Rank 0: Final Results: Minibatch[1-82]: Samples Seen = 83050    CrossEntropy
 MPI Rank 0: Finished Epoch[ 3 of 3]: [Validation Set] TrainLossPerSample = 1.8521576; EvalErrPerSample = 0.50912703
 MPI Rank 0: SGD: Saving checkpoint model 'C:\cygwin64\tmp\cntk-test-20160301170019.423861\Speech\DNN_ParallelCrossValidation@debug_cpu/models/cntkSpeech.dnn'
 MPI Rank 0: CNTKCommandTrainEnd: speechTrain
-MPI Rank 0: COMPLETED
+MPI Rank 0: __COMPLETED__
 MPI Rank 0: ~MPIWrapper
 MPI Rank 1: Redirecting stderr to file C:\cygwin64\tmp\cntk-test-20160301170019.423861\Speech\DNN_ParallelCrossValidation@debug_cpu/stderr_speechTrain.logrank1
 MPI Rank 1: -------------------------------------------------------------------
@@ -1226,5 +1226,5 @@ MPI Rank 1: minibatchiterator: epoch 0: frames [0..83050] (first utterance at fr
 MPI Rank 1: Final Results: Minibatch[1-82]: Samples Seen = 83050    CrossEntropyWithSoftmax: CrossEntropyWithSoftmax/Sample = 1.8521576    Perplexity = 6.3735562    EvalErrorPrediction: ErrorPrediction/Sample = 0.50912703    
 MPI Rank 1: Finished Epoch[ 3 of 3]: [Validation Set] TrainLossPerSample = 1.8521576; EvalErrPerSample = 0.50912703
 MPI Rank 1: CNTKCommandTrainEnd: speechTrain
-MPI Rank 1: COMPLETED
+MPI Rank 1: __COMPLETED__
 MPI Rank 1: ~MPIWrapper

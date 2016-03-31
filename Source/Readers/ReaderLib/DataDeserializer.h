@@ -43,6 +43,7 @@ typedef std::shared_ptr<SequenceDescription> SequenceDescriptionPtr;
 // Currently CNTK supports dense and sparse sequences (csc).
 // The storageType in the corresponding stream description identifies what type of SequenceData
 // data deserializer or transformer can provide provides.
+// TODO: add type casts (As<T>() or AsRef<>() or AsPtr<>()) to subclasses as members here.
 struct SequenceDataBase
 {
     SequenceDataBase() : m_id(0), m_numberOfSamples(0), m_data(nullptr) {}

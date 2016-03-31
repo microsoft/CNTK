@@ -448,7 +448,59 @@ BOOST_AUTO_TEST_CASE(ExperimentalHTKMLFReaderSimpleDataLoop21_1)
         2);
 };
 
+BOOST_AUTO_TEST_CASE(ExperimentalHTKMLFReaderSimpleDataLoop4)
+{
+    HelperRunReaderTest<float>(
+        testDataPath() + "/Config/ExperimentalHTKMLFReaderSimpleDataLoop4_Config.cntk",
+        testDataPath() + "/Control/ExperimentalHTKMLFReaderSimpleDataLoop4_Control.txt",
+        testDataPath() + "/Control/ExperimentalHTKMLFReaderSimpleDataLoop4_Output.txt",
+        "Simple_Test",
+        "reader",
+        500,
+        250,
+        2,
+        1,
+        1,
+        0,
+        1);
+};
+
+BOOST_AUTO_TEST_CASE(ExperimentalHTKMLFReaderSimpleDataLoop8)
+{
+    HelperRunReaderTest<float>(
+        testDataPath() + "/Config/ExperimentalHTKMLFReaderSimpleDataLoop8_Config.cntk",
+        testDataPath() + "/Control/HTKMLFReaderSimpleDataLoop4_8_14_Control.txt",
+        testDataPath() + "/Control/HTKMLFReaderSimpleDataLoop8_Output.txt",
+        "Simple_Test",
+        "reader",
+        500,
+        250,
+        2,
+        1,
+        1,
+        0,
+        1);
+};
+
+BOOST_AUTO_TEST_CASE(ExperimentalHTKMLFReaderSimpleDataLoop14)
+{
+    HelperRunReaderTest<double>(
+        testDataPath() + "/Config/ExperimentalHTKMLFReaderSimpleDataLoop14_Config.cntk",
+        testDataPath() + "/Control/HTKMLFReaderSimpleDataLoop4_8_14_Control.txt",
+        testDataPath() + "/Control/HTKMLFReaderSimpleDataLoop14_Output.txt",
+        "Simple_Test",
+        "reader",
+        500,
+        250,
+        2,
+        1,
+        1,
+        0,
+        1);
+};
+
 BOOST_AUTO_TEST_SUITE_END()
 
 }
-} } }
+
+}}}

@@ -968,7 +968,7 @@ MPI Rank 0:  Epoch[ 4 of 4]-Minibatch[   1-  10 of 20]: SamplesSeen = 9216; Trai
 MPI Rank 0:  Epoch[ 4 of 4]-Minibatch[  11-  20 of 20]: SamplesSeen = 10240; TrainLossPerSample =  2.03252134; EvalErr[0]PerSample = 0.54667969; TotalTime = 2.64420s; TotalTimePerSample = 0.25822ms; SamplesPerSecond = 3872
 MPI Rank 0: Finished Epoch[ 4 of 4]: [Training Set] TrainLossPerSample = 2.0474117; EvalErrPerSample = 0.546875; AvgLearningRatePerSample = 9.7656251e-05; EpochTime=5.515902
 MPI Rank 0: CNTKCommandTrainEnd: speechTrain
-MPI Rank 0: COMPLETED
+MPI Rank 0: __COMPLETED__
 MPI Rank 0: ~MPIWrapper
 MPI Rank 1: -------------------------------------------------------------------
 MPI Rank 1: Build info: 
@@ -1909,7 +1909,7 @@ MPI Rank 1:  Epoch[ 4 of 4]-Minibatch[   1-  10 of 20]: SamplesSeen = 9216; Trai
 MPI Rank 1:  Epoch[ 4 of 4]-Minibatch[  11-  20 of 20]: SamplesSeen = 10240; TrainLossPerSample =  2.03252134; EvalErr[0]PerSample = 0.54667969; TotalTime = 2.73810s; TotalTimePerSample = 0.26739ms; SamplesPerSecond = 3739
 MPI Rank 1: Finished Epoch[ 4 of 4]: [Training Set] TrainLossPerSample = 2.0474117; EvalErrPerSample = 0.546875; AvgLearningRatePerSample = 9.7656251e-05; EpochTime=5.515901
 MPI Rank 1: CNTKCommandTrainEnd: speechTrain
-MPI Rank 1: COMPLETED
+MPI Rank 1: __COMPLETED__
 MPI Rank 1: ~MPIWrapper
 MPI Rank 2: -------------------------------------------------------------------
 MPI Rank 2: Build info: 
@@ -2850,5 +2850,5 @@ MPI Rank 2:  Epoch[ 4 of 4]-Minibatch[   1-  10 of 20]: SamplesSeen = 9216; Trai
 MPI Rank 2:  Epoch[ 4 of 4]-Minibatch[  11-  20 of 20]: SamplesSeen = 10240; TrainLossPerSample =  2.03252134; EvalErr[0]PerSample = 0.54667969; TotalTime = 2.76024s; TotalTimePerSample = 0.26955ms; SamplesPerSecond = 3709
 MPI Rank 2: Finished Epoch[ 4 of 4]: [Training Set] TrainLossPerSample = 2.0474117; EvalErrPerSample = 0.546875; AvgLearningRatePerSample = 9.7656251e-05; EpochTime=5.51589
 MPI Rank 2: CNTKCommandTrainEnd: speechTrain
-MPI Rank 2: COMPLETED
+MPI Rank 2: __COMPLETED__
 MPI Rank 2: ~MPIWrapper

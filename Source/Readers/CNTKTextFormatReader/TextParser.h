@@ -12,8 +12,6 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
-typedef GPUSPARSE_INDEX_TYPE IndexType;
-
 template <class ElemType>
 class CNTKTextFormatReaderTestRunner;
 

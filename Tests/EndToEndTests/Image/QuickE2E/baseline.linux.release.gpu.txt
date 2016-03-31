@@ -915,7 +915,7 @@ RandomOrdering: 21 retries for 100 elements (21.0%) to ensure window condition
 RandomOrdering: recached sequence for seed 0: 38, 46, ...
 MBLayout::Init: Resizing m_distanceToStart from 1 x 0 to 100 x 1
 Final Results: Minibatch[1-1]: Samples Seen = 100    err: ErrorPrediction/Sample = 0    ce: CrossEntropyWithSoftmax/Sample = 0.30270519    Perplexity = 1.3535154    
-COMPLETED
+__COMPLETED__
 === Deleting last epoch data
 ==== Re-running from checkpoint
 -------------------------------------------------------------------
@@ -1737,4 +1737,4 @@ RandomOrdering: 21 retries for 100 elements (21.0%) to ensure window condition
 RandomOrdering: recached sequence for seed 0: 38, 46, ...
 MBLayout::Init: Resizing m_distanceToStart from 1 x 0 to 100 x 1
 Final Results: Minibatch[1-1]: Samples Seen = 100    err: ErrorPrediction/Sample = 0    ce: CrossEntropyWithSoftmax/Sample = 0.31781933    Perplexity = 1.374128    
-COMPLETED
+__COMPLETED__

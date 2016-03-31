@@ -8,12 +8,6 @@ LogFileName=stderr
 Instances=3
 NumCPUThreads=$(threadsPerInstance $Instances)
 
-(cd $TEST_DIR/$OriginalTestDir && md5sum baseline*) | (cd $TEST_DIR && md5sum --status -c -)
-if [ $? != 0 ]; then
-  echo Error: Baselines must match original test.
-  exit 1
-fi
-
 # cntkmpirun <MPI args> <CNTK config file name> <additional CNTK args>
 cntkmpirun "-n $Instances" cntk.cntk "speechTrain=[reader=[readerType=ExperimentalHTKMLFReader]] speechTrain=[reader=[prefetch=true]] numCPUThreads=$NumCPUThreads"
 ExitCode=$?

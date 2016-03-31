@@ -6,8 +6,8 @@
 #pragma once
 
 #include "Reader.h"
-#include "SampleModePacker.h"
-#include "BlockRandomizer.h"
+#include "Packer.h"
+#include "Config.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -36,7 +36,7 @@ private:
     std::vector<StreamDescriptionPtr> m_streams;
 
     // Packer.
-    SampleModePackerPtr m_packer;
+    PackerPtr m_packer;
 
     // Seed for the random generator.
     unsigned int m_seed;
@@ -44,7 +44,11 @@ private:
     // Memory provider (TODO: this will possibly change in the near future.)
     MemoryProviderPtr m_provider;
 
-    std::shared_ptr<BlockRandomizer> m_randomizer;
+    // TODO: Randomizer won't implement transformer interface in the near future.
+    TransformerPtr m_randomizer;
+
+    // Indicates whether the reader operates in frame mode.
+    bool m_frameMode;
 };
 
 }}}
