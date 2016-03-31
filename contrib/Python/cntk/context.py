@@ -9,6 +9,7 @@ import shutil as sh
 from cntk.graph import ComputationNode
 from cntk.ops.cntk1 import NewReshape
 from cntk.utils import CNTK_EXECUTABLE_PATH, MODEL_INDENTATION
+from .utils import cntk_to_numpy_shape
 
 CNTK_TEMPLATE_DIR = os.path.join(os.path.dirname(__file__), "templates")
 CNTK_TRAIN_TEMPLATE_PATH = os.path.join(
@@ -276,21 +277,25 @@ class Context(AbstractContext):
         retrieve the node shapes.
         '''
         filename = os.path.join(self.directory, config_file_name)
-        with open(os.path.join(self.directory, filename), "w") as out:
+        with open(os.path.join(self.directory, filename), 'w') as out:
             out.write(config_content)
 
         try:
-            output = subprocess.check_output(
-                [CNTK_EXECUTABLE_PATH, "configFile=%s" % filename],
+            output_bytes = subprocess.check_output(
+                [CNTK_EXECUTABLE_PATH, 'configFile=%s' % filename],
                 stderr=subprocess.STDOUT)
+            output = output_bytes.decode('utf-8')
+            with open(os.path.join(self.directory, 'cntk.log'), 'w') as log:
+                log.write(output)
+
         except subprocess.CalledProcessError as e:
-            print(e.output.decode("utf-8"), file=open('error.txt', 'w'))
+            print(e.output.decode('utf-8'), file=open('error.txt', 'w'))
             raise
 
         if not output:
             raise ValueError('no output returned')
 
-        return output.decode("utf-8")
+        return output
 
     def train(self, optimizer, reader=None, override_existing=True):
         '''
@@ -344,29 +349,123 @@ class Context(AbstractContext):
             if not mo:
                 continue
             var_name, shape = mo.group('var_name'), mo.group('shape')
+            # In Debug mode, an additional stride information is printed
+            shape = Context.SHAPE_STRIDE_REGEX.sub('', shape)
 
             shape_list = []
-            for x in Context.SHAPE_STRIDE_REGEX.sub('', shape).split('x'):
+            for x in shape.split('x'):
                 x = x.strip()
-                if x != '*':
+                if x == '*':
+                    shape_list.append(np.NaN)
+                else:
                     shape_list.append(int(x))
 
             var_shape[var_name] = tuple(shape_list)
 
         return var_shape
 
-    def _eval(self, node, reader):
-        # FIXME manually setting the tag to output might have side-effects
-        node.tag = 'output'
-        config_content = self._generate_eval_config(node, reader)
-        output = self._call_cntk(CNTK_EVAL_CONFIG_FILENAME, config_content)
-        shapes = Context._parse_shapes_from_output(output)
+    @staticmethod
+    def _parse_result_output(output):
+        '''
+        Assuming the data has been output using the output format in the
+        configuration
 
-        out_name = os.path.join(
-            self.directory, CNTK_OUTPUT_FILENAME + '.' + node.var_name)
-        data = np.loadtxt(out_name)
+            format = [
+                # %x = shape, %d = sequenceId
+                sequencePrologue=%d\t|w.shape %x\n%d\t|w\s
+                sampleSeparator=\n%d\t|w\s
+                elementSeparator=\s
+            ]
 
-        return data, shapes
+        this method will parse the output of the form
+        
+            0	|w.shape 1 1
+            0	|w 60.000000
+            1	|w.shape 1 2
+            1	|w 22.000000
+            1	|w 24.000000
+
+        and return a list of tensors.
+        '''
+
+        last_seq_idx = None
+        list_of_tensors = []
+        tensor_seq = []
+        shape = None
+        for line in output.splitlines():
+            parts = line.split('|')
+
+            seq_idx = parts[0].strip()
+            payload = parts[1]
+            info, *data = payload.split(' ')
+
+            if seq_idx != last_seq_idx:
+                if not info == 'w.shape':
+                    raise ValueError('expected shape information, but got "%s"'%line) 
+
+                if tensor_seq:
+                    list_of_tensors.append(np.asarray(tensor_seq))
+                    tensor_seq = []
+
+                last_seq_idx = seq_idx
+
+                shape = cntk_to_numpy_shape(data)
+
+                continue
+            else:
+                data = np.asarray(data, dtype=float).reshape(shape)
+
+            tensor_seq.append(data)
+
+        list_of_tensors.append(np.asarray(tensor_seq))
+
+        return list_of_tensors
+
+    def _calc_expected_shape_and_size(self, node, data, shapes):
+        '''
+        Calculates the expected shape and size from the CNTK output and the
+        retrieved data.
+
+        :param node: the node that was evaluated.
+        :param data: the resulting data from `eval()`
+        :param shapes: dictionary of node names to shape tuples
+
+        Returns the expected size and shape
+        '''
+
+        # We got a single-dimensional array back, so we have to check whether
+        # we need to reshape it based on CNTK's shape output.
+
+        expected_shape = np.asarray(shapes[node.var_name])
+
+        if sum(np.isnan(expected_shape))>1:
+            raise ValueError("for node '%s' we received shape '%s', but " +
+                    "at most one dimension can be left unspecified."%\
+                            (node.var_name, expected_shape))
+
+        expected_size = np.multiply.reduce(expected_shape[~np.isnan(expected_shape)])
+        if sum(np.isnan(expected_shape))==1:
+            if data.size == expected_size:
+                # We received all the data we need, so we have sequences of
+                # length 1. For convenience, we ignore it.
+                expected_shape = expected_shape[~np.isnan(expected_shape)]
+
+            elif data.size > expected_size:
+                # We can fill in the missing dimensions
+                missing_dimension = data.size / expected_size
+                if int(missing_dimension) != missing_dimension:
+                    raise ValueError('could not infer the missing dimensions')
+
+                expected_shape[np.isnan(expected_shape)] = missing_dimension
+                expected_size = np.multiply.reduce(expected_shape)
+                # Now we have expected_size == data.size
+            else:
+                raise ValueError('unable to retrieve expected size')
+
+        # Move last dimension to the beginning: this is the time dimension
+        #expected_shape = np.roll(expected_shape, 1) 
+
+        return expected_shape, expected_size
 
     def eval(self, node, reader=None):
         '''
@@ -383,24 +482,22 @@ class Context(AbstractContext):
             raise ValueError(
                 'node is not of type ComputationNode, but %s' % type(node))
 
-        data, shapes = self._eval(node, reader)
+        # Taking note of the original tag of this node to restore it later
+        orig_node_tag = node.tag if hasattr(node, 'tag') else None
+        node.tag = 'output'
 
-        expected_size = np.multiply.reduce(shapes[node.var_name])
-        expected_shape = shapes[node.var_name]
+        config_content = self._generate_eval_config(node, reader)
+        output = self._call_cntk(CNTK_EVAL_CONFIG_FILENAME, config_content)
 
-        receieved_all = data.size == expected_size
-        if not receieved_all:
-            # For some reason the CNTK write action has issues with multi-row
-            # output. So we have to CNTK reshape it to one row and do it again,
-            # but then NumPy reshape using node's expected shape.
+        node.tag = orig_node_tag
 
-            reshaped = NewReshape(node, expected_size)
-            data, _ = self._eval(reshaped, reader)
+        shapes = Context._parse_shapes_from_output(output)
 
-        if not (len(expected_shape) == 2 and expected_shape[1] == 1):
-            # CNTK outputs e.g. [2 x 1] although it is just a vector.
-            # TODO find better way to distinguis between
-            data = data.reshape(expected_shape)
+        out_name = os.path.join(
+            self.directory, CNTK_OUTPUT_FILENAME + '.' + node.var_name)
+        #data = np.loadtxt(out_name)
+        result_content = open(out_name).read()
+        data = Context._parse_result_output(result_content)
 
         return data
 
