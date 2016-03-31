@@ -38,10 +38,6 @@
 
 extern bool g_shareNodeValueMatrices;
 
-#ifndef UNREFERENCED_PARAMETER // TODO: unify with UNUSED()
-#define UNREFERENCED_PARAMETER(P) (P)
-#endif
-
 // helper mode for debugging
 // If TRACK_GAP_NANS is defined then initialize layout gaps to NaN and do NaN checks. Also do detailed logging of node computations.
 // #define TRACK_GAP_NANS
