@@ -21,7 +21,28 @@ CNTKTextFormatReader::CNTKTextFormatReader(MemoryProviderPtr provider,
 
     try
     {
-        randomizer = make_shared<BlockRandomizer>(0, SIZE_MAX, m_deserializer);
+        if (configHelper.GetElementType() == ElementType::tfloat)
+        {
+            m_deserializer = shared_ptr<IDataDeserializer>(new TextParser<float>(configHelper));
+        }
+        else
+        {
+            m_deserializer = shared_ptr<IDataDeserializer>(new TextParser<double>(configHelper));
+        }
+
+        TransformerPtr randomizer;
+        if (configHelper.ShouldRandomize())
+        {
+            randomizer = make_shared<BlockRandomizer>(0, SIZE_MAX, m_deserializer);
+        }
+        else
+        {
+            randomizer = std::make_shared<NoRandomizer>(m_deserializer);
+        }
+
+        randomizer->Initialize(nullptr, config);
+
+        m_transformer = randomizer;
     }
     catch (const std::runtime_error& e)
     {
