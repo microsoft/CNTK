@@ -10,9 +10,6 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
-
-typedef GPUSPARSE_INDEX_TYPE IndexType;
-
 // Sequence key, used for correlations between sequences between different deserializers.
 struct KeyType
 {

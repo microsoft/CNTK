@@ -10,6 +10,7 @@
 #include "BlockRandomizer.h"
 #include "NoRandomizer.h"
 #include "TextParser.h"
+#include "SequencePacker.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -57,7 +58,8 @@ void CNTKTextFormatReader::StartEpoch(const EpochConfiguration& config)
     }
 
     m_transformer->StartEpoch(config);
-    m_packer = std::make_shared<SampleModePacker>(
+    // TODO: add "frameMode"  config paramter
+    m_packer = std::make_shared<SequencePacker>(
         m_provider,
         m_transformer,
         config.m_minibatchSizeInSamples,

@@ -9,11 +9,11 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
-// A sequence packer that packs dense or sparse samples in dense minibatch for parallel GPU consumption.
-class SequencePacker : public PackerBase
+// A sample packer that densely packs samples in parallel for GPU consumptions.
+class FramePacker : public PackerBase
 {
 public:
-    SequencePacker(
+    FramePacker(
         MemoryProviderPtr memoryProvider,
         TransformerPtr transformer,
         size_t minibatchSize,
@@ -27,6 +27,5 @@ private:
     MBLayoutPtr CreateMBLayout(const StreamBatch& batch) override;
 };
 
-typedef std::shared_ptr<SequencePacker> SequencePackerPtr;
-
-}}}
+typedef std::shared_ptr<FramePacker> FramePackerPtr;
+} } }

@@ -6,19 +6,17 @@
 #define _CRT_SECURE_NO_WARNINGS
 #define _SCL_SECURE_NO_WARNINGS
 
-#include <numeric>
-#include <limits>
 #include <inttypes.h>
-#include "SampleModePacker.h"
+#include <numeric>
+#include "PackerBase.h"
 #include "ElementTypeUtils.h"
-#include "CommonMatrix.h"
-
-typedef CPUSPARSE_INDEX_TYPE IndexType;
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
+using namespace std;
+
 // TODO: this should be handled by the memory provider
-void StreamBuffer::Resize(size_t newSize)
+void PackerBase::StreamBuffer::Resize(size_t newSize)
 {
     m_size = newSize;
     m_data.reset(reinterpret_cast<char*>(m_memoryProvider->Alloc(1, newSize)),
@@ -29,33 +27,37 @@ void StreamBuffer::Resize(size_t newSize)
 }
 
 
-
-SampleModePacker::SampleModePacker(
-    MemoryProviderPtr memoryProvider,
+PackerBase::PackerBase(MemoryProviderPtr memoryProvider,
     TransformerPtr transformer,
     size_t minibatchSize,
-    const std::vector<StreamDescriptionPtr>& streams) : 
+    const std::vector<StreamDescriptionPtr>& streams) :
     m_transformer(transformer),
-                                                        m_minibatchSize(minibatchSize),
-    m_numberOfStreams(streams.size()),
-    m_outputStreams(streams)
+    m_minibatchSize(minibatchSize),
+    m_outputStreamDescriptions(streams)
 {
-    m_inputStreams = m_transformer->GetStreamDescriptions();
-    assert(m_inputStreams.size() == m_numberOfStreams);
-    assert(m_minibatchSize > 0);
+    m_inputStreamDescriptions = m_transformer->GetStreamDescriptions();
+    assert(m_inputStreamDescriptions.size() == m_outputStreamDescriptions.size());
 
-    m_streamBuffers.reserve(m_numberOfStreams);
-    for (int i = 0; i < m_numberOfStreams; ++i)
+    if (m_minibatchSize == 0)
     {
-        const auto& stream = m_outputStreams[i];
-        // Input and output should match in everything except for sparse/dense.
+        LogicError("Minibatch size cannot be zero.");
+    }
+
+    m_streamBuffers.reserve(m_outputStreamDescriptions.size());
+
+    // Sanity checks:
+    for (size_t i = 0; i < m_outputStreamDescriptions.size(); ++i)
+    {
+        const auto& stream = m_outputStreamDescriptions[i];
+        UNUSED(stream);
+
+        // Input and output should match in everything except for sparse/dense storage type.
         assert(stream->m_elementType == ElementType::tfloat || stream->m_elementType == ElementType::tdouble);
-        assert(stream->m_name == m_inputStreams[i]->m_name);
-        assert(stream->m_id == m_inputStreams[i]->m_id);
-        assert(GetSampleSize(m_inputStreams[i]) == GetSampleSize(stream));
+        assert(stream->m_name == m_inputStreamDescriptions[i]->m_name);
+        assert(stream->m_id == m_inputStreamDescriptions[i]->m_id);
+        assert(GetSampleSize(m_inputStreamDescriptions[i]) == GetSampleSize(stream));
 
-
-        if (m_inputStreams[i]->m_storageType == StorageType::dense &&
+        if (m_inputStreamDescriptions[i]->m_storageType == StorageType::dense &&
             stream->m_storageType == StorageType::sparse_csc)
         {
             RuntimeError("Dense to sparse re-packing requested for stream '%ls' is not supported.",
@@ -66,7 +68,7 @@ SampleModePacker::SampleModePacker(
     }
 }
 
-Minibatch SampleModePacker::ReadMinibatch()
+Minibatch PackerBase::ReadMinibatch()
 {
     auto sequences = m_transformer->GetNextSequences(m_minibatchSize);
     const auto& batch = sequences.m_data;
@@ -77,12 +79,12 @@ Minibatch SampleModePacker::ReadMinibatch()
         return minibatch;
     }
 
-    assert(m_numberOfStreams == batch.size());
+    assert(m_outputStreamDescriptions.size() == batch.size());
 
-    for (int streamIndex = 0; streamIndex < m_numberOfStreams; ++streamIndex)
+    for (int streamIndex = 0; streamIndex < batch.size(); ++streamIndex)
     {
         const auto& streamBatch = batch[streamIndex];
-        const auto& type = m_outputStreams[streamIndex]->m_storageType;
+        const auto& type = m_outputStreamDescriptions[streamIndex]->m_storageType;
         auto pMBLayout = (type == StorageType::dense) ?
             PackDenseStream(streamBatch, streamIndex) : PackSparseStream(streamBatch, streamIndex);
 
@@ -97,51 +99,18 @@ Minibatch SampleModePacker::ReadMinibatch()
     return minibatch;
 }
 
-size_t SampleModePacker::GetSampleSize(StreamDescriptionPtr stream)
+// Gets samples size in bytes.
+size_t PackerBase::GetSampleSize(StreamDescriptionPtr stream)
 {
     assert(stream != nullptr);
     size_t elementSize = GetSizeByType(stream->m_elementType);
     return stream->m_sampleLayout->GetNumElements() * elementSize;
 }
 
-
-size_t SampleModePacker::GetMaxSequenceLength(const StreamBatch& batch)
+MBLayoutPtr PackerBase::PackDenseStream(const StreamBatch& batch, size_t streamIndex)
 {
-    size_t maxLength = 0;
-    for (const auto& sequence : batch)
-    {
-        maxLength = max(maxLength, sequence->m_numberOfSamples);
-    }
-    return maxLength;
-}
-
-
-MBLayoutPtr SampleModePacker::CreateMBLayout(const StreamBatch& batch)
-{
-    vector<MBLayout::SequenceInfo> infos;
-    for (size_t index = 0; index < batch.size(); ++index)
-    {
-        MBLayout::SequenceInfo info;
-
-        info.seqId = index;
-        info.tBegin = 0;
-        info.tEnd = batch[index]->m_numberOfSamples;
-        infos.push_back(info);
-    }
-
-    vector<pair<size_t, size_t>> placement;
-    vector<size_t> rowAllocations;
-
-    // Creating the minibatch layout.
-    MBLayoutPtr pMBLayout = make_shared<MBLayout>();
-    pMBLayout->InitAsPackedSequences(infos, placement, rowAllocations);
-    return pMBLayout;
-}
-
-MBLayoutPtr SampleModePacker::PackDenseStream(const StreamBatch& batch, size_t streamIndex)
-{
-    assert(m_outputStreams[streamIndex]->m_storageType == StorageType::dense);
-    const auto& stream = m_inputStreams[streamIndex];
+    assert(m_outputStreamDescriptions[streamIndex]->m_storageType == StorageType::dense);
+    const auto& stream = m_inputStreamDescriptions[streamIndex];
     auto& buffer = m_streamBuffers[streamIndex];
     size_t sampleSize = GetSampleSize(stream);
     auto pMBLayout = CreateMBLayout(batch);
@@ -168,29 +137,40 @@ MBLayoutPtr SampleModePacker::PackDenseStream(const StreamBatch& batch, size_t s
         assert(numSamples == sequenceInfo.GetNumTimeSteps());
 
         char* bufferPtr = buffer.m_data.get();
-        for (size_t sampleIndex = 0; sampleIndex < numSamples; ++sampleIndex)
+        for (size_t sampleIndex = 0, sampleOffset = 0; sampleIndex < numSamples; ++sampleIndex)
         {
             auto* destination = bufferPtr + pMBLayout->GetColumnIndex(sequenceInfo, sampleIndex) * sampleSize;
             assert(destination <= bufferPtr + buffer.m_size - sampleSize);
-    if (stream->m_storageType == StorageType::dense)
-    {
-                const auto* source = dataPtr + sampleIndex * sampleSize;
+            if (stream->m_storageType == StorageType::dense)
+            {
+                assert(sampleOffset == sampleIndex * sampleSize);
+                const auto* source = dataPtr + sampleOffset;
+                //The sample is dense, simply copy it.
                 memcpy(destination, source, sampleSize);
-    }
-    else if (stream->m_storageType == StorageType::sparse_csc)
-    {
+                sampleOffset += sampleSize;
+            }
+            else if (stream->m_storageType == StorageType::sparse_csc)
+            {
+                //The sample is sparse, first, need to zero out the buffer.
                 memset(destination, 0, sampleSize);
                 // TODO: make type casts members of the SparseSequenceData
                 const auto& sparseSequence = reinterpret_cast<SparseSequenceData&>(*sequence);
+                assert(numSamples == sparseSequence.m_nnzCounts.size());
                 size_t nonZeroCount = sparseSequence.m_nnzCounts[sampleIndex];
+                // Iterate through non zero elements and copy them to the corresponding place using their index.
+                // In a sparse sequence, m_data points to the array of non zero elements,
+                // m_indices stores the non-zero row indexes for each element.
                 for (size_t nonZeroIndex = 0; nonZeroIndex < nonZeroCount; ++nonZeroIndex)
                 {
-                    auto rowIndex = sparseSequence.m_indices[nonZeroIndex];
+
+                    auto rowIndex = sparseSequence.m_indices[sampleOffset + nonZeroIndex];
                     size_t elementOffset = rowIndex * elementSize;
                     assert(elementOffset < sampleSize);
-                    const auto* source = dataPtr + nonZeroIndex * elementSize;
+                    const auto* source = dataPtr + (sampleOffset + nonZeroIndex) * elementSize;
                     memcpy(destination + elementOffset, source, elementSize);
+                    sampleOffset += nonZeroCount;
                 }
+                assert(sampleOffset <= sparseSequence.m_totalNnzCount);
             }
             else
             {
@@ -202,16 +182,16 @@ MBLayoutPtr SampleModePacker::PackDenseStream(const StreamBatch& batch, size_t s
     return pMBLayout;
 }
 
-MBLayoutPtr SampleModePacker::PackSparseStream(const StreamBatch& batch, size_t streamIndex)
+MBLayoutPtr PackerBase::PackSparseStream(const StreamBatch& batch, size_t streamIndex)
 {
-    assert(m_outputStreams[streamIndex]->m_storageType == StorageType::sparse_csc);
+    assert(m_outputStreamDescriptions[streamIndex]->m_storageType == StorageType::sparse_csc);
 
     size_t nnzCount = 0;
     for (const auto& sequence : batch)
-        {
+    {
         const auto& sparseSequence = reinterpret_cast<const SparseSequenceData&>(*sequence);
         nnzCount += sparseSequence.m_totalNnzCount;
-        }
+    }
 
     if (nnzCount > numeric_limits<IndexType>::max())
     {
@@ -219,7 +199,7 @@ MBLayoutPtr SampleModePacker::PackSparseStream(const StreamBatch& batch, size_t 
             "value (" PRIu64 ")\n", nnzCount, (size_t)numeric_limits<IndexType>::max());
     }
 
-    const auto& stream = m_inputStreams[streamIndex];
+    const auto& stream = m_inputStreamDescriptions[streamIndex];
     assert(stream->m_storageType == StorageType::sparse_csc);
     auto elementSize = GetSizeByType(stream->m_elementType);
     auto pMBLayout = CreateMBLayout(batch);
@@ -255,16 +235,16 @@ MBLayoutPtr SampleModePacker::PackSparseStream(const StreamBatch& batch, size_t 
     {
         for (const auto& sequenceInfo : sequenceInfos)
         {
-            
-            if (sampleIndex < sequenceInfo.tBegin || sampleIndex >= sequenceInfo.tEnd) 
+
+            if (sampleIndex < sequenceInfo.tBegin || sampleIndex >= sequenceInfo.tEnd)
             {
                 continue;
-}
+            }
 
             sparseColumnIndices.push_back(columnOffset);
 
             if (sequenceInfo.seqId == GAP_SEQUENCE_ID)
-{
+            {
                 continue;
             }
 
@@ -302,4 +282,6 @@ MBLayoutPtr SampleModePacker::PackSparseStream(const StreamBatch& batch, size_t 
 
     return pMBLayout;
 }
-} } }
+
+
+}}}

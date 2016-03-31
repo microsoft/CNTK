@@ -277,7 +277,8 @@ void MLFDataDeserializer::GetSequenceById(size_t sequenceId, std::vector<Sequenc
     else
     {
         // Packing labels for the utterance into sparse sequence.
-        size_t numberOfSamples = m_utteranceIndex[sequenceId + 1] - m_utteranceIndex[sequenceId];
+        size_t startFrameIndex = m_utteranceIndex[sequenceId];
+        size_t numberOfSamples = m_utteranceIndex[sequenceId + 1] - startFrameIndex;
         SparseSequenceDataPtr s;
         if (m_elementType == ElementType::tfloat)
         {
@@ -289,11 +290,10 @@ void MLFDataDeserializer::GetSequenceById(size_t sequenceId, std::vector<Sequenc
             s = std::make_shared<MLFSequenceData<double>>(numberOfSamples);
         }
 
-        size_t startFrameIndex = m_utteranceIndex[sequenceId];
-
-        for (size_t i = startFrameIndex; i < m_utteranceIndex[sequenceId + 1]; i++)
+        for (size_t i = 0; i < numberOfSamples; i++)
         {
-            size_t label = m_classIds[m_frames[i].m_index];
+            size_t frameIndex = startFrameIndex + i;
+            size_t label = m_classIds[m_frames[frameIndex].m_index];
             s->m_indices[i] = static_cast<IndexType>(label);
         }
         result.push_back(s);

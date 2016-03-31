@@ -12,7 +12,7 @@
 #include "Bundler.h"
 #include "StringUtil.h"
 #include "SequencePacker.h"
-#include "SampleModePacker.h"
+#include "FramePacker.h"
 #include "BlockRandomizer.h"
 #include "NoRandomizer.h"
 
@@ -125,7 +125,7 @@ void HTKMLFReader::StartEpoch(const EpochConfiguration& config)
     // TODO: Should do more perf tests before unifying these two.
     if (m_frameMode)
     {
-        m_packer = std::make_shared<SampleModePacker>(
+        m_packer = std::make_shared<FramePacker>(
             m_provider,
             m_randomizer,
             config.m_minibatchSizeInSamples,
