@@ -10,22 +10,23 @@
 namespace Microsoft { namespace MSR { namespace CNTK {
 
 template <class ElemType>
-void BatchNormEngine<ElemType>::Forward(const Mat& in, const Mat& scale, const Mat& bias, double expAvgFactor, Mat& runMean, Mat& runInvStdDev,
+void BatchNormEngine<ElemType>::Forward(const Mat& in, const Mat& scale, const Mat& bias, double expAvgFactor, double blendFactor, Mat& runMean, Mat& runInvStdDev,
                                         Mat& out, double epsilon, Mat& saveMean, Mat& saveInvStdDev)
 {
     assert(in.GetNumRows() == m_inOutT.GetNumElements());
     assert(out.GetNumRows() == m_inOutT.GetNumElements());
     assert(in.GetNumCols() == out.GetNumCols());
+    assert(std::isfinite(expAvgFactor) && (0 <= expAvgFactor && expAvgFactor <= 1));
+    assert(std::isfinite(blendFactor) && (0 <= blendFactor && blendFactor <= 1));
     assert(std::isfinite(epsilon) && epsilon > 0);
-    assert(std::isfinite(expAvgFactor) && (0 < expAvgFactor && expAvgFactor <= 1));
     if (!m_spatial)
     {
         assert(m_inOutT.GetNumElements() == scale.GetNumRows());
         assert(m_inOutT.GetNumElements() == bias.GetNumRows());
         assert(m_inOutT.GetNumElements() == runMean.GetNumRows());
         assert(m_inOutT.GetNumElements() == runInvStdDev.GetNumRows());
-        assert(m_inOutT.GetNumElements() == saveMean.GetNumRows());
-        assert(m_inOutT.GetNumElements() == saveInvStdDev.GetNumRows());
+        assert(saveMean.GetNumElements() == 0 || m_inOutT.GetNumElements() == saveMean.GetNumRows());
+        assert(saveInvStdDev.GetNumElements() == 0 || m_inOutT.GetNumElements() == saveInvStdDev.GetNumRows());
     }
     else
     {
@@ -33,18 +34,18 @@ void BatchNormEngine<ElemType>::Forward(const Mat& in, const Mat& scale, const M
         assert((m_inOutT.GetNumElements() % bias.GetNumRows()) == 0);
         assert((m_inOutT.GetNumElements() % runMean.GetNumRows()) == 0);
         assert((m_inOutT.GetNumElements() % runInvStdDev.GetNumRows()) == 0);
-        assert((m_inOutT.GetNumElements() % saveMean.GetNumRows()) == 0);
-        assert((m_inOutT.GetNumElements() % saveInvStdDev.GetNumRows()) == 0);
+        assert(saveMean.GetNumElements() == 0 || (m_inOutT.GetNumElements() % saveMean.GetNumRows()) == 0);
+        assert(saveInvStdDev.GetNumElements() == 0 || (m_inOutT.GetNumElements() % saveInvStdDev.GetNumRows()) == 0);
     }
     assert(scale.GetNumCols() == 1);
     assert(bias.GetNumCols() == 1);
     assert(runMean.GetNumCols() == 1);
     assert(runInvStdDev.GetNumCols() == 1);
-    assert(saveMean.GetNumCols() == 1);
-    assert(saveInvStdDev.GetNumCols() == 1);
+    assert(saveMean.GetNumElements() == 0 || saveMean.GetNumCols() == 1);
+    assert(saveInvStdDev.GetNumElements() == 0 || saveInvStdDev.GetNumCols() == 1);
 
     EnsureCompatible();
-    ForwardCore(in, scale, bias, expAvgFactor, runMean, runInvStdDev, out, epsilon, saveMean, saveInvStdDev);
+    ForwardCore(in, scale, bias, expAvgFactor, blendFactor, runMean, runInvStdDev, out, epsilon, saveMean, saveInvStdDev);
 }
 
 template <class ElemType>
@@ -89,10 +90,10 @@ protected:
             InvalidArgument("CNTK batch normalization supports only cudnn(CHW) layout.");
     }
 
-    void ForwardCore(const Mat& in, const Mat& scale, const Mat& bias, double expAvgFactor, Mat& runMean, Mat& runInvStdDev,
+    void ForwardCore(const Mat& in, const Mat& scale, const Mat& bias, double expAvgFactor, double blendFactor, Mat& runMean, Mat& runInvStdDev,
                      Mat& out, double epsilon, Mat& saveMean, Mat& saveInvStdDev) override
     {
-        in.BatchNormalizationForward(scale, bias, expAvgFactor, runMean, runInvStdDev, out, epsilon, saveMean, saveInvStdDev);
+        in.BatchNormalizationForward(scale, bias, expAvgFactor, blendFactor, runMean, runInvStdDev, out, epsilon, saveMean, saveInvStdDev);
     }
 
     void ForwardInferenceCore(const Mat& in, const Mat& scale, const Mat& bias, const Mat& runMean, const Mat& runInvStdDev, Mat& out) override

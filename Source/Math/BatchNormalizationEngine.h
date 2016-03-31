@@ -34,7 +34,7 @@ public:
 public:
     virtual ~BatchNormEngine() = default;
 
-    void Forward(const Mat& in, const Mat& scale, const Mat& bias, double expAvgFactor, Mat& runMean, Mat& runInvStdDev,
+    void Forward(const Mat& in, const Mat& scale, const Mat& bias, double expAvgFactor, double blendFactor, Mat& runMean, Mat& runInvStdDev,
                  Mat& out, double epsilon, Mat& saveMean, Mat& saveInvStdDev);
 
     void ForwardInference(const Mat& in, const Mat& scale, const Mat& bias, const Mat& runMean, const Mat& runInvStdDev, Mat& out);
@@ -57,7 +57,7 @@ protected:
 
     virtual void EnsureCompatible() = 0;
 
-    virtual void ForwardCore(const Mat& in, const Mat& scale, const Mat& bias, double expAvgFactor, Mat& runMean, Mat& runInvStdDev,
+    virtual void ForwardCore(const Mat& in, const Mat& scale, const Mat& bias, double expAvgFactor, double blendFactor, Mat& runMean, Mat& runInvStdDev,
                  Mat& out, double epsilon, Mat& saveMean, Mat& saveInvStdDev) = 0;
 
     virtual void ForwardInferenceCore(const Mat& in, const Mat& scale, const Mat& bias, const Mat& runMean, const Mat& runInvStdDev, Mat& out) = 0;

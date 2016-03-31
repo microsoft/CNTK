@@ -3088,8 +3088,9 @@ void GPUMatrix<ElemType>::AveragePoolingBackward(const GPUMatrix<int>& mpRowCol,
 }
 
 template <class ElemType>
-void GPUMatrix<ElemType>::BatchNormalizationForward(const GPUMatrix<ElemType>& scale, const GPUMatrix<ElemType>& bias, double expAvgFactor, GPUMatrix<ElemType>& runMean, GPUMatrix<ElemType>& runInvStdDev,
-                                                    GPUMatrix<ElemType>& out, double epsilon, GPUMatrix<ElemType>& saveMean, GPUMatrix<ElemType>& saveInvStdDev) const
+void GPUMatrix<ElemType>::BatchNormalizationForward(const GPUMatrix<ElemType>& scale, const GPUMatrix<ElemType>& bias, double expAvgFactor, double blendFactor,
+                                                    GPUMatrix<ElemType>& runMean, GPUMatrix<ElemType>& runInvStdDev, GPUMatrix<ElemType>& out, double epsilon,
+                                                    GPUMatrix<ElemType>& saveMean, GPUMatrix<ElemType>& saveInvStdDev) const
 {
     assert((GetNumRows() % scale.GetNumRows()) == 0);
 
@@ -3102,21 +3103,43 @@ void GPUMatrix<ElemType>::BatchNormalizationForward(const GPUMatrix<ElemType>& s
     assert(0 < batchSize  && batchSize  <= std::numeric_limits<int>::max());
 
     SyncGuard syncGuard;
-    if (spatial)
+    // If expAvgFactor == 0 && blendFactor == 1 then we don't need to compute current minibatch statistics.
+    if (expAvgFactor > 0 || blendFactor < 1)
     {
-        Call<ComputeSpatialBatchMeanAndInvStdDev, ElemType>(spatialSize, vectorSize, spatialSize, batchSize, m_pArray,
-                                                            expAvgFactor, runMean.m_pArray, runInvStdDev.m_pArray, epsilon,
-                                                            saveMean.m_pArray, saveInvStdDev.m_pArray, GetStream());
+        if (spatial)
+        {
+            Call<ComputeSpatialBatchMeanAndInvStdDev, ElemType>(spatialSize, vectorSize, spatialSize, batchSize, m_pArray,
+                                                                expAvgFactor, runMean.m_pArray, runInvStdDev.m_pArray, epsilon,
+                                                                saveMean.m_pArray, saveInvStdDev.m_pArray, GetStream());
+        }
+        else
+        {
+            Call<ComputeBatchMeanAndInvStdDev, ElemType>(vectorSize, vectorSize, batchSize, m_pArray,
+                                                         expAvgFactor, runMean.m_pArray, runInvStdDev.m_pArray, epsilon,
+                                                         saveMean.m_pArray, saveInvStdDev.m_pArray, GetStream());
+        }
+    }
+    // When blendFactor == 1 use running mean/var instead of current minibatch.
+    if (blendFactor < 1)
+    {
+        if (blendFactor > 0)
+        {
+            // REVIEW alexeyk: can be rolled into NormalizeBatchTraining to save bandwidth.
+            Scale((ElemType)(1 - blendFactor), saveMean);
+            ScaleAndAdd((ElemType)blendFactor, runMean, saveMean);
+            Scale((ElemType)(1 - blendFactor), saveInvStdDev);
+            ScaleAndAdd((ElemType)blendFactor, runInvStdDev, saveInvStdDev);
+        }
+        Call<NormalizeBatchTraining, ElemType>(spatial ? spatialSize : vectorSize, vectorSize, spatialSize, batchSize,
+                                               spatial, m_pArray, out.m_pArray, scale.m_pArray, bias.m_pArray,
+                                               saveMean.m_pArray, saveInvStdDev.m_pArray, GetStream());
     }
     else
     {
-        Call<ComputeBatchMeanAndInvStdDev, ElemType>(vectorSize, vectorSize, batchSize, m_pArray,
-                                                     expAvgFactor, runMean.m_pArray, runInvStdDev.m_pArray, epsilon,
-                                                     saveMean.m_pArray, saveInvStdDev.m_pArray, GetStream());
+        Call<NormalizeBatchTraining, ElemType>(spatial ? spatialSize : vectorSize, vectorSize, spatialSize, batchSize,
+                                               spatial, m_pArray, out.m_pArray, scale.m_pArray, bias.m_pArray,
+                                               runMean.m_pArray, runInvStdDev.m_pArray, GetStream());
     }
-    Call<NormalizeBatchTraining, ElemType>(spatial ? spatialSize : vectorSize, vectorSize, spatialSize, batchSize,
-                                           spatial, m_pArray, out.m_pArray, scale.m_pArray, bias.m_pArray,
-                                           saveMean.m_pArray, saveInvStdDev.m_pArray, GetStream());
 }
 
 template <class ElemType>

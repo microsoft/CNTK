@@ -69,7 +69,7 @@ public:
     // The following functions create nodes and link them to the network and their inputs.
     // TODO: Do we need both this set and the one above that does not add inputs? Can they share more code?
     ComputationNodePtr BatchNormalization(const ComputationNodePtr input, const ComputationNodePtr scale, const ComputationNodePtr bias,
-                                          const ComputationNodePtr runMean, const ComputationNodePtr runInvStdDev, bool eval = false, bool spatial = false, double normalizationTimeConstant = 0, double epsilon = 1e-5, bool useCntkEngine = true,
+                                          const ComputationNodePtr runMean, const ComputationNodePtr runInvStdDev, bool spatial = false, double normalizationTimeConstant = 0, double blendTimeConstant = 0, double epsilon = 1e-5, bool useCntkEngine = true,
                                           ImageLayoutKind imageLayoutKind = ImageLayoutKind::CHW, const std::wstring nodeName = L"");
     ComputationNodePtr Convolution(const ComputationNodePtr weight,
                                    const ComputationNodePtr inputValues,

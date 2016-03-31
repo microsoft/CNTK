@@ -95,6 +95,7 @@ BOOST_AUTO_TEST_CASE(BatchNormalizationForwardTrain)
             size_t batchSize = std::get<1>(cfg);
             bool spatial = std::get<2>(cfg);
             double expAvg = std::get<3>(cfg);
+            double blendFactor = 0; // cuDNN supports blendFactor == 0 (train) or 1 (eval) only.
             double eps = 1e-5; // CUDNN_BN_MIN_EPSILON
 
             auto engCudnn = BNEng::Create(baseDeviceId, inOutT, spatial, ImageLayoutKind::CHW, BatchNormEngineKind::CuDnn);
@@ -138,12 +139,12 @@ BOOST_AUTO_TEST_CASE(BatchNormalizationForwardTrain)
 
             CudaTimer time1;
             time1.Start();
-            engCntk->Forward(in, scale, bias, expAvg, runMean, runInvStdDev, out, eps, saveMean, saveInvStdDev);
+            engCntk->Forward(in, scale, bias, expAvg, blendFactor, runMean, runInvStdDev, out, eps, saveMean, saveInvStdDev);
             time1.Stop();
 
             CudaTimer time2;
             time2.Start();
-            engCudnn->Forward(inB, scaleB, biasB, expAvg, runMeanB, runInvStdDevB, outB, eps, saveMeanB, saveInvStdDevB);
+            engCudnn->Forward(inB, scaleB, biasB, expAvg, blendFactor, runMeanB, runInvStdDevB, outB, eps, saveMeanB, saveInvStdDevB);
             time2.Stop();
             
             std::stringstream tmsg;

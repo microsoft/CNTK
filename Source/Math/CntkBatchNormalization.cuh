@@ -611,17 +611,17 @@ struct NormalizeBatchTraining
         const int BlockDimY = 4 * U;
         auto bdim = dim3(BlockDimX, BlockDimY);
         // Create a grid that has uses striding in y-dimension to cover whole minibatch.
-        auto gdim = dim3(static_cast<unsigned int>(RoundUpToMultiple(vectorSize, BlockDimX * U)));
+        auto gdim = dim3((unsigned int)RoundUpToMultiple(vectorSize, BlockDimX * U));
         if (spatial)
         {
             kNormalizeBatchTraining<BlockDimX, BlockDimY, true, U><<<gdim, bdim, 0, stream>>>(
-                static_cast<int>(vectorSize), static_cast<int>(spatialSize), static_cast<int>(batchSize), x, y, bnScale, bnBias,
+                (int)vectorSize, (int)spatialSize, (int)batchSize, x, y, bnScale, bnBias,
                 batchMean, batchInvStdDev);
         }
         else
         {
             kNormalizeBatchTraining<BlockDimX, BlockDimY, false, U><<<gdim, bdim, 0, stream>>>(
-                static_cast<int>(vectorSize), static_cast<int>(spatialSize), static_cast<int>(batchSize), x, y, bnScale, bnBias,
+                (int)vectorSize, (int)spatialSize, (int)batchSize, x, y, bnScale, bnBias,
                 batchMean, batchInvStdDev);
         }
     }

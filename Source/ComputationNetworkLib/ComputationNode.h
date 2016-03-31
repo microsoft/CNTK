@@ -34,7 +34,8 @@
 #define CNTK_MODEL_VERSION_3 3
 #define CNTK_MODEL_VERSION_4 4 // PastValue
 #define CNTK_MODEL_VERSION_5 5 // ND convolution and pooling
-#define CURRENT_CNTK_MODEL_VERSION CNTK_MODEL_VERSION_5
+#define CNTK_MODEL_VERSION_6 6 // Batch norm blending
+#define CURRENT_CNTK_MODEL_VERSION CNTK_MODEL_VERSION_6
 
 extern bool g_shareNodeValueMatrices;
 

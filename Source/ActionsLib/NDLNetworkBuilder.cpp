@@ -492,9 +492,9 @@ void NDLNodeEvaluatorImpl<ElemType>::Evaluate(NDLNode<ElemType>* node, const wst
             vector<void*> params = EvaluateParameters(node, baseName, id, parameter.size() - id, pass);
 
             // Optional parameters
-            bool eval = node->GetOptionalParameter("eval", "false");
             bool spatial = node->GetOptionalParameter("spatial", "false");
             double normTimeConst = node->GetOptionalParameter("normalizationTimeConstant", "0");
+            double blendTimeConst = node->GetOptionalParameter("blendTimeConstant", "0");
             double epsilon = node->GetOptionalParameter("epsilon", "0.00001");
             std::wstring bnEngineS = node->GetOptionalParameter("engine", "cntk");
             bool useCntkEngine;
@@ -506,7 +506,7 @@ void NDLNodeEvaluatorImpl<ElemType>::Evaluate(NDLNode<ElemType>* node, const wst
                 InvalidArgument("Unsupported batch normalization engine, choose either \"cntk\"(default) or \"cudnn\".");
             ImageLayoutKind imageLayoutKind = ImageLayoutKindFrom(node->GetOptionalParameter("imageLayout", "CHW"));
 
-            nodePtr = builder.BatchNormalization(nullptr, nullptr, nullptr, nullptr, nullptr, eval, spatial, normTimeConst, epsilon, useCntkEngine, imageLayoutKind, name);
+            nodePtr = builder.BatchNormalization(nullptr, nullptr, nullptr, nullptr, nullptr, spatial, normTimeConst, blendTimeConst, epsilon, useCntkEngine, imageLayoutKind, name);
         }
     }
     else

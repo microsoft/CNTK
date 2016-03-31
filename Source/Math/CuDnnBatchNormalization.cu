@@ -42,16 +42,29 @@ protected:
             InvalidArgument("cuDNN batch normalization supports tensors of max 4 dimensions.");
     }
 
-    void ForwardCore(const Mat& in, const Mat& scale, const Mat& bias, double expAvgFactor, Mat& runMean, Mat& runInvStdDev,
+    void ForwardCore(const Mat& in, const Mat& scale, const Mat& bias, double expAvgFactor, double blendFactor, Mat& runMean, Mat& runInvStdDev,
                      Mat& out, double epsilon, Mat& saveMean, Mat& saveInvStdDev) override
     {
+        // REVIEW alexeyk: there might be a way to do this in cuDNN.
+        if (blendFactor != 0 && blendFactor != 1)
+            InvalidArgument("cuDNN batch normalization engine currently supports blendTimeConstant of 0 or 1 only.");
+
         m_inOutCuDnnT.UpdateBatchSize(in.GetNumCols());
         cudnnBatchNormMode_t mode = m_spatial ? CUDNN_BATCHNORM_SPATIAL : CUDNN_BATCHNORM_PER_ACTIVATION;
         // cuDNN will fail with BAD_PARAM if epsilon < CUDNN_BN_MIN_EPSILON.
         epsilon = std::max(epsilon, CUDNN_BN_MIN_EPSILON);
-        CUDNN_CALL(cudnnBatchNormalizationForwardTraining(*m_cudnn, mode, &C::One, &C::Zero, m_inOutCuDnnT, ptr(in), 
-            m_inOutCuDnnT, ptr(out), m_scaleBiasCuDnnT, ptr(scale), ptr(bias), expAvgFactor, ptr(runMean), ptr(runInvStdDev),
-            epsilon, ptr(saveMean), ptr(saveInvStdDev)));
+        // expAvgFactor == 0 && blendFactor == 1 means we are in eval mode.
+        if (expAvgFactor == 0 && blendFactor == 1)
+        {
+            CUDNN_CALL(cudnnBatchNormalizationForwardInference(*m_cudnn, mode, &C::One, &C::Zero, m_inOutCuDnnT, ptr(in), m_inOutCuDnnT, ptr(out),
+                m_scaleBiasCuDnnT, ptr(scale), ptr(bias), ptr(runMean), ptr(runInvStdDev), epsilon));
+        }
+        else
+        {
+            CUDNN_CALL(cudnnBatchNormalizationForwardTraining(*m_cudnn, mode, &C::One, &C::Zero, m_inOutCuDnnT, ptr(in),
+                m_inOutCuDnnT, ptr(out), m_scaleBiasCuDnnT, ptr(scale), ptr(bias), expAvgFactor, ptr(runMean), ptr(runInvStdDev),
+                epsilon, ptr(saveMean), ptr(saveInvStdDev)));
+        }
     }
 
     void ForwardInferenceCore(const Mat& in, const Mat& scale, const Mat& bias, const Mat& runMean, const Mat& runInvStdDev, Mat& out) override

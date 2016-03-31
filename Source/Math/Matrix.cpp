@@ -4132,18 +4132,19 @@ void Matrix<ElemType>::AveragePoolingBackward(const Matrix<int>& mpRowCol, const
 }
 
 template <class ElemType>
-void Matrix<ElemType>::BatchNormalizationForward(const Matrix<ElemType>& scale, const Matrix<ElemType>& bias, double expAvgFactor, Matrix<ElemType>& runMean, Matrix<ElemType>& runInvStdDev,
-                                                 Matrix<ElemType>& out, double epsilon, Matrix<ElemType>& saveMean, Matrix<ElemType>& saveInvStdDev) const
+void Matrix<ElemType>::BatchNormalizationForward(const Matrix<ElemType>& scale, const Matrix<ElemType>& bias, double expAvgFactor, double blendFactor, 
+                                                 Matrix<ElemType>& runMean, Matrix<ElemType>& runInvStdDev, Matrix<ElemType>& out, double epsilon,
+                                                 Matrix<ElemType>& saveMean, Matrix<ElemType>& saveInvStdDev) const
 {
     DecideAndMoveToRightDevice(*this, out);
 
     // REVIEW alexeyk: add sparse version.
     DISPATCH_MATRIX_ON_FLAG(this,
                             this,
-                            m_CPUMatrix->BatchNormalizationForward(*(scale.m_CPUMatrix), *(bias.m_CPUMatrix), expAvgFactor,
+                            m_CPUMatrix->BatchNormalizationForward(*(scale.m_CPUMatrix), *(bias.m_CPUMatrix), expAvgFactor, blendFactor,
                                                                    *(runMean.m_CPUMatrix), *(runInvStdDev.m_CPUMatrix),
                                                                    *(out.m_CPUMatrix), epsilon, *(saveMean.m_CPUMatrix), *(saveInvStdDev.m_CPUMatrix)),
-                            m_GPUMatrix->BatchNormalizationForward(*(scale.m_GPUMatrix), *(bias.m_GPUMatrix), expAvgFactor,
+                            m_GPUMatrix->BatchNormalizationForward(*(scale.m_GPUMatrix), *(bias.m_GPUMatrix), expAvgFactor, blendFactor,
                                                                    *(runMean.m_GPUMatrix), *(runInvStdDev.m_GPUMatrix),
                                                                    *(out.m_GPUMatrix), epsilon, *(saveMean.m_GPUMatrix), *(saveInvStdDev.m_GPUMatrix)),
                             NOT_IMPLEMENTED,

@@ -213,7 +213,7 @@ protected:
 
     doubleargvector m_dropoutRates;
     doubleargvector m_batchNormalizationTimeConstant;
-    int m_setBNToEvalModeAfterEpochNumber;
+    doubleargvector m_batchNormalizationBlendTimeConstant;
     size_t m_maxTempMemSizeInSamplesForCNN;
 
     int m_traceLevel;

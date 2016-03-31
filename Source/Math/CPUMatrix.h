@@ -333,7 +333,7 @@ public:
     void AveragePoolingBackward(const CPUMatrix<int>& mpRowCol, const CPUMatrix<int>& mpRowIndices, const CPUMatrix<int>& indices,
                                 CPUMatrix<ElemType>& grad) const;
 
-    void BatchNormalizationForward(const CPUMatrix<ElemType>& scale, const CPUMatrix<ElemType>& bias, double expAvgFactor, CPUMatrix<ElemType>& runMean, CPUMatrix<ElemType>& runInvStdDev,
+    void BatchNormalizationForward(const CPUMatrix<ElemType>& scale, const CPUMatrix<ElemType>& bias, double expAvgFactor, double blendFactor, CPUMatrix<ElemType>& runMean, CPUMatrix<ElemType>& runInvStdDev,
                                    CPUMatrix<ElemType>& out, double epsilon, CPUMatrix<ElemType>& saveMean, CPUMatrix<ElemType>& saveInvStdDev) const;
     void BatchNormalizationForwardInference(const CPUMatrix<ElemType>& scale, const CPUMatrix<ElemType>& bias, const CPUMatrix<ElemType>& runMean, const CPUMatrix<ElemType>& runInvStdDev, CPUMatrix<ElemType>& out) const;
     void BatchNormalizationBackward(const CPUMatrix<ElemType>& in, CPUMatrix<ElemType>& grad, const CPUMatrix<ElemType>& scale, const CPUMatrix<ElemType>& saveMean, const CPUMatrix<ElemType>& saveInvStdDev,

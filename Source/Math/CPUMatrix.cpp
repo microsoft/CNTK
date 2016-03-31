@@ -4289,10 +4289,11 @@ void CPUMatrix<ElemType>::AveragePoolingBackward(const CPUMatrix<int>& mpRowCol,
 }
 
 template <class ElemType>
-void CPUMatrix<ElemType>::BatchNormalizationForward(const CPUMatrix<ElemType>& scale, const CPUMatrix<ElemType>& bias, double expAvgFactor, CPUMatrix<ElemType>& runMean, CPUMatrix<ElemType>& runInvStdDev,
-                                                    CPUMatrix<ElemType>& out, double epsilon, CPUMatrix<ElemType>& saveMean, CPUMatrix<ElemType>& saveInvStdDev) const
+void CPUMatrix<ElemType>::BatchNormalizationForward(const CPUMatrix<ElemType>& scale, const CPUMatrix<ElemType>& bias, double expAvgFactor, double blendFactor,
+                                                    CPUMatrix<ElemType>& runMean, CPUMatrix<ElemType>& runInvStdDev, CPUMatrix<ElemType>& out, double epsilon,
+                                                    CPUMatrix<ElemType>& saveMean, CPUMatrix<ElemType>& saveInvStdDev) const
 {
-    UNUSED(scale); UNUSED(bias); UNUSED(expAvgFactor); UNUSED(runMean); UNUSED(runInvStdDev); UNUSED(out); UNUSED(epsilon); UNUSED(saveMean); UNUSED(saveInvStdDev);
+    UNUSED(scale); UNUSED(bias); UNUSED(expAvgFactor); UNUSED(blendFactor); UNUSED(runMean); UNUSED(runInvStdDev); UNUSED(out); UNUSED(epsilon); UNUSED(saveMean); UNUSED(saveInvStdDev);
     RuntimeError("Not yet implemented.");
 }
 

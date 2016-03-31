@@ -1547,19 +1547,20 @@ class BatchNormalizationNode : public ComputationNode<ElemType>, public NumInput
 
 public:
     BatchNormalizationNode(DEVICEID_TYPE deviceId, const wstring& name)
-        : Base(deviceId, name), m_eval(false), m_spatial(false), m_normTimeConst(0), m_epsilon(0), m_useCntkEngine(true),
+        : Base(deviceId, name), m_spatial(false), m_normTimeConst(0), m_blendTimeConst(0), m_epsilon(0), m_useCntkEngine(true),
         m_mbCount(0), m_imageLayoutKind(ImageLayoutKind::CHW)
     {
     }
-	BatchNormalizationNode(DEVICEID_TYPE deviceId, const wstring& name, bool eval, bool spatial, double normalizationTimeConstant, double epsilon,
-                           bool useCntkEngine, ImageLayoutKind imageLayoutKind)
-						   : Base(deviceId, name), m_eval(eval), m_spatial(spatial), m_normTimeConst(normalizationTimeConstant), m_epsilon(epsilon),
-          m_useCntkEngine(useCntkEngine), m_imageLayoutKind(imageLayoutKind), m_mbCount(0)
+	BatchNormalizationNode(DEVICEID_TYPE deviceId, const wstring& name, bool spatial, double normalizationTimeConstant, double blendTimeConstant, 
+                           double epsilon, bool useCntkEngine, ImageLayoutKind imageLayoutKind)
+						   : Base(deviceId, name), m_spatial(spatial), m_normTimeConst(normalizationTimeConstant), m_blendTimeConst(blendTimeConstant),
+                           m_epsilon(epsilon), m_useCntkEngine(useCntkEngine), m_imageLayoutKind(imageLayoutKind), m_mbCount(0)
     {
     }
     BatchNormalizationNode(const ScriptableObjects::IConfigRecordPtr configp)
-        : BatchNormalizationNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"eval"), configp->Get(L"spatial"),
-                                 configp->Get(L"normalizationTimeConstant"), configp->Get(L"epsilon"), configp->Get(L"useCntkEngine"),
+        : BatchNormalizationNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"spatial"),
+                                 configp->Get(L"normalizationTimeConstant"), configp->Get(L"blendTimeConstant"), 
+                                 configp->Get(L"epsilon"), configp->Get(L"useCntkEngine"),
                                  ImageLayoutKindFrom(configp->Get(L"imageLayout")))
     {
         AttachInputs(configp, this->GetExpectedNumInputs());
@@ -1568,11 +1569,10 @@ public:
     void Save(File& fstream) const override
     {
         Base::Save(fstream);
-        fstream << m_version.VerWrittenCur() << m_version.VerReadableCur();
 
-        fstream << m_eval;
         fstream << m_spatial;
         fstream << m_normTimeConst;
+        fstream << m_blendTimeConst;
         fstream << (int32_t)m_imageLayoutKind;
         fstream << m_mbCount;
         fstream << m_epsilon;
@@ -1583,38 +1583,55 @@ public:
     {
         Base::Load(fstream, modelVersion);
 
-        // Read and check version.
-        // REVIEW alexeyk: extract version checking so it can be re-used in other places.
-        int32_t verWritten;
-        int32_t verReadable;
-        fstream >> verWritten >> verReadable;
-
-        if (verReadable > verWritten)
-            RuntimeError("Corrupt model file.");
-        if (verWritten < m_version.VerWeCanReadBack())
-            RuntimeError("Model is too old.");
-        if (verReadable > m_version.VerWrittenCur())
-            RuntimeError("Model is too new.");
-
-        fstream >> m_eval;
-        fstream >> m_spatial;
-        if (verWritten >= 0x00010004)
+        if (modelVersion >= CNTK_MODEL_VERSION_6)
+        {
+            fstream >> m_spatial;
             fstream >> m_normTimeConst;
-        else
-        {
-            double expAvgFactor;
-            fstream >> expAvgFactor;
-            UNUSED(expAvgFactor); // Used in previous versions, replaced by m_normTimeConst.
-        }
-        if (verWritten >= 0x00010002)
-        {
+            fstream >> m_blendTimeConst;
             fstream >> m_imageLayoutKind;
             fstream >> m_mbCount;
-        }
-        if (verWritten >= 0x00010003)
-        {
             fstream >> m_epsilon;
             fstream >> m_useCntkEngine;
+        }
+        else
+        {
+            // Use old versioning scheme for older models.
+
+            // Read and check version.
+            // REVIEW alexeyk: extract version checking so it can be re-used in other places.
+            int32_t verWritten;
+            int32_t verReadable;
+            fstream >> verWritten >> verReadable;
+
+            if (verReadable > verWritten)
+                RuntimeError("Corrupt model file.");
+            if (verWritten < m_version.VerWeCanReadBack())
+                RuntimeError("Model is too old.");
+            if (verReadable > m_version.VerWrittenCur())
+                RuntimeError("Model is too new.");
+
+            bool eval;
+            fstream >> eval;
+            UNUSED(eval);
+            fstream >> m_spatial;
+            if (verWritten >= 0x00010004)
+                fstream >> m_normTimeConst;
+            else
+            {
+                double expAvgFactor;
+                fstream >> expAvgFactor;
+                UNUSED(expAvgFactor); // Used in previous versions, replaced by m_normTimeConst.
+            }
+            if (verWritten >= 0x00010002)
+            {
+                fstream >> m_imageLayoutKind;
+                fstream >> m_mbCount;
+            }
+            if (verWritten >= 0x00010003)
+            {
+                fstream >> m_epsilon;
+                fstream >> m_useCntkEngine;
+            }
         }
     }
 
@@ -1626,9 +1643,9 @@ public:
             auto node = dynamic_pointer_cast<BatchNormalizationNode<ElemType>>(nodeP);
             assert(node != nullptr);
 
-            node->m_eval = m_eval;
             node->m_spatial = m_spatial;
             node->m_normTimeConst = m_normTimeConst;
+            node->m_blendTimeConst = m_blendTimeConst;
             node->m_imageLayoutKind = m_imageLayoutKind;
             node->m_mbCount = m_mbCount;
             node->m_epsilon = m_epsilon;
@@ -1636,20 +1653,8 @@ public:
         }
     }
 
-    void SetNormalizationTimeConstant(const double normalizationTimeConstant)
-    {
-        m_normTimeConst = normalizationTimeConstant;
-    }
-
     void BackpropTo(const size_t inputIndex, const FrameRange& fr) override
     {
-        static bool m_evalWarningIssued = false;  //make sure we only print warning once
-        if (m_eval && !m_evalWarningIssued)
-        {
-            fprintf(stderr, "WARNING: You turned BatchNormalization to evaluation mode during training. Please make sure this is intended.\n");
-            m_evalWarningIssued = true;
-        }
-
         if (inputIndex == 0) // derivative with respect to the input.
         {
             auto sliceOutputGrad = GradientFor(fr);
@@ -1703,15 +1708,24 @@ public:
 
         Matrix<ElemType> sliceOutputValue = ValueFor(fr);
 
-        if (m_eval)
-            m_bnEng->ForwardInference(sliceInputValue, scale, bias, runMean, runInvStdDev, sliceOutputValue);
+        double expAvgFactor;
+        double blendFactor;
+        if (!Environment().IsTraining())
+        {
+            expAvgFactor = 0;
+            blendFactor = 1;
+
+            m_saveMean->Resize(0, 0);
+            m_saveInvStdDev->Resize(0, 0);
+        }
         else
         {
-            double expAvgFactor;
+            double numSamples = (double)GetMBLayout()->GetActualNumSamples();
             if (m_normTimeConst > 0)
             {
-                // Convert to per-minibatch factor.
-                expAvgFactor = 1.0 - exp(-(double)GetMBLayout()->GetActualNumSamples() / m_normTimeConst);
+                // Convert to per-minibatch factor. Treat positivie infinity as if running mean/var parameters are "frozen"
+                // that is, do not require updates.
+                expAvgFactor = !isfinite(m_normTimeConst) ? 0 : 1.0 - exp(-numSamples / m_normTimeConst);
             }
             else
             {
@@ -1719,18 +1733,19 @@ public:
                 expAvgFactor = (m_normTimeConst < 0) ? (1.0 / (1.0 + m_mbCount)) : 1;
             }
 
-            if (m_saveMean == nullptr)
-                fprintf(stderr, "WARNING: m_saveMean is null\n");
-            if (m_saveInvStdDev == nullptr)
-                fprintf(stderr, "WARNING: m_saveInvStdDev is null\n");
+            if (!isfinite(m_blendTimeConst))
+                blendFactor = 1;
+            else
+                blendFactor = m_blendTimeConst > 0 ? (m_blendTimeConst / (m_blendTimeConst + numSamples)) : 0;
+
             m_saveMean->Resize(runMean);
             m_saveInvStdDev->Resize(runMean);
-
-            m_bnEng->Forward(sliceInputValue, scale, bias, expAvgFactor, runMean, runInvStdDev,
-                             sliceOutputValue, m_epsilon, *m_saveMean, *m_saveInvStdDev);
-
-            m_mbCount++;
         }
+
+        m_bnEng->Forward(sliceInputValue, scale, bias, expAvgFactor, blendFactor, runMean, runInvStdDev,
+                         sliceOutputValue, m_epsilon, *m_saveMean, *m_saveInvStdDev);
+
+        m_mbCount++;
     }
 
     void Validate(bool isFinalValidationPass) override
@@ -1745,13 +1760,16 @@ public:
             if (m_spatial && m_imageLayoutKind != CHW)
             {
                 InvalidArgument(
-                    "Batch normalization currently supports only cuDNN (CHW) data layout. " 
+                    "%ls %ls currently supports only cuDNN (CHW) data layout. " 
                     "Please specify imageLayout=\"cudnn\" in BatchNormalization node in your NDL/BrainScript "
-                    "and make sure your input data layout is CHW");
+                    "and make sure your input data layout is CHW", NodeName().c_str(), OperationName().c_str());
             }
             double cudnnMinEps = 1e-5; // CUDNN_BN_MIN_EPSILON
             if (!m_useCntkEngine && m_epsilon < cudnnMinEps) 
                 fprintf(stderr, "\nWARNING: cuDNN batch normalization requires epsilon >= %e. Epsilon will be reset to that value.\n", cudnnMinEps);
+
+            if (m_blendTimeConst < 0)
+                InvalidArgument("%ls %ls requires blend time constant to be >= 0.", NodeName().c_str(), OperationName().c_str());
 
             auto shape = GetSampleLayout();
 
@@ -1766,41 +1784,39 @@ public:
     void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool) override
     {
         Base::RequestMatricesBeforeForwardProp(matrixPool);
-        //if (!m_eval)
-        {
-            RequestMatrixFromPool(m_saveMean, matrixPool);
-            RequestMatrixFromPool(m_saveInvStdDev, matrixPool);
-        }
+        RequestMatrixFromPool(m_saveMean, matrixPool);
+        RequestMatrixFromPool(m_saveInvStdDev, matrixPool);
     }
 
     void RequestMatricesBeforeBackprop(MatrixPool& matrixPool) override
     {
         Base::RequestMatricesBeforeBackprop(matrixPool);
-        //if (!m_eval)
-        {
-            RequestMatrixFromPool(m_dScale, matrixPool);
-            RequestMatrixFromPool(m_dBias, matrixPool);
-        }
+        RequestMatrixFromPool(m_dScale, matrixPool);
+        RequestMatrixFromPool(m_dBias, matrixPool);
     }
 
     void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool) override
     {
         Base::ReleaseMatricesAfterBackprop(matrixPool);
-        //if (!m_eval)
-        {
-            ReleaseMatrixToPool(m_saveMean, matrixPool);
-            ReleaseMatrixToPool(m_saveInvStdDev, matrixPool);
-            ReleaseMatrixToPool(m_dScale, matrixPool);
-            ReleaseMatrixToPool(m_dBias, matrixPool);
-        }
+        ReleaseMatrixToPool(m_saveMean, matrixPool);
+        ReleaseMatrixToPool(m_saveInvStdDev, matrixPool);
+        ReleaseMatrixToPool(m_dScale, matrixPool);
+        ReleaseMatrixToPool(m_dBias, matrixPool);
     }
 
-    void SetEvalMode(bool bnEvalMode)
+    void SetNormalizationTimeConstants(double normalizationTimeConstant, double prevNormalizationTimeConstant,
+                                       double blendTimeConstant, double prevBlendTimeConstant)
     {
-        m_eval = bnEvalMode;
+        // As this function is called from SGD solver (global), make sure we don't
+        // override settings set in NDL when it's not necessary.
+        if (normalizationTimeConstant != prevNormalizationTimeConstant)
+            m_normTimeConst = normalizationTimeConstant;
+        if (blendTimeConstant != prevBlendTimeConstant)
+            m_blendTimeConst = blendTimeConstant;
     }
 
 private:
+    // Old versioning - do not use. Do not remove until we're sure there are no old models around.
     struct VersionInfo
     {
         //int32_t VerWrittenCur() const      { return 0x00010001; } // Initial
@@ -1813,13 +1829,20 @@ private:
     VersionInfo m_version;
 
 private:
-    // Determines whether to use training or inference(evaluation) mode.
-    bool m_eval;
     // Determines whether to use per-activation (used after non-convolutional layers like fully connected)
     // or spatial (used after convolutional layers).
     bool m_spatial;
     // Time constant for running mean and variance.
     double m_normTimeConst;
+    // Time constant for blending running mean/var and current minibatch mean/var.
+    // The main idea is to represent current minibatch statistics as MAP estimate, linear interpolation
+    // of smoothed and minibatch statistics. 
+    // The idea is due to Frank Seide et al.
+    // It should also work well in data parallelism scenario
+    // as opposed to plain vanilla BN implementation which would require aggregation of statistics
+    // from all nodes.
+    // REVIEW alexeyk: if this works, document it properly in Wiki.
+    double m_blendTimeConst;
     // Epsilon used to compute inverse std deviation.
     double m_epsilon;
     // Whether to use CNTK or cuDNN BN implementation.
