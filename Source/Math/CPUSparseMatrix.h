@@ -148,8 +148,8 @@ public:
     }
 
     void RequireSizeAndAllocate(const size_t numRows, const size_t numCols, size_t numNZElemToReserve = 10000, const bool growOnly = true, bool keepExistingValues = false);
-    void RequireSize(const size_t numRows, const size_t numCols, size_t numNZElemToReserve = 10000, const bool growOnly = true, bool keepExistingValues = false);
-    void Resize(const size_t numRows, const size_t numCols, size_t numNZElemToReserve = 10000, const bool growOnly = true, bool keepExistingValues = false);
+    void RequireSize(const size_t numRows, const size_t numCols);
+    void Resize(const size_t numRows, const size_t numCols, size_t numNZElemToReserve = 10000, const bool growOnly = true);
     void Allocate(const size_t numRows, const size_t numCols, size_t numNZElemToReserve = 10000, const bool growOnly = true, bool keepExistingValues = false);
     void Reset();
 

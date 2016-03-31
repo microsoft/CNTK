@@ -113,16 +113,11 @@ public:
 			NOT_IMPLEMENTED;
 
     }
-    inline size_t NzSize() const
-    {
-        return sizeof(ElemType) * NzCount();
-    } // actual number of element bytes in use
+    inline size_t NzSize() const { return sizeof(ElemType) * NzCount(); } // actual number of element bytes in use
 
-    inline size_t GetNumNZElements() const
-    {
-        return NzCount();
-    }
+    inline size_t GetNumNZElements() const { return NzCount(); }
 
+    void ClearNzCount();
 	// The sparse matrix representation of CSC/CSR uses one large matrix (m_pArray) with offsets to the Major/Secondary index location.
 	// m_pArray [0,nz] are the nz elements, [nz+1,2*nz+1] is the major index location, and [2*nz+2,2*nz+2+ numcols/rows] is the secondary
 	// index location.
@@ -280,10 +275,14 @@ public:
 
     void Reshape(const size_t numRows, const size_t numCols);
     void ResizeAsAndCopyIndexFrom(const GPUSparseMatrix<ElemType>& a, const bool growOnly = true);
-    void RequireSize(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve, const MatrixFormat matrixFormat, const bool growOnly = true, bool keepExistingValues = true); // matrix format will affect the size to allocate
-    void RequireSize(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve = 10000, const bool growOnly = true, bool keepExistingValues = false);
-    void Resize(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve, const MatrixFormat matrixFormat, const bool growOnly = true, bool keepExistingValues = true); // matrix format will affect the size to allocate
-    void Resize(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve = 10000, const bool growOnly = true, bool keepExistingValues = false);
+
+    void Allocate(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve, const bool growOnly = true, bool keepExistingValues = true); // matrix format will affect the size to allocate
+    void RequireSizeAndAllocate(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve, const MatrixFormat matrixFormat, const bool growOnly = true, bool keepExistingValues = true); // matrix format will affect the size to allocate
+    void RequireSizeAndAllocate(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve = 10000, const bool growOnly = true, bool keepExistingValues = false);
+    void RequireSize(const size_t numRows, const size_t numCols, const MatrixFormat format, const bool growOnly = true);
+    void RequireSize(const size_t numRows, const size_t numCols, const bool growOnly = true);
+    void Resize(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve, const MatrixFormat matrixFormat, const bool growOnly = true); // matrix format will affect the size to allocate
+    void Resize(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve = 10000, const bool growOnly = true);
 
     GPUSparseMatrix<ElemType> Transpose() const;
     void InplaceTranspose();
@@ -423,7 +422,7 @@ public:
 private:
     void* ReserveTempHostBuffer(const size_t sizeInByte) const;
     template <class OutType, class InType>
-    static void CopyBuffer(OutType* outBuffer, const InType* inBuffer, const size_t size);
+    static void ConvertBuffer(OutType* outBuffer, const InType* inBuffer, const size_t size);
 
 private:
     void ZeroInit(const MatrixFormat matrixFormat, const DEVICEID_TYPE deviceId);

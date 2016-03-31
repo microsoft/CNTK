@@ -400,7 +400,7 @@ Matrix<ElemType>::Matrix(const size_t numRows, const size_t numCols, ElemType* p
         {
             // m_GPUSparseMatrix = new GPUSparseMatrix<ElemType>(numRows,numCols,nnz, pArray,matrixFlags,m_preferredDeviceId);
             m_GPUSparseMatrix = new GPUSparseMatrix<ElemType>(m_preferredDeviceId, MatrixFormat(matrixFlags & MatrixFormat::matrixFormatMask));
-            m_GPUSparseMatrix->Resize(numRows, numCols, nnz, true, false);
+            m_GPUSparseMatrix->RequireSizeAndAllocate(numRows, numCols, nnz, true, false);
             SetDataLocation(GPU, SPARSE);
         }
         else
@@ -1491,6 +1491,7 @@ void Matrix<ElemType>::Reshape(const size_t numRows, const size_t numCols)
 }
 
 // Note: Resize() will leave the matrix content undefined.
+// Note: Resize calls RequireSizeAndAllocate on the sparse versions in for performance reasons. If the external caller knows the nz, then we should set it.
 template <class ElemType>
 void Matrix<ElemType>::Resize(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve /*=0*/, bool growOnly /*=true*/)
 {
@@ -1499,8 +1500,8 @@ void Matrix<ElemType>::Resize(const size_t numRows, const size_t numCols, const 
                                           this,
                                           m_CPUMatrix->Resize(numRows, numCols, growOnly),
                                           m_GPUMatrix->Resize(numRows, numCols, growOnly),
-                                          m_CPUSparseMatrix->Resize(numRows, numCols, numNZElemToReserve, growOnly, false),
-                                          m_GPUSparseMatrix->Resize(numRows, numCols, numNZElemToReserve, growOnly, false));
+                                          m_CPUSparseMatrix->RequireSizeAndAllocate(numRows, numCols, numNZElemToReserve, growOnly),
+                                          m_GPUSparseMatrix->RequireSizeAndAllocate(numRows, numCols, numNZElemToReserve, growOnly));
 #ifdef _DEBUG
     if (GetMatrixType() != MatrixType::SPARSE)
         Invalidate(); // Fill the matrix with NaNs to detect using the content which is undefined. Unfortunately this won't work for sparse matrices.
@@ -5081,5 +5082,6 @@ template void Matrix<char>::SetValue(size_t numRows, const size_t numCols, int d
 template void Matrix<char>::SetValue(const Matrix<char>&, MatrixFormat);
 template bool Matrix<char>::IsEmpty() const;
 template void Matrix<char>::Resize(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve, bool growOnly);
+
 
 }}}
