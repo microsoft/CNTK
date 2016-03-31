@@ -17,7 +17,7 @@ SequencePacker::SequencePacker(
     size_t minibatchSize,
     const std::vector<StreamDescriptionPtr>& streams) : PackerBase(memoryProvider, transformer, minibatchSize, streams)
 {
-    for (int i = 0; i < m_outputStreams.size(); ++i)
+    for (int i = 0; i < m_outputStreamDescriptions.size(); ++i)
     {
         m_streamBufferSizes.push_back(0);
         m_streamBuffers.push_back(nullptr);
@@ -74,7 +74,7 @@ StreamMinibatchPtr SequencePacker::PackStreamMinibatch(const std::vector<Sequenc
     layout->InitAsPackedSequences(inputSequences, placement, rowAllocations);
 
     // Allocating necessary data buffer for the stream.
-    size_t sampleSize = GetSampleSize(m_inputStreams[streamId]);
+    size_t sampleSize = GetSampleSize(m_inputStreamDescriptions[streamId]);
     size_t totalNumberOfSamplesInBytes = layout->GetNumCols() * sampleSize;
     if (m_streamBufferSizes[streamId] < totalNumberOfSamplesInBytes)
     {
@@ -83,8 +83,8 @@ StreamMinibatchPtr SequencePacker::PackStreamMinibatch(const std::vector<Sequenc
     }
 
     // Packing the actual data.
-    StorageType storageType = m_inputStreams[streamId]->m_storageType;
-    size_t elementSize = GetSizeByType(m_inputStreams[streamId]->m_elementType);
+    StorageType storageType = m_inputStreamDescriptions[streamId]->m_storageType;
+    size_t elementSize = GetSizeByType(m_inputStreamDescriptions[streamId]->m_elementType);
     const auto& packedSequences = layout->GetAllSequences();
     char* streamBuffer = m_streamBuffers[streamId].get();
     for (const auto& sequence : packedSequences)

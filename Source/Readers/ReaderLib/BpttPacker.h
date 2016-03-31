@@ -41,7 +41,7 @@ private:
 
     // Parallel number of sequences to pack.
     // Calculated based on the truncation size and minibatch size in samples.
-    size_t m_parallelNumberOfSequences;
+    size_t m_numParallelSequences;
 
     // Truncation size in samples.
     size_t m_truncationSize;

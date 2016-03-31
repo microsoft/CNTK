@@ -11,30 +11,25 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
+using namespace std;
+
 PackerBase::PackerBase(MemoryProviderPtr memoryProvider,
     TransformerPtr transformer,
     size_t minibatchSize,
-    const std::vector<StreamDescriptionPtr>& streams)
+    const vector<StreamDescriptionPtr>& streams)
     : m_memoryProvider(memoryProvider),
     m_transformer(transformer),
     m_minibatchSize(minibatchSize),
-    m_outputStreams(streams)
+    m_outputStreamDescriptions(streams)
 {
-    m_inputStreams = m_transformer->GetStreamDescriptions();
-    assert(m_inputStreams.size() == m_outputStreams.size());
+    m_inputStreamDescriptions = m_transformer->GetStreamDescriptions();
+    assert(m_inputStreamDescriptions.size() == m_outputStreamDescriptions.size());
 
     // Currently do not support sparse output.
     // TODO: Will be supported in the future.
 
-    auto sparseOutput = std::find_if(
-        m_outputStreams.begin(),
-        m_outputStreams.end(),
-        [](const StreamDescriptionPtr& s)
-    {
-        return s->m_storageType == StorageType::sparse_csc;
-    });
-
-    if (sparseOutput != m_outputStreams.end())
+    auto sparseOutput = find_if(m_outputStreamDescriptions.begin(), m_outputStreamDescriptions.end(), [](const StreamDescriptionPtr& s){ return s->m_storageType == StorageType::sparse_csc; });
+    if (sparseOutput != m_outputStreamDescriptions.end())
     {
         RuntimeError("Sparse sequences are currently not supported.");
     }
@@ -44,16 +39,17 @@ PackerBase::PackerBase(MemoryProviderPtr memoryProvider,
         LogicError("Minibatch size cannot be zero.");
     }
 
-    for (int i = 0; i < m_outputStreams.size(); ++i)
+    // Sanity checks:
+    for (size_t i = 0; i < m_outputStreamDescriptions.size(); ++i)
     {
-        const auto& stream = m_outputStreams[i];
+        const auto& stream = m_outputStreamDescriptions[i];
         UNUSED(stream);
 
         // Input and output should match in everything except for sparse/dense storage type.
         assert(stream->m_elementType == ElementType::tfloat || stream->m_elementType == ElementType::tdouble);
-        assert(stream->m_name == m_inputStreams[i]->m_name);
-        assert(stream->m_id == m_inputStreams[i]->m_id);
-        assert(GetSampleSize(m_inputStreams[i]) == GetSampleSize(stream));
+        assert(stream->m_name == m_inputStreamDescriptions[i]->m_name);
+        assert(stream->m_id == m_inputStreamDescriptions[i]->m_id);
+        assert(GetSampleSize(m_inputStreamDescriptions[i]) == GetSampleSize(stream));
     }
 }
 
@@ -94,14 +90,11 @@ size_t PackerBase::GetSampleSize(StreamDescriptionPtr stream)
 }
 
 // Allocates a buffer for the specified number of elements and a given size of an element.
-std::shared_ptr<char> PackerBase::AllocateBuffer(size_t numElements, size_t elementSize)
+shared_ptr<char> PackerBase::AllocateBuffer(size_t numElements, size_t elementSize)
 {
-    return std::shared_ptr<char>(
+    return shared_ptr<char>(
         reinterpret_cast<char*>(m_memoryProvider->Alloc(elementSize, numElements)),
-        [this](char* p)
-    {
-        m_memoryProvider->Free(p);
-    });
+        [this](char* p) { m_memoryProvider->Free(p); });
 }
 
 }}}

@@ -11,6 +11,8 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
+using namespace std;
+
 // Represents a slot where we accumulate sequences from which the minibatch is created.
 // The number of slots equals number of parallel sequences we want to pack.
 struct Slot
@@ -57,7 +59,7 @@ struct Slot
 
 private:
     // Prepared sequences.
-    std::deque<SequenceDataPtr> m_sequences;
+    deque<SequenceDataPtr> m_sequences;
 
     // Contains the size of the slot in samples (accumulated over all m_sequences).
     size_t m_length;
@@ -66,20 +68,20 @@ private:
 // Represents a buffer of slots from which the minibatch is created.
 struct SequenceBuffer
 {
-    SequenceBuffer(size_t parallelNumberOfSequences)
+    SequenceBuffer(size_t numParallelSequences)
     {
         // Allocates required slots.
-        m_slots.resize(parallelNumberOfSequences);
+        m_slots.resize(numParallelSequences);
     }
 
     // Checks whether there is more data available in any of the slots.
     bool NothingToPack() const
     {
-        auto it = std::find_if(m_slots.begin(), m_slots.end(), [](const Slot& s) -> bool { return !s.IsEmpty(); });
+        auto it = find_if(m_slots.begin(), m_slots.end(), [](const Slot& s) -> bool { return !s.IsEmpty(); });
         return it == m_slots.end();
     }
 
-    // A matrix of prepared sequences. The number of rows(RN) = m_parallelNumberOfSequences = number of slots
+    // A matrix of prepared sequences. The number of rows(RN) = m_numParallelSequences = number of slots
     // in each row we at least holding sequences to fill in the truncation length.
     // Only at the end of the epoch there could be less than truncation length number of samples in this matrix
     //
@@ -89,7 +91,7 @@ struct SequenceBuffer
     // slotM: /**********sM1****/
     //  ....
     // slotN: /*sRN1*//*sRN2*//*sRN2*/
-    std::vector<Slot> m_slots;
+    vector<Slot> m_slots;
 };
 
 BpttPacker::BpttPacker(
@@ -97,26 +99,26 @@ BpttPacker::BpttPacker(
     TransformerPtr transformer,
     size_t minibatchSize,
     size_t truncationSize,
-    const std::vector<StreamDescriptionPtr>& streams)
+    const vector<StreamDescriptionPtr>& streams)
     : PackerBase(memoryProvider, transformer, minibatchSize, streams),
     m_truncationSize(truncationSize)
 {
     // Estimating the number of parallel sequences to pack (slots) from the minibatch size and truncation size.
-    m_parallelNumberOfSequences = (size_t)std::floor(m_minibatchSize / truncationSize);
+    m_numParallelSequences = (size_t)floor(m_minibatchSize / truncationSize);
 
     // Preparing the buffers.
-    for (int i = 0; i < m_outputStreams.size(); ++i)
+    for (int i = 0; i < m_outputStreamDescriptions.size(); ++i)
     {
-        const auto& stream = m_outputStreams[i];
-        m_streamBufferSizes.push_back(m_parallelNumberOfSequences * m_truncationSize * GetSampleSize(stream));
-        m_streamBuffers.push_back(AllocateBuffer(m_parallelNumberOfSequences * m_truncationSize, GetSampleSize(stream)));
+        const auto& stream = m_outputStreamDescriptions[i];
+        m_streamBufferSizes.push_back(m_numParallelSequences * m_truncationSize * GetSampleSize(stream));
+        m_streamBuffers.push_back(AllocateBuffer(m_numParallelSequences * m_truncationSize, GetSampleSize(stream)));
 
-        m_sequenceBufferPerStream.push_back(std::make_shared<SequenceBuffer>(m_parallelNumberOfSequences));
-        m_currentLayouts.push_back(std::make_shared<MBLayout>());
+        m_sequenceBufferPerStream.push_back(make_shared<SequenceBuffer>(m_numParallelSequences));
+        m_currentLayouts.push_back(make_shared<MBLayout>());
     }
 
     // Filling in the initial set of sequences
-    for (size_t slotIndex = 0; slotIndex < m_parallelNumberOfSequences; ++slotIndex)
+    for (size_t slotIndex = 0; slotIndex < m_numParallelSequences; ++slotIndex)
     {
         ReadSequencesToSlot(slotIndex);
     }
@@ -135,15 +137,15 @@ Minibatch BpttPacker::ReadMinibatch()
     }
 
     // Iterating over the streams/slots and packing them into the minibatch.
-    for (size_t streamIndex = 0; streamIndex < m_outputStreams.size(); ++streamIndex)
+    for (size_t streamIndex = 0; streamIndex < m_outputStreamDescriptions.size(); ++streamIndex)
     {
-        m_currentLayouts[streamIndex]->Init(m_parallelNumberOfSequences, m_truncationSize);
-        for (size_t slotIndex = 0; slotIndex < m_parallelNumberOfSequences; ++slotIndex)
+        m_currentLayouts[streamIndex]->Init(m_numParallelSequences, m_truncationSize);
+        for (size_t slotIndex = 0; slotIndex < m_numParallelSequences; ++slotIndex)
         {
             PackSlot(streamIndex, slotIndex);
         }
 
-        StreamMinibatchPtr m = std::make_shared<StreamMinibatch>();
+        StreamMinibatchPtr m = make_shared<StreamMinibatch>();
         m->m_data = m_streamBuffers[streamIndex].get();
         m->m_layout = m_currentLayouts[streamIndex];
         result.m_data.push_back(m);
@@ -164,7 +166,7 @@ void BpttPacker::PackSlot(size_t streamIndex, size_t slotIndex)
     }
 
     // Let's see how much samples we need to read.
-    size_t numberOfSamples = std::min(m_truncationSize, slot.AvailableNumberOfSamples());
+    size_t numberOfSamples = min(m_truncationSize, slot.AvailableNumberOfSamples());
     if (numberOfSamples == 0)
     {
         // Reached the end of the data, put the corresponding row in the minibatch layout to gap.
@@ -175,12 +177,12 @@ void BpttPacker::PackSlot(size_t streamIndex, size_t slotIndex)
         return;
     }
 
-    size_t sampleSize = GetSampleSize(m_inputStreams[streamIndex]);
-    StorageType storageType = m_inputStreams[streamIndex]->m_storageType;
-    size_t elementSize = GetSizeByType(m_inputStreams[streamIndex]->m_elementType);
+    size_t sampleSize = GetSampleSize(m_inputStreamDescriptions[streamIndex]);
+    StorageType storageType = m_inputStreamDescriptions[streamIndex]->m_storageType;
+    size_t elementSize = GetSizeByType(m_inputStreamDescriptions[streamIndex]->m_elementType);
 
     // Distance between two samples of the same sequence in bytes.
-    size_t stride = m_parallelNumberOfSequences * sampleSize;
+    size_t stride = m_numParallelSequences * sampleSize;
 
     // Add current sequence to the minibatch layout.
     m_currentLayouts[streamIndex]->AddSequence(

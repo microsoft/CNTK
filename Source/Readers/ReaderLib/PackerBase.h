@@ -33,10 +33,11 @@ protected:
     MemoryProviderPtr m_memoryProvider;
     TransformerPtr m_transformer;
 
-    // Input streams provided by the transformer.
-    std::vector<StreamDescriptionPtr> m_outputStreams;
-    // Output streams expected by the network.
-    std::vector<StreamDescriptionPtr> m_inputStreams;
+    // Input stream descriptions provided by the transformer.
+    std::vector<StreamDescriptionPtr> m_outputStreamDescriptions;
+
+    // Output stream descriptions expected by the network.
+    std::vector<StreamDescriptionPtr> m_inputStreamDescriptions;
 
     // Minibatch size in samples.
     size_t m_minibatchSize;
