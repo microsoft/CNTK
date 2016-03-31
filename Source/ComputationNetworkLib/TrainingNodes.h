@@ -1529,12 +1529,43 @@ template class DropoutNode<float>;
 template class DropoutNode<double>;
 
 // -----------------------------------------------------------------------
-// BatchNormalizationNode (...)  --TODO: document inputs
-// -----------------------------------------------------------------------
-
+// BatchNormalizationNode (input, scale, bias, runMean, runInvStdDev, spatial,
+//                         normalizationTimeConstant = 0, blendTimeConstant = 0,
+//                         epsilon = 0.00001,
+//                         useCntkEngine = true, imageLayout = 'cudnn')
+//
 // Implements batch normalization technique as described in:
 // Batch Normalization: Accelerating Deep Network Training by Reducing Internal Covariate Shift [S. Ioffe, C. Szegedy]
 // http://arxiv.org/abs/1502.03167
+// In short, it normalizes layer outputs for every minibatch for each output(feature) independently and applies affine transformation to preserve representation of the layer.
+// That is, for layer input:
+// 
+// m = mean(input)
+// var = variance(input)
+// input_norm = (input - mean) / sqrt(var)
+// output = gamma * input_norm + beta
+// 
+// where gamma and beta are trainable parameters(represented as LearnableParameter).
+// 
+// * input is the input of the batch normalization node
+// * scale is a LearnableParameter that stores scale vector(gamma term in the equation above).
+// * bias is a LearnableParameter that stores bias vector(beta term). scale and bias must have the same dimensions which must be equal 
+//      to the input dimensions in case of spatial = false or number of output convolution feature maps in case of spatial = true.
+// * runMean is the running mean which is used during evaluation phase and might be used during training as well.
+//      It is represented as a LearnableParameter with the same dimensions as scale and bias.
+// * runInvStdDev is the running inverse square root of variance(so InvStdDev = 1 / sqrt(var + epsilon)).
+//      It is represented as a LearnableParameter with the same dimensions as scale and bias.
+// * spatial is a flag that specifies whether to compute mean / var for each feature in a mininbatch independently or, in case of convolutional layers, per feature map.
+// * normalizationTimeConstant is the time constant which is used to compute running average of mean and variance.
+//      Value 0 (default) means there will be no exponential smoothing and running mean / variance will always have values computed for the last seen mininbatch.
+//      Value 1#INF (infinity)means running values are "frozen" (i.e.will not be updated).
+// * blendTimeConstant is the time constant which allows to specify how much of running mean / var should be "blended" into mean / var of the current minibatch.
+//      Value 0 (default) means no blending will happen and only the current minibatch statistics will be used.
+//      Value 1#INF (infinity)means only running mean / var will be used(this is used, for example, in evaluation phase).
+// * epsilon is a conditioner constant used in computing InvStdDev
+// * useCntkEngine is a boolean flag that specifies which batch normalization implementation to use : CNTK or cuDNN - based.
+// * imageLayout is the image layout.Only cudnn is supported.
+// -----------------------------------------------------------------------
 template <class ElemType>
 class BatchNormalizationNode : public ComputationNode<ElemType>, public NumInputs<5>
 {
