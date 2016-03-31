@@ -50,29 +50,25 @@ TextConfigHelper::TextConfigHelper(const ConfigParameters& config)
         ConfigParameters input = section.second;
         wstring name = msra::strfun::utf16(section.first);
 
-        if (!input.ExistsCurrent(L"format"))
+        if (!input.ExistsCurrent(L"dim") || !input.ExistsCurrent(L"format"))
         {
-            RuntimeError("Input section for input '%ls' does not specify the required \"format\" parameter.", name.c_str());
+            RuntimeError("Input section for input '%ls' does not specify all the required parameters, "
+                "\"dim\" and \"format\".", name.c_str());
         }
 
         StreamDescriptor stream;
         stream.m_id = id++;
         stream.m_name = name;
+        stream.m_sampleDimension = input(L"dim");
         string type = input(L"format");
 
         if (AreEqualIgnoreCase(type, "dense"))
         {
-            if (!input.ExistsCurrent(L"dim"))
-            {
-                RuntimeError("Input section for input '%ls' does not specify the required \"dim\" parameter.", name.c_str());
-            }
-            stream.m_sampleDimension = input(L"dim");
             stream.m_storageType = StorageType::dense;
         }
         else if (AreEqualIgnoreCase(type, "sparse"))
         {
             stream.m_storageType = StorageType::sparse_csc;
-            stream.m_sampleDimension = 0;
         }
         else
         {
