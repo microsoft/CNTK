@@ -4,7 +4,7 @@ import pytest
 from ..reader import *
 from ..graph import *
 from ..context import *
-from .. import cntk1_ops
+from ..ops import cntk1 as cntk1_ops
 
 allclose = np.testing.assert_allclose
 
@@ -20,6 +20,7 @@ def test_NumPyReader(tmpdir):
 
     with get_new_context() as ctx:
         result = ctx.eval(out, reader)
-        assert np.all(result == np.asarray(data) + 2)
+        for r, d in zip(result, data):
+            assert np.all(r== np.asarray(d) + 2)
 
 # TODO test other readers
