@@ -334,11 +334,9 @@ public:
 
                 FILE* file = *outputStreams[onode];
                 WriteMinibatch(file, dynamic_pointer_cast<ComputationNode<ElemType>>(onode), formattingOptions, formatChar, valueFormatString, labelMapping, numMBsRun, /* gradient */ false);
-                if (nodeUnitTest)
-                {
-                    m_net->Backprop(onode);
-                }
 
+                if (nodeUnitTest)
+                    m_net->Backprop(onode);
             } // end loop over nodes
 
             if (nodeUnitTest)
@@ -346,8 +344,7 @@ public:
                 for (auto & node : gradientNodes)
                 {
                     FILE* file = *outputStreams[node];
-                    Matrix<ElemType>& gradient = node->Gradient();
-                    if (&gradient == nullptr)
+                    if (!node->GradientPtr())
                     {
                         fprintf(stderr, "Warning: Gradient of node '%s' is empty. Not used in backward pass?", msra::strfun::utf8(node->NodeName().c_str()).c_str());
                     }

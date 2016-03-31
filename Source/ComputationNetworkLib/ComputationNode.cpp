@@ -382,6 +382,21 @@ void ComputationNode<ElemType>::WriteMinibatchWithFormatting(FILE* f, size_t onl
     }
     let& sequences = pMBLayout->GetAllSequences();
     let  width     = pMBLayout->GetNumTimeSteps();
+
+    TensorShape tensorShape = GetSampleLayout();
+    stringstream str;
+    let dims = tensorShape.GetDims();
+    for (auto dim : dims)
+    {
+        str << dim << ' ';
+    }
+    let shape = str.str();
+
+    bool sequencePrologueHasShape = sequencePrologue.find("%x") != sequencePrologue.npos;
+    bool sampleSeparatorHasShape = sampleSeparator.find("%x") != sampleSeparator.npos;
+    bool sequencePrologueHasSeqId = sequencePrologue.find("%d") != sequencePrologue.npos;
+    bool sampleSeparatorHasSeqId = sampleSeparator.find("%d") != sampleSeparator.npos;
+
     for (size_t s = 0; s < sequences.size(); s++)
     {
         const auto& seqInfo = sequences[s];
@@ -396,9 +411,30 @@ void ComputationNode<ElemType>::WriteMinibatchWithFormatting(FILE* f, size_t onl
         let  seqCols   = tEnd - tBegin;
         let  seqStride = pMBLayout->GetNumParallelSequences() * matStride;
 
+        auto seqProl = sequencePrologue;
+        auto sampleSep = sampleSeparator;
+
+        if (sequencePrologueHasShape || sampleSeparatorHasShape)
+        {
+            auto sh = msra::strfun::_strprintf<char>("%s%ld", shape.c_str(), (unsigned long long)seqInfo.GetNumTimeSteps());
+            if (sequencePrologueHasShape)
+                seqProl = msra::strfun::ReplaceAll<std::string>(seqProl, "%x", sh);
+            if (sampleSeparatorHasShape)
+                sampleSep = msra::strfun::ReplaceAll<std::string>(sampleSep, "%x", sh);
+        }
+
+        if (sequencePrologueHasSeqId || sampleSeparatorHasSeqId)
+        {
+            auto sh = msra::strfun::_strprintf<char>("%ld", (unsigned long long)seqInfo.seqId);
+            if (sequencePrologueHasSeqId)
+                seqProl = msra::strfun::ReplaceAll<std::string>(seqProl, "%d", sh);
+            if (sampleSeparatorHasSeqId)
+                sampleSep = msra::strfun::ReplaceAll<std::string>(sampleSep, "%d", sh);
+        }
+
         if (s > 0)
             fprintfOrDie(f, "%s", sequenceSeparator.c_str());
-        fprintfOrDie(f, "%s", sequencePrologue.c_str());
+        fprintfOrDie(f, "%s", seqProl.c_str());
 
         // output it according to our format specification
         let formatChar = valueFormatString.back();
@@ -438,7 +474,7 @@ void ComputationNode<ElemType>::WriteMinibatchWithFormatting(FILE* f, size_t onl
         for (size_t j = 0; j < jend; j++)
         {
             if (j > 0)
-                fprintfOrDie(f, "%s", sampleSeparator.c_str());
+                fprintfOrDie(f, "%s", sampleSep.c_str());
             if (j == jstop)
             {
                 fprintf(f, "...+%d", (int)(jend - jstop)); // 'nuff said

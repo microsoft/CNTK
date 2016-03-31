@@ -18,29 +18,36 @@ CNTKTextFormatReader::CNTKTextFormatReader(MemoryProviderPtr provider,
     m_provider(provider)
 {
     TextConfigHelper configHelper(config);
-    
-    if (configHelper.GetElementType() == ElementType::tfloat) 
-    {
-        m_deserializer = shared_ptr<IDataDeserializer>(new TextParser<float>(configHelper));
-    }
-    else 
-    {
-        m_deserializer = shared_ptr<IDataDeserializer>(new TextParser<double>(configHelper));
-    }
 
-    TransformerPtr randomizer;
-    if (configHelper.ShouldRandomize())
+    try
     {
-        randomizer = make_shared<BlockRandomizer>(0, SIZE_MAX, m_deserializer);
+        if (configHelper.GetElementType() == ElementType::tfloat)
+        {
+            m_deserializer = shared_ptr<IDataDeserializer>(new TextParser<float>(configHelper));
+        }
+        else
+        {
+            m_deserializer = shared_ptr<IDataDeserializer>(new TextParser<double>(configHelper));
+        }
+
+        TransformerPtr randomizer;
+        if (configHelper.ShouldRandomize())
+        {
+            randomizer = make_shared<BlockRandomizer>(0, SIZE_MAX, m_deserializer);
+        }
+        else
+        {
+            randomizer = std::make_shared<NoRandomizer>(m_deserializer);
+        }
+
+        randomizer->Initialize(nullptr, config);
+
+        m_transformer = randomizer;
     }
-    else
+    catch (const std::runtime_error& e)
     {
-        randomizer = std::make_shared<NoRandomizer>(m_deserializer);
+        RuntimeError("CNTKTextFormatReader: While reading '%ls': %s", configHelper.GetFilePath().c_str(), e.what());
     }
-
-    randomizer->Initialize(nullptr, config);
-
-    m_transformer = randomizer;
 }
 
 std::vector<StreamDescriptionPtr> CNTKTextFormatReader::GetStreamDescriptions()
