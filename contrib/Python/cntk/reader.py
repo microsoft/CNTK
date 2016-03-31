@@ -58,6 +58,7 @@ class UCIFastReader(AbstractReader):
         """
         template = '''\
     reader = [
+        traceLevel = 2
         readerType = "%(ReaderType)s"
         file = "%(FileName)s"
         randomize = "none"
@@ -132,10 +133,12 @@ class CNTKTextFormatReader(AbstractReader):
     def generate_config(self):
         """Generate the reader configuration block
         """
-        template = ''' reader = [
-                readerType = "%(ReaderType)s"
-                file = "%(FileName)s"                
-            '''
+        template = ''' 
+        reader = [
+            traceLevel = 2
+            readerType = "%(ReaderType)s"
+            file = "%(FileName)s"                
+        '''
 
         if self.inputs_def is not None:
             template += '''
@@ -154,15 +157,15 @@ class CNTKTextFormatReader(AbstractReader):
                     a = input_alias
 
                 template += '''
-                    {0}=[
-                        alias = "{1}"                
-                        dim = {2}          
-                        format = "{3}"
-                    ]'''.format(name, a, dim, format)
+                {0}=[
+                    alias = "{1}"                
+                    dim = {2}          
+                    format = "{3}"
+                ]'''.format(name, a, dim, format)
 
             template += '''
-                ]
             ]
+        ]
             '''
         return template % self
 

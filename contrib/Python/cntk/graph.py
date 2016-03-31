@@ -9,6 +9,7 @@ class sparse(object):
         return hasattr(obj, 'todense')
 
 from .utils import MODEL_INDENTATION
+from .utils import numpy_to_cntk_shape
 
 def _tuple_to_cntk_shape(shape):
     return ':'.join(str(v) for v in shape)
@@ -305,36 +306,44 @@ from .reader import UCIFastReader, CNTKTextFormatReader
 # redefine some operators to work with NumPy and sequences as input
 
 
-def _dense_seq_to_str(seq):
-    return ' '.join(seq.astype(np.str))
+def _dense_to_str(data):
+    return ' '.join(data.ravel().astype(np.str))
 
-
-def _sparse_seq_to_str(seq):
-    # return ' '.join('%s:%s'%(k,seq[k]) for k in sorted(seq.items()))
+def _sparse_to_str(data):
+    # return ' '.join('%s:%s'%(k,data[k]) for k in sorted(data.items()))
     raise NotImplementedError
 
 
-def _seq_to_text_format(sequences, alias):
+def _tensor_to_text_format(idx, alias, tensor, has_sequence_dimension=True):
     '''
-    `sequences` is a NumPy array
+    Converts a NumPy array representing tensor of one input into a format that
+    is readable by `CNTKTextReader`.
+
+    :param `alias`: alias to be used in the temporary file
+    :param `tensor`: a NumPy array having sequence as its innermost dimension
     '''
-    if not alias or not isinstance(alias, str):
+    if not alias:
         raise ValueError('alias is missing')
 
-    first_elem = sequences[0]
-    if isinstance(first_elem, np.ndarray):
-        seq_to_str = _dense_seq_to_str
-    elif sparse.issparse(first_elem):
-        seq_to_str = _sparse_seq_to_str
+    if isinstance(tensor, np.ndarray):
+        to_str = _dense_to_str
+    elif sparse.issparse(tensor):
+        raise ValueError('sparse is not yet supported')
+        #to_str = _sparse_to_str
     else:
-        raise ValueError(
-            'sequence elements have to be of type numpy.ndarray (dense) or dictionary (sparse), you gave "%s"' % str(first_elem))
+        raise ValueError('sequence elements have to be of type numpy.ndarray' +
+                ' (dense) or dictionary (sparse), you gave "%s"' % \
+                str(type(tensor)))
 
-    lines = []
-    for idx, seq in enumerate(sequences):
-        lines.append('%i|%s %s' % (idx, alias, seq_to_str(seq)))
+    if has_sequence_dimension:
+        num_seq_elements = tensor.shape[0]
+        lines = []
+        for seq_idx in range(0, num_seq_elements):
+            lines.append('%i\t|%s %s'%(idx, alias, to_str(tensor[seq_idx])))
 
-    return '\n'.join(lines)
+        return '\n'.join(lines)
+    else:
+        return '%i\t|%s %s'%(idx, alias, to_str(tensor))
 
 
 def _get_constant_node(value, **kw):
@@ -344,7 +353,7 @@ def _get_constant_node(value, **kw):
 
     To be as generic as possible, we 
      - flatten the data 
-     - initialize a LearnableParameter operator with it
+     - initialize a ParameterTensor operator with it
      - ensure that the graph does not backprob to it.  
      - Finally we to reshape it.
     '''
@@ -364,43 +373,41 @@ def _get_constant_node(value, **kw):
         prefix='_param_', suffix='.txt', dir=get_context().directory, delete=False)
     tf.close()
 
-    if isinstance(value, list):
+    if isinstance(value, list) or np.isscalar(value):
         value = np.asarray(value)
-
-    if len(value.shape) == 1:
-        # 1D list: interpret as one scalar per sample
-        value = value[:, np.newaxis]
 
     if sparse.issparse(value):
         raise ValueError('only dense data is supported')
 
     with open(tf.name, 'w') as f:
-        # TODO value.ravel() ?
-        np.ndarray.flatten(value).tofile(f, sep='\n')
-
-    size = np.multiply.reduce(value.shape[:])
-
-    # The var_name specified by the user should be set to the operator that
-    # is finally returned, which is the shape node.
-    var_name = kw.pop('var_name', None)
+        value.ravel().tofile(f, sep='\n')
 
     from cntk.reader import CNTKTextFormatReader
-    param_node = cntk1_ops.LearnableParameter(
-        size,
-        1,
+
+    cntk_shape = numpy_to_cntk_shape(value.shape)
+
+    dims = np.multiply.reduce(cntk_shape)
+
+    # TODO switch to ConstantTensor once it is in the core.bs file
+    node = cntk1_ops.ParameterTensor(
+        dims=dims,
         learningRateMultiplier=0.0,
         init='fromFile',
         initFromFilePath=tf.name,
         **kw)
 
-    reshape_node = cntk1_ops.NewReshape(param_node,
-                                        dims=value.shape,
-                                        var_name=var_name)
+    if len(cntk_shape) > 1:
+        node = cntk1_ops.NewReshape(node, dims=cntk_shape)
 
-    return reshape_node
+    return node
 
 
-def _get_input_node(value, **kw):
+def _get_input_node(list_of_tensors, has_sequence_dimension, **kw):
+    '''
+    :param list_of_tensors: list of tensors potentially having sequences of
+    different lengths.
+    '''
+
     # FIXME We need to better manage the context. How can we get hold
     # of the overall context without having to always pass it
     # explicitly?
@@ -415,13 +422,6 @@ def _get_input_node(value, **kw):
                                      dir=get_context().directory, delete=False)
     tf.close()
 
-    if isinstance(value, list):
-        value = np.asarray(value)
-
-    if len(value.shape) == 1:
-        # 1D list: interpret as one scalar per sample
-        value = value[:, np.newaxis]
-
     if 'alias' in kw:
         alias = kw['alias']
         del kw['alias']  # don't confuse with constructor's parameters
@@ -429,22 +429,51 @@ def _get_input_node(value, **kw):
         # TODO make sure we don't have clashes
         alias = '_I_%i' % np.random.randint(1000)
 
+    shapes = set()
     with open(tf.name, 'w') as f:
-        f.write(_seq_to_text_format(value, alias))
+        for idx,tensor in enumerate(list_of_tensors):
+            if isinstance(tensor, list):
+                tensor = np.asarray(tensor)
+
+            if has_sequence_dimension:
+                # collecting the shapes ignoring the sequence dimension
+                shapes.add(tensor.shape[1:])
+            else:
+                shapes.add(tensor.shape)
+
+            f.write(_tensor_to_text_format(idx, alias, tensor,
+                has_sequence_dimension) + '\n')
+
+    # ignoring the sequence dimension, all shapes should be equal
+    if len(shapes)!=1:
+        raise ValueError('except for the sequence dimensions all shapes ' +
+                'should be the same - instead we have: %s'%(", ".join(str(s) for s in shapes)))
+
+    # shapes now contains only one shape, which has the sequence dimension
+    # removed.
+    value_shape = shapes.pop()
+
+    cntk_shape = numpy_to_cntk_shape(value_shape)
 
     from cntk.reader import CNTKTextFormatReader
-    input_node = cntk1_ops.Input(value.shape, **kw)
-    input_node.reader = CNTKTextFormatReader(tf.name)
-    # In case we have the shape (2,3), which will be initialized at Input() as
-    # '2:3', we have 2*3 = 6 dimensions when flattened out for the reader. Note
-    # that the first dimension is the sample.
-    dims = np.multiply.reduce(value.shape[:])
-    input_node.reader.add_input(input_node, alias, dims)
 
-    return input_node
+    # In case we have the shape (2,3) and assuming we have only sequences of
+    # lengths 1, the input will be initialized with dim=3 (column major)
+    # followed by a reshape node that has the dims '2:3'. So we have 2*3 = 6 
+    # dimensions when flattened out for the reader. 
+    dims = int(np.multiply.reduce(cntk_shape))
+    node = cntk1_ops.Input(dims, **kw)
+    node.reader = CNTKTextFormatReader(tf.name)
+    node.reader.add_input(node, alias, dims)
+    
+    if len(cntk_shape) > 1:
+        node = cntk1_ops.NewReshape(node,
+                dims=cntk_shape)
+
+    return node
 
 
-def is_sequence(data):
+def is_tensor_list(data):
     '''
     Checks whether the data is a CNTK sequence, which is expressed in Python as
     a list of varying sized NumPy objects.
@@ -455,7 +484,10 @@ def is_sequence(data):
 
 def is_tensor(data):
     '''
-    Checks whether the data is a tensor.
+    Checks whether the data is a tensor, i.e. whether it is a NumPy array or a
+    list of NumPy arrays.
+
+    :param `data`: data to check
     '''
     if isinstance(data, np.ndarray):
         return True
@@ -479,48 +511,29 @@ def is_tensor(data):
     return True
 
 
-def input(value, **kw):
+def input(value, has_sequence_dimension=True, **kw):
     '''
-    Defining Input as a factory override that creates either a Constant()
-    operator or an Input() operator based on the type of the `value`.
+    Create an input node.
 
-    In case the `value` is a scalar, a normal CNTK Constant() operator is
-    returned.
-
-    In case the `value` is a list of NumPy arrays, a CNTK Input() operator is
-    returned, interpreting every element as a sequence of tensors.
-
-    In case the `value` is a NumPy array or list of lists, a CNTK Input()
-    operator is returned, interpreting it as a dense tensor.
-
-    Non-scalar values are interpreted as sparse when they contain a colon.
+    :param `value`: is a list of NumPy tensors. Currently, only dense tensors
+    are supported. Sparse will come soon by the power of scipy.
+    :param `has_sequence_dimension`: If True, the outermost dimension is
+    treated as the sequence dimension. If False, it will wrap each sample 
+    into its own 1-dimensional array.
+    :param `alias`: optional the alias to be used when serializing the data
+    into an intermediate file
     '''
-    if is_sequence(value) or is_tensor(value):
-        return _get_input_node(value, **kw)
+    if is_tensor_list(value) or is_tensor(value):
+        return _get_input_node(value, has_sequence_dimension, **kw)
     else:
         raise ValueError('value type is not supported: %s' % type(value))
 
 
 def constant(value, **kw):
     '''
-    Defining Constant as a factory override that creates either a Constant()
-    operator or an Input() operator based on the type of the `value`.
-
-    In case the `value` is a scalar, a normal CNTK Constant() operator is
-    returned.
-
-    In case the `value` is a list of NumPy arrays, a CNTK Input() operator is
-    returned, interpreting every element as a sequence of tensors.
-
-    In case the `value` is a NumPy array or list of lists, a CNTK Input()
-    operator is returned, interpreting it as a dense tensor.
-
-    Non-scalar values are interpreted as sparse when they contain a colon.
+    Creating a constant tensor node around `value`.
     '''
-    if np.isscalar(value):
-        return cntk1_ops.Constant(value, **kw)
+    if np.isscalar(value) or is_tensor(value):
+        return _get_constant_node(value, **kw)
     else:
-        if is_tensor(value):
-            return _get_constant_node(value, **kw)
-        else:
-            raise ValueError('value type is not supported: %s' % type(value))
+        raise ValueError('value type is not supported: %s' % type(value))

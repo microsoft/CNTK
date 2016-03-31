@@ -1,7 +1,8 @@
+import numpy as np
 from ..context import *
 
 
-def test_parse_shapes():
+def test_parse_shapes_1():
     output = '''\
 FormNestedNetwork: WARNING: Was called twice for v3 Plus operation
 
@@ -26,7 +27,7 @@ Post-processing network complete.
 '''
 
     expected = {
-        'dummy_node': (2,),
+        'dummy_node': (2, np.NaN),
         'v0': (4, 1),
         'v1': (2, 2),
         'v2': (1, 1),
@@ -34,3 +35,36 @@ Post-processing network complete.
     }
 
     assert Context._parse_shapes_from_output(output) == expected
+
+def test_parse_shapes_2():
+    output = '''\
+Validating --> v1 = LearnableParameter() :  -> [3 x 2 {1,3}]
+Validating --> v2 = InputValue() :  -> [2 {1} x *]
+Validating --> v3 = Times (v1, v2) : [3 x 2 {1,3}], [2 {1} x *] -> [3 {1} x *]
+Validating --> v4 = LearnableParameter() :  -> [3 x 1 {1,3}]
+Validating --> v5 = Plus (v3, v4) : [3 {1} x *], [3 x 1 {1,3}] -> [3 x 1 {1,3} x *]
+'''
+
+    expected = {
+        'v1': (3, 2),
+        'v2': (2, np.NaN),
+        'v3': (3, np.NaN),
+        'v4': (3, 1),
+        'v5': (3, 1, np.NaN),
+    }
+
+    assert Context._parse_shapes_from_output(output) == expected
+
+def test_parse_result_output_1():
+    output = '''\
+0	|w.shape 1 1
+0	|w 60.000000
+1	|w.shape 1 2
+1	|w 22.000000
+1	|w 24.000000'''
+    list_of_tensors = Context._parse_result_output(output)
+    expected = [[[60]], [[22],[24]]]
+    assert len(list_of_tensors) == len(expected)
+    for res, exp in zip(list_of_tensors, expected):
+        assert np.allclose(res, np.asarray(exp))
+
