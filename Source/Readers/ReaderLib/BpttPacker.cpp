@@ -104,7 +104,7 @@ BpttPacker::BpttPacker(
     m_truncationSize(truncationSize)
 {
     // Estimating the number of parallel sequences to pack (slots) from the minibatch size and truncation size.
-    m_numParallelSequences = (size_t)floor(m_minibatchSize / truncationSize);
+    m_numParallelSequences = max(1, (int)floor(m_minibatchSize / truncationSize));
 
     // Preparing the buffers.
     for (int i = 0; i < m_outputStreamDescriptions.size(); ++i)
