@@ -87,7 +87,7 @@ HTKMLFReader::HTKMLFReader(MemoryProviderPtr provider,
     }
 
     // nbruttsineachrecurrentiter is old reader configuration, truncationLength is the new one.
-    // If trancation length is specified we estimate
+    // If truncation length is specified we estimate
     // the number of parallel sequences we have to pack as max(1, (mbsize/truncationLength))
     // If nbruttsineachrecurrentiter is specified we assume that the truncation size is mbSize
     // and the real minibatch size in mbSize * nbruttsineachrecurrentiter[epochIndex]
