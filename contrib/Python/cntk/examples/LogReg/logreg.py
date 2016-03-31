@@ -26,5 +26,5 @@ if (__name__ == "__main__"):
     with Context('demo', root_node=ce, clean_up=False) as ctx:
         ctx.train(my_sgd, None)
 
-        #result = ctx.eval(out)
-        # print(result.argmax(axis=1))
+        result = ctx.eval(out)
+        print(result.argmax(axis=1))

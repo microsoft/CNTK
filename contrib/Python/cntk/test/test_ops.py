@@ -16,35 +16,77 @@ def _test(root_node, expected, clean_up=True):
         ctx.clean_up = clean_up
         assert not ctx.input_nodes
         result = ctx.eval(root_node)
-        expected = AA(expected)
-        assert result.shape == expected.shape or result.shape == (
-            1, 1) and expected.shape == ()
-        assert np.allclose(result, expected)
 
-_VALUES = [0, [[1, 2], [3, 4]], [10.1, -20.2], 1.1]
+        assert len(result) == len(expected)
+        for res, exp in zip(result, expected):
+            assert np.allclose(res, exp)
+            assert res.shape == AA(exp).shape
 
-@pytest.fixture(scope="module", params=_VALUES)
-def left_arg(request):
+#C_VALUES = [0, [[1, 2], [3, 4]], [10.1, -20.2], 1.1]
+C_VALUES = [0, [[1, 2], [3, 4]]]
+
+@pytest.fixture(scope="module", params=C_VALUES)
+def c_arg(request):
     return request.param
 
-right_arg = left_arg
+c_left_arg = c_arg
+c_right_arg = c_arg
 
-def test_op_add(left_arg, right_arg):
+if False:
+    def test_op_add_constant(c_left_arg, c_right_arg):
+        expected = [AA(c_left_arg) + AA(c_right_arg)]
+        _test(C(c_left_arg) + c_right_arg, expected, False)
+        _test(C(c_left_arg) + C(c_right_arg), expected)
+        _test(c_left_arg + C(c_right_arg), expected)
+        _test(c_left_arg + C(c_left_arg) + c_right_arg, c_left_arg+expected)
+
+    def test_op_minus_constant(c_left_arg, c_right_arg):
+        expected = [AA(c_left_arg) - AA(c_right_arg)]
+        _test(C(c_left_arg) - c_right_arg, expected)
+        _test(C(c_left_arg) - C(c_right_arg), expected)
+        _test(c_left_arg - C(c_right_arg), expected)
+        _test(c_left_arg - C(c_left_arg) + c_right_arg, c_left_arg-expected)
+
+    def test_op_times_constant(c_left_arg, c_right_arg):
+        expected = [AA(c_left_arg) * AA(c_right_arg)]
+        _test(C(c_left_arg) * c_right_arg, expected)
+        _test(C(c_left_arg) * C(c_right_arg), expected)
+        _test(c_left_arg * C(c_right_arg), expected)
+
+# Testing inputs
+
+@pytest.mark.parametrize("left_arg, right_arg", [
+    ([30], [10]),
+    ([[30]], [[10]]),
+    ([[1.5,2.1]], [[10,20]]),
+    # Adding two 3x2 inputs of sequence length 1
+    ([[30,40], [1,2], [0.1, 0.2]], [[10,20], [3,4], [-0.5, -0.4]]), 
+    ([5], [[30,40], [1,2]]),
+    ])
+def test_op_add_input_constant(left_arg, right_arg):
     expected = AA(left_arg) + AA(right_arg)
-    _test(C(left_arg) + right_arg, expected)
-    _test(C(left_arg) + C(right_arg), expected)
-    _test(left_arg + C(right_arg), expected)
-    _test(left_arg + C(left_arg) + right_arg, left_arg+expected)
+    # sequence of 1 element, since we have has_sequence_dimension=False
+    expected = [expected] 
+    # batch of one sample
+    expected = [expected]
+    _test(I([left_arg], has_sequence_dimension=False) + right_arg, expected, False)
+    _test(left_arg + I([right_arg], has_sequence_dimension=False), expected, False)
 
-def test_op_minus(left_arg, right_arg):
-    expected = AA(left_arg) - AA(right_arg)
-    _test(C(left_arg) - right_arg, expected)
-    _test(C(left_arg) - C(right_arg), expected)
-    _test(left_arg - C(right_arg), expected)
-    _test(left_arg - C(left_arg) + right_arg, left_arg-expected)
+@pytest.mark.parametrize("left_arg, right_arg", [
+    ([
+        [[30]],     # 1st element has (1,) sequence of length 1
+        [[11],[12]] # 2nd element has (1,) sequence of length 2
+     ] , 
+      2), 
+    ([
+        [[33,22]],           # 1st element has (1x2) sequence of length 1
+        [[11,12], [1.1,2.2]] # 2nd element has (1x2) sequence of length 2
+     ],  
+      2), 
+    ])
 
-def test_op_times(left_arg, right_arg):
-    expected = AA(left_arg) * AA(right_arg)
-    _test(C(left_arg) * right_arg, expected)
-    _test(C(left_arg) * C(right_arg), expected)
-    _test(left_arg * C(right_arg), expected)
+def test_op_mul_input_seq(left_arg, right_arg):
+    expected = [AA(elem)*right_arg for elem in left_arg]
+    result = I(left_arg, has_sequence_dimension=True) * right_arg
+    _test(result, expected, False)
+
