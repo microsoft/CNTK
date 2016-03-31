@@ -4293,16 +4293,12 @@ void CPUMatrix<ElemType>::BatchNormalizationForward(const CPUMatrix<ElemType>& s
                                                     CPUMatrix<ElemType>& runMean, CPUMatrix<ElemType>& runInvStdDev, CPUMatrix<ElemType>& out, double epsilon,
                                                     CPUMatrix<ElemType>& saveMean, CPUMatrix<ElemType>& saveInvStdDev) const
 {
-    UNUSED(scale); UNUSED(bias); UNUSED(expAvgFactor); UNUSED(blendFactor); UNUSED(runMean); UNUSED(runInvStdDev); UNUSED(out); UNUSED(epsilon); UNUSED(saveMean); UNUSED(saveInvStdDev);
-    RuntimeError("Not yet implemented.");
-}
+    UNUSED(epsilon); UNUSED(saveMean); UNUSED(saveInvStdDev);
 
-template <class ElemType>
-void CPUMatrix<ElemType>::BatchNormalizationForwardInference(const CPUMatrix<ElemType>& scale, const CPUMatrix<ElemType>& bias, 
-                                                             const CPUMatrix<ElemType>& runMean, const CPUMatrix<ElemType>& runInvStdDev,
-                                                             CPUMatrix<ElemType>& out) const
-{
     assert((GetNumRows() % scale.GetNumRows()) == 0);
+
+    if (expAvgFactor != 0 || blendFactor != 1)
+        RuntimeError("Batch normalization training on CPU is not yet implemented.");
 
     bool spatial = GetNumRows() != scale.GetNumRows();
     if (spatial)
@@ -4336,7 +4332,7 @@ void CPUMatrix<ElemType>::BatchNormalizationBackward(const CPUMatrix<ElemType>& 
                                                      CPUMatrix<ElemType>& scaleGrad, CPUMatrix<ElemType>& biasGrad) const
 {
     UNUSED(in); UNUSED(grad); UNUSED(scale); UNUSED(saveMean); UNUSED(saveInvStdDev); UNUSED(scaleGrad); UNUSED(biasGrad);
-    RuntimeError("Not yet implemented.");
+    RuntimeError("Batch normalization training on CPU is not yet implemented.");
 }
 
 

@@ -1713,7 +1713,7 @@ public:
         if (!Environment().IsTraining())
         {
             expAvgFactor = 0;
-            blendFactor = 1;
+            blendFactor = 1.0;
 
             m_saveMean->Resize(0, 0);
             m_saveInvStdDev->Resize(0, 0);
@@ -1725,16 +1725,16 @@ public:
             {
                 // Convert to per-minibatch factor. Treat positivie infinity as if running mean/var parameters are "frozen"
                 // that is, do not require updates.
-                expAvgFactor = !isfinite(m_normTimeConst) ? 0 : 1.0 - exp(-numSamples / m_normTimeConst);
+                expAvgFactor = !isfinite(m_normTimeConst) ? 0 : (1.0 - exp(-numSamples / m_normTimeConst));
             }
             else
             {
                 // REVIEW alexeyk: hack, m_normTimeConst < 0 is used to compute CMA.
-                expAvgFactor = (m_normTimeConst < 0) ? (1.0 / (1.0 + m_mbCount)) : 1;
+                expAvgFactor = (m_normTimeConst < 0) ? (1.0 / (1.0 + m_mbCount)) : 1.0;
             }
 
             if (!isfinite(m_blendTimeConst))
-                blendFactor = 1;
+                blendFactor = 1.0;
             else
                 blendFactor = m_blendTimeConst > 0 ? (m_blendTimeConst / (m_blendTimeConst + numSamples)) : 0;
 

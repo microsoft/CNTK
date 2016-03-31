@@ -3119,7 +3119,10 @@ void GPUMatrix<ElemType>::BatchNormalizationForward(const GPUMatrix<ElemType>& s
                                                          saveMean.m_pArray, saveInvStdDev.m_pArray, GetStream());
         }
     }
-    // When blendFactor == 1 use running mean/var instead of current minibatch.
+    // When:
+    //     blendFactor == 1 - use running mean/var instead of the current minibatch mean/var.
+    // 0 < blendFactor <  1 - blend running mean/var with mean/var of the current minibatch: saveMean = (1 - blendFactor) * saveMean + blendFactor * runMean
+    //     blendFactor == 0 - use mean/var of the current minibatch.
     if (blendFactor < 1)
     {
         if (blendFactor > 0)
@@ -3140,27 +3143,6 @@ void GPUMatrix<ElemType>::BatchNormalizationForward(const GPUMatrix<ElemType>& s
                                                spatial, m_pArray, out.m_pArray, scale.m_pArray, bias.m_pArray,
                                                runMean.m_pArray, runInvStdDev.m_pArray, GetStream());
     }
-}
-
-template <class ElemType>
-void GPUMatrix<ElemType>::BatchNormalizationForwardInference(const GPUMatrix<ElemType>& scale, const GPUMatrix<ElemType>& bias, 
-                                                             const GPUMatrix<ElemType>& runMean, const GPUMatrix<ElemType>& runInvStdDev,
-                                                             GPUMatrix<ElemType>& out) const
-{
-    assert((GetNumRows() % scale.GetNumRows()) == 0);
-
-    bool spatial = GetNumRows() != scale.GetNumRows();
-    size_t vectorSize = GetNumRows();
-    size_t spatialSize = spatial ? (GetNumRows() / scale.GetNumRows()) : 1;
-    size_t batchSize = GetNumCols();
-
-    assert(0 < vectorSize && vectorSize <= std::numeric_limits<int>::max());
-    assert(0 < batchSize  && batchSize  <= std::numeric_limits<int>::max());
-
-    SyncGuard syncGuard;
-    Call<NormalizeBatchTraining, ElemType>(spatial ? spatialSize : vectorSize, vectorSize, spatialSize, batchSize,
-                                           spatial, m_pArray, out.m_pArray, scale.m_pArray, bias.m_pArray,
-                                           runMean.m_pArray, runInvStdDev.m_pArray, GetStream());
 }
 
 template <class ElemType>

@@ -49,14 +49,6 @@ void BatchNormEngine<ElemType>::Forward(const Mat& in, const Mat& scale, const M
 }
 
 template <class ElemType>
-void BatchNormEngine<ElemType>::ForwardInference(const Mat& in, const Mat& scale, const Mat& bias,
-                                                 const Mat& runMean, const Mat& runInvStdDev, Mat& out)
-{
-    EnsureCompatible();
-    ForwardInferenceCore(in, scale, bias, runMean, runInvStdDev, out);
-}
-
-template <class ElemType>
 void BatchNormEngine<ElemType>::Backward(const Mat& in, const Mat& srcGrad, Mat& grad, const Mat& scale, 
                                          const Mat& saveMean, const Mat& saveInvStdDev, Mat& scaleGrad, Mat& biasGrad)
 {
@@ -94,11 +86,6 @@ protected:
                      Mat& out, double epsilon, Mat& saveMean, Mat& saveInvStdDev) override
     {
         in.BatchNormalizationForward(scale, bias, expAvgFactor, blendFactor, runMean, runInvStdDev, out, epsilon, saveMean, saveInvStdDev);
-    }
-
-    void ForwardInferenceCore(const Mat& in, const Mat& scale, const Mat& bias, const Mat& runMean, const Mat& runInvStdDev, Mat& out) override
-    {
-        in.BatchNormalizationForwardInference(scale, bias, runMean, runInvStdDev, out);
     }
 
     void BackwardCore(const Mat& in, const Mat& srcGrad, Mat& grad, const Mat& scale, const Mat& saveMean, const Mat& saveInvStdDev,

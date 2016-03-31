@@ -46,13 +46,13 @@ protected:
                      Mat& out, double epsilon, Mat& saveMean, Mat& saveInvStdDev) override
     {
         // REVIEW alexeyk: there might be a way to do this in cuDNN.
-        if (blendFactor != 0 && blendFactor != 1)
+        if (blendFactor != 0 && (blendFactor != 1 || expAvgFactor > 0))
             InvalidArgument("cuDNN batch normalization engine currently supports blendTimeConstant of 0 or 1 only.");
 
         m_inOutCuDnnT.UpdateBatchSize(in.GetNumCols());
         cudnnBatchNormMode_t mode = m_spatial ? CUDNN_BATCHNORM_SPATIAL : CUDNN_BATCHNORM_PER_ACTIVATION;
         // cuDNN will fail with BAD_PARAM if epsilon < CUDNN_BN_MIN_EPSILON.
-        epsilon = std::max(epsilon, CUDNN_BN_MIN_EPSILON);
+        epsilon = max(epsilon, CUDNN_BN_MIN_EPSILON);
         // expAvgFactor == 0 && blendFactor == 1 means we are in eval mode.
         if (expAvgFactor == 0 && blendFactor == 1)
         {
@@ -67,22 +67,14 @@ protected:
         }
     }
 
-    void ForwardInferenceCore(const Mat& in, const Mat& scale, const Mat& bias, const Mat& runMean, const Mat& runInvStdDev, Mat& out) override
-    {
-        m_inOutCuDnnT.UpdateBatchSize(in.GetNumCols());
-        cudnnBatchNormMode_t mode = m_spatial ? CUDNN_BATCHNORM_SPATIAL : CUDNN_BATCHNORM_PER_ACTIVATION;
-        CUDNN_CALL(cudnnBatchNormalizationForwardInference(*m_cudnn, mode, &C::One, &C::Zero, m_inOutCuDnnT, ptr(in), m_inOutCuDnnT, ptr(out),
-            m_scaleBiasCuDnnT, ptr(scale), ptr(bias), ptr(runMean), ptr(runInvStdDev), CUDNN_BN_MIN_EPSILON));
-    }
-
     void BackwardCore(const Mat& in, const Mat& srcGrad, Mat& grad, const Mat& scale, const Mat& saveMean, const Mat& saveInvStdDev,
                       Mat& scaleGrad, Mat& biasGrad) override
     {
         m_inOutCuDnnT.UpdateBatchSize(srcGrad.GetNumCols());
         cudnnBatchNormMode_t mode = m_spatial ? CUDNN_BATCHNORM_SPATIAL : CUDNN_BATCHNORM_PER_ACTIVATION;
-        // REVIEW alexeyk: remove once Philly is upgraded to prod version.
+        // REVIEW alexeyk: remove once Philly is upgraded to prod version. Also change betaParamDiff to 1 and update CNTK BN engine.
 #if CUDNN_PATCHLEVEL >= 7
-        CUDNN_CALL(cudnnBatchNormalizationBackward(*m_cudnn, mode, &C::One, &C::One, &C::One, &C::One, m_inOutCuDnnT, ptr(in), m_inOutCuDnnT, ptr(srcGrad), m_inOutCuDnnT, ptr(grad),
+        CUDNN_CALL(cudnnBatchNormalizationBackward(*m_cudnn, mode, &C::One, &C::One, &C::One, &C::Zero, m_inOutCuDnnT, ptr(in), m_inOutCuDnnT, ptr(srcGrad), m_inOutCuDnnT, ptr(grad),
             m_scaleBiasCuDnnT, ptr(scale), ptr(scaleGrad), ptr(biasGrad), CUDNN_BN_MIN_EPSILON, ptr(saveMean), ptr(saveInvStdDev)));
 #else
         CUDNN_CALL(cudnnBatchNormalizationBackward(*m_cudnn, mode, &C::One, &C::One, m_inOutCuDnnT, ptr(in), m_inOutCuDnnT, ptr(srcGrad), m_inOutCuDnnT, ptr(grad),

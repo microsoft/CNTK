@@ -10,7 +10,7 @@ BN(inp, mapCount, bValue, scValue, bnTimeConst)
     m = Parameter(mapCount, 1, init = fixedValue, value = 0, learningRateMultiplier = 0)
     isd = Parameter(mapCount, 1, init = fixedValue, value = 0, learningRateMultiplier = 0)
     
-    y = BatchNormalization(inp, sc, b, m, isd, eval = false, spatial = true, normalizationTimeConstant = bnTimeConst, epsilon = 0.000000001, imageLayout = "cudnn")
+    y = BatchNormalization(inp, sc, b, m, isd, spatial = true, normalizationTimeConstant = bnTimeConst, epsilon = 0.000000001, imageLayout = "cudnn")
 ]
 
 ConvBNLayerW(W, inp, outMap, kW, kH, hStride, vStride, bValue, scValue, bnTimeConst)

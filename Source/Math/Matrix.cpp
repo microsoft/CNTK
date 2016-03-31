@@ -4152,26 +4152,6 @@ void Matrix<ElemType>::BatchNormalizationForward(const Matrix<ElemType>& scale, 
 }
 
 template <class ElemType>
-void Matrix<ElemType>::BatchNormalizationForwardInference(const Matrix<ElemType>& scale, const Matrix<ElemType>& bias, 
-                                                          const Matrix<ElemType>& runMean, const Matrix<ElemType>& runInvStdDev,
-                                                          Matrix<ElemType>& out) const
-{
-    DecideAndMoveToRightDevice(*this, out);
-
-    // REVIEW alexeyk: add sparse version.
-    DISPATCH_MATRIX_ON_FLAG(this,
-                            this,
-                            m_CPUMatrix->BatchNormalizationForwardInference(*(scale.m_CPUMatrix), *(bias.m_CPUMatrix),
-                                                                            *(runMean.m_CPUMatrix), *(runInvStdDev.m_CPUMatrix),
-                                                                            *(out.m_CPUMatrix)),
-                            m_GPUMatrix->BatchNormalizationForwardInference(*(scale.m_GPUMatrix), *(bias.m_GPUMatrix),
-                                                                            *(runMean.m_GPUMatrix), *(runInvStdDev.m_GPUMatrix),
-                                                                            *(out.m_GPUMatrix)),
-                            NOT_IMPLEMENTED,
-                            NOT_IMPLEMENTED);
-}
-
-template <class ElemType>
 void Matrix<ElemType>::BatchNormalizationBackward(const Matrix<ElemType>& in, Matrix<ElemType>& grad, const Matrix<ElemType>& scale, const Matrix<ElemType>& saveMean, const Matrix<ElemType>& saveInvStdDev,
                                                   Matrix<ElemType>& scaleGrad, Matrix<ElemType>& biasGrad) const
 {

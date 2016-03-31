@@ -16,7 +16,7 @@ imageLayout = "cudnn"
 prefetch = "true"
 parallelTrain = "false"
 
-command = Train:AddBNEval:Test
+command = Train:Test
 
 stderr = "$OutputDir$/03_ResNet"
 traceLevel = 1
@@ -74,16 +74,9 @@ Train = [
     ]    
 ]
 
-AddBNEval = [    
-    action = "edit"
-    CurModel = "$ModelDir$/03_ResNet"
-    NewModel = "$ModelDir$/03_ResNet.Eval"
-    editPath = "$ConfigDir$/03_ResNet.mel"
-]
-
 Test = [
     action = "test"
-    modelPath = "$ModelDir$/03_ResNet.Eval"
+    modelPath = "$ModelDir$/03_ResNet"
     # Set minibatch size for testing.
     minibatchSize = 512
 
