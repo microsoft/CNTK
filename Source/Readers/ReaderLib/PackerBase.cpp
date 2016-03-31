@@ -202,14 +202,15 @@ MBLayoutPtr PackerBase::PackSparseStream(const StreamBatch& batch, size_t stream
     const auto& stream = m_inputStreamDescriptions[streamIndex];
     assert(stream->m_storageType == StorageType::sparse_csc);
     auto elementSize = GetSizeByType(stream->m_elementType);
+    auto indexSize = sizeof(IndexType);
     auto pMBLayout = CreateMBLayout(batch);
 
     // size of nnz type + nnz * (size of the element type) + nnz * (size of the row index type) + 
     // (number of columns + 1) * (size of the column index type). 
     size_t requiredSize =
         sizeof(nnzCount) +
-        nnzCount * (elementSize + sizeof(IndexType)) +
-        sizeof(IndexType) * (pMBLayout->GetNumCols() + 1);
+        nnzCount * (elementSize + indexSize) +
+        indexSize * (pMBLayout->GetNumCols() + 1);
 
     auto& buffer = m_streamBuffers[streamIndex];
     if (buffer.m_size < requiredSize)
@@ -217,14 +218,12 @@ MBLayoutPtr PackerBase::PackSparseStream(const StreamBatch& batch, size_t stream
         buffer.Resize(requiredSize);
     }
 
-    const char* source = reinterpret_cast<char*>(&nnzCount);
-    char* destination = buffer.m_data.get();
+    auto* destination = buffer.m_data.get();
     // insert the nnzCount as the first element in the buffer.
-    std::copy(source, source + sizeof(nnzCount), destination);
+    memcpy(destination, &nnzCount, sizeof(nnzCount));
 
-    destination += sizeof(nnzCount);
-    char* dataDst = destination;
-    IndexType* indicesDst = reinterpret_cast<IndexType*>(dataDst + elementSize* nnzCount);
+    auto* dataDst = destination + sizeof(nnzCount);
+    auto* indicesDst = dataDst + elementSize* nnzCount;
     IndexType columnOffset = 0;
     vector<IndexType> sparseColumnIndices;
     vector<IndexType>  sequenceOffsets(batch.size(), 0);
@@ -261,8 +260,8 @@ MBLayoutPtr PackerBase::PackSparseStream(const StreamBatch& batch, size_t stream
             dataDst += nnz * elementSize;
 
             const auto* indicesSrc = sparseSequence.m_indices + sequenceOffset;
-            memcpy(indicesDst, indicesSrc, nnz);
-            indicesDst += nnz;
+            memcpy(indicesDst, indicesSrc, nnz * indexSize);
+            indicesDst += nnz * indexSize;
 
             sequenceOffset += nnz;
             columnOffset += nnz;
@@ -274,11 +273,14 @@ MBLayoutPtr PackerBase::PackSparseStream(const StreamBatch& batch, size_t stream
     // overall nnz count.
     assert(accumulate(sequenceOffsets.begin(), sequenceOffsets.end(), 0) == nnzCount);
 
+    assert(indicesDst == dataDst + nnzCount * indexSize);
     assert(columnOffset == nnzCount);
     sparseColumnIndices.push_back(columnOffset);
     assert((pMBLayout->GetNumCols() + 1) == sparseColumnIndices.size());
 
-    std::copy(sparseColumnIndices.begin(), sparseColumnIndices.end(), indicesDst + nnzCount);
+    assert(indicesDst + sparseColumnIndices.size()*indexSize <= destination + requiredSize);
+
+    memcpy(indicesDst, sparseColumnIndices.data(), sparseColumnIndices.size() * indexSize);
 
     return pMBLayout;
 }
