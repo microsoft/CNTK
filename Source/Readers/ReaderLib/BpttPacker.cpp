@@ -32,7 +32,7 @@ public:
     size_t AvailableNumberOfSamples() const
     {
         assert(m_length >= m_sampleCursor);
-        assert(m_sequences.empty() ?  m_sampleCursor == 0 : m_sequences.size() > m_sampleCursor);
+        assert(m_sequences.empty() ? m_sampleCursor == 0 : FrontSequence()->m_numberOfSamples >= m_sampleCursor);
         return m_length - m_sampleCursor;
     }
 
