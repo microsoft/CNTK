@@ -332,7 +332,7 @@ Matrix<ElemType>::Matrix(BaseMatrix<ElemType>* baseMatrix, ElemType* pArray, DEV
         }
     }
     m_baseMatrix = baseMatrix;
-    m_baseMatrix->SetArray(pArray);
+    m_baseMatrix->SetBuffer(pArray);
 }
 
 template <class ElemType>
@@ -675,14 +675,14 @@ size_t Matrix<ElemType>::BufferSize() const
 }
 
 template <class ElemType>
-ElemType* Matrix<ElemType>::BufferPointer() const
+ElemType* Matrix<ElemType>::Data() const
 {
     DISPATCH_MATRIX_ON_FLAG(this,
                             nullptr,
-                            return m_CPUMatrix->BufferPointer(),
-                            return m_GPUMatrix->BufferPointer(),
-                            return m_CPUSparseMatrix->BufferPointer(),
-                            return m_GPUSparseMatrix->BufferPointer());
+                            return m_CPUMatrix->Data(),
+                            return m_GPUMatrix->Data(),
+                            return m_CPUSparseMatrix->Data(),
+                            return m_GPUSparseMatrix->Data());
 }
 
 template <class ElemType>
@@ -3030,10 +3030,10 @@ ElemType Matrix<ElemType>::LogSumOfElements() const
 
     DISPATCH_MATRIX_ON_FLAG(this,
                             nullptr,
-                            return m_CPUMatrix->LogSumOfElements(),
-                            return m_GPUMatrix->LogSumOfElements(),
-                            NOT_IMPLEMENTED,
-                            NOT_IMPLEMENTED);
+                            { return m_CPUMatrix->LogSumOfElements(); },
+                            { return m_GPUMatrix->LogSumOfElements(); },
+                            {NOT_IMPLEMENTED},
+                            { NOT_IMPLEMENTED });
 }
 
 template <class ElemType>
@@ -3615,7 +3615,7 @@ void Matrix<ElemType>::_transferFromDeviceToDevice(int from_id, int to_id, bool 
                 delete m_GPUMatrix;
             if (m_CPUMatrix->GetNumElements() != 0 && !emptyTransfer)
             {
-                m_GPUMatrix = new GPUMatrix<ElemType>(m_CPUMatrix->GetNumRows(), m_CPUMatrix->GetNumCols(), to_id, m_CPUMatrix->GetArray(), matrixFlagNormal);
+                m_GPUMatrix = new GPUMatrix<ElemType>(m_CPUMatrix->GetNumRows(), m_CPUMatrix->GetNumCols(), to_id, m_CPUMatrix->Buffer(), matrixFlagNormal);
             }
             else
             {
@@ -5069,7 +5069,7 @@ template Matrix<char>::Matrix(const size_t numRows, const size_t numCols, DEVICE
 template Matrix<char>::Matrix(const size_t numRows, const size_t numCols, char* pArray, DEVICEID_TYPE deviceId, const size_t matrixFlags, const size_t nnz);
 template Matrix<char>::~Matrix();
 template Matrix<char>& Matrix<char>::operator=(Matrix<char>&& moveFrom);
-template char* Matrix<char>::BufferPointer() const;
+template char* Matrix<char>::Data() const;
 template int Matrix<char>::GetDeviceId() const;
 template size_t Matrix<char>::GetNumElements() const;
 template Matrix<char> Matrix<char>::ColumnSlice(size_t startColumn, size_t numCols) const;

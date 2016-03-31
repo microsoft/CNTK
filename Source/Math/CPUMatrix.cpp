@@ -142,9 +142,9 @@ CPUMatrix<ElemType>::CPUMatrix(const size_t numRows, const size_t numCols)
     m_numCols = numCols;
     SetSizeAllocated(GetNumElements());
 
-    if (GetSizeAllocated() != 0)
+    if (GetNumElements() != 0)
     {
-        SetArray(NewArray<ElemType>(GetSizeAllocated()));
+        SetBuffer(NewArray<ElemType>(GetSizeAllocated()));
     }
 }
 
@@ -252,7 +252,7 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::SetColumnSlice(const CPUMatrix<ElemTyp
     if (m_numRows != fromMatrix.m_numRows)
         LogicError("The number of rows in source and destination matrices do not match");
 
-    memcpy(BufferPointer() + startColumn * m_numRows, fromMatrix.BufferPointer(), numCols * m_numRows * sizeof(ElemType));
+    memcpy(Data() + startColumn * m_numRows, fromMatrix.Data(), numCols * m_numRows * sizeof(ElemType));
 
     return *this;
 }
@@ -336,7 +336,7 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignRowSliceValuesOf(const CPUMatrix
     if (startIndex + numRows > a.GetNumRows())
         LogicError("AssignRowSliceValuesOf: startIndex + numRows exceeds a.GetNumRows().");
 
-    Resize(numRows, a.GetNumCols());
+    RequireSize(numRows, a.GetNumCols());
 
     long n = (long) a.GetNumCols(); // note: OpenMP requires loop indices to be long, not size_t
     long k = (long) a.GetNumRows();
@@ -345,7 +345,7 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignRowSliceValuesOf(const CPUMatrix
     for (long j = 0; j < n; j++)
     {
         // memory copy might be faster?
-        memcpy(BufferPointer() + j * numRows, a.BufferPointer() + j * k + startIndex, sizeof(ElemType) * numRows);
+        memcpy(Data() + j * numRows, a.Data() + j * k + startIndex, sizeof(ElemType) * numRows);
 
         // //four-way unrolling
         // for (long i=0, startRow = startIndex; i<(m & ~3); i+=4, startRow+=4)
@@ -470,7 +470,7 @@ template <class ElemType>
 void CPUMatrix<ElemType>::MinusOneAt(CPUMatrix<ElemType>& c, const size_t position)
 {
     if (position < c.GetNumElements())
-        c.BufferPointer()[position] -= 1.0;
+        c.Data()[position] -= 1.0;
     else
         RuntimeError("MinusOneAt: position is out of CPU matrix size");
 }
@@ -484,7 +484,7 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignRepeatOf(const CPUMatrix<ElemTyp
     if (a.IsEmpty())
         LogicError("AssignRepeatOf: Matrix a is empty.");
 
-    Resize(a.GetNumRows() * numRowRepeats, a.GetNumCols() * numColRepeats);
+    RequireSize(a.GetNumRows() * numRowRepeats, a.GetNumCols() * numColRepeats);
     long n = (long) a.GetNumCols(), m = (long) a.GetNumRows();
     auto& us = *this;
 
@@ -599,7 +599,7 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignTransposeOf(const CPUMatrix<Elem
     if (a.IsEmpty())
         LogicError("AssignTransposeOf: Matrix a is empty.");
 
-    Resize(a.GetNumCols(), a.GetNumRows());
+    RequireSize(a.GetNumCols(), a.GetNumRows());
     long n = (long) a.GetNumCols(), m = (long) a.GetNumRows();
 
     auto& us = *this;
@@ -633,11 +633,11 @@ void CPUMatrix<ElemType>::SetValue(const ElemType v)
     bool isFinite = std::numeric_limits<ElemType>::is_integer || std::isfinite((double) v);
     if (isFinite && v == 0)
     {
-        memset(BufferPointer(), 0, sizeof(ElemType) * GetNumElements());
+        memset(Data(), 0, sizeof(ElemType) * GetNumElements());
     }
     else
     {
-		ElemType* bufPtr = BufferPointer();
+		ElemType* bufPtr = Data();
         long m = (long) GetNumElements();
         // 2-way thread parallelism is sufficient for the memory bound
         // operation of just setting the values of an array.
@@ -771,7 +771,7 @@ void CPUMatrix<ElemType>::SetValue(const CPUMatrix<ElemType>& deepCopyFrom)
     if (this == &deepCopyFrom)
         return;
 
-	SetValue(deepCopyFrom.GetNumRows(), deepCopyFrom.GetNumCols(), deepCopyFrom.BufferPointer(), 0);
+	SetValue(deepCopyFrom.GetNumRows(), deepCopyFrom.GetNumCols(), deepCopyFrom.Data(), 0);
 }
 
 template <class ElemType>
@@ -787,9 +787,9 @@ void CPUMatrix<ElemType>::SetValue(const size_t numRows, const size_t numCols, E
     if (matrixFlags & matrixFlagDontOwnBuffer)
     {
         // free previous array allocation if any before overwriting
-		delete[] GetArray();
+		delete[] Buffer();
 
-        SetArray(pArray);
+        SetBuffer(pArray);
         m_numRows = numRows;
         m_numCols = numCols;
         SetSizeAllocated(GetNumElements());
@@ -797,18 +797,18 @@ void CPUMatrix<ElemType>::SetValue(const size_t numRows, const size_t numCols, E
     }
     else
     {
-        Resize(numRows, numCols);
+        RequireSize(numRows, numCols);
         SetExternalBuffer(false);
 
         if (!IsEmpty())
         {
             if (!(matrixFlags & matrixFormatRowMajor)) // compatible to internal structure
             {
-                memcpy(BufferPointer(), pArray, GetNumElements() * sizeof(ElemType));
+                memcpy(Data(), pArray, GetNumElements() * sizeof(ElemType));
             }
             else // need to transpose
             {
-                ElemType* bufPtr = BufferPointer();
+                ElemType* bufPtr = Data();
                 auto& us = *this;
                 if (sizeof(ElemType) == sizeof(double))
                 {
@@ -941,7 +941,7 @@ void CPUMatrix<ElemType>::SetUniformRandomValue(const ElemType low, const ElemTy
 #endif
     std::uniform_real_distribution<ElemType> r(low, high);
 
-    ElemType* bufPtr = BufferPointer();
+    ElemType* bufPtr = Data();
     long m = (long) GetNumElements();
     // four-way unrolling
     for (long i = 0; i < (m & ~3); i += 4)
@@ -1068,13 +1068,13 @@ ElemType CPUMatrix<ElemType>::Adagrad(CPUMatrix<ElemType>& gradients, const bool
 
     if (IsEmpty() || gradients.GetNumCols() != GetNumCols() || gradients.GetNumRows() != GetNumRows())
     {
-        Resize(gradients.GetNumRows(), gradients.GetNumCols());
+        RequireSize(gradients.GetNumRows(), gradients.GetNumCols());
         SetValue(0.0);
     }
 
     assert(GetNumRows() == gradients.GetNumRows() && GetNumCols() == gradients.GetNumCols());
 
-    ElemType *a = BufferPointer(), *d_v = gradients.BufferPointer();
+    ElemType *a = Data(), *d_v = gradients.Data();
     size_t n = GetNumElements();
 
     const ElemType floor = 1e-16f;
@@ -1137,17 +1137,17 @@ void CPUMatrix<ElemType>::FSAdagrad(CPUMatrix<ElemType>& gradients,
 
     if (IsEmpty() || (GetNumCols() < numColsNeeded))
     {
-        Resize(gradients.GetNumRows(), numColsNeeded);
+        RequireSize(gradients.GetNumRows(), numColsNeeded);
         SetValue(0.0);
     }
 
     assert((GetNumRows() == gradients.GetNumRows()) && (GetNumCols() == numColsNeeded));
 
     size_t n = gradients.GetNumElements();
-    ElemType* grad = gradients.BufferPointer();
-    ElemType* smoothAda = BufferPointer();
-    ElemType* smoothMom = BufferPointer() + n;
-    ElemType* val = functionValues.BufferPointer();
+    ElemType* grad = gradients.Data();
+    ElemType* smoothAda = Data();
+    ElemType* smoothMom = Data() + n;
+    ElemType* val = functionValues.Data();
 #pragma omp parallel for
     // TODO: Unroll 4-times for better performance leveraging vectorization
     for (long i = 0; i < n; i++)
@@ -1188,15 +1188,15 @@ ElemType CPUMatrix<ElemType>::RmsProp(CPUMatrix<ElemType>& gradients,
     const ElemType floor = 1e-6f;
 
     size_t n = gradients.GetNumElements();
-    ElemType* curr_grad = gradients.BufferPointer();
+    ElemType* curr_grad = gradients.Data();
 
     if (IsEmpty() || GetNumCols() < gradients.GetNumCols() * 3)
     {
-        Resize(gradients.GetNumRows(), gradients.GetNumCols() * 3);
+        RequireSize(gradients.GetNumRows(), gradients.GetNumCols() * 3);
         SetValue(0.0);
 
-        ElemType* avars = BufferPointer();         // accumulated variances for RMS scaling
-        ElemType* steps = BufferPointer() + 2 * n; // current step size
+        ElemType* avars = Data();         // accumulated variances for RMS scaling
+        ElemType* steps = Data() + 2 * n; // current step size
 
         // initialize moving average of gradient-squared
         for (long i = 0; i < n; i++)
@@ -1207,9 +1207,9 @@ ElemType CPUMatrix<ElemType>::RmsProp(CPUMatrix<ElemType>& gradients,
             steps[i] = ElemType(0.02);
     }
 
-    ElemType* avars = BufferPointer();         // accumulated variances for RMS scaling
-    ElemType* signs = BufferPointer() + n;     // sign of previous gradient
-    ElemType* steps = BufferPointer() + 2 * n; // current step size
+    ElemType* avars = Data();         // accumulated variances for RMS scaling
+    ElemType* signs = Data() + n;     // sign of previous gradient
+    ElemType* steps = Data() + 2 * n; // current step size
 
     assert(GetNumRows() == gradients.GetNumRows() && GetNumCols() == gradients.GetNumCols() * 3);
 
@@ -1283,6 +1283,14 @@ void CPUMatrix<ElemType>::Reshape(const size_t numRows, const size_t numCols)
     m_numCols = numCols;
 }
 
+// RequireSize() -- Tests if the matrix is the right size. If not, resizes the matrix. This avoids the VerifyResizable check if we're already the right size.
+template <class ElemType>
+void CPUMatrix<ElemType>::RequireSize(const size_t numRows, const size_t numCols, bool growOnly /*=true*/)
+{
+    if (GetNumRows() != numRows || GetNumCols() != numCols)
+		Resize(numRows, numCols, growOnly);
+}
+
 // Resize() -- change matrix size
 // This function is cheap if the matrix size does not change.
 // Current content is not preserved.
@@ -1292,7 +1300,7 @@ void CPUMatrix<ElemType>::Reshape(const size_t numRows, const size_t numCols)
 template <class ElemType>
 void CPUMatrix<ElemType>::Resize(const size_t numRows, const size_t numCols, bool growOnly /*=true*/)
 {
-    VerifyResizable();
+    VerifyResizable(__func__);
 
     if (GetNumRows() == numRows && GetNumCols() == numCols)
         return;
@@ -1308,10 +1316,10 @@ void CPUMatrix<ElemType>::Resize(const size_t numRows, const size_t numCols, boo
             pArray = NewArray<ElemType>(numElements);
         }
         // success: update the object
-        if (GetArray())
-            delete[] GetArray();
+        if (Buffer())
+            delete[] Buffer();
 
-        SetArray(pArray);
+        SetBuffer(pArray);
         SetSizeAllocated(numElements);
     }
 
@@ -1329,7 +1337,7 @@ ElemType* CPUMatrix<ElemType>::CopyToArray() const
     if (numElements != 0)
     {
         ElemType* arrayCopyTo = NewArray<ElemType>(numElements);
-        memcpy(arrayCopyTo, BufferPointer(), sizeof(ElemType) * numElements);
+        memcpy(arrayCopyTo, Data(), sizeof(ElemType) * numElements);
         return arrayCopyTo;
     }
     else
@@ -1354,7 +1362,7 @@ size_t CPUMatrix<ElemType>::CopyToArray(ElemType*& arrayCopyTo, size_t& currentA
 
     if (numElements != 0)
     {
-        memcpy(arrayCopyTo, BufferPointer(), sizeof(ElemType) * numElements);
+        memcpy(arrayCopyTo, Data(), sizeof(ElemType) * numElements);
     }
 
     return numElements;
@@ -1407,7 +1415,7 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignSumOf(const ElemType alpha, cons
 
     auto& us = *this;
     if (this != &a)
-        Resize(a.GetNumRows(), a.GetNumCols());
+        RequireSize(a.GetNumRows(), a.GetNumCols());
 
     long m = (long) GetNumRows(), n = (long) GetNumCols();
 #pragma omp parallel for
@@ -1507,7 +1515,7 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignDifferenceOf(const ElemType alph
 {
     auto& us = *this;
     if (this != &a)
-        Resize(a.GetNumRows(), a.GetNumCols());
+        RequireSize(a.GetNumRows(), a.GetNumCols());
 
     long m = (long) GetNumRows(), n = (long) GetNumCols();
 #pragma omp parallel for
@@ -1536,7 +1544,7 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignDifferenceOf(const CPUMatrix<Ele
 {
     auto& us = *this;
     if (this != &a)
-        Resize(a.GetNumRows(), a.GetNumCols());
+        RequireSize(a.GetNumRows(), a.GetNumCols());
 
     long m = (long) GetNumRows(), n = (long) GetNumCols();
 #pragma omp parallel for
@@ -1586,7 +1594,7 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignDifferenceOf(const CPUMatrix<Ele
 {
     if (this != &a)
     {
-        Resize(a.GetNumRows(), a.GetNumCols());
+        RequireSize(a.GetNumRows(), a.GetNumCols());
         SetValue(a);
     }
     (*this) -= b;
@@ -1726,7 +1734,7 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignElementProductOf(const CPUMatrix
 
     auto& us = *this;
     if (this != &a)
-        Resize(a.GetNumRows(), a.GetNumCols());
+        RequireSize(a.GetNumRows(), a.GetNumCols());
 
     long m = (long) GetNumRows(), n = (long) GetNumCols();
 #pragma omp parallel for
@@ -1801,7 +1809,7 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignElementDivisionOf(const CPUMatri
 
     auto& us = *this;
     if (this != &a)
-        Resize(a.GetNumRows(), a.GetNumCols());
+        RequireSize(a.GetNumRows(), a.GetNumCols());
 
     ElemType smallValue = EPS_IN_INVERSE;
 
@@ -1978,7 +1986,7 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignElementInverseOf(const CPUMatrix
 
     auto& us = *this;
     if (this != &a)
-        Resize(a.GetNumRows(), a.GetNumCols());
+        RequireSize(a.GetNumRows(), a.GetNumCols());
 
 #pragma omp parallel for
     foreach_coord (i, j, us)
@@ -2009,7 +2017,7 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignSigmoidOf(const CPUMatrix<ElemTy
 
     auto& us = *this;
     if (this != &a)
-        Resize(a.GetNumRows(), a.GetNumCols());
+        RequireSize(a.GetNumRows(), a.GetNumCols());
 
 #pragma omp parallel for
     foreach_coord (i, j, us)
@@ -2040,7 +2048,7 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignLinearRectifierDerivativeOf(cons
 
     auto& us = *this;
     if (this != &a)
-        Resize(a.GetNumRows(), a.GetNumCols());
+        RequireSize(a.GetNumRows(), a.GetNumCols());
 
     long m = (long) GetNumRows(), n = (long) GetNumCols();
 #pragma omp parallel for
@@ -2078,7 +2086,7 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignSigmoidDerivativeOf(const CPUMat
 
     auto& us = *this;
     if (this != &a)
-        Resize(a.GetNumRows(), a.GetNumCols());
+        RequireSize(a.GetNumRows(), a.GetNumCols());
 
     long m = (long) GetNumRows(), n = (long) GetNumCols();
 #pragma omp parallel for
@@ -2125,7 +2133,7 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignTanhOf(const CPUMatrix<ElemType>
 
     auto& us = *this;
     if (this != &a)
-        Resize(a.GetNumRows(), a.GetNumCols());
+        RequireSize(a.GetNumRows(), a.GetNumCols());
 
     long m = (long) GetNumRows(), n = (long) GetNumCols();
 #pragma omp parallel for
@@ -2164,7 +2172,7 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignLogSoftmaxOf(const CPUMatrix<Ele
 
     auto& us = *this;
     if (this != &a)
-        Resize(a.GetNumRows(), a.GetNumCols());
+        RequireSize(a.GetNumRows(), a.GetNumCols());
 
     if (isColWise)
     {
@@ -2222,7 +2230,7 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignHardmaxOf(const CPUMatrix<ElemTy
 
     auto& us = *this;
     if (this != &a)
-        Resize(a.GetNumRows(), a.GetNumCols());
+        RequireSize(a.GetNumRows(), a.GetNumCols());
 
     if (isColWise)
     {
@@ -2287,7 +2295,7 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignSqrtOf(const CPUMatrix<ElemType>
 
     auto& us = *this;
     if (this != &a)
-        Resize(a.GetNumRows(), a.GetNumCols());
+        RequireSize(a.GetNumRows(), a.GetNumCols());
 
     long m = (long) GetNumRows(), n = (long) GetNumCols();
 #pragma omp parallel for
@@ -2326,7 +2334,7 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignExpOf(const CPUMatrix<ElemType>&
 
     auto& us = *this;
     if (this != &a)
-        Resize(a.GetNumRows(), a.GetNumCols());
+        RequireSize(a.GetNumRows(), a.GetNumCols());
 
     long m = (long) GetNumRows(), n = (long) GetNumCols();
 #pragma omp parallel for
@@ -2365,7 +2373,7 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignAbsOf(const CPUMatrix<ElemType>&
 
     auto& us = *this;
     if (this != &a)
-        Resize(a.GetNumRows(), a.GetNumCols());
+        RequireSize(a.GetNumRows(), a.GetNumCols());
 
     long m = (long) GetNumRows(), n = (long) GetNumCols();
 #pragma omp parallel for
@@ -2411,7 +2419,7 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignLogOf(const CPUMatrix<ElemType>&
 
     auto& us = *this;
     if (this != &a)
-        Resize(a.GetNumRows(), a.GetNumCols());
+        RequireSize(a.GetNumRows(), a.GetNumCols());
 
 #pragma omp parallel for
     foreach_coord (i, j, a)
@@ -2436,7 +2444,7 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignLog10Of(const CPUMatrix<ElemType
 
     auto& us = *this;
     if (this != &a)
-        Resize(a.GetNumRows(), a.GetNumCols());
+        RequireSize(a.GetNumRows(), a.GetNumCols());
 
 #pragma omp parallel for
     foreach_coord (i, j, a)
@@ -2470,7 +2478,7 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignCosineOf(const CPUMatrix<ElemTyp
 
     auto& us = *this;
     if (this != &a)
-        Resize(a.GetNumRows(), a.GetNumCols());
+        RequireSize(a.GetNumRows(), a.GetNumCols());
 
 #pragma omp parallel for
     foreach_coord (i, j, a)
@@ -2497,7 +2505,7 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignNegativeSineOf(const CPUMatrix<E
 
     auto& us = *this;
     if (this != &a)
-        Resize(a.GetNumRows(), a.GetNumCols());
+        RequireSize(a.GetNumRows(), a.GetNumCols());
 
 #pragma omp parallel for
     foreach_coord (i, j, a)
@@ -2607,7 +2615,7 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::InplaceSoftThreshold(const ElemType th
 
     long m = (long) GetNumElements();
 
-    ElemType* bufPtr = BufferPointer();
+    ElemType* bufPtr = Data();
 #pragma omp parallel for
     for (long i = 0; i < (m & ~3); i += 4) // four-way unrolling
     {
@@ -2662,7 +2670,7 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignTruncateBottomOf(const CPUMatrix
 
     auto& us = *this;
     if (this != &a)
-        Resize(a.GetNumRows(), a.GetNumCols());
+        RequireSize(a.GetNumRows(), a.GetNumCols());
 
 #pragma omp parallel for
     foreach_coord (i, j, a)
@@ -2704,7 +2712,7 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignTruncateTopOf(const CPUMatrix<El
 
     auto& us = *this;
     if (this != &a)
-        Resize(a.GetNumRows(), a.GetNumCols());
+        RequireSize(a.GetNumRows(), a.GetNumCols());
 
 #pragma omp parallel for
     foreach_coord (i, j, a)
@@ -2747,18 +2755,18 @@ ElemType CPUMatrix<ElemType>::SumOfAbsElements() const
     if (sizeof(ElemType) == sizeof(double))
     {
 #ifdef USE_ACML
-        return (ElemType) dasum((int) GetNumElements(), reinterpret_cast<double*>(BufferPointer()), 1);
+        return (ElemType) dasum((int) GetNumElements(), reinterpret_cast<double*>(Data()), 1);
 #else
-        return (ElemType) cblas_dasum((int) GetNumElements(), reinterpret_cast<double*>(BufferPointer()), 1);
+        return (ElemType) cblas_dasum((int) GetNumElements(), reinterpret_cast<double*>(Data()), 1);
 #endif
     }
     else
     {
 #pragma warning(suppress : 4244)
 #ifdef USE_ACML
-        return sasum((int) GetNumElements(), reinterpret_cast<float*>(BufferPointer()), 1);
+        return sasum((int) GetNumElements(), reinterpret_cast<float*>(Data()), 1);
 #else
-        return cblas_sasum((int) GetNumElements(), reinterpret_cast<float*>(BufferPointer()), 1);
+        return cblas_sasum((int) GetNumElements(), reinterpret_cast<float*>(Data()), 1);
 #endif
     }
 }
@@ -2773,7 +2781,7 @@ ElemType CPUMatrix<ElemType>::SumOfElements() const
     ElemType sum = 0;
     long m = (long) GetNumElements(); // note: OpenMP requires loop indices to be long, not size_t
 
-    ElemType* bufPtr = BufferPointer();
+    ElemType* bufPtr = Data();
 //four-way unrolling
 #pragma omp parallel for reduction(+ : sum)
     for (long i = 0; i < (m & ~3); i += 4)
@@ -2796,7 +2804,7 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignSumOfElements(const CPUMatrix<El
         LogicError("AssignSumOfElements: Matrix a is empty.");
 
     auto& us = *this;
-    us.Resize(1, 1);
+    us.RequireSize(1, 1);
     us(0, 0) = a.SumOfElements();
 
     return *this;
@@ -2821,7 +2829,7 @@ void CPUMatrix<ElemType>::VectorSum(const CPUMatrix<ElemType>& a, CPUMatrix<Elem
 
     if (isColWise) // col-wise
     {
-        c.Resize(1, n);
+        c.RequireSize(1, n);
 
 #pragma omp parallel for
         foreach_column (j, a)
@@ -2837,7 +2845,7 @@ void CPUMatrix<ElemType>::VectorSum(const CPUMatrix<ElemType>& a, CPUMatrix<Elem
     }
     else
     {
-        c.Resize(m, 1);
+        c.RequireSize(m, 1);
 
 #pragma omp parallel for
         foreach_row (i, a)
@@ -2868,7 +2876,7 @@ void CPUMatrix<ElemType>::VectorNorm1(CPUMatrix<ElemType>& c, const bool isColWi
 
     if (isColWise) // col-wise
     {
-        c.Resize(1, n);
+        c.RequireSize(1, n);
 
 #pragma omp parallel for
         foreach_column (j, us)
@@ -2884,7 +2892,7 @@ void CPUMatrix<ElemType>::VectorNorm1(CPUMatrix<ElemType>& c, const bool isColWi
     }
     else
     {
-        c.Resize(m, 1);
+        c.RequireSize(m, 1);
 
 #pragma omp parallel for
         foreach_row (i, us)
@@ -2920,10 +2928,10 @@ void CPUMatrix<ElemType>::VectorNorm2(CPUMatrix<ElemType>& c, const bool isColWi
 
     assert(m > 0 && n > 0); // converting from size_t to int may cause overflow
 
-	ElemType* bufPtr = us.BufferPointer();
+	ElemType* bufPtr = us.Data();
     if (isColWise) // col-wise
     {
-        c.Resize(1, n);
+        c.RequireSize(1, n);
 
         if (sizeof(ElemType) == sizeof(double))
         {
@@ -2953,7 +2961,7 @@ void CPUMatrix<ElemType>::VectorNorm2(CPUMatrix<ElemType>& c, const bool isColWi
     }
     else
     {
-        c.Resize(m, 1);
+        c.RequireSize(m, 1);
 
         if (sizeof(ElemType) == sizeof(double))
         {
@@ -3005,7 +3013,7 @@ void CPUMatrix<ElemType>::VectorNormInf(CPUMatrix<ElemType>& c, const bool isCol
 
     if (isColWise) // col-wise
     {
-        c.Resize(1, n);
+        c.RequireSize(1, n);
 
         // #pragma omp parallel for
         foreach_column (j, us)
@@ -3020,7 +3028,7 @@ void CPUMatrix<ElemType>::VectorNormInf(CPUMatrix<ElemType>& c, const bool isCol
     }
     else
     {
-        c.Resize(m, 1);
+        c.RequireSize(m, 1);
 
         // #pragma omp parallel for
         foreach_row (i, us)
@@ -3063,7 +3071,7 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignKhatriRaoProductOf(const CPUMatr
 
     long rowsA = (long) a.GetNumRows();
     long rowsB = (long) b.GetNumRows();
-    Resize(rowsA * rowsB, cols);
+    RequireSize(rowsA * rowsB, cols);
 
 #ifdef __INTEL_COMPILER // TODO: check this
 #pragma simd statement
@@ -3180,7 +3188,7 @@ ElemType CPUMatrix<ElemType>::FrobeniusNorm() const
 
     long m = (long) GetNumElements();
 
-    ElemType* bufPtr = BufferPointer();
+    ElemType* bufPtr = Data();
 //four-way unrolling
 #pragma omp parallel for reduction(+ : v)
     for (long i = 0; i < (m & ~3); i += 4)
@@ -3203,7 +3211,7 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignFrobeniusNormOf(const CPUMatrix<
         LogicError("AssignFrobeniusNormOf: Matrix a is empty.");
 
     auto& us = *this;
-    us.Resize(1, 1);
+    us.RequireSize(1, 1);
     us(0, 0) = a.FrobeniusNorm();
 
     return us;
@@ -3277,7 +3285,7 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignSignOf(const CPUMatrix<ElemType>
 
     auto& us = *this;
     if (this != &a)
-        Resize(a.GetNumRows(), a.GetNumCols());
+        RequireSize(a.GetNumRows(), a.GetNumCols());
 
 #pragma omp parallel for
     foreach_column (j, us)
@@ -3303,7 +3311,7 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AddSignOf(const CPUMatrix<ElemType>& a
 
     auto& us = *this;
     if (this != &a)
-        Resize(a.GetNumRows(), a.GetNumCols());
+        RequireSize(a.GetNumRows(), a.GetNumCols());
 
 #pragma omp parallel for
     foreach_column (j, us)
@@ -3336,8 +3344,8 @@ void CPUMatrix<ElemType>::VectorMax(CPUMatrix<ElemType>& maxIndexes, CPUMatrix<E
 
     if (isColWise) // col-wise
     {
-        maxValues.Resize(topK, n);
-        maxIndexes.Resize(topK, n);
+        maxValues.RequireSize(topK, n);
+        maxIndexes.RequireSize(topK, n);
 
         if (topK == 1)
         {
@@ -3367,9 +3375,9 @@ void CPUMatrix<ElemType>::VectorMax(CPUMatrix<ElemType>& maxIndexes, CPUMatrix<E
                               return i++;
                           });
 
-            const ElemType* curVal =            BufferPointer();
-            ElemType* curIdx       = maxIndexes.BufferPointer();
-            ElemType* curMax       =  maxValues.BufferPointer();
+            const ElemType* curVal =            Data();
+            ElemType* curIdx       = maxIndexes.Data();
+            ElemType* curMax       =  maxValues.Data();
             for (int icol = 0; icol < n; icol++, curVal += m, curIdx += topK, curMax += topK)
             {
                 // Partial sort, descending order.
@@ -3393,8 +3401,8 @@ void CPUMatrix<ElemType>::VectorMax(CPUMatrix<ElemType>& maxIndexes, CPUMatrix<E
         if (topK > 1)
             RuntimeError("Row-wise TopK max is not supported.");
 
-        maxValues.Resize(m, 1);
-        maxIndexes.Resize(m, 1);
+        maxValues.RequireSize(m, 1);
+        maxIndexes.RequireSize(m, 1);
 
 #pragma omp parallel for
         for (int i = 0; i < m; i++)
@@ -3429,8 +3437,8 @@ void CPUMatrix<ElemType>::VectorMin(CPUMatrix<ElemType>& minIndexes, CPUMatrix<E
 
     if (isColWise) // col-wise
     {
-        minValues.Resize(1, n);
-        minIndexes.Resize(1, n);
+        minValues.RequireSize(1, n);
+        minIndexes.RequireSize(1, n);
 
 #pragma omp parallel for
         for (int j = 0; j < n; j++)
@@ -3451,8 +3459,8 @@ void CPUMatrix<ElemType>::VectorMin(CPUMatrix<ElemType>& minIndexes, CPUMatrix<E
     }
     else
     {
-        minValues.Resize(m, 1);
-        minIndexes.Resize(m, 1);
+        minValues.RequireSize(m, 1);
+        minIndexes.RequireSize(m, 1);
 
 #pragma omp parallel for
         for (int i = 0; i < m; i++)
@@ -3492,7 +3500,7 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignNumOfDiff(const CPUMatrix<ElemTy
     else
     {
         size_t crow = b.GetNumRows();
-        const ElemType* curCol = b.BufferPointer();
+        const ElemType* curCol = b.Data();
         for (size_t icol = 0; icol < a.GetNumCols(); icol++, curCol += crow)
         {
             auto res = std::find(curCol, curCol + crow, a(0, icol));
@@ -3501,7 +3509,7 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignNumOfDiff(const CPUMatrix<ElemTy
         }
     }
 
-    Resize(1, 1); // result should be one element
+    RequireSize(1, 1); // result should be one element
     (*this)(0, 0) = n;
 
     return *this;
@@ -3641,7 +3649,7 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignPackedConvolutionInput(const CPU
     const size_t inputDim = inputWidth * inputHeight * inputChannels;
     const size_t smallBatchSize = inputSubBatch.GetNumCols();
     const long inputHeightTimesChannel = (long) (inputHeight * inputChannels);
-    Resize(packedInputRows, packedInputColsPerSample * smallBatchSize);
+    RequireSize(packedInputRows, packedInputColsPerSample * smallBatchSize);
     if (zeroPadding)
         SetValue((ElemType) 0);
 
@@ -3782,7 +3790,7 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignMaxPoolingResult(const CPUMatrix
     const long inputHeightTimesChannel = (long) (inputHeight * channels);
     const long outputHeightTimesChannel = (long) (outputHeight * channels);
     const size_t batchSize = inputBatch.GetNumCols();
-    Resize(outputSizePerSample, batchSize);
+    RequireSize(outputSizePerSample, batchSize);
 
 // IN_ELEM_ROWPOS(channel, row, col) = (channel + (row + col * inputHeight) * channels)
 // IN_ELEM_COLPOS = sample
@@ -3879,7 +3887,7 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignAveragePoolingResult(const CPUMa
     const long outputHeightTimesChannel = (long) (outputHeight * channels);
     const size_t batchSize = inputBatch.GetNumCols();
     const size_t windowSize = windowWidth * windowHeight;
-    Resize(outputSizePerSample, batchSize);
+    RequireSize(outputSizePerSample, batchSize);
 
 // IN_ELEM_ROWPOS(channel, row, col) = (channel + (row + col * inputHeight) * channels)
 // IN_ELEM_COLPOS = sample
@@ -4042,7 +4050,7 @@ void CPUMatrix<ElemType>::MultiplyAndWeightedAdd(ElemType alpha, const CPUMatrix
         InvalidArgument("CPUMatrix<ElemType>::MultiplyAndWeightedAdd : The inner dimensions of a and b must match.");
 
     if (beta == 0)
-        c.Resize(m, n);
+        c.RequireSize(m, n);
     else
         c.VerifySize(m, n); // Can't resize if beta != 0
 
@@ -4051,18 +4059,18 @@ void CPUMatrix<ElemType>::MultiplyAndWeightedAdd(ElemType alpha, const CPUMatrix
     if (sizeof(ElemType) == sizeof(double))
     {
 #ifdef USE_ACML
-        dgemm(transA, transB, m, n, k, alpha, reinterpret_cast<double*>(a.BufferPointer()), lda, reinterpret_cast<double*>(b.BufferPointer()), ldb, beta, reinterpret_cast<double*>(c.BufferPointer()), ldc);
+        dgemm(transA, transB, m, n, k, alpha, reinterpret_cast<double*>(a.Data()), lda, reinterpret_cast<double*>(b.Data()), ldb, beta, reinterpret_cast<double*>(c.Data()), ldc);
 #else
-        cblas_dgemm((CBLAS_ORDER) BLAS_COLMAJOR mklTransA, mklTransB, m, n, k, alpha, reinterpret_cast<double*>(a.BufferPointer()), lda, reinterpret_cast<double*>(b.BufferPointer()), ldb, beta, reinterpret_cast<double*>(c.BufferPointer()), ldc);
+        cblas_dgemm((CBLAS_ORDER) BLAS_COLMAJOR mklTransA, mklTransB, m, n, k, alpha, reinterpret_cast<double*>(a.Data()), lda, reinterpret_cast<double*>(b.Data()), ldb, beta, reinterpret_cast<double*>(c.Data()), ldc);
 #endif
     }
     else
     {
 #pragma warning(suppress : 4244)
 #ifdef USE_ACML
-        sgemm(BLAS_COLMAJOR transA, transB, m, n, k, alpha, reinterpret_cast<float*>(a.BufferPointer()), lda, reinterpret_cast<float*>(b.BufferPointer()), ldb, beta, reinterpret_cast<float*>(c.BufferPointer()), ldc);
+        sgemm(BLAS_COLMAJOR transA, transB, m, n, k, alpha, reinterpret_cast<float*>(a.Data()), lda, reinterpret_cast<float*>(b.Data()), ldb, beta, reinterpret_cast<float*>(c.Data()), ldc);
 #else
-        cblas_sgemm((CBLAS_ORDER) BLAS_COLMAJOR mklTransA, mklTransB, m, n, k, alpha, reinterpret_cast<float*>(a.BufferPointer()), lda, reinterpret_cast<float*>(b.BufferPointer()), ldb, beta, reinterpret_cast<float*>(c.BufferPointer()), ldc);
+        cblas_sgemm((CBLAS_ORDER) BLAS_COLMAJOR mklTransA, mklTransB, m, n, k, alpha, reinterpret_cast<float*>(a.Data()), lda, reinterpret_cast<float*>(b.Data()), ldb, beta, reinterpret_cast<float*>(c.Data()), ldc);
 #endif
     }
 }
@@ -4102,43 +4110,43 @@ void CPUMatrix<ElemType>::SVD(const CPUMatrix<ElemType>& A, CPUMatrix<ElemType>&
     lda = m;
     ldu = m;
     ldvt = n;
-    U.Resize(m, m);
-    SIGMA.Resize(std::min(m, n), 1);
-    VT.Resize(n, n);
+    U.RequireSize(m, m);
+    SIGMA.RequireSize(std::min(m, n), 1);
+    VT.RequireSize(n, n);
 
     if (sizeof(ElemType) == sizeof(double))
     {
 #ifdef USE_ACML
-        dgesvd('A', 'A', (int) m, (int) n, reinterpret_cast<double*>(A.BufferPointer()), (int) lda, reinterpret_cast<double*>(SIGMA.BufferPointer()), reinterpret_cast<double*>(U.BufferPointer()), (int) ldu, reinterpret_cast<double*>(VT.BufferPointer()), (int) ldvt, &info);
+        dgesvd('A', 'A', (int) m, (int) n, reinterpret_cast<double*>(A.Data()), (int) lda, reinterpret_cast<double*>(SIGMA.Data()), reinterpret_cast<double*>(U.Data()), (int) ldu, reinterpret_cast<double*>(VT.Data()), (int) ldvt, &info);
 #elif defined(USE_MKL)
         double wkopt;
         int lwork = -1;
-        dgesvd("All", "All", &m, &n, reinterpret_cast<double*>(A.BufferPointer()), &lda, reinterpret_cast<double*>(SIGMA.BufferPointer()), reinterpret_cast<double*>(U.BufferPointer()), &ldu, reinterpret_cast<double*>(VT.BufferPointer()), &ldvt, &wkopt, &lwork, &info);
+        dgesvd("All", "All", &m, &n, reinterpret_cast<double*>(A.Data()), &lda, reinterpret_cast<double*>(SIGMA.Data()), reinterpret_cast<double*>(U.Data()), &ldu, reinterpret_cast<double*>(VT.Data()), &ldvt, &wkopt, &lwork, &info);
         lwork = (int) wkopt;
-        W.Resize(lwork, 1);
-        dgesvd("All", "All", &m, &n, reinterpret_cast<double*>(A.BufferPointer()), &lda, reinterpret_cast<double*>(SIGMA.BufferPointer()), reinterpret_cast<double*>(U.BufferPointer()), &ldu, reinterpret_cast<double*>(VT.BufferPointer()), &ldvt, reinterpret_cast<double*>(W.BufferPointer()), &lwork, &info);
+        W.RequireSize(lwork, 1);
+        dgesvd("All", "All", &m, &n, reinterpret_cast<double*>(A.Data()), &lda, reinterpret_cast<double*>(SIGMA.Data()), reinterpret_cast<double*>(U.Data()), &ldu, reinterpret_cast<double*>(VT.Data()), &ldvt, reinterpret_cast<double*>(W.Data()), &lwork, &info);
 #else
         std::vector<double> superb(std::max(std::min(m, n) - 1, 1));
-        info = LAPACKE_dgesvd(BLAS_COLMAJOR 'A', 'A', (int) m, (int) n, reinterpret_cast<double*>(A.BufferPointer()), (int) lda, reinterpret_cast<double*>(SIGMA.BufferPointer()),
-            reinterpret_cast<double*>(U.BufferPointer()), (int) ldu, reinterpret_cast<double*>(VT.BufferPointer()), (int) ldvt, &superb[0]);
+        info = LAPACKE_dgesvd(BLAS_COLMAJOR 'A', 'A', (int) m, (int) n, reinterpret_cast<double*>(A.Data()), (int) lda, reinterpret_cast<double*>(SIGMA.Data()),
+            reinterpret_cast<double*>(U.Data()), (int) ldu, reinterpret_cast<double*>(VT.Data()), (int) ldvt, &superb[0]);
 #endif
     }
     else
     {
 #ifdef USE_ACML
 #pragma warning(suppress : 4244)
-        sgesvd('A', 'A', (int) m, (int) n, reinterpret_cast<float*>(A.BufferPointer()), (int) lda, reinterpret_cast<float*>(SIGMA.BufferPointer()), reinterpret_cast<float*>(U.BufferPointer()), (int) ldu, reinterpret_cast<float*>(VT.BufferPointer()), (int) ldvt, &info);
+        sgesvd('A', 'A', (int) m, (int) n, reinterpret_cast<float*>(A.Data()), (int) lda, reinterpret_cast<float*>(SIGMA.Data()), reinterpret_cast<float*>(U.Data()), (int) ldu, reinterpret_cast<float*>(VT.Data()), (int) ldvt, &info);
 #elif defined(USE_MKL)
         float wkopt;
         int lwork = -1;
-        sgesvd("All", "All", &m, &n, reinterpret_cast<float*>(A.BufferPointer()), &lda, reinterpret_cast<float*>(SIGMA.BufferPointer()), reinterpret_cast<float*>(U.BufferPointer()), &ldu, reinterpret_cast<float*>(VT.BufferPointer()), &ldvt, &wkopt, &lwork, &info);
+        sgesvd("All", "All", &m, &n, reinterpret_cast<float*>(A.Data()), &lda, reinterpret_cast<float*>(SIGMA.Data()), reinterpret_cast<float*>(U.Data()), &ldu, reinterpret_cast<float*>(VT.Data()), &ldvt, &wkopt, &lwork, &info);
         lwork = (int) wkopt;
-        W.Resize(lwork, 1);
-        sgesvd("All", "All", &m, &n, reinterpret_cast<float*>(A.BufferPointer()), &lda, reinterpret_cast<float*>(SIGMA.BufferPointer()), reinterpret_cast<float*>(U.BufferPointer()), &ldu, reinterpret_cast<float*>(VT.BufferPointer()), &ldvt, reinterpret_cast<float*>(W.BufferPointer()), &lwork, &info);
+        W.RequireSize(lwork, 1);
+        sgesvd("All", "All", &m, &n, reinterpret_cast<float*>(A.Data()), &lda, reinterpret_cast<float*>(SIGMA.Data()), reinterpret_cast<float*>(U.Data()), &ldu, reinterpret_cast<float*>(VT.Data()), &ldvt, reinterpret_cast<float*>(W.Data()), &lwork, &info);
 #else
         std::vector<float> superb(std::max(std::min(m, n) - 1, 1));
-        info = LAPACKE_sgesvd(BLAS_COLMAJOR 'A', 'A', (int) m, (int) n, reinterpret_cast<float*>(A.BufferPointer()), (int) lda, reinterpret_cast<float*>(SIGMA.BufferPointer()),
-            reinterpret_cast<float*>(U.BufferPointer()), (int) ldu, reinterpret_cast<float*>(VT.BufferPointer()), (int) ldvt, &superb[0]);
+        info = LAPACKE_sgesvd(BLAS_COLMAJOR 'A', 'A', (int) m, (int) n, reinterpret_cast<float*>(A.Data()), (int) lda, reinterpret_cast<float*>(SIGMA.Data()),
+            reinterpret_cast<float*>(U.Data()), (int) ldu, reinterpret_cast<float*>(VT.Data()), (int) ldvt, &superb[0]);
 #endif
     }
 
@@ -4164,7 +4172,7 @@ template <class ElemType>
 void CPUMatrix<ElemType>::AssignSoftmaxSum(const CPUMatrix<ElemType>& softmax, CPUMatrix<ElemType>& c)
 {
     ElemType log_likelihood = 0.0;
-    size_t batch_size = this->GetNumCols();
+    size_t batch_size = GetNumCols();
 #pragma omp parallel for reduction(+ : log_likelihood)
     for (int instance_id = 0; instance_id < batch_size; instance_id++)
     {
@@ -4184,7 +4192,7 @@ void CPUMatrix<ElemType>::AssignNCEUnnormalizedEval(const CPUMatrix<ElemType>& a
 //  c: loglikelihood
 {
     ElemType log_likelihood = 0.0;
-    size_t batch_size = this->GetNumCols();
+    size_t batch_size = GetNumCols();
 #pragma omp parallel for reduction(+ : log_likelihood)
     for (int instance_id = 0; instance_id < batch_size; instance_id++)
     {
@@ -4202,8 +4210,8 @@ void CPUMatrix<ElemType>::AssignNCEUnnormalizedEval(const CPUMatrix<ElemType>& a
 template <class ElemType>
 CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignNCEDerivative(const CPUMatrix<ElemType>& tmp, const CPUMatrix<ElemType>& a, const CPUMatrix<ElemType>& b, size_t inputIndex, CPUMatrix<ElemType>& c)
 {
-    size_t sample_size = this->GetNumRows() / 2;
-    size_t batch_size = this->GetNumCols();
+    size_t sample_size = GetNumRows() / 2;
+    size_t batch_size = GetNumCols();
     if (inputIndex == 1)
     {
 #pragma omp parallel for
@@ -4256,8 +4264,8 @@ void CPUMatrix<ElemType>::AssignNoiseContrastiveEstimation(const CPUMatrix<ElemT
 // c: loglikelihood
 {
     double log_likelihood = 0.0;
-    size_t sample_size = this->GetNumRows() / 2;
-    size_t batch_size = this->GetNumCols();
+    size_t sample_size = GetNumRows() / 2;
+    size_t batch_size = GetNumCols();
     size_t num_noise_samples = sample_size - 1;
     double log_num_noise_samples = std::log(num_noise_samples);
 #pragma omp parallel for reduction(+ : log_likelihood)
@@ -4335,18 +4343,18 @@ void CPUMatrix<ElemType>::ScaleAndAdd(ElemType alpha, const CPUMatrix<ElemType>&
         if (sizeof(ElemType) == sizeof(double))
         {
 #ifdef USE_ACML
-            daxpy(len, alpha, reinterpret_cast<double*>(a.BufferPointer()), incx, reinterpret_cast<double*>(c.BufferPointer()), incy);
+            daxpy(len, alpha, reinterpret_cast<double*>(a.Data()), incx, reinterpret_cast<double*>(c.Data()), incy);
 #else
-            cblas_daxpy(len, alpha, reinterpret_cast<double*>(a.BufferPointer()), incx, reinterpret_cast<double*>(c.BufferPointer()), incy);
+            cblas_daxpy(len, alpha, reinterpret_cast<double*>(a.Data()), incx, reinterpret_cast<double*>(c.Data()), incy);
 #endif
         }
         else
         {
 #pragma warning(suppress : 4244)
 #ifdef USE_ACML
-            saxpy(len, alpha, reinterpret_cast<float*>(a.BufferPointer()), incx, reinterpret_cast<float*>(c.BufferPointer()), incy);
+            saxpy(len, alpha, reinterpret_cast<float*>(a.Data()), incx, reinterpret_cast<float*>(c.Data()), incy);
 #else
-            cblas_saxpy(len, alpha, reinterpret_cast<float*>(a.BufferPointer()), incx, reinterpret_cast<float*>(c.BufferPointer()), incy);
+            cblas_saxpy(len, alpha, reinterpret_cast<float*>(a.Data()), incx, reinterpret_cast<float*>(c.Data()), incy);
 #endif
         }
     }
@@ -4379,8 +4387,8 @@ void CPUMatrix<ElemType>::ScaleAndAdd(ElemType alpha, const CPUMatrix<ElemType>&
         if (m != (int) a.GetNumRows())
             InvalidArgument("To add column vector, rows should match.");
 
-        ElemType* aBufPtr = a.BufferPointer();
-        ElemType* cBufPtr = c.BufferPointer();
+        ElemType* aBufPtr = a.Data();
+        ElemType* cBufPtr = c.Data();
         if (sizeof(ElemType) == sizeof(double))
         {
 #pragma omp parallel for
@@ -4415,8 +4423,8 @@ void CPUMatrix<ElemType>::ScaleAndAdd(ElemType alpha, const CPUMatrix<ElemType>&
         if (n != (int) a.GetNumCols())
             InvalidArgument("To add row vector, cols should match.");
 
-        ElemType* aBufPtr = a.BufferPointer();
-        ElemType* cBufPtr = c.BufferPointer();
+        ElemType* aBufPtr = a.Data();
+        ElemType* cBufPtr = c.Data();
         if (sizeof(ElemType) == sizeof(double))
         {
 #pragma omp parallel for
@@ -4465,9 +4473,9 @@ void CPUMatrix<ElemType>::AddScaledDifference(const ElemType alpha, const CPUMat
     if (a.IsEmpty())
         LogicError("AddScaledDifference:  Input matrix a is empty.");
 
-	ElemType* aBufPtr = a.BufferPointer();
-	ElemType* bBufPtr = b.BufferPointer();
-	ElemType* cBufPtr = c.BufferPointer();
+	ElemType* aBufPtr = a.Data();
+	ElemType* bBufPtr = b.Data();
+	ElemType* cBufPtr = c.Data();
     long m = (long) c.GetNumElements();
 #pragma omp parallel for
     // four-way unrolling
@@ -4505,11 +4513,11 @@ void CPUMatrix<ElemType>::AssignScaledDifference(const ElemType alpha, const CPU
         LogicError("AssignScaledDifference:  Input matrix a is empty.");
 
     if (&c != &a && &c != &b)
-        c.Resize(a.GetNumRows(), a.GetNumCols());
+        c.RequireSize(a.GetNumRows(), a.GetNumCols());
 
-	ElemType* aBufPtr = a.BufferPointer();
-	ElemType* bBufPtr = b.BufferPointer();
-	ElemType* cBufPtr = c.BufferPointer();
+	ElemType* aBufPtr = a.Data();
+	ElemType* bBufPtr = b.Data();
+	ElemType* cBufPtr = c.Data();
     long m = (long) c.GetNumElements();
 #pragma omp parallel for
     // four-way unrolling
@@ -4606,10 +4614,10 @@ void CPUMatrix<ElemType>::Scale(ElemType alpha, const CPUMatrix<ElemType>& a, CP
     const int n = (int) a.GetNumCols();
 
     assert(m > 0 && n > 0); // converting from size_t to int may cause overflow
-    c.Resize(m, n);
+    c.RequireSize(m, n);
 
-	ElemType* aBufPtr = a.BufferPointer();
-	ElemType* cBufPtr = c.BufferPointer();
+	ElemType* aBufPtr = a.Data();
+	ElemType* cBufPtr = c.Data();
     long size = (long) c.GetNumElements();
 #pragma omp parallel for
     // four-way unrolling
@@ -4646,18 +4654,18 @@ void CPUMatrix<ElemType>::Scale(ElemType alpha, CPUMatrix<ElemType>& a)
     if (sizeof(ElemType) == sizeof(double))
     {
 #ifdef USE_ACML
-        dscal(len, alpha, reinterpret_cast<double*>(a.BufferPointer()), incx);
+        dscal(len, alpha, reinterpret_cast<double*>(a.Data()), incx);
 #else
-        cblas_dscal(len, alpha, reinterpret_cast<double*>(a.BufferPointer()), incx);
+        cblas_dscal(len, alpha, reinterpret_cast<double*>(a.Data()), incx);
 #endif
     }
     else
     {
 #pragma warning(suppress : 4244)
 #ifdef USE_ACML
-        sscal(len, alpha, reinterpret_cast<float*>(a.BufferPointer()), incx);
+        sscal(len, alpha, reinterpret_cast<float*>(a.Data()), incx);
 #else
-        cblas_sscal(len, alpha, reinterpret_cast<float*>(a.BufferPointer()), incx);
+        cblas_sscal(len, alpha, reinterpret_cast<float*>(a.Data()), incx);
 #endif
     }
 }
@@ -4697,10 +4705,10 @@ void CPUMatrix<ElemType>::InnerProduct(const CPUMatrix<ElemType>& a, const CPUMa
     }
     else if (isColWise) // col-wise
     {
-        c.Resize(1, n);
+        c.RequireSize(1, n);
 
-		ElemType* aBufPtr = a.BufferPointer();
-		ElemType* bBufPtr = b.BufferPointer();
+		ElemType* aBufPtr = a.Data();
+		ElemType* bBufPtr = b.Data();
         if (sizeof(ElemType) == sizeof(double))
         {
 #pragma omp parallel for
@@ -4729,10 +4737,10 @@ void CPUMatrix<ElemType>::InnerProduct(const CPUMatrix<ElemType>& a, const CPUMa
     }
     else
     {
-        c.Resize(m, 1);
+        c.RequireSize(m, 1);
 
-		ElemType* aBufPtr = a.BufferPointer();
-		ElemType* bBufPtr = b.BufferPointer();
+		ElemType* aBufPtr = a.Data();
+		ElemType* bBufPtr = b.Data();
         if (sizeof(ElemType) == sizeof(double))
         {
 #pragma omp parallel for
@@ -4781,18 +4789,18 @@ ElemType CPUMatrix<ElemType>::InnerProductOfMatrices(const CPUMatrix<ElemType>& 
     if (sizeof(ElemType) == sizeof(double))
     {
 #ifdef USE_ACML
-        return (ElemType) ddot((int) a.GetNumElements(), reinterpret_cast<double*>(a.BufferPointer()), 1, reinterpret_cast<double*>(b.BufferPointer()), 1);
+        return (ElemType) ddot((int) a.GetNumElements(), reinterpret_cast<double*>(a.Data()), 1, reinterpret_cast<double*>(b.Data()), 1);
 #else
-        return (ElemType) cblas_ddot((int) a.GetNumElements(), reinterpret_cast<double*>(a.BufferPointer()), 1, reinterpret_cast<double*>(b.BufferPointer()), 1);
+        return (ElemType) cblas_ddot((int) a.GetNumElements(), reinterpret_cast<double*>(a.Data()), 1, reinterpret_cast<double*>(b.Data()), 1);
 #endif
     }
     else
     {
 #pragma warning(suppress : 4244)
 #ifdef USE_ACML
-        return (ElemType) sdot((int) a.GetNumElements(), reinterpret_cast<float*>(a.BufferPointer()), 1, reinterpret_cast<float*>(b.BufferPointer()), 1);
+        return (ElemType) sdot((int) a.GetNumElements(), reinterpret_cast<float*>(a.Data()), 1, reinterpret_cast<float*>(b.Data()), 1);
 #else
-        return (ElemType) cblas_sdot((int) a.GetNumElements(), reinterpret_cast<float*>(a.BufferPointer()), 1, reinterpret_cast<float*>(b.BufferPointer()), 1);
+        return (ElemType) cblas_sdot((int) a.GetNumElements(), reinterpret_cast<float*>(a.Data()), 1, reinterpret_cast<float*>(b.Data()), 1);
 #endif
     }
 }
@@ -4803,7 +4811,7 @@ void CPUMatrix<ElemType>::ElementWisePower(ElemType alpha, const CPUMatrix<ElemT
     if (a.IsEmpty())
         LogicError("Scale:  The input matrix a is empty.");
 
-    c.Resize(a.GetNumRows(), a.GetNumCols());
+    c.RequireSize(a.GetNumRows(), a.GetNumCols());
 
     if (alpha == 2)
     {
@@ -4856,9 +4864,9 @@ template <class ElemType>
 void CPUMatrix<ElemType>::TensorShuffleScaleAndAdd(ElemType keepWeight, const CPUMatrix<ElemType>& a, size_t D, size_t S, size_t M, size_t K, size_t T, ElemType scaleFactor, const CPUMatrix<ElemType>& b, CPUMatrix<ElemType>& c)
 {
     size_t N = D * S * M * K * T;
-    const auto pa = a.BufferPointer();
-    const auto pb = b.BufferPointer();
-    auto pc = c.BufferPointer();
+    const auto pa = a.Data();
+    const auto pb = b.Data();
+    auto pc = c.Data();
     // Note: This code is written to match a GPU implementation. It is not super-efficient on the CPU.
     for (size_t na = 0; na < N; na++) // loop over all elements
     {
@@ -4931,7 +4939,7 @@ bool CPUMatrix<ElemType>::HasElement(const CPUMatrix<ElemType>& mat, const ElemT
 #pragma omp flush(bHas)
         if (!bHas)
         {
-            ElemType cur = mat.BufferPointer()[j];
+            ElemType cur = mat.Data()[j];
             if (isvFinite && std::isfinite(cur))
             {
                 if (cur == v)
@@ -4968,8 +4976,8 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignElementProductOfWithShiftNeg(con
     auto& us = *this;
     if (this != &a)
     {
-        Resize(negnumber + 1, a.GetNumCols());
-        //            Resize(a.GetNumRows(), a.GetNumCols());
+        RequireSize(negnumber + 1, a.GetNumCols());
+        //            RequireSize(a.GetNumRows(), a.GetNumCols());
     }
 
     long m = (long) GetNumRows(), n = (long) GetNumCols(); // a and b are of size (1,n)
@@ -5013,10 +5021,10 @@ void CPUMatrix<ElemType>::InnerProductWithShiftNeg(const CPUMatrix<ElemType>& a,
     }
     else if (isColWise) // col-wise
     {
-        c.Resize(negnumber + 1, n); // this line ischanged
+        c.RequireSize(negnumber + 1, n); // this line ischanged
 
-        ElemType* aBufPtr = a.BufferPointer();
-        ElemType* bBufPtr = b.BufferPointer();
+        ElemType* aBufPtr = a.Data();
+        ElemType* bBufPtr = b.Data();
         if (sizeof(ElemType) == sizeof(double))
         {
             for (long j = 0; j < n; j++)
@@ -5066,10 +5074,10 @@ void CPUMatrix<ElemType>::InnerProductWithShiftNeg(const CPUMatrix<ElemType>& a,
     {
         InvalidArgument("InnerProduct: Rowwise is not supported yet");
 
-        c.Resize(m, 1);
+        c.RequireSize(m, 1);
 
-        ElemType* aBufPtr = a.BufferPointer();
-        ElemType* bBufPtr = b.BufferPointer();
+        ElemType* aBufPtr = a.Data();
+        ElemType* bBufPtr = b.Data();
         if (sizeof(ElemType) == sizeof(double))
         {
 #pragma omp parallel for
@@ -5113,7 +5121,7 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::GetARowByIndex(const CPUMatrix<ElemTyp
     assert(m > 0 && n > 0); // converting from size_t to int may cause overflow
 
     auto& us = *this;
-    this->Resize(1, n);
+    RequireSize(1, n);
     for (long j = 0; j < n; j++)
     {
         us(0, j) = a(index, j);
@@ -5171,7 +5179,7 @@ void CPUMatrix<ElemType>::ConductRowElementMultiplyWithShift(const CPUMatrix<Ele
     if (m != 1 || n != l)
         InvalidArgument("InnerProduct: Matrices a and b should have same dimension.");
 
-    c.Resize(k, l); // c must the the same size of b
+    c.RequireSize(k, l); // c must the the same size of b
 
     if (bFirstmatrixfixed)
     {
@@ -5216,8 +5224,8 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignElementProductOfWithShift(const 
     auto& us = *this;
     if (this != &a)
     {
-        Resize(1, a.GetNumCols());
-        //            Resize(a.GetNumRows(), a.GetNumCols());
+        RequireSize(1, a.GetNumCols());
+        //            RequireSize(a.GetNumRows(), a.GetNumCols());
     }
 
     // long m = (long)GetNumRows(), n = (long)GetNumCols();  // a and b are of size (1,n)
@@ -5242,7 +5250,7 @@ template <class ElemType>
 ElemType CPUMatrix<ElemType>::LogSumOfElements() const
 {
     ElemType fAlpha = (ElemType) LZERO;
-	ElemType* bufPtr = BufferPointer();
+	ElemType* bufPtr = Data();
     for (int k = 0; k < GetNumElements(); k++)
         fAlpha = (ElemType) LogAddD(fAlpha, bufPtr[k]);
     return fAlpha;
@@ -5264,7 +5272,7 @@ void CPUMatrix<ElemType>::RCRFBackwardCompute(const CPUMatrix<ElemType>& alpha, 
             break;
         }
 
-    beta.Resize(iNumLab, iNumPos);
+    beta.RequireSize(iNumLab, iNumPos);
 
     for (int t = iNumPos - 1; t >= 0; t--)
     {
@@ -5753,7 +5761,7 @@ void CPUMatrix<ElemType>::TensorOp(ElemType beta, const CPUMatrix<ElemType>& a, 
                               },                                                       \
                               offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides)
 
-    array<ElemType*, 2> pointers = {a.BufferPointer(), BufferPointer()};
+    array<ElemType*, 2> pointers = {a.Data(), Data()};
     switch (op)
     {
         ForAllUnaryOps(CaseUnaryTensorOp);
@@ -5778,7 +5786,7 @@ void CPUMatrix<ElemType>::TensorOp(ElemType beta, const CPUMatrix<ElemType>& a, 
                               },                                                       \
                               offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides)
 
-    array<ElemType*, 3> pointers = {a.BufferPointer(), b.BufferPointer(), BufferPointer()};
+    array<ElemType*, 3> pointers = {a.Data(), b.Data(), Data()};
     switch (op)
     {
         ForAllBinaryOps(CaseBinaryTensorOp);
@@ -5803,7 +5811,7 @@ void CPUMatrix<ElemType>::TensorOp(ElemType beta, const CPUMatrix<ElemType>& a, 
                               },                                                       \
                               offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides)
 
-    array<ElemType*, 4> pointers = {a.BufferPointer(), b.BufferPointer(), c.BufferPointer(), BufferPointer()};
+    array<ElemType*, 4> pointers = {a.Data(), b.Data(), c.Data(), Data()};
     switch (op)
     {
         ForAllTernaryOps(CaseTernaryTensorOp);

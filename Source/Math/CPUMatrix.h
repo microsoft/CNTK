@@ -31,9 +31,9 @@ class MATH_API CPUMatrix : public BaseMatrix<ElemType>
     using Base::m_numRows;
     using Base::m_numCols;
     using Base::m_sliceViewOffset;
-    using Base::GetExternalBuffer;
+    using Base::HasExternalBuffer;
     using Base::SetExternalBuffer;
-    using Base::SetArray;
+    using Base::SetBuffer;
     using Base::SetComputeDeviceId;
     using Base::Clear;
     using Base::SetOwnBuffer;
@@ -48,7 +48,7 @@ class MATH_API CPUMatrix : public BaseMatrix<ElemType>
 public:
     using Base::VerifyWritable;
     using Base::GetComputeDeviceId;
-    using Base::GetArray;
+    using Base::Buffer;
     using Base::GetNumRows;
     using Base::GetNumCols;
     using Base::GetNumElements;
@@ -75,9 +75,9 @@ public:
     {
         return m_numRows * m_numCols * sizeof(ElemType);
     }
-    ElemType* BufferPointer() const
+    ElemType* Data() const
     {
-        return GetArray() + m_sliceViewOffset;
+        return Buffer() + m_sliceViewOffset;
     }
 
     CPUMatrix<ElemType> ColumnSlice(size_t startColumn, size_t numCols) const;
@@ -99,6 +99,7 @@ public:
                      const bool needAveMultiplier);
 
     void Reshape(const size_t numRows, const size_t numCols);
+    void RequireSize(const size_t numRows, const size_t numCols, bool growOnly = true); // by default we only reallocate if need to grow
     void Resize(const size_t numRows, const size_t numCols, bool growOnly = true); // by default we only reallocate if need to grow
     ElemType* CopyToArray() const;                                                 // allocated by the callee but need to be deleted by the caller
     size_t CopyToArray(ElemType*& arrayCopyTo, size_t& currentArraySize) const;    // allocated by the callee but need to be deleted by the caller
@@ -106,11 +107,11 @@ public:
 
     inline ElemType& operator()(const size_t row, const size_t col)
     {
-        return BufferPointer()[LocateElement(row, col)];
+        return Data()[LocateElement(row, col)];
     }
     inline const ElemType& operator()(const size_t row, const size_t col) const
     {
-        return BufferPointer()[LocateElement(row, col)];
+        return Data()[LocateElement(row, col)];
     }
     inline ElemType Get00Element() const
     {
@@ -427,7 +428,7 @@ public:
 
         stream << us.m_numRows << us.m_numCols;
         for (size_t i = 0; i < us.GetNumElements(); ++i)
-            stream << us.GetArray()[i];
+            stream << us.Buffer()[i];
         stream.PutMarker(fileMarkerEndSection, std::wstring(L"EMAT"));
         return stream;
     }

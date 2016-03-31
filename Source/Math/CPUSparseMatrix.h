@@ -26,8 +26,8 @@ class MATH_API CPUSparseMatrix : public BaseMatrix<ElemType>
     using Base::m_numRows;
     using Base::m_numCols;
     using Base::m_sliceViewOffset;
-    using Base::SetArray;
-    using Base::GetExternalBuffer;
+    using Base::SetBuffer;
+    using Base::HasExternalBuffer;
     using Base::SetExternalBuffer;
     using Base::GetNumStorageRows;
     using Base::SetNumStorageRows;
@@ -59,7 +59,7 @@ class MATH_API CPUSparseMatrix : public BaseMatrix<ElemType>
 public:
     using Base::VerifyWritable;
     using Base::GetComputeDeviceId;
-    using Base::GetArray;
+    using Base::Buffer;
     using Base::GetNumRows;
     using Base::GetNumCols;
     using Base::GetNumElements;
@@ -95,8 +95,8 @@ public:
     {
         return GetSizeAllocated() * sizeof(ElemType);
     }
-    ElemType* BufferPointer() const;
-    ElemType* BufferPointer();
+    ElemType* Data() const;
+    ElemType* Data();
     inline size_t GetNumElemAllocated() const
     {
         return GetSizeAllocated();
@@ -147,7 +147,10 @@ public:
         return -1;
     }
 
+    void RequireSizeAndAllocate(const size_t numRows, const size_t numCols, size_t numNZElemToReserve = 10000, const bool growOnly = true, bool keepExistingValues = false);
+    void RequireSize(const size_t numRows, const size_t numCols, size_t numNZElemToReserve = 10000, const bool growOnly = true, bool keepExistingValues = false);
     void Resize(const size_t numRows, const size_t numCols, size_t numNZElemToReserve = 10000, const bool growOnly = true, bool keepExistingValues = false);
+    void Allocate(const size_t numRows, const size_t numCols, size_t numNZElemToReserve = 10000, const bool growOnly = true, bool keepExistingValues = false);
     void Reset();
 
     const ElemType operator()(const size_t row, const size_t col) const
@@ -166,7 +169,7 @@ public:
                 size_t i = MajorIndexLocation()[p];
                 if (i == row)
                 {
-                    return ((ElemType*)GetArray())[p];
+                    return ((ElemType*)Buffer())[p];
                 }
             }
 
@@ -200,21 +203,23 @@ public:
 public:
     const ElemType* NzValues() const
     {
-        return BufferPointer();
+        return Data();
     }
     inline ElemType* NzValues()
     {
-        return BufferPointer();
+        return Data();
     }
 
     size_t NzCount() const
     {
-        if (GetFormat() == matrixFormatSparseCSC || GetFormat()== matrixFormatSparseCSR)
-			return GetCompIndex()[m_numCols] - GetCompIndex()[0];
+        if (GetFormat() == matrixFormatSparseCSC)
+			return GetCompIndex()[GetNumCols()] - GetCompIndex()[0];
+        else if (GetFormat()== matrixFormatSparseCSR)
+			return GetCompIndex()[GetNumRows()] - GetCompIndex()[0];
         else if (GetFormat() == matrixFormatSparseBlockCol)
-			return GetBlockSize() * GetNumRows();
+            return GetBlockSize() * GetNumRows();
         else
-			NOT_IMPLEMENTED
+            NOT_IMPLEMENTED;
     }
 
     size_t NzSize() const

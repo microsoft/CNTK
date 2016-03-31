@@ -95,9 +95,9 @@ class MATH_API GPUMatrix : public BaseMatrix<ElemType>
     using Base::m_numRows;
     using Base::m_numCols;
     using Base::m_sliceViewOffset;
-    using Base::GetExternalBuffer;
+    using Base::HasExternalBuffer;
     using Base::SetExternalBuffer;
-    using Base::SetArray;
+    using Base::SetBuffer;
     using Base::SetComputeDeviceId;
     using Base::Clear;
     using Base::SetSizeAllocated;
@@ -114,7 +114,7 @@ class MATH_API GPUMatrix : public BaseMatrix<ElemType>
 
 public:
     using Base::GetComputeDeviceId;
-    using Base::GetArray;
+    using Base::Buffer;
     using Base::GetNumRows;
     using Base::GetNumCols;
     using Base::GetNumElements;
@@ -184,9 +184,9 @@ public:
     {
         return m_numRows * m_numCols * sizeof(ElemType);
     }
-    ElemType* BufferPointer() const
+    ElemType* Data() const
     {
-        return GetArray() + m_sliceViewOffset;
+        return Buffer() + m_sliceViewOffset;
     }
 
     ElemType Adagrad(GPUMatrix<ElemType>& gradients, const bool needAveMultiplier);
@@ -194,6 +194,7 @@ public:
     ElemType RmsProp(GPUMatrix<ElemType>& gradients, ElemType RMS_GAMMA, ElemType RMS_WGT_INC, ElemType RMS_WGT_MAX, ElemType RMS_WGT_DEC, ElemType RMS_WGT_MIN, const bool needAveMultiplier);
 
     void Reshape(const size_t numRows, const size_t numCols);
+    void RequireSize(const size_t numRows, const size_t numCols, bool growOnly = true); // by default we only reallocate if need to grow
     void Resize(const size_t numRows, const size_t numCols, bool growOnly = true); // by default we only reallocate if need to grow
 
     ElemType& operator()(const size_t /*row*/, const size_t /*col*/)

@@ -245,7 +245,7 @@ private:
         {
             for (size_t i = 0; i < numGradMatrices; ++i)
             {
-                m_gpuDataTransferers[i]->CopyGPUToCPUAsync(gradients[i]->BufferPointer(), gradients[i]->GetNumElements(), m_intermediateCPUBuffers[i].get());
+                m_gpuDataTransferers[i]->CopyGPUToCPUAsync(gradients[i]->Data(), gradients[i]->GetNumElements(), m_intermediateCPUBuffers[i].get());
             }
         }
 
@@ -272,7 +272,7 @@ private:
         std::vector<MPI_Request> allReduceRequests(numGradMatrices);
         for (size_t i = 0; i < numGradMatrices; ++i)
         {
-            ElemType* reductionBuffer = gradients[i]->BufferPointer();
+            ElemType* reductionBuffer = gradients[i]->Data();
             if (deviceId >= 0)
             {
                 m_gpuDataTransferers[i]->WaitForCopyGPUToCPUAsync();
@@ -329,7 +329,7 @@ private:
             MPI_Wait(&allReduceRequests[i], MPI_STATUSES_IGNORE) || MpiFail("MPI_Wait");
             if (deviceId >= 0)
             {
-                m_gpuDataTransferers[i]->CopyCPUToGPUAsync(m_intermediateCPUBuffers[i].get(), gradients[i]->GetNumElements(), gradients[i]->BufferPointer());
+                m_gpuDataTransferers[i]->CopyCPUToGPUAsync(m_intermediateCPUBuffers[i].get(), gradients[i]->GetNumElements(), gradients[i]->Data());
             }
         }
 

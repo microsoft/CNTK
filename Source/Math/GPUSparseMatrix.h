@@ -24,12 +24,10 @@ class MATH_API GPUSparseMatrix : public BaseMatrix<ElemType>
 {
 public:
     typedef BaseMatrix<ElemType> Base;
-    using Base::m_numRows;
-    using Base::m_numCols;
     using Base::m_sliceViewOffset;
-    using Base::GetExternalBuffer;
+    using Base::HasExternalBuffer;
     using Base::SetExternalBuffer;
-    using Base::SetArray;
+    using Base::SetBuffer;
     using Base::GetNumStorageRows;
     using Base::SetNumStorageRows;
     using Base::GetNumStorageCols;
@@ -50,14 +48,14 @@ public:
     using Base::GetTempHostBufferSize;
     using Base::SetTempHostBufferSize;
     using Base::BufferSizeAllocated;
-    using Base::GetRowToId;
+    using Base::GetRowToIdMap;
     using Base::VerifyResizable;
     // without this, base members would require to use thi-> in GCC
 public:
     using Base::VerifyWritable;
     using Base::SetRowToId;
     using Base::GetComputeDeviceId;
-    using Base::GetArray;
+    using Base::Buffer;
     using Base::GetNumRows;
     using Base::GetNumCols;
     using Base::GetNumElements;
@@ -95,22 +93,22 @@ public:
     // to be offset accordingly.
     inline const ElemType* NzValues() const
     {
-        return BufferPointer();
+        return Data();
     }
 
     inline ElemType* NzValues()
     {
-        return BufferPointer();
+        return Data();
     }
 
 	GPUSPARSE_INDEX_TYPE NzCount() const
     {
         if (GetFormat() == matrixFormatSparseCSC)
-			return SecondaryIndexValueAt(m_numCols) - SecondaryIndexValueAt(0);
+			return SecondaryIndexValueAt(GetNumCols()) - SecondaryIndexValueAt(0);
         if (GetFormat() == matrixFormatSparseCSR )
-			return SecondaryIndexValueAt(m_numRows) - SecondaryIndexValueAt(0);
+			return SecondaryIndexValueAt(GetNumRows()) - SecondaryIndexValueAt(0);
         else if (GetFormat() == matrixFormatSparseBlockCol)
-            return (int)(m_numRows * GetBlockSize());
+            return (int)(GetNumRows() * GetBlockSize());
         else
 			NOT_IMPLEMENTED;
 
@@ -130,13 +128,13 @@ public:
 	// index location.
     GPUSPARSE_INDEX_TYPE* MajorIndexLocation() const // row/col ids in CSC/CSR format, blockId2col/blockId2row in BlockCol/BlockRow format
     {
-        return (GPUSPARSE_INDEX_TYPE*) (GetArray() + GetSizeAllocated());
+        return (GPUSPARSE_INDEX_TYPE*) (Buffer() + GetSizeAllocated());
     }
 
-	// Note: BufferPointer is already offset by the sliceViewOffset, so we can just add the allocated size to get the start of the MajorIndexLoc
+	// Note: Data is already offset by the sliceViewOffset, so we can just add the allocated size to get the start of the MajorIndexLoc
     GPUSPARSE_INDEX_TYPE* MajorIndexLocationWithSliceViewOffset() const
     {
-        return (GPUSPARSE_INDEX_TYPE*) (BufferPointer() + GetSizeAllocated());
+        return (GPUSPARSE_INDEX_TYPE*) (Data() + GetSizeAllocated());
     }
 
 	// MajorIndexCount depends on the format.
@@ -147,7 +145,7 @@ public:
 	//    of nz values that will fit in the current buffer.
     size_t MajorIndexCount() const
     {
-        return MajorIndexCount(m_numRows, m_numCols, NzCount(), GetFormat());
+        return MajorIndexCount(GetNumRows(), GetNumCols(), NzCount(), GetFormat());
     }
 
     size_t MajorIndexCount(const size_t numRows, const size_t numCols, const size_t numNZ, const MatrixFormat format) const
@@ -165,15 +163,18 @@ public:
         return sizeof(GPUSPARSE_INDEX_TYPE) * MajorIndexCount();
     }
 
-	// Since the m_sliceViewOffset effects BufferPointer and MajorIndexLocation differently than SecondaryIndexLocation, we compute it fully here.
+	// Since the m_sliceViewOffset effects Data and MajorIndexLocation differently than SecondaryIndexLocation, we compute it fully here.
     GPUSPARSE_INDEX_TYPE* SecondaryIndexLocation() const // compressed index, col/row in CSC/CSR format, col2blockId/row2blockId in BlockCol/BlockRow format
     {
         if (GetFormat() == matrixFormatSparseBlockCol)
-            return MajorIndexLocation() + m_numCols;
+            return MajorIndexLocation() + GetNumCols();
         else if (GetFormat() == matrixFormatSparseBlockRow)
-            return MajorIndexLocation() + m_numRows;
+            return MajorIndexLocation() + GetNumRows();
         else
-            return (GPUSPARSE_INDEX_TYPE*)(GetArray() + 2 * GetSizeAllocated() + m_sliceViewOffset);
+        {
+            size_t size = GetSizeAllocated();
+            return (GPUSPARSE_INDEX_TYPE*)((char*)Buffer() + sizeof(GPUSPARSE_INDEX_TYPE) * size + sizeof(ElemType)*size) + m_sliceViewOffset;
+        }
         // return MajorIndexLocation() + m_elemSizeAllocated + m_sliceViewOffset;
     }
 
@@ -193,7 +194,7 @@ public:
 
     size_t SecondaryIndexCount() const
     {
-        return SecondaryIndexCount(m_numRows, m_numCols, GetSizeAllocated(), GetFormat());
+        return SecondaryIndexCount(GetNumRows(), GetNumCols(), GetSizeAllocated(), GetFormat());
     }
 
     // get size for compressed index
@@ -208,9 +209,9 @@ public:
     }
 
 	// SecondaryIndexValueAt calls SecondaryIndexLocation which is already appropriately offset by m_sliceViewOffset
-    inline ElemType* BufferPointer() const
+    inline ElemType* Data() const
     {
-        return (GetArray() +
+        return (Buffer() +
             ((GetFormat() == matrixFormatSparseCSC || GetFormat() == matrixFormatSparseCSR) ? SecondaryIndexValueAt(0) : 0));
     }
 
@@ -279,6 +280,8 @@ public:
 
     void Reshape(const size_t numRows, const size_t numCols);
     void ResizeAsAndCopyIndexFrom(const GPUSparseMatrix<ElemType>& a, const bool growOnly = true);
+    void RequireSize(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve, const MatrixFormat matrixFormat, const bool growOnly = true, bool keepExistingValues = true); // matrix format will affect the size to allocate
+    void RequireSize(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve = 10000, const bool growOnly = true, bool keepExistingValues = false);
     void Resize(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve, const MatrixFormat matrixFormat, const bool growOnly = true, bool keepExistingValues = true); // matrix format will affect the size to allocate
     void Resize(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve = 10000, const bool growOnly = true, bool keepExistingValues = false);
 

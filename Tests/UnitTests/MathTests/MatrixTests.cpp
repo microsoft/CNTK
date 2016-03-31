@@ -706,8 +706,8 @@ BOOST_FIXTURE_TEST_CASE(MatrixColumnElementMultiply, RandomSeedFixture)
     CPUMatrix<float> mc2 = CPUMatrix<float>::RandomUniform(429, 1, 0, 3, IncrementCounter());
     mc1.ColumnElementMultiplyWith(mc2);
 
-    Matrix<float> m1(mc1.GetNumRows(), mc1.GetNumCols(), mc1.GetArray(), matrixFlagNormal);
-    Matrix<float> m2(mc2.GetNumRows(), mc2.GetNumCols(), mc2.GetArray(), matrixFlagNormal);
+    Matrix<float> m1(mc1.GetNumRows(), mc1.GetNumCols(), mc1.Buffer(), matrixFlagNormal);
+    Matrix<float> m2(mc2.GetNumRows(), mc2.GetNumCols(), mc2.Buffer(), matrixFlagNormal);
     m1.ColumnElementMultiplyWith(m2);
 
     foreach_coord (i, j, m2)
@@ -782,8 +782,8 @@ BOOST_FIXTURE_TEST_CASE(MatrixAssignXOf, RandomSeedFixture)
     // AssignSigmoidOf
     CPUMatrix<float> ac = CPUMatrix<float>::RandomUniform(429, 1024, 5, 32, IncrementCounter());
     CPUMatrix<float> bc = CPUMatrix<float>::RandomUniform(429, 1024, -5, 12, IncrementCounter());
-    Matrix<float> d(ac.GetNumRows(), ac.GetNumCols(), ac.GetArray(), matrixFlagNormal);
-    Matrix<float> e(bc.GetNumRows(), bc.GetNumCols(), bc.GetArray(), matrixFlagNormal);
+    Matrix<float> d(ac.GetNumRows(), ac.GetNumCols(), ac.Buffer(), matrixFlagNormal);
+    Matrix<float> e(bc.GetNumRows(), bc.GetNumCols(), bc.Buffer(), matrixFlagNormal);
     ac.AssignSigmoidOf(bc);
     d.AssignSigmoidOf(e);
     foreach_coord (i, j, ac)
@@ -1024,7 +1024,7 @@ BOOST_FIXTURE_TEST_CASE(MatrixCopy, RandomSeedFixture)
     Matrix<float> srcM(crow, ccol, src, matrixFlagNormal, c_deviceIdZero);
     // Test full copy.
     CPUMatrix<float> actualM(crow, ccol);
-    srcM.CopySection(actualM.GetNumRows(), actualM.GetNumCols(), actualM.BufferPointer(), actualM.GetNumRows());
+    srcM.CopySection(actualM.GetNumRows(), actualM.GetNumCols(), actualM.Data(), actualM.GetNumRows());
 
     std::vector<float> expected = {
         1.0f, 3.0f, 4.0f,
@@ -1034,7 +1034,7 @@ BOOST_FIXTURE_TEST_CASE(MatrixCopy, RandomSeedFixture)
     // Test tile copy.
     actualM.Resize(crow - 1, ccol - 1);
     actualM.SetValue(std::numeric_limits<float>::quiet_NaN());
-    srcM.CopySection(actualM.GetNumRows(), actualM.GetNumCols(), actualM.BufferPointer(), actualM.GetNumRows());
+    srcM.CopySection(actualM.GetNumRows(), actualM.GetNumCols(), actualM.Data(), actualM.GetNumRows());
 
     expected = {1.0f, 3.0f};
     BOOST_CHECK(actualM.IsEqualTo(CPUMatrix<float>(actualM.GetNumRows(), actualM.GetNumCols(), expected.data(), matrixFlagNormal)));

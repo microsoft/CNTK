@@ -3,7 +3,6 @@
 // Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
 //
 #pragma once
-
 #ifdef _WIN32
 #ifdef MATH_EXPORTS
 #define MATH_API __declspec(dllexport)
@@ -287,7 +286,7 @@ public:
     MatrixFormat GetFormat() const { return m_format; }
     void SetFormat(MatrixFormat format) { m_format = format; }
 
-    bool GetExternalBuffer() const { return m_externalBuffer; }
+    bool HasExternalBuffer() const { return m_externalBuffer; }
     void SetExternalBuffer(bool external) { m_externalBuffer = external; }
 
     DEVICEID_TYPE GetComputeDeviceId() const { return m_computeDevice; }
@@ -305,8 +304,8 @@ public:
     size_t GetNumStorageElements() const { return m_numRows * m_numCols; }
     bool IsEmpty() const { return m_numRows == 0 || m_numCols == 0; }
 
-    ElemType* GetArray() const { return m_pArray; }
-    void SetArray(ElemType* pArray) { m_pArray = pArray; }
+    ElemType* Buffer() const { return m_pArray; }
+    void SetBuffer(ElemType* pArray) { m_pArray = pArray; }
 
     size_t BufferSizeAllocated() const { return m_totalBufferSizeAllocated; }
     void SetBufferSizeAllocated(size_t alloc) { m_totalBufferSizeAllocated = alloc; }
@@ -314,7 +313,7 @@ public:
     size_t GetBlockSize() const { return m_blockSize; }
     void SetBlockSize(size_t blockSize) { m_blockSize = blockSize; }
 
-    GPUSPARSE_INDEX_TYPE* GetRowToId() const { return m_rowToId; }
+    GPUSPARSE_INDEX_TYPE* GetRowToIdMap() const { return m_rowToId; }
     void SetRowToId(GPUSPARSE_INDEX_TYPE* parray) { m_rowToId = parray; }
 
     void* GetTempHostBuffer() const { return m_tempHostBuffer; }
@@ -423,7 +422,7 @@ public:
     MatrixFormat GetFormat() const { return m_sob->GetFormat(); }
     void SetFormat(MatrixFormat format) { m_sob->SetFormat(format); }
 
-    bool GetExternalBuffer() const { return m_sob->GetExternalBuffer(); }
+    bool HasExternalBuffer() const { return m_sob->HasExternalBuffer(); }
     void SetExternalBuffer(bool external) { m_sob->SetExternalBuffer(external); }
 
     DEVICEID_TYPE GetComputeDeviceId() const { return m_sob->GetComputeDeviceId(); }
@@ -438,9 +437,9 @@ public:
     size_t GetSizeAllocated() const { return m_sob->GetSizeAllocated(); }
     void SetSizeAllocated(size_t alloc) { m_sob->SetSizeAllocated(alloc); }
 
-    ElemType* GetArray() { return m_sob->GetArray(); }
-    ElemType* GetArray() const { return m_sob->GetArray(); }
-    void SetArray(ElemType* parray) { m_sob->SetArray(parray); }
+    ElemType* Buffer() { return m_sob->Buffer(); }
+    ElemType* Buffer() const { return m_sob->Buffer(); }
+    void SetBuffer(ElemType* parray) { m_sob->SetBuffer(parray); }
 
     size_t BufferSizeAllocated() const { return m_sob->BufferSizeAllocated(); }
     void SetBufferSizeAllocated(size_t alloc) { m_sob->SetBufferSizeAllocated(alloc); }
@@ -448,11 +447,11 @@ public:
     size_t GetBlockSize() const { return m_sob->GetBlockSize(); }
     void SetBlockSize(size_t blockSize) { m_sob->SetBlockSize(blockSize); }
 
-    GPUSPARSE_INDEX_TYPE* GetRowToId() const { return m_sob->GetRowToId(); }
+    GPUSPARSE_INDEX_TYPE* GetRowToIdMap() const { return m_sob->GetRowToIdMap(); }
     void SetRowToId(GPUSPARSE_INDEX_TYPE* parray) { m_sob->SetRowToId(parray); }
 
     void* GetTempHostBuffer() const { return m_sob->GetTempHostBuffer(); }
-    void SetTempHostBuffer(void* buffer) const { m_sob->SetTempHostBuffer(buffer); }
+    void SetTempHostBuffer(void* buffer) const { m_sob->SetTempHostBuffer(buffer); };
 
     size_t GetTempHostBufferSize() const { return m_sob->GetTempHostBufferSize(); }
     void SetTempHostBufferSize(size_t bufferSize) const { m_sob->SetTempHostBufferSize(bufferSize); }
@@ -484,13 +483,24 @@ public:
     size_t GetNumElements() const { return m_numRows * m_numCols; }
     bool IsEmpty() const { return m_numRows == 0 || m_numCols == 0; }
 
-    bool OwnBuffer() const { return !GetExternalBuffer(); }
+    bool OwnBuffer() const { return !HasExternalBuffer(); }
     void SetOwnBuffer(bool own) { SetExternalBuffer(!own); }
 
 	// TODO: Disallow non-unique ptrs to be resized.
-    bool VerifyResizable() const { return (m_sob->GetNumStorageRows() == m_numRows && m_sob->GetNumStorageCols() == m_numCols); }
+    void VerifyResizable(char* function) const 
+    { 
+        if (!m_sob.unique())
+            LogicError("%s: Cannot resize the matrix because it is a view.", function);
+        if (m_sob->HasExternalBuffer())
+            LogicError("%s: Cannot resize the matrix because it is externally owned.", function);
+    }
 	// This is needed for Sparse Matrices to ensure they can write to the matrix. Note: writing to slices is not currently supported
-    bool VerifyWritable() const { return (m_sob->GetNumStorageRows() == m_numRows && m_sob->GetNumStorageCols() == m_numCols); }
+    void VerifyWritable(char* function) const { 
+        if (!(m_sob->GetNumStorageRows() == m_numRows && m_sob->GetNumStorageCols() == m_numCols))
+        {
+            LogicError("%s: Cannot write to the matrix because it is a slice.", function);
+        }
+    }
 
     bool IsView() const { return (GetNumRows() != m_sob->GetNumStorageRows() || GetNumCols() != m_sob->GetNumStorageCols() || m_sliceViewOffset != 0); }
 

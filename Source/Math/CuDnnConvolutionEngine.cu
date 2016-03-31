@@ -244,12 +244,12 @@ static const CuDnnPoolingDescriptor& p(const PoolingDescriptor& src)
 template <typename ElemType>
 static ElemType* ptr(Matrix<ElemType>& src)
 {
-    return src.BufferPointer();
+    return src.Data();
 }
 template <typename ElemType>
 static const ElemType* ptr(const Matrix<ElemType>& src)
 {
-    return src.BufferPointer();
+    return src.Data();
 }
 
 template <typename ElemType>

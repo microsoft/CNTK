@@ -110,7 +110,7 @@ template <class ElemType>
 
     SetCompIndexSize(0);
 	SetColIdx(-1);
-	SetArray(nullptr);
+	SetBuffer(nullptr);
 	SetUnCompIndex(nullptr);
 	SetCompIndex(nullptr);
 	SetBlockSize(0);
@@ -140,7 +140,7 @@ template <class ElemType>
 CPUSparseMatrix<ElemType>::CPUSparseMatrix(const MatrixFormat format, const size_t numRows, const size_t numCols, const size_t size)
 {
     CheckInit(format);
-    Resize(numRows, numCols, size, true, false);
+    RequireSize(numRows, numCols, size, true, false);
 }
 
 // copy constructor, deep copy
@@ -194,7 +194,7 @@ CPUSparseMatrix<ElemType>::~CPUSparseMatrix()
 
 #pragma region Basic Operators
 
-//make sure call order in column wise for CSC and row wise for CSR
+// make sure call order in column wise for CSC and row wise for CSR
 template <class ElemType>
 void CPUSparseMatrix<ElemType>::SetValue(const size_t row, const size_t col, const ElemType v)
 {
@@ -206,7 +206,7 @@ void CPUSparseMatrix<ElemType>::SetValue(const size_t row, const size_t col, con
         LogicError("CPUSparseMatrix:  unsupported SetValue() call.");
     }
 
-    size_t nz = NzCount();
+    let nz = NzCount();
     if (GetSizeAllocated() < nz + 1) // automatic resize
     {
         Resize(m_numRows, m_numCols, nz + 100, true, true); // allocate 100 more elelemnts and keep existing values
@@ -225,7 +225,7 @@ void CPUSparseMatrix<ElemType>::SetValue(const size_t row, const size_t col, con
     size_t r = (GetFormat() == matrixFormatSparseCSC) ? row : col;
     size_t c = (GetFormat() == matrixFormatSparseCSC) ? col : row;
 
-    BufferPointer()[nz] = v;
+    Data()[nz] = v;
     MajorIndexLocation()[nz] = (CPUSPARSE_INDEX_TYPE) r;
 
     // consistency check
@@ -255,15 +255,10 @@ void CPUSparseMatrix<ElemType>::SetValue(const size_t row, const size_t col, con
 template <class ElemType>
 void CPUSparseMatrix<ElemType>::SetValue(const CPUSparseMatrix<ElemType>& v)
 {
-    if (!OwnBuffer()) // TODO: GPU version allows to overwrite a view with a fresh non-view
-        LogicError("Cannot modify since the buffer is managed externally.");
-
-    Reset();
     SetFormat(v.GetFormat());
     SetExternalBuffer(false);
-    //m_sliceOf        = nullptr;
 
-    Resize(v.GetNumRows(), v.GetNumCols(), v.NzSize());
+    RequireSize(v.GetNumRows(), v.GetNumCols(), v.NzSize());
     size_t nz = v.NzCount();
 
     if (nz > 0)
@@ -387,7 +382,7 @@ CPUMatrix<ElemType> CPUSparseMatrix<ElemType>::CopyColumnSliceToDense(size_t sta
         for (long p = start; p < end; p++)
         {
             size_t i = GetUnCompIndex()[p];
-            ElemType value = GetArray()[(size_t) p];
+            ElemType value = Buffer()[(size_t) p];
             slice(i, (size_t) j) = value;
         }
     }
@@ -418,7 +413,7 @@ CPUMatrix<ElemType> CPUSparseMatrix<ElemType>::DiagonalToDense() const
 
             if (i == (size_t) j)
             {
-                diag(0, i) = BufferPointer()[(size_t) p];
+                diag(0, i) = Data()[(size_t) p];
             }
         }
     }
@@ -434,7 +429,7 @@ void CPUSparseMatrix<ElemType>::SetMatrixFromCSCFormat(const CPUSPARSE_INDEX_TYP
         LogicError("Cannot modify since the buffer is managed externally.");
 
     SetFormat(matrixFormatSparseCSC);
-    Resize(numRows, numCols, nz, true, false);
+    RequireSize(numRows, numCols, nz, true, false);
 
     memcpy(RowLocation(), h_Row, RowSize());
     memcpy(ColLocation(), h_CSCCol, ColSize());
@@ -442,25 +437,37 @@ void CPUSparseMatrix<ElemType>::SetMatrixFromCSCFormat(const CPUSPARSE_INDEX_TYP
 }
 
 template <class ElemType>
-ElemType* CPUSparseMatrix<ElemType>::BufferPointer() const
+ElemType* CPUSparseMatrix<ElemType>::Data() const
 {
-    return GetArray() + GetCompIndex()[m_sliceViewOffset];
+    return Buffer() + GetCompIndex()[m_sliceViewOffset];
 }
 
 template <class ElemType>
-ElemType* CPUSparseMatrix<ElemType>::BufferPointer() 
+ElemType* CPUSparseMatrix<ElemType>::Data() 
 {
-    return GetArray() + GetCompIndex()[m_sliceViewOffset];
+    return Buffer() + GetCompIndex()[m_sliceViewOffset];
+}
+
+template <class ElemType>
+void CPUSparseMatrix<ElemType>::RequireSize(const size_t numRows, const size_t numCols, size_t numNZElemToReserve, const bool growOnly, bool keepExistingValues)
+{
+    numNZElemToReserve = max(numNZElemToReserve, (size_t)1);
+    size_t newCompIndexSize = (numCols > numRows ? numCols : numRows) + 1;
+    bool reallocate = (GetSizeAllocated() < numNZElemToReserve || (GetSizeAllocated() > numNZElemToReserve && !growOnly) || GetCompIndexSize() < newCompIndexSize);
+
+    if (reallocate || numRows != GetNumRows() || numCols != GetNumCols())
+        Resize(numRows, numCols, numNZElemToReserve, growOnly, keepExistingValues);
 }
 
 template <class ElemType>
 void CPUSparseMatrix<ElemType>::Resize(const size_t numRows, const size_t numCols, size_t numNZElemToReserve, const bool growOnly, bool keepExistingValues)
 {
-    if (!VerifyResizable())
-        LogicError("Cannot modify since the buffer is managed externally.");
 
-    if (m_numRows != numRows || m_numCols != numCols)
+    if (GetNumRows() != numRows || GetNumCols() != numCols)
+    {
+        VerifyResizable(__func__);
         keepExistingValues = false;
+    }
 
     numNZElemToReserve = max(numNZElemToReserve, (size_t) 1);
     size_t newCompIndexSize = (numCols > numRows ? numCols : numRows) + 1;
@@ -487,16 +494,16 @@ void CPUSparseMatrix<ElemType>::Resize(const size_t numRows, const size_t numCol
             if (keepExistingValues && NzCount() > 0)
             {
                 assert(GetCompIndexSize() > 0 && NzCount() < numNZElemToReserve);
-                memcpy(pArray, BufferPointer(), NzSize());
+                memcpy(pArray, Data(), NzSize());
                 memcpy(unCompIndex, GetUnCompIndex(), MajorIndexSize());
                 memcpy(compIndex, GetCompIndex(), SecondaryIndexSize());
             }
 
-            delete[] GetArray();
+            delete[] Buffer();
             delete[] GetUnCompIndex();
             delete[] GetCompIndex();
 
-            SetArray(pArray);
+            SetBuffer(pArray);
             SetUnCompIndex(unCompIndex);
             SetCompIndex(compIndex);
         }
@@ -511,14 +518,14 @@ void CPUSparseMatrix<ElemType>::Resize(const size_t numRows, const size_t numCol
             if (keepExistingValues && GetSizeAllocated() > 0)
             {
                 assert(GetCompIndexSize() > 0 && GetSizeAllocated() < numNZElemToReserve);
-                memcpy(blockVal, BufferPointer(), NzSize());
+                memcpy(blockVal, Data(), NzSize());
                 memcpy(blockIds, GetBlockIds(), sizeof(size_t) * GetCompIndexSize());
             }
 
-            delete[] GetArray();
+            delete[] Buffer();
             delete[] GetBlockIds();
 
-            SetArray(blockVal);
+            SetBuffer(blockVal);
             SetBlockIds(blockIds);
         }
 
@@ -533,9 +540,6 @@ void CPUSparseMatrix<ElemType>::Resize(const size_t numRows, const size_t numCol
 template <class ElemType>
 void CPUSparseMatrix<ElemType>::Reset()
 {
-    if (!OwnBuffer())
-        LogicError("Cannot Reset since the buffer is managed externally.");
-
 	// This is equivalent to setting m_nz = 0;
     memset(SecondaryIndexLocation(), 0, SecondaryIndexSize());
     SetColIdx(-1);
@@ -565,13 +569,13 @@ void CPUSparseMatrix<ElemType>::MultiplyAndWeightedAdd(ElemType alpha, const CPU
     }
 
     if (beta == 0)
-        c.Resize(m, n);
+        c.RequireSize(m, n);
     else
         c.VerifySize(m, n); // Can't resize if beta != 0
 
     if (beta == 0)
     {
-        memset(c.GetArray(), 0, sizeof(ElemType) * c.GetNumElements());
+        memset(c.Buffer(), 0, sizeof(ElemType) * c.GetNumElements());
     }
     else if (beta != 1)
     {
@@ -594,7 +598,7 @@ void CPUSparseMatrix<ElemType>::MultiplyAndWeightedAdd(ElemType alpha, const CPU
             for (size_t p = start; p < end; p++)
             {
                 size_t i = rhs.MajorIndexLocation()[p]; // RowLocation
-                ElemType val = rhs.GetArray()[p];
+                ElemType val = rhs.Buffer()[p];
 
                 for (size_t h = 0; h < lhs.GetNumRows(); h++)
                 {
@@ -613,7 +617,7 @@ void CPUSparseMatrix<ElemType>::MultiplyAndWeightedAdd(ElemType alpha, const CPU
             for (size_t p = start; p < end; p++)
             {
                 size_t i = rhs.MajorIndexLocation()[p];
-                ElemType val = rhs.GetArray()[p];
+                ElemType val = rhs.Buffer()[p];
                 for (size_t h = 0; h < lhs.GetNumRows(); h++)
                 {
                     c(h, i) += alpha * lhs(h, j) * val;
@@ -670,7 +674,7 @@ void CPUSparseMatrix<ElemType>::MultiplyAndAdd(ElemType alpha, const CPUMatrix<E
 
         // allocate enough memory
         c.SetFormat(matrixFormatSparseBlockCol);
-        c.Resize(m, n, m * min(n, rhs.NzCount()), true, false);
+        c.RequireSize(m, n, m * min(n, rhs.NzCount()), true, false);
 
         map<size_t, size_t> w2Id;
         for (size_t j = 0; j < rhs.GetNumCols(); j++)
@@ -681,7 +685,7 @@ void CPUSparseMatrix<ElemType>::MultiplyAndAdd(ElemType alpha, const CPUMatrix<E
             for (size_t p = start; p < end; p++)
             {
                 size_t i = rhs.MajorIndexLocation()[p]; // i ranges over words
-                ElemType val = rhs.GetArray()[p];  // 1 for(i, j)
+                ElemType val = rhs.Buffer()[p];  // 1 for(i, j)
 
                 bool first = true;
                 if (w2Id.find(i) == w2Id.end())
@@ -700,11 +704,11 @@ void CPUSparseMatrix<ElemType>::MultiplyAndAdd(ElemType alpha, const CPUMatrix<E
                 { // h range over hidden layer
                     if (first == true)
                     {
-                        c.GetArray()[pos] = alpha * lhs(h, j) * val;
+                        c.Buffer()[pos] = alpha * lhs(h, j) * val;
                     }
                     else
                     {
-                        c.GetArray()[pos] += alpha * lhs(h, j) * val;
+                        c.Buffer()[pos] += alpha * lhs(h, j) * val;
                     }
                     pos++;
                 }
@@ -712,7 +716,7 @@ void CPUSparseMatrix<ElemType>::MultiplyAndAdd(ElemType alpha, const CPUMatrix<E
         }
         if (c.GetBlockSize() * m > c.GetSizeAllocated())
         {
-            LogicError("sparse matrix out of range.");
+            LogicError("Sparse matrix is unexpectedly out of range.");
         }
     }
     else if (transposeA && !transposeB)
@@ -749,7 +753,7 @@ void CPUSparseMatrix<ElemType>::ScaleAndAdd(const ElemType alpha, const CPUSpars
             for (size_t p = start; p < end; p++)
             {
                 size_t i = lhs.MajorIndexLocation()[p];
-                ElemType val = lhs.GetArray()[p];
+                ElemType val = lhs.Buffer()[p];
                 size_t r = (lhs.GetFormat() == MatrixFormat::matrixFormatSparseCSC) ? i : j;
                 size_t c = (lhs.GetFormat() == MatrixFormat::matrixFormatSparseCSC) ? j : i;
                 rhs(r, c) += alpha * val;
@@ -765,7 +769,7 @@ void CPUSparseMatrix<ElemType>::ScaleAndAdd(const ElemType alpha, const CPUSpars
             size_t start = j * len;
             for (size_t p = start; p < start + len; p++)
             {
-                ElemType val = lhs.GetArray()[p];
+                ElemType val = lhs.Buffer()[p];
 
                 size_t r = (lhs.GetFormat() == MatrixFormat::matrixFormatSparseBlockCol) ? (p - start) : i;
                 size_t c = (lhs.GetFormat() == MatrixFormat::matrixFormatSparseBlockCol) ? i : (p - start);
@@ -810,7 +814,7 @@ void CPUSparseMatrix<ElemType>::NormalGrad(CPUMatrix<ElemType>& c, const ElemTyp
 {
     if (c.IsEmpty())
     {
-        c.Resize(GetNumRows(), GetNumCols());
+        c.RequireSize(GetNumRows(), GetNumCols());
         c.SetValue(0.0);
     }
     // BUGBUG: dimension/ownbuffer check?
@@ -824,11 +828,11 @@ void CPUSparseMatrix<ElemType>::NormalGrad(CPUMatrix<ElemType>& c, const ElemTyp
             size_t start = j * len;
             for (size_t p = start; p < start + len; p++)
             {
-                ElemType val = GetArray()[p];
+                ElemType val = Buffer()[p];
                 size_t row = (GetFormat() == MatrixFormat::matrixFormatSparseBlockCol) ? (p - start) : i;
                 size_t col = (GetFormat() == MatrixFormat::matrixFormatSparseBlockCol) ? i : (p - start);
                 c(row, col) = (1 - momentum) * val + momentum * c(row, col);
-                GetArray()[p] = c(row, col);
+                Buffer()[p] = c(row, col);
             }
         }
     }
@@ -844,7 +848,7 @@ ElemType CPUSparseMatrix<ElemType>::Adagrad(CPUMatrix<ElemType>& c, const bool n
 {
     if (c.IsEmpty() || c.GetNumCols() != GetNumCols() || c.GetNumRows() != GetNumRows())
     {
-        c.Resize(GetNumRows(), GetNumCols());
+        c.RequireSize(GetNumRows(), GetNumCols());
         c.SetValue(0.0);
     }
     // BUGBUG: dimension/ownbuffer check?
@@ -862,14 +866,14 @@ ElemType CPUSparseMatrix<ElemType>::Adagrad(CPUMatrix<ElemType>& c, const bool n
             for (size_t p = start; p < end; p++)
             {
                 size_t i = MajorIndexLocation()[p];
-                ElemType val = GetArray()[p];
+                ElemType val = Buffer()[p];
 
                 size_t row = (GetFormat() == MatrixFormat::matrixFormatSparseCSC) ? i : j;
                 size_t col = (GetFormat() == MatrixFormat::matrixFormatSparseCSC) ? j : i;
                 ElemType adenorm = c(row, col);
                 adenorm += val * val;
                 ElemType a = sqrt(floor + adenorm);
-                GetArray()[p] = val / a;
+                Buffer()[p] = val / a;
                 c(row, col) = adenorm;
 
                 if (needAveMultiplier)
@@ -886,13 +890,13 @@ ElemType CPUSparseMatrix<ElemType>::Adagrad(CPUMatrix<ElemType>& c, const bool n
             size_t colOrRow = GetBlockIds()[j] - GetBlockIdShift();
             for (long i = 0; i < len; i++, p++)
             {
-                ElemType val = GetArray()[p];
+                ElemType val = Buffer()[p];
 
                 size_t row = (GetFormat() == MatrixFormat::matrixFormatSparseBlockCol) ? i : colOrRow;
                 size_t col = (GetFormat() == MatrixFormat::matrixFormatSparseBlockCol) ? colOrRow : i;
                 c(row, col) += val * val;
                 ElemType a = sqrt(floor + c(row, col));
-                GetArray()[p] /= a;
+                Buffer()[p] /= a;
 
                 if (needAveMultiplier)
                     aveMultiplier += 1 / a;
@@ -1111,18 +1115,18 @@ ElemType CPUSparseMatrix<ElemType>::SumOfAbsElements() const
     if (sizeof(ElemType) == sizeof(double))
     {
 #ifdef USE_ACML
-        return (ElemType) dasum((int) this->NzCount(), reinterpret_cast<double*>(BufferPointer()), 1);
+        return (ElemType) dasum((int) this->NzCount(), reinterpret_cast<double*>(Data()), 1);
 #else
-        return (ElemType) cblas_dasum((int) this->NzCount(), reinterpret_cast<double*>(BufferPointer()), 1);
+        return (ElemType) cblas_dasum((int) this->NzCount(), reinterpret_cast<double*>(Data()), 1);
 #endif
     }
     else
     {
 #pragma warning(suppress : 4244)
 #ifdef USE_ACML
-        return sasum((int) this->NzCount(), reinterpret_cast<float*>(BufferPointer()), 1);
+        return sasum((int) this->NzCount(), reinterpret_cast<float*>(Data()), 1);
 #else
-        return cblas_sasum((int) this->NzCount(), reinterpret_cast<float*>(BufferPointer()), 1);
+        return cblas_sasum((int) this->NzCount(), reinterpret_cast<float*>(Data()), 1);
 #endif
     }
 }
@@ -1178,7 +1182,7 @@ MATH_API File& operator>>(File& stream, CPUSparseMatrix<ElemType>& us)
     if (us.GetFormat() != matrixFormatSparseCSC && us.GetFormat() != matrixFormatSparseCSR)
         NOT_IMPLEMENTED;
 
-    us.Resize(rownum, colnum, nz, true, false);
+    us.RequireSize(rownum, colnum, nz, true, false);
 
     if (nz > 0)
     {
@@ -1261,8 +1265,8 @@ template CPUSparseMatrix<char>::CPUSparseMatrix(CPUSparseMatrix<char>&&);
 template CPUSparseMatrix<char>& CPUSparseMatrix<char>::operator=(CPUSparseMatrix<char>&& moveFrom);
 template void CPUSparseMatrix<char>::SetValue(size_t, size_t, char);
 template void CPUSparseMatrix<char>::SetValue(CPUSparseMatrix<char> const&);
-template char* CPUSparseMatrix<char>::BufferPointer() const;
-template char* CPUSparseMatrix<char>::BufferPointer();
+template char* CPUSparseMatrix<char>::Data() const;
+template char* CPUSparseMatrix<char>::Data();
 template void CPUSparseMatrix<char>::Reset(void);
 template CPUSparseMatrix<char>::~CPUSparseMatrix();
 template CPUSparseMatrix<char> CPUSparseMatrix<char>::ColumnSlice(size_t startColumn, size_t numCols) const;
