@@ -1777,13 +1777,6 @@ void GPUMatrix<ElemType>::BatchNormalizationForward(const GPUMatrix<ElemType>& s
 }
 
 template <class ElemType>
-void GPUMatrix<ElemType>::BatchNormalizationForwardInference(const GPUMatrix<ElemType>& scale, const GPUMatrix<ElemType>& bias, 
-                                                             const GPUMatrix<ElemType>& runMean, const GPUMatrix<ElemType>& runInvStdDev,
-                                                             GPUMatrix<ElemType>& out) const
-{
-}
-
-template <class ElemType>
 void GPUMatrix<ElemType>::BatchNormalizationBackward(const GPUMatrix<ElemType>& in, GPUMatrix<ElemType>& grad, const GPUMatrix<ElemType>& scale, 
                                                      const GPUMatrix<ElemType>& saveMean, const GPUMatrix<ElemType>& saveInvStdDev,
                                                      GPUMatrix<ElemType>& scaleGrad, GPUMatrix<ElemType>& biasGrad) const
