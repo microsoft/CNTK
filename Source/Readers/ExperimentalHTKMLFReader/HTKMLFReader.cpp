@@ -159,23 +159,19 @@ void HTKMLFReader::StartEpoch(const EpochConfiguration& config)
     switch (m_packingMode)
     {
     case PackingMode::sample:
-    {
         m_packer = std::make_shared<SampleModePacker>(
             m_provider,
             m_randomizer,
             config.m_minibatchSizeInSamples,
             m_streams);
         break;
-    }
     case PackingMode::sequence:
-    {
         m_packer = std::make_shared<SequencePacker>(
             m_provider,
             m_randomizer,
             config.m_minibatchSizeInSamples,
             m_streams);
         break;
-    }
     case PackingMode::truncated:
     {
         size_t minibatchSize = config.m_minibatchSizeInSamples;

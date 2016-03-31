@@ -24,6 +24,7 @@ PackerBase::PackerBase(MemoryProviderPtr memoryProvider,
 {
     m_inputStreamDescriptions = m_transformer->GetStreamDescriptions();
     assert(m_inputStreamDescriptions.size() == m_outputStreamDescriptions.size());
+    assert(m_inputStreamDescriptions.size() != 0);
 
     // Currently do not support sparse output.
     // TODO: Will be supported in the future.
@@ -75,8 +76,10 @@ void PackerBase::PackSparseSample(void* destination, SequenceDataPtr sequence, s
 }
 
 // Packs a dense sample as dense.
-void PackerBase::PackDenseSample(void* destination, SequenceDataPtr sequence, size_t sample, size_t /*elementSize*/, size_t sampleSize)
+void PackerBase::PackDenseSample(void* destination, SequenceDataPtr sequence, size_t sample, size_t elementSize, size_t sampleSize)
 {
+    UNUSED(elementSize);
+
     // Because the sample is dense - simply copying it to the output.
     memcpy(destination, (char*)(sequence->m_data) + sample * sampleSize, sampleSize);
 }

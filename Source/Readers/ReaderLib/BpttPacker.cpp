@@ -6,6 +6,7 @@
 #define _CRT_SECURE_NO_WARNINGS
 #define _SCL_SECURE_NO_WARNINGS
 
+#include <deque>
 #include "BpttPacker.h"
 #include "ElementTypeUtils.h"
 
@@ -15,8 +16,9 @@ using namespace std;
 
 // Represents a slot where we accumulate sequences from which the minibatch is created.
 // The number of slots equals number of parallel sequences we want to pack.
-struct Slot
+class Slot
 {
+public:
     Slot() : m_length(0), m_sampleCursor(0)
     {}
 
@@ -30,6 +32,7 @@ struct Slot
     size_t AvailableNumberOfSamples() const
     {
         assert(m_length >= m_sampleCursor);
+        assert(m_sequences.empty() ?  m_sampleCursor == 0 : m_sequences.size() > m_sampleCursor);
         return m_length - m_sampleCursor;
     }
 
@@ -49,6 +52,7 @@ struct Slot
     // Pops the front sequence at the beginning of the slot.
     void PopSequence()
     {
+        assert(!m_sequences.empty());
         m_sampleCursor = 0;
         m_length -= m_sequences.front()->m_numberOfSamples;
         m_sequences.pop_front();
@@ -104,7 +108,7 @@ BpttPacker::BpttPacker(
     m_truncationSize(truncationSize)
 {
     // Estimating the number of parallel sequences to pack (slots) from the minibatch size and truncation size.
-    m_numParallelSequences = max(1, (int)floor(m_minibatchSize / truncationSize));
+    m_numParallelSequences = max(1, (int)floor(m_minibatchSize / m_truncationSize));
 
     // Preparing the buffers.
     for (int i = 0; i < m_outputStreamDescriptions.size(); ++i)
@@ -182,7 +186,7 @@ void BpttPacker::PackSlot(size_t streamIndex, size_t slotIndex)
     size_t elementSize = GetSizeByType(m_inputStreamDescriptions[streamIndex]->m_elementType);
 
     // Distance between two samples of the same sequence in bytes.
-    size_t stride = m_numParallelSequences * sampleSize;
+    size_t strideSize = m_numParallelSequences * sampleSize;
 
     // Add current sequence to the minibatch layout.
     m_currentLayouts[streamIndex]->AddSequence(
@@ -211,7 +215,7 @@ void BpttPacker::PackSlot(size_t streamIndex, size_t slotIndex)
         // Fill in the data from the first sequence in the slot.
         auto data = slot.FrontSequence();
         // Get buffer destination for the current sample.
-        void* destination = m_streamBuffers[streamIndex].get() + stride * currentTimestep + slotIndex * sampleSize;
+        void* destination = m_streamBuffers[streamIndex].get() + strideSize * currentTimestep + slotIndex * sampleSize;
         assert(destination >= m_streamBuffers[streamIndex].get());
         assert(destination < m_streamBuffers[streamIndex].get() + m_streamBufferSizes[streamIndex]);
 
@@ -251,7 +255,8 @@ void BpttPacker::ReadSequencesToSlot(size_t slotIndex)
     const auto& slot = m_sequenceBufferPerStream.front()->m_slots[slotIndex];
     while (m_truncationSize > slot.AvailableNumberOfSamples())
     {
-        // We need a single sequence:
+        // We need a single sequence, potentially we can request (m_truncationSize - slot.AvailableNumberOfSamples())
+        // to be more efficient. In reality the truncation size usually is less the sequence size.
         auto s = m_transformer->GetNextSequences(1);
         if (s.m_endOfEpoch)
         {
@@ -262,6 +267,13 @@ void BpttPacker::ReadSequencesToSlot(size_t slotIndex)
         for (size_t i = 0; i < s.m_data.size(); ++i)
         {
             assert(s.m_data[i].size() == 1);
+
+            // Check that all sequences are of the same length.
+            if (s.m_data.front().front()->m_numberOfSamples != s.m_data[i].front()->m_numberOfSamples)
+            {
+                RuntimeError("For BPTT sequences between different input stream should have the same length.");
+            }
+
             m_sequenceBufferPerStream[i]->m_slots[slotIndex].PushSequence(s.m_data[i].front());
         }
     }

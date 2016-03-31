@@ -5,7 +5,6 @@
 
 #pragma once
 
-#include <deque>
 #include "Reader.h"
 #include "MemoryProvider.h"
 #include "Transformer.h"
@@ -59,7 +58,7 @@ private:
     std::vector<std::shared_ptr<char>> m_streamBuffers;
 
     // Size of allocated buffers, m_streamBuffers.size() == m_streamBufferSizes.size().
-    // TODO: this will dissapear after Alexey's merge (StreamBuffer class).
+    // TODO: this will disappear after Alexey's merge (StreamBuffer class).
     std::vector<size_t> m_streamBufferSizes;
 };
 
