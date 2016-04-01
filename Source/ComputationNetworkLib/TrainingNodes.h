@@ -1806,8 +1806,13 @@ public:
 
             if (m_bnEng == nullptr)
             {
-                m_bnEng = BatchNormEngine<ElemType>::Create(m_deviceId, shape, m_spatial, m_imageLayoutKind,
-                                                            m_useCntkEngine ? BatchNormEngineKind::Cntk : BatchNormEngineKind::CuDnn);
+                auto engineKind = m_useCntkEngine ? BatchNormEngineKind::Cntk : BatchNormEngineKind::CuDnn;
+                if (!m_useCntkEngine && m_deviceId < 0)
+                {
+                    fprintf(stderr, "\nWARNING: cuDNN batch normalization does not support CPU. Switching to CNTK batch normalization.\n");
+                    engineKind = BatchNormEngineKind::Cntk;
+                }
+                m_bnEng = BatchNormEngine<ElemType>::Create(m_deviceId, shape, m_spatial, m_imageLayoutKind, engineKind);
             }
         }
     }
