@@ -19,13 +19,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 class HTKDataDeserializer : public DataDeserializerBase
 {
 public:
-    // TODO: Currently a stub, first step to make deserializers loadable.
-    HTKDataDeserializer(CorpusDescriptorPtr corpus, const ConfigParameters& config)
-    {
-        UNUSED(corpus);
-        UNUSED(config);
-    }
+    // Expects new configuration.
+    HTKDataDeserializer(CorpusDescriptorPtr corpus, const ConfigParameters& config);
 
+    // TODO: Should be removed, when all readers go away, expects configuration in a legacy mode.
     HTKDataDeserializer(CorpusDescriptorPtr corpus, const ConfigParameters& featureConfig, const std::wstring& featureName, bool primary);
 
     // Get information about chunks.

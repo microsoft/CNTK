@@ -24,11 +24,13 @@
 #include "Transformer.h"
 #include "Reader.h"
 #include "Packer.h"
+#include "CorpusDescriptor.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
 CompositeDataReader::CompositeDataReader(const std::string& precision) : m_layout(make_shared<MBLayout>()),
-    m_precision(precision)
+    m_precision(precision),
+    m_corpus(std::make_shared<CorpusDescriptor>())
 {
 }
 
@@ -54,6 +56,9 @@ void CompositeDataReader::Init(const ConfigParameters& config)
 
     // Whether we need to check data between different deserializers.
     bool cleanse = config(L"checkData", false);
+
+    // Creating deserializers.
+    CreateDeserializers(config);
 
     // Bundling deserializers together.
     // TODO: Transformers should be applied on the level of a particular deserializer?
@@ -212,15 +217,32 @@ void CompositeDataReader::CreateDeserializers(const ConfigParameters& readerConf
     assert(m_deserializers.empty());
     for (size_t i = 0; i < deserializerConfigs.size(); ++i)
     {
-        IDataDeserializerPtr d = CreateDeserializer(deserializerConfigs[i]);
+        // TODO: Should go away in the future. Framing can be done on top of deserializer.
+        ConfigParameters p = deserializerConfigs[i];
+        p.Insert("frameMode", m_frameMode ? "true" : "false");
+        p.Insert("precision", m_precision);
+
+        IDataDeserializerPtr d = CreateDeserializer(p);
         m_deserializers.push_back(d);
     }
 }
 
 IDataDeserializerPtr CompositeDataReader::CreateDeserializer(const ConfigParameters& deserializerConfig)
 {
-    UNUSED(deserializerConfig);
-    return nullptr;
+    typedef bool(*CreateDeserializerFactory) (IDataDeserializer** d, const std::wstring& type, const ConfigParameters& cfg, CorpusDescriptorPtr corpus);
+
+    std::string deserializerModule = deserializerConfig("module");
+    CreateDeserializerFactory f = (CreateDeserializerFactory)Plugin::Load(deserializerModule, "CreateDeserializer");
+
+    std::wstring deserializerType = deserializerConfig("type");
+    IDataDeserializer* d;
+    if (!f(&d, deserializerType, deserializerConfig, m_corpus))
+    {
+        RuntimeError("Cannot create deserializer. Please check module and type in the configuration.");
+    }
+
+    assert(d != nullptr);
+    return IDataDeserializerPtr(d);
 }
 
 void CompositeDataReader::StartEpoch(const EpochConfiguration& config)

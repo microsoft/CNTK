@@ -24,6 +24,9 @@ typedef std::shared_ptr<Packer> PackerPtr;
 class MemoryProvider;
 typedef std::shared_ptr<MemoryProvider> MemoryProviderPtr;
 
+class CorpusDescriptor;
+typedef std::shared_ptr<CorpusDescriptor> CorpusDescriptorPtr;
+
 struct StreamDescription;
 typedef std::shared_ptr<StreamDescription> StreamDescriptionPtr;
 
@@ -86,6 +89,8 @@ private:
     // TODO: Should be removed. We already have matrices on this level.
     // Should just get the corresponding pinned memory.
     MemoryProviderPtr m_provider;
+
+    CorpusDescriptorPtr m_corpus;
 
     PackerPtr m_packer;
 

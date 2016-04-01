@@ -24,6 +24,52 @@ using namespace std;
 
 HTKDataDeserializer::HTKDataDeserializer(
     CorpusDescriptorPtr corpus,
+    const ConfigParameters& cfg)
+    : m_ioFeatureDimension(0),
+    m_samplePeriod(0),
+    m_verbosity(0),
+    m_corpus(corpus),
+    m_totalNumberOfFrames(0)
+{
+    // The frame mode is currently specified once per configuration,
+    // not in the configuration of a particular deserializer, but on a higher level in the configuration.
+    // Because of that we are using find method below.
+    m_frameMode = cfg.Find("frameMode", "true");
+
+    argvector<ConfigValue> inputs = cfg("inputs");
+    if (inputs.size() != 1)
+    {
+        LogicError("HTKDataDeserializer supports a single input stream.");
+    }
+
+    ConfigParameters input = inputs.front();
+    auto inputName = input.GetMemberIds().front();
+
+    ConfigParameters streamConfig = input(inputName);
+
+    ConfigHelper config(streamConfig);
+    auto context = config.GetContextWindow();
+
+    m_elementType = config.GetElementType();
+    m_dimension = config.GetFeatureDimension();
+    m_dimension = m_dimension * (1 + context.first + context.second);
+
+    InitializeChunkDescriptions(config);
+    InitializeStreams(inputName);
+    InitializeFeatureInformation();
+
+    m_augmentationWindow = config.GetContextWindow();
+
+    // If not given explicitly, we need to identify the required augmentation range from the expected dimension
+    // and the number of dimensions in the file.
+    if (m_augmentationWindow.first == 0 && m_augmentationWindow.second == 0)
+    {
+        m_augmentationWindow.first = m_augmentationWindow.second = msra::dbn::augmentationextent(m_ioFeatureDimension, m_dimension);
+    }
+}
+
+HTKDataDeserializer::HTKDataDeserializer(
+    CorpusDescriptorPtr corpus,
     const ConfigParameters& feature,
     const wstring& featureName,
     bool primary)
