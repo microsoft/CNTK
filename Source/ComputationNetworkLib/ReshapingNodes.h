@@ -206,9 +206,10 @@ public:
         // TODO: Once we do in-place, the above must include a copy-to-self check (either here or inside the matrix lib).
     }
 
-    virtual void /*ComputationNode::*/ BackpropTo(const size_t /*inputIndex*/, const FrameRange& fr) override
+    virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
     {
-        Input(0)->GradientFor(fr.WithLayout(Input(0)->GetMBLayout())) += GradientFor(fr);
+        if (inputIndex == 0)
+            Input(0)->GradientFor(fr.WithLayout(Input(0)->GetMBLayout())) += GradientFor(fr);
         // TODO: Once we do in-place, the above must include a copy-to-self check (pay special attention to adding vs. copying).
     }
 
