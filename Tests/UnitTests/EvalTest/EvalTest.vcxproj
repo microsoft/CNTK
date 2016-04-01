@@ -100,6 +100,22 @@
     <ClInclude Include="targetver.h" />
   </ItemGroup>
   <ItemGroup>
+<<<<<<< HEAD
+=======
+    <ClCompile Include="..\..\..\Source\Common\Config.cpp">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Source\Common\DataReader.cpp" />
+    <ClCompile Include="..\..\..\Source\Common\CompositeDataReader.cpp" />
+    <ClCompile Include="..\..\..\Source\Common\Eval.cpp" />
+    <ClCompile Include="..\..\..\Source\Common\ExceptionWithCallStack.cpp" />
+    <ClCompile Include="..\..\..\Source\Common\File.cpp">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Source\Common\fileutil.cpp">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+    </ClCompile>
+>>>>>>> Adding dependencies on the composite reader
     <ClCompile Include="CNTKEvalTest.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader>Create</PrecompiledHeader>

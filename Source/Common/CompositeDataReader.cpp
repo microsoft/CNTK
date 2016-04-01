@@ -20,16 +20,19 @@
 #include "SampleModePacker.h"
 #include "SequencePacker.h"
 #include "HeapMemoryProvider.h"
+#include "DataDeserializer.h"
+#include "Transformer.h"
+#include "Reader.h"
+#include "Packer.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
-template <class ElemType>
-CompositeDataReader<ElemType>::CompositeDataReader() : m_layout(make_shared<MBLayout>())
+CompositeDataReader::CompositeDataReader(const std::string& precision) : m_layout(make_shared<MBLayout>()),
+    m_precision(precision)
 {
 }
 
-template <class ElemType>
-void CompositeDataReader<ElemType>::Init(const ConfigParameters& config)
+void CompositeDataReader::Init(const ConfigParameters& config)
 {
     intargvector numberOfuttsPerMinibatchForAllEpochs =
         config(L"nbruttsineachrecurrentiter", ConfigParameters::Array(intargvector(vector<int> { 1 })));
@@ -81,14 +84,12 @@ void CompositeDataReader<ElemType>::Init(const ConfigParameters& config)
     }
 }
 
-template <class ElemType>
-void CompositeDataReader<ElemType>::StartMinibatchLoop(size_t mbSize, size_t epoch, size_t requestedEpochSamples)
+void CompositeDataReader::StartMinibatchLoop(size_t mbSize, size_t epoch, size_t requestedEpochSamples)
 {
     return StartDistributedMinibatchLoop(mbSize, epoch, 0, 1, requestedEpochSamples);
 }
 
-template <class ElemType>
-void CompositeDataReader<ElemType>::StartDistributedMinibatchLoop(
+void CompositeDataReader::StartDistributedMinibatchLoop(
     size_t requestedMBSize,
     size_t epoch,
     size_t subsetNum,
@@ -120,8 +121,7 @@ void CompositeDataReader<ElemType>::StartDistributedMinibatchLoop(
     });
 }
 
-template <class ElemType>
-bool CompositeDataReader<ElemType>::GetMinibatch(StreamMinibatchInputs& matrices)
+bool CompositeDataReader::GetMinibatch(StreamMinibatchInputs& matrices)
 {
     if (m_endOfEpoch)
     {
@@ -166,8 +166,17 @@ bool CompositeDataReader<ElemType>::GetMinibatch(StreamMinibatchInputs& matrices
             size_t columnNumber = m_layout->GetNumCols();
             size_t rowNumber = m_streams[streamId]->m_sampleLayout->GetNumElements();
 
-            auto* data = reinterpret_cast<const ElemType*>(stream->m_data);
-            matrices.GetInputMatrix<ElemType>(mx.first).SetValue(rowNumber, columnNumber, mx.second->GetDeviceId(), const_cast<ElemType*>(data), matrixFlagNormal);
+            if (m_precision == "float")
+            {
+                auto* data = reinterpret_cast<const float*>(stream->m_data);
+                matrices.GetInputMatrix<float>(mx.first).SetValue(rowNumber, columnNumber, mx.second->GetDeviceId(), const_cast<float*>(data), matrixFlagNormal);
+            }
+            else
+            {
+                assert(m_precision == "double");
+                auto* data = reinterpret_cast<const double*>(stream->m_data);
+                matrices.GetInputMatrix<double>(mx.first).SetValue(rowNumber, columnNumber, mx.second->GetDeviceId(), const_cast<double*>(data), matrixFlagNormal);
+            }
         }
     }
 
@@ -179,27 +188,23 @@ bool CompositeDataReader<ElemType>::GetMinibatch(StreamMinibatchInputs& matrices
     return !minibatch.m_data.empty();
 }
 
-template <class ElemType>
-bool CompositeDataReader<ElemType>::DataEnd()
+bool CompositeDataReader::DataEnd()
 {
     // Note: Return value never used.
     return false;
 }
 
-template <class ElemType>
-void CompositeDataReader<ElemType>::CopyMBLayoutTo(MBLayoutPtr layout)
+void CompositeDataReader::CopyMBLayoutTo(MBLayoutPtr layout)
 {
     layout->CopyFrom(m_layout);
 }
 
-template <class ElemType>
-size_t CompositeDataReader<ElemType>::GetNumParallelSequences()
+size_t CompositeDataReader::GetNumParallelSequences()
 {
     return m_layout->GetNumParallelSequences();
 }
 
-template <class ElemType>
-void CompositeDataReader<ElemType>::CreateDeserializers(const ConfigParameters& readerConfig)
+void CompositeDataReader::CreateDeserializers(const ConfigParameters& readerConfig)
 {
     argvector<ConfigValue> deserializerConfigs =
         readerConfig(L"deserializers", ConfigParameters::Array(argvector<ConfigValue>(vector<ConfigValue> {})));
@@ -212,15 +217,13 @@ void CompositeDataReader<ElemType>::CreateDeserializers(const ConfigParameters& 
     }
 }
 
-template <class ElemType>
-IDataDeserializerPtr CompositeDataReader<ElemType>::CreateDeserializer(const ConfigParameters& deserializerConfig)
+IDataDeserializerPtr CompositeDataReader::CreateDeserializer(const ConfigParameters& deserializerConfig)
 {
     UNUSED(deserializerConfig);
     return nullptr;
 }
 
-template <class ElemType>
-void CompositeDataReader<ElemType>::StartEpoch(const EpochConfiguration& config)
+void CompositeDataReader::StartEpoch(const EpochConfiguration& config)
 {
     if (config.m_totalEpochSizeInSamples <= 0)
     {
@@ -250,9 +253,6 @@ void CompositeDataReader<ElemType>::StartEpoch(const EpochConfiguration& config)
             m_streams);
     }
 }
-
-template class CompositeDataReader<float>;
-template class CompositeDataReader<double>;
 
 }}}
 

@@ -9,21 +9,34 @@
 #include <string>
 #include <future>
 #include "DataReader.h"
-#include "DataDeserializer.h"
-#include "Transformer.h"
-#include "Reader.h"
-#include "Packer.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
+
+class IDataDeserializer;
+typedef std::shared_ptr<IDataDeserializer> IDataDeserializerPtr;
+
+class Transformer;
+typedef std::shared_ptr<Transformer> TransformerPtr;
+
+class Packer;
+typedef std::shared_ptr<Packer> PackerPtr;
+
+class MemoryProvider;
+typedef std::shared_ptr<MemoryProvider> MemoryProviderPtr;
+
+struct StreamDescription;
+typedef std::shared_ptr<StreamDescription> StreamDescriptionPtr;
+
+struct EpochConfiguration;
+struct Minibatch;
 
 // TODO: Temporary shim for the new readers, will be removed and responsibilities will be moved to different parts of CNTK.
 // TODO: Currently binds together several deserializers, packer and randomizer. So that the actual reader developer has to provide deserializer only.
 // TODO: Same code as in ReaderLib shim, the one in the ReaderLib will be deleted as the next step.
-template <class ElemType>
 class CompositeDataReader : public IDataReader, protected Plugin, public ScriptableObjects::Object
 {
 public:
-    CompositeDataReader();
+    CompositeDataReader(const std::string& precision);
 
     // Currently we do not support BS configuration.
     virtual void Init(const ScriptableObjects::IConfigRecord& /*config*/) override
@@ -75,6 +88,8 @@ private:
     MemoryProviderPtr m_provider;
 
     PackerPtr m_packer;
+
+    std::string m_precision;
 
     bool m_frameMode;
     bool m_truncated;

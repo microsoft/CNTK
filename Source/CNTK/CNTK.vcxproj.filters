@@ -47,7 +47,7 @@
     <ClCompile Include="..\Common\ExceptionWithCallStack.cpp">
       <Filter>Common</Filter>
     </ClCompile>
-    <ClCompile Include="CompositeDataReader.cpp">
+    <ClCompile Include="..\Common\CompositeDataReader.cpp">
       <Filter>Common</Filter>
     </ClCompile>
   </ItemGroup>
@@ -169,9 +169,6 @@
     <ClInclude Include="..\Common\Include\ExceptionWithCallStack.h">
       <Filter>Common\Include</Filter>
     </ClInclude>
-    <ClInclude Include="CompositeDataReader.h">
-      <Filter>Common\Include</Filter>
-    </ClInclude>
     <ClInclude Include="..\Readers\ReaderLib\BlockRandomizer.h">
       <Filter>from ReaderLib</Filter>
     </ClInclude>
@@ -213,6 +210,9 @@
     </ClInclude>
     <ClInclude Include="..\Readers\ReaderLib\TransformerBase.h">
       <Filter>from ReaderLib</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Common\Include\CompositeDataReader.h">
+      <Filter>Common\Include</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

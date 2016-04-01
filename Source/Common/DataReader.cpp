@@ -16,6 +16,7 @@
 #include "Config.h"
 #include "ScriptableObjects.h"
 #include <string>
+#include "CompositeDataReader.h"
 
 using namespace std;
 
@@ -89,6 +90,7 @@ DataReader::DataReader(const ConfigRecordType& config)
     string precision = config(L"precision", "float");
 
     bool hasMultipleReaders = config.Exists(L"readers");
+    bool hasDeserializers = config.Exists(L"deserializers");
     if (hasMultipleReaders)
     {
         vector<wstring> ioNames = config(L"readers", ConfigRecordType::Array(stringargvector()));
@@ -102,6 +104,12 @@ DataReader::DataReader(const ConfigRecordType& config)
             assert(getReaderProc != nullptr);
             getReaderProc(&m_dataReaders[ioName]); // instantiates the reader with the default constructor (no config processed at this point)
         }
+    }
+    else if (hasDeserializers)
+    {
+        wstring ioName = L"ioName";
+        m_ioNames.push_back(ioName);
+        m_dataReaders[ioName] = new CompositeDataReader(precision);
     }
     else // legacy
     {
