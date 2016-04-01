@@ -14,6 +14,8 @@
 #include "ReaderShim.h"
 #include "HTKMLFReader.h"
 #include "HeapMemoryProvider.h"
+#include "HTKDataDeserializer.h"
+#include "MLFDataDeserializer.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -32,6 +34,27 @@ extern "C" DATAREADER_API void GetReaderF(IDataReader** preader)
 extern "C" DATAREADER_API void GetReaderD(IDataReader** preader)
 {
     *preader = new ReaderShim<double>(factory);
+}
+
+// TODO: Not safe from the ABI perspective. Will be uglified to make the interface ABI.
+extern "C" DATAREADER_API bool CreateDeserializer(IDataDeserializer** deserializer, const std::wstring& type, const ConfigParameters& deserializerConfig)
+{
+    if (type == L"HTKDataDeserializer")
+    {
+        *deserializer = new HTKDataDeserializer(nullptr, deserializerConfig);
+    }
+    else if (type == L"MLFDataDeserializer")
+    {
+        *deserializer = new MLFDataDeserializer(nullptr, deserializerConfig);
+    }
+    else
+    {
+        // Unknown type.
+        return false;
+    }
+
+    // Deserializer created.
+    return true;
 }
 
 }}}

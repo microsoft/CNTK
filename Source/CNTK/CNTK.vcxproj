@@ -47,6 +47,8 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="$(DebugBuild)">
     <LinkIncremental>true</LinkIncremental>
+    <IncludePath>..\Readers\ReaderLib;..\ActionsLib;..\SequenceTrainingLib;..\SGDLib;..\ComputationNetworkLib;..\Math;..\Common\Include;..\CNTK\BrainScript;$(MSMPI_INC);$(VCInstallDir)include;$(WindowsSDK_IncludePath);</IncludePath>
+    <LibraryPath>$(MSMPI_LIB64);$(SolutionDir)$(Platform)\$(Configuration);$(SolutionDir)..\Common\lib;$(VCInstallDir)lib\amd64;$(WindowsSDK_LibraryPath_x64)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="$(ReleaseBuild)">
     <LinkIncremental>false</LinkIncremental>
@@ -164,6 +166,20 @@
     <ClInclude Include="..\Math\Matrix.h" />
     <ClInclude Include="..\ComputationNetworkLib\PreComputeNodes.h" />
     <ClInclude Include="..\ComputationNetworkLib\MatrixPool.h" />
+    <ClInclude Include="..\Readers\ReaderLib\BlockRandomizer.h" />
+    <ClInclude Include="..\Readers\ReaderLib\Bundler.h" />
+    <ClInclude Include="..\Readers\ReaderLib\ChunkRandomizer.h" />
+    <ClInclude Include="..\Readers\ReaderLib\DataDeserializer.h" />
+    <ClInclude Include="..\Readers\ReaderLib\MemoryProvider.h" />
+    <ClInclude Include="..\Readers\ReaderLib\NoRandomizer.h" />
+    <ClInclude Include="..\Readers\ReaderLib\Packer.h" />
+    <ClInclude Include="..\Readers\ReaderLib\Reader.h" />
+    <ClInclude Include="..\Readers\ReaderLib\SampleModePacker.h" />
+    <ClInclude Include="..\Readers\ReaderLib\SequencePacker.h" />
+    <ClInclude Include="..\Readers\ReaderLib\SequenceRandomizer.h" />
+    <ClInclude Include="..\Readers\ReaderLib\StringToIdMap.h" />
+    <ClInclude Include="..\Readers\ReaderLib\Transformer.h" />
+    <ClInclude Include="..\Readers\ReaderLib\TransformerBase.h" />
     <ClInclude Include="..\SGDLib\DataReaderHelpers.h" />
     <ClInclude Include="..\SGDLib\SGD.h" />
     <ClInclude Include="..\SGDLib\SimpleEvaluator.h" />
@@ -176,6 +192,7 @@
     <ClInclude Include="BrainScript\BrainScriptParser.h" />
     <ClInclude Include="..\ComputationNetworkLib\InputAndParamNodes.h" />
     <ClInclude Include="..\ComputationNetworkLib\LinearAlgebraNodes.h" />
+    <ClInclude Include="CompositeDataReader.h" />
     <ClInclude Include="ModelEditLanguage.h" />
     <ClInclude Include="..\ComputationNetworkLib\NonlinearityNodes.h" />
     <ClInclude Include="..\ComputationNetworkLib\RecurrentNodes.h" />
@@ -187,6 +204,7 @@
     <ClCompile Include="BrainScript\BrainScriptParser.cpp" />
     <ClCompile Include="BrainScript\BrainScriptTest.cpp" />
     <ClCompile Include="CNTK.cpp" />
+    <ClCompile Include="CompositeDataReader.cpp" />
     <ClCompile Include="ModelEditLanguage.cpp" />
     <ClCompile Include="stdafx.cpp" />
     <ClCompile Include="tests.cpp" />

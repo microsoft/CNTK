@@ -19,6 +19,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 class HTKDataDeserializer : public DataDeserializerBase
 {
 public:
+    // TODO: Currently a stub, first step to make deserializers loadable.
+    HTKDataDeserializer(CorpusDescriptorPtr corpus, const ConfigParameters& config)
+    {
+        UNUSED(corpus);
+        UNUSED(config);
+    }
+
     HTKDataDeserializer(CorpusDescriptorPtr corpus, const ConfigParameters& featureConfig, const std::wstring& featureName, bool primary);
 
     // Get information about chunks.
