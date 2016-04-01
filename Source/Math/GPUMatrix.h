@@ -104,6 +104,8 @@ class MATH_API GPUMatrix : public BaseMatrix<ElemType>
     using Base::m_sob;
     using Base::ShallowCopyFrom;
     using Base::ReleaseStorageMemory;
+    using Base::GetSizeAllocated;
+    using Base::SetSizeAllocated;
 
     template <typename T>
     friend class GPUMatrix;

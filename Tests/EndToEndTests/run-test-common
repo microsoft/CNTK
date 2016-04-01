@@ -7,7 +7,7 @@ BinaryPath=$TEST_CNTK_BINARY
 if [ "$TEST_DEVICE" == "cpu" ]; then
   CNTKDeviceId=-1
 elif [ "$TEST_DEVICE" == "gpu" ]; then
-  CNTKDeviceId=1
+  CNTKDeviceId=0
 else
   echo "Error: Unknown TEST_DEVICE specified!"
   exit 3

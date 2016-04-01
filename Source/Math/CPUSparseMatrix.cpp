@@ -248,7 +248,6 @@ void CPUSparseMatrix<ElemType>::SetValue(const size_t row, const size_t col, con
     {
         SecondaryIndexLocation()[max] = CPUSPARSE_INDEX_TYPE(nz + 1);
     }
-    //m_nz++;
 }
 
 // make sure call order in colume wise for CSC and row wise for CSR
@@ -453,7 +452,7 @@ template <class ElemType>
 void CPUSparseMatrix<ElemType>::Allocate(const size_t numRows, const size_t numCols, const size_t numNZElemRequested, const bool growOnly /*= true*/, bool keepExistingValues /*= true*/)
 {
     if (m_numRows != numRows || m_numCols != numCols)
-        LogicError("Error, calling allocate with dimensions (%d, %d), but the matrix has dimension (%d, %d).", numRows, numCols, GetNumRows(), GetNumCols());
+        LogicError("Error, calling allocate with dimensions (%d, %d), but the matrix has dimension (%d, %d).", (int)numRows, (int)numCols, (int)GetNumRows(), (int)GetNumCols());
 
     size_t numNZElemToReserve = max(numNZElemRequested, (size_t) 1);
     size_t newCompIndexSize = (numCols > numRows ? numCols : numRows) + 1;
@@ -1305,6 +1304,8 @@ template void CPUSparseMatrix<char>::SetValue(CPUSparseMatrix<char> const&);
 template char* CPUSparseMatrix<char>::Data() const;
 template char* CPUSparseMatrix<char>::Data();
 template void CPUSparseMatrix<char>::Reset(void);
+template void CPUSparseMatrix<char>::RequireSizeAndAllocate(const size_t, const size_t, const size_t, const bool, bool);
+template void CPUSparseMatrix<char>::RequireSizeAndAllocate(const size_t, const size_t, const size_t, const MatrixFormat, const bool, bool);
 template CPUSparseMatrix<char>::~CPUSparseMatrix();
 template CPUSparseMatrix<char> CPUSparseMatrix<char>::ColumnSlice(size_t startColumn, size_t numCols) const;
 template CPUMatrix<char> CPUSparseMatrix<char>::CopyColumnSliceToDense(size_t startColumn, size_t numCols) const;

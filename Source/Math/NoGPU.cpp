@@ -126,20 +126,35 @@ void GPUSparseMatrix<ElemType>::ResizeAsAndCopyIndexFrom(const GPUSparseMatrix<E
 //-------------------------------------------------------------------------
 
 template <class ElemType>
-void GPUSparseMatrix<ElemType>::RequireSize(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve, const MatrixFormat matrixFormat, const bool growOnly, bool keepExistingValues)
-{
-} // matrix format will affect the size to allocate
-template <class ElemType>
-void GPUSparseMatrix<ElemType>::RequireSize(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve, const bool growOnly, bool keepExistingValues)
+void GPUSparseMatrix<ElemType>::ClearNzCount()
 {
 }
-
 template <class ElemType>
-void GPUSparseMatrix<ElemType>::Resize(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve, const MatrixFormat matrixFormat, const bool growOnly, bool keepExistingValues)
+void GPUSparseMatrix<ElemType>::Allocate(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve, const bool growOnly, bool keepExistingValues)
 {
-} // matrix format will affect the size to allocate
+}
 template <class ElemType>
-void GPUSparseMatrix<ElemType>::Resize(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve, const bool growOnly, bool keepExistingValues)
+void GPUSparseMatrix<ElemType>::RequireSizeAndAllocate(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve, const MatrixFormat matrixFormat, const bool growOnly, bool keepExistingValues)
+{
+}
+template <class ElemType>
+void GPUSparseMatrix<ElemType>::RequireSizeAndAllocate(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve, const bool growOnly, bool keepExistingValues)
+{
+}
+template <class ElemType>
+void GPUSparseMatrix<ElemType>::RequireSize(const size_t numRows, const size_t numCols, const MatrixFormat format, const bool growOnly)
+{
+}
+template <class ElemType>
+void GPUSparseMatrix<ElemType>::RequireSize(const size_t numRows, const size_t numCols, const bool growOnly)
+{
+}
+template <class ElemType>
+void GPUSparseMatrix<ElemType>::Resize(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve, const MatrixFormat matrixFormat, const bool growOnly)
+{
+}
+template <class ElemType>
+void GPUSparseMatrix<ElemType>::Resize(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve, const bool growOnly = true)
 {
 }
 
@@ -665,7 +680,7 @@ bool GPUSparseMatrix<ElemType>::IsValid() const
 
 template <class ElemType>
 template <class OutType, class InType>
-void GPUSparseMatrix<ElemType>::CopyBuffer(OutType* outBuffer, const InType* inBuffer, const size_t size)
+void GPUSparseMatrix<ElemType>::ConvertBuffer(OutType* outBuffer, const InType* inBuffer, const size_t size)
 {
 }
 

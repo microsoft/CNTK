@@ -474,7 +474,9 @@ public:
     void SetCompIndex(CPUSPARSE_INDEX_TYPE* parray) { m_sob->SetCompIndex(parray); }
 
     size_t GetNumRows() const { return m_numRows; }
+    void SetNumRows(size_t numRows) { m_numRows = numRows; }
     size_t GetNumCols() const { return m_numCols; }
+    void SetNumCols(size_t numCols) { m_numCols = numCols; }
 
     size_t GetNumElements() const { return m_numRows * m_numCols; }
     bool IsEmpty() const { return m_numRows == 0 || m_numCols == 0; }
@@ -482,7 +484,7 @@ public:
     bool OwnBuffer() const { return !HasExternalBuffer(); }
 
 	// TODO: Disallow non-unique ptrs to be resized.
-    void VerifyResizable(char* function) const 
+    void VerifyResizable(const char* function) const 
     { 
         if (!m_sob.unique())
             LogicError("%s: Cannot resize the matrix because it is a view.", function);
@@ -490,7 +492,7 @@ public:
             LogicError("%s: Cannot resize the matrix because it is externally owned.", function);
     }
 	// This is needed for Sparse Matrices to ensure they can write to the matrix. Note: writing to slices is not currently supported
-    void VerifyWritable(char* function) const { 
+    void VerifyWritable(const char* function) const { 
         if (!(m_sob->GetNumStorageRows() == m_numRows && m_sob->GetNumStorageCols() == m_numCols))
         {
             LogicError("%s: Cannot write to the matrix because it is a slice.", function);
@@ -499,7 +501,7 @@ public:
 
     bool IsView() const { return (GetNumRows() != m_sob->GetNumStorageRows() || GetNumCols() != m_sob->GetNumStorageCols() || m_sliceViewOffset != 0); }
 
-    void VerifySize(size_t rows, size_t cols)
+    void VerifySize(const size_t rows, const size_t cols)
     {
         if (rows != GetNumRows() || cols != GetNumCols())
             LogicError("VerifySize: expected matrix size %lu x %lu, but it is %lu x %lu",
