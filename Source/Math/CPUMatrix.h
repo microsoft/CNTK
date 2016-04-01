@@ -32,13 +32,9 @@ class MATH_API CPUMatrix : public BaseMatrix<ElemType>
     using Base::m_numCols;
     using Base::m_sliceViewOffset;
     using Base::HasExternalBuffer;
-    using Base::SetExternalBuffer;
     using Base::SetBuffer;
     using Base::SetComputeDeviceId;
     using Base::Clear;
-    using Base::SetOwnBuffer;
-    using Base::SetSizeAllocated;
-    using Base::GetSizeAllocated;
     using Base::ZeroInit;
     using Base::ZeroValues;
     using Base::m_sob;

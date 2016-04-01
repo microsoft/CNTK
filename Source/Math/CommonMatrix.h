@@ -287,7 +287,6 @@ public:
     void SetFormat(MatrixFormat format) { m_format = format; }
 
     bool HasExternalBuffer() const { return m_externalBuffer; }
-    void SetExternalBuffer(bool external) { m_externalBuffer = external; }
 
     DEVICEID_TYPE GetComputeDeviceId() const { return m_computeDevice; }
     void SetComputeDeviceId(const DEVICEID_TYPE computeId) const { m_computeDevice = computeId; }
@@ -305,10 +304,9 @@ public:
     bool IsEmpty() const { return m_numRows == 0 || m_numCols == 0; }
 
     ElemType* Buffer() const { return m_pArray; }
-    void SetBuffer(ElemType* pArray) { m_pArray = pArray; }
+    void SetBuffer(ElemType* pArray, size_t alloc, bool external = false) { m_pArray = pArray; m_totalBufferSizeAllocated = alloc; m_externalBuffer = external; }
 
     size_t BufferSizeAllocated() const { return m_totalBufferSizeAllocated; }
-    void SetBufferSizeAllocated(size_t alloc) { m_totalBufferSizeAllocated = alloc; }
     
     size_t GetBlockSize() const { return m_blockSize; }
     void SetBlockSize(size_t blockSize) { m_blockSize = blockSize; }
@@ -350,8 +348,8 @@ public:
         m_computeDevice            = computeDevice;
 		m_numRows                  = 0;
 		m_numCols                  = 0;
-		m_elemSizeAllocated        = 0;
 		m_pArray                   = nullptr;
+		m_elemSizeAllocated        = 0;
 		m_totalBufferSizeAllocated = 0;
 		m_blockSize                = 0; // block size
 		m_rowToId                  = nullptr; // the id showing the order row number is observed in the nnz values.
@@ -423,7 +421,6 @@ public:
     void SetFormat(MatrixFormat format) { m_sob->SetFormat(format); }
 
     bool HasExternalBuffer() const { return m_sob->HasExternalBuffer(); }
-    void SetExternalBuffer(bool external) { m_sob->SetExternalBuffer(external); }
 
     DEVICEID_TYPE GetComputeDeviceId() const { return m_sob->GetComputeDeviceId(); }
     void SetComputeDeviceId(const DEVICEID_TYPE computeId) const { m_sob->SetComputeDeviceId(computeId); }
@@ -439,10 +436,9 @@ public:
 
     ElemType* Buffer() { return m_sob->Buffer(); }
     ElemType* Buffer() const { return m_sob->Buffer(); }
-    void SetBuffer(ElemType* parray) { m_sob->SetBuffer(parray); }
+    void SetBuffer(ElemType* parray, size_t alloc, bool external = false) { m_sob->SetBuffer(parray, alloc, external); }
 
     size_t BufferSizeAllocated() const { return m_sob->BufferSizeAllocated(); }
-    void SetBufferSizeAllocated(size_t alloc) { m_sob->SetBufferSizeAllocated(alloc); }
     
     size_t GetBlockSize() const { return m_sob->GetBlockSize(); }
     void SetBlockSize(size_t blockSize) { m_sob->SetBlockSize(blockSize); }
@@ -484,7 +480,6 @@ public:
     bool IsEmpty() const { return m_numRows == 0 || m_numCols == 0; }
 
     bool OwnBuffer() const { return !HasExternalBuffer(); }
-    void SetOwnBuffer(bool own) { SetExternalBuffer(!own); }
 
 	// TODO: Disallow non-unique ptrs to be resized.
     void VerifyResizable(char* function) const 

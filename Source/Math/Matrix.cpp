@@ -332,7 +332,7 @@ Matrix<ElemType>::Matrix(BaseMatrix<ElemType>* baseMatrix, ElemType* pArray, DEV
         }
     }
     m_baseMatrix = baseMatrix;
-    m_baseMatrix->SetBuffer(pArray);
+    m_baseMatrix->SetBuffer(pArray,0);
 }
 
 template <class ElemType>
@@ -410,8 +410,11 @@ Matrix<ElemType>::Matrix(const size_t numRows, const size_t numCols, ElemType* p
         }
     }
 
+	// Why is this here??
+    /*
     if (matrixFlagDontOwnBuffer & matrixFlags)
         m_baseMatrix->SetOwnBuffer(false);
+		*/
 }
 
 //copy constructor, deep copy

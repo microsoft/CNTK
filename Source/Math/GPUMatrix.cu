@@ -364,7 +364,7 @@ void GPUMatrix<ElemType>::ChangeDeviceTo(DEVICEID_TYPE to_id)
     }
 
     TracingGPUMemoryAllocator::Free<ElemType>(GetComputeDeviceId(), Buffer());
-    SetBuffer(d_dst);
+    SetBuffer(d_dst, m_numRows * m_numCols * sizeof(ElemType));
 
     PrepareDevice((DEVICEID_TYPE) to_id);
     SetComputeDeviceId(to_id);
@@ -429,9 +429,9 @@ GPUMatrix<ElemType>::GPUMatrix(const size_t numRows, const size_t numCols, int d
     m_numCols = numCols;
     SetSizeAllocated(GetNumElements());
 
-    if (GetSizeAllocated() != 0)
+    if (GetNumElements() != 0)
     {
-        SetBuffer(TracingGPUMemoryAllocator::Allocate<ElemType>(GetComputeDeviceId(), m_numRows, m_numCols));
+        SetBuffer(TracingGPUMemoryAllocator::Allocate<ElemType>(GetComputeDeviceId(), m_numRows, m_numCols), GetNumElements() * sizeof(ElemType));
         CUDA_CALL(cudaMemset(Buffer(), 0, sizeof(ElemType) * GetSizeAllocated()));
     }
 };
@@ -985,8 +985,7 @@ void GPUMatrix<ElemType>::SetValue(const size_t numRows, const size_t numCols, i
         }
         m_numRows = numRows;
         m_numCols = numCols;
-        SetExternalBuffer(true);
-        SetBuffer(pArray);
+        SetBuffer(pArray, GetNumElements() * sizeof(ElemType), true);
         SetSizeAllocated(GetNumElements());
         SetFormat(matrixFormatDense);
         SetComputeDeviceId(deviceId);
@@ -1002,7 +1001,6 @@ void GPUMatrix<ElemType>::SetValue(const size_t numRows, const size_t numCols, i
 
         // now RequireSize/allocate as necessary
         RequireSize(numRows, numCols);
-        SetExternalBuffer(false);
 
         // copy over the content to the buffer
         PrepareDevice();
@@ -1307,7 +1305,7 @@ void GPUMatrix<ElemType>::Resize(const size_t numRows, const size_t numCols, boo
         if (IsEmpty())
         {
             SetSizeAllocated(0);
-            SetBuffer(nullptr);
+            SetBuffer(nullptr, 0);
         }
         else
         {
@@ -1316,7 +1314,7 @@ void GPUMatrix<ElemType>::Resize(const size_t numRows, const size_t numCols, boo
                 TracingGPUMemoryAllocator::Free<ElemType>(GetComputeDeviceId(), Buffer());
             }
             SetSizeAllocated(numElements);
-            SetBuffer(TracingGPUMemoryAllocator::Allocate<ElemType>(GetComputeDeviceId(), m_numRows, m_numCols));
+            SetBuffer(TracingGPUMemoryAllocator::Allocate<ElemType>(GetComputeDeviceId(), m_numRows, m_numCols), numElements * sizeof(ElemType));
             CUDA_CALL(cudaMemset(Buffer(), 0, sizeof(ElemType) * GetSizeAllocated()));
         }
     }

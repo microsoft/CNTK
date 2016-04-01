@@ -144,7 +144,7 @@ CPUMatrix<ElemType>::CPUMatrix(const size_t numRows, const size_t numCols)
 
     if (GetNumElements() != 0)
     {
-        SetBuffer(NewArray<ElemType>(GetSizeAllocated()));
+        SetBuffer(NewArray<ElemType>(GetNumElements()), GetNumElements() * sizeof(ElemType));
     }
 }
 
@@ -789,16 +789,14 @@ void CPUMatrix<ElemType>::SetValue(const size_t numRows, const size_t numCols, E
         // free previous array allocation if any before overwriting
 		delete[] Buffer();
 
-        SetBuffer(pArray);
         m_numRows = numRows;
         m_numCols = numCols;
+        SetBuffer(pArray, GetNumElements() * sizeof(ElemType), true);
         SetSizeAllocated(GetNumElements());
-        SetExternalBuffer(true);
     }
     else
     {
         RequireSize(numRows, numCols);
-        SetExternalBuffer(false);
 
         if (!IsEmpty())
         {
@@ -1319,7 +1317,7 @@ void CPUMatrix<ElemType>::Resize(const size_t numRows, const size_t numCols, boo
         if (Buffer())
             delete[] Buffer();
 
-        SetBuffer(pArray);
+        SetBuffer(pArray, numElements * sizeof(ElemType));
         SetSizeAllocated(numElements);
     }
 

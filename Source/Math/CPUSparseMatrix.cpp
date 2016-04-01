@@ -110,7 +110,7 @@ template <class ElemType>
 
     SetCompIndexSize(0);
 	SetColIdx(-1);
-	SetBuffer(nullptr);
+	SetBuffer(nullptr, 0, false);
 	SetUnCompIndex(nullptr);
 	SetCompIndex(nullptr);
 	SetBlockSize(0);
@@ -486,7 +486,7 @@ void CPUSparseMatrix<ElemType>::Allocate(const size_t numRows, const size_t numC
             delete[] GetUnCompIndex();
             delete[] GetCompIndex();
 
-            SetBuffer(pArray);
+            SetBuffer(pArray, numNZElemToReserve, false);
             SetUnCompIndex(unCompIndex);
             SetCompIndex(compIndex);
         }
@@ -508,7 +508,7 @@ void CPUSparseMatrix<ElemType>::Allocate(const size_t numRows, const size_t numC
             delete[] Buffer();
             delete[] GetBlockIds();
 
-            SetBuffer(blockVal);
+            SetBuffer(blockVal, numNZElemToReserve, false);
             SetBlockIds(blockIds);
         }
 
@@ -526,13 +526,13 @@ void CPUSparseMatrix<ElemType>::RequireSizeAndAllocate(const size_t numRows, con
 template <class ElemType>
 void CPUSparseMatrix<ElemType>::RequireSizeAndAllocate(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve, const MatrixFormat matrixFormat, const bool growOnly /*= true*/, bool keepExistingValues /*= true*/)
 {
+	RequireSize(numRows, numCols, matrixFormat, growOnly);
+    
     size_t newCompIndexSize = (numCols > numRows ? numCols : numRows) + 1;
     bool reallocate = (GetSizeAllocated() < numNZElemToReserve || (GetSizeAllocated() > numNZElemToReserve && !growOnly) || GetCompIndexSize() < newCompIndexSize);
 
-	RequireSize(numRows, numCols, matrixFormat, growOnly);
     if (reallocate)
         Allocate(numRows, numCols, numNZElemToReserve, growOnly, keepExistingValues);
-
 }
 
 template <class ElemType>

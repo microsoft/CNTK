@@ -26,7 +26,6 @@ public:
     typedef BaseMatrix<ElemType> Base;
     using Base::m_sliceViewOffset;
     using Base::HasExternalBuffer;
-    using Base::SetExternalBuffer;
     using Base::SetBuffer;
     using Base::GetNumStorageRows;
     using Base::SetNumStorageRows;
@@ -40,7 +39,6 @@ public:
     using Base::ZeroValues;
     using Base::m_sob;
     using Base::ShallowCopyFrom;
-    using Base::SetBufferSizeAllocated;
     using Base::GetBlockSize;
     using Base::SetBlockSize;
     using Base::GetTempHostBuffer;
@@ -156,6 +154,20 @@ public:
     size_t MajorIndexSize() const // actual number of major index bytes in use
     {
         return sizeof(GPUSPARSE_INDEX_TYPE) * MajorIndexCount();
+    }
+
+    size_t ComputeMaxNZElemFromBufferSize(size_t numRows, size_t numCols, size_t bufferSize, MatrixFormat format)
+    {
+        if (format == matrixFormatSparseBlockCol)
+            return ( bufferSize - 2 * sizeof(GPUSPARSE_INDEX_TYPE) * numCols) / sizeof(ElemType);
+        else if (format == matrixFormatSparseBlockRow)
+            return (bufferSize - 2 * sizeof(GPUSPARSE_INDEX_TYPE) * numRows) / sizeof(ElemType);
+        else if (format == matrixFormatSparseCSC)
+            return (bufferSize - sizeof(GPUSPARSE_INDEX_TYPE) * (numCols + 1)) / (2 * sizeof(ElemType));
+        else if (format == matrixFormatSparseCSR)
+            return (bufferSize - sizeof(GPUSPARSE_INDEX_TYPE) * (numRows + 1)) / (2 * sizeof(ElemType));
+        else
+            NOT_IMPLEMENTED;
     }
 
 	// Since the m_sliceViewOffset effects Data and MajorIndexLocation differently than SecondaryIndexLocation, we compute it fully here.

@@ -408,7 +408,7 @@ void GPUSparseMatrix<ElemType>::ChangeDeviceTo(DEVICEID_TYPE to_id)
         }
 
         TracingGPUMemoryAllocator::Free<ElemType>(GetComputeDeviceId(), Buffer());
-        SetBuffer(d_dst);
+        SetBuffer(d_dst, BufferSizeAllocated());
     }
 
     SetComputeDeviceId(PrepareDevice(to_id));
@@ -582,10 +582,9 @@ void GPUSparseMatrix<ElemType>::Reshape(const size_t numRows, const size_t numCo
         TracingGPUMemoryAllocator::Free<ElemType>(GetComputeDeviceId(), Buffer());
     }
 
-    SetBuffer(pArray);
+    SetBuffer(pArray, bufferSizeNeeded);
     m_numRows = numRows;
     m_numCols = numCols;
-    SetBufferSizeAllocated(bufferSizeNeeded);
 
     // following are generated dynamically and no need to save
     if (GetRowToIdMap() != nullptr)
@@ -634,16 +633,13 @@ void GPUSparseMatrix<ElemType>::Allocate(const size_t numRows, const size_t numC
             }
             TracingGPUMemoryAllocator::Free<ElemType>(GetComputeDeviceId(), Buffer());
         }
-
-        SetBuffer(pArray);
-
         // following are generated dynamically and no need to save
         if (GetRowToIdMap() != nullptr)
             TracingGPUMemoryAllocator::Free<GPUSPARSE_INDEX_TYPE>(GetComputeDeviceId(), GetRowToIdMap());
 
         SetRowToId(TracingGPUMemoryAllocator::Allocate<GPUSPARSE_INDEX_TYPE>(GetComputeDeviceId(), numNZElemToReserve));
 
-        SetBufferSizeAllocated(bufferSizeNeeded);
+        SetBuffer(pArray, bufferSizeNeeded);
         SetSizeAllocated(numNZElemToReserve);
     }
     else // if requested size is smaller, keeping original values does not make sense
@@ -662,10 +658,11 @@ void GPUSparseMatrix<ElemType>::RequireSizeAndAllocate(const size_t numRows, con
 template <class ElemType>
 void GPUSparseMatrix<ElemType>::RequireSizeAndAllocate(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve, const MatrixFormat matrixFormat, const bool growOnly /*= true*/, bool keepExistingValues /*= true*/)
 {
+	RequireSize(numRows, numCols, matrixFormat, growOnly);
+    
     size_t bufferSizeNeeded = BufferSizeNeeded(numRows, numCols, numNZElemToReserve, matrixFormat);
     bool reallocate = (BufferSizeAllocated() < bufferSizeNeeded || (!growOnly && BufferSizeAllocated() > bufferSizeNeeded));
 
-	RequireSize(numRows, numCols, matrixFormat, growOnly);
     if (reallocate)
         Allocate(numRows, numCols, numNZElemToReserve, growOnly, keepExistingValues);
 
@@ -701,6 +698,12 @@ void GPUSparseMatrix<ElemType>::Resize(const size_t numRows, const size_t numCol
 	SetNumStorageRows(numRows);
 	SetNumStorageCols(numCols);
 	SetFormat(matrixFormat);
+
+	// If we really did resize the number of rows/columns, then we changed the number of nz elements allocated. That is, if we used to have a buffer capable of
+	// stroring 100 nz elements and 10 columns in CSC format, but we resized to 20 columns, we can no longer store 100 elements, we can only store 95. 
+    // Thus we must reset the number of nz elements which can be stored. So let's compute it now.
+    size_t newNzElem = ComputeMaxNZElemFromBufferSize(numRows, numCols, BufferSizeAllocated(), matrixFormat);
+	SetSizeAllocated(newNzElem);
 
 	size_t bufferSizeNeeded = BufferSizeNeeded(numRows, numCols, numNZElemToReserve, matrixFormat);
 	bool reallocate = (BufferSizeAllocated() < bufferSizeNeeded || (!growOnly && BufferSizeAllocated() > bufferSizeNeeded));

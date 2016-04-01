@@ -28,7 +28,7 @@ class MATH_API CPUSparseMatrix : public BaseMatrix<ElemType>
     using Base::m_sliceViewOffset;
     using Base::SetBuffer;
     using Base::HasExternalBuffer;
-    using Base::SetExternalBuffer;
+    //using Base::SetExternalBuffer;
     using Base::GetNumStorageRows;
     using Base::SetNumStorageRows;
     using Base::GetNumStorageCols;
