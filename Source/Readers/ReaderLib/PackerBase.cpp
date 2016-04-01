@@ -228,29 +228,42 @@ MBLayoutPtr PackerBase::PackSparseStream(const StreamBatch& batch, size_t stream
     vector<IndexType> sparseColumnIndices;
     vector<IndexType>  sequenceOffsets(batch.size(), 0);
 
-    const auto& sequenceInfos = pMBLayout->GetAllSequences();
+    const auto& infos = pMBLayout->GetAllSequences();
+    vector<const MBLayout::SequenceInfo*> sequenceInfos(infos.size());
 
-    for (int sampleIndex = 0; sampleIndex < pMBLayout->GetNumTimeSteps(); ++sampleIndex)
+    for (auto i = 0; i < infos.size(); ++i)
     {
-        for (const auto& sequenceInfo : sequenceInfos)
-        {
+        sequenceInfos[i] = &infos[i];
+    }
 
-            if (sampleIndex < sequenceInfo.tBegin || sampleIndex >= sequenceInfo.tEnd)
+    // sort the vector in ascending order of the parallel sequence index.
+    sort(sequenceInfos.begin(), sequenceInfos.end(), 
+        [](const MBLayout::SequenceInfo* a, const MBLayout::SequenceInfo* b){ return a->s < b->s; });
+
+    for (auto timeStep = 0; timeStep < pMBLayout->GetNumTimeSteps(); ++timeStep)
+    {
+        for (const auto* sequenceInfo : sequenceInfos)
+        {
+            
+            if (timeStep < sequenceInfo->tBegin || timeStep >= sequenceInfo->tEnd)
             {
                 continue;
             }
 
             sparseColumnIndices.push_back(columnOffset);
 
-            if (sequenceInfo.seqId == GAP_SEQUENCE_ID)
+            auto seqId = sequenceInfo->seqId;
+            if (seqId == GAP_SEQUENCE_ID)
             {
                 continue;
             }
 
-            const auto& sequence = batch[sequenceInfo.seqId];
+            size_t sampleIndex = timeStep - sequenceInfo->tBegin;
+
+            const auto& sequence = batch[seqId];
             assert(sampleIndex < sequence->m_numberOfSamples);
 
-            auto& sequenceOffset = sequenceOffsets[sequenceInfo.seqId];
+            auto& sequenceOffset = sequenceOffsets[seqId];
             const auto& sparseSequence = reinterpret_cast<SparseSequenceData&>(*sequence);
             IndexType nnz = sparseSequence.m_nnzCounts[sampleIndex];
 

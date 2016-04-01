@@ -26,14 +26,58 @@ traceLevel = 1
     ]
 ]
 
-1x10_MI = [
+1x2 = [
+    precision = "double"
+    reader = [
+        readerType = "CNTKTextFormatReader"
+        # Training file contains a single sequence with two samples
+        file = "CNTKTextFormatReader/1x2_dense.txt"
+
+        randomize = "auto"
+        
+        #maxErrors = 0 -- default value
+        traceLevel = 1
+
+        input = [
+             features = [
+                alias = "F0"
+                dim = 100
+                format = "dense"
+            ]
+        ]
+    ]
+]
+
+1x10 = [
+    precision = "float"
+    reader = [
+        readerType = "CNTKTextFormatReader"
+        # Training file contains a single sequence with ten samples
+        file = "CNTKTextFormatReader/1x10_dense.txt"
+
+        randomize = "auto"
+        
+        #maxErrors = 0 -- default value
+        traceLevel = 1
+
+        input = [
+             features = [
+                alias = "F0"
+                dim = 10
+                format = "dense"
+            ]
+        ]
+    ]
+]
+
+10x1_MI = [
     precision = "float"
     reader = [
         readerType = "CNTKTextFormatReader"
         # Training file contains the same sequence 
         # (with a single per-input sample from a number of feature/label inputs) 
         # repeated 10 times, 
-        file = "CNTKTextFormatReader/1x10_MI_dense.txt"
+        file = "CNTKTextFormatReader/10x1_MI_dense.txt"
 
         randomize = "auto"
         
@@ -85,14 +129,37 @@ traceLevel = 1
     ]
 ]
 
-1x100 = [
+
+10x10 = [
+    precision = "float"
+    reader = [
+        readerType = "CNTKTextFormatReader"
+        # Training file contains ten sequence with ten samples each
+        file = "CNTKTextFormatReader/10x10_dense.txt"
+
+        randomize = "none"
+        
+        #maxErrors = 0 -- default value
+        traceLevel = 1
+
+        input = [
+             features = [
+                alias = "F0"
+                dim = 5
+                format = "dense"
+            ]
+        ]
+    ]
+]
+
+100x1 = [
     precision = "double"
     reader = [
         readerType = "CNTKTextFormatReader"
         # Training file contains the same sequence (with a single sample) 
         # repeated 100 times. Also, it uses UTF-8 encoding and contains
         # BOM value.
-        file = "CNTKTextFormatReader/1x100_dense.txt"
+        file = "CNTKTextFormatReader/100x1_dense.txt"
 
         randomize = "auto"
         
@@ -177,3 +244,27 @@ Simple = [
         ]
     ]
 ]
+
+
+50x20_jagged_sequences = [
+    precision = "double"
+    reader = [
+        readerType = "CNTKTextFormatReader"
+        # Training file contains 50 sequence with *up to* 20 samples each
+        file = "CNTKTextFormatReader/50x20_jagged_sequences_dense.txt"
+
+        randomize = "none"
+        
+        #maxErrors = 0 -- default value
+        traceLevel = 1
+
+        input = [
+             features = [
+                alias = "F0"
+                dim = 3
+                format = "dense"
+            ]
+        ]
+    ]
+]
+

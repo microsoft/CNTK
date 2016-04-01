@@ -72,7 +72,7 @@ TextConfigHelper::TextConfigHelper(const ConfigParameters& config)
         else if (AreEqualIgnoreCase(type, "sparse"))
         {
             stream.m_storageType = StorageType::sparse_csc;
-            stream.m_sampleDimension = 0;
+            stream.m_sampleDimension = input(L"dim", 0);
         }
         else
         {

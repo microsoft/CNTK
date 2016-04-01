@@ -117,19 +117,38 @@ struct ReaderFixture
 
     // Helper function to write a matrix (feature or label) to a file
     // matrix       : the matrix to output
+    // mblayout     : corresponding mb layout
     // outputFile   : the output stream to write to
     template <class ElemType>
-    void OutputMatrix(Matrix<ElemType>& matrix, ofstream& outputFile)
+    void OutputMatrix(Matrix<ElemType>& matrix, MBLayout& layout, ofstream& outputFile)
     {
-        size_t numRows = matrix.GetNumRows();
+        if (matrix.GetMatrixType() == MatrixType::SPARSE)
+        {
+            matrix.SwitchToMatrixType(MatrixType::DENSE, MatrixFormat::matrixFormatDense, true);
+        }
 
         std::unique_ptr<ElemType[]> pItem{matrix.CopyToArray()};
-        size_t numItems = numRows * matrix.GetNumCols();
+       
+        auto numRows = matrix.GetNumRows();
+        auto numCols = matrix.GetNumCols();
+        auto numParallelSequences = layout.GetNumParallelSequences();
 
-        for (auto j = 0; j < numItems; j++)
+        for (size_t i = 0; i < numCols; i++)
         {
-            outputFile << pItem[j] << ((j + 1) % numRows == 0 ? "\n" : " ");
-        }
+            auto s = i % numParallelSequences;
+            auto t = i / numParallelSequences;
+            
+            if (layout.IsGap(FrameRange(nullptr, t).Sequence(s)))
+            {
+                continue;
+            }
+
+            for (auto j = 0; j < numRows; j++)
+            {
+                auto idx = i*numRows + j;
+                outputFile << pItem[idx] << ((j + 1) == numRows ? "\n" : " ");
+            }
+        }    
     }
 
     // Helper function to write the Reader's content to a file.
@@ -173,14 +192,14 @@ struct ReaderFixture
                 for (auto i = 0; i < numFeatureFiles; i++)
                 {
                     wstring name = numFeatureFiles > 1 ? L"features" + std::to_wstring(i + 1) : L"features";
-                    OutputMatrix(map.GetInputMatrix<ElemType>(name), outputFile);
+                    OutputMatrix(map.GetInputMatrix<ElemType>(name), map.GetInputLayout<ElemType>(name), outputFile);
                 }
 
                 // Process the Label Matri(x|ces)
                 for (auto i = 0; i < numLabelFiles; i++)
                 {
                     wstring name = numLabelFiles > 1 ? L"labels" + std::to_wstring(i + 1) : L"labels";
-                    OutputMatrix(map.GetInputMatrix<ElemType>(name), outputFile);
+                    OutputMatrix(map.GetInputMatrix<ElemType>(name), map.GetInputLayout<ElemType>(name), outputFile);
                 }
             }
         }
@@ -199,6 +218,7 @@ struct ReaderFixture
     // numLabelFiles        : the number of label files used (multi IO)
     // subsetNum            : the subset number for parallel trainings
     // numSubsets           : the number of parallel trainings (set to 1 for single)
+    // sparse               : when true use sparse matrix type, dense otherwise
     template <class ElemType>
     void HelperRunReaderTest(
         string configFileName,
@@ -212,7 +232,8 @@ struct ReaderFixture
         size_t numFeatureFiles,
         size_t numLabelFiles,
         size_t subsetNum,
-        size_t numSubsets)
+        size_t numSubsets,
+        bool sparse = false)
     {
         std::wstring configFN(configFileName.begin(), configFileName.end());
         std::wstring configFileCommand(L"configFile=" + configFN);
@@ -234,6 +255,10 @@ struct ReaderFixture
         for (auto i = 0; i < numFeatureFiles; i++)
         {
             features.push_back(make_shared<Matrix<ElemType>>(DEVICEID_AUTO));
+            if (sparse)
+            {
+                features.back()->SwitchToMatrixType(MatrixType::SPARSE, MatrixFormat::matrixFormatSparseCSC, false);
+            }
             wstring name = numFeatureFiles > 1 ? L"features" + std::to_wstring(i + 1) : L"features";
             map.insert(make_pair(name, features[i]));
             map.AddInputLayout(name, make_shared<MBLayout>(1, 0));
@@ -242,6 +267,10 @@ struct ReaderFixture
         for (auto i = 0; i < numLabelFiles; i++)
         {
             labels.push_back(make_shared<Matrix<ElemType>>(DEVICEID_AUTO));
+            if (sparse)
+            {
+                labels.back()->SwitchToMatrixType(MatrixType::SPARSE, MatrixFormat::matrixFormatSparseCSC, false);
+            }
             wstring name = numLabelFiles > 1 ? L"labels" + std::to_wstring(i + 1) : L"labels";
             map.insert(make_pair(name, labels[i]));
             map.AddInputLayout(name, make_shared<MBLayout>(1, 0));
