@@ -45,6 +45,10 @@ typedef struct CUstream_st* cudaStream_t;
 #define USE_TIME_BASED_SEED ULONG_MAX
 #endif
 
+#ifndef MAX_GPUS
+#define MAX_GPUS 16
+#endif
+
 // Stream management functions
 void MATH_API SetStream(cudaStream_t stream);
 cudaStream_t MATH_API GetStream();
@@ -100,7 +104,7 @@ class MATH_API GPUMatrix : public BaseMatrix<ElemType>
     friend class GPUMatrix;
 
 public:
-    static const int MaxGpus = 8; // support up to 8 GPUs
+    static const int MaxGpus = MAX_GPUS; // support up to 8 GPUs
     using BaseMatrix<ElemType>::m_computeDevice;
     using BaseMatrix<ElemType>::m_elemSizeAllocated;
     using BaseMatrix<ElemType>::m_format;
