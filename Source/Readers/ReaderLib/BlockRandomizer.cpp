@@ -199,7 +199,7 @@ void BlockRandomizer::Decimate(const std::vector<RandomizedSequenceDescription>&
     }
 }
 
-// Retrives chunk data based on the window information provided by SequenceRandomizer
+// Retrieves chunk data based on the window information provided by SequenceRandomizer
 void BlockRandomizer::RetrieveDataChunks()
 {
     const auto& window = m_sequenceRandomizer->GetChunkWindow();

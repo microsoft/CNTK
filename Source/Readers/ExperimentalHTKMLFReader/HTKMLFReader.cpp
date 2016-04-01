@@ -13,6 +13,7 @@
 #include "StringUtil.h"
 #include "SequencePacker.h"
 #include "SampleModePacker.h"
+#include "BpttPacker.h"
 #include "BlockRandomizer.h"
 #include "NoRandomizer.h"
 
@@ -64,9 +65,37 @@ HTKMLFReader::HTKMLFReader(MemoryProviderPtr provider,
 {
     // TODO: deserializers and transformers will be dynamically loaded
     // from external libraries based on the configuration/brain script.
-    m_frameMode = readerConfig(L"frameMode", true);
-    ConfigHelper config(readerConfig);
 
+    bool frameMode = readerConfig(L"frameMode", true);
+    bool truncated = readerConfig(L"truncated", false);
+    if (frameMode && truncated)
+    {
+        LogicError("frameMode and truncated BPTT are mutually exclusive.");
+    }
+
+    if (frameMode)
+    {
+        m_packingMode = PackingMode::sample;
+    }
+    else if (truncated)
+    {
+        m_packingMode = PackingMode::truncated;
+    }
+    else
+    {
+        m_packingMode = PackingMode::sequence;
+    }
+
+    // nbruttsineachrecurrentiter is old reader configuration, truncationLength is the new one.
+    // If truncation length is specified we estimate
+    // the number of parallel sequences we have to pack as max(1, (mbsize/truncationLength))
+    // If nbruttsineachrecurrentiter is specified we assume that the truncation size is mbSize
+    // and the real minibatch size in mbSize * nbruttsineachrecurrentiter[epochIndex]
+    m_truncationLength = readerConfig(L"truncationLength", 0);
+    m_numParallelSequencesForAllEpochs =
+        readerConfig(L"nbruttsineachrecurrentiter", ConfigParameters::Array(intargvector(vector<int> { 1 })));
+
+    ConfigHelper config(readerConfig);
     size_t window = config.GetRandomizationWindow();
     auto deserializers = CreateDeserializers(readerConfig);
     assert(deserializers.size() == 2);
@@ -123,21 +152,51 @@ void HTKMLFReader::StartEpoch(const EpochConfiguration& config)
     // TODO: functionally they are the same, the only difference is how we handle
     // TODO: MBlayout and what is the perf hit for iterating/copying sequences.
     // TODO: Should do more perf tests before unifying these two.
-    if (m_frameMode)
+
+    // TODO: As the next step the packers will be moved out of the readers into the
+    // TODO: core CNTK. They are format agnostic and can be used with any type of 
+    // TODO: deserializers.
+    switch (m_packingMode)
     {
+    case PackingMode::sample:
         m_packer = std::make_shared<SampleModePacker>(
             m_provider,
             m_randomizer,
             config.m_minibatchSizeInSamples,
             m_streams);
-    }
-    else
-    {
+        break;
+    case PackingMode::sequence:
         m_packer = std::make_shared<SequencePacker>(
             m_provider,
             m_randomizer,
             config.m_minibatchSizeInSamples,
             m_streams);
+        break;
+    case PackingMode::truncated:
+    {
+        size_t minibatchSize = config.m_minibatchSizeInSamples;
+        size_t truncationLength = m_truncationLength;
+        if (truncationLength == 0)
+        {
+            // Old config, the truncation length is specified as the minibatch size.
+            // In this case the truncation size is mbSize
+            // and the real minibatch size is truncation size * nbruttsineachrecurrentiter
+            fprintf(stderr, "Legacy configuration is used for truncated BPTT mode, please adapt the config to explicitly specify truncationLength.");
+            truncationLength = minibatchSize;
+            size_t numParallelSequences = m_numParallelSequencesForAllEpochs[config.m_epochIndex];
+            minibatchSize = numParallelSequences * truncationLength;
+        }
+
+        m_packer = std::make_shared<BpttPacker>(
+            m_provider,
+            m_randomizer,
+            minibatchSize,
+            truncationLength,
+            m_streams);
+        break;
+    }
+    default:
+        LogicError("Unsupported type of packer '%d'.", (int)m_packingMode);
     }
 }
 

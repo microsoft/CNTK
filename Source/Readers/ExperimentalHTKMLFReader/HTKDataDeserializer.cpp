@@ -267,7 +267,7 @@ public:
         });
     }
 
-    // Gets data for the sequnce.
+    // Gets data for the sequence.
     virtual void GetSequence(size_t sequenceId, vector<SequenceDataPtr>& result) override
     {
         m_parent->GetSequenceById(m_chunkId, sequenceId, result);

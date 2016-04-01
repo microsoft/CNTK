@@ -151,9 +151,6 @@ BOOST_AUTO_TEST_CASE(HTKMLFReaderSimpleDataLoop8)
         1);
 };
 
-/*
-This test is commented out because it causes an assertion in debug mode on:
-HTKMLFReader (BPTT) (1110)
 BOOST_AUTO_TEST_CASE(HTKMLFReaderSimpleDataLoop9)
 {
     HelperRunReaderTest<float>(
@@ -162,7 +159,7 @@ BOOST_AUTO_TEST_CASE(HTKMLFReaderSimpleDataLoop9)
         testDataPath() + "/Control/HTKMLFReaderSimpleDataLoop9_Output.txt",
         "Simple_Test",
         "reader",
-        5000,
+        2000,
         250,
         2,
         1,
@@ -170,7 +167,6 @@ BOOST_AUTO_TEST_CASE(HTKMLFReaderSimpleDataLoop9)
         0,
         1);
 };
-*/      
 
 BOOST_AUTO_TEST_CASE(HTKMLFReaderSimpleDataLoop10)
 {
@@ -274,9 +270,6 @@ BOOST_AUTO_TEST_CASE(HTKMLFReaderSimpleDataLoop16)
         1);
 };
 
-/*
-This test is commented out because it causes an assertion in debug mode on:
-HTKMLFReader (BPTT) (1110)
 BOOST_AUTO_TEST_CASE(HTKMLFReaderSimpleDataLoop19)
 {
     HelperRunReaderTest<double>(
@@ -285,7 +278,7 @@ BOOST_AUTO_TEST_CASE(HTKMLFReaderSimpleDataLoop19)
         testDataPath() + "/Control/HTKMLFReaderSimpleDataLoop19_Output.txt",
         "Simple_Test",
         "reader",
-        5000,
+        2000,
         250,
         2,
         1,
@@ -293,7 +286,6 @@ BOOST_AUTO_TEST_CASE(HTKMLFReaderSimpleDataLoop19)
         0,
         1);
 };
-*/
 
 BOOST_AUTO_TEST_CASE(HTKMLFReaderSimpleDataLoop20)
 {
@@ -492,6 +484,40 @@ BOOST_AUTO_TEST_CASE(ExperimentalHTKMLFReaderSimpleDataLoop14)
         "reader",
         500,
         250,
+        2,
+        1,
+        1,
+        0,
+        1);
+};
+
+BOOST_AUTO_TEST_CASE(ExperimentalHTKMLFReaderSimpleDataLoop9)
+{
+    HelperRunReaderTest<float>(
+        testDataPath() + "/Config/ExperimentalHTKMLFReaderSimpleDataLoop9_Config.cntk",
+        testDataPath() + "/Control/ExperimentalHTKMLFReaderSimpleDataLoop9_19_Control.txt",
+        testDataPath() + "/Control/ExperimentalHTKMLFReaderSimpleDataLoop9_Output.txt",
+        "Simple_Test",
+        "reader",
+        2000,
+        500,
+        2,
+        1,
+        1,
+        0,
+        1);
+};
+
+BOOST_AUTO_TEST_CASE(ExperimentalHTKMLFReaderSimpleDataLoop19)
+{
+    HelperRunReaderTest<double>(
+        testDataPath() + "/Config/ExperimentalHTKMLFReaderSimpleDataLoop19_Config.cntk",
+        testDataPath() + "/Control/ExperimentalHTKMLFReaderSimpleDataLoop9_19_Control.txt",
+        testDataPath() + "/Control/ExperimentalHTKMLFReaderSimpleDataLoop9_Output.txt",
+        "Simple_Test",
+        "reader",
+        2000,
+        500,
         2,
         1,
         1,

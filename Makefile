@@ -233,6 +233,8 @@ READER_SRC =\
 	$(SOURCEDIR)/Readers/ReaderLib/ChunkRandomizer.cpp \
 	$(SOURCEDIR)/Readers/ReaderLib/SequenceRandomizer.cpp \
 	$(SOURCEDIR)/Readers/ReaderLib/SequencePacker.cpp \
+	$(SOURCEDIR)/Readers/ReaderLib/BpttPacker.cpp \
+	$(SOURCEDIR)/Readers/ReaderLib/PackerBase.cpp \
 	$(SOURCEDIR)/Readers/ReaderLib/SampleModePacker.cpp \
 
 COMMON_SRC =\
