@@ -256,10 +256,9 @@ template <class ElemType>
 void CPUSparseMatrix<ElemType>::SetValue(const CPUSparseMatrix<ElemType>& v)
 {
     SetFormat(v.GetFormat());
-    SetExternalBuffer(false);
 
     RequireSizeAndAllocate(v.GetNumRows(), v.GetNumCols(), v.NzSize());
-    size_t nz = v.NzCount();
+    let nz = v.NzCount();
 
     if (nz > 0)
     {
@@ -448,29 +447,15 @@ ElemType* CPUSparseMatrix<ElemType>::Data()
     return Buffer() + GetCompIndex()[m_sliceViewOffset];
 }
 
+// WARNING: When memory is reallocated, existing information will be lost.
+// TODO: add keepExistingValues (default to true) argument so that the existing values are kept even after reallocation
 template <class ElemType>
-void CPUSparseMatrix<ElemType>::RequireSizeAndAllocate(const size_t numRows, const size_t numCols, size_t numNZElemToReserve, const bool growOnly, bool keepExistingValues)
+void CPUSparseMatrix<ElemType>::Allocate(const size_t numRows, const size_t numCols, const size_t numNZElemRequested, const bool growOnly /*= true*/, bool keepExistingValues /*= true*/)
 {
-    RequireSize(numRows, numCols);
+    if (m_numRows != numRows || m_numCols != numCols)
+        LogicError("Error, calling allocate with dimensions (%d, %d), but the matrix has dimension (%d, %d).", numRows, numCols, GetNumRows(), GetNumCols());
 
-    Allocate(numRows, numCols, numNZElemToReserve, growOnly, keepExistingValues);
-}
-
-template <class ElemType>
-void CPUSparseMatrix<ElemType>::RequireSize(const size_t numRows, const size_t numCols)
-{
-    if (numRows != GetNumRows() || numCols != GetNumCols())
-        Resize(numRows, numCols);
-}
-
-template <class ElemType>
-void CPUSparseMatrix<ElemType>::Allocate(const size_t numRows, const size_t numCols, size_t numNZElemToReserve, const bool growOnly, bool keepExistingValues)
-{
-
-    if (GetNumStorageRows() != numRows || GetNumStorageCols() != numCols)
-        LogicError("Allocate called with dimensions (%d, %d), but the matrix is of dimensions (%d, %d). Resize must be called first.", numRows, numCols, GetNumStorageRows(), GetNumStorageCols());
-
-    numNZElemToReserve = max(numNZElemToReserve, (size_t) 1);
+    size_t numNZElemToReserve = max(numNZElemRequested, (size_t) 1);
     size_t newCompIndexSize = (numCols > numRows ? numCols : numRows) + 1;
     bool reallocate = (GetSizeAllocated() < numNZElemToReserve || (GetSizeAllocated() > numNZElemToReserve && !growOnly) || GetCompIndexSize() < newCompIndexSize);
 
@@ -532,26 +517,64 @@ void CPUSparseMatrix<ElemType>::Allocate(const size_t numRows, const size_t numC
     }
 }
 
-
-// Note: Resize will only allocate a new buffer if the dimensions change. 
 template <class ElemType>
-void CPUSparseMatrix<ElemType>::Resize(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve, const bool growOnly)
+void CPUSparseMatrix<ElemType>::RequireSizeAndAllocate(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve /*= 10000*/, const bool growOnly /*= true*/, bool keepExistingValues /*= false*/)
 {
-	VerifyResizable(__func__);
+    RequireSizeAndAllocate(numRows, numCols, numNZElemToReserve, GetFormat(), growOnly, keepExistingValues);
+}
 
+template <class ElemType>
+void CPUSparseMatrix<ElemType>::RequireSizeAndAllocate(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve, const MatrixFormat matrixFormat, const bool growOnly /*= true*/, bool keepExistingValues /*= true*/)
+{
     size_t newCompIndexSize = (numCols > numRows ? numCols : numRows) + 1;
-    bool reallocate = (GetCompIndexSize() < newCompIndexSize);
+    bool reallocate = (GetSizeAllocated() < numNZElemToReserve || (GetSizeAllocated() > numNZElemToReserve && !growOnly) || GetCompIndexSize() < newCompIndexSize);
 
+	RequireSize(numRows, numCols, matrixFormat, growOnly);
+    if (reallocate)
+        Allocate(numRows, numCols, numNZElemToReserve, growOnly, keepExistingValues);
+
+}
+
+template <class ElemType>
+void CPUSparseMatrix<ElemType>::RequireSize(const size_t numRows, const size_t numCols, const bool growOnly /*= true*/)
+{
+    RequireSize(numRows, numCols, GetFormat(), growOnly);
+}
+
+template <class ElemType>
+void CPUSparseMatrix<ElemType>::RequireSize(const size_t numRows, const size_t numCols, const MatrixFormat matrixFormat, const bool growOnly /*= true*/)
+{
+    if (GetFormat() != matrixFormat || GetNumRows() != numRows || GetNumCols() != numCols)
+        Resize(numRows, numCols, 0, matrixFormat, growOnly);
+}
+
+template <class ElemType>
+void CPUSparseMatrix<ElemType>::Resize(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve /*= 10000*/, const bool growOnly /*= true*/)
+{
+    Resize(numRows, numCols, numNZElemToReserve, GetFormat(), growOnly);
+}
+
+template <class ElemType>
+void CPUSparseMatrix<ElemType>::Resize(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve, const MatrixFormat matrixFormat, const bool growOnly /*= true*/)
+{
+    VerifyResizable(__func__);
+
+	m_sliceViewOffset = 0;
     m_numRows = numRows;
     m_numCols = numCols;
 	SetNumStorageRows(numRows);
 	SetNumStorageCols(numCols);
+	SetFormat(matrixFormat);
+
+    size_t newCompIndexSize = (numCols > numRows ? numCols : numRows) + 1;
+    bool reallocate = (GetCompIndexSize() < newCompIndexSize);
 
     if (reallocate)
         Allocate(numRows, numCols, numNZElemToReserve, growOnly, false);
     else
 		memset(GetCompIndex(), 0, sizeof(CPUSPARSE_INDEX_TYPE) * newCompIndexSize);
 }
+
 
 // Reset matrix to 0.
 template <class ElemType>

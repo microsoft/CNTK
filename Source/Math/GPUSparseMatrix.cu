@@ -599,8 +599,9 @@ void GPUSparseMatrix<ElemType>::Reshape(const size_t numRows, const size_t numCo
 template <class ElemType>
 void GPUSparseMatrix<ElemType>::Allocate(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve, const bool growOnly /*= true*/, bool keepExistingValues /*= true*/)
 {
+	// BugBug: This doesn't work because allocate is called from Resize sometimes and resize expects allocate to know the old values not the new values, so this won't work.
     if (m_numRows != numRows || m_numCols != numCols)
-        keepExistingValues = false;
+        LogicError("Error, calling allocate with dimensions (%d, %d), but the matrix has dimension (%d, %d).", numRows, numCols, GetNumRows(), GetNumCols());
 
     size_t bufferSizeNeeded = BufferSizeNeeded(numRows, numCols, numNZElemToReserve, GetFormat());
     bool reallocate = (BufferSizeAllocated() < bufferSizeNeeded || (!growOnly && BufferSizeAllocated() > bufferSizeNeeded));
@@ -661,9 +662,13 @@ void GPUSparseMatrix<ElemType>::RequireSizeAndAllocate(const size_t numRows, con
 template <class ElemType>
 void GPUSparseMatrix<ElemType>::RequireSizeAndAllocate(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve, const MatrixFormat matrixFormat, const bool growOnly /*= true*/, bool keepExistingValues /*= true*/)
 {
-    RequireSize(numRows, numCols, matrixFormat, growOnly);
+    size_t bufferSizeNeeded = BufferSizeNeeded(numRows, numCols, numNZElemToReserve, matrixFormat);
+    bool reallocate = (BufferSizeAllocated() < bufferSizeNeeded || (!growOnly && BufferSizeAllocated() > bufferSizeNeeded));
 
-    Allocate(numRows, numCols, numNZElemToReserve, growOnly, keepExistingValues);
+	RequireSize(numRows, numCols, matrixFormat, growOnly);
+    if (reallocate)
+        Allocate(numRows, numCols, numNZElemToReserve, growOnly, keepExistingValues);
+
 }
 
 template <class ElemType>
@@ -675,10 +680,7 @@ void GPUSparseMatrix<ElemType>::RequireSize(const size_t numRows, const size_t n
 template <class ElemType>
 void GPUSparseMatrix<ElemType>::RequireSize(const size_t numRows, const size_t numCols, const MatrixFormat matrixFormat, const bool growOnly /*= true*/)
 {
-    size_t bufferSizeNeeded = BufferSizeNeeded(numRows, numCols, 0, matrixFormat);
-    bool reallocate = (BufferSizeAllocated() < bufferSizeNeeded || (!growOnly && BufferSizeAllocated() > bufferSizeNeeded));
-
-    if (reallocate || GetFormat() != matrixFormat || GetNumRows() != numRows || GetNumCols() != numCols)
+    if (GetFormat() != matrixFormat || GetNumRows() != numRows || GetNumCols() != numCols)
         Resize(numRows, numCols, 0, matrixFormat, growOnly);
 }
 
@@ -692,21 +694,21 @@ template <class ElemType>
 void GPUSparseMatrix<ElemType>::Resize(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve, const MatrixFormat matrixFormat, const bool growOnly /*= true*/)
 {
 	VerifyResizable(__func__);
-    if (GetNumRows() != numRows || GetNumCols() != numCols || GetFormat() != matrixFormat)
-    {
-		m_sliceViewOffset = 0;
-		m_numRows = numRows;
-		m_numCols = numCols;
-		SetNumStorageRows(numRows);
-		SetNumStorageCols(numCols);
-		SetFormat(matrixFormat);
 
-        size_t bufferSizeNeeded = BufferSizeNeeded(numRows, numCols, numNZElemToReserve, matrixFormat);
-        bool reallocate = (BufferSizeAllocated() < bufferSizeNeeded || (!growOnly && BufferSizeAllocated() > bufferSizeNeeded));
+	m_sliceViewOffset = 0;
+	m_numRows = numRows;
+	m_numCols = numCols;
+	SetNumStorageRows(numRows);
+	SetNumStorageCols(numCols);
+	SetFormat(matrixFormat);
 
-		if (reallocate)
-			Allocate(numRows, numCols, numNZElemToReserve, growOnly, false);
-    }
+	size_t bufferSizeNeeded = BufferSizeNeeded(numRows, numCols, numNZElemToReserve, matrixFormat);
+	bool reallocate = (BufferSizeAllocated() < bufferSizeNeeded || (!growOnly && BufferSizeAllocated() > bufferSizeNeeded));
+
+	if (reallocate)
+		Allocate(numRows, numCols, numNZElemToReserve, growOnly, false);
+    else
+		ClearNzCount();
 }
 
 // Reset matrix to 0.
@@ -836,7 +838,6 @@ void GPUSparseMatrix<ElemType>::SetMatrixFromCSCFormat(const CPUSPARSE_INDEX_TYP
     {
         CUDA_CALL(cudaMemcpy(RowLocation(), h_Row, sizeof(GPUSPARSE_INDEX_TYPE) * nz, kind));
         CUDA_CALL(cudaMemcpy(ColLocation(), h_CSCCol, sizeof(GPUSPARSE_INDEX_TYPE) * (numCols+1), kind));
-        //CUDA_CALL(cudaMemcpy(ColLocation(), h_CSCCol, ColSize(), kind));
     }
     else
     {
@@ -2425,7 +2426,7 @@ template <class ElemType>
 GPUSparseMatrix<ElemType>& GPUSparseMatrix<ElemType>::AssignAbsOf(const GPUSparseMatrix<ElemType>& a)
 {
     if (this != &a)
-        RequireSize(a.GetNumRows(), a.GetNumCols());
+        RequireSizeAndAllocate(a.GetNumRows(), a.GetNumCols(), a.NzCount());
     performElementWiseFunction(ElementWiseOperator::opAbs, a);
     return *this;
 }

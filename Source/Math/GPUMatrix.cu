@@ -485,6 +485,7 @@ GPUMatrix<ElemType>::~GPUMatrix(void)
 {
 }
 
+// TODO: This should be in the storage object.
 // Clear will clear your storage, zeroinit just drops it on the ground.
 template <class ElemType>
 void GPUMatrix<ElemType>::Clear()

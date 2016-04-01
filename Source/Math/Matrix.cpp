@@ -1500,8 +1500,8 @@ void Matrix<ElemType>::Resize(const size_t numRows, const size_t numCols, const 
                                           this,
                                           m_CPUMatrix->Resize(numRows, numCols, growOnly),
                                           m_GPUMatrix->Resize(numRows, numCols, growOnly),
-                                          m_CPUSparseMatrix->RequireSizeAndAllocate(numRows, numCols, numNZElemToReserve, growOnly),
-                                          m_GPUSparseMatrix->RequireSizeAndAllocate(numRows, numCols, numNZElemToReserve, growOnly));
+                                          m_CPUSparseMatrix->RequireSizeAndAllocate(numRows, numCols, numNZElemToReserve, growOnly, false),
+                                          m_GPUSparseMatrix->RequireSizeAndAllocate(numRows, numCols, numNZElemToReserve, growOnly, false));
 #ifdef _DEBUG
     if (GetMatrixType() != MatrixType::SPARSE)
         Invalidate(); // Fill the matrix with NaNs to detect using the content which is undefined. Unfortunately this won't work for sparse matrices.
