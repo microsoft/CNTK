@@ -45,6 +45,7 @@ typedef struct CUstream_st* cudaStream_t;
 #define USE_TIME_BASED_SEED ULONG_MAX
 #endif
 
+// Max number of GPUs on a _single_ node.
 #ifndef MAX_GPUS
 #define MAX_GPUS 16
 #endif
@@ -104,7 +105,7 @@ class MATH_API GPUMatrix : public BaseMatrix<ElemType>
     friend class GPUMatrix;
 
 public:
-    static const int MaxGpus = MAX_GPUS; // support up to 8 GPUs
+    static const int MaxGpus = MAX_GPUS;
     using BaseMatrix<ElemType>::m_computeDevice;
     using BaseMatrix<ElemType>::m_elemSizeAllocated;
     using BaseMatrix<ElemType>::m_format;
