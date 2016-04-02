@@ -354,7 +354,9 @@ public:
     using Base::mRequestedNumParallelSequences; // IDataReader<ElemType>
 
 private:
-    size_t mLastProcssedSentenceId;
+    unsigned int m_randomSeed = 0; // deterministic random seed
+
+    size_t mLastProcessedSentenceId;
 
     size_t mNumRead;               // number of sentences in current cache block
     vector<bool> mProcessed;       // [mNumRead] true if sequence has already been returned in this cache block
@@ -379,7 +381,7 @@ public:
     BatchSequenceReader()
         : m_pMBLayout(make_shared<MBLayout>())
     {
-        mLastProcssedSentenceId = 0;
+        mLastProcessedSentenceId = 0;
         mRequestedNumParallelSequences = 1;
         mLastPosInSentence = 0;
         mNumRead = 0;

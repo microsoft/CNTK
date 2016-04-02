@@ -9598,4 +9598,4 @@ dengamma value 1.142857
  Epoch[ 3 of 3]-Minibatch[ 121- 130 of 8192]: SamplesSeen = 6564; TrainLossPerSample =  0.08458945; EvalErr[0]PerSample = 0.30042657; TotalTime = 2.28939s; TotalTimePerSample = 0.34878ms; SamplesPerSecond = 2867
 Finished Epoch[ 3 of 3]: [Training Set] TrainLossPerSample = 0.083290465; EvalErrPerSample = 0.31113231; AvgLearningRatePerSample = 1.999999995e-006; EpochTime=30.742683
 CNTKCommandTrainEnd: sequenceTrain
-COMPLETED
+__COMPLETED__

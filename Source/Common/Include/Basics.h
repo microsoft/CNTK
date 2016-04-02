@@ -61,10 +61,13 @@ template <class E>
 __declspec_noreturn static inline void ThrowFormatted(const char* format, ...)
 {
     va_list args;
-    char buffer[1024];
+    const size_t bufferSize = 1024;
+    char buffer[bufferSize];
 
     va_start(args, format);
-    vsprintf(buffer, format, args);
+    int written = vsnprintf(buffer, bufferSize, format, args);
+    if (written >= bufferSize - 1)
+        sprintf(buffer + bufferSize - 6, "[...]");
 #ifdef _DEBUG // print this to log, so we can see what the error is before throwing
     fprintf(stderr, "\nAbout to throw exception '%s'\n", buffer);
 #endif
@@ -602,11 +605,11 @@ public:
         m_dllName += L".dll";
         m_hModule = LoadLibrary(m_dllName.c_str());
         if (m_hModule == NULL)
-            RuntimeError("Plugin not found: %s", msra::strfun::utf8(m_dllName).c_str());
+            RuntimeError("Plugin not found: '%ls'", m_dllName.c_str());
         // create a variable of each type just to call the proper templated version
         FARPROC entryPoint = GetProcAddress(m_hModule, proc.c_str());
         if (entryPoint == nullptr)
-            RuntimeError("Symbol '%s' not found in plugin %s", proc.c_str(), m_dllName.c_str());
+            RuntimeError("Symbol '%s' not found in plugin '%ls'", proc.c_str(), m_dllName.c_str());
         return entryPoint;
     }
     ~Plugin()
@@ -633,10 +636,10 @@ public:
         soName = soName + ".so";
         void* handle = dlopen(soName.c_str(), RTLD_LAZY);
         if (handle == NULL)
-            RuntimeError("Plugin not found: %s (error: %s)", soName.c_str(), dlerror());
+            RuntimeError("Plugin not found: '%s' (error: %s)", soName.c_str(), dlerror());
         void* entryPoint = dlsym(handle, proc.c_str());
         if (entryPoint == nullptr)
-            RuntimeError("Symbol '%s' not found in plugin %s", proc.c_str(), soName.c_str());
+            RuntimeError("Symbol '%s' not found in plugin '%s'", proc.c_str(), soName.c_str());
         return entryPoint;
     }
     ~Plugin()

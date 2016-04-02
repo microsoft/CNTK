@@ -46,12 +46,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 template <class ElemType>
 class ReshapeNode : public UnaryElementWiseNode<ElemType>
 {
-    typedef UnaryElementWiseNode<ElemType> Base;
-    UsingUnaryElementwiseNodeBaseMembers;
-    static const std::wstring TypeName()
-    {
-        return L"Reshape";
-    }
+    typedef UnaryElementWiseNode<ElemType> Base; UsingUnaryElementwiseNodeBaseMembers;
+    static const std::wstring TypeName() { return L"Reshape"; }
 
 public:
     ReshapeNode(DEVICEID_TYPE deviceId, const wstring& name, const TensorShape& replacementSampleLayout = TensorShape(), int beginDim = 1, int endDim = 0)
@@ -185,12 +181,8 @@ template class ReshapeNode<double>;
 template <class ElemType>
 class ReconcileMBLayoutNode : public ComputationNode<ElemType>, public NumInputs<2>
 {
-    typedef ComputationNode<ElemType> Base;
-    UsingComputationNodeMembersBoilerplate;
-    static const std::wstring TypeName()
-    {
-        return L"ReconcileMBLayout";
-    }
+    typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+    static const std::wstring TypeName() { return L"ReconcileMBLayout"; }
 
 public:
     DeclareConstructorFromConfigWithNumInputs(ReconcileMBLayoutNode);
@@ -204,7 +196,7 @@ public:
         // enforce compatibility of 'dataInput' with 'layoutInput'
         // TODO: how to deal with boundary flags?
         if (*m_pMBLayout != *Input(0)->GetMBLayout()) // this does a deep value-level comparison
-            InvalidArgument("%ls %ls operation discovered that %ls %ls operation produced an MB layout that is incompaitble with that of %ls %ls.",
+            InvalidArgument("%ls %ls operation discovered that %ls %ls operation produced an MB layout that is incompatible with that of %ls %ls.",
                             NodeName().c_str(), OperationName().c_str(),
                             Input(0)->NodeName().c_str(), Input(0)->OperationName().c_str(),
                             Input(1)->NodeName().c_str(), Input(1)->OperationName().c_str());
@@ -241,13 +233,13 @@ template class ReconcileMBLayoutNode<double>;
 // -----------------------------------------------------------------------
 // RowSliceNode (input)
 // This node extracts a slice of the first tensor dimension (row).
+// TODO: Extend to specifying the axis. Time slicing would have to be done in BrainScript using Gather.
 // -----------------------------------------------------------------------
 
 template <class ElemType>
 class RowSliceNode : public ComputationNode<ElemType>, public NumInputs<1>
 {
-    typedef ComputationNode<ElemType> Base;
-    UsingComputationNodeMembersBoilerplate;
+    typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
     static const std::wstring TypeName() { return L"RowSlice"; }
 
 public:
@@ -342,7 +334,7 @@ template class RowSliceNode<float>;
 template class RowSliceNode<double>;
 
 // -----------------------------------------------------------------------
-// RowStackNode (input0, input1, ...)
+// RowStack (input0, input1, ...)
 // stacks multiple inputs on top of each other
 // The inputs will be spliced w.r.t. their first tensor dimension (the "row" dimension).
 // TODO: This is very close to the planned SpliceNode (just make m_spliceDim actually configurable) except for splicing along time.
@@ -351,8 +343,7 @@ template class RowSliceNode<double>;
 template <class ElemType>
 class RowStackNode : public ComputationNode<ElemType> // note: not deriving from NumInputs<> like most other nodes, because this one takes a variable number of inputs
 {
-    typedef ComputationNode<ElemType> Base;
-    UsingComputationNodeMembersBoilerplate;
+    typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
     static const std::wstring TypeName() { return L"RowStack"; }
 
 public:
@@ -492,12 +483,8 @@ template class RowStackNode<double>;
 template <class ElemType>
 class RowRepeatNode : public ComputationNode<ElemType>, public NumInputs<1>
 {
-    typedef ComputationNode<ElemType> Base;
-    UsingComputationNodeMembersBoilerplate;
-    static const std::wstring TypeName()
-    {
-        return L"RowRepeat";
-    }
+    typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+    static const std::wstring TypeName() { return L"RowRepeat"; }
 
 public:
     RowRepeatNode(DEVICEID_TYPE deviceId, const wstring& name, size_t numRepeats = 1)
@@ -533,10 +520,9 @@ public:
         fstream >> m_numRepeat;
     }
 
-    virtual void PrintSelfBeforeValidation() const override
+    virtual std::string FormatOperationPrototype(const std::string& extraArgs) const override
     {
-        Base::PrintSelfBeforeValidation();
-        fprintf(stderr, ", numRepeats=%lu", m_numRepeat);
+        return Base::FormatOperationPrototype(extraArgs + msra::strfun::strprintf(", numRepeats=%lu", m_numRepeat));
     }
 
     virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
@@ -562,20 +548,8 @@ public:
         Input(0)->GradientFor(fr).AddToRowRepeatValuesOf(GradientFor(fr), m_numRepeat);
     }
 
-    virtual bool OutputUsedInComputingInputNodesGradients() const override
-    {
-        // The RowRepeatNode does not require its output value for computing
-        // the gradients of its input nodes
-        return false;
-    }
-
-    virtual bool InputUsedInComputingInputNodesGradients(size_t childIndex) const override
-    {
-        // The RowRepeatNode does not require any of it's input's values for computing
-        // the gradients of its input nodes
-        UNREFERENCED_PARAMETER(childIndex);
-        return false;
-    }
+    virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }
+    virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override { return false; }
 
 private:
     size_t m_numRepeat;
@@ -585,18 +559,160 @@ template class RowRepeatNode<float>;
 template class RowRepeatNode<double>;
 
 // -----------------------------------------------------------------------
+// WhereNode(cond) -- extract indices of non-0 values in a sequence
+// As this implies a runtime-value dependent reduction in dimension, it can
+// only be applied to time sequences, and not other tensor dimensions.
+// The result will have a different MBLayout reflecting the shortened result sequences.
+// -----------------------------------------------------------------------
+
+/* Notes on Where(), PackedIndex(), and Gather-/ScatterPacked():
+This is one of the few nodes that creates new MBLayouts inside this system.
+This node is meant to operate jointly with PackedIndexNode.
+The difference between Index and PackedIndex is that Index is in human-readable
+form referring to indices WITHIN a sequence (since NDL and BS only talk about individual
+sequences and never expose anything cross-sequence, except for aggregates like CE or BN.
+PackedIndex maps that to the internal lookup table that has strides resolved etc.
+The reason that PackedIndex is separate from Gather/ScatterPacked is that the GPU has no
+access to the STL-heavy MBLayout. So PackedIndex applies the relevant information from
+the MBLayout into a GPU object that then drives the memory-copy operations in Gather()
+and Scatter().
+*/
+
+template <class ElemType>
+class WhereNode : public ComputationNodeNonLooping<ElemType>, public NumInputs<1>
+{
+    typedef ComputationNodeNonLooping<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+    static const std::wstring TypeName() { return L"Where"; }
+
+public:
+    DeclareConstructorFromConfigWithNumInputs(WhereNode);
+    WhereNode(DEVICEID_TYPE deviceId, const wstring& name) :
+        Base(deviceId, name)
+    {
+    }
+
+    virtual void /*ComputationNodeNonLooping::*/ ForwardPropNonLooping() override;
+    virtual void /*ComputationNodeNonLooping::*/ BackpropToNonLooping(size_t /*inputIndex*/) override;
+    virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }
+    virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override { return false; }
+    virtual void Validate(bool isFinalValidationPass) override;
+
+private:
+    // buffers for creating the result sequences (kept as object state to avoid memory allocations)
+    std::vector<std::vector<size_t>>   m_indexSequenceBuffer; // [sequenceIndex][t] for creating the result sequences
+    std::vector<size_t>               m_rowAllocationsBuffer; // [row] for determining new MBLayout packing
+    std::vector<std::pair<size_t, size_t>> m_placementBuffer; // [sequenceIndex] assigned location for a sequence
+};
+
+// -----------------------------------------------------------------------
+// PackedIndexNode(targetObject, indexSequence) -- convert sequence indices
+// to internal packed column indices w.r.t. targetObject.
+// Intended use is
+//  - Gather  (cond, x) = GatherPacked  (PackedIndex (x, Where (xCond)), x)
+//  - Scatter (cond, y) = ScatterPacked (yCond, PackedIndex (y, Where (yCond)), y)
+// This maps sequence-specific time indices t to GetColumnIndex(seq,t),
+// as input for subsequent GatherPacked() or ScatterPacked() operations.
+// -----------------------------------------------------------------------
+
+template <class ElemType>
+class PackedIndexNode : public ComputationNodeNonLooping<ElemType>, public NumInputs<2>
+{
+    typedef ComputationNodeNonLooping<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+    static const std::wstring TypeName() { return L"PackedIndex"; }
+
+    // our inputs
+    static const size_t SOURCEDATA = 0;
+    static const size_t INDEXDATA  = 1;
+
+public:
+    DeclareConstructorFromConfigWithNumInputs(PackedIndexNode);
+    PackedIndexNode(DEVICEID_TYPE deviceId, const wstring& name) :
+        Base(deviceId, name)
+    {
+    }
+
+    virtual void /*ComputationNodeNonLooping::*/ ForwardPropNonLooping() override;
+    virtual void /*ComputationNodeNonLooping::*/ BackpropToNonLooping(size_t /*inputIndex*/) override;
+    virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }
+    virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override { return false; }
+    virtual void Validate(bool isFinalValidationPass) override;
+};
+
+// -----------------------------------------------------------------------
+// GatherPackedNode(packedIndex, sourceData) -- gather operation
+// Copies subset of samples pointed to by packedIndex from sourceData.
+// Sequence lengths are equal to those from packedIndex.
+// PackedIndex must have been created with PackedIndex() node, and is
+// otherwise opaque to users.
+// -----------------------------------------------------------------------
+
+template <class ElemType>
+class GatherPackedNode : public ComputationNodeNonLooping<ElemType>, public NumInputs<2>
+{
+    typedef ComputationNodeNonLooping<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+    static const std::wstring TypeName() { return L"GatherPacked"; }
+
+    // our inputs
+    static const size_t INDEXDATA = 0;
+    static const size_t SOURCEDATA = 1;
+
+public:
+    DeclareConstructorFromConfigWithNumInputs(GatherPackedNode);
+    GatherPackedNode(DEVICEID_TYPE deviceId, const wstring& name) :
+        Base(deviceId, name)
+    {
+    }
+
+    virtual void /*ComputationNodeNonLooping::*/ ForwardPropNonLooping() override;
+    virtual void /*ComputationNodeNonLooping::*/ BackpropToNonLooping(size_t inputIndex) override;
+    virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }
+    virtual bool InputUsedInComputingInputNodesGradients(size_t childIndex) const override { return childIndex == INDEXDATA; }
+    virtual void Validate(bool isFinalValidationPass) override;
+};
+
+// -----------------------------------------------------------------------
+// ScatterPackedNode(layoutData, packedIndex, sourceData) -- scatter operation
+// Copies sourceData to sample positions pointed to by packedIndex.
+// The first arg, 'layoutData', is used only to determine sequence lengths,
+// and should be the same that was used to Where().
+// PackedIndex must have been created with PackedIndex() node, and is
+// otherwise opaque to users.
+// -----------------------------------------------------------------------
+
+template <class ElemType>
+class ScatterPackedNode : public ComputationNodeNonLooping<ElemType>, public NumInputs<3>
+{
+    typedef ComputationNodeNonLooping<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+    static const std::wstring TypeName() { return L"ScatterPacked"; }
+
+    // our inputs
+    static const size_t LAYOUTDATA = 0;
+    static const size_t INDEXDATA  = 1;
+    static const size_t SOURCEDATA = 2;
+
+public:
+    DeclareConstructorFromConfigWithNumInputs(ScatterPackedNode);
+    ScatterPackedNode(DEVICEID_TYPE deviceId, const wstring& name) :
+        Base(deviceId, name)
+    {
+    }
+
+    virtual void /*ComputationNodeNonLooping::*/ ForwardPropNonLooping() override;
+    virtual void /*ComputationNodeNonLooping::*/ BackpropToNonLooping(size_t inputIndex) override;
+    virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }
+    virtual bool InputUsedInComputingInputNodesGradients(size_t childIndex) const override { return childIndex == INDEXDATA; }
+    virtual void Validate(bool isFinalValidationPass) override;
+};
+
+// -----------------------------------------------------------------------
 // DiagonalNode -- extract diagonal elements of a square matrix into a row vector
 // -----------------------------------------------------------------------
 
 template <class ElemType>
 class DiagonalNode : public ComputationNodeNonLooping<ElemType>, public NumInputs<1>
 {
-    typedef ComputationNodeNonLooping<ElemType> Base;
-    UsingComputationNodeMembersBoilerplate;
-    static const std::wstring TypeName()
-    {
-        return L"Diagonal";
-    }
+    typedef ComputationNodeNonLooping<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+    static const std::wstring TypeName() { return L"Diagonal"; }
 
 public:
     DeclareConstructorFromConfigWithNumInputs(DiagonalNode);
@@ -643,7 +759,7 @@ public:
         m_pMBLayout = nullptr;
 
         if (isFinalValidationPass && Input(0)->HasMBLayout())
-            InvalidArgument("%ls %ls operation cannot operate on minibatch data (which have a layout)", NodeName().c_str(), OperationName().c_str());
+            InvalidArgument("%ls %ls operation cannot operate on minibatch data (which have a layout).", NodeName().c_str(), OperationName().c_str());
 
         size_t dim = Input(0)->GetAsMatrixNumCols();
         if (isFinalValidationPass && dim != Input(0)->GetAsMatrixNumRows())
@@ -847,22 +963,9 @@ public:
         m_targetImageLayout.Save(fstream);
     }
 
-    virtual void /*IComputationNode::*/ PrintSelfBeforeValidation() const override
+    virtual std::string /*IComputationNode::*/ FormatOperationPrototype(const std::string& extraArgs) const override
     {
-        fprintf(stderr, "\nValidating --> %ls = %ls", NodeName().c_str(), OperationName().c_str());
-        fprintf(stderr, "(");
-        for (size_t i = 0; i < GetNumInputs(); i++)
-        {
-            ComputationNodePtr child = Input(i);
-            if (i > 0)
-                fprintf(stderr, ", ");
-            if (!child)
-                fprintf(stderr, "NULL");
-            else
-                fprintf(stderr, "%ls[%s%s]", child->NodeName().c_str(), string(child->GetSampleLayout()).c_str(), child->HasMBLayout() ? " x *" : "");
-        }
-        fprintf(stderr, ", NumOfRows=%lu, imageWidth=%lu, imageHeight=%lu, imageChannels=%lu)", m_numTargetRows, m_targetImageLayout[1], m_targetImageLayout[2], m_targetImageLayout[0]);
-        // BUGBUG: This interpretaion as image dims is only correct for the 'legacy format, not for cudnn.
+        return Base::FormatOperationPrototype(extraArgs + msra::strfun::strprintf(", NumOfRows=%lu, imageWidth=%lu, imageHeight=%lu, imageChannels=%lu)", m_numTargetRows, m_targetImageLayout[1], m_targetImageLayout[2], m_targetImageLayout[0]));
     }
 
     // TODO: Clarify/resolve the semantic overlap between BeginForwardProp() and UpdateFunctionMBSize().

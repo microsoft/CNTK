@@ -10,12 +10,11 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
-// Sequence key, used for correlations between sequences of different deserializers.
-// Both strings and integers are supported.
+// Sequence key, used for correlations between sequences between different deserializers.
 struct KeyType
 {
-    std::wstring major;
-    size_t minor;
+    size_t m_major;
+    size_t m_minor;
 };
 
 class Chunk;
@@ -34,7 +33,8 @@ struct SequenceDescription
     bool m_isValid;           // Indicates whether the sequence is valid.
     KeyType m_key;            // Sequence key, used for correlations between sequences of different deserializers.
 };
-typedef std::vector<const SequenceDescription*> SequenceDescriptions;
+
+typedef std::shared_ptr<SequenceDescription> SequenceDescriptionPtr;
 
 // Defines sequence data and its layout.
 // Currently CNTK supports dense and sparse sequences (csc).
@@ -42,13 +42,17 @@ typedef std::vector<const SequenceDescription*> SequenceDescriptions;
 // data deserializer or transformer can provide provides.
 struct SequenceDataBase
 {
-    SequenceDataBase() : m_data(nullptr) { }
+    SequenceDataBase() : m_data(nullptr), m_numberOfSamples(0) { }
     virtual ~SequenceDataBase() = default;
+
+    // Sequence id.
+    size_t m_id;
 
     ChunkPtr m_chunk;
     // A non-owned pointer. The actual size is provided for particular sequences,
     // i.e. see DenseSequenceData, or SparseSequenceData.
     void* m_data;
+    size_t m_numberOfSamples;      // Number of samples in the sequence
 };
 typedef std::shared_ptr<SequenceDataBase> SequenceDataPtr;
 
@@ -58,10 +62,7 @@ typedef std::shared_ptr<SequenceDataBase> SequenceDataPtr;
 // All samples in the sequence should have the same layout.
 struct DenseSequenceData : SequenceDataBase
 {
-    DenseSequenceData() : m_numberOfSamples(0) { }
-
     TensorShapePtr m_sampleLayout; // Sample layout, can be shared by several sequences.
-    size_t m_numberOfSamples;      // Number of samples in the sequence
 };
 typedef std::shared_ptr<DenseSequenceData> DenseSequenceDataPtr;
 
@@ -95,7 +96,7 @@ public:
     // Gets a sequence per input by its identifier.
     // The sequence has a reference to the corresponding chunk. The chunk is not
     // deallocated till all its sequences are released.
-    virtual std::vector<SequenceDataPtr> GetSequence(size_t sequenceId) = 0;
+    virtual void GetSequence(size_t sequenceId, std::vector<SequenceDataPtr>& result) = 0;
 
     virtual ~Chunk() {};
 
@@ -105,6 +106,20 @@ protected:
 private:
     DISABLE_COPY_AND_MOVE(Chunk);
 };
+
+// Represents a chunk description.
+struct ChunkDescription
+{
+    // Chunk id.
+    size_t m_id;
+    // Number of samples in the chunk.
+    size_t m_numberOfSamples;
+    // Number of sequences in the chunk.
+    size_t m_numberOfSequences;
+};
+
+typedef std::shared_ptr<ChunkDescription> ChunkDescriptionPtr;
+typedef std::vector<ChunkDescriptionPtr> ChunkDescriptions;
 
 //////////////////////////////////////////////////////////////////////////////////////////////////
 // Interface all data deserializers should implement.
@@ -117,25 +132,26 @@ private:
 class IDataDeserializer
 {
 public:
-    // Describes streams this data deserializer can produce. Streams correspond to network inputs.
-    // TODO: Introduce the interface to reduce the size of the sequences available at any point in time (chunks/sequences).
+    // Gets stream descriptions for all streams this deserializer exposes.
     virtual std::vector<StreamDescriptionPtr> GetStreamDescriptions() const = 0;
 
-    // Retrieves description of all sequences this data deserializer can produce.
-    // TODO for huge corpuses, footprint will be too big; need interface to request timeline in chunks
-    virtual const SequenceDescriptions& GetSequenceDescriptions() const = 0;
+    // Gets chunk descriptions this deserializer exposes.
+    virtual ChunkDescriptions GetChunkDescriptions() = 0;
 
-    // Retrieves description of a single sequence given its key.
-    virtual const SequenceDescription* GetSequenceDescriptionByKey(const KeyType& key) = 0;
+    // Gets sequence descriptions for a given a chunk.
+    virtual void GetSequencesForChunk(size_t chunkId, std::vector<SequenceDescription>& descriptions) = 0;
 
-    // Retrieves total number of chunks this deserializer can produce.
-    virtual size_t GetTotalNumberOfChunks() = 0;
+    // Gets sequence description by its key.
+    // Used by deserializers not in driving/primary mode.
+    // TODO: Possibly move this out into a separate interface.
+    virtual void GetSequenceDescriptionByKey(const KeyType& key, SequenceDescription& description) = 0;
 
-    // Retrieves a chunk with data.
+    // Gets chunk data given its id.
     virtual ChunkPtr GetChunk(size_t chunkId) = 0;
 
     virtual ~IDataDeserializer() {};
 };
 
 typedef std::shared_ptr<IDataDeserializer> IDataDeserializerPtr;
-} } }
+
+}}}

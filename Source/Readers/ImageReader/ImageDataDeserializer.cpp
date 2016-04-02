@@ -7,6 +7,7 @@
 #include <opencv2/opencv.hpp>
 #include "ImageDataDeserializer.h"
 #include "ImageConfigHelper.h"
+#include <inttypes.h>
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -59,7 +60,7 @@ public:
     {
     }
 
-    virtual std::vector<SequenceDataPtr> GetSequence(size_t sequenceId) override
+    virtual void GetSequence(size_t sequenceId, std::vector<SequenceDataPtr>& result) override
     {
         assert(sequenceId == m_description.m_id);
         UNUSED(sequenceId);
@@ -92,11 +93,12 @@ public:
         image->m_sampleLayout = std::make_shared<TensorShape>(dimensions.AsTensorShape(HWC));
         image->m_numberOfSamples = 1;
         image->m_chunk = shared_from_this();
+        result.push_back(image);
 
         SparseSequenceDataPtr label = std::make_shared<SparseSequenceData>();
         label->m_chunk = shared_from_this();
         m_parent.m_labelGenerator->CreateLabelFor(imageSequence.m_classId, *label);
-        return std::vector<SequenceDataPtr> { image, label };
+        result.push_back(label);
     }
 };
 
@@ -134,6 +136,29 @@ ImageDataDeserializer::ImageDataDeserializer(const ConfigParameters& config)
     CreateSequenceDescriptions(configHelper.GetMapPath(), labelDimension);
 }
 
+// Descriptions of chunks exposed by the image reader.
+ChunkDescriptions ImageDataDeserializer::GetChunkDescriptions()
+{
+    ChunkDescriptions result;
+    result.reserve(m_imageSequences.size());
+    for (auto const& s : m_imageSequences)
+    {
+        auto chunk = std::make_shared<ChunkDescription>();
+        chunk->m_id = s.m_chunkId;
+        chunk->m_numberOfSamples = 1;
+        chunk->m_numberOfSequences = 1;
+        result.push_back(chunk);
+    }
+
+    return result;
+}
+
+void ImageDataDeserializer::GetSequencesForChunk(size_t chunkId, std::vector<SequenceDescription>& result)
+{
+    // Currently a single sequence per chunk.
+    result.push_back(m_imageSequences[chunkId]);
+}
+
 void ImageDataDeserializer::CreateSequenceDescriptions(std::string mapPath, size_t labelDimension)
 {
     UNUSED(labelDimension);
@@ -155,52 +180,29 @@ void ImageDataDeserializer::CreateSequenceDescriptions(std::string mapPath, size
         std::string imagePath;
         std::string classId;
         if (!std::getline(ss, imagePath, '\t') || !std::getline(ss, classId, '\t'))
-        {
-            RuntimeError("Invalid map file format, must contain 2 tab-delimited columns: %s, line: %d.",
-                         mapPath.c_str(),
-                         static_cast<int>(lineIndex));
-        }
+            RuntimeError("Invalid map file format, must contain 2 tab-delimited columns, line %" PRIu64 " in file %s.", lineIndex, mapPath.c_str());
 
         description.m_id = lineIndex;
         description.m_chunkId = lineIndex;
         description.m_path = imagePath;
-        description.m_classId = std::stoi(classId);
+        char* eptr;
+        errno = 0;
+        size_t cid = strtoull(classId.c_str(), &eptr, 10);
+        if (classId.c_str() == eptr || errno == ERANGE)
+            RuntimeError("Cannot parse label value on line %" PRIu64 ", second column, in file %s.", lineIndex, mapPath.c_str());
+        description.m_classId = cid;
+        description.m_key.m_major = description.m_id;
+        description.m_key.m_minor = 0;
 
         if (description.m_classId >= labelDimension)
         {
             RuntimeError(
-                "Image '%s' has invalid class id '%d'. Expected label dimension is '%d'.",
-                mapPath.c_str(),
-                static_cast<int>(description.m_classId),
-                static_cast<int>(labelDimension));
+                "Image '%s' has invalid class id '%" PRIu64 "'. Expected label dimension is '%" PRIu64 "'. Line %" PRIu64 " in file %s.",
+                imagePath.c_str(), description.m_classId, labelDimension, lineIndex, mapPath.c_str());
         }
         m_imageSequences.push_back(description);
         RegisterByteReader(description.m_id, description.m_path, knownReaders);
     }
-}
-
-size_t ImageDataDeserializer::GetTotalNumberOfChunks()
-{
-    // Currently we use one chunk per image.
-    return m_imageSequences.size();
-}
-
-std::vector<StreamDescriptionPtr> ImageDataDeserializer::GetStreamDescriptions() const
-{
-    return m_streams;
-}
-
-void ImageDataDeserializer::FillSequenceDescriptions(SequenceDescriptions& timeline) const
-{
-    timeline.resize(m_imageSequences.size());
-    std::transform(
-        m_imageSequences.begin(),
-        m_imageSequences.end(),
-        timeline.begin(),
-        [](const ImageSequenceDescription& desc)
-        {
-            return &desc;
-        });
 }
 
 ChunkPtr ImageDataDeserializer::GetChunk(size_t chunkId)

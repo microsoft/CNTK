@@ -553,7 +553,7 @@ Starting minibatch loop.
  Epoch[ 3 of 3]-Minibatch[  11-  20 of 20]: SamplesSeen = 10240; TrainLossPerSample =  1.86656265; EvalErr[0]PerSample = 0.51748047; TotalTime = 0.21814s; TotalTimePerSample = 0.02130ms; SamplesPerSecond = 46943
 Finished Epoch[ 3 of 3]: [Training Set] TrainLossPerSample = 1.8700806; EvalErrPerSample = 0.51840824; AvgLearningRatePerSample = 9.765625146e-05; EpochTime=0.493964
 CNTKCommandTrainEnd: speechTrain
-COMPLETED
+__COMPLETED__
 === Deleting last epoch data
 ==== Re-running from checkpoint
 === Running /home/mluser/src/cplx_master/build/debug/bin/cntk configFile=/home/mluser/src/cplx_master/Tests/Speech/QuickE2E/cntk.config RunDir=/tmp/cntk-test-20151024124900.548963/Speech_QuickE2E@debug_gpu DataDir=/home/mluser/src/cplx_master/Tests/Speech/Data ConfigDir=/home/mluser/src/cplx_master/Tests/Speech/QuickE2E DeviceId=0
@@ -1331,4 +1331,4 @@ EnforceOneGPUOnly: WARNING: Ignored attempt to change GPU choice from 0 now 1. T
  Epoch[ 3 of 3]-Minibatch[  11-  20 of 20]: SamplesSeen = 10240; TrainLossPerSample =  1.86656265; EvalErr[0]PerSample = 0.51748047; TotalTime = 0.21717s; TotalTimePerSample = 0.02121ms; SamplesPerSecond = 47152
 Finished Epoch[ 3 of 3]: [Training Set] TrainLossPerSample = 1.8700806; EvalErrPerSample = 0.51840824; AvgLearningRatePerSample = 9.765625146e-05; EpochTime=1.439589
 CNTKCommandTrainEnd: speechTrain
-COMPLETED
+__COMPLETED__

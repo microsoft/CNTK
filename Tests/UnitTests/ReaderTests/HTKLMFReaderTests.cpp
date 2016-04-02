@@ -151,9 +151,6 @@ BOOST_AUTO_TEST_CASE(HTKMLFReaderSimpleDataLoop8)
         1);
 };
 
-/*
-This test is commented out because it causes an assertion in debug mode on:
-HTKMLFReader (BPTT) (1110)
 BOOST_AUTO_TEST_CASE(HTKMLFReaderSimpleDataLoop9)
 {
     HelperRunReaderTest<float>(
@@ -162,7 +159,7 @@ BOOST_AUTO_TEST_CASE(HTKMLFReaderSimpleDataLoop9)
         testDataPath() + "/Control/HTKMLFReaderSimpleDataLoop9_Output.txt",
         "Simple_Test",
         "reader",
-        5000,
+        2000,
         250,
         2,
         1,
@@ -170,7 +167,6 @@ BOOST_AUTO_TEST_CASE(HTKMLFReaderSimpleDataLoop9)
         0,
         1);
 };
-*/      
 
 BOOST_AUTO_TEST_CASE(HTKMLFReaderSimpleDataLoop10)
 {
@@ -274,9 +270,6 @@ BOOST_AUTO_TEST_CASE(HTKMLFReaderSimpleDataLoop16)
         1);
 };
 
-/*
-This test is commented out because it causes an assertion in debug mode on:
-HTKMLFReader (BPTT) (1110)
 BOOST_AUTO_TEST_CASE(HTKMLFReaderSimpleDataLoop19)
 {
     HelperRunReaderTest<double>(
@@ -285,7 +278,7 @@ BOOST_AUTO_TEST_CASE(HTKMLFReaderSimpleDataLoop19)
         testDataPath() + "/Control/HTKMLFReaderSimpleDataLoop19_Output.txt",
         "Simple_Test",
         "reader",
-        5000,
+        2000,
         250,
         2,
         1,
@@ -293,7 +286,6 @@ BOOST_AUTO_TEST_CASE(HTKMLFReaderSimpleDataLoop19)
         0,
         1);
 };
-*/
 
 BOOST_AUTO_TEST_CASE(HTKMLFReaderSimpleDataLoop20)
 {
@@ -448,7 +440,93 @@ BOOST_AUTO_TEST_CASE(ExperimentalHTKMLFReaderSimpleDataLoop21_1)
         2);
 };
 
+BOOST_AUTO_TEST_CASE(ExperimentalHTKMLFReaderSimpleDataLoop4)
+{
+    HelperRunReaderTest<float>(
+        testDataPath() + "/Config/ExperimentalHTKMLFReaderSimpleDataLoop4_Config.cntk",
+        testDataPath() + "/Control/ExperimentalHTKMLFReaderSimpleDataLoop4_Control.txt",
+        testDataPath() + "/Control/ExperimentalHTKMLFReaderSimpleDataLoop4_Output.txt",
+        "Simple_Test",
+        "reader",
+        500,
+        250,
+        2,
+        1,
+        1,
+        0,
+        1);
+};
+
+BOOST_AUTO_TEST_CASE(ExperimentalHTKMLFReaderSimpleDataLoop8)
+{
+    HelperRunReaderTest<float>(
+        testDataPath() + "/Config/ExperimentalHTKMLFReaderSimpleDataLoop8_Config.cntk",
+        testDataPath() + "/Control/HTKMLFReaderSimpleDataLoop4_8_14_Control.txt",
+        testDataPath() + "/Control/HTKMLFReaderSimpleDataLoop8_Output.txt",
+        "Simple_Test",
+        "reader",
+        500,
+        250,
+        2,
+        1,
+        1,
+        0,
+        1);
+};
+
+BOOST_AUTO_TEST_CASE(ExperimentalHTKMLFReaderSimpleDataLoop14)
+{
+    HelperRunReaderTest<double>(
+        testDataPath() + "/Config/ExperimentalHTKMLFReaderSimpleDataLoop14_Config.cntk",
+        testDataPath() + "/Control/HTKMLFReaderSimpleDataLoop4_8_14_Control.txt",
+        testDataPath() + "/Control/HTKMLFReaderSimpleDataLoop14_Output.txt",
+        "Simple_Test",
+        "reader",
+        500,
+        250,
+        2,
+        1,
+        1,
+        0,
+        1);
+};
+
+BOOST_AUTO_TEST_CASE(ExperimentalHTKMLFReaderSimpleDataLoop9)
+{
+    HelperRunReaderTest<float>(
+        testDataPath() + "/Config/ExperimentalHTKMLFReaderSimpleDataLoop9_Config.cntk",
+        testDataPath() + "/Control/ExperimentalHTKMLFReaderSimpleDataLoop9_19_Control.txt",
+        testDataPath() + "/Control/ExperimentalHTKMLFReaderSimpleDataLoop9_Output.txt",
+        "Simple_Test",
+        "reader",
+        2000,
+        500,
+        2,
+        1,
+        1,
+        0,
+        1);
+};
+
+BOOST_AUTO_TEST_CASE(ExperimentalHTKMLFReaderSimpleDataLoop19)
+{
+    HelperRunReaderTest<double>(
+        testDataPath() + "/Config/ExperimentalHTKMLFReaderSimpleDataLoop19_Config.cntk",
+        testDataPath() + "/Control/ExperimentalHTKMLFReaderSimpleDataLoop9_19_Control.txt",
+        testDataPath() + "/Control/ExperimentalHTKMLFReaderSimpleDataLoop9_Output.txt",
+        "Simple_Test",
+        "reader",
+        2000,
+        500,
+        2,
+        1,
+        1,
+        0,
+        1);
+};
+
 BOOST_AUTO_TEST_SUITE_END()
 
 }
-} } }
+
+}}}

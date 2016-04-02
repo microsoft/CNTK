@@ -20,169 +20,213 @@ std::vector<std::wstring> htkfeatreader::parsedpath::archivePathStringVector;
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
+using namespace std;
+
 HTKDataDeserializer::HTKDataDeserializer(
     CorpusDescriptorPtr corpus,
     const ConfigParameters& feature,
-    const std::wstring& featureName)
+    const wstring& featureName)
     : m_ioFeatureDimension(0),
       m_samplePeriod(0),
-      m_verbosity(0)
+      m_verbosity(0),
+      m_corpus(corpus),
+      m_totalNumberOfFrames(0)
 {
-    bool frameMode = feature.Find("frameMode", "true");
-    if (!frameMode)
-    {
-        LogicError("Currently only reader only supports frame mode. Please check your configuration.");
-    }
+    // The frame mode is currently specified once per configuration,
+    // not in the configuration of a particular deserializer, but on a higher level in the configuration.
+    // Because of that we are using find method below.
+    m_frameMode = feature.Find("frameMode", "true");
 
     ConfigHelper config(feature);
-
     config.CheckFeatureType();
-
-    std::vector<std::wstring> featureFiles = config.GetFeaturePaths();
 
     auto context = config.GetContextWindow();
     m_elementType = config.GetElementType();
+
     m_dimension = config.GetFeatureDimension();
     m_dimension = m_dimension * (1 + context.first + context.second);
 
-    size_t numSequences = featureFiles.size();
+    InitializeChunkDescriptions(config);
+    InitializeStreams(featureName);
+    InitializeFeatureInformation();
 
     m_augmentationWindow = config.GetContextWindow();
 
-    m_utterances.reserve(numSequences);
-    size_t totalFrames = 0;
-    foreach_index (i, featureFiles)
+    // If not given explicitly, we need to identify the required augmentation range from the expected dimension
+    // and the number of dimensions in the file.
+    if (m_augmentationWindow.first == 0 && m_augmentationWindow.second == 0)
     {
-        UtteranceDescription description(std::move(msra::asr::htkfeatreader::parsedpath(featureFiles[i])));
-        size_t numberOfFrames = description.GetNumberOfFrames();
-        description.m_id = i;
+        m_augmentationWindow.first = m_augmentationWindow.second = msra::dbn::augmentationextent(m_ioFeatureDimension, m_dimension);
+    }
+}
 
-        // we need at least 2 frames for boundary markers to work
+// Initializes chunks based on the configuration and utterance descriptions.
+void HTKDataDeserializer::InitializeChunkDescriptions(ConfigHelper& config)
+{
+    // Read utterance descriptions.
+    vector<wstring> paths = config.GetSequencePaths();
+    vector<UtteranceDescription> utterances;
+    utterances.reserve(paths.size());
+    auto& stringRegistry = m_corpus->GetStringRegistry();
+    for (const auto& u : paths)
+    {
+        UtteranceDescription description(move(msra::asr::htkfeatreader::parsedpath(u)));
+        size_t numberOfFrames = description.GetNumberOfFrames();
+
+        // TODO: we need at least 2 frames for boundary markers to work
+        // TODO: this should be removed when MLF deserializer is rewritten.
         if (numberOfFrames < 2)
         {
             fprintf(stderr, "HTKDataDeserializer::HTKDataDeserializer: skipping utterance with %d frames because it has less than 2 frames: %ls\n",
                 (int)numberOfFrames, description.GetKey().c_str());
-            description.m_isValid = false;
-            description.m_numberOfSamples = 0;
-        }
-        else
-        {
-            description.m_isValid = true;
-            description.m_numberOfSamples = numberOfFrames;
+            continue;
         }
 
-        m_utterances.push_back(description);
-        totalFrames += description.m_numberOfSamples;
+        size_t id = stringRegistry.AddValue(description.GetKey());
+        description.SetId(id);
+        utterances.push_back(description);
+        m_totalNumberOfFrames += numberOfFrames;
     }
-
-    size_t totalSize = std::accumulate(
-        m_utterances.begin(),
-        m_utterances.end(),
-        static_cast<size_t>(0),
-        [](size_t sum, const UtteranceDescription& s)
-        {
-            return s.m_numberOfSamples + sum;
-        });
 
     const size_t MaxUtterancesPerChunk = 65535;
     // distribute them over chunks
     // We simply count off frames until we reach the chunk size.
     // Note that we first randomize the chunks, i.e. when used, chunks are non-consecutive and thus cause the disk head to seek for each chunk.
-    const size_t framespersec = 100;                   // we just assume this; our efficiency calculation is based on this
-    const size_t chunkframes = 15 * 60 * framespersec; // number of frames to target for each chunk
+
+    // We have 100 frames in a second.
+    const size_t FramesPerSec = 100;
+
+    // A chunk consitutes 15 minutes
+    const size_t ChunkFrames = 15 * 60 * FramesPerSec; // number of frames to target for each chunk
 
     // Loading an initial 24-hour range will involve 96 disk seeks, acceptable.
     // When paging chunk by chunk, chunk size ~14 MB.
 
     m_chunks.resize(0);
-    m_chunks.reserve(totalSize / chunkframes);
+    m_chunks.reserve(m_totalNumberOfFrames / ChunkFrames);
 
     int chunkId = -1;
-    foreach_index(i, m_utterances)
+    size_t startFrameInsideChunk = 0;
+    foreach_index(i, utterances)
     {
         // if exceeding current entry--create a new one
         // I.e. our chunks are a little larger than wanted (on av. half the av. utterance length).
-        if (m_chunks.empty() || m_chunks.back().GetTotalFrames() > chunkframes || m_chunks.back().GetNumberOfUtterances() >= MaxUtterancesPerChunk)
+        if (m_chunks.empty() || m_chunks.back().GetTotalFrames() > ChunkFrames || m_chunks.back().GetNumberOfUtterances() >= MaxUtterancesPerChunk)
         {
-            m_chunks.push_back(ChunkDescription());
+            m_chunks.push_back(HTKChunkDescription());
             chunkId++;
+            startFrameInsideChunk = 0;
         }
 
         // append utterance to last chunk
-        ChunkDescription& currentchunk = m_chunks.back();
-        m_utterances[i].SetIndexInsideChunk(currentchunk.GetNumberOfUtterances());
-        currentchunk.Add(&m_utterances[i]); // move it out from our temp array into the chunk
-        m_utterances[i].m_chunkId = chunkId;
+        HTKChunkDescription& currentChunk = m_chunks.back();
+        utterances[i].AssignToChunk(chunkId, currentChunk.GetNumberOfUtterances(), startFrameInsideChunk);
+        startFrameInsideChunk += utterances[i].GetNumberOfFrames();
+        currentChunk.Add(move(utterances[i]));
     }
+
+    // Creating a table of weak pointers to chunks,
+    // so that if randomizer asks the same chunk twice 
+    // we do not need to recreated the chunk if we already uploaded in memory.
+    m_weakChunks.resize(m_chunks.size());
 
     fprintf(stderr,
         "HTKDataDeserializer::HTKDataDeserializer: %d utterances grouped into %d chunks, av. chunk size: %.1f utterances, %.1f frames\n",
-        (int)m_utterances.size(),
+        (int)utterances.size(),
         (int)m_chunks.size(),
-        m_utterances.size() / (double)m_chunks.size(),
-        totalSize / (double)m_chunks.size());
+        utterances.size() / (double)m_chunks.size(),
+        m_totalNumberOfFrames / (double)m_chunks.size());
+}
 
-    // TODO: Currently we have global sequence id.
-    // After changing the timeline interface they must never referred to by a sequential id, only by chunk/within-chunk index
-    // because they are asked on the chunk anyway.
-
-    m_frames.reserve(totalFrames);
-    foreach_index(i, m_utterances)
-    {
-        if (!m_utterances[i].m_isValid)
-        {
-            continue;
-        }
-
-        std::wstring key = m_utterances[i].GetKey();
-        for (size_t k = 0; k < m_utterances[i].m_numberOfSamples; ++k)
-        {
-            Frame f(&m_utterances[i]);
-            f.m_key.major = key;
-            f.m_key.minor = k;
-            f.m_id = m_frames.size();
-            f.m_chunkId = m_utterances[i].m_chunkId;
-            f.m_numberOfSamples = 1;
-            f.m_frameIndex = k;
-            f.m_isValid = true;
-            m_frames.push_back(f);
-
-            m_sequences.push_back(&m_frames[f.m_id]);
-        }
-    }
-
-    m_weakChunks.resize(m_chunks.size());
-
-    StreamDescriptionPtr stream = std::make_shared<StreamDescription>();
+// Describes exposed stream - a single stream of htk features.
+void HTKDataDeserializer::InitializeStreams(const wstring& featureName)
+{
+    StreamDescriptionPtr stream = make_shared<StreamDescription>();
     stream->m_id = 0;
     stream->m_name = featureName;
-    stream->m_sampleLayout = std::make_shared<TensorShape>(m_dimension);
+    stream->m_sampleLayout = make_shared<TensorShape>(m_dimension);
     stream->m_elementType = m_elementType;
     stream->m_storageType = StorageType::dense;
     m_streams.push_back(stream);
+}
 
+// Reading information about the features from the first file.
+// This information is used later to check that all features among all files have the same properties.
+void HTKDataDeserializer::InitializeFeatureInformation()
+{
     msra::util::attempt(5, [&]()
     {
         msra::asr::htkfeatreader reader;
-        reader.getinfo(m_utterances[0].GetPath(), m_featureKind, m_ioFeatureDimension, m_samplePeriod);
+        reader.getinfo(m_chunks.front().GetUtterance(0)->GetPath(), m_featureKind, m_ioFeatureDimension, m_samplePeriod);
         fprintf(stderr, "HTKDataDeserializer::HTKDataDeserializer: determined feature kind as %d-dimensional '%s' with frame shift %.1f ms\n",
             (int)m_dimension, m_featureKind.c_str(), m_samplePeriod / 1e4);
     });
 }
 
-const SequenceDescriptions& HTKDataDeserializer::GetSequenceDescriptions() const
+// Gets information about available chunks.
+ChunkDescriptions HTKDataDeserializer::GetChunkDescriptions()
 {
-    return m_sequences;
+    ChunkDescriptions chunks;
+    chunks.reserve(m_chunks.size());
+
+    for (size_t i = 0; i < m_chunks.size(); ++i)
+    {
+        auto cd = make_shared<ChunkDescription>();
+        cd->m_id = i;
+        cd->m_numberOfSamples = m_chunks[i].GetTotalFrames();
+        // In frame mode, each frame is represented as sequence.
+        // The augmentation is still done for frames in the same sequence only, please see GetSequenceById method.
+        cd->m_numberOfSequences = m_frameMode ? m_chunks[i].GetTotalFrames() : m_chunks[i].GetNumberOfUtterances();
+        chunks.push_back(cd);
+    }
+    return chunks;
 }
 
-std::vector<StreamDescriptionPtr> HTKDataDeserializer::GetStreamDescriptions() const
+// Gets sequences for a particular chunk.
+// This information is used by the randomizer to fill in current windows of sequences.
+void HTKDataDeserializer::GetSequencesForChunk(size_t chunkId, vector<SequenceDescription>& result)
 {
-    return m_streams;
+    const HTKChunkDescription& chunk = m_chunks[chunkId];
+    result.reserve(chunk.GetTotalFrames());
+    size_t offsetInChunk = 0;
+    for (size_t i = 0; i < chunk.GetNumberOfUtterances(); ++i)
+    {
+        auto utterance = chunk.GetUtterance(i);
+        size_t major = utterance->GetId();
+
+        if (m_frameMode)
+        {
+            // Because it is a frame mode, creating a sequence for each frame.
+            for (size_t k = 0; k < utterance->GetNumberOfFrames(); ++k)
+            {
+                SequenceDescription f;
+                f.m_chunkId = chunkId;
+                f.m_key.m_major = major;
+                f.m_key.m_minor = k;
+                f.m_id = offsetInChunk++;
+                f.m_isValid = true;
+                f.m_numberOfSamples = 1;
+                result.push_back(f);
+            }
+        }
+        else
+        {
+            // Creating sequence description per utterance.
+            SequenceDescription f;
+            f.m_chunkId = chunkId;
+            f.m_key.m_major = major;
+            f.m_key.m_minor = 0;
+            f.m_id = offsetInChunk++;
+            f.m_isValid = true;
+            f.m_numberOfSamples = utterance->GetNumberOfFrames();
+            result.push_back(f);
+        }
+    }
 }
 
 // A wrapper around a matrix that views it as a vector of column vectors.
 // Does not have any memory associated.
-class MatrixAsVectorOfVectors 
+class MatrixAsVectorOfVectors
 {
 public:
     MatrixAsVectorOfVectors(msra::dbn::matrixbase& m)
@@ -210,8 +254,6 @@ private:
 // It is up to the randomizer to decide when to release a particular chunk.
 class HTKDataDeserializer::HTKChunk : public Chunk
 {
-    HTKDataDeserializer* m_parent;
-    size_t m_chunkId;
 public:
     HTKChunk(HTKDataDeserializer* parent, size_t chunkId) : m_parent(parent), m_chunkId(chunkId)
     {
@@ -225,18 +267,26 @@ public:
         });
     }
 
-    virtual std::vector<SequenceDataPtr> GetSequence(size_t sequenceId) override
+    // Gets data for the sequence.
+    virtual void GetSequence(size_t sequenceId, vector<SequenceDataPtr>& result) override
     {
-        return m_parent->GetSequenceById(sequenceId);
+        m_parent->GetSequenceById(m_chunkId, sequenceId, result);
     }
 
+    // Unloads the data from memory.
     ~HTKChunk()
     {
         auto& chunkDescription = m_parent->m_chunks[m_chunkId];
         chunkDescription.ReleaseData();
     }
+
+private:
+    DISABLE_COPY_AND_MOVE(HTKChunk);
+    HTKDataDeserializer* m_parent;
+    size_t m_chunkId;
 };
 
+// Gets a data chunk with the specified chunk id.
 ChunkPtr HTKDataDeserializer::GetChunk(size_t chunkId)
 {
     if (!m_weakChunks[chunkId].expired())
@@ -244,86 +294,125 @@ ChunkPtr HTKDataDeserializer::GetChunk(size_t chunkId)
         return m_weakChunks[chunkId].lock();
     }
 
-    auto chunk = std::make_shared<HTKChunk>(this, chunkId);
+    auto chunk = make_shared<HTKChunk>(this, chunkId);
     m_weakChunks[chunkId] = chunk;
     return chunk;
 };
 
-struct HTKSequenceData : DenseSequenceData
+// A matrix that stores all samples of a sequence without padding (differently from ssematrix).
+// The number of columns equals the number of samples in the sequence.
+// The number of rows equals the size of the feature vector of a sample (= dimensions).
+class FeatureMatrix
 {
-    msra::dbn::matrix m_buffer;
-
-    ~HTKSequenceData()
+public:
+    FeatureMatrix(size_t numRows, size_t numColumns) : m_numRows(numRows), m_numColumns(numColumns)
     {
-        msra::dbn::matrixstripe frame(m_buffer, 0, m_buffer.cols());
-        if (m_data != &frame(0, 0))
-        {
-            delete[] reinterpret_cast<double*>(m_data);
-            m_data = nullptr;
-        }
+        m_data.resize(m_numRows * m_numColumns);
     }
+
+    // Returns a reference to the column.
+    inline array_ref<float> col(size_t column)
+    {
+        return array_ref<float>(m_data.data() + m_numRows * column, m_numRows);
+    }
+
+    // Gets pointer to the data.
+    inline float* GetData()
+    {
+        return m_data.data();
+    }
+
+    // Gets the number of columns. It equals the number of samples in the sequence/utterance.
+    inline size_t GetNumberOfColumns() const
+    {
+        return m_numColumns;
+    }
+
+    // Gets total size in elements of stored features.
+    inline size_t GetTotalSize() const
+    {
+        return m_data.size();
+    }
+
+private:
+    // Features
+    std::vector<float> m_data;
+    // Number of rows = dimension of the feature
+    size_t m_numRows;
+    // Number of columns = number of samples in utterance.
+    size_t m_numColumns;
 };
 
-typedef std::shared_ptr<HTKSequenceData> HTKSequenceDataPtr;
-
-std::vector<SequenceDataPtr> HTKDataDeserializer::GetSequenceById(size_t id)
+// This class stores sequence data for HTK for floats.
+struct HTKFloatSequenceData : DenseSequenceData
 {
-    const auto& frame = m_frames[id];
-    UtteranceDescription* utterance = frame.m_utterence;
+    HTKFloatSequenceData(FeatureMatrix&& data) : m_buffer(data)
+    {
+        m_numberOfSamples = data.GetNumberOfColumns();
+        m_data = m_buffer.GetData();
+    }
 
-    const auto& chunkDescription = m_chunks[utterance->m_chunkId];
-    auto utteranceFrames = chunkDescription.GetUtteranceFrames(utterance->GetIndexInsideChunk());
+private:
+    FeatureMatrix m_buffer;
+};
+
+// This class stores sequence data for HTK for doubles.
+struct HTKDoubleSequenceData : DenseSequenceData
+{
+    HTKDoubleSequenceData(FeatureMatrix& data) : m_buffer(data.GetData(), data.GetData() + data.GetTotalSize())
+    {
+        m_numberOfSamples = data.GetNumberOfColumns();
+        m_data = m_buffer.data();
+    }
+
+private:
+    std::vector<double> m_buffer;
+};
+
+// Get a sequence by its chunk id and sequence id.
+// Sequence ids are guaranteed to be unique inside a chunk.
+void HTKDataDeserializer::GetSequenceById(size_t chunkId, size_t id, vector<SequenceDataPtr>& r)
+{
+    const auto& chunkDescription = m_chunks[chunkId];
+    size_t utteranceIndex = m_frameMode ? chunkDescription.GetUtteranceForChunkFrameIndex(id) : id;
+    const UtteranceDescription* utterance = chunkDescription.GetUtterance(utteranceIndex);
+    auto utteranceFrames = chunkDescription.GetUtteranceFrames(utteranceIndex);
 
     // wrapper that allows m[j].size() and m[j][i] as required by augmentneighbors()
     MatrixAsVectorOfVectors utteranceFramesWrapper(utteranceFrames);
+    FeatureMatrix features(m_dimension, m_frameMode ? 1 : utterance->GetNumberOfFrames());
 
-    size_t leftExtent = m_augmentationWindow.first;
-    size_t rightExtent = m_augmentationWindow.second;
-
-    // page in the needed range of frames
-    if (leftExtent == 0 && rightExtent == 0)
+    if (m_frameMode)
     {
-        leftExtent = rightExtent = msra::dbn::augmentationextent(utteranceFramesWrapper[0].size(), m_dimension);
-    }
-
-    HTKSequenceDataPtr result = std::make_shared<HTKSequenceData>();
-    result->m_buffer.resize(m_dimension, 1);
-    const std::vector<char> noBoundaryFlags; // dummy
-    msra::dbn::augmentneighbors(utteranceFramesWrapper, noBoundaryFlags, frame.m_frameIndex, leftExtent, rightExtent, result->m_buffer, 0);
-
-    result->m_numberOfSamples = frame.m_numberOfSamples;
-    msra::dbn::matrixstripe stripe(result->m_buffer, 0, result->m_buffer.cols());
-    const size_t dimensions = stripe.rows();
-
-    if (m_elementType == ElementType::tfloat)
-    {
-        result->m_data = &stripe(0, 0);
+        // For frame mode augment a single frame.
+        size_t frameIndex = id - utterance->GetStartFrameIndexInsideChunk();
+        msra::dbn::augmentneighbors(utteranceFramesWrapper, vector<char>(), frameIndex, m_augmentationWindow.first, m_augmentationWindow.second, features, 0);
     }
     else
     {
-        assert(m_elementType == ElementType::tdouble);
-        double *doubleBuffer = new double[dimensions];
-        const float *floatBuffer = &stripe(0, 0);
-
-        for (size_t i = 0; i < dimensions; i++)
+        // Augment complete utterance.
+        for (size_t frameIndex = 0; frameIndex < utterance->GetNumberOfFrames(); ++frameIndex)
         {
-            doubleBuffer[i] = floatBuffer[i];
+            msra::dbn::augmentneighbors(utteranceFramesWrapper, vector<char>(), frameIndex, m_augmentationWindow.first, m_augmentationWindow.second, features, frameIndex);
         }
-
-        result->m_data = doubleBuffer;
     }
 
-    return std::vector<SequenceDataPtr>(1, result);
+    // Copy features to the sequence depending on the type.
+    DenseSequenceDataPtr result;
+    if (m_elementType == ElementType::tdouble)
+    {
+        result = make_shared<HTKDoubleSequenceData>(features);
+    }
+    else if (m_elementType == ElementType::tfloat)
+    {
+        result = make_shared<HTKFloatSequenceData>(std::move(features));
+    }
+    else
+    {
+        LogicError("Currently, HTK Deserializer supports only double and float types.");
+    }
+
+    r.push_back(result);
 }
 
-const SequenceDescription* HTKDataDeserializer::GetSequenceDescriptionByKey(const KeyType&)
-{
-    LogicError("HTKDataDeserializer::GetSequenceDescriptionByKey: currently not implemented. Supported only as a primary deserializer.");
-}
-
-size_t HTKDataDeserializer::GetTotalNumberOfChunks()
-{
-    return m_chunks.size();
-}
-
-} } }
+}}}

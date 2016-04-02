@@ -11,6 +11,7 @@
 #include "Sequences.h"
 #include "TensorShape.h"
 #include "MatrixPool.h"
+#include "ComputationEnvironment.h"
 
 #include <unordered_set>
 #include <map>
@@ -31,13 +32,12 @@
 #define CNTK_MODEL_VERSION_1 1
 #define CNTK_MODEL_VERSION_2 2
 #define CNTK_MODEL_VERSION_3 3
-#define CURRENT_CNTK_MODEL_VERSION CNTK_MODEL_VERSION_3
+#define CNTK_MODEL_VERSION_4 4 // PastValue
+#define CNTK_MODEL_VERSION_5 5 // ND convolution and pooling
+#define CNTK_MODEL_VERSION_6 6 // Batch norm blending
+#define CURRENT_CNTK_MODEL_VERSION CNTK_MODEL_VERSION_6
 
 extern bool g_shareNodeValueMatrices;
-
-#ifndef UNREFERENCED_PARAMETER // TODO: unify with UNUSED()
-#define UNREFERENCED_PARAMETER(P) (P)
-#endif
 
 // helper mode for debugging
 // If TRACK_GAP_NANS is defined then initialize layout gaps to NaN and do NaN checks. Also do detailed logging of node computations.
@@ -108,7 +108,7 @@ struct /*interface*/ IComputationNode
 
     // --- optional overrides for more informative logging
 
-    virtual void PrintSelfBeforeValidation() const = 0; // called in validation loop right before Validate()
+    virtual std::string FormatOperationPrototype(const std::string& extraArgs) const = 0; // format the operation into a "prototype" (listing dimensions and parameters)
     virtual void DumpNodeInfo(const bool /*printValues*/, const bool /*printMetadata*/, File& fstream) const = 0;
 
 protected:
@@ -161,6 +161,15 @@ struct ComputationNetworkOwnedNodeState
     virtual void MarkValueNonSharable() { m_valueSharable = false; }
     virtual void MarkValueSharable() { m_valueSharable = true; }
     bool IsValueSharable() const { return m_valueSharable; }
+
+    // tracing flags
+    // Enable to print the value of the function-value matrix in somewhat readable format.
+    // These are public since you are meant to set these flags manually in the debugger or temporarily poke into them from code as needed.
+    bool m_traceNodeValue = false;
+    bool m_traceNodeValueAsCategoryLabel = false;
+    size_t m_traceNodeValueUpToDim = 3; // 3 should be enough to see simple patterns such as all values are identical or out of range
+    size_t m_traceNodeValueUpToT = 8;   // 8 time steps fit comfortably into a normal-sized console
+    void EnableNodeTracing(bool isCategoryLabel) { m_traceNodeValue = true; m_traceNodeValueAsCategoryLabel = isCategoryLabel; }
 
 protected:                // TODO: should be fully encapsulated here
 
@@ -267,6 +276,7 @@ public:
     ComputationNodeBase(DEVICEID_TYPE deviceId, const wstring& name)
         : m_deviceId(deviceId), m_outputNeededDuringBackprop(true), m_learningRateMultiplier(0), m_gradientInitialized(false), m_nodeName(name == L"" ? CreateUniqNodeName() : name)
     {
+        // TODO: should m_learningRateMultiplier be set to 0? Or should every node have a way to add its own say on the learning rate for all its inputs?
     }
     virtual ~ComputationNodeBase()
     {
@@ -404,9 +414,9 @@ private:
     void CheckTensorIsMatrix() const
     {
         if (HasMBLayout())
-            LogicError("%ls %ls operation: Minibatch data cannot be interpreted as a single 2D tensor.", NodeName().c_str(), OperationName().c_str());
+            LogicError("%ls: Minibatch data cannot be interpreted as a single 2D tensor.", NodeDescription().c_str());
         else if (m_sampleLayout.GetRank() < 1 || m_sampleLayout.GetRank() > 2) // note: scalars are not stored as tensors of rank 0, but rather as 1-dim vectors. TODO: clean this up some day
-            LogicError("%ls %ls operation: Sample [%s] is not a column vector or matrix (1D or 2D tensor).", NodeName().c_str(), OperationName().c_str(), string(m_sampleLayout).c_str());
+            LogicError("%ls: Sample [%s] is not a column vector or matrix (1D or 2D tensor).", NodeDescription().c_str(), string(m_sampleLayout).c_str());
     }
 public:
     size_t GetAsMatrixNumRows() const
@@ -425,7 +435,7 @@ public:
     void SetDims(const TensorShape& sampleLayout, bool isMinibatch)
     {
         if (HasMBLayout() != isMinibatch)
-            LogicError("SetDims: MBLayout must be set first, before calling this function, for %ls %ls operation.", NodeName().c_str(), OperationName().c_str());
+            LogicError("%ls: SetDims: MBLayout must be set first, before calling this function.", NodeDescription().c_str());
         m_sampleLayout = sampleLayout;
     }
     // copy dimensions (rows, cols, sample layout) from another node
@@ -444,8 +454,8 @@ public:
     {
         if (m_sampleLayout.GetDims() != shape.GetDims() || HasMBLayout() != isMinibatch)
         {
-            LogicError("VerifyDims: %ls %ls operation expected a %s of [%s], but it is a %s of [%s]",
-                       NodeName().c_str(), OperationName().c_str(),
+            LogicError("%ls: VerifyDims: Expected a %s of [%s], but it is a %s of [%s]",
+                       NodeDescription().c_str(),
                        isMinibatch ? "minibatch" : "tensor", string(shape).c_str(),
                        HasMBLayout() ? "minibatch" : "tensor", string(m_sampleLayout).c_str());
         }
@@ -479,7 +489,7 @@ protected: public: // ...the following should be protected, but nodes inquire ab
     size_t GetNumTimeSteps() const
     {
         if (!m_pMBLayout)
-            LogicError("GetNumTimeSteps: invalid to call on a node without MB layout"); // since it has no notion of time
+            LogicError("%ls: GetNumTimeSteps: invalid to call on a node without MB layout", NodeDescription().c_str()); // since it has no notion of time
         return m_pMBLayout->GetNumTimeSteps();
     }
 
@@ -583,7 +593,7 @@ public:
     /*HasName::*/ void SetName(const std::wstring& newName) override // also for use by ExperimentalNetworkBuilder
     {
         m_nodeName = newName;
-        fprintf(stderr, "Node --> %ls = %ls\n", NodeName().c_str(), OperationName().c_str()), fflush(stderr);
+        //fprintf(stderr, "Node --> %ls : %ls\n", NodeName().c_str(), OperationName().c_str()), fflush(stderr);
     }
 
     bool NeedsGradient() const { return m_needsGradient; }
@@ -591,7 +601,7 @@ public:
     void SetLearningRateMultiplier(float f) 
     { 
         if (f < 0)
-            InvalidArgument("LearningRateMultiplier should be non-negative. You are tring to set it to %f.", f);
+            InvalidArgument("%ls: LearningRateMultiplier should be non-negative. You are tring to set it to %f.", NodeDescription().c_str(), f);
         m_learningRateMultiplier = f; 
     }
     float GetLearningRateMultiplier() const { return m_learningRateMultiplier; }
@@ -599,6 +609,14 @@ public:
 
     // return true if the node's value should be computed before the normal training. e.g., mean and invStd of input features.
     virtual bool /*IComputationNode::*/ RequiresPreCompute() const { return false; }
+
+    const ComputationEnvironment& Environment() const
+    {
+        if (!m_environment)
+            LogicError("Environment: No environment has been set.");
+        return *m_environment;
+    }
+    void SetEnvironment(ComputationEnvironmentPtr environment) { m_environment = environment; }
 
     // -----------------------------------------------------------------------
     // validation
@@ -611,14 +629,14 @@ public:
         for (size_t i = 0; i < m_inputs.size(); i++)
         {
             if (!m_inputs[i])
-                RuntimeError("Validate: Input [%d] of %ls node '%ls' is empty (NULL, not connected).", (int) i, OperationName().c_str(), NodeName().c_str());
+                RuntimeError("%ls: Validate: Input [%d] is empty (NULL, not connected).", NodeDescription().c_str(), (int)i);
         }
         // check for empty inputs
         if (isFinalValidationPass)
         {
             for (const auto& child : m_inputs)
                 if (child->GetSampleMatrixNumRows() == 0)
-                    RuntimeError("%ls %ls operation: input %ls %ls has 0 elements.", NodeName().c_str(), OperationName().c_str(), child->NodeName().c_str(), child->OperationName().c_str());
+                    RuntimeError("%ls: input %ls %ls has 0 elements.", NodeDescription().c_str(), child->NodeName().c_str(), child->OperationName().c_str());
         }
     }
 
@@ -761,7 +779,7 @@ public:
     {
         auto p = dynamic_cast<N*>(this);
         if (!p)
-            LogicError("Attempted to type-cast node %ls %ls to %s, which is not possible.", NodeName().c_str(), OperationName().c_str(), typeid(N).name());
+            LogicError("%ls: Attempted to type-cast node to %s, which is not possible.", NodeDescription().c_str(), typeid(N).name());
         return p;
     }
     template <typename N>
@@ -777,41 +795,18 @@ public:
     virtual void PrintSelf(bool printMatrices = false) const = 0;
 
     // called in validation loop right before Validate()
-    virtual void /*IComputationNode::*/ PrintSelfBeforeValidation() const
-    {
-        fprintf(stderr, "\nValidating --> %ls = %ls", NodeName().c_str(), OperationName().c_str());
-
-        if (!IsLeaf())
-        {
-            fprintf(stderr, "(");
-            for (size_t i = 0; i < GetNumInputs(); i++)
-            {
-                const auto& child = m_inputs[i];
-                if (i > 0)
-                    fprintf(stderr, ", ");
-
-                if (child == nullptr)
-                {
-                    fprintf(stderr, "NULL");
-                    continue;
-                }
-
-                const char* mbSizeMark = child->m_pMBLayout ? " x *" : "";
-                if (child->m_sampleLayout.GetRank() == 3 && (child->m_sampleLayout[1] != 1 || child->m_sampleLayout[0] != 1)) // looks like an image: use WHC notation
-                    fprintf(stderr, "%ls[%s%s {W=%lu, H=%lu, C=%lu}]", child->NodeName().c_str(), string(child->m_sampleLayout).c_str(), mbSizeMark,
-                            child->m_sampleLayout[1], child->m_sampleLayout[2], child->m_sampleLayout[0]);
-                // BUGBUG: This ^^ will print based on the old legacy layout, and we have no way of knowing here whether that is correct.
-                else
-                    fprintf(stderr, "%ls[%s%s]", child->NodeName().c_str(), string(child->m_sampleLayout).c_str(), mbSizeMark);
-            }
-            fprintf(stderr, ")");
-        }
-    }
+    virtual std::string /*IComputationNode::*/ FormatOperationPrototype(const std::string& extraArgs) const;
 
     // helper for topology plot: enumerate arcs that can be reached starting from the current node's children
     typedef std::pair<ComputationNodeBasePtr, ComputationNodeBasePtr> ComputationArc;
     // TODO: This should be a method of ComputationNetwork, not ComputationNode.
     void EnumerateArcs(std::unordered_set<ComputationNodeBasePtr>& visited, std::list<ComputationArc>& arcs);
+
+    // Helper for generating error messages and the like
+    const std::wstring NodeDescription() const
+    { 
+        return std::wstring(L"Node '") + NodeName().c_str() + L"' (" + OperationName().c_str() + L" operation)"; 
+    };
 
 protected:
 
@@ -834,6 +829,10 @@ protected:
     // For nodes that do not carry data, the last tensor index of m_sampleLayout is the number of columns.
     TensorShape m_sampleLayout; // sample layout
     MBLayoutPtr m_pMBLayout;
+
+    // environment information
+    // This structure is shared with the ComputationNetwork that this node lives in
+    ComputationEnvironmentPtr m_environment;
 
     // flags related to gradient propagation
     float m_learningRateMultiplier;    // update parameters? Only used for LearnableParameters.    --TODO: Should we make this a member of LearnableParameters actually? And require a type cast? Currently it is read out for all leaves.
@@ -1076,6 +1075,12 @@ public:
         MaskMissingColumnsToZero(*m_gradient, m_pMBLayout, fr);
     }
 
+    // for index vectors: Invalid entries must be set to -1.
+    void MaskMissingValueColumnsTo(const FrameRange& fr, ElemType val)
+    {
+        MaskMissingColumnsTo(*m_value, m_pMBLayout, fr, val);
+    }
+
     // for debugging, set the gaps to NaN instead (to track whether it bubbles up somewhere)
     void InvalidateMissingValueColumns(const FrameRange& fr) override final
     {
@@ -1098,6 +1103,7 @@ public:
     MatrixBasePtr ValuePtr() const override final { return m_value; }    // readers want this as a shared_ptr straight
     // Note: We cannot return a const& since returning m_value as a MatrixBasePtr is a type cast that generates a temporary. Interesting.
 
+    MatrixBasePtr GradientPtr() const { return m_gradient; }
     const Matrix<ElemType>& Gradient() const { return *m_gradient; }
     Matrix<ElemType>&       Gradient()       { return *m_gradient; }
 
@@ -1118,7 +1124,7 @@ private:
     __declspec_noreturn
     void Rethrow(const std::exception & e)
     {
-        string what = msra::strfun::strprintf("%s, for %ls %ls operation.", e.what(), NodeName().c_str(), OperationName().c_str());
+        string what = msra::strfun::strprintf("%ls: %s", NodeDescription().c_str(), e.what());
         RethrowAs<std::runtime_error>   (e, what);
         RethrowAs<std::logic_error>     (e, what);
         RethrowAs<std::invalid_argument>(e, what);
@@ -1291,11 +1297,11 @@ public:
         VerifyDataSize(Value());
     }
 
-#ifdef _DEBUG
     // NaN checks
     virtual void /*IComputationNode::*/ EndForwardProp() override
     {
         Base::EndForwardProp();
+#ifdef _DEBUG
 #ifdef TRACK_GAP_NANS
         MaskMissingValueColumnsToZero(FrameRange(m_pMBLayout)); // HasNaN() operates on a whole matrix, so first flatten all gaps to 0
         if (Value().HasNan("EndForwardProp"))
@@ -1306,8 +1312,10 @@ public:
         Value().Print(msra::strfun::utf8(NodeName()), 0, min(Value().GetNumRows()-1, 4), 0, min(Value().GetNumCols()-1, 4));
 #endif
         InvalidateMissingValueColumns(FrameRange(m_pMBLayout)); // blast NaNs into columns that are gaps in a packed layout
-    }
 #endif
+        // tracing
+        Trace();
+    }
 
 #if 0   // (keep it around in case we need to add stuff in the future)
         virtual void /*IComputationNode::*/BeginBackprop() override
@@ -1337,41 +1345,7 @@ public:
 
     // this is the entry point from Network; while it will call virtual BackpropTo() into the actual node implementation
     // TODO: move to -Base (or -Network?)
-    void Backprop(const FrameRange& fr, bool childrenInThisLoop, bool childrenInOuterLoop) override
-    {
-        if (fr.IsAllFrames() && IsPartOfLoop() && childrenInThisLoop)
-            LogicError("%ls %ls operation: Backprop called with whole-batch FrameRange on node that participates in a loop", NodeName().c_str(), OperationName().c_str());
-
-        for (size_t i = 0; i < m_inputs.size(); i++)
-        {
-            ComputationNodePtr child = Input(i);
-            if (child->m_needsGradient &&
-                (childrenInThisLoop && child->IsPartOfLoop() == IsPartOfLoop() ||
-                 childrenInOuterLoop && child->IsPartOfLoop() != IsPartOfLoop()))
-            {
-                // fprintf(stderr, "Backprop: %ls %ls operation -> child %d %ls %ls\n", NodeName().c_str(), OperationName().c_str(), (int)i, child->NodeName().c_str(), child->OperationName().c_str());
-                if (!m_needsGradient)
-                    LogicError("%ls %ls operation has m_needsGradient set to false but children require it.", NodeName().c_str(), OperationName().c_str());
-
-#if DUMPOUTPUT
-                fprintf(stderr, "Backprop%d_%ls\n", i, NodeName().c_str());
-#endif
-                child->LazyZeroGradient(); // set gradient to 0 if this is the first time
-
-                // If we propagate from a loop to a node that is outside the loop, we are not efficient.
-                // This case is handled by SEQTraversalFlowControlNode::Backprop().
-                // The check below is to verify that.
-                if (IsPartOfLoop() && !child->IsPartOfLoop() && !fr.IsAllFrames())
-                {
-                    LogicError("Backprop: Inefficiency: %ls %ls operation in loop propagates gradient to non-loop %ls %ls\n",
-                               NodeName().c_str(), OperationName().c_str(), child->NodeName().c_str(), child->OperationName().c_str());
-                }
-
-                // fprintf(stderr, "BackpropTo %d %d %ls %ls\n", (int)fr.timeIdxInSeq, (int)i, NodeName().c_str(), OperationName().c_str());
-                BackpropTo(i, fr); // this computes partial wrt to the child and sums the gradient value in the child
-            }
-        }
-    }
+    void Backprop(const FrameRange& fr, bool childrenInThisLoop, bool childrenInOuterLoop) override;
 
     // TODO: why of the inputs, and not the node itself?
     void /*ComputationNodeBase::*/ ZeroGradientsOfInputs() override // clears the lazy-init flags (LazyZeroGradient() actually clears the values lazily)
@@ -1490,9 +1464,28 @@ public:
 
     virtual void DumpNodeInfo(const bool /*printValues*/, const bool /*printMetadata*/, File& fstream) const;
 
+    // helper for SimpleOutWriter, living in here to be able to use in debugging
+    void WriteMinibatchWithFormatting(FILE* f, size_t onlyUpToRow, size_t onlyUpToT, bool transpose, bool isCategoryLabel, 
+                                      const std::vector<std::string>& labelMapping, const std::string& sequenceSeparator, 
+                                      const std::string& sequencePrologue, const std::string& sequenceEpilogue, const std::string& elementSeparator,
+                                      const std::string& sampleSeparator, const std::string& valueFormatString,
+                                      bool outputGradient = false) const;
+
+    void Trace()
+    {
+        if (m_traceNodeValue)
+        {
+            fprintf(stderr, "Trace --> %s\n", FormatOperationPrototype("").c_str());
+            WriteMinibatchWithFormatting(stderr, m_traceNodeValueUpToDim, m_traceNodeValueUpToT, false/*transpose*/, m_traceNodeValueAsCategoryLabel, std::vector<std::string>(),
+                                         ""/*sequenceSeparator*/, "  "/*sequencePrologue*/, "\n"/*sequenceEpilogue*/, " "/*elementSeparator*/, "\n  "/*sampleSeparator*/,
+                                         "%13.10f"/*valueFormatString*/);
+        }
+    }
+
 protected:
 
     // print node values
+    // This is used for dumping model parameters, not minibatch data.
     void PrintNodeValuesToFile(const bool printValues, const bool printMetadata, File& fstream) const
     {
         if (printValues)
@@ -1634,14 +1627,14 @@ public:
         if (fr.IsAllFrames())
             ForwardPropNonLooping();
         else
-            LogicError("%s node should never be in a loop.", typeid(*this).name());
+            LogicError("%ls: %s node should never be in a loop.", Base::NodeDescription().c_str(), typeid(*this).name());
     }
     void BackpropTo(const size_t inputIndex, const FrameRange& fr) override final
     {
         if (fr.IsAllFrames())
             BackpropToNonLooping(inputIndex);
         else
-            LogicError("%s node should never be in a loop.", typeid(*this).name());
+            LogicError("%ls: %s node should never be in a loop.", Base::NodeDescription().c_str(), typeid(*this).name());
     }
 
     // non-looping node types instead implement these functions
@@ -1688,7 +1681,7 @@ public:
     virtual std::wstring ToString(void) const override { NOT_IMPLEMENTED; }
     // these are meant to be called during computation, so provide dummy implementations
     virtual bool RequiresPreCompute() const override { return false; } // return true if the node's value should be computed before the normal training. e.g., mean and invStd of input features.
-    virtual void PrintSelfBeforeValidation() const override { }
+    virtual std::string FormatOperationPrototype(const std::string& extraArgs) const override { return ""; }
     virtual void DumpNodeInfo(const bool /*printValues*/, const bool /*printMetadata*/, File& fstream) const override {}
 
 protected: public:                                     // needed in ComputationNetwork::FindInRecurrentLoops(), which really should be part of SEQTraversalFlowControlNode
@@ -1776,6 +1769,7 @@ protected:                                                                      
     using Base::DetermineElementwiseTensorRank;                                                                                                          \
     using Base::DumpNodeInfo;                                                                                                                            \
     using Base::EnumerateNodes;                                                                                                                          \
+    using Base::Environment;                                                                                                                             \
     using Base::ForwardProp;                                                                                                                             \
     using Base::GetAsMatrixNumCols;                                                                                                                      \
     using Base::GetAsMatrixNumRows;                                                                                                                      \
@@ -1813,9 +1807,10 @@ protected:                                                                      
     using Base::MaskedGradientFor;                                                                                                                       \
     using Base::MaskedValueFor;                                                                                                                          \
     using Base::MarkValueNonSharable;                                                                                                                    \
+    using Base::NodeDescription;                                                                                                                         \
     using Base::OutputUsedInComputingInputNodesGradients;                                                                                                \
     using Base::PrintNodeValuesToFile;                                                                                                                   \
-    using Base::PrintSelfBeforeValidation;                                                                                                               \
+    using Base::FormatOperationPrototype;                                                                                                               \
     using Base::ReleaseMatricesAfterBackprop;                                                                                                            \
     using Base::ReleaseMatricesAfterForwardProp;                                                                                                         \
     using Base::ReleaseMatrixToPool;                                                                                                                     \
@@ -1952,4 +1947,5 @@ public:
 #define UsingBinaryElementwiseNodeBaseMembers UsingComputationNodeMembersBoilerplate;
 
 #pragma endregion base computation class
-} } }
+
+}}}

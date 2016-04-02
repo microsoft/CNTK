@@ -95,12 +95,13 @@ Eval<ElemType>::~Eval()
     }
 }
 
-// LoadModel - load a model from the specified path
-// modelFileName - file holding the model to load
+
+// CreateNetwork - create the network from the specified description
+// networkDescription - network description
 template <class ElemType>
-void Eval<ElemType>::LoadModel(const std::wstring& modelFileName)
+void Eval<ElemType>::CreateNetwork(const std::string& networkDescription)
 {
-    m_eval->LoadModel(modelFileName);
+    m_eval->CreateNetwork(networkDescription);
 }
 
 // GetNodeDimensions - Get the node dimensions of the specified nodes
@@ -127,6 +128,14 @@ template <class ElemType>
 void Eval<ElemType>::Evaluate(std::map<std::wstring, std::vector<ElemType>*>& inputs, std::map<std::wstring, std::vector<ElemType>*>& outputs)
 {
     m_eval->Evaluate(inputs, outputs);
+}
+
+// Evaluate - Evaluate using the network without input and provide the outputs
+// outputs - map from node name to output vector, outputs vectors need to be preallocated by caller, sizing will happen during evaluation
+template <class ElemType>
+void Eval<ElemType>::Evaluate(std::map<std::wstring, std::vector<ElemType>*>& outputs)
+{
+    m_eval->Evaluate(outputs);
 }
 
 // ResetState - Reset the cell state when we get the start of an utterance

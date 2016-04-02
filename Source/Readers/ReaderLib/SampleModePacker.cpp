@@ -76,7 +76,6 @@ Minibatch SampleModePacker::ReadMinibatch()
     {
         auto stream = std::make_shared<StreamMinibatch>();
         stream->m_data = m_streamBuffers[i].get();
-        stream->m_dataSize = sequences.m_data[i].size() * GetSampleSize(m_outputStreams[i]);
         stream->m_layout = m_minibatchLayout;
 
         minibatch.m_data.push_back(stream);
@@ -104,16 +103,15 @@ void SampleModePacker::CopySequenceToBuffer(SequenceDataPtr sample, size_t strea
 
     if (stream->m_storageType == StorageType::dense)
     {
-        auto data = reinterpret_cast<DenseSequenceData&>(*sample);
         // Expect single sample.
-        assert(data.m_numberOfSamples == 1);
+        assert(reinterpret_cast<DenseSequenceData&>(*sample).m_numberOfSamples == 1);
 
         // Copying the sequence to its position in the buffer. Effectivly a buffer contains concatenation of samples for a stream.
         std::copy(sampleData, sampleData + sampleSize, buffer + sampleIndex * sampleSize);
     }
     else if (stream->m_storageType == StorageType::sparse_csc)
     {
-        auto data = reinterpret_cast<SparseSequenceData&>(*sample);
+        const auto& data = reinterpret_cast<SparseSequenceData&>(*sample);
         // Expect single sample.
         assert(data.m_indices.size() == 1);
 

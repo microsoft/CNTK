@@ -74,10 +74,11 @@ private:
     mutable int m_devicesTransferedTo[2]; // TODO: what is this for? Seems only diagnostics
 
     // Moves matrix from device id_from to device with id_to. This method doesn't change preferred device Id
-    void _transferFromDeviceToDevice(int id_from, int id_to, bool ismoved = true, bool emptyTransfer = false) const;
+    void _transferFromDeviceToDevice(int id_from, int id_to, bool isBeingMoved = true, bool emptyTransfer = false) const;
     // Moves matrix from current device to device with id_to. This method doesn't change preferred device Id
-    void _transferToDevice(int id_to, bool ismoved = true, bool emptyTransfer = false) const;
-    static void DecideAndMoveToRightDevice(const Matrix<ElemType>& a, const Matrix<ElemType>& b);
+    void _transferToDevice(int id_to, bool isBeingMoved = true, bool emptyTransfer = false) const;
+    template <class ElemType2>
+    static void DecideAndMoveToRightDevice(const Matrix<ElemType>& a, const Matrix<ElemType2>& b);
     static void DecideAndMoveToRightDevice(const Matrix<ElemType>& a, const Matrix<ElemType>& b, const Matrix<ElemType>& c);
     static void DecideAndMoveToRightDevice(const Matrix<ElemType>& a, const Matrix<ElemType>& b, const Matrix<ElemType>& c, const Matrix<ElemType>& d);
     static void CopyElementsFromDenseToSparse(CPUMatrix<ElemType>& from, CPUSparseMatrix<ElemType>& dest);
@@ -124,32 +125,17 @@ private:
     void ShallowCopyFrom(const Matrix<ElemType>& other);
 
 public:
-    MatrixType GetMatrixType() const
-    {
-        return m_matrixType;
-    }
-    MatrixFormat GetFormat() const
-    {
-        return m_baseMatrix->GetFormat();
-    }
-    bool OwnBuffer() const
-    {
-        return m_baseMatrix->OwnBuffer();
-    }
+    MatrixType GetMatrixType() const { return m_matrixType; }
+    MatrixFormat GetFormat() const { return m_baseMatrix->GetFormat(); }
+    bool OwnBuffer() const { return m_baseMatrix->OwnBuffer(); }
     int GetDeviceId() const; // -1 if CPU, otherwise GPU CUDA device id
-    DEVICEID_TYPE GetPreferredDeviceId() const
-    {
-        return m_preferredDeviceId;
-    }; // -1 if CPU, otherwise GPU CUDA device id
-    void SetPreferredDeviceId(DEVICEID_TYPE preferredDeviceId)
-    {
-        m_preferredDeviceId = preferredDeviceId;
-    }
+    DEVICEID_TYPE GetPreferredDeviceId() const { return m_preferredDeviceId; }; // -1 if CPU, otherwise GPU CUDA device id
+    void SetPreferredDeviceId(DEVICEID_TYPE preferredDeviceId) { m_preferredDeviceId = preferredDeviceId; }
     // Moves matrix from device id_from to device with id_to.
     // If emptyTransfer=true, then no data is ever moved, just corresponding GPU/CPU matrices are deleted and then created using empty constructor
-    void TransferFromDeviceToDevice(int id_from, int id_to, bool ismoved = false, /*if false then keep source and set location to BOTH*/ bool emptyTransfer = false, bool updatePreferredDevice = true) const;
+    void TransferFromDeviceToDevice(int id_from, int id_to, bool isBeingMoved = false, /*if false then keep source and set location to BOTH*/ bool emptyTransfer = false, bool updatePreferredDevice = true) const;
     // Same as TransferFromDeviceToDevice() but moves only if it is currently not on the target device
-    void TransferToDeviceIfNotThere(int id_to, bool ismoved = false, bool emptyTransfer = false, bool updatePreferredDevice = true) const;
+    void TransferToDeviceIfNotThere(int id_to, bool isBeingMoved = false, bool emptyTransfer = false, bool updatePreferredDevice = true) const;
     CurrentDataLocation GetCurrentMatrixLocation() const { return m_currentDataLocation; };
     void SwitchToMatrixType(MatrixType newMatrixType, MatrixFormat newMatrixFormat, bool keepValues); // sets matrix type between dense and sparse
     size_t GetNumRows() const;
@@ -181,7 +167,6 @@ public:
 
     Matrix<ElemType> Diagonal() const;
     void AssignDiagonalValuesTo(Matrix<ElemType>& diag) const;
-    void ShiftBy(int numShift);
 
     // TODO: all these scalars should be passed as doubles and cast down inside
     void NormalGrad(Matrix<ElemType>& gradients, Matrix<ElemType>& functionValues, const ElemType learnRatePerSample, const ElemType momentum, const bool useNAG);
@@ -190,7 +175,7 @@ public:
     ElemType RmsProp(Matrix<ElemType>& gradients, ElemType RMS_GAMMA, ElemType RMS_WGT_INC, ElemType RMS_WGT_MAX, ElemType RMS_WGT_DEC, ElemType RMS_WGT_MIN, const bool needAveMultiplier);
 
     void Resize(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve = 10000, bool growOnly = true); // by default we only reallocate if need to grow
-    void Resize(const Matrix<ElemType>& other)
+    void Resize(const Matrix<ElemType>& other) // TODO: Should this carry over numNZElemToReserve for sparse matrices?
     {
         Resize(other.GetNumRows(), other.GetNumCols());
     }
@@ -234,12 +219,12 @@ public:
     void SetValue(const Matrix<ElemType>& deepCopyFrom, const MatrixFormat format = matrixFormatSparseCSR); // BUGBUG: default for 'format' is unexpected
     void SetValue(const size_t numRows, const size_t numCols, int deviceId, ElemType* pArray, const size_t matrixFlags = matrixFlagNormal);
     void SetValue(const size_t rIdx, const size_t cIdx, ElemType val); // set matrix sparsely
-    void SetValue(const size_t numRows, const size_t numCols, std::initializer_list<ElemType> l)
+    void SetValue(const size_t numRows, const size_t numCols, std::initializer_list<ElemType> l) // SetValue(2,3, {1,2,3,  4,5,6});
     {
         std::vector<ElemType> vals(l);
         assert(vals.size() == numRows * numCols);
         SetValue(numRows, numCols, GetDeviceId(), vals.data(), matrixFormatRowMajor);
-    } // SetValue(2,3, {1,2,3,  4,5,6});
+    }
     static ElemType MakeNan(size_t payload);
     void Invalidate()
     {
@@ -269,36 +254,39 @@ public:
     Matrix<ElemType> Transpose(); // This method doesn't change state of Matrix. It should be a const function
     Matrix<ElemType>& AssignTransposeOf(const Matrix<ElemType>& a);
 
+    Matrix<ElemType>& DoGatherColumnsOf (ElemType beta, const Matrix<ElemType>& m, const Matrix<ElemType>& a, ElemType alpha);
+    Matrix<ElemType>& DoScatterColumnsOf(ElemType beta, const Matrix<ElemType>& m, const Matrix<ElemType>& a, ElemType alpha);
+
     Matrix<ElemType>& operator+=(const ElemType alpha);
-    Matrix<ElemType> operator+(const ElemType alpha) const;
+    Matrix<ElemType>  operator+(const ElemType alpha) const;
     Matrix<ElemType>& AssignSumOf(const ElemType alpha, const Matrix<ElemType>& a);
 
     Matrix<ElemType>& operator+=(const Matrix<ElemType>& a);
-    Matrix<ElemType> operator+(const Matrix<ElemType>& a) const;
+    Matrix<ElemType>  operator+(const Matrix<ElemType>& a) const;
     Matrix<ElemType>& AssignSumOf(const Matrix<ElemType>& a, const Matrix<ElemType>& b);
 
     Matrix<ElemType>& operator-=(const ElemType alpha);
-    Matrix<ElemType> operator-(const ElemType alpha) const;
+    Matrix<ElemType>  operator-(const ElemType alpha) const;
     Matrix<ElemType>& AssignDifferenceOf(const ElemType alpha, const Matrix<ElemType>& a);
     Matrix<ElemType>& AssignDifferenceOf(const Matrix<ElemType>& a, const ElemType alpha);
 
     Matrix<ElemType>& operator-=(const Matrix<ElemType>& a);
-    Matrix<ElemType> operator-(const Matrix<ElemType>& a) const;
+    Matrix<ElemType>  operator-(const Matrix<ElemType>& a) const;
     Matrix<ElemType>& AssignDifferenceOf(const Matrix<ElemType>& a, const Matrix<ElemType>& b);
 
     Matrix<ElemType>& operator*=(const ElemType alpha);
-    Matrix<ElemType> operator*(const ElemType alpha) const;
+    Matrix<ElemType>  operator*(const ElemType alpha) const;
     Matrix<ElemType>& AssignProductOf(const ElemType alpha, const Matrix<ElemType>& a);
 
-    Matrix<ElemType> operator*(const Matrix<ElemType>& a) const;
+    Matrix<ElemType>  operator*(const Matrix<ElemType>& a) const;
     Matrix<ElemType>& AssignProductOf(const Matrix<ElemType>& a, const bool transposeA, const Matrix<ElemType>& b, const bool transposeB); // this = a * b
     Matrix<ElemType>& Assign1x1ProductOf(const Matrix<ElemType>& a1x1, const Matrix<ElemType>& b);                                         // this = a * b, where a is 1x1
 
     Matrix<ElemType>& operator/=(ElemType alpha);
-    Matrix<ElemType> operator/(ElemType alpha) const;
+    Matrix<ElemType>  operator/(ElemType alpha) const;
 
     Matrix<ElemType>& operator^=(ElemType alpha);     // element-wise power
-    Matrix<ElemType> operator^(ElemType alpha) const; // element-wise power
+    Matrix<ElemType>  operator^(ElemType alpha) const; // element-wise power
     Matrix<ElemType>& AssignElementPowerOf(const Matrix<ElemType>& a, const ElemType power);
 
     // TODO: There are several functions below that perform an in-place operation
@@ -463,6 +451,27 @@ public:
                                                 const size_t inputWidth, const size_t inputHeight, const size_t inputSizePerSample,
                                                 const size_t outputWidth, const size_t outputHeight, const size_t outputSizePerSample,
                                                 const size_t windowWidth, const size_t windowHeight, const size_t horizontalSubsample, const size_t verticalSubsample);
+
+    void ConvolutionForward(const Matrix<ElemType>& kernel, const Matrix<int>& mpRowCol, const Matrix<int>& mpRowIwht,
+                            const Matrix<int>& mpRowRun, const Matrix<int>& runs, Matrix<ElemType>& output) const;
+    void ConvolutionBackwardData(const Matrix<ElemType>& kernel, const Matrix<int>& mpRowCol, const Matrix<int>& mpRowIwht,
+                                 const Matrix<int>& mpRowRun, const Matrix<int>& runs, Matrix<ElemType>& grad) const;
+    void ConvolutionBackwardKernel(const Matrix<ElemType>& in, const Matrix<int>& mpRowCol, const Matrix<int>& mpRowIwht,
+                                   const Matrix<int>& mpRowRun, const Matrix<int>& runs, Matrix<ElemType>& kernelGrad) const;
+
+    void MaxPoolingForward(const Matrix<int>& mpRowCol, const Matrix<int>& mpRowIndices, const Matrix<int>& indices, Matrix<ElemType>& output) const;
+    void MaxPoolingBackward(const Matrix<ElemType>& out, const Matrix<ElemType>& in,
+                            const Matrix<int>& mpRowCol, const Matrix<int>& mpRowIndices, const Matrix<int>& indices,
+                            Matrix<ElemType>& grad) const;
+
+    void AveragePoolingForward(const Matrix<int>& mpRowCol, const Matrix<int>& mpRowIndices, const Matrix<int>& indices, Matrix<ElemType>& output) const;
+    void AveragePoolingBackward(const Matrix<int>& mpRowCol, const Matrix<int>& mpRowIndices, const Matrix<int>& indices, Matrix<ElemType>& grad) const;
+
+    void BatchNormalizationForward(const Matrix<ElemType>& scale, const Matrix<ElemType>& bias, double expAvgFactor, double blendFactor,
+                                   Matrix<ElemType>& runMean, Matrix<ElemType>& runInvStdDev, Matrix<ElemType>& out, double epsilon,
+                                   Matrix<ElemType>& saveMean, Matrix<ElemType>& saveInvStdDev) const;
+    void BatchNormalizationBackward(const Matrix<ElemType>& in, Matrix<ElemType>& grad, const Matrix<ElemType>& scale, const Matrix<ElemType>& saveMean, const Matrix<ElemType>& saveInvStdDev,
+                                    Matrix<ElemType>& scaleGrad, Matrix<ElemType>& biasGrad) const;
 
 public:
     // TODO: why are these not static? And why are they here?

@@ -31,14 +31,14 @@ template <class ElemType>
 class SimpleEvaluator
 {
 public:
-    SimpleEvaluator(ComputationNetworkPtr net, const bool parallelRun, const size_t numMBsToShowResult = 100, const int traceLevel = 0, const size_t maxSamplesInRAM = SIZE_MAX,
-					const size_t numSubminiBatches = 1)
+    SimpleEvaluator(ComputationNetworkPtr net, const MPIWrapperPtr& mpi, const size_t numMBsToShowResult = 100, const int traceLevel = 0, const size_t maxSamplesInRAM = SIZE_MAX,
+                    const size_t numSubminiBatches = 1)
         : m_net(net), 
           m_numMBsToShowResult(numMBsToShowResult), 
           m_traceLevel(traceLevel),
           m_maxSamplesInRAM(maxSamplesInRAM), 
           m_numSubminiBatches(numSubminiBatches), 
-          m_parallelRun(parallelRun), 
+          m_mpi(mpi), 
           m_distGradAgg(nullptr),
           m_gradHeader(nullptr)
     {
@@ -47,6 +47,8 @@ public:
     // returns evaluation node values per sample determined by evalNodeNames (which can include both training and eval criterion nodes)
     vector<double> Evaluate(IDataReader* dataReader, const vector<wstring>& evalNodeNames, const size_t mbSize, const size_t testSize = requestDataSize)
     {
+        ScopedNetworkOperationMode modeGuard(m_net, NetworkOperationMode::inferring);
+
         // determine nodes to evaluate
         std::vector<ComputationNodeBasePtr> evalNodes;
 
@@ -123,7 +125,6 @@ public:
 
         const size_t numIterationsBeforePrintingProgress = 100;
         size_t numItersSinceLastPrintOfProgress = 0;
-        //while (DataReaderHelpers::GetMinibatchIntoNetwork<ElemType>(*dataReader, m_net, nullptr, false, m_parallelRun, inputMatrices, actualMBSize))
         while (DataReaderHelpers::GetMinibatchIntoNetwork<ElemType>(*dataReader, m_net, nullptr, dataReader->SupportsDistributedMBRead(), m_parallelRun, inputMatrices, actualMBSize))
         {
             size_t actualNumSubminibatches = numSubminibatchesNeeded <= 1 ? 1 : smbDispatcher.GetMinibatchIntoCache(*dataReader, *m_net, inputMatrices, numSubminibatchesNeeded);
@@ -149,12 +150,12 @@ public:
 
             size_t numSamplesWithLabel = m_net->GetNumSamplesWithLabel(actualMBSize);
             size_t aggregateNumSamplesWithLabel = numSamplesWithLabel;
-            if (m_parallelRun)
+            if (m_mpi != nullptr)
             {
                 if (m_gradHeader == nullptr)
                 {
                     m_gradHeader = DistGradHeader::Create(evalNodes.size());
-                    m_distGradAgg = make_shared<SimpleDistGradAggregator<ElemType>>(g_mpi, false, m_traceLevel);
+                    m_distGradAgg = make_shared<SimpleDistGradAggregator<ElemType>>(m_mpi, false, m_traceLevel);
                 }
 
                 m_gradHeader->numEvalNode = evalNodes.size();
@@ -209,16 +210,7 @@ public:
             }
 
 
-            if (ProgressTracing::GetTracingFlag())
-            {
-                numItersSinceLastPrintOfProgress++;
-                if (numItersSinceLastPrintOfProgress >= numIterationsBeforePrintingProgress)
-                {
-                    // TODO: For now just print 0.0 instead of calculating actual progress
-                    printf("PROGRESS: %.2f%%\n", 0.0f);
-                    numItersSinceLastPrintOfProgress = 0;
-                }
-            }
+            numItersSinceLastPrintOfProgress = ProgressTracing::TraceFakeProgress(numIterationsBeforePrintingProgress, numItersSinceLastPrintOfProgress);
 
             // call DataEnd to check if end of sentence is reached
             // datareader will do its necessary/specific process for sentence ending
@@ -288,7 +280,7 @@ protected:
     size_t m_numMBsToShowResult;
     size_t m_maxSamplesInRAM;
     size_t m_numSubminiBatches;
-    bool m_parallelRun;
+    MPIWrapperPtr m_mpi;
 
     shared_ptr<IDistGradAggregator<ElemType>> m_distGradAgg;
     struct DistGradHeader* m_gradHeader;

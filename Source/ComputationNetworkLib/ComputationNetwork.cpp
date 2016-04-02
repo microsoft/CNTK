@@ -64,7 +64,11 @@ void ComputationNetwork::ClearNetwork()
     //         Once we allow that (BrainScript editing), we need proper cycle detectors. Luckily, we know our cycles, so it won't be too hard.
     //         Or just use weak ptrs.
     for (auto& iter : m_nameToNodeMap)
-        iter.second->DetachInputs();
+    {
+        auto& node = iter.second;
+        node->SetEnvironment(nullptr);
+        node->DetachInputs();
+    }
 
     m_nameToNodeMap.clear();
 
@@ -86,17 +90,11 @@ void ComputationNetwork::SaveEdited(const wstring& fileName, const FileOptions f
 void ComputationNetwork::Save(const wstring& fileName, const FileOptions fileFormat) const
 {
     VerifyIsCompiled("Save");
-    // In case of parallel training only the main node should we saving the model to prevent
-    // the parallel training nodes from colliding to write the same file
-    // TODO: This does not belong here.
-    if ((g_mpi == nullptr) || g_mpi->IsMainNode())
-    {
-        // Saving into temporary file and then renaming it to the requested fileName
-        // This is a standard trick to avoid havign corrupted model files if process dies during writing
-        wstring tmpFileName = fileName + L".tmp";
-        SaveToFileImpl(tmpFileName, fileFormat);
-        renameOrDie(tmpFileName, fileName);
-    }
+    // Saving into temporary file and then renaming it to the requested fileName
+    // This is a standard trick to avoid havign corrupted model files if process dies during writing
+    wstring tmpFileName = fileName + L".tmp";
+    SaveToFileImpl(tmpFileName, fileFormat);
+    renameOrDie(tmpFileName, fileName);
 }
 
 // TODO: how does the file distinguish float vs double nodes?
@@ -218,7 +216,17 @@ void ComputationNetwork::ReadPersistableParameters(File& fstream, bool create)
         if (create) // loaded from scratch
             AddNodeToNet(node);
         else                      // reloaded existing
-            node->Validate(true); // nothing that propagates should have changed  --TODO: have a more rigid mechanism to prevent resizing; this should only reload the model parameters
+        {
+            let old = node->GetSampleLayout();
+            let changed = ValidateNode(node, /*isFinalValidationPass=*/true);
+            if (changed)
+            {
+                let upd = node->GetSampleLayout();
+                fprintf(stderr, "ValidateSubNetwork: %ls %ls operation changed, from [%s] to [%s].", node->NodeName().c_str(), node->OperationName().c_str(),
+                    string(old).c_str(), string(upd).c_str());
+                //LogicError("ValidateSubNetwork: %ls %ls operation changed during reload or re-validation.", node->NodeName().c_str(), node->OperationName().c_str());
+            }
+        }
     }
 
     fstream.GetMarker(FileMarker::fileMarkerEndSection, L"ENodeList");
@@ -481,25 +489,32 @@ template <class ElemType>
 }
 
 template <class ElemType>
-/*static*/ void ComputationNetwork::SetBatchNormalizationTimeConstant(ComputationNetworkPtr net, const ComputationNodeBasePtr& criterionNode, const double normalizationTimeConstant, double& prevNormalizationTimeConstant)
+/*static*/ void ComputationNetwork::SetBatchNormalizationTimeConstants(ComputationNetworkPtr net, const ComputationNodeBasePtr& criterionNode,
+                                                                       double normalizationTimeConstant, double& prevNormalizationTimeConstant,
+                                                                       double blendTimeConstant, double& prevBlendTimeConstant)
 {
-    if (normalizationTimeConstant != prevNormalizationTimeConstant && normalizationTimeConstant != numeric_limits<double>::infinity())
+    if (normalizationTimeConstant != prevNormalizationTimeConstant || blendTimeConstant != prevBlendTimeConstant)
     {
-        fprintf(stderr, "Setting batch normalization time constant to %.8g.\n", normalizationTimeConstant);
+        if (normalizationTimeConstant != prevNormalizationTimeConstant)
+            fprintf(stderr, "Setting batch normalization time constant to %.8g.\n", normalizationTimeConstant);
+        if (blendTimeConstant != prevBlendTimeConstant)
+            fprintf(stderr, "Setting batch normalization blend time constant to %.8g.\n", blendTimeConstant);
         // TODO: Change this to use an interface that is independent of <ElemType>.
-        list<ComputationNodeBasePtr> batchNormalizationNodes = net->GetNodesWithType(OperationNameOf(BatchNormalizationNode), criterionNode);
-        if (batchNormalizationNodes.size() == 0 && normalizationTimeConstant != numeric_limits<double>::infinity())
+        auto batchNormalizationNodes = net->GetNodesWithType(OperationNameOf(BatchNormalizationNode), criterionNode);
+        if (batchNormalizationNodes.size() == 0)
             fprintf(stderr, "WARNING: there is no batch normalization node.\n");
         else
         { 
             for (auto& nodeIter : batchNormalizationNodes)
             {
                 auto node = dynamic_pointer_cast<BatchNormalizationNode<ElemType>>(nodeIter);
-                node->SetNormalizationTimeConstant(normalizationTimeConstant);
+                node->SetNormalizationTimeConstants(normalizationTimeConstant, prevNormalizationTimeConstant,
+                                                    blendTimeConstant, prevBlendTimeConstant);
             }
         }
 
         prevNormalizationTimeConstant = normalizationTimeConstant;
+        prevBlendTimeConstant = blendTimeConstant;
     }
 }
 
@@ -1012,7 +1027,7 @@ void ComputationNetwork::PerformSVDecomposition(const map<wstring, float>& SVDCo
             redVT.ColumnElementMultiplyWith(redS);
 
             // Step 2. create two new Parameter nodes and one Times node
-            wstring leftChildName = name + L"-U";
+            wstring leftChildName = name + L"-U";  // BUGBUG: With BrainScript, node names must be proper identifieres/variable expressions. We can't have '-' in node names.
             wstring rightChildName = name + L"-V";
             shared_ptr<ComputationNode<ElemType>> pLeft = AddNodeToNetWithElemType(New<LearnableParameter<ElemType>>(m_deviceId, leftChildName, m, r));
             shared_ptr<ComputationNode<ElemType>> pRight = AddNodeToNetWithElemType(New<LearnableParameter<ElemType>>(m_deviceId, rightChildName, r, n));
@@ -1401,7 +1416,7 @@ template void ComputationNetwork::Read<float>(const wstring& fileName);
 template void ComputationNetwork::ReadPersistableParameters<float>(File& fstream, bool create);
 template void ComputationNetwork::PerformSVDecomposition<float>(const map<wstring, float>& SVDConfig, size_t alignedsize);
 template /*static*/ void ComputationNetwork::SetDropoutRate<float>(ComputationNetworkPtr net, const ComputationNodeBasePtr& criterionNode, const double dropoutRate, double& prevDropoutRate, unsigned long& dropOutSeed);
-template /*static*/ void ComputationNetwork::SetBatchNormalizationTimeConstant<float>(ComputationNetworkPtr net, const ComputationNodeBasePtr& criterionNode, const double normalizationTimeConstant, double& prevNormalizationTimeConstant);
+template /*static*/ void ComputationNetwork::SetBatchNormalizationTimeConstants<float>(ComputationNetworkPtr net, const ComputationNodeBasePtr& criterionNode, const double normalizationTimeConstant, double& prevNormalizationTimeConstant, double blendTimeConstant, double& prevBlendTimeConstant);
 template void ComputationNetwork::SetSeqParam<float>(ComputationNetworkPtr net, const ComputationNodeBasePtr criterionNode, const double& hsmoothingWeight, const double& frameDropThresh, const bool& doreferencealign,
                                                      const double& amf, const double& lmf, const double& wp, const double& bMMIfactor, const bool& sMBR);
 template void ComputationNetwork::SaveToDbnFile<float>(ComputationNetworkPtr net, const std::wstring& fileName) const;
@@ -1411,7 +1426,7 @@ template void ComputationNetwork::Read<double>(const wstring& fileName);
 template void ComputationNetwork::ReadPersistableParameters<double>(File& fstream, bool create);
 template void ComputationNetwork::PerformSVDecomposition<double>(const map<wstring, float>& SVDConfig, size_t alignedsize);
 template /*static*/ void ComputationNetwork::SetDropoutRate<double>(ComputationNetworkPtr net, const ComputationNodeBasePtr& criterionNode, const double dropoutRate, double& prevDropoutRate, unsigned long& dropOutSeed);
-template /*static*/ void ComputationNetwork::SetBatchNormalizationTimeConstant<double>(ComputationNetworkPtr net, const ComputationNodeBasePtr& criterionNode, const double normalizationTimeConstant, double& prevNormalizationTimeConstant);
+template /*static*/ void ComputationNetwork::SetBatchNormalizationTimeConstants<double>(ComputationNetworkPtr net, const ComputationNodeBasePtr& criterionNode, const double normalizationTimeConstant, double& prevNormalizationTimeConstant, double blendTimeConstant, double& prevBlendTimeConstant);
 template void ComputationNetwork::SetSeqParam<double>(ComputationNetworkPtr net, const ComputationNodeBasePtr criterionNode, const double& hsmoothingWeight, const double& frameDropThresh, const bool& doreferencealign,
                                                       const double& amf, const double& lmf, const double& wp, const double& bMMIfactor, const bool& sMBR);
 template void ComputationNetwork::SaveToDbnFile<double>(ComputationNetworkPtr net, const std::wstring& fileName) const;

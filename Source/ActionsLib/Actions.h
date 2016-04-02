@@ -8,14 +8,32 @@
 
 #include "Basics.h"
 #include "Config.h"
-#include "ScriptableObjects.h"
-#include "DataReader.h"
+#include "CommonMatrix.h"
+#include "ComputationNetwork.h"
+
 
 // ===========================================================================
 // implementations of all the commands of CNTK
 // ===========================================================================
 
+#ifndef let
+#define let const auto
+#endif
+
+using namespace std;
+using namespace Microsoft::MSR;
 using namespace Microsoft::MSR::CNTK; // TODO: we should not have this in a header
+
+// helper that returns 'float' or 'double' depending on ElemType
+template <typename ElemType> /*static*/ const wchar_t* ElemTypeName();
+
+function<ComputationNetworkPtr(DEVICEID_TYPE)> GetCreateNetworkFn(const ScriptableObjects::IConfigRecord& config);
+
+template <class ConfigRecordType, typename ElemType>
+function<ComputationNetworkPtr(DEVICEID_TYPE)> GetNetworkFactory(const ConfigRecordType& config);
+
+template <class ConfigRecordType, typename ElemType>
+ComputationNetworkPtr GetModelFromConfig(const ConfigRecordType& config, vector<wstring>& outputNodeNamesVector);
 
 // training (TrainActions.cpp)
 template <class ConfigRecordType, typename ElemType>

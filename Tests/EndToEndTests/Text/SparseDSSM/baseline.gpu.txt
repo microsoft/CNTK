@@ -472,7 +472,7 @@ MPI Rank 0: Allocating matrices for forward and/or backward propagation.
 MPI Rank 0: Final Results: Minibatch[1-25]: Samples Seen = 102399    CE: CrossEntropyWithSoftmax/Sample = 1.8091086    Perplexity = 6.1050027    
 MPI Rank 0: Finished Epoch[ 3 of 3]: [Validation Set] TrainLossPerSample = 1.8091086
 MPI Rank 0: CNTKCommandTrainEnd: train
-MPI Rank 0: COMPLETED
+MPI Rank 0: __COMPLETED__
 MPI Rank 0: ~MPIWrapper
 MPI Rank 1: -------------------------------------------------------------------
 MPI Rank 1: Build info: 
@@ -852,7 +852,7 @@ MPI Rank 1:  Epoch[ 3 of 3]-Minibatch[   1-  10, 40.00%]: SamplesSeen = 10240; T
 MPI Rank 1:  Epoch[ 3 of 3]-Minibatch[  11-  20, 80.00%]: SamplesSeen = 10240; TrainLossPerSample =  1.86598778; TotalTime = 4.5356s; SamplesPerSecond = 2257.7
 MPI Rank 1: Finished Epoch[ 3 of 3]: [Training Set] TrainLossPerSample = 1.8856394; AvgLearningRatePerSample = 9.9999997e-05; EpochTime=11.692
 MPI Rank 1: CNTKCommandTrainEnd: train
-MPI Rank 1: COMPLETED
+MPI Rank 1: __COMPLETED__
 MPI Rank 1: ~MPIWrapper
 MPI Rank 2: -------------------------------------------------------------------
 MPI Rank 2: Build info: 
@@ -1232,7 +1232,7 @@ MPI Rank 2:  Epoch[ 3 of 3]-Minibatch[   1-  10, 40.00%]: SamplesSeen = 10240; T
 MPI Rank 2:  Epoch[ 3 of 3]-Minibatch[  11-  20, 80.00%]: SamplesSeen = 10240; TrainLossPerSample =  1.87902641; TotalTime = 4.5357s; SamplesPerSecond = 2257.7
 MPI Rank 2: Finished Epoch[ 3 of 3]: [Training Set] TrainLossPerSample = 1.8856394; AvgLearningRatePerSample = 9.9999997e-05; EpochTime=11.692
 MPI Rank 2: CNTKCommandTrainEnd: train
-MPI Rank 2: COMPLETED
+MPI Rank 2: __COMPLETED__
 MPI Rank 2: ~MPIWrapper
 MPI Rank 3: -------------------------------------------------------------------
 MPI Rank 3: Build info: 
@@ -1612,7 +1612,7 @@ MPI Rank 3:  Epoch[ 3 of 3]-Minibatch[   1-  10, 40.00%]: SamplesSeen = 10240; T
 MPI Rank 3:  Epoch[ 3 of 3]-Minibatch[  11-  20, 80.00%]: SamplesSeen = 10240; TrainLossPerSample =  1.88304176; TotalTime = 4.5357s; SamplesPerSecond = 2257.6
 MPI Rank 3: Finished Epoch[ 3 of 3]: [Training Set] TrainLossPerSample = 1.8856394; AvgLearningRatePerSample = 9.9999997e-05; EpochTime=11.692
 MPI Rank 3: CNTKCommandTrainEnd: train
-MPI Rank 3: COMPLETED
+MPI Rank 3: __COMPLETED__
 MPI Rank 3: ~MPIWrapper
 === Deleting last epoch data
 ==== Re-running from checkpoint
@@ -2069,7 +2069,7 @@ MPI Rank 0: Allocating matrices for forward and/or backward propagation.
 MPI Rank 0: Final Results: Minibatch[1-25]: Samples Seen = 102399    CE: CrossEntropyWithSoftmax/Sample = 1.8982234    Perplexity = 6.6740266    
 MPI Rank 0: Finished Epoch[ 3 of 3]: [Validation Set] TrainLossPerSample = 1.8982234
 MPI Rank 0: CNTKCommandTrainEnd: train
-MPI Rank 0: COMPLETED
+MPI Rank 0: __COMPLETED__
 MPI Rank 0: ~MPIWrapper
 MPI Rank 1: -------------------------------------------------------------------
 MPI Rank 1: Build info: 
@@ -2438,7 +2438,7 @@ MPI Rank 1:  Epoch[ 3 of 3]-Minibatch[   1-  10, 40.00%]: SamplesSeen = 10240; T
 MPI Rank 1:  Epoch[ 3 of 3]-Minibatch[  11-  20, 80.00%]: SamplesSeen = 10240; TrainLossPerSample =  1.94722424; TotalTime = 4.5333s; SamplesPerSecond = 2258.9
 MPI Rank 1: Finished Epoch[ 3 of 3]: [Training Set] TrainLossPerSample = 1.9504802; AvgLearningRatePerSample = 9.9999997e-05; EpochTime=12.2322
 MPI Rank 1: CNTKCommandTrainEnd: train
-MPI Rank 1: COMPLETED
+MPI Rank 1: __COMPLETED__
 MPI Rank 1: ~MPIWrapper
 MPI Rank 2: -------------------------------------------------------------------
 MPI Rank 2: Build info: 
@@ -2807,7 +2807,7 @@ MPI Rank 2:  Epoch[ 3 of 3]-Minibatch[   1-  10, 40.00%]: SamplesSeen = 10240; T
 MPI Rank 2:  Epoch[ 3 of 3]-Minibatch[  11-  20, 80.00%]: SamplesSeen = 10240; TrainLossPerSample =  1.95635300; TotalTime = 4.5332s; SamplesPerSecond = 2258.9
 MPI Rank 2: Finished Epoch[ 3 of 3]: [Training Set] TrainLossPerSample = 1.9504802; AvgLearningRatePerSample = 9.9999997e-05; EpochTime=12.2322
 MPI Rank 2: CNTKCommandTrainEnd: train
-MPI Rank 2: COMPLETED
+MPI Rank 2: __COMPLETED__
 MPI Rank 2: ~MPIWrapper
 MPI Rank 3: -------------------------------------------------------------------
 MPI Rank 3: Build info: 
@@ -3176,5 +3176,5 @@ MPI Rank 3:  Epoch[ 3 of 3]-Minibatch[   1-  10, 40.00%]: SamplesSeen = 10240; T
 MPI Rank 3:  Epoch[ 3 of 3]-Minibatch[  11-  20, 80.00%]: SamplesSeen = 10240; TrainLossPerSample =  1.95965519; TotalTime = 4.5333s; SamplesPerSecond = 2258.9
 MPI Rank 3: Finished Epoch[ 3 of 3]: [Training Set] TrainLossPerSample = 1.9504802; AvgLearningRatePerSample = 9.9999997e-05; EpochTime=12.2322
 MPI Rank 3: CNTKCommandTrainEnd: train
-MPI Rank 3: COMPLETED
+MPI Rank 3: __COMPLETED__
 MPI Rank 3: ~MPIWrapper

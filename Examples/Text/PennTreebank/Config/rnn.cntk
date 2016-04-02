@@ -54,11 +54,8 @@ writeWordAndClassInfo = [
 
 train = [
     action = "train"
-    minibatchSize = 128:256:512 # TODO: Why is this here and not inside SGD?
     traceLevel = 1
     epochSize = 0               # (for quick tests, this can be overridden with something small)
-    defaultHiddenActivity = 0.1 # default value for hidden states--is this used by SimpleNetworkBuilder?
-    useValidation = true
 
     SimpleNetworkBuilder = [
         rnnType = "CLASSLSTM"   # TODO: camelCase
@@ -70,6 +67,7 @@ train = [
         initValueScale = 6.0
         uniformInit = true
         layerSizes = "$confVocabSize$:150:200:10000"
+        defaultHiddenActivity = 0.1 # default value for hidden states
         addPrior = false
         addDropoutNodes = false
         applyMeanVarNorm = false
@@ -81,6 +79,7 @@ train = [
     ]
 
     SGD = [
+        minibatchSize = 128:256:512
         learningRatesPerSample = 0.1
         momentumPerMB = 0
         gradientClippingWithTruncation = true
@@ -89,6 +88,10 @@ train = [
         numMBsToShowResult = 100
         gradUpdateType = "none"
         loadBestModel = true
+
+        dropoutRate = 0.0
+
+        #traceNodeNamesReal = AutoName37 # this allows to track a node's value
 
         # settings for Auto Adjust Learning Rate
         AutoAdjust = [
@@ -102,8 +105,6 @@ train = [
             numPrevLearnRates = 5
             numBestSearchEpoch = 1
         ]
-
-        dropoutRate = 0.0
     ]
 
     reader = [

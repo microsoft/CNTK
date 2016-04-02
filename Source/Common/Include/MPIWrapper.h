@@ -10,6 +10,7 @@
 #include <string>
 #include <array>
 #include <vector>
+#include <memory>
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -49,7 +50,10 @@ static int operator||(int rc, const MpiFail &what)
     RuntimeError("%s", what.c_str());
 }
 
-class MPIWrapper
+class MPIWrapper;
+typedef std::shared_ptr<MPIWrapper> MPIWrapperPtr;
+
+class MPIWrapper : public std::enable_shared_from_this<MPIWrapper>
 {
     int m_myRank;
     int m_numMPINodes;
@@ -57,6 +61,8 @@ class MPIWrapper
 
     // MPI communicator that reflects the current subset selection
     MPI_Comm m_currentComm;
+
+    static MPIWrapperPtr s_mpi;
 
     // MPI_Init() with delay-loading the msmpi.dll (possibly causing a failure if missing; we want to catch that)
     int MPI_Init_DL()
@@ -100,7 +106,6 @@ class MPIWrapper
     static int s_myRank;
     static void MPIWorkaroundAtExit()
     {
-        // Note: we can't use g_mpi, since MPI stack is already down at this point
         Sleep(s_myRank * 50);
     }
 
@@ -155,6 +160,7 @@ public:
         MPI_Finalize();
     }
 
+private:
     void Ping(const char *msg) const
     {
 #undef USE2NDCOMM
@@ -216,6 +222,28 @@ public:
                 (int) CurrentNodeRank(), IsIdle() ? "out (idle)" : "in (participating)");
         fflush(stderr);
         Ping("requestnodes (after change)");
+    }
+
+public:
+
+    static MPIWrapperPtr GetInstance(bool create = false)
+    {
+        static bool initialized = false;
+        if (create)
+        {
+            if (initialized)
+                LogicError("Creating MPIWrapper instance after a GetInstance call has been already made!");
+            else
+                s_mpi = std::make_shared<MPIWrapper>();
+        }
+
+        initialized = true;
+        return s_mpi;
+    }
+
+    static void DeleteInstance()
+    {
+        s_mpi = nullptr;
     }
 
     MPI_Comm Communicator() const
@@ -312,8 +340,5 @@ public:
         MPI_Barrier(m_currentComm) || MpiFail("waitall: MPI_Barrier");
     }
 };
-}
-}
-}
 
-extern Microsoft::MSR::CNTK::MPIWrapper *g_mpi;
+}}}

@@ -6,7 +6,6 @@
 
 #include "Basics.h"
 #include "ComputationNode.h"
-#include "ConvolutionalNodes.h"
 #include "Matrix.h"
 #include "TensorView.h"
 
@@ -71,6 +70,57 @@ template class PlusNode<float>;
 template class PlusNode<double>;
 
 // -----------------------------------------------------------------------
+// LogPlusNode (summand1, summand2)
+// -----------------------------------------------------------------------
+
+template <class ElemType>
+class LogPlusNode : public BinaryElementWiseNode<ElemType>
+{
+    typedef BinaryElementWiseNode<ElemType> Base;
+    UsingBinaryElementwiseNodeBaseMembers;
+    static const std::wstring TypeName()
+    {
+        return L"LogPlus";
+    }
+
+public:
+    DeclareConstructorFromConfigWithNumInputs(LogPlusNode);
+    LogPlusNode(DEVICEID_TYPE deviceId, const wstring& name)
+        : Base(deviceId, name)
+    {
+    }
+
+    virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
+    {
+        size_t rank = DetermineElementwiseTensorRank();
+        auto result =           ValueTensorFor(rank, fr);
+        auto input0 = Input(0)->ValueTensorFor(rank, fr.AllowBroadcast());
+        auto input1 = Input(1)->ValueTensorFor(rank, fr.AllowBroadcast());
+        result.AssignLogSumOf(input0, input1);
+    }
+
+    virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
+    {
+        size_t rank = DetermineElementwiseTensorRank();
+        auto gradient      =                    GradientTensorFor(rank, fr);
+        auto inputGradient = Input(inputIndex)->GradientTensorFor(rank, fr.AllowBroadcast());
+        auto input0        = Input(0)->ValueTensorFor(rank, fr.AllowBroadcast());
+        auto input1        = Input(1)->ValueTensorFor(rank, fr.AllowBroadcast());        
+
+        // if reduction then mask the respective input(s) (zero out the gaps)
+        if (Input(inputIndex)->ReducesInTimeWrt(shared_from_this()))
+            MaskMissingGradientColumnsToZero(fr);
+        if (Input(inputIndex)->ReducesInTimeWrt(Input(1 - inputIndex)))
+            Input(1 - inputIndex)->MaskMissingValueColumnsToZero(fr);
+
+        inputGradient.AddElementwiseProductWithLogSumDerivativeOf(gradient, input0, input1);
+    }
+};
+
+template class LogPlusNode<float>;
+template class LogPlusNode<double>;
+
+// -----------------------------------------------------------------------
 // MinusNode (minuend, subtrahend)
 // -----------------------------------------------------------------------
 
@@ -113,58 +163,6 @@ public:
 
 template class MinusNode<float>;
 template class MinusNode<double>;
-
-// -----------------------------------------------------------------------
-// NegateNode (input)
-// computes the negative of its input
-// -----------------------------------------------------------------------
-
-template <class ElemType>
-class NegateNode : public ComputationNode<ElemType>, public NumInputs<1>
-{
-    typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
-    static const std::wstring TypeName() { return L"Negate"; }
-
-public:
-    DeclareConstructorFromConfigWithNumInputs(NegateNode);
-    NegateNode(DEVICEID_TYPE deviceId, const wstring& name)
-        : Base(deviceId, name)
-    {
-    }
-
-    virtual void /*ComputationNode::*/ BackpropTo(const size_t /*inputIndex*/, const FrameRange& fr) override
-    {
-        Input(0)->GradientFor(fr) -= GradientFor(fr);
-    }
-
-    virtual bool OutputUsedInComputingInputNodesGradients() const override
-    {
-        // The NegateNode does not require its output value for computing
-        // the gradients of its input nodes
-        return false;
-    }
-
-    virtual bool InputUsedInComputingInputNodesGradients(size_t childIndex) const override
-    {
-        // The NegateNode does not require any of it's input's values for computing
-        // the gradients of its input nodes
-        UNREFERENCED_PARAMETER(childIndex);
-        return false;
-    }
-
-    virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
-    {
-        ValueFor(fr).AssignDifferenceOf(0, Input(0)->ValueFor(fr));
-    }
-
-    virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
-    {
-        ValidateUnaryMap(isFinalValidationPass);
-    }
-};
-
-template class NegateNode<float>;
-template class NegateNode<double>;
 
 // -----------------------------------------------------------------------
 // TimesNodeBase (A, B, outputRank=1)
@@ -401,6 +399,9 @@ template class TimesNode<double>;
 // Right operand and output can have MB layout, while left operand cannot.
 // This differs from TimesNode in that A is transposed, where A must be a
 // rank-1 or rank-2 tensor.
+// A common use of transposition is trace(X'X) where X is a matrix of samples.
+// This can NOT be implemented with this node. Instead, use
+// SumColumnElements (ElementTimes (X, X))
 // -----------------------------------------------------------------------
 
 template <class ElemType>
@@ -460,10 +461,7 @@ public:
         inputGradient.AddElementwiseProductOf(gradient, otherInputValue);
     }
 
-    virtual bool InputUsedInComputingInputNodesGradients(size_t childIndex) const override
-    {
-        return true;
-    }
+    virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override { return true; }
 
     virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
     {
@@ -689,20 +687,8 @@ public:
         sliceInputGrad += sliceOutputGrad; // here the assumption is that sliceOutputGrad is a row vector
     }
 
-    virtual bool OutputUsedInComputingInputNodesGradients() const override
-    {
-        // The SumColumnElementsNode does not require its output value for computing
-        // the gradients of its input nodes
-        return false;
-    }
-
-    virtual bool InputUsedInComputingInputNodesGradients(size_t childIndex) const override
-    {
-        // The SumColumnElementsNode does not require any of it's input's values for computing
-        // the gradients of its input nodes
-        UNREFERENCED_PARAMETER(childIndex);
-        return false;
-    }
+    virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }
+    virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override { return false; }
 
     virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
     {
@@ -725,7 +711,7 @@ template class SumColumnElementsNode<float>;
 template class SumColumnElementsNode<double>;
 
 // -----------------------------------------------------------------------
-// TransposeDimensionsNode (input, dim1, dim2)
+// TransposeDimensions (input, dim1, dim2)
 //  - swaps index dimensions dim1 and dim2. The values are 1-based; 1 stands for the leading dimension.
 //  - new dimensions can be created; e.g. a column vector can be transposed into a row vector, which is a [1 x N] tensor
 //  - transposing into the time dimension is currently not supported
@@ -737,8 +723,7 @@ template class SumColumnElementsNode<double>;
 template <class ElemType>
 class TransposeDimensionsNode : public ComputationNode /*ComputationNode*/<ElemType>, public NumInputs<1>
 {
-    typedef ComputationNode<ElemType> Base;
-    UsingComputationNodeMembersBoilerplate;
+    typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
     static const std::wstring TypeName() { return L"TransposeDimensions"; }
 
 public:

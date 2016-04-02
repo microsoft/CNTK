@@ -175,6 +175,62 @@ public:
         m_writable = true;
     }
 
+    // packing algorithm
+    //  - width: maximum width of structure; set to maximum over sequence lengths
+    //  - inputSequences: vector of input SequenceInfo records (only seqId and GetNumTimeSteps() are used)
+    //  - [out] *pMBLayout: MBLayout that describes the created packed sequence set
+    //  - placement, rowAllocations: temp buffers (passed in to be able to optimize memory allocations)
+    template<typename SequenceInfoVector>
+    void InitAsPackedSequences(const SequenceInfoVector& inputSequences,
+        /*temp buffer*/std::vector<std::pair<size_t, size_t>>& placement,
+        /*temp buffer*/std::vector<size_t> rowAllocations)
+    {
+        placement.resize(inputSequences.size()); // [sequence index] result goes here (entries are invalid for gaps)
+        // determine width of MBLayout
+        size_t width = 0;
+        for (size_t i = 0; i < inputSequences.size(); i++)
+        {
+            if (inputSequences[i].seqId == GAP_SEQUENCE_ID)
+                continue;
+            else if (width < inputSequences[i].GetNumTimeSteps())
+                width = inputSequences[i].GetNumTimeSteps();
+        }
+        // allocate
+        rowAllocations.clear();             // [row] we build rows one by one
+        for (size_t i = 0; i < inputSequences.size(); i++)
+        {
+            if (inputSequences[i].seqId == GAP_SEQUENCE_ID)
+                continue;
+            let len = inputSequences[i].GetNumTimeSteps();
+            // first see if we find a row that has enough space
+            // TODO: Should we use a proper priority_queue?
+            size_t s;
+            for (s = 0; s < rowAllocations.size(); s++)
+                if (rowAllocations[s] + len <= width)
+                    break; // yep, it fits
+            // we did not find a s that fit then create a new one
+            if (s == rowAllocations.size())
+                rowAllocations.push_back(0);
+            // sequence goes to (s, rowAllocations[s])
+            placement[i] = make_pair(s, rowAllocations[s]);
+            // and allocate it
+            rowAllocations[s] += len;
+        }
+        // create MBLayout
+        Init(rowAllocations.size(), width);
+        for (size_t i = 0; i < inputSequences.size(); i++)
+        {
+            if (inputSequences[i].seqId == GAP_SEQUENCE_ID)
+                continue;
+            size_t s, tBegin; tie
+            (s, tBegin) = placement[i];
+            AddSequence(inputSequences[i].seqId, s, (ptrdiff_t)tBegin, tBegin + inputSequences[i].GetNumTimeSteps());
+        }
+        // need to fill the gaps as well
+        for (size_t s = 0; s < rowAllocations.size(); s++)
+            AddGap(s, (size_t)rowAllocations[s], width);
+    }
+
     // -------------------------------------------------------------------
     // accessors
     // -------------------------------------------------------------------
@@ -221,6 +277,23 @@ public:
     {
         return !(*this == other);
     } // duh
+
+    operator std::string() const
+    {
+        std::stringstream s;
+        s << "{numTimeSteps:" << m_numTimeSteps << ", numParallelSequences:" << m_numParallelSequences << ", sequences:[";
+
+        bool first = true;
+        for (const auto &seq : m_sequences)
+        {
+            if (!first)
+                s << ", ";
+            s << "{seqId:" << seq.seqId << ", s:" << seq.s <<", begin:" << seq.tBegin << ", end:" << seq.tEnd << "}";
+            first = false;
+        }
+        s << "]}";
+        return s.str();
+    }
 
     // -------------------------------------------------------------------
     // building (adding sequences or gaps)
@@ -328,7 +401,7 @@ public:
     }
 
     // find a sequence by its id
-    const SequenceInfo &FindSequence(UniqueSequenceId seqId) const
+    const SequenceInfo& FindSequence(UniqueSequenceId seqId) const
     {
         for (const auto &seqInfo : m_sequences)
             if (seqInfo.seqId == seqId)
@@ -362,6 +435,25 @@ public:
             if (seq.tEnd > m_numTimeSteps)
                 return true;
         return false;
+    }
+
+    // -------------------------------------------------------------------
+    // indexing
+    // -------------------------------------------------------------------
+
+    // get the matrix-column index for a given time step in a given sequence
+    size_t GetColumnIndex(const SequenceInfo& seq, size_t t) const
+    {
+        if (t > seq.GetNumTimeSteps())
+            LogicError("GetColumnIndex: t out of sequence bounds.");
+        if (seq.s > GetNumParallelSequences())
+            LogicError("GetColumnIndex: seq.s out of sequence bounds."); // can only happen if 'seq' does not come out of our own m_sequences array, which is verboten
+        ptrdiff_t tIn = (ptrdiff_t)t + seq.tBegin;       // shifted time index
+        if (tIn < 0 || (size_t)tIn >= GetNumTimeSteps())
+            LogicError("GetColumnIndex: Attempted to access a time step that is accessing a portion of a sequence that is not included in current minibatch."); // we may encounter this for truncated BPTT
+        size_t col = (size_t)tIn * GetNumParallelSequences() + seq.s;
+        assert(col < GetNumCols());
+        return col;
     }
 
 private:
@@ -829,9 +921,9 @@ static inline std::pair<size_t, size_t> ColumnRangeWithMBLayoutFor(size_t numCol
         if (fr.m_broadcastAllowed && !pMBLayout && numCols == 1)
             return std::pair<size_t, size_t>(0, numCols);
         if (fr.m_pMBLayout && pMBLayout && *fr.m_pMBLayout == *pMBLayout)
-            LogicError("DataFor: fr's MBLayout inconsistent with matrix. They are compatible though--are you missing a ReconcileMBLayout operation?");
+            LogicError("DataFor: FrameRange's MBLayout inconsistent with matrix. They are compatible though--are you missing a ReconcileMBLayout operation?");
         else
-            LogicError("DataFor: fr's MBLayout inconsistent with matrix");
+            LogicError("DataFor: FrameRange's MBLayout inconsistent with matrix.");
     }
     // if FrameRange refers to whole minibatch (map mode)
     // or if we don't even have a layout
@@ -922,9 +1014,11 @@ static inline std::pair<DimensionVector, DimensionVector> TensorSliceWithMBLayou
         if (fr.m_pMBLayout /*get data for a loop*/ && !pMBLayout /*'data' is not samples*/ && fr.m_broadcastAllowed /*we're OK with that*/)
             ; // the time dimension is broadcasting--leave it as is
         else if (fr.m_pMBLayout && pMBLayout && *fr.m_pMBLayout == *pMBLayout)
-            LogicError("DataFor: fr's MBLayout inconsistent with matrix. They are compatible though--are you missing a ReconcileMBLayout operation?");
+            LogicError("DataFor: FrameRange's MBLayout inconsistent with matrix. They are compatible though--are you missing a ReconcileMBLayout operation? %s vs. %s", 
+                       static_cast<string>(*(fr.m_pMBLayout)).c_str(), static_cast<string>(*(pMBLayout)).c_str());
         else
-            LogicError("DataFor: fr's MBLayout inconsistent with matrix");
+            LogicError("DataFor: FrameRange's MBLayout inconsistent with matrix: %s vs. %s", 
+                       static_cast<string>(*(fr.m_pMBLayout)).c_str(), static_cast<string>(*(pMBLayout)).c_str());
     }
     // if FrameRange refers to whole minibatch (map mode)
     // or if we don't even have a layout
@@ -961,7 +1055,7 @@ static inline std::pair<DimensionVector, DimensionVector> TensorSliceWithMBLayou
             {
                 size_t s = fr.seqIndex;
                 if (s >= result.second[sequenceDim])
-                    LogicError("DataFor: FrameRange specifies a paralllel-sequence index that is out of range.");
+                    LogicError("DataFor: FrameRange specifies a parallel-sequence index that is out of range.");
                 result.first[sequenceDim] = (ElemType)s;
                 result.second[sequenceDim] = (ElemType)s + 1;
             }
@@ -984,21 +1078,23 @@ static inline std::pair<DimensionVector, DimensionVector> TensorSliceWithMBLayou
 // 'Reduce' style operations--the criterion nodes and gradient computation--call this.
 // Warning: The layout used here must match the matrix. E.g. don't pass a child's matrix from a criterion node (use Input(x)->MaskMissing{Values,Gradient}ColumnsToZero() instead.
 template <class ElemType>
-static inline void MaskMissingColumnsTo(Matrix<ElemType> &matrixToMask, const MBLayoutPtr &pMBLayout, const FrameRange &fr, ElemType val)
+static inline void MaskMissingColumnsTo(Matrix<ElemType>& matrixToMask, const MBLayoutPtr& pMBLayout, const FrameRange& fr, ElemType val)
 {
     if (pMBLayout && pMBLayout->HasGaps(fr))
     {
 #if 0 // in the future we can use the tensor lib to implement this
-            const auto & maskMatrix = pMBLayout->GetColumnsValidMask<ElemType>();
-            auto maskSlice          = DataWithMBLayoutFor(maskMatrix,   fr, pMBLayout);
-            auto matrixSliceToMask  = DataWithMBLayoutFor(matrixToMask, fr, pMBLayout);
-            TensorView<ElemType>(matrixSliceToMask).DoMaskNegativeOf(0, TensorView<ElemType>(matrixSliceToMask), TensorView<ElemType>(maskSlice), 1); val;
+        const auto & maskMatrix = pMBLayout->GetColumnsValidMask<ElemType>();
+        auto maskSlice          = DataWithMBLayoutFor(maskMatrix,   fr, pMBLayout);
+        auto matrixSliceToMask  = DataWithMBLayoutFor(matrixToMask, fr, pMBLayout);
+        TensorView<ElemType>(matrixSliceToMask).DoMaskNegativeOf(0, TensorView<ElemType>(matrixSliceToMask), TensorView<ElemType>(maskSlice), 1); val;
 #else
-        const auto &maskMatrix = pMBLayout->GetColumnsValidityMask(matrixToMask.GetDeviceId());
+        const auto& maskMatrix = pMBLayout->GetColumnsValidityMask(matrixToMask.GetDeviceId());
+        maskMatrix.TransferToDeviceIfNotThere(matrixToMask.GetDeviceId(), /*ismoved=*/ false, /*emptyTransfer=*/ false, /*updatePreferredDevice=*/ false);
         auto maskSlice = DataWithMBLayoutFor(maskMatrix, fr, pMBLayout);
         auto matrixSliceToMask = DataWithMBLayoutFor(matrixToMask, fr, pMBLayout);
         matrixSliceToMask.MaskColumnsValue(maskSlice, val);
 #endif
     }
 }
-} } }
+
+}}}

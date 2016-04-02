@@ -484,7 +484,7 @@ MPI Rank 0: Allocating matrices for forward and/or backward propagation.
 MPI Rank 0: Final Results: Minibatch[1-25]: Samples Seen = 102399    CE: CrossEntropyWithSoftmax/Sample = 1.8091086    Perplexity = 6.1050028    
 MPI Rank 0: Finished Epoch[ 3 of 3]: [Validation Set] TrainLossPerSample = 1.8091086
 MPI Rank 0: CNTKCommandTrainEnd: train
-MPI Rank 0: COMPLETED
+MPI Rank 0: __COMPLETED__
 MPI Rank 0: ~MPIWrapper
 MPI Rank 1: Redirecting stderr to file C:\cygwin64\tmp\cntk-test-20160303154710.317558\Text_SparseDSSM@release_gpu/stderr_train.logrank1
 MPI Rank 1: -------------------------------------------------------------------
@@ -868,7 +868,7 @@ MPI Rank 1:  Epoch[ 3 of 3]-Minibatch[   1-  10, 40.00%]: SamplesSeen = 10240; T
 MPI Rank 1:  Epoch[ 3 of 3]-Minibatch[  11-  20, 80.00%]: SamplesSeen = 10240; TrainLossPerSample =  1.86598778; TotalTime = 8.0798s; SamplesPerSecond = 1267.4
 MPI Rank 1: Finished Epoch[ 3 of 3]: [Training Set] TrainLossPerSample = 1.8856394; AvgLearningRatePerSample = 9.9999997e-005; EpochTime=20.8703
 MPI Rank 1: CNTKCommandTrainEnd: train
-MPI Rank 1: COMPLETED
+MPI Rank 1: __COMPLETED__
 MPI Rank 1: ~MPIWrapper
 MPI Rank 2: Redirecting stderr to file C:\cygwin64\tmp\cntk-test-20160303154710.317558\Text_SparseDSSM@release_gpu/stderr_train.logrank2
 MPI Rank 2: -------------------------------------------------------------------
@@ -1252,7 +1252,7 @@ MPI Rank 2:  Epoch[ 3 of 3]-Minibatch[   1-  10, 40.00%]: SamplesSeen = 10240; T
 MPI Rank 2:  Epoch[ 3 of 3]-Minibatch[  11-  20, 80.00%]: SamplesSeen = 10240; TrainLossPerSample =  1.87902641; TotalTime = 8.0798s; SamplesPerSecond = 1267.4
 MPI Rank 2: Finished Epoch[ 3 of 3]: [Training Set] TrainLossPerSample = 1.8856394; AvgLearningRatePerSample = 9.9999997e-005; EpochTime=20.8703
 MPI Rank 2: CNTKCommandTrainEnd: train
-MPI Rank 2: COMPLETED
+MPI Rank 2: __COMPLETED__
 MPI Rank 2: ~MPIWrapper
 MPI Rank 3: Redirecting stderr to file C:\cygwin64\tmp\cntk-test-20160303154710.317558\Text_SparseDSSM@release_gpu/stderr_train.logrank3
 MPI Rank 3: -------------------------------------------------------------------
@@ -1636,7 +1636,7 @@ MPI Rank 3:  Epoch[ 3 of 3]-Minibatch[   1-  10, 40.00%]: SamplesSeen = 10240; T
 MPI Rank 3:  Epoch[ 3 of 3]-Minibatch[  11-  20, 80.00%]: SamplesSeen = 10240; TrainLossPerSample =  1.88304138; TotalTime = 8.0823s; SamplesPerSecond = 1267.0
 MPI Rank 3: Finished Epoch[ 3 of 3]: [Training Set] TrainLossPerSample = 1.8856394; AvgLearningRatePerSample = 9.9999997e-005; EpochTime=20.8703
 MPI Rank 3: CNTKCommandTrainEnd: train
-MPI Rank 3: COMPLETED
+MPI Rank 3: __COMPLETED__
 MPI Rank 3: ~MPIWrapper
 === Deleting last epoch data
 ==== Re-running from checkpoint
@@ -2105,7 +2105,7 @@ MPI Rank 0: Allocating matrices for forward and/or backward propagation.
 MPI Rank 0: Final Results: Minibatch[1-25]: Samples Seen = 102399    CE: CrossEntropyWithSoftmax/Sample = 1.8982234    Perplexity = 6.6740265    
 MPI Rank 0: Finished Epoch[ 3 of 3]: [Validation Set] TrainLossPerSample = 1.8982234
 MPI Rank 0: CNTKCommandTrainEnd: train
-MPI Rank 0: COMPLETED
+MPI Rank 0: __COMPLETED__
 MPI Rank 0: ~MPIWrapper
 MPI Rank 1: Redirecting stderr to file C:\cygwin64\tmp\cntk-test-20160303154710.317558\Text_SparseDSSM@release_gpu/stderr_train.logrank1
 MPI Rank 1: -------------------------------------------------------------------
@@ -2478,7 +2478,7 @@ MPI Rank 1:  Epoch[ 3 of 3]-Minibatch[   1-  10, 40.00%]: SamplesSeen = 10240; T
 MPI Rank 1:  Epoch[ 3 of 3]-Minibatch[  11-  20, 80.00%]: SamplesSeen = 10240; TrainLossPerSample =  1.94722424; TotalTime = 8.1200s; SamplesPerSecond = 1261.1
 MPI Rank 1: Finished Epoch[ 3 of 3]: [Training Set] TrainLossPerSample = 1.9504802; AvgLearningRatePerSample = 9.9999997e-005; EpochTime=22.065
 MPI Rank 1: CNTKCommandTrainEnd: train
-MPI Rank 1: COMPLETED
+MPI Rank 1: __COMPLETED__
 MPI Rank 1: ~MPIWrapper
 MPI Rank 2: Redirecting stderr to file C:\cygwin64\tmp\cntk-test-20160303154710.317558\Text_SparseDSSM@release_gpu/stderr_train.logrank2
 MPI Rank 2: -------------------------------------------------------------------
@@ -2851,7 +2851,7 @@ MPI Rank 2:  Epoch[ 3 of 3]-Minibatch[   1-  10, 40.00%]: SamplesSeen = 10240; T
 MPI Rank 2:  Epoch[ 3 of 3]-Minibatch[  11-  20, 80.00%]: SamplesSeen = 10240; TrainLossPerSample =  1.95635300; TotalTime = 8.1200s; SamplesPerSecond = 1261.1
 MPI Rank 2: Finished Epoch[ 3 of 3]: [Training Set] TrainLossPerSample = 1.9504802; AvgLearningRatePerSample = 9.9999997e-005; EpochTime=22.0648
 MPI Rank 2: CNTKCommandTrainEnd: train
-MPI Rank 2: COMPLETED
+MPI Rank 2: __COMPLETED__
 MPI Rank 2: ~MPIWrapper
 MPI Rank 3: Redirecting stderr to file C:\cygwin64\tmp\cntk-test-20160303154710.317558\Text_SparseDSSM@release_gpu/stderr_train.logrank3
 MPI Rank 3: -------------------------------------------------------------------
@@ -3224,5 +3224,5 @@ MPI Rank 3:  Epoch[ 3 of 3]-Minibatch[   1-  10, 40.00%]: SamplesSeen = 10240; T
 MPI Rank 3:  Epoch[ 3 of 3]-Minibatch[  11-  20, 80.00%]: SamplesSeen = 10240; TrainLossPerSample =  1.95965519; TotalTime = 8.1200s; SamplesPerSecond = 1261.1
 MPI Rank 3: Finished Epoch[ 3 of 3]: [Training Set] TrainLossPerSample = 1.9504802; AvgLearningRatePerSample = 9.9999997e-005; EpochTime=22.065
 MPI Rank 3: CNTKCommandTrainEnd: train
-MPI Rank 3: COMPLETED
+MPI Rank 3: __COMPLETED__
 MPI Rank 3: ~MPIWrapper

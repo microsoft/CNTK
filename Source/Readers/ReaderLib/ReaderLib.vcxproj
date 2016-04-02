@@ -77,10 +77,17 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="BpttPacker.h" />
     <ClInclude Include="Bundler.h" />
+    <ClInclude Include="ChunkRandomizer.h" />
     <ClInclude Include="DataDeserializerBase.h" />
-    <ClInclude Include="TransformerBase.h" />
     <ClInclude Include="BlockRandomizer.h" />
+    <ClInclude Include="Packer.h" />
+    <ClInclude Include="PackerBase.h" />
+    <ClInclude Include="SequencePacker.h" />
+    <ClInclude Include="SequenceRandomizer.h" />
+    <ClInclude Include="StringToIdMap.h" />
+    <ClInclude Include="TransformerBase.h" />
     <ClInclude Include="NoRandomizer.h" />
     <ClInclude Include="CudaMemoryProvider.h" />
     <ClInclude Include="DataDeserializer.h" />
@@ -93,11 +100,16 @@
     <ClInclude Include="Transformer.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="BpttPacker.cpp" />
     <ClCompile Include="Bundler.cpp" />
-    <ClCompile Include="BlockRandomizer.cpp" />
+    <ClCompile Include="ChunkRandomizer.cpp" />
     <ClCompile Include="NoRandomizer.cpp" />
+    <ClCompile Include="BlockRandomizer.cpp" />
+    <ClCompile Include="PackerBase.cpp" />
     <ClCompile Include="SampleModePacker.cpp" />
     <ClCompile Include="ReaderShim.cpp" />
+    <ClCompile Include="SequencePacker.cpp" />
+    <ClCompile Include="SequenceRandomizer.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

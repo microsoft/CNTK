@@ -26,6 +26,12 @@
     <ClCompile Include="..\Common\ExceptionWithCallStack.cpp">
       <Filter>Common</Filter>
     </ClCompile>
+    <ClCompile Include="..\CNTK\BrainScript\BrainScriptEvaluator.cpp">
+      <Filter>BrainScript</Filter>
+    </ClCompile>
+    <ClCompile Include="..\CNTK\BrainScript\BrainScriptParser.cpp">
+      <Filter>BrainScript</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="EvalReader.h" />
@@ -68,6 +74,9 @@
     </Filter>
     <Filter Include="For External Use">
       <UniqueIdentifier>{fa8ec6d7-8998-44f0-bddb-cb4dffc5ec0b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="BrainScript">
+      <UniqueIdentifier>{eff3a7b6-ad84-4438-9422-1b66077cfded}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
 </Project>

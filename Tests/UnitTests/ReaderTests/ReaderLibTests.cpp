@@ -5,9 +5,9 @@
 
 #include "stdafx.h"
 
-#include "BlockRandomizer.h"
 #include "NoRandomizer.h"
 #include "DataDeserializer.h"
+#include "BlockRandomizer.h"
 
 using namespace Microsoft::MSR::CNTK;
 
@@ -34,7 +34,7 @@ public:
         assert(chunkEnd <= data.size());
     }
 
-    std::vector<SequenceDataPtr> GetSequence(size_t sequenceId) override
+    void GetSequence(size_t sequenceId, std::vector<SequenceDataPtr>& result) override
     {
         assert(m_chunkBegin <= sequenceId);
         assert(sequenceId < m_chunkEnd);
@@ -43,8 +43,7 @@ public:
         data->m_data = &m_data[sequenceId];
         data->m_numberOfSamples = 1;
         data->m_sampleLayout = m_sampleLayout;
-
-        return std::vector<SequenceDataPtr>{data};
+        result.push_back(data);
     }
 
     ~MockChunk() override {};
@@ -58,9 +57,9 @@ private:
     size_t m_numSequencesPerChunk;
     std::vector<SequenceDescription> m_descriptions;
     std::vector<float>& m_data;
-    SequenceDescriptions m_sequenceDescriptions;
     std::vector<StreamDescriptionPtr> m_streams;
     TensorShapePtr m_sampleLayout;
+    std::vector<ChunkDescriptionPtr> m_chunkDescriptions;
 
 public:
     MockDeserializer(size_t numChunks, size_t numSequencesPerChunks, std::vector<float>& data)
@@ -71,7 +70,6 @@ public:
     {
         size_t numSequences = numChunks * numSequencesPerChunks;
         m_descriptions.reserve(numSequences);
-        m_sequenceDescriptions.reserve(numSequences);
         assert(data.size() == numSequences);
 
         for (size_t i = 0; i < numSequences; i++)
@@ -81,12 +79,18 @@ public:
                 1,
                 i / numSequencesPerChunks,
                 true,
-                { std::wstring(L""), i }
+                { 0, i }
             });
-            m_sequenceDescriptions.push_back(&m_descriptions[i]);
         }
 
-        std::vector<StreamDescriptionPtr> result;
+        for (size_t i = 0; i < numChunks; i++)
+        {
+            m_chunkDescriptions.push_back(std::make_shared<ChunkDescription>(ChunkDescription {
+                i,
+                numSequencesPerChunks,
+                numSequencesPerChunks
+            }));
+        }
 
         m_streams.push_back(std::make_shared<StreamDescription>(StreamDescription{
             L"input",
@@ -95,16 +99,13 @@ public:
             ElementType::tfloat,
             m_sampleLayout
         }));
+
+
     };
 
     std::vector<StreamDescriptionPtr> GetStreamDescriptions() const override
     {
         return m_streams;
-    }
-
-    const SequenceDescriptions& GetSequenceDescriptions() const override
-    {
-        return m_sequenceDescriptions;
     }
 
     virtual ChunkPtr GetChunk(size_t chunkId) override
@@ -114,17 +115,30 @@ public:
         size_t chunkEnd = chunkBegin + m_numSequencesPerChunk;
         std::shared_ptr<Chunk> chunk = std::make_shared<MockChunk>(chunkBegin, chunkEnd, m_data);
         return chunk;
-
     }
 
-    virtual const SequenceDescription* GetSequenceDescriptionByKey(const KeyType&) override
+    virtual void GetSequenceDescriptionByKey(const KeyType&, SequenceDescription&) override
     {
         throw std::logic_error("Not implemented");
     }
 
-    virtual size_t GetTotalNumberOfChunks() override
+    virtual ChunkDescriptions GetChunkDescriptions() override
     {
-        throw std::logic_error("Not implemented");
+        return m_chunkDescriptions;
+    }
+
+    virtual void GetSequencesForChunk(size_t chunkId, std::vector<SequenceDescription>& descriptions) override
+    {
+        for (size_t i = chunkId * m_numSequencesPerChunk; i < (chunkId + 1) * m_numSequencesPerChunk; i++)
+        {
+            descriptions.push_back(SequenceDescription{
+                i,
+                1,
+                chunkId,
+                true,
+                { 0, i }
+            });
+        }
     }
 
     MockDeserializer(const MockDeserializer&) = delete;
@@ -136,7 +150,7 @@ BOOST_AUTO_TEST_CASE(BlockRandomizerInstantiate)
     std::vector<float> data;
     auto mockDeserializer = std::make_shared<MockDeserializer>(0, 0, data);
 
-    auto randomizer = std::make_shared<BlockRandomizer>(0, SIZE_MAX, mockDeserializer);
+    auto randomizer = std::make_shared<BlockRandomizer>(0, SIZE_MAX, mockDeserializer, BlockRandomizer::DecimationMode::chunk, false);
 }
 
 BOOST_AUTO_TEST_CASE(BlockRandomizerOneEpoch)
@@ -144,7 +158,7 @@ BOOST_AUTO_TEST_CASE(BlockRandomizerOneEpoch)
     std::vector<float> data { 0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0 };
     auto mockDeserializer = std::make_shared<MockDeserializer>(5, 2, data);
 
-    auto randomizer = std::make_shared<BlockRandomizer>(0, SIZE_MAX, mockDeserializer);
+    auto randomizer = std::make_shared<BlockRandomizer>(0, SIZE_MAX, mockDeserializer, BlockRandomizer::DecimationMode::chunk, false);
 
     EpochConfiguration epochConfiguration;
     epochConfiguration.m_numberOfWorkers = 1;
@@ -165,42 +179,8 @@ BOOST_AUTO_TEST_CASE(BlockRandomizerOneEpoch)
             auto data = reinterpret_cast<DenseSequenceData&>(*sequences.m_data[0][0]);
             BOOST_CHECK_EQUAL(data.m_numberOfSamples, 1);
             actual.push_back(*((float*)data.m_data));
-
         }
-        BOOST_CHECK_EQUAL(sequences.m_endOfEpoch, (9 <= i));
-    }
-    BOOST_CHECK_EQUAL_COLLECTIONS(expected.begin(), expected.end(),
-                                  actual.begin(), actual.end());
-}
-
-BOOST_AUTO_TEST_CASE(BlockRandomizerOneEpochSmallWindow)
-{
-    std::vector<float> data { 0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0 };
-    auto mockDeserializer = std::make_shared<MockDeserializer>(5, 2, data);
-
-    auto randomizer = std::make_shared<BlockRandomizer>(0, 10, mockDeserializer);
-
-    EpochConfiguration epochConfiguration;
-    epochConfiguration.m_numberOfWorkers = 1;
-    epochConfiguration.m_workerRank = 0;
-    epochConfiguration.m_minibatchSizeInSamples = 0;
-    epochConfiguration.m_totalEpochSizeInSamples = 10;
-    epochConfiguration.m_epochIndex = 0;
-    randomizer->StartEpoch(epochConfiguration);
-
-    std::vector<float> expected { 9.0, 8.0, 3.0, 6.0, 2.0, 1.0, 4.0, 7.0, 5.0, 0.0 };
-    std::vector<float> actual;
-    for (int i = 0; i < 11; i++)
-    {
-        Sequences sequences = randomizer->GetNextSequences(1);
-        BOOST_CHECK_EQUAL(sequences.m_data.size(), 1 - (i / 10));
-        if (i < 10)
-        {
-            auto data = reinterpret_cast<DenseSequenceData&>(*sequences.m_data[0][0]);
-            BOOST_CHECK_EQUAL(data.m_numberOfSamples, 1);
-            actual.push_back(*((float*)data.m_data));
-        }
-        BOOST_CHECK_EQUAL(sequences.m_endOfEpoch, (9 <= i));
+        BOOST_CHECK_EQUAL(sequences.m_endOfEpoch, (10 <= i));
     }
     BOOST_CHECK_EQUAL_COLLECTIONS(expected.begin(), expected.end(),
                                   actual.begin(), actual.end());
@@ -212,10 +192,10 @@ BOOST_AUTO_TEST_CASE(BlockRandomizerOneEpochLegacyRandomization)
     auto mockDeserializer = std::make_shared<MockDeserializer>(5, 2, data);
 
     auto randomizer = std::make_shared<BlockRandomizer>(0,
-                                                        SIZE_MAX,
-                                                        mockDeserializer,
-                                                        BlockRandomizer::DistributionMode::sequences_strides,
-                                                        true);
+        SIZE_MAX,
+        mockDeserializer,
+        BlockRandomizer::DecimationMode::sequence,
+        true);
 
     EpochConfiguration epochConfiguration;
     epochConfiguration.m_numberOfWorkers = 1;
@@ -238,7 +218,7 @@ BOOST_AUTO_TEST_CASE(BlockRandomizerOneEpochLegacyRandomization)
             actual.push_back(*((float*)data.m_data));
 
         }
-        BOOST_CHECK_EQUAL(sequences.m_endOfEpoch, (9 <= i));
+        BOOST_CHECK_EQUAL(sequences.m_endOfEpoch, (10 <= i));
     }
     BOOST_CHECK_EQUAL_COLLECTIONS(expected.begin(), expected.end(),
                                   actual.begin(), actual.end());
@@ -271,10 +251,11 @@ BOOST_AUTO_TEST_CASE(NoRandomizerOneEpoch)
             auto data = reinterpret_cast<DenseSequenceData&>(*sequences.m_data[0][0]);
             BOOST_CHECK_EQUAL(data.m_numberOfSamples, 1);
             actual.push_back(*((float*)data.m_data));
-
         }
+
         BOOST_CHECK_EQUAL(sequences.m_endOfEpoch, (10 <= i));
     }
+
     BOOST_CHECK_EQUAL_COLLECTIONS(data.begin(), data.end(),
                                   actual.begin(), actual.end());
 }

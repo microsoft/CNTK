@@ -103,30 +103,26 @@ void ComputationNetwork::CopyInputs(const std::wstring fromName, std::wstring to
 // RenameNode - Rename a node to another name
 // nodeNameOrig - original node name
 // nodeNameNew - new node name
-void ComputationNetwork::RenameNode(const std::wstring& nodeNameOrig, const std::wstring& nodeNameNew)
+void ComputationNetwork::RenameNode(const std::wstring& nodeNameOrig, const std::wstring& newNodeName)
 {
-    InvalidateCompiledNetwork();
-
-    ComputationNodeBasePtr nodeToRename = GetNodeFromName(nodeNameOrig);
-
-    auto iter = m_nameToNodeMap.find(nodeNameNew);
-    if (iter != m_nameToNodeMap.end()) // found
-        RuntimeError("RenameNode: Target name already exists.");
-
-    // rename the node and update the mapping table
-    nodeToRename->SetNodeName(nodeNameNew);
-    m_nameToNodeMap.erase(nodeNameOrig);
-    m_nameToNodeMap[nodeNameNew] = nodeToRename;
+    RenameNode(GetNodeFromName(nodeNameOrig), newNodeName);
 }
 
 void ComputationNetwork::RenameNode(ComputationNodeBasePtr node, const std::wstring& newNodeName)
 {
-    // TODO: check if new name exists
-    m_nameToNodeMap.erase(node->NodeName());
-    node->SetNodeName(newNodeName);
-    AddNodeToNet(node);
+    // make sure the new name is not already used
+    auto iter = m_nameToNodeMap.find(newNodeName);
+    if (iter != m_nameToNodeMap.end()) // found
+        RuntimeError("RenameNode: Target name already exists.");
+
+    InvalidateCompiledNetwork();
+
+    RemoveNodeFromNet(node);        // take it out remporarily
+    node->SetNodeName(newNodeName); // change the name
+    AddNodeToNet(node);             // and put it back
 }
 
+// deletes a node from the network including setting all input links to it to null, and removing it from the node groups
 void ComputationNetwork::DeleteNode(const std::wstring& nodeName)
 {
     InvalidateCompiledNetwork();
@@ -165,20 +161,24 @@ void ComputationNetwork::DeleteNode(const std::wstring& nodeName)
     // Note: the necessary update of m_allSEQNodes is hanlded by the InvalidateCompiledNetwork() call above
 
     // delete the node itself
-    m_nameToNodeMap.erase(nodeName); // this will deref the node and possibly deallocate it
+    RemoveNodeFromNet(nodeToDelete);
 }
 
-// change the node associated with nodeName to newNode; used in the KL-reg based adaptation to reduce feature copy
-// need to update all the mappings as well childrens
+// replace a named node by newNode of the same type under the same name, including moving over all network links
+// This is used in the KL-reg based adaptation to reduce feature copy
+// need to update all the mappings as well childrens.
 void ComputationNetwork::ChangeNode(wstring nodeName, ComputationNodeBasePtr newNode)
 {
+    ComputationNodeBasePtr oldNode = GetNodeFromName(nodeName);
+
+    if (newNode->NodeName() != nodeName) // TODO: This was not tested for earlier; I hope no code depends on this.
+        InvalidArgument("ChangeNode: newNode must have the same name as the old node.");
+    if (oldNode->OperationName() != newNode->OperationName())
+        InvalidArgument("ChangeNode: newNode must have the same type as the old node.");
+
     InvalidateCompiledNetwork();
 
-    ComputationNodeBasePtr oldNode = GetNodeFromName(nodeName);
-    if (oldNode->OperationName() != newNode->OperationName())
-        InvalidArgument("newNode must have the same type as the old node.");
-
-    // change children
+    // change all nodes to have old node as input to point to the new node instead
     for (auto nodeIter = m_nameToNodeMap.begin(); nodeIter != m_nameToNodeMap.end(); nodeIter++)
     {
         ComputationNodeBasePtr node = nodeIter->second;
@@ -187,12 +187,18 @@ void ComputationNetwork::ChangeNode(wstring nodeName, ComputationNodeBasePtr new
                 node->SetInput(i, newNode);
     }
 
-    // change name map
-    m_nameToNodeMap[nodeName] = newNode;
+    // change all inputs of this new node to share the old one's inputs
     for (int i = 0; i < oldNode->GetNumInputs(); i++)
-        newNode->SetInput(i, oldNode->GetInputs()[i]);
+    {
+        newNode->SetInput(i, oldNode->GetInputs()[i]); // TODO: use AttachInput()?
+        //oldNode->SetInput(i, nullptr); // BUGBUG: old node should no longer point into the network
+    }
 
-    // change other maps
+    // replace the node in the network
+    RemoveNodeFromNet(oldNode);
+    AddNodeToNet(newNode);
+
+    // also update node groups
     for (auto groupIter : GetAllNodeGroups())
     {
         auto& group = *groupIter;
@@ -204,13 +210,17 @@ void ComputationNetwork::ChangeNode(wstring nodeName, ComputationNodeBasePtr new
 
 // replace the old node with the current node, assuming the old node is a leaf node
 // need to update those nodes who use oldNode as their child
+// TODO: Can this be called with a node that's already part of the network? This is currently allowed, but should it?
+// BUGBUG: Seems ChangeNode() also updates node groups. Why doesn't this function?
+// BUGBUG: What if newNode is the one referenced by oldNodeName?
+// BUGBUG: Or what if an unrelated node of the same name exists?
 void ComputationNetwork::ReplaceLeafNode(wstring oldNodeName, ComputationNodeBasePtr newNode)
 {
     InvalidateCompiledNetwork();
 
     ComputationNodeBasePtr oldNode = GetNodeFromName(oldNodeName);
 
-    // change the input of those nodes whose child is oldNode
+    // relink the input of those nodes whose child is oldNode to point to the new one instead
     for (auto nodeIter = m_nameToNodeMap.begin(); nodeIter != m_nameToNodeMap.end(); nodeIter++)
     {
         ComputationNodeBasePtr node = nodeIter->second;
@@ -218,18 +228,19 @@ void ComputationNetwork::ReplaceLeafNode(wstring oldNodeName, ComputationNodeBas
             if (node->GetInputs()[i] == oldNode)
                 node->SetInput(i, newNode);
     }
-    m_nameToNodeMap[newNode->GetName()] = newNode;
 
-    // now the old node becomes a orphan node , remove it
-    DeleteNode(oldNodeName);
-    // RemoveOrphanNode(oldNode);
+    // add the new, remove the old
+    AddNodeToNetIfNotYet(newNode);
+    DeleteNode(oldNodeName); // TODO: can this just be RemoveNodeFromNet()?
 }
 
+// add a new criterion node and at the same time orphan the previous one (it won't be removed)
+// BUGBUG: Can this operate on both new and existing nodes?
 void ComputationNetwork::ReplaceFinalCriterionNode(wstring oldNodeName, ComputationNodeBasePtr newNode)
 {
     InvalidateCompiledNetwork();
 
-    // Checks if the node is a criterion node.
+    // checks if the node is a criterion node
     int index = -1;
     for (int i = 0; i < m_finalCriteria.size(); ++i)
     {
@@ -242,32 +253,32 @@ void ComputationNetwork::ReplaceFinalCriterionNode(wstring oldNodeName, Computat
     if (index == -1)
         RuntimeError("ReplaceFinalCriterionNode: the node to be replaced is not a criterion node.");
 
-    // Replaces children.
+    // replace children
     for (int i = 0; i < newNode->GetNumInputs(); ++i)
     {
         if (m_nameToNodeMap.find(newNode->GetInputs()[i]->NodeName()) == m_nameToNodeMap.end())
             RuntimeError("Child node does not exist.");
         newNode->SetInput(i, m_nameToNodeMap[newNode->GetInputs()[i]->NodeName()]);
+        // TODO: Remove the strange indirection through nameToNodeMap, just use the ptr directly?
     }
 
-    // Addes it to criterion node list.
+    // add it to the network
+    AddNodeToNetIfNotYet(newNode);
+
+    // add it to criterion node list
     m_finalCriteria[index] = newNode;
-    m_nameToNodeMap[newNode->NodeName()] = newNode;
 }
 
 void ComputationNetwork::AddFeatureNode(ComputationNodeBasePtr featureNode)
 {
     InvalidateCompiledNetwork();
 
-    wstring nodeName = featureNode->NodeName();
-    if (NodeNameExists(nodeName))
-        RuntimeError("AddFeatureNode: feature node already exists.");
-    m_nameToNodeMap[nodeName] = featureNode;
+    AddNodeToNet(featureNode);
     m_features.push_back(featureNode);
 }
 
-// We only remove the node, not delete it.
-void ComputationNetwork::RemoveFeatureNode(ComputationNodeBasePtr featureNode)
+// We only remove the node from the net, not destruct it.
+ComputationNodeBasePtr ComputationNetwork::RemoveFeatureNode(ComputationNodeBasePtr featureNode)
 {
     InvalidateCompiledNetwork();
 
@@ -275,7 +286,7 @@ void ComputationNetwork::RemoveFeatureNode(ComputationNodeBasePtr featureNode)
     if (!NodeNameExists(nodeName))
         RuntimeError("RemoveFeatureNode: feature node does not exist.");
 
-    // Removes links.
+    // removes links
     for (auto nodeIter = m_nameToNodeMap.begin(); nodeIter != m_nameToNodeMap.end(); ++nodeIter)
     {
         ComputationNodeBasePtr node = nodeIter->second;
@@ -295,7 +306,7 @@ void ComputationNetwork::RemoveFeatureNode(ComputationNodeBasePtr featureNode)
     if (search != m_features.end())
         m_features.erase(search);
 
-    m_nameToNodeMap.erase(nodeName);
+    return RemoveNodeFromNet(featureNode);
 }
 
 // sets m_learningRateMultiplier in all LearnableParameters feeding into the passed rootNode
@@ -323,41 +334,4 @@ void ComputationNetwork::SetLearnableNodesBelowLearningRateMultiplier(const floa
     }
 }
 
-void ComputationNetwork::SetBatchNormalizationNodesBelowEvalMode(const bool evalMode, const ComputationNodeBasePtr& rootNode /* = nullptr */)
-{
-    vector<ComputationNodeBasePtr> nodes;
-    if (rootNode == nullptr)
-    {
-        for (auto pair : m_nameToNodeMap)
-        {
-            nodes.push_back(pair.second);
-        }
-    }
-    else
-    {
-        auto allnodes = rootNode->EnumerateNodes();
-        for (auto node : allnodes)
-            nodes.push_back(node);
-    }
-
-    for (auto& node : nodes)
-    {
-        if (node->OperationName() == OperationNameOf(BatchNormalizationNode))
-        {
-            auto pNode = dynamic_pointer_cast<BatchNormalizationNode<float>>(node);
-            if (!pNode)
-            {
-                auto pNode2 = dynamic_pointer_cast<BatchNormalizationNode<double>>(node);
-                if (!pNode2)
-                {
-                    RuntimeError("Invalid node type: node name=%ls. We assume either BatchNormalizationNode<float> or BatchNormalizationNode<double>\n", node->NodeName().c_str());
-                }
-            }
-            else
-            {
-                pNode->SetEvalMode(evalMode);
-            }
-        }
-    }
-}
-} } }
+}}}
