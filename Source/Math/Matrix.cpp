@@ -475,6 +475,7 @@ Matrix<ElemType>& Matrix<ElemType>::operator=(Matrix<ElemType>&& moveFrom)
         LogicError("Matrix: Move assignment into itself is forbidden.");
 #if 1
     // shallow-copy all members
+    ReleaseMemory();
     ShallowCopyFrom(moveFrom);
     // virgin-init the source
     moveFrom.Init(CPUDEVICE);
