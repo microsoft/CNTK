@@ -4068,7 +4068,7 @@ void CPUMatrix<ElemType>::ConvolutionForward(const CPUMatrix<ElemType>& kernel, 
                     continue;
                 int dcol = runs(i0 + i, 0);
                 assert(0 <= colBase + dcol && colBase + dcol < GetNumRows());
-                sum += kernel.BufferPointer()[ivBase + skip + i] * (*this)(colBase + dcol, sample);
+                sum += kernel.Data()[ivBase + skip + i] * (*this)(colBase + dcol, sample);
             }
             output(row, sample) = sum;
         }
@@ -4100,7 +4100,7 @@ void CPUMatrix<ElemType>::ConvolutionBackwardData(const CPUMatrix<ElemType>& ker
                     continue;
                 int dcol = runs(i0 + i, 0);
                 assert(0 <= colBase + dcol && colBase + dcol < grad.GetNumRows());
-                grad(colBase + dcol, sample) += curGrad * kernel.BufferPointer()[ivBase + skip + i];
+                grad(colBase + dcol, sample) += curGrad * kernel.Data()[ivBase + skip + i];
             }
         }
     }
@@ -4131,7 +4131,7 @@ void CPUMatrix<ElemType>::ConvolutionBackwardKernel(const CPUMatrix<ElemType>& i
                     continue;
                 int dcol = runs(i0 + i, 0);
                 assert(0 <= colBase + dcol && colBase + dcol < in.GetNumRows());
-                kernelGrad.BufferPointer()[ivBase + skip + i] += curGrad * in(colBase + dcol, sample);
+                kernelGrad.Data()[ivBase + skip + i] += curGrad * in(colBase + dcol, sample);
             }
         }
     }
@@ -4983,7 +4983,7 @@ template <class ElemType>
 
     if (alpha == 0 && incx == 1)
     {
-        memset(a.m_pArray, 0, sizeof(ElemType) * len);
+        memset(a.Data(), 0, sizeof(ElemType) * len);
     }
     else if (sizeof(ElemType) == sizeof(double))
     {

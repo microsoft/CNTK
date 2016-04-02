@@ -920,7 +920,7 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::DoGatherColumnsOf(ElemType beta, const
     a.PrepareDevice();
 
     SyncGuard syncGuard;
-    _doGatherColumnsOf<ElemType> << <GetNumCols(), GetNumRows(), 0, t_stream >> >(m_pArray, GetNumRows(), beta, m.m_pArray, 1, a.m_pArray, a.GetNumRows(), a.GetNumCols(), alpha);
+    _doGatherColumnsOf<ElemType> << <GetNumCols(), GetNumRows(), 0, t_stream >> >(Data(), GetNumRows(), beta, m.Data(), 1, a.Data(), a.GetNumRows(), a.GetNumCols(), alpha);
 
     return *this;
 }
@@ -985,7 +985,7 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::DoScatterColumnsOf(ElemType beta, cons
     Scale(beta, us); // if beta is 0, then this will be a memset()
 
     SyncGuard syncGuard;
-    _doScatterColumnsOf<ElemType> << <a.GetNumCols(), a.GetNumRows(), 0, t_stream >> >(m_pArray, GetNumRows(), GetNumCols(), m.m_pArray, 1, a.m_pArray, a.GetNumRows(), alpha);
+    _doScatterColumnsOf<ElemType> << <a.GetNumCols(), a.GetNumRows(), 0, t_stream >> >(Data(), GetNumRows(), GetNumCols(), m.Data(), 1, a.Data(), a.GetNumRows(), alpha);
 
     return *this;
 }
@@ -2962,8 +2962,8 @@ void GPUMatrix<ElemType>::ConvolutionForward(const GPUMatrix<ElemType>& kernel, 
     auto gdim = dim3((output.GetNumRows() + BlockSize - 1)/ BlockSize, std::min((int)GetNumCols(), 65535));
     PrepareDevice();
     SyncGuard syncGuard;
-    kConvolutionForward<<<gdim, BlockSize, 0, t_stream>>>((int)GetNumCols(), kernel.m_pArray, mpRowCol.m_pArray, mpRowIwht.m_pArray, mpRowRun.m_pArray,
-                                                            runs.m_pArray, m_pArray, (int)GetNumRows(), output.m_pArray, (int)output.GetNumRows());
+    kConvolutionForward<<<gdim, BlockSize, 0, t_stream>>>((int)GetNumCols(), kernel.Data(), mpRowCol.Data(), mpRowIwht.Data(), mpRowRun.Data(),
+                                                            runs.Data(), Data(), (int)GetNumRows(), output.Data(), (int)output.GetNumRows());
 }
 
 template <class ElemType>
@@ -2974,8 +2974,8 @@ void GPUMatrix<ElemType>::ConvolutionBackwardData(const GPUMatrix<ElemType>& ker
     auto gdim = dim3((GetNumRows() + BlockSize - 1)/ BlockSize, std::min((int)GetNumCols(), 65535));
     PrepareDevice();
     SyncGuard syncGuard;
-    kConvolutionBackwardData<<<gdim, BlockSize, 0, t_stream>>>((int)GetNumCols(), kernel.m_pArray, mpRowCol.m_pArray, mpRowIwht.m_pArray, mpRowRun.m_pArray,
-                                                                 runs.m_pArray, m_pArray, (int)GetNumRows(), grad.m_pArray, (int)grad.GetNumRows());
+    kConvolutionBackwardData<<<gdim, BlockSize, 0, t_stream>>>((int)GetNumCols(), kernel.Data(), mpRowCol.Data(), mpRowIwht.Data(), mpRowRun.Data(),
+                                                                 runs.Data(), Data(), (int)GetNumRows(), grad.Data(), (int)grad.GetNumRows());
 }
 
 template <class ElemType>
@@ -2987,8 +2987,8 @@ void GPUMatrix<ElemType>::ConvolutionBackwardKernel(const GPUMatrix<ElemType>& i
     PrepareDevice();
     SyncGuard syncGuard;
     kConvolutionBackwardKernel<<<gdim, BlockSize, 0, t_stream>>>((int)GetNumCols(), (int)in.GetNumRows(), (int)GetNumRows(),
-                                                                   in.m_pArray, mpRowCol.m_pArray, mpRowIwht.m_pArray, mpRowRun.m_pArray,
-                                                                   runs.m_pArray, m_pArray, kernelGrad.m_pArray);
+                                                                   in.Data(), mpRowCol.Data(), mpRowIwht.Data(), mpRowRun.Data(),
+                                                                   runs.Data(), Data(), kernelGrad.Data());
 }
 
 template <class ElemType>
@@ -2998,8 +2998,8 @@ void GPUMatrix<ElemType>::MaxPoolingForward(const GPUMatrix<int>& mpRowCol, cons
     auto gdim = dim3((output.GetNumRows() + BlockSize - 1)/ BlockSize, std::min((int)GetNumCols(), 65535));
     PrepareDevice();
     SyncGuard syncGuard;
-    kMaxPoolingForward<<<gdim, BlockSize, 0, t_stream>>>((int)GetNumCols(), mpRowCol.m_pArray, mpRowIndices.m_pArray, indices.m_pArray,
-                                                           m_pArray, (int)GetNumRows(), output.m_pArray, (int)output.GetNumRows());
+    kMaxPoolingForward<<<gdim, BlockSize, 0, t_stream>>>((int)GetNumCols(), mpRowCol.Data(), mpRowIndices.Data(), indices.Data(),
+                                                           Data(), (int)GetNumRows(), output.Data(), (int)output.GetNumRows());
 }
 
 template <class ElemType>
@@ -3011,9 +3011,9 @@ void GPUMatrix<ElemType>::MaxPoolingBackward(const GPUMatrix<ElemType>& out, con
     auto gdim = dim3((GetNumRows() + BlockSize - 1)/ BlockSize, std::min((int)GetNumCols(), 65535));
     PrepareDevice();
     SyncGuard syncGuard;
-    kMaxPoolingBackward<<<gdim, BlockSize, 0, t_stream>>>((int)GetNumCols(), out.m_pArray, in.m_pArray,
-                                                            mpRowCol.m_pArray, mpRowIndices.m_pArray, indices.m_pArray,
-                                                            m_pArray, (int)GetNumRows(), grad.m_pArray, (int)grad.GetNumRows());
+    kMaxPoolingBackward<<<gdim, BlockSize, 0, t_stream>>>((int)GetNumCols(), out.Data(), in.Data(),
+                                                            mpRowCol.Data(), mpRowIndices.Data(), indices.Data(),
+                                                            Data(), (int)GetNumRows(), grad.Data(), (int)grad.GetNumRows());
 }
 
 template <class ElemType>
@@ -3023,8 +3023,8 @@ void GPUMatrix<ElemType>::AveragePoolingForward(const GPUMatrix<int>& mpRowCol, 
     auto gdim = dim3((output.GetNumRows() + BlockSize - 1)/ BlockSize, std::min((int)GetNumCols(), 65535));
     PrepareDevice();
     SyncGuard syncGuard;
-    kAveragePoolingForward<<<gdim, BlockSize, 0, t_stream>>>((int)GetNumCols(), mpRowCol.m_pArray, mpRowIndices.m_pArray, indices.m_pArray,
-                                                               m_pArray, (int)GetNumRows(), output.m_pArray, (int)output.GetNumRows());
+    kAveragePoolingForward<<<gdim, BlockSize, 0, t_stream>>>((int)GetNumCols(), mpRowCol.Data(), mpRowIndices.Data(), indices.Data(),
+                                                               Data(), (int)GetNumRows(), output.Data(), (int)output.GetNumRows());
 }
 
 template <class ElemType>
@@ -3034,8 +3034,8 @@ void GPUMatrix<ElemType>::AveragePoolingBackward(const GPUMatrix<int>& mpRowCol,
     auto gdim = dim3((GetNumRows() + BlockSize - 1)/ BlockSize, std::min((int)GetNumCols(), 65535));
     PrepareDevice();
     SyncGuard syncGuard;
-    kAveragePoolingBackward<<<gdim, BlockSize, 0, t_stream>>>((int)GetNumCols(), mpRowCol.m_pArray, mpRowIndices.m_pArray, indices.m_pArray,
-                                                                m_pArray, (int)GetNumRows(), grad.m_pArray, (int)grad.GetNumRows());
+    kAveragePoolingBackward<<<gdim, BlockSize, 0, t_stream>>>((int)GetNumCols(), mpRowCol.Data(), mpRowIndices.Data(), indices.Data(),
+                                                                Data(), (int)GetNumRows(), grad.Data(), (int)grad.GetNumRows());
 }
 
 template <class ElemType>
@@ -3059,15 +3059,15 @@ void GPUMatrix<ElemType>::BatchNormalizationForward(const GPUMatrix<ElemType>& s
     {
         if (spatial)
         {
-            Call<ComputeSpatialBatchMeanAndInvStdDev, ElemType>(spatialSize, vectorSize, spatialSize, batchSize, m_pArray,
-                                                                expAvgFactor, runMean.m_pArray, runInvStdDev.m_pArray, epsilon,
-                                                                saveMean.m_pArray, saveInvStdDev.m_pArray, GetStream());
+            Call<ComputeSpatialBatchMeanAndInvStdDev, ElemType>(spatialSize, vectorSize, spatialSize, batchSize, Data(),
+                                                                expAvgFactor, runMean.Data(), runInvStdDev.Data(), epsilon,
+                                                                saveMean.Data(), saveInvStdDev.Data(), GetStream());
         }
         else
         {
-            Call<ComputeBatchMeanAndInvStdDev, ElemType>(vectorSize, vectorSize, batchSize, m_pArray,
-                                                         expAvgFactor, runMean.m_pArray, runInvStdDev.m_pArray, epsilon,
-                                                         saveMean.m_pArray, saveInvStdDev.m_pArray, GetStream());
+            Call<ComputeBatchMeanAndInvStdDev, ElemType>(vectorSize, vectorSize, batchSize, Data(),
+                                                         expAvgFactor, runMean.Data(), runInvStdDev.Data(), epsilon,
+                                                         saveMean.Data(), saveInvStdDev.Data(), GetStream());
         }
     }
     // When:
@@ -3085,14 +3085,14 @@ void GPUMatrix<ElemType>::BatchNormalizationForward(const GPUMatrix<ElemType>& s
             ScaleAndAdd((ElemType)blendFactor, runInvStdDev, saveInvStdDev);
         }
         Call<NormalizeBatchTraining, ElemType>(spatial ? spatialSize : vectorSize, vectorSize, spatialSize, batchSize,
-                                               spatial, m_pArray, out.m_pArray, scale.m_pArray, bias.m_pArray,
-                                               saveMean.m_pArray, saveInvStdDev.m_pArray, GetStream());
+                                               spatial, Data(), out.Data(), scale.Data(), bias.Data(),
+                                               saveMean.Data(), saveInvStdDev.Data(), GetStream());
     }
     else
     {
         Call<NormalizeBatchTraining, ElemType>(spatial ? spatialSize : vectorSize, vectorSize, spatialSize, batchSize,
-                                               spatial, m_pArray, out.m_pArray, scale.m_pArray, bias.m_pArray,
-                                               runMean.m_pArray, runInvStdDev.m_pArray, GetStream());
+                                               spatial, Data(), out.Data(), scale.Data(), bias.Data(),
+                                               runMean.Data(), runInvStdDev.Data(), GetStream());
     }
 }
 
@@ -3114,16 +3114,16 @@ void GPUMatrix<ElemType>::BatchNormalizationBackward(const GPUMatrix<ElemType>& 
     SyncGuard syncGuard;
     if (spatial)
     {
-        Call<ComputeSpatialScaleAndBiasGradients, ElemType>(spatialSize, vectorSize, spatialSize, batchSize, in.m_pArray, m_pArray, scaleGrad.m_pArray, biasGrad.m_pArray,
-                                                            saveMean.m_pArray, saveInvStdDev.m_pArray, GetStream());
+        Call<ComputeSpatialScaleAndBiasGradients, ElemType>(spatialSize, vectorSize, spatialSize, batchSize, in.Data(), Data(), scaleGrad.Data(), biasGrad.Data(),
+                                                            saveMean.Data(), saveInvStdDev.Data(), GetStream());
     }
     else
     {
-        Call<ComputeScaleAndBiasGradients, ElemType>(vectorSize, vectorSize, batchSize, in.m_pArray, m_pArray, scaleGrad.m_pArray, biasGrad.m_pArray,
-                                                     saveMean.m_pArray, saveInvStdDev.m_pArray, GetStream());
+        Call<ComputeScaleAndBiasGradients, ElemType>(vectorSize, vectorSize, batchSize, in.Data(), Data(), scaleGrad.Data(), biasGrad.Data(),
+                                                     saveMean.Data(), saveInvStdDev.Data(), GetStream());
     }
     Call<BackpropagateBatchNormGradients, ElemType>(spatial ? spatialSize : vectorSize, vectorSize, spatialSize, batchSize, spatial,
-                                                    in.m_pArray, m_pArray, grad.m_pArray, scale.m_pArray, scaleGrad.m_pArray, biasGrad.m_pArray, saveMean.m_pArray, saveInvStdDev.m_pArray, GetStream());
+                                                    in.Data(), Data(), grad.Data(), scale.Data(), scaleGrad.Data(), biasGrad.Data(), saveMean.Data(), saveInvStdDev.Data(), GetStream());
 }
 
 #pragma region Static BLAS Functions
@@ -3563,7 +3563,7 @@ template <class ElemType>
 {
     if (alpha == 0) // if 0 then do not access the value, so that we can use this to multiply uninitialized matrices with beta=0
     {
-        CUDA_CALL(cudaMemset(a.m_pArray, 0, a.m_numRows * a.m_numCols * sizeof(ElemType)));
+        CUDA_CALL(cudaMemset(a.Data(), 0, a.m_numRows * a.m_numCols * sizeof(ElemType)));
         return;
     }
 
