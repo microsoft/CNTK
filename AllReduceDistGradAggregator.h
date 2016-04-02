@@ -40,7 +40,7 @@ class AllReduceDistGradAggregator : public IDistGradAggregator<ElemType>
     static const int DEBUG_OUTPUT_TRACE_LEVEL = 3;
 
 public:
-    AllReduceDistGradAggregator(MPIWrapper* mpi, int nBits, bool zeroThresholdFor1Bit, bool useQuantizationForSelfStripe, bool useAsyncAggregation, int traceLevel, int syncStatsTrace)
+    AllReduceDistGradAggregator(const std::shared_ptr<MPIWrapper>& mpi, int nBits, bool zeroThresholdFor1Bit, bool useQuantizationForSelfStripe, bool useAsyncAggregation, int traceLevel, int syncStatsTrace)
         : IDistGradAggregator<ElemType>(mpi), m_numQuantizationBits(nBits), m_zeroThresholdFor1Bit(zeroThresholdFor1Bit), m_useQuantizationForSelfStripe(useQuantizationForSelfStripe), m_traceLevel(traceLevel), m_currentEpochNumber(-1), m_useAsyncAggregation(useAsyncAggregation), m_bufferedGradHeader(nullptr), m_syncStatsTrace(syncStatsTrace), m_iterationCount(0)
     {
     }
