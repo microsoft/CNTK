@@ -32,7 +32,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         map < wstring, shared_ptr<Matrix<ElemType>>>    m_blockLevelSmoothedGradient; 
 
     public:
-        BlockMomentumSGD(MPIWrapper* pMPI, size_t reportFreq, DEVICEID_TYPE devID, bool resetSGDM, double blockMomentum)
+        BlockMomentumSGD(const MPIWrapperPtr& pMPI, size_t reportFreq, DEVICEID_TYPE devID, bool resetSGDM, double blockMomentum)
             :IMASGD<ElemType>(pMPI, reportFreq, devID)
         {
             m_blockMomentum = blockMomentum; 
@@ -121,7 +121,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (nTotalSamples <= 0)
             {
                 // prepare for overflow 
-                factor = 1.0f / g_mpi->NumNodesInUse();
+                factor = 1.0f / m_pMPI->NumNodesInUse();
                 totalSamplesProcessed = samplesSinceLastSync * m_pMPI->NumNodesInUse();
                 // give an estimated one 
             }
