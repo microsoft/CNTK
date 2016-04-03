@@ -261,7 +261,7 @@ public:
                           configp->Get(L"dimSharing"), configp->Get(L"dimPadding"), configp->Get(L"dimPadLower"), configp->Get(L"dimPadUpper"),
                           ImageLayoutKindFrom(configp->Get(L"imageLayout")), configp->Get(L"maxTempMemSizeInSamples"))
     {
-        AttachInputs(configp, GetExpectedNumInputs());
+        AttachInputsFromConfig(configp, GetExpectedNumInputs());
     }
 
 public:
@@ -441,14 +441,14 @@ public:
                       configp->Get(L"dimPadding"), configp->Get(L"dimPadLower"), configp->Get(L"dimPadUpper"),
                       ImageLayoutKindFrom(configp->Get(L"imageLayout")))
     {
-        AttachInputs(configp, GetExpectedNumInputs());
+        AttachInputsFromConfig(configp, GetExpectedNumInputs());
     }
 
 public:
     void Validate(bool isFinalValidationPass) override
     {
         Base::Validate(isFinalValidationPass);
-        InferMBLayoutFromInputsForStandardCase();
+        InferMBLayoutFromInputsForStandardCase(isFinalValidationPass);
 
         if (m_imageLayout != ImageLayoutKind::CHW)
         {

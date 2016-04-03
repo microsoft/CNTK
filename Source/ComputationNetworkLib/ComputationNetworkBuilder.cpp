@@ -306,7 +306,7 @@ shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Convo
                                                                           kernelShape, mapCount, strideShape,
                                                                           sharing, autoPadding, lowerPad, upperPad,
                                                                           imageLayout, maxTempMemSizeInSamples),
-                                                                          weight, inputValues);
+                                                                          { weight, inputValues });
 }
 
 template <class ElemType>
@@ -318,7 +318,7 @@ shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Pooli
 {
     return net.AddNodeToNetAndAttachInputs(New<PoolingNode<ElemType>>(net.GetDeviceId(), nodeName,
                                                                       poolKind, kernelShape, strideShape, autoPadding, lowerPad, upperPad, imageLayout),
-                                                                      inputValues);
+                                                                      { inputValues });
 }
 
 template <class ElemType>

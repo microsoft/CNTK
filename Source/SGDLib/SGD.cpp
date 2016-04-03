@@ -153,7 +153,9 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
     fprintf(stderr, "\n");
     LOGPRINTF(stderr, "Training criterion node(s):\n");
     for (const auto& node : criterionNodes)
+    {
         LOGPRINTF(stderr, "\t%ls = %ls\n", node->NodeName().c_str(), node->OperationName().c_str());
+    }
     if (criterionNodes.empty())
     {
         LOGPRINTF(stderr, "\t(none)\n");
@@ -178,7 +180,9 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
             LOGPRINTF(stderr, "Evaluation criterion node(s):\n");
             fprintf(stderr, "\n");
             for (const auto& node : evaluationNodes)
+            {
                 LOGPRINTF(stderr, "\t%ls = %ls\n", node->NodeName().c_str(), node->OperationName().c_str());
+            }
         }
     }
 
@@ -1302,7 +1306,9 @@ bool SGD<ElemType>::PreCompute(ComputationNetworkPtr net,
     fprintf(stderr, "\n");
     LOGPRINTF(stderr, "Precomputing --> %lu PreCompute nodes found.\n\n", nodes.size());
     for (const auto & node : nodes)
+    {
         LOGPRINTF(stderr, "\t%ls = %ls()\n", node->NodeName().c_str(), node->OperationName().c_str());
+    }
 
     // compute
     ScopedNetworkOperationMode modeGuard(net, NetworkOperationMode::preComputing);

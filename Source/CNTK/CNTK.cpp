@@ -659,7 +659,8 @@ int wmainOldCNTKConfig(int argc, wchar_t* argv[])
         fcloseOrDie(fp);
     }
     // TODO: Change back to COMPLETED (no underscores)
-    LOGPRINTF(stderr, "__COMPLETED__\n"), fflush(stderr);
+    LOGPRINTF(stderr, "__COMPLETED__\n");
+    fflush(stderr);
 
     MPIWrapper::DeleteInstance();
     return EXIT_SUCCESS;
