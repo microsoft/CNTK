@@ -98,6 +98,7 @@ static shared_ptr<ComputationNode<ElemType>> CreateStandardNode(const std::wstri
     else if (nodeType == OperationNameOf(SumColumnElementsNode))                return New<SumColumnElementsNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(SumElementsNode))                      return New<SumElementsNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(TanhNode))                             return New<TanhNode<ElemType>>(forward<_Types>(_Args)...);
+    else if (nodeType == OperationNameOf(TraceNode))                            return New<TraceNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(TimesNode))                            return New<TimesNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(TransposeDimensionsNode))              return New<TransposeDimensionsNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(TransposeTimesNode))                   return New<TransposeTimesNode<ElemType>>(forward<_Types>(_Args)...);

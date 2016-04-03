@@ -1027,7 +1027,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                     if (smoothedGradient.HasNan("TrainOneEpoch/UpdateWeights(): "))
                         LogicError("%ls %ls operation has NaNs in smoothedGradient.", node->NodeName().c_str(), node->OperationName().c_str());
 #endif
-                    // BUGBUG: Access to net MBLayout can no longer be done if we have multiple input layouts
+                    // BUGBUG (Issue #95): Access to net MBLayout can no longer be done if we have multiple input layouts
                     UpdateWeights(node, smoothedGradient, learnRatePerSample,
                                   GetMomentumPerSample(epochNumber /*BUGBUG workaround:*/, net->GetMBLayoutPtrOfNetwork()->GetNumParallelSequences()), aggregateNumSamples,
                                   m_L2RegWeight, m_L1RegWeight,
@@ -1785,7 +1785,7 @@ void SGD<ElemType>::AttemptUtteranceDerivativeFeatures(ComputationNetworkPtr net
         if (outputNodes.empty())
             LogicError("no output node was found.");
 
-        // BUGBUG: This is no longer correct once we have multiple input layouts.
+        // BUGBUG (Issue #95): This is no longer correct once we have multiple input layouts.
         trainSetDataReader->CopyMBLayoutTo(net->GetMBLayoutPtrOfNetwork());
         net->ForwardProp(outputNodes[0]); // only evaluate the first output
         trainSetDataReader->SetNetOutput(uttInfo,

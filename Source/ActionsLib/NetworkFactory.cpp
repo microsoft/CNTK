@@ -128,10 +128,15 @@ static void PatchOutputNodes(const ComputationNetworkPtr& net, const ConfigArray
     while (!net->OutputNodes().empty())
         net->RemoveFromNodeGroup(L"output", net->OutputNodes().back());
     // and insert the desired nodes instead
-    for (int i = 0; i < outputNodeNames.size(); ++i)
+    for (wstring name : outputNodeNames)
     {
-        outputNodeNamesVector.push_back(outputNodeNames[i]);
-        let& node = net->GetNodeFromName(outputNodeNames[i]);
+        if (!net->NodeNameExists(name))
+        {
+            fprintf(stderr, "PatchOutputNodes: No node named '%ls'; skipping\n", name.c_str());
+            continue;
+        }
+        outputNodeNamesVector.push_back (name);
+        let& node = net->GetNodeFromName(name);
         net->AddToNodeGroup(L"output", node);
     }
 }

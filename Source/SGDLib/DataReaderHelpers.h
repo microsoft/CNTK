@@ -62,6 +62,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         // get layout meta-data
+        // BUGBUG (Issue #95): must be adapted for multiple MBLayouts
         trainSetDataReader.CopyMBLayoutTo(net->GetMBLayoutPtrOfNetwork());
 
         // decimate if needed. Decimation happens in-place.

@@ -509,7 +509,7 @@ void ComputationNetwork::DetermineSetOfAllRoots()
 // initial setup of MBLayout pointers
 //  - link all input nodes to one or more MBLayouts    --TODO: Currently only one
 //  - reset all others to nullptr, in expectation of a ValidateNetwork() pass
-// TODO: Change this to use different MBLayouts for different inputs if so configured.
+// BUGBUG (Issue #95): Change this to use different MBLayouts for different inputs if so configured.
 void ComputationNetwork::ResetMBLayouts()
 {
     // reset to a well-defined MBLayout (any meaningful layout should do here)
@@ -521,7 +521,7 @@ void ComputationNetwork::ResetMBLayouts()
         node->LinkToMBLayout(nullptr);
 
     // then fix up inputs (all others get propagated upwards through Validate())
-    // TODO: Once we support mismatching layouts, this will be more involved. For now, everything shares the one layout that the Network knows about.
+    // BUGBUG (Issue #95): Once we support mismatching layouts, this will be more involved. For now, everything shares the one layout that the Network knows about.
     for (auto node : InputNodes(nullptr))
         node->LinkToMBLayout(m_pMBLayoutOfNetwork);
 }

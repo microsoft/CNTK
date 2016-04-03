@@ -10,7 +10,6 @@
 ##############################################################################
 
 Print(value, format='') = new PrintAction [ what = value /*; how = format*/ ] 
-Debug(value, say = '', enabled = true) = new Debug [ /*macro arg values*/ ] 
 Fail(what) = new FailAction [ /*what*/ ]
 Format(value, format) = new StringFunction [ what = 'Format' ; arg = value ; how = format ] 
 Replace(s, from, to) = new StringFunction [ what = 'Replace' ; arg = s ; replacewhat = from ; withwhat = to ] 
@@ -372,16 +371,16 @@ RNNs =
                 Wmr = Parameters.WeightParam(outputDim, cellDim);
                 htp = Wmr * Parameters.Stabilize (_privateInnards.ht, enabled=enableSelfStabilization)
             ].htp         // TODO: ^^ extend BS syntax to allow to say: then [ Wmr = WeightParam(outputDim, cellDim) ] in Wmr * Stabilize (...)
-            else _privateInnards.ht // no projection
+            else _privateInnards.ht     // no projection
     ]
 
     # this implements a recurrent (stateful) LSTM with projection and self-stabilization
     RecurrentLSTMP (inputDim, outputDim, cellDim, x, enableSelfStabilization=false) =
     [
-        prevState =  // Loop.Previous (lstmState). BS can't apply Previous() to dictionaries, so expand it manually
+        prevState =
         [
-            h = Loop.Previous (lstmState.h);                     // hidden state(t-1)
-            c = Loop.Previous (lstmState.c);                     // cell(t-1)
+            h = Loop.Previous (lstmState.h)             // hidden state(t-1)
+            c = Loop.Previous (lstmState.c)             // cell(t-1)
         ]
         enableSelfStabilization1 = enableSelfStabilization // TODO: BS syntax needs to allow to say ^.enableSelfStabilization
         lstmState = LSTMP (inputDim, outputDim, cellDim, x, prevState, enableSelfStabilization=enableSelfStabilization1)
@@ -395,7 +394,7 @@ RNNs =
 
 Network = [
     Load(pathName) = new ComputationNetworkFromFile [ /*pathName; also needs 'precision' somewhere*/ ]
-    Edit(inputModel, editFunctions) = new ComputationNetworkWithEdits [ /*inputModel, editFunctions*/ ]
+    Edit(inputModel, editFunctions, additionalRoots) = new ComputationNetworkWithEdits [ /*inputModel, editFunctions, additionalRoots*/ ]
 
     Editing = [
         // Create a lambda that returns its argument unless that argument == 'old', then it will return 'replacement'

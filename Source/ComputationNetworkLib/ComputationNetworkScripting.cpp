@@ -249,8 +249,10 @@ public:
         let& config = *configp;
         let& net = config[L"inputModel"].AsRef<ComputationNetwork>();
         let editFunctions = ScriptableObjects::ConfigArray::FlattenedVectorFrom<ConfigLambda>(config[L"editFunctions"]);
+        let additionalRoots = ScriptableObjects::ConfigArray::FlattenedVectorFrom<ComputationNodeBasePtr>(config[L"additionalRoots"]);
 
         // gather all the edits
+        // This runs the edit functions over all nodes.
         map<ComputationNodeBasePtr, ComputationNodeBasePtr> replacements; // [orig, replacement] all return values from the Edit-function calls
         let allNodes = net.GetAllNodes();
         for (let& node : allNodes) // iterate over all nodes
@@ -313,11 +315,15 @@ public:
         //  - original nodes that are no longer referenced
         // The new network will be constructed to have the same roots as the original.
 
-        // determine all roots of the original network
+        // determine all roots
         deque<ComputationNodeBasePtr> roots;
+        // start with the original network
         for (let& node : allNodes)
             if (parents.find(node)->second.empty()) // no parents: it's a root
                 roots.push_back(node);
+        // also add new roots
+        for (let& node : additionalRoots)
+            roots.push_back(node);
         fprintf(stderr, "Edit: %d roots to construct the network from.\n", (int)roots.size());
 #ifdef _DEBUG
         for (let& node : roots)

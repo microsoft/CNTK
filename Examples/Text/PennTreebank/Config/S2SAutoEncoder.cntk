@@ -35,6 +35,7 @@ command = writeWordAndClassInfo:train:test:write
 precision  = "float"
 traceLevel = 1
 modelPath  = "$ModelDir$/S2SAutoEncoder.dnn"
+decodeModelPath = "$modelPath$.13" # epoch to decode. Has best CV WER
 
 # uncomment the following line to write logs to a file
 #stderr=$OutputDir$/rnnOutput
@@ -128,10 +129,12 @@ BrainScriptNetworkBuilder = (new ComputationNetwork [
     # and takes as input [thoughtVector; previous word].
 
     isTraining = EnvironmentInput ('isTraining', tag='evaluation')
-    #decoderFeedback = Boolean.If (isTraining, labelsEmbedded, decoderOutputEmbedded)
-    decoderFeedback = labelsEmbedded
-    delayedDecoderFeedback = Boolean.If (Loop.IsFirst (decoderFeedback), inputEmbedded, Loop.Previous (decoderFeedback))
+    #decoderFeedback      = Boolean.If (isTraining, labelsEmbedded, decoderOutputEmbedded) # not working
+    decoderFeedback       = labelsEmbedded
+    sentenceStartEmbedded = inputEmbedded          # first token is sentence start
     # ^^ inputEmbedded is used to get </s>. Must make this a constant once we separate input and output.
+
+    delayedDecoderFeedback = Boolean.If (Loop.IsFirst (decoderFeedback), sentenceStartEmbedded, Loop.Previous (decoderFeedback))
 
     decoderInputDim = if useEncoder then           thoughtVectorDim        + embeddingDim  else           embeddingDim
     decoderInput    = if useEncoder then RowStack (thoughtVector : delayedDecoderFeedback) else delayedDecoderFeedback
@@ -501,8 +504,48 @@ write = [
     BrainScriptNetworkBuilder = ([
 
         # import some names
-        Previous = BS.Loop.Previous
-        IsFirst = BS.Loop.IsFirst
+        Boolean = BS.Boolean
+        Loop = BS.Loop
+        Previous = Loop.Previous
+        IsFirst = Loop.IsFirst
+
+        Trace (node, say='', logFrequency=traceFrequency, logFirst=10, logGradientToo=false, onlyUpToRow=100000000, onlyUpToT=100000000, format=[], tag='') = new ComputationNode [
+            operation = 'Trace' ; inputs = node
+        ]
+
+        formatDense = [
+            type = "real"
+            transpose = false
+            precisionFormat = ".4"
+        ]
+        formatOneHot = [
+            type = "category"
+            transpose = false
+            labelMappingFile = "$ModelDir$/vocab.wl"
+        ]
+        formatSparse = [
+            type = "sparse"
+            transpose = false
+            labelMappingFile = "$ModelDir$/vocab.wl"
+        ]
+        enableTracing = true
+        traceFrequency = 1
+        TraceState (h, what) =
+            if enableTracing
+            then Transpose (Trace (Transpose (h), say=what, logFirst=10, logFrequency=traceFrequency, logGradientToo=false, onlyUpToRow=beamDepth*beamDepth, onlyUpToT=3, format=formatDense))
+            else h
+        TraceDense (h, what) =
+            if enableTracing
+            then Trace (h, say=what, logFirst=10, logFrequency=traceFrequency, logGradientToo=false, onlyUpToRow=beamDepth*beamDepth, onlyUpToT=3, format=formatDense)
+            else h
+        TraceOneHot (h, what) =
+            if enableTracing
+            then Trace (h, say=what, logFirst=10, logFrequency=traceFrequency, logGradientToo=false, /*onlyUpToRow=beamDepth*beamDepth, onlyUpToT=15,*/ format=formatOneHot)
+            else h
+        TraceSparse (h, what) =
+            if enableTracing
+            then Trace (h, say=what, logFirst=10, logFrequency=traceFrequency, logGradientToo=false, /*onlyUpToRow=beamDepth*beamDepth, onlyUpToT=3,*/ format=formatSparse)
+            else h
 
         # macro that extracts top D hypotheses from a 2D tensor
         # input: scores[w,n]    w = word index, d = hyp index in beam (d=0 is the best one)
@@ -518,7 +561,7 @@ write = [
                 curBestScores = if n == 0                            # scores excluding paths better than rank n
                                 then scores                          # top: just the path scores
                                 else recursion[n - 1].nextBestScores # next: path scores after removing all we already got
-                best = Hardmax (curBestScores)                       # best = one-hot over (w,n)
+                best = TraceOneHot (Hardmax (curBestScores), 'best')                       # best = one-hot over (w,n)
                 nextBestScores = curBestScores + Constant (-1e30) .* best     # set the ones we've already got to -INF
                 # TODO: use proper -INF; e.g. -1/0 in BS. Needs to be tested thoroughly.
             ]
@@ -527,39 +570,53 @@ write = [
             spliced = Splice (axis = 3, asArray)   # convert BS array index n to tensor index n1
         ].spliced
 
-        beamDepth = 2 // 0=predict; 1=greedy; >1=beam
+        beamDepth = 1 // 0=predict; 1=greedy; >1=beam
 
-        oldModel = BS.Network.Load ("$modelPath$")
+        modelAsTrained = BS.Network.Load ("$decodeModelPath$")
 
-        predictingModel(model) = new ComputationNetwork [
+        top1DecodingModel(model) = new ComputationNetwork [
             # compute top-N from output
-            z = model.z
+            logP = LogSoftmax (model.z)
 
-            top = Hardmax(z)
+            offset = Constant (10000)
+            top1a = Hardmax (logP)  .* (logP + offset)/*for tracing*/
+            top1b = top1a
+            top1 = TraceSparse (top1b, 'logP') # TODO: get the accumulated logP out, it's a little more involved
 
             topN = 10
-            tokenSet = GetTopNTensor (topN, z) # [V x 1] -> [V x 1 x topN]
-            tokenSetScores = tokenSet .* z   # [V x 1 x topN]
+            tokenSet = GetTopNTensor (topN, logP) # [V x 1] -> [V x 1 x topN]
+            tokenSetScores = tokenSet .* logP   # [V x 1 x topN]
             # reduce back to a single column
-            topHyps = tokenSetScores * ConstantTensor (1, (1 : topN))
+            topHyps = TraceSparse (tokenSetScores * ConstantTensor (1, (1 : topN)), 'topHyps')
 
-            # our outputs
-            labels1 = model.labels1
-            top1     = BS.Sequences.Skip (1, top)
-            topHyps1 = BS.Sequences.Skip (1, topHyps)
+            labelsOut = Pass (TraceOneHot (model.labelSequence, 'labels'))
+            decodeOut = Pass (TraceOneHot (top1, 'out'))
+            topNOut   = Pass (topHyps)
         ]
 
         # replace old decoderFeedback node by newDecoderFeedback
-        decoderInput1 = oldModel.decoderInput.RowStackArgs[1]
-        sentenceStart = oldModel.labelsEmbedded
-        newDecoderInput1 = BS.Loop.Previous (BS.Boolean.If (IsFirst (oldModel.decoderOutputEmbedded), oldModel.labelsEmbedded, oldModel.decoderOutputEmbedded))
-        # need a way to find a node by name, then this is easy
-        # or a way to rename a node as an edit? finding and assigning is renaming
-        # or a way to force-name nodes--Pass(, name='')? Can we explicitly name them?
-        greedyDecodingModel = BS.Network.Edit (oldModel, BS.Network.Editing.ReplaceLinksToNode (decoderInput1, newDecoderInput1))
+
+        decoderFeedback        = modelAsTrained.decoderOutputEmbedded  # in training, this is decoderFeedback = labelsEmbedded
+        sentenceStartEmbedded  = Boolean.If (Loop.IsFirst (decoderFeedback), modelAsTrained.inputEmbedded, Previous (sentenceStartEmbedded)) # enforces no leaking of labels
+        delayedDecoderFeedback = Boolean.If (Loop.IsFirst (decoderFeedback), sentenceStartEmbedded, Loop.Previous (decoderFeedback)) # same expression as in training
+
+        greedyDecodingModel = BS.Network.Edit (modelAsTrained,
+                                               BS.Network.Editing.ReplaceLinksToNode (modelAsTrained.delayedDecoderFeedback, delayedDecoderFeedback),
+                                               modelAsTrained.z/*dummy for now since cannot pass empty set*/)
 
         # beam search of width 'beamDepth'
         beamDecodingModel = [
+            # this comes out of modelAsTrained:
+            #  decoder[0].prevState.h = PastValue (decoder[0].lstmState._privateInnards.ht) : [200 x 1 {1,200} x *] -> [200 x 1 {1,200} x *]
+            #  decoder[0].prevState.c = PastValue (decoder[0].lstmState._privateInnards.ct) : [200 x 1 {1,200} x *] -> [200 x 1 {1,200} x *]
+            #  decoderInput.inputs[1] = PastValue (labelsEmbedded) : [300 x 1 {1,300} x *] -> [300 x 1 {1,300} x *]
+
+            hiddenDim    = modelAsTrained.delayedDecoderFeedback.dim
+            embeddingDim = modelAsTrained.decoderOutputEmbedded.dim
+            vocabSize    = modelAsTrained.z.dim
+
+            # replace every reference of these by PropagateTopN(of these)
+
             # turning a regular LSTM to a top-N beam-search decoder:
             #  - add a depth axis of dimension N to all nodes inside the decoder loop
             #     - only needs the init signal for PastValue to be that
@@ -577,34 +634,26 @@ write = [
             #  - traceback is a right-to-left recurrence
             #     - output best hypo conditioned on the path (it is already known)
 
-            m1 = oldModel
+            EditToPropagateTopN (name) = (node => if node.name == name then TraceState (Previous (PropagateTopN (node)), 'propagated') else node)
+            # if I comment out PropagateTopN then this becomes greedy, which makes sense
 
-            # this comes out of m1:
-            #  decoder[0].prevState.h = PastValue (decoder[0].lstmState._privateInnards.ht) : [200 x 1 {1,200} x *] -> [200 x 1 {1,200} x *]
-            #  decoder[0].prevState.c = PastValue (decoder[0].lstmState._privateInnards.ct) : [200 x 1 {1,200} x *] -> [200 x 1 {1,200} x *]
-            #  decoderInput.inputs[1] = PastValue (labelsEmbedded) : [300 x 1 {1,300} x *] -> [300 x 1 {1,300} x *]
+            # cf. Validating --> decoder[0].prevState.h = PastValue (decoder[0].lstmState._privateInnards.ht) : [200 x 1 {1,200} x *] -> [200 x 1 {1,200} x *]
+            # prevState.h = Loop.Previous (lstmState.h)
 
-            hiddenDim    = m1.delayedDecoderFeedback.dim
-            embeddingDim = m1.decoderOutputEmbedded.dim
-            vocabSize    = m1.z.dim
-
-            SkipFirst (x) = BS.Sequences.Skip (1, x)
-
-            # replace every reference of these by PropagateTopN(of these)
-            EditToPropagateTopN (name) = (node => if node.name == name then /*PropagateTopN*/ (node) else node)
-            propagationEdits[i:0..3] = // TODO: implement and use { } syntax
-                if      i == 0 then EditToPropagateTopN ('decoder[0].prevState.h')
+            propagationEdits[i:0..2] = // TODO: implement and use { } syntax
+                if      i == 0 then EditToPropagateTopN ('decoder[0].prevState.h') # inject reshuffling of hypotheses
                 else if i == 1 then EditToPropagateTopN ('decoder[0].prevState.c')
-                else if i == 2 then BS.Network.Editing.ReplaceLinksToNamedNode ('z1.out', z1)
-                else                BS.Network.Editing.ReplaceLinksToNode (m1.decoderInput.RowStackArgs[1], PastValue ((embeddingDim : beamDepth), m1.decoderOutputEmbedded))
-                # note: The RowStack operation should broadcast the thoughtVector automatically
+                else                BS.Network.Editing.ReplaceLinksToNode (modelAsTrained.delayedDecoderFeedback, delayedDecoderFeedback)
 
-            z1 = SkipFirst (decode)
+            delayedDecoderFeedback = Boolean.If (Loop.IsFirst (decoderFeedback), sentenceStartEmbedded, Loop.Previous (decoderFeedback))
 
-            m2 = BS.Network.Edit (m1, propagationEdits)
+            m2 = BS.Network.Edit (modelAsTrained,
+                                  propagationEdits,
+                                  (labelsOut : decodeOut)) # additional roots
 
             # propagate LSTM state to the right top-N rank given where that rank came from in the previous time step
-            PropagateTopN (h /* or c*/) = Previous (Times (h.PastValueArgs[0], backPointers))
+
+            PropagateTopN (h_or_c) = Times (TraceState (h_or_c.PastValueArgs[0], 'past'), TraceDense (backPointers, 'backp'))
             # backPointers: [Dprev, Dnew]
             #   v--------- best came from input hyp[1]
             #     v------- second best came from input hyp[0]
@@ -617,8 +666,9 @@ write = [
             # multiplying with such a column from the right will select the column represented by the one-hot value
 
             # get decoder log likelihoods
-            logLLs = m1.z    # [V x D] un-normalized log P(w|hist) + const
-            #logLLs = logLLs1 + IsFirst (logLLs1) .* m1.input .* Constant (5000)   # give a boost to sentence start to enforce it to be output
+            # BUGBUG!!! Does not normalize correctly. Must normalize along columns.
+            # EvalActions: EnableNodeTracing {L"decoder[0].lstmState._privateInnards.it", L"z"}, //
+            logLLs = LogSoftmax (modelAsTrained.z)    # [V x D] un-normalized log P(w|hist) + const
 
             # decoder start token: 0 for first hyp, -INF for the others
             LOGZERO = -1e30
@@ -627,7 +677,7 @@ write = [
             expandedPathScores = logLLs + PreviousOrDefault (pathScores, initialPathScores)        # [V x Dprev] un-normalized log (P(w|hist) * P(hist)) for all top D hypotheses
             # ^^ path expansion, [V x 1] + [1 x D] -> [V x D]
 
-            tokenSet = GetTopNTensor (beamDepth, expandedPathScores) # [V x Dprev] -> [V x Dprev x Dnew]
+            tokenSet = TraceSparse (GetTopNTensor (beamDepth, expandedPathScores), 'tokenSet') # [V x Dprev] -> [V x Dprev x Dnew]
             #   +-----+
             #   |0 0 0|
             #   |0 0 0|-+
@@ -639,7 +689,7 @@ write = [
             #       |0 0 0|
             #       +-----+
 
-            backPointers = Times (ConstantTensor (1, vocabSize), tokenSet, outputRank = 0) # this is a tensor Times operation that reduces over the first dimension
+            backPointers = Times (ConstantTensor (1, (vocabSize)), tokenSet, outputRank = 0) # this is a tensor Times operation that reduces over the first dimension
             # before dropping the first dimension: [V x Dprev x Dnew]
             #   +-----+
             #   |0 1 0|       means input hyp[1] gave rise to the best    
@@ -657,7 +707,7 @@ write = [
             #   0 0 1
             # backPointers[:,n] one-hot encodes the best predecessor at top-N rank n
 
-            tokenSetScores = tokenSet .* expandedPathScores   # [V x Dprev x Dnew]
+            tokenSetScores = TraceSparse (tokenSet .* logLLs/*expandedPathScores  FIX THIS!!!*/, 'tokenSetScores')   # [V x Dprev x Dnew]
             #   +-----+
             #   |0 0 0|
             #   |0 0 0|-+
@@ -668,21 +718,21 @@ write = [
             #     +-----+z|   z denotes the accumulated path score max_w P(w|hyp[2])
             #       |0 0 0|
             #       +-----+
-            pathScores = ConstantTensor (1, (1/*output dim*/ : /*reduction dims: */vocabSize : beamDepth/*Dprev*/)) * tokenSetScores  # [1 x Dnew]
+            pathScores = TraceDense (ConstantTensor (1, (1/*output dim*/ : /*reduction dims: */vocabSize : beamDepth/*Dprev*/)) * tokenSetScores, 'pathScores')  # [1 x Dnew]
 
             # traceback
             # last state: take Hardmax over pathScores
             # previous states: multiply wth respective backPointers matrix
             # -> hyp index for every time step
             # then finally use that to select the actual output   TODO: That's a sample-wise matrix product between two sequences!!!
-            traceback = NextOrDefault (backPointers * traceback, finalHyp)    # [D] one-hot, multiplying backPointers from the left will select another one-hot row of backPointers
+            traceback = TraceDense (NextOrDefault (backPointers * traceback, finalHyp), 'traceback')    # [D] one-hot, multiplying backPointers from the left will select another one-hot row of backPointers
             finalHyp = FirstAndOther (1, 0, beamDepth, axis = 1)              # the final token is the top-scoring hypothesis, that is, hyp[0]
 
             # and the actual decoding output
-            # This is the one to output.
+            # This is the one to output (top sentence-level hypothesis after traceback).
             decode = [
-                hyp = Times (tokenSet, traceback, outputRank = 2)   # [V x Dprev] 2D one-hot
-                out = hyp * ConstantTensor (1, beamDepth)           # reduces over Dprev -> 1D one-hot
+                hyp = TraceOneHot (Times (tokenSet, traceback, outputRank = 2), 'hyp')   # [V x Dprev] 2D one-hot
+                out = TraceOneHot (hyp * ConstantTensor (1, beamDepth), 'out')           # reduces over Dprev -> 1D one-hot
             ].out
             # traceback : [Dnew]
             # tokenSet : [V x Dprev x Dnew]
@@ -697,16 +747,18 @@ write = [
             #       |0 0 0|
             #       +-----+
 
-            z = decode;
-
             # helper macros  --> move to BS.core.bs
 
-            FirstAndOther (firstVal, otherVals, N, axis = 1) = [
+            FirstAndOther (firstVal, otherVals, N, axis = 1) = if N == 1 then ConstantTensor (firstVal, (1 : 1)) else [
                 axis1 = axis  # TODO: Is this really necessary? Why? Then we need the syntax   axis = ^.axis or ^axis
                 out = if axis == 1
                       then RowStack (ConstantTensor (firstVal, 1) : ConstantTensor (otherVals, N -1))   # col vector: [ 1; 0; 0; 0 ... ]
                       else Splice (Constant (firstVal) : ConstantTensor (otherVals, (1 : N -1)), axis = axis1 /*, axis*/)   # row vector: [ 0, -INF, -INF, -INF, ... ]
             ].out
+
+            labelsOut = Pass (modelAsTrained.labelSequence)
+            decodeOut = Pass (decode)
+            #topNOut   = Pass (topHyps)
 
             PreviousOrDefault (x, initialValue) =   # a delay node with initial value
                 BS.Boolean.If (BS.Loop.IsFirst (x),
@@ -725,8 +777,8 @@ write = [
                 #else BS.Loop.Next (x)
         ].m2
 
-        model = if beamDepth == 0 then predictingModel(oldModel)
-           else if beamDepth == 1 then predictingModel(greedyDecodingModel)
+        model = if beamDepth == 0 then top1DecodingModel (modelAsTrained)
+           else if beamDepth == 1 then top1DecodingModel (greedyDecodingModel)
            else                        beamDecodingModel
 
     ].model)
@@ -736,13 +788,15 @@ write = [
     #outputNodeNames = z1.out:labels1 # when processing one sentence per minibatch, this is the sentence posterior
     #outputNodeNames = network.beamDecodingModel.z1.out:labels1 # when processing one sentence per minibatch, this is the sentence posterior
 
-    # predicting model:
-    #outputNodeNames = topHyps:top:labels1 # when processing one sentence per minibatch, this is the sentence posterior
+    # greedy and predict:
+    #outputNodeNames = labelsOut:decodeOut    #:topNOut
+    # beam:
+    #outputNodeNames = network.beamDecodingModel.labelsOut:network.beamDecodingModel.decodeOut    #:topNOut
 
-    # greedy model:
-    #outputNodeNames = topHyps:top:labels1 # when processing one sentence per minibatch, this is the sentence posterior
+    # joint:
+    outputNodeNames = labelsOut:decodeOut:network.beamDecodingModel.labelsOut:network.beamDecodingModel.decodeOut
 
-    outputNodeNames = labels1:network.beamDecodingModel.decode.out
+    #outputNodeNames = labels1:network.beamDecodingModel.decode.out
     #outputNodeNames = labels1:network.beamDecodingModel.expandedPathScores
     #outputNodeNames = network.beamDecodingModel.pathScores:network.beamDecodingModel.traceback
     #   network.beamDecodingModel.tokenSetScores
@@ -751,15 +805,16 @@ write = [
     #   network.beamDecodingModel.expandedPathScores
 
     format = [
-        type = "sparse"
+        type = "category" #"sparse"
         transpose = false
         labelMappingFile = "$ModelDir$/vocab.wl"
+        #precisionFormat = "10"
         sequenceEpilogue = "\t// %s\n"
     ]
 
     #traceNodeNamesReal = network.beamDecodingModel.pathScores:network.beamDecodingModel.tokenSetScores:network.beamDecodingModel.expandedPathScores:network.beamDecodingModel.backPointers
     #traceNodeNamesCategory = network.beamDecodingModel.tokenSetScores
-    traceNodeNamesSparse = network.beamDecodingModel.tokenSetScores:network.beamDecodingModel.backPointers:decoderOutputEmbedded.x
+    #traceNodeNamesSparse = network.beamDecodingModel.tokenSetScores:network.beamDecodingModel.backPointers:decoderOutputEmbedded.x
 
     minibatchSize = 8192                # choose this to be big enough for the longest sentence
     # need to be small since models are updated for each minibatch

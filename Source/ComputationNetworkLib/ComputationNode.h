@@ -1174,15 +1174,19 @@ public:
             Rethrow(e);
         }
     }
+#if 0
+    Matrix<ElemType> DataFor(const Matrix<ElemType>& data, const FrameRange& fr /*select frame or entire batch*/) const
+    {
+        return const_cast<ComputationNode<ElemType>*>(this)->DataFor(const_cast<Matrix<ElemType>&>(data), fr);
+    }
+#endif
 
-    Matrix<ElemType> ValueFor(const FrameRange& fr /*select frame or entire batch*/)
-    {
-        return DataFor(Value(), fr);
-    }
-    Matrix<ElemType> GradientFor(const FrameRange& fr /*select frame or entire batch*/)
-    {
-        return DataFor(Gradient(), fr);
-    }
+    Matrix<ElemType> ValueFor   (const FrameRange& fr /*select frame or entire batch*/)       { return DataFor(Value(),    fr); }
+    Matrix<ElemType> GradientFor(const FrameRange& fr /*select frame or entire batch*/)       { return DataFor(Gradient(), fr); }
+#if 0 // causes grief with gcc
+    Matrix<ElemType> ValueFor   (const FrameRange& fr /*select frame or entire batch*/) const { return DataFor(Value(),    fr); }
+    Matrix<ElemType> GradientFor(const FrameRange& fr /*select frame or entire batch*/) const { return DataFor(Gradient(), fr); }
+#endif
     // use the following two versions if you assume the inputs may contain gaps that must be set to zero because you want to reduce over frames with a BLAS operation
     Matrix<ElemType> MaskedValueFor(const FrameRange& fr /*select frame or entire batch*/)
     {
@@ -1264,8 +1268,8 @@ protected:
         DetermineDataSize(rows, cols);
         try
         {
-        m.VerifySize(rows, cols);
-    }
+            m.VerifySize(rows, cols);
+        }
         catch (const std::exception& e)
         {
             Rethrow(e);
@@ -1474,10 +1478,10 @@ public:
     virtual void DumpNodeInfo(const bool /*printValues*/, const bool /*printMetadata*/, File& fstream) const;
 
     // helper for SimpleOutWriter, living in here to be able to use in debugging
-    void WriteMinibatchWithFormatting(FILE* f, size_t onlyUpToRow, size_t onlyUpToT, bool transpose, bool isCategoryLabel, bool isSparse,
+    void WriteMinibatchWithFormatting(FILE* f, const FrameRange& fr, size_t onlyUpToRow, size_t onlyUpToT, bool transpose, bool isCategoryLabel, bool isSparse,
                                       const std::vector<std::string>& labelMapping, const std::string& sequenceSeparator, 
                                       const std::string& sequencePrologue, const std::string& sequenceEpilogue, const std::string& elementSeparator,
-                                      const std::string& sampleSeparator, const std::string& valueFormatString,
+                                      const std::string& sampleSeparator, std::string valueFormatString,
                                       bool outputGradient = false) const;
 
     void Trace()
@@ -1486,15 +1490,15 @@ public:
         {
             fprintf(stderr, "Trace --> %s\n", FormatOperationPrototype("").c_str());
             if (m_traceNodeValueReal)
-                WriteMinibatchWithFormatting(stderr, m_traceNodeValueUpToDim, m_traceNodeValueUpToT, false/*transpose*/, /*isCategoryLabel=*/false, /*isSparse=*/false, std::vector<std::string>(),
+                WriteMinibatchWithFormatting(stderr, FrameRange(), m_traceNodeValueUpToDim, m_traceNodeValueUpToT, false/*transpose*/, /*isCategoryLabel=*/false, /*isSparse=*/false, std::vector<std::string>(),
                                              ""/*sequenceSeparator*/, "  "/*sequencePrologue*/, "\n"/*sequenceEpilogue*/, " "/*elementSeparator*/, "\n  "/*sampleSeparator*/,
                                              "%13.10f"/*valueFormatString*/);
             if (m_traceNodeValueAsCategoryLabel)
-                WriteMinibatchWithFormatting(stderr, m_traceNodeValueUpToDim, m_traceNodeValueUpToT, false/*transpose*/, /*isCategoryLabel=*/true,  /*isSparse=*/false, std::vector<std::string>(),
+                WriteMinibatchWithFormatting(stderr, FrameRange(), m_traceNodeValueUpToDim, m_traceNodeValueUpToT, false/*transpose*/, /*isCategoryLabel=*/true,  /*isSparse=*/false, std::vector<std::string>(),
                                              ""/*sequenceSeparator*/, "  "/*sequencePrologue*/, "\n"/*sequenceEpilogue*/, " "/*elementSeparator*/, "\n  "/*sampleSeparator*/,
                                              "%13.10f"/*valueFormatString*/);
             if (m_traceNodeValueSparse)
-                WriteMinibatchWithFormatting(stderr, SIZE_MAX,                SIZE_MAX,              false/*transpose*/, /*isCategoryLabel=*/false, /*isSparse=*/true, std::vector<std::string>(),
+                WriteMinibatchWithFormatting(stderr, FrameRange(), SIZE_MAX,                SIZE_MAX,              false/*transpose*/, /*isCategoryLabel=*/false, /*isSparse=*/true, std::vector<std::string>(),
                                              ""/*sequenceSeparator*/, "  "/*sequencePrologue*/, "\n"/*sequenceEpilogue*/, " "/*elementSeparator*/, "\n  "/*sampleSeparator*/,
                                              "%13.10f"/*valueFormatString*/);
         }
@@ -1619,6 +1623,43 @@ inline shared_ptr<C> New(_Types&&... _Args)
 {
     return make_shared<C>(forward<_Types>(_Args)...);
 }
+
+// helper class for parsing parameters for WriteMinibatchWithFormatting() below
+// pass this to WriteOutput() (to file-path, below) to specify how the output should be formatted
+struct WriteFormattingOptions
+{
+    // How to interpret the data:
+    bool isCategoryLabel = false;  // true: find max value in column and output the index instead of the entire vector
+    std::wstring labelMappingFile; // optional dictionary for pretty-printing category labels
+    bool isSparse = false;
+    bool transpose = true;         // true: one line per sample, each sample (column vector) forms one line; false: one column per sample
+    // The following strings are interspersed with the data:
+    // overall
+    std::string prologue; // print this at the start (e.g. a global header or opening bracket)
+    std::string epilogue; // and this at the end
+    // sequences
+    std::string sequenceSeparator; // print this between sequences (i.e. before all sequences but the first)
+    std::string sequencePrologue;  // print this before each sequence (after sequenceSeparator)
+    std::string sequenceEpilogue;  // and this after each sequence
+    // elements
+    std::string elementSeparator;  // print this between elements on a row
+    std::string sampleSeparator;   // and this between rows
+    // Optional printf precision parameter:
+    std::string precisionFormat;        // printf precision, e.g. ".2" to get a "%.2f"
+
+    WriteFormattingOptions() : // TODO: replace by initializers?
+        isCategoryLabel(false), transpose(true), sequenceEpilogue("\n"), elementSeparator(" "), sampleSeparator("\n")
+    { }
+
+    template <class ConfigRecordType>
+    WriteFormattingOptions(const ConfigRecordType& config);
+
+    void Save(File& fstream) const;
+    void Load(File& fstream, size_t modelVersion);
+
+    // Process -- replace newlines and all %s by the given string
+    static std::string Processed(const std::wstring& nodeName, std::string fragment, size_t minibatchId);
+};
 
 // =======================================================================
 // ComputationNodeNonLooping -- abstract base class for computation nodes that do not implement eval/partial for individual frames
@@ -1852,6 +1893,7 @@ protected:                                                                      
     using Base::ValueTensorFor;                                                                                                                          \
     using Base::VerifyDataSize;                                                                                                                          \
     using Base::VerifyDims;                                                                                                                              \
+    using Base::WriteMinibatchWithFormatting;                                                                                                            \
     using Base::ZeroGradientsOfInputs;                                                                                                                   \
     using Base::m_deviceId;                                                                                                                              \
     using Base::m_gradient;                                                                                                                              \

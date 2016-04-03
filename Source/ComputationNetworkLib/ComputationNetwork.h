@@ -283,7 +283,7 @@ public:
     // -----------------------------------------------------------------------
 
     // Note: this is also used to copy MBLayouts into our existing MBLayout instance, which is a somewhat questionable design.
-    // BUGBUG: This function will conflict once we have multiple input layouts in the network.
+    // BUGBUG (Issue #95): This function will conflict once we have multiple input layouts in the network.
     const MBLayoutPtr& GetMBLayoutPtrOfNetwork() { return m_pMBLayoutOfNetwork; }
 
     // determine the actual MB size from the feature nodes
@@ -314,7 +314,7 @@ public:
 
     // this counts the actual number of frames in a minibatch (not counting gaps in parallel sequences)
     // TODO: Instead of passing numAllSamples in here, we should determine it from the inputs in case of no layout. Or simply forbid this case.
-    // BUGBUG: With variable-length sequences, this can no longer be a network method.
+    // BUGBUG (Issue #95): With variable-length sequences, this can no longer be a network method.
     size_t GetNumSamplesWithLabelOfNetwork(const size_t numAllSamples) const
     {
         if (m_pMBLayoutOfNetwork)
@@ -728,11 +728,20 @@ public:
                            const std::vector<std::wstring>& traceNodeNamesSparse)
     {
         for (const auto& name : traceNodeNamesReal)
-            GetNodeFromName(name)->EnableNodeTracing(/*asReal=*/true,  /*asCategoryLabel=*/false, /*asSparse=*/false);
+            if (NodeNameExists(name))
+                GetNodeFromName(name)->EnableNodeTracing(/*asReal=*/true,  /*asCategoryLabel=*/false, /*asSparse=*/false);
+            else
+                fprintf(stderr, "EnableNodeTracing: No node named '%ls'; skipping\n", name.c_str());
         for (const auto& name : traceNodeNamesCategory)
-            GetNodeFromName(name)->EnableNodeTracing(/*asReal=*/false, /*asCategoryLabel=*/true,  /*asSparse=*/false);
+            if (NodeNameExists(name))
+                GetNodeFromName(name)->EnableNodeTracing(/*asReal=*/false, /*asCategoryLabel=*/true,  /*asSparse=*/false);
+            else
+                fprintf(stderr, "EnableNodeTracing: No node named '%ls'; skipping\n", name.c_str());
         for (const auto& name : traceNodeNamesSparse)
-            GetNodeFromName(name)->EnableNodeTracing(/*asReal=*/false, /*asCategoryLabel=*/false, /*asSparse=*/true);
+            if (NodeNameExists(name))
+                GetNodeFromName(name)->EnableNodeTracing(/*asReal=*/false, /*asCategoryLabel=*/false, /*asSparse=*/true);
+            else
+                fprintf(stderr, "EnableNodeTracing: No node named '%ls'; skipping\n", name.c_str());
     }
 
     // if node name is not found, dump all nodes
@@ -987,7 +996,7 @@ private:
 
     // used for sentence boundary information passed from reader to reset RNN state
     // specify how the minibatch is packed for each sample
-    // BUGBUG: With variable-length inconsistent layouts, this can no longer be a network property.
+    // BUGBUG (Issue #95): With variable-length inconsistent layouts, this can no longer be a network property.
     MBLayoutPtr m_pMBLayoutOfNetwork; // note that this must be installed before doing anything that needs it (default leaves a nullptr)
 
     // environment information that nodes may want to inquire, e.g. to know whether we are training

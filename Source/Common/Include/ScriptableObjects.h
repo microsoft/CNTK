@@ -686,7 +686,7 @@ public:
         else if (valp.Is<ConfigArray>())
             return valp.AsRef<ConfigArray>().AsVector<E>([&](const wstring& msg) { valp.Fail(msg); }, /*flatten=*/true);
         else
-            return std::vector<E>(1, (E)valp); // single element
+            return std::vector<E>(1, (const E&)valp); // single element
     }
 };
 typedef shared_ptr<ConfigArray> ConfigArrayPtr;

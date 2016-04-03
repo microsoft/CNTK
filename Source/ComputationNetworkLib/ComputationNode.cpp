@@ -173,8 +173,8 @@ void ComputationNodeBase::ValidateBinaryReduce(bool isFinalValidationPass)
     {
         if (!(Input(0)->GetSampleLayout().IsElementwiseCompatibleWith(Input(1)->GetSampleLayout())))
         {
-            std::string s1 = Input(0)->GetSampleLayout();
-            std::string s2 = Input(1)->GetSampleLayout();
+            string s1 = Input(0)->GetSampleLayout();
+            string s2 = Input(1)->GetSampleLayout();
             // BUGBUG: Allow broadcasting?
             LogicError("%ls: The tensor dimensions in the inputs do not match. %s != %s", NodeDescription().c_str(), s1.c_str(), s2.c_str());
         }
@@ -376,18 +376,19 @@ template <class ElemType>
 // 'transpose' means print one row per sample (non-transposed is one column per sample).
 // 'isSparse' will print all non-zero values as one row (non-transposed, which makes sense for one-hot) or column (transposed).
 template <class ElemType>
-void ComputationNode<ElemType>::WriteMinibatchWithFormatting(FILE* f, size_t onlyUpToRow, size_t onlyUpToT, bool transpose, bool isCategoryLabel, bool isSparse,
-                                                             const std::vector<std::string>& labelMapping, const string& sequenceSeparator, 
+void ComputationNode<ElemType>::WriteMinibatchWithFormatting(FILE* f, const FrameRange& fr,
+                                                             size_t onlyUpToRow, size_t onlyUpToT, bool transpose, bool isCategoryLabel, bool isSparse,
+                                                             const vector<string>& labelMapping, const string& sequenceSeparator, 
                                                              const string& sequencePrologue, const string& sequenceEpilogue,
                                                              const string& elementSeparator, const string& sampleSeparator,
-                                                             const string& valueFormatString,
+                                                             string valueFormatString,
                                                              bool outputGradient) const
 {
     // get minibatch matrix -> matData, matRows, matStride
     const Matrix<ElemType>& outputValues = outputGradient ? Gradient() : Value();
     let matRows   = outputValues.GetNumRows();
     let matStride = matRows; // how to get from one column to the next
-    std::unique_ptr<ElemType[]> matDataPtr(outputValues.CopyToArray());
+    unique_ptr<ElemType[]> matDataPtr(outputValues.CopyToArray());
     ElemType* matData = matDataPtr.get();
     let sampleLayout = GetSampleLayout(); // this is currently only used for sparse; dense tensors are linearized
 
@@ -408,11 +409,24 @@ void ComputationNode<ElemType>::WriteMinibatchWithFormatting(FILE* f, size_t onl
             continue;
         let tBegin = seqInfo.tBegin >= 0     ? seqInfo.tBegin : 0;
         let tEnd   = seqInfo.tEnd   <= width ? seqInfo.tEnd   : width;
+        // [tBegin,tEnd) is where the sequence resides.
+        // fr is also referencing where a sequence resides.
+
+        // narrow to FrameRange if needed
+        auto t0 = fr.IsAllFrames() ? tBegin : fr.m_timeOffset + (ptrdiff_t)fr.timeIdxInSeq;
+        auto t1 = fr.IsAllFrames() ? tEnd   : fr.m_timeOffset + (ptrdiff_t)fr.timeIdxInSeq + (ptrdiff_t)fr.m_timeRange;
+        if (t0 < tBegin)
+            t0 = tBegin;
+        if (t1 > tEnd)
+            t1 = tEnd;
+        // [t0,t1) is the range we want to print
+        if (t0 > (ptrdiff_t)t1)
+            continue; // skip this sequence
 
         // get sequence matrix -> seqData, seqRows, seqCols, seqStride
-        let  seqData   = matData + pMBLayout->GetColumnIndex(seqInfo, 0) * matStride;
+        let  seqData   = matData + pMBLayout->GetColumnIndex(seqInfo, t0 - tBegin) * matStride;
         auto seqRows   = matRows;
-        let  seqCols   = tEnd - tBegin;
+        let  seqCols   = t1 - t0;
         let  seqStride = pMBLayout->GetNumParallelSequences() * matStride;
 
         if (s > 0)
@@ -425,12 +439,14 @@ void ComputationNode<ElemType>::WriteMinibatchWithFormatting(FILE* f, size_t onl
         {
             if (formatChar == 's') // verify label dimension
             {
-                if (outputValues.GetNumRows() != labelMapping.size())
+                if (outputValues.GetNumRows() != labelMapping.size() &&
+                    sampleLayout[0] != labelMapping.size()) // if we match the first dim then use that
                 {
                     static size_t warnings = 0;
                     if (warnings++ < 5)
                         fprintf(stderr, "write: Row dimension %d does not match number of entries %d in labelMappingFile, not using mapping\n", (int)seqRows, (int)labelMapping.size());
-                    formatChar = 'u'; // this is a fallback
+                    valueFormatString.back() = 'u'; // this is a fallback
+                    formatChar = valueFormatString.back();
                 }
             }
             // update the matrix in-place from one-hot (or max) to index
@@ -466,6 +482,8 @@ void ComputationNode<ElemType>::WriteMinibatchWithFormatting(FILE* f, size_t onl
             else if (formatChar == 's') // print category as a label string
             {
                 size_t uval = (size_t)dval;
+                if (!labelMapping.empty())
+                    uval %= labelMapping.size();
                 assert(uval < labelMapping.size());
                 const char * sval = labelMapping[uval].c_str();
                 fprintfOrDie(f, valueFormatString.c_str(), sval);
@@ -494,14 +512,11 @@ void ComputationNode<ElemType>::WriteMinibatchWithFormatting(FILE* f, size_t onl
                         fprintfOrDie(f, "%s", transpose ? sampleSeparator.c_str() : elementSeparator.c_str());
                     if (dval != 1.0 || formatChar != 'f') // hack: we assume that we are either one-hot or never precisely hitting 1.0
                         print(dval);
-                    fprintfOrDie(f, "[");
                     size_t row = transpose ? i : j;
                     size_t col = transpose ? j : i;
                     for (size_t k = 0; k < sampleLayout.size(); k++)
                     {
-                        if (k > 0)
-                            fprintfOrDie(f, ",");
-                        fprintfOrDie(f, "%d", row % sampleLayout[k]);
+                        fprintfOrDie(f, "%c%d", k == 0 ? '[' : ',', row % sampleLayout[k]);
                         if (sampleLayout[k] == labelMapping.size()) // annotate index with label if dimensions match (which may misfire once in a while)
                             fprintfOrDie(f, "=%s", labelMapping[row % sampleLayout[k]].c_str());
                         row /= sampleLayout[k];
@@ -520,16 +535,24 @@ void ComputationNode<ElemType>::WriteMinibatchWithFormatting(FILE* f, size_t onl
                     fprintfOrDie(f, "%s", sampleSeparator.c_str());
                 if (j == jstop && jstop < jend - 1) // if jstop == jend-1 we may as well just print the value instead of '...'
                 {
-                    fprintf(f, "...+%d", (int)(jend - jstop)); // 'nuff said
+                    fprintfOrDie(f, "...+%d", (int)(jend - jstop)); // 'nuff said
                     break;
                 }
+                // inject sample tensor index if we are printing row-wise and it's a tensor
+                if (!transpose && sampleLayout.size() > 1 && !isCategoryLabel) // each row is a different sample dimension
+                {
+                    for (size_t k = 0; k < sampleLayout.size(); k++)
+                        fprintfOrDie(f, "%c%d", k == 0 ? '[' : ',', (int)((j / sampleLayout.GetStrides()[k])) % sampleLayout[k]);
+                    fprintfOrDie(f, "]\t");
+                }
+                // print a row of values
                 for (size_t i = 0; i < iend; i++) // loop over elements
                 {
                     if (i > 0)
                         fprintfOrDie(f, "%s", elementSeparator.c_str());
                     if (i == istop && istop < iend - 1)
                     {
-                        fprintf(f, "...+%d", (int)(iend - istop));
+                        fprintfOrDie(f, "...+%d", (int)(iend - istop));
                         break;
                     }
                     double dval = seqData[i * istride + j * jstride];
@@ -542,6 +565,85 @@ void ComputationNode<ElemType>::WriteMinibatchWithFormatting(FILE* f, size_t onl
     fflushOrDie(f);
 }
 
+/*static*/ string WriteFormattingOptions::Processed(const wstring& nodeName, string fragment, size_t minibatchId)
+{
+    fragment = msra::strfun::ReplaceAll<string>(fragment, "\\n", "\n");
+    fragment = msra::strfun::ReplaceAll<string>(fragment, "\\r", "\r");
+    fragment = msra::strfun::ReplaceAll<string>(fragment, "\\t", "\t");
+    fragment = msra::strfun::ReplaceAll<string>(fragment, "\\s", " "); // Config might strip spaces.
+    if (fragment.find("%s") != fragment.npos)
+        fragment = msra::strfun::ReplaceAll<string>(fragment, "%s", msra::strfun::utf8(nodeName));
+    if (fragment.find("%n") != fragment.npos)
+        fragment = msra::strfun::ReplaceAll<string>(fragment, "%n", msra::strfun::_strprintf<char>("%ld", minibatchId).c_str());
+    // %d: sequenceId
+    return fragment;
+}
+
+template <class ConfigRecordType>
+WriteFormattingOptions::WriteFormattingOptions(const ConfigRecordType& config) :
+    WriteFormattingOptions()
+{
+    // gather additional formatting options
+    if (config.Exists(L"format"))
+    {
+        const ConfigRecordType& formatConfig(config(L"format", ConfigRecordType::Record()));
+        if (formatConfig.ExistsCurrent(L"type")) // do not inherit 'type' from outer block
+        {
+            wstring type = formatConfig(L"type");
+            if      (type == L"real")     ; // default
+            else if (type == L"category") isCategoryLabel = true;
+            else if (type == L"sparse")   isSparse = true;
+            else                         InvalidArgument("write: type must be 'real', 'category', or 'sparse'");
+            labelMappingFile = (wstring)formatConfig(L"labelMappingFile", L"");
+        }
+        transpose = formatConfig(L"transpose", transpose);
+        prologue  = formatConfig(L"prologue",  prologue);
+        epilogue  = formatConfig(L"epilogue",  epilogue);
+        sequenceSeparator = msra::strfun::utf8(formatConfig(L"sequenceSeparator", (wstring)msra::strfun::utf16(sequenceSeparator)));
+        sequencePrologue  = msra::strfun::utf8(formatConfig(L"sequencePrologue",  (wstring)msra::strfun::utf16(sequencePrologue)));
+        sequenceEpilogue  = msra::strfun::utf8(formatConfig(L"sequenceEpilogue",  (wstring)msra::strfun::utf16(sequenceEpilogue)));
+        elementSeparator  = msra::strfun::utf8(formatConfig(L"elementSeparator",  (wstring)msra::strfun::utf16(elementSeparator)));
+        sampleSeparator   = msra::strfun::utf8(formatConfig(L"sampleSeparator",   (wstring)msra::strfun::utf16(sampleSeparator)));
+        precisionFormat   = msra::strfun::utf8(formatConfig(L"precisionFormat",   (wstring)msra::strfun::utf16(precisionFormat)));
+        // TODO: change those strings into wstrings to avoid this conversion mess
+    }
+}
+
+void WriteFormattingOptions::Save(File& fstream) const
+{
+    fstream << isCategoryLabel;
+    fstream << labelMappingFile;
+    fstream << isSparse;
+    fstream << transpose;
+    fstream << prologue;
+    fstream << epilogue;
+    fstream << sequenceSeparator;
+    fstream << sequencePrologue;
+    fstream << sequenceEpilogue;
+    fstream << elementSeparator;
+    fstream << sampleSeparator;
+    fstream << precisionFormat;
+}
+
+void WriteFormattingOptions::Load(File& fstream, size_t modelVersion)
+{
+    fstream >> isCategoryLabel;
+    fstream >> labelMappingFile;
+    fstream >> isSparse;
+    fstream >> transpose;
+    fstream >> prologue;
+    fstream >> epilogue;
+    fstream >> sequenceSeparator;
+    fstream >> sequencePrologue;
+    fstream >> sequenceEpilogue;
+    fstream >> elementSeparator;
+    fstream >> sampleSeparator;
+    fstream >> precisionFormat;
+}
+
+template WriteFormattingOptions::WriteFormattingOptions(const ConfigParameters&);
+template WriteFormattingOptions::WriteFormattingOptions(const ScriptableObjects::IConfigRecord&);
+
 // -----------------------------------------------------------------------
 // instantiate the core class templates
 // -----------------------------------------------------------------------
@@ -552,9 +654,9 @@ typedef Matrix<double> DoubleMatrix;
 atomic_ullong TimeStamp::s_timeStampCounter = ATOMIC_VAR_INIT(0);
 
 template <>
-std::map<size_t, std::map<size_t, FloatMatrix*>> ComputationNode<float>::s_constOnes{};
+map<size_t, map<size_t, FloatMatrix*>>  ComputationNode<float>::s_constOnes{};
 template <>
-std::map<size_t, std::map<size_t, DoubleMatrix*>> ComputationNode<double>::s_constOnes{};
+map<size_t, map<size_t, DoubleMatrix*>> ComputationNode<double>::s_constOnes{};
 
 template class ComputationNode<float>;
 template class ComputationNode<double>;

@@ -269,7 +269,7 @@ void ComputationNetwork::DetermineSCCsR(ComputationNodeBasePtr cur,
     // 'cur' must be left on the stack if m_minIndex < m_index,
     // whereas it must be removed as the root of a strongly connected component if m_minIndex == m_index.
     // m_minIndex is computed during the depth-first search from 'cur' (above), as this finds the nodes that are reachable from 'cur'. [Wikipedia]
-    assert(cur->m_index <= cur->m_minIndex);
+    assert(cur->m_minIndex <= cur->m_index);
     if (cur->m_minIndex == cur->m_index) // m_minIndex is still equal to m_index, as we set it at the start of this function: we closed a loop
     {
         // gather the list of all nodes in this loop

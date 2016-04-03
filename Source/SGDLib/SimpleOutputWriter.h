@@ -167,48 +167,6 @@ public:
         dataWriter.SaveData(0, outputMatrices, 1, 1, 0);
     }
 
-    // pass this to WriteOutput() (to file-path, below) to specify how the output should be formatted
-    struct WriteFormattingOptions
-    {
-        // How to interpret the data:
-        bool isCategoryLabel = false;  // true: find max value in column and output the index instead of the entire vector
-        std::wstring labelMappingFile; // optional dictionary for pretty-printing category labels
-        bool isSparse = false;
-        bool transpose = true;         // true: one line per sample, each sample (column vector) forms one line; false: one column per sample
-        // The following strings are interspersed with the data:
-        // overall
-        std::string prologue; // print this at the start (e.g. a global header or opening bracket)
-        std::string epilogue; // and this at the end
-        // sequences
-        std::string sequenceSeparator; // print this between sequences (i.e. before all sequences but the first)
-        std::string sequencePrologue;  // print this before each sequence (after sequenceSeparator)
-        std::string sequenceEpilogue;  // and this after each sequence
-        // elements
-        std::string elementSeparator;  // print this between elements on a row
-        std::string sampleSeparator;   // and this between rows
-        // Optional printf precision parameter:
-        std::string precisionFormat;        // printf precision, e.g. ".2" to get a "%.2f"
-
-        WriteFormattingOptions() :
-            isCategoryLabel(false), transpose(true), sequenceEpilogue("\n"), elementSeparator(" "), sampleSeparator("\n")
-        { }
-
-        // Process -- replace newlines and all %s by the given string
-        static std::string Processed(const std::wstring& nodeName, std::string fragment, size_t minibatchId)
-        {
-            fragment = msra::strfun::ReplaceAll<std::string>(fragment, "\\n", "\n");
-            fragment = msra::strfun::ReplaceAll<std::string>(fragment, "\\r", "\r");
-            fragment = msra::strfun::ReplaceAll<std::string>(fragment, "\\t", "\t");
-            fragment = msra::strfun::ReplaceAll<std::string>(fragment, "\\s", " "); // Config might strip spaces.
-            if (fragment.find("%s") != fragment.npos)
-                fragment = msra::strfun::ReplaceAll<std::string>(fragment, "%s", msra::strfun::utf8(nodeName));
-            if (fragment.find("%n") != fragment.npos)
-                fragment = msra::strfun::ReplaceAll<std::string>(fragment, "%n", msra::strfun::_strprintf<char>("%ld", minibatchId).c_str());
-            // %d: sequenceId
-            return fragment;
-        }
-    };
-
     void WriteMinibatch(FILE* f, ComputationNodePtr node, 
         const WriteFormattingOptions & formattingOptions, char formatChar, std::string valueFormatString, std::vector<std::string>& labelMapping,
         size_t numMBsRun, bool gradient)
@@ -219,7 +177,7 @@ public:
         const auto elementSeparator =  formattingOptions.Processed(node->NodeName(), formattingOptions.elementSeparator,  numMBsRun);
         const auto sampleSeparator =   formattingOptions.Processed(node->NodeName(), formattingOptions.sampleSeparator,   numMBsRun);
 
-        node->WriteMinibatchWithFormatting(f, SIZE_MAX, SIZE_MAX, formattingOptions.transpose, formattingOptions.isCategoryLabel, formattingOptions.isSparse, labelMapping,
+        node->WriteMinibatchWithFormatting(f, FrameRange(), SIZE_MAX, SIZE_MAX, formattingOptions.transpose, formattingOptions.isCategoryLabel, formattingOptions.isSparse, labelMapping,
             sequenceSeparator, sequencePrologue, sequenceEpilogue, elementSeparator, sampleSeparator,
             valueFormatString, gradient);
     }
@@ -250,7 +208,11 @@ public:
         std::vector<ComputationNodePtr> gradientNodes;
         std::vector<ComputationNodeBasePtr> allOutputNodes = outputNodes;
 
-        if (nodeUnitTest)
+        if (!nodeUnitTest)                                        // regular operation
+        {
+            m_net->AllocateAllMatrices({}, outputNodes, nullptr); // don't allocate for backward pass
+        }
+        else                                                      // we mis-appropriate this code for unit testing of the back-prop path
         {
             // Unit test only makes sense for one output node.
             if (outputNodes.size() != 1)
@@ -281,11 +243,9 @@ public:
             // like a criterion node. Submitting a node as parameter 3 here will allocate the gradients.
             m_net->AllocateAllMatrices({}, outputNodes, outputNodes[0]);
         }
-        else
-            m_net->AllocateAllMatrices({}, outputNodes, nullptr); // Don't allocate for backward pass
 
         StreamMinibatchInputs inputMatrices = RetrieveInputMatrices(inputNodes);
-        
+
         // load a label mapping if requested
         std::vector<std::string> labelMapping;
         if ((formattingOptions.isCategoryLabel || formattingOptions.isSparse) && !formattingOptions.labelMappingFile.empty())
@@ -334,7 +294,7 @@ public:
                 m_net->ForwardProp(onode);
 
                 FILE* file = *outputStreams[onode];
-                WriteMinibatch(file, dynamic_pointer_cast<ComputationNode<ElemType>>(onode), formattingOptions, formatChar, valueFormatString, labelMapping, numMBsRun, /* gradient */ false);
+                WriteMinibatch(file, dynamic_pointer_cast<ComputationNode<ElemType>>(onode), formattingOptions, formatChar, valueFormatString, labelMapping, numMBsRun + 1, /* gradient */ false);
                 if (nodeUnitTest)
                 {
                     m_net->Backprop(onode);
@@ -354,13 +314,15 @@ public:
                     }
                     else
                     {
-                        WriteMinibatch(file, node, formattingOptions, formatChar, valueFormatString, labelMapping, numMBsRun, /* gradient */ true);
+                        WriteMinibatch(file, node, formattingOptions, formatChar, valueFormatString, labelMapping, numMBsRun + 1, /* gradient */ true);
                     }
                 }
             }
             totalEpochSamples += actualMBSize;
 
             fprintf(stderr, "Minibatch[%lu]: ActualMBSize = %lu\n", ++numMBsRun, actualMBSize);
+            if (outputPath == L"-") // if we mush all nodes together on stdout, add some visual separator
+                fprintf(stdout, "\n");
 
             numItersSinceLastPrintOfProgress = ProgressTracing::TraceFakeProgress(numIterationsBeforePrintingProgress, numItersSinceLastPrintOfProgress);
 

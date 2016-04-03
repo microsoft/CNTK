@@ -148,7 +148,7 @@ public:
             if (actualNumSubminibatches > 1)
                 smbDispatcher.DoneWithCurrentMinibatch();
 
-            // BUGBUG: Once we have multiple layouts, this must be done on a per-node basis.
+            // BUGBUG (Issue #95): Once we have multiple layouts, this must be done on a per-node basis.
             size_t numSamplesWithLabel = m_net->GetNumSamplesWithLabelOfNetwork(actualMBSize);
             size_t aggregateNumSamplesWithLabel = numSamplesWithLabel;
             if (m_mpi != nullptr)
@@ -167,7 +167,7 @@ public:
                     m_gradHeader->evalErrors[i] = evalNodes[i]->Get00Element();
 
                 // TODO: We are reusing the aggregation logic inside SimpleDistGradAggregator, which has a heavy dependency
-                // on the gradient matrix. At some point we should refacotr the aggregator class to be able to only calculating
+                // on the gradient matrix. At some point we should refactor the aggregator class to be able to only calculating
                 // eval results and then remove this hack.
                 if (learnParamsGradients.size() == 0)
                 {
