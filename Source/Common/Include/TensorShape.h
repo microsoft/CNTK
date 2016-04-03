@@ -780,6 +780,11 @@ static inline ImageLayoutKind ImageLayoutKindFrom(const wstring& s)
 struct ImageDimensions
 {
     size_t m_width, m_height, m_numChannels;
+    // convenience accessors. TODO: use only one name. Rename the members themselves?
+    size_t w() const { return m_width;       }
+    size_t h() const { return m_height;      }
+    size_t c() const { return m_numChannels; }
+
     // interpret TensorShape as image
     ImageDimensions(const TensorShape& shape, ImageLayoutKind imageLayoutKind)
     {
@@ -787,14 +792,14 @@ struct ImageDimensions
             InvalidArgument("Convolution operation currently only supports 1D or 2D convolution on 3D tensors.");
         if (imageLayoutKind == ImageLayoutKind::CHW)
         {
-            m_width = shape[0];
-            m_height = shape[1];
+            m_width       = shape[0];
+            m_height      = shape[1];
             m_numChannels = shape[2];
         }
         else if (imageLayoutKind == ImageLayoutKind::HWC)
         {
-            m_width = shape[1];
-            m_height = shape[2];
+            m_width      = shape[1];
+            m_height     = shape[2];
             m_numChannels = shape[0];
         }
         else

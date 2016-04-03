@@ -8,11 +8,12 @@
 #include "Reader.h"
 #include "MemoryProvider.h"
 #include "Transformer.h"
+#include "Packer.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
 // A sample packer that densely packs samples in parallel for GPU consumptions.
-class SampleModePacker
+class SampleModePacker : public Packer
 {
 public:
     SampleModePacker(
@@ -21,7 +22,7 @@ public:
         size_t minibatchSize,
         const std::vector<StreamDescriptionPtr>& streams);
 
-    Minibatch ReadMinibatch();
+    virtual Minibatch ReadMinibatch() override;
 
 private:
     std::shared_ptr<char> AllocateBuffer(size_t numElements, size_t elementSize);

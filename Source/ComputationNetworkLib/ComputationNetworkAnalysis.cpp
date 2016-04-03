@@ -106,13 +106,13 @@ void ComputationNetwork::FormRecurrentLoops(const ComputationNodeBasePtr& rootNo
                 assert(node->m_numNonDelayedParentsInLoop == 0); // (in PurgeStateForFormingRecurrentLoops())
         }
         for (let& node : nestedNodes)
-        {
-            for (auto& input : node->GetInputs())
             {
+            for (auto& input : node->GetInputs())
+                {
                 if (input->m_loopId == node->m_loopId && GetRecurrenceSteppingDirection(node) == 0/*not a Delay node*/)
                     input->m_numNonDelayedParentsInLoop++; // cound #parents of 'input' that are not delay nodes
+                }
             }
-        }
 
         // re-traverse the graph for all nestedNodes, starting with the first
         // Then update m_nestedNodes with the re-traversed order.
@@ -301,18 +301,18 @@ void ComputationNetwork::DetermineSCCsR(ComputationNodeBasePtr cur,
             for (let& iter : m_allSEQNodes)
             {
                 for (let& iter2 : iter->m_nestedNodes)
-                {
+            {
                     if (iter2 == cur)
-                    {
-                        bFound = true;
+                {
+                    bFound = true;
                         // validate that the loop is really the same, by a set comparison
                         unordered_set<ComputationNodeBasePtr> newLoop     (        nestedNodes.begin(),         nestedNodes.end());
                         unordered_set<ComputationNodeBasePtr> existingLoop(iter->m_nestedNodes.begin(), iter->m_nestedNodes.end());
                         if (newLoop != existingLoop)
                             LogicError("DetermineSCCsR: %ls %ls operation rediscovered in a loop, but that loop is not the same as last time.", cur->NodeName().c_str(), cur->OperationName().c_str());
-                        break;
-                    }
+                    break;
                 }
+            }
             }
             if (bFound)
                 fprintf(stderr, "\nDetermineSCCsR: %ls %ls operation was discovered multiple times as as loop participant", cur->NodeName().c_str(), cur->OperationName().c_str());

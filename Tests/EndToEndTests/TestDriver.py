@@ -580,7 +580,7 @@ def runCommand(args):
          six.print_("ERROR: test not found", name, file=sys.stderr)
          return 1
   else:
-     testsToRun = list(Test.allTestsIndexedByFullName.values())
+     testsToRun = list(sorted(Test.allTestsIndexedByFullName.values(), key=lambda test: test.fullName))
 
   devices = args.devices
   flavors = args.flavors

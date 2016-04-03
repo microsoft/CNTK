@@ -114,9 +114,11 @@ ComputationNetwork::PARTraversalFlowControlNode::PARTraversalFlowControlNode(con
         {
             // instead of the node itself, include the sentinel SEQTraversalFlowControlNode in our list
             m_nestedNodes.push_back(recInfo);
+
             // and verify that we only encountered the loop once (all nodes should have been consecutive)
             if (!loopsSeen.insert(recInfo).second)
                 LogicError("PARTraversalFlowControlNode: members of loop %ls are not consecutive in node list.", recInfo->NodeName().c_str());
+
             // consume all nodes that are part of the same loop (they are all consecutive)
             while (nodeIter != allNodes.end() && (*nodeIter)->IsPartOfLoop() && FindInRecurrentLoops(recurrentInfo, *nodeIter) == recInfo)
                 nodeIter++;
@@ -303,8 +305,10 @@ ComputationNetwork::PARTraversalFlowControlNode::PARTraversalFlowControlNode(con
     // look in all recurrent loops of the network
     // TODO: Check for IsPartOfLoop(). Also why not store the loop id in the node for direct lookup?
     for (auto& iter : recurrentInfo)
+    {
         if (std::find(iter->m_nestedNodes.begin(), iter->m_nestedNodes.end(), node) != iter->m_nestedNodes.end()) // TODO: should this loop need to be a method of SEQTraversalFlowControlNode?
             return iter;
+    }
     return nullptr; // not part of a recurrent loop
 }
 
@@ -357,8 +361,10 @@ void ComputationNetwork::PrintComputationTree(const ComputationNodeBasePtr& root
     if (nodes.size() == 0)
         fprintf(stderr, "\n(empty)\n");
     else
+    {
         for (const auto& node : nodes)
             node->PrintSelf(printMatrices);
+    }
 }
 
 // -----------------------------------------------------------------------
@@ -399,7 +405,7 @@ void ComputationNetwork::CompileNetwork()
     // all steps below have to be repeated for all root nodes (=nodes without parents and PreComputeNodes)
     DetermineSetOfAllRoots();
 
-    fprintf(stderr, "\n%d roots:\n", (int) m_allRoots.size());
+    fprintf(stderr, "\n%d roots:\n", (int)m_allRoots.size());
     for (const auto& root : m_allRoots)
         fprintf(stderr, "\t%ls = %ls()\n", root->NodeName().c_str(), root->OperationName().c_str());
 
@@ -469,7 +475,7 @@ void ComputationNetwork::DetermineSetOfAllRoots()
             auto input = node->Input(i);
             if (!input) // this may be the result of an incorrect MEL operation
             {
-                InvalidArgument("DetermineSetOfAllRoots: Input %d of %ls %ls operation if not connected, network is malformed.",
+                InvalidArgument("DetermineSetOfAllRoots: Input %d of %ls %ls operation is not connected, network is malformed.",
                                 (int) i, node->NodeName().c_str(), node->OperationName().c_str());
             }
             referencedNodes.insert(input);
@@ -592,7 +598,7 @@ void ComputationNetwork::ValidateNetwork()
     }
     if (!nonDefaultNodes.empty())
     {
-        fprintf(stderr, "%d out of %d nodes do not share the minibatch layout with the input data.\n", (int) nonDefaultNodes.size(), (int) nodes.size());
+        fprintf(stderr, "%d out of %d nodes do not share the minibatch layout with the input data.\n", (int)nonDefaultNodes.size(), (int)nodes.size());
         // for (auto node : nonDefaultNodes)
         //    fprintf(stderr, "    %ls\n", node->NodeName().c_str());
         // fprintf(stderr, "\n\n");
@@ -652,6 +658,7 @@ size_t ComputationNetwork::ValidateNodes(list<ComputationNodeBasePtr> nodes, boo
             hasVisitedChild |= child->m_visited; // if not a single visited child then no point in validating
             allChildrenVisited &= child->m_visited;
         }
+
         // if there is not at least one visited child
         bool valid = false;
         if (hasVisitedChild || isLeaf) // got at least one child: it makes sense to call Validate()
@@ -850,7 +857,7 @@ void ComputationNetwork::AllocateAllMatrices(const std::vector<ComputationNodeBa
         else
         {
             nodeIter->RequestMatricesBeforeForwardProp(m_matrixPool);
-            // we only release matrices for the children since the root node's informatioin will be used and should not be shared
+            // we only release matrices for the children since the root node's information will be used and should not be shared
             // with others
             ReleaseMatricesAfterEvalForChildren(nodeIter, parentCount);
         }

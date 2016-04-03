@@ -3,8 +3,6 @@ precision = "float"
 command = train:test
 deviceId = $DeviceId$
 
-useCuDnn = true     # can be overridden by the command line
-
 ndlMacros = "$ConfigDir$/Macros.ndl"
 
 parallelTrain = false
@@ -22,19 +20,15 @@ train = [
     
     BrainScriptNetworkBuilder = [
 
-        useCuDnn = $useCuDnn$
-
         // HACK to enforce same evaluation order or LearnableParameters as for NDL, as to get same radomization
         // Nodes are evaluated in sorting order.
         A1 = conv1_act; A2 = conv2_act; A3 = h1 ; A5 = ol
 
         // macros
-        ConvReLULayer(inp, outMap, inWCount, kW, kH, hStride, vStride, wScale, bValue) = [  // ReLU non-linearity
+        ConvReLULayer(inp, outMap, inMap, inWCount, kW, kH, hStride, vStride, wScale, bValue) = [  // ReLU non-linearity
             convW = Parameter(outMap, inWCount, init="uniform", initValueScale=wScale, initOnCPUOnly=false)
-            conv = Convolution(convW, inp, kW, kH, outMap, hStride, vStride, zeroPadding=false, imageLayout=if useCuDnn then "cudnn" else "legacy")
-            convB = if useCuDnn
-                    then ParameterTensor((1 : 1 : outMap), init="fixedValue", value=bValue)
-                    else Parameter(outMap, 1,              init="fixedValue", value=bValue)
+            conv = Convolution(convW, inp, (kW : kH : inMap), mapDims=outMap, stride=(hStride : vStride : inMap), autoPadding=false, imageLayout="cudnn")
+            convB = ParameterTensor((1 : 1 : outMap), init="fixedValue", value=bValue)
             convPlusB = Plus(conv, convB);
             out = RectifiedLinear(convPlusB);
         ]
@@ -58,7 +52,7 @@ train = [
         imageH = 28
         labelDim = 10
 
-        features = ImageInput(imageW, imageH, 1, imageLayout=if useCuDnn then "cudnn" else "legacy", tag="feature")
+        features = ImageInput(imageW, imageH, 1, imageLayout="cudnn", tag="feature")
         featScale = Constant(0.00390625)
         featScaled = Scale(featScale, features)
         labels = Input(labelDim, tag="label")
@@ -70,14 +64,14 @@ train = [
         hStride1 = 1
         vStride1 = 1
         # weight[cMap1, kW1 * kH1 * inputChannels]
-        conv1_act = ConvReLULayer(featScaled, cMap1, 25, kW1, kH1, hStride1, vStride1, 10, 1).out
+        conv1_act = ConvReLULayer(featScaled, cMap1, 1, 25, kW1, kH1, hStride1, vStride1, 10, 1).out
 
         # pool1
         pool1W = 2
         pool1H = 2
         pool1hStride = 2
         pool1vStride = 2
-        pool1 = MaxPooling(conv1_act, pool1W, pool1H, pool1hStride, pool1vStride, imageLayout=if useCuDnn then "cudnn" else "legacy")
+        pool1 = MaxPooling(conv1_act, pool1W, pool1H, pool1hStride, pool1vStride, imageLayout="cudnn")
 
         # conv2
         kW2 = 5
@@ -87,18 +81,18 @@ train = [
         vStride2 = 1
         # weight[cMap2, kW2 * kH2 * cMap1]
         # ConvReLULayer is defined in Macros.ndl
-        conv2_act = ConvReLULayer(pool1, cMap2, 400, kW2, kH2, hStride2, vStride2, 10, 1).out
+        conv2_act = ConvReLULayer(pool1, cMap2, cMap1, 400, kW2, kH2, hStride2, vStride2, 10, 1).out
 
         # pool2
         pool2W = 2
         pool2H = 2
         pool2hStride = 2
         pool2vStride = 2
-        pool2 = AveragePooling(conv2_act, pool2W, pool2H, pool2hStride, pool2vStride, imageLayout=if useCuDnn then "cudnn" else "legacy")
+        pool2 = AveragePooling(conv2_act, pool2W, pool2H, pool2hStride, pool2vStride, imageLayout="cudnn")
 
         h1Dim = 128
         # DNNSigmoidLayer and DNNLayer are defined in Macros.ndl
-        h1 = DNNSigmoidLayer(if useCuDnn then (4 : 4 : cMap2/*cudnn: CHW*/) else (cMap2 : 4 : 4/*legacy: HWC*/), h1Dim, pool2, 1).out
+        h1 = DNNSigmoidLayer((4 : 4 : cMap2/*cudnn: CHW*/), h1Dim, pool2, 1).out
         # Note: 'CHW' and 'HWC' refer to row-major representations, while CNTK uses column-major, so must specify the values in reverse order
         ol = DNNLayer(h1Dim, labelDim, h1, 1).out
 

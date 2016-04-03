@@ -31,16 +31,14 @@
 // version number to control how to read and write
 #define CNTK_MODEL_VERSION_1 1
 #define CNTK_MODEL_VERSION_2 2
-#define CNTK_MODEL_VERSION_3 3 // (Row)Slice: axis; LearnableParameter: tensor shape; Times: outputRank; TransposeDimensions: axes
-#define CNTK_MODEL_VERSION_4 4 // PastValue: tensor shape
-#define CNTK_MODEL_VERSION_5 5 // ElemType tag in model file
-#define CURRENT_CNTK_MODEL_VERSION CNTK_MODEL_VERSION_5
+#define CNTK_MODEL_VERSION_3 3
+#define CNTK_MODEL_VERSION_4 4 // PastValue
+#define CNTK_MODEL_VERSION_5 5 // ND convolution and pooling
+#define CNTK_MODEL_VERSION_6 6 // Batch norm blending
+#define CNTK_MODEL_VERSION_7 7 // ElemType tag in model file
+#define CURRENT_CNTK_MODEL_VERSION CNTK_MODEL_VERSION_7
 
 extern bool g_shareNodeValueMatrices;
-
-#ifndef UNREFERENCED_PARAMETER // TODO: unify with UNUSED()
-#define UNREFERENCED_PARAMETER(P) (P)
-#endif
 
 // helper mode for debugging
 // If TRACK_GAP_NANS is defined then initialize layout gaps to NaN and do NaN checks. Also do detailed logging of node computations.
@@ -902,7 +900,7 @@ public:
             if (m_value)
             {
                 node->CreateValueMatrixIfNull();
-                node->m_value->SetValue(*m_value);
+            node->m_value->SetValue(*m_value);
             }
             else
                 node->m_value = nullptr;
@@ -1112,6 +1110,9 @@ public:
     const Matrix<ElemType>& Gradient() const { return *m_gradient; }
     Matrix<ElemType>&       Gradient()       { return *m_gradient; }
 
+    MatrixBasePtr GradientPtr() const { return m_gradient; }
+    // TODO: This is only used for testing whether a gradient has been allocated. Maybe reduce to bool HasGradient()?
+
 private:
 
     template<class E>
@@ -1268,8 +1269,8 @@ protected:
         DetermineDataSize(rows, cols);
         try
         {
-            m.VerifySize(rows, cols);
-        }
+        m.VerifySize(rows, cols);
+    }
         catch (const std::exception& e)
         {
             Rethrow(e);
@@ -1499,8 +1500,8 @@ public:
                                              "%13.10f"/*valueFormatString*/);
             if (m_traceNodeValueSparse)
                 WriteMinibatchWithFormatting(stderr, FrameRange(), SIZE_MAX,                SIZE_MAX,              false/*transpose*/, /*isCategoryLabel=*/false, /*isSparse=*/true, std::vector<std::string>(),
-                                             ""/*sequenceSeparator*/, "  "/*sequencePrologue*/, "\n"/*sequenceEpilogue*/, " "/*elementSeparator*/, "\n  "/*sampleSeparator*/,
-                                             "%13.10f"/*valueFormatString*/);
+                                         ""/*sequenceSeparator*/, "  "/*sequencePrologue*/, "\n"/*sequenceEpilogue*/, " "/*elementSeparator*/, "\n  "/*sampleSeparator*/,
+                                         "%13.10f"/*valueFormatString*/);
         }
     }
 

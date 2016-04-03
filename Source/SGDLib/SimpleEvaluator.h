@@ -143,7 +143,7 @@ public:
                 // house-keeping for sub-minibatching
                 if (actualNumSubminibatches > 1)
                     smbDispatcher.DoneWithCurrentSubMinibatch(ismb); // page state out
-            }                                                        // end sub-minibatch loop
+            } // end sub-minibatch loop
 
             if (actualNumSubminibatches > 1)
                 smbDispatcher.DoneWithCurrentMinibatch();

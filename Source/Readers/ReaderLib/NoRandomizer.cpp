@@ -33,6 +33,11 @@ NoRandomizer::NoRandomizer(IDataDeserializerPtr deserializer)
         sampleCount += chunk->m_numberOfSamples;
     }
 
+    if (sampleCount == 0)
+    {
+        RuntimeError("NoRandomizer: Expected input to contain samples, but the number of successfully read samples was 0.");
+    }
+
     m_totalNumberOfSamples = sampleCount;
 }
 

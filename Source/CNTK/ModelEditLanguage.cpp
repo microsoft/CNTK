@@ -9,6 +9,7 @@
 
 #include "ModelEditLanguage.h"
 #include "ConvolutionalNodes.h"
+#include "InputAndParamNodes.h"
 #include <map>
 
 namespace Microsoft { namespace MSR { namespace CNTK {
@@ -58,8 +59,7 @@ enum MELProperty
     melPropFinalCriterion,
     melPropEvaluation,
     melPropOutput,
-    melPropRecurrent,
-    melPropBatchNormMode
+    melPropRecurrent
 };
 
 // SetGroupTag - Set the group tag on a node
@@ -73,7 +73,7 @@ void MELScript<ElemType>::SetGroupTag(ComputationNodeBasePtr nodeProp, Computati
         cn->AddToNodeGroup(groupTag, nodeProp);
     else
         cn->RemoveFromNodeGroup(groupTag, nodeProp);
-}
+    }
 
 // ProcessNDLScript - Process the NDL script
 // netNdl - netNDL structure
@@ -384,18 +384,7 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
             inputNodes[i - 1] = nodeFrom[0];
         }
 
-#if 1
         nodeTo[0]->AttachInputs(inputNodes);
-#else   // TODO: delete this
-        if (inputNodes.size() == 1)
-            nodeTo[0]->AttachInputs(inputNodes[0]);
-        else if (inputNodes.size() == 2)
-            nodeTo[0]->AttachInputs(inputNodes[0], inputNodes[1]);
-        else if (inputNodes.size() == 3)
-            nodeTo[0]->AttachInputs(inputNodes[0], inputNodes[1], inputNodes[2]);
-        else
-            RuntimeError("SetNodeInputs(): You specified more than 3 input nodes.");
-#endif
     }
     else if (EqualInsensitive(name, "SetProperty"))
     {
@@ -416,8 +405,7 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
 
         // map property name to property enum
         // Please keep this table sorted.
-             if (EqualInsensitive(propName, "batchNormEvalMode"))      prop = melPropBatchNormMode;
-        else if (EqualInsensitive(propName, "criterion"))              prop = melPropFinalCriterion;
+             if (EqualInsensitive(propName, "criterion"))              prop = melPropFinalCriterion;
         else if (EqualInsensitive(propName, "evaluation"))             prop = melPropEvaluation;
         else if (EqualInsensitive(propName, "feature"))                prop = melPropFeature;
         else if (EqualInsensitive(propName, "label"))                  prop = melPropLabel;
@@ -483,32 +471,6 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
                 // what to do here?
                 break;
             }
-            case melPropBatchNormMode:
-            {
-                if (node->OperationName() != OperationNameOf(BatchNormalizationNode))
-                {
-                    RuntimeError("Invalid node type: node %ls (type:%ls) is not a %ls node; therefore cannot apply batchNormEvalMode on it.",
-                                 node->NodeName().c_str(),
-                                 node->OperationName().c_str(),
-                                 OperationNameOf(BatchNormalizationNode).c_str());
-                }
-                bool property = params[2];
-                auto pnode = dynamic_pointer_cast<BatchNormalizationNode<float>>(node);
-                if (pnode)
-                    pnode->SetEvalMode(property);
-                else
-                {
-                    auto pnode2 = dynamic_pointer_cast<BatchNormalizationNode<double>>(node);
-                    if (pnode2)
-                        pnode2->SetEvalMode(property);
-                    else
-                    {
-                        RuntimeError("Invalid node type: node name=%ls. We assume either BatchNormalizationNode<float> or BatchNormalizationNode<double>\n",
-                                     node->NodeName().c_str());
-                    }
-                }
-                break;
-            }
             default:
             {
                 RuntimeError("Invalid property, %s, is not supported", propName.c_str());
@@ -533,10 +495,6 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
         else if (EqualInsensitive(propName, "learningRateMultiplier"))
         {
             prop = melPropLearningRateMultiplier;
-        }
-        else if (EqualInsensitive(propName, "batchNormEvalMode"))
-        {
-            prop = melPropBatchNormMode;
         }
         else
         {
@@ -564,12 +522,6 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
             {
                 float learningRateMultiplier = (float)params[2];
                 netNdl->cn->SetLearnableNodesBelowLearningRateMultiplier(learningRateMultiplier, node);
-                break;
-            }
-            case melPropBatchNormMode:
-            {
-                bool evalMode = params[2];
-                netNdl->cn->SetBatchNormalizationNodesBelowEvalMode(evalMode, node);
                 break;
             }
             default:

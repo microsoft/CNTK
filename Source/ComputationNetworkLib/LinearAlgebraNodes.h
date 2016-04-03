@@ -6,7 +6,6 @@
 
 #include "Basics.h"
 #include "ComputationNode.h"
-#include "ConvolutionalNodes.h"
 #include "Matrix.h"
 #include "TensorView.h"
 

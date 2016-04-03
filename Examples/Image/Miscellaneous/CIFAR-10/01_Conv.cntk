@@ -12,7 +12,6 @@ deviceId = 0
 imageLayout = "cudnn"
 # override the above as follows when running on CPU:
 # deviceId = -1
-# imageLayout = "legacy"
 
 prefetch = "true"
 
@@ -45,6 +44,7 @@ Train = [
         readerType = "UCIFastReader"
         file = "$DataDir$/Train.txt"
         randomize = "auto"
+        minibatchMode="full"
         features = [
             dim = 3072
             start = 1
