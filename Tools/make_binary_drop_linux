@@ -170,7 +170,6 @@ CopyFilesFromList $opencvPath opencvFiles[@] $baseDependenciesPath
 echo "Copying libzip..." >&3
 CopyFilesFromList $libzipPath libzipFiles[@] $baseDependenciesPath
 
-
 # GPU Drops only
 if [[ $targetConfig != "cpu" ]]; then
 
