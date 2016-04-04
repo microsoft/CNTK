@@ -80,10 +80,11 @@ MLFDataDeserializer::MLFDataDeserializer(CorpusDescriptorPtr corpus, const Confi
     {
         // Currently the string registry contains only utterances described in scp.
         // So here we skip all others.
-        if (!stringRegistry.Contains(l.first))
+        size_t id = 0;
+        if (!stringRegistry.TryGet(l.first, id))
             continue;
 
-        description.m_key.m_major = stringRegistry[l.first];
+        description.m_key.m_major = id;
 
         const auto& utterance = l.second;
         description.m_sequenceStart = m_classIds.size();
