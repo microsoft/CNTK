@@ -102,8 +102,7 @@ class AbstractContext(object, metaclass=ABCMeta):
         del _CONTEXT[self.name]
 
         if self.clean_up:
-            import shutil
-            shutil.rmtree(self.directory)
+            sh.rmtree(self.directory)
 
     def _generate_train_config(self, optimizer, reader, override_existing):
         '''
@@ -114,13 +113,14 @@ class AbstractContext(object, metaclass=ABCMeta):
         '''
 
         model_dir = os.path.join(self.directory, 'Models')
-        if os.path.exists(model_dir) and os.listdir(model_dir) == []:
+        if os.path.exists(model_dir):
             if override_existing:
                 print("Overriding the existing models")
                 sh.rmtree(model_dir)
             else:
-                raise Exception("Directory '%s' already exists, set the flag override_existing to true if you want to override it"
-                                % self.directory)
+                raise Exception("Directory '%s' already exists, set the " + 
+                        "flag override_existing to true if you want to "
+                        "override it" % self.directory)
 
         tmpl = open(CNTK_TRAIN_TEMPLATE_PATH, "r").read()
         model_filename = os.path.join(model_dir, self.name)
@@ -305,6 +305,7 @@ class Context(AbstractContext):
         can attach a reader directly to the input node.
         :param override_existing: if the folder exists already override it
         '''
+
         config_content = self._generate_train_config(
             optimizer, reader, override_existing)
         return self._call_cntk(CNTK_TRAIN_CONFIG_FILENAME, config_content)
