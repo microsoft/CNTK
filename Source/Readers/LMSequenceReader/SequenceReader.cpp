@@ -1592,6 +1592,7 @@ void BatchSequenceReader<ElemType>::Reset()
     m_parser.mSentenceIndex2SentenceInfo.clear();
 }
 
+#if 0
 template <class ElemType>
 void BatchSequenceReader<ElemType>::StartMinibatchLoop(size_t mbSize, size_t epoch, size_t requestedEpochSamples)
 {
@@ -1675,6 +1676,94 @@ void BatchSequenceReader<ElemType>::StartMinibatchLoop(size_t mbSize, size_t epo
     m_parser.ParseReset();
 
     Reset();
+}
+#endif
+
+template <class ElemType>
+void BatchSequenceReader<ElemType>::StartDistributedMinibatchLoop(size_t mbSize, size_t epoch, size_t subsetNum, size_t numSubsets, size_t requestedEpochSamples = requestDataSize)
+{
+	m_subsetNum = subsetNum;
+	m_numSubsets = numSubsets;
+	// if we aren't currently caching, see if we can use a cache
+	if (!m_cachingReader && !m_cachingWriter)
+	{
+		InitCache(m_readerConfig);
+		if (m_cachingReader)
+			ReleaseMemory(); // free the memory used by the SequenceReader
+	}
+
+	// if we are reading from the cache, do so now and return
+	if (m_cachingReader)
+	{
+		m_cachingReader->StartMinibatchLoop(mbSize, epoch, requestedEpochSamples);
+		return;
+	}
+
+	// allocate buffers for building features and labels
+	// We allocate 'mbSize' entries, i.e. that's the total token cound across multiple parallel sequences.
+	const LabelInfo& labelInfo = m_labelInfo[(m_labelInfo[labelInfoOut].type == labelNextWord) ? labelInfoIn : labelInfoOut];
+
+	if (m_featuresBuffer == NULL)       // features
+		m_featuresBuffer = new ElemType[mbSize * labelInfo.dim]();
+
+	if (m_labelsBuffer == NULL)         // labels
+	{
+		if (labelInfo.type == labelCategory)
+		{
+			m_labelsBuffer = new ElemType[mbSize * labelInfo.dim]();
+			m_labelsIdBuffer = new /*typename IDataReader<ElemType>::*/LabelIdType[mbSize]();     // TODO: no "new" please! Use a vector
+		}
+		else if (labelInfo.type != labelNone)
+		{
+			m_labelsBuffer = new ElemType[mbSize]();
+			m_labelsIdBuffer = NULL;
+		}
+	}
+
+	//m_featuresBufferRow = new size_t[mbSize];
+	//m_featuresBufferRowIdx = new size_t[mbSize];
+
+	m_id2classLocal = new Matrix<ElemType>(CPUDEVICE);
+	m_classInfoLocal = new Matrix<ElemType>(CPUDEVICE);
+
+	m_mbSize = mbSize;
+	if (requestedEpochSamples == requestDataSize)
+	{
+		if (!m_endReached)
+		{
+			m_epochSize = requestDataSize;
+		}
+	}
+	else
+	{
+		m_epochSize = requestedEpochSamples;
+	}
+
+	// we use epochSize, which might not be set yet, so use a default value for allocations if not yet set
+	size_t epochSize = m_epochSize == requestDataSize ? 1000 : m_epochSize;
+	m_epoch = epoch;
+	m_randomSeed = (unsigned int)m_epoch;
+	m_mbStartSample = epoch * m_epochSize;
+	m_epochSamplesReturned = 0;     // counter to know when we returned one epoch
+
+	// allocate room for the data
+	m_featureData.reserve(m_featureCount * epochSize);
+	if (m_labelInfo[labelInfoOut].type == labelCategory)
+		m_labelIdData.reserve(epochSize);
+	//else if (m_labelInfo[labelInfoOut].type != labelNone)
+	//    m_labelData.reserve(epochSize);
+	m_sequence.reserve(m_seqIndex); // clear out the sequence array
+	// this is too complicated for LM
+	// SetupEpoch();
+	// use the LMSetupEpoch() instead
+	LMSetupEpoch();
+
+	m_clsinfoRead = false;
+	m_idx2clsRead = false;
+
+	m_parser.ParseReset();
+
+	Reset();
 }
 
 // fill mToProcess[] with the next set of sequences of the same length
@@ -1931,7 +2020,7 @@ bool BatchSequenceReader<ElemType>::GetMinibatch(StreamMinibatchInputs& matrices
         const LabelInfo& labelOut = m_labelInfo[labelInfoOut];
         size_t len = m_parser.mSentenceIndex2SentenceInfo[seq].sLen - (labelOut.type != labelNone); // -1 because last one is label
         // ############### BREAKING CHANGE ################
-        // We use sLen, not sLen -1, if labelOut.type is labelNode, assuming there is no output label, and all labels are inputs.
+        // We use sLen, not sLen -1, if labelOut.type is labelNone, assuming there is no output label, and all labels are inputs.
         // ############### BREAKING CHANGE ################
         ptrdiff_t begin = -(ptrdiff_t)firstPosInSentence;
         ptrdiff_t end = (ptrdiff_t) len - (ptrdiff_t) firstPosInSentence;
@@ -1949,6 +2038,11 @@ bool BatchSequenceReader<ElemType>::GetMinibatch(StreamMinibatchInputs& matrices
     // copy m_featureData to matrix
     // m_featureData is a sparse, already with interleaved parallel sequences. We copy it into a dense matrix.
     // we always copy it to cpu first and then convert to gpu if gpu is desired.
+	// There may be multiple parallel trainers reading at the same time in which case
+	// we will slice the data to only return the share of the current trainer's subset
+
+	size_t currSubsetStartCol = (actualmbsize * m_subsetNum) / m_numSubsets;
+	size_t currSubsetEndCol = (actualmbsize * (m_subsetNum + 1)) / m_numSubsets;
     size_t featureDim = m_labelInfo[labelInfoIn].dim;
     auto iter = matrices.find(m_featuresName);
     if (iter != matrices.end()) // (if not found then feature matrix is not requested this time)
@@ -1971,7 +2065,7 @@ bool BatchSequenceReader<ElemType>::GetMinibatch(StreamMinibatchInputs& matrices
             features.SetValue(0);
         }
 
-        for (size_t j = 0; j < actualmbsize; ++j) // note: this is a loop over matrix columns, not time steps
+		for (size_t j = currSubsetStartCol; j < currSubsetEndCol; ++j) // note: this is a loop over matrix columns, not time steps
         {
             // vector of feature data goes into matrix column
             size_t idx = (size_t) m_featureData[j]; // one-hot index of the word, indexed by column (i.e. already interleaved, t=j/mToProcess.size(), s=j%mToProcess.size())
