@@ -57,8 +57,8 @@
     <ExecutablePath>$(ExecutablePath)</ExecutablePath>
   </PropertyGroup>
   <PropertyGroup Condition="$(GpuBuild)">
-    <IncludePath>$(IncludePath);$(CUDA_PATH)\include</IncludePath>
-    <LibraryPath>$(LibraryPath);$(CUDA_PATH)\lib\$(Platform)</LibraryPath>
+    <IncludePath>$(IncludePath);$(CudaInclude)</IncludePath>
+    <LibraryPath>$(LibraryPath);$(CudaLibPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="$(DebugBuild)">
     <ClCompile>
@@ -71,18 +71,18 @@
       <OpenMPSupport>true</OpenMPSupport>
       <TreatWarningAsError>true</TreatWarningAsError>
       <AdditionalOptions>/bigobj %(AdditionalOptions)</AdditionalOptions>
-      <AdditionalIncludeDirectories>"c:\Program Files\NVIDIA Corporation\GDK\gdk_win7_amd64_release\nvml\include"</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(NvmlInclude)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalDependencies>ActionsLib.lib; SGDLib.lib; ComputationNetworkLib.lib; Math.lib; kernel32.lib; user32.lib; shell32.lib; SequenceTrainingLib.lib; %(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>"c:\Program Files\NVIDIA Corporation\GDK\gdk_win7_amd64_release\nvml\lib"</AdditionalLibraryDirectories>
-      <DelayLoadDLLs>Math.dll; msmpi.dll; nvml.dll; cudart64_70.dll</DelayLoadDLLs>
+      <AdditionalLibraryDirectories>$(NvmlLibPath)</AdditionalLibraryDirectories>
+      <DelayLoadDLLs>Math.dll; msmpi.dll; nvml.dll; $(CudaRuntimeDll)</DelayLoadDLLs>
       <StackReserveSize>100000000</StackReserveSize>
     </Link>
     <PreBuildEvent>
-      <Command>prebuild.bat $(Configuration)</Command>
+      <Command>prebuild.bat "$(Configuration)" "$(CudaPath)"</Command>
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="$(ReleaseBuild)">
@@ -98,7 +98,7 @@
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
       <AdditionalOptions>/d2Zi+ %(AdditionalOptions)</AdditionalOptions>
       <TreatWarningAsError>true</TreatWarningAsError>
-      <AdditionalIncludeDirectories>"c:\Program Files\NVIDIA Corporation\GDK\gdk_win7_amd64_release\nvml\include"</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(NvmlInclude)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -107,12 +107,12 @@
       <OptimizeReferences>true</OptimizeReferences>
       <AdditionalDependencies>ActionsLib.lib; SGDLib.lib; ComputationNetworkLib.lib; Math.lib; kernel32.lib; user32.lib; shell32.lib; SequenceTrainingLib.lib; %(AdditionalDependencies)</AdditionalDependencies>
       <Profile>true</Profile>
-      <DelayLoadDLLs>Math.dll; msmpi.dll; nvml.dll; cudart64_70.dll</DelayLoadDLLs>
-      <AdditionalLibraryDirectories>"c:\Program Files\NVIDIA Corporation\GDK\gdk_win7_amd64_release\nvml\lib"</AdditionalLibraryDirectories>
+      <DelayLoadDLLs>Math.dll; msmpi.dll; nvml.dll; $(CudaRuntimeDll)</DelayLoadDLLs>
+      <AdditionalLibraryDirectories>$(NvmlLibPath)</AdditionalLibraryDirectories>
       <StackReserveSize>100000000</StackReserveSize>
     </Link>
     <PreBuildEvent>
-      <Command>prebuild.bat $(Configuration)</Command>
+      <Command>prebuild.bat "$(Configuration)" "$(CudaPath)"</Command>
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="$(CpuOnlyBuild)">
