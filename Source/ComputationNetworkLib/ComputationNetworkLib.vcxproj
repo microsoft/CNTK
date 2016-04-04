@@ -172,6 +172,7 @@
     <ClCompile Include="ComputationNetworkScripting.cpp" />
     <ClCompile Include="ComputationNode.cpp" />
     <ClCompile Include="ComputationNodeScripting.cpp" />
+    <ClCompile Include="InputAndParamNodes.cpp" />
     <ClCompile Include="ReshapingNodes.cpp" />
     <ClCompile Include="SpecialPurposeNodes.cpp" />
     <ClCompile Include="stdafx.cpp" />

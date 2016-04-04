@@ -682,21 +682,10 @@ template WriteFormattingOptions::WriteFormattingOptions(const ScriptableObjects:
 // instantiate the core class templates
 // -----------------------------------------------------------------------
 
-typedef Matrix<float> FloatMatrix;
-typedef Matrix<double> DoubleMatrix;
-
 atomic_ullong TimeStamp::s_timeStampCounter = ATOMIC_VAR_INIT(0);
 
-template <>
-map<size_t, map<size_t, FloatMatrix*>>  ComputationNode<float>::s_constOnes{};
-template <>
-map<size_t, map<size_t, DoubleMatrix*>> ComputationNode<double>::s_constOnes{};
-
-template class ComputationNode<float>;
-template class ComputationNode<double>;
-
-template class LearnableParameter<float>;
-template class LearnableParameter<double>;
+template <> map<size_t, map<size_t, Matrix<float>*>>  ComputationNode<float> ::s_constOnes{};
+template <> map<size_t, map<size_t, Matrix<double>*>> ComputationNode<double>::s_constOnes{};
 
 }}}
 

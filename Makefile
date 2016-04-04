@@ -562,6 +562,7 @@ CNTK_SRC =\
 	$(SOURCEDIR)/CNTK/tests.cpp \
 	$(SOURCEDIR)/ComputationNetworkLib/ComputationNode.cpp \
 	$(SOURCEDIR)/ComputationNetworkLib/ComputationNodeScripting.cpp \
+	$(SOURCEDIR)/ComputationNetworkLib/InputAndParamNodes.cpp \
 	$(SOURCEDIR)/ComputationNetworkLib/ReshapingNodes.cpp \
 	$(SOURCEDIR)/ComputationNetworkLib/SpecialPurposeNodes.cpp \
 	$(SOURCEDIR)/ComputationNetworkLib/ComputationNetwork.cpp \
