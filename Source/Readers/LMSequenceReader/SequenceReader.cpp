@@ -1680,7 +1680,7 @@ void BatchSequenceReader<ElemType>::StartMinibatchLoop(size_t mbSize, size_t epo
 #endif
 
 template <class ElemType>
-void BatchSequenceReader<ElemType>::StartDistributedMinibatchLoop(size_t mbSize, size_t epoch, size_t subsetNum, size_t numSubsets, size_t requestedEpochSamples = requestDataSize)
+void BatchSequenceReader<ElemType>::StartDistributedMinibatchLoop(size_t mbSize, size_t epoch, size_t subsetNum, size_t numSubsets, size_t requestedEpochSamples /*= requestDataSize */)
 {
 	m_subsetNum = subsetNum;
 	m_numSubsets = numSubsets;
