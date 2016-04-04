@@ -37,12 +37,15 @@ std::vector<IDataDeserializerPtr> CreateDeserializers(const ConfigParameters& re
     std::vector<IDataDeserializerPtr> featureDeserializers;
     std::vector<IDataDeserializerPtr> labelDeserializers;
 
+    bool primary = true;
+    // The first deserializer is the driving one, it defines chunking.
+    // TODO: should we make this explicit configuration parameter
     for (const auto& featureName : featureNames)
     {
-        auto deserializer = std::make_shared<HTKDataDeserializer>(corpus, readerConfig(featureName), featureName);
+        auto deserializer = std::make_shared<HTKDataDeserializer>(corpus, readerConfig(featureName), featureName, primary);
+        primary = false;
         featureDeserializers.push_back(deserializer);
     }
-    assert(featureDeserializers.size() == 1);
 
     for (const auto& labelName : labelNames)
     {
@@ -50,7 +53,6 @@ std::vector<IDataDeserializerPtr> CreateDeserializers(const ConfigParameters& re
 
         labelDeserializers.push_back(deserializer);
     }
-    assert(labelDeserializers.size() == 1);
 
     std::vector<IDataDeserializerPtr> deserializers;
     deserializers.insert(deserializers.end(), featureDeserializers.begin(), featureDeserializers.end());
@@ -98,7 +100,10 @@ HTKMLFReader::HTKMLFReader(MemoryProviderPtr provider,
     ConfigHelper config(readerConfig);
     size_t window = config.GetRandomizationWindow();
     auto deserializers = CreateDeserializers(readerConfig);
-    assert(deserializers.size() == 2);
+    if (deserializers.empty())
+    {
+        LogicError("Please specify at least a single input stream.");
+    }
 
     auto bundler = std::make_shared<Bundler>(readerConfig, deserializers[0], deserializers, false);
     int verbosity = readerConfig(L"verbosity", 2);

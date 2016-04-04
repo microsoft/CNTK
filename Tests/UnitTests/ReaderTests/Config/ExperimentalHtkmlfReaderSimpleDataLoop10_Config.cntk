@@ -4,20 +4,21 @@ DataDir = $RootDir$
 # deviceId = -1 for CPU, >= 0 for GPU devices
 deviceId = -1
 
-precision = "double"
+precision = float
 
 Simple_Test = [
     reader = [
-        readerType = "HTKMLFReader"
+        readerType = "ExperimentalHTKMLFReader"
         readMethod = "blockRandomize"
         miniBatchMode = "partial"
         randomize = "auto"
-        verbosity = 2   
+        verbosity = 1
+        framemode = true
 
         features1 = [
-            dim = 363
-            scpFile = "$DataDir$/glob_0000.scp"
-            type = "real"
+	        dim = 363
+	        scpFile = "$DataDir$/glob_0000.scp"
+	        type = "real"
         ]
         features2 = [
             dim = 363
