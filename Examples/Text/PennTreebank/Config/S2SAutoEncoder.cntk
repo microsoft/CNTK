@@ -504,7 +504,7 @@ write = [
     # We need to make a change:
     BrainScriptNetworkBuilder = ([
 
-        beamDepth = 13 // 0=predict; 1=greedy; >1=beam
+        beamDepth = 3 // 0=predict; 1=greedy; >1=beam
 
         # import some names
         Boolean = BS.Boolean
@@ -635,15 +635,9 @@ write = [
             #  - traceback is a right-to-left recurrence
             #     - output best hypo conditioned on the path (it is already known)
 
-            EditToPropagateTopN (name) = (node => if node.name == name then TraceState (Previous (PropagateTopN (node)), 'propagated') else node)
-            # if I comment out PropagateTopN then this becomes greedy, which makes sense
-
-            # cf. Validating --> decoder[0].prevState.h = PastValue (decoder[0].lstmState._privateInnards.ht) : [200 x 1 {1,200} x *] -> [200 x 1 {1,200} x *]
-            # prevState.h = Loop.Previous (lstmState.h)
-
             propagationEdits[i:0..2] = // TODO: implement and use { } syntax
-                if      i == 0 then EditToPropagateTopN ('decoder[0].prevState.h') # inject reshuffling of hypotheses
-                else if i == 1 then EditToPropagateTopN ('decoder[0].prevState.c')
+                if      i == 0 then (node => if node.name == 'decoder[0].prevState.h' then TraceState (Previous (PropagateTopN (node.PastValueArgs[0])), 'propagated') else node) # inject reshuffling of hypotheses
+                else if i == 1 then (node => if node.name == 'decoder[0].prevState.c' then TraceState (Previous (PropagateTopN (node.PastValueArgs[0])), 'propagated') else node)
                 else                BS.Network.Editing.ReplaceLinksToNode (modelAsTrained.delayedDecoderFeedback, delayedDecoderFeedback)
 
             # decoderFeedback must be updated to do Hardmax column-wise
@@ -659,12 +653,12 @@ write = [
 
             # propagate LSTM state to the right top-N rank given where that rank came from in the previous time step
 
-            #PropagateTopN (h_or_c) = Times (TraceState (h_or_c.PastValueArgs[0], 'past1'), eye3) # hack version that does no shuffling
+            #PropagateTopN (past_h_or_c) = Times (TraceState (past_h_or_c, 'past1'), eye3) # hack version that does no shuffling
             eye3 = ConstantFromString ("1 1 1
                                         0 0 0
                                         0 0 0")
 
-            PropagateTopN (h_or_c) = Times (TraceState (h_or_c.PastValueArgs[0], 'past'), TraceDense (backPointers, 'backp'))
+            PropagateTopN (past_h_or_c) = Times (TraceState (past_h_or_c, 'past'), TraceDense (backPointers, 'backp'))
             # backPointers: [Dprev, Dnew]
             #   v--------- best came from input hyp[1]
             #     v------- second best came from input hyp[0]
@@ -690,7 +684,7 @@ write = [
             LOGZERO = -1e30
             initialPathScores = FirstAndOther (0, LOGZERO, beamDepth, axis = 2)  # row vector: [ 0, -INF, -INF, -INF, ... ]
 
-            expandedPathScores = logLLs + PreviousOrDefault (pathScores, initialPathScores)        # [V x Dprev] un-normalized log (P(w|hist) * P(hist)) for all top D hypotheses
+            expandedPathScores = logLLs + PreviousOrDefault (PropagateTopN (pathScores), initialPathScores)        # [V x Dprev] un-normalized log (P(w|hist) * P(hist)) for all top D hypotheses
             # ^^ path expansion, [V x 1] + [1 x D] -> [V x D]
 
             tokenSet = TraceSparse (GetTopNTensor (beamDepth, expandedPathScores), 'tokenSet') # [V x Dprev] -> [V x Dprev x Dnew]
