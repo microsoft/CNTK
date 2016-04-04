@@ -15,7 +15,7 @@ MBLayoutPtr SequencePacker::CreateMBLayout(const StreamBatch& batch)
 {
     vector<MBLayout::SequenceInfo> infos;
     for (size_t index = 0; index < batch.size(); ++index)
-    {
+        {
         MBLayout::SequenceInfo info;
 
         info.seqId = index;

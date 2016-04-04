@@ -233,6 +233,8 @@ READER_SRC =\
 	$(SOURCEDIR)/Readers/ReaderLib/ChunkRandomizer.cpp \
 	$(SOURCEDIR)/Readers/ReaderLib/SequenceRandomizer.cpp \
 	$(SOURCEDIR)/Readers/ReaderLib/SequencePacker.cpp \
+	$(SOURCEDIR)/Readers/ReaderLib/BpttPacker.cpp \
+	$(SOURCEDIR)/Readers/ReaderLib/PackerBase.cpp \
 	$(SOURCEDIR)/Readers/ReaderLib/SampleModePacker.cpp \
 
 COMMON_SRC =\
@@ -255,6 +257,7 @@ MATH_SRC =\
 	$(SOURCEDIR)/Math/TensorView.cpp \
 	$(SOURCEDIR)/Math/CUDAPageLockedMemAllocator.cpp \
 	$(SOURCEDIR)/Math/ConvolutionEngine.cpp \
+	$(SOURCEDIR)/Math/BatchNormalizationEngine.cpp \
 
 ifdef CUDA_PATH
 MATH_SRC +=\
@@ -263,7 +266,9 @@ MATH_SRC +=\
 	$(SOURCEDIR)/Math/GPUSparseMatrix.cu \
 	$(SOURCEDIR)/Math/GPUWatcher.cu \
 	$(SOURCEDIR)/Math/MatrixQuantizerGPU.cu \
+	$(SOURCEDIR)/Math/CuDnnCommon.cu \
 	$(SOURCEDIR)/Math/CuDnnConvolutionEngine.cu \
+	$(SOURCEDIR)/Math/CuDnnBatchNormalization.cu \
 	$(SOURCEDIR)/Math/GPUDataTransferer.cpp \
 
 else

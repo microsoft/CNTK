@@ -466,8 +466,10 @@ int wmainWithBS(int argc, wchar_t* argv[]) // called from wmain which is a wrapp
     // legacy parameters that have changed spelling
     if (config.Find(L"DoneFile")) // variables follow camel case (start with lower-case letters)
         InvalidArgument("Legacy spelling of 'DoneFile' no longer allowed. Use 'doneFile'.");
+
     if (config.Find(L"command")) // spelling error, should be plural. Using 'actions' instead to match the data type.
         InvalidArgument("Legacy spelling of 'command' no longer allowed. Use 'actions'.");
+
     if (config.Find(L"type"))
         InvalidArgument("Legacy name 'type' no longer allowed. Use 'precision'.");
 
@@ -514,6 +516,7 @@ int wmainWithBS(int argc, wchar_t* argv[]) // called from wmain which is a wrapp
 
     // MAIN LOOP that executes the actions
     auto actionsVal = config[L"actions"];
+
     // Note: weird behavior. If 'actions' is a scalar value (rather than an array) then it will have been resolved already after the above call. That means, it has already completed its action!
     //       Not pretty, but a direct consequence of the lazy evaluation. The only good solution would be to have a syntax for arrays including length 0 and 1.
     //       Since this in the end behaves indistinguishable from the array loop below, we will keep it for now.
@@ -549,11 +552,16 @@ int wmainWithBS(int argc, wchar_t* argv[]) // called from wmain which is a wrapp
 // ---------------------------------------------------------------------------
 // main() for old CNTK config language
 // ---------------------------------------------------------------------------
-
-int wmainOldCNTKConfig(int argc, wchar_t* argv[]) // called from wmain which is a wrapper that catches & repots Win32 exceptions
+// called from wmain which is a wrapper that catches & repots Win32 exceptions
+int wmainOldCNTKConfig(int argc, wchar_t* argv[])
 {
     ConfigParameters config;
-    std::string rawConfigString = ConfigParameters::ParseCommandLine(argc, argv, config);
+    std::string rawConfigString = ConfigParameters::ParseCommandLine(argc, argv, config);    // get the command param set they want
+    bool timestamping = config(L"timestamping", false);
+    if (timestamping)
+    {
+        ProgressTracing::SetTimestampingFlag();
+    }
 
     // get the command param set they want
     wstring logpath = config(L"stderr", L"");
@@ -592,12 +600,6 @@ int wmainOldCNTKConfig(int argc, wchar_t* argv[]) // called from wmain which is 
 
     PrintBuiltInfo(); // this one goes to log file
     std::string timestamp = TimeDateStamp();
-
-    bool timestamping = config(L"timestamping", false);
-    if (timestamping)
-    {
-        ProgressTracing::SetTimestampingFlag();
-    }
 
     // dump config info
     fprintf(stderr, "\n");
@@ -684,9 +686,11 @@ void AllocationFailureHandler()
 int wmain1(int argc, wchar_t* argv[]) // called from wmain which is a wrapper that catches & reports Win32 exceptions
 {
     std::set_new_handler(AllocationFailureHandler);
+
     try
-    {
+    {        
         PrintBuiltInfo(); // print build info directly in case that user provides zero argument (convenient for checking build type)
+
         if (argc <= 1)
         {
             LOGPRINTF(stderr, "No command-line argument given.\n");

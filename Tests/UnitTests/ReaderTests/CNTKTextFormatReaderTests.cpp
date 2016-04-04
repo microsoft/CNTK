@@ -3,6 +3,7 @@
 // Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
 //
 #include "stdafx.h"
+#include "Common/ReaderTestHelper.h"
 
 using namespace Microsoft::MSR::CNTK;
 
@@ -160,7 +161,6 @@ BOOST_AUTO_TEST_CASE(CNTKTextFormatReader_10x10_dense)
         0,
         1);
 };
-
 
 // 100 identical single sample sequences 
 BOOST_AUTO_TEST_CASE(CNTKTextFormatReader_100x1_1_dense)

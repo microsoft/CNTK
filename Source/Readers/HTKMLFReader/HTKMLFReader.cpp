@@ -1354,7 +1354,8 @@ bool HTKMLFReader<ElemType>::GetMinibatchToTrainOrTest(StreamMinibatchInputs& ma
                         if (reNewSucc) // we actually have another utterance to start here
                         {
                             const size_t startT = m_switchFrame[i];
-                            const size_t endT = m_mbNumTimeSteps;
+                            // Have to take the min, if the next sequence is shorted then truncation length.
+                            const size_t endT = std::min(m_mbNumTimeSteps, startT + m_numFramesToProcess[i]);
                             // Note: Don't confuse startT/endT with startFr/endFr above.
 
                             // add sequence to MBLayout
@@ -1420,6 +1421,9 @@ bool HTKMLFReader<ElemType>::GetMinibatchToTrainOrTest(StreamMinibatchInputs& ma
                                 fprintf(stderr, "GetMinibatchToTrainOrTest(): WARNING: Packing a second utterance did still not fill all time slots; filling slots from %d on as gaps.\n", (int) a);
                                 // declare the rest as a gap
                                 m_pMBLayout->AddGap(i, a, m_mbNumTimeSteps);
+
+                                // Have to renew, so that there is data for the next read.
+                                ReNewBufferForMultiIO(i);
                             }
                         }
                         else // we did have space for more, but no more data is available. BUGBUG: we should update actualmbsize[i] above and re-test here

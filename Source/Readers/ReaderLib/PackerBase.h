@@ -49,6 +49,14 @@ protected:
     virtual MBLayoutPtr PackDenseStream(const StreamBatch& batch, size_t streamIndex);
 
     virtual MBLayoutPtr PackSparseStream(const StreamBatch& batch, size_t streamIndex);
+
+    // Packs a sparse sample as dense.
+    inline void PackSparseSampleAsDense(char* destination, SparseSequenceDataPtr sequence,
+        size_t sampleIndex, size_t sampleOffset, size_t sampleSize, size_t elementSize);
+
+    // Packs a dense sample as dense.
+    inline void PackDenseSample(char* destination, SequenceDataPtr sequence, size_t sampleOffset, size_t sampleSize);
+
    
     virtual MBLayoutPtr CreateMBLayout(const StreamBatch& batch) = 0;
     
@@ -60,6 +68,7 @@ protected:
     // Output stream descriptions expected by the network.
     std::vector<StreamDescriptionPtr> m_inputStreamDescriptions;
 
+    // Buffers for allocated data.
     std::vector<StreamBuffer> m_streamBuffers;
 
     // Minibatch size in samples.

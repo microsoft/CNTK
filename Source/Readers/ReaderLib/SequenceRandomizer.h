@@ -17,7 +17,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 // Randomized sequence description.
 struct RandomizedSequenceDescription
 {
-    // Sequnce id.
+    // Sequence id.
     size_t m_id;
     // Number of samples in sequence.
     size_t m_numberOfSamples;

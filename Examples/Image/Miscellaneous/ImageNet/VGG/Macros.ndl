@@ -17,7 +17,7 @@ DnnBNReLULayer(inDim, outDim, x, wScale, bValue)
     m = Parameter(outDim, 1, init = fixedValue, value = 0, learningRateMultiplier = 0)
     isd = Parameter(outDim, 1, init = fixedValue, value = 0, learningRateMultiplier = 0)
     t = Times(W, x)
-    bn = BatchNormalization(t, sc, b, m, isd, eval = false, spatial = false)
+    bn = BatchNormalization(t, sc, b, m, isd, spatial = false)
     y = RectifiedLinear(bn)
 ]
 
@@ -50,6 +50,6 @@ ConvBNReLULayer(inp, outMap, inWCount, kW, kH, hStride, vStride, wScale, bValue,
     isd = Parameter(outMap, 1, init = fixedValue, value = 0, learningRateMultiplier = 0)
     
     c = Convolution(W, inp, kW, kH, outMap, hStride, vStride, zeroPadding = true, imageLayout = "cudnn")
-    bn = BatchNormalization(c, sc, b, m, isd, eval = false, spatial = true, imageLayout = "cudnn")
+    bn = BatchNormalization(c, sc, b, m, isd, spatial = true, imageLayout = "cudnn")
     y = RectifiedLinear(bn);
 ]

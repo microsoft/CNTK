@@ -36,6 +36,7 @@ PackerBase::PackerBase(MemoryProviderPtr memoryProvider,
     m_outputStreamDescriptions(streams)
 {
     m_inputStreamDescriptions = m_transformer->GetStreamDescriptions();
+    assert(m_inputStreamDescriptions.size() != 0);
     assert(m_inputStreamDescriptions.size() == m_outputStreamDescriptions.size());
 
     if (m_minibatchSize == 0)
@@ -132,7 +133,6 @@ MBLayoutPtr PackerBase::PackDenseStream(const StreamBatch& batch, size_t streamI
         }
 
         const auto& sequence = batch[sequenceInfo.seqId];
-        const char* dataPtr = reinterpret_cast<char*>(sequence->m_data);
         size_t numSamples = sequence->m_numberOfSamples;
         assert(numSamples == sequenceInfo.GetNumTimeSteps());
 
@@ -144,33 +144,17 @@ MBLayoutPtr PackerBase::PackDenseStream(const StreamBatch& batch, size_t streamI
             if (stream->m_storageType == StorageType::dense)
             {
                 assert(sampleOffset == sampleIndex * sampleSize);
-                const auto* source = dataPtr + sampleOffset;
-                //The sample is dense, simply copy it.
-                memcpy(destination, source, sampleSize);
+                PackDenseSample(destination, sequence, sampleOffset, sampleSize);
                 sampleOffset += sampleSize;
             }
             else if (stream->m_storageType == StorageType::sparse_csc)
             {
-                //The sample is sparse, first, need to zero out the buffer.
-                memset(destination, 0, sampleSize);
                 // TODO: make type casts members of the SparseSequenceData
-                const auto& sparseSequence = reinterpret_cast<SparseSequenceData&>(*sequence);
-                assert(numSamples == sparseSequence.m_nnzCounts.size());
-                size_t nonZeroCount = sparseSequence.m_nnzCounts[sampleIndex];
-                // Iterate through non zero elements and copy them to the corresponding place using their index.
-                // In a sparse sequence, m_data points to the array of non zero elements,
-                // m_indices stores the non-zero row indexes for each element.
-                for (size_t nonZeroIndex = 0; nonZeroIndex < nonZeroCount; ++nonZeroIndex)
-                {
-
-                    auto rowIndex = sparseSequence.m_indices[sampleOffset + nonZeroIndex];
-                    size_t elementOffset = rowIndex * elementSize;
-                    assert(elementOffset < sampleSize);
-                    const auto* source = dataPtr + (sampleOffset + nonZeroIndex) * elementSize;
-                    memcpy(destination + elementOffset, source, elementSize);
-                    sampleOffset += nonZeroCount;
-                }
-                assert(sampleOffset <= sparseSequence.m_totalNnzCount);
+                SparseSequenceDataPtr sparseSequence = static_pointer_cast<SparseSequenceData>(sequence);
+                assert(numSamples == sparseSequence->m_nnzCounts.size());
+                PackSparseSampleAsDense(destination, sparseSequence, sampleIndex, sampleOffset, sampleSize, elementSize);
+                sampleOffset += sparseSequence->m_nnzCounts[sampleIndex];
+                assert(sampleOffset <= sparseSequence->m_totalNnzCount);
             }
             else
             {
@@ -237,14 +221,14 @@ MBLayoutPtr PackerBase::PackSparseStream(const StreamBatch& batch, size_t stream
     }
 
     // sort the vector in ascending order of the parallel sequence index.
-    sort(sequenceInfos.begin(), sequenceInfos.end(), 
+    sort(sequenceInfos.begin(), sequenceInfos.end(),
         [](const MBLayout::SequenceInfo* a, const MBLayout::SequenceInfo* b){ return a->s < b->s; });
 
     for (auto timeStep = 0; timeStep < pMBLayout->GetNumTimeSteps(); ++timeStep)
     {
         for (const auto* sequenceInfo : sequenceInfos)
         {
-            
+
             if (timeStep < sequenceInfo->tBegin || timeStep >= sequenceInfo->tEnd)
             {
                 continue;
@@ -298,5 +282,31 @@ MBLayoutPtr PackerBase::PackSparseStream(const StreamBatch& batch, size_t stream
     return pMBLayout;
 }
 
+
+inline void PackerBase::PackSparseSampleAsDense(char* destination, SparseSequenceDataPtr sequence,
+    size_t sampleIndex, size_t sampleOffset, size_t sampleSize, size_t elementSize)
+{
+    //The sample is sparse, first, need to zero out the buffer.
+    memset(destination, 0, sampleSize);
+    size_t nonZeroCount = sequence->m_nnzCounts[sampleIndex];
+    // Iterate through non zero elements and copy them to the corresponding place using their index.
+    // In a sparse sequence, m_data points to the array of non zero elements,
+    // m_indices stores the non-zero row indexes for each element.
+    for (size_t nonZeroIndex = 0; nonZeroIndex < nonZeroCount; ++nonZeroIndex)
+    {
+
+        auto rowIndex = sequence->m_indices[sampleOffset + nonZeroIndex];
+        size_t elementOffset = rowIndex * elementSize;
+        assert(elementOffset < sampleSize);
+        const auto* source = (const char*)(sequence->m_data) + (sampleOffset + nonZeroIndex) * elementSize;
+        memcpy(destination + elementOffset, source, elementSize);
+    }
+}
+
+inline void PackerBase::PackDenseSample(char* destination, SequenceDataPtr sequence, size_t sampleOffset, size_t sampleSize)
+{
+    // Because the sample is dense - simply copying it to the output.
+    memcpy(destination, (const char*)(sequence->m_data) + sampleOffset, sampleSize);
+}
 
 }}}

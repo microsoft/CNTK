@@ -41,11 +41,11 @@ DNN=[
     conv1WScale = 0.6
     conv1 = ConvBNReLULayer(features, cMap1, 147, 7, 7, 2, 2, conv1WScale, convBValue, scValue, bnTimeConst)
     # Max pooling
-    pool1W = 2
-    pool1H = 2
+    pool1W = 3
+    pool1H = 3
     pool1hs = 2
     pool1vs = 2
-    pool1 = MaxPooling(conv1, pool1W, pool1H, pool1hs, pool1vs, imageLayout = "cudnn")
+    pool1 = MaxNDPooling(conv1, pool1W, pool1H, pool1hs, pool1vs)
     
     rn1_1 = ResNetNode3BInc(pool1, cMap1, cMap1, cMap3, 576, convWScale, convBValue, scValue, bnTimeConst, 1)
     rn1_2 = ResNetNode3A(rn1_1, cMap3, cMap1, cMap3, 576, convWScale, convBValue, scValue, bnTimeConst)

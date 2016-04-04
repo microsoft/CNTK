@@ -4,8 +4,9 @@
 //
 #pragma once
 
-#include "DataReader.h"
+#include <boost/test/unit_test.hpp>
 #include "boost/filesystem.hpp"
+#include "DataReader.h"
 
 using namespace Microsoft::MSR::CNTK;
 
@@ -37,7 +38,7 @@ struct ReaderFixture
 
         string newCurrentPath;
 
-        // Determine if a subpath has been specified and it is not a relative path
+        // Determine if a sub-path has been specified and it is not a relative path
         if (subPath.length())
         {
             // Retrieve the full path from the environment variable (if any)
@@ -188,18 +189,24 @@ struct ReaderFixture
 
             for (auto cnt = 0; dataReader.GetMinibatch(map) && cnt < m_maxMiniBatchCount; cnt++)
             {
+                MBLayoutPtr pMBlayoutPtr = make_shared<MBLayout>();
+                dataReader.CopyMBLayoutTo(pMBlayoutPtr);
                 // Process the Feature Matri(x|ces)
                 for (auto i = 0; i < numFeatureFiles; i++)
                 {
                     wstring name = numFeatureFiles > 1 ? L"features" + std::to_wstring(i + 1) : L"features";
-                    OutputMatrix(map.GetInputMatrix<ElemType>(name), map.GetInputLayout<ElemType>(name), outputFile);
+                    auto& layout = (pMBlayoutPtr->GetNumCols() > 0) ? 
+                        *pMBlayoutPtr.get() : map.GetInputLayout<ElemType>(name);
+                    OutputMatrix(map.GetInputMatrix<ElemType>(name), layout, outputFile);
                 }
 
                 // Process the Label Matri(x|ces)
                 for (auto i = 0; i < numLabelFiles; i++)
                 {
                     wstring name = numLabelFiles > 1 ? L"labels" + std::to_wstring(i + 1) : L"labels";
-                    OutputMatrix(map.GetInputMatrix<ElemType>(name), map.GetInputLayout<ElemType>(name), outputFile);
+                    auto& layout = (pMBlayoutPtr->GetNumCols() > 0) ?
+                        *pMBlayoutPtr.get() : map.GetInputLayout<ElemType>(name);
+                    OutputMatrix(map.GetInputMatrix<ElemType>(name), layout, outputFile);
                 }
             }
         }
