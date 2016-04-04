@@ -520,7 +520,7 @@ public:
     {
         ZeroInit();
     }
-    ~BaseMatrix()
+    virtual ~BaseMatrix()
     {
         ZeroValues();
     }

@@ -522,9 +522,9 @@ typedef Matrix<double> DoubleMatrix;
 atomic_ullong TimeStamp::s_timeStampCounter = ATOMIC_VAR_INIT(0);
 
 template <>
-std::map<size_t, std::map<size_t, FloatMatrix*>> ComputationNode<float>::s_constOnes{};
+std::map<size_t, std::map<size_t, shared_ptr<FloatMatrix>>> ComputationNode<float>::s_constOnes{};
 template <>
-std::map<size_t, std::map<size_t, DoubleMatrix*>> ComputationNode<double>::s_constOnes{};
+std::map<size_t, std::map<size_t, shared_ptr<DoubleMatrix>>> ComputationNode<double>::s_constOnes{};
 
 template class ComputationNode<float>;
 template class ComputationNode<double>;
