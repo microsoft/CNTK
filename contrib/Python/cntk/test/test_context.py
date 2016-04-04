@@ -55,7 +55,7 @@ Validating --> v5 = Plus (v3, v4) : [3 {1} x *], [3 x 1 {1,3}] -> [3 x 1 {1,3} x
 
     assert Context._parse_shapes_from_output(output) == expected
 
-def test_parse_result_output_1():
+def test_parse_eval_result_output_1():
     output = '''\
 0	|w.shape 1 1
 0	|w 60.000000
@@ -68,3 +68,14 @@ def test_parse_result_output_1():
     for res, exp in zip(list_of_tensors, expected):
         assert np.allclose(res, np.asarray(exp))
 
+
+def test_parse_test_result_output():
+    output = '''\
+Final Results: Minibatch[1-1]: SamplesSeen = 500    v8: SquareError/Sample = 13.779223    v7: CrossEntropyWithSoftmax/Sample = 0.20016696    Perplexity = 1.2216067   ''' 
+    result = Context._parse_test_result(output)
+
+    assert result['SamplesSeen'] == 500
+    assert result['Perplexity'] == 1.2216067
+    assert result['v8'] == 13.779223
+    assert result['v7'] == 0.20016696
+    assert len(result) == 4
