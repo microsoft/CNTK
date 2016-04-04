@@ -542,6 +542,24 @@ BOOST_AUTO_TEST_CASE(ExperimentalHTKMLFReaderSimpleDataLoop10)
         1);
 };
 
+BOOST_AUTO_TEST_CASE(ExperimentalHTKMLFReaderSimpleDataLoop20)
+{
+    HelperRunReaderTest<double>(
+        testDataPath() + "/Config/ExperimentalHtkmlfReaderSimpleDataLoop20_Config.cntk",
+        testDataPath() + "/Control/HTKMLFReaderSimpleDataLoop10_20_Control.txt",
+        testDataPath() + "/Control/HTKMLFReaderSimpleDataLoop20_Output.txt",
+        "Simple_Test",
+        "reader",
+        500,
+        250,
+        2,
+        2,
+        1,
+        0,
+        1);
+};
+
+
 BOOST_AUTO_TEST_SUITE_END()
 
 }
