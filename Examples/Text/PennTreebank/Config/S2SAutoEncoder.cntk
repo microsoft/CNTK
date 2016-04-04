@@ -51,6 +51,7 @@ trainFile = "ptb.train.txt"
 validFile = "ptb.valid.txt"
 #validFile = "ptb.small.valid.txt"
 testFile  = "ptb.test.txt"
+#testFile  = "ptb.test.txt-econ1"
 
 #######################################
 #  network definition                 #
@@ -503,6 +504,8 @@ write = [
     # We need to make a change:
     BrainScriptNetworkBuilder = ([
 
+        beamDepth = 13 // 0=predict; 1=greedy; >1=beam
+
         # import some names
         Boolean = BS.Boolean
         Loop = BS.Loop
@@ -569,8 +572,6 @@ write = [
             asArray[n:0..D-1] = recursion[n].best  # this is a BS array consisting only of the 'best' field    ('from r in recursion select r.best')
             spliced = Splice (axis = 3, asArray)   # convert BS array index n to tensor index n1
         ].spliced
-
-        beamDepth = 1 // 0=predict; 1=greedy; >1=beam
 
         modelAsTrained = BS.Network.Load ("$decodeModelPath$")
 
@@ -645,6 +646,11 @@ write = [
                 else if i == 1 then EditToPropagateTopN ('decoder[0].prevState.c')
                 else                BS.Network.Editing.ReplaceLinksToNode (modelAsTrained.delayedDecoderFeedback, delayedDecoderFeedback)
 
+            # decoderFeedback must be updated to do Hardmax column-wise
+
+            decoderFeedbackAsTrained = modelAsTrained.decoderOutputEmbedded
+            decoderFeedback = TransposeTimes (decoderFeedbackAsTrained.TransposeTimesArgs[0], Columnwise (Hardmax, beamDepth, modelAsTrained.z))
+
             delayedDecoderFeedback = Boolean.If (Loop.IsFirst (decoderFeedback), sentenceStartEmbedded, Loop.Previous (decoderFeedback))
 
             m2 = BS.Network.Edit (modelAsTrained,
@@ -652,6 +658,11 @@ write = [
                                   (labelsOut : decodeOut)) # additional roots
 
             # propagate LSTM state to the right top-N rank given where that rank came from in the previous time step
+
+            #PropagateTopN (h_or_c) = Times (TraceState (h_or_c.PastValueArgs[0], 'past1'), eye3) # hack version that does no shuffling
+            eye3 = ConstantFromString ("1 1 1
+                                        0 0 0
+                                        0 0 0")
 
             PropagateTopN (h_or_c) = Times (TraceState (h_or_c.PastValueArgs[0], 'past'), TraceDense (backPointers, 'backp'))
             # backPointers: [Dprev, Dnew]
@@ -666,9 +677,14 @@ write = [
             # multiplying with such a column from the right will select the column represented by the one-hot value
 
             # get decoder log likelihoods
-            # BUGBUG!!! Does not normalize correctly. Must normalize along columns.
             # EvalActions: EnableNodeTracing {L"decoder[0].lstmState._privateInnards.it", L"z"}, //
-            logLLs = LogSoftmax (modelAsTrained.z)    # [V x D] un-normalized log P(w|hist) + const
+            logLLs = Columnwise (LogSoftmax, beamDepth, modelAsTrained.z)    # [V x D] un-normalized log P(w|hist) + const
+
+            Columnwise (f, beamDepth, z) = # TODO: Takes LogSoftmax over axis=1. it is more tricky to do this over arbitrary axes
+            [
+                cols[d:0..beamDepth-1] = f (Slice (d, d+1, z, axis=2) /*[:,d]*/ )
+                out = Splice (cols, axis=2)
+            ].out
 
             # decoder start token: 0 for first hyp, -INF for the others
             LOGZERO = -1e30
@@ -707,7 +723,7 @@ write = [
             #   0 0 1
             # backPointers[:,n] one-hot encodes the best predecessor at top-N rank n
 
-            tokenSetScores = TraceSparse (tokenSet .* logLLs/*expandedPathScores  FIX THIS!!!*/, 'tokenSetScores')   # [V x Dprev x Dnew]
+            tokenSetScores = TraceSparse (tokenSet .* expandedPathScores, 'tokenSetScores')   # [V x Dprev x Dnew]
             #   +-----+
             #   |0 0 0|
             #   |0 0 0|-+
@@ -731,7 +747,7 @@ write = [
             # and the actual decoding output
             # This is the one to output (top sentence-level hypothesis after traceback).
             decode = [
-                hyp = TraceOneHot (Times (tokenSet, traceback, outputRank = 2), 'hyp')   # [V x Dprev] 2D one-hot
+                hyp = Times (tokenSet, traceback, outputRank = 2)   # [V x Dprev] 2D one-hot
                 out = TraceOneHot (hyp * ConstantTensor (1, beamDepth), 'out')           # reduces over Dprev -> 1D one-hot
             ].out
             # traceback : [Dnew]
@@ -751,9 +767,9 @@ write = [
 
             FirstAndOther (firstVal, otherVals, N, axis = 1) = if N == 1 then ConstantTensor (firstVal, (1 : 1)) else [
                 axis1 = axis  # TODO: Is this really necessary? Why? Then we need the syntax   axis = ^.axis or ^axis
-                out = if axis == 1
-                      then RowStack (ConstantTensor (firstVal, 1) : ConstantTensor (otherVals, N -1))   # col vector: [ 1; 0; 0; 0 ... ]
-                      else Splice (Constant (firstVal) : ConstantTensor (otherVals, (1 : N -1)), axis = axis1 /*, axis*/)   # row vector: [ 0, -INF, -INF, -INF, ... ]
+                out = if axis == 1  # maybe this can be unified or pushed into Splice?
+                      then RowStack (ConstantTensor (firstVal, (1)) : ConstantTensor (otherVals, (N -1)))                                # col vector: [ 1; 0; 0; 0 ... ]
+                      else Splice   (Constant       (firstVal)      : ConstantTensor (otherVals, (1 : N -1)), axis = axis1 /*, axis*/)   # row vector: [ 0, -INF, -INF, -INF, ... ]
             ].out
 
             labelsOut = Pass (modelAsTrained.labelSequence)

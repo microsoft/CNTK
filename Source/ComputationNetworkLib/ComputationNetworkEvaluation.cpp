@@ -669,7 +669,12 @@ size_t ComputationNetwork::ValidateNodes(list<ComputationNodeBasePtr> nodes, boo
             {
                 unchanged = !ValidateNode(node, isFinalValidationPass);
                 string updatedPrototype = node->FormatOperationPrototype("");
+#if 1           // print prototype in final validation pass
+                unchanged;
+                if (isFinalValidationPass)
+#else           // print prototype upon every change (useful for debugging)
                 if (isFirstPass || !unchanged || prevPrototype != updatedPrototype)
+#endif
                     fprintf(stderr, "Validating --> %s\n", updatedPrototype.c_str());
             }
             catch (...) // if validation failed then print the prototype anyway so one can see the input args

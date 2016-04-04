@@ -688,7 +688,7 @@ public:
                 s.append(" x ");
             s.append(std::to_string(m_dims[k]));
         }
-#ifdef _DEBUG // also emit the strides, easier for debugging
+#if 0   // also emit the strides, easier for debugging
         s.append(" {");
         for (size_t k = 0; k < size(); k++)
         {
