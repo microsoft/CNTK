@@ -276,6 +276,7 @@ public:
     }
     virtual ~SequenceReader();
     virtual void StartMinibatchLoop(size_t mbSize, size_t epoch, size_t requestedEpochSamples = requestDataSize);
+	//virtual void StartDistributedMinibatchLoop(size_t mbSize, size_t epoch, size_t subsetNum, size_t numSubsets, size_t requestedEpochSamples = requestDataSize);
     virtual bool GetMinibatch(StreamMinibatchInputs& matrices);
 
     // void SetSentenceSegBatch(std::vector<size_t> &/*sentenceEnd*/) {};
@@ -367,6 +368,8 @@ private:
     size_t mPosInSentence;
     size_t mLastPosInSentence;
     size_t m_truncationLength;     // sequences longer than this get chopped up
+	size_t m_subsetNum;
+	size_t m_numSubsets;
 
     std::vector<ElemType> m_featureTemp;
     std::vector<LabelType> m_labelTemp;
@@ -405,7 +408,11 @@ private:
     void GetLabelOutput(StreamMinibatchInputs& matrices, size_t m_mbStartSample, size_t actualmbsize);
 
 public:
-    void StartMinibatchLoop(size_t mbSize, size_t epoch, size_t requestedEpochSamples = requestDataSize) override;
+	void StartMinibatchLoop(size_t mbSize, size_t epoch, size_t requestedEpochSamples = requestDataSize)
+	{
+		return StartDistributedMinibatchLoop(mbSize, epoch, 0, 1, requestedEpochSamples);
+	}
+	void StartDistributedMinibatchLoop(size_t mbSize, size_t epoch, size_t subsetNum, size_t numSubsets, size_t requestedEpochSamples = requestDataSize) override;
     bool GetMinibatch(StreamMinibatchInputs& matrices) override;
     bool DataEnd() override;
 
