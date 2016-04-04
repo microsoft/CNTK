@@ -125,11 +125,6 @@ void HTKDataDeserializer::InitializeChunkDescriptions(ConfigHelper& config)
         currentChunk.Add(move(utterances[i]));
     }
 
-    // Creating a table of weak pointers to chunks,
-    // so that if randomizer asks the same chunk twice 
-    // we do not need to recreated the chunk if we already uploaded in memory.
-    m_weakChunks.resize(m_chunks.size());
-
     fprintf(stderr,
         "HTKDataDeserializer::HTKDataDeserializer: %d utterances grouped into %d chunks, av. chunk size: %.1f utterances, %.1f frames\n",
         (int)utterances.size(),
@@ -289,14 +284,7 @@ private:
 // Gets a data chunk with the specified chunk id.
 ChunkPtr HTKDataDeserializer::GetChunk(size_t chunkId)
 {
-    if (!m_weakChunks[chunkId].expired())
-    {
-        return m_weakChunks[chunkId].lock();
-    }
-
-    auto chunk = make_shared<HTKChunk>(this, chunkId);
-    m_weakChunks[chunkId] = chunk;
-    return chunk;
+    return make_shared<HTKChunk>(this, chunkId);
 };
 
 // A matrix that stores all samples of a sequence without padding (differently from ssematrix).
