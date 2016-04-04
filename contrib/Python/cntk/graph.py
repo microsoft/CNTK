@@ -9,7 +9,7 @@ class sparse(object):
         return hasattr(obj, 'todense')
 
 from .utils import MODEL_INDENTATION
-from .utils import numpy_to_cntk_shape
+from .utils import numpy_to_cntk_shape, dedupe_readers
 
 def _tuple_to_cntk_shape(shape):
     return ':'.join(str(v) for v in shape)
@@ -153,9 +153,8 @@ class ComputationNode(object):
         return is_loop_node and p_name == 'input' and isinstance(p_value, str)
 
     def _to_config_recursively(self, desc, unrolled_nodes, inputs,
-                               readers, dep_inputs=None, node_counter=0):
-        if dep_inputs is None:
-            dep_inputs = tuple()
+                               readers, dep_inputs, node_counter,
+                               reconciled_cache):
 
         param_variable_names = []
         # In case we have multiple unreconciled inputs, we will reconcile each
@@ -186,7 +185,7 @@ class ComputationNode(object):
                         else:
                             child_var, node_counter, child_desc, child_dep_inputs = pv._to_config_recursively(
                                 desc, unrolled_nodes, inputs, readers,
-                                dep_inputs, node_counter)
+                                dep_inputs, node_counter, reconciled_cache)
 
                             unrolled_nodes[pv] = child_var, dep_inputs
 
@@ -200,10 +199,16 @@ class ComputationNode(object):
                                 first_unreconciled_input = pv
 
                             else:
-                                pv = ReconcileMBLayout(pv, first_unreconciled_input)
-                                child_var, node_counter, child_desc, dep_inputs = pv._to_config_recursively(
-                                    desc, unrolled_nodes, inputs, readers,
-                                    dep_inputs, node_counter)
+                                if (pv, first_unreconciled_input) in reconciled_cache:
+                                    child_var, dep_inputs = reconciled_cache[(pv, first_unreconciled_input)]
+                                else:
+                                    unrec_pv = pv
+                                    pv = ReconcileMBLayout(unrec_pv, first_unreconciled_input)
+                                    child_var, node_counter, child_desc, dep_inputs = pv._to_config_recursively(
+                                        desc, unrolled_nodes, inputs, readers,
+                                        dep_inputs, node_counter,
+                                        reconciled_cache)
+                                    reconciled_cache[(unrec_pv, first_unreconciled_input)] = pv.var_name, dep_inputs
 
                                 unrolled_nodes[pv] = child_var, dep_inputs
 
@@ -246,41 +251,38 @@ class ComputationNode(object):
 
         return self.var_name, node_counter, desc, dep_inputs
 
-    def _to_config(self):
+    def _to_config(self, description, unrolled_nodes, inputs, readers,
+            dep_inputs, node_counter, reconciled_cache):
         '''
         Helper method to generate the CNTK configuration for this node.
         '''
-        unrolled_nodes = {}
-        inputs = set()
-        readers = set()
+
         var_name, node_counter, desc, dep_inputs = self._to_config_recursively(
-            desc=[],
+            description,
             unrolled_nodes=unrolled_nodes,
             inputs=inputs,
-            readers=readers)
+            readers=readers, 
+            dep_inputs=dep_inputs,
+            node_counter=node_counter, 
+            reconciled_cache=reconciled_cache)
 
-        return var_name, node_counter, desc, len(inputs) > 0, readers
-
-    def _dedupe_readers(self, readers):
-        import copy
-        readers_map = {}
-        for r in readers:
-            filename = r['FileName']
-            if filename in readers_map:
-                readers_map[filename].inputs_def.extend(r.inputs_def)
-            else:
-                readers_map[filename] = copy.deepcopy(r)
-
-        return [r for r in readers_map.values()]
+        return var_name, node_counter, desc, len(inputs) > 0, readers, dep_inputs
 
     def to_config(self):
         '''
         Generate CNTK configuration for this node including the configuration
         for all dependent child nodes.
         '''
-        var_name, node_counter, desc, has_inputs, readers = self._to_config()
+        var_name, node_counter, desc, has_inputs, readers, dep_inputs = \
+            self._to_config(description=[], 
+                    unrolled_nodes={},
+                    inputs=set(),
+                    readers=set(), 
+                    dep_inputs=tuple(), 
+                    node_counter=0,
+                    reconciled_cache={})
 
-        return "\n".join(desc), has_inputs, self._dedupe_readers(readers)
+        return "\n".join(desc), has_inputs, dedupe_readers(readers)
 
 
 class InputComputationNodeBase(ComputationNode, metaclass=ABCMeta):

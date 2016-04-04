@@ -9,7 +9,7 @@ import shutil as sh
 from cntk.graph import ComputationNode
 from cntk.ops.cntk1 import NewReshape
 from cntk.utils import CNTK_EXECUTABLE_PATH, MODEL_INDENTATION
-from .utils import cntk_to_numpy_shape
+from .utils import cntk_to_numpy_shape, dedupe_readers
 
 CNTK_TEMPLATE_DIR = os.path.join(os.path.dirname(__file__), "templates")
 CNTK_TRAIN_TEMPLATE_PATH = os.path.join(
@@ -58,7 +58,7 @@ class AbstractContext(object, metaclass=ABCMeta):
     def __init__(self, name,
                  graph=None,
                  device_id=-1,
-                 root_node=None,
+                 root_nodes=None,
                  clean_up=True,
                  node_unit_test=False):
         '''
@@ -67,7 +67,7 @@ class AbstractContext(object, metaclass=ABCMeta):
         :param name: context name
         :param graph: the computational graph to be used for training, testing and prediction        
         :param device_id: whether to use CPU or a specific GPU. -1 for CPU larger values
-        :param root_node: the top node of the graph
+        :param root_nodes: list of top nodes of the graph or single node itself
         :param clean_up: whether the temporary directory should be removed when the context is left
         are the GPUs indices.        
         :param node_unit_test: set to True if you want to output the gradient of a node (backward pass)
@@ -90,7 +90,10 @@ class AbstractContext(object, metaclass=ABCMeta):
         self.device_id = device_id
         self.clean_up = clean_up
         self.input_nodes = set()
-        self.root_node = root_node
+        if root_nodes is None:
+            self.root_nodes = None
+        else:
+            self.root_nodes = root_nodes if isinstance(root_nodes, list) else [root_nodes]
         self.node_unit_test= node_unit_test
 
     def __enter__(self):
@@ -103,6 +106,42 @@ class AbstractContext(object, metaclass=ABCMeta):
 
         if self.clean_up:
             sh.rmtree(self.directory)
+
+    def _generate_config(self, root_nodes=None):
+        '''
+        Helper function to create a configuration incorporating all root nodes
+        '''
+        has_inputs = False
+
+        desc = []
+        inputs = set()
+        readers = set() 
+        unrolled_nodes = {}
+        node_counter = 0
+        dep_inputs = tuple()
+        reconciled_cache = {}
+
+        if root_nodes is None:
+            root_nodes = self.root_nodes
+        elif not isinstance(root_nodes, list):
+            root_nodes = [root_nodes]
+
+        for root_node in root_nodes:
+            var_name, node_counter, _desc, _has_inputs, _readers, _dep_inputs = \
+                root_node._to_config(desc, 
+                        unrolled_nodes, 
+                        inputs,
+                        readers, 
+                        dep_inputs,
+                        node_counter, reconciled_cache)
+
+            has_inputs |= _has_inputs
+            readers |= _readers
+            dep_inputs += _dep_inputs
+
+        description = "\n".join(desc)
+
+        return description, has_inputs, dedupe_readers(readers)
 
     def _generate_train_config(self, optimizer, reader, override_existing):
         '''
@@ -124,7 +163,7 @@ class AbstractContext(object, metaclass=ABCMeta):
 
         tmpl = open(CNTK_TRAIN_TEMPLATE_PATH, "r").read()
         model_filename = os.path.join(model_dir, self.name)
-        description, has_inputs, readers = self.root_node.to_config()
+        description, has_inputs, readers = self._generate_config()
         if reader:
             readers.append(reader)
 
@@ -148,7 +187,7 @@ class AbstractContext(object, metaclass=ABCMeta):
         if reader:
             reader_config = reader.generate_config()
         else:
-            description, has_inputs, readers = self.root_node.to_config()
+            description, has_inputs, readers = self._generate_config()
             reader_config = '\n'.join(r.generate_config() for r in readers)
 
         tmpl_dict = {
@@ -172,7 +211,7 @@ class AbstractContext(object, metaclass=ABCMeta):
         if reader:
             reader_config = reader.generate_config()
         else:
-            description, has_inputs, readers = self.root_node.to_config()
+            description, has_inputs, readers = self._generate_config()
             reader_config = '\n'.join(r.generate_config() for r in readers)
 
         tmpl_dict = {
@@ -183,17 +222,17 @@ class AbstractContext(object, metaclass=ABCMeta):
         }
         return tmpl % tmpl_dict
 
-    def _generate_eval_config(self, root_node, reader):
+    def _generate_eval_config(self, root_nodes, reader):
         '''
         Generates the configuration file for write action.
-        :param root_node: the node to evaluate. 
+        :param root_nodes: the node to evaluate. 
         :param reader: the reader used to load the data, None if the network does not have input
         '''
-        model_description, has_input, readers = root_node.to_config()
+        description, has_inputs, readers = self._generate_config(root_nodes)
         if reader:
             readers.append(reader)
 
-        if not has_input and not readers:
+        if not has_inputs and not readers:
             # add dummy input to keep CNTK happy
             # TODO relieve this requirement on CNTK side
             data = [[1, 2], [3, 4]]
@@ -203,7 +242,7 @@ class AbstractContext(object, metaclass=ABCMeta):
             from .ops.cntk1 import Input
             dummy_input_node = Input(2, var_name='dummy_node')
             reader.add_input(dummy_input_node, 0, 2)
-            model_description += "\n" + " "*MODEL_INDENTATION + "dummy_node = Input(2, tag='output')"
+            description += "\n" + " "*MODEL_INDENTATION + "dummy_node = Input(2, tag='output')"
             readers.append(reader)
 
         tmpl = open(CNTK_EVAL_TEMPLATE_PATH, "r").read()
@@ -212,7 +251,7 @@ class AbstractContext(object, metaclass=ABCMeta):
             'DevideId': self.device_id,
             'NodeUnitTest': self.node_unit_test,
             'OutputFile': output_filename,
-            'ModelDescription': model_description,
+            'ModelDescription': description,
             'Reader': '\n'.join(r.generate_config() for r in readers),
         }
         return tmpl % tmpl_dict
@@ -317,7 +356,10 @@ class Context(AbstractContext):
         can attach a reader directly to the input node.
         '''
         config_content = self._generate_test_config(reader)
-        return self._call_cntk(CNTK_TEST_CONFIG_FILENAME, config_content)
+        output = self._call_cntk(CNTK_TEST_CONFIG_FILENAME, config_content)
+
+        return Context._parse_test_result(output)
+
 
     def predict(self, reader=None):
         '''
@@ -421,6 +463,41 @@ class Context(AbstractContext):
         list_of_tensors.append(np.asarray(tensor_seq))
 
         return list_of_tensors
+
+    TEST_RESULT_REGEX = re.compile('(?P<name>[^:]+): [^=]+ = (?P<number>[0-9.]+)')
+
+    @staticmethod
+    def _parse_test_result(output):
+        result = {}
+
+        PREAMPLE = 'Final Results: Minibatch[1-1]: '
+        for line in output.splitlines():
+
+            if not line.startswith(PREAMPLE):
+                continue
+
+            line = line[len(PREAMPLE):]
+
+            if not line.startswith('SamplesSeen = '):
+                raise ValueError('expected SamplesSeen but got "%s"'%line)
+
+            line = line[len('SamplesSeen = '):]
+            number_ends = line.index(' ')
+            result['SamplesSeen'] = int(line[:number_ends])
+            line = line[number_ends:]
+
+            perplexity_idx = line.index('Perplexity = ')
+            result['Perplexity'] = float(line[perplexity_idx+len('Perplexity = '):])
+
+            line = line[:perplexity_idx]
+
+            mo = Context.TEST_RESULT_REGEX.match(line)
+            while mo:
+                result[mo.group('name').strip()] = float(mo.group('number').strip())
+                line = line[mo.span()[1]:]
+                mo = Context.TEST_RESULT_REGEX.match(line)
+
+        return result
 
     def _calc_expected_shape_and_size(self, node, data, shapes):
         '''
