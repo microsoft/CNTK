@@ -153,8 +153,14 @@ class ComputationNode(object):
         return is_loop_node and p_name == 'input' and isinstance(p_value, str)
 
     def _to_config_recursively(self, desc, unrolled_nodes, inputs,
-                               readers, node_counter=0):
+                               readers, dep_inputs=None, node_counter=0):
+        if dep_inputs is None:
+            dep_inputs = tuple()
+
         param_variable_names = []
+        # In case we have multiple unreconciled inputs, we will reconcile each
+        # of them to the layout of the first input.
+        first_unreconciled_input = None
         if self.params:
             for p_name in self.params:
                 p_value = self.__dict__[p_name]
@@ -172,14 +178,37 @@ class ComputationNode(object):
 
                     input_nodes_vars = []
                     for pv in inputs_param:
+
                         if pv in unrolled_nodes:
                             # We have seen this node already, so just retrieve its
                             # name.
-                            child_var = unrolled_nodes[pv]
+                            child_var, child_dep_inputs = unrolled_nodes[pv]
                         else:
-                            child_var, node_counter, child_desc = pv._to_config_recursively(
-                                desc, unrolled_nodes, inputs, readers, node_counter)
-                            unrolled_nodes[pv] = child_var
+                            child_var, node_counter, child_desc, child_dep_inputs = pv._to_config_recursively(
+                                desc, unrolled_nodes, inputs, readers,
+                                dep_inputs, node_counter)
+
+                            unrolled_nodes[pv] = child_var, dep_inputs
+
+                        # Whenever two unreconciled inputs meet, we need
+                        # reconcile them to have the same MB layout. This is a
+                        # temporary necessity that should go away with future
+                        # CNTK versions.
+                        if dep_inputs != child_dep_inputs:
+
+                            if first_unreconciled_input is None:
+                                first_unreconciled_input = pv
+
+                            else:
+                                pv = ReconcileMBLayout(pv, first_unreconciled_input)
+                                child_var, node_counter, child_desc, dep_inputs = pv._to_config_recursively(
+                                    desc, unrolled_nodes, inputs, readers,
+                                    dep_inputs, node_counter)
+
+                                unrolled_nodes[pv] = child_var, dep_inputs
+
+                            dep_inputs = child_dep_inputs
+
                         input_nodes_vars.append(child_var)
 
                     param_variable_names.append(
@@ -212,7 +241,10 @@ class ComputationNode(object):
             "%s = %s(%s)" % (self.var_name, self.name, params)
         desc.append(line)
 
-        return self.var_name, node_counter, desc
+        if self._is_input():
+            dep_inputs += (self.var_name,)
+
+        return self.var_name, node_counter, desc, dep_inputs
 
     def _to_config(self):
         '''
@@ -221,7 +253,7 @@ class ComputationNode(object):
         unrolled_nodes = {}
         inputs = set()
         readers = set()
-        var_name, node_counter, desc = self._to_config_recursively(
+        var_name, node_counter, desc, dep_inputs = self._to_config_recursively(
             desc=[],
             unrolled_nodes=unrolled_nodes,
             inputs=inputs,
