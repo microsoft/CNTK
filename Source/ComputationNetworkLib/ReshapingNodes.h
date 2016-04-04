@@ -1257,7 +1257,7 @@ reshaping
           - this will be implemented separately on BrainScript level
        - like tf.concat()
     - Pack(inputs, axis) = ReshapeDimension(Splice(inputs, axis), axis, (0:Length(inputs)) )
-       - like splice but creates inserts new axis of dimension Length(inputs)
+       - like splice but inserts new axis of dimension Length(inputs)
        - inputs must have identical dimensions for all dims (except for broadcasting)
        - axis can be a time dimension; then a new inner-most time dimension will be inserted
        - like tf.pack()

@@ -564,14 +564,14 @@ void ComputationNode<ElemType>::WriteMinibatchWithFormatting(FILE* f, const Fram
         else
         {
             for (size_t j = 0; j < jend; j++) // loop over output rows     --BUGBUG: row index is 'i'!! Rename these!!
-        {
-            if (j > 0)
+            {
+                if (j > 0)
                     fprintfOrDie(f, "%s", sampleSep.c_str());
                 if (j == jstop && jstop < jend - 1) // if jstop == jend-1 we may as well just print the value instead of '...'
-            {
+                {
                     fprintfOrDie(f, "...+%d", (int)(jend - jstop)); // 'nuff said
-                break;
-            }
+                    break;
+                }
                 // inject sample tensor index if we are printing row-wise and it's a tensor
                 if (!transpose && sampleLayout.size() > 1 && !isCategoryLabel) // each row is a different sample dimension
                 {
@@ -581,15 +581,15 @@ void ComputationNode<ElemType>::WriteMinibatchWithFormatting(FILE* f, const Fram
                 }
                 // print a row of values
                 for (size_t i = 0; i < iend; i++) // loop over elements
-            {
-                if (i > 0)
-                    fprintfOrDie(f, "%s", elementSeparator.c_str());
-                    if (i == istop && istop < iend - 1)
                 {
+                    if (i > 0)
+                        fprintfOrDie(f, "%s", elementSeparator.c_str());
+                    if (i == istop && istop < iend - 1)
+                    {
                         fprintfOrDie(f, "...+%d", (int)(iend - istop));
-                    break;
-                }
-                double dval = seqData[i * istride + j * jstride];
+                        break;
+                    }
+                    double dval = seqData[i * istride + j * jstride];
                     print(dval);
                 }
             }
@@ -600,7 +600,7 @@ void ComputationNode<ElemType>::WriteMinibatchWithFormatting(FILE* f, const Fram
 }
 
 /*static*/ string WriteFormattingOptions::Processed(const wstring& nodeName, string fragment, size_t minibatchId)
-                {
+{
     fragment = msra::strfun::ReplaceAll<string>(fragment, "\\n", "\n");
     fragment = msra::strfun::ReplaceAll<string>(fragment, "\\r", "\r");
     fragment = msra::strfun::ReplaceAll<string>(fragment, "\\t", "\t");
@@ -611,7 +611,7 @@ void ComputationNode<ElemType>::WriteMinibatchWithFormatting(FILE* f, const Fram
         fragment = msra::strfun::ReplaceAll<string>(fragment, "%n", msra::strfun::_strprintf<char>("%ld", minibatchId).c_str());
     // %d: sequenceId
     return fragment;
-                }
+}
 
 template <class ConfigRecordType>
 WriteFormattingOptions::WriteFormattingOptions(const ConfigRecordType& config) :
@@ -622,14 +622,14 @@ WriteFormattingOptions::WriteFormattingOptions(const ConfigRecordType& config) :
     {
         const ConfigRecordType& formatConfig(config(L"format", ConfigRecordType::Record()));
         if (formatConfig.ExistsCurrent(L"type")) // do not inherit 'type' from outer block
-                {
+        {
             wstring type = formatConfig(L"type");
             if      (type == L"real")     ; // default
             else if (type == L"category") isCategoryLabel = true;
             else if (type == L"sparse")   isSparse = true;
             else                         InvalidArgument("write: type must be 'real', 'category', or 'sparse'");
             labelMappingFile = (wstring)formatConfig(L"labelMappingFile", L"");
-                }
+        }
         transpose = formatConfig(L"transpose", transpose);
         prologue  = formatConfig(L"prologue",  prologue);
         epilogue  = formatConfig(L"epilogue",  epilogue);
@@ -640,8 +640,8 @@ WriteFormattingOptions::WriteFormattingOptions(const ConfigRecordType& config) :
         sampleSeparator   = msra::strfun::utf8(formatConfig(L"sampleSeparator",   (wstring)msra::strfun::utf16(sampleSeparator)));
         precisionFormat   = msra::strfun::utf8(formatConfig(L"precisionFormat",   (wstring)msra::strfun::utf16(precisionFormat)));
         // TODO: change those strings into wstrings to avoid this conversion mess
-                }
-            }
+    }
+}
 
 void WriteFormattingOptions::Save(File& fstream) const
 {
@@ -657,7 +657,7 @@ void WriteFormattingOptions::Save(File& fstream) const
     fstream << elementSeparator;
     fstream << sampleSeparator;
     fstream << precisionFormat;
-        }
+}
 
 void WriteFormattingOptions::Load(File& fstream, size_t modelVersion)
 {
@@ -679,13 +679,20 @@ template WriteFormattingOptions::WriteFormattingOptions(const ConfigParameters&)
 template WriteFormattingOptions::WriteFormattingOptions(const ScriptableObjects::IConfigRecord&);
 
 // -----------------------------------------------------------------------
-// instantiate the core class templates
+// static variables
 // -----------------------------------------------------------------------
 
 atomic_ullong TimeStamp::s_timeStampCounter = ATOMIC_VAR_INIT(0);
 
 template <> map<size_t, map<size_t, Matrix<float>*>>  ComputationNode<float> ::s_constOnes{};
 template <> map<size_t, map<size_t, Matrix<double>*>> ComputationNode<double>::s_constOnes{};
+
+// -----------------------------------------------------------------------
+// instantiate the core class templates
+// -----------------------------------------------------------------------
+
+template class ComputationNode<float>;
+template class ComputationNode<double>;
 
 }}}
 

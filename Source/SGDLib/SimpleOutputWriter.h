@@ -269,7 +269,6 @@ public:
         m_net->StartEvaluateMinibatchLoop(outputNodes);
 
         size_t totalEpochSamples = 0;
-        size_t numMBsRun = 0;
 
         for (auto & onode : outputNodes)
         {
@@ -283,7 +282,7 @@ public:
         char formatChar = !formattingOptions.isCategoryLabel ? 'f' : !formattingOptions.labelMappingFile.empty() ? 's' : 'u';
         std::string valueFormatString = "%" + formattingOptions.precisionFormat + formatChar; // format string used in fprintf() for formatting the values
 
-        while (DataReaderHelpers::GetMinibatchIntoNetwork<ElemType>(dataReader, m_net, nullptr, false, false, inputMatrices, actualMBSize, nullptr))
+        for (size_t numMBsRun = 0; DataReaderHelpers::GetMinibatchIntoNetwork<ElemType>(dataReader, m_net, nullptr, false, false, inputMatrices, actualMBSize, nullptr); numMBsRun++)
         {
             ComputationNetwork::BumpEvalTimeStamp(inputNodes);
 
@@ -294,7 +293,7 @@ public:
                 m_net->ForwardProp(onode);
 
                 FILE* file = *outputStreams[onode];
-                WriteMinibatch(file, dynamic_pointer_cast<ComputationNode<ElemType>>(onode), formattingOptions, formatChar, valueFormatString, labelMapping, numMBsRun + 1, /* gradient */ false);
+                WriteMinibatch(file, dynamic_pointer_cast<ComputationNode<ElemType>>(onode), formattingOptions, formatChar, valueFormatString, labelMapping, numMBsRun, /* gradient */ false);
 
                 if (nodeUnitTest)
                     m_net->Backprop(onode);
@@ -311,13 +310,13 @@ public:
                     }
                     else
                     {
-                        WriteMinibatch(file, node, formattingOptions, formatChar, valueFormatString, labelMapping, numMBsRun + 1, /* gradient */ true);
+                        WriteMinibatch(file, node, formattingOptions, formatChar, valueFormatString, labelMapping, numMBsRun, /* gradient */ true);
                     }
                 }
             }
             totalEpochSamples += actualMBSize;
 
-            fprintf(stderr, "Minibatch[%lu]: ActualMBSize = %lu\n", ++numMBsRun, actualMBSize);
+            fprintf(stderr, "Minibatch[%lu]: ActualMBSize = %lu\n", numMBsRun, actualMBSize);
             if (outputPath == L"-") // if we mush all nodes together on stdout, add some visual separator
                 fprintf(stdout, "\n");
 
