@@ -2,7 +2,6 @@
 // Copyright (c) Microsoft. All rights reserved.
 // Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
 //
-#pragma once
 
 #include "Basics.h"
 #include "InputAndParamNodes.h"
@@ -40,7 +39,7 @@ LearnableParameter<ElemType>::LearnableParameter(const ScriptableObjects::IConfi
     if (configp->Exists(L"learningRateMultiplier"))
         SetLearningRateMultiplier(configp->Get(L"learningRateMultiplier"));
     else if (configp->Exists(L"needsGradient") || configp->Exists(L"needGradient") || configp->Exists(L"computeGradient"))
-        InvalidArgument("needsGradient|needGradient|computeGradient are not supported in BrainScript. Use learningRateMultiplier instead.");
+        InvalidArgument("Deprecated parameter names needsGradient|needGradient|computeGradient are not supported in BrainScript. Use learningRateMultiplier instead.");
 
     wstring initString = configp->Get(L"init");
     if (initString == L"fixedValue")
@@ -56,8 +55,17 @@ LearnableParameter<ElemType>::LearnableParameter(const ScriptableObjects::IConfi
     {
         wstring initFromFilePath = configp->Get(L"initFromFilePath");
         if (initFromFilePath.empty())
-            RuntimeError("initFromFilePath must be set when using \"fromFile\" initialization method");
+            RuntimeError("initFromFilePath parameter must be provided when using \"fromFile\" initialization method");
         InitFromFile(initFromFilePath);
+    }
+    else if (initString == L"fromLiteral")
+    {
+        wstring initFromLiteral = configp->Get(L"initFromLiteral");
+        if (initFromLiteral.empty())
+            RuntimeError("initFromLiteral parameter must be provided when using \"fromLiteral\" initialization method");
+        size_t numRows, numCols;
+        auto array = File::LoadMatrixFromStringLiteral<ElemType>(msra::strfun::utf8(initFromLiteral), numRows, numCols);
+        InitFromArray(array, numRows, numCols);
     }
     else
         RuntimeError("init must be one of the values of [ uniform | gaussian | fixedValue | fromFile ]");
@@ -99,11 +107,17 @@ void LearnableParameter<ElemType>::InitRandom(const bool uniformInit,
 
 // initialize by reading a matrix from a text file
 template <class ElemType>
-void LearnableParameter<ElemType>::InitFromFile(const std::wstring& initFromFilePath)
+void LearnableParameter<ElemType>::InitFromFile(const wstring& initFromFilePath)
 {
     size_t numRows, numCols;
     auto array = File::LoadMatrixFromTextFile<ElemType>(initFromFilePath, numRows, numCols);
+    InitFromArray(array, numRows, numCols);
+}
 
+// initialize by reading a matrix from a text file
+template <class ElemType>
+void LearnableParameter<ElemType>::InitFromArray(const std::vector<ElemType>& array, size_t numRows, size_t numCols)
+{
     // infer tensor dimensions from input file if not set
     // Note: The mapping of dimensions of the input matrix to tensor dimensions are somewhat confusing.
     //       The file contains a 2D matrix (one row per text line) that is saved into our column-major representation.
@@ -142,8 +156,9 @@ void LearnableParameter<ElemType>::InitFromFile(const std::wstring& initFromFile
     }
 
     // BUGBUG: We should allow to read an arbitrary tensor from a single-column file.
-    //         Currently, this would cause a matrix/tensor dimension mismatch.
-    Value().SetValue(numRows, numCols, m_deviceId, array.data(), matrixFlagNormal);
+    //         Currently, this would cause a matrix/tensor dimension mismatch. --TODO: Is this comment up-to-date?
+    Value().SetValue(numRows, numCols, m_deviceId, const_cast<ElemType*>(array.data()), matrixFlagNormal);
+    // TODO: Get rid of that const_cast, as soon as after Ryan's Matrix-lib refactoring separated out SetValue() from external vs. from deep copy
     VerifyDataSize(Value());      // sanity check
 }
 

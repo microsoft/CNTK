@@ -257,7 +257,11 @@ public:
     // returns: a flat array containing the contents of this file in column-major format
     // This function does not quite fit here, but it fits elsewhere even worse. TODO: change to use File class!
     template <class ElemType>
-    static vector<ElemType> LoadMatrixFromTextFile(const std::wstring& filePath, size_t& /*out*/ numRows, size_t& /*out*/ numCols);
+    static std::vector<ElemType> LoadMatrixFromTextFile(const std::wstring& filePath, size_t& /*out*/ numRows, size_t& /*out*/ numCols);
+    // same as LoadMatrixFromTextFile() but from a string literal
+    // This function fits even less...
+    template <class ElemType>
+    static std::vector<ElemType> LoadMatrixFromStringLiteral(const std::string& literal, size_t& /*out*/ numRows, size_t& /*out*/ numCols);
 
     // Read a label file.
     // A label file is a sequence of text lines with one token per line, where each line maps a string to an index, starting with 0.

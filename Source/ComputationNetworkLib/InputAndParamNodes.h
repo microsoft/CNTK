@@ -55,6 +55,9 @@ public:
     // initialize by reading a matrix from a text file
     void InitFromFile(const std::wstring& initFromFilePath);
 
+    // helper to initialize from a matrix read from a text file or a string literal
+    void InitFromArray(const std::vector<ElemType>& array, size_t numRows, size_t numCols);
+
     // reload parameters from file
     // This is called from MEL.
     // TODO: Move this error check there, since this is called only from one place.
