@@ -11,7 +11,7 @@ train_file = os.path.join(cur_dir, "Train-3Classes.txt")
 test_file = os.path.join(cur_dir, "Test-3Classes.txt") 
 mapping_file = os.path.join(cur_dir, "SimpleMapping-3Classes.txt")
 
-def train_eval_logreg(criterion_name, eval_name):
+def train_eval_logreg(criterion_name=None, eval_name=None):
     X = Input(2)
     y = Input(3)
 
