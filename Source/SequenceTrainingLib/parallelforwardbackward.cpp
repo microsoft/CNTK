@@ -14,7 +14,6 @@
 #include "cudalatticeops.h"
 #include <numeric> // for debug
 #include "cudalib.h"
-#include <memory>
 
 #define TWO_CHANNEL // [v-hansu]
 using namespace msra::cuda;
@@ -631,7 +630,6 @@ struct parallelstateimpl
             errorsignalgpu = nullptr;
             errorsignalgpustorage->Resize(errorsignal.rows(), errorsignal.cols());
         }
-        //*errorsignalgpu = errorsignalgpustorage->ColumnSlice(0, errorsignal.cols());
         errorsignalgpu = make_unique<Microsoft::MSR::CNTK::Matrix<float>>(errorsignalgpustorage->ColumnSlice(0, errorsignal.cols()));
 
         if (cacheerrsignalneg)
@@ -644,7 +642,6 @@ struct parallelstateimpl
                 errorsignalneggpu = nullptr;
                 errorsignalneggpustorage->Resize(errorsignal.rows(), errorsignal.cols());
             }
-            //*errorsignalneggpu = errorsignalneggpustorage->ColumnSlice(0, errorsignal.cols());
             errorsignalneggpu = make_unique<Microsoft::MSR::CNTK::Matrix<float>>(errorsignalneggpustorage->ColumnSlice(0, errorsignal.cols()));
         }
     }
