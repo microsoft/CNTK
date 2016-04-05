@@ -745,7 +745,7 @@ void LibSVMBinaryReader<ElemType>::CheckDataMatrices(StreamMinibatchInputs& matr
     {
         for (auto inmat : matrices)
         {
-            shared_ptr<BinaryMatrix<ElemType>> mat = m_dataInput->CreateMatrix(inmat.first, inmat.second->GetDeviceId());
+            shared_ptr<BinaryMatrix<ElemType>> mat = m_dataInput->CreateMatrix(inmat.first, inmat.second.matrix->GetDeviceId());
             if (mat != nullptr)
             {
                 m_dataMatrices[inmat.first] = mat;

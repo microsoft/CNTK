@@ -92,14 +92,9 @@ bool ReaderShim<ElemType>::GetMinibatch(StreamMinibatchInputs& matrices)
 
     // Check that all matrices have the same device id.
     // If not we should inject the IMemoryProvider per stream.
-    int deviceId = matrices.begin()->second->GetDeviceId();
+    int deviceId = matrices.begin()->second.matrix->GetDeviceId();
     for (auto mx : matrices)
-    {
-        if (mx.second->GetDeviceId() != deviceId)
-        {
-            assert(false);
-        }
-    }
+        assert(mx.second.matrix->GetDeviceId() == deviceId), UNUSED(deviceId);
 
     assert(m_prefetchTask.valid());
 
@@ -129,7 +124,7 @@ bool ReaderShim<ElemType>::GetMinibatch(StreamMinibatchInputs& matrices)
             size_t rowNumber = m_streams[streamId]->m_sampleLayout->GetNumElements();
 
             auto* data = reinterpret_cast<const ElemType*>(stream->m_data);
-            matrices.GetInputMatrix<ElemType>(mx.first).SetValue(rowNumber, columnNumber, mx.second->GetDeviceId(), const_cast<ElemType*>(data), matrixFlagNormal);
+            matrices.GetInputMatrix<ElemType>(mx.first).SetValue(rowNumber, columnNumber, mx.second.matrix->GetDeviceId(), const_cast<ElemType*>(data), matrixFlagNormal);
         }
     }
 

@@ -95,9 +95,9 @@ public:
 
         StreamMinibatchInputs inputMatrices;
         for (auto& node : featureNodes)
-            inputMatrices.AddInputMatrix(node->NodeName(), node->ValuePtr());
+            inputMatrices.AddInput(node->NodeName(), node->ValuePtr(), node->GetMBLayout(), node->GetSampleLayout());
         for (auto& node : labelNodes)
-            inputMatrices.AddInputMatrix(node->NodeName(), node->ValuePtr());
+            inputMatrices.AddInput(node->NodeName(), node->ValuePtr(), node->GetMBLayout(), node->GetSampleLayout());
 
         // evaluate through minibatches
         size_t totalEpochSamples = 0;

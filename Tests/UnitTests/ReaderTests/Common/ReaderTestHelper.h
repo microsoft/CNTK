@@ -231,18 +231,19 @@ struct ReaderFixture
         std::vector<shared_ptr<Matrix<ElemType>>> features;
         std::vector<shared_ptr<Matrix<ElemType>>> labels;
 
+        MBLayoutPtr pMBLayout = make_shared<MBLayout>();
         for (auto i = 0; i < numFeatureFiles; i++)
         {
             features.push_back(make_shared<Matrix<ElemType>>(0));
             wstring name = numFeatureFiles > 1 ? L"features" + std::to_wstring(i + 1) : L"features";
-            map.insert(make_pair(name, features[i]));
+            map.insert(make_pair(name, StreamMinibatchInputs::Input(features[i], pMBLayout, TensorShape())));
         }
 
         for (auto i = 0; i < numLabelFiles; i++)
         {
             labels.push_back(make_shared<Matrix<ElemType>>(0));
             wstring name = numLabelFiles > 1 ? L"labels" + std::to_wstring(i + 1) : L"labels";
-            map.insert(make_pair(name, labels[i]));
+            map.insert(make_pair(name, StreamMinibatchInputs::Input(labels[i], pMBLayout, TensorShape())));
         }
 
         // Setup output file

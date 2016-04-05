@@ -118,9 +118,10 @@ void TestReader(const ConfigParameters& configBase)
     int deviceId = 0;
     auto featuresMatrix = make_shared<Matrix<ElemType>>(deviceId);
     auto labelsMatrix   = make_shared<Matrix<ElemType>>(deviceId);
+    MBLayoutPtr pMBLayout = make_shared<MBLayout>();
     StreamMinibatchInputs matrices;
-    matrices.AddInputMatrix(featureNames[0], featuresMatrix);
-    matrices.AddInputMatrix(labelNames[0],   labelsMatrix);
+    matrices.AddInput(featureNames[0], featuresMatrix, pMBLayout, TensorShape());
+    matrices.AddInput(labelNames[0],   labelsMatrix  , pMBLayout, TensorShape());
 
     auto start = std::chrono::system_clock::now();
     int epochs = config("maxEpochs");

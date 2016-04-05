@@ -76,7 +76,7 @@ private:
     {
         StreamMinibatchInputs inputMatrices;
         for (auto& node : inputNodes)
-            inputMatrices.AddInputMatrix(node->NodeName(), node->ValuePtr());
+            inputMatrices.AddInput(node->NodeName(), node->ValuePtr(), node->GetMBLayout(), node->GetSampleLayout());
         return inputMatrices;
     }
 
@@ -123,8 +123,8 @@ public:
             if (doWriterUnitTest)
             {
                 std::map<std::wstring, void*, nocase_compare> inputMatricesUnitTest;
-                for (auto iter = inputMatrices.begin(); iter != inputMatrices.end(); iter++)
-                    inputMatricesUnitTest[iter->first] = (void*) iter->second.get();  // BUGBUG: void* are evil
+                for (auto& iter : inputMatrices)
+                    inputMatricesUnitTest[iter.first] = (void*) iter.second.matrix.get();  // BUGBUG: void* are evil
                 dataWriter.SaveData(0, inputMatricesUnitTest, actualMBSize, actualMBSize, 0);
             }
             else
