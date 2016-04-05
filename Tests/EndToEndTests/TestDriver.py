@@ -236,19 +236,10 @@ class Test:
     os.environ["TEST_DEVICE"] = device
     os.environ["TEST_BUILD_LOCATION"] = args.build_location
     if windows:
-      if args.build_sku == "cpu":
-        os.environ["TEST_CNTK_BINARY"] = os.path.join(args.build_location, (flavor + "_CpuOnly"), "cntk.exe")
-      else:
-        os.environ["TEST_CNTK_BINARY"] = os.path.join(args.build_location, flavor, "cntk.exe")
+      os.environ["TEST_CNTK_BINARY"] = os.path.join(args.build_location, args.build_sku, flavor, "cntk.exe")
       os.environ["MPI_BINARY"] = os.path.join(os.environ["MSMPI_BIN"], "mpiexec.exe")
     else:
-      tempPath = os.path.join(args.build_location, args.build_sku, flavor, "bin", "cntk")
-      if not os.path.isfile(tempPath):
-        for bsku in ["/build/gpu/", "/build/cpu/", "/build/1bitsgd/"]:
-          if tempPath.find(bsku) >= 0:
-            tempPath = tempPath.replace(bsku, "/build/")
-            break
-      os.environ["TEST_CNTK_BINARY"] = tempPath
+      os.environ["TEST_CNTK_BINARY"] = os.path.join(args.build_location, args.build_sku, flavor, "bin", "cntk")
       os.environ["MPI_BINARY"] = "mpiexec"
     if not os.path.exists(os.environ["TEST_CNTK_BINARY"]):
       raise ValueError("the cntk executable does not exist at path '%s'"%os.environ["TEST_CNTK_BINARY"]) 

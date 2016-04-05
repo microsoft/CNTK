@@ -17,6 +17,14 @@
       <Configuration>Release_CpuOnly</Configuration>
       <Platform>x64</Platform>
     </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug_1BitSGD|x64">
+      <Configuration>Debug_1BitSGD</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release_1BitSGD|x64">
+      <Configuration>Release_1BitSGD</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{E6F26F9A-FF64-4F0A-B749-CD309EE357EE}</ProjectGuid>
@@ -48,17 +56,20 @@
   <PropertyGroup Condition="$(DebugBuild)">
     <LinkIncremental>true</LinkIncremental>
     <IncludePath>..\ActionsLib;..\SequenceTrainingLib;..\SGDLib;..\ComputationNetworkLib;..\Math;..\Common\Include;..\CNTK\BrainScript;$(MSMPI_INC);$(VCInstallDir)include;$(WindowsSDK_IncludePath);</IncludePath>
-    <LibraryPath>$(MSMPI_LIB64);$(SolutionDir)$(Platform)\$(Configuration);$(SolutionDir)..\Common\lib;$(VCInstallDir)lib\amd64;$(WindowsSDK_LibraryPath_x64)</LibraryPath>
+    <LibraryPath>$(MSMPI_LIB64);$(OutDir);$(VCInstallDir)lib\amd64;$(WindowsSDK_LibraryPath_x64)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="$(ReleaseBuild)">
     <LinkIncremental>false</LinkIncremental>
     <IncludePath>..\ActionsLib;..\SequenceTrainingLib;..\SGDLib;..\ComputationNetworkLib;..\Math;..\Common\Include;..\CNTK\BrainScript;$(MSMPI_INC);$(VCInstallDir)include;$(WindowsSDK_IncludePath);</IncludePath>
-    <LibraryPath>$(MSMPI_LIB64);$(SolutionDir)$(Platform)\$(Configuration);$(SolutionDir)..\Common\lib;$(VCInstallDir)lib\amd64;$(WindowsSDK_LibraryPath_x64)</LibraryPath>
+    <LibraryPath>$(MSMPI_LIB64);$(OutDir);$(VCInstallDir)lib\amd64;$(WindowsSDK_LibraryPath_x64)</LibraryPath>
     <ExecutablePath>$(ExecutablePath)</ExecutablePath>
   </PropertyGroup>
   <PropertyGroup Condition="$(GpuBuild)">
     <IncludePath>$(IncludePath);$(CudaInclude)</IncludePath>
     <LibraryPath>$(LibraryPath);$(CudaLibPath)</LibraryPath>
+  </PropertyGroup>
+  <PropertyGroup Condition="$(OneBitSGDBuild)">
+    <LibraryPath>$(LibraryPath);$(GpuBuildOutDir)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="$(DebugBuild)">
     <ClCompile>
@@ -123,17 +134,13 @@
       <DelayLoadDLLs>Math.dll; msmpi.dll;</DelayLoadDLLs>
     </Link>
     <PostBuildEvent>
-      <Message Condition="'$(Configuration)|$(Platform)'=='Release_CpuOnly|x64'">Copying dependencies</Message>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Release_CpuOnly|x64'">xcopy /I /D /Y $(ProjectDir)BrainScript\CNTKCoreLib\CNTK.core.bs $(TargetDir)</Command>
-    </PostBuildEvent>
-    <PostBuildEvent>
-      <Message Condition="'$(Configuration)|$(Platform)'=='Debug_CpuOnly|x64'">Copying dependencies</Message>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Debug_CpuOnly|x64'">xcopy /I /D /Y $(ProjectDir)BrainScript\CNTKCoreLib\CNTK.core.bs $(TargetDir)</Command>
+      <Message>Copying dependencies</Message>
+      <Command>xcopy /I /D /Y "$(ProjectDir)BrainScript\CNTKCoreLib\CNTK.core.bs*" $(TargetDir)</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="$(GpuBuild)">
     <PostBuildEvent>
-      <Command>xcopy /I /D /Y $(ProjectDir)BrainScript\CNTKCoreLib\CNTK.core.bs $(TargetDir) &amp;&amp; if exist "%ProgramW6432%\NVIDIA Corporation\NVSMI" xcopy /I /D /Y "%ProgramW6432%\NVIDIA Corporation\NVSMI\nvml*.dll" $(TargetDir)</Command>
+      <Command>xcopy /I /D /Y "$(ProjectDir)BrainScript\CNTKCoreLib\CNTK.core.bs*" $(TargetDir) &amp;&amp; if exist "%ProgramW6432%\NVIDIA Corporation\NVSMI" xcopy /I /D /Y "%ProgramW6432%\NVIDIA Corporation\NVSMI\nvml*.dll" $(TargetDir)</Command>
       <Message>Copying dependencies</Message>
     </PostBuildEvent>
   </ItemDefinitionGroup>

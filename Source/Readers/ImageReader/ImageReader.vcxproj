@@ -37,10 +37,10 @@
     <UseZip Condition="Exists('$(ZLIB_PATH)')">true</UseZip>
   </PropertyGroup>
   <PropertyGroup Condition="$(UseZip)">
-    <ZipInclude>$(ZLIB_PATH)\include;$(ZLIB_PATH)\lib\libzip\include;</ZipInclude>
+    <ZipInclude>$(ZLIB_PATH)\include;$(ZLIB_PATH)\lib\libzip\include</ZipInclude>
     <ZipDefine>USE_ZIP</ZipDefine>
-    <ZipLibPath>$(ZLIB_PATH)\lib;</ZipLibPath>
-    <ZipLibs>zlib.lib;zip.lib;</ZipLibs>
+    <ZipLibPath>$(ZLIB_PATH)\lib</ZipLibPath>
+    <ZipLibs>zlib.lib;zip.lib</ZipLibs>
   </PropertyGroup>
   <PropertyGroup Condition="$(DebugBuild)" Label="Configuration">
     <UseDebugLibraries>true</UseDebugLibraries>
@@ -56,7 +56,7 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup>
     <IncludePath>..\..\common\include;..\..\math;$(OPENCV_PATH)\include;$(ZipInclude);$(IncludePath);</IncludePath>
-    <LibraryPath>$(SolutionDir)$(Platform)\$(Configuration);$(OPENCV_PATH)\x64\vc12\lib;$(ZipLibPath);$(LibraryPath);</LibraryPath>
+    <LibraryPath>$(OutDir);$(OPENCV_PATH)\x64\vc12\lib;$(ZipLibPath);$(LibraryPath);</LibraryPath>
     <OpenCVLib Condition="$(HasOpenCV)">opencv_world300.lib</OpenCVLib>
   </PropertyGroup>
   <PropertyGroup Condition="$(DebugBuild)">

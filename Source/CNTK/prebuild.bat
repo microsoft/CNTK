@@ -45,19 +45,17 @@ echo #define _BUILDPATH_    %buildpath%     >> buildinfo.h$$
 set build_type=Unknown
 set build_target=Unknown
 :: Configuration property provided by CNTK.vcxproj
-if /i "%~1" == "Debug" set build_type=Debug&set build_target=GPU
-if /i "%~1" == "Debug_CpuOnly" set build_type=Debug&set build_target=CPU-only
-if /i "%~1" == "Release" set build_type=Release&set build_target=GPU
-if /i "%~1" == "Release_CpuOnly" set build_type=Release&set build_target=CPU-only
+if /i "%~1" == "Debug" set build_type=Debug&set build_target=GPU&set with_1bitsgd=no
+if /i "%~1" == "Debug_1BitSGD" set build_type=Debug&set build_target=GPU&set with_1bitsgd=yes
+if /i "%~1" == "Debug_CpuOnly" set build_type=Debug&set build_target=CPU-only&set with_1bitsgd=no
+if /i "%~1" == "Release" set build_type=Release&set build_target=GPU&set with_1bitsgd=no
+if /i "%~1" == "Release_1BitSGD" set build_type=Release&set build_target=GPU&set with_1bitsgd=yes
+if /i "%~1" == "Release_CpuOnly" set build_type=Release&set build_target=CPU-only&set with_1bitsgd=no
 
 echo #define _BUILDTYPE_ "%build_type%">> buildinfo.h$$
 echo #define _BUILDTARGET_ "%build_target%">> buildinfo.h$$
 
-if "%CNTK_ENABLE_1BitSGD%" == "true" (
-    echo #define _WITH_1BITSGD_ "yes">>buildinfo.h$$
-) else (
-    echo #define _WITH_1BITSGD_ "no">>buildinfo.h$$
-)
+echo #define _WITH_1BITSGD_ "%with_1bitsgd%">>buildinfo.h$$
 
 if not %build_target% == CPU-only (
     :: CudaPath property provided by CNTK.vcxproj

@@ -27,7 +27,7 @@ struct ReaderFixture
         m_parentPath = boost::filesystem::canonical(path.parent_path()).generic_string();
         fprintf(stderr, "Executable path: %s\n", m_parentPath.c_str());
 
-        m_testDataPath = m_parentPath + "/../../../Tests/UnitTests/ReaderTests";
+        m_testDataPath = m_parentPath + "/../../../../Tests/UnitTests/ReaderTests";
         boost::filesystem::path absTestPath(m_testDataPath);
         absTestPath = boost::filesystem::canonical(absTestPath);
         m_testDataPath = absTestPath.generic_string();

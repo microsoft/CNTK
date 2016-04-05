@@ -107,11 +107,6 @@ if [[ $OS == "Windows_NT" && $OSTYPE == "cygwin" ]]; then
         exit 1
     fi
 
-    if [[ "${TARGETS,,}" =~ "1bitsgd" && "${TARGETS,,}" =~ "gpu" ]]; then
-        echo "============ Cannot specify both GPU and 1bit-SGD as targets, please choose one ============"
-        exit 1
-    fi
-
 elif [[ $OSTYPE == "linux-gnu" ]]; then
     DEBUG_DIR=build/$TARGET/debug
     RELEASE_DIR=build/$TARGET/release
@@ -197,11 +192,9 @@ if [[ $BUILD == 1 ]]; then
                 OneBitSGDOPT=/property:CNTK_ENABLE_1BitSGD=
                 if [[ $TARGET == "cpu" ]]; then
                     CONFIGURATION=${FLAVOR}_CpuOnly
-                else
-                    CONFIGURATION=${FLAVOR}
-                    if [[ $TARGET == "1bitsgd" ]]; then
-                        OneBitSGDOPT=/property:CNTK_ENABLE_1BitSGD=true
-                    fi
+                elif [[ $TARGET == "1bitsgd" ]]; then
+                    CONFIGURATION=${FLAVOR}_1BitSGD
+                    OneBitSGDOPT=/property:CNTK_ENABLE_1BitSGD=true
                 fi
 
                 if [[ $CLEAN_BEFORE == 1 ]]; then

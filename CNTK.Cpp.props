@@ -5,20 +5,33 @@
     <RepoRootPath>$(MSBuildThisFileDirectory)</RepoRootPath>
     <RelativeProjectPath>$(MSBuildProjectDirectory.Substring($(MSBuildThisFileDirectory.Length)))</RelativeProjectPath>
 
-    <OutDir>$(RepoRootPath)$(Platform)\$(Configuration)\</OutDir>
-    <IntDir>$(RepoRootPath)$(Platform)\.build\$(Configuration)\$(RelativeProjectPath)\</IntDir>
-
     <DebugBuild>false</DebugBuild>
     <DebugBuild Condition="$(Configuration.StartsWith('Debug'))">true</DebugBuild>
 
     <ReleaseBuild>false</ReleaseBuild>
     <ReleaseBuild Condition="!$(DebugBuild)">true</ReleaseBuild>
 
+    <!-- Note: OneBitSGDBuild implies GPU build -->
+
     <GpuBuild>true</GpuBuild>
     <GpuBuild Condition="$(Configuration.EndsWith('_CpuOnly'))">false</GpuBuild>
+    <OneBitSGDBuild>false</OneBitSGDBuild>
+    <OneBitSGDBuild Condition="$(Configuration.EndsWith('_1BitSGD')) And '$(CNTK_ENABLE_1BitSGD)'=='true'">true</OneBitSGDBuild>
 
     <CpuOnlyBuild>true</CpuOnlyBuild>
     <CpuOnlyBuild Condition="$(GpuBuild)">false</CpuOnlyBuild>
+
+    <Flavor>Debug</Flavor>
+    <Flavor Condition="!$(DebugBuild)">Release</Flavor>
+
+    <Sku>GPU</Sku>
+    <Sku Condition="$(Configuration.EndsWith('_CpuOnly'))">CPU</Sku>
+    <Sku Condition="$(Configuration.EndsWith('_1BitSGD'))">1BitSGD</Sku>
+
+    <GpuBuildOutDir>$(RepoRootPath)$(Platform)\GPU\$(Flavor)\</GpuBuildOutDir>
+
+    <OutDir>$(RepoRootPath)$(Platform)\$(Sku)\$(Flavor)\</OutDir>
+    <IntDir>$(RepoRootPath)$(Platform)\.build\$(Sku)\$(Flavor)\$(RelativeProjectPath)\</IntDir>
 
     <NvmlInclude>"c:\Program Files\NVIDIA Corporation\GDK\gdk_win7_amd64_release\nvml\include"</NvmlInclude>
     <NvmlLibPath>"c:\Program Files\NVIDIA Corporation\GDK\gdk_win7_amd64_release\nvml\lib"</NvmlLibPath>
