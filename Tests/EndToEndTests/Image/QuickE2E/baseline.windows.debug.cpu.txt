@@ -1468,7 +1468,7 @@ already there from last epoch
 randomordering: 11 retries for 100 elements (11.0%) to ensure window condition
 randomordering: recached sequence for seed 0: 15, 33, ...
 Final Results: Minibatch[1-1]: Samples Seen = 100    Err: ErrorPrediction/Sample = 0    CE: CrossEntropyWithSoftmax/Sample = 0.31800278    Perplexity = 1.3743801    
-COMPLETED
+__COMPLETED__
 === Deleting last epoch data
 ==== Re-running from checkpoint
 -------------------------------------------------------------------
@@ -2844,4 +2844,4 @@ already there from last epoch
 randomordering: 11 retries for 100 elements (11.0%) to ensure window condition
 randomordering: recached sequence for seed 0: 15, 33, ...
 Final Results: Minibatch[1-1]: Samples Seen = 100    Err: ErrorPrediction/Sample = 0    CE: CrossEntropyWithSoftmax/Sample = 0.33039909    Perplexity = 1.3915234    
-COMPLETED
+__COMPLETED__

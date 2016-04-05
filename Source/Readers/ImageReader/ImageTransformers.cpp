@@ -28,7 +28,7 @@ void ImageTransformerBase::Initialize(TransformerPtr next,
                                       const ConfigParameters &readerConfig)
 {
     Base::Initialize(next, readerConfig);
-    m_seed = std::stoi(readerConfig(L"seed", "0"));
+    m_seed = readerConfig(L"seed", (unsigned int)0);
 
     ImageConfigHelper config(readerConfig);
     size_t featureStreamId = config.GetFeatureStreamId();
@@ -127,7 +127,7 @@ void CropTransformer::InitFromConfig(const ConfigParameters &config)
     }
     else
     {
-        m_hFlip = std::stoi(config(L"hflip")) != 0;
+        m_hFlip = config(L"hflip");
     }
 }
 

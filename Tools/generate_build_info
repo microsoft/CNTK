@@ -41,17 +41,17 @@ Has_Git()
 
 makebuildinfo()
 {
-    target=$1
-    BUILDTYPE=$2
-    MATHLIB=$3
-    GIT_COMMIT=$4
-    GIT_BRANCH=$5
-    CUDA_PATH=$6
-    CUB_PATH=$7
-    WITH_1BITSGD=$8
-    BUILDER=$9
-    BUILDMACHINE=$10
-    BUILDPATH=$11
+    local target=$1
+    local BUILDTYPE=$2
+    local MATHLIB=$3
+    local GIT_COMMIT=$4
+    local GIT_BRANCH=$5
+    local CUDA_PATH=$6
+    local CUB_PATH=$7
+    local WITH_1BITSGD=$8
+    local BUILDER=$9
+    local BUILDMACHINE=${10}
+    local BUILDPATH=${11}
 
     (
         printf "#ifndef _BUILDINFO_H\n"
@@ -126,18 +126,14 @@ BUILDER=$USER
 BUILDMACHINE=`hostname`
 BUILDPATH=`pwd`
 
-# 6. make buildinfo.h 
-# TODO should avoid rebuild if not changing
+# 6. make buildinfo.h (only update if changed)
 target=Source/CNTK/buildinfo.h
 if [ ! -d Source ] ; then 
     usage
 fi
-if [ -e Source/CNTK/buildinfo.h ] ; then 
-    rm Source/CNTK/buildinfo.h
-fi
 
 makebuildinfo \
-    "$target" \
+    "$target\$\$" \
     "$BUILDTYPE" \
     "$MATHLIB" \
     "$GIT_COMMIT" \
@@ -148,3 +144,5 @@ makebuildinfo \
     "$BUILDER" \
     "$BUILDMACHINE" \
     "$BUILDPATH"
+
+cmp -s "$target\$\$" "$target" || mv "$target\$\$" "$target"

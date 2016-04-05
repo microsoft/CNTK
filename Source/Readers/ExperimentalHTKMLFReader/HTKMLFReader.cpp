@@ -11,6 +11,10 @@
 #include "ConfigHelper.h"
 #include "Bundler.h"
 #include "StringUtil.h"
+#include "SequencePacker.h"
+#include "SampleModePacker.h"
+#include "BlockRandomizer.h"
+#include "NoRandomizer.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -60,8 +64,7 @@ HTKMLFReader::HTKMLFReader(MemoryProviderPtr provider,
 {
     // TODO: deserializers and transformers will be dynamically loaded
     // from external libraries based on the configuration/brain script.
-
-    assert(readerConfig(L"frameMode", true));
+    m_frameMode = readerConfig(L"frameMode", true);
     ConfigHelper config(readerConfig);
 
     size_t window = config.GetRandomizationWindow();
@@ -69,15 +72,23 @@ HTKMLFReader::HTKMLFReader(MemoryProviderPtr provider,
     assert(deserializers.size() == 2);
 
     auto bundler = std::make_shared<Bundler>(readerConfig, deserializers[0], deserializers, false);
-
+    int verbosity = readerConfig(L"verbosity", 2);
     std::wstring readMethod = config.GetRandomizer();
-    if (!AreEqualIgnoreCase(readMethod, std::wstring(L"blockRandomize")))
+
+    // TODO: this should be bool. Change when config per deserializer is allowed.
+    if (AreEqualIgnoreCase(readMethod, std::wstring(L"blockRandomize")))
     {
-        RuntimeError("readMethod must be 'blockRandomize'");
+        m_randomizer = std::make_shared<BlockRandomizer>(verbosity, window, bundler, BlockRandomizer::DecimationMode::chunk, true /* useLegacyRandomization */);
+    }
+    else if (AreEqualIgnoreCase(readMethod, std::wstring(L"none")))
+    {
+        m_randomizer = std::make_shared<NoRandomizer>(bundler);
+    }
+    else
+    {
+        RuntimeError("readMethod must be 'blockRandomize' or 'none'.");
     }
 
-    int verbosity = readerConfig(L"verbosity", 2);
-    m_randomizer = std::make_shared<BlockRandomizer>(verbosity, window, bundler, BlockRandomizer::DecimationMode::chunk, true /* useLegacyRandomization */);
     m_randomizer->Initialize(nullptr, readerConfig);
 
     // Create output stream descriptions (all dense)
@@ -107,11 +118,27 @@ void HTKMLFReader::StartEpoch(const EpochConfiguration& config)
     }
 
     m_randomizer->StartEpoch(config);
-    m_packer = std::make_shared<SampleModePacker>(
-        m_provider,
-        m_randomizer,
-        config.m_minibatchSizeInSamples,
-        m_streams);
+
+    // TODO: should we unify sample and sequence mode packers into a single one.
+    // TODO: functionally they are the same, the only difference is how we handle
+    // TODO: MBlayout and what is the perf hit for iterating/copying sequences.
+    // TODO: Should do more perf tests before unifying these two.
+    if (m_frameMode)
+    {
+        m_packer = std::make_shared<SampleModePacker>(
+            m_provider,
+            m_randomizer,
+            config.m_minibatchSizeInSamples,
+            m_streams);
+    }
+    else
+    {
+        m_packer = std::make_shared<SequencePacker>(
+            m_provider,
+            m_randomizer,
+            config.m_minibatchSizeInSamples,
+            m_streams);
+    }
 }
 
 Minibatch HTKMLFReader::ReadMinibatch()

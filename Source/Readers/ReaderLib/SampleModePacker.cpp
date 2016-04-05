@@ -76,7 +76,6 @@ Minibatch SampleModePacker::ReadMinibatch()
     {
         auto stream = std::make_shared<StreamMinibatch>();
         stream->m_data = m_streamBuffers[i].get();
-        stream->m_dataSize = sequences.m_data[i].size() * GetSampleSize(m_outputStreams[i]);
         stream->m_layout = m_minibatchLayout;
 
         minibatch.m_data.push_back(stream);

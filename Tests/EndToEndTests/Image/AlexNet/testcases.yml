@@ -8,24 +8,24 @@ tags:
 testCases:
   CNTK Run must be completed:
     patterns:
-      - ^COMPLETED
+      - __COMPLETED__
 
   Must train epochs in exactly same order and parameters:
     patterns:
-      - ^Starting Epoch {{integer}}
+      - Starting Epoch {{integer}}
       - learning rate per sample = {{float}}
       - momentum = {{float}}
 
   Epochs must be finished with expected results:
     patterns:
-      - ^Finished Epoch[{{integer}} of {{integer}}]
+      - Finished Epoch[{{integer}} of {{integer}}]
       - TrainLossPerSample = {{float,tolerance=.2%}}
       - EvalErrPerSample = {{float,tolerance=.2%}}
       - AvgLearningRatePerSample = {{float,tolerance=0.001%}}
 
   Per-minibatch training results must match:
     patterns:
-      - ^ Epoch[{{integer}} of {{integer}}]-Minibatch[{{integer}}-{{integer}}
+      - Epoch[{{integer}} of {{integer}}]-Minibatch[{{integer}}-{{integer}}
       - SamplesSeen = {{integer}}
       - TrainLossPerSample = {{float,tolerance=.2%}}
 

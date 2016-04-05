@@ -28,6 +28,7 @@ BlockRandomizer::BlockRandomizer(
       m_sweep(SIZE_MAX),
       m_epochSize(SIZE_MAX),
       m_globalSamplePosition(SIZE_MAX),
+      m_epochStartPosition(0),
       m_sweepTotalNumberOfSamples(0),
       m_lastSeenChunkId(SIZE_MAX),
       m_chunkRandomizer(std::make_shared<ChunkRandomizer>(deserializer, randomizationRangeInSamples, useLegacyRandomization))
@@ -58,13 +59,15 @@ void BlockRandomizer::StartEpoch(const EpochConfiguration& config)
         m_epochSize = config.m_totalEpochSizeInSamples;
     }
 
-    // Calculates global sample position.
-    m_globalSamplePosition = m_epochSize * config.m_epochIndex;
-    PrepareNewSweepIfNeeded(m_globalSamplePosition);
+    // Calculates starts of the epoch, prepares a new sweep if needed.
+    m_epochStartPosition = m_epochSize * config.m_epochIndex;
+    PrepareNewSweepIfNeeded(m_epochStartPosition);
 
-    // Sets sequence cursor to the sequence that corresponds to the global sample position.
+    // Sets sequence cursor to the sequence that corresponds to the epoch start position.
     // If last epoch ended in the middle of a sequence, the cursor is moved to the next sequence in the sweep.
-    m_sequenceRandomizer->SetSequencePositionTo(m_globalSamplePosition % m_sweepTotalNumberOfSamples, m_sweep);
+    size_t offsetInSweep = m_epochStartPosition % m_sweepTotalNumberOfSamples;
+    size_t newOffset = m_sequenceRandomizer->Seek(offsetInSweep, m_sweep);
+    m_globalSamplePosition = m_sweep * m_sweepTotalNumberOfSamples + newOffset;
 }
 
 // Prepares a new sweep if needed.
@@ -138,26 +141,21 @@ Sequences BlockRandomizer::GetNextSequences(size_t sampleCount)
 // Returns true if epoch end is reached.
 bool BlockRandomizer::GetNextSequenceDescriptions(size_t sampleCount, std::vector<RandomizedSequenceDescription>& result)
 {
+    assert(sampleCount != 0);
+
     PrepareNewSweepIfNeeded(m_globalSamplePosition);
 
-    // Check epoch.
-    size_t epochStart = m_config.m_epochIndex * m_epochSize;
-    if (m_globalSamplePosition - epochStart + sampleCount >= m_epochSize)
-    {
-        sampleCount = epochStart + m_epochSize - m_globalSamplePosition;
-    }
-
-    if (sampleCount <= 0)
+    // Check epoch end.
+    if (m_globalSamplePosition >= m_epochSize + m_epochStartPosition)
     {
         return true;
     }
 
+    sampleCount = std::min(sampleCount, m_epochSize + m_epochStartPosition - m_globalSamplePosition);
+    assert(sampleCount != 0);
+
     // Check that we do not go over the sweep.
-    size_t sweepPosition = m_globalSamplePosition % m_sweepTotalNumberOfSamples;
-    if (sweepPosition + sampleCount >= m_sweepTotalNumberOfSamples)
-    {
-        sampleCount = m_sweepTotalNumberOfSamples - sweepPosition;
-    }
+    sampleCount = std::min(sampleCount, (long)m_sweepTotalNumberOfSamples - m_globalSamplePosition % m_sweepTotalNumberOfSamples);
     assert(sampleCount != 0);
 
     // Randomizing sequences
@@ -224,7 +222,7 @@ void BlockRandomizer::RetrieveDataChunks()
             continue;
         }
 
-        auto it = m_chunks.find(chunk.m_original->m_id);
+        auto it = m_chunks.find(chunk.m_chunkId);
         if (it != m_chunks.end())
         {
             chunks[chunk.m_chunkId] = it->second;

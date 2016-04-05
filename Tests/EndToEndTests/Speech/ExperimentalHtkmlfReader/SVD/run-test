@@ -5,11 +5,5 @@
 OriginalTestDir=../../SVD
 ConfigDir=$TEST_DIR/$OriginalTestDir
 
-(cd $TEST_DIR/$OriginalTestDir && md5sum baseline*) | (cd $TEST_DIR && md5sum --status -c -)
-if [ $? != 0 ]; then
-  echo Error: Baselines must match original test.
-  exit 1
-fi
-
 # cntkrun <CNTK config file name> <additional CNTK args>
 cntkrun cntk.cntk 'reader=[readerType=ExperimentalHTKMLFReader] reader=[prefetch=true]' || exit $?

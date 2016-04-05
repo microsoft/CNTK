@@ -609,11 +609,6 @@ void renameOrDie(const std::string& from, const std::string& to)
     // WORKAROUND: "rename" should do this but this is a workaround
     // to the HDFS FUSE implementation's bug of failing to do so
     // workaround for FUSE rename when running on Philly
-    if (ProgressTracing::GetTracingFlag())
-    {
-        fprintf(stderr, "rename %s to %s\n", from.c_str(), to.c_str());
-    }    
-    
     unlinkOrDie(to);
     if (rename(from.c_str(), to.c_str()) != 0)
     {

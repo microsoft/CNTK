@@ -496,7 +496,7 @@ MPI Rank 0:  Epoch[ 4 of 10]-Minibatch[ 371- 380]: SamplesSeen = 250; TrainLossP
 MPI Rank 0:  Epoch[ 4 of 10]-Minibatch[ 381- 390]: SamplesSeen = 250; TrainLossPerSample =  0.20657080; EvalErr[0]PerSample = 0.11600000; TotalTime = 5.56086s; TotalTimePerSample = 22.24344ms; SamplesPerSecond = 44
 MPI Rank 0:  Epoch[ 4 of 10]-Minibatch[ 391- 400]: SamplesSeen = 250; TrainLossPerSample =  0.14566553; EvalErr[0]PerSample = 0.06400000; TotalTime = 5.57143s; TotalTimePerSample = 22.28572ms; SamplesPerSecond = 44
 MPI Rank 0: Finished Epoch[ 4 of 10]: [Training Set] TrainLossPerSample = 0.15888368; EvalErrPerSample = 0.076499999; AvgLearningRatePerSample = 0.00800000038; EpochTime=222.08354
-MPI Rank 0: COMPLETED
+MPI Rank 0: __COMPLETED__
 MPI Rank 0: ~MPIWrapper
 MPI Rank 1: running on localhost at 2015/08/25 20:50:23
 MPI Rank 1: command line options: 
@@ -955,7 +955,7 @@ MPI Rank 1:  Epoch[ 4 of 10]-Minibatch[ 371- 380]: SamplesSeen = 250; TrainLossP
 MPI Rank 1:  Epoch[ 4 of 10]-Minibatch[ 381- 390]: SamplesSeen = 250; TrainLossPerSample =  0.20657080; EvalErr[0]PerSample = 0.11600000; TotalTime = 5.56099s; TotalTimePerSample = 22.24397ms; SamplesPerSecond = 44
 MPI Rank 1:  Epoch[ 4 of 10]-Minibatch[ 391- 400]: SamplesSeen = 250; TrainLossPerSample =  0.14566553; EvalErr[0]PerSample = 0.06400000; TotalTime = 5.57339s; TotalTimePerSample = 22.29357ms; SamplesPerSecond = 44
 MPI Rank 1: Finished Epoch[ 4 of 10]: [Training Set] TrainLossPerSample = 0.15888368; EvalErrPerSample = 0.076499999; AvgLearningRatePerSample = 0.00800000038; EpochTime=222.07455
-MPI Rank 1: COMPLETED
+MPI Rank 1: __COMPLETED__
 MPI Rank 1: ~MPIWrapper
 MPI Rank 2: running on localhost at 2015/08/25 20:50:24
 MPI Rank 2: command line options: 
@@ -1414,7 +1414,7 @@ MPI Rank 2:  Epoch[ 4 of 10]-Minibatch[ 371- 380]: SamplesSeen = 250; TrainLossP
 MPI Rank 2:  Epoch[ 4 of 10]-Minibatch[ 381- 390]: SamplesSeen = 250; TrainLossPerSample =  0.20657080; EvalErr[0]PerSample = 0.11600000; TotalTime = 5.56393s; TotalTimePerSample = 22.25572ms; SamplesPerSecond = 44
 MPI Rank 2:  Epoch[ 4 of 10]-Minibatch[ 391- 400]: SamplesSeen = 250; TrainLossPerSample =  0.14566553; EvalErr[0]PerSample = 0.06400000; TotalTime = 5.57187s; TotalTimePerSample = 22.28747ms; SamplesPerSecond = 44
 MPI Rank 2: Finished Epoch[ 4 of 10]: [Training Set] TrainLossPerSample = 0.15888368; EvalErrPerSample = 0.076499999; AvgLearningRatePerSample = 0.00800000038; EpochTime=222.08799
-MPI Rank 2: COMPLETED
+MPI Rank 2: __COMPLETED__
 MPI Rank 2: ~MPIWrapper
 MPI Rank 3: running on localhost at 2015/08/25 20:50:24
 MPI Rank 3: command line options: 
@@ -1873,5 +1873,5 @@ MPI Rank 3:  Epoch[ 4 of 10]-Minibatch[ 371- 380]: SamplesSeen = 250; TrainLossP
 MPI Rank 3:  Epoch[ 4 of 10]-Minibatch[ 381- 390]: SamplesSeen = 250; TrainLossPerSample =  0.20657080; EvalErr[0]PerSample = 0.11600000; TotalTime = 5.54955s; TotalTimePerSample = 22.19822ms; SamplesPerSecond = 45
 MPI Rank 3:  Epoch[ 4 of 10]-Minibatch[ 391- 400]: SamplesSeen = 250; TrainLossPerSample =  0.14566553; EvalErr[0]PerSample = 0.06400000; TotalTime = 5.58100s; TotalTimePerSample = 22.32401ms; SamplesPerSecond = 44
 MPI Rank 3: Finished Epoch[ 4 of 10]: [Training Set] TrainLossPerSample = 0.15888368; EvalErrPerSample = 0.076499999; AvgLearningRatePerSample = 0.00800000038; EpochTime=222.07455
-MPI Rank 3: COMPLETED
+MPI Rank 3: __COMPLETED__
 MPI Rank 3: ~MPIWrapper

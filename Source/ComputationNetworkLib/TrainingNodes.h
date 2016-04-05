@@ -21,8 +21,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 /// SquareErrorNode (left, right)
 // -----------------------------------------------------------------------
 
-//note: to save computation the gradient may be scaled by an constant.
-
 template <class ElemType>
 class SquareErrorNode : public ComputationNodeNonLooping /*ComputationNode*/<ElemType>, public NumInputs<2>
 {
@@ -44,7 +42,7 @@ public:
     {
         FrameRange fr(Input(0)->GetMBLayout());
         auto gradient = Input(inputIndex)->GradientFor(fr);
-        Matrix<ElemType>::Multiply1x1AndWeightedAdd(inputIndex == 0 ? 1.0f : -1.0f, Gradient() /*1x1*/, *m_leftMinusRight, 1.0f, gradient);
+        Matrix<ElemType>::Multiply1x1AndWeightedAdd(inputIndex == 0 ? 2.0f : -2.0f, Gradient() /*1x1*/, *m_leftMinusRight, 1.0f, gradient); // O = (I0-I1)^2; dO/dI0 = 2*(I0-I1); dO/dI1 = -2*(I0-I1)
     }
 
     virtual bool OutputUsedInComputingInputNodesGradients() const override
@@ -66,9 +64,9 @@ public:
         FrameRange fr(Input(0)->GetMBLayout());
         m_leftMinusRight->AssignDifferenceOf(Input(0)->ValueFor(fr), Input(1)->ValueFor(fr));
         MaskMissingColumnsToZero(*m_leftMinusRight, Input(0)->GetMBLayout(), fr); // we are fine since it will only be called with full minibatch.
-        ElemType v = m_leftMinusRight->FrobeniusNorm();
+        ElemType v = m_leftMinusRight->FrobeniusNorm(); //v = sqrt( sum{ (I0[i] - I1[i])^2 } )
         Value().VerifySize(1, 1);
-        Value().SetValue(v * v / 2);
+        Value().SetValue(v * v);  //Value = sum{ (I0[i] - I1[i])^2 }
 #if NANCHECK
         Value().HasNan("SquareError");
 #endif

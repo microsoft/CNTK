@@ -376,9 +376,17 @@ void BatchLUSequenceReader<ElemType>::InitFromConfig(const ConfigRecordType& rea
                 m_labelInfo[index].m_classInfoLocal = nullptr;
                 m_labelInfo[index].m_id2classLocal = nullptr;
 
-                if (mode == L"class")
+                if (EqualCI(mode, L"class"))
                 {
                     m_labelInfo[index].readerMode = ReaderMode::Class;
+                }
+                else if (EqualCI(mode, L"plain"))
+                {
+                    m_labelInfo[index].readerMode = ReaderMode::Plain;
+                }
+                else
+                {
+                    LogicError("Unsupported label mode format %ls for LUSequenceReader. Should be either 'plain' or 'class'", mode.c_str());
                 }
 
                 std::wstring wClassFile = labelConfig(L"token", L"");

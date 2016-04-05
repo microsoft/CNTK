@@ -38,9 +38,10 @@ public:
     // Resets current sequence sweep according to the seed.
     void Reset(size_t seed);
 
-    // Sets current sequence position to the sample offset.
-    // If offset is in the middle of the sequence, the next sequence is picked up.
-    void SetSequencePositionTo(size_t sweepSampleOffset, size_t sweep);
+    // Sets current sequence cursor given the sample offset in a sweep.
+    // If the sample offset point in the middle of sequence, the cursor is moved to the sequence end,
+    // and a new sample offset is returned that points to the end of the sequence.
+    size_t Seek(size_t sweepSampleOffset, size_t sweep);
 
     // Gets next sequence descriptions.
     std::vector<RandomizedSequenceDescription> GetNextSequenceDescriptions(size_t sampleCount);
