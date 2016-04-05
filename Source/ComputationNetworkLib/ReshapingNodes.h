@@ -1073,7 +1073,10 @@ public:
         else if (Input(0)->HasMBLayout())
         {
             if (!m_pMBLayout)
+            {
                 m_pMBLayout = make_shared<MBLayout>(); // mini-batch data: this generates a new layout
+                m_pMBLayout->SetUniqueAxisName(NodeName());
+            }
         }
         else
             assert(!m_pMBLayout); // reshaping non-mini-batch data

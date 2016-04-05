@@ -31,8 +31,13 @@ void ComputationNode<ElemType>::Backprop(const FrameRange& fr, bool childrenInTh
     // after nodes that propagate outside of the loop, and thus, in the last
     // time step of the sequence, have not yet received a gradient from a parent
     // and thus may not have had their gradient matrices allocated.
-    //if (m_needsGradient)
-    //    LazyZeroGradient(); // set gradient to 0 if this is the first time
+#if 1
+    if (m_needsGradient && !m_gradientInitialized)
+        //LogicError("%ls %ls operation: Backprop called with uninitialized gradient.", NodeName().c_str(), OperationName().c_str());
+        fprintf(stderr, "%ls %ls operation: Initializing gradient out of line.\n", NodeName().c_str(), OperationName().c_str());
+    if (m_needsGradient)
+        LazyZeroGradient(); // set gradient to 0 if this is the first time
+#endif
 
     if (fr.IsAllFrames() && IsPartOfLoop() && childrenInThisLoop)
         LogicError("%ls %ls operation: Backprop called with whole-batch FrameRange on node that participates in a loop", NodeName().c_str(), OperationName().c_str());
@@ -332,21 +337,13 @@ TensorShape ComputationNodeBase::GetOneSampleTensorSliceFor(size_t rank, const F
                 continue;
             }
 
-            const char* mbSizeMark = child->m_pMBLayout ? " x *" : "";
-#if 0
-            if (child->m_sampleLayout.GetRank() == 3 && (child->m_sampleLayout[1] != 1 || child->m_sampleLayout[0] != 1)) // looks like an image: use WHC notation
-                prototype += msra::strfun::strprintf("%ls[%s%s {W=%lu, H=%lu, C=%lu}]", child->NodeName().c_str(), string(child->m_sampleLayout).c_str(), mbSizeMark,
-                child->m_sampleLayout[1], child->m_sampleLayout[2], child->m_sampleLayout[0]);
-            // BUGBUG: This ^^ will print based on the old legacy layout, and we have no way of knowing here whether that is correct.
-            else
-#endif
-                prototype += msra::strfun::strprintf("[%s%s]", string(child->m_sampleLayout).c_str(), mbSizeMark);
+            prototype += msra::strfun::strprintf("[%s%ls]", string(child->m_sampleLayout).c_str(), child->GetMBLayoutAxisString().c_str());
         }
         prototype += extraArgs;
         //prototype += ")";
     }
 
-    prototype += msra::strfun::strprintf(" -> [%s%s]", string(GetSampleLayout()).c_str(), HasMBLayout() ? " x *" : "");
+    prototype += msra::strfun::strprintf(" -> [%s%ls]", string(GetSampleLayout()).c_str(), GetMBLayoutAxisString().c_str());
 
     return prototype;
 }

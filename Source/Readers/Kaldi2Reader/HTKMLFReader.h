@@ -41,6 +41,7 @@ private:
         MinibatchBufferUnit()
             : pMBLayout(make_shared<MBLayout>()), currentMBSize(0)
         {
+            m_pMBLayout->SetUniqueAxisName(L"HTKMLFReader");
         }
     };
     bool m_doMinibatchBuffering;
@@ -166,6 +167,7 @@ public:
     HTKMLFReader()
         : m_pMBLayout(make_shared<MBLayout>())
     {
+        m_pMBLayout->SetUniqueAxisName(L"HTKMLFReader");
     }
 
     template <class ConfigRecordType>

@@ -43,18 +43,17 @@ void ComputationNetwork::ForwardProp(const ComputationNodeBasePtr rootNode)
     GetNestedNetwork(rootNode)->ForwardProp(FrameRange(nullptr));
 }
 
-// set the gradient matrix of a node to an 1x1 matrix containing 1.0
-// Returns false if the node is not a ComputationNode<ElemType>.
+// set the gradient matrix of a (root) node 1.0
+// Returns false if the node is not a ComputationNode<ElemType>; see Backprop() below for intended use.
 template <class ElemType>
-static bool SetGradientToScalarOne(ComputationNodeBasePtr nodep)
+static bool SetRootGradientToScalarOne(ComputationNodeBasePtr nodep)
 {
     auto node = dynamic_pointer_cast<ComputationNode<ElemType>>(nodep);
     bool hasMatchingType = (node != nullptr);
     if (hasMatchingType)
     {
-        Matrix<ElemType>& grad = node->Gradient();
-        grad.Resize(node->Value());
-        grad.SetValue((ElemType) 1.0);
+        // reset the root gradient to 1
+        node->ResetGradient(1);
     }
     return hasMatchingType;
 }
@@ -69,12 +68,12 @@ void ComputationNetwork::Backprop(const ComputationNodeBasePtr rootNode) // trai
     if (!Environment().IsTraining())
         LogicError("Backprop: Requires network is to be in training mode.");
 
-    // reset all gradients to zero (actually, internally, this is lazy, but we don't care here)
-    ZeroGradients(rootNode);
-
     // initialize root gradient with a scalar value of 1.0
-    if (!SetGradientToScalarOne<float>(rootNode) && !SetGradientToScalarOne<double>(rootNode))
+    if (!SetRootGradientToScalarOne<float>(rootNode) && !SetRootGradientToScalarOne<double>(rootNode))
         LogicError("Backprop: Training criterion is neither ComputationNode<float> nor ComputationNode<double>.");
+
+    // reset all gradients below rootNode to zero (actually, internally, this is lazy, but we don't care here)
+    ZeroInputGradients(rootNode);
 
     // backpropagate through the network
     GetNestedNetwork(rootNode)->Backprop(FrameRange(nullptr), true, true);

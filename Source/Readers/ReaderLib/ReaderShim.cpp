@@ -22,6 +22,7 @@ template <class ElemType>
 ReaderShim<ElemType>::ReaderShim(ReaderFactory factory)
     : m_layout(make_shared<MBLayout>()), m_factory(factory)
 {
+    m_layout->SetUniqueAxisName(L"ReaderShim");
 }
 
 template <class ElemType>

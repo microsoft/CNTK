@@ -776,8 +776,8 @@ void ComputationNetwork::DescribeNetworkUsingDot(list<ComputationArc>& arcs,
     for (const auto& x : allnodes)
     {
         line.clear();
-        line = msra::strfun::wstrprintf(L" \"%ls\" [ label = \"%ls [%s%s]\\n%ls\" ] ;\n",
-                                        x->GetName().c_str(), x->GetName().c_str(), string(x->GetSampleLayout()).c_str(), x->HasMBLayout() ? " x *" : "",
+        line = msra::strfun::wstrprintf(L" \"%ls\" [ label = \"%ls [%s%ls]\\n%ls\" ] ;\n",
+                                        x->GetName().c_str(), x->GetName().c_str(), string(x->GetSampleLayout()).c_str(), x->GetMBLayoutAxisString().c_str(),
                                         x->OperationName().c_str());
         fstream << line;
     }

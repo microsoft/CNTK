@@ -315,8 +315,8 @@ Loop = [
     NextOrDefault (x, defaultValue=Constant (0)) =   # a delay node with initial value
     [
         flags = BS.Loop.IsLast (x)
-        out = BS.Boolean.If (BS.Loop.IsLast (x),
-                    /*then*/ BS.Sequences.Scatter (x, defaultValue),
+        out = BS.Boolean.If (flags,
+                    /*then*/ BS.Sequences.Scatter (flags, defaultValue),
                     /*else*/ Next (x))
     ].out
 ]
@@ -408,14 +408,15 @@ RNNs =
     ].lstmState.h // that's the value we return
 
     # this implements a recurrent (stateful) LSTM with projection and self-stabilization
-    RecurrentLSTMPWithDefault (inputDim, outputDim, cellDim, x, defaultValue=Constants.Zero, enableSelfStabilization=false) =
+    # TODO: use the same macro, with initialState=Undefined and test for object identity
+    RecurrentLSTMPWithInitialState (inputDim, outputDim, cellDim, x, initialState=Constants.Zero, enableSelfStabilization=false) =
     [
-        v = defaultValue // TODO: ^ syntax
         prevState =
         [
-            #h = Loop.PreviousOrDefault (defaultValue=v, lstmState.h)             // hidden state(t-1)
-            h = Loop.Previous (lstmState.h) + v             // hidden state(t-1)
-            c = Loop.Previous (lstmState.c)             // cell(t-1)
+            #h = Loop.PreviousOrDefault (defaultValue=initialState, lstmState.h) // hidden state(t-1)
+            # BUGBUG: For now, initialState must have the same MBLayout as lstmState but not be part of the loop
+            h = Boolean.If (Loop.IsFirst (lstmState.h), initialState, Loop.Previous (lstmState.h))
+            c = Loop.Previous (lstmState.c)                                     // cell(t-1)
         ]
         enableSelfStabilization1 = enableSelfStabilization // TODO: BS syntax needs to allow to say ^.enableSelfStabilization
         lstmState = LSTMP (inputDim, outputDim, cellDim, x, prevState, enableSelfStabilization=enableSelfStabilization1)

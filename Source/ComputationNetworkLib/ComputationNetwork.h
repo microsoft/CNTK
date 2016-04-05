@@ -704,10 +704,9 @@ public:
     // evaluation
     // -----------------------------------------------------------------------
 
-    // zeroes out all gradients except the root itself
-    // TODO: why not the root?
+    // zeroes out all gradients except the root itself (since its gradient is set from outside rather than propagated down)
     // (Note that inside the nodes this only really sets a flag to do it later when needed, but that's not our concern.)
-    void ZeroGradients(const ComputationNodeBasePtr& rootNode)
+    void ZeroInputGradients(const ComputationNodeBasePtr& rootNode)
     {
         for (auto& node : GetAllNodesForRoot(rootNode))
             node->ZeroGradientsOfInputs();

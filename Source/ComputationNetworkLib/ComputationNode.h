@@ -481,6 +481,18 @@ public:
     const MBLayoutPtr& GetMBLayout() const { return m_pMBLayout; }
     bool HasMBLayout() const { return !!m_pMBLayout; }
 
+    // for logging: get the string fragment for displaying the dimension
+    std::wstring GetMBLayoutAxisString() const
+    {
+        if (!HasMBLayout())
+            return L"";
+        const wstring& axisName = GetMBLayout()->GetAxisName();
+        if (axisName.empty())
+            return L" x *";
+        else
+            return L" x " + axisName;
+    }
+
 protected: public: // ...the following should be protected, but nodes inquire about their children, requiring public access
 
     size_t GetNumParallelSequences() const
@@ -679,6 +691,14 @@ public:
         return false;
     }
 
+    // reset gradients of a node's inputs
+    // This really only clears the lazy-init flags (LazyZeroGradient() actually clears the values lazily).
+    void /*ComputationNodeBase::*/ ZeroGradientsOfInputs()
+    {
+        for (size_t i = 0; i < m_inputs.size(); i++)
+            Input(i)->m_gradientInitialized = false;
+    }
+
     // -----------------------------------------------------------------------
     // masking
     // -----------------------------------------------------------------------
@@ -688,8 +708,6 @@ public:
     virtual void MaskMissingGradientColumnsToZero(const FrameRange&) = 0;
     virtual void InvalidateMissingValueColumns(const FrameRange&) = 0;
     virtual void InvalidateMissingGradientColumns(const FrameRange&) = 0;
-
-    virtual void ZeroGradientsOfInputs() = 0;
 
     // -----------------------------------------------------------------------
     // memory sharing
@@ -1357,14 +1375,8 @@ public:
     // TODO: move to -Base (or -Network?)
     void Backprop(const FrameRange& fr, bool childrenInThisLoop, bool childrenInOuterLoop) override;
 
-    // TODO: why of the inputs, and not the node itself?
-    void /*ComputationNodeBase::*/ ZeroGradientsOfInputs() override // clears the lazy-init flags (LazyZeroGradient() actually clears the values lazily)
-    {
-        for (size_t i = 0; i < m_inputs.size(); i++)
-            Input(i)->m_gradientInitialized = false;
-    }
-
     // lazy resetting of gradient
+    // This performs the actual zeroing out.
     void LazyZeroGradient()
     {
         if (!m_needsGradient)
@@ -1373,8 +1385,14 @@ public:
         if (m_gradientInitialized)
             return;
 
+        ResetGradient(0);
+    }
+
+    // resize and reset this node's gradient to a given value (normally 0, 1 for root)
+    void ResetGradient(ElemType val)
+    {
         UpdateDataSize(Gradient());
-        Gradient().SetValue(0);
+        Gradient().SetValue(val);
 
         m_gradientInitialized = true;
     }
@@ -1538,8 +1556,8 @@ public:
     /*HasToString::*/ wstring ToString() const override
     {
         // we format it like "name : type rows x cols ( args )"
-        wstring result = /*TidyName*/ (NodeName()) + L" : " + OperationName();
-        result.append(msra::strfun::wstrprintf(L" [%s%s]", string(GetSampleLayout()).c_str(), HasMBLayout() ? " x *" : ""));
+        wstring result = NodeName() + L" : " + OperationName();
+        result.append(msra::strfun::wstrprintf(L" [%s%ls]", string(GetSampleLayout()).c_str(), GetMBLayoutAxisString().c_str()));
         if (m_inputs.empty())
             result.append(L" ()");
         else
@@ -1562,7 +1580,7 @@ public:
     // for debugging purposes
     void /*ComputationNodeBase::*/ PrintSelf(bool printMatrices = false) const
     {
-        fprintf(stderr, "\n%ls[%s%s] = %ls", NodeName().c_str(), string(GetSampleLayout()).c_str(), HasMBLayout() ? " x *" : "", OperationName().c_str());
+        fprintf(stderr, "\n%ls[%s%ls] = %ls", NodeName().c_str(), string(GetSampleLayout()).c_str(), GetMBLayoutAxisString().c_str(), OperationName().c_str());
 
         if (!IsLeaf())
         {
@@ -1571,7 +1589,7 @@ public:
             {
                 if (i > 0)
                     fprintf(stderr, ", ");
-                fprintf(stderr, "%ls[%s%s] = %ls", m_inputs[i] ? m_inputs[i]->NodeName().c_str() : L"NULL", string(m_inputs[i]->GetSampleLayout()).c_str(), m_inputs[i]->HasMBLayout() ? " x *" : "", OperationName().c_str());
+                fprintf(stderr, "%ls[%s%ls] = %ls", m_inputs[i] ? m_inputs[i]->NodeName().c_str() : L"NULL", string(m_inputs[i]->GetSampleLayout()).c_str(), m_inputs[i]->GetMBLayoutAxisString().c_str(), OperationName().c_str());
             }
             fprintf(stderr, ")");
         }
@@ -1731,7 +1749,6 @@ public:
     virtual void PrintSelf(bool) const override { NOT_IMPLEMENTED; }
     virtual void ValidateInferInputDimsFrom(const TensorShape&) override { NOT_IMPLEMENTED; }
     virtual void SetInput(const size_t, const Microsoft::MSR::CNTK::ComputationNodeBase::ComputationNodeBasePtr&) override { NOT_IMPLEMENTED; }
-    virtual void ZeroGradientsOfInputs(void) override { NOT_IMPLEMENTED; }
     virtual void MaskMissingValueColumnsToZero(const Microsoft::MSR::CNTK::FrameRange&) override { NOT_IMPLEMENTED; }
     virtual void MaskMissingGradientColumnsToZero(const Microsoft::MSR::CNTK::FrameRange&) override { NOT_IMPLEMENTED; }
     virtual void InvalidateMissingValueColumns(const Microsoft::MSR::CNTK::FrameRange&) override { NOT_IMPLEMENTED; }
@@ -1836,6 +1853,7 @@ protected:                                                                      
     using Base::GetInputSampleLayout;                                                                                                                    \
     using Base::GetInputsFromConfig;                                                                                                                     \
     using Base::GetMBLayout;                                                                                                                             \
+    using Base::GetMBLayoutAxisString;                                                                                                                   \
     using Base::GetNumInputs;                                                                                                                            \
     using Base::GetNumParallelSequences;                                                                                                                 \
     using Base::GetNumTimeSteps;                                                                                                                         \

@@ -152,6 +152,7 @@ public:
     HTKMLFReader()
         : m_pMBLayout(make_shared<MBLayout>())
     {
+        m_pMBLayout->SetUniqueAxisName(L"HTKMLFReader");
     }
     template <class ConfigRecordType>
     void InitFromConfig(const ConfigRecordType&);

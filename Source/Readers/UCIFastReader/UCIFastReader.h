@@ -135,6 +135,7 @@ public:
     UCIFastReader()
     {
         m_pMBLayout = make_shared<MBLayout>();
+        m_pMBLayout->SetUniqueAxisName(L"UCIFastReader");
     }
     virtual ~UCIFastReader();
 

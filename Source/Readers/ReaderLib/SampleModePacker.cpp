@@ -21,6 +21,7 @@ SampleModePacker::SampleModePacker(
                                                         m_minibatchLayout(std::make_shared<MBLayout>()),
                                                         m_memoryProvider(memoryProvider)
 {
+    m_minibatchLayout->SetUniqueAxisName(L"SampleModePacker");
     m_inputStreams = m_transformer->GetStreamDescriptions();
     assert(m_inputStreams.size() == m_outputStreams.size());
     assert(

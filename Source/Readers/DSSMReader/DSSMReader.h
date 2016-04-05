@@ -152,6 +152,7 @@ public:
     DSSMReader()
         : m_pMBLayout(make_shared<MBLayout>())
     {
+        m_pMBLayout->SetUniqueAxisName(L"DSSMReader");
         m_qfeaturesBuffer = NULL;
         m_dfeaturesBuffer = NULL;
         m_labelsBuffer = NULL;

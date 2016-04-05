@@ -140,7 +140,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
         // decimate MBLayout as well
         pDecimateMBLayout = make_shared<MBLayout>(numNewParallelSequence, nT);
-        //pDecimateMBLayout->SetAxisName(pMBLayout->GetAxisName());
+        pDecimateMBLayout->SetAxisName(pMBLayout->GetAxisName());
 #if 1
         // now copy over all sequence info records that are inside the range, with adjusted 's'
         const auto& sequences = pMBLayout->GetAllSequences();
@@ -174,17 +174,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // no need to do inplace decimation if numproc == 1
 
         // allocate space for non-inplace decimation
-        MBLayoutPtr pDecimatedMB = make_shared<MBLayout>();
+        MBLayoutPtr pDecimatedMBLayout = make_shared<MBLayout>();
+        pDecimatedMBLayout->SetAxisName(pMBLayout->GetAxisName());
         StreamMinibatchInputs decimatedMB;
         // call in-place decimation
-        pair<size_t, size_t> selected = DecimateMinibatch<ElemType>(mb, decimatedMB, pMBLayout, pDecimatedMB, numprocs, rank);
+        pair<size_t, size_t> selected = DecimateMinibatch<ElemType>(mb, decimatedMB, pMBLayout, pDecimatedMBLayout, numprocs, rank);
         // move the data
         for (auto k : mb)
         {
             const auto& name = k.first;
             mb.GetInputMatrix<ElemType>(name).SetValue(decimatedMB.GetInputMatrix<ElemType>(name)); // deep-copy our local one to the output location
         }
-        pMBLayout->MoveFrom(pDecimatedMB);
+        pMBLayout->MoveFrom(pDecimatedMBLayout);
         return selected;
     }
 

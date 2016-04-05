@@ -71,6 +71,7 @@ StreamMinibatchPtr SequencePacker::PackStreamMinibatch(const std::vector<Sequenc
 
     // Creating the minibatch layout.
     MBLayoutPtr layout = std::make_shared<MBLayout>();
+    layout->SetUniqueAxisName(L"SequencePacker");
     layout->InitAsPackedSequences(inputSequences, placement, rowAllocations);
 
     // Allocating necessary data buffer for the stream.
