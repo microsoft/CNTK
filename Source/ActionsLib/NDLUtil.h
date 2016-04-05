@@ -158,7 +158,7 @@ public:
         CheckOutputNodes(script, "evalNodes"     , L"evaluation");
         CheckOutputNodes(script, "outputNodes"   , L"output"    );
         // legacy name:
-        CheckOutputNodes(script, "criteriaNodes" , L"finalCriterion");
+        CheckOutputNodes(script, "criteriaNodes" , L"criterion" );
     }
 };
 
