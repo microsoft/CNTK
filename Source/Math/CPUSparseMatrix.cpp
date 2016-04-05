@@ -156,7 +156,7 @@ CPUSparseMatrix<ElemType>::CPUSparseMatrix(const CPUSparseMatrix<ElemType>& deep
 template <class ElemType>
 CPUSparseMatrix<ElemType>& CPUSparseMatrix<ElemType>::operator=(const CPUSparseMatrix<ElemType>& deepCopyFrom)
 {
-    Clear();
+    //Clear();
     if (!deepCopyFrom.IsEmpty())
         SetValue(deepCopyFrom);
     return *this;
@@ -526,7 +526,7 @@ void CPUSparseMatrix<ElemType>::RequireSizeAndAllocate(const size_t numRows, con
 template <class ElemType>
 void CPUSparseMatrix<ElemType>::RequireSizeAndAllocate(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve, const MatrixFormat matrixFormat, const bool growOnly /*= true*/, bool keepExistingValues /*= true*/)
 {
-	RequireSize(numRows, numCols, matrixFormat, growOnly);
+    RequireSize(numRows, numCols, matrixFormat, growOnly);
     
     size_t newCompIndexSize = (numCols > numRows ? numCols : numRows) + 1;
     bool reallocate = (GetSizeAllocated() < numNZElemToReserve || (GetSizeAllocated() > numNZElemToReserve && !growOnly) || GetCompIndexSize() < newCompIndexSize);
@@ -572,7 +572,7 @@ void CPUSparseMatrix<ElemType>::Resize(const size_t numRows, const size_t numCol
     if (reallocate)
         Allocate(numRows, numCols, numNZElemToReserve, growOnly, false);
     else
-		memset(GetCompIndex(), 0, sizeof(CPUSPARSE_INDEX_TYPE) * newCompIndexSize);
+        Reset();
 }
 
 
@@ -580,8 +580,9 @@ void CPUSparseMatrix<ElemType>::Resize(const size_t numRows, const size_t numCol
 template <class ElemType>
 void CPUSparseMatrix<ElemType>::Reset()
 {
-	// This is equivalent to setting m_nz = 0;
-    memset(SecondaryIndexLocation(), 0, SecondaryIndexSize());
+	// This is equivalent to setting m_nz = 0; Note we can only do this for sparse CSC/CSR because CompIndexSize is overloaded.
+    if (GetFormat() == MatrixFormat::matrixFormatSparseCSC || GetFormat() == MatrixFormat::matrixFormatSparseCSR)
+        memset(GetCompIndex(), 0, sizeof(CPUSPARSE_INDEX_TYPE) * GetCompIndexSize());
     SetColIdx(-1);
     SetBlockSize(0);
     SetBlockIdShift(0);

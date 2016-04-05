@@ -34,7 +34,7 @@ class MATH_API CPUMatrix : public BaseMatrix<ElemType>
     using Base::HasExternalBuffer;
     using Base::SetBuffer;
     using Base::SetComputeDeviceId;
-    using Base::Clear;
+    //using Base::Clear;
     using Base::SetSizeAllocated;
     using Base::GetSizeAllocated;
     using Base::ZeroInit;
@@ -96,9 +96,19 @@ public:
                      ElemType RMS_WGT_MIN,
                      const bool needAveMultiplier);
 
+
     void Reshape(const size_t numRows, const size_t numCols);
+
+
+    // RequireSize is now the new preferred method of ensuring the correct size inside of the Matrix class. Since Resize will fail if the storage object has
+    // multiple views, RequireSize will first check to see if Resize is required. If it is not, then it short-circuits and is a noop. Otherwise, RequireSize
+    // will call Resize, which may fail if the matrix has multiple views.
     void RequireSize(const size_t numRows, const size_t numCols, bool growOnly = true); // by default we only reallocate if need to grow
+    // Resize first checks to ensure that the caller has the authority to call Resize (i.e., it checks to ensure the underlying data is owned by only this matrix), and then
+    // actually resizes the underlying matrix, doing any allocation as required.
     void Resize(const size_t numRows, const size_t numCols, bool growOnly = true); // by default we only reallocate if need to grow
+
+
     ElemType* CopyToArray() const;                                                 // allocated by the callee but need to be deleted by the caller
     size_t CopyToArray(ElemType*& arrayCopyTo, size_t& currentArraySize) const;    // allocated by the callee but need to be deleted by the caller
     void CopySection(size_t numRows, size_t numCols, ElemType* dst, size_t colStride) const;

@@ -504,7 +504,7 @@ void GPUMatrix<ElemType>::Clear()
             ReleaseStorageMemory();
         }
     }
-    BaseMatrix<ElemType>::Clear();
+    //BaseMatrix<ElemType>::Clear();
 
     ZeroInit(GetComputeDeviceId());
 }

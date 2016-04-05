@@ -201,7 +201,7 @@ CPUMatrix<ElemType>::~CPUMatrix()
 template <class ElemType>
 void CPUMatrix<ElemType>::Clear()
 {
-    BaseMatrix<ElemType>::Clear();
+    //BaseMatrix<ElemType>::Clear();
     ZeroInit();
 }
 
@@ -1388,8 +1388,7 @@ void CPUMatrix<ElemType>::Resize(const size_t numRows, const size_t numCols, boo
             pArray = NewArray<ElemType>(numElements);
         }
         // success: update the object
-        if (Buffer())
-            delete[] Buffer();
+        delete[] Buffer();
 
         SetBuffer(pArray, numElements * sizeof(ElemType));
         SetSizeAllocated(numElements);

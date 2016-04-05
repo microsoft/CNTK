@@ -34,7 +34,7 @@ class MATH_API CPUSparseMatrix : public BaseMatrix<ElemType>
     using Base::GetNumStorageCols;
     using Base::SetNumStorageCols;
     using Base::SetComputeDeviceId;
-    using Base::Clear;
+    //using Base::Clear;
     using Base::SetSizeAllocated;
     using Base::GetSizeAllocated;
     using Base::GetCompIndex;
@@ -143,11 +143,23 @@ public:
     }
 
 
+    // Allocate actually allocates the storage space for numNZElemToReserve elements. This is different than resizing, which changes the dimensions of the underlying matrix.
+    // Unfortunately numRows/numCols need to be passed in in the case of various matrix formats (e.g., SparseCSC), because some of the dimensions allocated depend on the
+    // dimensions of the matrix.
     void Allocate(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve = 10000, const bool growOnly = true, bool keepExistingValues = false); // matrix format will affect the size to allocate
+    // RequireSizeAndAllocate is required by SpasreMatrix since resizing the dimensions and allocating storage are different operations. Since a Resize can entail changing
+    // MatrixFormat, we offer an overload for that case.
     void RequireSizeAndAllocate(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve, const MatrixFormat matrixFormat, const bool growOnly = true, bool keepExistingValues = true); // matrix format will affect the size to allocate
+    // Otherwise we will just use the current MatrixFormat.
     void RequireSizeAndAllocate(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve = 10000, const bool growOnly = true, bool keepExistingValues = false);
+    // Sparse matrix RequireSize is similar to dense matrix RequireSize in that it will only allocate the minimum amount of storage requried to successfully create the matrix.
+    // This is required because some formats (e.g., SparseCSC) require the SecondaryIndexLocation to have valid data in order to compute m_nz. Otherwise this method would not
+    // update the storage at all.
     void RequireSize(const size_t numRows, const size_t numCols, const MatrixFormat format, const bool growOnly = true);
+    // Allows RequireSize to be called without modifying the MatrixFormat.
     void RequireSize(const size_t numRows, const size_t numCols, const bool growOnly = true);
+    // Resizes the dimensions of the underlying sparse matrix object. Since the caller may have a hint for m_nz, we allow that to be passed, but this is terrible design. In the
+    // future if we want better separation between allocation and resizing, this interface should be updated to be less clunky.
     void Resize(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve, const MatrixFormat matrixFormat, const bool growOnly = true); // matrix format will affect the size to allocate
     void Resize(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve = 10000, const bool growOnly = true);
 

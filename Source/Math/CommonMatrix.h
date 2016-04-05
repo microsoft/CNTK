@@ -200,6 +200,8 @@ enum MatrixFlags
 template <class ElemType>
 class BaseMatrixStorage : public enable_shared_from_this<BaseMatrixStorage<ElemType>>
 {
+    template <class ElemType>
+    friend class BaseMatrix;
 
 private:
     BaseMatrixStorage<ElemType>(const BaseMatrixStorage<ElemType>& ) = delete;
@@ -262,6 +264,7 @@ public:
         }
     }
 
+protected:
     MatrixFormat GetFormat() const { return m_format; }
     void SetFormat(MatrixFormat format) { m_format = format; }
 
@@ -291,7 +294,7 @@ public:
     void SetBlockSize(size_t blockSize) { m_blockSize = blockSize; }
 
     GPUSPARSE_INDEX_TYPE* GetRowToIdMap() const { return m_rowToId; }
-    void SetRowToId(GPUSPARSE_INDEX_TYPE* parray) { m_rowToId = parray; }
+    void SetRowToIdMap(GPUSPARSE_INDEX_TYPE* parray) { m_rowToId = parray; }
 
     void* GetTempHostBuffer() const { return m_tempHostBuffer; }
     void SetTempHostBuffer(void* buffer) const { m_tempHostBuffer = buffer; }
@@ -382,7 +385,6 @@ protected:
     CPUSPARSE_INDEX_TYPE* m_unCompIndex; // row/col ids in CSC/CSR format
     CPUSPARSE_INDEX_TYPE* m_compIndex;   // begin ids of col/row in CSC/CSR format
 
-    //size_t m_blockSize;    // block size
     size_t* m_blockIds;    // block ids
     size_t m_blockIdShift; // used to get efficient slice, actual col = blockIds[j] - m_blockIdShift
 
@@ -392,11 +394,61 @@ protected:
 // BaseMatrix -- base class for all matrix types (CPU, GPU) x (dense, sparse)
 // -----------------------------------------------------------------------
 
+// TODO: Some of these accessors should be merged into single methods like SetBuffer. 
 template <class ElemType>
 class MATH_API BaseMatrix
 {
 public:
+    
+    BaseMatrix()
+    {
+        ZeroInit();
+    }
+    virtual ~BaseMatrix()
+    {
+        ZeroValues();
+    }
+
+    void VerifyResizable(const char* function) const 
+    { 
+        if (!m_sob.unique())
+            LogicError("%s: Cannot resize the matrix because it is a view.", function);
+        if (m_sob->HasExternalBuffer())
+            LogicError("%s: Cannot resize the matrix because it is externally owned.", function);
+    }
+	// This is needed for Sparse Matrices to ensure they can write to the matrix. Note: writing to slices is not currently supported
+    void VerifyWritable(const char* function) const 
+    {
+        if (!(m_sob->GetNumStorageRows() == m_numRows && m_sob->GetNumStorageCols() == m_numCols))
+        {
+            LogicError("%s: Cannot write to the matrix because it is a slice.", function);
+        }
+    }
+
+    bool IsView() const { return (GetNumRows() != m_sob->GetNumStorageRows() || GetNumCols() != m_sob->GetNumStorageCols() || m_sliceViewOffset != 0); }
+
+    void VerifySize(const size_t rows, const size_t cols)
+    {
+        if (rows != GetNumRows() || cols != GetNumCols())
+            LogicError("VerifySize: expected matrix size %lu x %lu, but it is %lu x %lu",
+                       rows, cols, GetNumRows(), GetNumCols());
+    }
+
     MatrixFormat GetFormat() const { return m_sob->GetFormat(); }
+
+    bool OwnBuffer() const { return !HasExternalBuffer(); }
+
+    bool IsEmpty() const { return m_numRows == 0 || m_numCols == 0; }
+
+    size_t GetSizeAllocated() const { return m_sob->GetSizeAllocated(); }
+
+    size_t BufferSizeAllocated() const { return m_sob->BufferSizeAllocated(); }
+
+    size_t GetNumRows() const { return m_numRows; }
+    size_t GetNumCols() const { return m_numCols; }
+
+protected:
+
     void SetFormat(MatrixFormat format) { m_sob->SetFormat(format); }
 
     bool HasExternalBuffer() const { return m_sob->HasExternalBuffer(); }
@@ -410,20 +462,17 @@ public:
     size_t GetNumStorageCols() const { return m_sob->GetNumStorageCols(); }
     void SetNumStorageCols(size_t cols) { m_sob->SetNumStorageCols(cols); }
 
-    size_t GetSizeAllocated() const { return m_sob->GetSizeAllocated(); }
     void SetSizeAllocated(size_t alloc) { m_sob->SetSizeAllocated(alloc); }
 
-    ElemType* Buffer() { return m_sob->Buffer(); }
     ElemType* Buffer() const { return m_sob->Buffer(); }
     void SetBuffer(ElemType* parray, size_t alloc, bool external = false) { m_sob->SetBuffer(parray, alloc, external); }
 
-    size_t BufferSizeAllocated() const { return m_sob->BufferSizeAllocated(); }
     
     size_t GetBlockSize() const { return m_sob->GetBlockSize(); }
     void SetBlockSize(size_t blockSize) { m_sob->SetBlockSize(blockSize); }
 
     GPUSPARSE_INDEX_TYPE* GetRowToIdMap() const { return m_sob->GetRowToIdMap(); }
-    void SetRowToId(GPUSPARSE_INDEX_TYPE* parray) { m_sob->SetRowToId(parray); }
+    void SetRowToIdMap(GPUSPARSE_INDEX_TYPE* parray) { m_sob->SetRowToIdMap(parray); }
 
     void* GetTempHostBuffer() const { return m_sob->GetTempHostBuffer(); }
     void SetTempHostBuffer(void* buffer) const { m_sob->SetTempHostBuffer(buffer); };
@@ -452,49 +501,10 @@ public:
     CPUSPARSE_INDEX_TYPE* GetCompIndex() const { return m_sob->GetCompIndex(); }
     void SetCompIndex(CPUSPARSE_INDEX_TYPE* parray) { m_sob->SetCompIndex(parray); }
 
-    size_t GetNumRows() const { return m_numRows; }
     void SetNumRows(size_t numRows) { m_numRows = numRows; }
-    size_t GetNumCols() const { return m_numCols; }
     void SetNumCols(size_t numCols) { m_numCols = numCols; }
 
     size_t GetNumElements() const { return m_numRows * m_numCols; }
-    bool IsEmpty() const { return m_numRows == 0 || m_numCols == 0; }
-
-    bool OwnBuffer() const { return !HasExternalBuffer(); }
-
-	// TODO: Disallow non-unique ptrs to be resized.
-    void VerifyResizable(const char* function) const 
-    { 
-        if (!m_sob.unique())
-            LogicError("%s: Cannot resize the matrix because it is a view.", function);
-        if (m_sob->HasExternalBuffer())
-            LogicError("%s: Cannot resize the matrix because it is externally owned.", function);
-    }
-	// This is needed for Sparse Matrices to ensure they can write to the matrix. Note: writing to slices is not currently supported
-    void VerifyWritable(const char* function) const { 
-        if (!(m_sob->GetNumStorageRows() == m_numRows && m_sob->GetNumStorageCols() == m_numCols))
-        {
-            LogicError("%s: Cannot write to the matrix because it is a slice.", function);
-        }
-    }
-
-    bool IsView() const { return (GetNumRows() != m_sob->GetNumStorageRows() || GetNumCols() != m_sob->GetNumStorageCols() || m_sliceViewOffset != 0); }
-
-    void VerifySize(const size_t rows, const size_t cols)
-    {
-        if (rows != GetNumRows() || cols != GetNumCols())
-            LogicError("VerifySize: expected matrix size %lu x %lu, but it is %lu x %lu",
-                       rows, cols, GetNumRows(), GetNumCols());
-    }
-
-    BaseMatrix()
-    {
-        ZeroInit();
-    }
-    virtual ~BaseMatrix()
-    {
-        ZeroValues();
-    }
 
 
     void ZeroInit()
@@ -524,7 +534,7 @@ public:
     }
 
 protected:
-    void Clear() {}
+    //void Clear() {}
 
     void ZeroStorageInit() { m_sob->ZeroInit(); }
     void ReleaseStorageMemory() { m_sob->ReleaseMemory(); }

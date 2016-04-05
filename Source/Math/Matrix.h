@@ -135,7 +135,7 @@ public:
     {
         shared_ptr<T> node = dynamic_pointer_cast<T>(inode);
         if (!node)
-            LogicError("A Matrix of mismatching precision was passed.");
+            LogicError("A Matrix of mismatching type was passed.");
         return node;
     }
 

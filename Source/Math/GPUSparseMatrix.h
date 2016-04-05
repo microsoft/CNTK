@@ -32,7 +32,7 @@ public:
     using Base::GetNumStorageCols;
     using Base::SetNumStorageCols;
     using Base::SetComputeDeviceId;
-    using Base::Clear;
+    //using Base::Clear;
     using Base::SetSizeAllocated;
     using Base::GetSizeAllocated;
     using Base::ZeroInit;
@@ -51,7 +51,7 @@ public:
     // without this, base members would require to use thi-> in GCC
 public:
     using Base::VerifyWritable;
-    using Base::SetRowToId;
+    using Base::SetRowToIdMap;
     using Base::GetComputeDeviceId;
     using Base::Buffer;
     using Base::GetNumRows;
