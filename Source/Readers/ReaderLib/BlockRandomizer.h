@@ -80,6 +80,9 @@ private:
     // Global sample position on the timeline.
     size_t m_globalSamplePosition;
 
+    // Global start position;
+    size_t m_epochStartPosition;
+
     // Configuration of the epoch.
     EpochConfiguration m_config;
 

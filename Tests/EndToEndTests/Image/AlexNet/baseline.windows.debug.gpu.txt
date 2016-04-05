@@ -2981,4 +2981,4 @@ CUDA error 11 [c:\tools\cub-1.4.1\cub\device\dispatch/dispatch_radix_sort.cuh, 7
 CUDA error 11 [c:\tools\cub-1.4.1\cub\device\dispatch/dispatch_radix_sort.cuh, 796]: invalid argument
 Minibatch[1-32]: Samples Seen = 500    Err: ErrorPrediction/Sample = 1    errTop5: ErrorPrediction/Sample = 0.992    CE: CrossEntropyWithSoftmax/Sample = 6.9566009    
 Final Results: Minibatch[1-32]: Samples Seen = 500    Err: ErrorPrediction/Sample = 1    errTop5: ErrorPrediction/Sample = 0.992    CE: CrossEntropyWithSoftmax/Sample = 6.9566009    Perplexity = 1050.0582    
-COMPLETED
+__COMPLETED__

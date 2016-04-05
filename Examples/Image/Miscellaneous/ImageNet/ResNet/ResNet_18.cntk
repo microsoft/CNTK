@@ -1,0 +1,115 @@
+RootDir = "."
+
+ConfigDir = "$RootDir$"
+DataDir = "$RootDir$"
+OutputDir = "$RootDir$/Output"
+ModelDir = "$OutputDir$/Models"
+
+ndlMacros="$ConfigDir$/Macros.ndl"
+
+precision="float"
+deviceId="Auto"
+
+command=Train:CreateEval:Test
+
+parallelTrain="false"
+
+stderr="$OutputDir$/ResNet_18"
+traceLevel=1
+numMBsToShowResult=500
+
+Train=[
+    action="train"
+    modelPath="$ModelDir$/ResNet_18"
+
+     NDLNetworkBuilder=[
+        networkDescription="$ConfigDir$/ResNet_18.ndl"
+    ]
+    
+    SGD=[
+        epochSize=0
+        minibatchSize=256
+        # Note that learning rates are 10x more than in the paper due to a different
+        # momentum update rule in CNTK: v{t + 1} = lr*(1 - momentum)*g{t + 1} + momentum*v{t}
+        learningRatesPerMB=1.0*35:0.1*35:0.01
+        momentumPerMB=0.9
+        maxEpochs=125
+        gradUpdateType="None"
+        L2RegWeight=0.0001
+        dropoutRate=0
+        
+        ParallelTrain=[
+            parallelizationMethod="DataParallelSGD"
+            distributedMBReading="true"
+            parallelizationStartEpoch=1
+            DataParallelSGD=[
+                gradientBits=32
+            ]
+        ]
+    ]
+    
+    reader=[
+        readerType="ImageReader"
+        # Map file which maps images to labels using the following format:
+        # <full path to image><tab><numerical label (0-based class id)>
+        # Example:
+        # C:\Data\ImageNet\2012\train\n01440764\n01440764_10026.JPEG<tab>0
+        file="$DataDir$/train_map.txt"
+        # Randomize images before every epoch. Possible values: None, Auto. Default: Auto.
+        randomize="Auto"
+        features=[
+            # Below are the required parameters.
+            width=224
+            height=224
+            channels=3
+            # Below are the optional parameters.
+            # Possible values: Center, Random. Default: Center
+            cropType="Random"
+            # Horizontal random flip, will be enabled by default if cropType=Random
+            #hflip="true"
+            # Crop scale ratio. Examples: cropRatio=0.9, cropRatio=0.7:0.9. Default: 1.
+            cropRatio=0.46666:0.875
+            # Crop scale ratio jitter type.
+            # Possible values: None, UniRatio, UniLength, UniArea. Default: UniRatio
+            jitterType="UniRatio"
+            # Interpolation to use when scaling image to width x height size.
+            # Possible values: nearest, linear, cubic, lanczos. Default: linear.
+            interpolations="Linear"
+            # Stores mean values for each pixel in OpenCV matrix XML format.
+            meanFile="$ConfigDir$/ImageNet1K_mean.xml"
+        ]
+        labels=[
+            labelDim=1000
+        ]
+    ]    
+]
+
+CreateEval=[    
+    action="edit"
+    CurModel="$ModelDir$/ResNet_18"
+    NewModel="$ModelDir$/ResNet_18.Eval"
+    editPath="$ConfigDir$/CreateEvalModel.mel"
+]
+
+Test=[
+    action="test"
+    modelPath="$ModelDir$/ResNet_18.Eval"
+    # Set minibatch size for testing.
+    minibatchSize=64
+
+    reader=[
+        readerType="ImageReader"
+        file="$DataDir$/val_map.txt"
+        randomize="None"
+        features=[
+            width=224
+            height=224
+            channels=3
+            cropType="Center"
+            meanFile="$ConfigDir$/ImageNet1K_mean.xml"
+        ]
+        labels=[
+            labelDim=1000
+        ]
+    ]    
+]

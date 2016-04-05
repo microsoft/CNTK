@@ -2965,4 +2965,4 @@ CNTKCommandTrainEnd: speechTrain
 
 Action "train" complete.
 
-COMPLETED
+__COMPLETED__

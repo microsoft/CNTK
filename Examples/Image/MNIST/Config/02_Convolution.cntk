@@ -13,7 +13,6 @@ deviceId = 0
 imageLayout = "cudnn"
 # override the above as follows when running on CPU:
 # deviceId = -1
-# imageLayout = "legacy"
 
 command = train:test
 
@@ -42,7 +41,7 @@ train = [
     SGD = [
         epochSize = 60000
         minibatchSize = 32
-        learningRatesPerMB = 0.5
+        learningRatesPerMB = 0.1*5:0.3
         momentumPerMB = 0*10:0.7
         maxEpochs = 15
     ]

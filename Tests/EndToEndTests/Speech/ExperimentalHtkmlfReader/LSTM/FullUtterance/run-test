@@ -1,0 +1,16 @@
+#!/bin/bash
+
+. $TEST_ROOT_DIR/run-test-common
+
+# TODO not yet: OriginalTestDir=../../../LSTM/FullUtterance
+ConfigDir=$TEST_DIR/../../../LSTM
+
+# TODO not yet:
+#(cd $TEST_DIR/$OriginalTestDir && md5sum baseline*) | (cd $TEST_DIR && md5sum --status -c -)
+#if [ $? != 0 ]; then
+#  echo Error: Baselines must match original test.
+#  exit 1
+#fi
+
+# cntkrun <CNTK config file name> <additional CNTK args>
+cntkrun cntk.cntk 'Truncated=false speechTrain=[reader=[readerType=ExperimentalHTKMLFReader]] speechTrain=[reader=[nbruttsineachrecurrentiter=2]] speechTrain=[SGD=[epochSize=2560]] speechTrain=[SGD=[maxEpochs=2]] speechTrain=[SGD=[numMBsToShowResult=1]] shareNodeValueMatrices=true' || exit $?

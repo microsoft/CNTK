@@ -25,7 +25,7 @@ Then install numpy package by following instruction from: http://www.scipy.org/i
 2. Alternatively install Python Anaconda distribution which contains most of the popular Python packages including numpy:
 http://continuum.io/downloads
 
-`-f` parameter is optional and specifies output format of the datasets. `cudnn` option (default) saves dataset in a spatial-major format used by cuDNN, while `legacy` - in CNTK legacy format. Use `cudnn` if CNTK is compiled with cuDNN **and** running on GPU and `legacy` otherwise.
+`-f` parameter is optional and specifies output format of the datasets. `cudnn` option (default) saves dataset in a spatial-major format used by cuDNN, while `legacy` - in CNTK legacy format. Use `cudnn` if CNTK is compiled with cuDNN and `legacy` otherwise.
 
 ResNet samples require converting CIFAR-10 dataset to actual images. This can be performed by running the following command:
 ```
@@ -53,6 +53,8 @@ cntk configFile=02_BatchNormConv.cntk
 
 3. 03_ResNet.ndl and 04_ResNet_56.ndl are very deep convolutional networks that use ResNet architecture and have 20 and 56 layers respectively (http://arxiv.org/abs/1512.03385).
 With 03_ResNet.cntk you should get around 8.2% of error after training for about 50 minutes. 04_ResNet_56.cntk should produce around 6.4% of error after training for about 3 hours (see log files in the Output directory).
+
+4. 05_ConvLocal.cntk uses locally-connected convolution layers (see `conv_local3` and `conv_local4` in `05_ConvLocal.cntk`) and resembles a network described here: https://code.google.com/p/cuda-convnet/source/browse/trunk/example-layers/layers-conv-local-11pct.cfg
 
 For more details, refer to .ndl and corresponding .cntk files.
 

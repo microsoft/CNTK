@@ -28,6 +28,9 @@
     <CudaCompile Include="CuDnnConvolutionEngine.cu">
       <Filter>GPU\Convolution</Filter>
     </CudaCompile>
+    <CudaCompile Include="CuDnnBatchNormalization.cu">
+      <Filter>GPU\BatchNormalization</Filter>
+    </CudaCompile>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="cudalattice.cpp">
@@ -44,6 +47,9 @@
     </ClCompile>
     <ClCompile Include="..\Common\ExceptionWithCallStack.cpp">
       <Filter>Misc</Filter>
+    </ClCompile>
+    <ClCompile Include="CuDnnCommon.cpp">
+      <Filter>GPU\CuDnn</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -98,8 +104,8 @@
     <ClInclude Include="CommonMatrix.h">
       <Filter>from Math</Filter>
     </ClInclude>
-    <ClInclude Include="CuDnnConvolutionEngine.h">
-      <Filter>GPU\Convolution</Filter>
+    <ClInclude Include="CuDnnFactories.h">
+      <Filter>GPU\CuDnn</Filter>
     </ClInclude>
     <ClInclude Include="TensorOps.h">
       <Filter>from Math</Filter>
@@ -107,7 +113,13 @@
     <ClInclude Include="GPUDataTransferer.h">
       <Filter>GPU</Filter>
     </ClInclude>
-    <ClInclude Include="CuDnnConvolutionEngine.cuh">
+    <ClInclude Include="CntkBatchNormalization.cuh">
+      <Filter>GPU\BatchNormalization</Filter>
+    </ClInclude>
+    <ClInclude Include="CuDnnCommon.h">
+      <Filter>GPU\CuDnn</Filter>
+    </ClInclude>
+    <ClInclude Include="Convolution.cuh">
       <Filter>GPU\Convolution</Filter>
     </ClInclude>
   </ItemGroup>
@@ -149,6 +161,12 @@
     </Filter>
     <Filter Include="GPU\Convolution">
       <UniqueIdentifier>{3155488f-128f-494e-858d-459b4cc9fab7}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="GPU\BatchNormalization">
+      <UniqueIdentifier>{639ff4b6-39b5-4a5b-8856-ee918eeea91e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="GPU\CuDnn">
+      <UniqueIdentifier>{05351afa-de95-40c8-830a-d70eede55dc0}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
 </Project>

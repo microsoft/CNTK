@@ -3,6 +3,7 @@
 // Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
 //
 #include "stdafx.h"
+#include "Common/ReaderTestHelper.h"
 
 using namespace Microsoft::MSR::CNTK;
 
@@ -28,10 +29,10 @@ BOOST_AUTO_TEST_CASE(UCIFastReaderSimpleDataLoop)
         "reader",
         500,
         250,
-        2,
+        2,  
         1,
-        1,
-        0,
+        1, 
+        0, 
         1);
 };
 

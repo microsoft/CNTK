@@ -494,7 +494,7 @@ MPI Rank 0:  Epoch[ 3 of 3]-Minibatch[   1-  10 of 20]: SamplesSeen = 10240; Tra
 MPI Rank 0:  Epoch[ 3 of 3]-Minibatch[  11-  20 of 20]: SamplesSeen = 10240; TrainLossPerSample =  1.91062447; EvalErr[0]PerSample = 0.52783203; TotalTime = 3.92841s; TotalTimePerSample = 0.38363ms; SamplesPerSecond = 2606
 MPI Rank 0: Finished Epoch[ 3 of 3]: [Training Set] TrainLossPerSample = 1.9150216; EvalErrPerSample = 0.52836914; AvgLearningRatePerSample = 9.765625146e-05; EpochTime=7.722059
 MPI Rank 0: CNTKCommandTrainEnd: speechTrain
-MPI Rank 0: COMPLETED
+MPI Rank 0: __COMPLETED__
 MPI Rank 0: ~MPIWrapper
 MPI Rank 1: running on localhost at 2015/10/02 13:34:22
 MPI Rank 1: command line options: 
@@ -958,7 +958,7 @@ MPI Rank 1:  Epoch[ 3 of 3]-Minibatch[   1-  10 of 20]: SamplesSeen = 10240; Tra
 MPI Rank 1:  Epoch[ 3 of 3]-Minibatch[  11-  20 of 20]: SamplesSeen = 10240; TrainLossPerSample =  1.91062447; EvalErr[0]PerSample = 0.52783203; TotalTime = 3.91134s; TotalTimePerSample = 0.38197ms; SamplesPerSecond = 2618
 MPI Rank 1: Finished Epoch[ 3 of 3]: [Training Set] TrainLossPerSample = 1.9150216; EvalErrPerSample = 0.52836914; AvgLearningRatePerSample = 9.765625146e-05; EpochTime=7.721915
 MPI Rank 1: CNTKCommandTrainEnd: speechTrain
-MPI Rank 1: COMPLETED
+MPI Rank 1: __COMPLETED__
 MPI Rank 1: ~MPIWrapper
 MPI Rank 2: running on localhost at 2015/10/02 13:34:22
 MPI Rank 2: command line options: 
@@ -1422,5 +1422,5 @@ MPI Rank 2:  Epoch[ 3 of 3]-Minibatch[   1-  10 of 20]: SamplesSeen = 10240; Tra
 MPI Rank 2:  Epoch[ 3 of 3]-Minibatch[  11-  20 of 20]: SamplesSeen = 10240; TrainLossPerSample =  1.91062447; EvalErr[0]PerSample = 0.52783203; TotalTime = 3.89837s; TotalTimePerSample = 0.38070ms; SamplesPerSecond = 2626
 MPI Rank 2: Finished Epoch[ 3 of 3]: [Training Set] TrainLossPerSample = 1.9150216; EvalErrPerSample = 0.52836914; AvgLearningRatePerSample = 9.765625146e-05; EpochTime=7.712128
 MPI Rank 2: CNTKCommandTrainEnd: speechTrain
-MPI Rank 2: COMPLETED
+MPI Rank 2: __COMPLETED__
 MPI Rank 2: ~MPIWrapper

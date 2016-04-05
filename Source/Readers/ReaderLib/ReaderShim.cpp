@@ -17,8 +17,6 @@
 #include "ReaderShim.h"
 #include <sstream>
 
-typedef CPUSPARSE_INDEX_TYPE IndexType;
-
 namespace Microsoft { namespace MSR { namespace CNTK {
 
 template <class ElemType>

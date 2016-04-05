@@ -453,6 +453,27 @@ public:
                                                 const size_t outputWidth, const size_t outputHeight, const size_t outputSizePerSample,
                                                 const size_t windowWidth, const size_t windowHeight, const size_t horizontalSubsample, const size_t verticalSubsample);
 
+    void ConvolutionForward(const Matrix<ElemType>& kernel, const Matrix<int>& mpRowCol, const Matrix<int>& mpRowIwht,
+                            const Matrix<int>& mpRowRun, const Matrix<int>& runs, Matrix<ElemType>& output) const;
+    void ConvolutionBackwardData(const Matrix<ElemType>& kernel, const Matrix<int>& mpRowCol, const Matrix<int>& mpRowIwht,
+                                 const Matrix<int>& mpRowRun, const Matrix<int>& runs, Matrix<ElemType>& grad) const;
+    void ConvolutionBackwardKernel(const Matrix<ElemType>& in, const Matrix<int>& mpRowCol, const Matrix<int>& mpRowIwht,
+                                   const Matrix<int>& mpRowRun, const Matrix<int>& runs, Matrix<ElemType>& kernelGrad) const;
+
+    void MaxPoolingForward(const Matrix<int>& mpRowCol, const Matrix<int>& mpRowIndices, const Matrix<int>& indices, Matrix<ElemType>& output) const;
+    void MaxPoolingBackward(const Matrix<ElemType>& out, const Matrix<ElemType>& in,
+                            const Matrix<int>& mpRowCol, const Matrix<int>& mpRowIndices, const Matrix<int>& indices,
+                            Matrix<ElemType>& grad) const;
+
+    void AveragePoolingForward(const Matrix<int>& mpRowCol, const Matrix<int>& mpRowIndices, const Matrix<int>& indices, Matrix<ElemType>& output) const;
+    void AveragePoolingBackward(const Matrix<int>& mpRowCol, const Matrix<int>& mpRowIndices, const Matrix<int>& indices, Matrix<ElemType>& grad) const;
+
+    void BatchNormalizationForward(const Matrix<ElemType>& scale, const Matrix<ElemType>& bias, double expAvgFactor, double blendFactor,
+                                   Matrix<ElemType>& runMean, Matrix<ElemType>& runInvStdDev, Matrix<ElemType>& out, double epsilon,
+                                   Matrix<ElemType>& saveMean, Matrix<ElemType>& saveInvStdDev) const;
+    void BatchNormalizationBackward(const Matrix<ElemType>& in, Matrix<ElemType>& grad, const Matrix<ElemType>& scale, const Matrix<ElemType>& saveMean, const Matrix<ElemType>& saveInvStdDev,
+                                    Matrix<ElemType>& scaleGrad, Matrix<ElemType>& biasGrad) const;
+
 public:
     // TODO: why are these not static? And why are they here?
     ElemType Exp10(ElemType num);

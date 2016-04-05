@@ -143,6 +143,7 @@ if exist "$(CuDnnDll)" (xcopy /Y "$(CuDnnDll)" $(OutputPath))
   <ItemGroup>
     <ClInclude Include="..\Common\Include\File.h" />
     <ClInclude Include="..\Common\Include\fileutil.h" />
+    <ClInclude Include="CntkBatchNormalization.cuh" />
     <ClInclude Include="ColumnQuantizer.h" />
     <ClInclude Include="CommonMatrix.h" />
     <ClInclude Include="cudabasetypes.h" />
@@ -151,11 +152,12 @@ if exist "$(CuDnnDll)" (xcopy /Y "$(CuDnnDll)" $(OutputPath))
     <ClInclude Include="cudalatticeops.cu.h" />
     <ClInclude Include="cudalatticeops.h" />
     <ClInclude Include="cudalib.h" />
-    <ClInclude Include="CuDnnConvolutionEngine.cuh" />
-    <ClInclude Include="CuDnnConvolutionEngine.h" />
+    <ClInclude Include="CuDnnCommon.h" />
+    <ClInclude Include="CuDnnFactories.h" />
     <ClInclude Include="GPUDataTransferer.h" />
     <ClInclude Include="GPUTensor.h" />
     <ClInclude Include="latticefunctionskernels.h" />
+    <ClInclude Include="Convolution.cuh" />
     <ClInclude Include="TensorOps.h" />
     <ClInclude Include="ValueQuantizer.h" />
     <None Include="GPUWatcher.h">
@@ -170,6 +172,9 @@ if exist "$(CuDnnDll)" (xcopy /Y "$(CuDnnDll)" $(OutputPath))
     <ClInclude Include="targetver.h" />
   </ItemGroup>
   <ItemGroup>
+    <CudaCompile Include="CuDnnBatchNormalization.cu">
+      <FileType>CppCode</FileType>
+    </CudaCompile>
     <CudaCompile Include="GPUTensor.cu">
       <InterleaveSourceInPTX Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</InterleaveSourceInPTX>
       <Keep Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</Keep>
@@ -190,6 +195,7 @@ if exist "$(CuDnnDll)" (xcopy /Y "$(CuDnnDll)" $(OutputPath))
     <CudaCompile Include="CuDnnConvolutionEngine.cu">
       <FileType>CppCode</FileType>
     </CudaCompile>
+    <ClCompile Include="CuDnnCommon.cpp" />
     <ClCompile Include="GPUDataTransferer.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader>Create</PrecompiledHeader>

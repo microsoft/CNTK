@@ -112,6 +112,9 @@ declare -a acmlFiles=("libacml_mp.so" "libiomp5.so")
 # Open CV
 declare -a opencvFiles=("libopencv_core.so.3.0" "libopencv_imgproc.so.3.0" "libopencv_imgproc.so.3.0" "libopencv_imgcodecs.so.3.0")
 
+# libzip
+declare -a libzipFiles=("libzip.so")
+
 # CUDA
 declare -a cudaFiles=("libcudart.so.7.0" "libcublas.so.7.0" "libcurand.so.7.0" "libcusparse.so.7.0")
 
@@ -121,6 +124,7 @@ declare -a cudnnFiles=("libcudnn.so.4")
 # Set dependency sources paths
 acmlPath="/usr/local/acml5.3.1/ifort64_mp/lib"
 opencvPath="/usr/local/opencv-3.0.0/lib"
+libzipPath="/usr/local/lib"
 cudaPath="/usr/local/cuda/lib64"
 cudnnPath="/usr/local/cudnn-4.0/cuda/lib64"
 
@@ -161,6 +165,10 @@ CopyFilesFromList $acmlPath acmlFiles[@] $baseDependenciesPath
 # Copy Open CV
 echo "Copying Open CV..." >&3
 CopyFilesFromList $opencvPath opencvFiles[@] $baseDependenciesPath
+
+# Copy libzip
+echo "Copying libzip..." >&3
+CopyFilesFromList $libzipPath libzipFiles[@] $baseDependenciesPath
 
 # GPU Drops only
 if [[ $targetConfig != "cpu" ]]; then

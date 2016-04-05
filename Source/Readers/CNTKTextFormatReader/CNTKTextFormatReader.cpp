@@ -10,6 +10,7 @@
 #include "BlockRandomizer.h"
 #include "NoRandomizer.h"
 #include "TextParser.h"
+#include "SequencePacker.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -21,20 +22,22 @@ CNTKTextFormatReader::CNTKTextFormatReader(MemoryProviderPtr provider,
 
     try
     {
-        if (configHelper.GetElementType() == ElementType::tfloat) 
+        if (configHelper.GetElementType() == ElementType::tfloat)
         {
             m_deserializer = shared_ptr<IDataDeserializer>(new TextParser<float>(configHelper));
         }
-        else 
+        else
         {
             m_deserializer = shared_ptr<IDataDeserializer>(new TextParser<double>(configHelper));
         }
 
         TransformerPtr randomizer;
-        if (configHelper.ShouldRandomize())
+        size_t window = configHelper.GetRandomizationWindow();
+        if (window > 0)
         {
-            randomizer = make_shared<BlockRandomizer>(0, SIZE_MAX, m_deserializer, 
-                BlockRandomizer::DecimationMode::sequence, false);
+            // Verbosity is a general config parameter, not specific to the text format reader.
+            int verbosity = config(L"verbosity", 2);
+            randomizer = make_shared<BlockRandomizer>(verbosity, window, m_deserializer);
         }
         else
         {
@@ -64,7 +67,8 @@ void CNTKTextFormatReader::StartEpoch(const EpochConfiguration& config)
     }
 
     m_transformer->StartEpoch(config);
-    m_packer = std::make_shared<SampleModePacker>(
+    // TODO: add "frameMode"  config paramter
+    m_packer = std::make_shared<SequencePacker>(
         m_provider,
         m_transformer,
         config.m_minibatchSizeInSamples,

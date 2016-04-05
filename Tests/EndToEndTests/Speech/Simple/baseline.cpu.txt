@@ -3602,7 +3602,7 @@ starting epoch 0 at record count 0, and file position 0
 already there from last epoch
 Minibatch[1]: ActualMBSize = 603
 Total Samples Evaluated = 603
-COMPLETED
+__COMPLETED__
 === Deleting last epoch data
 ==== Re-running from checkpoint
 === Running /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/build/release/bin/cntk configFile=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/Speech/Simple/cntk.config RunDir=/tmp/cntk-test-20151119184420.414180/Speech_Simple@release_cpu DataDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/Speech/Data ConfigDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/Speech/Simple DeviceId=-1 makeMode=true
@@ -4808,4 +4808,4 @@ starting epoch 0 at record count 0, and file position 0
 already there from last epoch
 Minibatch[1]: ActualMBSize = 603
 Total Samples Evaluated = 603
-COMPLETED
+__COMPLETED__

@@ -33,13 +33,11 @@
 #define CNTK_MODEL_VERSION_2 2
 #define CNTK_MODEL_VERSION_3 3
 #define CNTK_MODEL_VERSION_4 4 // PastValue
-#define CURRENT_CNTK_MODEL_VERSION CNTK_MODEL_VERSION_4
+#define CNTK_MODEL_VERSION_5 5 // ND convolution and pooling
+#define CNTK_MODEL_VERSION_6 6 // Batch norm blending
+#define CURRENT_CNTK_MODEL_VERSION CNTK_MODEL_VERSION_6
 
 extern bool g_shareNodeValueMatrices;
-
-#ifndef UNREFERENCED_PARAMETER // TODO: unify with UNUSED()
-#define UNREFERENCED_PARAMETER(P) (P)
-#endif
 
 // helper mode for debugging
 // If TRACK_GAP_NANS is defined then initialize layout gaps to NaN and do NaN checks. Also do detailed logging of node computations.

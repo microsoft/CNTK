@@ -31,6 +31,8 @@
 #     defaults to /usr/local/
 # These can be overridden on the command line, e.g. make BUILDTYPE=debug
 
+ARCH=$(shell uname)
+
 ifndef BUILD_TOP
 BUILD_TOP=.
 endif
@@ -211,9 +213,11 @@ CNTKMATH:=cntkmath
 BUILDINFO:= $(SOURCEDIR)/CNTK/buildinfo.h
 GENBUILD:=Tools/generate_build_info
 
-$(BUILDINFO): $(GENBUILD)
-	@echo creating $@ for $(ARCH) with build type $(BUILDTYPE)
-	@$(GENBUILD) $(BUILD_TOP)/Config.make
+BUILDINFO_OUTPUT := $(shell $(GENBUILD) $(BUILD_TOP)/Config.make && echo Success)
+
+ifneq ("$(BUILDINFO_OUTPUT)","Success")
+  $(error Could not generate $(BUILDINFO))
+endif
 
 
 ########################################
@@ -228,6 +232,9 @@ READER_SRC =\
 	$(SOURCEDIR)/Readers/ReaderLib/ReaderShim.cpp \
 	$(SOURCEDIR)/Readers/ReaderLib/ChunkRandomizer.cpp \
 	$(SOURCEDIR)/Readers/ReaderLib/SequenceRandomizer.cpp \
+	$(SOURCEDIR)/Readers/ReaderLib/SequencePacker.cpp \
+	$(SOURCEDIR)/Readers/ReaderLib/BpttPacker.cpp \
+	$(SOURCEDIR)/Readers/ReaderLib/PackerBase.cpp \
 	$(SOURCEDIR)/Readers/ReaderLib/SampleModePacker.cpp \
 
 COMMON_SRC =\
@@ -250,6 +257,7 @@ MATH_SRC =\
 	$(SOURCEDIR)/Math/TensorView.cpp \
 	$(SOURCEDIR)/Math/CUDAPageLockedMemAllocator.cpp \
 	$(SOURCEDIR)/Math/ConvolutionEngine.cpp \
+	$(SOURCEDIR)/Math/BatchNormalizationEngine.cpp \
 
 ifdef CUDA_PATH
 MATH_SRC +=\
@@ -258,7 +266,9 @@ MATH_SRC +=\
 	$(SOURCEDIR)/Math/GPUSparseMatrix.cu \
 	$(SOURCEDIR)/Math/GPUWatcher.cu \
 	$(SOURCEDIR)/Math/MatrixQuantizerGPU.cu \
+	$(SOURCEDIR)/Math/CuDnnCommon.cu \
 	$(SOURCEDIR)/Math/CuDnnConvolutionEngine.cu \
+	$(SOURCEDIR)/Math/CuDnnBatchNormalization.cu \
 	$(SOURCEDIR)/Math/GPUDataTransferer.cpp \
 
 else
@@ -594,8 +604,9 @@ CNTK_OBJ := $(patsubst %.cu, $(OBJDIR)/%.o, $(patsubst %.cpp, $(OBJDIR)/%.o, $(C
 
 CNTK:=$(BINDIR)/cntk
 ALL+=$(CNTK)
+SRC+=$(CNTK_SRC)
 
-$(CNTK): $(BUILDINFO)  $(CNTK_OBJ) | $(CNTKMATH_LIB)
+$(CNTK): $(CNTK_OBJ) | $(CNTKMATH_LIB)
 	@echo $(SEPARATOR)
 	@mkdir -p $(dir $@)
 	@echo building output for $(ARCH) with build type $(BUILDTYPE)
@@ -637,10 +648,7 @@ $(OBJDIR)/%.o : %.cpp Makefile
 	@mkdir -p $(dir $@)
 	$(CXX) -c $< -o $@ $(COMMON_FLAGS) $(CPPFLAGS) $(CXXFLAGS) $(INCLUDEPATH:%=-I%) -MD -MP -MF ${@:.o=.d}
 
-.PHONY: force clean buildall all
-
-force:	$(BUILDINFO)
-
+.PHONY: clean buildall all
 
 clean:
 	@echo $(SEPARATOR)
