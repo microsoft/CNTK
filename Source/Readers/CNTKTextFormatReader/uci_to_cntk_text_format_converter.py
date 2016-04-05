@@ -12,7 +12,7 @@ parser = argparse.ArgumentParser(
             "--num_labels 10 "
             "--output_file Examples/Image/MNIST/Data/Train-28x28_cntk_text.txt"
             "\n\n"
-            "For more infomation please visit "
+            "For more information please visit "
             "https://github.com/Microsoft/CNTK/wiki/CNTKTextFormat-Reader"),
     formatter_class=argparse.RawTextHelpFormatter)
 
