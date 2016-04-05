@@ -429,8 +429,10 @@ void CPUSparseMatrix<ElemType>::SetMatrixFromCSCFormat(const CPUSPARSE_INDEX_TYP
     SetFormat(matrixFormatSparseCSC);
     RequireSizeAndAllocate(numRows, numCols, nz, true, false);
 
-    memcpy(RowLocation(), h_Row, RowSize());
+    // Note: This is a casualty of the switch away from m_nz. RowSize and NzSize depend on ColLocation being correct for format SparseCSC. Thus we must
+    // copy ColLocation before RowLocation and NzValues. That's ugly and error prone.
     memcpy(ColLocation(), h_CSCCol, ColSize());
+    memcpy(RowLocation(), h_Row, RowSize());
     memcpy(NzValues(), h_Val, NzSize());
 }
 
@@ -609,7 +611,11 @@ void CPUSparseMatrix<ElemType>::MultiplyAndWeightedAdd(ElemType alpha, const CPU
         InvalidArgument("CPUSparseMatrix::MultiplyAndWeightedAdd: The inner dimensions of a and b must match.");
     }
 
-	c.RequireSize(m, n);
+    if (beta == 0)
+        c.RequireSize(m, n);
+    else
+        c.VerifySize(m, n); // Can't resize if beta != 0
+
 
     if (beta == 0)
     {
