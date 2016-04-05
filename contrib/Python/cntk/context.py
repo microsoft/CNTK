@@ -59,7 +59,7 @@ class AbstractContext(object, metaclass=ABCMeta):
                  graph=None,
                  device_id=-1,
                  root_nodes=None,
-                 clean_up=True):
+                 clean_up=True):      
         '''
         AbstractContext Constructer
 
@@ -219,6 +219,7 @@ class AbstractContext(object, metaclass=ABCMeta):
         return tmpl % tmpl_dict
 
     def _generate_eval_config(self, root_nodes, reader, node_unit_test=False):
+        
         '''
         Generates the configuration file for write action.
         :param root_nodes: the node to evaluate. 
@@ -568,11 +569,11 @@ class Context(AbstractContext):
 
         node.tag = orig_node_tag
 
-        shapes = Context._parse_shapes_from_output(output)
         n = input_name.var_name if isinstance(input_name, ComputationNode) else input_name
         out_name = os.path.join(
             self.directory, CNTK_OUTPUT_FILENAME + '.' + \
                 ((n + '.grad') if node_unit_test  else node.var_name))        
+
         result_content = open(out_name).read()
         data = Context._parse_result_output(result_content)
 

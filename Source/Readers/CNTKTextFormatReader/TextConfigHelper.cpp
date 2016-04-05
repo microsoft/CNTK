@@ -5,6 +5,7 @@
 
 #include "stdafx.h"
 #include "TextConfigHelper.h"
+#include "DataReader.h"
 #include "StringUtil.h"
 
 using std::string;
@@ -50,29 +51,25 @@ TextConfigHelper::TextConfigHelper(const ConfigParameters& config)
         ConfigParameters input = section.second;
         wstring name = msra::strfun::utf16(section.first);
 
-        if (!input.ExistsCurrent(L"format"))
+        if (!input.ExistsCurrent(L"dim") || !input.ExistsCurrent(L"format"))
         {
-            RuntimeError("Input section for input '%ls' does not specify the required \"format\" parameter.", name.c_str());
+            RuntimeError("Input section for input '%ls' does not specify all the required parameters, "
+                "\"dim\" and \"format\".", name.c_str());
         }
 
         StreamDescriptor stream;
         stream.m_id = id++;
         stream.m_name = name;
+        stream.m_sampleDimension = input(L"dim");
         string type = input(L"format");
 
         if (AreEqualIgnoreCase(type, "dense"))
         {
-            if (!input.ExistsCurrent(L"dim"))
-            {
-                RuntimeError("Input section for input '%ls' does not specify the required \"dim\" parameter.", name.c_str());
-            }
-            stream.m_sampleDimension = input(L"dim");
             stream.m_storageType = StorageType::dense;
         }
         else if (AreEqualIgnoreCase(type, "sparse"))
         {
             stream.m_storageType = StorageType::sparse_csc;
-            stream.m_sampleDimension = 0;
         }
         else
         {
@@ -109,19 +106,25 @@ TextConfigHelper::TextConfigHelper(const ConfigParameters& config)
 
     m_filepath = msra::strfun::utf16(config(L"file"));
 
-    string rand = config(L"randomize", "auto");
-
-    if (AreEqualIgnoreCase(rand, "auto"))
+    if (config.Exists(L"randomize"))
     {
-        m_randomize = true;
-    }
-    else if (AreEqualIgnoreCase(rand, "none"))
-    {
-        m_randomize = false;
-    }
+        wstring randomizeString = config.CanBeString(L"randomize") ? config(L"randomize") : wstring();
+        if (!_wcsicmp(randomizeString.c_str(), L"none"))
+        {
+            m_randomizationWindow = randomizeNone;
+        }
+        else if (!_wcsicmp(randomizeString.c_str(), L"auto"))
+        {
+            m_randomizationWindow = randomizeAuto;
+        }
+        else
+        {
+            m_randomizationWindow = config(L"randomize");
+        }
+    } 
     else
     {
-        RuntimeError("'randomize' parameter must be set to 'auto' or 'none'");
+        m_randomizationWindow = randomizeAuto;
     }
 
     m_skipSequenceIds = config(L"skipSequenceIds", false);

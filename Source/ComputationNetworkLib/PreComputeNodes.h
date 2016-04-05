@@ -426,7 +426,7 @@ public:
     virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
     {
         Base::Validate(isFinalValidationPass);
-        InferMBLayoutFromInputsForStandardCase();
+        InferMBLayoutFromInputsForStandardCase(isFinalValidationPass);
 
         Input(1)->ValidateInferInputDimsFrom(Input(0)->GetSampleLayout());
         Input(2)->ValidateInferInputDimsFrom(Input(0)->GetSampleLayout());
@@ -527,7 +527,7 @@ public:
     virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
     {
         Base::Validate(isFinalValidationPass);
-        InferMBLayoutFromInputsForStandardCase();
+        InferMBLayoutFromInputsForStandardCase(isFinalValidationPass);
 
         Input(1)->ValidateInferInputDimsFrom(Input(0)->GetSampleLayout());
         Input(2)->ValidateInferInputDimsFrom(Input(0)->GetSampleLayout());

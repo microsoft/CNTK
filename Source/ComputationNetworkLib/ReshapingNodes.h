@@ -24,18 +24,18 @@
 namespace Microsoft { namespace MSR { namespace CNTK {
 
 // -----------------------------------------------------------------------
-// Reshape(x, tensorShape, beginDim=0, endDim=0) -- reinterpret input samples as having different tensor dimensions
+// Reshape(x, tensorShape, beginAxis=0, endAxis=0) -- reinterpret input samples as having different tensor dimensions
 //  - just replaces metadata m_sampleLayout, does not change data values
 //  - one dimension may be specified as 0 and will be inferred
-//  - optional beginDim/endDim denote to only replace a sub-range of dims, for implementing ReshapeDimension() and FlattenRank()
+//  - optional beginAxis/endAxis denote to only replace a sub-range of dims, for implementing ReshapeDimension() and FlattenRank()
 //
 // Derived operations:
 //
-// ReshapeDimension(x, dim, tensorShape) = Reshape(x, tensorShape, beginDim=dim, endDim=dim+1)
+// ReshapeDimension(x, dim, tensorShape) = Reshape(x, tensorShape, beginAxis=dim, endAxis=dim+1)
 //  - reinterprets one dimension as multiple, where the number of elements remains the same
 //  - one of the new dimensions may be specified as 0 and will be inferred
 //
-// FlattenDimensions(x, dim, num) = Reshape(x, 0, beginDim=dim, endDim=dim+num)
+// FlattenDimensions(x, dim, num) = Reshape(x, 0, beginAxis=dim, endAxis=dim+num)
 //  - replace two or more consecutive dims by a single dim with the same number of elements
 //
 // SplitDimension(x, dim, N) = ReshapeDimension(x, dim, 0:N)
@@ -50,17 +50,17 @@ class ReshapeNode : public UnaryElementWiseNode<ElemType>
     static const std::wstring TypeName() { return L"Reshape"; }
 
 public:
-    ReshapeNode(DEVICEID_TYPE deviceId, const wstring& name, const TensorShape& replacementSampleLayout = TensorShape(), int beginDim = 1, int endDim = 0)
+    ReshapeNode(DEVICEID_TYPE deviceId, const wstring& name, const TensorShape& replacementSampleLayout = TensorShape(), int beginAxis = 1, int endAxis = 0)
         : Base(deviceId, name),
           m_replacementSampleLayout(replacementSampleLayout),
-          m_beginDimParameter(beginDim),
-          m_endDimParameter(endDim)
+          m_beginDimParameter(beginAxis),
+          m_endDimParameter(endAxis)
     {
     }
     ReshapeNode(const ScriptableObjects::IConfigRecordPtr configp)
-        : ReshapeNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"shape"), configp->Get(L"beginDim"), configp->Get(L"endDim"))
+        : ReshapeNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"shape"), configp->Get(L"beginAxis"), configp->Get(L"endAxis"))
     {
-        AttachInputs(configp, this->GetExpectedNumInputs());
+        AttachInputsFromConfig(configp, this->GetExpectedNumInputs());
     }
 
     virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
@@ -97,21 +97,21 @@ public:
 
         auto replacementDims = m_replacementSampleLayout.GetDims();
 
-        size_t beginDim = m_beginDimParameter > 0 ? m_beginDimParameter - 1 : 0;
-        size_t endDim = m_endDimParameter > 0 ? m_endDimParameter - 1 : inputDims.size();
+        size_t beginAxis = m_beginDimParameter > 0 ? m_beginDimParameter - 1 : 0;
+        size_t endAxis = m_endDimParameter > 0 ? m_endDimParameter - 1 : inputDims.size();
         if (!isFinalValidationPass) // non-final: be tolerant, no errors
         {
-            if (endDim > inputDims.size())
-                endDim = inputDims.size();
-            if (beginDim > endDim)
-                beginDim = endDim;
+            if (endAxis > inputDims.size())
+                endAxis = inputDims.size();
+            if (beginAxis > endAxis)
+                beginAxis = endAxis;
         }
 
         // TODO: We should allow to reduce to a 0-length tensor if the dimension is 0
 
         // if a dimension is specified as zero then infer it, otherwise verify that total #elements matches
         size_t inputElements = 1; // get #elements in range to be replaced
-        for (size_t k = beginDim; k < endDim; k++)
+        for (size_t k = beginAxis; k < endAxis; k++)
             inputElements *= inputDims[k];
         size_t targetElements = 1; // check/infer #elements to replace with
         size_t zeroIndex = SIZE_MAX;
@@ -129,15 +129,15 @@ public:
 
         // assemble actual full dimension vector
         SmallVector<size_t> dims;
-        dims.append(inputDims.begin(), inputDims.begin() + beginDim);
+        dims.append(inputDims.begin(), inputDims.begin() + beginAxis);
         dims.append(replacementDims.begin(), replacementDims.end());
-        dims.append(inputDims.begin() + endDim, inputDims.end());
+        dims.append(inputDims.begin() + endAxis, inputDims.end());
         auto sampleLayout = TensorShape(dims);
 
         // validate total dimension
         if (isFinalValidationPass && inputSampleLayout.GetNumElements() != sampleLayout.GetNumElements())
         {
-            auto subShape = TensorShape(std::vector<size_t>(inputDims.begin() + beginDim, inputDims.begin() + endDim));
+            auto subShape = TensorShape(std::vector<size_t>(inputDims.begin() + beginAxis, inputDims.begin() + endAxis));
             InvalidArgument("%ls %ls operation: Input (sub-)dimensions [%s] incompatible with desired (sub-)dimensions [%s]. Number of elements %s.",
                             NodeName().c_str(), OperationName().c_str(),
                             string(subShape).c_str(), string(m_replacementSampleLayout).c_str(),
@@ -162,7 +162,7 @@ public:
     virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override { return false; }
 
 private:
-    TensorShape m_replacementSampleLayout; // user-specified dimensions to replace dimensions [beginDim, endDim]
+    TensorShape m_replacementSampleLayout; // user-specified dimensions to replace dimensions [beginAxis, endAxis]
     int m_beginDimParameter;               // 1-based index range as specified
     int m_endDimParameter;
 };
@@ -231,62 +231,69 @@ template class ReconcileMBLayoutNode<float>;
 template class ReconcileMBLayoutNode<double>;
 
 // -----------------------------------------------------------------------
-// RowSliceNode (input)
+// SliceNode (input)
 // This node extracts a slice of the first tensor dimension (row).
-// TODO: Extend to specifying the axis. Time slicing would have to be done in BrainScript using Gather.
+// This does not support slicing the time axis. That has to be done in BrainScript using Gather.
 // -----------------------------------------------------------------------
 
 template <class ElemType>
-class RowSliceNode : public ComputationNode<ElemType>, public NumInputs<1>
+class SliceNode : public ComputationNode<ElemType>, public NumInputs<1>
 {
     typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
-    static const std::wstring TypeName() { return L"RowSlice"; }
+    static const std::wstring TypeName() { return L"Slice"; }
 
 public:
-    RowSliceNode(DEVICEID_TYPE deviceId, const wstring& name, size_t startIndex = 0, size_t numRows = 0)
-        : Base(deviceId, name), m_startIndex(startIndex), m_sliceHeight(numRows)
+    SliceNode(DEVICEID_TYPE deviceId, const wstring& name, int beginIndex = 0, int endIndex = 0, int axis = 1)
+        : Base(deviceId, name), m_beginIndex(beginIndex), m_endIndex(endIndex), m_axis(axis)
     {
     }
 
-    RowSliceNode(const ScriptableObjects::IConfigRecordPtr configp)
-        : RowSliceNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"startIndex"), configp->Get(L"numRows"))
+    SliceNode(const ScriptableObjects::IConfigRecordPtr configp)
+        : SliceNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"beginIndex"), configp->Get(L"endIndex"), configp->Get(L"axis"))
     {
-        AttachInputs(configp, this->GetExpectedNumInputs());
+        AttachInputsFromConfig(configp, this->GetExpectedNumInputs());
     }
 
     virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
     {
         Base::CopyTo(nodeP, newName, flags);
-        auto node = dynamic_pointer_cast<RowSliceNode<ElemType>>(nodeP);
-
-        node->m_startIndex = m_startIndex;
-        node->m_sliceHeight = m_sliceHeight;
+        auto node = dynamic_pointer_cast<SliceNode<ElemType>>(nodeP);
+        node->m_beginIndex = m_beginIndex;
+        node->m_endIndex   = m_endIndex;
+        node->m_axis       = m_axis;
     }
 
     virtual void Load(File& fstream, size_t modelVersion) override
     {
         Base::Load(fstream, modelVersion);
-        fstream >> m_startIndex >> m_sliceHeight;
-        int dim; // preparation for future extension that stores a dimension along which we slice
+        ptrdiff_t beginIndex, height;
+        fstream >> beginIndex >> height; // legacy format stored (end-begin)
+        m_beginIndex = (int)beginIndex;
+        m_endIndex = (int)(beginIndex + height);
         if (modelVersion >= CNTK_MODEL_VERSION_3)
-            fstream >> dim;
+            fstream >> m_axis;
+        else
+            m_axis = 1; // emulate old RowSliceNode
     }
 
     virtual void Save(File& fstream) const override
     {
         Base::Save(fstream);
-        fstream << m_startIndex << m_sliceHeight;
-        int dim = 1; // preparation for future extension that stores a dimension along which we slice
-        fstream << dim;
+        fstream << (ptrdiff_t)m_beginIndex << (ptrdiff_t)(m_endIndex - m_beginIndex); // legacy file format stores (end-begin), we keep it that way
+        fstream << m_axis;
     }
 
 private:
+
+    // these implement numpy-style negative bound values to index from the end
+    size_t BeginIndex() const { return m_beginIndex >= 0 ? (size_t)m_beginIndex : (size_t)(m_beginIndex + Input(0)->GetSampleLayout()[m_axis - 1]); }
+    size_t EndIndex()   const { return m_endIndex   >  0 ? (size_t)m_endIndex   : (size_t)(m_endIndex   + Input(0)->GetSampleLayout()[m_axis - 1]); }
 
     // determine the tensor shape that represents slice of the input that we are taking
     TensorShape GetInputSlice(size_t rank, const FrameRange & fr) const
     {
         auto inputSlice = Input(0)->GetTensorSliceFor(rank, fr);    // input must be narrowed down
-        inputSlice.NarrowTo(0, m_startIndex, m_startIndex + m_sliceHeight);
+        inputSlice.NarrowTo(m_axis - 1, BeginIndex(), EndIndex());
         return inputSlice;
     }
 
@@ -314,24 +321,30 @@ public:
     virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
     {
         Base::Validate(isFinalValidationPass);
-        InferMBLayoutFromInputsForStandardCase();
+
+        InferMBLayoutFromInputsForStandardCase(isFinalValidationPass);
 
         auto sampleLayout = Input(0)->GetSampleLayout();
-        if (isFinalValidationPass && sampleLayout[0] < m_startIndex + m_sliceHeight)
-            RuntimeError("%ls %ls operation: m_startIndex + m_sliceHeight (%d) exceeds number of rows in the input ([%s]).", NodeName().c_str(), OperationName().c_str(), (int)(m_startIndex + m_sliceHeight), string(sampleLayout).c_str());
+        if (m_axis < 1 || (isFinalValidationPass && m_axis > sampleLayout.GetRank()))
+            RuntimeError("%ls %ls operation: axis parameter %d must be in range 1..rank of input ([%s]).", NodeName().c_str(), OperationName().c_str(), m_axis, string(sampleLayout).c_str());
 
-        if (sampleLayout[0] >= m_startIndex + m_sliceHeight)    // (this guards against failing an out-of-bounds error if not isFinalValidationPass)
-            sampleLayout.NarrowTo(0, m_startIndex, m_startIndex + m_sliceHeight);
+        if (isFinalValidationPass && (sampleLayout[m_axis - 1] < EndIndex() || EndIndex() < BeginIndex() || BeginIndex() < 0))
+            RuntimeError("%ls %ls operation: Index range [%d,%d), interpreted as [%d,%d), is invalid for input ([%s]).", NodeName().c_str(), OperationName().c_str(), m_beginIndex, m_endIndex, (int)BeginIndex(), (int)EndIndex(), string(sampleLayout).c_str());
+
+        // propagate as much as we can
+        if (isFinalValidationPass || (m_axis - 1 < sampleLayout.GetRank() && 0 <= BeginIndex() && BeginIndex() <= EndIndex() && EndIndex() <= sampleLayout[m_axis - 1])) // (the second condition guards against failing an out-of-bounds error if not isFinalValidationPass)
+            sampleLayout.NarrowTo(m_axis - 1, BeginIndex(), EndIndex());
 
         SetDims(TensorShape(sampleLayout.GetDims()), HasMBLayout());
     }
 
 private:
-    size_t m_startIndex, m_sliceHeight;
+    int m_beginIndex, m_endIndex; // 'int' because negative indices are allowed, to index from end Python-style
+    int m_axis;                   // note: axes are 1-based
 };
 
-template class RowSliceNode<float>;
-template class RowSliceNode<double>;
+template class SliceNode<float>;
+template class SliceNode<double>;
 
 // -----------------------------------------------------------------------
 // RowStack (input0, input1, ...)
@@ -356,7 +369,7 @@ public:
     virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
     {
         Base::CopyTo(nodeP, newName, flags);
-        if (flags & CopyNodeFlags::copyNodeChildren)
+        if (flags & CopyNodeFlags::copyNodeInputLinks)
         {
             auto node = dynamic_pointer_cast<RowStackNode<ElemType>>(nodeP);
             node->m_firstIndices = m_firstIndices;
@@ -421,7 +434,7 @@ public:
     virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
     {
         Base::Validate(isFinalValidationPass);
-        InferMBLayoutFromInputsForStandardCase();
+        InferMBLayoutFromInputsForStandardCase(isFinalValidationPass);
 
         // we must fuse all tensor shapes
         // All dimensions but the last must be the same. (In a future version, we should be able to stack along any given dimension.)
@@ -495,7 +508,7 @@ public:
     RowRepeatNode(const ScriptableObjects::IConfigRecordPtr configp)
         : RowRepeatNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"numRepeats"))
     {
-        AttachInputs(configp, this->GetExpectedNumInputs());
+        AttachInputsFromConfig(configp, this->GetExpectedNumInputs());
     }
 
     virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
@@ -528,7 +541,7 @@ public:
     virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
     {
         Base::Validate(isFinalValidationPass);
-        InferMBLayoutFromInputsForStandardCase();
+        InferMBLayoutFromInputsForStandardCase(isFinalValidationPass);
 
         // the trailing dimension gets multiplied
         // TODO: Or should we add an additional dimension?
@@ -935,7 +948,7 @@ public:
         : LegacyReshapeNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"numRows"), ImageDimensions::AsTensorShape(configp->Get(L"imageWidth"), configp->Get(L"imageHeight"), configp->Get(L"imageChannels"), ImageLayoutKind::HWC /*legacy*/))
     {
         // BUGBUG: We should not operate on image layouts here, but on a proper tensor layout.
-        AttachInputs(configp, this->GetExpectedNumInputs());
+        AttachInputsFromConfig(configp, this->GetExpectedNumInputs());
     }
 
     virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
@@ -1186,68 +1199,73 @@ notes on tensor operations
 reshaping
 ---------
 
- - on dimension index 'dim' and 'tensorShape'
- - tensorShape: a vector of dimensions, e.g. 640:480:3:30 could describe a 1-second RGB video of VGA dimensions at 30 fps
- - 'dim' specifies a specific tensor index
-    - dim > 0 is a regular sample index. E.g. for a matrix, dim=1 would be the row dimension, and dim=2 in the above example has dimension 480.
-    - dim < 0 denote time indices (recurrent loops). Rank=-1 is the innermost time index.
-    - dim = 0 denotes the index of the parallel sequence
-       - Since all operations logically operate on a single sequence, i.e. parallel sequences generally cannot be indexed by the user.
-       - Exceptions: training criteria, BatchNormalization, ...WithNegativeSamples (we should not need this)
-    - I don't like that 'dim' refers to the index of the dimension as well as the number of elements in that dimension. Axis (numpy)?
+ - on dimension index 'axis' and 'tensorShape'
+    - 'tensorShape': a vector of dimensions, e.g. 640:480:3:30 could describe a 1-second RGB video of VGA dimensions at 30 fps
+    - 'axis' specifies a specific tensor index
+       - axis > 0 is a regular sample-tensor axis. E.g. for a matrix, axis=1 would be the row dimension, and axis=2 in the above example has dimension 480.
+       - axis < 0 denote time indices (recurrent loops). Rank=-1 is the innermost time index.
+          - some operation may have the same BS surface form but may be implemented differently for axis < 0
+       - axis = 0 denotes the index of the parallel sequence
+          - Since all operations logically operate on a single sequence, i.e. parallel sequences generally cannot be indexed by the user.
+          - Exceptions: training criteria, BatchNormalization, ...WithNegativeSamples (we should not need this)
+       - I don't like that 'axis' refers to the index of the dimension as well as the number of elements in that dimension. Axis (numpy)?
 
- - Reshaping:   --these are all implemented in C++ by LegacyReshapeNode
-    - Reshape(x, tensorShape, beginDim=0, endDim=0)
+ - Reshaping:   --these are all implemented in C++ by ReshapeNode
+    - Reshape(x, tensorShape, beginAxis=0, endAxis=0)
         - just replaces metadata m_sampleLayout
         - one dimension may be specified as 0 and will be inferred
-        - optional beginDim/endDim denote to only replace a sub-range of dims, for implementing ReshapeDimension() and FlattenRank()
-    - ReshapeDimension(x, dim, tensorShape) = Reshape(x, tensorShape, beginDim=dim, endDim=dim+1)
+        - optional beginAxis/endAxis denote to only replace a sub-range of dims, primarly for implementing ReshapeDimension() and FlattenRank()
+    - ReshapeDimension(x, axis, tensorShape) = Reshape(x, tensorShape, beginAxis=axis, endAxis=axis+1)
        - reinterprets one dimension as multiple, where the number of elements remains the same
        - one of the new dimensions may be specified as 0 and will be inferred
-    - FlattenDimensions(x, dim, num) = Reshape(x, 0, beginDim=dim, endDim=dim+1)
-       - replace two or more consecutive dims by a single dim with the same number of elements
-    - SplitDimension(x, dim, N) = ReshapeDimension(x, dim, 0:N)
+    - FlattenDimensions(x, axis, num) = Reshape(x, 0, beginAxis=axis, endAxis=axis+1)
+       - replace two or more consecutive dims by a single axis with the same number of elements
+    - SplitDimension(x, axis, N) = ReshapeDimension(x, axis, 0:N)
        - splits a dimension into a new tensor dimension, injecting them into a new dimension
        - note: to split into multiple outputs (like tf.split()), use a BrainScript loop with Slice().
  - Slicing   --all implemented in C++ by SliceNode
-    - Slice(x, dim, begin, end, stride=1, phase=0)
-       - reduces a dim to index range [begin,end)
+    - Slice(x, axis, beginIndex, endIndex, stride=1, phase=0)
+       - reduces a axis to index range [beginIndex,endIndex)
        - negative bounds specify "from end" (end=0 means end if stride>0, and begin=0 means end if stride<0)
        - also applies to time, e.g.:
-          - pick last frame of a sequence (for s2s): Slice(x, -1, -1, 0)    // first -1 is dim and means the time index
+          - pick last frame of a sequence (for s2s): Slice(x, -1, -1, 0)    // first -1 is axis and means the time index
           - trim first and last 3 frames of a sequence: Slice(x, -1, 3, -3) // 3 means begin at frame 3, -3 means end is 3rd frame from the end
           - this will update MBLayout
+          - but is implemented completely differently using Gather()
        - the optional stride and phase parameters are for implementing downsampling (stride>1) and reversing (begin=-1, stride=-1)
+          - not implemented
        - multiple slice operations can be combined by concatenating the spec vector, e.g. Slice(x, dim1:dim2, begin1:begin2, end1:end2)
+          - not implemented; could be implemented in BS
        - today's RowSlice(begin, num, x) = Slice(x, 1, begin, begin + num)
        - like torch.narrow()
        - can implement TF unpack() and Torch split() as a BrainScript loop with multiple Slice() operations
        - internally implemented by tensor lib opCopy with manipulated m_strides/m_offset
-    - Select(x, dim, index) = FlattenDimensions(Slice(x, dim, index, index+1), index > 1 ? index-1 : index, index > 1 ? index : index+1)
-       - narrow dim to a single index, then drop the dim. Result will have one dim less.
+    - Select(x, axis, index) = FlattenDimensions(Slice(x, axis, index, index+1), index > 1 ? index-1 : index, index > 1 ? index : index+1)
+       - narrow axis to a single index, then drop the axis. Result will have one axis less.
        - like torch.select()
-       - can implement squeezing a dim-1 dim: Select(x, dim:0)
-    - Squeeze(x, dim) = Select(x, dim, 0)
+       - can implement squeezing a axis-1 axis: Select(x, axis:0)
+    - Squeeze(x, axis) = Select(x, axis, 0)
  - Splicing:   --all implemented in C++ by SpliceNode
-    - Splice(inputs, dim)
-       - splice multiple inputs inputs[0]:inputs[1]:... along given dim (=RowStack for vectors)
+    - Splice(inputs, axis)
+       - splice multiple inputs inputs[0]:inputs[1]:... along given axis (=RowStack for vectors)
        - inputs must have identical dimensions except for:
-          - the specified dim
+          - the specified axis
           - broadcasting dimensions (e.g. used to implement Pad())
        - one can splice in time
           - e.g. prepend a vector to a time sequence
           - this will create a new MBLayout
+          - this will be implemented separately on BrainScript level
        - like tf.concat()
-    - Pack(inputs, dim) = ReshapeDimension(Splice(inputs, dim), dim, (0:Length(inputs)) )
-       - like splice but creates inserts new dim of dimension Length(inputs)
+    - Pack(inputs, axis) = ReshapeDimension(Splice(inputs, axis), axis, (0:Length(inputs)) )
+       - like splice but inserts new axis of dimension Length(inputs)
        - inputs must have identical dimensions for all dims (except for broadcasting)
-       - dim can be a time dimension; then a new inner-most time dimension will be inserted
+       - axis can be a time dimension; then a new inner-most time dimension will be inserted
        - like tf.pack()
-    - Pad(x, dim, howManyBefore, howManyAfter, with=0) = Splice(Constant(with, tensorShape=1*(dim-1):howManyBefore),  x,  Constant(with, tensorShape=1*(dim-1):howManyAfter), dim)
+    - Pad(x, axis, howManyBefore, howManyAfter, with=0) = Splice(Constant(with, tensorShape=1*(axis-1):howManyBefore),  x,  Constant(with, tensorShape=1*(axis-1):howManyAfter), axis)
        - inverse of slice, pad with a constant value
        - dimensions specified relative, can pad at start and end
        - in time: pad neighbor frames
-    - Repeat(x, dim, numRepeats) = Splice(x*numRepeats, dim)
+    - Repeat(x, axis, numRepeats) = Splice(x*numRepeats, axis)
        - generalizes CNTK RowRepeat(x, numRepeats) = Repeat(x, 1, numRepeats)
        - to repeat multiple, specify vectors, e.g. Repeat(x, dim1:dim2, numRepeats1:numRepeats2)
        - like tf.tile() and Matlab's repmat()
@@ -1261,23 +1279,24 @@ reshaping
        - like torch.transpose()
     - Transpose (input) = TransposeDimensions (input, 1, 2)
  - Re-indexing:   --implemented by ReindexRankNode and SliceNode
-    - ReindexDimension(x, dim, indexVector)
-       - splice x[..., indexVector[0], ...], x[..., indexVector[1], ...], etc. with indexVector[.] at given dim
+    - ReindexDimension(x, axis, indexVector)
+       - splice x[..., indexVector[0], ...], x[..., indexVector[1], ...], etc. with indexVector[.] at given axis
        - indexVector must be invertible if it is intended to backpropagate through this node
-    - DownsampleDimension(x, dim, n, phase=0) = Slice(x, dim, 0, 0, stride=n)
+    - DownsampleDimension(x, axis, n, phase=0) = Slice(x, axis, 0, 0, stride=n)
        - select every n-th element, starting with index 'phase'
        - time dims allowed. Phase is then a modulus w.r.t. where a sequence is inside the minibatch (may require a ReconcileLayout() before to match layouts)
-       - TODO: use a bool vector for the time dimensions
-    - ReverseDimension(x, dim) = Slice(x, dim, -1, 0, stride=-1)
-       - reverses the direction of a dim
+       - TODO: use a bool vector for the time dimensions --> Gather()
+    - ReverseDimension(x, axis) = Slice(x, axis, -1, 0, stride=-1)
+       - reverses the direction of a axis
        - when applied to time dims, this creates a new layout (which is also flipped)
+       - could be implemented with Gather() as well!
 
  - misc.:
-    - note: much would look more natural if we had OO syntax, e.g. x.Slice(dim, begin, end).FlattenDimensions(...)
+    - note: much would look more natural if we had OO syntax, e.g. x.Slice(axis, begin, end).FlattenDimensions(...)
       Could be done by exposing all methods on ComputationNode... not currently feasible with BrainScript, but e.g. with Python bindings
-    - torch.unfold (dim, size, step)
+    - torch.unfold (axis, size, step)
        - create a convolution matrix (stride magic)
-    - CyclicallyPermuteRank(x, dim, step)
+    - CyclicallyPermuteRank(x, axis, step)
        - rotates indices
        - also applies to time dimensions
     - duplicate elements
@@ -1287,7 +1306,7 @@ reshaping
        - 'gather': reindexing
        - 'dynamic_partition', 'dynamic_stitch'
     - Torch:
-       - expand (dim, range): broadcasts dimension 'dim' as a new dimension with 'range'. Not needed I think.
+       - expand (axis, range): broadcasts dimension 'axis' as a new dimension with 'range'. Not needed I think.
        - repeatTensor: like tile but with weird reshaping
        - squeeze: removes all singleton dimensions, or a specific one. We can remove a specific one with Select().
     - TODO:
@@ -1299,10 +1318,13 @@ reductions
 
  - ReduceSum
     - sum over all elements of a dimension, or over time
+    - we already got: SumColumnElements
  - ReduceMax
     - max
+    - can use MaxPooling?
  - ReduceMean
     - av
+    - can use AvPooling?
  - ArgMax, ArgMin
     - we already have that somewhere, for evaluation
  - All, Any
@@ -1365,4 +1387,5 @@ other
  - can we interleave variable-length ones? Concat into a single dimensions, using strides?
 
  */
-} } }
+
+}}}

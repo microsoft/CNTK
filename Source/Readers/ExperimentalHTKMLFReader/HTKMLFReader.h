@@ -32,8 +32,18 @@ public:
     Minibatch ReadMinibatch() override;
 
 private:
+    enum class PackingMode
+    {
+        sample,
+        sequence,
+        truncated
+    };
+
     // All streams this reader provides.
     std::vector<StreamDescriptionPtr> m_streams;
+
+    // TODO: Should be moved outside of the reader.
+    PackingMode m_packingMode;
 
     // Packer.
     PackerPtr m_packer;
@@ -47,8 +57,11 @@ private:
     // TODO: Randomizer won't implement transformer interface in the near future.
     TransformerPtr m_randomizer;
 
-    // Indicates whether the reader operates in frame mode.
-    bool m_frameMode;
+    // Truncation length for BPTT mode.
+    size_t m_truncationLength;
+
+    // Parallel sequences, used for legacy configs.
+    intargvector m_numParallelSequencesForAllEpochs;
 };
 
 }}}

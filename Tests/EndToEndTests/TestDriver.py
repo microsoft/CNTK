@@ -16,7 +16,7 @@
 # Each test directory has a following components:
 #    - testcases.yml - main test configuration file, which defines all test cases
 #    - run-test - (run-test) script
-#    - baseline*.txt - baseline files whith a captured expected output of run-test script
+#    - baseline*.txt - baseline files with a captured expected output of run-test script
 #
 # ----- testcases.yml format -------
 # dataDir: <path> #<relative-path-to the data directory
@@ -41,10 +41,10 @@
 #
 # ----- pattern language --------
 # Multiple patterns of the same testcase are matching a *single* line of text
-# Pattern is essentiually a substring which has to be found in a line
+# Pattern is essentially a substring which has to be found in a line
 # if pattern starts with ^ then matching is constrained to look only at the beginning of the line
 #
-# pattern can have one or multiple placelohders wrapped with double-curly braces:  {{...}}
+# pattern can have one or multiple placeholders wrapped with double-curly braces:  {{...}}
 # this placeholders can match any text conforming to the type constraint. Available placeholders
 #  {{integer}} - matches any (positive or negative integer) value
 #  {{float}} - matches any float value
@@ -67,9 +67,9 @@
 #        where <flavor> = { debug | release }
 #              <device> = { cpu | gpu }
 #
-# Baseline files are optional. They only evaluate if test defines one or more pattern-drivern test cases.
+# Baseline files are optional. They only evaluate if test defines one or more pattern-driven test cases.
 # If no test cases are defined, then TestDriver uses exit code of the run-test script as the only criteria
-# of successful copmpletion of the test.
+# of successful completion of the test.
 
 # ----- Tagging system ------
 # Unit tests can be optionally tagged with 1 or many tags
@@ -82,7 +82,7 @@
 # Baseline verification:
 #   For each testcase 
 #     - filter all lines which matches
-#       - if no lines found then abord with an error - since either baseline and/or pattern are invalid
+#       - if no lines found then abort with an error - since either baseline and/or pattern are invalid
 # Running test:
 #    Run test script (run-test) and capture output:
 #
@@ -92,7 +92,7 @@
 #      - compare filtered lines one by one, ensuring that substrings defined by patterns are matching
 #
 # In practice, TestDriver performs 1 pass through the output of run-test performing a real-time 
-# matching against all test-cases/pattern simulteneously
+# matching against all test-cases/pattern simultaneously
 #
 
 import sys, os, argparse, traceback, yaml, subprocess, random, re, time, stat
@@ -178,7 +178,7 @@ class Test:
         testDir = dirName
         testName = os.path.basename(dirName)
         suiteDir = os.path.dirname(dirName)
-        # sute name will be derived from the path components
+        # suite name will be derived from the path components
         suiteName = os.path.relpath(suiteDir, thisDir).replace('\\', '/')
         try:
           test = Test(suiteName,  testName, dirName + "/testcases.yml")
@@ -218,7 +218,7 @@ class Test:
 
     # Before running the test, pre-creating TestCaseRunResult object for each test case
     # and compute filtered lines from baseline file.
-    # Note: some test cases might fail at this time if baseline and/or patterns are inconsistant
+    # Note: some test cases might fail at this time if baseline and/or patterns are inconsistent
       if not args.update_baseline:
         for testCase in self.testCases:
           testCaseRunResult = testCase.processBaseline(baseline)
@@ -315,7 +315,7 @@ class Test:
 
     if len(self.testCases)>0 and args.update_baseline and result.succeeded:
       # When running in --update-baseline mode 
-      # verifying that new output is succesfully matching every pattern in the testcases.yml
+      # verifying that new output is successfully matching every pattern in the testcases.yml
       # If this is not the case then baseline update will be rejected
       for testCase in self.testCases:
         testCaseRunResult = testCase.processBaseline(allLines)
@@ -351,7 +351,7 @@ class Test:
     return None
 
   # Checks whether the test matches the specified tag,
-  # returns matched tag name on succes, or None if there is no match(boolean, string) tuple
+  # returns matched tag name on success, or None if there is no match(boolean, string) tuple
   def matchesTag(self, tag, flavor, device, os, build_sku):
     tagL = tag.lower() # normalizing the tag for comparison
     # enumerating all the tags
@@ -400,7 +400,7 @@ class TestCase:
   def processLine(self, line, result, verbose):
     if all([p.match(line) for p in self.patterns]):
       if len(result.expectedLines) > 0:
-        # we have mathed line in the output and at leat one remaining unmatched in a baseline
+        # we have matched line in the output and at least one remaining unmatched in a baseline
         expected = result.expectedLines[0]
         # running comparison logic for each pattern
         failedPatterns = []
@@ -424,7 +424,7 @@ class TestCase:
             if verbose:
               print (msg)
             result.diagnostics+=msg+"\n"
-        # removing this line, since we already matched it (whether succesfully or not - doesn't matter)
+        # removing this line, since we already matched it (whether successfully or not - doesn't matter)
         del result.expectedLines[0]
       else:
         # we have matched line in the output - but don't have any remaining unmatched in a baseline
@@ -461,7 +461,7 @@ class TestPattern:
     # After parsing this will be a list of tuples (dataType, tolerance) for each {{...}} section from left to right
     self.groupInfo = []
 
-    # Transforming our pattern into a sigle regular expression
+    # Transforming our pattern into a single regular expression
     # processing {{...}} fragments and escaping all regex special characters
     self.regexText = prefix + re.sub(r"(\{\{[^}]+\}\}|[\[\]\.\*\+\{\}\(\)\$\^\\\|\?])", self.patternParse, patternText)
     # Compiling it to perform a check (fail-fast) and for faster matching later
@@ -472,7 +472,7 @@ class TestPattern:
   def patternParse(self, match):
     fragment = match.group(1)
     if len(fragment) == 1:
-      # this is a spexcial character of regex
+      # this is a special character of regex
       return "\\" + fragment;
     else:
       # parsing {{...}} expressions
@@ -487,11 +487,11 @@ class TestPattern:
         tolerance = 0.0
       # saving information about data type and tolerance
       self.groupInfo.append((dataType, tolerance))
-      # converting this to regex which mathes specific type
+      # converting this to regex which matches specific type
       # All {{...}} sections are converted to regex groups named as G0, G1, G2...
       return "(?P<G{0}>{1})".format(len(self.groupInfo)-1, TestPattern.typeTable[dataType])
  
-  # Checks wether given line matches this pattern
+  # Checks whether given line matches this pattern
   # returns True or False
   def match(self, line):
     if type(line) == bytes:
@@ -639,12 +639,12 @@ def runCommand(args):
               if (args.verbose):
                 six.print_(" [OK] " + testCaseRunResult.testCaseName)
             else:
-              # 'FAILED' + detailed diagnostics with proper indendtation
+              # 'FAILED' + detailed diagnostics with proper indentation
               six.print_(" [FAILED] " + testCaseRunResult.testCaseName)
               if testCaseRunResult.diagnostics:
                 for line in testCaseRunResult.diagnostics.split('\n'):
                   six.print_("    " + line);
-              # In non-verbose mode log wasn't piped to the stdout, showing log file path for conveniencce
+              # In non-verbose mode log wasn't piped to the stdout, showing log file path for convenience
                
           if not result.succeeded and not args.verbose and result.logFile:
             six.print_("  See log file for details: " + result.logFile)
@@ -668,7 +668,7 @@ runSubparser.add_argument("test", nargs="*",
 defaultBuildSKU = "gpu"
 
 runSubparser.add_argument("-b", "--build-location", help="location of the CNTK build to run")
-runSubparser.add_argument("-t", "--tag", help="runs tests which match the spacified tag")
+runSubparser.add_argument("-t", "--tag", help="runs tests which match the specified tag")
 runSubparser.add_argument("-d", "--device", help="cpu|gpu - run on a specified device")
 runSubparser.add_argument("-f", "--flavor", help="release|debug - run only a specified flavor")
 runSubparser.add_argument("-s", "--build-sku", default=defaultBuildSKU, help="cpu|gpu|1bitsgd - run tests only for a specified build SKU")
@@ -682,7 +682,7 @@ runSubparser.add_argument("-n", "--dry-run", action='store_true', help="do not r
 runSubparser.set_defaults(func=runCommand)
 
 listSubparser = subparsers.add_parser("list", help="list available tests")
-listSubparser.add_argument("-t", "--tag", help="limits a resulting list to tests matching the spacified tag")
+listSubparser.add_argument("-t", "--tag", help="limits a resulting list to tests matching the specified tag")
 listSubparser.add_argument("-d", "--device", help="cpu|gpu - tests for a specified device")
 listSubparser.add_argument("-f", "--flavor", help="release|debug - tests for specified flavor")
 listSubparser.add_argument("-s", "--build-sku", default=defaultBuildSKU, help="cpu|gpu|1bitsgd - list tests only for a specified build SKU")

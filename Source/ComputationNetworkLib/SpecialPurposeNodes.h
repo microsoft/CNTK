@@ -19,6 +19,48 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
 // This header collects special-purpose nodes.
 
+// -----------------------------------------------------------------------
+// TraceNode (input, say='', enabled=true, gradient=false, showFrequency=10, showFirst=10, format=[]) -- trace a node's value
+// Traces a node's value using WriteMinibatchWithFormatting().
+// -----------------------------------------------------------------------
+
+template <class ElemType>
+class TraceNode : public ComputationNode<ElemType>, public NumInputs<1>
+{
+    typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+    static const std::wstring TypeName() { return L"Trace"; }
+
+public:
+    TraceNode(DEVICEID_TYPE deviceId, const wstring& name)
+        : Base(deviceId, name)
+    {
+    }
+
+    TraceNode(const ScriptableObjects::IConfigRecordPtr configp);
+    virtual void Save(File& fstream) const override;
+    virtual void Load(File& fstream, size_t modelVersion) override;
+    virtual void /*IComputationNode::*/ BeginForwardProp() override;
+    virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override;
+    virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override;
+    virtual void /*ComputationNode::*/ Validate(bool isFinalValidationPass) override;
+
+    virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }
+    virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override { return false; }
+
+private:
+    // configuration
+    std::wstring m_message;
+    size_t m_logFrequency = 0; // Note: This can be changed in the debugger on the fly.
+    size_t m_logFirst = 0;
+    bool m_logGradientToo = false;
+    WriteFormattingOptions m_formattingOptions;
+    size_t m_onlyUpToRow = SIZE_MAX;
+    size_t m_onlyUpToT = SIZE_MAX;
+    // cached stuff (not persisted)
+    size_t m_numMBsRun = 0;
+    std::vector<std::string> m_labelMapping;
+};
+
 #ifdef COMING_SOON
 
 // -----------------------------------------------------------------------
@@ -34,12 +76,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 template <class ElemType>
 class GMMLogLikelihoodNode : public ComputationNode<ElemType>, public NumInputs<4>
 {
-    typedef ComputationNode<ElemType> Base;
-    UsingComputationNodeMembersBoilerplate;
-    static const std::wstring TypeName()
-    {
-        return L"GMMLogLikelihood";
-    }
+    typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+    static const std::wstring TypeName() { return L"GMMLogLikelihood"; }
 
 public:
     DeclareConstructorFromConfigWithNumInputs(GMMLogLikelihoodNode);
@@ -315,7 +353,7 @@ public:
     virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
     {
         Base::Validate(isFinalValidationPass);
-        InferMBLayoutFromInputsForStandardCase();
+        InferMBLayoutFromInputsForStandardCase(isFinalValidationPass);
 
         size_t rows[4];
         for (int i = 0; i < 4; i++)
@@ -634,21 +672,20 @@ protected:
 template class SequenceWithSoftmaxNode<float>;
 template class SequenceWithSoftmaxNode<double>;
 
-
 // -----------------------------------------------------------------------
-/// DummyCriterionNode (objectives, derivatives, prediction)
-// -----------------------------------------------------------------------
-
-// This training criterion node needs derivatives and objectives to be
-// computed out of the node. Derivatives and objectives will be fed to the
-// node as input features. It has 3 inputs:
-// 1. feature node that feeds objectives
-// 2. feature node that feeds derivatives
-// 3. neural network output
+// DummyCriterionNode (objectiveValues, userSuppliedGradient, prediction)
+// TODO: Rename to CustomCriterionNode?
 //
-// This node is useful in sequence training for speech recognition, so that
-// we can separate lattice computation (which may rely other softwares, such
-// as Kaldi) with the neural network training.
+// Apply user-supplied gradient, computed as Forward(), as the gradient into 'prediction'.
+//
+// predictionsGradient += userSuppliedGradient * scalarGradientFromTop
+//
+// This training criterion node allows to compute objectives and gradient
+// with custom CNTK expressions (as Forward() computations). It has 3 inputs:
+// 1. custom objective values to be summed up and passed up
+// 2. custom gradient values to be passed down as the gradient into 'prediction'
+// 3. prediction: the node to pass the custom gradient into
+// -----------------------------------------------------------------------
 
 template <class ElemType>
 class DummyCriterionNode : public ComputationNodeNonLooping /*ComputationNode*/<ElemType>, public NumInputs<3>
@@ -671,13 +708,14 @@ public:
     {
         FrameRange fr(Input(0)->GetMBLayout());
         if (inputIndex == 0)
-            LogicError("DummyCriterionNode: derivatives with respect to objective features are not necessary, not implemented yet.\n");
+            LogicError("DummyCriterionNode: Gradients with respect to objective features are not necessary, not implemented.\n");
         else if (inputIndex == 1)
-            LogicError("DummyCriterionNode: derivatives with respect to derivative features are not necessary, not implemented yet.\n");
+            LogicError("DummyCriterionNode: Gradients with respect to derivative features are not necessary, not implemented.\n");
         else if (inputIndex == 2)
         {
+            // predictionsGradient += userSuppliedGradient * scalarGradientFromTop
             auto gradient = Input(2)->GradientFor(fr);
-            Matrix<ElemType>::Multiply1x1AndWeightedAdd(+1.0f, Gradient() /*1x1*/, Input(1)->ValueFor(fr), 1.0f, gradient);
+            Matrix<ElemType>::Multiply1x1AndWeightedAdd(+1.0f, /*gradient from top:*/Gradient() /*1x1*/, /*user-supplied gradient:*/Input(1)->ValueFor(fr), 1.0f, /*add to:*/gradient);
         }
     }
 
