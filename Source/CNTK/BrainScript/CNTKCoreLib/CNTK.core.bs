@@ -406,6 +406,20 @@ RNNs =
         enableSelfStabilization1 = enableSelfStabilization // TODO: BS syntax needs to allow to say ^.enableSelfStabilization
         lstmState = LSTMP (inputDim, outputDim, cellDim, x, prevState, enableSelfStabilization=enableSelfStabilization1)
     ].lstmState.h // that's the value we return
+
+    # this implements a recurrent (stateful) LSTM with projection and self-stabilization
+    RecurrentLSTMPWithDefault (inputDim, outputDim, cellDim, x, defaultValue=Constants.Zero, enableSelfStabilization=false) =
+    [
+        v = defaultValue // TODO: ^ syntax
+        prevState =
+        [
+            #h = Loop.PreviousOrDefault (defaultValue=v, lstmState.h)             // hidden state(t-1)
+            h = Loop.Previous (lstmState.h) + v             // hidden state(t-1)
+            c = Loop.Previous (lstmState.c)             // cell(t-1)
+        ]
+        enableSelfStabilization1 = enableSelfStabilization // TODO: BS syntax needs to allow to say ^.enableSelfStabilization
+        lstmState = LSTMP (inputDim, outputDim, cellDim, x, prevState, enableSelfStabilization=enableSelfStabilization1)
+    ].lstmState.h // that's the value we return
 ]
 
 ##############################################################################

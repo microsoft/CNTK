@@ -50,11 +50,12 @@ public:
 
     ComputationNetwork() :
         m_randomSeedOffset(0),
-          m_isCompiled(false),
-          m_areMatricesAllocated(false),
+        m_isCompiled(false),
+        m_areMatricesAllocated(false),
         m_pMBLayoutOfNetwork(make_shared<MBLayout>()),
         m_environment(make_shared<ComputationEnvironment>())
     {
+        m_pMBLayoutOfNetwork->SetAxisName(L"T");
     }
     ComputationNetwork(DEVICEID_TYPE deviceId)
         : ComputationNetwork()

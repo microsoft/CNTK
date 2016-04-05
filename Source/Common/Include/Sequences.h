@@ -140,6 +140,8 @@ struct MBLayout
 
         m_columnsValidityMask.SetValue(other->m_columnsValidityMask);
         m_writable = other->m_writable;
+
+        m_axisName = other->m_axisName;
     }
 
     // Destructive copy that steals ownership if the content, like std::move()
@@ -163,6 +165,8 @@ struct MBLayout
 
         m_columnsValidityMask = std::move(other->m_columnsValidityMask);
         m_writable = other->m_writable;
+
+        m_axisName = std::move(other->m_axisName);
     }
 
     MBLayout(const MBLayout&) = delete;
@@ -248,13 +252,20 @@ public:
     // accessors
     // -------------------------------------------------------------------
 
-    size_t GetNumTimeSteps() const
+    size_t GetNumTimeSteps() const { return m_numTimeSteps; }
+    size_t GetNumParallelSequences() const { return m_numParallelSequences; }
+
+    // axis names are for now only a debugging aid
+    // In the future, there will be a mechanism to denote that axes are meant to be the same.
+    const wchar_t* GetAxisName() const { return m_axisName.c_str(); }
+    void SetAxisName(const std::wstring& name) { m_axisName = name; }
+    void SetUniqueAxisName(std::wstring name) // helper for constructing
     {
-        return m_numTimeSteps;
-    }
-    size_t GetNumParallelSequences() const
-    {
-        return m_numParallelSequences;
+        static std::map<std::wstring, size_t> nameIndices;
+        size_t index = nameIndices[name]++;
+        if (index > 0)
+            name += msra::strfun::wstrprintf(L"%d", (int)index);
+        SetAxisName(name);
     }
 
     // how many columns the underlying MB matrix has
@@ -543,6 +554,10 @@ private:
     // When it's value is false, no set operations are allowed on the MBLayout.
     // Meant to guard in lazy creation of m_columnsValidityMask.
     mutable bool m_writable;
+
+    // the axis
+    // For now only a string meant for debugging.
+    std::wstring m_axisName;
 
 public:
 
