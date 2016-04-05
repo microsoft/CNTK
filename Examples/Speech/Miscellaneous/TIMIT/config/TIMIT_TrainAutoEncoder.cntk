@@ -1,4 +1,3 @@
-stderr=$ExpDir$\TrainAutoEncoder\log\log
 command=TIMIT_TrainAutoEncoder
 
 precision=float

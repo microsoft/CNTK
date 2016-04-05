@@ -1,4 +1,3 @@
-stderr=$ExpDir$\TrainMultiInput\log\log
 command=TIMIT_TrainMultiInput
 
 precision=float

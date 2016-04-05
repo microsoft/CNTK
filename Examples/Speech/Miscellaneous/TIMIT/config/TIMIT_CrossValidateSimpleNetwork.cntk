@@ -1,4 +1,3 @@
-stderr=$ExpDir$\CrossValidateSimpleNetwork\log\log
 command=TIMIT_CVSimple
 
 precision=float

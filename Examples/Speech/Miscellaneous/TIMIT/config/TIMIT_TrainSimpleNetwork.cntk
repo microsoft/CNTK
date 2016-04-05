@@ -1,4 +1,3 @@
-stderr=$ExpDir$\TrainSimpleNetwork\log\log
 command=TIMIT_TrainSimple
 
 precision=float
@@ -45,7 +44,6 @@ TIMIT_TrainSimple=[
       # reader to use
       readerType=HTKMLFReader
 
-#     readMethod=blockRandomize
       readMethod=rollingWindow
 
       miniBatchMode=Partial

@@ -1,4 +1,3 @@
-stderr=$ExpDir$\TrainAdaptLR\log\log
 command=TIMIT_TrainAdaptLR
 
 precision=float

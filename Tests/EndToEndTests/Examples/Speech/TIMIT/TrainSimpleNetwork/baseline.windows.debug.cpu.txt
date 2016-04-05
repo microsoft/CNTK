@@ -1,0 +1,375 @@
+=== Running /cygdrive/c/repo/cntk_github6/CNTK/x64/debug/cntk.exe configFile=C:\repo\cntk_github6\CNTK\Examples\Speech\Miscellaneous\TIMIT\config/TIMIT_TrainSimpleNetwork.cntk currentDirectory=D:\TestPreparation\Speech\ASR RunDir=F:\cygwin64\tmp\cntk-test-20160405140042.694392\Examples\Speech\TIMIT_TrainSimpleNetwork@debug_cpu DataDir=D:\TestPreparation\Speech\ASR ConfigDir=C:\repo\cntk_github6\CNTK\Examples\Speech\Miscellaneous\TIMIT\config OutputDir=F:\cygwin64\tmp\cntk-test-20160405140042.694392\Examples\Speech\TIMIT_TrainSimpleNetwork@debug_cpu DeviceId=-1 timestamping=true LibDir=C:\repo\cntk_github6\CNTK\Examples\Speech\Miscellaneous\TIMIT\config/../lib ScpDir=D:\TestPreparation\Speech\ASR MlfDir=D:\TestPreparation\Speech\ASR NdlDir=C:\repo\cntk_github6\CNTK\Examples\Speech\Miscellaneous\TIMIT\config MelDir=C:\repo\cntk_github6\CNTK\Examples\Speech\Miscellaneous\TIMIT\config ExpDir=F:\cygwin64\tmp\cntk-test-20160405140042.694392\Examples\Speech\TIMIT_TrainSimpleNetwork@debug_cpu/exp DeviceNumber=-1 TIMIT_TrainSimple=[SGD=[maxEpochs=2]] TIMIT_TrainSimple=[SGD=[epochSize=20000]]
+-------------------------------------------------------------------
+Build info: 
+
+		Built time: Apr  5 2016 13:51:17
+		Last modified date: Tue Apr  5 09:21:26 2016
+		Build type: Debug
+		Build target: GPU
+		With 1bit-SGD: yes
+		CUDA_PATH: C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v7.0
+		CUB_PATH: c:\Tools\cub-1.4.1\
+		CUDNN_PATH: c:\Tools\cudnn-4.0\cuda
+		Build Branch: eldak/addingTimitExamplesToTests
+		Build SHA1: a6bc80f88d60b3f01a0b7fe6b8c2e251060db958 (modified)
+		Built by eldak on ELDAK-0
+		Build Path: c:\repo\cntk_github6\CNTK\Source\CNTK\
+-------------------------------------------------------------------
+Changed current directory to D:\TestPreparation\Speech\ASR
+04/05/2016 13:00:42: -------------------------------------------------------------------
+04/05/2016 13:00:42: Build info: 
+
+04/05/2016 13:00:42: 		Built time: Apr  5 2016 13:51:17
+04/05/2016 13:00:42: 		Last modified date: Tue Apr  5 09:21:26 2016
+04/05/2016 13:00:42: 		Build type: Debug
+04/05/2016 13:00:42: 		Build target: GPU
+04/05/2016 13:00:42: 		With 1bit-SGD: yes
+04/05/2016 13:00:42: 		CUDA_PATH: C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v7.0
+04/05/2016 13:00:42: 		CUB_PATH: c:\Tools\cub-1.4.1\
+04/05/2016 13:00:42: 		CUDNN_PATH: c:\Tools\cudnn-4.0\cuda
+04/05/2016 13:00:42: 		Build Branch: eldak/addingTimitExamplesToTests
+04/05/2016 13:00:42: 		Build SHA1: a6bc80f88d60b3f01a0b7fe6b8c2e251060db958 (modified)
+04/05/2016 13:00:42: 		Built by eldak on ELDAK-0
+04/05/2016 13:00:42: 		Build Path: c:\repo\cntk_github6\CNTK\Source\CNTK\
+04/05/2016 13:00:42: -------------------------------------------------------------------
+
+04/05/2016 13:00:42: Running on ELDAK-0 at 2016/04/05 13:00:42
+04/05/2016 13:00:42: Command line: 
+C:\repo\cntk_github6\CNTK\x64\debug\cntk.exe  configFile=C:\repo\cntk_github6\CNTK\Examples\Speech\Miscellaneous\TIMIT\config/TIMIT_TrainSimpleNetwork.cntk  currentDirectory=D:\TestPreparation\Speech\ASR  RunDir=F:\cygwin64\tmp\cntk-test-20160405140042.694392\Examples\Speech\TIMIT_TrainSimpleNetwork@debug_cpu  DataDir=D:\TestPreparation\Speech\ASR  ConfigDir=C:\repo\cntk_github6\CNTK\Examples\Speech\Miscellaneous\TIMIT\config  OutputDir=F:\cygwin64\tmp\cntk-test-20160405140042.694392\Examples\Speech\TIMIT_TrainSimpleNetwork@debug_cpu  DeviceId=-1  timestamping=true  LibDir=C:\repo\cntk_github6\CNTK\Examples\Speech\Miscellaneous\TIMIT\config/../lib  ScpDir=D:\TestPreparation\Speech\ASR  MlfDir=D:\TestPreparation\Speech\ASR  NdlDir=C:\repo\cntk_github6\CNTK\Examples\Speech\Miscellaneous\TIMIT\config  MelDir=C:\repo\cntk_github6\CNTK\Examples\Speech\Miscellaneous\TIMIT\config  ExpDir=F:\cygwin64\tmp\cntk-test-20160405140042.694392\Examples\Speech\TIMIT_TrainSimpleNetwork@debug_cpu/exp  DeviceNumber=-1  TIMIT_TrainSimple=[SGD=[maxEpochs=2]]  TIMIT_TrainSimple=[SGD=[epochSize=20000]]
+
+
+
+04/05/2016 13:00:42: >>>>>>>>>>>>>>>>>>>> RAW CONFIG (VARIABLES NOT RESOLVED) >>>>>>>>>>>>>>>>>>>>
+04/05/2016 13:00:42: command=TIMIT_TrainSimple
+precision=float
+TIMIT_TrainSimple=[
+    action=train
+    modelPath=$ExpDir$\TrainSimpleNetwork\model\cntkSpeech.dnn
+    deviceId=$DeviceNumber$
+    traceLevel=1
+    SimpleNetworkBuilder=[
+        layerSizes=792:512*3:183
+        trainingCriterion=CrossEntropyWithSoftmax
+        evalCriterion=ErrorPrediction
+        layerTypes=Sigmoid
+        initValueScale=1.0
+        applyMeanVarNorm=true
+        uniformInit=true
+        needPrior=true
+    ]
+    SGD=[
+        epochSize=0 
+        minibatchSize=256:1024
+        learningRatesPerMB=0.8:3.2*14:0.08
+        momentumPerMB=0.9
+        dropoutRate=0.0
+        maxEpochs=25
+    ]
+    reader=[
+      readerType=HTKMLFReader
+      readMethod=rollingWindow
+      miniBatchMode=Partial
+      randomize=Auto
+      verbosity=1   
+      features=[
+	  dim=792
+	  scpFile=$ScpDir$\TIMIT.train.scp.fbank.fullpath
+      ]
+      labels=[
+	mlfFile=$MlfDir$\TIMIT.train.align_cistate.mlf.cntk
+        labelDim=183
+	labelMappingFile=$MlfDir$\TIMIT.statelist
+      ]
+    ]
+]
+currentDirectory=D:\TestPreparation\Speech\ASR
+RunDir=F:\cygwin64\tmp\cntk-test-20160405140042.694392\Examples\Speech\TIMIT_TrainSimpleNetwork@debug_cpu
+DataDir=D:\TestPreparation\Speech\ASR
+ConfigDir=C:\repo\cntk_github6\CNTK\Examples\Speech\Miscellaneous\TIMIT\config
+OutputDir=F:\cygwin64\tmp\cntk-test-20160405140042.694392\Examples\Speech\TIMIT_TrainSimpleNetwork@debug_cpu
+DeviceId=-1
+timestamping=true
+LibDir=C:\repo\cntk_github6\CNTK\Examples\Speech\Miscellaneous\TIMIT\config/../lib
+ScpDir=D:\TestPreparation\Speech\ASR
+MlfDir=D:\TestPreparation\Speech\ASR
+NdlDir=C:\repo\cntk_github6\CNTK\Examples\Speech\Miscellaneous\TIMIT\config
+MelDir=C:\repo\cntk_github6\CNTK\Examples\Speech\Miscellaneous\TIMIT\config
+ExpDir=F:\cygwin64\tmp\cntk-test-20160405140042.694392\Examples\Speech\TIMIT_TrainSimpleNetwork@debug_cpu/exp
+DeviceNumber=-1
+TIMIT_TrainSimple=[SGD=[maxEpochs=2]]
+TIMIT_TrainSimple=[SGD=[epochSize=20000]]
+
+04/05/2016 13:00:42: <<<<<<<<<<<<<<<<<<<< RAW CONFIG (VARIABLES NOT RESOLVED)  <<<<<<<<<<<<<<<<<<<<
+
+04/05/2016 13:00:42: >>>>>>>>>>>>>>>>>>>> RAW CONFIG WITH ALL VARIABLES RESOLVED >>>>>>>>>>>>>>>>>>>>
+04/05/2016 13:00:42: command=TIMIT_TrainSimple
+precision=float
+TIMIT_TrainSimple=[
+    action=train
+    modelPath=F:\cygwin64\tmp\cntk-test-20160405140042.694392\Examples\Speech\TIMIT_TrainSimpleNetwork@debug_cpu/exp\TrainSimpleNetwork\model\cntkSpeech.dnn
+    deviceId=-1
+    traceLevel=1
+    SimpleNetworkBuilder=[
+        layerSizes=792:512*3:183
+        trainingCriterion=CrossEntropyWithSoftmax
+        evalCriterion=ErrorPrediction
+        layerTypes=Sigmoid
+        initValueScale=1.0
+        applyMeanVarNorm=true
+        uniformInit=true
+        needPrior=true
+    ]
+    SGD=[
+        epochSize=0 
+        minibatchSize=256:1024
+        learningRatesPerMB=0.8:3.2*14:0.08
+        momentumPerMB=0.9
+        dropoutRate=0.0
+        maxEpochs=25
+    ]
+    reader=[
+      readerType=HTKMLFReader
+      readMethod=rollingWindow
+      miniBatchMode=Partial
+      randomize=Auto
+      verbosity=1   
+      features=[
+	  dim=792
+	  scpFile=D:\TestPreparation\Speech\ASR\TIMIT.train.scp.fbank.fullpath
+      ]
+      labels=[
+	mlfFile=D:\TestPreparation\Speech\ASR\TIMIT.train.align_cistate.mlf.cntk
+        labelDim=183
+	labelMappingFile=D:\TestPreparation\Speech\ASR\TIMIT.statelist
+      ]
+    ]
+]
+currentDirectory=D:\TestPreparation\Speech\ASR
+RunDir=F:\cygwin64\tmp\cntk-test-20160405140042.694392\Examples\Speech\TIMIT_TrainSimpleNetwork@debug_cpu
+DataDir=D:\TestPreparation\Speech\ASR
+ConfigDir=C:\repo\cntk_github6\CNTK\Examples\Speech\Miscellaneous\TIMIT\config
+OutputDir=F:\cygwin64\tmp\cntk-test-20160405140042.694392\Examples\Speech\TIMIT_TrainSimpleNetwork@debug_cpu
+DeviceId=-1
+timestamping=true
+LibDir=C:\repo\cntk_github6\CNTK\Examples\Speech\Miscellaneous\TIMIT\config/../lib
+ScpDir=D:\TestPreparation\Speech\ASR
+MlfDir=D:\TestPreparation\Speech\ASR
+NdlDir=C:\repo\cntk_github6\CNTK\Examples\Speech\Miscellaneous\TIMIT\config
+MelDir=C:\repo\cntk_github6\CNTK\Examples\Speech\Miscellaneous\TIMIT\config
+ExpDir=F:\cygwin64\tmp\cntk-test-20160405140042.694392\Examples\Speech\TIMIT_TrainSimpleNetwork@debug_cpu/exp
+DeviceNumber=-1
+TIMIT_TrainSimple=[SGD=[maxEpochs=2]]
+TIMIT_TrainSimple=[SGD=[epochSize=20000]]
+
+04/05/2016 13:00:42: <<<<<<<<<<<<<<<<<<<< RAW CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<
+
+04/05/2016 13:00:42: >>>>>>>>>>>>>>>>>>>> PROCESSED CONFIG WITH ALL VARIABLES RESOLVED >>>>>>>>>>>>>>>>>>>>
+configparameters: TIMIT_TrainSimpleNetwork.cntk:command=TIMIT_TrainSimple
+configparameters: TIMIT_TrainSimpleNetwork.cntk:ConfigDir=C:\repo\cntk_github6\CNTK\Examples\Speech\Miscellaneous\TIMIT\config
+configparameters: TIMIT_TrainSimpleNetwork.cntk:currentDirectory=D:\TestPreparation\Speech\ASR
+configparameters: TIMIT_TrainSimpleNetwork.cntk:DataDir=D:\TestPreparation\Speech\ASR
+configparameters: TIMIT_TrainSimpleNetwork.cntk:DeviceId=-1
+configparameters: TIMIT_TrainSimpleNetwork.cntk:DeviceNumber=-1
+configparameters: TIMIT_TrainSimpleNetwork.cntk:ExpDir=F:\cygwin64\tmp\cntk-test-20160405140042.694392\Examples\Speech\TIMIT_TrainSimpleNetwork@debug_cpu/exp
+configparameters: TIMIT_TrainSimpleNetwork.cntk:LibDir=C:\repo\cntk_github6\CNTK\Examples\Speech\Miscellaneous\TIMIT\config/../lib
+configparameters: TIMIT_TrainSimpleNetwork.cntk:MelDir=C:\repo\cntk_github6\CNTK\Examples\Speech\Miscellaneous\TIMIT\config
+configparameters: TIMIT_TrainSimpleNetwork.cntk:MlfDir=D:\TestPreparation\Speech\ASR
+configparameters: TIMIT_TrainSimpleNetwork.cntk:NdlDir=C:\repo\cntk_github6\CNTK\Examples\Speech\Miscellaneous\TIMIT\config
+configparameters: TIMIT_TrainSimpleNetwork.cntk:OutputDir=F:\cygwin64\tmp\cntk-test-20160405140042.694392\Examples\Speech\TIMIT_TrainSimpleNetwork@debug_cpu
+configparameters: TIMIT_TrainSimpleNetwork.cntk:precision=float
+configparameters: TIMIT_TrainSimpleNetwork.cntk:RunDir=F:\cygwin64\tmp\cntk-test-20160405140042.694392\Examples\Speech\TIMIT_TrainSimpleNetwork@debug_cpu
+configparameters: TIMIT_TrainSimpleNetwork.cntk:ScpDir=D:\TestPreparation\Speech\ASR
+configparameters: TIMIT_TrainSimpleNetwork.cntk:timestamping=true
+configparameters: TIMIT_TrainSimpleNetwork.cntk:TIMIT_TrainSimple=[
+    action=train
+    modelPath=F:\cygwin64\tmp\cntk-test-20160405140042.694392\Examples\Speech\TIMIT_TrainSimpleNetwork@debug_cpu/exp\TrainSimpleNetwork\model\cntkSpeech.dnn
+    deviceId=-1
+    traceLevel=1
+    SimpleNetworkBuilder=[
+        layerSizes=792:512*3:183
+        trainingCriterion=CrossEntropyWithSoftmax
+        evalCriterion=ErrorPrediction
+        layerTypes=Sigmoid
+        initValueScale=1.0
+        applyMeanVarNorm=true
+        uniformInit=true
+        needPrior=true
+    ]
+    SGD=[
+        epochSize=0 
+        minibatchSize=256:1024
+        learningRatesPerMB=0.8:3.2*14:0.08
+        momentumPerMB=0.9
+        dropoutRate=0.0
+        maxEpochs=25
+    ]
+    reader=[
+      readerType=HTKMLFReader
+      readMethod=rollingWindow
+      miniBatchMode=Partial
+      randomize=Auto
+      verbosity=1   
+      features=[
+	  dim=792
+	  scpFile=D:\TestPreparation\Speech\ASR\TIMIT.train.scp.fbank.fullpath
+      ]
+      labels=[
+	mlfFile=D:\TestPreparation\Speech\ASR\TIMIT.train.align_cistate.mlf.cntk
+        labelDim=183
+	labelMappingFile=D:\TestPreparation\Speech\ASR\TIMIT.statelist
+      ]
+    ]
+] [SGD=[maxEpochs=2]] [SGD=[epochSize=20000]]
+
+04/05/2016 13:00:42: <<<<<<<<<<<<<<<<<<<< PROCESSED CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<
+04/05/2016 13:00:42: Commands: TIMIT_TrainSimple
+04/05/2016 13:00:42: Precision = "float"
+04/05/2016 13:00:42: CNTKModelPath: F:\cygwin64\tmp\cntk-test-20160405140042.694392\Examples\Speech\TIMIT_TrainSimpleNetwork@debug_cpu/exp\TrainSimpleNetwork\model\cntkSpeech.dnn
+04/05/2016 13:00:42: CNTKCommandTrainInfo: TIMIT_TrainSimple : 2
+04/05/2016 13:00:42: CNTKCommandTrainInfo: CNTKNoMoreCommands_Total : 2
+
+04/05/2016 13:00:42: ##############################################################################
+04/05/2016 13:00:42: #                                                                            #
+04/05/2016 13:00:42: # Action "train"                                                             #
+04/05/2016 13:00:42: #                                                                            #
+04/05/2016 13:00:42: ##############################################################################
+
+04/05/2016 13:00:42: CNTKCommandTrainBegin: TIMIT_TrainSimple
+SimpleNetworkBuilder Using CPU
+reading script file D:\TestPreparation\Speech\ASR\TIMIT.train.scp.fbank.fullpath ... 3696 entries
+total 183 state names in state list D:\TestPreparation\Speech\ASR\TIMIT.statelist
+htkmlfreader: reading MLF file D:\TestPreparation\Speech\ASR\TIMIT.train.align_cistate.mlf.cntk ... total 3696 entries
+biggrowablevectorarray: creating disk backup store at 'F:\cygwin64\tmp\CNTA5DA.tmp'
+minibatchframesourcemulti: reading 1 feature sets and 1 label sets.......................................................................................................
+minibatchframesourcemulti: read label set 0: 183 classes
+
+minibatchframesourcemulti: feature set 0: 1124823 frames read from 3696 utterances
+biggrowablevectorarray: disk backup store created, 1124823 frames, 339738624 bytes
+
+04/05/2016 13:01:25: Creating virgin network.
+
+Post-processing network...
+
+7 roots:
+	CrossEntropyWithSoftmax = CrossEntropyWithSoftmax()
+	EvalErrorPrediction = ErrorPrediction()
+	InvStdOfFeatures = InvStdDev()
+	MeanOfFeatures = Mean()
+	PosteriorProb = Softmax()
+	Prior = Mean()
+	ScaledLogLikelihood = Minus()
+
+Validating network. 30 nodes to process in pass 1.
+
+
+Validating network. 20 nodes to process in pass 2.
+
+
+Validating network, final pass.
+
+Validating --> labels = InputValue() :  -> [183 x *]
+Validating --> W3 = LearnableParameter() :  -> [183 x 512]
+Validating --> W2 = LearnableParameter() :  -> [512 x 512]
+Validating --> W1 = LearnableParameter() :  -> [512 x 512]
+Validating --> W0 = LearnableParameter() :  -> [512 x 792]
+Validating --> features = InputValue() :  -> [792 x *]
+Validating --> MeanOfFeatures = Mean (features) : [792 x *] -> [792]
+Validating --> InvStdOfFeatures = InvStdDev (features) : [792 x *] -> [792]
+Validating --> MVNormalizedFeatures = PerDimMeanVarNormalization (features, MeanOfFeatures, InvStdOfFeatures) : [792 x *], [792], [792] -> [792 x *]
+Validating --> W0*features = Times (W0, MVNormalizedFeatures) : [512 x 792], [792 x *] -> [512 x *]
+Validating --> B0 = LearnableParameter() :  -> [512 x 1]
+Validating --> W0*features+B0 = Plus (W0*features, B0) : [512 x *], [512 x 1] -> [512 x 1 x *]
+Validating --> H1 = Sigmoid (W0*features+B0) : [512 x 1 x *] -> [512 x 1 x *]
+Validating --> W1*H1 = Times (W1, H1) : [512 x 512], [512 x 1 x *] -> [512 x 1 x *]
+Validating --> B1 = LearnableParameter() :  -> [512 x 1]
+Validating --> W1*H1+B1 = Plus (W1*H1, B1) : [512 x 1 x *], [512 x 1] -> [512 x 1 x *]
+Validating --> H2 = Sigmoid (W1*H1+B1) : [512 x 1 x *] -> [512 x 1 x *]
+Validating --> W2*H2 = Times (W2, H2) : [512 x 512], [512 x 1 x *] -> [512 x 1 x *]
+Validating --> B2 = LearnableParameter() :  -> [512 x 1]
+Validating --> W2*H2+B2 = Plus (W2*H2, B2) : [512 x 1 x *], [512 x 1] -> [512 x 1 x *]
+Validating --> H3 = Sigmoid (W2*H2+B2) : [512 x 1 x *] -> [512 x 1 x *]
+Validating --> W3*H2 = Times (W3, H3) : [183 x 512], [512 x 1 x *] -> [183 x 1 x *]
+Validating --> B3 = LearnableParameter() :  -> [183 x 1]
+Validating --> HLast = Plus (W3*H2, B3) : [183 x 1 x *], [183 x 1] -> [183 x 1 x *]
+Validating --> CrossEntropyWithSoftmax = CrossEntropyWithSoftmax (labels, HLast) : [183 x *], [183 x 1 x *] -> [1]
+Validating --> EvalErrorPrediction = ErrorPrediction (labels, HLast) : [183 x *], [183 x 1 x *] -> [1]
+Validating --> PosteriorProb = Softmax (HLast) : [183 x 1 x *] -> [183 x 1 x *]
+Validating --> Prior = Mean (labels) : [183 x *] -> [183]
+Validating --> LogOfPrior = Log (Prior) : [183] -> [183]
+Validating --> ScaledLogLikelihood = Minus (HLast, LogOfPrior) : [183 x 1 x *], [183] -> [183 x 1 x *]
+
+
+14 out of 30 nodes do not share the minibatch layout with the input data.
+
+Post-processing network complete.
+
+04/05/2016 13:01:25: Created model with 30 nodes on CPU.
+
+04/05/2016 13:01:25: Training criterion node(s):
+04/05/2016 13:01:25: 	CrossEntropyWithSoftmax = CrossEntropyWithSoftmax
+
+04/05/2016 13:01:25: Evaluation criterion node(s):
+
+04/05/2016 13:01:25: 	EvalErrorPrediction = ErrorPrediction
+
+
+Allocating matrices for forward and/or backward propagation.
+
+04/05/2016 13:01:25: Precomputing --> 3 PreCompute nodes found.
+
+04/05/2016 13:01:25: 	MeanOfFeatures = Mean()
+04/05/2016 13:01:25: 	InvStdOfFeatures = InvStdDev()
+04/05/2016 13:01:25: 	Prior = Mean()
+minibatchiterator: epoch 0: frames [0..1124823] (first utterance at frame 0), data subset 0 of 1, with 1 datapasses
+randomordering: 0 retries for 1124823 elements (0.0%) to ensure window condition
+randomordering: recached sequence for seed 0: 128042, 767369, ...
+recoverblock: recovering feature block 0 [0..65535)
+recoverblock: recovering feature block 1 [65536..131071)
+recoverblock: recovering feature block 2 [131072..196607)
+recoverblock: recovering feature block 3 [196608..262143)
+recoverblock: recovering feature block 4 [262144..327679)
+recoverblock: recovering feature block 5 [327680..393215)
+recoverblock: recovering feature block 6 [393216..458751)
+recoverblock: recovering feature block 7 [458752..524287)
+recoverblock: recovering feature block 8 [524288..589823)
+recoverblock: recovering feature block 9 [589824..655359)
+recoverblock: recovering feature block 10 [655360..720895)
+recoverblock: recovering feature block 11 [720896..786431)
+recoverblock: recovering feature block 12 [786432..851967)
+recoverblock: recovering feature block 13 [851968..917503)
+recoverblock: recovering feature block 14 [917504..983039)
+recoverblock: recovering feature block 15 [983040..1048575)
+recoverblock: recovering feature block 16 [1048576..1114111)
+recoverblock: recovering feature block 17 [1114112..1179647)
+
+04/05/2016 13:09:57: Precomputing --> Completed.
+
+
+04/05/2016 13:09:57: Starting Epoch 1: learning rate per sample = 0.003125  effective momentum = 0.900000  momentum as time constant = 2429.8 samples
+minibatchiterator: epoch 0: frames [0..20000] (first utterance at frame 0), data subset 0 of 1, with 1 datapasses
+
+04/05/2016 13:09:57: Starting minibatch loop.
+04/05/2016 13:10:04:  Epoch[ 1 of 2]-Minibatch[   1-  10, 12.80%]: SamplesSeen = 2560; TrainLossPerSample =  5.03882942; EvalErr[0]PerSample = 0.96562500; TotalTime = 7.3280s; SamplesPerSecond = 349.3
+04/05/2016 13:10:12:  Epoch[ 1 of 2]-Minibatch[  11-  20, 25.60%]: SamplesSeen = 2560; TrainLossPerSample =  4.95890236; EvalErr[0]PerSample = 0.96250000; TotalTime = 7.5005s; SamplesPerSecond = 341.3
+04/05/2016 13:10:19:  Epoch[ 1 of 2]-Minibatch[  21-  30, 38.40%]: SamplesSeen = 2560; TrainLossPerSample =  4.93162155; EvalErr[0]PerSample = 0.95234375; TotalTime = 7.5569s; SamplesPerSecond = 338.8
+04/05/2016 13:10:26:  Epoch[ 1 of 2]-Minibatch[  31-  40, 51.20%]: SamplesSeen = 2560; TrainLossPerSample =  4.91397705; EvalErr[0]PerSample = 0.95703125; TotalTime = 7.1418s; SamplesPerSecond = 358.5
+04/05/2016 13:10:34:  Epoch[ 1 of 2]-Minibatch[  41-  50, 64.00%]: SamplesSeen = 2560; TrainLossPerSample =  4.91657867; EvalErr[0]PerSample = 0.96640625; TotalTime = 7.1853s; SamplesPerSecond = 356.3
+04/05/2016 13:10:41:  Epoch[ 1 of 2]-Minibatch[  51-  60, 76.80%]: SamplesSeen = 2560; TrainLossPerSample =  4.90114746; EvalErr[0]PerSample = 0.95742187; TotalTime = 7.6302s; SamplesPerSecond = 335.5
+04/05/2016 13:10:49:  Epoch[ 1 of 2]-Minibatch[  61-  70, 89.60%]: SamplesSeen = 2560; TrainLossPerSample =  4.89748840; EvalErr[0]PerSample = 0.95429688; TotalTime = 7.5042s; SamplesPerSecond = 341.1
+04/05/2016 13:10:55: Finished Epoch[ 1 of 2]: [Training Set] TrainLossPerSample = 4.9305248; TotalSamplesSeen = 20000; EvalErrPerSample = 0.95874995; AvgLearningRatePerSample = 0.003125; EpochTime=58.4243
+04/05/2016 13:10:55: SGD: Saving checkpoint model 'F:\cygwin64\tmp\cntk-test-20160405140042.694392\Examples\Speech\TIMIT_TrainSimpleNetwork@debug_cpu/exp\TrainSimpleNetwork\model\cntkSpeech.dnn.1'
+
+04/05/2016 13:10:56: Starting Epoch 2: learning rate per sample = 0.003125  effective momentum = 0.900000  momentum as time constant = 9719.0 samples
+minibatchiterator: epoch 1: frames [20000..40000] (first utterance at frame 20000), data subset 0 of 1, with 1 datapasses
+
+04/05/2016 13:10:56: Starting minibatch loop.
+04/05/2016 13:11:07:  Epoch[ 2 of 2]-Minibatch[   1-  10, 51.20%]: SamplesSeen = 10240; TrainLossPerSample =  4.85331116; EvalErr[0]PerSample = 0.95146484; TotalTime = 10.9661s; SamplesPerSecond = 933.8
+04/05/2016 13:11:18:  Epoch[ 2 of 2]-Minibatch[  11-  20, 102.40%]: SamplesSeen = 9760; TrainLossPerSample =  4.78947954; EvalErr[0]PerSample = 0.95020492; TotalTime = 11.3991s; SamplesPerSecond = 856.2
+04/05/2016 13:11:18: Finished Epoch[ 2 of 2]: [Training Set] TrainLossPerSample = 4.8221612; TotalSamplesSeen = 40000; EvalErrPerSample = 0.95084995; AvgLearningRatePerSample = 0.003125; EpochTime=22.498
+04/05/2016 13:11:18: SGD: Saving checkpoint model 'F:\cygwin64\tmp\cntk-test-20160405140042.694392\Examples\Speech\TIMIT_TrainSimpleNetwork@debug_cpu/exp\TrainSimpleNetwork\model\cntkSpeech.dnn'
+biggrowablevectorarray: deleted disk backup store at 'F:\cygwin64\tmp\CNTA5DA.tmp'
+04/05/2016 13:11:18: CNTKCommandTrainEnd: TIMIT_TrainSimple
+
+04/05/2016 13:11:18: Action "train" complete.
+
+04/05/2016 13:11:18: __COMPLETED__

@@ -1,4 +1,3 @@
-stderr=$ExpDir$\WriteScaledLogLike\log\log
 command=TIMIT_WriteScaledLogLike
 
 precision=float

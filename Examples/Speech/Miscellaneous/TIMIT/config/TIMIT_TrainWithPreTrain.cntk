@@ -1,4 +1,3 @@
-stderr=$ExpDir$\TrainWithPreTrain\log\log
 command=TIMIT_DiscrimPreTrain1:TIMIT_AddLayer2:TIMIT_DiscrimPreTrain2:TIMIT_AddLayer3:TIMIT_Train3
 
 precision=float

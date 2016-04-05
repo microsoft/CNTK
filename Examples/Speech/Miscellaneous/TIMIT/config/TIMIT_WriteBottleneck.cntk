@@ -1,4 +1,3 @@
-stderr=$ExpDir$\WriteBottleneck\log\log
 command=TIMIT_WriteBottleneck
 
 precision=float

@@ -1,4 +1,3 @@
-stderr=$ExpDir$\EvalSimpleNetwork\log\log
 command=TIMIT_EvalSimple
 
 precision=float

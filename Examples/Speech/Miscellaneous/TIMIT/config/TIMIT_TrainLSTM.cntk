@@ -1,4 +1,3 @@
-stderr=$ExpDir$\TrainLSTM\log\log
 command=TIMIT_TrainLSTM
 
 precision=float

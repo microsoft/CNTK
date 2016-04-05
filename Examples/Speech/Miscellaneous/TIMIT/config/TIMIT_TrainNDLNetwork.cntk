@@ -1,4 +1,3 @@
-stderr=$ExpDir$\TrainNDLNetwork\log\log
 command=TIMIT_TrainNDL
 
 precision=float
