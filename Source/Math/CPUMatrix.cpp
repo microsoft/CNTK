@@ -730,8 +730,9 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::DoScatterColumnsOf(ElemType beta, cons
 {
     if (m.GetNumRows() != 1) // index is 1-dimensional only
         InvalidArgument("DoScatterColumnsOf: Map must be a row vector.");
-    if (m.GetNumCols() != a.GetNumCols())
-        InvalidArgument("DoScatterColumnsOf: Map must have width of input vector.");
+    bool broadcastA = a.GetNumCols() == 1;
+    if (!broadcastA && m.GetNumCols() != a.GetNumCols())
+        InvalidArgument("DoScatterColumnsOf: Map must have width of input matrix, or input matrix must be column vector to do broadcasting.");
     if (a.GetNumRows() != GetNumRows())
         InvalidArgument("DoScatterColumnsOf: Output must have same height as input vector.");
 
@@ -750,7 +751,7 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::DoScatterColumnsOf(ElemType beta, cons
         size_t jOut = (size_t)jOutF;
         if (jOut >= GetNumCols())
             InvalidArgument("DoGatherColumnsOf: Map out of bounds.");
-        ScaleAndAddColumn(/*beta=*/(ElemType)1, &us(0, jOut), &a(0, jIn), us.GetNumRows(), alpha);
+        ScaleAndAddColumn(/*beta=*/(ElemType)1, &us(0, jOut), &a(0, broadcastA ? 0 : jIn), us.GetNumRows(), alpha);
     }
 
     return *this;

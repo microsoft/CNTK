@@ -963,7 +963,7 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::DoGatherColumnsOf(ElemType beta, const
 }
 
 template <class ElemType>
-__global__ void _doScatterColumnsOf(ElemType* us, size_t usStride, size_t usCols, const ElemType* m, size_t mStride, const ElemType* a, size_t aStride, const ElemType alpha)
+__global__ void _doScatterColumnsOf(ElemType* us, size_t usStride, size_t usCols, const ElemType* m, size_t mStride, const ElemType* a, size_t aStride, const ElemType alpha, bool broadcastA)
 {
     size_t i   = threadIdx.x; // index into 'a' and 'us'
     size_t jIn =  blockIdx.x; // index into 'a' and 'm'
@@ -975,7 +975,7 @@ __global__ void _doScatterColumnsOf(ElemType* us, size_t usStride, size_t usCols
     if (jOut >= usCols)
         return; // actually a failure
 
-    const ElemType& ra  =  a[i + jIn  *  aStride];
+    const ElemType& ra  =  a[i + broadcastA ? 0 : (jIn  *  aStride)];
     ElemType&       rus = us[i + jOut * usStride];
 
     ElemType res = ra * alpha;
@@ -1005,8 +1005,9 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::DoScatterColumnsOf(ElemType beta, cons
 {
     if (m.GetNumRows() != 1) // index is 1-dimensional only
         InvalidArgument("DoScatterColumnsOf: Map must be a row vector.");
-    if (m.GetNumCols() != a.GetNumCols())
-        InvalidArgument("DoScatterColumnsOf: Map must have width of input vector.");
+    bool broadcastA = a.GetNumCols() == 1;
+    if (!broadcastA && m.GetNumCols() != a.GetNumCols())
+        InvalidArgument("DoScatterColumnsOf: Map must have width of input matrix, or input matrix must be column vector to do broadcasting.");
     if (a.GetNumRows() != GetNumRows())
         InvalidArgument("DoScatterColumnsOf: Output must have same height as input vector.");
 
@@ -1022,7 +1023,7 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::DoScatterColumnsOf(ElemType beta, cons
     Scale(beta, us); // if beta is 0, then this will be a memset()
 
     SyncGuard syncGuard;
-    _doScatterColumnsOf<ElemType> << <a.GetNumCols(), a.GetNumRows(), 0, t_stream >> >(m_pArray, GetNumRows(), GetNumCols(), m.m_pArray, 1, a.m_pArray, a.GetNumRows(), alpha);
+    _doScatterColumnsOf<ElemType> << <a.GetNumCols(), a.GetNumRows(), 0, t_stream >> >(m_pArray, GetNumRows(), GetNumCols(), m.m_pArray, 1, a.m_pArray, a.GetNumRows(), alpha, broadcastA);
 
     return *this;
 }
