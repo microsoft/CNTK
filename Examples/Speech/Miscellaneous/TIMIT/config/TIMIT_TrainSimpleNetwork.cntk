@@ -44,7 +44,7 @@ TIMIT_TrainSimple=[
       # reader to use
       readerType=HTKMLFReader
 
-      readMethod=rollingWindow
+      readMethod=blockRandomize
 
       miniBatchMode=Partial
       randomize=Auto
@@ -52,7 +52,7 @@ TIMIT_TrainSimple=[
 
       features=[
 	  dim=792
-	  scpFile=$ScpDir$\TIMIT.train.scp.fbank.fullpath
+	  scpFile=$ScpDir$\TIMIT.train.scp.fbank.fullpath.rnn
       ]
 
       labels=[
