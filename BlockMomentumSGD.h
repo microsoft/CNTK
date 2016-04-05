@@ -41,7 +41,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 (int)m_pMPI->NumNodesInUse(),
                 m_blockMomentum,
                 m_resetSGDMomentumAfterAggregation ? "true" : "false", 
-                m_preferredDeviceID
+                m_deviceId
                 );
         }
 
@@ -233,8 +233,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 }
 
                 fstream.GetMarker(FileMarker::fileMarkerBeginSection, L"BParam");
-                LoadParameters(fstream, m_prevParameters, m_preferredDeviceID);
-                LoadParameters(fstream, m_blockLevelSmoothedGradient, m_preferredDeviceID);
+                LoadParameters(fstream, m_prevParameters, m_deviceId);
+                LoadParameters(fstream, m_blockLevelSmoothedGradient, m_deviceId);
                 fstream.GetMarker(FileMarker::fileMarkerBeginSection, L"EParam");
 
                 fstream.GetMarker(FileMarker::fileMarkerEndSection, L"EMACKP");
