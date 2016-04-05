@@ -31,10 +31,11 @@ template <class ElemType>
 class SimpleEvaluator
 {
 public:
-    SimpleEvaluator(ComputationNetworkPtr net, const MPIWrapperPtr& mpi, const size_t numMBsToShowResult = 100, const int traceLevel = 0, const size_t maxSamplesInRAM = SIZE_MAX,
+    SimpleEvaluator(ComputationNetworkPtr net, const MPIWrapperPtr& mpi, const size_t numMBsToShowResult = 100, const size_t firstMBsToShowResult = 0, const int traceLevel = 0, const size_t maxSamplesInRAM = SIZE_MAX,
                     const size_t numSubminiBatches = 1)
         : m_net(net), 
           m_numMBsToShowResult(numMBsToShowResult), 
+          m_firstMBsToShowResult(firstMBsToShowResult),
           m_traceLevel(traceLevel),
           m_maxSamplesInRAM(maxSamplesInRAM), 
           m_numSubminiBatches(numSubminiBatches), 
@@ -197,7 +198,7 @@ public:
             {
                 numSamplesLastMBs += aggregateNumSamplesWithLabel;
 
-                if (numMBsRun % m_numMBsToShowResult == 0)
+                if (numMBsRun <= m_firstMBsToShowResult || (m_numMBsToShowResult && (numMBsRun % m_numMBsToShowResult == 0)))
                 {
                     DisplayEvalStatistics(lastMBsRun + 1, numMBsRun, numSamplesLastMBs, evalNodes, evalResults, evalResultsLastMBs);
 
@@ -279,6 +280,7 @@ protected:
 protected:
     ComputationNetworkPtr m_net;
     size_t m_numMBsToShowResult;
+    size_t m_firstMBsToShowResult;
     size_t m_maxSamplesInRAM;
     size_t m_numSubminiBatches;
     MPIWrapperPtr m_mpi;
@@ -288,4 +290,5 @@ protected:
     int m_traceLevel;
     void operator=(const SimpleEvaluator&); // (not assignable)
 };
-} } }
+
+}}}

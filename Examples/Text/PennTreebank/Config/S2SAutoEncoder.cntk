@@ -59,12 +59,53 @@ testFile  = "ptb.test.txt"
 
 BrainScriptNetworkBuilder = (new ComputationNetwork [
 
+# TODO: move this somewhere shared
+    Trace (node, say='', logFrequency=traceFrequency, logFirst=10, logGradientToo=false, onlyUpToRow=100000000, onlyUpToT=100000000, format=[], tag='') = new ComputationNode [
+        operation = 'Trace' ; inputs = node
+    ]
+
+    formatDense = [
+        type = "real"
+        transpose = false
+        precisionFormat = ".4"
+    ]
+    formatOneHot = [
+        type = "category"
+        transpose = false
+        labelMappingFile = "$ModelDir$/vocab.wl"
+    ]
+    formatSparse = [
+        type = "sparse"
+        transpose = false
+        labelMappingFile = "$ModelDir$/vocab.wl"
+    ]
+    enableTracing = true
+    traceFrequency = 1000
+    TraceState (h, what) =
+        if enableTracing
+        then Transpose (Trace (Transpose (h), say=what, logFirst=10, logFrequency=traceFrequency, logGradientToo=false, onlyUpToRow=beamDepth*beamDepth, onlyUpToT=3, format=formatDense))
+        else h
+    TraceDense (h, what) =
+        if enableTracing
+        then Trace (h, say=what, logFirst=10, logFrequency=traceFrequency, logGradientToo=false, onlyUpToRow=beamDepth*beamDepth, onlyUpToT=25, format=formatDense)
+        else h
+    TraceOneHot (h, what) =
+        if enableTracing
+        then Trace (h, say=what, logFirst=10, logFrequency=traceFrequency, logGradientToo=false, /*onlyUpToRow=beamDepth*beamDepth, onlyUpToT=15,*/ format=formatOneHot)
+        else h
+    TraceSparse (h, what) =
+        if enableTracing
+        then Trace (h, say=what, logFirst=10, logFrequency=traceFrequency, logGradientToo=false, /*onlyUpToRow=beamDepth*beamDepth, onlyUpToT=3,*/ format=formatSparse)
+        else h
+beamDepth=3
     # import general config options from outside config values
     vocabDim = $confVocabSize$
     nbrClass = $confClassSize$
 
+    isAutoencoder = true                # input is only one sequence, meant to reproduce itself
     useStabilizer = $useStabilizer$
-    useEncoder = true                 // if false, this becomes a regular RNN
+    useEncoder = true                   # if false, this becomes a regular RNN
+    useNYUStyle = true                  # if true use thought vector for all inputs, NYU-style
 
     # import some namespaces
     Parameters = BS.Parameters
@@ -84,27 +125,41 @@ BrainScriptNetworkBuilder = (new ComputationNetwork [
     #input = SparseInput(vocabDim, tag='feature');  # BUGBUG: Slice() not working for sparse, need to extend TensorView
     input = Input(vocabDim, tag='feature');
 
-    # for an auto-encoder, both are the same
-    labels = input
+    streams = [ outerInput = input   # TODO: need ^ syntax
+              out = if isAutoencoder
+              then [
+                  # for an auto-encoder, both are the same
+                  input  = outerInput
+                  labels = input
+              ]
+              else [ # TODO: the separation hack
+                  input  = outerInput
+                  labels = input
+              ]
+              ].out
+
+    # helpers
+    CastAs (type, data) = Sequences.Scatter (Constants.OnesLike (type), data)
+    First (x) = Slice (0,  1, x,  axis=-1)
+    Last (x)  = Slice (-1, 0, x,  axis=-1)
 
     # strip separators
-    CastAs (type, data) = Sequences.Scatter (Constants.OnesLike (type), data)
+    inputSequence  = TraceSparse (Slice (0, -1, streams.input,   axis=-1), 'inputSeq');  # e.g. <s> A   B   C      # TODO: process </s> as well, to trigger the thought vector
+    labelSequence  = TraceSparse (Slice (1,  0, streams.labels,  axis=-1), 'labelSeq');  # e.g. A   B   C   </s>
 
-    inputSequence =                        Slice (0, -1, input,  axis=-1)  # e.g. <s> A   B   C
-    labelSequence = CastAs (inputSequence, Slice (1,  0, labels, axis=-1)) # e.g. A   B   C   </s>
-
-    # embeddings
+    # embeddings  --as long as we cannot read multiple sequences, we got one embedding
     # Note: Embeddings are linear, so better stabilize. We really should use BatchNorm.
 
-    Einput = Parameters.Stabilize (Parameters.WeightParam (vocabDim, embeddingDim), enabled=useStabilizer) # note: this is assumed to be applied transposed, hence the swapped dimensions
-    Elabel = Einput
+    E = Parameters.Stabilize (Parameters.WeightParam (vocabDim, embeddingDim), enabled=useStabilizer) # note: this is assumed to be applied transposed, hence the swapped dimensions
+    EmbedInput (x)  = TransposeTimes (E, x)
+    EmbedLabels (x) = TransposeTimes (E, x)
 
-    Embed (E, x) = TransposeTimes (E, x)
+    inputEmbedded  = EmbedInput  (inputSequence)
+    labelsEmbedded = EmbedLabels (labelSequence)
+    labelSentenceStart = TraceSparse (First (streams.labels), 'sentStart')
+    labelSentenceStartEmbedded = EmbedLabels (labelSentenceStart)
 
-    inputEmbedded  = Embed (Einput, inputSequence)
-    labelsEmbedded = Embed (Elabel, labelSequence)
-
-    # encoder (processes user input)
+    # encoder (processes inputEmbedded)
     encoderOutputLayer = Length (encoderDims)-1
     encoder[i:0..encoderOutputLayer] =
         RecurrentLSTMP(if i == 0 then embeddingDim else encoderDims[i-1],
@@ -116,31 +171,27 @@ BrainScriptNetworkBuilder = (new ComputationNetwork [
     # that last frame should be fed as an additional input to every decoder step
     # (This is the NYU model, not the Google model where the thought vector is only the initial state.)
 
-    thoughtVector =
-    [
-        x = encoderOutput
-        result = Boolean.If (Loop.IsLast (x),      // if last entry
-                 /*then*/ x,                       // then copy that
-                 /*else*/ FutureValue (0, result)) // else just propagate to the front  --TODO: Use Scatter() once input and labels are no longer the same.
-    ].result
+    thoughtVector = TraceDense (Last (TraceDense (encoderOutput, 'encout')), 'thv')
     thoughtVectorDim = encoderDims[encoderOutputLayer]
 
+    thoughtVectorPadded = Sequences.Scatter (Loop.IsFirst (labelsEmbedded), thoughtVector) # padded with zeroes until end of target sequence
+
+    # NYU style: expand to all
+    thoughtVectorEverywhere = Boolean.If (Loop.IsFirst (thoughtVectorPadded),      # if first entry
+                                 /*then*/ thoughtVectorPadded,                     # then copy that
+                                 /*else*/ Loop.Previous (thoughtVectorEverywhere)) # else just propagate to the front
+
     # decoder
+    # NYU style:
     # The decoder starts with hidden state 0
-    # and takes as input [thoughtVector; previous word].
+    # and takes as input [thoughtVectorEverywhere; previous word].
 
-    isTraining = EnvironmentInput ('isTraining', tag='evaluation')
-    #decoderFeedback      = Boolean.If (isTraining, labelsEmbedded, decoderOutputEmbedded) # not working
-    decoderFeedback       = labelsEmbedded
-    sentenceStartEmbedded = inputEmbedded          # first token is sentence start
-    # ^^ inputEmbedded is used to get </s>. Must make this a constant once we separate input and output.
+    delayedDecoderFeedback = TraceDense (Loop.PreviousOrDefault (defaultValue=labelSentenceStartEmbedded, TraceDense (labelsEmbedded, 'lemb'))   , 'prev lemb')
 
-    delayedDecoderFeedback = Boolean.If (Loop.IsFirst (decoderFeedback), sentenceStartEmbedded, Loop.Previous (decoderFeedback))
-
-    decoderInputDim = if useEncoder then           thoughtVectorDim        + embeddingDim  else           embeddingDim
-    decoderInput    = if useEncoder then RowStack (thoughtVector : delayedDecoderFeedback) else delayedDecoderFeedback
+    decoderInputDim = if useEncoder && useNYUStyle then           thoughtVectorDim         + embeddingDim  else           embeddingDim
+    decoderInput    = if useEncoder && useNYUStyle then RowStack (thoughtVectorEverywhere : delayedDecoderFeedback) else delayedDecoderFeedback
     decoderOutputLayer = Length (decoderDims)-1
-    decoder[i:0..decoderOutputLayer] =
+    decoder[i:0..decoderOutputLayer] =         # TODO: !useNYUStyle: set initial hidden state
         if i == 0
         then RecurrentLSTMP (decoderInputDim, decoderDims[i], decoderDims[i],
                              decoderInput,
@@ -158,41 +209,9 @@ BrainScriptNetworkBuilder = (new ComputationNetwork [
 
     z = W(decoderOutput) + B;  // top-level input to Softmax
 
-    decoderOutputEmbedded = Embed (Elabel, Hardmax (z))
-
     # training criteria
-    ce  = CrossEntropyWithSoftmax(labelSequence, z, tag='criterion')   // this is the training objective
-    wer = ErrorPrediction        (labelSequence, z, tag='evaluation')  // this also gets tracked
-
-    #indexTestVals = Plus (decoderOutput, BS.Constants.Zero, tag='evaluation')
-    #indexTest = Slice (0, 1, indexTestVals)
-    #index = Where (RectifiedLinear (indexTest), tag='evaluation'); // for testing: this thresholds all negative numbers to 0=false, keeping positive as !=0=true
-    #packedIndex = PackedIndex (indexTest, index, tag='evaluation')
-    #filtered = GatherPacked (packedIndex, indexTestVals, tag='evaluation')
-    #unfiltered = ScatterPacked (indexTest, packedIndex, filtered, tag='evaluation')
-
-    //# define an LSTM with a per-sequence initialization value
-    //# TODO: Not currently used. Move to BS library once tested.
-    //RecurrentLSTMPWithInitValue (inputDim, outputDim, cellDim, x, initValue, enableSelfStabilization=false) =
-    //[
-    //    prevState =  // Loop.Previous (lstmState). BS can't apply Previous() to dictionaries, so expand it manually
-    //    [
-    //        h = Loop.Previous (lstmState.h);                     // hidden state(t-1)
-    //        c = Loop.Previous (lstmState.c);                     // cell(t-1)
-    //    ]
-    //    # resettable LSTM function
-    //    lstmState =
-    //    [
-    //        // apply the LSTM function to the input state; for first frame, we will ignore the output
-    //        enableSelfStabilization1 = enableSelfStabilization // TODO: BS syntax needs to allow to say ^.enableSelfStabilization
-    //        lstmState1 = LSTMP (inputDim, outputDim, cellDim, x, prevState, enableSelfStabilization=enableSelfStabilization1)
-    //
-    //        // the actual LSTM state (incl. its output) gets overwritten in the first frame by the initValue
-    //        isFirst = Loop.IsFirst (x)
-    //        h = Boolean.If (isFirst, initValue, lstmState1.h); // hidden state(t-1)
-    //        c = Boolean.If (isFirst, initValue, lstmState1.c); // cell(t-1)
-    //    ]
-    //].lstmState.h // that's the value we return
+    ce  = CrossEntropyWithSoftmax (labelSequence, z, tag='criterion')   // this is the training objective
+    wer = ErrorPrediction         (labelSequence, z, tag='evaluation')  // this also gets tracked
 ])
 
 #######################################
@@ -372,13 +391,14 @@ train = [
         clippingThresholdPerSample = 15.0
         maxEpochs = 16
         numMBsToShowResult = 100
+        firstMBsToShowResult = 10
         gradUpdateType = "none" # FSAdaGrad?
         loadBestModel = true
 
         # tracing (enable these for debugging)
         #traceNodeNamesReal = labelsEmbedded:decoderInput:"decoder[0].lstmState._privateInnards.ht":z.Plus_left.Times_right.result:z:ce
         #traceNodeNamesReal = labelsEmbedded:decoderInput:z:ce
-        #traceNodeNamesReal = thoughtVector.result:zMask:z:ce:wer:indexTestVals:index:packedIndex:filtered:unfiltered:isTraining
+        #traceNodeNamesReal = thoughtVectorEverywhere.result:zMask:z:ce:wer:indexTestVals:index:packedIndex:filtered:unfiltered:isTraining
         #traceNodeNamesCategory = inputSequence.out:labelSequence
 
         dropoutRate = 0.0
@@ -511,44 +531,6 @@ write = [
         Loop = BS.Loop
         Previous = Loop.Previous
         IsFirst = Loop.IsFirst
-
-        Trace (node, say='', logFrequency=traceFrequency, logFirst=10, logGradientToo=false, onlyUpToRow=100000000, onlyUpToT=100000000, format=[], tag='') = new ComputationNode [
-            operation = 'Trace' ; inputs = node
-        ]
-
-        formatDense = [
-            type = "real"
-            transpose = false
-            precisionFormat = ".4"
-        ]
-        formatOneHot = [
-            type = "category"
-            transpose = false
-            labelMappingFile = "$ModelDir$/vocab.wl"
-        ]
-        formatSparse = [
-            type = "sparse"
-            transpose = false
-            labelMappingFile = "$ModelDir$/vocab.wl"
-        ]
-        enableTracing = true
-        traceFrequency = 1
-        TraceState (h, what) =
-            if enableTracing
-            then Transpose (Trace (Transpose (h), say=what, logFirst=10, logFrequency=traceFrequency, logGradientToo=false, onlyUpToRow=beamDepth*beamDepth, onlyUpToT=3, format=formatDense))
-            else h
-        TraceDense (h, what) =
-            if enableTracing
-            then Trace (h, say=what, logFirst=10, logFrequency=traceFrequency, logGradientToo=false, onlyUpToRow=beamDepth*beamDepth, onlyUpToT=3, format=formatDense)
-            else h
-        TraceOneHot (h, what) =
-            if enableTracing
-            then Trace (h, say=what, logFirst=10, logFrequency=traceFrequency, logGradientToo=false, /*onlyUpToRow=beamDepth*beamDepth, onlyUpToT=15,*/ format=formatOneHot)
-            else h
-        TraceSparse (h, what) =
-            if enableTracing
-            then Trace (h, say=what, logFirst=10, logFrequency=traceFrequency, logGradientToo=false, /*onlyUpToRow=beamDepth*beamDepth, onlyUpToT=3,*/ format=formatSparse)
-            else h
 
         # macro that extracts top D hypotheses from a 2D tensor
         # input: scores[w,n]    w = word index, d = hyp index in beam (d=0 is the best one)
@@ -790,22 +772,6 @@ write = [
             labelsOut = Pass (modelAsTrained.labelSequence)
             decodeOut = Pass (decode)
             #topNOut   = Pass (topHyps)
-
-            PreviousOrDefault (x, initialValue) =   # a delay node with initial value
-                BS.Boolean.If (BS.Loop.IsFirst (x),
-                /*then*/ initialValue,
-                /*else*/ BS.Loop.Previous (x))
-                #if BS.Loop.IsFirst (x)
-                #then initialValue
-                #else BS.Loop.Previous (x)
-
-            NextOrDefault (x, initialValue) =   # a delay node with initial value
-                BS.Boolean.If (BS.Loop.IsLast (x),
-                /*then*/ initialValue,
-                /*else*/ BS.Loop.Next (x))
-                #if BS.Loop.IsLast (x)
-                #then initialValue
-                #else BS.Loop.Next (x)
         ].m2
 
         model = if beamDepth == 0 then top1DecodingModel (modelAsTrained)

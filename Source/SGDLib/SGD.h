@@ -225,7 +225,8 @@ protected:
     GradientUpdateInfo m_gradType;
     RMSPropInfo m_rpi;
 
-    int m_numMBsToShowResult;
+    size_t m_numMBsToShowResult = 0;
+    size_t m_firstMBsToShowResult = 0;
     int m_numMBsToCUDAProfile;
 
     bool m_doGradientCheck;

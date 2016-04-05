@@ -1074,11 +1074,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
         totalTimeInMBs += timer.ElapsedSeconds();
         numSamplesLastMBs += (int)aggregateNumSamplesWithLabel;
 
-        if (
-#if 0       // output the first few to see if everything started right
-            numMBsRun <= 3 ||
-#endif
-            numMBsRun % m_numMBsToShowResult == 0)
+        if (numMBsRun <= m_firstMBsToShowResult || (m_numMBsToShowResult && (numMBsRun % m_numMBsToShowResult == 0)))
         {
             // get the epoch Values updated
             if (!useGradientAggregation)
@@ -2404,8 +2400,9 @@ SGDParams::SGDParams(const ConfigRecordType& configSGD, size_t sizeofElemType)
     m_maxTempMemSizeInSamplesForCNN = configSGD(L"maxTempMemSizeInSamplesForCNN", (size_t) 0);
 
     m_traceLevel = configSGD(L"traceLevel", (int) 0);
-    m_numMBsToShowResult = configSGD(L"numMBsToShowResult", (size_t) 10);
-    m_numMBsToCUDAProfile = configSGD(L"numMBsToCUDAProfile", (size_t) 0);
+    m_numMBsToShowResult = configSGD(L"numMBsToShowResult", (size_t)10);
+    m_firstMBsToShowResult = configSGD(L"firstMBsToShowResult", (size_t)0);
+    m_numMBsToCUDAProfile = configSGD(L"numMBsToCUDAProfile", (size_t)0);
 
     m_gradientClippingWithTruncation = configSGD(L"gradientClippingWithTruncation", true);
     m_clippingThresholdPerSample = configSGD(L"clippingThresholdPerSample", numeric_limits<double>::infinity());

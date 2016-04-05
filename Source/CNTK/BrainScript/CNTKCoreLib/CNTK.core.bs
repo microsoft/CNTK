@@ -301,8 +301,24 @@ Loop = [
     _IsWithin (DelayFn/*PastValue or FutureValue*/, N, x) = DelayFn (0, Constants.ZeroesLike (x)/*false*/, timeStep=N, defaultHiddenActivation=Constants.True)
 
     # opposite of Id's "next"
-    Previous (x) = PastValue (0, x, timeStep=1)
-    Next (x) = FutureValue (0, x, timeStep=1)
+    Previous (x) = PastValue   (0, x, timeStep=1)
+    Next (x)     = FutureValue (0, x, timeStep=1)
+
+    PreviousOrDefault (x, defaultValue=Constant (0)) =   # a delay node with initial value  --TODO: merge the two, then do in C++
+    [
+        flags = BS.Loop.IsFirst (x)
+        out = BS.Boolean.If (flags,
+                    /*then*/ BS.Sequences.Scatter (flags, defaultValue),
+                    /*else*/ Previous (x))
+    ].out
+
+    NextOrDefault (x, defaultValue=Constant (0)) =   # a delay node with initial value
+    [
+        flags = BS.Loop.IsLast (x)
+        out = BS.Boolean.If (BS.Loop.IsLast (x),
+                    /*then*/ BS.Sequences.Scatter (x, defaultValue),
+                    /*else*/ Next (x))
+    ].out
 ]
 
 ##############################################################################
