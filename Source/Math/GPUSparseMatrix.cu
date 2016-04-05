@@ -925,7 +925,10 @@ void GPUSparseMatrix<ElemType>::MultiplyAndWeightedAdd(ElemType alpha, const GPU
         InvalidArgument("GPUSparseMatrix::MultiplyAndWeightedAdd: The inner dimensions of a and b must match.");
     }
 
-    c.RequireSize(m, n);
+    if (beta == 0)
+        c.RequireSize(m, n);
+    else
+        c.VerifySize(m, n); // Can't resize if beta != 0
 
     c.PrepareDevice();
     if (rhs.GetFormat() == MatrixFormat::matrixFormatSparseCSC)
@@ -975,7 +978,10 @@ void GPUSparseMatrix<ElemType>::ConvolveAndWeightedAdd(ElemType alpha, const GPU
     int cRows = m * numSteps;
     int cCols = n;
 
-    c.RequireSize(cRows, cCols);
+    if (beta == 0)
+        c.RequireSize(cRows, cCols);
+    else
+        c.VerifySize(cRows, cCols); // Can't resize if beta != 0
 
     c.PrepareDevice();
     if (rhs.GetFormat() == MatrixFormat::matrixFormatSparseCSC)

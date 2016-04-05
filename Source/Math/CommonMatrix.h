@@ -539,7 +539,10 @@ protected:
 
     size_t m_numRows;
     size_t m_numCols;
-    size_t m_sliceViewOffset; // this is used to get a column slice view of a matrix in the Sparse CSC format  --TODO: move to sparse matrix implementations? Or common sparse base class?
+    // TODO: m_sliceViewOffset has a different meaning in sparse (column offset) versus dense (byte offset to start of pointer). This should perhaps be fixed.
+    size_t m_sliceViewOffset; // this is the slice view of a matrix
+    // TODO: implement m_colStride
+    size_t m_colStride;
 
 	// Storage OBject containing the underlying data used by this matrix
     shared_ptr<BaseMatrixStorage<ElemType>> m_sob;

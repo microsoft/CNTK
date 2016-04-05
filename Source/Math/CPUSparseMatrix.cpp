@@ -481,6 +481,7 @@ void CPUSparseMatrix<ElemType>::Allocate(const size_t numRows, const size_t numC
                 memcpy(compIndex, GetCompIndex(), SecondaryIndexSize());
             }
 
+            // TODO: This is super ugly. The internals of the storage object should be a shared_ptr.
             delete[] Buffer();
             delete[] GetUnCompIndex();
             delete[] GetCompIndex();

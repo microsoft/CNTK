@@ -59,9 +59,9 @@ class MATH_API Matrix : public MatrixBase
 {
     typedef MatrixBase Base;
 private:
-    mutable shared_ptr<BaseMatrix<ElemType>> m_baseMatrix;
-    mutable shared_ptr<GPUMatrix<ElemType>> m_GPUMatrix;
-    mutable shared_ptr<CPUMatrix<ElemType>> m_CPUMatrix;
+    mutable shared_ptr<BaseMatrix     <ElemType>> m_baseMatrix;
+    mutable shared_ptr<GPUMatrix      <ElemType>> m_GPUMatrix;
+    mutable shared_ptr<CPUMatrix      <ElemType>> m_CPUMatrix;
     mutable shared_ptr<GPUSparseMatrix<ElemType>> m_GPUSparseMatrix;
     mutable shared_ptr<CPUSparseMatrix<ElemType>> m_CPUSparseMatrix;
 
@@ -89,8 +89,12 @@ public:
     // If deviceId<0 then the matrix will be based in RAM (CPUMatrix)
     // Elseif deviceId>=0 then the matrix will be based on GPU with specified deviceId
     explicit Matrix(DEVICEID_TYPE deviceId);
+    // This constructor is not used, but it makes the ownership of baseMatrix ambiguous. If it's to be used, ensure that the semantics with external buffer are clear.
+#if 0
     Matrix(shared_ptr<BaseMatrix<ElemType>> baseMatrix, ElemType* pArray, DEVICEID_TYPE deviceId);                                     // constructor for setting Matrix from a base matrix (externally managed butter pArray)
+#endif
     Matrix(const size_t numRows, const size_t numCols, DEVICEID_TYPE deviceId, const MatrixType matrixType = DENSE, const MatrixFormat matrixFormat = matrixFormatDense);
+    // TODO: Rewrite this constructor to eliminate the external buffers flag. Make a separate construction mechanism for Matrix objects that don't own their storage.
     Matrix(const size_t numRows, const size_t numCols, ElemType* pArray, DEVICEID_TYPE deviceId, const size_t matrixFlags = matrixFlagNormal, const size_t nnz = 0);
     Matrix(const Matrix<ElemType>& deepCopyFrom, DEVICEID_TYPE deviceId);
     Matrix(Matrix<ElemType>&& moveFrom);                                                    // move constructor, shallow copy
@@ -125,7 +129,7 @@ private:
     void ShallowCopyFrom(const Matrix<ElemType>& other);
 
 public:
-    // up-cast to make life easier
+    // down-cast to make life easier
     template <class T>
     static shared_ptr<T> DownCast(shared_ptr<BaseMatrix<ElemType>> inode)
     {

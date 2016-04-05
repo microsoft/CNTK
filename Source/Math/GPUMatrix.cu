@@ -3235,6 +3235,7 @@ template <class ElemType>
                 InvalidArgument("dimension of matrix c does not match dimension of matrix a.");
 
             cublasHandle_t cuHandle = GetCublasHandle(a.GetComputeDeviceId());
+            // TODO: Overload the call to cublas_axpy to remove these ugly if/else statements.
             if (sizeof(ElemType) == sizeof(float))
             {
                 CUBLAS_CALL(cublasSaxpy(cuHandle, len, reinterpret_cast<float*>(&alpha), reinterpret_cast<float*>(a.Data()), incx, reinterpret_cast<float*>(c.Data()), incy));
@@ -3289,6 +3290,7 @@ template <class ElemType>
             if (n != (int) a.GetNumCols())
                 InvalidArgument("To add row vector, cols should match.");
 
+            // TODO: Overload the call to cublas_axpy to remove these ugly if/else statements.
             if (sizeof(ElemType) == sizeof(double))
             {
                 foreach_row (i, c)
@@ -3562,6 +3564,7 @@ template <class ElemType>
     }
 
     cublasHandle_t cuHandle = GetCublasHandle(a.GetComputeDeviceId());
+    // TODO: Overload the call to cublas_axpy to remove these ugly if/else statements.
     if (sizeof(ElemType) == sizeof(float))
     {
         float alph = (float) alpha;
