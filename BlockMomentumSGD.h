@@ -189,7 +189,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
 
-        /*virtual*/ bool requireCheckPointSaving() override
+        /*virtual*/ bool RequiresToSaveToCheckPoint() override
         {
             return true;
         }
