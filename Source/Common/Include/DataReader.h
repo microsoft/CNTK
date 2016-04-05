@@ -61,7 +61,7 @@ public:
         // constructor
         Input(MatrixBasePtr matrix, MBLayoutPtr pMBLayout, TensorShape sampleLayout) : matrix(matrix), pMBLayout(pMBLayout), sampleLayout(sampleLayout)
         {
-            assert(input.matrix);
+            assert(matrix);
         }
         Input(){} // some STL classes need this for general happiness
 
