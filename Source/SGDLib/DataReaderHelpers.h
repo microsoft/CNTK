@@ -347,7 +347,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
 
             // for sequence training
-            if (criterionNodes[0]->OperationName() == L"SequenceWithSoftmax")
+            if (!criterionNodes.empty() && criterionNodes[0]->OperationName() == L"SequenceWithSoftmax")
             {
                 auto node = dynamic_pointer_cast<SequenceWithSoftmaxNode<ElemType>>(criterionNodes[0]);
                 assert(node);
@@ -533,18 +533,21 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 }
                 shared_ptr<ComputationNode<ElemType>> pNode = m_LearnableNodePtr[nodename];
                 m_cachedGradient.GetInputMatrix<ElemType>(nodename) += pNode->Gradient();
-                pNode->Gradient().SetValue((ElemType) 0);
+                pNode->Gradient().SetValue(0);
             }
             // accumulate criterion value
-            Matrix<ElemType>::AddElementToElement(m_netCriterionNodes[0]->Value(), 0, 0,
-                                                  *m_netCriterionAccumulator, 0, 0);
-            m_netCriterionNodes[0]->Value().SetValue((ElemType) 0);
+            if (!m_netCriterionNodes.empty())
+            {
+                Matrix<ElemType>::AddElementToElement(m_netCriterionNodes[0]->Value(), 0, 0,
+                                                      *m_netCriterionAccumulator, 0, 0);
+                m_netCriterionNodes[0]->Value().SetValue(0);
+            }
             // accumulate evaluation value
             for (size_t i = 0; i < m_netEvaluationNodes.size(); i++)
             {
                 Matrix<ElemType>::AddElementToElement(m_netEvaluationNodes[i]->Value(), 0, 0,
                                                       *m_netEvaluationAccumulator, 0, i);
-                m_netEvaluationNodes[i]->Value().SetValue((ElemType) 0);
+                m_netEvaluationNodes[i]->Value().SetValue(0);
             }
 
             // Export node state
@@ -570,10 +573,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             // also revert net.m_MBLayoutPtr
             m_netMBLayoutPtr->CopyFrom(m_MBLayoutCache);
 
-            // m_netCriterionNodes[0]->Value().SetValue((ElemType)0);
-            Matrix<ElemType>::AddElementToElement(*m_netCriterionAccumulator, 0, 0,
-                                                  m_netCriterionNodes[0]->Value(), 0, 0);
-            m_netCriterionAccumulator->SetValue((ElemType) 0);
+            if (!m_netCriterionNodes.empty())
+            {
+                // m_netCriterionNodes[0]->Value().SetValue((ElemType)0);
+                Matrix<ElemType>::AddElementToElement(*m_netCriterionAccumulator, 0, 0,
+                                                      m_netCriterionNodes[0]->Value(), 0, 0);
+            }
+            m_netCriterionAccumulator->SetValue(0);
 
             for (size_t i = 0; i < m_netEvaluationNodes.size(); i++)
             {
@@ -581,7 +587,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 Matrix<ElemType>::AddElementToElement(*m_netEvaluationAccumulator, 0, i,
                                                       m_netEvaluationNodes[i]->Value(), 0, 0);
             }
-            m_netEvaluationAccumulator->SetValue((ElemType) 0);
+            m_netEvaluationAccumulator->SetValue(0);
         }
     };
 };

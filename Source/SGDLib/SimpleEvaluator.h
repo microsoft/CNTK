@@ -82,9 +82,7 @@ public:
         }
 
         // initialize eval results
-        std::vector<double> evalResults;
-        for (int i = 0; i < evalNodes.size(); i++)
-            evalResults.push_back((double) 0);
+        std::vector<double> evalResults(evalNodes.size(), 0);
 
         // allocate memory for forward computation
         m_net->AllocateAllMatrices(evalNodes, {}, nullptr);
