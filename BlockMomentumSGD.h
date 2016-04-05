@@ -22,7 +22,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         typedef IMASGD<ElemType> Base;
         using Base::m_pMPI;
-        using Base::m_preferredDeviceID;
+        using Base::m_deviceId;
         using Base::DownCast;
     
      protected:
