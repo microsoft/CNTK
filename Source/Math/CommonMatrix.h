@@ -200,8 +200,7 @@ enum MatrixFlags
 template <class ElemType>
 class BaseMatrixStorage : public enable_shared_from_this<BaseMatrixStorage<ElemType>>
 {
-    template <class ElemType>
-    friend class BaseMatrix;
+    template <class ElemType2> friend class BaseMatrix;
 
 private:
     BaseMatrixStorage<ElemType>(const BaseMatrixStorage<ElemType>& ) = delete;
