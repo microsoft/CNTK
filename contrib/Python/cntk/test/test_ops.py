@@ -11,14 +11,17 @@ C = constant
 I = input
 AA = np.asarray
 
-def _test(root_node, expected, clean_up=True):
+def _test(root_node, expected, clean_up=True, backward_pass = False, input_node = None):
     with get_new_context() as ctx:
         ctx.clean_up = clean_up
         assert not ctx.input_nodes
-        result = ctx.eval(root_node)
+        result = ctx.eval(root_node, None, backward_pass, input_node)
 
         assert len(result) == len(expected)
-        for res, exp in zip(result, expected):
+        for res, exp in zip(result, expected):            
+            print(res)
+            print(exp)
+            print("===========#####")
             assert np.allclose(res, exp)
             assert res.shape == AA(exp).shape
 
@@ -84,9 +87,17 @@ def test_op_add_input_constant(left_arg, right_arg):
      ],  
       2), 
     ])
-
 def test_op_mul_input_seq(left_arg, right_arg):
     expected = [AA(elem)*right_arg for elem in left_arg]
     result = I(left_arg, has_sequence_dimension=True) * right_arg
     _test(result, expected, False)
 
+@pytest.mark.parametrize("left_arg, right_arg", [
+    ([0],[0]),              # grad(Cos(0)) = -Sin(0) = 0
+    ([1.57079633],[-1]),     # grad(Cos(pi/2)) = -Sin(pi/2) = -1
+    ([3.14159265],[0]),    # grad(Cos(pi)) = -Sin(pi) = 0 
+    ])
+def test_cosine_backward(left_arg, right_arg):
+     i = I([left_arg], has_sequence_dimension=False)
+     n = Cosine(i)
+     _test(n, [[AA(right_arg)]], clean_up=False, backward_pass = True, input_node = i)
