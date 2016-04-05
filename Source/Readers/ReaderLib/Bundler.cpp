@@ -5,6 +5,7 @@
 #define _CRT_SECURE_NO_WARNINGS
 
 #include "Bundler.h"
+#include <set>
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -150,16 +151,19 @@ void Bundler::GetSequencesForChunk(size_t chunkId, std::vector<SequenceDescripti
     std::swap(sequences, result);
 }
 
-// Represents a chunk that has pointers to the underlying deserialzer chunks.
+// Represents a chunk that has pointers to the underlying deserializer chunks.
 class Bundler::BundlingChunk : public Chunk
 {
     size_t m_numberOfInputs;
     Bundler* m_parent;
     size_t m_chunkId;
 
-    // A mapping between exposed sequence id and inner chunk for each deserialzier.
+    // A mapping between exposed sequence id and inner chunk for each deserializer.
+    // Index i of the vector maps to the chunk of inner sequence (i / m_numberOfInputs) of
+    // deserializer (i % m_numberOfInputs).
     std::vector<ChunkPtr> m_innerChunks;
     // A mapping between exposed sequence id and inner sequence id for each deserializer.
+    // Indices as above.
     std::vector<size_t> m_sequenceToSequence;
 
     DISABLE_COPY_AND_MOVE(BundlingChunk);
@@ -197,6 +201,8 @@ public:
         SequenceDescription s;
         for (size_t deserializerIndex = 1; deserializerIndex < m_parent->m_deserializers.size(); ++deserializerIndex)
         {
+            std::map<size_t, ChunkPtr> secondaryChunks;
+
             for (size_t sequenceIndex = 0; sequenceIndex < sequences.size(); ++sequenceIndex)
             {
                 if (chunk->m_invalid.find(sequenceIndex) != chunk->m_invalid.end())
@@ -207,7 +213,20 @@ public:
                 size_t currentIndex = sequenceIndex * m_numberOfInputs + deserializerIndex;
                 deserializers[deserializerIndex]->GetSequenceDescriptionByKey(sequences[sequenceIndex].m_key, s);
                 m_sequenceToSequence[currentIndex] = s.m_id;
-                m_innerChunks[currentIndex] = deserializers[deserializerIndex]->GetChunk(s.m_chunkId);
+
+                ChunkPtr secondaryChunk;
+                auto it = secondaryChunks.find(s.m_chunkId);
+                if (it == secondaryChunks.end())
+                {
+                    secondaryChunk = deserializers[deserializerIndex]->GetChunk(s.m_chunkId);
+                    secondaryChunks.insert(make_pair(s.m_chunkId, secondaryChunk));
+                }
+                else
+                {
+                    secondaryChunk = it->second;
+                }
+
+                m_innerChunks[currentIndex] = secondaryChunk;
             }
         }
     }

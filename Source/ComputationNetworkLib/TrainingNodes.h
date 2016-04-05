@@ -18,40 +18,21 @@
 namespace Microsoft { namespace MSR { namespace CNTK {
 
 // -----------------------------------------------------------------------
-/// SquareErrorNode (left, right)
+// SquareErrorNode (left, right)
+// = SumElements ((left - right) .* (left - right))
 // -----------------------------------------------------------------------
 
 template <class ElemType>
 class SquareErrorNode : public ComputationNodeNonLooping /*ComputationNode*/<ElemType>, public NumInputs<2>
 {
-    typedef ComputationNodeNonLooping<ElemType> Base;
-    UsingComputationNodeMembersBoilerplate;
-    static const std::wstring TypeName()
-    {
-        return L"SquareError";
-    }
+    typedef ComputationNodeNonLooping<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+    static const std::wstring TypeName() { return L"SquareError"; }
 
 public:
     DeclareConstructorFromConfigWithNumInputs(SquareErrorNode);
     SquareErrorNode(DEVICEID_TYPE deviceId, const wstring& name)
         : Base(deviceId, name)
     {
-    }
-
-    virtual void BackpropToNonLooping(size_t inputIndex) override
-    {
-        FrameRange fr(Input(0)->GetMBLayout());
-        auto gradient = Input(inputIndex)->GradientFor(fr);
-        Matrix<ElemType>::Multiply1x1AndWeightedAdd(inputIndex == 0 ? 2.0f : -2.0f, Gradient() /*1x1*/, *m_leftMinusRight, 1.0f, gradient); // O = (I0-I1)^2; dO/dI0 = 2*(I0-I1); dO/dI1 = -2*(I0-I1)
-    }
-
-    virtual bool OutputUsedInComputingInputNodesGradients() const override
-    {
-        return false;
-    }
-    virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override
-    {
-        return false;
     }
 
     virtual void UpdateFunctionMBSize() override
@@ -64,13 +45,23 @@ public:
         FrameRange fr(Input(0)->GetMBLayout());
         m_leftMinusRight->AssignDifferenceOf(Input(0)->ValueFor(fr), Input(1)->ValueFor(fr));
         MaskMissingColumnsToZero(*m_leftMinusRight, Input(0)->GetMBLayout(), fr); // we are fine since it will only be called with full minibatch.
-        ElemType v = m_leftMinusRight->FrobeniusNorm(); //v = sqrt( sum{ (I0[i] - I1[i])^2 } )
+        ElemType v = m_leftMinusRight->FrobeniusNorm(); // v = sqrt( sum{ (I0[i] - I1[i])^2 } )
         Value().VerifySize(1, 1);
-        Value().SetValue(v * v);  //Value = sum{ (I0[i] - I1[i])^2 }
+        Value().SetValue(v * v);  // Value = sum{ (I0[i] - I1[i])^2 }
 #if NANCHECK
         Value().HasNan("SquareError");
 #endif
     }
+
+    virtual void BackpropToNonLooping(size_t inputIndex) override
+    {
+        FrameRange fr(Input(0)->GetMBLayout());
+        auto gradient = Input(inputIndex)->GradientFor(fr);
+        Matrix<ElemType>::Multiply1x1AndWeightedAdd(inputIndex == 0 ? 2.0f : -2.0f, Gradient() /*1x1*/, *m_leftMinusRight, 1.0f, gradient); // O = (I0-I1)^2; dO/dI0 = 2*(I0-I1); dO/dI1 = -2*(I0-I1)
+    }
+
+    virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }
+    virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override { return false; }
 
     virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
     {
@@ -1252,7 +1243,7 @@ private:
 #endif
 
 // -----------------------------------------------------------------------
-// LogisticNode (labels, prediction, weight)
+// Logistic (labels, prediction, weight)
 // calculates: -sum(left * log(right) + (1-left)*log(1-right)) (optionally * weight)
 // -----------------------------------------------------------------------
 
@@ -1594,7 +1585,7 @@ public:
                                  configp->Get(L"epsilon"), configp->Get(L"useCntkEngine"),
                                  ImageLayoutKindFrom(configp->Get(L"imageLayout")))
     {
-        AttachInputs(configp, this->GetExpectedNumInputs());
+        AttachInputsFromConfig(configp, this->GetExpectedNumInputs());
     }
 
     void Save(File& fstream) const override
@@ -1633,7 +1624,7 @@ public:
             int32_t verWritten;
             int32_t verReadable;
             fstream >> verWritten >> verReadable;
-
+    
             if (verReadable > verWritten)
                 RuntimeError("Corrupt model file.");
             if (verWritten < m_version.VerWeCanReadBack())
@@ -1698,7 +1689,7 @@ public:
             m_dBias->Resize(bias);
             // Compute all derivatives in one step. Save derivatives with respect to scale and bias in temp matrices.
             m_bnEng->Backward(sliceInputValue, sliceOutputGrad, sliceInputGrad, scale,
-                              *m_saveMean, *m_saveInvStdDev, *m_dScale, *m_dBias);
+                                              *m_saveMean, *m_saveInvStdDev, *m_dScale, *m_dBias);
         }
         else if (inputIndex == 1) // derivative with respect to the scale
         {
@@ -1774,15 +1765,15 @@ public:
         }
 
         m_bnEng->Forward(sliceInputValue, scale, bias, expAvgFactor, blendFactor, runMean, runInvStdDev,
-                         sliceOutputValue, m_epsilon, *m_saveMean, *m_saveInvStdDev);
+                                      sliceOutputValue, m_epsilon, *m_saveMean, *m_saveInvStdDev);
 
-        m_mbCount++;
-    }
+            m_mbCount++;
+        }
 
     void Validate(bool isFinalValidationPass) override
     {
         Base::Validate(isFinalValidationPass);
-        InferMBLayoutFromInputsForStandardCase();
+        InferMBLayoutFromInputsForStandardCase(isFinalValidationPass);
 
         SetDims(Input(0));
 
@@ -1815,25 +1806,25 @@ public:
     void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool) override
     {
         Base::RequestMatricesBeforeForwardProp(matrixPool);
-        RequestMatrixFromPool(m_saveMean, matrixPool);
-        RequestMatrixFromPool(m_saveInvStdDev, matrixPool);
-    }
+            RequestMatrixFromPool(m_saveMean, matrixPool);
+            RequestMatrixFromPool(m_saveInvStdDev, matrixPool);
+        }
 
     void RequestMatricesBeforeBackprop(MatrixPool& matrixPool) override
     {
         Base::RequestMatricesBeforeBackprop(matrixPool);
-        RequestMatrixFromPool(m_dScale, matrixPool);
-        RequestMatrixFromPool(m_dBias, matrixPool);
-    }
+            RequestMatrixFromPool(m_dScale, matrixPool);
+            RequestMatrixFromPool(m_dBias, matrixPool);
+        }
 
     void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool) override
     {
         Base::ReleaseMatricesAfterBackprop(matrixPool);
-        ReleaseMatrixToPool(m_saveMean, matrixPool);
-        ReleaseMatrixToPool(m_saveInvStdDev, matrixPool);
-        ReleaseMatrixToPool(m_dScale, matrixPool);
-        ReleaseMatrixToPool(m_dBias, matrixPool);
-    }
+            ReleaseMatrixToPool(m_saveMean, matrixPool);
+            ReleaseMatrixToPool(m_saveInvStdDev, matrixPool);
+            ReleaseMatrixToPool(m_dScale, matrixPool);
+            ReleaseMatrixToPool(m_dBias, matrixPool);
+        }
 
     void SetNormalizationTimeConstants(double normalizationTimeConstant, double prevNormalizationTimeConstant,
                                        double blendTimeConstant, double prevBlendTimeConstant)
@@ -1898,4 +1889,4 @@ private:
 template class BatchNormalizationNode<float>;
 template class BatchNormalizationNode<double>;
 
-} } }
+}}}

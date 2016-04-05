@@ -199,7 +199,7 @@ ndlCreateNetwork=[
     LSTMoutputW1 = Times(W1, LSTMoutput, tag="outputs");
 
     cr = CrossEntropyWithSoftmax(labels, LSTMoutputW1,tag="criterion");
-    Err = CrossEntropyWithSoftmax(labels,LSTMoutputW1,tag="eval");
+    Err = CrossEntropyWithSoftmax(labels,LSTMoutputW1,tag="evaluation");
     
 #    logPrior = LogPrior(labels)	 
 

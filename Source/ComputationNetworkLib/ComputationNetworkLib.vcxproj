@@ -171,7 +171,10 @@
     <ClCompile Include="ComputationNetworkEvaluation.cpp" />
     <ClCompile Include="ComputationNetworkScripting.cpp" />
     <ClCompile Include="ComputationNode.cpp" />
+    <ClCompile Include="ComputationNodeScripting.cpp" />
+    <ClCompile Include="InputAndParamNodes.cpp" />
     <ClCompile Include="ReshapingNodes.cpp" />
+    <ClCompile Include="SpecialPurposeNodes.cpp" />
     <ClCompile Include="stdafx.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

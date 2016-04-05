@@ -7,7 +7,7 @@
 #include "Basics.h"
 #include "ComputationNode.h"
 #include "ComputationNetwork.h"
-#include "TrainingNodes.h" // for NCEEvalMode
+#include "TrainingNodes.h"      // for NCEEvalMode
 #include "ConvolutionalNodes.h" // for PoolKind
 #include "ScriptableObjects.h"
 #include "TensorShape.h"

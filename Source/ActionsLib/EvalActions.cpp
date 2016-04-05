@@ -69,6 +69,11 @@ static void DoEvalBase(const ConfigParameters& config, IDataReader& reader)
 
     auto net = ComputationNetwork::CreateFromFile<ElemType>(deviceId, modelPath);
     
+    // set tracing flags
+    net->EnableNodeTracing(config(L"traceNodeNamesReal",     ConfigParameters::Array(stringargvector())),
+                           config(L"traceNodeNamesCategory", ConfigParameters::Array(stringargvector())),
+                           config(L"traceNodeNamesSparse",   ConfigParameters::Array(stringargvector())));
+
     SimpleEvaluator<ElemType> eval(net, MPIWrapper::GetInstance(), numMBsToShowResult, traceLevel, maxSamplesInRAM, numSubminiBatches);
     eval.Evaluate(&reader, evalNodeNamesVector, mbSize[0], epochSize);
 }
@@ -223,7 +228,12 @@ void DoWriteOutput(const ConfigParameters& config)
 
     vector<wstring> outputNodeNamesVector;
 
-    auto net = GetModelFromConfig<ConfigParameters, ElemType>(config, outputNodeNamesVector);
+    let net = GetModelFromConfig<ConfigParameters, ElemType>(config, outputNodeNamesVector);
+
+    // set tracing flags
+    net->EnableNodeTracing(config(L"traceNodeNamesReal",     ConfigParameters::Array(stringargvector())),
+                           config(L"traceNodeNamesCategory", ConfigParameters::Array(stringargvector())),
+                           config(L"traceNodeNamesSparse",   ConfigParameters::Array(stringargvector())));
 
     SimpleOutputWriter<ElemType> writer(net, 1);
 
@@ -237,34 +247,8 @@ void DoWriteOutput(const ConfigParameters& config)
     else if (config.Exists("outputPath"))
     {
         wstring outputPath = config(L"outputPath");
-
-        // gather additional formatting options
-        typename decltype(writer)::WriteFormattingOptions formattingOptions;
-        if (config.Exists("format"))
-        {
-            ConfigParameters formatConfig(config(L"format"));
-            if (formatConfig.ExistsCurrent("type")) // do not inherit 'type' from outer block
-            {
-                string type = formatConfig(L"type");
-                if      (type == "real")     formattingOptions.isCategoryLabel = false;
-                else if (type == "category") formattingOptions.isCategoryLabel = true;
-                else                         InvalidArgument("write: type must be 'real' or 'category'");
-                if (formattingOptions.isCategoryLabel)
-                    formattingOptions.labelMappingFile = (wstring)formatConfig(L"labelMappingFile", L"");
-            }
-            formattingOptions.transpose         = formatConfig(L"transpose",         formattingOptions.transpose);
-            formattingOptions.prologue          = formatConfig(L"prologue",          formattingOptions.prologue);
-            formattingOptions.epilogue          = formatConfig(L"epilogue",          formattingOptions.epilogue);
-            formattingOptions.sequenceSeparator = formatConfig(L"sequenceSeparator", formattingOptions.sequenceSeparator);
-            formattingOptions.sequencePrologue  = formatConfig(L"sequencePrologue",  formattingOptions.sequencePrologue);
-            formattingOptions.sequenceEpilogue  = formatConfig(L"sequenceEpilogue",  formattingOptions.sequenceEpilogue);
-            formattingOptions.elementSeparator  = formatConfig(L"elementSeparator",  formattingOptions.elementSeparator);
-            formattingOptions.sampleSeparator   = formatConfig(L"sampleSeparator",   formattingOptions.sampleSeparator);
-            formattingOptions.precisionFormat   = formatConfig(L"precisionFormat",   formattingOptions.precisionFormat);
-        }
-
+        WriteFormattingOptions formattingOptions(config);
         bool nodeUnitTest = config(L"nodeUnitTest", "false");
-
         writer.WriteOutput(testDataReader, mbSize[0], outputPath, outputNodeNamesVector, formattingOptions, epochSize, nodeUnitTest);
     }
     else

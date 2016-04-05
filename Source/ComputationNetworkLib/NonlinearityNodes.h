@@ -101,12 +101,16 @@ public:
 #define UnaryElementWiseWithOpCodeNodeBaseMembers UsingComputationNodeMembersBoilerplate;
 
 // -----------------------------------------------------------------------
+// Pass (Input)
 // SigmoidNode (input)
 // TanhNode (input)
 // RectifiedLinearNode (input)
 // LogNode (input)
 // ExpNode (input)
 // CosineNode (input)
+// Abs(input)
+// Negate (input)
+// Sqrt (input)
 // These are all implemented by single-opcode functions and can thus be declared by a macro.
 // -----------------------------------------------------------------------
 
@@ -124,13 +128,14 @@ public:
                                                                                                                                              \
     public:                                                                                                                                  \
         DeclareConstructorFromConfigWithNumInputs(Name##Node);                                                                               \
-        Name##Node(DEVICEID_TYPE deviceId, const wstring& Name)                                                                              \
-            : Base(deviceId, Name)                                                                                                           \
+        Name##Node(DEVICEID_TYPE deviceId, const wstring& Name) :                                                                            \
+            Base(deviceId, Name)                                                                                                             \
         {                                                                                                                                    \
         }                                                                                                                                    \
     }
 
 //                                    Name             Forward and      Backward opcodes                                           Gradient optype
+DeclareUnaryElementWiseWithOpCodeNode(Pass,            Copy,            Copy,                                                      UnaryGradient);
 DeclareUnaryElementWiseWithOpCodeNode(Sigmoid,         Sigmoid,         ElementwiseProductWithSigmoidDerivativeFromOutput,         BinaryWithOutputGradient);
 DeclareUnaryElementWiseWithOpCodeNode(Tanh,            Tanh,            ElementwiseProductWithTanhDerivativeFromOutput,            BinaryWithOutputGradient);
 DeclareUnaryElementWiseWithOpCodeNode(RectifiedLinear, LinearRectifier, ElementwiseProductWithLinearRectifierDerivativeFromOutput, BinaryWithOutputGradient);
@@ -141,7 +146,6 @@ DeclareUnaryElementWiseWithOpCodeNode(Abs,             Abs,             Elementw
 DeclareUnaryElementWiseWithOpCodeNode(Negate,          Negate,          Negate,                                                    UnaryGradient);
 DeclareUnaryElementWiseWithOpCodeNode(Sqrt,            Sqrt,            ElementwiseProductWithSqrtDerivative,                      BinaryWithOutputGradient);
 DeclareUnaryElementWiseWithOpCodeNode(Reciprocal,      Reciprocal,      ElementwiseProductWithReciprocalDerivative,                BinaryWithOutputGradient);
-DeclareUnaryElementWiseWithOpCodeNode(Pass,            Copy,            Copy,                                                      UnaryGradient);
 
 #pragma pop_macro("DeclareUnaryElementWiseWithOpCodeNode")
 
