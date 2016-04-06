@@ -51,11 +51,11 @@ protected:
     virtual MBLayoutPtr PackSparseStream(const StreamBatch& batch, size_t streamIndex);
 
     // Packs a sparse sample as dense.
-    inline void PackSparseSampleAsDense(char* destination, SparseSequenceDataPtr sequence,
+    void PackSparseSampleAsDense(char* destination, SparseSequenceDataPtr sequence,
         size_t sampleIndex, size_t sampleOffset, size_t sampleSize, size_t elementSize);
 
     // Packs a dense sample as dense.
-    inline void PackDenseSample(char* destination, SequenceDataPtr sequence, size_t sampleOffset, size_t sampleSize);
+    void PackDenseSample(char* destination, SequenceDataPtr sequence, size_t sampleOffset, size_t sampleSize);
 
    
     virtual MBLayoutPtr CreateMBLayout(const StreamBatch& batch) = 0;

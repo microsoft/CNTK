@@ -282,7 +282,6 @@ MBLayoutPtr PackerBase::PackSparseStream(const StreamBatch& batch, size_t stream
     return pMBLayout;
 }
 
-
 inline void PackerBase::PackSparseSampleAsDense(char* destination, SparseSequenceDataPtr sequence,
     size_t sampleIndex, size_t sampleOffset, size_t sampleSize, size_t elementSize)
 {
