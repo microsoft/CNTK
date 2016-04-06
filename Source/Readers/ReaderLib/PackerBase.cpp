@@ -282,30 +282,4 @@ MBLayoutPtr PackerBase::PackSparseStream(const StreamBatch& batch, size_t stream
     return pMBLayout;
 }
 
-inline void PackerBase::PackSparseSampleAsDense(char* destination, SparseSequenceDataPtr sequence,
-    size_t sampleIndex, size_t sampleOffset, size_t sampleSize, size_t elementSize)
-{
-    //The sample is sparse, first, need to zero out the buffer.
-    memset(destination, 0, sampleSize);
-    size_t nonZeroCount = sequence->m_nnzCounts[sampleIndex];
-    // Iterate through non zero elements and copy them to the corresponding place using their index.
-    // In a sparse sequence, m_data points to the array of non zero elements,
-    // m_indices stores the non-zero row indexes for each element.
-    for (size_t nonZeroIndex = 0; nonZeroIndex < nonZeroCount; ++nonZeroIndex)
-    {
-
-        auto rowIndex = sequence->m_indices[sampleOffset + nonZeroIndex];
-        size_t elementOffset = rowIndex * elementSize;
-        assert(elementOffset < sampleSize);
-        const auto* source = (const char*)(sequence->m_data) + (sampleOffset + nonZeroIndex) * elementSize;
-        memcpy(destination + elementOffset, source, elementSize);
-    }
-}
-
-inline void PackerBase::PackDenseSample(char* destination, SequenceDataPtr sequence, size_t sampleOffset, size_t sampleSize)
-{
-    // Because the sample is dense - simply copying it to the output.
-    memcpy(destination, (const char*)(sequence->m_data) + sampleOffset, sampleSize);
-}
-
 }}}
