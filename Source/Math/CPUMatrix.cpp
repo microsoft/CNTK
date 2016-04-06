@@ -643,23 +643,23 @@ static void ScaleAndAddColumn(ElemType beta, ElemType* dst, const ElemType* src,
             dst[i] = beta * dst[i] + src[i];
 }
 
-// *this[:,j] = a[:,m[j]] * alpha + *this[:,j] * beta
+// *this[:,j] = a[:,idx[j]] * alpha + *this[:,j] * beta
 template <class ElemType>
-CPUMatrix<ElemType>& CPUMatrix<ElemType>::DoGatherColumnsOf(ElemType beta, const CPUMatrix<ElemType>& m, const CPUMatrix<ElemType>& a, ElemType alpha)
+CPUMatrix<ElemType>& CPUMatrix<ElemType>::DoGatherColumnsOf(ElemType beta, const CPUMatrix<ElemType>& idx, const CPUMatrix<ElemType>& a, ElemType alpha)
 {
-    if (m.GetNumRows() != 1) // index is 1-dimensional only
+    if (idx.GetNumRows() != 1) // index is 1-dimensional only
         InvalidArgument("DoGatherColumnsOf: Map must be a row vector.");
 
     if (beta)
-        VerifySize(a.GetNumRows(), m.GetNumCols());
+        VerifySize(a.GetNumRows(), idx.GetNumCols());
     else
-        Resize(a.GetNumRows(), m.GetNumCols());
+        Resize(a.GetNumRows(), idx.GetNumCols());
 
     auto& us = *this;
 #pragma omp parallel for // TODO: Depending in circumstance, it may be more efficient to parallelize over rows.
     foreach_column(jOut, us)
     {
-        auto jInF = m(0, jOut); // this is the column we need to get
+        auto jInF = idx(0, jOut); // this is the column we need to get
         if (jInF < 0)           // negative index means gap
             continue;
         size_t jIn = (size_t)jInF;
@@ -671,13 +671,13 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::DoGatherColumnsOf(ElemType beta, const
     return *this;
 }
 
-// *this[:,m[j]] = a[:,j] * alpha + *this[:,m[j]] * beta
+// *this[:,idx[j]] = a[:,j] * alpha + *this[:,idx[j]] * beta
 template <class ElemType>
-CPUMatrix<ElemType>& CPUMatrix<ElemType>::DoScatterColumnsOf(ElemType beta, const CPUMatrix<ElemType>& m, const CPUMatrix<ElemType>& a, ElemType alpha)
+CPUMatrix<ElemType>& CPUMatrix<ElemType>::DoScatterColumnsOf(ElemType beta, const CPUMatrix<ElemType>& idx, const CPUMatrix<ElemType>& a, ElemType alpha)
 {
-    if (m.GetNumRows() != 1) // index is 1-dimensional only
+    if (idx.GetNumRows() != 1) // index is 1-dimensional only
         InvalidArgument("DoScatterColumnsOf: Map must be a row vector.");
-    if (m.GetNumCols() != a.GetNumCols())
+    if (idx.GetNumCols() != a.GetNumCols())
         InvalidArgument("DoScatterColumnsOf: Map must have width of input vector.");
     if (a.GetNumRows() != GetNumRows())
         InvalidArgument("DoScatterColumnsOf: Output must have same height as input vector.");
@@ -691,7 +691,7 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::DoScatterColumnsOf(ElemType beta, cons
 #pragma omp parallel for // TODO: Depending in circumstance, it may be more efficient to parallelize over rows.
     foreach_column(jIn, a)
     {
-        auto jOutF = m(0, jIn); // this is the column we copy/add into
+        auto jOutF = idx(0, jIn); // this is the column we copy/add into
         if (jOutF < 0)          // negative index means gap
             continue;
         size_t jOut = (size_t)jOutF;

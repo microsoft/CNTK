@@ -268,8 +268,8 @@ public:
     Matrix<ElemType> Transpose(); // This method doesn't change state of Matrix. It should be a const function
     Matrix<ElemType>& AssignTransposeOf(const Matrix<ElemType>& a);
 
-    Matrix<ElemType>& DoGatherColumnsOf (ElemType beta, const Matrix<ElemType>& m, const Matrix<ElemType>& a, ElemType alpha);
-    Matrix<ElemType>& DoScatterColumnsOf(ElemType beta, const Matrix<ElemType>& m, const Matrix<ElemType>& a, ElemType alpha);
+    Matrix<ElemType>& DoGatherColumnsOf (ElemType beta, const Matrix<ElemType>& idx, const Matrix<ElemType>& a, ElemType alpha);
+    Matrix<ElemType>& DoScatterColumnsOf(ElemType beta, const Matrix<ElemType>& idx, const Matrix<ElemType>& a, ElemType alpha);
 
     Matrix<ElemType>& operator+=(const ElemType alpha);
     Matrix<ElemType>  operator+(const ElemType alpha) const;

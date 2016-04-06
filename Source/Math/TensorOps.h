@@ -48,7 +48,7 @@ OverloadUnaryMathFns(fabs);
 OverloadUnaryMathFns(cos);
 OverloadUnaryMathFns(sin);
 
-#pragma push_macro("OverloadUnaryMathFns")
+#pragma pop_macro("OverloadUnaryMathFns")
 
 // -----------------------------------------------------------------------
 // additional functions that are standard in our context

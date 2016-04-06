@@ -234,8 +234,8 @@ public:
     GPUMatrix<ElemType> Transpose() const;
     GPUMatrix<ElemType>& AssignTransposeOf(const GPUMatrix<ElemType>& a);
 
-    GPUMatrix<ElemType>& DoGatherColumnsOf (ElemType beta, const GPUMatrix<ElemType>& m, const GPUMatrix<ElemType>& a, ElemType alpha);
-    GPUMatrix<ElemType>& DoScatterColumnsOf(ElemType beta, const GPUMatrix<ElemType>& m, const GPUMatrix<ElemType>& a, ElemType alpha);
+    GPUMatrix<ElemType>& DoGatherColumnsOf (ElemType beta, const GPUMatrix<ElemType>& idx, const GPUMatrix<ElemType>& a, ElemType alpha);
+    GPUMatrix<ElemType>& DoScatterColumnsOf(ElemType beta, const GPUMatrix<ElemType>& idx, const GPUMatrix<ElemType>& a, ElemType alpha);
 
     GPUMatrix<ElemType>& operator+=(const ElemType alpha);
     GPUMatrix<ElemType> operator+(const ElemType alpha) const;

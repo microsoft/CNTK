@@ -145,8 +145,8 @@ public:
     CPUMatrix<ElemType> Transpose();
     CPUMatrix<ElemType>& AssignTransposeOf(const CPUMatrix<ElemType>& a);
 
-    CPUMatrix<ElemType>& DoGatherColumnsOf (ElemType beta, const CPUMatrix<ElemType>& m, const CPUMatrix<ElemType>& a, ElemType alpha);
-    CPUMatrix<ElemType>& DoScatterColumnsOf(ElemType beta, const CPUMatrix<ElemType>& m, const CPUMatrix<ElemType>& a, ElemType alpha);
+    CPUMatrix<ElemType>& DoGatherColumnsOf (ElemType beta, const CPUMatrix<ElemType>& idx, const CPUMatrix<ElemType>& a, ElemType alpha);
+    CPUMatrix<ElemType>& DoScatterColumnsOf(ElemType beta, const CPUMatrix<ElemType>& idx, const CPUMatrix<ElemType>& a, ElemType alpha);
 
     CPUMatrix<ElemType>& operator+=(const ElemType alpha);
     CPUMatrix<ElemType>  operator+(const ElemType alpha) const;
