@@ -431,9 +431,9 @@ void CPUSparseMatrix<ElemType>::SetMatrixFromCSCFormat(const CPUSPARSE_INDEX_TYP
 
     // Note: This is a casualty of the switch away from m_nz. RowSize and NzSize depend on ColLocation being correct for format SparseCSC. Thus we must
     // copy ColLocation before RowLocation and NzValues. That's ugly and error prone.
-    memcpy(ColLocation(), h_CSCCol, ColSize());
-    memcpy(RowLocation(), h_Row, RowSize());
-    memcpy(NzValues(), h_Val, NzSize());
+    memcpy(ColLocation(), h_CSCCol, sizeof(CPUSPARSE_INDEX_TYPE)*(numCols + 1));
+    memcpy(RowLocation(), h_Row, sizeof(CPUSPARSE_INDEX_TYPE)*nz);
+    memcpy(NzValues(), h_Val, sizeof(ElemType)*nz);
 }
 
 template <class ElemType>
