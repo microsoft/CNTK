@@ -298,14 +298,14 @@ class Reshape(ComputationNode):
 
 class NewReshape(ComputationNode):
 
-    def __init__(self, input, dims, beginDim=0, endDim=0, name='NewReshape', var_name=None):
+    def __init__(self, input, dims, beginAxis=0, endAxis=0, name='NewReshape', var_name=None):
         super(NewReshape, self).__init__(
-            params=['input', 'dims', 'beginDim', 'endDim'], name=name, var_name=var_name)
+            params=['input', 'dims', 'beginAxis', 'endAxis'], name=name, var_name=var_name)
         self.input = input
         self.dims = dims
-        self.beginDim = beginDim
-        self.endDim = endDim
-        self.params_with_defaults = ['beginDim', 'endDim']
+        self.beginAxis = beginAxis
+        self.endAxis = endAxis
+        self.params_with_defaults = ['beginAxis', 'endAxis']
 
 
 class TransposeDimensions(ComputationNode):
