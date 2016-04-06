@@ -79,19 +79,24 @@ template <class ElemType>
     outMBLayout->InitAsPackedSequences(SequenceLengthVector(sequences, indexSequences), /*temp*/m_placementBuffer, /*temp*/m_rowAllocationsBuffer);
     // copy to output
     vector<ElemType> buf(outMBLayout->GetNumCols(), numeric_limits<ElemType>::quiet_NaN()); // STL cannot easily avoid initializing, so we might as well init with NaN for gaps
-    for (size_t i = 0; i < sequences.size(); i++)
+    for (size_t i = 0, j = 0; i < sequences.size();)
     {
-        let& seq = outMBLayout->GetAllSequences()[i];
-        if (seq.seqId == GAP_SEQUENCE_ID) // gaps will keep the NaN
+        if (sequences[i].seqId == GAP_SEQUENCE_ID) // gaps will keep the NaN
+        {
+            ++i;
             continue;
+        }
+        let& seq = outMBLayout->GetAllSequences()[j];
+        if (seq.seqId == GAP_SEQUENCE_ID) // When would we see this?
+        {
+            ++j;
+            continue;
+        }
         let& indexSequence = indexSequences[i];
         for (size_t t = 0; t < seq.GetNumTimeSteps(); t++)
             buf[outMBLayout->GetColumnIndex(seq, t)] = (ElemType)indexSequence[t];
-        /*
-        BUGBUG: a debug assert when doing this:
-        TakeRight (N, x) = BS.Sequences._Take (FutureValue, N, x)
-        Last(x) = TakeRight(1, x)
-        */
+        ++i;
+        ++j;
     }
     // the result will be kept in CPUDEVICE, since most likely we will access it again in PackedIndexNode
     Value().TransferToDeviceIfNotThere(CPUDEVICE, /*isBeingMoved=*/ true, /*emptyTransfer=*/ true, /*updatePreferredDevice=*/ true);
@@ -216,14 +221,27 @@ template <class ElemType>
 
     // inherit MBLayout from indexData
     m_pMBLayout = Input(INDEXDATA)->GetMBLayout();
-    if (isFinalValidationPass && (!Input(INDEXDATA)->HasMBLayout() || !Input(SOURCEDATA)->HasMBLayout()))
-        LogicError("%ls %ls operation requires both inputs to be minibatch data (must have MBLayouts).", NodeName().c_str(), OperationName().c_str());
+    if (isFinalValidationPass && (!Input(INDEXDATA)->HasMBLayout()))
+        LogicError("%ls requires first argument (index data) to have a time dimension.", this->NodeDescription().c_str());
+
+    bool sourceHasTimeDimension = Input(SOURCEDATA)->HasMBLayout();
 
     if (isFinalValidationPass && Input(INDEXDATA)->GetSampleLayout().GetNumElements() != 1)
-        InvalidArgument("%ls %ls operation requires the first argument (indexData) to be a scalar sequence.", NodeName().c_str(), OperationName().c_str());
+        InvalidArgument("%ls requires the first argument (index data) to be a scalar time sequence.", this->NodeDescription().c_str());
 
-    // inherit tensor dimension from sourceData
-    SetDims(Input(SOURCEDATA)->GetSampleLayout(), HasMBLayout());
+    // inherit tensor dimension from sourceData, minus the last (column or time) dimension. TODO this needs to become simpler...
+    if (sourceHasTimeDimension)
+        SetDims(Input(SOURCEDATA)->GetSampleLayout(), HasMBLayout());
+    else
+    {
+        SmallVector<size_t> layout = { 1 }; // Scalar
+        if (Input(SOURCEDATA)->GetSampleLayout().GetRank() > 1)
+        {
+            auto srcLayout = Input(SOURCEDATA)->GetSampleLayout().GetDims();
+            layout.assign(srcLayout.begin(), srcLayout.end() - 1);
+        }
+        SetDims(TensorShape(layout), HasMBLayout());
+    }
 }
 
 template class GatherPackedNode<float>;
