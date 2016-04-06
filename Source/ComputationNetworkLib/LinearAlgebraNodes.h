@@ -1148,7 +1148,6 @@ public:
                     Matrix<ElemType>::ConductRowElementMultiplyWithShift(temp, in1, leftTerm, currshift, true);
                 }
 
-				// BUGBUG, if we use the leftTerm = leftTerm - rightTerm code path, there is a memory leak.
                 leftTerm -= rightTerm;
 
                 temp.GetARowByIndex(thisGradientValues, m);
@@ -1178,7 +1177,6 @@ public:
 
                     Matrix<ElemType>::ConductRowElementMultiplyWithShift(temp, in0, leftTerm, 0, true);
 
-					// BUGBUG, if we use the leftTerm = leftTerm - rightTerm code path, there is a memory leak.
                     leftTerm -= rightTerm;
 
                     temp.GetARowByIndex(thisGradientValues, m);
@@ -1200,7 +1198,6 @@ public:
 
                     Matrix<ElemType>::ConductRowElementMultiplyWithShift(temp, in0, leftTerm, reverseshift, true);
 
-					// BUGBUG, if we use the leftTerm = leftTerm - rightTerm code path, there is a memory leak.
                     leftTerm -= rightTerm;
 
                     temp.GetARowByIndex(thisGradientValues, m);
