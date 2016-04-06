@@ -3,6 +3,7 @@
 // Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
 //
 #include "stdafx.h"
+#include "Common/ReaderTestHelper.h"
 
 using namespace Microsoft::MSR::CNTK;
 
