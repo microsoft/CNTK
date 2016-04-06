@@ -1,0 +1,411 @@
+=== Running /cygdrive/c/repo/cntk_github6/CNTK/x64/release/cntk.exe configFile=C:\repo\cntk_github6\CNTK\Examples\Speech\Miscellaneous\TIMIT\config/TIMIT_TrainMultiInput.cntk currentDirectory=D:\TestPreparation\Speech\ASR RunDir=F:\cygwin64\tmp\cntk-test-20160406123516.34066\Examples\Speech\TIMIT_TrainMultiInput@release_cpu DataDir=D:\TestPreparation\Speech\ASR ConfigDir=C:\repo\cntk_github6\CNTK\Examples\Speech\Miscellaneous\TIMIT\config OutputDir=F:\cygwin64\tmp\cntk-test-20160406123516.34066\Examples\Speech\TIMIT_TrainMultiInput@release_cpu DeviceId=-1 timestamping=true LibDir=C:\repo\cntk_github6\CNTK\Examples\Speech\Miscellaneous\TIMIT\config/../lib ScpDir=D:\TestPreparation\Speech\ASR MlfDir=D:\TestPreparation\Speech\ASR NdlDir=C:\repo\cntk_github6\CNTK\Examples\Speech\Miscellaneous\TIMIT\config MelDir=C:\repo\cntk_github6\CNTK\Examples\Speech\Miscellaneous\TIMIT\config ExpDir=F:\cygwin64\tmp\cntk-test-20160406123516.34066\Examples\Speech\TIMIT_TrainMultiInput@release_cpu/exp DeviceNumber=-1 TIMIT_TrainMultiInput=[SGD=[maxEpochs=1]] TIMIT_TrainMultiInput=[SGD=[epochSize=2048]] numMBsToShowResult=5
+-------------------------------------------------------------------
+Build info: 
+
+		Built time: Apr  6 2016 09:34:06
+		Last modified date: Tue Apr  5 15:50:31 2016
+		Build type: Release
+		Build target: GPU
+		With 1bit-SGD: yes
+		CUDA_PATH: C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v7.0
+		CUB_PATH: c:\Tools\cub-1.4.1\
+		CUDNN_PATH: c:\Tools\cudnn-4.0\cuda
+		Build Branch: eldak/addingTimitExamplesToTests
+		Build SHA1: 40db0b8fcc1e6ffd89b9357a636439c63130b589 (modified)
+		Built by eldak on ELDAK-0
+		Build Path: c:\repo\cntk_github6\CNTK\Source\CNTK\
+-------------------------------------------------------------------
+Changed current directory to D:\TestPreparation\Speech\ASR
+04/06/2016 11:35:17: -------------------------------------------------------------------
+04/06/2016 11:35:17: Build info: 
+
+04/06/2016 11:35:17: 		Built time: Apr  6 2016 09:34:06
+04/06/2016 11:35:17: 		Last modified date: Tue Apr  5 15:50:31 2016
+04/06/2016 11:35:17: 		Build type: Release
+04/06/2016 11:35:17: 		Build target: GPU
+04/06/2016 11:35:17: 		With 1bit-SGD: yes
+04/06/2016 11:35:17: 		CUDA_PATH: C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v7.0
+04/06/2016 11:35:17: 		CUB_PATH: c:\Tools\cub-1.4.1\
+04/06/2016 11:35:17: 		CUDNN_PATH: c:\Tools\cudnn-4.0\cuda
+04/06/2016 11:35:17: 		Build Branch: eldak/addingTimitExamplesToTests
+04/06/2016 11:35:17: 		Build SHA1: 40db0b8fcc1e6ffd89b9357a636439c63130b589 (modified)
+04/06/2016 11:35:17: 		Built by eldak on ELDAK-0
+04/06/2016 11:35:17: 		Build Path: c:\repo\cntk_github6\CNTK\Source\CNTK\
+04/06/2016 11:35:17: -------------------------------------------------------------------
+
+04/06/2016 11:35:17: Running on ELDAK-0 at 2016/04/06 11:35:17
+04/06/2016 11:35:17: Command line: 
+C:\repo\cntk_github6\CNTK\x64\release\cntk.exe  configFile=C:\repo\cntk_github6\CNTK\Examples\Speech\Miscellaneous\TIMIT\config/TIMIT_TrainMultiInput.cntk  currentDirectory=D:\TestPreparation\Speech\ASR  RunDir=F:\cygwin64\tmp\cntk-test-20160406123516.34066\Examples\Speech\TIMIT_TrainMultiInput@release_cpu  DataDir=D:\TestPreparation\Speech\ASR  ConfigDir=C:\repo\cntk_github6\CNTK\Examples\Speech\Miscellaneous\TIMIT\config  OutputDir=F:\cygwin64\tmp\cntk-test-20160406123516.34066\Examples\Speech\TIMIT_TrainMultiInput@release_cpu  DeviceId=-1  timestamping=true  LibDir=C:\repo\cntk_github6\CNTK\Examples\Speech\Miscellaneous\TIMIT\config/../lib  ScpDir=D:\TestPreparation\Speech\ASR  MlfDir=D:\TestPreparation\Speech\ASR  NdlDir=C:\repo\cntk_github6\CNTK\Examples\Speech\Miscellaneous\TIMIT\config  MelDir=C:\repo\cntk_github6\CNTK\Examples\Speech\Miscellaneous\TIMIT\config  ExpDir=F:\cygwin64\tmp\cntk-test-20160406123516.34066\Examples\Speech\TIMIT_TrainMultiInput@release_cpu/exp  DeviceNumber=-1  TIMIT_TrainMultiInput=[SGD=[maxEpochs=1]]  TIMIT_TrainMultiInput=[SGD=[epochSize=2048]]  numMBsToShowResult=5
+
+
+
+04/06/2016 11:35:17: >>>>>>>>>>>>>>>>>>>> RAW CONFIG (VARIABLES NOT RESOLVED) >>>>>>>>>>>>>>>>>>>>
+04/06/2016 11:35:17: command=TIMIT_TrainMultiInput
+precision=float
+TIMIT_TrainMultiInput=[
+    action=train
+    modelPath=$ExpDir$\TrainMultiInput\model\cntkSpeech.dnn
+    deviceId=$DeviceNumber$
+    traceLevel=1
+    NDLNetworkBuilder=[
+	ndlMacros=$NdlDir$\default_macros.ndl
+        networkDescription=$NdlDir$\mtl_fbank_mfcc.ndl
+    ]
+    SGD=[
+        epochSize=0
+        minibatchSize=256:1024
+        learningRatesPerMB=0.8:3.2*14:0.08
+        momentumPerMB=0.9
+        dropoutRate=0.0
+        maxEpochs=25
+        gradientClippingWithTruncation=true
+        clippingThresholdPerSample=1#INF
+        gradientClippingWithTruncation=true
+        clippingThresholdPerSample=1#INF
+    ]
+    reader=[
+      readerType=HTKMLFReader
+      readMethod=rollingWindow
+      miniBatchMode=Partial
+      randomize=Auto
+      verbosity=1   
+      features1=[
+	dim=792
+	scpFile=$ScpDir$\TIMIT.train.scp.fbank.fullpath
+	type=Real
+      ]
+      features2=[
+	dim=39
+	scpFile=$ScpDir$\TIMIT.train.scp.mfcc.fullpath
+	type=Real
+      ]
+      labels=[
+	mlfFile=$MlfDir$\TIMIT.train.align_cistate.mlf.cntk
+ 	labelMappingFile=$MlfDir$\TIMIT.statelist
+   	 labelDim=183
+         labelType=Category
+      ]
+    ]
+]
+currentDirectory=D:\TestPreparation\Speech\ASR
+RunDir=F:\cygwin64\tmp\cntk-test-20160406123516.34066\Examples\Speech\TIMIT_TrainMultiInput@release_cpu
+DataDir=D:\TestPreparation\Speech\ASR
+ConfigDir=C:\repo\cntk_github6\CNTK\Examples\Speech\Miscellaneous\TIMIT\config
+OutputDir=F:\cygwin64\tmp\cntk-test-20160406123516.34066\Examples\Speech\TIMIT_TrainMultiInput@release_cpu
+DeviceId=-1
+timestamping=true
+LibDir=C:\repo\cntk_github6\CNTK\Examples\Speech\Miscellaneous\TIMIT\config/../lib
+ScpDir=D:\TestPreparation\Speech\ASR
+MlfDir=D:\TestPreparation\Speech\ASR
+NdlDir=C:\repo\cntk_github6\CNTK\Examples\Speech\Miscellaneous\TIMIT\config
+MelDir=C:\repo\cntk_github6\CNTK\Examples\Speech\Miscellaneous\TIMIT\config
+ExpDir=F:\cygwin64\tmp\cntk-test-20160406123516.34066\Examples\Speech\TIMIT_TrainMultiInput@release_cpu/exp
+DeviceNumber=-1
+TIMIT_TrainMultiInput=[SGD=[maxEpochs=1]]
+TIMIT_TrainMultiInput=[SGD=[epochSize=2048]]
+numMBsToShowResult=5
+
+04/06/2016 11:35:17: <<<<<<<<<<<<<<<<<<<< RAW CONFIG (VARIABLES NOT RESOLVED)  <<<<<<<<<<<<<<<<<<<<
+
+04/06/2016 11:35:17: >>>>>>>>>>>>>>>>>>>> RAW CONFIG WITH ALL VARIABLES RESOLVED >>>>>>>>>>>>>>>>>>>>
+04/06/2016 11:35:17: command=TIMIT_TrainMultiInput
+precision=float
+TIMIT_TrainMultiInput=[
+    action=train
+    modelPath=F:\cygwin64\tmp\cntk-test-20160406123516.34066\Examples\Speech\TIMIT_TrainMultiInput@release_cpu/exp\TrainMultiInput\model\cntkSpeech.dnn
+    deviceId=-1
+    traceLevel=1
+    NDLNetworkBuilder=[
+	ndlMacros=C:\repo\cntk_github6\CNTK\Examples\Speech\Miscellaneous\TIMIT\config\default_macros.ndl
+        networkDescription=C:\repo\cntk_github6\CNTK\Examples\Speech\Miscellaneous\TIMIT\config\mtl_fbank_mfcc.ndl
+    ]
+    SGD=[
+        epochSize=0
+        minibatchSize=256:1024
+        learningRatesPerMB=0.8:3.2*14:0.08
+        momentumPerMB=0.9
+        dropoutRate=0.0
+        maxEpochs=25
+        gradientClippingWithTruncation=true
+        clippingThresholdPerSample=1#INF
+        gradientClippingWithTruncation=true
+        clippingThresholdPerSample=1#INF
+    ]
+    reader=[
+      readerType=HTKMLFReader
+      readMethod=rollingWindow
+      miniBatchMode=Partial
+      randomize=Auto
+      verbosity=1   
+      features1=[
+	dim=792
+	scpFile=D:\TestPreparation\Speech\ASR\TIMIT.train.scp.fbank.fullpath
+	type=Real
+      ]
+      features2=[
+	dim=39
+	scpFile=D:\TestPreparation\Speech\ASR\TIMIT.train.scp.mfcc.fullpath
+	type=Real
+      ]
+      labels=[
+	mlfFile=D:\TestPreparation\Speech\ASR\TIMIT.train.align_cistate.mlf.cntk
+ 	labelMappingFile=D:\TestPreparation\Speech\ASR\TIMIT.statelist
+   	 labelDim=183
+         labelType=Category
+      ]
+    ]
+]
+currentDirectory=D:\TestPreparation\Speech\ASR
+RunDir=F:\cygwin64\tmp\cntk-test-20160406123516.34066\Examples\Speech\TIMIT_TrainMultiInput@release_cpu
+DataDir=D:\TestPreparation\Speech\ASR
+ConfigDir=C:\repo\cntk_github6\CNTK\Examples\Speech\Miscellaneous\TIMIT\config
+OutputDir=F:\cygwin64\tmp\cntk-test-20160406123516.34066\Examples\Speech\TIMIT_TrainMultiInput@release_cpu
+DeviceId=-1
+timestamping=true
+LibDir=C:\repo\cntk_github6\CNTK\Examples\Speech\Miscellaneous\TIMIT\config/../lib
+ScpDir=D:\TestPreparation\Speech\ASR
+MlfDir=D:\TestPreparation\Speech\ASR
+NdlDir=C:\repo\cntk_github6\CNTK\Examples\Speech\Miscellaneous\TIMIT\config
+MelDir=C:\repo\cntk_github6\CNTK\Examples\Speech\Miscellaneous\TIMIT\config
+ExpDir=F:\cygwin64\tmp\cntk-test-20160406123516.34066\Examples\Speech\TIMIT_TrainMultiInput@release_cpu/exp
+DeviceNumber=-1
+TIMIT_TrainMultiInput=[SGD=[maxEpochs=1]]
+TIMIT_TrainMultiInput=[SGD=[epochSize=2048]]
+numMBsToShowResult=5
+
+04/06/2016 11:35:17: <<<<<<<<<<<<<<<<<<<< RAW CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<
+
+04/06/2016 11:35:17: >>>>>>>>>>>>>>>>>>>> PROCESSED CONFIG WITH ALL VARIABLES RESOLVED >>>>>>>>>>>>>>>>>>>>
+configparameters: TIMIT_TrainMultiInput.cntk:command=TIMIT_TrainMultiInput
+configparameters: TIMIT_TrainMultiInput.cntk:ConfigDir=C:\repo\cntk_github6\CNTK\Examples\Speech\Miscellaneous\TIMIT\config
+configparameters: TIMIT_TrainMultiInput.cntk:currentDirectory=D:\TestPreparation\Speech\ASR
+configparameters: TIMIT_TrainMultiInput.cntk:DataDir=D:\TestPreparation\Speech\ASR
+configparameters: TIMIT_TrainMultiInput.cntk:DeviceId=-1
+configparameters: TIMIT_TrainMultiInput.cntk:DeviceNumber=-1
+configparameters: TIMIT_TrainMultiInput.cntk:ExpDir=F:\cygwin64\tmp\cntk-test-20160406123516.34066\Examples\Speech\TIMIT_TrainMultiInput@release_cpu/exp
+configparameters: TIMIT_TrainMultiInput.cntk:LibDir=C:\repo\cntk_github6\CNTK\Examples\Speech\Miscellaneous\TIMIT\config/../lib
+configparameters: TIMIT_TrainMultiInput.cntk:MelDir=C:\repo\cntk_github6\CNTK\Examples\Speech\Miscellaneous\TIMIT\config
+configparameters: TIMIT_TrainMultiInput.cntk:MlfDir=D:\TestPreparation\Speech\ASR
+configparameters: TIMIT_TrainMultiInput.cntk:NdlDir=C:\repo\cntk_github6\CNTK\Examples\Speech\Miscellaneous\TIMIT\config
+configparameters: TIMIT_TrainMultiInput.cntk:numMBsToShowResult=5
+configparameters: TIMIT_TrainMultiInput.cntk:OutputDir=F:\cygwin64\tmp\cntk-test-20160406123516.34066\Examples\Speech\TIMIT_TrainMultiInput@release_cpu
+configparameters: TIMIT_TrainMultiInput.cntk:precision=float
+configparameters: TIMIT_TrainMultiInput.cntk:RunDir=F:\cygwin64\tmp\cntk-test-20160406123516.34066\Examples\Speech\TIMIT_TrainMultiInput@release_cpu
+configparameters: TIMIT_TrainMultiInput.cntk:ScpDir=D:\TestPreparation\Speech\ASR
+configparameters: TIMIT_TrainMultiInput.cntk:timestamping=true
+configparameters: TIMIT_TrainMultiInput.cntk:TIMIT_TrainMultiInput=[
+    action=train
+    modelPath=F:\cygwin64\tmp\cntk-test-20160406123516.34066\Examples\Speech\TIMIT_TrainMultiInput@release_cpu/exp\TrainMultiInput\model\cntkSpeech.dnn
+    deviceId=-1
+    traceLevel=1
+    NDLNetworkBuilder=[
+	ndlMacros=C:\repo\cntk_github6\CNTK\Examples\Speech\Miscellaneous\TIMIT\config\default_macros.ndl
+        networkDescription=C:\repo\cntk_github6\CNTK\Examples\Speech\Miscellaneous\TIMIT\config\mtl_fbank_mfcc.ndl
+    ]
+    SGD=[
+        epochSize=0
+        minibatchSize=256:1024
+        learningRatesPerMB=0.8:3.2*14:0.08
+        momentumPerMB=0.9
+        dropoutRate=0.0
+        maxEpochs=25
+        gradientClippingWithTruncation=true
+        clippingThresholdPerSample=1#INF
+        gradientClippingWithTruncation=true
+        clippingThresholdPerSample=1#INF
+    ]
+    reader=[
+      readerType=HTKMLFReader
+      readMethod=rollingWindow
+      miniBatchMode=Partial
+      randomize=Auto
+      verbosity=1   
+      features1=[
+	dim=792
+	scpFile=D:\TestPreparation\Speech\ASR\TIMIT.train.scp.fbank.fullpath
+	type=Real
+      ]
+      features2=[
+	dim=39
+	scpFile=D:\TestPreparation\Speech\ASR\TIMIT.train.scp.mfcc.fullpath
+	type=Real
+      ]
+      labels=[
+	mlfFile=D:\TestPreparation\Speech\ASR\TIMIT.train.align_cistate.mlf.cntk
+ 	labelMappingFile=D:\TestPreparation\Speech\ASR\TIMIT.statelist
+   	 labelDim=183
+         labelType=Category
+      ]
+    ]
+] [SGD=[maxEpochs=1]] [SGD=[epochSize=2048]]
+
+04/06/2016 11:35:17: <<<<<<<<<<<<<<<<<<<< PROCESSED CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<
+04/06/2016 11:35:17: Commands: TIMIT_TrainMultiInput
+04/06/2016 11:35:17: Precision = "float"
+04/06/2016 11:35:17: CNTKModelPath: F:\cygwin64\tmp\cntk-test-20160406123516.34066\Examples\Speech\TIMIT_TrainMultiInput@release_cpu/exp\TrainMultiInput\model\cntkSpeech.dnn
+04/06/2016 11:35:17: CNTKCommandTrainInfo: TIMIT_TrainMultiInput : 1
+04/06/2016 11:35:17: CNTKCommandTrainInfo: CNTKNoMoreCommands_Total : 1
+
+04/06/2016 11:35:17: ##############################################################################
+04/06/2016 11:35:17: #                                                                            #
+04/06/2016 11:35:17: # Action "train"                                                             #
+04/06/2016 11:35:17: #                                                                            #
+04/06/2016 11:35:17: ##############################################################################
+
+04/06/2016 11:35:17: CNTKCommandTrainBegin: TIMIT_TrainMultiInput
+NDLBuilder Using CPU
+reading script file D:\TestPreparation\Speech\ASR\TIMIT.train.scp.fbank.fullpath ... 3696 entries
+reading script file D:\TestPreparation\Speech\ASR\TIMIT.train.scp.mfcc.fullpath ... 3696 entries
+total 183 state names in state list D:\TestPreparation\Speech\ASR\TIMIT.statelist
+htkmlfreader: reading MLF file D:\TestPreparation\Speech\ASR\TIMIT.train.align_cistate.mlf.cntk ... total 3696 entries
+biggrowablevectorarray: creating disk backup store at 'F:\cygwin64\tmp\CNT10F2.tmp'
+biggrowablevectorarray: creating disk backup store at 'F:\cygwin64\tmp\CNT10F3.tmp'
+minibatchframesourcemulti: reading 2 feature sets and 1 label sets.......................................................................................................
+minibatchframesourcemulti: read label set 0: 183 classes
+
+minibatchframesourcemulti: feature set 0: 1124823 frames read from 3696 utterances
+biggrowablevectorarray: disk backup store created, 1124823 frames, 339738624 bytes
+....................................................................................................
+minibatchframesourcemulti: feature set 1: 1124823 frames read from 3696 utterances
+biggrowablevectorarray: disk backup store created, 1124823 frames, 188743680 bytes
+
+04/06/2016 11:35:21: Creating virgin network.
+
+Post-processing network...
+
+8 roots:
+	CE.SM = CrossEntropyWithSoftmax()
+	FER = ErrorPrediction()
+	Prior = Mean()
+	ScaledLogLikelihood = Minus()
+	featInvStd1 = InvStdDev()
+	featInvStd2 = InvStdDev()
+	featMean1 = Mean()
+	featMean2 = Mean()
+
+Validating network. 36 nodes to process in pass 1.
+
+
+Validating network. 24 nodes to process in pass 2.
+
+
+Validating network, final pass.
+
+Validating --> labels = InputValue() :  -> [183 x *]
+Validating --> CE.BFF.W = LearnableParameter() :  -> [183 x 512]
+Validating --> L3.BFF.W = LearnableParameter() :  -> [512 x 512]
+Validating --> L2.BFF.W = LearnableParameter() :  -> [512 x 512]
+Validating --> L1.W1 = LearnableParameter() :  -> [512 x 792]
+Validating --> features1 = InputValue() :  -> [792 x *]
+Validating --> featMean1 = Mean (features1) : [792 x *] -> [792]
+Validating --> featInvStd1 = InvStdDev (features1) : [792 x *] -> [792]
+Validating --> featInput1 = PerDimMeanVarNormalization (features1, featMean1, featInvStd1) : [792 x *], [792], [792] -> [792 x *]
+Validating --> L1.T1 = Times (L1.W1, featInput1) : [512 x 792], [792 x *] -> [512 x *]
+Validating --> L1.W2 = LearnableParameter() :  -> [512 x 39]
+Validating --> features2 = InputValue() :  -> [39 x *]
+Validating --> featMean2 = Mean (features2) : [39 x *] -> [39]
+Validating --> featInvStd2 = InvStdDev (features2) : [39 x *] -> [39]
+Validating --> featInput2 = PerDimMeanVarNormalization (features2, featMean2, featInvStd2) : [39 x *], [39], [39] -> [39 x *]
+Validating --> L1.T2 = Times (L1.W2, featInput2) : [512 x 39], [39 x *] -> [512 x *]
+Validating --> L1.P1 = Plus (L1.T1, L1.T2) : [512 x *], [512 x *] -> [512 x *]
+Validating --> L1.B = LearnableParameter() :  -> [512]
+Validating --> L1.P2 = Plus (L1.P1, L1.B) : [512 x *], [512] -> [512 x *]
+Validating --> L1.S = Sigmoid (L1.P2) : [512 x *] -> [512 x *]
+Validating --> L2.BFF.FF.T = Times (L2.BFF.W, L1.S) : [512 x 512], [512 x *] -> [512 x *]
+Validating --> L2.BFF.B = LearnableParameter() :  -> [512]
+Validating --> L2.BFF.FF.P = Plus (L2.BFF.FF.T, L2.BFF.B) : [512 x *], [512] -> [512 x *]
+Validating --> L2.S = Sigmoid (L2.BFF.FF.P) : [512 x *] -> [512 x *]
+Validating --> L3.BFF.FF.T = Times (L3.BFF.W, L2.S) : [512 x 512], [512 x *] -> [512 x *]
+Validating --> L3.BFF.B = LearnableParameter() :  -> [512]
+Validating --> L3.BFF.FF.P = Plus (L3.BFF.FF.T, L3.BFF.B) : [512 x *], [512] -> [512 x *]
+Validating --> L3.S = Sigmoid (L3.BFF.FF.P) : [512 x *] -> [512 x *]
+Validating --> CE.BFF.FF.T = Times (CE.BFF.W, L3.S) : [183 x 512], [512 x *] -> [183 x *]
+Validating --> CE.BFF.B = LearnableParameter() :  -> [183]
+Validating --> CE.BFF.FF.P = Plus (CE.BFF.FF.T, CE.BFF.B) : [183 x *], [183] -> [183 x *]
+Validating --> CE.SM = CrossEntropyWithSoftmax (labels, CE.BFF.FF.P) : [183 x *], [183 x *] -> [1]
+Validating --> FER = ErrorPrediction (labels, CE.BFF.FF.P) : [183 x *], [183 x *] -> [1]
+Validating --> Prior = Mean (labels) : [183 x *] -> [183]
+Validating --> LogPrior = Log (Prior) : [183] -> [183]
+Validating --> ScaledLogLikelihood = Minus (CE.BFF.FF.P, LogPrior) : [183 x *], [183] -> [183 x *]
+
+
+17 out of 36 nodes do not share the minibatch layout with the input data.
+
+Post-processing network complete.
+
+04/06/2016 11:35:21: Created model with 36 nodes on CPU.
+
+04/06/2016 11:35:21: Training criterion node(s):
+04/06/2016 11:35:21: 	CE.SM = CrossEntropyWithSoftmax
+
+04/06/2016 11:35:21: Evaluation criterion node(s):
+
+04/06/2016 11:35:21: 	FER = ErrorPrediction
+
+
+Allocating matrices for forward and/or backward propagation.
+
+04/06/2016 11:35:21: Precomputing --> 5 PreCompute nodes found.
+
+04/06/2016 11:35:21: 	featMean1 = Mean()
+04/06/2016 11:35:21: 	featInvStd1 = InvStdDev()
+04/06/2016 11:35:21: 	featMean2 = Mean()
+04/06/2016 11:35:21: 	featInvStd2 = InvStdDev()
+04/06/2016 11:35:21: 	Prior = Mean()
+minibatchiterator: epoch 0: frames [0..1124823] (first utterance at frame 0), data subset 0 of 1, with 1 datapasses
+randomordering: 0 retries for 1124823 elements (0.0%) to ensure window condition
+randomordering: recached sequence for seed 0: 128042, 767369, ...
+recoverblock: recovering feature block 0 [0..65535)
+recoverblock: recovering feature block 1 [65536..131071)
+recoverblock: recovering feature block 2 [131072..196607)
+recoverblock: recovering feature block 3 [196608..262143)
+recoverblock: recovering feature block 4 [262144..327679)
+recoverblock: recovering feature block 5 [327680..393215)
+recoverblock: recovering feature block 6 [393216..458751)
+recoverblock: recovering feature block 7 [458752..524287)
+recoverblock: recovering feature block 8 [524288..589823)
+recoverblock: recovering feature block 9 [589824..655359)
+recoverblock: recovering feature block 10 [655360..720895)
+recoverblock: recovering feature block 11 [720896..786431)
+recoverblock: recovering feature block 12 [786432..851967)
+recoverblock: recovering feature block 13 [851968..917503)
+recoverblock: recovering feature block 14 [917504..983039)
+recoverblock: recovering feature block 15 [983040..1048575)
+recoverblock: recovering feature block 16 [1048576..1114111)
+recoverblock: recovering feature block 17 [1114112..1179647)
+recoverblock: recovering feature block 0 [0..65535)
+recoverblock: recovering feature block 1 [65536..131071)
+recoverblock: recovering feature block 2 [131072..196607)
+recoverblock: recovering feature block 3 [196608..262143)
+recoverblock: recovering feature block 4 [262144..327679)
+recoverblock: recovering feature block 5 [327680..393215)
+recoverblock: recovering feature block 6 [393216..458751)
+recoverblock: recovering feature block 7 [458752..524287)
+recoverblock: recovering feature block 8 [524288..589823)
+recoverblock: recovering feature block 9 [589824..655359)
+recoverblock: recovering feature block 10 [655360..720895)
+recoverblock: recovering feature block 11 [720896..786431)
+recoverblock: recovering feature block 12 [786432..851967)
+recoverblock: recovering feature block 13 [851968..917503)
+recoverblock: recovering feature block 14 [917504..983039)
+recoverblock: recovering feature block 15 [983040..1048575)
+recoverblock: recovering feature block 16 [1048576..1114111)
+recoverblock: recovering feature block 17 [1114112..1179647)
+
+04/06/2016 11:35:32: Precomputing --> Completed.
+
+
+04/06/2016 11:35:32: Starting Epoch 1: learning rate per sample = 0.003125  effective momentum = 0.900000  momentum as time constant = 2429.8 samples
+minibatchiterator: epoch 0: frames [0..2048] (first utterance at frame 0), data subset 0 of 1, with 1 datapasses
+
+04/06/2016 11:35:32: Starting minibatch loop.
+04/06/2016 11:35:32:  Epoch[ 1 of 1]-Minibatch[   1-   5, 62.50%]: SamplesSeen = 1280; TrainLossPerSample =  5.10970078; EvalErr[0]PerSample = 0.97265625; TotalTime = 0.1783s; SamplesPerSecond = 7179.9
+04/06/2016 11:35:32: Finished Epoch[ 1 of 1]: [Training Set] TrainLossPerSample = 5.0801849; TotalSamplesSeen = 2048; EvalErrPerSample = 0.97216797; AvgLearningRatePerSample = 0.003125; EpochTime=0.274774
+04/06/2016 11:35:32: SGD: Saving checkpoint model 'F:\cygwin64\tmp\cntk-test-20160406123516.34066\Examples\Speech\TIMIT_TrainMultiInput@release_cpu/exp\TrainMultiInput\model\cntkSpeech.dnn'
+biggrowablevectorarray: deleted disk backup store at 'F:\cygwin64\tmp\CNT10F2.tmp'
+biggrowablevectorarray: deleted disk backup store at 'F:\cygwin64\tmp\CNT10F3.tmp'
+04/06/2016 11:35:32: CNTKCommandTrainEnd: TIMIT_TrainMultiInput
+
+04/06/2016 11:35:32: Action "train" complete.
+
+04/06/2016 11:35:32: __COMPLETED__
