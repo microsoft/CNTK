@@ -48,7 +48,7 @@
   <PropertyGroup>
     <IncludePath>..\SequenceTrainingLib;..\ComputationNetworkLib;..\Math;..\Common\Include;..\CNTK\BrainScript;$(MSMPI_INC);$(VCInstallDir)include;$(WindowsSDK_IncludePath)</IncludePath>
     <IncludePath Condition="'$(CNTK_ENABLE_1BitSGD)'=='true'">..\1BitSGD;$(IncludePath)</IncludePath>
-    <LibraryPath>$(MSMPI_LIB64);$(SolutionDir)$(Platform)\$(Configuration);$(SolutionDir)..\Common\lib;$(VCInstallDir)lib\amd64;$(WindowsSDK_LibraryPath_x64)</LibraryPath>
+    <LibraryPath>$(MSMPI_LIB64);$(SolutionDir)$(Platform)\$(Configuration);$(VCInstallDir)lib\amd64;$(WindowsSDK_LibraryPath_x64)</LibraryPath>
     <PreBuildEventUseInBuild>false</PreBuildEventUseInBuild>
   </PropertyGroup>
   <PropertyGroup Condition="$(ReleaseBuild)">
