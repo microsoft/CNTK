@@ -182,6 +182,7 @@ BOOST_AUTO_TEST_CASE(BatchNormalizationForward)
             BOOST_REQUIRE_MESSAGE(CheckEqual(saveInvStdDev, saveInvStdDevB, emsg, relErr, absErr), "saveInvStdDev" << msg << ". " << emsg);
             BOOST_REQUIRE_MESSAGE(CountNans(saveInvStdDevBuf) == crowScaleBias * 2, "saveInvStdDev" << msgNotNan);
 
+#if 0
 #ifndef _DEBUG
             float elapsedCntk = time1.Elapsed();
             float elapsedCudnn = time2.Elapsed();
@@ -195,6 +196,7 @@ BOOST_AUTO_TEST_CASE(BatchNormalizationForward)
                 BOOST_REQUIRE_MESSAGE(speedup * elapsedCntk < elapsedCudnn,
                                       "CNTK implementation (" << elapsedCntk << "ms) must be faster than cuDNN (" << elapsedCudnn << "ms) by at least " << speedup << "x, what's changed? " << tmsg.str());
             }
+#endif
 #endif
         }
     }
@@ -385,6 +387,7 @@ BOOST_AUTO_TEST_CASE(BatchNormalizationBackward)
             BOOST_REQUIRE_MESSAGE(CheckEqual(dBias, dBiasB, emsg, relErr * 32, absErr * 16), "dBias" << msg << ". " << emsg);
             BOOST_REQUIRE_MESSAGE(CountNans(dBiasBuf) == crowScaleBias * 2, "dBias" << msgNotNan);
 
+#if 0
 #ifndef _DEBUG
             float elapsedCntk = time1.Elapsed();
             float elapsedCudnn = time2.Elapsed();
@@ -398,6 +401,7 @@ BOOST_AUTO_TEST_CASE(BatchNormalizationBackward)
                 BOOST_REQUIRE_MESSAGE(speedup * elapsedCntk < elapsedCudnn,
                                       "CNTK implementation (" << elapsedCntk << "ms) must be faster than cuDNN (" << elapsedCudnn << "ms) by at least " << speedup << "x, what's changed? " << tmsg.str());
             }
+#endif
 #endif
         }
     }

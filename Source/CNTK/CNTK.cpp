@@ -414,9 +414,7 @@ int wmainWithBS(int argc, wchar_t* argv[]) // called from wmain which is a wrapp
     wstring startupMessage = msra::strfun::wstrprintf(L"running on %ls at %ls\n", msra::strfun::utf16(GetHostName()).c_str(), msra::strfun::utf16(TimeDateStamp()).c_str());
     startupMessage += msra::strfun::wstrprintf(L"command line: %ls", exePath.c_str());
     for (const auto& arg : args)
-    {
         startupMessage += L"  " + arg;
-    }
 
     LOGPRINTF(stderr, "%ls\n", startupMessage.c_str());
 
@@ -542,6 +540,7 @@ int wmainWithBS(int argc, wchar_t* argv[]) // called from wmain which is a wrapp
         fprintf(fp, "successfully finished at %s on %s\n", TimeDateStamp().c_str(), GetHostName().c_str());
         fcloseOrDie(fp);
     }
+    // TODO: change this back to COMPLETED, double underscores don't look good in output
     LOGPRINTF(stderr, "__COMPLETED__\n");
     fflush(stderr);
 
@@ -606,10 +605,7 @@ int wmainOldCNTKConfig(int argc, wchar_t* argv[])
     LOGPRINTF(stderr, "Running on %s at %s\n", GetHostName().c_str(), timestamp.c_str());
     LOGPRINTF(stderr, "Command line: \n");
     for (int i = 0; i < argc; i++)
-    {
-        // use 2 spaces for better visual separability
-        fprintf(stderr, "%*s%ls", i > 0 ? 2 : 0, "", argv[i]);
-    }
+        fprintf(stderr, "%*s%ls", i > 0 ? 2 : 0, "", argv[i]); // use 2 spaces for better visual separability
     fprintf(stderr, "\n\n");
 
 #if 1 //def _DEBUG
@@ -637,9 +633,7 @@ int wmainOldCNTKConfig(int argc, wchar_t* argv[])
 
     LOGPRINTF(stderr, "Commands:");
     for (int i = 0; i < command.size(); i++)
-    {
         fprintf(stderr, " %s", command[i].c_str());
-    }
     fprintf(stderr, "\n");
 
     // run commands
@@ -664,6 +658,7 @@ int wmainOldCNTKConfig(int argc, wchar_t* argv[])
         fprintf(fp, "successfully finished at %s on %s\n", TimeDateStamp().c_str(), GetHostName().c_str());
         fcloseOrDie(fp);
     }
+    // TODO: Change back to COMPLETED (no underscores)
     LOGPRINTF(stderr, "__COMPLETED__\n");
     fflush(stderr);
 

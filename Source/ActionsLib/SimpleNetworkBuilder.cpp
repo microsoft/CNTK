@@ -81,7 +81,7 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildFFDNNFromDescription(
         ComputationNodePtr input, w, b, output, label, prior, scaledLogLikelihood;
 
         input = builder.CreateInputNode(L"features", m_layerSizes[0]);
-        m_net->FeatureNodes().push_back(input);
+        m_net->AddToNodeGroup(L"feature", input);
 
         if (m_applyMeanVarNorm)
         {
@@ -151,16 +151,16 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildFFDNNFromDescription(
             // output = builder.Log(output);
 
             scaledLogLikelihood = builder.Minus(output, input, L"ScaledLogLikelihood");
-            m_net->OutputNodes().push_back(scaledLogLikelihood);
+            m_net->AddToNodeGroup(L"output", scaledLogLikelihood);
         }
         else
         {
-            m_net->OutputNodes().push_back(output);
+            m_net->AddToNodeGroup(L"output", output);
         }
 
         // add softmax layer (if prob is needed or KL reg adaptation is needed)
         output = builder.Softmax(output, L"PosteriorProb");
-        // m_net->OutputNodes().push_back(output);
+        // m_net->AddToNodeGroup(L"output", output);
     }
 
     return m_net;
@@ -182,7 +182,7 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildRNNFromDescription()
         ComputationNodePtr input, w, b, u, pastValue, output, label, prior;
 
         input = builder.CreateSparseInputNode(L"features", m_layerSizes[0]);
-        m_net->FeatureNodes().push_back(input);
+        m_net->AddToNodeGroup(L"feature", input);
 
         if (m_applyMeanVarNorm)
         {
@@ -211,7 +211,7 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildRNNFromDescription()
                     builder.Plus(
                         builder.Times(u, input), builder.Times(w, pastValue)),
                     0);
-                pastValue->AttachInputs(output);
+                pastValue->AttachInputs({ output });
                 recur_idx++;
             }
             else
@@ -243,7 +243,7 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildRNNFromDescription()
                         builder.Plus(
                             builder.Times(u, input), builder.Times(w, pastValue)),
                         0);
-                    pastValue->AttachInputs(output);
+                    pastValue->AttachInputs({ output });
                     recur_idx++;
                 }
                 else
@@ -267,7 +267,7 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildRNNFromDescription()
 
         output = builder.Times(w, input, 1, L"outputs");
 
-        m_net->OutputNodes().push_back(output);
+        m_net->AddToNodeGroup(L"output", output);
 
         if (m_needPrior)
             prior = builder.Mean(label);
@@ -296,7 +296,7 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildClassEntropyRNNFromDe
             RuntimeError("BuildClassEntropyRNNFromDescription : vocabulary size should be the same as the output layer size");
 
         input = builder.CreateSparseInputNode(L"features", m_layerSizes[0]);
-        m_net->FeatureNodes().push_back(input);
+        m_net->AddToNodeGroup(L"feature", input);
 
         if (m_applyMeanVarNorm)
         {
@@ -324,7 +324,7 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildClassEntropyRNNFromDe
                     builder.Plus(
                         builder.Times(u, input), builder.Times(w, pastValue)),
                     0);
-                pastValue->AttachInputs(output);
+                pastValue->AttachInputs({ output });
                 recur_idx++;
             }
             else
@@ -354,7 +354,7 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildClassEntropyRNNFromDe
                         builder.Plus(
                             builder.Times(u, input), builder.Times(w, pastValue)),
                         0);
-                    pastValue->AttachInputs(output);
+                    pastValue->AttachInputs({ output });
                     recur_idx++;
                 }
                 else
@@ -385,7 +385,7 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildClassEntropyRNNFromDe
         output = AddTrainAndEvalCriterionNodes(input, label, w, L"TrainNodeClassBasedCrossEntropy", L"EvalNodeClassBasedCrossEntrpy",
                                                clslogpostprob);
 
-        m_net->OutputNodes().push_back(output);
+        m_net->AddToNodeGroup(L"output", output);
 
         if (m_needPrior)
         {
@@ -414,7 +414,7 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildConditionalLSTMNetwor
         ComputationNodePtr clsweight;
 
         input = builder.CreateSparseInputNode(L"features", m_layerSizes[0]);
-        m_net->FeatureNodes().push_back(input);
+        m_net->AddToNodeGroup(L"feature", input);
 
         if (m_applyMeanVarNorm)
         {
@@ -463,7 +463,7 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildConditionalLSTMNetwor
 
         // serve as a global bias term
         gt = builder.CreateInputNode(L"binaryFeature", m_auxFeatDim);
-        m_net->FeatureNodes().push_back(gt);
+        m_net->AddToNodeGroup(L"feature", gt);
         e = builder.CreateLearnableParameter(msra::strfun::wstrprintf(L"AuxTrans%d", 0),
                                              m_layerSizes[numHiddenLayers], m_auxFeatDim);
         m_net->InitLearnableParameters(e, m_uniformInit, randomSeed++, m_initValueScale);
@@ -489,7 +489,7 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildConditionalLSTMNetwor
 
         output = builder.TransposeTimes(w, input, L"outputs");
 
-        m_net->OutputNodes().push_back(output);
+        m_net->AddToNodeGroup(L"output", output);
 
         // add softmax layer (if prob is needed or KL reg adaptation is needed)
         output = builder.Softmax(output, L"PosteriorProb");
@@ -520,7 +520,7 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildLogBilinearNetworkFro
         //                input = builder.CreateSparseInputNode(L"features", m_layerSizes[0]);
         input = builder.CreateInputNode(L"features", m_layerSizes[0]);
         featin = input;
-        m_net->FeatureNodes().push_back(input);
+        m_net->AddToNodeGroup(L"feature", input);
 
         if (m_applyMeanVarNorm)
         {
@@ -553,7 +553,7 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildLogBilinearNetworkFro
             pastValueXI =
                 builder.PastValue(NULL, m_defaultHiddenActivity, m_layerSizes[0], ik, msra::strfun::wstrprintf(L"pastValue%d", ik));
             pastValueXI->SetLearningRateMultiplier(0);
-            pastValueXI->AttachInputs(input);
+            pastValueXI->AttachInputs({ input });
             // TODO: to figure out sparse matrix size
             Wxi = builder.CreateLearnableParameter(msra::strfun::wstrprintf(L"DD%d", ik), m_layerSizes[0], m_layerSizes[0]);
             m_net->InitLearnableParameters(Wxi, m_uniformInit, randomSeed++, m_initValueScale);
@@ -582,7 +582,7 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildLogBilinearNetworkFro
                 pastValue = builder.PastValue(NULL, m_defaultHiddenActivity, m_layerSizes[i + 1], 1);
                 output = builder.Plus(builder.Times(w, pastValue), input);
 
-                pastValue->AttachInputs(output);
+                pastValue->AttachInputs({ output });
                 input = output;
                 recur_idx++;
             }
@@ -604,7 +604,7 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildLogBilinearNetworkFro
 
         output = builder.Times(w, input, 1, L"outputs");
 
-        m_net->OutputNodes().push_back(output);
+        m_net->AddToNodeGroup(L"output", output);
 
         if (m_needPrior)
         {
@@ -635,7 +635,7 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildDNNLMNetworkFromDescr
         ComputationNodePtr pastValueXI, pastValueXII, pastValueXIII, pastValueXIV;
 
         input = builder.CreateSparseInputNode(L"features", m_layerSizes[0]);
-        m_net->FeatureNodes().push_back(input);
+        m_net->AddToNodeGroup(L"feature", input);
 
         if (m_applyMeanVarNorm)
         {
@@ -655,10 +655,10 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildDNNLMNetworkFromDescr
             pastValueXII = builder.PastValue(NULL, m_defaultHiddenActivity, m_layerSizes[0], 2);
             pastValueXIII = builder.PastValue(NULL, m_defaultHiddenActivity, m_layerSizes[0], 3);
             pastValueXIV = builder.PastValue(NULL, m_defaultHiddenActivity, m_layerSizes[0], 4);
-            pastValueXI->AttachInputs(input);
-            pastValueXII->AttachInputs(input);
-            pastValueXIII->AttachInputs(input);
-            pastValueXIV->AttachInputs(input);
+            pastValueXI->AttachInputs({ input });
+            pastValueXII->AttachInputs({ input });
+            pastValueXIII->AttachInputs({ input });
+            pastValueXIV->AttachInputs({ input });
 
             if (m_recurrentLayers.size() > 0 && m_recurrentLayers[recur_idx] == 1)
             {
@@ -719,7 +719,7 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildDNNLMNetworkFromDescr
                     std::list<ComputationNodeBasePtr> recurrent_loop;
                     pastValue = builder.PastValue(NULL, m_defaultHiddenActivity, m_layerSizes[i + 1], 1);
                     output = SimpleNetworkBuilder<ElemType>::ApplyNonlinearFunction(builder.Plus(builder.Times(u, input), builder.Times(w, pastValue)), i);
-                    pastValue->AttachInputs(output);
+                    pastValue->AttachInputs({ output });
                     recur_idx++;
                 }
                 else
@@ -743,7 +743,7 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildDNNLMNetworkFromDescr
 
         output = builder.Times(w, input);
 
-        m_net->OutputNodes().push_back(output);
+        m_net->AddToNodeGroup(L"output", output);
 
         if (m_needPrior)
         {
@@ -933,13 +933,13 @@ shared_ptr<ComputationNode<ElemType>> /*ComputationNodePtr*/ SimpleNetworkBuilde
         output = builder.ElementTimes(ot, builder.Tanh(ct));
     }
 
-    pastValueHO->AttachInputs(output);
-    pastValueHI->AttachInputs(output);
-    pastValueHF->AttachInputs(output);
-    pastValueHC->AttachInputs(output);
-    pastValueCI->AttachInputs(ct);
-    pastValueCF->AttachInputs(ct);
-    pastValueCC->AttachInputs(ct);
+    pastValueHO->AttachInputs({ output });
+    pastValueHI->AttachInputs({ output });
+    pastValueHF->AttachInputs({ output });
+    pastValueHC->AttachInputs({ output });
+    pastValueCI->AttachInputs({ ct });
+    pastValueCF->AttachInputs({ ct });
+    pastValueCC->AttachInputs({ ct });
 
     if (m_addDropoutNodes)
         input = builder.Dropout(output);
@@ -974,7 +974,7 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildCRFLSTMNetworkFromDes
         ComputationNodePtr trans;
 
         input = builder.CreateInputNode(L"features", m_layerSizes[0]);
-        m_net->FeatureNodes().push_back(input);
+        m_net->AddToNodeGroup(L"feature", input);
 
         if (m_applyMeanVarNorm)
         {
@@ -1043,7 +1043,7 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildCRFLSTMNetworkFromDes
 
         input = output;
         output = builder.SequenceDecoder(label, input, trans, L"outputs");
-        m_net->OutputNodes().push_back(output);
+        m_net->AddToNodeGroup(L"output", output);
 
         output = builder.Softmax(input, L"PosteriorProb");
     }
@@ -1071,7 +1071,7 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildClassLSTMNetworkFromD
         ComputationNodePtr clsweight;
 
         input = builder.CreateSparseInputNode(L"features", m_layerSizes[0]);
-        m_net->FeatureNodes().push_back(input);
+        m_net->AddToNodeGroup(L"feature", input);
 
         if (m_applyMeanVarNorm)
         {
@@ -1136,7 +1136,7 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildClassLSTMNetworkFromD
 
         output = builder.TransposeTimes(w, input, L"outputs");
 
-        m_net->OutputNodes().push_back(output);
+        m_net->AddToNodeGroup(L"output", output);
 
         // add softmax layer (if prob is needed or KL reg adaptation is needed)
         output = builder.Softmax(output, L"PosteriorProb");
@@ -1220,7 +1220,7 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildLSTMNetworkFromDescri
         else
             input = builder.CreateInputNode(L"features", m_layerSizes[0]);
 
-        m_net->FeatureNodes().push_back(input);
+        m_net->AddToNodeGroup(L"feature", input);
 
         if (m_applyMeanVarNorm)
         {
@@ -1305,10 +1305,10 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildLSTMNetworkFromDescri
             input = builder.Log(prior, L"LogOfPrior");
             ComputationNodePtr
                 scaledLogLikelihood = builder.Minus(output, input, L"ScaledLogLikelihood");
-            m_net->OutputNodes().push_back(scaledLogLikelihood);
+            m_net->AddToNodeGroup(L"output", scaledLogLikelihood);
         }
         else
-            m_net->OutputNodes().push_back(output);
+            m_net->AddToNodeGroup(L"output", output);
 
         // add softmax layer (if prob is needed or KL reg adaptation is needed)
         output = builder.Softmax(output, L"PosteriorProb");
@@ -1335,7 +1335,7 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildNCELSTMNetworkFromDes
         ComputationNodePtr outputFromEachLayer[MAX_DEPTH] = {nullptr};
 
         input = builder.CreateSparseInputNode(L"features", m_layerSizes[0]);
-        m_net->FeatureNodes().push_back(input);
+        m_net->AddToNodeGroup(L"feature", input);
 
         if (m_applyMeanVarNorm)
         {
@@ -1419,7 +1419,7 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildNCELSTMNetworkFromDes
 
         output = AddTrainAndEvalCriterionNodes(input, label, w, L"TrainNodeNCEBasedCrossEntropy", L"EvalNodeNCEBasedCrossEntrpy", bias);
 
-        m_net->OutputNodes().push_back(output);
+        m_net->AddToNodeGroup(L"output", output);
 
         if (m_needPrior)
         {
@@ -1480,7 +1480,7 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildNetworkFromDbnFile(co
         if (i == 0)
         {
             input = builder.CreateInputNode(L"features", wts.GetNumCols());
-            m_net->FeatureNodes().push_back(input);
+            m_net->AddToNodeGroup(L"feature", input);
 
             size_t frameDim = globalMean.GetNumRows();
             size_t numContextFrames = wts.GetNumCols() / frameDim;
@@ -1613,12 +1613,12 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildNetworkFromDbnFile(co
         // output = builder.Log(output);
 
         scaledLogLikelihood = builder.CreateComputationNode(OperationNameOf(MinusNode), L"ScaledLogLikelihood");
-        scaledLogLikelihood->AttachInputs(output, input);
-        m_net->OutputNodes().push_back(scaledLogLikelihood);
+        scaledLogLikelihood->AttachInputs({ output, input });
+        m_net->AddToNodeGroup(L"output", scaledLogLikelihood);
     }
     else
     {
-        m_net->OutputNodes().push_back(output);
+        m_net->AddToNodeGroup(L"output", output);
     }
 
     if (!CheckDbnTag(fstream, "EDBN"))
@@ -1657,11 +1657,13 @@ shared_ptr<ComputationNode<ElemType>> SimpleNetworkBuilder<ElemType>::ApplyNonli
 }
 
 template <class ElemType>
-shared_ptr<ComputationNode<ElemType>> SimpleNetworkBuilder<ElemType>::AddTrainAndEvalCriterionNodes(ComputationNodePtr input, ComputationNodePtr label, ComputationNodePtr matrix, const std::wstring trainNodeName, const std::wstring evalNodeName, ComputationNodePtr clspostprob, ComputationNodePtr trans)
+shared_ptr<ComputationNode<ElemType>> SimpleNetworkBuilder<ElemType>::AddTrainAndEvalCriterionNodes(ComputationNodePtr input, ComputationNodePtr label, ComputationNodePtr matrix,
+                                                                                                    const std::wstring trainNodeName, const std::wstring evalNodeName,
+                                                                                                    ComputationNodePtr clspostprob, ComputationNodePtr trans)
 {
     ComputationNetworkBuilder<ElemType> builder(*m_net);
 
-    m_net->LabelNodes().push_back(label);
+    m_net->AddToNodeGroup(L"label", label);
 
     ComputationNodePtr output;
 
@@ -1703,7 +1705,7 @@ shared_ptr<ComputationNode<ElemType>> SimpleNetworkBuilder<ElemType>::AddTrainAn
     default:
         LogicError("Unsupported training criterion.");
     }
-    m_net->FinalCriterionNodes().push_back(output);
+    m_net->AddToNodeGroup(L"criterion", output);
 
     if (!((m_evalCriterion == EvalCriterion::CrossEntropyWithSoftmax && m_trainCriterion == TrainingCriterion::CrossEntropyWithSoftmax) ||
           (m_evalCriterion == EvalCriterion::SquareError && m_trainCriterion == TrainingCriterion::SquareError) ||
@@ -1758,7 +1760,7 @@ shared_ptr<ComputationNode<ElemType>> SimpleNetworkBuilder<ElemType>::AddTrainAn
         output->SetLearningRateMultiplier(0);
     }
 
-    m_net->EvaluationNodes().push_back(output);
+    m_net->AddToNodeGroup(L"evaluation", output);
 
     return output;
 }
@@ -1793,4 +1795,4 @@ EvalCriterion ParseEvalCriterionString(wstring s)
     else LogicError("evalCriterion: Invalid trainingCriterion value. Valid values are (errorPrediction | crossEntropyWithSoftmax | squareError | logistic | sequenceWithSoftmax)");
 }
 
-} } }
+}}}

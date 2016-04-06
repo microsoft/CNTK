@@ -9,7 +9,7 @@ deviceId=%(DevideId)s
 Test=[
 	action="test"
 		
-	%(Reader)s	
+%(Reader)s	
 ]
 
 

@@ -81,7 +81,7 @@ void ComputationNode<ElemType>::Backprop(const FrameRange& fr, bool childrenInTh
 //  - with the exception of NULL layouts (e.g. TimesNode)
 //  - all layouts may be NULL (e.g. W' = W * Exp(Stabilizer))
 //  - if there are more than one different layouts involved, this function will fail
-void ComputationNodeBase::InferMBLayoutFromInputsForStandardCase()
+void ComputationNodeBase::InferMBLayoutFromInputsForStandardCase(bool isFinalValidationPass)
 {
     MBLayoutPtr pMBLayout; // start with NULL layout
     for (auto child : m_inputs)
@@ -92,7 +92,7 @@ void ComputationNodeBase::InferMBLayoutFromInputsForStandardCase()
             ;
         else if (!pMBLayout) // first non-NULL layout: just copy it
             pMBLayout = child->m_pMBLayout;
-        else if (pMBLayout != child->m_pMBLayout) // got a layout--compare whether it is the same
+        else if (pMBLayout != child->m_pMBLayout && isFinalValidationPass) // got a layout--compare whether it is the same
             RuntimeError("%ls: InferMBLayoutFromInputsForStandardCase: Expected minibatch layouts to be the same between all children. Child '%ls' (%ls) uses a different layout than previously checked children and might get out of sync during runtime. If this is by design, use ReconcileMBLayout() to forward layouts between nodes.",
                          NodeDescription().c_str(), child->NodeName().c_str(), child->OperationName().c_str());
     }
@@ -105,7 +105,7 @@ void ComputationNodeBase::ValidateUnaryMap(bool isFinalValidationPass)
 {
     assert(m_inputs.size() == 1);
     ComputationNodeBase::Validate(isFinalValidationPass);
-    InferMBLayoutFromInputsForStandardCase();
+    InferMBLayoutFromInputsForStandardCase(isFinalValidationPass);
     SetDims(Input(0));
 }
 
@@ -116,7 +116,7 @@ void ComputationNodeBase::ValidateBinaryZip(bool isFinalValidationPass, bool all
 {
     assert(m_inputs.size() == 2);
     ComputationNodeBase::Validate(isFinalValidationPass);
-    InferMBLayoutFromInputsForStandardCase();
+    InferMBLayoutFromInputsForStandardCase(isFinalValidationPass);
 
     ValidateInferBinaryInputDims();
 
@@ -174,8 +174,8 @@ void ComputationNodeBase::ValidateBinaryReduce(bool isFinalValidationPass)
     {
         if (!(Input(0)->GetSampleLayout().IsElementwiseCompatibleWith(Input(1)->GetSampleLayout())))
         {
-            std::string s1 = Input(0)->GetSampleLayout();
-            std::string s2 = Input(1)->GetSampleLayout();
+            string s1 = Input(0)->GetSampleLayout();
+            string s2 = Input(1)->GetSampleLayout();
             // BUGBUG: Allow broadcasting?
             LogicError("%ls: The tensor dimensions in the inputs do not match. %s != %s", NodeDescription().c_str(), s1.c_str(), s2.c_str());
         }
@@ -201,7 +201,7 @@ void ComputationNodeBase::ValidateInferBinaryInputDims()
     assert(m_inputs.size() >= 2);
     for (size_t index = 0; index < 2; index++)
     {
-        auto in = Input(index);
+        auto in    = Input(    index);
         auto other = Input(1 - index);
         // borrow any unset dimension on one input from the other input
         in->ValidateInferInputDimsFrom(other->GetSampleLayout());
@@ -241,8 +241,8 @@ size_t ComputationNodeBase::DetermineElementwiseTensorRank() const
 // form the actual tensor that describes the full object
 TensorShape ComputationNodeBase::GetTensorShape(size_t rank) const
 {
-    // If we have an MB layout then add the necessary dimensions. If we have none, then absorb the column dimension.
-    TensorShape tensorShape = GetSampleLayout(); // TODO: Can this tensor have arbitrary strides? In case it came out of a Slice, Reshape, or Transpose op in-place
+    // If we have an MB layout then add the necessary sequence and time axes. If we have none, then absorb the column dimension.
+    TensorShape tensorShape = GetSampleLayout(); // TODO: Do we need to expect this tensor to have arbitrary strides? In case it came out of a Slice, Reshape, or Transpose op in-place?
     if (HasMBLayout())
     {
         size_t i = rank;
@@ -253,6 +253,7 @@ TensorShape ComputationNodeBase::GetTensorShape(size_t rank) const
 }
 
 // get tensor shape of the slice referenced by a given FrameRange
+// Important: This shape does carry offset and stride; it's not just dimensions.
 TensorShape ComputationNodeBase::GetTensorSliceFor(size_t rank, const FrameRange& fr) const
 {
     // form the actual tensor that describes the full object
@@ -266,7 +267,22 @@ TensorShape ComputationNodeBase::GetTensorSliceFor(size_t rank, const FrameRange
     // narrow the tensor
     // Note: Strides are honored correctly.
     tensorShape.NarrowTo(slice);
+
     return tensorShape;
+}
+
+// same as GetTensorSliceFor() except that 'fr' refers to a single column, and result will not have seq/time axes
+// This is needed by TimesNode when the left argument has to be broken up into individual matrices/GEMM calls.
+// To enable its first argument to have an MBLayout, it needs to un-pad if we have an MBLayout but only refer to a single sequence and time step.
+TensorShape ComputationNodeBase::GetOneSampleTensorSliceFor(size_t rank, const FrameRange& fr) const
+{
+    TensorShape result = GetTensorSliceFor(rank, fr);
+    // undo the adding of (seq, time) axes that was done by GetTensorShape()
+    if (!fr.IsOneColumnWrt(GetMBLayout()))
+        LogicError("GetOneSampleTensorSliceFor: Requires 'fr' to refer to a single sample.");
+    if (HasMBLayout())
+        result.TrimRankInPlace(rank); // Note: This function will verify once again that the extra dimensions have been reduced to [1 x 1]
+    return result;
 }
 
 // -----------------------------------------------------------------------
@@ -358,20 +374,24 @@ template <class ElemType>
 }
 
 // write out the content of a node in formatted/readable form
+// 'transpose' means print one row per sample (non-transposed is one column per sample).
+// 'isSparse' will print all non-zero values as one row (non-transposed, which makes sense for one-hot) or column (transposed).
 template <class ElemType>
-void ComputationNode<ElemType>::WriteMinibatchWithFormatting(FILE* f, size_t onlyUpToRow, size_t onlyUpToT, bool transpose, bool isCategoryLabel, 
-                                                             const std::vector<std::string>& labelMapping, const string& sequenceSeparator, 
+void ComputationNode<ElemType>::WriteMinibatchWithFormatting(FILE* f, const FrameRange& fr,
+                                                             size_t onlyUpToRow, size_t onlyUpToT, bool transpose, bool isCategoryLabel, bool isSparse,
+                                                             const vector<string>& labelMapping, const string& sequenceSeparator, 
                                                              const string& sequencePrologue, const string& sequenceEpilogue,
                                                              const string& elementSeparator, const string& sampleSeparator,
-                                                             const string& valueFormatString,
+                                                             string valueFormatString,
                                                              bool outputGradient) const
 {
     // get minibatch matrix -> matData, matRows, matStride
     const Matrix<ElemType>& outputValues = outputGradient ? Gradient() : Value();
     let matRows   = outputValues.GetNumRows();
     let matStride = matRows; // how to get from one column to the next
-    std::unique_ptr<ElemType[]> matDataPtr(outputValues.CopyToArray());
+    unique_ptr<ElemType[]> matDataPtr(outputValues.CopyToArray());
     ElemType* matData = matDataPtr.get();
+    let sampleLayout = GetSampleLayout(); // this is currently only used for sparse; dense tensors are linearized
 
     // process all sequences one by one
     MBLayoutPtr pMBLayout = GetMBLayout();
@@ -388,15 +408,13 @@ void ComputationNode<ElemType>::WriteMinibatchWithFormatting(FILE* f, size_t onl
     stringstream str;
     let dims = tensorShape.GetDims();
     for (auto dim : dims)
-    {
         str << dim << ' ';
-    }
-    let shape = str.str();
+    let shape = str.str(); // BUGBUG: change to string(tensorShape) to make sure we always use the same format
 
     bool sequencePrologueHasShape = sequencePrologue.find("%x") != sequencePrologue.npos;
-    bool sampleSeparatorHasShape = sampleSeparator.find("%x") != sampleSeparator.npos;
+    bool sampleSeparatorHasShape  = sampleSeparator.find("%x")  != sampleSeparator.npos;
     bool sequencePrologueHasSeqId = sequencePrologue.find("%d") != sequencePrologue.npos;
-    bool sampleSeparatorHasSeqId = sampleSeparator.find("%d") != sampleSeparator.npos;
+    bool sampleSeparatorHasSeqId  = sampleSeparator.find("%d")  != sampleSeparator.npos;
 
     for (size_t s = 0; s < sequences.size(); s++)
     {
@@ -405,11 +423,24 @@ void ComputationNode<ElemType>::WriteMinibatchWithFormatting(FILE* f, size_t onl
             continue;
         let tBegin = seqInfo.tBegin >= 0     ? seqInfo.tBegin : 0;
         let tEnd   = seqInfo.tEnd   <= width ? seqInfo.tEnd   : width;
+        // [tBegin,tEnd) is where the sequence resides.
+        // fr is also referencing where a sequence resides.
+
+        // narrow to FrameRange if needed
+        auto t0 = fr.IsAllFrames() ? tBegin : fr.m_timeOffset + (ptrdiff_t)fr.timeIdxInSeq;
+        auto t1 = fr.IsAllFrames() ? tEnd   : fr.m_timeOffset + (ptrdiff_t)fr.timeIdxInSeq + (ptrdiff_t)fr.m_timeRange;
+        if (t0 < tBegin)
+            t0 = tBegin;
+        if (t1 > tEnd)
+            t1 = tEnd;
+        // [t0,t1) is the range we want to print
+        if (t0 > (ptrdiff_t)t1)
+            continue; // skip this sequence
 
         // get sequence matrix -> seqData, seqRows, seqCols, seqStride
-        let  seqData   = matData + pMBLayout->GetColumnIndex(seqInfo, 0) * matStride;
+        let  seqData   = matData + pMBLayout->GetColumnIndex(seqInfo, t0 - tBegin) * matStride;
         auto seqRows   = matRows;
-        let  seqCols   = tEnd - tBegin;
+        let  seqCols   = t1 - t0;
         let  seqStride = pMBLayout->GetNumParallelSequences() * matStride;
 
         auto seqProl = sequencePrologue;
@@ -438,13 +469,20 @@ void ComputationNode<ElemType>::WriteMinibatchWithFormatting(FILE* f, size_t onl
         fprintfOrDie(f, "%s", seqProl.c_str());
 
         // output it according to our format specification
-        let formatChar = valueFormatString.back();
+        auto formatChar = valueFormatString.back();
         if (isCategoryLabel) // if is category then find the max value and output its index (possibly mapped to a string)
         {
             if (formatChar == 's') // verify label dimension
             {
-                if (outputValues.GetNumRows() != labelMapping.size())
-                    InvalidArgument("write: Row dimension %d does not match number of entries %d in labelMappingFile", (int)seqRows, (int)labelMapping.size());
+                if (outputValues.GetNumRows() != labelMapping.size() &&
+                    sampleLayout[0] != labelMapping.size()) // if we match the first dim then use that
+                {
+                    static size_t warnings = 0;
+                    if (warnings++ < 5)
+                        fprintf(stderr, "write: Row dimension %d does not match number of entries %d in labelMappingFile, not using mapping\n", (int)seqRows, (int)labelMapping.size());
+                    valueFormatString.back() = 'u'; // this is a fallback
+                    formatChar = valueFormatString.back();
+                }
             }
             // update the matrix in-place from one-hot (or max) to index
             // find the max in each column
@@ -465,46 +503,95 @@ void ComputationNode<ElemType>::WriteMinibatchWithFormatting(FILE* f, size_t onl
             }
             seqRows = 1; // ignore remaining dimensions
         }
+        // function to print a value
+        auto print = [&](double dval)
+        {
+            if (formatChar == 'f') // print as real number
+            {
+                fprintfOrDie(f, valueFormatString.c_str(), dval);
+            }
+            else if (formatChar == 'u') // print category as integer index
+            {
+                fprintfOrDie(f, valueFormatString.c_str(), (unsigned int)dval);
+            }
+            else if (formatChar == 's') // print category as a label string
+            {
+                size_t uval = (size_t)dval;
+                if (!labelMapping.empty())
+                    uval %= labelMapping.size();
+                assert(uval < labelMapping.size());
+                const char * sval = labelMapping[uval].c_str();
+                fprintfOrDie(f, valueFormatString.c_str(), sval);
+            }
+        };
         // bounds for printing
-        let iend    = transpose ?     seqRows : seqCols;         // true dimension of the data to print
+        let iend    = transpose ?     seqRows : seqCols;     // true dimension of the data to print
         let jend    = transpose ?     seqCols : seqRows;
-        let istop   = transpose ? onlyUpToRow : onlyUpToT; // we stop at these dimensions (for debugging, one often needs only the first few values of those huge matrices)
+        let istop   = transpose ? onlyUpToRow : onlyUpToT;   // we stop at these dimensions (for debugging, one often needs only the first few values of those huge matrices)
         let jstop   = transpose ?   onlyUpToT : onlyUpToRow;
         let istride = transpose ?           1 : seqStride;
         let jstride = transpose ?   seqStride : 1;
-        for (size_t j = 0; j < jend; j++)
+        if (isSparse)
         {
-            if (j > 0)
-                fprintfOrDie(f, "%s", sampleSep.c_str());
-            if (j == jstop)
+            // sparse linearizes the entire matrix into a single vector, and prints that one with coordinates
+            // TODO: This can be done more nicely. We should keep the block structure.
+            size_t numPrinted = 0;
+            for (size_t i = 0; i < iend; i++) // loop over elements --we just flatten them all out
             {
-                fprintf(f, "...+%d", (int)(jend - jstop)); // 'nuff said
-                break;
-            }
-            for (size_t i = 0; i < iend; i++)
-            {
-                if (i > 0)
-                    fprintfOrDie(f, "%s", elementSeparator.c_str());
-                if (i == istop)
+                for (size_t j = 0; j < jend; j++) // loop over rows
                 {
-                    fprintf(f, "...+%d", (int)(iend - istop));
+                    double dval = seqData[i * istride + j * jstride];
+                    if (dval == 0) // only print non-0 values
+                        continue;
+                    if (numPrinted++ > 0)
+                        fprintfOrDie(f, "%s", transpose ? sampleSeparator.c_str() : elementSeparator.c_str());
+                    if (dval != 1.0 || formatChar != 'f') // hack: we assume that we are either one-hot or never precisely hitting 1.0
+                        print(dval);
+                    size_t row = transpose ? i : j;
+                    size_t col = transpose ? j : i;
+                    for (size_t k = 0; k < sampleLayout.size(); k++)
+                    {
+                        fprintfOrDie(f, "%c%d", k == 0 ? '[' : ',', row % sampleLayout[k]);
+                        if (sampleLayout[k] == labelMapping.size()) // annotate index with label if dimensions match (which may misfire once in a while)
+                            fprintfOrDie(f, "=%s", labelMapping[row % sampleLayout[k]].c_str());
+                        row /= sampleLayout[k];
+                    }
+                    if (seqInfo.GetNumTimeSteps() > 1)
+                        fprintfOrDie(f, ";%d", col);
+                    fprintfOrDie(f, "]");
+                }
+            }
+        }
+        else
+        {
+            for (size_t j = 0; j < jend; j++) // loop over output rows     --BUGBUG: row index is 'i'!! Rename these!!
+            {
+                if (j > 0)
+                    fprintfOrDie(f, "%s", sampleSep.c_str());
+                if (j == jstop && jstop < jend - 1) // if jstop == jend-1 we may as well just print the value instead of '...'
+                {
+                    fprintfOrDie(f, "...+%d", (int)(jend - jstop)); // 'nuff said
                     break;
                 }
-                double dval = seqData[i * istride + j * jstride];
-                if (formatChar == 'f') // print as real number
+                // inject sample tensor index if we are printing row-wise and it's a tensor
+                if (!transpose && sampleLayout.size() > 1 && !isCategoryLabel) // each row is a different sample dimension
                 {
-                    fprintfOrDie(f, valueFormatString.c_str(), dval);
+                    for (size_t k = 0; k < sampleLayout.size(); k++)
+                        fprintfOrDie(f, "%c%d", k == 0 ? '[' : ',', (int)((j / sampleLayout.GetStrides()[k])) % sampleLayout[k]);
+                    fprintfOrDie(f, "]\t");
                 }
-                else if (formatChar == 'u') // print category as integer index
+                // print a row of values
+                for (size_t i = 0; i < iend; i++) // loop over elements
                 {
-                    fprintfOrDie(f, valueFormatString.c_str(), (unsigned int)dval);
-                }
-                else if (formatChar == 's') // print category as a label string
-                {
-                    size_t uval = (size_t)dval;
-                    assert(uval < labelMapping.size());
-                    const char * sval = labelMapping[uval].c_str();
-                    fprintfOrDie(f, valueFormatString.c_str(), sval);
+                    if (i > 0)
+                        fprintfOrDie(f, "%s", elementSeparator.c_str());
+                    if (i == istop && istop < iend - 1)
+                    {
+                        fprintfOrDie(f, "...+%d", (int)(iend - istop));
+                        break;
+                    }
+                    double dval = seqData[i * istride + j * jstride];
+                    print(dval);
                 }
             }
         }
@@ -513,25 +600,100 @@ void ComputationNode<ElemType>::WriteMinibatchWithFormatting(FILE* f, size_t onl
     fflushOrDie(f);
 }
 
+/*static*/ string WriteFormattingOptions::Processed(const wstring& nodeName, string fragment, size_t minibatchId)
+{
+    fragment = msra::strfun::ReplaceAll<string>(fragment, "\\n", "\n");
+    fragment = msra::strfun::ReplaceAll<string>(fragment, "\\r", "\r");
+    fragment = msra::strfun::ReplaceAll<string>(fragment, "\\t", "\t");
+    fragment = msra::strfun::ReplaceAll<string>(fragment, "\\s", " "); // Config might strip spaces.
+    if (fragment.find("%s") != fragment.npos)
+        fragment = msra::strfun::ReplaceAll<string>(fragment, "%s", msra::strfun::utf8(nodeName));
+    if (fragment.find("%n") != fragment.npos)
+        fragment = msra::strfun::ReplaceAll<string>(fragment, "%n", msra::strfun::_strprintf<char>("%ld", minibatchId).c_str());
+    // %d: sequenceId
+    return fragment;
+}
+
+template <class ConfigRecordType>
+WriteFormattingOptions::WriteFormattingOptions(const ConfigRecordType& config) :
+    WriteFormattingOptions()
+{
+    // gather additional formatting options
+    if (config.Exists(L"format"))
+    {
+        const ConfigRecordType& formatConfig(config(L"format", ConfigRecordType::Record()));
+        if (formatConfig.ExistsCurrent(L"type")) // do not inherit 'type' from outer block
+        {
+            wstring type = formatConfig(L"type");
+            if      (type == L"real")     ; // default
+            else if (type == L"category") isCategoryLabel = true;
+            else if (type == L"sparse")   isSparse = true;
+            else                         InvalidArgument("write: type must be 'real', 'category', or 'sparse'");
+            labelMappingFile = (wstring)formatConfig(L"labelMappingFile", L"");
+        }
+        transpose = formatConfig(L"transpose", transpose);
+        prologue  = formatConfig(L"prologue",  prologue);
+        epilogue  = formatConfig(L"epilogue",  epilogue);
+        sequenceSeparator = msra::strfun::utf8(formatConfig(L"sequenceSeparator", (wstring)msra::strfun::utf16(sequenceSeparator)));
+        sequencePrologue  = msra::strfun::utf8(formatConfig(L"sequencePrologue",  (wstring)msra::strfun::utf16(sequencePrologue)));
+        sequenceEpilogue  = msra::strfun::utf8(formatConfig(L"sequenceEpilogue",  (wstring)msra::strfun::utf16(sequenceEpilogue)));
+        elementSeparator  = msra::strfun::utf8(formatConfig(L"elementSeparator",  (wstring)msra::strfun::utf16(elementSeparator)));
+        sampleSeparator   = msra::strfun::utf8(formatConfig(L"sampleSeparator",   (wstring)msra::strfun::utf16(sampleSeparator)));
+        precisionFormat   = msra::strfun::utf8(formatConfig(L"precisionFormat",   (wstring)msra::strfun::utf16(precisionFormat)));
+        // TODO: change those strings into wstrings to avoid this conversion mess
+    }
+}
+
+void WriteFormattingOptions::Save(File& fstream) const
+{
+    fstream << isCategoryLabel;
+    fstream << labelMappingFile;
+    fstream << isSparse;
+    fstream << transpose;
+    fstream << prologue;
+    fstream << epilogue;
+    fstream << sequenceSeparator;
+    fstream << sequencePrologue;
+    fstream << sequenceEpilogue;
+    fstream << elementSeparator;
+    fstream << sampleSeparator;
+    fstream << precisionFormat;
+}
+
+void WriteFormattingOptions::Load(File& fstream, size_t modelVersion)
+{
+    fstream >> isCategoryLabel;
+    fstream >> labelMappingFile;
+    fstream >> isSparse;
+    fstream >> transpose;
+    fstream >> prologue;
+    fstream >> epilogue;
+    fstream >> sequenceSeparator;
+    fstream >> sequencePrologue;
+    fstream >> sequenceEpilogue;
+    fstream >> elementSeparator;
+    fstream >> sampleSeparator;
+    fstream >> precisionFormat;
+}
+
+template WriteFormattingOptions::WriteFormattingOptions(const ConfigParameters&);
+template WriteFormattingOptions::WriteFormattingOptions(const ScriptableObjects::IConfigRecord&);
+
+// -----------------------------------------------------------------------
+// static variables
+// -----------------------------------------------------------------------
+
+atomic_ullong TimeStamp::s_timeStampCounter = ATOMIC_VAR_INIT(0);
+
+template <> map<size_t, map<size_t, Matrix<float>*>>  ComputationNode<float> ::s_constOnes{};
+template <> map<size_t, map<size_t, Matrix<double>*>> ComputationNode<double>::s_constOnes{};
+
 // -----------------------------------------------------------------------
 // instantiate the core class templates
 // -----------------------------------------------------------------------
 
-typedef Matrix<float> FloatMatrix;
-typedef Matrix<double> DoubleMatrix;
-
-atomic_ullong TimeStamp::s_timeStampCounter = ATOMIC_VAR_INIT(0);
-
-template <>
-std::map<size_t, std::map<size_t, FloatMatrix*>> ComputationNode<float>::s_constOnes{};
-template <>
-std::map<size_t, std::map<size_t, DoubleMatrix*>> ComputationNode<double>::s_constOnes{};
-
 template class ComputationNode<float>;
 template class ComputationNode<double>;
-
-template class LearnableParameter<float>;
-template class LearnableParameter<double>;
 
 }}}
 
@@ -555,34 +717,13 @@ ScriptableObjects::ConfigurableRuntimeTypeRegister::Add<ComputationNodeBase> reg
 // register a boxed version of TensorShape with the ScriptableObject system
 // -----------------------------------------------------------------------
 
-// create a vector from config
-// Nested vectors are flattened, which is useful e.g. for building TensorShapes.
-template <typename E>
-static vector<E> VectorFromConfig(const ConfigValuePtr& valp)
-{
-    if (valp.Is<vector<E>>())
-        return valp.AsRef<vector<E>>(); // UNTESTED
-    else if (valp.Is<ConfigArray>())
-        return valp.AsRef<ConfigArray>().AsVector<E>([&](const wstring& msg) { valp.Fail(msg); }, /*flatten=*/true);
-    else
-        return std::vector<E>(1, (E)valp); // single element
-}
-
-// create a vector from config
-template <typename E>
-static vector<E> VectorFromConfig(const IConfigRecord& config, const wstring& paramName)
-{
-    const auto& valp = config[paramName];
-    return VectorFromConfig<E>(valp);
-}
-
 // e.g.
 // new TensorShape [ dims = 13:42 ]
 class BoxedTensorShape : public BoxOf<TensorShape>
 {
 public:
-    BoxedTensorShape(const IConfigRecordPtr configp)
-        : BoxOf<TensorShape>(TensorShape(VectorFromConfig<size_t>(*configp, L"dims")))
+    BoxedTensorShape(const IConfigRecordPtr configp) :
+        BoxOf<TensorShape>(TensorShape(ConfigArray::FlattenedVectorFrom<size_t>(configp->Get(L"dims"))))
     {
     }
 };
@@ -591,15 +732,15 @@ template <typename E>
 class BoxedVector : public BoxOf<vector<E>>
 {
 public:
-    BoxedVector(const IConfigRecordPtr configp)
-        : BoxOf<vector<E>>(VectorFromConfig<E>(*configp, L"items"))
+    BoxedVector(const IConfigRecordPtr configp) :
+        BoxOf<vector<E>>(ConfigArray::FlattenedVectorFrom<E>(configp->Get(L"items")))
     {
     }
 };
 
-ScriptableObjects::ConfigurableRuntimeTypeRegister::Add<BoxedTensorShape> registerTensorShape(L"TensorShape");
-ScriptableObjects::ConfigurableRuntimeTypeRegister::Add<BoxedVector<int>> registerIntVector(L"IntVector");
-ScriptableObjects::ConfigurableRuntimeTypeRegister::Add<BoxedVector<size_t>> registerSizeVector(L"SizeVector");
-ScriptableObjects::ConfigurableRuntimeTypeRegister::Add<BoxedVector<bool>> registerBoolVector(L"BoolVector");
+ScriptableObjects::ConfigurableRuntimeTypeRegister::Add<BoxedTensorShape>    registerTensorShape(L"TensorShape");
+ScriptableObjects::ConfigurableRuntimeTypeRegister::Add<BoxedVector<int>>    registerIntVector  (L"IntVector");
+ScriptableObjects::ConfigurableRuntimeTypeRegister::Add<BoxedVector<size_t>> registerSizeVector (L"SizeVector");
+ScriptableObjects::ConfigurableRuntimeTypeRegister::Add<BoxedVector<bool>>   registerBoolVector (L"BoolVector");
 
 }}}

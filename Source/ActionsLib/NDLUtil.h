@@ -109,7 +109,7 @@ public:
     // CheckOutputNodes - check output nodes
     // symbolName - name of the computation nodes we are collecting
     // compNodes - array of computation nodes
-    void CheckOutputNodes(NDLScript<ElemType>* script, std::string symbolName, std::vector<ComputationNodeBasePtr>& compNodes)
+    void CheckOutputNodes(NDLScript<ElemType>* script, std::string symbolName, std::wstring groupTag)
     {
         NDLNode<ElemType>* nodeArray = script->FindSymbol(symbolName);
         bool valid = m_net->FeatureNodes().size() > 0; // see if it's already valid
@@ -135,25 +135,11 @@ public:
                 auto cnNode = ComputationNode<ElemType>::FromVoidPtr(nodes[i]->GetEvalValue());
 
                 // if no evaluation value exists throw an error
-                if (cnNode == nullptr)
-                {
+                if (!cnNode)
                     RuntimeError("Invalid node '%s' as an output node, nonexistant or wrong type", nodes[i]->GetName().c_str());
-                }
 
-                // see if it's already in the collection
-                bool found = false;
-                for (const auto& compNode : compNodes)
-                {
-                    if (cnNode == compNode)
-                    {
-                        found = true;
-                        break;
-                    }
-                }
-
-                // add it if it's not already there
-                if (!found)
-                    compNodes.push_back(cnNode);
+                // add to the desired node group
+                m_net->AddToNodeGroup(groupTag, cnNode);
             }
         }
     }
@@ -165,15 +151,18 @@ public:
         // NOTE: all optional parameter nodes (i.e. tag="feature") have already been processed in ProcessOptionalParameters()
 
         // handle the alternate way of specifying nodes, the array of nodes method
-        CheckOutputNodes(script, "FeatureNodes", m_net->FeatureNodes());
-        CheckOutputNodes(script, "LabelNodes", m_net->LabelNodes());
-        CheckOutputNodes(script, "CriterionNodes", m_net->FinalCriterionNodes());
-        CheckOutputNodes(script, "CriteriaNodes", m_net->FinalCriterionNodes()); // legacy
-        CheckOutputNodes(script, "EvalNodes", m_net->EvaluationNodes());
-        CheckOutputNodes(script, "OutputNodes", m_net->OutputNodes());
+        //                       parameter name    node-group tag
+        CheckOutputNodes(script, "featureNodes"  , L"feature"   );
+        CheckOutputNodes(script, "labelNodes"    , L"label"     );
+        CheckOutputNodes(script, "criterionNodes", L"criterion" );
+        CheckOutputNodes(script, "evalNodes"     , L"evaluation");
+        CheckOutputNodes(script, "outputNodes"   , L"output"    );
+        // legacy name:
+        CheckOutputNodes(script, "criteriaNodes" , L"finalCriterion");
     }
 };
 
 template class NDLUtil<float>;
 template class NDLUtil<double>;
-} } }
+
+}}}

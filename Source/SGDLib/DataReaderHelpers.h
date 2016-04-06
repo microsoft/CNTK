@@ -33,7 +33,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                         size_t& actualMBSize, 
                                         const MPIWrapperPtr& mpi)
     {
-        auto pMBLayout = net->GetMBLayoutPtr();
+        auto pMBLayout = net->GetMBLayoutPtrOfNetwork();
         // Reading consists of a sequence of Reader API calls:
         //  - GetMinibatch() --fills the inputMatrices
         //  - SetActualMiniBatchSizeFromFeatures()  --tells Network to resize the nodes' buffers
@@ -65,6 +65,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // TODO: move this into shim for the old readers.
         // New readers will reset this to (0,0) (they cannot modify the pointer itself). 
         // get layout meta-data
+        // BUGBUG (Issue #95): must be adapted for multiple MBLayouts
         trainSetDataReader.CopyMBLayoutTo(pMBLayout);
 
         // TODO: move this into shim for the old readers.
@@ -72,7 +73,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (!useDistributedMBReading && useParallelTrain &&
             !(pMBLayout->GetNumParallelSequences() == 0 && pMBLayout->GetNumTimeSteps() == 0))
         {
-            DecimateMinibatchInPlace<ElemType>(inputMatrices, mpi->NumNodesInUse(), mpi->CurrentNodeRank(), net->GetMBLayoutPtr());
+            DecimateMinibatchInPlace<ElemType>(inputMatrices, mpi->NumNodesInUse(), mpi->CurrentNodeRank(), pMBLayout);
         }
 
         if (!(pMBLayout->GetNumParallelSequences() == 0 && pMBLayout->GetNumTimeSteps() == 0))
@@ -293,21 +294,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         std::map<wstring, shared_ptr<IStatefulNode>> m_netStatefulNodes; // we need to Export/Import states of stateful nodes when we swtich subminibatches
 
     private:
-        void EnumerateStatefulNodeWithRoot(ComputationNetwork& net, ComputationNodeBasePtr root, std::map<wstring, shared_ptr<IStatefulNode>>& statefulnode)
+        void EnumerateStatefulNodesForRoot(ComputationNetwork& net, ComputationNodeBasePtr root, std::map<wstring, shared_ptr<IStatefulNode>>& statefulNodes)
         {
-            const std::list<ComputationNodeBasePtr> evalorder = net.GetEvalOrder(root);
-            for (auto& x : evalorder)
+            for (const auto& node : net.GetAllNodesForRoot(root))
             {
-                wstring name = x->GetName();
-                if (statefulnode.find(name) != statefulnode.end())
-                    continue; // already in the list
-                shared_ptr<IStatefulNode> pNode = dynamic_pointer_cast<IStatefulNode>(x);
-                if (pNode)
-                {
-                    statefulnode[name] = pNode;
+                const auto& name = node->GetName();
+                if (statefulNodes.find(name) != statefulNodes.end())
+                    continue; // already in the list  --TODO: use insert()
+                shared_ptr<IStatefulNode> pNode = dynamic_pointer_cast<IStatefulNode>(node);
+                if (pNode) // if it is an IStatefulNode then report it
+                    statefulNodes[name] = pNode;
                 }
             }
-        }
 
         std::map<wstring, shared_ptr<IStatefulNode>> EnumerateStatefulNode(ComputationNetwork& net,
                                                                            const std::vector<ComputationNodeBasePtr>& criterionNode,
@@ -315,13 +313,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             std::map<wstring, shared_ptr<IStatefulNode>> statefulNodes;
             for (auto& root : criterionNode)
-            {
-                EnumerateStatefulNodeWithRoot(net, root, statefulNodes);
-            }
+                EnumerateStatefulNodesForRoot(net, root, statefulNodes);
             for (auto& root : evaluationNode)
-            {
-                EnumerateStatefulNodeWithRoot(net, root, statefulNodes);
-            }
+                EnumerateStatefulNodesForRoot(net, root, statefulNodes);
             return statefulNodes;
         }
 
@@ -392,7 +386,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                      size_t requestedSubminibatches)
         {
             // first, remember interface to the net
-            m_netMBLayoutPtr = net.GetMBLayoutPtr();
+            // BUGBUG: This will no longer be correct once we have multiple input layouts.
+            m_netMBLayoutPtr = net.GetMBLayoutPtrOfNetwork();
             m_netInputMatrixPtr = inputMatrices;
 
             // second, get data from reader, stored it in cache
@@ -407,7 +402,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     m_inputMatricesCache.GetInputMatrix<ElemType>(name).SetValue(M);
             }
             // 2. MBlayout
-            m_MBLayoutCache->CopyFrom(net.GetMBLayoutPtr());
+            m_MBLayoutCache->CopyFrom(net.GetMBLayoutPtrOfNetwork());
             size_t nParallelSequences = m_MBLayoutCache->GetNumParallelSequences();
 
             // 3. for bits in seq. training

@@ -1355,7 +1355,7 @@ bool HTKMLFReader<ElemType>::GetMinibatchToTrainOrTest(StreamMinibatchInputs& ma
                         {
                             const size_t startT = m_switchFrame[i];
                             // Have to take the min, if the next sequence is shorted then truncation length.
-                            const size_t endT = std::min(m_mbNumTimeSteps, startT + m_numFramesToProcess[i]);
+                            const size_t endT = min(m_mbNumTimeSteps, startT + m_numFramesToProcess[i]);
                             // Note: Don't confuse startT/endT with startFr/endFr above.
 
                             // add sequence to MBLayout

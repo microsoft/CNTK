@@ -70,18 +70,16 @@ static shared_ptr<ComputationNode<ElemType>> CreateStandardNode(const std::wstri
     else if (nodeType == OperationNameOf(NegateNode))                           return New<NegateNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(NoiseContrastiveEstimationNode))       return New<NoiseContrastiveEstimationNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(PackedIndexNode))                      return New<PackedIndexNode<ElemType>>(forward<_Types>(_Args)...);
-    else if (nodeType == OperationNameOf(PassNode))                             return New<PassNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(PastValueNode))                        return New<PastValueNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(PerDimMeanVarNormalizationNode))       return New<PerDimMeanVarNormalizationNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(PerDimMeanVarDeNormalizationNode))     return New<PerDimMeanVarDeNormalizationNode<ElemType>>(forward<_Types>(_Args)...);
-    else if (nodeType == OperationNameOf(TransposeDimensionsNode))              return New<TransposeDimensionsNode<ElemType>>(forward<_Types>(_Args)...);
+    else if (nodeType == OperationNameOf(PassNode))                             return New<PassNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(PlusNode))                             return New<PlusNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(ReconcileMBLayoutNode))                return New<ReconcileMBLayoutNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(ReciprocalNode))                       return New<ReciprocalNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(RectifiedLinearNode))                  return New<RectifiedLinearNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(ReshapeNode))                          return New<ReshapeNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(RowRepeatNode))                        return New<RowRepeatNode<ElemType>>(forward<_Types>(_Args)...);
-    else if (nodeType == OperationNameOf(RowSliceNode))                         return New<RowSliceNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(RowStackNode))                         return New<RowStackNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(ScatterPackedNode))                    return New<ScatterPackedNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(SequenceWithSoftmaxNode))              return New<SequenceWithSoftmaxNode<ElemType>>(forward<_Types>(_Args)...);
@@ -92,6 +90,7 @@ static shared_ptr<ComputationNode<ElemType>> CreateStandardNode(const std::wstri
     else if (nodeType == OperationNameOf(ShiftNode))                            return New<ShiftNode<ElemType>>(forward<_Types>(_Args)...);
 #endif
     else if (nodeType == OperationNameOf(SigmoidNode))                          return New<SigmoidNode<ElemType>>(forward<_Types>(_Args)...);
+    else if (nodeType == OperationNameOf(SliceNode))                            return New<SliceNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(SoftmaxNode))                          return New<SoftmaxNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(SqrtNode))                             return New<SqrtNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(SquareErrorNode))                      return New<SquareErrorNode<ElemType>>(forward<_Types>(_Args)...);
@@ -99,6 +98,7 @@ static shared_ptr<ComputationNode<ElemType>> CreateStandardNode(const std::wstri
     else if (nodeType == OperationNameOf(SumColumnElementsNode))                return New<SumColumnElementsNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(SumElementsNode))                      return New<SumElementsNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(TanhNode))                             return New<TanhNode<ElemType>>(forward<_Types>(_Args)...);
+    else if (nodeType == OperationNameOf(TraceNode))                            return New<TraceNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(TimesNode))                            return New<TimesNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(TransposeDimensionsNode))              return New<TransposeDimensionsNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(TransposeTimesNode))                   return New<TransposeTimesNode<ElemType>>(forward<_Types>(_Args)...);
@@ -110,6 +110,7 @@ static shared_ptr<ComputationNode<ElemType>> CreateStandardNode(const std::wstri
     else if (nodeType == L"PerDimMeanVarNormalizationNode")                     return New<PerDimMeanVarNormalizationNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == L"PerDimMeanVarDeNormalizationNode")                   return New<PerDimMeanVarDeNormalizationNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == L"RowElementTimes")                                    return New<ElementTimesNode<ElemType>>(forward<_Types>(_Args)...);
+    else if (nodeType == L"RowSlice")                                           return New<SliceNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == L"Scale")                                              return New<ElementTimesNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == L"Transpose")                                          return New<TransposeDimensionsNode<ElemType>>(forward<_Types>(_Args)...);
 #if 1
@@ -161,10 +162,11 @@ shared_ptr<ComputationNodeBase> NewComputationNodeFromConfig(const Microsoft::MS
     else
         RuntimeError("NewStandardNode: Invalid value '%ls' for 'precision' parameter. Must be 'float' or 'double'.", precision.c_str());
     // add a tag
-    // Tags are used to declare special node types tp ComputationNetwork.
-    const auto nodeWithTag = dynamic_pointer_cast<ScriptableObjects::WithTag>(node);
-    if (nodeWithTag)
-        nodeWithTag->SetTag(configp->Get(L"tag"));
+    // Tags are used to declare special node types to ComputationNetwork.
+    // For now we support only a single tag, but we could in the future easily extend this to an array of tags.
+    wstring tag = configp->Get(L"tag");
+    if (!tag.empty())
+        node->SetTag(tag);
     return node;
 }
 
@@ -288,8 +290,7 @@ shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Convo
 {
     return net.AddNodeToNetAndAttachInputs(New<ConvolutionNode<ElemType>>(net.GetDeviceId(), nodeName,
                                                                           kernelWidth, kernelHeight, outputChannels, horizontalSubsample, verticalSubsample, imageLayoutKind, zeroPadding,
-                                                                          maxTempMemSizeInSamples),
-                                                                          weight, inputValues);
+                                                                          maxTempMemSizeInSamples), { weight, inputValues });
 }
 
 template <class ElemType>
@@ -305,7 +306,7 @@ shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Convo
                                                                           kernelShape, mapCount, strideShape,
                                                                           sharing, autoPadding, lowerPad, upperPad,
                                                                           imageLayout, maxTempMemSizeInSamples),
-                                                                          weight, inputValues);
+                                                                          { weight, inputValues });
 }
 
 template <class ElemType>
@@ -317,7 +318,7 @@ shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Pooli
 {
     return net.AddNodeToNetAndAttachInputs(New<PoolingNode<ElemType>>(net.GetDeviceId(), nodeName,
                                                                       poolKind, kernelShape, strideShape, autoPadding, lowerPad, upperPad, imageLayout),
-                                                                      inputValues);
+                                                                      { inputValues });
 }
 
 template <class ElemType>
@@ -325,7 +326,7 @@ shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::MaxPo
                                                                                       const size_t windowWidth, const size_t windowHeight, const size_t horizontalSubsample, const size_t verticalSubsample, ImageLayoutKind imageLayoutKind,
                                                                                       const std::wstring nodeName)
 {
-    return net.AddNodeToNetAndAttachInputs(New<MaxPoolingNode<ElemType>>(net.GetDeviceId(), nodeName, windowWidth, windowHeight, horizontalSubsample, verticalSubsample, imageLayoutKind), inputValues);
+    return net.AddNodeToNetAndAttachInputs(New<MaxPoolingNode<ElemType>>(net.GetDeviceId(), nodeName, windowWidth, windowHeight, horizontalSubsample, verticalSubsample, imageLayoutKind), { inputValues });
 }
 
 template <class ElemType>
@@ -333,65 +334,65 @@ shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Avera
                                                                                           const size_t windowWidth, const size_t windowHeight, const size_t horizontalSubsample, const size_t verticalSubsample, ImageLayoutKind imageLayoutKind,
                                                                                           const std::wstring nodeName)
 {
-    return net.AddNodeToNetAndAttachInputs(New<AveragePoolingNode<ElemType>>(net.GetDeviceId(), nodeName, windowWidth, windowHeight, horizontalSubsample, verticalSubsample, imageLayoutKind), inputValues);
+    return net.AddNodeToNetAndAttachInputs(New<AveragePoolingNode<ElemType>>(net.GetDeviceId(), nodeName, windowWidth, windowHeight, horizontalSubsample, verticalSubsample, imageLayoutKind), { inputValues });
 }
 
 template <class ElemType>
 shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::ErrorPrediction(const ComputationNodePtr a, const ComputationNodePtr b, const std::wstring nodeName)
 {
-    return net.AddNodeToNetAndAttachInputs(New<ErrorPredictionNode<ElemType>>(net.GetDeviceId(), nodeName), a, b);
+    return net.AddNodeToNetAndAttachInputs(New<ErrorPredictionNode<ElemType>>(net.GetDeviceId(), nodeName), { a, b });
 }
 
 template <class ElemType>
 shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::PerDimMeanVarNormalization(const ComputationNodePtr feature, const ComputationNodePtr mean,
                                                                                                       const ComputationNodePtr InvStdDev, const std::wstring nodeName)
 {
-    return net.AddNodeToNetAndAttachInputs(New<PerDimMeanVarNormalizationNode<ElemType>>(net.GetDeviceId(), nodeName), feature, mean, InvStdDev);
+    return net.AddNodeToNetAndAttachInputs(New<PerDimMeanVarNormalizationNode<ElemType>>(net.GetDeviceId(), nodeName), { feature, mean, InvStdDev });
 }
 
 template <class ElemType>
 shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::PerDimMeanVarDeNormalization(const ComputationNodePtr feature, const ComputationNodePtr mean,
                                                                                                         const ComputationNodePtr InvStdDev, const std::wstring nodeName)
 {
-    return net.AddNodeToNetAndAttachInputs(New<PerDimMeanVarDeNormalizationNode<ElemType>>(net.GetDeviceId(), nodeName), feature, mean, InvStdDev);
+    return net.AddNodeToNetAndAttachInputs(New<PerDimMeanVarDeNormalizationNode<ElemType>>(net.GetDeviceId(), nodeName), { feature, mean, InvStdDev });
 }
 
 template <class ElemType>
 shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::SquareError(const ComputationNodePtr a, const ComputationNodePtr b, const std::wstring nodeName)
 {
-    return net.AddNodeToNetAndAttachInputs(New<SquareErrorNode<ElemType>>(net.GetDeviceId(), nodeName), a, b);
+    return net.AddNodeToNetAndAttachInputs(New<SquareErrorNode<ElemType>>(net.GetDeviceId(), nodeName), { a, b });
 }
 
 template <class ElemType>
 shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Logistic(const ComputationNodePtr a, const ComputationNodePtr b, const std::wstring nodeName)
 {
-    return net.AddNodeToNetAndAttachInputs(New<LogisticNode<ElemType>>(net.GetDeviceId(), nodeName), a, b);
+    return net.AddNodeToNetAndAttachInputs(New<LogisticNode<ElemType>>(net.GetDeviceId(), nodeName), { a, b });
 }
 
 template <class ElemType>
 shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Logistic(const ComputationNodePtr a, const ComputationNodePtr b, const ComputationNodePtr c, const std::wstring nodeName)
 {
-    return net.AddNodeToNetAndAttachInputs(New<LogisticNode<ElemType>>(net.GetDeviceId(), nodeName), a, b, c);
+    return net.AddNodeToNetAndAttachInputs(New<LogisticNode<ElemType>>(net.GetDeviceId(), nodeName), { a, b, c });
 }
 
 #ifdef COMING_SOON
 template <class ElemType>
 shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::SequenceDecoder(const ComputationNodePtr label, const ComputationNodePtr prediction, const ComputationNodePtr pairscore, const std::wstring nodeName)
 {
-    return net.AddNodeToNetAndAttachInputs(New<SequenceDecoderNode<ElemType>>(net.GetDeviceId(), nodeName), label, prediction, pairscore);
+    return net.AddNodeToNetAndAttachInputs(New<SequenceDecoderNode<ElemType>>(net.GetDeviceId(), nodeName), { label, prediction, pairscore });
 }
 #endif
 
 template <class ElemType>
 shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::CrossEntropyWithSoftmax(const ComputationNodePtr label, const ComputationNodePtr prediction, const std::wstring nodeName)
 {
-    return net.AddNodeToNetAndAttachInputs(New<CrossEntropyWithSoftmaxNode<ElemType>>(net.GetDeviceId(), nodeName), label, prediction);
+    return net.AddNodeToNetAndAttachInputs(New<CrossEntropyWithSoftmaxNode<ElemType>>(net.GetDeviceId(), nodeName), { label, prediction });
 }
 
 template <class ElemType>
 shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::SequenceWithSoftmax(const ComputationNodePtr label, const ComputationNodePtr prediction, const ComputationNodePtr loglikelihood, const std::wstring nodeName)
 {
-    return net.AddNodeToNetAndAttachInputs(New<SequenceWithSoftmaxNode<ElemType>>(net.GetDeviceId(), nodeName), label, prediction, loglikelihood);
+    return net.AddNodeToNetAndAttachInputs(New<SequenceWithSoftmaxNode<ElemType>>(net.GetDeviceId(), nodeName), { label, prediction, loglikelihood });
 }
 
 template <class ElemType>
@@ -400,7 +401,7 @@ shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Noise
                                                                                                       const ComputationNodePtr input_bias, const std::wstring nodeName,
                                                                                                       NCEEvalMode mode)
 {
-    return net.AddNodeToNetAndAttachInputs(New<NoiseContrastiveEstimationNode<ElemType>>(net.GetDeviceId(), nodeName, mode), label, prediction, input_weight, input_bias);
+    return net.AddNodeToNetAndAttachInputs(New<NoiseContrastiveEstimationNode<ElemType>>(net.GetDeviceId(), nodeName, mode), { label, prediction, input_weight, input_bias });
 }
 
 template <class ElemType>
@@ -409,7 +410,7 @@ shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Class
                                                                                                         const ComputationNodePtr cls_log_post_prob,
                                                                                                         const std::wstring nodeName)
 {
-    return net.AddNodeToNetAndAttachInputs(New<ClassBasedCrossEntropyWithSoftmaxNode<ElemType>>(net.GetDeviceId(), nodeName), label, prediction, input_weight, cls_log_post_prob);
+    return net.AddNodeToNetAndAttachInputs(New<ClassBasedCrossEntropyWithSoftmaxNode<ElemType>>(net.GetDeviceId(), nodeName), { label, prediction, input_weight, cls_log_post_prob });
 }
 
 #ifdef COMING_SOON
@@ -419,194 +420,194 @@ shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::CRF(c
                                                                                const ComputationNodePtr transition_score,
                                                                                const std::wstring nodeName)
 {
-    return net.AddNodeToNetAndAttachInputs(New<CRFNode<ElemType>>(net.GetDeviceId(), nodeName), label, postDepScore, transition_score);
+    return net.AddNodeToNetAndAttachInputs(New<CRFNode<ElemType>>(net.GetDeviceId(), nodeName), { label, postDepScore, transition_score });
 }
 #endif
 
 template <class ElemType>
 shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::DummyCriterion(const ComputationNodePtr objectives, const ComputationNodePtr derivatives, const ComputationNodePtr prediction, const std::wstring nodeName)
 {
-    return net.AddNodeToNetAndAttachInputs(New<DummyCriterionNode<ElemType>>(net.GetDeviceId(), nodeName), objectives, derivatives, prediction);
+    return net.AddNodeToNetAndAttachInputs(New<DummyCriterionNode<ElemType>>(net.GetDeviceId(), nodeName), { objectives, derivatives, prediction });
 }
 
 template <class ElemType>
 shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::CrossEntropy(const ComputationNodePtr label, const ComputationNodePtr prediction, const std::wstring nodeName)
 {
-    return net.AddNodeToNetAndAttachInputs(New<CrossEntropyNode<ElemType>>(net.GetDeviceId(), nodeName), label, prediction);
+    return net.AddNodeToNetAndAttachInputs(New<CrossEntropyNode<ElemType>>(net.GetDeviceId(), nodeName), { label, prediction });
 }
 
 template <class ElemType>
 shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::MatrixL1Reg(const ComputationNodePtr a, const std::wstring nodeName)
 {
-    return net.AddNodeToNetAndAttachInputs(New<MatrixL1RegNode<ElemType>>(net.GetDeviceId(), nodeName), a);
+    return net.AddNodeToNetAndAttachInputs(New<MatrixL1RegNode<ElemType>>(net.GetDeviceId(), nodeName), { a });
 }
 
 template <class ElemType>
 shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::MatrixL2Reg(const ComputationNodePtr a, const std::wstring nodeName)
 {
-    return net.AddNodeToNetAndAttachInputs(New<MatrixL2RegNode<ElemType>>(net.GetDeviceId(), nodeName), a);
+    return net.AddNodeToNetAndAttachInputs(New<MatrixL2RegNode<ElemType>>(net.GetDeviceId(), nodeName), { a });
 }
 
 template <class ElemType>
 shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Mean(const ComputationNodePtr a, const std::wstring nodeName)
 {
-    return net.AddNodeToNetAndAttachInputs(New<MeanNode<ElemType>>(net.GetDeviceId(), nodeName), a);
+    return net.AddNodeToNetAndAttachInputs(New<MeanNode<ElemType>>(net.GetDeviceId(), nodeName), { a });
 }
 
 template <class ElemType>
 shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Pass(const ComputationNodePtr a, const std::wstring& nodeName)
 {
-    return net.AddNodeToNetAndAttachInputs(New<PassNode<ElemType>>(net.GetDeviceId(), nodeName), a);
+    return net.AddNodeToNetAndAttachInputs(New<PassNode<ElemType>>(net.GetDeviceId(), nodeName), { a });
 }
 
 template <class ElemType>
 shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::InvStdDev(const ComputationNodePtr a, const std::wstring nodeName)
 {
-    return net.AddNodeToNetAndAttachInputs(New<InvStdDevNode<ElemType>>(net.GetDeviceId(), nodeName), a);
+    return net.AddNodeToNetAndAttachInputs(New<InvStdDevNode<ElemType>>(net.GetDeviceId(), nodeName), { a });
 }
 
 template <class ElemType>
 shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Negate(const ComputationNodePtr a, const std::wstring nodeName)
 {
-    return net.AddNodeToNetAndAttachInputs(New<NegateNode<ElemType>>(net.GetDeviceId(), nodeName), a);
+    return net.AddNodeToNetAndAttachInputs(New<NegateNode<ElemType>>(net.GetDeviceId(), nodeName), { a });
 }
 
 template <class ElemType>
 shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::RectifiedLinear(const ComputationNodePtr a, const std::wstring nodeName)
 {
-    return net.AddNodeToNetAndAttachInputs(New<RectifiedLinearNode<ElemType>>(net.GetDeviceId(), nodeName), a);
+    return net.AddNodeToNetAndAttachInputs(New<RectifiedLinearNode<ElemType>>(net.GetDeviceId(), nodeName), { a });
 }
 
 template <class ElemType>
 shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Sigmoid(const ComputationNodePtr a, const std::wstring nodeName)
 {
-    return net.AddNodeToNetAndAttachInputs(New<SigmoidNode<ElemType>>(net.GetDeviceId(), nodeName), a);
+    return net.AddNodeToNetAndAttachInputs(New<SigmoidNode<ElemType>>(net.GetDeviceId(), nodeName), { a });
 }
 
 template <class ElemType>
 shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Tanh(const ComputationNodePtr a, const std::wstring nodeName)
 {
-    return net.AddNodeToNetAndAttachInputs(New<TanhNode<ElemType>>(net.GetDeviceId(), nodeName), a);
+    return net.AddNodeToNetAndAttachInputs(New<TanhNode<ElemType>>(net.GetDeviceId(), nodeName), { a });
 }
 
 template <class ElemType>
 shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Exp(const ComputationNodePtr a, const std::wstring nodeName)
 {
-    return net.AddNodeToNetAndAttachInputs(New<ExpNode<ElemType>>(net.GetDeviceId(), nodeName), a);
+    return net.AddNodeToNetAndAttachInputs(New<ExpNode<ElemType>>(net.GetDeviceId(), nodeName), { a });
 }
 
 template <class ElemType>
 shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Log(const ComputationNodePtr a, const std::wstring nodeName)
 {
-    return net.AddNodeToNetAndAttachInputs(New<LogNode<ElemType>>(net.GetDeviceId(), nodeName), a);
+    return net.AddNodeToNetAndAttachInputs(New<LogNode<ElemType>>(net.GetDeviceId(), nodeName), { a });
 }
 
 template <class ElemType>
 shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Cos(const ComputationNodePtr a, const std::wstring nodeName)
 {
-    return net.AddNodeToNetAndAttachInputs(New<CosineNode<ElemType>>(net.GetDeviceId(), nodeName), a);
+    return net.AddNodeToNetAndAttachInputs(New<CosineNode<ElemType>>(net.GetDeviceId(), nodeName), { a });
 }
 
 template <class ElemType>
 shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Abs(const ComputationNodePtr a, const std::wstring nodeName)
 {
-    return net.AddNodeToNetAndAttachInputs(New<AbsNode<ElemType>>(net.GetDeviceId(), nodeName), a);
+    return net.AddNodeToNetAndAttachInputs(New<AbsNode<ElemType>>(net.GetDeviceId(), nodeName), { a });
 }
 
 template <class ElemType>
 shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Hardmax(const ComputationNodePtr a, const std::wstring nodeName)
 {
-    return net.AddNodeToNetAndAttachInputs(New<HardmaxNode<ElemType>>(net.GetDeviceId(), nodeName), a);
+    return net.AddNodeToNetAndAttachInputs(New<HardmaxNode<ElemType>>(net.GetDeviceId(), nodeName), { a });
 }
 
 template <class ElemType>
 shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Softmax(const ComputationNodePtr a, const std::wstring nodeName)
 {
-    return net.AddNodeToNetAndAttachInputs(New<SoftmaxNode<ElemType>>(net.GetDeviceId(), nodeName), a);
+    return net.AddNodeToNetAndAttachInputs(New<SoftmaxNode<ElemType>>(net.GetDeviceId(), nodeName), { a });
 }
 
 template <class ElemType>
 shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::LogSoftmax(const ComputationNodePtr a, const std::wstring nodeName)
 {
-    return net.AddNodeToNetAndAttachInputs(New<LogSoftmaxNode<ElemType>>(net.GetDeviceId(), nodeName), a);
+    return net.AddNodeToNetAndAttachInputs(New<LogSoftmaxNode<ElemType>>(net.GetDeviceId(), nodeName), { a });
 }
 
 template <class ElemType>
 shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Reciprocal(const ComputationNodePtr a, const std::wstring nodeName)
 {
-    return net.AddNodeToNetAndAttachInputs(New<ReciprocalNode<ElemType>>(net.GetDeviceId(), nodeName), a);
+    return net.AddNodeToNetAndAttachInputs(New<ReciprocalNode<ElemType>>(net.GetDeviceId(), nodeName), { a });
 }
 
 template <class ElemType>
 shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Sqrt(const ComputationNodePtr a, const std::wstring nodeName)
 {
-    return net.AddNodeToNetAndAttachInputs(New<SqrtNode<ElemType>>(net.GetDeviceId(), nodeName), a);
+    return net.AddNodeToNetAndAttachInputs(New<SqrtNode<ElemType>>(net.GetDeviceId(), nodeName), { a });
 }
 
 template <class ElemType>
 shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Sum(const ComputationNodePtr a, const std::wstring nodeName)
 {
-    return net.AddNodeToNetAndAttachInputs(New<SumElementsNode<ElemType>>(net.GetDeviceId(), nodeName), a);
+    return net.AddNodeToNetAndAttachInputs(New<SumElementsNode<ElemType>>(net.GetDeviceId(), nodeName), { a });
 }
 
 template <class ElemType>
 shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::TransposeDimensions(const ComputationNodePtr matrix, int dim1, int dim2, const std::wstring nodeName)
 {
-    return net.AddNodeToNetAndAttachInputs(New<TransposeDimensionsNode<ElemType>>(net.GetDeviceId(), nodeName, dim1, dim2), matrix);
+    return net.AddNodeToNetAndAttachInputs(New<TransposeDimensionsNode<ElemType>>(net.GetDeviceId(), nodeName, dim1, dim2), { matrix });
 }
 
 template <class ElemType>
 shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Times(const ComputationNodePtr a, const ComputationNodePtr b, size_t outputRank, const std::wstring nodeName)
 {
-    return net.AddNodeToNetAndAttachInputs(New<TimesNode<ElemType>>(net.GetDeviceId(), nodeName, outputRank), a, b);
+    return net.AddNodeToNetAndAttachInputs(New<TimesNode<ElemType>>(net.GetDeviceId(), nodeName, outputRank), { a, b });
 }
 
 template <class ElemType>
 shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::TransposeTimes(const ComputationNodePtr a, const ComputationNodePtr b, const std::wstring nodeName)
 {
-    return net.AddNodeToNetAndAttachInputs(New<TransposeTimesNode<ElemType>>(net.GetDeviceId(), nodeName), a, b);
+    return net.AddNodeToNetAndAttachInputs(New<TransposeTimesNode<ElemType>>(net.GetDeviceId(), nodeName), { a, b });
 }
 
 template <class ElemType>
 shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::ElementTimes(const ComputationNodePtr a, const ComputationNodePtr b, const std::wstring nodeName)
 {
-    return net.AddNodeToNetAndAttachInputs(New<ElementTimesNode<ElemType>>(net.GetDeviceId(), nodeName), a, b);
+    return net.AddNodeToNetAndAttachInputs(New<ElementTimesNode<ElemType>>(net.GetDeviceId(), nodeName), { a, b });
 }
 
 template <class ElemType>
 shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::DiagTimes(const ComputationNodePtr a, const ComputationNodePtr b, const std::wstring nodeName)
 {
-    return net.AddNodeToNetAndAttachInputs(New<DiagTimesNode<ElemType>>(net.GetDeviceId(), nodeName), a, b);
+    return net.AddNodeToNetAndAttachInputs(New<DiagTimesNode<ElemType>>(net.GetDeviceId(), nodeName), { a, b });
 }
 
 template <class ElemType>
 shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::CosDistance(const ComputationNodePtr a, const ComputationNodePtr b, const std::wstring nodeName)
 {
-    return net.AddNodeToNetAndAttachInputs(New<CosDistanceNode<ElemType>>(net.GetDeviceId(), nodeName), a, b);
+    return net.AddNodeToNetAndAttachInputs(New<CosDistanceNode<ElemType>>(net.GetDeviceId(), nodeName), { a, b });
 }
 
 template <class ElemType>
 shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::KhatriRaoProduct(const ComputationNodePtr a, const ComputationNodePtr b, const std::wstring nodeName)
 {
-    return net.AddNodeToNetAndAttachInputs(New<KhatriRaoProductNode<ElemType>>(net.GetDeviceId(), nodeName), a, b);
+    return net.AddNodeToNetAndAttachInputs(New<KhatriRaoProductNode<ElemType>>(net.GetDeviceId(), nodeName), { a, b });
 }
 
 template <class ElemType>
 shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Plus(const ComputationNodePtr a, const ComputationNodePtr b, const std::wstring nodeName)
 {
-    return net.AddNodeToNetAndAttachInputs(New<PlusNode<ElemType>>(net.GetDeviceId(), nodeName), a, b);
+    return net.AddNodeToNetAndAttachInputs(New<PlusNode<ElemType>>(net.GetDeviceId(), nodeName), { a, b });
 }
 
 template <class ElemType>
 shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Minus(const ComputationNodePtr a, const ComputationNodePtr b, const std::wstring nodeName)
 {
-    return net.AddNodeToNetAndAttachInputs(New<MinusNode<ElemType>>(net.GetDeviceId(), nodeName), a, b);
+    return net.AddNodeToNetAndAttachInputs(New<MinusNode<ElemType>>(net.GetDeviceId(), nodeName), { a, b });
 }
 
 template <class ElemType>
 shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Dropout(const ComputationNodePtr a, const std::wstring nodeName)
 {
-    return net.AddNodeToNetAndAttachInputs(New<DropoutNode<ElemType>>(net.GetDeviceId(), nodeName), a);
+    return net.AddNodeToNetAndAttachInputs(New<DropoutNode<ElemType>>(net.GetDeviceId(), nodeName), { a });
 }
 
 template <class ElemType>
@@ -614,7 +615,7 @@ shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Resha
                                                                                    const TensorShape& imageLayout,
                                                                                    const std::wstring nodeName)
 {
-    return net.AddNodeToNetAndAttachInputs(New<ReshapeNode<ElemType>>(net.GetDeviceId(), nodeName, imageLayout), a);
+    return net.AddNodeToNetAndAttachInputs(New<ReshapeNode<ElemType>>(net.GetDeviceId(), nodeName, imageLayout), { a });
 }
 #if 1
 template <class ElemType>
@@ -623,38 +624,38 @@ shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Legac
                                                                                          const TensorShape& imageLayout,
                                                                                          const std::wstring nodeName)
 {
-    return net.AddNodeToNetAndAttachInputs(New<LegacyReshapeNode<ElemType>>(net.GetDeviceId(), nodeName, numRows, imageLayout), a);
+    return net.AddNodeToNetAndAttachInputs(New<LegacyReshapeNode<ElemType>>(net.GetDeviceId(), nodeName, numRows, imageLayout), { a });
 }
 #endif
 
 template <class ElemType>
 shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::RowRepeat(const ComputationNodePtr a, const size_t num_repeat, const std::wstring nodeName)
 {
-    return net.AddNodeToNetAndAttachInputs(New<RowRepeatNode<ElemType>>(net.GetDeviceId(), nodeName, num_repeat), a);
+    return net.AddNodeToNetAndAttachInputs(New<RowRepeatNode<ElemType>>(net.GetDeviceId(), nodeName, num_repeat), { a });
 }
 
 template <class ElemType>
 shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Diagonal(const ComputationNodePtr a, const std::wstring nodeName)
 {
-    return net.AddNodeToNetAndAttachInputs(New<DiagonalNode<ElemType>>(net.GetDeviceId(), nodeName), a);
+    return net.AddNodeToNetAndAttachInputs(New<DiagonalNode<ElemType>>(net.GetDeviceId(), nodeName), { a });
 }
 
 template <class ElemType>
 shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::PastValue(const ComputationNodePtr a, const float initHiddenActivity, const size_t row_size, size_t timeStep, const std::wstring nodeName)
 {
-    return net.AddNodeToNetAndAttachInputs(New<PastValueNode<ElemType>>(net.GetDeviceId(), nodeName, initHiddenActivity, row_size, timeStep), a);
+    return net.AddNodeToNetAndAttachInputs(New<PastValueNode<ElemType>>(net.GetDeviceId(), nodeName, initHiddenActivity, row_size, timeStep), { a });
 }
 
 template <class ElemType>
 shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::FutureValue(const ComputationNodePtr a, const float initHiddenActivity, const size_t row_size, size_t timeStep, const std::wstring nodeName)
 {
-    return net.AddNodeToNetAndAttachInputs(New<FutureValueNode<ElemType>>(net.GetDeviceId(), nodeName, initHiddenActivity, row_size, timeStep), a);
+    return net.AddNodeToNetAndAttachInputs(New<FutureValueNode<ElemType>>(net.GetDeviceId(), nodeName, initHiddenActivity, row_size, timeStep), { a });
 }
 
 template <class ElemType>
 shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::RowSlice(const ComputationNodePtr a, const size_t start_index, const size_t num_rows, const std::wstring nodeName)
 {
-    return net.AddNodeToNetAndAttachInputs(New<RowSliceNode<ElemType>>(net.GetDeviceId(), nodeName, start_index, num_rows), a);
+    return net.AddNodeToNetAndAttachInputs(New<SliceNode<ElemType>>(net.GetDeviceId(), nodeName, (int)start_index, (int)(start_index + num_rows)), { a });
 }
 
 template <class ElemType>
@@ -663,7 +664,7 @@ shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::RowSt
     vector<ComputationNodeBasePtr> inputs(pinputs.size());
     for (size_t i = 0; i < inputs.size(); i++)
         inputs[i] = pinputs[i]; // convert to ComputationNodeBasePtr
-    return net.AddNodeToNetAndAttachInputs(New<RowStackNode<ElemType>>(net.GetDeviceId(), nodeName), inputs);
+    return net.AddNodeToNetAndAttachInputs(New<RowStackNode<ElemType>>(net.GetDeviceId(), nodeName), { inputs });
 }
 
 #ifdef COMING_SOON
@@ -674,14 +675,14 @@ shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::GMMLo
                                                                                             const ComputationNodePtr feature,
                                                                                             const std::wstring nodeName)
 {
-    return net.AddNodeToNetAndAttachInputs(New<GMMLogLikelihoodNode<ElemType>>(net.GetDeviceId(), nodeName), unnormedPrior, mean, logStddev, feature);
+    return net.AddNodeToNetAndAttachInputs(New<GMMLogLikelihoodNode<ElemType>>(net.GetDeviceId(), nodeName), { unnormedPrior, mean, logStddev, feature });
 }
 #endif
 
 template <class ElemType>
 shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::LookupTable(const ComputationNodePtr dictionary, const ComputationNodePtr input, const std::wstring nodeName)
 {
-    return net.AddNodeToNetAndAttachInputs(New<LookupTableNode<ElemType>>(net.GetDeviceId(), nodeName), dictionary, input);
+    return net.AddNodeToNetAndAttachInputs(New<LookupTableNode<ElemType>>(net.GetDeviceId(), nodeName), { dictionary, input });
 }
 
 template <class ElemType>
@@ -691,11 +692,10 @@ shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Batch
                                                                                               ImageLayoutKind imageLayoutKind,
                                                                                               const std::wstring nodeName)
 {
-    return net.AddNodeToNetAndAttachInputs(New<BatchNormalizationNode<ElemType>>(net.GetDeviceId(), nodeName, spatial, normalizationTimeConstant, blendTimeConstant, epsilon, useCntkEngine, imageLayoutKind),
-                                           input, scale, bias, runMean, runInvStdDev);
+    return net.AddNodeToNetAndAttachInputs(New<BatchNormalizationNode<ElemType>>(net.GetDeviceId(), nodeName, spatial, normalizationTimeConstant, blendTimeConstant, epsilon, useCntkEngine, imageLayoutKind), { input, scale, bias, runMean, runInvStdDev });
 }
 
 template class ComputationNetworkBuilder<float>;
 template class ComputationNetworkBuilder<double>;
 
-} } }
+}}}

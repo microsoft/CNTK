@@ -10,7 +10,7 @@
 ##############################################################################
 
 Print(value, format='') = new PrintAction [ what = value /*; how = format*/ ] 
-Debug(value, say = '', enabled = true) = new Debug [ /*macro arg values*/ ] 
+Fail(what) = new FailAction [ /*what*/ ]
 Format(value, format) = new StringFunction [ what = 'Format' ; arg = value ; how = format ] 
 Replace(s, from, to) = new StringFunction [ what = 'Replace' ; arg = s ; replacewhat = from ; withwhat = to ] 
 Substr(s, begin, num) = new StringFunction [ what = 'Substr' ; arg = s ; pos = begin ; chars = num ] 
@@ -23,32 +23,58 @@ Sign(x) = if x > 0 then 1 else if x < 0 then -1 else 0
 Min(a,b) = if a < b then a else b 
 Max(a,b) = if a > b then a else b 
 Fac(n) = if n > 1 then Fac(n-1) * n else 1 
+IsSameObject(a,b) = new CompareFunction [ what = 'IsSameObject' ; args = (a : b) ]
 
 ##############################################################################
 # ComputationNodes
 ##############################################################################
 
-LearnableParameter(rows, cols, learningRateMultiplier = 1.0, init = 'uniform'/*|fixedValue|gaussian|fromFile*/, initValueScale = 1, value = 0, initFromFilePath = '', initOnCPUOnly=true, randomSeed=-1, tag='') = new ComputationNode [ operation = 'LearnableParameter' ; shape = new TensorShape [ dims = (rows : cols) ] /*plus the function args*/ ]
+LearnableParameter(rows, cols, learningRateMultiplier = 1.0, init = 'uniform'/*|fixedValue|gaussian|fromFile*/, initValueScale = 1, value = 0, initFromFilePath = '', initFromLiteral = '', initOnCPUOnly=true, randomSeed=-1, tag='') = new ComputationNode [ operation = 'LearnableParameter' ; shape = new TensorShape [ dims = (rows : cols) ] /*plus the function args*/ ]
 Parameter = LearnableParameter // deprecated 
-ParameterTensor(dims, learningRateMultiplier = 1.0, init = 'uniform'/*|fixedValue|gaussian|fromFile*/, initValueScale = 1, value = 0, initFromFilePath = '', initOnCPUOnly=true, randomSeed=-1, tag='') = new ComputationNode [ operation = 'LearnableParameter' ; shape = new TensorShape [ /*dims*/ ] /*plus the function args*/ ]
+# TODO: make Parameter take tensor dims?
+ParameterTensor(dims, learningRateMultiplier = 1.0, init = 'uniform'/*|fixedValue|gaussian|fromFile*/, initValueScale = 1, value = 0, initFromFilePath = '', initFromLiteral = '', initOnCPUOnly=true, randomSeed=-1, tag='') = new ComputationNode [ operation = 'LearnableParameter' ; shape = new TensorShape [ /*dims*/ ] /*plus the function args*/ ]
+ConstantFromString(literal, tag='') = ParameterTensor((0)/*dim, will be inferred*/, init = 'fromLiteral', initFromLiteral = literal, learningRateMultiplier = 0.0)
 Input(dims, tag='feature') = new ComputationNode [ operation = 'InputValue' ; shape = new TensorShape [ /*dims*/ ] ; isImage = false /*plus the function args*/ ]
 SparseInput(dims, tag='feature') = new ComputationNode [ operation = 'SparseInputValue' ; shape = new TensorShape [ /*dims*/ ] ; isImage = false /*plus the function args*/ ]
 ImageInput(imageWidth, imageHeight, imageChannels, imageLayout='CHW', tag='feature') = new ComputationNode [ operation = 'InputValue' ; isImage = true /*plus the function args*/ ]
 SparseImageInput(imageWidth, imageHeight, imageChannels, imageLayout='CHW', tag='feature') = new ComputationNode [ operation = 'SparseInputValue' ; isImage = true /*plus the function args*/ ]
 EnvironmentInput(propertyName, tag='') = new ComputationNode [ operation = 'EnvironmentInput' /*plus the function args*/ ]
+ConstantTensor(val, dims, tag='') = ParameterTensor(dims, learningRateMultiplier = 0, init = 'fixedValue', value = val) 
 Constant(val, rows = 1, cols = 1, tag='') = Parameter(rows, cols, learningRateMultiplier = 0, init = 'fixedValue', value = val) 
 PastValue(dims, input, timeStep = 1, defaultHiddenActivation = 0.1, tag='') = new ComputationNode [ operation = 'PastValue' ; inputs = input ; shape = new TensorShape [ /*dims*/ ] /*plus the function args*/ ]
 FutureValue(dims, input, timeStep = 1, defaultHiddenActivation = 0.1, tag='') = new ComputationNode [ operation = 'FutureValue' ; inputs = input ; shape = new TensorShape [ /*dims*/ ] /*plus the function args*/ ]
 Shift(input, fromOffset, boundaryValue, boundaryMode=-1/*context*/, dim=-1, tag='') = new ComputationNode [ operation = 'Shift' ; inputs = (input : boundaryValue) /*plus the function args*/ ]
-RowSlice(startIndex, numRows, input, tag='') = new ComputationNode [ operation = 'RowSlice' ; inputs = input /*plus the function args*/ ]
+RowSlice(beginIndex, numRows, input, tag='') = Slice(beginIndex, beginIndex + numRows, input, axis = 1)
 RowRepeat(input, numRepeats, tag='') = new ComputationNode [ operation = 'RowRepeat' ; inputs = input /*plus the function args*/ ]
 RowStack(inputs, tag='') = new ComputationNode [ operation = 'RowStack' /*plus the function args*/ ]
+Splice (inputs, axis=1) = # TODO: This is a workaround. RowStack itself shall interpret 'axis' and be renamed to Splice().
+    if axis < 1 then Fail('Splice does not yet implement splicing the time axis.')
+    else if axis == 1 then RowStack (inputs)
+    else [ # workaround: swap 'axis' to first position, RowStack, swap back
+        ArrayTransposeDimensions (inputs, axis1, axis2) = [ # transpose each element of a BS array
+            inputsT[i:0..Length(inputs)-1] = TransposeDimensions (inputs[i], axis1, axis2)
+        ].inputsT
+        out = TransposeDimensions (RowStack (ArrayTransposeDimensions (inputs, 1, axis)), 1, axis)
+    ].out
 Reshape(input, numRows, imageWidth = 0, imageHeight = 0, imageChannels = 0, tag='') = new ComputationNode [ operation = 'LegacyReshape' ; inputs = input /*plus the function args*/ ]
-NewReshape(input, dims, beginDim=0, endDim=0, tag='') = new ComputationNode [ operation = 'Reshape' ; inputs = input ; shape = new TensorShape [ /*dims*/ ] /*plus the function args*/ ]
-ReshapeDimension(x, dim, tensorShape) = NewReshape(x, tensorShape, beginDim=dim, endDim=dim + 1) 
-FlattenDimensions(x, dim, num) = NewReshape(x, 0, beginDim=dim, endDim=dim + num) 
-SplitDimension(x, dim, N) = ReshapeDimension(x, dim, 0:N) 
-TransposeDimensions(input, dim1, dim2, tag='') = new ComputationNode [ operation = 'TransposeDimensions' ; inputs = input /*plus the function args*/ ]
+NewReshape(input, dims, beginAxis=0, endAxis=0, tag='') = new ComputationNode [ operation = 'Reshape' ; inputs = input ; shape = new TensorShape [ /*dims*/ ] /*plus the function args*/ ]
+ReshapeDimension(x, axis, tensorShape) = NewReshape(x, tensorShape, beginAxis=axis, endAxis=axis + 1) 
+FlattenDimensions(x, axis, num) = NewReshape(x, 0, beginAxis=axis, endAxis=axis + num) 
+Slice(beginIndex, endIndex, input, axis=1, tag='') =
+    if axis < 0 then [ # time axis: specify -1
+        beginFlags = if beginIndex > 0 then BS.Boolean.Not (BS.Loop.IsFirstN (beginIndex, input)) else                 BS.Loop.IsLastN  (-beginIndex, input)
+        endFlags   = if endIndex   > 0 then                 BS.Loop.IsFirstN (endIndex,   input)  else BS.Boolean.Not (BS.Loop.IsLastN  (-endIndex,   input))
+        flags = if      beginIndex == 0 then endFlags
+                else if endIndex   == 0 then beginFlags
+                else                         BS.Boolean.And (beginFlags, endFlags)
+        out = if beginIndex == 0 && endIndex == 0
+              then input
+              else BS.Sequences.Gather (flags, input)
+    ].out
+    else new ComputationNode [ operation = 'Slice' ; inputs = input /*plus the function args*/ ] # non-time axis
+SplitDimension(x, axis, N) = ReshapeDimension(x, axis, 0:N) 
+TransposeDimensions(input, axis1, axis2, tag='') = new ComputationNode [ operation = 'TransposeDimensions' ; inputs = input /*plus the function args*/ ]
+# TODO: make input the last arg!
 Transpose(x) = TransposeDimensions(x, 1, 2)
 Times(A, B, outputRank=1, tag='') = new ComputationNode [ operation = 'Times' ; inputs = ( A : B ) /*plus the function args*/ ]
 Logistic(label, probability, tag='') = new ComputationNode [ operation = 'Logistic' ; inputs = (label : probability) /*plus the function args*/ ]
@@ -107,7 +133,9 @@ Hardmax(z, tag='') = new ComputationNode [ operation = 'Hardmax' ; inputs = z /*
 Sqrt(z, tag='') = new ComputationNode [ operation = 'Sqrt' ; inputs = z /*plus the function args*/ ]
 SquareError(aMatrix, anotherMatrix, tag='') = new ComputationNode [ operation = 'SquareError' ; inputs = (aMatrix : anotherMatrix) /*plus the function args*/ ]
 SumColumnElements(z, tag='') = new ComputationNode [ operation = 'SumColumnElements' ; inputs = z /*plus the function args*/ ]
+# ^^ TODO: Rename to SumElements? ReduceSum without axis?
 SumElements(matrix, tag='') = new ComputationNode [ operation = 'SumElements' ; inputs = matrix /*plus the function args*/ ]
+# ^^ TODO: Rename to ReduceSumMB?
 Tanh(z, tag='') = new ComputationNode [ operation = 'Tanh' ; inputs = z /*plus the function args*/ ]
 TimeReverse(vectorSequence, tag='') = new ComputationNode [ operation = 'TimeReverse' ; inputs = vectorSequence /*plus the function args*/ ]
 TransposeTimes(leftMatrix, rightMatrix, tag='') = new ComputationNode [ operation = 'TransposeTimes' ; inputs = (leftMatrix : rightMatrix) /*plus the function args*/ ]
@@ -135,8 +163,8 @@ BS = [
 ##############################################################################
 
 Constants = [
-    Zero = Constant (0)
-    One  = Constant (1)
+    Zero = ConstantTensor (0, (1))
+    One  = ConstantTensor (1, (1))
     # BUGBUG: ZeroesLike() would recreate the full dimension of x. Well, no need if it considers broadcasting. But still wrong if we want to broadcast a vector of different tensor dim.
     #ZeroesLike (x) = CastAs (x, Zero) // read: Cast<x>(Zero)
     #OnesLike (x)   = CastAs (x, One)
@@ -265,12 +293,16 @@ Loop = [
     IsFirst (x) = _IsWithin (PastValue,   1, x)
     IsLast (x)  = _IsWithin (FutureValue, 1, x)
 
+    IsFirstN (N, x) = _IsWithin (PastValue,   N, x)
+    IsLastN  (N, x) = _IsWithin (FutureValue, N, x)
+
     # private helpers
     # flag whether a frame is within the first or last N frames
     _IsWithin (DelayFn/*PastValue or FutureValue*/, N, x) = DelayFn (0, Constants.ZeroesLike (x)/*false*/, timeStep=N, defaultHiddenActivation=Constants.True)
 
     # opposite of Id's "next"
     Previous (x) = PastValue (0, x, timeStep=1)
+    Next (x) = FutureValue (0, x, timeStep=1)
 ]
 
 ##############################################################################
@@ -344,20 +376,36 @@ RNNs =
                 Wmr = Parameters.WeightParam(outputDim, cellDim);
                 htp = Wmr * Parameters.Stabilize (_privateInnards.ht, enabled=enableSelfStabilization)
             ].htp         // TODO: ^^ extend BS syntax to allow to say: then [ Wmr = WeightParam(outputDim, cellDim) ] in Wmr * Stabilize (...)
-            else _privateInnards.ht // no projection
+            else _privateInnards.ht     // no projection
     ]
 
     # this implements a recurrent (stateful) LSTM with projection and self-stabilization
     RecurrentLSTMP (inputDim, outputDim, cellDim, x, enableSelfStabilization=false) =
     [
-        prevState =  // Loop.Previous (lstmState). BS can't apply Previous() to dictionaries, so expand it manually
+        prevState =
         [
-            h = Loop.Previous (lstmState.h);                     // hidden state(t-1)
-            c = Loop.Previous (lstmState.c);                     // cell(t-1)
+            h = Loop.Previous (lstmState.h)             // hidden state(t-1)
+            c = Loop.Previous (lstmState.c)             // cell(t-1)
         ]
         enableSelfStabilization1 = enableSelfStabilization // TODO: BS syntax needs to allow to say ^.enableSelfStabilization
         lstmState = LSTMP (inputDim, outputDim, cellDim, x, prevState, enableSelfStabilization=enableSelfStabilization1)
     ].lstmState.h // that's the value we return
+]
+
+##############################################################################
+# Network operations
+# These operations will have undefined behavior for input values != 0 or 1.
+##############################################################################
+
+Network = [
+    Load(pathName) = new ComputationNetworkFromFile [ /*pathName; also needs 'precision' somewhere*/ ]
+    Edit(inputModel, editFunctions, additionalRoots) = new ComputationNetworkWithEdits [ /*inputModel, editFunctions, additionalRoots*/ ]
+
+    Editing = [
+        // Create a lambda that returns its argument unless that argument == 'old', then it will return 'replacement'
+        ReplaceLinksToNode (old, replacement) = (node => if IsSameObject (node, old) then replacement else node)
+        ReplaceLinksToNamedNode (name, replacement) = (node => if node.name == name then replacement else node)
+    ]
 ]
 
 ] # end of BS namespace

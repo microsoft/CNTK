@@ -163,7 +163,7 @@ ndlCreateNetwork=[
     criterion2 = CrossEntropyWithSoftmax(statelabels, DNN_B_CE_BFF)
     criterion = Plus(Scale(cr2,criterion2), Scale(cr1,criterion1), tag="criterion")
 	
-	Err = ErrorPrediction(labels,DNN_A_CE_BFF,tag="eval")
+    Err = ErrorPrediction(labels,DNN_A_CE_BFF,tag="evaluation")
     
     logPrior = LogPrior(labels)	 
 

@@ -97,6 +97,11 @@ template <class ElemType>
             buf[outMBLayout->GetColumnIndex(seq, t)] = (ElemType)indexSequence[t];
         ++i;
         ++j;
+        /*
+        BUGBUG: a debug assert when doing this:
+        TakeRight (N, x) = BS.Sequences._Take (FutureValue, N, x)
+        Last(x) = TakeRight(1, x)
+        */
     }
     // the result will be kept in CPUDEVICE, since most likely we will access it again in PackedIndexNode
     Value().TransferToDeviceIfNotThere(CPUDEVICE, /*isBeingMoved=*/ true, /*emptyTransfer=*/ true, /*updatePreferredDevice=*/ true);
@@ -231,7 +236,7 @@ template <class ElemType>
 
     // inherit tensor dimension from sourceData, minus the last (column or time) dimension. TODO this needs to become simpler...
     if (sourceHasTimeDimension)
-        SetDims(Input(SOURCEDATA)->GetSampleLayout(), HasMBLayout());
+    SetDims(Input(SOURCEDATA)->GetSampleLayout(), HasMBLayout());
     else
     {
         SmallVector<size_t> layout = { 1 }; // Scalar

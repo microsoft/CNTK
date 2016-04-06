@@ -91,13 +91,8 @@ protected:
 template <class ElemType, int direction /*-1 for Past/left-to-right or +1 for Future/right-to-left*/ /*, MinibatchPackingFlags SequenceStart_or_End/*-Start or -End*/>
 class DelayedValueNodeBase : public ComputationNode<ElemType>, public IRecurrentNode, public ILateAttachingNode, public IStatefulNode, public NumInputs<1>
 {
-    typedef ComputationNode<ElemType> Base;
-    UsingComputationNodeMembersBoilerplate;
+    typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
     typedef std::shared_ptr<DelayedValueNodeState<ElemType>> DelayedNodeStatePtr;
-    static const std::wstring TypeName()
-    {
-        return L"DelayedValue";
-    }
 
 private:
     void Init(const TensorShape& sampleLayout, ElemType initialActivationValue)

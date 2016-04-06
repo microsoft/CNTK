@@ -25,12 +25,14 @@ using namespace std;
 HTKDataDeserializer::HTKDataDeserializer(
     CorpusDescriptorPtr corpus,
     const ConfigParameters& feature,
-    const wstring& featureName)
+    const wstring& featureName,
+    bool primary)
     : m_ioFeatureDimension(0),
       m_samplePeriod(0),
       m_verbosity(0),
       m_corpus(corpus),
-      m_totalNumberOfFrames(0)
+      m_totalNumberOfFrames(0),
+      m_primary(primary)
 {
     // The frame mode is currently specified once per configuration,
     // not in the configuration of a particular deserializer, but on a higher level in the configuration.
@@ -82,7 +84,23 @@ void HTKDataDeserializer::InitializeChunkDescriptions(ConfigHelper& config)
             continue;
         }
 
-        size_t id = stringRegistry.AddValue(description.GetKey());
+        wstring key = description.GetKey();
+        size_t id = 0;
+        if (m_primary)
+        {
+            // TODO: Definition of the corpus should be moved to the CorpusDescriptor
+            // TODO: All keys should be added there. Currently, we add them in the driving deserializer.
+            id = stringRegistry.AddValue(key);
+        }
+        else
+        {
+            if (!stringRegistry.TryGet(key, id))
+            {
+                // Utterance is unknown, skipping it.
+                continue;
+            }
+        }
+
         description.SetId(id);
         utterances.push_back(description);
         m_totalNumberOfFrames += numberOfFrames;
@@ -121,14 +139,14 @@ void HTKDataDeserializer::InitializeChunkDescriptions(ConfigHelper& config)
         // append utterance to last chunk
         HTKChunkDescription& currentChunk = m_chunks.back();
         utterances[i].AssignToChunk(chunkId, currentChunk.GetNumberOfUtterances(), startFrameInsideChunk);
+        if (!m_primary)
+        {
+            // Have to store key <-> utterance mapping for non primary deserializers.
+            m_keyToChunkLocation[utterances[i].GetId()] = make_pair(utterances[i].GetChunkId(), utterances[i].GetIndexInsideChunk());
+        }
         startFrameInsideChunk += utterances[i].GetNumberOfFrames();
         currentChunk.Add(move(utterances[i]));
     }
-
-    // Creating a table of weak pointers to chunks,
-    // so that if randomizer asks the same chunk twice 
-    // we do not need to recreated the chunk if we already uploaded in memory.
-    m_weakChunks.resize(m_chunks.size());
 
     fprintf(stderr,
         "HTKDataDeserializer::HTKDataDeserializer: %d utterances grouped into %d chunks, av. chunk size: %.1f utterances, %.1f frames\n",
@@ -289,14 +307,7 @@ private:
 // Gets a data chunk with the specified chunk id.
 ChunkPtr HTKDataDeserializer::GetChunk(size_t chunkId)
 {
-    if (!m_weakChunks[chunkId].expired())
-    {
-        return m_weakChunks[chunkId].lock();
-    }
-
-    auto chunk = make_shared<HTKChunk>(this, chunkId);
-    m_weakChunks[chunkId] = chunk;
-    return chunk;
+    return make_shared<HTKChunk>(this, chunkId);
 };
 
 // A matrix that stores all samples of a sequence without padding (differently from ssematrix).
@@ -413,6 +424,29 @@ void HTKDataDeserializer::GetSequenceById(size_t chunkId, size_t id, vector<Sequ
     }
 
     r.push_back(result);
+}
+
+static SequenceDescription s_InvalidSequence{0, 0, 0, false};
+
+// Gets sequence description by its key.
+void HTKDataDeserializer::GetSequenceDescriptionByKey(const KeyType& key, SequenceDescription& d)
+{
+    assert(!m_primary);
+    auto iter = m_keyToChunkLocation.find(key.m_major);
+    if (iter == m_keyToChunkLocation.end())
+    {
+        // Unknown sequence. Return invalid.
+        d = s_InvalidSequence;
+    }
+    else
+    {
+        const auto& chunk = m_chunks[iter->second.first];
+        const auto& sequence = chunk.GetUtterance(iter->second.second);
+        d.m_chunkId = sequence->GetChunkId();
+        d.m_id = m_frameMode ? sequence->GetStartFrameIndexInsideChunk() + key.m_minor : sequence->GetIndexInsideChunk();
+        d.m_isValid = true;
+        d.m_numberOfSamples = m_frameMode ? 1 : sequence->GetNumberOfFrames();
+    }
 }
 
 }}}

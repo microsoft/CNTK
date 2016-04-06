@@ -72,6 +72,19 @@ typedef size_t UniqueSequenceId;
 //  - ComputationNode::GetNumCols() == MBLayout::GetNumTimeSteps() * MBLayout::GetNumParallelSequences()
 //  - ComputationNetwork ensures that m_{value,gradient} are allocated correctly before calling ForwardProp() on a node
 
+// Relationship between MBLayout and FrameRange:
+//  - an MBLayout represents a time axis
+//     - a nullptr means absence of a time axis, e.g. a weight matrix
+//     - two MBLayouts with identical content may be used together as if they describe the same time axis
+//  - a FrameRange describes an iterator over a time axis
+//     - the iterator can be either an index "all," implying a non-sequenced 'map' operation
+//       This is true for both time and parallel-sequence dimension, although not all code supports the striding needed to select a sequence dimension.
+//       The iterator can also represent a sub-range, e.g. to one packed sequence with a given start and end time.
+//     - each FrameRange is bound to a MBLayout for that reason
+// Towards nested loops:  --TODO: implement this
+//  - an object with multiple time dimensions (such as state of an attention model) is described by a linked list of MBLayouts
+//  - a nested iterator is described by a linked list of FrameRanges
+
 struct MBLayout
 {
     typedef std::shared_ptr<MBLayout> MBLayoutPtr;
@@ -658,30 +671,36 @@ public:
         if (!m_pMBLayout)
             return 0;
         else
-            return -1; // TODO: allow user to specify other dimensions
+            return -1; // TODO: allow user to specify other dimensions  --BUGBUG: This is currently not thought through.
     }
 
-    class IndexIteration // range for range-based for over sequences
+    std::pair<size_t,size_t> GetSequenceRange() const
     {
-        size_t m_beginIndex, m_endIndex;
+        if (!m_pMBLayout) return
+            make_pair(0, 1);
+        else if (seqIndex == SIZE_MAX) return
+            make_pair(0, m_pMBLayout->GetNumParallelSequences());
+        else return
+            make_pair(seqIndex, seqIndex + 1);
+    }
 
-    public:
-        IndexIteration(size_t beginIndex, size_t endIndex)
-            : m_beginIndex(beginIndex), m_endIndex(endIndex)
-        {
-        }
-        size_t begin() const
-        {
-            return m_beginIndex;
-        }
-        size_t end() const
-        {
-            return m_endIndex;
-        }
-    };
-    IndexIteration GetSequenceRange(const shared_ptr<MBLayout> &pMBLayout) const
+    std::pair<size_t, size_t> GetTimeRange() const
     {
-        return IndexIteration(seqIndex == SIZE_MAX ? 0 : seqIndex, seqIndex == SIZE_MAX ? pMBLayout->GetNumParallelSequences() : seqIndex + 1);
+        if (!m_pMBLayout) return
+            make_pair(0, 1);
+        else if (IsAllFrames()) return
+            make_pair(0, m_pMBLayout->GetNumTimeSteps());
+        else return
+            make_pair(timeIdxInSeq + m_timeOffset, timeIdxInSeq + m_timeOffset + m_timeRange);
+    }
+
+    bool IsOneColumnWrt(const shared_ptr<MBLayout> &pMBLayout) const
+    {
+        if (!pMBLayout) return
+            true; // target has no layout: This would broadcast.
+        else return
+            (pMBLayout->GetNumTimeSteps()         == 1 || (!IsAllFrames() && m_timeRange == 1)) &&
+            (pMBLayout->GetNumParallelSequences() == 1 || seqIndex != SIZE_MAX);
     }
 
     // code that can only handle single-frame ranges will call t() to get the time index, which will throw if numFrames != 1

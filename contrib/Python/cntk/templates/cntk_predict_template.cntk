@@ -9,7 +9,7 @@ deviceId=%(DevideId)s
 Predict=[
 	action="write"
 	
-	%(Reader)s	
+%(Reader)s	
 	
 	outputPath = "%(PredictOutputFile)s"		# dump the output as text
 ]
