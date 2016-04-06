@@ -1,0 +1,15 @@
+#!/bin/bash
+
+. $TEST_ROOT_DIR/run-test-common
+
+# specific TIMIT variables
+. $TEST_DIR/../run-test-common
+
+Sgd=`echo TIMIT_TrainLSTM=[SGD=[{maxEpochs=1,epochSize=1024}]]`
+CntkArguments+=" $Sgd reader=[verbosity=0] cvReader=[verbosity=0] numMBsToShowResult=5"
+
+# cntkrun <CNTK config file name> <additional CNTK arg>
+cntkrun TIMIT_TrainLSTM.cntk "$CntkArguments"
+ExitCode=$?
+
+exit $ExitCode

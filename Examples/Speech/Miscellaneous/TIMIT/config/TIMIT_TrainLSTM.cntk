@@ -11,6 +11,8 @@ TIMIT_TrainLSTM=[
     traceLevel=1
     useValidation=true
 
+    truncated=true
+
     NDLNetworkBuilder=[
         ndlMacros=$NdlDir$\default_macros.ndl	
         networkDescription=$NdlDir$\lstm.ndl
@@ -47,7 +49,6 @@ TIMIT_TrainLSTM=[
       readerType=HTKMLFReader
       readMethod=blockRandomize
       frameMode=false
-      Truncated=true
       nbruttsineachrecurrentiter=10
       miniBatchMode=Partial
       randomize=Auto
