@@ -23,6 +23,12 @@ ndlMacros = "$ConfigDir$/Macros.ndl"
 # uncomment the following line to write logs to a file 
 # stderr = "$OutputDir$/03_ConvBatchNorm_out"
 
+traceLevel=1
+numMBsToShowResult=500
+
+# If set to true, always initialize the network on CPU, making initialization consistent across CPU and GPU targets (for testing).
+initOnCPUOnly=true
+
 #######################################
 #  TRAINING CONFIG                    #
 #######################################
