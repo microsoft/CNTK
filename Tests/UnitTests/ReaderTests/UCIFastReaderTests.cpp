@@ -29,10 +29,10 @@ BOOST_AUTO_TEST_CASE(UCIFastReaderSimpleDataLoop)
         "reader",
         500,
         250,
-        2,  
+        2,
         1,
-        1, 
-        0, 
+        1,
+        0,
         1);
 };
 
