@@ -59,8 +59,8 @@
     <PreBuildEventUseInBuild>false</PreBuildEventUseInBuild>
   </PropertyGroup>
   <PropertyGroup Condition="$(GpuBuild)">
-    <IncludePath>$(IncludePath);$(CUDA_PATH)\include;</IncludePath>
-    <LibraryPath>$(LibraryPath);$(CUDA_PATH)\lib\$(Platform)</LibraryPath>
+    <IncludePath>$(IncludePath);$(CudaInclude)</IncludePath>
+    <LibraryPath>$(LibraryPath);$(CudaLibPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="$(DebugBuild)">
     <ClCompile>
@@ -73,14 +73,14 @@
       <OpenMPSupport>true</OpenMPSupport>
       <TreatWarningAsError>true</TreatWarningAsError>
       <AdditionalOptions>/bigobj %(AdditionalOptions)</AdditionalOptions>
-      <AdditionalIncludeDirectories>"c:\Program Files\NVIDIA Corporation\GDK\gdk_win7_amd64_release\nvml\include"</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(NvmlInclude)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalDependencies>Math.lib; kernel32.lib; user32.lib; shell32.lib; %(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>"c:\Program Files\NVIDIA Corporation\GDK\gdk_win7_amd64_release\nvml\lib"</AdditionalLibraryDirectories>
-      <DelayLoadDLLs>Math.dll; nvml.dll; cudart64_70.dll</DelayLoadDLLs>
+      <AdditionalLibraryDirectories>$(NvmlLibPath></AdditionalLibraryDirectories>
+      <DelayLoadDLLs>Math.dll; nvml.dll</DelayLoadDLLs>
       <StackReserveSize>100000000</StackReserveSize>
     </Link>
   </ItemDefinitionGroup>
@@ -97,7 +97,7 @@
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
       <AdditionalOptions>/d2Zi+ %(AdditionalOptions)</AdditionalOptions>
       <TreatWarningAsError>true</TreatWarningAsError>
-      <AdditionalIncludeDirectories>"c:\Program Files\NVIDIA Corporation\GDK\gdk_win7_amd64_release\nvml\include"</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(NvmlInclude)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -106,8 +106,8 @@
       <OptimizeReferences>true</OptimizeReferences>
       <AdditionalDependencies>Math.lib; kernel32.lib; user32.lib; shell32.lib; %(AdditionalDependencies)</AdditionalDependencies>
       <Profile>true</Profile>
-      <DelayLoadDLLs>Math.dll; nvml.dll; cudart64_70.dll</DelayLoadDLLs>
-      <AdditionalLibraryDirectories>"c:\Program Files\NVIDIA Corporation\GDK\gdk_win7_amd64_release\nvml\lib"</AdditionalLibraryDirectories>
+      <DelayLoadDLLs>Math.dll; nvml.dll</DelayLoadDLLs>
+      <AdditionalLibraryDirectories>$(NvmlLibPath)</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="$(CpuOnlyBuild)">

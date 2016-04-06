@@ -48,8 +48,8 @@
     <LibraryPath>$(MSMPI_LIB64);$(SolutionDir)$(Platform)\$(Configuration);$(SolutionDir)..\Common\lib;$(VCInstallDir)lib\amd64;$(WindowsSDK_LibraryPath_x64)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="$(GpuBuild)">
-    <IncludePath>$(IncludePath);$(CUDA_PATH)\include</IncludePath>
-    <LibraryPath>$(LibraryPath);$(CUDA_PATH)\lib\$(Platform)</LibraryPath>
+    <IncludePath>$(IncludePath);$(CudaInclude)</IncludePath>
+    <LibraryPath>$(LibraryPath);$(CudaLibPath)</LibraryPath>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings" />
@@ -85,11 +85,11 @@
     <ClCompile>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(BOOST_INCLUDE_PATH);"c:\Program Files\NVIDIA Corporation\GDK\gdk_win7_amd64_release\nvml\include"</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(BOOST_INCLUDE_PATH);$(NvmlInclude)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
-      <DelayLoadDLLs>math.dll;msmpi.dll; nvml.dll; cudart64_70.dll</DelayLoadDLLs>
-      <AdditionalLibraryDirectories>$(BOOST_LIB_PATH);$(OutDir);"c:\Program Files\NVIDIA Corporation\GDK\gdk_win7_amd64_release\nvml\lib"</AdditionalLibraryDirectories>
+      <DelayLoadDLLs>math.dll;msmpi.dll; nvml.dll; $(CudaRuntimeDll)</DelayLoadDLLs>
+      <AdditionalLibraryDirectories>$(BOOST_LIB_PATH);$(OutDir);$(NvmlLibPath)</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="$(ReleaseBuild)">
@@ -100,12 +100,12 @@
       <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <AdditionalOptions>/d2Zi+ %(AdditionalOptions)</AdditionalOptions>
-      <AdditionalIncludeDirectories>$(BOOST_INCLUDE_PATH);"c:\Program Files\NVIDIA Corporation\GDK\gdk_win7_amd64_release\nvml\include"</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(BOOST_INCLUDE_PATH);$(NvmlInclude)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
-      <DelayLoadDLLs>math.dll;msmpi.dll; nvml.dll; cudart64_70.dll</DelayLoadDLLs>
-      <AdditionalLibraryDirectories>$(BOOST_LIB_PATH);$(OutDir);"c:\Program Files\NVIDIA Corporation\GDK\gdk_win7_amd64_release\nvml\lib"</AdditionalLibraryDirectories>
+      <DelayLoadDLLs>math.dll;msmpi.dll; nvml.dll; $(CudaRuntimeDll)</DelayLoadDLLs>
+      <AdditionalLibraryDirectories>$(BOOST_LIB_PATH);$(OutDir);$(NvmlLibPath)</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="$(CpuOnlyBuild)">
