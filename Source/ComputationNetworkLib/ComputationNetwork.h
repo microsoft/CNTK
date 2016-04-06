@@ -264,7 +264,7 @@ public:
 
         const auto& featureNodes = FeatureNodes(); // TODO: a getter; should be called GetFeatureNodes()
         for (auto& nodeIter : featureNodes)
-            actualMBSize = max(actualMBSize, nodeIter->GetMBLayout()->GetNumCols());
+            actualMBSize = max(actualMBSize, nodeIter->GetMBLayout()->GetActualNumSamples());
 
         return actualMBSize;
     }
