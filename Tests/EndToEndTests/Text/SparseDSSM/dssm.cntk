@@ -15,7 +15,6 @@ train = [
     action = train
     numMBsToShowResult=10
     deviceId=$DeviceId$
-    #deviceId=0
     minibatchSize = $MBSize$
     modelPath = $modelPath$
     traceLevel = 1
