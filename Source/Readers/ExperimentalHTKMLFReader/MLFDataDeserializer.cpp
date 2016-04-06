@@ -4,10 +4,7 @@
 //
 
 #include "stdafx.h"
-
-#define __STDC_FORMAT_MACROS
 #include <inttypes.h>
-
 #include <limits>
 #include "MLFDataDeserializer.h"
 #include "ConfigHelper.h"
@@ -58,8 +55,8 @@ MLFDataDeserializer::MLFDataDeserializer(CorpusDescriptorPtr corpus, const Confi
 
     if (dimension > numeric_limits<IndexType>::max())
     {
-        RuntimeError("Label dimension (" PRIu64 ") exceeds the maximum allowed "
-            "value (" PRIu64 ")\n", dimension, (size_t)numeric_limits<IndexType>::max());
+        RuntimeError("Label dimension (%" PRIu64 ") exceeds the maximum allowed "
+            "value (%" PRIu64 ")\n", dimension, (size_t)numeric_limits<IndexType>::max());
     }
 
     // TODO: Similarly to the old reader, currently we assume all Mlfs will have same root name (key)
@@ -257,8 +254,8 @@ struct MLFSequenceData : SparseSequenceData
     {
         if (numberOfSamples > numeric_limits<IndexType>::max())
         {
-            RuntimeError("Number of samples in an MLFSequence (" PRIu64 ") "
-                "exceeds the maximum allowed value (" PRIu64 ")\n", 
+            RuntimeError("Number of samples in an MLFSequence (%" PRIu64 ") "
+                "exceeds the maximum allowed value (%" PRIu64 ")\n", 
                 numberOfSamples, (size_t)numeric_limits<IndexType>::max());
         }
 

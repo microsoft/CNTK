@@ -4,10 +4,7 @@
 //
 
 #include "stdafx.h"
-
-#define __STDC_FORMAT_MACROS
 #include <inttypes.h>
-
 #include <cfloat>
 #include <limits>
 #include "Indexer.h"
@@ -768,8 +765,8 @@ bool TextParser<ElemType>::ReadSparseSample(std::vector<ElemType>& values, std::
             if (m_traceLevel >= Warning)
             {
                 fprintf(stderr,
-                    "WARNING: sparse index value(" PRIu64 ") exceeds the maximum allowed "
-                    " value (" PRIu64 ")\n", index, (size_t)numeric_limits<IndexType>::max());
+                    "WARNING: sparse index value(%" PRIu64 ") exceeds the maximum allowed "
+                    " value (%" PRIu64 ")\n", index, (size_t)numeric_limits<IndexType>::max());
             }
             // bail out.
             return false;

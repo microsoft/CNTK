@@ -6,9 +6,7 @@
 #define _CRT_SECURE_NO_WARNINGS
 #define _SCL_SECURE_NO_WARNINGS
 
-#define __STDC_FORMAT_MACROS
 #include <inttypes.h>
-
 #include <numeric>
 #include "PackerBase.h"
 #include "ElementTypeUtils.h"
@@ -181,8 +179,8 @@ MBLayoutPtr PackerBase::PackSparseStream(const StreamBatch& batch, size_t stream
 
     if (nnzCount > numeric_limits<IndexType>::max())
     {
-        RuntimeError("Minibatch NNZ count (" PRIu64 ") exceeds the maximum allowed "
-            "value (" PRIu64 ")\n", nnzCount, (size_t)numeric_limits<IndexType>::max());
+        RuntimeError("Minibatch NNZ count (%" PRIu64 ") exceeds the maximum allowed "
+            "value (%" PRIu64 ")\n", nnzCount, (size_t)numeric_limits<IndexType>::max());
     }
 
     const auto& stream = m_inputStreamDescriptions[streamIndex];

@@ -4,10 +4,7 @@
 //
 
 #include "stdafx.h"
-
-#define __STDC_FORMAT_MACROS
 #include <inttypes.h>
-
 #include <opencv2/opencv.hpp>
 #include <numeric>
 #include <limits>
@@ -36,8 +33,8 @@ public:
     {
         if (labelDimension > numeric_limits<IndexType>::max())
         {
-            RuntimeError("Label dimension (" PRIu64 ") exceeds the maximum allowed "
-                "value (" PRIu64 ")\n", labelDimension, (size_t)numeric_limits<IndexType>::max());
+            RuntimeError("Label dimension (%" PRIu64 ") exceeds the maximum allowed "
+                "value (%" PRIu64 ")\n", labelDimension, (size_t)numeric_limits<IndexType>::max());
         }
         iota(m_indices.begin(), m_indices.end(), 0);
     }
