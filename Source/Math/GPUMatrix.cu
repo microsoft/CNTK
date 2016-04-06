@@ -861,89 +861,96 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignTransposeOf(const GPUMatrix<Elem
     ElemType beta = 0;
     cublasStatus_t st;
     if (sizeof(ElemType) == sizeof(float))
-    {
         st = cublasSgeam(cuHandle, transA, transB, m, n, reinterpret_cast<float*>(&alpha), reinterpret_cast<float*>(a.Data()), (int) a.m_numRows, reinterpret_cast<float*>(&beta), reinterpret_cast<float*>(a.Data()), (int) a.m_numRows, reinterpret_cast<float*>(Data()), (int) m_numRows);
-    }
     else if (sizeof(ElemType) == sizeof(double))
-    {
         st = cublasDgeam(cuHandle, transA, transB, m, n, reinterpret_cast<double*>(&alpha), reinterpret_cast<double*>(a.Data()), (int) a.m_numRows, reinterpret_cast<double*>(&beta), reinterpret_cast<double*>(a.Data()), (int) a.m_numRows, reinterpret_cast<double*>(Data()), (int) m_numRows);
-    }
     else
-    {
         RuntimeError("Unsupported template argument in GPUMatrix");
-    }
     if (st != CUBLAS_STATUS_SUCCESS)
-    {
         RuntimeError("AssignTransposeOf failed");
-    }
     m_numRows = a.m_numCols;
     m_numCols = a.m_numRows;
     return *this;
 }
 
 template <class ElemType>
-__global__ void _doGatherColumnsOf(ElemType* us, size_t usStride, const ElemType beta, const ElemType* m, size_t mStride, const ElemType* a, size_t aStride, size_t aCols, const ElemType alpha)
+__global__ void _doGatherColumnsOf(ElemType* us, size_t usStride, const ElemType beta, const ElemType* idx, size_t idxStride, const ElemType* a, size_t aStride, size_t aCols, const ElemType alpha, CUDA_LONG numElements)
 {
-    size_t i    = threadIdx.x; // index into 'us' and 'a'
-    size_t jOut =  blockIdx.x; // index into 'us' and 'm'
+    CUDA_LONG id = GridDim::GetLinearThreadId();
+    if (id >= numElements) // note: there are no __syncthread() calls inside
+        return;
 
-    auto jInF = m[jOut * mStride]; // this is the column we need to get
-    if (jInF < 0)                  // negative index means gap
+    // id = i + jOut * usStride;
+    CUDA_LONG i    = id % usStride; // row index into 'us' and 'a'
+    CUDA_LONG jOut = id / usStride; // col index into 'us' and 'idx'
+
+    auto jInF = idx[jOut * idxStride]; // this is the column we need to get
+    if (jInF < 0)                      // negative index means gap
         return;
     size_t jIn = (size_t)jInF;
     if (jIn >= aCols)
         return; // actually a failure
 
-    const ElemType& ra  =  a[i + jIn  *  aStride];
-    ElemType&       rus = us[i + jOut * usStride];
-
+    const ElemType&  ra = a[    i + jIn  *  aStride  ];
+    ElemType&       rus = us[id/*i + jOut * usStride*/];
+    
     ElemType res = ra * alpha;
     if (beta != 0)
         res += rus * beta;
     rus = res;
 }
 
-// *this[:,j] = a[:,m[j]] * alpha + *this[:,j] * beta
+// *this[:,j] = a[:,idx[j]] * alpha + *this[:,j] * beta
 template <class ElemType>
-GPUMatrix<ElemType>& GPUMatrix<ElemType>::DoGatherColumnsOf(ElemType beta, const GPUMatrix<ElemType>& m, const GPUMatrix<ElemType>& a, ElemType alpha)
+GPUMatrix<ElemType>& GPUMatrix<ElemType>::DoGatherColumnsOf(ElemType beta, const GPUMatrix<ElemType>& idx, const GPUMatrix<ElemType>& a, ElemType alpha)
 {
-    if (m.GetNumRows() != 1) // index is 1-dimensional only
+    if (idx.GetNumRows() != 1) // index is 1-dimensional only
         InvalidArgument("DoGatherColumnsOf: Map must be a row vector.");
 
-    RequireSize(a.GetNumRows(), a.GetNumCols());
+    if (beta == 0)
+        RequireSize(a.GetNumRows(), idx.GetNumCols()); // output has same column format as a, but number of columns comes from idx
+    else
+        VerifySize(a.GetNumRows(), idx.GetNumCols());
 
-    if (m.GetComputeDeviceId() != a.GetComputeDeviceId() || GetComputeDeviceId() != a.GetComputeDeviceId())
+    if (idx.GetComputeDeviceId() != a.GetComputeDeviceId() || GetComputeDeviceId() != a.GetComputeDeviceId())
         InvalidArgument("All matrices must be on the same GPU");
     a.PrepareDevice();
 
+    // launch the kernel
+    CUDA_LONG NN = (CUDA_LONG)GetNumElements(); // linear space identifying each individual input element
     SyncGuard syncGuard;
-    _doGatherColumnsOf<ElemType> << <GetNumCols(), GetNumRows(), 0, t_stream >> >(Data(), GetNumRows(), beta, m.Data(), 1, a.Data(), a.GetNumRows(), a.GetNumCols(), alpha);
+    GridDim grid(NN);
+    _doGatherColumnsOf<ElemType><<<grid.m_blocksPerGrid, grid.m_threadsPerBlock, 0, t_stream>>>(Data(), GetNumRows(), beta, idx.Data(), idx.GetNumRows(), a.Data(), a.GetNumRows(), a.GetNumCols(), alpha, grid.m_N);
+
+    // Note: The following fails silently (no error, immediate or delayed) for numcols = 10000 under CUDA 7.0.
+    //_doGatherColumnsOf<ElemType><<<GetNumCols(), GetNumRows(), 0, t_stream>>>(Data(), GetNumRows(), beta, idx.Data(), idx.GetNumRows(), a.Data(), a.GetNumRows(), a.GetNumCols(), alpha);
 
     return *this;
 }
 
 template <class ElemType>
-__global__ void _doScatterColumnsOf(ElemType* us, size_t usStride, size_t usCols, const ElemType* m, size_t mStride, const ElemType* a, size_t aStride, const ElemType alpha)
+__global__ void _doScatterColumnsOf(ElemType* us, size_t usStride, size_t usCols, const ElemType* idx, size_t idxStride, const ElemType* a, size_t aStride, const ElemType alpha, CUDA_LONG numElements)
 {
-    size_t i   = threadIdx.x; // index into 'a' and 'us'
-    size_t jIn =  blockIdx.x; // index into 'a' and 'm'
+    CUDA_LONG id = GridDim::GetLinearThreadId();
+    if (id >= numElements) // note: there are no __syncthread() calls inside
+        return;
 
-    auto jOutF = m[jIn * mStride]; // this is the column we copy/add into
-    if (jOutF < 0)                 // negative index means gap
+    // id = i + jIn  *  aStride
+    CUDA_LONG i   = id % aStride; // row index into 'a' and 'us'
+    CUDA_LONG jIn = id / aStride; // col index into 'a' and 'idx'
+
+    auto jOutF = idx[jIn * idxStride]; // this is the column we copy/add into
+    if (jOutF < 0)                     // negative index means gap
         return;
     size_t jOut = (size_t)jOutF;
     if (jOut >= usCols)
         return; // actually a failure
 
-    const ElemType& ra  =  a[i + jIn  *  aStride];
-    ElemType&       rus = us[i + jOut * usStride];
+    const ElemType&  ra =  a[id/*i + jIn  *  aStride*/];
+    ElemType&       rus = us[    i + jOut * usStride  ];
 
     ElemType res = ra * alpha;
-#if 0 // this is not the reason. Some stupid bad index.
-    rus += res;
-#else
-    atomicAdd(&rus, res);
-#endif
+    atomicAdd(&rus, res); // rus += res;
     // Note: atomicAdd() is supposed to be fast in case of no conflict (the simple case of Scatter())
 }
 
@@ -953,36 +960,42 @@ static void Peek(const GPUMatrix<ElemType>& m, const char* which)
 {
     size_t rows = m.GetNumRows();
     size_t cols = m.GetNumCols();
-    ElemType buf[100] = { 0 };
+    ElemType buf[10000] = { 0 };
     size_t n = min(rows * cols, _countof(buf));
-    cudaMemcpy(buf, m.BufferPointer(), sizeof(ElemType) * n, cudaMemcpyDeviceToHost);
+    CUDA_CALL(cudaMemcpy(buf, m.Data(), sizeof(ElemType) * n, cudaMemcpyDeviceToHost));
     UNUSED(which); UNUSED(rows); UNUSED(cols); sin(1.0f); // set breakpoint here
+    //CUDA_CALL(cudaMemcpy(const_cast<ElemType*>(m.Data()), buf, sizeof(ElemType) * n, cudaMemcpyHostToDevice));
 }
 
-// *this[:,m[j]] = a[:,j] * alpha + *this[:,m[j]] * beta
+// *this[:,idx[j]] = a[:,j] * alpha + *this[:,idx[j]] * beta
 template <class ElemType>
-GPUMatrix<ElemType>& GPUMatrix<ElemType>::DoScatterColumnsOf(ElemType beta, const GPUMatrix<ElemType>& m, const GPUMatrix<ElemType>& a, ElemType alpha)
+GPUMatrix<ElemType>& GPUMatrix<ElemType>::DoScatterColumnsOf(ElemType beta, const GPUMatrix<ElemType>& idx, const GPUMatrix<ElemType>& a, ElemType alpha)
 {
-    if (m.GetNumRows() != 1) // index is 1-dimensional only
+    if (idx.GetNumRows() != 1) // index is 1-dimensional only
         InvalidArgument("DoScatterColumnsOf: Map must be a row vector.");
-    if (m.GetNumCols() != a.GetNumCols())
+    if (idx.GetNumCols() != a.GetNumCols())
         InvalidArgument("DoScatterColumnsOf: Map must have width of input vector.");
     if (a.GetNumRows() != GetNumRows())
         InvalidArgument("DoScatterColumnsOf: Output must have same height as input vector.");
 
-    if (m.GetComputeDeviceId() != a.GetComputeDeviceId() || GetComputeDeviceId() != a.GetComputeDeviceId())
+    if (idx.GetComputeDeviceId() != a.GetComputeDeviceId() || GetComputeDeviceId() != a.GetComputeDeviceId())
         InvalidArgument("All matrices must be on the same GPU");
     a.PrepareDevice();
 
     auto& us = *this;
-    //Peek(us, "us"); Peek(m, "m"); Peek(a, "a");
 
     // pre-scale with beta upfront
     // Scatter may add more than one source column to the same target, so we must pre-scale with beta, and then just keep adding.
     Scale(beta, us); // if beta is 0, then this will be a memset()
 
+    // launch the kernel
+    CUDA_LONG NN = (CUDA_LONG)GetNumElements(); // linear space identifying each individual input element
     SyncGuard syncGuard;
-    _doScatterColumnsOf<ElemType> << <a.GetNumCols(), a.GetNumRows(), 0, t_stream >> >(Data(), GetNumRows(), GetNumCols(), m.Data(), 1, a.Data(), a.GetNumRows(), alpha);
+    GridDim grid(NN);
+    _doScatterColumnsOf<ElemType><<<grid.m_blocksPerGrid, grid.m_threadsPerBlock, 0, t_stream>>>(Data(), GetNumRows(), GetNumCols(), idx.Data(), idx.GetNumRows(), a.Data(), a.GetNumRows(), alpha, NN);
+
+    //SyncGuard syncGuard;
+    //_doScatterColumnsOf<ElemType><<<a.GetNumCols(), a.GetNumRows(), 0, t_stream>>>(Data(), GetNumRows(), GetNumCols(), idx.Data(), idx.GetNumRows(), a.Data(), a.GetNumRows(), alpha, NN);
 
     return *this;
 }

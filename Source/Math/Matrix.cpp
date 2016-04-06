@@ -1004,12 +1004,15 @@ const ElemType Matrix<ElemType>::operator()(const size_t row, const size_t col) 
 template <class ElemType>
 ElemType& Matrix<ElemType>::operator()(const size_t row, const size_t col)
 {
-    DISPATCH_MATRIX_ON_FLAG_USECPU_4BOTH(this,
-                                         nullptr,
-                                         return m_CPUMatrix->operator()(row, col),
-                                         _transferFromDeviceToDevice(GetDeviceId(), CPUDEVICE, false); SetDataLocation(CPU, DENSE); return m_CPUMatrix->operator()(row, col),
-                                                                             NOT_IMPLEMENTED,
-                                                                             NOT_IMPLEMENTED);
+    DISPATCH_MATRIX_ON_FLAG_USECPU_4BOTH(this, nullptr,
+        { return m_CPUMatrix->operator()(row, col); },
+        {
+            _transferFromDeviceToDevice(GetDeviceId(), CPUDEVICE, false);
+            SetDataLocation(CPU, DENSE);
+            return m_CPUMatrix->operator()(row, col);
+        },
+        { NOT_IMPLEMENTED; },
+        { NOT_IMPLEMENTED; });
 }
 
 template <class ElemType>
@@ -1029,49 +1032,46 @@ Matrix<ElemType>& Matrix<ElemType>::AssignTransposeOf(const Matrix<ElemType>& a)
     DecideAndMoveToRightDevice(a, *this);
     SwitchToMatrixType(a.GetMatrixType(), a.GetFormat(), false);
 
-    DISPATCH_MATRIX_ON_FLAG(&a,
-                            this,
-                            m_CPUMatrix->AssignTransposeOf(*a.m_CPUMatrix),
-                            m_GPUMatrix->AssignTransposeOf(*a.m_GPUMatrix),
-                            NOT_IMPLEMENTED,
-                            m_GPUSparseMatrix->AssignTransposeOf(*a.m_GPUSparseMatrix));
+    DISPATCH_MATRIX_ON_FLAG(&a, this,
+        { m_CPUMatrix->AssignTransposeOf(*a.m_CPUMatrix); },
+        { m_GPUMatrix->AssignTransposeOf(*a.m_GPUMatrix); },
+        { NOT_IMPLEMENTED; },
+        { m_GPUSparseMatrix->AssignTransposeOf(*a.m_GPUSparseMatrix); });
 
     return *this;
 }
 
-// *this[:,j] = a[:,m[j]] * alpha + *this[:,j] * beta
-// m has width of 'this' and contains values w.r.t. 'a'
-// Invalid entries (gap columns) are denoted by m(0,j) == -1.
+// *this[:,j] = a[:,idx[j]] * alpha + *this[:,j] * beta
+// idx has width of 'this' and contains values w.r.t. 'a'
+// Invalid entries (gap columns) are denoted by idx(0,j) == -1.
 template <class ElemType>
-Matrix<ElemType>& Matrix<ElemType>::DoGatherColumnsOf(ElemType beta, const Matrix<ElemType>& m, const Matrix<ElemType>& a, ElemType alpha)
+Matrix<ElemType>& Matrix<ElemType>::DoGatherColumnsOf(ElemType beta, const Matrix<ElemType>& idx, const Matrix<ElemType>& a, ElemType alpha)
 {
-    DecideAndMoveToRightDevice(*this, m, a); // TODO: only move target if beta != 0
+    DecideAndMoveToRightDevice(*this, idx, a); // TODO: only move target if beta != 0
 
-    DISPATCH_MATRIX_ON_FLAG(&a,
-        this,
-        m_CPUMatrix->DoGatherColumnsOf(beta, *m.m_CPUMatrix, *a.m_CPUMatrix, alpha),
-        m_GPUMatrix->DoGatherColumnsOf(beta, *m.m_GPUMatrix, *a.m_GPUMatrix, alpha),
-        NOT_IMPLEMENTED,
-        NOT_IMPLEMENTED);
+    DISPATCH_MATRIX_ON_FLAG(&a, this,
+        { m_CPUMatrix->DoGatherColumnsOf(beta, *idx.m_CPUMatrix, *a.m_CPUMatrix, alpha); },
+        { m_GPUMatrix->DoGatherColumnsOf(beta, *idx.m_GPUMatrix, *a.m_GPUMatrix, alpha); },
+        { NOT_IMPLEMENTED; },
+        { NOT_IMPLEMENTED; });
 
     return *this;
 }
 
-// *this[:,m[j]] = a[:,j] * alpha + *this[:,m[j]] * beta
-// m has width of 'a' and contains values w.r.t. 'this'
+// *this[:,idx[j]] = a[:,j] * alpha + *this[:,idx[j]] * beta
+// idx has width of 'a' and contains values w.r.t. 'this'
 // Unlike gather, for scatter, 'this' must have been sized already.
-// Invalid entries (gap columns) are denoted by m(0,j) == -1.
+// Invalid entries (gap columns) are denoted by idx(0,j) == -1.
 template <class ElemType>
-Matrix<ElemType>& Matrix<ElemType>::DoScatterColumnsOf(ElemType beta, const Matrix<ElemType>& m, const Matrix<ElemType>& a, ElemType alpha)
+Matrix<ElemType>& Matrix<ElemType>::DoScatterColumnsOf(ElemType beta, const Matrix<ElemType>& idx, const Matrix<ElemType>& a, ElemType alpha)
 {
-    DecideAndMoveToRightDevice(*this, m, a); // TODO: only move target if beta != 0
+    DecideAndMoveToRightDevice(*this, idx, a); // TODO: only move target if beta != 0
 
-    DISPATCH_MATRIX_ON_FLAG(&a,
-        this,
-        m_CPUMatrix->DoScatterColumnsOf(beta, *m.m_CPUMatrix, *a.m_CPUMatrix, alpha),
-        m_GPUMatrix->DoScatterColumnsOf(beta, *m.m_GPUMatrix, *a.m_GPUMatrix, alpha),
-        NOT_IMPLEMENTED,
-        NOT_IMPLEMENTED);
+    DISPATCH_MATRIX_ON_FLAG(&a, this,
+        { m_CPUMatrix->DoScatterColumnsOf(beta, *idx.m_CPUMatrix, *a.m_CPUMatrix, alpha); },
+        { m_GPUMatrix->DoScatterColumnsOf(beta, *idx.m_GPUMatrix, *a.m_GPUMatrix, alpha); },
+        { NOT_IMPLEMENTED; },
+        { NOT_IMPLEMENTED; });
 
     return *this;
 }
@@ -1090,12 +1090,11 @@ void Matrix<ElemType>::SetValue(const ElemType v)
         return;
     }
 
-    DISPATCH_MATRIX_ON_FLAG(this,
-                            this,
-                            m_CPUMatrix->SetValue(v),
-                            m_GPUMatrix->SetValue(v),
-                            NOT_IMPLEMENTED,
-                            NOT_IMPLEMENTED);
+    DISPATCH_MATRIX_ON_FLAG(this, this,
+        { m_CPUMatrix->SetValue(v); },
+        { m_GPUMatrix->SetValue(v); },
+        { NOT_IMPLEMENTED; },
+        { NOT_IMPLEMENTED; });
 }
 
 template <class ElemType>
@@ -1103,18 +1102,16 @@ void Matrix<ElemType>::SetValue(const DeviceBoundNumber<ElemType>& db_number)
 {
     if (IsEmpty()) // if empty then we are done
         return;
-    // LogicError("SetValue: Matrix is empty.");
 
-    DISPATCH_MATRIX_ON_FLAG(this,
-                            this,
-                            m_CPUMatrix->SetValue(*db_number.ExposePointer2Value()),
-                            {
-                            if (GetDeviceId() != db_number.GetDeviceId())
-                                RuntimeError("Matrix and device bound number must be on the same device");
-                                m_GPUMatrix->SetValue(db_number.ExposePointer2Value());
-                            },
-                            NOT_IMPLEMENTED,
-                            NOT_IMPLEMENTED);
+    DISPATCH_MATRIX_ON_FLAG(this, this,
+        { m_CPUMatrix->SetValue(*db_number.ExposePointer2Value()); },
+        {
+            if (GetDeviceId() != db_number.GetDeviceId())
+            RuntimeError("Matrix and device bound number must be on the same device");
+            m_GPUMatrix->SetValue(db_number.ExposePointer2Value());
+        },
+        { NOT_IMPLEMENTED; },
+        { NOT_IMPLEMENTED; });
 }
 
 template <>
