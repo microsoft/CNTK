@@ -1387,7 +1387,7 @@ public:
     virtual void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool) override
     {
         if (IsValueSharable())
-        RequestMatrixFromPool(m_value, matrixPool);
+			RequestMatrixFromPool(m_value, matrixPool);
         else
             CreateMatrixIfNull(m_value);
     }
@@ -1596,12 +1596,12 @@ public:
         if (s_constOnes.find(rows) == s_constOnes.end() ||
             s_constOnes[rows].find(cols) == s_constOnes[rows].end()) // not found
         {
-            Matrix<ElemType>* matrix = new Matrix<ElemType>(rows, cols, (DEVICEID_TYPE) deviceId);
+            shared_ptr<Matrix<ElemType>> matrix = make_shared<Matrix<ElemType>>(rows, cols, (DEVICEID_TYPE) deviceId);
             matrix->SetValue(1);
             s_constOnes[rows][cols] = matrix;
         }
 
-        Matrix<ElemType>* m = s_constOnes[rows][cols];
+        shared_ptr<Matrix<ElemType>> m = s_constOnes[rows][cols];
         m->TransferFromDeviceToDevice(m->GetDeviceId(), deviceId);
 
         return *m;
@@ -1615,7 +1615,7 @@ protected:
 
     shared_ptr<Matrix<ElemType>> m_value, m_gradient;
 
-    static std::map<size_t, std::map<size_t, Matrix<ElemType>*>> s_constOnes;
+    static std::map<size_t, std::map<size_t, shared_ptr<Matrix<ElemType>>>> s_constOnes;
 };
 
 // convenience wrapper for ComputationNode::New()
