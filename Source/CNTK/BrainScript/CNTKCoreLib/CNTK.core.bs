@@ -128,6 +128,7 @@ Scale(scalarScalingFactor, matrix, tag='') = new ComputationNode [ operation = '
 // TODO: Scale = ElementTimes
 ScatterPacked(cond, indexSequence, sourceData, tag='') = new ComputationNode [ operation = 'ScatterPacked' ; inputs = (cond : indexSequence : sourceData) /*plus the function args*/ ]
 Sigmoid(z, tag='') = new ComputationNode [ operation = 'Sigmoid' ; inputs = z /*plus the function args*/ ]
+Sin(z, tag='') = new ComputationNode [ operation = 'Sin' ; inputs = z /*plus the function args*/ ]
 Softmax(z, tag='') = new ComputationNode [ operation = 'Softmax' ; inputs = z /*plus the function args*/ ]
 Hardmax(z, tag='') = new ComputationNode [ operation = 'Hardmax' ; inputs = z /*plus the function args*/ ]
 Sqrt(z, tag='') = new ComputationNode [ operation = 'Sqrt' ; inputs = z /*plus the function args*/ ]
