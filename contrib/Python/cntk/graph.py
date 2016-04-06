@@ -496,14 +496,10 @@ def _get_input_node(list_of_tensors, has_sequence_dimension, **kw):
     # followed by a reshape node that has the dims '2:3'. So we have 2*3 = 6 
     # dimensions when flattened out for the reader. 
     dims = int(np.multiply.reduce(cntk_shape))
-    node = cntk1_ops.Input(dims, **kw)
+    node = cntk1_ops.Input(cntk_shape, **kw)
     node.reader = CNTKTextFormatReader(tf.name)
     node.reader.add_input(node, alias, dims)
     
-    if len(cntk_shape) > 1:
-        node = cntk1_ops.NewReshape(node,
-                dims=cntk_shape)
-
     return node
 
 
