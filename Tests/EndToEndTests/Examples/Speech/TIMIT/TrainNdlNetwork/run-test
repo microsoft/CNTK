@@ -1,0 +1,15 @@
+#!/bin/bash
+
+. $TEST_ROOT_DIR/run-test-common
+
+# specific TIMIT variables
+. $TEST_DIR/../run-test-common
+
+Sgd=`echo TIMIT_TrainNDL=[SGD=[{maxEpochs=1,epochSize=2048}]]`
+CntkArguments+=" $Sgd reader=[verbosity=0] numMBsToShowResult=5"
+
+# cntkrun <CNTK config file name> <additional CNTK arg>
+cntkrun TIMIT_TrainNDLNetwork.cntk "$CntkArguments"
+ExitCode=$?
+
+exit $ExitCode
