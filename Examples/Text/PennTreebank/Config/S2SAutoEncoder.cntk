@@ -1,4 +1,4 @@
-# configFile=$(SolutionDir)Examples/Text/PennTreebank/Config/S2SAutoEncoder.cntk  RunDir=$(SolutionDir)Examples/Text/PennTreebank/_run  RootDir=$(SolutionDir)Examples/Text/PennTreebank/_run  DataDir=$(SolutionDir)Examples/Text/PennTreebank/Data  ConfigDir=$(SolutionDir)Examples/Text/PennTreebank/Config  stderr=$(SolutionDir)Examples/Text/PennTreebank/_run/S2SAutoEncoder.log  DeviceId=-1  makeMode=false
+# configFile=$(SolutionDir)Examples/Text/PennTreebank/Config/S2SAutoEncoder.cntk  RunRootDir=$(SolutionDir)Examples/Text/PennTreebank  DeviceId=-1  makeMode=false
 ####################
 # WORK IN PROGRESS #
 # WORK IN PROGRESS #
@@ -6,25 +6,30 @@
 ####################
 
 # Command line to run in debugger:
-# configFile=$(SolutionDir)Examples/Text/PennTreebank/Config/S2SAutoEncoder.cntk  RunDir=$(SolutionDir)Examples/Text/PennTreebank/_run  RootDir=$(SolutionDir)Examples/Text/PennTreebank/_run  DataDir=$(SolutionDir)Examples/Text/PennTreebank/Data  ConfigDir=$(SolutionDir)Examples/Text/PennTreebank/Config  stderr=$(SolutionDir)Examples/Text/PennTreebank/_run/S2SAutoEncoder.log  train=[SGD=[maxEpochs=1]]  confVocabSize=1000  DeviceId=-1  makeMode=false
+# configFile=$(SolutionDir)Examples/Text/PennTreebank/Config/S2SAutoEncoder.cntk  RunRootDir=$(SolutionDir)Examples/Text/PennTreebank  train=[SGD=[maxEpochs=1]]  confVocabSize=1000  DeviceId=-1  makeMode=false
+
+# directory defaults (if not overridden)
+RunRootDir = "../.."             # default if not overridden
+DataDir    = "$RunRootDir$/Data"
+CacheDir   = "$DataDir$/cache"   # (not used currently)
+ExpRootDir = "$RunRootDir$"
+
+# experiment id
+#ExpId = _run
+ExpId = 37-s2sae-bigmodel
+
+# directories
+ExpDir    = "$ExpRootDir$/$ExpId$"
+ModelDir  = "$ExpDir$/Models"
+
+stderr = $ExpDir$/S2SAutoEncoder.log
+
 # Append this for small set:
 # train=[epochSize=2048]]  trainFile=ptb.small.train.txt  validFile=ptb.small.valid.txt testFile=ptb.small.test.txt
 
 # It implements a sequence-to-sequence based auto-encoder.
 # It encodes an entire sentence into a flat vector, and tries to regenerate it.
 # Meant to be useful mainly understanding how to do sequence-to-sequence in CNTK.
-
-# Parameters can be overwritten on the command line
-# for example: cntk configFile=myConfigFile RootDir=../.. 
-# For running from Visual Studio add
-# currentDirectory=$(SolutionDir)/<path to corresponding data folder> 
-RootDir = ".."
-
-ConfigDir = "$RootDir$/Config"
-DataDir   = "$RootDir$/Data"
-CacheDir  = "$RootDir$/Data/cache"
-OutputDir = "$RootDir$/Output"
-ModelDir  = "$OutputDir$/Models"
 
 # deviceId=-1 for CPU, >=0 for GPU devices, "auto" chooses the best GPU, or CPU if no usable GPU is available
 deviceId = "auto"
@@ -37,14 +42,10 @@ traceLevel = 1
 modelPath  = "$ModelDir$/S2SAutoEncoder.dnn"
 decodeModelPath = "$modelPath$.13" # epoch to decode. Has best CV WER
 
-# uncomment the following line to write logs to a file
-#stderr=$OutputDir$/rnnOutput
-
-#numCPUThreads = 1
-
 confVocabSize = 10000
 confClassSize = 50
-useStabilizer = true
+
+# TODO: overtrain it, then get decode to work again and check
 
 trainFile = "ptb.train.txt"
 #trainFile = "ptb.small.train.txt"
@@ -103,9 +104,9 @@ beamDepth=3
     nbrClass = $confClassSize$
 
     isAutoencoder = true                # input is only one sequence, meant to reproduce itself
-    useStabilizer = $useStabilizer$
-    useEncoder = true                   # if false, this becomes a regular RNN
-    useNYUStyle = true                  # if true use thought vector for all inputs, NYU-style
+    useStabilizer = true
+    useEncoder    = true                # if false, this becomes a regular RNN
+    useNYUStyle   = true                # if true use thought vector for all inputs, NYU-style
 
     # import some namespaces
     Parameters = BS.Parameters
@@ -114,12 +115,14 @@ beamDepth=3
     Loop       = BS.Loop
     Boolean    = BS.Boolean
     RecurrentLSTMP = BS.RNNs.RecurrentLSTMP
+    RecurrentLSTMPWithInitialState = BS.RNNs.RecurrentLSTMPWithInitialState
 
     embeddingDim = 300
-    hiddenDim    = 200
+    hiddenDim    = 1024
+	maxLayer = 3
 
-    encoderDims[i:0..0] = hiddenDim # this defines the number of hidden layers in each
-    decoderDims[i:0..0] = hiddenDim # both are one LSTM layer only for now
+    encoderDims[i:0..maxLayer] = hiddenDim # this defines the number of hidden layers in each
+    decoderDims[i:0..maxLayer] = hiddenDim # both are one LSTM layer only for now
 
     # inputs
     #input = SparseInput(vocabDim, tag='feature');  # BUGBUG: Slice() not working for sparse, need to extend TensorView
@@ -144,7 +147,9 @@ beamDepth=3
     Last (x)  = Slice (-1, 0, x,  axis=-1)
 
     # strip separators
-    inputSequence  = TraceSparse (Slice (0, -1, streams.input,   axis=-1), 'inputSeq');  # e.g. <s> A   B   C      # TODO: process </s> as well, to trigger the thought vector
+    # TODO: find out which one is the correct one
+    #inputSequence  = TraceSparse (Slice (0, -1, streams.input,   axis=-1), 'inputSeq');  # e.g. <s> A   B   C      # TODO: process </s> as well, to trigger the thought vector
+    inputSequence  = TraceSparse (              streams.input            , 'inputSeq');  # e.g. <s> A   B   C    </s>
     labelSequence  = TraceSparse (Slice (1,  0, streams.labels,  axis=-1), 'labelSeq');  # e.g. A   B   C   </s>
 
     # embeddings  --as long as we cannot read multiple sequences, we got one embedding
@@ -156,7 +161,7 @@ beamDepth=3
 
     inputEmbedded  = EmbedInput  (inputSequence)
     labelsEmbedded = EmbedLabels (labelSequence)
-    labelSentenceStart = TraceSparse (First (streams.labels), 'sentStart')
+    labelSentenceStart = First (streams.labels)
     labelSentenceStartEmbedded = EmbedLabels (labelSentenceStart)
 
     # encoder (processes inputEmbedded)
@@ -169,7 +174,7 @@ beamDepth=3
     encoderOutput = encoder[encoderOutputLayer]
 
     # that last frame should be fed as an additional input to every decoder step
-    # (This is the NYU model, not the Google model where the thought vector is only the initial state.)
+    # (in the NYU model, not the Google model where the thought vector is only the initial state.)
 
     thoughtVector = TraceDense (Last (TraceDense (encoderOutput, 'encout')), 'thv')
     thoughtVectorDim = encoderDims[encoderOutputLayer]
@@ -193,9 +198,14 @@ beamDepth=3
     decoderOutputLayer = Length (decoderDims)-1
     decoder[i:0..decoderOutputLayer] =         # TODO: !useNYUStyle: set initial hidden state
         if i == 0
-        then RecurrentLSTMP (decoderInputDim, decoderDims[i], decoderDims[i],
-                             decoderInput,
-                             enableSelfStabilization=useStabilizer)
+        then if useNYUStyle
+             then RecurrentLSTMP (decoderInputDim, decoderDims[i], decoderDims[i],
+                                  decoderInput,
+                                  enableSelfStabilization=useStabilizer)
+             else RecurrentLSTMPWithInitialState (decoderInputDim, decoderDims[i], decoderDims[i],
+                                                  decoderInput,
+                                                  initialState=thoughtVectorPadded, # BUGBUG: Should be thoughtVector, but Scatter() can't expand from inside a loop
+                                                  enableSelfStabilization=useStabilizer)
         else RecurrentLSTMP (decoderDims[i-1], decoderDims[i], decoderDims[i],
                              decoder[i-1],
                              enableSelfStabilization=useStabilizer)

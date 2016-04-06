@@ -31,10 +31,12 @@ void ComputationNode<ElemType>::Backprop(const FrameRange& fr, bool childrenInTh
     // after nodes that propagate outside of the loop, and thus, in the last
     // time step of the sequence, have not yet received a gradient from a parent
     // and thus may not have had their gradient matrices allocated.
-#if 1
+#if 1 // keep enabled once this works
+#if 1 // log the cases where this is needed
     if (m_needsGradient && !m_gradientInitialized)
         //LogicError("%ls %ls operation: Backprop called with uninitialized gradient.", NodeName().c_str(), OperationName().c_str());
         fprintf(stderr, "%ls %ls operation: Initializing gradient out of line.\n", NodeName().c_str(), OperationName().c_str());
+#endif
     if (m_needsGradient)
         LazyZeroGradient(); // set gradient to 0 if this is the first time
 #endif
