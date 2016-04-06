@@ -4,9 +4,12 @@
 //
 
 #include "stdafx.h"
+
+#define __STDC_FORMAT_MACROS
+#include <inttypes.h>
+
 #include <cfloat>
 #include <limits>
-#include <inttypes.h>
 #include "Indexer.h"
 #include "TextParser.h"
 #include "TextReaderConstants.h"

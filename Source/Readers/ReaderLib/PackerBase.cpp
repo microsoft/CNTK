@@ -6,7 +6,9 @@
 #define _CRT_SECURE_NO_WARNINGS
 #define _SCL_SECURE_NO_WARNINGS
 
+#define __STDC_FORMAT_MACROS
 #include <inttypes.h>
+
 #include <numeric>
 #include "PackerBase.h"
 #include "ElementTypeUtils.h"

@@ -6,12 +6,8 @@
 #define _CRT_SECURE_NO_WARNINGS
 #define _SCL_SECURE_NO_WARNINGS
 
-#include <numeric>
-#include <limits>
-#include <inttypes.h>
+#include <algorithm>
 #include "FramePacker.h"
-#include "ElementTypeUtils.h"
-#include "CommonMatrix.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 

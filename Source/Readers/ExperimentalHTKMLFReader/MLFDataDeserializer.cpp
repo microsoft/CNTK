@@ -4,8 +4,11 @@
 //
 
 #include "stdafx.h"
-#include <limits>
+
+#define __STDC_FORMAT_MACROS
 #include <inttypes.h>
+
+#include <limits>
 #include "MLFDataDeserializer.h"
 #include "ConfigHelper.h"
 #include "../HTKMLFReader/htkfeatio.h"

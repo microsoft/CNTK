@@ -4,13 +4,15 @@
 //
 
 #include "stdafx.h"
+
+#define __STDC_FORMAT_MACROS
+#include <inttypes.h>
+
 #include <opencv2/opencv.hpp>
 #include <numeric>
 #include <limits>
-#include <inttypes.h>
 #include "ImageDataDeserializer.h"
 #include "ImageConfigHelper.h"
-#include <inttypes.h>
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
