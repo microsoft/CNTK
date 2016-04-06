@@ -19,12 +19,11 @@ SGD=[
 ]
        
     # Parameter values for the reader
- reader=[
+reader=[
       # reader to use
       readerType=HTKMLFReader
 
-#     readMethod=blockRandomize
-      readMethod=rollingWindow
+      readMethod=blockRandomize
 
       miniBatchMode=Partial
       randomize=Auto
@@ -32,7 +31,7 @@ SGD=[
 
       features=[
 	  dim=792
-	  scpFile=$ScpDir$\TIMIT.train.scp.fbank.fullpath
+	  scpFile=$ScpDir$\TIMIT.train.scp.fbank.fullpath.rnn
       ]
 
       labels=[
@@ -91,6 +90,3 @@ TIMIT_Train3=[
         maxEpochs=25
     ]  
 ]
-
-
-
