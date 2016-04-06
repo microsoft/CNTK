@@ -103,7 +103,6 @@ class MATH_API GPUMatrix : public BaseMatrix<ElemType>
     using Base::HasExternalBuffer;
     using Base::SetBuffer;
     using Base::SetComputeDeviceId;
-    //using Base::Clear;
     using Base::ZeroInit;
     using Base::ZeroValues;
     using Base::m_sob;

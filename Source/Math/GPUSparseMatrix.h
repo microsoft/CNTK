@@ -32,7 +32,6 @@ public:
     using Base::GetNumStorageCols;
     using Base::SetNumStorageCols;
     using Base::SetComputeDeviceId;
-    //using Base::Clear;
     using Base::SetSizeAllocated;
     using Base::GetSizeAllocated;
     using Base::ZeroInit;

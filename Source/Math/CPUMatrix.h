@@ -34,7 +34,6 @@ class MATH_API CPUMatrix : public BaseMatrix<ElemType>
     using Base::HasExternalBuffer;
     using Base::SetBuffer;
     using Base::SetComputeDeviceId;
-    //using Base::Clear;
     using Base::SetSizeAllocated;
     using Base::GetSizeAllocated;
     using Base::ZeroInit;

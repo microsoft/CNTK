@@ -393,7 +393,6 @@ protected:
 // BaseMatrix -- base class for all matrix types (CPU, GPU) x (dense, sparse)
 // -----------------------------------------------------------------------
 
-// TODO: Some of these accessors should be merged into single methods like SetBuffer. 
 template <class ElemType>
 class MATH_API BaseMatrix
 {
@@ -455,6 +454,7 @@ protected:
     DEVICEID_TYPE GetComputeDeviceId() const { return m_sob->GetComputeDeviceId(); }
     void SetComputeDeviceId(const DEVICEID_TYPE computeId) const { m_sob->SetComputeDeviceId(computeId); }
 
+    // TODO: Some of these accessors should be merged into single methods like SetBuffer. 
     size_t GetNumStorageRows() const { return m_sob->GetNumStorageRows(); }
     void SetNumStorageRows(size_t rows) { m_sob->SetNumStorageRows(rows); }
 

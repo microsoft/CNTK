@@ -201,7 +201,6 @@ CPUMatrix<ElemType>::~CPUMatrix()
 template <class ElemType>
 void CPUMatrix<ElemType>::Clear()
 {
-    //BaseMatrix<ElemType>::Clear();
     ZeroInit();
 }
 
