@@ -77,7 +77,7 @@ enum ElementWiseOperator
     // unary (or binary with constant parameter)
     opCopy,
     opNegate, opNot, opAbs, opReciprocal,
-    opSigmoid, opTanh, opSqr, opSqrt, opExp, opLog, opLinearRectifier, opCosine,
+    opSigmoid, opTanh, opSqr, opSqrt, opExp, opLog, opLinearRectifier, opCosine, opSin,
     // unary ops for use by Matrix class only (there is no TensorView implementation)
     opSigmoidDerivative, opLinearRectifierDerivative, opNegativeSine,
     // binary
@@ -87,9 +87,9 @@ enum ElementWiseOperator
     opAnd, opOr, opXor, opMaskNegative,
     opElementwiseProductWithSigmoidDerivativeFromOutput, opElementwiseProductWithTanhDerivativeFromOutput,
     opElementwiseProductWithLinearRectifierDerivativeFromOutput, opElementwiseProductWithLogDerivativeFromOutput,
-    opElementwiseProductWithCosDerivative, opElementwiseProductWithAbsDerivative,
-    opElementwiseProductWithSqrtDerivative, opElementwiseProductWithReciprocalDerivative,
-    opSqrOfDifference,
+    opElementwiseProductWithCosDerivative, opElementwiseProductWithSinDerivative,
+    opElementwiseProductWithAbsDerivative, opElementwiseProductWithSqrtDerivative, 
+    opElementwiseProductWithReciprocalDerivative, opSqrOfDifference,
     // binary ops for indexing
     // opIndex,
     // ternary
@@ -116,7 +116,8 @@ enum ElementWiseOperator
     Macro(Exp);               \
     Macro(Log);               \
     Macro(LinearRectifier);   \
-    Macro(Cosine);
+    Macro(Cosine);            \
+    Macro(Sin);
 
 #define ForAllBinaryOps(Macro)                                        \
     Macro(Sum);                                                       \
@@ -141,6 +142,7 @@ enum ElementWiseOperator
     Macro(ElementwiseProductWithLinearRectifierDerivativeFromOutput); \
     Macro(ElementwiseProductWithLogDerivativeFromOutput);             \
     Macro(ElementwiseProductWithCosDerivative);                       \
+    Macro(ElementwiseProductWithSinDerivative);                       \
     Macro(ElementwiseProductWithAbsDerivative);                       \
     Macro(ElementwiseProductWithReciprocalDerivative);                \
     Macro(ElementwiseProductWithSqrtDerivative);                      \
