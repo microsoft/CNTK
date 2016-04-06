@@ -2,10 +2,10 @@ class SGD(dict):
 
     """This is the Stochastic Gradien Descent optimizer used to train the networks
     """
-    def __init__(self, epoch_size = 0, minibatch_size = 1, learning_ratesPerMB = "0.1", \
-                 learning_rates_per_sample = None, momentum_per_mb = "0.9",  \
-                 momentum_per_sample = None, max_epochs = 5, dropout_rate = None):
 
+    def __init__(self, epoch_size=0, minibatch_size=1, learning_ratesPerMB="0.1",
+                 learning_rates_per_sample=None, momentum_per_mb="0.9",
+                 momentum_per_sample=None, max_epochs=5, dropout_rate=None):
         """ SGD constructor
 
         :param epoch_size: the number of samples to use in each epoch. An intermediate
@@ -53,7 +53,7 @@ class SGD(dict):
         """
 
         config = []
-        for k,v in self.items():
+        for k, v in self.items():
             if (v is not None):
-                config.append('{0} = {1}\r\n'.format(k,v))
+                config.append('{0} = {1}\r\n'.format(k, v))
         return ''.join(config)
