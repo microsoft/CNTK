@@ -5,9 +5,6 @@
 
 #pragma once
 
-#include "Reader.h"
-#include "MemoryProvider.h"
-#include "Transformer.h"
 #include "PackerBase.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
@@ -20,19 +17,14 @@ public:
         MemoryProviderPtr memoryProvider,
         TransformerPtr transformer,
         size_t minibatchSize,
-        const std::vector<StreamDescriptionPtr>& streams);
+        const std::vector<StreamDescriptionPtr>& streams) :
+        PackerBase(memoryProvider, transformer, minibatchSize, streams)
+    {
 
-    virtual Minibatch ReadMinibatch() override;
+    }
 
 private:
-    // Auxiliary packing functions.
-    // Packs sequences from a particular stream into a minibatch.
-    StreamMinibatchPtr PackStreamMinibatch(const std::vector<SequenceDataPtr>& sequences, size_t streamId);
-
-    // Buffers for allocated data.
-    std::vector<std::shared_ptr<char>> m_streamBuffers;
-    // Size of allocated buffers, m_streamBuffers.size() == m_streamBufferSizes.size().
-    std::vector<size_t> m_streamBufferSizes;
+    MBLayoutPtr CreateMBLayout(const StreamBatch& batch) override;
 };
 
 typedef std::shared_ptr<SequencePacker> SequencePackerPtr;

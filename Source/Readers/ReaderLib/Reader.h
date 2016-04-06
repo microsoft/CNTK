@@ -12,6 +12,8 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
+typedef GPUSPARSE_INDEX_TYPE IndexType;
+
 typedef std::shared_ptr<TensorShape> TensorShapePtr;
 
 struct MBLayout;

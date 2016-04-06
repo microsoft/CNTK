@@ -148,12 +148,15 @@
     <Text Include="Config\HTKMLFReaderSimpleDataLoop9_Config.cntk" />
     <Text Include="Config\ImageReaderSimple_Config.cntk" />
     <Text Include="Config\UCIFastReaderSimpleDataLoop_Config.cntk" />
-    <Text Include="Control\CNTKTextFormatReader1x100_1_Control.txt" />
-    <Text Include="Control\CNTKTextFormatReader1x10_MI_1_Control.txt" />
-    <Text Include="Control\CNTKTextFormatReader1x10_MI_2_Control.txt" />
-    <Text Include="Control\CNTKTextFormatReader1x1_1_Control.txt" />
-    <Text Include="Control\CNTKTextFormatReaderMNIST_Control.txt" />
-    <Text Include="Control\CNTKTextFormatReaderSimple_Control.txt" />
+    <Text Include="Control\CNTKTextFormatReader\100x1_1_dense.txt" />
+    <Text Include="Control\CNTKTextFormatReader\100x1_2_dense.txt" />
+    <Text Include="Control\CNTKTextFormatReader\10x1_MI_1_dense.txt" />
+    <Text Include="Control\CNTKTextFormatReader\10x1_MI_2_dense.txt" />
+    <Text Include="Control\CNTKTextFormatReader\1x1_1_dense.txt" />
+    <Text Include="Control\CNTKTextFormatReader\1x1_2_dense.txt" />
+    <Text Include="Control\CNTKTextFormatReader\1x1_sparse.txt" />
+    <Text Include="Control\CNTKTextFormatReader\MNIST_dense.txt" />
+    <Text Include="Control\CNTKTextFormatReader\Simple_dense.txt" />
     <Text Include="Control\HTKMLFReaderSimpleDataLoop10_20_Control.txt" />
     <Text Include="Control\HTKMLFReaderSimpleDataLoop1_5_11_Control.txt" />
     <Text Include="Control\HTKMLFReaderSimpleDataLoop21_0_Control.txt" />
@@ -168,11 +171,12 @@
     <Text Include="Control\ImageReaderSimple_Control.txt" />
     <Text Include="Control\ImageReaderZip_Control.txt" />
     <Text Include="Control\UCIFastReaderSimpleDataLoop_Control.txt" />
-    <Text Include="Data\CNTKTextFormatReader1x100_Train.txt" />
-    <Text Include="Data\CNTKTextFormatReader1x10_MI_Train.txt" />
-    <Text Include="Data\CNTKTextFormatReader1x1_Train.txt" />
-    <Text Include="Data\CNTKTextFormatReaderMNIST_Train.txt" />
-    <Text Include="Data\CNTKTextFormatReaderSimple_Train.txt" />
+    <Text Include="Data\CNTKTextFormatReader\100x1_dense.txt" />
+    <Text Include="Data\CNTKTextFormatReader\10x1_MI_dense.txt" />
+    <Text Include="Data\CNTKTextFormatReader\1x1_dense.txt" />
+    <Text Include="Data\CNTKTextFormatReader\1x1_sparse.txt" />
+    <Text Include="Data\CNTKTextFormatReader\MNIST_dense.txt" />
+    <Text Include="Data\CNTKTextFormatReader\Simple_dense.txt" />
     <Text Include="Data\ImageReaderBadLabel_map.txt" />
     <Text Include="Data\ImageReaderBadMap_map.txt" />
     <Text Include="Data\ImageReaderLabelOutOfRange_map.txt" />
@@ -188,11 +192,8 @@
     <Image Include="Data\images\red.jpg" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="Config\CNTKTextFormatReader1x10_MI_Config.cntk" />
-    <None Include="Config\CNTKTextFormatReader1x100_Config.cntk" />
-    <None Include="Config\CNTKTextFormatReader1x1_Config.cntk" />
-    <None Include="Config\CNTKTextFormatReaderSimple_Config.cntk" />
-    <None Include="Config\CNTKTextFormatReaderMNIST_Config.cntk" />
+    <None Include="Config\CNTKTextFormatReader\dense.cntk" />
+    <None Include="Config\CNTKTextFormatReader\sparse.cntk" />
     <None Include="Config\ImageReaderBadLabel_Config.cntk" />
     <None Include="Config\ImageReaderBadMap_Config.cntk" />
     <None Include="Config\ImageReaderLabelOutOfRange_Config.cntk" />

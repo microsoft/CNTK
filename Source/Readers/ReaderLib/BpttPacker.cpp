@@ -19,7 +19,7 @@ using namespace std;
 class Slot
 {
 public:
-    Slot() : m_length(0), m_sampleCursor(0)
+    Slot() : m_length(0), m_sampleCursor(0), m_sampleOffset(0)
     {}
 
     // Checks if slot is empty.
@@ -54,12 +54,19 @@ public:
     {
         assert(!m_sequences.empty());
         m_sampleCursor = 0;
+        m_sampleOffset = 0;
         m_length -= m_sequences.front()->m_numberOfSamples;
         m_sequences.pop_front();
     }
 
     // Contains the current sample cursor in the first sequence(m_sequences.front()) of the slot.
     size_t m_sampleCursor;
+
+    // offset of the current sample into the data region of the first sequence.
+    // For dense input, this is just (sample cursor) x (sample size in bytes).
+    // For sparse input, this is (element size in bytes) x (sum of nnz counts 
+    // of all preceding samples).
+    size_t m_sampleOffset; 
 
 private:
     // Prepared sequences.
@@ -107,6 +114,12 @@ BpttPacker::BpttPacker(
     : PackerBase(memoryProvider, transformer, minibatchSize, streams),
     m_truncationSize(truncationSize)
 {
+    auto sparseOutput = find_if(m_outputStreamDescriptions.begin(), m_outputStreamDescriptions.end(), [](const StreamDescriptionPtr& s){ return s->m_storageType == StorageType::sparse_csc; });
+    if (sparseOutput != m_outputStreamDescriptions.end())
+    {
+        RuntimeError("Sparse output is not supported in BPTT mode.");
+    }
+
     // Estimating the number of parallel sequences to pack (slots) from the minibatch size and truncation size.
     m_numParallelSequences = max(1, (int)floor(m_minibatchSize / m_truncationSize));
 
@@ -114,9 +127,8 @@ BpttPacker::BpttPacker(
     for (int i = 0; i < m_outputStreamDescriptions.size(); ++i)
     {
         const auto& stream = m_outputStreamDescriptions[i];
-        m_streamBufferSizes.push_back(m_numParallelSequences * m_truncationSize * GetSampleSize(stream));
-        m_streamBuffers.push_back(AllocateBuffer(m_numParallelSequences * m_truncationSize, GetSampleSize(stream)));
-
+        auto& buffer = m_streamBuffers[i];
+        buffer.Resize(m_numParallelSequences * m_truncationSize * GetSampleSize(stream));
         m_sequenceBufferPerStream.push_back(make_shared<SequenceBuffer>(m_numParallelSequences));
         m_currentLayouts.push_back(make_shared<MBLayout>());
     }
@@ -150,7 +162,7 @@ Minibatch BpttPacker::ReadMinibatch()
         }
 
         StreamMinibatchPtr m = make_shared<StreamMinibatch>();
-        m->m_data = m_streamBuffers[streamIndex].get();
+        m->m_data = m_streamBuffers[streamIndex].m_data.get();
         m->m_layout = m_currentLayouts[streamIndex];
         result.m_data.push_back(m);
     }
@@ -215,19 +227,28 @@ void BpttPacker::PackSlot(size_t streamIndex, size_t slotIndex)
         // Fill in the data from the first sequence in the slot.
         auto data = slot.FrontSequence();
         // Get buffer destination for the current sample.
-        void* destination = m_streamBuffers[streamIndex].get() + strideSize * currentTimestep + slotIndex * sampleSize;
-        assert(destination >= m_streamBuffers[streamIndex].get());
-        assert(destination < m_streamBuffers[streamIndex].get() + m_streamBufferSizes[streamIndex]);
+        auto& buffer = m_streamBuffers[streamIndex];
+        auto offset = strideSize * currentTimestep + slotIndex * sampleSize;
+        assert(offset >= 0 && offset < buffer.m_size);
+        char* destination = buffer.m_data.get() + offset;
 
         // Pack the sample.
         if (storageType == StorageType::dense)
         {
-            PackDenseSample(destination, data, slot.m_sampleCursor, elementSize, sampleSize);
+            assert(slot.m_sampleOffset == slot.m_sampleCursor * sampleSize);
+            PackDenseSample(destination, data, slot.m_sampleOffset, sampleSize);
+            slot.m_sampleOffset += sampleSize;
         }
         else
         {
             assert(storageType == StorageType::sparse_csc);
-            PackSparseSample(destination, data, slot.m_sampleCursor, elementSize, sampleSize);
+            // TODO: make type casts members of the SparseSequenceData
+            SparseSequenceDataPtr sparseSequence = static_pointer_cast<SparseSequenceData>(data);
+            assert(slot.m_sampleCursor < sparseSequence->m_nnzCounts.size());
+            PackSparseSampleAsDense(destination, sparseSequence, slot.m_sampleCursor, 
+                slot.m_sampleOffset, sampleSize, elementSize);
+            slot.m_sampleOffset += sparseSequence->m_nnzCounts[slot.m_sampleCursor];
+            assert(slot.m_sampleOffset <= sparseSequence->m_totalNnzCount);
         }
 
         slot.m_sampleCursor++;

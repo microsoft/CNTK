@@ -12,4 +12,3 @@
 #include <array>
 #include <boost/test/unit_test.hpp>
 #include <fstream>
-#include "Common/ReaderTestHelper.h"

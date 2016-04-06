@@ -16,21 +16,50 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 // A base class for Packers.
 class PackerBase : public Packer
 {
+public:
+
+    virtual Minibatch ReadMinibatch() override;
+
 protected:
+
+    struct StreamBuffer
+    {
+        size_t m_size; // buffer size in bytes.
+        // Memory provider.
+        // TODO: Should possibly switch to matrices here.
+        MemoryProviderPtr m_memoryProvider;
+        std::shared_ptr<char> m_data; // contiguous array of data.
+
+        StreamBuffer(MemoryProviderPtr m_memoryProvider) :
+            m_size(0), m_memoryProvider(m_memoryProvider), m_data(nullptr)
+        {
+        }
+        void Resize(size_t newSize);
+    };
+
     PackerBase(MemoryProviderPtr memoryProvider,
-               TransformerPtr transformer,
-               size_t minibatchSize,
-               const std::vector<StreamDescriptionPtr>& streams);
+        TransformerPtr transformer,
+        size_t minibatchSize,
+        const std::vector<StreamDescriptionPtr>& streams);
 
-protected:
-    std::shared_ptr<char> AllocateBuffer(size_t numElements, size_t elementSize);
+    typedef std::vector<SequenceDataPtr> StreamBatch;
+
     size_t GetSampleSize(StreamDescriptionPtr stream);
-    void PackSparseSample(void* destination, SequenceDataPtr sequence, size_t sample, size_t elementSize, size_t sampleSize);
-    void PackDenseSample(void* destination, SequenceDataPtr sequence, size_t sample, size_t elementSize, size_t sampleSize);
 
-    // Memory provider.
-    // TODO: Should possibly switch to matrices here.
-    MemoryProviderPtr m_memoryProvider;
+    virtual MBLayoutPtr PackDenseStream(const StreamBatch& batch, size_t streamIndex);
+
+    virtual MBLayoutPtr PackSparseStream(const StreamBatch& batch, size_t streamIndex);
+
+    // Packs a sparse sample as dense.
+    inline void PackSparseSampleAsDense(char* destination, SparseSequenceDataPtr sequence,
+        size_t sampleIndex, size_t sampleOffset, size_t sampleSize, size_t elementSize);
+
+    // Packs a dense sample as dense.
+    inline void PackDenseSample(char* destination, SequenceDataPtr sequence, size_t sampleOffset, size_t sampleSize);
+
+   
+    virtual MBLayoutPtr CreateMBLayout(const StreamBatch& batch) = 0;
+    
     TransformerPtr m_transformer;
 
     // Input stream descriptions provided by the transformer.
@@ -38,6 +67,9 @@ protected:
 
     // Output stream descriptions expected by the network.
     std::vector<StreamDescriptionPtr> m_inputStreamDescriptions;
+
+    // Buffers for allocated data.
+    std::vector<StreamBuffer> m_streamBuffers;
 
     // Minibatch size in samples.
     size_t m_minibatchSize;

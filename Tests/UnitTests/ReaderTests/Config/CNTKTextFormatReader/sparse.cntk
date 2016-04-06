@@ -1,0 +1,208 @@
+# deviceId = -1 for CPU, >= 0 for GPU devices
+deviceId = -1
+
+traceLevel = 1
+
+1x1 = [
+    precision = "float"
+    reader = [
+        readerType = "CNTKTextFormatReader"
+        # Training file contains a single frame
+        # (a sequence with a single sample) 
+        file = "CNTKTextFormatReader/1x1_sparse.txt"
+
+        randomize = "auto"
+        
+        #maxErrors = 0 -- default value
+        traceLevel = 1
+
+        input = [
+             features = [
+                alias = "F0"
+                dim = 10000
+                format = "sparse"
+            ]
+        ]
+    ]
+]
+
+1x2 = [
+    precision = "float"
+    reader = [
+        readerType = "CNTKTextFormatReader"
+        # Training file contains a single sequence with two samples
+        file = "CNTKTextFormatReader/1x2_sparse.txt"
+
+        randomize = "auto"
+        
+        #maxErrors = 0 -- default value
+        traceLevel = 1
+
+        input = [
+             features = [
+                alias = "F0"
+                dim = 1000
+                format = "sparse"
+            ]
+        ]
+    ]
+]
+
+1x10 = [
+    precision = "double"
+    reader = [
+        readerType = "CNTKTextFormatReader"
+        # Training file contains a single sequence with ten samples
+        file = "CNTKTextFormatReader/1x10_sparse.txt"
+
+        randomize = "auto"
+        
+        #maxErrors = 0 -- default value
+        traceLevel = 1
+
+        input = [
+             features = [
+                alias = "F0"
+                dim = 100
+                format = "sparse"
+            ]
+        ]
+    ]
+]
+
+10x10 = [
+    precision = "double"
+    reader = [
+        readerType = "CNTKTextFormatReader"
+        # Training file contains ten sequences with ten samples each
+        file = "CNTKTextFormatReader/10x10_sparse.txt"
+
+        randomize = "none"
+        
+        #maxErrors = 0 -- default value
+        traceLevel = 1
+
+        input = [
+             features = [
+                alias = "F0"
+                dim = 100
+                format = "sparse"
+            ]
+        ]
+    ]
+]
+
+3x5_MI = [
+    precision = "float"
+    reader = [
+        readerType = "CNTKTextFormatReader"
+        # Training file contains three sequences with five samples
+        # coming from three input streams
+        file = "CNTKTextFormatReader/3x5_MI_sparse.txt"
+
+        randomize = "none"
+        
+        #maxErrors = 0 -- default value
+        traceLevel = 1
+
+        input = [
+             features1 = [
+                alias = "F0"
+                dim = 2
+                format = "sparse"
+            ]
+
+            features2 = [
+                alias = "F1"
+                dim = 20
+                format = "sparse"
+            ]
+
+            features3 = [
+                alias = "F2"
+                dim = 200
+                format = "sparse"
+            ]
+        ]
+    ]
+]
+
+20x10_MI_jagged_samples = [
+    precision = "float"
+    reader = [
+        readerType = "CNTKTextFormatReader"
+        # Training file contains 20 sequences with 10 samples
+        # coming from 3 input streams. Number of values in each sparse
+        # sample is chosen randomly (< dim)
+        file = "CNTKTextFormatReader/20x10_MI_jagged_samples_sparse.txt"
+
+        randomize = "none"
+        
+        #maxErrors = 0 -- default value
+        traceLevel = 1
+
+        input = [
+             features1 = [
+                alias = "F0"
+                dim = 2
+                format = "sparse"
+            ]
+
+            features2 = [
+                alias = "F1"
+                dim = 20
+                format = "sparse"
+            ]
+
+            features3 = [
+                alias = "F2"
+                dim = 200
+                format = "sparse"
+            ]
+        ]
+    ]
+]
+
+50x20_jagged_sequences = [
+    precision = "float"
+    reader = [
+        readerType = "CNTKTextFormatReader"
+        # Training file contains 50 sequence with *up to* 20 samples each
+        file = "CNTKTextFormatReader/50x20_jagged_sequences_sparse.txt"
+
+        randomize = "none"
+        
+        #maxErrors = 0 -- default value
+        traceLevel = 1
+
+        input = [
+             features = [
+                alias = "F0"
+                dim = 100
+                format = "sparse"
+            ]
+        ]
+    ]
+]
+
+100x100_jagged = [
+    precision = "float"
+    reader = [
+        readerType = "CNTKTextFormatReader"
+        # Training file contains 50 sequence with *up to* 20 samples each
+        file = "CNTKTextFormatReader/100x100_jagged_sparse.txt"
+
+        randomize = "none"
+        
+        #maxErrors = 0 -- default value
+        traceLevel = 1
+
+        input = [
+             features = [
+                alias = "F0"
+                dim = 20
+                format = "sparse"
+            ]
+        ]
+    ]
+]
