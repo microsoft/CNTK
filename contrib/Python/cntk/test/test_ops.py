@@ -2,7 +2,7 @@
 
 import numpy as np
 import pytest
-from ..context import get_new_context, _CONTEXT
+from ..context import get_new_context
 from ..graph import *
 from ..reader import *
 
