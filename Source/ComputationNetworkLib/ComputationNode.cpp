@@ -506,6 +506,7 @@ void ComputationNode<ElemType>::WriteMinibatchWithFormatting(FILE* f, const Fram
         {
             if (formatChar == 'f') // print as real number
             {
+                if (dval == 0) dval = fabs(dval);    // clear the sign of a negative 0, which are produced inconsistently between CPU and GPU
                 fprintfOrDie(f, valueFormatString.c_str(), dval);
             }
             else if (formatChar == 'u') // print category as integer index

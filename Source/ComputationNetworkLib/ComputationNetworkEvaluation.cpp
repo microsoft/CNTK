@@ -133,6 +133,10 @@ ComputationNetwork::PARTraversalFlowControlNode::PARTraversalFlowControlNode(con
 {
     for (auto& node : m_nestedNodes)
     {
+#if 0
+        if (dynamic_pointer_cast<LearnableParameter<float>>(node))
+            dynamic_pointer_cast<ComputationNode<float>>(node)->DebugLogMinibatch();
+#endif
         if (node->IsOutOfDateWrtInputs())
         {
             node->BeginForwardProp();

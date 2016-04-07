@@ -210,11 +210,6 @@ void LearnableParameter<ElemType>::Load(File& fstream, size_t modelVersion) /*ov
 template <class ElemType>
 /*virtual*/ void LearnableParameter<ElemType>::UpdateFunctionMBSize() /*override*/
 {
-#if 1
-    WriteMinibatchWithFormatting(stderr, FrameRange(), 8, 10, false/*transpose*/, /*isCategoryLabel=*/false, /*isSparse=*/false, std::vector<std::string>(),
-        ""/*sequenceSeparator*/, "  "/*sequencePrologue*/, "\n"/*sequenceEpilogue*/, " "/*elementSeparator*/, "\n  "/*sampleSeparator*/,
-        "%.8f"/*valueFormatString*/);
-#endif
 }
 
 template <class ElemType>

@@ -1218,7 +1218,7 @@ public:
         return GradientFor(fr);
     }
     // tensor version of the above functions
-    TensorView<ElemType> DataTensorFor(MatrixBasePtr data, size_t rank, const FrameRange& fr)
+    TensorView<ElemType> DataTensorFor(const MatrixBasePtr& data, size_t rank, const FrameRange& fr)
     {
         try
         {
@@ -1503,8 +1503,45 @@ public:
                                       const std::string& sampleSeparator, std::string valueFormatString,
                                       bool outputGradient = false) const;
 
+    // simple helper to log the content of a minibatch
+    void DebugLogMinibatch() const
+    {
+        fprintf(stderr, "<<<<<<\n", NodeName().c_str()); // some prologue and epilogue so that we can use diff -c1 to see the node name
+        fprintf(stderr, "<<<<<<\n", NodeName().c_str());
+        fprintf(stderr, "DebugLogMinibatch: <<<<< %ls >>>>>\n", NodeName().c_str());
+        WriteMinibatchWithFormatting(stderr, FrameRange(), 8, 10, false/*transpose*/, /*isCategoryLabel=*/false, /*isSparse=*/false, std::vector<std::string>(),
+            ""/*sequenceSeparator*/, "  "/*sequencePrologue*/, "\n"/*sequenceEpilogue*/, " "/*elementSeparator*/, "\n  "/*sampleSeparator*/,
+            "%.8f"/*valueFormatString*/);
+        fprintf(stderr, ">>>>>>\n", NodeName().c_str());
+        fprintf(stderr, ">>>>>>\n", NodeName().c_str());
+    }
+
     void Trace()
     {
+#if 0
+        static const std::set<std::wstring> toLog{
+            L"labelSentenceStartEmbedded",
+            L"delayedDecoderFeedback.h.x",
+            L"delayedDecoderFeedback.h.flags",
+            L"delayedDecoderFeedback.h.out.thenVal.h.indexSequence.h.indexSequence.h",
+            L"delayedDecoderFeedback.h.out.thenVal.h.indexSequence.h",
+            L"delayedDecoderFeedback.h.out.thenVal.h",
+            L"delayedDecoderFeedback.h.out.PlusArgs[0]",
+            L"delayedDecoderFeedback.h.out.PlusArgs[1].ElementTimesArgs[0]",
+            L"delayedDecoderFeedback.h.out.elseVal",
+            L"delayedDecoderFeedback.h.out.PlusArgs[1]",
+            L"delayedDecoderFeedback.h.out",
+            L"delayedDecoderFeedback"
+        };
+        if (toLog.find(NodeName()) != toLog.end())
+            DebugLogMinibatch();
+        if (NodeName() == L"delayedDecoderFeedback.h.out")
+        {
+            static int i = 0;
+            if (++i == 2)
+                exit(1);
+        }
+#endif
         if (m_traceNodeValueReal || m_traceNodeValueAsCategoryLabel || m_traceNodeValueSparse)
         {
             fprintf(stderr, "Trace --> %s\n", FormatOperationPrototype("").c_str());

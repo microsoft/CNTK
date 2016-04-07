@@ -881,6 +881,7 @@ __global__ void _doGatherColumnsOf(ElemType* us, size_t usStride, const ElemType
         return;
 
     // id = i + jOut * usStride;
+    // Each thread processes one element of the output matrix.
     CUDA_LONG i    = id % usStride; // row index into 'us' and 'a'
     CUDA_LONG jOut = id / usStride; // col index into 'us' and 'idx'
 
@@ -936,6 +937,7 @@ __global__ void _doScatterColumnsOf(ElemType* us, size_t usStride, size_t usCols
         return;
 
     // id = i + jIn  *  aStride
+    // Each thread processes one column of idx and one row of a.
     CUDA_LONG i   = id % aStride; // row index into 'a' and 'us'
     CUDA_LONG jIn = id / aStride; // col index into 'a' and 'idx'
 
@@ -944,7 +946,7 @@ __global__ void _doScatterColumnsOf(ElemType* us, size_t usStride, size_t usCols
         return;
     size_t jOut = (size_t)jOutF;
     if (jOut >= usCols)
-        return; // actually a failure
+        return; // actually a failure  --TODO: This should not be necessary. Why is it?
 
     const ElemType&  ra =  a[id/*i + jIn  *  aStride*/];
     ElemType&       rus = us[    i + jOut * usStride  ];
@@ -989,7 +991,7 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::DoScatterColumnsOf(ElemType beta, cons
     Scale(beta, us); // if beta is 0, then this will be a memset()
 
     // launch the kernel
-    CUDA_LONG NN = (CUDA_LONG)GetNumElements(); // linear space identifying each individual input element
+    CUDA_LONG NN = (CUDA_LONG)(a.GetNumRows() * idx.GetNumCols()); // linear space identifying each individual input element
     SyncGuard syncGuard;
     GridDim grid(NN);
     _doScatterColumnsOf<ElemType><<<grid.m_blocksPerGrid, grid.m_threadsPerBlock, 0, t_stream>>>(Data(), GetNumRows(), GetNumCols(), idx.Data(), idx.GetNumRows(), a.Data(), a.GetNumRows(), alpha, NN);
