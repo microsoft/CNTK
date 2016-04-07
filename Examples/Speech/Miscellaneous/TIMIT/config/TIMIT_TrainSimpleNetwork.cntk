@@ -1,3 +1,6 @@
+# If set to true, always initialize the network on CPU, making initialization consistent across CPU and GPU targets (for testing).
+initOnCPUOnly=true
+
 command=TIMIT_TrainSimple
 
 precision=float
@@ -30,7 +33,7 @@ TIMIT_TrainSimple=[
     ]
 
     SGD=[
-	# epochSize=0 means epochSize is the size of the training set
+        # epochSize=0 means epochSize is the size of the training set
         epochSize=0 
         minibatchSize=256:1024
         learningRatesPerMB=0.8:3.2*14:0.08
@@ -38,27 +41,26 @@ TIMIT_TrainSimple=[
         dropoutRate=0.0
         maxEpochs=25
     ]
-       
+
     # Parameter values for the reader
     reader=[
-      # reader to use
-      readerType=HTKMLFReader
+        # reader to use
+        readerType=HTKMLFReader
+        readMethod=blockRandomize
 
-      readMethod=blockRandomize
+        miniBatchMode=Partial
+        randomize=Auto
+        verbosity=1   
 
-      miniBatchMode=Partial
-      randomize=Auto
-      verbosity=1   
+        features=[
+            dim=792
+            scpFile=$ScpDir$\TIMIT.train.scp.fbank.fullpath.rnn
+        ]
 
-      features=[
-	  dim=792
-	  scpFile=$ScpDir$\TIMIT.train.scp.fbank.fullpath.rnn
-      ]
-
-      labels=[
-	mlfFile=$MlfDir$\TIMIT.train.align_cistate.mlf.cntk
-        labelDim=183
-	labelMappingFile=$MlfDir$\TIMIT.statelist
-      ]
+        labels=[
+            mlfFile=$MlfDir$\TIMIT.train.align_cistate.mlf.cntk
+            labelDim=183
+            labelMappingFile=$MlfDir$\TIMIT.statelist
+        ]
     ]
 ]

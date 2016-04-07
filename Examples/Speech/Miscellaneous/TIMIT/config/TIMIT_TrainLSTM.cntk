@@ -1,3 +1,6 @@
+# If set to true, always initialize the network on CPU, making initialization consistent across CPU and GPU targets (for testing).
+initOnCPUOnly=true
+
 command=TIMIT_TrainLSTM
 
 precision=float
@@ -14,7 +17,7 @@ TIMIT_TrainLSTM=[
     truncated=true
 
     NDLNetworkBuilder=[
-        ndlMacros=$NdlDir$\default_macros.ndl	
+        ndlMacros=$NdlDir$\default_macros.ndl
         networkDescription=$NdlDir$\lstm.ndl
     ]
 
@@ -45,43 +48,43 @@ TIMIT_TrainLSTM=[
        
     # Parameter values for the reader
     reader=[
-      # reader to use
-      readerType=HTKMLFReader
-      readMethod=blockRandomize
-      frameMode=false
-      nbruttsineachrecurrentiter=10
-      miniBatchMode=Partial
-      randomize=Auto
-      verbosity=1   
-      features=[
-	dim=72
-        scpFile=$ScpDir$\TIMIT.train.scp.fbank.fullpath.rnn
-      ]
+        # reader to use
+        readerType=HTKMLFReader
+        readMethod=blockRandomize
+        frameMode=false
+        nbruttsineachrecurrentiter=10
+        miniBatchMode=Partial
+        randomize=Auto
+        verbosity=1   
+        features=[
+            dim=72
+            scpFile=$ScpDir$\TIMIT.train.scp.fbank.fullpath.rnn
+        ]
 
-      labels=[
-	mlfFile=$MlfDir$\TIMIT.train.align_cistate.mlf.cntk
-        labelDim=183
-	labelMappingFile=$MlfDir$\TIMIT.statelist
-      ]
+        labels=[
+            mlfFile=$MlfDir$\TIMIT.train.align_cistate.mlf.cntk
+            labelDim=183
+            labelMappingFile=$MlfDir$\TIMIT.statelist
+        ]
     ]
+
     cvReader=[
-      # reader to use
-      readerType=HTKMLFReader
-      readMethod=blockRandomize
-      frameMode=false
-      miniBatchMode=Partial
-      randomize=Auto
-      verbosity=1   
-      features=[
-	dim=72
-	scpFile=$ScpDir$\TIMIT.dev.scp.fbank.fullpath.rnn
-      ]
+        # reader to use
+        readerType=HTKMLFReader
+        readMethod=blockRandomize
+        frameMode=false
+        miniBatchMode=Partial
+        randomize=Auto
+        verbosity=1   
+        features=[
+            dim=72
+            scpFile=$ScpDir$\TIMIT.dev.scp.fbank.fullpath.rnn
+        ]
 
-      labels=[
- 	mlfFile=$MlfDir$\TIMIT.dev.align_cistate.mlf.cntk
-        labelDim=183
-	labelMappingFile=$MlfDir$\TIMIT.statelist
-      ]
+        labels=[
+            mlfFile=$MlfDir$\TIMIT.dev.align_cistate.mlf.cntk
+            labelDim=183
+            labelMappingFile=$MlfDir$\TIMIT.statelist
+        ]
     ]
-
 ]

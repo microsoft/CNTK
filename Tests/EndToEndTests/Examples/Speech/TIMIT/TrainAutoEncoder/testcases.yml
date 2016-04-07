@@ -2,9 +2,8 @@ dataDir: ../../../../Speech/Data
 
 # running in 'E' (Examples) leg
 tags:
-    # only in 1BitSGD, GPU and release in BVT
-    - bvt-e (build_sku == '1bitsgd') and ((flavor=='release') ^ (device=='gpu'))
-    - nightly-e (build_sku == '1bitsgd')
+    # due to time, only in 1BitSGD, GPU and release
+    - nightly-e (build_sku == '1bitsgd') and (flavor=='release') and (device=='gpu')
 
 testCases:
   CNTK Run must be completed:
@@ -28,5 +27,3 @@ testCases:
       - Epoch[{{integer}} of {{integer}}]-Minibatch[{{integer}}-{{integer}}
       - SamplesSeen = {{integer}}
       - TrainLossPerSample = {{float,tolerance=.1%}}
-
-
