@@ -24,7 +24,7 @@ TextConfigHelper::TextConfigHelper(const ConfigParameters& config)
     }
 
     const ConfigParameters& input = config(L"input");
-    
+
     if (input.empty())
     {
         RuntimeError("CNTKTextFormatReader configuration contains an empty input section");
@@ -121,7 +121,7 @@ TextConfigHelper::TextConfigHelper(const ConfigParameters& config)
         {
             m_randomizationWindow = config(L"randomize");
         }
-    } 
+    }
     else
     {
         m_randomizationWindow = randomizeAuto;

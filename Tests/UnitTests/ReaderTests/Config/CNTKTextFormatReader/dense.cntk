@@ -1,0 +1,270 @@
+# deviceId = -1 for CPU, >= 0 for GPU devices
+deviceId = -1
+
+traceLevel = 1
+
+1x1 = [
+    precision = "double"
+    reader = [
+        readerType = "CNTKTextFormatReader"
+        # Training file contains a single frame
+        # (a sequence with a single sample) 
+        file = "CNTKTextFormatReader/1x1_dense.txt"
+
+        randomize = "auto"
+        
+        #maxErrors = 0 -- default value
+        traceLevel = 1
+
+        input = [
+             features = [
+                alias = "F"
+                dim = 10000
+                format = "dense"
+            ]
+        ]
+    ]
+]
+
+1x2 = [
+    precision = "double"
+    reader = [
+        readerType = "CNTKTextFormatReader"
+        # Training file contains a single sequence with two samples
+        file = "CNTKTextFormatReader/1x2_dense.txt"
+
+        randomize = "auto"
+        
+        #maxErrors = 0 -- default value
+        traceLevel = 1
+
+        input = [
+             features = [
+                alias = "F0"
+                dim = 100
+                format = "dense"
+            ]
+        ]
+    ]
+]
+
+1x10 = [
+    precision = "float"
+    reader = [
+        readerType = "CNTKTextFormatReader"
+        # Training file contains a single sequence with ten samples
+        file = "CNTKTextFormatReader/1x10_dense.txt"
+
+        randomize = "auto"
+        
+        #maxErrors = 0 -- default value
+        traceLevel = 1
+
+        input = [
+             features = [
+                alias = "F0"
+                dim = 10
+                format = "dense"
+            ]
+        ]
+    ]
+]
+
+10x1_MI = [
+    precision = "float"
+    reader = [
+        readerType = "CNTKTextFormatReader"
+        # Training file contains the same sequence 
+        # (with a single per-input sample from a number of feature/label inputs) 
+        # repeated 10 times, 
+        file = "CNTKTextFormatReader/10x1_MI_dense.txt"
+
+        randomize = "auto"
+        
+        #maxErrors = 0 -- default value
+        traceLevel = 1
+        
+        chunkSizeInBytes = 50000 # ~ 1/2 input size
+        numChunksToCache = 1
+
+        input = [
+
+             features1 = [
+                alias = "F1"
+                dim = 1
+                format = "dense"
+            ]
+            features2 = [
+                alias = "F2"
+                dim = 10
+                format = "dense"
+            ]
+            features3 = [
+                alias = "F3"
+                dim = 100
+                format = "dense"
+            ]
+            features4 = [
+                alias = "F4"
+                dim = 1000
+                format = "dense"
+            ]
+            
+            labels1 = [
+                alias = "L1"
+                dim = 1
+                format = "dense"
+            ]
+            labels2 = [
+                alias = "L2"
+                dim = 10
+                format = "dense"
+            ]
+            labels3 = [
+                alias = "L3"
+                dim = 100
+                format = "dense"
+            ]
+        ]
+    ]
+]
+
+
+10x10 = [
+    precision = "float"
+    reader = [
+        readerType = "CNTKTextFormatReader"
+        # Training file contains ten sequence with ten samples each
+        file = "CNTKTextFormatReader/10x10_dense.txt"
+
+        randomize = "none"
+        
+        #maxErrors = 0 -- default value
+        traceLevel = 1
+
+        input = [
+             features = [
+                alias = "F0"
+                dim = 5
+                format = "dense"
+            ]
+        ]
+    ]
+]
+
+100x1 = [
+    precision = "double"
+    reader = [
+        readerType = "CNTKTextFormatReader"
+        # Training file contains the same sequence (with a single sample) 
+        # repeated 100 times. Also, it uses UTF-8 encoding and contains
+        # BOM value.
+        file = "CNTKTextFormatReader/100x1_dense.txt"
+
+        randomize = "auto"
+        
+        #maxErrors = 0 -- default value
+        traceLevel = 1
+        
+        chunkSizeInBytes = 10000 # ~ 3 full sequences (30 samples)
+        numChunksToCache = 5
+
+        input = [
+
+             features = [
+                alias = "F"
+                dim = 100
+                format = "dense"
+            ]
+            
+            labels = [
+                alias = "L"
+                dim = 100
+                format = "dense"
+            ]
+        ]
+    ]
+]
+
+MNIST = [
+    precision = "double"
+    reader = [
+        readerType = "CNTKTextFormatReader"
+        file = "CNTKTextFormatReader/MNIST_dense.txt"
+
+        randomize = "none"
+        
+        #maxErrors = 0 -- default value
+        traceLevel = 1
+        
+        chunkSizeInBytes = 10000 # should be enough for ~ 10 samples.
+        numChunksToCache = 10
+
+        input = [
+
+             features = [
+                alias = "F"
+                dim = 784
+                format = "dense"
+            ]
+            
+            labels = [
+                alias = "L"
+                dim = 10
+                format = "dense"
+            ]
+        ]
+    ]
+]
+
+Simple = [
+    precision = "float"
+    reader = [
+        readerType = "CNTKTextFormatReader"
+        file = "CNTKTextFormatReader/Simple_dense.txt"
+
+        randomize = "none"
+        
+        #maxErrors = 0 -- default value
+        traceLevel = 1
+        
+        input = [
+
+             features = [
+                alias = "F"
+                dim = 2
+                format = "dense"
+            ]
+            
+            labels = [
+                alias = "L"
+                dim = 2
+                format = "dense"
+            ]
+        ]
+    ]
+]
+
+
+50x20_jagged_sequences = [
+    precision = "double"
+    reader = [
+        readerType = "CNTKTextFormatReader"
+        # Training file contains 50 sequence with *up to* 20 samples each
+        file = "CNTKTextFormatReader/50x20_jagged_sequences_dense.txt"
+
+        randomize = "none"
+        
+        #maxErrors = 0 -- default value
+        traceLevel = 1
+
+        input = [
+             features = [
+                alias = "F0"
+                dim = 3
+                format = "dense"
+            ]
+        ]
+    ]
+]
+

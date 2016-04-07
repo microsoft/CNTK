@@ -124,7 +124,7 @@ struct ReaderFixture
     void OutputMatrix(Matrix<ElemType>& matrix, const MBLayout& layout, ofstream& outputFile)
     {
         if (matrix.GetMatrixType() == MatrixType::SPARSE)
-        {
+    {
             matrix.SwitchToMatrixType(MatrixType::DENSE, MatrixFormat::matrixFormatDense, true);
         }
 
@@ -145,11 +145,11 @@ struct ReaderFixture
             }
 
             for (auto j = 0; j < numRows; j++)
-            {
+        {
                 auto idx = i*numRows + j;
                 outputFile << pItem[idx] << ((j + 1) == numRows ? "\n" : " ");
             }
-        }    
+        }
     }
 
     // Helper function to write the Reader's content to a file.

@@ -10,6 +10,7 @@
 #include "BlockRandomizer.h"
 #include "NoRandomizer.h"
 #include "TextParser.h"
+#include "SequencePacker.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -30,8 +31,8 @@ CNTKTextFormatReader::CNTKTextFormatReader(MemoryProviderPtr provider,
             m_deserializer = shared_ptr<IDataDeserializer>(new TextParser<double>(configHelper));
         }
 
-        size_t window = configHelper.GetRandomizationWindow();
         TransformerPtr randomizer;
+        size_t window = configHelper.GetRandomizationWindow();
         if (window > 0)
         {
             // Verbosity is a general config parameter, not specific to the text format reader.
@@ -66,7 +67,8 @@ void CNTKTextFormatReader::StartEpoch(const EpochConfiguration& config)
     }
 
     m_transformer->StartEpoch(config);
-    m_packer = std::make_shared<SampleModePacker>(
+    // TODO: add "frameMode"  config paramter
+    m_packer = std::make_shared<SequencePacker>(
         m_provider,
         m_transformer,
         config.m_minibatchSizeInSamples,

@@ -7,7 +7,7 @@
 
 #include "TextParser.h"
 #include "Reader.h"
-#include "SampleModePacker.h"
+#include "Packer.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -36,7 +36,7 @@ private:
     TransformerPtr m_transformer;
 
     // Packer.
-    SampleModePackerPtr m_packer;
+    PackerPtr m_packer;
 
     // Memory provider (TODO: this will possibly change in the near future.)
     MemoryProviderPtr m_provider;

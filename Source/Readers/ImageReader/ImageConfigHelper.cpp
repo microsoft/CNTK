@@ -62,6 +62,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         features->m_id = 0;
         features->m_name = msra::strfun::utf16(featureSection.ConfigName());
         features->m_sampleLayout = std::make_shared<TensorShape>(ImageDimensions(w, h, c).AsTensorShape(m_dataFormat));
+        features->m_storageType = StorageType::dense;
         m_streams.push_back(features);
 
         ConfigParameters label = config(labelNames[0]);
@@ -71,6 +72,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         labelSection->m_id = 1;
         labelSection->m_name = msra::strfun::utf16(label.ConfigName());
         labelSection->m_sampleLayout = std::make_shared<TensorShape>(labelDimension);
+        labelSection->m_storageType = StorageType::dense;
         m_streams.push_back(labelSection);
 
         m_mapPath = config(L"file");

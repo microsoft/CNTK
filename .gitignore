@@ -182,5 +182,5 @@ Source/CNTK/buildinfo.h
 Source/CNTK/buildinfo.h$$
 
 # Unit test output
-Tests/UnitTests/ReaderTests/Control/*_Output.txt
+Tests/UnitTests/ReaderTests/Control/**/*_Output.txt
 Tests/UnitTests/NetworkTests/Output/
