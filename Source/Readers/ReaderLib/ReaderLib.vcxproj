@@ -92,7 +92,7 @@
     <ClInclude Include="CudaMemoryProvider.h" />
     <ClInclude Include="DataDeserializer.h" />
     <ClInclude Include="ElementTypeUtils.h" />
-    <ClInclude Include="SampleModePacker.h" />
+    <ClInclude Include="FramePacker.h" />
     <ClInclude Include="HeapMemoryProvider.h" />
     <ClInclude Include="MemoryProvider.h" />
     <ClInclude Include="Reader.h" />
@@ -106,7 +106,7 @@
     <ClCompile Include="NoRandomizer.cpp" />
     <ClCompile Include="BlockRandomizer.cpp" />
     <ClCompile Include="PackerBase.cpp" />
-    <ClCompile Include="SampleModePacker.cpp" />
+    <ClCompile Include="FramePacker.cpp" />
     <ClCompile Include="ReaderShim.cpp" />
     <ClCompile Include="SequencePacker.cpp" />
     <ClCompile Include="SequenceRandomizer.cpp" />

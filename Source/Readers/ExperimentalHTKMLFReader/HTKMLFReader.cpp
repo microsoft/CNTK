@@ -11,8 +11,8 @@
 #include "ConfigHelper.h"
 #include "Bundler.h"
 #include "StringUtil.h"
+#include "FramePacker.h"
 #include "SequencePacker.h"
-#include "SampleModePacker.h"
 #include "BpttPacker.h"
 #include "BlockRandomizer.h"
 #include "NoRandomizer.h"
@@ -164,7 +164,7 @@ void HTKMLFReader::StartEpoch(const EpochConfiguration& config)
     switch (m_packingMode)
     {
     case PackingMode::sample:
-        m_packer = std::make_shared<SampleModePacker>(
+        m_packer = std::make_shared<FramePacker>(
             m_provider,
             m_randomizer,
             config.m_minibatchSizeInSamples,

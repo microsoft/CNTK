@@ -10,6 +10,8 @@
 #ifdef _WIN32
 #include <objbase.h>
 #endif
+
+#include <sstream>
 #include "Basics.h"
 
 #define DATAREADER_EXPORTS // creating the exports here
@@ -82,9 +84,31 @@ void ReaderShim<ElemType>::StartDistributedMinibatchLoop(
     });
 }
 
+string EnumerateInputs(const map<wstring, size_t> &nameToStreamId)
+{
+    // TODO use boost::algorithm::join, boost::adapters::transformed, make this a generic function
+    std::stringstream str;
+    bool first = true;
+
+    for (auto s : nameToStreamId)
+    {
+        str << (first ? "" : ", ");
+        auto name = msra::strfun::utf8(s.first);
+        str << '\"' << name.c_str() << '\"';
+        first = false;
+    }
+
+    return str.str();
+}
+
 template <class ElemType>
 bool ReaderShim<ElemType>::GetMinibatch(StreamMinibatchInputs& matrices)
 {
+    
+    // TODO: verify that the set of matrix names is identical 
+    // to the set of reader input names. Warn if it's a subset, throw
+    // if it's a superset.
+
     if (m_endOfEpoch)
     {
         return false;
@@ -119,26 +143,59 @@ bool ReaderShim<ElemType>::GetMinibatch(StreamMinibatchInputs& matrices)
         // Copy returned minibatch to the matrices.
         for (const auto& mx : matrices)
         {
-            assert(m_nameToStreamId.find(mx.first) != m_nameToStreamId.end());
+            if (m_nameToStreamId.find(mx.first) == m_nameToStreamId.end())
+            {
+                string inputNames = EnumerateInputs(m_nameToStreamId);
+                RuntimeError("Could not map input '%ls' to the reader. Reader outputs only [%s].", 
+                    mx.first.c_str(), inputNames.c_str());
+            }
+
             size_t streamId = m_nameToStreamId[mx.first];
-
+            
             const auto& stream = minibatch.m_data[streamId];
-            m_layout->CopyFrom(stream->m_layout);
-
-            size_t columnNumber = m_layout->GetNumCols();
-            size_t rowNumber = m_streams[streamId]->m_sampleLayout->GetNumElements();
-
-            auto* data = reinterpret_cast<const ElemType*>(stream->m_data);
-            matrices.GetInputMatrix<ElemType>(mx.first).SetValue(rowNumber, columnNumber, mx.second->GetDeviceId(), const_cast<ElemType*>(data), matrixFlagNormal);
+            m_layout = stream->m_layout;
+            size_t sampleSize = m_streams[streamId]->m_sampleLayout->GetNumElements();
+            auto& matrix = matrices.GetInputMatrix<ElemType>(mx.first);
+            FillMatrixFromStream(m_streams[streamId]->m_storageType, &matrix, sampleSize, stream);
         }
     }
 
-    m_prefetchTask = std::async(m_launchType, [this]()
+    if (!m_endOfEpoch)
     {
-        return m_reader->ReadMinibatch();
-    });
+        m_prefetchTask = std::async(m_launchType, [this]()
+        {
+            return m_reader->ReadMinibatch();
+        });
+    }
 
     return !minibatch.m_data.empty();
+}
+
+template <class ElemType>
+void ReaderShim<ElemType>::FillMatrixFromStream(StorageType type, Matrix<ElemType>* matrix, size_t numRows, const StreamMinibatchPtr& stream)
+{
+    size_t numCols = stream->m_layout->GetNumCols();
+
+    if (type == StorageType::dense)
+    {
+        auto data = reinterpret_cast<const ElemType*>(stream->m_data);
+        matrix->SetValue(numRows, numCols, matrix->GetDeviceId(), const_cast<ElemType*>(data), matrixFlagNormal);
+    }
+    else if (type == StorageType::sparse_csc)
+    {
+        // In the sparse case the m_data layout is identical to CUDA's CSC layout
+        // (see http://docs.nvidia.com/cuda/cusparse/#compressed-sparse-column-format-csc).
+        size_t* data = reinterpret_cast<size_t*>(stream->m_data);
+        size_t nnzCount = *data;
+        ElemType* values = reinterpret_cast<ElemType*>(data + 1);
+        IndexType* rows = reinterpret_cast<IndexType*>(values + nnzCount);
+        IndexType* columns = reinterpret_cast<IndexType*>(rows + nnzCount);
+        matrix->SetMatrixFromCSCFormat(columns, rows, values, nnzCount, numRows, numCols);
+    }
+    else 
+    {
+        RuntimeError("Storage type %d is not supported.", (int)type);
+    }
 }
 
 template <class ElemType>
