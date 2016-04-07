@@ -38,6 +38,14 @@ cntk.graph module
     :undoc-members:
     :show-inheritance:
 
+cntk.logreg module
+------------------
+
+.. automodule:: cntk.logreg
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 cntk.optimizer module
 ---------------------
 
