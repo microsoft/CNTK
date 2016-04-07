@@ -55,8 +55,6 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup>
-    <IncludePath>..\..\common\include;..\..\math;$(OPENCV_PATH)\include;$(ZipInclude);$(IncludePath);</IncludePath>
-    <LibraryPath>$(SolutionDir)$(Platform)\$(Configuration);$(OPENCV_PATH)\x64\vc12\lib;$(ZipLibPath);$(LibraryPath);</LibraryPath>
     <OpenCVLib Condition="$(HasOpenCV)">opencv_world300.lib</OpenCVLib>
   </PropertyGroup>
   <PropertyGroup Condition="$(DebugBuild)">
@@ -87,11 +85,18 @@ if "$(UseZip)" == "true" if exist "$(ZLIB_PATH)\bin\zlib1.dll" (xcopy /I /D /Y "
       <Message>Copying dependencies</Message>
     </PostBuildEvent>
   </ItemDefinitionGroup>
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <AdditionalIncludeDirectories>$(SolutionDir)Source\Common\Include;$(SolutionDir)Source\Math;$(OPENCV_PATH)\include;$(ZipInclude);$(SolutionDir)Source\Readers\ReaderLib</AdditionalIncludeDirectories>
+    </ClCompile>
+    <Link>
+      <AdditionalLibraryDirectories>$(OutDir);$(OPENCV_PATH)\x64\vc12\lib;$(ZipLibPath)</AdditionalLibraryDirectories>
+    </Link>
+  </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="$(DebugBuild)">
     <ClCompile>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>../ReaderLib</AdditionalIncludeDirectories>
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="$(ReleaseBuild)">
@@ -101,7 +106,6 @@ if "$(UseZip)" == "true" if exist "$(ZLIB_PATH)\bin\zlib1.dll" (xcopy /I /D /Y "
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalOptions>/d2Zi+ %(AdditionalOptions)</AdditionalOptions>
-      <AdditionalIncludeDirectories>../ReaderLib</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
