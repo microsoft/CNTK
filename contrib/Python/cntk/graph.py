@@ -93,6 +93,18 @@ class ComputationNode(object):
         # NOTE supported in Python 3.5
         return Times(other, self)
 
+    def __div__(self, other):
+        if not isinstance(other, ComputationNode):
+            # TODO: in case of non-scalars we have to pull in a reader
+            other = constant(other)
+        return ElementDivide(self, other)
+
+    def __rdiv__(self, other):
+        if not isinstance(other, ComputationNode):
+            # TODO: in case of non-scalars we have to pull in a reader
+            other = constant(other)
+        return ElementDivide(other, self)
+
     def __abs__(self):
         return Abs(self)
 
