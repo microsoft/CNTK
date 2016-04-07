@@ -149,7 +149,7 @@ bool ReaderShim<ElemType>::GetMinibatch(StreamMinibatchInputs& matrices)
             }
 
             size_t streamId = m_nameToStreamId[mx.first];
-            
+
             const auto& stream = minibatch.m_data[streamId];
             // TODO: assert that num sequences is consistent across all streams
             m_numParallelSequences = stream->m_layout->GetNumParallelSequences();
@@ -170,10 +170,10 @@ bool ReaderShim<ElemType>::GetMinibatch(StreamMinibatchInputs& matrices)
 
     if (!m_endOfEpoch)
     {
-        m_prefetchTask = std::async(m_launchType, [this]()
-        {
-            return m_reader->ReadMinibatch();
-        });
+    m_prefetchTask = std::async(m_launchType, [this]()
+    {
+        return m_reader->ReadMinibatch();
+    });
     }
 
     return !minibatch.m_data.empty();

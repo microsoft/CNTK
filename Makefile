@@ -235,7 +235,7 @@ READER_SRC =\
 	$(SOURCEDIR)/Readers/ReaderLib/SequencePacker.cpp \
 	$(SOURCEDIR)/Readers/ReaderLib/BpttPacker.cpp \
 	$(SOURCEDIR)/Readers/ReaderLib/PackerBase.cpp \
-	$(SOURCEDIR)/Readers/ReaderLib/SampleModePacker.cpp \
+	$(SOURCEDIR)/Readers/ReaderLib/FramePacker.cpp \
 
 COMMON_SRC =\
 	$(SOURCEDIR)/Common/Config.cpp \

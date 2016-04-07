@@ -4,13 +4,12 @@
 //
 
 #include "stdafx.h"
+#include <inttypes.h>
 #include <opencv2/opencv.hpp>
 #include <numeric>
 #include <limits>
-#include <inttypes.h>
 #include "ImageDataDeserializer.h"
 #include "ImageConfigHelper.h"
-#include <inttypes.h>
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -33,9 +32,9 @@ public:
     TypedLabelGenerator(size_t labelDimension) : m_value(1), m_indices(labelDimension)
     {
         if (labelDimension > numeric_limits<IndexType>::max())
-        {
-            RuntimeError("Label dimension (" PRIu64 ") exceeds the maximum allowed "
-                "value (" PRIu64 ")\n", labelDimension, (size_t)numeric_limits<IndexType>::max());
+    {
+            RuntimeError("Label dimension (%" PRIu64 ") exceeds the maximum allowed "
+                "value (%" PRIu64 ")\n", labelDimension, (size_t)numeric_limits<IndexType>::max());
         }
         iota(m_indices.begin(), m_indices.end(), 0);
     }

@@ -7,7 +7,6 @@
 #define _SCL_SECURE_NO_WARNINGS
 
 #include "SequencePacker.h"
-#include "ElementTypeUtils.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -15,7 +14,7 @@ MBLayoutPtr SequencePacker::CreateMBLayout(const StreamBatch& batch)
 {
     vector<MBLayout::SequenceInfo> infos;
     for (size_t index = 0; index < batch.size(); ++index)
-        {
+{
         MBLayout::SequenceInfo info;
 
         info.seqId = index;
