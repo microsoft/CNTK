@@ -19,8 +19,8 @@ import numpy as np
 # Testing inputs
 @pytest.mark.parametrize("left_operand, right_operand", [
     ([30], [10]),
-    #([[30]], [[10]]),
-    #([[1.5,2.1]], [[10,20]]),
+    ([[30]], [[10]]),
+    ([[1.5,2.1]], [[10,20]]),
     #TODO: enable once all branches are merged to master
     #([5], [[30,40], [1,2]]),
     #Adding two 3x2 inputs of sequence length 1
