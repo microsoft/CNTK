@@ -12,7 +12,7 @@ from cntk.ops.cntk1 import Times, Plus
 
 def plus(left_operand, right_operand, name=None):
     """
-    tensor addition opearation
+    tensor addition operation
     Args:
         left_operand: Left side tensor
         right_operand: Right side tensor
@@ -25,7 +25,7 @@ def plus(left_operand, right_operand, name=None):
 
 def times(left_operand, right_operand, name=None):
     """
-    tensor times opearation
+    tensor times operation
     Args:
         left_operand: Left side tensor
         right_operand: Right side tensor
@@ -36,4 +36,15 @@ def times(left_operand, right_operand, name=None):
     
     return Times(left_operand, right_operand, var_name = name)    
 
-
+def element_divide(left_operand, right_operand, name=None):
+    """
+    element-wise division operation
+    Args:
+        left_operand: Left side tensor
+        right_operand: Right side tensor
+        var_name: the name of the node in the network            
+    Returns:
+        ElementDivide node
+    """
+    
+    return ElementDivide(left_operand, right_operand, var_name = name)
