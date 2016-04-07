@@ -2186,7 +2186,6 @@ void BatchSequenceReader<ElemType>::GetLabelOutput(StreamMinibatchInputs& matric
     if (!matrices.HasInput(m_labelsName[labelInfoOut]))
         return;
 
-    size_t j = 0;
     Matrix<ElemType>& labels = matrices.GetInputMatrix<ElemType>(m_labelsName[labelInfoOut]);
     if (readerMode == ReaderMode::NCE)
         labels.Resize(2 * (m_noiseSampleSize + 1), actualmbsize);
@@ -2202,10 +2201,14 @@ void BatchSequenceReader<ElemType>::GetLabelOutput(StreamMinibatchInputs& matric
 
     ElemType epsilon = (ElemType) 1e-6; // avoid all zero, although this is almost impossible.
 
-    for (size_t jSample = mbStartSample; j < actualmbsize; ++j, ++jSample)
+	// enabling parallel data reading
+	size_t currSubsetStartCol = ((actualmbsize * m_subsetNum) / m_numSubsets) + mbStartSample;
+	size_t currSubsetEndCol = ((actualmbsize * (m_subsetNum + 1)) / m_numSubsets) + mbStartSample;
+
+	for (size_t j = currSubsetStartCol; j < currSubsetEndCol; j++)
     {
         // get the token
-        LabelIdType wrd = m_labelIdData[jSample];
+        LabelIdType wrd = m_labelIdData[j];
 
         // write sample value into output
         // This writes an index into a row vector. Which is wrong, we want a sparse one-hot vector.
