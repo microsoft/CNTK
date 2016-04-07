@@ -49,4 +49,5 @@ def test_op_add(left_operand, right_operand):
     
     #the expected results for the backward pass is all ones
     expected = [[[np.ones_like(x) for x in left_operand]]]
-    test_helper(left_as_input, expected, clean_up=True, backward_pass = True, input_node = a)
+    test_helper(left_as_input, expected, clean_up=True, backward_pass = True, input_node = a)    
+    test_helper(right_as_input, expected, clean_up=True, backward_pass = True, input_node = b)
