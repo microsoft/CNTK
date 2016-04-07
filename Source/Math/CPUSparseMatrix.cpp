@@ -506,6 +506,23 @@ void CPUSparseMatrix<ElemType>::SetMatrixFromCSCFormat(const CPUSPARSE_INDEX_TYP
 }
 
 template <class ElemType>
+void CPUSparseMatrix<ElemType>::SetMatrixFromCSRFormat(const GPUSPARSE_INDEX_TYPE* h_CSRRow, const GPUSPARSE_INDEX_TYPE* h_Col, const ElemType* h_Val,
+    const size_t nz, const size_t numRows, const size_t numCols)
+{
+    if (!OwnBuffer())
+        LogicError("Cannot modify since the buffer is managed externally.");
+
+    SetFormat(matrixFormatSparseCSR);
+    RequireSizeAndAllocate(numRows, numCols, nz, true, false);
+
+    // Note: This is a casualty of the switch away from m_nz. RowSize and NzSize depend on ColLocation being correct for format SparseCSC. Thus we must
+    // copy ColLocation before RowLocation and NzValues. That's ugly and error prone.
+    memcpy(RowLocation(), h_CSRRow, sizeof(CPUSPARSE_INDEX_TYPE)*(numRows + 1));
+    memcpy(ColLocation(), h_Col, sizeof(CPUSPARSE_INDEX_TYPE)*nz);
+    memcpy(NzValues(), h_Val, sizeof(ElemType)*nz);
+}
+
+template <class ElemType>
 ElemType* CPUSparseMatrix<ElemType>::Data() const
 {
     return Buffer() + GetCompIndex()[m_sliceViewOffset];
@@ -1269,101 +1286,6 @@ ElemType CPUSparseMatrix<ElemType>::SumOfElements() const
     }
 
     return sum;
-}
-
-template <typename ElemType>
-MATH_API File& operator>>(File& stream, CPUSparseMatrix<ElemType>& us)
-{
-    if (!us.OwnBuffer())
-        LogicError("Cannot read into a managed external matrix");
-
-    stream.GetMarker(fileMarkerBeginSection, std::wstring(L"BMAT"));
-    size_t elsize;
-    stream >> elsize;
-    if (sizeof(ElemType) != elsize)
-        RuntimeError("Template argument size doesn't match those in file");
-    std::wstring matrixName;
-
-    // now prepare this header to receive the data being read
-    size_t nz, colnum, rownum;
-    int format;
-
-    // read in the header information
-    stream >> matrixName >> format >> nz >> colnum >> rownum;
-
-    us.SetFormat((MatrixFormat) format);
-    if (us.GetFormat() != matrixFormatSparseCSC && us.GetFormat() != matrixFormatSparseCSR)
-        NOT_IMPLEMENTED;
-
-    us.RequireSizeAndAllocate(rownum, colnum, nz, true, false);
-
-    if (nz > 0)
-    {
-        size_t compressedSize = (us.GetFormat() == matrixFormatSparseCSC) ? colnum + 1 : rownum + 1;
-        ElemType* dataBuffer = us.NzValues();
-        CPUSPARSE_INDEX_TYPE* unCompressedIndex = us.MajorIndexLocation();
-        CPUSPARSE_INDEX_TYPE* compressedIndex = us.SecondaryIndexLocation();
-
-        // read in the sparse matrix info
-        for (size_t i = 0; i < nz; ++i)
-        {
-            stream >> dataBuffer[i];
-        }
-        for (size_t i = 0; i < nz; ++i)
-        {
-            stream >> unCompressedIndex[i];
-        }
-        for (size_t i = 0; i < compressedSize; ++i)
-        {
-            stream >> compressedIndex[i];
-        }
-    }
-    stream.GetMarker(fileMarkerEndSection, std::wstring(L"EMAT"));
-
-    return stream;
-}
-
-template MATH_API File& operator>>(File& stream, CPUSparseMatrix<float>& us);
-template MATH_API File& operator>>(File& stream, CPUSparseMatrix<double>& us);
-
-template <typename ElemType>
-MATH_API File& operator<<(File& stream, const CPUSparseMatrix<ElemType>& us)
-{
-    if (us.GetFormat() != matrixFormatSparseCSC && us.GetFormat() != matrixFormatSparseCSR)
-        NOT_IMPLEMENTED;
-
-    stream.PutMarker(fileMarkerBeginSection, std::wstring(L"BMAT"));
-    stream << sizeof(ElemType);
-	stream << std::wstring(L"nnmatrix"); // Note this is needed for compatability, and could potentially be an empty string
-
-    size_t nz, numRows, numCols;
-    size_t compressedSize = us.SecondaryIndexCount();
-    int format = us.GetFormat();
-
-    stream << format << nz << numCols << numRows;
-
-    if (nz > 0)
-    {
-        ElemType* dataBuffer = us.NzValues();
-        CPUSPARSE_INDEX_TYPE* unCompressedIndex = us.MajorIndexLocation();
-        CPUSPARSE_INDEX_TYPE* compressedIndex = us.SecondaryIndexLocation();
-
-        for (size_t i = 0; i < nz; ++i)
-        {
-            stream << dataBuffer[i];
-        }
-        for (size_t i = 0; i < nz; ++i)
-        {
-            stream << unCompressedIndex[i];
-        }
-        for (size_t i = 0; i < compressedSize; ++i)
-        {
-            stream << compressedIndex[i];
-        }
-    }
-    stream.PutMarker(fileMarkerEndSection, std::wstring(L"EMAT"));
-
-    return stream;
 }
 
 template class CPUSparseMatrix<float>;

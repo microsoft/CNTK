@@ -9,6 +9,7 @@
 
 #include "Basics.h"
 #include "NDLNetworkBuilder.h"
+#include "LatticeFreeMMINode.h"
 #include "LinearAlgebraNodes.h"
 #include "RecurrentNodes.h"
 #include "ConvolutionalNodes.h"
@@ -510,6 +511,58 @@ void NDLNodeEvaluatorImpl<ElemType>::Evaluate(NDLNode<ElemType>* node, const wst
             ImageLayoutKind imageLayoutKind = ImageLayoutKindFrom(node->GetOptionalParameter("imageLayout", "CHW"));
 
             nodePtr = builder.BatchNormalization(nullptr, nullptr, nullptr, nullptr, nullptr, spatial, normTimeConst, blendTimeConst, epsilon, useCntkEngine, imageLayoutKind, name);
+        }
+    }
+    else if (cnNodeType == OperationNameOf(LatticeFreeMMINode))
+    {
+        if (parameter.size() != 3)
+            RuntimeError("%ls should have 3 fixed parameters[labelVectorSequence, outProbVectorSequence, logPrior].", cnNodeType.c_str());
+
+        // setup the parameter position of children so we can hook them up later
+        nodeParamCount = 3;
+        nodeParamStart = 0;
+
+        if (pass == ndlPassInitial)
+        {
+            int id = 3; // skip inputValueNode, scale and bias, runMean, runInvStdDev.
+            // evaluate only scalar parameters
+            vector<void*> params = EvaluateParameters(node, baseName, id, parameter.size() - id, pass);
+
+            // Optional parameters
+            ElemType acweight = node->GetOptionalParameter("acweight", "1.0");
+            bool usePrior = node->GetOptionalParameter("usePrior", "true");
+            int alignmentWindow = node->GetOptionalParameter("alignmentWindow", "0");
+            ElemType ceweight = node->GetOptionalParameter("ceweight", "0.0");
+            ElemType l2NormFactor = node->GetOptionalParameter("l2NormFactor", "0.0");
+            std::string fstFilePath = node->GetOptionalParameter("fstFilePath", "");
+            if (fstFilePath == "")
+                RuntimeError("fstFilePath must be set");
+            if (fstFilePath[0] == '\"' && fstFilePath[fstFilePath.size() - 1] == '\"')
+                // remove the opening and closing double quotes
+                fstFilePath = fstFilePath.substr(1, fstFilePath.size() - 2);
+            if (!fexists(fstFilePath))
+                RuntimeError("File pointed to by fstFilePath does not exist: %s", fstFilePath.c_str());
+
+            std::string smapFilePath = node->GetOptionalParameter("smapFilePath", "");
+            if (smapFilePath == "")
+                RuntimeError("smapFilePath must be set");
+            if (smapFilePath[0] == '\"' && smapFilePath[smapFilePath.size() - 1] == '\"')
+                // remove the opening and closing double quotes
+                smapFilePath = smapFilePath.substr(1, smapFilePath.size() - 2);
+            if (!fexists(smapFilePath))
+                RuntimeError("File pointed to by smapFilePath does not exist: %s", smapFilePath.c_str());
+
+
+            bool useSenoneLM = node->GetOptionalParameter("useSenoneLM", "true");
+            std::string transFilePath = node->GetOptionalParameter("transFilePath", "");
+            if (!useSenoneLM)
+            {
+                if (transFilePath[0] == '\"' && transFilePath[transFilePath.size() - 1] == '\"')
+                    // remove the opening and closing double quotes
+                    transFilePath = transFilePath.substr(1, transFilePath.size() - 2);
+            }
+
+            nodePtr = builder.LatticeFreeMMI(nullptr, nullptr, nullptr, msra::strfun::utf16(fstFilePath), msra::strfun::utf16(smapFilePath), acweight, usePrior, alignmentWindow, ceweight, l2NormFactor, useSenoneLM, msra::strfun::utf16(transFilePath), name);
         }
     }
     else

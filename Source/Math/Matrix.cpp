@@ -617,7 +617,10 @@ void Matrix<ElemType>::Read(File& stream)
     {
         if (M.GetDeviceId() < 0)
         {
-            NOT_IMPLEMENTED; // You might want to tranfer your matrix to GPU
+            if (M.m_CPUSparseMatrix == NULL)
+                M.m_CPUSparseMatrix = make_shared<CPUSparseMatrix<ElemType>>(matrixFormatSparseCSR);
+            stream >> (*M.m_CPUSparseMatrix);
+            M.SetDataLocation(CPU, SPARSE);
         }
         else
         {
@@ -647,9 +650,9 @@ void Matrix<ElemType>::Write(File& stream) const
     {
         stream << 's';
         if (M.GetDeviceId() < 0)
-            NOT_IMPLEMENTED // stream<<(*M.m_CPUMatrix);
-                else stream
-                << (*M.m_GPUSparseMatrix);
+            stream << (*M.m_CPUSparseMatrix);
+        else 
+            stream << (*M.m_GPUSparseMatrix);
     }
 }
 
@@ -1301,6 +1304,18 @@ void Matrix<ElemType>::SetMatrixFromCSCFormat(const CPUSPARSE_INDEX_TYPE* h_CSCC
         },
         { m_CPUSparseMatrix->SetMatrixFromCSCFormat(h_CSCCol, h_Row, h_Val, nz, numRows, numCols); },
         { m_GPUSparseMatrix->SetMatrixFromCSCFormat(h_CSCCol, h_Row, h_Val, nz, numRows, numCols); });
+}
+
+template <class ElemType>
+void Matrix<ElemType>::SetMatrixFromCSRFormat(const GPUSPARSE_INDEX_TYPE* h_CSRRow, const GPUSPARSE_INDEX_TYPE* h_Col, const ElemType* h_Val,
+    const size_t nz, const size_t numRows, const size_t numCols)
+{
+    DISPATCH_MATRIX_ON_FLAG(this,
+        this,
+        NOT_IMPLEMENTED,
+        NOT_IMPLEMENTED,
+        m_CPUSparseMatrix->SetMatrixFromCSRFormat(h_CSRRow, h_Col, h_Val, nz, numRows, numCols),
+        m_GPUSparseMatrix->SetMatrixFromCSRFormat(h_CSRRow, h_Col, h_Val, nz, numRows, numCols));
 }
 
 template <class ElemType>
