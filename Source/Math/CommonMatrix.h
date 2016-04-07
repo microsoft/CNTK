@@ -96,7 +96,11 @@ enum ElementWiseOperator
     opCond /*a ? b : c*/,
     opClip, /*clip a within interval b..c*/
     opElementwiseProductWithLogSumDerivative,
+<<<<<<< HEAD
     opCopyGradientOnEqualInputs
+=======
+    opElementwiseProductWithClipByValueDerivative
+>>>>>>> implementation of clipbyvalue
     // Note: not all that's implemented in CNTK ComputationNodes has an opcode yet.
 };
 
