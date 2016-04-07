@@ -419,4 +419,60 @@ public:
 template class HardmaxNode<float>;
 template class HardmaxNode<double>;
 
+// -----------------------------------------------------------------------
+// ClipByValueNode (tensor, minValue, maxValue)
+// -----------------------------------------------------------------------
+// This node clips the values in a tensor elements-wise to ensure they are within minValue <= x >= maxValue
+// The gradient (per element) is (ge(x, minValue) AND le(x, maxValue)), or in other words, 1 if the value has
+// not been clipped, and 0 if the value has been clipped.
+
+template <class ElemType>
+class ClipByValueNode : public ComputationNode<ElemType>, public NumInputs<3>
+{
+    typedef ComputationNode<ElemType> Base;
+    UsingComputationNodeMembers;
+    static const std::wstring TypeName()
+    {
+        return L"ClipByValue";
+    }
+
+public:
+    DeclareConstructorFromConfigWithNumInputs(ClipByValueNode);
+    ClipByValueNode(DEVICEID_TYPE deviceId, const wstring& name)
+        : Base(deviceId, name)
+    {
+    }
+
+    virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
+    {
+        size_t rank = DetermineElementwiseTensorRank();
+        auto result = ValueTensorFor(rank, fr);
+        auto input0 = Input(0)->ValueTensorFor(rank, fr.AllowBroadcast());
+        auto input1 = Input(1)->ValueTensorFor(rank, fr.AllowBroadcast());
+        auto input2 = Input(2)->ValueTensorFor(rank, fr.AllowBroadcast());
+
+        result.AssignClipOf(input0, input1, input2);
+    }
+
+    virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
+    {
+        size_t rank = DetermineElementwiseTensorRank();
+        auto gradient = GradientTensorFor(rank, fr);
+        auto inputGradient = Input(inputIndex)->GradientTensorFor(rank, fr.AllowBroadcast());
+        auto input = Input(inputIndex)->ValueTensorFor(rank, fr.AllowBroadcast());
+        auto output = ValueTensorFor(rank, fr.AllowBroadcast());
+
+        // if reduction then mask the respective input(s) (zero out the gaps)
+        if (Input(inputIndex)->ReducesInTimeWrt(shared_from_this()))
+            MaskMissingGradientColumnsToZero(fr);
+        if (Input(inputIndex)->ReducesInTimeWrt(Input(1 - inputIndex)))
+            Input(1 - inputIndex)->MaskMissingValueColumnsToZero(fr);
+
+        inputGradient.AddElementwiseProductWithClipByValueDerivativeOf(gradient, input, output);
+    }
+};
+
+template class ClipByValueNode<float>;
+template class ClipByValueNode<double>;
+
 }}}
