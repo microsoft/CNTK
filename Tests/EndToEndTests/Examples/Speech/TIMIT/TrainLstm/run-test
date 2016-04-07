@@ -5,4 +5,4 @@
 # specific TIMIT variables
 . $TEST_DIR/../run-test-common
 
-cntkrun TIMIT_TrainLSTM.cntk "$CntkArguments" || exit $?
+cntkrun TIMIT_TrainLSTM.cntk "$CntkArguments TIMIT_TrainLSTM=[SGD=[maxEpochs=3]]" || exit $?

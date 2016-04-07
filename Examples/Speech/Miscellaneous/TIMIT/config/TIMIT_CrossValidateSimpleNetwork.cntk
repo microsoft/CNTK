@@ -23,15 +23,14 @@ TIMIT_CVSimple=[
     reader=[
         # reader to use
         readerType=HTKMLFReader
-        readMethod=blockRandomize
-
         miniBatchMode=Partial
+        readMethod=rollingWindow
         randomize=None
-        verbosity=1   
+        verbosity=0
 
         features=[
             dim=792
-            scpFile=$ScpDir$\TIMIT.dev.scp.fbank.fullpath.rnn
+            scpFile=$ScpDir$\TIMIT.dev.scp.fbank.fullpath
         ]
 
         labels=[

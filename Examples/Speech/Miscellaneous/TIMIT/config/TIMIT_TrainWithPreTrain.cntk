@@ -28,7 +28,7 @@ reader=[
     readMethod=blockRandomize
     miniBatchMode=Partial
     randomize=Auto
-    verbosity=1   
+    verbosity=0
 
     features=[
         dim=792

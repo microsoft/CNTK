@@ -44,7 +44,7 @@ TIMIT_TrainAutoEncoder=[
 
         miniBatchMode=Partial
         randomize=Auto
-        verbosity=1   
+        verbosity=0
 
         featIn=[
             dim=792
@@ -52,7 +52,7 @@ TIMIT_TrainAutoEncoder=[
         ]
 
         featOut=[
-            scpFile=$ScpDir$\TIMIT.train.scp.fbank.fullpath
+            scpFile=$ScpDir$\TIMIT.train.scp.fbank.fullpath.rnn
             dim=792
         ]
     ]
