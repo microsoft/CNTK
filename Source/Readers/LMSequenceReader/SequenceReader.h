@@ -412,6 +412,12 @@ public:
 	{
 		return StartDistributedMinibatchLoop(mbSize, epoch, 0, 1, requestedEpochSamples);
 	}
+
+	virtual bool SupportsDistributedMBRead() const override
+	{
+		return ((m_cachingReader == nullptr) || m_cachingReader->SupportsDistributedMBRead());
+	}
+
 	void StartDistributedMinibatchLoop(size_t mbSize, size_t epoch, size_t subsetNum, size_t numSubsets, size_t requestedEpochSamples = requestDataSize) override;
     bool GetMinibatch(StreamMinibatchInputs& matrices) override;
     bool DataEnd() override;
