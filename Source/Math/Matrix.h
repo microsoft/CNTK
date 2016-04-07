@@ -115,10 +115,16 @@ public:
     static Matrix<ElemType> RandomUniform(const size_t rows, const size_t cols, DEVICEID_TYPE deviceId, const ElemType low, const ElemType high, unsigned long seed = USE_TIME_BASED_SEED);
     static Matrix<ElemType> RandomGaussian(const size_t rows, const size_t cols, DEVICEID_TYPE deviceId, const ElemType mean, const ElemType sigma, unsigned long seed = USE_TIME_BASED_SEED);
 
-    static void SetDevice(DEVICEID_TYPE deviceId);
+    static void SetDevice(DEVICEID_TYPE deviceId); // TODO: unify with PrepareDevice()
 
     void ReleaseMemory();
     ~Matrix();
+
+    // workaround to bugs in BOTH implementation: force to collapse to home location
+    void CollapseDataLocation() const
+    {
+        SetDataLocation(GetDeviceId() < 0 ? CurrentDataLocation::CPU : CurrentDataLocation::GPU, GetMatrixType());
+    }
 
 private:
     Matrix(const MatrixFlags matrixFlags, const MatrixType matrixType, const MatrixFormat matrixFormat, DEVICEID_TYPE deviceID); // only used internally to initialize a blank matrix

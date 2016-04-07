@@ -1865,6 +1865,7 @@ protected:                                                                      
     using Base::Gradient;                                                                                                                                \
     using Base::GradientAsMatrix;                                                                                                                        \
     using Base::GradientFor;                                                                                                                             \
+    using Base::GradientPtr;                                                                                                                             \
     using Base::GradientTensorFor;                                                                                                                       \
     using Base::HasMBLayout;                                                                                                                             \
     using Base::InferMBLayoutFromInputsForStandardCase;                                                                                                  \
@@ -1909,6 +1910,7 @@ protected:                                                                      
     using Base::ValidateUnaryMap;                                                                                                                        \
     using Base::ValidateUnaryReduce;                                                                                                                     \
     using Base::ValueFor;                                                                                                                                \
+    using Base::ValuePtr;                                                                                                                                \
     using Base::ValueTensorFor;                                                                                                                          \
     using Base::VerifyDataSize;                                                                                                                          \
     using Base::VerifyDims;                                                                                                                              \

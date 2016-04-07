@@ -74,6 +74,7 @@ template <class ElemType>
                 indexSequence.push_back(t);
         // Note: The above accesses m_value directly on the CPU, putting it into BOTH state, possibly for other consumers as well.
     }
+    input.CollapseDataLocation(); // BUGBUG: Move back, since BOTH state is broken at present.
     // create a new MBLayout
     let& outMBLayout = GetMBLayout();
     outMBLayout->InitAsPackedSequences(SequenceLengthVector(sequences, indexSequences), /*temp*/m_placementBuffer, /*temp*/m_rowAllocationsBuffer);
@@ -102,7 +103,6 @@ template <class ElemType>
 /*virtual*/ void WhereNode<ElemType>::BackpropToNonLooping(size_t /*inputIndex*/) /*override*/
 {
     // we cannot backprop through a condition
-    // Can we?
     return;
 }
 
@@ -156,6 +156,7 @@ template <class ElemType>
             result(0, jIndex) = (ElemType)jSource;
         }
     }
+    result.CollapseDataLocation(); // BUGBUG: Move back, since BOTH state is broken at present.
 }
 
 template <class ElemType>

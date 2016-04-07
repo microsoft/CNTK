@@ -247,6 +247,12 @@ void Matrix<ElemType>::SetDataLocation(CurrentDataLocation location, MatrixType 
     if (m_currentDataLocation == CurrentDataLocation::BOTH && location != CurrentDataLocation::BOTH)
     {
         // we get here if we wrote into this object that was BOTH but is no longer
+        // all viewed matrices must have single view (us)
+        if (m_CPUMatrix)       ((BaseMatrix<ElemType>*)m_CPUMatrix      .get())->VerifyResizable("SetDataLocation [CPUMatrix]");
+        if (m_GPUMatrix)       ((BaseMatrix<ElemType>*)m_GPUMatrix      .get())->VerifyResizable("SetDataLocation [GPUMatrix]");
+        if (m_CPUSparseMatrix) ((BaseMatrix<ElemType>*)m_CPUSparseMatrix.get())->VerifyResizable("SetDataLocation [CPUSparseMatrix]");
+        if (m_GPUSparseMatrix) ((BaseMatrix<ElemType>*)m_GPUSparseMatrix.get())->VerifyResizable("SetDataLocation [GPUSparseMatrix]");
+
         if (!OwnBuffer()) // this means we should not have written into it in the first place, so fail now (better late than never)
             LogicError("SetDataLocation: A non-owning object cannot be written to in BOTH state.");
     }
