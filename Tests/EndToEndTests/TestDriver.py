@@ -340,6 +340,9 @@ class Test:
     return result
 
   # Composes the full path of a new baseline file for a specified platform and device
+  # Note this currently hardcodes the baseline file name to be baseline.<os>.<device>.txt
+  # which is how the baselines currently exist for all CNTK E2E tests i.e. we have different
+  # baselines for platform and device but not for flavor
   def newBaselineFilePath(self, device):
       candidateName = "baseline" + "." + ("windows" if windows else "linux") + "." + device.lower() + ".txt"
       fullPath = os.path.join(self.testDir, candidateName)
@@ -690,7 +693,7 @@ tmpDir = os.getenv("TEMP") if windows else "/tmp"
 defaultRunDir=os.path.join(tmpDir, "cntk-test-{0}.{1}".format(time.strftime("%Y%m%d%H%M%S"), random.randint(0,1000000)))
 runSubparser.add_argument("-r", "--run-dir", default=defaultRunDir, help="directory where to store test output, default: a random dir within /tmp")
 runSubparser.add_argument("--update-baseline", action='store_true', help="update baseline file(s) instead of matching them")
-runSubparser.add_argument("--create-baseline", action='store_true', help="create new baseline file(s) for tests that do not currently have baselines")
+runSubparser.add_argument("--create-baseline", action='store_true', help="create new baseline file(s) (named as baseline.<os>.<device>.txt) for tests that do not currently have baselines")
 runSubparser.add_argument("-v", "--verbose", action='store_true', help="verbose output - dump all output of test script")
 runSubparser.add_argument("-n", "--dry-run", action='store_true', help="do not run the tests, only print test names and configurations to be run along with full command lines")
 
