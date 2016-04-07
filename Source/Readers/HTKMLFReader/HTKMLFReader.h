@@ -48,6 +48,7 @@ private:
     vector<size_t> m_numValidFrames;     // [seq index] valid #frames in each parallel sequence. Frames (s, t) with t >= m_numValidFrames[s] are NoInput.
     vector<size_t> m_extraSeqsPerMB;
     size_t m_extraNumSeqs;
+    size_t m_maxUtteranceLength;
     bool m_noData;
     bool m_trainOrTest; // if false, in file writing mode
     using IDataReader::LabelType;

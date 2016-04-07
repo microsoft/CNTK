@@ -9,6 +9,7 @@
 #include "ComputationNode.h"
 #include "ComputationNetwork.h"
 #include "ComputationNetworkBuilder.h" // used for load & save
+#include "LatticeFreeMMINode.h"
 #include "LinearAlgebraNodes.h"
 #include "NonlinearityNodes.h"
 #include "ConvolutionalNodes.h"
@@ -410,6 +411,7 @@ bool ComputationNetwork::IsTypicalCriterionNode(ComputationNodeBasePtr nodePtr)
         nodePtr->OperationName() == OperationNameOf(CrossEntropyNode) ||
         nodePtr->OperationName() == OperationNameOf(ClassBasedCrossEntropyWithSoftmaxNode) ||
         nodePtr->OperationName() == OperationNameOf(ErrorPredictionNode) ||
+        nodePtr->OperationName() == OperationNameOf(LatticeFreeMMINode) ||
 #ifdef COMING_SOON
         nodePtr->OperationName() == OperationNameOf(CRFNode) ||
 #endif
