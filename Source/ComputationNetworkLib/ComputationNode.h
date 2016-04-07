@@ -888,7 +888,7 @@ public:
     static ComputationNodePtr FromVoidPtr(void* vp)
     {
         auto p = dynamic_cast<ComputationNode<ElemType>*>((ComputationNodeBase*)vp); // TODO: check that all void* casts really come from ComputationNodeBasePtr; or add a method ToVoidPtr(). Or get rid of the void*?!
-        return p->shared_from_this();
+        return p ? p->shared_from_this() : nullptr;
     }
 
     virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
