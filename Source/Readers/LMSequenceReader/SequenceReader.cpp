@@ -1701,6 +1701,8 @@ void BatchSequenceReader<ElemType>::StartDistributedMinibatchLoop(size_t mbSize,
 
 	// allocate buffers for building features and labels
 	// We allocate 'mbSize' entries, i.e. that's the total token cound across multiple parallel sequences.
+	//Currently, buffers are not being used.
+#if 0
 	const LabelInfo& labelInfo = m_labelInfo[(m_labelInfo[labelInfoOut].type == labelNextWord) ? labelInfoIn : labelInfoOut];
 
 	if (m_featuresBuffer == NULL)       // features
@@ -1719,7 +1721,7 @@ void BatchSequenceReader<ElemType>::StartDistributedMinibatchLoop(size_t mbSize,
 			m_labelsIdBuffer = NULL;
 		}
 	}
-
+#endif
 	//m_featuresBufferRow = new size_t[mbSize];
 	//m_featuresBufferRowIdx = new size_t[mbSize];
 
