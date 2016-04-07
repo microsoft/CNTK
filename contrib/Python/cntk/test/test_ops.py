@@ -103,7 +103,7 @@ def test_elemmul_backward(left_arg, right_arg):
      expected = [expected]
      a = I([left_arg], has_sequence_dimension=False)
      m = a * right_arg     
-     _test(m, expected, clean_up=False, backward_pass = True, input_node = a)
+     _test(m, expected, clean_up=True, backward_pass = True, input_node = a)
      
      expected = AA(left_arg)
      # sequence of 1 element, since we have has_sequence_dimension=False
@@ -113,7 +113,7 @@ def test_elemmul_backward(left_arg, right_arg):
      b = I([left_arg], has_sequence_dimension=False)
      #b.var_name = 'v2'
      m = left_arg * b
-     _test(m, expected, clean_up=False, backward_pass = True, input_node = b)
+     _test(m, expected, clean_up=True, backward_pass = True, input_node = b)
      
 @pytest.mark.parametrize("left_arg, right_arg", [
     ([0],[0]),              # grad(Cos(0)) = -Sin(0) = 0
@@ -123,4 +123,4 @@ def test_elemmul_backward(left_arg, right_arg):
 def test_cosine_backward(left_arg, right_arg):
      i = I([left_arg], has_sequence_dimension=False)
      n = Cosine(i)
-     _test(n, [[AA(right_arg)]], clean_up=False, backward_pass = True, input_node = i)
+     _test(n, [[AA(right_arg)]], clean_up=True, backward_pass = True, input_node = i)
