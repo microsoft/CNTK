@@ -8,7 +8,7 @@
 Linear algebra operations
 """
 
-from cntk.ops.cntk1 import Times, Plus
+from cntk.ops.cntk1 import Times, Plus, ElementDivide
 
 def plus(left_operand, right_operand, name=None):
     """
