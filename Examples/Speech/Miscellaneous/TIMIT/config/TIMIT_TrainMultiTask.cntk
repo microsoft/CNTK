@@ -7,15 +7,15 @@ precision=float
 
 TIMIT_TrainMultiTask=[
     action=train
-    modelPath=$ExpDir$\TrainMultiTask\model\cntkSpeech.dnn
+    modelPath=$ExpDir$/TrainMultiTask/model/cntkSpeech.dnn
     #=-1 for CPU, >=0 for GPU devices 
     deviceId=$DeviceNumber$
 
     traceLevel=1
 
     NDLNetworkBuilder=[
-        ndlMacros=$NdlDir$\default_macros.ndl
-        networkDescription=$NdlDir$\mtl_senones_dr.ndl
+        ndlMacros=$NdlDir$/default_macros.ndl
+        networkDescription=$NdlDir$/mtl_senones_dr.ndl
     ]
 
     SGD=[
@@ -55,16 +55,16 @@ TIMIT_TrainMultiTask=[
         verbosity=0
         features=[
             dim=792
-            scpFile=$ScpDir$\TIMIT.train.scp.fbank.fullpath.rnn
+            scpFile=$ScpDir$/TIMIT.train.scp.fbank.fullpath.rnn
         ]
         labels=[
-            mlfFile=$MlfDir$\TIMIT.train.align_cistate.mlf.cntk
-            labelMappingFile=$MlfDir$\TIMIT.statelist
+            mlfFile=$MlfDir$/TIMIT.train.align_cistate.mlf.cntk
+            labelMappingFile=$MlfDir$/TIMIT.statelist
             labelDim=183
             labelType=Category
         ]
         regions=[
-            mlfFile=$MlfDir$\TIMIT.train.align_dr.mlf.cntk
+            mlfFile=$MlfDir$/TIMIT.train.align_dr.mlf.cntk
             labelDim=8
             labelType=Category
         ]

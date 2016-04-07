@@ -8,7 +8,7 @@ precision=float
 TIMIT_TrainAdaptLR=[
     action=train
 
-    modelPath=$ExpDir$\TrainAdaptLR\model\cntkSpeech.dnn
+    modelPath=$ExpDir$/TrainAdaptLR/model/cntkSpeech.dnn
 
     # deviceId=-1 for CPU, >=0 for GPU devices 
     deviceId=$DeviceNumber$
@@ -64,13 +64,13 @@ TIMIT_TrainAdaptLR=[
         verbosity=0
         features=[
             dim=792
-            scpFile=$ScpDir$\TIMIT.train.scp.fbank.fullpath.rnn
+            scpFile=$ScpDir$/TIMIT.train.scp.fbank.fullpath.rnn
         ]
 
         labels=[
-            mlfFile=$MlfDir$\TIMIT.train.align_cistate.mlf.cntk
+            mlfFile=$MlfDir$/TIMIT.train.align_cistate.mlf.cntk
             labelDim=183
-            labelMappingFile=$MlfDir$\TIMIT.statelist
+            labelMappingFile=$MlfDir$/TIMIT.statelist
         ]
     ]
 
@@ -82,13 +82,13 @@ TIMIT_TrainAdaptLR=[
         verbosity=0
         features=[
             dim=792
-            scpFile=$ScpDir$\TIMIT.dev.scp.fbank.fullpath.rnn
+            scpFile=$ScpDir$/TIMIT.dev.scp.fbank.fullpath.rnn
         ]
 
         labels=[
-            mlfFile=$MlfDir$\TIMIT.dev.align_cistate.mlf.cntk
+            mlfFile=$MlfDir$/TIMIT.dev.align_cistate.mlf.cntk
             labelDim=183
-            labelMappingFile=$MlfDir$\TIMIT.statelist
+            labelMappingFile=$MlfDir$/TIMIT.statelist
         ]
     ]
 ]

@@ -11,7 +11,7 @@ precision=float
 TIMIT_WriteScaledLogLike=[
     action=write
 
-    modelPath=$ExpDir$\TrainSimpleNetwork\model\cntkSpeech.dnn
+    modelPath=$ExpDir$/TrainSimpleNetwork/model/cntkSpeech.dnn
 
     # deviceId=-1 for CPU, >=0 for GPU devices 
     deviceId=$DeviceNumber$
@@ -27,7 +27,7 @@ TIMIT_WriteScaledLogLike=[
         readerType=HTKMLFReader
         features=[
             dim=792
-            scpFile=$ScpDir$\TIMIT.core.scp.fbank.fullpath
+            scpFile=$ScpDir$/TIMIT.core.scp.fbank.fullpath
         type=Real
         ]
     ]
@@ -36,7 +36,7 @@ TIMIT_WriteScaledLogLike=[
         writerType=HTKMLFWriter	
         ScaledLogLikelihood = [
             dim=183
-            scpFile=$ScpDir$\TIMIT.core.scp.scaledloglike.fullpath
+            scpFile=$ScpDir$/TIMIT.core.scp.scaledloglike.fullpath
             type=Real
         ]
     ]

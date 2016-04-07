@@ -12,7 +12,7 @@ precision=float
 TIMIT_EvalSimple=[
     action=eval
 
-    modelPath=$ExpDir$\TrainSimpleNetwork\model\cntkSpeech.dnn
+    modelPath=$ExpDir$/TrainSimpleNetwork/model/cntkSpeech.dnn
 
     # deviceId=-1 for CPU, >=0 for GPU devices 
     deviceId=$DeviceNumber$
@@ -30,13 +30,13 @@ TIMIT_EvalSimple=[
 
         features=[
             dim=792
-            scpFile=$ScpDir$\TIMIT.dev.scp.fbank.fullpath
+            scpFile=$ScpDir$/TIMIT.dev.scp.fbank.fullpath
         ]
 
         labels=[
-            mlfFile=$MlfDir$\TIMIT.dev.align_cistate.mlf.cntk
+            mlfFile=$MlfDir$/TIMIT.dev.align_cistate.mlf.cntk
             labelDim=183
-            labelMappingFile=$MlfDir$\TIMIT.statelist
+            labelMappingFile=$MlfDir$/TIMIT.statelist
         ]
     ]
 ]

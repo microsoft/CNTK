@@ -11,7 +11,7 @@ precision=float
 TIMIT_WriteBottleneck=[
     action=write
 
-    modelPath=$ExpDir$\TrainAutoEncoder\model\cntkSpeech.dnn
+    modelPath=$ExpDir$/TrainAutoEncoder/model/cntkSpeech.dnn
 
     # deviceId=-1 for CPU, >=0 for GPU devices 
     deviceId=$DeviceNumber$
@@ -27,7 +27,7 @@ TIMIT_WriteBottleneck=[
         readerType=HTKMLFReader
         featIn=[
             dim=792
-            scpFile=$ScpDir$\TIMIT.core.scp.fbank.fullpath
+            scpFile=$ScpDir$/TIMIT.core.scp.fbank.fullpath
             type=Real
         ]
     ]
@@ -36,7 +36,7 @@ TIMIT_WriteBottleneck=[
         writerType=HTKMLFWriter	
         L2.BFF.FF.P = [
             dim=64
-            scpFile=$ScpDir$\TIMIT.core.scp.bottleneck.fullpath
+            scpFile=$ScpDir$/TIMIT.core.scp.bottleneck.fullpath
             type=Real
         ]
     ]
