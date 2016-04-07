@@ -41,10 +41,11 @@ def train_eval_logreg(criterion_name=None, eval_name=None):
 
 def test_logreg():
     result = train_eval_logreg('crit_node', 'eval_node')
+
     assert result['SamplesSeen'] == 500
-    assert result['Perplexity'] == 1.2216067
-    assert result['eval_node'] == 13.779223
-    assert result['crit_node'] == 0.20016696
+    assert np.allclose(result['Perplexity'], 1.2216067)
+    assert np.allclose(result['crit_node'], 0.2001669)
+    assert np.allclose(result['eval_node'], 27.558445)
 
 if __name__ == "__main__":
     print(train_eval_logreg())
