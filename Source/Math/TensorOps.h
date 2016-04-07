@@ -257,6 +257,7 @@ DefBinaryOp(SqrOfDifference, Sqr(a - b));
 DefTernaryOp(Cond, a ? b : c);
 DefTernaryOp(Clip, a < b ? b : (a > c ? c : a));
 DefTernaryOp(ElementwiseProductWithLogSumDerivative, a * Sigmoid(c - b));
+DefTernaryOp(ElementwiseProductWithClipByValueDerivative, a * (b == c ? 1 : 0));    // gradient for clip is 1 if no change (i.e. input==output) or 0 otherwise
 
 #pragma pop_macro("DefTernaryOp")
 }}}
