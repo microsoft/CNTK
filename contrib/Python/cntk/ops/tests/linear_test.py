@@ -26,7 +26,7 @@ import numpy as np
     #Adding two 3x2 inputs of sequence length 1
     #([[30,40], [1,2], [0.1, 0.2]], [[10,20], [3,4], [-0.5, -0.4]]),     
     ])
-def test_op_add2(left_operand, right_operand, cpu_gpu):    
+def test_op_add(left_operand, right_operand, cpu_gpu):    
 
     #Forward pass test
     
