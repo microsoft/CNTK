@@ -118,6 +118,9 @@ public:
     void SetMatrixFromCSCFormat(const CPUSPARSE_INDEX_TYPE* h_CSCCol, const CPUSPARSE_INDEX_TYPE* h_Row, const ElemType* h_Val,
                                 const size_t nz, const size_t numRows, const size_t numCols);
 
+    void SetMatrixFromCSRFormat(const GPUSPARSE_INDEX_TYPE* h_CSRRow, const GPUSPARSE_INDEX_TYPE* h_Col, const ElemType* h_Val,
+        const size_t nz, const size_t numRows, const size_t numCols);
+
     static void MultiplyAndWeightedAdd(ElemType alpha, const CPUMatrix<ElemType>& lhs, const bool transposeA,
                                        const CPUSparseMatrix<ElemType>& rhs, const bool transposeB, ElemType beta, CPUMatrix<ElemType>& c);
 
@@ -219,6 +222,113 @@ public:
 public:
     void Print(const char* matrixName, ptrdiff_t rowStart, ptrdiff_t rowEnd, ptrdiff_t colStart, ptrdiff_t colEnd) const;
     void Print(const char* matrixName = NULL) const; // print whole matrix. can be expensive
+
+public:
+    friend MATH_API File& operator>>(File& stream, CPUSparseMatrix<ElemType>& us)
+    {
+        if (!us.OwnBuffer())
+            LogicError("Cannot read into a managed external matrix");
+
+        stream.GetMarker(fileMarkerBeginSection, std::wstring(L"BMAT"));
+        size_t elsize;
+        stream >> elsize;
+        if (sizeof(ElemType) != elsize)
+            RuntimeError("Template argument size doesn't match those in file");
+        std::wstring matrixName;
+
+        // now prepare this header to receive the data being read
+        size_t nz, colnum, rownum;
+        int format;
+
+        // read in the header information
+        stream >> matrixName >> format >> nz >> colnum >> rownum;
+
+        us.SetFormat((MatrixFormat)format);
+        if (us.GetFormat() != matrixFormatSparseCSC && us.GetFormat() != matrixFormatSparseCSR)
+            NOT_IMPLEMENTED;
+
+        us.RequireSizeAndAllocate(rownum, colnum, nz, true, false);
+
+        if (nz > 0)
+        {
+            size_t compressedSize = (us.GetFormat() == matrixFormatSparseCSC) ? colnum + 1 : rownum + 1;
+            ElemType* dataBuffer = new ElemType[nz];
+            CPUSPARSE_INDEX_TYPE* unCompressedIndex = new CPUSPARSE_INDEX_TYPE[nz];
+            CPUSPARSE_INDEX_TYPE* compressedIndex = new CPUSPARSE_INDEX_TYPE[compressedSize];
+
+            // read in the sparse matrix info
+            for (size_t i = 0; i < nz; ++i)
+            {
+                stream >> dataBuffer[i];
+            }
+            for (size_t i = 0; i < nz; ++i)
+            {
+                size_t val;
+                stream >> val;
+                unCompressedIndex[i] = (CPUSPARSE_INDEX_TYPE)val;
+            }
+            for (size_t i = 0; i < compressedSize; ++i)
+            {
+                size_t val;
+                stream >> val;
+                compressedIndex[i] = (CPUSPARSE_INDEX_TYPE)val;
+            }
+
+            if (us.GetFormat() == matrixFormatSparseCSC)
+                us.SetMatrixFromCSCFormat(compressedIndex, unCompressedIndex, dataBuffer, nz, rownum, colnum);
+            else if (us.GetFormat() == matrixFormatSparseCSR)
+                us.SetMatrixFromCSRFormat(compressedIndex, unCompressedIndex, dataBuffer, nz, rownum, colnum);
+
+            delete[] dataBuffer;
+            delete[] unCompressedIndex;
+            delete[] compressedIndex;
+        }
+        stream.GetMarker(fileMarkerEndSection, std::wstring(L"EMAT"));
+
+        return stream;
+    }
+
+    friend MATH_API File& operator<<(File& stream, const CPUSparseMatrix<ElemType>& us)
+    {
+        if (us.GetFormat() != matrixFormatSparseCSC && us.GetFormat() != matrixFormatSparseCSR)
+            NOT_IMPLEMENTED;
+
+        stream.PutMarker(fileMarkerBeginSection, std::wstring(L"BMAT"));
+        stream << sizeof(ElemType);
+        stream << std::wstring(L"nnmatrix"); // Note this is needed for compatability, and could potentially be an empty string
+
+        //size_t nz, numRows, numCols;
+        size_t nz = us.GetNumElemAllocated();
+        size_t compressedSize = us.SecondaryIndexCount();
+        int format = us.GetFormat();
+
+        stream << format << nz << us.GetNumCols() << us.GetNumRows();
+
+        if (nz > 0)
+        {
+            const ElemType* dataBuffer = us.NzValues();
+            CPUSPARSE_INDEX_TYPE* unCompressedIndex = us.MajorIndexLocation();
+            CPUSPARSE_INDEX_TYPE* compressedIndex = us.SecondaryIndexLocation();
+
+            for (size_t i = 0; i < nz; ++i)
+            {
+                stream << dataBuffer[i];
+            }
+            for (size_t i = 0; i < nz; ++i)
+            {
+                size_t val = unCompressedIndex[i];
+                stream << val;
+            }
+            for (size_t i = 0; i < compressedSize; ++i)
+            {
+                size_t val = compressedIndex[i];
+                stream << val;
+            }
+        }
+        stream.PutMarker(fileMarkerEndSection, std::wstring(L"EMAT"));
+
+        return stream;
+    }
 
 public:
     const ElemType* NzValues() const

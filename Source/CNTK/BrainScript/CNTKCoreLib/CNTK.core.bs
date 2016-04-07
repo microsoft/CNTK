@@ -472,6 +472,7 @@ GatherPacked(indexSequence, sourceData, tag='') = new ComputationNode [ operatio
 GMMLogLikelihood(unnormalizedPriorVector, meansAsRows, logStdDevAsRows, dataVectorSequence, tag='') = new ComputationNode [ operation = 'GMMLogLikelihood' ; inputs = (unnormalizedPriorVector : meansAsRows : logStdDevAsRows : dataVectorSequence) /*plus the function args*/ ]
 InvStdDev(dataVectorSequence, tag='') = new ComputationNode [ operation = 'InvStdDev' ; inputs = dataVectorSequence /*plus the function args*/ ]
 KhatriRaoProduct(leftMatrix, rightMatrix, tag='') = new ComputationNode [ operation = 'KhatriRaoProduct' ; inputs = (leftMatrix : rightMatrix) /*plus the function args*/ ]
+LatticeFreeMMI(labelVectorSequence, outProbVectorSequence, logPrior, fstFilePath = '', smapFilePath = '', acweight = 1.0, usePrior = true, alignmentWindow = 0, ceweight = 0, l2NormFactor = 0, useSenoneLM = true, transFilePath = '', tag='') = new ComputationNode [ operation = 'LatticeFreeMMI' ; inputs = (labelVectorSequence : outProbVectorSequence : logPrior) /*plus the function args*/ ]
 LogPlus(leftMatrix, rightMatrix, tag='') = new ComputationNode [ operation = 'LogPlus' ; inputs = (leftMatrix : rightMatrix) /*plus the function args*/ ]
 LogSoftmax(z, tag='') = new ComputationNode [ operation = 'LogSoftmax' ; inputs = z /*plus the function args*/ ]
 # TODO: ^^ along axis, like Softmax
