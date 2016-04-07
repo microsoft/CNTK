@@ -26,20 +26,22 @@ public:
     // -------------------------------------------------------------------
 
     // reinterpret a matrix storage object (SOB) as a TensorView with a given TensorShape  --this is the main constructor
-    TensorView(const Matrix<ElemType>& sob, const TensorShape& shape);
+    TensorView(const MatrixBasePtr& sob, const TensorShape& shape);
+#if 0
     // cast a Matrix as a 2D TensorView (without shape change)
-    TensorView(const Matrix<ElemType>& sob)
-        : m_sob(sob.AsReference()), m_shape(TensorShape(array<size_t, 2>{sob.GetNumRows(), sob.GetNumCols()}))
+    TensorView(const MatrixBasePtr& sob)
+        : m_sob(sob), m_shape(TensorShape(array<size_t, 2>{sob->GetNumRows(), sob->GetNumCols()}))
     {
     }
+#endif
     // reshape a TensorView
     TensorView(const TensorView<ElemType>& other, const TensorShape& shape)
-        : m_sob(other.m_sob.AsReference()), m_shape(shape)
+        : m_sob(other.m_sob), m_shape(shape)
     {
     }
     // copy constructor
     TensorView(const TensorView<ElemType>& other)
-        : m_sob(other.m_sob.AsReference()), m_shape(other.m_shape)
+        : m_sob(other.m_sob), m_shape(other.m_shape)
     {
     }
 
@@ -119,8 +121,6 @@ public:
     ForAllTernaryOps(DeclareTernaryTensorOp);
 #pragma pop_macro("DeclareTernaryTensorOp")
 
-    static void Test();
-
     void DoUnaryOpOf  (ElemType beta, const TensorView& a,                                           ElemType alpha, ElementWiseOperator op);
     void DoBinaryOpOf (ElemType beta, const TensorView& a, const TensorView& b,                      ElemType alpha, ElementWiseOperator op);
     void DoTernaryOpOf(ElemType beta, const TensorView& a, const TensorView& b, const TensorView& c, ElemType alpha, ElementWiseOperator op);
@@ -146,16 +146,16 @@ private:
     // accessors
     // -------------------------------------------------------------------
 
-    const Matrix<ElemType>& GetSOB() const { return m_sob; }
-    Matrix<ElemType>&       GetSOB()       { return m_sob; }
+    const Matrix<ElemType>& GetSOB() const { return *m_sob; }
+    Matrix<ElemType>&       GetSOB()       { return *m_sob; }
     const TensorShape& GetShape() const { return m_shape; }
 
     // -------------------------------------------------------------------
     // sob members
     // -------------------------------------------------------------------
 
-    Matrix<ElemType> m_sob; // Storage OBject that holds the data that is being viewed with this TensorView. This is really a reference (not owing the buffer).
-    TensorShape m_shape;    // the meta-data that describes the data's shape and/or access pattern
+    shared_ptr<Matrix<ElemType>> m_sob; // Storage OBject that holds the data that is being viewed with this TensorView. This is really a reference (not owing the buffer).
+    TensorShape m_shape;                // the meta-data that describes the data's shape and/or access pattern
 };
 
 }}}

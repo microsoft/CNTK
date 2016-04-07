@@ -1218,7 +1218,7 @@ public:
         return GradientFor(fr);
     }
     // tensor version of the above functions
-    TensorView<ElemType> DataTensorFor(Matrix<ElemType>& data, size_t rank, const FrameRange& fr)
+    TensorView<ElemType> DataTensorFor(MatrixBasePtr data, size_t rank, const FrameRange& fr)
     {
         try
         {
@@ -1231,11 +1231,11 @@ public:
     }
     TensorView<ElemType> ValueTensorFor(size_t rank, const FrameRange& fr)
     {
-        return DataTensorFor(Value(), rank, fr);
+        return DataTensorFor(ValuePtr(), rank, fr);
     }
     TensorView<ElemType> GradientTensorFor(size_t rank, const FrameRange& fr)
     {
-        return DataTensorFor(Gradient(), rank, fr);
+        return DataTensorFor(GradientPtr(), rank, fr);
     }
 
     // TODO: Are all these meant to read out a scalar? Then rename and verify dimensions.

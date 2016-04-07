@@ -38,14 +38,16 @@ using namespace std;
 
 // main constructor (all constructors except the default one route through this)
 template <class ElemType>
-TensorView<ElemType>::TensorView(const Matrix<ElemType>& sob, const TensorShape& shape)
-    : m_sob(sob.AsReference()), m_shape(shape)
+TensorView<ElemType>::TensorView(const MatrixBasePtr& sob, const TensorShape& shape)
+    : m_sob(dynamic_pointer_cast<Matrix<ElemType>>(sob)), m_shape(shape)
 {
+    if (!m_sob)
+        LogicError("TensorView: Attempted to create a TensorView<ElemType> on a storage object of a different ElemType.");
 #ifdef _DEBUG
     // check bounds of TensorShape against underlying storage object
     // This is useful to detect errors like passing a matrix from the wrong input.
     const auto r = shape.GetLocationRange();
-    const auto n = m_sob.GetNumElements();
+    const auto n = m_sob->GetNumElements();
     if (r.first < 0 || (size_t)r.second > n)
         LogicError("TensorView: Shape bounds [%d,%d) exceed bounds of underlying storage object [0,%d).", (int) r.first, (int) r.second, (int) n);
 #endif
@@ -283,78 +285,6 @@ void TensorView<ElemType>::DoTernaryOpOf(ElemType beta, const TensorView& a, con
     GetSOB().TensorOp(beta, a.GetSOB(), b.GetSOB(), c.GetSOB(), alpha, op, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
 }
 
-// simple test function for testing stuff
-// Call as: Microsoft::MSR::CNTK::TensorView<float>::Test();
-template <class ElemType>
-/*static*/ void TensorView<ElemType>::Test()
-{
-    const DEVICEID_TYPE deviceId = 0; // -1
-    Matrix<ElemType> m1(deviceId);
-    Matrix<ElemType> m2(deviceId);
-    Matrix<ElemType> m3(deviceId);
-    {
-        m1.SetValue(5, 3, {1, 2, 3,
-                           14, 15, 6,
-                           4, 5, 16,
-                           41, 5, 1,
-                           1.8, 4.5, 7});
-        m2.SetValue(5, 1, {42,
-                           13,
-                           1968,
-                           3.1415f,
-                           7});
-
-        m3.Resize(m1);
-
-        // regular zip  (just add m1 to itself)
-        TensorView(m3).DoSumOf(0, TensorView(m1), TensorView(m1), 1);
-        m3.Print();
-
-        // unary op
-        TensorView(m3).DoSqrtOf(0, TensorView(m1), 1);
-        m3.Print();
-
-        // broadcasting of an input
-        TensorView(m3).DoSumOf(0, TensorView(m1), TensorView(m2), 1);
-        m3.Print();
-
-        TensorView(m3).DoMaxOf(0, TensorView(m1), TensorView(m2), 1);
-        m3.Print();
-
-        TensorView(m3).DoGTOf(0, TensorView(m1), TensorView(m2), 1);
-        m3.Print();
-
-        // reduction over columns
-        m3.Resize(5, 1);
-        TensorView(m3).DoSumOf(0, TensorView(m1), TensorView(m2), 1);
-        m3.Print();
-
-        // reduction over rows
-        m3.Resize(1, 3);
-        TensorView(m3).DoSumOf(0, TensorView(m1), TensorView(m2), 1);
-        m3.Print();
-
-        TensorView(m3).DoLogSumOf(0, TensorView(m1), TensorView(m2), 1);
-        m3.Print();
-    }
-    {
-        m1.Resize(1, 42);
-        m2.Resize(13, 1);
-        m3.Resize(13, 21);
-        TensorShape s1(1, 2, 21);
-        TensorShape s2(13, 1);
-        TensorShape s3(13, 1, 21);
-        let t1 = TensorView<ElemType>(m1, s1);
-        t1;
-        let t2 = TensorView<ElemType>(m2, s2);
-        t2;
-        auto t3 = TensorView<ElemType>(m3, s3);
-        t3;
-        t3.DoSumOf(0, t1, t2, 1);
-        m3.Print();
-    }
-}
-
 // -------------------------------------------------------------------
 // matrix product -- GEMM for flattened tensors
 // -------------------------------------------------------------------
@@ -417,11 +347,11 @@ Matrix/*ref*/<ElemType> TensorView<ElemType>::AsMatrix() const
     // create a Matrix view into the TensorView (which in turn is a view over a Matrix...)
     // The way to do this is to use a ColumnSlice.
     // express the TensorView's storage in m_sob's coordinates
-    let firstColumn = m_shape.GetOffset()      / m_sob.GetNumRows();
-    let numColumns  = m_shape.GetNumElements() / m_sob.GetNumRows();
-    if (firstColumn * m_sob.GetNumRows() != m_shape.GetOffset() || numColumns * m_sob.GetNumRows() != m_shape.GetNumElements())
+    let firstColumn = m_shape.GetOffset()      / m_sob->GetNumRows();
+    let numColumns  = m_shape.GetNumElements() / m_sob->GetNumRows();
+    if (firstColumn * m_sob->GetNumRows() != m_shape.GetOffset() || numColumns * m_sob->GetNumRows() != m_shape.GetNumElements())
         InvalidArgument("AsMatrix: Flattened [%s] matrix has an offset or width that is not a multiple of the storage object's row dimension.", string(m_shape).c_str());
-    auto sob = m_sob.ColumnSlice(firstColumn, numColumns);
+    auto sob = m_sob->ColumnSlice(firstColumn, numColumns); // BUGBUG: Since this is a view, it cannot move data location.
     // now reinterpret this slice according to the new tensor shape
     // Example:
     //  - each sob column contains a set of vectors stored as a 2D tensor [I x J], and [S x T] samples
