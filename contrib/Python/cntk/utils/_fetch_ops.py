@@ -14,7 +14,7 @@ from cntk.utils import CNTK_EXECUTABLE_PATH
 # BrainSCript's node definitions are created when a build is triggered so we
 # should be able to find the file in the path of the cntk exeutable.
 CNTKCORE_DEFS = os.path.join(
-        os.path.dirname(CNTK_EXECUTABLE_PATH), 'CNTK.core.bs')
+    os.path.dirname(CNTK_EXECUTABLE_PATH), 'CNTK.core.bs')
 
 REGEX_STANDARD = re.compile(r'(?P<operator>\w+)\((?P<operands>.*?)\) = .*')
 REGEX_COMPNODE = re.compile(
@@ -78,14 +78,14 @@ class %(name)s(%(parentclass)s):
 
     def __init__(self, comp_match):
         self.name = comp_match.group('operator')
-        
+
         if self.name in INPUT_NODES:
-            self.parentclass = 'InputComputationNodeBase'     
+            self.parentclass = 'InputComputationNodeBase'
         elif self.name in IMAGE_INPUT_NODES:
-            self.parentclass = 'ImageInputComputationNodeBase'     
+            self.parentclass = 'ImageInputComputationNodeBase'
         else:
             self.parentclass = 'ComputationNode'
-        
+
         self.raw_operands = comp_match.group('operands')
 
         self.operands = []

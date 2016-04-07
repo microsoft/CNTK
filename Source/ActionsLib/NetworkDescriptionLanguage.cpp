@@ -197,13 +197,13 @@ bool CheckFunction(std::string& p_nodeType, bool* allowUndeterminedVariable)
     else if (EqualInsensitive(nodeType, OperationNameOf(RectifiedLinearNode), L"ReLU")) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(ReshapeNode))) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(RowRepeatNode))) ret = true;
-    else if (EqualInsensitive(nodeType, OperationNameOf(RowSliceNode))) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(RowStackNode))) ret = true;
 #ifdef COMING_SOON
     else if (EqualInsensitive(nodeType, OperationNameOf(SequenceDecoderNode), L"SEWithSM")) ret = true;
 #endif
     else if (EqualInsensitive(nodeType, OperationNameOf(SequenceWithSoftmaxNode), L"SEWithSM")) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(SigmoidNode))) ret = true;
+    else if (EqualInsensitive(nodeType, OperationNameOf(SinNode))) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(SoftmaxNode))) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(SparseInputValue), L"SparseInput")) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(SqrtNode))) ret = true;
@@ -220,6 +220,7 @@ bool CheckFunction(std::string& p_nodeType, bool* allowUndeterminedVariable)
     else if (EqualInsensitive(nodeType, L"ImageInput", L"Image")) ret = true;
     else if (EqualInsensitive(nodeType, L"ImageParameter")) ret = true;
     else if (EqualInsensitive(nodeType, L"RowElementTimes")) ret = true;
+    else if (EqualInsensitive(nodeType, L"RowSlice")) ret = true;
     else if (EqualInsensitive(nodeType, L"Scale")) ret = true;
     else if (EqualInsensitive(nodeType, L"SparseImageInput", L"SparseImage")) ret = true;
     else if (EqualInsensitive(nodeType, L"Transpose")) ret = true;

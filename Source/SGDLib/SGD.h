@@ -297,9 +297,10 @@ public:
           m_keepCheckPointFiles(configSGD(L"keepCheckPointFiles", false)),
           // m_validateAfterModelReloading(configSGD(L"validateAfterModelReloading", true)),
           m_trainCriterionNodeName((const wstring&) configSGD(L"trainCriterionNodeName", L"")),
-          m_evalCriterionNodeName((const wstring&) configSGD(L"evalCriterionNodeName", L"")),
-          m_traceNodeNamesReal(configSGD(L"traceNodeNamesReal", ConfigRecordType::Array(stringargvector()))),
+          m_evalCriterionNodeName ((const wstring&) configSGD(L"evalCriterionNodeName", L"")),
+          m_traceNodeNamesReal    (configSGD(L"traceNodeNamesReal",     ConfigRecordType::Array(stringargvector()))),
           m_traceNodeNamesCategory(configSGD(L"traceNodeNamesCategory", ConfigRecordType::Array(stringargvector()))),
+          m_traceNodeNamesSparse  (configSGD(L"traceNodeNamesSparse",   ConfigRecordType::Array(stringargvector()))),
           m_prevChosenMinibatchSize(0),
           m_lastFinishedEpochTrainLoss(0.0),
           m_distGradAgg(nullptr),
@@ -334,8 +335,8 @@ public:
 
 protected:
 
-    std::vector<ComputationNodeBasePtr>& GetTrainCriterionNodes(ComputationNetworkPtr net);
-    std::vector<ComputationNodeBasePtr>& GetEvalCriterionNodes(ComputationNetworkPtr net);
+    const std::vector<ComputationNodeBasePtr>& GetTrainCriterionNodes(ComputationNetworkPtr net);
+    const std::vector<ComputationNodeBasePtr>& GetEvalCriterionNodes(ComputationNetworkPtr net);
 
     void TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
                            bool networkLoadedFromCheckpoint,
@@ -349,8 +350,8 @@ protected:
     // return true if precomputation is executed.
     bool PreCompute(ComputationNetworkPtr net,
                     IDataReader* trainSetDataReader,
-                    std::vector<ComputationNodeBasePtr>& featureNodes,
-                    std::vector<ComputationNodeBasePtr>& labelNodes,
+                    const std::vector<ComputationNodeBasePtr>& featureNodes,
+                    const std::vector<ComputationNodeBasePtr>& labelNodes,
                     StreamMinibatchInputs* inputMatrices);
 
     // return a reasonable initial learning rate based on the initial mbsize
@@ -524,9 +525,10 @@ protected:
     wstring m_trainCriterionNodeName;
     wstring m_evalCriterionNodeName;
 
-    // enable tracing. Nodes listed here get their m_traceNodeValue and m_traceNodeValueAsCategoryLabel flags set
+    // enable tracing. Nodes listed here get their m_traceNodeValueXXX flags set
     vector<wstring> m_traceNodeNamesReal;
     vector<wstring> m_traceNodeNamesCategory;
+    vector<wstring> m_traceNodeNamesSparse;
 
     size_t m_prevChosenMinibatchSize;
     double m_lastFinishedEpochTrainLoss;

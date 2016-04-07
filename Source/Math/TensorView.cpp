@@ -386,7 +386,10 @@ static void FlattenToMatrix(TensorShape& shape, bool trans, size_t splitPoint)
                 dimsToDrop[k - 1] = true;
     // handle case where last dimension missing, e.g. u'v where u and v are column vectors
     if (splitPoint == shape.GetRank())
+    {
         shape.PadRankInPlace(splitPoint + 1);
+        dimsToDrop.resize(splitPoint + 1, false);
+    }
     // flatten the dimensions
     for (size_t k = 1; k < shape.GetRank(); k++)
         if (dimsToDrop[k - 1])
@@ -409,7 +412,7 @@ template <class ElemType>
 Matrix/*ref*/<ElemType> TensorView<ElemType>::AsMatrix() const
 {
     assert(m_shape.GetRank() == 2);
-    if (m_shape.GetStrides()[0] != 1)
+    if (m_shape.GetStrides()[0] != 1 && m_shape[0] != 1)
         InvalidArgument("AsMatrix: Flattened [%s] matrix is not dense (it has a stride).", string(m_shape).c_str());
     // create a Matrix view into the TensorView (which in turn is a view over a Matrix...)
     // The way to do this is to use a ColumnSlice.

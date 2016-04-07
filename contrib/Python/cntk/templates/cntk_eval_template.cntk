@@ -6,14 +6,23 @@ deviceId=%(DevideId)s
 				   
 Eval=[
 	action="write"
+	nodeUnitTest=%(NodeUnitTest)s
 	run=BrainScriptNetworkBuilder
 
     BrainScriptNetworkBuilder=[
-		%(ModelDescription)s
+%(ModelDescription)s
 	]
 	
-	%(Reader)s	
+%(Reader)s	
 	
+
+    format = [
+        # %%x = shape, %%d = sequenceId
+        sequencePrologue=%%d\t|w.shape %%x\n%%d\t|w\s
+        sampleSeparator=\n%%d\t|w\s
+        elementSeparator=\s
+    ]
+
 	outputPath = "%(OutputFile)s"
 ]
 

@@ -1,4 +1,4 @@
-modelPath=$RunDir$/models/dssm.net
+modelPath=$RunDir$/Models/dssm.net
 
 MBSize=4096
 LRate=0.0001

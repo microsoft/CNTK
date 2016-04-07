@@ -1,6 +1,8 @@
 # CNTK
 
 ## Latest news
+*2016-04-05.* CUDA7.5 support for Windows Build: Windows project files have been updated to automatically utilize CUDA 7.5 if present
+
 *2016-03-24.* New Text Reader (CNTKTextFormatReader) is available
 Read description here https://github.com/Microsoft/CNTK/wiki/CNTKTextFormat-Reader
 

@@ -18,9 +18,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 // ConvolutionNodeBase is a base class for ND-convolution(ConvolutionNode) and ND-pooling(PoolingNode).
 // 
 // 2D convolutions (incl. pooling) support two different storage formats:
-// BUGBUG: These are currently hard-selected depending on circumstances, without being reflected in TensoShape.
 //
-// * legacy mode: Channels are tuples of scalars
+// * legacy ("HWC") mode: Channels are tuples of scalars
 //
 //    This follows "high performance convolutional neural networks for document processing" by Kumar Chellapilla, Sidde Puri, and Patrice Simard.
 //    Each sample is stored as a column-major matrix (height, width) of float[numChannels] (r00, g00, b00, r10, g10, b10, r01, g01, b01, r11, g11, b11).
@@ -29,7 +28,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 //     - output : [C' x W' x H'     x T]  or  ARRAY[1..T] OF                ARRAY[1..H'] OF ARRAY[1..W'] OF ARRAY[1..C']
 //     - filter : [C' x W" x H" x C    ]  or                 ARRAY[1..C] OF ARRAY[1..H"] OF ARRAY[1..W"] OF ARRAY[1..C']
 //
-// * cudnn mode (works both GPU and CPU): Channels are planes
+// * cudnn ("CHW") mode (works both GPU and CPU): Channels are planes
 //
 //     - input :   [W  x H  x C       x T]   or  ARRAY[1..T] OF                 ARRAY[1..C]  OF ARRAY[1..H]  OF ARRAY[1..W]
 //     - output :  [W' x H' x      C' x T]   or  ARRAY[1..T] OF ARRAY[1..C'] OF                 ARRAY[1..H'] OF ARRAY[1..W']
@@ -49,8 +48,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 template <class ElemType>
 class ConvolutionNodeBase : public ComputationNode<ElemType>
 {
-    typedef ComputationNode<ElemType> Base;
-    UsingComputationNodeMembers;
+    typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
 
 public:
     ConvolutionNodeBase(DEVICEID_TYPE deviceId, const wstring& name)
@@ -104,7 +102,7 @@ public:
             fstream >> layout;
             m_imageLayout = (ImageLayoutKind)layout;
             fstream >> m_maxTempMemSizeInSamples;
-        }
+    }
     }
 
     void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
@@ -132,19 +130,19 @@ public:
 
         if (m_poolKind == PoolKind::None)
         {
-            if (inputIndex == 0) // derivative with respect to the weight matrix
-            {
-                auto& grad = Input(0)->GradientAsMatrix();
+        if (inputIndex == 0) // derivative with respect to the weight matrix
+        {
+            auto& grad = Input(0)->GradientAsMatrix();
                 auto sliceInput1Value = Input(1)->ValueFor(fr);
                 m_convEng->BackwardKernel(sliceOutputGrad, sliceInput1Value, grad, fr.IsAllFrames(), *m_tempMatrix);
-            }
-            else if (inputIndex == 1) // derivative with respect to the input feature
-            {
-                auto& input0 = Input(0)->ValueAsMatrix();
-                auto sliceInput1Grad = Input(1)->GradientFor(fr);
-                m_convEng->BackwardData(sliceOutputGrad, input0, sliceInput1Grad, *m_tempMatrix);
-            }
         }
+        else if (inputIndex == 1) // derivative with respect to the input feature
+        {
+            auto& input0 = Input(0)->ValueAsMatrix();
+            auto sliceInput1Grad = Input(1)->GradientFor(fr);
+                m_convEng->BackwardData(sliceOutputGrad, input0, sliceInput1Grad, *m_tempMatrix);
+        }
+    }
         else
         {
             Matrix<ElemType> sliceInput0Grad = Input(0)->GradientFor(fr);
@@ -168,8 +166,8 @@ public:
 
         if (m_poolKind == PoolKind::None)
         {
-            const Matrix<ElemType>& input0 = Input(0)->ValueAsMatrix();
-            Matrix<ElemType> sliceInput1Value = Input(1)->ValueFor(fr);
+        const Matrix<ElemType>& input0 = Input(0)->ValueAsMatrix();
+        Matrix<ElemType> sliceInput1Value = Input(1)->ValueFor(fr);
             m_convEng->Forward(sliceInput1Value, input0, sliceOutputValue, *m_tempMatrix);
         }
         else
@@ -263,7 +261,7 @@ public:
                           configp->Get(L"dimSharing"), configp->Get(L"dimPadding"), configp->Get(L"dimPadLower"), configp->Get(L"dimPadUpper"),
                           ImageLayoutKindFrom(configp->Get(L"imageLayout")), configp->Get(L"maxTempMemSizeInSamples"))
     {
-        AttachInputs(configp, GetExpectedNumInputs());
+        AttachInputsFromConfig(configp, GetExpectedNumInputs());
     }
 
 public:
@@ -322,7 +320,7 @@ public:
     void Validate(bool isFinalValidationPass) override
     {
         Base::Validate(isFinalValidationPass);
-        InferMBLayoutFromInputsForStandardCase();
+        InferMBLayoutFromInputsForStandardCase(isFinalValidationPass);
 
         size_t inputIdx = GetExpectedNumInputs() - 1;
         TensorShape inputShape;
@@ -341,17 +339,17 @@ public:
 
             size_t mapCount = m_mapCount.GetNumElements();
             size_t weightCols = kW * kH * inDims.m_numChannels;
-            
-            // check/infer input [0] (weights)
-            // BUGBUG: For now, we treat the weights as a 2D matrix. They should be a tensor proper.
+
+        // check/infer input [0] (weights)
+        // BUGBUG: For now, we treat the weights as a 2D matrix. They should be a tensor proper.
             Input(0)->ValidateInferInputDimsFrom(TensorShape(mapCount, weightCols));
-            
+
             if (isFinalValidationPass && (Input(0)->GetAsMatrixNumCols() != weightCols || Input(0)->GetAsMatrixNumRows() != mapCount))
             {
                 LogicError("Convolution weight matrix %ls should have dimension [%d, %d] which is [outputChannels, kernelWidth * kernelHeight * inputChannels]", 
                            Input(0)->NodeName().c_str(), (int)mapCount, (int)weightCols);
             }
-            
+
             auto outDims = ConvolveGeometry::ComputeOutputShape(inputShape, m_kernelShape, m_mapCount, m_stride,
                                                                  m_sharing, m_autoPad, m_lowerPad, m_upperPad);
             // ConvolveGeometry always uses CHW.
@@ -360,31 +358,31 @@ public:
         else
         {
             if (m_imageLayout != ImageLayoutKind::CHW)
-            {
+        {
                 InvalidArgument(
                     "%ls %ls supports only cuDNN (CHW) data layout. "
                     "Please specify imageLayout=\"cudnn\" in %ls node in your script "
                     "and make sure input data layout is CHW", NodeName().c_str(), OperationName().c_str(), NodeName().c_str());
-            }
+        }
             inputShape = GetInputSampleLayout(inputIdx);
             auto outDims = ConvolveGeometry::ComputeOutputShape(inputShape, m_kernelShape, m_mapCount, m_stride,
                                                                 m_sharing, m_autoPad, m_lowerPad, m_upperPad);
             SetDims(outDims, HasMBLayout());
-        }
+    }
 
         if (isFinalValidationPass)
         {
             if (m_convEng == nullptr)
-            {
+    {
                 auto geometry = std::make_shared<ConvolveGeometry>(inputShape, m_kernelShape, m_mapCount, m_stride,
                                                                    m_sharing, m_autoPad, m_lowerPad, m_upperPad);
                 m_convEng = ConvolutionEngine<ElemType>::Create(geometry, m_deviceId, m_imageLayout,
                                                                 m_maxTempMemSizeInSamples, m_poolKind);
-            }
+    }
 
             if (Input(0)->GetAsMatrixNumCols() != m_kernelShape.GetNumElements() ||
                 Input(0)->GetAsMatrixNumRows() != m_convEng->Geometry()->KernelCount())
-            {
+    {
                 LogicError("Convolution weight matrix %ls should have dimension [%d, %d] which is [kernelCount, kernelWidth * kernelHeight * inputChannels]",
                            Input(0)->NodeName().c_str(), (int)m_convEng->Geometry()->KernelCount(), (int)m_kernelShape.GetNumElements());
             }
@@ -443,14 +441,14 @@ public:
                       configp->Get(L"dimPadding"), configp->Get(L"dimPadLower"), configp->Get(L"dimPadUpper"),
                       ImageLayoutKindFrom(configp->Get(L"imageLayout")))
     {
-        AttachInputs(configp, GetExpectedNumInputs());
+        AttachInputsFromConfig(configp, GetExpectedNumInputs());
     }
 
 public:
     void Validate(bool isFinalValidationPass) override
     {
         Base::Validate(isFinalValidationPass);
-        InferMBLayoutFromInputsForStandardCase();
+        InferMBLayoutFromInputsForStandardCase(isFinalValidationPass);
 
         if (m_imageLayout != ImageLayoutKind::CHW)
         {
@@ -511,7 +509,7 @@ public:
         : PoolingNodeBase(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"windowWidth"), configp->Get(L"windowHeight"), configp->Get(L"horizontalSubsample"), configp->Get(L"verticalSubsample"), ImageLayoutKindFrom(configp->Get(L"imageLayout")))
     {
         // input, windowWidth, windowHeight, horizontalSubsample, verticalSubsample
-        AttachInputs(configp, this->GetExpectedNumInputs());
+        AttachInputsFromConfig(configp, this->GetExpectedNumInputs());
     }
 
     void Save(File& fstream) const override
@@ -573,7 +571,7 @@ public:
     void Validate(bool isFinalValidationPass) override
     {
         Base::Validate(isFinalValidationPass);
-        InferMBLayoutFromInputsForStandardCase();
+        InferMBLayoutFromInputsForStandardCase(isFinalValidationPass);
 
         // get input tensor shape and interpret as image dimensions
         auto inDims = ImageDimensions(GetInputSampleLayout(0), m_imageLayoutKind);

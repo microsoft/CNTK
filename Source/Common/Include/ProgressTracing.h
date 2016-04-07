@@ -9,6 +9,7 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
+// TODO: make this proper C++ functions with variadic templates and a name that reflects their difference to fprintf(stderr) which already implies printing to log
 // If the Tracing flag is set, print out a timestamp with no new line at the end
 #define PREPENDTS(stream) \
     do \
@@ -51,7 +52,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 {
     bool m_enabled;
     bool m_tracingFlag;
-    bool m_timestampFlag;
+    bool m_timestampFlag;        // TODO: What does this do? TODO: camelCase
     size_t m_totalNumberOfSteps; // total number of epochs in entire training run
     size_t m_currentStepOffset;  // current offset
     Timer m_progressTracingTimer;
@@ -76,6 +77,7 @@ public:
     static bool GetTimestampingFlag()
     {
         return GetStaticInstance().m_timestampFlag;
+        // TODO: timestampFlag or timestampingFlag? (Or timeStampFlag?)
     }
 
     static void SetTracingFlag()

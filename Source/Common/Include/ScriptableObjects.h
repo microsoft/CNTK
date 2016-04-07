@@ -8,6 +8,7 @@
 #include <memory>     // for shared_ptr<>
 #include <functional> // for function<>
 #include <map>
+#include <set>
 
 namespace Microsoft { namespace MSR { namespace ScriptableObjects {
 
@@ -173,24 +174,35 @@ struct HasToString
 };
 
 // -----------------------------------------------------------------------
-// WithTag -- trait to give an object a tag std::string
+// WithTags -- trait to give an object a set of tag strings
 // -----------------------------------------------------------------------
 
-class WithTag
+class WithTags : std::set<std::wstring>
 {
-    std::wstring m_tag;
-
 public:
-    WithTag()
+    WithTags()
     {
     }
-    void SetTag(const std::wstring &tag)
+    bool SetTag(const std::wstring &tag)
     {
-        m_tag = tag;
+        auto res = insert(tag);
+        return res.second; // true if was not there before
     }
-    const std::wstring &GetTag() const
+    bool ClearTag(const std::wstring &tag)
     {
-        return m_tag;
+        auto iter = find(tag);
+        if (iter == end())
+            return false;
+        erase(iter);
+        return true; // indicates that we used to have this tag
+    }
+    bool HasTag(const std::wstring &tag) const
+    {
+        return find(tag) != end();
+    }
+    const std::set<std::wstring>& GetTags() const
+    {
+        return *this;
     }
 };
 
@@ -664,6 +676,18 @@ public:
         }
         return res;
     }
+
+    // helper function: get a vector from config that may be a scalar, a ConfigArray, or nested ConfigArrays meant to be flattened
+    template <typename E>
+    static vector<E> FlattenedVectorFrom(const ConfigValuePtr& valp)
+    {
+        if (valp.Is<vector<E>>())
+            return valp.AsRef<vector<E>>(); // UNTESTED
+        else if (valp.Is<ConfigArray>())
+            return valp.AsRef<ConfigArray>().AsVector<E>([&](const wstring& msg) { valp.Fail(msg); }, /*flatten=*/true);
+        else
+            return std::vector<E>(1, (const E&)valp); // single element
+    }
 };
 typedef shared_ptr<ConfigArray> ConfigArrayPtr;
 
@@ -698,7 +722,7 @@ public:
     } // used for expression naming
     // what this function does is call f() held in this object with the given arguments except optional arguments are verified and fall back to their defaults if not given
     // The arguments are rvalue references, which allows us to pass Thunks, which is important to allow stuff with circular references like CNTK's DelayedNode.
-    ConfigValuePtr Apply(std::vector<ConfigValuePtr> &&args, NamedParams &&namedArgs, const std::wstring &exprName)
+    ConfigValuePtr Apply(std::vector<ConfigValuePtr> &&args, NamedParams &&namedArgs, const std::wstring &exprName) const
     {
         NamedParams actualNamedArgs;
         // actualNamedArgs is a filtered version of namedArgs that contains all optional args listed in namedParams,
@@ -728,6 +752,59 @@ public:
     // TODO: define an overload that takes const & for external users (which will then take a copy and pass it on to Apply &&)
 };
 typedef shared_ptr<ConfigLambda> ConfigLambdaPtr;
+
+// -----------------------------------------------------------------------
+// CustomConfigRecord -- helper for implementors of IConfigRecord
+// Custom classes that implement IConfigRecord can derive from this to make
+// it easier to manage the simulated config record.
+// -----------------------------------------------------------------------
+
+struct CustomConfigRecord : public IConfigRecord // any class that exposes config can derive from this
+{
+    const ConfigValuePtr& /*IConfigRecord::*/ operator[](const std::wstring& id) const override // e.g. confRec[L"message"]
+    {
+        const auto* valuep = Find(id);
+        if (!valuep)
+            RuntimeError("Unknown configuration-record member '%ls'", id.c_str());
+        return *valuep;
+    }
+
+    const ConfigValuePtr* /*IConfigRecord::*/ Find(const std::wstring& id) const // returns nullptr if not found
+    {
+        const auto& mapIter = members.find(id);
+        if (mapIter != members.end())
+            return &mapIter->second;
+        LazyCreateConfigMember(id);
+        const auto& mapIter2 = members.find(id);
+        if (mapIter2 != members.end())
+            return &mapIter2->second;
+        else
+            return nullptr;
+    }
+
+    void InsertConfigMember(const std::wstring& id, ConfigValuePtr&& valuep) const/*because it is called from Find() which is const*/
+    {
+        const auto res = members.insert(make_pair(id, move(valuep)));
+        assert(&res.first->second == &members.find(id)->second);
+        assert(res.second);        // this says whether it has been inserted. It better be.
+    }
+
+    // call this whenever anything changes about this node
+    // Once we use a ComputationNode as a config record, we are in immutable BS world.
+    // So we should not really need to ever call this.
+    // However, we *must* call it at least in DetachInputs() in order to break cyclic dependencies.
+    void ClearConfigMemberCache()
+    {
+        members.clear();
+    }
+
+    // user of this class must implement LazyCreateConfigMember() and GetMemberIds()
+    virtual void LazyCreateConfigMember(const std::wstring &id) const = 0;
+
+protected:
+    // cached return values from IConfigRecord implementation
+    mutable std::map<std::wstring, ScriptableObjects::ConfigValuePtr> members; // [id] -> cached ConfigValuePtr
+};
 
 // -----------------------------------------------------------------------
 // ConfigurableRuntimeType -- interface to scriptable runtime types
@@ -801,7 +878,9 @@ public:
             Register(typeId, std::move(rtInfo));
         }
     };
+
     // to register a class that exists in dual precisions (Something<ElemType>>, use this one instead
+    // ConfigurableRuntimeTypeRegister::AddFloatDouble<ClassName<float>,ClassName<double>> registerClassName(L"ClassName")l
     template <class Cfloat, class Cdouble>
     struct AddFloatDouble
     {
@@ -846,15 +925,9 @@ inline std::vector<T> IConfigRecord::operator()(const std::wstring &id, const st
         return std::vector<T>(1, (const T &) *valp); // scalar value
     const ConfigArray &arr = *valp;                  // actual array
 #if 1                                                // TODO: test whether this works correctly w.r.t. typecasting
-    return arr.AsVector<T>([&](const std::wstring &msg)
-                           {
-                               valp->Fail(msg);
-                           });
+    return arr.AsVector<T>([&](const std::wstring &msg) { valp->Fail(msg); });
 #else
-    const auto size = arr.GetSize([&](const std::wstring &msg)
-                                  {
-                                      valp->Fail(msg);
-                                  });
+    const auto size = arr.GetSize([&](const std::wstring &msg) { valp->Fail(msg); });
     std::vector<T> res(size);
     for (int i = 0; i < size; i++)
         res[i] = (const T &) arr.At(i);

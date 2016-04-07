@@ -64,7 +64,7 @@ default_openblas=""
 
 # NOTE: Will get compilation errors with cuda-6.0
 default_cudas="cuda-7.5 cuda-7.0 cuda-6.5"
-default_kaldis="kaldi-trunk"
+default_kaldis="kaldi-trunk kaldi-c024e8aa"
 default_gdks=". gdk/usr"
 default_cubs="cub-1.4.1"
 default_cudnns="cudnn-4.0"
@@ -597,6 +597,17 @@ then
         echo ImageReader will be built without zip container support.
     else
         echo Found libzip at $libzip_path
+    fi
+fi
+
+if test x$kaldi_path = x
+then
+    kaldi_path=$(find_kaldi)
+    if test x$kaldi_path = x ; then
+        echo Cannot locate Kaldi files
+        echo Kaldi2Reader will NOT be built.
+    else
+        echo Found Kaldi at $kaldi_path
     fi
 fi
 

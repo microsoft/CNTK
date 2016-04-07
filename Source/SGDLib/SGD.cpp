@@ -73,11 +73,7 @@ void SGD<ElemType>::Train(function<ComputationNetworkPtr(DEVICEID_TYPE)> createN
     m_needAdaptRegularization = false;
 
     // set tracing flags
-    for (const auto& traceNodeName : m_traceNodeNamesReal)
-        net->GetNodeFromName(traceNodeName)->EnableNodeTracing(/*isCategoryLabel=*/false);
-
-    for (const auto& traceNodeName : m_traceNodeNamesCategory)
-        net->GetNodeFromName(traceNodeName)->EnableNodeTracing(/*isCategoryLabel=*/true);
+    net->EnableNodeTracing(m_traceNodeNamesReal, m_traceNodeNamesCategory, m_traceNodeNamesSparse);
 
     TrainOrAdaptModel(startEpoch, net, loadNetworkFromCheckpoint, net, nullptr, trainSetDataReader, validationSetDataReader);
 }
@@ -150,15 +146,20 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
                                       IDataReader* trainSetDataReader,
                                       IDataReader* validationSetDataReader)
 {
-    auto& featureNodes = net->FeatureNodes();
-    auto& labelNodes = net->LabelNodes();
-    auto& criterionNodes = GetTrainCriterionNodes(net);
+    let& featureNodes = net->FeatureNodes();
+    let& labelNodes = net->LabelNodes();
+    let& criterionNodes = GetTrainCriterionNodes(net);
 
     fprintf(stderr, "\n");
     LOGPRINTF(stderr, "Training criterion node(s):\n");
     for (const auto& node : criterionNodes)
     {
         LOGPRINTF(stderr, "\t%ls = %ls\n", node->NodeName().c_str(), node->OperationName().c_str());
+    }
+    if (criterionNodes.empty())
+    {
+        LOGPRINTF(stderr, "\t(none)\n");
+        InvalidArgument("TrainOrAdaptModel: No criterion node was specified.");
     }
 
     // determine evaluationNodes from GetEvalCriterionNodes(), ensuring each criterion is only logged once
@@ -221,19 +222,20 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
     // TODO: Should this be done in SGD::Adapt()?
     // TODO: Redo this leveraging that we now have shared_ptrs. It is probably even OK if both networks share feature nodes.
     // TODO: Then we can also share the MBLayout; which currently is copied by value.
-    std::vector<ComputationNodeBasePtr> refFeatureNodes;
+    std::vector<ComputationNodeBasePtr> refFeatureNodes; // we keep the original network's features here
     if (m_needAdaptRegularization && m_adaptationRegType == AdaptationRegType::KL && refNode != nullptr)
     {
+        refNet->InvalidateCompiledNetwork(); // prepare to re-compile
         // replace input nodes in ref network by input nodes of the main network
         refFeatureNodes.resize(featureNodes.size());
         for (size_t i = 0; i < featureNodes.size(); i++)
         {
             // we need to keep this info to undo this later
             // TODO: After the change to shared_ptrs, this may no longer be necessary.
-            refFeatureNodes[i] = refNet->GetNodeFromName(featureNodes[i]->NodeName());
+            refFeatureNodes[i] = refNet->GetNodeFromName(featureNodes[i]->NodeName()); // remember so that we can restore them later
             refNet->ChangeNode(featureNodes[i]->NodeName(), featureNodes[i]);
         }
-        refNet->InvalidateCompiledNetwork(); // prepare to re-compile
+        //const_cast<MBLayoutPtr&>(refNet->GetMBLayoutPtrOfNetwork()) = net->GetMBLayoutPtrOfNetwork(); // WORKAROUND
         refNet->CompileNetwork();
 
         // allocate memory for forward computation
@@ -261,9 +263,7 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
 
     std::vector<wstring> evalNodeNames;
     for (size_t i = 0; i < evaluationNodes.size(); i++)
-    {
         evalNodeNames.push_back(evaluationNodes[i]->NodeName());
-    }
 
     size_t totalSamplesSeen = 0;
     double learnRatePerSample = 0.5f / m_mbSize[startEpoch];
@@ -285,7 +285,6 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
         InitModelAggregationHandler(m_syncStatsTrace);
     }
     
-
     // precompute mean and invStdDev nodes and save initial model
     // When no precompute, only save if we did not load the model from a 
     // checkpoint but instead built it from a network description
@@ -507,12 +506,12 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
                     learnRatePerSample, epochTime);
 
             // TODO: why these extra log messages here and not for 1 eval criterion?
-            LOGPRINTF(stderr, "Finished Epoch[%2d of %d]: Criterion Node [%ls] Per Sample = %.8g\n",
+            LOGPRINTF(stderr, "Finished Epoch[%2d of %d]:     Criterion Node [%ls] Per Sample = %.8g\n",
                       i + 1, (int) m_maxEpochs, criterionNodes[0]->NodeName().c_str(), epochCriterion);
 
             for (size_t j = 0; j < epochEvalErrors.size(); j++)
             {
-                LOGPRINTF(stderr, "Finished Epoch[%2d of %d]: Evaluation Node [%ls] Per Sample = %.8g\n",
+                LOGPRINTF(stderr, "Finished Epoch[%2d of %d]:     Evaluation Node [%ls] Per Sample = %.8g\n",
                           i + 1, (int) m_maxEpochs, evalNodeNames[j].c_str(), epochEvalErrors[j]);
             }
         }
@@ -901,7 +900,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
             if (m_needAdaptRegularization && m_adaptationRegType == AdaptationRegType::KL && refNode)
             {
                 size_t actualMBSize2 = refNet->DetermineActualMBSizeFromFeatures();
-                refNet->GetMBLayoutPtr()->CopyFrom(net->GetMBLayoutPtr()); // TODO: This is UNTESTED (before this was missing, seemingly inconsistently)
+                refNet->GetMBLayoutPtrOfNetwork()->CopyFrom(net->GetMBLayoutPtrOfNetwork()); // TODO: This is UNTESTED (before this was missing, seemingly inconsistently)
 
                 if (actualMBSize2 != actualMBSize)
                     LogicError("TrainOneEpoch: refNet has different MB size than main net??");
@@ -957,7 +956,8 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
         } // if (actualMBSize > 0)
 
         // for progress and statistics, we should only count frames that are not gaps
-        size_t numSamplesWithLabel = wasDataRead ? net->GetNumSamplesWithLabel(actualMBSize) : 0;
+        // BUGBUG: Once we have multiple layouts, this must be done on a per-criterion basis.
+        size_t numSamplesWithLabel = wasDataRead ? net->GetNumSamplesWithLabelOfNetwork(actualMBSize) : 0;
 
         // Sum of actualMBSize across all nodes when using parallel training
         size_t aggregateNumSamples = actualMBSize;
@@ -1037,8 +1037,9 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                     if (smoothedGradient.HasNan("TrainOneEpoch/UpdateWeights(): "))
                         LogicError("%ls %ls operation has NaNs in smoothedGradient.", node->NodeName().c_str(), node->OperationName().c_str());
 #endif
+                    // BUGBUG (Issue #95): Access to net MBLayout can no longer be done if we have multiple input layouts
                     UpdateWeights(node, smoothedGradient, learnRatePerSample,
-                                  GetMomentumPerSample(epochNumber /*BUGBUG workaround:*/, net->GetMBLayoutPtr()->GetNumParallelSequences()), aggregateNumSamples,
+                                  GetMomentumPerSample(epochNumber /*BUGBUG workaround:*/, net->GetMBLayoutPtrOfNetwork()->GetNumParallelSequences()), aggregateNumSamples,
                                   m_L2RegWeight, m_L1RegWeight,
                                   m_needAveMultiplier, m_useNesterovMomentum);
 #ifdef _DEBUG
@@ -1262,7 +1263,7 @@ static map<ComputationNetworkPtr, vector<ComputationNodeBasePtr>> tmpCriterionNo
 // TODO: test this, then remove this comment
 
 template <class ElemType>
-std::vector<ComputationNodeBasePtr>& SGD<ElemType>::GetTrainCriterionNodes(ComputationNetworkPtr net)
+const std::vector<ComputationNodeBasePtr>& SGD<ElemType>::GetTrainCriterionNodes(ComputationNetworkPtr net)
 {
     if (!m_trainCriterionNodeName.empty())
     {
@@ -1274,7 +1275,7 @@ std::vector<ComputationNodeBasePtr>& SGD<ElemType>::GetTrainCriterionNodes(Compu
 }
 
 template <class ElemType>
-std::vector<ComputationNodeBasePtr>& SGD<ElemType>::GetEvalCriterionNodes(ComputationNetworkPtr net)
+const std::vector<ComputationNodeBasePtr>& SGD<ElemType>::GetEvalCriterionNodes(ComputationNetworkPtr net)
 {
     if (!m_evalCriterionNodeName.empty())
     {
@@ -1290,8 +1291,8 @@ std::vector<ComputationNodeBasePtr>& SGD<ElemType>::GetEvalCriterionNodes(Comput
 template <class ElemType>
 bool SGD<ElemType>::PreCompute(ComputationNetworkPtr net,
                                IDataReader* trainSetDataReader,
-                               std::vector<ComputationNodeBasePtr>& featureNodes,
-                               std::vector<ComputationNodeBasePtr>& labelNodes,
+                               const std::vector<ComputationNodeBasePtr>& featureNodes,
+                               const std::vector<ComputationNodeBasePtr>& labelNodes,
                                StreamMinibatchInputs* inputMatrices)
 {
     std::list<ComputationNodeBasePtr> nodes = net->GetNodesRequiringPreComputation(); // this tests all HasComputed() flags
@@ -1306,7 +1307,7 @@ bool SGD<ElemType>::PreCompute(ComputationNetworkPtr net,
     LOGPRINTF(stderr, "Precomputing --> %lu PreCompute nodes found.\n\n", nodes.size());
     for (const auto & node : nodes)
     {
-        LOGPRINTF(stderr, "\tNodeName: %ls\n", (node->NodeName()).c_str());
+        LOGPRINTF(stderr, "\t%ls = %ls()\n", node->NodeName().c_str(), node->OperationName().c_str());
     }
 
     // compute
@@ -1342,9 +1343,7 @@ bool SGD<ElemType>::PreCompute(ComputationNetworkPtr net,
 
     // finalize
     for (auto & node : nodes)
-    {
         dynamic_pointer_cast<IPreComputeNode>(node)->MarkComputed(true /*done accumulating*/);
-    }
 
     fprintf(stderr, "\n");
     LOGPRINTF(stderr, "Precomputing --> Completed.\n\n");
@@ -1559,9 +1558,9 @@ size_t SGD<ElemType>::AdaptiveMinibatchSizing(ComputationNetworkPtr net,
     if (epochNumber < 2 && m_prevChosenMinibatchSize != 0)
     {
         // newly started training: any previous MB size stored in the model is to be ignored
-        LOGPRINTF(stderr, "before epoch .2, previous minibatchSize %zd is "
-                  "considered invalid -> resetting\n",
-                m_prevChosenMinibatchSize);
+        // BUGBUG: %z is not supported in VS 2013, is it?
+        LOGPRINTF(stderr, "before epoch .2, previous minibatchSize %zd is considered invalid -> resetting\n",
+                  m_prevChosenMinibatchSize);
         m_prevChosenMinibatchSize = 0;
     }
 
@@ -1570,8 +1569,7 @@ size_t SGD<ElemType>::AdaptiveMinibatchSizing(ComputationNetworkPtr net,
         (epochNumber + 1) > m_minibatchSizeTuningFrequency &&
         (epochNumber + 1) % m_minibatchSizeTuningFrequency != 0)
     {
-        LOGPRINTF(stderr, "AdaptiveMinibatchSearch: Search for a better minibatchSize "
-                  "in epoch %d skipped, keeping minibatchSize of %zd\n",
+        LOGPRINTF(stderr, "AdaptiveMinibatchSearch: Search for a better minibatchSize in epoch %d skipped, keeping minibatchSize of %zd\n",
                   epochNumber + 1, m_prevChosenMinibatchSize);
         chosenMinibatchSize = m_prevChosenMinibatchSize;
     }
@@ -1582,8 +1580,7 @@ size_t SGD<ElemType>::AdaptiveMinibatchSizing(ComputationNetworkPtr net,
             // if m_prevChosenMinibatchSize (the chosen minibatch size for the previous epoch) div 2
             // is higher than initialMinibatchSize (the minibatch size we start with for this epoch),
             // then start the search with m_prevChosenMinibatchSize/2 instead of initialMinibatchSize.
-            LOGPRINTF(stderr, "AdaptiveMinibatchSearch: Limiting minMinibatchSize to "
-                      "largest of previous minibatchSize = (%d / 2) or %d\n",
+            LOGPRINTF(stderr, "AdaptiveMinibatchSearch: Limiting minMinibatchSize to largest of previous minibatchSize = (%d / 2) or %d\n",
                       (int) m_prevChosenMinibatchSize, (int) minMinibatchSize);
             minMinibatchSize = max(minMinibatchSize, m_prevChosenMinibatchSize / 2);
         }
@@ -1595,9 +1592,8 @@ size_t SGD<ElemType>::AdaptiveMinibatchSizing(ComputationNetworkPtr net,
         {
             assert(m_prevChosenMinibatchSize >= chosenMinibatchSize);
 
-            LOGPRINTF(stderr, "AdaptiveMinibatchSearch: Limiting maxMinibatchSize to "
-                      "previous minibatchSize %zd*2\n",
-                    m_prevChosenMinibatchSize);
+            LOGPRINTF(stderr, "AdaptiveMinibatchSearch: Limiting maxMinibatchSize to previous minibatchSize %zd*2\n",
+                      m_prevChosenMinibatchSize);
             maxMinibatchSize = min(maxMinibatchSize, m_prevChosenMinibatchSize * 2);
         }
 
@@ -1710,14 +1706,12 @@ size_t SGD<ElemType>::SearchForBestMinibatchSize(ComputationNetworkPtr net,
             lastTriedTrialEpochCriterion = epochCriterion;
             if (trialMinibatchSizeFloat * minibatchSizeTuningFactor <= maxMinibatchSize)
             {
-                LOGPRINTF(stderr, "AdaptiveMinibatchSearch: Keep searching... "
-                          "EpochCriterion = %.10g vs BaseCriterion = %.10g\n",
+                LOGPRINTF(stderr, "AdaptiveMinibatchSearch: Keep searching... EpochCriterion = %.10g vs BaseCriterion = %.10g\n",
                           epochCriterion, baseCriterion);
             }
         }
     }
-    LOGPRINTF(stderr, "AdaptiveMinibatchSearch: Search successful!!! Chose new minibatchSize of %d. "
-              "EpochCriterion = %.10g vs BaseCriterion = %.10g\n\n",
+    LOGPRINTF(stderr, "AdaptiveMinibatchSearch: Search successful. New minibatchSize is %d. EpochCriterion = %.10g vs BaseCriterion = %.10g\n\n",
               (int) lastTriedTrialMinibatchSize, lastTriedTrialEpochCriterion, baseCriterion);
 
     return lastTriedTrialMinibatchSize;
@@ -1801,7 +1795,8 @@ void SGD<ElemType>::AttemptUtteranceDerivativeFeatures(ComputationNetworkPtr net
         if (outputNodes.empty())
             LogicError("no output node was found.");
 
-        trainSetDataReader->CopyMBLayoutTo(net->GetMBLayoutPtr());
+        // BUGBUG (Issue #95): This is no longer correct once we have multiple input layouts.
+        trainSetDataReader->CopyMBLayoutTo(net->GetMBLayoutPtrOfNetwork());
         net->ForwardProp(outputNodes[0]); // only evaluate the first output
         trainSetDataReader->SetNetOutput(uttInfo,
                                          dynamic_pointer_cast<ComputationNode<ElemType>>(outputNodes[0])->Value(),
