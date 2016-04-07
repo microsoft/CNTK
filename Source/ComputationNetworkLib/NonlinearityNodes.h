@@ -108,9 +108,11 @@ public:
 // LogNode (input)
 // ExpNode (input)
 // CosineNode (input)
+// SinNode (input)
 // Abs(input)
 // Negate (input)
 // Sqrt (input)
+// Reciprocal (input)
 // These are all implemented by single-opcode functions and can thus be declared by a macro.
 // -----------------------------------------------------------------------
 
