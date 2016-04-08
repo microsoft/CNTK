@@ -15,10 +15,7 @@ Format(value, format) = new StringFunction [ what = 'Format' ; arg = value ; how
 Replace(s, from, to) = new StringFunction [ what = 'Replace' ; arg = s ; replacewhat = from ; withwhat = to ] 
 Substr(s, begin, num) = new StringFunction [ what = 'Substr' ; arg = s ; pos = begin ; chars = num ] 
 Chr(c) = new StringFunction [ what = 'Chr' ;  arg = c ] 
-Floor(x)  = new NumericFunction [ what = 'Floor' ;  arg = x ] 
 Length(x) = new NumericFunction [ what = 'Length' ; arg = x ] 
-Ceil(x) = -Floor(-x) 
-Round(x) = Floor(x+0.5)
 Sign(x) = if x > 0 then 1 else if x < 0 then -1 else 0 
 Min(a,b) = if a < b then a else b 
 Max(a,b) = if a > b then a else b 
