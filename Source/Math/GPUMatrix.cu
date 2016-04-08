@@ -937,7 +937,7 @@ __global__ void _doScatterColumnsOf(ElemType* us, size_t usStride, size_t usCols
         return;
 
     // id = i + jIn  *  aStride
-    // Each thread processes one column of idx and one row of a.
+    // Each thread processes one element of a
     CUDA_LONG i   = id % aStride; // row index into 'a' and 'us'
     CUDA_LONG jIn = id / aStride; // col index into 'a' and 'idx'
 
@@ -991,7 +991,7 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::DoScatterColumnsOf(ElemType beta, cons
     Scale(beta, us); // if beta is 0, then this will be a memset()
 
     // launch the kernel
-    CUDA_LONG NN = (CUDA_LONG)(a.GetNumRows() * idx.GetNumCols()); // linear space identifying each individual input element
+    CUDA_LONG NN = (CUDA_LONG)(a.GetNumElements()); // linear space identifying each individual input element
     SyncGuard syncGuard;
     GridDim grid(NN);
     _doScatterColumnsOf<ElemType><<<grid.m_blocksPerGrid, grid.m_threadsPerBlock, 0, t_stream>>>(Data(), GetNumRows(), GetNumCols(), idx.Data(), idx.GetNumRows(), a.Data(), a.GetNumRows(), alpha, NN);

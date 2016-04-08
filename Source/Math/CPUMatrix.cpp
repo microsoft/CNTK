@@ -693,7 +693,7 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::DoScatterColumnsOf(ElemType beta, cons
     foreach_column(jIn, a)
     {
         auto jOutF = idx(0, jIn); // this is the column we copy/add into
-        if (jOutF < 0)          // negative index means gap
+        if (jOutF < 0)            // negative index means gap
             continue;
         size_t jOut = (size_t)jOutF;
         if (jOut >= GetNumCols())
