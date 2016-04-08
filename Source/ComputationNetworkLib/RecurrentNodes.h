@@ -183,6 +183,8 @@ public:
 
     virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
     {
+        Input(0)->Gradient().TransferToDeviceIfNotThere(Gradient().GetDeviceId(), /*isBeingMoved=*/ true);
+
         assert(inputIndex == 0);
         inputIndex;
 

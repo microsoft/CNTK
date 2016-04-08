@@ -339,11 +339,12 @@ static void FlattenToMatrix(TensorShape& shape, bool trans, size_t splitPoint)
 
 // convert tensor into a Matrix object
 template <class ElemType>
-Matrix/*ref*/<ElemType> TensorView<ElemType>::AsMatrix() const
+shared_ptr<Matrix<ElemType>> TensorView<ElemType>::AsMatrix() const
 {
     assert(m_shape.GetRank() == 2);
     if (m_shape.GetStrides()[0] != 1 && m_shape[0] != 1)
         InvalidArgument("AsMatrix: Flattened [%s] matrix is not dense (it has a stride).", string(m_shape).c_str());
+
     // create a Matrix view into the TensorView (which in turn is a view over a Matrix...)
     // The way to do this is to use a ColumnSlice.
     // express the TensorView's storage in m_sob's coordinates
@@ -351,7 +352,7 @@ Matrix/*ref*/<ElemType> TensorView<ElemType>::AsMatrix() const
     let numColumns  = m_shape.GetNumElements() / m_sob->GetNumRows();
     if (firstColumn * m_sob->GetNumRows() != m_shape.GetOffset() || numColumns * m_sob->GetNumRows() != m_shape.GetNumElements())
         InvalidArgument("AsMatrix: Flattened [%s] matrix has an offset or width that is not a multiple of the storage object's row dimension.", string(m_shape).c_str());
-    auto sob = m_sob->ColumnSlice(firstColumn, numColumns); // BUGBUG: Since this is a view, it cannot move data location.
+
     // now reinterpret this slice according to the new tensor shape
     // Example:
     //  - each sob column contains a set of vectors stored as a 2D tensor [I x J], and [S x T] samples
@@ -361,12 +362,20 @@ Matrix/*ref*/<ElemType> TensorView<ElemType>::AsMatrix() const
     //  - which in turn yields a [K x (J * S x*T)] matrix
     //    which gets reinterpreted back as a [K x J x S x T] tensor
     // In the special case of sparse matrices, this split cannot be done. E.g. in the above example, we could only multiply with a [K x I x J] tensor.
-    if (sob.GetMatrixType() == MatrixType::DENSE)
-        return sob.Reshaped(m_shape[0], m_shape[1]);
-    else if (m_shape[0] == sob.GetNumRows()) // SPARSE matrices cannot be reshaped, so we only support 1D and 2D tensors
-        return sob;
-    else
+    let needsSlicing = firstColumn != 0 || numColumns != m_sob->GetNumCols();
+    let needsReshaping = m_shape[0] != m_sob->GetNumRows() || m_shape[1] != m_sob->GetNumCols();
+
+    // Note: If an output matrix is a view and needs to move to a different device, we will fail later, since the current structure cannot supoprt that.
+    // As a consequence, some configurations will simply not work currently.
+    // We minimize the chance of this by using the original storage object whenever possible.
+    if (!needsSlicing && !needsReshaping)     // no need to mess with the storage object: pass it on as it is. Full support for moving devices.
+        return m_sob;
+    else if (needsSlicing && !needsReshaping) // slicing is supported for sparse as well
+        return make_shared<Matrix<ElemType>>(m_sob->ColumnSlice(firstColumn, numColumns));
+    else if (m_sob->GetMatrixType() != MatrixType::DENSE) // needsReshaping: not allowed for sparse matrices
         RuntimeError("AsMatrix: Sparse tensors are not supported unless they are 1D or 2D matrices.");
+    else                                                  // dense can slice and reshape neutrally, but will also fail if output matrix needs to move devices
+        return make_shared<Matrix<ElemType>>(m_sob->ColumnSlice(firstColumn, numColumns).Reshaped(m_shape[0], m_shape[1]));
 }
 
 template <class ElemType>
@@ -401,9 +410,9 @@ void TensorView<ElemType>::DoMatrixProductOf(ElemType beta, bool transC, const T
     auto C =   Reshaped(shapeC).AsMatrix();
     // and go
     if (!transC)
-        Matrix<ElemType>::MultiplyAndWeightedAdd(alpha, A, transA, B, transB, beta, C);
+        Matrix<ElemType>::MultiplyAndWeightedAdd(alpha, *A, transA, *B, transB, beta, *C);
     else // C' = A * B  <==>  C = (A * B)' = B' * A'
-        Matrix<ElemType>::MultiplyAndWeightedAdd(alpha, B, !transB, A, !transA, beta, C);
+        Matrix<ElemType>::MultiplyAndWeightedAdd(alpha, *B, !transB, *A, !transA, beta, *C);
 }
 
 template class TensorView<float>;

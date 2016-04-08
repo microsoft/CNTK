@@ -227,6 +227,7 @@ void Matrix<ElemType>::ShallowCopyFrom(const Matrix<ElemType>& other)
 //  - first-time initialization, e.g. of a ColumnSlice (NONE->!NONE)
 //  - after creating a temp copy for reading
 //  - collapse temp copies after writing to one of them
+//  - setting matrixType if not set yet
 template <class ElemType>
 void Matrix<ElemType>::SetDataLocation(CurrentDataLocation location, MatrixType type) const
 {
@@ -250,25 +251,37 @@ void Matrix<ElemType>::SetDataLocation(CurrentDataLocation location, MatrixType 
     //        - read case: OK
     //        - write case: forbidden to call this function in this way
     //     - NONE -> !NONE: FORBIDDEN
-    if (m_currentDataLocation != location && m_currentDataLocation != CurrentDataLocation::NONE/*fresh object from ColumnSlice()*/)
+    if (m_currentDataLocation != location &&                  // it is attempted to change it
+        m_currentDataLocation != CurrentDataLocation::NONE && // from a valid object (NONE means we are a fresh object from ColumnSlice())
+        location != CurrentDataLocation::BOTH)                // and we are changing it not into a temporary copy for reading
     {
-        if (location != CurrentDataLocation::BOTH)
+        // we get here if we wrote into this object that was BOTH but is no longer, or if we move between CPU and GPU
+        // Both is forbidden on shared views since we cannot inform other views of this change.
+        // We will now check any *valid* pointer will now be checked for uniqueness. There may be mismatching left-over pointers kept around in case they should be revived.
+        if (m_matrixType == MatrixType::DENSE) // note: this checks the current type, not the new one passed in. Asssumption: this tells us which pointers are valid.
         {
-            // we get here if we wrote into this object that was BOTH but is no longer, or if we move between CPU and GPU
-            // Both is forbidden on shared views since we cannot inform other views of this change.
-            if (m_CPUMatrix)       ((BaseMatrix<ElemType>*)m_CPUMatrix      .get())->VerifyResizable("SetDataLocation [CPUMatrix]");
-            if (m_GPUMatrix)       ((BaseMatrix<ElemType>*)m_GPUMatrix      .get())->VerifyResizable("SetDataLocation [GPUMatrix]");
-            if (m_CPUSparseMatrix) ((BaseMatrix<ElemType>*)m_CPUSparseMatrix.get())->VerifyResizable("SetDataLocation [CPUSparseMatrix]");
-            if (m_GPUSparseMatrix) ((BaseMatrix<ElemType>*)m_GPUSparseMatrix.get())->VerifyResizable("SetDataLocation [GPUSparseMatrix]");
-            // TODO: Why do we need these typecasts? (without it will fail with "cannot access private member declared in class 'Microsoft::MSR::CNTK::CPUMatrix<float>'")
+            assert(m_currentDataLocation == CurrentDataLocation::GPU || m_CPUMatrix);
+            assert(m_currentDataLocation == CurrentDataLocation::CPU || m_GPUMatrix);
+            if (m_currentDataLocation != CurrentDataLocation::GPU) ((BaseMatrix<ElemType>*)m_CPUMatrix.get())->VerifyResizable("SetDataLocation [CPUMatrix]");
+            if (m_currentDataLocation != CurrentDataLocation::CPU) ((BaseMatrix<ElemType>*)m_GPUMatrix.get())->VerifyResizable("SetDataLocation [GPUMatrix]");
         }
+        else if (m_matrixType == MatrixType::SPARSE)
+        {
+            assert(m_currentDataLocation == CurrentDataLocation::GPU || m_CPUSparseMatrix);
+            assert(m_currentDataLocation == CurrentDataLocation::CPU || m_GPUSparseMatrix);
+            if (m_currentDataLocation != CurrentDataLocation::GPU) ((BaseMatrix<ElemType>*)m_CPUSparseMatrix.get())->VerifyResizable("SetDataLocation [CPUSparseMatrix]");
+            if (m_currentDataLocation != CurrentDataLocation::CPU) ((BaseMatrix<ElemType>*)m_GPUSparseMatrix.get())->VerifyResizable("SetDataLocation [GPUSparseMatrix]");
+        }
+        // TODO: Why do we need these typecasts? (without it will fail with "cannot access private member declared in class 'Microsoft::MSR::CNTK::CPUMatrix<float>'")
 
-        if (m_baseMatrix && !OwnBuffer()) // same arguments for externally owned matrices
+        if (m_baseMatrix && !OwnBuffer()) // same arguments for externally owned matrices: Can read a temp but not write.
             LogicError("SetDataLocation: A non-owning object cannot be written to in BOTH state.");
     }
+    // passed validation: we can now update the state
+
     m_currentDataLocation = location;
 
-    // set the matrix type if passed in
+    // update the matrix type if passed in
     if (type != MatrixType::UNDETERMINED)
         m_matrixType = type;
 
