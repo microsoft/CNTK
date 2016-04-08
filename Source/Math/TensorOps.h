@@ -181,6 +181,7 @@ DECL ElemType LogAdd(ElemType x, ElemType y)
     }
 
 DefNullaryOp(ConstOne, 1);
+DefNullaryOp(ZeroDerivative, 0);
 #pragma pop_macro("DefNullaryOp")
 
 #pragma push_macro("DefUnaryOp")
@@ -205,7 +206,7 @@ DefUnaryOp(Log, ClippedLog(a));
 DefUnaryOp(LinearRectifier, a > 0 ? a : 0);
 DefUnaryOp(Cosine, cos_(a));
 DefUnaryOp(Reciprocal, a == 0 ? 0 : 1 / a);
-DefUnaryOp(ZeroDerivative, a * 0);
+
 #pragma pop_macro("DefUnaryOp")
 
 #pragma push_macro("DefBinaryOp")
