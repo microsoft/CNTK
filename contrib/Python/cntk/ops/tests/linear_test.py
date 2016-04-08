@@ -22,6 +22,7 @@ import numpy as np
     ([[30]], [[10]]),
     ([[1.5,2.1]], [[10,20]]),
     #TODO: enable once all branches are merged to master
+    #Test with matrix
     #([5], [[30,40], [1,2]]),
     #Adding two 3x2 inputs of sequence length 1
     #([[30,40], [1,2], [0.1, 0.2]], [[10,20], [3,4], [-0.5, -0.4]]),     
