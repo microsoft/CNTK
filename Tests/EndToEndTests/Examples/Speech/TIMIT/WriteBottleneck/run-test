@@ -23,7 +23,7 @@ OutputDir=$DataDir/bottleneck
 cd $OutputDir && md5sum --quiet -c $TEST_DIR/expected_output.txt
 if [ $? != 0 ]; then
   echo Error: Output files are different.
-  exit 1
+  $ExitCode = 1
 fi
 echo MD5 check succeeded.
 
