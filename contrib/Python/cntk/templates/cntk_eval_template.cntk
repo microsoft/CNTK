@@ -3,7 +3,8 @@
 
 command=Eval
 deviceId=%(DevideId)s	
-				   
+precision="%(Precision)s"
+
 Eval=[
 	action="write"
 	nodeUnitTest=%(NodeUnitTest)s

@@ -5,6 +5,7 @@ command=Train
 
 modelPath="%(ModelPath)s"		
 deviceId=%(DevideId)s					   
+precision="%(Precision)s"
 
 Train=[
 	action="train"
