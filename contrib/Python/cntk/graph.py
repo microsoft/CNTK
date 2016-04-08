@@ -410,42 +410,28 @@ def _get_constant_node(value, **kw):
     # of the overall context without having to always pass it
     # explicitly?
 
-    from cntk.context import get_context
-    import tempfile
-
-    # We have to use NamedTemporaryFile and close it, because when using the
-    # obvious first choice, mkstemp(), would later fail in cntk.exe because the
-    # file would still be locked.
-    # TODO make it same filename as alias
-    tf = tempfile.NamedTemporaryFile(
-        prefix='_param_', suffix='.txt', dir=get_context().directory, delete=False)
-    tf.close()
-
     if isinstance(value, list) or np.isscalar(value):
         value = np.asarray(value)
 
     if sparse.issparse(value):
         raise ValueError('only dense data is supported')
 
-    with open(tf.name, 'w') as f:
-        value.ravel().tofile(f, sep='\n')
+    param_shape = value.shape if value.shape else (1,)
+    literal_shape = (param_shape[0], np.multiply.reduce(param_shape[1:]))
+    
+    literal_array = np.reshape(value, literal_shape)        
 
-    from cntk.reader import CNTKTextFormatReader
-
-    cntk_shape = numpy_to_cntk_shape(value.shape)
-
-    dims = np.multiply.reduce(cntk_shape)
+    from io import BytesIO
+    s = BytesIO()    
+    np.savetxt(s, literal_array, '%.4f')
 
     # TODO switch to ConstantTensor once it is in the core.bs file
     node = cntk1_ops.ParameterTensor(
-        dims=dims,
+        dims=param_shape,
         learningRateMultiplier=0.0,
-        init='fromFile',
-        initFromFilePath=tf.name,
+        init='fromLiteral',
+        initFromLiteral=s.getvalue().decode(),
         **kw)
-
-    if len(cntk_shape) > 1:
-        node = cntk1_ops.NewReshape(node, dims=cntk_shape)
 
     return node
 
