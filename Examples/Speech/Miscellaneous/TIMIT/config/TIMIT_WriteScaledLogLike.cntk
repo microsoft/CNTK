@@ -28,7 +28,7 @@ TIMIT_WriteScaledLogLike=[
         features=[
             dim=792
             scpFile=$ScpDir$/TIMIT.core.scp.fbank.fullpath
-        type=Real
+            type=Real
         ]
     ]
 
