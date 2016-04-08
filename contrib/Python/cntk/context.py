@@ -56,19 +56,19 @@ class AbstractContext(object, metaclass=ABCMeta):
     '''
 
     def __init__(self, name,
-                 graph=None,
-                 device_id=-1,
                  root_nodes=None,
+                 device_id=-1,                 
+                 precision="float",
                  clean_up=True):      
         '''
         AbstractContext Constructer
 
         :param name: context name
-        :param graph: the computational graph to be used for training, testing and prediction        
         :param device_id: whether to use CPU or a specific GPU. -1 for CPU larger values
         :param root_nodes: list of top nodes of the graph or single node itself
-        :param clean_up: whether the temporary directory should be removed when the context is left
+        :param clean_up: whether the temporary directory should be removed when the context is left        
         are the GPUs indices.                
+        :param precision: either float or double
         '''
         if isinstance(name, str):
             tmpdir = name
@@ -85,6 +85,7 @@ class AbstractContext(object, metaclass=ABCMeta):
 
         self.name = name
         self.device_id = device_id
+        self.precision = precision
         self.clean_up = clean_up
         self.input_nodes = set()
         if root_nodes is None:
@@ -165,6 +166,7 @@ class AbstractContext(object, metaclass=ABCMeta):
 
         tmpl_dict = {
             'DevideId': self.device_id,
+            'Precision': self.precision,
             'ModelDescription': description,
             'ModelPath': model_filename,
             'Reader': '\n'.join(r.generate_config() for r in readers),
@@ -188,6 +190,7 @@ class AbstractContext(object, metaclass=ABCMeta):
 
         tmpl_dict = {
             'DevideId': self.device_id,
+            'Precision': self.precision,
             'ModelPath': model_filename,
             'Reader': reader_config,
         }
@@ -212,6 +215,7 @@ class AbstractContext(object, metaclass=ABCMeta):
 
         tmpl_dict = {
             'DevideId': self.device_id,
+            'Precision': self.precision,
             'ModelPath': model_filename,
             'PredictOutputFile': output_filename_base,
             'Reader': reader_config,
@@ -247,6 +251,7 @@ class AbstractContext(object, metaclass=ABCMeta):
         output_filename = os.path.join(self.directory, CNTK_OUTPUT_FILENAME)
         tmpl_dict = {
             'DevideId': self.device_id,
+            'Precision': self.precision,
             'NodeUnitTest': node_unit_test,
             'OutputFile': output_filename,
             'ModelDescription': description,

@@ -23,7 +23,7 @@ AA = np.asarray
 def cpu_gpu(request):
     return request.param
 
-def test_helper(root_node, expected, device_id = -1, clean_up=True, backward_pass = False, input_node = None):
+def unittest_helper(root_node, expected, device_id = -1, clean_up=True, backward_pass = False, input_node = None):
     with get_new_context() as ctx:
         ctx.clean_up = clean_up
         ctx.device_id = device_id
