@@ -9,6 +9,7 @@
 #include "DataDeserializer.h"
 #include "BlockRandomizer.h"
 #include <numeric>
+#include <random>
 
 using namespace Microsoft::MSR::CNTK;
 
@@ -170,7 +171,7 @@ BOOST_AUTO_TEST_CASE(BlockRandomizerOneEpoch)
     epochConfiguration.m_epochIndex = 0;
     randomizer->StartEpoch(epochConfiguration);
 
-    std::vector<float> expected { 3.0, 4.0, 1.0, 8.0, 0.0, 5.0, 9.0, 6.0, 7.0, 2.0 };
+    std::vector<float> expected { 3, 4, 1, 8, 0, 5, 9, 6, 7, 2 };
     BOOST_CHECK_EQUAL(data.size(), expected.size());
     std::vector<float> actual;
     for (int i = 0; i < data.size() + 1; i++)
@@ -205,7 +206,7 @@ BOOST_AUTO_TEST_CASE(BlockRandomizerOneEpochWithChunks1)
     epochConfiguration.m_epochIndex = 0;
     randomizer->StartEpoch(epochConfiguration);
 
-    std::vector<float> expected{ 9.0, 8.0, 6.0, 7.0, 3.0, 2.0, 1.0, 0.0, 4.0, 5.0 };
+    std::vector<float> expected{ 9, 8, 6, 7, 3, 2, 1, 0, 4, 5 };
     BOOST_CHECK_EQUAL(data.size(), expected.size());
     std::vector<float> actual;
     for (int i = 0; i < data.size() + 1; i++)
@@ -242,8 +243,8 @@ BOOST_AUTO_TEST_CASE(BlockRandomizerOneEpochWithChunks2)
     randomizer->StartEpoch(epochConfiguration);
 
     std::vector<float> expected {
-        16.0, 14.0, 15.0, 8.0, 13.0, 5.0, 17.0, 4.0, 12.0, 9.0,
-        3.0, 18.0, 0.0, 5.0, 2.0, 11.0, 19.0, 7.0, 1.0, 10.0
+        16, 14, 15, 8, 13, 6, 17, 4, 12, 9,
+        3, 18, 0, 5, 2, 11, 19, 7, 1, 10
     };
     BOOST_CHECK_EQUAL(data.size(), expected.size());
     std::vector<float> actual;
@@ -261,6 +262,45 @@ BOOST_AUTO_TEST_CASE(BlockRandomizerOneEpochWithChunks2)
     }
     BOOST_CHECK_EQUAL_COLLECTIONS(expected.begin(), expected.end(),
         actual.begin(), actual.end());
+}
+
+BOOST_AUTO_TEST_CASE(BlockRandomizerChaosMonkey)
+{
+    const int seed = 42;
+    const int numChunks = 100;
+    const int numSequencesPerChunk = 10;
+    const int windowSize = 18;
+    std::vector<float> data(numChunks * numSequencesPerChunk);
+    std::iota(data.begin(), data.end(), 0.0f);
+    std::mt19937 rng(seed);
+    std::uniform_int_distribution<int> distr(1, 10);
+
+    auto mockDeserializer = std::make_shared<MockDeserializer>(numChunks, numSequencesPerChunk, data);
+
+    auto randomizer = std::make_shared<BlockRandomizer>(0, windowSize, mockDeserializer, BlockRandomizer::DecimationMode::chunk, false);
+
+    for (int t = 0; t < 100; t++)
+    {
+        EpochConfiguration epochConfiguration;
+        epochConfiguration.m_numberOfWorkers = distr(rng);
+        do
+        {
+            epochConfiguration.m_workerRank = distr(rng) - 1;
+        }
+        while (epochConfiguration.m_numberOfWorkers <= epochConfiguration.m_workerRank);
+
+        epochConfiguration.m_minibatchSizeInSamples = 0; // don't care
+        epochConfiguration.m_totalEpochSizeInSamples = data.size() / distr(rng);
+        epochConfiguration.m_epochIndex = distr(rng);
+        randomizer->StartEpoch(epochConfiguration);
+
+        int samplesToGet = 0;
+        for (int i = 0; i < epochConfiguration.m_totalEpochSizeInSamples + 1; i += samplesToGet)
+        {
+            samplesToGet = distr(rng);
+            Sequences sequences = randomizer->GetNextSequences(samplesToGet);
+        }
+    }
 }
 
 BOOST_AUTO_TEST_CASE(BlockRandomizerOneEpochLegacyRandomization)
@@ -283,7 +323,7 @@ BOOST_AUTO_TEST_CASE(BlockRandomizerOneEpochLegacyRandomization)
     epochConfiguration.m_epochIndex = 0;
     randomizer->StartEpoch(epochConfiguration);
 
-    std::vector<float> expected { 9.0, 4.0, 1.0, 2.0, 0.0, 5.0, 3.0, 6.0, 7.0, 8.0 };
+    std::vector<float> expected { 9, 4, 1, 2, 0, 5, 3, 6, 7, 8 };
     BOOST_CHECK_EQUAL(data.size(), expected.size());
     std::vector<float> actual;
     for (int i = 0; i < data.size() + 1; i++)
