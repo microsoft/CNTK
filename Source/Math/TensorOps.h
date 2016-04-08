@@ -181,7 +181,8 @@ DECL ElemType LogAdd(ElemType x, ElemType y)
     }
 
 DefNullaryOp(ConstOne, 1);
-DefNullaryOp(ZeroDerivative, 0);
+DefNullaryOp(ConstZero, 0);
+
 #pragma pop_macro("DefNullaryOp")
 
 #pragma push_macro("DefUnaryOp")

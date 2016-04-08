@@ -70,7 +70,7 @@ private:
 enum ElementWiseOperator
 {
     // nullary
-	opConstOne, opZeroDerivative,
+    opConstOne, opConstZero,
     // unary (or binary with constant parameter)
     opCopy,
     opNegate, opNot, opAbs, opFloor, opReciprocal,
@@ -99,7 +99,7 @@ enum ElementWiseOperator
 // helper to apply a C macro for all operations of each kind
 #define ForAllNullaryOps(Macro) \
     Macro(ConstOne);            \
-    Macro(ZeroDerivative);
+    Macro(ConstZero);
 
 #define ForAllUnaryOps(Macro) \
     Macro(Copy);              \
