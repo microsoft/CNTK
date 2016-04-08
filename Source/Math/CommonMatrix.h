@@ -73,10 +73,10 @@ enum ElementWiseOperator
     opConstOne,
     // unary (or binary with constant parameter)
     opCopy,
-    opNegate, opNot, opAbs, opReciprocal,
+    opNegate, opNot, opAbs, opFloor, opReciprocal,
     opSigmoid, opTanh, opSqr, opSqrt, opExp, opLog, opLinearRectifier, opCosine,
     // unary ops for use by Matrix class only (there is no TensorView implementation)
-    opSigmoidDerivative, opLinearRectifierDerivative, opNegativeSine,
+    opSigmoidDerivative, opLinearRectifierDerivative, opNegativeSine, opZeroDerivative,
     // binary
     opSum, opDifference, opElementwiseProduct, opElementwiseQuotient, opLogSum,
     opMax, opMin,
@@ -105,6 +105,7 @@ enum ElementWiseOperator
     Macro(Negate);            \
     Macro(Not);               \
     Macro(Abs);               \
+    Macro(Floor);             \
     Macro(Reciprocal);        \
     Macro(Sigmoid);           \
     Macro(Tanh);              \
@@ -113,7 +114,8 @@ enum ElementWiseOperator
     Macro(Exp);               \
     Macro(Log);               \
     Macro(LinearRectifier);   \
-    Macro(Cosine);
+    Macro(Cosine);            \
+    Macro(ZeroDerivative);
 
 #define ForAllBinaryOps(Macro)                                        \
     Macro(Sum);                                                       \

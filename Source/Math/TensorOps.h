@@ -194,6 +194,7 @@ DefUnaryOp(Copy, a);
 DefUnaryOp(Negate, -a);
 DefUnaryOp(Not, !a);
 DefUnaryOp(Abs, fabs_(a));
+DefUnaryOp(Floor, floor(a));
 DefUnaryOp(Sigmoid, Sigmoid(a));
 DefUnaryOp(Tanh, tanh_(a));
 DefUnaryOp(Sqr, Sqr(a));
@@ -203,6 +204,7 @@ DefUnaryOp(Log, ClippedLog(a));
 DefUnaryOp(LinearRectifier, a > 0 ? a : 0);
 DefUnaryOp(Cosine, cos_(a));
 DefUnaryOp(Reciprocal, a == 0 ? 0 : 1 / a);
+DefUnaryOp(ZeroDerivative, a * 0);
 #pragma pop_macro("DefUnaryOp")
 
 #pragma push_macro("DefBinaryOp")
