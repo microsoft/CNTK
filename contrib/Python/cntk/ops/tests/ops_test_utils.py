@@ -20,13 +20,19 @@ I = input
 AA = np.asarray
 
 @pytest.fixture(params=[-1,0])
-def cpu_gpu(request):
+def device_id(request):
     return request.param
 
-def unittest_helper(root_node, expected, device_id = -1, clean_up=True, backward_pass = False, input_node = None):
+@pytest.fixture(params=["float","double"])
+def precision(request):
+    return request.param
+
+def unittest_helper(root_node, expected, device_id = -1, precision="float", 
+                    clean_up=True, backward_pass = False, input_node = None):
     with get_new_context() as ctx:
         ctx.clean_up = clean_up
         ctx.device_id = device_id
+        ctx.precision = precision
         assert not ctx.input_nodes
         result = ctx.eval(root_node, None, backward_pass, input_node)
 
