@@ -19,10 +19,6 @@ C = constant
 I = input
 AA = np.asarray
 
-@pytest.fixture(params=[-1,0])
-def device_id(request):
-    return request.param
-
 @pytest.fixture(params=["float","double"])
 def precision(request):
     return request.param

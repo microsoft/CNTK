@@ -4,7 +4,8 @@
 command=Predict
 
 modelPath="%(ModelPath)s"		
-deviceId=%(DevideId)s					   		    
+deviceId=%(DevideId)s					  
+precision="%(Precision)s" 		    
 
 Predict=[
 	action="write"
