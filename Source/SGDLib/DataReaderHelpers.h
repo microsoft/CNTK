@@ -89,7 +89,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // TODO: This is a stopgap. SGD will at some point change from sets of matrices to sets of nodes. Then this will become much simpler.
         std::set<MatrixBasePtr> matrices;
         for (const auto& iter : inputMatrices)
-            matrices.insert(iter.second);
+            matrices.insert(iter.second.matrix);
         for (auto& node : net->FeatureNodes())
             if (matrices.find(node->As<ComputationNode<ElemType>>()->ValuePtr()) != matrices.end())
                 node->NotifyFunctionValuesMBSizeModified();
@@ -133,6 +133,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         for (const auto& it : MB)
         {
             const wstring& name = it.first;
+            const auto& input = it.second;
             auto& mat = MB.GetInputMatrix<ElemType>(name);
             size_t numRows = mat.GetNumRows();
             size_t numCols = mat.GetNumCols();
@@ -149,12 +150,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             auto matrixp = make_shared<Matrix<ElemType>>(deviceId);
             matrixp->AssignRowSliceValuesOf(mat.Reshaped(numRows * numParallelSequences, nT), st * numRows, (en - st) * numRows);
             matrixp->Reshape(numRows, numNewParallelSequence * nT);
-            decimatedMB.AddInputMatrix(name, matrixp);
+            decimatedMB.AddInput(name, matrixp, input.pMBLayout, input.sampleLayout);
             // If we had a RowSlice function, we would like to write in this way
             // decimatedMB[name]->SetValue(mat.Reshaped(nRows*nSequence, nT).RowSlice( st*nRows , (en-st)*nRows).Reshaped(nRows, nNewParallelSequence*nT));
         }
         // decimate MBLayout as well
         pDecimateMBLayout = make_shared<MBLayout>(numNewParallelSequence, nT);
+        //pDecimateMBLayout->SetAxisName(pMBLayout->GetAxisName());
 #if 1
         // now copy over all sequence info records that are inside the range, with adjusted 's'
         const auto& sequences = pMBLayout->GetAllSequences();
@@ -304,8 +306,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 shared_ptr<IStatefulNode> pNode = dynamic_pointer_cast<IStatefulNode>(node);
                 if (pNode) // if it is an IStatefulNode then report it
                     statefulNodes[name] = pNode;
-                }
             }
+        }
 
         std::map<wstring, shared_ptr<IStatefulNode>> EnumerateStatefulNode(ComputationNetwork& net,
                                                                            const std::vector<ComputationNodeBasePtr>& criterionNode,
@@ -395,9 +397,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             for (auto& pa : inputMatrices)
             {
                 const wstring& name = pa.first;
-                auto& M = inputMatrices.GetInputMatrix<ElemType>(name);
+                const auto& input = pa.second;
+                auto& M = input.GetMatrix<ElemType>();
                 if (m_inputMatricesCache.find(name) == m_inputMatricesCache.end())
-                    m_inputMatricesCache.AddInputMatrix(name, make_shared<Matrix<ElemType>>(M, M.GetDeviceId())); // deep copy from M
+                    m_inputMatricesCache.AddInput(name, make_shared<Matrix<ElemType>>(M, M.GetDeviceId()), input.pMBLayout, input.sampleLayout); // deep copy from M
                 else
                     m_inputMatricesCache.GetInputMatrix<ElemType>(name).SetValue(M);
             }
@@ -431,7 +434,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 if (node->IsParameterUpdateRequired())
                 {
                     wstring nodeName = node->GetName();
-                    shared_ptr<ComputationNode<ElemType>> pLearnableNode = node;
+                    shared_ptr<ComputationNode<ElemType>> pLearnableNode = node; // TODO: what's this for?
                     const auto& funvalue = pLearnableNode->Value(); // gradient may not be allocated when this function is first called
                     size_t nrow = funvalue.GetNumRows();
                     size_t ncol = funvalue.GetNumCols();
@@ -440,7 +443,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         // not allocated yet
                         auto matrixp = make_shared<Matrix<ElemType>>(nrow, ncol, funvalue.GetDeviceId());
                         matrixp->SetValue(0);
-                        m_cachedGradient.AddInputMatrix(nodeName, matrixp);
+                        m_cachedGradient.AddInput(nodeName, matrixp, pLearnableNode->GetMBLayout()/*null*/, pLearnableNode->GetSampleLayout());
                     }
                 }
             }

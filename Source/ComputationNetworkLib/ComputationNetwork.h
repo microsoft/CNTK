@@ -55,6 +55,7 @@ public:
         m_pMBLayoutOfNetwork(make_shared<MBLayout>()),
         m_environment(make_shared<ComputationEnvironment>())
     {
+        m_pMBLayoutOfNetwork->SetAxisName(L"T");
     }
     ComputationNetwork(DEVICEID_TYPE deviceId)
         : ComputationNetwork()

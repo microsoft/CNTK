@@ -115,14 +115,9 @@ bool ReaderShim<ElemType>::GetMinibatch(StreamMinibatchInputs& matrices)
 
     // Check that all matrices have the same device id.
     // If not we should inject the IMemoryProvider per stream.
-    int deviceId = matrices.begin()->second->GetDeviceId();
+    int deviceId = matrices.begin()->second.matrix->GetDeviceId();
     for (auto mx : matrices)
-    {
-        if (mx.second->GetDeviceId() != deviceId)
-        {
-            assert(false);
-        }
-    }
+        assert(mx.second.matrix->GetDeviceId() == deviceId), UNUSED(deviceId);
 
     assert(m_prefetchTask.valid());
 
@@ -152,17 +147,12 @@ bool ReaderShim<ElemType>::GetMinibatch(StreamMinibatchInputs& matrices)
             size_t streamId = m_nameToStreamId[mx.first];
 
             const auto& stream = minibatch.m_data[streamId];
-		 	// TODO: assert that num sequences is consistent across all streams
+            // TODO: assert that num sequences is consistent across all streams
             m_numParallelSequences = stream->m_layout->GetNumParallelSequences();
-            auto& layout = matrices.GetInputLayout<ElemType>(mx.first);
-            layout.CopyFrom(stream->m_layout);
+            auto& layout = mx.second.pMBLayout;
+            layout->CopyFrom(stream->m_layout);
             size_t sampleSize = m_streams[streamId]->m_sampleLayout->GetNumElements();
             auto& matrix = matrices.GetInputMatrix<ElemType>(mx.first);
-			/*if (expectedRowNumber > 0 && expectedRowNumber != rowNumber)
-            {
-                RuntimeError("Sample size (%d) for input '%ls' does not match the expected size (%d).", 
-                    (int) rowNumber, mx.first.c_str(), (int) expectedRowNumber);
-            }*/
             FillMatrixFromStream(m_streams[streamId]->m_storageType, &matrix, sampleSize, stream);
         }
     }

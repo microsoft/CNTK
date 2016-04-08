@@ -58,7 +58,8 @@ void DoCreateLabelMap(const ConfigParameters& config)
     auto featuresMatrix = make_shared<Matrix<ElemType>>(CPUDEVICE);
     auto labelsMatrix   = make_shared<Matrix<ElemType>>(CPUDEVICE);
     StreamMinibatchInputs matrices;
-    matrices.AddInputMatrix(featureNames[0], featuresMatrix);
+    MBLayoutPtr pMBLayout = make_shared<MBLayout>();
+    matrices.AddInput(featureNames[0], featuresMatrix, pMBLayout, TensorShape());
     if (labelNames.size() == 0)
         RuntimeError("CreateLabelMap: no labels found to process");
 
@@ -67,7 +68,7 @@ void DoCreateLabelMap(const ConfigParameters& config)
     for (const std::wstring& labelsName : labelNames)
     {
         // take the last label file defined (the other one might be input)
-        matrices.AddInputMatrix(labelsName, labelsMatrix);
+        matrices.AddInput(labelsName, labelsMatrix, pMBLayout, TensorShape());
 
         // get the label mapping file name
         ConfigParameters labelConfig(readerConfig(labelsName));

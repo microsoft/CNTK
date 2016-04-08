@@ -195,18 +195,18 @@ struct ReaderFixture
                 for (auto i = 0; i < numFeatureFiles; i++)
                 {
                     wstring name = numFeatureFiles > 1 ? L"features" + std::to_wstring(i + 1) : L"features";
-                    auto& layout = (pMBlayoutPtr->GetNumCols() > 0) ? 
-                        *pMBlayoutPtr.get() : map.GetInputLayout<ElemType>(name);
-                    OutputMatrix(map.GetInputMatrix<ElemType>(name), layout, outputFile);
+                    auto& layoutPtr = (pMBlayoutPtr->GetNumCols() > 0) ? 
+                       pMBlayoutPtr : map.GetInput(name).pMBLayout;
+                    OutputMatrix(map.GetInputMatrix<ElemType>(name), *layoutPtr, outputFile);
                 }
 
                 // Process the Label Matri(x|ces)
                 for (auto i = 0; i < numLabelFiles; i++)
                 {
                     wstring name = numLabelFiles > 1 ? L"labels" + std::to_wstring(i + 1) : L"labels";
-                    auto& layout = (pMBlayoutPtr->GetNumCols() > 0) ?
-                        *pMBlayoutPtr.get() : map.GetInputLayout<ElemType>(name);
-                    OutputMatrix(map.GetInputMatrix<ElemType>(name), layout, outputFile);
+                    auto& layoutPtr = (pMBlayoutPtr->GetNumCols() > 0) ? 
+                        pMBlayoutPtr : map.GetInput(name).pMBLayout;
+                    OutputMatrix(map.GetInputMatrix<ElemType>(name), *layoutPtr, outputFile);
                 }
             }
         }
@@ -261,26 +261,24 @@ struct ReaderFixture
 
         for (auto i = 0; i < numFeatureFiles; i++)
         {
-            features.push_back(make_shared<Matrix<ElemType>>(DEVICEID_AUTO));
+            features.push_back(make_shared<Matrix<ElemType>>(0));
             if (sparse)
             {
                 features.back()->SwitchToMatrixType(MatrixType::SPARSE, MatrixFormat::matrixFormatSparseCSC, false);
             }
             wstring name = numFeatureFiles > 1 ? L"features" + std::to_wstring(i + 1) : L"features";
-            map.insert(make_pair(name, features[i]));
-            map.AddInputLayout(name, make_shared<MBLayout>(1, 0));
+            map.insert(make_pair(name, StreamMinibatchInputs::Input(features[i], make_shared<MBLayout>(), TensorShape())));
         }
 
         for (auto i = 0; i < numLabelFiles; i++)
         {
-            labels.push_back(make_shared<Matrix<ElemType>>(DEVICEID_AUTO));
+            labels.push_back(make_shared<Matrix<ElemType>>(0));
             if (sparse)
             {
                 labels.back()->SwitchToMatrixType(MatrixType::SPARSE, MatrixFormat::matrixFormatSparseCSC, false);
             }
             wstring name = numLabelFiles > 1 ? L"labels" + std::to_wstring(i + 1) : L"labels";
-            map.insert(make_pair(name, labels[i]));
-            map.AddInputLayout(name, make_shared<MBLayout>(1, 0));
+            map.insert(make_pair(name, StreamMinibatchInputs::Input(labels[i], make_shared<MBLayout>(), TensorShape())));
         }
 
         // Setup output file
