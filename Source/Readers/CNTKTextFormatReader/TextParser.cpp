@@ -192,11 +192,11 @@ void TextParser<ElemType>::GetSequencesForChunk(size_t chunkId, std::vector<Sequ
     const auto& index = m_indexer->GetIndex();
     const auto& chunk = index[chunkId];
     result.reserve(chunk.m_sequences.size());
-    
+
     for (auto const& s : chunk.m_sequences)
     {
         result.push_back(
-        { 
+        {
             s.m_id, 
             s.m_numberOfSamples,
             s.m_chunkId,
@@ -757,6 +757,17 @@ bool TextParser<ElemType>::ReadSparseSample(std::vector<ElemType>& values, std::
         // read next sparse index
         if (!ReadUint64(index, bytesToRead))
         {
+            // bail out.
+            return false;
+        } 
+        if (index > numeric_limits<IndexType>::max())
+        {
+            if (m_traceLevel >= Warning)
+            {
+                fprintf(stderr,
+                    "WARNING: sparse index value(%" PRIu64 ") exceeds the maximum allowed "
+                    " value (%" PRIu64 ")\n", index, (size_t)numeric_limits<IndexType>::max());
+            }
             // bail out.
             return false;
         }

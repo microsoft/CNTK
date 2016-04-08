@@ -10,12 +10,13 @@
 #ifdef _WIN32
 #include <objbase.h>
 #endif
+
+#include <sstream>
 #include "Basics.h"
 
 #define DATAREADER_EXPORTS // creating the exports here
 #include "DataReader.h"
 #include "ReaderShim.h"
-#include <sstream>
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -151,20 +152,18 @@ bool ReaderShim<ElemType>::GetMinibatch(StreamMinibatchInputs& matrices)
             size_t streamId = m_nameToStreamId[mx.first];
 
             const auto& stream = minibatch.m_data[streamId];
-            // TODO: assert that num sequences is consistent across all streams
+		 	// TODO: assert that num sequences is consistent across all streams
             m_numParallelSequences = stream->m_layout->GetNumParallelSequences();
-            size_t rowNumber = m_streams[streamId]->m_sampleLayout->GetNumElements();
             auto& layout = matrices.GetInputLayout<ElemType>(mx.first);
             layout.CopyFrom(stream->m_layout);
-
+            size_t sampleSize = m_streams[streamId]->m_sampleLayout->GetNumElements();
             auto& matrix = matrices.GetInputMatrix<ElemType>(mx.first);
-            auto expectedRowNumber = matrix.GetNumRows();
-            if (expectedRowNumber > 0 && expectedRowNumber != rowNumber)
+			/*if (expectedRowNumber > 0 && expectedRowNumber != rowNumber)
             {
                 RuntimeError("Sample size (%d) for input '%ls' does not match the expected size (%d).", 
                     (int) rowNumber, mx.first.c_str(), (int) expectedRowNumber);
-            }
-            FillMatrixFromStream(m_streams[streamId]->m_storageType, &matrix, rowNumber, stream);
+            }*/
+            FillMatrixFromStream(m_streams[streamId]->m_storageType, &matrix, sampleSize, stream);
         }
     }
 

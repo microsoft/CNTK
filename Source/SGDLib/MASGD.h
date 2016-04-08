@@ -303,7 +303,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             :Base(pMPI, reportFreq)
         {}
 
-        
         void ModelAggregationProcessing(
             size_t samplesSinceLastSync,                                       /* in */
             const std::list<ComputationNodeBasePtr>&  learnableNodes,          /* in/out */

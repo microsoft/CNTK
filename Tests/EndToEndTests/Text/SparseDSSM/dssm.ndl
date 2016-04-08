@@ -45,6 +45,6 @@ CE=CrossEntropyWithSoftmax(DSSMLabel, SIM_Scale)
 
 FeatureNodes=(Query,Keyword)
 LabelNodes=(DSSMLabel)
-CriteriaNodes=(CE)
+CriterionNodes=(CE)
 EvalNodes=(CE)
 OutputNodes=(SIM)

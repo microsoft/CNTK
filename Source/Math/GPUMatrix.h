@@ -96,28 +96,39 @@ void PrepareDevice(DEVICEID_TYPE deviceId);
 template <class ElemType>
 class MATH_API GPUMatrix : public BaseMatrix<ElemType>
 {
-    typedef BaseMatrix<ElemType> B;
-    using B::m_numRows;
-    using B::m_numCols;
-    using B::m_pArray; // without this, base members would require to use thi-> in GCC
+    typedef BaseMatrix<ElemType> Base;
+    using Base::m_numRows;
+    using Base::m_numCols;
+    using Base::m_sliceViewOffset;
+    using Base::HasExternalBuffer;
+    using Base::SetBuffer;
+    using Base::SetComputeDeviceId;
+    using Base::ZeroInit;
+    using Base::ZeroValues;
+    using Base::m_sob;
+    using Base::ShallowCopyFrom;
+    using Base::ReleaseStorageMemory;
+    using Base::GetSizeAllocated;
+    using Base::SetSizeAllocated;
 
     template <typename T>
     friend class GPUMatrix;
 
 public:
+    using Base::GetComputeDeviceId;
+    using Base::Buffer;
+    using Base::GetNumRows;
+    using Base::GetNumCols;
+    using Base::GetNumElements;
+    using Base::OwnBuffer;
+    using Base::GetFormat;
+    using Base::SetFormat;
+    using Base::IsEmpty;
+    using Base::VerifyResizable;
+
+public:
+    using Base::VerifyWritable;
     static const int MaxGpus = MAX_GPUS;
-    using BaseMatrix<ElemType>::m_computeDevice;
-    using BaseMatrix<ElemType>::m_elemSizeAllocated;
-    using BaseMatrix<ElemType>::m_format;
-    using BaseMatrix<ElemType>::m_externalBuffer;
-    using BaseMatrix<ElemType>::m_nz;
-    using BaseMatrix<ElemType>::OwnBuffer;
-    using BaseMatrix<ElemType>::GetNumElements;
-    using BaseMatrix<ElemType>::IsEmpty;
-    using BaseMatrix<ElemType>::GetArray;
-    using BaseMatrix<ElemType>::GetNumRows;
-    using BaseMatrix<ElemType>::GetNumCols;
-    using BaseMatrix<ElemType>::VerifySize;
 
 private:
     static cublasHandle_t s_cuHandle[MaxGpus];
@@ -137,6 +148,7 @@ private:
     size_t LocateColumn(const size_t j) const;
     void Clear();
     void ZeroInit(int deviceId);
+    void ZeroInit() { Base::ZeroInit(); }
 
     std::unique_ptr<GPUMatrix<ElemType>> GetOrCreateWorkspace() const;
     void ReleaseWorkspace(std::unique_ptr<GPUMatrix<ElemType>> src) const;
@@ -152,7 +164,6 @@ public:
     ~GPUMatrix(void);
 
     static void SetDevice(DEVICEID_TYPE deviceId);
-    int GetComputeDeviceId() const;
     DEVICEID_TYPE PrepareDevice(DEVICEID_TYPE deviceId = -1) const;
 
     static cublasHandle_t GetCublasHandle(int computeDevice = -1);
@@ -175,9 +186,9 @@ public:
     {
         return m_numRows * m_numCols * sizeof(ElemType);
     }
-    ElemType* BufferPointer() const
+    ElemType* Data() const
     {
-        return m_pArray;
+        return Buffer() + m_sliceViewOffset;
     }
 
     ElemType Adagrad(GPUMatrix<ElemType>& gradients, const bool needAveMultiplier);
@@ -185,6 +196,13 @@ public:
     ElemType RmsProp(GPUMatrix<ElemType>& gradients, ElemType RMS_GAMMA, ElemType RMS_WGT_INC, ElemType RMS_WGT_MAX, ElemType RMS_WGT_DEC, ElemType RMS_WGT_MIN, const bool needAveMultiplier);
 
     void Reshape(const size_t numRows, const size_t numCols);
+
+    // RequireSize is now the new preferred method of ensuring the correct size inside of the Matrix class. Since Resize will fail if the storage object has
+    // multiple views, RequireSize will first check to see if Resize is required. If it is not, then it short-circuits and is a noop. Otherwise, RequireSize
+    // will call Resize, which may fail if the matrix has multiple views.
+    void RequireSize(const size_t numRows, const size_t numCols, bool growOnly = true); // by default we only reallocate if need to grow
+    // Resize first checks to ensure that the caller has the authority to call Resize (i.e., it checks to ensure the underlying data is owned by only this matrix), and then
+    // actually resizes the underlying matrix, doing any allocation as required.
     void Resize(const size_t numRows, const size_t numCols, bool growOnly = true); // by default we only reallocate if need to grow
 
     ElemType& operator()(const size_t /*row*/, const size_t /*col*/)
@@ -484,7 +502,7 @@ public:
 
     static ElemType GetLearnRateForBlock_Helper(const GPUMatrix<ElemType>& Gradients, const GPUMatrix<ElemType>& SmoothedGradients);
 
-    ElemType LogAddSumOfElements() const;
+    ElemType LogSumOfElements() const;
 
 public:
     GPUMatrix<ElemType>& AssignElementProductOfWithShiftNeg(const GPUMatrix<ElemType>& a, const GPUMatrix<ElemType>& b, const size_t shift, const size_t nt);
@@ -534,7 +552,7 @@ public:
 
         // TODO: This is now ignored on input, so we can should change to an empty string. This might break parsing, and must be tested first
         std::wstring s = std::wstring(L"unnamed");
-        int format = us.m_format;
+        int format = us.GetFormat();
         stream << s << format;
 
         stream << us.m_numRows << us.m_numCols;

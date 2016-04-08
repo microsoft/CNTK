@@ -203,6 +203,7 @@ bool CheckFunction(std::string& p_nodeType, bool* allowUndeterminedVariable)
 #endif
     else if (EqualInsensitive(nodeType, OperationNameOf(SequenceWithSoftmaxNode), L"SEWithSM")) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(SigmoidNode))) ret = true;
+    else if (EqualInsensitive(nodeType, OperationNameOf(SinNode))) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(SoftmaxNode))) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(SparseInputValue), L"SparseInput")) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(SqrtNode))) ret = true;

@@ -202,6 +202,7 @@ DefUnaryOp(Exp, exp_(a));
 DefUnaryOp(Log, ClippedLog(a));
 DefUnaryOp(LinearRectifier, a > 0 ? a : 0);
 DefUnaryOp(Cosine, cos_(a));
+DefUnaryOp(Sin, sin_(a));
 DefUnaryOp(Reciprocal, a == 0 ? 0 : 1 / a);
 #pragma pop_macro("DefUnaryOp")
 
@@ -236,6 +237,7 @@ DefBinaryOp(ElementwiseProductWithTanhDerivativeFromOutput, a*(1 - b * b));
 DefBinaryOp(ElementwiseProductWithLinearRectifierDerivativeFromOutput, b > 0 ? a : 0);
 DefBinaryOp(ElementwiseProductWithLogDerivativeFromOutput, a* exp_(-b));
 DefBinaryOp(ElementwiseProductWithCosDerivative, a * -sin_(b)); // note: b = input for cos()
+DefBinaryOp(ElementwiseProductWithSinDerivative, a * cos_(b)); // note: b = input for sin()
 DefBinaryOp(ElementwiseProductWithAbsDerivative, a * Sgn(b)); // note: b = input for abs()
 DefBinaryOp(ElementwiseProductWithReciprocalDerivative, a * -Sqr(b)); // b = output
 DefBinaryOp(ElementwiseProductWithSqrtDerivative, a / (2 * b)); // b = output; d/dx sqrt(x) = 1/(2 * sqrt(x)) --> note this is the same as ElementwiseQuotient w a constant; if more show up like this we should add more template params

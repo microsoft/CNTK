@@ -59,11 +59,11 @@ class MATH_API Matrix : public MatrixBase
 {
     typedef MatrixBase Base;
 private:
-    mutable BaseMatrix<ElemType>* m_baseMatrix;
-    mutable GPUMatrix<ElemType>* m_GPUMatrix;
-    mutable CPUMatrix<ElemType>* m_CPUMatrix;
-    mutable GPUSparseMatrix<ElemType>* m_GPUSparseMatrix;
-    mutable CPUSparseMatrix<ElemType>* m_CPUSparseMatrix;
+    mutable shared_ptr<BaseMatrix     <ElemType>> m_baseMatrix;
+    mutable shared_ptr<GPUMatrix      <ElemType>> m_GPUMatrix;
+    mutable shared_ptr<CPUMatrix      <ElemType>> m_CPUMatrix;
+    mutable shared_ptr<GPUSparseMatrix<ElemType>> m_GPUSparseMatrix;
+    mutable shared_ptr<CPUSparseMatrix<ElemType>> m_CPUSparseMatrix;
 
     mutable MatrixType m_matrixType;
     mutable CurrentDataLocation m_currentDataLocation; // Indicates which matrix is current
@@ -89,8 +89,12 @@ public:
     // If deviceId<0 then the matrix will be based in RAM (CPUMatrix)
     // Elseif deviceId>=0 then the matrix will be based on GPU with specified deviceId
     explicit Matrix(DEVICEID_TYPE deviceId);
-    Matrix(BaseMatrix<ElemType>* baseMatrix, ElemType* pArray, DEVICEID_TYPE deviceId);                                     // constructor for setting Matrix from a base matrix (externally managed butter pArray)
+    // This constructor is not used, but it makes the ownership of baseMatrix ambiguous. If it's to be used, ensure that the semantics with external buffer are clear.
+#if 0
+    Matrix(shared_ptr<BaseMatrix<ElemType>> baseMatrix, ElemType* pArray, DEVICEID_TYPE deviceId);                                     // constructor for setting Matrix from a base matrix (externally managed butter pArray)
+#endif
     Matrix(const size_t numRows, const size_t numCols, DEVICEID_TYPE deviceId, const MatrixType matrixType = DENSE, const MatrixFormat matrixFormat = matrixFormatDense);
+    // TODO: Rewrite this constructor to eliminate the external buffers flag. Make a separate construction mechanism for Matrix objects that don't own their storage.
     Matrix(const size_t numRows, const size_t numCols, ElemType* pArray, DEVICEID_TYPE deviceId, const size_t matrixFlags = matrixFlagNormal, const size_t nnz = 0);
     Matrix(const Matrix<ElemType>& deepCopyFrom, DEVICEID_TYPE deviceId);
     Matrix(Matrix<ElemType>&& moveFrom);                                                    // move constructor, shallow copy
@@ -125,6 +129,16 @@ private:
     void ShallowCopyFrom(const Matrix<ElemType>& other);
 
 public:
+    // down-cast to make life easier
+    template <class T>
+    static shared_ptr<T> DownCast(shared_ptr<BaseMatrix<ElemType>> inode)
+    {
+        shared_ptr<T> node = dynamic_pointer_cast<T>(inode);
+        if (!node)
+            LogicError("A Matrix of mismatching type was passed.");
+        return node;
+    }
+
     MatrixType GetMatrixType() const { return m_matrixType; }
     MatrixFormat GetFormat() const { return m_baseMatrix->GetFormat(); }
     bool OwnBuffer() const { return m_baseMatrix->OwnBuffer(); }
@@ -144,8 +158,7 @@ public:
     bool HasNoElements() const { return GetNumElements() == 0; }
     bool IsEmpty() const;
     size_t BufferSize() const;
-    ElemType* BufferPointer() const;
-    size_t NzCount() const;
+    ElemType* Data() const;
 
     ElemType* CopyToArray() const;                                              // allocated by the callee but need to be deleted by the caller
     size_t CopyToArray(ElemType*& arrayCopyTo, size_t& currentArraySize) const; // allocated by the callee but need to be deleted by the caller
@@ -368,7 +381,7 @@ public:
     ElemType SumOfElements() const;    // sum of all elements
     Matrix<ElemType>& AssignSumOfElements(const Matrix<ElemType>& a);
 
-    ElemType LogAddSumOfElements() const;
+    ElemType LogSumOfElements() const;
 
     Matrix<ElemType>& AssignToRowSliceValuesOf(const Matrix<ElemType>& a, const size_t startIndex, const size_t numRows);
     Matrix<ElemType>& AssignRowSliceValuesOf(const Matrix<ElemType>& a, const size_t startIndex, const size_t numRows);

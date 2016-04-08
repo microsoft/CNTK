@@ -5,12 +5,12 @@
 
 #pragma once
 
-#include "PackerBase.h"
+#include "SequencePacker.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
-// A sample packer that densely packs samples in parallel for GPU consumptions.
-class FramePacker : public PackerBase
+//A packer optimized for the case of single-frame sequences.
+class FramePacker : public SequencePacker
 {
 public:
     FramePacker(
@@ -18,12 +18,13 @@ public:
         TransformerPtr transformer,
         size_t minibatchSize,
         const std::vector<StreamDescriptionPtr>& streams) :
-        PackerBase(memoryProvider, transformer, minibatchSize, streams)
+        SequencePacker(memoryProvider, transformer, minibatchSize, streams)
     {
 
     }
 
 private:
+
     MBLayoutPtr CreateMBLayout(const StreamBatch& batch) override;
 };
 

@@ -360,11 +360,11 @@ private:
 
     static ElemType* ptr(Mat& src)
     {
-        return src.BufferPointer();
+        return src.Data();
     }
     static const ElemType* ptr(const Mat& src)
     {
-        return src.BufferPointer();
+        return src.Data();
     }
 
 private:

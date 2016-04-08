@@ -88,7 +88,7 @@ template <class ElemType>
         }
         let& seq = outMBLayout->GetAllSequences()[j];
         if (seq.seqId == GAP_SEQUENCE_ID) // When would we see this?
-        {
+    {
             ++j;
             continue;
         }
@@ -97,11 +97,6 @@ template <class ElemType>
             buf[outMBLayout->GetColumnIndex(seq, t)] = (ElemType)indexSequence[t];
         ++i;
         ++j;
-        /*
-        BUGBUG: a debug assert when doing this:
-        TakeRight (N, x) = BS.Sequences._Take (FutureValue, N, x)
-        Last(x) = TakeRight(1, x)
-        */
     }
     // the result will be kept in CPUDEVICE, since most likely we will access it again in PackedIndexNode
     Value().TransferToDeviceIfNotThere(CPUDEVICE, /*isBeingMoved=*/ true, /*emptyTransfer=*/ true, /*updatePreferredDevice=*/ true);

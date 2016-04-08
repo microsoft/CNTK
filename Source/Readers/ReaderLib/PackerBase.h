@@ -16,10 +16,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 // A base class for Packers.
 class PackerBase : public Packer
 {
-public:
-
-    virtual Minibatch ReadMinibatch() override;
-
 protected:
 
     struct StreamBuffer
@@ -46,18 +42,21 @@ protected:
 
     size_t GetSampleSize(StreamDescriptionPtr stream);
 
-    virtual MBLayoutPtr PackDenseStream(const StreamBatch& batch, size_t streamIndex);
-
-    virtual MBLayoutPtr PackSparseStream(const StreamBatch& batch, size_t streamIndex);
-
-    // Packs a sparse sample as dense.
+    // Packs a sparse sample as dense:
+    //  - 0-fills a region of sampleSize bytes in the block of memory pointed to by destination;
+    //  - copies non-zero values of the required sample (given by sampleIndex) from the data
+    // portion of the source sequence to the destination block of memory, where each value is placed
+    // at the offset equal to value index * elementSize. sampleOffset specifies the offset of the
+    // first value from the given sample in the sequence data/indices array (sampleOffset is equal
+    // to the sum of non-zero value counts of all preceding samples).
     void PackSparseSampleAsDense(char* destination, SparseSequenceDataPtr sequence,
         size_t sampleIndex, size_t sampleOffset, size_t sampleSize, size_t elementSize);
 
-    // Packs a dense sample as dense.
+    // Packs a dense sample as dense. Copies sampleSize bytes staring at the sampleOffset from 
+    // the data portion of the source sequence to the destination block of memory. sampleOffset 
+    // specifies the offset of the first value from the given sample in the sequence data/ array 
+    // (sampleOffset is equal to the sum of sample sizes of all preceding samples).
     void PackDenseSample(char* destination, SequenceDataPtr sequence, size_t sampleOffset, size_t sampleSize);
-
-    virtual MBLayoutPtr CreateMBLayout(const StreamBatch& batch) = 0;
 
     TransformerPtr m_transformer;
 
@@ -79,18 +78,20 @@ inline void PackerBase::PackSparseSampleAsDense(char* destination, SparseSequenc
 {
     //The sample is sparse, first, need to zero out the buffer.
     memset(destination, 0, sampleSize);
+    // Get the nnz count of the sample.
     size_t nonZeroCount = sequence->m_nnzCounts[sampleIndex];
-    // Iterate through non zero elements and copy them to the corresponding place using their index.
     // In a sparse sequence, m_data points to the array of non zero elements,
-    // m_indices stores the non-zero row indexes for each element.
+    // m_indices stores the corresponding indices for each element. 
+    // Iterate through non zero elements and copy from m_data them into the 
+    // destination at the offset given by the corresponding row index (m_index).
     for (size_t nonZeroIndex = 0; nonZeroIndex < nonZeroCount; ++nonZeroIndex)
     {
-
-        auto rowIndex = sequence->m_indices[sampleOffset + nonZeroIndex];
-        size_t elementOffset = rowIndex * elementSize;
-        assert(elementOffset < sampleSize);
-        const auto* source = (const char*)(sequence->m_data) + (sampleOffset + nonZeroIndex) * elementSize;
-        memcpy(destination + elementOffset, source, elementSize);
+        auto sourceOffset = sampleOffset + nonZeroIndex;
+        auto elementIndex = sequence->m_indices[sourceOffset];
+        auto destinationOffset = elementIndex * elementSize;
+        assert(destinationOffset < sampleSize);
+        const auto* source = (const char*)(sequence->m_data) + (sourceOffset)* elementSize;
+        memcpy(destination + destinationOffset, source, elementSize);
     }
 }
 
