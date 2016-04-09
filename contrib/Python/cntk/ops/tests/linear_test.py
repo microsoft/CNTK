@@ -22,6 +22,9 @@ import numpy as np
     ([[30]], [[10]]),
     ([[1.5,2.1]], [[10,20]]),
     #Test with matrix
+    ([[100, 200], [300,400], [10,20]], [[10, 20], [30,40], [1,2]]),
+    #Test with broadcast
+    #TODO: un-expected CNTK output with the backward pass test
     #([5], [[10, 20], [30,40], [1,2]]),
     #TODO: enable once all branches are merged to master
     #Adding two 3x2 inputs of sequence length 1
