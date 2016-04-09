@@ -16,7 +16,9 @@ ExpRootDir = "$RunRootDir$"
 
 # experiment id
 #ExpId = _run
-ExpId = 37-s2sae-bigmodel
+
+deviceId = 0
+ExpId = 68-$deviceId$-s2sae-bigmodel
 
 # directories
 ExpDir    = "$ExpRootDir$/$ExpId$"
@@ -32,7 +34,7 @@ stderr = $ExpDir$/S2SAutoEncoder.log
 # Meant to be useful mainly understanding how to do sequence-to-sequence in CNTK.
 
 # deviceId=-1 for CPU, >=0 for GPU devices, "auto" chooses the best GPU, or CPU if no usable GPU is available
-deviceId = "auto"
+#deviceId = 0 # "auto"
 
 command = writeWordAndClassInfo:train:test:write
 #command = write
@@ -98,7 +100,8 @@ BrainScriptNetworkBuilder = (new ComputationNetwork [
         if enableTracing
         then Trace (h, say=what, logFirst=10, logFrequency=traceFrequency, logGradientToo=false, /*onlyUpToRow=beamDepth*beamDepth, onlyUpToT=3,*/ format=formatSparse)
         else h
-beamDepth=3
+    beamDepth=3 // for above Trace macros only
+
     # import general config options from outside config values
     vocabDim = $confVocabSize$
     nbrClass = $confClassSize$
@@ -118,8 +121,8 @@ beamDepth=3
     RecurrentLSTMPWithInitialState = BS.RNNs.RecurrentLSTMPWithInitialState
 
     embeddingDim = 300
-    hiddenDim    = 1024
-	maxLayer = 3
+    hiddenDim    = 512 # 1024 # 200
+    maxLayer = 2 # 0
 
     encoderDims[i:0..maxLayer] = hiddenDim # this defines the number of hidden layers in each
     decoderDims[i:0..maxLayer] = hiddenDim # both are one LSTM layer only for now
@@ -394,8 +397,8 @@ train = [
     #BrainScriptNetworkBuilder is defined in outer scope
 
     SGD = [
-        minibatchSize = 128*2:256:512
-        learningRatesPerSample = 0.01
+        minibatchSize = 128:128:256:512
+        learningRatesPerSample = 0.01 #0.005 # 0.01
         momentumAsTimeConstant = 2500
         gradientClippingWithTruncation = true   # TODO: clip and truncate? What is the difference?
         clippingThresholdPerSample = 15.0

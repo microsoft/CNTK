@@ -1504,16 +1504,16 @@ public:
                                       bool outputGradient = false) const;
 
     // simple helper to log the content of a minibatch
-    void DebugLogMinibatch() const
+    void DebugLogMinibatch(bool outputGradient = false) const
     {
-        fprintf(stderr, "<<<<<<\n", NodeName().c_str()); // some prologue and epilogue so that we can use diff -c1 to see the node name
-        fprintf(stderr, "<<<<<<\n", NodeName().c_str());
-        fprintf(stderr, "DebugLogMinibatch: <<<<< %ls >>>>>\n", NodeName().c_str());
+        fprintf(stderr, "<<<<<<\n"); // some prologue and epilogue so that we can use diff -c1 to see the node name
+        fprintf(stderr, "<<<<<<\n");
+        fprintf(stderr, "DebugLogMinibatch: <<<<< %ls%s >>>>>\n", NodeName().c_str(), outputGradient ? " (gradient)" : "");
         WriteMinibatchWithFormatting(stderr, FrameRange(), 8, 10, false/*transpose*/, /*isCategoryLabel=*/false, /*isSparse=*/false, std::vector<std::string>(),
             ""/*sequenceSeparator*/, "  "/*sequencePrologue*/, "\n"/*sequenceEpilogue*/, " "/*elementSeparator*/, "\n  "/*sampleSeparator*/,
-            "%.8f"/*valueFormatString*/);
-        fprintf(stderr, ">>>>>>\n", NodeName().c_str());
-        fprintf(stderr, ">>>>>>\n", NodeName().c_str());
+            "%.8f"/*valueFormatString*/, outputGradient);
+        fprintf(stderr, ">>>>>>\n");
+        fprintf(stderr, ">>>>>>\n");
     }
 
     void Trace()
