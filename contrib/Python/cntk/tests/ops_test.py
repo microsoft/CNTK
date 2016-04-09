@@ -22,7 +22,6 @@ def _test(root_node, expected, clean_up=True, backward_pass = False, input_node 
             assert np.allclose(res, exp)
             assert res.shape == AA(exp).shape
 
-#C_VALUES = [0, [[1, 2], [3, 4]], [10.1, -20.2], 1.1]
 C_VALUES = [0, [[1, 2], [3, 4]]]
 
 @pytest.fixture(scope="module", params=C_VALUES)
@@ -32,10 +31,11 @@ def c_arg(request):
 c_left_arg = c_arg
 c_right_arg = c_arg
 
+#TODO: broken due to a problem in CNTK. Once fixed merge them with the tests in linear_test.py
 if False:
     def test_op_add_constant(c_left_arg, c_right_arg):
         expected = [AA(c_left_arg) + AA(c_right_arg)]
-        _test(C(c_left_arg) + c_right_arg, expected, False)
+        _test(C(c_left_arg) + c_right_arg, expected)
         _test(C(c_left_arg) + C(c_right_arg), expected)
         _test(c_left_arg + C(c_right_arg), expected)
         _test(c_left_arg + C(c_left_arg) + c_right_arg, c_left_arg+expected)

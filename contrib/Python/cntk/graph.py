@@ -9,7 +9,7 @@ class sparse(object):
         return hasattr(obj, 'todense')
 
 from .utils import MODEL_INDENTATION
-from .utils import numpy_to_cntk_shape, dedupe_readers
+from .utils import dedupe_readers
 
 def _tuple_to_cntk_shape(shape):
     return ':'.join(str(v) for v in shape)
@@ -355,7 +355,7 @@ from .reader import UCIFastReader, CNTKTextFormatReader
 
 
 def _dense_to_str(data):
-    return ' '.join(data.ravel().astype(np.str))
+    return ' '.join(data.ravel(order='F').astype(np.str))
 
 def _sparse_to_str(data):
     # return ' '.join('%s:%s'%(k,data[k]) for k in sorted(data.items()))
@@ -410,42 +410,28 @@ def _get_constant_node(value, **kw):
     # of the overall context without having to always pass it
     # explicitly?
 
-    from cntk.context import get_context
-    import tempfile
-
-    # We have to use NamedTemporaryFile and close it, because when using the
-    # obvious first choice, mkstemp(), would later fail in cntk.exe because the
-    # file would still be locked.
-    # TODO make it same filename as alias
-    tf = tempfile.NamedTemporaryFile(
-        prefix='_param_', suffix='.txt', dir=get_context().directory, delete=False)
-    tf.close()
-
     if isinstance(value, list) or np.isscalar(value):
         value = np.asarray(value)
 
     if sparse.issparse(value):
         raise ValueError('only dense data is supported')
 
-    with open(tf.name, 'w') as f:
-        value.ravel().tofile(f, sep='\n')
+    param_shape = value.shape if value.shape else (1,)
+    literal_shape = (param_shape[0], np.multiply.reduce(param_shape[1:]))
+    
+    literal_array = np.reshape(value, literal_shape)        
 
-    from cntk.reader import CNTKTextFormatReader
-
-    cntk_shape = numpy_to_cntk_shape(value.shape)
-
-    dims = np.multiply.reduce(cntk_shape)
+    from io import BytesIO
+    s = BytesIO()    
+    np.savetxt(s, literal_array, '%.4f')
 
     # TODO switch to ConstantTensor once it is in the core.bs file
     node = cntk1_ops.ParameterTensor(
-        dims=dims,
+        dims=param_shape,
         learningRateMultiplier=0.0,
-        init='fromFile',
-        initFromFilePath=tf.name,
+        init='fromLiteral',
+        initFromLiteral=s.getvalue().decode(),
         **kw)
-
-    if len(cntk_shape) > 1:
-        node = cntk1_ops.NewReshape(node, dims=cntk_shape)
 
     return node
 
@@ -501,14 +487,10 @@ def _get_input_node(list_of_tensors, has_sequence_dimension, **kw):
     # removed.
     value_shape = shapes.pop()
 
-    cntk_shape = numpy_to_cntk_shape(value_shape)
+    cntk_shape = value_shape if value_shape else (1,)
 
     from cntk.reader import CNTKTextFormatReader
 
-    # In case we have the shape (2,3) and assuming we have only sequences of
-    # lengths 1, the input will be initialized with dim=3 (column major)
-    # followed by a reshape node that has the dims '2:3'. So we have 2*3 = 6 
-    # dimensions when flattened out for the reader. 
     dims = int(np.multiply.reduce(cntk_shape))
     node = cntk1_ops.Input(cntk_shape, **kw)
     node.reader = CNTKTextFormatReader(tf.name)

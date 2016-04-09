@@ -16,17 +16,24 @@ from ...graph import *
 from ...reader import *
 import numpy as np
 
-# Testing inputs
-@pytest.mark.parametrize("left_operand, right_operand", [
+#TODO: Test plus(), times(), etc, not only the overloaded opeartors (+, *, etc.)
+
+#TODO: perhaps include some rand() testing; and 
+TENSOR_PAIRS = [
     ([30], [10]),
     ([[30]], [[10]]),
     ([[1.5,2.1]], [[10,20]]),
+    ([[100, 200], [300,400], [10,20]], [[10, 20], [30,40], [1,2]]),
+    #Test with broadcast
+    #TODO: un-expected CNTK output with the backward pass test
+    #([5], [[10, 20], [30,40], [1,2]]),
     #TODO: enable once all branches are merged to master
-    #Test with matrix
-    #([5], [[30,40], [1,2]]),
     #Adding two 3x2 inputs of sequence length 1
     #([[30,40], [1,2], [0.1, 0.2]], [[10,20], [3,4], [-0.5, -0.4]]),     
-    ])
+    ]
+
+# -- plus operation tests --
+@pytest.mark.parametrize("left_operand, right_operand", TENSOR_PAIRS)
 def test_op_plus(left_operand, right_operand, device_id, precision):    
 
     #Forward pass test
@@ -42,7 +49,7 @@ def test_op_plus(left_operand, right_operand, device_id, precision):
     
     left_as_input = a + right_operand    
     unittest_helper(left_as_input, expected, device_id=device_id, 
-                    precision=precision, clean_up=False, backward_pass=False)
+                    precision=precision, clean_up=True, backward_pass=False)
     
     right_as_input = left_operand + b
     unittest_helper(right_as_input, expected, device_id=device_id, 
@@ -58,14 +65,7 @@ def test_op_plus(left_operand, right_operand, device_id, precision):
                     precision=precision, clean_up=True, backward_pass=True, input_node=b)    
 
 # -- element times tests --
-# Testing inputs
-@pytest.mark.parametrize("left_operand, right_operand", [
-    ([30], [10]),
-    ([[30]], [[10]]),
-    ([[1.5,2.1]], [[10,20]]),
-    ])
-    #TODO: perhaps (1) include some rand() testing; and 
-    # (2) setup some shared set of numbers to use for all tests
+@pytest.mark.parametrize("left_operand, right_operand", TENSOR_PAIRS)
 def test_op_element_times(left_operand, right_operand, device_id, precision):
 
     #Forward pass test
@@ -81,7 +81,7 @@ def test_op_element_times(left_operand, right_operand, device_id, precision):
     
     left_as_input = a * right_operand    
     unittest_helper(left_as_input, expected, device_id=device_id, 
-                    precision=precision, clean_up=False, backward_pass=False)
+                    precision=precision, clean_up=True, backward_pass=False)
     
     right_as_input = left_operand * b
     unittest_helper(right_as_input, expected, device_id=device_id, 
@@ -100,12 +100,7 @@ def test_op_element_times(left_operand, right_operand, device_id, precision):
                     precision=precision, clean_up=True, backward_pass=True, input_node=b)       
 
 # -- element divide tests --
-# Testing inputs
-@pytest.mark.parametrize("left_operand, right_operand", [
-    ([30], [10]),
-    ([[30]], [[10]]),
-    ([[1.5,2.1]], [[10,20]]),
-    ])
+@pytest.mark.parametrize("left_operand, right_operand", TENSOR_PAIRS)
 def Ztest_op_element_divide(left_operand, right_operand, device_id, precision):    # 'Z' added to temporarily comment out test
 
     #Forward pass test
@@ -121,7 +116,7 @@ def Ztest_op_element_divide(left_operand, right_operand, device_id, precision): 
     
     left_as_input = a / right_operand    
     unittest_helper(left_as_input, expected, device_id=device_id, 
-                    precision=precision, clean_up=False, backward_pass=False)
+                    precision=precision, clean_up=True, backward_pass=False)
     
     right_as_input = left_operand / b
     unittest_helper(right_as_input, expected, device_id=device_id, 
