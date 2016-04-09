@@ -459,7 +459,7 @@ class Context(AbstractContext):
 
                 continue
             else:
-                data = np.asarray(data, dtype=float).reshape(shape)
+                data = np.asarray(data, dtype=float).reshape(shape, order='F')
 
             tensor_seq.append(data)
 
