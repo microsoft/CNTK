@@ -660,7 +660,7 @@ void SequenceReader<ElemType>::ReadClassInfo(const wstring& vocfile, int& classS
 
     // check if unk is the same used in vocabulary file
     if (word4idx.find(mUnk.c_str()) == word4idx.end())
-        RuntimeError("ReadClassInfo unknown symbol '%s' is not in vocabulary file.", mUnk.c_str());
+        fprintf(stderr, "ReadClassInfo: 'unknown' symbol unk='%s' is not in vocabulary file. Unknown words will error out if encountered.\n", mUnk.c_str());
 }
 
 // InitCache - Initialize the caching reader if cache files exist, otherwise the writer
