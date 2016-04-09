@@ -9,6 +9,7 @@ Subpackages
     cntk.examples
     cntk.ops
     cntk.test
+    cntk.tests
     cntk.utils
 
 Submodules
@@ -34,14 +35,6 @@ cntk.graph module
 -----------------
 
 .. automodule:: cntk.graph
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-cntk.logreg module
-------------------
-
-.. automodule:: cntk.logreg
     :members:
     :undoc-members:
     :show-inheritance:

@@ -23,7 +23,13 @@ Example
 
     import cntk as cn
 
-    def x():
+    with cn.Context('demo') as ctx:
+        a = cn.constant([[1,2], [3,4]])
+        out = a + [[10,20], [30, 40]]
+
+        result = ctx.eval(out)
+
+        return result
 
 
 Contents:
@@ -31,7 +37,7 @@ Contents:
 .. toctree::
    :maxdepth: 2
 
-   cntk.ops
+   CNTK operators <cntk.ops>
 
 
 
