@@ -19,7 +19,7 @@ def plus(left_operand, right_operand, name=None):
         right_operand: Right side tensor
         name: the name of the node in the network            
     Returns:
-        Plus node
+        :class:`cntk.graph.ComputationNode`
     """
     
     return Plus(left_operand, right_operand, var_name = name)  
@@ -33,7 +33,7 @@ def times(left_operand, right_operand, name=None):
         right_operand: Right side tensor
         name: the name of the node in the network            
     Returns:
-        Times node
+        :class:`cntk.graph.ComputationNode`
     """
     
     return Times(left_operand, right_operand, var_name = name)    
@@ -47,7 +47,7 @@ def element_divide(left_operand, right_operand, name=None):
         right_operand: Right side tensor
         name: the name of the node in the network            
     Returns:
-        ElementDivide node
+        :class:`cntk.graph.ComputationNode`
     """
     
     return ElementDivide(left_operand, right_operand, var_name = name)
