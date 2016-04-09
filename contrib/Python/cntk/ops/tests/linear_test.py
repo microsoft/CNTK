@@ -16,6 +16,8 @@ from ...graph import *
 from ...reader import *
 import numpy as np
 
+#TODO: Test plus(), times(), etc, not only the overloaded opeartors (+, *, etc.)
+
 #TODO: perhaps include some rand() testing; and 
 TENSOR_PAIRS = [
     ([30], [10]),
