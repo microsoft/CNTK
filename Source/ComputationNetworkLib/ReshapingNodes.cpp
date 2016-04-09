@@ -80,7 +80,7 @@ template <class ElemType>
     outMBLayout->InitAsPackedSequences(SequenceLengthVector(sequences, indexSequences), /*temp*/m_placementBuffer, /*temp*/m_rowAllocationsBuffer);
     // copy to output
     vector<ElemType> buf(outMBLayout->GetNumCols(), numeric_limits<ElemType>::quiet_NaN()); // STL cannot easily avoid initializing, so we might as well init with NaN for gaps
-    for (size_t i = 0; i < sequences.size(); i++)
+    for (size_t i = 0; i < min(sequences.size(), outMBLayout->GetAllSequences().size()); i++)
     {
         let& seq = outMBLayout->GetAllSequences()[i];
         if (seq.seqId == GAP_SEQUENCE_ID) // gaps will keep the NaN
@@ -88,12 +88,12 @@ template <class ElemType>
         let& indexSequence = indexSequences[i];
         for (size_t t = 0; t < seq.GetNumTimeSteps(); t++)
             buf[outMBLayout->GetColumnIndex(seq, t)] = (ElemType)indexSequence[t];
-        /*
-        BUGBUG: a debug assert when doing this:
-        TakeRight (N, x) = BS.Sequences._Take (FutureValue, N, x)
-        Last(x) = TakeRight(1, x)
-        */
     }
+    // there may be dangling gaps at the end. Take the opportunity to verify this.
+    for (size_t i = min(sequences.size(), outMBLayout->GetAllSequences().size()); i < sequences.size(); i++)
+        assert(sequences[i].seqId == GAP_SEQUENCE_ID);
+    for (size_t i = min(sequences.size(), outMBLayout->GetAllSequences().size()); i < outMBLayout->GetAllSequences().size(); i++)
+        assert(outMBLayout->GetAllSequences()[i].seqId == GAP_SEQUENCE_ID);
     // the result will be kept in CPUDEVICE, since most likely we will access it again in PackedIndexNode
     Value().TransferToDeviceIfNotThere(CPUDEVICE, /*isBeingMoved=*/ true, /*emptyTransfer=*/ true, /*updatePreferredDevice=*/ true);
     Value().SetValue(1, outMBLayout->GetNumCols(), CPUDEVICE, buf.data(), MatrixFormat::matrixFormatColMajor);
