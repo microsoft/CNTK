@@ -210,13 +210,13 @@ protected:
             InvalidArgument("Pooling type %d is not supported.", (int)m_poolKind);
     }
 
-private:
+protected:
     static bool IsGpu(DEVICEID_TYPE deviceId)
     {
         return deviceId >= 0;
     }
 
-private:
+protected:
     using IntMatPtr = std::unique_ptr<Matrix<int>>;
 
     Matrix<int> m_mpRowCol;
@@ -511,6 +511,96 @@ private:
     bool m_gpuSparse1D;
 };
 
+//------------------------------------------------------------------
+// GEMM convolution engine implementation.
+// This engine supports arbitrary convolution configuration with full
+// sharing and implemented using unroll + GEMM technique 
+// (High performance convolutional neural networks for document processing; Chellapilla, Puri, Simard)
+// Uses reference engine for pooling operations.
+//------------------------------------------------------------------
+template <class ElemType>
+class GemmConvolutionEngine : public ReferenceConvolutionEngine<ElemType>
+{
+public:
+    using Base = ReferenceConvolutionEngine<ElemType>;
+    using typename Base::Mat;
+
+public:
+    GemmConvolutionEngine(ConvolveGeometryPtr geometry, DEVICEID_TYPE deviceId, ImageLayoutKind imageLayout, size_t maxTempMemSizeInSamples, PoolKind poolKind)
+        : Base(geometry, deviceId, imageLayout, maxTempMemSizeInSamples, poolKind)
+    {
+    }
+
+protected:
+    using typename Base::IntMatPtr;
+
+    using Base::m_geometry;
+    using Base::m_deviceId;
+    using Base::m_imageLayout;
+    using Base::m_maxTempMemSizeInSamples;
+
+    using Base::m_mpRowCol;
+    using Base::m_mpRowIwht;
+    using Base::m_mpRowRun;
+    using Base::m_runs;
+
+    void EnsureCompatible() override
+    {
+        if (m_imageLayout != ImageLayoutKind::CHW)
+            RuntimeError("GEMM convolution engine supports only CHW/cudnn layout.");
+        if (IsGpu(m_deviceId))
+            RuntimeError("GEMM convolution engine currently supports only CPU device.");
+    }
+
+    void ForwardCore(const Mat& in, const Mat& kernel, Mat& out, Mat& workspace) override
+    {
+        size_t batchSize = in.GetNumCols();
+        size_t subBatchSize = m_maxTempMemSizeInSamples == 0 ? batchSize : min(batchSize, m_maxTempMemSizeInSamples);
+
+        size_t mapCount = m_geometry->GetMapCount(m_geometry->InputShape().GetRank() - 1);
+        size_t mapOutSize = m_geometry->OutputShape().GetNumElements() / mapCount;
+        size_t unrollRows = mapOutSize * subBatchSize;
+        size_t unrollCols = m_geometry->KernelShape().GetNumElements();
+        // Reserve space for unrolled inputs and, if needed, intermediate outputs. 
+        // Intermediate outputs will be transposed to final outputs after GEMM operation.
+        // Transpose is not required if subBatchSize == 1.
+        workspace.Resize(unrollRows, unrollCols + (subBatchSize > 1 ? mapCount : 0));
+
+        for (size_t start = 0; start < batchSize; start += subBatchSize)
+        {
+            size_t curBatchSize = min(subBatchSize, batchSize - start);
+            auto inputSlice = in.ColumnSlice(start, curBatchSize);
+            auto unrolledInput = workspace.ColumnSlice(0, unrollCols);
+            // Need to reshape (soft transpose) as matrices are column-major.
+            unrolledInput.Reshape(unrollCols, unrollRows);
+            inputSlice.UnrollConvolutionInput(kernel, m_mpRowCol, *m_mpRowIwht, *m_mpRowRun, *m_runs, unrolledInput);
+
+            auto outputSlice = out.ColumnSlice(start, curBatchSize);
+            outputSlice.Reshape(unrollRows, mapCount);
+            Mat::Multiply(unrolledInput, true, kernel, true, outputSlice);
+        }
+    }
+
+    void BackwardDataCore(const Mat& srcGrad, const Mat& kernel, Mat& grad, Mat& workspace) override
+    {
+        UNUSED(srcGrad); UNUSED(kernel); UNUSED(grad); UNUSED(workspace);
+        //srcGrad.ConvolutionBackwardData(kernel, m_mpRowCol, *m_mpRowIwht, *m_mpRowRun, *m_runs, grad);
+    }
+
+    void BackwardKernelCore(const Mat& srcGrad, const Mat& in, Mat& kernelGrad, bool /*allowReuse*/, Mat& workspace) override
+    {
+        UNUSED(srcGrad); UNUSED(in); UNUSED(kernelGrad); UNUSED(workspace);
+        //srcGrad.ConvolutionBackwardKernel(in, m_mpRowCol, *m_mpRowIwht, *m_mpRowRun, *m_runs, kernelGrad);
+    }
+
+public:
+    static bool IsSupported(DEVICEID_TYPE deviceId, ConvolveGeometryPtr geometry)
+    {
+        return deviceId < 0 &&
+               find(begin(geometry->Sharing()), end(geometry->Sharing()), false) == end(geometry->Sharing());
+    }
+};
+
 template <class ElemType>
 std::unique_ptr<ConvolutionEngine<ElemType>> ConvolutionEngine<ElemType>::Create(ConvolveGeometryPtr geometry, DEVICEID_TYPE deviceId,
                                                                                  ImageLayoutKind imageLayout, size_t maxTempMemSizeInSamples, PoolKind poolKind,
@@ -537,6 +627,12 @@ std::unique_ptr<ConvolutionEngine<ElemType>> ConvolutionEngine<ElemType>::Create
     {
         fprintf(stderr, "\nUsing cuDNN convolution engine for geometry: %s.\n", engStr.c_str());
         return CuDnnConvolutionEngineFactory<ElemType>::Create(geometry, deviceId, imageLayout, maxTempMemSizeInSamples, poolKind);
+    }
+
+    if (isEnabled(ConvolutionEngineKind::Gemm) && GemmConvolutionEngine<ElemType>::IsSupported(deviceId, geometry))
+    {
+        fprintf(stderr, "\nUsing GEMM convolution engine for geometry: %s.\n", engStr.c_str());
+        return std::make_unique<GemmConvolutionEngine<ElemType>>(geometry, deviceId, imageLayout, maxTempMemSizeInSamples, poolKind);
     }
 
     if (!isEnabled(ConvolutionEngineKind::Reference))

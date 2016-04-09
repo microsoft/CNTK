@@ -51,30 +51,30 @@ std::vector<ConvolveGeometryPtr> GenerateConvTestConfigs()
 {
     std::vector<ConvolveGeometryPtr> res;
     // REVIEW alexeyk: add test cases with even dimensions of a kernel. There are some corner cases which cuDNN does not support (which essentially require negative padding).
-    for (size_t kW : {1, 3})
-    {
-        for (size_t kH : {1, 3})
-        {
-            for (size_t inW : {kW, 2 * kW, 2 * kW - 1})
-            {
-                for (size_t inC : {1, 3})
-                {
-                    for (size_t mapCount : {1, 5})
-                    {
-                        for (size_t stride : {1, min((int)kW, min((int)kH, 2))})
-                        {
-                            // Note: must use sharing=false in channel dimension otherwise geometry will not be cuDNN compatible but cuDNN won't fail.
-                            res.push_back(std::make_shared<ConvolveGeometry>(TensorShape(inW, max(kH, inW) + 1, inC),
-                                TensorShape(kW, kH, inC), TensorShape(mapCount), TensorShape(stride, stride, inC),
-                                ConvolveGeometry::BoolVec{true},
-                                ConvolveGeometry::BoolVec{(kW & 1) != 0, (kH & 1) != 0, false},
-                                TensorShape(0), TensorShape(0)));
-                        }
-                    }
-                }
-            }
-        }
-    }
+    //for (size_t kW : {1, 3})
+    //{
+    //    for (size_t kH : {1, 3})
+    //    {
+    //        for (size_t inW : {kW, 2 * kW, 2 * kW - 1})
+    //        {
+    //            for (size_t inC : {1, 3})
+    //            {
+    //                for (size_t mapCount : {1, 5})
+    //                {
+    //                    for (size_t stride : {1, min((int)kW, min((int)kH, 2))})
+    //                    {
+    //                        // Note: must use sharing=false in channel dimension otherwise geometry will not be cuDNN compatible but cuDNN won't fail.
+    //                        res.push_back(std::make_shared<ConvolveGeometry>(TensorShape(inW, max(kH, inW) + 1, inC),
+    //                            TensorShape(kW, kH, inC), TensorShape(mapCount), TensorShape(stride, stride, inC),
+    //                            ConvolveGeometry::BoolVec{true},
+    //                            ConvolveGeometry::BoolVec{(kW & 1) != 0, (kH & 1) != 0, false},
+    //                            TensorShape(0), TensorShape(0)));
+    //                    }
+    //                }
+    //            }
+    //        }
+    //    }
+    //}
     // For debugging.
     res.push_back(std::make_shared<ConvolveGeometry>(TensorShape(3, 3, 1),
         TensorShape(3, 3, 1), TensorShape(2), TensorShape(1, 1, 1),
@@ -152,51 +152,58 @@ BOOST_AUTO_TEST_CASE(ConvolutionForward)
     };
 
     int baseDeviceId = 0;
-    auto engKind = ConvolutionEngineKind::Reference;
-    for (int deviceId : {-1, 0})
+    //for (auto engKind : {ConvolutionEngineKind::Reference, ConvolutionEngineKind::Gemm})
+    for (auto engKind : {ConvolutionEngineKind::Gemm})
     {
-        for (const auto& g : GenerateConvTestConfigs())
+        for (int deviceId : {-1, 0})
         {
-            auto baseEng = ConvEng::Create(g, baseDeviceId, ImageLayoutKind::CHW, 0, PoolKind::None, ConvolutionEngineKind::CuDnn);
-            auto testEng = ConvEng::Create(g, deviceId, ImageLayoutKind::CHW, 0, PoolKind::None, engKind);
+            // REVIEW alexeyk: Unroll engine supports CPU only for now.
+            if (engKind == ConvolutionEngineKind::Gemm && deviceId >= 0)
+                continue;
 
-            size_t n = batchSizeG(rng);
-            vec buf;
-            buf.resize(g->InputShape().GetNumElements() * n);
-            std::generate(begin(buf), end(buf), [&] { return nd(rng); });
-            SingleMatrix in(g->InputShape().GetNumElements(), n, buf.data(), deviceId, matrixFlagNormal);
-            SingleMatrix inB(g->InputShape().GetNumElements(), n, buf.data(), baseDeviceId, matrixFlagNormal);
-            
-            size_t mapCount = g->GetMapCount(g->InputShape().GetRank() - 1);
-            buf.resize(g->KernelShape().GetNumElements() * mapCount);
-            std::generate(begin(buf), end(buf), [&] { return nd(rng); });
-            SingleMatrix kernel(mapCount, g->KernelShape().GetNumElements(), buf.data(), deviceId, matrixFlagNormal);
-            SingleMatrix kernelB(mapCount, g->KernelShape().GetNumElements(), buf.data(), baseDeviceId, matrixFlagNormal);
+            for (const auto& g : GenerateConvTestConfigs())
+            {
+                auto baseEng = ConvEng::Create(g, baseDeviceId, ImageLayoutKind::CHW, 0, PoolKind::None, ConvolutionEngineKind::CuDnn);
+                auto testEng = ConvEng::Create(g, deviceId, ImageLayoutKind::CHW, 0, PoolKind::None, engKind);
 
-            size_t crowOut = g->OutputShape().GetNumElements();
-            SingleMatrix outBuf(deviceId);
-            SingleMatrix out = initMat(outBuf, crowOut, n, buf);
-            SingleMatrix outB(out.DeepClone(), baseDeviceId);
+                size_t n = batchSizeG(rng);
+                vec buf;
+                buf.resize(g->InputShape().GetNumElements() * n);
+                std::generate(begin(buf), end(buf), [&] { return nd(rng); });
+                SingleMatrix in(g->InputShape().GetNumElements(), n, buf.data(), deviceId, matrixFlagNormal);
+                SingleMatrix inB(g->InputShape().GetNumElements(), n, buf.data(), baseDeviceId, matrixFlagNormal);
 
-            SingleMatrix workspace(deviceId);
-            SingleMatrix workspaceB(baseDeviceId);
-            
-            testEng->Forward(in, kernel, out, workspace);
-            baseEng->Forward(inB, kernelB, outB, workspaceB);
-            
-            std::stringstream tmsg;
-            tmsg << "Geometry: " << (std::string)(*g) << ", Batch: " << n << ", Device: " << deviceId;
-            std::string msg = " are not equal, " + tmsg.str();
-            std::string msgNan = " has NaNs, " + tmsg.str();
-            std::string msgNotNan = " has buffer overflow/underflow, " + tmsg.str();
+                size_t mapCount = g->GetMapCount(g->InputShape().GetRank() - 1);
+                buf.resize(g->KernelShape().GetNumElements() * mapCount);
+                std::generate(begin(buf), end(buf), [&] { return nd(rng); });
+                SingleMatrix kernel(mapCount, g->KernelShape().GetNumElements(), buf.data(), deviceId, matrixFlagNormal);
+                SingleMatrix kernelB(mapCount, g->KernelShape().GetNumElements(), buf.data(), baseDeviceId, matrixFlagNormal);
 
-            float relErr = Err<float>::Rel;
-            float absErr = Err<float>::Abs;
-            std::string emsg;
+                size_t crowOut = g->OutputShape().GetNumElements();
+                SingleMatrix outBuf(deviceId);
+                SingleMatrix out = initMat(outBuf, crowOut, n, buf);
+                SingleMatrix outB(out.DeepClone(), baseDeviceId);
 
-            BOOST_REQUIRE_MESSAGE(!out.HasNan("out"), "out" << msgNan);
-            BOOST_REQUIRE_MESSAGE(CheckEqual(out, outB, emsg, relErr * 4, absErr * 8), "out" << msg << ". " << emsg);
-            BOOST_REQUIRE_MESSAGE(CountNans(outBuf) == crowOut * 2 * n, "out" << msgNotNan);
+                SingleMatrix workspace(deviceId);
+                SingleMatrix workspaceB(baseDeviceId);
+
+                testEng->Forward(in, kernel, out, workspace);
+                baseEng->Forward(inB, kernelB, outB, workspaceB);
+
+                std::stringstream tmsg;
+                tmsg << "Geometry: " << (std::string)(*g) << ", Batch: " << n << ", Device: " << deviceId;
+                std::string msg = " are not equal, " + tmsg.str();
+                std::string msgNan = " has NaNs, " + tmsg.str();
+                std::string msgNotNan = " has buffer overflow/underflow, " + tmsg.str();
+
+                float relErr = Err<float>::Rel;
+                float absErr = Err<float>::Abs;
+                std::string emsg;
+
+                BOOST_REQUIRE_MESSAGE(!out.HasNan("out"), "out" << msgNan);
+                BOOST_REQUIRE_MESSAGE(CheckEqual(out, outB, emsg, relErr * 4, absErr * 8), "out" << msg << ". " << emsg);
+                BOOST_REQUIRE_MESSAGE(CountNans(outBuf) == crowOut * 2 * n, "out" << msgNotNan);
+            }
         }
     }
 }

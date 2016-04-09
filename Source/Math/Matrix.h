@@ -479,6 +479,9 @@ public:
     void ConvolutionBackwardKernel(const Matrix<ElemType>& in, const Matrix<int>& mpRowCol, const Matrix<int>& mpRowIwht,
                                    const Matrix<int>& mpRowRun, const Matrix<int>& runs, Matrix<ElemType>& kernelGrad) const;
 
+    void UnrollConvolutionInput(const Matrix<ElemType>& kernel, const Matrix<int>& mpRowCol, const Matrix<int>& mpRowIwht,
+                                const Matrix<int>& mpRowRun, const Matrix<int>& runs, Matrix<ElemType>& output) const;
+
     void MaxPoolingForward(const Matrix<int>& mpRowCol, const Matrix<int>& mpRowIndices, const Matrix<int>& indices, Matrix<ElemType>& output) const;
     void MaxPoolingBackward(const Matrix<ElemType>& out, const Matrix<ElemType>& in,
                             const Matrix<int>& mpRowCol, const Matrix<int>& mpRowIndices, const Matrix<int>& indices,

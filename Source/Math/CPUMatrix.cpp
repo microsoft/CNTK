@@ -4136,6 +4136,13 @@ void CPUMatrix<ElemType>::ConvolutionBackwardKernel(const CPUMatrix<ElemType>& i
 }
 
 template <class ElemType>
+void CPUMatrix<ElemType>::UnrollConvolutionInput(const CPUMatrix<ElemType>& kernel, const CPUMatrix<int>& mpRowCol, const CPUMatrix<int>& mpRowIwht,
+                                                 const CPUMatrix<int>& mpRowRun, const CPUMatrix<int>& runs, CPUMatrix<ElemType>& output) const
+{
+    UNUSED(kernel); UNUSED(mpRowCol); UNUSED(mpRowIwht); UNUSED(mpRowRun); UNUSED(runs); UNUSED(output);
+}
+
+template <class ElemType>
 void CPUMatrix<ElemType>::MaxPoolingForward(const CPUMatrix<int>& mpRowCol, const CPUMatrix<int>& mpRowIndices, const CPUMatrix<int>& indices, CPUMatrix<ElemType>& output) const
 {
 #pragma omp parallel for
