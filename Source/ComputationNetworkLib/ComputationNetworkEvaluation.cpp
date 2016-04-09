@@ -192,8 +192,9 @@ ComputationNetwork::PARTraversalFlowControlNode::PARTraversalFlowControlNode(con
     for (auto& node : m_nestedNodes)
     {
         if (node->GetMBLayout() != GetMBLayout())
-            LogicError("Evaluate: all nodes inside a recurrent loop must have a layout that is identical; mismatch found for nodes '%ls' vs. '%ls'",
-                       node->NodeName().c_str(), m_nestedNodes[0]->NodeName().c_str());
+            LogicError("Evaluate: All nodes inside a recurrent loop must have a layout that is identical; mismatch found for nodes '%ls' (%ls) vs. '%ls' (%ls)",
+                       node            ->NodeName().c_str(), node            ->GetMBLayoutAxisString().c_str(),
+                       m_nestedNodes[0]->NodeName().c_str(), m_nestedNodes[0]->GetMBLayoutAxisString().c_str());
     }
 
     // tell all that loop is about to commence
@@ -672,7 +673,7 @@ size_t ComputationNetwork::ValidateNodes(list<ComputationNodeBasePtr> nodes, boo
             {
                 unchanged = !ValidateNode(node, isFinalValidationPass);
                 string updatedPrototype = node->FormatOperationPrototype("");
-#if 1           // print prototype in final validation pass
+#if 0           // print prototype in final validation pass. Problematic for tracking down validation errors in loops.
                 unchanged;
                 if (isFinalValidationPass)
 #else           // print prototype upon every change (useful for debugging)

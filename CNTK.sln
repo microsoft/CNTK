@@ -666,6 +666,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Config", "Config", "{850008
 	ProjectSection(SolutionItems) = preProject
 		Examples\Text\PennTreebank\Config\rnn.cntk = Examples\Text\PennTreebank\Config\rnn.cntk
 		Examples\Text\PennTreebank\Config\S2SAutoEncoder.cntk = Examples\Text\PennTreebank\Config\S2SAutoEncoder.cntk
+		Examples\Text\PennTreebank\Config\S2SLib.bs = Examples\Text\PennTreebank\Config\S2SLib.bs
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "SLU", "SLU", "{E6DC3B7D-303D-4A54-B040-D8DCF8C56E17}"
