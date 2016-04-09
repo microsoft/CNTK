@@ -149,46 +149,32 @@ void File::Init(const wchar_t* filename, int fileOptions)
 /*static*/ wstring File::DirectoryPathOf(wstring path)
 {
 #if WIN32
-    if (IsWindows8OrGreater())
+    HRESULT hr;
+    path = msra::strfun::ReplaceAll<wstring>(path, L"/", L"\\"); // Win32 accepts forward slashes, but it seems that PathRemoveFileSpec() does not
+    if (IsWindows8OrGreater()) // PathCchRemoveFileSpec() only available on Windows 8+
     {
         typedef HRESULT(*PathCchRemoveFileSpecProc)(_Inout_updates_(_Inexpressible_(cchPath)) PWSTR, _In_ size_t);
+        HINSTANCE hinstLib = LoadLibrary(TEXT("api-ms-win-core-path-l1-1-0.dll"));
+        if (hinstLib == nullptr)
+            RuntimeError("DirectoryPathOf: LoadLibrary() unexpectedly failed.");
+        PathCchRemoveFileSpecProc PathCchRemoveFileSpec = reinterpret_cast<PathCchRemoveFileSpecProc>(GetProcAddress(hinstLib, "PathCchRemoveFileSpec"));
+        if (!PathCchRemoveFileSpec)
+            RuntimeError("DirectoryPathOf: GetProcAddress() unexpectedly failed.");
 
-        HINSTANCE hinstLib;
-        PathCchRemoveFileSpecProc ProcAdd;
-        BOOL fFreeResult = FALSE;
+        // this is the actual function call we care about
+        hr = PathCchRemoveFileSpec(&path[0], path.size());
 
-        hinstLib = LoadLibrary(TEXT("api-ms-win-core-path-l1-1-0.dll"));
-        if (hinstLib != nullptr)
-        {
-            ProcAdd = reinterpret_cast<PathCchRemoveFileSpecProc>(GetProcAddress(hinstLib, "PathCchRemoveFileSpec"));
-            if (NULL != ProcAdd)
-            {
-                auto hr = (ProcAdd)(&path[0], path.size());
-                if (hr == S_OK) // done
-                    path.resize(wcslen(&path[0]));
-                else if (hr == S_FALSE) // nothing to remove: use .
-                    path = L".";
-            }
-            else
-            {
-                LogicError("DirectoryPathOf: GetProcAddress() unexpectedly failed.");
-            }
-
-            fFreeResult = FreeLibrary(hinstLib);
-        }
-        else
-        {
-            LogicError("DirectoryPathOf: LoadLibrary() unexpectedly failed.");
-        }
+        FreeLibrary(hinstLib);
     }
+    else // on Windows 7-, use older PathRemoveFileSpec() instead
+        hr = PathRemoveFileSpec(&path[0]);
+
+    if (hr == S_OK) // done
+        path.resize(wcslen(&path[0]));
+    else if (hr == S_FALSE) // nothing to remove: use .
+        path = L".";
     else
-    {
-        auto hr = PathRemoveFileSpec(&path[0]);
-        if (hr != 0) // done
-            path.resize(wcslen(&path[0]));
-        else
-            path = L".";
-    }
+        RuntimeError("DirectoryPathOf: Path(Cch)RemoveFileSpec() unexpectedly failed with 0x%08x.", (unsigned int)hr);
 #else
     auto pos = path.find_last_of(L"/");
     if (pos != path.npos)
