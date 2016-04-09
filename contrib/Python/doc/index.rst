@@ -37,7 +37,7 @@ Contents:
 .. toctree::
    :maxdepth: 2
 
-   cntk.ops
+   CNTK operators <cntk.ops>
 
 
 
