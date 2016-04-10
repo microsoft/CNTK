@@ -1,4 +1,5 @@
 # configFile=$(SolutionDir)Examples/Text/PennTreebank/Config/S2SAutoEncoder.cntk  RunRootDir=$(SolutionDir)Examples/Text/PennTreebank  DeviceId=-1  makeMode=false
+# configFile=$(SolutionDir)Examples/Text/PennTreebank/Config/S2SAutoEncoder.cntk  RunRootDir=$(SolutionDir)g2p  makeMode=false
 ####################
 # WORK IN PROGRESS #
 # WORK IN PROGRESS #
@@ -17,9 +18,10 @@ ExpRootDir = "$RunRootDir$"
 # experiment id
 #ExpId = _run
 
-deviceId = 0
+deviceId = 1
 #ExpId = 68-$deviceId$-s2sae-bigmodel
-ExpId = 67-1-s2sae-bigmodel # for decoding a different model
+ExpId = 04-$deviceId$-g2p
+#ExpId = 67-1-s2sae-bigmodel # for decoding a different model
 
 # directories
 ExpDir    = "$ExpRootDir$/$ExpId$"
@@ -34,9 +36,6 @@ stderr = $ExpDir$/S2SAutoEncoder.log
 # It encodes an entire sentence into a flat vector, and tries to regenerate it.
 # Meant to be useful mainly understanding how to do sequence-to-sequence in CNTK.
 
-# deviceId=-1 for CPU, >=0 for GPU devices, "auto" chooses the best GPU, or CPU if no usable GPU is available
-#deviceId = 0 # "auto"
-
 command = writeWordAndClassInfo:train:test:write
 #command = write
 
@@ -45,18 +44,26 @@ traceLevel = 1
 modelPath  = "$ModelDir$/S2SAutoEncoder.dnn"
 decodeModelPath = "$modelPath$" # epoch to decode. Has best CV WER
 
-confVocabSize = 10000
-confClassSize = 50
+#confVocabSize = 10000
+#confClassSize = 50
 
-# TODO: overtrain it, then get decode to work again and check
+#trainFile = "ptb.train.txt"
+##trainFile = "ptb.small.train.txt"
+#validFile = "ptb.valid.txt"
+##validFile = "ptb.small.valid.txt"
+#testFile  = "ptb.test.txt"
+##testFile  = "ptb.test.txt-econ1"
+##testFile = "ptb.small.train.txt" # test on train, to see whether model makes sense at all
+#startSymbol = "</s>"
 
-trainFile = "ptb.train.txt"
-#trainFile = "ptb.small.train.txt"
-validFile = "ptb.valid.txt"
-#validFile = "ptb.small.valid.txt"
-testFile  = "ptb.test.txt"
-#testFile  = "ptb.test.txt-econ1"
-#testFile = "ptb.small.train.txt" # test on train, to see whether model makes sense at all
+confVocabSize = 69 #10000
+confClassSize = 0 #50
+
+trainFile = "g014b2b.train-dev-20-21.bsf.joint"
+#trainFile = "g014b2b.train-dev-1-21.bsf.joint" # small one for debugging
+validFile = "g014b2b.train-dev-1-21.bsf.joint"
+testFile  = "g014b2b.test.bsf.joint"
+startSymbol = "<s>"
 
 #######################################
 #  network definition                 #
@@ -75,7 +82,7 @@ BrainScriptNetworkBuilder = (new ComputationNetwork [
     vocabDim = $confVocabSize$
     nbrClass = $confClassSize$
 
-    isAutoencoder = true                # input is only one sequence, meant to reproduce itself
+    isAutoencoder = false               # input is only one sequence, meant to reproduce itself
     useStabilizer = true
     useEncoder    = true                # if false, this becomes a regular RNN
     useNYUStyle   = true                # if true use thought vector for all inputs, NYU-style
@@ -89,7 +96,7 @@ BrainScriptNetworkBuilder = (new ComputationNetwork [
     RecurrentLSTMP = BS.RNNs.RecurrentLSTMP
     RecurrentLSTMPWithInitialState = BS.RNNs.RecurrentLSTMPWithInitialState
 
-    embeddingDim = 300
+    embeddingDim = $confVocabSize$ # 300
     hiddenDim    = 512 # 1024 # 200
     maxLayer = 2 # 0
 
@@ -100,21 +107,25 @@ BrainScriptNetworkBuilder = (new ComputationNetwork [
     #input = SparseInput(vocabDim, tag='feature');  # BUGBUG: Slice() not working for sparse, need to extend TensorView
     input = Input(vocabDim, tag='feature');
 
-    streams = [ outerInput = input   # TODO: need ^ syntax
-              out = if isAutoencoder
-              then [
-                  # for an auto-encoder, both are the same
-                  input  = outerInput
-                  labels = input
-              ]
-              else [ # TODO: the separation hack
-                  input  = outerInput
-                  labels = input
-              ]
+    streams = [
+                  rawInput = input
+                  out = if isAutoencoder
+                  then [
+                      # for an auto-encoder, both are the same
+                      input  = rawInput
+                      labels = rawInput
+                  ]
+                  else [
+                      separatorRow = 2                                   # row index of separator symbokl 
+                      isSeparator = TraceSparse (RowSlice (separatorRow, 1, TraceSparse (rawInput, 'raw')), 'row') # cut out the separator as a flag
+                      inInput  = TraceDense (Boolean.Or (FutureValue (1, inInput , defaultHiddenActivation=0), isSeparator), 'fin')
+                      inLabels = TraceDense (Boolean.Or (PastValue   (1, inLabels, defaultHiddenActivation=0), isSeparator), 'flb')
+                      input  = TraceSparse (Sequences.Gather (inInput,  rawInput), 'in')
+                      labels = TraceSparse (Sequences.Gather (inLabels, rawInput), 'lb')
+                  ]
               ].out
 
     # helpers
-    CastAs (type, data) = Sequences.Scatter (Constants.OnesLike (type), data)
     First (x) = Slice (0,  1, x,  axis=-1)
     Last (x)  = Slice (-1, 0, x,  axis=-1)
 
@@ -128,34 +139,65 @@ BrainScriptNetworkBuilder = (new ComputationNetwork [
     # Note: Embeddings are linear, so better stabilize. We really should use BatchNorm.
 
     E = Parameters.Stabilize (Parameters.WeightParam (vocabDim, embeddingDim), enabled=useStabilizer) # note: this is assumed to be applied transposed, hence the swapped dimensions
-    EmbedInput (x)  = TransposeTimes (E, x)
-    EmbedLabels (x) = TransposeTimes (E, x)
+    EmbedInput (x)  = if vocabDim != embeddingDim then TransposeTimes (E, x) else x
+    EmbedLabels (x) = if vocabDim != embeddingDim then TransposeTimes (E, x) else x
 
     inputEmbedded  = EmbedInput  (inputSequence)
     labelsEmbedded = EmbedLabels (labelSequence)
     labelSentenceStart = First (streams.labels)
     labelSentenceStartEmbedded = EmbedLabels (labelSentenceStart)
 
+    # same as RecurrentLSTMP but returns both h and c
+    RecurrentLSTMP2 (inputDim, outputDim, cellDim, x, enableSelfStabilization=false) =
+    [
+        prevState =
+        [
+            h = Loop.Previous (lstmState.h)             // hidden state(t-1)
+            c = Loop.Previous (lstmState.c)             // cell(t-1)
+        ]
+        enableSelfStabilization1 = enableSelfStabilization // TODO: BS syntax needs to allow to say ^.enableSelfStabilization
+        lstmState = BS.RNNs.LSTMP (inputDim, outputDim, cellDim, x, prevState, enableSelfStabilization=enableSelfStabilization1)
+    ].lstmState // that's the value we return
+
+    RecurrentLSTMP2WithInitialState (inputDim, outputDim, cellDim, x, initialState, enableSelfStabilization=false) =
+    [
+        prevState =
+        [
+            isFirst = Loop.IsFirst (initialState.h)
+            h = Boolean.If (isFirst, initialState.h, Loop.Previous (lstmState.h))             // hidden state(t-1)
+            c = Boolean.If (isFirst, initialState.c, Loop.Previous (lstmState.c))             // cell(t-1)
+        ]
+        enableSelfStabilization1 = enableSelfStabilization // TODO: BS syntax needs to allow to say ^.enableSelfStabilization
+        lstmState = BS.RNNs.LSTMP (inputDim, outputDim, cellDim, x, prevState, enableSelfStabilization=enableSelfStabilization1)
+    ].lstmState // that's the value we return
+
     # encoder (processes inputEmbedded)
     encoderOutputLayer = Length (encoderDims)-1
     encoder[i:0..encoderOutputLayer] =
-        RecurrentLSTMP(if i == 0 then embeddingDim else encoderDims[i-1],
-                       encoderDims[i], encoderDims[i],
-                       if i == 0 then inputEmbedded else encoder[i-1],
-                       enableSelfStabilization=useStabilizer)
+        RecurrentLSTMP2(if i == 0 then embeddingDim else encoderDims[i-1],
+                        encoderDims[i], encoderDims[i],
+                        if i == 0 then inputEmbedded else encoder[i-1].h,
+                        enableSelfStabilization=useStabilizer)
     encoderOutput = encoder[encoderOutputLayer]
 
     # that last frame should be fed as an additional input to every decoder step
     # (in the NYU model, not the Google model where the thought vector is only the initial state.)
 
-    thoughtVector = TraceDense (Last (TraceDense (encoderOutput, 'encout')), 'thv')
+    thoughtVector = [
+        h = TraceDense (Last (TraceDense (encoderOutput.h, 'encout')), 'thvh')
+        c = TraceDense (Last (TraceDense (encoderOutput.c, 'encout')), 'thvc')
+    ]
     thoughtVectorDim = encoderDims[encoderOutputLayer]
 
-    thoughtVectorPadded = Sequences.Scatter (Loop.IsFirst (labelsEmbedded), thoughtVector) # padded with zeroes until end of target sequence
+    thoughtVectorPadded = [ # padded with zeroes until end of target sequence
+        isFirst = Loop.IsFirst (labelsEmbedded)
+        h = Sequences.Scatter (isFirst, thoughtVector.h)
+        c = Sequences.Scatter (isFirst, thoughtVector.c)
+    ]
 
-    # NYU style: expand to all
-    thoughtVectorEverywhere = Boolean.If (Loop.IsFirst (thoughtVectorPadded),      # if first entry
-                                 /*then*/ thoughtVectorPadded,                     # then copy that
+    # NYU style: expand h to all, drop c
+    thoughtVectorEverywhere = Boolean.If (Loop.IsFirst (thoughtVectorPadded.h),    # if first entry
+                                 /*then*/ thoughtVectorPadded.h,                   # then copy that
                                  /*else*/ Loop.Previous (thoughtVectorEverywhere)) # else just propagate to the front
 
     # decoder
@@ -165,24 +207,24 @@ BrainScriptNetworkBuilder = (new ComputationNetwork [
 
     delayedDecoderFeedback = TraceDense (Loop.PreviousOrDefault (defaultValue=labelSentenceStartEmbedded, TraceDense (labelsEmbedded, 'lemb'))   , 'prev lemb')
 
-    decoderInputDim = if useEncoder && useNYUStyle then           thoughtVectorDim         + embeddingDim  else           embeddingDim
+    decoderInputDim = if useEncoder && useNYUStyle then           thoughtVectorDim        + embeddingDim            else embeddingDim
     decoderInput    = if useEncoder && useNYUStyle then RowStack (thoughtVectorEverywhere : delayedDecoderFeedback) else delayedDecoderFeedback
     decoderOutputLayer = Length (decoderDims)-1
     decoder[i:0..decoderOutputLayer] =         # TODO: !useNYUStyle: set initial hidden state
         if i == 0
         then if useNYUStyle
-             then RecurrentLSTMP (decoderInputDim, decoderDims[i], decoderDims[i],
-                                  decoderInput,
-                                  enableSelfStabilization=useStabilizer)
-             else RecurrentLSTMPWithInitialState (decoderInputDim, decoderDims[i], decoderDims[i],
-                                                  decoderInput,
-                                                  initialState=thoughtVectorPadded, # BUGBUG: Should be thoughtVector, but Scatter() can't expand from inside a loop
-                                                  enableSelfStabilization=useStabilizer)
-        else RecurrentLSTMP (decoderDims[i-1], decoderDims[i], decoderDims[i],
-                             decoder[i-1],
-                             enableSelfStabilization=useStabilizer)
+             then RecurrentLSTMP2 (decoderInputDim, decoderDims[i], decoderDims[i],
+                                   decoderInput,
+                                   enableSelfStabilization=useStabilizer)
+             else RecurrentLSTMP2WithInitialState (decoderInputDim, decoderDims[i], decoderDims[i],
+                                                   decoderInput,
+                                                   thoughtVectorPadded, # BUGBUG: Should be thoughtVector, but Scatter() can't expand from inside a loop
+                                                   enableSelfStabilization=useStabilizer)
+        else RecurrentLSTMP2 (decoderDims[i-1], decoderDims[i], decoderDims[i],
+                              decoder[i-1].h,
+                              enableSelfStabilization=useStabilizer)
     decoderDim = decoderDims[decoderOutputLayer]
-    decoderOutput = decoder[decoderOutputLayer]
+    decoderOutput = decoder[decoderOutputLayer].h
 
     # and add a softmax layer on top
 
@@ -242,7 +284,7 @@ reader = [
         labelType = "category"
         labelDim = "$confVocabSize$"
         labelMappingFile = "$ModelDir$/vocab.wl"
-        beginSequence = "</s>"
+        beginSequence = "$startSymbol$" # "</s>"
         endSequence   = "</s>"
 
         #### Write definition ####
@@ -342,7 +384,7 @@ cvReader = [
 writeWordAndClassInfo = [
     action = "writeWordAndClass"
     inputFile = "$DataDir$/$trainFile$"
-    beginSequence = "</s>"
+    beginSequence = "$startSymbol$" # "</s>"
     endSequence   = "</s>"
     outputMappingFile = "$ModelDir$/vocab.wl"
     outputVocabFile = "$ModelDir$/vocab.txt"
@@ -456,7 +498,7 @@ test = [
             labelType = "category"
             labelDim = "$confVocabSize$"
             labelMappingFile = "$ModelDir$/vocab.wl"
-            beginSequence = "</s>"
+            beginSequence = "$startSymbol$" # "</s>"
             endSequence   = "</s>"
     
             #### Write definition ####
@@ -861,7 +903,7 @@ write = [
             labelType = "category"
             labelDim = "$confVocabSize$"
             labelMappingFile = "$ModelDir$/vocab.wl"
-            beginSequence = "</s>"
+            beginSequence = "$startSymbol$" # "</s>"
             endSequence   = "</s>"
 
             #### Write definition ####
