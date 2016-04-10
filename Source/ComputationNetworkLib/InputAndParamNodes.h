@@ -229,7 +229,7 @@ protected:
             return;
         }
 
-        if (m_dynamicAxisNodeName == GetName())
+        if (m_dynamicAxisNodeName == this->GetName())
             RuntimeError("%ls: Cannot attach dynamic axis from itself.", NodeDescription().c_str());
 
         auto node = nodeLookup(m_dynamicAxisNodeName);
@@ -286,7 +286,6 @@ public:
         else
             m_dynamicAxisNodeName = L""; // Use default
         Init(sampleLayout, m_isSparse, m_dynamicAxisNodeName);
-        fprintf(stderr, "WARNING: %ls loading of DynamixAxes is not implemented yet.");
     }
 
     // InputValue must not resize its inputs because that might destroy it. It should already have the correct size.
