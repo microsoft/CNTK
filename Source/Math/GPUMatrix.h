@@ -126,6 +126,7 @@ public:
     using Base::SetFormat;
     using Base::IsEmpty;
     using Base::VerifyResizable;
+    using Base::VerifySize;
 
 public:
     using Base::VerifyWritable;
