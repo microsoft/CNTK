@@ -11,7 +11,7 @@ Python for CNTK 1.5
 
 CNTK_ is a computational toolkit to train and run deep learning networks. It is known for its speed [TODO shootout], because it does not unroll loops (like they occur in RNNs, e.g.) in high-level languages like Python, but instead keeps them in the highly-optimized C++ domain. [TODO improve sales pitch]
 
-To leverage this, one needs to write BrainScript, which might be a bit convoluted (pun intended) at the first encounter. Meet the Python API, which tries to hide away many of the surprises and provides you a NumPy-like interface to the graph. Under the hood, the Python API will create the required configuration and input files, run the cntk executable on the graph and then return the result as a NumPy array.
+To leverage this, one needs to write BrainScript, which might be a bit convoluted (pun intended) at the first encounter. Meet the Python API, which tries to hide away many of the surprises and exposes the graph operators with a NumPy-like interface. Under the hood, the Python API will create the required configuration and input files, run the cntk executable on the graph and then return the result as a NumPy array.
 
 .. note:: CNTK 1.5 is an intermediate step towards CNTK 2.0, which will expose all of its internals to Python. Nevertheless, the Python API should stay stay stable, so that your Python CNTK application should not require many changes once 2.0 has arrived.
 

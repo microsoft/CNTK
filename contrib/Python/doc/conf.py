@@ -55,8 +55,8 @@ master_doc = 'index'
 
 # General information about the project.
 project = 'CNTK 1.5'
-copyright = '2016, Microsoft/Blis'
-author = 'Microsoft/Blis'
+copyright = '2016, Microsoft'
+author = 'Microsoft'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
@@ -93,7 +93,7 @@ exclude_patterns = ['_build']
 
 # If true, the current module name will be prepended to all description
 # unit titles (such as .. function::).
-#add_module_names = True
+add_module_names = False
 
 # If true, sectionauthor and moduleauthor directives will be shown in the
 # output. They are ignored by default.
@@ -126,9 +126,6 @@ html_theme_path = [sphinx_rtd_theme.get_html_theme_path()]
 # further.  For a list of options available for each theme, see the
 # documentation.
 #html_theme_options = {}
-
-# Add any paths that contain custom themes here, relative to this directory.
-#html_theme_path = []
 
 # The name for this set of Sphinx documents.  If None, it defaults to
 # "<project> v<release> documentation".
@@ -235,7 +232,7 @@ latex_elements = {
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
     (master_doc, 'CNTK15.tex', 'CNTK 1.5 Documentation',
-     'Microsoft/Blis', 'manual'),
+     'Microsoft', 'manual'),
 ]
 
 # The name of an image file (relative to this directory) to place at the top of
