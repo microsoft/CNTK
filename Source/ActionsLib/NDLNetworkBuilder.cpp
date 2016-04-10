@@ -73,14 +73,15 @@ void NDLNodeEvaluatorImpl<ElemType>::Evaluate(NDLNode<ElemType>* node, const wst
             size_t i = 0;
             auto tensorShape = ProcessTensorShapeParameters(node, params, i, /*isImage=*/false, cnNodeType);
 
+            wstring dynamicAxis = node->GetOptionalParameter("dynamic", "");
             // first look for this node already existing in the network
             // BUGBUG: How does this set the dimensions then?
             if (m_net->NodeNameExists(name))
                 nodePtr = dynamic_pointer_cast<ComputationNode<ElemType>>(m_net->GetNodeFromName(name));
             else if (isSparse)
-                nodePtr = builder.CreateSparseInputNode(name, tensorShape);
+                nodePtr = builder.CreateSparseInputNode(name, tensorShape, dynamicAxis);
             else
-                nodePtr = builder.CreateInputNode(name, tensorShape);
+                nodePtr = builder.CreateInputNode(name, tensorShape, dynamicAxis);
         }
     }
     else if (cnNodeType == L"ImageInput" || cnNodeType == L"SparseImageInput")
@@ -97,11 +98,12 @@ void NDLNodeEvaluatorImpl<ElemType>::Evaluate(NDLNode<ElemType>* node, const wst
             size_t imageHeight   = ((NDLNode<ElemType>*) params[1])->GetScalar();
             size_t imageChannels = ((NDLNode<ElemType>*) params[2])->GetScalar();
             ImageLayoutKind imageLayoutKind = ImageLayoutKindFrom(node->GetOptionalParameter("imageLayout", "HWC"));
+            wstring dynamicAxis = node->GetOptionalParameter("dynamic", "");
 
             if (isSparse)
-                nodePtr = builder.CreateSparseInputNode(name, ImageDimensions::AsTensorShape(imageWidth, imageHeight, imageChannels, imageLayoutKind));
+                nodePtr = builder.CreateSparseInputNode(name, ImageDimensions::AsTensorShape(imageWidth, imageHeight, imageChannels, imageLayoutKind), dynamicAxis);
             else
-                nodePtr = builder.CreateInputNode(name, ImageDimensions::AsTensorShape(imageWidth, imageHeight, imageChannels, imageLayoutKind));
+                nodePtr = builder.CreateInputNode(name, ImageDimensions::AsTensorShape(imageWidth, imageHeight, imageChannels, imageLayoutKind), dynamicAxis);
         }
     }
     else if (OperationNameOf(LearnableParameter) == cnNodeType || cnNodeType == L"ImageParameter")

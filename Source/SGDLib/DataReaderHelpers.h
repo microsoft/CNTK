@@ -154,7 +154,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             // decimatedMB[name]->SetValue(mat.Reshaped(nRows*nSequence, nT).RowSlice( st*nRows , (en-st)*nRows).Reshaped(nRows, nNewParallelSequence*nT));
         }
         // decimate MBLayout as well
-        pDecimateMBLayout = make_shared<MBLayout>(numNewParallelSequence, nT);
+        pDecimateMBLayout = make_shared<MBLayout>(numNewParallelSequence, nT, L"");
 #if 1
         // now copy over all sequence info records that are inside the range, with adjusted 's'
         const auto& sequences = pMBLayout->GetAllSequences();
