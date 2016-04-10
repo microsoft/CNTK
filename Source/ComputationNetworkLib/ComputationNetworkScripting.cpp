@@ -156,9 +156,16 @@ void ComputationNetwork::ConstructFromRoots(DEVICEID_TYPE deviceId, deque<Comput
 // not in the cache yet: create it (or not if no such member)
 void /*CustomConfigRecord::*/ ComputationNetwork::LazyCreateConfigMember(const wstring& id) const /*override*/
 {
-    let iter = m_nameToNodeMap.find(id);
+    auto iter = m_nameToNodeMap.find(id);
     if (iter == m_nameToNodeMap.end())
-        return; // no such node
+    {
+        // workaround to allow to access members with '.' inside: change to _
+        for (iter = m_nameToNodeMap.begin(); iter != m_nameToNodeMap.end(); iter++)
+            if (msra::strfun::ReplaceAll<wstring>(iter->first, L".", L"_") == id)
+                break;
+        if (iter == m_nameToNodeMap.end())
+            return; // no such node
+    }
     const ComputationNodeBasePtr& node = iter->second;
     // TODO: What is the expressionPath?
     let& nodeName = node->NodeName();   // failFn lambda below holds a copy of the name for the error message. Let's not hold an unneccessary shared_ptr to the node, risking cycles & stuff.
@@ -168,16 +175,20 @@ void /*CustomConfigRecord::*/ ComputationNetwork::LazyCreateConfigMember(const w
 
 vector<wstring> /*IConfigRecord::*/ ComputationNetwork::GetMemberIds() const
 {
-    vector<wstring> nodeNames;
+    set<wstring> nodeNames;
     for (let& iter : m_nameToNodeMap)
     {
         const ComputationNodeBasePtr& node = iter.second;
-        const wstring& nodeName = node->NodeName();
-        if (nodeName.find_first_of(L".[$")) // only expose the top-level names
+        wstring nodeName = node->NodeName();
+        if (nodeName.find_first_of(L"$")) // skip non-top-level names
             continue;
-        nodeNames.push_back(nodeName);
+        // temp solution for composites: use _ instead of .
+        nodeName = msra::strfun::ReplaceAll<wstring>(nodeName, L".", L"_");
+        if (nodeName.find_first_of(L".[")) // skip composite names
+            continue;
+        nodeNames.insert(nodeName);
     }
-    return nodeNames;
+    return vector<wstring>(nodeNames.begin(), nodeNames.end());
 }
 
 // ===================================================================

@@ -18,16 +18,16 @@ ExpRootDir = "$RunRootDir$"
 # experiment id
 #ExpId = _run
 
-deviceId = 1
+deviceId = 5
 #ExpId = 68-$deviceId$-s2sae-bigmodel
-ExpId = 04-$deviceId$-g2p
-#ExpId = 67-1-s2sae-bigmodel # for decoding a different model
+#ExpId = 04-$deviceId$-g2p
+ExpId = 04-0-g2p # for decoding a different model
 
 # directories
 ExpDir    = "$ExpRootDir$/$ExpId$"
 ModelDir  = "$ExpDir$/Models"
 
-stderr = $ExpDir$/S2SAutoEncoder.log
+stderr = $ExpDir$/S2SAutoEncoder.log5
 
 # Append this for small set:
 # train=[epochSize=2048]]  trainFile=ptb.small.train.txt  validFile=ptb.small.valid.txt testFile=ptb.small.test.txt
@@ -36,13 +36,15 @@ stderr = $ExpDir$/S2SAutoEncoder.log
 # It encodes an entire sentence into a flat vector, and tries to regenerate it.
 # Meant to be useful mainly understanding how to do sequence-to-sequence in CNTK.
 
-command = writeWordAndClassInfo:train:test:write
-#command = write
+#command = writeWordAndClassInfo:train:test:write
+command = write
 
 precision  = "float"
 traceLevel = 1
 modelPath  = "$ModelDir$/S2SAutoEncoder.dnn"
-decodeModelPath = "$modelPath$" # epoch to decode. Has best CV WER
+decodeModelPath = "$modelPath$" # epoch to decode can be appended here
+beamDepth = 1                     # 0=predict; 1=greedy; >1=beam
+decodeOutputPath = "$decodeModelPath$.$beamDepth$"
 
 #confVocabSize = 10000
 #confClassSize = 50
@@ -85,7 +87,7 @@ BrainScriptNetworkBuilder = (new ComputationNetwork [
     isAutoencoder = false               # input is only one sequence, meant to reproduce itself
     useStabilizer = true
     useEncoder    = true                # if false, this becomes a regular RNN
-    useNYUStyle   = true                # if true use thought vector for all inputs, NYU-style
+    useNYUStyle   = false               # if true use thought vector for all inputs, NYU-style
 
     # import some namespaces
     Parameters = BS.Parameters
@@ -98,7 +100,7 @@ BrainScriptNetworkBuilder = (new ComputationNetwork [
 
     embeddingDim = $confVocabSize$ # 300
     hiddenDim    = 512 # 1024 # 200
-    maxLayer = 2 # 0
+    maxLayer = 1 # 0
 
     encoderDims[i:0..maxLayer] = hiddenDim # this defines the number of hidden layers in each
     decoderDims[i:0..maxLayer] = hiddenDim # both are one LSTM layer only for now
@@ -409,7 +411,7 @@ train = [
 
     SGD = [
         minibatchSize = 128:128:256:512
-        learningRatesPerSample = 0.01 #0.005 # 0.01
+        learningRatesPerSample = 0.007 #0.01 #0.005 # 0.01
         momentumAsTimeConstant = 2500
         gradientClippingWithTruncation = true   # TODO: clip and truncate? What is the difference?
         clippingThresholdPerSample = 15.0
@@ -553,7 +555,7 @@ write = [
         tracingLabelMappingFile = "$ModelDir$/vocab.wl"
         include "S2SLib.bs"
 
-        beamDepth = 3 // 0=predict; 1=greedy; >1=beam
+        beamDepth = $beamDepth$ // 0=predict; 1=greedy; >1=beam
 
         # import some names
         Boolean = BS.Boolean
@@ -586,6 +588,9 @@ write = [
 
         modelAsTrained = BS.Network.Load ("$decodeModelPath$")
 
+        useNYUStyle = false     # TODO: we should be able to infer this from some dimensions
+        hasEmbeddings = false   # TODO: infer this
+
         top1DecodingModel(model) = new ComputationNetwork [
             # compute top-N from output
             logP = LogSoftmax (model.z)
@@ -606,7 +611,7 @@ write = [
         ]
 
         # replace old decoderFeedback node by newDecoderFeedback
-        EmbedLabels (x) = TransposeTimes (modelAsTrained.labelsEmbedded.TransposeTimesArgs[0], x)
+        EmbedLabels (x) = if hasEmbeddings then TransposeTimes (modelAsTrained.labelsEmbedded.TransposeTimesArgs[0], x) else x
         decoderFeedback = EmbedLabels (Hardmax (modelAsTrained.z))  # in training, this is decoderFeedback = labelsEmbedded
 
         # TODO: fold this in
@@ -618,7 +623,11 @@ write = [
                         /*else*/ Previous (x))
         ].out
 
-        labelSentenceStartEmbeddedScattered = TraceDense (BS.Sequences.Scatter (BS.Loop.IsFirst (modelAsTrained.labelsEmbedded), modelAsTrained.labelSentenceStartEmbedded), 'sest')
+        labelSentenceStart = modelAsTrained.labelSentenceStart_out_h # _ is a hack
+
+        labelsToUse             = if hasEmbeddings then modelAsTrained.labelsEmbedded             else modelAsTrained.labelSequence
+        labelSentenceStartToUse = if hasEmbeddings then modelAsTrained.labelSentenceStartEmbedded else labelSentenceStart
+        labelSentenceStartEmbeddedScattered = TraceDense (BS.Sequences.Scatter (BS.Loop.IsFirst (labelsToUse), labelSentenceStartToUse), 'sest')
 
         delayedDecoderFeedback = TraceDense (/*Loop.*/PreviousOrDefault1 (defaultValue=labelSentenceStartEmbeddedScattered, TraceDense (decoderFeedback, 'lemb'))   , 'prev lemb')
 
@@ -632,6 +641,8 @@ write = [
             #  decoder[0].prevState.h = PastValue (decoder[0].lstmState._privateInnards.ht) : [200 x 1 {1,200} x *] -> [200 x 1 {1,200} x *]
             #  decoder[0].prevState.c = PastValue (decoder[0].lstmState._privateInnards.ct) : [200 x 1 {1,200} x *] -> [200 x 1 {1,200} x *]
             #  decoderInput.inputs[1] = PastValue (labelsEmbedded) : [300 x 1 {1,300} x *] -> [300 x 1 {1,300} x *]
+            #  decoder[0].prevState.h.elseVal = PastValue (decoder[0].lstmState._privateInnards.ht) : [512 x 1 x labelSequence.h.out.h.indexSequence.h.indexSequence.h] -> [512 x 1 x labelSequence.h.out.h.indexSequence.h.indexSequence.h]
+            #  decoder[0].prevState.c.elseVal = PastValue (decoder[0].lstmState._privateInnards.ct) : [512 x 1 x labelSequence.h.out.h.indexSequence.h.indexSequence.h] -> [512 x 1 x labelSequence.h.out.h.indexSequence.h.indexSequence.h]
 
             hiddenDim    = modelAsTrained.delayedDecoderFeedback.dim
             embeddingDim = modelAsTrained.decoderOutputEmbedded.dim
@@ -656,9 +667,9 @@ write = [
             #  - traceback is a right-to-left recurrence
             #     - output best hypo conditioned on the path (it is already known)
 
-            propagationEdits[i:0..6] = // TODO: implement and use { } syntax
-                if      i == 0 then (node => if node.name == 'decoder[0].prevState.h' then TraceState (Previous (PropagateTopN (node.PastValueArgs[0])), 'propagated') else node) # inject reshuffling of hypotheses
-                else if i == 1 then (node => if node.name == 'decoder[0].prevState.c' then TraceState (Previous (PropagateTopN (node.PastValueArgs[0])), 'propagated') else node)
+            propagationEdits[i:0..6] = // TODO: implement and use { } syntax  TODO: VV elseVal only for non-NYU?
+                if      i == 0 then (node => if node.name == 'decoder[0].prevState.h.elseVal' then TraceState (Previous (PropagateTopN (node.PastValueArgs[0])), 'propagated') else node) # inject reshuffling of hypotheses
+                else if i == 1 then (node => if node.name == 'decoder[0].prevState.c.elseVal' then TraceState (Previous (PropagateTopN (node.PastValueArgs[0])), 'propagated') else node)
                 else if i == 2 then (node => if node.name == 'decoder[1].prevState.h' then TraceState (Previous (PropagateTopN (node.PastValueArgs[0])), 'propagated') else node) # inject reshuffling of hypotheses
                 else if i == 3 then (node => if node.name == 'decoder[1].prevState.c' then TraceState (Previous (PropagateTopN (node.PastValueArgs[0])), 'propagated') else node)
                 else if i == 4 then (node => if node.name == 'decoder[2].prevState.h' then TraceState (Previous (PropagateTopN (node.PastValueArgs[0])), 'propagated') else node) # inject reshuffling of hypotheses
@@ -822,8 +833,8 @@ write = [
 
     ].model)
 
-    #outputPath = "$OutputDir$/Write"
-    outputPath = "-"                    # "-" will write to stdout; useful for debugging
+    outputPath = $decodeOutputPath$
+    #outputPath = "-"                    # "-" will write to stdout; useful for debugging
     #outputNodeNames = z1.out:labels1 # when processing one sentence per minibatch, this is the sentence posterior
     #outputNodeNames = network.beamDecodingModel.z1.out:labels1 # when processing one sentence per minibatch, this is the sentence posterior
 
@@ -848,7 +859,7 @@ write = [
         transpose = false
         labelMappingFile = "$ModelDir$/vocab.wl"
         #precisionFormat = "10"
-        sequenceEpilogue = "\t// %s\n"
+        #sequenceEpilogue = "\t// %s\n"
     ]
 
     #traceNodeNamesReal = network.beamDecodingModel.pathScores:network.beamDecodingModel.tokenSetScores:network.beamDecodingModel.expandedPathScores:network.beamDecodingModel.backPointers
