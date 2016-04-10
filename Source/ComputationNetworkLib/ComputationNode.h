@@ -473,6 +473,12 @@ public:
         VerifyDims(node->GetSampleLayout(), node->HasMBLayout());
     }
 
+    virtual void AttachDynamicAxis(std::function<ComputationNodeBasePtr(const std::wstring)> nodeLookup, MBLayoutPtr defaultLayout)
+    {
+        // Applies only to input nodes.
+        NOT_IMPLEMENTED;
+    }
+
     // MBLayout (minibatch structure)
     void LinkToMBLayout(MBLayoutPtr pMBLayout)
     {
@@ -542,8 +548,13 @@ public:
     // helper for the factory function for ComputationNodes
     static vector<ComputationNodeBasePtr> GetInputsFromConfig(const ScriptableObjects::IConfigRecordPtr configp)
     {
+        return GetInputsFromConfig(configp, L"inputs");
+    }
+
+    static vector<ComputationNodeBasePtr> GetInputsFromConfig(const ScriptableObjects::IConfigRecordPtr configp, const std::wstring property)
+    {
         vector<ComputationNodeBasePtr> inputs;
-        const auto* inputsArg = configp->Find(L"inputs");
+        const auto* inputsArg = configp->Find(property);
         if (inputsArg)
         {
             if (inputsArg->Is<ComputationNodeBase>()) // single arg
@@ -986,7 +997,7 @@ public:
             if (inputs[i])
                 m_inputs[i] = DownCast(inputs[i]); // (DownCast() checks the type; the assignment then downcasts it again)
             else
-                m_inputs[i] = nullptr; // during network creation, nullpts are possible
+                m_inputs[i] = nullptr; // during network creation, nullptrs are possible
     }
 
 protected:
@@ -1387,7 +1398,7 @@ public:
     virtual void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool) override
     {
         if (IsValueSharable())
-			RequestMatrixFromPool(m_value, matrixPool);
+            RequestMatrixFromPool(m_value, matrixPool);
         else
             CreateMatrixIfNull(m_value);
     }
@@ -1910,6 +1921,7 @@ protected:                                                                      
 public:                                                                                                                                                  \
     using Base::AttachInputs;                                                                                                                            \
     using Base::AttachInputsFromConfig;                                                                                                                  \
+    using Base::AttachDynamicAxis;                                                                                                                       \
     using Base::CreateGradientMatrixIfNull;                                                                                                              \
     using Base::NodeName;                                                                                                                                \
     using Base::RequiresPreCompute;                                                                                                                      \

@@ -201,7 +201,7 @@ bool ReaderShim<ElemType>::DataEnd() { return false; } // Note: Return value nev
 template <class ElemType>
 void ReaderShim<ElemType>::CopyMBLayoutTo(MBLayoutPtr layout)
 {
-    layout->CopyFrom(make_shared<MBLayout>(0, 0));
+    layout->CopyFrom(make_shared<MBLayout>(0, 0, L"<shim>"));
 }
 
 template <class ElemType>

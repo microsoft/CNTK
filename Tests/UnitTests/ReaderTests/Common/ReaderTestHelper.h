@@ -267,7 +267,7 @@ struct ReaderFixture
                 features.back()->SwitchToMatrixType(MatrixType::SPARSE, MatrixFormat::matrixFormatSparseCSC, false);
             }
             wstring name = numFeatureFiles > 1 ? L"features" + std::to_wstring(i + 1) : L"features";
-            map.insert(make_pair(name, StreamMinibatchInputs::Input(features[i], make_shared<MBLayout>(), TensorShape())));
+            map.insert(make_pair(name, StreamMinibatchInputs::Input(features[i], make_shared<MBLayout>(1, 0, L""), TensorShape())));
         }
 
         for (auto i = 0; i < numLabelFiles; i++)
@@ -278,7 +278,7 @@ struct ReaderFixture
                 labels.back()->SwitchToMatrixType(MatrixType::SPARSE, MatrixFormat::matrixFormatSparseCSC, false);
             }
             wstring name = numLabelFiles > 1 ? L"labels" + std::to_wstring(i + 1) : L"labels";
-            map.insert(make_pair(name, StreamMinibatchInputs::Input(labels[i], make_shared<MBLayout>(), TensorShape())));
+            map.insert(make_pair(name, StreamMinibatchInputs::Input(labels[i], make_shared<MBLayout>(1, 0, L""), TensorShape())));
         }
 
         // Setup output file

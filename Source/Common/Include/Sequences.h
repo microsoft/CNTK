@@ -110,13 +110,18 @@ struct MBLayout
     // construction
     // -------------------------------------------------------------------
 
-    MBLayout(size_t numParallelSequences, size_t numTimeSteps)
-        : m_distanceToStart(CPUDEVICE), m_distanceToEnd(CPUDEVICE), m_columnsValidityMask(CPUDEVICE)
+    MBLayout(size_t numParallelSequences, size_t numTimeSteps, const std::wstring &axisName)
+        : m_distanceToStart(CPUDEVICE), m_distanceToEnd(CPUDEVICE), m_columnsValidityMask(CPUDEVICE), m_axisname(axisName)
     {
+        if (axisName == L"")
+        {
+            // Debugging tool for now.
+            m_axisname = msra::strfun::wstrprintf(L"X%d", (int)rand());
+        }
         Init(numParallelSequences, numTimeSteps);
     }
     MBLayout()
-        : MBLayout(1, 0)
+        : MBLayout(1, 0, L"")
     {
     }
 
@@ -278,6 +283,16 @@ public:
     const vector<SequenceInfo> &GetAllSequences() const
     {
         return m_sequences;
+    }
+
+    const std::wstring GetName() const
+    {
+        return m_name;
+    }
+
+    void SetName(const std::wstring& name)
+    {
+        m_name = name;
     }
 
     // compute the number of actual samples in this layout (not counting gaps)
