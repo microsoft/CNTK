@@ -341,13 +341,13 @@ TensorShape ComputationNodeBase::GetOneSampleTensorSliceFor(size_t rank, const F
             // BUGBUG: This ^^ will print based on the old legacy layout, and we have no way of knowing here whether that is correct.
             else
 #endif
-                prototype += msra::strfun::strprintf("[%s%s%ls]", string(child->m_sampleLayout).c_str(), mbSizeMark, child->HasMBLayout() ? child->GetMBLayout()->GetAxisName().c_str() : L"");
+                prototype += msra::strfun::strprintf("[%s%s%ls]", string(child->m_sampleLayout).c_str(), mbSizeMark, child->HasMBLayout() ? child->GetMBLayout()->GetAxisName() : L"");
         }
         prototype += extraArgs;
         //prototype += ")";
     }
 
-    prototype += msra::strfun::strprintf(" -> [%s%s%ls]", string(GetSampleLayout()).c_str(), HasMBLayout() ? " x " : "", HasMBLayout() ? GetMBLayout()->GetAxisName().c_str() : L"");
+    prototype += msra::strfun::strprintf(" -> [%s%s%ls]", string(GetSampleLayout()).c_str(), HasMBLayout() ? " x " : "", HasMBLayout() ? GetMBLayout()->GetAxisName() : L"");
 
     return prototype;
 }
