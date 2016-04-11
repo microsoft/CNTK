@@ -101,7 +101,7 @@ def test_op_element_times(left_operand, right_operand, device_id, precision):
 
 # -- element divide tests --
 @pytest.mark.parametrize("left_operand, right_operand", TENSOR_PAIRS)
-def Ztest_op_element_divide(left_operand, right_operand, device_id, precision):    # 'Z' added to temporarily comment out test
+def test_op_element_divide(left_operand, right_operand, device_id, precision):    # 'Z' added to temporarily comment out test
 
     #Forward pass test
     #==================
