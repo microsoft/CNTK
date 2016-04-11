@@ -40,6 +40,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         //  - CopyMBLayoutTo()   --copies the MBLayout from Reader to Network
         // with the special twist that in presence of parallelization, there is some decimation involved.
 
+        // BUGBUG - new cntktextreader assumes it has different MBLayouts, one per input, when in fact
+        // it has only one here if the user didn't specify a new dynamic axis. So definitely the global layout should not be altered by the
+        // reader. It should fill in the first and use the others as constraints.
         bool wasDataRead = trainSetDataReader.GetMinibatch(inputMatrices); // fill in the minibatch data into the Input nodes' buffers directly
         // If this returns false, the matrices may contain garbage or not sized to 0 columns.
         // On the other hand, if it returns a 0-column matrix, that would be a perfectly cromulent minibatch (in case of data parallelism with distributed reading).

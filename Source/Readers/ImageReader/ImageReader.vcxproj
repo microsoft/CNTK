@@ -151,7 +151,7 @@ if "$(UseZip)" == "true" if exist "$(ZLIB_PATH)\bin\zlib1.dll" (xcopy /I /D /Y "
   <Target Name="Build" Condition="$(HasOpenCV)" Outputs="$(TargetPath)" DependsOnTargets="$(BuildDependsOn)" />
   <ImportGroup Label="ExtensionTargets" />
   <Target Name="CheckDependencies">
-    <Warning Condition="!$(HasOpenCV)" Text="ImageReader requires the OpenCV library to build. Please see https://github.com/Microsoft/CNTK/wiki/Setup-CNTK-on-Windows#opencv for installation instructions." />
+    <Warning Condition="!$(HasOpenCV)" Text="ImageReader requires the OpenCV library to build. Please see https://github.com/Microsoft/CNTK/wiki/Setup-CNTK-on-Windows#optional-opencv for installation instructions." />
     <Warning Condition="!$(UseZip)" Text="zlib and libzip libraries were not found, ImageReader will be built without zip container support. Please see https://github.com/Microsoft/CNTK/wiki/Setup-CNTK-on-Windows#libzip for installation instructions." />
   </Target>
 </Project>
