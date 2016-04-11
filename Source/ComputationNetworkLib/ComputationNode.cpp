@@ -146,11 +146,11 @@ void ComputationNodeBase::ValidateBinaryZip(bool isFinalValidationPass, bool all
     {
         size_t dim1 = shape1[k];
         // BUGBUG: We must consider the allowBroadcast flag here.
-        if (dims[k] == 1)                                  // is [0] broadcasting?
+        if (dims[k] <= 1 && dim1 != 0)                     // is [0] broadcasting (1) or unspecified (0)?
             dims[k] = dim1;                                // then use dimension we broadcast to
-        else if (dim1 == 1)                                // if [1] is broadcasting
-            ;                                              // dims is already correct
-        else if (isFinalValidationPass && dim1 != dims[k]) // no broadcasting: they must match
+        else if (dim1 <= 1 && dims[k] != 0)                // if [1] is broadcasting or unspecified
+            ;                                              // then dims is already correct
+        else if (isFinalValidationPass && dim1 != dims[k]) // no broadcasting or unspecified: they must match
             InvalidArgument("%ls: Input dimensions [%s] and [%s] are not compatible.",
                             NodeDescription().c_str(), string(shape0).c_str(), string(shape1).c_str());
     }

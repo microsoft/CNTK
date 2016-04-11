@@ -170,7 +170,7 @@ Constants = [
     #ZeroesLike (x) = CastAs (x, Zero) // read: Cast<x>(Zero)
     #OnesLike (x)   = CastAs (x, One)
     # CastAs() does not implement broadcasting
-    ZeroesLike (x) = RowSlice (0, 1, x) .* Zero  // hack: get one row of input and multiply with zero
+    ZeroesLike (x) = SumColumnElements (RowSlice (0, 1, x) .* Zero)  // hack: get one row of input and multiply with zero; double-hack: reduce extra tensor dims by SumCol
     OnesLike (x) = ZeroesLike (x) + One
     # is this like Sequences.Repeat?
     True  = 1

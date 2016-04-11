@@ -238,8 +238,8 @@ BrainScriptNetworkBuilder = (new ComputationNetwork [
         ]
         # delayLine[t].value = value of t steps in the past
         # delayLine[t].valid = true if we had a value t steps in the past
-        value = Last (SplitDimension (RowStack (array[0..attentionSpan-1](t=>delayLine[t].value)), 1, attentionSpan))  # [i, delay]
-        valid = Last (SplitDimension (RowStack (array[0..attentionSpan-1](t=>delayLine[t].valid)), 1, attentionSpan))  # [i, delay]
+        value = Slice (-1, 0, axis=-1, SplitDimension (RowStack (array[0..attentionSpan-1](t=>delayLine[t].value)), 1, attentionSpan))  # [i, delay]
+        valid = Slice (-1, 0, axis=-1, SplitDimension (RowStack (array[0..attentionSpan-1](t=>delayLine[t].valid)), 1, attentionSpan))  # [i, delay]
     ]
     attentionWindow = AttentionWindow (attentionSpan, encoderOutput.h)
     attentionDim = thoughtVectorDim
