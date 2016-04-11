@@ -8,7 +8,7 @@ import shutil as sh
 
 from cntk.graph import ComputationNode
 from cntk.ops.cntk1 import NewReshape
-from cntk.utils import CNTK_EXECUTABLE_PATH, MODEL_INDENTATION
+from cntk.utils import get_cntk_cmd, MODEL_INDENTATION
 from .utils import cntk_to_numpy_shape, dedupe_readers
 
 CNTK_TEMPLATE_DIR = os.path.join(os.path.dirname(__file__), "templates")
@@ -324,7 +324,7 @@ class Context(AbstractContext):
 
         try:
             output_bytes = subprocess.check_output(
-                [CNTK_EXECUTABLE_PATH, 'configFile=%s' % filename],
+                [get_cntk_cmd(), 'configFile=%s' % filename],
                 stderr=subprocess.STDOUT)
             output = output_bytes.decode('utf-8')
             with open(os.path.join(self.directory, 'cntk.log'), 'w') as log:
