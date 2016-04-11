@@ -43,8 +43,8 @@ precision  = "float"
 traceLevel = 1
 modelPath  = "$ModelDir$/S2SAutoEncoder.dnn"
 decodeModelPath = "$modelPath$.6" # epoch to decode can be appended here
-beamDepth = 8                     # 0=predict; 1=greedy; >1=beam
-decodeOutputPath = "$decodeModelPath$.d$beamDepth$"
+beamDepth = 3                     # 0=predict; 1=greedy; >1=beam
+decodeOutputPath = "$decodeModelPath$.b$beamDepth$"
 
 #confVocabSize = 10000
 #confClassSize = 50
@@ -608,6 +608,7 @@ write = [
             # reduce back to a single column
             topHyps = TraceSparse (topPathScores * OnesTensor (1 : topN), 'topHyps')
 
+            inputsOut = Pass (model.inputSequence)
             labelsOut = Pass (TraceOneHot (model.labelSequence, 'labels'))
             decodeOut = Pass (TraceOneHot (top1, 'out'))
             topNOut   = Pass (topHyps)
@@ -683,7 +684,7 @@ write = [
 
             m2 = BS.Network.Edit (modelAsTrained,
                                   propagationEdits,
-                                  (labelsOut : decodeOut)) # additional roots
+                                  (inputsOut : labelsOut : decodeOut)) # additional roots
 
             ReduceAxis (axisDim, x, axis=1) =   # unfortunately, we must feed in the dimension of the axis, it can't be inferred
                 if      axis == 1 then Times (OnesTensor (axisDim), x, outputRank = 0)
@@ -697,7 +698,7 @@ write = [
             finalHyp          = FirstAndOther (1, 0,       beamDepth, axis = 1)  # [D] the final token is the top-scoring hypothesis, that is, hyp[0]
 
             # path expansion of the D hypotheses that were best in previous time step (ordered as in previous time step)
-            logLLs = Columnwise (LogSoftmax, beamDepth, modelAsTrained.z)                                 # [V x Dprev]     log  P(w|hist)
+            logLLs = Columnwise (LogSoftmax, beamDepth, modelAsTrained.z)                                   # [V x Dprev]     log  P(w|hist)
             expandedPathScores = logLLs + If (IsFirst (logLLs), initialPathScores, Previous (tokens.score)) # [V x Dprev] log (P(w|hist) * P(hist)) for all top D hypotheses
 
             # determine top D of expanded paths
@@ -850,6 +851,7 @@ write = [
                       else Splice   (Constant       (firstVal)      : ConstantTensor (otherVals, (1 : N -1)), axis = axis1 /*, axis*/)   # row vector: [ 0, -INF, -INF, -INF, ... ]
             ].out
 
+            inputsOut = Pass (modelAsTrained.inputSequence)
             labelsOut = Pass (modelAsTrained.labelSequence)
             decodeOut = Pass (decode)
             #topNOut   = Pass (topHyps)
@@ -872,7 +874,7 @@ write = [
     #outputNodeNames = network.beamDecodingModel.labelsOut:network.beamDecodingModel.decodeOut    #:topNOut
 
     # joint:
-    outputNodeNames = labelsOut:decodeOut:network.beamDecodingModel.labelsOut:network.beamDecodingModel.decodeOut
+    outputNodeNames = inputsOut:labelsOut:decodeOut:network.beamDecodingModel.inputsOut:network.beamDecodingModel.labelsOut:network.beamDecodingModel.decodeOut
 
     #outputNodeNames = labels1:network.beamDecodingModel.decode.out
     #outputNodeNames = labels1:network.beamDecodingModel.expandedPathScores
