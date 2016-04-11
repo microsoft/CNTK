@@ -125,8 +125,8 @@ def test_op_element_divide(left_operand, right_operand, device_id, precision):  
     #Backward pass test
     #==================
     # the expected results for the backward pass is all ones
-    #expected = [[[np.ones_like(x) for x in left_operand]]]
-    #unittest_helper(left_as_input, expected, device_id=device_id, 
-    #                precision=precision, clean_up=True, backward_pass=True, input_node=a)    
-    #unittest_helper(right_as_input, expected, device_id=device_id, 
-    #                precision=precision, clean_up=True, backward_pass=True, input_node=b)       
+    expected = [[[np.ones_like(x) for x in left_operand]]]
+    unittest_helper(left_as_input, expected, device_id=device_id, 
+                    precision=precision, clean_up=True, backward_pass=True, input_node=a)    
+    unittest_helper(right_as_input, expected, device_id=device_id, 
+                    precision=precision, clean_up=True, backward_pass=True, input_node=b)       
