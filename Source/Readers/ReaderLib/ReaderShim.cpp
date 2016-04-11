@@ -153,6 +153,11 @@ bool ReaderShim<ElemType>::GetMinibatch(StreamMinibatchInputs& matrices)
             layout->CopyFrom(stream->m_layout);
             size_t sampleSize = m_streams[streamId]->m_sampleLayout->GetNumElements();
             auto& matrix = matrices.GetInputMatrix<ElemType>(mx.first);
+            /*if (expectedRowNumber > 0 && expectedRowNumber != rowNumber)
+            {
+                RuntimeError("Sample size (%d) for input '%ls' does not match the expected size (%d).", 
+                    (int) rowNumber, mx.first.c_str(), (int) expectedRowNumber);
+            }*/
             FillMatrixFromStream(m_streams[streamId]->m_storageType, &matrix, sampleSize, stream);
         }
     }

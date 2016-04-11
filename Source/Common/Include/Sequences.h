@@ -285,6 +285,16 @@ public:
         return m_sequences;
     }
 
+    const std::wstring GetName() const
+    {
+        return m_name;
+    }
+
+    void SetName(const std::wstring& name)
+    {
+        m_name = name;
+    }
+
     // compute the number of actual samples in this layout (not counting gaps)
     // This is used by MeanNode and InvStdDevNode, and by statistics reporting.
     size_t GetActualNumSamples() const;
@@ -548,6 +558,8 @@ private:
     vector<ptrdiff_t> m_distanceToNearestStart, m_distanceToNearestEnd; // [t]    (does not store info about gaps; consult m_timeStepHasGap[] vector instead)
 
     vector<bool> m_timeStepHasGap; // [t] true if at least one gap in time step t
+
+    std::wstring m_name;
 
     // Cached mask indicating the validity of each column in the MBLayout
     // TODO: We actually just need a boolean matrix for this.
