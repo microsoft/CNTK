@@ -13,12 +13,13 @@ from cntk.ops.cntk1 import Times, Plus, ElementDivide
 def plus(left_operand, right_operand, name=None):
     """
     tensor addition operation
+
     Args:
         left_operand: Left side tensor
         right_operand: Right side tensor
-        var_name: the name of the node in the network            
+        name: the name of the node in the network            
     Returns:
-        Plus node
+        :class:`cntk.graph.ComputationNode`
     """
     
     return Plus(left_operand, right_operand, var_name = name)  
@@ -26,12 +27,13 @@ def plus(left_operand, right_operand, name=None):
 def times(left_operand, right_operand, name=None):
     """
     tensor times operation
+
     Args:
         left_operand: Left side tensor
         right_operand: Right side tensor
-        var_name: the name of the node in the network            
+        name: the name of the node in the network            
     Returns:
-        Times node
+        :class:`cntk.graph.ComputationNode`
     """
     
     return Times(left_operand, right_operand, var_name = name)    
@@ -39,12 +41,13 @@ def times(left_operand, right_operand, name=None):
 def element_divide(left_operand, right_operand, name=None):
     """
     element-wise division operation
+
     Args:
         left_operand: Left side tensor
         right_operand: Right side tensor
-        var_name: the name of the node in the network            
+        name: the name of the node in the network            
     Returns:
-        ElementDivide node
+        :class:`cntk.graph.ComputationNode`
     """
     
     return ElementDivide(left_operand, right_operand, var_name = name)

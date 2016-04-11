@@ -539,15 +539,16 @@ def is_tensor(data):
 
 def input(value, has_sequence_dimension=True, **kw):
     '''
-    Create an input node.
+    creates an input node.
 
-    :param `value`: is a list of NumPy tensors. Currently, only dense tensors
-    are supported. Sparse will come soon by the power of scipy.
-    :param `has_sequence_dimension`: If True, the outermost dimension is
-    treated as the sequence dimension. If False, it will wrap each sample 
-    into its own 1-dimensional array.
-    :param `alias`: optional the alias to be used when serializing the data
-    into an intermediate file
+    Args:
+        value: is a list of NumPy tensors.  Currently, only dense tensors are supported. Sparse will come soon by the power of scipy.
+        has_sequence_dimension: If True, the outermost dimension is treated as the sequence dimension. If False, it will wrap each sample into its own 1-dimensional array.
+        alias: optional the alias to be used when serializing the data into an intermediate file
+        kw: will be passed on to the input operator [TODO: specify most commonly used options]
+
+    Returns:
+        :class:`cntk.graph.ComputationNode`
     '''
     if is_tensor_list(value) or is_tensor(value):
         return _get_input_node(value, has_sequence_dimension, **kw)
@@ -557,7 +558,7 @@ def input(value, has_sequence_dimension=True, **kw):
 
 def constant(value, **kw):
     '''
-    Creating a constant tensor node around `value`.
+    creates a constant tensor node.
     '''
     if np.isscalar(value) or is_tensor(value):
         return _get_constant_node(value, **kw)
