@@ -251,7 +251,7 @@ void Matrix<ElemType>::SetDataLocation(CurrentDataLocation location, MatrixType 
     //        - read case: OK
     //        - write case: forbidden to call this function in this way
     //     - NONE -> !NONE: FORBIDDEN
-    if (m_currentDataLocation != location &&                  // it is attempted to change it
+    if (m_currentDataLocation != location &&                  // it is attempted to change location
         m_currentDataLocation != CurrentDataLocation::NONE && // from a valid object (NONE means we are a fresh object from ColumnSlice())
         location != CurrentDataLocation::BOTH)                // and we are changing it not into a temporary copy for reading
     {

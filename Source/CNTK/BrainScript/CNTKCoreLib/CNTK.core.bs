@@ -165,6 +165,7 @@ BS = [
 Constants = [
     Zero = ConstantTensor (0, (1))
     One  = ConstantTensor (1, (1))
+    OnesTensor (dims) = ConstantTensor (1, dims)
     # BUGBUG: ZeroesLike() would recreate the full dimension of x. Well, no need if it considers broadcasting. But still wrong if we want to broadcast a vector of different tensor dim.
     #ZeroesLike (x) = CastAs (x, Zero) // read: Cast<x>(Zero)
     #OnesLike (x)   = CastAs (x, One)
@@ -328,8 +329,9 @@ Loop = [
 Parameters =
 [
     WeightParam (outputDim, inputDim) = Parameter (outputDim, inputDim, init='uniform', initValueScale=1, initOnCPUOnly=true, randomSeed=1)
-    BiasParam (dim)                   = ParameterTensor (dim, init='fixedValue', value=0.0)
-    ScalarParam()                     = Parameter (1, 1, init='fixedValue', value=0.0)
+    DiagWeightParam (outputDim)       = ParameterTensor ((outputDim), init='uniform', initValueScale=1, initOnCPUOnly=true, randomSeed=1) # meant to be applied elementwise
+    BiasParam (dim)                   = ParameterTensor ((dim), init='fixedValue', value=0.0)
+    ScalarParam()                     = BiasParam (1)
 
     # route input through an extra scalar weight, for stabilization
     Stabilize (x, enabled=true) =
@@ -360,11 +362,11 @@ RNNs =
             dc = prevState.c
 
             // parameter macros--these carry their own weight matrices
-            B() = Parameters.BiasParam(cellDim)
+            B() = Parameters.BiasParam (cellDim)
 
             W(v) = Parameters.WeightParam (cellDim, inputDim)  * Parameters.Stabilize (v, enabled=enableSelfStabilization) // input-to-hidden
             H(h) = Parameters.WeightParam (cellDim, outputDim) * Parameters.Stabilize (h, enabled=enableSelfStabilization) // hidden-to-hidden
-            C(c) = Parameters.WeightParam (cellDim, 1)        .* Parameters.Stabilize (c, enabled=enableSelfStabilization) // cell-to-hiddden (note: applied elementwise)
+            C(c) = Parameters.DiagWeightParam (cellDim)       .* Parameters.Stabilize (c, enabled=enableSelfStabilization) // cell-to-hiddden (note: applied elementwise)
 
             // note: the W(x) here are all different, they all come with their own set of weights; same for H(dh), C(dc), and B()
             it = Sigmoid (W(x) + B() + H(dh) + C(dc))          // input gate(t)

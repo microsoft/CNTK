@@ -18,10 +18,10 @@ ExpRootDir = "$RunRootDir$"
 # experiment id
 #ExpId = _run
 
-deviceId = 1
+deviceId = 0
 #ExpId = 68-$deviceId$-s2sae-bigmodel
-#ExpId = 04-$deviceId$-g2p
-ExpId = 04-3-g2p # for decoding a different model
+ExpId = 05-$deviceId$-g2p
+#ExpId = 05-3-g2p # for decoding a different model
 
 # directories
 ExpDir    = "$ExpRootDir$/$ExpId$"
@@ -36,12 +36,13 @@ stderr = $ExpDir$/S2SAutoEncoder.log7
 # It encodes an entire sentence into a flat vector, and tries to regenerate it.
 # Meant to be useful mainly understanding how to do sequence-to-sequence in CNTK.
 
-#command = writeWordAndClassInfo:train:test:write
-command = write
+command = writeWordAndClassInfo:train:test:write
+#command = write
 
 precision  = "float"
 traceLevel = 1
 modelPath  = "$ModelDir$/S2SAutoEncoder.dnn"
+
 decodeModelPath = "$modelPath$.6" # epoch to decode can be appended here
 beamDepth = 3                     # 0=predict; 1=greedy; >1=beam
 decodeOutputPath = "$decodeModelPath$.b$beamDepth$"
@@ -88,6 +89,7 @@ BrainScriptNetworkBuilder = (new ComputationNetwork [
     useStabilizer = true
     useEncoder    = true                # if false, this becomes a regular RNN
     useNYUStyle   = false               # if true use thought vector for all inputs, NYU-style
+    attentionSpan = 0                  # we only support fixed-size attention windows for now. 0 means no attention; exactly 20 is needed for the g2p CMUDict task
 
     # import some namespaces
     Parameters = BS.Parameters
@@ -161,6 +163,29 @@ BrainScriptNetworkBuilder = (new ComputationNetwork [
         lstmState = BS.RNNs.LSTMP (inputDim, outputDim, cellDim, x, prevState, enableSelfStabilization=enableSelfStabilization1)
     ].lstmState // that's the value we return
 
+    RecurrentLSTMPWithAttentionWindow2 (inputDim/*x.dim*/, outputDim/*h.dim*/, cellDim/*c.dim*/, x, projectedAttentionWindowBroadcast, attentionDim, attentionSpan, enableSelfStabilization=false) =
+    [
+        prevState =
+        [
+            h = Loop.Previous (lstmState.h)             // hidden state(t-1)
+            c = Loop.Previous (lstmState.c)             // cell(t-1)
+        ]
+
+        # compute additional hidden state from attention
+        W(x) = Parameters.WeightParam (attentionDim, outputDim) * Parameters.Stabilize (x, enabled=useStabilizer)
+        projectedH = W (prevState.h) # [cellDim]
+        tanHOut = Tanh (projectedAttentionWindowBroadcast.value + projectedH) # [attentionDim x attentionSpan]
+        v(x) = Parameters.WeightParam (1, attentionDim) * Parameters.Stabilize (x, enabled=useStabilizer) # [1 x attentionDim]
+        u = v (tanHOut)                                            # [1 x attentionSpan]
+        uValid = u + Log (projectedAttentionWindowBroadcast.valid) # [1 x attentionSpan]
+        attentionWeights = LogSoftmax (uValid)                     # [1 x attentionSpan]
+        weightedAttentionWindow = projectedAttentionWindowBroadcast.value .* attentionWeights # [attentionDim x attentionSpan]
+        weightedAttentionAverage = weightedAttentionWindow * BS.Constants.OnesTensor (attentionSpan) # [attentionDim]
+        augmentedX = RowStack (weightedAttentionAverage : x)
+        enableSelfStabilization1 = enableSelfStabilization // TODO: BS syntax needs to allow to say ^.enableSelfStabilization
+        lstmState = BS.RNNs.LSTMP (attentionDim + inputDim, outputDim, cellDim, augmentedX, prevState, enableSelfStabilization=enableSelfStabilization1)
+    ].lstmState // that's the value we return
+
     RecurrentLSTMP2WithInitialState (inputDim, outputDim, cellDim, x, initialState, enableSelfStabilization=false) =
     [
         prevState =
@@ -183,7 +208,10 @@ BrainScriptNetworkBuilder = (new ComputationNetwork [
     encoderOutput = encoder[encoderOutputLayer]
 
     # that last frame should be fed as an additional input to every decoder step
-    # (in the NYU model, not the Google model where the thought vector is only the initial state.)
+    # Three ways of passing encoder state:
+    #  1. as initial state for decoder (Google style)
+    #  2. as side information for every decoder step (NYU style)
+    #  3. attention
 
     thoughtVector = [
         h = TraceDense (Last (TraceDense (encoderOutput.h, 'encout')), 'thvh')
@@ -197,10 +225,55 @@ BrainScriptNetworkBuilder = (new ComputationNetwork [
         c = Sequences.Scatter (isFirst, thoughtVector.c)
     ]
 
+    # attention (fixed rolling window)
+    # This implementation is suboptimal in that it creates copies for the intermediate steps.
+    AttentionWindow(attentionSpan, in) = [
+        delayLine[t:0..attentionSpan-1] = [     # shift register for encoder, last N inputs
+            value = if t == 0
+                    then in        # delay 0: current value
+                    else Loop.PastValue (0, in, timeStep=t)
+            valid = if t == 0
+                    then Constants.One
+                    else Constants.One - PastValue (1, Constants.ZeroesLike (in), timeStep=t, defaultHiddenActivation=1)
+        ]
+        # delayLine[t].value = value of t steps in the past
+        # delayLine[t].valid = true if we had a value t steps in the past
+        value = Last (SplitDimension (RowStack (array[0..attentionSpan-1](t=>delayLine[t].value)), 1, attentionSpan))  # [i, delay]
+        valid = Last (SplitDimension (RowStack (array[0..attentionSpan-1](t=>delayLine[t].valid)), 1, attentionSpan))  # [i, delay]
+    ]
+    attentionWindow = AttentionWindow (attentionSpan, encoderOutput.h)
+    attentionDim = thoughtVectorDim
+    projectedAttentionWindow = [
+        W(x) = Parameters.WeightParam (attentionDim, thoughtVectorDim) * Parameters.Stabilize (x, enabled=useStabilizer)
+        #B = Parameters.BiasParam (vocabDim) # no bias in attention
+        value = W (attentionWindow.value) # apply the projection columnwise to the attentionWindow tensor
+        valid = attentionWindow.valid
+    ]
+    # pad with something to bring it into output timeline
+    projectedAttentionWindowPadded = [
+        isFirst = Loop.IsFirst (labelsEmbedded)
+        value = Sequences.Scatter (isFirst, projectedAttentionWindow.value)
+        valid = Sequences.Scatter (isFirst, projectedAttentionWindow.valid)
+        # TODO: create an indexSequence that contains all zeroes, basically broadcast a single-frame sequence across another sequence length
+    ]
+    # projectedAttentionWindow[t].values = [hiddenDim x attentionSpan]
+    # now broadcast the values everywhere
+    # This entire complex process is inefficient and must become a C++ node.
+    projectedAttentionWindowBroadcast = [
+        isFirst = projectedAttentionWindowPadded.isFirst
+        value = Boolean.If (isFirst,                              # if first step (w.r.t output step)
+                   /*then*/ projectedAttentionWindowPadded.value, # then copy that
+                   /*else*/ Loop.Previous (value)) # else just propagate to the front
+        valid = Boolean.If (isFirst,
+                   /*then*/ projectedAttentionWindowPadded.valid, 
+                   /*else*/ Loop.Previous (valid))
+    ]
+
     # NYU style: expand h to all, drop c
     thoughtVectorEverywhere = Boolean.If (Loop.IsFirst (thoughtVectorPadded.h),    # if first entry
                                  /*then*/ thoughtVectorPadded.h,                   # then copy that
                                  /*else*/ Loop.Previous (thoughtVectorEverywhere)) # else just propagate to the front
+    # TODO: create an indexSequence that contains all zeroes, basically broadcast a single-frame sequence across another sequence length
 
     # decoder
     # NYU style:
@@ -209,15 +282,18 @@ BrainScriptNetworkBuilder = (new ComputationNetwork [
 
     delayedDecoderFeedback = TraceDense (Loop.PreviousOrDefault (defaultValue=labelSentenceStartEmbedded, TraceDense (labelsEmbedded, 'lemb'))   , 'prev lemb')
 
-    decoderInputDim = if useEncoder && useNYUStyle then           thoughtVectorDim        + embeddingDim            else embeddingDim
-    decoderInput    = if useEncoder && useNYUStyle then RowStack (thoughtVectorEverywhere : delayedDecoderFeedback) else delayedDecoderFeedback
+    decoderInputDim = embeddingDim
+    decoderInput    = Pass (delayedDecoderFeedback)
     decoderOutputLayer = Length (decoderDims)-1
-    decoder[i:0..decoderOutputLayer] =         # TODO: !useNYUStyle: set initial hidden state
+    decoder[i:0..decoderOutputLayer] =
         if i == 0
-        then if useNYUStyle
-             then RecurrentLSTMP2 (decoderInputDim, decoderDims[i], decoderDims[i],
-                                   decoderInput,
-                                   enableSelfStabilization=useStabilizer)
+        then if useEncoder && useNYUStyle then RecurrentLSTMP2 (thoughtVectorDim + decoderInputDim, decoderDims[i], decoderDims[i],
+                                                                RowStack (thoughtVectorEverywhere : decoderInput),
+                                                                enableSelfStabilization=useStabilizer)
+             else if useEncoder && attentionSpan > 0 then RecurrentLSTMPWithAttentionWindow2 (thoughtVectorDim + decoderInputDim, decoderDims[i], decoderDims[i],
+                                                                                              RowStack (thoughtVectorEverywhere : decoderInput),
+                                                                                              projectedAttentionWindowBroadcast, attentionDim, attentionSpan,
+                                                                                              enableSelfStabilization=useStabilizer)
              else RecurrentLSTMP2WithInitialState (decoderInputDim, decoderDims[i], decoderDims[i],
                                                    decoderInput,
                                                    thoughtVectorPadded, # BUGBUG: Should be thoughtVector, but Scatter() can't expand from inside a loop
@@ -558,13 +634,13 @@ write = [
         beamDepth = $beamDepth$ // 0=predict; 1=greedy; >1=beam
 
         # import some names
+        Constants = BS.Constants
         Boolean = BS.Boolean
         Loop = BS.Loop
         Previous = Loop.Previous
         IsFirst = Loop.IsFirst
         If = Boolean.If
-
-        OnesTensor (dims) = ConstantTensor (1, dims)
+        OnesTensor = Constants.OnesTensor
 
         # macro that extracts top D hypotheses from a 2D tensor
         # input: scores[w,n]    w = word index, d = hyp index in beam (d=0 is the best one)

@@ -365,7 +365,7 @@ shared_ptr<Matrix<ElemType>> TensorView<ElemType>::AsMatrix() const
     let needsSlicing = firstColumn != 0 || numColumns != m_sob->GetNumCols();
     let needsReshaping = m_shape[0] != m_sob->GetNumRows() || m_shape[1] != m_sob->GetNumCols();
 
-    // Note: If an output matrix is a view and needs to move to a different device, we will fail later, since the current structure cannot supoprt that.
+    // Note: If an output matrix is a view and needs to move to a different device, we will fail later, since the current structure cannot support that.
     // As a consequence, some configurations will simply not work currently.
     // We minimize the chance of this by using the original storage object whenever possible.
     if (!needsSlicing && !needsReshaping)     // no need to mess with the storage object: pass it on as it is. Full support for moving devices.
