@@ -110,13 +110,19 @@ struct MBLayout
     // construction
     // -------------------------------------------------------------------
 
-    MBLayout(size_t numParallelSequences, size_t numTimeSteps)
-        : m_distanceToStart(CPUDEVICE), m_distanceToEnd(CPUDEVICE), m_columnsValidityMask(CPUDEVICE)
+    MBLayout(size_t numParallelSequences, size_t numTimeSteps, const std::wstring &name)
+        : m_distanceToStart(CPUDEVICE), m_distanceToEnd(CPUDEVICE), m_columnsValidityMask(CPUDEVICE), m_name(name)
     {
+        if (name == L"")
+    {
+            wstringstream s;
+            s << "X" << rand();
+            m_name = s.str();
+        }
         Init(numParallelSequences, numTimeSteps);
     }
     MBLayout()
-        : MBLayout(1, 0)
+        : MBLayout(1, 0, L"")
     {
     }
 
@@ -140,8 +146,7 @@ struct MBLayout
 
         m_columnsValidityMask.SetValue(other->m_columnsValidityMask);
         m_writable = other->m_writable;
-
-        m_axisName = other->m_axisName;
+        m_name = other->m_name;
     }
 
     // Destructive copy that steals ownership if the content, like std::move()
@@ -165,8 +170,7 @@ struct MBLayout
 
         m_columnsValidityMask = std::move(other->m_columnsValidityMask);
         m_writable = other->m_writable;
-
-        m_axisName = std::move(other->m_axisName);
+        m_name = std::move(other->m_name);
     }
 
     MBLayout(const MBLayout&) = delete;
@@ -252,20 +256,13 @@ public:
     // accessors
     // -------------------------------------------------------------------
 
-    size_t GetNumTimeSteps() const { return m_numTimeSteps; }
-    size_t GetNumParallelSequences() const { return m_numParallelSequences; }
-
-    // axis names are for now only a debugging aid
-    // In the future, there will be a mechanism to denote that axes are meant to be the same.
-    const wchar_t* GetAxisName() const { return m_axisName.c_str(); }
-    void SetAxisName(const std::wstring& name) { m_axisName = name; }
-    void SetUniqueAxisName(std::wstring name) // helper for constructing
+    size_t GetNumTimeSteps() const
     {
-        static std::map<std::wstring, size_t> nameIndices;
-        size_t index = nameIndices[name]++;
-        if (index > 0)
-            name += msra::strfun::wstrprintf(L"%d", (int)index);
-        SetAxisName(name);
+        return m_numTimeSteps;
+    }
+    size_t GetNumParallelSequences() const
+    {
+        return m_numParallelSequences;
     }
 
     // how many columns the underlying MB matrix has
@@ -278,6 +275,16 @@ public:
     const vector<SequenceInfo> &GetAllSequences() const
     {
         return m_sequences;
+    }
+
+    const std::wstring GetName() const
+    {
+        return m_name;
+    }
+
+    void SetName(const std::wstring& name)
+    {
+        m_name = name;
     }
 
     // compute the number of actual samples in this layout (not counting gaps)
@@ -544,6 +551,8 @@ private:
 
     vector<bool> m_timeStepHasGap; // [t] true if at least one gap in time step t
 
+    std::wstring m_name;
+
     // Cached mask indicating the validity of each column in the MBLayout
     // TODO: We actually just need a boolean matrix for this.
     // A value of 1 indicates that the column has valid content
@@ -554,10 +563,6 @@ private:
     // When it's value is false, no set operations are allowed on the MBLayout.
     // Meant to guard in lazy creation of m_columnsValidityMask.
     mutable bool m_writable;
-
-    // the axis
-    // For now only a string meant for debugging.
-    std::wstring m_axisName;
 
 public:
 

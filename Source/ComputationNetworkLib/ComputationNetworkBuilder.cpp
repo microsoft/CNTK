@@ -48,6 +48,7 @@ static shared_ptr<ComputationNode<ElemType>> CreateStandardNode(const std::wstri
     else if (nodeType == OperationNameOf(DiagTimesNode))                        return New<DiagTimesNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(DropoutNode))                          return New<DropoutNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(DummyCriterionNode))                   return New<DummyCriterionNode<ElemType>>(forward<_Types>(_Args)...);
+    else if (nodeType == OperationNameOf(DynamicAxisNode))                      return New<DynamicAxisNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(ElementTimesNode))                     return New<ElementTimesNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(EnvironmentInputNode))                 return New<EnvironmentInputNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(ErrorPredictionNode))                  return New<ErrorPredictionNode<ElemType>>(forward<_Types>(_Args)...);
@@ -194,27 +195,27 @@ shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Creat
 }
 
 template <class ElemType>
-shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::CreateInputNode(const std::wstring& inputName, const size_t rows)
+shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::CreateInputNode(const std::wstring& inputName, const size_t rows, const wstring& dynamicAxisName)
 {
-    return net.AddNodeToNetWithElemType(New<InputValue<ElemType>>(net.GetDeviceId(), inputName, rows));
+    return net.AddNodeToNetWithElemType(New<InputValue<ElemType>>(net.GetDeviceId(), inputName, rows, dynamicAxisName));
 }
 
 template <class ElemType>
-shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::CreateSparseInputNode(const std::wstring& inputName, const size_t rows)
+shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::CreateSparseInputNode(const std::wstring& inputName, const size_t rows, const wstring& dynamicAxisName)
 {
-    return net.AddNodeToNetWithElemType(New<SparseInputValue<ElemType>>(net.GetDeviceId(), inputName, rows));
+    return net.AddNodeToNetWithElemType(New<SparseInputValue<ElemType>>(net.GetDeviceId(), inputName, rows, dynamicAxisName));
 }
 
 template <class ElemType>
-shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::CreateInputNode(const std::wstring& inputName, const TensorShape& sampleLayout)
+shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::CreateInputNode(const std::wstring& inputName, const TensorShape& sampleLayout, const wstring& axisName)
 {
-    return net.AddNodeToNetWithElemType(New<InputValue<ElemType>>(net.GetDeviceId(), inputName, sampleLayout));
+    return net.AddNodeToNetWithElemType(New<InputValue<ElemType>>(net.GetDeviceId(), inputName, sampleLayout, axisName));
 }
 
 template <class ElemType>
-shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::CreateSparseInputNode(const std::wstring& inputName, const TensorShape& imageLayout)
+shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::CreateSparseInputNode(const std::wstring& inputName, const TensorShape& imageLayout, const wstring& axisName)
 {
-    return net.AddNodeToNetWithElemType(New<SparseInputValue<ElemType>>(net.GetDeviceId(), inputName, imageLayout));
+    return net.AddNodeToNetWithElemType(New<SparseInputValue<ElemType>>(net.GetDeviceId(), inputName, imageLayout, axisName));
 }
 
 template <class ElemType>
@@ -459,6 +460,12 @@ template <class ElemType>
 shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Pass(const ComputationNodePtr a, const std::wstring& nodeName)
 {
     return net.AddNodeToNetAndAttachInputs(New<PassNode<ElemType>>(net.GetDeviceId(), nodeName), { a });
+}
+
+template <class ElemType>
+shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::DynamicAxis(const ComputationNodePtr a, const std::wstring& nodeName)
+{
+    return net.AddNodeToNetAndAttachInputs(New<DynamicAxisNode<ElemType>>(net.GetDeviceId(), nodeName), { a });
 }
 
 template <class ElemType>

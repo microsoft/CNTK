@@ -150,7 +150,7 @@ public:
     // TODO: this ^^ does not seem to belong here.
 
     HTKMLFReader()
-        : m_pMBLayout(make_shared<MBLayout>())
+        : m_pMBLayout(make_shared<MBLayout>(1, 0, L"*"))
     {
     }
     template <class ConfigRecordType>

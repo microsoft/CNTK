@@ -513,9 +513,8 @@ void ComputationNetwork::DetermineSetOfAllRoots()
 }
 
 // initial setup of MBLayout pointers
-//  - link all input nodes to one or more MBLayouts    --TODO: Currently only one
+//  - link all input nodes to one or more MBLayouts
 //  - reset all others to nullptr, in expectation of a ValidateNetwork() pass
-// BUGBUG (Issue #95): Change this to use different MBLayouts for different inputs if so configured.
 void ComputationNetwork::ResetMBLayouts()
 {
     // reset to a well-defined MBLayout (any meaningful layout should do here)
@@ -524,12 +523,18 @@ void ComputationNetwork::ResetMBLayouts()
 
     // first reset all
     for (const auto& node : GetAllNodesForRoot(nullptr))
+    {
         node->LinkToMBLayout(nullptr);
+    }
 
-    // then fix up inputs (all others get propagated upwards through Validate())
-    // BUGBUG (Issue #95): Once we support mismatching layouts, this will be more involved. For now, everything shares the one layout that the Network knows about.
+    for (auto node : GetNodesWithType(L"DynamicAxis"))
+    {
+        node->LinkToMBLayout(make_shared<MBLayout>(1, 0, node->GetName()));
+    }
+
+    // This is now initialized inside of the Input nodes, with the proper connections.
     for (auto node : InputNodes(nullptr))
-        node->LinkToMBLayout(make_shared<MBLayout>(1, 0));
+        node->AttachDynamicAxis([&](std::wstring name) { return GetNodeFromName(name); }, m_pMBLayoutOfNetwork);
 }
 
 // -----------------------------------------------------------------------

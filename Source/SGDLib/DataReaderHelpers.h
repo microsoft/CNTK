@@ -155,8 +155,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             // decimatedMB[name]->SetValue(mat.Reshaped(nRows*nSequence, nT).RowSlice( st*nRows , (en-st)*nRows).Reshaped(nRows, nNewParallelSequence*nT));
         }
         // decimate MBLayout as well
-        pDecimateMBLayout = make_shared<MBLayout>(numNewParallelSequence, nT);
-        //pDecimateMBLayout->SetAxisName(pMBLayout->GetAxisName());
+        pDecimateMBLayout = make_shared<MBLayout>(numNewParallelSequence, nT, L"");
 #if 1
         // now copy over all sequence info records that are inside the range, with adjusted 's'
         const auto& sequences = pMBLayout->GetAllSequences();
@@ -306,8 +305,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 shared_ptr<IStatefulNode> pNode = dynamic_pointer_cast<IStatefulNode>(node);
                 if (pNode) // if it is an IStatefulNode then report it
                     statefulNodes[name] = pNode;
+                }
             }
-        }
 
         std::map<wstring, shared_ptr<IStatefulNode>> EnumerateStatefulNode(ComputationNetwork& net,
                                                                            const std::vector<ComputationNodeBasePtr>& criterionNode,

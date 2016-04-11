@@ -147,7 +147,7 @@ bool ReaderShim<ElemType>::GetMinibatch(StreamMinibatchInputs& matrices)
             size_t streamId = m_nameToStreamId[mx.first];
 
             const auto& stream = minibatch.m_data[streamId];
-            // TODO: assert that num sequences is consistent across all streams
+		 	// TODO: assert that num sequences is consistent across all streams
             m_numParallelSequences = stream->m_layout->GetNumParallelSequences();
             auto& layout = mx.second.pMBLayout;
             layout->CopyFrom(stream->m_layout);
@@ -201,7 +201,7 @@ bool ReaderShim<ElemType>::DataEnd() { return false; } // Note: Return value nev
 template <class ElemType>
 void ReaderShim<ElemType>::CopyMBLayoutTo(MBLayoutPtr layout)
 {
-    layout->CopyFrom(make_shared<MBLayout>(0, 0));
+    layout->CopyFrom(make_shared<MBLayout>(0, 0, L"<shim>"));
 }
 
 template <class ElemType>
