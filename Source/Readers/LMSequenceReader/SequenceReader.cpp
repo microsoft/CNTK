@@ -1825,6 +1825,11 @@ size_t BatchSequenceReader<ElemType>::DetermineSequencesToProcess()
         if (mProcessed[seq])
             continue;
 
+		// logic to partition data b/w different MPI workers.
+		// need to consider only those sequences for which seq ID modulo m_numSubsets is m_subsetNum
+		if (seq % m_numSubsets != m_subsetNum)
+			continue;
+
         // first unprocessed sequence determines the length if this minibatch
         if (sln == 0)
             sln = m_parser.mSentenceIndex2SentenceInfo[seq].sLen;
@@ -1908,13 +1913,13 @@ bool BatchSequenceReader<ElemType>::GetMinibatchData(size_t& /*out*/ firstPosInS
 
     firstPosInSentence = mLastPosInSentence;
 
-    size_t & i = mLastPosInSentence;
+    size_t & i = mLastPosInSentence;	// why not just use mLastPosInSentence directly in the loop? This adds unnecessary confusion.
     size_t iend = sLn - (labelOut.type != labelNone);       // exclude the last token since it is the last label to be predicted
     // ############### BREAKING CHANGE ################
-    // We use sLn, not sLn -1, if labelOut.type is labelNode, assuming there is no output label, and all labels are inputs.
+    // We use sLn, not sLn -1, if labelOut.type is labelNone, assuming there is no output label, and all labels are inputs.
     // ############### BREAKING CHANGE ################
-    const size_t jend = mRequestedNumParallelSequences > 0 ? m_mbSize : SIZE_MAX;                           // mbSize here is truncation length
-    for (size_t j = 0; j < jend && i < iend; i++, j++)
+    const size_t maxNumberOfParallelSequences = mRequestedNumParallelSequences > 0 ? m_mbSize : SIZE_MAX;                           // mbSize here is truncation length
+	for (size_t j = 0; j < maxNumberOfParallelSequences && i < iend; i++, j++)
     {
         for (int k = 0; k < mToProcess.size(); k++)
         {
@@ -2043,8 +2048,6 @@ bool BatchSequenceReader<ElemType>::GetMinibatch(StreamMinibatchInputs& matrices
 	// There may be multiple parallel trainers reading at the same time in which case
 	// we will slice the data to only return the share of the current trainer's subset
 
-	size_t currSubsetStartCol = (actualmbsize * m_subsetNum) / m_numSubsets;
-	size_t currSubsetEndCol = (actualmbsize * (m_subsetNum + 1)) / m_numSubsets;
     size_t featureDim = m_labelInfo[labelInfoIn].dim;
     auto iter = matrices.find(m_featuresName);
     if (iter != matrices.end()) // (if not found then feature matrix is not requested this time)
@@ -2067,7 +2070,7 @@ bool BatchSequenceReader<ElemType>::GetMinibatch(StreamMinibatchInputs& matrices
             features.SetValue(0);
         }
 
-		for (size_t j = currSubsetStartCol; j < currSubsetEndCol; ++j) // note: this is a loop over matrix columns, not time steps
+		for (size_t j = 0; j < actualmbsize; ++j) // note: this is a loop over matrix columns, not time steps
         {
             // vector of feature data goes into matrix column
             size_t idx = (size_t) m_featureData[j]; // one-hot index of the word, indexed by column (i.e. already interleaved, t=j/mToProcess.size(), s=j%mToProcess.size())
