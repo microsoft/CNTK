@@ -101,7 +101,7 @@ def test_op_element_times(left_operand, right_operand, device_id, precision):
 
 # -- element divide tests --
 @pytest.mark.parametrize("left_operand, right_operand", TENSOR_PAIRS)
-def test_op_element_divide(left_operand, right_operand, device_id, precision):    # 'Z' added to temporarily comment out test
+def test_op_element_divide(left_operand, right_operand, device_id, precision):
 
     #Forward pass test
     #==================
@@ -124,9 +124,12 @@ def test_op_element_divide(left_operand, right_operand, device_id, precision):  
     
     #Backward pass test
     #==================
-    # the expected results for the backward pass is all ones
-    expected = [[[np.ones_like(x) for x in left_operand]]]
-    #unittest_helper(left_as_input, expected, device_id=device_id, 
-    #                precision=precision, clean_up=True, backward_pass=True, input_node=a)    
-    #unittest_helper(right_as_input, expected, device_id=device_id, 
-    #                precision=precision, clean_up=True, backward_pass=True, input_node=b)       
+    # For left: d/da (a/b) = 1/b
+    # For right: d/db (a/b) = a * d/db (1/b) = a * -1/b^2 = -a/b^2
+    expected_left = [[[np.ones_like(x) / x for x in right_operand]]]
+    expected_right = [[-AA(left_operand)  / AA(right_operand)**2]]
+    
+    unittest_helper(left_as_input, expected_left, device_id=device_id, 
+                    precision=precision, clean_up=True, backward_pass=True, input_node=a)    
+    unittest_helper(right_as_input, expected_right, device_id=device_id, 
+                    precision=precision, clean_up=True, backward_pass=True, input_node=b)       
