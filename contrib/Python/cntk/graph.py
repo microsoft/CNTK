@@ -151,7 +151,7 @@ class ComputationNode(object):
             p_value = "'%s'" % p_value
         elif type(p_value) in [list, tuple]:
             # FIXME here we assume that all dims are of TensorShape
-            if p_name in ['dims', 'inputs']:
+            if p_name in ['dims', 'inputs', 'z']:
                 p_value = _tuple_to_cntk_shape(p_value)
             else:
                 raise ValueError('Sequence initialization is only allowed for' +
