@@ -75,7 +75,7 @@ if __name__ == "__main__":
     print('Done.')
     testing_data = load_data(
         'http://yann.lecun.com/exdb/mnist/t10k-images-idx3-ubyte.gz', 10000)
-     = load_labels(
+    testing_labels = load_labels(
         'http://yann.lecun.com/exdb/mnist/t10k-labels-idx1-ubyte.gz', 10000)
     test = np.hstack((testing_labels, testing_data))
     print('Writing test text file...')
