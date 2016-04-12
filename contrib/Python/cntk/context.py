@@ -92,7 +92,6 @@ class AbstractContext(object, metaclass=ABCMeta):
             self.root_nodes = None
         else:
             self.root_nodes = root_nodes if isinstance(root_nodes, list) else [root_nodes]
-        self.node_unit_test= node_unit_test
 
     def __enter__(self):
         _CONTEXT[self.name] = self
@@ -223,11 +222,13 @@ class AbstractContext(object, metaclass=ABCMeta):
         }
         return tmpl % tmpl_dict
 
-    def _generate_eval_config(self, root_nodes, reader):
+    def _generate_eval_config(self, root_nodes, reader, node_unit_test=False):
+        
         '''
         Generates the configuration file for write action.
         :param root_nodes: the node to evaluate. 
         :param reader: the reader used to load the data, None if the network does not have input
+        :param node_unit_test: set to True if you want to output the gradient of a node (backward pass)
         '''
         description, has_inputs, readers = self._generate_config(root_nodes)
         if reader:
@@ -579,18 +580,8 @@ class Context(AbstractContext):
             self.directory, CNTK_OUTPUT_FILENAME + '.' + \
                 ((n + '.grad') if backward_pass  else node.var_name))        
 
-        out_name = os.path.join(
-            self.directory, CNTK_OUTPUT_FILENAME + '.' + node.var_name)
-        #data = np.loadtxt(out_name)
+
         result_content = open(out_name).read()
         data = Context._parse_result_output(result_content)
 
         return data
-
-
-class ClusterContext(AbstractContext):
-
-    '''
-    This is a sub-class of AbstractContext, use it to submit your workloads to the cluster.
-    '''
-    pass
