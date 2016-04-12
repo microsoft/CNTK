@@ -3,14 +3,14 @@
 
 command=Test
 
-modelPath="%(ModelPath)s"		
+modelPath="%(ModelPath)s"
 deviceId=%(DevideId)s
-precision="%(Precision)s"	   		    
+precision="%(Precision)s"
 
 Test=[
-	action="test"
-		
-%(Reader)s	
+    action="test"
+        
+%(Reader)s
 ]
 
 

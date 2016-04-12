@@ -9,7 +9,7 @@ from cntk import *
 # =====================================================================================
 
 
-def dnn_sigmoid_layer(in_dim, out_dim, x, param_scale):
+def add_dnn_sigmoid_layer(in_dim, out_dim, x, param_scale):
     W = LearnableParameter(out_dim, in_dim, initValueScale=param_scale)
     b = LearnableParameter(out_dim, 1, initValueScale=param_scale)
     t = Times(W, x)
@@ -17,7 +17,7 @@ def dnn_sigmoid_layer(in_dim, out_dim, x, param_scale):
     return Sigmoid(z)
 
 
-def dnn_layer(in_dim, out_dim, x, param_scale):
+def add_dnn_layer(in_dim, out_dim, x, param_scale):
     W = LearnableParameter(out_dim, in_dim, initValueScale=param_scale)
     b = LearnableParameter(out_dim, 1, initValueScale=param_scale)
     t = Times(W, x)
@@ -43,8 +43,8 @@ if (__name__ == "__main__"):
     labels.attach_uci_fast_reader(
         training_filename, 0, True, 1, os.path.join("Data", "labelsmap.txt"))
 
-    h1 = dnn_sigmoid_layer(feat_dim, hidden_dim, feats_scaled, 1)
-    out = dnn_layer(hidden_dim, label_dim, h1, 1)
+    h1 = add_dnn_sigmoid_layer(feat_dim, hidden_dim, feats_scaled, 1)
+    out = add_dnn_layer(hidden_dim, label_dim, h1, 1)
     out.tag = 'output'
 
     ec = CrossEntropyWithSoftmax(labels, out)
@@ -55,12 +55,12 @@ if (__name__ == "__main__"):
                  learning_ratesPerMB=0.1, max_epochs=5, momentum_per_mb=0)
 
     # Create a context or re-use if already there
-    with Context('mnist_one_layer', root_node=ec, clean_up=False) as ctx:
+    with Context('mnist_one_layer', root_nodes=ec, clean_up=False) as ctx:
         # CNTK actions
-        # ctx.train(my_sgd)
+        ctx.train(my_sgd)
         features.attach_uci_fast_reader(test_filename, 1)
         labels.attach_uci_fast_reader(
             test_filename, 0, True, 1, os.path.join("Data", "labelsmap.txt"))
         ctx.predict()
-        ctx.test()
-        ctx.predict()
+        print(ctx.test())
+        

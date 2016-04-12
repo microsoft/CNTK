@@ -36,7 +36,7 @@ def element_times(left_operand, right_operand, name=None):
         :class:`cntk.graph.ComputationNode`
     """    
     
-    return ElementDivide(left_operand, right_operand, var_name = name)
+    return ElementTimes(left_operand, right_operand, var_name = name)
 
 def element_divide(left_operand, right_operand, name=None):
     """

@@ -73,9 +73,9 @@ def test_tensor_conversion_exceptions(alias, idx, data, expected):
 
 
 @pytest.mark.parametrize("alias, idx, data, expected", [
-    ('W', 0, A([]), "0	|W "),
+    ('W', 0, A([]), "0\t|W "),
     ('W', 0, A([[1, 0, 0, 0], [1, 0, 0, 0]]), """\
-0	|W 1 1 0 0 0 0 0 0\
+0\t|W 1 1 0 0 0 0 0 0\
 """),
 ])
 def test_tensor_conversion_dense(alias, idx, data, expected):
