@@ -5,6 +5,7 @@
 # ==============================================================================
 
 """
+<<<<<<< HEAD
 Non-linear operations. For every operation we explain how the forward and backward
 passes are computed. For the backward pass we just explain the scalar case which is the building 
 block for computing tensor gradients using the chain rule. For tensors, the backward pass of a node 
@@ -51,6 +52,7 @@ def rectified_linear(x, name=None):
         :class:`cntk.graph.ComputationNode`
     """
     return RectifiedLinear(x, var_name=name)
+
 
 def sigmoid(x, name=None):
     """
