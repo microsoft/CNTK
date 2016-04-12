@@ -219,6 +219,24 @@ Sequences = [
         out = GatherPacked (packedIndex, data1)        # copy data1[0] to all elements, total length like 'type'
     ].out
 
+    # rolling window over past N samples
+    # returns a record [ value=..., valid=... ]
+    # This implementation is suboptimal in that it creates copies for the intermediate steps.
+    PastValueWindow (N, in) = [
+        delayLine[t:0..N-1] = [     # shift register for encoder, last N inputs
+            value = if t == 0
+                    then in        # delay 0: current value
+                    else Loop.PastValue (0, in, timeStep=t)
+            valid = if t == 0
+                    then Constants.One
+                    else Constants.One - PastValue (1, Constants.ZeroesLike (in), timeStep=t, defaultHiddenActivation=1)
+        ]
+        # delayLine[t].value = value of t steps in the past
+        # delayLine[t].valid = true if we had a value t steps in the past
+        value = Slice (-1, 0, axis=-1, SplitDimension (RowStack (array[0..N-1](t=>delayLine[t].value)), 1, N))  # [i, delay]
+        valid = Slice (-1, 0, axis=-1, SplitDimension (RowStack (array[0..N-1](t=>delayLine[t].valid)), 1, N))  # [i, delay]
+    ]
+
     # fold left/right: Reduce entire sequence by applying binaryOp, e.g. FoldL (Plus, 0, input)
     # LINQ calls this Aggregate; and may or may not specify the seed value; and allows a predicate
     FoldL (binaryOp, x0, x) = _Fold (PastValue,   binaryOp, x0, x)

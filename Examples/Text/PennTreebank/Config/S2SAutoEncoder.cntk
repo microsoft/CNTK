@@ -214,8 +214,8 @@ BrainScriptNetworkBuilder = (new ComputationNetwork [
     #  3. attention
 
     thoughtVector = [
-        h = TraceDense (Last (TraceDense (encoderOutput.h, 'encout')), 'thvh')
-        c = TraceDense (Last (TraceDense (encoderOutput.c, 'encout')), 'thvc')
+        h = Last (encoderOutput.h)
+        c = Last (encoderOutput.c)
     ]
     thoughtVectorDim = encoderDims[encoderOutputLayer]
 
@@ -226,22 +226,7 @@ BrainScriptNetworkBuilder = (new ComputationNetwork [
     ]
 
     # attention (fixed rolling window)
-    # This implementation is suboptimal in that it creates copies for the intermediate steps.
-    AttentionWindow(attentionSpan, in) = [
-        delayLine[t:0..attentionSpan-1] = [     # shift register for encoder, last N inputs
-            value = if t == 0
-                    then in        # delay 0: current value
-                    else Loop.PastValue (0, in, timeStep=t)
-            valid = if t == 0
-                    then Constants.One
-                    else Constants.One - PastValue (1, Constants.ZeroesLike (in), timeStep=t, defaultHiddenActivation=1)
-        ]
-        # delayLine[t].value = value of t steps in the past
-        # delayLine[t].valid = true if we had a value t steps in the past
-        value = Slice (-1, 0, axis=-1, SplitDimension (RowStack (array[0..attentionSpan-1](t=>delayLine[t].value)), 1, attentionSpan))  # [i, delay]
-        valid = Slice (-1, 0, axis=-1, SplitDimension (RowStack (array[0..attentionSpan-1](t=>delayLine[t].valid)), 1, attentionSpan))  # [i, delay]
-    ]
-    attentionWindow = AttentionWindow (attentionSpan, encoderOutput.h)
+    attentionWindow = Sequences.PastValueWindow (attentionSpan, encoderOutput.h)
     attentionDim = thoughtVectorDim
     projectedAttentionWindowBroadcast = [
         W(x) = Parameters.WeightParam (attentionDim, thoughtVectorDim) * Parameters.Stabilize (x, enabled=useStabilizer)
@@ -251,7 +236,7 @@ BrainScriptNetworkBuilder = (new ComputationNetwork [
     ]
 
     # NYU style: expand h to all, drop c
-    # TODO: se BroadcastAs()
+    # TODO: use BroadcastAs()
     thoughtVectorEverywhere = Boolean.If (Loop.IsFirst (thoughtVectorPadded.h),    # if first entry
                                  /*then*/ thoughtVectorPadded.h,                   # then copy that
                                  /*else*/ Loop.Previous (thoughtVectorEverywhere)) # else just propagate to the front
