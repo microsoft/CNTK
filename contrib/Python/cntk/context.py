@@ -569,6 +569,9 @@ class Context(AbstractContext):
             raise ValueError(
                 'node is not of type ComputationNode, but %s' % type(node))
 
+        if backward_pass and input_name is None:
+            raise ValueError('an input name is required when backward pass is enabled')
+
         # Taking note of the original tag of this node to restore it later
         orig_node_tag = node.tag if hasattr(node, 'tag') else None
         node.tag = 'output'
@@ -579,10 +582,11 @@ class Context(AbstractContext):
         node.tag = orig_node_tag
 
         n = input_name.var_name if isinstance(input_name, ComputationNode) else input_name
-        out_name = os.path.join(
-            self.directory, CNTK_OUTPUT_FILENAME + '.' + \
-                ((n + '.grad') if backward_pass  else node.var_name))        
-
+        out_name = os.path.join(self.directory, CNTK_OUTPUT_FILENAME + '.')
+        if backward_pass:
+            out_name += n + '.grad'
+        else:
+            out_name += node.var_name
 
         result_content = open(out_name).read()
         data = Context._parse_result_output(result_content)
