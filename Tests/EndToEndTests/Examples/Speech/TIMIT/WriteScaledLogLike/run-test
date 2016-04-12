@@ -17,7 +17,7 @@ cp -R $DataSourceDir/* $DataDir || exit $?
 cntkrun TIMIT_WriteScaledLogLike.cntk "$CntkArguments"
 ExitCode=$?
 
-# Need to compare the output, because the output 
+# Compare the output files
 OutputDir=$DataDir/scaledloglike
 
 cd $OutputDir && md5sum --quiet -c $TEST_DIR/expected_output.txt
