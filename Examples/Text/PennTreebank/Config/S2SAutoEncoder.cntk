@@ -120,12 +120,13 @@ BrainScriptNetworkBuilder = (new ComputationNetwork [
                       labels = rawInput
                   ]
                   else [
-                      separatorRow = 2                                   # row index of separator symbokl 
-                      isSeparator = TraceSparse (RowSlice (separatorRow, 1, TraceSparse (rawInput, 'raw')), 'row') # cut out the separator as a flag
-                      inInput  = TraceDense (Boolean.Or (FutureValue (1, inInput , defaultHiddenActivation=0), isSeparator), 'fin')
-                      inLabels = TraceDense (Boolean.Or (PastValue   (1, inLabels, defaultHiddenActivation=0), isSeparator), 'flb')
-                      input  = TraceSparse (Sequences.Gather (inInput,  rawInput), 'in')
-                      labels = TraceSparse (Sequences.Gather (inLabels, rawInput), 'lb')
+                      # we encode input and label as a single input; this splits it into two
+                      separatorRow = 2                                                                          # row index of separator symbokl 
+                      isSeparator = RowSlice (separatorRow, 1, rawInput)                                        # cut out the separator as a flag
+                      inInput  = Boolean.Or (FutureValue (1, inInput , defaultHiddenActivation=0), isSeparator) # flag sequence: word is input...
+                      inLabels = Boolean.Or (PastValue   (1, inLabels, defaultHiddenActivation=0), isSeparator) # ...or labels
+                      input  = Sequences.Gather (inInput,  rawInput)                                            # use flags to split raw input into input and labels
+                      labels = Sequences.Gather (inLabels, rawInput)                                            # (both have different lengths)
                   ]
               ].out
 
@@ -135,9 +136,9 @@ BrainScriptNetworkBuilder = (new ComputationNetwork [
 
     # strip separators
     # TODO: find out which one is the correct one
-    #inputSequence  = TraceSparse (Slice (0, -1, streams.input,   axis=-1), 'inputSeq');  # e.g. <s> A   B   C      # TODO: process </s> as well, to trigger the thought vector
-    inputSequence  = TraceSparse (              streams.input            , 'inputSeq');  # e.g. <s> A   B   C    </s>
-    labelSequence  = TraceSparse (Slice (1,  0, streams.labels,  axis=-1), 'labelSeq');  # e.g. A   B   C   </s>
+    #inputSequence = Slice (0, -1, streams.input,   axis=-1)  # e.g. <s> A   B   C      # TODO: process </s> as well, to trigger the thought vector
+    inputSequence  =               streams.input              # e.g. <s> A   B   C    </s>
+    labelSequence  = Slice (1,  0, streams.labels,  axis=-1)  # e.g. A   B   C   </s>
 
     # embeddings  --as long as we cannot read multiple sequences, we got one embedding
     # Note: Embeddings are linear, so better stabilize. We really should use BatchNorm.
@@ -156,8 +157,8 @@ BrainScriptNetworkBuilder = (new ComputationNetwork [
     [
         prevState =
         [
-            h = Loop.Previous (lstmState.h)             // hidden state(t-1)
-            c = Loop.Previous (lstmState.c)             // cell(t-1)
+            h = Loop.Previous (lstmState.h)             # hidden state(t-1)
+            c = Loop.Previous (lstmState.c)             # cell(t-1)
         ]
         enableSelfStabilization1 = enableSelfStabilization // TODO: BS syntax needs to allow to say ^.enableSelfStabilization
         lstmState = BS.RNNs.LSTMP (inputDim, outputDim, cellDim, x, prevState, enableSelfStabilization=enableSelfStabilization1)
@@ -167,8 +168,8 @@ BrainScriptNetworkBuilder = (new ComputationNetwork [
     [
         prevState =
         [
-            h = Loop.Previous (lstmState.h)             // hidden state(t-1)
-            c = Loop.Previous (lstmState.c)             // cell(t-1)
+            h = Loop.Previous (lstmState.h)             # hidden state(t-1)
+            c = Loop.Previous (lstmState.c)             # cell(t-1)
         ]
 
         # compute additional hidden state from attention
@@ -181,7 +182,10 @@ BrainScriptNetworkBuilder = (new ComputationNetwork [
         attentionWeights = Softmax (uValid)                        # [1 x attentionSpan]
         weightedAttentionWindow = projectedAttentionWindowBroadcast.value .* attentionWeights # [attentionDim x attentionSpan]
         weightedAttentionAverage = weightedAttentionWindow * BS.Constants.OnesTensor (attentionSpan) # [attentionDim]
+
+        # feed both to LSTM as a single agumented input, so that we can reuse the existing LSTM component
         augmentedX = RowStack (weightedAttentionAverage : x)
+
         enableSelfStabilization1 = enableSelfStabilization // TODO: BS syntax needs to allow to say ^.enableSelfStabilization
         lstmState = BS.RNNs.LSTMP (attentionDim + inputDim, outputDim, cellDim, augmentedX, prevState, enableSelfStabilization=enableSelfStabilization1)
     ].lstmState // that's the value we return
@@ -220,9 +224,8 @@ BrainScriptNetworkBuilder = (new ComputationNetwork [
     thoughtVectorDim = encoderDims[encoderOutputLayer]
 
     thoughtVectorPadded = [ # padded with zeroes until end of target sequence
-        isFirst = Loop.IsFirst (labelsEmbedded)
-        h = Sequences.Scatter (isFirst, thoughtVector.h)
-        c = Sequences.Scatter (isFirst, thoughtVector.c)
+        h = Sequences.BroadcastSequenceAs (labelsEmbedded, thoughtVector.h)
+        c = Sequences.BroadcastSequenceAs (labelsEmbedded, thoughtVector.c)
     ]
 
     # attention (fixed rolling window)
