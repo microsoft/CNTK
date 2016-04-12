@@ -259,7 +259,7 @@ public:
 
         fstream.PutMarker(FileMarker::fileMarkerBeginSection, L"BDynamicAxis");
         fstream << m_dynamicAxisNodeName;
-        fstream.TryGetMarker(FileMarker::fileMarkerEndSection, L"EDynamicAxis");
+        fstream.PutMarker(FileMarker::fileMarkerEndSection, L"EDynamicAxis");
     }
 
     virtual void Load(File& fstream, size_t modelVersion) override
