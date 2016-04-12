@@ -664,7 +664,7 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::DoGatherColumnsOf(ElemType beta, const
             continue;
         size_t jIn = (size_t)jInF;
         if (jIn >= a.GetNumCols())
-            InvalidArgument("DoGatherColumnsOf: Map out of bounds.");
+            InvalidArgument("DoGatherColumnsOf: Map out of bounds. %ld >= %ld", (long int)jIn, (long int)a.GetNumCols());
         ScaleAndAddColumn(beta, &us(0,jOut), &a(0,jIn), us.GetNumRows(), alpha);
     }
 

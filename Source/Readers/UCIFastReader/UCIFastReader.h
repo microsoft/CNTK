@@ -134,7 +134,7 @@ public:
     virtual void Destroy();
     UCIFastReader()
     {
-        m_pMBLayout = make_shared<MBLayout>(1, 0, L"*");
+        m_pMBLayout = make_shared<MBLayout>();
     }
     virtual ~UCIFastReader();
 

@@ -119,7 +119,10 @@ template <class ElemType>
     if (isFinalValidationPass && !Input(0)->HasMBLayout())
         InvalidArgument("%ls %ls operation can only operate on minibatch data (which have a layout).", NodeName().c_str(), OperationName().c_str());
     if (!m_pMBLayout)
+    {
         m_pMBLayout = make_shared<MBLayout>(); // this generates a new layout
+        m_pMBLayout->SetUniqueAxisName(L"WhereNodeAxis");
+    }
     // we map scalars to scalars
     if (isFinalValidationPass && Input(0)->GetSampleLayout().GetNumElements() != 1)
         InvalidArgument("%ls %ls operation can only operate on scalar input.", NodeName().c_str(), OperationName().c_str());

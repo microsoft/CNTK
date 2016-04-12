@@ -904,6 +904,15 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "NetworkTests", "Tests\UnitT
 		{EAD17188-072C-4726-B840-A769C36DAD1B} = {EAD17188-072C-4726-B840-A769C36DAD1B}
 	EndProjectSection
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Text", "Text", "{8656B71D-E24C-4AC2-8BE4-C07B415A3E15}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "SequenceClassification", "SequenceClassification", "{E53E63A0-FAA9-4416-9AD1-08A8FB87FEE1}"
+	ProjectSection(SolutionItems) = preProject
+		Tests\EndToEndTests\Text\SequenceClassification\embeddingmatrix.txt = Tests\EndToEndTests\Text\SequenceClassification\embeddingmatrix.txt
+		Tests\EndToEndTests\Text\SequenceClassification\seqcla.cntk = Tests\EndToEndTests\Text\SequenceClassification\seqcla.cntk
+		Tests\EndToEndTests\Text\SequenceClassification\Train.txt = Tests\EndToEndTests\Text\SequenceClassification\Train.txt
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug_CpuOnly|x64 = Debug_CpuOnly|x64
@@ -1245,5 +1254,7 @@ Global
 		{48C2A9DE-FB2C-4724-9ADC-744216D79BCF} = {08A05A9A-4E45-42D5-83FA-719E99C04A30}
 		{2B1046A1-0140-43B7-B3DC-CF7DEEE1009E} = {8071EF60-30F7-4A77-81AA-ADCA0E18B1E3}
 		{CDA96AA3-3252-4978-A0BF-2ACD670823CB} = {6F19321A-65E7-4829-B00C-3886CD6C6EDE}
+		{8656B71D-E24C-4AC2-8BE4-C07B415A3E15} = {6E565B48-1923-49CE-9787-9BBB9D96F4C5}
+		{E53E63A0-FAA9-4416-9AD1-08A8FB87FEE1} = {8656B71D-E24C-4AC2-8BE4-C07B415A3E15}
 	EndGlobalSection
 EndGlobal

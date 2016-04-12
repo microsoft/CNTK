@@ -135,7 +135,6 @@ bool ReaderShim<ElemType>::GetMinibatch(StreamMinibatchInputs& matrices)
 
     // a map to generate error messages when checking layout constraints. 
     map<wstring, wstring> layoutToInputMap;
-
     if (!minibatch.m_data.empty())
     {
         // TODO: Use alternating pinned buffer in the packer, do not copy anything, but pack into the pinned memory.
@@ -154,21 +153,25 @@ bool ReaderShim<ElemType>::GetMinibatch(StreamMinibatchInputs& matrices)
             const auto& stream = minibatch.m_data[streamId];
 
             m_numParallelSequences = stream->m_layout->GetNumParallelSequences();
-            assert(m_numParallelSequences == minibatch.m_data.front()->m_layout->GetNumParallelSequences());
+
+            // This assert no longer holds - different inputs have different sequence lengths, resulting in different number 
+            // of parallel samples.
+            // assert(m_numParallelSequences == minibatch.m_data.front()->m_layout->GetNumParallelSequences());
 
             auto& layout = mx.second.pMBLayout;
 
             if (layout->GetNumCols() == 0)
             {
                 // layout is empty, copy layout info from the reader
-                layout->CopyFrom(stream->m_layout);
-                layoutToInputMap[layout->GetName()] = mx.first;
+                layout->CopyFrom(stream->m_layout, /*keepName*/ true);
+                layoutToInputMap[layout->GetAxisName()] = mx.first;
             }
             else if (*layout != *stream->m_layout) // this does a deep value-level comparison
             {
-                RuntimeError("Layout '%ls' is shared between inputs '%ls' and '%ls', but layouts generated "
-                    "by the reader for these inputs are incompatible.",
-                    layout->GetName().c_str(), layoutToInputMap[layout->GetName()].c_str(), mx.first.c_str());
+                RuntimeError("Dynamic axis layout '%ls' is shared between inputs '%ls' and '%ls', but layouts generated "
+                    "from the input data are incompatible on this axis. Are you using different sequence lengths? "
+                    "Did you consider adding a DynamicAxis() to the Input nodes?",
+                    layout->GetAxisName().c_str(), layoutToInputMap[layout->GetAxisName()].c_str(), mx.first.c_str());
             }
 
             size_t sampleSize = m_streams[streamId]->m_sampleLayout->GetNumElements();
@@ -227,6 +230,8 @@ void ReaderShim<ElemType>::CopyMBLayoutTo(MBLayoutPtr layout)
 template <class ElemType>
 size_t ReaderShim<ElemType>::GetNumParallelSequences()
 {
+    // BUGBUG This is a property of the stream, of which this reader might produce several, with different nr. of
+    // parallel sequences. Thus this property doesn't make sense anymore.
     return m_numParallelSequences;
 }
 
