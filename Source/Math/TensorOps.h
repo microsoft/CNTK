@@ -47,6 +47,7 @@ OverloadUnaryMathFns(sqrt);
 OverloadUnaryMathFns(fabs);
 OverloadUnaryMathFns(cos);
 OverloadUnaryMathFns(sin);
+OverloadUnaryMathFns(floor);
 
 #pragma push_macro("OverloadUnaryMathFns")
 
@@ -180,6 +181,8 @@ DECL ElemType LogAdd(ElemType x, ElemType y)
     }
 
 DefNullaryOp(ConstOne, 1);
+DefNullaryOp(ConstZero, 0);
+
 #pragma pop_macro("DefNullaryOp")
 
 #pragma push_macro("DefUnaryOp")
@@ -194,6 +197,7 @@ DefUnaryOp(Copy, a);
 DefUnaryOp(Negate, -a);
 DefUnaryOp(Not, !a);
 DefUnaryOp(Abs, fabs_(a));
+DefUnaryOp(Floor, floor_(a));
 DefUnaryOp(Sigmoid, Sigmoid(a));
 DefUnaryOp(Tanh, tanh_(a));
 DefUnaryOp(Sqr, Sqr(a));
@@ -203,6 +207,7 @@ DefUnaryOp(Log, ClippedLog(a));
 DefUnaryOp(LinearRectifier, a > 0 ? a : 0);
 DefUnaryOp(Cosine, cos_(a));
 DefUnaryOp(Reciprocal, a == 0 ? 0 : 1 / a);
+
 #pragma pop_macro("DefUnaryOp")
 
 #pragma push_macro("DefBinaryOp")

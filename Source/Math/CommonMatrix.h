@@ -70,10 +70,10 @@ private:
 enum ElementWiseOperator
 {
     // nullary
-    opConstOne,
+    opConstOne, opConstZero,
     // unary (or binary with constant parameter)
     opCopy,
-    opNegate, opNot, opAbs, opReciprocal,
+    opNegate, opNot, opAbs, opFloor, opReciprocal,
     opSigmoid, opTanh, opSqr, opSqrt, opExp, opLog, opLinearRectifier, opCosine,
     // unary ops for use by Matrix class only (there is no TensorView implementation)
     opSigmoidDerivative, opLinearRectifierDerivative, opNegativeSine,
@@ -98,13 +98,15 @@ enum ElementWiseOperator
 
 // helper to apply a C macro for all operations of each kind
 #define ForAllNullaryOps(Macro) \
-    Macro(ConstOne);
+    Macro(ConstOne);            \
+    Macro(ConstZero);
 
 #define ForAllUnaryOps(Macro) \
     Macro(Copy);              \
     Macro(Negate);            \
     Macro(Not);               \
     Macro(Abs);               \
+    Macro(Floor);             \
     Macro(Reciprocal);        \
     Macro(Sigmoid);           \
     Macro(Tanh);              \

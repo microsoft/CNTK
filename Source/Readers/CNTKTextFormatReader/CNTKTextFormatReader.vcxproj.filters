@@ -50,5 +50,13 @@
     <Filter Include="Common\Include">
       <UniqueIdentifier>{C6F55578-121A-4D7C-8F57-4172BC5C463B}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Scripts">
+      <UniqueIdentifier>{cd70d891-88aa-40a4-8e47-0e31e4cac48e}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="uci_to_cntk_text_format_converter.py">
+      <Filter>Scripts</Filter>
+    </None>
   </ItemGroup>
 </Project>
