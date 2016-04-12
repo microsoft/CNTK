@@ -246,11 +246,12 @@ BrainScriptNetworkBuilder = (new ComputationNetwork [
     projectedAttentionWindowBroadcast = [
         W(x) = Parameters.WeightParam (attentionDim, thoughtVectorDim) * Parameters.Stabilize (x, enabled=useStabilizer)
         #B = Parameters.BiasParam (vocabDim) # no bias in attention
-        value = Sequences.BroadcastAs (labelsEmbedded, W (attentionWindow.value)) # apply the projection columnwise to the attentionWindow tensor
-        valid = Sequences.BroadcastAs (labelsEmbedded, attentionWindow.valid)
+        value = Sequences.BroadcastSequenceAs (labelsEmbedded, W (attentionWindow.value)) # apply the projection columnwise to the attentionWindow tensor
+        valid = Sequences.BroadcastSequenceAs (labelsEmbedded,    attentionWindow.valid)
     ]
 
     # NYU style: expand h to all, drop c
+    # TODO: se BroadcastAs()
     thoughtVectorEverywhere = Boolean.If (Loop.IsFirst (thoughtVectorPadded.h),    # if first entry
                                  /*then*/ thoughtVectorPadded.h,                   # then copy that
                                  /*else*/ Loop.Previous (thoughtVectorEverywhere)) # else just propagate to the front

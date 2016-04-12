@@ -171,6 +171,8 @@ Constants = [
     #OnesLike (x)   = CastAs (x, One)
     # CastAs() does not implement broadcasting
     ZeroesLike (x) = SumColumnElements (RowSlice (0, 1, x) .* Zero)  // hack: get one row of input and multiply with zero; double-hack: reduce extra tensor dims by SumCol
+    ZeroSequenceLike = ZeroesLike   # TODO: this should yield a scalar sequence, while ZeroesLike should be a tensor
+    ZeroesLike1 (x) = x .* Zero     # get a tensor of zeroes of same dim as x  TODO: Do this as a C++ node (will be simple)
     OnesLike (x) = ZeroesLike (x) + One
     # is this like Sequences.Repeat?
     True  = 1
@@ -210,16 +212,11 @@ Boolean = [
 
 Sequences = [
     # broadcast a single-step sequence to a multi-step sequence
-    BroadcastAs (type, data) = [ # type = example sequence with desired length (outside of a loop), data = 1 time step
-        # pad with something to bring it into output timeline
-        isFirst = Loop.IsFirst (type)
-        dataPadded = Sequences.Scatter (isFirst, data) # value followed by lots of zeroes,length of 'type'
-
-        # now broadcast the values everywhere
-        # This entire complex process is inefficient and must become a C++ node.
-        out = Boolean.If (isFirst,                              # if first step (w.r.t output step)
-                 /*then*/ dataPadded, # then copy that
-                 /*else*/ Loop.Previous (out)) # else just propagate to the front
+    BroadcastSequenceAs (type, data1) = [                      # type=example sequence with desired length (outside of a loop), data1=1 time step
+        ZeroSequenceLike (x) = RowSlice (0, 1, x) .* Constants.Zero # BUGBUG: SumColumnElements() has a CPU/GPU problem
+        index = /*Constants.*/ZeroSequenceLike (type)  # create an index sequence [ 0 0 0 ... ] of target length
+        packedIndex = PackedIndex (data1, index)       # convert into internal packed index w.r.t. 'data1'
+        out = GatherPacked (packedIndex, data1)        # copy data1[0] to all elements, total length like 'type'
     ].out
 
     # fold left/right: Reduce entire sequence by applying binaryOp, e.g. FoldL (Plus, 0, input)
