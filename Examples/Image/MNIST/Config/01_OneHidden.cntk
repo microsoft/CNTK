@@ -14,7 +14,7 @@ imageLayout = "cudnn"
 # override the above as follows when running on CPU:
 # deviceId = -1
 
-command = MNISTtrain:MNISTtest
+command = train:test
 
 precision = "float"
 modelPath = "$ModelDir$/01_OneHidden"
@@ -32,7 +32,7 @@ initOnCPUOnly=true
 #  TRAINING CONFIG                    #
 #######################################
 
-MNISTtrain = [
+train = [
     action = "train"
 
     NDLNetworkBuilder = [
@@ -47,6 +47,7 @@ MNISTtrain = [
         maxEpochs = 30
     ]
     
+    # Note: this reader crashes if randomization is turned on.
     reader = [
         readerType = "UCIFastReader"
         # To get the data (Train-28x28.txt) please run `python mnist_convert.py` 
@@ -71,7 +72,7 @@ MNISTtrain = [
 #  TEST CONFIG                        #
 #######################################
 
-MNISTtest = [
+test = [
     action = "test"
     minibatchSize = 16
 
