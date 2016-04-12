@@ -15,7 +15,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // For detail, see the following paper
     // Kai Chen and Qiang Huo, “Scalable training of deep learning machines by incremental block training 
     // with intra-block parallel optimization and blockwise model-update filtering”, 
-    // in Internal Conference on Acoustics, Speech and Signal Processing , March 2016, Shanghai, China. 
+    // in International Conference on Acoustics, Speech and Signal Processing , March 2016, Shanghai, China. 
 
     template<typename ElemType>
     class BlockMomentumSGD : public IMASGD<ElemType>
@@ -27,21 +27,31 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     
      protected:
         bool m_resetSGDMomentumAfterAggregation; 
+        bool m_useNestrovMomentum;
         double m_blockMomentum; 
+        double m_blockLearningRate; 
         map < wstring, shared_ptr<Matrix<ElemType>>>     m_prevParameters;       // parameters at the last model aggregation point
         map < wstring, shared_ptr<Matrix<ElemType>>>    m_blockLevelSmoothedGradient; 
 
     public:
-        BlockMomentumSGD(const MPIWrapperPtr& pMPI, size_t reportFreq, DEVICEID_TYPE devID, bool resetSGDM, double blockMomentum)
+        BlockMomentumSGD(const MPIWrapperPtr& pMPI, size_t reportFreq, DEVICEID_TYPE devID, 
+                        bool useNestrovMomentum, bool resetSGDM, 
+                        double blockMomentum, double blockLearningRate, double blockMomentumAsTimeConstant)
             :IMASGD<ElemType>(pMPI, reportFreq, devID)
         {
             m_blockMomentum = blockMomentum; 
+            m_useNestrovMomentum = useNestrovMomentum;
             m_resetSGDMomentumAfterAggregation = resetSGDM; 
-            fprintf(stderr, "Parallel training (%d workers) using BlockMomentum: useNesterovMomentum=true, blockMomentum=%6.4f, resetSGDMomentum=%s, preferredDeviceID=%d\n",
-                (int)m_pMPI->NumNodesInUse(),
-                m_blockMomentum,
+            m_blockLearningRate = blockLearningRate;
+            fprintf(stderr, "Parallel training (%d workers) using BlockMomentum: "
+                            "useNesterovMomentum=%s, resetSGDMomentum=%s, "
+                            "blockMomentum=%6.4f, blockMomentumAsTimeConstant=%6.4f, "
+                            "blockLearningRate=%6.4f\n",
+                (int)m_pMPI->NumNodesInUse(),      
+                m_useNestrovMomentum ? "true" : "false" , 
                 m_resetSGDMomentumAfterAggregation ? "true" : "false", 
-                m_deviceId
+                m_blockMomentum, blockMomentumAsTimeConstant,
+                m_blockLearningRate
                 );
         }
 
@@ -72,10 +82,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 {
                     m_prevParameters[name]->SetValue(NodeValue);
                 }
-                // related with nestrov momentum, adjust it before training start
-                Matrix<ElemType> V(m_blockLevelSmoothedGradient[name]->DeepClone());
-                Matrix<ElemType>::Scale((ElemType)m_blockMomentum, V);
-                NodeValue -= V;
             }
         }
         /*virtual*/ void OnEpochEnd(const std::list<ComputationNodeBasePtr>& LearnableNodes, 
@@ -83,6 +89,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             size_t                                      samplesSinceLastSync) override
         {
             Base::OnEpochEnd(LearnableNodes, smoothedGradient, samplesSinceLastSync);
+#if 0
             for (auto& pNode : LearnableNodes)
             {
                 auto pnode = DownCast(pNode);
@@ -90,13 +97,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 if (m_blockLevelSmoothedGradient.find(name) == m_blockLevelSmoothedGradient.end())
                 {
                     LogicError("Cannot find block information for node %ls. Contact erw@microsoft.com\n", name.c_str());
-                    // TODO: remove this part
+                    // TODO: remote this 
                 }
-                Matrix<ElemType>& W = pnode->Value();
-                Matrix<ElemType> V(m_blockLevelSmoothedGradient[name]->DeepClone());
-                Matrix<ElemType>::Scale((ElemType)m_blockMomentum, V);
-                W += V;
             }
+#endif 
         }
         /*virtual*/ void ModelAggregationProcessing(
             size_t samplesSinceLastSync,
@@ -106,8 +110,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             float& secondsOnCommunication
             ) override
         {
+            
             //----------------------------------------
-            // 1. communicate with other nodes to negotiate  contribution weights
+            // 1. communicate with other nodes to negotiate contribution weights
             //----------------------------------------
             float factor = 0;
             int   nTotalSamples = samplesSinceLastSync;
@@ -117,22 +122,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_pMPI->AllReduce(&nTotalSamples, 1);
             commTimer.Stop();
             secondsOnCommunication += (float)commTimer.ElapsedSeconds();
-
-            if (nTotalSamples <= 0)
-            {
-                // prepare for overflow 
-                factor = 1.0f / m_pMPI->NumNodesInUse();
-                totalSamplesProcessed = samplesSinceLastSync * m_pMPI->NumNodesInUse();
-                // give an estimated one 
-            }
-            else
             {
                 factor = (samplesSinceLastSync + 0.0f) / nTotalSamples;
                 totalSamplesProcessed = nTotalSamples;
+                factor *= m_pMPI->NumNodesInUse();
             }
-            //----------------------------------------
-            // 2. process for each individual node
-            //----------------------------------------
+            // TODO: currently each worker's contribution to block gradient is proportional to the processed samples. 
+            //       However, if some worker just diverge during his local SGD update, 
+            //       we should disable its contribution by setting its contribution 
+            //       factor to 0 
+            
+
+
             for (auto& pBaseNode : learnableNodes)
             {
                 if (!pBaseNode->IsParameterUpdateRequired())
@@ -140,41 +141,44 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     continue;
                 }
                 wstring name = pBaseNode->NodeName();
-                // 2.1 model averaging
+                // 2 block gradient aggregation 
                 auto pNode = DownCast(pBaseNode);
-                // 2.1.1. average model from individual models 
-                Matrix<ElemType> mat(pNode->Value().DeepClone()); // pNode->Value returns lvalue, so a deep copy is invoked here
-                // 2.1.2. normalize the weight matrix 
-                Matrix<ElemType>::Scale(factor, mat);
-                // 2.1.3. send weight matrix over MPI nodes; 
-                unique_ptr<ElemType[]> px(mat.CopyToArray());
-                //ElemType* px = mat.CopyToArray();
-                size_t    nx = mat.GetNumElements();
+                // 2.1. get current model  
+                Matrix<ElemType>& preW = *m_prevParameters[name];               // prev model value 
+                Matrix<ElemType>& curW = pNode->Value();                        // current model 
+                // 2.1.2. subtract it from the previous model                   
+                Matrix<ElemType>  blockGrad(preW.DeepClone());            
+                blockGrad -= curW;                                              // matW becomes local block gradient (of one worker)
+                Matrix<ElemType>::Scale(factor, blockGrad);
+                // 2.1.3. send block gradient over MPI nodes; 
+                unique_ptr<ElemType[]> px(blockGrad.CopyToArray());
+                size_t    nx = blockGrad.GetNumElements();
                 // 2.1.4. inplace sum 
                 commTimer.Restart();
                 m_pMPI->AllReduce(px.get(), nx);
                 commTimer.Stop();
                 secondsOnCommunication += (float)commTimer.ElapsedSeconds();
-                // 2.1.5. averaged model
-                mat.SetValue(mat.GetNumRows(), mat.GetNumCols(), mat.GetDeviceId(), px.get());
-                // 2.2. blockwise model update and filtering 
+                // 2.1.5. global block gradient
+                blockGrad.SetValue( blockGrad.GetNumRows(), 
+                                    blockGrad.GetNumCols(), 
+                                    blockGrad.GetDeviceId(), 
+                                    px.get()
+                                    ); // blockGrad becomes global block gradient (sum of all local block gradient)
+                // 2.2. model update 
                 {
-                    // some alias for better readability 
-                    Matrix<ElemType>& V = *m_blockLevelSmoothedGradient[name];       // smoothed gradient 
-                    Matrix<ElemType>& W = pNode->Value();                           // model value 
-                    Matrix<ElemType>& preW = *m_prevParameters[name];               // prev model value 
-                    Matrix<ElemType>& negG = mat;                                   // negative gradient
-                    negG -= preW;                                                   // (W^-W_{t-1})
-
+                    // alias for better readability 
+                    Matrix<ElemType>& V = *m_blockLevelSmoothedGradient[name];       // smoothed gradient                   
                     // 2.2.1 update block level smoothed gradient;
-                    Matrix<ElemType>::Scale((ElemType)m_blockMomentum, V);
-                    V -= negG;                                                  // V_t=\eta*V_{t-1}-(W^-W_{t-1})
+                    Matrix<ElemType>::ScaleAndAdd((ElemType)((1 - m_blockMomentum)*m_blockLearningRate), blockGrad, (ElemType)m_blockMomentum, V); 
                     // 2.2.2 update parameters; 
-                    W.SetValue(*m_prevParameters[name]);
-                    Matrix<ElemType>::ScaleAndAdd((ElemType)-m_blockMomentum, V, W); // W_t=W_{t-1}-\eta*V_t + (W^-W_{t-1})
-                    W += negG;
-                    // 2.2.3 update previous model parameters;
-                    preW.SetValue(W);
+                    curW.SetValue(preW);
+                    curW -= V;
+                    preW.SetValue(curW);
+                    // 2.2.3 Nestrov Momentum 
+                    if (m_useNestrovMomentum)
+                    {
+                        Matrix<ElemType>::ScaleAndAdd((ElemType)-m_blockMomentum, V, curW);
+                    }
                 }
             }
             //----------------------------------------
