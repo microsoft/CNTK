@@ -82,7 +82,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             // This is only allowed for old readers, which support a single layout for all inputs.
             for (const auto& iter : inputMatrices)
             {
-                assert(iter.second.pMBLayout == pMBLayout);
+                assert(iter.second.pMBLayout == pMBLayout); UNUSED(iter);
             }
         
             DecimateMinibatchInPlace<ElemType>(inputMatrices, mpi->NumNodesInUse(), mpi->CurrentNodeRank(), pMBLayout);
