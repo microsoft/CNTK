@@ -952,7 +952,8 @@ __global__ void _doScatterColumnsOf(ElemType* us, size_t usStride, size_t usCols
     ElemType&       rus = us[    i + jOut * usStride  ];
 
     ElemType res = ra * alpha;
-    atomicAdd(&rus, res); // rus += res;
+    if (res != 0)             // avoid memory conflict if e.g. an entire column has no gradient
+        atomicAdd(&rus, res); // rus += res;
     // Note: atomicAdd() is supposed to be fast in case of no conflict (the simple case of Scatter())
 }
 
