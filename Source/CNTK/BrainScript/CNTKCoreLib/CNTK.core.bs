@@ -209,6 +209,19 @@ Boolean = [
 ##############################################################################
 
 Sequences = [
+    # broadcast a single-step sequence to a multi-step sequence
+    BroadcastAs (type, data) = [ # type = example sequence with desired length (outside of a loop), data = 1 time step
+        # pad with something to bring it into output timeline
+        isFirst = Loop.IsFirst (type)
+        dataPadded = Sequences.Scatter (isFirst, data) # value followed by lots of zeroes,length of 'type'
+
+        # now broadcast the values everywhere
+        # This entire complex process is inefficient and must become a C++ node.
+        out = Boolean.If (isFirst,                              # if first step (w.r.t output step)
+                 /*then*/ dataPadded, # then copy that
+                 /*else*/ Loop.Previous (out)) # else just propagate to the front
+    ].out
+
     # fold left/right: Reduce entire sequence by applying binaryOp, e.g. FoldL (Plus, 0, input)
     # LINQ calls this Aggregate; and may or may not specify the seed value; and allows a predicate
     FoldL (binaryOp, x0, x) = _Fold (PastValue,   binaryOp, x0, x)
