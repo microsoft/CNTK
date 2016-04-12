@@ -33,7 +33,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                         size_t& actualMBSize, 
                                         const MPIWrapperPtr& mpi)
     {
+        // Reset stale mb layouts.
+        for (const auto& iter : inputMatrices)
+        {
+            iter.second.pMBLayout->Init(1, 0);
+        }
         auto pMBLayout = net->GetMBLayoutPtrOfNetwork();
+        pMBLayout->Init(1, 0);
+
         // Reading consists of a sequence of Reader API calls:
         //  - GetMinibatch() --fills the inputMatrices
         //  - SetActualMiniBatchSizeFromFeatures()  --tells Network to resize the nodes' buffers
@@ -63,26 +70,22 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         // TODO: move this into shim for the old readers.
-        // New readers will reset this to (0,0) (they cannot modify the pointer itself). 
-        // get layout meta-data
+        // get layout meta-data (new readers will ignore this)
         // BUGBUG (Issue #95): must be adapted for multiple MBLayouts
+        
         trainSetDataReader.CopyMBLayoutTo(pMBLayout);
 
         // TODO: move this into shim for the old readers.
         // decimate if needed. Decimation happens in-place.
-        if (!useDistributedMBReading && useParallelTrain &&
-            !(pMBLayout->GetNumParallelSequences() == 0 && pMBLayout->GetNumTimeSteps() == 0))
+        if (!useDistributedMBReading && useParallelTrain)
         {
+            // This is only allowed for old readers, which support a single layout for all inputs.
+            for (const auto& iter : inputMatrices)
+            {
+                assert(iter.second.pMBLayout == pMBLayout);
+            }
+        
             DecimateMinibatchInPlace<ElemType>(inputMatrices, mpi->NumNodesInUse(), mpi->CurrentNodeRank(), pMBLayout);
-        }
-
-        if (!(pMBLayout->GetNumParallelSequences() == 0 && pMBLayout->GetNumTimeSteps() == 0))
-        {
-            // we are dealing with an old reader.
-            for (auto& node : net->FeatureNodes())
-                node->GetMBLayout()->CopyFrom(pMBLayout);
-            for (auto& node : net->LabelNodes())
-                node->GetMBLayout()->CopyFrom(pMBLayout);
         }
 
         // reader will have resized input node's m_value directly. Nodes must be notified to do necessary internal state updates from that.

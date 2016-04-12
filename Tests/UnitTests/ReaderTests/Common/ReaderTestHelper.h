@@ -208,7 +208,14 @@ struct ReaderFixture
                         pMBlayoutPtr : map.GetInput(name).pMBLayout;
                     OutputMatrix(map.GetInputMatrix<ElemType>(name), *layoutPtr, outputFile);
                 }
+
+                // Reset mb layouts
+                for (const auto& iter : map)
+                {
+                    iter.second.pMBLayout->Init(1, 0);
+                }
             }
+
         }
     }
 

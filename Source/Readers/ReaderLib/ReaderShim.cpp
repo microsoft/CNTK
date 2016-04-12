@@ -103,7 +103,7 @@ string EnumerateInputs(const map<wstring, size_t> &nameToStreamId)
 template <class ElemType>
 bool ReaderShim<ElemType>::GetMinibatch(StreamMinibatchInputs& matrices)
 {
-    
+
     // TODO: verify that the set of matrix names is identical 
     // to the set of reader input names. Warn if it's a subset, throw
     // if it's a superset.
@@ -117,7 +117,9 @@ bool ReaderShim<ElemType>::GetMinibatch(StreamMinibatchInputs& matrices)
     // If not we should inject the IMemoryProvider per stream.
     int deviceId = matrices.begin()->second.matrix->GetDeviceId();
     for (auto mx : matrices)
+    {
         assert(mx.second.matrix->GetDeviceId() == deviceId), UNUSED(deviceId);
+    }
 
     assert(m_prefetchTask.valid());
 
@@ -131,6 +133,9 @@ bool ReaderShim<ElemType>::GetMinibatch(StreamMinibatchInputs& matrices)
         }
     }
 
+    // a map to generate error messages when checking layout constraints. 
+    map<wstring, wstring> layoutToInputMap;
+
     if (!minibatch.m_data.empty())
     {
         // TODO: Use alternating pinned buffer in the packer, do not copy anything, but pack into the pinned memory.
@@ -140,17 +145,32 @@ bool ReaderShim<ElemType>::GetMinibatch(StreamMinibatchInputs& matrices)
             if (m_nameToStreamId.find(mx.first) == m_nameToStreamId.end())
             {
                 string inputNames = EnumerateInputs(m_nameToStreamId);
-                RuntimeError("Could not map input '%ls' to the reader. Reader outputs only [%s].", 
+                RuntimeError("Could not map input '%ls' to the reader. Reader outputs only [%s].",
                     mx.first.c_str(), inputNames.c_str());
             }
 
             size_t streamId = m_nameToStreamId[mx.first];
 
             const auto& stream = minibatch.m_data[streamId];
-		 	// TODO: assert that num sequences is consistent across all streams
+
             m_numParallelSequences = stream->m_layout->GetNumParallelSequences();
+            assert(m_numParallelSequences == minibatch.m_data.front()->m_layout->GetNumParallelSequences());
+
             auto& layout = mx.second.pMBLayout;
-            layout->CopyFrom(stream->m_layout);
+
+            if (layout->GetNumCols() == 0)
+            {
+                // layout is empty, copy layout info from the reader
+                layout->CopyFrom(stream->m_layout);
+                layoutToInputMap[layout->GetName()] = mx.first;
+            }
+            else if (*layout != *stream->m_layout) // this does a deep value-level comparison
+            {
+                RuntimeError("Layout '%ls' is shared between inputs '%ls' and '%ls', but layouts generated "
+                    "by the reader for these inputs are incompatible.",
+                    layout->GetName().c_str(), layoutToInputMap[layout->GetName()].c_str(), mx.first.c_str());
+            }
+
             size_t sampleSize = m_streams[streamId]->m_sampleLayout->GetNumElements();
             auto& matrix = matrices.GetInputMatrix<ElemType>(mx.first);
             FillMatrixFromStream(m_streams[streamId]->m_storageType, &matrix, sampleSize, stream);
@@ -159,10 +179,10 @@ bool ReaderShim<ElemType>::GetMinibatch(StreamMinibatchInputs& matrices)
 
     if (!m_endOfEpoch)
     {
-    m_prefetchTask = std::async(m_launchType, [this]()
-    {
-        return m_reader->ReadMinibatch();
-    });
+        m_prefetchTask = std::async(m_launchType, [this]()
+        {
+            return m_reader->ReadMinibatch();
+        });
     }
 
     return !minibatch.m_data.empty();
@@ -189,7 +209,7 @@ void ReaderShim<ElemType>::FillMatrixFromStream(StorageType type, Matrix<ElemTyp
         IndexType* columns = reinterpret_cast<IndexType*>(rows + nnzCount);
         matrix->SetMatrixFromCSCFormat(columns, rows, values, nnzCount, numRows, numCols);
     }
-    else 
+    else
     {
         RuntimeError("Storage type %d is not supported.", (int)type);
     }
@@ -201,7 +221,7 @@ bool ReaderShim<ElemType>::DataEnd() { return false; } // Note: Return value nev
 template <class ElemType>
 void ReaderShim<ElemType>::CopyMBLayoutTo(MBLayoutPtr layout)
 {
-    layout->CopyFrom(make_shared<MBLayout>(0, 0, L"<shim>"));
+    // Do nothing.
 }
 
 template <class ElemType>
