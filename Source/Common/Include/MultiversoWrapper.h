@@ -4,6 +4,7 @@
 // the header files in ..\Multiverso\include
 #include <multiverso/multiverso.h>
 #include <multiverso/table/array_table.h>
+#include <multiverso/util/configure.h>
 #pragma comment(lib, "IMultiverso.lib")
 
 #ifndef CPUONLY
@@ -141,9 +142,6 @@ namespace Microsoft {
 					m_sharedArray->Get(m_deltaArray, m_totalModelSize);
 
 				}
-
-				//Todo: support auto adjust learning rate 
-				void LearningrateSync(){ throw("not implement yet."); };
 
 				//ASGD logic
 				void PushAndPullModel(const std::list<ComputationNodeBasePtr> & learnableNodes)
