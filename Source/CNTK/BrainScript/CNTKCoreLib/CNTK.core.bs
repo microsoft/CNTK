@@ -437,20 +437,27 @@ RNNs =
         lstmState = LSTMP (inputDim, outputDim, cellDim, x, prevState, enableSelfStabilization=enableSelfStabilization1)
     ].lstmState.h // that's the value we return
 
-    # this implements a recurrent (stateful) LSTM with projection and self-stabilization
-    # TODO: use the same macro, with initialState=Undefined and test for object identity
-    RecurrentLSTMPWithInitialState (inputDim, outputDim, cellDim, x, initialState=Constants.Zero, enableSelfStabilization=false) =
+    # same as RecurrentLSTMP but returns both h and c
+    RecurrentLSTMP2 (inputDim, outputDim, cellDim, x, enableSelfStabilization=false) =
     [
         prevState =
         [
-            #h = Loop.PreviousOrDefault (defaultValue=initialState, lstmState.h) // hidden state(t-1)
-            # BUGBUG: For now, initialState must have the same MBLayout as lstmState but not be part of the loop
-            h = Boolean.If (Loop.IsFirst (lstmState.h), initialState, Loop.Previous (lstmState.h))
-            c = Loop.Previous (lstmState.c)                                     // cell(t-1)
+            h = Loop.Previous (lstmState.h)             # hidden state(t-1)
+            c = Loop.Previous (lstmState.c)             # cell(t-1)
         ]
         enableSelfStabilization1 = enableSelfStabilization // TODO: BS syntax needs to allow to say ^.enableSelfStabilization
-        lstmState = LSTMP (inputDim, outputDim, cellDim, x, prevState, enableSelfStabilization=enableSelfStabilization1)
-    ].lstmState.h // that's the value we return
+        lstmState = BS.RNNs.LSTMP (inputDim, outputDim, cellDim, x, prevState, enableSelfStabilization=enableSelfStabilization1)
+    ].lstmState // that's the value we return
+
+    # a stack of recurrent LSTMs (unidirectional)
+    RecurrentLSTMP2Stack (input, inputDim, hiddenDims, cellDims, enableSelfStabilization=false) = [
+        useStabilizer = enableSelfStabilization
+        layer[i:0..Length (hiddenDims)-1] =
+            RecurrentLSTMP2 (if i == 0 then inputDim else hiddenDims[i-1],
+                             hiddenDims[i], cellDims[i],
+                             if i == 0 then input else layer[i-1].h,
+                             enableSelfStabilization=useStabilizer)
+    ].layer
 ]
 
 ##############################################################################

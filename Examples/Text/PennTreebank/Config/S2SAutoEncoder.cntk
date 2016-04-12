@@ -98,7 +98,6 @@ BrainScriptNetworkBuilder = (new ComputationNetwork [
     Loop       = BS.Loop
     Boolean    = BS.Boolean
     RecurrentLSTMP = BS.RNNs.RecurrentLSTMP
-    RecurrentLSTMPWithInitialState = BS.RNNs.RecurrentLSTMPWithInitialState
 
     embeddingDim = $confVocabSize$ # 300
     hiddenDim    = 512 # 1024 # 200
@@ -152,18 +151,6 @@ BrainScriptNetworkBuilder = (new ComputationNetwork [
     labelSentenceStart = First (streams.labels)
     labelSentenceStartEmbedded = EmbedLabels (labelSentenceStart)
 
-    # same as RecurrentLSTMP but returns both h and c
-    RecurrentLSTMP2 (inputDim, outputDim, cellDim, x, enableSelfStabilization=false) =
-    [
-        prevState =
-        [
-            h = Loop.Previous (lstmState.h)             # hidden state(t-1)
-            c = Loop.Previous (lstmState.c)             # cell(t-1)
-        ]
-        enableSelfStabilization1 = enableSelfStabilization // TODO: BS syntax needs to allow to say ^.enableSelfStabilization
-        lstmState = BS.RNNs.LSTMP (inputDim, outputDim, cellDim, x, prevState, enableSelfStabilization=enableSelfStabilization1)
-    ].lstmState // that's the value we return
-
     RecurrentLSTMPWithAttentionWindow2 (inputDim/*x.dim*/, outputDim/*h.dim*/, cellDim/*c.dim*/, x, projectedAttentionWindowBroadcast, attentionDim, attentionSpan, enableSelfStabilization=false) =
     [
         prevState =
@@ -203,12 +190,9 @@ BrainScriptNetworkBuilder = (new ComputationNetwork [
     ].lstmState // that's the value we return
 
     # encoder (processes inputEmbedded)
+    encoder = BS.RNNs.RecurrentLSTMP2Stack (inputEmbedded, embeddingDim, encoderDims, encoderDims, enableSelfStabilization=useStabilizer)
+
     encoderOutputLayer = Length (encoderDims)-1
-    encoder[i:0..encoderOutputLayer] =
-        RecurrentLSTMP2(if i == 0 then embeddingDim else encoderDims[i-1],
-                        encoderDims[i], encoderDims[i],
-                        if i == 0 then inputEmbedded else encoder[i-1].h,
-                        enableSelfStabilization=useStabilizer)
     encoderOutput = encoder[encoderOutputLayer]
 
     # that last frame should be fed as an additional input to every decoder step
@@ -239,7 +223,7 @@ BrainScriptNetworkBuilder = (new ComputationNetwork [
     ]
 
     # NYU style: expand h to all, drop c
-    # TODO: use BroadcastAs()
+    # TODO: just use use thoughtVectorPadded.h (do this when we next test this branch again)
     thoughtVectorEverywhere = Boolean.If (Loop.IsFirst (thoughtVectorPadded.h),    # if first entry
                                  /*then*/ thoughtVectorPadded.h,                   # then copy that
                                  /*else*/ Loop.Previous (thoughtVectorEverywhere)) # else just propagate to the front
@@ -250,16 +234,16 @@ BrainScriptNetworkBuilder = (new ComputationNetwork [
     # The decoder starts with hidden state 0
     # and takes as input [thoughtVectorEverywhere; previous word].
 
-    delayedDecoderFeedback = TraceDense (Loop.PreviousOrDefault (defaultValue=labelSentenceStartEmbedded, TraceDense (labelsEmbedded, 'lemb'))   , 'prev lemb')
+    delayedDecoderFeedback = Loop.PreviousOrDefault (defaultValue=labelSentenceStartEmbedded, labelsEmbedded)
 
     decoderInputDim = embeddingDim
     decoderInput    = Pass (delayedDecoderFeedback)
     decoderOutputLayer = Length (decoderDims)-1
     decoder[i:0..decoderOutputLayer] =
         if i == 0
-        then if useEncoder && useNYUStyle then RecurrentLSTMP2 (thoughtVectorDim + decoderInputDim, decoderDims[i], decoderDims[i],
-                                                                RowStack (thoughtVectorEverywhere : decoderInput),
-                                                                enableSelfStabilization=useStabilizer)
+        then if useEncoder && useNYUStyle then BS.RNNs.RecurrentLSTMP2 (thoughtVectorDim + decoderInputDim, decoderDims[i], decoderDims[i],
+                                                                        RowStack (thoughtVectorEverywhere : decoderInput),
+                                                                        enableSelfStabilization=useStabilizer)
              else if useEncoder && attentionSpan > 0 then RecurrentLSTMPWithAttentionWindow2 (thoughtVectorDim + decoderInputDim, decoderDims[i], decoderDims[i],
                                                                                               RowStack (thoughtVectorEverywhere : decoderInput),
                                                                                               projectedAttentionWindowBroadcast, attentionDim, attentionSpan,
@@ -268,9 +252,9 @@ BrainScriptNetworkBuilder = (new ComputationNetwork [
                                                    decoderInput,
                                                    thoughtVectorPadded, # BUGBUG: Should be thoughtVector, but Scatter() can't expand from inside a loop
                                                    enableSelfStabilization=useStabilizer)
-        else RecurrentLSTMP2 (decoderDims[i-1], decoderDims[i], decoderDims[i],
-                              decoder[i-1].h,
-                              enableSelfStabilization=useStabilizer)
+        else BS.RNNs.RecurrentLSTMP2 (decoderDims[i-1], decoderDims[i], decoderDims[i],
+                                      decoder[i-1].h,
+                                      enableSelfStabilization=useStabilizer)
     decoderDim = decoderDims[decoderOutputLayer]
     decoderOutput = decoder[decoderOutputLayer].h
 
