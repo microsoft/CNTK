@@ -206,7 +206,7 @@ protected:
     {
         AttachInputsFromConfig(configp, this->GetExpectedNumInputs());
         wstring axisName = L"";
-        if (configp->Find(L"dynamics")->Is<ComputationNodeBasePtr>())
+        if (configp->Exists(L"dynamics") && configp->Find(L"dynamics")->Is<ComputationNodeBasePtr>())
         {
             ComputationNodeBasePtr axis = configp->Get(L"dynamics");
             axisName = axis->GetName();
