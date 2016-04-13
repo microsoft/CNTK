@@ -109,7 +109,7 @@ public:
 
 // Note: This class is deprecated for standalone use, only used as a base for BatchSequenceReader which overrides most of the functions.
 template <class ElemType>
-class SequenceReader : public IDataReader
+class SequenceReader : public DataReaderBase
 {
 protected:
     bool m_idx2clsRead;
@@ -276,7 +276,7 @@ public:
     }
     virtual ~SequenceReader();
     virtual void StartMinibatchLoop(size_t mbSize, size_t epoch, size_t requestedEpochSamples = requestDataSize);
-    virtual bool GetMinibatch(StreamMinibatchInputs& matrices);
+    virtual bool TryGetMinibatch(StreamMinibatchInputs& matrices);
 
     // void SetSentenceSegBatch(std::vector<size_t> &/*sentenceEnd*/) {};
     // TODO: ^^ should this be   void CopyMBLayoutTo(MBLayoutPtr pMBLayout);
@@ -406,7 +406,7 @@ private:
 
 public:
     void StartMinibatchLoop(size_t mbSize, size_t epoch, size_t requestedEpochSamples = requestDataSize) override;
-    bool GetMinibatch(StreamMinibatchInputs& matrices) override;
+    bool TryGetMinibatch(StreamMinibatchInputs& matrices) override;
     bool DataEnd() override;
 
     void CopyMBLayoutTo(MBLayoutPtr pMBLayout) { assert(mToProcess.size() == m_pMBLayout->GetNumParallelSequences()); pMBLayout->CopyFrom(m_pMBLayout); }

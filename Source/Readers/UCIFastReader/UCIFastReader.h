@@ -36,7 +36,7 @@ enum LabelKind
 };
 
 template <class ElemType>
-class UCIFastReader : public IDataReader
+class UCIFastReader : public DataReaderBase
 {
     shared_ptr<UCIParser<ElemType, LabelType>> m_parser;
     size_t m_mbSize;                 // size of minibatch requested
@@ -150,7 +150,7 @@ public:
 
     virtual void StartDistributedMinibatchLoop(size_t mbSize, size_t epoch, size_t subsetNum, size_t numSubsets, size_t requestedEpochSamples = requestDataSize) override;
 
-    virtual bool GetMinibatch(StreamMinibatchInputs& matrices);
+    virtual bool TryGetMinibatch(StreamMinibatchInputs& matrices);
 
     bool GetMinibatchImpl(StreamMinibatchInputs& matrices);
 

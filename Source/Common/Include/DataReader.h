@@ -247,6 +247,21 @@ typedef std::shared_ptr<IDataReader> IDataReaderPtr;
 extern "C" DATAREADER_API void GetReaderF(IDataReader** preader);
 extern "C" DATAREADER_API void GetReaderD(IDataReader** preader);
 
+// The sole purpose of this base class is to provide backwards compatibility for (old)
+// readers that do not support multiple mb layouts.
+class DataReaderBase : public IDataReader
+{
+protected:
+    // Verifies that all inputs share the same layout (have the same layout pointer) 
+    // and copies the provided layout into the minibatch layout.
+    // This method is needed for backwards-compatibility and only meant to be used by old readers!
+    void SetMinibatchLayout(StreamMinibatchInputs& minibatch);
+
+    virtual bool TryGetMinibatch(StreamMinibatchInputs& matrices) = 0;
+public:
+    virtual bool GetMinibatch(StreamMinibatchInputs& matrices) override;
+};
+
 // Data Reader class
 // interface for clients of the Data Reader
 // mirrors the IDataReader interface, except the Init method is private (use the constructor)
@@ -293,7 +308,6 @@ class DataReader : public IDataReader, protected Plugin, public ScriptableObject
     // NOTE: this destroys the object, and it can't be used past this point.
     // The reason why this is not just a destructor is that it goes across a DLL boundary.
     virtual void Destroy() override;
-
 public:
     // DataReader Constructor
     // config - [in] configuration parameters for the datareader

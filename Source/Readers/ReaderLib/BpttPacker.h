@@ -36,7 +36,11 @@ private:
     void ReadSequencesToSlot(size_t slotIndex);
 
     // Packs a slot into the data buffer.
-    void PackSlot(size_t streamIndex, size_t slotIndex);
+    // SequenceId specifies the starting value to be used as sequence identifier.
+    // For each new input, sequence id is reset to 0, and incremented each time
+    // a sequence is added to the layout. This allows layouts corresponding to different
+    // inputs to have consistent sequence ids.
+    void PackSlot(size_t streamIndex, size_t slotIndex, size_t& sequenceId);
 
     virtual MBLayoutPtr CreateMBLayout(const StreamBatch& batch)
     {

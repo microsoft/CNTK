@@ -21,7 +21,7 @@
 namespace Microsoft { namespace MSR { namespace CNTK {
 
 template <class ElemType>
-class SparsePCReader : public IDataReader
+class SparsePCReader : public DataReaderBase
 {
     ConfigParameters m_readerConfig;
     std::wstring m_file;
@@ -73,7 +73,7 @@ public:
         InitFromConfig(config);
     }
     virtual void StartMinibatchLoop(size_t mbSize, size_t epoch, size_t requestedEpochSamples = requestDataSize);
-    virtual bool GetMinibatch(StreamMinibatchInputs& matrices);
+    virtual bool TryGetMinibatch(StreamMinibatchInputs& matrices);
 
     size_t GetNumParallelSequences()
     {

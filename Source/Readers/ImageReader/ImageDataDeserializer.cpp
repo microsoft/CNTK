@@ -32,7 +32,7 @@ public:
     TypedLabelGenerator(size_t labelDimension) : m_value(1), m_indices(labelDimension)
     {
         if (labelDimension > numeric_limits<IndexType>::max())
-    {
+        {
             RuntimeError("Label dimension (%" PRIu64 ") exceeds the maximum allowed "
                 "value (%" PRIu64 ")\n", labelDimension, (size_t)numeric_limits<IndexType>::max());
         }

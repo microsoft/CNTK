@@ -33,18 +33,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                         size_t& actualMBSize, 
                                         const MPIWrapperPtr& mpi)
     {
-        // Reset stale mb layouts.
-        for (const auto& iter : inputMatrices)
-        {
-            iter.second.pMBLayout->Init(1, 0);
-        }
-        auto pMBLayout = net->GetMBLayoutPtrOfNetwork();
-        pMBLayout->Init(1, 0);
-
         // Reading consists of a sequence of Reader API calls:
-        //  - GetMinibatch() --fills the inputMatrices
+        //  - GetMinibatch() --fills the inputMatrices and copies the MBLayout from Reader into inputMatrices
         //  - SetActualMiniBatchSizeFromFeatures()  --tells Network to resize the nodes' buffers
-        //  - CopyMBLayoutTo()   --copies the MBLayout from Reader to Network
         // with the special twist that in presence of parallelization, there is some decimation involved.
 
         bool wasDataRead = trainSetDataReader.GetMinibatch(inputMatrices); // fill in the minibatch data into the Input nodes' buffers directly
@@ -70,19 +61,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         // TODO: move this into shim for the old readers.
-        // get layout meta-data (new readers will ignore this)
-        // BUGBUG (Issue #95): must be adapted for multiple MBLayouts
-        
-        trainSetDataReader.CopyMBLayoutTo(pMBLayout);
-
-        // TODO: move this into shim for the old readers.
         // decimate if needed. Decimation happens in-place.
+        // This is only allowed for old readers, which support a single layout for all inputs.
         if (!useDistributedMBReading && useParallelTrain)
         {
-            // This is only allowed for old readers, which support a single layout for all inputs.
+            auto& pMBLayout = net->GetMBLayoutPtrOfNetwork();
+            
+            // Verify that there's indeed a single layout
             for (const auto& iter : inputMatrices)
             {
-                assert(iter.second.pMBLayout == pMBLayout); UNUSED(iter);
+                assert(iter.second.pMBLayout == pMBLayout); 
+                UNUSED(iter);
             }
         
             DecimateMinibatchInPlace<ElemType>(inputMatrices, mpi->NumNodesInUse(), mpi->CurrentNodeRank(), pMBLayout);
@@ -308,8 +297,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 shared_ptr<IStatefulNode> pNode = dynamic_pointer_cast<IStatefulNode>(node);
                 if (pNode) // if it is an IStatefulNode then report it
                     statefulNodes[name] = pNode;
-                }
             }
+        }
 
         std::map<wstring, shared_ptr<IStatefulNode>> EnumerateStatefulNode(ComputationNetwork& net,
                                                                            const std::vector<ComputationNodeBasePtr>& criterionNode,
