@@ -5,7 +5,6 @@
 # ==============================================================================
 
 """
-<<<<<<< HEAD
 Non-linear operations. For every operation we explain how the forward and backward
 passes are computed. For the backward pass we just explain the scalar case which is the building 
 block for computing tensor gradients using the chain rule. For tensors, the backward pass of a node 
@@ -96,7 +95,7 @@ def softmax(X, name=None):
     Returns:
         :class:`cntk.graph.ComputationNode`
     """
-    return Softmax(X)#Exp(LogSoftmax(X), var_name=name)
+    return Softmax(x, var_name=name)
 
 def exp(x, name=None):
     """
