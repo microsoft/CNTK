@@ -12,7 +12,7 @@ is computed as follows : for each element in the output tensor, its gradient wit
 given input tensor is computed, then, the resulting tensors are added up.
 """
 
-from cntk.ops.cntk1 import Clip, Sigmoid
+from cntk.ops.cntk1 import Clip, Sigmoid, Exp
 
 def clip(min_value, max_value, x, name=None):
     """
@@ -55,3 +55,31 @@ def sigmoid(x, name=None):
         :class:`cntk.graph.ComputationNode`
     """
     return Sigmoid(x, var_name=name)
+
+def softmax(x, name=None):
+    """
+    computes the element-wise sigmoid of `x`: 
+
+    :math:`softmax(X) = {\exp(X_ \over {1+\exp(-x)}}`
+
+    Args:
+        x: any :class:`cntk.graph.ComputationNode` that outputs a tensor
+
+    Returns:
+        :class:`cntk.graph.ComputationNode`
+    """
+    return Softmax(x, var_name=name)
+
+def exp(x, name=None):
+    """
+    computes the element-wise exponential of `x`: 
+
+    :math:`exp(x) = {e^x}`
+
+    Args:
+        x: any :class:`cntk.graph.ComputationNode` that outputs a tensor
+
+    Returns:
+        :class:`cntk.graph.ComputationNode`
+    """
+    return Exp(x, var_name=name)
