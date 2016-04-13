@@ -119,7 +119,7 @@ void ComputationNetwork::SaveToFileImpl(const wstring& fileName, const FileOptio
     {
         ComputationNodeBasePtr nodePtr = nodeIter->second;
         // type
-#if CURRENT_CNTK_MODEL_VERSION >= CNTK_MODEL_VERSION_5
+#if CURRENT_CNTK_MODEL_VERSION >= CNTK_MODEL_VERSION_7
         wstring precision;
         if (nodePtr->Is<ComputationNode<float>>())
             precision = ElemTypeName<float>();
@@ -195,7 +195,7 @@ void ComputationNetwork::SaveToFileImpl(const wstring& fileName, const FileOptio
 // load the section of nodes that contain persistable parameters
 // This is also used for reloading a model without recreating it, e.g. during training.
 // TODO: Why not just reload it? Because SGD::Train() holds pointers to the parameters directly? That should be fixed.
-template <class ElemType> // ElemType is the default for models prior to CNTK_MODEL_VERSION_5; after that, it is serialized, and ElemType is ignored
+template <class ElemType> // ElemType is the default for models prior to CNTK_MODEL_VERSION_7; after that, it is serialized, and ElemType is ignored
 void ComputationNetwork::ReadPersistableParameters(File& fstream, bool create)
 {
     fstream.GetMarker(FileMarker::fileMarkerBeginSection, L"BCN");
@@ -218,7 +218,7 @@ void ComputationNetwork::ReadPersistableParameters(File& fstream, bool create)
     for (size_t i = 0; i < numNodes; i++)
     {
         wstring precision;
-        if (modelVersion >= CNTK_MODEL_VERSION_5)
+        if (modelVersion >= CNTK_MODEL_VERSION_7)
             fstream >> precision; // "float" or "double"; default is "" meaning <ElemType> as passed in from outside
 
         wstring opName, nodeName;
