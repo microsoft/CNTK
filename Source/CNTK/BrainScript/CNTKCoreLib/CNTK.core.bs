@@ -34,7 +34,7 @@ Parameter = LearnableParameter // deprecated
 # TODO: make Parameter take tensor dims?
 ParameterTensor(dims, learningRateMultiplier = 1.0, init = 'uniform'/*|fixedValue|gaussian|fromFile*/, initValueScale = 1, value = 0, initFromFilePath = '', initFromLiteral = '', initOnCPUOnly=true, randomSeed=-1, tag='') = new ComputationNode [ operation = 'LearnableParameter' ; shape = new TensorShape [ /*dims*/ ] /*plus the function args*/ ]
 ConstantFromString(literal, tag='') = ParameterTensor((0)/*dim, will be inferred*/, init = 'fromLiteral', initFromLiteral = literal, learningRateMultiplier = 0.0)
-DynamicAxis(name='', tag='') = new ComputationNode [ operation = 'DynamicAxis' ; /*plus the function args*/  ]
+DynamicAxis(axisName='', tag='') = new ComputationNode [ operation = 'DynamicAxis' ; /*plus the function args*/  ]
 Input(dims, dynamicAxis='', tag='feature') = new ComputationNode [ operation = 'InputValue' ; shape = new TensorShape [ /*dims*/ ] ; isImage = false /*plus the function args*/ ]
 SparseInput(dims, dynamicAxis='', tag='feature') = new ComputationNode [ operation = 'SparseInputValue' ; shape = new TensorShape [ /*dims*/ ] ; isImage = false /*plus the function args*/ ]
 ImageInput(imageWidth, imageHeight, imageChannels, imageLayout='CHW', dynamicAxis='', tag='feature') = new ComputationNode [ operation = 'InputValue' ; isImage = true /*plus the function args*/ ]

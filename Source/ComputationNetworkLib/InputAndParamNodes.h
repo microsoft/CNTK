@@ -261,11 +261,9 @@ public:
         fstream << rowsDummy << colsDummy;
         m_sampleLayout.Save(fstream);
 
-        fstream.PutMarker(FileMarker::fileMarkerBeginSection, L"BDynamicAxis");
         unsigned int nrAxes = 1;
         fstream << nrAxes;
         fstream << m_dynamicAxisNodeName;
-        fstream.PutMarker(FileMarker::fileMarkerEndSection, L"EDynamicAxis");
     }
 
     virtual void Load(File& fstream, size_t modelVersion) override
@@ -284,15 +282,14 @@ public:
             sampleLayout = TensorShape(rows);
         }
 
-        if (fstream.TryGetMarker(FileMarker::fileMarkerBeginSection, L"BDynamicAxis"))
-        {
+        if (modelVersion >= CNTK_MODEL_VERSION_8)
+        { 
             unsigned int nrAxes;
             fstream >> nrAxes;
             if (nrAxes == 1)
                 fstream >> m_dynamicAxisNodeName;
             else if (nrAxes > 1)
                 RuntimeError("Input node: This version only supports a single dynamic axis. Please update your bits.");
-            fstream.TryGetMarker(FileMarker::fileMarkerEndSection, L"EDynamicAxis");
         }
         else
             m_dynamicAxisNodeName = L""; // Use default

@@ -36,7 +36,8 @@
 #define CNTK_MODEL_VERSION_5 5 // ND convolution and pooling
 #define CNTK_MODEL_VERSION_6 6 // Batch norm blending
 #define CNTK_MODEL_VERSION_7 7 // ElemType tag in model file
-#define CURRENT_CNTK_MODEL_VERSION CNTK_MODEL_VERSION_7
+#define CNTK_MODEL_VERSION_8 8 // DynamicAxis for inputs
+#define CURRENT_CNTK_MODEL_VERSION CNTK_MODEL_VERSION_8
 
 extern bool g_shareNodeValueMatrices;
 
