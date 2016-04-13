@@ -489,27 +489,25 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
         {
             fprintf(stderr,
                     "EvalErrPerSample = %.8g; AvgLearningRatePerSample = %.8g; EpochTime=%.6g\n",
-                    epochEvalErrors[0], learnRatePerSample, epochTime);
+                    epochEvalErrors[0].Average(), learnRatePerSample, epochTime);
         }
         else
         {
             fprintf(stderr, "EvalErrPerSample ");
             for (size_t j = 0; j < epochEvalErrors.size(); j++)
-            {
-                fprintf(stderr, "[%lu]=%.8g; ", j, epochEvalErrors[j]);
-            }
+                fprintf(stderr, "[%lu]=%.8g; ", j, epochEvalErrors[j].Average());
 
             fprintf(stderr, "AvgLearningRatePerSample = %.8g; EpochTime=%.6g\n",
                     learnRatePerSample, epochTime);
 
             // TODO: why these extra log messages here and not for 1 eval criterion?
             LOGPRINTF(stderr, "Finished Epoch[%2d of %d]:     Criterion Node [%ls] Per Sample = %.8g\n",
-                      i + 1, (int) m_maxEpochs, criterionNodes[0]->NodeName().c_str(), epochCriterion);
+                      i + 1, (int)m_maxEpochs, criterionNodes[0]->NodeName().c_str(), epochCriterion.Average());
 
             for (size_t j = 0; j < epochEvalErrors.size(); j++)
             {
                 LOGPRINTF(stderr, "Finished Epoch[%2d of %d]:     Evaluation Node [%ls] Per Sample = %.8g\n",
-                          i + 1, (int) m_maxEpochs, evalNodeNames[j].c_str(), epochEvalErrors[j]);
+                          i + 1, (int) m_maxEpochs, evalNodeNames[j].c_str(), epochEvalErrors[j].Average());
             }
         }
 
@@ -1481,7 +1479,7 @@ double SGD<ElemType>::SearchForBestLearnRate(ComputationNetworkPtr net,
     }
 
     LOGPRINTF(stderr, "Best Learn Rate Per Sample for Epoch[%d] = %.10g  baseCriterion=%.10g\n",
-              epochNumber + 1, bestLearnRatePerSample, baseCriterion);
+              epochNumber + 1, bestLearnRatePerSample, baseCriterion.Average());
 
     return bestLearnRatePerSample;
 }
@@ -1661,7 +1659,7 @@ size_t SGD<ElemType>::SearchForBestMinibatchSize(ComputationNetworkPtr net,
             lastTriedTrialEpochCriterion = baseCriterion;
             isFirstIteration = false;
 
-            LOGPRINTF(stderr, "AdaptiveMinibatchSearch: Computed BaseCriterion %.10g\n", baseCriterion);
+            LOGPRINTF(stderr, "AdaptiveMinibatchSearch: Computed BaseCriterion %.10g\n", baseCriterion.Average());
         }
         else if (!epochCriterion.IsNan() &&
                  epochCriterion.Average() > (baseCriterion.Average() * (1.0 + (m_minibatchSearchCriterionErrorMargin / 100.0))))
@@ -1679,12 +1677,12 @@ size_t SGD<ElemType>::SearchForBestMinibatchSize(ComputationNetworkPtr net,
             if (trialMinibatchSizeFloat * minibatchSizeTuningFactor <= maxMinibatchSize)
             {
                 LOGPRINTF(stderr, "AdaptiveMinibatchSearch: Keep searching... EpochCriterion = %.10g vs BaseCriterion = %.10g\n",
-                          epochCriterion, baseCriterion);
+                          epochCriterion.Average(), baseCriterion.Average());
             }
         }
     }
     LOGPRINTF(stderr, "AdaptiveMinibatchSearch: Search successful. New minibatchSize is %d. EpochCriterion = %.10g vs BaseCriterion = %.10g\n\n",
-              (int) lastTriedTrialMinibatchSize, lastTriedTrialEpochCriterion, baseCriterion);
+              (int) lastTriedTrialMinibatchSize, lastTriedTrialEpochCriterion.Average(), baseCriterion.Average());
 
     return lastTriedTrialMinibatchSize;
 }
@@ -1715,17 +1713,15 @@ void SGD<ElemType>::TrainOneMiniEpochAndReloadModel(ComputationNetworkPtr net,
                   /*out*/ epochCriterion, /*out*/ epochEvalErrors,
                   prefixMsg);
 
-    LOGPRINTF(stderr, "Finished Mini-Epoch For LearnRate Selection: TrainLossPerSample = %.8g;", epochCriterion);
+    LOGPRINTF(stderr, "Finished Mini-Epoch For LearnRate Selection: TrainLossPerSample = %.8g;", epochCriterion.Average());
 
     if (epochEvalErrors.size() == 1)
-        LOGPRINTF(stderr, "EvalErrPerSample = %.8g; AvgLearningRatePerSample = %.8g\n", epochEvalErrors[0], learnRatePerSample);
+        LOGPRINTF(stderr, "EvalErrPerSample = %.8g; AvgLearningRatePerSample = %.8g\n", epochEvalErrors[0].Average(), learnRatePerSample);
     else
     {
         LOGPRINTF(stderr, "EvalErrPerSample ");
         for (size_t i = 0; i < epochEvalErrors.size(); i++)
-        {
-            LOGPRINTF(stderr, "[%lu] = %.8g; ", i, epochEvalErrors[i]);
-        }
+            LOGPRINTF(stderr, "[%lu] = %.8g; ", i, epochEvalErrors[i].Average());
         LOGPRINTF(stderr, "AvgLearningRatePerSample = %.8g\n", learnRatePerSample);
     }
 
