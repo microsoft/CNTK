@@ -73,7 +73,7 @@ void NDLNodeEvaluatorImpl<ElemType>::Evaluate(NDLNode<ElemType>* node, const wst
             size_t i = 0;
             auto tensorShape = ProcessTensorShapeParameters(node, params, i, /*isImage=*/false, cnNodeType);
 
-            wstring dynamicAxis = node->GetOptionalParameter("dynamic", "");
+            wstring dynamicAxis = node->GetOptionalParameter("dynamicAxis", "");
             // first look for this node already existing in the network
             // BUGBUG: How does this set the dimensions then?
             if (m_net->NodeNameExists(name))
@@ -98,7 +98,7 @@ void NDLNodeEvaluatorImpl<ElemType>::Evaluate(NDLNode<ElemType>* node, const wst
             size_t imageHeight   = ((NDLNode<ElemType>*) params[1])->GetScalar();
             size_t imageChannels = ((NDLNode<ElemType>*) params[2])->GetScalar();
             ImageLayoutKind imageLayoutKind = ImageLayoutKindFrom(node->GetOptionalParameter("imageLayout", "HWC"));
-            wstring dynamicAxis = node->GetOptionalParameter("dynamic", "");
+            wstring dynamicAxis = node->GetOptionalParameter("dynamicAxis", "");
 
             if (isSparse)
                 nodePtr = builder.CreateSparseInputNode(name, ImageDimensions::AsTensorShape(imageWidth, imageHeight, imageChannels, imageLayoutKind), dynamicAxis);

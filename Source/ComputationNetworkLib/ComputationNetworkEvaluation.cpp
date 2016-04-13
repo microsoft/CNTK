@@ -525,13 +525,40 @@ void ComputationNetwork::ResetMBLayouts()
     for (const auto& node : GetAllNodesForRoot(nullptr))
         node->LinkToMBLayout(nullptr);
 
-    // DynamicAxis nodes are (apart from the network-wide MBLayout) the only holders of MBLayouts. Initialize them.
+    // DynamicAxis nodes are (apart from the network-wide MBLayout) the main holders of MBLayouts. Initialize them.
+    // The only other instances are nodes that change the MBLayout, like WhereNode. 
     for (auto node : GetNodesWithType(L"DynamicAxis"))
         node->LinkToMBLayout(make_shared<MBLayout>(1, 0, node->GetName()));
 
     // This is now initialized inside of the Input nodes, with the proper connections.
     for (auto node : InputNodes(nullptr))
-        node->AttachDynamicAxis([&](std::wstring name) { return GetNodeFromName(name); }, /* default */ m_pMBLayoutOfNetwork);
+    {
+        auto n = dynamic_pointer_cast<IDynamic>(node);
+        if (!n)
+            LogicError("Expected %ls to implement IDynamic, but it doesn't.", node->NodeDescription().c_str());
+        std::wstring axisName = n->GetRequestedDynamicAxis();
+
+        if (axisName == L"")
+        {
+            // Legacy behavior: One shared MBLayout
+            node->LinkToMBLayout(m_pMBLayoutOfNetwork);
+        }
+        else
+        {
+            auto axisNode = GetNodeFromName(axisName);
+
+            if (!axisNode)
+                RuntimeError("%ls: Can't find node '%ls' for retrieving dynamic axis.", axisNode->NodeDescription().c_str(), axisName.c_str());
+
+            // For now we require the node to be a DynamicAxisNode, though we could derive the same from other nodes. This would involve
+            // more dependencies on the order in which things are evaluated, though.
+            if (axisNode->OperationName() != L"DynamicAxis")
+                RuntimeError("%ls: dynamicAxis argument must be of type DynamicAxis(), but got %ls.", node->NodeDescription().c_str(), axisNode->NodeDescription().c_str());
+            if (!axisNode->HasMBLayout())
+                LogicError("%ls: Expected %ls to have MBLayout, but it doesn't.", node->NodeDescription().c_str(), axisNode->NodeDescription().c_str());
+            node->LinkToMBLayout(axisNode->GetMBLayout());
+        }
+    }
 }
 
 // -----------------------------------------------------------------------

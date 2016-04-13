@@ -129,7 +129,7 @@ public:
         m_displayName = name;
     }
     DynamicAxisNode(const ScriptableObjects::IConfigRecordPtr configp)
-        : DynamicAxisNode(configp->Get(L"deviceId"), (const std::wstring&)configp->Get(L"name"))
+        : DynamicAxisNode(configp->Get(L"deviceId"), (const std::wstring&)configp->Get(L"axisName"))
     {
     }
 
@@ -168,7 +168,7 @@ template class DynamicAxisNode<double>;
 // -----------------------------------------------------------------------
 
 template <class ElemType>
-class InputValueBase : public ComputationNode<ElemType>, public NumInputs<0>
+class InputValueBase : public ComputationNode<ElemType>, public NumInputs<0>, public IDynamic
 {
     typedef ComputationNode<ElemType> Base;
     UsingComputationNodeMembers;
@@ -205,11 +205,11 @@ protected:
     {
         AttachInputsFromConfig(configp, this->GetExpectedNumInputs());
         wstring axisName = L"";
-        if (configp->Exists(L"dynamicAxes"))
+        if (configp->Exists(L"dynamicAxis"))
         {
-            if (configp->Find(L"dynamicAxes")->Is<ComputationNodeBase>())
+            if (configp->Find(L"dynamicAxis")->Is<ComputationNodeBase>())
             {
-                ComputationNodeBasePtr axis = configp->Get(L"dynamicAxes");
+                ComputationNodeBasePtr axis = configp->Get(L"dynamicAxis");
                 axisName = axis->GetName();
             }
             // Else: Use default axis.
@@ -222,35 +222,7 @@ protected:
             Init(ImageDimensions::AsTensorShape(configp->Get(L"imageWidth"), configp->Get(L"imageHeight"), configp->Get(L"imageChannels"), ImageLayoutKindFrom(configp->Get(L"imageLayout"))), isSparse, axisName);
     }
 
-    // Only for input nodes: Allow for connecting to the MBLayout based on the dynamic axis object.
-    // This is called while compiling the network.
-    virtual void AttachDynamicAxis(std::function<ComputationNodeBasePtr(const std::wstring)> nodeLookup, MBLayoutPtr defaultLayout) override
-    {
-        if (m_dynamicAxisNodeName == L"")
-        {
-            // Legacy behavior: One shared MBLayout
-            LinkToMBLayout(defaultLayout);
-            return;
-        }
-
-        if (m_dynamicAxisNodeName == this->GetName())
-            RuntimeError("%ls: Cannot attach dynamic axis to itself.", NodeDescription().c_str());
-
-        auto node = nodeLookup(m_dynamicAxisNodeName);
-
-        if (!node)
-            RuntimeError("%ls: Can't find node '%ls' for retrieving dynamic axis.", NodeDescription().c_str(), m_dynamicAxisNodeName.c_str());
-
-        // For now we require the node to be a DynamicAxisNode, though we could derive the same from other nodes. This would involve
-        // more dependencies on the order in which things are evaluated, though.
-        if (!node->Is<DynamicAxisNode<ElemType>>())
-            RuntimeError("%ls: dynamicAxis argument must be of type DynamicAxis(), but got %ls.",
-            NodeDescription().c_str(), node->NodeDescription().c_str());
-        m_dynamicAxisNode = node->As<DynamicAxisNode<ElemType>>();
-        if (!m_dynamicAxisNode->HasMBLayout())
-            LogicError("%ls: Expected %ls to have MBLayout, but it doesn't.", NodeDescription().c_str(), node->NodeDescription().c_str());
-        LinkToMBLayout(node->GetMBLayout());
-    }
+    virtual const std::wstring GetRequestedDynamicAxis() const override { return m_dynamicAxisNodeName; }
 
 public:
     virtual void Save(File& fstream) const override
@@ -261,11 +233,9 @@ public:
         fstream << rowsDummy << colsDummy;
         m_sampleLayout.Save(fstream);
 
-        fstream.PutMarker(FileMarker::fileMarkerBeginSection, L"BDynamicAxis");
         unsigned int nrAxes = 1;
         fstream << nrAxes;
         fstream << m_dynamicAxisNodeName;
-        fstream.PutMarker(FileMarker::fileMarkerEndSection, L"EDynamicAxis");
     }
 
     virtual void Load(File& fstream, size_t modelVersion) override
@@ -284,15 +254,14 @@ public:
             sampleLayout = TensorShape(rows);
         }
 
-        if (fstream.TryGetMarker(FileMarker::fileMarkerBeginSection, L"BDynamicAxis"))
-        {
+        if (modelVersion >= CNTK_MODEL_VERSION_8)
+        { 
             unsigned int nrAxes;
             fstream >> nrAxes;
             if (nrAxes == 1)
                 fstream >> m_dynamicAxisNodeName;
             else if (nrAxes > 1)
                 RuntimeError("Input node: This version only supports a single dynamic axis. Please update your bits.");
-            fstream.TryGetMarker(FileMarker::fileMarkerEndSection, L"EDynamicAxis");
         }
         else
             m_dynamicAxisNodeName = L""; // Use default

@@ -36,7 +36,8 @@
 #define CNTK_MODEL_VERSION_5 5 // ND convolution and pooling
 #define CNTK_MODEL_VERSION_6 6 // Batch norm blending
 #define CNTK_MODEL_VERSION_7 7 // ElemType tag in model file
-#define CURRENT_CNTK_MODEL_VERSION CNTK_MODEL_VERSION_7
+#define CNTK_MODEL_VERSION_8 8 // DynamicAxis for inputs
+#define CURRENT_CNTK_MODEL_VERSION CNTK_MODEL_VERSION_8
 
 extern bool g_shareNodeValueMatrices;
 
@@ -473,12 +474,6 @@ public:
         VerifyDims(node->GetSampleLayout(), node->HasMBLayout());
     }
 
-    virtual void AttachDynamicAxis(std::function<ComputationNodeBasePtr(const std::wstring)> nodeLookup, MBLayoutPtr defaultLayout)
-    {
-        // Applies only to input nodes.
-        NOT_IMPLEMENTED;
-    }
-
     // MBLayout (minibatch structure)
     void LinkToMBLayout(MBLayoutPtr pMBLayout)
     {
@@ -551,7 +546,7 @@ public:
         return GetInputsFromConfig(configp, L"inputs");
     }
 
-    static vector<ComputationNodeBasePtr> GetInputsFromConfig(const ScriptableObjects::IConfigRecordPtr configp, const std::wstring property)
+    static vector<ComputationNodeBasePtr> GetInputsFromConfig(const ScriptableObjects::IConfigRecordPtr configp, const std::wstring& property)
     {
         vector<ComputationNodeBasePtr> inputs;
         const auto* inputsArg = configp->Find(property);
@@ -810,6 +805,9 @@ public:
         return std::wstring(L"Node '") + NodeName().c_str() + L"' (" + OperationName().c_str() + L" operation)"; 
     };
 
+    // Helper that returns [a x b x c], including dynamic axes.
+    const std::string ShapeDescription() const;
+
 protected:
 
     // -----------------------------------------------------------------------
@@ -844,7 +842,8 @@ protected:
 typedef ComputationNodeBase::ComputationNodeBasePtr ComputationNodeBasePtr;
 
 // =======================================================================
-// NumInputs -- little helper interface to allow derived Node classes to specify how many inputs they expect
+// NumInputs -- little helper interface to allow derived Node classes to 
+// specify how many inputs they expect
 // =======================================================================
 
 struct INumInputs { virtual size_t GetExpectedNumInputs() const = 0; };
@@ -855,6 +854,14 @@ struct NumInputs : public INumInputs // e.g. derive from NumInputs<2>
     {
         return m_numInputs;
     }
+};
+
+// =======================================================================
+// 
+// =======================================================================
+struct IDynamic
+{
+    virtual const std::wstring GetRequestedDynamicAxis() const = 0;
 };
 
 // =======================================================================
@@ -1921,7 +1928,6 @@ protected:                                                                      
 public:                                                                                                                                                  \
     using Base::AttachInputs;                                                                                                                            \
     using Base::AttachInputsFromConfig;                                                                                                                  \
-    using Base::AttachDynamicAxis;                                                                                                                       \
     using Base::CreateGradientMatrixIfNull;                                                                                                              \
     using Base::NodeName;                                                                                                                                \
     using Base::RequiresPreCompute;                                                                                                                      \

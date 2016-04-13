@@ -120,6 +120,8 @@ struct MBLayout
 
     // copy the content of another MBLayoutPtr over
     // Use this instead of actual assignment to make it super-obvious that this is not copying the pointer but actual content. The pointer is kept fixed.
+    // Use "keepName" if the "identity" of the target is to be preserved, e.g. 
+    // while copying from reader space to network space.
     void CopyFrom(const MBLayoutPtr& other, bool keepName=false)
     {
         m_numTimeSteps = other->m_numTimeSteps;
@@ -521,7 +523,7 @@ private:
     size_t m_numFramesDeclared;
     size_t m_numGapFrames;
 
-    // Lookup tables for determining whether any sequence at time t is a identical layouts, do noboundary or gap.
+    // Lookup tables for determining whether any sequence at time t is a boundary or gap.
     // An optional time delay can be given, then the test is whether going from t to (t + time delay) crosses a boundary.
     // The purpose is for knowing when to reset state of a recurrent node.
     //
