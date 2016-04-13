@@ -154,7 +154,7 @@ template class DynamicAxisNode<double>;
 // -----------------------------------------------------------------------
 
 template <class ElemType>
-class InputValueBase : public ComputationNode<ElemType>, public NumInputs<0>, public IDynamic
+class InputValueBase : public ComputationNode<ElemType>, public NumInputs<0>, public Dynamic
 {
     typedef ComputationNode<ElemType> Base;
     UsingComputationNodeMembers;
@@ -212,7 +212,7 @@ protected:
             Init(ImageDimensions::AsTensorShape(configp->Get(L"imageWidth"), configp->Get(L"imageHeight"), configp->Get(L"imageChannels"), ImageLayoutKindFrom(configp->Get(L"imageLayout"))), isSparse, axisName);
     }
 
-    virtual const std::wstring GetRequestedDynamicAxis() const override { return m_dynamicAxisNodeName; }
+    virtual const std::wstring GetRequestedDynamicAxis() const { return m_dynamicAxisNodeName; }
 
 public:
     virtual void Save(File& fstream) const override
