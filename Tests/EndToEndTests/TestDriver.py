@@ -106,6 +106,17 @@ except ImportError:
 thisDir = os.path.dirname(os.path.realpath(__file__))
 windows = os.getenv("OS")=="Windows_NT"
 
+def cygpath(path, relative=False):
+    if windows:
+        if path.startswith('/'):
+          return path
+        path = os.path.abspath(path)
+        if not relative and path[1]==':': # Windows drive
+          path = '/cygdrive/' + path[0] + path[2:]
+        path = path.replace('\\','/')
+
+    return path
+
 # This class encapsulates an instance of the test
 class Test:
   # "Suite/TestName" => instance of Test
@@ -120,7 +131,7 @@ class Test:
     self.fullName = suite + "/" + name
 
     # computing location of test directory (yml file directory)
-    self.testDir = os.path.dirname(pathToYmlFile)
+    self.testDir = cygpath(os.path.dirname(pathToYmlFile), relative=True)
 
     # parsing yml file with testcases 
     with open(pathToYmlFile, "r") as f:
@@ -229,6 +240,7 @@ class Test:
   
     # preparing run directory
     runDir = os.path.join(args.run_dir, "{0}_{1}@{2}_{3}".format(self.suite, self.name, flavor, device))
+    runDir = cygpath(runDir)
     if not os.path.isdir(runDir):
       os.makedirs(runDir)
 
@@ -321,21 +333,21 @@ class Test:
       for testCase in self.testCases:
         testCaseRunResult = testCase.processBaseline(allLines)
         if not testCaseRunResult.succeeded:
-           result.succeeded = False
+          result.succeeded = False
         result.testCaseRunResults.append(testCaseRunResult)
 
       if baselineFile == None:
           baselineFile = self.newBaselineFilePath(device)
 
       if result.succeeded:
-       if args.verbose:
-           if args.update_baseline:
+        if args.verbose:
+          if args.update_baseline:
             six.print_("Updating baseline file " + baselineFile)
-           else:
+          else:
             six.print_("Creating baseline file " + baselineFile)
 
-       with open(baselineFile, "w") as f:
-         f.write("\n".join(allLines))
+        with open(baselineFile, "w") as f:
+          f.write("\n".join(allLines))
 
     return result
 
@@ -362,7 +374,7 @@ class Test:
       for f in ["." + flavor.lower(), ""]:
         for d in ["." + device.lower(), ""]:
           candidateName = "baseline" + o + f + d + ".txt"
-          fullPath = os.path.join(self.testDir, candidateName)
+          fullPath = cygpath(os.path.join(self.testDir, candidateName), relative=True)
           if os.path.isfile(fullPath):
             return fullPath
     return None
