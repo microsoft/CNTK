@@ -45,7 +45,7 @@ Train=[
         labels   = Input(numLabels)          # Input has shape (numLabels,*) where all sequences in *=1
         
         // load the pre-learned word embedding matrix
-        l1 = Layers.EmbeddingLayer(features, vocab, embedDim, 'embeddingMatrix.txt')
+        l1 = Layers.EmbeddingLayer(features, vocab, embedDim, 'embeddingmatrix.txt')
         l2 = Layers.LSTMLayer(l1, embedDim, lstmDim, cellDim, Macros.Last)
         l3 = Layers.DenseLayer(l2, lstmDim, numLabels, Pass)
         out = Pass(l3, tag='output')   
