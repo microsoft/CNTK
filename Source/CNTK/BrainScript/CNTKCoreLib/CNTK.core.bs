@@ -252,9 +252,9 @@ Sequences = [
         selected = Loop._IsWithin (DelayFn, N, x)
         out = Gather (selected, x)
     ].out
-	# Last and TakeRight
-	Last(x) = TakeRight(1, x)
-	TakeRight (N, x) = _Take (FutureValue, N, x)
+    # Last and TakeRight
+    Last(x) = TakeRight(1, x)
+    TakeRight (N, x) = _Take (FutureValue, N, x)
     Skip (N, x) = if N > 0 then _Skip (PastValue, N, x) else x
     _Skip (DelayFn, N, x) = [ // TODO: merge with _Take
         selected = Loop._IsWithin (DelayFn, N, x)
