@@ -4031,11 +4031,10 @@ void Matrix<ElemType>::ConvolutionBackwardKernel(const Matrix<ElemType>& in, con
 }
 
 template <class ElemType>
-void Matrix<ElemType>::UnrollConvolutionInput(const Matrix<ElemType>& kernel, const Matrix<int>& mpRowCol, const Matrix<int>& mpRowIwht,
+void Matrix<ElemType>::UnrollConvolutionInput(size_t kernelSize, size_t mapOutSize, const Matrix<int>& mpRowCol,
                                               const Matrix<int>& mpRowRun, const Matrix<int>& runs, Matrix<ElemType>& output) const
 {
     assert(mpRowCol.GetNumCols() == 1);
-    assert(mpRowIwht.GetNumCols() == 1);
     assert(mpRowRun.GetNumCols() == 1);
     assert(runs.GetNumCols() == 1);
 
@@ -4043,7 +4042,7 @@ void Matrix<ElemType>::UnrollConvolutionInput(const Matrix<ElemType>& kernel, co
 
     DISPATCH_MATRIX_ON_FLAG(this,
                             this,
-                            m_CPUMatrix->UnrollConvolutionInput(*(kernel.m_CPUMatrix), *(mpRowCol.m_CPUMatrix), *(mpRowIwht.m_CPUMatrix),
+                            m_CPUMatrix->UnrollConvolutionInput(kernelSize, mapOutSize, *(mpRowCol.m_CPUMatrix),
                                                                 *(mpRowRun.m_CPUMatrix), *(runs.m_CPUMatrix), *(output.m_CPUMatrix)),
                             NOT_IMPLEMENTED,
                             NOT_IMPLEMENTED,

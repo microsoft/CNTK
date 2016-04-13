@@ -571,26 +571,59 @@ protected:
             size_t curBatchSize = min(subBatchSize, batchSize - start);
             auto inputSlice = in.ColumnSlice(start, curBatchSize);
             auto unrolledInput = workspace.ColumnSlice(0, unrollCols);
+            if (curBatchSize != subBatchSize)
+            {
+                unrolledInput.Reshape(mapOutSize, subBatchSize * unrollCols);
+                unrolledInput = unrolledInput.ColumnSlice(0, curBatchSize * unrollCols);
+            }
             // Need to reshape (soft transpose) as matrices are column-major.
-            unrolledInput.Reshape(unrollCols, unrollRows);
-            inputSlice.UnrollConvolutionInput(kernel, m_mpRowCol, *m_mpRowIwht, *m_mpRowRun, *m_runs, unrolledInput);
+            unrolledInput.Reshape(unrollCols, mapOutSize * curBatchSize);
 
-            auto outputSlice = out.ColumnSlice(start, curBatchSize);
-            outputSlice.Reshape(unrollRows, mapCount);
-            Mat::Multiply(unrolledInput, true, kernel, true, outputSlice);
+            // Unroll inputs.
+            unrolledInput.SetValue(0);
+            inputSlice.UnrollConvolutionInput(unrollCols, mapOutSize, m_mpRowCol, *m_mpRowRun, *m_runs, unrolledInput);
+
+            // cudnn layout uses row-major kernel weight matrix.
+            auto kern = kernel.ColumnSlice(0, kernel.GetNumCols());
+            kern.Reshape(kernel.GetNumCols(), kernel.GetNumRows());
+
+            // Perform matrix multiplication of unrolled inputs with weights.
+            // If there is just one sample in the sub-batch then compute result directly to the output matrix.
+            if (curBatchSize == 1)
+            {
+                auto outSlice = out.ColumnSlice(start, 1);
+                outSlice.Reshape(mapOutSize, mapCount);
+                Mat::Multiply(unrolledInput, true, kern, false, outSlice);
+            }
+            else
+            {
+                auto outTempSlice = workspace.ColumnSlice(unrollCols, mapCount);
+                if (curBatchSize != subBatchSize)
+                {
+                    outTempSlice.Reshape(mapOutSize, subBatchSize * mapCount);
+                    outTempSlice = outTempSlice.ColumnSlice(0, curBatchSize * mapCount);
+                    outTempSlice.Reshape(mapOutSize * curBatchSize, mapCount);
+                }
+                Mat::Multiply(unrolledInput, true, kern, false, outTempSlice);
+                outTempSlice.Reshape(curBatchSize, mapOutSize * mapCount);
+                auto outSlice = out.ColumnSlice(start, curBatchSize);
+                outSlice.AssignTransposeOf(outTempSlice);
+            }
         }
     }
-
+    
     void BackwardDataCore(const Mat& srcGrad, const Mat& kernel, Mat& grad, Mat& workspace) override
     {
         UNUSED(srcGrad); UNUSED(kernel); UNUSED(grad); UNUSED(workspace);
         //srcGrad.ConvolutionBackwardData(kernel, m_mpRowCol, *m_mpRowIwht, *m_mpRowRun, *m_runs, grad);
+        RuntimeError("Not yet implemented.");
     }
 
     void BackwardKernelCore(const Mat& srcGrad, const Mat& in, Mat& kernelGrad, bool /*allowReuse*/, Mat& workspace) override
     {
         UNUSED(srcGrad); UNUSED(in); UNUSED(kernelGrad); UNUSED(workspace);
         //srcGrad.ConvolutionBackwardKernel(in, m_mpRowCol, *m_mpRowIwht, *m_mpRowRun, *m_runs, kernelGrad);
+        RuntimeError("Not yet implemented.");
     }
 
 public:

@@ -51,34 +51,34 @@ std::vector<ConvolveGeometryPtr> GenerateConvTestConfigs()
 {
     std::vector<ConvolveGeometryPtr> res;
     // REVIEW alexeyk: add test cases with even dimensions of a kernel. There are some corner cases which cuDNN does not support (which essentially require negative padding).
-    //for (size_t kW : {1, 3})
-    //{
-    //    for (size_t kH : {1, 3})
-    //    {
-    //        for (size_t inW : {kW, 2 * kW, 2 * kW - 1})
-    //        {
-    //            for (size_t inC : {1, 3})
-    //            {
-    //                for (size_t mapCount : {1, 5})
-    //                {
-    //                    for (size_t stride : {1, min((int)kW, min((int)kH, 2))})
-    //                    {
-    //                        // Note: must use sharing=false in channel dimension otherwise geometry will not be cuDNN compatible but cuDNN won't fail.
-    //                        res.push_back(std::make_shared<ConvolveGeometry>(TensorShape(inW, max(kH, inW) + 1, inC),
-    //                            TensorShape(kW, kH, inC), TensorShape(mapCount), TensorShape(stride, stride, inC),
-    //                            ConvolveGeometry::BoolVec{true},
-    //                            ConvolveGeometry::BoolVec{(kW & 1) != 0, (kH & 1) != 0, false},
-    //                            TensorShape(0), TensorShape(0)));
-    //                    }
-    //                }
-    //            }
-    //        }
-    //    }
-    //}
+    for (size_t kW : {1, 3})
+    {
+        for (size_t kH : {1, 3})
+        {
+            for (size_t inW : {kW, 2 * kW, 2 * kW - 1})
+            {
+                for (size_t inC : {1, 3})
+                {
+                    for (size_t mapCount : {1, 5})
+                    {
+                        for (size_t stride : {1, min((int)kW, min((int)kH, 2))})
+                        {
+                            // Note: must use sharing=false in channel dimension otherwise geometry will not be cuDNN compatible but cuDNN won't fail.
+                            res.push_back(std::make_shared<ConvolveGeometry>(TensorShape(inW, max(kH, inW) + 1, inC),
+                                TensorShape(kW, kH, inC), TensorShape(mapCount), TensorShape(stride, stride, inC),
+                                ConvolveGeometry::BoolVec{true},
+                                ConvolveGeometry::BoolVec{(kW & 1) != 0, (kH & 1) != 0, false},
+                                TensorShape(0), TensorShape(0)));
+                        }
+                    }
+                }
+            }
+        }
+    }
     // For debugging.
     res.push_back(std::make_shared<ConvolveGeometry>(TensorShape(3, 3, 1),
         TensorShape(3, 3, 1), TensorShape(2), TensorShape(1, 1, 1),
-        ConvolveGeometry::BoolVec{true}, ConvolveGeometry::BoolVec{true, true, false},
+        ConvolveGeometry::BoolVec{true}, ConvolveGeometry::BoolVec{false, false, false},
         TensorShape(0), TensorShape(0)));
 
     res.push_back(std::make_shared<ConvolveGeometry>(TensorShape(16, 16, 1),
