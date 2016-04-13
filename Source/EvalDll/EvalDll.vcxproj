@@ -143,6 +143,7 @@
     <ClCompile Include="..\CNTK\BrainScript\BrainScriptEvaluator.cpp" />
     <ClCompile Include="..\CNTK\BrainScript\BrainScriptParser.cpp" />
     <ClCompile Include="..\Common\Config.cpp" />
+    <ClCompile Include="..\Common\DataReader.cpp" />
     <ClCompile Include="..\Common\Eval.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug_CpuOnly|x64'">true</ExcludedFromBuild>
