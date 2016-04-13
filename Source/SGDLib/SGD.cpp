@@ -255,8 +255,8 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
                                                      net->GetDeviceId()));
     }
 
-    double epochCriterion, avgCriterion, prevCriterion, lrControlCriterion;
-    lrControlCriterion = epochCriterion = avgCriterion = prevCriterion = std::numeric_limits<double>::infinity();
+    double epochCriterion, avgCriterion, prevCriterion, learningRateControlCriterion;
+    learningRateControlCriterion = epochCriterion = avgCriterion = prevCriterion = std::numeric_limits<double>::infinity();
     size_t epochsNotCountedInAvgCriterion = startEpoch % m_learnRateAdjustInterval;
 
     std::vector<double> epochEvalErrors(evaluationNodes.size(), std::numeric_limits<double>::infinity());
@@ -471,11 +471,11 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
 
         if (m_useEvalCriterionControlLR && epochEvalErrors.size() > 0)
         {
-            lrControlCriterion = epochEvalErrors[0];
+            learningRateControlCriterion = epochEvalErrors[0];
         }
         else
         {
-            lrControlCriterion = epochCriterion;
+            learningRateControlCriterion = epochCriterion;
         }
 
         LOGPRINTF(stderr,
@@ -542,11 +542,11 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
             {
                 if (m_useEvalCriterionControlLR && vScore.size() > 1)
                 {
-                    lrControlCriterion = vScore[1];
+                    learningRateControlCriterion = vScore[1];
                 }
                 else
                 {
-                    lrControlCriterion = vScore[0]; // the first one is the training criterion
+                    learningRateControlCriterion = vScore[0]; // the first one is the training criterion
                 }
             }
         }
@@ -555,20 +555,20 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
         if ((GetParallelizationMethod() == ParallelizationMethod::ModelAveragingSGD) && (m_mpi->NumNodesInUse() > 1))
         {
             m_mpi->Bcast(&epochCriterion, 1, m_mpi->MainNodeRank());
-            m_mpi->Bcast(&lrControlCriterion, 1, m_mpi->MainNodeRank());
+            m_mpi->Bcast(&learningRateControlCriterion, 1, m_mpi->MainNodeRank());
         }
 
         bool loadedPrevModel = false;
         size_t epochsSinceLastLearnRateAdjust = i % m_learnRateAdjustInterval + 1;
         if (avgCriterion == std::numeric_limits<double>::infinity())
         {
-            avgCriterion = lrControlCriterion;
+            avgCriterion = learningRateControlCriterion;
         }
         else
         {
             avgCriterion = ((epochsSinceLastLearnRateAdjust - 1 - epochsNotCountedInAvgCriterion) *
                                 avgCriterion +
-                            lrControlCriterion) /
+                            learningRateControlCriterion) /
                            (epochsSinceLastLearnRateAdjust - epochsNotCountedInAvgCriterion);
         }
 
