@@ -857,9 +857,9 @@ struct NumInputs : public INumInputs // e.g. derive from NumInputs<2>
 };
 
 // =======================================================================
-// 
+// Nodes that can take a dynamic axis need to implement this.
 // =======================================================================
-struct IDynamic
+struct ITakesDynamicAxis
 {
     virtual const std::wstring GetRequestedDynamicAxis() const = 0;
 };

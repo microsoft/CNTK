@@ -533,9 +533,9 @@ void ComputationNetwork::ResetMBLayouts()
     // This is now initialized inside of the Input nodes, with the proper connections.
     for (auto node : InputNodes(nullptr))
     {
-        auto n = dynamic_pointer_cast<IDynamic>(node);
+        auto n = dynamic_pointer_cast<ITakesDynamicAxis>(node);
         if (!n)
-            LogicError("Expected %ls to implement IDynamic, but it doesn't.", node->NodeDescription().c_str());
+            LogicError("Expected %ls to implement ITakesDynamicAxis, but it doesn't.", node->NodeDescription().c_str());
         std::wstring axisName = n->GetRequestedDynamicAxis();
 
         if (axisName == L"")

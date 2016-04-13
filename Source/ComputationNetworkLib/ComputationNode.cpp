@@ -345,10 +345,10 @@ TensorShape ComputationNodeBase::GetOneSampleTensorSliceFor(size_t rank, const F
 
 const std::string ComputationNodeBase::ShapeDescription() const
 {
-    return msra::strfun::strprintf("[%s%s%ls]", 
-                                   string(m_sampleLayout).c_str(), 
-                                   HasMBLayout() ? " x " : "", 
-                                   HasMBLayout() ? GetMBLayout()->GetAxisName().c_str() : L"");
+    return msra::strfun::strprintf("[%s%s%ls]",
+        string(m_sampleLayout).c_str(),
+        HasMBLayout() ? " x " : "",
+        HasMBLayout() ? GetMBLayout()->GetAxisName().c_str() : L"");
 }
 
 template <class ElemType>
