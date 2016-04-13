@@ -336,8 +336,9 @@ void ScaleTransformer::InitFromConfig(const ConfigParameters &config)
         m_interp.push_back(cv::INTER_LINEAR);
 }
 
-void ScaleTransformer::Apply(size_t /*id*/, cv::Mat &mat)
+void ScaleTransformer::Apply(size_t id, cv::Mat &mat)
 {
+    UNUSED(id);
     // If matrix has not been converted to the right type, do it now as rescaling
     // requires floating point type.
     //
@@ -409,8 +410,9 @@ void MeanTransformer::InitFromConfig(const ConfigParameters &config)
     }
 }
 
-void MeanTransformer::Apply(size_t /*id*/, cv::Mat &mat)
+void MeanTransformer::Apply(size_t id, cv::Mat &mat)
 {
+    UNUSED(id);
     assert(m_meanImg.size() == cv::Size(0, 0) ||
            (m_meanImg.size() == mat.size() &&
             m_meanImg.channels() == mat.channels()));

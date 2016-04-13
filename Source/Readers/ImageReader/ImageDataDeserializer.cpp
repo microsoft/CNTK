@@ -74,7 +74,6 @@ public:
     virtual void GetSequence(size_t sequenceId, std::vector<SequenceDataPtr>& result) override
     {
         assert(sequenceId == m_description.m_id);
-        UNUSED(sequenceId);
         const auto& imageSequence = m_description;
 
         auto image = std::make_shared<DeserializedImage>();
@@ -174,8 +173,6 @@ void ImageDataDeserializer::GetSequencesForChunk(size_t chunkId, std::vector<Seq
 
 void ImageDataDeserializer::CreateSequenceDescriptions(std::string mapPath, size_t labelDimension, const ImageConfigHelper& config)
 {
-    UNUSED(labelDimension);
-
     std::ifstream mapFile(mapPath);
     if (!mapFile)
     {
