@@ -9,7 +9,7 @@ import scipy.sparse
 # keeping things short
 A = np.asarray
 C = constant
-I = input
+I = input_reader
 
 
 # testing whether operator overloads result in proper type

@@ -48,20 +48,20 @@ def test_op_plus(left_operand, right_operand, device_id, precision):
     b = I([right_operand], has_sequence_dimension=False)    
     
     left_as_input = a + right_operand    
-    unittest_helper(left_as_input, expected, device_id=device_id, 
+    unittest_helper(left_as_input, None, expected, device_id=device_id, 
                     precision=precision, clean_up=True, backward_pass=False)
     
     right_as_input = left_operand + b
-    unittest_helper(right_as_input, expected, device_id=device_id, 
+    unittest_helper(right_as_input, None, expected, device_id=device_id, 
                     precision=precision, clean_up=True, backward_pass=False)
     
     #Backward pass test
     #==================
     #the expected results for the backward pass is all ones
     expected = [[[np.ones_like(x) for x in left_operand]]]
-    unittest_helper(left_as_input, expected, device_id=device_id, 
+    unittest_helper(left_as_input, None, expected, device_id=device_id, 
                     precision=precision, clean_up=True, backward_pass=True, input_node=a)    
-    unittest_helper(right_as_input, expected, device_id=device_id, 
+    unittest_helper(right_as_input, None, expected, device_id=device_id, 
                     precision=precision, clean_up=True, backward_pass=True, input_node=b)    
 
 # -- element times tests --
@@ -80,11 +80,11 @@ def test_op_element_times(left_operand, right_operand, device_id, precision):
     b = I([right_operand], has_sequence_dimension=False)    
     
     left_as_input = a * right_operand    
-    unittest_helper(left_as_input, expected, device_id=device_id, 
+    unittest_helper(left_as_input, None, expected, device_id=device_id, 
                     precision=precision, clean_up=True, backward_pass=False)
     
     right_as_input = left_operand * b
-    unittest_helper(right_as_input, expected, device_id=device_id, 
+    unittest_helper(right_as_input, None, expected, device_id=device_id, 
                     precision=precision, clean_up=True, backward_pass=False)
     
     #Backward pass test
@@ -94,9 +94,9 @@ def test_op_element_times(left_operand, right_operand, device_id, precision):
     expected_left = [[right_operand]]
     expected_right = [[left_operand]]
     
-    unittest_helper(left_as_input, expected_left, device_id=device_id, 
+    unittest_helper(left_as_input, None, expected_left, device_id=device_id, 
                     precision=precision, clean_up=True, backward_pass=True, input_node=a)    
-    unittest_helper(right_as_input, expected_right, device_id=device_id, 
+    unittest_helper(right_as_input, None, expected_right, device_id=device_id, 
                     precision=precision, clean_up=True, backward_pass=True, input_node=b)       
 
 # -- element divide tests --
@@ -115,11 +115,11 @@ def test_op_element_divide(left_operand, right_operand, device_id, precision):
     b = I([right_operand], has_sequence_dimension=False)    
     
     left_as_input = a / right_operand    
-    unittest_helper(left_as_input, expected, device_id=device_id, 
+    unittest_helper(left_as_input, None, expected, device_id=device_id, 
                     precision=precision, clean_up=True, backward_pass=False)
     
     right_as_input = left_operand / b
-    unittest_helper(right_as_input, expected, device_id=device_id, 
+    unittest_helper(right_as_input, None, expected, device_id=device_id, 
                     precision=precision, clean_up=True, backward_pass=False)
     
     #Backward pass test
@@ -129,7 +129,7 @@ def test_op_element_divide(left_operand, right_operand, device_id, precision):
     expected_left = [[[np.ones_like(x) / x for x in right_operand]]]
     expected_right = [[-AA(left_operand)  / AA(right_operand)**2]]
     
-    unittest_helper(left_as_input, expected_left, device_id=device_id, 
+    unittest_helper(left_as_input, None, expected_left, device_id=device_id, 
                     precision=precision, clean_up=True, backward_pass=True, input_node=a)    
-    unittest_helper(right_as_input, expected_right, device_id=device_id, 
+    unittest_helper(right_as_input, None, expected_right, device_id=device_id, 
                     precision=precision, clean_up=True, backward_pass=True, input_node=b)       

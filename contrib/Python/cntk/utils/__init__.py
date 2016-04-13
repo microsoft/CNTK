@@ -28,12 +28,13 @@ def cntk_to_numpy_shape(shape):
 
     return shape
 
-def dedupe_readers(readers):
+def aggregate_readers(readers):
     import copy
     readers_map = {}
     for r in readers:
         filename = r['FileName']
-        if filename in readers_map:
+        if filename in readers_map and\
+                r.__class__.__name__ == readers_map[filename].__class__.__name__:
             readers_map[filename].inputs_def.extend(r.inputs_def)
         else:
             readers_map[filename] = copy.deepcopy(r)

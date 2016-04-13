@@ -4,4 +4,5 @@ from .context import *
 from .graph import *
 from .objectives import *
 from .optimizer import *
-from .reader import *
+from .reader import UCIFastReader,CNTKTextFormatReader
+

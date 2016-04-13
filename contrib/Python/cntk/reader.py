@@ -15,12 +15,17 @@ class AbstractReader(metaclass=ABCMeta):
 
     def __ne__(self, x): return x is not self
 
+    @abstractmethod
+    def _to_aggregate_form():
+        pass
+
 class UCIFastReader(AbstractReader):
     """ A UCIFastReader for one input node
     """
 
-    def __init__(self, filename, input_start, input_dim, custom_delimiter=None, 
-                 num_of_classes=None, label_mapping_file=None):
+    def __init__(self, filename, input_start, input_dim, 
+                 num_of_classes=None, label_mapping_file=None,
+                 custom_delimiter=None):
         """ Reader constructor. Note that the dimensions are not inferred from 
         the input node's shape, because in case of a label node the dimension does 
         not match the shape which would be (numOfClasses,1)
@@ -42,6 +47,12 @@ class UCIFastReader(AbstractReader):
         self.num_of_classes = num_of_classes
         self.label_mapping_file = label_mapping_file
         
+    def _to_aggregate_form(self, input_node):
+        r = UCIFastReaderAggregator(self.filename, self.custom_delimiter)
+        r.add_input(input_node, self.input_start, self.input_dim, 
+                    self.num_of_classes, self.label_mapping_file)        
+        return r
+            
 class CNTKTextFormatReader(AbstractReader):
     """ A CNTKTextFormatReader for one input node
     """
@@ -57,6 +68,12 @@ class CNTKTextFormatReader(AbstractReader):
         self.input_alias = input_alias
         self.format = format
         self.input_dim = None # to be inferred from the input node.
+
+    def _to_aggregate_form(self, input_node):
+        r = TextFormatReaderAggregator(self.filename)
+        import numpy as np
+        r.add_input(input_node, self.input_alias, np.multiply.reduce(input_node.dims), self.format)        
+        return r
         
 class AbstractReaderAggregator(dict, metaclass=ABCMeta):
 

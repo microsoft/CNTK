@@ -8,7 +8,7 @@ from ..reader import *
 
 # keeping things short
 C = constant
-I = input
+I = input_reader
 AA = np.asarray
 
 def _test(root_node, expected, clean_up=True, backward_pass = False, input_node = None):

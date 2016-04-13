@@ -14,7 +14,15 @@ mapping_file = os.path.join(cur_dir, "SimpleMapping-3Classes.txt")
 def train_eval_logreg(criterion_name=None, eval_name=None):
     X = Input(2)
     y = Input(3)
-
+    
+    # training data readers
+    rx = UCIFastReader(train_file, 0, 2)
+    ry = UCIFastReader(train_file, 2, 1, 2, mapping_file)
+    
+    # testing data readers
+    rx_t = UCIFastReader(test_file, 0, 2)
+    ry_t = UCIFastReader(test_file, 2, 1, 2, mapping_file)
+    
     W = LearnableParameter(3, 2)
     b = LearnableParameter(3, 1)
 
@@ -29,14 +37,10 @@ def train_eval_logreg(criterion_name=None, eval_name=None):
         epoch_size=0, minibatch_size=25, learning_ratesPerMB=0.1, max_epochs=3)
 
     with Context('demo', clean_up=False) as ctx:
-        X.attach_uci_fast_reader(train_file, 0)
-        y.attach_uci_fast_reader(train_file, 2, True, 1, mapping_file)
-        ctx.train(root_nodes=[ce,eval], optimizer=my_sgd)
-        
-        X.attach_uci_fast_reader(test_file, 0)
-        y.attach_uci_fast_reader(test_file, 2, True, 1, mapping_file)
-        result = ctx.test()
 
+        ctx.train(root_nodes=[ce,eval], optimizer=my_sgd, input_reader={X:rx, y:ry})                
+        result = ctx.test(input_reader={X:rx_t, y:ry_t})
+        
         return result
 
 def test_logreg():

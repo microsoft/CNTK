@@ -9,7 +9,7 @@ class sparse(object):
         return hasattr(obj, 'todense')
 
 from .utils import MODEL_INDENTATION
-from .utils import dedupe_readers
+from .utils import aggregate_readers
 
 def _tuple_to_cntk_shape(shape):
     return ':'.join(str(v) for v in shape)
@@ -38,7 +38,9 @@ class ComputationNode(object):
             if hasattr(p, 'consumers'):
                 p.consumers.append(self)
 
+        # Create sub-class construtor and more these 
         self.reader = None
+        self.has_sequence_dimensions = False
 
     def _is_input(self):
         return isinstance(self, InputComputationNodeBase)
@@ -166,9 +168,8 @@ class ComputationNode(object):
         is_loop_node = self.name in ('Delay', 'PastValue', 'FutureValue')
         return is_loop_node and p_name == 'input' and isinstance(p_value, str)
 
-    def _to_config_recursively(self, desc, unrolled_nodes, inputs,
-                               readers, dep_inputs, node_counter,
-                               reconciled_cache):
+    def _to_config_recursively(self, input_reader, desc, unrolled_nodes, inputs,
+                               readers, dep_inputs, node_counter, reconciled_cache):
 
         param_variable_names = []
         # In case we have multiple unreconciled inputs, we will reconcile each
@@ -198,7 +199,7 @@ class ComputationNode(object):
                             child_var, child_dep_inputs = unrolled_nodes[pv]
                         else:
                             child_var, node_counter, child_desc, child_dep_inputs = pv._to_config_recursively(
-                                desc, unrolled_nodes, inputs, readers,
+                                input_reader, desc, unrolled_nodes, inputs, readers,
                                 dep_inputs, node_counter, reconciled_cache)
 
                             unrolled_nodes[pv] = child_var, dep_inputs
@@ -219,7 +220,7 @@ class ComputationNode(object):
                                     unrec_pv = pv
                                     pv = ReconcileMBLayout(unrec_pv, first_unreconciled_input)
                                     child_var, node_counter, child_desc, dep_inputs = pv._to_config_recursively(
-                                        desc, unrolled_nodes, inputs, readers,
+                                        input_reader, desc, unrolled_nodes, inputs, readers,
                                         dep_inputs, node_counter,
                                         reconciled_cache)
                                     reconciled_cache[(unrec_pv, first_unreconciled_input)] = pv.var_name, dep_inputs
@@ -242,17 +243,29 @@ class ComputationNode(object):
                         param_variable_names.append(
                             self._param_to_brainscript(p_name, p_value))
 
-        if self.reader:
-            readers.add(self.reader)
+        if hasattr(self, 'tag') and 'tag' not in self.params:
+            param_variable_names.append("tag='%s'" % self.tag)
+        
+        has_var_name = False
+        if (self.var_name):
+            has_var_name = True
+            
+        self.var_name = self.var_name or "v%i" % node_counter
+        node_counter += 1
 
         if self._is_input():
             inputs.add(self)
+            
+            if self.reader:                
+                node_reader = self.reader
+            elif self in input_reader:
+                node_reader = input_reader[self]
+            elif has_var_name and self.var_name in input_reader:
+                node_reader = input_reader[self.var_name]
+            else:
+                raise RuntimeError("No reader was found for input node: {0}".format(self.var_name))
 
-        if hasattr(self, 'tag') and 'tag' not in self.params:
-            param_variable_names.append("tag='%s'" % self.tag)
-
-        self.var_name = self.var_name or "v%i" % node_counter
-        node_counter += 1
+            readers.add(node_reader._to_aggregate_form(self))
 
         params = self._get_cntk_param_string(param_variable_names)
 
@@ -265,13 +278,14 @@ class ComputationNode(object):
 
         return self.var_name, node_counter, desc, dep_inputs
 
-    def _to_config(self, description, unrolled_nodes, inputs, readers,
+    def _to_config(self, input_reader, description, unrolled_nodes, inputs, readers,
             dep_inputs, node_counter, reconciled_cache):
         '''
         Helper method to generate the CNTK configuration for this node.
         '''
 
         var_name, node_counter, desc, dep_inputs = self._to_config_recursively(
+            input_reader,
             description,
             unrolled_nodes=unrolled_nodes,
             inputs=inputs,
@@ -288,7 +302,8 @@ class ComputationNode(object):
         for all dependent child nodes.
         '''
         var_name, node_counter, desc, has_inputs, readers, dep_inputs = \
-            self._to_config(description=[], 
+            self._to_config(input_reader={},
+					description=[], 
                     unrolled_nodes={},
                     inputs=set(),
                     readers=set(), 
@@ -296,7 +311,7 @@ class ComputationNode(object):
                     node_counter=0,
                     reconciled_cache={})
 
-        return "\n".join(desc), has_inputs, dedupe_readers(readers)
+        return "\n".join(desc), has_inputs, aggregate_readers(readers)
 
 
 class InputComputationNodeBase(ComputationNode, metaclass=ABCMeta):
@@ -317,7 +332,7 @@ class ImageInputComputationNodeBase(ComputationNode, metaclass=ABCMeta):
 from cntk.ops.cntk1 import *
 # to have a separate namespace when we want to override below
 from cntk.ops import cntk1 as cntk1_ops
-from .reader import TextFormatReaderAggregator
+from .reader import CNTKTextFormatReader
 
 # redefine some operators to work with NumPy and sequences as input
 
@@ -457,11 +472,9 @@ def _get_input_node(list_of_tensors, has_sequence_dimension, **kw):
 
     cntk_shape = value_shape if value_shape else (1,)
     
-    dims = int(np.multiply.reduce(cntk_shape))
     node = cntk1_ops.Input(cntk_shape, **kw)
-    node.reader = TextFormatReaderAggregator(tf.name)
-    node.reader.add_input(node, alias, dims)
-    
+    node.reader = CNTKTextFormatReader(tf.name, alias)
+        
     return node
 
 
@@ -503,7 +516,7 @@ def is_tensor(data):
     return True
 
 
-def input(value, has_sequence_dimension=True, **kw):
+def input_reader(value, has_sequence_dimension=True, **kw):
     '''
     creates an input node.
 

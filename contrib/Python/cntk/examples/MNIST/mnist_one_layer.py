@@ -33,16 +33,20 @@ if (__name__ == "__main__"):
     training_filename = os.path.join("Data", "Train-28x28.txt")
     test_filename = os.path.join("Data", "Test-28x28.txt")
 
-    features = Input(feat_dim, var_name='features')
-    features.attach_uci_fast_reader(training_filename, 1)
-
+    features = Input(feat_dim, var_name='features')    
+    f_reader = UCIFastReader(training_filename, 1, feat_dim)
+    f_reader_t = UCIFastReader(test_filename, 1, feat_dim)
+    
     feat_scale = Constant(0.00390625)
     feats_scaled = Scale(feat_scale, features)
 
     labels = Input(label_dim, tag='label', var_name='labels')
-    labels.attach_uci_fast_reader(
-        training_filename, 0, True, 1, os.path.join("Data", "labelsmap.txt"))
-
+    l_reader = UCIFastReader(training_filename, 0, 1, label_dim, 
+                             os.path.join("Data", "labelsmap.txt"))
+    
+    l_reader_t = UCIFastReader(test_filename, 0, 1, label_dim, 
+                             os.path.join("Data", "labelsmap.txt"))
+    
     h1 = add_dnn_sigmoid_layer(feat_dim, hidden_dim, feats_scaled, 1)
     out = add_dnn_layer(hidden_dim, label_dim, h1, 1)
     out.tag = 'output'
@@ -55,12 +59,9 @@ if (__name__ == "__main__"):
                  learning_ratesPerMB=0.1, max_epochs=5, momentum_per_mb=0)
 
     # Create a context or re-use if already there
-    with Context('mnist_one_layer', root_nodes=ec, clean_up=False) as ctx:
+    with Context('mnist_one_layer' , clean_up=False) as ctx:
         # CNTK actions
-        ctx.train(my_sgd)
-        features.attach_uci_fast_reader(test_filename, 1)
-        labels.attach_uci_fast_reader(
-            test_filename, 0, True, 1, os.path.join("Data", "labelsmap.txt"))
-        ctx.predict()
-        print(ctx.test())
+        ctx.train(ec, my_sgd, {features:f_reader, labels:l_reader})
+        ctx.predict({features:f_reader_t, labels:l_reader_t})
+        print(ctx.test({features:f_reader_t, labels:l_reader_t}))
         
