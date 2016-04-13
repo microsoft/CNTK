@@ -340,8 +340,8 @@ public:
             size_t mapCount = m_mapCount.GetNumElements();
             size_t weightCols = kW * kH * inDims.m_numChannels;
 
-        // check/infer input [0] (weights)
-        // BUGBUG: For now, we treat the weights as a 2D matrix. They should be a tensor proper.
+            // check/infer input [0] (weights)
+            // BUGBUG: For now, we treat the weights as a 2D matrix. They should be a tensor proper.
             Input(0)->ValidateInferInputDimsFrom(TensorShape(mapCount, weightCols));
 
             if (isFinalValidationPass && (Input(0)->GetAsMatrixNumCols() != weightCols || Input(0)->GetAsMatrixNumRows() != mapCount))
@@ -358,31 +358,31 @@ public:
         else
         {
             if (m_imageLayout != ImageLayoutKind::CHW)
-        {
+            {
                 InvalidArgument(
                     "%ls %ls supports only cuDNN (CHW) data layout. "
                     "Please specify imageLayout=\"cudnn\" in %ls node in your script "
                     "and make sure input data layout is CHW", NodeName().c_str(), OperationName().c_str(), NodeName().c_str());
-        }
+            }
             inputShape = GetInputSampleLayout(inputIdx);
             auto outDims = ConvolveGeometry::ComputeOutputShape(inputShape, m_kernelShape, m_mapCount, m_stride,
                                                                 m_sharing, m_autoPad, m_lowerPad, m_upperPad);
             SetDims(outDims, HasMBLayout());
-    }
+        }
 
         if (isFinalValidationPass)
         {
             if (m_convEng == nullptr)
-    {
+            {
                 auto geometry = std::make_shared<ConvolveGeometry>(inputShape, m_kernelShape, m_mapCount, m_stride,
                                                                    m_sharing, m_autoPad, m_lowerPad, m_upperPad);
                 m_convEng = ConvolutionEngine<ElemType>::Create(geometry, m_deviceId, m_imageLayout,
                                                                 m_maxTempMemSizeInSamples, m_poolKind);
-    }
+            }
 
             if (Input(0)->GetAsMatrixNumCols() != m_kernelShape.GetNumElements() ||
                 Input(0)->GetAsMatrixNumRows() != m_convEng->Geometry()->KernelCount())
-    {
+            {
                 LogicError("Convolution weight matrix %ls should have dimension [%d, %d] which is [kernelCount, kernelWidth * kernelHeight * inputChannels]",
                            Input(0)->NodeName().c_str(), (int)m_convEng->Geometry()->KernelCount(), (int)m_kernelShape.GetNumElements());
             }
@@ -587,7 +587,7 @@ public:
 
         m_inputSizePerSample = inDims.m_width * inDims.m_height * inDims.m_numChannels;
 
-        SetDims(outDims.AsTensorShape(m_imageLayoutKind), true);
+        SetDims(outDims.AsTensorShape(m_imageLayoutKind), HasMBLayout());
 
         if (isFinalValidationPass)
         {

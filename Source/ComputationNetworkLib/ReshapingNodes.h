@@ -311,7 +311,7 @@ public:
     {
         size_t rank = DetermineElementwiseTensorRank();
         let outputGrad =                                GradientTensorFor(           rank, fr);
-        auto inputGrad = TensorView<ElemType>(Input(0)->GradientPtr(), GetInputSlice(rank, fr));
+        auto inputGrad = TensorView<ElemType>(Input(0)->GradientPtr(), GetInputSlice(rank, fr.AllowBroadcast()));
         inputGrad.AddCopyOf(outputGrad);
     }
 
