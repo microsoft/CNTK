@@ -332,26 +332,23 @@ TensorShape ComputationNodeBase::GetOneSampleTensorSliceFor(size_t rank, const F
                 prototype += "NULL";
                 continue;
             }
-
-            const char* mbSizeMark = child->m_pMBLayout ? " x " : "";
-#if 0
-            if (child->m_sampleLayout.GetRank() == 3 && (child->m_sampleLayout[1] != 1 || child->m_sampleLayout[0] != 1)) // looks like an image: use WHC notation
-                prototype += msra::strfun::strprintf("%ls[%s%s {W=%lu, H=%lu, C=%lu}]", child->NodeName().c_str(), string(child->m_sampleLayout).c_str(), mbSizeMark,
-                child->m_sampleLayout[1], child->m_sampleLayout[2], child->m_sampleLayout[0]);
-            // BUGBUG: This ^^ will print based on the old legacy layout, and we have no way of knowing here whether that is correct.
-            else
-#endif
-                prototype += msra::strfun::strprintf("[%s%s%ls]", string(child->m_sampleLayout).c_str(), mbSizeMark, 
-                                                     child->HasMBLayout() ? child->GetMBLayout()->GetAxisName().c_str() : L"");
+            prototype += child->ShapeDescription().c_str();
         }
         prototype += extraArgs;
         //prototype += ")";
     }
 
-    prototype += msra::strfun::strprintf(" -> [%s%s%ls]", string(GetSampleLayout()).c_str(), HasMBLayout() ? " x " : "", 
-                                         HasMBLayout() ? GetMBLayout()->GetAxisName().c_str() : L"");
+    prototype += msra::strfun::strprintf(" -> %s", ShapeDescription().c_str());
 
     return prototype;
+}
+
+const std::string ComputationNodeBase::ShapeDescription() const
+{
+    return msra::strfun::strprintf("[%s%s%ls]", 
+                                   string(m_sampleLayout).c_str(), 
+                                   HasMBLayout() ? " x " : "", 
+                                   HasMBLayout() ? GetMBLayout()->GetAxisName().c_str() : L"");
 }
 
 template <class ElemType>

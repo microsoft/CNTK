@@ -203,7 +203,6 @@
     <ClCompile Include="BrainScript\BrainScriptEvaluator.cpp" />
     <ClCompile Include="BrainScript\BrainScriptParser.cpp" />
     <ClCompile Include="BrainScript\BrainScriptTest.cpp" />
-    <ClCompile Include="BrainScript\ExperimentalNetworkBuilder.cpp" />
     <ClCompile Include="CNTK.cpp" />
     <ClCompile Include="ModelEditLanguage.cpp" />
     <ClCompile Include="stdafx.cpp" />

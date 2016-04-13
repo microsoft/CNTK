@@ -129,7 +129,7 @@ public:
         m_displayName = name;
     }
     DynamicAxisNode(const ScriptableObjects::IConfigRecordPtr configp)
-        : DynamicAxisNode(configp->Get(L"deviceId"), (const std::wstring&)configp->Get(L"name"))
+        : DynamicAxisNode(configp->Get(L"deviceId"), (const std::wstring&)configp->Get(L"axisName"))
     {
     }
 
@@ -168,7 +168,7 @@ template class DynamicAxisNode<double>;
 // -----------------------------------------------------------------------
 
 template <class ElemType>
-class InputValueBase : public ComputationNode<ElemType>, public NumInputs<0>
+class InputValueBase : public ComputationNode<ElemType>, public NumInputs<0>, public IDynamic
 {
     typedef ComputationNode<ElemType> Base;
     UsingComputationNodeMembers;
@@ -205,11 +205,11 @@ protected:
     {
         AttachInputsFromConfig(configp, this->GetExpectedNumInputs());
         wstring axisName = L"";
-        if (configp->Exists(L"dynamicAxes"))
+        if (configp->Exists(L"dynamicAxis"))
         {
-            if (configp->Find(L"dynamicAxes")->Is<ComputationNodeBase>())
+            if (configp->Find(L"dynamicAxis")->Is<ComputationNodeBase>())
             {
-                ComputationNodeBasePtr axis = configp->Get(L"dynamicAxes");
+                ComputationNodeBasePtr axis = configp->Get(L"dynamicAxis");
                 axisName = axis->GetName();
             }
             // Else: Use default axis.
@@ -245,7 +245,7 @@ protected:
         // more dependencies on the order in which things are evaluated, though.
         if (!node->Is<DynamicAxisNode<ElemType>>())
             RuntimeError("%ls: dynamicAxis argument must be of type DynamicAxis(), but got %ls.",
-            NodeDescription().c_str(), node->NodeDescription().c_str());
+                         NodeDescription().c_str(), node->NodeDescription().c_str());
         m_dynamicAxisNode = node->As<DynamicAxisNode<ElemType>>();
         if (!m_dynamicAxisNode->HasMBLayout())
             LogicError("%ls: Expected %ls to have MBLayout, but it doesn't.", NodeDescription().c_str(), node->NodeDescription().c_str());

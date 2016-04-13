@@ -525,13 +525,19 @@ void ComputationNetwork::ResetMBLayouts()
     for (const auto& node : GetAllNodesForRoot(nullptr))
         node->LinkToMBLayout(nullptr);
 
-    // DynamicAxis nodes are (apart from the network-wide MBLayout) the only holders of MBLayouts. Initialize them.
+    // DynamicAxis nodes are (apart from the network-wide MBLayout) the main holders of MBLayouts. Initialize them.
+    // The only other instances are nodes that change the MBLayout, like WhereNode. 
     for (auto node : GetNodesWithType(L"DynamicAxis"))
         node->LinkToMBLayout(make_shared<MBLayout>(1, 0, node->GetName()));
 
     // This is now initialized inside of the Input nodes, with the proper connections.
     for (auto node : InputNodes(nullptr))
-        node->AttachDynamicAxis([&](std::wstring name) { return GetNodeFromName(name); }, /* default */ m_pMBLayoutOfNetwork);
+    {
+        auto n = dynamic_pointer_cast<IDynamic>(node);
+        if (!n)
+            LogicError("Expected %ls to implement IDynamic, but it doesn't.", node->NodeDescription().c_str());
+        n->AttachDynamicAxis([&](std::wstring name) { return GetNodeFromName(name); }, /* default */ m_pMBLayoutOfNetwork);
+    }
 }
 
 // -----------------------------------------------------------------------
