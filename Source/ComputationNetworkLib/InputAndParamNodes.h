@@ -127,7 +127,7 @@ public:
         SetDims(TensorShape(1,1), true);
     }
     DynamicAxisNode(const ScriptableObjects::IConfigRecordPtr configp)
-        : DynamicAxisNode(configp->Get(L"deviceId"), (const std::wstring&)configp->Get(L"axisName"))
+        : DynamicAxisNode(configp->Get(L"deviceId"), L"<placeholder>")
     {
     }
 
@@ -154,7 +154,7 @@ template class DynamicAxisNode<double>;
 // -----------------------------------------------------------------------
 
 template <class ElemType>
-class InputValueBase : public ComputationNode<ElemType>, public NumInputs<0>, public IDynamic
+class InputValueBase : public ComputationNode<ElemType>, public NumInputs<0>, public ITakesDynamicAxis
 {
     typedef ComputationNode<ElemType> Base;
     UsingComputationNodeMembers;
