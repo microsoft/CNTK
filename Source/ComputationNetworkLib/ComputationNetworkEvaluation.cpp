@@ -690,7 +690,7 @@ size_t ComputationNetwork::ValidateNodes(list<ComputationNodeBasePtr> nodes, boo
             // Make sure we don't use DynamicAxis in places where it was not designed for.
             // This is a stop-gap. We need a more coherent concept for passing of shapes.
             if (child->OperationName() == L"DynamicAxis")
-                RuntimeError("%ls: Cannot be used as input to another node.", child->NodeDescription().c_str());
+                RuntimeError("%ls: Cannot be used as input to another node. It can only be used on the 'dynamicAxis' property of an Input node.", child->NodeDescription().c_str());
         }
 
         // if there is not at least one visited child

@@ -41,6 +41,7 @@ Train=[
                 
         // set up features and labels
         t = DynamicAxis()
+        ppp = Pass(t)
         features = Input(1, dynamicAxis=t)   # Input has shape (1,t)
         labels   = Input(numLabels)          # Input has shape (numLabels,*) where all sequences in *=1
         
