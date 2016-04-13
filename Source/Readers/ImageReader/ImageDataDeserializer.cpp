@@ -211,7 +211,7 @@ void ImageDataDeserializer::CreateSequenceDescriptions(std::string mapPath, size
                 imagePath.c_str(), cid, labelDimension, lineIndex, mapPath.c_str());
         }
 
-        for (size_t old = curId; curId < old + itemsPerLine; curId++)
+        for (size_t start = curId; curId < start + itemsPerLine; curId++)
         {
             description.m_id = curId;
             description.m_chunkId = curId;
