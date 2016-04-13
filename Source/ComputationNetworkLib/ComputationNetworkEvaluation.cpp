@@ -536,7 +536,28 @@ void ComputationNetwork::ResetMBLayouts()
         auto n = dynamic_pointer_cast<IDynamic>(node);
         if (!n)
             LogicError("Expected %ls to implement IDynamic, but it doesn't.", node->NodeDescription().c_str());
-        n->AttachDynamicAxis([&](std::wstring name) { return GetNodeFromName(name); }, /* default */ m_pMBLayoutOfNetwork);
+        std::wstring axisName = n->GetRequestedDynamicAxis();
+
+        if (axisName == L"")
+        {
+            // Legacy behavior: One shared MBLayout
+            node->LinkToMBLayout(m_pMBLayoutOfNetwork);
+        }
+        else
+        {
+            auto axisNode = GetNodeFromName(axisName);
+
+            if (!axisNode)
+                RuntimeError("%ls: Can't find node '%ls' for retrieving dynamic axis.", axisNode->NodeDescription().c_str(), axisName.c_str());
+
+            // For now we require the node to be a DynamicAxisNode, though we could derive the same from other nodes. This would involve
+            // more dependencies on the order in which things are evaluated, though.
+            if (axisNode->OperationName() != L"DynamicAxis")
+                RuntimeError("%ls: dynamicAxis argument must be of type DynamicAxis(), but got %ls.", node->NodeDescription().c_str(), axisNode->NodeDescription().c_str());
+            if (!axisNode->HasMBLayout())
+                LogicError("%ls: Expected %ls to have MBLayout, but it doesn't.", node->NodeDescription().c_str(), axisNode->NodeDescription().c_str());
+            node->LinkToMBLayout(axisNode->GetMBLayout());
+        }
     }
 }
 

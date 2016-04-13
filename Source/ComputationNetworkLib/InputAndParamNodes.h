@@ -222,35 +222,7 @@ protected:
             Init(ImageDimensions::AsTensorShape(configp->Get(L"imageWidth"), configp->Get(L"imageHeight"), configp->Get(L"imageChannels"), ImageLayoutKindFrom(configp->Get(L"imageLayout"))), isSparse, axisName);
     }
 
-    // Only for input nodes: Allow for connecting to the MBLayout based on the dynamic axis object.
-    // This is called while compiling the network.
-    virtual void AttachDynamicAxis(std::function<ComputationNodeBasePtr(const std::wstring)> nodeLookup, MBLayoutPtr defaultLayout) override
-    {
-        if (m_dynamicAxisNodeName == L"")
-        {
-            // Legacy behavior: One shared MBLayout
-            LinkToMBLayout(defaultLayout);
-            return;
-        }
-
-        if (m_dynamicAxisNodeName == this->GetName())
-            RuntimeError("%ls: Cannot attach dynamic axis to itself.", NodeDescription().c_str());
-
-        auto node = nodeLookup(m_dynamicAxisNodeName);
-
-        if (!node)
-            RuntimeError("%ls: Can't find node '%ls' for retrieving dynamic axis.", NodeDescription().c_str(), m_dynamicAxisNodeName.c_str());
-
-        // For now we require the node to be a DynamicAxisNode, though we could derive the same from other nodes. This would involve
-        // more dependencies on the order in which things are evaluated, though.
-        if (!node->Is<DynamicAxisNode<ElemType>>())
-            RuntimeError("%ls: dynamicAxis argument must be of type DynamicAxis(), but got %ls.",
-                         NodeDescription().c_str(), node->NodeDescription().c_str());
-        m_dynamicAxisNode = node->As<DynamicAxisNode<ElemType>>();
-        if (!m_dynamicAxisNode->HasMBLayout())
-            LogicError("%ls: Expected %ls to have MBLayout, but it doesn't.", NodeDescription().c_str(), node->NodeDescription().c_str());
-        LinkToMBLayout(node->GetMBLayout());
-    }
+    virtual const std::wstring GetRequestedDynamicAxis() const override { return m_dynamicAxisNodeName; }
 
 public:
     virtual void Save(File& fstream) const override

@@ -861,7 +861,7 @@ struct NumInputs : public INumInputs // e.g. derive from NumInputs<2>
 // =======================================================================
 struct IDynamic
 {
-    virtual void AttachDynamicAxis(std::function<ComputationNodeBasePtr(const std::wstring)> nodeLookup, MBLayoutPtr defaultLayout) = 0;
+    virtual const std::wstring GetRequestedDynamicAxis() const = 0;
 };
 
 // =======================================================================
