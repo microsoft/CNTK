@@ -117,7 +117,6 @@ class DynamicAxisNode : public ComputationNode<ElemType>, public NumInputs<0>
 {
     typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
     static const std::wstring TypeName() { return L"DynamicAxis"; }
-    std::wstring m_displayName;
 public:
     DynamicAxisNode(DEVICEID_TYPE deviceId, const wstring& name)
         : Base(deviceId, name)
@@ -126,7 +125,6 @@ public:
         LinkToMBLayout(make_shared<MBLayout>(1, 0, name));
         // We need some shape, or validation fails.
         SetDims(TensorShape(1,1), true);
-        m_displayName = name;
     }
     DynamicAxisNode(const ScriptableObjects::IConfigRecordPtr configp)
         : DynamicAxisNode(configp->Get(L"deviceId"), (const std::wstring&)configp->Get(L"axisName"))
@@ -141,18 +139,6 @@ public:
     virtual void /*ComputationNode::*/ BackpropTo(const size_t /*inputIndex*/, const FrameRange&)
     {
         LogicError("%ls is a leaf node. BackpropTo() should never be called.", NodeDescription().c_str());
-    }
-
-    virtual void Save(File& fstream) const override
-    {
-        Base::Save(fstream);
-        fstream << m_displayName;
-    }
-
-    virtual void Load(File& fstream, size_t modelVersion) override
-    {
-        Base::Load(fstream, modelVersion);
-        fstream >> m_displayName;
     }
 };
 
@@ -207,12 +193,16 @@ protected:
         wstring axisName = L"";
         if (configp->Exists(L"dynamicAxis"))
         {
-            if (configp->Find(L"dynamicAxis")->Is<ComputationNodeBase>())
+            auto axisConfig = configp->Find(L"dynamicAxis");
+            if (axisConfig->Is<ComputationNodeBase>())
             {
                 ComputationNodeBasePtr axis = configp->Get(L"dynamicAxis");
                 axisName = axis->GetName();
             }
-            // Else: Use default axis.
+            else
+            {
+                axisName = (const std::wstring&)*axisConfig;
+            }
         }
 
         bool isImage = configp->Get(L"isImage");

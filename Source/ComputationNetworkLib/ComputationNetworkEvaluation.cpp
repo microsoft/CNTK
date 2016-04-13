@@ -686,6 +686,11 @@ size_t ComputationNetwork::ValidateNodes(list<ComputationNodeBasePtr> nodes, boo
         {
             hasVisitedChild |= child->m_visited; // if not a single visited child then no point in validating
             allChildrenVisited &= child->m_visited;
+
+            // Make sure we don't use DynamicAxis in places where it was not designed for.
+            // This is a stop-gap. We need a more coherent concept for passing of shapes.
+            if (child->OperationName() == L"DynamicAxis")
+                RuntimeError("%ls: Cannot be used as input to another node.", child->NodeDescription().c_str());
         }
 
         // if there is not at least one visited child

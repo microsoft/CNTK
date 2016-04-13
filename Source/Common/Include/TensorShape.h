@@ -79,7 +79,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 //     - special case: swapping between sample and MBLayout, e.g. turn a sample dimension to a time dimension
 //  - Validate() stage will automatically infer tensor dimensions from inputs, and also infer downwards into LearnableParameters where requested
 //
-// Interfacing to and inplementation in Matrix lib:
+// Interfacing to and implementation in Matrix lib:
 //  - a Tensor is realized as a type TensorView = { Matrix&, TensorShape& } (i.e. tensors don't own their memory)
 //  - Matrix lib will contain overloads for relevant operations that take Tensor& instead of Matrix&.
 //  - elementwise ops will go through a single bottleneck function that deals with matching dimensions (extend, broadcast) and flattening
