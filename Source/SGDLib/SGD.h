@@ -487,7 +487,13 @@ protected:
                             const double prevCriterion,
                             const size_t minibatchSize);
 
-    bool LoadCheckPointInfo(const size_t epochNumber,
+    bool TryLoadCheckPointInfo(const size_t epochNumber,
+                               /*out*/ size_t& totalSamplesSeen,
+                               /*out*/ double& learnRatePerSample,
+                               std::list<Matrix<ElemType>>& smoothedGradients,
+                               /*out*/ double& prevCriterion,
+                               /*out*/ size_t& minibatchSize);
+    void LoadCheckPointInfo(const size_t epochNumber,
                             /*out*/ size_t& totalSamplesSeen,
                             /*out*/ double& learnRatePerSample,
                             std::list<Matrix<ElemType>>& smoothedGradients,
