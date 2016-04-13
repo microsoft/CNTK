@@ -77,7 +77,7 @@ enum ElementWiseOperator
     // unary (or binary with constant parameter)
     opCopy,
     opNegate, opNot, opAbs, opReciprocal,
-    opSigmoid, opTanh, opSqr, opSqrt, opExp, opLog, opLinearRectifier, opCosine,
+    opSigmoid, opTanh, opSqr, opSqrt, opExp, opLog, opLinearRectifier, opCosine, opSin,
     // unary ops for use by Matrix class only (there is no TensorView implementation)
     opSigmoidDerivative, opLinearRectifierDerivative, opNegativeSine,
     // binary
@@ -87,9 +87,9 @@ enum ElementWiseOperator
     opAnd, opOr, opXor, opMaskNegative,
     opElementwiseProductWithSigmoidDerivativeFromOutput, opElementwiseProductWithTanhDerivativeFromOutput,
     opElementwiseProductWithLinearRectifierDerivativeFromOutput, opElementwiseProductWithLogDerivativeFromOutput,
-    opElementwiseProductWithCosDerivative, opElementwiseProductWithAbsDerivative,
-    opElementwiseProductWithSqrtDerivative, opElementwiseProductWithReciprocalDerivative,
-    opSqrOfDifference,
+    opElementwiseProductWithCosDerivative, opElementwiseProductWithSinDerivative,
+    opElementwiseProductWithAbsDerivative, opElementwiseProductWithSqrtDerivative, 
+    opElementwiseProductWithReciprocalDerivative, opSqrOfDifference,
     // binary ops for indexing
     // opIndex,
     // ternary
@@ -116,7 +116,8 @@ enum ElementWiseOperator
     Macro(Exp);               \
     Macro(Log);               \
     Macro(LinearRectifier);   \
-    Macro(Cosine);
+    Macro(Cosine);            \
+    Macro(Sin);
 
 #define ForAllBinaryOps(Macro)                                        \
     Macro(Sum);                                                       \
@@ -141,6 +142,7 @@ enum ElementWiseOperator
     Macro(ElementwiseProductWithLinearRectifierDerivativeFromOutput); \
     Macro(ElementwiseProductWithLogDerivativeFromOutput);             \
     Macro(ElementwiseProductWithCosDerivative);                       \
+    Macro(ElementwiseProductWithSinDerivative);                       \
     Macro(ElementwiseProductWithAbsDerivative);                       \
     Macro(ElementwiseProductWithReciprocalDerivative);                \
     Macro(ElementwiseProductWithSqrtDerivative);                      \
@@ -393,7 +395,6 @@ protected:
 // BaseMatrix -- base class for all matrix types (CPU, GPU) x (dense, sparse)
 // -----------------------------------------------------------------------
 
-// TODO: Some of these accessors should be merged into single methods like SetBuffer. 
 template <class ElemType>
 class MATH_API BaseMatrix
 {
@@ -455,6 +456,7 @@ protected:
     DEVICEID_TYPE GetComputeDeviceId() const { return m_sob->GetComputeDeviceId(); }
     void SetComputeDeviceId(const DEVICEID_TYPE computeId) const { m_sob->SetComputeDeviceId(computeId); }
 
+    // TODO: Some of these accessors should be merged into single methods like SetBuffer. 
     size_t GetNumStorageRows() const { return m_sob->GetNumStorageRows(); }
     void SetNumStorageRows(size_t rows) { m_sob->SetNumStorageRows(rows); }
 

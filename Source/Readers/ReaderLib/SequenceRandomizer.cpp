@@ -105,12 +105,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     void SequenceRandomizer::RandomizeNextSequenceDescriptions(size_t sampleCount)
     {
         assert(m_currentSamplePosition <= m_nextSamplePositionNotYetRandomized);
-        if (m_nextSamplePositionNotYetRandomized == m_randomizedChunks.back().SampleEndPosition())
+        if (m_currentSamplePosition + sampleCount <= m_nextSamplePositionNotYetRandomized)
         {
             return;
         }
 
-        if (m_currentSamplePosition + sampleCount < m_nextSamplePositionNotYetRandomized)
+        if (m_nextSamplePositionNotYetRandomized == m_randomizedChunks.back().SampleEndPosition())
         {
             return;
         }
@@ -127,7 +127,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         size_t firstSequencePositionToRandomize = m_nextSequencePositionNotYetRandomized;
 
         // Find the smallest chunk index whose windows begin exceeds the chunk index
-        // of the sample position we have to randomized (current + sampleCount).
+        // of the sample position we have to randomize (current + sampleCount).
         // We will randomize up to this chunk as the final position of windows end is guaranteed to have been determined
         // when all sequences up to that chunk have been randomized
         size_t lastSamplePositionChunkIdx = GetChunkIndexOf(m_currentSamplePosition + sampleCount - 1);
@@ -140,13 +140,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         size_t endFramePosToRandomize = m_randomizedChunks[endChunkIdxToRandomize - 1].SampleEndPosition();
         size_t endSequencePosToRandomize = m_randomizedChunks[endChunkIdxToRandomize - 1].SequenceEndPosition();
+        assert(GetChunkIndexOf(endFramePosToRandomize - 1) == endChunkIdxToRandomize - 1);
 
         // Determine the range of chunks that need to be in m_sequenceWindows for us
         // to perform the necessary randomization
         size_t startChunkIdx = std::min(GetChunkIndexOf(m_currentSamplePosition), m_randomizedChunks[GetChunkIndexOf(firstSamplePositionToRandomize)].m_randomizationWindow.m_begin);
         size_t endChunkIdx = m_randomizedChunks[GetChunkIndexOf(endFramePosToRandomize - 1)].m_randomizationWindow.m_end;
+        assert(endChunkIdxToRandomize <= endChunkIdx);
 
-        // Lets drop everything that is outside the new range [startChunkIdx, endChunkIdx)
+        // Let's drop everything that is outside the new range [startChunkIdx, endChunkIdx)
         for (size_t i = m_currentRangeBeginChunkIndex; i < startChunkIdx; ++i)
         {
             m_sequenceWindow.pop_front();
@@ -154,7 +156,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_currentRangeBeginChunkIndex++;
         }
 
-        // Lets page in everything from m_currentRangeEndChunkIndex to endChunkIdx
+        // Let's page in everything from m_currentRangeEndChunkIndex to endChunkIdx
         for (size_t i = m_currentRangeEndChunkIndex; i < endChunkIdx; ++i)
         {
             AddRandomizedSequencesForChunk(i);

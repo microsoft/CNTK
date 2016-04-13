@@ -34,9 +34,6 @@
     <ClInclude Include="DataDeserializerBase.h">
       <Filter>Deserializers</Filter>
     </ClInclude>
-    <ClInclude Include="SampleModePacker.h">
-      <Filter>Packers</Filter>
-    </ClInclude>
     <ClInclude Include="Bundler.h">
       <Filter>Deserializers</Filter>
     </ClInclude>
@@ -58,10 +55,13 @@
     <ClInclude Include="SequencePacker.h">
       <Filter>Packers</Filter>
     </ClInclude>
-    <ClInclude Include="BpttPacker.h">
+    <ClInclude Include="PackerBase.h">
       <Filter>Packers</Filter>
     </ClInclude>
-    <ClInclude Include="PackerBase.h">
+    <ClInclude Include="FramePacker.h">
+      <Filter>Packers</Filter>
+    </ClInclude>
+    <ClInclude Include="BpttPacker.h">
       <Filter>Packers</Filter>
     </ClInclude>
   </ItemGroup>
@@ -71,9 +71,6 @@
     </ClCompile>
     <ClCompile Include="ReaderShim.cpp">
       <Filter>Utils</Filter>
-    </ClCompile>
-    <ClCompile Include="SampleModePacker.cpp">
-      <Filter>Packers</Filter>
     </ClCompile>
     <ClCompile Include="Bundler.cpp">
       <Filter>Deserializers</Filter>
@@ -90,10 +87,13 @@
     <ClCompile Include="SequencePacker.cpp">
       <Filter>Packers</Filter>
     </ClCompile>
-    <ClCompile Include="BpttPacker.cpp">
+    <ClCompile Include="PackerBase.cpp">
       <Filter>Packers</Filter>
     </ClCompile>
-    <ClCompile Include="PackerBase.cpp">
+    <ClCompile Include="FramePacker.cpp">
+      <Filter>Packers</Filter>
+    </ClCompile>
+    <ClCompile Include="BpttPacker.cpp">
       <Filter>Packers</Filter>
     </ClCompile>
   </ItemGroup>

@@ -8,7 +8,7 @@ from cntk import *
 
 if (__name__ == "__main__"):
 
-    X = constant(np.asarray([[2,3], [4,5]]))
+    X = constant(np.asarray([[2, 3], [4, 5]]))
     out = 2.5 * X + 100
 
     with Context('demo', clean_up=False) as ctx:

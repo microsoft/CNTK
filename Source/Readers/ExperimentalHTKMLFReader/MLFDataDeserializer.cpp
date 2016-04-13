@@ -4,11 +4,15 @@
 //
 
 #include "stdafx.h"
+#include <inttypes.h>
+#include <limits>
 #include "MLFDataDeserializer.h"
 #include "ConfigHelper.h"
 #include "../HTKMLFReader/htkfeatio.h"
 #include "../HTKMLFReader/msra_mgram.h"
 #include "latticearchive.h"
+
+#undef max // max is defined in minwindef.h
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -48,6 +52,12 @@ MLFDataDeserializer::MLFDataDeserializer(CorpusDescriptorPtr corpus, const Confi
 
     config.CheckLabelType();
     size_t dimension = config.GetLabelDimension();
+
+    if (dimension > numeric_limits<IndexType>::max())
+    {
+        RuntimeError("Label dimension (%" PRIu64 ") exceeds the maximum allowed "
+            "value (%" PRIu64 ")\n", dimension, (size_t)numeric_limits<IndexType>::max());
+    }
 
     // TODO: Similarly to the old reader, currently we assume all Mlfs will have same root name (key)
     // restrict MLF reader to these files--will make stuff much faster without having to use shortened input files
@@ -154,11 +164,16 @@ MLFDataDeserializer::MLFDataDeserializer(CorpusDescriptorPtr corpus, const Confi
 
     // Initializing array of labels.
     m_categories.reserve(dimension);
+    m_categoryIndices.reserve(dimension);
     for (size_t i = 0; i < dimension; ++i)
     {
         SparseSequenceDataPtr category = std::make_shared<SparseSequenceData>();
-        category->m_indices.resize(1);
-        category->m_indices[0] = std::vector<size_t>{ m_categories.size() };
+        m_categoryIndices.push_back(static_cast<IndexType>(i));
+        category->m_indices = &(m_categoryIndices[i]);
+        category->m_nnzCounts.resize(1);
+        category->m_nnzCounts[0] = 1;
+        category->m_totalNnzCount = 1;
+        category->m_numberOfSamples = 1;
         if (m_elementType == ElementType::tfloat)
         {
             category->m_data = &s_oneFloat;
@@ -230,13 +245,25 @@ ChunkPtr MLFDataDeserializer::GetChunk(size_t chunkId)
 template <class ElemType>
 struct MLFSequenceData : SparseSequenceData
 {
-    std::vector<ElemType> m_nonZero;
+    std::vector<ElemType> m_values;
+    std::unique_ptr<IndexType[]> m_indicesPtr;
 
-    MLFSequenceData(size_t numberOfSamples)
-        : m_nonZero(numberOfSamples, 1)
+    MLFSequenceData(size_t numberOfSamples) : 
+        m_values(numberOfSamples, 1),
+        m_indicesPtr(new IndexType[numberOfSamples])
     {
+        if (numberOfSamples > numeric_limits<IndexType>::max())
+        {
+            RuntimeError("Number of samples in an MLFSequence (%" PRIu64 ") "
+                "exceeds the maximum allowed value (%" PRIu64 ")\n", 
+                numberOfSamples, (size_t)numeric_limits<IndexType>::max());
+        }
+
+        m_nnzCounts.resize(numberOfSamples, static_cast<IndexType>(1));
         m_numberOfSamples = numberOfSamples;
-        m_data = m_nonZero.data();
+        m_totalNnzCount = static_cast<IndexType>(numberOfSamples);
+        m_indices = m_indicesPtr.get();
+        m_data = m_values.data();
     }
 };
 
@@ -251,7 +278,8 @@ void MLFDataDeserializer::GetSequenceById(size_t sequenceId, std::vector<Sequenc
     else
     {
         // Packing labels for the utterance into sparse sequence.
-        size_t numberOfSamples = m_utteranceIndex[sequenceId + 1] - m_utteranceIndex[sequenceId];
+        size_t startFrameIndex = m_utteranceIndex[sequenceId];
+        size_t numberOfSamples = m_utteranceIndex[sequenceId + 1] - startFrameIndex;
         SparseSequenceDataPtr s;
         if (m_elementType == ElementType::tfloat)
         {
@@ -263,13 +291,11 @@ void MLFDataDeserializer::GetSequenceById(size_t sequenceId, std::vector<Sequenc
             s = std::make_shared<MLFSequenceData<double>>(numberOfSamples);
         }
 
-        size_t startFrameIndex = m_utteranceIndex[sequenceId];
-        s->m_indices.reserve(s->m_numberOfSamples);
-
-        for (size_t i = startFrameIndex; i < m_utteranceIndex[sequenceId + 1]; i++)
+        for (size_t i = 0; i < numberOfSamples; i++)
         {
-            size_t label = m_classIds[m_frames[i].m_index];
-            s->m_indices.push_back(std::vector<size_t> { label });
+            size_t frameIndex = startFrameIndex + i;
+            size_t label = m_classIds[m_frames[frameIndex].m_index];
+            s->m_indices[i] = static_cast<IndexType>(label);
         }
         result.push_back(s);
     }

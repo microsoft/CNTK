@@ -40,19 +40,20 @@ typedef std::shared_ptr<SequenceDescription> SequenceDescriptionPtr;
 // Currently CNTK supports dense and sparse sequences (csc).
 // The storageType in the corresponding stream description identifies what type of SequenceData
 // data deserializer or transformer can provide provides.
+// TODO: add type casts (As<T>() or AsRef<>() or AsPtr<>()) to subclasses as members here.
 struct SequenceDataBase
 {
-    SequenceDataBase() : m_data(nullptr), m_numberOfSamples(0) { }
+    SequenceDataBase() : m_id(0), m_numberOfSamples(0), m_data(nullptr) {}
     virtual ~SequenceDataBase() = default;
 
     // Sequence id.
     size_t m_id;
+    size_t m_numberOfSamples;      // Number of samples in the sequence
 
     ChunkPtr m_chunk;
     // A non-owned pointer. The actual size is provided for particular sequences,
     // i.e. see DenseSequenceData, or SparseSequenceData.
     void* m_data;
-    size_t m_numberOfSamples;      // Number of samples in the sequence
 };
 typedef std::shared_ptr<SequenceDataBase> SequenceDataPtr;
 
@@ -72,7 +73,11 @@ typedef std::shared_ptr<DenseSequenceData> DenseSequenceDataPtr;
 // All samples in the sequence should have the same layout.
 struct SparseSequenceData : SequenceDataBase
 {
-    std::vector<std::vector<size_t>> m_indices;
+    IndexType* m_indices; // an index for every value in the m_data array
+    std::vector<IndexType> m_nnzCounts; // nnz count for each sample in the sequence
+    IndexType m_totalNnzCount; // sum of all nzzCounts of all samples
+    // Using IndexType for both properties above since the nnzCount should fit inside
+    // the index type (in CSC format, the last value in the column index array == nnzCount)
 };
 typedef std::shared_ptr<SparseSequenceData> SparseSequenceDataPtr;
 

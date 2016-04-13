@@ -1,6 +1,8 @@
 # CNTK
 
 ## Latest news
+*2016-04-12.* Added support for ND convolutions and pooling. Enabled CPU support for `cudnn` data layout. Added documentation for convolution, pooling and batch normalization nodes: https://github.com/Microsoft/CNTK/wiki/Full-NDL-Function-Reference
+
 *2016-04-05.* CUDA7.5 support for Windows Build: Windows project files have been updated to automatically utilize CUDA 7.5 if present
 
 *2016-03-24.* New Text Reader (CNTKTextFormatReader) is available

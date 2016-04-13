@@ -1,0 +1,814 @@
+=== Running /home/mahilleb/CNTK/build/gpu/release/bin/cntk configFile=/home/mahilleb/CNTK/Tests/EndToEndTests/Examples/Image/MNIST/01_OneHidden/../../../../../../Examples/Image/MNIST/Config/01_OneHidden.cntk currentDirectory=/home/mahilleb/CNTK/Examples/Image/MNIST/Data RunDir=/tmp/cntk-test-20160407140437.931634/Examples/Image/MNIST_01_OneHidden@release_gpu DataDir=/home/mahilleb/CNTK/Examples/Image/MNIST/Data ConfigDir=/home/mahilleb/CNTK/Tests/EndToEndTests/Examples/Image/MNIST/01_OneHidden/../../../../../../Examples/Image/MNIST/Config OutputDir=/tmp/cntk-test-20160407140437.931634/Examples/Image/MNIST_01_OneHidden@release_gpu DeviceId=0 timestamping=true MNISTtrain=[reader=[randomize=none]] imageLayout="cudnn"
+-------------------------------------------------------------------
+Build info: 
+
+		Built time: Apr  6 2016 15:52:46
+		Last modified date: Tue Apr  5 14:19:05 2016
+		Build type: release
+		Build target: GPU
+		With 1bit-SGD: no
+		Math lib: acml
+		CUDA_PATH: /usr/local/cuda-7.0
+		CUB_PATH: /usr/local/cub-1.4.1
+		CUDNN_PATH: /usr/local/cudnn-4.0
+		Build Branch: mahilleb/MNISTLinux
+		Build SHA1: ad5c8cd8002553a87d462a9a1ddcdabf2c84f519 (modified)
+		Built by mahilleb on atleneu04
+		Build Path: /home/mahilleb/CNTK
+-------------------------------------------------------------------
+Changed current directory to /home/mahilleb/CNTK/Examples/Image/MNIST/Data
+04/07/2016 14:04:38: -------------------------------------------------------------------
+04/07/2016 14:04:38: Build info: 
+
+04/07/2016 14:04:38: 		Built time: Apr  6 2016 15:52:46
+04/07/2016 14:04:38: 		Last modified date: Tue Apr  5 14:19:05 2016
+04/07/2016 14:04:38: 		Build type: release
+04/07/2016 14:04:38: 		Build target: GPU
+04/07/2016 14:04:38: 		With 1bit-SGD: no
+04/07/2016 14:04:38: 		Math lib: acml
+04/07/2016 14:04:38: 		CUDA_PATH: /usr/local/cuda-7.0
+04/07/2016 14:04:38: 		CUB_PATH: /usr/local/cub-1.4.1
+04/07/2016 14:04:38: 		CUDNN_PATH: /usr/local/cudnn-4.0
+04/07/2016 14:04:38: 		Build Branch: mahilleb/MNISTLinux
+04/07/2016 14:04:38: 		Build SHA1: ad5c8cd8002553a87d462a9a1ddcdabf2c84f519 (modified)
+04/07/2016 14:04:38: 		Built by mahilleb on atleneu04
+04/07/2016 14:04:38: 		Build Path: /home/mahilleb/CNTK
+04/07/2016 14:04:38: -------------------------------------------------------------------
+
+04/07/2016 14:04:38: Running on localhost at 2016/04/07 14:04:38
+04/07/2016 14:04:38: Command line: 
+/home/mahilleb/CNTK/build/gpu/release/bin/cntk  configFile=/home/mahilleb/CNTK/Tests/EndToEndTests/Examples/Image/MNIST/01_OneHidden/../../../../../../Examples/Image/MNIST/Config/01_OneHidden.cntk  currentDirectory=/home/mahilleb/CNTK/Examples/Image/MNIST/Data  RunDir=/tmp/cntk-test-20160407140437.931634/Examples/Image/MNIST_01_OneHidden@release_gpu  DataDir=/home/mahilleb/CNTK/Examples/Image/MNIST/Data  ConfigDir=/home/mahilleb/CNTK/Tests/EndToEndTests/Examples/Image/MNIST/01_OneHidden/../../../../../../Examples/Image/MNIST/Config  OutputDir=/tmp/cntk-test-20160407140437.931634/Examples/Image/MNIST_01_OneHidden@release_gpu  DeviceId=0  timestamping=true  MNISTtrain=[reader=[randomize=none]]  imageLayout="cudnn"
+
+
+
+04/07/2016 14:04:38: >>>>>>>>>>>>>>>>>>>> RAW CONFIG (VARIABLES NOT RESOLVED) >>>>>>>>>>>>>>>>>>>>
+04/07/2016 14:04:38: RootDir = ".."
+ConfigDir = "$RootDir$/Config"
+DataDir   = "$RootDir$/Data"
+OutputDir = "$RootDir$/Output"
+ModelDir  = "$OutputDir$/Models"
+deviceId = 0
+imageLayout = "cudnn"
+command = MNISTtrain:MNISTtest
+precision = "float"
+modelPath = "$ModelDir$/01_OneHidden"
+ndlMacros = "$ConfigDir$/Macros.ndl"
+traceLevel=1
+numMBsToShowResult=500
+initOnCPUOnly=true
+MNISTtrain = [
+    action = "train"
+    NDLNetworkBuilder = [
+        networkDescription = "$ConfigDir$/01_OneHidden.ndl"
+    ]
+    SGD = [
+        epochSize = 60000
+        minibatchSize = 32
+        learningRatesPerMB = 0.1
+        momentumPerMB = 0
+        maxEpochs = 30
+    ]
+    reader = [
+        readerType = "UCIFastReader"
+        file = "$DataDir$/Train-28x28.txt"
+        features = [
+            dim = 784
+            start = 1
+        ]
+        labels = [
+            dim = 1
+            start = 0
+            labelDim = 10
+            labelMappingFile = "$DataDir$/labelsmap.txt"
+        ]
+    ]    
+]
+MNISTtest = [
+    action = "test"
+    minibatchSize = 16
+    reader = [
+        readerType = "UCIFastReader"
+        file = "$DataDir$/Test-28x28.txt"
+        features = [
+            dim = 784
+            start = 1
+        ]
+        labels = [
+            dim = 1
+            start = 0
+            labelDim = 10
+            labelMappingFile = "$DataDir$/labelsmap.txt"
+        ]
+    ]    
+]
+currentDirectory=/home/mahilleb/CNTK/Examples/Image/MNIST/Data
+RunDir=/tmp/cntk-test-20160407140437.931634/Examples/Image/MNIST_01_OneHidden@release_gpu
+DataDir=/home/mahilleb/CNTK/Examples/Image/MNIST/Data
+ConfigDir=/home/mahilleb/CNTK/Tests/EndToEndTests/Examples/Image/MNIST/01_OneHidden/../../../../../../Examples/Image/MNIST/Config
+OutputDir=/tmp/cntk-test-20160407140437.931634/Examples/Image/MNIST_01_OneHidden@release_gpu
+DeviceId=0
+timestamping=true
+MNISTtrain=[reader=[randomize=none]]
+imageLayout="cudnn"
+
+04/07/2016 14:04:38: <<<<<<<<<<<<<<<<<<<< RAW CONFIG (VARIABLES NOT RESOLVED)  <<<<<<<<<<<<<<<<<<<<
+
+04/07/2016 14:04:38: >>>>>>>>>>>>>>>>>>>> RAW CONFIG WITH ALL VARIABLES RESOLVED >>>>>>>>>>>>>>>>>>>>
+04/07/2016 14:04:38: RootDir = ".."
+ConfigDir = "../Config"
+DataDir   = "../Data"
+OutputDir = "../Output"
+ModelDir  = "/tmp/cntk-test-20160407140437.931634/Examples/Image/MNIST_01_OneHidden@release_gpu/Models"
+deviceId = 0
+imageLayout = "cudnn"
+command = MNISTtrain:MNISTtest
+precision = "float"
+modelPath = "/tmp/cntk-test-20160407140437.931634/Examples/Image/MNIST_01_OneHidden@release_gpu/Models/01_OneHidden"
+ndlMacros = "/home/mahilleb/CNTK/Tests/EndToEndTests/Examples/Image/MNIST/01_OneHidden/../../../../../../Examples/Image/MNIST/Config/Macros.ndl"
+traceLevel=1
+numMBsToShowResult=500
+initOnCPUOnly=true
+MNISTtrain = [
+    action = "train"
+    NDLNetworkBuilder = [
+        networkDescription = "/home/mahilleb/CNTK/Tests/EndToEndTests/Examples/Image/MNIST/01_OneHidden/../../../../../../Examples/Image/MNIST/Config/01_OneHidden.ndl"
+    ]
+    SGD = [
+        epochSize = 60000
+        minibatchSize = 32
+        learningRatesPerMB = 0.1
+        momentumPerMB = 0
+        maxEpochs = 30
+    ]
+    reader = [
+        readerType = "UCIFastReader"
+        file = "/home/mahilleb/CNTK/Examples/Image/MNIST/Data/Train-28x28.txt"
+        features = [
+            dim = 784
+            start = 1
+        ]
+        labels = [
+            dim = 1
+            start = 0
+            labelDim = 10
+            labelMappingFile = "/home/mahilleb/CNTK/Examples/Image/MNIST/Data/labelsmap.txt"
+        ]
+    ]    
+]
+MNISTtest = [
+    action = "test"
+    minibatchSize = 16
+    reader = [
+        readerType = "UCIFastReader"
+        file = "/home/mahilleb/CNTK/Examples/Image/MNIST/Data/Test-28x28.txt"
+        features = [
+            dim = 784
+            start = 1
+        ]
+        labels = [
+            dim = 1
+            start = 0
+            labelDim = 10
+            labelMappingFile = "/home/mahilleb/CNTK/Examples/Image/MNIST/Data/labelsmap.txt"
+        ]
+    ]    
+]
+currentDirectory=/home/mahilleb/CNTK/Examples/Image/MNIST/Data
+RunDir=/tmp/cntk-test-20160407140437.931634/Examples/Image/MNIST_01_OneHidden@release_gpu
+DataDir=/home/mahilleb/CNTK/Examples/Image/MNIST/Data
+ConfigDir=/home/mahilleb/CNTK/Tests/EndToEndTests/Examples/Image/MNIST/01_OneHidden/../../../../../../Examples/Image/MNIST/Config
+OutputDir=/tmp/cntk-test-20160407140437.931634/Examples/Image/MNIST_01_OneHidden@release_gpu
+DeviceId=0
+timestamping=true
+MNISTtrain=[reader=[randomize=none]]
+imageLayout="cudnn"
+
+04/07/2016 14:04:38: <<<<<<<<<<<<<<<<<<<< RAW CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<
+
+04/07/2016 14:04:38: >>>>>>>>>>>>>>>>>>>> PROCESSED CONFIG WITH ALL VARIABLES RESOLVED >>>>>>>>>>>>>>>>>>>>
+configparameters: 01_OneHidden.cntk:command=MNISTtrain:MNISTtest
+configparameters: 01_OneHidden.cntk:ConfigDir=/home/mahilleb/CNTK/Tests/EndToEndTests/Examples/Image/MNIST/01_OneHidden/../../../../../../Examples/Image/MNIST/Config
+configparameters: 01_OneHidden.cntk:currentDirectory=/home/mahilleb/CNTK/Examples/Image/MNIST/Data
+configparameters: 01_OneHidden.cntk:DataDir=/home/mahilleb/CNTK/Examples/Image/MNIST/Data
+configparameters: 01_OneHidden.cntk:deviceId=0
+configparameters: 01_OneHidden.cntk:imageLayout=cudnn
+configparameters: 01_OneHidden.cntk:initOnCPUOnly=true
+configparameters: 01_OneHidden.cntk:MNISTtest=[
+    action = "test"
+    minibatchSize = 16
+    reader = [
+        readerType = "UCIFastReader"
+        file = "/home/mahilleb/CNTK/Examples/Image/MNIST/Data/Test-28x28.txt"
+        features = [
+            dim = 784
+            start = 1
+        ]
+        labels = [
+            dim = 1
+            start = 0
+            labelDim = 10
+            labelMappingFile = "/home/mahilleb/CNTK/Examples/Image/MNIST/Data/labelsmap.txt"
+        ]
+    ]    
+]
+
+configparameters: 01_OneHidden.cntk:MNISTtrain=[
+    action = "train"
+    NDLNetworkBuilder = [
+        networkDescription = "/home/mahilleb/CNTK/Tests/EndToEndTests/Examples/Image/MNIST/01_OneHidden/../../../../../../Examples/Image/MNIST/Config/01_OneHidden.ndl"
+    ]
+    SGD = [
+        epochSize = 60000
+        minibatchSize = 32
+        learningRatesPerMB = 0.1
+        momentumPerMB = 0
+        maxEpochs = 30
+    ]
+    reader = [
+        readerType = "UCIFastReader"
+        file = "/home/mahilleb/CNTK/Examples/Image/MNIST/Data/Train-28x28.txt"
+        features = [
+            dim = 784
+            start = 1
+        ]
+        labels = [
+            dim = 1
+            start = 0
+            labelDim = 10
+            labelMappingFile = "/home/mahilleb/CNTK/Examples/Image/MNIST/Data/labelsmap.txt"
+        ]
+    ]    
+] [reader=[randomize=none]]
+
+configparameters: 01_OneHidden.cntk:ModelDir=/tmp/cntk-test-20160407140437.931634/Examples/Image/MNIST_01_OneHidden@release_gpu/Models
+configparameters: 01_OneHidden.cntk:modelPath=/tmp/cntk-test-20160407140437.931634/Examples/Image/MNIST_01_OneHidden@release_gpu/Models/01_OneHidden
+configparameters: 01_OneHidden.cntk:ndlMacros=/home/mahilleb/CNTK/Tests/EndToEndTests/Examples/Image/MNIST/01_OneHidden/../../../../../../Examples/Image/MNIST/Config/Macros.ndl
+configparameters: 01_OneHidden.cntk:numMBsToShowResult=500
+configparameters: 01_OneHidden.cntk:OutputDir=/tmp/cntk-test-20160407140437.931634/Examples/Image/MNIST_01_OneHidden@release_gpu
+configparameters: 01_OneHidden.cntk:precision=float
+configparameters: 01_OneHidden.cntk:RootDir=..
+configparameters: 01_OneHidden.cntk:RunDir=/tmp/cntk-test-20160407140437.931634/Examples/Image/MNIST_01_OneHidden@release_gpu
+configparameters: 01_OneHidden.cntk:timestamping=true
+configparameters: 01_OneHidden.cntk:traceLevel=1
+04/07/2016 14:04:38: <<<<<<<<<<<<<<<<<<<< PROCESSED CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<
+04/07/2016 14:04:38: Commands: MNISTtrain MNISTtest
+04/07/2016 14:04:38: Precision = "float"
+04/07/2016 14:04:38: CNTKModelPath: /tmp/cntk-test-20160407140437.931634/Examples/Image/MNIST_01_OneHidden@release_gpu/Models/01_OneHidden
+04/07/2016 14:04:38: CNTKCommandTrainInfo: MNISTtrain : 30
+04/07/2016 14:04:38: CNTKCommandTrainInfo: CNTKNoMoreCommands_Total : 30
+
+04/07/2016 14:04:38: ##############################################################################
+04/07/2016 14:04:38: #                                                                            #
+04/07/2016 14:04:38: # Action "train"                                                             #
+04/07/2016 14:04:38: #                                                                            #
+04/07/2016 14:04:38: ##############################################################################
+
+04/07/2016 14:04:38: CNTKCommandTrainBegin: MNISTtrain
+NDLBuilder Using GPU 0
+Reading UCI file /home/mahilleb/CNTK/Examples/Image/MNIST/Data/Train-28x28.txt
+
+04/07/2016 14:04:38: Creating virgin network.
+
+Post-processing network...
+
+4 roots:
+	ce = CrossEntropyWithSoftmax()
+	err = ErrorPrediction()
+	errTop5 = ErrorPrediction()
+	ol.z = Plus()
+
+Validating network. 17 nodes to process in pass 1.
+
+
+Validating network. 9 nodes to process in pass 2.
+
+
+Validating network, final pass.
+
+Validating --> labels = InputValue() :  -> [10 x *]
+Validating --> ol.W = LearnableParameter() :  -> [10 x 200]
+Validating --> h1.W = LearnableParameter() :  -> [200 x 784]
+Validating --> featScale = LearnableParameter() :  -> [1 x 1]
+Validating --> features = InputValue() :  -> [784 x *]
+Validating --> featScaled = ElementTimes (featScale, features) : [1 x 1], [784 x *] -> [784 x 1 x *]
+Validating --> h1.t = Times (h1.W, featScaled) : [200 x 784], [784 x 1 x *] -> [200 x 1 x *]
+Validating --> h1.b = LearnableParameter() :  -> [200 x 1]
+Validating --> h1.z = Plus (h1.t, h1.b) : [200 x 1 x *], [200 x 1] -> [200 x 1 x *]
+Validating --> h1.y = Sigmoid (h1.z) : [200 x 1 x *] -> [200 x 1 x *]
+Validating --> ol.t = Times (ol.W, h1.y) : [10 x 200], [200 x 1 x *] -> [10 x 1 x *]
+Validating --> ol.b = LearnableParameter() :  -> [10 x 1]
+Validating --> ol.z = Plus (ol.t, ol.b) : [10 x 1 x *], [10 x 1] -> [10 x 1 x *]
+Validating --> ce = CrossEntropyWithSoftmax (labels, ol.z) : [10 x *], [10 x 1 x *] -> [1]
+Validating --> err = ErrorPrediction (labels, ol.z) : [10 x *], [10 x 1 x *] -> [1]
+Validating --> unnamed81 = LearnableParameter() :  -> [1 x 1]
+Validating --> errTop5 = ErrorPrediction (labels, ol.z, unnamed81) : [10 x *], [10 x 1 x *], [1 x 1] -> [1]
+
+
+9 out of 17 nodes do not share the minibatch layout with the input data.
+
+Post-processing network complete.
+
+04/07/2016 14:04:38: Created model with 17 nodes on GPU 0.
+
+04/07/2016 14:04:38: Training criterion node(s):
+04/07/2016 14:04:38: 	ce = CrossEntropyWithSoftmax
+
+04/07/2016 14:04:38: Evaluation criterion node(s):
+
+04/07/2016 14:04:38: 	errTop5 = ErrorPrediction
+04/07/2016 14:04:38: 	err = ErrorPrediction
+
+
+Allocating matrices for forward and/or backward propagation.
+04/07/2016 14:04:38: No PreCompute nodes found, skipping PreCompute step.
+
+04/07/2016 14:04:38: Starting Epoch 1: learning rate per sample = 0.003125  effective momentum = 0.000000  momentum as time constant = 0.0 samples
+UCIFastReader: Starting at epoch 0, counting lines to determine record count...
+ 60000 records found.
+starting epoch 0 at record count 0, and file position 0
+already there from last epoch
+
+04/07/2016 14:04:39: Starting minibatch loop.
+04/07/2016 14:04:39:  Epoch[ 1 of 30]-Minibatch[   1- 500, 26.67%]: SamplesSeen = 16000; TrainLossPerSample =  1.29554907; EvalErr[0]PerSample = 0.38125000; EvalErr[1]PerSample = 0.38125000; TotalTime = 0.5578s; SamplesPerSecond = 28684.9
+04/07/2016 14:04:40:  Epoch[ 1 of 30]-Minibatch[ 501-1000, 53.33%]: SamplesSeen = 16000; TrainLossPerSample =  0.50022791; EvalErr[0]PerSample = 0.13212500; EvalErr[1]PerSample = 0.13212500; TotalTime = 0.4482s; SamplesPerSecond = 35702.0
+04/07/2016 14:04:40:  Epoch[ 1 of 30]-Minibatch[1001-1500, 80.00%]: SamplesSeen = 16000; TrainLossPerSample =  0.39194543; EvalErr[0]PerSample = 0.11150000; EvalErr[1]PerSample = 0.11150000; TotalTime = 0.4494s; SamplesPerSecond = 35601.4
+04/07/2016 14:04:41: Finished Epoch[ 1 of 30]: [Training Set] TrainLossPerSample = 0.64949685; TotalSamplesSeen = 60000; EvalErrPerSample [0]=0.18576667; [1]=0.18576667; AvgLearningRatePerSample = 0.003125; EpochTime=2.30671
+04/07/2016 14:04:41: Finished Epoch[ 1 of 30]:     Criterion Node [ce] Per Sample = 0.64949685
+04/07/2016 14:04:41: Finished Epoch[ 1 of 30]:     Evaluation Node [errTop5] Per Sample = 0.18576667
+04/07/2016 14:04:41: Finished Epoch[ 1 of 30]:     Evaluation Node [err] Per Sample = 0.18576667
+04/07/2016 14:04:41: SGD: Saving checkpoint model '/tmp/cntk-test-20160407140437.931634/Examples/Image/MNIST_01_OneHidden@release_gpu/Models/01_OneHidden.1'
+
+04/07/2016 14:04:41: Starting Epoch 2: learning rate per sample = 0.003125  effective momentum = 0.000000  momentum as time constant = 0.0 samples
+starting epoch 1 at record count 60000, and file position 0
+already there from last epoch
+
+04/07/2016 14:04:41: Starting minibatch loop.
+04/07/2016 14:04:41:  Epoch[ 2 of 30]-Minibatch[   1- 500, 26.67%]: SamplesSeen = 16000; TrainLossPerSample =  0.33514655; EvalErr[0]PerSample = 0.09568750; EvalErr[1]PerSample = 0.09568750; TotalTime = 0.2391s; SamplesPerSecond = 66912.0
+04/07/2016 14:04:41:  Epoch[ 2 of 30]-Minibatch[ 501-1000, 53.33%]: SamplesSeen = 16000; TrainLossPerSample =  0.31925513; EvalErr[0]PerSample = 0.09193750; EvalErr[1]PerSample = 0.09193750; TotalTime = 0.2393s; SamplesPerSecond = 66873.1
+04/07/2016 14:04:41:  Epoch[ 2 of 30]-Minibatch[1001-1500, 80.00%]: SamplesSeen = 16000; TrainLossPerSample =  0.30763525; EvalErr[0]PerSample = 0.09056250; EvalErr[1]PerSample = 0.09056250; TotalTime = 0.2392s; SamplesPerSecond = 66884.0
+04/07/2016 14:04:42: Finished Epoch[ 2 of 30]: [Training Set] TrainLossPerSample = 0.31140831; TotalSamplesSeen = 120000; EvalErrPerSample [0]=0.089983337; [1]=0.089983337; AvgLearningRatePerSample = 0.003125; EpochTime=0.898468
+04/07/2016 14:04:42: Finished Epoch[ 2 of 30]:     Criterion Node [ce] Per Sample = 0.31140831
+04/07/2016 14:04:42: Finished Epoch[ 2 of 30]:     Evaluation Node [errTop5] Per Sample = 0.089983337
+04/07/2016 14:04:42: Finished Epoch[ 2 of 30]:     Evaluation Node [err] Per Sample = 0.089983337
+04/07/2016 14:04:42: SGD: Saving checkpoint model '/tmp/cntk-test-20160407140437.931634/Examples/Image/MNIST_01_OneHidden@release_gpu/Models/01_OneHidden.2'
+
+04/07/2016 14:04:42: Starting Epoch 3: learning rate per sample = 0.003125  effective momentum = 0.000000  momentum as time constant = 0.0 samples
+starting epoch 2 at record count 120000, and file position 0
+already there from last epoch
+
+04/07/2016 14:04:42: Starting minibatch loop.
+04/07/2016 14:04:42:  Epoch[ 3 of 30]-Minibatch[   1- 500, 26.67%]: SamplesSeen = 16000; TrainLossPerSample =  0.28740411; EvalErr[0]PerSample = 0.08375000; EvalErr[1]PerSample = 0.08375000; TotalTime = 0.2393s; SamplesPerSecond = 66858.0
+04/07/2016 14:04:42:  Epoch[ 3 of 30]-Minibatch[ 501-1000, 53.33%]: SamplesSeen = 16000; TrainLossPerSample =  0.27846802; EvalErr[0]PerSample = 0.07981250; EvalErr[1]PerSample = 0.07981250; TotalTime = 0.2400s; SamplesPerSecond = 66672.5
+04/07/2016 14:04:42:  Epoch[ 3 of 30]-Minibatch[1001-1500, 80.00%]: SamplesSeen = 16000; TrainLossPerSample =  0.27320044; EvalErr[0]PerSample = 0.08025000; EvalErr[1]PerSample = 0.08025000; TotalTime = 0.2390s; SamplesPerSecond = 66941.4
+04/07/2016 14:04:43: Finished Epoch[ 3 of 30]: [Training Set] TrainLossPerSample = 0.2724613; TotalSamplesSeen = 180000; EvalErrPerSample [0]=0.078916669; [1]=0.078916669; AvgLearningRatePerSample = 0.003125; EpochTime=0.899276
+04/07/2016 14:04:43: Finished Epoch[ 3 of 30]:     Criterion Node [ce] Per Sample = 0.2724613
+04/07/2016 14:04:43: Finished Epoch[ 3 of 30]:     Evaluation Node [errTop5] Per Sample = 0.078916669
+04/07/2016 14:04:43: Finished Epoch[ 3 of 30]:     Evaluation Node [err] Per Sample = 0.078916669
+04/07/2016 14:04:43: SGD: Saving checkpoint model '/tmp/cntk-test-20160407140437.931634/Examples/Image/MNIST_01_OneHidden@release_gpu/Models/01_OneHidden.3'
+
+04/07/2016 14:04:43: Starting Epoch 4: learning rate per sample = 0.003125  effective momentum = 0.000000  momentum as time constant = 0.0 samples
+starting epoch 3 at record count 180000, and file position 0
+already there from last epoch
+
+04/07/2016 14:04:43: Starting minibatch loop.
+04/07/2016 14:04:43:  Epoch[ 4 of 30]-Minibatch[   1- 500, 26.67%]: SamplesSeen = 16000; TrainLossPerSample =  0.25527621; EvalErr[0]PerSample = 0.07356250; EvalErr[1]PerSample = 0.07356250; TotalTime = 0.2391s; SamplesPerSecond = 66918.4
+04/07/2016 14:04:43:  Epoch[ 4 of 30]-Minibatch[ 501-1000, 53.33%]: SamplesSeen = 16000; TrainLossPerSample =  0.24833566; EvalErr[0]PerSample = 0.07106250; EvalErr[1]PerSample = 0.07106250; TotalTime = 0.2393s; SamplesPerSecond = 66856.4
+04/07/2016 14:04:43:  Epoch[ 4 of 30]-Minibatch[1001-1500, 80.00%]: SamplesSeen = 16000; TrainLossPerSample =  0.24453772; EvalErr[0]PerSample = 0.07056250; EvalErr[1]PerSample = 0.07056250; TotalTime = 0.2391s; SamplesPerSecond = 66919.0
+04/07/2016 14:04:43: Finished Epoch[ 4 of 30]: [Training Set] TrainLossPerSample = 0.24299194; TotalSamplesSeen = 240000; EvalErrPerSample [0]=0.069650002; [1]=0.069650002; AvgLearningRatePerSample = 0.003125; EpochTime=0.898466
+04/07/2016 14:04:43: Finished Epoch[ 4 of 30]:     Criterion Node [ce] Per Sample = 0.24299194
+04/07/2016 14:04:43: Finished Epoch[ 4 of 30]:     Evaluation Node [errTop5] Per Sample = 0.069650002
+04/07/2016 14:04:43: Finished Epoch[ 4 of 30]:     Evaluation Node [err] Per Sample = 0.069650002
+04/07/2016 14:04:43: SGD: Saving checkpoint model '/tmp/cntk-test-20160407140437.931634/Examples/Image/MNIST_01_OneHidden@release_gpu/Models/01_OneHidden.4'
+
+04/07/2016 14:04:43: Starting Epoch 5: learning rate per sample = 0.003125  effective momentum = 0.000000  momentum as time constant = 0.0 samples
+starting epoch 4 at record count 240000, and file position 0
+already there from last epoch
+
+04/07/2016 14:04:43: Starting minibatch loop.
+04/07/2016 14:04:44:  Epoch[ 5 of 30]-Minibatch[   1- 500, 26.67%]: SamplesSeen = 16000; TrainLossPerSample =  0.22738316; EvalErr[0]PerSample = 0.06581250; EvalErr[1]PerSample = 0.06581250; TotalTime = 0.2392s; SamplesPerSecond = 66894.1
+04/07/2016 14:04:44:  Epoch[ 5 of 30]-Minibatch[ 501-1000, 53.33%]: SamplesSeen = 16000; TrainLossPerSample =  0.22237688; EvalErr[0]PerSample = 0.06400000; EvalErr[1]PerSample = 0.06400000; TotalTime = 0.2392s; SamplesPerSecond = 66875.9
+04/07/2016 14:04:44:  Epoch[ 5 of 30]-Minibatch[1001-1500, 80.00%]: SamplesSeen = 16000; TrainLossPerSample =  0.21983353; EvalErr[0]PerSample = 0.06381250; EvalErr[1]PerSample = 0.06381250; TotalTime = 0.2402s; SamplesPerSecond = 66605.3
+04/07/2016 14:04:44: Finished Epoch[ 5 of 30]: [Training Set] TrainLossPerSample = 0.21759067; TotalSamplesSeen = 300000; EvalErrPerSample [0]=0.062466666; [1]=0.062466666; AvgLearningRatePerSample = 0.003125; EpochTime=0.89968
+04/07/2016 14:04:44: Finished Epoch[ 5 of 30]:     Criterion Node [ce] Per Sample = 0.21759067
+04/07/2016 14:04:44: Finished Epoch[ 5 of 30]:     Evaluation Node [errTop5] Per Sample = 0.062466666
+04/07/2016 14:04:44: Finished Epoch[ 5 of 30]:     Evaluation Node [err] Per Sample = 0.062466666
+04/07/2016 14:04:44: SGD: Saving checkpoint model '/tmp/cntk-test-20160407140437.931634/Examples/Image/MNIST_01_OneHidden@release_gpu/Models/01_OneHidden.5'
+
+04/07/2016 14:04:44: Starting Epoch 6: learning rate per sample = 0.003125  effective momentum = 0.000000  momentum as time constant = 0.0 samples
+starting epoch 5 at record count 300000, and file position 0
+already there from last epoch
+
+04/07/2016 14:04:44: Starting minibatch loop.
+04/07/2016 14:04:45:  Epoch[ 6 of 30]-Minibatch[   1- 500, 26.67%]: SamplesSeen = 16000; TrainLossPerSample =  0.20367961; EvalErr[0]PerSample = 0.05812500; EvalErr[1]PerSample = 0.05812500; TotalTime = 0.2392s; SamplesPerSecond = 66900.3
+04/07/2016 14:04:45:  Epoch[ 6 of 30]-Minibatch[ 501-1000, 53.33%]: SamplesSeen = 16000; TrainLossPerSample =  0.20047520; EvalErr[0]PerSample = 0.05706250; EvalErr[1]PerSample = 0.05706250; TotalTime = 0.2390s; SamplesPerSecond = 66950.9
+04/07/2016 14:04:45:  Epoch[ 6 of 30]-Minibatch[1001-1500, 80.00%]: SamplesSeen = 16000; TrainLossPerSample =  0.19919839; EvalErr[0]PerSample = 0.05768750; EvalErr[1]PerSample = 0.05768750; TotalTime = 0.2390s; SamplesPerSecond = 66948.4
+04/07/2016 14:04:45: Finished Epoch[ 6 of 30]: [Training Set] TrainLossPerSample = 0.19621238; TotalSamplesSeen = 360000; EvalErrPerSample [0]=0.056000002; [1]=0.056000002; AvgLearningRatePerSample = 0.003125; EpochTime=0.897957
+04/07/2016 14:04:45: Finished Epoch[ 6 of 30]:     Criterion Node [ce] Per Sample = 0.19621238
+04/07/2016 14:04:45: Finished Epoch[ 6 of 30]:     Evaluation Node [errTop5] Per Sample = 0.056000002
+04/07/2016 14:04:45: Finished Epoch[ 6 of 30]:     Evaluation Node [err] Per Sample = 0.056000002
+04/07/2016 14:04:45: SGD: Saving checkpoint model '/tmp/cntk-test-20160407140437.931634/Examples/Image/MNIST_01_OneHidden@release_gpu/Models/01_OneHidden.6'
+
+04/07/2016 14:04:45: Starting Epoch 7: learning rate per sample = 0.003125  effective momentum = 0.000000  momentum as time constant = 0.0 samples
+starting epoch 6 at record count 360000, and file position 0
+already there from last epoch
+
+04/07/2016 14:04:45: Starting minibatch loop.
+04/07/2016 14:04:45:  Epoch[ 7 of 30]-Minibatch[   1- 500, 26.67%]: SamplesSeen = 16000; TrainLossPerSample =  0.18383334; EvalErr[0]PerSample = 0.05268750; EvalErr[1]PerSample = 0.05268750; TotalTime = 0.2395s; SamplesPerSecond = 66799.4
+04/07/2016 14:04:46:  Epoch[ 7 of 30]-Minibatch[ 501-1000, 53.33%]: SamplesSeen = 16000; TrainLossPerSample =  0.18212634; EvalErr[0]PerSample = 0.05206250; EvalErr[1]PerSample = 0.05206250; TotalTime = 0.2391s; SamplesPerSecond = 66930.5
+04/07/2016 14:04:46:  Epoch[ 7 of 30]-Minibatch[1001-1500, 80.00%]: SamplesSeen = 16000; TrainLossPerSample =  0.18186630; EvalErr[0]PerSample = 0.05231250; EvalErr[1]PerSample = 0.05231250; TotalTime = 0.2393s; SamplesPerSecond = 66855.8
+04/07/2016 14:04:46: Finished Epoch[ 7 of 30]: [Training Set] TrainLossPerSample = 0.17827822; TotalSamplesSeen = 420000; EvalErrPerSample [0]=0.050650001; [1]=0.050650001; AvgLearningRatePerSample = 0.003125; EpochTime=0.898836
+04/07/2016 14:04:46: Finished Epoch[ 7 of 30]:     Criterion Node [ce] Per Sample = 0.17827822
+04/07/2016 14:04:46: Finished Epoch[ 7 of 30]:     Evaluation Node [errTop5] Per Sample = 0.050650001
+04/07/2016 14:04:46: Finished Epoch[ 7 of 30]:     Evaluation Node [err] Per Sample = 0.050650001
+04/07/2016 14:04:46: SGD: Saving checkpoint model '/tmp/cntk-test-20160407140437.931634/Examples/Image/MNIST_01_OneHidden@release_gpu/Models/01_OneHidden.7'
+
+04/07/2016 14:04:46: Starting Epoch 8: learning rate per sample = 0.003125  effective momentum = 0.000000  momentum as time constant = 0.0 samples
+starting epoch 7 at record count 420000, and file position 0
+already there from last epoch
+
+04/07/2016 14:04:46: Starting minibatch loop.
+04/07/2016 14:04:46:  Epoch[ 8 of 30]-Minibatch[   1- 500, 26.67%]: SamplesSeen = 16000; TrainLossPerSample =  0.16707426; EvalErr[0]PerSample = 0.04881250; EvalErr[1]PerSample = 0.04881250; TotalTime = 0.2393s; SamplesPerSecond = 66849.9
+04/07/2016 14:04:47:  Epoch[ 8 of 30]-Minibatch[ 501-1000, 53.33%]: SamplesSeen = 16000; TrainLossPerSample =  0.16657964; EvalErr[0]PerSample = 0.04762500; EvalErr[1]PerSample = 0.04762500; TotalTime = 0.2396s; SamplesPerSecond = 66789.9
+04/07/2016 14:04:47:  Epoch[ 8 of 30]-Minibatch[1001-1500, 80.00%]: SamplesSeen = 16000; TrainLossPerSample =  0.16704306; EvalErr[0]PerSample = 0.04750000; EvalErr[1]PerSample = 0.04750000; TotalTime = 0.2393s; SamplesPerSecond = 66860.6
+04/07/2016 14:04:47: Finished Epoch[ 8 of 30]: [Training Set] TrainLossPerSample = 0.16303664; TotalSamplesSeen = 480000; EvalErrPerSample [0]=0.046483334; [1]=0.046483334; AvgLearningRatePerSample = 0.003125; EpochTime=0.899093
+04/07/2016 14:04:47: Finished Epoch[ 8 of 30]:     Criterion Node [ce] Per Sample = 0.16303664
+04/07/2016 14:04:47: Finished Epoch[ 8 of 30]:     Evaluation Node [errTop5] Per Sample = 0.046483334
+04/07/2016 14:04:47: Finished Epoch[ 8 of 30]:     Evaluation Node [err] Per Sample = 0.046483334
+04/07/2016 14:04:47: SGD: Saving checkpoint model '/tmp/cntk-test-20160407140437.931634/Examples/Image/MNIST_01_OneHidden@release_gpu/Models/01_OneHidden.8'
+
+04/07/2016 14:04:47: Starting Epoch 9: learning rate per sample = 0.003125  effective momentum = 0.000000  momentum as time constant = 0.0 samples
+starting epoch 8 at record count 480000, and file position 0
+already there from last epoch
+
+04/07/2016 14:04:47: Starting minibatch loop.
+04/07/2016 14:04:47:  Epoch[ 9 of 30]-Minibatch[   1- 500, 26.67%]: SamplesSeen = 16000; TrainLossPerSample =  0.15274779; EvalErr[0]PerSample = 0.04450000; EvalErr[1]PerSample = 0.04450000; TotalTime = 0.2391s; SamplesPerSecond = 66912.6
+04/07/2016 14:04:48:  Epoch[ 9 of 30]-Minibatch[ 501-1000, 53.33%]: SamplesSeen = 16000; TrainLossPerSample =  0.15323347; EvalErr[0]PerSample = 0.04450000; EvalErr[1]PerSample = 0.04450000; TotalTime = 0.2392s; SamplesPerSecond = 66896.6
+04/07/2016 14:04:48:  Epoch[ 9 of 30]-Minibatch[1001-1500, 80.00%]: SamplesSeen = 16000; TrainLossPerSample =  0.15418118; EvalErr[0]PerSample = 0.04425000; EvalErr[1]PerSample = 0.04425000; TotalTime = 0.2393s; SamplesPerSecond = 66865.9
+04/07/2016 14:04:48: Finished Epoch[ 9 of 30]: [Training Set] TrainLossPerSample = 0.14991474; TotalSamplesSeen = 540000; EvalErrPerSample [0]=0.04315; [1]=0.04315; AvgLearningRatePerSample = 0.003125; EpochTime=0.898354
+04/07/2016 14:04:48: Finished Epoch[ 9 of 30]:     Criterion Node [ce] Per Sample = 0.14991474
+04/07/2016 14:04:48: Finished Epoch[ 9 of 30]:     Evaluation Node [errTop5] Per Sample = 0.04315
+04/07/2016 14:04:48: Finished Epoch[ 9 of 30]:     Evaluation Node [err] Per Sample = 0.04315
+04/07/2016 14:04:48: SGD: Saving checkpoint model '/tmp/cntk-test-20160407140437.931634/Examples/Image/MNIST_01_OneHidden@release_gpu/Models/01_OneHidden.9'
+
+04/07/2016 14:04:48: Starting Epoch 10: learning rate per sample = 0.003125  effective momentum = 0.000000  momentum as time constant = 0.0 samples
+starting epoch 9 at record count 540000, and file position 0
+already there from last epoch
+
+04/07/2016 14:04:48: Starting minibatch loop.
+04/07/2016 14:04:48:  Epoch[10 of 30]-Minibatch[   1- 500, 26.67%]: SamplesSeen = 16000; TrainLossPerSample =  0.14038245; EvalErr[0]PerSample = 0.04062500; EvalErr[1]PerSample = 0.04062500; TotalTime = 0.2393s; SamplesPerSecond = 66875.1
+04/07/2016 14:04:48:  Epoch[10 of 30]-Minibatch[ 501-1000, 53.33%]: SamplesSeen = 16000; TrainLossPerSample =  0.14165695; EvalErr[0]PerSample = 0.04100000; EvalErr[1]PerSample = 0.04100000; TotalTime = 0.2391s; SamplesPerSecond = 66926.8
+04/07/2016 14:04:49:  Epoch[10 of 30]-Minibatch[1001-1500, 80.00%]: SamplesSeen = 16000; TrainLossPerSample =  0.14291498; EvalErr[0]PerSample = 0.04093750; EvalErr[1]PerSample = 0.04093750; TotalTime = 0.2389s; SamplesPerSecond = 66971.1
+04/07/2016 14:04:49: Finished Epoch[10 of 30]: [Training Set] TrainLossPerSample = 0.13850868; TotalSamplesSeen = 600000; EvalErrPerSample [0]=0.039583333; [1]=0.039583333; AvgLearningRatePerSample = 0.003125; EpochTime=0.897973
+04/07/2016 14:04:49: Finished Epoch[10 of 30]:     Criterion Node [ce] Per Sample = 0.13850868
+04/07/2016 14:04:49: Finished Epoch[10 of 30]:     Evaluation Node [errTop5] Per Sample = 0.039583333
+04/07/2016 14:04:49: Finished Epoch[10 of 30]:     Evaluation Node [err] Per Sample = 0.039583333
+04/07/2016 14:04:49: SGD: Saving checkpoint model '/tmp/cntk-test-20160407140437.931634/Examples/Image/MNIST_01_OneHidden@release_gpu/Models/01_OneHidden.10'
+
+04/07/2016 14:04:49: Starting Epoch 11: learning rate per sample = 0.003125  effective momentum = 0.000000  momentum as time constant = 0.0 samples
+starting epoch 10 at record count 600000, and file position 0
+already there from last epoch
+
+04/07/2016 14:04:49: Starting minibatch loop.
+04/07/2016 14:04:49:  Epoch[11 of 30]-Minibatch[   1- 500, 26.67%]: SamplesSeen = 16000; TrainLossPerSample =  0.12962636; EvalErr[0]PerSample = 0.03731250; EvalErr[1]PerSample = 0.03731250; TotalTime = 0.2391s; SamplesPerSecond = 66928.0
+04/07/2016 14:04:49:  Epoch[11 of 30]-Minibatch[ 501-1000, 53.33%]: SamplesSeen = 16000; TrainLossPerSample =  0.13153072; EvalErr[0]PerSample = 0.03775000; EvalErr[1]PerSample = 0.03775000; TotalTime = 0.2390s; SamplesPerSecond = 66945.6
+04/07/2016 14:04:50:  Epoch[11 of 30]-Minibatch[1001-1500, 80.00%]: SamplesSeen = 16000; TrainLossPerSample =  0.13298419; EvalErr[0]PerSample = 0.03900000; EvalErr[1]PerSample = 0.03900000; TotalTime = 0.2390s; SamplesPerSecond = 66943.6
+04/07/2016 14:04:50: Finished Epoch[11 of 30]: [Training Set] TrainLossPerSample = 0.12852019; TotalSamplesSeen = 660000; EvalErrPerSample [0]=0.036699999; [1]=0.036699999; AvgLearningRatePerSample = 0.003125; EpochTime=0.897779
+04/07/2016 14:04:50: Finished Epoch[11 of 30]:     Criterion Node [ce] Per Sample = 0.12852019
+04/07/2016 14:04:50: Finished Epoch[11 of 30]:     Evaluation Node [errTop5] Per Sample = 0.036699999
+04/07/2016 14:04:50: Finished Epoch[11 of 30]:     Evaluation Node [err] Per Sample = 0.036699999
+04/07/2016 14:04:50: SGD: Saving checkpoint model '/tmp/cntk-test-20160407140437.931634/Examples/Image/MNIST_01_OneHidden@release_gpu/Models/01_OneHidden.11'
+
+04/07/2016 14:04:50: Starting Epoch 12: learning rate per sample = 0.003125  effective momentum = 0.000000  momentum as time constant = 0.0 samples
+starting epoch 11 at record count 660000, and file position 0
+already there from last epoch
+
+04/07/2016 14:04:50: Starting minibatch loop.
+04/07/2016 14:04:50:  Epoch[12 of 30]-Minibatch[   1- 500, 26.67%]: SamplesSeen = 16000; TrainLossPerSample =  0.12020341; EvalErr[0]PerSample = 0.03381250; EvalErr[1]PerSample = 0.03381250; TotalTime = 0.2393s; SamplesPerSecond = 66849.1
+04/07/2016 14:04:50:  Epoch[12 of 30]-Minibatch[ 501-1000, 53.33%]: SamplesSeen = 16000; TrainLossPerSample =  0.12260921; EvalErr[0]PerSample = 0.03587500; EvalErr[1]PerSample = 0.03587500; TotalTime = 0.2390s; SamplesPerSecond = 66936.1
+04/07/2016 14:04:51:  Epoch[12 of 30]-Minibatch[1001-1500, 80.00%]: SamplesSeen = 16000; TrainLossPerSample =  0.12419101; EvalErr[0]PerSample = 0.03618750; EvalErr[1]PerSample = 0.03618750; TotalTime = 0.2391s; SamplesPerSecond = 66907.0
+04/07/2016 14:04:51: Finished Epoch[12 of 30]: [Training Set] TrainLossPerSample = 0.11971864; TotalSamplesSeen = 720000; EvalErrPerSample [0]=0.034066666; [1]=0.034066666; AvgLearningRatePerSample = 0.003125; EpochTime=0.898274
+04/07/2016 14:04:51: Finished Epoch[12 of 30]:     Criterion Node [ce] Per Sample = 0.11971864
+04/07/2016 14:04:51: Finished Epoch[12 of 30]:     Evaluation Node [errTop5] Per Sample = 0.034066666
+04/07/2016 14:04:51: Finished Epoch[12 of 30]:     Evaluation Node [err] Per Sample = 0.034066666
+04/07/2016 14:04:51: SGD: Saving checkpoint model '/tmp/cntk-test-20160407140437.931634/Examples/Image/MNIST_01_OneHidden@release_gpu/Models/01_OneHidden.12'
+
+04/07/2016 14:04:51: Starting Epoch 13: learning rate per sample = 0.003125  effective momentum = 0.000000  momentum as time constant = 0.0 samples
+starting epoch 12 at record count 720000, and file position 0
+already there from last epoch
+
+04/07/2016 14:04:51: Starting minibatch loop.
+04/07/2016 14:04:51:  Epoch[13 of 30]-Minibatch[   1- 500, 26.67%]: SamplesSeen = 16000; TrainLossPerSample =  0.11189415; EvalErr[0]PerSample = 0.03093750; EvalErr[1]PerSample = 0.03093750; TotalTime = 0.2393s; SamplesPerSecond = 66865.0
+04/07/2016 14:04:51:  Epoch[13 of 30]-Minibatch[ 501-1000, 53.33%]: SamplesSeen = 16000; TrainLossPerSample =  0.11469778; EvalErr[0]PerSample = 0.03400000; EvalErr[1]PerSample = 0.03400000; TotalTime = 0.2393s; SamplesPerSecond = 66860.8
+04/07/2016 14:04:51:  Epoch[13 of 30]-Minibatch[1001-1500, 80.00%]: SamplesSeen = 16000; TrainLossPerSample =  0.11637517; EvalErr[0]PerSample = 0.03412500; EvalErr[1]PerSample = 0.03412500; TotalTime = 0.2393s; SamplesPerSecond = 66862.2
+04/07/2016 14:04:52: Finished Epoch[13 of 30]: [Training Set] TrainLossPerSample = 0.11191925; TotalSamplesSeen = 780000; EvalErrPerSample [0]=0.0319; [1]=0.0319; AvgLearningRatePerSample = 0.003125; EpochTime=0.898649
+04/07/2016 14:04:52: Finished Epoch[13 of 30]:     Criterion Node [ce] Per Sample = 0.11191925
+04/07/2016 14:04:52: Finished Epoch[13 of 30]:     Evaluation Node [errTop5] Per Sample = 0.0319
+04/07/2016 14:04:52: Finished Epoch[13 of 30]:     Evaluation Node [err] Per Sample = 0.0319
+04/07/2016 14:04:52: SGD: Saving checkpoint model '/tmp/cntk-test-20160407140437.931634/Examples/Image/MNIST_01_OneHidden@release_gpu/Models/01_OneHidden.13'
+
+04/07/2016 14:04:52: Starting Epoch 14: learning rate per sample = 0.003125  effective momentum = 0.000000  momentum as time constant = 0.0 samples
+starting epoch 13 at record count 780000, and file position 0
+already there from last epoch
+
+04/07/2016 14:04:52: Starting minibatch loop.
+04/07/2016 14:04:52:  Epoch[14 of 30]-Minibatch[   1- 500, 26.67%]: SamplesSeen = 16000; TrainLossPerSample =  0.10452200; EvalErr[0]PerSample = 0.02825000; EvalErr[1]PerSample = 0.02825000; TotalTime = 0.2393s; SamplesPerSecond = 66868.7
+04/07/2016 14:04:52:  Epoch[14 of 30]-Minibatch[ 501-1000, 53.33%]: SamplesSeen = 16000; TrainLossPerSample =  0.10763933; EvalErr[0]PerSample = 0.03143750; EvalErr[1]PerSample = 0.03143750; TotalTime = 0.2391s; SamplesPerSecond = 66914.2
+04/07/2016 14:04:52:  Epoch[14 of 30]-Minibatch[1001-1500, 80.00%]: SamplesSeen = 16000; TrainLossPerSample =  0.10939818; EvalErr[0]PerSample = 0.03187500; EvalErr[1]PerSample = 0.03187500; TotalTime = 0.2391s; SamplesPerSecond = 66917.0
+04/07/2016 14:04:53: Finished Epoch[14 of 30]: [Training Set] TrainLossPerSample = 0.1049702; TotalSamplesSeen = 840000; EvalErrPerSample [0]=0.029516667; [1]=0.029516667; AvgLearningRatePerSample = 0.003125; EpochTime=0.898446
+04/07/2016 14:04:53: Finished Epoch[14 of 30]:     Criterion Node [ce] Per Sample = 0.1049702
+04/07/2016 14:04:53: Finished Epoch[14 of 30]:     Evaluation Node [errTop5] Per Sample = 0.029516667
+04/07/2016 14:04:53: Finished Epoch[14 of 30]:     Evaluation Node [err] Per Sample = 0.029516667
+04/07/2016 14:04:53: SGD: Saving checkpoint model '/tmp/cntk-test-20160407140437.931634/Examples/Image/MNIST_01_OneHidden@release_gpu/Models/01_OneHidden.14'
+
+04/07/2016 14:04:53: Starting Epoch 15: learning rate per sample = 0.003125  effective momentum = 0.000000  momentum as time constant = 0.0 samples
+starting epoch 14 at record count 840000, and file position 0
+already there from last epoch
+
+04/07/2016 14:04:53: Starting minibatch loop.
+04/07/2016 14:04:53:  Epoch[15 of 30]-Minibatch[   1- 500, 26.67%]: SamplesSeen = 16000; TrainLossPerSample =  0.09794547; EvalErr[0]PerSample = 0.02681250; EvalErr[1]PerSample = 0.02681250; TotalTime = 0.2392s; SamplesPerSecond = 66879.0
+04/07/2016 14:04:53:  Epoch[15 of 30]-Minibatch[ 501-1000, 53.33%]: SamplesSeen = 16000; TrainLossPerSample =  0.10130624; EvalErr[0]PerSample = 0.02906250; EvalErr[1]PerSample = 0.02906250; TotalTime = 0.2394s; SamplesPerSecond = 66839.1
+04/07/2016 14:04:53:  Epoch[15 of 30]-Minibatch[1001-1500, 80.00%]: SamplesSeen = 16000; TrainLossPerSample =  0.10314120; EvalErr[0]PerSample = 0.02937500; EvalErr[1]PerSample = 0.02937500; TotalTime = 0.2391s; SamplesPerSecond = 66928.0
+04/07/2016 14:04:53: Finished Epoch[15 of 30]: [Training Set] TrainLossPerSample = 0.098746225; TotalSamplesSeen = 900000; EvalErrPerSample [0]=0.027566668; [1]=0.027566668; AvgLearningRatePerSample = 0.003125; EpochTime=0.898655
+04/07/2016 14:04:53: Finished Epoch[15 of 30]:     Criterion Node [ce] Per Sample = 0.098746225
+04/07/2016 14:04:53: Finished Epoch[15 of 30]:     Evaluation Node [errTop5] Per Sample = 0.027566668
+04/07/2016 14:04:53: Finished Epoch[15 of 30]:     Evaluation Node [err] Per Sample = 0.027566668
+04/07/2016 14:04:53: SGD: Saving checkpoint model '/tmp/cntk-test-20160407140437.931634/Examples/Image/MNIST_01_OneHidden@release_gpu/Models/01_OneHidden.15'
+
+04/07/2016 14:04:53: Starting Epoch 16: learning rate per sample = 0.003125  effective momentum = 0.000000  momentum as time constant = 0.0 samples
+starting epoch 15 at record count 900000, and file position 0
+already there from last epoch
+
+04/07/2016 14:04:53: Starting minibatch loop.
+04/07/2016 14:04:54:  Epoch[16 of 30]-Minibatch[   1- 500, 26.67%]: SamplesSeen = 16000; TrainLossPerSample =  0.09205003; EvalErr[0]PerSample = 0.02506250; EvalErr[1]PerSample = 0.02506250; TotalTime = 0.2395s; SamplesPerSecond = 66804.5
+04/07/2016 14:04:54:  Epoch[16 of 30]-Minibatch[ 501-1000, 53.33%]: SamplesSeen = 16000; TrainLossPerSample =  0.09559438; EvalErr[0]PerSample = 0.02725000; EvalErr[1]PerSample = 0.02725000; TotalTime = 0.2394s; SamplesPerSecond = 66847.2
+04/07/2016 14:04:54:  Epoch[16 of 30]-Minibatch[1001-1500, 80.00%]: SamplesSeen = 16000; TrainLossPerSample =  0.09750049; EvalErr[0]PerSample = 0.02762500; EvalErr[1]PerSample = 0.02762500; TotalTime = 0.2391s; SamplesPerSecond = 66930.5
+04/07/2016 14:04:54: Finished Epoch[16 of 30]: [Training Set] TrainLossPerSample = 0.093143202; TotalSamplesSeen = 960000; EvalErrPerSample [0]=0.025933333; [1]=0.025933333; AvgLearningRatePerSample = 0.003125; EpochTime=0.898779
+04/07/2016 14:04:54: Finished Epoch[16 of 30]:     Criterion Node [ce] Per Sample = 0.093143202
+04/07/2016 14:04:54: Finished Epoch[16 of 30]:     Evaluation Node [errTop5] Per Sample = 0.025933333
+04/07/2016 14:04:54: Finished Epoch[16 of 30]:     Evaluation Node [err] Per Sample = 0.025933333
+04/07/2016 14:04:54: SGD: Saving checkpoint model '/tmp/cntk-test-20160407140437.931634/Examples/Image/MNIST_01_OneHidden@release_gpu/Models/01_OneHidden.16'
+
+04/07/2016 14:04:54: Starting Epoch 17: learning rate per sample = 0.003125  effective momentum = 0.000000  momentum as time constant = 0.0 samples
+starting epoch 16 at record count 960000, and file position 0
+already there from last epoch
+
+04/07/2016 14:04:54: Starting minibatch loop.
+04/07/2016 14:04:55:  Epoch[17 of 30]-Minibatch[   1- 500, 26.67%]: SamplesSeen = 16000; TrainLossPerSample =  0.08674107; EvalErr[0]PerSample = 0.02350000; EvalErr[1]PerSample = 0.02350000; TotalTime = 0.2393s; SamplesPerSecond = 66849.4
+04/07/2016 14:04:55:  Epoch[17 of 30]-Minibatch[ 501-1000, 53.33%]: SamplesSeen = 16000; TrainLossPerSample =  0.09041695; EvalErr[0]PerSample = 0.02531250; EvalErr[1]PerSample = 0.02531250; TotalTime = 0.2393s; SamplesPerSecond = 66860.0
+04/07/2016 14:04:55:  Epoch[17 of 30]-Minibatch[1001-1500, 80.00%]: SamplesSeen = 16000; TrainLossPerSample =  0.09238812; EvalErr[0]PerSample = 0.02618750; EvalErr[1]PerSample = 0.02618750; TotalTime = 0.2391s; SamplesPerSecond = 66914.8
+04/07/2016 14:04:55: Finished Epoch[17 of 30]: [Training Set] TrainLossPerSample = 0.088073827; TotalSamplesSeen = 1020000; EvalErrPerSample [0]=0.024383334; [1]=0.024383334; AvgLearningRatePerSample = 0.003125; EpochTime=0.898655
+04/07/2016 14:04:55: Finished Epoch[17 of 30]:     Criterion Node [ce] Per Sample = 0.088073827
+04/07/2016 14:04:55: Finished Epoch[17 of 30]:     Evaluation Node [errTop5] Per Sample = 0.024383334
+04/07/2016 14:04:55: Finished Epoch[17 of 30]:     Evaluation Node [err] Per Sample = 0.024383334
+04/07/2016 14:04:55: SGD: Saving checkpoint model '/tmp/cntk-test-20160407140437.931634/Examples/Image/MNIST_01_OneHidden@release_gpu/Models/01_OneHidden.17'
+
+04/07/2016 14:04:55: Starting Epoch 18: learning rate per sample = 0.003125  effective momentum = 0.000000  momentum as time constant = 0.0 samples
+starting epoch 17 at record count 1020000, and file position 0
+already there from last epoch
+
+04/07/2016 14:04:55: Starting minibatch loop.
+04/07/2016 14:04:55:  Epoch[18 of 30]-Minibatch[   1- 500, 26.67%]: SamplesSeen = 16000; TrainLossPerSample =  0.08193969; EvalErr[0]PerSample = 0.02212500; EvalErr[1]PerSample = 0.02212500; TotalTime = 0.2393s; SamplesPerSecond = 66849.1
+04/07/2016 14:04:56:  Epoch[18 of 30]-Minibatch[ 501-1000, 53.33%]: SamplesSeen = 16000; TrainLossPerSample =  0.08570138; EvalErr[0]PerSample = 0.02375000; EvalErr[1]PerSample = 0.02375000; TotalTime = 0.2394s; SamplesPerSecond = 66836.5
+04/07/2016 14:04:56:  Epoch[18 of 30]-Minibatch[1001-1500, 80.00%]: SamplesSeen = 16000; TrainLossPerSample =  0.08772934; EvalErr[0]PerSample = 0.02425000; EvalErr[1]PerSample = 0.02425000; TotalTime = 0.2392s; SamplesPerSecond = 66901.9
+04/07/2016 14:04:56: Finished Epoch[18 of 30]: [Training Set] TrainLossPerSample = 0.083464988; TotalSamplesSeen = 1080000; EvalErrPerSample [0]=0.022849999; [1]=0.022849999; AvgLearningRatePerSample = 0.003125; EpochTime=0.898846
+04/07/2016 14:04:56: Finished Epoch[18 of 30]:     Criterion Node [ce] Per Sample = 0.083464988
+04/07/2016 14:04:56: Finished Epoch[18 of 30]:     Evaluation Node [errTop5] Per Sample = 0.022849999
+04/07/2016 14:04:56: Finished Epoch[18 of 30]:     Evaluation Node [err] Per Sample = 0.022849999
+04/07/2016 14:04:56: SGD: Saving checkpoint model '/tmp/cntk-test-20160407140437.931634/Examples/Image/MNIST_01_OneHidden@release_gpu/Models/01_OneHidden.18'
+
+04/07/2016 14:04:56: Starting Epoch 19: learning rate per sample = 0.003125  effective momentum = 0.000000  momentum as time constant = 0.0 samples
+starting epoch 18 at record count 1080000, and file position 0
+already there from last epoch
+
+04/07/2016 14:04:56: Starting minibatch loop.
+04/07/2016 14:04:56:  Epoch[19 of 30]-Minibatch[   1- 500, 26.67%]: SamplesSeen = 16000; TrainLossPerSample =  0.07757853; EvalErr[0]PerSample = 0.02068750; EvalErr[1]PerSample = 0.02068750; TotalTime = 0.2393s; SamplesPerSecond = 66848.6
+04/07/2016 14:04:57:  Epoch[19 of 30]-Minibatch[ 501-1000, 53.33%]: SamplesSeen = 16000; TrainLossPerSample =  0.08138667; EvalErr[0]PerSample = 0.02262500; EvalErr[1]PerSample = 0.02262500; TotalTime = 0.2393s; SamplesPerSecond = 66852.7
+04/07/2016 14:04:57:  Epoch[19 of 30]-Minibatch[1001-1500, 80.00%]: SamplesSeen = 16000; TrainLossPerSample =  0.08346284; EvalErr[0]PerSample = 0.02318750; EvalErr[1]PerSample = 0.02318750; TotalTime = 0.2391s; SamplesPerSecond = 66921.2
+04/07/2016 14:04:57: Finished Epoch[19 of 30]: [Training Set] TrainLossPerSample = 0.079255536; TotalSamplesSeen = 1140000; EvalErrPerSample [0]=0.0217; [1]=0.0217; AvgLearningRatePerSample = 0.003125; EpochTime=0.898689
+04/07/2016 14:04:57: Finished Epoch[19 of 30]:     Criterion Node [ce] Per Sample = 0.079255536
+04/07/2016 14:04:57: Finished Epoch[19 of 30]:     Evaluation Node [errTop5] Per Sample = 0.0217
+04/07/2016 14:04:57: Finished Epoch[19 of 30]:     Evaluation Node [err] Per Sample = 0.0217
+04/07/2016 14:04:57: SGD: Saving checkpoint model '/tmp/cntk-test-20160407140437.931634/Examples/Image/MNIST_01_OneHidden@release_gpu/Models/01_OneHidden.19'
+
+04/07/2016 14:04:57: Starting Epoch 20: learning rate per sample = 0.003125  effective momentum = 0.000000  momentum as time constant = 0.0 samples
+starting epoch 19 at record count 1140000, and file position 0
+already there from last epoch
+
+04/07/2016 14:04:57: Starting minibatch loop.
+04/07/2016 14:04:57:  Epoch[20 of 30]-Minibatch[   1- 500, 26.67%]: SamplesSeen = 16000; TrainLossPerSample =  0.07360051; EvalErr[0]PerSample = 0.01900000; EvalErr[1]PerSample = 0.01900000; TotalTime = 0.2391s; SamplesPerSecond = 66914.5
+04/07/2016 14:04:58:  Epoch[20 of 30]-Minibatch[ 501-1000, 53.33%]: SamplesSeen = 16000; TrainLossPerSample =  0.07742140; EvalErr[0]PerSample = 0.02206250; EvalErr[1]PerSample = 0.02206250; TotalTime = 0.2392s; SamplesPerSecond = 66896.6
+04/07/2016 14:04:58:  Epoch[20 of 30]-Minibatch[1001-1500, 80.00%]: SamplesSeen = 16000; TrainLossPerSample =  0.07953708; EvalErr[0]PerSample = 0.02212500; EvalErr[1]PerSample = 0.02212500; TotalTime = 0.2391s; SamplesPerSecond = 66912.9
+04/07/2016 14:04:58: Finished Epoch[20 of 30]: [Training Set] TrainLossPerSample = 0.07539349; TotalSamplesSeen = 1200000; EvalErrPerSample [0]=0.020666666; [1]=0.020666666; AvgLearningRatePerSample = 0.003125; EpochTime=0.898458
+04/07/2016 14:04:58: Finished Epoch[20 of 30]:     Criterion Node [ce] Per Sample = 0.07539349
+04/07/2016 14:04:58: Finished Epoch[20 of 30]:     Evaluation Node [errTop5] Per Sample = 0.020666666
+04/07/2016 14:04:58: Finished Epoch[20 of 30]:     Evaluation Node [err] Per Sample = 0.020666666
+04/07/2016 14:04:58: SGD: Saving checkpoint model '/tmp/cntk-test-20160407140437.931634/Examples/Image/MNIST_01_OneHidden@release_gpu/Models/01_OneHidden.20'
+
+04/07/2016 14:04:58: Starting Epoch 21: learning rate per sample = 0.003125  effective momentum = 0.000000  momentum as time constant = 0.0 samples
+starting epoch 20 at record count 1200000, and file position 0
+already there from last epoch
+
+04/07/2016 14:04:58: Starting minibatch loop.
+04/07/2016 14:04:58:  Epoch[21 of 30]-Minibatch[   1- 500, 26.67%]: SamplesSeen = 16000; TrainLossPerSample =  0.06995720; EvalErr[0]PerSample = 0.01831250; EvalErr[1]PerSample = 0.01831250; TotalTime = 0.2394s; SamplesPerSecond = 66824.0
+04/07/2016 14:04:58:  Epoch[21 of 30]-Minibatch[ 501-1000, 53.33%]: SamplesSeen = 16000; TrainLossPerSample =  0.07376222; EvalErr[0]PerSample = 0.02068750; EvalErr[1]PerSample = 0.02068750; TotalTime = 0.2393s; SamplesPerSecond = 66849.1
+04/07/2016 14:04:59:  Epoch[21 of 30]-Minibatch[1001-1500, 80.00%]: SamplesSeen = 16000; TrainLossPerSample =  0.07590971; EvalErr[0]PerSample = 0.02131250; EvalErr[1]PerSample = 0.02131250; TotalTime = 0.2391s; SamplesPerSecond = 66912.6
+04/07/2016 14:04:59: Finished Epoch[21 of 30]: [Training Set] TrainLossPerSample = 0.071835473; TotalSamplesSeen = 1260000; EvalErrPerSample [0]=0.019650001; [1]=0.019650001; AvgLearningRatePerSample = 0.003125; EpochTime=0.898979
+04/07/2016 14:04:59: Finished Epoch[21 of 30]:     Criterion Node [ce] Per Sample = 0.071835473
+04/07/2016 14:04:59: Finished Epoch[21 of 30]:     Evaluation Node [errTop5] Per Sample = 0.019650001
+04/07/2016 14:04:59: Finished Epoch[21 of 30]:     Evaluation Node [err] Per Sample = 0.019650001
+04/07/2016 14:04:59: SGD: Saving checkpoint model '/tmp/cntk-test-20160407140437.931634/Examples/Image/MNIST_01_OneHidden@release_gpu/Models/01_OneHidden.21'
+
+04/07/2016 14:04:59: Starting Epoch 22: learning rate per sample = 0.003125  effective momentum = 0.000000  momentum as time constant = 0.0 samples
+starting epoch 21 at record count 1260000, and file position 0
+already there from last epoch
+
+04/07/2016 14:04:59: Starting minibatch loop.
+04/07/2016 14:04:59:  Epoch[22 of 30]-Minibatch[   1- 500, 26.67%]: SamplesSeen = 16000; TrainLossPerSample =  0.06660743; EvalErr[0]PerSample = 0.01756250; EvalErr[1]PerSample = 0.01756250; TotalTime = 0.2392s; SamplesPerSecond = 66895.2
+04/07/2016 14:04:59:  Epoch[22 of 30]-Minibatch[ 501-1000, 53.33%]: SamplesSeen = 16000; TrainLossPerSample =  0.07037196; EvalErr[0]PerSample = 0.01937500; EvalErr[1]PerSample = 0.01937500; TotalTime = 0.2392s; SamplesPerSecond = 66896.6
+04/07/2016 14:05:00:  Epoch[22 of 30]-Minibatch[1001-1500, 80.00%]: SamplesSeen = 16000; TrainLossPerSample =  0.07254503; EvalErr[0]PerSample = 0.01981250; EvalErr[1]PerSample = 0.01981250; TotalTime = 0.2391s; SamplesPerSecond = 66929.6
+04/07/2016 14:05:00: Finished Epoch[22 of 30]: [Training Set] TrainLossPerSample = 0.068544805; TotalSamplesSeen = 1320000; EvalErrPerSample [0]=0.018616667; [1]=0.018616667; AvgLearningRatePerSample = 0.003125; EpochTime=0.89819
+04/07/2016 14:05:00: Finished Epoch[22 of 30]:     Criterion Node [ce] Per Sample = 0.068544805
+04/07/2016 14:05:00: Finished Epoch[22 of 30]:     Evaluation Node [errTop5] Per Sample = 0.018616667
+04/07/2016 14:05:00: Finished Epoch[22 of 30]:     Evaluation Node [err] Per Sample = 0.018616667
+04/07/2016 14:05:00: SGD: Saving checkpoint model '/tmp/cntk-test-20160407140437.931634/Examples/Image/MNIST_01_OneHidden@release_gpu/Models/01_OneHidden.22'
+
+04/07/2016 14:05:00: Starting Epoch 23: learning rate per sample = 0.003125  effective momentum = 0.000000  momentum as time constant = 0.0 samples
+starting epoch 22 at record count 1320000, and file position 0
+already there from last epoch
+
+04/07/2016 14:05:00: Starting minibatch loop.
+04/07/2016 14:05:00:  Epoch[23 of 30]-Minibatch[   1- 500, 26.67%]: SamplesSeen = 16000; TrainLossPerSample =  0.06351610; EvalErr[0]PerSample = 0.01668750; EvalErr[1]PerSample = 0.01668750; TotalTime = 0.2392s; SamplesPerSecond = 66901.4
+04/07/2016 14:05:00:  Epoch[23 of 30]-Minibatch[ 501-1000, 53.33%]: SamplesSeen = 16000; TrainLossPerSample =  0.06721899; EvalErr[0]PerSample = 0.01825000; EvalErr[1]PerSample = 0.01825000; TotalTime = 0.2393s; SamplesPerSecond = 66862.8
+04/07/2016 14:05:01:  Epoch[23 of 30]-Minibatch[1001-1500, 80.00%]: SamplesSeen = 16000; TrainLossPerSample =  0.06941310; EvalErr[0]PerSample = 0.01856250; EvalErr[1]PerSample = 0.01856250; TotalTime = 0.2393s; SamplesPerSecond = 66869.5
+04/07/2016 14:05:01: Finished Epoch[23 of 30]: [Training Set] TrainLossPerSample = 0.065490127; TotalSamplesSeen = 1380000; EvalErrPerSample [0]=0.017633334; [1]=0.017633334; AvgLearningRatePerSample = 0.003125; EpochTime=0.898821
+04/07/2016 14:05:01: Finished Epoch[23 of 30]:     Criterion Node [ce] Per Sample = 0.065490127
+04/07/2016 14:05:01: Finished Epoch[23 of 30]:     Evaluation Node [errTop5] Per Sample = 0.017633334
+04/07/2016 14:05:01: Finished Epoch[23 of 30]:     Evaluation Node [err] Per Sample = 0.017633334
+04/07/2016 14:05:01: SGD: Saving checkpoint model '/tmp/cntk-test-20160407140437.931634/Examples/Image/MNIST_01_OneHidden@release_gpu/Models/01_OneHidden.23'
+
+04/07/2016 14:05:01: Starting Epoch 24: learning rate per sample = 0.003125  effective momentum = 0.000000  momentum as time constant = 0.0 samples
+starting epoch 23 at record count 1380000, and file position 0
+already there from last epoch
+
+04/07/2016 14:05:01: Starting minibatch loop.
+04/07/2016 14:05:01:  Epoch[24 of 30]-Minibatch[   1- 500, 26.67%]: SamplesSeen = 16000; TrainLossPerSample =  0.06065337; EvalErr[0]PerSample = 0.01587500; EvalErr[1]PerSample = 0.01587500; TotalTime = 0.2392s; SamplesPerSecond = 66901.1
+04/07/2016 14:05:01:  Epoch[24 of 30]-Minibatch[ 501-1000, 53.33%]: SamplesSeen = 16000; TrainLossPerSample =  0.06427705; EvalErr[0]PerSample = 0.01768750; EvalErr[1]PerSample = 0.01768750; TotalTime = 0.2395s; SamplesPerSecond = 66800.5
+04/07/2016 14:05:01:  Epoch[24 of 30]-Minibatch[1001-1500, 80.00%]: SamplesSeen = 16000; TrainLossPerSample =  0.06648905; EvalErr[0]PerSample = 0.01750000; EvalErr[1]PerSample = 0.01750000; TotalTime = 0.2393s; SamplesPerSecond = 66875.7
+04/07/2016 14:05:02: Finished Epoch[24 of 30]: [Training Set] TrainLossPerSample = 0.062645398; TotalSamplesSeen = 1440000; EvalErrPerSample [0]=0.016716667; [1]=0.016716667; AvgLearningRatePerSample = 0.003125; EpochTime=0.89884
+04/07/2016 14:05:02: Finished Epoch[24 of 30]:     Criterion Node [ce] Per Sample = 0.062645398
+04/07/2016 14:05:02: Finished Epoch[24 of 30]:     Evaluation Node [errTop5] Per Sample = 0.016716667
+04/07/2016 14:05:02: Finished Epoch[24 of 30]:     Evaluation Node [err] Per Sample = 0.016716667
+04/07/2016 14:05:02: SGD: Saving checkpoint model '/tmp/cntk-test-20160407140437.931634/Examples/Image/MNIST_01_OneHidden@release_gpu/Models/01_OneHidden.24'
+
+04/07/2016 14:05:02: Starting Epoch 25: learning rate per sample = 0.003125  effective momentum = 0.000000  momentum as time constant = 0.0 samples
+starting epoch 24 at record count 1440000, and file position 0
+already there from last epoch
+
+04/07/2016 14:05:02: Starting minibatch loop.
+04/07/2016 14:05:02:  Epoch[25 of 30]-Minibatch[   1- 500, 26.67%]: SamplesSeen = 16000; TrainLossPerSample =  0.05799355; EvalErr[0]PerSample = 0.01562500; EvalErr[1]PerSample = 0.01562500; TotalTime = 0.2393s; SamplesPerSecond = 66869.2
+04/07/2016 14:05:02:  Epoch[25 of 30]-Minibatch[ 501-1000, 53.33%]: SamplesSeen = 16000; TrainLossPerSample =  0.06152334; EvalErr[0]PerSample = 0.01718750; EvalErr[1]PerSample = 0.01718750; TotalTime = 0.2392s; SamplesPerSecond = 66896.9
+04/07/2016 14:05:02:  Epoch[25 of 30]-Minibatch[1001-1500, 80.00%]: SamplesSeen = 16000; TrainLossPerSample =  0.06375144; EvalErr[0]PerSample = 0.01687500; EvalErr[1]PerSample = 0.01687500; TotalTime = 0.2393s; SamplesPerSecond = 66862.0
+04/07/2016 14:05:03: Finished Epoch[25 of 30]: [Training Set] TrainLossPerSample = 0.059987996; TotalSamplesSeen = 1500000; EvalErrPerSample [0]=0.016233334; [1]=0.016233334; AvgLearningRatePerSample = 0.003125; EpochTime=0.898668
+04/07/2016 14:05:03: Finished Epoch[25 of 30]:     Criterion Node [ce] Per Sample = 0.059987996
+04/07/2016 14:05:03: Finished Epoch[25 of 30]:     Evaluation Node [errTop5] Per Sample = 0.016233334
+04/07/2016 14:05:03: Finished Epoch[25 of 30]:     Evaluation Node [err] Per Sample = 0.016233334
+04/07/2016 14:05:03: SGD: Saving checkpoint model '/tmp/cntk-test-20160407140437.931634/Examples/Image/MNIST_01_OneHidden@release_gpu/Models/01_OneHidden.25'
+
+04/07/2016 14:05:03: Starting Epoch 26: learning rate per sample = 0.003125  effective momentum = 0.000000  momentum as time constant = 0.0 samples
+starting epoch 25 at record count 1500000, and file position 0
+already there from last epoch
+
+04/07/2016 14:05:03: Starting minibatch loop.
+04/07/2016 14:05:03:  Epoch[26 of 30]-Minibatch[   1- 500, 26.67%]: SamplesSeen = 16000; TrainLossPerSample =  0.05551456; EvalErr[0]PerSample = 0.01475000; EvalErr[1]PerSample = 0.01475000; TotalTime = 0.2391s; SamplesPerSecond = 66915.9
+04/07/2016 14:05:03:  Epoch[26 of 30]-Minibatch[ 501-1000, 53.33%]: SamplesSeen = 16000; TrainLossPerSample =  0.05893863; EvalErr[0]PerSample = 0.01668750; EvalErr[1]PerSample = 0.01668750; TotalTime = 0.2390s; SamplesPerSecond = 66933.3
+04/07/2016 14:05:03:  Epoch[26 of 30]-Minibatch[1001-1500, 80.00%]: SamplesSeen = 16000; TrainLossPerSample =  0.06118142; EvalErr[0]PerSample = 0.01625000; EvalErr[1]PerSample = 0.01625000; TotalTime = 0.2391s; SamplesPerSecond = 66920.7
+04/07/2016 14:05:03: Finished Epoch[26 of 30]: [Training Set] TrainLossPerSample = 0.0574985; TotalSamplesSeen = 1560000; EvalErrPerSample [0]=0.015600001; [1]=0.015600001; AvgLearningRatePerSample = 0.003125; EpochTime=0.898136
+04/07/2016 14:05:03: Finished Epoch[26 of 30]:     Criterion Node [ce] Per Sample = 0.0574985
+04/07/2016 14:05:03: Finished Epoch[26 of 30]:     Evaluation Node [errTop5] Per Sample = 0.015600001
+04/07/2016 14:05:03: Finished Epoch[26 of 30]:     Evaluation Node [err] Per Sample = 0.015600001
+04/07/2016 14:05:03: SGD: Saving checkpoint model '/tmp/cntk-test-20160407140437.931634/Examples/Image/MNIST_01_OneHidden@release_gpu/Models/01_OneHidden.26'
+
+04/07/2016 14:05:03: Starting Epoch 27: learning rate per sample = 0.003125  effective momentum = 0.000000  momentum as time constant = 0.0 samples
+starting epoch 26 at record count 1560000, and file position 0
+already there from last epoch
+
+04/07/2016 14:05:03: Starting minibatch loop.
+04/07/2016 14:05:04:  Epoch[27 of 30]-Minibatch[   1- 500, 26.67%]: SamplesSeen = 16000; TrainLossPerSample =  0.05319750; EvalErr[0]PerSample = 0.01393750; EvalErr[1]PerSample = 0.01393750; TotalTime = 0.2389s; SamplesPerSecond = 66970.3
+04/07/2016 14:05:04:  Epoch[27 of 30]-Minibatch[ 501-1000, 53.33%]: SamplesSeen = 16000; TrainLossPerSample =  0.05650659; EvalErr[0]PerSample = 0.01600000; EvalErr[1]PerSample = 0.01600000; TotalTime = 0.2392s; SamplesPerSecond = 66879.6
+04/07/2016 14:05:04:  Epoch[27 of 30]-Minibatch[1001-1500, 80.00%]: SamplesSeen = 16000; TrainLossPerSample =  0.05876301; EvalErr[0]PerSample = 0.01531250; EvalErr[1]PerSample = 0.01531250; TotalTime = 0.2393s; SamplesPerSecond = 66865.0
+04/07/2016 14:05:04: Finished Epoch[27 of 30]: [Training Set] TrainLossPerSample = 0.055160314; TotalSamplesSeen = 1620000; EvalErrPerSample [0]=0.014816667; [1]=0.014816667; AvgLearningRatePerSample = 0.003125; EpochTime=0.898545
+04/07/2016 14:05:04: Finished Epoch[27 of 30]:     Criterion Node [ce] Per Sample = 0.055160314
+04/07/2016 14:05:04: Finished Epoch[27 of 30]:     Evaluation Node [errTop5] Per Sample = 0.014816667
+04/07/2016 14:05:04: Finished Epoch[27 of 30]:     Evaluation Node [err] Per Sample = 0.014816667
+04/07/2016 14:05:04: SGD: Saving checkpoint model '/tmp/cntk-test-20160407140437.931634/Examples/Image/MNIST_01_OneHidden@release_gpu/Models/01_OneHidden.27'
+
+04/07/2016 14:05:04: Starting Epoch 28: learning rate per sample = 0.003125  effective momentum = 0.000000  momentum as time constant = 0.0 samples
+starting epoch 27 at record count 1620000, and file position 0
+already there from last epoch
+
+04/07/2016 14:05:04: Starting minibatch loop.
+04/07/2016 14:05:05:  Epoch[28 of 30]-Minibatch[   1- 500, 26.67%]: SamplesSeen = 16000; TrainLossPerSample =  0.05102567; EvalErr[0]PerSample = 0.01300000; EvalErr[1]PerSample = 0.01300000; TotalTime = 0.2394s; SamplesPerSecond = 66845.2
+04/07/2016 14:05:05:  Epoch[28 of 30]-Minibatch[ 501-1000, 53.33%]: SamplesSeen = 16000; TrainLossPerSample =  0.05421332; EvalErr[0]PerSample = 0.01500000; EvalErr[1]PerSample = 0.01500000; TotalTime = 0.2391s; SamplesPerSecond = 66911.2
+04/07/2016 14:05:05:  Epoch[28 of 30]-Minibatch[1001-1500, 80.00%]: SamplesSeen = 16000; TrainLossPerSample =  0.05648208; EvalErr[0]PerSample = 0.01443750; EvalErr[1]PerSample = 0.01443750; TotalTime = 0.2391s; SamplesPerSecond = 66924.9
+04/07/2016 14:05:05: Finished Epoch[28 of 30]: [Training Set] TrainLossPerSample = 0.052959003; TotalSamplesSeen = 1680000; EvalErrPerSample [0]=0.013950001; [1]=0.013950001; AvgLearningRatePerSample = 0.003125; EpochTime=0.898578
+04/07/2016 14:05:05: Finished Epoch[28 of 30]:     Criterion Node [ce] Per Sample = 0.052959003
+04/07/2016 14:05:05: Finished Epoch[28 of 30]:     Evaluation Node [errTop5] Per Sample = 0.013950001
+04/07/2016 14:05:05: Finished Epoch[28 of 30]:     Evaluation Node [err] Per Sample = 0.013950001
+04/07/2016 14:05:05: SGD: Saving checkpoint model '/tmp/cntk-test-20160407140437.931634/Examples/Image/MNIST_01_OneHidden@release_gpu/Models/01_OneHidden.28'
+
+04/07/2016 14:05:05: Starting Epoch 29: learning rate per sample = 0.003125  effective momentum = 0.000000  momentum as time constant = 0.0 samples
+starting epoch 28 at record count 1680000, and file position 0
+already there from last epoch
+
+04/07/2016 14:05:05: Starting minibatch loop.
+04/07/2016 14:05:05:  Epoch[29 of 30]-Minibatch[   1- 500, 26.67%]: SamplesSeen = 16000; TrainLossPerSample =  0.04898481; EvalErr[0]PerSample = 0.01231250; EvalErr[1]PerSample = 0.01231250; TotalTime = 0.2392s; SamplesPerSecond = 66899.7
+04/07/2016 14:05:06:  Epoch[29 of 30]-Minibatch[ 501-1000, 53.33%]: SamplesSeen = 16000; TrainLossPerSample =  0.05204683; EvalErr[0]PerSample = 0.01406250; EvalErr[1]PerSample = 0.01406250; TotalTime = 0.2393s; SamplesPerSecond = 66867.8
+04/07/2016 14:05:06:  Epoch[29 of 30]-Minibatch[1001-1500, 80.00%]: SamplesSeen = 16000; TrainLossPerSample =  0.05432639; EvalErr[0]PerSample = 0.01393750; EvalErr[1]PerSample = 0.01393750; TotalTime = 0.2393s; SamplesPerSecond = 66863.6
+04/07/2016 14:05:06: Finished Epoch[29 of 30]: [Training Set] TrainLossPerSample = 0.05088209; TotalSamplesSeen = 1740000; EvalErrPerSample [0]=0.013283334; [1]=0.013283334; AvgLearningRatePerSample = 0.003125; EpochTime=0.898595
+04/07/2016 14:05:06: Finished Epoch[29 of 30]:     Criterion Node [ce] Per Sample = 0.05088209
+04/07/2016 14:05:06: Finished Epoch[29 of 30]:     Evaluation Node [errTop5] Per Sample = 0.013283334
+04/07/2016 14:05:06: Finished Epoch[29 of 30]:     Evaluation Node [err] Per Sample = 0.013283334
+04/07/2016 14:05:06: SGD: Saving checkpoint model '/tmp/cntk-test-20160407140437.931634/Examples/Image/MNIST_01_OneHidden@release_gpu/Models/01_OneHidden.29'
+
+04/07/2016 14:05:06: Starting Epoch 30: learning rate per sample = 0.003125  effective momentum = 0.000000  momentum as time constant = 0.0 samples
+starting epoch 29 at record count 1740000, and file position 0
+already there from last epoch
+
+04/07/2016 14:05:06: Starting minibatch loop.
+04/07/2016 14:05:06:  Epoch[30 of 30]-Minibatch[   1- 500, 26.67%]: SamplesSeen = 16000; TrainLossPerSample =  0.04706239; EvalErr[0]PerSample = 0.01168750; EvalErr[1]PerSample = 0.01168750; TotalTime = 0.2395s; SamplesPerSecond = 66812.8
+04/07/2016 14:05:07:  Epoch[30 of 30]-Minibatch[ 501-1000, 53.33%]: SamplesSeen = 16000; TrainLossPerSample =  0.04999670; EvalErr[0]PerSample = 0.01318750; EvalErr[1]PerSample = 0.01318750; TotalTime = 0.2391s; SamplesPerSecond = 66925.4
+04/07/2016 14:05:07:  Epoch[30 of 30]-Minibatch[1001-1500, 80.00%]: SamplesSeen = 16000; TrainLossPerSample =  0.05228509; EvalErr[0]PerSample = 0.01331250; EvalErr[1]PerSample = 0.01331250; TotalTime = 0.2396s; SamplesPerSecond = 66786.3
+04/07/2016 14:05:07: Finished Epoch[30 of 30]: [Training Set] TrainLossPerSample = 0.048918661; TotalSamplesSeen = 1800000; EvalErrPerSample [0]=0.0125; [1]=0.0125; AvgLearningRatePerSample = 0.003125; EpochTime=0.899362
+04/07/2016 14:05:07: Finished Epoch[30 of 30]:     Criterion Node [ce] Per Sample = 0.048918661
+04/07/2016 14:05:07: Finished Epoch[30 of 30]:     Evaluation Node [errTop5] Per Sample = 0.0125
+04/07/2016 14:05:07: Finished Epoch[30 of 30]:     Evaluation Node [err] Per Sample = 0.0125
+04/07/2016 14:05:07: SGD: Saving checkpoint model '/tmp/cntk-test-20160407140437.931634/Examples/Image/MNIST_01_OneHidden@release_gpu/Models/01_OneHidden'
+04/07/2016 14:05:07: CNTKCommandTrainEnd: MNISTtrain
+
+04/07/2016 14:05:07: Action "train" complete.
+
+
+04/07/2016 14:05:07: ##############################################################################
+04/07/2016 14:05:07: #                                                                            #
+04/07/2016 14:05:07: # Action "test"                                                              #
+04/07/2016 14:05:07: #                                                                            #
+04/07/2016 14:05:07: ##############################################################################
+
+Reading UCI file /home/mahilleb/CNTK/Examples/Image/MNIST/Data/Test-28x28.txt
+
+Post-processing network...
+
+4 roots:
+	ce = CrossEntropyWithSoftmax()
+	err = ErrorPrediction()
+	errTop5 = ErrorPrediction()
+	ol.z = Plus()
+
+Validating network. 17 nodes to process in pass 1.
+
+
+Validating network. 9 nodes to process in pass 2.
+
+
+Validating network, final pass.
+
+Validating --> labels = InputValue() :  -> [10 x *]
+Validating --> ol.W = LearnableParameter() :  -> [10 x 200]
+Validating --> h1.W = LearnableParameter() :  -> [200 x 784]
+Validating --> featScale = LearnableParameter() :  -> [1 x 1]
+Validating --> features = InputValue() :  -> [784 x *]
+Validating --> featScaled = ElementTimes (featScale, features) : [1 x 1], [784 x *] -> [784 x 1 x *]
+Validating --> h1.t = Times (h1.W, featScaled) : [200 x 784], [784 x 1 x *] -> [200 x 1 x *]
+Validating --> h1.b = LearnableParameter() :  -> [200 x 1]
+Validating --> h1.z = Plus (h1.t, h1.b) : [200 x 1 x *], [200 x 1] -> [200 x 1 x *]
+Validating --> h1.y = Sigmoid (h1.z) : [200 x 1 x *] -> [200 x 1 x *]
+Validating --> ol.t = Times (ol.W, h1.y) : [10 x 200], [200 x 1 x *] -> [10 x 1 x *]
+Validating --> ol.b = LearnableParameter() :  -> [10 x 1]
+Validating --> ol.z = Plus (ol.t, ol.b) : [10 x 1 x *], [10 x 1] -> [10 x 1 x *]
+Validating --> ce = CrossEntropyWithSoftmax (labels, ol.z) : [10 x *], [10 x 1 x *] -> [1]
+Validating --> err = ErrorPrediction (labels, ol.z) : [10 x *], [10 x 1 x *] -> [1]
+Validating --> unnamed81 = LearnableParameter() :  -> [1 x 1]
+Validating --> errTop5 = ErrorPrediction (labels, ol.z, unnamed81) : [10 x *], [10 x 1 x *], [1 x 1] -> [1]
+
+
+9 out of 17 nodes do not share the minibatch layout with the input data.
+
+Post-processing network complete.
+
+evalNodeNames are not specified, using all the default evalnodes and training criterion nodes.
+
+
+Allocating matrices for forward and/or backward propagation.
+UCIFastReader: Starting at epoch 0, counting lines to determine record count...
+ 10000 records found.
+starting epoch 0 at record count 0, and file position 0
+already there from last epoch
+RandomOrdering: 2036 retries for 10000 elements (20.4%) to ensure window condition
+RandomOrdering: recached sequence for seed 0: 2009, 1524, ...
+Minibatch[1-500]: SamplesSeen = 8000    errTop5: ErrorPrediction/Sample = 0.02575    err: ErrorPrediction/Sample = 0.02575    ce: CrossEntropyWithSoftmax/Sample = 0.084545252    
+Minibatch[501-625]: SamplesSeen = 2000    errTop5: ErrorPrediction/Sample = 0.013    err: ErrorPrediction/Sample = 0.013    ce: CrossEntropyWithSoftmax/Sample = 0.047279389    
+Final Results: Minibatch[1-625]: SamplesSeen = 10000    errTop5: ErrorPrediction/Sample = 0.0232    err: ErrorPrediction/Sample = 0.0232    ce: CrossEntropyWithSoftmax/Sample = 0.07709208    Perplexity = 1.0801415    
+
+04/07/2016 14:05:07: Action "test" complete.
+
+04/07/2016 14:05:07: __COMPLETED__

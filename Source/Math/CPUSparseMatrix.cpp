@@ -156,7 +156,6 @@ CPUSparseMatrix<ElemType>::CPUSparseMatrix(const CPUSparseMatrix<ElemType>& deep
 template <class ElemType>
 CPUSparseMatrix<ElemType>& CPUSparseMatrix<ElemType>::operator=(const CPUSparseMatrix<ElemType>& deepCopyFrom)
 {
-    //Clear();
     if (!deepCopyFrom.IsEmpty())
         SetValue(deepCopyFrom);
     return *this;

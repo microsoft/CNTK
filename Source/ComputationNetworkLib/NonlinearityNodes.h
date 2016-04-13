@@ -108,9 +108,11 @@ public:
 // LogNode (input)
 // ExpNode (input)
 // CosineNode (input)
+// SinNode (input)
 // Abs(input)
 // Negate (input)
 // Sqrt (input)
+// Reciprocal (input)
 // These are all implemented by single-opcode functions and can thus be declared by a macro.
 // -----------------------------------------------------------------------
 
@@ -142,6 +144,7 @@ DeclareUnaryElementWiseWithOpCodeNode(RectifiedLinear, LinearRectifier, Elementw
 DeclareUnaryElementWiseWithOpCodeNode(Log,             Log,             ElementwiseProductWithLogDerivativeFromOutput,             BinaryWithOutputGradient);
 DeclareUnaryElementWiseWithOpCodeNode(Exp,             Exp,             ElementwiseProduct,                                        BinaryWithOutputGradient);
 DeclareUnaryElementWiseWithOpCodeNode(Cosine,          Cosine,          ElementwiseProductWithCosDerivative,                       BinaryWithInputGradient);
+DeclareUnaryElementWiseWithOpCodeNode(Sin,             Sin,             ElementwiseProductWithSinDerivative,                       BinaryWithInputGradient);
 DeclareUnaryElementWiseWithOpCodeNode(Abs,             Abs,             ElementwiseProductWithAbsDerivative,                       BinaryWithInputGradient);
 DeclareUnaryElementWiseWithOpCodeNode(Negate,          Negate,          Negate,                                                    UnaryGradient);
 DeclareUnaryElementWiseWithOpCodeNode(Sqrt,            Sqrt,            ElementwiseProductWithSqrtDerivative,                      BinaryWithOutputGradient);
