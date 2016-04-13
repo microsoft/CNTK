@@ -14,6 +14,7 @@
 #include "DistGradHeader.h"
 #include "IDistGradAggregator.h"
 #include "SimpleDistGradAggregator.h"
+#include "Criterion.h"
 
 #include <vector>
 #include <string>
@@ -46,7 +47,7 @@ public:
     }
 
     // returns evaluation node values per sample determined by evalNodeNames (which can include both training and eval criterion nodes)
-    vector<double> Evaluate(IDataReader* dataReader, const vector<wstring>& evalNodeNames, const size_t mbSize, const size_t testSize = requestDataSize)
+    vector<EpochCriterion> Evaluate(IDataReader* dataReader, const vector<wstring>& evalNodeNames, const size_t mbSize, const size_t testSize = requestDataSize)
     {
         ScopedNetworkOperationMode modeGuard(m_net, NetworkOperationMode::inferring);
 
@@ -82,7 +83,7 @@ public:
         }
 
         // initialize eval results
-        std::vector<double> evalResults(evalNodes.size(), 0);
+        std::vector<EpochCriterion> evalResults(evalNodes.size(), EpochCriterion(0));
 
         // allocate memory for forward computation
         m_net->AllocateAllMatrices(evalNodes, {}, nullptr);
@@ -104,9 +105,7 @@ public:
         size_t numSamplesLastMBs = 0;
         size_t lastMBsRun = 0; // MBs run before this display
 
-        std::vector<double> evalResultsLastMBs;
-        for (int i = 0; i < evalResults.size(); i++)
-            evalResultsLastMBs.push_back((ElemType) 0);
+        std::vector<EpochCriterion> evalResultsLastMBs(evalResults.size(), EpochCriterion(0));
 
         //TODO: we should add support for distributed reading
         dataReader->StartMinibatchLoop(mbSize, 0, testSize);
@@ -161,9 +160,10 @@ public:
                 m_gradHeader->numEvalNode = evalNodes.size();
                 m_gradHeader->numSamples = actualMBSize;
                 m_gradHeader->numSamplesWithLabel = numSamplesWithLabel;
-                m_gradHeader->criterion = 0.0;
+                m_gradHeader->criterion = 0.0; // (not used here)
                 for (size_t i = 0; i < evalNodes.size(); i++)
-                    m_gradHeader->evalErrors[i] = evalNodes[i]->Get00Element();
+                    //m_gradHeader->evalErrors[i] = evalNodes[i]->Get00Element();
+                    m_gradHeader->evalErrors[i] = CriterionAccumulator<ElemType>::GetCriterion(evalNodes[i], numSamplesWithLabel);
 
                 // TODO: We are reusing the aggregation logic inside SimpleDistGradAggregator, which has a heavy dependency
                 // on the gradient matrix. At some point we should refactor the aggregator class to be able to only calculating
@@ -184,9 +184,8 @@ public:
             else
             {
                 for (int i = 0; i < evalNodes.size(); i++)
-                {
-                    evalResults[i] += (double)evalNodes[i]->Get00Element(); // criterionNode should be a scalar
-                }
+                    evalResults[i] += CriterionAccumulator<ElemType>::GetCriterion(evalNodes[i], numSamplesWithLabel);
+                  //evalResults[i] += (double)evalNodes[i]->Get00Element(); // criterionNode should be a scalar
             }
 
             totalEpochSamples += aggregateNumSamplesWithLabel;
@@ -225,15 +224,15 @@ public:
 
         // final statistics
         for (int i = 0; i < evalResultsLastMBs.size(); i++)
-            evalResultsLastMBs[i] = 0; // clear this since statistics display will subtract the previous value
+            evalResultsLastMBs[i] = EpochCriterion(0); // clear this since statistics display will subtract the previous value
 
         fprintf(stderr, "Final Results: ");
         DisplayEvalStatistics(1, numMBsRun, totalEpochSamples, evalNodes, evalResults, evalResultsLastMBs, true);
 
-        for (int i = 0; i < evalResults.size(); i++)
-        {
-            evalResults[i] /= totalEpochSamples;
-        }
+        //for (int i = 0; i < evalResults.size(); i++)
+        //{
+        //    evalResults[i] /= totalEpochSamples;
+        //}
 
         return evalResults;
     }
@@ -241,24 +240,19 @@ public:
 protected:
     void DisplayEvalStatistics(const size_t startMBNum, const size_t endMBNum, const size_t numSamplesLastMBs,
                                const vector<ComputationNodeBasePtr>& evalNodes,
-                               const double evalResults, const double evalResultsLastMBs, bool displayConvertedValue = false)
+                               const EpochCriterion evalResults, const EpochCriterion evalResultsLastMBs, bool displayConvertedValue = false)
     {
-        vector<double> evaR;
-        evaR.push_back(evalResults);
-        vector<double> evaLast;
-        evaLast.push_back(evalResultsLastMBs);
-
-        DisplayEvalStatistics(startMBNum, endMBNum, numSamplesLastMBs, evalNodes, evaR, evaLast, displayConvertedValue);
+        DisplayEvalStatistics(startMBNum, endMBNum, numSamplesLastMBs, evalNodes, { evalResults }, { evalResultsLastMBs }, displayConvertedValue);
     }
 
     void DisplayEvalStatistics(const size_t startMBNum, const size_t endMBNum, const size_t numSamplesLastMBs, const vector<ComputationNodeBasePtr>& evalNodes,
-                               const vector<double>& evalResults, const vector<double>& evalResultsLastMBs, bool displayConvertedValue = false)
+                               const vector<EpochCriterion>& evalResults, const vector<EpochCriterion>& evalResultsLastMBs, bool displayConvertedValue = false)
     {
         fprintf(stderr, "Minibatch[%lu-%lu]: SamplesSeen = %lu    ", startMBNum, endMBNum, numSamplesLastMBs);
 
         for (size_t i = 0; i < evalResults.size(); i++)
         {
-            double eresult = (evalResults[i] - evalResultsLastMBs[i]) / numSamplesLastMBs;
+            double eresult = (evalResults[i] - evalResultsLastMBs[i]).Average(); // / numSamplesLastMBs;
             fprintf(stderr, "%ls: %ls/Sample = %.8g    ", evalNodes[i]->NodeName().c_str(), evalNodes[i]->OperationName().c_str(), eresult);
 
             if (displayConvertedValue)

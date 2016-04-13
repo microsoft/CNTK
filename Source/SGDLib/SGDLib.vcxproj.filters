@@ -141,6 +141,9 @@
     <ClInclude Include="MASGD.h">
       <Filter>Parallelization</Filter>
     </ClInclude>
+    <ClInclude Include="Criterion.h">
+      <Filter>SGD</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Common">
