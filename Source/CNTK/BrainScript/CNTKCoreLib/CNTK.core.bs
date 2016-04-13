@@ -383,8 +383,9 @@ RNNs =
     # It returns a dictionary with two members: h and c. prevState must be in the same format.
     // TODO: Standardize on one parameter order. Is first dimension the output (like in math, strcpy, or functional style) or the input (listing inputs first)?
     //       If we change this, we'd need to fix the LSTM end-to-end test.
-    LSTMP (inputDim, outputDim, cellDim, x, prevState, enableSelfStabilization=false) =
+    LSTMP (inputDim1, outputDim, cellDim, x, prevState, enableSelfStabilization=false) =
     [
+        inputDim = x.dim   # get dimension from 'x' (if this works, we can remove the inputDim1 parameter)
         _privateInnards = [       // encapsulate the privateInnards workings
             dh = prevState.h // previous values
             dc = prevState.c

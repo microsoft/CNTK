@@ -18,7 +18,7 @@ ExpRootDir = "$RunRootDir$"
 # experiment id
 #ExpId = _run
 
-deviceId = 0
+deviceId = 1
 #ExpId = 68-$deviceId$-s2sae-bigmodel
 ExpId = 06-$deviceId$-g2p
 #ExpId = 05-3-g2p # for decoding a different model
@@ -100,8 +100,8 @@ BrainScriptNetworkBuilder = (new ComputationNetwork [
     RecurrentLSTMP = BS.RNNs.RecurrentLSTMP
 
     embeddingDim = $confVocabSize$ # 300
-    hiddenDim    = 512 # 1024 # 200
-    maxLayer = 1 # 0
+    hiddenDim    = 750 # 512 # 1024 # 200   --TODO: Kaisheng used 500
+    maxLayer = 2 # 1 # 0
 
     encoderDims[i:0..maxLayer] = hiddenDim # this defines the number of hidden layers in each
     decoderDims[i:0..maxLayer] = hiddenDim # both are one LSTM layer only for now
@@ -236,7 +236,7 @@ BrainScriptNetworkBuilder = (new ComputationNetwork [
 
     delayedDecoderFeedback = Loop.PreviousOrDefault (defaultValue=labelSentenceStartEmbedded, labelsEmbedded)
 
-    decoderInputDim = embeddingDim
+    decoderInputDim = labelsEmbedded.dim  #embeddingDim
     decoderInput    = Pass (delayedDecoderFeedback)
     decoderOutputLayer = Length (decoderDims)-1
     decoder[i:0..decoderOutputLayer] =
@@ -255,15 +255,16 @@ BrainScriptNetworkBuilder = (new ComputationNetwork [
         else BS.RNNs.RecurrentLSTMP2 (decoderDims[i-1], decoderDims[i], decoderDims[i],
                                       decoder[i-1].h,
                                       enableSelfStabilization=useStabilizer)
-    decoderDim = decoderDims[decoderOutputLayer]
+    #decoderDim = decoderDims[decoderOutputLayer]
     decoderOutput = decoder[decoderOutputLayer].h
+    decoderDim = decoderOutput.dim
 
     # and add a softmax layer on top
 
     W(x) = Parameters.WeightParam (vocabDim, decoderDim) * Parameters.Stabilize (x, enabled=useStabilizer)
     B = Parameters.BiasParam (vocabDim)
 
-    z = W(decoderOutput) + B;  // top-level input to Softmax
+    z = W (decoderOutput) + B;  // top-level input to Softmax
 
     # training criteria
     ce  = CrossEntropyWithSoftmax (labelSequence, z, tag='criterion')   // this is the training objective
@@ -445,7 +446,7 @@ train = [
         momentumAsTimeConstant = 2500
         gradientClippingWithTruncation = true   # TODO: clip and truncate? What is the difference?
         clippingThresholdPerSample = 15.0
-        maxEpochs = 16
+        maxEpochs = 50
         numMBsToShowResult = 100
         firstMBsToShowResult = 10
         gradUpdateType = "none" # FSAdaGrad?

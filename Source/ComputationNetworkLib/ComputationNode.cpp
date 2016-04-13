@@ -707,7 +707,10 @@ using namespace Microsoft::MSR::CNTK;
 template <>
 shared_ptr<Object> MakeRuntimeObject<ComputationNodeBase>(const IConfigRecordPtr configp)
 {
-    return NewComputationNodeFromConfig(configp);
+    let node = NewComputationNodeFromConfig(configp);
+    if (!node->Is<IRecurrentNode>())
+        node->Validate(/*isFinalValidationPass*/false); // do an initial validation, so that we have access to dimensions
+    return node;
 }
 
 ScriptableObjects::ConfigurableRuntimeTypeRegister::Add<ComputationNodeBase> registerComputationNode(L"ComputationNode");
