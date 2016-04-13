@@ -4139,6 +4139,7 @@ template <class ElemType>
 void CPUMatrix<ElemType>::UnrollConvolutionInput(size_t kernelSize, size_t mapOutSize, const CPUMatrix<int>& mpRowCol,
                                                  const CPUMatrix<int>& mpRowRun, const CPUMatrix<int>& runs, CPUMatrix<ElemType>& output) const
 {
+#pragma omp parallel for
     for (int64_t sample = 0; sample < (int64_t)GetNumCols(); sample++)
     {
         for (size_t row = 0; row < mapOutSize; row++)
