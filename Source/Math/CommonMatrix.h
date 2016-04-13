@@ -413,10 +413,20 @@ public:
     { 
         if (!m_sob.unique())
             LogicError("%s: Cannot resize the matrix because it is a view.", function);
-        if (m_sob->HasExternalBuffer())
+        else if (m_sob->HasExternalBuffer())
             LogicError("%s: Cannot resize the matrix because it is externally owned.", function);
     }
-	// This is needed for Sparse Matrices to ensure they can write to the matrix. Note: writing to slices is not currently supported
+
+    // same as VerifyResizable() except for the error message. Could be folded into one.
+    void VerifyMovable(const char* function) const
+    {
+        if (!m_sob.unique())
+            LogicError("%s: Cannot move the matrix because it is a view.", function);
+        else if (m_sob->HasExternalBuffer())
+            LogicError("%s: Cannot move the matrix because it is externally owned.", function);
+    }
+
+    // This is needed for Sparse Matrices to ensure they can write to the matrix. Note: writing to slices is not currently supported
     void VerifyWritable(const char* function) const 
     {
         if (!(m_sob->GetNumStorageRows() == m_numRows && m_sob->GetNumStorageCols() == m_numCols))

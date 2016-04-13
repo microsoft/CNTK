@@ -111,52 +111,36 @@
     }
 
 // version of helper macro that executes both CPU and GPU macros if 'matrixPointer' location is BOTH
-#define DISPATCH_MATRIX_ON_FLAG_USEBOTH_4BOTH(matrixPointer, CPUDense, GPUDense, CPUSparse, GPUSparse) \
-    {                                                                                                                                 \
-        CurrentDataLocation curLocation = (matrixPointer)->GetCurrentMatrixLocation();                                         \
-        if (curLocation == CurrentDataLocation::BOTH)                                                                                 \
-        {                                                                                                                             \
-            if ((matrixPointer)->GetMatrixType() != MatrixType::SPARSE)                                                        \
-            {                                                                                                                         \
-                CPUDense;                                                                                                             \
-                GPUDense;                                                                                                             \
-            }                                                                                                                         \
-            else                                                                                                                      \
-            {                                                                                                                         \
-                CPUSparse;                                                                                                            \
-                GPUSparse;                                                                                                            \
-            }                                                                                                                         \
-        }                                                                                                                             \
-        else if (curLocation == CurrentDataLocation::GPU)                                                                             \
-        {                                                                                                                             \
-            if ((matrixPointer)->GetMatrixType() != MatrixType::SPARSE)                                                        \
-            {                                                                                                                         \
-                GPUDense;                                                                                                             \
-                (/*(Matrix*)*/ matrixPointer)->SetDataLocation(CurrentDataLocation::GPU, MatrixType::DENSE);                 \
-            }                                                                                                                         \
-            else                                                                                                                      \
-            {                                                                                                                         \
-                GPUSparse;                                                                                                            \
-                (/*(Matrix*)*/ matrixPointer)->SetDataLocation(CurrentDataLocation::GPU, MatrixType::SPARSE);                \
-            }                                                                                                                         \
-        }                                                                                                                             \
-        else if (curLocation == CurrentDataLocation::CPU)                                                                             \
-        {                                                                                                                             \
-            if ((matrixPointer)->GetMatrixType() != MatrixType::SPARSE)                                                        \
-            {                                                                                                                         \
-                CPUDense;                                                                                                             \
-                (/*(Matrix*)*/ matrixPointer)->SetDataLocation(CurrentDataLocation::CPU, MatrixType::DENSE);                 \
-            }                                                                                                                         \
-            else                                                                                                                      \
-            {                                                                                                                         \
-                CPUSparse;                                                                                                            \
-                (/*(Matrix*)*/ matrixPointer)->SetDataLocation(CurrentDataLocation::CPU, MatrixType::SPARSE);                \
-            }                                                                                                                         \
-        }                                                                                                                             \
-        else                                                                                                                          \
-        {                                                                                                                             \
-            RuntimeError("Matrices do not exist in either CPU or GPU.");                                                              \
-        }                                                                                                                             \
+#define DISPATCH_MATRIX_ON_FLAG_USEBOTH_4BOTH(matrixPointer, CPUDense, GPUDense, CPUSparse, GPUSparse)  \
+    {                                                                                                   \
+        auto curLocation = (matrixPointer)->GetCurrentMatrixLocation();                                 \
+        auto curMatrixType = (matrixPointer)->GetMatrixType();                                          \
+        if (curLocation == CurrentDataLocation::NONE)                                                   \
+            LogicError("Matrices do not exist in either CPU or GPU.");                                  \
+        if (curMatrixType == MatrixType::UNDETERMINED)                                                  \
+            LogicError("Matrices must be SPARSE or DENSE.");                                            \
+        if (curLocation != CurrentDataLocation::CPU) /*GPU or BOTH*/                                    \
+        {                                                                                               \
+            if (curMatrixType == MatrixType::DENSE)                                                     \
+            {                                                                                           \
+                GPUDense;                                                                               \
+            }                                                                                           \
+            else                                                                                        \
+            {                                                                                           \
+                GPUSparse;                                                                              \
+            }                                                                                           \
+        }                                                                                               \
+        if (curLocation != CurrentDataLocation::GPU) /*CPU or BOTH*/                                    \
+        {                                                                                               \
+            if (curMatrixType == MatrixType::DENSE)                                                     \
+            {                                                                                           \
+                CPUDense;                                                                               \
+            }                                                                                           \
+            else                                                                                        \
+            {                                                                                           \
+                CPUSparse;                                                                              \
+            }                                                                                           \
+        }                                                                                               \
     }
 
 namespace Microsoft { namespace MSR { namespace CNTK {
@@ -262,15 +246,15 @@ void Matrix<ElemType>::SetDataLocation(CurrentDataLocation location, MatrixType 
         {
             assert(m_currentDataLocation == CurrentDataLocation::GPU || m_CPUMatrix);
             assert(m_currentDataLocation == CurrentDataLocation::CPU || m_GPUMatrix);
-            if (m_currentDataLocation != CurrentDataLocation::GPU) ((BaseMatrix<ElemType>*)m_CPUMatrix.get())->VerifyResizable("SetDataLocation [CPUMatrix]");
-            if (m_currentDataLocation != CurrentDataLocation::CPU) ((BaseMatrix<ElemType>*)m_GPUMatrix.get())->VerifyResizable("SetDataLocation [GPUMatrix]");
+            if (m_currentDataLocation != CurrentDataLocation::GPU) ((BaseMatrix<ElemType>*)m_CPUMatrix.get())->VerifyMovable("SetDataLocation [CPUMatrix]");
+            if (m_currentDataLocation != CurrentDataLocation::CPU) ((BaseMatrix<ElemType>*)m_GPUMatrix.get())->VerifyMovable("SetDataLocation [GPUMatrix]");
         }
         else if (m_matrixType == MatrixType::SPARSE)
         {
             assert(m_currentDataLocation == CurrentDataLocation::GPU || m_CPUSparseMatrix);
             assert(m_currentDataLocation == CurrentDataLocation::CPU || m_GPUSparseMatrix);
-            if (m_currentDataLocation != CurrentDataLocation::GPU) ((BaseMatrix<ElemType>*)m_CPUSparseMatrix.get())->VerifyResizable("SetDataLocation [CPUSparseMatrix]");
-            if (m_currentDataLocation != CurrentDataLocation::CPU) ((BaseMatrix<ElemType>*)m_GPUSparseMatrix.get())->VerifyResizable("SetDataLocation [GPUSparseMatrix]");
+            if (m_currentDataLocation != CurrentDataLocation::GPU) ((BaseMatrix<ElemType>*)m_CPUSparseMatrix.get())->VerifyMovable("SetDataLocation [CPUSparseMatrix]");
+            if (m_currentDataLocation != CurrentDataLocation::CPU) ((BaseMatrix<ElemType>*)m_GPUSparseMatrix.get())->VerifyMovable("SetDataLocation [GPUSparseMatrix]");
         }
         // TODO: Why do we need these typecasts? (without it will fail with "cannot access private member declared in class 'Microsoft::MSR::CNTK::CPUMatrix<float>'")
 
