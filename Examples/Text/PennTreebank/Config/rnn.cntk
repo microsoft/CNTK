@@ -25,6 +25,7 @@ numCPUThreads = 1
 
 confVocabSize = 10000
 confClassSize = 50
+parallelTrain = true
 
 trainFile = "ptb.train.txt"
 validFile = "ptb.valid.txt"
