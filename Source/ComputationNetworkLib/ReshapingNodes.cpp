@@ -88,7 +88,7 @@ template <class ElemType>
         }
         let& seq = outMBLayout->GetAllSequences()[j];
         if (seq.seqId == GAP_SEQUENCE_ID) // When would we see this?
-    {
+        {
             ++j;
             continue;
         }
@@ -234,7 +234,7 @@ template <class ElemType>
 
     // inherit tensor dimension from sourceData, minus the last (column or time) dimension. TODO this needs to become simpler...
     if (sourceHasTimeDimension)
-    SetDims(Input(SOURCEDATA)->GetSampleLayout(), HasMBLayout());
+        SetDims(Input(SOURCEDATA)->GetSampleLayout(), HasMBLayout());
     else
     {
         SmallVector<size_t> layout = { 1 }; // Scalar

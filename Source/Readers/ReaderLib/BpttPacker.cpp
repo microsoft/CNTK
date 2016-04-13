@@ -156,9 +156,10 @@ Minibatch BpttPacker::ReadMinibatch()
     for (size_t streamIndex = 0; streamIndex < m_outputStreamDescriptions.size(); ++streamIndex)
     {
         m_currentLayouts[streamIndex]->Init(m_numParallelSequences, m_truncationSize);
+        size_t sequenceId = 0;
         for (size_t slotIndex = 0; slotIndex < m_numParallelSequences; ++slotIndex)
         {
-            PackSlot(streamIndex, slotIndex);
+            PackSlot(streamIndex, slotIndex, sequenceId);
         }
 
         StreamMinibatchPtr m = make_shared<StreamMinibatch>();
@@ -171,7 +172,7 @@ Minibatch BpttPacker::ReadMinibatch()
 }
 
 // Packs a slot of sequences into the minibatch.
-void BpttPacker::PackSlot(size_t streamIndex, size_t slotIndex)
+void BpttPacker::PackSlot(size_t streamIndex, size_t slotIndex, size_t& sequenceId)
 {
     auto& slot = m_sequenceBufferPerStream[streamIndex]->m_slots[slotIndex];
 
@@ -202,7 +203,7 @@ void BpttPacker::PackSlot(size_t streamIndex, size_t slotIndex)
 
     // Add current sequence to the minibatch layout.
     m_currentLayouts[streamIndex]->AddSequence(
-        NEW_SEQUENCE_ID,
+        sequenceId++,
         slotIndex,
         -(int)slot.m_sampleCursor,
         slot.FrontSequence()->m_numberOfSamples - slot.m_sampleCursor);
@@ -218,7 +219,7 @@ void BpttPacker::PackSlot(size_t streamIndex, size_t slotIndex)
 
             //Adding next sequence to the minibatch.
             m_currentLayouts[streamIndex]->AddSequence(
-                NEW_SEQUENCE_ID,
+                sequenceId++,
                 slotIndex,
                 currentTimestep,
                 currentTimestep + slot.FrontSequence()->m_numberOfSamples);

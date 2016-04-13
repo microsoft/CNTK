@@ -253,7 +253,7 @@ struct MLFSequenceData : SparseSequenceData
         m_indicesPtr(new IndexType[numberOfSamples])
     {
         if (numberOfSamples > numeric_limits<IndexType>::max())
-    {
+        {
             RuntimeError("Number of samples in an MLFSequence (%" PRIu64 ") "
                 "exceeds the maximum allowed value (%" PRIu64 ")\n", 
                 numberOfSamples, (size_t)numeric_limits<IndexType>::max());

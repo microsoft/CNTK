@@ -59,28 +59,29 @@ public:
         /*const*/ TensorShape sampleLayout;
 
         // constructor
-        Input(MatrixBasePtr matrix, MBLayoutPtr pMBLayout, TensorShape sampleLayout) : matrix(matrix), pMBLayout(pMBLayout), sampleLayout(sampleLayout)
+        Input(MatrixBasePtr matrix, MBLayoutPtr pMBLayout, TensorShape sampleLayout) : 
+            matrix(matrix), pMBLayout(pMBLayout), sampleLayout(sampleLayout)
         {
             assert(matrix);
         }
-        Input(){} // some STL classes need this for general happiness
+        Input() {} // some STL classes need this for general happiness
 
         // helper for typecasting the matrix pointer
-    template<class ElemType>
+        template<class ElemType>
         Matrix<ElemType>& GetMatrix(const wchar_t* name/*for debugging only*/ = L"(unknown)") const
-    {
+        {
             assert(matrix);
             auto* matrixp = dynamic_cast<Matrix<ElemType>*>(matrix.get());
-        if (!matrixp)
-        {
-            // print a rather rich error to track down a regression failure
-                auto isFloat  = !!dynamic_cast<Matrix<float>*> (matrix.get());
+            if (!matrixp)
+            {
+                // print a rather rich error to track down a regression failure
+                auto isFloat = !!dynamic_cast<Matrix<float>*> (matrix.get());
                 auto isDouble = !!dynamic_cast<Matrix<double>*>(matrix.get());
                 LogicError("GetMatrix<%s>: Attempted to access input stream '%ls' with wrong precision, got %s {%d,%d} instead of %s.",
                     typeid(ElemType).name(), name, typeid(matrix.get()).name(), (int)isFloat, (int)isDouble, typeid(Matrix<ElemType>*).name());
+            }
+            return *matrixp;
         }
-        return *matrixp;
-    }
     };
 
 private:
@@ -246,6 +247,21 @@ typedef std::shared_ptr<IDataReader> IDataReaderPtr;
 extern "C" DATAREADER_API void GetReaderF(IDataReader** preader);
 extern "C" DATAREADER_API void GetReaderD(IDataReader** preader);
 
+// The sole purpose of this base class is to provide backwards compatibility for (old)
+// readers that do not support multiple mb layouts.
+class DataReaderBase : public IDataReader
+{
+protected:
+    // Verifies that all inputs share the same layout (have the same layout pointer) 
+    // and copies the provided layout into the minibatch layout.
+    // This method is needed for backwards-compatibility and only meant to be used by old readers!
+    void SetMinibatchLayout(StreamMinibatchInputs& minibatch);
+
+    virtual bool TryGetMinibatch(StreamMinibatchInputs& matrices) = 0;
+public:
+    virtual bool GetMinibatch(StreamMinibatchInputs& matrices) override;
+};
+
 // Data Reader class
 // interface for clients of the Data Reader
 // mirrors the IDataReader interface, except the Init method is private (use the constructor)
@@ -292,7 +308,6 @@ class DataReader : public IDataReader, protected Plugin, public ScriptableObject
     // NOTE: this destroys the object, and it can't be used past this point.
     // The reason why this is not just a destructor is that it goes across a DLL boundary.
     virtual void Destroy() override;
-
 public:
     // DataReader Constructor
     // config - [in] configuration parameters for the datareader

@@ -103,7 +103,6 @@ string EnumerateInputs(const map<wstring, size_t> &nameToStreamId)
 template <class ElemType>
 bool ReaderShim<ElemType>::GetMinibatch(StreamMinibatchInputs& matrices)
 {
-
     // TODO: verify that the set of matrix names is identical 
     // to the set of reader input names. Warn if it's a subset, throw
     // if it's a superset.
@@ -131,6 +130,12 @@ bool ReaderShim<ElemType>::GetMinibatch(StreamMinibatchInputs& matrices)
         {
             return false;
         }
+    }
+
+    // Reset stale mb layouts.
+    for (const auto& iter : matrices)
+    {
+        iter.second.pMBLayout->Init(1, 0);
     }
 
     // a map to generate error messages when checking layout constraints. 
@@ -224,7 +229,8 @@ bool ReaderShim<ElemType>::DataEnd() { return false; } // Note: Return value nev
 template <class ElemType>
 void ReaderShim<ElemType>::CopyMBLayoutTo(MBLayoutPtr layout)
 {
-    // Do nothing.
+    // This method is inherited from IDataReader and should be removed in the near future.
+    NOT_IMPLEMENTED;
 }
 
 template <class ElemType>
@@ -232,6 +238,11 @@ size_t ReaderShim<ElemType>::GetNumParallelSequences()
 {
     // BUGBUG This is a property of the stream, of which this reader might produce several, with different nr. of
     // parallel sequences. Thus this property doesn't make sense anymore.
+    // This method is called by 
+    // * DataReaderHelpers::GetNumSubminibatchesNeeded to estimate mb size
+    // * ComputationNetwork::SetBatchNormalizationTimeConstants to compute learning rate per sample
+    // * ComputationNetwork::SetBatchNormalizationTimeConstants to compute actual mb size and momentum per sample
+    // * SGD::AdaptiveMinibatchSizing  to compute learning rate per sample
     return m_numParallelSequences;
 }
 

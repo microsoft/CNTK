@@ -316,8 +316,7 @@ public:
     // BUGBUG (Issue #95): With variable-length sequences, this can no longer be a network method.
     size_t GetNumSamplesWithLabelOfNetwork(const size_t numAllSamples) const
     {
-        if (m_pMBLayoutOfNetwork && 
-            !(m_pMBLayoutOfNetwork->GetNumParallelSequences() == 0 && m_pMBLayoutOfNetwork->GetNumTimeSteps() == 0))
+        if (m_pMBLayoutOfNetwork)
             return m_pMBLayoutOfNetwork->GetActualNumSamples();
         else
             return numAllSamples; // TODO: Return the actual number of samples, by inquiring our own input nodes; then eliminate the numAllSamples parameter.
@@ -502,12 +501,12 @@ public:
         auto& nodeGroup = GetNodeGroup(groupTag);
         // if node is already in the list then we are done
         if (node->HasTag(groupTag))
-    {
+        {
             for (const auto& groupNode : nodeGroup) // TODO: is there an STL algorithm?
                 if (groupNode == node)
                     return;
             // we get here if the node has the tag but is not in the node group yet
-    }
+        }
         // verify and update the node's tag
         node->SetTag(groupTag);
         // add to the node group
@@ -525,11 +524,11 @@ public:
         for (auto iter = nodeGroup.begin(); iter != nodeGroup.end(); iter++)
         {
             if (*iter == node)
-    {
+            {
                 nodeGroup.erase(iter);
                 return true;
-    }
-    }
+            }
+        }
         LogicError("RemoveFromNodeGroup: %ls %ls operation not found in its node group '%ls'.", node->NodeName().c_str(), node->OperationName().c_str(), groupTag.c_str());
     }
 
@@ -680,7 +679,7 @@ public:
         // if there's already one under this name, it better be node
         // unless user requested 'makeUniqueName', then we will modify the name
         while (!result.second/*if already there*/ && result.first->second != node)
-    {
+        {
             if (!makeUniqueName || node->NodeName().find_first_of(L".[]") == wstring::npos)
                 RuntimeError("AddNodeToNetIfNotYet: Duplicated name for %ls %ls operation.", node->NodeName().c_str(), node->OperationName().c_str());
             node->SetName(L"_" + node->NodeName());

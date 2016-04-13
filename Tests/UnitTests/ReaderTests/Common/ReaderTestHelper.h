@@ -189,14 +189,11 @@ struct ReaderFixture
 
             for (auto cnt = 0; dataReader.GetMinibatch(map) && cnt < m_maxMiniBatchCount; cnt++)
             {
-                MBLayoutPtr pMBlayoutPtr = make_shared<MBLayout>();
-                dataReader.CopyMBLayoutTo(pMBlayoutPtr);
                 // Process the Feature Matri(x|ces)
                 for (auto i = 0; i < numFeatureFiles; i++)
                 {
                     wstring name = numFeatureFiles > 1 ? L"features" + std::to_wstring(i + 1) : L"features";
-                    auto& layoutPtr = (pMBlayoutPtr->GetNumCols() > 0) ? 
-                       pMBlayoutPtr : map.GetInput(name).pMBLayout;
+                    auto& layoutPtr = map.GetInput(name).pMBLayout;
                     OutputMatrix(map.GetInputMatrix<ElemType>(name), *layoutPtr, outputFile);
                 }
 
@@ -204,18 +201,10 @@ struct ReaderFixture
                 for (auto i = 0; i < numLabelFiles; i++)
                 {
                     wstring name = numLabelFiles > 1 ? L"labels" + std::to_wstring(i + 1) : L"labels";
-                    auto& layoutPtr = (pMBlayoutPtr->GetNumCols() > 0) ? 
-                        pMBlayoutPtr : map.GetInput(name).pMBLayout;
+                    auto& layoutPtr = map.GetInput(name).pMBLayout;
                     OutputMatrix(map.GetInputMatrix<ElemType>(name), *layoutPtr, outputFile);
                 }
-
-                // Reset mb layouts
-                for (const auto& iter : map)
-                {
-                    iter.second.pMBLayout->Init(1, 0);
-                }
             }
-
         }
     }
 
@@ -266,6 +255,10 @@ struct ReaderFixture
         std::vector<shared_ptr<Matrix<ElemType>>> features;
         std::vector<shared_ptr<Matrix<ElemType>>> labels;
 
+        // For the time being, use the same layout across all inputs.
+        // TODO: add an option to create per-input layouts (once we have test-cases with different layouts)
+        MBLayoutPtr pMBLayout = make_shared<MBLayout>(1, 0, L"X");
+
         for (auto i = 0; i < numFeatureFiles; i++)
         {
             features.push_back(make_shared<Matrix<ElemType>>(0));
@@ -274,7 +267,7 @@ struct ReaderFixture
                 features.back()->SwitchToMatrixType(MatrixType::SPARSE, MatrixFormat::matrixFormatSparseCSC, false);
             }
             wstring name = numFeatureFiles > 1 ? L"features" + std::to_wstring(i + 1) : L"features";
-            map.insert(make_pair(name, StreamMinibatchInputs::Input(features[i], make_shared<MBLayout>(1, 0, name), TensorShape())));
+            map.insert(make_pair(name, StreamMinibatchInputs::Input(features[i], pMBLayout, TensorShape())));
         }
 
         for (auto i = 0; i < numLabelFiles; i++)
@@ -285,7 +278,7 @@ struct ReaderFixture
                 labels.back()->SwitchToMatrixType(MatrixType::SPARSE, MatrixFormat::matrixFormatSparseCSC, false);
             }
             wstring name = numLabelFiles > 1 ? L"labels" + std::to_wstring(i + 1) : L"labels";
-            map.insert(make_pair(name, StreamMinibatchInputs::Input(labels[i], make_shared<MBLayout>(1, 0, name), TensorShape())));
+            map.insert(make_pair(name, StreamMinibatchInputs::Input(labels[i], pMBLayout, TensorShape())));
         }
 
         // Setup output file

@@ -765,7 +765,7 @@ void UCIFastReader<ElemType>::StoreLabel(ElemType& labelStore, const LabelType& 
 //             [out] each matrix resized if necessary containing data.
 // returns - true if there are more minibatches, false if no more minibatchs remain
 template <class ElemType>
-bool UCIFastReader<ElemType>::GetMinibatch(StreamMinibatchInputs& matrices)
+bool UCIFastReader<ElemType>::TryGetMinibatch(StreamMinibatchInputs& matrices)
 {
     bool minibatchesRemaining = true;
     if (m_pendingAsyncGetMinibatch.valid())

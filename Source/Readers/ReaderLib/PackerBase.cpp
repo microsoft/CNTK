@@ -57,10 +57,10 @@ PackerBase::PackerBase(MemoryProviderPtr memoryProvider,
 
         if (m_inputStreamDescriptions[i]->m_storageType == StorageType::dense &&
             stream->m_storageType == StorageType::sparse_csc)
-{
+        {
             RuntimeError("Dense to sparse re-packing requested for stream '%ls' is not supported.",
                 stream->m_name.c_str());
-    }
+        }
 
         m_streamBuffers.push_back(StreamBuffer(memoryProvider));
     }
