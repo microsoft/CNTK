@@ -93,7 +93,7 @@ void ComputationNodeBase::InferMBLayoutFromInputsForStandardCase(bool isFinalVal
         else if (!pMBLayout) // first non-NULL layout: just copy it
             pMBLayout = child->m_pMBLayout;
         else if (pMBLayout != child->m_pMBLayout && isFinalValidationPass) // got a layout--compare whether it is the same
-            RuntimeError("%ls: InferMBLayoutFromInputsForStandardCase: Expected minibatch layouts to be the same between all children. Child '%ls' (%ls) uses a different layout than previously checked children and might get out of sync during runtime. If this is by design, use ReconcileMBLayout() to forward layouts between nodes.",
+            RuntimeError("%ls: InferMBLayoutFromInputsForStandardCase: Expected minibatch layouts to be the same between all children. Child '%ls' (%ls) uses a different layout than previously checked children and might get out of sync during runtime. If this is by design, use ReconcileDynamicAxis() to forward layouts between nodes.",
                          NodeDescription().c_str(), child->NodeName().c_str(), child->OperationName().c_str());
     }
     // all are consistent: install it
@@ -123,7 +123,7 @@ void ComputationNodeBase::ValidateBinaryZip(bool isFinalValidationPass, bool all
     if (isFinalValidationPass &&
         Input(0)->GetMBLayout() != Input(1)->GetMBLayout() && Input(0)->HasMBLayout() && Input(1)->HasMBLayout())
     {
-        LogicError("%ls: Minibatch layouts are not the same between arguments and might get out of sync during runtime. If this is by design, use ReconcileMBLayout() to forward layouts between nodes.", NodeDescription().c_str());
+        LogicError("%ls: Minibatch layouts are not the same between arguments and might get out of sync during runtime. If this is by design, use ReconcileDynamicAxis() to forward layouts between nodes.", NodeDescription().c_str());
     }
 
     // result has tensor shape with dimensions being the max over both
@@ -341,13 +341,15 @@ TensorShape ComputationNodeBase::GetOneSampleTensorSliceFor(size_t rank, const F
             // BUGBUG: This ^^ will print based on the old legacy layout, and we have no way of knowing here whether that is correct.
             else
 #endif
-                prototype += msra::strfun::strprintf("[%s%s%ls]", string(child->m_sampleLayout).c_str(), mbSizeMark, child->HasMBLayout() ? child->GetMBLayout()->GetName().c_str() : L"");
+                prototype += msra::strfun::strprintf("[%s%s%ls]", string(child->m_sampleLayout).c_str(), mbSizeMark, 
+                                                     child->HasMBLayout() ? child->GetMBLayout()->GetAxisName().c_str() : L"");
         }
         prototype += extraArgs;
         //prototype += ")";
     }
 
-    prototype += msra::strfun::strprintf(" -> [%s%s%ls]", string(GetSampleLayout()).c_str(), HasMBLayout() ? " x " : "", HasMBLayout() ? GetMBLayout()->GetName().c_str() : L"");
+    prototype += msra::strfun::strprintf(" -> [%s%s%ls]", string(GetSampleLayout()).c_str(), HasMBLayout() ? " x " : "", 
+                                         HasMBLayout() ? GetMBLayout()->GetAxisName().c_str() : L"");
 
     return prototype;
 }

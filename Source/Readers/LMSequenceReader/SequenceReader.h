@@ -379,7 +379,7 @@ private:
 public:
     LMBatchSequenceParser<ElemType, LabelType> m_parser;
     BatchSequenceReader()
-        : m_pMBLayout(make_shared<MBLayout>(1, 0, L"*"))
+        : m_pMBLayout(make_shared<MBLayout>())
     {
         mLastProcessedSentenceId = 0;
         mRequestedNumParallelSequences = 1;

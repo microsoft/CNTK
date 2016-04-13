@@ -59,7 +59,7 @@ class SparsePCReader : public IDataReader
 
 public:
     SparsePCReader()
-        : m_pMBLayout(make_shared<MBLayout>(1, 0, L"*")){};
+        : m_pMBLayout(make_shared<MBLayout>()){};
     virtual ~SparsePCReader();
     virtual void Destroy();
     template <class ConfigRecordType>

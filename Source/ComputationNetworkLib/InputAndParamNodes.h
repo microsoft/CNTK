@@ -122,7 +122,6 @@ public:
     DynamicAxisNode(DEVICEID_TYPE deviceId, const wstring& name)
         : Base(deviceId, name)
     {
-        printf("DynamixAxis called\n");
         // This is the whole point of this class: Introduce a new MBLayout that others can use.
         LinkToMBLayout(make_shared<MBLayout>(1, 0, name));
         // We need some shape, or validation fails.
@@ -206,10 +205,14 @@ protected:
     {
         AttachInputsFromConfig(configp, this->GetExpectedNumInputs());
         wstring axisName = L"";
-        if (configp->Exists(L"dynamics") && configp->Find(L"dynamics")->Is<ComputationNodeBasePtr>())
+        if (configp->Exists(L"dynamicAxes"))
         {
-            ComputationNodeBasePtr axis = configp->Get(L"dynamics");
-            axisName = axis->GetName();
+            if (configp->Find(L"dynamicAxes")->Is<ComputationNodeBase>())
+            {
+                ComputationNodeBasePtr axis = configp->Get(L"dynamicAxes");
+                axisName = axis->GetName();
+            }
+            // Else: Use default axis.
         }
 
         bool isImage = configp->Get(L"isImage");
@@ -220,6 +223,7 @@ protected:
     }
 
     // Only for input nodes: Allow for connecting to the MBLayout based on the dynamic axis object.
+    // This is called while compiling the network.
     virtual void AttachDynamicAxis(std::function<ComputationNodeBasePtr(const std::wstring)> nodeLookup, MBLayoutPtr defaultLayout) override
     {
         if (m_dynamicAxisNodeName == L"")
@@ -230,7 +234,7 @@ protected:
         }
 
         if (m_dynamicAxisNodeName == this->GetName())
-            RuntimeError("%ls: Cannot attach dynamic axis from itself.", NodeDescription().c_str());
+            RuntimeError("%ls: Cannot attach dynamic axis to itself.", NodeDescription().c_str());
 
         auto node = nodeLookup(m_dynamicAxisNodeName);
 
@@ -240,7 +244,7 @@ protected:
         // For now we require the node to be a DynamicAxisNode, though we could derive the same from other nodes. This would involve
         // more dependencies on the order in which things are evaluated, though.
         if (!node->Is<DynamicAxisNode<ElemType>>())
-            RuntimeError("%ls: dynamic argument must be of type DynamicAxis(), but got %ls.",
+            RuntimeError("%ls: dynamicAxis argument must be of type DynamicAxis(), but got %ls.",
             NodeDescription().c_str(), node->NodeDescription().c_str());
         m_dynamicAxisNode = node->As<DynamicAxisNode<ElemType>>();
         if (!m_dynamicAxisNode->HasMBLayout())
@@ -258,6 +262,8 @@ public:
         m_sampleLayout.Save(fstream);
 
         fstream.PutMarker(FileMarker::fileMarkerBeginSection, L"BDynamicAxis");
+        unsigned int nrAxes = 1;
+        fstream << nrAxes;
         fstream << m_dynamicAxisNodeName;
         fstream.PutMarker(FileMarker::fileMarkerEndSection, L"EDynamicAxis");
     }
@@ -280,7 +286,12 @@ public:
 
         if (fstream.TryGetMarker(FileMarker::fileMarkerBeginSection, L"BDynamicAxis"))
         {
-            fstream >> m_dynamicAxisNodeName;
+            unsigned int nrAxes;
+            fstream >> nrAxes;
+            if (nrAxes == 1)
+                fstream >> m_dynamicAxisNodeName;
+            else if (nrAxes > 1)
+                RuntimeError("Input node: This version only supports a single dynamic axis. Please update your bits.");
             fstream.TryGetMarker(FileMarker::fileMarkerEndSection, L"EDynamicAxis");
         }
         else
@@ -345,16 +356,16 @@ public:
         : Base(deviceId, name, false, L"")
     {
     }
-    InputValue(DEVICEID_TYPE deviceId, const wstring& name, const wstring& axisName)
-        : Base(deviceId, name, false, axisName)
+    InputValue(DEVICEID_TYPE deviceId, const wstring& name, const wstring& dynamicAxisName)
+        : Base(deviceId, name, false, dynamicAxisName)
     {
     }
-    InputValue(DEVICEID_TYPE deviceId, const wstring& name, size_t rows, const wstring& axisName)
-        : Base(deviceId, name, rows, false, axisName)
+    InputValue(DEVICEID_TYPE deviceId, const wstring& name, size_t rows, const wstring& dynamicAxisName)
+        : Base(deviceId, name, rows, false, dynamicAxisName)
     {
     }
-    InputValue(DEVICEID_TYPE deviceId, const wstring& name, const TensorShape& sampleLayout, const wstring& axisName)
-        : Base(deviceId, name, sampleLayout, false, axisName)
+    InputValue(DEVICEID_TYPE deviceId, const wstring& name, const TensorShape& sampleLayout, const wstring& dynamicAxisName)
+        : Base(deviceId, name, sampleLayout, false, dynamicAxisName)
     {
     }
     InputValue(const ScriptableObjects::IConfigRecordPtr configp)
@@ -387,16 +398,16 @@ public:
         : Base(deviceId, name, false, L"")
     {
     }
-    SparseInputValue(DEVICEID_TYPE deviceId, const wstring& name, const wstring& axisName)
-        : Base(deviceId, name, true, axisName)
+    SparseInputValue(DEVICEID_TYPE deviceId, const wstring& name, const wstring& dynamicAxisName)
+        : Base(deviceId, name, true, dynamicAxisName)
     {
     }
-    SparseInputValue(DEVICEID_TYPE deviceId, const wstring& name, size_t rows, const wstring& axisName)
-        : Base(deviceId, name, rows, true, axisName)
+    SparseInputValue(DEVICEID_TYPE deviceId, const wstring& name, size_t rows, const wstring& dynamicAxisName)
+        : Base(deviceId, name, rows, true, dynamicAxisName)
     {
     }
-    SparseInputValue(DEVICEID_TYPE deviceId, const wstring& name, const TensorShape& imageLayout, const wstring& axisName)
-        : Base(deviceId, name, imageLayout, true, axisName)
+    SparseInputValue(DEVICEID_TYPE deviceId, const wstring& name, const TensorShape& imageLayout, const wstring& dynamicAxisName)
+        : Base(deviceId, name, imageLayout, true, dynamicAxisName)
     {
     }
     SparseInputValue(const ScriptableObjects::IConfigRecordPtr configp)

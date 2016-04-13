@@ -100,10 +100,7 @@ struct MBLayout
         {
             return seqId == other.seqId && s == other.s && tBegin == other.tBegin && tEnd == other.tEnd;
         }
-        size_t GetNumTimeSteps() const
-        {
-            return (size_t)(tEnd - tBegin);
-        }
+        size_t GetNumTimeSteps() const { return (size_t)(tEnd - tBegin); }
     };
 
     // -------------------------------------------------------------------
@@ -111,15 +108,10 @@ struct MBLayout
     // -------------------------------------------------------------------
 
     MBLayout(size_t numParallelSequences, size_t numTimeSteps, const std::wstring &name)
-        : m_distanceToStart(CPUDEVICE), m_distanceToEnd(CPUDEVICE), m_columnsValidityMask(CPUDEVICE), m_name(name)
+        : m_distanceToStart(CPUDEVICE), m_distanceToEnd(CPUDEVICE), m_columnsValidityMask(CPUDEVICE)
     {
-        if (name == L"")
-    {
-            wstringstream s;
-            s << "X" << rand();
-            m_name = s.str();
-        }
         Init(numParallelSequences, numTimeSteps);
+        SetUniqueAxisName(name != L"" ? name : L"DynamicAxis");
     }
     MBLayout()
         : MBLayout(1, 0, L"")
@@ -128,7 +120,7 @@ struct MBLayout
 
     // copy the content of another MBLayoutPtr over
     // Use this instead of actual assignment to make it super-obvious that this is not copying the pointer but actual content. The pointer is kept fixed.
-    void CopyFrom(const MBLayoutPtr& other)
+    void CopyFrom(const MBLayoutPtr& other, bool keepName=false)
     {
         m_numTimeSteps = other->m_numTimeSteps;
         m_numParallelSequences = other->m_numParallelSequences;
@@ -146,7 +138,9 @@ struct MBLayout
 
         m_columnsValidityMask.SetValue(other->m_columnsValidityMask);
         m_writable = other->m_writable;
-        m_name = other->m_name;
+
+        if (!keepName)
+            m_axisName = other->m_axisName;
     }
 
     // Destructive copy that steals ownership if the content, like std::move()
@@ -170,7 +164,7 @@ struct MBLayout
 
         m_columnsValidityMask = std::move(other->m_columnsValidityMask);
         m_writable = other->m_writable;
-        m_name = std::move(other->m_name);
+        m_axisName = std::move(other->m_axisName);
     }
 
     MBLayout(const MBLayout&) = delete;
@@ -256,13 +250,18 @@ public:
     // accessors
     // -------------------------------------------------------------------
 
-    size_t GetNumTimeSteps() const
+    size_t GetNumTimeSteps() const { return m_numTimeSteps; }
+    size_t GetNumParallelSequences() const { return m_numParallelSequences; }
+    const std::wstring GetAxisName() const { return m_axisName; }
+    void SetAxisName(const std::wstring& axisName) { m_axisName = axisName; }
+
+    void SetUniqueAxisName(std::wstring name) // helper for constructing
     {
-        return m_numTimeSteps;
-    }
-    size_t GetNumParallelSequences() const
-    {
-        return m_numParallelSequences;
+        static std::map<std::wstring, size_t> nameIndices;
+        size_t index = nameIndices[name]++;
+        if (index > 0)
+            name += msra::strfun::wstrprintf(L"%d", (int)index);
+        SetAxisName(name);
     }
 
     // how many columns the underlying MB matrix has
@@ -275,16 +274,6 @@ public:
     const vector<SequenceInfo> &GetAllSequences() const
     {
         return m_sequences;
-    }
-
-    const std::wstring GetName() const
-    {
-        return m_name;
-    }
-
-    void SetName(const std::wstring& name)
-    {
-        m_name = name;
     }
 
     // compute the number of actual samples in this layout (not counting gaps)
@@ -551,8 +540,6 @@ private:
 
     vector<bool> m_timeStepHasGap; // [t] true if at least one gap in time step t
 
-    std::wstring m_name;
-
     // Cached mask indicating the validity of each column in the MBLayout
     // TODO: We actually just need a boolean matrix for this.
     // A value of 1 indicates that the column has valid content
@@ -564,6 +551,8 @@ private:
     // Meant to guard in lazy creation of m_columnsValidityMask.
     mutable bool m_writable;
 
+    // The axis this MBLayout represents.
+    std::wstring m_axisName;
 public:
 
     // special accessor for sequence training  --TODO: must be replaced by a different mechanism
@@ -952,7 +941,7 @@ static inline std::pair<size_t, size_t> ColumnRangeWithMBLayoutFor(size_t numCol
     // MBLayout of data and of FrameRange must be identical pointers,
     // or in case of broadcasting, respective parent pointers.
     // MBLayouts that are identical in content but not object identity (pointer) are not admissible.
-    // For those cases, use a ReconcileMBLayout node.
+    // For those cases, use a ReconcileDynamicAxis node.
     if (fr.m_pMBLayout != pMBLayout)
     {
         // if broadcast allowed then it is allowed to broadcast from an outer-loop value
@@ -960,9 +949,9 @@ static inline std::pair<size_t, size_t> ColumnRangeWithMBLayoutFor(size_t numCol
         if (fr.m_broadcastAllowed && !pMBLayout && numCols == 1)
             return std::pair<size_t, size_t>(0, numCols);
         if (fr.m_pMBLayout && pMBLayout && *fr.m_pMBLayout == *pMBLayout)
-            LogicError("DataFor: FrameRange's MBLayout inconsistent with matrix. They are compatible though--are you missing a ReconcileMBLayout operation?");
+            LogicError("DataFor: FrameRange's dynamic axis is inconsistent with matrix. They are compatible though--are you missing a ReconcileDynamicAxis operation?");
         else
-            LogicError("DataFor: FrameRange's MBLayout inconsistent with matrix.");
+            LogicError("DataFor: FrameRange's dynamic axis is inconsistent with matrix.");
     }
     // if FrameRange refers to whole minibatch (map mode)
     // or if we don't even have a layout
@@ -1045,7 +1034,7 @@ static inline std::pair<DimensionVector, DimensionVector> TensorSliceWithMBLayou
     // MBLayout of data and of FrameRange must be identical pointers,
     // or in case of broadcasting, respective parent pointers.
     // MBLayouts that are identical in content but not object identity (pointer) are not admissible.
-    // For those cases, use a ReconcileMBLayout node.
+    // For those cases, use a ReconcileDynamicAxis node.
     if (isTimeIteration && fr.m_pMBLayout != pMBLayout)
     {
         // if broadcast allowed then it is allowed to broadcast from an outer-loop value
@@ -1053,10 +1042,10 @@ static inline std::pair<DimensionVector, DimensionVector> TensorSliceWithMBLayou
         if (fr.m_pMBLayout /*get data for a loop*/ && !pMBLayout /*'data' is not samples*/ && fr.m_broadcastAllowed /*we're OK with that*/)
             ; // the time dimension is broadcasting--leave it as is
         else if (fr.m_pMBLayout && pMBLayout && *fr.m_pMBLayout == *pMBLayout)
-            LogicError("DataFor: FrameRange's MBLayout inconsistent with matrix. They are compatible though--are you missing a ReconcileMBLayout operation? %s vs. %s", 
+            LogicError("DataFor: FrameRange's dynamic axis is inconsistent with matrix. They are compatible though--are you missing a ReconcileDynamicAxis operation? %s vs. %s", 
                        static_cast<string>(*(fr.m_pMBLayout)).c_str(), static_cast<string>(*(pMBLayout)).c_str());
         else
-            LogicError("DataFor: FrameRange's MBLayout inconsistent with matrix: %s vs. %s", 
+            LogicError("DataFor: FrameRange's dynamic axis is inconsistent with matrix: %s vs. %s", 
                        static_cast<string>(*(fr.m_pMBLayout)).c_str(), static_cast<string>(*(pMBLayout)).c_str());
     }
     // if FrameRange refers to whole minibatch (map mode)

@@ -171,7 +171,7 @@ template class ReshapeNode<float>;
 template class ReshapeNode<double>;
 
 // -----------------------------------------------------------------------
-// ReconcileMBLayout (dataInput, layoutInput)
+// ReconcileDynamicAxis (dataInput, layoutInput)
 // This node copies data from 'dataInput' while it propagates the minibatch-layout information from 'layoutInput'.
 // It does perform a runtime check to enforce that the layout of 'dataInput' is compatible (identical content) to that of 'layoutInput'.
 // This node is meant to be used from BrainScript macros that bracket expand/reduce pairs of nodes. It is not meant to really be used directly.
@@ -179,14 +179,14 @@ template class ReshapeNode<double>;
 // -----------------------------------------------------------------------
 
 template <class ElemType>
-class ReconcileMBLayoutNode : public ComputationNode<ElemType>, public NumInputs<2>
+class ReconcileDynamicAxisNode : public ComputationNode<ElemType>, public NumInputs<2>
 {
     typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
-    static const std::wstring TypeName() { return L"ReconcileMBLayout"; }
+    static const std::wstring TypeName() { return L"ReconcileDynamicAxis"; }
 
 public:
-    DeclareConstructorFromConfigWithNumInputs(ReconcileMBLayoutNode);
-    ReconcileMBLayoutNode(DEVICEID_TYPE deviceId, const wstring& name)
+    DeclareConstructorFromConfigWithNumInputs(ReconcileDynamicAxisNode);
+    ReconcileDynamicAxisNode(DEVICEID_TYPE deviceId, const wstring& name)
         : Base(deviceId, name)
     {
     }
@@ -228,8 +228,8 @@ public:
     }
 };
 
-template class ReconcileMBLayoutNode<float>;
-template class ReconcileMBLayoutNode<double>;
+template class ReconcileDynamicAxisNode<float>;
+template class ReconcileDynamicAxisNode<double>;
 
 // -----------------------------------------------------------------------
 // SliceNode (input)
