@@ -300,56 +300,24 @@ class ComputationNode(object):
 
 
 class InputComputationNodeBase(ComputationNode, metaclass=ABCMeta):
-
     '''
-    Base class for all non-image input nodes nodes and operators. Provides methods to attach
-    a reader to an input node
+    Base class for all non-image input nodes nodes and operators. 
     '''
-
-    def attach_text_format_reader(self, filename, input_alias=None, format='dense'):
-        '''
-        attach a TextFormatReader to the node
-        '''
-        self.reader = CNTKTextFormatReader(filename)
-        self.reader.add_input(self, input_alias, self.dims, format)
-
-    def attach_uci_fast_reader(self,
-                               filename,
-                               input_start,
-                               islabel=False,
-                               num_label_cols=None,
-                               label_mapping_file=None,
-                               custom_delimiter=None):
-        '''
-        attach a UCIFastReader to the node
-        '''
-        self.reader = UCIFastReader(filename, custom_delimiter)
-
-        if islabel:
-            self.reader.add_input(
-                self, input_start, num_label_cols, self.dims, label_mapping_file)
-        else:
-            self.reader.add_input(self, input_start, self.dims)
+    pass
 
 
 class ImageInputComputationNodeBase(ComputationNode, metaclass=ABCMeta):
 
     '''
-    Base class for all image input nodes nodes and operators. Provides methods to attach
-    a reader to an input node
+    Base class for all image input nodes nodes and operators. 
     '''
-
-    def attach_image_reader(self, filename, **kw):
-        '''
-        attach a TextFormatReader to the node
-        '''
-        raise NotImplementedError
+    pass
 
 # importing after defining ComputationNode to work around circular imports
 from cntk.ops.cntk1 import *
 # to have a separate namespace when we want to override below
 from cntk.ops import cntk1 as cntk1_ops
-from .reader import UCIFastReader, CNTKTextFormatReader
+from .reader import TextFormatReaderAggregator
 
 # redefine some operators to work with NumPy and sequences as input
 
@@ -488,12 +456,10 @@ def _get_input_node(list_of_tensors, has_sequence_dimension, **kw):
     value_shape = shapes.pop()
 
     cntk_shape = value_shape if value_shape else (1,)
-
-    from cntk.reader import CNTKTextFormatReader
-
+    
     dims = int(np.multiply.reduce(cntk_shape))
     node = cntk1_ops.Input(cntk_shape, **kw)
-    node.reader = CNTKTextFormatReader(tf.name)
+    node.reader = TextFormatReaderAggregator(tf.name)
     node.reader.add_input(node, alias, dims)
     
     return node

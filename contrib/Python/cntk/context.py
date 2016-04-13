@@ -56,7 +56,6 @@ class AbstractContext(object, metaclass=ABCMeta):
     '''
 
     def __init__(self, name,
-                 root_nodes=None,
                  device_id=-1,                 
                  precision="float",
                  clean_up=True):      
@@ -64,8 +63,7 @@ class AbstractContext(object, metaclass=ABCMeta):
         AbstractContext Constructer
 
         :param name: context name
-        :param device_id: whether to use CPU or a specific GPU. -1 for CPU larger values
-        :param root_nodes: list of top nodes of the graph or single node itself
+        :param device_id: whether to use CPU or a specific GPU. -1 for CPU larger values        
         :param clean_up: whether the temporary directory should be removed when the context is left        
         are the GPUs indices.                
         :param precision: either float or double
@@ -87,11 +85,7 @@ class AbstractContext(object, metaclass=ABCMeta):
         self.device_id = device_id
         self.precision = precision
         self.clean_up = clean_up
-        self.input_nodes = set()
-        if root_nodes is None:
-            self.root_nodes = None
-        else:
-            self.root_nodes = root_nodes if isinstance(root_nodes, list) else [root_nodes]
+        self.input_nodes = set()    
 
     def __enter__(self):
         _CONTEXT[self.name] = self
@@ -104,7 +98,7 @@ class AbstractContext(object, metaclass=ABCMeta):
         if self.clean_up:
             sh.rmtree(self.directory)
 
-    def _generate_config(self, root_nodes=None):
+    def _generate_config(self, root_nodes):
         '''
         Helper function to create a configuration incorporating all root nodes
         '''
@@ -117,10 +111,8 @@ class AbstractContext(object, metaclass=ABCMeta):
         node_counter = 0
         dep_inputs = tuple()
         reconciled_cache = {}
-
-        if root_nodes is None:
-            root_nodes = self.root_nodes
-        elif not isinstance(root_nodes, list):
+        
+        if not isinstance(root_nodes, list):
             root_nodes = [root_nodes]
 
         for root_node in root_nodes:
@@ -140,9 +132,10 @@ class AbstractContext(object, metaclass=ABCMeta):
 
         return description, has_inputs, dedupe_readers(readers)
 
-    def _generate_train_config(self, optimizer, reader, override_existing):
+    def _generate_train_config(self, root_nodes, optimizer, reader, override_existing):
         '''
         Generates the configuration file for the train action.
+        :param root_nodes: list of the root nodes of the model
         :param optimizer: the SGD optimizer to use for training
         :param reader: the reader to use for reading the data
         :param override_existing: if the folder exists already override it
@@ -160,7 +153,7 @@ class AbstractContext(object, metaclass=ABCMeta):
 
         tmpl = open(CNTK_TRAIN_TEMPLATE_PATH, "r").read()
         model_filename = os.path.join(model_dir, self.name)
-        description, has_inputs, readers = self._generate_config()
+        description, has_inputs, readers = self._generate_config(root_nodes)
         if reader:
             readers.append(reader)
 
@@ -260,45 +253,43 @@ class AbstractContext(object, metaclass=ABCMeta):
         return tmpl % tmpl_dict
 
     @abstractmethod
-    def train(self, optimizer, reader=None, override_existing=True):
+    def train(self, root_nodes, optimizer, inputs_readers=None, override_existing=True):
         '''
         Abstract method for the action train.
-        :param reader: the reader to use for this action. Alternatively, you
-        can attach a reader directly to the input node.
+        :param root_nodes: the list of root nodes of the model
+        :param inputs_readers: map from input nodes to readers
         '''
         pass
 
     @abstractmethod
-    def test(self, reader=None):
+    def test(self, inputs_readers=None):
         '''
         Abstract method for the action test.
-        :param reader: the reader to use for this action. Alternatively, you
-        can attach a reader directly to the input node.
+        :param inputs_readers: map from input nodes to readers        
         '''
         pass
 
     @abstractmethod
-    def predict(self, reader=None):
+    def predict(self, inputs_readers=None):
         '''
         Abstract method for the action write. It evaluated the trained model on 
         the data provided by the reader.
-        :param reader: the reader to use for this action. Alternatively, you
-        can attach a reader directly to the input node.
+        :param inputs_readers: map from input nodes to readers
 
         Returns the predicted output
         '''
         pass
 
     @abstractmethod
-    def eval(self, node, reader=None, backward_pass=False):
+    def eval(self, node, inputs_readers=None, backward_pass=False, input_name=None):
         '''
         Abstract method for the action write. It evaluated the passed node on the
         data provided by the reader.
         :param node: the node to evaluate.
-        :param reader: the reader to use for this action. Alternatively, you
-        can attach a reader directly to the input node.
+        :param inputs_readers: map from input nodes to readers
         :param backward_pass: set to True if you want to output the gradient of a node (backward pass)
-
+        :input_name: if backward_pass is True then input_node should contain the input name that
+        the gradient is performed with respect to.
         Returns the output generated by `node`
         '''
         pass
@@ -340,40 +331,38 @@ class Context(AbstractContext):
 
         return output
 
-    def train(self, optimizer, reader=None, override_existing=True):
+    def train(self, root_nodes, optimizer, inputs_readers=None, override_existing=True):
         '''
         Run the train action locally.
+        :param root_nodes: the list of root nodes of the model
         :param optimizer: the SGD optimizer to use for training
-        :param reader: the reader to use for this action. Alternatively, you
-        can attach a reader directly to the input node.
+        :param inputs_readers: map from input nodes to readers
         :param override_existing: if the folder exists already override it
         '''
 
         config_content = self._generate_train_config(
-            optimizer, reader, override_existing)
+            root_nodes, optimizer, inputs_readers, override_existing)
         return self._call_cntk(CNTK_TRAIN_CONFIG_FILENAME, config_content)
 
-    def test(self, reader=None):
+    def test(self, inputs_readers=None):
         '''
         Run the test action locally.
-        :param reader: the reader to use for this action. Alternatively, you
-        can attach a reader directly to the input node.
+        :param inputs_readers: map from input nodes to readers
         '''
-        config_content = self._generate_test_config(reader)
+        config_content = self._generate_test_config(inputs_readers)
         output = self._call_cntk(CNTK_TEST_CONFIG_FILENAME, config_content)
 
         return Context._parse_test_result(output)
 
 
-    def predict(self, reader=None):
+    def predict(self, inputs_readers=None):
         '''
         Run the write action locally, use the trained model of this context.
-        :param reader: the reader to use for this action. Alternatively, you
-        can attach a reader directly to the input node.
+        :param inputs_readers: map from input nodes to readers
 
         Returns the predicted output
         '''
-        config_content = self._generate_predict_config(reader)
+        config_content = self._generate_predict_config(inputs_readers)
         return self._call_cntk(CNTK_PREDICT_CONFIG_FILENAME, config_content)
 
     '''
@@ -549,14 +538,13 @@ class Context(AbstractContext):
 
         return expected_shape, expected_size
 
-    def eval(self, node, reader=None, backward_pass=False, input_name=None):
+    def eval(self, node, inputs_readers=None, backward_pass=False, input_name=None):
         '''
         Run the write action locally to evaluate the passed node and returning
         the data it produced.
 
         :param node: the node to evaluate.
-        :param reader: the reader to use for this action. Alternatively, you
-        can attach a reader directly to the input node.
+        :param inputs_readers: map from input nodes to readers
         :param backward_pass: set to True if you want to output the gradient of a node (backward pass)
         :input_name: if backward_pass is True then input_node should contain the input name that
         the gradient is performed with respect to.
@@ -570,7 +558,7 @@ class Context(AbstractContext):
         orig_node_tag = node.tag if hasattr(node, 'tag') else None
         node.tag = 'output'
 
-        config_content = self._generate_eval_config(node, reader, backward_pass)
+        config_content = self._generate_eval_config(node, inputs_readers, backward_pass)
         self._call_cntk(CNTK_EVAL_CONFIG_FILENAME, config_content)
 
         node.tag = orig_node_tag

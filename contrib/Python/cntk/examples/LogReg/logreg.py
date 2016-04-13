@@ -28,10 +28,10 @@ def train_eval_logreg(criterion_name=None, eval_name=None):
     my_sgd = SGD(
         epoch_size=0, minibatch_size=25, learning_ratesPerMB=0.1, max_epochs=3)
 
-    with Context('demo', root_nodes=[ce,eval], clean_up=False) as ctx:
+    with Context('demo', clean_up=False) as ctx:
         X.attach_uci_fast_reader(train_file, 0)
         y.attach_uci_fast_reader(train_file, 2, True, 1, mapping_file)
-        ctx.train(my_sgd)
+        ctx.train(root_nodes=[ce,eval], optimizer=my_sgd)
         
         X.attach_uci_fast_reader(test_file, 0)
         y.attach_uci_fast_reader(test_file, 2, True, 1, mapping_file)
