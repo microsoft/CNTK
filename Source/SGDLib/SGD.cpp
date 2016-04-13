@@ -9,6 +9,8 @@
 #include "DataReaderHelpers.h"
 #include "MatrixQuantizerImpl.h"
 #ifdef QUANTIZED_GRADIENT_AGGREGATION
+static inline bool operator==(const std::pair<double,size_t>& a, size_t b) { assert(b==0); return a.first == b; }
+// ^^ workaround until this line in AggregateGradientsImpl() gets updated: assert(headerCPU->evalErrors[i] == 0);
 #include "AllReduceDistGradAggregator.h"
 #endif
 #include "SimpleDistGradAggregator.h"

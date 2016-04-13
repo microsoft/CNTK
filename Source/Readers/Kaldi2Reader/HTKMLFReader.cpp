@@ -2055,4 +2055,5 @@ void HTKMLFReader<ElemType>::GetDataNamesFromConfig(const ConfigRecordType& read
 
 template class HTKMLFReader<float>;
 template class HTKMLFReader<double>;
-} } }
+
+}}}
