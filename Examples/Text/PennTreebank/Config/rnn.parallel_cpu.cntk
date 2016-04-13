@@ -10,7 +10,7 @@ OutputDir = "$RootDir$/Output"
 ModelDir  = "$OutputDir$/Models"
 
 # deviceId=-1 for CPU, >=0 for GPU devices, "auto" chooses the best GPU, or CPU if no usable GPU is available
-deviceId = "auto"
+deviceId = -1
 
 command = writeWordAndClassInfo:train:test:write
 
@@ -21,10 +21,11 @@ modelPath  = "$ModelDir$/rnn.dnn"
 # uncomment the following line to write logs to a file
 #stderr=$OutputDir$/rnnOutput
 
-numCPUThreads = 1
+numCPUThreads = 0
 
 confVocabSize = 10000
 confClassSize = 50
+parallelTrain = true
 
 trainFile = "ptb.train.txt"
 validFile = "ptb.valid.txt"
@@ -104,6 +105,12 @@ train = [
             numMiniBatch4LRSearch = 100
             numPrevLearnRates = 5
             numBestSearchEpoch = 1
+        ]
+		
+		parallelTrain = [
+            parallelizationMethod = "DataParallelSGD"
+			parallelizationStartEpoch = 2
+            distributedMBReading = true
         ]
     ]
 
