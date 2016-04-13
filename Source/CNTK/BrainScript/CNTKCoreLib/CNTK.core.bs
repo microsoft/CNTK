@@ -150,6 +150,10 @@ BFF(in, rows, cols) = [ B = Parameter(rows, 1, init = 'fixedValue', value = 0) ;
 SBFF(in, rows, cols) = [ Eh = Sigmoid(BFF(in, rows, cols).z) ] 
 MeanVarNorm(feat) = PerDimMeanVarNormalization(feat, Mean(feat), InvStdDev(feat)) 
 LogPrior(labels) = Log(Mean(labels)) 
+Embedding(input, vocabSize, embeddingDim, embeddingPath) = [
+    embedding = Transpose(LearnableParameter(vocabSize, embeddingDim, learningRateMultiplier = 0.0, init = 'fromFile', initFromFilePath = embeddingPath))          
+    lookup = GatherPacked(features, embedding)
+].lookup
 
 ##############################################################################
 # the more specific standard things are in a namespace called 'BS'
@@ -248,6 +252,9 @@ Sequences = [
         selected = Loop._IsWithin (DelayFn, N, x)
         out = Gather (selected, x)
     ].out
+	# Last and TakeRight
+	Last(x) = TakeRight(1, x)
+	TakeRight (N, x) = _Take (FutureValue, N, x)
     Skip (N, x) = if N > 0 then _Skip (PastValue, N, x) else x
     _Skip (DelayFn, N, x) = [ // TODO: merge with _Take
         selected = Loop._IsWithin (DelayFn, N, x)
