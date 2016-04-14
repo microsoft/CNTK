@@ -208,23 +208,24 @@ class Test:
     if len(self.testCases) > 0:
       # Locating and reading baseline file
       baselineFile = self.findBaselineFile(flavor, device)
-      if baselineFile == None:
-        return TestRunResult.fatalError("Baseline file sanity check", "Can't find baseline file")
-  
-      with open(baselineFile, "r") as f:
-        baseline = f.read().split("\n")
-        if args.verbose:
-           six.print_("Baseline: " + baselineFile)
+      if baselineFile != None:
+          with open(baselineFile, "r") as f:
+            baseline = f.read().split("\n")
+            if args.verbose:
+               six.print_("Baseline: " + baselineFile)
 
-    # Before running the test, pre-creating TestCaseRunResult object for each test case
-    # and compute filtered lines from baseline file.
-    # Note: some test cases might fail at this time if baseline and/or patterns are inconsistent
-      if not args.update_baseline:
-        for testCase in self.testCases:
-          testCaseRunResult = testCase.processBaseline(baseline)
-          if not testCaseRunResult.succeeded:
-             result.succeeded = False
-          result.testCaseRunResults.append(testCaseRunResult)
+          # Before running the test, pre-creating TestCaseRunResult object for each test case
+          # and compute filtered lines from baseline file.
+          # Note: some test cases might fail at this time if baseline and/or patterns are inconsistent
+          if not args.update_baseline:
+            for testCase in self.testCases:
+              testCaseRunResult = testCase.processBaseline(baseline)
+              if not testCaseRunResult.succeeded:
+                 result.succeeded = False
+              result.testCaseRunResults.append(testCaseRunResult)
+      else:
+          if not args.create_baseline:
+              return TestRunResult.fatalError("Baseline file sanity check", "Can't find baseline file")
   
     # preparing run directory
     runDir = os.path.join(args.run_dir, "{0}_{1}@{2}_{3}".format(self.suite, self.name, flavor, device))
@@ -313,23 +314,39 @@ class Test:
       if not testCaseRunResult.succeeded:
         result.succeeded = False
 
-    if len(self.testCases)>0 and args.update_baseline and result.succeeded:
-      # When running in --update-baseline mode 
+    if len(self.testCases)>0 and (args.update_baseline or (baselineFile == None)) and result.succeeded:
+      # When running in --update-baseline or --create-baseline mode 
       # verifying that new output is successfully matching every pattern in the testcases.yml
-      # If this is not the case then baseline update will be rejected
+      # If this is not the case then baseline update/create will be rejected
       for testCase in self.testCases:
         testCaseRunResult = testCase.processBaseline(allLines)
         if not testCaseRunResult.succeeded:
            result.succeeded = False
         result.testCaseRunResults.append(testCaseRunResult)
 
+      if baselineFile == None:
+          baselineFile = self.newBaselineFilePath(device)
+
       if result.succeeded:
        if args.verbose:
-         six.print_("Updating baseline file " + baselineFile)
+           if args.update_baseline:
+            six.print_("Updating baseline file " + baselineFile)
+           else:
+            six.print_("Creating baseline file " + baselineFile)
+
        with open(baselineFile, "w") as f:
          f.write("\n".join(allLines))
 
     return result
+
+  # Composes the full path of a new baseline file for a specified platform and device
+  # Note this currently hardcodes the baseline file name to be baseline.<os>.<device>.txt
+  # which is how the baselines currently exist for all CNTK E2E tests i.e. we have different
+  # baselines for platform and device but not for flavor
+  def newBaselineFilePath(self, device):
+      candidateName = "baseline" + "." + ("windows" if windows else "linux") + "." + device.lower() + ".txt"
+      fullPath = os.path.join(self.testDir, candidateName)
+      return fullPath
 
   # Finds a location of a baseline file by probing different names in the following order:
   #   baseline.$os.$flavor.$device.txt
@@ -676,6 +693,7 @@ tmpDir = os.getenv("TEMP") if windows else "/tmp"
 defaultRunDir=os.path.join(tmpDir, "cntk-test-{0}.{1}".format(time.strftime("%Y%m%d%H%M%S"), random.randint(0,1000000)))
 runSubparser.add_argument("-r", "--run-dir", default=defaultRunDir, help="directory where to store test output, default: a random dir within /tmp")
 runSubparser.add_argument("--update-baseline", action='store_true', help="update baseline file(s) instead of matching them")
+runSubparser.add_argument("--create-baseline", action='store_true', help="create new baseline file(s) (named as baseline.<os>.<device>.txt) for tests that do not currently have baselines")
 runSubparser.add_argument("-v", "--verbose", action='store_true', help="verbose output - dump all output of test script")
 runSubparser.add_argument("-n", "--dry-run", action='store_true', help="do not run the tests, only print test names and configurations to be run along with full command lines")
 

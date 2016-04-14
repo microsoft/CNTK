@@ -23,25 +23,52 @@ template <class ElemType>
 class MATH_API CPUSparseMatrix : public BaseMatrix<ElemType>
 {
     typedef BaseMatrix<ElemType> Base;
-    using Base::m_elemSizeAllocated;
-    using Base::m_computeDevice;
-    using Base::m_externalBuffer;
-    using Base::m_format;
-    using Base::m_numCols;
     using Base::m_numRows;
-    using Base::m_nz;
-    using Base::m_pArray; // without this, base members would require to use thi-> in GCC
-    using Base::Clear;
-    using Base::NzCount;
-
+    using Base::m_numCols;
+    using Base::m_sliceViewOffset;
+    using Base::SetBuffer;
+    using Base::HasExternalBuffer;
+    using Base::GetNumStorageRows;
+    using Base::SetNumStorageRows;
+    using Base::GetNumStorageCols;
+    using Base::SetNumStorageCols;
+    using Base::SetComputeDeviceId;
+    using Base::SetSizeAllocated;
+    using Base::GetSizeAllocated;
+    using Base::GetCompIndex;
+    using Base::SetCompIndex;
+    using Base::GetUnCompIndex;
+    using Base::SetUnCompIndex;
+    using Base::GetCompIndexSize;
+    using Base::SetCompIndexSize;
+    using Base::GetColIdx;
+    using Base::SetColIdx;
+    using Base::GetBlockSize;
+    using Base::SetBlockSize;
+    using Base::GetBlockIds;
+    using Base::SetBlockIds;
+    using Base::GetBlockIdShift;
+    using Base::SetBlockIdShift;
+    using Base::ZeroInit;
+    using Base::ZeroValues;
+    using Base::m_sob;
+    using Base::ShallowCopyFrom;
+    using Base::VerifyResizable;
 public:
+    using Base::VerifyWritable;
+    using Base::GetComputeDeviceId;
+    using Base::Buffer;
+    using Base::GetNumRows;
+    using Base::GetNumCols;
+    using Base::GetNumElements;
     using Base::OwnBuffer;
+    using Base::GetFormat;
+    using Base::SetFormat;
     using Base::IsEmpty;
 
 private:
     void ZeroInit();
     void CheckInit(const MatrixFormat format);
-    void ReleaseMemory();
 
 public:
     explicit CPUSparseMatrix(const MatrixFormat format);
@@ -53,20 +80,19 @@ public:
     ~CPUSparseMatrix();
 
 public:
-    using Base::GetNumCols;
-    using Base::GetNumRows;
 
     void SetValue(const size_t row, const size_t col, ElemType val);
     void SetValue(const CPUSparseMatrix<ElemType>& /*val*/);
 
     size_t BufferSize() const
     {
-        return m_elemSizeAllocated * sizeof(ElemType);
+        return GetSizeAllocated() * sizeof(ElemType);
     }
-    ElemType* BufferPointer() const;
+    ElemType* Data() const;
+    ElemType* Data();
     inline size_t GetNumElemAllocated() const
     {
-        return m_elemSizeAllocated;
+        return GetSizeAllocated();
     }
 
     CPUSparseMatrix<ElemType> ColumnSlice(size_t startColumn, size_t numCols) const;
@@ -114,7 +140,27 @@ public:
         return -1;
     }
 
-    void Resize(const size_t numRows, const size_t numCols, size_t numNZElemToReserve = 10000, const bool growOnly = true, bool keepExistingValues = false);
+
+    // Allocate actually allocates the storage space for numNZElemToReserve elements. This is different than resizing, which changes the dimensions of the underlying matrix.
+    // Unfortunately numRows/numCols need to be passed in in the case of various matrix formats (e.g., SparseCSC), because some of the dimensions allocated depend on the
+    // dimensions of the matrix.
+    void Allocate(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve = 10000, const bool growOnly = true, bool keepExistingValues = false); // matrix format will affect the size to allocate
+    // RequireSizeAndAllocate is required by SpasreMatrix since resizing the dimensions and allocating storage are different operations. Since a Resize can entail changing
+    // MatrixFormat, we offer an overload for that case.
+    void RequireSizeAndAllocate(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve, const MatrixFormat matrixFormat, const bool growOnly = true, bool keepExistingValues = true); // matrix format will affect the size to allocate
+    // Otherwise we will just use the current MatrixFormat.
+    void RequireSizeAndAllocate(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve = 10000, const bool growOnly = true, bool keepExistingValues = false);
+    // Sparse matrix RequireSize is similar to dense matrix RequireSize in that it will only allocate the minimum amount of storage requried to successfully create the matrix.
+    // This is required because some formats (e.g., SparseCSC) require the SecondaryIndexLocation to have valid data in order to compute m_nz. Otherwise this method would not
+    // update the storage at all.
+    void RequireSize(const size_t numRows, const size_t numCols, const MatrixFormat format, const bool growOnly = true);
+    // Allows RequireSize to be called without modifying the MatrixFormat.
+    void RequireSize(const size_t numRows, const size_t numCols, const bool growOnly = true);
+    // Resizes the dimensions of the underlying sparse matrix object. Since the caller may have a hint for m_nz, we allow that to be passed, but this is terrible design. In the
+    // future if we want better separation between allocation and resizing, this interface should be updated to be less clunky.
+    void Resize(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve, const MatrixFormat matrixFormat, const bool growOnly = true); // matrix format will affect the size to allocate
+    void Resize(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve = 10000, const bool growOnly = true);
+
     void Reset();
 
     const ElemType operator()(const size_t row, const size_t col) const
@@ -124,16 +170,16 @@ public:
             RuntimeError("Position outside matrix dimensions");
         }
 
-        if (m_format == MatrixFormat::matrixFormatSparseCSC)
+        if (GetFormat() == MatrixFormat::matrixFormatSparseCSC)
         {
-            size_t start = m_compIndex[col];
-            size_t end = m_compIndex[col + 1];
+            size_t start = SecondaryIndexLocation()[col];
+            size_t end = SecondaryIndexLocation()[col + 1];
             for (size_t p = start; p < end; p++)
             {
-                size_t i = m_unCompIndex[p];
+                size_t i = MajorIndexLocation()[p];
                 if (i == row)
                 {
-                    return m_pArray[p];
+                    return ((ElemType*)Buffer())[p];
                 }
             }
 
@@ -167,24 +213,37 @@ public:
 public:
     const ElemType* NzValues() const
     {
-        return m_nzValues;
+        return Data();
     }
     inline ElemType* NzValues()
     {
-        return m_nzValues;
+        return Data();
     }
+
+    size_t NzCount() const
+    {
+        if (GetFormat() == matrixFormatSparseCSC)
+			return GetCompIndex()[GetNumCols()] - GetCompIndex()[0];
+        else if (GetFormat()== matrixFormatSparseCSR)
+			return GetCompIndex()[GetNumRows()] - GetCompIndex()[0];
+        else if (GetFormat() == matrixFormatSparseBlockCol)
+            return GetBlockSize() * GetNumRows();
+        else
+            NOT_IMPLEMENTED;
+    }
+
     size_t NzSize() const
     {
-        return sizeof(ElemType) * m_nz;
+        return sizeof(ElemType) * NzCount();
     } // actual number of element bytes in use
 
     CPUSPARSE_INDEX_TYPE* MajorIndexLocation() const
     {
-        return m_unCompIndex;
+        return GetUnCompIndex() + GetCompIndex()[m_sliceViewOffset];
     } // this is the major index, row/col ids in CSC/CSR format
     size_t MajorIndexCount() const
     {
-        return m_nz;
+        return NzCount();
     }
     size_t MajorIndexSize() const
     {
@@ -193,19 +252,19 @@ public:
 
     CPUSPARSE_INDEX_TYPE* SecondaryIndexLocation() const
     {
-        return m_compIndex;
+        return GetCompIndex() + m_sliceViewOffset;
     } // this is the compressed index, col/row in CSC/CSR format
     size_t SecondaryIndexCount() const
     {
-        if (m_format & matrixFormatCompressed)
+        if (GetFormat() & matrixFormatCompressed)
         {
-            size_t cnt = (m_format & matrixFormatRowMajor) ? m_numRows : m_numCols;
+            size_t cnt = (GetFormat() & matrixFormatRowMajor) ? m_numRows : m_numCols;
             if (cnt > 0)
                 cnt++; // add an extra element on the end for the "max" value
             return cnt;
         }
         else
-            return m_nz; // COO format
+            return NzCount(); // COO format
     }
     // get size for compressed index
     size_t SecondaryIndexSize() const
@@ -216,35 +275,21 @@ public:
     // the column and row locations will swap based on what format we are in. Full index always follows the data array
     CPUSPARSE_INDEX_TYPE* RowLocation() const
     {
-        return (m_format & matrixFormatRowMajor) ? SecondaryIndexLocation() : MajorIndexLocation();
+        return (GetFormat() & matrixFormatRowMajor) ? SecondaryIndexLocation() : MajorIndexLocation();
     }
     size_t RowSize() const
     {
-        return (m_format & matrixFormatRowMajor) ? SecondaryIndexSize() : MajorIndexSize();
+        return (GetFormat() & matrixFormatRowMajor) ? SecondaryIndexSize() : MajorIndexSize();
     }
     CPUSPARSE_INDEX_TYPE* ColLocation() const
     {
-        return (m_format & matrixFormatRowMajor) ? MajorIndexLocation() : SecondaryIndexLocation();
+        return (GetFormat() & matrixFormatRowMajor) ? MajorIndexLocation() : SecondaryIndexLocation();
     }
     size_t ColSize() const
     {
-        return (m_format & matrixFormatRowMajor) ? MajorIndexSize() : SecondaryIndexSize();
+        return (GetFormat() & matrixFormatRowMajor) ? MajorIndexSize() : SecondaryIndexSize();
     } // actual number of bytes in use
 
-private:
-    int m_colIdx; // used to SetValue()
-    size_t m_compIndexSize;
-    ElemType* m_nzValues;
-
-    // non-zero values are stored in m_pArray
-    CPUSPARSE_INDEX_TYPE* m_unCompIndex; // row/col ids in CSC/CSR format
-    CPUSPARSE_INDEX_TYPE* m_compIndex;   // begin ids of col/row in CSC/CSR format
-
-    size_t m_blockSize;    // block size
-    size_t* m_blockIds;    // block ids
-    size_t m_blockIdShift; // used to get efficient slice, actual col = blockIds[j] - m_blockIdShift
-
-    CPUSparseMatrix* m_sliceOf; // if this is a slice, then this points to the owning matrix object that we sliced from
 };
 
 typedef CPUSparseMatrix<float> CPUSingleSparseMatrix;

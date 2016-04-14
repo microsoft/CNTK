@@ -15,8 +15,6 @@
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>Math</RootNamespace>
     <ProjectName>MathCUDA</ProjectName>
-    <CudaPath>$(CUDA_PATH_V7_0)</CudaPath>
-    <CudaToolkitCustomDir>$(CudaPath)</CudaToolkitCustomDir>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <Import Project="$(SolutionDir)\CNTK.Cpp.props" />
@@ -50,12 +48,13 @@
     </Otherwise>
   </Choose>
   <PropertyGroup>
-    <IncludePath>..\Common\include;$(ACML_PATH)\include;$(CudaPath)\include;$(CUB_PATH);$(CuDnnIncPath);$(IncludePath)</IncludePath>
-    <LibraryPath>$(SolutionDir)$(Platform)\$(Configuration);$(ACML_PATH)\lib;$(CudaPath)\lib\$(Platform);$(CuDnnLibPath);$(LibraryPath)</LibraryPath>
+    <CudaToolkitCustomDir>$(CudaPath)</CudaToolkitCustomDir>
+    <IncludePath>..\Common\include;$(ACML_PATH)\include;$(CudaInclude);$(CUB_PATH);$(CuDnnIncPath);$(IncludePath)</IncludePath>
+    <LibraryPath>$(SolutionDir)$(Platform)\$(Configuration);$(ACML_PATH)\lib;$(CudaLibPath);$(CuDnnLibPath);$(LibraryPath)</LibraryPath>
     <IntDir>$(IntDir)\MathCUDA\</IntDir>
   </PropertyGroup>
   <ImportGroup Label="ExtensionSettings">
-    <Import Project="$(VCTargetsPath)\BuildCustomizations\CUDA 7.0.props" />
+    <Import Project="$(VCTargetsPath)\BuildCustomizations\CUDA $(CudaVersion).props" />
   </ImportGroup>
   <ImportGroup Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
@@ -86,9 +85,9 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>cudart.lib;cublas.lib;cusparse.lib;curand.lib;libacml_mp_dll.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>$(CudaLibs);libacml_mp_dll.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <Profile>true</Profile>
-      <DelayLoadDLLs>cublas64_70.dll;cusparse64_70.dll;curand64_70.dll;cudart64_70.dll;%(DelayLoadDLLs)</DelayLoadDLLs>
+      <DelayLoadDLLs>$(CudaDlls);%(DelayLoadDLLs)</DelayLoadDLLs>
     </Link>
     <Lib>
       <AdditionalLibraryDirectories>$(CuDnnLibPath);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
@@ -105,10 +104,7 @@
       <AdditionalOptions>-Xcudafe "--diag_suppress=field_without_dll_interface" %(AdditionalOptions)</AdditionalOptions>
     </CudaCompile>
     <PostBuildEvent>
-      <Command>if exist "$(CudaPath)\bin\cublas64_*.dll" (xcopy /Y "$(CudaPath)\bin\cublas64_*.dll" $(OutputPath))
-if exist "$(CudaPath)\bin\cusparse64_*.dll" (xcopy /Y "$(CudaPath)\bin\cusparse64_*.dll" $(OutputPath))
-if exist "$(CudaPath)\bin\curand64_*.dll" (xcopy /Y "$(CudaPath)\bin\curand64_*.dll" $(OutputPath))
-if exist "$(CudaPath)\bin\cudart64_*.dll" (xcopy /Y "$(CudaPath)\bin\cudart64_*.dll" $(OutputPath))
+      <Command>for %%l in ($(CudaDlls)) do if exist "$(CudaPath)\bin\%%l" xcopy /D /Y "$(CudaPath)\bin\%%l*" $(OutputPath)
 if exist "$(CuDnnDll)" (xcopy /Y "$(CuDnnDll)" $(OutputPath))
 </Command>
     </PostBuildEvent>
@@ -224,7 +220,7 @@ if exist "$(CuDnnDll)" (xcopy /Y "$(CuDnnDll)" $(OutputPath))
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
-    <Import Project="$(VCTargetsPath)\BuildCustomizations\CUDA 7.0.targets" />
+    <Import Project="$(VCTargetsPath)\BuildCustomizations\CUDA $(CudaVersion).targets" />
   </ImportGroup>
   <Target Name="CheckDependencies">
     <Error Condition="!Exists('$(CUB_PATH)')" Text="CNTK requires the NVIDIA CUB library to build. Please see https://github.com/Microsoft/CNTK/wiki/Setup-CNTK-on-Windows#cuda for installation instructions." />

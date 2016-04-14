@@ -115,7 +115,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 chunk.m_randomizationWindow.m_begin++;
             }
 
-            chunk.m_randomizationWindow.m_end = std::max(chunk.m_randomizationWindow.m_end, chunk.m_randomizationWindow.m_begin + 1);
+            // Chunk id should always be inside the window.
+            // Adjusting begin and end window against chunkId.
+            chunk.m_randomizationWindow.m_begin = std::min(chunk.m_randomizationWindow.m_begin, chunkId);
+            chunk.m_randomizationWindow.m_end = std::max(chunk.m_randomizationWindow.m_end, chunkId + 1);
 
             while (chunk.m_randomizationWindow.m_end < m_originalChunks.size() &&
                 m_randomizedChunks[chunk.m_randomizationWindow.m_end].SampleEndPosition() - chunk.m_samplePositionStart < halfWindowRange)

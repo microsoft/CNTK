@@ -4,10 +4,12 @@
 //
 
 #include "stdafx.h"
+#include <inttypes.h>
 #include <opencv2/opencv.hpp>
+#include <numeric>
+#include <limits>
 #include "ImageDataDeserializer.h"
 #include "ImageConfigHelper.h"
-#include <inttypes.h>
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -27,19 +29,28 @@ template <class TElement>
 class TypedLabelGenerator : public ImageDataDeserializer::LabelGenerator
 {
 public:
-    TypedLabelGenerator() : m_value(1)
+    TypedLabelGenerator(size_t labelDimension) : m_value(1), m_indices(labelDimension)
     {
+        if (labelDimension > numeric_limits<IndexType>::max())
+        {
+            RuntimeError("Label dimension (%" PRIu64 ") exceeds the maximum allowed "
+                "value (%" PRIu64 ")\n", labelDimension, (size_t)numeric_limits<IndexType>::max());
+        }
+        iota(m_indices.begin(), m_indices.end(), 0);
     }
 
     virtual void CreateLabelFor(size_t classId, SparseSequenceData& data) override
     {
-        data.m_indices.resize(1);
-        data.m_indices[0] = std::vector<size_t>{ classId };
+        data.m_nnzCounts.resize(1);
+        data.m_nnzCounts[0] = 1;
+        data.m_totalNnzCount = 1;
         data.m_data = &m_value;
+        data.m_indices = &(m_indices[classId]);
     }
 
 private:
     TElement m_value;
+    vector<IndexType> m_indices;
 };
 
 // Used to keep track of the image. Accessed only using DenseSequenceData interface.
@@ -98,6 +109,7 @@ public:
         SparseSequenceDataPtr label = std::make_shared<SparseSequenceData>();
         label->m_chunk = shared_from_this();
         m_parent.m_labelGenerator->CreateLabelFor(imageSequence.m_classId, *label);
+        label->m_numberOfSamples = 1;
         result.push_back(label);
     }
 };
@@ -122,11 +134,11 @@ ImageDataDeserializer::ImageDataDeserializer(const ConfigParameters& config)
 
     if (label->m_elementType == ElementType::tfloat)
     {
-        m_labelGenerator = std::make_shared<TypedLabelGenerator<float>>();
+        m_labelGenerator = std::make_shared<TypedLabelGenerator<float>>(labelDimension);
     }
     else if (label->m_elementType == ElementType::tdouble)
     {
-        m_labelGenerator = std::make_shared<TypedLabelGenerator<double>>();
+        m_labelGenerator = std::make_shared<TypedLabelGenerator<double>>(labelDimension);
     }
     else
     {

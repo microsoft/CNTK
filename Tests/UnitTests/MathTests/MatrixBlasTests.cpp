@@ -90,9 +90,9 @@ BOOST_FIXTURE_TEST_CASE(MatrixMultiplyAndPlusAndMinus, RandomSeedFixture)
     CPUMatrix<float> copyCpuMatrix3(cpuMatrix3);
     CPUMatrix<float>::MultiplyAndAdd(cpuMatrix1, true, cpuMatrix2, false, cpuMatrix3);
 
-    SingleMatrix singleMatrix1(429, 1024, cpuMatrix1.GetArray(), matrixFlagNormal);
-    SingleMatrix singleMatrix2(429, 1024, cpuMatrix2.GetArray(), matrixFlagNormal);
-    SingleMatrix singleMatrix3(1024, 1024, copyCpuMatrix3.GetArray(), matrixFlagNormal);
+    SingleMatrix singleMatrix1(429, 1024, cpuMatrix1.Buffer(), matrixFlagNormal);
+    SingleMatrix singleMatrix2(429, 1024, cpuMatrix2.Buffer(), matrixFlagNormal);
+    SingleMatrix singleMatrix3(1024, 1024, copyCpuMatrix3.Buffer(), matrixFlagNormal);
     SingleMatrix::MultiplyAndAdd(singleMatrix1, true, singleMatrix2, false, singleMatrix3);
     foreach_coord (i, j, singleMatrix3)
     {

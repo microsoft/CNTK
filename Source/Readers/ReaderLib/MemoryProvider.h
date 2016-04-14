@@ -22,6 +22,8 @@ public:
     // Frees contiguous storage.
     virtual void Free(void* ptr) = 0;
 
+    // TODO: add Resize function.
+
     virtual ~MemoryProvider() { }
 };
 

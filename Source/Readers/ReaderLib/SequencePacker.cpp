@@ -6,114 +6,270 @@
 #define _CRT_SECURE_NO_WARNINGS
 #define _SCL_SECURE_NO_WARNINGS
 
+#include <numeric>
+#include <inttypes.h>
 #include "SequencePacker.h"
 #include "ElementTypeUtils.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
-SequencePacker::SequencePacker(
-    MemoryProviderPtr memoryProvider,
-    TransformerPtr transformer,
-    size_t minibatchSize,
-    const std::vector<StreamDescriptionPtr>& streams) : PackerBase(memoryProvider, transformer, minibatchSize, streams)
+MBLayoutPtr SequencePacker::CreateMBLayout(const StreamBatch& batch)
 {
-    for (int i = 0; i < m_outputStreamDescriptions.size(); ++i)
+    vector<MBLayout::SequenceInfo> infos;
+    for (size_t index = 0; index < batch.size(); ++index)
     {
-        m_streamBufferSizes.push_back(0);
-        m_streamBuffers.push_back(nullptr);
+        MBLayout::SequenceInfo info;
+
+        info.seqId = index;
+        info.tBegin = 0;
+        info.tEnd = batch[index]->m_numberOfSamples;
+        infos.push_back(info);
     }
+
+    vector<pair<size_t, size_t>> placement;
+    vector<size_t> rowAllocations;
+
+    // Creating the minibatch layout.
+    MBLayoutPtr pMBLayout = make_shared<MBLayout>();
+    pMBLayout->InitAsPackedSequences(infos, placement, rowAllocations);
+    return pMBLayout;
 }
 
-// Reading minibatch.
 Minibatch SequencePacker::ReadMinibatch()
 {
-    assert(m_streamBufferSizes.size() == m_streamBuffers.size());
-    const auto sequences = m_transformer->GetNextSequences(m_minibatchSize);
+    auto sequences = m_transformer->GetNextSequences(m_minibatchSize);
+    const auto& batch = sequences.m_data;
 
     Minibatch minibatch(sequences.m_endOfEpoch);
-    if (sequences.m_data.empty())
+    if (batch.empty())
     {
         return minibatch;
     }
 
-    // For each stream packing the minibatch.
-    minibatch.m_data.reserve(sequences.m_data.size());
-    for (size_t streamIndex = 0; streamIndex < sequences.m_data.size(); ++streamIndex)
+    assert(m_outputStreamDescriptions.size() == batch.size());
+
+    for (int streamIndex = 0; streamIndex < batch.size(); ++streamIndex)
     {
-        minibatch.m_data.push_back(PackStreamMinibatch(sequences.m_data[streamIndex], streamIndex));
+        const auto& streamBatch = batch[streamIndex];
+        const auto& type = m_outputStreamDescriptions[streamIndex]->m_storageType;
+        auto pMBLayout = (type == StorageType::dense) ?
+            PackDenseStream(streamBatch, streamIndex) : PackSparseStream(streamBatch, streamIndex);
+
+        auto& buffer = m_streamBuffers[streamIndex];
+
+        auto streamMinibatch = std::make_shared<StreamMinibatch>();
+        streamMinibatch->m_data = buffer.m_data.get();
+        streamMinibatch->m_layout = pMBLayout;
+        minibatch.m_data.push_back(streamMinibatch);
     }
 
     return minibatch;
 }
 
-StreamMinibatchPtr SequencePacker::PackStreamMinibatch(const std::vector<SequenceDataPtr>& sequences, size_t streamId)
+MBLayoutPtr SequencePacker::PackDenseStream(const StreamBatch& batch, size_t streamIndex)
 {
-    // Create sequence info for each sequences that we have got from the transformer.
-
-    std::vector<MBLayout::SequenceInfo> inputSequences;
-    for (size_t index = 0; index < sequences.size(); ++index)
+    assert(m_outputStreamDescriptions[streamIndex]->m_storageType == StorageType::dense);
+    const auto& stream = m_inputStreamDescriptions[streamIndex];
+    auto& buffer = m_streamBuffers[streamIndex];
+    size_t sampleSize = GetSampleSize(stream);
+    auto pMBLayout = CreateMBLayout(batch);
+    size_t requiredSize = pMBLayout->GetNumCols() * sampleSize;
+    if (buffer.m_size < requiredSize)
     {
-        MBLayout::SequenceInfo info;
-
-        // In each minibatch sequence ids should be unique.
-        // They have to match between different input streams in the same minibatch.
-        // We are using sequence index in the set of received sequences.
-        // TODO: should we use m_key as sequence id and pass it with data?
-        info.seqId = index;
-
-        info.tBegin = 0;
-        info.tEnd = sequences[index]->m_numberOfSamples;
-        inputSequences.push_back(info);
+        buffer.Resize(requiredSize);
     }
 
-    std::vector<std::pair<size_t, size_t>> placement;
-    std::vector<size_t> rowAllocations;
+    auto elementSize = GetSizeByType(stream->m_elementType);
 
-    // Creating the minibatch layout.
-    MBLayoutPtr layout = std::make_shared<MBLayout>();
-    layout->InitAsPackedSequences(inputSequences, placement, rowAllocations);
+    const auto& sequenceInfos = pMBLayout->GetAllSequences();
 
-    // Allocating necessary data buffer for the stream.
-    size_t sampleSize = GetSampleSize(m_inputStreamDescriptions[streamId]);
-    size_t totalNumberOfSamplesInBytes = layout->GetNumCols() * sampleSize;
-    if (m_streamBufferSizes[streamId] < totalNumberOfSamplesInBytes)
+    // Iterate over sequences in the layout, copy samples from the
+    // source sequences into the buffer (at appropriate offsets).
+    for (const auto& sequenceInfo : sequenceInfos)
     {
-        m_streamBuffers[streamId] = AllocateBuffer(layout->GetNumCols(), sampleSize);
-        m_streamBufferSizes[streamId] = totalNumberOfSamplesInBytes;
-    }
-
-    // Packing the actual data.
-    StorageType storageType = m_inputStreamDescriptions[streamId]->m_storageType;
-    size_t elementSize = GetSizeByType(m_inputStreamDescriptions[streamId]->m_elementType);
-    const auto& packedSequences = layout->GetAllSequences();
-    char* streamBuffer = m_streamBuffers[streamId].get();
-    for (const auto& sequence : packedSequences)
-    {
-        if (sequence.seqId == GAP_SEQUENCE_ID)
-            continue;
-        const auto& data = sequences[sequence.seqId];
-
-        // Packing the sequence
-        for (size_t sampleIndex = 0; sampleIndex < sequence.GetNumTimeSteps(); ++sampleIndex)
+        // skip gaps
+        if (sequenceInfo.seqId == GAP_SEQUENCE_ID)
         {
-            char* destination = streamBuffer + layout->GetColumnIndex(sequence, sampleIndex) * sampleSize;
-            if (storageType == StorageType::dense)
+            continue;
+        }
+
+        const auto& sequence = batch[sequenceInfo.seqId];
+        size_t numSamples = sequence->m_numberOfSamples;
+        assert(numSamples == sequenceInfo.GetNumTimeSteps());
+
+        char* bufferPtr = buffer.m_data.get();
+        // Iterate over all samples in the sequence, keep track of the sample offset (which is especially
+        // important for sparse input, where offset == number of preceding nnz elements).
+        for (size_t sampleIndex = 0, sampleOffset = 0; sampleIndex < numSamples; ++sampleIndex)
+        {
+            // Compute the offset into the destination buffer, using the layout information 
+            // to get the column index corresponding to the given sample.
+            auto destinationOffset = pMBLayout->GetColumnIndex(sequenceInfo, sampleIndex) * sampleSize;
+            // verify that there's enough space left in the buffer to fit a full sample.
+            assert(destinationOffset <= buffer.m_size - sampleSize);
+            auto* destination = bufferPtr + destinationOffset;
+            if (stream->m_storageType == StorageType::dense)
             {
-                PackDenseSample(destination, data, sampleIndex, elementSize, sampleSize);
+                // verify that the offset (an invariant for dense).
+                assert(sampleOffset == sampleIndex * sampleSize);
+                PackDenseSample(destination, sequence, sampleOffset, sampleSize);
+                sampleOffset += sampleSize;
             }
-            else // sparse
+            else if (stream->m_storageType == StorageType::sparse_csc)
             {
-                assert(storageType == StorageType::sparse_csc);
-                PackSparseSample(destination, data, sampleIndex, elementSize, sampleSize);
+                // TODO: make type casts members of the SparseSequenceData
+                SparseSequenceDataPtr sparseSequence = static_pointer_cast<SparseSequenceData>(sequence);
+                // make sure that the sequence meta-data is correct.
+                assert(numSamples == sparseSequence->m_nnzCounts.size());
+                PackSparseSampleAsDense(destination, sparseSequence, sampleIndex, sampleOffset, sampleSize, elementSize);
+                // move the offset by nnz count of the sample.
+                sampleOffset += sparseSequence->m_nnzCounts[sampleIndex];
+                // verify that the offset is within the bounds (less or equal 
+                // to the total nnz count of the sequence).
+                assert(sampleOffset <= sparseSequence->m_totalNnzCount);
+            }
+            else
+            {
+                RuntimeError("Storage type %d is not supported.", (int)stream->m_storageType);
             }
         }
     }
 
-    // Ok, minibatch is ready, give it out.
-    StreamMinibatchPtr result = std::make_shared<StreamMinibatch>();
-    result->m_data = m_streamBuffers[streamId].get();
-    result->m_layout = layout;
-    return result;
+    return pMBLayout;
+}
+
+MBLayoutPtr SequencePacker::PackSparseStream(const StreamBatch& batch, size_t streamIndex)
+{
+    assert(m_outputStreamDescriptions[streamIndex]->m_storageType == StorageType::sparse_csc);
+
+    // compute the aggregate nnz count of all the sequence in the batch.
+    size_t nnzCount = 0;
+    for (const auto& sequence : batch)
+    {
+        SparseSequenceDataPtr sparseSequence = static_pointer_cast<SparseSequenceData>(sequence);
+        nnzCount += sparseSequence->m_totalNnzCount;
+    }
+
+    if (nnzCount > numeric_limits<IndexType>::max())
+    {
+        RuntimeError("Minibatch NNZ count (%" PRIu64 ") exceeds the maximum allowed "
+            "value (%" PRIu64 ")\n", nnzCount, (size_t)numeric_limits<IndexType>::max());
+    }
+
+    const auto& stream = m_inputStreamDescriptions[streamIndex];
+    assert(stream->m_storageType == StorageType::sparse_csc);
+    auto elementSize = GetSizeByType(stream->m_elementType);
+    auto indexSize = sizeof(IndexType);
+    auto pMBLayout = CreateMBLayout(batch);
+
+    // Compute the required buffer size:
+    // size of nnz type + nnz * (size of the element type) + nnz * (size of the row index type) + 
+    // (number of columns + 1) * (size of the column index type). 
+    size_t requiredSize =
+        sizeof(nnzCount) +
+        nnzCount * (elementSize + indexSize) +
+        indexSize * (pMBLayout->GetNumCols() + 1);
+
+    auto& buffer = m_streamBuffers[streamIndex];
+    if (buffer.m_size < requiredSize)
+    {
+        buffer.Resize(requiredSize);
+    }
+
+    auto* destination = buffer.m_data.get();
+    // insert the nnzCount as the first element in the buffer.
+    memcpy(destination, &nnzCount, sizeof(nnzCount));
+
+    // create two pointers to the memory blocks inside the buffer,
+    // one for data portion and anther -- for indices.
+    auto* dataDst = destination + sizeof(nnzCount);
+    auto* indicesDst = dataDst + elementSize* nnzCount;
+    // column index for the current sample (= number of nnz value packed so far).
+    IndexType columnOffset = 0;
+    // a vector to store column index for each sample in the resulting (packed) matrix.
+    vector<IndexType> sparseColumnIndices;
+    // a vector to keep track of the offsets into each input sequence,
+    // there an offset is the number of nnz values packed so far. Current sample
+    // values/indices start of the offset position in the sequence data/index array
+    vector<IndexType>  sequenceOffsets(batch.size(), 0); 
+
+    vector<MBLayout::SequenceInfo> sequenceInfos(pMBLayout->GetAllSequences());
+
+    // sort the vector in ascending order of the parallel sequence index.
+    sort(sequenceInfos.begin(), sequenceInfos.end(),
+        [](const MBLayout::SequenceInfo& a, const MBLayout::SequenceInfo& b){ return a.s < b.s; });
+
+    // Iterate over the all time steps in the layout (total number of samples/columns 
+    // in a parallel sequence), traversing the layout in horizontal direction.
+    for (auto timeStep = 0; timeStep < pMBLayout->GetNumTimeSteps(); ++timeStep)
+    {
+        // For each time step, iterate over all sequences in the minibatch,
+        // traversing the layout in vertical direction.
+        for (const auto& sequenceInfo : sequenceInfos)
+        {
+            // skip the sequence if it does not intersect with the time step
+            if (timeStep < sequenceInfo.tBegin || timeStep >= sequenceInfo.tEnd)
+            {
+                continue;
+            }
+
+            // store the offset of the current column )...
+            sparseColumnIndices.push_back(columnOffset);
+
+            auto seqId = sequenceInfo.seqId;
+            if (seqId == GAP_SEQUENCE_ID)
+            {
+                continue;
+            }
+
+            // compute the index of the sample inside the sequence.
+            size_t sampleIndex = timeStep - sequenceInfo.tBegin;
+            const auto& sequence = batch[seqId];
+            
+            // make sure the index less than the sequence length in samples.
+            assert(sampleIndex < sequence->m_numberOfSamples);
+
+            auto& sequenceOffset = sequenceOffsets[seqId];
+            SparseSequenceDataPtr sparseSequence = static_pointer_cast<SparseSequenceData>(sequence);
+            IndexType nnz = sparseSequence->m_nnzCounts[sampleIndex];
+
+            // compute the sample offset in bytes.
+            size_t sampleOffset = sequenceOffset * elementSize;
+            // copy all nzz values from source sequence into the buffer.
+            const auto* dataSrc = reinterpret_cast<const char*>(sequence->m_data) + sampleOffset;
+            memcpy(dataDst, dataSrc, nnz * elementSize);
+            dataDst += nnz * elementSize; // advance the destination pointer
+
+            // copy all nzz value indices from source sequence into the buffer.
+            const auto* indicesSrc = sparseSequence->m_indices + sequenceOffset;
+            memcpy(indicesDst, indicesSrc, nnz * indexSize);
+            indicesDst += nnz * indexSize; // advance the destination pointer
+
+            sequenceOffset += nnz;
+            columnOffset += nnz;
+        }
+    }
+
+    // at this point each element in sequenceOffsets should be equal to the total
+    // nnz count of the respective sequence and the sum of all elements - to the 
+    // overall nnz count.
+    assert(accumulate(sequenceOffsets.begin(), sequenceOffsets.end(), 0) == nnzCount);
+
+    // check the distance between data and index destination pointers.
+    assert(indicesDst == dataDst + nnzCount * indexSize);
+    // after we packed all samples, the column offset must be equal to the total nnz count.
+    assert(columnOffset == nnzCount);
+    sparseColumnIndices.push_back(columnOffset);
+    // check that the number of column indices == N + 1 (where N is the number of
+    // column in the packed matrix)
+    assert((pMBLayout->GetNumCols() + 1) == sparseColumnIndices.size());
+
+    // verify that there's enough space in the buffer for the array of column indices.
+    assert(indicesDst + sparseColumnIndices.size()*indexSize <= destination + requiredSize);
+    // copy column indices into the buffer.
+    memcpy(indicesDst, sparseColumnIndices.data(), sparseColumnIndices.size() * indexSize);
+
+    return pMBLayout;
 }
 
 }}}

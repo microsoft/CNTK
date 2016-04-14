@@ -148,7 +148,7 @@ BOOST_AUTO_TEST_CASE(ConvolutionForward)
         std::generate(begin(data) + r * c, begin(data) + 2 * r * c, [&] { return nd(rng); });
         buf.SetValue(r, 3 * c, buf.GetDeviceId(), data.data());
         // Get center slice.
-        return buf.ColumnSlice(c, c);
+        return buf.ColumnSlice(c, c).DeepClone();
     };
 
     int baseDeviceId = 0;
@@ -214,7 +214,7 @@ BOOST_AUTO_TEST_CASE(ConvolutionBackwardData)
         std::generate(begin(data) + r * c, begin(data) + 2 * r * c, [&] { return nd(rng); });
         buf.SetValue(r, 3 * c, buf.GetDeviceId(), data.data());
         // Get center slice.
-        return buf.ColumnSlice(c, c);
+        return buf.ColumnSlice(c, c).DeepClone();
     };
 
     int baseDeviceId = 0;
@@ -347,7 +347,7 @@ BOOST_AUTO_TEST_CASE(PoolingForward)
         std::generate(begin(data) + r * c, begin(data) + 2 * r * c, [&] { return nd(rng); });
         buf.SetValue(r, 3 * c, buf.GetDeviceId(), data.data());
         // Get center slice.
-        return buf.ColumnSlice(c, c);
+        return buf.ColumnSlice(c, c).DeepClone();
     };
 
     int baseDeviceId = 0;

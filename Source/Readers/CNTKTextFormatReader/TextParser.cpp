@@ -4,12 +4,14 @@
 //
 
 #include "stdafx.h"
-#include <cfloat>
 #include <inttypes.h>
+#include <cfloat>
+#include <limits>
 #include "Indexer.h"
 #include "TextParser.h"
 #include "TextReaderConstants.h"
 
+#undef max // max is defined in minwindef.h
 #define isSign(c) ((c == '-' || c == '+'))
 #define isE(c) ((c == 'e' || c == 'E'))
 
@@ -190,11 +192,11 @@ void TextParser<ElemType>::GetSequencesForChunk(size_t chunkId, std::vector<Sequ
     const auto& index = m_indexer->GetIndex();
     const auto& chunk = index[chunkId];
     result.reserve(chunk.m_sequences.size());
-    
+
     for (auto const& s : chunk.m_sequences)
     {
         result.push_back(
-        { 
+        {
             s.m_id, 
             s.m_numberOfSamples,
             s.m_chunkId,
@@ -305,20 +307,13 @@ void TextParser<ElemType>::LoadChunk(TextChunkPtr& chunk, const ChunkDescriptor&
                 SparseInputStreamBuffer* input = reinterpret_cast<SparseInputStreamBuffer*>(sequenceData[j].get());
                 auto data = make_shared<SparseSequenceData>();
                 data->m_data = input->m_buffer.data();
-                // TODO: will be refactored once SparseSequenceData is updated.
-                data->m_indices.resize(input->m_nnzCounts.size());
-                auto from = input->m_indices.begin();
-                for (size_t k = 0; k < input->m_nnzCounts.size(); ++k)
-                {
-                    auto& indices = data->m_indices[k];
-                    auto nnzCount = input->m_nnzCounts[k];
-                    indices.reserve(nnzCount);
-                    copy(from, from + nnzCount, indices.begin());
-                    from += nnzCount;
-                }
-
+                data->m_indices = input->m_indices.data();
+                data->m_nnzCounts.reserve(input->m_nnzCounts.size());
+                copy(input->m_nnzCounts.begin(), input->m_nnzCounts.end(), back_inserter(data->m_nnzCounts));
+                data->m_totalNnzCount = input->m_totalNnzCount;
                 data->m_chunk = chunk;
                 data->m_id = sequenceDescriptor.m_id;
+                data->m_numberOfSamples = input->m_nnzCounts.size();
                 sequencePtrs[j] = data;
             }
         }
@@ -535,7 +530,7 @@ bool TextParser<ElemType>::ReadRow(SequenceBuffer& sequence, size_t& bytesToRead
         {
             SparseInputStreamBuffer* data = reinterpret_cast<SparseInputStreamBuffer*>(sequence[id].get());
             vector<ElemType>& values = data->m_buffer;
-            vector<size_t>& indices = data->m_indices;
+            vector<IndexType>& indices = data->m_indices;
             assert(values.size() == indices.size());
             size_t size = values.size();
             if (!ReadSparseSample(values, indices, bytesToRead))
@@ -556,8 +551,11 @@ bool TextParser<ElemType>::ReadRow(SequenceBuffer& sequence, size_t& bytesToRead
                 SkipToNextInput(bytesToRead);
                 continue;
             }
+            assert(values.size() == indices.size());
             ++data->m_numberOfSamples;
-            data->m_nnzCounts.push_back(values.size() - size);
+            IndexType count = static_cast<IndexType>(values.size() - size);
+            data->m_nnzCounts.push_back(count);
+            data->m_totalNnzCount += count;
         }
 
         found |= true;
@@ -732,7 +730,7 @@ bool TextParser<ElemType>::ReadDenseSample(vector<ElemType>& values, size_t samp
 }
 
 template <class ElemType>
-bool TextParser<ElemType>::ReadSparseSample(std::vector<ElemType>& values, std::vector<size_t>& indices, size_t& bytesToRead)
+bool TextParser<ElemType>::ReadSparseSample(std::vector<ElemType>& values, std::vector<IndexType>& indices, size_t& bytesToRead)
 {
     size_t index;
     ElemType value;
@@ -759,6 +757,17 @@ bool TextParser<ElemType>::ReadSparseSample(std::vector<ElemType>& values, std::
         // read next sparse index
         if (!ReadUint64(index, bytesToRead))
         {
+            // bail out.
+            return false;
+        } 
+        if (index > numeric_limits<IndexType>::max())
+        {
+            if (m_traceLevel >= Warning)
+            {
+                fprintf(stderr,
+                    "WARNING: sparse index value(%" PRIu64 ") exceeds the maximum allowed "
+                    " value (%" PRIu64 ")\n", index, (size_t)numeric_limits<IndexType>::max());
+            }
             // bail out.
             return false;
         }
@@ -790,7 +799,7 @@ bool TextParser<ElemType>::ReadSparseSample(std::vector<ElemType>& values, std::
         }
 
         values.push_back(value);
-        indices.push_back(index);
+        indices.push_back(static_cast<IndexType>(index));
     }
 
     IncrementNumberOfErrorsOrDie();

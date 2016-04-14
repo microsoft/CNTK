@@ -136,7 +136,7 @@ public:
 
                 // if no evaluation value exists throw an error
                 if (!cnNode)
-                    RuntimeError("Invalid node '%s' as an output node, nonexistant or wrong type", nodes[i]->GetName().c_str());
+                    RuntimeError("Invalid node '%s' as a(n) %s node, nonexistant or wrong type", nodes[i]->GetName().c_str(), msra::strfun::utf8(groupTag).c_str());
 
                 // add to the desired node group
                 m_net->AddToNodeGroup(groupTag, cnNode);
@@ -158,7 +158,7 @@ public:
         CheckOutputNodes(script, "evalNodes"     , L"evaluation");
         CheckOutputNodes(script, "outputNodes"   , L"output"    );
         // legacy name:
-        CheckOutputNodes(script, "criteriaNodes" , L"finalCriterion");
+        CheckOutputNodes(script, "criteriaNodes" , L"criterion" );
     }
 };
 

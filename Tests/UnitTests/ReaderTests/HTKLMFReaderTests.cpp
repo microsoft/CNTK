@@ -3,6 +3,7 @@
 // Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
 //
 #include "stdafx.h"
+#include "Common/ReaderTestHelper.h"
 
 using namespace Microsoft::MSR::CNTK;
 
@@ -513,7 +514,7 @@ BOOST_AUTO_TEST_CASE(ExperimentalHTKMLFReaderSimpleDataLoop19)
     HelperRunReaderTest<double>(
         testDataPath() + "/Config/ExperimentalHTKMLFReaderSimpleDataLoop19_Config.cntk",
         testDataPath() + "/Control/ExperimentalHTKMLFReaderSimpleDataLoop9_19_Control.txt",
-        testDataPath() + "/Control/ExperimentalHTKMLFReaderSimpleDataLoop9_Output.txt",
+        testDataPath() + "/Control/ExperimentalHTKMLFReaderSimpleDataLoop19_Output.txt",
         "Simple_Test",
         "reader",
         2000,

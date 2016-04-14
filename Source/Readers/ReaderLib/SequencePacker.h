@@ -5,14 +5,12 @@
 
 #pragma once
 
-#include "Reader.h"
-#include "MemoryProvider.h"
-#include "Transformer.h"
 #include "PackerBase.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
-// A sequence packer that packs dense or sparse samples in dense minibatch for parallel GPU consumption.
+// This packer generates minibatches containing full sequences packed for 
+// efficient (concurrent) consumption on a GPU.
 class SequencePacker : public PackerBase
 {
 public:
@@ -20,19 +18,22 @@ public:
         MemoryProviderPtr memoryProvider,
         TransformerPtr transformer,
         size_t minibatchSize,
-        const std::vector<StreamDescriptionPtr>& streams);
+        const std::vector<StreamDescriptionPtr>& streams) :
+        PackerBase(memoryProvider, transformer, minibatchSize, streams)
+    {
+
+    }
 
     virtual Minibatch ReadMinibatch() override;
 
-private:
-    // Auxiliary packing functions.
-    // Packs sequences from a particular stream into a minibatch.
-    StreamMinibatchPtr PackStreamMinibatch(const std::vector<SequenceDataPtr>& sequences, size_t streamId);
+protected:
+    virtual MBLayoutPtr PackDenseStream(const StreamBatch& batch, size_t streamIndex);
 
-    // Buffers for allocated data.
-    std::vector<std::shared_ptr<char>> m_streamBuffers;
-    // Size of allocated buffers, m_streamBuffers.size() == m_streamBufferSizes.size().
-    std::vector<size_t> m_streamBufferSizes;
+    virtual MBLayoutPtr PackSparseStream(const StreamBatch& batch, size_t streamIndex);
+
+    // Given a number of sequences, creates an MB layout that is used to guide
+    // the actual packing.
+    virtual MBLayoutPtr CreateMBLayout(const StreamBatch& batch);
 };
 
 typedef std::shared_ptr<SequencePacker> SequencePackerPtr;

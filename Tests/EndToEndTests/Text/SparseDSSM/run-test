@@ -27,6 +27,7 @@ Instances=4
 NumCPUThreads=$(threadsPerInstance $Instances)
 
 # cntkrun <CNTK config file name> <additional CNTK args>
+DeleteModelsAfterTest=0
 cntkmpirun "-n $Instances" dssm.cntk "numCPUThreads=$NumCPUThreads"
 ExitCode=$?
 sed 's/^/MPI Rank 0: /' $TEST_RUN_DIR/"$LogFileName"_train.logrank0
@@ -37,10 +38,11 @@ if [ "$ExitCode" != "0" ]; then
     exit $ExitCode
 fi
 echo === Deleting last epoch data
-rm $TEST_RUN_DIR/models/*.net || exit $?
+rm $TEST_RUN_DIR/Models/*.net || exit $?
 echo ==== Re-running from checkpoint
 DeleteExistingModels=0
 # cntkrun <CNTK config file name> <additional CNTK args>
+DeleteModelsAfterTest=1
 cntkmpirun "-n $Instances" dssm.cntk "numCPUThreads=$NumCPUThreads"
 ExitCode=$?
 sed 's/^/MPI Rank 0: /' $TEST_RUN_DIR/"$LogFileName"_train.logrank0

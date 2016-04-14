@@ -19,5 +19,32 @@
 
     <CpuOnlyBuild>true</CpuOnlyBuild>
     <CpuOnlyBuild Condition="$(GpuBuild)">false</CpuOnlyBuild>
+
+    <NvmlInclude>"c:\Program Files\NVIDIA Corporation\GDK\gdk_win7_amd64_release\nvml\include"</NvmlInclude>
+    <NvmlLibPath>"c:\Program Files\NVIDIA Corporation\GDK\gdk_win7_amd64_release\nvml\lib"</NvmlLibPath>
+
+    <CudaVersion/>
+    <CudaVersion Condition="Exists('$(CUDA_PATH_V7_5)') And '$(CudaVersion)' == ''">7.5</CudaVersion>
+    <CudaVersion Condition="Exists('$(CUDA_PATH_V7_0)') And '$(CudaVersion)' == ''">7.0</CudaVersion>
+
   </PropertyGroup>
+
+  <PropertyGroup Condition="'$(CudaVersion)' == '7.5'">
+    <CudaPath>$(CUDA_PATH_V7_5)</CudaPath>
+    <CudaRuntimeDll>cudart64_75.dll</CudaRuntimeDll>
+    <CudaDlls>cublas64_75.dll;cusparse64_75.dll;curand64_75.dll;$(CudaRuntimeDll)</CudaDlls>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(CudaVersion)' == '7.0'">
+    <CudaPath>$(CUDA_PATH_V7_0)</CudaPath>
+    <CudaRuntimeDll>cudart64_70.dll</CudaRuntimeDll>
+    <CudaDlls>cublas64_70.dll;cusparse64_70.dll;curand64_70.dll;$(CudaRuntimeDll)</CudaDlls>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <CudaLibs>cudart.lib;cublas.lib;cusparse.lib;curand.lib</CudaLibs>
+    <CudaInclude>$(CudaPath)\include</CudaInclude>
+    <CudaLibPath>$(CudaPath)\lib\$(Platform)</CudaLibPath>
+  </PropertyGroup>
+
 </Project>
