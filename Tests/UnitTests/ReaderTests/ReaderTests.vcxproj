@@ -57,24 +57,28 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup>
     <LinkIncremental>false</LinkIncremental>
-    <IncludePath>..\..\..\Source\Common\include;..\..\..\Source\Math;$(IncludePath)</IncludePath>
-    <LibraryPath>$(OutDir);$(LibraryPath)</LibraryPath>
     <OutDir>$(OutDir)\UnitTests\</OutDir>
   </PropertyGroup>
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <AdditionalIncludeDirectories>$(SolutionDir)Source\Common\Include;$(SolutionDir)Source\Math;$(SolutionDir)Source\Readers\ReaderLib;$(BOOST_INCLUDE_PATH)</AdditionalIncludeDirectories>
+    </ClCompile>
+    <Link>
+      <AdditionalLibraryDirectories>$(OutDir);$(OutDir)..;$(BOOST_LIB_PATH)</AdditionalLibraryDirectories>
+    </Link>
+  </ItemDefinitionGroup>
   <ItemDefinitionGroup>
     <ClCompile>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <WarningLevel>Level4</WarningLevel>
       <TreatWarningAsError>true</TreatWarningAsError>
       <PreprocessorDefinitions>WIN32;$(ImageReaderDefine);$(ZipDefine);%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>..\..\..\Source\Readers\ReaderLib;$(BOOST_INCLUDE_PATH);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <UseFullPaths>true</UseFullPaths>
       <OpenMPSupport>true</OpenMPSupport>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>$(BOOST_LIB_PATH);$(OutDir)..\;</AdditionalLibraryDirectories>
       <AdditionalDependencies>htkmlfreader.lib;experimentalhtkmlfreader.lib;Math.lib;ReaderLib.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <OptimizeReferences>true</OptimizeReferences>
     </Link>
@@ -168,6 +172,7 @@
     <Text Include="Control\HTKMLFReaderSimpleDataLoop6_16_17_Control.txt" />
     <Text Include="Control\HTKMLFReaderSimpleDataLoop7_Control.txt" />
     <Text Include="Control\HTKMLFReaderSimpleDataLoop9_19_Control.txt" />
+    <Text Include="Control\ImageReaderMultiView_Control.txt" />
     <Text Include="Control\ImageReaderSimple_Control.txt" />
     <Text Include="Control\ImageReaderZip_Control.txt" />
     <Text Include="Control\UCIFastReaderSimpleDataLoop_Control.txt" />
@@ -180,6 +185,7 @@
     <Text Include="Data\ImageReaderBadLabel_map.txt" />
     <Text Include="Data\ImageReaderBadMap_map.txt" />
     <Text Include="Data\ImageReaderLabelOutOfRange_map.txt" />
+    <Text Include="Data\ImageReaderMultiView_map.txt" />
     <Text Include="Data\ImageReaderSimple_map.txt" />
     <Text Include="Data\ImageReaderZip_map.txt" />
     <Text Include="Data\UCIFastReaderSimpleDataLoop_Mapping.txt" />
@@ -189,6 +195,7 @@
     <Image Include="Data\images\black.jpg" />
     <Image Include="Data\images\blue.jpg" />
     <Image Include="Data\images\green.jpg" />
+    <Image Include="Data\images\multi.png" />
     <Image Include="Data\images\red.jpg" />
   </ItemGroup>
   <ItemGroup>
@@ -197,6 +204,7 @@
     <None Include="Config\ImageReaderBadLabel_Config.cntk" />
     <None Include="Config\ImageReaderBadMap_Config.cntk" />
     <None Include="Config\ImageReaderLabelOutOfRange_Config.cntk" />
+    <None Include="Config\ImageReaderMultiView_Config.cntk" />
     <None Include="Config\ImageReaderZip_Config.cntk" />
     <None Include="Data\images\chunk0.zip" />
     <None Include="Data\images\chunk1.zip" />

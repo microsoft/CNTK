@@ -199,7 +199,7 @@ public:
 
         wstring pathName = config[L"pathName"];
         fprintf(stderr, "Load: Loading model file: %ls", pathName.c_str());
-        Load<ElemType>(pathName); // note that for CNTK_MODEL_VERSION_5 and above, 'ElemType' is ignored
+        Load<ElemType>(pathName); // note that for CNTK_MODEL_VERSION_7 and above, 'ElemType' is ignored
     }
 };
 

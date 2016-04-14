@@ -68,7 +68,7 @@ ImageTransformerBase::Apply(SequenceDataPtr sequence,
     auto result = std::make_shared<ImageSequenceData>();
     int type = CV_MAKETYPE(typeId, channels);
     cv::Mat buffer = cv::Mat(rows, columns, type, inputSequence.m_data);
-    Apply(buffer);
+    Apply(sequence->m_id, buffer);
     if (!buffer.isContinuous())
     {
         buffer = buffer.clone();
@@ -131,7 +131,7 @@ void CropTransformer::InitFromConfig(const ConfigParameters &config)
     }
 }
 
-void CropTransformer::Apply(cv::Mat &mat)
+void CropTransformer::Apply(size_t id, cv::Mat &mat)
 {
     auto seed = GetSeed();
     auto rng = m_rngs.pop_or_create(
@@ -161,8 +161,11 @@ void CropTransformer::Apply(cv::Mat &mat)
         RuntimeError("Jitter type currently not implemented.");
     }
 
-    mat = mat(GetCropRect(m_cropType, mat.rows, mat.cols, ratio, *rng));
-    if (m_hFlip && std::bernoulli_distribution()(*rng))
+    int viewIndex = m_cropType == CropType::MultiView10 ? (int)(id % 10) : 0;
+
+    mat = mat(GetCropRect(m_cropType, viewIndex, mat.rows, mat.cols, ratio, *rng));
+    if ((m_hFlip && std::bernoulli_distribution()(*rng)) ||
+        viewIndex >= 5)
     {
         cv::flip(mat, mat, 1);
     }
@@ -181,6 +184,11 @@ CropTransformer::ParseCropType(const std::string &src)
     if (AreEqualIgnoreCase(src, "random"))
     {
         return CropType::Random;
+    }
+
+    if (AreEqualIgnoreCase(src, "multiview10"))
+    {
+        return CropType::MultiView10;
     }
 
     RuntimeError("Invalid crop type: %s.", src.c_str());
@@ -212,7 +220,7 @@ CropTransformer::ParseJitterType(const std::string &src)
     RuntimeError("Invalid jitter type: %s.", src.c_str());
 }
 
-cv::Rect CropTransformer::GetCropRect(CropType type, int crow, int ccol,
+cv::Rect CropTransformer::GetCropRect(CropType type, int viewIndex, int crow, int ccol,
                                       double cropRatio, std::mt19937 &rng)
 {
     assert(crow > 0);
@@ -225,13 +233,50 @@ cv::Rect CropTransformer::GetCropRect(CropType type, int crow, int ccol,
     switch (type)
     {
     case CropType::Center:
+        assert(viewIndex == 0);
         xOff = (ccol - cropSize) / 2;
         yOff = (crow - cropSize) / 2;
         break;
     case CropType::Random:
+        assert(viewIndex == 0);
         xOff = UniIntT(0, ccol - cropSize)(rng);
         yOff = UniIntT(0, crow - cropSize)(rng);
         break;
+    case CropType::MultiView10:
+    {
+        assert(0 <= viewIndex && viewIndex < 10);
+        // 0 - 4: 4 corners + center crop. 5 - 9: same, but with a flip.
+        int isubView = viewIndex % 5;
+        switch (isubView)
+        {
+        // top-left
+        case 0:
+            xOff = 0;
+            yOff = 0;
+            break;
+        // top-right
+        case 1:
+            xOff = ccol - cropSize;
+            yOff = 0;
+            break;
+        // bottom-left
+        case 2:
+            xOff = 0;
+            yOff = crow - cropSize;
+            break;
+        // bottom-right
+        case 3:
+            xOff = ccol - cropSize;
+            yOff = crow - cropSize;
+            break;
+        // center
+        case 4:
+            xOff = (ccol - cropSize) / 2;
+            yOff = (crow - cropSize) / 2;
+            break;
+        }
+        break;
+    }
     default:
         assert(false);
     }
@@ -291,8 +336,9 @@ void ScaleTransformer::InitFromConfig(const ConfigParameters &config)
         m_interp.push_back(cv::INTER_LINEAR);
 }
 
-void ScaleTransformer::Apply(cv::Mat &mat)
+void ScaleTransformer::Apply(size_t id, cv::Mat &mat)
 {
+    UNUSED(id);
     // If matrix has not been converted to the right type, do it now as rescaling
     // requires floating point type.
     //
@@ -364,8 +410,9 @@ void MeanTransformer::InitFromConfig(const ConfigParameters &config)
     }
 }
 
-void MeanTransformer::Apply(cv::Mat &mat)
+void MeanTransformer::Apply(size_t id, cv::Mat &mat)
 {
+    UNUSED(id);
     assert(m_meanImg.size() == cv::Size(0, 0) ||
            (m_meanImg.size() == mat.size() &&
             m_meanImg.channels() == mat.channels()));
@@ -439,28 +486,25 @@ TransposeTransformer::TypedApply(SequenceDataPtr sequence,
     assert(inputStream.m_storageType == StorageType::dense);
     auto inputSequence = static_cast<DenseSequenceData&>(*sequence.get());
     assert(inputSequence.m_numberOfSamples == 1);
-    assert(inputStream.m_sampleLayout->GetNumElements() ==
-        outputStream.m_sampleLayout->GetNumElements());
+    assert(inputStream.m_sampleLayout->GetNumElements() == outputStream.m_sampleLayout->GetNumElements());
 
     size_t count = inputStream.m_sampleLayout->GetNumElements() * GetSizeByType(inputStream.m_elementType);
 
     auto result = std::make_shared<DenseSequenceWithBuffer>();
     result->m_buffer.resize(count);
 
-    TElemType* typedBuffer = reinterpret_cast<TElemType*>(result->m_buffer.data());
     ImageDimensions dimensions(*inputStream.m_sampleLayout, ImageLayoutKind::HWC);
-
     size_t rowCount = dimensions.m_height * dimensions.m_width;
     size_t channelCount = dimensions.m_numChannels;
-    TElemType* data = reinterpret_cast<TElemType*>(inputSequence.m_data);
 
-    for (size_t rowIndex = 0; rowIndex < rowCount; rowIndex++)
+    auto src = reinterpret_cast<TElemType*>(inputSequence.m_data);
+    auto dst = reinterpret_cast<TElemType*>(result->m_buffer.data());
+
+    for (size_t irow = 0; irow < rowCount; irow++)
     {
-        for (size_t columnIndex = 0; columnIndex < channelCount;
-             columnIndex++)
+        for (size_t icol = 0; icol < channelCount; icol++)
         {
-            typedBuffer[columnIndex * rowCount + rowIndex] =
-                data[rowIndex * channelCount + columnIndex];
+            dst[icol * rowCount + irow] = src[irow * channelCount + icol];
         }
     }
 
