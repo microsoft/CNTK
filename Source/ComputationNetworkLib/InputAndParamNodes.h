@@ -354,7 +354,7 @@ class SparseInputValue : public InputValueBase<ElemType>
 
 public:
     SparseInputValue(DEVICEID_TYPE deviceId, const wstring& name)
-        : Base(deviceId, name, false, L"")
+        : Base(deviceId, name, true, L"")
     {
     }
     SparseInputValue(DEVICEID_TYPE deviceId, const wstring& name, const wstring& dynamicAxisName)
