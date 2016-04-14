@@ -16,7 +16,7 @@ REGEX_INSTANTIATION = re.compile( r'(?P<operator>\w+)\((?P<operands>.*?)\) = (?P
 REGEX_COMMENT = re.compile(r'/\*.*\*/')
 
 OPERANDS_TO_IGNORE = {"tag=''"}
-OPERATORS_TO_IGNORE = {'ConstantFromString', 'ElementDivide'}
+OPERATORS_TO_IGNORE = {'Print', 'Fail', 'Format', 'Replace', 'Substr', 'Chr', 'Length', 'ConstantFromString', 'ElementDivide'}
 
 INPUT_NODES = ['Input', 'SparseInput']
 IMAGE_INPUT_NODES = ['ImageInput', 'SparseImageInput']

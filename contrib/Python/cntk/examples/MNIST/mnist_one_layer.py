@@ -1,3 +1,13 @@
+# Copyright (c) Microsoft. All rights reserved.
+
+# Licensed under the MIT license. See LICENSE.md file in the project root 
+# for full license information.
+# ==============================================================================
+
+"""
+Example of a one layer neural network for MNNIST classification problem
+"""
+
 import sys
 import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..'))
@@ -55,13 +65,13 @@ if (__name__ == "__main__"):
     ec.tag = 'criterion'
 
     # Build the optimizer (settings are scaled down)
-    my_sgd = SGD(epoch_size=600, minibatch_size=32,
+    my_sgd = SGDParams(epoch_size=600, minibatch_size=32,
                  learning_ratesPerMB=0.1, max_epochs=5, momentum_per_mb=0)
 
     # Create a context or re-use if already there
     with Context('mnist_one_layer' , clean_up=False) as ctx:
         # CNTK actions
         ctx.train(ec, my_sgd, {features:f_reader, labels:l_reader})
-        ctx.predict({features:f_reader_t, labels:l_reader_t})
+        ctx.infer({features:f_reader_t, labels:l_reader_t})
         print(ctx.test({features:f_reader_t, labels:l_reader_t}))
         

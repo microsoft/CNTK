@@ -16,13 +16,13 @@ CNTK_TRAIN_TEMPLATE_PATH = os.path.join(
     CNTK_TEMPLATE_DIR, "cntk_train_template.cntk")
 CNTK_TEST_TEMPLATE_PATH = os.path.join(
     CNTK_TEMPLATE_DIR, "cntk_test_template.cntk")
-CNTK_PREDICT_TEMPLATE_PATH = os.path.join(
-    CNTK_TEMPLATE_DIR, "cntk_predict_template.cntk")
+CNTK_INFER_TEMPLATE_PATH = os.path.join(
+    CNTK_TEMPLATE_DIR, "cntk_infer_template.cntk")
 CNTK_EVAL_TEMPLATE_PATH = os.path.join(
     CNTK_TEMPLATE_DIR, "cntk_eval_template.cntk")
 CNTK_TRAIN_CONFIG_FILENAME = "train.cntk"
 CNTK_TEST_CONFIG_FILENAME = "test.cntk"
-CNTK_PREDICT_CONFIG_FILENAME = "predict.cntk"
+CNTK_INFER_CONFIG_FILENAME = "infer.cntk"
 CNTK_EVAL_CONFIG_FILENAME = "eval.cntk"
 CNTK_OUTPUT_FILENAME = "out.txt"
 
@@ -116,13 +116,13 @@ class AbstractContext(object, metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def predict(self, input_reader=None):
+    def infer(self, input_reader=None):
         '''
         Abstract method for the action write. It evaluated the trained model on 
         the data provided by the reader.
         :param input_reader: map from input nodes to readers
 
-        Returns the predicted output
+        Returns the inferred output
         '''
         pass
 
@@ -233,13 +233,13 @@ class AbstractContext(object, metaclass=ABCMeta):
         }
         return tmpl % tmpl_dict
 
-    def _generate_predict_config(self, input_reader):
+    def _generate_infer_config(self, input_reader):
         '''
         Generates the configuration file for the write action.
         It uses the context's trained model.
         :param input_reader: a map from input nodes to their readers
         '''
-        tmpl = open(CNTK_PREDICT_TEMPLATE_PATH, "r").read()
+        tmpl = open(CNTK_INFER_TEMPLATE_PATH, "r").read()
         model_filename = os.path.join(self.directory, 'Models', self.name)
         output_filename_base = os.path.join(
             self.directory, 'Outputs', self.name)
@@ -526,15 +526,15 @@ class Context(AbstractContext):
         return Context._parse_test_result(output)
 
 
-    def predict(self, input_reader=None):
+    def infer(self, input_reader=None):
         '''
         Run the write action locally, use the trained model of this context.
         :param input_reader: map from input nodes to readers
 
-        Returns the predicted output
+        Returns the inferred output
         '''
-        config_content = self._generate_predict_config(input_reader)
-        return self._call_cntk(CNTK_PREDICT_CONFIG_FILENAME, config_content)
+        config_content = self._generate_infer_config(input_reader)
+        return self._call_cntk(CNTK_INFER_CONFIG_FILENAME, config_content)
 
     def eval(self, node, input_reader=None, backward_pass=False, input_name=None):
         '''

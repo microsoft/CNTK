@@ -1,3 +1,13 @@
+# Copyright (c) Microsoft. All rights reserved.
+
+# Licensed under the MIT license. See LICENSE.md file in the project root 
+# for full license information.
+# ==============================================================================
+
+"""
+Example of logictic regression implementation 
+"""
+
 import os
 import sys
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..'))
@@ -11,7 +21,7 @@ train_file = os.path.join(cur_dir, "Train-3Classes.txt")
 test_file = os.path.join(cur_dir, "Test-3Classes.txt") 
 mapping_file = os.path.join(cur_dir, "SimpleMapping-3Classes.txt")
 
-def train_eval_logreg(criterion_name=None, eval_name=None):
+def train_eval_logistic_regression(criterion_name=None, eval_name=None):
     X = Input(2)
     y = Input(3)
     
@@ -28,12 +38,14 @@ def train_eval_logreg(criterion_name=None, eval_name=None):
 
     out = Times(W, X) + b
     out.tag = 'output'
-    ce = CrossEntropyWithSoftmax(y, out, var_name=criterion_name)
+    ce = CrossEntropyWithSoftmax(y, out)
+    ce.var_name = criterion_name
     ce.tag = 'criterion'
-    eval = SquareError(y, out, var_name=eval_name)
+    eval = SquareError(y, out)
     eval.tag = 'eval'
+    eval.var_name = eval_name
 
-    my_sgd = SGD(
+    my_sgd = SGDParams(
         epoch_size=0, minibatch_size=25, learning_ratesPerMB=0.1, max_epochs=3)
 
     with Context('demo', clean_up=False) as ctx:
@@ -43,8 +55,8 @@ def train_eval_logreg(criterion_name=None, eval_name=None):
         
         return result
 
-def test_logreg():
-    result = train_eval_logreg('crit_node', 'eval_node')
+def test_logistic_regression():
+    result = train_eval_logistic_regression('crit_node', 'eval_node')
 
     assert result['SamplesSeen'] == 500
     assert np.allclose(result['Perplexity'], 1.2216067)
@@ -52,4 +64,4 @@ def test_logreg():
     assert np.allclose(result['eval_node'], 27.558445)
 
 if __name__ == "__main__":
-    print(train_eval_logreg())
+    print(train_eval_logistic_regression())

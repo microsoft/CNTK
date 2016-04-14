@@ -45,66 +45,66 @@ class ComputationNode(object):
     def _is_input(self):
         return isinstance(self, InputComputationNodeBase)
 
+    # operator overload for (+) where self is the left operand
     def __add__(self, other):
-        if not isinstance(other, ComputationNode):
-            # TODO: in case of non-scalars we have to pull in a reader
+        if not isinstance(other, ComputationNode):            
             other = constant(other)
         return Plus(self, other)
 
+    # operator overload for (+) where self is the right operand
     def __radd__(self, other):
-        if not isinstance(other, ComputationNode):
-            # TODO: in case of non-scalars we have to pull in a reader
+        if not isinstance(other, ComputationNode):            
             other = constant(other)
         return Plus(other, self)
-
+    
+    # operator overload for (-) where self is the left operand
     def __sub__(self, other):
         if not isinstance(other, ComputationNode):
-            # TODO: in case of non-scalars we have to pull in a reader
             other = constant(other)
         return Minus(self, other)
 
+    # operator overload for (-) where self is the right operand
     def __rsub__(self, other):
-        if not isinstance(other, ComputationNode):
-            # TODO: in case of non-scalars we have to pull in a reader
+        if not isinstance(other, ComputationNode):            
             other = constant(other)
         return Minus(other, self)
 
+    # operator overload for (*) where self is the left operand
     def __mul__(self, other):
         if not isinstance(other, ComputationNode):
-            # TODO: in case of non-scalars we have to pull in a reader
             other = constant(other)
         return ElementTimes(self, other)
 
+    # operator overload for (*) where self is the right operand
     def __rmul__(self, other):
         if not isinstance(other, ComputationNode):
-            # TODO: in case of non-scalars we have to pull in a reader
             other = constant(other)
         return ElementTimes(other, self)
 
+    # operator overload for (@) where self is the left operand
     def __matmul__(self, other):
         if not isinstance(other, ComputationNode):
-            # TODO: in case of non-scalars we have to pull in a reader
             other = constant(other)
         # NOTE supported in Python 3.5
         return Times(self, other)
 
+    # operator overload for (@) where self is the right operand
     def __rmatmul__(self, other):
-        if not isinstance(other, ComputationNode):
-            # TODO: in case of non-scalars we have to pull in a reader
+        if not isinstance(other, ComputationNode):            
             other = constant(other)
         # NOTE supported in Python 3.5
         return Times(other, self)
 
+    # operator overload for (\) where self is the left operand
     def __truediv__(self, other):
         if not isinstance(other, ComputationNode):
-            # TODO: in case of non-scalars we have to pull in a reader
             other = constant(other)
         self.__div__ = self.__truediv__
         return ElementDivide(self, other)
 
+    # operator overload for (\) where self is the right operand
     def __rtruediv__(self, other):
         if not isinstance(other, ComputationNode):
-            # TODO: in case of non-scalars we have to pull in a reader
             other = constant(other)
         self.__rdiv__ = self.__rtruediv__
         return ElementDivide(other, self)
