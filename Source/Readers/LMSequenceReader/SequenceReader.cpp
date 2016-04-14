@@ -1612,29 +1612,6 @@ void BatchSequenceReader<ElemType>::StartDistributedMinibatchLoop(size_t mbSize,
 		return;
 	}
 
-	// allocate buffers for building features and labels
-	// We allocate 'mbSize' entries, i.e. that's the total token cound across multiple parallel sequences.
-	//Currently, buffers are not being used.
-#if 0
-	const LabelInfo& labelInfo = m_labelInfo[(m_labelInfo[labelInfoOut].type == labelNextWord) ? labelInfoIn : labelInfoOut];
-
-	if (m_featuresBuffer == NULL)       // features
-		m_featuresBuffer = new ElemType[mbSize * labelInfo.dim]();
-
-	if (m_labelsBuffer == NULL)         // labels
-	{
-		if (labelInfo.type == labelCategory)
-		{
-			m_labelsBuffer = new ElemType[mbSize * labelInfo.dim]();
-			m_labelsIdBuffer = new /*typename IDataReader<ElemType>::*/LabelIdType[mbSize]();     // TODO: no "new" please! Use a vector
-		}
-		else if (labelInfo.type != labelNone)
-		{
-			m_labelsBuffer = new ElemType[mbSize]();
-			m_labelsIdBuffer = NULL;
-		}
-	}
-#endif
 	//m_featuresBufferRow = new size_t[mbSize];
 	//m_featuresBufferRowIdx = new size_t[mbSize];
 
@@ -1957,8 +1934,6 @@ bool BatchSequenceReader<ElemType>::GetMinibatch(StreamMinibatchInputs& matrices
     // copy m_featureData to matrix
     // m_featureData is a sparse, already with interleaved parallel sequences. We copy it into a dense matrix.
     // we always copy it to cpu first and then convert to gpu if gpu is desired.
-	// There may be multiple parallel trainers reading at the same time in which case
-	// we will slice the data to only return the share of the current trainer's subset
 
     size_t featureDim = m_labelInfo[labelInfoIn].dim;
     auto iter = matrices.find(m_featuresName);
@@ -2104,7 +2079,6 @@ void BatchSequenceReader<ElemType>::GetLabelOutput(StreamMinibatchInputs& matric
         return;
 
 	size_t j = 0;
-
     Matrix<ElemType>& labels = matrices.GetInputMatrix<ElemType>(m_labelsName[labelInfoOut]);
     if (readerMode == ReaderMode::NCE)
         labels.Resize(2 * (m_noiseSampleSize + 1), actualmbsize);
@@ -2120,7 +2094,6 @@ void BatchSequenceReader<ElemType>::GetLabelOutput(StreamMinibatchInputs& matric
 
     ElemType epsilon = (ElemType) 1e-6; // avoid all zero, although this is almost impossible.
 
-	// enabling parallel data reading
 	for (size_t jSample = mbStartSample; j < actualmbsize; ++j, ++jSample)
     {
         // get the token

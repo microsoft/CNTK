@@ -325,10 +325,6 @@ public:
     using Base::InitCache;
     using Base::m_readerConfig;
     using Base::ReleaseMemory;
-    using Base::m_featuresBuffer;
-    //using Base::m_featuresBufferRow;
-    using Base::m_labelsBuffer;
-    using Base::m_labelsIdBuffer;
     using Base::m_id2classLocal;
     using Base::m_classInfoLocal;
     using Base::m_cacheBlockSize;
@@ -336,12 +332,10 @@ public:
     using Base::m_epochSize;
     using Base::m_featureData;
     using Base::labelInfoOut;
-    //using Base::m_labelData;
     using Base::m_labelIdData;
     using Base::LMSetupEpoch;
     using Base::m_clsinfoRead;
     using Base::m_idx2clsRead;
-    //using Base::m_featuresBufferRowIdx;
     using Base::m_sequence;
     using Base::idx4class;
     using Base::m_indexer;
