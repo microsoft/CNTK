@@ -3,7 +3,7 @@
 
 command=Train #:Write
 deviceId=-1
-modelPath="model"
+modelPath="$RunDir$/model"
 
 Train=[
     action="train"
