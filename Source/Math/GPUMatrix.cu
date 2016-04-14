@@ -909,7 +909,7 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::DoGatherColumnsOf(ElemType beta, const
     if (beta == 0)
         RequireSize(a.GetNumRows(), idx.GetNumCols()); // output has same column format as a, but number of columns comes from idx
     else
-        VerifySize(a.GetNumRows(), idx.GetNumCols());
+        this->VerifySize(a.GetNumRows(), idx.GetNumCols());
 
     if (idx.GetComputeDeviceId() != a.GetComputeDeviceId() || GetComputeDeviceId() != a.GetComputeDeviceId())
         InvalidArgument("All matrices must be on the same GPU");
