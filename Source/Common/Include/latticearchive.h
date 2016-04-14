@@ -10,7 +10,10 @@
 #undef HACK_IN_SILENCE  // [v-hansu] hack to simulate DEL in the lattice
 #define SILENCE_PENALTY // give penalty to added silence
 
-#define __STDC_FORMAT_MACROS
+#ifndef __STDC_FORMAT_MACROS
+#define __STDC_FORMAT_MACROS 1
+#else
+#endif
 #include <inttypes.h>
 
 #include "Basics.h"

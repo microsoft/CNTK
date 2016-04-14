@@ -6,6 +6,11 @@
 #define _CRT_SECURE_NO_WARNINGS
 #define _SCL_SECURE_NO_WARNINGS
 
+#ifndef __STDC_FORMAT_MACROS
+#define __STDC_FORMAT_MACROS 1
+#else
+#endif
+
 #include <numeric>
 #include <inttypes.h>
 #include "SequencePacker.h"
