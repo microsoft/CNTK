@@ -1,15 +1,36 @@
-dataDir: ../../../../Image/Data
+dataDir: ../../../../../../Examples/Image/MNIST/Data
 
-# Note: Windows temporarily disabled because of instability (pending investigation; perhaps
-#   alexeyk/batch_norm fixes it)
 tags:
-    # running on every BVT job in 'E' (Examples) leg
-    - bvt-e ((flavor=='debug') ^ (device=='cpu')) and (os=='linux')
-    # running every Nightly job in 'E' (Examples) leg
-    - nightly-e (os=='linux')
+    # In BVT, run Release GPU (~ 60 - 90 sec)
+    - bvt-e (build_sku=='gpu') and (device=='gpu') and (flavor=='release') 
+    # In Nightly on Linux, run Debug GPU in addition (~ 100 - 240 sec).
+    - nightly-e (build_sku=='gpu') and (device=='gpu')
 
 testCases:
   CNTK Run must be completed:
     patterns:
       - __COMPLETED__
 
+  Must train epochs in exactly same order and parameters:
+    patterns:
+      - Starting Epoch {{integer}}
+      - learning rate per sample = {{float}}
+      - momentum = {{float}}
+
+  Epochs (with low train loss) must be finished with expected results:
+    patterns:
+      - Finished Epoch[{{integer}} of {{integer}}]
+      - TrainLossPerSample = 0.0
+      - TrainLossPerSample = {{float,tolerance=0.05}}
+      - EvalErrPerSample = {{float,tolerance=0.005}}
+      - AvgLearningRatePerSample = {{float,tolerance=0.1%}}
+
+  Per-minibatch (with low train loss) training results must match:
+    patterns:
+      # Ignores first set of minibatches at start of epoch, which sometimes has a larger deviation:
+      - 01-
+      - Epoch[{{integer}} of {{integer}}]-Minibatch[{{integer}}-{{integer}}
+      - SamplesSeen = {{integer}}
+      - TrainLossPerSample =  0.0
+      - TrainLossPerSample = {{float,tolerance=0.05}}
+      - EvalErr[0]PerSample = {{float,tolerance=0.005}}

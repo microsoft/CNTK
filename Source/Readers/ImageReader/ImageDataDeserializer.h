@@ -8,6 +8,7 @@
 #include "DataDeserializerBase.h"
 #include "Config.h"
 #include "ByteReader.h"
+#include "ImageConfigHelper.h"
 #include <unordered_map>
 
 namespace Microsoft { namespace MSR { namespace CNTK {
@@ -33,7 +34,7 @@ public:
 
 private:
     // Creates a set of sequence descriptions.
-    void CreateSequenceDescriptions(std::string mapPath, size_t labelDimension);
+    void CreateSequenceDescriptions(std::string mapPath, size_t labelDimension, const ImageConfigHelper& config);
 
     // Image sequence descriptions. Currently, a sequence contains a single sample only.
     struct ImageSequenceDescription : public SequenceDescription

@@ -1,13 +1,35 @@
-dataDir: ../../../../Image/Data
+dataDir: ../../../../../../Examples/Image/MNIST/Data
 
 tags:
-    # running on every BVT job in 'E' (Examples) leg
-    #- bvt-e ((flavor=='debug') ^ (device=='cpu')) 
-    # running every Nightly job in 'E' (Examples) leg
-    #- nightly-e
+    # In BVT, run Release GPU (~ 30 - 60 sec)
+    - bvt-e (build_sku=='gpu') and (device=='gpu') and (flavor=='release') 
+    # In Nightly, additionally run Debug GPU
+    # Note: Batch normalization training on CPU is not yet implemented.
+    - nightly-e (build_sku=='gpu') and (device=='gpu')
 
 testCases:
   CNTK Run must be completed:
     patterns:
       - __COMPLETED__
 
+  Must train epochs in exactly same order and parameters:
+    patterns:
+      - Starting Epoch {{integer}}
+      - learning rate per sample = {{float}}
+      - momentum = {{float}}
+
+  Epochs (with low train loss) must be finished with expected results:
+    patterns:
+      - Finished Epoch[{{integer}} of {{integer}}]
+      - TrainLossPerSample = 0.0
+      - TrainLossPerSample = {{float,tolerance=0.05}}
+      - EvalErrPerSample = {{float,tolerance=0.005}}
+      - AvgLearningRatePerSample = {{float,tolerance=0.1%}}
+
+  Per-minibatch (with low train loss) training results must match:
+    patterns:
+      - Epoch[{{integer}} of {{integer}}]-Minibatch[{{integer}}-{{integer}}
+      - SamplesSeen = {{integer}}
+      - TrainLossPerSample =  0.0
+      - TrainLossPerSample = {{float,tolerance=0.05}}
+      - EvalErr[0]PerSample = {{float,tolerance=0.005}}

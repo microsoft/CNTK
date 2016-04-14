@@ -246,6 +246,12 @@
     <Text Include="Data\CNTKTextFormatReader\100x1_dense.txt">
       <Filter>Data\CNTKTextFormatReader</Filter>
     </Text>
+    <Text Include="Data\ImageReaderMultiView_map.txt">
+      <Filter>Data</Filter>
+    </Text>
+    <Text Include="Control\ImageReaderMultiView_Control.txt">
+      <Filter>Control</Filter>
+    </Text>
   </ItemGroup>
   <ItemGroup>
     <Image Include="Data\images\black.jpg">
@@ -258,6 +264,9 @@
       <Filter>Data\images</Filter>
     </Image>
     <Image Include="Data\images\red.jpg">
+      <Filter>Data\images</Filter>
+    </Image>
+    <Image Include="Data\images\multi.png">
       <Filter>Data\images</Filter>
     </Image>
   </ItemGroup>
@@ -285,6 +294,9 @@
     </None>
     <None Include="Config\CNTKTextFormatReader\sparse.cntk">
       <Filter>Config\CNTKTextFormatReader</Filter>
+    </None>
+    <None Include="Config\ImageReaderMultiView_Config.cntk">
+      <Filter>Config</Filter>
     </None>
   </ItemGroup>
 </Project>

@@ -11,7 +11,8 @@ ModelDir  = "$OutputDir$/Models"
 
 deviceId = 0
 imageLayout = "cudnn"
-# override the above as follows when running on CPU:
+# Note: Batch normalization training on CPU is not yet implemented.
+# When it is, override the above as follows when running on CPU:
 # deviceId = -1
 
 command = train:test
@@ -22,6 +23,12 @@ ndlMacros = "$ConfigDir$/Macros.ndl"
 
 # uncomment the following line to write logs to a file 
 # stderr = "$OutputDir$/03_ConvBatchNorm_out"
+
+traceLevel=1
+numMBsToShowResult=500
+
+# If set to true, always initialize the network on CPU, making initialization consistent across CPU and GPU targets (for testing).
+initOnCPUOnly=true
 
 #######################################
 #  TRAINING CONFIG                    #
@@ -44,6 +51,7 @@ train = [
         batchNormalizationBlendTimeConstant=0:1#INF
     ]
     
+    # Note: this reader crashes if randomization is turned on.
     reader = [
         readerType = "UCIFastReader"
         # To get the data (Train-28x28.txt) please run `python mnist_convert.py` 

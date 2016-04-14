@@ -3,13 +3,35 @@
 . $TEST_ROOT_DIR/run-test-common
 
 ConfigDir=$TEST_DIR/../../../../../../Examples/Image/MNIST/Config
-if [ "$OS" == "Windows_NT" ]; then
-  CleanDataDir=$(cygpath -aw $DataDir)
-else
-  CleanDataDir=$DataDir
+
+if [[ ! -d $TEST_DATA_DIR || ! -e $TEST_DATA_DIR/Test-28x28.txt || ! -e $TEST_DATA_DIR/Test-28x28.txt ]]; then
+    # Cannot find test data locally.
+    # Try external test data directory (not part of the CNTK repository) as an alternative.
+    if [[ -d "$CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY" ]]; then
+        if [ "$OS" == "Windows_NT" ]; then
+            DataSourceDir=`cygpath -au $CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY`/Image/MNIST/v0
+        else
+            DataSourceDir=$CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY/Image/MNIST/v0
+        fi
+
+        # Copy the test data to the test run directory
+        DataDir=$TEST_RUN_DIR/TestData
+        mkdir $DataDir
+        cp -R $DataSourceDir/* $DataDir || exit $?
+        Copied=1
+    else
+        echo Error: cannot find data. Please see Examples/Image/MNIST/README.md for instructions to get it.
+        exit 1
+    fi
 fi
 
-# cntkrun <CNTK config file name> <additional CNTK args>
 imageLayout=cudnn
 
-cntkrun  02_Convolution.cntk  "train=[reader=[file=$CleanDataDir/Train.txt]]  test=[reader=[file=$CleanDataDir/Test.txt]]  train=[SGD=[maxEpochs=1]]  train=[SGD=[epochSize=128]]  train=[reader=[randomize=none]]  imageLayout=\"$imageLayout\"" || exit $?
+# Note: explicitly turn off randomization, as it crashes the reader.
+cntkrun  02_Convolution.cntk  "train=[reader=[randomize=none]]  imageLayout=\"$imageLayout\""
+ExitCode=$?
+
+# Delete the test data if copied
+[[ "$Copied" -eq "1" ]] && rm -rf "$DataDir"
+
+exit $ExitCode
