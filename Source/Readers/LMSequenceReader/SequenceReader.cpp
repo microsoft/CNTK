@@ -1826,18 +1826,17 @@ bool BatchSequenceReader<ElemType>::GetMinibatchData(size_t& /*out*/ firstPosInS
 
     firstPosInSentence = mLastPosInSentence;
 
-    size_t & i = mLastPosInSentence;	// why not just use mLastPosInSentence directly in the loop? This adds unnecessary confusion.
-    size_t iend = sLn - (labelOut.type != labelNone);       // exclude the last token since it is the last label to be predicted
+    size_t effectiveInputSequenceLength = sLn - (labelOut.type != labelNone);       // exclude the last token since it is the last label to be predicted
     // ############### BREAKING CHANGE ################
     // We use sLn, not sLn -1, if labelOut.type is labelNone, assuming there is no output label, and all labels are inputs.
     // ############### BREAKING CHANGE ################
-    const size_t maxNumberOfParallelSequences = mRequestedNumParallelSequences > 0 ? m_mbSize : SIZE_MAX;                           // mbSize here is truncation length
-	for (size_t j = 0; j < maxNumberOfParallelSequences && i < iend; i++, j++)
+    const size_t jend = mRequestedNumParallelSequences > 0 ? m_mbSize : SIZE_MAX;                           // mbSize here is truncation length
+	for (size_t j = 0; j < jend && mLastPosInSentence < effectiveInputSequenceLength; mLastPosInSentence++, j++)
     {
         for (int k = 0; k < mToProcess.size(); k++)
         {
             size_t seq = mToProcess[k];
-            size_t pos = m_parser.mSentenceIndex2SentenceInfo[seq].sBegin + i;
+            size_t pos = m_parser.mSentenceIndex2SentenceInfo[seq].sBegin + mLastPosInSentence;
 
             // labelIn should be a category label
             const auto& labelValue = m_labelTemp[pos];
@@ -1887,7 +1886,7 @@ bool BatchSequenceReader<ElemType>::GetMinibatchData(size_t& /*out*/ firstPosInS
 
     // remember if we are at the end
     // Note: This flag will propagate into setting mProcessed[] in DataEnd(), which seems a bit fragile. Can't we do it here?
-    mSentenceEnd = (i == iend);
+    mSentenceEnd = (mLastPosInSentence == effectiveInputSequenceLength);
 
     return true;
 }
@@ -2104,6 +2103,8 @@ void BatchSequenceReader<ElemType>::GetLabelOutput(StreamMinibatchInputs& matric
     if (!matrices.HasInput(m_labelsName[labelInfoOut]))
         return;
 
+	size_t j = 0;
+
     Matrix<ElemType>& labels = matrices.GetInputMatrix<ElemType>(m_labelsName[labelInfoOut]);
     if (readerMode == ReaderMode::NCE)
         labels.Resize(2 * (m_noiseSampleSize + 1), actualmbsize);
@@ -2120,13 +2121,10 @@ void BatchSequenceReader<ElemType>::GetLabelOutput(StreamMinibatchInputs& matric
     ElemType epsilon = (ElemType) 1e-6; // avoid all zero, although this is almost impossible.
 
 	// enabling parallel data reading
-	size_t currSubsetStartCol = ((actualmbsize * m_subsetNum) / m_numSubsets) + mbStartSample;
-	size_t currSubsetEndCol = ((actualmbsize * (m_subsetNum + 1)) / m_numSubsets) + mbStartSample;
-
-	for (size_t j = currSubsetStartCol; j < currSubsetEndCol; j++)
+	for (size_t jSample = mbStartSample; j < actualmbsize; ++j, ++jSample)
     {
         // get the token
-        LabelIdType wrd = m_labelIdData[j];
+        LabelIdType wrd = m_labelIdData[jSample];
 
         // write sample value into output
         // This writes an index into a row vector. Which is wrong, we want a sparse one-hot vector.
