@@ -18,6 +18,10 @@ from ..variables_and_parameters import *
 # functions like sigmoid.
 TOLERANCE_ABSOLUTE = 1E06 
 
+PRECISION_TO_TYPE = {'float': np.float32, 'double':np.float64}
+
+PRECISION_TO_TYPE = {'float': np.float32, 'double':np.float64}
+
 #Keeping things short
 C = constant
 I = input_array
