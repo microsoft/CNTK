@@ -148,7 +148,7 @@ void File::Init(const wchar_t* filename, int fileOptions)
 // (wstring only for now; feel free to make this a template if needed)
 /*static*/ wstring File::DirectoryPathOf(wstring path)
 {
-#if WIN32
+#ifdef WIN32
     if (IsWindows8OrGreater())
     {
         typedef HRESULT(*PathCchRemoveFileSpecProc)(_Inout_updates_(_Inexpressible_(cchPath)) PWSTR, _In_ size_t);
@@ -203,7 +203,7 @@ void File::Init(const wchar_t* filename, int fileOptions)
 // (wstring only for now; feel free to make this a template if needed)
 /*static*/ wstring File::FileNameOf(wstring path)
 {
-#if WIN32
+#ifdef WIN32
     static const wstring delim = L"\\:/";
 #else
     static const wstring delim = L"/";
@@ -218,7 +218,7 @@ void File::Init(const wchar_t* filename, int fileOptions)
 // get path of current executable
 /*static*/ wstring File::GetExecutablePath()
 {
-#if WIN32
+#ifdef WIN32
     wchar_t path[33000];
     if (GetModuleFileNameW(NULL, path, _countof(path)) == 0)
         LogicError("GetExecutablePath: GetModuleFileNameW() unexpectedly failed.");
@@ -264,7 +264,7 @@ File::~File(void)
 {
     if (m_pcloseNeeded)
     {
-        // TODO: Check for error code and throw if !std::uncaught_exception()     
+        // TODO: Check for error code and throw if !std::uncaught_exception()
         _pclose(m_file);
     }
     else if (m_file != stdin && m_file != stdout && m_file != stderr)

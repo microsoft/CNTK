@@ -11,8 +11,9 @@ ModelDir  = "$OutputDir$/Models"
 
 deviceId = 0
 imageLayout = "cudnn"
-# override the above as follows when running on CPU:
+# Override the above as follows when running on CPU:
 # deviceId = -1
+# Note: Compared to GPU, this runs very slow.
 
 command = train:test
 
@@ -26,6 +27,9 @@ traceLevel=1
 numMBsToShowResult=500
 
 prefetch=true
+
+# If set to true, always initialize the network on CPU, making initialization consistent across CPU and GPU targets (for testing).
+initOnCPUOnly=true
 
 #######################################
 #  TRAINING CONFIG                    #
@@ -46,6 +50,7 @@ train = [
         maxEpochs = 15
     ]
     
+    # Note: this reader crashes if randomization is turned on.
     reader = [
         readerType = "UCIFastReader"
         # To get the data (Train-28x28.txt) please run `python mnist_convert.py` 

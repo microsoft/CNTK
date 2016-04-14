@@ -67,7 +67,7 @@ Train=[
             height=224
             channels=3
             # Below are the optional parameters.
-            # Possible values: Center, Random. Default: Center
+            # Possible values: Center, Random, MultiView10. Default: Center
             cropType="Random"
             # Horizontal random flip, will be enabled by default if cropType=Random
             #hflip="true"
@@ -109,7 +109,7 @@ Test=[
             width=224
             height=224
             channels=3
-            cropType="Center"
+            cropType="Center" # Use MultiView10 to enable 10-view testing.
             meanFile="$ConfigDir$/ImageNet1K_mean.xml"
         ]
         labels=[
