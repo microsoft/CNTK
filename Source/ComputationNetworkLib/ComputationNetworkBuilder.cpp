@@ -422,9 +422,15 @@ shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Class
 }
 
 template <class ElemType>
+<<<<<<< HEAD
 shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Clip(const ComputationNodePtr a, const ComputationNodePtr b, const ComputationNodePtr c, const std::wstring nodeName)
 {
     return net.AddNodeToNetAndAttachInputs(New<ClipNode<ElemType>>(net.GetDeviceId(), nodeName), { a, b, c });
+=======
+shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::ClipByValue(const ComputationNodePtr a, const ComputationNodePtr b, const ComputationNodePtr c, const std::wstring nodeName)
+{
+    return net.AddNodeToNetAndAttachInputs(New<ClipByValueNode<ElemType>>(net.GetDeviceId(), nodeName), { a, b, c });
+>>>>>>> implementing ClipByValue(x, minValue, maxValue) in CN lib, NDL, and BS
 }
 
 #ifdef COMING_SOON
