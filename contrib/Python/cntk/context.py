@@ -338,6 +338,45 @@ class AbstractContext(with_metaclass(ABCMeta, object)):
         return var_shape
 
     @staticmethod
+    def _sanitized_asarray(data):
+        '''
+        Data returned from CNTK might contain infinity or NaNs in the form of
+        `1.#IND -1.#IND 1.#INF -1.#INF` on Windows or `nan -nan inf -inf` on
+        Linux. While the Linux versions are automatically handled by NumPy, the
+        Windows versions are not. This function maps those values to NumPy's 
+        `nan` and `inf` and returns a NumPy array with dtype=float.
+
+        Args:
+            data : Python list of strings 
+              Numbers to be converted or inf/nans
+
+        Returns:
+            out : ndarray
+                NumPy array with NaNs and Infs mappe to NumPy versions of them.
+            
+        See also:
+            http://www.johndcook.com/blog/IEEE_exceptions_in_cpp/
+        '''
+        try:
+            return np.asarray(data, dtype=float)
+        except ValueError:
+            
+            for i in range(len(data)):
+                try:
+                    data[i] = float(data[i])
+                except ValueError:
+                    if data[i].startswith('1.#IND'):
+                        data[i] = np.nan
+                    elif data[i].startswith('-1.#IND'):
+                        data[i] = -np.nan
+                    elif data[i].startswith('1.#INF'):
+                        data[i] = np.inf
+                    elif data[i].startswith('-1.#INF'):
+                        data[i] = -np.inf
+
+            return np.asarray(data, dtype=float)
+
+    @staticmethod
     def _parse_result_output(output):
         '''
         Assuming the data has been output using the output format in the
@@ -366,7 +405,7 @@ class AbstractContext(with_metaclass(ABCMeta, object)):
         tensor_seq = []
         shape = None
         for line in output.splitlines():
-            parts = line.split('|')
+            parts = line.strip().split('|')
 
             seq_idx = parts[0].strip()
             payload = parts[1]
@@ -379,7 +418,7 @@ class AbstractContext(with_metaclass(ABCMeta, object)):
                     raise ValueError('expected shape information, but got "%s"'%line) 
 
                 if tensor_seq:
-                    list_of_tensors.append(np.asarray(tensor_seq))
+                    list_of_tensors.append(Context._sanitized_asarray(tensor_seq))
                     tensor_seq = []
 
                 last_seq_idx = seq_idx
@@ -388,7 +427,7 @@ class AbstractContext(with_metaclass(ABCMeta, object)):
 
                 continue
             else:
-                data = np.asarray(data, dtype=float).reshape(shape, order='F')
+                data = Context._sanitized_asarray(data).reshape(shape, order='F')
 
             tensor_seq.append(data)
 

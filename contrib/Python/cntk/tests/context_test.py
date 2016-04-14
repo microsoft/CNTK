@@ -68,6 +68,25 @@ def test_parse_eval_result_output_1():
     for res, exp in zip(list_of_tensors, expected):
         assert np.allclose(res, np.asarray(exp))
 
+def test_parse_eval_result_output_2():
+    output = '''\
+0	|w.shape 8 1
+0	|w 1.#IND -1.#IND 1.#INF00 -1.#INF nan -nan inf -inf 
+'''
+    data = Context._parse_result_output(output)
+    data = data[0][0] # First sequence in first batch
+    assert len(data) == 8
+    # Windows
+    assert np.isnan(data[0])
+    assert np.isnan(data[1])
+    assert np.isinf(data[2]) and data[2]>0
+    assert np.isinf(data[3]) and data[3]<0
+    # Linux
+    assert np.isnan(data[4])
+    assert np.isnan(data[5])
+    assert np.isinf(data[6]) and data[6]>0
+    assert np.isinf(data[7]) and data[7]<0
+
 
 def test_parse_test_result_output():
     output = '''\
