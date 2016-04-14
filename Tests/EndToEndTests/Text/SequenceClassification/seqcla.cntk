@@ -102,7 +102,7 @@ Write=[
     reader = [
         
             readerType = "CNTKTextFormatReader"
-            file = "Train.txt"            
+            file = "$DataDir$/Train.txt"            
             
             input = [            
                 features=[
