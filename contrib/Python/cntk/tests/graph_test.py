@@ -4,6 +4,7 @@ from ..graph import _tensor_to_text_format
 
 import pytest
 
+import scipy.sparse
 
 # keeping things short
 A = np.asarray
@@ -82,8 +83,6 @@ def test_tensor_conversion_dense(alias, idx, data, expected):
             has_sequence_dimension=False) == expected
 
 if False:
-    import scipy.sparse
-
     @pytest.mark.parametrize("alias, data, expected", [
         ('W', [A({})], ""),
         ('W', [{3: 1, 50: 1, 2: 0}, {1: -5}], """\

@@ -76,7 +76,7 @@ enum ElementWiseOperator
     opConstOne,
     // unary (or binary with constant parameter)
     opCopy,
-    opNegate, opNot, opAbs, opFloor, opReciprocal, opZeroExpr,
+    opNegate, opNot, opAbs, opReciprocal,
     opSigmoid, opTanh, opSqr, opSqrt, opExp, opLog, opLinearRectifier, opCosine, opSin,
     // unary ops for use by Matrix class only (there is no TensorView implementation)
     opSigmoidDerivative, opLinearRectifierDerivative, opNegativeSine,
@@ -103,13 +103,11 @@ enum ElementWiseOperator
 #define ForAllNullaryOps(Macro) \
     Macro(ConstOne);
 
-
 #define ForAllUnaryOps(Macro) \
     Macro(Copy);              \
     Macro(Negate);            \
     Macro(Not);               \
     Macro(Abs);               \
-    Macro(Floor);             \
     Macro(Reciprocal);        \
     Macro(Sigmoid);           \
     Macro(Tanh);              \
@@ -119,8 +117,7 @@ enum ElementWiseOperator
     Macro(Log);               \
     Macro(LinearRectifier);   \
     Macro(Cosine);            \
-    Macro(Sin);...............\
-    Macro(ZeroExpr);
+    Macro(Sin);
 
 #define ForAllBinaryOps(Macro)                                        \
     Macro(Sum);                                                       \
@@ -232,9 +229,9 @@ public:
     void ReleaseMemory()
     {
         if (!m_externalBuffer)
-    {
+        {
             if (m_computeDevice < 0)
-    {
+            {
                 delete[] m_pArray;
                 m_pArray = nullptr;
                 m_nzValues = nullptr;
@@ -247,9 +244,9 @@ public:
 
                 delete[] m_blockIds;
                 m_blockIds = nullptr;
-    }
+            }
             else
-    {
+            {
 #ifndef CPUONLY
                 if (m_pArray != nullptr)
                     TracingGPUMemoryAllocator::Free<ElemType>(m_computeDevice, m_pArray, true);
@@ -262,7 +259,7 @@ public:
 
                 delete[](byte*) m_tempHostBuffer;
                 m_tempHostBuffer = nullptr;
-    }
+            }
             m_elemSizeAllocated = 0;
             m_totalBufferSizeAllocated = 0;
         }
@@ -400,7 +397,7 @@ protected:
 
 template <class ElemType>
 class MATH_API BaseMatrix
-    {
+{
 public:
     
     BaseMatrix()
@@ -413,7 +410,7 @@ public:
     }
 
     void VerifyResizable(const char* function) const 
-    {
+    { 
         if (!m_sob.unique())
             LogicError("%s: Cannot resize the matrix because it is a view.", function);
         if (m_sob->HasExternalBuffer())
@@ -423,9 +420,9 @@ public:
     void VerifyWritable(const char* function) const 
     {
         if (!(m_sob->GetNumStorageRows() == m_numRows && m_sob->GetNumStorageCols() == m_numCols))
-    {
+        {
             LogicError("%s: Cannot write to the matrix because it is a slice.", function);
-    }
+        }
     }
 
     bool IsView() const { return (GetNumRows() != m_sob->GetNumStorageRows() || GetNumCols() != m_sob->GetNumStorageCols() || m_sliceViewOffset != 0); }
@@ -544,7 +541,7 @@ protected:
     void ReleaseStorageMemory() { m_sob->ReleaseMemory(); }
 
     // copy all metadata (but not content that m_sob points to)
-    void ShallowCopyFrom(const BaseMatrix& other)
+    void ShallowCopyFrom(const BaseMatrix& other) 
     {
         *this = other;
     }
