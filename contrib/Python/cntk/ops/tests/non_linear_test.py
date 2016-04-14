@@ -253,3 +253,4 @@ def test_op_rectified_linear(tensor, device_id, precision):
 
     unittest_helper(op_node, None, expected, device_id=device_id,
                     precision=precision, clean_up=True, backward_pass=True,
+                    input_node=input_node)
