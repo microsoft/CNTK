@@ -47,6 +47,7 @@ OverloadUnaryMathFns(sqrt);
 OverloadUnaryMathFns(fabs);
 OverloadUnaryMathFns(cos);
 OverloadUnaryMathFns(sin);
+OverloadUnaryMathFns(floor);
 
 #pragma pop_macro("OverloadUnaryMathFns")
 
@@ -194,6 +195,7 @@ DefUnaryOp(Copy, a);
 DefUnaryOp(Negate, -a);
 DefUnaryOp(Not, !a);
 DefUnaryOp(Abs, fabs_(a));
+DefUnaryOp(Floor, floor_(a));
 DefUnaryOp(Sigmoid, Sigmoid(a));
 DefUnaryOp(Tanh, tanh_(a));
 DefUnaryOp(Sqr, Sqr(a));
@@ -204,6 +206,7 @@ DefUnaryOp(LinearRectifier, a > 0 ? a : 0);
 DefUnaryOp(Cosine, cos_(a));
 DefUnaryOp(Sin, sin_(a));
 DefUnaryOp(Reciprocal, a == 0 ? 0 : 1 / a);
+DefUnaryOp(ZeroExpr, a * 0);
 #pragma pop_macro("DefUnaryOp")
 
 #pragma push_macro("DefBinaryOp")
