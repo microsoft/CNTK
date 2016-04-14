@@ -12,7 +12,7 @@ is computed as follows : for each element in the output tensor, its gradient wit
 given input tensor is computed, then, the resulting tensors are added up.
 """
 
-from cntk.ops.cntk1 import Clip, Sigmoid, Exp
+from cntk.ops.cntk1 import Clip, Sigmoid, Exp, Tanh
 
 def clip(min_value, max_value, x, name=None):
     """
@@ -41,7 +41,6 @@ def clip(min_value, max_value, x, name=None):
     return Clip(min_value, max_value, x, var_name = name)
 
 
-
 def sigmoid(x, name=None):
     """
     computes the element-wise sigmoid of `x`: 
@@ -55,6 +54,18 @@ def sigmoid(x, name=None):
         :class:`cntk.graph.ComputationNode`
     """
     return Sigmoid(x, var_name=name)
+
+def tanh(x, name=None):
+    """
+    computes the element-wise tanh of `x`: 
+
+    Args:
+        x: any :class:`cntk.graph.ComputationNode` that outputs a tensor
+
+    Returns:
+        :class:`cntk.graph.ComputationNode`
+    """
+    return Tanh(x, var_name=name)
 
 def softmax(x, name=None):
     """
