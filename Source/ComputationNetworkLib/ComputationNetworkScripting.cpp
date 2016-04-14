@@ -180,11 +180,11 @@ vector<wstring> /*IConfigRecord::*/ ComputationNetwork::GetMemberIds() const
     {
         const ComputationNodeBasePtr& node = iter.second;
         wstring nodeName = node->NodeName();
-        if (nodeName.find_first_of(L"$")) // skip non-top-level names
+        if (nodeName.find_first_of(L"$") != nodeName.npos) // skip non-top-level names
             continue;
         // temp solution for composites: use _ instead of .
         nodeName = msra::strfun::ReplaceAll<wstring>(nodeName, L".", L"_");
-        if (nodeName.find_first_of(L".[")) // skip composite names
+        if (nodeName.find_first_of(L".[") != nodeName.npos) // skip composite names
             continue;
         nodeNames.insert(nodeName);
     }

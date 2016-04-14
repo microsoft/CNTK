@@ -13,19 +13,24 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
-// helper class for passing accumulated epoch-level criteria around, with their counts
+// helper class for passing accumulated epoch-level criteria around while retaining their sample counts
+// Criteria are represented as a tuple (aggregate criterion, sample count). The average criterion value is their ratio.
 struct EpochCriterion : public std::pair<double, size_t>
 {
-    explicit EpochCriterion(double numer = 0.0, size_t denom = 0) : std::pair<double, size_t>(numer, denom) { }
+    // construction
+    explicit EpochCriterion(double aggregateCriterionValue = 0.0, size_t aggregateSampleCount = 0) : std::pair<double, size_t>(aggregateCriterionValue, aggregateSampleCount) { }
     EpochCriterion(const std::pair<double, size_t>& other) : std::pair<double, size_t>(other) { }
-    static EpochCriterion Infinity() { return EpochCriterion(std::numeric_limits<double>::infinity()); }
-    bool IsInfinity() const { return first == std::numeric_limits<double>::infinity(); }
-    // a few operations that are needed
+
+    // main way of reading this out: compute the actual average criterion value from the aggregate and sample count
     double Average() const { return second > 0 ? first / second : 0.0; } // compute the epoch-average
-    // Note: for now using a longer complex name that is find-replaceable
+
+    // a few more handy operations that occured multiple times
     bool IsNan() const { return std::isnan(first); }
     EpochCriterion operator-(const EpochCriterion& other) const { return EpochCriterion(first - other.first, second - other.second); }
     void operator+=(const EpochCriterion& other) { first += other.first; second += other.second; }
+
+    static EpochCriterion Infinity() { return EpochCriterion(std::numeric_limits<double>::infinity()); }
+    bool IsInfinity() const { return first == std::numeric_limits<double>::infinity(); }
 };
 
 // We accumulate criteria in this struct.
@@ -34,11 +39,11 @@ template <class ElemType>
 struct CriterionAccumulator
 {
     // constructor
-    CriterionAccumulator(size_t num, DEVICEID_TYPE deviceId) :
-        m_numerators(1, num, deviceId)
+    CriterionAccumulator(size_t numCriteria, DEVICEID_TYPE deviceId) :
+        m_aggregateCriterionValues(1, numCriteria, deviceId)
     {
-        m_numerators.SetValue(0);
-        m_denominators.assign(num, 0);
+        m_aggregateCriterionValues.SetValue(0);
+        m_aggregateSampleCounts.assign(numCriteria, 0);
     }
     // 'i' is the index of the element we add into (multiple eval criteria share the same matrix object)
     void Accumulate(const std::vector<ComputationNodeBasePtr>& nodes, size_t i, size_t legacyNumSamples)
@@ -48,13 +53,13 @@ struct CriterionAccumulator
         // In that case, the denominator will be accumulated from their MBLayout.
         // Also, the numerator will have masking and an implicit reduction.
         Matrix<ElemType>::AddElementToElement(dynamic_pointer_cast<ComputationNode<ElemType>>(node)->Value(),
-                                              0, 0, m_numerators, 0, i);
-        m_denominators[i] += GetNumSamples(nodes[i], legacyNumSamples);
+                                              0, 0, m_aggregateCriterionValues, 0, i);
+        m_aggregateSampleCounts[i] += GetNumSamples(nodes[i], legacyNumSamples);
     }
     // retrieve an accumulated result as a pair (numerator, denominator)
     EpochCriterion GetCriterion(size_t i) const
     {
-        return EpochCriterion(m_numerators(0, i), m_denominators[i]);
+        return EpochCriterion(m_aggregateCriterionValues(0, i), m_aggregateSampleCounts[i]);
     }
     // retrive a result from a node
     static EpochCriterion GetCriterion(const ComputationNodeBasePtr& node, size_t legacyNumSamples)
@@ -74,8 +79,8 @@ private:
     }
 
 private:
-    Matrix<ElemType> m_numerators; // [1 x N]
-    vector<size_t> m_denominators; // [N]
+    Matrix<ElemType> m_aggregateCriterionValues; // [1 x N]
+    vector<size_t> m_aggregateSampleCounts;      // [N]
 };
 
 }}}

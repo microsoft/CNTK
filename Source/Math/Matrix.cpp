@@ -246,15 +246,15 @@ void Matrix<ElemType>::SetDataLocation(CurrentDataLocation location, MatrixType 
         {
             assert(m_currentDataLocation == CurrentDataLocation::GPU || m_CPUMatrix);
             assert(m_currentDataLocation == CurrentDataLocation::CPU || m_GPUMatrix);
-            if (m_currentDataLocation != CurrentDataLocation::GPU) ((BaseMatrix<ElemType>*)m_CPUMatrix.get())->VerifyMovable("SetDataLocation [CPUMatrix]");
-            if (m_currentDataLocation != CurrentDataLocation::CPU) ((BaseMatrix<ElemType>*)m_GPUMatrix.get())->VerifyMovable("SetDataLocation [GPUMatrix]");
+            if (m_currentDataLocation != CurrentDataLocation::GPU) ((BaseMatrix<ElemType>*)m_CPUMatrix.get())->VerifyMigratable("SetDataLocation [CPUMatrix]");
+            if (m_currentDataLocation != CurrentDataLocation::CPU) ((BaseMatrix<ElemType>*)m_GPUMatrix.get())->VerifyMigratable("SetDataLocation [GPUMatrix]");
         }
         else if (m_matrixType == MatrixType::SPARSE)
         {
             assert(m_currentDataLocation == CurrentDataLocation::GPU || m_CPUSparseMatrix);
             assert(m_currentDataLocation == CurrentDataLocation::CPU || m_GPUSparseMatrix);
-            if (m_currentDataLocation != CurrentDataLocation::GPU) ((BaseMatrix<ElemType>*)m_CPUSparseMatrix.get())->VerifyMovable("SetDataLocation [CPUSparseMatrix]");
-            if (m_currentDataLocation != CurrentDataLocation::CPU) ((BaseMatrix<ElemType>*)m_GPUSparseMatrix.get())->VerifyMovable("SetDataLocation [GPUSparseMatrix]");
+            if (m_currentDataLocation != CurrentDataLocation::GPU) ((BaseMatrix<ElemType>*)m_CPUSparseMatrix.get())->VerifyMigratable("SetDataLocation [CPUSparseMatrix]");
+            if (m_currentDataLocation != CurrentDataLocation::CPU) ((BaseMatrix<ElemType>*)m_GPUSparseMatrix.get())->VerifyMigratable("SetDataLocation [GPUSparseMatrix]");
         }
         // TODO: Why do we need these typecasts? (without it will fail with "cannot access private member declared in class 'Microsoft::MSR::CNTK::CPUMatrix<float>'")
 

@@ -418,12 +418,12 @@ public:
     }
 
     // same as VerifyResizable() except for the error message. Could be folded into one.
-    void VerifyMovable(const char* function) const
+    void VerifyMigratable(const char* function) const
     {
         if (!m_sob.unique())
-            LogicError("%s: Cannot move the matrix because it is a view.", function);
+            LogicError("%s: Cannot migrate the matrix between devices because it is a view.", function);
         else if (m_sob->HasExternalBuffer())
-            LogicError("%s: Cannot move the matrix because it is externally owned.", function);
+            LogicError("%s: Cannot migrate the matrix between devices because it is externally owned.", function);
     }
 
     // This is needed for Sparse Matrices to ensure they can write to the matrix. Note: writing to slices is not currently supported
