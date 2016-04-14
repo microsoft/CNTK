@@ -430,7 +430,7 @@ template <class ElemType>
 class ClipByValueNode : public ComputationNode<ElemType>, public NumInputs<3>
 {
     typedef ComputationNode<ElemType> Base;
-    UsingComputationNodeMembers;
+    UsingComputationNodeMembersBoilerplate;
     static const std::wstring TypeName()
     {
         return L"ClipByValue";
