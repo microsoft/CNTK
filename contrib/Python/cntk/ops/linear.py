@@ -35,7 +35,7 @@ def element_times(left_operand, right_operand, name=None):
     Element-wise multiplication operation. The output of this operation is the
     element-wise product of the two input tensors. It supports broadcasting. In
     case of scalars its backward pass to left_operand propagates right_operand 
-	times the received gradient and vice versa. 
+    times the received gradient and vice versa. 
     Args:
         left_operand: left side tensor
         right_operand: right side tensor
@@ -51,8 +51,8 @@ def element_divide(left_operand, right_operand, name=None):
     Element-wise division operation. The output of this operation is the
     element-wise division of the two input tensors. It supports broadcasting. In
     case of scalars its backward pass to left_operand propagates 1/right_operand 
-	times the received gradient, and the backward pass to right_operand propagates 
-	(-left_operand/right_operand^2) times the received gradient. 
+    times the received gradient, and the backward pass to right_operand propagates 
+    (-left_operand/right_operand^2) times the received gradient. 
 
     Args:
         left_operand: left side tensor
@@ -70,7 +70,7 @@ def times(left_operand, right_operand, name=None):
     Tensor times operation. The output of this operation is the
     tensor product of the two input tensors. It supports broadcasting. In
     case of scalars its backward pass to left_operand propagates right_operand
-	times the received gradient and vice versa.
+ times the received gradient and vice versa.
 
     Args:
         left_operand: left side tensor
