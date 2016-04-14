@@ -150,10 +150,11 @@ BFF(in, rows, cols) = [ B = Parameter(rows, 1, init = 'fixedValue', value = 0) ;
 SBFF(in, rows, cols) = [ Eh = Sigmoid(BFF(in, rows, cols).z) ] 
 MeanVarNorm(feat) = PerDimMeanVarNormalization(feat, Mean(feat), InvStdDev(feat)) 
 LogPrior(labels) = Log(Mean(labels)) 
-Embedding(input, vocabSize, embeddingDim, embeddingPath, sparseInput=false) = [
-    embedding = Transpose(LearnableParameter(vocabSize, embeddingDim, learningRateMultiplier = 0.0, init = 'fromFile', initFromFilePath = embeddingPath))          
-    lookup = if sparseInput then embedding * features
-             else GatherPacked(features, embedding) 
+
+Embedding (input, inputDim, embeddingDim, initFrom='fromFile'/*|gaussian|uniform*/, embeddingPath = '', sparseInput = false, learningRateWeight = 0.0) = [
+    embedding = Transpose (LearnableParameter (inputDim, embeddingDim, learningRateMultiplier = learningRateWeight, init = initFrom, initFromFilePath = embeddingPath))          
+    lookup = if sparseInput then embedding * input
+             else GatherPacked (input, embedding) 
 ].lookup
 
 ##############################################################################
