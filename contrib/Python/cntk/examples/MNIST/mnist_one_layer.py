@@ -5,7 +5,7 @@
 # ==============================================================================
 
 """
-Example of a one layer neural network for MNNIST classification problem
+MNIST Example, one hidden layer neural network
 """
 
 import sys
@@ -13,11 +13,6 @@ import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..'))
 
 from cntk import *
-
-# =====================================================================================
-# MNIST Example, one hidden layer neural network
-# =====================================================================================
-
 
 def add_dnn_sigmoid_layer(in_dim, out_dim, x, param_scale):
     W = LearnableParameter(out_dim, in_dim, initValueScale=param_scale)
