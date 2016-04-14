@@ -273,7 +273,7 @@ public:
     }
 
     // return all sequences stored in this minibatch
-    const vector<SequenceInfo> &GetAllSequences() const
+    const vector<SequenceInfo>& GetAllSequences() const
     {
         return m_sequences;
     }
@@ -285,7 +285,7 @@ public:
     const Matrix<char>& GetColumnsValidityMask(DEVICEID_TYPE deviceId) const;
 
     // compare whether two layouts are the same
-    bool operator==(const MBLayout &other) const
+    bool operator==(const MBLayout& other) const
     {
         if (this == &other)
             return true;
@@ -439,8 +439,8 @@ public:
     bool HasGaps(const FrameRange &fr) const;
 
     // test boundary flags for a specific condition
-    bool IsBeyondStartOrEnd(const FrameRange &fr) const;
-    bool IsGap(const FrameRange &fr) const;
+    bool IsBeyondStartOrEnd(const FrameRange& fr) const;
+    bool IsGap(const FrameRange& fr) const;
 
     // test whether at least one sequence crosses the bounds of this minibatch
     bool HasSequenceBeyondBegin() const
@@ -747,6 +747,7 @@ inline bool MBLayout::HasGaps() const
 {
     return m_numGapFrames > 0; /*HasGaps(FrameRange());*/
 }
+
 inline bool MBLayout::HasGaps(const FrameRange &fr) const
 {
     CheckIsValid();
@@ -824,7 +825,7 @@ inline size_t MBLayout::GetActualNumSamples() const { return m_numFramesDeclared
 // only called from MaskMissingColumnsTo()
 // TODO: Can probably be faster by using the sequence array directly.
 // TODO: Or should we just blast m_distanceToStart to GPU, and maks based on that? It is small compared to features.
-inline const Matrix<char> &MBLayout::GetColumnsValidityMask(DEVICEID_TYPE deviceId) const
+inline const Matrix<char>& MBLayout::GetColumnsValidityMask(DEVICEID_TYPE deviceId) const
 {
     CheckIsValid();
     // lazily compute the validity mask
@@ -1119,8 +1120,10 @@ static inline void MaskMissingColumnsTo(Matrix<ElemType>& matrixToMask, const MB
         TensorView<ElemType>(matrixSliceToMask).DoMaskNegativeOf(0, TensorView<ElemType>(matrixSliceToMask), TensorView<ElemType>(maskSlice), 1); val;
 #else
         const auto& maskMatrix = pMBLayout->GetColumnsValidityMask(matrixToMask.GetDeviceId());
+
         maskMatrix.TransferToDeviceIfNotThere(matrixToMask.GetDeviceId(), /*ismoved=*/ false, /*emptyTransfer=*/ false, /*updatePreferredDevice=*/ false);
         auto maskSlice = DataWithMBLayoutFor(maskMatrix, fr, pMBLayout);
+
         auto matrixSliceToMask = DataWithMBLayoutFor(matrixToMask, fr, pMBLayout);
         matrixSliceToMask.MaskColumnsValue(maskSlice, val);
 #endif
