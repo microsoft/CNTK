@@ -12,7 +12,7 @@ is computed as follows : for each element in the output tensor, its gradient wit
 given input tensor is computed, then, the resulting tensors are added up.
 """
 
-from cntk.ops.cntk1 import Clip, Sigmoid, Exp, Tanh
+from cntk.ops.cntk1 import Clip, Exp, RectifiedLinear, Sigmoid, Softmax, Tanh
 
 def clip(min_value, max_value, x, name=None):
     """
@@ -40,6 +40,17 @@ def clip(min_value, max_value, x, name=None):
     
     return Clip(min_value, max_value, x, var_name = name)
 
+def rectified_linear(x, name=None):
+    """
+    computes the element-wise rectified linear of `x`: `max(x, 0)`
+
+    Args:
+        x: any :class:`cntk.graph.ComputationNode` that outputs a tensor
+
+    Returns:
+        :class:`cntk.graph.ComputationNode`
+    """
+    return RectifiedLinear(x, var_name=name)
 
 def sigmoid(x, name=None):
     """

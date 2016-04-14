@@ -14,7 +14,7 @@ import pytest
 from .ops_test_utils import unittest_helper, C, AA, I, precision, PRECISION_TO_TYPE
 from ...graph import *
 from ...reader import *
-from ..non_linear import clip, sigmoid, exp, tanh
+from ..non_linear import clip, exp, rectified_linear, sigmoid, tanh
 
 CLIP_TUPLES = [
     ([1.0], [2.0], [1.5]), # value shouldn't be clipped; gradient is [1.0]
@@ -212,6 +212,44 @@ def test_op_tanh(tensor, device_id, precision):
     # ==================
     # The expected results for the backward pass is 1-tanh(x)^2
     expected = [[1-numpy_op(tensor)**2]]
+
+    unittest_helper(op_node, expected, device_id=device_id,
+                    precision=precision, clean_up=True, backward_pass=True,
+                    input_node=input_node)
+
+@pytest.mark.parametrize("tensor", TENSORS)
+def test_op_rectified_linear(tensor, device_id, precision):
+
+    def numpy_op(x):
+        npx = AA(x, dtype=PRECISION_TO_TYPE[precision])
+        return np.maximum(np.zeros_like(npx), npx)
+
+    # Forward pass test
+    # ==================
+    # we compute the expected output for the forward pass
+    # we need two surrounding brackets
+    # the first for sequences (length=1, since we have has_sequence_dimension=False)
+    # the second for batch of one sample
+
+    expected = [[numpy_op(tensor)]]
+
+    input_node = I([tensor], has_sequence_dimension=False)
+    op_node = rectified_linear(input_node)
+
+    unittest_helper(op_node, expected,
+                    device_id=device_id,
+                    precision=precision,
+                    clean_up=True, backward_pass=False)
+
+    # Backward pass test
+    # ==================
+    # The expected results for the backward pass is 1 whenever the value is
+    # positive
+    def numpy_op_grad(x):
+        npx = AA(x, dtype=PRECISION_TO_TYPE[precision])
+        return np.asarray(npx>0, dtype=int)
+
+    expected = [[numpy_op_grad(tensor)]]
 
     unittest_helper(op_node, expected, device_id=device_id,
                     precision=precision, clean_up=True, backward_pass=True,
