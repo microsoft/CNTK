@@ -1,0 +1,946 @@
+=== Running /home/clemensm/CNTK/build/debug/bin/cntk configFile=/home/clemensm/CNTK/Tests/EndToEndTests/Text/SequenceClassification/seqcla.cntk currentDirectory=/home/clemensm/CNTK/Tests/EndToEndTests/Text/SequenceClassification RunDir=/tmp/cntk-test-20160414100435.385838/Text_SequenceClassification@debug_cpu DataDir=/home/clemensm/CNTK/Tests/EndToEndTests/Text/SequenceClassification ConfigDir=/home/clemensm/CNTK/Tests/EndToEndTests/Text/SequenceClassification OutputDir=/tmp/cntk-test-20160414100435.385838/Text_SequenceClassification@debug_cpu DeviceId=-1 timestamping=true
+-------------------------------------------------------------------
+Build info: 
+
+		Built time: Apr 14 2016 08:05:53
+		Last modified date: Wed Apr 13 15:12:17 2016
+		Build type: release
+		Build target: GPU
+		With 1bit-SGD: no
+		Math lib: acml
+		CUDA_PATH: /usr/local/cuda-7.5
+		CUB_PATH: /usr/local/cub-1.4.1
+		CUDNN_PATH: /usr/local/cudnn-4.0
+		Build Branch: deepbliscore/vnext
+		Build SHA1: 1aca7c04c27e65dd60998214962fd727909d7813 (modified)
+		Built by clemensm on ubuntu
+		Build Path: /home/clemensm/CNTK
+-------------------------------------------------------------------
+Changed current directory to /home/clemensm/CNTK/Tests/EndToEndTests/Text/SequenceClassification
+04/14/2016 10:04:36: -------------------------------------------------------------------
+04/14/2016 10:04:36: Build info: 
+
+04/14/2016 10:04:36: 		Built time: Apr 14 2016 08:05:53
+04/14/2016 10:04:36: 		Last modified date: Wed Apr 13 15:12:17 2016
+04/14/2016 10:04:36: 		Build type: release
+04/14/2016 10:04:36: 		Build target: GPU
+04/14/2016 10:04:36: 		With 1bit-SGD: no
+04/14/2016 10:04:36: 		Math lib: acml
+04/14/2016 10:04:36: 		CUDA_PATH: /usr/local/cuda-7.5
+04/14/2016 10:04:36: 		CUB_PATH: /usr/local/cub-1.4.1
+04/14/2016 10:04:36: 		CUDNN_PATH: /usr/local/cudnn-4.0
+04/14/2016 10:04:36: 		Build Branch: deepbliscore/vnext
+04/14/2016 10:04:36: 		Build SHA1: 1aca7c04c27e65dd60998214962fd727909d7813 (modified)
+04/14/2016 10:04:36: 		Built by clemensm on ubuntu
+04/14/2016 10:04:36: 		Build Path: /home/clemensm/CNTK
+04/14/2016 10:04:36: -------------------------------------------------------------------
+
+04/14/2016 10:04:36: Running on localhost at 2016/04/14 10:04:36
+04/14/2016 10:04:36: Command line: 
+/home/clemensm/CNTK/build/debug/bin/cntk  configFile=/home/clemensm/CNTK/Tests/EndToEndTests/Text/SequenceClassification/seqcla.cntk  currentDirectory=/home/clemensm/CNTK/Tests/EndToEndTests/Text/SequenceClassification  RunDir=/tmp/cntk-test-20160414100435.385838/Text_SequenceClassification@debug_cpu  DataDir=/home/clemensm/CNTK/Tests/EndToEndTests/Text/SequenceClassification  ConfigDir=/home/clemensm/CNTK/Tests/EndToEndTests/Text/SequenceClassification  OutputDir=/tmp/cntk-test-20160414100435.385838/Text_SequenceClassification@debug_cpu  DeviceId=-1  timestamping=true
+
+
+
+04/14/2016 10:04:36: >>>>>>>>>>>>>>>>>>>> RAW CONFIG (VARIABLES NOT RESOLVED) >>>>>>>>>>>>>>>>>>>>
+04/14/2016 10:04:36: command=Train 
+deviceId=-1
+modelPath="$RunDir$/model"
+Train=[
+    action="train"
+    run=BrainScriptNetworkBuilder
+    BrainScriptNetworkBuilder=[
+        Macros = [
+            // define "last hidden state of sequence" in the LSTM (really for any sequence though)
+            TakeRight (N, x) = BS.Sequences._Take(FutureValue, N, x)
+            Last(x) = TakeRight(1, x)
+        ]
+        Layers = [
+            EmbeddingLayer(input, vocabSize, embeddingDim, embeddingPath) = [
+                embedding = Transpose(LearnableParameter(vocabSize, embeddingDim, learningRateMultiplier = 0.0, init = 'fromFile', initFromFilePath = embeddingPath))          
+                lookup = GatherPacked(features, embedding)
+            ].lookup
+            DenseLayer(input, inputSize, outputSize, activation) = [
+               z = BFF(input, outputSize, inputSize).z
+               act = activation(z)
+            ].act
+            LSTMLayer(input, inputSize, outputSize, cellSize, selector) = [ 
+               lstm = BS.RNNs.RecurrentLSTMP(inputSize, outputSize, cellSize, input)
+               result = selector(lstm)
+            ].result
+        ]        
+        // LSTM params
+        lstmDim = 25
+        cellDim = 25
+        // model
+        numLabels = 5        
+        vocab = 2000
+        embedDim = 50        
+        // set up features and labels
+        t = DynamicAxis()
+features = Input(1, dynamicAxis=t)   
+labels   = Input(numLabels)          
+        // load the pre-learned word embedding matrix
+        l1 = Layers.EmbeddingLayer(features, vocab, embedDim, 'embeddingmatrix.txt')
+        l2 = Layers.LSTMLayer(l1, embedDim, lstmDim, cellDim, Macros.Last)
+        l3 = Layers.DenseLayer(l2, lstmDim, numLabels, Pass)
+        out = Pass(l3, tag='output')   
+        // Make sure the trainer understands that the time dimension of l3 is actually the same as that of labels.
+        l3p = ReconcileDynamicAxis(l3, labels)
+        // training criteria
+        ce  = CrossEntropyWithSoftmax(labels, l3p, tag='criterion')   // this is the training objective
+        wer = ErrorPrediction        (labels, l3p, tag='evaluation')  // this also gets tracked
+    ]
+    SGD = [	
+      epochSize = 0
+      minibatchSize = 200
+      maxEpochs = 5
+      momentumPerMB = 0.9
+      learningRatesPerMB = 0.1
+    ]
+    reader = [
+        readerType = "CNTKTextFormatReader"
+        file = "Train.txt"            
+        input = [            
+            features=[
+                alias = "x"                
+                dim = 1               
+                format = "dense"
+            ]
+            labels=[
+                alias = "y"                
+                dim = 5           
+                format = "dense"
+            ]
+        ]
+   ]    
+outputPath = "output"        
+]
+Write=[
+    action="test"
+    run=BrainScriptNetworkBuilder
+    format = [
+      sequencePrologue=%d\t|w.shape %x\n%d\t|w\s
+      sampleSeparator=\n%d\t|w\s
+      elementSeparator=\s
+    ]
+    modelFile = "model"    
+    reader = [
+            readerType = "CNTKTextFormatReader"
+            file = "$DataDir$/Train.txt"            
+            input = [            
+                features=[
+                    alias = "x"                
+                    dim = 1               
+                    format = "dense"
+                ]
+                labels=[
+                    alias = "y"                
+                    dim = 5           
+                    format = "dense"
+                ]
+            ]
+   ]    
+outputPath = "output"        
+]
+currentDirectory=/home/clemensm/CNTK/Tests/EndToEndTests/Text/SequenceClassification
+RunDir=/tmp/cntk-test-20160414100435.385838/Text_SequenceClassification@debug_cpu
+DataDir=/home/clemensm/CNTK/Tests/EndToEndTests/Text/SequenceClassification
+ConfigDir=/home/clemensm/CNTK/Tests/EndToEndTests/Text/SequenceClassification
+OutputDir=/tmp/cntk-test-20160414100435.385838/Text_SequenceClassification@debug_cpu
+DeviceId=-1
+timestamping=true
+
+04/14/2016 10:04:36: <<<<<<<<<<<<<<<<<<<< RAW CONFIG (VARIABLES NOT RESOLVED)  <<<<<<<<<<<<<<<<<<<<
+
+04/14/2016 10:04:36: >>>>>>>>>>>>>>>>>>>> RAW CONFIG WITH ALL VARIABLES RESOLVED >>>>>>>>>>>>>>>>>>>>
+04/14/2016 10:04:36: command=Train 
+deviceId=-1
+modelPath="/tmp/cntk-test-20160414100435.385838/Text_SequenceClassification@debug_cpu/model"
+Train=[
+    action="train"
+    run=BrainScriptNetworkBuilder
+    BrainScriptNetworkBuilder=[
+        Macros = [
+            // define "last hidden state of sequence" in the LSTM (really for any sequence though)
+            TakeRight (N, x) = BS.Sequences._Take(FutureValue, N, x)
+            Last(x) = TakeRight(1, x)
+        ]
+        Layers = [
+            EmbeddingLayer(input, vocabSize, embeddingDim, embeddingPath) = [
+                embedding = Transpose(LearnableParameter(vocabSize, embeddingDim, learningRateMultiplier = 0.0, init = 'fromFile', initFromFilePath = embeddingPath))          
+                lookup = GatherPacked(features, embedding)
+            ].lookup
+            DenseLayer(input, inputSize, outputSize, activation) = [
+               z = BFF(input, outputSize, inputSize).z
+               act = activation(z)
+            ].act
+            LSTMLayer(input, inputSize, outputSize, cellSize, selector) = [ 
+               lstm = BS.RNNs.RecurrentLSTMP(inputSize, outputSize, cellSize, input)
+               result = selector(lstm)
+            ].result
+        ]        
+        // LSTM params
+        lstmDim = 25
+        cellDim = 25
+        // model
+        numLabels = 5        
+        vocab = 2000
+        embedDim = 50        
+        // set up features and labels
+        t = DynamicAxis()
+features = Input(1, dynamicAxis=t)   
+labels   = Input(numLabels)          
+        // load the pre-learned word embedding matrix
+        l1 = Layers.EmbeddingLayer(features, vocab, embedDim, 'embeddingmatrix.txt')
+        l2 = Layers.LSTMLayer(l1, embedDim, lstmDim, cellDim, Macros.Last)
+        l3 = Layers.DenseLayer(l2, lstmDim, numLabels, Pass)
+        out = Pass(l3, tag='output')   
+        // Make sure the trainer understands that the time dimension of l3 is actually the same as that of labels.
+        l3p = ReconcileDynamicAxis(l3, labels)
+        // training criteria
+        ce  = CrossEntropyWithSoftmax(labels, l3p, tag='criterion')   // this is the training objective
+        wer = ErrorPrediction        (labels, l3p, tag='evaluation')  // this also gets tracked
+    ]
+    SGD = [	
+      epochSize = 0
+      minibatchSize = 200
+      maxEpochs = 5
+      momentumPerMB = 0.9
+      learningRatesPerMB = 0.1
+    ]
+    reader = [
+        readerType = "CNTKTextFormatReader"
+        file = "Train.txt"            
+        input = [            
+            features=[
+                alias = "x"                
+                dim = 1               
+                format = "dense"
+            ]
+            labels=[
+                alias = "y"                
+                dim = 5           
+                format = "dense"
+            ]
+        ]
+   ]    
+outputPath = "output"        
+]
+Write=[
+    action="test"
+    run=BrainScriptNetworkBuilder
+    format = [
+      sequencePrologue=%d\t|w.shape %x\n%d\t|w\s
+      sampleSeparator=\n%d\t|w\s
+      elementSeparator=\s
+    ]
+    modelFile = "model"    
+    reader = [
+            readerType = "CNTKTextFormatReader"
+            file = "/home/clemensm/CNTK/Tests/EndToEndTests/Text/SequenceClassification/Train.txt"            
+            input = [            
+                features=[
+                    alias = "x"                
+                    dim = 1               
+                    format = "dense"
+                ]
+                labels=[
+                    alias = "y"                
+                    dim = 5           
+                    format = "dense"
+                ]
+            ]
+   ]    
+outputPath = "output"        
+]
+currentDirectory=/home/clemensm/CNTK/Tests/EndToEndTests/Text/SequenceClassification
+RunDir=/tmp/cntk-test-20160414100435.385838/Text_SequenceClassification@debug_cpu
+DataDir=/home/clemensm/CNTK/Tests/EndToEndTests/Text/SequenceClassification
+ConfigDir=/home/clemensm/CNTK/Tests/EndToEndTests/Text/SequenceClassification
+OutputDir=/tmp/cntk-test-20160414100435.385838/Text_SequenceClassification@debug_cpu
+DeviceId=-1
+timestamping=true
+
+04/14/2016 10:04:36: <<<<<<<<<<<<<<<<<<<< RAW CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<
+
+04/14/2016 10:04:36: >>>>>>>>>>>>>>>>>>>> PROCESSED CONFIG WITH ALL VARIABLES RESOLVED >>>>>>>>>>>>>>>>>>>>
+configparameters: seqcla.cntk:command=Train
+configparameters: seqcla.cntk:ConfigDir=/home/clemensm/CNTK/Tests/EndToEndTests/Text/SequenceClassification
+configparameters: seqcla.cntk:currentDirectory=/home/clemensm/CNTK/Tests/EndToEndTests/Text/SequenceClassification
+configparameters: seqcla.cntk:DataDir=/home/clemensm/CNTK/Tests/EndToEndTests/Text/SequenceClassification
+configparameters: seqcla.cntk:deviceId=-1
+configparameters: seqcla.cntk:modelPath=/tmp/cntk-test-20160414100435.385838/Text_SequenceClassification@debug_cpu/model
+configparameters: seqcla.cntk:OutputDir=/tmp/cntk-test-20160414100435.385838/Text_SequenceClassification@debug_cpu
+configparameters: seqcla.cntk:RunDir=/tmp/cntk-test-20160414100435.385838/Text_SequenceClassification@debug_cpu
+configparameters: seqcla.cntk:timestamping=true
+configparameters: seqcla.cntk:Train=[
+    action="train"
+    run=BrainScriptNetworkBuilder
+    BrainScriptNetworkBuilder=[
+        Macros = [
+            // define "last hidden state of sequence" in the LSTM (really for any sequence though)
+            TakeRight (N, x) = BS.Sequences._Take(FutureValue, N, x)
+            Last(x) = TakeRight(1, x)
+        ]
+        Layers = [
+            EmbeddingLayer(input, vocabSize, embeddingDim, embeddingPath) = [
+                embedding = Transpose(LearnableParameter(vocabSize, embeddingDim, learningRateMultiplier = 0.0, init = 'fromFile', initFromFilePath = embeddingPath))          
+                lookup = GatherPacked(features, embedding)
+            ].lookup
+            DenseLayer(input, inputSize, outputSize, activation) = [
+               z = BFF(input, outputSize, inputSize).z
+               act = activation(z)
+            ].act
+            LSTMLayer(input, inputSize, outputSize, cellSize, selector) = [ 
+               lstm = BS.RNNs.RecurrentLSTMP(inputSize, outputSize, cellSize, input)
+               result = selector(lstm)
+            ].result
+        ]        
+        // LSTM params
+        lstmDim = 25
+        cellDim = 25
+        // model
+        numLabels = 5        
+        vocab = 2000
+        embedDim = 50        
+        // set up features and labels
+        t = DynamicAxis()
+features = Input(1, dynamicAxis=t)   
+labels   = Input(numLabels)          
+        // load the pre-learned word embedding matrix
+        l1 = Layers.EmbeddingLayer(features, vocab, embedDim, 'embeddingmatrix.txt')
+        l2 = Layers.LSTMLayer(l1, embedDim, lstmDim, cellDim, Macros.Last)
+        l3 = Layers.DenseLayer(l2, lstmDim, numLabels, Pass)
+        out = Pass(l3, tag='output')   
+        // Make sure the trainer understands that the time dimension of l3 is actually the same as that of labels.
+        l3p = ReconcileDynamicAxis(l3, labels)
+        // training criteria
+        ce  = CrossEntropyWithSoftmax(labels, l3p, tag='criterion')   // this is the training objective
+        wer = ErrorPrediction        (labels, l3p, tag='evaluation')  // this also gets tracked
+    ]
+    SGD = [	
+      epochSize = 0
+      minibatchSize = 200
+      maxEpochs = 5
+      momentumPerMB = 0.9
+      learningRatesPerMB = 0.1
+    ]
+    reader = [
+        readerType = "CNTKTextFormatReader"
+        file = "Train.txt"            
+        input = [            
+            features=[
+                alias = "x"                
+                dim = 1               
+                format = "dense"
+            ]
+            labels=[
+                alias = "y"                
+                dim = 5           
+                format = "dense"
+            ]
+        ]
+   ]    
+outputPath = "output"        
+]
+
+configparameters: seqcla.cntk:Write=[
+    action="test"
+    run=BrainScriptNetworkBuilder
+    format = [
+      sequencePrologue=%d\t|w.shape %x\n%d\t|w\s
+      sampleSeparator=\n%d\t|w\s
+      elementSeparator=\s
+    ]
+    modelFile = "model"    
+    reader = [
+            readerType = "CNTKTextFormatReader"
+            file = "/home/clemensm/CNTK/Tests/EndToEndTests/Text/SequenceClassification/Train.txt"            
+            input = [            
+                features=[
+                    alias = "x"                
+                    dim = 1               
+                    format = "dense"
+                ]
+                labels=[
+                    alias = "y"                
+                    dim = 5           
+                    format = "dense"
+                ]
+            ]
+   ]    
+outputPath = "output"        
+]
+
+04/14/2016 10:04:36: <<<<<<<<<<<<<<<<<<<< PROCESSED CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<
+04/14/2016 10:04:36: Commands: Train
+04/14/2016 10:04:36: Precision = "float"
+04/14/2016 10:04:36: CNTKModelPath: /tmp/cntk-test-20160414100435.385838/Text_SequenceClassification@debug_cpu/model
+04/14/2016 10:04:36: CNTKCommandTrainInfo: Train : 5
+04/14/2016 10:04:36: CNTKCommandTrainInfo: CNTKNoMoreCommands_Total : 5
+
+04/14/2016 10:04:36: ##############################################################################
+04/14/2016 10:04:36: #                                                                            #
+04/14/2016 10:04:36: # Action "train"                                                             #
+04/14/2016 10:04:36: #                                                                            #
+04/14/2016 10:04:36: ##############################################################################
+
+04/14/2016 10:04:36: CNTKCommandTrainBegin: Train
+
+04/14/2016 10:04:36: Creating virgin network.
+
+Post-processing network...
+
+4 roots:
+	ce = CrossEntropyWithSoftmax()
+	out = Pass()
+	t = DynamicAxis()
+	wer = ErrorPrediction()
+
+Loop[0] --> Loop_l2.lstm.lstmState._privateInnards.ht -> 26 nodes
+
+	l2.lstm.prevState.h	l2.lstm.lstmState._privateInnards.ot.z.PlusArgs[0].PlusArgs[1]	l2.lstm.lstmState._privateInnards.ot.z.PlusArgs[0]
+	l2.lstm.lstmState._privateInnards.ft.z.PlusArgs[0].PlusArgs[1]	l2.lstm.lstmState._privateInnards.ft.z.PlusArgs[0]	l2.lstm.prevState.c
+	l2.lstm.lstmState._privateInnards.ft.z.PlusArgs[1]	l2.lstm.lstmState._privateInnards.ft.z	l2.lstm.lstmState._privateInnards.ft
+	l2.lstm.lstmState._privateInnards.bft	l2.lstm.lstmState._privateInnards.it.z.PlusArgs[0].PlusArgs[1]	l2.lstm.lstmState._privateInnards.it.z.PlusArgs[0]
+	l2.lstm.lstmState._privateInnards.it.z.PlusArgs[1]	l2.lstm.lstmState._privateInnards.it.z	l2.lstm.lstmState._privateInnards.it
+	l2.lstm.lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[0]	l2.lstm.lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1]	l2.lstm.lstmState._privateInnards.bit.ElementTimesArgs[1].z
+	l2.lstm.lstmState._privateInnards.bit.ElementTimesArgs[1]	l2.lstm.lstmState._privateInnards.bit	l2.lstm.lstmState._privateInnards.ct
+	l2.lstm.lstmState._privateInnards.ot.z.PlusArgs[1]	l2.lstm.lstmState._privateInnards.ot.z	l2.lstm.lstmState._privateInnards.ot
+	l2.lstm.lstmState._privateInnards.ht.ElementTimesArgs[1]	l2.lstm.lstmState._privateInnards.ht
+
+Validating network. 70 nodes to process in pass 1.
+
+
+Validating network. 48 nodes to process in pass 2.
+
+
+Validating network. 14 nodes to process in pass 3.
+
+
+Validating network, final pass.
+
+Validating --> labels = InputValue() :  -> [5 x *]
+Validating --> l3.z.W = LearnableParameter() :  -> [5 x 25]
+Validating --> l2.lstm.lstmState._privateInnards.ot.z.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[0] = LearnableParameter() :  -> [25 x 50]
+Validating --> features = InputValue() :  -> [1 x t]
+Validating --> l1.embedding.x = LearnableParameter() :  -> [2000 x 50]
+Validating --> l1.embedding = TransposeDimensions (l1.embedding.x) : [2000 x 50] -> [50 x 2000]
+Validating --> l1.lookup = GatherPacked (features, l1.embedding) : [1 x t], [50 x 2000] -> [50 x t]
+Validating --> l2.lstm.lstmState._privateInnards.ot.z.PlusArgs[0].PlusArgs[0].PlusArgs[0] = Times (l2.lstm.lstmState._privateInnards.ot.z.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[0], l1.lookup) : [25 x 50], [50 x t] -> [25 x t]
+Validating --> l2.lstm.lstmState._privateInnards.ot.z.PlusArgs[0].PlusArgs[0].PlusArgs[1] = LearnableParameter() :  -> [25]
+Validating --> l2.lstm.lstmState._privateInnards.ot.z.PlusArgs[0].PlusArgs[0] = Plus (l2.lstm.lstmState._privateInnards.ot.z.PlusArgs[0].PlusArgs[0].PlusArgs[0], l2.lstm.lstmState._privateInnards.ot.z.PlusArgs[0].PlusArgs[0].PlusArgs[1]) : [25 x t], [25] -> [25 x t]
+Validating --> l2.lstm.lstmState._privateInnards.ot.z.PlusArgs[0].PlusArgs[1].TimesArgs[0] = LearnableParameter() :  -> [25 x 25]
+Validating --> l2.lstm.lstmState._privateInnards.ot.z.PlusArgs[1].ElementTimesArgs[0] = LearnableParameter() :  -> [25 x 1]
+Validating --> l2.lstm.lstmState._privateInnards.ft.z.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[0] = LearnableParameter() :  -> [25 x 50]
+Validating --> l2.lstm.lstmState._privateInnards.ft.z.PlusArgs[0].PlusArgs[0].PlusArgs[0] = Times (l2.lstm.lstmState._privateInnards.ft.z.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[0], l1.lookup) : [25 x 50], [50 x t] -> [25 x t]
+Validating --> l2.lstm.lstmState._privateInnards.ft.z.PlusArgs[0].PlusArgs[0].PlusArgs[1] = LearnableParameter() :  -> [25]
+Validating --> l2.lstm.lstmState._privateInnards.ft.z.PlusArgs[0].PlusArgs[0] = Plus (l2.lstm.lstmState._privateInnards.ft.z.PlusArgs[0].PlusArgs[0].PlusArgs[0], l2.lstm.lstmState._privateInnards.ft.z.PlusArgs[0].PlusArgs[0].PlusArgs[1]) : [25 x t], [25] -> [25 x t]
+Validating --> l2.lstm.lstmState._privateInnards.ft.z.PlusArgs[0].PlusArgs[1].TimesArgs[0] = LearnableParameter() :  -> [25 x 25]
+Validating --> l2.lstm.lstmState._privateInnards.ft.z.PlusArgs[1].ElementTimesArgs[0] = LearnableParameter() :  -> [25 x 1]
+Validating --> l2.lstm.lstmState._privateInnards.it.z.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[0] = LearnableParameter() :  -> [25 x 50]
+Validating --> l2.lstm.lstmState._privateInnards.it.z.PlusArgs[0].PlusArgs[0].PlusArgs[0] = Times (l2.lstm.lstmState._privateInnards.it.z.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[0], l1.lookup) : [25 x 50], [50 x t] -> [25 x t]
+Validating --> l2.lstm.lstmState._privateInnards.it.z.PlusArgs[0].PlusArgs[0].PlusArgs[1] = LearnableParameter() :  -> [25]
+Validating --> l2.lstm.lstmState._privateInnards.it.z.PlusArgs[0].PlusArgs[0] = Plus (l2.lstm.lstmState._privateInnards.it.z.PlusArgs[0].PlusArgs[0].PlusArgs[0], l2.lstm.lstmState._privateInnards.it.z.PlusArgs[0].PlusArgs[0].PlusArgs[1]) : [25 x t], [25] -> [25 x t]
+Validating --> l2.lstm.lstmState._privateInnards.it.z.PlusArgs[0].PlusArgs[1].TimesArgs[0] = LearnableParameter() :  -> [25 x 25]
+Validating --> l2.lstm.lstmState._privateInnards.it.z.PlusArgs[1].ElementTimesArgs[0] = LearnableParameter() :  -> [25 x 1]
+Validating --> l2.lstm.lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[0].TimesArgs[0] = LearnableParameter() :  -> [25 x 50]
+Validating --> l2.lstm.lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[0] = Times (l2.lstm.lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[0].TimesArgs[0], l1.lookup) : [25 x 50], [50 x t] -> [25 x t]
+Validating --> l2.lstm.lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[0].TimesArgs[0] = LearnableParameter() :  -> [25 x 25]
+Validating --> l2.lstm.lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[1] = LearnableParameter() :  -> [25]
+Validating --> l2.lstm.prevState.h = PastValue (l2.lstm.lstmState._privateInnards.ht) : [25 x 1 x t] -> [25 x 1 x t]
+Validating --> l2.lstm.lstmState._privateInnards.ot.z.PlusArgs[0].PlusArgs[1] = Times (l2.lstm.lstmState._privateInnards.ot.z.PlusArgs[0].PlusArgs[1].TimesArgs[0], l2.lstm.prevState.h) : [25 x 25], [25 x 1 x t] -> [25 x 1 x t]
+Validating --> l2.lstm.lstmState._privateInnards.ot.z.PlusArgs[0] = Plus (l2.lstm.lstmState._privateInnards.ot.z.PlusArgs[0].PlusArgs[0], l2.lstm.lstmState._privateInnards.ot.z.PlusArgs[0].PlusArgs[1]) : [25 x t], [25 x 1 x t] -> [25 x 1 x t]
+Validating --> l2.lstm.lstmState._privateInnards.ft.z.PlusArgs[0].PlusArgs[1] = Times (l2.lstm.lstmState._privateInnards.ft.z.PlusArgs[0].PlusArgs[1].TimesArgs[0], l2.lstm.prevState.h) : [25 x 25], [25 x 1 x t] -> [25 x 1 x t]
+Validating --> l2.lstm.lstmState._privateInnards.ft.z.PlusArgs[0] = Plus (l2.lstm.lstmState._privateInnards.ft.z.PlusArgs[0].PlusArgs[0], l2.lstm.lstmState._privateInnards.ft.z.PlusArgs[0].PlusArgs[1]) : [25 x t], [25 x 1 x t] -> [25 x 1 x t]
+Validating --> l2.lstm.prevState.c = PastValue (l2.lstm.lstmState._privateInnards.ct) : [25 x 1 x t] -> [25 x 1 x t]
+Validating --> l2.lstm.lstmState._privateInnards.ft.z.PlusArgs[1] = ElementTimes (l2.lstm.lstmState._privateInnards.ft.z.PlusArgs[1].ElementTimesArgs[0], l2.lstm.prevState.c) : [25 x 1], [25 x 1 x t] -> [25 x 1 x t]
+Validating --> l2.lstm.lstmState._privateInnards.ft.z = Plus (l2.lstm.lstmState._privateInnards.ft.z.PlusArgs[0], l2.lstm.lstmState._privateInnards.ft.z.PlusArgs[1]) : [25 x 1 x t], [25 x 1 x t] -> [25 x 1 x t]
+Validating --> l2.lstm.lstmState._privateInnards.ft = Sigmoid (l2.lstm.lstmState._privateInnards.ft.z) : [25 x 1 x t] -> [25 x 1 x t]
+Validating --> l2.lstm.lstmState._privateInnards.bft = ElementTimes (l2.lstm.lstmState._privateInnards.ft, l2.lstm.prevState.c) : [25 x 1 x t], [25 x 1 x t] -> [25 x 1 x t]
+Validating --> l2.lstm.lstmState._privateInnards.it.z.PlusArgs[0].PlusArgs[1] = Times (l2.lstm.lstmState._privateInnards.it.z.PlusArgs[0].PlusArgs[1].TimesArgs[0], l2.lstm.prevState.h) : [25 x 25], [25 x 1 x t] -> [25 x 1 x t]
+Validating --> l2.lstm.lstmState._privateInnards.it.z.PlusArgs[0] = Plus (l2.lstm.lstmState._privateInnards.it.z.PlusArgs[0].PlusArgs[0], l2.lstm.lstmState._privateInnards.it.z.PlusArgs[0].PlusArgs[1]) : [25 x t], [25 x 1 x t] -> [25 x 1 x t]
+Validating --> l2.lstm.lstmState._privateInnards.it.z.PlusArgs[1] = ElementTimes (l2.lstm.lstmState._privateInnards.it.z.PlusArgs[1].ElementTimesArgs[0], l2.lstm.prevState.c) : [25 x 1], [25 x 1 x t] -> [25 x 1 x t]
+Validating --> l2.lstm.lstmState._privateInnards.it.z = Plus (l2.lstm.lstmState._privateInnards.it.z.PlusArgs[0], l2.lstm.lstmState._privateInnards.it.z.PlusArgs[1]) : [25 x 1 x t], [25 x 1 x t] -> [25 x 1 x t]
+Validating --> l2.lstm.lstmState._privateInnards.it = Sigmoid (l2.lstm.lstmState._privateInnards.it.z) : [25 x 1 x t] -> [25 x 1 x t]
+Validating --> l2.lstm.lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[0] = Times (l2.lstm.lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[0].TimesArgs[0], l2.lstm.prevState.h) : [25 x 25], [25 x 1 x t] -> [25 x 1 x t]
+Validating --> l2.lstm.lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1] = Plus (l2.lstm.lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[0], l2.lstm.lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[1]) : [25 x 1 x t], [25] -> [25 x 1 x t]
+Validating --> l2.lstm.lstmState._privateInnards.bit.ElementTimesArgs[1].z = Plus (l2.lstm.lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[0], l2.lstm.lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1]) : [25 x t], [25 x 1 x t] -> [25 x 1 x t]
+Validating --> l2.lstm.lstmState._privateInnards.bit.ElementTimesArgs[1] = Tanh (l2.lstm.lstmState._privateInnards.bit.ElementTimesArgs[1].z) : [25 x 1 x t] -> [25 x 1 x t]
+Validating --> l2.lstm.lstmState._privateInnards.bit = ElementTimes (l2.lstm.lstmState._privateInnards.it, l2.lstm.lstmState._privateInnards.bit.ElementTimesArgs[1]) : [25 x 1 x t], [25 x 1 x t] -> [25 x 1 x t]
+Validating --> l2.lstm.lstmState._privateInnards.ct = Plus (l2.lstm.lstmState._privateInnards.bft, l2.lstm.lstmState._privateInnards.bit) : [25 x 1 x t], [25 x 1 x t] -> [25 x 1 x t]
+Validating --> l2.lstm.lstmState._privateInnards.ot.z.PlusArgs[1] = ElementTimes (l2.lstm.lstmState._privateInnards.ot.z.PlusArgs[1].ElementTimesArgs[0], l2.lstm.lstmState._privateInnards.ct) : [25 x 1], [25 x 1 x t] -> [25 x 1 x t]
+Validating --> l2.lstm.lstmState._privateInnards.ot.z = Plus (l2.lstm.lstmState._privateInnards.ot.z.PlusArgs[0], l2.lstm.lstmState._privateInnards.ot.z.PlusArgs[1]) : [25 x 1 x t], [25 x 1 x t] -> [25 x 1 x t]
+Validating --> l2.lstm.lstmState._privateInnards.ot = Sigmoid (l2.lstm.lstmState._privateInnards.ot.z) : [25 x 1 x t] -> [25 x 1 x t]
+Validating --> l2.lstm.lstmState._privateInnards.ht.ElementTimesArgs[1] = Tanh (l2.lstm.lstmState._privateInnards.ct) : [25 x 1 x t] -> [25 x 1 x t]
+Validating --> l2.lstm.lstmState._privateInnards.ht = ElementTimes (l2.lstm.lstmState._privateInnards.ot, l2.lstm.lstmState._privateInnards.ht.ElementTimesArgs[1]) : [25 x 1 x t], [25 x 1 x t] -> [25 x 1 x t]
+Validating --> l2.result.selected.input.ElementTimesArgs[0] = Slice (l2.lstm.lstmState._privateInnards.ht) : [25 x 1 x t] -> [1 x 1 x t]
+Validating --> BS.Constants.Zero = LearnableParameter() :  -> [1]
+Validating --> l2.result.selected.input = ElementTimes (l2.result.selected.input.ElementTimesArgs[0], BS.Constants.Zero) : [1 x 1 x t], [1] -> [1 x 1 x t]
+Validating --> l2.result.selected = FutureValue (l2.result.selected.input) : [1 x 1 x t] -> [1 x 1 x t]
+Validating --> l2.result.out.indexSequence.indexSequence = Where (l2.result.selected) : [1 x 1 x t] -> [1 x WhereNodeAxis]
+Validating --> l2.result.out.indexSequence = PackedIndex (l2.lstm.lstmState._privateInnards.ht, l2.result.out.indexSequence.indexSequence) : [25 x 1 x t], [1 x WhereNodeAxis] -> [1 x WhereNodeAxis]
+Validating --> l2.result.out = GatherPacked (l2.result.out.indexSequence, l2.lstm.lstmState._privateInnards.ht) : [1 x WhereNodeAxis], [25 x 1 x t] -> [25 x 1 x WhereNodeAxis]
+Validating --> l3.z.z.PlusArgs[0] = Times (l3.z.W, l2.result.out) : [5 x 25], [25 x 1 x WhereNodeAxis] -> [5 x 1 x WhereNodeAxis]
+Validating --> l3.z.B = LearnableParameter() :  -> [5 x 1]
+Validating --> l3.z.z = Plus (l3.z.z.PlusArgs[0], l3.z.B) : [5 x 1 x WhereNodeAxis], [5 x 1] -> [5 x 1 x WhereNodeAxis]
+Validating --> l3.act = Pass (l3.z.z) : [5 x 1 x WhereNodeAxis] -> [5 x 1 x WhereNodeAxis]
+Validating --> l3p = ReconcileDynamicAxis (l3.act, labels) : [5 x 1 x WhereNodeAxis], [5 x *] -> [5 x 1 x *]
+Validating --> ce = CrossEntropyWithSoftmax (labels, l3p) : [5 x *], [5 x 1 x *] -> [1]
+Validating --> out = Pass (l3.act) : [5 x 1 x WhereNodeAxis] -> [5 x 1 x WhereNodeAxis]
+Validating --> t = DynamicAxis() :  -> [1 x 1 x t]
+Validating --> wer = ErrorPrediction (labels, l3p) : [5 x *], [5 x 1 x *] -> [1]
+
+
+68 out of 70 nodes do not share the minibatch layout with the input data.
+
+Post-processing network complete.
+
+04/14/2016 10:04:36: Created model with 70 nodes on CPU.
+
+04/14/2016 10:04:36: Training criterion node(s):
+04/14/2016 10:04:36: 	ce = CrossEntropyWithSoftmax
+
+04/14/2016 10:04:36: Evaluation criterion node(s):
+
+04/14/2016 10:04:36: 	wer = ErrorPrediction
+
+
+Allocating matrices for forward and/or backward propagation.
+04/14/2016 10:04:36: No PreCompute nodes found, skipping PreCompute step.
+
+04/14/2016 10:04:36: Starting Epoch 1: learning rate per sample = 0.000500  effective momentum = 0.900000  momentum as time constant = 1898.2 samples
+
+04/14/2016 10:04:36: Starting minibatch loop.
+04/14/2016 10:04:44: Finished Epoch[ 1 of 5]: [Training Set] TrainLossPerSample = 1.5804178; TotalSamplesSeen = 1247; EvalErrPerSample = 0.44667202; AvgLearningRatePerSample = 0.00050000002; EpochTime=8.11749
+04/14/2016 10:04:44: SGD: Saving checkpoint model '/tmp/cntk-test-20160414100435.385838/Text_SequenceClassification@debug_cpu/model.1'
+
+04/14/2016 10:04:44: Starting Epoch 2: learning rate per sample = 0.000500  effective momentum = 0.900000  momentum as time constant = 1898.2 samples
+
+04/14/2016 10:04:44: Starting minibatch loop.
+04/14/2016 10:04:51: Finished Epoch[ 2 of 5]: [Training Set] TrainLossPerSample = 1.495942; TotalSamplesSeen = 2494; EvalErrPerSample = 0.44667202; AvgLearningRatePerSample = 0.00050000002; EpochTime=7.67253
+04/14/2016 10:04:51: SGD: Saving checkpoint model '/tmp/cntk-test-20160414100435.385838/Text_SequenceClassification@debug_cpu/model.2'
+
+04/14/2016 10:04:51: Starting Epoch 3: learning rate per sample = 0.000500  effective momentum = 0.900000  momentum as time constant = 1898.2 samples
+
+04/14/2016 10:04:51: Starting minibatch loop.
+04/14/2016 10:04:58: Finished Epoch[ 3 of 5]: [Training Set] TrainLossPerSample = 1.4256026; TotalSamplesSeen = 3741; EvalErrPerSample = 0.44667202; AvgLearningRatePerSample = 0.00050000002; EpochTime=7.04749
+04/14/2016 10:04:58: SGD: Saving checkpoint model '/tmp/cntk-test-20160414100435.385838/Text_SequenceClassification@debug_cpu/model.3'
+
+04/14/2016 10:04:58: Starting Epoch 4: learning rate per sample = 0.000500  effective momentum = 0.900000  momentum as time constant = 1898.2 samples
+
+04/14/2016 10:04:58: Starting minibatch loop.
+04/14/2016 10:05:05: Finished Epoch[ 4 of 5]: [Training Set] TrainLossPerSample = 1.3731796; TotalSamplesSeen = 4988; EvalErrPerSample = 0.44667202; AvgLearningRatePerSample = 0.00050000002; EpochTime=6.94081
+04/14/2016 10:05:05: SGD: Saving checkpoint model '/tmp/cntk-test-20160414100435.385838/Text_SequenceClassification@debug_cpu/model.4'
+
+04/14/2016 10:05:05: Starting Epoch 5: learning rate per sample = 0.000500  effective momentum = 0.900000  momentum as time constant = 1898.2 samples
+
+04/14/2016 10:05:05: Starting minibatch loop.
+04/14/2016 10:05:12: Finished Epoch[ 5 of 5]: [Training Set] TrainLossPerSample = 1.3350673; TotalSamplesSeen = 6235; EvalErrPerSample = 0.44667202; AvgLearningRatePerSample = 0.00050000002; EpochTime=6.32158
+04/14/2016 10:05:12: SGD: Saving checkpoint model '/tmp/cntk-test-20160414100435.385838/Text_SequenceClassification@debug_cpu/model'
+04/14/2016 10:05:12: CNTKCommandTrainEnd: Train
+
+04/14/2016 10:05:12: Action "train" complete.
+
+04/14/2016 10:05:12: __COMPLETED__
+=== Deleting last epoch data
+rm: cannot remove ‘/tmp/cntk-test-20160414100435.385838/Text_SequenceClassification@debug_cpu/models/*.dnn’: No such file or directory
+==== Re-running from checkpoint
+=== Running /home/clemensm/CNTK/build/debug/bin/cntk configFile=/home/clemensm/CNTK/Tests/EndToEndTests/Text/SequenceClassification/seqcla.cntk currentDirectory=/home/clemensm/CNTK/Tests/EndToEndTests/Text/SequenceClassification RunDir=/tmp/cntk-test-20160414100435.385838/Text_SequenceClassification@debug_cpu DataDir=/home/clemensm/CNTK/Tests/EndToEndTests/Text/SequenceClassification ConfigDir=/home/clemensm/CNTK/Tests/EndToEndTests/Text/SequenceClassification OutputDir=/tmp/cntk-test-20160414100435.385838/Text_SequenceClassification@debug_cpu DeviceId=-1 timestamping=true makeMode=true
+-------------------------------------------------------------------
+Build info: 
+
+		Built time: Apr 14 2016 08:05:53
+		Last modified date: Wed Apr 13 15:12:17 2016
+		Build type: release
+		Build target: GPU
+		With 1bit-SGD: no
+		Math lib: acml
+		CUDA_PATH: /usr/local/cuda-7.5
+		CUB_PATH: /usr/local/cub-1.4.1
+		CUDNN_PATH: /usr/local/cudnn-4.0
+		Build Branch: deepbliscore/vnext
+		Build SHA1: 1aca7c04c27e65dd60998214962fd727909d7813 (modified)
+		Built by clemensm on ubuntu
+		Build Path: /home/clemensm/CNTK
+-------------------------------------------------------------------
+Changed current directory to /home/clemensm/CNTK/Tests/EndToEndTests/Text/SequenceClassification
+04/14/2016 10:05:12: -------------------------------------------------------------------
+04/14/2016 10:05:12: Build info: 
+
+04/14/2016 10:05:12: 		Built time: Apr 14 2016 08:05:53
+04/14/2016 10:05:12: 		Last modified date: Wed Apr 13 15:12:17 2016
+04/14/2016 10:05:12: 		Build type: release
+04/14/2016 10:05:12: 		Build target: GPU
+04/14/2016 10:05:12: 		With 1bit-SGD: no
+04/14/2016 10:05:12: 		Math lib: acml
+04/14/2016 10:05:12: 		CUDA_PATH: /usr/local/cuda-7.5
+04/14/2016 10:05:12: 		CUB_PATH: /usr/local/cub-1.4.1
+04/14/2016 10:05:12: 		CUDNN_PATH: /usr/local/cudnn-4.0
+04/14/2016 10:05:12: 		Build Branch: deepbliscore/vnext
+04/14/2016 10:05:12: 		Build SHA1: 1aca7c04c27e65dd60998214962fd727909d7813 (modified)
+04/14/2016 10:05:12: 		Built by clemensm on ubuntu
+04/14/2016 10:05:12: 		Build Path: /home/clemensm/CNTK
+04/14/2016 10:05:12: -------------------------------------------------------------------
+
+04/14/2016 10:05:12: Running on localhost at 2016/04/14 10:05:12
+04/14/2016 10:05:12: Command line: 
+/home/clemensm/CNTK/build/debug/bin/cntk  configFile=/home/clemensm/CNTK/Tests/EndToEndTests/Text/SequenceClassification/seqcla.cntk  currentDirectory=/home/clemensm/CNTK/Tests/EndToEndTests/Text/SequenceClassification  RunDir=/tmp/cntk-test-20160414100435.385838/Text_SequenceClassification@debug_cpu  DataDir=/home/clemensm/CNTK/Tests/EndToEndTests/Text/SequenceClassification  ConfigDir=/home/clemensm/CNTK/Tests/EndToEndTests/Text/SequenceClassification  OutputDir=/tmp/cntk-test-20160414100435.385838/Text_SequenceClassification@debug_cpu  DeviceId=-1  timestamping=true  makeMode=true
+
+
+
+04/14/2016 10:05:12: >>>>>>>>>>>>>>>>>>>> RAW CONFIG (VARIABLES NOT RESOLVED) >>>>>>>>>>>>>>>>>>>>
+04/14/2016 10:05:12: command=Train 
+deviceId=-1
+modelPath="$RunDir$/model"
+Train=[
+    action="train"
+    run=BrainScriptNetworkBuilder
+    BrainScriptNetworkBuilder=[
+        Macros = [
+            // define "last hidden state of sequence" in the LSTM (really for any sequence though)
+            TakeRight (N, x) = BS.Sequences._Take(FutureValue, N, x)
+            Last(x) = TakeRight(1, x)
+        ]
+        Layers = [
+            EmbeddingLayer(input, vocabSize, embeddingDim, embeddingPath) = [
+                embedding = Transpose(LearnableParameter(vocabSize, embeddingDim, learningRateMultiplier = 0.0, init = 'fromFile', initFromFilePath = embeddingPath))          
+                lookup = GatherPacked(features, embedding)
+            ].lookup
+            DenseLayer(input, inputSize, outputSize, activation) = [
+               z = BFF(input, outputSize, inputSize).z
+               act = activation(z)
+            ].act
+            LSTMLayer(input, inputSize, outputSize, cellSize, selector) = [ 
+               lstm = BS.RNNs.RecurrentLSTMP(inputSize, outputSize, cellSize, input)
+               result = selector(lstm)
+            ].result
+        ]        
+        // LSTM params
+        lstmDim = 25
+        cellDim = 25
+        // model
+        numLabels = 5        
+        vocab = 2000
+        embedDim = 50        
+        // set up features and labels
+        t = DynamicAxis()
+features = Input(1, dynamicAxis=t)   
+labels   = Input(numLabels)          
+        // load the pre-learned word embedding matrix
+        l1 = Layers.EmbeddingLayer(features, vocab, embedDim, 'embeddingmatrix.txt')
+        l2 = Layers.LSTMLayer(l1, embedDim, lstmDim, cellDim, Macros.Last)
+        l3 = Layers.DenseLayer(l2, lstmDim, numLabels, Pass)
+        out = Pass(l3, tag='output')   
+        // Make sure the trainer understands that the time dimension of l3 is actually the same as that of labels.
+        l3p = ReconcileDynamicAxis(l3, labels)
+        // training criteria
+        ce  = CrossEntropyWithSoftmax(labels, l3p, tag='criterion')   // this is the training objective
+        wer = ErrorPrediction        (labels, l3p, tag='evaluation')  // this also gets tracked
+    ]
+    SGD = [	
+      epochSize = 0
+      minibatchSize = 200
+      maxEpochs = 5
+      momentumPerMB = 0.9
+      learningRatesPerMB = 0.1
+    ]
+    reader = [
+        readerType = "CNTKTextFormatReader"
+        file = "Train.txt"            
+        input = [            
+            features=[
+                alias = "x"                
+                dim = 1               
+                format = "dense"
+            ]
+            labels=[
+                alias = "y"                
+                dim = 5           
+                format = "dense"
+            ]
+        ]
+   ]    
+outputPath = "output"        
+]
+Write=[
+    action="test"
+    run=BrainScriptNetworkBuilder
+    format = [
+      sequencePrologue=%d\t|w.shape %x\n%d\t|w\s
+      sampleSeparator=\n%d\t|w\s
+      elementSeparator=\s
+    ]
+    modelFile = "model"    
+    reader = [
+            readerType = "CNTKTextFormatReader"
+            file = "$DataDir$/Train.txt"            
+            input = [            
+                features=[
+                    alias = "x"                
+                    dim = 1               
+                    format = "dense"
+                ]
+                labels=[
+                    alias = "y"                
+                    dim = 5           
+                    format = "dense"
+                ]
+            ]
+   ]    
+outputPath = "output"        
+]
+currentDirectory=/home/clemensm/CNTK/Tests/EndToEndTests/Text/SequenceClassification
+RunDir=/tmp/cntk-test-20160414100435.385838/Text_SequenceClassification@debug_cpu
+DataDir=/home/clemensm/CNTK/Tests/EndToEndTests/Text/SequenceClassification
+ConfigDir=/home/clemensm/CNTK/Tests/EndToEndTests/Text/SequenceClassification
+OutputDir=/tmp/cntk-test-20160414100435.385838/Text_SequenceClassification@debug_cpu
+DeviceId=-1
+timestamping=true
+makeMode=true
+
+04/14/2016 10:05:12: <<<<<<<<<<<<<<<<<<<< RAW CONFIG (VARIABLES NOT RESOLVED)  <<<<<<<<<<<<<<<<<<<<
+
+04/14/2016 10:05:12: >>>>>>>>>>>>>>>>>>>> RAW CONFIG WITH ALL VARIABLES RESOLVED >>>>>>>>>>>>>>>>>>>>
+04/14/2016 10:05:12: command=Train 
+deviceId=-1
+modelPath="/tmp/cntk-test-20160414100435.385838/Text_SequenceClassification@debug_cpu/model"
+Train=[
+    action="train"
+    run=BrainScriptNetworkBuilder
+    BrainScriptNetworkBuilder=[
+        Macros = [
+            // define "last hidden state of sequence" in the LSTM (really for any sequence though)
+            TakeRight (N, x) = BS.Sequences._Take(FutureValue, N, x)
+            Last(x) = TakeRight(1, x)
+        ]
+        Layers = [
+            EmbeddingLayer(input, vocabSize, embeddingDim, embeddingPath) = [
+                embedding = Transpose(LearnableParameter(vocabSize, embeddingDim, learningRateMultiplier = 0.0, init = 'fromFile', initFromFilePath = embeddingPath))          
+                lookup = GatherPacked(features, embedding)
+            ].lookup
+            DenseLayer(input, inputSize, outputSize, activation) = [
+               z = BFF(input, outputSize, inputSize).z
+               act = activation(z)
+            ].act
+            LSTMLayer(input, inputSize, outputSize, cellSize, selector) = [ 
+               lstm = BS.RNNs.RecurrentLSTMP(inputSize, outputSize, cellSize, input)
+               result = selector(lstm)
+            ].result
+        ]        
+        // LSTM params
+        lstmDim = 25
+        cellDim = 25
+        // model
+        numLabels = 5        
+        vocab = 2000
+        embedDim = 50        
+        // set up features and labels
+        t = DynamicAxis()
+features = Input(1, dynamicAxis=t)   
+labels   = Input(numLabels)          
+        // load the pre-learned word embedding matrix
+        l1 = Layers.EmbeddingLayer(features, vocab, embedDim, 'embeddingmatrix.txt')
+        l2 = Layers.LSTMLayer(l1, embedDim, lstmDim, cellDim, Macros.Last)
+        l3 = Layers.DenseLayer(l2, lstmDim, numLabels, Pass)
+        out = Pass(l3, tag='output')   
+        // Make sure the trainer understands that the time dimension of l3 is actually the same as that of labels.
+        l3p = ReconcileDynamicAxis(l3, labels)
+        // training criteria
+        ce  = CrossEntropyWithSoftmax(labels, l3p, tag='criterion')   // this is the training objective
+        wer = ErrorPrediction        (labels, l3p, tag='evaluation')  // this also gets tracked
+    ]
+    SGD = [	
+      epochSize = 0
+      minibatchSize = 200
+      maxEpochs = 5
+      momentumPerMB = 0.9
+      learningRatesPerMB = 0.1
+    ]
+    reader = [
+        readerType = "CNTKTextFormatReader"
+        file = "Train.txt"            
+        input = [            
+            features=[
+                alias = "x"                
+                dim = 1               
+                format = "dense"
+            ]
+            labels=[
+                alias = "y"                
+                dim = 5           
+                format = "dense"
+            ]
+        ]
+   ]    
+outputPath = "output"        
+]
+Write=[
+    action="test"
+    run=BrainScriptNetworkBuilder
+    format = [
+      sequencePrologue=%d\t|w.shape %x\n%d\t|w\s
+      sampleSeparator=\n%d\t|w\s
+      elementSeparator=\s
+    ]
+    modelFile = "model"    
+    reader = [
+            readerType = "CNTKTextFormatReader"
+            file = "/home/clemensm/CNTK/Tests/EndToEndTests/Text/SequenceClassification/Train.txt"            
+            input = [            
+                features=[
+                    alias = "x"                
+                    dim = 1               
+                    format = "dense"
+                ]
+                labels=[
+                    alias = "y"                
+                    dim = 5           
+                    format = "dense"
+                ]
+            ]
+   ]    
+outputPath = "output"        
+]
+currentDirectory=/home/clemensm/CNTK/Tests/EndToEndTests/Text/SequenceClassification
+RunDir=/tmp/cntk-test-20160414100435.385838/Text_SequenceClassification@debug_cpu
+DataDir=/home/clemensm/CNTK/Tests/EndToEndTests/Text/SequenceClassification
+ConfigDir=/home/clemensm/CNTK/Tests/EndToEndTests/Text/SequenceClassification
+OutputDir=/tmp/cntk-test-20160414100435.385838/Text_SequenceClassification@debug_cpu
+DeviceId=-1
+timestamping=true
+makeMode=true
+
+04/14/2016 10:05:12: <<<<<<<<<<<<<<<<<<<< RAW CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<
+
+04/14/2016 10:05:12: >>>>>>>>>>>>>>>>>>>> PROCESSED CONFIG WITH ALL VARIABLES RESOLVED >>>>>>>>>>>>>>>>>>>>
+configparameters: seqcla.cntk:command=Train
+configparameters: seqcla.cntk:ConfigDir=/home/clemensm/CNTK/Tests/EndToEndTests/Text/SequenceClassification
+configparameters: seqcla.cntk:currentDirectory=/home/clemensm/CNTK/Tests/EndToEndTests/Text/SequenceClassification
+configparameters: seqcla.cntk:DataDir=/home/clemensm/CNTK/Tests/EndToEndTests/Text/SequenceClassification
+configparameters: seqcla.cntk:deviceId=-1
+configparameters: seqcla.cntk:makeMode=true
+configparameters: seqcla.cntk:modelPath=/tmp/cntk-test-20160414100435.385838/Text_SequenceClassification@debug_cpu/model
+configparameters: seqcla.cntk:OutputDir=/tmp/cntk-test-20160414100435.385838/Text_SequenceClassification@debug_cpu
+configparameters: seqcla.cntk:RunDir=/tmp/cntk-test-20160414100435.385838/Text_SequenceClassification@debug_cpu
+configparameters: seqcla.cntk:timestamping=true
+configparameters: seqcla.cntk:Train=[
+    action="train"
+    run=BrainScriptNetworkBuilder
+    BrainScriptNetworkBuilder=[
+        Macros = [
+            // define "last hidden state of sequence" in the LSTM (really for any sequence though)
+            TakeRight (N, x) = BS.Sequences._Take(FutureValue, N, x)
+            Last(x) = TakeRight(1, x)
+        ]
+        Layers = [
+            EmbeddingLayer(input, vocabSize, embeddingDim, embeddingPath) = [
+                embedding = Transpose(LearnableParameter(vocabSize, embeddingDim, learningRateMultiplier = 0.0, init = 'fromFile', initFromFilePath = embeddingPath))          
+                lookup = GatherPacked(features, embedding)
+            ].lookup
+            DenseLayer(input, inputSize, outputSize, activation) = [
+               z = BFF(input, outputSize, inputSize).z
+               act = activation(z)
+            ].act
+            LSTMLayer(input, inputSize, outputSize, cellSize, selector) = [ 
+               lstm = BS.RNNs.RecurrentLSTMP(inputSize, outputSize, cellSize, input)
+               result = selector(lstm)
+            ].result
+        ]        
+        // LSTM params
+        lstmDim = 25
+        cellDim = 25
+        // model
+        numLabels = 5        
+        vocab = 2000
+        embedDim = 50        
+        // set up features and labels
+        t = DynamicAxis()
+features = Input(1, dynamicAxis=t)   
+labels   = Input(numLabels)          
+        // load the pre-learned word embedding matrix
+        l1 = Layers.EmbeddingLayer(features, vocab, embedDim, 'embeddingmatrix.txt')
+        l2 = Layers.LSTMLayer(l1, embedDim, lstmDim, cellDim, Macros.Last)
+        l3 = Layers.DenseLayer(l2, lstmDim, numLabels, Pass)
+        out = Pass(l3, tag='output')   
+        // Make sure the trainer understands that the time dimension of l3 is actually the same as that of labels.
+        l3p = ReconcileDynamicAxis(l3, labels)
+        // training criteria
+        ce  = CrossEntropyWithSoftmax(labels, l3p, tag='criterion')   // this is the training objective
+        wer = ErrorPrediction        (labels, l3p, tag='evaluation')  // this also gets tracked
+    ]
+    SGD = [	
+      epochSize = 0
+      minibatchSize = 200
+      maxEpochs = 5
+      momentumPerMB = 0.9
+      learningRatesPerMB = 0.1
+    ]
+    reader = [
+        readerType = "CNTKTextFormatReader"
+        file = "Train.txt"            
+        input = [            
+            features=[
+                alias = "x"                
+                dim = 1               
+                format = "dense"
+            ]
+            labels=[
+                alias = "y"                
+                dim = 5           
+                format = "dense"
+            ]
+        ]
+   ]    
+outputPath = "output"        
+]
+
+configparameters: seqcla.cntk:Write=[
+    action="test"
+    run=BrainScriptNetworkBuilder
+    format = [
+      sequencePrologue=%d\t|w.shape %x\n%d\t|w\s
+      sampleSeparator=\n%d\t|w\s
+      elementSeparator=\s
+    ]
+    modelFile = "model"    
+    reader = [
+            readerType = "CNTKTextFormatReader"
+            file = "/home/clemensm/CNTK/Tests/EndToEndTests/Text/SequenceClassification/Train.txt"            
+            input = [            
+                features=[
+                    alias = "x"                
+                    dim = 1               
+                    format = "dense"
+                ]
+                labels=[
+                    alias = "y"                
+                    dim = 5           
+                    format = "dense"
+                ]
+            ]
+   ]    
+outputPath = "output"        
+]
+
+04/14/2016 10:05:12: <<<<<<<<<<<<<<<<<<<< PROCESSED CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<
+04/14/2016 10:05:12: Commands: Train
+04/14/2016 10:05:12: Precision = "float"
+04/14/2016 10:05:12: CNTKModelPath: /tmp/cntk-test-20160414100435.385838/Text_SequenceClassification@debug_cpu/model
+04/14/2016 10:05:12: CNTKCommandTrainInfo: Train : 5
+04/14/2016 10:05:12: CNTKCommandTrainInfo: CNTKNoMoreCommands_Total : 5
+
+04/14/2016 10:05:12: ##############################################################################
+04/14/2016 10:05:12: #                                                                            #
+04/14/2016 10:05:12: # Action "train"                                                             #
+04/14/2016 10:05:12: #                                                                            #
+04/14/2016 10:05:12: ##############################################################################
+
+04/14/2016 10:05:12: CNTKCommandTrainBegin: Train
+04/14/2016 10:05:12: Final model exists: /tmp/cntk-test-20160414100435.385838/Text_SequenceClassification@debug_cpu/model
+04/14/2016 10:05:12: No further training is necessary.
+04/14/2016 10:05:12: CNTKCommandTrainEnd: Train
+
+04/14/2016 10:05:12: Action "train" complete.
+
+04/14/2016 10:05:12: __COMPLETED__
