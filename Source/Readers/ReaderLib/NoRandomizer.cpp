@@ -11,13 +11,14 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
-NoRandomizer::NoRandomizer(IDataDeserializerPtr deserializer)
+NoRandomizer::NoRandomizer(IDataDeserializerPtr deserializer, bool multithreadedGetNextSequences)
     : m_deserializer(deserializer),
       m_samplePositionInEpoch(0),
       m_currentChunkPosition(SIZE_MAX),
       m_globalSamplePosition(0),
       m_totalNumberOfSamples(0),
-      m_currentSequencePositionInChunk(0)
+      m_currentSequencePositionInChunk(0),
+      m_multithreadedGetNextSequences(multithreadedGetNextSequences)
 {
     assert(deserializer != nullptr);
     m_streams = m_deserializer->GetStreamDescriptions();
@@ -172,8 +173,8 @@ Sequences NoRandomizer::GetNextSequences(size_t sampleCount)
     }
 
     result.m_data.resize(m_streams.size(), std::vector<SequenceDataPtr>(subsetSize));
-    for (int i = 0; i < subsetSize; ++i)
-    {
+
+    auto process = [&](int i) -> void {
         std::vector<SequenceDataPtr> sequence;
         const auto& sequenceDescription = descriptions[start + i];
         if (sequenceDescription.m_chunkId != m_currentChunkId)
@@ -187,6 +188,19 @@ Sequences NoRandomizer::GetNextSequences(size_t sampleCount)
         {
             result.m_data[j][i] = sequence[j];
         }
+    };
+
+    // TODO: This will be changed, when we move transformers under the (no-) randomizer, should not deal with multithreading here.
+    if (m_multithreadedGetNextSequences)
+    {
+#pragma omp parallel for ordered schedule(dynamic)
+        for (int i = 0; i < subsetSize; ++i)
+            process(i);
+    }
+    else
+    {
+        for (int i = 0; i < subsetSize; ++i)
+            process(i);
     }
 
     return result;
