@@ -4856,15 +4856,17 @@ void CPUMatrix<ElemType>::AssignScaledDifference(const ElemType alpha, const CPU
     }
 }
 
-//c[ci,cj] += a[ai,aj]
+// c[ci,cj] += a[ai,aj]
 template <class ElemType>
-void CPUMatrix<ElemType>::AddElementToElement(const CPUMatrix<ElemType>& a, const size_t ai, const size_t aj, CPUMatrix<ElemType>& c, const size_t ci, const size_t cj)
+void CPUMatrix<ElemType>::AddElementToElement(ElemType beta, const CPUMatrix<ElemType>& a, const size_t ai, const size_t aj, CPUMatrix<ElemType>& c, const size_t ci, const size_t cj)
 {
     if (ai >= a.GetNumRows() || aj >= a.GetNumCols() ||
         ci >= c.GetNumRows() || cj >= c.GetNumCols())
         InvalidArgument("AddElementToElement:  index out of range.");
 
-    c(ci, cj) += a(ai, aj);
+    ElemType us = beta ? beta * c(ci, cj) : 0; // do not multiply if beta is 0, could be a NaN
+    us += a(ai, aj);
+    c(ci, cj) = us;
 }
 
 ////c[ci,cj] += a[ai,aj]
@@ -4879,7 +4881,8 @@ void CPUMatrix<ElemType>::AddElementToElement(const CPUMatrix<ElemType>& a, cons
 //    c(ci, cj) += ((v < EPS_IN_LOG) ? LOG_OF_EPS_IN_LOG : log(v));
 //}
 
-//c[ci,cj] = a[ai,aj]
+#if 0 // now done as AddElementToElement (beta=0)
+// c[ci,cj] = a[ai,aj]
 template <class ElemType>
 void CPUMatrix<ElemType>::AssignElementToElement(const CPUMatrix<ElemType>& a, const size_t ai, const size_t aj, CPUMatrix<ElemType>& c, const size_t ci, const size_t cj)
 {
@@ -4889,6 +4892,7 @@ void CPUMatrix<ElemType>::AssignElementToElement(const CPUMatrix<ElemType>& a, c
 
     c(ci, cj) = a(ai, aj);
 }
+#endif
 
 /// <summary>c += alpha * (a-b)</summary>
 /// if a, b, c  must have same dim

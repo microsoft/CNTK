@@ -4584,8 +4584,8 @@ void Matrix<ElemType>::AddElementToElement(const Matrix<ElemType>& a, const size
 
     DISPATCH_MATRIX_ON_FLAG(&c,
                             &c,
-                            CPUMatrix<ElemType>::AddElementToElement(*a.m_CPUMatrix, ai, aj, *c.m_CPUMatrix, ci, cj),
-                            GPUMatrix<ElemType>::AddElementToElement(*a.m_GPUMatrix, ai, aj, *c.m_GPUMatrix, ci, cj),
+                            CPUMatrix<ElemType>::AddElementToElement(1, *a.m_CPUMatrix, ai, aj, *c.m_CPUMatrix, ci, cj),
+                            GPUMatrix<ElemType>::AddElementToElement(1, *a.m_GPUMatrix, ai, aj, *c.m_GPUMatrix, ci, cj),
                             NOT_IMPLEMENTED,
                             NOT_IMPLEMENTED);
 }
@@ -4601,8 +4601,8 @@ void Matrix<ElemType>::AssignElementToElement(const Matrix<ElemType>& a, const s
 
     DISPATCH_MATRIX_ON_FLAG(&c,
                             &c,
-                            CPUMatrix<ElemType>::AssignElementToElement(*a.m_CPUMatrix, ai, aj, *c.m_CPUMatrix, ci, cj),
-                            NOT_IMPLEMENTED,
+                            CPUMatrix<ElemType>::AddElementToElement(0, *a.m_CPUMatrix, ai, aj, *c.m_CPUMatrix, ci, cj),
+                            GPUMatrix<ElemType>::AddElementToElement(0, *a.m_GPUMatrix, ai, aj, *c.m_GPUMatrix, ci, cj),
                             NOT_IMPLEMENTED,
                             NOT_IMPLEMENTED);
 }

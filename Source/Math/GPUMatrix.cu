@@ -3347,7 +3347,7 @@ template <class ElemType>
             return;
         a.PrepareDevice();
         if (a.IsEmpty() || b.IsEmpty())
-            LogicError("ScaleAndAdd:  one of the input matrices is empty.");
+            LogicError("ScaleAndAdd: One of the input matrices is empty.");
         c.RequireSize(b.GetNumRows(), b.GetNumCols());
         // if (a.GetNumRows() != 1 && a.GetNumCols() != 1) // a is not a col or row vector
         if (a.GetNumRows() == b.GetNumRows() && a.GetNumCols() == b.GetNumCols()) // dimensions match
@@ -3398,7 +3398,7 @@ template <class ElemType>
             _matrixVectorRowWiseAddWithThreadPerElem<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(a.Data(), b.Data(), c.Data(), alpha, m, n);
         }
         else
-            InvalidArgument("dimension of matrix c does not match dimension of matrix a.");
+            InvalidArgument("Dimension of matrix c does not match dimension of matrix a.");
     }
 }
 
@@ -3425,11 +3425,11 @@ void GPUMatrix<ElemType>::AddScaledDifference(const ElemType alpha, const GPUMat
         if (!(a.GetNumRows() == b.GetNumRows() && a.GetNumRows() == c.GetNumRows() &&
               a.GetNumCols() == b.GetNumCols() && a.GetNumCols() == c.GetNumCols()))
         {
-            InvalidArgument("AddScaledDifference:  a, b, and c must have same dimension.");
+            InvalidArgument("AddScaledDifference: a, b, and c must have same dimension.");
         }
 
         if (a.IsEmpty())
-            LogicError("AddScaledDifference:  Input matrix a is empty.");
+            LogicError("AddScaledDifference: Input matrix a is empty.");
 
         CUDA_LONG n = (CUDA_LONG) a.GetNumElements();
         int blocksPerGrid = (int) ceil(1.0 * n / GridDim::maxThreadsPerBlock);
@@ -3458,12 +3458,10 @@ void GPUMatrix<ElemType>::AssignScaledDifference(const ElemType alpha, const GPU
         assert(a.GetNumRows() == b.GetNumRows() && a.GetNumCols() == b.GetNumCols());
 
         if (!(a.GetNumRows() == b.GetNumRows() && a.GetNumCols() == b.GetNumCols()))
-        {
-            InvalidArgument("AssignScaledDifference:  a, b must have same dimension.");
-        }
+            InvalidArgument("AssignScaledDifference: a, b must have same dimension.");
 
         if (a.IsEmpty())
-            LogicError("AssignScaledDifference:  Input matrix a is empty.");
+            LogicError("AssignScaledDifference: Input matrix a is empty.");
 
         if (&c != &a && &c != &b)
             c.RequireSize(a.GetNumRows(), a.GetNumCols());
@@ -3486,7 +3484,7 @@ void GPUMatrix<ElemType>::AddScaledDifference(const GPUMatrix<ElemType>& alpha, 
 {
     assert(alpha.GetNumElements() == 1);
     if (!(alpha.GetNumElements() == 1))
-        InvalidArgument("AddScaledDifference:  alpha must be a 1X1 matrix.");
+        InvalidArgument("AddScaledDifference: alpha must be a 1X1 matrix.");
 
     if (a.GetComputeDeviceId() != c.GetComputeDeviceId())
     {
@@ -3502,11 +3500,11 @@ void GPUMatrix<ElemType>::AddScaledDifference(const GPUMatrix<ElemType>& alpha, 
         if (!(a.GetNumRows() == b.GetNumRows() && a.GetNumRows() == c.GetNumRows() &&
               a.GetNumCols() == b.GetNumCols() && a.GetNumCols() == c.GetNumCols()))
         {
-            InvalidArgument("AddScaledDifference:  a, b, and c must have same dimension.");
+            InvalidArgument("AddScaledDifference: a, b, and c must have same dimension.");
         }
 
         if (a.IsEmpty())
-            LogicError("AddScaledDifference:  Input matrix a is empty.");
+            LogicError("AddScaledDifference: Input matrix a is empty.");
 
         CUDA_LONG n = (CUDA_LONG) a.GetNumElements();
         int blocksPerGrid = (int) ceil(1.0 * n / GridDim::maxThreadsPerBlock);
@@ -3526,7 +3524,7 @@ void GPUMatrix<ElemType>::AssignScaledDifference(const GPUMatrix<ElemType>& alph
 {
     assert(alpha.GetNumElements() == 1);
     if (!(alpha.GetNumElements() == 1))
-        InvalidArgument("AddScaledDifference:  alpha must be a 1X1 matrix.");
+        InvalidArgument("AddScaledDifference: alpha must be a 1X1 matrix.");
 
     if (a.GetComputeDeviceId() != c.GetComputeDeviceId())
     {
@@ -3540,11 +3538,11 @@ void GPUMatrix<ElemType>::AssignScaledDifference(const GPUMatrix<ElemType>& alph
 
         if (!(a.GetNumRows() == b.GetNumRows() && a.GetNumCols() == b.GetNumCols()))
         {
-            InvalidArgument("AssignScaledDifference:  a, b must have same dimension.");
+            InvalidArgument("AssignScaledDifference: a, b must have same dimension.");
         }
 
         if (a.IsEmpty())
-            LogicError("AssignScaledDifference:  Input matrix a is empty.");
+            LogicError("AssignScaledDifference: Input matrix a is empty.");
 
         c.RequireSize(a.GetNumRows(), a.GetNumCols());
 
@@ -3557,16 +3555,15 @@ void GPUMatrix<ElemType>::AssignScaledDifference(const GPUMatrix<ElemType>& alph
 
 //c[ci,cj] += a[ai,aj]
 template <class ElemType>
-void GPUMatrix<ElemType>::AddElementToElement(const GPUMatrix<ElemType>& a, const size_t ai, const size_t aj, GPUMatrix<ElemType>& c, const size_t ci, const size_t cj)
+void GPUMatrix<ElemType>::AddElementToElement(ElemType beta, const GPUMatrix<ElemType>& a, const size_t ai, const size_t aj, GPUMatrix<ElemType>& c, const size_t ci, const size_t cj)
 {
     if (ai >= a.GetNumRows() || aj >= a.GetNumCols() ||
         ci >= c.GetNumRows() || cj >= c.GetNumCols())
-        InvalidArgument("AddElementToElement:  index out of range.");
+        InvalidArgument("AddElementToElement: Index out of range.");
 
     a.PrepareDevice();
-    int blocksPerGrid = 1; // only one element   --BUGBUG: then why not launch only 1 thread per block?
     SyncGuard syncGuard;
-    _addElementToElement<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock /*BUGBUG: should be 1?*/, 0, t_stream>>>(a.Data(), (CUDA_LONG) a.LocateElement(ai, aj), c.Data(), (CUDA_LONG) c.LocateElement(ci, cj));
+    _addElementToElement<ElemType><<<1, 1, 0, t_stream>>>(beta, a.Data(), (CUDA_LONG) a.LocateElement(ai, aj), c.Data(), (CUDA_LONG) c.LocateElement(ci, cj));
 }
 
 template <class ElemType>
