@@ -46,29 +46,44 @@ struct CriterionAccumulator
         m_aggregateSampleCounts.assign(numCriteria, 0);
     }
     // 'i' is the index of the element we add into (multiple eval criteria share the same matrix object)
-    void Accumulate(const std::vector<ComputationNodeBasePtr>& nodes, size_t i, size_t legacyNumSamples)
+    // Use 'reset=true' to not accumulate but overwrite.
+    const CriterionAccumulator& Add(const std::vector<ComputationNodeBasePtr>& nodes, size_t i, size_t legacyNumSamples)
     {
-        const auto& node = nodes[i]; // multiple nodes are managed by this struct
-        // Note: A future change will be that criterion nodes emit criteria per frame, but aggregated.
-        // In that case, the denominator will be accumulated from their MBLayout.
-        // Also, the numerator will have masking and an implicit reduction.
-        Matrix<ElemType>::AddElementToElement(dynamic_pointer_cast<ComputationNode<ElemType>>(node)->Value(),
-                                              0, 0, m_aggregateCriterionValues, 0, i);
-        m_aggregateSampleCounts[i] += GetNumSamples(nodes[i], legacyNumSamples);
+        return Accumulate</*reset=*/false>(nodes, i, legacyNumSamples);
+    }
+    const CriterionAccumulator& Assign(const std::vector<ComputationNodeBasePtr>& nodes, size_t i, size_t legacyNumSamples)
+    {
+        return Accumulate</*reset=*/true>(nodes, i, legacyNumSamples);
     }
     // retrieve an accumulated result as a pair (numerator, denominator)
     EpochCriterion GetCriterion(size_t i) const
     {
         return EpochCriterion(m_aggregateCriterionValues(0, i), m_aggregateSampleCounts[i]);
     }
-    // retrive a result from a node
-    static EpochCriterion GetCriterion(const ComputationNodeBasePtr& node, size_t legacyNumSamples)
-    {
-        auto numSamples = GetNumSamples(node, legacyNumSamples);
-        return numSamples > 0 ? EpochCriterion(node->Get00Element(), numSamples) : EpochCriterion(0); // (avoid GPU access if 0 samples)
-    }
 
 private:
+    // shared part of Add() and Assign()
+    template<bool reset>
+    const CriterionAccumulator& Accumulate(const std::vector<ComputationNodeBasePtr>& nodes, size_t i, size_t legacyNumSamples)
+    {
+        const auto& node = nodes[i]; // multiple nodes are managed by this struct
+        float beta = !reset; // gives 1 to add, 0 to assign
+        // Note: A future change will be that criterion nodes emit criteria per frame.
+        // In that case, we will do masking and an implicit reduction right here using TensorView.
+        if (beta == 0) // temp solution until we add TensorView reduction
+        {
+            Matrix<ElemType>::AssignElementToElement(dynamic_pointer_cast<ComputationNode<ElemType>>(node)->Value(),
+                                                     0, 0, m_aggregateCriterionValues, 0, i);
+            m_aggregateSampleCounts[i] = GetNumSamples(nodes[i], legacyNumSamples);
+        }
+        else
+        {
+            Matrix<ElemType>::AddElementToElement(dynamic_pointer_cast<ComputationNode<ElemType>>(node)->Value(),
+                                                  0, 0, m_aggregateCriterionValues, 0, i);
+            m_aggregateSampleCounts[i] += GetNumSamples(nodes[i], legacyNumSamples);
+        }
+        return *this;
+    }
     // get the number of samples
     static size_t GetNumSamples(const ComputationNodeBasePtr& node, size_t legacyNumSamples)
     {

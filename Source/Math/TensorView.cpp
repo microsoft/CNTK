@@ -230,7 +230,7 @@ static bool CheckDifferentObject(const TensorView<ElemType>& a, const TensorView
 }
 
 template <class ElemType>
-void TensorView<ElemType>::DoUnaryOpOf(ElemType beta, const TensorView& a, ElemType alpha, ElementWiseOperator op)
+void TensorView<ElemType>::DoUnaryOpOf(ElemType beta, const TensorView& a, ElemType alpha, ElementWiseOperator op, ElementWiseOperator reductionOp)
 {
     // static int cc = 0; if (cc++ == 0)
     //    fprintf(stderr, "Tensor Op: Op %d: %s -> %s\n", (int)op, string(a.GetShape()).c_str(), string(GetShape()).c_str());
@@ -246,11 +246,11 @@ void TensorView<ElemType>::DoUnaryOpOf(ElemType beta, const TensorView& a, ElemT
         CheckDifferentObject(a, *this);
 
     // now perform the operation
-    GetSOB().TensorOp(beta, a.GetSOB(), alpha, op, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
+    GetSOB().TensorOp(beta, a.GetSOB(), alpha, op, reductionOp, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
 }
 
 template <class ElemType>
-void TensorView<ElemType>::DoBinaryOpOf(ElemType beta, const TensorView& a, const TensorView& b, ElemType alpha, ElementWiseOperator op)
+void TensorView<ElemType>::DoBinaryOpOf(ElemType beta, const TensorView& a, const TensorView& b, ElemType alpha, ElementWiseOperator op, ElementWiseOperator reductionOp)
 {
     // static int cc = 0; if (cc++ == 0)
     //    fprintf(stderr, "Tensor Op: Op %d: %s op %s -> %s\n", (int)op, string(a.GetShape()).c_str(), string(b.GetShape()).c_str(), string(GetShape()).c_str());
@@ -264,11 +264,11 @@ void TensorView<ElemType>::DoBinaryOpOf(ElemType beta, const TensorView& a, cons
     if (reducingOpDims.size() > 0)
         CheckDifferentObject(a, *this) && CheckDifferentObject(b, *this);
 
-    GetSOB().TensorOp(beta, a.GetSOB(), b.GetSOB(), alpha, op, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
+    GetSOB().TensorOp(beta, a.GetSOB(), b.GetSOB(), alpha, op, reductionOp, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
 }
 
 template <class ElemType>
-void TensorView<ElemType>::DoTernaryOpOf(ElemType beta, const TensorView& a, const TensorView& b, const TensorView& c, ElemType alpha, ElementWiseOperator op)
+void TensorView<ElemType>::DoTernaryOpOf(ElemType beta, const TensorView& a, const TensorView& b, const TensorView& c, ElemType alpha, ElementWiseOperator op, ElementWiseOperator reductionOp)
 {
     // static int cc = 0; if (cc++ == 0)
     //    fprintf(stderr, "Tensor Op: Op %d: %s, %s, %s -> %s\n", (int)op, string(a.GetShape()).c_str(), string(b.GetShape()).c_str(), string(c.GetShape()).c_str(), string(GetShape()).c_str());
@@ -282,7 +282,7 @@ void TensorView<ElemType>::DoTernaryOpOf(ElemType beta, const TensorView& a, con
     if (reducingOpDims.size() > 0)
         CheckDifferentObject(a, *this) && CheckDifferentObject(b, *this) && CheckDifferentObject(c, *this);
 
-    GetSOB().TensorOp(beta, a.GetSOB(), b.GetSOB(), c.GetSOB(), alpha, op, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
+    GetSOB().TensorOp(beta, a.GetSOB(), b.GetSOB(), c.GetSOB(), alpha, op, reductionOp, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
 }
 
 // -------------------------------------------------------------------

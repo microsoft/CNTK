@@ -51,7 +51,7 @@ public:
         size_t rank = DetermineElementwiseTensorRank();
         auto result = ValueTensorFor(rank, fr);
         auto input = Input(0)->ValueTensorFor(rank, fr);
-        result.DoUnaryOpOf(0, input, 1, opForward);
+        result.DoUnaryOpOf(0, input, 1, opForward, opSum);
     }
 
     virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
@@ -61,8 +61,8 @@ public:
 
         // get the args
         size_t rank = DetermineElementwiseTensorRank();
-        auto sliceOutputGrad = GradientTensorFor(rank, fr);               // propagate from this one...
-        auto sliceInputGrad = Input(0)->GradientTensorFor(rank, fr);      // ...to this one
+        auto sliceOutputGrad =           GradientTensorFor(rank, fr); // propagate from this one...
+        auto sliceInputGrad  = Input(0)->GradientTensorFor(rank, fr); // ...to this one
 
         // we expect a constant conditional expression here -- suppress the warning that leads to an error
         // TODO: alternative: assign to a non-const variable and test that.
@@ -70,7 +70,7 @@ public:
 #pragma warning( disable : 4127 )
         if (opType == UnaryGradient) 
         {
-            sliceInputGrad.DoUnaryOpOf(1, sliceOutputGrad, 1, opBackward);
+            sliceInputGrad.DoUnaryOpOf(1, sliceOutputGrad, 1, opBackward, opSum);
         }
         else 
         {
@@ -78,7 +78,7 @@ public:
             // Not possible for Cos().
             auto sliceValue = (opType == BinaryWithOutputGradient) ? ValueTensorFor(rank, fr) : // using input or output value
                 Input(0)->ValueTensorFor(rank, fr);
-            sliceInputGrad.DoBinaryOpOf(1, sliceOutputGrad, sliceValue, 1, opBackward);
+            sliceInputGrad.DoBinaryOpOf(1, sliceOutputGrad, sliceValue, 1, opBackward, opSum);
         }
 #pragma warning( pop )
     }

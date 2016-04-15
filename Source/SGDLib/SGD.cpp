@@ -754,12 +754,6 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
 
     int numMBsRun = 0;
 
-    // NOTE: the following two local matrices are not used in distGradAgg path
-    // assume only one training criterion node for each epoch.
-    // The criterion values are accumulated here over the minibatches (without having to pull them off the GPU).
-    CriterionAccumulator<ElemType> localEpochCriterion (1,                      net->GetDeviceId());
-    CriterionAccumulator<ElemType> localEpochEvalErrors(epochEvalErrors.size(), net->GetDeviceId());
-
     bool useGradientAggregation = ((GetParallelizationMethod() == ParallelizationMethod::DataParallelSGD) &&
                                    (epochNumber >= m_parallelizationStartEpochNum));
     bool useModelAveraging = ((GetParallelizationMethod() == ParallelizationMethod::ModelAveragingSGD) &&
@@ -845,6 +839,12 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
 
     Timer timer;
     timer.Start();
+
+    // NOTE: the following two local matrices are not used in distGradAgg path
+    // assume only one training criterion node for each epoch.
+    // The criterion values are accumulated here over the minibatches (without having to pull them off the GPU).
+    CriterionAccumulator<ElemType> localEpochCriterion(1, net->GetDeviceId());
+    CriterionAccumulator<ElemType> localEpochEvalErrors(epochEvalErrors.size(), net->GetDeviceId());
 
     // --- MAIN MINIBATCH LOOP
 
@@ -960,9 +960,9 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
             {
                 assert(wasDataRead);
                 // criteria are in Value()(0,0), we accumulate into another 1x1 Matrix (to avoid having to pull the values off the GPU)
-                localEpochCriterion.Accumulate(criterionNodes, 0, numSamplesWithLabel);
+                localEpochCriterion.Add(criterionNodes, 0, numSamplesWithLabel);
                 for (size_t i = 0; i < evaluationNodes.size(); i++)
-                    localEpochEvalErrors.Accumulate(evaluationNodes, i, numSamplesWithLabel);
+                    localEpochEvalErrors.Add(evaluationNodes, i, numSamplesWithLabel);
             }
         }
         else
@@ -997,11 +997,14 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
             m_gradHeader->numSamples = actualMBSize;
             //m_gradHeader->numSamplesWithLabel = numSamplesWithLabel;
             //m_gradHeader->criterion = actualMBSize > 0 ? criterionNodes[0]->Get00Element() : 0.0;
-            let thisMBCriterion = CriterionAccumulator<ElemType>::GetCriterion(criterionNodes[0], numSamplesWithLabel);
-            m_gradHeader->numSamplesWithLabel = thisMBCriterion.second;
-            m_gradHeader->criterion           = thisMBCriterion.first;
+            // hoist the criterion into CPU space for all-reduce
+            localEpochCriterion.Assign(criterionNodes, 0, numSamplesWithLabel);
             for (size_t i = 0; i < evaluationNodes.size(); i++)
-                m_gradHeader->evalErrors[i] = CriterionAccumulator<ElemType>::GetCriterion(evaluationNodes[i], numSamplesWithLabel);
+                localEpochEvalErrors.Assign(evaluationNodes, i, numSamplesWithLabel);
+            m_gradHeader->numSamplesWithLabel = localEpochCriterion.GetCriterion(0).second;
+            m_gradHeader->criterion           = localEpochCriterion.GetCriterion(0).first;
+            for (size_t i = 0; i < evaluationNodes.size(); i++)
+                m_gradHeader->evalErrors[i] = localEpochEvalErrors.GetCriterion(i);
 
             bool samplesProcessed = m_distGradAgg->AggregateGradients(learnParamsGradients, m_gradHeader, epochNumber);
             noMoreSamplesToProcess = !samplesProcessed;
@@ -1180,10 +1183,10 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
         nSamplesSinceLastModelSync = 0;
     }
 
-    // compute final criterion values
+    // hoist the accumulated criterion value from GPU side to our 'out'  variables
+    // (unless we useGradientAggregation, in which case they are accumulated in the 'out' variables directly)
     if (!useGradientAggregation)
     {
-        // unless we do parallelization, we have them in Matrix objects that possibly live on the GPU--get them over now
         epochCriterion = localEpochCriterion.GetCriterion(0);
         for (size_t i = 0; i < epochEvalErrors.size(); i++)
             epochEvalErrors[i] = localEpochEvalErrors.GetCriterion(i);
@@ -1198,6 +1201,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
         //totalSamplesSeen += totalEpochSamplesOfAllWorkers;
 
         // get criteria for this worker
+        assert(!useGradientAggregation); // (otherwise the data would not be in localEpochCriterion)
         epochCriterion = localEpochCriterion.GetCriterion(0);
         for (size_t i = 0; i < epochEvalErrors.size(); i++)
             epochEvalErrors[i] = localEpochEvalErrors.GetCriterion(i);

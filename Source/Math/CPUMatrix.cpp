@@ -6079,12 +6079,15 @@ static void TensorOpWithFn(ElemType beta, array<ElemType*, N> pointers, ElemType
 // perform unary operation 'op' on a giving 'this', reinterpreting the matrices as tensors as specified by the dims and strides
 // This maps 'op' to a lambda.
 template <class ElemType>
-void CPUMatrix<ElemType>::TensorOp(ElemType beta, const CPUMatrix<ElemType>& a, ElemType alpha, ElementWiseOperator op,
+void CPUMatrix<ElemType>::TensorOp(ElemType beta, const CPUMatrix<ElemType>& a, ElemType alpha, ElementWiseOperator op, ElementWiseOperator reductionOp,
                                    const array<size_t, 2>& offsets,
                                    const SmallVector<size_t>& regularOpDims, const array<SmallVector<ptrdiff_t>, 2>& regularStrides,
                                    const SmallVector<size_t>& reducingOpDims, const array<SmallVector<ptrdiff_t>, 2>& reducingStrides)
 {
-// TODO: Change the lambda to take a pointer and a number of elements, so that we can pass it 1 or 4 elements, in order for it to SSE-vectorize.
+    if (reductionOp != ElementWiseOperator::opSum) // TODO: enable the reduction ops
+        InvalidArgument("TensorOp: Unary reduction operations other than opSum not yet implemented.");
+
+    // TODO: Change the lambda to take a pointer and a number of elements, so that we can pass it 1 or 4 elements, in order for it to SSE-vectorize.
 #define CaseUnaryTensorOp(oper)                                                        \
     case ElementWiseOperator::op##oper:                                                \
         return TensorOpWithFn(beta, pointers, alpha, [](const array<ElemType*, 2>& pp) \
@@ -6098,18 +6101,21 @@ void CPUMatrix<ElemType>::TensorOp(ElemType beta, const CPUMatrix<ElemType>& a, 
     {
         ForAllUnaryOps(CaseUnaryTensorOp);
     default:
-        LogicError("TensorUnaryOp: Unknown op code %d.", (int) op);
+        LogicError("TensorOp: Unknown unary op code %d.", (int) op);
     }
 }
 
 // perform binary operation 'op' on a and b giving 'this', reinterpreting the matrices as tensors as specified by the dims and strides
 // This maps 'op' to a lambda.
 template <class ElemType>
-void CPUMatrix<ElemType>::TensorOp(ElemType beta, const CPUMatrix<ElemType>& a, const CPUMatrix<ElemType>& b, ElemType alpha, ElementWiseOperator op,
+void CPUMatrix<ElemType>::TensorOp(ElemType beta, const CPUMatrix<ElemType>& a, const CPUMatrix<ElemType>& b, ElemType alpha, ElementWiseOperator op, ElementWiseOperator reductionOp,
                                    const array<size_t, 3>& offsets,
                                    const SmallVector<size_t>& regularOpDims, const array<SmallVector<ptrdiff_t>, 3>& regularStrides,
                                    const SmallVector<size_t>& reducingOpDims, const array<SmallVector<ptrdiff_t>, 3>& reducingStrides)
 {
+    if (reductionOp != ElementWiseOperator::opSum)
+        InvalidArgument("TensorOp (binary): The only permitted binary reduction operation is opSum.");
+
 #define CaseBinaryTensorOp(oper)                                                       \
     case ElementWiseOperator::op##oper:                                                \
         return TensorOpWithFn(beta, pointers, alpha, [](const array<ElemType*, 3>& pp) \
@@ -6123,18 +6129,21 @@ void CPUMatrix<ElemType>::TensorOp(ElemType beta, const CPUMatrix<ElemType>& a, 
     {
         ForAllBinaryOps(CaseBinaryTensorOp);
     default:
-        LogicError("TensorBinaryOp: Unknown op code %d.", (int) op);
+        LogicError("TensorOp: Unknown op binary code %d.", (int) op);
     }
 }
 
 // perform ternary operation 'op' on a, and c giving 'this', reinterpreting the matrices as tensors as specified by the dims and strides
 // This maps 'op' to a lambda.
 template <class ElemType>
-void CPUMatrix<ElemType>::TensorOp(ElemType beta, const CPUMatrix<ElemType>& a, const CPUMatrix<ElemType>& b, const CPUMatrix<ElemType>& c, ElemType alpha, ElementWiseOperator op,
+void CPUMatrix<ElemType>::TensorOp(ElemType beta, const CPUMatrix<ElemType>& a, const CPUMatrix<ElemType>& b, const CPUMatrix<ElemType>& c, ElemType alpha, ElementWiseOperator op, ElementWiseOperator reductionOp,
                                    const array<size_t, 4>& offsets,
                                    const SmallVector<size_t>& regularOpDims, const array<SmallVector<ptrdiff_t>, 4>& regularStrides,
                                    const SmallVector<size_t>& reducingOpDims, const array<SmallVector<ptrdiff_t>, 4>& reducingStrides)
 {
+    if (reductionOp != ElementWiseOperator::opSum)
+        InvalidArgument("TensorOp: The only permitted ternary reduction operation is opSum.");
+
 #define CaseTernaryTensorOp(oper)                                                      \
     case ElementWiseOperator::op##oper:                                                \
         return TensorOpWithFn(beta, pointers, alpha, [](const array<ElemType*, 4>& pp) \
@@ -6148,7 +6157,7 @@ void CPUMatrix<ElemType>::TensorOp(ElemType beta, const CPUMatrix<ElemType>& a, 
     {
         ForAllTernaryOps(CaseTernaryTensorOp);
     default:
-        LogicError("TensorTernaryOp: Unknown op code %d.", (int) op);
+        LogicError("TensorOp: Unknown ternary op code %d.", (int) op);
     }
 }
 
