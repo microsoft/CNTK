@@ -1,0 +1,16 @@
+dataDir: ../../Data
+tags:
+     # running on every BVT job in 'S' (Speech) leg in Debug-GPU and Release-CPU configurations:
+     - bvt-s  (build_sku == 'gpu') and ((flavor=='debug') ^ (device=='cpu'))
+     # running unconditionally on every Nightly job in 'S' leg
+     - nightly-s (build_sku == 'gpu')
+
+    
+testCases:
+    CNTK Run must be completed:
+        patterns:
+            - __COMPLETED__
+
+    dot description of the DNN topology should match with baseline:
+        patterns:
+            - dot file of DNN topology matches

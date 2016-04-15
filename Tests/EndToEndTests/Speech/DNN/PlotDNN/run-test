@@ -1,0 +1,18 @@
+#!/bin/bash
+
+. $TEST_ROOT_DIR/run-test-common
+
+# cntkrun <CNTK config file name> <additional CNTK args> 
+cntkrun plot.cntk 
+echo "checking generated dot file against baseline dot file" 
+echo ""
+diff  $TEST_RUN_DIR/cntkSpeech.dnn.dot $TEST_DIR/cntkSpeech.dnn.dot > $TEST_RUN_DIR/diff.txt
+if [ $? -ne 0 ]; then 
+    echo ""
+    echo "dot file of DNN topology diffs:"
+    cat $TEST_RUN_DIR/diff.txt
+else
+    echo "dot file of DNN topology matches"
+fi
+ExitCode=$?
+exit $ExitCode

@@ -776,8 +776,8 @@ void ComputationNetwork::DescribeNetworkUsingDot(list<ComputationArc>& arcs,
     for (const auto& x : allnodes)
     {
         line.clear();
-        line = msra::strfun::wstrprintf(L" \"%ls\" [ label = \"%ls [%s%ls]\\n%ls\" ] ;\n",
-                                        x->GetName().c_str(), x->GetName().c_str(), string(x->GetSampleLayout()).c_str(), x->GetMBLayoutAxisString().c_str(),
+        line = msra::strfun::wstrprintf(L" \"%ls\" [ label = \"%ls [%ls%ls]\\n%ls\" ] ;\n",
+                                        x->GetName().c_str(), x->GetName().c_str(), wstring(x->GetSampleLayout()).c_str(), x->HasMBLayout() ? L" x *" : L"",
                                         x->OperationName().c_str());
         fstream << line;
     }
@@ -851,7 +851,7 @@ void ComputationNetwork::DescribeNetworkUsingDot(list<ComputationArc>& arcs,
     fstream << L"\n}\n";
 }
 
-void ComputationNetwork::PlotNetworkTopology(const wstring outputFile) //  [1/13/2015 erw] plot network topology using dot language
+void ComputationNetwork::PlotNetworkTopology(const wstring outputFile) 
 {
     VerifyIsCompiled("PlotNetworkTopology");
     // ValidateNetwork(false, true);

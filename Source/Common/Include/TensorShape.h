@@ -701,6 +701,13 @@ public:
         return s;
     }
 
+    // pretty-printing, wstring version 
+    operator std::wstring() const
+    {
+        string s = this->operator std::string(); 
+        return msra::strfun::utf16(s);
+    }
+
 private:
     // reset m_strides and m_offset to represent a canonical no-strides column-major tensor
     void InitAsNoSlice()
