@@ -541,6 +541,7 @@ void ComputationNetwork::ResetMBLayouts()
         if (axisName == L"")
         {
             // Legacy behavior: One shared MBLayout
+            // TODO Remove m_pMBLayoutOfNetwork altogether. See issue 358.
             node->LinkToMBLayout(m_pMBLayoutOfNetwork);
         }
         else

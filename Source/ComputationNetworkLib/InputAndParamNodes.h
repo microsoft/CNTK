@@ -121,6 +121,9 @@ public:
     DynamicAxisNode(DEVICEID_TYPE deviceId, const wstring& name)
         : Base(deviceId, name)
     {
+        // BUGBUG: In BS, the node name is not known during node instantiation.
+        // This may require to pass the display name as a separate parameter.
+
         // This is the whole point of this class: Introduce a new MBLayout that others can use.
         LinkToMBLayout(make_shared<MBLayout>(1, 0, name));
         // We need some shape, or validation fails.
@@ -191,6 +194,16 @@ protected:
     {
         AttachInputsFromConfig(configp, this->GetExpectedNumInputs());
         wstring axisName = L"";
+        // TODO This currently reads a ComputationNode object from a property, thereby bypassing "normal" input handling.
+        // The passing of shapes represents a second graph that is "overlaid" (and previously identical) to the data
+        // flow network. This needs to be solved on a more fundamental level.
+        // The proposed future change from fseide is as follows:
+        // (2) On BS level, dynamicAxis is an optional parameter that takes a DynamicAxis object--the alternative,
+        // passing a string, will be removed.
+        // (3) The dynamicAxis argument will become an actual m_inputs[] to the InputValue. I.e.InputValues are no
+        // longer leaves from the ComputationNetwork viewpoint. But they ARE leaves from the user / BS / NDL view, as
+        // the axis is not passed as a regular input.This way, the current special - casing can and will be removed;
+        // instead, the MBLayout propagation will happen automagically as part of regular ValidateNetwork().
         if (configp->Exists(L"dynamicAxis"))
         {
             auto axisConfig = configp->Find(L"dynamicAxis");
