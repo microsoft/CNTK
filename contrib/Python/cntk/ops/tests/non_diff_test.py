@@ -32,13 +32,13 @@ def test_op_floor(arg, device_id, precision):
 
     a = I([arg], has_sequence_dimension=False)
     op = Floor(a)
-    unittest_helper(op, exp, device_id, precision, clean_up=False, backward_pass=False)
+    unittest_helper(op, None, exp, device_id, precision, clean_up=False, backward_pass=False)
 
     # Backward pass test
     # ==================
     # the expected results for the backward pass is all zeroes
-    #expected = [[[np.zeros_like(x) for x in arg]]]
-    #unittest_helper(op, expected, device_id, precision, clean_up=True, backward_pass=True, input_node=a)
+    expected = [[[np.zeros_like(x) for x in arg]]]
+    unittest_helper(op, None, expected, device_id, precision, clean_up=True, backward_pass=True, input_node=a)
 
 @pytest.mark.parametrize("arg", [([12.3,-12.3]),([10.2,-10.2]),([0.5,-0.5]),([0.01,-0.01]),([0.499,-0.499]),([5.0,-5.0]),([0.0])])
 def test_op_ceil(arg, device_id, precision):
@@ -54,13 +54,13 @@ def test_op_ceil(arg, device_id, precision):
 
     a = I([arg], has_sequence_dimension=False)
     op = Ceil(a)
-    unittest_helper(op, exp, device_id, precision, clean_up=False, backward_pass=False)
+    unittest_helper(op, None, exp, device_id, precision, clean_up=False, backward_pass=False)
 
     # Backward pass test
     # ==================
     # the expected results for the backward pass is all zeroes
     expected = [[[np.zeros_like(x) for x in arg]]]
-    unittest_helper(op, expected, device_id, precision, clean_up=True, backward_pass=True, input_node=a)
+    unittest_helper(op, None, expected, device_id, precision, clean_up=True, backward_pass=True, input_node=a)
 
 @pytest.mark.parametrize("arg", [([12.3,-12.3]),([10.2,-10.2]),([0.01,-0.01]),([0.499,-0.499]),([5.0,-5.0]),([0.0])])
 def test_op_round(arg, device_id, precision):
@@ -77,13 +77,13 @@ def test_op_round(arg, device_id, precision):
 
     a = I([arg], has_sequence_dimension=False)
     op = Round(a)
-    unittest_helper(op, exp, device_id, precision, clean_up=False, backward_pass=False)
+    unittest_helper(op, None, exp, device_id, precision, clean_up=False, backward_pass=False)
 
     # Backward pass test
     # ==================
     # the expected results for the backward pass is all zeroes
     expected = [[[np.zeros_like(x) for x in arg]]]
-    unittest_helper(op, expected, device_id, precision, clean_up=True, backward_pass=True, input_node=a)
+    unittest_helper(op, None, expected, device_id, precision, clean_up=True, backward_pass=True, input_node=a)
 
 def test_op_roundnonstandard(device_id, precision):
 

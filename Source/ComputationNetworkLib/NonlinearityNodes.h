@@ -106,6 +106,7 @@ public:
 // RectifiedLinearNode (input)
 // LogNode (input)
 // ExpNode (input)
+// FloorNode (input)
 // CosineNode (input)
 // SinNode (input)
 // Abs(input)
