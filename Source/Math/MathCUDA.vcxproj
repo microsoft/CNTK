@@ -102,8 +102,8 @@
       <AdditionalOptions>-Xcudafe "--diag_suppress=field_without_dll_interface" %(AdditionalOptions)</AdditionalOptions>
     </CudaCompile>
     <PostBuildEvent>
-      <Command>for %%l in ($(CudaDlls)) do if exist "$(CudaPath)\bin\%%l" xcopy /D /Y "$(CudaPath)\bin\%%l*" $(OutputPath)
-if exist "$(CuDnnDll)" (xcopy /Y "$(CuDnnDll)" $(OutputPath))
+      <Command>for %%l in ($(CudaDlls)) do if exist "$(CudaPath)\bin\%%l" xcopy /D /Y "$(CudaPath)\bin\%%l*" "$(OutputPath)"
+if exist "$(CuDnnDll)" (xcopy /Y "$(CuDnnDll)" "$(OutputPath)")
 </Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
