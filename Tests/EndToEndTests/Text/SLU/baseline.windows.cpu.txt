@@ -1,48 +1,46 @@
-=== Running /home/alrezni/src/cntk_git/build/release/bin/cntk configFile=/home/alrezni/src/cntk_git/Tests/EndToEndTests/SLU/globals.cntk+rnnlu.ndl.cntk currentDirectory=/home/alrezni/src/cntk_git/Tests/EndToEndTests/SLU RunDir=/tmp/cntk-test-20160411094809.162825/._SLU@release_gpu DataDir=/home/alrezni/src/cntk_git/Tests/EndToEndTests/SLU ConfigDir=/home/alrezni/src/cntk_git/Tests/EndToEndTests/SLU OutputDir=/tmp/cntk-test-20160411094809.162825/._SLU@release_gpu DeviceId=0 timestamping=true
+=== Running /cygdrive/c/src/cntk_github/x64/release/cntk.exe configFile=C:\src\cntk_github\Tests\EndToEndTests\Text\SLU/globals.cntk+rnnlu.ndl.cntk currentDirectory=C:\src\cntk_github\Tests\EndToEndTests\Text\SLU RunDir=E:\cygwin64\tmp\cntk-test-20160411151928.899517\Text_SLU@release_cpu DataDir=C:\src\cntk_github\Tests\EndToEndTests\Text\SLU ConfigDir=C:\src\cntk_github\Tests\EndToEndTests\Text\SLU OutputDir=E:\cygwin64\tmp\cntk-test-20160411151928.899517\Text_SLU@release_cpu DeviceId=-1 timestamping=true
 -------------------------------------------------------------------
 Build info: 
 
-		Built time: Apr 11 2016 09:46:26
-		Last modified date: Tue Apr  5 16:01:37 2016
-		Build type: release
+		Built time: Apr 11 2016 13:32:44
+		Last modified date: Thu Apr  7 11:05:47 2016
+		Build type: Release
 		Build target: GPU
 		With 1bit-SGD: no
-		Math lib: acml
-		CUDA_PATH: /usr/local/cuda-7.0
-		CUB_PATH: /usr/local/cub-1.4.1
-		CUDNN_PATH: /usr/local/cudnn-4.0
-		Build Branch: alrezni/slu_e2e
-		Build SHA1: 5fff5334ae4166c6378543973ebf87ebde912757
-		Built by alrezni on atleneu04
-		Build Path: /home/alrezni/src/cntk_git
+		CUDA_PATH: C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v7.0
+		CUB_PATH: E:\lib\cub-1.4.1
+		CUDNN_PATH: E:\lib\cuDNN_v4
+		Build Branch: alrezni/examples_text
+		Build SHA1: 110e330e5b490c97d4836374ed83fbe642e4f857 (modified)
+		Built by alrezni on DIFFENG
+		Build Path: C:\src\cntk_github\Source\CNTK\
 -------------------------------------------------------------------
-Changed current directory to /home/alrezni/src/cntk_git/Tests/EndToEndTests/SLU
-04/11/2016 09:48:20: -------------------------------------------------------------------
-04/11/2016 09:48:20: Build info: 
+Changed current directory to C:\src\cntk_github\Tests\EndToEndTests\Text\SLU
+04/11/2016 14:20:07: -------------------------------------------------------------------
+04/11/2016 14:20:07: Build info: 
 
-04/11/2016 09:48:20: 		Built time: Apr 11 2016 09:46:26
-04/11/2016 09:48:20: 		Last modified date: Tue Apr  5 16:01:37 2016
-04/11/2016 09:48:20: 		Build type: release
-04/11/2016 09:48:20: 		Build target: GPU
-04/11/2016 09:48:20: 		With 1bit-SGD: no
-04/11/2016 09:48:20: 		Math lib: acml
-04/11/2016 09:48:20: 		CUDA_PATH: /usr/local/cuda-7.0
-04/11/2016 09:48:20: 		CUB_PATH: /usr/local/cub-1.4.1
-04/11/2016 09:48:20: 		CUDNN_PATH: /usr/local/cudnn-4.0
-04/11/2016 09:48:20: 		Build Branch: alrezni/slu_e2e
-04/11/2016 09:48:20: 		Build SHA1: 5fff5334ae4166c6378543973ebf87ebde912757
-04/11/2016 09:48:20: 		Built by alrezni on atleneu04
-04/11/2016 09:48:20: 		Build Path: /home/alrezni/src/cntk_git
-04/11/2016 09:48:20: -------------------------------------------------------------------
+04/11/2016 14:20:07: 		Built time: Apr 11 2016 13:32:44
+04/11/2016 14:20:07: 		Last modified date: Thu Apr  7 11:05:47 2016
+04/11/2016 14:20:07: 		Build type: Release
+04/11/2016 14:20:07: 		Build target: GPU
+04/11/2016 14:20:07: 		With 1bit-SGD: no
+04/11/2016 14:20:07: 		CUDA_PATH: C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v7.0
+04/11/2016 14:20:07: 		CUB_PATH: E:\lib\cub-1.4.1
+04/11/2016 14:20:07: 		CUDNN_PATH: E:\lib\cuDNN_v4
+04/11/2016 14:20:07: 		Build Branch: alrezni/examples_text
+04/11/2016 14:20:07: 		Build SHA1: 110e330e5b490c97d4836374ed83fbe642e4f857 (modified)
+04/11/2016 14:20:07: 		Built by alrezni on DIFFENG
+04/11/2016 14:20:07: 		Build Path: C:\src\cntk_github\Source\CNTK\
+04/11/2016 14:20:07: -------------------------------------------------------------------
 
-04/11/2016 09:48:20: Running on localhost at 2016/04/11 09:48:20
-04/11/2016 09:48:20: Command line: 
-/home/alrezni/src/cntk_git/build/release/bin/cntk  configFile=/home/alrezni/src/cntk_git/Tests/EndToEndTests/SLU/globals.cntk+rnnlu.ndl.cntk  currentDirectory=/home/alrezni/src/cntk_git/Tests/EndToEndTests/SLU  RunDir=/tmp/cntk-test-20160411094809.162825/._SLU@release_gpu  DataDir=/home/alrezni/src/cntk_git/Tests/EndToEndTests/SLU  ConfigDir=/home/alrezni/src/cntk_git/Tests/EndToEndTests/SLU  OutputDir=/tmp/cntk-test-20160411094809.162825/._SLU@release_gpu  DeviceId=0  timestamping=true
-
+04/11/2016 14:20:07: Running on DIFFENG at 2016/04/11 14:20:07
+04/11/2016 14:20:07: Command line: 
+C:\src\cntk_github\x64\release\cntk.exe  configFile=C:\src\cntk_github\Tests\EndToEndTests\Text\SLU/globals.cntk+rnnlu.ndl.cntk  currentDirectory=C:\src\cntk_github\Tests\EndToEndTests\Text\SLU  RunDir=E:\cygwin64\tmp\cntk-test-20160411151928.899517\Text_SLU@release_cpu  DataDir=C:\src\cntk_github\Tests\EndToEndTests\Text\SLU  ConfigDir=C:\src\cntk_github\Tests\EndToEndTests\Text\SLU  OutputDir=E:\cygwin64\tmp\cntk-test-20160411151928.899517\Text_SLU@release_cpu  DeviceId=-1  timestamping=true
 
 
-04/11/2016 09:48:20: >>>>>>>>>>>>>>>>>>>> RAW CONFIG (VARIABLES NOT RESOLVED) >>>>>>>>>>>>>>>>>>>>
-04/11/2016 09:48:20: NdlDir=$ConfigDir$
+
+04/11/2016 14:20:07: >>>>>>>>>>>>>>>>>>>> RAW CONFIG (VARIABLES NOT RESOLVED) >>>>>>>>>>>>>>>>>>>>
+04/11/2016 14:20:07: NdlDir=$ConfigDir$
 ExpDir=$RunDir$
 OutDir=$OutputDir$
 precision="double"
@@ -278,22 +276,22 @@ LSTMTest=[
     ]
   ]
 ]
-currentDirectory=/home/alrezni/src/cntk_git/Tests/EndToEndTests/SLU
-RunDir=/tmp/cntk-test-20160411094809.162825/._SLU@release_gpu
-DataDir=/home/alrezni/src/cntk_git/Tests/EndToEndTests/SLU
-ConfigDir=/home/alrezni/src/cntk_git/Tests/EndToEndTests/SLU
-OutputDir=/tmp/cntk-test-20160411094809.162825/._SLU@release_gpu
-DeviceId=0
+currentDirectory=C:\src\cntk_github\Tests\EndToEndTests\Text\SLU
+RunDir=E:\cygwin64\tmp\cntk-test-20160411151928.899517\Text_SLU@release_cpu
+DataDir=C:\src\cntk_github\Tests\EndToEndTests\Text\SLU
+ConfigDir=C:\src\cntk_github\Tests\EndToEndTests\Text\SLU
+OutputDir=E:\cygwin64\tmp\cntk-test-20160411151928.899517\Text_SLU@release_cpu
+DeviceId=-1
 timestamping=true
 
-04/11/2016 09:48:20: <<<<<<<<<<<<<<<<<<<< RAW CONFIG (VARIABLES NOT RESOLVED)  <<<<<<<<<<<<<<<<<<<<
+04/11/2016 14:20:07: <<<<<<<<<<<<<<<<<<<< RAW CONFIG (VARIABLES NOT RESOLVED)  <<<<<<<<<<<<<<<<<<<<
 
-04/11/2016 09:48:20: >>>>>>>>>>>>>>>>>>>> RAW CONFIG WITH ALL VARIABLES RESOLVED >>>>>>>>>>>>>>>>>>>>
-04/11/2016 09:48:20: NdlDir=/home/alrezni/src/cntk_git/Tests/EndToEndTests/SLU
-ExpDir=/tmp/cntk-test-20160411094809.162825/._SLU@release_gpu
-OutDir=/tmp/cntk-test-20160411094809.162825/._SLU@release_gpu
+04/11/2016 14:20:07: >>>>>>>>>>>>>>>>>>>> RAW CONFIG WITH ALL VARIABLES RESOLVED >>>>>>>>>>>>>>>>>>>>
+04/11/2016 14:20:07: NdlDir=C:\src\cntk_github\Tests\EndToEndTests\Text\SLU
+ExpDir=E:\cygwin64\tmp\cntk-test-20160411151928.899517\Text_SLU@release_cpu
+OutDir=E:\cygwin64\tmp\cntk-test-20160411151928.899517\Text_SLU@release_cpu
 precision="double"
-deviceId = 0
+deviceId = -1
 command=LSTM:LSTMTest
 traceLevel=1
 LSTM=[
@@ -301,9 +299,9 @@ LSTM=[
   makeMode=true
   minibatchSize=10
   epochSize=4430000
-  modelPath=/tmp/cntk-test-20160411094809.162825/._SLU@release_gpu/cntkdebug.dnn
+  modelPath=E:\cygwin64\tmp\cntk-test-20160411151928.899517\Text_SLU@release_cpu/cntkdebug.dnn
   NDLNetworkBuilder=[
-      networkDescription=/home/alrezni/src/cntk_git/Tests/EndToEndTests/SLU/lstm.ndl
+      networkDescription=C:\src\cntk_github\Tests\EndToEndTests\Text\SLU/lstm.ndl
   ]
   SGD=[
     learningRatesPerSample=0.1
@@ -331,13 +329,13 @@ LSTM=[
     wordContext=0:1:2
     randomize=None
     nbruttsineachrecurrentiter=10
-    wfile=/tmp/cntk-test-20160411094809.162825/._SLU@release_gpu/sequenceSentence.bin
+    wfile=E:\cygwin64\tmp\cntk-test-20160411151928.899517\Text_SLU@release_cpu/sequenceSentence.bin
     wsize=256
     wrecords=1000
     windowSize=10000
     unk="<unk>"
-    wordmap=/home/alrezni/src/cntk_git/Tests/EndToEndTests/SLU/inputmap.txt
-    file=/home/alrezni/src/cntk_git/Tests/EndToEndTests/SLU/atis.train.apos.pred.pos.head.IOB.simple
+    wordmap=C:\src\cntk_github\Tests\EndToEndTests\Text\SLU/inputmap.txt
+    file=C:\src\cntk_github\Tests\EndToEndTests\Text\SLU/atis.train.apos.pred.pos.head.IOB.simple
     features=[
       dim=0
       sectionType=data
@@ -351,12 +349,12 @@ LSTM=[
       dim=1
       usewordmap=true
       labelDim=10000
-      labelMappingFile=/tmp/cntk-test-20160411094809.162825/._SLU@release_gpu/sentenceLabels.txt
+      labelMappingFile=E:\cygwin64\tmp\cntk-test-20160411151928.899517\Text_SLU@release_cpu/sentenceLabels.txt
       labelType=Category
       beginSequence="BOS"
       endSequence="EOS"
       usewordmap=true
-      token=/home/alrezni/src/cntk_git/Tests/EndToEndTests/SLU/input.txt
+      token=C:\src\cntk_github\Tests\EndToEndTests\Text\SLU/input.txt
       elementSize=4
       sectionType=labels
       mapping=[
@@ -374,8 +372,8 @@ LSTM=[
       labelType=Category
       beginSequence="O"
       endSequence="O"
-      token=/home/alrezni/src/cntk_git/Tests/EndToEndTests/SLU/output.txt
-    labelMappingFile=/tmp/cntk-test-20160411094809.162825/._SLU@release_gpu/sentenceLabels.out.txt
+      token=C:\src\cntk_github\Tests\EndToEndTests\Text\SLU/output.txt
+    labelMappingFile=E:\cygwin64\tmp\cntk-test-20160411151928.899517\Text_SLU@release_cpu/sentenceLabels.out.txt
       sectionType=labels
       mapping=[
         sectionType=labelMapping
@@ -389,13 +387,13 @@ LSTM=[
     readerType=LUSequenceReader
     randomize=None
     wordContext=0:1:2
-    wfile=/tmp/cntk-test-20160411094809.162825/._SLU@release_gpu/sequenceSentence.valid.bin
+    wfile=E:\cygwin64\tmp\cntk-test-20160411151928.899517\Text_SLU@release_cpu/sequenceSentence.valid.bin
     wsize=256
     wrecords=1000
     windowSize=10000
     unk="<unk>"
-    wordmap=/home/alrezni/src/cntk_git/Tests/EndToEndTests/SLU/inputmap.txt
-    file=/home/alrezni/src/cntk_git/Tests/EndToEndTests/SLU/atis.dev.IOB.simple
+    wordmap=C:\src\cntk_github\Tests\EndToEndTests\Text\SLU/inputmap.txt
+    file=C:\src\cntk_github\Tests\EndToEndTests\Text\SLU/atis.dev.IOB.simple
     features=[
       dim=0
       sectionType=data
@@ -408,12 +406,12 @@ LSTM=[
     labelIn=[
       dim=1
       labelDim=10000
-      labelMappingFile=/tmp/cntk-test-20160411094809.162825/._SLU@release_gpu/sentenceLabels.in.txt
+      labelMappingFile=E:\cygwin64\tmp\cntk-test-20160411151928.899517\Text_SLU@release_cpu/sentenceLabels.in.txt
       labelType=Category
       beginSequence="BOS"
       endSequence="EOS"
       usewordmap=true
-      token=/home/alrezni/src/cntk_git/Tests/EndToEndTests/SLU/input.txt
+      token=C:\src\cntk_github\Tests\EndToEndTests\Text\SLU/input.txt
       elementSize=4
       sectionType=labels
       mapping=[
@@ -431,9 +429,9 @@ LSTM=[
       labelType=Category
       beginSequence="O"
       endSequence="O"
-      token=/home/alrezni/src/cntk_git/Tests/EndToEndTests/SLU/output.txt
+      token=C:\src\cntk_github\Tests\EndToEndTests\Text\SLU/output.txt
       labelDim=10000
-      labelMappingFile=/tmp/cntk-test-20160411094809.162825/._SLU@release_gpu/sentenceLabels.out.txt
+      labelMappingFile=E:\cygwin64\tmp\cntk-test-20160411151928.899517\Text_SLU@release_cpu/sentenceLabels.out.txt
       elementSize=4
       sectionType=labels
       mapping=[
@@ -453,16 +451,16 @@ LSTMTest=[
   minibatchSize=100
   epochSize=4430000
   defaultHiddenActivity=0.1
-  modelPath=/tmp/cntk-test-20160411094809.162825/._SLU@release_gpu/cntkdebug.dnn
+  modelPath=E:\cygwin64\tmp\cntk-test-20160411151928.899517\Text_SLU@release_cpu/cntkdebug.dnn
   outputNodeNames=outputs
   reader=[
     readerType=LUSequenceReader
     randomize=None
     wordContext=0:1:2
     unk="<unk>"
-    wordmap=/home/alrezni/src/cntk_git/Tests/EndToEndTests/SLU/inputmap.txt
-    file=/home/alrezni/src/cntk_git/Tests/EndToEndTests/SLU/atis.test.apos.pred.pos.head.IOB.simple
-    wfile=/tmp/cntk-test-20160411094809.162825/._SLU@release_gpu/sequenceSentence.bin
+    wordmap=C:\src\cntk_github\Tests\EndToEndTests\Text\SLU/inputmap.txt
+    file=C:\src\cntk_github\Tests\EndToEndTests\Text\SLU/atis.test.apos.pred.pos.head.IOB.simple
+    wfile=E:\cygwin64\tmp\cntk-test-20160411151928.899517\Text_SLU@release_cpu/sequenceSentence.bin
     wsize=256
     wrecords=1000
     windowSize=10000
@@ -478,12 +476,12 @@ LSTMTest=[
     labelIn=[
       dim=1
       labelDim=10000
-      labelMappingFile=/tmp/cntk-test-20160411094809.162825/._SLU@release_gpu/sentenceLabels.txt
+      labelMappingFile=E:\cygwin64\tmp\cntk-test-20160411151928.899517\Text_SLU@release_cpu/sentenceLabels.txt
       labelType=Category
       beginSequence="BOS"
       endSequence="EOS"
       usewordmap=true
-      token=/home/alrezni/src/cntk_git/Tests/EndToEndTests/SLU/input.txt
+      token=C:\src\cntk_github\Tests\EndToEndTests\Text\SLU/input.txt
       elementSize=4
       sectionType=labels
       mapping=[
@@ -501,9 +499,9 @@ LSTMTest=[
       labelType=Category
       beginSequence="BOS"
       endSequence="EOS"
-      token=/home/alrezni/src/cntk_git/Tests/EndToEndTests/SLU/output.txt
+      token=C:\src\cntk_github\Tests\EndToEndTests\Text\SLU/output.txt
       labelDim=127
-      labelMappingFile=/tmp/cntk-test-20160411094809.162825/._SLU@release_gpu/sentenceLabels.out.txt
+      labelMappingFile=E:\cygwin64\tmp\cntk-test-20160411151928.899517\Text_SLU@release_cpu/sentenceLabels.out.txt
       elementSize=4
       sectionType=labels
       mapping=[
@@ -520,36 +518,36 @@ LSTMTest=[
   writer=[
     writerType=LUSequenceWriter
     outputs=[
-      file=/tmp/cntk-test-20160411094809.162825/._SLU@release_gpu/output.rec.txt
-      token=/home/alrezni/src/cntk_git/Tests/EndToEndTests/SLU/output.txt
+      file=E:\cygwin64\tmp\cntk-test-20160411151928.899517\Text_SLU@release_cpu/output.rec.txt
+      token=C:\src\cntk_github\Tests\EndToEndTests\Text\SLU/output.txt
     ]
   ]
 ]
-currentDirectory=/home/alrezni/src/cntk_git/Tests/EndToEndTests/SLU
-RunDir=/tmp/cntk-test-20160411094809.162825/._SLU@release_gpu
-DataDir=/home/alrezni/src/cntk_git/Tests/EndToEndTests/SLU
-ConfigDir=/home/alrezni/src/cntk_git/Tests/EndToEndTests/SLU
-OutputDir=/tmp/cntk-test-20160411094809.162825/._SLU@release_gpu
-DeviceId=0
+currentDirectory=C:\src\cntk_github\Tests\EndToEndTests\Text\SLU
+RunDir=E:\cygwin64\tmp\cntk-test-20160411151928.899517\Text_SLU@release_cpu
+DataDir=C:\src\cntk_github\Tests\EndToEndTests\Text\SLU
+ConfigDir=C:\src\cntk_github\Tests\EndToEndTests\Text\SLU
+OutputDir=E:\cygwin64\tmp\cntk-test-20160411151928.899517\Text_SLU@release_cpu
+DeviceId=-1
 timestamping=true
 
-04/11/2016 09:48:20: <<<<<<<<<<<<<<<<<<<< RAW CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<
+04/11/2016 14:20:07: <<<<<<<<<<<<<<<<<<<< RAW CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<
 
-04/11/2016 09:48:20: >>>>>>>>>>>>>>>>>>>> PROCESSED CONFIG WITH ALL VARIABLES RESOLVED >>>>>>>>>>>>>>>>>>>>
+04/11/2016 14:20:07: >>>>>>>>>>>>>>>>>>>> PROCESSED CONFIG WITH ALL VARIABLES RESOLVED >>>>>>>>>>>>>>>>>>>>
 configparameters: rnnlu.ndl.cntk:command=LSTM:LSTMTest
-configparameters: rnnlu.ndl.cntk:ConfigDir=/home/alrezni/src/cntk_git/Tests/EndToEndTests/SLU
-configparameters: rnnlu.ndl.cntk:currentDirectory=/home/alrezni/src/cntk_git/Tests/EndToEndTests/SLU
-configparameters: rnnlu.ndl.cntk:DataDir=/home/alrezni/src/cntk_git/Tests/EndToEndTests/SLU
-configparameters: rnnlu.ndl.cntk:deviceId=0
-configparameters: rnnlu.ndl.cntk:ExpDir=/tmp/cntk-test-20160411094809.162825/._SLU@release_gpu
+configparameters: rnnlu.ndl.cntk:ConfigDir=C:\src\cntk_github\Tests\EndToEndTests\Text\SLU
+configparameters: rnnlu.ndl.cntk:currentDirectory=C:\src\cntk_github\Tests\EndToEndTests\Text\SLU
+configparameters: rnnlu.ndl.cntk:DataDir=C:\src\cntk_github\Tests\EndToEndTests\Text\SLU
+configparameters: rnnlu.ndl.cntk:deviceId=-1
+configparameters: rnnlu.ndl.cntk:ExpDir=E:\cygwin64\tmp\cntk-test-20160411151928.899517\Text_SLU@release_cpu
 configparameters: rnnlu.ndl.cntk:LSTM=[
   action=train
   makeMode=true
   minibatchSize=10
   epochSize=4430000
-  modelPath=/tmp/cntk-test-20160411094809.162825/._SLU@release_gpu/cntkdebug.dnn
+  modelPath=E:\cygwin64\tmp\cntk-test-20160411151928.899517\Text_SLU@release_cpu/cntkdebug.dnn
   NDLNetworkBuilder=[
-      networkDescription=/home/alrezni/src/cntk_git/Tests/EndToEndTests/SLU/lstm.ndl
+      networkDescription=C:\src\cntk_github\Tests\EndToEndTests\Text\SLU/lstm.ndl
   ]
   SGD=[
     learningRatesPerSample=0.1
@@ -577,13 +575,13 @@ configparameters: rnnlu.ndl.cntk:LSTM=[
     wordContext=0:1:2
     randomize=None
     nbruttsineachrecurrentiter=10
-    wfile=/tmp/cntk-test-20160411094809.162825/._SLU@release_gpu/sequenceSentence.bin
+    wfile=E:\cygwin64\tmp\cntk-test-20160411151928.899517\Text_SLU@release_cpu/sequenceSentence.bin
     wsize=256
     wrecords=1000
     windowSize=10000
     unk="<unk>"
-    wordmap=/home/alrezni/src/cntk_git/Tests/EndToEndTests/SLU/inputmap.txt
-    file=/home/alrezni/src/cntk_git/Tests/EndToEndTests/SLU/atis.train.apos.pred.pos.head.IOB.simple
+    wordmap=C:\src\cntk_github\Tests\EndToEndTests\Text\SLU/inputmap.txt
+    file=C:\src\cntk_github\Tests\EndToEndTests\Text\SLU/atis.train.apos.pred.pos.head.IOB.simple
     features=[
       dim=0
       sectionType=data
@@ -597,12 +595,12 @@ configparameters: rnnlu.ndl.cntk:LSTM=[
       dim=1
       usewordmap=true
       labelDim=10000
-      labelMappingFile=/tmp/cntk-test-20160411094809.162825/._SLU@release_gpu/sentenceLabels.txt
+      labelMappingFile=E:\cygwin64\tmp\cntk-test-20160411151928.899517\Text_SLU@release_cpu/sentenceLabels.txt
       labelType=Category
       beginSequence="BOS"
       endSequence="EOS"
       usewordmap=true
-      token=/home/alrezni/src/cntk_git/Tests/EndToEndTests/SLU/input.txt
+      token=C:\src\cntk_github\Tests\EndToEndTests\Text\SLU/input.txt
       elementSize=4
       sectionType=labels
       mapping=[
@@ -620,8 +618,8 @@ configparameters: rnnlu.ndl.cntk:LSTM=[
       labelType=Category
       beginSequence="O"
       endSequence="O"
-      token=/home/alrezni/src/cntk_git/Tests/EndToEndTests/SLU/output.txt
-    labelMappingFile=/tmp/cntk-test-20160411094809.162825/._SLU@release_gpu/sentenceLabels.out.txt
+      token=C:\src\cntk_github\Tests\EndToEndTests\Text\SLU/output.txt
+    labelMappingFile=E:\cygwin64\tmp\cntk-test-20160411151928.899517\Text_SLU@release_cpu/sentenceLabels.out.txt
       sectionType=labels
       mapping=[
         sectionType=labelMapping
@@ -635,13 +633,13 @@ configparameters: rnnlu.ndl.cntk:LSTM=[
     readerType=LUSequenceReader
     randomize=None
     wordContext=0:1:2
-    wfile=/tmp/cntk-test-20160411094809.162825/._SLU@release_gpu/sequenceSentence.valid.bin
+    wfile=E:\cygwin64\tmp\cntk-test-20160411151928.899517\Text_SLU@release_cpu/sequenceSentence.valid.bin
     wsize=256
     wrecords=1000
     windowSize=10000
     unk="<unk>"
-    wordmap=/home/alrezni/src/cntk_git/Tests/EndToEndTests/SLU/inputmap.txt
-    file=/home/alrezni/src/cntk_git/Tests/EndToEndTests/SLU/atis.dev.IOB.simple
+    wordmap=C:\src\cntk_github\Tests\EndToEndTests\Text\SLU/inputmap.txt
+    file=C:\src\cntk_github\Tests\EndToEndTests\Text\SLU/atis.dev.IOB.simple
     features=[
       dim=0
       sectionType=data
@@ -654,12 +652,12 @@ configparameters: rnnlu.ndl.cntk:LSTM=[
     labelIn=[
       dim=1
       labelDim=10000
-      labelMappingFile=/tmp/cntk-test-20160411094809.162825/._SLU@release_gpu/sentenceLabels.in.txt
+      labelMappingFile=E:\cygwin64\tmp\cntk-test-20160411151928.899517\Text_SLU@release_cpu/sentenceLabels.in.txt
       labelType=Category
       beginSequence="BOS"
       endSequence="EOS"
       usewordmap=true
-      token=/home/alrezni/src/cntk_git/Tests/EndToEndTests/SLU/input.txt
+      token=C:\src\cntk_github\Tests\EndToEndTests\Text\SLU/input.txt
       elementSize=4
       sectionType=labels
       mapping=[
@@ -677,9 +675,9 @@ configparameters: rnnlu.ndl.cntk:LSTM=[
       labelType=Category
       beginSequence="O"
       endSequence="O"
-      token=/home/alrezni/src/cntk_git/Tests/EndToEndTests/SLU/output.txt
+      token=C:\src\cntk_github\Tests\EndToEndTests\Text\SLU/output.txt
       labelDim=10000
-      labelMappingFile=/tmp/cntk-test-20160411094809.162825/._SLU@release_gpu/sentenceLabels.out.txt
+      labelMappingFile=E:\cygwin64\tmp\cntk-test-20160411151928.899517\Text_SLU@release_cpu/sentenceLabels.out.txt
       elementSize=4
       sectionType=labels
       mapping=[
@@ -700,16 +698,16 @@ configparameters: rnnlu.ndl.cntk:LSTMTest=[
   minibatchSize=100
   epochSize=4430000
   defaultHiddenActivity=0.1
-  modelPath=/tmp/cntk-test-20160411094809.162825/._SLU@release_gpu/cntkdebug.dnn
+  modelPath=E:\cygwin64\tmp\cntk-test-20160411151928.899517\Text_SLU@release_cpu/cntkdebug.dnn
   outputNodeNames=outputs
   reader=[
     readerType=LUSequenceReader
     randomize=None
     wordContext=0:1:2
     unk="<unk>"
-    wordmap=/home/alrezni/src/cntk_git/Tests/EndToEndTests/SLU/inputmap.txt
-    file=/home/alrezni/src/cntk_git/Tests/EndToEndTests/SLU/atis.test.apos.pred.pos.head.IOB.simple
-    wfile=/tmp/cntk-test-20160411094809.162825/._SLU@release_gpu/sequenceSentence.bin
+    wordmap=C:\src\cntk_github\Tests\EndToEndTests\Text\SLU/inputmap.txt
+    file=C:\src\cntk_github\Tests\EndToEndTests\Text\SLU/atis.test.apos.pred.pos.head.IOB.simple
+    wfile=E:\cygwin64\tmp\cntk-test-20160411151928.899517\Text_SLU@release_cpu/sequenceSentence.bin
     wsize=256
     wrecords=1000
     windowSize=10000
@@ -725,12 +723,12 @@ configparameters: rnnlu.ndl.cntk:LSTMTest=[
     labelIn=[
       dim=1
       labelDim=10000
-      labelMappingFile=/tmp/cntk-test-20160411094809.162825/._SLU@release_gpu/sentenceLabels.txt
+      labelMappingFile=E:\cygwin64\tmp\cntk-test-20160411151928.899517\Text_SLU@release_cpu/sentenceLabels.txt
       labelType=Category
       beginSequence="BOS"
       endSequence="EOS"
       usewordmap=true
-      token=/home/alrezni/src/cntk_git/Tests/EndToEndTests/SLU/input.txt
+      token=C:\src\cntk_github\Tests\EndToEndTests\Text\SLU/input.txt
       elementSize=4
       sectionType=labels
       mapping=[
@@ -748,9 +746,9 @@ configparameters: rnnlu.ndl.cntk:LSTMTest=[
       labelType=Category
       beginSequence="BOS"
       endSequence="EOS"
-      token=/home/alrezni/src/cntk_git/Tests/EndToEndTests/SLU/output.txt
+      token=C:\src\cntk_github\Tests\EndToEndTests\Text\SLU/output.txt
       labelDim=127
-      labelMappingFile=/tmp/cntk-test-20160411094809.162825/._SLU@release_gpu/sentenceLabels.out.txt
+      labelMappingFile=E:\cygwin64\tmp\cntk-test-20160411151928.899517\Text_SLU@release_cpu/sentenceLabels.out.txt
       elementSize=4
       sectionType=labels
       mapping=[
@@ -767,39 +765,38 @@ configparameters: rnnlu.ndl.cntk:LSTMTest=[
   writer=[
     writerType=LUSequenceWriter
     outputs=[
-      file=/tmp/cntk-test-20160411094809.162825/._SLU@release_gpu/output.rec.txt
-      token=/home/alrezni/src/cntk_git/Tests/EndToEndTests/SLU/output.txt
+      file=E:\cygwin64\tmp\cntk-test-20160411151928.899517\Text_SLU@release_cpu/output.rec.txt
+      token=C:\src\cntk_github\Tests\EndToEndTests\Text\SLU/output.txt
     ]
   ]
 ]
 
-configparameters: rnnlu.ndl.cntk:NdlDir=/home/alrezni/src/cntk_git/Tests/EndToEndTests/SLU
-configparameters: rnnlu.ndl.cntk:OutDir=/tmp/cntk-test-20160411094809.162825/._SLU@release_gpu
-configparameters: rnnlu.ndl.cntk:OutputDir=/tmp/cntk-test-20160411094809.162825/._SLU@release_gpu
+configparameters: rnnlu.ndl.cntk:NdlDir=C:\src\cntk_github\Tests\EndToEndTests\Text\SLU
+configparameters: rnnlu.ndl.cntk:OutDir=E:\cygwin64\tmp\cntk-test-20160411151928.899517\Text_SLU@release_cpu
+configparameters: rnnlu.ndl.cntk:OutputDir=E:\cygwin64\tmp\cntk-test-20160411151928.899517\Text_SLU@release_cpu
 configparameters: rnnlu.ndl.cntk:precision=double
-configparameters: rnnlu.ndl.cntk:RunDir=/tmp/cntk-test-20160411094809.162825/._SLU@release_gpu
+configparameters: rnnlu.ndl.cntk:RunDir=E:\cygwin64\tmp\cntk-test-20160411151928.899517\Text_SLU@release_cpu
 configparameters: rnnlu.ndl.cntk:timestamping=true
 configparameters: rnnlu.ndl.cntk:traceLevel=1
-04/11/2016 09:48:20: <<<<<<<<<<<<<<<<<<<< PROCESSED CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<
-04/11/2016 09:48:20: Commands: LSTM LSTMTest
-04/11/2016 09:48:20: Precision = "double"
-04/11/2016 09:48:20: CNTKModelPath: /tmp/cntk-test-20160411094809.162825/._SLU@release_gpu/cntkdebug.dnn
-04/11/2016 09:48:20: CNTKCommandTrainInfo: LSTM : 3
-04/11/2016 09:48:20: CNTKCommandTrainInfo: CNTKNoMoreCommands_Total : 3
+04/11/2016 14:20:07: <<<<<<<<<<<<<<<<<<<< PROCESSED CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<
+04/11/2016 14:20:07: Commands: LSTM LSTMTest
+04/11/2016 14:20:07: Precision = "double"
+04/11/2016 14:20:07: CNTKModelPath: E:\cygwin64\tmp\cntk-test-20160411151928.899517\Text_SLU@release_cpu/cntkdebug.dnn
+04/11/2016 14:20:07: CNTKCommandTrainInfo: LSTM : 3
+04/11/2016 14:20:07: CNTKCommandTrainInfo: CNTKNoMoreCommands_Total : 3
 
-04/11/2016 09:48:20: ##############################################################################
-04/11/2016 09:48:20: #                                                                            #
-04/11/2016 09:48:20: # Action "train"                                                             #
-04/11/2016 09:48:20: #                                                                            #
-04/11/2016 09:48:20: ##############################################################################
+04/11/2016 14:20:07: ##############################################################################
+04/11/2016 14:20:07: #                                                                            #
+04/11/2016 14:20:07: # Action "train"                                                             #
+04/11/2016 14:20:07: #                                                                            #
+04/11/2016 14:20:07: ##############################################################################
 
-04/11/2016 09:48:20: CNTKCommandTrainBegin: LSTM
-NDLBuilder Using GPU 0
-BatchLUSequenceReader: Input file is /home/alrezni/src/cntk_git/Tests/EndToEndTests/SLU/atis.train.apos.pred.pos.head.IOB.simple
-BatchLUSequenceReader: Input file is /home/alrezni/src/cntk_git/Tests/EndToEndTests/SLU/atis.dev.IOB.simple
+04/11/2016 14:20:07: CNTKCommandTrainBegin: LSTM
+NDLBuilder Using CPU
+BatchLUSequenceReader: Input file is C:\src\cntk_github\Tests\EndToEndTests\Text\SLU/atis.train.apos.pred.pos.head.IOB.simple
+BatchLUSequenceReader: Input file is C:\src\cntk_github\Tests\EndToEndTests\Text\SLU/atis.dev.IOB.simple
 
-04/11/2016 09:48:20: Creating virgin network.
-SetUniformRandomValue (GPU): creating curand object with seed 1, sizeof(ElemType)==8
+04/11/2016 14:20:07: Creating virgin network.
 
 Post-processing network...
 
@@ -902,85 +899,84 @@ Validating --> outputs = Softmax (LSTMoutputW1) : [127 x 1 x *] -> [127 x 1 x *]
 
 Post-processing network complete.
 
-04/11/2016 09:48:20: Created model with 62 nodes on GPU 0.
+04/11/2016 14:20:07: Created model with 62 nodes on CPU.
 
-04/11/2016 09:48:20: Training criterion node(s):
-04/11/2016 09:48:20: 	cr = CrossEntropyWithSoftmax
+04/11/2016 14:20:07: Training criterion node(s):
+04/11/2016 14:20:07: 	cr = CrossEntropyWithSoftmax
 
-04/11/2016 09:48:20: Evaluation criterion node(s):
+04/11/2016 14:20:07: Evaluation criterion node(s):
 
-04/11/2016 09:48:20: 	Err = CrossEntropyWithSoftmax
+04/11/2016 14:20:07: 	Err = CrossEntropyWithSoftmax
 
 
 Allocating matrices for forward and/or backward propagation.
-04/11/2016 09:48:20: No PreCompute nodes found, skipping PreCompute step.
+04/11/2016 14:20:07: No PreCompute nodes found, skipping PreCompute step.
 
-04/11/2016 09:48:20: Starting Epoch 1: learning rate per sample = 0.100000  effective momentum = 0.900000  momentum as time constant = 94.9 samples
+04/11/2016 14:20:07: Starting Epoch 1: learning rate per sample = 0.100000  effective momentum = 0.900000  momentum as time constant = 94.9 samples
 
-04/11/2016 09:48:20: Starting minibatch loop.
-BatchLUSequenceParser: Parsing input data...
-BatchLUSequenceParser: Parsed 51 lines with a total of 36+51 tokens.
-WARNING: The same matrix with dim [127, 3] has been transferred between different devices for 20 times.
-BatchLUSequenceParser: Parsing input data...
-BatchLUSequenceParser: Parsed 0 lines with a total of 0+0 tokens.
-EnsureDataAvailable: No more data.
-04/11/2016 09:48:21: Finished Epoch[ 1 of 3]: [Training Set] TrainLossPerSample = 4.7706065; TotalSamplesSeen = 81; EvalErrPerSample = 4.7706065; AvgLearningRatePerSample = 0.1; EpochTime=0.128349
+04/11/2016 14:20:07: Starting minibatch loop.
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 51 lines with a total of 36+51 tokens.
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 0 lines with a total of 0+0 tokens.
 EnsureDataAvailable: No more data.
-Final Results: Minibatch[1-51]: SamplesSeen = 81    cr: CrossEntropyWithSoftmax/Sample = 4.4589574    Perplexity = 86.397381    Err: CrossEntropyWithSoftmax/Sample = 4.4589574    Perplexity = 86.397381    
-04/11/2016 09:48:21: Finished Epoch[ 1 of 3]: [Validation Set] TrainLossPerSample = 4.4589574; EvalErrPerSample = 4.4589574
-04/11/2016 09:48:21: SGD: Saving checkpoint model '/tmp/cntk-test-20160411094809.162825/._SLU@release_gpu/cntkdebug.dnn.1'
-
-04/11/2016 09:48:21: Starting Epoch 2: learning rate per sample = 0.100000  effective momentum = 0.900000  momentum as time constant = 94.9 samples
-
-04/11/2016 09:48:21: Starting minibatch loop.
+04/11/2016 14:20:12: Finished Epoch[ 1 of 3]: [Training Set] TrainLossPerSample = 4.7398555; TotalSamplesSeen = 81; EvalErrPerSample = 4.7398555; AvgLearningRatePerSample = 0.1; EpochTime=4.48677
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 51 lines with a total of 36+51 tokens.
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 0 lines with a total of 0+0 tokens.
 EnsureDataAvailable: No more data.
-04/11/2016 09:48:21: Finished Epoch[ 2 of 3]: [Training Set] TrainLossPerSample = 4.1254825; TotalSamplesSeen = 162; EvalErrPerSample = 4.1254825; AvgLearningRatePerSample = 0.1; EpochTime=0.051916
+Final Results: Minibatch[1-51]: SamplesSeen = 81    cr: CrossEntropyWithSoftmax/Sample = 4.4723632    Perplexity = 87.563405    Err: CrossEntropyWithSoftmax/Sample = 4.4723632    Perplexity = 87.563405    
+04/11/2016 14:20:15: Finished Epoch[ 1 of 3]: [Validation Set] TrainLossPerSample = 4.4723632; EvalErrPerSample = 4.4723632
+04/11/2016 14:20:15: SGD: Saving checkpoint model 'E:\cygwin64\tmp\cntk-test-20160411151928.899517\Text_SLU@release_cpu/cntkdebug.dnn.1'
+
+04/11/2016 14:20:15: Starting Epoch 2: learning rate per sample = 0.100000  effective momentum = 0.900000  momentum as time constant = 94.9 samples
+
+04/11/2016 14:20:15: Starting minibatch loop.
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 51 lines with a total of 36+51 tokens.
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 0 lines with a total of 0+0 tokens.
 EnsureDataAvailable: No more data.
-Final Results: Minibatch[1-51]: SamplesSeen = 81    cr: CrossEntropyWithSoftmax/Sample = 3.4404076    Perplexity = 31.199672    Err: CrossEntropyWithSoftmax/Sample = 3.4404076    Perplexity = 31.199672    
-04/11/2016 09:48:21: Finished Epoch[ 2 of 3]: [Validation Set] TrainLossPerSample = 3.4404076; EvalErrPerSample = 3.4404076
-04/11/2016 09:48:21: SGD: Saving checkpoint model '/tmp/cntk-test-20160411094809.162825/._SLU@release_gpu/cntkdebug.dnn.2'
-
-04/11/2016 09:48:21: Starting Epoch 3: learning rate per sample = 0.100000  effective momentum = 0.900000  momentum as time constant = 94.9 samples
-
-04/11/2016 09:48:21: Starting minibatch loop.
+04/11/2016 14:20:17: Finished Epoch[ 2 of 3]: [Training Set] TrainLossPerSample = 4.1812397; TotalSamplesSeen = 162; EvalErrPerSample = 4.1812397; AvgLearningRatePerSample = 0.1; EpochTime=1.92451
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 51 lines with a total of 36+51 tokens.
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 0 lines with a total of 0+0 tokens.
 EnsureDataAvailable: No more data.
-04/11/2016 09:48:21: Finished Epoch[ 3 of 3]: [Training Set] TrainLossPerSample = 2.8280984; TotalSamplesSeen = 243; EvalErrPerSample = 2.8280984; AvgLearningRatePerSample = 0.1; EpochTime=0.050464
+Final Results: Minibatch[1-51]: SamplesSeen = 81    cr: CrossEntropyWithSoftmax/Sample = 3.5786757    Perplexity = 35.826064    Err: CrossEntropyWithSoftmax/Sample = 3.5786757    Perplexity = 35.826064    
+04/11/2016 14:20:18: Finished Epoch[ 2 of 3]: [Validation Set] TrainLossPerSample = 3.5786757; EvalErrPerSample = 3.5786757
+04/11/2016 14:20:18: SGD: Saving checkpoint model 'E:\cygwin64\tmp\cntk-test-20160411151928.899517\Text_SLU@release_cpu/cntkdebug.dnn.2'
+
+04/11/2016 14:20:18: Starting Epoch 3: learning rate per sample = 0.100000  effective momentum = 0.900000  momentum as time constant = 94.9 samples
+
+04/11/2016 14:20:18: Starting minibatch loop.
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 51 lines with a total of 36+51 tokens.
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 0 lines with a total of 0+0 tokens.
 EnsureDataAvailable: No more data.
-Final Results: Minibatch[1-51]: SamplesSeen = 81    cr: CrossEntropyWithSoftmax/Sample = 2.2055314    Perplexity = 9.0750731    Err: CrossEntropyWithSoftmax/Sample = 2.2055314    Perplexity = 9.0750731    
-04/11/2016 09:48:21: Finished Epoch[ 3 of 3]: [Validation Set] TrainLossPerSample = 2.2055314; EvalErrPerSample = 2.2055314
-04/11/2016 09:48:21: SGD: Saving checkpoint model '/tmp/cntk-test-20160411094809.162825/._SLU@release_gpu/cntkdebug.dnn'
-04/11/2016 09:48:21: CNTKCommandTrainEnd: LSTM
+04/11/2016 14:20:24: Finished Epoch[ 3 of 3]: [Training Set] TrainLossPerSample = 2.9969333; TotalSamplesSeen = 243; EvalErrPerSample = 2.9969333; AvgLearningRatePerSample = 0.1; EpochTime=5.28606
+BatchLUSequenceParser: Parsing input data...
+BatchLUSequenceParser: Parsed 51 lines with a total of 36+51 tokens.
+BatchLUSequenceParser: Parsing input data...
+BatchLUSequenceParser: Parsed 0 lines with a total of 0+0 tokens.
+EnsureDataAvailable: No more data.
+Final Results: Minibatch[1-51]: SamplesSeen = 81    cr: CrossEntropyWithSoftmax/Sample = 2.2711188    Perplexity = 9.6902358    Err: CrossEntropyWithSoftmax/Sample = 2.2711188    Perplexity = 9.6902358    
+04/11/2016 14:20:25: Finished Epoch[ 3 of 3]: [Validation Set] TrainLossPerSample = 2.2711188; EvalErrPerSample = 2.2711188
+04/11/2016 14:20:25: SGD: Saving checkpoint model 'E:\cygwin64\tmp\cntk-test-20160411151928.899517\Text_SLU@release_cpu/cntkdebug.dnn'
+04/11/2016 14:20:25: CNTKCommandTrainEnd: LSTM
 
-04/11/2016 09:48:21: Action "train" complete.
+04/11/2016 14:20:25: Action "train" complete.
 
 
-04/11/2016 09:48:21: ##############################################################################
-04/11/2016 09:48:21: #                                                                            #
-04/11/2016 09:48:21: # Action "write"                                                             #
-04/11/2016 09:48:21: #                                                                            #
-04/11/2016 09:48:21: ##############################################################################
+04/11/2016 14:20:25: ##############################################################################
+04/11/2016 14:20:25: #                                                                            #
+04/11/2016 14:20:25: # Action "write"                                                             #
+04/11/2016 14:20:25: #                                                                            #
+04/11/2016 14:20:25: ##############################################################################
 
-BatchLUSequenceReader: Input file is /home/alrezni/src/cntk_git/Tests/EndToEndTests/SLU/atis.test.apos.pred.pos.head.IOB.simple
+BatchLUSequenceReader: Input file is C:\src\cntk_github\Tests\EndToEndTests\Text\SLU/atis.test.apos.pred.pos.head.IOB.simple
 
 Post-processing network...
 
@@ -1097,6 +1093,6 @@ BatchLUSequenceParser: Parsed 0 lines with a total of 0+0 tokens.
 EnsureDataAvailable: No more data.
 Total Samples Evaluated = 91
 
-04/11/2016 09:48:21: Action "write" complete.
+04/11/2016 14:20:26: Action "write" complete.
 
-04/11/2016 09:48:21: __COMPLETED__
+04/11/2016 14:20:26: __COMPLETED__

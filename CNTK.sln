@@ -832,14 +832,10 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "PennTreebank", "PennTreeban
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "RNN", "RNN", "{B72C5B0E-38E8-41BF-91FE-0C1012C7C078}"
 	ProjectSection(SolutionItems) = preProject
-		Tests\EndToEndTests\Examples\Text\PennTreebank\RNN\baseline.linux.debug.cpu.txt = Tests\EndToEndTests\Examples\Text\PennTreebank\RNN\baseline.linux.debug.cpu.txt
-		Tests\EndToEndTests\Examples\Text\PennTreebank\RNN\baseline.linux.debug.gpu.txt = Tests\EndToEndTests\Examples\Text\PennTreebank\RNN\baseline.linux.debug.gpu.txt
-		Tests\EndToEndTests\Examples\Text\PennTreebank\RNN\baseline.linux.release.cpu.txt = Tests\EndToEndTests\Examples\Text\PennTreebank\RNN\baseline.linux.release.cpu.txt
-		Tests\EndToEndTests\Examples\Text\PennTreebank\RNN\baseline.linux.release.gpu.txt = Tests\EndToEndTests\Examples\Text\PennTreebank\RNN\baseline.linux.release.gpu.txt
-		Tests\EndToEndTests\Examples\Text\PennTreebank\RNN\baseline.windows.debug.cpu.txt = Tests\EndToEndTests\Examples\Text\PennTreebank\RNN\baseline.windows.debug.cpu.txt
-		Tests\EndToEndTests\Examples\Text\PennTreebank\RNN\baseline.windows.debug.gpu.txt = Tests\EndToEndTests\Examples\Text\PennTreebank\RNN\baseline.windows.debug.gpu.txt
-		Tests\EndToEndTests\Examples\Text\PennTreebank\RNN\baseline.windows.release.cpu.txt = Tests\EndToEndTests\Examples\Text\PennTreebank\RNN\baseline.windows.release.cpu.txt
-		Tests\EndToEndTests\Examples\Text\PennTreebank\RNN\baseline.windows.release.gpu.txt = Tests\EndToEndTests\Examples\Text\PennTreebank\RNN\baseline.windows.release.gpu.txt
+		Tests\EndToEndTests\Examples\Text\PennTreebank\RNN\baseline.linux.cpu.txt = Tests\EndToEndTests\Examples\Text\PennTreebank\RNN\baseline.linux.cpu.txt
+		Tests\EndToEndTests\Examples\Text\PennTreebank\RNN\baseline.linux.gpu.txt = Tests\EndToEndTests\Examples\Text\PennTreebank\RNN\baseline.linux.gpu.txt
+		Tests\EndToEndTests\Examples\Text\PennTreebank\RNN\baseline.windows.cpu.txt = Tests\EndToEndTests\Examples\Text\PennTreebank\RNN\baseline.windows.cpu.txt
+		Tests\EndToEndTests\Examples\Text\PennTreebank\RNN\baseline.windows.gpu.txt = Tests\EndToEndTests\Examples\Text\PennTreebank\RNN\baseline.windows.gpu.txt
 		Tests\EndToEndTests\Examples\Text\PennTreebank\RNN\run-test = Tests\EndToEndTests\Examples\Text\PennTreebank\RNN\run-test
 		Tests\EndToEndTests\Examples\Text\PennTreebank\RNN\testcases.yml = Tests\EndToEndTests\Examples\Text\PennTreebank\RNN\testcases.yml
 	EndProjectSection
@@ -939,6 +935,18 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "04_ResNet", "04_ResNet", "{
 		Tests\EndToEndTests\Examples\Image\Miscellaneous\CIFAR-10\04_ResNet_56\baseline.windows.txt = Tests\EndToEndTests\Examples\Image\Miscellaneous\CIFAR-10\04_ResNet_56\baseline.windows.txt
 		Tests\EndToEndTests\Examples\Image\Miscellaneous\CIFAR-10\04_ResNet_56\run-test = Tests\EndToEndTests\Examples\Image\Miscellaneous\CIFAR-10\04_ResNet_56\run-test
 		Tests\EndToEndTests\Examples\Image\Miscellaneous\CIFAR-10\04_ResNet_56\testcases.yml = Tests\EndToEndTests\Examples\Image\Miscellaneous\CIFAR-10\04_ResNet_56\testcases.yml
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Miscellaneous", "Miscellaneous", "{CCB0CD89-DE53-4104-94D3-041D46FC8885}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "SLU", "SLU", "{B900D033-DC37-45F1-AE52-F35584FD3024}"
+	ProjectSection(SolutionItems) = preProject
+		Tests\EndToEndTests\Examples\Text\Miscellaneous\SLU\baseline.linux.cpu.txt = Tests\EndToEndTests\Examples\Text\Miscellaneous\SLU\baseline.linux.cpu.txt
+		Tests\EndToEndTests\Examples\Text\Miscellaneous\SLU\baseline.linux.gpu.txt = Tests\EndToEndTests\Examples\Text\Miscellaneous\SLU\baseline.linux.gpu.txt
+		Tests\EndToEndTests\Examples\Text\Miscellaneous\SLU\baseline.windows.cpu.txt = Tests\EndToEndTests\Examples\Text\Miscellaneous\SLU\baseline.windows.cpu.txt
+		Tests\EndToEndTests\Examples\Text\Miscellaneous\SLU\baseline.windows.gpu.txt = Tests\EndToEndTests\Examples\Text\Miscellaneous\SLU\baseline.windows.gpu.txt
+		Tests\EndToEndTests\Examples\Text\Miscellaneous\SLU\run-test = Tests\EndToEndTests\Examples\Text\Miscellaneous\SLU\run-test
+		Tests\EndToEndTests\Examples\Text\Miscellaneous\SLU\testcases.yml = Tests\EndToEndTests\Examples\Text\Miscellaneous\SLU\testcases.yml
 	EndProjectSection
 EndProject
 Global
@@ -1288,5 +1296,7 @@ Global
 		{AB9207B9-B134-4C57-B7ED-F3DCF7B0DC5F} = {0141526B-F257-4574-8CBE-99634726FFCE}
 		{12FB912C-43F8-40FE-BD7F-B52F589A1EBC} = {0141526B-F257-4574-8CBE-99634726FFCE}
 		{2BFE4D88-6F32-4701-887A-1DE3D7626DBB} = {0141526B-F257-4574-8CBE-99634726FFCE}
+		{CCB0CD89-DE53-4104-94D3-041D46FC8885} = {439BE0E0-FABE-403D-BF2C-A41FB8A60616}
+		{B900D033-DC37-45F1-AE52-F35584FD3024} = {CCB0CD89-DE53-4104-94D3-041D46FC8885}
 	EndGlobalSection
 EndGlobal

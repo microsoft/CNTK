@@ -124,7 +124,7 @@ LSTM=[
       dim=1
       usewordmap=true
 
-  # vocabulary size
+      # vocabulary size
       labelDim=10000
       labelMappingFile=$ExpDir$/sentenceLabels.txt
       labelType=Category
