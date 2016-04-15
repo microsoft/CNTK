@@ -196,8 +196,7 @@ public:
     {
         // move the target matrix to the target device, since below it is accessed as slices which cannot move
         // TODO: once this gets reimplemented using TensorView, then this is no longer needed.
-        Input(0)->Value().TransferToDeviceIfNotThere(m_deviceId, /*isBeingMoved=*/ false);
-        Value().TransferToDeviceIfNotThere(m_deviceId, /*isBeingMoved=*/ true);
+        Input(0)->Value().TransferToDeviceIfNotThere(Value().GetDeviceId(), /*isBeingMoved=*/ false);
 
         auto values = ValueFor(fr);
         ForwardPropV(values, Input(0)->ValueFor(fr));

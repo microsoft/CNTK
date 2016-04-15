@@ -3027,12 +3027,11 @@ ElemType Matrix<ElemType>::SumOfAbsElements() const
     if (IsEmpty())
         LogicError("SumOfAbsElements: Matrix is empty.");
 
-    DISPATCH_MATRIX_ON_FLAG(this,
-                            nullptr,
-                            return m_CPUMatrix->SumOfAbsElements(),
-                            return m_GPUMatrix->SumOfAbsElements(),
-                            NOT_IMPLEMENTED,
-                            return m_GPUSparseMatrix->SumOfAbsElements());
+    DISPATCH_MATRIX_ON_FLAG(this, nullptr,
+                            { return m_CPUMatrix->SumOfAbsElements(); },
+                            { return m_GPUMatrix->SumOfAbsElements(); },
+                            { NOT_IMPLEMENTED; },
+                            { return m_GPUSparseMatrix->SumOfAbsElements(); });
 }
 
 //sum of all elements
@@ -3042,11 +3041,10 @@ ElemType Matrix<ElemType>::LogSumOfElements() const
     if (IsEmpty())
         LogicError("LogSumOfElements: Matrix is empty.");
 
-    DISPATCH_MATRIX_ON_FLAG(this,
-                            nullptr,
+    DISPATCH_MATRIX_ON_FLAG(this, nullptr,
                             { return m_CPUMatrix->LogSumOfElements(); },
                             { return m_GPUMatrix->LogSumOfElements(); },
-                            {NOT_IMPLEMENTED},
+                            { NOT_IMPLEMENTED},
                             { NOT_IMPLEMENTED });
 }
 

@@ -58,6 +58,8 @@ struct CriterionAccumulator
     // retrieve an accumulated result as a pair (numerator, denominator)
     EpochCriterion GetCriterion(size_t i) const
     {
+        // BUGBUG: For unknown reasons, this (or the other below) check makes a difference for MPI configs.
+        //         If it is left out, then training and test configs end up being scaled by the same factor close to 1.
         if (m_aggregateSampleCounts[i] == 0)
             return EpochCriterion(0, 0); // avoid unnecessary GPU access
         else
@@ -74,11 +76,9 @@ private:
         float beta = reset ? 0 : 1;
         // Note: A future change will be that criterion nodes emit criteria per frame.
         // In that case, we will do masking and an implicit reduction right here using TensorView.
-        // BUGBUG: currently fails with
-        // CNTKTextFormatReader/ParallelTraining/NoQuantization/DoublePrecision: MPI Rank 0: cntk: Source/1BitSGD/AllReduceDistGradAggregator.h:281: void Microsoft::MSR::CNTK::AllReduceDistGradAggregator<ElemType>::AggregateGradientsImpl(const std::vector<Microsoft::MSR::CNTK::Matrix<ElemType>*>&, Microsoft::MSR::CNTK::DistGradHeader*, bool) [with ElemType = double]:
-        // Assertion `headerCPU->criterion == 0' failed.
         size_t numSamples = GetNumSamples(nodes[i], legacyNumSamples);
-        if (beta == 0) // temp solution until we add TensorView reduction
+        // temp solution until we add TensorView reduction
+        if (beta == 0)
         {
             Matrix<ElemType>::AssignElementToElement(dynamic_pointer_cast<ComputationNode<ElemType>>(node)->Value(),
                                                      0, 0, m_aggregateCriterionValues, 0, i);

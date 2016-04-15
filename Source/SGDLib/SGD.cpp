@@ -976,7 +976,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                     ComputationNodePtr node = dynamic_pointer_cast<ComputationNode<ElemType>>(*nodeIter);
                     if (node->IsParameterUpdateRequired())
                     {
-                        Matrix<ElemType>* currParamsGradient = &(node->Gradient());
+                        Matrix<ElemType>* currParamsGradient = &(node->Gradient()); // TODO: we can use shared_ptrs now
 
                         // Sometimes, in parallel training, the current node may not get any samples to process
                         // In this case, the gradient matrix may not have been sized yet. If so, lets size it.
@@ -992,11 +992,8 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
             }
 
             // prepare the header
-            // BUGBUG: This needs to be redone for criterion nodes that have their own MBLayout.
             m_gradHeader->numEvalNode = evaluationNodes.size();
             m_gradHeader->numSamples = actualMBSize;
-            //m_gradHeader->numSamplesWithLabel = numSamplesWithLabel;
-            //m_gradHeader->criterion = actualMBSize > 0 ? criterionNodes[0]->Get00Element() : 0.0;
             // hoist the criterion into CPU space for all-reduce
             localEpochCriterion.Assign(criterionNodes, 0, numSamplesWithLabel);
             for (size_t i = 0; i < evaluationNodes.size(); i++)
