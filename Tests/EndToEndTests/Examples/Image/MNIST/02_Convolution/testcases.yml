@@ -1,8 +1,10 @@
 dataDir: ../../../../../../Examples/Image/MNIST/Data
 
 tags:
-    # TODO
-    - nightly-e (build_sku=='gpu') and ((device=='gpu') or (flavor=='release')) 
+    # In BVT, run Release GPU (~ 60 - 90 sec)
+    - bvt-e (build_sku=='gpu') and (device=='gpu') and (flavor=='release') 
+    # In Nightly on Linux, run Debug GPU in addition (~ 100 - 240 sec).
+    - nightly-e (build_sku=='gpu') and (device=='gpu')
 
 testCases:
   CNTK Run must be completed:
@@ -25,6 +27,8 @@ testCases:
 
   Per-minibatch (with low train loss) training results must match:
     patterns:
+      # Ignores first set of minibatches at start of epoch, which sometimes has a larger deviation:
+      - 01-
       - Epoch[{{integer}} of {{integer}}]-Minibatch[{{integer}}-{{integer}}
       - SamplesSeen = {{integer}}
       - TrainLossPerSample =  0.0

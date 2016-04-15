@@ -3,75 +3,37 @@
 from cntk.graph import ComputationNode, InputComputationNodeBase, ImageInputComputationNodeBase
 
 
-class Print(ComputationNode):
+class Slice(ComputationNode):
 
-    def __init__(self, value, format='', name='Print', var_name=None):
-        super(Print, self).__init__(
+    def __init__(self, beginIndex, endIndex, input, axis=1, name='Slice',
+                 var_name=None):
+        super(Slice, self).__init__(
             params=['value', 'format'], name=name, var_name=var_name)
-        self.value = value
-        self.format = format
-        self.params_with_defaults = ['format']
+        self.beginIndex = beginIndex
+        self.endIndex = endIndex
+        self.input = input
+        self.axis = axis
 
 
-class Debug(ComputationNode):
+class Splice(ComputationNode):
 
-    def __init__(self, value, say='', enabled=True, name='Debug', var_name=None):
-        super(Debug, self).__init__(
-            params=['value', 'say', 'enabled'], name=name, var_name=var_name)
-        self.value = value
-        self.say = say
-        self.enabled = enabled
-        self.params_with_defaults = ['say', 'enabled']
-
-
-class Format(ComputationNode):
-
-    def __init__(self, value, format, name='Format', var_name=None):
-        super(Format, self).__init__(
+    def __init__(self, beginIndex, endIndex, input, axis=1, name='Splice',
+                 var_name=None):
+        super(Splice, self).__init__(
             params=['value', 'format'], name=name, var_name=var_name)
-        self.value = value
-        self.format = format
-        self.params_with_defaults = []
+        self.beginIndex = beginIndex
+        self.endIndex = endIndex
+        self.input = input
+        self.axis = axis
 
 
-class Replace(ComputationNode):
+class ElementDivide(ComputationNode):
 
-    def __init__(self, s, from_, to, name='Replace', var_name=None):
-        super(Replace, self).__init__(
-            params=['s', 'from_', 'to'], name=name, var_name=var_name)
-        self.s = s
-        self.from_ = from_
-        self.to = to
-        self.params_with_defaults = []
-
-
-class Substr(ComputationNode):
-
-    def __init__(self, s, begin, num, name='Substr', var_name=None):
-        super(Substr, self).__init__(
-            params=['s', 'begin', 'num'], name=name, var_name=var_name)
-        self.s = s
-        self.begin = begin
-        self.num = num
-        self.params_with_defaults = []
-
-
-class Chr(ComputationNode):
-
-    def __init__(self, c, name='Chr', var_name=None):
-        super(Chr, self).__init__(params=['c'], name=name, var_name=var_name)
-        self.c = c
-        self.params_with_defaults = []
-
-
-class Length(ComputationNode):
-
-    def __init__(self, x, name='Length', var_name=None):
-        super(Length, self).__init__(
-            params=['x'], name=name, var_name=var_name)
-        self.x = x
-        self.params_with_defaults = []
-
+    def __init__(self, aMatrix, anotherMatrix, name='ElementDivide', var_name=None):
+        super(ElementDivide, self).__init__(
+            params=['aMatrix', 'anotherMatrix'], name=name, var_name=var_name)
+        self.aMatrix = aMatrix
+        self.anotherMatrix = anotherMatrix
 
 class Ceil(ComputationNode):
 
@@ -125,11 +87,21 @@ class Fac(ComputationNode):
         self.params_with_defaults = []
 
 
+class IsSameObject(ComputationNode):
+
+    def __init__(self, a, b, name='IsSameObject', var_name=None):
+        super(IsSameObject, self).__init__(
+            params=['a', 'b'], name=name, var_name=var_name)
+        self.a = a
+        self.b = b
+        self.params_with_defaults = []
+
+
 class LearnableParameter(ComputationNode):
 
-    def __init__(self, rows, cols, learningRateMultiplier=1.0, init='uniform', initValueScale=1, value=0, initFromFilePath='', initOnCPUOnly=True, randomSeed=-1, name='LearnableParameter', var_name=None):
-        super(LearnableParameter, self).__init__(params=[
-            'rows', 'cols', 'learningRateMultiplier', 'init', 'initValueScale', 'value', 'initFromFilePath', 'initOnCPUOnly', 'randomSeed'], name=name, var_name=var_name)
+    def __init__(self, rows, cols, learningRateMultiplier=1.0, init='uniform', initValueScale=1, value=0, initFromFilePath='', initFromLiteral='', initOnCPUOnly=True, randomSeed=-1, name='LearnableParameter', var_name=None):
+        super(LearnableParameter, self).__init__(params=['rows', 'cols', 'learningRateMultiplier', 'init', 'initValueScale',
+                                                         'value', 'initFromFilePath', 'initFromLiteral', 'initOnCPUOnly', 'randomSeed'], name=name, var_name=var_name)
         self.rows = rows
         self.cols = cols
         self.learningRateMultiplier = learningRateMultiplier
@@ -137,27 +109,29 @@ class LearnableParameter(ComputationNode):
         self.initValueScale = initValueScale
         self.value = value
         self.initFromFilePath = initFromFilePath
+        self.initFromLiteral = initFromLiteral
         self.initOnCPUOnly = initOnCPUOnly
         self.randomSeed = randomSeed
-        self.params_with_defaults = [
-            'learningRateMultiplier', 'init', 'initValueScale', 'value', 'initFromFilePath', 'initOnCPUOnly', 'randomSeed']
+        self.params_with_defaults = ['learningRateMultiplier', 'init', 'initValueScale',
+                                     'value', 'initFromFilePath', 'initFromLiteral', 'initOnCPUOnly', 'randomSeed']
 
 
 class ParameterTensor(ComputationNode):
 
-    def __init__(self, dims, learningRateMultiplier=1.0, init='uniform', initValueScale=1, value=0, initFromFilePath='', initOnCPUOnly=True, randomSeed=-1, name='ParameterTensor', var_name=None):
-        super(ParameterTensor, self).__init__(params=[
-            'dims', 'learningRateMultiplier', 'init', 'initValueScale', 'value', 'initFromFilePath', 'initOnCPUOnly', 'randomSeed'], name=name, var_name=var_name)
+    def __init__(self, dims, learningRateMultiplier=1.0, init='uniform', initValueScale=1, value=0, initFromFilePath='', initFromLiteral='', initOnCPUOnly=True, randomSeed=-1, name='ParameterTensor', var_name=None):
+        super(ParameterTensor, self).__init__(params=['dims', 'learningRateMultiplier', 'init', 'initValueScale',
+                                                      'value', 'initFromFilePath', 'initFromLiteral', 'initOnCPUOnly', 'randomSeed'], name=name, var_name=var_name)
         self.dims = dims
         self.learningRateMultiplier = learningRateMultiplier
         self.init = init
         self.initValueScale = initValueScale
         self.value = value
         self.initFromFilePath = initFromFilePath
+        self.initFromLiteral = initFromLiteral
         self.initOnCPUOnly = initOnCPUOnly
         self.randomSeed = randomSeed
-        self.params_with_defaults = [
-            'learningRateMultiplier', 'init', 'initValueScale', 'value', 'initFromFilePath', 'initOnCPUOnly', 'randomSeed']
+        self.params_with_defaults = ['learningRateMultiplier', 'init', 'initValueScale',
+                                     'value', 'initFromFilePath', 'initFromLiteral', 'initOnCPUOnly', 'randomSeed']
 
 
 class Input(InputComputationNodeBase):
@@ -252,17 +226,6 @@ class Shift(ComputationNode):
         self.params_with_defaults = ['boundaryMode', 'dim']
 
 
-class RowSlice(ComputationNode):
-
-    def __init__(self, startIndex, numRows, input, name='RowSlice', var_name=None):
-        super(RowSlice, self).__init__(
-            params=['startIndex', 'numRows', 'input'], name=name, var_name=var_name)
-        self.startIndex = startIndex
-        self.numRows = numRows
-        self.input = input
-        self.params_with_defaults = []
-
-
 class RowRepeat(ComputationNode):
 
     def __init__(self, input, numRepeats, name='RowRepeat', var_name=None):
@@ -298,24 +261,24 @@ class Reshape(ComputationNode):
 
 class NewReshape(ComputationNode):
 
-    def __init__(self, input, dims, beginDim=0, endDim=0, name='NewReshape', var_name=None):
+    def __init__(self, input, dims, beginAxis=0, endAxis=0, name='NewReshape', var_name=None):
         super(NewReshape, self).__init__(
-            params=['input', 'dims', 'beginDim', 'endDim'], name=name, var_name=var_name)
+            params=['input', 'dims', 'beginAxis', 'endAxis'], name=name, var_name=var_name)
         self.input = input
         self.dims = dims
-        self.beginDim = beginDim
-        self.endDim = endDim
-        self.params_with_defaults = ['beginDim', 'endDim']
+        self.beginAxis = beginAxis
+        self.endAxis = endAxis
+        self.params_with_defaults = ['beginAxis', 'endAxis']
 
 
 class TransposeDimensions(ComputationNode):
 
-    def __init__(self, input, dim1, dim2, name='TransposeDimensions', var_name=None):
+    def __init__(self, input, axis1, axis2, name='TransposeDimensions', var_name=None):
         super(TransposeDimensions, self).__init__(
-            params=['input', 'dim1', 'dim2'], name=name, var_name=var_name)
+            params=['input', 'axis1', 'axis2'], name=name, var_name=var_name)
         self.input = input
-        self.dim1 = dim1
-        self.dim2 = dim2
+        self.axis1 = axis1
+        self.axis2 = axis2
         self.params_with_defaults = []
 
 
@@ -363,21 +326,39 @@ class ReconcileMBLayout(ComputationNode):
 
 class Convolution(ComputationNode):
 
-    def __init__(self, weightNode, inputValueNode, kernelWidth, kernelHeight, outputChannels, horizontalSubsample, verticalSubsample, zeroPadding=False, maxTempMemSizeInSamples=0, imageLayout='CHW', name='Convolution', var_name=None):
-        super(Convolution, self).__init__(params=['weightNode', 'inputValueNode', 'kernelWidth', 'kernelHeight', 'outputChannels',
-                                                  'horizontalSubsample', 'verticalSubsample', 'zeroPadding', 'maxTempMemSizeInSamples', 'imageLayout'], name=name, var_name=var_name)
+    def __init__(self, weightNode, inputValueNode, kernelDims, mapDims=1, stride=1, sharing=True, autoPadding=True, lowerPad=0, upperPad=0, imageLayout='CHW', maxTempMemSizeInSamples=0, name='Convolution', var_name=None):
+        super(Convolution, self).__init__(params=['weightNode', 'inputValueNode', 'kernelDims', 'mapDims', 'stride', 'sharing',
+                                                  'autoPadding', 'lowerPad', 'upperPad', 'imageLayout', 'maxTempMemSizeInSamples'], name=name, var_name=var_name)
         self.weightNode = weightNode
         self.inputValueNode = inputValueNode
-        self.kernelWidth = kernelWidth
-        self.kernelHeight = kernelHeight
-        self.outputChannels = outputChannels
-        self.horizontalSubsample = horizontalSubsample
-        self.verticalSubsample = verticalSubsample
-        self.zeroPadding = zeroPadding
+        self.kernelDims = kernelDims
+        self.mapDims = mapDims
+        self.stride = stride
+        self.sharing = sharing
+        self.autoPadding = autoPadding
+        self.lowerPad = lowerPad
+        self.upperPad = upperPad
+        self.imageLayout = imageLayout
         self.maxTempMemSizeInSamples = maxTempMemSizeInSamples
+        self.params_with_defaults = ['mapDims', 'stride', 'sharing', 'autoPadding',
+                                     'lowerPad', 'upperPad', 'imageLayout', 'maxTempMemSizeInSamples']
+
+
+class Pooling(ComputationNode):
+
+    def __init__(self, input, poolKind, kernelDims, stride=1, autoPadding=True, lowerPad=0, upperPad=0, imageLayout='CHW', name='Pooling', var_name=None):
+        super(Pooling, self).__init__(params=['input', 'poolKind', 'kernelDims', 'stride',
+                                              'autoPadding', 'lowerPad', 'upperPad', 'imageLayout'], name=name, var_name=var_name)
+        self.input = input
+        self.poolKind = poolKind
+        self.kernelDims = kernelDims
+        self.stride = stride
+        self.autoPadding = autoPadding
+        self.lowerPad = lowerPad
+        self.upperPad = upperPad
         self.imageLayout = imageLayout
         self.params_with_defaults = [
-            'zeroPadding', 'maxTempMemSizeInSamples', 'imageLayout']
+            'stride', 'autoPadding', 'lowerPad', 'upperPad', 'imageLayout']
 
 
 class MaxPooling(ComputationNode):
@@ -410,22 +391,22 @@ class AveragePooling(ComputationNode):
 
 class BatchNormalization(ComputationNode):
 
-    def __init__(self, input, scale, bias, runMean, runInvStdDev, eval, spatial, normalizationTimeConstant=0, epsilon=1e-05, useCntkEngine=True, imageLayout='CHW', name='BatchNormalization', var_name=None):
-        super(BatchNormalization, self).__init__(params=['input', 'scale', 'bias', 'runMean', 'runInvStdDev', 'eval',
-                                                         'spatial', 'normalizationTimeConstant', 'epsilon', 'useCntkEngine', 'imageLayout'], name=name, var_name=var_name)
+    def __init__(self, input, scale, bias, runMean, runInvStdDev, spatial, normalizationTimeConstant=0, blendTimeConstant=0, epsilon=1e-05, useCntkEngine=True, imageLayout='CHW', name='BatchNormalization', var_name=None):
+        super(BatchNormalization, self).__init__(params=['input', 'scale', 'bias', 'runMean', 'runInvStdDev', 'spatial',
+                                                         'normalizationTimeConstant', 'blendTimeConstant', 'epsilon', 'useCntkEngine', 'imageLayout'], name=name, var_name=var_name)
         self.input = input
         self.scale = scale
         self.bias = bias
         self.runMean = runMean
         self.runInvStdDev = runInvStdDev
-        self.eval = eval
         self.spatial = spatial
         self.normalizationTimeConstant = normalizationTimeConstant
+        self.blendTimeConstant = blendTimeConstant
         self.epsilon = epsilon
         self.useCntkEngine = useCntkEngine
         self.imageLayout = imageLayout
         self.params_with_defaults = [
-            'normalizationTimeConstant', 'epsilon', 'useCntkEngine', 'imageLayout']
+            'normalizationTimeConstant', 'blendTimeConstant', 'epsilon', 'useCntkEngine', 'imageLayout']
 
 
 class Abs(ComputationNode):
@@ -670,6 +651,14 @@ class PackedIndex(ComputationNode):
         self.params_with_defaults = []
 
 
+class Pass(ComputationNode):
+
+    def __init__(self, x, name='Pass', var_name=None):
+        super(Pass, self).__init__(params=['x'], name=name, var_name=var_name)
+        self.x = x
+        self.params_with_defaults = []
+
+
 class PerDimMeanVarDeNormalization(ComputationNode):
 
     def __init__(self, dataVectorSequence, meanVector, invStdDevVector, name='PerDimMeanVarDeNormalization', var_name=None):
@@ -699,6 +688,15 @@ class Plus(ComputationNode):
             params=['leftMatrix', 'rightMatrix'], name=name, var_name=var_name)
         self.leftMatrix = leftMatrix
         self.rightMatrix = rightMatrix
+        self.params_with_defaults = []
+
+
+class Reciprocal(ComputationNode):
+
+    def __init__(self, z, name='Reciprocal', var_name=None):
+        super(Reciprocal, self).__init__(
+            params=['z'], name=name, var_name=var_name)
+        self.z = z
         self.params_with_defaults = []
 
 
@@ -836,6 +834,15 @@ ClassificationError = ErrorPrediction
 Delay = PastValue
 
 
+class ConstantTensor(ParameterTensor):
+
+    def __init__(self, value, dims, name='ConstantTensor', var_name=None):
+        super(ConstantTensor, self).__init__(dims, learningRateMultiplier=0,
+                                             init='fixedValue', value=value, name=name, var_name=var_name)
+        self.params = ['value', 'dims']
+        self.params_with_defaults = []
+
+
 class Constant(Parameter):
 
     def __init__(self, value, rows=1, cols=1, name='Constant', var_name=None):
@@ -845,30 +852,39 @@ class Constant(Parameter):
         self.params_with_defaults = ['rows', 'cols']
 
 
+class RowSlice(Slice):
+
+    def __init__(self, beginIndex, numRows, input, name='RowSlice', var_name=None):
+        super(RowSlice, self).__init__(
+            beginIndex, beginIndex + numRows, input, axis=1, name=name, var_name=var_name)
+        self.params = ['beginIndex', 'numRows', 'input']
+        self.params_with_defaults = []
+
+
 class ReshapeDimension(NewReshape):
 
-    def __init__(self, x, dim, tensorShape, name='ReshapeDimension', var_name=None):
+    def __init__(self, x, axis, tensorShape, name='ReshapeDimension', var_name=None):
         super(ReshapeDimension, self).__init__(
-            x, tensorShape, beginDim=dim, endDim=dim + 1, name=name, var_name=var_name)
-        self.params = ['x', 'dim', 'tensorShape']
+            x, tensorShape, beginAxis=axis, endAxis=axis + 1, name=name, var_name=var_name)
+        self.params = ['x', 'axis', 'tensorShape']
         self.params_with_defaults = []
 
 
 class FlattenDimensions(NewReshape):
 
-    def __init__(self, x, dim, num, name='FlattenDimensions', var_name=None):
+    def __init__(self, x, axis, num, name='FlattenDimensions', var_name=None):
         super(FlattenDimensions, self).__init__(
-            x, 0, beginDim=dim, endDim=dim + num, name=name, var_name=var_name)
-        self.params = ['x', 'dim', 'num']
+            x, 0, beginAxis=axis, endAxis=axis + num, name=name, var_name=var_name)
+        self.params = ['x', 'axis', 'num']
         self.params_with_defaults = []
 
 
 class SplitDimension(ReshapeDimension):
 
-    def __init__(self, x, dim, N, name='SplitDimension', var_name=None):
+    def __init__(self, x, axis, N, name='SplitDimension', var_name=None):
         super(SplitDimension, self).__init__(
-            x, dim, '<not yet supported>', name=name, var_name=var_name)
-        self.params = ['x', 'dim', 'N']
+            x, axis, '<not yet supported>', name=name, var_name=var_name)
+        self.params = ['x', 'axis', 'N']
         self.params_with_defaults = []
 
 

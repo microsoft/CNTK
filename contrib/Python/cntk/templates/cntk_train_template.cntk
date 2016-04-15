@@ -3,21 +3,22 @@
 
 command=Train
 
-modelPath="%(ModelPath)s"		
-deviceId=%(DevideId)s					   
+modelPath="%(ModelPath)s"
+deviceId=%(DevideId)s
+precision="%(Precision)s"
 
 Train=[
-	action="train"
-	run=BrainScriptNetworkBuilder
+    action="train"
+    run=BrainScriptNetworkBuilder
 
     BrainScriptNetworkBuilder=[
-%(ModelDescription)s  
+%(ModelDescription)s
     ]
-	
-	SGD = [	
+    
+    SGD = [
 %(SGD)s
-	]
-	
-%(Reader)s	
+    ]
+    
+%(Reader)s
 ]
 

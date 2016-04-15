@@ -49,8 +49,6 @@
   </Choose>
   <PropertyGroup>
     <CudaToolkitCustomDir>$(CudaPath)</CudaToolkitCustomDir>
-    <IncludePath>..\Common\include;$(ACML_PATH)\include;$(CudaInclude);$(CUB_PATH);$(CuDnnIncPath);$(IncludePath)</IncludePath>
-    <LibraryPath>$(SolutionDir)$(Platform)\$(Configuration);$(ACML_PATH)\lib;$(CudaLibPath);$(CuDnnLibPath);$(LibraryPath)</LibraryPath>
     <IntDir>$(IntDir)\MathCUDA\</IntDir>
   </PropertyGroup>
   <ImportGroup Label="ExtensionSettings">
@@ -76,7 +74,7 @@
       <WarningLevel>Level4</WarningLevel>
       <PreprocessorDefinitions>NO_SYNC; WIN32; _WINDOWS; _USRDLL; MATH_EXPORTS; $(CuDnnDefine); %(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>..\Common\include\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)Source\Common\include;$(ACML_PATH)\include;$(CudaInclude);$(CUB_PATH);$(CuDnnIncPath)</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <FloatingPointModel>Fast</FloatingPointModel>
       <OpenMPSupport>true</OpenMPSupport>
@@ -90,7 +88,7 @@
       <DelayLoadDLLs>$(CudaDlls);%(DelayLoadDLLs)</DelayLoadDLLs>
     </Link>
     <Lib>
-      <AdditionalLibraryDirectories>$(CuDnnLibPath);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(OutDir);$(ACML_PATH)\lib;$(CudaLibPath);$(CuDnnLibPath)</AdditionalLibraryDirectories>
       <AdditionalDependencies>$(CuDnnLib)</AdditionalDependencies>
     </Lib>
     <CudaCompile>

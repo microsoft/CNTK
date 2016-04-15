@@ -1,3 +1,11 @@
+# Copyright (c) Microsoft. All rights reserved.
+
+# Licensed under the MIT license. See LICENSE.md file in the project root 
+# for full license information.
+# ==============================================================================
+
+#TODO: Formalize the naming convention and the transformation rules from C++ to Python
+
 from abc import ABCMeta, abstractmethod
 import numpy as np
 
@@ -9,7 +17,7 @@ class sparse(object):
         return hasattr(obj, 'todense')
 
 from .utils import MODEL_INDENTATION
-from .utils import numpy_to_cntk_shape, dedupe_readers
+from .utils import aggregate_readers
 
 def _tuple_to_cntk_shape(shape):
     return ':'.join(str(v) for v in shape)
@@ -38,60 +46,76 @@ class ComputationNode(object):
             if hasattr(p, 'consumers'):
                 p.consumers.append(self)
 
+        # Create sub-class construtor and more these 
         self.reader = None
+        self.has_sequence_dimensions = False
 
     def _is_input(self):
         return isinstance(self, InputComputationNodeBase)
 
+    # operator overload for (+) where self is the left operand
     def __add__(self, other):
-        if not isinstance(other, ComputationNode):
-            # TODO: in case of non-scalars we have to pull in a reader
+        if not isinstance(other, ComputationNode):            
             other = constant(other)
         return Plus(self, other)
 
+    # operator overload for (+) where self is the right operand
     def __radd__(self, other):
-        if not isinstance(other, ComputationNode):
-            # TODO: in case of non-scalars we have to pull in a reader
+        if not isinstance(other, ComputationNode):            
             other = constant(other)
         return Plus(other, self)
-
+    
+    # operator overload for (-) where self is the left operand
     def __sub__(self, other):
         if not isinstance(other, ComputationNode):
-            # TODO: in case of non-scalars we have to pull in a reader
             other = constant(other)
         return Minus(self, other)
 
+    # operator overload for (-) where self is the right operand
     def __rsub__(self, other):
-        if not isinstance(other, ComputationNode):
-            # TODO: in case of non-scalars we have to pull in a reader
+        if not isinstance(other, ComputationNode):            
             other = constant(other)
         return Minus(other, self)
 
+    # operator overload for (*) where self is the left operand
     def __mul__(self, other):
         if not isinstance(other, ComputationNode):
-            # TODO: in case of non-scalars we have to pull in a reader
             other = constant(other)
         return ElementTimes(self, other)
 
+    # operator overload for (*) where self is the right operand
     def __rmul__(self, other):
         if not isinstance(other, ComputationNode):
-            # TODO: in case of non-scalars we have to pull in a reader
             other = constant(other)
         return ElementTimes(other, self)
 
+    # operator overload for (@) where self is the left operand
     def __matmul__(self, other):
         if not isinstance(other, ComputationNode):
-            # TODO: in case of non-scalars we have to pull in a reader
             other = constant(other)
         # NOTE supported in Python 3.5
         return Times(self, other)
 
+    # operator overload for (@) where self is the right operand
     def __rmatmul__(self, other):
-        if not isinstance(other, ComputationNode):
-            # TODO: in case of non-scalars we have to pull in a reader
+        if not isinstance(other, ComputationNode):            
             other = constant(other)
         # NOTE supported in Python 3.5
         return Times(other, self)
+
+    # operator overload for (\) where self is the left operand
+    def __truediv__(self, other):
+        if not isinstance(other, ComputationNode):
+            other = constant(other)
+        self.__div__ = self.__truediv__
+        return ElementDivide(self, other)
+
+    # operator overload for (\) where self is the right operand
+    def __rtruediv__(self, other):
+        if not isinstance(other, ComputationNode):
+            other = constant(other)
+        self.__rdiv__ = self.__rtruediv__
+        return ElementDivide(other, self)
 
     def __abs__(self):
         return Abs(self)
@@ -152,9 +176,8 @@ class ComputationNode(object):
         is_loop_node = self.name in ('Delay', 'PastValue', 'FutureValue')
         return is_loop_node and p_name == 'input' and isinstance(p_value, str)
 
-    def _to_config_recursively(self, desc, unrolled_nodes, inputs,
-                               readers, dep_inputs, node_counter,
-                               reconciled_cache):
+    def _to_config_recursively(self, input_reader, desc, unrolled_nodes, inputs,
+                               readers, dep_inputs, node_counter, reconciled_cache):
 
         param_variable_names = []
         # In case we have multiple unreconciled inputs, we will reconcile each
@@ -184,7 +207,7 @@ class ComputationNode(object):
                             child_var, child_dep_inputs = unrolled_nodes[pv]
                         else:
                             child_var, node_counter, child_desc, child_dep_inputs = pv._to_config_recursively(
-                                desc, unrolled_nodes, inputs, readers,
+                                input_reader, desc, unrolled_nodes, inputs, readers,
                                 dep_inputs, node_counter, reconciled_cache)
 
                             unrolled_nodes[pv] = child_var, dep_inputs
@@ -205,7 +228,7 @@ class ComputationNode(object):
                                     unrec_pv = pv
                                     pv = ReconcileMBLayout(unrec_pv, first_unreconciled_input)
                                     child_var, node_counter, child_desc, dep_inputs = pv._to_config_recursively(
-                                        desc, unrolled_nodes, inputs, readers,
+                                        input_reader, desc, unrolled_nodes, inputs, readers,
                                         dep_inputs, node_counter,
                                         reconciled_cache)
                                     reconciled_cache[(unrec_pv, first_unreconciled_input)] = pv.var_name, dep_inputs
@@ -228,17 +251,29 @@ class ComputationNode(object):
                         param_variable_names.append(
                             self._param_to_brainscript(p_name, p_value))
 
-        if self.reader:
-            readers.add(self.reader)
+        if hasattr(self, 'tag') and 'tag' not in self.params:
+            param_variable_names.append("tag='%s'" % self.tag)
+        
+        has_var_name = False
+        if (self.var_name):
+            has_var_name = True
+            
+        self.var_name = self.var_name or "v%i" % node_counter
+        node_counter += 1
 
         if self._is_input():
             inputs.add(self)
+            
+            if self.reader:                
+                node_reader = self.reader
+            elif self in input_reader:
+                node_reader = input_reader[self]
+            elif has_var_name and self.var_name in input_reader:
+                node_reader = input_reader[self.var_name]
+            else:
+                raise RuntimeError("No reader was found for input node: {0}".format(self.var_name))
 
-        if hasattr(self, 'tag') and 'tag' not in self.params:
-            param_variable_names.append("tag='%s'" % self.tag)
-
-        self.var_name = self.var_name or "v%i" % node_counter
-        node_counter += 1
+            readers.add(node_reader._to_aggregate_form(self))
 
         params = self._get_cntk_param_string(param_variable_names)
 
@@ -251,13 +286,14 @@ class ComputationNode(object):
 
         return self.var_name, node_counter, desc, dep_inputs
 
-    def _to_config(self, description, unrolled_nodes, inputs, readers,
+    def _to_config(self, input_reader, description, unrolled_nodes, inputs, readers,
             dep_inputs, node_counter, reconciled_cache):
         '''
         Helper method to generate the CNTK configuration for this node.
         '''
 
         var_name, node_counter, desc, dep_inputs = self._to_config_recursively(
+            input_reader,
             description,
             unrolled_nodes=unrolled_nodes,
             inputs=inputs,
@@ -274,7 +310,8 @@ class ComputationNode(object):
         for all dependent child nodes.
         '''
         var_name, node_counter, desc, has_inputs, readers, dep_inputs = \
-            self._to_config(description=[], 
+            self._to_config(input_reader={},
+					description=[], 
                     unrolled_nodes={},
                     inputs=set(),
                     readers=set(), 
@@ -282,66 +319,34 @@ class ComputationNode(object):
                     node_counter=0,
                     reconciled_cache={})
 
-        return "\n".join(desc), has_inputs, dedupe_readers(readers)
+        return "\n".join(desc), has_inputs, aggregate_readers(readers)
 
 
 class InputComputationNodeBase(ComputationNode, metaclass=ABCMeta):
-
     '''
-    Base class for all non-image input nodes nodes and operators. Provides methods to attach
-    a reader to an input node
+    Base class for all non-image input nodes nodes and operators. 
     '''
-
-    def attach_text_format_reader(self, filename, input_alias=None, format='dense'):
-        '''
-        attach a TextFormatReader to the node
-        '''
-        self.reader = CNTKTextFormatReader(filename)
-        self.reader.add_input(self, input_alias, self.dims, format)
-
-    def attach_uci_fast_reader(self,
-                               filename,
-                               input_start,
-                               islabel=False,
-                               num_label_cols=None,
-                               label_mapping_file=None,
-                               custom_delimiter=None):
-        '''
-        attach a UCIFastReader to the node
-        '''
-        self.reader = UCIFastReader(filename, custom_delimiter)
-
-        if islabel:
-            self.reader.add_input(
-                self, input_start, num_label_cols, self.dims, label_mapping_file)
-        else:
-            self.reader.add_input(self, input_start, self.dims)
+    pass
 
 
 class ImageInputComputationNodeBase(ComputationNode, metaclass=ABCMeta):
 
     '''
-    Base class for all image input nodes nodes and operators. Provides methods to attach
-    a reader to an input node
+    Base class for all image input nodes nodes and operators. 
     '''
-
-    def attach_image_reader(self, filename, **kw):
-        '''
-        attach a TextFormatReader to the node
-        '''
-        raise NotImplementedError
+    pass
 
 # importing after defining ComputationNode to work around circular imports
 from cntk.ops.cntk1 import *
 # to have a separate namespace when we want to override below
 from cntk.ops import cntk1 as cntk1_ops
-from .reader import UCIFastReader, CNTKTextFormatReader
+from .reader import CNTKTextFormatReader
 
 # redefine some operators to work with NumPy and sequences as input
 
 
 def _dense_to_str(data):
-    return ' '.join(data.ravel().astype(np.str))
+    return ' '.join(data.ravel(order='F').astype(np.str))
 
 def _sparse_to_str(data):
     # return ' '.join('%s:%s'%(k,data[k]) for k in sorted(data.items()))
@@ -396,42 +401,28 @@ def _get_constant_node(value, **kw):
     # of the overall context without having to always pass it
     # explicitly?
 
-    from cntk.context import get_context
-    import tempfile
-
-    # We have to use NamedTemporaryFile and close it, because when using the
-    # obvious first choice, mkstemp(), would later fail in cntk.exe because the
-    # file would still be locked.
-    # TODO make it same filename as alias
-    tf = tempfile.NamedTemporaryFile(
-        prefix='_param_', suffix='.txt', dir=get_context().directory, delete=False)
-    tf.close()
-
     if isinstance(value, list) or np.isscalar(value):
         value = np.asarray(value)
 
     if sparse.issparse(value):
         raise ValueError('only dense data is supported')
 
-    with open(tf.name, 'w') as f:
-        value.ravel().tofile(f, sep='\n')
+    param_shape = value.shape if value.shape else (1,)
+    literal_shape = (param_shape[0], np.multiply.reduce(param_shape[1:]))
+    
+    literal_array = np.reshape(value, literal_shape)        
 
-    from cntk.reader import CNTKTextFormatReader
-
-    cntk_shape = numpy_to_cntk_shape(value.shape)
-
-    dims = np.multiply.reduce(cntk_shape)
+    from io import BytesIO
+    s = BytesIO()    
+    np.savetxt(s, literal_array, '%.4f')
 
     # TODO switch to ConstantTensor once it is in the core.bs file
     node = cntk1_ops.ParameterTensor(
-        dims=dims,
+        dims=param_shape,
         learningRateMultiplier=0.0,
-        init='fromFile',
-        initFromFilePath=tf.name,
+        init='fromLiteral',
+        initFromLiteral=s.getvalue().decode(),
         **kw)
-
-    if len(cntk_shape) > 1:
-        node = cntk1_ops.NewReshape(node, dims=cntk_shape)
 
     return node
 
@@ -487,23 +478,11 @@ def _get_input_node(list_of_tensors, has_sequence_dimension, **kw):
     # removed.
     value_shape = shapes.pop()
 
-    cntk_shape = numpy_to_cntk_shape(value_shape)
-
-    from cntk.reader import CNTKTextFormatReader
-
-    # In case we have the shape (2,3) and assuming we have only sequences of
-    # lengths 1, the input will be initialized with dim=3 (column major)
-    # followed by a reshape node that has the dims '2:3'. So we have 2*3 = 6 
-    # dimensions when flattened out for the reader. 
-    dims = int(np.multiply.reduce(cntk_shape))
-    node = cntk1_ops.Input(dims, **kw)
-    node.reader = CNTKTextFormatReader(tf.name)
-    node.reader.add_input(node, alias, dims)
+    cntk_shape = value_shape if value_shape else (1,)
     
-    if len(cntk_shape) > 1:
-        node = cntk1_ops.NewReshape(node,
-                dims=cntk_shape)
-
+    node = cntk1_ops.Input(cntk_shape, **kw)
+    node.reader = CNTKTextFormatReader(tf.name, alias)
+        
     return node
 
 
@@ -545,17 +524,18 @@ def is_tensor(data):
     return True
 
 
-def input(value, has_sequence_dimension=True, **kw):
+def input_reader(value, has_sequence_dimension=True, **kw):
     '''
-    Create an input node.
+    creates an input node.
 
-    :param `value`: is a list of NumPy tensors. Currently, only dense tensors
-    are supported. Sparse will come soon by the power of scipy.
-    :param `has_sequence_dimension`: If True, the outermost dimension is
-    treated as the sequence dimension. If False, it will wrap each sample 
-    into its own 1-dimensional array.
-    :param `alias`: optional the alias to be used when serializing the data
-    into an intermediate file
+    Args:
+        value: is a list of NumPy tensors.  Currently, only dense tensors are supported. Sparse will come soon by the power of scipy.
+        has_sequence_dimension: If True, the outermost dimension is treated as the sequence dimension. If False, it will wrap each sample into its own 1-dimensional array.
+        alias: optional the alias to be used when serializing the data into an intermediate file
+        kw: will be passed on to the input operator [TODO: specify most commonly used options]
+
+    Returns:
+        :class:`cntk.graph.ComputationNode`
     '''
     if is_tensor_list(value) or is_tensor(value):
         return _get_input_node(value, has_sequence_dimension, **kw)
@@ -565,7 +545,7 @@ def input(value, has_sequence_dimension=True, **kw):
 
 def constant(value, **kw):
     '''
-    Creating a constant tensor node around `value`.
+    creates a constant tensor node.
     '''
     if np.isscalar(value) or is_tensor(value):
         return _get_constant_node(value, **kw)

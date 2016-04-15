@@ -4,9 +4,83 @@ import numpy as np
 from .graph import ComputationNode
 
 
-class AbstractReader(dict, metaclass=ABCMeta):
+class AbstractReader(metaclass=ABCMeta):
+    """ This is the abstract class that represents a reader for one input node
+    """    
+    
+    # required so that instances can be put into a set
+    def __hash__(self): return hash(id(self))
 
-    """ This is the abstract reader class
+    def __eq__(self, x): return x is self
+
+    def __ne__(self, x): return x is not self
+
+    @abstractmethod
+    def _to_aggregate_form():
+        pass
+
+class UCIFastReader(AbstractReader):
+    """ A UCIFastReader for one input node
+    """
+
+    def __init__(self, filename, input_start, input_dim, 
+                 num_of_classes=None, label_mapping_file=None,
+                 custom_delimiter=None):
+        """ Reader constructor. Note that the dimensions are not inferred from 
+        the input node's shape, because in case of a label node the dimension does 
+        not match the shape which would be (numOfClasses,1)
+        :param filename: the name of the file where the data is stored
+        :param custom_delimiter: what delimiter is used to separate columns, 
+        specify it in case it neither tab nor white spaces.        
+        :param input_start: the start column   
+        :param input_dim: the number of columns
+        :param num_of_classes: the number of classes
+        :param label_mapping_file: 
+            the mapping file path, it can be simply with all the possible classes, 
+            one per line
+        """
+    
+        self.filename = filename
+        self.custom_delimiter = custom_delimiter
+        self.input_start = input_start
+        self.input_dim = input_dim 
+        self.num_of_classes = num_of_classes
+        self.label_mapping_file = label_mapping_file
+        
+    def _to_aggregate_form(self, input_node):
+        r = UCIFastReaderAggregator(self.filename, self.custom_delimiter)
+        r.add_input(input_node, self.input_start, self.input_dim, 
+                    self.num_of_classes, self.label_mapping_file)        
+        return r
+            
+class CNTKTextFormatReader(AbstractReader):
+    """ A CNTKTextFormatReader for one input node
+    """
+
+    def __init__(self, filename, input_alias, format="Dense"):        
+        """ Reader constructor. Note that the dimension is inferred from the input node
+        while generating the configuration
+        :param filename: the name of the file where the data is stored
+        input_alias: a short name for the input, it is how inputs are referenced in the data files        
+        format: dense or sparse
+        """                
+        self.filename = filename
+        self.input_alias = input_alias
+        self.format = format
+        self.input_dim = None # to be inferred from the input node.
+
+    def _to_aggregate_form(self, input_node):
+        r = TextFormatReaderAggregator(self.filename)
+        import numpy as np
+        r.add_input(input_node, self.input_alias, np.multiply.reduce(input_node.dims), self.format)        
+        return r
+        
+class AbstractReaderAggregator(dict, metaclass=ABCMeta):
+
+    """ This is the abstract reader class. The sub-classes of this class
+    are not exposed to the user and are used to aggregate all inputs' readers
+    for a graph before generating the CNTK config. That is, they are a mirror
+    to what we see under the reader block in CNTK config files.
     """
 
     @abstractmethod
@@ -22,8 +96,7 @@ class AbstractReader(dict, metaclass=ABCMeta):
 
     def __ne__(self, x): return x is not self
 
-
-class UCIFastReader(AbstractReader):
+class UCIFastReaderAggregator(AbstractReaderAggregator):
 
     """This is the reader class the maps to UCIFastReader of CNTK
     :param filename: data file path
@@ -33,7 +106,7 @@ class UCIFastReader(AbstractReader):
     def __init__(self, filename, custom_delimiter=None):
         """ Reader constructor    
         """
-        self["ReaderType"] = self.__class__.__name__
+        self["ReaderType"] = "UCIFastReader"
         self["FileName"] = filename
         self["CustomDelimiter"] = custom_delimiter
         self.inputs_def = []
@@ -103,7 +176,7 @@ class UCIFastReader(AbstractReader):
         return template % self
 
 
-class CNTKTextFormatReader(AbstractReader):
+class TextFormatReaderAggregator(AbstractReaderAggregator):
 
     """This is the reader class the maps to CNTKTextFormatReader of CNTK
     :param filename: data file path
@@ -112,7 +185,7 @@ class CNTKTextFormatReader(AbstractReader):
     def __init__(self, filename):
         """ Reader constructor    
         """
-        self["ReaderType"] = self.__class__.__name__
+        self["ReaderType"] = "CNTKTextFormatReader"
         self["FileName"] = filename
         self.inputs_def = []
 
@@ -187,4 +260,4 @@ def NumPyReader(data, filename):
     format_str = ' '.join(['%f'] * num_cols)
     np.savetxt(filename, data, delimiter=' ', newline='\r\n', fmt=format_str)
 
-    return UCIFastReader(filename)
+    return UCIFastReaderAggregator(filename)

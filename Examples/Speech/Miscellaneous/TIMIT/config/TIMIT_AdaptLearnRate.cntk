@@ -1,4 +1,6 @@
-stderr=$ExpDir$\TrainAdaptLR\log\log
+# If set to true, always initialize the network on CPU, making initialization consistent across CPU and GPU targets (for testing).
+initOnCPUOnly=true 
+
 command=TIMIT_TrainAdaptLR
 
 precision=float
@@ -6,7 +8,7 @@ precision=float
 TIMIT_TrainAdaptLR=[
     action=train
 
-    modelPath=$ExpDir$\TrainAdaptLR\model\cntkSpeech.dnn
+    modelPath=$ExpDir$/TrainAdaptLR/model/cntkSpeech.dnn
 
     # deviceId=-1 for CPU, >=0 for GPU devices 
     deviceId=$DeviceNumber$
@@ -23,7 +25,7 @@ TIMIT_TrainAdaptLR=[
         uniformInit=true
         needPrior=true
     ]
-    
+
     SGD=[
         epochSize=0
         minibatchSize=128
@@ -51,47 +53,42 @@ TIMIT_TrainAdaptLR=[
         clippingThresholdPerSample=1#INF
 
     ]
-       
+
     # Parameter values for the reader
     reader=[
-      # reader to use
-      readerType=HTKMLFReader
-#      readMethod=blockRandomize
-      readMethod=rollingWindow
-      miniBatchMode=Partial
-      randomize=Auto
-      verbosity=1   
-      features=[
-	dim=792	
-     	scpFile=$ScpDir$\TIMIT.train.scp.fbank.fullpath
-      ]
+        # reader to use
+        readerType=HTKMLFReader
+        readMethod=blockRandomize
+        miniBatchMode=Partial
+        randomize=Auto
+        verbosity=0
+        features=[
+            dim=792
+            scpFile=$ScpDir$/TIMIT.train.scp.fbank.fullpath.rnn
+        ]
 
-      labels=[
-	mlfFile=$MlfDir$\TIMIT.train.align_cistate.mlf.cntk
-        labelDim=183
-	labelMappingFile=$MlfDir$\TIMIT.statelist
-      ]
+        labels=[
+            mlfFile=$MlfDir$/TIMIT.train.align_cistate.mlf.cntk
+            labelDim=183
+            labelMappingFile=$MlfDir$/TIMIT.statelist
+        ]
     ]
 
     cvReader=[
-      # reader to use
-      readerType=HTKMLFReader
-#      readMethod=blockRandomize
-      readMethod=rollingWindow
-      miniBatchMode=Partial
-      randomize=Auto
-      verbosity=1   
-      features=[
-	dim=792
-	scpFile=$ScpDir$\TIMIT.dev.scp.fbank.fullpath    
-      ]
+        readerType=HTKMLFReader
+        readMethod=blockRandomize
+        miniBatchMode=Partial
+        randomize=Auto
+        verbosity=0
+        features=[
+            dim=792
+            scpFile=$ScpDir$/TIMIT.dev.scp.fbank.fullpath.rnn
+        ]
 
-      labels=[
-	mlfFile=$MlfDir$\TIMIT.dev.align_cistate.mlf.cntk
-        labelDim=183	
-	labelMappingFile=$MlfDir$\TIMIT.statelist
-      ]
+        labels=[
+            mlfFile=$MlfDir$/TIMIT.dev.align_cistate.mlf.cntk
+            labelDim=183
+            labelMappingFile=$MlfDir$/TIMIT.statelist
+        ]
     ]
-
 ]
-

@@ -169,11 +169,11 @@ void File::Init(const wchar_t* filename, int fileOptions)
     else // on Windows 7-, use older PathRemoveFileSpec() instead
         hr = PathRemoveFileSpec(&path[0]);
 
-    if (hr == S_OK) // done
-        path.resize(wcslen(&path[0]));
-    else if (hr == S_FALSE) // nothing to remove: use .
-        path = L".";
-    else
+                if (hr == S_OK) // done
+                    path.resize(wcslen(&path[0]));
+                else if (hr == S_FALSE) // nothing to remove: use .
+                    path = L".";
+        else
         RuntimeError("DirectoryPathOf: Path(Cch)RemoveFileSpec() unexpectedly failed with 0x%08x.", (unsigned int)hr);
 #else
     auto pos = path.find_last_of(L"/");
@@ -189,7 +189,7 @@ void File::Init(const wchar_t* filename, int fileOptions)
 // (wstring only for now; feel free to make this a template if needed)
 /*static*/ wstring File::FileNameOf(wstring path)
 {
-#if WIN32
+#ifdef WIN32
     static const wstring delim = L"\\:/";
 #else
     static const wstring delim = L"/";
@@ -204,7 +204,7 @@ void File::Init(const wchar_t* filename, int fileOptions)
 // get path of current executable
 /*static*/ wstring File::GetExecutablePath()
 {
-#if WIN32
+#ifdef WIN32
     wchar_t path[33000];
     if (GetModuleFileNameW(NULL, path, _countof(path)) == 0)
         LogicError("GetExecutablePath: GetModuleFileNameW() unexpectedly failed.");

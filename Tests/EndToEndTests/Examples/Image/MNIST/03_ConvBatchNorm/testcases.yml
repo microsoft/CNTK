@@ -1,8 +1,11 @@
 dataDir: ../../../../../../Examples/Image/MNIST/Data
 
 tags:
-    # TODO
-    - nightly-e (build_sku=='gpu') and ((device=='gpu') or (flavor=='release')) 
+    # In BVT, run Release GPU (~ 30 - 60 sec)
+    - bvt-e (build_sku=='gpu') and (device=='gpu') and (flavor=='release') 
+    # In Nightly, additionally run Debug GPU
+    # Note: Batch normalization training on CPU is not yet implemented.
+    - nightly-e (build_sku=='gpu') and (device=='gpu')
 
 testCases:
   CNTK Run must be completed:

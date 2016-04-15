@@ -74,7 +74,6 @@ public:
     virtual void GetSequence(size_t sequenceId, std::vector<SequenceDataPtr>& result) override
     {
         assert(sequenceId == m_description.m_id);
-        UNUSED(sequenceId);
         const auto& imageSequence = m_description;
 
         auto image = std::make_shared<DeserializedImage>();
@@ -102,6 +101,7 @@ public:
         image->m_data = image->m_image.data;
         ImageDimensions dimensions(cvImage.cols, cvImage.rows, cvImage.channels());
         image->m_sampleLayout = std::make_shared<TensorShape>(dimensions.AsTensorShape(HWC));
+        image->m_id = sequenceId;
         image->m_numberOfSamples = 1;
         image->m_chunk = shared_from_this();
         result.push_back(image);
@@ -145,7 +145,7 @@ ImageDataDeserializer::ImageDataDeserializer(const ConfigParameters& config)
         RuntimeError("Unsupported label element type '%d'.", (int)label->m_elementType);
     }
 
-    CreateSequenceDescriptions(configHelper.GetMapPath(), labelDimension);
+    CreateSequenceDescriptions(configHelper.GetMapPath(), labelDimension, configHelper);
 }
 
 // Descriptions of chunks exposed by the image reader.
@@ -171,21 +171,22 @@ void ImageDataDeserializer::GetSequencesForChunk(size_t chunkId, std::vector<Seq
     result.push_back(m_imageSequences[chunkId]);
 }
 
-void ImageDataDeserializer::CreateSequenceDescriptions(std::string mapPath, size_t labelDimension)
+void ImageDataDeserializer::CreateSequenceDescriptions(std::string mapPath, size_t labelDimension, const ImageConfigHelper& config)
 {
-    UNUSED(labelDimension);
-
     std::ifstream mapFile(mapPath);
     if (!mapFile)
     {
         RuntimeError("Could not open %s for reading.", mapPath.c_str());
     }
 
+    size_t itemsPerLine = config.IsMultiViewCrop() ? 10 : 1;
+    size_t curId = 0;
     std::string line;
+    PathReaderMap knownReaders;
     ImageSequenceDescription description;
     description.m_numberOfSamples = 1;
     description.m_isValid = true;
-    PathReaderMap knownReaders;
+
     for (size_t lineIndex = 0; std::getline(mapFile, line); ++lineIndex)
     {
         std::stringstream ss(line);
@@ -194,26 +195,31 @@ void ImageDataDeserializer::CreateSequenceDescriptions(std::string mapPath, size
         if (!std::getline(ss, imagePath, '\t') || !std::getline(ss, classId, '\t'))
             RuntimeError("Invalid map file format, must contain 2 tab-delimited columns, line %" PRIu64 " in file %s.", lineIndex, mapPath.c_str());
 
-        description.m_id = lineIndex;
-        description.m_chunkId = lineIndex;
-        description.m_path = imagePath;
         char* eptr;
         errno = 0;
         size_t cid = strtoull(classId.c_str(), &eptr, 10);
         if (classId.c_str() == eptr || errno == ERANGE)
             RuntimeError("Cannot parse label value on line %" PRIu64 ", second column, in file %s.", lineIndex, mapPath.c_str());
-        description.m_classId = cid;
-        description.m_key.m_major = description.m_id;
-        description.m_key.m_minor = 0;
 
-        if (description.m_classId >= labelDimension)
+        if (cid >= labelDimension)
         {
             RuntimeError(
                 "Image '%s' has invalid class id '%" PRIu64 "'. Expected label dimension is '%" PRIu64 "'. Line %" PRIu64 " in file %s.",
-                imagePath.c_str(), description.m_classId, labelDimension, lineIndex, mapPath.c_str());
+                imagePath.c_str(), cid, labelDimension, lineIndex, mapPath.c_str());
         }
-        m_imageSequences.push_back(description);
-        RegisterByteReader(description.m_id, description.m_path, knownReaders);
+
+        for (size_t start = curId; curId < start + itemsPerLine; curId++)
+        {
+            description.m_id = curId;
+            description.m_chunkId = curId;
+            description.m_path = imagePath;
+            description.m_classId = cid;
+            description.m_key.m_major = description.m_id;
+            description.m_key.m_minor = 0;
+
+            m_imageSequences.push_back(description);
+            RegisterByteReader(description.m_id, description.m_path, knownReaders);
+        }
     }
 }
 

@@ -1,4 +1,4 @@
-class SGD(dict):
+class SGDParams(dict):
 
     """This is the Stochastic Gradien Descent optimizer used to train the networks
     """
@@ -6,7 +6,7 @@ class SGD(dict):
     def __init__(self, epoch_size=0, minibatch_size=1, learning_ratesPerMB="0.1",
                  learning_rates_per_sample=None, momentum_per_mb="0.9",
                  momentum_per_sample=None, max_epochs=5, dropout_rate=None):
-        """ SGD constructor
+        """ SGDParmas constructor
 
         :param epoch_size: the number of samples to use in each epoch. An intermediate
         model and other check point information are saved for each epoch. When set 
@@ -49,7 +49,7 @@ class SGD(dict):
         self["dropoutRate"] = dropout_rate
 
     def generate_config(self):
-        """Generate the SGD configuration block
+        """Generate the SGDParams configuration block
         """
 
         config = []
