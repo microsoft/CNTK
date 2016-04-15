@@ -10,6 +10,7 @@ from cntk.graph import ComputationNode
 from cntk.ops.cntk1 import NewReshape
 from cntk.utils import get_cntk_cmd, MODEL_INDENTATION
 from .utils import cntk_to_numpy_shape, aggregate_readers
+from .utils import with_metaclass
 
 CNTK_TEMPLATE_DIR = os.path.join(os.path.dirname(__file__), "templates")
 CNTK_TRAIN_TEMPLATE_PATH = os.path.join(
@@ -49,7 +50,7 @@ def get_new_context():
             return get_context(new_handle)
 
 
-class AbstractContext(object, metaclass=ABCMeta):
+class AbstractContext(with_metaclass(ABCMeta, object)):
 
     '''
     This is the abstract CNTK context. It provides an API to run CNTK actions.
@@ -361,7 +362,9 @@ class AbstractContext(object, metaclass=ABCMeta):
 
             seq_idx = parts[0].strip()
             payload = parts[1]
-            info, *data = payload.split(' ')
+            payload_parts = payload.split(' ')
+            info = payload_parts[0]
+            data = payload_parts[1:]
 
             if seq_idx != last_seq_idx:
                 if not info == 'w.shape':

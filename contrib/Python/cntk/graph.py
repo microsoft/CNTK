@@ -10,6 +10,7 @@ class sparse(object):
 
 from .utils import MODEL_INDENTATION
 from .utils import aggregate_readers
+from .utils import with_metaclass, is_string
 
 def _tuple_to_cntk_shape(shape):
     return ':'.join(str(v) for v in shape)
@@ -109,6 +110,10 @@ class ComputationNode(object):
         self.__rdiv__ = self.__rtruediv__
         return ElementDivide(other, self)
 
+    # Python2 compatibility
+    __div__ = __truediv__
+    __rdiv__ = __rtruediv__
+
     def __abs__(self):
         return Abs(self)
 
@@ -138,7 +143,7 @@ class ComputationNode(object):
     def _param_to_brainscript(self, p_name, p_value):
         if isinstance(p_value, bool):
             p_value = str(p_value).lower()
-        elif isinstance(p_value, str):
+        elif is_string(p_value):
             p_value = "'%s'" % p_value
         elif type(p_value) in [list, tuple]:
             # FIXME here we assume that all dims are of TensorShape
@@ -314,14 +319,14 @@ class ComputationNode(object):
         return "\n".join(desc), has_inputs, aggregate_readers(readers)
 
 
-class InputComputationNodeBase(ComputationNode, metaclass=ABCMeta):
+class InputComputationNodeBase(with_metaclass(ABCMeta, ComputationNode)):
     '''
     Base class for all non-image input nodes nodes and operators. 
     '''
     pass
 
 
-class ImageInputComputationNodeBase(ComputationNode, metaclass=ABCMeta):
+class ImageInputComputationNodeBase(with_metaclass(ABCMeta, ComputationNode)):
 
     '''
     Base class for all image input nodes nodes and operators. 

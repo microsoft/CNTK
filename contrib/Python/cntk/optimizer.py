@@ -29,7 +29,7 @@ class SGDParams(dict):
         :param momentum_per_mb: The default value is 0.9. Different values can
         be given to different epochs. It is important to note that CNTK has a particular
         behaviour when dealing with momentum, the learning rate is automatically further
-        scaled by a factor of (1 – momentum).
+        scaled by a factor of (1 - momentum).
 
         :param momentum_per_sample: similarly to learning rate, momentum can be defined
         on the sample level, also, different values can be given to different epochs.
