@@ -37,18 +37,19 @@ def test_op_clip_by_value(x, min_value, max_value, device_id, precision):
     expected = [[np.clip(AA(x), AA(min_value), AA(max_value))]]
 
     a = I([x], has_sequence_dimension=False)
-    b = I([min_value], has_sequence_dimension=False)    
-    c = I([max_value], has_sequence_dimension=False)
+    b = C([min_value])    
+    c = C([max_value])
     
     result = clip_by_value(a, b, c)
     unittest_helper(result, None, expected, device_id=device_id, 
-                    precision=precision, clean_up=False, backward_pass=False)
+                    precision=precision, clean_up=True, backward_pass=False)
     
     #Backward pass test
     #==================
-    # ...
-    #expected = [[[np.ones_like(x) for x in left_operand]]]
-    #unittest_helper(left_as_input, None, expected, device_id=device_id, 
-    #                precision=precision, clean_up=True, backward_pass=True, input_node=a)    
-    #unittest_helper(right_as_input, None, expected, device_id=device_id, 
-    #                precision=precision, clean_up=True, backward_pass=True, input_node=b)    
+    # The gradient of the clip_by_value() function is equal to 1 when the element 
+    # has not been clipped, and 0 if it has been clipped
+    # We only test for the case where the input_node is a -- backproping into 
+    # the others doesn't make sense (they are constants)
+    expected = [[[np.ones_like(i) for i in x]]]
+    unittest_helper(result, None, expected, device_id=device_id, 
+                    precision=precision, clean_up=False, backward_pass=True, input_node=a)
