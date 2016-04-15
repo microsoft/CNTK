@@ -1,3 +1,12 @@
+# Copyright (c) Microsoft. All rights reserved.
+
+# Licensed under the MIT license. See LICENSE.md file in the project root 
+# for full license information.
+# ==============================================================================
+
+#TODO: Settle on a centralized location for all the documentation that is in docstrings
+
+
 from abc import ABCMeta, abstractmethod
 import os
 import re

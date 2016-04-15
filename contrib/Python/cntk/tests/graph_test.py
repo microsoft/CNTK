@@ -1,3 +1,9 @@
+# Copyright (c) Microsoft. All rights reserved.
+
+# Licensed under the MIT license. See LICENSE.md file in the project root 
+# for full license information.
+# ==============================================================================
+
 from ..context import get_new_context, _CONTEXT
 from ..graph import *
 from ..graph import _tensor_to_text_format
