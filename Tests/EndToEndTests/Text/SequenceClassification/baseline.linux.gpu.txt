@@ -1,10 +1,10 @@
-=== Running /home/clemensm/CNTK/build/debug/bin/cntk configFile=/home/clemensm/CNTK/Tests/EndToEndTests/Text/SequenceClassification/seqcla.cntk currentDirectory=/home/clemensm/CNTK/Tests/EndToEndTests/Text/SequenceClassification RunDir=/tmp/cntk-test-20160414100627.936345/Text_SequenceClassification@debug_gpu DataDir=/home/clemensm/CNTK/Tests/EndToEndTests/Text/SequenceClassification ConfigDir=/home/clemensm/CNTK/Tests/EndToEndTests/Text/SequenceClassification OutputDir=/tmp/cntk-test-20160414100627.936345/Text_SequenceClassification@debug_gpu DeviceId=0 timestamping=true
+=== Running /home/clemensm/CNTK/build/debug/bin/cntk configFile=/home/clemensm/CNTK/Tests/EndToEndTests/Text/SequenceClassification/Config/seqcla.cntk currentDirectory=/home/clemensm/CNTK/Tests/EndToEndTests/Text/SequenceClassification/Data RunDir=/tmp/cntk-test-20160415130034.515539/Text_SequenceClassification@debug_gpu DataDir=/home/clemensm/CNTK/Tests/EndToEndTests/Text/SequenceClassification/Data ConfigDir=/home/clemensm/CNTK/Tests/EndToEndTests/Text/SequenceClassification/Config OutputDir=/tmp/cntk-test-20160415130034.515539/Text_SequenceClassification@debug_gpu DeviceId=0 timestamping=true
 -------------------------------------------------------------------
 Build info: 
 
-		Built time: Apr 14 2016 08:05:53
+		Built time: Apr 15 2016 12:53:57
 		Last modified date: Wed Apr 13 15:12:17 2016
-		Build type: release
+		Build type: debug
 		Build target: GPU
 		With 1bit-SGD: no
 		Math lib: acml
@@ -12,39 +12,44 @@ Build info:
 		CUB_PATH: /usr/local/cub-1.4.1
 		CUDNN_PATH: /usr/local/cudnn-4.0
 		Build Branch: deepbliscore/vnext
-		Build SHA1: 1aca7c04c27e65dd60998214962fd727909d7813 (modified)
+		Build SHA1: 2709eb537f5ac2533af73316daa176b56788b646
 		Built by clemensm on ubuntu
 		Build Path: /home/clemensm/CNTK
 -------------------------------------------------------------------
-Changed current directory to /home/clemensm/CNTK/Tests/EndToEndTests/Text/SequenceClassification
-04/14/2016 10:06:27: -------------------------------------------------------------------
-04/14/2016 10:06:27: Build info: 
+Changed current directory to /home/clemensm/CNTK/Tests/EndToEndTests/Text/SequenceClassification/Data
+04/15/2016 13:00:35: -------------------------------------------------------------------
+04/15/2016 13:00:35: Build info: 
 
-04/14/2016 10:06:27: 		Built time: Apr 14 2016 08:05:53
-04/14/2016 10:06:27: 		Last modified date: Wed Apr 13 15:12:17 2016
-04/14/2016 10:06:27: 		Build type: release
-04/14/2016 10:06:27: 		Build target: GPU
-04/14/2016 10:06:27: 		With 1bit-SGD: no
-04/14/2016 10:06:27: 		Math lib: acml
-04/14/2016 10:06:27: 		CUDA_PATH: /usr/local/cuda-7.5
-04/14/2016 10:06:27: 		CUB_PATH: /usr/local/cub-1.4.1
-04/14/2016 10:06:27: 		CUDNN_PATH: /usr/local/cudnn-4.0
-04/14/2016 10:06:27: 		Build Branch: deepbliscore/vnext
-04/14/2016 10:06:27: 		Build SHA1: 1aca7c04c27e65dd60998214962fd727909d7813 (modified)
-04/14/2016 10:06:27: 		Built by clemensm on ubuntu
-04/14/2016 10:06:27: 		Build Path: /home/clemensm/CNTK
-04/14/2016 10:06:27: -------------------------------------------------------------------
+04/15/2016 13:00:35: 		Built time: Apr 15 2016 12:53:57
+04/15/2016 13:00:35: 		Last modified date: Wed Apr 13 15:12:17 2016
+04/15/2016 13:00:35: 		Build type: debug
+04/15/2016 13:00:35: 		Build target: GPU
+04/15/2016 13:00:35: 		With 1bit-SGD: no
+04/15/2016 13:00:35: 		Math lib: acml
+04/15/2016 13:00:35: 		CUDA_PATH: /usr/local/cuda-7.5
+04/15/2016 13:00:35: 		CUB_PATH: /usr/local/cub-1.4.1
+04/15/2016 13:00:35: 		CUDNN_PATH: /usr/local/cudnn-4.0
+04/15/2016 13:00:35: 		Build Branch: deepbliscore/vnext
+04/15/2016 13:00:35: 		Build SHA1: 2709eb537f5ac2533af73316daa176b56788b646
+04/15/2016 13:00:35: 		Built by clemensm on ubuntu
+04/15/2016 13:00:35: 		Build Path: /home/clemensm/CNTK
+04/15/2016 13:00:35: -------------------------------------------------------------------
 
-04/14/2016 10:06:27: Running on localhost at 2016/04/14 10:06:27
-04/14/2016 10:06:27: Command line: 
-/home/clemensm/CNTK/build/debug/bin/cntk  configFile=/home/clemensm/CNTK/Tests/EndToEndTests/Text/SequenceClassification/seqcla.cntk  currentDirectory=/home/clemensm/CNTK/Tests/EndToEndTests/Text/SequenceClassification  RunDir=/tmp/cntk-test-20160414100627.936345/Text_SequenceClassification@debug_gpu  DataDir=/home/clemensm/CNTK/Tests/EndToEndTests/Text/SequenceClassification  ConfigDir=/home/clemensm/CNTK/Tests/EndToEndTests/Text/SequenceClassification  OutputDir=/tmp/cntk-test-20160414100627.936345/Text_SequenceClassification@debug_gpu  DeviceId=0  timestamping=true
+04/15/2016 13:00:35: Running on localhost at 2016/04/15 13:00:35
+04/15/2016 13:00:35: Command line: 
+/home/clemensm/CNTK/build/debug/bin/cntk  configFile=/home/clemensm/CNTK/Tests/EndToEndTests/Text/SequenceClassification/Config/seqcla.cntk  currentDirectory=/home/clemensm/CNTK/Tests/EndToEndTests/Text/SequenceClassification/Data  RunDir=/tmp/cntk-test-20160415130034.515539/Text_SequenceClassification@debug_gpu  DataDir=/home/clemensm/CNTK/Tests/EndToEndTests/Text/SequenceClassification/Data  ConfigDir=/home/clemensm/CNTK/Tests/EndToEndTests/Text/SequenceClassification/Config  OutputDir=/tmp/cntk-test-20160415130034.515539/Text_SequenceClassification@debug_gpu  DeviceId=0  timestamping=true
 
 
 
-04/14/2016 10:06:27: >>>>>>>>>>>>>>>>>>>> RAW CONFIG (VARIABLES NOT RESOLVED) >>>>>>>>>>>>>>>>>>>>
-04/14/2016 10:06:27: command=Train 
-deviceId=-1
-modelPath="$RunDir$/model"
+04/15/2016 13:00:35: >>>>>>>>>>>>>>>>>>>> RAW CONFIG (VARIABLES NOT RESOLVED) >>>>>>>>>>>>>>>>>>>>
+04/15/2016 13:00:35: RootDir = ".."
+ConfigDir = "$RootDir$/Config"
+DataDir   = "$RootDir$/Data"
+OutputDir = "$RootDir$/Output"
+ModelDir  = "$OutputDir$/Models"
+command=Train 
+deviceId = $DeviceId$
+modelPath="$ModelDir$/seqcla.dnn"
 Train=[
     action="train"
     run=BrainScriptNetworkBuilder
@@ -99,7 +104,7 @@ labels   = Input(numLabels)
     ]
     reader = [
         readerType = "CNTKTextFormatReader"
-        file = "Train.txt"            
+        file = "$DataDir$/Train.txt"            
         input = [            
             features=[
                 alias = "x"                
@@ -113,7 +118,7 @@ labels   = Input(numLabels)
             ]
         ]
    ]    
-outputPath = "output"        
+outputPath = "$OutputDir$/output.txt"        
 ]
 Write=[
     action="test"
@@ -123,7 +128,7 @@ Write=[
       sampleSeparator=\n%d\t|w\s
       elementSeparator=\s
     ]
-    modelFile = "model"    
+    modelFile = "$ModelDir$/seqcla.dnn"    
     reader = [
             readerType = "CNTKTextFormatReader"
             file = "$DataDir$/Train.txt"            
@@ -140,22 +145,27 @@ Write=[
                 ]
             ]
    ]    
-outputPath = "output"        
+outputPath = "$OutputDir$/output.txt"        
 ]
-currentDirectory=/home/clemensm/CNTK/Tests/EndToEndTests/Text/SequenceClassification
-RunDir=/tmp/cntk-test-20160414100627.936345/Text_SequenceClassification@debug_gpu
-DataDir=/home/clemensm/CNTK/Tests/EndToEndTests/Text/SequenceClassification
-ConfigDir=/home/clemensm/CNTK/Tests/EndToEndTests/Text/SequenceClassification
-OutputDir=/tmp/cntk-test-20160414100627.936345/Text_SequenceClassification@debug_gpu
+currentDirectory=/home/clemensm/CNTK/Tests/EndToEndTests/Text/SequenceClassification/Data
+RunDir=/tmp/cntk-test-20160415130034.515539/Text_SequenceClassification@debug_gpu
+DataDir=/home/clemensm/CNTK/Tests/EndToEndTests/Text/SequenceClassification/Data
+ConfigDir=/home/clemensm/CNTK/Tests/EndToEndTests/Text/SequenceClassification/Config
+OutputDir=/tmp/cntk-test-20160415130034.515539/Text_SequenceClassification@debug_gpu
 DeviceId=0
 timestamping=true
 
-04/14/2016 10:06:27: <<<<<<<<<<<<<<<<<<<< RAW CONFIG (VARIABLES NOT RESOLVED)  <<<<<<<<<<<<<<<<<<<<
+04/15/2016 13:00:35: <<<<<<<<<<<<<<<<<<<< RAW CONFIG (VARIABLES NOT RESOLVED)  <<<<<<<<<<<<<<<<<<<<
 
-04/14/2016 10:06:27: >>>>>>>>>>>>>>>>>>>> RAW CONFIG WITH ALL VARIABLES RESOLVED >>>>>>>>>>>>>>>>>>>>
-04/14/2016 10:06:27: command=Train 
-deviceId=-1
-modelPath="/tmp/cntk-test-20160414100627.936345/Text_SequenceClassification@debug_gpu/model"
+04/15/2016 13:00:35: >>>>>>>>>>>>>>>>>>>> RAW CONFIG WITH ALL VARIABLES RESOLVED >>>>>>>>>>>>>>>>>>>>
+04/15/2016 13:00:35: RootDir = ".."
+ConfigDir = "../Config"
+DataDir   = "../Data"
+OutputDir = "../Output"
+ModelDir  = "/tmp/cntk-test-20160415130034.515539/Text_SequenceClassification@debug_gpu/Models"
+command=Train 
+deviceId = 0
+modelPath="/tmp/cntk-test-20160415130034.515539/Text_SequenceClassification@debug_gpu/Models/seqcla.dnn"
 Train=[
     action="train"
     run=BrainScriptNetworkBuilder
@@ -210,7 +220,7 @@ labels   = Input(numLabels)
     ]
     reader = [
         readerType = "CNTKTextFormatReader"
-        file = "Train.txt"            
+        file = "/home/clemensm/CNTK/Tests/EndToEndTests/Text/SequenceClassification/Data/Train.txt"            
         input = [            
             features=[
                 alias = "x"                
@@ -224,7 +234,7 @@ labels   = Input(numLabels)
             ]
         ]
    ]    
-outputPath = "output"        
+outputPath = "/tmp/cntk-test-20160415130034.515539/Text_SequenceClassification@debug_gpu/output.txt"        
 ]
 Write=[
     action="test"
@@ -234,10 +244,10 @@ Write=[
       sampleSeparator=\n%d\t|w\s
       elementSeparator=\s
     ]
-    modelFile = "model"    
+    modelFile = "/tmp/cntk-test-20160415130034.515539/Text_SequenceClassification@debug_gpu/Models/seqcla.dnn"    
     reader = [
             readerType = "CNTKTextFormatReader"
-            file = "/home/clemensm/CNTK/Tests/EndToEndTests/Text/SequenceClassification/Train.txt"            
+            file = "/home/clemensm/CNTK/Tests/EndToEndTests/Text/SequenceClassification/Data/Train.txt"            
             input = [            
                 features=[
                     alias = "x"                
@@ -251,27 +261,29 @@ Write=[
                 ]
             ]
    ]    
-outputPath = "output"        
+outputPath = "/tmp/cntk-test-20160415130034.515539/Text_SequenceClassification@debug_gpu/output.txt"        
 ]
-currentDirectory=/home/clemensm/CNTK/Tests/EndToEndTests/Text/SequenceClassification
-RunDir=/tmp/cntk-test-20160414100627.936345/Text_SequenceClassification@debug_gpu
-DataDir=/home/clemensm/CNTK/Tests/EndToEndTests/Text/SequenceClassification
-ConfigDir=/home/clemensm/CNTK/Tests/EndToEndTests/Text/SequenceClassification
-OutputDir=/tmp/cntk-test-20160414100627.936345/Text_SequenceClassification@debug_gpu
+currentDirectory=/home/clemensm/CNTK/Tests/EndToEndTests/Text/SequenceClassification/Data
+RunDir=/tmp/cntk-test-20160415130034.515539/Text_SequenceClassification@debug_gpu
+DataDir=/home/clemensm/CNTK/Tests/EndToEndTests/Text/SequenceClassification/Data
+ConfigDir=/home/clemensm/CNTK/Tests/EndToEndTests/Text/SequenceClassification/Config
+OutputDir=/tmp/cntk-test-20160415130034.515539/Text_SequenceClassification@debug_gpu
 DeviceId=0
 timestamping=true
 
-04/14/2016 10:06:27: <<<<<<<<<<<<<<<<<<<< RAW CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<
+04/15/2016 13:00:35: <<<<<<<<<<<<<<<<<<<< RAW CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<
 
-04/14/2016 10:06:27: >>>>>>>>>>>>>>>>>>>> PROCESSED CONFIG WITH ALL VARIABLES RESOLVED >>>>>>>>>>>>>>>>>>>>
+04/15/2016 13:00:35: >>>>>>>>>>>>>>>>>>>> PROCESSED CONFIG WITH ALL VARIABLES RESOLVED >>>>>>>>>>>>>>>>>>>>
 configparameters: seqcla.cntk:command=Train
-configparameters: seqcla.cntk:ConfigDir=/home/clemensm/CNTK/Tests/EndToEndTests/Text/SequenceClassification
-configparameters: seqcla.cntk:currentDirectory=/home/clemensm/CNTK/Tests/EndToEndTests/Text/SequenceClassification
-configparameters: seqcla.cntk:DataDir=/home/clemensm/CNTK/Tests/EndToEndTests/Text/SequenceClassification
+configparameters: seqcla.cntk:ConfigDir=/home/clemensm/CNTK/Tests/EndToEndTests/Text/SequenceClassification/Config
+configparameters: seqcla.cntk:currentDirectory=/home/clemensm/CNTK/Tests/EndToEndTests/Text/SequenceClassification/Data
+configparameters: seqcla.cntk:DataDir=/home/clemensm/CNTK/Tests/EndToEndTests/Text/SequenceClassification/Data
 configparameters: seqcla.cntk:deviceId=0
-configparameters: seqcla.cntk:modelPath=/tmp/cntk-test-20160414100627.936345/Text_SequenceClassification@debug_gpu/model
-configparameters: seqcla.cntk:OutputDir=/tmp/cntk-test-20160414100627.936345/Text_SequenceClassification@debug_gpu
-configparameters: seqcla.cntk:RunDir=/tmp/cntk-test-20160414100627.936345/Text_SequenceClassification@debug_gpu
+configparameters: seqcla.cntk:ModelDir=/tmp/cntk-test-20160415130034.515539/Text_SequenceClassification@debug_gpu/Models
+configparameters: seqcla.cntk:modelPath=/tmp/cntk-test-20160415130034.515539/Text_SequenceClassification@debug_gpu/Models/seqcla.dnn
+configparameters: seqcla.cntk:OutputDir=/tmp/cntk-test-20160415130034.515539/Text_SequenceClassification@debug_gpu
+configparameters: seqcla.cntk:RootDir=..
+configparameters: seqcla.cntk:RunDir=/tmp/cntk-test-20160415130034.515539/Text_SequenceClassification@debug_gpu
 configparameters: seqcla.cntk:timestamping=true
 configparameters: seqcla.cntk:Train=[
     action="train"
@@ -327,7 +339,7 @@ labels   = Input(numLabels)
     ]
     reader = [
         readerType = "CNTKTextFormatReader"
-        file = "Train.txt"            
+        file = "/home/clemensm/CNTK/Tests/EndToEndTests/Text/SequenceClassification/Data/Train.txt"            
         input = [            
             features=[
                 alias = "x"                
@@ -341,7 +353,7 @@ labels   = Input(numLabels)
             ]
         ]
    ]    
-outputPath = "output"        
+outputPath = "/tmp/cntk-test-20160415130034.515539/Text_SequenceClassification@debug_gpu/output.txt"        
 ]
 
 configparameters: seqcla.cntk:Write=[
@@ -352,10 +364,10 @@ configparameters: seqcla.cntk:Write=[
       sampleSeparator=\n%d\t|w\s
       elementSeparator=\s
     ]
-    modelFile = "model"    
+    modelFile = "/tmp/cntk-test-20160415130034.515539/Text_SequenceClassification@debug_gpu/Models/seqcla.dnn"    
     reader = [
             readerType = "CNTKTextFormatReader"
-            file = "/home/clemensm/CNTK/Tests/EndToEndTests/Text/SequenceClassification/Train.txt"            
+            file = "/home/clemensm/CNTK/Tests/EndToEndTests/Text/SequenceClassification/Data/Train.txt"            
             input = [            
                 features=[
                     alias = "x"                
@@ -369,25 +381,25 @@ configparameters: seqcla.cntk:Write=[
                 ]
             ]
    ]    
-outputPath = "output"        
+outputPath = "/tmp/cntk-test-20160415130034.515539/Text_SequenceClassification@debug_gpu/output.txt"        
 ]
 
-04/14/2016 10:06:27: <<<<<<<<<<<<<<<<<<<< PROCESSED CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<
-04/14/2016 10:06:27: Commands: Train
-04/14/2016 10:06:27: Precision = "float"
-04/14/2016 10:06:27: CNTKModelPath: /tmp/cntk-test-20160414100627.936345/Text_SequenceClassification@debug_gpu/model
-04/14/2016 10:06:27: CNTKCommandTrainInfo: Train : 5
-04/14/2016 10:06:27: CNTKCommandTrainInfo: CNTKNoMoreCommands_Total : 5
+04/15/2016 13:00:35: <<<<<<<<<<<<<<<<<<<< PROCESSED CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<
+04/15/2016 13:00:35: Commands: Train
+04/15/2016 13:00:35: Precision = "float"
+04/15/2016 13:00:35: CNTKModelPath: /tmp/cntk-test-20160415130034.515539/Text_SequenceClassification@debug_gpu/Models/seqcla.dnn
+04/15/2016 13:00:35: CNTKCommandTrainInfo: Train : 5
+04/15/2016 13:00:35: CNTKCommandTrainInfo: CNTKNoMoreCommands_Total : 5
 
-04/14/2016 10:06:27: ##############################################################################
-04/14/2016 10:06:27: #                                                                            #
-04/14/2016 10:06:27: # Action "train"                                                             #
-04/14/2016 10:06:27: #                                                                            #
-04/14/2016 10:06:27: ##############################################################################
+04/15/2016 13:00:35: ##############################################################################
+04/15/2016 13:00:35: #                                                                            #
+04/15/2016 13:00:35: # Action "train"                                                             #
+04/15/2016 13:00:35: #                                                                            #
+04/15/2016 13:00:35: ##############################################################################
 
-04/14/2016 10:06:27: CNTKCommandTrainBegin: Train
+04/15/2016 13:00:35: CNTKCommandTrainBegin: Train
 
-04/14/2016 10:06:27: Creating virgin network.
+04/15/2016 13:00:35: Creating virgin network.
 
 Post-processing network...
 
@@ -496,64 +508,63 @@ Validating --> wer = ErrorPrediction (labels, l3p) : [5 x *], [5 x 1 x *] -> [1]
 
 Post-processing network complete.
 
-04/14/2016 10:06:27: Created model with 70 nodes on GPU 0.
+04/15/2016 13:00:35: Created model with 70 nodes on GPU 0.
 
-04/14/2016 10:06:27: Training criterion node(s):
-04/14/2016 10:06:27: 	ce = CrossEntropyWithSoftmax
+04/15/2016 13:00:35: Training criterion node(s):
+04/15/2016 13:00:35: 	ce = CrossEntropyWithSoftmax
 
-04/14/2016 10:06:27: Evaluation criterion node(s):
+04/15/2016 13:00:35: Evaluation criterion node(s):
 
-04/14/2016 10:06:27: 	wer = ErrorPrediction
+04/15/2016 13:00:35: 	wer = ErrorPrediction
 
 
 Allocating matrices for forward and/or backward propagation.
-04/14/2016 10:06:27: No PreCompute nodes found, skipping PreCompute step.
+04/15/2016 13:00:35: No PreCompute nodes found, skipping PreCompute step.
 
-04/14/2016 10:06:27: Starting Epoch 1: learning rate per sample = 0.000500  effective momentum = 0.900000  momentum as time constant = 1898.2 samples
+04/15/2016 13:00:35: Starting Epoch 1: learning rate per sample = 0.000500  effective momentum = 0.900000  momentum as time constant = 1898.2 samples
 
-04/14/2016 10:06:27: Starting minibatch loop.
+04/15/2016 13:00:35: Starting minibatch loop.
 WARNING: The same matrix with dim [1, 44] has been transferred between different devices for 20 times.
-04/14/2016 10:06:28: Finished Epoch[ 1 of 5]: [Training Set] TrainLossPerSample = 1.5804819; TotalSamplesSeen = 1247; EvalErrPerSample = 0.4979952; AvgLearningRatePerSample = 0.00050000002; EpochTime=0.944397
-04/14/2016 10:06:28: SGD: Saving checkpoint model '/tmp/cntk-test-20160414100627.936345/Text_SequenceClassification@debug_gpu/model.1'
+04/15/2016 13:00:37: Finished Epoch[ 1 of 5]: [Training Set] TrainLossPerSample = 1.5806144; TotalSamplesSeen = 1247; EvalErrPerSample = 0.4979952; AvgLearningRatePerSample = 0.00050000002; EpochTime=1.6899
+04/15/2016 13:00:37: SGD: Saving checkpoint model '/tmp/cntk-test-20160415130034.515539/Text_SequenceClassification@debug_gpu/Models/seqcla.dnn.1'
 
-04/14/2016 10:06:28: Starting Epoch 2: learning rate per sample = 0.000500  effective momentum = 0.900000  momentum as time constant = 1898.2 samples
+04/15/2016 13:00:37: Starting Epoch 2: learning rate per sample = 0.000500  effective momentum = 0.900000  momentum as time constant = 1898.2 samples
 
-04/14/2016 10:06:28: Starting minibatch loop.
-04/14/2016 10:06:29: Finished Epoch[ 2 of 5]: [Training Set] TrainLossPerSample = 1.4940796; TotalSamplesSeen = 2494; EvalErrPerSample = 0.44667202; AvgLearningRatePerSample = 0.00050000002; EpochTime=0.742401
-04/14/2016 10:06:29: SGD: Saving checkpoint model '/tmp/cntk-test-20160414100627.936345/Text_SequenceClassification@debug_gpu/model.2'
+04/15/2016 13:00:37: Starting minibatch loop.
+04/15/2016 13:00:38: Finished Epoch[ 2 of 5]: [Training Set] TrainLossPerSample = 1.4946848; TotalSamplesSeen = 2494; EvalErrPerSample = 0.44667202; AvgLearningRatePerSample = 0.00050000002; EpochTime=1.66885
+04/15/2016 13:00:38: SGD: Saving checkpoint model '/tmp/cntk-test-20160415130034.515539/Text_SequenceClassification@debug_gpu/Models/seqcla.dnn.2'
 
-04/14/2016 10:06:29: Starting Epoch 3: learning rate per sample = 0.000500  effective momentum = 0.900000  momentum as time constant = 1898.2 samples
+04/15/2016 13:00:38: Starting Epoch 3: learning rate per sample = 0.000500  effective momentum = 0.900000  momentum as time constant = 1898.2 samples
 
-04/14/2016 10:06:29: Starting minibatch loop.
-04/14/2016 10:06:30: Finished Epoch[ 3 of 5]: [Training Set] TrainLossPerSample = 1.4226023; TotalSamplesSeen = 3741; EvalErrPerSample = 0.44667202; AvgLearningRatePerSample = 0.00050000002; EpochTime=1.00546
-04/14/2016 10:06:30: SGD: Saving checkpoint model '/tmp/cntk-test-20160414100627.936345/Text_SequenceClassification@debug_gpu/model.3'
+04/15/2016 13:00:38: Starting minibatch loop.
+04/15/2016 13:00:40: Finished Epoch[ 3 of 5]: [Training Set] TrainLossPerSample = 1.4235663; TotalSamplesSeen = 3741; EvalErrPerSample = 0.44667202; AvgLearningRatePerSample = 0.00050000002; EpochTime=1.60341
+04/15/2016 13:00:40: SGD: Saving checkpoint model '/tmp/cntk-test-20160415130034.515539/Text_SequenceClassification@debug_gpu/Models/seqcla.dnn.3'
 
-04/14/2016 10:06:30: Starting Epoch 4: learning rate per sample = 0.000500  effective momentum = 0.900000  momentum as time constant = 1898.2 samples
+04/15/2016 13:00:40: Starting Epoch 4: learning rate per sample = 0.000500  effective momentum = 0.900000  momentum as time constant = 1898.2 samples
 
-04/14/2016 10:06:30: Starting minibatch loop.
-04/14/2016 10:06:31: Finished Epoch[ 4 of 5]: [Training Set] TrainLossPerSample = 1.369714; TotalSamplesSeen = 4988; EvalErrPerSample = 0.44667202; AvgLearningRatePerSample = 0.00050000002; EpochTime=0.695888
-04/14/2016 10:06:31: SGD: Saving checkpoint model '/tmp/cntk-test-20160414100627.936345/Text_SequenceClassification@debug_gpu/model.4'
+04/15/2016 13:00:40: Starting minibatch loop.
+04/15/2016 13:00:42: Finished Epoch[ 4 of 5]: [Training Set] TrainLossPerSample = 1.3709049; TotalSamplesSeen = 4988; EvalErrPerSample = 0.44667202; AvgLearningRatePerSample = 0.00050000002; EpochTime=1.61669
+04/15/2016 13:00:42: SGD: Saving checkpoint model '/tmp/cntk-test-20160415130034.515539/Text_SequenceClassification@debug_gpu/Models/seqcla.dnn.4'
 
-04/14/2016 10:06:31: Starting Epoch 5: learning rate per sample = 0.000500  effective momentum = 0.900000  momentum as time constant = 1898.2 samples
+04/15/2016 13:00:42: Starting Epoch 5: learning rate per sample = 0.000500  effective momentum = 0.900000  momentum as time constant = 1898.2 samples
 
-04/14/2016 10:06:31: Starting minibatch loop.
-04/14/2016 10:06:31: Finished Epoch[ 5 of 5]: [Training Set] TrainLossPerSample = 1.3316153; TotalSamplesSeen = 6235; EvalErrPerSample = 0.44667202; AvgLearningRatePerSample = 0.00050000002; EpochTime=0.515625
-04/14/2016 10:06:31: SGD: Saving checkpoint model '/tmp/cntk-test-20160414100627.936345/Text_SequenceClassification@debug_gpu/model'
-04/14/2016 10:06:31: CNTKCommandTrainEnd: Train
+04/15/2016 13:00:42: Starting minibatch loop.
+04/15/2016 13:00:43: Finished Epoch[ 5 of 5]: [Training Set] TrainLossPerSample = 1.3328552; TotalSamplesSeen = 6235; EvalErrPerSample = 0.44667202; AvgLearningRatePerSample = 0.00050000002; EpochTime=1.59827
+04/15/2016 13:00:43: SGD: Saving checkpoint model '/tmp/cntk-test-20160415130034.515539/Text_SequenceClassification@debug_gpu/Models/seqcla.dnn'
+04/15/2016 13:00:43: CNTKCommandTrainEnd: Train
 
-04/14/2016 10:06:31: Action "train" complete.
+04/15/2016 13:00:43: Action "train" complete.
 
-04/14/2016 10:06:31: __COMPLETED__
+04/15/2016 13:00:43: __COMPLETED__
 === Deleting last epoch data
-rm: cannot remove ‘/tmp/cntk-test-20160414100627.936345/Text_SequenceClassification@debug_gpu/models/*.dnn’: No such file or directory
 ==== Re-running from checkpoint
-=== Running /home/clemensm/CNTK/build/debug/bin/cntk configFile=/home/clemensm/CNTK/Tests/EndToEndTests/Text/SequenceClassification/seqcla.cntk currentDirectory=/home/clemensm/CNTK/Tests/EndToEndTests/Text/SequenceClassification RunDir=/tmp/cntk-test-20160414100627.936345/Text_SequenceClassification@debug_gpu DataDir=/home/clemensm/CNTK/Tests/EndToEndTests/Text/SequenceClassification ConfigDir=/home/clemensm/CNTK/Tests/EndToEndTests/Text/SequenceClassification OutputDir=/tmp/cntk-test-20160414100627.936345/Text_SequenceClassification@debug_gpu DeviceId=0 timestamping=true makeMode=true
+=== Running /home/clemensm/CNTK/build/debug/bin/cntk configFile=/home/clemensm/CNTK/Tests/EndToEndTests/Text/SequenceClassification/Config/seqcla.cntk currentDirectory=/home/clemensm/CNTK/Tests/EndToEndTests/Text/SequenceClassification/Data RunDir=/tmp/cntk-test-20160415130034.515539/Text_SequenceClassification@debug_gpu DataDir=/home/clemensm/CNTK/Tests/EndToEndTests/Text/SequenceClassification/Data ConfigDir=/home/clemensm/CNTK/Tests/EndToEndTests/Text/SequenceClassification/Config OutputDir=/tmp/cntk-test-20160415130034.515539/Text_SequenceClassification@debug_gpu DeviceId=0 timestamping=true makeMode=true
 -------------------------------------------------------------------
 Build info: 
 
-		Built time: Apr 14 2016 08:05:53
+		Built time: Apr 15 2016 12:53:57
 		Last modified date: Wed Apr 13 15:12:17 2016
-		Build type: release
+		Build type: debug
 		Build target: GPU
 		With 1bit-SGD: no
 		Math lib: acml
@@ -561,39 +572,44 @@ Build info:
 		CUB_PATH: /usr/local/cub-1.4.1
 		CUDNN_PATH: /usr/local/cudnn-4.0
 		Build Branch: deepbliscore/vnext
-		Build SHA1: 1aca7c04c27e65dd60998214962fd727909d7813 (modified)
+		Build SHA1: 2709eb537f5ac2533af73316daa176b56788b646
 		Built by clemensm on ubuntu
 		Build Path: /home/clemensm/CNTK
 -------------------------------------------------------------------
-Changed current directory to /home/clemensm/CNTK/Tests/EndToEndTests/Text/SequenceClassification
-04/14/2016 10:06:31: -------------------------------------------------------------------
-04/14/2016 10:06:31: Build info: 
+Changed current directory to /home/clemensm/CNTK/Tests/EndToEndTests/Text/SequenceClassification/Data
+04/15/2016 13:00:43: -------------------------------------------------------------------
+04/15/2016 13:00:43: Build info: 
 
-04/14/2016 10:06:31: 		Built time: Apr 14 2016 08:05:53
-04/14/2016 10:06:31: 		Last modified date: Wed Apr 13 15:12:17 2016
-04/14/2016 10:06:31: 		Build type: release
-04/14/2016 10:06:31: 		Build target: GPU
-04/14/2016 10:06:31: 		With 1bit-SGD: no
-04/14/2016 10:06:31: 		Math lib: acml
-04/14/2016 10:06:31: 		CUDA_PATH: /usr/local/cuda-7.5
-04/14/2016 10:06:31: 		CUB_PATH: /usr/local/cub-1.4.1
-04/14/2016 10:06:31: 		CUDNN_PATH: /usr/local/cudnn-4.0
-04/14/2016 10:06:31: 		Build Branch: deepbliscore/vnext
-04/14/2016 10:06:31: 		Build SHA1: 1aca7c04c27e65dd60998214962fd727909d7813 (modified)
-04/14/2016 10:06:31: 		Built by clemensm on ubuntu
-04/14/2016 10:06:31: 		Build Path: /home/clemensm/CNTK
-04/14/2016 10:06:31: -------------------------------------------------------------------
+04/15/2016 13:00:43: 		Built time: Apr 15 2016 12:53:57
+04/15/2016 13:00:43: 		Last modified date: Wed Apr 13 15:12:17 2016
+04/15/2016 13:00:43: 		Build type: debug
+04/15/2016 13:00:43: 		Build target: GPU
+04/15/2016 13:00:43: 		With 1bit-SGD: no
+04/15/2016 13:00:43: 		Math lib: acml
+04/15/2016 13:00:43: 		CUDA_PATH: /usr/local/cuda-7.5
+04/15/2016 13:00:43: 		CUB_PATH: /usr/local/cub-1.4.1
+04/15/2016 13:00:43: 		CUDNN_PATH: /usr/local/cudnn-4.0
+04/15/2016 13:00:43: 		Build Branch: deepbliscore/vnext
+04/15/2016 13:00:43: 		Build SHA1: 2709eb537f5ac2533af73316daa176b56788b646
+04/15/2016 13:00:43: 		Built by clemensm on ubuntu
+04/15/2016 13:00:43: 		Build Path: /home/clemensm/CNTK
+04/15/2016 13:00:43: -------------------------------------------------------------------
 
-04/14/2016 10:06:31: Running on localhost at 2016/04/14 10:06:31
-04/14/2016 10:06:31: Command line: 
-/home/clemensm/CNTK/build/debug/bin/cntk  configFile=/home/clemensm/CNTK/Tests/EndToEndTests/Text/SequenceClassification/seqcla.cntk  currentDirectory=/home/clemensm/CNTK/Tests/EndToEndTests/Text/SequenceClassification  RunDir=/tmp/cntk-test-20160414100627.936345/Text_SequenceClassification@debug_gpu  DataDir=/home/clemensm/CNTK/Tests/EndToEndTests/Text/SequenceClassification  ConfigDir=/home/clemensm/CNTK/Tests/EndToEndTests/Text/SequenceClassification  OutputDir=/tmp/cntk-test-20160414100627.936345/Text_SequenceClassification@debug_gpu  DeviceId=0  timestamping=true  makeMode=true
+04/15/2016 13:00:43: Running on localhost at 2016/04/15 13:00:43
+04/15/2016 13:00:43: Command line: 
+/home/clemensm/CNTK/build/debug/bin/cntk  configFile=/home/clemensm/CNTK/Tests/EndToEndTests/Text/SequenceClassification/Config/seqcla.cntk  currentDirectory=/home/clemensm/CNTK/Tests/EndToEndTests/Text/SequenceClassification/Data  RunDir=/tmp/cntk-test-20160415130034.515539/Text_SequenceClassification@debug_gpu  DataDir=/home/clemensm/CNTK/Tests/EndToEndTests/Text/SequenceClassification/Data  ConfigDir=/home/clemensm/CNTK/Tests/EndToEndTests/Text/SequenceClassification/Config  OutputDir=/tmp/cntk-test-20160415130034.515539/Text_SequenceClassification@debug_gpu  DeviceId=0  timestamping=true  makeMode=true
 
 
 
-04/14/2016 10:06:31: >>>>>>>>>>>>>>>>>>>> RAW CONFIG (VARIABLES NOT RESOLVED) >>>>>>>>>>>>>>>>>>>>
-04/14/2016 10:06:31: command=Train 
-deviceId=-1
-modelPath="$RunDir$/model"
+04/15/2016 13:00:43: >>>>>>>>>>>>>>>>>>>> RAW CONFIG (VARIABLES NOT RESOLVED) >>>>>>>>>>>>>>>>>>>>
+04/15/2016 13:00:43: RootDir = ".."
+ConfigDir = "$RootDir$/Config"
+DataDir   = "$RootDir$/Data"
+OutputDir = "$RootDir$/Output"
+ModelDir  = "$OutputDir$/Models"
+command=Train 
+deviceId = $DeviceId$
+modelPath="$ModelDir$/seqcla.dnn"
 Train=[
     action="train"
     run=BrainScriptNetworkBuilder
@@ -648,7 +664,7 @@ labels   = Input(numLabels)
     ]
     reader = [
         readerType = "CNTKTextFormatReader"
-        file = "Train.txt"            
+        file = "$DataDir$/Train.txt"            
         input = [            
             features=[
                 alias = "x"                
@@ -662,7 +678,7 @@ labels   = Input(numLabels)
             ]
         ]
    ]    
-outputPath = "output"        
+outputPath = "$OutputDir$/output.txt"        
 ]
 Write=[
     action="test"
@@ -672,7 +688,7 @@ Write=[
       sampleSeparator=\n%d\t|w\s
       elementSeparator=\s
     ]
-    modelFile = "model"    
+    modelFile = "$ModelDir$/seqcla.dnn"    
     reader = [
             readerType = "CNTKTextFormatReader"
             file = "$DataDir$/Train.txt"            
@@ -689,23 +705,28 @@ Write=[
                 ]
             ]
    ]    
-outputPath = "output"        
+outputPath = "$OutputDir$/output.txt"        
 ]
-currentDirectory=/home/clemensm/CNTK/Tests/EndToEndTests/Text/SequenceClassification
-RunDir=/tmp/cntk-test-20160414100627.936345/Text_SequenceClassification@debug_gpu
-DataDir=/home/clemensm/CNTK/Tests/EndToEndTests/Text/SequenceClassification
-ConfigDir=/home/clemensm/CNTK/Tests/EndToEndTests/Text/SequenceClassification
-OutputDir=/tmp/cntk-test-20160414100627.936345/Text_SequenceClassification@debug_gpu
+currentDirectory=/home/clemensm/CNTK/Tests/EndToEndTests/Text/SequenceClassification/Data
+RunDir=/tmp/cntk-test-20160415130034.515539/Text_SequenceClassification@debug_gpu
+DataDir=/home/clemensm/CNTK/Tests/EndToEndTests/Text/SequenceClassification/Data
+ConfigDir=/home/clemensm/CNTK/Tests/EndToEndTests/Text/SequenceClassification/Config
+OutputDir=/tmp/cntk-test-20160415130034.515539/Text_SequenceClassification@debug_gpu
 DeviceId=0
 timestamping=true
 makeMode=true
 
-04/14/2016 10:06:31: <<<<<<<<<<<<<<<<<<<< RAW CONFIG (VARIABLES NOT RESOLVED)  <<<<<<<<<<<<<<<<<<<<
+04/15/2016 13:00:43: <<<<<<<<<<<<<<<<<<<< RAW CONFIG (VARIABLES NOT RESOLVED)  <<<<<<<<<<<<<<<<<<<<
 
-04/14/2016 10:06:31: >>>>>>>>>>>>>>>>>>>> RAW CONFIG WITH ALL VARIABLES RESOLVED >>>>>>>>>>>>>>>>>>>>
-04/14/2016 10:06:31: command=Train 
-deviceId=-1
-modelPath="/tmp/cntk-test-20160414100627.936345/Text_SequenceClassification@debug_gpu/model"
+04/15/2016 13:00:43: >>>>>>>>>>>>>>>>>>>> RAW CONFIG WITH ALL VARIABLES RESOLVED >>>>>>>>>>>>>>>>>>>>
+04/15/2016 13:00:43: RootDir = ".."
+ConfigDir = "../Config"
+DataDir   = "../Data"
+OutputDir = "../Output"
+ModelDir  = "/tmp/cntk-test-20160415130034.515539/Text_SequenceClassification@debug_gpu/Models"
+command=Train 
+deviceId = 0
+modelPath="/tmp/cntk-test-20160415130034.515539/Text_SequenceClassification@debug_gpu/Models/seqcla.dnn"
 Train=[
     action="train"
     run=BrainScriptNetworkBuilder
@@ -760,7 +781,7 @@ labels   = Input(numLabels)
     ]
     reader = [
         readerType = "CNTKTextFormatReader"
-        file = "Train.txt"            
+        file = "/home/clemensm/CNTK/Tests/EndToEndTests/Text/SequenceClassification/Data/Train.txt"            
         input = [            
             features=[
                 alias = "x"                
@@ -774,7 +795,7 @@ labels   = Input(numLabels)
             ]
         ]
    ]    
-outputPath = "output"        
+outputPath = "/tmp/cntk-test-20160415130034.515539/Text_SequenceClassification@debug_gpu/output.txt"        
 ]
 Write=[
     action="test"
@@ -784,10 +805,10 @@ Write=[
       sampleSeparator=\n%d\t|w\s
       elementSeparator=\s
     ]
-    modelFile = "model"    
+    modelFile = "/tmp/cntk-test-20160415130034.515539/Text_SequenceClassification@debug_gpu/Models/seqcla.dnn"    
     reader = [
             readerType = "CNTKTextFormatReader"
-            file = "/home/clemensm/CNTK/Tests/EndToEndTests/Text/SequenceClassification/Train.txt"            
+            file = "/home/clemensm/CNTK/Tests/EndToEndTests/Text/SequenceClassification/Data/Train.txt"            
             input = [            
                 features=[
                     alias = "x"                
@@ -801,29 +822,31 @@ Write=[
                 ]
             ]
    ]    
-outputPath = "output"        
+outputPath = "/tmp/cntk-test-20160415130034.515539/Text_SequenceClassification@debug_gpu/output.txt"        
 ]
-currentDirectory=/home/clemensm/CNTK/Tests/EndToEndTests/Text/SequenceClassification
-RunDir=/tmp/cntk-test-20160414100627.936345/Text_SequenceClassification@debug_gpu
-DataDir=/home/clemensm/CNTK/Tests/EndToEndTests/Text/SequenceClassification
-ConfigDir=/home/clemensm/CNTK/Tests/EndToEndTests/Text/SequenceClassification
-OutputDir=/tmp/cntk-test-20160414100627.936345/Text_SequenceClassification@debug_gpu
+currentDirectory=/home/clemensm/CNTK/Tests/EndToEndTests/Text/SequenceClassification/Data
+RunDir=/tmp/cntk-test-20160415130034.515539/Text_SequenceClassification@debug_gpu
+DataDir=/home/clemensm/CNTK/Tests/EndToEndTests/Text/SequenceClassification/Data
+ConfigDir=/home/clemensm/CNTK/Tests/EndToEndTests/Text/SequenceClassification/Config
+OutputDir=/tmp/cntk-test-20160415130034.515539/Text_SequenceClassification@debug_gpu
 DeviceId=0
 timestamping=true
 makeMode=true
 
-04/14/2016 10:06:31: <<<<<<<<<<<<<<<<<<<< RAW CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<
+04/15/2016 13:00:43: <<<<<<<<<<<<<<<<<<<< RAW CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<
 
-04/14/2016 10:06:31: >>>>>>>>>>>>>>>>>>>> PROCESSED CONFIG WITH ALL VARIABLES RESOLVED >>>>>>>>>>>>>>>>>>>>
+04/15/2016 13:00:43: >>>>>>>>>>>>>>>>>>>> PROCESSED CONFIG WITH ALL VARIABLES RESOLVED >>>>>>>>>>>>>>>>>>>>
 configparameters: seqcla.cntk:command=Train
-configparameters: seqcla.cntk:ConfigDir=/home/clemensm/CNTK/Tests/EndToEndTests/Text/SequenceClassification
-configparameters: seqcla.cntk:currentDirectory=/home/clemensm/CNTK/Tests/EndToEndTests/Text/SequenceClassification
-configparameters: seqcla.cntk:DataDir=/home/clemensm/CNTK/Tests/EndToEndTests/Text/SequenceClassification
+configparameters: seqcla.cntk:ConfigDir=/home/clemensm/CNTK/Tests/EndToEndTests/Text/SequenceClassification/Config
+configparameters: seqcla.cntk:currentDirectory=/home/clemensm/CNTK/Tests/EndToEndTests/Text/SequenceClassification/Data
+configparameters: seqcla.cntk:DataDir=/home/clemensm/CNTK/Tests/EndToEndTests/Text/SequenceClassification/Data
 configparameters: seqcla.cntk:deviceId=0
 configparameters: seqcla.cntk:makeMode=true
-configparameters: seqcla.cntk:modelPath=/tmp/cntk-test-20160414100627.936345/Text_SequenceClassification@debug_gpu/model
-configparameters: seqcla.cntk:OutputDir=/tmp/cntk-test-20160414100627.936345/Text_SequenceClassification@debug_gpu
-configparameters: seqcla.cntk:RunDir=/tmp/cntk-test-20160414100627.936345/Text_SequenceClassification@debug_gpu
+configparameters: seqcla.cntk:ModelDir=/tmp/cntk-test-20160415130034.515539/Text_SequenceClassification@debug_gpu/Models
+configparameters: seqcla.cntk:modelPath=/tmp/cntk-test-20160415130034.515539/Text_SequenceClassification@debug_gpu/Models/seqcla.dnn
+configparameters: seqcla.cntk:OutputDir=/tmp/cntk-test-20160415130034.515539/Text_SequenceClassification@debug_gpu
+configparameters: seqcla.cntk:RootDir=..
+configparameters: seqcla.cntk:RunDir=/tmp/cntk-test-20160415130034.515539/Text_SequenceClassification@debug_gpu
 configparameters: seqcla.cntk:timestamping=true
 configparameters: seqcla.cntk:Train=[
     action="train"
@@ -879,7 +902,7 @@ labels   = Input(numLabels)
     ]
     reader = [
         readerType = "CNTKTextFormatReader"
-        file = "Train.txt"            
+        file = "/home/clemensm/CNTK/Tests/EndToEndTests/Text/SequenceClassification/Data/Train.txt"            
         input = [            
             features=[
                 alias = "x"                
@@ -893,7 +916,7 @@ labels   = Input(numLabels)
             ]
         ]
    ]    
-outputPath = "output"        
+outputPath = "/tmp/cntk-test-20160415130034.515539/Text_SequenceClassification@debug_gpu/output.txt"        
 ]
 
 configparameters: seqcla.cntk:Write=[
@@ -904,10 +927,10 @@ configparameters: seqcla.cntk:Write=[
       sampleSeparator=\n%d\t|w\s
       elementSeparator=\s
     ]
-    modelFile = "model"    
+    modelFile = "/tmp/cntk-test-20160415130034.515539/Text_SequenceClassification@debug_gpu/Models/seqcla.dnn"    
     reader = [
             readerType = "CNTKTextFormatReader"
-            file = "/home/clemensm/CNTK/Tests/EndToEndTests/Text/SequenceClassification/Train.txt"            
+            file = "/home/clemensm/CNTK/Tests/EndToEndTests/Text/SequenceClassification/Data/Train.txt"            
             input = [            
                 features=[
                     alias = "x"                
@@ -921,27 +944,155 @@ configparameters: seqcla.cntk:Write=[
                 ]
             ]
    ]    
-outputPath = "output"        
+outputPath = "/tmp/cntk-test-20160415130034.515539/Text_SequenceClassification@debug_gpu/output.txt"        
 ]
 
-04/14/2016 10:06:31: <<<<<<<<<<<<<<<<<<<< PROCESSED CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<
-04/14/2016 10:06:31: Commands: Train
-04/14/2016 10:06:31: Precision = "float"
-04/14/2016 10:06:31: CNTKModelPath: /tmp/cntk-test-20160414100627.936345/Text_SequenceClassification@debug_gpu/model
-04/14/2016 10:06:31: CNTKCommandTrainInfo: Train : 5
-04/14/2016 10:06:31: CNTKCommandTrainInfo: CNTKNoMoreCommands_Total : 5
+04/15/2016 13:00:43: <<<<<<<<<<<<<<<<<<<< PROCESSED CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<
+04/15/2016 13:00:43: Commands: Train
+04/15/2016 13:00:43: Precision = "float"
+04/15/2016 13:00:43: CNTKModelPath: /tmp/cntk-test-20160415130034.515539/Text_SequenceClassification@debug_gpu/Models/seqcla.dnn
+04/15/2016 13:00:43: CNTKCommandTrainInfo: Train : 5
+04/15/2016 13:00:43: CNTKCommandTrainInfo: CNTKNoMoreCommands_Total : 5
 
-04/14/2016 10:06:31: ##############################################################################
-04/14/2016 10:06:31: #                                                                            #
-04/14/2016 10:06:31: # Action "train"                                                             #
-04/14/2016 10:06:31: #                                                                            #
-04/14/2016 10:06:31: ##############################################################################
+04/15/2016 13:00:43: ##############################################################################
+04/15/2016 13:00:43: #                                                                            #
+04/15/2016 13:00:43: # Action "train"                                                             #
+04/15/2016 13:00:43: #                                                                            #
+04/15/2016 13:00:43: ##############################################################################
 
-04/14/2016 10:06:31: CNTKCommandTrainBegin: Train
-04/14/2016 10:06:31: Final model exists: /tmp/cntk-test-20160414100627.936345/Text_SequenceClassification@debug_gpu/model
-04/14/2016 10:06:31: No further training is necessary.
-04/14/2016 10:06:31: CNTKCommandTrainEnd: Train
+04/15/2016 13:00:43: CNTKCommandTrainBegin: Train
 
-04/14/2016 10:06:31: Action "train" complete.
+04/15/2016 13:00:43: Starting from checkpoint. Loading network from '/tmp/cntk-test-20160415130034.515539/Text_SequenceClassification@debug_gpu/Models/seqcla.dnn.4'.
 
-04/14/2016 10:06:31: __COMPLETED__
+Post-processing network...
+
+4 roots:
+	ce = CrossEntropyWithSoftmax()
+	out = Pass()
+	t = DynamicAxis()
+	wer = ErrorPrediction()
+
+Loop[0] --> Loop_l2.lstm.lstmState._privateInnards.ht -> 26 nodes
+
+	l2.lstm.prevState.h	l2.lstm.lstmState._privateInnards.ot.z.PlusArgs[0].PlusArgs[1]	l2.lstm.lstmState._privateInnards.ot.z.PlusArgs[0]
+	l2.lstm.lstmState._privateInnards.ft.z.PlusArgs[0].PlusArgs[1]	l2.lstm.lstmState._privateInnards.ft.z.PlusArgs[0]	l2.lstm.prevState.c
+	l2.lstm.lstmState._privateInnards.ft.z.PlusArgs[1]	l2.lstm.lstmState._privateInnards.ft.z	l2.lstm.lstmState._privateInnards.ft
+	l2.lstm.lstmState._privateInnards.bft	l2.lstm.lstmState._privateInnards.it.z.PlusArgs[0].PlusArgs[1]	l2.lstm.lstmState._privateInnards.it.z.PlusArgs[0]
+	l2.lstm.lstmState._privateInnards.it.z.PlusArgs[1]	l2.lstm.lstmState._privateInnards.it.z	l2.lstm.lstmState._privateInnards.it
+	l2.lstm.lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[0]	l2.lstm.lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1]	l2.lstm.lstmState._privateInnards.bit.ElementTimesArgs[1].z
+	l2.lstm.lstmState._privateInnards.bit.ElementTimesArgs[1]	l2.lstm.lstmState._privateInnards.bit	l2.lstm.lstmState._privateInnards.ct
+	l2.lstm.lstmState._privateInnards.ot.z.PlusArgs[1]	l2.lstm.lstmState._privateInnards.ot.z	l2.lstm.lstmState._privateInnards.ot
+	l2.lstm.lstmState._privateInnards.ht.ElementTimesArgs[1]	l2.lstm.lstmState._privateInnards.ht
+
+Validating network. 70 nodes to process in pass 1.
+
+
+Validating network. 48 nodes to process in pass 2.
+
+
+Validating network. 9 nodes to process in pass 3.
+
+
+Validating network, final pass.
+
+Validating --> labels = InputValue() :  -> [5 x *]
+Validating --> l3.z.W = LearnableParameter() :  -> [5 x 25]
+Validating --> l2.lstm.lstmState._privateInnards.ot.z.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[0] = LearnableParameter() :  -> [25 x 50]
+Validating --> features = InputValue() :  -> [1 x t1]
+Validating --> l1.embedding.x = LearnableParameter() :  -> [2000 x 50]
+Validating --> l1.embedding = TransposeDimensions (l1.embedding.x) : [2000 x 50] -> [50 x 2000]
+Validating --> l1.lookup = GatherPacked (features, l1.embedding) : [1 x t1], [50 x 2000] -> [50 x t1]
+Validating --> l2.lstm.lstmState._privateInnards.ot.z.PlusArgs[0].PlusArgs[0].PlusArgs[0] = Times (l2.lstm.lstmState._privateInnards.ot.z.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[0], l1.lookup) : [25 x 50], [50 x t1] -> [25 x t1]
+Validating --> l2.lstm.lstmState._privateInnards.ot.z.PlusArgs[0].PlusArgs[0].PlusArgs[1] = LearnableParameter() :  -> [25]
+Validating --> l2.lstm.lstmState._privateInnards.ot.z.PlusArgs[0].PlusArgs[0] = Plus (l2.lstm.lstmState._privateInnards.ot.z.PlusArgs[0].PlusArgs[0].PlusArgs[0], l2.lstm.lstmState._privateInnards.ot.z.PlusArgs[0].PlusArgs[0].PlusArgs[1]) : [25 x t1], [25] -> [25 x t1]
+Validating --> l2.lstm.lstmState._privateInnards.ot.z.PlusArgs[0].PlusArgs[1].TimesArgs[0] = LearnableParameter() :  -> [25 x 25]
+Validating --> l2.lstm.lstmState._privateInnards.ot.z.PlusArgs[1].ElementTimesArgs[0] = LearnableParameter() :  -> [25 x 1]
+Validating --> l2.lstm.lstmState._privateInnards.ft.z.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[0] = LearnableParameter() :  -> [25 x 50]
+Validating --> l2.lstm.lstmState._privateInnards.ft.z.PlusArgs[0].PlusArgs[0].PlusArgs[0] = Times (l2.lstm.lstmState._privateInnards.ft.z.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[0], l1.lookup) : [25 x 50], [50 x t1] -> [25 x t1]
+Validating --> l2.lstm.lstmState._privateInnards.ft.z.PlusArgs[0].PlusArgs[0].PlusArgs[1] = LearnableParameter() :  -> [25]
+Validating --> l2.lstm.lstmState._privateInnards.ft.z.PlusArgs[0].PlusArgs[0] = Plus (l2.lstm.lstmState._privateInnards.ft.z.PlusArgs[0].PlusArgs[0].PlusArgs[0], l2.lstm.lstmState._privateInnards.ft.z.PlusArgs[0].PlusArgs[0].PlusArgs[1]) : [25 x t1], [25] -> [25 x t1]
+Validating --> l2.lstm.lstmState._privateInnards.ft.z.PlusArgs[0].PlusArgs[1].TimesArgs[0] = LearnableParameter() :  -> [25 x 25]
+Validating --> l2.lstm.lstmState._privateInnards.ft.z.PlusArgs[1].ElementTimesArgs[0] = LearnableParameter() :  -> [25 x 1]
+Validating --> l2.lstm.lstmState._privateInnards.it.z.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[0] = LearnableParameter() :  -> [25 x 50]
+Validating --> l2.lstm.lstmState._privateInnards.it.z.PlusArgs[0].PlusArgs[0].PlusArgs[0] = Times (l2.lstm.lstmState._privateInnards.it.z.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[0], l1.lookup) : [25 x 50], [50 x t1] -> [25 x t1]
+Validating --> l2.lstm.lstmState._privateInnards.it.z.PlusArgs[0].PlusArgs[0].PlusArgs[1] = LearnableParameter() :  -> [25]
+Validating --> l2.lstm.lstmState._privateInnards.it.z.PlusArgs[0].PlusArgs[0] = Plus (l2.lstm.lstmState._privateInnards.it.z.PlusArgs[0].PlusArgs[0].PlusArgs[0], l2.lstm.lstmState._privateInnards.it.z.PlusArgs[0].PlusArgs[0].PlusArgs[1]) : [25 x t1], [25] -> [25 x t1]
+Validating --> l2.lstm.lstmState._privateInnards.it.z.PlusArgs[0].PlusArgs[1].TimesArgs[0] = LearnableParameter() :  -> [25 x 25]
+Validating --> l2.lstm.lstmState._privateInnards.it.z.PlusArgs[1].ElementTimesArgs[0] = LearnableParameter() :  -> [25 x 1]
+Validating --> l2.lstm.lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[0].TimesArgs[0] = LearnableParameter() :  -> [25 x 50]
+Validating --> l2.lstm.lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[0] = Times (l2.lstm.lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[0].TimesArgs[0], l1.lookup) : [25 x 50], [50 x t1] -> [25 x t1]
+Validating --> l2.lstm.lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[0].TimesArgs[0] = LearnableParameter() :  -> [25 x 25]
+Validating --> l2.lstm.lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[1] = LearnableParameter() :  -> [25]
+Validating --> l2.lstm.prevState.h = PastValue (l2.lstm.lstmState._privateInnards.ht) : [25 x 1 x t1] -> [25 x 1 x t1]
+Validating --> l2.lstm.lstmState._privateInnards.ot.z.PlusArgs[0].PlusArgs[1] = Times (l2.lstm.lstmState._privateInnards.ot.z.PlusArgs[0].PlusArgs[1].TimesArgs[0], l2.lstm.prevState.h) : [25 x 25], [25 x 1 x t1] -> [25 x 1 x t1]
+Validating --> l2.lstm.lstmState._privateInnards.ot.z.PlusArgs[0] = Plus (l2.lstm.lstmState._privateInnards.ot.z.PlusArgs[0].PlusArgs[0], l2.lstm.lstmState._privateInnards.ot.z.PlusArgs[0].PlusArgs[1]) : [25 x t1], [25 x 1 x t1] -> [25 x 1 x t1]
+Validating --> l2.lstm.lstmState._privateInnards.ft.z.PlusArgs[0].PlusArgs[1] = Times (l2.lstm.lstmState._privateInnards.ft.z.PlusArgs[0].PlusArgs[1].TimesArgs[0], l2.lstm.prevState.h) : [25 x 25], [25 x 1 x t1] -> [25 x 1 x t1]
+Validating --> l2.lstm.lstmState._privateInnards.ft.z.PlusArgs[0] = Plus (l2.lstm.lstmState._privateInnards.ft.z.PlusArgs[0].PlusArgs[0], l2.lstm.lstmState._privateInnards.ft.z.PlusArgs[0].PlusArgs[1]) : [25 x t1], [25 x 1 x t1] -> [25 x 1 x t1]
+Validating --> l2.lstm.prevState.c = PastValue (l2.lstm.lstmState._privateInnards.ct) : [25 x 1 x t1] -> [25 x 1 x t1]
+Validating --> l2.lstm.lstmState._privateInnards.ft.z.PlusArgs[1] = ElementTimes (l2.lstm.lstmState._privateInnards.ft.z.PlusArgs[1].ElementTimesArgs[0], l2.lstm.prevState.c) : [25 x 1], [25 x 1 x t1] -> [25 x 1 x t1]
+Validating --> l2.lstm.lstmState._privateInnards.ft.z = Plus (l2.lstm.lstmState._privateInnards.ft.z.PlusArgs[0], l2.lstm.lstmState._privateInnards.ft.z.PlusArgs[1]) : [25 x 1 x t1], [25 x 1 x t1] -> [25 x 1 x t1]
+Validating --> l2.lstm.lstmState._privateInnards.ft = Sigmoid (l2.lstm.lstmState._privateInnards.ft.z) : [25 x 1 x t1] -> [25 x 1 x t1]
+Validating --> l2.lstm.lstmState._privateInnards.bft = ElementTimes (l2.lstm.lstmState._privateInnards.ft, l2.lstm.prevState.c) : [25 x 1 x t1], [25 x 1 x t1] -> [25 x 1 x t1]
+Validating --> l2.lstm.lstmState._privateInnards.it.z.PlusArgs[0].PlusArgs[1] = Times (l2.lstm.lstmState._privateInnards.it.z.PlusArgs[0].PlusArgs[1].TimesArgs[0], l2.lstm.prevState.h) : [25 x 25], [25 x 1 x t1] -> [25 x 1 x t1]
+Validating --> l2.lstm.lstmState._privateInnards.it.z.PlusArgs[0] = Plus (l2.lstm.lstmState._privateInnards.it.z.PlusArgs[0].PlusArgs[0], l2.lstm.lstmState._privateInnards.it.z.PlusArgs[0].PlusArgs[1]) : [25 x t1], [25 x 1 x t1] -> [25 x 1 x t1]
+Validating --> l2.lstm.lstmState._privateInnards.it.z.PlusArgs[1] = ElementTimes (l2.lstm.lstmState._privateInnards.it.z.PlusArgs[1].ElementTimesArgs[0], l2.lstm.prevState.c) : [25 x 1], [25 x 1 x t1] -> [25 x 1 x t1]
+Validating --> l2.lstm.lstmState._privateInnards.it.z = Plus (l2.lstm.lstmState._privateInnards.it.z.PlusArgs[0], l2.lstm.lstmState._privateInnards.it.z.PlusArgs[1]) : [25 x 1 x t1], [25 x 1 x t1] -> [25 x 1 x t1]
+Validating --> l2.lstm.lstmState._privateInnards.it = Sigmoid (l2.lstm.lstmState._privateInnards.it.z) : [25 x 1 x t1] -> [25 x 1 x t1]
+Validating --> l2.lstm.lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[0] = Times (l2.lstm.lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[0].TimesArgs[0], l2.lstm.prevState.h) : [25 x 25], [25 x 1 x t1] -> [25 x 1 x t1]
+Validating --> l2.lstm.lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1] = Plus (l2.lstm.lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[0], l2.lstm.lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[1]) : [25 x 1 x t1], [25] -> [25 x 1 x t1]
+Validating --> l2.lstm.lstmState._privateInnards.bit.ElementTimesArgs[1].z = Plus (l2.lstm.lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[0], l2.lstm.lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1]) : [25 x t1], [25 x 1 x t1] -> [25 x 1 x t1]
+Validating --> l2.lstm.lstmState._privateInnards.bit.ElementTimesArgs[1] = Tanh (l2.lstm.lstmState._privateInnards.bit.ElementTimesArgs[1].z) : [25 x 1 x t1] -> [25 x 1 x t1]
+Validating --> l2.lstm.lstmState._privateInnards.bit = ElementTimes (l2.lstm.lstmState._privateInnards.it, l2.lstm.lstmState._privateInnards.bit.ElementTimesArgs[1]) : [25 x 1 x t1], [25 x 1 x t1] -> [25 x 1 x t1]
+Validating --> l2.lstm.lstmState._privateInnards.ct = Plus (l2.lstm.lstmState._privateInnards.bft, l2.lstm.lstmState._privateInnards.bit) : [25 x 1 x t1], [25 x 1 x t1] -> [25 x 1 x t1]
+Validating --> l2.lstm.lstmState._privateInnards.ot.z.PlusArgs[1] = ElementTimes (l2.lstm.lstmState._privateInnards.ot.z.PlusArgs[1].ElementTimesArgs[0], l2.lstm.lstmState._privateInnards.ct) : [25 x 1], [25 x 1 x t1] -> [25 x 1 x t1]
+Validating --> l2.lstm.lstmState._privateInnards.ot.z = Plus (l2.lstm.lstmState._privateInnards.ot.z.PlusArgs[0], l2.lstm.lstmState._privateInnards.ot.z.PlusArgs[1]) : [25 x 1 x t1], [25 x 1 x t1] -> [25 x 1 x t1]
+Validating --> l2.lstm.lstmState._privateInnards.ot = Sigmoid (l2.lstm.lstmState._privateInnards.ot.z) : [25 x 1 x t1] -> [25 x 1 x t1]
+Validating --> l2.lstm.lstmState._privateInnards.ht.ElementTimesArgs[1] = Tanh (l2.lstm.lstmState._privateInnards.ct) : [25 x 1 x t1] -> [25 x 1 x t1]
+Validating --> l2.lstm.lstmState._privateInnards.ht = ElementTimes (l2.lstm.lstmState._privateInnards.ot, l2.lstm.lstmState._privateInnards.ht.ElementTimesArgs[1]) : [25 x 1 x t1], [25 x 1 x t1] -> [25 x 1 x t1]
+Validating --> l2.result.selected.input.ElementTimesArgs[0] = Slice (l2.lstm.lstmState._privateInnards.ht) : [25 x 1 x t1] -> [1 x 1 x t1]
+Validating --> BS.Constants.Zero = LearnableParameter() :  -> [1]
+Validating --> l2.result.selected.input = ElementTimes (l2.result.selected.input.ElementTimesArgs[0], BS.Constants.Zero) : [1 x 1 x t1], [1] -> [1 x 1 x t1]
+Validating --> l2.result.selected = FutureValue (l2.result.selected.input) : [1 x 1 x t1] -> [1 x 1 x t1]
+Validating --> l2.result.out.indexSequence.indexSequence = Where (l2.result.selected) : [1 x 1 x t1] -> [1 x WhereNodeAxis]
+Validating --> l2.result.out.indexSequence = PackedIndex (l2.lstm.lstmState._privateInnards.ht, l2.result.out.indexSequence.indexSequence) : [25 x 1 x t1], [1 x WhereNodeAxis] -> [1 x WhereNodeAxis]
+Validating --> l2.result.out = GatherPacked (l2.result.out.indexSequence, l2.lstm.lstmState._privateInnards.ht) : [1 x WhereNodeAxis], [25 x 1 x t1] -> [25 x 1 x WhereNodeAxis]
+Validating --> l3.z.z.PlusArgs[0] = Times (l3.z.W, l2.result.out) : [5 x 25], [25 x 1 x WhereNodeAxis] -> [5 x 1 x WhereNodeAxis]
+Validating --> l3.z.B = LearnableParameter() :  -> [5 x 1]
+Validating --> l3.z.z = Plus (l3.z.z.PlusArgs[0], l3.z.B) : [5 x 1 x WhereNodeAxis], [5 x 1] -> [5 x 1 x WhereNodeAxis]
+Validating --> l3.act = Pass (l3.z.z) : [5 x 1 x WhereNodeAxis] -> [5 x 1 x WhereNodeAxis]
+Validating --> l3p = ReconcileDynamicAxis (l3.act, labels) : [5 x 1 x WhereNodeAxis], [5 x *] -> [5 x 1 x *]
+Validating --> ce = CrossEntropyWithSoftmax (labels, l3p) : [5 x *], [5 x 1 x *] -> [1]
+Validating --> out = Pass (l3.act) : [5 x 1 x WhereNodeAxis] -> [5 x 1 x WhereNodeAxis]
+Validating --> t = DynamicAxis() :  -> [1 x 1 x t1]
+Validating --> wer = ErrorPrediction (labels, l3p) : [5 x *], [5 x 1 x *] -> [1]
+
+
+68 out of 70 nodes do not share the minibatch layout with the input data.
+
+Post-processing network complete.
+
+04/15/2016 13:00:43: Loaded model with 70 nodes on GPU 0.
+
+04/15/2016 13:00:43: Training criterion node(s):
+04/15/2016 13:00:43: 	ce = CrossEntropyWithSoftmax
+
+04/15/2016 13:00:43: Evaluation criterion node(s):
+
+04/15/2016 13:00:43: 	wer = ErrorPrediction
+
+
+Allocating matrices for forward and/or backward propagation.
+04/15/2016 13:00:43: No PreCompute nodes found, skipping PreCompute step.
+04/15/2016 13:00:43: Warning: checkpoint file is missing. learning parameters will be initialized from 0
+
+04/15/2016 13:00:43: Starting Epoch 5: learning rate per sample = 0.000500  effective momentum = 0.900000  momentum as time constant = 1898.2 samples
+
+04/15/2016 13:00:43: Starting minibatch loop.
+WARNING: The same matrix with dim [1, 51] has been transferred between different devices for 20 times.
+04/15/2016 13:00:45: Finished Epoch[ 5 of 5]: [Training Set] TrainLossPerSample = 1.3394046; TotalSamplesSeen = 1247; EvalErrPerSample = 0.44667202; AvgLearningRatePerSample = 0.00050000002; EpochTime=1.72764
+04/15/2016 13:00:45: SGD: Saving checkpoint model '/tmp/cntk-test-20160415130034.515539/Text_SequenceClassification@debug_gpu/Models/seqcla.dnn'
+04/15/2016 13:00:45: CNTKCommandTrainEnd: Train
+
+04/15/2016 13:00:45: Action "train" complete.
+
+04/15/2016 13:00:45: __COMPLETED__
