@@ -45,6 +45,7 @@ private:
     void InitializeChunkDescriptions(ConfigHelper& config);
     void InitializeStreams(const std::wstring& featureName);
     void InitializeFeatureInformation();
+    void InitializeAugmentationWindow(ConfigHelper& config);
 
     // Gets sequence by its chunk id and id inside the chunk.
     void GetSequenceById(size_t chunkId, size_t id, std::vector<SequenceDataPtr>&);

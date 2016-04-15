@@ -59,15 +59,7 @@ HTKDataDeserializer::HTKDataDeserializer(
     InitializeChunkDescriptions(config);
     InitializeStreams(inputName);
     InitializeFeatureInformation();
-
-    m_augmentationWindow = config.GetContextWindow();
-
-    // If not given explicitly, we need to identify the required augmentation range from the expected dimension
-    // and the number of dimensions in the file.
-    if (m_augmentationWindow.first == 0 && m_augmentationWindow.second == 0)
-    {
-        m_augmentationWindow.first = m_augmentationWindow.second = msra::dbn::augmentationextent(m_ioFeatureDimension, m_dimension);
-    }
+    InitializeAugmentationWindow(config);
 }
 
 HTKDataDeserializer::HTKDataDeserializer(
@@ -99,7 +91,11 @@ HTKDataDeserializer::HTKDataDeserializer(
     InitializeChunkDescriptions(config);
     InitializeStreams(featureName);
     InitializeFeatureInformation();
+    InitializeAugmentationWindow(config);
+}
 
+void HTKDataDeserializer::InitializeAugmentationWindow(ConfigHelper& config)
+{
     m_augmentationWindow = config.GetContextWindow();
 
     // If not given explicitly, we need to identify the required augmentation range from the expected dimension

@@ -41,6 +41,9 @@ private:
     class MLFChunk;
     DISABLE_COPY_AND_MOVE(MLFDataDeserializer);
 
+    void InitializeChunkDescriptions(CorpusDescriptorPtr corpus, const ConfigHelper& config, const std::wstring& stateListPath, size_t dimension);
+    void InitializeStream(const std::wstring& name, size_t dimension);
+
     // Inner class for a frame.
     struct MLFFrame : SequenceDescription
     {

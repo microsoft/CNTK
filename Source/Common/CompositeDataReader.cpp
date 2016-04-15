@@ -2,7 +2,8 @@
 // Copyright (c) Microsoft. All rights reserved.
 // Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
 //
-// DataReader.cpp : Defines the exported functions for the DLL application.
+// CompositeDataReader.cpp : Defines a reader that allows composing different deserializers.
+// With this reader in place the users should only extend deserializers.
 //
 
 #include "stdafx.h"
@@ -14,50 +15,61 @@
 
 #include "CompositeDataReader.h"
 #include "Bundler.h"
-
 #include "BlockRandomizer.h"
 #include "NoRandomizer.h"
 #include "FramePacker.h"
 #include "SequencePacker.h"
+#include "BpttPacker.h"
 #include "HeapMemoryProvider.h"
-#include "DataDeserializer.h"
-#include "Transformer.h"
-#include "Reader.h"
-#include "Packer.h"
 #include "CorpusDescriptor.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
 CompositeDataReader::CompositeDataReader(const std::string& precision) : m_layout(make_shared<MBLayout>()),
     m_precision(precision),
-    m_corpus(std::make_shared<CorpusDescriptor>())
+    m_corpus(std::make_shared<CorpusDescriptor>()),
+    m_endOfEpoch(false)
 {
 }
 
 void CompositeDataReader::Init(const ConfigParameters& config)
 {
-    intargvector numberOfuttsPerMinibatchForAllEpochs =
-        config(L"nbruttsineachrecurrentiter", ConfigParameters::Array(intargvector(vector<int> { 1 })));
-
-    bool prefetch = config(L"prefetch", true);
-
     m_provider = std::make_shared<HeapMemoryProvider>();
 
     // if prefetch - launching asynchronously,
     // otherwise deferring - synchronous execution during .get() call
+    bool prefetch = config(L"prefetch", true);
     m_launchType = prefetch ? launch::async : launch::deferred;
 
-    auto numSeqsPerMBForAllEpochs = numberOfuttsPerMinibatchForAllEpochs;
-    m_layout->Init(numSeqsPerMBForAllEpochs[0], 0);
+    auto numSequencesPerMinibatchForAllEpochs = config(L"nbruttsineachrecurrentiter", ConfigParameters::Array(intargvector(vector<int> { 1 })));;
+    m_layout->Init(numSequencesPerMinibatchForAllEpochs[0], 0);
 
-    // Check mode.
-    m_frameMode = config(L"frameMode", true);
-    m_truncated = config(L"truncated", false);
+    // Identifying packing mode.
+    bool frameMode = config(L"frameMode", true);
+    bool truncated = config(L"truncated", false);
+    if (frameMode && truncated)
+    {
+        LogicError("frameMode and truncated BPTT are mutually exclusive.");
+    }
+
+    if (frameMode)
+    {
+        m_packingMode = PackingMode::sample;
+    }
+    else if (truncated)
+    {
+        m_packingMode = PackingMode::truncated;
+    }
+    else
+    {
+        m_packingMode = PackingMode::sequence;
+    }
 
     // Whether we need to check data between different deserializers.
     bool cleanse = config(L"checkData", false);
 
     // Creating deserializers.
+    // TODO: Currently the primary deserializer defines the corpus. The logic will be moved to CorpusDescriptor class.
     CreateDeserializers(config);
 
     // Bundling deserializers together.
@@ -79,7 +91,10 @@ void CompositeDataReader::Init(const ConfigParameters& config)
         m_randomizer = std::make_shared<NoRandomizer>(bundler);
     }
 
+    m_randomizer->Initialize(nullptr, config);
+
     // Create output stream descriptions - where to get those? from config? what if it is not the same as network expects?
+    // TODO: Currently only sparse streams.
     for (const auto& streamDescription : bundler->GetStreamDescriptions())
     {
         StreamDescriptionPtr stream = std::make_shared<StreamDescription>(*streamDescription);
@@ -108,13 +123,13 @@ void CompositeDataReader::StartDistributedMinibatchLoop(
     config.m_totalEpochSizeInSamples = requestedEpochSamples;
     config.m_epochIndex = epoch;
 
-    m_endOfEpoch = false;
-
     // Make sure there are no outstanding reads.
     if (m_prefetchTask.valid())
     {
         m_prefetchTask.wait();
     }
+
+    m_endOfEpoch = false;
 
     // Nothing is running, let's reconfigure the packer according to the new epoch.
     StartEpoch(config);
@@ -218,9 +233,9 @@ void CompositeDataReader::CreateDeserializers(const ConfigParameters& readerConf
     bool primary = true;  // CUrrently, the first deserializer becomes primary - it drives chunking.
     for (size_t i = 0; i < deserializerConfigs.size(); ++i)
     {
-        // TODO: Should go away in the future. Framing can be done on top of deserializer.
+        // TODO: Should go away in the future. Framing can be done on top of deserializers.
         ConfigParameters p = deserializerConfigs[i];
-        p.Insert("frameMode", m_frameMode ? "true" : "false");
+        p.Insert("frameMode", m_packingMode == PackingMode::sample ? "true" : "false");
         p.Insert("precision", m_precision);
 
         IDataDeserializerPtr d = CreateDeserializer(p, primary);
@@ -256,25 +271,35 @@ void CompositeDataReader::StartEpoch(const EpochConfiguration& config)
 
     m_randomizer->StartEpoch(config);
 
-    // TODO: should we unify sample and sequence mode packers into a single one.
-    // TODO: functionally they are the same, the only difference is how we handle
-    // TODO: MBlayout and what is the perf hit for iterating/copying sequences.
-    // TODO: Should do more perf tests before unifying these two.
-    if (m_frameMode)
+    // TODO: As the next step the packers should be moved into the network.
+    switch (m_packingMode)
     {
+    case PackingMode::sample:
         m_packer = std::make_shared<FramePacker>(
             m_provider,
             m_randomizer,
             config.m_minibatchSizeInSamples,
             m_streams);
-    }
-    else
-    {
+        break;
+    case PackingMode::sequence:
         m_packer = std::make_shared<SequencePacker>(
             m_provider,
             m_randomizer,
             config.m_minibatchSizeInSamples,
             m_streams);
+        break;
+    case PackingMode::truncated:
+    {
+        m_packer = std::make_shared<BpttPacker>(
+            m_provider,
+            m_randomizer,
+            config.m_minibatchSizeInSamples,
+            m_truncationLength,
+            m_streams);
+        break;
+    }
+    default:
+        LogicError("Unsupported type of packer '%d'.", (int)m_packingMode);
     }
 }
 

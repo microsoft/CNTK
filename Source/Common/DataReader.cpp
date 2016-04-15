@@ -90,6 +90,7 @@ DataReader::DataReader(const ConfigRecordType& config)
     string precision = config(L"precision", "float");
 
     bool hasMultipleReaders = config.Exists(L"readers");
+    // In case when deserializers are specified, use the new logic to compose them.
     bool hasDeserializers = config.Exists(L"deserializers");
     if (hasMultipleReaders)
     {

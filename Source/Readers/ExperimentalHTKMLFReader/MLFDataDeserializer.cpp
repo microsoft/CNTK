@@ -16,6 +16,8 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
+using namespace std;
+
 static float s_oneFloat = 1.0;
 static double s_oneDouble = 1.0;
 
@@ -29,7 +31,7 @@ public:
     MLFChunk(MLFDataDeserializer* parent) : m_parent(parent)
     {}
 
-    virtual void GetSequence(size_t sequenceId, std::vector<SequenceDataPtr>& result) override
+    virtual void GetSequence(size_t sequenceId, vector<SequenceDataPtr>& result) override
     {
         m_parent->GetSequenceById(sequenceId, result);
     }
@@ -67,133 +69,12 @@ MLFDataDeserializer::MLFDataDeserializer(CorpusDescriptorPtr corpus, const Confi
 
     size_t dimension = config.GetLabelDimension();
 
-    // TODO: Similarly to the old reader, currently we assume all Mlfs will have same root name (key)
-    // restrict MLF reader to these files--will make stuff much faster without having to use shortened input files
-
-    // TODO: currently we do not use symbol and word tables.
-    const msra::lm::CSymbolSet* wordTable = nullptr;
-    std::unordered_map<const char*, int>* symbolTable = nullptr;
-    std::vector<std::wstring> mlfPaths = config.GetMlfPaths();
-    std::wstring stateListPath = static_cast<std::wstring>(streamConfig(L"labelMappingFile", L""));
-
-    // TODO: Currently we still use the old IO module. This will be refactored later.
-    const double htkTimeToFrame = 100000.0; // default is 10ms
-    msra::asr::htkmlfreader<msra::asr::htkmlfentry, msra::lattices::lattice::htkmlfwordsequence> labels(mlfPaths, std::set<wstring>(), stateListPath, wordTable, symbolTable, htkTimeToFrame);
-
-    // Make sure 'msra::asr::htkmlfreader' type has a move constructor
-    static_assert(
-        std::is_move_constructible<
-        msra::asr::htkmlfreader<msra::asr::htkmlfentry,
-        msra::lattices::lattice::htkmlfwordsequence >> ::value,
-        "Type 'msra::asr::htkmlfreader' should be move constructible!");
-
-    m_elementType = config.GetElementType();
-
-    MLFUtterance description;
-    description.m_isValid = true;
-    size_t totalFrames = 0;
-
-    auto& stringRegistry = corpus->GetStringRegistry();
-    for (const auto& l : labels)
-    {
-        // Currently the string registry contains only utterances described in scp.
-        // So here we skip all others.
-        if (!stringRegistry.Contains(l.first))
-            continue;
-
-        description.m_key.m_major = stringRegistry[l.first];
-
-        const auto& utterance = l.second;
-        description.m_sequenceStart = m_classIds.size();
-        description.m_isValid = true;
-        size_t numberOfFrames = 0;
-
-        foreach_index(i, utterance)
-        {
-            const auto& timespan = utterance[i];
-            if ((i == 0 && timespan.firstframe != 0) ||
-                (i > 0 && utterance[i - 1].firstframe + utterance[i - 1].numframes != timespan.firstframe))
-            {
-                RuntimeError("Labels are not in the consecutive order MLF in label set: %ls", l.first.c_str());
-            }
-
-            if (timespan.classid >= dimension)
-            {
-                RuntimeError("Class id %d exceeds the model output dimension %d.", (int)timespan.classid, (int)dimension);
-            }
-
-            if (timespan.classid != static_cast<msra::dbn::CLASSIDTYPE>(timespan.classid))
-            {
-                RuntimeError("CLASSIDTYPE has too few bits");
-            }
-
-            for (size_t t = timespan.firstframe; t < timespan.firstframe + timespan.numframes; t++)
-            {
-                m_classIds.push_back(timespan.classid);
-                numberOfFrames++;
-            }
-        }
-
-        description.m_numberOfSamples = numberOfFrames;
-        totalFrames += numberOfFrames;
-        m_utteranceIndex.push_back(m_frames.size());
-        m_keyToSequence[description.m_key.m_major] = m_utteranceIndex.size() - 1;
-
-        // TODO: Should be created by chunks only.
-        MLFFrame f;
-        f.m_chunkId = 0;
-        f.m_numberOfSamples = 1;
-        f.m_key.m_major = description.m_key.m_major;
-        f.m_isValid = description.m_isValid;
-        for (size_t k = 0; k < description.m_numberOfSamples; ++k)
-        {
-            f.m_id = m_frames.size();
-            f.m_key.m_minor = k;
-            f.m_index = description.m_sequenceStart + k;
-            m_frames.push_back(f);
-        }
-    }
-    m_utteranceIndex.push_back(m_frames.size());
-
-    m_totalNumberOfFrames = totalFrames;
-
-    fprintf(stderr, "MLFDataDeserializer::MLFDataDeserializer: read %d sequences\n", (int)m_frames.size());
-    fprintf(stderr, "MLFDataDeserializer::MLFDataDeserializer: read %d utterances\n", (int)m_keyToSequence.size());
-
-    // Initializing stream description - a single stream of MLF data.
-    StreamDescriptionPtr stream = std::make_shared<StreamDescription>();
-    stream->m_id = 0;
-    stream->m_name = inputName;
-    stream->m_sampleLayout = std::make_shared<TensorShape>(dimension);
-    stream->m_storageType = StorageType::sparse_csc;
-    stream->m_elementType = m_elementType;
-    m_streams.push_back(stream);
-
-    // Initializing array of labels.
-    m_categories.reserve(dimension);
-    for (size_t i = 0; i < dimension; ++i)
-    {
-        SparseSequenceDataPtr category = std::make_shared<SparseSequenceData>();
-        m_categoryIndices.push_back(static_cast<IndexType>(i));
-        category->m_indices = &(m_categoryIndices[i]);
-        category->m_nnzCounts.resize(1);
-        category->m_nnzCounts[0] = 1;
-        category->m_totalNnzCount = 1;
-        category->m_numberOfSamples = 1;
-        if (m_elementType == ElementType::tfloat)
-        {
-            category->m_data = &s_oneFloat;
-        }
-        else
-        {
-            assert(m_elementType == ElementType::tdouble);
-            category->m_data = &s_oneDouble;
-        }
-        m_categories.push_back(category);
-    }
+    wstring labelMappingFile = streamConfig(L"labelMappingFile", L"");
+    InitializeChunkDescriptions(corpus, config, labelMappingFile, dimension);
+    InitializeStream(inputName, dimension);
 }
 
-MLFDataDeserializer::MLFDataDeserializer(CorpusDescriptorPtr corpus, const ConfigParameters& labelConfig, const std::wstring& name)
+MLFDataDeserializer::MLFDataDeserializer(CorpusDescriptorPtr corpus, const ConfigParameters& labelConfig, const wstring& name)
 {
     // The frame mode is currently specified once per configuration,
     // not in the configuration of a particular deserializer, but on a higher level in the configuration.
@@ -211,24 +92,31 @@ MLFDataDeserializer::MLFDataDeserializer(CorpusDescriptorPtr corpus, const Confi
             "value (%" PRIu64 ")\n", dimension, (size_t)numeric_limits<IndexType>::max());
     }
 
+    wstring labelMappingFile = labelConfig(L"labelMappingFile", L"");
+    InitializeChunkDescriptions(corpus, config, labelMappingFile, dimension);
+    InitializeStream(name, dimension);
+}
+
+// Currently we create a single chunk only.
+void MLFDataDeserializer::InitializeChunkDescriptions(CorpusDescriptorPtr corpus, const ConfigHelper& config, const wstring& stateListPath, size_t dimension)
+{
     // TODO: Similarly to the old reader, currently we assume all Mlfs will have same root name (key)
     // restrict MLF reader to these files--will make stuff much faster without having to use shortened input files
 
     // TODO: currently we do not use symbol and word tables.
     const msra::lm::CSymbolSet* wordTable = nullptr;
-    std::unordered_map<const char*, int>* symbolTable = nullptr;
-    std::vector<std::wstring> mlfPaths = config.GetMlfPaths();
-    std::wstring stateListPath = static_cast<std::wstring>(labelConfig(L"labelMappingFile", L""));
+    unordered_map<const char*, int>* symbolTable = nullptr;
+    vector<wstring> mlfPaths = config.GetMlfPaths();
 
     // TODO: Currently we still use the old IO module. This will be refactored later.
     const double htkTimeToFrame = 100000.0; // default is 10ms
-    msra::asr::htkmlfreader<msra::asr::htkmlfentry, msra::lattices::lattice::htkmlfwordsequence> labels(mlfPaths, std::set<wstring>(), stateListPath, wordTable, symbolTable, htkTimeToFrame);
+    msra::asr::htkmlfreader<msra::asr::htkmlfentry, msra::lattices::lattice::htkmlfwordsequence> labels(mlfPaths, set<wstring>(), stateListPath, wordTable, symbolTable, htkTimeToFrame);
 
     // Make sure 'msra::asr::htkmlfreader' type has a move constructor
     static_assert(
-        std::is_move_constructible<
-            msra::asr::htkmlfreader<msra::asr::htkmlfentry,
-                                    msra::lattices::lattice::htkmlfwordsequence>>::value,
+        is_move_constructible<
+        msra::asr::htkmlfreader<msra::asr::htkmlfentry,
+        msra::lattices::lattice::htkmlfwordsequence >> ::value,
         "Type 'msra::asr::htkmlfreader' should be move constructible!");
 
     m_elementType = config.GetElementType();
@@ -264,7 +152,7 @@ MLFDataDeserializer::MLFDataDeserializer(CorpusDescriptorPtr corpus, const Confi
 
             if (timespan.classid >= dimension)
             {
-                RuntimeError("Class id %d exceeds the model output dimension %d.", (int)timespan.classid,(int)dimension);
+                RuntimeError("Class id %d exceeds the model output dimension %d.", (int)timespan.classid, (int)dimension);
             }
 
             if (timespan.classid != static_cast<msra::dbn::CLASSIDTYPE>(timespan.classid))
@@ -305,21 +193,12 @@ MLFDataDeserializer::MLFDataDeserializer(CorpusDescriptorPtr corpus, const Confi
     fprintf(stderr, "MLFDataDeserializer::MLFDataDeserializer: read %d sequences\n", (int)m_frames.size());
     fprintf(stderr, "MLFDataDeserializer::MLFDataDeserializer: read %d utterances\n", (int)m_keyToSequence.size());
 
-    // Initializing stream description - a single stream of MLF data.
-    StreamDescriptionPtr stream = std::make_shared<StreamDescription>();
-    stream->m_id = 0;
-    stream->m_name = name;
-    stream->m_sampleLayout = std::make_shared<TensorShape>(dimension);
-    stream->m_storageType = StorageType::sparse_csc;
-    stream->m_elementType = m_elementType;
-    m_streams.push_back(stream);
-
     // Initializing array of labels.
     m_categories.reserve(dimension);
     m_categoryIndices.reserve(dimension);
     for (size_t i = 0; i < dimension; ++i)
     {
-        SparseSequenceDataPtr category = std::make_shared<SparseSequenceData>();
+        SparseSequenceDataPtr category = make_shared<SparseSequenceData>();
         m_categoryIndices.push_back(static_cast<IndexType>(i));
         category->m_indices = &(m_categoryIndices[i]);
         category->m_nnzCounts.resize(1);
@@ -339,11 +218,26 @@ MLFDataDeserializer::MLFDataDeserializer(CorpusDescriptorPtr corpus, const Confi
     }
 }
 
+void MLFDataDeserializer::InitializeStream(const wstring& name, size_t dimension)
+{
+    // Initializing stream description - a single stream of MLF data.
+    StreamDescriptionPtr stream = make_shared<StreamDescription>();
+    stream->m_id = 0;
+    stream->m_name = name;
+    stream->m_sampleLayout = make_shared<TensorShape>(dimension);
+    stream->m_storageType = StorageType::sparse_csc;
+    stream->m_elementType = m_elementType;
+    m_streams.push_back(stream);
+}
+
+void InitializeFeatureInformation();
+void InitializeAugmentationWindow(ConfigHelper& config);
+
 // Currently MLF has a single chunk.
 // TODO: This will be changed when the deserializer properly supports chunking.
 ChunkDescriptions MLFDataDeserializer::GetChunkDescriptions()
 {
-    auto cd = std::make_shared<ChunkDescription>();
+    auto cd = make_shared<ChunkDescription>();
     cd->m_id = 0;
     cd->m_numberOfSequences = m_frameMode ? m_frames.size() : m_keyToSequence.size();
     cd->m_numberOfSamples = m_frames.size();
@@ -351,7 +245,7 @@ ChunkDescriptions MLFDataDeserializer::GetChunkDescriptions()
 }
 
 // Gets sequences for a particular chunk.
-void MLFDataDeserializer::GetSequencesForChunk(size_t, std::vector<SequenceDescription>& result)
+void MLFDataDeserializer::GetSequencesForChunk(size_t, vector<SequenceDescription>& result)
 {
     result.reserve(m_frames.size());
     if (m_frameMode)
@@ -397,8 +291,8 @@ ChunkPtr MLFDataDeserializer::GetChunk(size_t chunkId)
 template <class ElemType>
 struct MLFSequenceData : SparseSequenceData
 {
-    std::vector<ElemType> m_values;
-    std::unique_ptr<IndexType[]> m_indicesPtr;
+    vector<ElemType> m_values;
+    unique_ptr<IndexType[]> m_indicesPtr;
 
     MLFSequenceData(size_t numberOfSamples) : 
         m_values(numberOfSamples, 1),
@@ -419,7 +313,7 @@ struct MLFSequenceData : SparseSequenceData
     }
 };
 
-void MLFDataDeserializer::GetSequenceById(size_t sequenceId, std::vector<SequenceDataPtr>& result)
+void MLFDataDeserializer::GetSequenceById(size_t sequenceId, vector<SequenceDataPtr>& result)
 {
     if (m_frameMode)
     {
@@ -435,12 +329,12 @@ void MLFDataDeserializer::GetSequenceById(size_t sequenceId, std::vector<Sequenc
         SparseSequenceDataPtr s;
         if (m_elementType == ElementType::tfloat)
         {
-            s = std::make_shared<MLFSequenceData<float>>(numberOfSamples);
+            s = make_shared<MLFSequenceData<float>>(numberOfSamples);
         }
         else
         {
             assert(m_elementType == ElementType::tdouble);
-            s = std::make_shared<MLFSequenceData<double>>(numberOfSamples);
+            s = make_shared<MLFSequenceData<double>>(numberOfSamples);
         }
 
         for (size_t i = 0; i < numberOfSamples; i++)
