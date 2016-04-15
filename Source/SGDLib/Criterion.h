@@ -70,6 +70,9 @@ private:
         float beta = !reset; // gives 1 to add, 0 to assign
         // Note: A future change will be that criterion nodes emit criteria per frame.
         // In that case, we will do masking and an implicit reduction right here using TensorView.
+        // BUGBUG: currently fails with
+        // CNTKTextFormatReader/ParallelTraining/NoQuantization/DoublePrecision: MPI Rank 0: cntk: Source/1BitSGD/AllReduceDistGradAggregator.h:281: void Microsoft::MSR::CNTK::AllReduceDistGradAggregator<ElemType>::AggregateGradientsImpl(const std::vector<Microsoft::MSR::CNTK::Matrix<ElemType>*>&, Microsoft::MSR::CNTK::DistGradHeader*, bool) [with ElemType = double]:
+        // Assertion `headerCPU->criterion == 0' failed.
         if (beta == 0) // temp solution until we add TensorView reduction
         {
             Matrix<ElemType>::AssignElementToElement(dynamic_pointer_cast<ComputationNode<ElemType>>(node)->Value(),

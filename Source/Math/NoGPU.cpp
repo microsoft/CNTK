@@ -1894,7 +1894,7 @@ void GPUMatrix<ElemType>::AssignScaledDifference(const GPUMatrix<ElemType>& /*al
 
 //c[ci,cj] += a[ai,aj]
 template <class ElemType>
-void GPUMatrix<ElemType>::AddElementToElement(const GPUMatrix<ElemType>& /*a*/, const size_t ai, const size_t aj, GPUMatrix<ElemType>& c, const size_t ci, const size_t cj)
+void GPUMatrix<ElemType>::AddElementToElement(ElemType beta, const GPUMatrix<ElemType>& /*a*/, const size_t ai, const size_t aj, GPUMatrix<ElemType>& c, const size_t ci, const size_t cj)
 {
 }
 
