@@ -451,7 +451,7 @@ public:
     virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
     {
         size_t rank = DetermineElementwiseTensorRank();
-        auto result = ValueTensorFor(rank, fr);
+        auto result =           ValueTensorFor(rank, fr);
         auto input0 = Input(0)->ValueTensorFor(rank, fr.AllowBroadcast());
         auto input1 = Input(1)->ValueTensorFor(rank, fr.AllowBroadcast());
         auto input2 = Input(2)->ValueTensorFor(rank, fr.AllowBroadcast());
@@ -467,13 +467,16 @@ public:
         auto input = Input(inputIndex)->ValueTensorFor(rank, fr.AllowBroadcast());
         auto output = ValueTensorFor(rank, fr.AllowBroadcast());
 
-        // if reduction then mask the respective input(s) (zero out the gaps)
-        if (Input(inputIndex)->ReducesInTimeWrt(shared_from_this()))
-            MaskMissingGradientColumnsToZero(fr);
-        if (Input(inputIndex)->ReducesInTimeWrt(Input(1 - inputIndex)))
-            Input(1 - inputIndex)->MaskMissingValueColumnsToZero(fr);
-
         inputGradient.AddElementwiseProductWithClipByValueDerivativeOf(gradient, input, output);
+    }
+
+    virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
+    {
+        // this assumes that Input(1) and Input(2) are constants
+        assert(m_inputs.size() == 3);
+        ComputationNodeBase::Validate(isFinalValidationPass);
+        InferMBLayoutFromInputsForStandardCase(isFinalValidationPass);
+        SetDims(Input(0));
     }
 };
 
