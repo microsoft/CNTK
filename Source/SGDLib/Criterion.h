@@ -58,32 +58,37 @@ struct CriterionAccumulator
     // retrieve an accumulated result as a pair (numerator, denominator)
     EpochCriterion GetCriterion(size_t i) const
     {
-        return EpochCriterion(m_aggregateCriterionValues(0, i), m_aggregateSampleCounts[i]);
+        if (m_aggregateSampleCounts[i] == 0)
+            return EpochCriterion(0, 0); // avoid unnecessary GPU access
+        else
+            return EpochCriterion(m_aggregateCriterionValues(0, i), m_aggregateSampleCounts[i]);
     }
 
 private:
     // shared part of Add() and Assign()
+    // This code assumes that if number of samples is 0, the criterion value is also 0 and does not need to be fetched from the GPU.
     template<bool reset>
     const CriterionAccumulator& Accumulate(const std::vector<ComputationNodeBasePtr>& nodes, size_t i, size_t legacyNumSamples)
     {
         const auto& node = nodes[i]; // multiple nodes are managed by this struct
-        float beta = !reset; // gives 1 to add, 0 to assign
+        float beta = reset ? 0 : 1;
         // Note: A future change will be that criterion nodes emit criteria per frame.
         // In that case, we will do masking and an implicit reduction right here using TensorView.
         // BUGBUG: currently fails with
         // CNTKTextFormatReader/ParallelTraining/NoQuantization/DoublePrecision: MPI Rank 0: cntk: Source/1BitSGD/AllReduceDistGradAggregator.h:281: void Microsoft::MSR::CNTK::AllReduceDistGradAggregator<ElemType>::AggregateGradientsImpl(const std::vector<Microsoft::MSR::CNTK::Matrix<ElemType>*>&, Microsoft::MSR::CNTK::DistGradHeader*, bool) [with ElemType = double]:
         // Assertion `headerCPU->criterion == 0' failed.
+        size_t numSamples = GetNumSamples(nodes[i], legacyNumSamples);
         if (beta == 0) // temp solution until we add TensorView reduction
         {
             Matrix<ElemType>::AssignElementToElement(dynamic_pointer_cast<ComputationNode<ElemType>>(node)->Value(),
                                                      0, 0, m_aggregateCriterionValues, 0, i);
-            m_aggregateSampleCounts[i] = GetNumSamples(nodes[i], legacyNumSamples);
+            m_aggregateSampleCounts[i] = numSamples;
         }
-        else
+        else if (numSamples > 0) // avoid unnecessary GPU access
         {
             Matrix<ElemType>::AddElementToElement(dynamic_pointer_cast<ComputationNode<ElemType>>(node)->Value(),
                                                   0, 0, m_aggregateCriterionValues, 0, i);
-            m_aggregateSampleCounts[i] += GetNumSamples(nodes[i], legacyNumSamples);
+            m_aggregateSampleCounts[i] += numSamples;
         }
         return *this;
     }
