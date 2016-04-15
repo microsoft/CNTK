@@ -21,6 +21,25 @@ testCases:
       - EvalErrPerSample = {{float,tolerance=0%}}
       - AvgLearningRatePerSample = {{float,tolerance=0.001%}}
 
+  BlockMomentumSGD training should have distributed reading enabled:
+    patterns:
+      - distributed reading is ENABLED
+
+  BlockMomentumSGD training should have the expected block momentum:
+    patterns:
+      - ^MPI Rank {{integer}}
+      - blockMomentum = {{float,tolerance=0.1%}}
+ 
+  BlockMomentumSGD training should have the expected block learning rate:
+    patterns:
+      - ^MPI Rank {{integer}}
+      - blockLearningRate = {{float,tolerance=0.1%}}
+
+  BlockMomentumSGD training should have the expected block momentum as time constant: 
+    patterns:
+      - ^MPI Rank {{integer}}
+      - blockMomentumAsTimeConstant = {{float,tolerance=0.1%}}
+
   Per-minibatch training results must match for each MPI Rank:
     patterns:
       - ^MPI Rank {{integer}}
@@ -29,12 +48,4 @@ testCases:
       - TrainLossPerSample = {{float,tolerance=0%}}
       - EvalErr[0]PerSample = {{float,tolerance=0%}}
 
-  DataParallelSGD training parameters must match for each MPI Rank:
-    patterns:
-      - ^MPI Rank {{integer}}
-      - Starting minibatch loop
-      - DataParallelSGD training
-      - MyRank = {{integer}}
-      - NumNodes = 3
-      - NumGradientBits = 1
-      - distributed reading is ENABLED
+
