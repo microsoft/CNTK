@@ -24,12 +24,14 @@ using namespace std;
 
 HTKDataDeserializer::HTKDataDeserializer(
     CorpusDescriptorPtr corpus,
-    const ConfigParameters& cfg)
+    const ConfigParameters& cfg,
+    bool primary)
     : m_ioFeatureDimension(0),
     m_samplePeriod(0),
     m_verbosity(0),
     m_corpus(corpus),
-    m_totalNumberOfFrames(0)
+    m_totalNumberOfFrames(0),
+    m_primary(primary)
 {
     // The frame mode is currently specified once per configuration,
     // not in the configuration of a particular deserializer, but on a higher level in the configuration.

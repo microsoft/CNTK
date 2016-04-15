@@ -69,7 +69,7 @@ public:
 
 private:
     void CreateDeserializers(const ConfigParameters& readerConfig);
-    IDataDeserializerPtr CreateDeserializer(const ConfigParameters& readerConfig);
+    IDataDeserializerPtr CreateDeserializer(const ConfigParameters& readerConfig, bool primary);
     void StartEpoch(const EpochConfiguration& config);
 
     std::future<Minibatch> m_prefetchTask;

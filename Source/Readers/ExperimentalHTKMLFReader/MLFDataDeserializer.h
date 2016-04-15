@@ -18,7 +18,7 @@ class MLFDataDeserializer : public DataDeserializerBase
 {
 public:
     // Expects new configuration.
-    MLFDataDeserializer(CorpusDescriptorPtr corpus, const ConfigParameters& config);
+    MLFDataDeserializer(CorpusDescriptorPtr corpus, const ConfigParameters& config, bool primary);
 
     // TODO: Should be removed, when all readers go away, expects configuration in a legacy mode.
     MLFDataDeserializer(CorpusDescriptorPtr corpus, const ConfigParameters& config, const std::wstring& streamName);

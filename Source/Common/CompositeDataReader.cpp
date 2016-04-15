@@ -17,7 +17,7 @@
 
 #include "BlockRandomizer.h"
 #include "NoRandomizer.h"
-#include "SampleModePacker.h"
+#include "FramePacker.h"
 #include "SequencePacker.h"
 #include "HeapMemoryProvider.h"
 #include "DataDeserializer.h"
@@ -61,7 +61,7 @@ void CompositeDataReader::Init(const ConfigParameters& config)
     CreateDeserializers(config);
 
     // Bundling deserializers together.
-    // TODO: Transformers should be applied on the level of a particular deserializer?
+    // TODO: Add transformers in between.
     auto bundler = std::make_shared<Bundler>(config, m_deserializers[0], m_deserializers, cleanse);
 
     int verbosity = config(L"verbosity", 2);
@@ -215,6 +215,7 @@ void CompositeDataReader::CreateDeserializers(const ConfigParameters& readerConf
         readerConfig(L"deserializers", ConfigParameters::Array(argvector<ConfigValue>(vector<ConfigValue> {})));
 
     assert(m_deserializers.empty());
+    bool primary = true;  // CUrrently, the first deserializer becomes primary - it drives chunking.
     for (size_t i = 0; i < deserializerConfigs.size(); ++i)
     {
         // TODO: Should go away in the future. Framing can be done on top of deserializer.
@@ -222,21 +223,22 @@ void CompositeDataReader::CreateDeserializers(const ConfigParameters& readerConf
         p.Insert("frameMode", m_frameMode ? "true" : "false");
         p.Insert("precision", m_precision);
 
-        IDataDeserializerPtr d = CreateDeserializer(p);
+        IDataDeserializerPtr d = CreateDeserializer(p, primary);
+        primary = false;
         m_deserializers.push_back(d);
     }
 }
 
-IDataDeserializerPtr CompositeDataReader::CreateDeserializer(const ConfigParameters& deserializerConfig)
+IDataDeserializerPtr CompositeDataReader::CreateDeserializer(const ConfigParameters& deserializerConfig, bool primary)
 {
-    typedef bool(*CreateDeserializerFactory) (IDataDeserializer** d, const std::wstring& type, const ConfigParameters& cfg, CorpusDescriptorPtr corpus);
+    typedef bool(*CreateDeserializerFactory) (IDataDeserializer** d, const std::wstring& type, const ConfigParameters& cfg, CorpusDescriptorPtr corpus, bool primary);
 
     std::string deserializerModule = deserializerConfig("module");
     CreateDeserializerFactory f = (CreateDeserializerFactory)Plugin::Load(deserializerModule, "CreateDeserializer");
 
     std::wstring deserializerType = deserializerConfig("type");
     IDataDeserializer* d;
-    if (!f(&d, deserializerType, deserializerConfig, m_corpus))
+    if (!f(&d, deserializerType, deserializerConfig, m_corpus, primary))
     {
         RuntimeError("Cannot create deserializer. Please check module and type in the configuration.");
     }
@@ -260,7 +262,7 @@ void CompositeDataReader::StartEpoch(const EpochConfiguration& config)
     // TODO: Should do more perf tests before unifying these two.
     if (m_frameMode)
     {
-        m_packer = std::make_shared<SampleModePacker>(
+        m_packer = std::make_shared<FramePacker>(
             m_provider,
             m_randomizer,
             config.m_minibatchSizeInSamples,

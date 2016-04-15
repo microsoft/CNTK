@@ -41,12 +41,17 @@ struct MLFUtterance : SequenceDescription
     size_t m_sequenceStart;
 };
 
-MLFDataDeserializer::MLFDataDeserializer(CorpusDescriptorPtr corpus, const ConfigParameters& cfg)
+MLFDataDeserializer::MLFDataDeserializer(CorpusDescriptorPtr corpus, const ConfigParameters& cfg, bool primary)
 {
     // The frame mode is currently specified once per configuration,
     // not in the configuration of a particular deserializer, but on a higher level in the configuration.
     // Because of that we are using find method below.
     m_frameMode = cfg.Find("frameMode", "true");
+
+    if (primary)
+    {
+        LogicError("Mlf deserializer does not support primary mode.");
+    }
 
     argvector<ConfigValue> inputs = cfg("inputs");
     if (inputs.size() != 1)
@@ -169,8 +174,12 @@ MLFDataDeserializer::MLFDataDeserializer(CorpusDescriptorPtr corpus, const Confi
     for (size_t i = 0; i < dimension; ++i)
     {
         SparseSequenceDataPtr category = std::make_shared<SparseSequenceData>();
-        category->m_indices.resize(1);
-        category->m_indices[0] = std::vector<size_t>{ m_categories.size() };
+        m_categoryIndices.push_back(static_cast<IndexType>(i));
+        category->m_indices = &(m_categoryIndices[i]);
+        category->m_nnzCounts.resize(1);
+        category->m_nnzCounts[0] = 1;
+        category->m_totalNnzCount = 1;
+        category->m_numberOfSamples = 1;
         if (m_elementType == ElementType::tfloat)
         {
             category->m_data = &s_oneFloat;
