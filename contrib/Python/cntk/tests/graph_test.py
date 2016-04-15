@@ -1,3 +1,9 @@
+# Copyright (c) Microsoft. All rights reserved.
+
+# Licensed under the MIT license. See LICENSE.md file in the project root 
+# for full license information.
+# ==============================================================================
+
 from ..context import get_new_context, _CONTEXT
 from ..graph import *
 from ..graph import _tensor_to_text_format
@@ -9,7 +15,7 @@ import scipy.sparse
 # keeping things short
 A = np.asarray
 C = constant
-I = input
+I = input_reader
 
 
 # testing whether operator overloads result in proper type
@@ -57,7 +63,7 @@ def _to_list(desc):
 
 
 def test_graph_with_same_node_twice():
-    v0 = C(1)
+    v0 = Constant(1)
     root_node = Plus(v0, v0)
     description, has_inputs, readers = root_node.to_config()
     assert len(_to_list(description)) == 2
@@ -73,9 +79,9 @@ def test_tensor_conversion_exceptions(alias, idx, data, expected):
 
 
 @pytest.mark.parametrize("alias, idx, data, expected", [
-    ('W', 0, A([]), "0	|W "),
-    ('W', 0, A([[1, 0, 0, 0], [0, 0, 1, 0]]), """\
-0	|W 1 0 0 0 0 0 1 0\
+    ('W', 0, A([]), "0\t|W "),
+    ('W', 0, A([[1, 0, 0, 0], [1, 0, 0, 0]]), """\
+0\t|W 1 1 0 0 0 0 0 0\
 """),
 ])
 def test_tensor_conversion_dense(alias, idx, data, expected):

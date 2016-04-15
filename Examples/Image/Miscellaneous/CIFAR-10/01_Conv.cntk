@@ -13,6 +13,9 @@ imageLayout = "cudnn"
 # override the above as follows when running on CPU:
 # deviceId = -1
 
+# If set to true, always initialize the network on CPU, making initialization consistent across CPU and GPU targets (for testing).
+initOnCPUOnly=true
+
 prefetch = "true"
 
 command = Train:Test
@@ -44,6 +47,7 @@ Train = [
         readerType = "UCIFastReader"
         file = "$DataDir$/Train.txt"
         randomize = "auto"
+        # Setting minibatchMode="full" is a temporary fix to prevent an exception until the reader is migrated to the new reader.
         minibatchMode="full"
         features = [
             dim = 3072

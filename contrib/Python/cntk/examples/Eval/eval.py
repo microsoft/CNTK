@@ -6,12 +6,14 @@ import numpy as np
 
 from cntk import *
 
+# broken due to a bug in CNTK. When we do not use inputs (just constants), the 
+# output of the write action has a missing line.
 if (__name__ == "__main__"):
 
     X = constant(np.asarray([[2, 3], [4, 5]]))
     out = 2.5 * X + 100
 
-    with Context('demo', clean_up=False) as ctx:
+    with Context('demo', clean_up=True) as ctx:
         result = ctx.eval(out)
         print(result)
         # outputs:

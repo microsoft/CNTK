@@ -2,19 +2,20 @@
 # Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 command=Eval
-deviceId=%(DevideId)s	
-				   
+deviceId=%(DevideId)s
+precision="%(Precision)s"
+
 Eval=[
-	action="write"
-	nodeUnitTest=%(NodeUnitTest)s
-	run=BrainScriptNetworkBuilder
+    action="write"
+    nodeUnitTest=%(NodeUnitTest)s
+    run=BrainScriptNetworkBuilder
 
     BrainScriptNetworkBuilder=[
 %(ModelDescription)s
-	]
-	
-%(Reader)s	
-	
+    ]
+    
+%(Reader)s
+    
 
     format = [
         # %%x = shape, %%d = sequenceId
@@ -23,7 +24,7 @@ Eval=[
         elementSeparator=\s
     ]
 
-	outputPath = "%(OutputFile)s"
+    outputPath = "%(OutputFile)s"
 ]
 
 

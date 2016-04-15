@@ -1,0 +1,33 @@
+dataDir: .
+
+tags:
+    # Execution time: Release-GPU ~ 20sec
+    # CPU version not supported. Debug-GPU throws exception 
+    # running on every BVT job in 'E' (Examples) leg
+    - bvt-e ((build_sku=='gpu') & (flavor=='release') & (device=='gpu')) 
+    # running every Nightly job in 'E' (Examples) leg
+    - nightly-e ((build_sku=='gpu') & (flavor=='release') & (device=='gpu'))
+
+testCases:
+  CNTK Run must be completed:
+    patterns:
+      - __COMPLETED__
+
+Must train epochs in exactly same order and parameters:
+    patterns:
+      - Starting Epoch {{integer}}
+      - learning rate per sample = {{float}}
+      - momentum = {{float}}
+
+Epochs must be finished with expected results:
+    patterns:
+      - Finished Epoch[{{integer}} of {{integer}}]
+      - TrainLossPerSample = {{float,tolerance=2.0%}}
+      - EvalErrPerSample = {{float,tolerance=2.0%}}
+      - AvgLearningRatePerSample = {{float,tolerance=0.001%}}
+
+Per-minibatch training results must match:
+    patterns:
+      - Epoch[{{integer}} of {{integer}}]-Minibatch[{{integer}}-{{integer}}
+      - SamplesSeen = {{integer}}
+      - TrainLossPerSample = {{float,tolerance=2.0%}}
