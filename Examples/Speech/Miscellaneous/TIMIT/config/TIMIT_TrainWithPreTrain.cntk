@@ -1,53 +1,52 @@
-stderr=$ExpDir$\TrainWithPreTrain\log\log
+# If set to true, always initialize the network on CPU, making initialization consistent across CPU and GPU targets (for testing).
+initOnCPUOnly=true
+
 command=TIMIT_DiscrimPreTrain1:TIMIT_AddLayer2:TIMIT_DiscrimPreTrain2:TIMIT_AddLayer3:TIMIT_Train3
 
 precision=float
 
-ndlMacros=$NdlDir$\default_macros.ndl
+ndlMacros=$NdlDir$/default_macros.ndl
 deviceId=$DeviceNumber$
 ##########################################
 #  Blocks common to all pre-training commands
 ##########################################
 traceLevel=1
 SGD=[
-	# epochSize=0 means epochSize is the size of the training set
-        epochSize=0 
-        minibatchSize=256
-        learningRatesPerMB=0.1
-        momentumPerMB=0.9
-        dropoutRate=0.0
-        maxEpochs=2
+    # epochSize=0 means epochSize is the size of the training set
+    epochSize=0 
+    minibatchSize=256
+    learningRatesPerMB=0.1
+    momentumPerMB=0.9
+    dropoutRate=0.0
+    maxEpochs=2
 ]
-       
-    # Parameter values for the reader
- reader=[
-      # reader to use
-      readerType=HTKMLFReader
 
-#     readMethod=blockRandomize
-      readMethod=rollingWindow
+# Parameter values for the reader
+reader=[
+    # reader to use
+    readerType=HTKMLFReader
+    readMethod=blockRandomize
+    miniBatchMode=Partial
+    randomize=Auto
+    verbosity=0
 
-      miniBatchMode=Partial
-      randomize=Auto
-      verbosity=1   
+    features=[
+        dim=792
+        scpFile=$ScpDir$/TIMIT.train.scp.fbank.fullpath.rnn
+    ]
 
-      features=[
-	  dim=792
-	  scpFile=$ScpDir$\TIMIT.train.scp.fbank.fullpath
-      ]
-
-      labels=[
-	mlfFile=$MlfDir$\TIMIT.train.align_cistate.mlf.cntk
+    labels=[
+        mlfFile=$MlfDir$/TIMIT.train.align_cistate.mlf.cntk
         labelDim=183
-	labelMappingFile=$MlfDir$\TIMIT.statelist
-      ]
+        labelMappingFile=$MlfDir$/TIMIT.statelist
+    ]
 ]
 
 TIMIT_DiscrimPreTrain1=[
     action=train    
-    modelPath=$ExpDir$\TrainWithPreTrain\dptmodel1\cntkSpeech.dnn
+    modelPath=$ExpDir$/TrainWithPreTrain/dptmodel1/cntkSpeech.dnn
     NDLNetworkBuilder=[
-	NetworkDescription=$NdlDir$\create_1layer.ndl
+        NetworkDescription=$NdlDir$/create_1layer.ndl
     ]
 ]
 
@@ -55,16 +54,16 @@ TIMIT_AddLayer2=[
     action=edit
     CurrLayer=1
     NewLayer=2
-    CurrModel=$ExpDir$\TrainWithPreTrain\dptmodel1\cntkSpeech.dnn
-    NewModel=$ExpDir$\TrainWithPreTrain\dptmodel2\cntkSpeech.dnn.0
-    editPath=$MelDir$\add_layer.mel
+    CurrModel=$ExpDir$/TrainWithPreTrain/dptmodel1/cntkSpeech.dnn
+    NewModel=$ExpDir$/TrainWithPreTrain/dptmodel2/cntkSpeech.dnn.0
+    editPath=$MelDir$/add_layer.mel
 ]
 
 TIMIT_DiscrimPreTrain2=[
     action=train
-    modelPath=$ExpDir$\TrainWithPreTrain\dptmodel2\cntkSpeech.dnn
+    modelPath=$ExpDir$/TrainWithPreTrain/dptmodel2/cntkSpeech.dnn
     NDLNetworkBuilder=[
-	NetworkDescription=$NdlDir$\create_1layer.ndl
+        NetworkDescription=$NdlDir$/create_1layer.ndl
     ]
 ]
 
@@ -72,16 +71,16 @@ TIMIT_AddLayer3=[
     action=edit
     CurrLayer=2
     NewLayer=3
-    CurrModel=$ExpDir$\TrainWithPreTrain\dptmodel2\cntkSpeech.dnn
-    NewModel=$ExpDir$\TrainWithPreTrain\model\cntkSpeech.dnn.0
-    editPath=$MelDir$\add_layer.mel
+    CurrModel=$ExpDir$/TrainWithPreTrain/dptmodel2/cntkSpeech.dnn
+    NewModel=$ExpDir$/TrainWithPreTrain/model/cntkSpeech.dnn.0
+    editPath=$MelDir$/add_layer.mel
 ]
 
 TIMIT_Train3=[
     action=train
-    modelPath=$ExpDir$\TrainWithPreTrain\model\cntkSpeech.dnn
+    modelPath=$ExpDir$/TrainWithPreTrain/model/cntkSpeech.dnn
     NDLNetworkBuilder=[
-	NetworkDescription=$NdlDir$\create_1layer.ndl
+        NetworkDescription=$NdlDir$/create_1layer.ndl
     ]
     SGD=[
         epochSize=0 
@@ -92,6 +91,3 @@ TIMIT_Train3=[
         maxEpochs=25
     ]  
 ]
-
-
-
