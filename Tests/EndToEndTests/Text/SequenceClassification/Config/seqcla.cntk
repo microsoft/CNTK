@@ -90,7 +90,7 @@ Train=[
             ]
         ]
    ]    
-   outputPath = "OutputDir/output"        # dump the output as text?
+   outputPath = "$OutputDir$/output.txt"        # dump the output as text?
 ]
 
 Write=[
@@ -125,5 +125,5 @@ Write=[
             ]
             
    ]    
-   outputPath = "OutputDir/output"        # dump the output as text?
+   outputPath = "$OutputDir$/output.txt"        # dump the output as text?
 ]
