@@ -949,7 +949,8 @@ __global__ void _doScatterColumnsOf(ElemType* us, size_t usStride, size_t usCols
     ElemType&       rus = us[    i + jOut * usStride  ];
 
     ElemType res = ra * alpha;
-    atomicAdd(&rus, res); // rus += res;
+    if (res != 0)             // avoid memory conflict if e.g. an entire column has no gradient
+        atomicAdd(&rus, res); // rus += res;
     // Note: atomicAdd() is supposed to be fast in case of no conflict (the simple case of Scatter())
 }
 
@@ -988,7 +989,7 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::DoScatterColumnsOf(ElemType beta, cons
     Scale(beta, us); // if beta is 0, then this will be a memset()
 
     // launch the kernel
-    CUDA_LONG NN = (CUDA_LONG)GetNumElements(); // linear space identifying each individual input element
+    CUDA_LONG NN = (CUDA_LONG)(a.GetNumElements()); // linear space identifying each individual input element
     SyncGuard syncGuard;
     GridDim grid(NN);
     _doScatterColumnsOf<ElemType><<<grid.m_blocksPerGrid, grid.m_threadsPerBlock, 0, t_stream>>>(Data(), GetNumRows(), GetNumCols(), idx.Data(), idx.GetNumRows(), a.Data(), a.GetNumRows(), alpha, NN);
