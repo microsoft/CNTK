@@ -447,21 +447,6 @@ class ClipNode : public ComputationNode<ElemType>, public NumInputs<3>
 public:
     DeclareConstructorFromConfigWithNumInputs(ClipNode);
     ClipNode(DEVICEID_TYPE deviceId, const wstring& name)
-=======
-class ClipByValueNode : public ComputationNode<ElemType>, public NumInputs<3>
-{
-    typedef ComputationNode<ElemType> Base;
-    UsingComputationNodeMembersBoilerplate;
-
-    static const std::wstring TypeName()
-    {
-        return L"ClipByValue";
-    }
-
-public:
-    DeclareConstructorFromConfigWithNumInputs(ClipByValueNode);
-    ClipByValueNode(DEVICEID_TYPE deviceId, const wstring& name)
->>>>>>> implementation of clipbyvalue
         : Base(deviceId, name)
     {
     }
@@ -469,11 +454,7 @@ public:
     virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
     {
         size_t rank = DetermineElementwiseTensorRank();
-<<<<<<< HEAD
         auto result =           ValueTensorFor(rank, fr);
-=======
-        auto result = ValueTensorFor(rank, fr);
->>>>>>> implementation of clipbyvalue
         auto input0 = Input(0)->ValueTensorFor(rank, fr.AllowBroadcast());
         auto input1 = Input(1)->ValueTensorFor(rank, fr.AllowBroadcast());
         auto input2 = Input(2)->ValueTensorFor(rank, fr.AllowBroadcast());
@@ -484,7 +465,6 @@ public:
     virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
     {
         size_t rank = DetermineElementwiseTensorRank();
-<<<<<<< HEAD
         auto gradient =                         GradientTensorFor(rank, fr);
         auto inputGradient = Input(inputIndex)->GradientTensorFor(rank, fr.AllowBroadcast());
         auto input =         Input(inputIndex)->ValueTensorFor   (rank, fr.AllowBroadcast());
@@ -541,24 +521,5 @@ public:
 
 template class ClipNode<float>;
 template class ClipNode<double>;
-=======
-        auto gradient = GradientTensorFor(rank, fr);
-        auto inputGradient = Input(inputIndex)->GradientTensorFor(rank, fr.AllowBroadcast());
-        auto input = Input(inputIndex)->ValueTensorFor(rank, fr.AllowBroadcast());
-        auto output = ValueTensorFor(rank, fr.AllowBroadcast());
-
-        // if reduction then mask the respective input(s) (zero out the gaps)
-        if (Input(inputIndex)->ReducesInTimeWrt(shared_from_this()))
-            MaskMissingGradientColumnsToZero(fr);
-        if (Input(inputIndex)->ReducesInTimeWrt(Input(1 - inputIndex)))
-            Input(1 - inputIndex)->MaskMissingValueColumnsToZero(fr);
-
-        inputGradient.AddElementwiseProductWithClipByValueDerivativeOf(gradient, input, output);
-    }
-};
-
-template class ClipByValueNode<float>;
-template class ClipByValueNode<double>;
->>>>>>> implementation of clipbyvalue
 
 }}}
