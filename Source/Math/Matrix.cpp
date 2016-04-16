@@ -1520,6 +1520,7 @@ void Matrix<ElemType>::Resize(const size_t numRows, const size_t numCols, const 
     if (GetMatrixType() != MatrixType::SPARSE)
         Invalidate(); // Fill the matrix with NaNs to detect using the content which is undefined. Unfortunately this won't work for sparse matrices.
 #endif
+    SetDataLocation((m_preferredDeviceId < 0) ? CurrentDataLocation::CPU : CurrentDataLocation::GPU, GetMatrixType());
 }
 
 template <class ElemType>
@@ -3672,7 +3673,7 @@ void Matrix<ElemType>::TransferFromDeviceToDevice(int from_id, int to_id, bool i
 {
     _transferFromDeviceToDevice(from_id, to_id, isBeingMoved, emptyTransfer);
     if (updatePreferredDevice)
-        m_preferredDeviceId = GetDeviceId();
+        m_preferredDeviceId = to_id;
 }
 template <class ElemType>
 void Matrix<ElemType>::TransferToDeviceIfNotThere(int to_id, bool isBeingMoved/*false: may leave in BOTH state*/, bool emptyTransfer/* = false*/, bool updatePreferredDevice/* = true*/) const

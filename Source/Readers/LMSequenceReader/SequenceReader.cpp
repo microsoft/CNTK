@@ -1958,7 +1958,7 @@ bool BatchSequenceReader<ElemType>::GetMinibatch(StreamMinibatchInputs& matrices
         bool moveMatrix = features.GetMatrixType() != MatrixType::SPARSE;
         // BUGBUG: Matrix does not support modifying a dense GPU matrix temporarily ^^ on the CPU. We should instead have a local CPU matrix and assign it over.
         DEVICEID_TYPE featureDeviceId = features.GetDeviceId();
-        features.TransferFromDeviceToDevice(featureDeviceId, CPUDEVICE, moveMatrix, true, false);
+        features.TransferFromDeviceToDevice(featureDeviceId, CPUDEVICE, moveMatrix, true, true);
 
         if (features.GetMatrixType() == MatrixType::SPARSE)
         {
@@ -1979,7 +1979,7 @@ bool BatchSequenceReader<ElemType>::GetMinibatch(StreamMinibatchInputs& matrices
             features.SetValue(idx, j, (ElemType) 1);
         }
 
-        features.TransferFromDeviceToDevice(CPUDEVICE, featureDeviceId, moveMatrix, false, false);
+        features.TransferFromDeviceToDevice(CPUDEVICE, featureDeviceId, moveMatrix, false, true);
     }
 
     // get class info
