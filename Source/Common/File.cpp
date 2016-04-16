@@ -148,7 +148,7 @@ void File::Init(const wchar_t* filename, int fileOptions)
 // (wstring only for now; feel free to make this a template if needed)
 /*static*/ wstring File::DirectoryPathOf(wstring path)
 {
-#if WIN32
+#ifdef _WIN32
     HRESULT hr;
     path = msra::strfun::ReplaceAll<wstring>(path, L"/", L"\\"); // Win32 accepts forward slashes, but it seems that PathRemoveFileSpec() does not
     if (IsWindows8OrGreater()) // PathCchRemoveFileSpec() only available on Windows 8+
