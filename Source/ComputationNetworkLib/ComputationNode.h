@@ -1300,6 +1300,7 @@ public:
     void UpdateFunctionValuesSize()
     {
         UpdateDataSize(Value());
+        Value().CollapseDataLocationAfterWriting(); // actually before writing, should change the name
     }
 
     // -----------------------------------------------------------------------
