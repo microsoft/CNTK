@@ -1511,7 +1511,7 @@ template <class ElemType>
 void Matrix<ElemType>::Resize(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve /*=0*/, bool growOnly /*=true*/)
 {
     // TODO: should this function test whether the size is changing, and skip if it isn't? We have at least one explicit test for this code calling this (recurrent node)
-    DISPATCH_MATRIX_ON_FLAG_USEBOTH_4BOTH(this,
+    DISPATCH_MATRIX_ON_FLAG(this, this,
         { m_CPUMatrix->Resize(numRows, numCols, growOnly); },
         { m_GPUMatrix->Resize(numRows, numCols, growOnly); },
         { m_CPUSparseMatrix->RequireSizeAndAllocate(numRows, numCols, numNZElemToReserve, growOnly, false); },
