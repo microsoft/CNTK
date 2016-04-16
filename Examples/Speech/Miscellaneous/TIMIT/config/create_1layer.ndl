@@ -31,7 +31,7 @@ ndlCreateNetwork=[
 	 featNorm = MeanVarNorm(features)
 	 L1 = SBFF(featNorm,hiddenDim,featDim)
 	 CE = SMBFF(L1,labelDim,hiddenDim,labels,tag="criterion")
-	 Err = ErrorPrediction(labels,CE.BFF.FF.P,tag="eval")
+	 Err = ErrorPrediction(labels,CE.BFF.FF.P,tag="evaluation")
 
 	 # define output (scaled loglikelihood)
 	 logPrior = LogPrior(labels)	 

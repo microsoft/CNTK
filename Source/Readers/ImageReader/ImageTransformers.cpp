@@ -1,7 +1,6 @@
 //
-// <copyright company="Microsoft">
-//     Copyright (c) Microsoft Corporation.  All rights reserved.
-// </copyright>
+// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
 //
 
 #include "stdafx.h"
@@ -18,11 +17,18 @@
 namespace Microsoft { namespace MSR { namespace CNTK
 {
 
+struct ImageSequenceData : DenseSequenceData
+{
+    cv::Mat m_image;
+    // In case we do not copy data - we have to preserve the original sequence.
+    SequenceDataPtr m_original;
+};
+
 void ImageTransformerBase::Initialize(TransformerPtr next,
                                       const ConfigParameters &readerConfig)
 {
     Base::Initialize(next, readerConfig);
-    m_seed = std::stoi(readerConfig(L"seed", "0"));
+    m_seed = readerConfig(L"seed", (unsigned int)0);
 
     ImageConfigHelper config(readerConfig);
     size_t featureStreamId = config.GetFeatureStreamId();
@@ -34,10 +40,12 @@ void ImageTransformerBase::Initialize(TransformerPtr next,
 }
 
 SequenceDataPtr
-ImageTransformerBase::Apply(const DenseSequenceData &inputSequence,
-                            const StreamDescription &inputStream, cv::Mat &buffer,
+ImageTransformerBase::Apply(SequenceDataPtr sequence,
+                            const StreamDescription &inputStream,
                             const StreamDescription & /*outputStream*/)
 {
+    assert(inputStream.m_storageType == StorageType::dense);
+    auto inputSequence = static_cast<const DenseSequenceData&>(*sequence.get());
     ImageDimensions dimensions(*inputSequence.m_sampleLayout, HWC);
     int columns = static_cast<int>(dimensions.m_width);
     int rows = static_cast<int>(dimensions.m_height);
@@ -57,20 +65,25 @@ ImageTransformerBase::Apply(const DenseSequenceData &inputSequence,
         RuntimeError("Unsupported type");
     }
 
+    auto result = std::make_shared<ImageSequenceData>();
     int type = CV_MAKETYPE(typeId, channels);
-    buffer = cv::Mat(rows, columns, type, inputSequence.m_data);
-    this->Apply(buffer);
+    cv::Mat buffer = cv::Mat(rows, columns, type, inputSequence.m_data);
+    Apply(sequence->m_id, buffer);
     if (!buffer.isContinuous())
     {
         buffer = buffer.clone();
     }
+    else
+    {
+        result->m_original = sequence;
+    }
     assert(buffer.isContinuous());
+    result->m_image = buffer;
+    result->m_data = buffer.ptr();
+    result->m_numberOfSamples = inputSequence.m_numberOfSamples;
 
-    auto result = std::make_shared<DenseSequenceData>();
     ImageDimensions outputDimensions(buffer.cols, buffer.rows, buffer.channels());
     result->m_sampleLayout = std::make_shared<TensorShape>(outputDimensions.AsTensorShape(HWC));
-    result->m_numberOfSamples = inputSequence.m_numberOfSamples;
-    result->m_data = buffer.ptr();
     return result;
 }
 
@@ -114,11 +127,11 @@ void CropTransformer::InitFromConfig(const ConfigParameters &config)
     }
     else
     {
-        m_hFlip = std::stoi(config(L"hflip")) != 0;
+        m_hFlip = config(L"hflip");
     }
 }
 
-void CropTransformer::Apply(cv::Mat &mat)
+void CropTransformer::Apply(size_t id, cv::Mat &mat)
 {
     auto seed = GetSeed();
     auto rng = m_rngs.pop_or_create(
@@ -148,8 +161,11 @@ void CropTransformer::Apply(cv::Mat &mat)
         RuntimeError("Jitter type currently not implemented.");
     }
 
-    mat = mat(GetCropRect(m_cropType, mat.rows, mat.cols, ratio, *rng));
-    if (m_hFlip && std::bernoulli_distribution()(*rng))
+    int viewIndex = m_cropType == CropType::MultiView10 ? (int)(id % 10) : 0;
+
+    mat = mat(GetCropRect(m_cropType, viewIndex, mat.rows, mat.cols, ratio, *rng));
+    if ((m_hFlip && std::bernoulli_distribution()(*rng)) ||
+        viewIndex >= 5)
     {
         cv::flip(mat, mat, 1);
     }
@@ -168,6 +184,11 @@ CropTransformer::ParseCropType(const std::string &src)
     if (AreEqualIgnoreCase(src, "random"))
     {
         return CropType::Random;
+    }
+
+    if (AreEqualIgnoreCase(src, "multiview10"))
+    {
+        return CropType::MultiView10;
     }
 
     RuntimeError("Invalid crop type: %s.", src.c_str());
@@ -199,7 +220,7 @@ CropTransformer::ParseJitterType(const std::string &src)
     RuntimeError("Invalid jitter type: %s.", src.c_str());
 }
 
-cv::Rect CropTransformer::GetCropRect(CropType type, int crow, int ccol,
+cv::Rect CropTransformer::GetCropRect(CropType type, int viewIndex, int crow, int ccol,
                                       double cropRatio, std::mt19937 &rng)
 {
     assert(crow > 0);
@@ -212,13 +233,50 @@ cv::Rect CropTransformer::GetCropRect(CropType type, int crow, int ccol,
     switch (type)
     {
     case CropType::Center:
+        assert(viewIndex == 0);
         xOff = (ccol - cropSize) / 2;
         yOff = (crow - cropSize) / 2;
         break;
     case CropType::Random:
+        assert(viewIndex == 0);
         xOff = UniIntT(0, ccol - cropSize)(rng);
         yOff = UniIntT(0, crow - cropSize)(rng);
         break;
+    case CropType::MultiView10:
+    {
+        assert(0 <= viewIndex && viewIndex < 10);
+        // 0 - 4: 4 corners + center crop. 5 - 9: same, but with a flip.
+        int isubView = viewIndex % 5;
+        switch (isubView)
+        {
+        // top-left
+        case 0:
+            xOff = 0;
+            yOff = 0;
+            break;
+        // top-right
+        case 1:
+            xOff = ccol - cropSize;
+            yOff = 0;
+            break;
+        // bottom-left
+        case 2:
+            xOff = 0;
+            yOff = crow - cropSize;
+            break;
+        // bottom-right
+        case 3:
+            xOff = ccol - cropSize;
+            yOff = crow - cropSize;
+            break;
+        // center
+        case 4:
+            xOff = (ccol - cropSize) / 2;
+            yOff = (crow - cropSize) / 2;
+            break;
+        }
+        break;
+    }
     default:
         assert(false);
     }
@@ -278,8 +336,9 @@ void ScaleTransformer::InitFromConfig(const ConfigParameters &config)
         m_interp.push_back(cv::INTER_LINEAR);
 }
 
-void ScaleTransformer::Apply(cv::Mat &mat)
+void ScaleTransformer::Apply(size_t id, cv::Mat &mat)
 {
+    UNUSED(id);
     // If matrix has not been converted to the right type, do it now as rescaling
     // requires floating point type.
     //
@@ -351,8 +410,9 @@ void MeanTransformer::InitFromConfig(const ConfigParameters &config)
     }
 }
 
-void MeanTransformer::Apply(cv::Mat &mat)
+void MeanTransformer::Apply(size_t id, cv::Mat &mat)
 {
+    UNUSED(id);
     assert(m_meanImg.size() == cv::Size(0, 0) ||
            (m_meanImg.size() == mat.size() &&
             m_meanImg.channels() == mat.channels()));
@@ -367,7 +427,7 @@ void MeanTransformer::Apply(cv::Mat &mat)
 void TransposeTransformer::Initialize(TransformerPtr next,
                                       const ConfigParameters &readerConfig)
 {
-    Base::Initialize(next, readerConfig);
+    TransformerBase::Initialize(next, readerConfig);
 
     // Currently we only support a single stream.
     ImageConfigHelper config(readerConfig);
@@ -384,7 +444,7 @@ void TransposeTransformer::Initialize(TransformerPtr next,
 
         ImageDimensions dimensions(*stream->m_sampleLayout, HWC);
 
-        // Changing layout from NWH to NHW
+        // Changing from NHWC to NCHW
         auto changedStream = std::make_shared<StreamDescription>(*stream);
         changedStream->m_sampleLayout = std::make_shared<TensorShape>(dimensions.AsTensorShape(CHW));
         m_outputStreams[id] = changedStream;
@@ -392,58 +452,64 @@ void TransposeTransformer::Initialize(TransformerPtr next,
 }
 
 SequenceDataPtr
-TransposeTransformer::Apply(const DenseSequenceData &inputSequence,
+TransposeTransformer::Apply(SequenceDataPtr inputSequence,
                             const StreamDescription &inputStream,
-                            vector<char> &buffer,
                             const StreamDescription &outputStream)
 {
     if (inputStream.m_elementType == ElementType::tdouble)
     {
-        return TypedApply<double>(inputSequence, inputStream, buffer, outputStream);
+        return TypedApply<double>(inputSequence, inputStream, outputStream);
     }
 
     if (inputStream.m_elementType == ElementType::tfloat)
     {
-        return TypedApply<float>(inputSequence, inputStream, buffer, outputStream);
+        return TypedApply<float>(inputSequence, inputStream, outputStream);
     }
 
     RuntimeError("Unsupported type");
 }
 
-template <class TElement>
+// The class represents a sequence that owns an internal data buffer.
+// Passed from the TransposeTransformer.
+// TODO: Trasposition potentially could be done in place.
+struct DenseSequenceWithBuffer : DenseSequenceData
+{
+    std::vector<char> m_buffer;
+};
+
+template <class TElemType>
 SequenceDataPtr
-TransposeTransformer::TypedApply(const DenseSequenceData &inputSequence,
+TransposeTransformer::TypedApply(SequenceDataPtr sequence,
                                  const StreamDescription &inputStream,
-                                 vector<char> &buffer,
                                  const StreamDescription &outputStream)
 {
+    assert(inputStream.m_storageType == StorageType::dense);
+    auto inputSequence = static_cast<DenseSequenceData&>(*sequence.get());
     assert(inputSequence.m_numberOfSamples == 1);
-    assert(inputStream.m_sampleLayout->GetNumElements() ==
-        outputStream.m_sampleLayout->GetNumElements());
+    assert(inputStream.m_sampleLayout->GetNumElements() == outputStream.m_sampleLayout->GetNumElements());
 
     size_t count = inputStream.m_sampleLayout->GetNumElements() * GetSizeByType(inputStream.m_elementType);
-    buffer.resize(count);
 
-    TElement* typedBuffer = reinterpret_cast<TElement*>(&buffer[0]);
+    auto result = std::make_shared<DenseSequenceWithBuffer>();
+    result->m_buffer.resize(count);
+
     ImageDimensions dimensions(*inputStream.m_sampleLayout, ImageLayoutKind::HWC);
-
     size_t rowCount = dimensions.m_height * dimensions.m_width;
     size_t channelCount = dimensions.m_numChannels;
-    TElement* data = reinterpret_cast<TElement*>(inputSequence.m_data);
 
-    for (size_t rowIndex = 0; rowIndex < rowCount; rowIndex++)
+    auto src = reinterpret_cast<TElemType*>(inputSequence.m_data);
+    auto dst = reinterpret_cast<TElemType*>(result->m_buffer.data());
+
+    for (size_t irow = 0; irow < rowCount; irow++)
     {
-        for (size_t columnIndex = 0; columnIndex < channelCount;
-             columnIndex++)
+        for (size_t icol = 0; icol < channelCount; icol++)
         {
-            typedBuffer[columnIndex * rowCount + rowIndex] =
-                data[rowIndex * channelCount + columnIndex];
+            dst[icol * rowCount + irow] = src[irow * channelCount + icol];
         }
     }
 
-    auto result = std::make_shared<DenseSequenceData>();
     result->m_sampleLayout = outputStream.m_sampleLayout;
-    result->m_data = &buffer[0];
+    result->m_data = result->m_buffer.data();
     result->m_numberOfSamples = inputSequence.m_numberOfSamples;
     return result;
 }

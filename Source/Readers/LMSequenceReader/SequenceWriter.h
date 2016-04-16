@@ -12,7 +12,7 @@
 namespace Microsoft { namespace MSR { namespace CNTK {
 
 template <class ElemType>
-class LMSequenceWriter : public IDataWriter<ElemType>
+class LMSequenceWriter : public IDataWriter
 {
 private:
     std::vector<size_t> outputDims;
@@ -20,7 +20,7 @@ private:
     map<wstring, FILE*> outputFileIds;
 
     std::vector<size_t> udims;
-    int class_size;
+    int m_classSize;
     map<wstring, map<int, vector<int>>> class_words;
     map<wstring, map<string, int>> word4idx;
     map<wstring, map<int, string>> idx4word;
@@ -30,7 +30,7 @@ private:
 
     map<wstring, string> mUnk; // unk symbol
 
-    int noise_sample_size;
+    int m_noiseSampleSize;
     noiseSampler<long> m_noiseSampler;
 
     map<wstring, int> nBests;
@@ -49,8 +49,6 @@ public:
     }
 
 public:
-    using LabelType = typename IDataWriter<ElemType>::LabelType;
-    using LabelIdType = typename IDataWriter<ElemType>::LabelIdType;
     void GetSections(std::map<std::wstring, SectionType, nocase_compare>& /*sections*/)
     {
     }
@@ -71,22 +69,10 @@ public:
     }
     virtual void Destroy();
     virtual bool SaveData(size_t recordStart, const std::map<std::wstring, void*, nocase_compare>& matrices, size_t numRecords, size_t datasetSize, size_t byteVariableSized);
+    virtual bool SupportMultiUtterances() const
+    {
+        return false;
+    };
 };
 
-template <class ElemType>
-void DATAWRITER_API GetWriter(IDataWriter<ElemType>** pwriter)
-{
-    assert(pwriter != nullptr);
-    *pwriter = new LMSequenceWriter<ElemType>();
-    assert(*pwriter != nullptr);
-}
-
-extern "C" DATAWRITER_API void GetWriterF(IDataWriter<float>** pwriter)
-{
-    GetWriter(pwriter);
-}
-extern "C" DATAWRITER_API void GetWriterD(IDataWriter<double>** pwriter)
-{
-    GetWriter(pwriter);
-}
-} } }
+}}}

@@ -2,13 +2,7 @@
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <ClCompile Include="CNTKEval.cpp" />
-    <ClCompile Include="..\Common\Eval.cpp">
-      <Filter>Common</Filter>
-    </ClCompile>
     <ClCompile Include="..\Common\fileutil.cpp">
-      <Filter>Common</Filter>
-    </ClCompile>
-    <ClCompile Include="..\Common\DebugUtil.cpp">
       <Filter>Common</Filter>
     </ClCompile>
     <ClCompile Include="..\Common\File.cpp">
@@ -26,21 +20,30 @@
     <ClCompile Include="..\Common\Config.cpp">
       <Filter>Common</Filter>
     </ClCompile>
+    <ClCompile Include="..\Common\Eval.cpp">
+      <Filter>For External Use</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Common\ExceptionWithCallStack.cpp">
+      <Filter>Common</Filter>
+    </ClCompile>
+    <ClCompile Include="..\CNTK\BrainScript\BrainScriptEvaluator.cpp">
+      <Filter>BrainScript</Filter>
+    </ClCompile>
+    <ClCompile Include="..\CNTK\BrainScript\BrainScriptParser.cpp">
+      <Filter>BrainScript</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Common\DataReader.cpp">
+      <Filter>Common</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="EvalReader.h" />
     <ClInclude Include="EvalWriter.h" />
     <ClInclude Include="CNTKEval.h" />
-    <ClInclude Include="..\Common\Include\Eval.h">
-      <Filter>Common\Include</Filter>
-    </ClInclude>
     <ClInclude Include="..\Common\Include\File.h">
       <Filter>Common\Include</Filter>
     </ClInclude>
     <ClInclude Include="..\Common\Include\fileutil.h">
-      <Filter>Common\Include</Filter>
-    </ClInclude>
-    <ClInclude Include="..\Common\Include\DebugUtil.h">
       <Filter>Common\Include</Filter>
     </ClInclude>
     <ClInclude Include="..\Common\Include\TimerUtility.h">
@@ -58,6 +61,9 @@
     <ClInclude Include="..\Common\Include\Config.h">
       <Filter>Common\Include</Filter>
     </ClInclude>
+    <ClInclude Include="..\Common\Include\Eval.h">
+      <Filter>For External Use</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Common">
@@ -68,6 +74,12 @@
     </Filter>
     <Filter Include="Misc">
       <UniqueIdentifier>{3660ead9-4e83-4246-8f76-dd1fda8e2590}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="For External Use">
+      <UniqueIdentifier>{fa8ec6d7-8998-44f0-bddb-cb4dffc5ec0b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="BrainScript">
+      <UniqueIdentifier>{eff3a7b6-ad84-4438-9422-1b66077cfded}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
 </Project>

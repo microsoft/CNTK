@@ -19,7 +19,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
 // -----------------------------------------------------------------------
 // ErrorPredictionNode (label, prediction)   or ErrorPredictionNode (prediction, label)
-// performs classification and error counting
+// Performs classification and error counting.
+// Result is an error rate, lower = better.
 // -----------------------------------------------------------------------
 
 template <class ElemType>
@@ -100,9 +101,9 @@ public:
         if (flags & CopyNodeFlags::copyNodeValue)
         {
             auto node = dynamic_pointer_cast<ErrorPredictionNode<ElemType>>(nodeP);
-            *node->m_maxIndexes0 = *m_maxIndexes0;
-            *node->m_maxIndexes1 = *m_maxIndexes1;
-            *node->m_maxValues = *m_maxValues;
+            node->m_maxIndexes0->SetValue(*m_maxIndexes0);
+            node->m_maxIndexes1->SetValue(*m_maxIndexes1);
+            node->m_maxValues->SetValue(*m_maxValues);
         }
     }
     // request matrices needed to do node function value evaluation
@@ -317,7 +318,7 @@ public:
     virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
     {
         Base::Validate(isFinalValidationPass);
-        InferMBLayoutFromInputsForStandardCase();
+        InferMBLayoutFromInputsForStandardCase(isFinalValidationPass);
 
         if (isFinalValidationPass)
             if (!(Input(1)->GetSampleMatrixNumRows() == Input(2)->GetSampleMatrixNumRows() && // position dependent and pair scores have same number of labels

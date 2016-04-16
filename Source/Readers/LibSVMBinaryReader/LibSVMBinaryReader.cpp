@@ -739,13 +739,13 @@ void LibSVMBinaryReader<ElemType>::StartDistributedMinibatchLoop(size_t mbSize, 
 }
 
 template <class ElemType>
-void LibSVMBinaryReader<ElemType>::CheckDataMatrices(std::map<std::wstring, Matrix<ElemType>*>& matrices)
+void LibSVMBinaryReader<ElemType>::CheckDataMatrices(StreamMinibatchInputs& matrices)
 {
     if (m_dataMatrices.empty())
     {
         for (auto inmat : matrices)
         {
-            shared_ptr<BinaryMatrix<ElemType>> mat = m_dataInput->CreateMatrix(inmat.first, inmat.second->GetDeviceId());
+            shared_ptr<BinaryMatrix<ElemType>> mat = m_dataInput->CreateMatrix(inmat.first, inmat.second.matrix->GetDeviceId());
             if (mat != nullptr)
             {
                 m_dataMatrices[inmat.first] = mat;
@@ -780,7 +780,7 @@ void LibSVMBinaryReader<ElemType>::DoDSSMMatrix(Matrix<ElemType>& mat, size_t ac
 }
 
 template <class ElemType>
-bool LibSVMBinaryReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemType>*>& matrices)
+bool LibSVMBinaryReader<ElemType>::TryGetMinibatch(StreamMinibatchInputs& matrices)
 {
 //timer = clock();
 #if DEBUG
@@ -821,25 +821,20 @@ bool LibSVMBinaryReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<El
 #endif
         for (auto matrix : m_dataMatrices)
         {
-            auto findMat = matrices.find(matrix.first);
-            if (findMat != matrices.end())
-            {
-                matrix.second->Fill(findMat->second);
-            }
+            if (matrices.HasInput(matrix.first))
+                matrix.second->Fill(&matrices.GetInputMatrix<ElemType>(matrix.first));
         }
 #if DEBUG
         reader_series->write_flag(_T("done fill."));
 #endif
-        auto findMat = matrices.find(L"DSSMLabel");
-        if (findMat != matrices.end())
-        {
-            DoDSSMMatrix(*(findMat->second), actualMBSize);
-        }
+        if (matrices.HasInput(L"DSSMLabel"))
+            DoDSSMMatrix(matrices.GetInputMatrix<ElemType>(L"DSSMLabel"), actualMBSize);
+
         m_pendingAsyncGetMinibatch = std::async(std::launch::async, [this]()
-                                                {
-                                                    // CheckDataMatrices(matrices);
-                                                    return m_dataInput->FillMatrices(m_dataMatrices);
-                                                });
+        {
+            // CheckDataMatrices(matrices);
+            return m_dataInput->FillMatrices(m_dataMatrices);
+        });
     }
 #if DEBUG
     cur_read++;
@@ -873,32 +868,13 @@ void LibSVMBinaryReader<ElemType>::RenamedMatrices(const ConfigRecordType& confi
 }
 
 template <class ElemType>
-bool LibSVMBinaryReader<ElemType>::DataEnd(EndDataType endDataType)
+bool LibSVMBinaryReader<ElemType>::DataEnd()
 {
-    return m_dataInput->DataEnd(endDataType);
+    return m_dataInput->DataEnd();
 }
 
 template <class ElemType>
-bool SparseBinaryInput<ElemType>::DataEnd(EndDataType endDataType)
-{
-    bool ret = false;
-    switch (endDataType)
-    {
-    case endDataNull:
-        assert(false);
-        break;
-    case endDataEpoch:
-        ret = (m_nextMB >= m_epochSize);
-        break;
-    case endDataSet:
-        ret = (m_nextMB >= m_epochSize);
-        break;
-    case endDataSentence: // for fast reader each minibatch is considered a "sentence", so always true
-        ret = true;
-        break;
-    }
-    return ret;
-}
+bool SparseBinaryInput<ElemType>::DataEnd() { return true; }
 
 // instantiate all the combinations we expect to be used
 template class LibSVMBinaryReader<double>;

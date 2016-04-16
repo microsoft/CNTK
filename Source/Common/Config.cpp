@@ -39,6 +39,7 @@ std::string ConfigParameters::ParseCommandLine(int argc, wchar_t* argv[], Config
             wstring dir = str.substr(cdDescriptor.length());
             if (_wchdir(dir.c_str()) != 0)
                 InvalidArgument("Failed to set the current directory to '%ls'", dir.c_str());
+            fprintf(stderr, "Changed current directory to %ls\n", dir.c_str());
         }
 
         // see if they are loading a config file
@@ -61,6 +62,8 @@ std::string ConfigParameters::ParseCommandLine(int argc, wchar_t* argv[], Config
                     // if haven't already read this file, read it
                     resolvedConfigFiles.push_back(filePath);
                     configString += config.ReadConfigFile(filePath);
+                    // remember all config directories, for use as include paths by BrainScriptNetworkBuilder
+                    GetBrainScriptNetworkBuilderIncludePaths().push_back(File::DirectoryPathOf(msra::strfun::utf16(filePath)));
                 }
                 else
                     RuntimeError("Cannot specify same config file multiple times at the command line.");
@@ -236,18 +239,18 @@ void GetFileConfigNames(const ConfigRecordType& config, std::vector<std::wstring
         if (!config.CanBeConfigRecord(id))
             continue;
         const ConfigRecordType& temp = config(id);
-        // see if we have a config parameters that contains a "dim" element, it's a sub key, use it
-        if (temp.ExistsCurrent(L"dim"))
-        {
-            if (temp.ExistsCurrent(L"labelMappingFile") || temp.ExistsCurrent(L"labelDim") || temp.ExistsCurrent(L"labelType") || (temp.ExistsCurrent(L"sectionType") && (const wstring&) temp(L"sectionType") == L"labels"))
-            {
-                labels.push_back(id);
-            }
-            else
-            {
-                features.push_back(id);
-            }
-        }
+        // ############### BREAKING ############
+        // Before it required a "dim" parameter, but that was unused for labels.
+        // ############### BREAKING ############
+        //// see if we have a config parameters that contains a "dim" element, it's a sub key, use it
+        //if (temp.ExistsCurrent(L"dim"))
+        //{
+        // any sub-dictionary that contains any relevant entries is considered an input stream, either label or features
+        if (temp.ExistsCurrent(L"labelMappingFile") || temp.ExistsCurrent(L"labelDim") || temp.ExistsCurrent(L"labelType") || (temp.ExistsCurrent(L"sectionType") && (const wstring&) temp(L"sectionType") == L"labels"))
+            labels.push_back(id);
+        else if (temp.ExistsCurrent(L"dim"))
+            features.push_back(id);
+        //}
     }
 }
 
@@ -304,4 +307,5 @@ void TrimQuotes(std::string& str)
     if (str.front() == '"' && str.back() == '"')
         str = str.substr(1, str.size() - 2);
 }
-} } }
+
+}}}

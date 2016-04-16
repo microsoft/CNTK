@@ -1,310 +1,299 @@
 # configuration file for CNTK ATIS for language understanding tasks
 
-stderr=$ExpDir$\ATIS\log
+precision="double"
+deviceId = $DeviceId$
 command=LSTM:LSTMTest
-
-type=double
+traceLevel=1
 
 LSTM=[
-    # this is the maximum size for the minibatch, since sequence minibatches are really just a single sequence
-	# can be considered as the maximum length of a sentence
-    action=train
-	makeMode=true
+  # this is the maximum size for the minibatch, since sequence minibatches are really just a single sequence
+  # can be considered as the maximum length of a sentence
+  action=train
+  makeMode=true
 
-#  recurrent networks are trained with minibatch
-#  minibatch size, for example in language model, is the number of input words
-#  e.g., 6, corresponds to having 6 inputs words from one sentence
-#  In the learning process, we split an input sequence into a vector of subsequences of size T_bptt .
-    minibatchSize=10
+  #  recurrent networks are trained with minibatch
+  #  minibatch size, for example in language model, is the number of input words
+  #  e.g., 6, corresponds to having 6 inputs words from one sentence
+  #  In the learning process, we split an input sequence into a vector of subsequences of size T_bptt .
+  # need to be small since models are updated for each minibatch
+  minibatchSize=10
 
-	# need to be small since models are updated for each minibatch
-    traceLevel=1
-    # CPU is -1
-	deviceId=-1
+  # for each epoch, maximum number of input words is set below
+  epochSize=4430000
 
-    # for each epoch, maximum number of input words is set below
-    epochSize=4430000
+  modelPath=$ExpDir$/cntkdebug.dnn
 
-# uncomment NDLNetworkBuilder to use NDL
-# need to comment out SimpleNetworkBuilder section
-#    NDLNetworkBuilder=[
-#        networkDescription=$NdlDir$\lstmNDL.txt
-#    ]
+  SimpleNetworkBuilder=[
+    trainingCriterion=crossentropywithsoftmax
+    evalCriterion=crossentropywithsoftmax
 
-    SimpleNetworkBuilder=[
-	    trainingCriterion=crossentropywithsoftmax
-	    evalCriterion=crossentropywithsoftmax
+    # default hidden layer activity
+    defaultHiddenActivity=0.1
 
- #       # default hidden layer activity
-      defaultHiddenActivity=0.1
+    recurrentLayer=2
+    # randomization range
+    initValueScale=6.0
 
-    	recurrentLayer=2
-        # randomization range
-        initValueScale=6.0
+    # first layer, second layer, and output layer size
+    layerSizes=2832:50:300:127
 
-        # first layer, second layer, and output layer size
-		layerSizes=2832:50:300:127
+    rnnType=LSTM
+    lookupTableOrder=3
 
-        rnnType=LSTM
-        lookupTableOrder=3
+    addPrior=false
+    addDropoutNodes=false
+    applyMeanVarNorm=false
+    uniformInit=true
+  ]
 
-       addPrior=false
-       addDropoutNodes=false
-       applyMeanVarNorm=false
-       uniformInit=true
+  # configuration file, base parameters
+  SGD=[
+    learningRatesPerSample=0.1
+    momentumPerMB=0.90
+
+    gradientClippingWithTruncation=true
+    clippingThresholdPerSample=15.0
+
+    # maximum number of epochs
+    maxEpochs=3
+
+    gradientcheck=false
+
+    # for information purpose, number of minibatches to report progress
+    numMBsToShowResult=1000
+
+    # Whether use AdaGrad
+    # gradUpdateType=AdaGrad
+
+    # if validation shows that the model has no improvement, then do back-up to the previously 
+    # estimated model and reduce learning rate
+    loadBestModel=true
+
+    # settings for Auto Adjust Learning Rate
+    AutoAdjust=[
+      # auto learning rate adjustment
+      autoAdjustLR=adjustafterepoch
+      reduceLearnRateIfImproveLessThan=0
+      increaseLearnRateIfImproveMoreThan=1000000000
+
+      # how much learning rate is reduced 
+      learnRateDecreaseFactor=0.5
+
+      # if continously improved, can increase learning rate by the following ratio
+      learnRateIncreaseFactor=1.382
+
+      numMiniBatch4LRSearch=100
+      numPrevLearnRates=5
+      numBestSearchEpoch=1
     ]
 
-    # configuration file, base parameters
-    SGD=[
-		learningRatesPerSample=0.1
-        momentumPerMB=0.90
 
-        gradientClippingWithTruncation=true
-		clippingThresholdPerSample=15.0
+    dropoutRate=0
+  ]
 
-        # maximum number of epochs
-	    maxEpochs=3
+  reader=[
+    # reader to use
+    readerType=LUSequenceReader
+    #typedef argvector<size_t> intargvector which is not compatible with negative number
+    wordContext=0:1:2
+    randomize=None
 
-        gradientcheck=false
+    # number of utterances to be allocated for each minibatch
+    nbruttsineachrecurrentiter=10
+  
+    # if writerType is set, we will cache to a binary file
+    # if the binary file exists, we will use it instead of parsing this file
+    # writerType=BinaryReader
 
-        # for information purpose, number of minibatches to report progress
-        numMBsToShowResult=1000
+    #### write definition
+    wfile=$ExpDir$/sequenceSentence.bin
+    #wsize - inital size of the file in MB
+    # if calculated size would be bigger, that is used instead
+    wsize=256
 
-        # Whether use AdaGrad
-#        gradUpdateType=AdaGrad
-        
-        # output model path        
-		    modelPath=$ExpDir$\cntkdebug.dnn
+    #wrecords - number of records we should allocate space for in the file
+    # files cannot be expanded, so this should be large enough. If known modify this element in config before creating file
+    wrecords=1000
+    #windowSize - number of records we should include in BinaryWriter window
+    windowSize=10000
 
-        # if validation shows that the model has no improvement, then do back-up to the previously 
-        # estimated model and reduce learning rate
-        loadBestModel=true
+    unk="<unk>"
+    wordmap=$DataDir$/inputmap.txt
+    file=$DataDir$/atis.train.apos.pred.pos.head.IOB.simple
 
-        # settings for Auto Adjust Learning Rate
-        AutoAdjust=[
-            # auto learning rate adjustment
-	        autoAdjustLR=adjustafterepoch
-            reduceLearnRateIfImproveLessThan=0
-            increaseLearnRateIfImproveMoreThan=1000000000
-
-            # how much learning rate is reduced 
-            learnRateDecreaseFactor=0.5
-
-            # if continously improved, can increase learning rate by the following ratio
-            learnRateIncreaseFactor=1.382
-
-            numMiniBatch4LRSearch=100
-            numPrevLearnRates=5
-            numBestSearchEpoch=1
-        ]
-
-
-        dropoutRate=0
+    #additional features sections
+    #for now store as expanded category data (including label in)
+    features=[
+      # sentence has no features, so need to set dimension to zero
+      dim=0
+      ### write definition
+      sectionType=data
     ]
+    # sequence break table, list indexes into sequence records, so we know when a sequence starts/stops
+    sequence=[
+      dim=1
+      wrecords=2
+      ### write definition
+      sectionType=data
+    ]
+    #labels sections
+    labelIn=[
+      dim=1
+      usewordmap=true
 
-    reader=[
-      # reader to use
-      readerType=LUSequenceReader
-	  #typedef argvector<size_t> intargvector which is not compatible with negative number
-	  wordContext=0:1:2
-      randomize=None
+      # vocabulary size
+      labelDim=10000
+      labelMappingFile=$ExpDir$/sentenceLabels.txt
+      labelType=Category
+      beginSequence="BOS"
+      endSequence="EOS"
+      usewordmap=true
 
-	  # number of utterances to be allocated for each minibatch
-	  nbruttsineachrecurrentiter=10
-	  
-      # if writerType is set, we will cache to a binary file
-      # if the binary file exists, we will use it instead of parsing this file
-      # writerType=BinaryReader
-
-      #### write definition
-      wfile=$ExpDir$\sequenceSentence.bin
-      #wsize - inital size of the file in MB
-      # if calculated size would be bigger, that is used instead
-      wsize=256
-
-      #wrecords - number of records we should allocate space for in the file
-      # files cannot be expanded, so this should be large enough. If known modify this element in config before creating file
-      wrecords=1000
-      #windowSize - number of records we should include in BinaryWriter window
-      windowSize=10000
-
-      unk="<unk>"
-      wordmap=$DataDir$\inputmap.txt
-      file=$DataDir$\atis.train.apos.pred.pos.head.IOB.simple
-
-      #additional features sections
-      #for now store as expanded category data (including label in)
-      features=[
-        # sentence has no features, so need to set dimension to zero
-        dim=0
-        ### write definition
-        sectionType=data
+      # input word list
+      token=$DataDir$/input.txt
+      
+      #### Write definition ####
+      # sizeof(unsigned) which is the label index type
+      elementSize=4
+      sectionType=labels
+      mapping=[
+        #redefine number of records for this section, since we don't need to save it for each data record
+        wrecords=11
+        #variable size so use an average string size
+        elementSize=10
+        sectionType=labelMapping
       ]
-      # sequence break table, list indexes into sequence records, so we know when a sequence starts/stops
-      sequence=[
-        dim=1
-        wrecords=2
-        ### write definition
-        sectionType=data
-      ]
-      #labels sections
-      labelIn=[
-        dim=1
-        usewordmap=true
-
-		# vocabulary size
-        labelDim=10000
-	    labelMappingFile=$ExpDir$\sentenceLabels.txt
-	    labelType=Category
-        beginSequence="BOS"
-        endSequence="EOS"
-        usewordmap=true
-
-        # input word list
-        token=$DataDir$\input.txt
-        
-        #### Write definition ####
-        # sizeof(unsigned) which is the label index type
-        elementSize=4
-        sectionType=labels
-        mapping=[
-          #redefine number of records for this section, since we don't need to save it for each data record
-          wrecords=11
-          #variable size so use an average string size
-          elementSize=10
-          sectionType=labelMapping
-        ]
-        category=[
-          dim=11
-          #elementSize=sizeof(ElemType) is default
-          sectionType=categoryLabels
-        ]
-      ]
-      #labels sections
-      labels=[
-        dim=1
-	    labelType=Category
-        beginSequence="O"
-        endSequence="O"
-
-        # output token list
-        token=$DataDir$\output.txt
-
-	    labelMappingFile=$ExpDir$\sentenceLabels.out.txt
-        #### Write definition ####
-        # sizeof(unsigned) which is the label index type
-        sectionType=labels
-        mapping=[
-          sectionType=labelMapping
-        ]
-        category=[
-          sectionType=categoryLabels
-        ]
+      category=[
+        dim=11
+        #elementSize=sizeof(ElemType) is default
+        sectionType=categoryLabels
       ]
     ]
+    #labels sections
+    labels=[
+      dim=1
+      labelType=Category
+      beginSequence="O"
+      endSequence="O"
 
-    cvReader=[
-      # reader to use
-      readerType=LUSequenceReader
-      randomize=None
-	  wordContext=0:1:2
-	  
-      # if writerType is set, we will cache to a binary file
-      # if the binary file exists, we will use it instead of parsing this file
-      # writerType=BinaryReader
-	  
-      #### write definition
-      wfile=$ExpDir$\sequenceSentence.valid.bin
-      #wsize - inital size of the file in MB
-      # if calculated size would be bigger, that is used instead
-      wsize=256
+      # output token list
+      token=$DataDir$/output.txt
 
-      #wrecords - number of records we should allocate space for in the file
-      # files cannot be expanded, so this should be large enough. If known modify this element in config before creating file
-      wrecords=1000
-      #windowSize - number of records we should include in BinaryWriter window
-      windowSize=10000
-
-      unk="<unk>"
-      wordmap=$DataDir$\inputmap.txt
-      file=$DataDir$\atis.dev.IOB.simple
-
-      #additional features sections
-      #for now store as expanded category data (including label in)
-      features=[
-        # sentence has no features, so need to set dimension to zero
-        dim=0
-        ### write definition
-        sectionType=data
+    labelMappingFile=$ExpDir$/sentenceLabels.out.txt
+      #### Write definition ####
+      # sizeof(unsigned) which is the label index type
+      sectionType=labels
+      mapping=[
+        sectionType=labelMapping
       ]
-      # sequence break table, list indexes into sequence records, so we know when a sequence starts/stops
-      sequence=[
-        dim=1
-        wrecords=2
-        ### write definition
-        sectionType=data
+      category=[
+        sectionType=categoryLabels
       ]
-      #labels sections
-	  # it should be the same as that in the training set
-      labelIn=[
-        dim=1
+    ]
+  ]
 
-		# vocabulary size
-        labelDim=10000
-	    labelMappingFile=$ExpDir$\sentenceLabels.in.txt
-	    labelType=Category
-        beginSequence="BOS"
-        endSequence="EOS"
-        usewordmap=true
+  cvReader=[
+    # reader to use
+    readerType=LUSequenceReader
+    randomize=None
+    wordContext=0:1:2
+  
+    # if writerType is set, we will cache to a binary file
+    # if the binary file exists, we will use it instead of parsing this file
+    # writerType=BinaryReader
+  
+    #### write definition
+    wfile=$ExpDir$/sequenceSentence.valid.bin
+    #wsize - inital size of the file in MB
+    # if calculated size would be bigger, that is used instead
+    wsize=256
 
-        token=$DataDir$\input.txt
+    #wrecords - number of records we should allocate space for in the file
+    # files cannot be expanded, so this should be large enough. If known modify this element in config before creating file
+    wrecords=1000
+    #windowSize - number of records we should include in BinaryWriter window
+    windowSize=10000
 
-        #### Write definition ####
-        # sizeof(unsigned) which is the label index type
-        elementSize=4
-        sectionType=labels
-        mapping=[
-          #redefine number of records for this section, since we don't need to save it for each data record
-          wrecords=11
-          #variable size so use an average string size
-          elementSize=10
-          sectionType=labelMapping
-        ]
-        category=[
-          dim=11
-          #elementSize=sizeof(ElemType) is default
-          sectionType=categoryLabels
-        ]
+    unk="<unk>"
+    wordmap=$DataDir$/inputmap.txt
+    file=$DataDir$/atis.dev.IOB.simple
+
+    #additional features sections
+    #for now store as expanded category data (including label in)
+    features=[
+      # sentence has no features, so need to set dimension to zero
+      dim=0
+      ### write definition
+      sectionType=data
+    ]
+    # sequence break table, list indexes into sequence records, so we know when a sequence starts/stops
+    sequence=[
+      dim=1
+      wrecords=2
+      ### write definition
+      sectionType=data
+    ]
+    #labels sections
+    # it should be the same as that in the training set
+    labelIn=[
+      dim=1
+
+      # vocabulary size
+      labelDim=10000
+      labelMappingFile=$ExpDir$/sentenceLabels.in.txt
+      labelType=Category
+      beginSequence="BOS"
+      endSequence="EOS"
+      usewordmap=true
+
+      token=$DataDir$/input.txt
+
+      #### Write definition ####
+      # sizeof(unsigned) which is the label index type
+      elementSize=4
+      sectionType=labels
+      mapping=[
+        #redefine number of records for this section, since we don't need to save it for each data record
+        wrecords=11
+        #variable size so use an average string size
+        elementSize=10
+        sectionType=labelMapping
       ]
-      #labels sections
-      labels=[
-        dim=1
-	    labelType=Category
-        beginSequence="O"
-        endSequence="O"
-
-        token=$DataDir$\output.txt
-
-        labelDim=10000
-	    labelMappingFile=$ExpDir$\sentenceLabels.out.txt
-        #### Write definition ####
-        # sizeof(unsigned) which is the label index type
-        elementSize=4
-        sectionType=labels
-        mapping=[
-          #redefine number of records for this section, since we don't need to save it for each data record
-          wrecords=3
-          #variable size so use an average string size
-          elementSize=10
-          sectionType=labelMapping
-        ]
-        category=[
-          dim=3
-          #elementSize=sizeof(ElemType) is default
-          sectionType=categoryLabels
-        ]
+      category=[
+        dim=11
+        #elementSize=sizeof(ElemType) is default
+        sectionType=categoryLabels
       ]
-	]
+    ]
+    #labels sections
+    labels=[
+      dim=1
+      labelType=Category
+      beginSequence="O"
+      endSequence="O"
+
+      token=$DataDir$/output.txt
+
+      labelDim=10000
+      labelMappingFile=$ExpDir$/sentenceLabels.out.txt
+      #### Write definition ####
+      # sizeof(unsigned) which is the label index type
+      elementSize=4
+      sectionType=labels
+      mapping=[
+        #redefine number of records for this section, since we don't need to save it for each data record
+        wrecords=3
+        #variable size so use an average string size
+        elementSize=10
+        sectionType=labelMapping
+      ]
+      category=[
+        dim=3
+        #elementSize=sizeof(ElemType) is default
+        sectionType=categoryLabels
+      ]
+    ]
+  ]
 ]
 
 # set output files path
@@ -313,135 +302,134 @@ LSTM=[
 # accuracy:  98.16%; precision:  94.37%; recall:  94.57%; FB1:  94.47
  
 LSTMTest=[
-    # this is the maximum size for the minibatch, since sequence minibatches are really just a single sequence
-	# can be considered as the maximum length of a sentence
-	action=write
+  # this is the maximum size for the minibatch, since sequence minibatches are really just a single sequence
+  # can be considered as the maximum length of a sentence
+  action=write
 
-# correspond to the number of words/characteres to train in a minibatch
-    minibatchSize=1
-	# need to be small since models are updated for each minibatch
-    traceLevel=1
-	deviceId=-1
-	epochSize=4430000
-	# which is 886 * 5000
-	#recurrentLayer=1
-    defaultHiddenActivity=0.1
+  # correspond to the number of words/characteres to train in a minibatch
+  # need to be small since models are updated for each minibatch
+  minibatchSize=100
 
-    modelPath=$ExpDir$\cntkdebug.dnn
+  epochSize=4430000
+  # which is 886 * 5000
+  #recurrentLayer=1
+  defaultHiddenActivity=0.1
 
-	outputNodeNames=outputs
+  modelPath=$ExpDir$/cntkdebug.dnn
 
-    reader=[
-      # reader to use
-      readerType=LUSequenceReader
-      randomize=None
-	  wordContext=0:1:2
-      unk="<unk>"
-      wordmap=$DataDir$\inputmap.txt
-      file=$DataDir$\atis.test.apos.pred.pos.head.IOB.simple
+  outputNodeNames=outputs
 
-      # if writerType is set, we will cache to a binary file
-      # if the binary file exists, we will use it instead of parsing this file
-      # writerType=BinaryReader
+  reader=[
+    # reader to use
+    readerType=LUSequenceReader
+    randomize=None
+    wordContext=0:1:2
+    unk="<unk>"
+    wordmap=$DataDir$/inputmap.txt
+    file=$DataDir$/atis.test.apos.pred.pos.head.IOB.simple
 
-      #### write definition
-      wfile=$ExpDir$\sequenceSentence.bin
-      #wsize - inital size of the file in MB
-      # if calculated size would be bigger, that is used instead
-      wsize=256
+    # if writerType is set, we will cache to a binary file
+    # if the binary file exists, we will use it instead of parsing this file
+    # writerType=BinaryReader
 
-      #wrecords - number of records we should allocate space for in the file
-      # files cannot be expanded, so this should be large enough. If known modify this element in config before creating file
-      wrecords=1000
-      #windowSize - number of records we should include in BinaryWriter window
-      windowSize=10000
+    #### write definition
+    wfile=$ExpDir$/sequenceSentence.bin
+    #wsize - inital size of the file in MB
+    # if calculated size would be bigger, that is used instead
+    wsize=256
+
+    #wrecords - number of records we should allocate space for in the file
+    # files cannot be expanded, so this should be large enough. If known modify this element in config before creating file
+    wrecords=1000
+    #windowSize - number of records we should include in BinaryWriter window
+    windowSize=10000
 
 
-      #additional features sections
-      #for now store as expanded category data (including label in)
-      features=[
-        # sentence has no features, so need to set dimension to zero
-        dim=0 
-        ### write definition
-        sectionType=data
+    #additional features sections
+    #for now store as expanded category data (including label in)
+    features=[
+      # sentence has no features, so need to set dimension to zero
+      dim=0 
+      ### write definition
+      sectionType=data
+    ]
+    # sequence break table, list indexes into sequence records, so we know when a sequence starts/stops
+    sequence=[
+      dim=1
+      wrecords=2
+      ### write definition
+      sectionType=data
+    ]
+    #labels sections
+    labelIn=[
+      dim=1
+
+      # vocabulary size
+      labelDim=10000
+      labelMappingFile=$ExpDir$/sentenceLabels.txt
+      labelType=Category
+      beginSequence="BOS"
+      endSequence="EOS"
+      usewordmap=true
+
+      token=$DataDir$/input.txt
+
+      #### Write definition ####
+      # sizeof(unsigned) which is the label index type
+      elementSize=4
+      sectionType=labels
+      mapping=[
+        #redefine number of records for this section, since we don't need to save it for each data record
+        wrecords=11
+        #variable size so use an average string size
+        elementSize=10
+        sectionType=labelMapping
       ]
-      # sequence break table, list indexes into sequence records, so we know when a sequence starts/stops
-      sequence=[
-        dim=1
-        wrecords=2
-        ### write definition
-        sectionType=data
-      ]
-      #labels sections
-      labelIn=[
-        dim=1
-
-		# vocabulary size
-        labelDim=10000
-	    labelMappingFile=$ExpDir$\sentenceLabels.txt
-	    labelType=Category
-        beginSequence="BOS"
-        endSequence="EOS"
-        usewordmap=true
-
-        token=$DataDir$\input.txt
-
-        #### Write definition ####
-        # sizeof(unsigned) which is the label index type
-        elementSize=4
-        sectionType=labels
-        mapping=[
-          #redefine number of records for this section, since we don't need to save it for each data record
-          wrecords=11
-          #variable size so use an average string size
-          elementSize=10
-          sectionType=labelMapping
-        ]
-        category=[
-          dim=11
-          #elementSize=sizeof(ElemType) is default
-          sectionType=categoryLabels
-        ]
-      ]
-      #labels sections
-      labels=[
-        dim=1
-	    labelType=Category
-        beginSequence="BOS"
-        endSequence="EOS"
-
-        token=$DataDir$\output.txt
-
-		# vocabulary size
-        labelDim=127
-
-	    labelMappingFile=$ExpDir$\sentenceLabels.out.txt
-        #### Write definition ####
-        # sizeof(unsigned) which is the label index type
-        elementSize=4
-        sectionType=labels
-        mapping=[
-          #redefine number of records for this section, since we don't need to save it for each data record
-          wrecords=3
-          #variable size so use an average string size
-          elementSize=10
-          sectionType=labelMapping
-        ]
-        category=[
-          dim=3
-          #elementSize=sizeof(ElemType) is default
-          sectionType=categoryLabels
-        ]
+      category=[
+        dim=11
+        #elementSize=sizeof(ElemType) is default
+        sectionType=categoryLabels
       ]
     ]
+    #labels sections
+    labels=[
+      dim=1
+      labelType=Category
+      beginSequence="BOS"
+      endSequence="EOS"
 
-    writer=[
-        writerType=LUSequenceWriter
+      token=$DataDir$/output.txt
 
-        outputs=[
-            file=$OutDir$\output.rec.txt
-            token=$DataDir$\output.txt
-        ]
+      # vocabulary size
+      labelDim=127
+
+      labelMappingFile=$ExpDir$/sentenceLabels.out.txt
+      #### Write definition ####
+      # sizeof(unsigned) which is the label index type
+      elementSize=4
+      sectionType=labels
+      mapping=[
+        #redefine number of records for this section, since we don't need to save it for each data record
+        wrecords=3
+        #variable size so use an average string size
+        elementSize=10
+        sectionType=labelMapping
+      ]
+      category=[
+        dim=3
+        #elementSize=sizeof(ElemType) is default
+        sectionType=categoryLabels
+      ]
     ]
+  ]
+
+  writer=[
+    writerType=LUSequenceWriter
+
+    outputs=[
+        file=$OutDir$/output.rec.txt
+        token=$DataDir$/output.txt
+    ]
+  ]
 ]
 

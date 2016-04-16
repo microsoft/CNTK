@@ -14,7 +14,7 @@
 #include <stdexcept>
 #include "fileutil.h"
 #include "Config.h"
-#include <chrono> 
+#include <chrono>
 #include <random>
 #include "Profiler.h"
 #ifdef MULTIVERSO_SUPPORT
@@ -22,8 +22,13 @@
 #else
 #include "NoMultiversoWrapper.h"
 #endif
-
+#include "MASGD.h"
 using namespace std; // ugh! TODO: get rid of this from .h files!!!
+
+#define CNTK_CHECKPOINT_VERSION_1 1     // 1 -> no version number 
+#define CNTK_CHECKPOINT_VERSION_2 2     
+#define CURRENT_CNTK_CHECKPOINT_VERSION CNTK_CHECKPOINT_VERSION_2
+
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -143,6 +148,14 @@ protected:
         return pow(m_momentumParam[epoch], 1.0 / FixUpEffectiveMBSize(m_momentumSpecifiedForMBSize[epoch], numParallelSequences));
     }
 
+    ParallelizationMethod GetParallelizationMethod() const
+    {
+        if (m_mpi == nullptr)
+            return ParallelizationMethod::None;
+
+        return m_parallelizationMethod;
+    }
+
     // only true when the user specify LearningRatePerMB and the number of parallel utterances in Reader > 1
     // bool m_needToNormalizeLRByParallUtterance;          // TODO: should go away
     // bool m_needToNormalizeMomentumByParallUtterance;
@@ -153,13 +166,13 @@ protected:
     //         We really should only read it in SGD and pass it ourselves on to the Reader, instead of it being a Reader parameter.
     // BUGBUG: If m_truncated, then m_mbSize is interpreted as truncation length; the actual MB size is a combination of that and the #parallel sequences specified in the reader.
     // TODO: do not specify 'Truncated' but 'TruncatedLength', set m_truncated so given, and let m_mbSize control how many #parallel sequences the reader is allowed to pack into an MB.
-    size_t m_maxSamplesInRAM; 
-    // This is related with subminibatch implementation 
-    // maxSamplesInRAM denotes how many samples we used in forward-backward on net. 
-    // Due to the GPU memory limitations, it is sometime not possible to hold the m_mbSize in RAM. 
-    // To mitigate this issue, we adopt the sub-minibatch implementation, where 
+    size_t m_maxSamplesInRAM;
+    // This is related with subminibatch implementation
+    // maxSamplesInRAM denotes how many samples we used in forward-backward on net.
+    // Due to the GPU memory limitations, it is sometime not possible to hold the m_mbSize in RAM.
+    // To mitigate this issue, we adopt the sub-minibatch implementation, where
     // each m_mbSize[epoch] is divided by a few sub-minibatch of which size will be no more than m_maxSamplesInRAM
-    // a forward-backward is performed for each sub-minibathch; a model update is performed after each minibatch 
+    // a forward-backward is performed for each sub-minibathch; a model update is performed after each minibatch
     size_t m_numSubminiBatches;
     // alternative method to specify how to split minibatches into subminibatches
     // default is 1, which means no subminibatch is used
@@ -203,7 +216,9 @@ protected:
     size_t m_minibatchSizeTuningFrequency;
     size_t m_minibatchSizeTuningMax;
 
-    floatargvector m_dropoutRates;
+    doubleargvector m_dropoutRates;
+    doubleargvector m_batchNormalizationTimeConstant;
+    doubleargvector m_batchNormalizationBlendTimeConstant;
     size_t m_maxTempMemSizeInSamplesForCNN;
 
     int m_traceLevel;
@@ -226,13 +241,15 @@ protected:
     bool m_useAllDataForPreComputedNode;
 
     // Parallel training
+    MPIWrapperPtr m_mpi;
+
     ParallelizationMethod m_parallelizationMethod;
     bool m_enableDistributedMBReading;
     int m_parallelizationStartEpochNum;
 
-    // decide if/how often we measure and show sync performance stats (seconds spend on sync, seconds since last sync etc.) ?  
+    // decide if/how often we measure and show sync performance stats (seconds spend on sync, seconds since last sync etc.) ?
     // 0: No sync perfomance stats
-    // 1: Show stats on every sync 
+    // 1: Show stats on every sync
     // n > 1: Show stats after every n sync
     int m_syncStatsTrace;
 
@@ -241,7 +258,7 @@ protected:
     bool m_bufferedAsyncGradientAggregation;
     bool m_zeroThresholdFor1Bit;
 
-    // Parallel training related with MA 
+    // Parallel training related with MA
     size_t m_nFramesBetweenMASync;
 
     bool m_needAveMultiplier;
@@ -290,18 +307,21 @@ public:
     template <class ConfigRecordType>
     SGD(const ConfigRecordType& configSGD)
         : SGDParams(configSGD, sizeof(ElemType)),
-        // TODO: The next few do not belong into SGD any more than the network or reader we operate on. Either move network and reader in here, or move these out.
+          // TODO: The next few do not belong into SGD any more than the network or reader we operate on. Either move network and reader in here, or move these out.
           m_modelPath((const wstring&) configSGD(L"modelPath")),
-        m_keepCheckPointFiles(configSGD(L"keepCheckPointFiles", false)),
+          m_keepCheckPointFiles(configSGD(L"keepCheckPointFiles", false)),
           // m_validateAfterModelReloading(configSGD(L"validateAfterModelReloading", true)),
           m_trainCriterionNodeName((const wstring&) configSGD(L"trainCriterionNodeName", L"")),
-          m_evalCriterionNodeName((const wstring&) configSGD(L"evalCriterionNodeName", L"")),
-        m_prevChosenMinibatchSize(0),
-        m_lastFinishedEpochTrainLoss(0.0),
-        m_distGradAgg(nullptr),
-        m_gradHeader(nullptr)
+          m_evalCriterionNodeName ((const wstring&) configSGD(L"evalCriterionNodeName", L"")),
+          m_traceNodeNamesReal    (configSGD(L"traceNodeNamesReal",     ConfigRecordType::Array(stringargvector()))),
+          m_traceNodeNamesCategory(configSGD(L"traceNodeNamesCategory", ConfigRecordType::Array(stringargvector()))),
+          m_traceNodeNamesSparse  (configSGD(L"traceNodeNamesSparse",   ConfigRecordType::Array(stringargvector()))),
+          m_prevChosenMinibatchSize(0),
+          m_lastFinishedEpochTrainLoss(0.0),
+          m_distGradAgg(nullptr),
+          m_gradHeader(nullptr)
     {
-            msra::files::make_intermediate_dirs(m_modelPath);
+        msra::files::make_intermediate_dirs(m_modelPath);
     }
     // note: This must be in the header, as we cannot properly specialize this constructor in the CPP to make sure all versions are generated.
 
@@ -311,47 +331,55 @@ public:
     {
     }
 
+    void InitMPI(const MPIWrapperPtr& mpi)
+    {
+        m_mpi = mpi;
+
+        if (m_mpi == nullptr)
+            m_parallelizationMethod = ParallelizationMethod::None;
+    }
+
     void Train(function<ComputationNetworkPtr(DEVICEID_TYPE)> createNetworkFn, DEVICEID_TYPE deviceId,
-               IDataReader<ElemType>* trainSetDataReader,
-               IDataReader<ElemType>* validationSetDataReader,
+               IDataReader* trainSetDataReader,
+               IDataReader* validationSetDataReader,
                const bool makeMode = true);
     void Adapt(wstring origModelFileName, wstring refNodeName,
-               IDataReader<ElemType>* trainSetDataReader,
-               IDataReader<ElemType>* validationSetDataReader,
+               IDataReader* trainSetDataReader,
+               IDataReader* validationSetDataReader,
                const DEVICEID_TYPE deviceID, const bool makeMode = true);
 
 protected:
 
-    std::vector<ComputationNodeBasePtr>& GetTrainCriterionNodes(ComputationNetworkPtr net);
-    std::vector<ComputationNodeBasePtr>& GetEvalCriterionNodes(ComputationNetworkPtr net);
+    const std::vector<ComputationNodeBasePtr>& GetTrainCriterionNodes(ComputationNetworkPtr net);
+    const std::vector<ComputationNodeBasePtr>& GetEvalCriterionNodes(ComputationNetworkPtr net);
 
     void TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
                            bool networkLoadedFromCheckpoint,
                            ComputationNetworkPtr refNet,
                            ComputationNodeBasePtr refNode,
-                           IDataReader<ElemType>* trainSetDataReader,
-                           IDataReader<ElemType>* validationSetDataReader);
+                           IDataReader* trainSetDataReader,
+                           IDataReader* validationSetDataReader);
 
 protected:
 
     // return true if precomputation is executed.
     bool PreCompute(ComputationNetworkPtr net,
-                    IDataReader<ElemType>* trainSetDataReader,
-                    std::vector<ComputationNodeBasePtr>& featureNodes,
-                    std::vector<ComputationNodeBasePtr>& labelNodes,
-                    std::map<std::wstring, Matrix<ElemType>*>* inputMatrices);
+                    IDataReader* trainSetDataReader,
+                    const std::vector<ComputationNodeBasePtr>& featureNodes,
+                    const std::vector<ComputationNodeBasePtr>& labelNodes,
+                    StreamMinibatchInputs* inputMatrices);
 
     // return a reasonable initial learning rate based on the initial mbsize
     double SearchForBestLearnRate(ComputationNetworkPtr net,
                                   ComputationNetworkPtr refNet,
                                   const ComputationNodeBasePtr& refNode, const int epochNumber,
                                   const double curLearnRate,
-                                  IDataReader<ElemType>* trainSetDataReader,
+                                  IDataReader* trainSetDataReader,
                                   const std::vector<ComputationNodeBasePtr>& featureNodes,
                                   const std::vector<ComputationNodeBasePtr>& labelNodes,
                                   const std::vector<ComputationNodeBasePtr>& criterionNodes,
                                   const std::vector<ComputationNodeBasePtr>& evaluationNodes,
-                                  std::map<std::wstring, Matrix<ElemType>*>* inputMatrices,
+                                  StreamMinibatchInputs* inputMatrices,
                                   const std::list<ComputationNodeBasePtr>& learnableNodes,
                                   std::list<Matrix<ElemType>>& smoothedGradients,
                                   const bool learnRateInitialized,
@@ -360,14 +388,14 @@ protected:
     void TrainOneMiniEpochAndReloadModel(ComputationNetworkPtr net,
                                          ComputationNetworkPtr refNet,
                                          const ComputationNodeBasePtr& refNode, const int epochNumber,
-                                         const size_t epochSize, IDataReader<ElemType>* trainSetDataReader,
+                                         const size_t epochSize, IDataReader* trainSetDataReader,
                                          const double learnRatePerSample,
                                          const size_t minibatchSize,
                                          const std::vector<ComputationNodeBasePtr>& featureNodes,
                                          const std::vector<ComputationNodeBasePtr>& labelNodes,
                                          const std::vector<ComputationNodeBasePtr>& criterionNodes,
                                          const std::vector<ComputationNodeBasePtr>& evaluationNodes,
-                                         std::map<std::wstring, Matrix<ElemType>*>* inputMatrices,
+                                         StreamMinibatchInputs* inputMatrices,
                                          const std::list<ComputationNodeBasePtr>& learnableNodes,
                                          std::list<Matrix<ElemType>>& smoothedGradients,
                                          /*out*/ double& epochCriterion,
@@ -380,14 +408,14 @@ protected:
                                    const ComputationNodeBasePtr& refNode,
                                    const int epochNumber,
                                    const size_t numFramesToUseInSearch,
-                                   IDataReader<ElemType>* trainSetDataReader,
+                                   IDataReader* trainSetDataReader,
                                    const double learnRatePerSample,
                                    const size_t initialMinibatchSize,
                                    const std::vector<ComputationNodeBasePtr>& featureNodes,
                                    const std::vector<ComputationNodeBasePtr>& labelNodes,
                                    const std::vector<ComputationNodeBasePtr>& criterionNodes,
                                    const std::vector<ComputationNodeBasePtr>& evaluationNodes,
-                                   std::map<std::wstring, Matrix<ElemType>*>* inputMatrices,
+                                   StreamMinibatchInputs* inputMatrices,
                                    const std::list<ComputationNodeBasePtr>& learnableNodes,
                                    std::list<Matrix<ElemType>>& smoothedGradients,
                                    const double learningRateAdjustmentFactor);
@@ -399,13 +427,13 @@ protected:
                                       const ComputationNodeBasePtr& refNode,
                                       const int epochNumber,
                                       const size_t numFramesToUseInSearch,
-                                      IDataReader<ElemType>* trainSetDataReader,
+                                      IDataReader* trainSetDataReader,
                                       const double learnRatePerSample,
                                       const std::vector<ComputationNodeBasePtr>& featureNodes,
                                       const std::vector<ComputationNodeBasePtr>& labelNodes,
                                       const std::vector<ComputationNodeBasePtr>& criterionNodes,
                                       const std::vector<ComputationNodeBasePtr>& evaluationNodes,
-                                      std::map<std::wstring, Matrix<ElemType>*>* inputMatrices,
+                                      StreamMinibatchInputs* inputMatrices,
                                       const std::list<ComputationNodeBasePtr>& learnableNodes,
                                       std::list<Matrix<ElemType>>& smoothedGradients,
                                       const size_t minMinibatchSize, const size_t maxMinibatchSize);
@@ -416,23 +444,23 @@ protected:
     // processing more utterances at the same time. Only used in Kaldi2Reader.
     // TODO: move the two-forward-pass support out of the reader.
     void AttemptUtteranceDerivativeFeatures(ComputationNetworkPtr net,
-                                            IDataReader<ElemType>* trainSetDataReader,
+                                            IDataReader* trainSetDataReader,
                                             const std::vector<ComputationNodeBasePtr>& featureNodes,
-                                            std::map<std::wstring, Matrix<ElemType>*>* inputMatrices);
+                                            StreamMinibatchInputs* inputMatrices);
 
     size_t TrainOneEpoch(ComputationNetworkPtr net,
                          ComputationNetworkPtr refNet,
                          const ComputationNodeBasePtr& refNode,
                          const int epochNumber,
                          const size_t epochSize,
-                         IDataReader<ElemType>* trainSetDataReader,
+                         IDataReader* trainSetDataReader,
                          const double learnRatePerSample,
                          size_t tunedMBSize,
                          const std::vector<ComputationNodeBasePtr>& featureNodes,
                          const std::vector<ComputationNodeBasePtr>& labelNodes,
                          const std::vector<ComputationNodeBasePtr>& criterionNodes,
                          const std::vector<ComputationNodeBasePtr>& evaluationNodes,
-                         std::map<std::wstring, Matrix<ElemType>*>* inputMatrices,
+                         StreamMinibatchInputs* inputMatrices,
                          const std::list<ComputationNodeBasePtr>& learnableNodes,
                          std::list<Matrix<ElemType>>& smoothedGradients,
                          /*out*/ double& epochCriterion,
@@ -441,12 +469,7 @@ protected:
                          std::string prefixMsg = "");
 
     void InitDistGradAgg(int numEvalNodes, int traceLevel);
-
-    bool ModelAveragingProcessing(size_t nSamplesSinceLastSync, const std::list<ComputationNodeBasePtr>& learnableNodes, size_t& nProcessedFrames, 
-                                  float& SecondsSinceLastSyncFinished, float& SecondsSpentOnSync);
-
-    size_t ModelAveragingSync(int nSamplesSinceLastSync, const std::list<ComputationNodeBasePtr>& learnableNodes);
-
+    void InitModelAggregationHandler(int traceLevel);
 public:
     // UpdateWeightsS - static version of UpdateWeights()
     static void UpdateWeightsS(const SGD* sgd, Matrix<ElemType>& functionValues,
@@ -517,15 +540,23 @@ protected:
     wstring m_trainCriterionNodeName;
     wstring m_evalCriterionNodeName;
 
+    // enable tracing. Nodes listed here get their m_traceNodeValueXXX flags set
+    vector<wstring> m_traceNodeNamesReal;
+    vector<wstring> m_traceNodeNamesCategory;
+    vector<wstring> m_traceNodeNamesSparse;
+
     size_t m_prevChosenMinibatchSize;
     double m_lastFinishedEpochTrainLoss;
 
     IDistGradAggregator<ElemType>* m_distGradAgg;
     struct DistGradHeader* m_gradHeader;
 
+    shared_ptr<IMASGD<ElemType>> m_pMASGDHelper;
+
 private:
-    int SGDTrace(FILE *__restrict __stream, const char *__restrict __format, ...);
-	MultiversoWrapper<ElemType>* m_multiverso;
-	bool m_multiversoBarrier;
+    int SGDTrace(FILE* __restrict __stream, bool isPrependTimestamp, const char* __restrict __format, ...);
+    MultiversoWrapper<ElemType>* m_multiverso;
+    bool m_multiversoBarrier;
 };
-} } }
+
+}}}

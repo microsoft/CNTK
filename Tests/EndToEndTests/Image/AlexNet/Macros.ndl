@@ -16,6 +16,15 @@ DNNReLULayer(inDim, outDim, x, wScale, bValue)
     y = RectifiedLinear(z)
 }
 
+DNNImageReLULayer(inW, inH, inC, outDim, x, wScale, bValue)
+{
+    W = ImageParameter(outDim, inW, inH, inC, init = "gaussian", initValueScale = wScale, imageLayout = "cudnn")
+    b = Parameter(outDim, init = fixedValue, value = bValue) 
+    t = Times(W, x)
+    z = Plus(t, b)
+    y = RectifiedLinear(z)
+}
+
 DNNLastLayer(hiddenDim, labelDim, x, wScale, bValue)
 {
     W = Parameter(labelDim, hiddenDim, init = Gaussian, initValueScale = wScale)

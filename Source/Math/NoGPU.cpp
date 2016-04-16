@@ -12,7 +12,7 @@
 #include "GPUMatrix.h"
 #include "GPUSparseMatrix.h"
 #include "MatrixQuantizerGPU.h"
-#include "CuDnnConvolutionEngine.h"
+#include "CuDnnFactories.h"
 #include "TensorShape.h"
 #include "GPUDataTransferer.h"
 
@@ -113,11 +113,6 @@ GPUSparseMatrix<ElemType>::~GPUSparseMatrix()
 {
 }
 
-template <class ElemType>
-void GPUSparseMatrix<ElemType>::ReleaseMemory()
-{
-}
-
 //ResizeAsAndCopyIndexFrom - Resize this sparse matrix to have the same element structure as the passed matrix
 // a - sparse matrix whose structure we want to clone
 // remark: this was done for element wise operations where the structure will be identical after an operation
@@ -131,11 +126,35 @@ void GPUSparseMatrix<ElemType>::ResizeAsAndCopyIndexFrom(const GPUSparseMatrix<E
 //-------------------------------------------------------------------------
 
 template <class ElemType>
-void GPUSparseMatrix<ElemType>::Resize(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve, const MatrixFormat matrixFormat, const bool growOnly, bool keepExistingValues)
+void GPUSparseMatrix<ElemType>::ClearNzCount()
 {
-} // matrix format will affect the size to allocate
+}
 template <class ElemType>
-void GPUSparseMatrix<ElemType>::Resize(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve, const bool growOnly, bool keepExistingValues)
+void GPUSparseMatrix<ElemType>::Allocate(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve, const bool growOnly, bool keepExistingValues)
+{
+}
+template <class ElemType>
+void GPUSparseMatrix<ElemType>::RequireSizeAndAllocate(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve, const MatrixFormat matrixFormat, const bool growOnly, bool keepExistingValues)
+{
+}
+template <class ElemType>
+void GPUSparseMatrix<ElemType>::RequireSizeAndAllocate(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve, const bool growOnly, bool keepExistingValues)
+{
+}
+template <class ElemType>
+void GPUSparseMatrix<ElemType>::RequireSize(const size_t numRows, const size_t numCols, const MatrixFormat format, const bool growOnly)
+{
+}
+template <class ElemType>
+void GPUSparseMatrix<ElemType>::RequireSize(const size_t numRows, const size_t numCols, const bool growOnly)
+{
+}
+template <class ElemType>
+void GPUSparseMatrix<ElemType>::Resize(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve, const MatrixFormat matrixFormat, const bool growOnly)
+{
+}
+template <class ElemType>
+void GPUSparseMatrix<ElemType>::Resize(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve, const bool growOnly)
 {
 }
 
@@ -213,14 +232,6 @@ ElemType GPUSparseMatrix<ElemType>::Adagrad(GPUMatrix<ElemType>& c, const bool n
 }
 //template<class ElemType>
 //void GPUSparseMatrix<ElemType>::FSAdagrad(CPUMatrix<ElemType>& gradients, CPUMatrix<ElemType>&, ElemType, ElemType, ElemType, ElemType) { }
-
-#ifdef NO_SYNC
-template <class ElemType>
-bool GPUSparseMatrix<ElemType>::do_sync = false;
-#else
-template <class ElemType>
-bool GPUSparseMatrix<ElemType>::do_sync = true;
-#endif
 
 template <class ElemType>
 void GPUSparseMatrix<ElemType>::MultiplyAndWeightedAdd(ElemType alpha, const GPUSparseMatrix<ElemType>& a, const bool transposeA,
@@ -347,12 +358,6 @@ bool GPUSparseMatrix<ElemType>::IsEqualTo(const GPUMatrix<ElemType>& /*a*/, cons
 #pragma endregion Static BLAS Functions
 
 #pragma region Member BLAS Functions
-
-template <class ElemType>
-int GPUSparseMatrix<ElemType>::GetComputeDeviceId() const
-{
-    return -1;
-}
 
 template <class ElemType>
 GPUMatrix<ElemType> GPUSparseMatrix<ElemType>::ElementProductOf(const GPUSparseMatrix<ElemType>& a, const GPUMatrix<ElemType>& /*b*/)
@@ -675,7 +680,7 @@ bool GPUSparseMatrix<ElemType>::IsValid() const
 
 template <class ElemType>
 template <class OutType, class InType>
-void GPUSparseMatrix<ElemType>::CopyBuffer(OutType* outBuffer, const InType* inBuffer, const size_t size)
+void GPUSparseMatrix<ElemType>::ConvertBuffer(OutType* outBuffer, const InType* inBuffer, const size_t size)
 {
 }
 
@@ -684,6 +689,7 @@ void GPUSparseMatrix<ElemType>::CopyBuffer(OutType* outBuffer, const InType* inB
 template class MATH_API GPUSparseMatrix<char>;
 template class MATH_API GPUSparseMatrix<float>;
 template class MATH_API GPUSparseMatrix<double>;
+template class MATH_API GPUSparseMatrix<int>;
 
 template <typename ElemType>
 MATH_API File& operator>>(File& stream, GPUSparseMatrix<ElemType>& us)
@@ -785,12 +791,6 @@ void GPUMatrix<ElemType>::ZeroInit(int deviceId)
 template <class ElemType>
 GPUMatrix<ElemType>::GPUMatrix(int deviceId){};
 
-//matrixName is used to verify that correct matrix is read.
-template <class ElemType>
-GPUMatrix<ElemType>::GPUMatrix(FILE* f, const char* matrixName, int deviceId)
-{
-}
-
 template <class ElemType>
 GPUMatrix<ElemType>::GPUMatrix(const size_t numRows, const size_t numCols, int deviceId){};
 
@@ -831,12 +831,6 @@ void GPUMatrix<ElemType>::Clear()
 {
 }
 #pragma endregion Constructors and Destructor
-
-template <class ElemType>
-int GPUMatrix<ElemType>::GetComputeDeviceId() const
-{
-    return -1;
-}
 
 #pragma region Basic Operators
 template <class ElemType>
@@ -936,6 +930,18 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignTransposeOf(const GPUMatrix<Elem
 }
 
 template <class ElemType>
+GPUMatrix<ElemType>& GPUMatrix<ElemType>::DoGatherColumnsOf(ElemType beta, const GPUMatrix<ElemType>& m, const GPUMatrix<ElemType>& a, ElemType alpha)
+{
+    return *this;
+}
+
+template <class ElemType>
+GPUMatrix<ElemType>& GPUMatrix<ElemType>::DoScatterColumnsOf(ElemType beta, const GPUMatrix<ElemType>& m, const GPUMatrix<ElemType>& a, ElemType alpha)
+{
+    return *this;
+}
+
+template <class ElemType>
 void GPUMatrix<ElemType>::SetValue(const ElemType v)
 {
 }
@@ -1018,6 +1024,11 @@ ElemType GPUMatrix<ElemType>::RmsProp(GPUMatrix<ElemType>& gradients, ElemType R
 
 template <class ElemType>
 void GPUMatrix<ElemType>::Reshape(const size_t numRows, const size_t numCols)
+{
+}
+
+template <class ElemType>
+void GPUMatrix<ElemType>::RequireSize(const size_t numRows, const size_t numCols, bool growOnly)
 {
 }
 
@@ -1670,19 +1681,6 @@ void GPUMatrix<ElemType>::Print(const char* matrixName /*=nullptr*/) const
 {
 }
 
-// file I/O
-//matrixName is used to verify that correct matrix is read.
-template <class ElemType>
-void GPUMatrix<ElemType>::ReadFromFile(FILE* f, const char* matrixName)
-{
-}
-
-//matrixName is used to verify that correct matrix is read.
-template <class ElemType>
-void GPUMatrix<ElemType>::WriteToFile(FILE* f, const char* matrixName)
-{
-}
-
 //helpfer function used for convolution neural network
 template <class ElemType>
 GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignPackedConvolutionInput(const GPUMatrix<ElemType>& inputSubBatch,
@@ -1741,6 +1739,60 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AddAveragePoolingGradient(const GPUMat
                                                                     const size_t windowWidth, const size_t windowHeight, const size_t horizontalSubsample, const size_t verticalSubsample)
 {
     return *this;
+}
+
+template <class ElemType>
+void GPUMatrix<ElemType>::ConvolutionForward(const GPUMatrix<ElemType>& kernel, const GPUMatrix<int>& mpRowCol, const GPUMatrix<int>& mpRowIwht,
+                                               const GPUMatrix<int>& mpRowRun, const GPUMatrix<int>& runs, GPUMatrix<ElemType>& output) const
+{
+}
+
+template <class ElemType>
+void GPUMatrix<ElemType>::ConvolutionBackwardData(const GPUMatrix<ElemType>& kernel, const GPUMatrix<int>& mpRowCol, const GPUMatrix<int>& mpRowIwht,
+                                                    const GPUMatrix<int>& mpRowRun, const GPUMatrix<int>& runs, GPUMatrix<ElemType>& grad) const
+{
+}
+
+template <class ElemType>
+void GPUMatrix<ElemType>::ConvolutionBackwardKernel(const GPUMatrix<ElemType>& in, const GPUMatrix<int>& mpRowCol, const GPUMatrix<int>& mpRowIwht,
+                                                      const GPUMatrix<int>& mpRowRun, const GPUMatrix<int>& runs, GPUMatrix<ElemType>& kernelGrad) const
+{
+}
+
+template <class ElemType>
+void GPUMatrix<ElemType>::MaxPoolingForward(const GPUMatrix<int>& mpRowCol, const GPUMatrix<int>& mpRowIndices, const GPUMatrix<int>& indices, GPUMatrix<ElemType>& output) const
+{
+}
+
+template <class ElemType>
+void GPUMatrix<ElemType>::MaxPoolingBackward(const GPUMatrix<ElemType>& out, const GPUMatrix<ElemType>& in,
+                                               const GPUMatrix<int>& mpRowCol, const GPUMatrix<int>& mpRowIndices, const GPUMatrix<int>& indices,
+                                               GPUMatrix<ElemType>& grad) const
+{
+}
+
+template <class ElemType>
+void GPUMatrix<ElemType>::AveragePoolingForward(const GPUMatrix<int>& mpRowCol, const GPUMatrix<int>& mpRowIndices, const GPUMatrix<int>& indices, GPUMatrix<ElemType>& output) const
+{
+}
+
+template <class ElemType>
+void GPUMatrix<ElemType>::AveragePoolingBackward(const GPUMatrix<int>& mpRowCol, const GPUMatrix<int>& mpRowIndices, const GPUMatrix<int>& indices, GPUMatrix<ElemType>& grad) const
+{
+}
+
+template <class ElemType>
+void GPUMatrix<ElemType>::BatchNormalizationForward(const GPUMatrix<ElemType>& scale, const GPUMatrix<ElemType>& bias, double expAvgFactor, double blendFactor, 
+                                                    GPUMatrix<ElemType>& runMean, GPUMatrix<ElemType>& runInvStdDev, GPUMatrix<ElemType>& out, double epsilon,
+                                                    GPUMatrix<ElemType>& saveMean, GPUMatrix<ElemType>& saveInvStdDev) const
+{
+}
+
+template <class ElemType>
+void GPUMatrix<ElemType>::BatchNormalizationBackward(const GPUMatrix<ElemType>& in, GPUMatrix<ElemType>& grad, const GPUMatrix<ElemType>& scale, 
+                                                     const GPUMatrix<ElemType>& saveMean, const GPUMatrix<ElemType>& saveInvStdDev,
+                                                     GPUMatrix<ElemType>& scaleGrad, GPUMatrix<ElemType>& biasGrad) const
+{
 }
 
 #pragma endregion Other helper functions
@@ -1974,7 +2026,7 @@ ElemType GPUMatrix<ElemType>::GetLearnRateForBlock_Helper(const GPUMatrix<ElemTy
 }
 
 template <class ElemType>
-ElemType GPUMatrix<ElemType>::LogAddSumOfElements() const
+ElemType GPUMatrix<ElemType>::LogSumOfElements() const
 {
     return ElemType(0);
 }
@@ -2111,6 +2163,7 @@ void GPUDataTransferer<ElemType>::WaitForCopyCPUToGPUAsync()
 template class GPUMatrix<char>;
 template class GPUMatrix<float>;
 template class GPUMatrix<double>;
+template class GPUMatrix<int>;
 template class DeviceBoundNumber<float>;
 template class DeviceBoundNumber<double>;
 template MatrixQuantizerGPU<float>::~MatrixQuantizerGPU();
@@ -2128,51 +2181,30 @@ template <class ElemType>
 void* GPUMatrix<ElemType>::s_curandGenerator = NULL;
 
 template <class ElemType>
-typename CuDnnConvolutionEngineFactory<ElemType>::Tensor4DPtr CuDnnConvolutionEngineFactory<ElemType>::CreateTensor(size_t, size_t, size_t, size_t)
+std::unique_ptr<ConvolutionEngine<ElemType>> CuDnnConvolutionEngineFactory<ElemType>::Create(ConvolveGeometryPtr, DEVICEID_TYPE,
+                                                                                             ImageLayoutKind, size_t, PoolKind)
 {
     RuntimeError("The code is compiled with CPUONLY macro.");
 }
 
 template <class ElemType>
-typename CuDnnConvolutionEngineFactory<ElemType>::FilterPtr CuDnnConvolutionEngineFactory<ElemType>::CreateFilter(size_t, size_t, size_t, size_t)
-{
-    RuntimeError("The code is compiled with CPUONLY macro.");
-}
-
-template <class ElemType>
-typename CuDnnConvolutionEngineFactory<ElemType>::ConvDescPtr CuDnnConvolutionEngineFactory<ElemType>::CreateConvDescriptor(
-    const Tensor4D&, const Filter&, size_t, size_t, bool)
-{
-    RuntimeError("The code is compiled with CPUONLY macro.");
-}
-
-template <class ElemType>
-typename CuDnnConvolutionEngineFactory<ElemType>::PoolDescPtr CuDnnConvolutionEngineFactory<ElemType>::CreatePoolDescriptor(
-    typename PoolDesc::PoolKind, size_t, size_t, size_t, size_t, size_t, size_t)
-{
-    RuntimeError("The code is compiled with CPUONLY macro.");
-}
-
-template <class ElemType>
-typename CuDnnConvolutionEngineFactory<ElemType>::ConvEnginePtr CuDnnConvolutionEngineFactory<ElemType>::CreateConvEngine(DEVICEID_TYPE, size_t, BatchNormImpl)
-{
-    RuntimeError("The code is compiled with CPUONLY macro.");
-}
-
-template <class ElemType>
-typename CuDnnConvolutionEngineFactory<ElemType>::PoolEnginePtr CuDnnConvolutionEngineFactory<ElemType>::CreatePoolEngine(DEVICEID_TYPE)
-{
-    RuntimeError("The code is compiled with CPUONLY macro.");
-}
-
-template <class ElemType>
-bool CuDnnConvolutionEngineFactory<ElemType>::IsSupported(DEVICEID_TYPE)
+bool CuDnnConvolutionEngineFactory<ElemType>::IsSupported(DEVICEID_TYPE, ConvolveGeometryPtr, PoolKind)
 {
     return false;
 }
 
 template class CuDnnConvolutionEngineFactory<float>;
 template class CuDnnConvolutionEngineFactory<double>;
+
+template <class ElemType>
+std::unique_ptr<BatchNormEngine<ElemType>> CuDnnBatchNormEngineFactory<ElemType>::Create(DEVICEID_TYPE deviceId, const TensorShape& inOutT,
+                                                                                         bool spatial, ImageLayoutKind imageLayout)
+{
+    RuntimeError("The code is compiled with CPUONLY macro.");
+}
+
+template class CuDnnBatchNormEngineFactory<float>;
+template class CuDnnBatchNormEngineFactory<double>;
 
 CudaTimer::~CudaTimer()
 {

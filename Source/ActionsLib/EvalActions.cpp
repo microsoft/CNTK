@@ -43,7 +43,7 @@ using namespace Microsoft::MSR::CNTK;
 // ===========================================================================
 
 template <typename ElemType>
-static void DoEvalBase(const ConfigParameters& config, IDataReader<ElemType>& reader)
+static void DoEvalBase(const ConfigParameters& config, IDataReader& reader)
 {
     DEVICEID_TYPE deviceId = DeviceFromConfig(config);
     ConfigArray minibatchSize = config(L"minibatchSize", "40960");
@@ -57,6 +57,8 @@ static void DoEvalBase(const ConfigParameters& config, IDataReader<ElemType>& re
 
     int traceLevel = config(L"traceLevel", "0");
     size_t numMBsToShowResult = config(L"numMBsToShowResult", "100");
+    size_t maxSamplesInRAM = config(L"maxSamplesInRAM", (size_t)SIZE_MAX);
+    size_t numSubminiBatches = config(L"numSubminibatches", (size_t)1);
 
     ConfigArray evalNodeNames = config(L"evalNodeNames", "");
     vector<wstring> evalNodeNamesVector;
@@ -66,8 +68,13 @@ static void DoEvalBase(const ConfigParameters& config, IDataReader<ElemType>& re
     }
 
     auto net = ComputationNetwork::CreateFromFile<ElemType>(deviceId, modelPath);
+    
+    // set tracing flags
+    net->EnableNodeTracing(config(L"traceNodeNamesReal",     ConfigParameters::Array(stringargvector())),
+                           config(L"traceNodeNamesCategory", ConfigParameters::Array(stringargvector())),
+                           config(L"traceNodeNamesSparse",   ConfigParameters::Array(stringargvector())));
 
-    SimpleEvaluator<ElemType> eval(net, numMBsToShowResult, traceLevel);
+    SimpleEvaluator<ElemType> eval(net, MPIWrapper::GetInstance(), numMBsToShowResult, traceLevel, maxSamplesInRAM, numSubminiBatches);
     eval.Evaluate(&reader, evalNodeNamesVector, mbSize[0], epochSize);
 }
 
@@ -78,9 +85,9 @@ void DoEval(const ConfigParameters& config)
     ConfigParameters readerConfig(config(L"reader"));
     readerConfig.Insert("traceLevel", config(L"traceLevel", "0"));
 
-    DataReader<ElemType> testDataReader(readerConfig);
+    DataReader testDataReader(readerConfig);
 
-    DoEvalBase(config, testDataReader);
+    DoEvalBase<ElemType>(config, testDataReader);
 }
 
 template void DoEval<double>(const ConfigParameters& config);
@@ -114,6 +121,8 @@ void DoCrossValidate(const ConfigParameters& config)
 
     int traceLevel = config(L"traceLevel", "0");
     size_t numMBsToShowResult = config(L"numMBsToShowResult", "100");
+    size_t maxSamplesInRAM = config(L"maxSamplesInRAM", (size_t)SIZE_MAX);
+    size_t numSubminiBatches = config(L"numSubminibatches", (size_t)1);
 
     ConfigArray evalNodeNames = config(L"evalNodeNames", "");
     vector<wstring> evalNodeNamesVector;
@@ -125,7 +134,7 @@ void DoCrossValidate(const ConfigParameters& config)
     std::vector<std::vector<double>> cvErrorResults;
     std::vector<std::wstring> cvModels;
 
-    DataReader<ElemType> cvDataReader(readerConfig);
+    DataReader cvDataReader(readerConfig);
 
     bool finalModelEvaluated = false;
     for (size_t i = cvInterval[0]; i <= cvInterval[2]; i += cvInterval[1])
@@ -146,8 +155,8 @@ void DoCrossValidate(const ConfigParameters& config)
 
         cvModels.push_back(cvModelPath);
         auto net = ComputationNetwork::CreateFromFile<ElemType>(deviceId, cvModelPath);
-
-        SimpleEvaluator<ElemType> eval(net, numMBsToShowResult, traceLevel);
+        
+        SimpleEvaluator<ElemType> eval(net, MPIWrapper::GetInstance(), numMBsToShowResult, traceLevel, maxSamplesInRAM, numSubminiBatches);
 
         fprintf(stderr, "model %ls --> \n", cvModelPath.c_str());
         auto evalErrors = eval.Evaluate(&cvDataReader, evalNodeNamesVector, mbSize[0], epochSize);
@@ -203,14 +212,13 @@ template <typename ElemType>
 void DoWriteOutput(const ConfigParameters& config)
 {
     ConfigParameters readerConfig(config(L"reader"));
-    readerConfig.Insert("traceLevel", config(L"traceLevel", "0"));
+    // Why?
+    //readerConfig.Insert("traceLevel", config(L"traceLevel", "0"));
     readerConfig.Insert("randomize", "None"); // we don't want randomization when output results
 
-    DataReader<ElemType> testDataReader(readerConfig);
+    DataReader testDataReader(readerConfig);
 
-    DEVICEID_TYPE deviceId = DeviceFromConfig(config);
     ConfigArray minibatchSize = config(L"minibatchSize", "2048");
-    wstring modelPath = config(L"modelPath");
     intargvector mbSize = minibatchSize;
 
     size_t epochSize = config(L"epochSize", "0");
@@ -219,39 +227,33 @@ void DoWriteOutput(const ConfigParameters& config)
         epochSize = requestDataSize;
     }
 
-    ConfigArray outputNodeNames = config(L"outputNodeNames", "");
     vector<wstring> outputNodeNamesVector;
 
-    // Note this is required since the user might specify OutputNodeNames in the config, so don't use CreateFromFile,
-	// instead we build the network ourselves.
-    auto net = make_shared<ComputationNetwork>(deviceId);
-    net->Read<ElemType>(modelPath);
+    let net = GetModelFromConfig<ConfigParameters, ElemType>(config, outputNodeNamesVector);
 
-    if (outputNodeNames.size() > 0) {
-        net->OutputNodes().clear();
-        for (int i = 0; i < outputNodeNames.size(); ++i)
-        {
-            outputNodeNamesVector.push_back(outputNodeNames[i]);
-            net->OutputNodes().emplace_back(net->GetNodeFromName(outputNodeNames[i]));
-        }
-    }
-	net->CompileNetwork();
+    // set tracing flags
+    net->EnableNodeTracing(config(L"traceNodeNamesReal",     ConfigParameters::Array(stringargvector())),
+                           config(L"traceNodeNamesCategory", ConfigParameters::Array(stringargvector())),
+                           config(L"traceNodeNamesSparse",   ConfigParameters::Array(stringargvector())));
 
     SimpleOutputWriter<ElemType> writer(net, 1);
 
     if (config.Exists("writer"))
     {
         ConfigParameters writerConfig(config(L"writer"));
-        bool bWriterUnittest = writerConfig(L"unittest", "false");
-        DataWriter<ElemType> testDataWriter(writerConfig);
-        writer.WriteOutput(testDataReader, mbSize[0], testDataWriter, outputNodeNamesVector, epochSize, bWriterUnittest);
+        bool writerUnittest = writerConfig(L"unittest", "false");
+        DataWriter testDataWriter(writerConfig);
+        writer.WriteOutput(testDataReader, mbSize[0], testDataWriter, outputNodeNamesVector, epochSize, writerUnittest);
     }
     else if (config.Exists("outputPath"))
     {
-        wstring outputPath = config(L"outputPath"); // crashes if no default given?
-        writer.WriteOutput(testDataReader, mbSize[0], outputPath, outputNodeNamesVector, epochSize);
+        wstring outputPath = config(L"outputPath");
+        WriteFormattingOptions formattingOptions(config);
+        bool nodeUnitTest = config(L"nodeUnitTest", "false");
+        writer.WriteOutput(testDataReader, mbSize[0], outputPath, outputNodeNamesVector, formattingOptions, epochSize, nodeUnitTest);
     }
-    // writer.WriteOutput(testDataReader, mbSize[0], testDataWriter, outputNodeNamesVector, epochSize);
+    else
+        InvalidArgument("write command: You must specify either 'writer'or 'outputPath'");
 }
 
 template void DoWriteOutput<float>(const ConfigParameters& config);

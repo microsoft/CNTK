@@ -1,5 +1,20 @@
 # CNTK
 
+## Latest news
+*2016-04-12.* CNTK is available as [Azure Virtual Machines](https://github.com/Microsoft/CNTK/wiki/CNTK-on-Azure) and [Docker Containers](https://github.com/Microsoft/CNTK/wiki/CNTK-Docker-Containers)
+
+*2016-04-12.* Added support for ND convolution and ND pooling and CPU support for `cudnn` layout in convolution, pooling and batch normalization nodes.
+Read [documentation](https://github.com/Microsoft/CNTK/wiki/Full-NDL-Function-Reference) on convolution, pooling and batch normalization nodes.
+
+*2016-04-05.* CUDA7.5 support for Windows Build: Windows project files have been updated to automatically utilize CUDA 7.5 if present
+
+## March 2016
+*2016-03-24.* New Text Reader (CNTKTextFormatReader) is available
+Read description here https://github.com/Microsoft/CNTK/wiki/CNTKTextFormat-Reader
+
+See [all news](https://github.com/Microsoft/CNTK/wiki/News).
+
+## What is CNTK
 CNTK (http://www.cntk.ai/), the Computational Network Toolkit by Microsoft Research, is a unified deep-learning toolkit that describes neural networks as a series of computational steps via a directed graph. In this directed graph, leaf nodes represent input values or network parameters, while other nodes represent matrix operations upon their inputs. CNTK allows to easily realize and combine popular model types such as feed-forward DNNs, convolutional nets (CNNs), and recurrent networks (RNNs/LSTMs). It implements stochastic gradient descent (SGD, error backpropagation) learning with automatic differentiation and parallelization across multiple GPUs and servers. CNTK has been available under an open-source license since April 2015. It is our hope that the community will take advantage of CNTK to share ideas more quickly through the exchange of open source working code.
 
 Wiki: Go to the [CNTK Wiki](https://github.com/Microsoft/CNTK/wiki) for all information on CNTK including [setup](https://github.com/Microsoft/CNTK/wiki/Setup-CNTK-on-your-machine ), [examples](https://github.com/Microsoft/CNTK/wiki/Examples ), etc.

@@ -1605,12 +1605,12 @@ BFF1=BFF(L3,LabelDim1,HiddenDim)
 
 \begin_layout Plain Layout
 
-CE1=CrossEntropyWithSoftmax(labels,BFF1.FF.P,tag="eval")
+CE1=CrossEntropyWithSoftmax(labels,BFF1.FF.P,tag="evaluation")
 \end_layout
 
 \begin_layout Plain Layout
 
-FER1 = ErrorPrediction(labels,BFF1.FF.P,tag="eval")
+FER1 = ErrorPrediction(labels,BFF1.FF.P,tag="evaluation")
 \end_layout
 
 \begin_layout Plain Layout
@@ -1629,12 +1629,12 @@ BFF2=BFF(L3,LabelDim2,HiddenDim)
 
 \begin_layout Plain Layout
 
-CE2=CrossEntropyWithSoftmax(regions,BFF2.FF.P,tag="eval")
+CE2=CrossEntropyWithSoftmax(regions,BFF2.FF.P,tag="evaluation")
 \end_layout
 
 \begin_layout Plain Layout
 
-FER2 = ErrorPrediction(regions,BFF2.FF.P,tag="eval")
+FER2 = ErrorPrediction(regions,BFF2.FF.P,tag="evaluation")
 \end_layout
 
 \begin_layout Plain Layout

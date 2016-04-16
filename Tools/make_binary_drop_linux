@@ -1,0 +1,196 @@
+#!/bin/bash
+
+# Copyright (c) Microsoft. All rights reserved.
+# Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+# WARNING. This will run in Microsoft Internal Environment ONLY
+# Generating CNTK Binary drops in Jenkins environment
+
+# Stop on Error
+set -e
+
+# Define variables to be set via command parameters
+buildConfig=
+targetConfig=
+verbose=false
+
+# Process Command line parameters
+
+usage="Usage: make_binary_drop_linux -b build_configuration -t target_configuration [-v] [-h]\nBuild and Target configurations should correspond to Jenkins environment\n-v Verbose output\n-h Displays this message\nExample: make_binary_drop_linux -b Release -t gpu -v"
+
+if [[ $# == 0 ]]; then
+    echo "Command line parameters are missing" >&2
+    echo -e $usage >&2
+    exit 1
+fi
+
+while getopts ":b::t::v" opt; do
+    case $opt in
+    b)
+        # Supposed to be taken from Jenkins BUILD_CONFIGURATION
+        buildConfig=$OPTARG
+        ;;
+    t)
+        # Supposed to be taken from Jenkins TARGET_CONFIGURATION
+        targetConfig=$OPTARG
+        ;;
+    v)
+        # Enables verbose output
+        verbose=true
+        ;;
+    h)
+        # Display Usage message and exit
+        echo -e $usage
+        exit 0
+        ;;
+    \?)
+        echo "Invalid parameter: -$OPTARG" >&2
+        echo -e $usage >&2
+        exit 1
+        ;;
+    :)
+        echo "Parameter -$OPTARG requires an argument." >&2
+        echo -e $usage >&2
+        exit 1
+        ;;
+    esac
+done
+
+# Check mandatory parameters presence
+if [[ -z "$buildConfig" ]]; then
+    echo "Parameter -b is missing." >&2
+    echo -e $usage >&2
+    exit 1
+fi
+
+if [[ -z "$targetConfig" ]]; then
+    echo "Parameter -t is missing." >&2
+    echo -e $usage >&2
+    exit 1
+fi
+
+# Make buildConfig and targetConfig lowercase
+buildConfig=$(echo ${buildConfig} | tr '[:upper:]' '[:lower:]')
+targetConfig=$(echo ${targetConfig} | tr '[:upper:]' '[:lower:]')
+
+# Enable "verbose" mode if needed
+# stderr is NOT changed
+if [[ "$verbose" == true ]]; then
+    exec 3>&1
+else
+    exec 3>/dev/null
+fi
+
+# Define helper function
+
+# File List Copy function
+# usage: CopyFilesFromList source_path file_name_array destination_path
+function CopyFilesFromList ()
+{
+    declare -a fileNames=(${!2})
+    for fileName in  "${fileNames[@]}"
+    do
+        cp "$1/$fileName" "$3"
+    done
+}
+
+# Main script
+
+echo "Making binary drops..." >&3
+
+# If not a Release build quit
+if [[ $buildConfig != "release" ]]; then
+    echo "Not a release build. No binary drops generation" >&3
+    exit 0
+fi
+
+# Dependency files
+
+# ACML
+declare -a acmlFiles=("libacml_mp.so" "libiomp5.so")
+
+# Open CV
+declare -a opencvFiles=("libopencv_core.so.3.0" "libopencv_imgproc.so.3.0" "libopencv_imgproc.so.3.0" "libopencv_imgcodecs.so.3.0")
+
+# libzip
+declare -a libzipFiles=("libzip.so")
+
+# CUDA
+declare -a cudaFiles=("libcudart.so.7.0" "libcublas.so.7.0" "libcurand.so.7.0" "libcusparse.so.7.0")
+
+# cuDNN
+declare -a cudnnFiles=("libcudnn.so.4")
+
+# Set dependency sources paths
+acmlPath="/usr/local/acml5.3.1/ifort64_mp/lib"
+opencvPath="/usr/local/opencv-3.0.0/lib"
+libzipPath="/usr/local/lib"
+cudaPath="/usr/local/cuda/lib64"
+cudnnPath="/usr/local/cudnn-4.0/cuda/lib64"
+
+# Set build paths
+buildPath="build/$targetConfig/release"
+basePath="BinaryDrops"
+baseDropPath="$basePath/cntk"
+baseBinariesPath="$baseDropPath/cntk"
+baseDependenciesPath="$baseBinariesPath/dependencies/lib"
+extrasPath="Tools/cntk-binary-drop/linux/$targetConfig"
+gzipFile="BinaryDrops.tar.gz"
+
+# Make BinaryDrops directory
+mkdir -p $baseBinariesPath
+
+# Copy build binaries
+echo "Copying build binaries..." >&3
+cp -r $buildPath/* $baseBinariesPath
+
+# Copy Examples
+echo "Copying Examples..." >&3
+cp -r Examples $baseDropPath
+
+# Copy Extras
+echo "Copying Extras..." >&3
+cp -r $extrasPath/* $baseDropPath
+
+# Copy Dependencies
+echo "Copying Dependencies..." >&3
+
+# Make dependencies directory
+mkdir -p $baseDependenciesPath
+
+# Copy ACML
+echo "Copying ACML..." >&3
+CopyFilesFromList $acmlPath acmlFiles[@] $baseDependenciesPath
+
+# Copy Open CV
+echo "Copying Open CV..." >&3
+CopyFilesFromList $opencvPath opencvFiles[@] $baseDependenciesPath
+
+# Copy libzip
+echo "Copying libzip..." >&3
+CopyFilesFromList $libzipPath libzipFiles[@] $baseDependenciesPath
+
+# GPU Drops only
+if [[ $targetConfig != "cpu" ]]; then
+
+    # Copy CUDA
+    echo "Copying CUDA..." >&3
+    CopyFilesFromList $cudaPath cudaFiles[@] $baseDependenciesPath
+
+    # Copy cuDNN
+    echo "Copying cuDNN..." >&3
+    CopyFilesFromList $cudnnPath cudnnFiles[@] $baseDependenciesPath
+
+fi
+
+echo "Making Archive and cleaning up..." >&3
+# Make GZipped TAR
+cd $basePath
+if [[ "$verbose" == true ]]; then
+    tar -cvzf $gzipFile cntk
+else
+    tar -czf $gzipFile cntk
+fi
+
+# Remove TAR sources
+rm -r cntk

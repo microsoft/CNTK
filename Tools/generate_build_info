@@ -51,8 +51,8 @@ makebuildinfo()
     WITH_1BITSGD=$8
     WITH_ASGD=$9
     BUILDER=$10
-    BUILDMACHINE=$11
-    BUILDPATH=$12
+    BUILDMACHINE=${11}
+    BUILDPATH=${12}
 
     (
         printf "#ifndef _BUILDINFO_H\n"
@@ -132,18 +132,14 @@ BUILDER=$USER
 BUILDMACHINE=`hostname`
 BUILDPATH=`pwd`
 
-# 6. make buildinfo.h 
-# TODO should avoid rebuild if not changing
+# 6. make buildinfo.h (only update if changed)
 target=Source/CNTK/buildinfo.h
 if [ ! -d Source ] ; then 
     usage
 fi
-if [ -e Source/CNTK/buildinfo.h ] ; then 
-    rm Source/CNTK/buildinfo.h
-fi
 
 makebuildinfo \
-    "$target" \
+    "$target\$\$" \
     "$BUILDTYPE" \
     "$MATHLIB" \
     "$GIT_COMMIT" \
@@ -155,3 +151,5 @@ makebuildinfo \
     "$BUILDER" \
     "$BUILDMACHINE" \
     "$BUILDPATH"
+
+cmp -s "$target\$\$" "$target" || mv "$target\$\$" "$target"

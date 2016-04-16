@@ -5,8 +5,10 @@ VisualStudioVersion = 12.0.40629.0
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CNTK", "Source\CNTK\CNTK.vcxproj", "{E6F26F9A-FF64-4F0A-B749-CD309EE357EE}"
 	ProjectSection(ProjectDependencies) = postProject
-		{33D2FD22-DEF2-4507-A58A-368F641AEBE5} = {33D2FD22-DEF2-4507-A58A-368F641AEBE5}
+		{928ABD1B-4D3B-4017-AEF1-0FA1B4467513} = {928ABD1B-4D3B-4017-AEF1-0FA1B4467513}
+		{60BDB847-D0C4-4FD3-A947-0C15C08BCDB5} = {60BDB847-D0C4-4FD3-A947-0C15C08BCDB5}
 		{EB2BE26F-6BD4-4274-971F-86D080779DD1} = {EB2BE26F-6BD4-4274-971F-86D080779DD1}
+		{EAD17188-072C-4726-B840-A769C36DAD1B} = {EAD17188-072C-4726-B840-A769C36DAD1B}
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tests", "Tests", "{D45DF403-6781-444E-B654-A96868C5BE68}"
@@ -361,6 +363,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ReaderTests", "Tests\UnitTe
 		{9BD0A711-0BBD-45B6-B81C-053F03C26CFB} = {9BD0A711-0BBD-45B6-B81C-053F03C26CFB}
 		{33D2FD22-DEF2-4507-A58A-368F641AEBE5} = {33D2FD22-DEF2-4507-A58A-368F641AEBE5}
 		{60BDB847-D0C4-4FD3-A947-0C15C08BCDB5} = {60BDB847-D0C4-4FD3-A947-0C15C08BCDB5}
+		{91973E60-A7BE-4C86-8FDB-59C88A0B3715} = {91973E60-A7BE-4C86-8FDB-59C88A0B3715}
+		{7B7A51ED-AA8E-4660-A805-D50235A02120} = {7B7A51ED-AA8E-4660-A805-D50235A02120}
 		{E6646FFE-3588-4276-8A15-8D65C22711C1} = {E6646FFE-3588-4276-8A15-8D65C22711C1}
 	EndProjectSection
 EndProject
@@ -368,6 +372,7 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "EvalDll", "Source\EvalDll\E
 	ProjectSection(ProjectDependencies) = postProject
 		{928ABD1B-4D3B-4017-AEF1-0FA1B4467513} = {928ABD1B-4D3B-4017-AEF1-0FA1B4467513}
 		{60BDB847-D0C4-4FD3-A947-0C15C08BCDB5} = {60BDB847-D0C4-4FD3-A947-0C15C08BCDB5}
+		{EB2BE26F-6BD4-4274-971F-86D080779DD1} = {EB2BE26F-6BD4-4274-971F-86D080779DD1}
 	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Math", "Source\Math\Math.vcxproj", "{60BDB847-D0C4-4FD3-A947-0C15C08BCDB5}"
@@ -504,7 +509,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "CIFAR-10", "CIFAR-10", "{77
 		Examples\Image\Miscellaneous\CIFAR-10\CifarConverter.py = Examples\Image\Miscellaneous\CIFAR-10\CifarConverter.py
 		Examples\Image\Miscellaneous\CIFAR-10\labelsmap.txt = Examples\Image\Miscellaneous\CIFAR-10\labelsmap.txt
 		Examples\Image\Miscellaneous\CIFAR-10\Macros.ndl = Examples\Image\Miscellaneous\CIFAR-10\Macros.ndl
-		Examples\Image\Miscellaneous\CIFAR-10\readme.txt = Examples\Image\Miscellaneous\CIFAR-10\readme.txt
+		Examples\Image\Miscellaneous\CIFAR-10\README.md = Examples\Image\Miscellaneous\CIFAR-10\README.md
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "ImageNet", "ImageNet", "{EF710C5A-E616-442A-889D-C997D39AF2E1}"
@@ -539,11 +544,15 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Simple2d", "Simple2d", "{D2
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "NdlExamples", "NdlExamples", "{FC573A62-6DAE-40A4-8153-520C8571A007}"
 	ProjectSection(SolutionItems) = preProject
+		Examples\Other\NdlExamples\AddOperator.ndl = Examples\Other\NdlExamples\AddOperator.ndl
+		Examples\Other\NdlExamples\AddOperatorConstant.ndl = Examples\Other\NdlExamples\AddOperatorConstant.ndl
 		Examples\Other\NdlExamples\NDLExamples.ndl = Examples\Other\NdlExamples\NDLExamples.ndl
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Config", "Config", "{1E37CE40-556D-4693-B58C-F8D4CE349BB7}"
 	ProjectSection(SolutionItems) = preProject
+		Examples\Other\Simple2d\Config\AddOperatorConstant.cntk = Examples\Other\Simple2d\Config\AddOperatorConstant.cntk
+		Examples\Other\Simple2d\Config\AddOperatorConstantNoInput.cntk = Examples\Other\Simple2d\Config\AddOperatorConstantNoInput.cntk
 		Examples\Other\Simple2d\Config\Multigpu.cntk = Examples\Other\Simple2d\Config\Multigpu.cntk
 		Examples\Other\Simple2d\Config\Simple.cntk = Examples\Other\Simple2d\Config\Simple.cntk
 	EndProjectSection
@@ -656,6 +665,7 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Config", "Config", "{850008BC-36B0-4A0A-BD0C-B6D5C2184227}"
 	ProjectSection(SolutionItems) = preProject
 		Examples\Text\PennTreebank\Config\rnn.cntk = Examples\Text\PennTreebank\Config\rnn.cntk
+		Examples\Text\PennTreebank\Config\S2SAutoEncoder.cntk = Examples\Text\PennTreebank\Config\S2SAutoEncoder.cntk
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "SLU", "SLU", "{E6DC3B7D-303D-4A54-B040-D8DCF8C56E17}"
@@ -758,11 +768,6 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ReaderLib", "Source\Readers
 		{60BDB847-D0C4-4FD3-A947-0C15C08BCDB5} = {60BDB847-D0C4-4FD3-A947-0C15C08BCDB5}
 	EndProjectSection
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ImageReader", "Source\Readers\ImageReader\ImageReader.vcxproj", "{9BD0A711-0BBD-45B6-B81C-053F03C26CFB}"
-	ProjectSection(ProjectDependencies) = postProject
-		{F0A9637C-20DA-42F0-83D4-23B4704DE602} = {F0A9637C-20DA-42F0-83D4-23B4704DE602}
-	EndProjectSection
-EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Simple2d", "Simple2d", "{D456FA9C-A51C-48B9-87DE-0F7D8A910265}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "MultiGpu", "MultiGpu", "{C86A6572-DE7A-4EBB-ADD0-A6C4906D46A3}"
@@ -837,6 +842,118 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "RNN", "RNN", "{B72C5B0E-38E
 		Tests\EndToEndTests\Examples\Text\PennTreebank\RNN\baseline.windows.release.gpu.txt = Tests\EndToEndTests\Examples\Text\PennTreebank\RNN\baseline.windows.release.gpu.txt
 		Tests\EndToEndTests\Examples\Text\PennTreebank\RNN\run-test = Tests\EndToEndTests\Examples\Text\PennTreebank\RNN\run-test
 		Tests\EndToEndTests\Examples\Text\PennTreebank\RNN\testcases.yml = Tests\EndToEndTests\Examples\Text\PennTreebank\RNN\testcases.yml
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CNTKTextFormatReader", "Source\Readers\CNTKTextFormatReader\CNTKTextFormatReader.vcxproj", "{91973E60-A7BE-4C86-8FDB-59C88A0B3715}"
+	ProjectSection(ProjectDependencies) = postProject
+		{F0A9637C-20DA-42F0-83D4-23B4704DE602} = {F0A9637C-20DA-42F0-83D4-23B4704DE602}
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ExperimentalHTKMLFReader", "Source\Readers\ExperimentalHTKMLFReader\ExperimentalHTKMLFReader.vcxproj", "{7B7A51ED-AA8E-4660-A805-D50235A02120}"
+	ProjectSection(ProjectDependencies) = postProject
+		{60BDB847-D0C4-4FD3-A947-0C15C08BCDB5} = {60BDB847-D0C4-4FD3-A947-0C15C08BCDB5}
+		{F0A9637C-20DA-42F0-83D4-23B4704DE602} = {F0A9637C-20DA-42F0-83D4-23B4704DE602}
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ImageReader", "Source\Readers\ImageReader\ImageReader.vcxproj", "{9BD0A711-0BBD-45B6-B81C-053F03C26CFB}"
+	ProjectSection(ProjectDependencies) = postProject
+		{60BDB847-D0C4-4FD3-A947-0C15C08BCDB5} = {60BDB847-D0C4-4FD3-A947-0C15C08BCDB5}
+		{F0A9637C-20DA-42F0-83D4-23B4704DE602} = {F0A9637C-20DA-42F0-83D4-23B4704DE602}
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "ModelExport", "ModelExport", "{08A05A9A-4E45-42D5-83FA-719E99C04A30}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Model0", "Model0", "{715C0E2D-6FF6-4B26-9E49-1C68920CFAF6}"
+	ProjectSection(SolutionItems) = preProject
+		Tests\EndToEndTests\ModelExport\Model0\0.cntk = Tests\EndToEndTests\ModelExport\Model0\0.cntk
+		Tests\EndToEndTests\ModelExport\Model0\baseline.txt = Tests\EndToEndTests\ModelExport\Model0\baseline.txt
+		Tests\EndToEndTests\ModelExport\Model0\run-test = Tests\EndToEndTests\ModelExport\Model0\run-test
+		Tests\EndToEndTests\ModelExport\Model0\testcases.yml = Tests\EndToEndTests\ModelExport\Model0\testcases.yml
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Model1", "Model1", "{48C2A9DE-FB2C-4724-9ADC-744216D79BCF}"
+	ProjectSection(SolutionItems) = preProject
+		Tests\EndToEndTests\ModelExport\Model1\1.cntk = Tests\EndToEndTests\ModelExport\Model1\1.cntk
+		Tests\EndToEndTests\ModelExport\Model1\baseline.txt = Tests\EndToEndTests\ModelExport\Model1\baseline.txt
+		Tests\EndToEndTests\ModelExport\Model1\run-test = Tests\EndToEndTests\ModelExport\Model1\run-test
+		Tests\EndToEndTests\ModelExport\Model1\testcases.yml = Tests\EndToEndTests\ModelExport\Model1\testcases.yml
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "AlexNet", "AlexNet", "{2B1046A1-0140-43B7-B3DC-CF7DEEE1009E}"
+	ProjectSection(SolutionItems) = preProject
+		Tests\EndToEndTests\Image\AlexNet\add_top5_layer.mel = Tests\EndToEndTests\Image\AlexNet\add_top5_layer.mel
+		Tests\EndToEndTests\Image\AlexNet\AlexNet.cntk = Tests\EndToEndTests\Image\AlexNet\AlexNet.cntk
+		Tests\EndToEndTests\Image\AlexNet\AlexNet.ndl = Tests\EndToEndTests\Image\AlexNet\AlexNet.ndl
+		Tests\EndToEndTests\Image\AlexNet\baseline.linux.debug.gpu.txt = Tests\EndToEndTests\Image\AlexNet\baseline.linux.debug.gpu.txt
+		Tests\EndToEndTests\Image\AlexNet\baseline.linux.release.gpu.txt = Tests\EndToEndTests\Image\AlexNet\baseline.linux.release.gpu.txt
+		Tests\EndToEndTests\Image\AlexNet\baseline.windows.debug.gpu.txt = Tests\EndToEndTests\Image\AlexNet\baseline.windows.debug.gpu.txt
+		Tests\EndToEndTests\Image\AlexNet\baseline.windows.release.gpu.txt = Tests\EndToEndTests\Image\AlexNet\baseline.windows.release.gpu.txt
+		Tests\EndToEndTests\Image\AlexNet\ImageNet1K_mean.xml = Tests\EndToEndTests\Image\AlexNet\ImageNet1K_mean.xml
+		Tests\EndToEndTests\Image\AlexNet\Macros.ndl = Tests\EndToEndTests\Image\AlexNet\Macros.ndl
+		Tests\EndToEndTests\Image\AlexNet\run-test = Tests\EndToEndTests\Image\AlexNet\run-test
+		Tests\EndToEndTests\Image\AlexNet\testcases.yml = Tests\EndToEndTests\Image\AlexNet\testcases.yml
+		Tests\EndToEndTests\Image\AlexNet\train_map.txt = Tests\EndToEndTests\Image\AlexNet\train_map.txt
+		Tests\EndToEndTests\Image\AlexNet\val_map.txt = Tests\EndToEndTests\Image\AlexNet\val_map.txt
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "NetworkTests", "Tests\UnitTests\NetworkTests\NetworkTests.vcxproj", "{CDA96AA3-3252-4978-A0BF-2ACD670823CB}"
+	ProjectSection(ProjectDependencies) = postProject
+		{928ABD1B-4D3B-4017-AEF1-0FA1B4467513} = {928ABD1B-4D3B-4017-AEF1-0FA1B4467513}
+		{60BDB847-D0C4-4FD3-A947-0C15C08BCDB5} = {60BDB847-D0C4-4FD3-A947-0C15C08BCDB5}
+		{EB2BE26F-6BD4-4274-971F-86D080779DD1} = {EB2BE26F-6BD4-4274-971F-86D080779DD1}
+		{EAD17188-072C-4726-B840-A769C36DAD1B} = {EAD17188-072C-4726-B840-A769C36DAD1B}
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Text", "Text", "{8656B71D-E24C-4AC2-8BE4-C07B415A3E15}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "SequenceClassification", "SequenceClassification", "{E53E63A0-FAA9-4416-9AD1-08A8FB87FEE1}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Miscellaneous", "Miscellaneous", "{8629430A-821E-43BA-AEC5-8B2CF31A2A7A}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "CIFAR-10", "CIFAR-10", "{0141526B-F257-4574-8CBE-99634726FFCE}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "01_Convolution", "01_Convolution", "{58286327-6742-44C4-A34E-D2583419E55E}"
+	ProjectSection(SolutionItems) = preProject
+		Tests\EndToEndTests\Examples\Image\Miscellaneous\CIFAR-10\01_Convolution\baseline.linux.cpu.txt = Tests\EndToEndTests\Examples\Image\Miscellaneous\CIFAR-10\01_Convolution\baseline.linux.cpu.txt
+		Tests\EndToEndTests\Examples\Image\Miscellaneous\CIFAR-10\01_Convolution\baseline.linux.gpu.txt = Tests\EndToEndTests\Examples\Image\Miscellaneous\CIFAR-10\01_Convolution\baseline.linux.gpu.txt
+		Tests\EndToEndTests\Examples\Image\Miscellaneous\CIFAR-10\01_Convolution\baseline.windows.txt = Tests\EndToEndTests\Examples\Image\Miscellaneous\CIFAR-10\01_Convolution\baseline.windows.txt
+		Tests\EndToEndTests\Examples\Image\Miscellaneous\CIFAR-10\01_Convolution\run-test = Tests\EndToEndTests\Examples\Image\Miscellaneous\CIFAR-10\01_Convolution\run-test
+		Tests\EndToEndTests\Examples\Image\Miscellaneous\CIFAR-10\01_Convolution\testcases.yml = Tests\EndToEndTests\Examples\Image\Miscellaneous\CIFAR-10\01_Convolution\testcases.yml
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "02_BatchNormConv", "02_BatchNormConv", "{AB9207B9-B134-4C57-B7ED-F3DCF7B0DC5F}"
+	ProjectSection(SolutionItems) = preProject
+		Tests\EndToEndTests\Examples\Image\Miscellaneous\CIFAR-10\02_BatchNormConv\baseline.linux.gpu.txt = Tests\EndToEndTests\Examples\Image\Miscellaneous\CIFAR-10\02_BatchNormConv\baseline.linux.gpu.txt
+		Tests\EndToEndTests\Examples\Image\Miscellaneous\CIFAR-10\02_BatchNormConv\baseline.windows.txt = Tests\EndToEndTests\Examples\Image\Miscellaneous\CIFAR-10\02_BatchNormConv\baseline.windows.txt
+		Tests\EndToEndTests\Examples\Image\Miscellaneous\CIFAR-10\02_BatchNormConv\run-test = Tests\EndToEndTests\Examples\Image\Miscellaneous\CIFAR-10\02_BatchNormConv\run-test
+		Tests\EndToEndTests\Examples\Image\Miscellaneous\CIFAR-10\02_BatchNormConv\testcases.yml = Tests\EndToEndTests\Examples\Image\Miscellaneous\CIFAR-10\02_BatchNormConv\testcases.yml
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "03_ResNet", "03_ResNet", "{12FB912C-43F8-40FE-BD7F-B52F589A1EBC}"
+	ProjectSection(SolutionItems) = preProject
+		Tests\EndToEndTests\Examples\Image\Miscellaneous\CIFAR-10\03_ResNet\baseline.linux.gpu.txt = Tests\EndToEndTests\Examples\Image\Miscellaneous\CIFAR-10\03_ResNet\baseline.linux.gpu.txt
+		Tests\EndToEndTests\Examples\Image\Miscellaneous\CIFAR-10\03_ResNet\baseline.windows.txt = Tests\EndToEndTests\Examples\Image\Miscellaneous\CIFAR-10\03_ResNet\baseline.windows.txt
+		Tests\EndToEndTests\Examples\Image\Miscellaneous\CIFAR-10\03_ResNet\run-test = Tests\EndToEndTests\Examples\Image\Miscellaneous\CIFAR-10\03_ResNet\run-test
+		Tests\EndToEndTests\Examples\Image\Miscellaneous\CIFAR-10\03_ResNet\testcases.yml = Tests\EndToEndTests\Examples\Image\Miscellaneous\CIFAR-10\03_ResNet\testcases.yml
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "04_ResNet", "04_ResNet", "{2BFE4D88-6F32-4701-887A-1DE3D7626DBB}"
+	ProjectSection(SolutionItems) = preProject
+		Tests\EndToEndTests\Examples\Image\Miscellaneous\CIFAR-10\04_ResNet_56\baseline.linux.gpu.txt = Tests\EndToEndTests\Examples\Image\Miscellaneous\CIFAR-10\04_ResNet_56\baseline.linux.gpu.txt
+		Tests\EndToEndTests\Examples\Image\Miscellaneous\CIFAR-10\04_ResNet_56\baseline.windows.txt = Tests\EndToEndTests\Examples\Image\Miscellaneous\CIFAR-10\04_ResNet_56\baseline.windows.txt
+		Tests\EndToEndTests\Examples\Image\Miscellaneous\CIFAR-10\04_ResNet_56\run-test = Tests\EndToEndTests\Examples\Image\Miscellaneous\CIFAR-10\04_ResNet_56\run-test
+		Tests\EndToEndTests\Examples\Image\Miscellaneous\CIFAR-10\04_ResNet_56\testcases.yml = Tests\EndToEndTests\Examples\Image\Miscellaneous\CIFAR-10\04_ResNet_56\testcases.yml
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Config", "Config", "{EC780385-7580-4D15-914B-1D878A295CBC}"
+	ProjectSection(SolutionItems) = preProject
+		Tests\EndToEndTests\Text\SequenceClassification\Config\seqcla.cntk = Tests\EndToEndTests\Text\SequenceClassification\Config\seqcla.cntk
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Data", "Data", "{D11F76CC-DB6D-4CB4-B3B7-AB139DE2F5FA}"
+	ProjectSection(SolutionItems) = preProject
+		Tests\EndToEndTests\Text\SequenceClassification\Data\embeddingmatrix.txt = Tests\EndToEndTests\Text\SequenceClassification\Data\embeddingmatrix.txt
+		Tests\EndToEndTests\Text\SequenceClassification\Data\Train.txt = Tests\EndToEndTests\Text\SequenceClassification\Data\Train.txt
 	EndProjectSection
 EndProject
 Global
@@ -1029,6 +1146,22 @@ Global
 		{F0A9637C-20DA-42F0-83D4-23B4704DE602}.Release_CpuOnly|x64.Build.0 = Release_CpuOnly|x64
 		{F0A9637C-20DA-42F0-83D4-23B4704DE602}.Release|x64.ActiveCfg = Release|x64
 		{F0A9637C-20DA-42F0-83D4-23B4704DE602}.Release|x64.Build.0 = Release|x64
+		{91973E60-A7BE-4C86-8FDB-59C88A0B3715}.Debug_CpuOnly|x64.ActiveCfg = Debug_CpuOnly|x64
+		{91973E60-A7BE-4C86-8FDB-59C88A0B3715}.Debug_CpuOnly|x64.Build.0 = Debug_CpuOnly|x64
+		{91973E60-A7BE-4C86-8FDB-59C88A0B3715}.Debug|x64.ActiveCfg = Debug|x64
+		{91973E60-A7BE-4C86-8FDB-59C88A0B3715}.Debug|x64.Build.0 = Debug|x64
+		{91973E60-A7BE-4C86-8FDB-59C88A0B3715}.Release_CpuOnly|x64.ActiveCfg = Release_CpuOnly|x64
+		{91973E60-A7BE-4C86-8FDB-59C88A0B3715}.Release_CpuOnly|x64.Build.0 = Release_CpuOnly|x64
+		{91973E60-A7BE-4C86-8FDB-59C88A0B3715}.Release|x64.ActiveCfg = Release|x64
+		{91973E60-A7BE-4C86-8FDB-59C88A0B3715}.Release|x64.Build.0 = Release|x64
+		{7B7A51ED-AA8E-4660-A805-D50235A02120}.Debug_CpuOnly|x64.ActiveCfg = Debug_CpuOnly|x64
+		{7B7A51ED-AA8E-4660-A805-D50235A02120}.Debug_CpuOnly|x64.Build.0 = Debug_CpuOnly|x64
+		{7B7A51ED-AA8E-4660-A805-D50235A02120}.Debug|x64.ActiveCfg = Debug|x64
+		{7B7A51ED-AA8E-4660-A805-D50235A02120}.Debug|x64.Build.0 = Debug|x64
+		{7B7A51ED-AA8E-4660-A805-D50235A02120}.Release_CpuOnly|x64.ActiveCfg = Release_CpuOnly|x64
+		{7B7A51ED-AA8E-4660-A805-D50235A02120}.Release_CpuOnly|x64.Build.0 = Release_CpuOnly|x64
+		{7B7A51ED-AA8E-4660-A805-D50235A02120}.Release|x64.ActiveCfg = Release|x64
+		{7B7A51ED-AA8E-4660-A805-D50235A02120}.Release|x64.Build.0 = Release|x64
 		{9BD0A711-0BBD-45B6-B81C-053F03C26CFB}.Debug_CpuOnly|x64.ActiveCfg = Debug_CpuOnly|x64
 		{9BD0A711-0BBD-45B6-B81C-053F03C26CFB}.Debug_CpuOnly|x64.Build.0 = Debug_CpuOnly|x64
 		{9BD0A711-0BBD-45B6-B81C-053F03C26CFB}.Debug|x64.ActiveCfg = Debug|x64
@@ -1037,6 +1170,14 @@ Global
 		{9BD0A711-0BBD-45B6-B81C-053F03C26CFB}.Release_CpuOnly|x64.Build.0 = Release_CpuOnly|x64
 		{9BD0A711-0BBD-45B6-B81C-053F03C26CFB}.Release|x64.ActiveCfg = Release|x64
 		{9BD0A711-0BBD-45B6-B81C-053F03C26CFB}.Release|x64.Build.0 = Release|x64
+		{CDA96AA3-3252-4978-A0BF-2ACD670823CB}.Debug_CpuOnly|x64.ActiveCfg = Debug_CpuOnly|x64
+		{CDA96AA3-3252-4978-A0BF-2ACD670823CB}.Debug_CpuOnly|x64.Build.0 = Debug_CpuOnly|x64
+		{CDA96AA3-3252-4978-A0BF-2ACD670823CB}.Debug|x64.ActiveCfg = Debug|x64
+		{CDA96AA3-3252-4978-A0BF-2ACD670823CB}.Debug|x64.Build.0 = Debug|x64
+		{CDA96AA3-3252-4978-A0BF-2ACD670823CB}.Release_CpuOnly|x64.ActiveCfg = Release_CpuOnly|x64
+		{CDA96AA3-3252-4978-A0BF-2ACD670823CB}.Release_CpuOnly|x64.Build.0 = Release_CpuOnly|x64
+		{CDA96AA3-3252-4978-A0BF-2ACD670823CB}.Release|x64.ActiveCfg = Release|x64
+		{CDA96AA3-3252-4978-A0BF-2ACD670823CB}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -1140,7 +1281,6 @@ Global
 		{A0B366FE-2EEA-4E32-9AED-12C46409C30C} = {63C6816D-66BF-487E-B541-094142C8272B}
 		{BD783D50-47E2-485F-BDAF-29BD40D84645} = {63C6816D-66BF-487E-B541-094142C8272B}
 		{F0A9637C-20DA-42F0-83D4-23B4704DE602} = {33EBFE78-A1A8-4961-8938-92A271941F94}
-		{9BD0A711-0BBD-45B6-B81C-053F03C26CFB} = {33EBFE78-A1A8-4961-8938-92A271941F94}
 		{D456FA9C-A51C-48B9-87DE-0F7D8A910265} = {CEADE942-4077-4577-ACF9-41C04388DDC0}
 		{C86A6572-DE7A-4EBB-ADD0-A6C4906D46A3} = {D456FA9C-A51C-48B9-87DE-0F7D8A910265}
 		{E330CA6B-5954-4EBA-9C64-6058494E338A} = {D456FA9C-A51C-48B9-87DE-0F7D8A910265}
@@ -1149,5 +1289,23 @@ Global
 		{9F1F9C7C-2CC3-410C-ACDC-988B12D6AC14} = {AC7BA8D3-B4C8-42A4-8507-B359BB6D49E8}
 		{A3231EF2-DED1-4638-B0A2-5F87C484CA92} = {439BE0E0-FABE-403D-BF2C-A41FB8A60616}
 		{B72C5B0E-38E8-41BF-91FE-0C1012C7C078} = {A3231EF2-DED1-4638-B0A2-5F87C484CA92}
+		{91973E60-A7BE-4C86-8FDB-59C88A0B3715} = {33EBFE78-A1A8-4961-8938-92A271941F94}
+		{7B7A51ED-AA8E-4660-A805-D50235A02120} = {33EBFE78-A1A8-4961-8938-92A271941F94}
+		{9BD0A711-0BBD-45B6-B81C-053F03C26CFB} = {33EBFE78-A1A8-4961-8938-92A271941F94}
+		{08A05A9A-4E45-42D5-83FA-719E99C04A30} = {6E565B48-1923-49CE-9787-9BBB9D96F4C5}
+		{715C0E2D-6FF6-4B26-9E49-1C68920CFAF6} = {08A05A9A-4E45-42D5-83FA-719E99C04A30}
+		{48C2A9DE-FB2C-4724-9ADC-744216D79BCF} = {08A05A9A-4E45-42D5-83FA-719E99C04A30}
+		{2B1046A1-0140-43B7-B3DC-CF7DEEE1009E} = {8071EF60-30F7-4A77-81AA-ADCA0E18B1E3}
+		{CDA96AA3-3252-4978-A0BF-2ACD670823CB} = {6F19321A-65E7-4829-B00C-3886CD6C6EDE}
+		{8656B71D-E24C-4AC2-8BE4-C07B415A3E15} = {6E565B48-1923-49CE-9787-9BBB9D96F4C5}
+		{E53E63A0-FAA9-4416-9AD1-08A8FB87FEE1} = {8656B71D-E24C-4AC2-8BE4-C07B415A3E15}
+		{8629430A-821E-43BA-AEC5-8B2CF31A2A7A} = {FC7E7EC7-6E6A-4518-81C6-DA60451C657A}
+		{0141526B-F257-4574-8CBE-99634726FFCE} = {8629430A-821E-43BA-AEC5-8B2CF31A2A7A}
+		{58286327-6742-44C4-A34E-D2583419E55E} = {0141526B-F257-4574-8CBE-99634726FFCE}
+		{AB9207B9-B134-4C57-B7ED-F3DCF7B0DC5F} = {0141526B-F257-4574-8CBE-99634726FFCE}
+		{12FB912C-43F8-40FE-BD7F-B52F589A1EBC} = {0141526B-F257-4574-8CBE-99634726FFCE}
+		{2BFE4D88-6F32-4701-887A-1DE3D7626DBB} = {0141526B-F257-4574-8CBE-99634726FFCE}
+		{EC780385-7580-4D15-914B-1D878A295CBC} = {E53E63A0-FAA9-4416-9AD1-08A8FB87FEE1}
+		{D11F76CC-DB6D-4CB4-B3B7-AB139DE2F5FA} = {E53E63A0-FAA9-4416-9AD1-08A8FB87FEE1}
 	EndGlobalSection
 EndGlobal

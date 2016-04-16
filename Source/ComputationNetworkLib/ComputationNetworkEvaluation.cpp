@@ -52,9 +52,9 @@ static bool SetGradientToScalarOne(ComputationNodeBasePtr nodep)
     bool hasMatchingType = (node != nullptr);
     if (hasMatchingType)
     {
-        node->Value().VerifySize(1, 1);
-        node->Gradient().Resize(1, 1);
-        node->Gradient().SetValue((ElemType) 1.0);
+        Matrix<ElemType>& grad = node->Gradient();
+        grad.Resize(node->Value());
+        grad.SetValue((ElemType) 1.0);
     }
     return hasMatchingType;
 }
@@ -66,6 +66,9 @@ static bool SetGradientToScalarOne(ComputationNodeBasePtr nodep)
 //  - Backprop() for the training criterion
 void ComputationNetwork::Backprop(const ComputationNodeBasePtr rootNode) // training criterion to compute the gradients for
 {
+    if (!Environment().IsTraining())
+        LogicError("Backprop: Requires network is to be in training mode.");
+
     // reset all gradients to zero (actually, internally, this is lazy, but we don't care here)
     ZeroGradients(rootNode);
 
@@ -111,9 +114,11 @@ ComputationNetwork::PARTraversalFlowControlNode::PARTraversalFlowControlNode(con
         {
             // instead of the node itself, include the sentinel SEQTraversalFlowControlNode in our list
             m_nestedNodes.push_back(recInfo);
+
             // and verify that we only encountered the loop once (all nodes should have been consecutive)
             if (!loopsSeen.insert(recInfo).second)
                 LogicError("PARTraversalFlowControlNode: members of loop %ls are not consecutive in node list.", recInfo->NodeName().c_str());
+
             // consume all nodes that are part of the same loop (they are all consecutive)
             while (nodeIter != allNodes.end() && (*nodeIter)->IsPartOfLoop() && FindInRecurrentLoops(recurrentInfo, *nodeIter) == recInfo)
                 nodeIter++;
@@ -288,7 +293,7 @@ ComputationNetwork::PARTraversalFlowControlNode::PARTraversalFlowControlNode(con
 {
     for (auto nodeIter = m_nestedNodes.rbegin(); nodeIter != m_nestedNodes.rend(); ++nodeIter)
     {
-        if ((*nodeIter)->NeedGradient())
+        if ((*nodeIter)->NeedsGradient())
             (*nodeIter)->ReleaseMatricesAfterBackprop(matrixPool);
     }
 }
@@ -300,8 +305,10 @@ ComputationNetwork::PARTraversalFlowControlNode::PARTraversalFlowControlNode(con
     // look in all recurrent loops of the network
     // TODO: Check for IsPartOfLoop(). Also why not store the loop id in the node for direct lookup?
     for (auto& iter : recurrentInfo)
+    {
         if (std::find(iter->m_nestedNodes.begin(), iter->m_nestedNodes.end(), node) != iter->m_nestedNodes.end()) // TODO: should this loop need to be a method of SEQTraversalFlowControlNode?
             return iter;
+    }
     return nullptr; // not part of a recurrent loop
 }
 
@@ -354,8 +361,10 @@ void ComputationNetwork::PrintComputationTree(const ComputationNodeBasePtr& root
     if (nodes.size() == 0)
         fprintf(stderr, "\n(empty)\n");
     else
+    {
         for (const auto& node : nodes)
             node->PrintSelf(printMatrices);
+    }
 }
 
 // -----------------------------------------------------------------------
@@ -384,38 +393,50 @@ void ComputationNetwork::VerifyIsCompiled(const char* where) const
 // CompileNetwork() -- bring network into executable state
 // Call this after creation, load, and any modification.
 // This method sets up all members that are cleared in InvalidateCompiledNetwork();
-// TODO: This should be the only entry point, subsuming all other Validate, Build, etc. functions.
-// TODO: Related functions today do lots of stuff lazily. There are redundant calls. That will all be removed.
 // TODO: This is in a somewhat partial state in that we now have a global eval order (keyed by a nullptr), but don't use it yet.
 void ComputationNetwork::CompileNetwork()
 {
     fprintf(stderr, "\nPost-processing network...\n");
 
+    // We may only get here if not !IsCompiled(). We could now verify each member to be virgin.
+    // Or just invalidate it again, which is easier and safer.
+    InvalidateCompiledNetwork();
+
     // all steps below have to be repeated for all root nodes (=nodes without parents and PreComputeNodes)
     DetermineSetOfAllRoots();
 
-    fprintf(stderr, "\n%d roots:\n", (int) m_allRoots.size());
+    fprintf(stderr, "\n%d roots:\n", (int)m_allRoots.size());
     for (const auto& root : m_allRoots)
-        fprintf(stderr, "\t%ls = %ls\n", root->NodeName().c_str(), root->OperationName().c_str());
+        fprintf(stderr, "\t%ls = %ls()\n", root->NodeName().c_str(), root->OperationName().c_str());
 
     // Note: Steps below are loops over root nodes. We will gradually push those loops through to the functions,
     //       to reduce redundant operation on shared portions of the network.
 
-    // STEP: Create a depth-first tree-traversal order through original graph for every root.
-    // This is used wherever a nested structure is not relevant.
-    FormEvalOrder(nullptr); // form the global one
-    for (auto& node : m_allRoots)
-        FormEvalOrder(node);
+    // STEP: Create a depth-first tree-traversal order through complete graph.
+    // TODO: Do not cache this before reordering; get list & pass to FormRecurrentLoops() which reorders it, then store it (such that GetEvalOrder(nullptr) is always valid w.r.t. loops).
+    FormEvalOrder(nullptr);
 
-    // STEP: form the m_inputValues and m_learnableParameters sets for this rootNode
+    // STEP: Form the m_inputValues and m_learnableParameters sets for the entire network.
+    // Needed for ResetMBLayouts() below.
+    // TODO: Move this further down; or decide whether the 'nullptr' version is needed, other than ResetMBLayouts() which could use the global order and filter by itself.
     CollectInputAndLearnableParameters(nullptr);
-    for (const auto& root : m_allRoots)
-        CollectInputAndLearnableParameters(root);
+
+    // STEP: Establish time-axis relationships.
+    // This sets all MBLayout pointers of Input nodes according to user spec of time axes.
+    // TODO: Don't use m_inputValues, traverse ourselves, to remove dependency on FormEvalOrder().
+    ResetMBLayouts();
 
     // STEP: Discover nested loops.
     FormRecurrentLoops(nullptr); // form the global one  --TODO: just use this; should be no need to do this for each root
-    for (auto& node : m_allRoots)
-        FormRecurrentLoops(node);
+    //for (auto& node : m_allRoots)
+    //    FormRecurrentLoops(node); // BUGBUG: These calls are needed because they patch EvalOrders. Will be unnecessary once we move this out.
+
+    // STEP: Create loop-corrected depth-first traversals and cached input/parameter sets for every actual root node.
+    for (auto& root : m_allRoots)
+    {
+        FormEvalOrder(root);
+        CollectInputAndLearnableParameters(root);
+    }
 
     // STEP: Form nested structure of PAR and SEQ traversal nodes.
     for (auto& node : m_allRoots)
@@ -430,7 +451,7 @@ void ComputationNetwork::CompileNetwork()
     // STEP: Some final details.
     ResetEvalTimeStamps(); // invalidate all m_value fields. Really belongs into StartEvaluateMinibatchLoop()
 
-    fprintf(stderr, "\nPost-processing network complete.\n");
+    fprintf(stderr, "\nPost-processing network complete.\n\n");
     m_isCompiled = true;
 }
 
@@ -454,7 +475,7 @@ void ComputationNetwork::DetermineSetOfAllRoots()
             auto input = node->Input(i);
             if (!input) // this may be the result of an incorrect MEL operation
             {
-                InvalidArgument("DetermineSetOfAllRoots: Input %d of %ls %ls operation if not connected, network is malformed.",
+                InvalidArgument("DetermineSetOfAllRoots: Input %d of %ls %ls operation is not connected, network is malformed.",
                                 (int) i, node->NodeName().c_str(), node->OperationName().c_str());
             }
             referencedNodes.insert(input);
@@ -491,6 +512,56 @@ void ComputationNetwork::DetermineSetOfAllRoots()
     });
 }
 
+// initial setup of MBLayout pointers
+//  - link all input nodes to one or more MBLayouts
+//  - reset all others to nullptr, in expectation of a ValidateNetwork() pass
+void ComputationNetwork::ResetMBLayouts()
+{
+    // reset to a well-defined MBLayout (any meaningful layout should do here)
+    // Note that Validate is never called during operation. Any actual computation will lead to MBLayout to be set.
+    m_pMBLayoutOfNetwork->Init(1, 0);
+
+    // first reset all
+    for (const auto& node : GetAllNodesForRoot(nullptr))
+        node->LinkToMBLayout(nullptr);
+
+    // DynamicAxis nodes are (apart from the network-wide MBLayout) the main holders of MBLayouts. Initialize them.
+    // The only other instances are nodes that change the MBLayout, like WhereNode. 
+    for (auto node : GetNodesWithType(L"DynamicAxis"))
+        node->LinkToMBLayout(make_shared<MBLayout>(1, 0, node->GetName()));
+
+    // This is now initialized inside of the Input nodes, with the proper connections.
+    for (auto node : InputNodes(nullptr))
+    {
+        auto n = dynamic_pointer_cast<ITakesDynamicAxis>(node);
+        if (!n)
+            LogicError("Expected %ls to implement ITakesDynamicAxis, but it doesn't.", node->NodeDescription().c_str());
+        std::wstring axisName = n->GetRequestedDynamicAxis();
+
+        if (axisName == L"")
+        {
+            // Legacy behavior: One shared MBLayout
+            // TODO Remove m_pMBLayoutOfNetwork altogether. See issue 358.
+            node->LinkToMBLayout(m_pMBLayoutOfNetwork);
+        }
+        else
+        {
+            auto axisNode = GetNodeFromName(axisName);
+
+            if (!axisNode)
+                RuntimeError("%ls: Can't find node '%ls' for retrieving dynamic axis.", axisNode->NodeDescription().c_str(), axisName.c_str());
+
+            // For now we require the node to be a DynamicAxisNode, though we could derive the same from other nodes. This would involve
+            // more dependencies on the order in which things are evaluated, though.
+            if (axisNode->OperationName() != L"DynamicAxis")
+                RuntimeError("%ls: dynamicAxis argument must be of type DynamicAxis(), but got %ls.", node->NodeDescription().c_str(), axisNode->NodeDescription().c_str());
+            if (!axisNode->HasMBLayout())
+                LogicError("%ls: Expected %ls to have MBLayout, but it doesn't.", node->NodeDescription().c_str(), axisNode->NodeDescription().c_str());
+            node->LinkToMBLayout(axisNode->GetMBLayout());
+        }
+    }
+}
+
 // -----------------------------------------------------------------------
 // validation
 // -----------------------------------------------------------------------
@@ -498,18 +569,9 @@ void ComputationNetwork::DetermineSetOfAllRoots()
 // validate sub-network needed to evalute a specific output node
 // This calls Validate() on every node in evaluation order (allowing to propagate things forwards through the net).
 // This is called lazily but once only per node until next ClearCache().
-// This also sets up MBLayout links.
+// MBLayout links are expected to have been set up already for inputs, and reset to nullptr for all other nodes.
 void ComputationNetwork::ValidateNetwork()
 {
-    // reset to a well-defined MBLayout (any meaningful layout should do here)
-    // Note that Validate is never called during operation. Any actual computation will lead to MBLayout to be set.
-    m_pMBLayout->Init(1, 0);
-
-    // set up MBLayout links of inputs (all others get propagated upwards through Validate())
-    // TODO: Once we support mismatching layouts, this will be more involved. For now, everything shares the one layout that the Network knows about.
-    for (auto node : InputNodes(nullptr))
-        node->LinkToMBLayout(m_pMBLayout);
-
     // we call all nodes' Validate() in order to validate, that is, set up MBLayout and FunctionValues dimension
     // A problem is that recurrent loops may require partial validation.
     // Nodes validated on partial input (i.e. some children not yet validated) will be revisited.
@@ -527,16 +589,16 @@ void ComputationNetwork::ValidateNetwork()
     //    Keep going through the list until all nodes have been validated and all inputs have been validated as well.
     //  - validate (final)              // final means consistency checks
     //    Fail if any change during this stage.
-    size_t pass = 0;
+    size_t pass = 1;
     size_t toValidate = nodes.size();
     while (toValidate > 0)
     {
+        fprintf(stderr, "\nValidating network. %d nodes to process in pass %d.\n\n", (int) toValidate, (int) pass);
+        toValidate = ValidateNodes(nodes, /*isFirstPass=*/pass == 1, false /*isFinalValidationPass*/);
         pass++;
-        fprintf(stderr, "\n\nValidating network. %d nodes to process in pass %d.\n", (int) toValidate, (int) pass);
-        ValidateNodes(nodes, false /*isFinalValidationPass*/, toValidate);
     }
-    fprintf(stderr, "\n\nValidating network, final pass.\n");
-    ValidateNodes(nodes, true /*isFinalValidationPass*/, toValidate);
+    fprintf(stderr, "\nValidating network, final pass.\n\n");
+    toValidate = ValidateNodes(nodes, /*isFirstPass=*/pass == 1, true /*isFinalValidationPass*/);
     if (toValidate != 0)
         LogicError("ValidateSubNetwork: ValidateNodes(true) unexpectedly returned with work left to do.");
 
@@ -561,12 +623,12 @@ void ComputationNetwork::ValidateNetwork()
     vector<ComputationNodeBasePtr> nonDefaultNodes;
     for (auto node : nodes)
     {
-        if (!(node->GetMBLayout() == m_pMBLayout))
+        if (!(node->GetMBLayout() == m_pMBLayoutOfNetwork))
             nonDefaultNodes.push_back(node);
     }
     if (!nonDefaultNodes.empty())
     {
-        fprintf(stderr, "%d out of %d nodes do not share the minibatch layout with the input data.\n", (int) nonDefaultNodes.size(), (int) nodes.size());
+        fprintf(stderr, "%d out of %d nodes do not share the minibatch layout with the input data.\n", (int)nonDefaultNodes.size(), (int)nodes.size());
         // for (auto node : nonDefaultNodes)
         //    fprintf(stderr, "    %ls\n", node->NodeName().c_str());
         // fprintf(stderr, "\n\n");
@@ -579,9 +641,41 @@ static pair<TensorShape, bool> GetDims(const ComputationNodeBasePtr& node)
     return make_pair(node->GetSampleLayout(), node->HasMBLayout());
 }
 
-void ComputationNetwork::ValidateNodes(list<ComputationNodeBasePtr> nodes, bool isFinalValidationPass, size_t& todo)
+bool ComputationNetwork::ValidateNode(ComputationNodeBasePtr node, bool isFinalValidationPass) const
 {
-    todo = 0; // returns how many nodes are to be redone
+    const auto& children = node->GetInputs();
+
+    // keep state
+    MBLayoutPtr oldMBLayoutPtr = node->GetMBLayout();
+    auto dim = GetDims(node);
+    vector<pair<TensorShape, bool>> childDims;
+    for (auto& child : children)
+        childDims.push_back(GetDims(child));
+    auto sampleLayout = node->GetSampleLayout();
+    // We do call validate(final) as many times as needed, since stuff may have changed underneath.
+    node->Validate(isFinalValidationPass /*final*/); // all nodes have been visited: do verification instead of just inference
+    // also take the opportunity to propagate m_needsGradient
+    auto needsGradient = node->m_needsGradient;
+    for (auto& child : children) // TODO: do we need a check that this is stable if isFinalValidationPass?
+        node->m_needsGradient |= child->m_needsGradient;
+    // check state --node will be valid if all nodes have been visited and node has not been updated
+    bool unchanged = true;
+    unchanged &= (oldMBLayoutPtr == node->GetMBLayout());
+    unchanged &= (dim == GetDims(node));
+    vector<pair<TensorShape, bool>> newChildDims;
+    for (auto& child : children)
+        newChildDims.push_back(GetDims(child));
+    unchanged &= (childDims == newChildDims);
+    unchanged &= (sampleLayout == node->GetSampleLayout());
+    unchanged &= (needsGradient == node->m_needsGradient);
+    return !unchanged;
+}
+
+// perform one pass of validation over the topologically-sorted node set
+// returns how many nodes either could not yet be validated yet or have changed and thus must be redone
+size_t ComputationNetwork::ValidateNodes(list<ComputationNodeBasePtr> nodes, bool isFirstPass, bool isFinalValidationPass)
+{
+    size_t todo = 0;
     for (auto& node : nodes)
     {
         const auto& children = node->GetInputs();
@@ -593,38 +687,39 @@ void ComputationNetwork::ValidateNodes(list<ComputationNodeBasePtr> nodes, bool 
         {
             hasVisitedChild |= child->m_visited; // if not a single visited child then no point in validating
             allChildrenVisited &= child->m_visited;
+
+            // Make sure we don't use DynamicAxis in places where it was not designed for.
+            // This is a stop-gap. We need a more coherent concept for passing of shapes.
+            if (child->OperationName() == L"DynamicAxis")
+                RuntimeError("%ls: Cannot be used as input to another node. It can only be used on the 'dynamicAxis' property of an Input node.", child->NodeDescription().c_str());
         }
+
         // if there is not at least one visited child
         bool valid = false;
-        if (hasVisitedChild || isLeaf)
+        if (hasVisitedChild || isLeaf) // got at least one child: it makes sense to call Validate()
         {
-            // got at least one child: it makes sense to call Validate()
-            // keep state
-            MBLayoutPtr oldMBLayoutPtr = node->GetMBLayout();
-            auto dim = GetDims(node);
-            vector<pair<TensorShape, bool>> childDims;
-            for (auto& child : children)
-                childDims.push_back(GetDims(child));
-            auto sampleLayout = node->GetSampleLayout();
-            // We do call validate(final) as many times as needed, since stuff may have changed underneath.
-            node->PrintSelfBeforeValidation();
-            node->Validate(isFinalValidationPass /*final*/); // all nodes have been visited: do verification instead of just inference
-            fprintf(stderr, " -> [%s%s]", string(node->GetSampleLayout()).c_str(), node->HasMBLayout() ? " x *" : "");
+            string prevPrototype = node->FormatOperationPrototype("");
+            bool unchanged;
+            try
+            {
+                unchanged = !ValidateNode(node, isFinalValidationPass);
+                string updatedPrototype = node->FormatOperationPrototype("");
+#if 1           // print prototype in final validation pass
+                unchanged;
+                if (isFinalValidationPass)
+#else           // print prototype upon every change (useful for debugging)
+                if (isFirstPass || !unchanged || prevPrototype != updatedPrototype)
+#endif
+                    fprintf(stderr, "Validating --> %s\n", updatedPrototype.c_str());
+            }
+            catch (...) // if validation failed then print the prototype anyway so one can see the input args
+            {
+                fprintf(stderr, "Validating --> %s FAILED\n", prevPrototype.c_str());
+                throw;
+            }
             node->m_visited = true;
-            // also take the opportunity to propagate m_needsGradient
-            auto needsGradient = node->m_needsGradient;
-            for (auto& child : children) // TODO: do we need a check that this is stable if isFinalValidationPass?
-                node->m_needsGradient |= child->m_needsGradient;
-            // check state --node will be valid if all nodes have been visited and node has not been updated
-            bool unchanged = true;
-            unchanged &= (oldMBLayoutPtr == node->GetMBLayout());
-            unchanged &= (dim == GetDims(node));
-            vector<pair<TensorShape, bool>> newChildDims;
-            for (auto& child : children)
-                newChildDims.push_back(GetDims(child));
-            unchanged &= (childDims == newChildDims);
-            unchanged &= (sampleLayout == node->GetSampleLayout());
-            unchanged &= (needsGradient == node->m_needsGradient);
+            // print the new type
+            // sanity checks
             if (isFinalValidationPass && !unchanged)
                 LogicError("ValidateSubNetwork: %ls %ls operation changed during final validation.", node->NodeName().c_str(), node->OperationName().c_str());
             if (isFinalValidationPass && !allChildrenVisited)
@@ -636,6 +731,7 @@ void ComputationNetwork::ValidateNodes(list<ComputationNodeBasePtr> nodes, bool 
         if (!valid)
             todo++;
     }
+    return todo;
 }
 
 // -----------------------------------------------------------------------
@@ -645,54 +741,59 @@ void ComputationNetwork::ValidateNodes(list<ComputationNodeBasePtr> nodes, bool 
 void ComputationNetwork::MarkValueNonSharableNodes()
 {
     const auto& nodes = GetEvalOrder(nullptr);
-    std::map<wstring, bool> allLeafDescendentsAreParameters;
+    std::map<wstring, bool> allLeafDescendentsAreParametersOrPreComputeNodes;
     std::list<ComputationNodeBasePtr> allLearnableParameters = GetNodesWithType(OperationNameOf(LearnableParameter));
     // note that: we cannot use m_learnableParameters because we need all parameters node, regardless whether it requires update or not
 
+    std::list<ComputationNodeBasePtr> allPreComputeNodes;
+    for (const auto& node : nodes)
+    {
+        if (node->Is<IPreComputeNode>())
+            allPreComputeNodes.push_back(node);
+    }
+
     for (auto& node : nodes)
     {
-        auto children = node->GetInputs();
+        auto inputs = node->GetInputs();
         wstring myname = node->NodeName();
-        bool allParameters = true;
+        bool allParametersOrPreComputeNodes = true;
 
-        if (children.size()) // we don't do the check for leaf node, cause all the possible leaf nodes (input/parameters/precompute node) are marked as non-sharable already
+        if (inputs.size()) // we don't do the check for leaf node, cause all the possible leaf nodes (input/parameters/precompute node) are marked as non-sharable already
         {
-            for (auto child : children)
+            if (std::find(allPreComputeNodes.begin(), allPreComputeNodes.end(), node) == allPreComputeNodes.end())
             {
-                wstring ChildName = child->NodeName();
-                if (allLeafDescendentsAreParameters.find(ChildName) == allLeafDescendentsAreParameters.end())
+                for (auto input : inputs)
                 {
-                    // not found, means it is a leaf node (we are at eval order )
-                    assert(child->IsLeaf() || child->IsPartOfLoop());
-                    if (std::find(allLearnableParameters.begin(), allLearnableParameters.end(), child) != allLearnableParameters.end())
+                    const auto& inputName = input->NodeName();
+                    if (allLeafDescendentsAreParametersOrPreComputeNodes.find(inputName) == allLeafDescendentsAreParametersOrPreComputeNodes.end())
                     {
-                        allLeafDescendentsAreParameters[ChildName] = true;
+                        // not found, means it is a leaf node (we are at eval order )
+                        assert(input->IsLeaf() || input->IsPartOfLoop());
+                        if (std::find(allLearnableParameters.begin(), allLearnableParameters.end(), input) != allLearnableParameters.end())
+                        {
+                            allLeafDescendentsAreParametersOrPreComputeNodes[inputName] = true;
+                        }
+                        else
+                        {
+                            allParametersOrPreComputeNodes = false;
+                            allLeafDescendentsAreParametersOrPreComputeNodes[inputName] = false;
+                            break;
+                        }
                     }
                     else
                     {
-                        allParameters = false;
-                        allLeafDescendentsAreParameters[ChildName] = false;
-                        break;
-                    }
-                }
-                else
-                {
-                    if (allLeafDescendentsAreParameters[ChildName] == false)
-                    {
-                        allParameters = false;
-                        break;
+                        if (allLeafDescendentsAreParametersOrPreComputeNodes[inputName] == false)
+                        {
+                            allParametersOrPreComputeNodes = false;
+                            break;
+                        }
                     }
                 }
             }
-            allLeafDescendentsAreParameters[myname] = allParameters;
-            if (allParameters)
-            {
+
+            allLeafDescendentsAreParametersOrPreComputeNodes[myname] = allParametersOrPreComputeNodes;
+            if (allParametersOrPreComputeNodes)
                 node->MarkValueNonSharable();
-            }
-            else
-            {
-                node->MarkValueSharable();
-            }
         }
     }
 }
@@ -705,6 +806,9 @@ void ComputationNetwork::AllocateAllMatrices(const std::vector<ComputationNodeBa
                                              const std::vector<ComputationNodeBasePtr>& outValueRootNodes,
                                              ComputationNodeBasePtr trainRootNode)
 {
+    if (AreMatricesAllocated())
+        return;
+
     // Allocate memory for forward/backward computation
     fprintf(stderr, "\n\nAllocating matrices for forward and/or backward propagation.\n");
 
@@ -728,24 +832,23 @@ void ComputationNetwork::AllocateAllMatrices(const std::vector<ComputationNodeBa
     std::unordered_map<ComputationNodeBasePtr, std::unordered_set<ComputationNodeBasePtr>> parentsMap;
     for (auto& rootNode : forwardPropRoots)
     {
-        list<ComputationNodeBasePtr>& currentRootEvalNodes = GetEvalOrder(rootNode);
-        for (auto& currentNode : currentRootEvalNodes)
+        for (const auto& node : GetEvalOrder(rootNode))
         {
-            for (int i = 0; i < currentNode->GetNumInputs(); i++)
+            for (int i = 0; i < node->GetNumInputs(); i++)
             {
-                ComputationNodeBasePtr pNode = currentNode->GetInputs()[i];
-                parentsMap[pNode].insert(currentNode);
+                ComputationNodeBasePtr input = node->GetInputs()[i];
+                parentsMap[input].insert(node);
 
                 if (performingBackPropagation)
                 {
-                    if (outputValueNeededDuringBackProp.find(pNode) == outputValueNeededDuringBackProp.end())
-                        outputValueNeededDuringBackProp[pNode] = pNode->OutputUsedInComputingInputNodesGradients();
+                    if (outputValueNeededDuringBackProp.find(input) == outputValueNeededDuringBackProp.end())
+                        outputValueNeededDuringBackProp[input] = input->OutputUsedInComputingInputNodesGradients();
 
-                    outputValueNeededDuringBackProp[pNode] |= currentNode->InputUsedInComputingInputNodesGradients(i);
+                    outputValueNeededDuringBackProp[input] |= node->InputUsedInComputingInputNodesGradients(i);
                 }
                 else
                 {
-                    outputValueNeededDuringBackProp[pNode] = false;
+                    outputValueNeededDuringBackProp[input] = false;
                 }
             }
         }
@@ -794,7 +897,7 @@ void ComputationNetwork::AllocateAllMatrices(const std::vector<ComputationNodeBa
         else
         {
             nodeIter->RequestMatricesBeforeForwardProp(m_matrixPool);
-            // we only release matrices for the children since the root node's informatioin will be used and should not be shared
+            // we only release matrices for the children since the root node's information will be used and should not be shared
             // with others
             ReleaseMatricesAfterEvalForChildren(nodeIter, parentCount);
         }
@@ -802,7 +905,7 @@ void ComputationNetwork::AllocateAllMatrices(const std::vector<ComputationNodeBa
 
     if (trainRootNode != nullptr)
     {
-        std::list<ComputationNodeBasePtr>& backPropNodes = GetEvalOrder(trainRootNode);
+        const std::list<ComputationNodeBasePtr>& backPropNodes = GetEvalOrder(trainRootNode);
 
         // now, simulate the gradient computation order to determine how to allocate matrices
         set<ComputationNodeBasePtr> completedGradient;
@@ -832,11 +935,13 @@ void ComputationNetwork::AllocateAllMatrices(const std::vector<ComputationNodeBa
                 // PAR mode: we can allocate and immediately deallocate one by one
                 n->AllocateGradientMatricesForInputs(m_matrixPool);
                 // Root node's information will be used and should not be shared with others, also it's small (1x1)
-                if ((n != trainRootNode) && n->NeedGradient())
+                if ((n != trainRootNode) && n->NeedsGradient())
                     n->ReleaseMatricesAfterBackprop(m_matrixPool);
             }
         }
     }
+
+    m_areMatricesAllocated = true;
 }
 
 void ComputationNetwork::ReleaseMatricesAfterEvalForChildren(ComputationNodeBasePtr n, std::unordered_map<ComputationNodeBasePtr, int>& parentCount)

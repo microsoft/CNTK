@@ -48,11 +48,16 @@
       <WarningLevel>Level4</WarningLevel>
       <SDLCheck>true</SDLCheck>
       <TreatWarningAsError>true</TreatWarningAsError>
-      <AdditionalIncludeDirectories>..\..\common\include;..\..\math</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)Source\Common\Include;$(SolutionDir)Source\Math</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <OpenMPSupport>true</OpenMPSupport>
+    </ClCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="$(DebugBuild)">
     <ClCompile>
@@ -64,6 +69,7 @@
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
+      <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
@@ -71,14 +77,22 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="BpttPacker.h" />
+    <ClInclude Include="Bundler.h" />
+    <ClInclude Include="ChunkRandomizer.h" />
     <ClInclude Include="DataDeserializerBase.h" />
-    <ClInclude Include="TransformerBase.h" />
     <ClInclude Include="BlockRandomizer.h" />
+    <ClInclude Include="Packer.h" />
+    <ClInclude Include="PackerBase.h" />
+    <ClInclude Include="SequencePacker.h" />
+    <ClInclude Include="SequenceRandomizer.h" />
+    <ClInclude Include="StringToIdMap.h" />
+    <ClInclude Include="TransformerBase.h" />
     <ClInclude Include="NoRandomizer.h" />
     <ClInclude Include="CudaMemoryProvider.h" />
     <ClInclude Include="DataDeserializer.h" />
     <ClInclude Include="ElementTypeUtils.h" />
-    <ClInclude Include="SampleModePacker.h" />
+    <ClInclude Include="FramePacker.h" />
     <ClInclude Include="HeapMemoryProvider.h" />
     <ClInclude Include="MemoryProvider.h" />
     <ClInclude Include="Reader.h" />
@@ -86,10 +100,16 @@
     <ClInclude Include="Transformer.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="BlockRandomizer.cpp" />
+    <ClCompile Include="BpttPacker.cpp" />
+    <ClCompile Include="Bundler.cpp" />
+    <ClCompile Include="ChunkRandomizer.cpp" />
     <ClCompile Include="NoRandomizer.cpp" />
-    <ClCompile Include="SampleModePacker.cpp" />
+    <ClCompile Include="BlockRandomizer.cpp" />
+    <ClCompile Include="PackerBase.cpp" />
+    <ClCompile Include="FramePacker.cpp" />
     <ClCompile Include="ReaderShim.cpp" />
+    <ClCompile Include="SequencePacker.cpp" />
+    <ClCompile Include="SequenceRandomizer.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

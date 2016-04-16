@@ -11,18 +11,21 @@ echo #define _BUILDINFO_H >> buildinfo.h$$
 FOR /F %%i IN ('hostname') DO SET HOST=%%i
 :: assuming hostname always exists
 
-:: not sure whether git in path ?
-call git --version 2 > nul
-if not %ERRORLEVEL% == 9009 (
-    echo #define _GIT_EXIST >> buildinfo.h$$
-    FOR /F %%i IN ('git rev-parse --abbrev-ref HEAD') DO SET BRANCH=%%i
-    FOR /F %%i IN ('git rev-parse HEAD') DO SET COMMIT=%%i
-    set STATUS=
-    git diff --quiet --cached
-    if not errorlevel 1 git diff --quiet
-    if errorlevel 1 set STATUS= ^(modified^)
-    echo #define _BUILDBRANCH_  "!BRANCH!"      >> buildinfo.h$$
-    echo #define _BUILDSHA1_    "!COMMIT!!STATUS!">> buildinfo.h$$
+:: note: we'll only use git which is in path
+where -q git
+if not errorlevel 1 (
+    call git --version > NUL 2>&1
+    if not errorlevel 1 (
+        echo #define _GIT_EXIST >> buildinfo.h$$
+        FOR /F %%i IN ('call git rev-parse --abbrev-ref HEAD') DO SET BRANCH=%%i
+        FOR /F %%i IN ('call git rev-parse HEAD') DO SET COMMIT=%%i
+        set STATUS=
+        call git diff --quiet --cached
+        if not errorlevel 1 call git diff --quiet
+        if errorlevel 1 set STATUS= ^(modified^)
+        echo #define _BUILDBRANCH_  "!BRANCH!"      >> buildinfo.h$$
+        echo #define _BUILDSHA1_    "!COMMIT!!STATUS!">> buildinfo.h$$
+    )
 )
 
 :: For now, math lib is basically hardwired
@@ -41,6 +44,7 @@ echo #define _BUILDPATH_    %buildpath%     >> buildinfo.h$$
 
 set build_type=Unknown
 set build_target=Unknown
+:: Configuration property provided by CNTK.vcxproj
 if /i "%~1" == "Debug" set build_type=Debug&set build_target=GPU
 if /i "%~1" == "Debug_CpuOnly" set build_type=Debug&set build_target=CPU-only
 if /i "%~1" == "Release" set build_type=Release&set build_target=GPU
@@ -62,10 +66,12 @@ if "%CNTK_ENABLE_ASGD%" == "true" (
 )
 
 if not %build_target% == CPU-only (
-    if "%cuda_path%" == "" (
+    :: CudaPath property provided by CNTK.vcxproj
+    if "%~2%" == "" (
         echo #define _CUDA_PATH_    "NOT_DEFINED"     >> buildinfo.h$$
     ) else (
-        echo #define _CUDA_PATH_    "%cuda_path:\=\\%" >> buildinfo.h$$
+        set cudaPathTemp=%~2
+        echo #define _CUDA_PATH_    "!cudaPathTemp:\=\\!" >> buildinfo.h$$
     )
 
     if not "%cudnn_path%" == "" (
@@ -81,4 +87,4 @@ echo #endif >> buildinfo.h$$
 
 ::: update file only if it changed (otherwise CNTK.cpp will get rebuilt each time)
 fc buildinfo.h$$ buildinfo.h > NUL 2>&1
-if ERRORLEVEL 1 move /Y buildinfo.h$$ buildinfo.h
+if errorlevel 1 move /Y buildinfo.h$$ buildinfo.h
