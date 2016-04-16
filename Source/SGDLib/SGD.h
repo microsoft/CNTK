@@ -555,8 +555,8 @@ protected:
 
 private:
     int SGDTrace(FILE* __restrict __stream, bool isPrependTimestamp, const char* __restrict __format, ...);
-    MultiversoWrapper<ElemType>* m_multiverso;
-    bool m_multiversoBarrier;
+    MultiversoHelper<ElemType>* m_pMultiversoHelper;
+    bool m_pMultiversoHelperBarrier;
 };
 
 }}}

@@ -46,11 +46,11 @@ namespace Microsoft {
 			};
 
 			template<class ElemType = float>
-			class MultiversoWrapper
+			class MultiversoHelper
 			{
 				typedef shared_ptr<ComputationNode<ElemType>> ComputationNodePtr;
 			public:
-				MultiversoWrapper(const std::list<ComputationNodeBasePtr> & learnableNodes,
+				MultiversoHelper(const std::list<ComputationNodeBasePtr> & learnableNodes,
 					int MPINodeNum,
 					bool isAsyncBuffered = true,
 					AdjustLearningRateatBeginning adjusttype = AdjustLearningRateatBeginning::None,
@@ -74,7 +74,8 @@ namespace Microsoft {
 					m_cpuAsyncBuffer = new ElemType*[m_localCacheNumber];
 #ifndef CPUONLY
 					//GPU asynchronous buffer
-					m_gpuAsyncBuffer = new Matrix<ElemType>**[m_localCacheNumber];
+					//m_gpuAsyncBuffer = new Matrix<ElemType>**[m_localCacheNumber];
+          m_gpuAsyncBuffer.resize(m_localCacheNumber);
 
 					//creat an communication stream for the data tranfer between GPU and CPU
 					CudaErrorCheck(cudaStreamCreate(&_commStream));
@@ -91,9 +92,9 @@ namespace Microsoft {
 					MultiversoInit(learnableNodes);
 				}
 
-				~MultiversoWrapper()
+				~MultiversoHelper()
 				{
-					fprintf(stderr, "~MultiversoWrapper\n");
+					fprintf(stderr, "~MultiversoHelper\n");
 					fflush(stderr);
 
 					if (m_isUseAsyncBuffered && m_prefetchThread != nullptr && m_prefetchThread->joinable())
@@ -126,11 +127,17 @@ namespace Microsoft {
 					{
 						ComputationNodePtr node = dynamic_pointer_cast<ComputationNode<ElemType>>(*nodeIter);
 						Matrix<ElemType> &mat = node->Value();
+          printf("here!2\n");
+          fflush(stdout);
+#pragma warning( push )
+#pragma warning( disable : 4238)
+
 #ifndef CPUONLY
 						for (int j = 0; j < m_localCacheNumber; j++)
-							m_gpuAsyncBuffer[j][i] = new Matrix<ElemType>(mat);
+              m_gpuAsyncBuffer[j].push_back(mat.DeepClone());
+              //m_gpuAsyncBuffer[j][i] = mat.DeepClone();
 #endif
-
+#pragma warning( pop )
 						ElemType* px = m_cpuAsyncBuffer[0] + m_tableOffsets[i];
 						mat.CopyToArray(px, m_tableLength[i]);
 					}
@@ -178,14 +185,14 @@ namespace Microsoft {
 							Microsoft::MSR::CNTK::Matrix<ElemType> &mat = node->Value();
 #ifndef CPUONLY
 							//CNTK model -> GPU buffer
-							CudaErrorCheck(cudaMemcpy(m_gpuAsyncBuffer[m_bufferInUse][i]->BufferPointer(),
-								mat.BufferPointer(),
+							CudaErrorCheck(cudaMemcpy(m_gpuAsyncBuffer[m_bufferInUse][i].Data(),
+								mat.Data(),
 								mat.GetNumElements() * sizeof(ElemType),
 								cudaMemcpyDeviceToDevice));
 
 							//GPU buffer -> CNTK model
-							CudaErrorCheck(cudaMemcpy(mat.BufferPointer(),
-								m_gpuAsyncBuffer[m_cacheSwapIndex[m_bufferInUse]][i]->BufferPointer(),
+							CudaErrorCheck(cudaMemcpy(mat.Data(),
+								m_gpuAsyncBuffer[m_cacheSwapIndex[m_bufferInUse]][i].Data(),
 								mat.GetNumElements() * sizeof(ElemType),
 								cudaMemcpyDeviceToDevice));
 #else
@@ -205,7 +212,7 @@ namespace Microsoft {
 						m_prefetchThread = new thread([&](){
 							float factor = DecayCoefficient();
 							int t_cacheIdx = m_bufferInUse;
-							int deviceId = m_gpuAsyncBuffer[t_cacheIdx][0]->GetDeviceId();
+							int deviceId = m_gpuAsyncBuffer[t_cacheIdx][0].GetDeviceId();
 
 							CudaErrorCheck(cudaSetDevice(deviceId));
 
@@ -214,8 +221,8 @@ namespace Microsoft {
 								ElemType * px = m_deltaArray + m_tableOffsets[widx];
 								//GPU buffer -> CPU buffer
 								CudaErrorCheck(cudaMemcpyAsync(px,
-									m_gpuAsyncBuffer[t_cacheIdx][widx]->BufferPointer(),
-									m_gpuAsyncBuffer[t_cacheIdx][widx]->GetNumElements() * sizeof(ElemType),
+									m_gpuAsyncBuffer[t_cacheIdx][widx].Data(),
+									m_gpuAsyncBuffer[t_cacheIdx][widx].GetNumElements() * sizeof(ElemType),
 									cudaMemcpyDeviceToHost,
 									_commStream));
 							}
@@ -242,9 +249,9 @@ namespace Microsoft {
 							{
 								ElemType * py = m_cpuAsyncBuffer[t_cacheIdx] + m_tableOffsets[widx];
 
-								CudaErrorCheck(cudaMemcpyAsync(m_gpuAsyncBuffer[t_cacheIdx][widx]->BufferPointer(),
+								CudaErrorCheck(cudaMemcpyAsync(m_gpuAsyncBuffer[t_cacheIdx][widx].Data(),
 									py,
-									m_gpuAsyncBuffer[t_cacheIdx][widx]->GetNumElements() * sizeof(ElemType),
+									m_gpuAsyncBuffer[t_cacheIdx][widx].GetNumElements() * sizeof(ElemType),
 									cudaMemcpyHostToDevice,
 									_commStream));
 							}
@@ -376,8 +383,13 @@ namespace Microsoft {
 					}
 
 #ifndef CPUONLY
+          printf("here!1\n");
+          fflush(stdout);
 					for (int i = 0; i < m_localCacheNumber; i++)
-						m_gpuAsyncBuffer[i] = new Matrix<ElemType>*[m_tableCount];
+						//m_gpuAsyncBuffer[i] = new Matrix<ElemType>*[m_tableCount];
+						m_gpuAsyncBuffer[i].reserve(m_tableCount);
+          printf("here!2\n");
+          fflush(stdout);
 
 					//create pinned memory
 					for (int i = 0; i < m_localCacheNumber; ++i)
@@ -433,7 +445,8 @@ namespace Microsoft {
 				ElemType ** m_cpuAsyncBuffer;
 
 				//GPU double buffer
-				Matrix<ElemType> *** m_gpuAsyncBuffer;
+				//Matrix<ElemType> ** m_gpuAsyncBuffer;
+        std::vector<std::vector<Matrix<ElemType>   >> m_gpuAsyncBuffer;
 				int m_tableCount;
 #ifndef CPUONLY
 				cudaStream_t _commStream;

@@ -479,7 +479,6 @@ int wmainWithBS(int argc, wchar_t* argv[]) // called from wmain which is a wrapp
     bool paralleltrain = config(L"parallelTrain", false);
     if (paralleltrain)
         mpi = MPIWrapper::GetInstance(true /*create*/);
-	}
 
     g_shareNodeValueMatrices = config(L"shareNodeValueMatrices", false);
 

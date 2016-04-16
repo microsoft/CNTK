@@ -345,27 +345,27 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
                                                   m_seqGammarCalcAMF, m_seqGammarCalcLMF, m_seqGammarCalcWP, m_seqGammarCalcbMMIFactor, m_seqGammarCalcUsesMBR);
     }
 
-	//Multiverso Warpper for ASGD logic init
-	if (m_parallelizationMethod == ParallelizationMethod::DataParallelASGD)
-	{
-		m_multiverso = new MultiversoWrapper<ElemType>(learnableNodes,
-			g_mpi->NumNodesInUse(),
-			m_isPipeline,
-			m_adjustlearningrateatbeginning,
-			m_adjustcoefficient,
-			m_adjustnbminibatch,
-			m_traceLevel);
-		m_multiverso->InitModel(learnableNodes);
-		m_multiversoBarrier = false;
-		m_multiverso->WaitAll();
-	}
+    //Multiverso Warpper for ASGD logic init
+    if (m_parallelizationMethod == ParallelizationMethod::DataParallelASGD)
+    {
+        m_pMultiversoHelper = new MultiversoHelper<ElemType>(learnableNodes,
+        m_mpi->NumNodesInUse(),
+        m_isPipeline,
+        m_adjustlearningrateatbeginning,
+        m_adjustcoefficient,
+        m_adjustnbminibatch,
+        m_traceLevel);
+        m_pMultiversoHelper->InitModel(learnableNodes);
+        m_pMultiversoHelperBarrier = false;
+        m_pMultiversoHelper->WaitAll();
+    }
 
     // --- MAIN EPOCH LOOP
     for (int i = startEpoch; i < (int) m_maxEpochs; i++) // TODO: why is this an int, and not a size_t?
     {
         // Synchronize all ranks before proceeding to ensure that
         // rank 0 has finished writing the previous model file
-      if (m_mpi != nullptr && GetParallelizationMethod() != ParallelizationMethod::DataParallelASGD)
+        if (m_mpi != nullptr && GetParallelizationMethod() != ParallelizationMethod::DataParallelASGD)
         {
           m_mpi->WaitAll();
         }
@@ -534,7 +534,7 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
 
             if (validationSetDataReader != trainSetDataReader && validationSetDataReader != nullptr)
             {
-            SimpleEvaluator<ElemType> evalforvalidation(net, m_mpi);
+                SimpleEvaluator<ElemType> evalforvalidation(net, m_mpi);
                 vector<wstring> cvSetTrainAndEvalNodes;
                 if (criterionNodes.size() > 0)
                 {
@@ -547,7 +547,7 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
 
                 // BUGBUG: We should not use the training MB size. The training MB size is constrained by both convergence and memory. Eval is only constrained by memory.
                 vector<double> vScore = evalforvalidation.Evaluate(validationSetDataReader, cvSetTrainAndEvalNodes, m_mbSize[i]);
-            LOGPRINTF(stderr, "Finished Epoch[%2d of %d]: [Validation Set] TrainLossPerSample = %.8g", i + 1, (int) m_maxEpochs, vScore[0]);
+                LOGPRINTF(stderr, "Finished Epoch[%2d of %d]: [Validation Set] TrainLossPerSample = %.8g", i + 1, (int)m_maxEpochs, vScore[0]);
                 if (vScore.size() > 1)
                 {
                     fprintf(stderr, "; EvalErrPerSample = %.8g", vScore[1]);
@@ -716,7 +716,7 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
     // Synchronize all ranks before proceeding to ensure that
     // rank 0 has finished writing the model file
     // TODO[DataASGD]: should othet other rank waiting in async-mode
-    if (m_mpi != nullptr &&  GetParallazationMethod() != ParallelizationMethod::DataParallelASGD)
+    if (m_mpi != nullptr &&  GetParallelizationMethod() != ParallelizationMethod::DataParallelASGD)
     {
         m_mpi->WaitAll();
     }
@@ -738,7 +738,7 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
     delete inputMatrices;
 	if (m_parallelizationMethod == ParallelizationMethod::DataParallelASGD)
 	{
-		delete m_multiverso;
+		delete m_pMultiversoHelper;
 	}
 }
 
@@ -795,9 +795,9 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                                    (epochNumber >= m_parallelizationStartEpochNum));
     bool useModelAveraging = ((GetParallelizationMethod() == ParallelizationMethod::ModelAveragingSGD) &&
                               (epochNumber >= m_parallelizationStartEpochNum));
-	bool useASGD = ((m_parallelizationMethod == ParallelizationMethod::DataParallelASGD) &&
-			(epochNumber >= m_parallelizationStartEpochNum));
-	bool useParallelTrain = useGradientAggregation || useModelAveraging || useASGD;
+    bool useASGD = ((GetParallelizationMethod() == ParallelizationMethod::DataParallelASGD) &&
+                     (epochNumber >= m_parallelizationStartEpochNum));
+    bool useParallelTrain = useGradientAggregation || useModelAveraging || useASGD;
 
     // MA-related variables
     size_t nSamplesSinceLastModelSync = 0;
@@ -1053,8 +1053,8 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
             for (size_t i = 0; i < epochEvalErrors.size(); i++)
                 epochEvalErrors[i] += m_gradHeader->evalErrors[i];
         }
-			computeTimer.Stop();
-			computeTime += computeTimer.ElapsedSeconds();
+        computeTimer.Stop();
+        computeTime += computeTimer.ElapsedSeconds();
         // update model parameters
         if ((aggregateNumSamples > 0) && (learnRatePerSample > m_minLearnRate * 0.01))
         {
@@ -1091,38 +1091,37 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                 bool synced = m_pMASGDHelper->OnArrivingAtSyncPoint(learnableNodes, smoothedGradients, nSamplesSinceLastModelSync);
                 if (synced)
                 {
-                    nSamplesSinceLastModelSync = 0;
-                        }
-                    }
+                  nSamplesSinceLastModelSync = 0;
+                }
+            }
             // prepare break condition
             if (useDistributedMBReading)
             {
-                noMoreSamplesToProcess = !wasDataRead;
-                }
+              noMoreSamplesToProcess = !wasDataRead;
+            }
+        }
+
+        // using parameter server for parameter update
+        if (useASGD && m_mpi->NumNodesInUse() > 1)
+        {
+            if (GetParallelizationMethod() == ParallelizationMethod::DataParallelASGD && m_nEpochBarrier[epochNumber] > 0 && epochNumber % m_nEpochBarrier[epochNumber] == 0)
+            {
+              // simulating BSP
+              m_pMultiversoHelper->WaitAsyncBuffer();
+              m_pMultiversoHelper->WaitAll();
             }
 
-        if (useASGD && g_mpi->NumNodesInUse() > 1)
-        {
-          if (m_parallelizationMethod == ParallelizationMethod::DataParallelASGD && m_nEpochBarrier[epochNumber] > 0 && epochNumber % m_nEpochBarrier[epochNumber] == 0)
-          {
-            m_multiverso->WaitAsyncBuffer();
-            m_multiverso->WaitAll();
-          }
+            // Determine if any samples were processed across any of the ranks
+            if (useDistributedMBReading)
+            {
+              noMoreSamplesToProcess = !wasDataRead;
+            }
 
-          // Determine if any samples were processed across any of the ranks
-          if (useDistributedMBReading)
-          {
-            noMoreSamplesToProcess = !wasDataRead;
-          }
-
-          size_t processedSamples = 0;
-          if (nSamplesSinceLastModelSync >= m_nFramesBetweenASGDSync[epochNumber])
-          {
-            m_multiverso->PushAndPullModel(learnableNodes);
-            processedSamples = nSamplesSinceLastModelSync;
-            nSamplesSinceLastModelSync = 0;
-          }
-          aggregateNumSamplesWithLabel = processedSamples;
+            if (nSamplesSinceLastModelSync >= m_nFramesBetweenASGDSync[epochNumber])
+            {
+              m_pMultiversoHelper->PushAndPullModel(learnableNodes);
+              nSamplesSinceLastModelSync = 0;
+            }
         }
 
         commTimer.Stop();
@@ -1136,81 +1135,81 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
 
         if (
 #if 0       // output the first few to see if everything started right
-            numMBsRun <= 3 ||
+          numMBsRun <= 3 ||
 #endif
-            numMBsRun % m_numMBsToShowResult == 0)
+          numMBsRun % m_numMBsToShowResult == 0)
         {
-            // get the epoch Values updated
-            if (!useGradientAggregation)
-            {
-                timer.Restart();
-                epochCriterion = localEpochCriterion.Get00Element();
-                for (size_t i = 0; i < epochEvalErrors.size(); i++)
-                {
-                    epochEvalErrors[i] = localEpochEvalErrors(0, i);
-                }
-                timer.Stop();
-
-                // Add the last trailing compute
-                totalTimeInMBs += timer.ElapsedSeconds();
-            }
-
-            double trainLossPerSample = (numSamplesLastMBs != 0) ? ((epochCriterion - epochCriterionLastMBs) / numSamplesLastMBs) : 0.0;
-            bool wasProgressPrinted = false;
-
-            if (epochNumber > 0 || (int) epochSize > 0)
-            {
-                // progress tracing for compute cluster management
-                double mbProg = 0.0;
-                int mbProgNumPrecision = 2;
-                if (m_maxComputedEpochSize != 0)
-                {
-                    double numMBPerEpoch = (double) m_maxComputedEpochSize / (double) tunedMBSize;
-                    mbProg = (double) numMBsRun / numMBPerEpoch;
-                    mbProgNumPrecision = (int) ceil(log10(numMBPerEpoch / (double) m_numMBsToShowResult));
-                    mbProgNumPrecision = max(mbProgNumPrecision - 2, 2);
-                }
-                wasProgressPrinted = ProgressTracing::TraceProgressPercentage(epochNumber, mbProg, false);
-
-                // progress tracing for regular log
-                string formatString = "%s Epoch[%2d of %d]-Minibatch[%4d-%4d, %2." + std::to_string(mbProgNumPrecision) + "f%%]: SamplesSeen = %d; TrainLossPerSample = " +
-                                      GeneratePaddedFloatOrExpFormat(11, 8, trainLossPerSample) + "; ";
-                SGDTrace(stderr, true, formatString.c_str(),
-                         prefixMsg.c_str(), epochNumber + 1, m_maxEpochs, numMBsRun - m_numMBsToShowResult + 1,
-                         numMBsRun, mbProg * 100, numSamplesLastMBs, trainLossPerSample);
-            }
-            else
-            {
-                wasProgressPrinted = ProgressTracing::TraceProgressPercentage(epochNumber, 0.0, false);
-
-                string formatString = "%s Epoch[%2d of %d]-Minibatch[%4d-%4d]: SamplesSeen = %d; TrainLossPerSample = " +
-                                      GeneratePaddedFloatOrExpFormat(11, 8, trainLossPerSample) + "; ";
-                SGDTrace(stderr, true, formatString.c_str(),
-                         prefixMsg.c_str(), epochNumber + 1, m_maxEpochs, numMBsRun - m_numMBsToShowResult + 1,
-                         numMBsRun, numSamplesLastMBs, trainLossPerSample);
-                m_maxComputedEpochSize = numMBsRun * numSamplesLastMBs / m_numMBsToShowResult;
-            }
-
-            double evalError = 0.0;
+          // get the epoch Values updated
+          if (!useGradientAggregation)
+          {
+            timer.Restart();
+            epochCriterion = localEpochCriterion.Get00Element();
             for (size_t i = 0; i < epochEvalErrors.size(); i++)
             {
-                evalError = (epochEvalErrors[i] - epochEvalErrorsLastMBs[i]) / numSamplesLastMBs;
-                string formatString = "EvalErr[%lu]PerSample = " + GeneratePaddedFloatOrExpFormat(0, 8, evalError) + "; ";
-                SGDTrace(stderr, false, formatString.c_str(), i, evalError);
+              epochEvalErrors[i] = localEpochEvalErrors(0, i);
             }
+            timer.Stop();
 
-            string formatString = "TotalTime = " + GeneratePaddedFloatOrExpFormat(0, 4, totalTimeInMBs) + "s; SamplesPerSecond = %.1f\n";
-            SGDTrace(stderr, false, formatString.c_str(), totalTimeInMBs, numSamplesLastMBs / totalTimeInMBs);
+            // Add the last trailing compute
+            totalTimeInMBs += timer.ElapsedSeconds();
+          }
 
-            string statcis_formatString = "; ReadTime = " + GeneratePaddedFloatOrExpFormat(0, 5, readTime) + "s; ComputeTime = " +
-              GeneratePaddedFloatOrExpFormat(0, 5, computeTime) + "s; CommunicationTime = " +
-              GeneratePaddedFloatOrExpFormat(0, 5, commTime) + "s;\n";
-            SGDTrace(stderr, false, statcis_formatString.c_str(), readTime, computeTime, commTime);
+          double trainLossPerSample = (numSamplesLastMBs != 0) ? ((epochCriterion - epochCriterionLastMBs) / numSamplesLastMBs) : 0.0;
+          bool wasProgressPrinted = false;
+
+          if (epochNumber > 0 || (int)epochSize > 0)
+          {
             // progress tracing for compute cluster management
-            if (wasProgressPrinted)
+            double mbProg = 0.0;
+            int mbProgNumPrecision = 2;
+            if (m_maxComputedEpochSize != 0)
             {
-                ProgressTracing::TraceTrainLoss(trainLossPerSample);
+              double numMBPerEpoch = (double)m_maxComputedEpochSize / (double)tunedMBSize;
+              mbProg = (double)numMBsRun / numMBPerEpoch;
+              mbProgNumPrecision = (int)ceil(log10(numMBPerEpoch / (double)m_numMBsToShowResult));
+              mbProgNumPrecision = max(mbProgNumPrecision - 2, 2);
             }
+            wasProgressPrinted = ProgressTracing::TraceProgressPercentage(epochNumber, mbProg, false);
+
+            // progress tracing for regular log
+            string formatString = "%s Epoch[%2d of %d]-Minibatch[%4d-%4d, %2." + std::to_string(mbProgNumPrecision) + "f%%]: SamplesSeen = %d; TrainLossPerSample = " +
+              GeneratePaddedFloatOrExpFormat(11, 8, trainLossPerSample) + "; ";
+            SGDTrace(stderr, true, formatString.c_str(),
+              prefixMsg.c_str(), epochNumber + 1, m_maxEpochs, numMBsRun - m_numMBsToShowResult + 1,
+              numMBsRun, mbProg * 100, numSamplesLastMBs, trainLossPerSample);
+          }
+          else
+          {
+            wasProgressPrinted = ProgressTracing::TraceProgressPercentage(epochNumber, 0.0, false);
+
+            string formatString = "%s Epoch[%2d of %d]-Minibatch[%4d-%4d]: SamplesSeen = %d; TrainLossPerSample = " +
+              GeneratePaddedFloatOrExpFormat(11, 8, trainLossPerSample) + "; ";
+            SGDTrace(stderr, true, formatString.c_str(),
+              prefixMsg.c_str(), epochNumber + 1, m_maxEpochs, numMBsRun - m_numMBsToShowResult + 1,
+              numMBsRun, numSamplesLastMBs, trainLossPerSample);
+            m_maxComputedEpochSize = numMBsRun * numSamplesLastMBs / m_numMBsToShowResult;
+          }
+
+          double evalError = 0.0;
+          for (size_t i = 0; i < epochEvalErrors.size(); i++)
+          {
+            evalError = (epochEvalErrors[i] - epochEvalErrorsLastMBs[i]) / numSamplesLastMBs;
+            string formatString = "EvalErr[%lu]PerSample = " + GeneratePaddedFloatOrExpFormat(0, 8, evalError) + "; ";
+            SGDTrace(stderr, false, formatString.c_str(), i, evalError);
+          }
+
+          string formatString = "TotalTime = " + GeneratePaddedFloatOrExpFormat(0, 4, totalTimeInMBs) + "s; SamplesPerSecond = %.1f\n";
+          SGDTrace(stderr, false, formatString.c_str(), totalTimeInMBs, numSamplesLastMBs / totalTimeInMBs);
+
+          string statcis_formatString = "; ReadTime = " + GeneratePaddedFloatOrExpFormat(0, 5, readTime) + "s; ComputeTime = " +
+            GeneratePaddedFloatOrExpFormat(0, 5, computeTime) + "s; CommunicationTime = " +
+            GeneratePaddedFloatOrExpFormat(0, 5, commTime) + "s;\n";
+          SGDTrace(stderr, false, statcis_formatString.c_str(), readTime, computeTime, commTime);
+          // progress tracing for compute cluster management
+          if (wasProgressPrinted)
+          {
+            ProgressTracing::TraceTrainLoss(trainLossPerSample);
+          }
 
             if (m_traceLevel > 0)
             {
@@ -1236,7 +1235,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
 
         timer.Restart();
         totalEpochSamples += aggregateNumSamplesWithLabel;
-        if (!useModelAveraging && !useDataASGD)
+        if (!useModelAveraging && !useASGD)
           totalSamplesSeen += aggregateNumSamplesWithLabel;
         readTimer.Restart();
 
@@ -1263,15 +1262,15 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
         nSamplesSinceLastModelSync = 0;
     }
 
-	if (useASGD && (g_mpi->NumNodesInUse() > 1))
-	{
-		// ASGD also may not be synced after epoch finished, so do the sync here 
-		int residualSampels = (int)nSamplesSinceLastModelSync;
-		totalSamplesSeen += residualSampels;
-		totalEpochSamples += residualSampels;
-		m_multiverso->PushAndPullModel(learnableNodes);
-		nSamplesSinceLastModelSync = 0;
-	}
+    if (useASGD && (m_mpi->NumNodesInUse() > 1))
+    {
+        // ASGD also shouldn't syncing after every epoch 
+        int residualSampels = (int)nSamplesSinceLastModelSync;
+        totalSamplesSeen += residualSampels;
+        totalEpochSamples += residualSampels;
+        m_pMultiversoHelper->PushAndPullModel(learnableNodes);
+        nSamplesSinceLastModelSync = 0;
+    }
 
     // compute final criterion values
     if (useGradientAggregation)
