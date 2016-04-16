@@ -71,49 +71,43 @@
     }
 
 // version of dispatch macro that prefers the CPU if the 'MatrixPointerToCheck' location is BOTH
-// If the device is GPU, we transfer to CPU in BOTH state, execute the passed operation,
-// and if 'MatrixPointerToSetFlag' is given, collapse to CPU.
-// BUGBUG: 2 of 3 uses pass a 'return' statement, i.e. SetDataLocation() gets skipped.
-// This is used by operator(,) and SetValue(), which accesses individual elements.
-#define DISPATCH_MATRIX_ON_FLAG_USECPU_4BOTH(MatrixPointerToCheck, MatrixPointerToSetFlag, CPUDense, CPUSparse) \
-    {                                                                                                           \
-        CurrentDataLocation curLocation = (MatrixPointerToCheck)->GetCurrentMatrixLocation();                   \
-        if (curLocation == CurrentDataLocation::GPU)                                                            \
-        {                                                                                                       \
-            if ((MatrixPointerToCheck)->GetMatrixType() != MatrixType::SPARSE)                                  \
-            {                                                                                                   \
-                _transferFromDeviceToDevice(GetDeviceId(), CPUDEVICE, false);                                   \
-                if (MatrixPointerToSetFlag != nullptr)                                                          \
-                    ((Matrix*) MatrixPointerToSetFlag)->SetDataLocation(CurrentDataLocation::CPU, MatrixType::DENSE);       \
-                CPUDense;                                                                                       \
-            }                                                                                                   \
-            else                                                                                                \
-            {                                                                                                   \
-                _transferFromDeviceToDevice(GetDeviceId(), CPUDEVICE, false);                                   \
-                if (MatrixPointerToSetFlag != nullptr)                                                          \
-                    ((Matrix*) MatrixPointerToSetFlag)->SetDataLocation(CurrentDataLocation::CPU, MatrixType::SPARSE);      \
-                CPUSparse;                                                                                      \
-            }                                                                                                   \
-        }                                                                                                       \
-        else if (curLocation == CurrentDataLocation::CPU || curLocation == CurrentDataLocation::BOTH)           \
-        {                                                                                                       \
-            if ((MatrixPointerToCheck)->GetMatrixType() != MatrixType::SPARSE)                                  \
-            {                                                                                                   \
-                if (MatrixPointerToSetFlag != nullptr)                                                          \
-                    ((Matrix*) MatrixPointerToSetFlag)->SetDataLocation(CurrentDataLocation::CPU, MatrixType::DENSE);     \
-                CPUDense;                                                                                       \
-            }                                                                                                   \
-            else                                                                                                \
-            {                                                                                                   \
-                if (MatrixPointerToSetFlag != nullptr)                                                          \
-                    ((Matrix*) MatrixPointerToSetFlag)->SetDataLocation(CurrentDataLocation::CPU, MatrixType::SPARSE);    \
-                CPUSparse;                                                                                      \
-            }                                                                                                   \
-        }                                                                                                       \
-        else                                                                                                    \
-        {                                                                                                       \
-            RuntimeError("Matrices do not exist in either CPU or GPU.");                                        \
-        }                                                                                                       \
+#define DISPATCH_MATRIX_ON_FLAG_USECPU_4BOTH(MatrixPointerToCheck, MatrixPointerToSetFlag, CPUDense, GPUDense, CPUSparse, GPUSparse) \
+    {                                                                                                                                \
+        CurrentDataLocation curLocation = (MatrixPointerToCheck)->GetCurrentMatrixLocation();                                        \
+        if (curLocation == CurrentDataLocation::GPU)                                                                                 \
+        {                                                                                                                            \
+            if ((MatrixPointerToCheck)->GetMatrixType() != MatrixType::SPARSE)                                                       \
+            {                                                                                                                        \
+                GPUDense;                                                                                                            \
+                if (MatrixPointerToSetFlag != nullptr)                                                                               \
+                    ((Matrix*) MatrixPointerToSetFlag)->SetDataLocation(CurrentDataLocation::GPU, MatrixType::DENSE);                \
+            }                                                                                                                        \
+            else                                                                                                                     \
+            {                                                                                                                        \
+                GPUSparse;                                                                                                           \
+                if (MatrixPointerToSetFlag != nullptr)                                                                               \
+                    ((Matrix*) MatrixPointerToSetFlag)->SetDataLocation(CurrentDataLocation::GPU, MatrixType::SPARSE);               \
+            }                                                                                                                        \
+        }                                                                                                                            \
+        else if (curLocation == CurrentDataLocation::CPU || curLocation == CurrentDataLocation::BOTH)                                \
+        {                                                                                                                            \
+            if ((MatrixPointerToCheck)->GetMatrixType() != MatrixType::SPARSE)                                                       \
+            {                                                                                                                        \
+                CPUDense;                                                                                                            \
+                if (MatrixPointerToSetFlag != nullptr)                                                                               \
+                    ((Matrix*) MatrixPointerToSetFlag)->SetDataLocation(CurrentDataLocation::CPU, MatrixType::DENSE);                \
+            }                                                                                                                        \
+            else                                                                                                                     \
+            {                                                                                                                        \
+                CPUSparse;                                                                                                           \
+                if (MatrixPointerToSetFlag != nullptr)                                                                               \
+                    ((Matrix*) MatrixPointerToSetFlag)->SetDataLocation(CurrentDataLocation::CPU, MatrixType::SPARSE);               \
+            }                                                                                                                        \
+        }                                                                                                                            \
+        else                                                                                                                         \
+        {                                                                                                                            \
+            RuntimeError("Matrices do not exist in either CPU or GPU.");                                                             \
+        }                                                                                                                            \
     }
 
 // version of helper macro that executes both CPU and GPU macros if 'matrixPointer' location is BOTH
@@ -1005,8 +999,10 @@ ElemType Matrix<ElemType>::Get00Element() const
 template <class ElemType>
 const ElemType Matrix<ElemType>::operator()(const size_t row, const size_t col) const
 {
-    DISPATCH_MATRIX_ON_FLAG_USECPU_4BOTH(this, nullptr/*don't collapse to CPU*/,
+    DISPATCH_MATRIX_ON_FLAG_USECPU_4BOTH(this, nullptr,
         { return m_CPUMatrix->operator()(row, col); },
+        { _transferFromDeviceToDevice(GetDeviceId(), CPUDEVICE, false); return m_CPUMatrix->operator()(row, col); },
+        { NOT_IMPLEMENTED; },
         { NOT_IMPLEMENTED; });
 }
 
@@ -1019,8 +1015,14 @@ const ElemType Matrix<ElemType>::operator()(const size_t row, const size_t col) 
 template <class ElemType>
 ElemType& Matrix<ElemType>::operator()(const size_t row, const size_t col)
 {
-    DISPATCH_MATRIX_ON_FLAG_USECPU_4BOTH(this, this/*collapse to CPU*/,
+    DISPATCH_MATRIX_ON_FLAG_USECPU_4BOTH(this, nullptr,
         { return m_CPUMatrix->operator()(row, col); },
+        {
+            _transferFromDeviceToDevice(GetDeviceId(), CPUDEVICE, false);
+            SetDataLocation(CPU, DENSE);
+            return m_CPUMatrix->operator()(row, col);
+        },
+        { NOT_IMPLEMENTED; },
         { NOT_IMPLEMENTED; });
 }
 
@@ -1220,20 +1222,23 @@ void Matrix<ElemType>::SetValue(const size_t numRows, const size_t numCols, int 
     if (((numRows * numCols) > 0) && (pArray == nullptr))
         InvalidArgument("Invalid pArray.");
 
-    DISPATCH_MATRIX_ON_FLAG(this, this,
-        { m_CPUMatrix->SetValue(numRows, numCols, pArray, matrixFlags); },
-        { m_GPUMatrix->SetValue(numRows, numCols, deviceId, pArray, matrixFlags); },
-        { NOT_IMPLEMENTED; },
-        { NOT_IMPLEMENTED; });
+    DISPATCH_MATRIX_ON_FLAG(this,
+                            this,
+                            m_CPUMatrix->SetValue(numRows, numCols, pArray, matrixFlags),
+                            m_GPUMatrix->SetValue(numRows, numCols, deviceId, pArray, matrixFlags),
+                            NOT_IMPLEMENTED,
+                            NOT_IMPLEMENTED);
 }
 
 template <class ElemType>
 void Matrix<ElemType>::SetValue(const size_t rIdx, const size_t cIdx, ElemType val)
 {
-    // SetValue() uses the same GPU/CPU logic as non-const operator(,),
-    DISPATCH_MATRIX_ON_FLAG_USECPU_4BOTH(this, this/*collapse to CPU*/,
-        { m_CPUMatrix->operator()(rIdx, cIdx) = val; },
-        { m_CPUSparseMatrix->SetValue(rIdx, cIdx, val); });
+    DISPATCH_MATRIX_ON_FLAG_USECPU_4BOTH(this,
+                                         this,
+                                         (*m_CPUMatrix)(rIdx, cIdx) = val,
+                                         NOT_IMPLEMENTED,
+                                         m_CPUSparseMatrix->SetValue(rIdx, cIdx, val),
+                                         NOT_IMPLEMENTED);
 }
 
 // read features
@@ -1506,8 +1511,7 @@ template <class ElemType>
 void Matrix<ElemType>::Resize(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve /*=0*/, bool growOnly /*=true*/)
 {
     // TODO: should this function test whether the size is changing, and skip if it isn't? We have at least one explicit test for this code calling this (recurrent node)
-    DISPATCH_MATRIX_ON_FLAG(this, this,
-    //DISPATCH_MATRIX_ON_FLAG_USEBOTH_4BOTH(this,
+    DISPATCH_MATRIX_ON_FLAG_USEBOTH_4BOTH(this,
         { m_CPUMatrix->Resize(numRows, numCols, growOnly); },
         { m_GPUMatrix->Resize(numRows, numCols, growOnly); },
         { m_CPUSparseMatrix->RequireSizeAndAllocate(numRows, numCols, numNZElemToReserve, growOnly, false); },
@@ -3513,8 +3517,6 @@ void Matrix<ElemType>::_transferToDevice(int to_id, bool isBeingMoved /*= true*/
 }
 
 // this function performs data transfer and updates data location, but not the device that is stored with it
-// If 'isBeingMoved' then location will be set to CPU or GPU, otherwise to BOTH (temp copy for reading).
-// If 'emptyTransfer' then skip copying, but also skip allocating, so this may leave the matrix object with wrong size?
 template <class ElemType>
 void Matrix<ElemType>::_transferFromDeviceToDevice(int from_id, int to_id, bool isBeingMoved /*= true*/, bool emptyTransfer /* = false*/) const
 {
@@ -3670,7 +3672,7 @@ void Matrix<ElemType>::TransferFromDeviceToDevice(int from_id, int to_id, bool i
 {
     _transferFromDeviceToDevice(from_id, to_id, isBeingMoved, emptyTransfer);
     if (updatePreferredDevice)
-        m_preferredDeviceId = GetDeviceId(); // note: if to_id is CPU but not isBeingMoved, GetDeviceId() will still return a GPU index
+        m_preferredDeviceId = GetDeviceId();
 }
 template <class ElemType>
 void Matrix<ElemType>::TransferToDeviceIfNotThere(int to_id, bool isBeingMoved/*false: may leave in BOTH state*/, bool emptyTransfer/* = false*/, bool updatePreferredDevice/* = true*/) const
