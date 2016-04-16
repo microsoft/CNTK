@@ -664,7 +664,7 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::DoGatherColumnsOf(ElemType beta, const
             continue;
         size_t jIn = (size_t)jInF;
         if (jIn >= a.GetNumCols())
-            InvalidArgument("DoGatherColumnsOf: Map out of bounds.");
+            InvalidArgument("DoGatherColumnsOf: Map out of bounds. %ld >= %ld", (long int)jIn, (long int)a.GetNumCols());
         ScaleAndAddColumn(beta, &us(0,jOut), &a(0,jIn), us.GetNumRows(), alpha);
     }
 
@@ -6091,7 +6091,7 @@ void CPUMatrix<ElemType>::TensorOp(ElemType beta, const CPUMatrix<ElemType>& a, 
     if (reductionOp != ElementWiseOperator::opSum) // TODO: enable the reduction ops
         InvalidArgument("TensorOp: Unary reduction operations other than opSum not yet implemented.");
 
-    // TODO: Change the lambda to take a pointer and a number of elements, so that we can pass it 1 or 4 elements, in order for it to SSE-vectorize.
+// TODO: Change the lambda to take a pointer and a number of elements, so that we can pass it 1 or 4 elements, in order for it to SSE-vectorize.
 #define CaseUnaryTensorOp(oper)                                                        \
     case ElementWiseOperator::op##oper:                                                \
         return TensorOpWithFn(beta, pointers, alpha, [](const array<ElemType*, 2>& pp) \

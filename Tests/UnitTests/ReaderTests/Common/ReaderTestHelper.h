@@ -189,20 +189,20 @@ struct ReaderFixture
 
             for (auto cnt = 0; dataReader.GetMinibatch(map) && cnt < m_maxMiniBatchCount; cnt++)
             {
-                MBLayoutPtr pMBlayoutPtr = make_shared<MBLayout>();
-                dataReader.CopyMBLayoutTo(pMBlayoutPtr);
                 // Process the Feature Matri(x|ces)
                 for (auto i = 0; i < numFeatureFiles; i++)
                 {
                     wstring name = numFeatureFiles > 1 ? L"features" + std::to_wstring(i + 1) : L"features";
-                    OutputMatrix(map.GetInputMatrix<ElemType>(name), *pMBlayoutPtr, outputFile);
+                    auto& layoutPtr = map.GetInput(name).pMBLayout;
+                    OutputMatrix(map.GetInputMatrix<ElemType>(name), *layoutPtr, outputFile);
                 }
 
                 // Process the Label Matri(x|ces)
                 for (auto i = 0; i < numLabelFiles; i++)
                 {
                     wstring name = numLabelFiles > 1 ? L"labels" + std::to_wstring(i + 1) : L"labels";
-                    OutputMatrix(map.GetInputMatrix<ElemType>(name), *pMBlayoutPtr, outputFile);
+                    auto& layoutPtr = map.GetInput(name).pMBLayout;
+                    OutputMatrix(map.GetInputMatrix<ElemType>(name), *layoutPtr, outputFile);
                 }
             }
         }
@@ -255,7 +255,10 @@ struct ReaderFixture
         std::vector<shared_ptr<Matrix<ElemType>>> features;
         std::vector<shared_ptr<Matrix<ElemType>>> labels;
 
-        MBLayoutPtr pMBLayout = make_shared<MBLayout>();
+        // For the time being, use the same layout across all inputs.
+        // TODO: add an option to create per-input layouts (once we have test-cases with different layouts)
+        MBLayoutPtr pMBLayout = make_shared<MBLayout>(1, 0, L"X");
+
         for (auto i = 0; i < numFeatureFiles; i++)
         {
             features.push_back(make_shared<Matrix<ElemType>>(0));

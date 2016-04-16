@@ -117,7 +117,7 @@ template <class ElemType>
     if (!m_pMBLayout)
     {
         m_pMBLayout = make_shared<MBLayout>(); // this generates a new layout
-        m_pMBLayout->SetUniqueAxisName(NodeName());
+        m_pMBLayout->SetUniqueAxisName(L"WhereNodeAxis");
     }
     // we map scalars to scalars
     if (isFinalValidationPass && Input(0)->GetSampleLayout().GetNumElements() != 1)
@@ -157,6 +157,7 @@ template <class ElemType>
             result(0, jIndex) = (ElemType)jSource;
         }
     }
+    // Note: maybe this is no longer needed, now that we do the same inside UpdateFunctionValueSize() for all nodes.
     result.CollapseDataLocationAfterWriting(); // BUGBUG: Move back, since BOTH state is broken at present.
 }
 

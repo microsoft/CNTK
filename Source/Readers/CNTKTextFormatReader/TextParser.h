@@ -124,28 +124,28 @@ private:
     void SkipToNextValue(size_t& bytesToRead);
     void SkipToNextInput(size_t& bytesToRead);
 
-    bool RefillBuffer();
+    bool TryRefillBuffer();
 
     int64_t GetFileOffset() const { return m_fileOffsetStart + (m_pos - m_bufferStart); }
 
     // Reads an alias/name and converts it to an internal stream id (= stream index).
-    bool GetInputId(size_t& id, size_t& bytesToRead);
+    bool TryGetInputId(size_t& id, size_t& bytesToRead);
 
-    bool ReadRealNumber(ElemType& value, size_t& bytesToRead);
+    bool TryReadRealNumber(ElemType& value, size_t& bytesToRead);
 
-    bool ReadUint64(size_t& value, size_t& bytesToRead);
+    bool TryReadUint64(size_t& value, size_t& bytesToRead);
 
     // Reads dense sample values into the provided vector.
-    bool ReadDenseSample(std::vector<ElemType>& values, size_t sampleSize, size_t& bytesToRead);
+    bool TryReadDenseSample(std::vector<ElemType>& values, size_t sampleSize, size_t& bytesToRead);
 
     // Reads sparse sample values and corresponging indices into the provided vectors.
-    bool ReadSparseSample(std::vector<ElemType>& values, std::vector<IndexType>& indices, size_t& bytesToRead);
+    bool TryReadSparseSample(std::vector<ElemType>& values, std::vector<IndexType>& indices, size_t& bytesToRead);
 
     // Reads one whole row (terminated by a row delimiter) of samples
-    bool ReadRow(SequenceBuffer& sequence, size_t& bytesToRead);
+    bool TryReadRow(SequenceBuffer& sequence, size_t& bytesToRead);
 
     // Returns true if there's still data available.
-    bool inline CanRead() { return m_pos != m_bufferEnd || RefillBuffer(); }
+    bool inline CanRead() { return m_pos != m_bufferEnd || TryRefillBuffer(); }
 
     // Given a descriptor, retrieves the data for the corresponging sequence from the file.
     SequenceBuffer LoadSequence(bool verifyId, const SequenceDescriptor& descriptor);

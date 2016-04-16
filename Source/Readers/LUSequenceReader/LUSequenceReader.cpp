@@ -817,7 +817,7 @@ void BatchLUSequenceReader<ElemType>::SetNumParallelSequences(const size_t mz)
 }
 
 template <class ElemType>
-bool BatchLUSequenceReader<ElemType>::GetMinibatch(StreamMinibatchInputs& matrices)
+bool BatchLUSequenceReader<ElemType>::TryGetMinibatch(StreamMinibatchInputs& matrices)
 {
     // get out if they didn't call StartMinibatchLoop() first
     // TODO: Why is this allowed? Why not terminate?
@@ -881,12 +881,12 @@ bool BatchLUSequenceReader<ElemType>::GetMinibatch(StreamMinibatchInputs& matric
                     {
                         assert(idx == (LabelIdType) NULLLABEL); // TODO: what other conditions?
                         // if (!m_pMBLayout->IsGap(s, t))    // verify that these are marked as NoInput
-                        //    LogicError("BatchLUSequenceReader::GetMinibatch observation is larger than its dimension but no_labels sign is not used to indicate that this observation has no labels. Possible reason is a bug in EnsureDataAvailable or a bug here.");
+                        //    LogicError("BatchLUSequenceReader::TryGetMinibatch observation is larger than its dimension but no_labels sign is not used to indicate that this observation has no labels. Possible reason is a bug in EnsureDataAvailable or a bug here.");
                         continue;
                     }
 
                     // if (m_pMBLayout->IsGap(s, t))    // verify that these are marked as NoInput
-                    //    LogicError("BatchLUSequenceReader::GetMinibatch: Inconsistent NoInput flag");
+                    //    LogicError("BatchLUSequenceReader::TryGetMinibatch: Inconsistent NoInput flag");
 
                     locObs.SetValue(idx + jj * featInfo.dim, j, (ElemType) 1);
                 }
@@ -1171,7 +1171,7 @@ template class BatchLUSequenceReader<double>;
 template class BatchLUSequenceReader<float>;
 
 template <class ElemType>
-bool MultiIOBatchLUSequenceReader<ElemType>::GetMinibatch(StreamMinibatchInputs& matrices)
+bool MultiIOBatchLUSequenceReader<ElemType>::TryGetMinibatch(StreamMinibatchInputs& matrices)
 {
     // on first iteration, need to check if all requested data matrices are available
     std::map<std::wstring, size_t>::iterator iter;

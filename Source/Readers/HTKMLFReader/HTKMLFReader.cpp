@@ -931,7 +931,7 @@ bool HTKMLFReader<ElemType>::GetHmmData(msra::asr::simplesenonehmm* hmm)
 // returns - true if there are more minibatches, false if no more minibatchs remain
 // TODO: Why do we have two read functions? Is one not a superset of the other?
 template <class ElemType>
-bool HTKMLFReader<ElemType>::GetMinibatch(StreamMinibatchInputs& matrices)
+bool HTKMLFReader<ElemType>::TryGetMinibatch(StreamMinibatchInputs& matrices)
 {
     if (m_trainOrTest)
     {

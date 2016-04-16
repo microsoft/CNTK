@@ -36,7 +36,8 @@
 #define CNTK_MODEL_VERSION_5 5 // ND convolution and pooling
 #define CNTK_MODEL_VERSION_6 6 // Batch norm blending
 #define CNTK_MODEL_VERSION_7 7 // ElemType tag in model file
-#define CURRENT_CNTK_MODEL_VERSION CNTK_MODEL_VERSION_7
+#define CNTK_MODEL_VERSION_8 8 // DynamicAxis for inputs
+#define CURRENT_CNTK_MODEL_VERSION CNTK_MODEL_VERSION_8
 
 extern bool g_shareNodeValueMatrices;
 
@@ -554,8 +555,13 @@ public:
     // helper for the factory function for ComputationNodes
     static vector<ComputationNodeBasePtr> GetInputsFromConfig(const ScriptableObjects::IConfigRecordPtr configp)
     {
+        return GetInputsFromConfig(configp, L"inputs");
+    }
+
+    static vector<ComputationNodeBasePtr> GetInputsFromConfig(const ScriptableObjects::IConfigRecordPtr configp, const std::wstring& property)
+    {
         vector<ComputationNodeBasePtr> inputs;
-        const auto* inputsArg = configp->Find(L"inputs");
+        const auto* inputsArg = configp->Find(property);
         if (inputsArg)
         {
             if (inputsArg->Is<ComputationNodeBase>()) // single arg
@@ -817,6 +823,9 @@ public:
         return std::wstring(L"Node '") + NodeName().c_str() + L"' (" + OperationName().c_str() + L" operation)"; 
     };
 
+    // Helper that returns [a x b x c], including dynamic axes.
+    const std::string ShapeDescription() const;
+
 protected:
 
     // -----------------------------------------------------------------------
@@ -851,7 +860,8 @@ protected:
 typedef ComputationNodeBase::ComputationNodeBasePtr ComputationNodeBasePtr;
 
 // =======================================================================
-// NumInputs -- little helper interface to allow derived Node classes to specify how many inputs they expect
+// NumInputs -- little helper interface to allow derived Node classes to 
+// specify how many inputs they expect
 // =======================================================================
 
 struct INumInputs { virtual size_t GetExpectedNumInputs() const = 0; };
@@ -862,6 +872,14 @@ struct NumInputs : public INumInputs // e.g. derive from NumInputs<2>
     {
         return m_numInputs;
     }
+};
+
+// =======================================================================
+// Nodes that can take a dynamic axis need to implement this.
+// =======================================================================
+struct ITakesDynamicAxis
+{
+    virtual const std::wstring GetRequestedDynamicAxis() const = 0;
 };
 
 // =======================================================================
@@ -1004,7 +1022,7 @@ public:
             if (inputs[i])
                 m_inputs[i] = DownCast(inputs[i]); // (DownCast() checks the type; the assignment then downcasts it again)
             else
-                m_inputs[i] = nullptr; // during network creation, nullpts are possible
+                m_inputs[i] = nullptr; // during network creation, nullptrs are possible
     }
 
 protected:
@@ -1406,7 +1424,7 @@ public:
     virtual void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool) override
     {
         if (IsValueSharable())
-			RequestMatrixFromPool(m_value, matrixPool);
+            RequestMatrixFromPool(m_value, matrixPool);
         else
             CreateMatrixIfNull(m_value);
     }

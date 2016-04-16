@@ -207,7 +207,7 @@ void SparsePCReader<ElemType>::StartMinibatchLoop(size_t mbSize, size_t /*epoch*
 //             [out] each matrix resized if necessary containing data.
 // returns - true if there are more minibatches, false if no more minibatchs remain
 template <class ElemType>
-bool SparsePCReader<ElemType>::GetMinibatch(StreamMinibatchInputs& matrices)
+bool SparsePCReader<ElemType>::TryGetMinibatch(StreamMinibatchInputs& matrices)
 {
     // get out if they didn't call StartMinibatchLoop() first
     if (m_miniBatchSize == 0)

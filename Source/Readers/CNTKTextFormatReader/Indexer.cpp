@@ -140,7 +140,7 @@ void Indexer::Build()
     size_t id = 0;
     int64_t offset = GetFileOffset();
     // read the very first sequence id
-    if (!GetNextSequenceId(id))
+    if (!TryGetSequenceId(id))
     {
         RuntimeError("Expected a sequence id at the offset %" PRIi64 ", none was found.", offset);
     }
@@ -156,7 +156,7 @@ void Indexer::Build()
         offset = GetFileOffset(); // a new line starts at this offset;
         sd.m_numberOfSamples++;
 
-        if (!m_done && GetNextSequenceId(id) && id != sd.m_id)
+        if (!m_done && TryGetSequenceId(id) && id != sd.m_id)
         {
             // found a new sequence, which starts at the [offset] bytes into the file
             sd.m_byteSize = offset - sd.m_fileOffsetBytes;
@@ -192,7 +192,7 @@ void Indexer::SkipLine()
     }
 }
 
-bool Indexer::GetNextSequenceId(size_t& id)
+bool Indexer::TryGetSequenceId(size_t& id)
 {
     bool found = false;
     id = 0;

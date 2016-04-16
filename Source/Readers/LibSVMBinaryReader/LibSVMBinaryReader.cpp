@@ -780,7 +780,7 @@ void LibSVMBinaryReader<ElemType>::DoDSSMMatrix(Matrix<ElemType>& mat, size_t ac
 }
 
 template <class ElemType>
-bool LibSVMBinaryReader<ElemType>::GetMinibatch(StreamMinibatchInputs& matrices)
+bool LibSVMBinaryReader<ElemType>::TryGetMinibatch(StreamMinibatchInputs& matrices)
 {
 //timer = clock();
 #if DEBUG

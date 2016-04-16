@@ -893,7 +893,7 @@ __global__ void _doGatherColumnsOf(ElemType* us, size_t usStride, const ElemType
 
     const ElemType&  ra = a[    i + jIn  *  aStride  ];
     ElemType&       rus = us[id/*i + jOut * usStride*/];
-    
+
     ElemType res = ra * alpha;
     if (beta != 0)
         res += rus * beta;

@@ -100,7 +100,7 @@ void ComputationNodeBase::InferMBLayoutFromInputsForStandardCase(bool isFinalVal
         else if (!pMBLayout) // first non-NULL layout: just copy it
             pMBLayout = child->m_pMBLayout;
         else if (pMBLayout != child->m_pMBLayout && isFinalValidationPass) // got a layout--compare whether it is the same
-            RuntimeError("%ls: InferMBLayoutFromInputsForStandardCase: Expected minibatch layouts to be the same between all children. Child '%ls' (%ls) uses a different layout than previously checked children and might get out of sync during runtime. If this is by design, use ReconcileMBLayout() to forward layouts between nodes.",
+            RuntimeError("%ls: InferMBLayoutFromInputsForStandardCase: Expected minibatch layouts to be the same between all children. Child '%ls' (%ls) uses a different layout than previously checked children and might get out of sync during runtime. If this is by design, use ReconcileDynamicAxis() to forward layouts between nodes.",
                          NodeDescription().c_str(), child->NodeName().c_str(), child->OperationName().c_str());
     }
     // all are consistent: install it
@@ -130,7 +130,7 @@ void ComputationNodeBase::ValidateBinaryZip(bool isFinalValidationPass, bool all
     if (isFinalValidationPass &&
         Input(0)->GetMBLayout() != Input(1)->GetMBLayout() && Input(0)->HasMBLayout() && Input(1)->HasMBLayout())
     {
-        LogicError("%ls: Minibatch layouts are not the same between arguments and might get out of sync during runtime. If this is by design, use ReconcileMBLayout() to forward layouts between nodes.", NodeDescription().c_str());
+        LogicError("%ls: Minibatch layouts are not the same between arguments and might get out of sync during runtime. If this is by design, use ReconcileDynamicAxis() to forward layouts between nodes.", NodeDescription().c_str());
     }
 
     // result has tensor shape with dimensions being the max over both
@@ -176,6 +176,7 @@ void ComputationNodeBase::ValidateBinaryReduce(bool isFinalValidationPass)
     ComputationNodeBase::Validate(isFinalValidationPass);
     m_pMBLayout = nullptr; // this node does not hold mini-batch data
     ValidateInferBinaryInputDims();
+
     if (isFinalValidationPass)
     {
         if (!(Input(0)->GetSampleLayout().IsElementwiseCompatibleWith(Input(1)->GetSampleLayout())))
@@ -338,16 +339,23 @@ TensorShape ComputationNodeBase::GetOneSampleTensorSliceFor(size_t rank, const F
                 prototype += "NULL";
                 continue;
             }
-
-            prototype += msra::strfun::strprintf("[%s%ls]", string(child->m_sampleLayout).c_str(), child->GetMBLayoutAxisString().c_str());
+            prototype += child->ShapeDescription().c_str();
         }
         prototype += extraArgs;
         //prototype += ")";
     }
 
-    prototype += msra::strfun::strprintf(" -> [%s%ls]", string(GetSampleLayout()).c_str(), GetMBLayoutAxisString().c_str());
+    prototype += msra::strfun::strprintf(" -> %s", ShapeDescription().c_str());
 
     return prototype;
+}
+
+const std::string ComputationNodeBase::ShapeDescription() const
+{
+    return msra::strfun::strprintf("[%s%s%ls]",
+        string(m_sampleLayout).c_str(),
+        HasMBLayout() ? " x " : "",
+        HasMBLayout() ? GetMBLayout()->GetAxisName() : L"");
 }
 
 template <class ElemType>

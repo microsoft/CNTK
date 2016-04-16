@@ -34,9 +34,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                         const MPIWrapperPtr& mpi)
     {
         // Reading consists of a sequence of Reader API calls:
-        //  - GetMinibatch() --fills the inputMatrices
+        //  - GetMinibatch() --fills the inputMatrices and copies the MBLayout from Reader into inputMatrices
         //  - SetActualMiniBatchSizeFromFeatures()  --tells Network to resize the nodes' buffers
-        //  - CopyMBLayoutTo()   --copies the MBLayout from Reader to Network
         // with the special twist that in presence of parallelization, there is some decimation involved.
 
         bool wasDataRead = trainSetDataReader.GetMinibatch(inputMatrices); // fill in the minibatch data into the Input nodes' buffers directly
@@ -61,13 +60,23 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             trainSetDataReader.GetMinibatch4SE(*latticeinput, *uids, *boundaries, *extrauttmap);
         }
 
-        // get layout meta-data
-        // BUGBUG (Issue #95): must be adapted for multiple MBLayouts
-        trainSetDataReader.CopyMBLayoutTo(net->GetMBLayoutPtrOfNetwork());
-
+        // TODO: move this into shim for the old readers.
         // decimate if needed. Decimation happens in-place.
+        // This is only allowed for old readers, which support a single layout for all inputs.
         if (!useDistributedMBReading && useParallelTrain)
-            DecimateMinibatchInPlace<ElemType>(inputMatrices, mpi->NumNodesInUse(), mpi->CurrentNodeRank(), net->GetMBLayoutPtrOfNetwork());
+        {
+            auto& pMBLayout = net->GetMBLayoutPtrOfNetwork();
+            
+            // Verify that there's indeed a single layout
+            for (const auto& iter : inputMatrices)
+            {
+                assert(iter.second.pMBLayout == pMBLayout);
+                // TODO: This must be a runtime check, not an assert().
+                UNUSED(iter);
+            }
+        
+            DecimateMinibatchInPlace<ElemType>(inputMatrices, mpi->NumNodesInUse(), mpi->CurrentNodeRank(), pMBLayout);
+        }
 
         // reader will have resized input node's m_value directly. Nodes must be notified to do necessary internal state updates from that.
         // TODO: This is a stopgap. SGD will at some point change from sets of matrices to sets of nodes. Then this will become much simpler.
@@ -139,7 +148,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             // decimatedMB[name]->SetValue(mat.Reshaped(nRows*nSequence, nT).RowSlice( st*nRows , (en-st)*nRows).Reshaped(nRows, nNewParallelSequence*nT));
         }
         // decimate MBLayout as well
-        pDecimateMBLayout = make_shared<MBLayout>(numNewParallelSequence, nT);
+        pDecimateMBLayout = make_shared<MBLayout>(numNewParallelSequence, nT, L"");
         pDecimateMBLayout->SetAxisName(pMBLayout->GetAxisName());
 #if 1
         // now copy over all sequence info records that are inside the range, with adjusted 's'
