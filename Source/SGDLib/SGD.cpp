@@ -1191,10 +1191,13 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
             string formatString = "TotalTime = " + GeneratePaddedFloatOrExpFormat(0, 4, totalTimeInMBs) + "s; SamplesPerSecond = %.1f\n";
             SGDTrace(stderr, false, formatString.c_str(), totalTimeInMBs, trainSamplesSinceLastLogged / totalTimeInMBs);
 
-            string statcis_formatString = "\t\t ----ReadTime = " + GeneratePaddedFloatOrExpFormat(0, 5, readTime) + "s; ComputeTime = " +
-              GeneratePaddedFloatOrExpFormat(0, 5, computeTime) + "s; CommunicationTime = " +
-              GeneratePaddedFloatOrExpFormat(0, 5, commTime) + "s;\n";
-            SGDTrace(stderr, false, statcis_formatString.c_str(), readTime, computeTime, commTime);
+            if (m_traceLevel > 2)
+            {
+                string statcis_formatString = "\t\t ----ReadTime = " + GeneratePaddedFloatOrExpFormat(0, 5, readTime) + "s; ComputeTime = " +
+                  GeneratePaddedFloatOrExpFormat(0, 5, computeTime) + "s; CommunicationTime = " +
+                  GeneratePaddedFloatOrExpFormat(0, 5, commTime) + "s;\n";
+                SGDTrace(stderr, false, statcis_formatString.c_str(), readTime, computeTime, commTime);
+            }
             // progress tracing for compute cluster management
             if (wasProgressPrinted)
                 ProgressTracing::TraceTrainLoss(trainLossSinceLastLogged);
