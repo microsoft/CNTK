@@ -70,7 +70,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             // Verify that there's indeed a single layout
             for (const auto& iter : inputMatrices)
             {
-                assert(iter.second.pMBLayout == pMBLayout); 
+                assert(iter.second.pMBLayout == pMBLayout);
+                // TODO: This must be a runtime check, not an assert().
                 UNUSED(iter);
             }
         
@@ -105,8 +106,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template <class ElemType>
     static pair<size_t, size_t> DecimateMinibatch(const StreamMinibatchInputs& MB,    // input matrices
                                                   StreamMinibatchInputs& decimatedMB, // output decimated matrices.
-                                                  MBLayoutPtr pMBLayout,                        // input MBLayout
-                                                  MBLayoutPtr& pDecimateMBLayout,               // output decimated MBLayout (note: cannot work in-place)
+                                                  MBLayoutPtr pMBLayout,              // input MBLayout
+                                                  MBLayoutPtr& pDecimateMBLayout,     // output decimated MBLayout (note: cannot work in-place)
                                                   size_t numProcs, size_t rank)
     {
         size_t numParallelSequences = pMBLayout->GetNumParallelSequences();
@@ -148,6 +149,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
         // decimate MBLayout as well
         pDecimateMBLayout = make_shared<MBLayout>(numNewParallelSequence, nT, L"");
+        pDecimateMBLayout->SetAxisName(pMBLayout->GetAxisName());
 #if 1
         // now copy over all sequence info records that are inside the range, with adjusted 's'
         const auto& sequences = pMBLayout->GetAllSequences();
@@ -181,17 +183,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // no need to do inplace decimation if numproc == 1
 
         // allocate space for non-inplace decimation
-        MBLayoutPtr pDecimatedMB = make_shared<MBLayout>();
+        MBLayoutPtr pDecimatedMBLayout = make_shared<MBLayout>();
+        pDecimatedMBLayout->SetAxisName(pMBLayout->GetAxisName());
         StreamMinibatchInputs decimatedMB;
         // call in-place decimation
-        pair<size_t, size_t> selected = DecimateMinibatch<ElemType>(mb, decimatedMB, pMBLayout, pDecimatedMB, numprocs, rank);
+        pair<size_t, size_t> selected = DecimateMinibatch<ElemType>(mb, decimatedMB, pMBLayout, pDecimatedMBLayout, numprocs, rank);
         // move the data
         for (auto k : mb)
         {
             const auto& name = k.first;
             mb.GetInputMatrix<ElemType>(name).SetValue(decimatedMB.GetInputMatrix<ElemType>(name)); // deep-copy our local one to the output location
         }
-        pMBLayout->MoveFrom(pDecimatedMB);
+        pMBLayout->MoveFrom(pDecimatedMBLayout);
         return selected;
     }
 
@@ -353,7 +356,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
 
             // for sequence training
-            if (criterionNodes[0]->OperationName() == L"SequenceWithSoftmax")
+            if (!criterionNodes.empty() && criterionNodes[0]->OperationName() == L"SequenceWithSoftmax")
             {
                 auto node = dynamic_pointer_cast<SequenceWithSoftmaxNode<ElemType>>(criterionNodes[0]);
                 assert(node);
@@ -379,7 +382,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                      size_t requestedSubminibatches)
         {
             // first, remember interface to the net
-            // BUGBUG: This will no longer be correct once we have multiple input layouts.
+            // BUGBUG (Issue #95): This will no longer be correct once we have multiple input layouts.
             m_netMBLayoutPtr = net.GetMBLayoutPtrOfNetwork();
             m_netInputMatrixPtr = inputMatrices;
 
@@ -539,18 +542,21 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 }
                 shared_ptr<ComputationNode<ElemType>> pNode = m_LearnableNodePtr[nodename];
                 m_cachedGradient.GetInputMatrix<ElemType>(nodename) += pNode->Gradient();
-                pNode->Gradient().SetValue((ElemType) 0);
+                pNode->Gradient().SetValue(0);
             }
             // accumulate criterion value
-            Matrix<ElemType>::AddElementToElement(m_netCriterionNodes[0]->Value(), 0, 0,
-                                                  *m_netCriterionAccumulator, 0, 0);
-            m_netCriterionNodes[0]->Value().SetValue((ElemType) 0);
+            if (!m_netCriterionNodes.empty())
+            {
+                Matrix<ElemType>::AddElementToElement(m_netCriterionNodes[0]->Value(), 0, 0,
+                                                      *m_netCriterionAccumulator, 0, 0);
+                m_netCriterionNodes[0]->Value().SetValue(0);
+            }
             // accumulate evaluation value
             for (size_t i = 0; i < m_netEvaluationNodes.size(); i++)
             {
                 Matrix<ElemType>::AddElementToElement(m_netEvaluationNodes[i]->Value(), 0, 0,
                                                       *m_netEvaluationAccumulator, 0, i);
-                m_netEvaluationNodes[i]->Value().SetValue((ElemType) 0);
+                m_netEvaluationNodes[i]->Value().SetValue(0);
             }
 
             // Export node state
@@ -576,10 +582,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             // also revert net.m_MBLayoutPtr
             m_netMBLayoutPtr->CopyFrom(m_MBLayoutCache);
 
-            // m_netCriterionNodes[0]->Value().SetValue((ElemType)0);
-            Matrix<ElemType>::AddElementToElement(*m_netCriterionAccumulator, 0, 0,
-                                                  m_netCriterionNodes[0]->Value(), 0, 0);
-            m_netCriterionAccumulator->SetValue((ElemType) 0);
+            if (!m_netCriterionNodes.empty())
+            {
+                // m_netCriterionNodes[0]->Value().SetValue((ElemType)0);
+                Matrix<ElemType>::AddElementToElement(*m_netCriterionAccumulator, 0, 0,
+                                                      m_netCriterionNodes[0]->Value(), 0, 0);
+            }
+            m_netCriterionAccumulator->SetValue(0);
 
             for (size_t i = 0; i < m_netEvaluationNodes.size(); i++)
             {
@@ -587,7 +596,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 Matrix<ElemType>::AddElementToElement(*m_netEvaluationAccumulator, 0, i,
                                                       m_netEvaluationNodes[i]->Value(), 0, 0);
             }
-            m_netEvaluationAccumulator->SetValue((ElemType) 0);
+            m_netEvaluationAccumulator->SetValue(0);
         }
     };
 };

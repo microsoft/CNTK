@@ -166,6 +166,7 @@ struct MBLayout
 
         m_columnsValidityMask = std::move(other->m_columnsValidityMask);
         m_writable = other->m_writable;
+
         m_axisName = std::move(other->m_axisName);
     }
 
@@ -254,9 +255,11 @@ public:
 
     size_t GetNumTimeSteps() const { return m_numTimeSteps; }
     size_t GetNumParallelSequences() const { return m_numParallelSequences; }
-    const std::wstring GetAxisName() const { return m_axisName; }
-    void SetAxisName(const std::wstring& axisName) { m_axisName = axisName; }
 
+    // axis names are for now only a debugging aid
+    // In the future, there will be a mechanism to denote that axes are meant to be the same.
+    const wchar_t* GetAxisName() const { return m_axisName.c_str(); }
+    void SetAxisName(const std::wstring& name) { m_axisName = name; }
     void SetUniqueAxisName(std::wstring name) // helper for constructing
     {
         static std::map<std::wstring, size_t> nameIndices;
@@ -554,7 +557,9 @@ private:
     mutable bool m_writable;
 
     // The axis this MBLayout represents.
+    // For now only a string meant for debugging.
     std::wstring m_axisName;
+
 public:
 
     // special accessor for sequence training  --TODO: must be replaced by a different mechanism

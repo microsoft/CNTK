@@ -130,7 +130,9 @@ BpttPacker::BpttPacker(
         auto& buffer = m_streamBuffers[i];
         buffer.Resize(m_numParallelSequences * m_truncationSize * GetSampleSize(stream));
         m_sequenceBufferPerStream.push_back(make_shared<SequenceBuffer>(m_numParallelSequences));
-        m_currentLayouts.push_back(make_shared<MBLayout>());
+        auto pMBLayout = make_shared<MBLayout>();
+        pMBLayout->SetUniqueAxisName(L"BpttPacker");
+        m_currentLayouts.push_back(pMBLayout);
     }
 
     // Filling in the initial set of sequences

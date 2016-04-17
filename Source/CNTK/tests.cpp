@@ -184,7 +184,7 @@ void TestSequenceReader(const ConfigParameters& configBase)
         MBLayoutPtr pMBLayout = make_shared<MBLayout>();
         StreamMinibatchInputs matrices;
         matrices.AddInput(featureNames[0], featuresMatrix, pMBLayout, TensorShape());
-        matrices.AddInput(labelNames[0],   labelsMatrix  , pMBLayout, TensorShape());
+        matrices.AddInput(labelNames[1]  , labelsMatrix  , pMBLayout, TensorShape());
 
         auto start = std::chrono::system_clock::now();
         int epochs = config("maxEpochs");

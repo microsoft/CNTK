@@ -303,16 +303,16 @@ public:
     virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
     {
         size_t rank = DetermineElementwiseTensorRank();
-        auto output =                                ValueTensorFor(rank,         fr);
-        let   input = TensorView<ElemType>(Input(0)->Value(), GetInputSlice(rank, fr.AllowBroadcast()));
+        auto output =                                ValueTensorFor(           rank, fr);
+        let   input = TensorView<ElemType>(Input(0)->ValuePtr(), GetInputSlice(rank, fr.AllowBroadcast()));
         output.AssignCopyOf(input);
     }
 
     virtual void /*ComputationNode::*/ BackpropTo(const size_t /*inputIndex*/, const FrameRange& fr) override
     {
         size_t rank = DetermineElementwiseTensorRank();
-        let outputGrad =                                GradientTensorFor(rank,         fr);
-        auto inputGrad = TensorView<ElemType>(Input(0)->Gradient(), GetInputSlice(rank, fr));
+        let outputGrad =                                GradientTensorFor(           rank, fr);
+        auto inputGrad = TensorView<ElemType>(Input(0)->GradientPtr(), GetInputSlice(rank, fr.AllowBroadcast()));
         inputGrad.AddCopyOf(outputGrad);
     }
 
@@ -413,7 +413,7 @@ public:
         {
             let input = Input(inputIndex)->ValueTensorFor(rank, fr.AllowBroadcast());
             let outputSubSlice = NarrowToStripe(outputSlice, inputIndex);
-            auto output = TensorView<ElemType>(Value(), outputSubSlice);
+            auto output = TensorView<ElemType>(ValuePtr(), outputSubSlice);
             output.AssignCopyOf(input);
         }
     }
@@ -425,7 +425,7 @@ public:
 
         auto inputGrad = Input(inputIndex)->GradientTensorFor(rank, fr.AllowBroadcast());
         let outputSubSlice = NarrowToStripe(outputSlice, inputIndex);
-        let outputGrad = TensorView<ElemType>(Gradient(), outputSubSlice);
+        let outputGrad = TensorView<ElemType>(GradientPtr(), outputSubSlice);
         inputGrad.AddCopyOf(outputGrad);
     }
 
@@ -1074,7 +1074,10 @@ public:
         else if (Input(0)->HasMBLayout())
         {
             if (!m_pMBLayout)
+            {
                 m_pMBLayout = make_shared<MBLayout>(); // mini-batch data: this generates a new layout
+                m_pMBLayout->SetUniqueAxisName(NodeName());
+            }
         }
         else
             assert(!m_pMBLayout); // reshaping non-mini-batch data

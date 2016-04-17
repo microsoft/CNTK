@@ -59,7 +59,10 @@ class SparsePCReader : public DataReaderBase
 
 public:
     SparsePCReader()
-        : m_pMBLayout(make_shared<MBLayout>()){};
+        : m_pMBLayout(make_shared<MBLayout>())
+    {
+        m_pMBLayout->SetUniqueAxisName(L"SparsePCReader");
+    };
     virtual ~SparsePCReader();
     virtual void Destroy();
     template <class ConfigRecordType>

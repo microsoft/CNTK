@@ -384,8 +384,8 @@ public:
         {
             // look for closing brace and also for another opening brace
             // Inside strings we only accept the closing quote, and ignore any braces inside.
-            current = str.find_first_of(braceStack.back() == '"' ? "\"" : charsToLookFor, current + 1); //
-            if (current == string::npos)                                                                // none found: done or error
+            current = str.find_first_of(braceStack.back() == '"' ? "\"" : charsToLookFor, current + 1);
+            if (current == string::npos) // none found: error
                 break;
             char brace = str[current];
             // found the expected closing brace?
@@ -406,7 +406,7 @@ public:
             }
         }
         // hit end before everything was closed: error
-        RuntimeError("no closing bracket found in parameters");
+        RuntimeError("no closing %c found in parameters", braceStack.back());
         //RuntimeError("no closing bracket found in parameters (opening bracket at offset %d)\n%s", (int)tokenStart, str.substr(tokenStart).c_str());
     }
 

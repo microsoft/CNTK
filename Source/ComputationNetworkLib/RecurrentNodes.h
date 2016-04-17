@@ -183,6 +183,10 @@ public:
 
     virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
     {
+        // move the target matrix to the target device, since below it is accessed as slices which cannot move
+        // TODO: change below accesses to TensorView, then this is no longer needed.
+        Input(0)->Gradient().TransferToDeviceIfNotThere(m_deviceId, /*isBeingMoved=*/ true);
+
         assert(inputIndex == 0);
         inputIndex;
 

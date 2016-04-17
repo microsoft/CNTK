@@ -583,6 +583,7 @@ public:
     BinaryReader()
         : m_pMBLayout(make_shared<MBLayout>())
     {
+        m_pMBLayout->SetUniqueAxisName(L"BinaryReader");
     }
     virtual ~BinaryReader();
     virtual void StartMinibatchLoop(size_t mbSize, size_t epoch, size_t requestedEpochSamples = requestDataSize);

@@ -247,6 +247,7 @@ public:
         : DSSMLabels(nullptr), DSSMCols(0)
     {
         m_pMBLayout = make_shared<MBLayout>();
+        m_pMBLayout->SetUniqueAxisName(L"LibSVMReader");
     };
 
     virtual ~LibSVMBinaryReader();

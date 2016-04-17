@@ -458,13 +458,21 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "SLU", "SLU", "{BFBC6BE1-C33
 		Tests\EndToEndTests\SLU\atis.dev.IOB.simple = Tests\EndToEndTests\SLU\atis.dev.IOB.simple
 		Tests\EndToEndTests\SLU\atis.test.apos.pred.pos.head.IOB.simple = Tests\EndToEndTests\SLU\atis.test.apos.pred.pos.head.IOB.simple
 		Tests\EndToEndTests\SLU\atis.train.apos.pred.pos.head.IOB.simple = Tests\EndToEndTests\SLU\atis.train.apos.pred.pos.head.IOB.simple
+		Tests\EndToEndTests\SLU\baseline.linux.cpu.txt = Tests\EndToEndTests\SLU\baseline.linux.cpu.txt
+		Tests\EndToEndTests\SLU\baseline.linux.gpu.txt = Tests\EndToEndTests\SLU\baseline.linux.gpu.txt
+		Tests\EndToEndTests\SLU\baseline.windows.cpu.txt = Tests\EndToEndTests\SLU\baseline.windows.cpu.txt
+		Tests\EndToEndTests\SLU\baseline.windows.gpu.txt = Tests\EndToEndTests\SLU\baseline.windows.gpu.txt
 		Tests\EndToEndTests\SLU\globals.cntk = Tests\EndToEndTests\SLU\globals.cntk
 		Tests\EndToEndTests\SLU\input.txt = Tests\EndToEndTests\SLU\input.txt
 		Tests\EndToEndTests\SLU\inputmap.txt = Tests\EndToEndTests\SLU\inputmap.txt
+		Tests\EndToEndTests\SLU\lstm.ndl = Tests\EndToEndTests\SLU\lstm.ndl
 		Tests\EndToEndTests\SLU\lstmNDL.txt = Tests\EndToEndTests\SLU\lstmNDL.txt
+		Tests\EndToEndTests\SLU\output.txt = Tests\EndToEndTests\SLU\output.txt
 		Tests\EndToEndTests\SLU\README.txt = Tests\EndToEndTests\SLU\README.txt
 		Tests\EndToEndTests\SLU\rnnlu.cntk = Tests\EndToEndTests\SLU\rnnlu.cntk
 		Tests\EndToEndTests\SLU\rnnlu.ndl.cntk = Tests\EndToEndTests\SLU\rnnlu.ndl.cntk
+		Tests\EndToEndTests\SLU\run-test = Tests\EndToEndTests\SLU\run-test
+		Tests\EndToEndTests\SLU\testcases.yml = Tests\EndToEndTests\SLU\testcases.yml
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "MNIST", "MNIST", "{FA33A61E-95C7-4049-8111-22058CE361A3}"
@@ -509,7 +517,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "CIFAR-10", "CIFAR-10", "{77
 		Examples\Image\Miscellaneous\CIFAR-10\CifarConverter.py = Examples\Image\Miscellaneous\CIFAR-10\CifarConverter.py
 		Examples\Image\Miscellaneous\CIFAR-10\labelsmap.txt = Examples\Image\Miscellaneous\CIFAR-10\labelsmap.txt
 		Examples\Image\Miscellaneous\CIFAR-10\Macros.ndl = Examples\Image\Miscellaneous\CIFAR-10\Macros.ndl
-		Examples\Image\Miscellaneous\CIFAR-10\README.md = Examples\Image\Miscellaneous\CIFAR-10\README.md
+		Examples\Image\Miscellaneous\CIFAR-10\readme.txt = Examples\Image\Miscellaneous\CIFAR-10\readme.txt
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "ImageNet", "ImageNet", "{EF710C5A-E616-442A-889D-C997D39AF2E1}"
@@ -666,6 +674,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Config", "Config", "{850008
 	ProjectSection(SolutionItems) = preProject
 		Examples\Text\PennTreebank\Config\rnn.cntk = Examples\Text\PennTreebank\Config\rnn.cntk
 		Examples\Text\PennTreebank\Config\S2SAutoEncoder.cntk = Examples\Text\PennTreebank\Config\S2SAutoEncoder.cntk
+		Examples\Text\PennTreebank\Config\S2SLib.bs = Examples\Text\PennTreebank\Config\S2SLib.bs
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "SLU", "SLU", "{E6DC3B7D-303D-4A54-B040-D8DCF8C56E17}"
