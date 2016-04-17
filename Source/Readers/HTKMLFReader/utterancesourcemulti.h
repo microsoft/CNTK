@@ -153,7 +153,9 @@ class minibatchutterancesourcemulti : public minibatchsource
             try // this function supports retrying since we read from the unrealible network, i.e. do not return in a broken state
             {
                 msra::asr::htkfeatreader reader; // feature reader (we reinstantiate it for each block, i.e. we reopen the file actually)
-				auto_timer pageintimer;
+                auto_timer* p_pageintimer = nullptr;
+                if (verbosity > 2)
+                  p_pageintimer = new auto_timer();
                 // if this is the first feature read ever, we explicitly open the first file to get the information such as feature dimension
                 if (featdim == 0)
                 {
@@ -174,9 +176,19 @@ class minibatchutterancesourcemulti : public minibatchsource
                     if (!latticesource.empty())
                         latticesource.getlattices(utteranceset[i].key(), lattices[i], uttframes.cols());
                 }
-                // fprintf (stderr, "\n");
                 if (verbosity)
-					fprintf(stderr, "requiredata: %d utterances read, time usage = %.8g \n", (int)utteranceset.size(), (double)pageintimer);
+                {
+                    fprintf(stderr, "requiredata: %d utterances read\n", (int)utteranceset.size());
+                    if (verbosity > 2)
+                    {
+                        if (p_pageintimer != nullptr)
+                        {
+                          double pageintime = (double)(*p_pageintimer);
+                          fprintf(stderr, "Chunk read statistics; Total time = %.8g, Num Frames read = %d, Num bytes per frame = %d, Avg I/O bandwidth = %.2g MB/sec).\n",
+                            pageintime, totalframes, (int)featdim * sizeof(float), (featdim * sizeof(float) * totalframes / 1024 / 1024 / pageintime));
+                        }
+                    }
+                }
             }
             catch (...)
             {
