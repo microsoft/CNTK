@@ -223,16 +223,24 @@ Boolean = [
 Sequences = [
     # broadcast a single-step sequence to a multi-step sequence
     BroadcastSequenceAs (type, data1) = [                      # type=example sequence with desired length (outside of a loop), data1=1 time step
-        ZeroSequenceLike (x) = RowSlice (0, 1, x) .* Constants.Zero # BUGBUG: SumColumnElements() has a CPU/GPU problem
-        index = /*Constants.*/ZeroSequenceLike (type)  # create an index sequence [ 0 0 0 ... ] of target length
-        packedIndex = PackedIndex (data1, index)       # convert into internal packed index w.r.t. 'data1'
-        out = GatherPacked (packedIndex, data1)        # copy data1[0] to all elements, total length like 'type'
+        # BUGBUG: This should work but gives worse results.
+        #ZeroSequenceLike (x) = RowSlice (0, 1, x) .* Constants.Zero # BUGBUG: SumColumnElements() has a CPU/GPU problem
+        #index = /*Constants.*/ZeroSequenceLike (type)  # create an index sequence [ 0 0 0 ... ] of target length
+        #packedIndex = PackedIndex (data1, index)       # convert into internal packed index w.r.t. 'data1'
+        #out = GatherPacked (packedIndex, data1)        # copy data1[0] to all elements, total length like 'type'
+
+        # alternative (slower, older) implementation (10% slower end-to-end?)
+        # Gives nearly the same result, but not completely. Since Gather() above has an atomicAdd(), let's leave this on for now and check later.
+        dataPadded = Sequences.Scatter (Loop.IsFirst (type), data1) # padded with zeroes until end of target sequence
+        out = Boolean.If (Loop.IsFirst (dataPadded), # if first entry
+                 /*then*/ dataPadded,                # then copy that
+                 /*else*/ Loop.Previous (out))       # else just propagate to the front
     ].out
 
     # rolling window over past N samples
-    # returns a record [ value=..., valid=... ]
+    # returns a record [ value=..., valid=... ], both being 1-step sequences of [dim x N]. N can optionally be moved to axes >2.
     # This implementation is suboptimal in that it creates copies for the intermediate steps.
-    PastValueWindow (N, in) = [
+    PastValueWindow (N, in, axis=2) = [
         delayLine[t:0..N-1] = [     # shift register for encoder, last N inputs
             value = if t == 0
                     then in        # delay 0: current value
@@ -243,8 +251,12 @@ Sequences = [
         ]
         # delayLine[t].value = value of t steps in the past
         # delayLine[t].valid = true if we had a value t steps in the past
-        value = Slice (-1, 0, axis=-1, SplitDimension (RowStack (array[0..N-1](t=>delayLine[t].value)), 1, N))  # [i, delay]
-        valid = Slice (-1, 0, axis=-1, SplitDimension (RowStack (array[0..N-1](t=>delayLine[t].valid)), 1, N))  # [i, delay]
+        SplitStack (x) =
+            if      axis == 2 then SplitDimension (x, 1, N)
+            else if axis > 2  then TransposeDimensions (SplitDimension (x, 1, N), 2, axis)
+            else Fail ("PastValueWindow: axis>2 required.") # BUGBUG: We also require that input is a single vector. Address later.
+        value = Slice (-1, 0, axis=-1, SplitStack (RowStack (array[0..N-1](t=>delayLine[t].value))))  # [i, delay]
+        valid = Slice (-1, 0, axis=-1, SplitStack (RowStack (array[0..N-1](t=>delayLine[t].valid))))  # [i, delay]
     ]
 
     # fold left/right: Reduce entire sequence by applying binaryOp, e.g. FoldL (Plus, 0, input)
@@ -287,7 +299,7 @@ Sequences = [
         out = Gather (selected, x)
     ].out
     # Last and TakeRight
-    Last(x) = TakeRight(1, x)
+    Last (x) = TakeRight (1, x)
     TakeRight (N, x) = _Take (FutureValue, N, x)
     Skip (N, x) = if N > 0 then _Skip (PastValue, N, x) else x
     _Skip (DelayFn, N, x) = [ // TODO: merge with _Take
@@ -378,7 +390,21 @@ Parameters =
     Stabilize (x, enabled=true) =
         if enabled
         then [
-                 beta = Exp (ScalarParam())
+
+    # temporary tracing facility
+    TraceDenseTransposed (h, what) =
+        Trace (h, say=what, logFirst=10, logFrequency=100, logGradientToo=false, onlyUpToRow=21/*beamDepth*beamDepth*/, onlyUpToT=25, format=formatDenseTransposed)
+    formatDenseTransposed = [
+        type = "real"
+        transpose = true
+        precisionFormat = ".4"
+    ]
+    Trace (node, say='', logFrequency=traceFrequency, logFirst=10, logGradientToo=false, onlyUpToRow=100000000, onlyUpToT=100000000, format=[], tag='') = new ComputationNode [
+        operation = 'Trace' ; inputs = node
+    ]
+
+
+                 beta = /*TraceDenseTransposed(*/   Exp (ScalarParam())   /*,'beta')*/
                  result = Scale (beta, x)
              ].result
         else x
@@ -390,6 +416,8 @@ Parameters =
 
 RNNs =
 [
+    # WARNING: parameter order will change to
+    # LSTMP (outputDim, cellDim=outputDim /*<-type*/, input, inputDim=input.dim/*<-input with its dim since for now we cannot infer*/, prevState, ...)
     # LSTMP -- LSTM function with projection and self-stabilization
     # Projection it enabled by passing different values for outputDim and cellDim.
     # This is the stateless version that takes the previous state as an input.
@@ -406,9 +434,33 @@ RNNs =
             // parameter macros--these carry their own weight matrices
             B() = Parameters.BiasParam (cellDim)
 
-            W(v) = Parameters.WeightParam (cellDim, inputDim)  * Parameters.Stabilize (v, enabled=enableSelfStabilization) // input-to-hidden
-            H(h) = Parameters.WeightParam (cellDim, outputDim) * Parameters.Stabilize (h, enabled=enableSelfStabilization) // hidden-to-hidden
-            C(c) = Parameters.DiagWeightParam (cellDim)       .* Parameters.Stabilize (c, enabled=enableSelfStabilization) // cell-to-hiddden (note: applied elementwise)
+            # temporary
+            Stabilize1 (x, enabled=true) =
+                if enabled
+                then [
+
+                    TraceDenseTransposed (h, what) =
+                        Trace (h, say=what, logFirst=10, logFrequency=100, logGradientToo=false, onlyUpToRow=21/*beamDepth*beamDepth*/, onlyUpToT=25, format=formatDenseTransposed)
+                    formatDenseTransposed = [
+                        type = "real"
+                        transpose = true
+                        precisionFormat = ".4"
+                    ]
+                    Trace (node, say='', logFrequency=traceFrequency, logFirst=10, logGradientToo=false, onlyUpToRow=100000000, onlyUpToT=100000000, format=[], tag='') = new ComputationNode [
+                        operation = 'Trace' ; inputs = node
+                    ]
+
+                    beta = /*TraceDenseTransposed(*/   Exp (ParameterTensor((inputDim)))   /*,'betav')*/
+                    result = beta .* x
+                ].result
+            else x
+
+
+            #W(v) = Parameters.WeightParam (cellDim, inputDim)  * /*Parameters.*/ Stabilize1 (v, enabled=enableSelfStabilization) // input-to-hidden
+            # ^^ element-wise stab, use if input is a concatenation; vv stab for entire matrix
+            W(v) = Parameters.WeightParam (cellDim, inputDim)  * Parameters. Stabilize (v, enabled=enableSelfStabilization) // input-to-hidden
+            H(h) = Parameters.WeightParam (cellDim, outputDim) * Parameters. Stabilize (h, enabled=enableSelfStabilization) // hidden-to-hidden
+            C(c) = Parameters.DiagWeightParam (cellDim)       .* Parameters. Stabilize (c, enabled=enableSelfStabilization) // cell-to-hiddden (note: applied elementwise)
 
             // note: the W(x) here are all different, they all come with their own set of weights; same for H(dh), C(dc), and B()
             it = Sigmoid (W(x) + B() + H(dh) + C(dc))          // input gate(t)
@@ -439,32 +491,31 @@ RNNs =
             else _privateInnards.ht     // no projection
     ]
 
+    # helper function to delay h and c
+    # Callers can provide their own, e.g. useful for beam decoding.
+    PreviousHC (lstmState) = [
+       h = Loop.Previous (lstmState.h)             // hidden state(t-1)
+       c = Loop.Previous (lstmState.c)             // cell(t-1)
+    ]
+
     # this implements a recurrent (stateful) LSTM with projection and self-stabilization
-    RecurrentLSTMP (inputDim, outputDim, cellDim, x, enableSelfStabilization=false) =
+    RecurrentLSTMP (inputDim, outputDim, cellDim, x, previousHook=PreviousHC, enableSelfStabilization=false) =
     [
-        prevState =
-        [
-            h = Loop.Previous (lstmState.h)             // hidden state(t-1)
-            c = Loop.Previous (lstmState.c)             // cell(t-1)
-        ]
+        prevState = previousHook (lstmState)
         enableSelfStabilization1 = enableSelfStabilization // TODO: BS syntax needs to allow to say ^.enableSelfStabilization
         lstmState = LSTMP (inputDim, outputDim, cellDim, x, prevState, enableSelfStabilization=enableSelfStabilization1)
     ].lstmState.h // that's the value we return
 
     # same as RecurrentLSTMP but returns both h and c
-    RecurrentLSTMP2 (inputDim, outputDim, cellDim, x, enableSelfStabilization=false) =
+    RecurrentLSTMP2 (inputDim, outputDim, cellDim, x, previousHook=PreviousHC, enableSelfStabilization=false) =
     [
-        prevState =
-        [
-            h = Loop.Previous (lstmState.h)             # hidden state(t-1)
-            c = Loop.Previous (lstmState.c)             # cell(t-1)
-        ]
+        prevState = previousHook (lstmState)
         enableSelfStabilization1 = enableSelfStabilization // TODO: BS syntax needs to allow to say ^.enableSelfStabilization
         lstmState = BS.RNNs.LSTMP (inputDim, outputDim, cellDim, x, prevState, enableSelfStabilization=enableSelfStabilization1)
     ].lstmState // that's the value we return
 
     # a stack of recurrent LSTMs (unidirectional)
-    RecurrentLSTMP2Stack (input, inputDim, hiddenDims, cellDims, enableSelfStabilization=false) = [
+    RecurrentLSTMP2Stack (input, inputDim, hiddenDims, cellDims, previousHook=PreviousHC, enableSelfStabilization=false) = [
         useStabilizer = enableSelfStabilization
         layer[i:0..Length (hiddenDims)-1] =
             RecurrentLSTMP2 (if i == 0 then inputDim else hiddenDims[i-1],
