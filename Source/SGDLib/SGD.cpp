@@ -2385,7 +2385,7 @@ static ParallelizationMethod ParseParallelizationMethod(const wstring& s)
     if      (EqualCI(s, L"") || EqualCI(s, L"none")) return ParallelizationMethod::None;
     else if (EqualCI(s, L"DataParallelSGD"))         return ParallelizationMethod::DataParallelSGD;
     else if (EqualCI(s, L"ModelAveragingSGD"))       return ParallelizationMethod::ModelAveragingSGD;
-	else if (EqualCI(s, L"DataParallelASGD"))       return ParallelizationMethod::DataParallelASGD;
+    else if (EqualCI(s, L"DataParallelASGD"))       return ParallelizationMethod::DataParallelASGD;
     else InvalidArgument("ParseParallelizationMethod: Invalid Parallelization Method. Valid values are (none | dataParallelSGD | modelAveragingSGD | DataParallelASGD)");
 }
 
