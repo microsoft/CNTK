@@ -34,7 +34,7 @@ long LUSequenceReader<ElemType>::GetIdFromLabel(const LabelType& labelValue, Lab
 template <class ElemType>
 BatchLUSequenceReader<ElemType>::~BatchLUSequenceReader()
 {
-    for (int index = labelInfoMin; index < labelInfoMax; ++index)
+    for (int index = 0; index < labelInfoNum; ++index)
     {
         delete[] m_labelInfo[index].m_id2classLocal;
         delete[] m_labelInfo[index].m_classInfoLocal;
@@ -59,7 +59,7 @@ void BatchLUSequenceReader<ElemType>::ReadLabelInfo(const wstring& vocfile,
     if (!vin.good())
         LogicError("LUSequenceReader cannot open %ls\n", vocfile.c_str());
 
-    wstring wstr = L" ";
+    const wstring wstr = L" \n\r\t";
     long b = 0;
     this->nwords = 0;
     int prevcls = -1;
@@ -69,12 +69,12 @@ void BatchLUSequenceReader<ElemType>::ReadLabelInfo(const wstring& vocfile,
     while (vin.good())
     {
         getline(vin, strtmp);
-        strtmp = wtrim(strtmp);
+        strtmp = trim(strtmp); // TODO: operates in-place, so no need to re-assign to itself
         if (strtmp.length() == 0)
             break;
         if (readClass)
         {
-            vector<wstring> wordandcls = wsep_string(strtmp, wstr);
+            vector<wstring> wordandcls = SplitString(strtmp, wstr);
             long cls = _wtoi(wordandcls[1].c_str());
             word4cls[wordandcls[0]] = cls;
 
@@ -161,6 +161,7 @@ bool LUSequenceReader<ElemType>::GetIdFromLabel(const vector<LabelIdType>& label
     return true; // TODO: what's this return value for?
 }
 
+#if 0
 template <class ElemType>
 int LUSequenceReader<ElemType>::GetSentenceEndIdFromOutputLabel()
 {
@@ -173,6 +174,7 @@ int LUSequenceReader<ElemType>::GetSentenceEndIdFromOutputLabel()
     else
         return -1; // not found
 }
+#endif
 
 // GetData - Gets metadata from the specified section (into CPU memory)
 // sectionName - section name to retrieve data from
@@ -207,7 +209,7 @@ template <class ElemType>
 void LUSequenceReader<ElemType>::WriteLabelFile()
 {
     // update the label dimension if it is not big enough, need it here because m_labelIdMax get's updated in the processing loop (after a read)
-    for (int index = labelInfoMin; index < labelInfoMax; ++index)
+    for (int index = 0; index < labelInfoNum; ++index)
     {
         LabelInfo& labelInfo = m_labelInfo[index];
 
@@ -251,15 +253,16 @@ void LUSequenceReader<ElemType>::LoadLabelFile(const std::wstring& filePath, std
         wchar_t stmp[MAX_STRING];
         vin.getline(stmp, MAX_STRING);
         str = stmp;
-        str = wtrim(str);
+        str = trim(str);
         if (str.length() == 0)
             break;
 
         // check for a comment line
+        // BUGBUG: This is checking for an all-space line, which may be needed because vin.good() only fails after the end was hit.
         wstring::size_type pos = str.find_first_not_of(L" \t");
         if (pos != -1)
         {
-            str = wtrim(str);
+            str = trim(str);
             retLabels.push_back((LabelType) str);
         }
     }
@@ -307,54 +310,47 @@ void BatchLUSequenceReader<ElemType>::InitFromConfig(const ConfigRecordType& rea
     std::vector<std::wstring> labels;
     GetFileConfigNames(readerConfig, features, labels);
     if (features.size() > 0)
-    {
         m_featuresName = features[0];
-    }
 
     {
-        wstring tInputLabel = readerConfig(L"inputLabel", L"");
+        wstring tInputLabel  = readerConfig(L"inputLabel",  L"");
         wstring tOutputLabel = readerConfig(L"outputLabel", L"");
 
-        if (labels.size() == 2)
-        {
-            if (tInputLabel == L"" && tOutputLabel == L"")
-            {
-                for (int index = labelInfoMin; index < labelInfoMax; ++index)
-                {
-                    m_labelsName[index] = labels[index];
-                }
-            }
-            else
-            {
-                int index = 0;
-                for (int i = labelInfoMin; i < labelInfoMax; ++i)
-                {
-                    if (labels[i] == tInputLabel)
-                        m_labelsName[index] = labels[i];
-                }
-                if (m_labelsName[index] == L"")
-                    RuntimeError("cannot find input label");
+        if (labels.size() != labelInfoNum)
+            RuntimeError("BatchLUSequenceReader: Two label definitions (in and out) are required.");
 
-                index = 1;
-                for (int i = labelInfoMin; i < labelInfoMax; ++i)
-                {
-                    if (labels[i] == tOutputLabel)
-                        m_labelsName[index] = labels[i];
-                }
-                if (m_labelsName[index] == L"")
-                    RuntimeError("cannot find output label");
-            }
+        if (tInputLabel == L"" && tOutputLabel == L"")
+        {
+            for (int index = 0; index < labelInfoNum; ++index)
+                m_labelsName[index] = labels[index];
         }
         else
-            RuntimeError("two label definitions (in and out) required for Sequence Reader");
+        {
+            int index = 0;
+            for (int i = 0; i < labelInfoNum; ++i)
+            {
+                if (labels[i] == tInputLabel)
+                    m_labelsName[index] = labels[i];
+            }
+            if (m_labelsName[index] == L"")
+                RuntimeError("cannot find input label");
+
+            index = 1;
+            for (int i = 0; i < labelInfoNum; ++i)
+            {
+                if (labels[i] == tOutputLabel)
+                    m_labelsName[index] = labels[i];
+            }
+            if (m_labelsName[index] == L"")
+                RuntimeError("cannot find output label");
+        }
 
         // const ConfigRecordType & featureConfig = readerConfig(m_featuresName.c_str(), ConfigRecordType::Record());
 
-        for (int index = labelInfoMin; index < labelInfoMax; ++index)
+        for (int index = 0; index < labelInfoNum; ++index)
         {
             const ConfigRecordType& labelConfig = readerConfig(m_labelsName[index].c_str(), ConfigRecordType::Record());
 
-            m_labelInfo[index].idMax = 0;
             m_labelInfo[index].beginSequence = (wstring) labelConfig(L"beginSequence", L"");
             m_labelInfo[index].endSequence = (wstring) labelConfig(L"endSequence", L"");
             m_labelInfo[index].busewordmap = labelConfig(L"useWordMap", false);
@@ -380,9 +376,17 @@ void BatchLUSequenceReader<ElemType>::InitFromConfig(const ConfigRecordType& rea
                 m_labelInfo[index].m_classInfoLocal = nullptr;
                 m_labelInfo[index].m_id2classLocal = nullptr;
 
-                if (mode == L"class")
+                if (EqualCI(mode, L"class"))
                 {
                     m_labelInfo[index].readerMode = ReaderMode::Class;
+                }
+                else if (EqualCI(mode, L"plain"))
+                {
+                    m_labelInfo[index].readerMode = ReaderMode::Plain;
+                }
+                else
+                {
+                    LogicError("Unsupported label mode format %ls for LUSequenceReader. Should be either 'plain' or 'class'", mode.c_str());
                 }
 
                 std::wstring wClassFile = labelConfig(L"token", L"");
@@ -416,7 +420,7 @@ void BatchLUSequenceReader<ElemType>::InitFromConfig(const ConfigRecordType& rea
 
     std::wstring pathName = readerConfig(L"file");
     if (m_traceLevel > 0)
-        fprintf(stderr, "reading sequence file %ls\n", pathName.c_str());
+        fprintf(stderr, "LUSequenceReader: Reading sequence file %ls\n", pathName.c_str());
 
     const LabelInfo& labelIn = m_labelInfo[labelInfoIn];
     const LabelInfo& labelOut = m_labelInfo[labelInfoOut];
@@ -656,7 +660,7 @@ bool BatchLUSequenceReader<ElemType>::EnsureDataAvailable(size_t /*mbStartSample
         {
             Reset();
 
-            mNumRead = m_parser.Parse(CACHE_BLOG_SIZE, &m_labelTemp, &m_featureTemp, &seqPos, featIn.word4idx, labelIn.word4idx, mAllowMultPassData);
+            mNumRead = m_parser.Parse(CACHE_BLOCK_SIZE, &m_labelTemp, &m_featureTemp, &seqPos, featIn.word4idx, labelIn.word4idx, mAllowMultPassData);
             if (mNumRead == 0)
             {
                 fprintf(stderr, "EnsureDataAvailable: No more data.\n");
@@ -813,7 +817,7 @@ void BatchLUSequenceReader<ElemType>::SetNumParallelSequences(const size_t mz)
 }
 
 template <class ElemType>
-bool BatchLUSequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemType>*>& matrices)
+bool BatchLUSequenceReader<ElemType>::TryGetMinibatch(StreamMinibatchInputs& matrices)
 {
     // get out if they didn't call StartMinibatchLoop() first
     // TODO: Why is this allowed? Why not terminate?
@@ -842,7 +846,7 @@ bool BatchLUSequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix
     {
         if (matrices.find(m_featuresName) == matrices.end())
             RuntimeError("BatchLUSequenceReader cannot find %ls.", m_featuresName.c_str());
-        Matrix<ElemType>& features = *matrices[m_featuresName];
+        Matrix<ElemType>& features = matrices.GetInputMatrix<ElemType>(m_featuresName);
 
         // loop through all the samples and create a one-hot representation, or multi-hot in some conditions (TODO: which condition)
         Matrix<ElemType> locObs(CPUDEVICE);
@@ -877,12 +881,12 @@ bool BatchLUSequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix
                     {
                         assert(idx == (LabelIdType) NULLLABEL); // TODO: what other conditions?
                         // if (!m_pMBLayout->IsGap(s, t))    // verify that these are marked as NoInput
-                        //    LogicError("BatchLUSequenceReader::GetMinibatch observation is larger than its dimension but no_labels sign is not used to indicate that this observation has no labels. Possible reason is a bug in EnsureDataAvailable or a bug here.");
+                        //    LogicError("BatchLUSequenceReader::TryGetMinibatch observation is larger than its dimension but no_labels sign is not used to indicate that this observation has no labels. Possible reason is a bug in EnsureDataAvailable or a bug here.");
                         continue;
                     }
 
                     // if (m_pMBLayout->IsGap(s, t))    // verify that these are marked as NoInput
-                    //    LogicError("BatchLUSequenceReader::GetMinibatch: Inconsistent NoInput flag");
+                    //    LogicError("BatchLUSequenceReader::TryGetMinibatch: Inconsistent NoInput flag");
 
                     locObs.SetValue(idx + jj * featInfo.dim, j, (ElemType) 1);
                 }
@@ -910,20 +914,18 @@ bool BatchLUSequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix
 }
 
 template <class ElemType>
-size_t BatchLUSequenceReader<ElemType>::GetLabelOutput(std::map<std::wstring,
-                                                                Matrix<ElemType>*>& matrices,
-                                                       LabelInfo& labelInfo, size_t actualmbsize)
+size_t BatchLUSequenceReader<ElemType>::GetLabelOutput(StreamMinibatchInputs& matrices, LabelInfo& labelInfo, size_t actualmbsize)
 {
-    Matrix<ElemType>* labels = matrices[m_labelsName[labelInfoOut]];
-    if (labels == nullptr)
+    if (!matrices.HasInput(m_labelsName[labelInfoOut]))
         return 0;
 
-    labels->Resize(labelInfo.dim, actualmbsize);
-    labels->SetValue(0);
+    Matrix<ElemType>& labels = matrices.GetInputMatrix<ElemType>(m_labelsName[labelInfoOut]);
+    labels.Resize(labelInfo.dim, actualmbsize);
+    labels.SetValue(0);
 
     // build it on the CPU side
-    DEVICEID_TYPE deviceId = labels->GetDeviceId();
-    labels->TransferFromDeviceToDevice(deviceId, CPUDEVICE, true);
+    DEVICEID_TYPE deviceId = labels.GetDeviceId();
+    labels.TransferFromDeviceToDevice(deviceId, CPUDEVICE, true);
 
     size_t nbrLabl = 0;
     for (size_t j = 0; j < actualmbsize; ++j) // loop over columns of the minibatch matrix
@@ -939,22 +941,22 @@ size_t BatchLUSequenceReader<ElemType>::GetLabelOutput(std::map<std::wstring,
         // if Plain then labels are 1-dim
         // if Class then labels are 3-dim, including the index range of all words belonging to the same class (words within a class have consecutive ids)
         if (labelInfo.readerMode == ReaderMode::Plain)
-            labels->SetValue(wrd, j, 1);
+            labels.SetValue(wrd, j, 1);
         else if (labelInfo.readerMode == ReaderMode::Class && labelInfo.mNbrClasses > 0)
         {
-            labels->SetValue(0, j, (ElemType) wrd);
+            labels.SetValue(0, j, (ElemType) wrd);
 
             long clsidx = -1;
             clsidx = labelInfo.idx4class[wrd];
 
-            labels->SetValue(1, j, (ElemType) clsidx);
+            labels.SetValue(1, j, (ElemType) clsidx);
             // save the [beginning ending_indx) of the class
             ElemType lft = (*labelInfo.m_classInfoLocal)(0, clsidx);
             ElemType rgt = (*labelInfo.m_classInfoLocal)(1, clsidx);
             if (rgt <= lft)
                 LogicError("LUSequenceReader : right is equal or smaller than the left, which is wrong.");
-            labels->SetValue(2, j, lft); // beginning index of the class
-            labels->SetValue(3, j, rgt); // end index of the class
+            labels.SetValue(2, j, lft); // beginning index of the class
+            labels.SetValue(3, j, rgt); // end index of the class
         }
         else
             LogicError("LUSequenceReader: reader mode is not set to Plain. Or in the case of setting it to Class, the class number is 0. ");
@@ -962,7 +964,7 @@ size_t BatchLUSequenceReader<ElemType>::GetLabelOutput(std::map<std::wstring,
     }
 
     // move it back to GPU if that's where it was before
-    labels->TransferFromDeviceToDevice(CPUDEVICE, deviceId, true);
+    labels.TransferFromDeviceToDevice(CPUDEVICE, deviceId, true);
 
     return nbrLabl;
 }
@@ -1007,32 +1009,18 @@ void BatchLUSequenceReader<ElemType>::SetSentenceBegin(int wrd, int pos, int /*a
 }
 
 template <class ElemType>
-bool BatchLUSequenceReader<ElemType>::DataEnd(EndDataType endDataType)
+bool BatchLUSequenceReader<ElemType>::DataEnd()
 {
-    bool ret = false;
-    switch (endDataType)
+    if (mSentenceEndAt.size() != mToProcess.size())
+        LogicError("DataEnd: Sentence ending vector size %d and the toprocess vector size %d should be the same.", (int)mSentenceEndAt.size(), (int)mToProcess.size());
+    for (size_t i = 0; i < mToProcess.size(); i++)
     {
-    case endDataNull:
-        assert(false);
-        break;
-    case endDataEpoch:
-    case endDataSet:
-        ret = !EnsureDataAvailable(m_mbStartSample);
-        break;
-    case endDataSentence: // for fast reader each minibatch is considered a "sentence", so always true
-        if (mSentenceEndAt.size() != mToProcess.size())
-            LogicError("DataEnd: Sentence ending vector size %d and the toprocess vector size %d should be the same.", (int) mSentenceEndAt.size(), (int) mToProcess.size());
-        ret = true;
-        for (size_t i = 0; i < mToProcess.size(); i++)
-        {
-            if (mSentenceEndAt[i] == NO_INPUT)
-                LogicError("BatchLUSequenceReader: Minibatch should be large enough to accomodate the longest sentence.");
-            size_t k = mToProcess[i];
-            mProcessed[k] = true;
-        }
-        break;
+        if (mSentenceEndAt[i] == NO_INPUT)
+            LogicError("BatchLUSequenceReader: Minibatch should be large enough to accomodate the longest sentence.");
+        size_t k = mToProcess[i];
+        mProcessed[k] = true;
     }
-    return ret;
+    return true;
 }
 
 template <class ElemType>
@@ -1050,7 +1038,7 @@ bool BatchLUSequenceReader<ElemType>::CanReadFor(wstring nodeName) // TODO: cons
 
 /// get a column slice corresponding to a frame of observations
 template <class ElemType>
-bool BatchLUSequenceReader<ElemType>::GetFrame(std::map<std::wstring, Matrix<ElemType>*>& matrices, const size_t tidx, vector<size_t>& history)
+bool BatchLUSequenceReader<ElemType>::GetFrame(StreamMinibatchInputs& matrices, const size_t tidx, vector<size_t>& history)
 {
 
     // get out if they didn't call StartMinibatchLoop() first
@@ -1064,7 +1052,7 @@ bool BatchLUSequenceReader<ElemType>::GetFrame(std::map<std::wstring, Matrix<Ele
         const LabelInfo& featInfo = m_labelInfo[labelInfoIn];
 
         // loop through all the samples
-        Matrix<ElemType>& features = *matrices[m_featuresName];
+        Matrix<ElemType>& features = matrices.GetInputMatrix<ElemType>(m_featuresName);
         Matrix<ElemType> locObs(CPUDEVICE);
         locObs.SwitchToMatrixType(SPARSE, matrixFormatSparseCSC, false);
 
@@ -1120,7 +1108,7 @@ bool BatchLUSequenceReader<ElemType>::GetFrame(std::map<std::wstring, Matrix<Ele
         {
             assert(mMatrices[p->first]->GetNumCols() > tidx);
             if (matrices.find(p->first) != matrices.end())
-                matrices[p->first]->SetValue(mMatrices[p->first]->ColumnSlice(tidx, mRequestedNumParallelSequences));
+                matrices.GetInputMatrix<ElemType>(p->first).SetValue(mMatrices[p->first]->ColumnSlice(tidx, mRequestedNumParallelSequences));
         }
     }
 
@@ -1131,18 +1119,18 @@ bool BatchLUSequenceReader<ElemType>::GetFrame(std::map<std::wstring, Matrix<Ele
 /// propose labels, return a vector with size larger than 0 if this reader allows proposal
 /// otherwise, return a vector with length zero
 template <class ElemType>
-void BatchLUSequenceReader<ElemType>::InitProposals(map<wstring, Matrix<ElemType>*>& pMat)
+void BatchLUSequenceReader<ElemType>::InitProposals(StreamMinibatchInputs& pMat)
 {
     if (m_labelInfo[labelInfoIn].isproposal)
     {
         // no need to save info for labelInfoIn since it is in mProposals
         if (pMat.find(m_labelsName[labelInfoOut]) != pMat.end())
-            mMatrices[m_labelsName[labelInfoOut]]->SetValue(*(pMat[m_labelsName[labelInfoOut]]));
+            mMatrices[m_labelsName[labelInfoOut]]->SetValue(pMat.GetInputMatrix<ElemType>(m_labelsName[labelInfoOut]));
     }
     else
     {
         if (pMat.find(m_featuresName) != pMat.end())
-            mMatrices[m_featuresName]->SetValue(*(pMat[m_featuresName]));
+            mMatrices[m_featuresName]->SetValue(pMat.GetInputMatrix<ElemType>(m_featuresName));
     }
 }
 
@@ -1166,10 +1154,10 @@ void BatchLUSequenceReader<ElemType>::LoadWordMapping(const ConfigRecordType& re
         while (fp.good())
         {
             getline(fp, ss);
-            ss = wtrim(ss);
+            ss = trim(ss);
             if (ss.length() == 0)
                 break;
-            vs = wsep_string(ss, L" ");
+            vs = SplitString(ss, L" \n\r\t");
             si = vs[0];
             so = vs[1];
             mWordMapping[si] = so;
@@ -1183,16 +1171,16 @@ template class BatchLUSequenceReader<double>;
 template class BatchLUSequenceReader<float>;
 
 template <class ElemType>
-bool MultiIOBatchLUSequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemType>*>& matrices)
+bool MultiIOBatchLUSequenceReader<ElemType>::TryGetMinibatch(StreamMinibatchInputs& matrices)
 {
     // on first iteration, need to check if all requested data matrices are available
     std::map<std::wstring, size_t>::iterator iter;
     if (mCheckDictionaryKeys)
     {
-        for (auto iter = matrices.begin(); iter != matrices.end(); iter++)
+        for (auto iter = matrices.begin(); iter != matrices.end(); iter++) // TODO: range-based for
         {
             bool bFound = false;
-            for (typename map<wstring, BatchLUSequenceReader<ElemType>*>::iterator p = mReader.begin(); p != mReader.end(); p++)
+            for (typename map<wstring, BatchLUSequenceReader<ElemType>*>::iterator p = mReader.begin(); p != mReader.end(); p++) // TODO: range-based for
             {
                 if ((p->second)->CanReadFor(iter->first))
                 {
@@ -1304,6 +1292,7 @@ size_t MultiIOBatchLUSequenceReader<ElemType>::GetNumParallelSequences()
     return mReader.begin()->second->GetNumParallelSequences();
 }
 
+#if 0
 template <class ElemType>
 int MultiIOBatchLUSequenceReader<ElemType>::GetSentenceEndIdFromOutputLabel()
 {
@@ -1317,21 +1306,23 @@ int MultiIOBatchLUSequenceReader<ElemType>::GetSentenceEndIdFromOutputLabel()
     }
     return iret;
 }
+#endif
 
 template <class ElemType>
-bool MultiIOBatchLUSequenceReader<ElemType>::DataEnd(EndDataType endDataType)
+bool MultiIOBatchLUSequenceReader<ElemType>::DataEnd()
 {
     bool ret = true;
-    for (typename map<wstring, BatchLUSequenceReader<ElemType>*>::iterator p = mReader.begin(); p != mReader.end(); p++)
-    {
-        ret |= (p->second)->DataEnd(endDataType);
-    }
+    for (auto& iter : mReader)
+        ret &= iter.second->DataEnd();
+    // ###### BREAKING ######
+    // The above was an |= which did not make sense. I follow the other examples where we have an &= here. Hope that is correct.
+    // ###### BREAKING ######
     return ret;
 }
 
-/// history is shared
+// history is shared
 template <class ElemType>
-bool MultiIOBatchLUSequenceReader<ElemType>::GetProposalObs(std::map<std::wstring, Matrix<ElemType>*>& matrices, const size_t tidx, vector<size_t>& history)
+bool MultiIOBatchLUSequenceReader<ElemType>::GetProposalObs(StreamMinibatchInputs& matrices, const size_t tidx, vector<size_t>& history)
 {
     // run for each reader
     for (typename map<wstring, BatchLUSequenceReader<ElemType>*>::iterator p = mReader.begin(); p != mReader.end(); p++)
@@ -1347,13 +1338,11 @@ bool MultiIOBatchLUSequenceReader<ElemType>::GetProposalObs(std::map<std::wstrin
 /// need to provide initial matrice values if there are
 /// these values are from getMinibatch
 template <class ElemType>
-void MultiIOBatchLUSequenceReader<ElemType>::InitProposals(std::map<std::wstring, Matrix<ElemType>*>& matrices)
+void MultiIOBatchLUSequenceReader<ElemType>::InitProposals(StreamMinibatchInputs& matrices)
 {
     // run for each reader
-    for (typename map<wstring, BatchLUSequenceReader<ElemType>*>::iterator p = mReader.begin(); p != mReader.end(); p++)
-    {
-        (p->second)->InitProposals(matrices);
-    }
+    for (auto & iter : mReader)
+        iter.second->InitProposals(matrices);
 }
 
 template class MultiIOBatchLUSequenceReader<double>;

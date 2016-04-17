@@ -1,7 +1,6 @@
 //
-// <copyright company="Microsoft">
-//     Copyright (c) Microsoft Corporation.  All rights reserved.
-// </copyright>
+// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
 //
 
 #pragma once
@@ -12,8 +11,6 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
-// Currently supports only dense data format.
-template <class TBufferElement>
 class TransformerBase : public Transformer
 {
 public:
@@ -45,29 +42,26 @@ public:
         assert(m_next != nullptr);
         Sequences samples = m_next->GetNextSequences(sampleCount);
 
-        const auto &appliedStreamIds = GetAppliedStreamIds();
-        const auto &outputStreams = GetOutputStreams();
-        assert(m_inputStreams.size() == outputStreams.size());
-        m_buffer.resize(samples.m_data.size());
-
-#pragma omp parallel for ordered schedule(dynamic)
-        for (int i = 0; i < samples.m_data.size(); ++i)
+        if (samples.m_data.empty())
         {
-            auto &sample = samples.m_data[i];
-            assert(sample.size() == m_inputStreams.size());
-
-            m_buffer[i].resize(appliedStreamIds.size());
-            for (int j = 0; j < appliedStreamIds.size(); ++j)
-            {
-                size_t id = appliedStreamIds[j];
-                assert(m_inputStreams[id]->m_storageType == StorageType::dense);
-                const DenseSequenceData &sequence =
-                    reinterpret_cast<DenseSequenceData &>(*sample[id]);
-                sample[id] = Apply(sequence, *m_inputStreams[id], m_buffer[i][j],
-                                   *outputStreams[id]);
-            }
+            return samples;
         }
 
+        const auto &appliedStreamIds = GetAppliedStreamIds();
+        const auto &outputStreams = GetOutputStreams();
+
+        // TODO: Move parallelization on the outer loop with collapse.
+        for (int j = 0; j < appliedStreamIds.size(); ++j)
+        {
+            size_t streamId = appliedStreamIds[j];
+            auto& allSamples = samples.m_data[streamId];
+
+#pragma omp parallel for ordered schedule(dynamic)
+            for (int i = 0; i < allSamples.size(); ++i)
+            {
+                allSamples[i] = Apply(allSamples[i], *m_inputStreams[streamId], *outputStreams[streamId]);
+            }
+        }
         return samples;
     }
 
@@ -85,14 +79,12 @@ protected:
 
 private:
     // Applies transformation to the sequence.
-    virtual SequenceDataPtr Apply(const DenseSequenceData &inputSequence,
+    virtual SequenceDataPtr Apply(SequenceDataPtr inputSequence,
                                   const StreamDescription &inputStream,
-                                  TBufferElement &buffer,
                                   const StreamDescription &outputStream) = 0;
 
     TransformerPtr m_next;
     std::vector<StreamId> m_featureStreamIds;
-    std::vector<std::vector<TBufferElement>> m_buffer;
     std::vector<StreamDescriptionPtr> m_inputStreams;
 };
 

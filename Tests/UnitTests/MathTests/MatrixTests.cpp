@@ -92,7 +92,7 @@ BOOST_FIXTURE_TEST_CASE(MatrixDeepCopy, RandomSeedFixture)
     BOOST_CHECK_EQUAL(b.GetNumRows(), 50);
     BOOST_CHECK_EQUAL(b.GetNumCols(), 100);
 
-    b = a;
+    b.SetValue(a);
     BOOST_CHECK_EQUAL(a.GetNumRows(), 0);
     BOOST_CHECK_EQUAL(a.GetNumCols(), 0);
     BOOST_CHECK_EQUAL(b.GetNumRows(), 0);
@@ -107,7 +107,7 @@ BOOST_FIXTURE_TEST_CASE(MatrixDeepCopy, RandomSeedFixture)
     b(2, 3) = 9;
     BOOST_CHECK_EQUAL(b(2, 3), 9);
 
-    b = a;
+    b.SetValue(a);
     BOOST_CHECK_EQUAL(a.GetNumRows(), 0);
     BOOST_CHECK_EQUAL(a.GetNumCols(), 0);
     BOOST_CHECK_EQUAL(b.GetNumRows(), 0);
@@ -500,7 +500,7 @@ BOOST_FIXTURE_TEST_CASE(MatrixAddAndSub, RandomSeedFixture)
     m3 = m1 - 10;
     BOOST_CHECK(m3.IsEqualTo(m0));
 
-    SingleMatrix m33(m3);
+    SingleMatrix m33(m3.DeepClone());
     m3 += 10;
     BOOST_CHECK(m3.IsEqualTo(m1));
 
@@ -545,7 +545,7 @@ BOOST_FIXTURE_TEST_CASE(MatrixElementOps, RandomSeedFixture)
     BOOST_CHECK(m3.IsEqualTo(m1, c_epsilonFloatE4));
 
     SingleMatrix m4 = SingleMatrix::Zeros(2, 3, c_deviceIdZero);
-    m4 = m4.AddElementProductOf(m0, m00);
+    m4.SetValue(m4.AddElementProductOf(m0, m00));
     BOOST_CHECK(m4.IsEqualTo(m1, c_epsilonFloatE4));
 
     m3 = m0 ^ 4;
@@ -697,7 +697,7 @@ BOOST_FIXTURE_TEST_CASE(MatrixColumnElementMultiply, RandomSeedFixture)
 
     Matrix<float> m = Matrix<float>::RandomUniform(429, 1024, c_deviceIdZero, -3.4f, 1, IncrementCounter());
     Matrix<float> a = Matrix<float>::Ones(429, 1, c_deviceIdZero);
-    Matrix<float> mCopy(m);
+    Matrix<float> mCopy(m.DeepClone());
 
     m.ColumnElementMultiplyWith(a);
     BOOST_CHECK(mCopy.IsEqualTo(m, c_epsilonFloatE4));
@@ -706,8 +706,8 @@ BOOST_FIXTURE_TEST_CASE(MatrixColumnElementMultiply, RandomSeedFixture)
     CPUMatrix<float> mc2 = CPUMatrix<float>::RandomUniform(429, 1, 0, 3, IncrementCounter());
     mc1.ColumnElementMultiplyWith(mc2);
 
-    Matrix<float> m1(mc1.GetNumRows(), mc1.GetNumCols(), mc1.GetArray(), matrixFlagNormal);
-    Matrix<float> m2(mc2.GetNumRows(), mc2.GetNumCols(), mc2.GetArray(), matrixFlagNormal);
+    Matrix<float> m1(mc1.GetNumRows(), mc1.GetNumCols(), mc1.Buffer(), matrixFlagNormal);
+    Matrix<float> m2(mc2.GetNumRows(), mc2.GetNumCols(), mc2.Buffer(), matrixFlagNormal);
     m1.ColumnElementMultiplyWith(m2);
 
     foreach_coord (i, j, m2)
@@ -728,6 +728,9 @@ BOOST_FIXTURE_TEST_CASE(MatrixAssignXOf, RandomSeedFixture)
     {
         BOOST_CHECK_EQUAL(c(i, j), a(i, j) - b(i, j));
     }
+    a.TransferToDeviceIfNotThere(c_deviceIdZero, true, false, true);
+    b.TransferToDeviceIfNotThere(c_deviceIdZero, true, false, true);
+    c.TransferToDeviceIfNotThere(c_deviceIdZero, true, false, true);
 
     float x = 234.2f;
     c.AssignDifferenceOf(a, x);
@@ -735,12 +738,18 @@ BOOST_FIXTURE_TEST_CASE(MatrixAssignXOf, RandomSeedFixture)
     {
         BOOST_CHECK_EQUAL(c(i, j), a(i, j) - x);
     }
+    a.TransferToDeviceIfNotThere(c_deviceIdZero, true, false, true);
+    b.TransferToDeviceIfNotThere(c_deviceIdZero, true, false, true);
+    c.TransferToDeviceIfNotThere(c_deviceIdZero, true, false, true);
 
     c.AssignDifferenceOf(x, a);
     foreach_coord (i, j, c)
     {
         BOOST_CHECK_EQUAL(c(i, j), x - a(i, j));
     }
+    a.TransferToDeviceIfNotThere(c_deviceIdZero, true, false, true);
+    b.TransferToDeviceIfNotThere(c_deviceIdZero, true, false, true);
+    c.TransferToDeviceIfNotThere(c_deviceIdZero, true, false, true);
 
     c.AssignDifferenceOf(1, a);
     foreach_coord (i, j, c)
@@ -748,6 +757,9 @@ BOOST_FIXTURE_TEST_CASE(MatrixAssignXOf, RandomSeedFixture)
         BOOST_CHECK_EQUAL(c(i, j), 1 - a(i, j));
     }
     // 
+    a.TransferToDeviceIfNotThere(c_deviceIdZero, true, false, true);
+    b.TransferToDeviceIfNotThere(c_deviceIdZero, true, false, true);
+    c.TransferToDeviceIfNotThere(c_deviceIdZero, true, false, true);
 
     // AssignElementProductOf
     c.AssignElementProductOf(a, b);
@@ -755,9 +767,12 @@ BOOST_FIXTURE_TEST_CASE(MatrixAssignXOf, RandomSeedFixture)
     {
         BOOST_CHECK_EQUAL(c(i, j), a(i, j) * b(i, j));
     }
+    a.TransferToDeviceIfNotThere(c_deviceIdZero, true, false, true);
+    b.TransferToDeviceIfNotThere(c_deviceIdZero, true, false, true);
+    c.TransferToDeviceIfNotThere(c_deviceIdZero, true, false, true);
 
     // AddElementProductOf
-    Matrix<float> c_copy(c);
+    Matrix<float> c_copy(c.DeepClone());
     c.AddElementProductOf(a, b);
     foreach_coord (i, j, c)
     {
@@ -767,8 +782,8 @@ BOOST_FIXTURE_TEST_CASE(MatrixAssignXOf, RandomSeedFixture)
     // AssignSigmoidOf
     CPUMatrix<float> ac = CPUMatrix<float>::RandomUniform(429, 1024, 5, 32, IncrementCounter());
     CPUMatrix<float> bc = CPUMatrix<float>::RandomUniform(429, 1024, -5, 12, IncrementCounter());
-    Matrix<float> d(ac.GetNumRows(), ac.GetNumCols(), ac.GetArray(), matrixFlagNormal);
-    Matrix<float> e(bc.GetNumRows(), bc.GetNumCols(), bc.GetArray(), matrixFlagNormal);
+    Matrix<float> d(ac.GetNumRows(), ac.GetNumCols(), ac.Buffer(), matrixFlagNormal);
+    Matrix<float> e(bc.GetNumRows(), bc.GetNumCols(), bc.Buffer(), matrixFlagNormal);
     ac.AssignSigmoidOf(bc);
     d.AssignSigmoidOf(e);
     foreach_coord (i, j, ac)
@@ -789,7 +804,7 @@ BOOST_FIXTURE_TEST_CASE(MatrixAssignXOf, RandomSeedFixture)
     }
 
     Matrix<float> m3 = Matrix<float>::RandomUniform(42, 12, c_deviceIdZero, -5, 2, IncrementCounter());
-    Matrix<float> m4(m3);
+    Matrix<float> m4(m3.DeepClone());
     m3.AddSignOf(m1);
     foreach_coord (i, j, m3)
     {
@@ -1009,7 +1024,7 @@ BOOST_FIXTURE_TEST_CASE(MatrixCopy, RandomSeedFixture)
     Matrix<float> srcM(crow, ccol, src, matrixFlagNormal, c_deviceIdZero);
     // Test full copy.
     CPUMatrix<float> actualM(crow, ccol);
-    srcM.CopySection(actualM.GetNumRows(), actualM.GetNumCols(), actualM.BufferPointer(), actualM.GetNumRows());
+    srcM.CopySection(actualM.GetNumRows(), actualM.GetNumCols(), actualM.Data(), actualM.GetNumRows());
 
     std::vector<float> expected = {
         1.0f, 3.0f, 4.0f,
@@ -1019,7 +1034,7 @@ BOOST_FIXTURE_TEST_CASE(MatrixCopy, RandomSeedFixture)
     // Test tile copy.
     actualM.Resize(crow - 1, ccol - 1);
     actualM.SetValue(std::numeric_limits<float>::quiet_NaN());
-    srcM.CopySection(actualM.GetNumRows(), actualM.GetNumCols(), actualM.BufferPointer(), actualM.GetNumRows());
+    srcM.CopySection(actualM.GetNumRows(), actualM.GetNumCols(), actualM.Data(), actualM.GetNumRows());
 
     expected = {1.0f, 3.0f};
     BOOST_CHECK(actualM.IsEqualTo(CPUMatrix<float>(actualM.GetNumRows(), actualM.GetNumCols(), expected.data(), matrixFlagNormal)));

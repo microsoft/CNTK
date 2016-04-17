@@ -27,7 +27,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 // only inputs (but not // function values) are used.
 // -----------------------------------------------------------------------
 
-template <class ElemType, ElementWiseOperator opForward, ElementWiseOperator opBackward, bool gradientFromOutput>
+enum GradientOperationType 
+{
+    UnaryGradient,
+    BinaryWithInputGradient,
+    BinaryWithOutputGradient
+};
+
+template <class ElemType, ElementWiseOperator opForward, ElementWiseOperator opBackward, GradientOperationType opType>
 class UnaryElementWiseWithOpCodeNodeBase : public ComputationNode<ElemType>, public NumInputs<1>
 {
     typedef ComputationNode<ElemType> Base;
@@ -56,11 +63,24 @@ public:
         size_t rank = DetermineElementwiseTensorRank();
         auto sliceOutputGrad = GradientTensorFor(rank, fr);               // propagate from this one...
         auto sliceInputGrad = Input(0)->GradientTensorFor(rank, fr);      // ...to this one
-        auto sliceValue = gradientFromOutput ? ValueTensorFor(rank, fr) : // using input or output value
-                              Input(0)->ValueTensorFor(rank, fr);
-        // If gradient can be compute from output rather than input, then that's better for mem sharing (and faster in most cases).
-        // Not possible for Cos().
-        sliceInputGrad.DoBinaryOpOf(1, sliceOutputGrad, sliceValue, 1, opBackward);
+
+        // we expect a constant conditional expression here -- suppress the warning that leads to an error
+        // TODO: alternative: assign to a non-const variable and test that.
+#pragma warning( push )
+#pragma warning( disable : 4127 )
+        if (opType == UnaryGradient) 
+        {
+            sliceInputGrad.DoUnaryOpOf(1, sliceOutputGrad, 1, opBackward);
+        }
+        else 
+        {
+            // If gradient can be compute from output rather than input, then that's better for mem sharing (and faster in most cases).
+            // Not possible for Cos().
+            auto sliceValue = (opType == BinaryWithOutputGradient) ? ValueTensorFor(rank, fr) : // using input or output value
+                Input(0)->ValueTensorFor(rank, fr);
+            sliceInputGrad.DoBinaryOpOf(1, sliceOutputGrad, sliceValue, 1, opBackward);
+        }
+#pragma warning( pop )
     }
 
     virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
@@ -70,55 +90,67 @@ public:
 
     virtual bool OutputUsedInComputingInputNodesGradients() const override
     {
-        return gradientFromOutput;
+        return opType == BinaryWithOutputGradient;
     }
     virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override
     {
-        return !gradientFromOutput;
+        return opType == BinaryWithInputGradient;
     }
 };
 
 #define UnaryElementWiseWithOpCodeNodeBaseMembers UsingComputationNodeMembersBoilerplate;
 
 // -----------------------------------------------------------------------
+// Pass (Input)
 // SigmoidNode (input)
 // TanhNode (input)
 // RectifiedLinearNode (input)
 // LogNode (input)
 // ExpNode (input)
 // CosineNode (input)
+// SinNode (input)
+// Abs(input)
+// Negate (input)
+// Sqrt (input)
+// Reciprocal (input)
 // These are all implemented by single-opcode functions and can thus be declared by a macro.
 // -----------------------------------------------------------------------
 
-#pragma push_macro("DeclareUnaryTensorOp")
-#define DeclareUnaryElementWiseWithOpCodeNode(Name, Forward, Backward, gradientFromOutput)                                \
-    template <class ElemType>                                                                                             \
-    class Name##Node : public UnaryElementWiseWithOpCodeNodeBase<ElemType, op##Forward, op##Backward, gradientFromOutput> \
-    {                                                                                                                     \
-        typedef UnaryElementWiseWithOpCodeNodeBase<ElemType, op##Forward, op##Backward, gradientFromOutput> Base;         \
-        UnaryElementWiseWithOpCodeNodeBaseMembers;                                                                        \
-        static const std::wstring TypeName()                                                                              \
-        {                                                                                                                 \
-            return L## #Name;                                                                                             \
-        }                                                                                                                 \
-                                                                                                                          \
-    public:                                                                                                               \
-        DeclareConstructorFromConfigWithNumInputs(Name##Node);                                                            \
-        Name##Node(DEVICEID_TYPE deviceId, const wstring& Name)                                                           \
-            : Base(deviceId, Name)                                                                                        \
-        {                                                                                                                 \
-        }                                                                                                                 \
+#pragma push_macro("DeclareUnaryElementWiseWithOpCodeNode")
+#define DeclareUnaryElementWiseWithOpCodeNode(Name, Forward, Backward, opType)                                                               \
+    template <class ElemType>                                                                                                                \
+    class Name##Node : public UnaryElementWiseWithOpCodeNodeBase<ElemType, op##Forward, op##Backward, opType>                                \
+    {                                                                                                                                        \
+        typedef UnaryElementWiseWithOpCodeNodeBase<ElemType, op##Forward, op##Backward, opType> Base;                                        \
+        UnaryElementWiseWithOpCodeNodeBaseMembers;                                                                                           \
+        static const std::wstring TypeName()                                                                                                 \
+        {                                                                                                                                    \
+            return L## #Name;                                                                                                                \
+        }                                                                                                                                    \
+                                                                                                                                             \
+    public:                                                                                                                                  \
+        DeclareConstructorFromConfigWithNumInputs(Name##Node);                                                                               \
+        Name##Node(DEVICEID_TYPE deviceId, const wstring& Name) :                                                                            \
+            Base(deviceId, Name)                                                                                                             \
+        {                                                                                                                                    \
+        }                                                                                                                                    \
     }
 
-//                                    Name             Forward and      Backward opcodes
-DeclareUnaryElementWiseWithOpCodeNode(Sigmoid, Sigmoid, ElementwiseProductWithSigmoidDerivativeFromOutput, true);
-DeclareUnaryElementWiseWithOpCodeNode(Tanh, Tanh, ElementwiseProductWithTanhDerivativeFromOutput, true);
-DeclareUnaryElementWiseWithOpCodeNode(RectifiedLinear, LinearRectifier, ElementwiseProductWithLinearRectifierDerivativeFromOutput, true);
-DeclareUnaryElementWiseWithOpCodeNode(Log, Log, ElementwiseProductWithLogDerivativeFromOutput, true);
-DeclareUnaryElementWiseWithOpCodeNode(Exp, Exp, ElementwiseProduct, true);
-DeclareUnaryElementWiseWithOpCodeNode(Cosine, Cosine, ElementwiseProductWithCosDerivative, false);
+//                                    Name             Forward and      Backward opcodes                                           Gradient optype
+DeclareUnaryElementWiseWithOpCodeNode(Pass,            Copy,            Copy,                                                      UnaryGradient);
+DeclareUnaryElementWiseWithOpCodeNode(Sigmoid,         Sigmoid,         ElementwiseProductWithSigmoidDerivativeFromOutput,         BinaryWithOutputGradient);
+DeclareUnaryElementWiseWithOpCodeNode(Tanh,            Tanh,            ElementwiseProductWithTanhDerivativeFromOutput,            BinaryWithOutputGradient);
+DeclareUnaryElementWiseWithOpCodeNode(RectifiedLinear, LinearRectifier, ElementwiseProductWithLinearRectifierDerivativeFromOutput, BinaryWithOutputGradient);
+DeclareUnaryElementWiseWithOpCodeNode(Log,             Log,             ElementwiseProductWithLogDerivativeFromOutput,             BinaryWithOutputGradient);
+DeclareUnaryElementWiseWithOpCodeNode(Exp,             Exp,             ElementwiseProduct,                                        BinaryWithOutputGradient);
+DeclareUnaryElementWiseWithOpCodeNode(Cosine,          Cosine,          ElementwiseProductWithCosDerivative,                       BinaryWithInputGradient);
+DeclareUnaryElementWiseWithOpCodeNode(Sin,             Sin,             ElementwiseProductWithSinDerivative,                       BinaryWithInputGradient);
+DeclareUnaryElementWiseWithOpCodeNode(Abs,             Abs,             ElementwiseProductWithAbsDerivative,                       BinaryWithInputGradient);
+DeclareUnaryElementWiseWithOpCodeNode(Negate,          Negate,          Negate,                                                    UnaryGradient);
+DeclareUnaryElementWiseWithOpCodeNode(Sqrt,            Sqrt,            ElementwiseProductWithSqrtDerivative,                      BinaryWithOutputGradient);
+DeclareUnaryElementWiseWithOpCodeNode(Reciprocal,      Reciprocal,      ElementwiseProductWithReciprocalDerivative,                BinaryWithOutputGradient);
 
-#pragma pop_macro("DeclareUnaryTensorOp")
+#pragma pop_macro("DeclareUnaryElementWiseWithOpCodeNode")
 
 // -----------------------------------------------------------------------
 // SoftmaxNodeBase (input) -- shared base of Softmax and LogSoftmax
@@ -180,7 +212,7 @@ public:
         if (flags & CopyNodeFlags::copyNodeValue)
         {
             auto node = dynamic_pointer_cast<SoftmaxNodeBase<ElemType>>(nodeP);
-            *node->m_gradientTemp = *m_gradientTemp;
+            node->m_gradientTemp->SetValue(*m_gradientTemp);
         }
     }
 
@@ -229,13 +261,7 @@ public:
     {
     }
 
-    virtual bool InputUsedInComputingInputNodesGradients(size_t childIndex) const override
-    {
-        // The plus node does not require any of it's input's values for computing
-        // the gradients of its input nodes
-        UNREFERENCED_PARAMETER(childIndex);
-        return false;
-    }
+    virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override { return false; }
 
     /*virtual*/ void BackpropToV(Matrix<ElemType>& gradient, const Matrix<ElemType>& inputFunctionValues, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues, const Matrix<ElemType>& functionValues)
     {
@@ -258,7 +284,7 @@ public:
         if (flags & CopyNodeFlags::copyNodeValue)
         {
             auto node = dynamic_pointer_cast<SoftmaxNode<ElemType>>(nodeP);
-            *node->m_diff = *m_diff;
+            node->m_diff->SetValue(*m_diff);
         }
     }
     // request matrices that are needed for gradient computation
@@ -303,13 +329,7 @@ public:
     {
     }
 
-    virtual bool InputUsedInComputingInputNodesGradients(size_t childIndex) const override
-    {
-        // The plus node does not require any of it's input's values for computing
-        // the gradients of its input nodes
-        UNREFERENCED_PARAMETER(childIndex);
-        return false;
-    }
+    virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override { return false; }
 
     /*virtual*/ void BackpropToV(Matrix<ElemType>& gradient, const Matrix<ElemType>& inputFunctionValues, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues, const Matrix<ElemType>& functionValues)
     {
@@ -331,7 +351,7 @@ public:
         if (flags & CopyNodeFlags::copyNodeValue)
         {
             auto node = dynamic_pointer_cast<LogSoftmaxNode<ElemType>>(nodeP);
-            *node->m_softmax = *m_softmax;
+            node->m_softmax->SetValue(*m_softmax);
         }
     }
     // request matrices that are needed for gradient computation
@@ -380,25 +400,18 @@ public:
 
     /*virtual*/ void BackpropToV(Matrix<ElemType>& gradient, const Matrix<ElemType>& inputFunctionValues, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues, const Matrix<ElemType>& functionValues) override
     {
-        gradient;
-        inputFunctionValues;
-        inputGradientValues;
-        gradientValues;
-        LogicError("Hardmax is not differentiable and is used for evaluation only.");
+        gradient; inputFunctionValues; inputGradientValues; gradientValues;
+        // Hardmax cannot back-propagate a gradient.
+        // We must not forbid this function to be called, though, since Hardmax may be running
+        // as part of a recurrent decoding loop. Sequence-to-sequence models run the Hardmax
+        // node inside the training without back-propagating into them.
     }
 
-    virtual bool OutputUsedInComputingInputNodesGradients() const override
-    {
-        return false;
-    }
-    virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override
-    {
-        return false;
-    }
+    virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }
+    virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override { return false; }
 
     /*virtual*/ void ForwardPropV(Matrix<ElemType>& functionValues, const Matrix<ElemType>& inputFunctionValues) override
     {
-        // TODO: temp solution, we need to write a math function specifically for this
         functionValues.AssignHardmaxOf(inputFunctionValues, true);
     }
 };
@@ -406,4 +419,4 @@ public:
 template class HardmaxNode<float>;
 template class HardmaxNode<double>;
 
-} } }
+}}}

@@ -37,24 +37,24 @@ void MatrixQuantizerCPU<ElemType>::QuantizeAsync(const Matrix<ElemType>& inMatri
                                   if (zeroThresholdFor1Bit)
                                   {
                                       // Explicit use of 'template' keyword is needed to compile with GCC
-                                      ColumnQuantizer<ElemType>::template ComputeRangeStatColj<true>(inMatrix.BufferPointer(), inResidual.BufferPointer(), (long) nRow, j, nBits, qcol.lower, qcol.upper);
+                                      ColumnQuantizer<ElemType>::template ComputeRangeStatColj<true>(inMatrix.Data(), inResidual.Data(), (long) nRow, j, nBits, qcol.lower, qcol.upper);
                                   }
                                   else
                                   {
                                       // Explicit use of 'template' keyword is needed to compile with GCC
-                                      ColumnQuantizer<ElemType>::template ComputeRangeStatColj<false>(inMatrix.BufferPointer(), inResidual.BufferPointer(), (long) nRow, j, nBits, qcol.lower, qcol.upper);
+                                      ColumnQuantizer<ElemType>::template ComputeRangeStatColj<false>(inMatrix.Data(), inResidual.Data(), (long) nRow, j, nBits, qcol.lower, qcol.upper);
                                   }
 
                                   ColumnQuantizer<ElemType> q(ldNbits, qcol.lower, qcol.upper);
                                   if (zeroThresholdFor1Bit)
                                   {
                                       // Explicit use of 'template' keyword is needed to compile with GCC
-                                      q.template Quantize<true>(inMatrix.BufferPointer(), inResidual.BufferPointer(), (long) nRow, j, qcol.bits, outResidual.BufferPointer());
+                                      q.template Quantize<true>(inMatrix.Data(), inResidual.Data(), (long) nRow, j, qcol.bits, outResidual.Data());
                                   }
                                   else
                                   {
                                       // Explicit use of 'template' keyword is needed to compile with GCC
-                                      q.template Quantize<false>(inMatrix.BufferPointer(), inResidual.BufferPointer(), (long) nRow, j, qcol.bits, outResidual.BufferPointer());
+                                      q.template Quantize<false>(inMatrix.Data(), inResidual.Data(), (long) nRow, j, qcol.bits, outResidual.Data());
                                   }
                               }
 #ifdef QUANTUSEPPL
@@ -92,7 +92,7 @@ void MatrixQuantizerCPU<ElemType>::UnquantizeAsync(QuantizedMatrix<ElemType>& in
                               {
                                   const auto& qcol = *(inQMatrix.GetQuantizedColumn(j));
                                   ColumnQuantizer<ElemType> q(ldNbits, qcol.lower, qcol.upper);
-                                  q.Unquantize(outMatrix.BufferPointer(), (long) nRow, j, qcol.bits, add);
+                                  q.Unquantize(outMatrix.Data(), (long) nRow, j, qcol.bits, add);
                               }
 #ifdef QUANTUSEPPL
                               );

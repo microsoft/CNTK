@@ -8,9 +8,6 @@
     <ClCompile Include="..\Common\fileutil.cpp">
       <Filter>Common</Filter>
     </ClCompile>
-    <ClCompile Include="..\Common\DebugUtil.cpp">
-      <Filter>Common</Filter>
-    </ClCompile>
     <ClCompile Include="CPUMatrix.cpp">
       <Filter>CPU</Filter>
     </ClCompile>
@@ -43,6 +40,12 @@
     </ClCompile>
     <ClCompile Include="MatrixQuantizerImpl.cpp">
       <Filter>1bitSGD</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Common\ExceptionWithCallStack.cpp">
+      <Filter>Common</Filter>
+    </ClCompile>
+    <ClCompile Include="BatchNormalizationEngine.cpp">
+      <Filter>BatchNormalization</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -82,9 +85,6 @@
     <ClInclude Include="Helpers.h">
       <Filter>Misc</Filter>
     </ClInclude>
-    <ClInclude Include="..\Common\Include\DebugUtil.h">
-      <Filter>Common\Include</Filter>
-    </ClInclude>
     <ClInclude Include="ConvolutionEngine.h">
       <Filter>Convolution</Filter>
     </ClInclude>
@@ -99,6 +99,12 @@
     </ClInclude>
     <ClInclude Include="MatrixQuantizerImpl.h">
       <Filter>1bitSGD</Filter>
+    </ClInclude>
+    <ClInclude Include="ConvolveGeometry.h">
+      <Filter>Convolution</Filter>
+    </ClInclude>
+    <ClInclude Include="BatchNormalizationEngine.h">
+      <Filter>BatchNormalization</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -145,6 +151,9 @@
     </Filter>
     <Filter Include="1bitSGD">
       <UniqueIdentifier>{546cacbd-253e-485b-8c8c-8b9ee0e2f631}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="BatchNormalization">
+      <UniqueIdentifier>{8f982dac-298d-4e48-b060-8e6cba5ff554}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
 </Project>

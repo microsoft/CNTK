@@ -53,7 +53,7 @@ public:
 
 __declspec_noreturn static inline void EvaluationError(const wstring &msg, TextLocation where)
 {
-    Microsoft::MSR::CNTK::DebugUtil::PrintCallStack();
+    //Microsoft::MSR::CNTK::DebugUtil::PrintCallStack();
     throw EvaluationException(msg, where);
 }
 
@@ -174,7 +174,7 @@ static ConfigValuePtr RecordLookup(const ExpressionPtr &recordExpr, const wstrin
     // that is, variables inside that expression--often a single variable referencing something in the current scope--
     // will be looked up there.
     // Now, the identifier on the other hand is looked up in the record and *its* scope (parent chain).
-    let record = AsPtr<ConfigRecord>(Evaluate(recordExpr, scope, exprPath, L""), recordExpr, L"record");
+    let record = AsPtr<IConfigRecord>(Evaluate(recordExpr, scope, exprPath, L""), recordExpr, L"record");
     return ResolveIdentifier(id, idLocation, record /*resolve in scope of record; *not* the current scope*/);
 }
 
@@ -222,61 +222,41 @@ __declspec_noreturn static void InvalidInfixOpTypes(ExpressionPtr e)
 template <typename T>
 static ConfigValuePtr CompOp(const ExpressionPtr &e, const T &left, const T &right, const IConfigRecordPtr &, const wstring &exprPath)
 {
-    if (e->op == L"==")
-        return MakePrimitiveConfigValuePtr(left == right, MakeFailFn(e->location), exprPath);
-    else if (e->op == L"!=")
-        return MakePrimitiveConfigValuePtr(left != right, MakeFailFn(e->location), exprPath);
-    else if (e->op == L"<")
-        return MakePrimitiveConfigValuePtr(left < right, MakeFailFn(e->location), exprPath);
-    else if (e->op == L">")
-        return MakePrimitiveConfigValuePtr(left > right, MakeFailFn(e->location), exprPath);
-    else if (e->op == L"<=")
-        return MakePrimitiveConfigValuePtr(left <= right, MakeFailFn(e->location), exprPath);
-    else if (e->op == L">=")
-        return MakePrimitiveConfigValuePtr(left >= right, MakeFailFn(e->location), exprPath);
-    else
-        LogicError("unexpected infix op");
+    if      (e->op == L"==") return MakePrimitiveConfigValuePtr(left == right, MakeFailFn(e->location), exprPath);
+    else if (e->op == L"!=") return MakePrimitiveConfigValuePtr(left != right, MakeFailFn(e->location), exprPath);
+    else if (e->op == L"<")  return MakePrimitiveConfigValuePtr(left < right, MakeFailFn(e->location), exprPath);
+    else if (e->op == L">")  return MakePrimitiveConfigValuePtr(left > right, MakeFailFn(e->location), exprPath);
+    else if (e->op == L"<=") return MakePrimitiveConfigValuePtr(left <= right, MakeFailFn(e->location), exprPath);
+    else if (e->op == L">=") return MakePrimitiveConfigValuePtr(left >= right, MakeFailFn(e->location), exprPath);
+    else LogicError("unexpected infix op");
 }
 static ConfigValuePtr NumOp(const ExpressionPtr &e, ConfigValuePtr leftVal, ConfigValuePtr rightVal, const IConfigRecordPtr &scope, const wstring &exprPath)
 {
     let left = leftVal.AsRef<Double>();
     let right = rightVal.AsRef<Double>();
-    if (e->op == L"+")
-        return MakePrimitiveConfigValuePtr(left + right, MakeFailFn(e->location), exprPath);
-    else if (e->op == L"-")
-        return MakePrimitiveConfigValuePtr(left - right, MakeFailFn(e->location), exprPath);
-    else if (e->op == L"*")
-        return MakePrimitiveConfigValuePtr(left * right, MakeFailFn(e->location), exprPath);
-    else if (e->op == L"/")
-        return MakePrimitiveConfigValuePtr(left / right, MakeFailFn(e->location), exprPath);
-    else if (e->op == L"%")
-        return MakePrimitiveConfigValuePtr(fmod(left, right), MakeFailFn(e->location), exprPath);
-    else if (e->op == L"**")
-        return MakePrimitiveConfigValuePtr(pow(left, right), MakeFailFn(e->location), exprPath);
-    else
-        return CompOp<double>(e, left, right, scope, exprPath);
+    if      (e->op == L"+")  return MakePrimitiveConfigValuePtr(left + right, MakeFailFn(e->location), exprPath);
+    else if (e->op == L"-")  return MakePrimitiveConfigValuePtr(left - right, MakeFailFn(e->location), exprPath);
+    else if (e->op == L"*")  return MakePrimitiveConfigValuePtr(left * right, MakeFailFn(e->location), exprPath);
+    else if (e->op == L"/")  return MakePrimitiveConfigValuePtr(left / right, MakeFailFn(e->location), exprPath);
+    else if (e->op == L"%")  return MakePrimitiveConfigValuePtr(fmod(left, right), MakeFailFn(e->location), exprPath);
+    else if (e->op == L"**") return MakePrimitiveConfigValuePtr(pow(left, right), MakeFailFn(e->location), exprPath);
+    else return CompOp<double>(e, left, right, scope, exprPath);
 };
 static ConfigValuePtr StrOp(const ExpressionPtr &e, ConfigValuePtr leftVal, ConfigValuePtr rightVal, const IConfigRecordPtr &scope, const wstring &exprPath)
 {
     let left = leftVal.AsRef<String>();
     let right = rightVal.AsRef<String>();
-    if (e->op == L"+")
-        return ConfigValuePtr(make_shared<String>(left + right), MakeFailFn(e->location), exprPath);
-    else
-        return CompOp<wstring>(e, left, right, scope, exprPath);
+    if (e->op == L"+") return ConfigValuePtr(make_shared<String>(left + right), MakeFailFn(e->location), exprPath);
+    else return CompOp<wstring>(e, left, right, scope, exprPath);
 };
 static ConfigValuePtr BoolOp(const ExpressionPtr &e, ConfigValuePtr leftVal, ConfigValuePtr rightVal, const IConfigRecordPtr &scope, const wstring &exprPath)
 {
     let left = leftVal.AsRef<Bool>();
     //let right = rightVal.AsRef<Bool>();   // we do this inline, as to get the same short-circuit semantics as C++ (if rightVal is thunked, it will remain so unless required for this operation)
-    if (e->op == L"||")
-        return MakePrimitiveConfigValuePtr(left || rightVal.AsRef<Bool>(), MakeFailFn(e->location), exprPath);
-    else if (e->op == L"&&")
-        return MakePrimitiveConfigValuePtr(left && rightVal.AsRef<Bool>(), MakeFailFn(e->location), exprPath);
-    else if (e->op == L"^")
-        return MakePrimitiveConfigValuePtr(left ^ rightVal.AsRef<Bool>(), MakeFailFn(e->location), exprPath);
-    else
-        return CompOp<bool>(e, left, rightVal.AsRef<Bool>(), scope, exprPath);
+    if      (e->op == L"||") return MakePrimitiveConfigValuePtr(left || rightVal.AsRef<Bool>(), MakeFailFn(e->location), exprPath);
+    else if (e->op == L"&&") return MakePrimitiveConfigValuePtr(left && rightVal.AsRef<Bool>(), MakeFailFn(e->location), exprPath);
+    else if (e->op == L"^")  return MakePrimitiveConfigValuePtr(left ^ rightVal.AsRef<Bool>(), MakeFailFn(e->location), exprPath);
+    else return CompOp<bool>(e, left, rightVal.AsRef<Bool>(), scope, exprPath);
 };
 // NodeOps handle the magic CNTK types, that is, infix operations between ComputeNode objects.
 // TODO: we should have automagic up-casting of 'double' values to Constant() nodes, e.g. to allow to say "1 - P" where P is a node.
@@ -324,18 +304,20 @@ static ConfigValuePtr NodeOp(const ExpressionPtr &e, ConfigValuePtr leftVal, Con
     // When they fetch their parameters, they should only look in this record, not in any parent scope (if they don't find what they are looking for, it's a bug in this routine here).
     // The values themselves are already in ConfigValuePtr form, so we won't need any scope lookups there either.
     config->Add(L"operation", MakeFailFn(e->location), ConfigValuePtr(make_shared<String>(operationName), MakeFailFn(e->location), exprPath));
+    let leftFailFn = leftVal.GetFailFn(); // report any error for this Constant object as belonging to the scalar factor's expression
     vector<ConfigValuePtr> inputs;
     if (operationName == L"Scale")
     {
         // if we scale, the first operand is a Double, and we must convert that into a 1x1 Constant
         // TODO: apply this more generally to all operators
         auto constantConfig = make_shared<ConfigRecord>(config, MakeFailFn(e->location));
-        let leftFailFn = leftVal.GetFailFn(); // report any error for this Constant object as belonging to the scalar factor's expression
-        constantConfig->Add(L"operation", leftFailFn, ConfigValuePtr(make_shared<String>(L"Constant"), leftFailFn, exprPath));
-        let one = MakePrimitiveConfigValuePtr(1.0, leftVal.GetFailFn(), exprPath);
+        constantConfig->Add(L"operation", leftFailFn, ConfigValuePtr(make_shared<String>(L"LearnableParameter"), leftFailFn, exprPath));
+        let one = MakePrimitiveConfigValuePtr(1.0, leftFailFn, exprPath);
         constantConfig->Add(L"rows", leftFailFn, one);
         constantConfig->Add(L"cols", leftFailFn, one);
+        //constantConfig->Add(L"shape", leftFailFn, one);  // BUGBUG: rows,cols is no longer right, we need a TensorShape here
         constantConfig->Add(L"value", leftFailFn, leftVal);
+        constantConfig->Add(L"learningRateMultiplier", leftFailFn, MakePrimitiveConfigValuePtr(0.0f, leftFailFn, exprPath));
         let value = ConfigValuePtr(rtInfo->construct(constantConfig), leftFailFn, exprPath);
         let valueWithName = dynamic_cast<HasName *>(value.get());
         if (valueWithName)
@@ -345,8 +327,13 @@ static ConfigValuePtr NodeOp(const ExpressionPtr &e, ConfigValuePtr leftVal, Con
     inputs.push_back(leftVal);
     if (operationName != L"Negate") // Negate only has one input (rightVal is a nullptr)
         inputs.push_back(rightVal);
-    config->Add(L"inputs", leftVal.GetFailFn(), ConfigValuePtr(make_shared<ConfigArray>(0, move(inputs)), leftVal.GetFailFn(), exprPath));
-    config->Add(L"tag", leftVal.GetFailFn(), ConfigValuePtr(make_shared<String>(), leftVal.GetFailFn(), exprPath)); // infix nodes have no tag
+    config->Add(L"inputs", leftFailFn, ConfigValuePtr(make_shared<ConfigArray>(0, move(inputs)), leftFailFn, exprPath));
+    config->Add(L"tag", leftFailFn, ConfigValuePtr(make_shared<String>(), leftFailFn, exprPath)); // infix nodes have no tag
+    if (operationName == L"Times")
+    {
+        let one = MakePrimitiveConfigValuePtr(1.0, leftFailFn, exprPath);
+        config->Add(L"outputRank", leftFailFn, one);
+    }
     // instantiate the ComputationNode
     let value = ConfigValuePtr(rtInfo->construct(config), MakeFailFn(e->location), exprPath);
     let valueWithName = dynamic_cast<HasName *>(value.get());
@@ -374,25 +361,26 @@ static ConfigValuePtr BadOp(const ExpressionPtr &e, ConfigValuePtr, ConfigValueP
 // lookup table for infix operators
 // This lists all infix operators with lambdas for evaluating them.
 static map<wstring, InfixOps> infixOps =
-    {
-        // symbol  PrettyName      NumbersOp StringsOp BoolOp ComputeNodeOp DictOp
-        {L"with", InfixOps(L"With", NumOp, BadOp, BadOp, NodeOp, DictOp)},
-        {L"*", InfixOps(L"Times", NumOp, BadOp, BadOp, NodeOp, BadOp)},
-        {L"/", InfixOps(L"Div", NumOp, BadOp, BadOp, BadOp, BadOp)},
-        {L".*", InfixOps(L"DotTimes", BadOp, BadOp, BadOp, NodeOp, BadOp)},
-        {L"**", InfixOps(L"Pow", NumOp, BadOp, BadOp, BadOp, BadOp)},
-        {L"%", InfixOps(L"Mod", NumOp, BadOp, BadOp, BadOp, BadOp)},
-        {L"+", InfixOps(L"Plus", NumOp, StrOp, BadOp, NodeOp, BadOp)},
-        {L"-", InfixOps(L"Minus", NumOp, BadOp, BadOp, NodeOp, BadOp)},
-        {L"==", InfixOps(L"Equal", NumOp, StrOp, BoolOp, BadOp, BadOp)},
-        {L"!=", InfixOps(L"NotEqual", NumOp, StrOp, BoolOp, BadOp, BadOp)},
-        {L"<", InfixOps(L"LT", NumOp, StrOp, BoolOp, BadOp, BadOp)},
-        {L">", InfixOps(L"GT", NumOp, StrOp, BoolOp, BadOp, BadOp)},
-        {L"<=", InfixOps(L"LE", NumOp, StrOp, BoolOp, BadOp, BadOp)},
-        {L">=", InfixOps(L"GT", NumOp, StrOp, BoolOp, BadOp, BadOp)},
-        {L"&&", InfixOps(L"And", BadOp, BadOp, BoolOp, BadOp, BadOp)},
-        {L"||", InfixOps(L"Or", BadOp, BadOp, BoolOp, BadOp, BadOp)},
-        {L"^", InfixOps(L"Xor", BadOp, BadOp, BoolOp, BadOp, BadOp)}};
+{
+    // symbol  PrettyName                NumbersOp StringsOp BoolOp  ComputeNodeOp DictOp
+    { L"with", InfixOps(L"With",         NumOp,    BadOp,    BadOp,  NodeOp,       DictOp) },
+    { L"*",    InfixOps(L"Times",        NumOp,    BadOp,    BadOp,  NodeOp,       BadOp) },
+    { L"/",    InfixOps(L"Div",          NumOp,    BadOp,    BadOp,  BadOp,        BadOp) },
+    { L".*",   InfixOps(L"ElementTimes", BadOp,    BadOp,    BadOp,  NodeOp,       BadOp) },
+    { L"**",   InfixOps(L"Pow",          NumOp,    BadOp,    BadOp,  BadOp,        BadOp) },
+    { L"%",    InfixOps(L"Mod",          NumOp,    BadOp,    BadOp,  BadOp,        BadOp) },
+    { L"+",    InfixOps(L"Plus",         NumOp,    StrOp,    BadOp,  NodeOp,       BadOp) },
+    { L"-",    InfixOps(L"Minus",        NumOp,    BadOp,    BadOp,  NodeOp,       BadOp) },
+    { L"==",   InfixOps(L"Equal",        NumOp,    StrOp,    BoolOp, BadOp,        BadOp) },
+    { L"!=",   InfixOps(L"NotEqual",     NumOp,    StrOp,    BoolOp, BadOp,        BadOp) },
+    { L"<",    InfixOps(L"LT",           NumOp,    StrOp,    BoolOp, BadOp,        BadOp) },
+    { L">",    InfixOps(L"GT",           NumOp,    StrOp,    BoolOp, BadOp,        BadOp) },
+    { L"<=",   InfixOps(L"LE",           NumOp,    StrOp,    BoolOp, BadOp,        BadOp) },
+    { L">=",   InfixOps(L"GT",           NumOp,    StrOp,    BoolOp, BadOp,        BadOp) },
+    { L"&&",   InfixOps(L"And",          BadOp,    BadOp,    BoolOp, BadOp,        BadOp) },
+    { L"||",   InfixOps(L"Or",           BadOp,    BadOp,    BoolOp, BadOp,        BadOp) },
+    { L"^",    InfixOps(L"Xor",          BadOp,    BadOp,    BoolOp, BadOp,        BadOp) }
+};
 
 // -----------------------------------------------------------------------
 // thunked (delayed) evaluation
@@ -713,8 +701,8 @@ static ConfigValuePtr Evaluate(const ExpressionPtr &e, const IConfigRecordPtr &s
             let &functions = opIter->second;
             let &leftArg = e->args[0];
             let &rightArg = e->args[1];
-            let leftValPtr = Evaluate(leftArg, scope, exprPath, functions.prettyName + L"_left");
-            let rightValPtr = Evaluate(rightArg, scope, exprPath, functions.prettyName + L"_right");
+            let leftValPtr = Evaluate(leftArg, scope, exprPath, functions.prettyName + L"Args[0]");
+            let rightValPtr = Evaluate(rightArg, scope, exprPath, functions.prettyName + L"Args[1]");
             if (leftValPtr.Is<Double>() && rightValPtr.Is<Double>())
                 return functions.NumbersOp(e, leftValPtr, rightValPtr, scope, exprPath);
             else if (leftValPtr.Is<String>() && rightValPtr.Is<String>())
@@ -760,7 +748,7 @@ void Do(ExpressionPtr e)
 
 shared_ptr<Object> EvaluateField(ExpressionPtr e, const wstring &id)
 {
-    return RecordLookup(e, id, e->location, nullptr /*scope for evaluating 'e'*/, L"$"); // we evaluate the member 'do'
+    return RecordLookup(e, id, e->location, nullptr /*scope for evaluating 'e'*/, L""); // we evaluate the member 'do'
 }
 
 ConfigValuePtr Evaluate(ExpressionPtr e)
@@ -786,18 +774,6 @@ static wstring FormatConfigValue(ConfigValuePtr arg, const wstring &how);
 // TODO: RegexReplace()
 class StringFunction : public String
 {
-    // actual operations that we perform
-    static wstring Replace(wstring s, const wstring &what, const wstring &withwhat)
-    {
-        wstring res = s;
-        auto pos = res.find(what);
-        while (pos != wstring::npos)
-        {
-            res = res.substr(0, pos) + withwhat + res.substr(pos + what.size());
-            pos = res.find(what, pos + withwhat.size());
-        }
-        return res;
-    }
     static wstring Substr(const wstring &s, int ibegin, int inum)
     {
         // negative index indexes from end; index may exceed
@@ -822,9 +798,9 @@ public:
         else if (what == L"Substr")
             us = Substr(arg, config[L"pos"], config[L"chars"]);
         else if (what == L"Replace")
-            us = Replace(arg, config[L"replacewhat"], config[L"withwhat"]);
+            us = msra::strfun::ReplaceAll<wstring>(arg, config[L"replacewhat"], config[L"withwhat"]);
         else
-            whatArg.Fail(L"unknown 'what' value to StringFunction: " + what);
+            whatArg.Fail(L"Unknown 'what' value to StringFunction: " + what);
     }
 };
 
@@ -877,11 +853,7 @@ static wstring FormatConfigValue(ConfigValuePtr arg, const wstring &how)
         {
             if (i > range.first)
                 result.append(L"\n");
-            result.append(FormatConfigValue(arr->At(i, [](const wstring &)
-                                                    {
-                                                        LogicError("FormatConfigValue: out of bounds index while iterating??");
-                                                    }),
-                                            how));
+            result.append(FormatConfigValue(arr->At(i, [](const wstring &) { LogicError("FormatConfigValue: out of bounds index while iterating??"); }), how));
         }
         return HasToString::NestString(result, L'(', false, L')');
     }
@@ -897,8 +869,8 @@ static wstring FormatConfigValue(ConfigValuePtr arg, const wstring &how)
 class NumericFunction : public BoxOf<Double>
 {
 public:
-    NumericFunction(const IConfigRecordPtr &configp)
-        : BoxOf<Double>(0.0)
+    NumericFunction(const IConfigRecordPtr &configp) :
+        BoxOf<Double>(0.0)
     {
         let &config = *configp;
         double &us = *this; // we write to this
@@ -913,13 +885,41 @@ public:
                 us = (double) ((wstring &) arg).size();
             else // otherwise expect an array
             {
-                let arr = (ConfigArray) arg;
+                let & arr = arg.AsRef<ConfigArray>();
                 let range = arr.GetIndexRange();
                 us = (double) (range.second + 1 - range.first);
             }
         }
         else
-            whatArg.Fail(L"unknown 'what' value to NumericFunction: " + what);
+            whatArg.Fail(L"Unknown 'what' value to NumericFunction: " + what);
+    }
+};
+
+// CompareFunctions
+//  - IsSameObject()
+class CompareFunction : public BoxOf<Bool>
+{
+public:
+    CompareFunction(const IConfigRecordPtr &configp) :
+        BoxOf<Bool>(false)
+    {
+        let &config = *configp;
+        bool &us = *this; // we write to this
+        let argsArg = config[L"args"];
+        let whatArg = config[L"what"];
+        wstring what = whatArg;
+        if (what == L"IsSameObject")
+        {
+            let& args = argsArg.AsRef<ConfigArray>();
+            auto range = args.GetIndexRange();
+            if (range.second != range.first+1)
+                argsArg.Fail(L"IsSameObject expects two arguments");
+            let arg1 = args.At(range.first ).AsPtr<Object>();
+            let arg2 = args.At(range.second).AsPtr<Object>();
+            us = arg1.get() == arg2.get();
+        }
+        else
+            whatArg.Fail(L"Unknown 'what' value to CompareFunction: " + what);
     }
 };
 
@@ -990,13 +990,14 @@ template <>
 // =======================================================================
 
 // Functions
-static ScriptableObjects::ConfigurableRuntimeTypeRegister::Add<StringFunction> registerStringFunction(L"StringFunction");
+static ScriptableObjects::ConfigurableRuntimeTypeRegister::Add<StringFunction>  registerStringFunction(L"StringFunction");
 static ScriptableObjects::ConfigurableRuntimeTypeRegister::Add<NumericFunction> registerNumericFunction(L"NumericFunction");
+static ScriptableObjects::ConfigurableRuntimeTypeRegister::Add<CompareFunction> registerCompareFunction(L"CompareFunction");
 // Actions
-static ScriptableObjects::ConfigurableRuntimeTypeRegister::Add<PrintAction> registerPrintAction(L"PrintAction");
-static ScriptableObjects::ConfigurableRuntimeTypeRegister::Add<FailAction> registerFailAction(L"FailAction");
+static ScriptableObjects::ConfigurableRuntimeTypeRegister::Add<PrintAction>     registerPrintAction(L"PrintAction");
+static ScriptableObjects::ConfigurableRuntimeTypeRegister::Add<FailAction>      registerFailAction(L"FailAction");
 // Special
-static ScriptableObjects::ConfigurableRuntimeTypeRegister::Add<Debug> registerDebug(L"Debug");
+static ScriptableObjects::ConfigurableRuntimeTypeRegister::Add<Debug>           registerDebug(L"Debug");
 
 // main TODO items:
 //  - break Evaluate() to optimize stack usage
@@ -1022,4 +1023,5 @@ static ScriptableObjects::ConfigurableRuntimeTypeRegister::Add<Debug> registerDe
 //     - macro arg expressions get their path assigned when their thunk is created, the thunk remembers it
 //     - however, really, the thunk should get the expression path from the context it is executed in, not the context it was created in
 //     - maybe there is some clever scheme of overwriting when a result comes back? E.g. we retrieve a value but its name is not right, can we patch it up? Very tricky to find the right rules/conditions
-} } } // namespaces
+
+}}} // namespaces

@@ -1,18 +1,13 @@
 #ifndef MULTIVERSO_INCLUDE_MULTIVERSO_H_
 #define MULTIVERSO_INCLUDE_MULTIVERSO_H_
 
+#include <string>
+
 namespace multiverso {
 
-enum Role {
-  Null = 0,
-  Worker = 1,
-  Server = 2,
-  All = 3
-};
-
-void MV_Init(int* argc = nullptr, 
-             char* argv[] = nullptr, 
-             int role = All);
+void MV_Init(int* argc = nullptr,
+             char* argv[] = nullptr,
+             int role = 3);
 
 void MV_Barrier();
 
@@ -30,9 +25,13 @@ int  MV_ServerId();
 int  MV_WorkerIdToRank(int worker_id);
 int  MV_ServerIdToRank(int server_id);
 
+// Show the dashboard information about the monitored excuation time
+// used for profile
+void MV_Dashboard();
+
 // --- Net API -------------------------------------------------------------- //
 // NOTE(feiga): these API is only used for specific situation.
-// Init Multiverso Net with the provided endpoint. Multiverso Net will bind 
+// Init Multiverso Net with the provided endpoint. Multiverso Net will bind
 // the provided endpoint and use this endpoint to listen and recv message
 // \param rank the rank of this MV process
 // \param endpoint endpoint with format ip:port, e.g., localhost:9999
@@ -40,7 +39,7 @@ int  MV_ServerIdToRank(int server_id);
 // \return -1 FAIL
 int  MV_NetBind(int rank, char* endpoint);
 
-// Connect Multiverso Net with other processes in the system. Multiverso Net 
+// Connect Multiverso Net with other processes in the system. Multiverso Net
 // will connect these endpoints and send msgs
 // \param ranks array of rank
 // \param endpoints endpoints for each rank
@@ -49,6 +48,7 @@ int  MV_NetBind(int rank, char* endpoint);
 // \return -1 FAIL
 int  MV_NetConnect(int* rank, char* endpoint[], int size);
 
-} // namespace multiverso
+}  // namespace multiverso
 
-#endif // MULTIVERSO_INCLUDE_MULTIVERSO_H_
+#endif  // MULTIVERSO_INCLUDE_MULTIVERSO_H_
+

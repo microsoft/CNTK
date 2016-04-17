@@ -9,12 +9,13 @@
 
 namespace multiverso {
 
-// Manage a chunk of memory. Blob can share memory with other Blobs. 
+// Manage a chunk of memory. Blob can share memory with other Blobs.
 // Never use external memory. All external memory should be managed by itself
+// TODO(feiga): maybe make blob also not hold memory?
 class Blob {
 public:
   // an empty blob
-  Blob() {};
+  Blob() {}
 
   explicit Blob(size_t size) : size_(size) {
     CHECK(size > 0);
@@ -60,10 +61,11 @@ public:
   size_t size() const { return size_; }
 
 private:
-  // Memory is shared and auto managed 
+  // Memory is shared and auto managed
   std::shared_ptr<char> data_;
   size_t size_;
 };
-}
 
-#endif // MULTIVERSO_BLOB_H_
+}  // namespace multiverso
+
+#endif  // MULTIVERSO_BLOB_H_

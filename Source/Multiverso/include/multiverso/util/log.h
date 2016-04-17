@@ -1,29 +1,21 @@
 #ifndef MULTIVERSO_LOG_H_
 #define MULTIVERSO_LOG_H_
 
-/*!
-* \file util/log.h
-* \brief Provides simple logging tools.
-*/
-
 #include <fstream>
 #include <string>
 
-namespace multiverso
-{
+namespace multiverso {
 
-#define CHECK(condition)         \
-  if (!(condition)) Log::Fatal("Check failed: " #condition " at %s, line %d .\n", __FILE__,  __LINE__);
+#define CHECK(condition)                                   \
+  if (!(condition)) Log::Fatal("Check failed: " #condition \
+     " at %s, line %d .\n", __FILE__,  __LINE__);
 
-#define CHECK_NOTNULL(pointer)   \
-  if ((pointer) == nullptr) Log::Fatal(#pointer " Can't be NULL\n"); 
+#define CHECK_NOTNULL(pointer)                             \
+  if ((pointer) == nullptr) Log::Fatal(#pointer " Can't be NULL\n");
 
-/*!
-* \brief A enumeration type of log message levels. The values are ordered:
-*        Debug < Info < Error < Fatal.
-*/
-enum class LogLevel : int
-{
+// A enumeration type of log message levels. The values are ordered:
+// Debug < Info < Error < Fatal.
+enum class LogLevel : int {
   Debug = 0,
   Info = 1,
   Error = 2,
@@ -34,8 +26,7 @@ enum class LogLevel : int
 * \brief The Logger class is responsible for writing log messages into
 *        standard output or log file.
 */
-class Logger
-{
+class Logger {
   // Enable the static Log class to call the private method.
   friend class Log;
 
@@ -91,16 +82,16 @@ public:
   void Fatal(const char *format, ...);
 
 private:
-  void Write(LogLevel level, const char *format, va_list &val);
+  void Write(LogLevel level, const char* format, va_list* val);
   void CloseLogFile();
   // Returns current system time as a string.
   std::string GetSystemTime();
   // Returns the string of a log level.
   std::string GetLevelStr(LogLevel level);
 
-  std::FILE *file_; // A file pointer to the log file.
-  LogLevel level_;  // Only the message not less than level_ will be outputed.
-  bool is_kill_fatal_; // If kill the process when fatal error occurs.
+  std::FILE *file_;  // A file pointer to the log file.
+  LogLevel level_;   // Only the message not less than level_ will be outputed.
+  bool is_kill_fatal_;  // If kill the process when fatal error occurs.
 
   // No copying allowed
   Logger(const Logger&);
@@ -112,8 +103,7 @@ private:
 *        the scope of a process. Users can write logging messages easily
 *        with the static methods.
 */
-class Log
-{
+class Log {
 public:
   /*!
   * \brief Resets the log file. The logger will write messages to the
@@ -124,7 +114,7 @@ public:
   * \return -1 if fail on creating the log file, or 0 otherwise.
   */
   static int ResetLogFile(std::string filename);
-  // TODO(feiga): use a env variable to represent log level 
+  // TODO(feiga): use a env variable to represent log level
   /*!
   * \brief Resets the minimal log level. It is INFO by default.
   * \param level The new minimal log level.
@@ -137,7 +127,7 @@ public:
   static void ResetKillFatal(bool is_kill_fatal);
 
   /*! \brief The C formatted methods of writing the messages. */
-  static void Write(LogLevel level, const char *format, ...);
+  static void Write(LogLevel level, const char* format, ...);
   static void Debug(const char *format, ...);
   static void Info(const char *format, ...);
   static void Error(const char *format, ...);
@@ -146,6 +136,7 @@ public:
 private:
   static Logger logger_;
 };
-}
 
-#endif // MULTIVERSO_LOG_H_
+}  // namespace multiverso
+
+#endif  // MULTIVERSO_LOG_H_

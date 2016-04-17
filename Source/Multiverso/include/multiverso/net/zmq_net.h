@@ -78,10 +78,11 @@ public:
   virtual int Connect(int* ranks, char* endpoints[], int size) override {
     CHECK_NOTNULL(receiver_);
     CHECK_NOTNULL(context_);
-    size_ = size + 1;
+    size_ = size;
     senders_.resize(size_);
     for (int i = 0; i < size; ++i) {
       int rank = ranks[i];
+      if (rank == rank_) continue;
       std::string ip_port(endpoints[i]);
       senders_[rank] = zmq_socket(context_, ZMQ_DEALER);
       int rc = zmq_connect(senders_[rank], ("tcp://" + ip_port).c_str());
@@ -171,7 +172,7 @@ public:
     return NetThreadLevel::THREAD_MULTIPLE; 
   }
 
-private:
+protected:
   void ParseMachineFile(std::string filename, 
                         std::vector<std::string>* result) {
     CHECK_NOTNULL(result);

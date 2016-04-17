@@ -1,0 +1,9 @@
+#!/bin/bash
+
+. $TEST_ROOT_DIR/run-test-common
+
+# specific TIMIT variables
+. $TEST_DIR/../run-timit-test-common
+
+# Running only 3 epochs (~1000s gpu release), because full run takes a lot of time.
+cntkrun TIMIT_TrainLSTM.cntk "$CntkArguments TIMIT_TrainLSTM=[SGD=[maxEpochs=3]]" || exit $?

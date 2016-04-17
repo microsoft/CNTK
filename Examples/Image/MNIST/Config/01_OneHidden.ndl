@@ -8,10 +8,10 @@ ndlMnistMacros = [
     featDim = 784
     labelDim = 10
 
-    features = Input(featDim)
-    featScale = Const(0.00390625)
+    features = InputValue(featDim)
+    featScale = Constant(0.00390625)
     featScaled = Scale(featScale, features)
-    labels = Input(labelDim)
+    labels = InputValue(labelDim)
 ]
 
 DNN = [
@@ -25,6 +25,7 @@ DNN = [
     err = ErrorPrediction(labels, ol)
     
     # Special Nodes
+    errTop5 = ErrorPrediction(labels, ol, Const(1), tag="eval")
     FeatureNodes = (features)
     LabelNodes = (labels)
     CriterionNodes = (ce)

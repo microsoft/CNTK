@@ -14,7 +14,7 @@ namespace multiverso {
 
 template<typename T> class MtQueue;
 
-// The basic computation and communication unit in the system 
+// The basic computation and communication unit in the system
 class Actor {
 public:
   explicit Actor(const std::string& name);
@@ -27,6 +27,7 @@ public:
   void Receive(MessagePtr&);
   // Actor name, a unique identifier of a actor
   const std::string name() const { return name_; }
+
 protected:
   // Message response function
   using Handler = std::function<void(MessagePtr&)>;
@@ -37,7 +38,7 @@ protected:
   // Send a message to a dst actor
   void SendTo(const std::string& dst_name, MessagePtr& msg);
 
-  // Main function run in a background thread 
+  // Main function run in a background thread
   // The default main is to receive msg from other actors and process
   // messages based on registered message handlers
   virtual void Main();
@@ -63,6 +64,6 @@ const std::string kWorker = "worker";
 
 }
 
-} // namespace multiverso
+}  // namespace multiverso
 
-#endif // MULTIVERSO_ANIMAL_H_
+#endif  // MULTIVERSO_ACTOR_H_

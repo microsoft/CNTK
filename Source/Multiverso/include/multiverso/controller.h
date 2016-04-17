@@ -10,6 +10,7 @@ class Controller : public Actor {
 public:
   Controller();
   ~Controller();
+
 private:
   void ProcessBarrier(MessagePtr& msg);
   void ProcessRegister(MessagePtr& msg);
@@ -23,6 +24,6 @@ private:
   ClockController* clock_controller_;
 };
 
-} // namespace multiverso
+}  // namespace multiverso
 
-#endif // MULTIVERSO_CONTROLLER_H_
+#endif  // MULTIVERSO_CONTROLLER_H_

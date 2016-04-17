@@ -3,6 +3,7 @@
 #define _CRT_SECURE_NO_WARNINGS // "secure" CRT not available on all platforms  --add this at the top of all CPP files that give "function or variable may be unsafe" warnings
 
 #include "BrainScriptParser.h"
+#include "File.h"
 #include <cstdio>
 #include <cstdlib>
 #include <cctype>
@@ -32,12 +33,10 @@ SourceFile::SourceFile(wstring location, wstring text)
     : path(location), lines(split(text, L"\r\n"))
 {
 } // from string, e.g. command line
-SourceFile::SourceFile(wstring path, const vector<wstring>& includePaths)
+SourceFile::SourceFile(wstring path)
     : path(path) // from file
 {
-    // ... scan paths
-    includePaths;
-    File(path, fileOptionsRead).GetLines(lines);
+    File(path, fileOptionsRead | fileOptionsText).GetLines(lines);
 }
 
 bool TextLocation::IsValid() const
@@ -185,7 +184,7 @@ public:
 
     __declspec_noreturn static void Fail(wstring msg, TextLocation where)
     {
-        Microsoft::MSR::CNTK::DebugUtil::PrintCallStack();
+        //Microsoft::MSR::CNTK::DebugUtil::PrintCallStack();
         throw CodeSourceException(msg, where);
     }
 
@@ -376,8 +375,32 @@ public:
 private:
     __declspec_noreturn static void Fail(wstring msg, Token where)
     {
-        Microsoft::MSR::CNTK::DebugUtil::PrintCallStack();
+        //Microsoft::MSR::CNTK::DebugUtil::PrintCallStack();
         throw LexerException(msg, where.beginLocation);
+    }
+
+    // find a file either at given location or traverse include paths
+    static wstring FindSourceFile(const wstring& path, const vector<wstring>& includePaths)
+    {
+        if (File::Exists(path))
+            return path;
+        // non-existent path: scan include paths
+        // TODO: This is a little weird. Rather, this should be done by the call site.
+        let fileName = File::FileNameOf(path);
+        for (let& dir : includePaths)
+        {
+            // TODO: We should use the separator that matches the include path.
+            let newPath = dir + L"/" + fileName;
+            if (File::Exists(newPath))
+                return newPath;
+        }
+        // not in include path: try EXE directory
+        let dir = File::DirectoryPathOf(File::GetExecutablePath());
+        let newPath = dir + L"/" + fileName;
+        if (File::Exists(newPath))
+            return newPath;
+        // not found: return unmodified, let caller fail
+        return path;
     }
 
     Token currentToken;
@@ -405,6 +428,7 @@ private:
         {
             if (IsInInclude())
             {
+                includePaths.erase(includePaths.begin()); // pop dir of current include file
                 PopSourceFile();
                 t = NextToken();        // tail call--the current 't' gets dropped/ignored
                 t.isLineInitial = true; // eof is a line end
@@ -443,8 +467,9 @@ private:
                 let nameTok = NextToken(); // must be followed by a string literal
                 if (nameTok.kind != stringliteral)
                     Fail(L"'include' must be followed by a quoted string", nameTok);
-                let path = nameTok.symbol;                      // TODO: some massaging of the path
-                PushSourceFile(SourceFile(path, includePaths)); // current cursor is right after the pathname; that's where we will pick up later
+                let path = FindSourceFile(nameTok.symbol, includePaths);
+                PushSourceFile(SourceFile(path)); // current cursor is right after the pathname; that's where we will pick up later
+                includePaths.insert(includePaths.begin(), File::DirectoryPathOf(path));
                 return NextToken();
             }
         }
@@ -581,7 +606,7 @@ class Parser : public Lexer
 
     __declspec_noreturn static void Fail(const wstring& msg, Token where)
     {
-        Microsoft::MSR::CNTK::DebugUtil::PrintCallStack();
+        //Microsoft::MSR::CNTK::DebugUtil::PrintCallStack();
         throw ParseException(msg, where.beginLocation);
     }
 
@@ -626,24 +651,13 @@ public:
         : Lexer(move(includePaths))
     {
         infixPrecedence = map<wstring, int>{
-            {L".", 100}, {L"[", 100}, {L"(", 100}, // also sort-of infix operands...
-            {L"*", 10},
-            {L"/", 10},
-            {L".*", 10},
-            {L"**", 10},
-            {L"%", 10},
-            {L"+", 9},
-            {L"-", 9},
-            {L"with", 9},
-            {L"==", 8},
-            {L"!=", 8},
-            {L"<", 8},
-            {L"<=", 8},
-            {L">", 8},
-            {L">=", 8},
+            {L".", 99}, {L"[", 99}, {L"(",   99}, // also sort-of infix operands...
+            {L"*", 10}, {L"/", 10}, {L".*",  10}, {L"**", 10}, {L"%", 10},
+            {L"+",  9}, {L"-",  9}, {L"with", 9}, {L"==",  8},
+            {L"!=", 8}, {L"<",  8}, {L"<=",   8}, {L">",   8}, {L">=", 8},
             {L"&&", 7},
             {L"||", 6},
-            {L":", 5},
+            {L":",  5},
             {L"=>", 0},
         };
         SetSourceFile(move(sourceFile));
@@ -940,11 +954,12 @@ ExpressionPtr ParseConfigDictFromString(wstring text, vector<wstring>&& includeP
 {
     return Parse(SourceFile(L"(command line)", text), move(includePaths));
 }
-ExpressionPtr ParseConfigDictFromFile(wstring path, vector<wstring>&& includePaths)
-{
-    auto sourceFile = SourceFile(path, includePaths);
-    return Parse(move(sourceFile), move(includePaths));
-}
+//ExpressionPtr ParseConfigDictFromFile(wstring path, vector<wstring> includePaths)
+//{
+//    auto sourceFile = SourceFile(path); // note: no resolution against include paths done here
+//    includePaths.insert(includePaths.begin(), File::DirectoryPathOf(path)); // must include our own path for nested include statements
+//    return Parse(move(sourceFile), move(includePaths));
+//}
 ExpressionPtr ParseConfigExpression(const wstring& sourceText, vector<wstring>&& includePaths)
 {
     auto parser = Parser(SourceFile(L"(command line)", sourceText), move(includePaths));
@@ -952,4 +967,5 @@ ExpressionPtr ParseConfigExpression(const wstring& sourceText, vector<wstring>&&
     parser.VerifyAtEnd();
     return expr;
 }
-} } } // namespaces
+
+}}}

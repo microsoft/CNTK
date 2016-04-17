@@ -5,30 +5,33 @@
 # work to make all sources compile with GCC, and also to check for GCC-compat regressions due to
 # modifications which are currently done under Windows.
 #
-# This makefile will be extended/completed as we go.
-#
 # To use this Makefile, create a directory to build in and make a Config.make in the directory
 # that provides
-# ACML_PATH= path to ACML library installation
-#   only needed if MATHLIB=acml
-# MKL_PATH= path to MKL library installation
-#   only needed if MATHLIB=mkl
-# GDK_PATH= path to cuda gdk installation, so $(GDK_PATH)/include/nvidia/gdk/nvml.h exists
-#   defaults to /usr
-# BUILDTYPE= One of release or debug
-#   defaults to release
-# MATHLIB= One of acml or mkl
-#   defaults to acml
-# CUDA_PATH= Path to CUDA
-#   If not specified, GPU will not be enabled
-# CUB_PATH= path to NVIDIA CUB installation, so $(CUB_PATH)/cub/cub.cuh exists
-#   defaults to /usr/local/cub-1.4.1
-# CUDNN_PATH= path to NVIDIA cuDNN installation so $(CUDNN_PATH)/cuda/include/cudnn.h exists
-#   If not specified, CNTK will be be built without cuDNN.
-# KALDI_PATH= Path to Kaldi
-#   If not specified, Kaldi plugins will not be built
-# OPENCV_PATH= path to OpenCV 3.0.0 installation, so $(OPENCV_PATH) exists
-#   defaults to /usr/local/opencv-3.0.0
+#   BUILDTYPE= One of release or debug
+#     defaults to release
+#   ACML_PATH= path to ACML library installation
+#     only needed if MATHLIB=acml
+#   MKL_PATH= path to MKL library installation
+#     only needed if MATHLIB=mkl
+#   GDK_PATH= path to cuda gdk installation, so $(GDK_PATH)/include/nvidia/gdk/nvml.h exists
+#     defaults to /usr
+#   MATHLIB= One of acml or mkl
+#     defaults to acml
+#   CUDA_PATH= Path to CUDA
+#     If not specified, GPU will not be enabled
+#   CUB_PATH= path to NVIDIA CUB installation, so $(CUB_PATH)/cub/cub.cuh exists
+#     defaults to /usr/local/cub-1.4.1
+#   CUDNN_PATH= path to NVIDIA cuDNN installation so $(CUDNN_PATH)/cuda/include/cudnn.h exists
+#     If not specified, CNTK will be be built without cuDNN.
+#   KALDI_PATH= Path to Kaldi
+#     If not specified, Kaldi plugins will not be built
+#   OPENCV_PATH= path to OpenCV 3.0.0 installation, so $(OPENCV_PATH) exists
+#     defaults to /usr/local/opencv-3.0.0
+#   LIBZIP_PATH= path to libzip installation, so $(LIBZIP_PATH) exists
+#     defaults to /usr/local/
+# These can be overridden on the command line, e.g. make BUILDTYPE=debug
+
+ARCH=$(shell uname)
 
 ifndef BUILD_TOP
 BUILD_TOP=.
@@ -170,7 +173,7 @@ ifeq ("$(BUILDTYPE)","debug")
 
   CXXFLAGS += -g
   LDFLAGS += -rdynamic
-  COMMON_FLAGS += -D_DEBUG
+  COMMON_FLAGS += -D_DEBUG -DNO_SYNC
   CUFLAGS += -O0 -g -use_fast_math -lineinfo  $(GENCODE_FLAGS)
 endif
 
@@ -210,9 +213,11 @@ CNTKMATH:=cntkmath
 BUILDINFO:= $(SOURCEDIR)/CNTK/buildinfo.h
 GENBUILD:=Tools/generate_build_info
 
-$(BUILDINFO): $(GENBUILD)
-	@echo creating $@ for $(ARCH) with build type $(BUILDTYPE)
-	@$(GENBUILD) $(BUILD_TOP)/Config.make
+BUILDINFO_OUTPUT := $(shell $(GENBUILD) $(BUILD_TOP)/Config.make && echo Success)
+
+ifneq ("$(BUILDINFO_OUTPUT)","Success")
+  $(error Could not generate $(BUILDINFO))
+endif
 
 
 ########################################
@@ -221,16 +226,22 @@ $(BUILDINFO): $(GENBUILD)
 
 # Define all sources that need to be built
 READER_SRC =\
-	$(SOURCEDIR)/Readers/ReaderLib/SampleModePacker.cpp \
 	$(SOURCEDIR)/Readers/ReaderLib/BlockRandomizer.cpp \
+	$(SOURCEDIR)/Readers/ReaderLib/Bundler.cpp \
 	$(SOURCEDIR)/Readers/ReaderLib/NoRandomizer.cpp \
 	$(SOURCEDIR)/Readers/ReaderLib/ReaderShim.cpp \
+	$(SOURCEDIR)/Readers/ReaderLib/ChunkRandomizer.cpp \
+	$(SOURCEDIR)/Readers/ReaderLib/SequenceRandomizer.cpp \
+	$(SOURCEDIR)/Readers/ReaderLib/SequencePacker.cpp \
+	$(SOURCEDIR)/Readers/ReaderLib/BpttPacker.cpp \
+	$(SOURCEDIR)/Readers/ReaderLib/PackerBase.cpp \
+	$(SOURCEDIR)/Readers/ReaderLib/FramePacker.cpp \
 
 COMMON_SRC =\
 	$(SOURCEDIR)/Common/Config.cpp \
 	$(SOURCEDIR)/Common/DataReader.cpp \
 	$(SOURCEDIR)/Common/DataWriter.cpp \
-	$(SOURCEDIR)/Common/DebugUtil.cpp \
+	$(SOURCEDIR)/Common/ExceptionWithCallStack.cpp \
 	$(SOURCEDIR)/Common/Eval.cpp \
 	$(SOURCEDIR)/Common/File.cpp \
 	$(SOURCEDIR)/Common/TimerUtility.cpp \
@@ -246,6 +257,7 @@ MATH_SRC =\
 	$(SOURCEDIR)/Math/TensorView.cpp \
 	$(SOURCEDIR)/Math/CUDAPageLockedMemAllocator.cpp \
 	$(SOURCEDIR)/Math/ConvolutionEngine.cpp \
+	$(SOURCEDIR)/Math/BatchNormalizationEngine.cpp \
 
 ifdef CUDA_PATH
 MATH_SRC +=\
@@ -254,7 +266,9 @@ MATH_SRC +=\
 	$(SOURCEDIR)/Math/GPUSparseMatrix.cu \
 	$(SOURCEDIR)/Math/GPUWatcher.cu \
 	$(SOURCEDIR)/Math/MatrixQuantizerGPU.cu \
+	$(SOURCEDIR)/Math/CuDnnCommon.cu \
 	$(SOURCEDIR)/Math/CuDnnConvolutionEngine.cu \
+	$(SOURCEDIR)/Math/CuDnnBatchNormalization.cu \
 	$(SOURCEDIR)/Math/GPUDataTransferer.cpp \
 
 else
@@ -305,8 +319,8 @@ $(BINARY_READER): $(BINARYREADER_OBJ) | $(CNTKMATH_LIB)
 ########################################
 
 HTKMLFREADER_SRC =\
-	$(SOURCEDIR)/Readers/HTKMLFReader/DataReader.cpp \
-	$(SOURCEDIR)/Readers/HTKMLFReader/DataWriter.cpp \
+	$(SOURCEDIR)/Readers/HTKMLFReader/Exports.cpp \
+	$(SOURCEDIR)/Readers/HTKMLFReader/DataWriterLocal.cpp \
 	$(SOURCEDIR)/Readers/HTKMLFReader/HTKMLFReader.cpp \
 	$(SOURCEDIR)/Readers/HTKMLFReader/HTKMLFWriter.cpp \
 
@@ -317,6 +331,29 @@ ALL+=$(HTKMLFREADER)
 SRC+=$(HTKMLFREADER_SRC)
 
 $(LIBDIR)/HTKMLFReader.so: $(HTKMLFREADER_OBJ) | $(CNTKMATH_LIB)
+	@echo $(SEPARATOR)
+	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(LIBPATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH)) -o $@ $^ -l$(CNTKMATH)
+
+########################################
+# ExperimentalHTKMLFReader plugin
+########################################
+
+EXPERIMENTALHTKMLFREADER_SRC =\
+	$(SOURCEDIR)/Readers/HTKMLFReader/DataWriterLocal.cpp \
+	$(SOURCEDIR)/Readers/HTKMLFReader/HTKMLFWriter.cpp \
+	$(SOURCEDIR)/Readers/ExperimentalHTKMLFReader/ConfigHelper.cpp \
+	$(SOURCEDIR)/Readers/ExperimentalHTKMLFReader/Exports.cpp \
+	$(SOURCEDIR)/Readers/ExperimentalHTKMLFReader/HTKDataDeserializer.cpp \
+	$(SOURCEDIR)/Readers/ExperimentalHTKMLFReader/HTKMLFReader.cpp \
+	$(SOURCEDIR)/Readers/ExperimentalHTKMLFReader/MLFDataDeserializer.cpp \
+
+EXPERIMENTALHTKMLFREADER_OBJ := $(patsubst %.cpp, $(OBJDIR)/%.o, $(EXPERIMENTALHTKMLFREADER_SRC))
+
+EXPERIMENTALHTKMLFREADER:=$(LIBDIR)/ExperimentalHTKMLFReader.so
+ALL+=$(EXPERIMENTALHTKMLFREADER)
+SRC+=$(EXPERIMENTALHTKMLFREADER_SRC)
+
+$(LIBDIR)/ExperimentalHTKMLFReader.so: $(EXPERIMENTALHTKMLFREADER_OBJ) | $(CNTKMATH_LIB)
 	@echo $(SEPARATOR)
 	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(LIBPATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH)) -o $@ $^ -l$(CNTKMATH)
 
@@ -346,8 +383,10 @@ $(LMSEQUENCEREADER): $(LMSEQUENCEREADER_OBJ) | $(CNTKMATH_LIB)
 
 LUSEQUENCEREADER_SRC =\
 	$(SOURCEDIR)/Readers/LUSequenceReader/Exports.cpp \
+	$(SOURCEDIR)/Readers/LUSequenceReader/DataWriterLocal.cpp \
 	$(SOURCEDIR)/Readers/LUSequenceReader/LUSequenceParser.cpp \
 	$(SOURCEDIR)/Readers/LUSequenceReader/LUSequenceReader.cpp \
+	$(SOURCEDIR)/Readers/LUSequenceReader/LUSequenceWriter.cpp \
 
 LUSEQUENCEREADER_OBJ := $(patsubst %.cpp, $(OBJDIR)/%.o, $(LUSEQUENCEREADER_SRC))
 
@@ -415,6 +454,28 @@ $(SPARSEPCREADER): $(SPARSEPCREADER_OBJ) | $(CNTKMATH_LIB)
 	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(LIBPATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH)) -o $@ $^ -l$(CNTKMATH)
 
 ########################################
+# CNTKTextFormatReader plugin
+########################################
+
+CNTKTEXTFORMATREADER_SRC =\
+	$(SOURCEDIR)/Readers/CNTKTextFormatReader/Exports.cpp \
+	$(SOURCEDIR)/Readers/CNTKTextFormatReader/Indexer.cpp \
+	$(SOURCEDIR)/Readers/CNTKTextFormatReader/TextParser.cpp \
+	$(SOURCEDIR)/Readers/CNTKTextFormatReader/CNTKTextFormatReader.cpp \
+	$(SOURCEDIR)/Readers/CNTKTextFormatReader/TextConfigHelper.cpp \
+
+CNTKTEXTFORMATREADER_OBJ := $(patsubst %.cpp, $(OBJDIR)/%.o, $(CNTKTEXTFORMATREADER_SRC))
+
+CNTKTEXTFORMATREADER:=$(LIBDIR)/CNTKTextFormatReader.so
+ALL += $(CNTKTEXTFORMATREADER)
+SRC+=$(CNTKTEXTFORMATREADER_SRC)
+
+$(CNTKTEXTFORMATREADER): $(CNTKTEXTFORMATREADER_OBJ) | $(CNTKMATH_LIB)
+	@echo $(SEPARATOR)
+	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(LIBPATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH)) -o $@ $^ -l$(CNTKMATH)
+
+
+########################################
 # Kaldi plugins
 ########################################
 
@@ -445,12 +506,22 @@ endif
 ########################################
 
 ifdef OPENCV_PATH
+
+IMAGE_READER_LIBS += -lopencv_core -lopencv_imgproc -lopencv_imgcodecs
+
+ifdef LIBZIP_PATH
+  CPPFLAGS += -DUSE_ZIP
+  INCLUDEPATH += $(LIBZIP_PATH)/lib/libzip/include
+  IMAGE_READER_LIBS += -lzip
+endif
+
 IMAGEREADER_SRC =\
-	$(SOURCEDIR)/Readers/ImageReader/Exports.cpp \
-	$(SOURCEDIR)/Readers/ImageReader/ImageConfigHelper.cpp \
-	$(SOURCEDIR)/Readers/ImageReader/ImageDataDeserializer.cpp \
-	$(SOURCEDIR)/Readers/ImageReader/ImageTransformers.cpp \
-	$(SOURCEDIR)/Readers/ImageReader/ImageReader.cpp \
+  $(SOURCEDIR)/Readers/ImageReader/Exports.cpp \
+  $(SOURCEDIR)/Readers/ImageReader/ImageConfigHelper.cpp \
+  $(SOURCEDIR)/Readers/ImageReader/ImageDataDeserializer.cpp \
+  $(SOURCEDIR)/Readers/ImageReader/ImageTransformers.cpp \
+  $(SOURCEDIR)/Readers/ImageReader/ImageReader.cpp \
+  $(SOURCEDIR)/Readers/ImageReader/ZipByteReader.cpp \
 
 IMAGEREADER_OBJ := $(patsubst %.cpp, $(OBJDIR)/%.o, $(IMAGEREADER_SRC))
 
@@ -463,7 +534,7 @@ LIBPATH += $(OPENCV_PATH)/lib $(OPENCV_PATH)/release/lib
 
 $(IMAGEREADER): $(IMAGEREADER_OBJ) | $(CNTKMATH_LIB)
 	@echo $(SEPARATOR)
-	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(LIBPATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH)) -o $@ $^ -l$(CNTKMATH) -lopencv_core -lopencv_imgproc -lopencv_imgcodecs
+	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(LIBPATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH)) -o $@ $^ -l$(CNTKMATH) $(IMAGE_READER_LIBS)
 endif
 
 ########################################
@@ -505,11 +576,12 @@ endif
 CNTK_SRC =\
 	$(SOURCEDIR)/CNTK/CNTK.cpp \
 	$(SOURCEDIR)/CNTK/ModelEditLanguage.cpp \
-	$(SOURCEDIR)/CNTK/NetworkDescriptionLanguage.cpp \
-	$(SOURCEDIR)/CNTK/SimpleNetworkBuilder.cpp \
-	$(SOURCEDIR)/CNTK/SynchronousExecutionEngine.cpp \
 	$(SOURCEDIR)/CNTK/tests.cpp \
 	$(SOURCEDIR)/ComputationNetworkLib/ComputationNode.cpp \
+	$(SOURCEDIR)/ComputationNetworkLib/ComputationNodeScripting.cpp \
+	$(SOURCEDIR)/ComputationNetworkLib/InputAndParamNodes.cpp \
+	$(SOURCEDIR)/ComputationNetworkLib/ReshapingNodes.cpp \
+	$(SOURCEDIR)/ComputationNetworkLib/SpecialPurposeNodes.cpp \
 	$(SOURCEDIR)/ComputationNetworkLib/ComputationNetwork.cpp \
 	$(SOURCEDIR)/ComputationNetworkLib/ComputationNetworkEvaluation.cpp \
 	$(SOURCEDIR)/ComputationNetworkLib/ComputationNetworkAnalysis.cpp \
@@ -522,12 +594,15 @@ CNTK_SRC =\
 	$(SOURCEDIR)/ActionsLib/EvalActions.cpp \
 	$(SOURCEDIR)/ActionsLib/OtherActions.cpp \
 	$(SOURCEDIR)/ActionsLib/SpecialPurposeActions.cpp \
+	$(SOURCEDIR)/ActionsLib/NetworkFactory.cpp \
+	$(SOURCEDIR)/ActionsLib/NetworkDescriptionLanguage.cpp \
+	$(SOURCEDIR)/ActionsLib/SimpleNetworkBuilder.cpp \
+	$(SOURCEDIR)/ActionsLib/NDLNetworkBuilder.cpp \
 	$(SOURCEDIR)/SequenceTrainingLib/latticeforwardbackward.cpp \
 	$(SOURCEDIR)/SequenceTrainingLib/parallelforwardbackward.cpp \
 	$(SOURCEDIR)/CNTK/BrainScript/BrainScriptEvaluator.cpp \
 	$(SOURCEDIR)/CNTK/BrainScript/BrainScriptParser.cpp \
 	$(SOURCEDIR)/CNTK/BrainScript/BrainScriptTest.cpp \
-	$(SOURCEDIR)/CNTK/BrainScript/ExperimentalNetworkBuilder.cpp \
 	$(SOURCEDIR)/Common/BestGpu.cpp \
 	$(SOURCEDIR)/Common/MPIWrapper.cpp \
 
@@ -548,12 +623,21 @@ CNTK_OBJ := $(patsubst %.cu, $(OBJDIR)/%.o, $(patsubst %.cpp, $(OBJDIR)/%.o, $(C
 
 CNTK:=$(BINDIR)/cntk
 ALL+=$(CNTK)
+SRC+=$(CNTK_SRC)
 
-$(CNTK): $(BUILDINFO)  $(CNTK_OBJ) | $(CNTKMATH_LIB)
+$(CNTK): $(CNTK_OBJ) | $(CNTKMATH_LIB)
 	@echo $(SEPARATOR)
 	@mkdir -p $(dir $@)
 	@echo building output for $(ARCH) with build type $(BUILDTYPE)
 	$(CXX) $(LDFLAGS) $(patsubst %,-L%, $(LIBDIR) $(LIBPATH) $(NVMLPATH)) $(patsubst %,$(RPATH)%, $(ORIGINLIBDIR) $(LIBPATH)) -o $@ $^ $(LIBS) -l$(CNTKMATH) -fopenmp
+
+# deployable resources: standard library of BS
+CNTK_CORE_BS:=$(BINDIR)/cntk.core.bs
+ALL += $(CNTK_CORE_BS)
+$(CNTK_CORE_BS): $(SOURCEDIR)/CNTK/BrainScript/CNTKCoreLib/CNTK.core.bs
+	@mkdir -p $(dir $@)
+	@echo bin-placing deployable resource files
+	cp -f $^ $@
 
 ########################################
 # General compile and dependency rules
@@ -571,22 +655,21 @@ DEP := $(patsubst %.o, %.d, $(OBJ))
 # will result in the rebuild.
 -include ${DEP}
 
-$(OBJDIR)/%.o : %.cu Makefile
+MAKEFILES :=  Makefile $(BUILD_TOP)/Config.make
+$(OBJDIR)/%.o : %.cu $(MAKEFILES)
+
 	@echo $(SEPARATOR)
 	@echo creating $@ for $(ARCH) with build type $(BUILDTYPE)
 	@mkdir -p $(dir $@)
 	$(NVCC) -c $< -o $@ $(COMMON_FLAGS) $(CUFLAGS) $(INCLUDEPATH:%=-I%) -Xcompiler "-fPIC -Werror"
 
-$(OBJDIR)/%.o : %.cpp Makefile
+$(OBJDIR)/%.o : %.cpp $(MAKEFILES)
 	@echo $(SEPARATOR)
 	@echo creating $@ for $(ARCH) with build type $(BUILDTYPE)
 	@mkdir -p $(dir $@)
 	$(CXX) -c $< -o $@ $(COMMON_FLAGS) $(CPPFLAGS) $(CXXFLAGS) $(INCLUDEPATH:%=-I%) -MD -MP -MF ${@:.o=.d}
 
-.PHONY: force clean buildall all
-
-force:	$(BUILDINFO)
-
+.PHONY: clean buildall all
 
 clean:
 	@echo $(SEPARATOR)

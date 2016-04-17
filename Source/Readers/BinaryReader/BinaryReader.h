@@ -541,12 +541,8 @@ public:
 };
 
 template <class ElemType>
-class BinaryReader : public IDataReader<ElemType>
+class BinaryReader : public DataReaderBase
 {
-    typedef typename IDataReader<ElemType>::LabelType LabelType;
-    typedef typename IDataReader<ElemType>::LabelIdType LabelIdType;
-
-private:
     size_t m_mbSize;           // size of minibatch requested
     size_t m_mbStartSample;    // starting sample # of the next minibatch
     size_t m_epochSize;        // size of an epoch
@@ -590,7 +586,7 @@ public:
     }
     virtual ~BinaryReader();
     virtual void StartMinibatchLoop(size_t mbSize, size_t epoch, size_t requestedEpochSamples = requestDataSize);
-    virtual bool GetMinibatch(std::map<std::wstring, Matrix<ElemType>*>& matrices);
+    virtual bool TryGetMinibatch(StreamMinibatchInputs& matrices);
 
     size_t GetNumParallelSequences()
     {
@@ -606,7 +602,8 @@ public:
     virtual void SetLabelMapping(const std::wstring& sectionName, const std::map<typename BinaryReader<ElemType>::LabelIdType, typename BinaryReader<ElemType>::LabelType>& labelMapping);
     virtual bool GetData(const std::wstring& sectionName, size_t numRecords, void* data, size_t& dataBufferSize, size_t recordStart = 0);
 
-    virtual bool DataEnd(EndDataType endDataType);
+    virtual bool DataEnd();
+
     void SetRandomSeed(int)
     {
         NOT_IMPLEMENTED;
@@ -614,12 +611,8 @@ public:
 };
 
 template <class ElemType>
-class BinaryWriter : public IDataWriter<ElemType>
+class BinaryWriter : public IDataWriter
 {
-    typedef typename IDataWriter<ElemType>::LabelType LabelType;
-    typedef typename IDataWriter<ElemType>::LabelIdType LabelIdType;
-
-private:
     int m_traceLevel; // trace level to output the
     size_t m_recordCurrent;
     size_t m_recordMax;
@@ -679,6 +672,10 @@ public:
     // saveId - name of the section to save into (section:subsection format)
     // labelMapping - map we are saving to the file
     virtual void SaveMapping(std::wstring saveId, const std::map<typename BinaryWriter<ElemType>::LabelIdType, typename BinaryWriter<ElemType>::LabelType>& labelMapping);
+    virtual bool SupportMultiUtterances() const 
+    {
+        return false;
+    };
 };
 
 // utility function to round an integer up to a multiple of size

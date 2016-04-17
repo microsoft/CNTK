@@ -6,7 +6,7 @@
 #include <string>
 #include <vector>
 
-#include "multiverso/blob.h" 
+#include "multiverso/blob.h"
 
 namespace multiverso {
 
@@ -15,11 +15,10 @@ enum MsgType {
   Request_Add = 2,
   Reply_Get = -1,
   Reply_Add = -2,
-  Control_Barrier = 33, // 0x100001
+  Control_Barrier = 33,  // 0x100001
   Control_Reply_Barrier = -33,
   Control_Register = 34,
   Control_Reply_Register = -34,
-  // user define code should greater than 1024
   Default = 0
 };
 
@@ -72,6 +71,6 @@ private:
 
 typedef std::unique_ptr<Message> MessagePtr;
 
-}
+}  // namespace multiverso
 
-#endif // MULTIVERSO_MESSAGE_H_
+#endif  // MULTIVERSO_MESSAGE_H_

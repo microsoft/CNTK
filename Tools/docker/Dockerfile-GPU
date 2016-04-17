@@ -1,0 +1,70 @@
+FROM nvidia/cuda:7.0-cudnn4-devel
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        autotools-dev \
+        cmake \
+        git \
+        libavcodec-dev \
+        libavformat-dev \
+        libjasper-dev \
+        libjpeg-dev \
+        libpng-dev \
+        liblapacke-dev \
+        libswscale-dev \
+        libtiff-dev \
+        pkg-config \
+        python-dev \
+        python-numpy \
+        python-pip \
+        wget \
+        zlib1g-dev && \
+    rm -rf /var/lib/apt/lists/*
+
+RUN wget -q -O - https://www.open-mpi.org/software/ompi/v1.10/downloads/openmpi-1.10.1.tar.gz | tar -xzf - && \
+    cd openmpi-1.10.1 && \
+    ./configure --prefix=/usr/local/mpi && \
+    make -j"$(nproc)" install && \
+    rm -rf /openmpi-1.10.1
+
+ENV PATH /usr/local/mpi/bin:$PATH
+ENV LD_LIBRARY_PATH /usr/local/mpi/lib:$LD_LIBRARY_PATH
+
+RUN wget -q -O - http://nih.at/libzip/libzip-1.1.2.tar.gz | tar -xzf - && \
+    cd libzip-1.1.2 && \
+    ./configure && \
+    make -j"$(nproc)" install && \
+    rm -rf /libzip-1.1.2
+
+RUN wget -q -O - https://github.com/NVlabs/cub/archive/1.4.1.tar.gz | tar -C /usr/local -xzf -
+
+RUN wget -q -O - https://github.com/Itseez/opencv/archive/3.0.0.tar.gz | tar -xzf - && \
+    cd opencv-3.0.0 && \
+    cmake -DCMAKE_BUILD_TYPE=RELEASE -DCMAKE_INSTALL_PREFIX=/usr/local/opencv-3.0.0 . && \
+    make -j"$(nproc)" install && \
+    rm -rf /opencv-3.0.0
+
+RUN wget -q -O - https://github.com/xianyi/OpenBLAS/archive/v0.2.17.tar.gz | tar -xzf - && \
+    cd OpenBLAS-0.2.17 && \
+    make -j"$(nproc)" && \
+    make PREFIX=/usr/local/openblas install && \
+    rm -rf /OpenBLAS-0.2.17
+
+RUN mkdir -p /usr/local/cudnn/cuda/include && \
+    ln -s /usr/include/cudnn.h /usr/local/cudnn/cuda/include/cudnn.h && \
+    mkdir -p /usr/local/cudnn/cuda/lib64 && \
+    ln -s /etc/alternatives/libcudnn_so /usr/local/cudnn/cuda/lib64/libcudnn.so
+
+RUN wget -O gdk.run -q http://developer.download.nvidia.com/compute/cuda/7_0/Prod/local_installers/cuda_346.46_gdk_linux.run && \
+    chmod +x gdk.run && \
+    ./gdk.run --silent && \
+    rm gdk.run
+
+WORKDIR /cntk
+RUN git clone --depth=1 -b master https://github.com/Microsoft/CNTK.git . && \
+    sed -i 's/-lopenblas/-lopenblas -llapacke/g' Makefile && \
+    mkdir -p build/release && \
+    cd build/release && \
+    ../../configure --with-cuda=/usr/local/cuda --with-cudnn=/usr/local/cudnn --with-openblas=/usr/local/openblas && \
+     make -j1 all # FIXME: Makefile race condition?
+
+ENV PATH /cntk/build/release/bin:$PATH

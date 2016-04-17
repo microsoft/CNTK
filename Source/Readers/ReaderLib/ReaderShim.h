@@ -19,7 +19,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 typedef ReaderPtr (*ReaderFactory)(const ConfigParameters& parameters);
 
 template <class ElemType>
-class ReaderShim : public IDataReader<ElemType>
+class ReaderShim : public IDataReader
 {
 public:
     explicit ReaderShim(ReaderFactory factory);
@@ -36,7 +36,7 @@ public:
         delete this;
     }
 
-    virtual void StartMinibatchLoop(size_t mbSize, size_t epoch, size_t requestedEpochSamples) override;
+    virtual void StartMinibatchLoop(size_t mbSize, size_t epoch, size_t requestedEpochSamples = requestDataSize) override;
     virtual void StartDistributedMinibatchLoop(size_t requestedMBSize, size_t epoch, size_t subsetNum, size_t numSubsets, size_t requestedEpochSamples) override;
 
     virtual bool SupportsDistributedMBRead() const override
@@ -44,9 +44,9 @@ public:
         return true;
     }
 
-    virtual bool GetMinibatch(std::map<std::wstring, Matrix<ElemType>*>& matrices) override;
+    virtual bool GetMinibatch(StreamMinibatchInputs& matrices) override;
 
-    virtual bool DataEnd(EndDataType endDataType) override;
+    virtual bool DataEnd() override;
 
     void CopyMBLayoutTo(MBLayoutPtr) override;
 
@@ -58,11 +58,13 @@ private:
     ReaderFactory m_factory;
     bool m_endOfEpoch;
 
-    MBLayoutPtr m_layout;
+    size_t m_numParallelSequences;
 
     std::map<std::wstring, size_t> m_nameToStreamId;
     std::vector<StreamDescriptionPtr> m_streams;
     launch m_launchType;
+
+    void FillMatrixFromStream(StorageType type, Matrix<ElemType>* matrix, size_t numRows, const StreamMinibatchPtr& stream);
 };
 
 }}}

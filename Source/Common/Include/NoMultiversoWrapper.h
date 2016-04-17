@@ -12,10 +12,10 @@ namespace Microsoft {
 			};
 
 			template<class ElemType = float>
-			class MultiversoWrapper
+			class MultiversoHelper
 	 		{
             public:
-				MultiversoWrapper(const std::list<ComputationNodeBasePtr> & learnableNodes,
+				MultiversoHelper(const std::list<ComputationNodeBasePtr> & learnableNodes,
 					int localWorkerNumber,
 					bool isPipeline = true,
 					AdjustLearningRateatBeginning adjusttype = AdjustLearningRateatBeginning::None,
@@ -25,7 +25,7 @@ namespace Microsoft {
 					
 				}
 
-				~MultiversoWrapper()
+				~MultiversoHelper()
 				{
 
 				}

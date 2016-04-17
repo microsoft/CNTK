@@ -91,7 +91,7 @@ bool UtteranceDerivativeBuffer<ElemType>::SetLikelihood(
     ProcessUttInfo(uttInfo, pMBLayout, &uttInfoInMinibatch);
 
     // Checks if we need to move data to CPU.
-    Matrix<ElemType> logLikelihood(logLikelihoodIn);
+    Matrix<ElemType> logLikelihood = logLikelihoodIn.DeepClone();
     if (logLikelihood.GetDeviceId() >= 0)
     {
         logLikelihood.TransferFromDeviceToDevice(
@@ -114,7 +114,7 @@ bool UtteranceDerivativeBuffer<ElemType>::SetLikelihood(
                 tmpUttUnit.streamID = i;
                 tmpUttUnit.logLikelihood.Resize(logLikelihood.GetNumRows(),
                                                 tmpUttUnit.uttLength);
-                m_uttPool[uttID] = tmpUttUnit;
+                m_uttPool[uttID] = std::move(tmpUttUnit);
             }
 
             // Sets the likelihood and computes derivatives.
@@ -244,6 +244,7 @@ bool UtteranceDerivativeBuffer<ElemType>::GetDerivative(
 template <class ElemType>
 bool UtteranceDerivativeBuffer<ElemType>::GetObjective(
     const std::vector<std::vector<std::pair<wstring, size_t>>>& uttInfo,
+    MBLayoutPtr pMBLayout,
     Matrix<ElemType>* objectivesIn)
 {
     assert(objectivesIn != NULL);
@@ -258,8 +259,9 @@ bool UtteranceDerivativeBuffer<ElemType>::GetObjective(
     }
 
     // Sets the objectives...
-    objectivesIn->Resize(1, 1);
-    objectivesIn->SetValue(m_currentObj);
+    objectivesIn->Resize(1, pMBLayout->GetNumCols());
+    objectivesIn->SetValue(
+        m_currentObj / static_cast<ElemType>(pMBLayout->GetNumCols()));
 
     return true;
 }

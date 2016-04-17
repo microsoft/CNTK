@@ -51,7 +51,6 @@ Train=[
         file=$ConfigDir$/train_map.txt
         # Randomize images before every epoch. Possible values: None, Auto. Default: Auto.
         randomize=Auto
-        numCPUThreads = 1 
         features=[
             # Below are the required parameters.
             width=224
@@ -98,7 +97,6 @@ Test=[
     
     reader=[
         readerType=ImageReader
-        numCPUThreads = 1
         file=$ConfigDir$/val_map.txt
         randomize=None
         features=[

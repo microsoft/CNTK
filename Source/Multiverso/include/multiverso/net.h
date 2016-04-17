@@ -8,7 +8,7 @@
 namespace multiverso {
 
 enum NetThreadLevel {
-  THREAD_SERIALIZED, 
+  THREAD_SERIALIZED,
   THREAD_MULTIPLE
 };
 
@@ -45,5 +45,6 @@ public:
   virtual int thread_level_support() = 0;
 };
 
-}
-#endif // MULTIVERSO_NET_NET_H_
+}  // namespace multiverso
+
+#endif  // MULTIVERSO_NET_NET_H_

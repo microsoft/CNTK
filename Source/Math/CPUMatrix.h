@@ -27,18 +27,37 @@ double logadd(double x, double y);
 template <class ElemType>
 class MATH_API CPUMatrix : public BaseMatrix<ElemType>
 {
-    typedef BaseMatrix<ElemType> B;
-    using B::m_numRows;
-    using B::m_numCols;
-    using B::m_pArray;
-    using B::m_computeDevice;
-    using B::m_elemSizeAllocated;
-    using B::m_externalBuffer;
-    using B::m_format;
-    using B::m_matrixName; // without this, base members would require to use thi-> in GCC
+    typedef BaseMatrix<ElemType> Base;
+    using Base::m_numRows;
+    using Base::m_numCols;
+    using Base::m_sliceViewOffset;
+    using Base::HasExternalBuffer;
+    using Base::SetBuffer;
+    using Base::SetComputeDeviceId;
+    using Base::SetSizeAllocated;
+    using Base::GetSizeAllocated;
+    using Base::ZeroInit;
+    using Base::ZeroValues;
+    using Base::m_sob;
+    using Base::ShallowCopyFrom;
+    using Base::VerifyResizable;
+
+public:
+    using Base::VerifyWritable;
+    using Base::GetComputeDeviceId;
+    using Base::Buffer;
+    using Base::GetNumRows;
+    using Base::GetNumCols;
+    using Base::GetNumElements;
+    using Base::OwnBuffer;
+    using Base::GetFormat;
+    using Base::SetFormat;
+    using Base::IsEmpty;
+    using Base::VerifySize;
+
+
 public:
     CPUMatrix();
-    CPUMatrix(FILE* f, const char* matrixName); // matrixName is used to verify that correct matrix is read.
     CPUMatrix(const size_t numRows, const size_t numCols);
     CPUMatrix(const size_t numRows, const size_t numCols, ElemType* pArray, const size_t matrixFlags = matrixFlagNormal);
     CPUMatrix(const CPUMatrix<ElemType>& deepCopyFrom);                      // copy constructor, deep copy
@@ -49,21 +68,13 @@ public:
     ~CPUMatrix();
 
 public:
-    using B::OwnBuffer;
-    using B::GetNumElements;
-    using B::IsEmpty;
-    using B::GetNumRows;
-    using B::GetNumCols;
-    using B::SetOwnBuffer;
-    using B::SetMatrixName;
-
     size_t BufferSize() const
     {
         return m_numRows * m_numCols * sizeof(ElemType);
     }
-    ElemType* BufferPointer() const
+    ElemType* Data() const
     {
-        return m_pArray;
+        return Buffer() + m_sliceViewOffset;
     }
 
     CPUMatrix<ElemType> ColumnSlice(size_t startColumn, size_t numCols) const;
@@ -84,23 +95,34 @@ public:
                      ElemType RMS_WGT_MIN,
                      const bool needAveMultiplier);
 
+
     void Reshape(const size_t numRows, const size_t numCols);
+
+
+    // RequireSize is now the new preferred method of ensuring the correct size inside of the Matrix class. Since Resize will fail if the storage object has
+    // multiple views, RequireSize will first check to see if Resize is required. If it is not, then it short-circuits and is a noop. Otherwise, RequireSize
+    // will call Resize, which may fail if the matrix has multiple views.
+    void RequireSize(const size_t numRows, const size_t numCols, bool growOnly = true); // by default we only reallocate if need to grow
+    // Resize first checks to ensure that the caller has the authority to call Resize (i.e., it checks to ensure the underlying data is owned by only this matrix), and then
+    // actually resizes the underlying matrix, doing any allocation as required.
     void Resize(const size_t numRows, const size_t numCols, bool growOnly = true); // by default we only reallocate if need to grow
+
+
     ElemType* CopyToArray() const;                                                 // allocated by the callee but need to be deleted by the caller
     size_t CopyToArray(ElemType*& arrayCopyTo, size_t& currentArraySize) const;    // allocated by the callee but need to be deleted by the caller
     void CopySection(size_t numRows, size_t numCols, ElemType* dst, size_t colStride) const;
 
     inline ElemType& operator()(const size_t row, const size_t col)
     {
-        return m_pArray[LocateElement(row, col)];
+        return Data()[LocateElement(row, col)];
     }
     inline const ElemType& operator()(const size_t row, const size_t col) const
     {
-        return m_pArray[LocateElement(row, col)];
+        return Data()[LocateElement(row, col)];
     }
     inline ElemType Get00Element() const
     {
-        return m_pArray[0];
+        return operator()(0, 0);
     }
 
     void SetValue(const ElemType v);
@@ -123,35 +145,38 @@ public:
     CPUMatrix<ElemType> Transpose();
     CPUMatrix<ElemType>& AssignTransposeOf(const CPUMatrix<ElemType>& a);
 
+    CPUMatrix<ElemType>& DoGatherColumnsOf (ElemType beta, const CPUMatrix<ElemType>& idx, const CPUMatrix<ElemType>& a, ElemType alpha);
+    CPUMatrix<ElemType>& DoScatterColumnsOf(ElemType beta, const CPUMatrix<ElemType>& idx, const CPUMatrix<ElemType>& a, ElemType alpha);
+
     CPUMatrix<ElemType>& operator+=(const ElemType alpha);
-    CPUMatrix<ElemType> operator+(const ElemType alpha) const;
+    CPUMatrix<ElemType>  operator+(const ElemType alpha) const;
     CPUMatrix<ElemType>& AssignSumOf(const ElemType alpha, const CPUMatrix<ElemType>& a);
 
     CPUMatrix<ElemType>& operator+=(const CPUMatrix<ElemType>& a);
-    CPUMatrix<ElemType> operator+(const CPUMatrix<ElemType>& a) const;
+    CPUMatrix<ElemType>  operator+(const CPUMatrix<ElemType>& a) const;
     CPUMatrix<ElemType>& AssignSumOf(const CPUMatrix<ElemType>& a, const CPUMatrix<ElemType>& b);
 
     CPUMatrix<ElemType>& operator-=(const ElemType alpha);
-    CPUMatrix<ElemType> operator-(const ElemType alpha) const;
+    CPUMatrix<ElemType>  operator-(const ElemType alpha) const;
     CPUMatrix<ElemType>& AssignDifferenceOf(const ElemType alpha, const CPUMatrix<ElemType>& a);
     CPUMatrix<ElemType>& AssignDifferenceOf(const CPUMatrix<ElemType>& a, const ElemType alpha);
 
     CPUMatrix<ElemType>& operator-=(const CPUMatrix<ElemType>& a);
-    CPUMatrix<ElemType> operator-(const CPUMatrix<ElemType>& a) const;
+    CPUMatrix<ElemType>  operator-(const CPUMatrix<ElemType>& a) const;
     CPUMatrix<ElemType>& AssignDifferenceOf(const CPUMatrix<ElemType>& a, const CPUMatrix<ElemType>& b);
 
     CPUMatrix<ElemType>& operator*=(const ElemType alpha);
-    CPUMatrix<ElemType> operator*(const ElemType alpha) const;
+    CPUMatrix<ElemType>  operator*(const ElemType alpha) const;
     CPUMatrix<ElemType>& AssignProductOf(const ElemType alpha, const CPUMatrix<ElemType>& a);
 
-    CPUMatrix<ElemType> operator*(const CPUMatrix<ElemType>& a) const;
+    CPUMatrix<ElemType>  operator*(const CPUMatrix<ElemType>& a) const;
     CPUMatrix<ElemType>& AssignProductOf(const CPUMatrix<ElemType>& a, const bool transposeA, const CPUMatrix<ElemType>& b, const bool transposeB);
 
     CPUMatrix<ElemType>& operator/=(ElemType alpha);
-    CPUMatrix<ElemType> operator/(ElemType alpha) const;
+    CPUMatrix<ElemType>  operator/(ElemType alpha) const;
 
     CPUMatrix<ElemType>& operator^=(ElemType alpha);     // element-wise power
-    CPUMatrix<ElemType> operator^(ElemType alpha) const; // element-wise power
+    CPUMatrix<ElemType>  operator^(ElemType alpha) const; // element-wise power
     CPUMatrix<ElemType>& AssignElementPowerOf(const CPUMatrix<ElemType>& a, const ElemType power);
 
     CPUMatrix<ElemType>& ElementMultiplyWith(const CPUMatrix<ElemType>& a);
@@ -316,6 +341,27 @@ public:
                                                    const size_t outputWidth, const size_t outputHeight, const size_t outputSizePerSample,
                                                    const size_t windowWidth, const size_t windowHeight, const size_t horizontalSubsample, const size_t verticalSubsample);
 
+    void ConvolutionForward(const CPUMatrix<ElemType>& kernel, const CPUMatrix<int>& mpRowCol, const CPUMatrix<int>& mpRowIwht,
+                            const CPUMatrix<int>& mpRowRun, const CPUMatrix<int>& runs, CPUMatrix<ElemType>& output) const;
+    void ConvolutionBackwardData(const CPUMatrix<ElemType>& kernel, const CPUMatrix<int>& mpRowCol, const CPUMatrix<int>& mpRowIwht,
+                                 const CPUMatrix<int>& mpRowRun, const CPUMatrix<int>& runs, CPUMatrix<ElemType>& grad) const;
+    void ConvolutionBackwardKernel(const CPUMatrix<ElemType>& in, const CPUMatrix<int>& mpRowCol, const CPUMatrix<int>& mpRowIwht,
+                                   const CPUMatrix<int>& mpRowRun, const CPUMatrix<int>& runs, CPUMatrix<ElemType>& kernelGrad) const;
+
+    void MaxPoolingForward(const CPUMatrix<int>& mpRowCol, const CPUMatrix<int>& mpRowIndices, const CPUMatrix<int>& indices, CPUMatrix<ElemType>& output) const;
+    void MaxPoolingBackward(const CPUMatrix<ElemType>& out, const CPUMatrix<ElemType>& in,
+                            const CPUMatrix<int>& mpRowCol, const CPUMatrix<int>& mpRowIndices, const CPUMatrix<int>& indices,
+                            CPUMatrix<ElemType>& grad) const;
+
+    void AveragePoolingForward(const CPUMatrix<int>& mpRowCol, const CPUMatrix<int>& mpRowIndices, const CPUMatrix<int>& indices, CPUMatrix<ElemType>& output) const;
+    void AveragePoolingBackward(const CPUMatrix<int>& mpRowCol, const CPUMatrix<int>& mpRowIndices, const CPUMatrix<int>& indices,
+                                CPUMatrix<ElemType>& grad) const;
+
+    void BatchNormalizationForward(const CPUMatrix<ElemType>& scale, const CPUMatrix<ElemType>& bias, double expAvgFactor, double blendFactor, CPUMatrix<ElemType>& runMean, CPUMatrix<ElemType>& runInvStdDev,
+                                   CPUMatrix<ElemType>& out, double epsilon, CPUMatrix<ElemType>& saveMean, CPUMatrix<ElemType>& saveInvStdDev) const;
+    void BatchNormalizationBackward(const CPUMatrix<ElemType>& in, CPUMatrix<ElemType>& grad, const CPUMatrix<ElemType>& scale, const CPUMatrix<ElemType>& saveMean, const CPUMatrix<ElemType>& saveInvStdDev,
+                                    CPUMatrix<ElemType>& scaleGrad, CPUMatrix<ElemType>& biasGrad) const;
+
 public:
     static int SetNumThreads(int numThreads); // note: this does not depend on <ElemType>, i.e. you can call it on any <ElemType>
 
@@ -398,10 +444,6 @@ public:
             stream >> d_array[i];
         stream.GetMarker(fileMarkerEndSection, std::wstring(L"EMAT"));
         us.SetValue(numRows, numCols, d_array, matrixFlagNormal);
-        if (us.m_matrixName)
-            delete[] us.m_matrixName;
-        us.m_matrixName = new wchar_t[matrixName.length() + 1];
-        wmemcpy(us.m_matrixName, matrixName.c_str(), matrixName.length() + 1);
 
         delete[] d_array;
         return stream;
@@ -411,19 +453,19 @@ public:
         stream.PutMarker(fileMarkerBeginSection, std::wstring(L"BMAT"));
         stream << sizeof(ElemType);
 
-        std::wstring s = (us.m_matrixName == NULL) ? std::wstring(L"unnamed") : std::wstring(us.m_matrixName);
-        int format = us.m_format;
+        std::wstring s = std::wstring(L"unnamed");
+        int format = us.GetFormat();
         stream << s << format;
 
         stream << us.m_numRows << us.m_numCols;
         for (size_t i = 0; i < us.GetNumElements(); ++i)
-            stream << us.m_pArray[i];
+            stream << us.Buffer()[i];
         stream.PutMarker(fileMarkerEndSection, std::wstring(L"EMAT"));
         return stream;
     }
 
 public:
-    ElemType LogAddSumOfElements() const;
+    ElemType LogSumOfElements() const;
 
 public:
     // for RCRF
@@ -454,10 +496,10 @@ protected:
     size_t LocateColumn(const size_t j) const;
 
 private:
-    void ZeroInit(); // should only be used by constructors.
     void Clear();
 };
 
 typedef CPUMatrix<float> CPUSingleMatrix;
 typedef CPUMatrix<double> CPUDoubleMatrix;
-} } }
+
+}}}

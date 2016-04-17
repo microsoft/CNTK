@@ -96,7 +96,7 @@ DNN=[
     pool3 = MaxPooling(conv5, pool3W, pool3H, pool3hStride, pool3vStride, imageLayout = "cudnn")
 
     hiddenDim = 4096
-    h1 = DNNReLULayer(9216, hiddenDim, pool3, fc1WScale, fc1BValue)
+    h1 = DNNImageReLULayer(6, 6, 256, hiddenDim, pool3, fc1WScale, fc1BValue)
     h1_d = Dropout(h1)
     h2 = DNNReLULayer(hiddenDim, hiddenDim, h1_d, fc2WScale, fc2BValue)
     h2_d = Dropout(h2)

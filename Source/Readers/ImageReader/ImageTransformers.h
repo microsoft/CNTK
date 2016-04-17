@@ -1,7 +1,6 @@
 //
-// <copyright company="Microsoft">
-//     Copyright (c) Microsoft Corporation.  All rights reserved.
-// </copyright>
+// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
 //
 
 #pragma once
@@ -20,7 +19,7 @@ class ConfigParameters;
 
 // Base class for image transformations based on OpenCV
 // that helps to wrap the sequences into OpenCV::Mat class.
-class ImageTransformerBase : public TransformerBase<cv::Mat>
+class ImageTransformerBase : public TransformerBase
 {
 public:
     // Initializes the transformer.
@@ -44,17 +43,17 @@ protected:
         return m_seed;
     }
 
-    using Base = TransformerBase<cv::Mat>;
+    using Base = TransformerBase;
     using UniRealT = std::uniform_real_distribution<double>;
     using UniIntT = std::uniform_int_distribution<int>;
 
     // Applies transformation to the sequence.
-    SequenceDataPtr Apply(const DenseSequenceData &inputSequence,
-                          const StreamDescription &inputStream, cv::Mat &buffer,
+    SequenceDataPtr Apply(SequenceDataPtr inputSequence,
+                          const StreamDescription &inputStream,
                           const StreamDescription &outputStream) override;
 
     // The only function that should be redefined by the inherited classes.
-    virtual void Apply(cv::Mat &from) = 0;
+    virtual void Apply(size_t id, cv::Mat &from) = 0;
 
 private:
     std::vector<StreamDescriptionPtr> m_outputStreams;
@@ -71,13 +70,14 @@ public:
                             const ConfigParameters &readerConfig) override;
 
 protected:
-    virtual void Apply(cv::Mat &mat) override;
+    virtual void Apply(size_t id, cv::Mat &mat) override;
 
 private:
     enum class CropType
     {
         Center = 0,
-        Random = 1
+        Random = 1,
+        MultiView10 = 2
     };
     enum class RatioJitterType
     {
@@ -90,7 +90,7 @@ private:
     void InitFromConfig(const ConfigParameters &config);
     CropType ParseCropType(const std::string &src);
     RatioJitterType ParseJitterType(const std::string &src);
-    cv::Rect GetCropRect(CropType type, int crow, int ccol, double cropRatio,
+    cv::Rect GetCropRect(CropType type, int viewIndex, int crow, int ccol, double cropRatio,
                          std::mt19937 &rng);
 
     conc_stack<std::unique_ptr<std::mt19937>> m_rngs;
@@ -111,7 +111,7 @@ public:
 
 private:
     void InitFromConfig(const ConfigParameters &config);
-    virtual void Apply(cv::Mat &mat) override;
+    virtual void Apply(size_t id, cv::Mat &mat) override;
 
     using StrToIntMapT = std::unordered_map<std::string, int>;
     StrToIntMapT m_interpMap;
@@ -132,14 +132,14 @@ public:
                             const ConfigParameters &readerConfig) override;
 
 private:
-    virtual void Apply(cv::Mat &mat) override;
+    virtual void Apply(size_t id, cv::Mat &mat) override;
     void InitFromConfig(const ConfigParameters &config);
 
     cv::Mat m_meanImg;
 };
 
 // Transpose transformation from HWC to CHW.
-class TransposeTransformer : public TransformerBase<vector<char>>
+class TransposeTransformer : public TransformerBase
 {
 public:
     virtual void Initialize(TransformerPtr next,
@@ -156,18 +156,14 @@ protected:
         return m_outputStreams;
     }
 
-    SequenceDataPtr Apply(const DenseSequenceData &inputSequence,
+    SequenceDataPtr Apply(SequenceDataPtr inputSequence,
                           const StreamDescription &inputStream,
-                          vector<char> &buffer,
                           const StreamDescription &outputStream) override;
 
 private:
-    using Base = TransformerBase<vector<char>>;
-
     template <class TElement>
-    SequenceDataPtr TypedApply(const DenseSequenceData &inputSequence,
+    SequenceDataPtr TypedApply(SequenceDataPtr inputSequence,
                                const StreamDescription &inputStream,
-                               vector<char> &buffer,
                                const StreamDescription &outputStream);
 
     std::vector<StreamDescriptionPtr> m_outputStreams;

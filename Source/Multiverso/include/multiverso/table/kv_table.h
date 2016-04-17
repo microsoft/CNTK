@@ -99,8 +99,40 @@ public:
       table_[keys.As<Key>(i)] += vals.As<Val>(i);
     }
   }
+
+  void Store(Stream* s) override{
+    size_t size = table_.size();
+    s->Write(&size, sizeof(size_t));
+    for (auto& i : table_){
+      s->Write(&i.first, sizeof(Key));
+      s->Write(&i.second, sizeof(Val));
+    }
+  }
+  void Load(Stream* s) override{
+    size_t count;
+    Key k;
+    Val v;
+    s->Read(&count, sizeof(size_t));
+    for (int i = 0; i < count; ++i){
+      s->Read(&k, sizeof(Key));
+      s->Read(&v, sizeof(Val));
+      table_[k] = v;
+    }
+  }
+
 private:
   std::unordered_map<Key, Val> table_;
+};
+
+template <typename Key, typename Val>
+class KVTableHelper : public TableHelper {
+protected:
+  WorkerTable* CreateWorkerTable() override{
+    return new KVWorkerTable<Key, Val>();
+  }
+  ServerTable* CreateServerTable() override{
+    return new KVServerTable<Key, Val>();
+  }
 };
 
 }

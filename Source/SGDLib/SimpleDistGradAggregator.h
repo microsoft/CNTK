@@ -5,6 +5,7 @@
 #include <future>
 #include "GPUDataTransferer.h"
 #include "TimerUtility.h"
+#include "MatrixQuantizerImpl.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -14,7 +15,7 @@ class SimpleDistGradAggregator : public IDistGradAggregator<ElemType>
     UsingIDistGradAggregatorMembers;
 
 public:
-    SimpleDistGradAggregator(MPIWrapper* mpi, bool useAsyncAggregation, int syncStatsTrace)
+    SimpleDistGradAggregator(const MPIWrapperPtr& mpi, bool useAsyncAggregation, int syncStatsTrace)
         : IDistGradAggregator<ElemType>(mpi), m_useAsyncAggregation(useAsyncAggregation), m_currentEpochNumber(-1), m_bufferedGradHeader(nullptr), m_syncStatsTrace(syncStatsTrace), m_iterationCount(0)
     {
     }
@@ -244,7 +245,7 @@ private:
         {
             for (size_t i = 0; i < numGradMatrices; ++i)
             {
-                m_gpuDataTransferers[i]->CopyGPUToCPUAsync(gradients[i]->BufferPointer(), gradients[i]->GetNumElements(), m_intermediateCPUBuffers[i].get());
+                m_gpuDataTransferers[i]->CopyGPUToCPUAsync(gradients[i]->Data(), gradients[i]->GetNumElements(), m_intermediateCPUBuffers[i].get());
             }
         }
 
@@ -271,7 +272,7 @@ private:
         std::vector<MPI_Request> allReduceRequests(numGradMatrices);
         for (size_t i = 0; i < numGradMatrices; ++i)
         {
-            ElemType* reductionBuffer = gradients[i]->BufferPointer();
+            ElemType* reductionBuffer = gradients[i]->Data();
             if (deviceId >= 0)
             {
                 m_gpuDataTransferers[i]->WaitForCopyGPUToCPUAsync();
@@ -328,7 +329,7 @@ private:
             MPI_Wait(&allReduceRequests[i], MPI_STATUSES_IGNORE) || MpiFail("MPI_Wait");
             if (deviceId >= 0)
             {
-                m_gpuDataTransferers[i]->CopyCPUToGPUAsync(m_intermediateCPUBuffers[i].get(), gradients[i]->GetNumElements(), gradients[i]->BufferPointer());
+                m_gpuDataTransferers[i]->CopyCPUToGPUAsync(m_intermediateCPUBuffers[i].get(), gradients[i]->GetNumElements(), gradients[i]->Data());
             }
         }
 

@@ -21,9 +21,9 @@ public:
     cv_.notify_all();
   }
 
-  void Reset(int num_wait) { 
+  void Reset(int num_wait) {
     std::unique_lock<std::mutex> lock(mutex_);
-    num_wait_ = num_wait; 
+    num_wait_ = num_wait;
   }
 
 private:
@@ -32,6 +32,6 @@ private:
   int num_wait_;
 };
 
-}
+}  // namespace multiverso
 
-#endif // MULTIVERSO_WAITER_H_
+#endif  // MULTIVERSO_WAITER_H_

@@ -11,7 +11,6 @@ class NetInterface;
 class Communicator : public Actor {
 public:
   Communicator();
-
   ~Communicator();
 
 private:
@@ -27,5 +26,6 @@ private:
   std::unique_ptr<std::thread> recv_thread_;
 };
 
-}
-#endif // MULTIVERSO_COMMUNICATION_H_
+}  // namespace multiverso
+
+#endif  // MULTIVERSO_COMMUNICATION_H_

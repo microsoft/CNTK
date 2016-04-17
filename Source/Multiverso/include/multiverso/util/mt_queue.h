@@ -89,8 +89,7 @@ void MtQueue<T>::Push(T& item) {
 }
 
 template<typename T>
-bool MtQueue<T>::Pop(T& result)
-{
+bool MtQueue<T>::Pop(T& result) {
   std::unique_lock<std::mutex> lock(mutex_);
   // empty_condition_.wait(lock,
   //  [this]{ return !buffer_.empty() || exit_; });
@@ -146,6 +145,7 @@ bool MtQueue<T>::Alive() {
   std::lock_guard<std::mutex> lock(mutex_);
   return exit_ == false;
 }
-}
 
-#endif // MULTIVERSO_MT_QUEUE_H_
+}  // namespace multiverso
+
+#endif  // MULTIVERSO_MT_QUEUE_H_

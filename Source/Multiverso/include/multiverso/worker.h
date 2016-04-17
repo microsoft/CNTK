@@ -1,6 +1,8 @@
 #ifndef MULTIVERSO_WORKER_H_
 #define MULTIVERSO_WORKER_H_
 
+#include <vector>
+
 #include "multiverso/actor.h"
 
 namespace multiverso {
@@ -17,8 +19,9 @@ private:
   void ProcessReplyGet(MessagePtr& msg);
   void ProcessReplyAdd(MessagePtr& msg);
 
-  std::vector<WorkerTable*> cache_; 
+  std::vector<WorkerTable*> cache_;
 };
 
-}
-#endif // MULTIVERSO_WORKER_H_
+}  // namespace multiverso
+
+#endif  // MULTIVERSO_WORKER_H_
