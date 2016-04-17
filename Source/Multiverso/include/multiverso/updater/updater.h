@@ -1,9 +1,11 @@
 #ifndef MULTIVERSO_UPDATER_UPDATER_H_
 #define MULTIVERSO_UPDATER_UPDATER_H_
 
+#include <multiverso/multiverso.h>
+
 #include <cstring>
 #include <sstream>
-#include <multiverso/multiverso.h>
+#include <multiverso/util/log.h>
 
 namespace multiverso {
 

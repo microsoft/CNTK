@@ -1,10 +1,11 @@
 #ifndef MULTIVERSO_UPDATER_SECOND_ORDER_GRADIENT_UPDATER_H_
 #define MULTIVERSO_UPDATER_SECOND_ORDER_GRADIENT_UPDATER_H_
 
+#include "multiverso/updater/updater.h"
+
 #include <cmath>
 #include <vector>
 
-#include "updater.h"
 
 
 namespace multiverso {
