@@ -41,18 +41,18 @@ Has_Git()
 
 makebuildinfo()
 {
-    target=$1
-    BUILDTYPE=$2
-    MATHLIB=$3
-    GIT_COMMIT=$4
-    GIT_BRANCH=$5
-    CUDA_PATH=$6
-    CUB_PATH=$7
-    WITH_1BITSGD=$8
-    WITH_ASGD=$9
-    BUILDER=$10
-    BUILDMACHINE=${11}
-    BUILDPATH=${12}
+    local target=$1
+    local BUILDTYPE=$2
+    local MATHLIB=$3
+    local GIT_COMMIT=$4
+    local GIT_BRANCH=$5
+    local CUDA_PATH=$6
+    local CUB_PATH=$7
+    local WITH_1BITSGD=$8
+    local WITH_ASGD=$9
+    local BUILDER=$10
+    local BUILDMACHINE=${11}
+    local BUILDPATH=${12}
 
     (
         printf "#ifndef _BUILDINFO_H\n"
