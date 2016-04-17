@@ -80,14 +80,14 @@ private:
         // For criterion nodes that emit criteria per frame, we will at this point
         // do masking and an implicit reduction.
 
-        // get a tensor into the criterion values
+        // get a TensorView of the criterion values to aggregate
         FrameRange fr;
         node->MaskMissingValueColumnsToZero(fr); // set gaps to zero, so that we can aggregate
         auto criterionValue = node->As<ComputationNode<ElemType>>()->ValueTensorFor(SIZE_MAX, fr);
 
-        // get a tensor to our aggregator
+        // get a TensorView of our aggregator
         TensorShape shape{ m_aggregateCriterionValues->GetNumRows(), m_aggregateCriterionValues->GetNumCols() };
-        shape.NarrowTo(1, i, 1); // narrow to the single element that corresponds to the accumulator value
+        shape.NarrowTo(1, i, i + 1); // narrow to the single element that corresponds to the accumulator value
         auto criterionAccumulator = TensorView<ElemType>(m_aggregateCriterionValues, shape);
 
         // accumulate
