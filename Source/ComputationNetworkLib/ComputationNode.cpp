@@ -252,7 +252,7 @@ TensorShape ComputationNodeBase::GetTensorShape(size_t rank) const
     TensorShape tensorShape = GetSampleLayout(); // TODO: Do we need to expect this tensor to have arbitrary strides? In case it came out of a Slice, Reshape, or Transpose op in-place?
     if (HasMBLayout())
     {
-        size_t i = rank;
+        size_t i = (rank != SIZE_MAX) ? rank : tensorShape.GetRank();
         tensorShape.AppendInPlace(i++, GetMBLayout()->GetNumParallelSequences());
         tensorShape.AppendInPlace(i++, GetMBLayout()->GetNumTimeSteps());
     }

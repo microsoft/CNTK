@@ -74,7 +74,7 @@ template <class ElemType>
                 indexSequence.push_back(t);
         // Note: The above accesses m_value directly on the CPU, putting it into BOTH state, possibly for other consumers as well.
     }
-    input.CollapseDataLocationAfterWriting(); // BUGBUG: Move back, since BOTH state is broken at present.
+    input.CollapseDataLocation(); // BUGBUG: Move back, since BOTH state is broken at present.
     // create a new MBLayout
     let& outMBLayout = GetMBLayout();
     outMBLayout->InitAsPackedSequences(SequenceLengthVector(sequences, indexSequences), /*temp*/m_placementBuffer, /*temp*/m_rowAllocationsBuffer);
@@ -158,7 +158,7 @@ template <class ElemType>
         }
     }
     // Note: maybe this is no longer needed, now that we do the same inside UpdateFunctionValueSize() for all nodes.
-    result.CollapseDataLocationAfterWriting(); // BUGBUG: Move back, since BOTH state is broken at present.
+    result.CollapseDataLocation(); // BUGBUG: Move back, since BOTH state is broken at present.
 }
 
 template <class ElemType>
