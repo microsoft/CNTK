@@ -898,48 +898,4 @@ std::wstring s2ws(const std::string& str);
 
 std::string ws2s(const std::wstring& wstr);
 
-
-#ifdef __unix__
-typedef timeval LARGE_INTEGER;
-#endif
-class auto_timer
-{
-	LARGE_INTEGER freq, start;
-	auto_timer(const auto_timer &);
-	void operator=(const auto_timer &);
-
-public:
-	auto_timer()
-	{
-#ifdef _WIN32
-		if (!QueryPerformanceFrequency(&freq)) // count ticks per second
-			RuntimeError("auto_timer: QueryPerformanceFrequency failure");
-		QueryPerformanceCounter(&start);
-#endif
-#ifdef __unix__
-		gettimeofday(&start, NULL);
-#endif
-	}
-	operator double() const // each read gives time elapsed since start, in seconds
-	{
-		LARGE_INTEGER end;
-#ifdef _WIN32
-		QueryPerformanceCounter(&end);
-		return (end.QuadPart - start.QuadPart) / (double)freq.QuadPart;
-#endif
-#ifdef __unix__
-		gettimeofday(&end, NULL);
-		return (end.tv_sec - start.tv_sec) + (end.tv_usec - start.tv_usec) / (1000 * 1000);
-#endif
-	}
-	void show(const std::string &msg) const
-	{
-		double elapsed = *this;
-		fprintf(stderr, "%s: %.6f ms\n", msg.c_str(), elapsed * 1000.0 /*to ms*/);
-	}
-};
-
-#pragma warning(push)
-#pragma warning(disable : 4555) // expression has no affect, used so retail won't be empty
-
 #endif // _FILEUTIL_
