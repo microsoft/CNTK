@@ -115,10 +115,16 @@ public:
     static Matrix<ElemType> RandomUniform(const size_t rows, const size_t cols, DEVICEID_TYPE deviceId, const ElemType low, const ElemType high, unsigned long seed = USE_TIME_BASED_SEED);
     static Matrix<ElemType> RandomGaussian(const size_t rows, const size_t cols, DEVICEID_TYPE deviceId, const ElemType mean, const ElemType sigma, unsigned long seed = USE_TIME_BASED_SEED);
 
-    static void SetDevice(DEVICEID_TYPE deviceId);
+    static void SetDevice(DEVICEID_TYPE deviceId); // TODO: unify with PrepareDevice()
 
     void ReleaseMemory();
     ~Matrix();
+
+    // workaround to bugs in BOTH implementation: force to collapse to home location
+    void CollapseDataLocationAfterWriting() const
+    {
+        SetDataLocation(GetDeviceId() < 0 ? CurrentDataLocation::CPU : CurrentDataLocation::GPU, GetMatrixType());
+    }
 
 private:
     Matrix(const MatrixFlags matrixFlags, const MatrixType matrixType, const MatrixFormat matrixFormat, DEVICEID_TYPE deviceID); // only used internally to initialize a blank matrix
@@ -530,15 +536,15 @@ public:
 
     static void TensorShuffleScaleAndAdd(ElemType keepWeight, const Matrix<ElemType>& a, size_t D, size_t S, size_t M, size_t K, size_t T, ElemType scaleFactor, const Matrix<ElemType>& b, Matrix<ElemType>& c);
 
-    void TensorOp(ElemType beta, const Matrix<ElemType>& a, ElemType alpha, ElementWiseOperator op,
+    void TensorOp(ElemType beta, const Matrix<ElemType>& a, ElemType alpha, ElementWiseOperator op, ElementWiseOperator reductionOp,
                   const std::array<size_t, 2>& offsets,
                   const SmallVector<size_t>& regularOpDims, const std::array<SmallVector<ptrdiff_t>, 2>& regularStrides,
                   const SmallVector<size_t>& reducingOpDims, const std::array<SmallVector<ptrdiff_t>, 2>& reducingStrides);
-    void TensorOp(ElemType beta, const Matrix<ElemType>& a, const Matrix<ElemType>& b, ElemType alpha, ElementWiseOperator op,
+    void TensorOp(ElemType beta, const Matrix<ElemType>& a, const Matrix<ElemType>& b, ElemType alpha, ElementWiseOperator op, ElementWiseOperator reductionOp,
                   const std::array<size_t, 3>& offsets,
                   const SmallVector<size_t>& regularOpDims, const std::array<SmallVector<ptrdiff_t>, 3>& regularStrides,
                   const SmallVector<size_t>& reducingOpDims, const std::array<SmallVector<ptrdiff_t>, 3>& reducingStrides);
-    void TensorOp(ElemType beta, const Matrix<ElemType>& a, const Matrix<ElemType>& b, const Matrix<ElemType>& c, ElemType alpha, ElementWiseOperator op,
+    void TensorOp(ElemType beta, const Matrix<ElemType>& a, const Matrix<ElemType>& b, const Matrix<ElemType>& c, ElemType alpha, ElementWiseOperator op, ElementWiseOperator reductionOp,
                   const std::array<size_t, 4>& offsets,
                   const SmallVector<size_t>& regularOpDims, const std::array<SmallVector<ptrdiff_t>, 4>& regularStrides,
                   const SmallVector<size_t>& reducingOpDims, const std::array<SmallVector<ptrdiff_t>, 4>& reducingStrides);

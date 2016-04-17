@@ -38,9 +38,10 @@ private:
         MBLayoutPtr pMBLayout;
         std::vector<std::vector<std::pair<wstring, size_t>>> minibatchUttInfo;
         size_t currentMBSize;
-        MinibatchBufferUnit()
-            : pMBLayout(make_shared<MBLayout>()), currentMBSize(0)
+        MinibatchBufferUnit() :
+            pMBLayout(make_shared<MBLayout>()), currentMBSize(0)
         {
+            pMBLayout->SetUniqueAxisName(L"HTKMLFReader");
         }
     };
     bool m_doMinibatchBuffering;
@@ -163,9 +164,10 @@ public:
     // set to true so that a current minibatch can uses state activities from the previous minibatch.
     // default will have truncated BPTT, which only does BPTT inside a minibatch
     bool mIgnoreSentenceBeginTag;
-    HTKMLFReader()
-        : m_pMBLayout(make_shared<MBLayout>())
+    HTKMLFReader() :
+        m_pMBLayout(make_shared<MBLayout>())
     {
+        m_pMBLayout->SetUniqueAxisName(L"HTKMLFReader");
     }
 
     template <class ConfigRecordType>

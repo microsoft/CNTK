@@ -40,6 +40,7 @@ void DataReaderBase::SetMinibatchLayout(StreamMinibatchInputs& minibatch)
     for (const auto& iter : minibatch)
     {
         assert(iter.second.pMBLayout == pMBLayout);
+        // TODO: This should be a runtime check, not an assert() that only runs in Debug.
         UNUSED(iter);
     }
 

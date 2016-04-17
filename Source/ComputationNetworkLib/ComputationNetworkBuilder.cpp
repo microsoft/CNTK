@@ -111,6 +111,7 @@ static shared_ptr<ComputationNode<ElemType>> CreateStandardNode(const std::wstri
     // TODO: DiagTimes is also an alias of ElementTimes; current separate implementation is unnecessary.
     else if (nodeType == L"PerDimMeanVarNormalizationNode")                     return New<PerDimMeanVarNormalizationNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == L"PerDimMeanVarDeNormalizationNode")                   return New<PerDimMeanVarDeNormalizationNode<ElemType>>(forward<_Types>(_Args)...);
+    else if (nodeType == L"ReconcileMBLayout")                                  return New<ReconcileDynamicAxisNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == L"RowElementTimes")                                    return New<ElementTimesNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == L"RowSlice")                                           return New<SliceNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == L"Scale")                                              return New<ElementTimesNode<ElemType>>(forward<_Types>(_Args)...);
@@ -194,6 +195,7 @@ shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Creat
     return net.AddNodeToNetWithElemType(New<LearnableParameter<ElemType>>(net.GetDeviceId(), paramName, tensorShape));
 }
 
+// TODO: change these to take an actual object instead of a name for dynamicAxis
 template <class ElemType>
 shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::CreateInputNode(const std::wstring& inputName, const size_t rows, const wstring& dynamicAxisName)
 {

@@ -2567,13 +2567,16 @@ __global__ void _assignScaledDifference(
 
 template <class ElemType>
 __global__ void _addElementToElement(
+    ElemType beta,
     const ElemType* a, CUDA_LONG indexA,
     ElemType* c, CUDA_LONG indexC)
 {
-    CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
-    if (id > 0)
-        return;
-    c[indexC] += a[indexA];
+    //CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;  // only one thread launched
+    //if (id > 0)
+    //    return;
+    ElemType us = beta ? beta * c[indexC] : 0; // do not multiply if beta is 0, could be a NaN
+    us += a[indexA];
+    c[indexC] = us;
 }
 
 template <class ElemType>

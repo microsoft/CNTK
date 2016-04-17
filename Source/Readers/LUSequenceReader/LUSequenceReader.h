@@ -270,6 +270,7 @@ public:
     BatchLUSequenceReader()
         : m_pMBLayout(make_shared<MBLayout>())
     {
+        m_pMBLayout->SetUniqueAxisName(L"LUSequenceReader");
         mLastProcessedSentenceId = 0;
         mRequestedNumParallelSequences = 1;
         mLastPosInSentence = 0;

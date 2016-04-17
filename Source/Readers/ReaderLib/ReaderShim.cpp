@@ -116,9 +116,7 @@ bool ReaderShim<ElemType>::GetMinibatch(StreamMinibatchInputs& matrices)
     // If not we should inject the IMemoryProvider per stream.
     int deviceId = matrices.begin()->second.matrix->GetDeviceId();
     for (auto mx : matrices)
-    {
         assert(mx.second.matrix->GetDeviceId() == deviceId), UNUSED(deviceId);
-    }
 
     assert(m_prefetchTask.valid());
 
@@ -133,6 +131,7 @@ bool ReaderShim<ElemType>::GetMinibatch(StreamMinibatchInputs& matrices)
     }
 
     // Reset stale mb layouts.
+    // BUGBUG: This seems incorrect. (1) layouts should all be updated below, and (2) some of these layouts are the same, we are resetting them twice.
     for (const auto& iter : matrices)
     {
         iter.second.pMBLayout->Init(1, 0);
@@ -149,12 +148,12 @@ bool ReaderShim<ElemType>::GetMinibatch(StreamMinibatchInputs& matrices)
             if (m_nameToStreamId.find(mx.first) == m_nameToStreamId.end())
             {
                 string inputNames = EnumerateInputs(m_nameToStreamId);
-                RuntimeError("Could not map input '%ls' to the reader. Reader outputs only [%s].",
+                RuntimeError("Could not map input '%ls' to the reader. Reader outputs only [%s].", 
                     mx.first.c_str(), inputNames.c_str());
             }
 
             size_t streamId = m_nameToStreamId[mx.first];
-
+            
             const auto& stream = minibatch.m_data[streamId];
 
             m_numParallelSequences = stream->m_layout->GetNumParallelSequences();
@@ -176,7 +175,7 @@ bool ReaderShim<ElemType>::GetMinibatch(StreamMinibatchInputs& matrices)
                 RuntimeError("Dynamic axis layout '%ls' is shared between inputs '%ls' and '%ls', but layouts generated "
                     "from the input data are incompatible on this axis. Are you using different sequence lengths? "
                     "Did you consider adding a DynamicAxis() to the Input nodes?",
-                    layout->GetAxisName().c_str(), layoutToInputMap[layout->GetAxisName()].c_str(), mx.first.c_str());
+                    layout->GetAxisName(), layoutToInputMap[layout->GetAxisName()].c_str(), mx.first.c_str());
             }
 
             size_t sampleSize = m_streams[streamId]->m_sampleLayout->GetNumElements();
@@ -217,7 +216,7 @@ void ReaderShim<ElemType>::FillMatrixFromStream(StorageType type, Matrix<ElemTyp
         IndexType* columns = reinterpret_cast<IndexType*>(rows + nnzCount);
         matrix->SetMatrixFromCSCFormat(columns, rows, values, nnzCount, numRows, numCols);
     }
-    else
+    else 
     {
         RuntimeError("Storage type %d is not supported.", (int)type);
     }

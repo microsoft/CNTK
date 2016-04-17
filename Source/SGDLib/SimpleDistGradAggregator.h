@@ -224,7 +224,7 @@ private:
             assert(headerCPU->criterion == 0);
             for (int i = 0; i < headerCPU->numEvalNode; ++i)
             {
-                assert(headerCPU->evalErrors[i] == 0);
+                assert(headerCPU->evalErrors[i].first == 0);
             }
 
             // If the current node did not process any samples, the gradients should be zero'd

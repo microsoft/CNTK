@@ -31,8 +31,15 @@ void ComputationNode<ElemType>::Backprop(const FrameRange& fr, bool childrenInTh
     // after nodes that propagate outside of the loop, and thus, in the last
     // time step of the sequence, have not yet received a gradient from a parent
     // and thus may not have had their gradient matrices allocated.
-    //if (m_needsGradient)
-    //    LazyZeroGradient(); // set gradient to 0 if this is the first time
+#if 1 // keep enabled once this works
+#if 1 // log the cases where this is needed
+    if (m_needsGradient && !m_gradientInitialized)
+        //LogicError("%ls %ls operation: Backprop called with uninitialized gradient.", NodeName().c_str(), OperationName().c_str());
+        fprintf(stderr, "%ls %ls operation: Initializing gradient out of line.\n", NodeName().c_str(), OperationName().c_str());
+#endif
+    if (m_needsGradient)
+        LazyZeroGradient(); // set gradient to 0 if this is the first time
+#endif
 
     if (fr.IsAllFrames() && IsPartOfLoop() && childrenInThisLoop)
         LogicError("%ls %ls operation: Backprop called with whole-batch FrameRange on node that participates in a loop", NodeName().c_str(), OperationName().c_str());
@@ -139,11 +146,11 @@ void ComputationNodeBase::ValidateBinaryZip(bool isFinalValidationPass, bool all
     {
         size_t dim1 = shape1[k];
         // BUGBUG: We must consider the allowBroadcast flag here.
-        if (dims[k] == 1)                                  // is [0] broadcasting?
+        if (dims[k] <= 1 && dim1 != 0)                     // is [0] broadcasting (1) or unspecified (0)?
             dims[k] = dim1;                                // then use dimension we broadcast to
-        else if (dim1 == 1)                                // if [1] is broadcasting
-            ;                                              // dims is already correct
-        else if (isFinalValidationPass && dim1 != dims[k]) // no broadcasting: they must match
+        else if (dim1 <= 1 && dims[k] != 0)                // if [1] is broadcasting or unspecified
+            ;                                              // then dims is already correct
+        else if (isFinalValidationPass && dim1 != dims[k]) // no broadcasting or unspecified: they must match
             InvalidArgument("%ls: Input dimensions [%s] and [%s] are not compatible.",
                             NodeDescription().c_str(), string(shape0).c_str(), string(shape1).c_str());
     }
@@ -348,7 +355,7 @@ const std::string ComputationNodeBase::ShapeDescription() const
     return msra::strfun::strprintf("[%s%s%ls]",
         string(m_sampleLayout).c_str(),
         HasMBLayout() ? " x " : "",
-        HasMBLayout() ? GetMBLayout()->GetAxisName().c_str() : L"");
+        HasMBLayout() ? GetMBLayout()->GetAxisName() : L"");
 }
 
 template <class ElemType>
@@ -507,6 +514,7 @@ void ComputationNode<ElemType>::WriteMinibatchWithFormatting(FILE* f, const Fram
         {
             if (formatChar == 'f') // print as real number
             {
+                if (dval == 0) dval = fabs(dval);    // clear the sign of a negative 0, which are produced inconsistently between CPU and GPU
                 fprintfOrDie(f, valueFormatString.c_str(), dval);
             }
             else if (formatChar == 'u') // print category as integer index
@@ -707,7 +715,11 @@ using namespace Microsoft::MSR::CNTK;
 template <>
 shared_ptr<Object> MakeRuntimeObject<ComputationNodeBase>(const IConfigRecordPtr configp)
 {
-    return NewComputationNodeFromConfig(configp);
+    let node = NewComputationNodeFromConfig(configp);
+    // temporarily disabling this, as it caused a test to fail:
+    //if (!node->Is<IRecurrentNode>())
+    //    node->Validate(/*isFinalValidationPass*/false); // do an initial validation, so that we have access to dimensions
+    return node;
 }
 
 ScriptableObjects::ConfigurableRuntimeTypeRegister::Add<ComputationNodeBase> registerComputationNode(L"ComputationNode");

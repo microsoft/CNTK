@@ -74,6 +74,7 @@ void NDLNodeEvaluatorImpl<ElemType>::Evaluate(NDLNode<ElemType>* node, const wst
             auto tensorShape = ProcessTensorShapeParameters(node, params, i, /*isImage=*/false, cnNodeType);
 
             wstring dynamicAxis = node->GetOptionalParameter("dynamicAxis", "");
+            // TODO: Map dynamicAxis from name to node at this point, where that node is memoized inside NDL.
             // first look for this node already existing in the network
             // BUGBUG: How does this set the dimensions then?
             if (m_net->NodeNameExists(name))
