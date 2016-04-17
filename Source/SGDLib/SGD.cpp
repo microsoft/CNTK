@@ -991,8 +991,8 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                 localEpochCriterion.Add(criterionNodes, 0, numSamplesWithLabel);
                 for (size_t i = 0; i < evaluationNodes.size(); i++)
                     localEpochEvalErrors.Add(evaluationNodes, i, numSamplesWithLabel);
-                }
             }
+        }
         else
         {
             // distributed gradient aggregation
