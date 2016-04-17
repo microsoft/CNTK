@@ -270,25 +270,10 @@ cv::Mat ImageDataDeserializer::ReadImage(size_t seqId, const std::string& path)
 {
     assert(!path.empty());
 
-	auto_timer imageTimer;
     ImageDataDeserializer::SeqReaderMap::const_iterator r;
-	if (m_readers.empty() || (r = m_readers.find(seqId)) == m_readers.end())
-	{
-		auto ret = m_defaultReader.Read(seqId, path);
-		if (m_verbose)
-		{
-			double imageReadTime = (double)imageTimer;
-			fprintf(stderr, "ReadImage: time usage = %.8g.\n", (double) imageReadTime);
-		}
-		return ret;
-	}
-	auto ret = (*r).second->Read(seqId, path);
-	if (m_verbose)
-	{
-		double imageReadTime = (double)imageTimer;
-		fprintf(stderr, "ReadImage: time usage = %.8g.\n", (double)imageReadTime);
-	}
-	return ret;
+    if (m_readers.empty() || (r = m_readers.find(seqId)) == m_readers.end())
+        return m_defaultReader.Read(seqId, path);
+    return (*r).second->Read(seqId, path);
 }
 
 cv::Mat FileByteReader::Read(size_t, const std::string& path)

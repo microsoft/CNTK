@@ -10,7 +10,6 @@
 #include "ByteReader.h"
 #include "ImageConfigHelper.h"
 #include <unordered_map>
-#include <fileutil.h>
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -67,7 +66,6 @@ private:
     SeqReaderMap m_readers;
 
     FileByteReader m_defaultReader;
-	int m_verbose;
 };
 
 }}}
