@@ -1,4 +1,6 @@
-stderr=$ExpDir$\WriteScaledLogLike\log\log
+# If set to true, always initialize the network on CPU, making initialization consistent across CPU and GPU targets (for testing).
+initOnCPUOnly=true
+
 command=TIMIT_WriteScaledLogLike
 
 precision=float
@@ -9,7 +11,7 @@ precision=float
 TIMIT_WriteScaledLogLike=[
     action=write
 
-    modelPath=$ExpDir$\TrainSimpleNetwork\model\cntkSpeech.dnn
+    modelPath=$ExpDir$/TrainSimpleNetwork/model/cntkSpeech.dnn
 
     # deviceId=-1 for CPU, >=0 for GPU devices 
     deviceId=$DeviceNumber$
@@ -21,20 +23,21 @@ TIMIT_WriteScaledLogLike=[
 
     # Parameter values for the reader
     reader=[
-      # reader to use
-      readerType=HTKMLFReader
-      features=[
-	dim=792
-     	scpFile=$ScpDir$\TIMIT.core.scp.fbank.fullpath
-	type=Real
-      ]
+        # reader to use
+        readerType=HTKMLFReader
+        features=[
+            dim=792
+            scpFile=$ScpDir$/TIMIT.core.scp.fbank.fullpath
+            type=Real
+        ]
     ]
+
     writer=[
-	writerType=HTKMLFWriter	
-	ScaledLogLikelihood = [
-	   dim=183
-	   scpFile=$ScpDir$\TIMIT.core.scp.scaledloglike.fullpath
-	   type=Real
-	]
-   ]
+        writerType=HTKMLFWriter	
+        ScaledLogLikelihood = [
+            dim=183
+            scpFile=$ScpDir$/TIMIT.core.scp.scaledloglike.fullpath
+            type=Real
+        ]
+    ]
 ]

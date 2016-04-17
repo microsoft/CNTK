@@ -4,10 +4,12 @@
 //
 
 #include "stdafx.h"
+#include <inttypes.h>
 #include <opencv2/opencv.hpp>
+#include <numeric>
+#include <limits>
 #include "ImageDataDeserializer.h"
 #include "ImageConfigHelper.h"
-#include <inttypes.h>
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -27,19 +29,28 @@ template <class TElement>
 class TypedLabelGenerator : public ImageDataDeserializer::LabelGenerator
 {
 public:
-    TypedLabelGenerator() : m_value(1)
+    TypedLabelGenerator(size_t labelDimension) : m_value(1), m_indices(labelDimension)
     {
+        if (labelDimension > numeric_limits<IndexType>::max())
+        {
+            RuntimeError("Label dimension (%" PRIu64 ") exceeds the maximum allowed "
+                "value (%" PRIu64 ")\n", labelDimension, (size_t)numeric_limits<IndexType>::max());
+        }
+        iota(m_indices.begin(), m_indices.end(), 0);
     }
 
     virtual void CreateLabelFor(size_t classId, SparseSequenceData& data) override
     {
-        data.m_indices.resize(1);
-        data.m_indices[0] = std::vector<size_t>{ classId };
+        data.m_nnzCounts.resize(1);
+        data.m_nnzCounts[0] = 1;
+        data.m_totalNnzCount = 1;
         data.m_data = &m_value;
+        data.m_indices = &(m_indices[classId]);
     }
 
 private:
     TElement m_value;
+    vector<IndexType> m_indices;
 };
 
 // Used to keep track of the image. Accessed only using DenseSequenceData interface.
@@ -63,7 +74,6 @@ public:
     virtual void GetSequence(size_t sequenceId, std::vector<SequenceDataPtr>& result) override
     {
         assert(sequenceId == m_description.m_id);
-        UNUSED(sequenceId);
         const auto& imageSequence = m_description;
 
         auto image = std::make_shared<DeserializedImage>();
@@ -91,6 +101,7 @@ public:
         image->m_data = image->m_image.data;
         ImageDimensions dimensions(cvImage.cols, cvImage.rows, cvImage.channels());
         image->m_sampleLayout = std::make_shared<TensorShape>(dimensions.AsTensorShape(HWC));
+        image->m_id = sequenceId;
         image->m_numberOfSamples = 1;
         image->m_chunk = shared_from_this();
         result.push_back(image);
@@ -98,6 +109,7 @@ public:
         SparseSequenceDataPtr label = std::make_shared<SparseSequenceData>();
         label->m_chunk = shared_from_this();
         m_parent.m_labelGenerator->CreateLabelFor(imageSequence.m_classId, *label);
+        label->m_numberOfSamples = 1;
         result.push_back(label);
     }
 };
@@ -122,18 +134,18 @@ ImageDataDeserializer::ImageDataDeserializer(const ConfigParameters& config)
 
     if (label->m_elementType == ElementType::tfloat)
     {
-        m_labelGenerator = std::make_shared<TypedLabelGenerator<float>>();
+        m_labelGenerator = std::make_shared<TypedLabelGenerator<float>>(labelDimension);
     }
     else if (label->m_elementType == ElementType::tdouble)
     {
-        m_labelGenerator = std::make_shared<TypedLabelGenerator<double>>();
+        m_labelGenerator = std::make_shared<TypedLabelGenerator<double>>(labelDimension);
     }
     else
     {
         RuntimeError("Unsupported label element type '%d'.", (int)label->m_elementType);
     }
 
-    CreateSequenceDescriptions(configHelper.GetMapPath(), labelDimension);
+    CreateSequenceDescriptions(configHelper.GetMapPath(), labelDimension, configHelper);
 }
 
 // Descriptions of chunks exposed by the image reader.
@@ -159,21 +171,22 @@ void ImageDataDeserializer::GetSequencesForChunk(size_t chunkId, std::vector<Seq
     result.push_back(m_imageSequences[chunkId]);
 }
 
-void ImageDataDeserializer::CreateSequenceDescriptions(std::string mapPath, size_t labelDimension)
+void ImageDataDeserializer::CreateSequenceDescriptions(std::string mapPath, size_t labelDimension, const ImageConfigHelper& config)
 {
-    UNUSED(labelDimension);
-
     std::ifstream mapFile(mapPath);
     if (!mapFile)
     {
         RuntimeError("Could not open %s for reading.", mapPath.c_str());
     }
 
+    size_t itemsPerLine = config.IsMultiViewCrop() ? 10 : 1;
+    size_t curId = 0;
     std::string line;
+    PathReaderMap knownReaders;
     ImageSequenceDescription description;
     description.m_numberOfSamples = 1;
     description.m_isValid = true;
-    PathReaderMap knownReaders;
+
     for (size_t lineIndex = 0; std::getline(mapFile, line); ++lineIndex)
     {
         std::stringstream ss(line);
@@ -182,26 +195,31 @@ void ImageDataDeserializer::CreateSequenceDescriptions(std::string mapPath, size
         if (!std::getline(ss, imagePath, '\t') || !std::getline(ss, classId, '\t'))
             RuntimeError("Invalid map file format, must contain 2 tab-delimited columns, line %" PRIu64 " in file %s.", lineIndex, mapPath.c_str());
 
-        description.m_id = lineIndex;
-        description.m_chunkId = lineIndex;
-        description.m_path = imagePath;
         char* eptr;
         errno = 0;
         size_t cid = strtoull(classId.c_str(), &eptr, 10);
         if (classId.c_str() == eptr || errno == ERANGE)
             RuntimeError("Cannot parse label value on line %" PRIu64 ", second column, in file %s.", lineIndex, mapPath.c_str());
-        description.m_classId = cid;
-        description.m_key.m_major = description.m_id;
-        description.m_key.m_minor = 0;
 
-        if (description.m_classId >= labelDimension)
+        if (cid >= labelDimension)
         {
             RuntimeError(
                 "Image '%s' has invalid class id '%" PRIu64 "'. Expected label dimension is '%" PRIu64 "'. Line %" PRIu64 " in file %s.",
-                imagePath.c_str(), description.m_classId, labelDimension, lineIndex, mapPath.c_str());
+                imagePath.c_str(), cid, labelDimension, lineIndex, mapPath.c_str());
         }
-        m_imageSequences.push_back(description);
-        RegisterByteReader(description.m_id, description.m_path, knownReaders);
+
+        for (size_t start = curId; curId < start + itemsPerLine; curId++)
+        {
+            description.m_id = curId;
+            description.m_chunkId = curId;
+            description.m_path = imagePath;
+            description.m_classId = cid;
+            description.m_key.m_major = description.m_id;
+            description.m_key.m_minor = 0;
+
+            m_imageSequences.push_back(description);
+            RegisterByteReader(description.m_id, description.m_path, knownReaders);
+        }
     }
 }
 

@@ -49,6 +49,8 @@ BlockRandomizer::BlockRandomizer(
 // Start a new epoch.
 void BlockRandomizer::StartEpoch(const EpochConfiguration& config)
 {
+    m_lastSeenChunkId = SIZE_MAX;
+
     m_config = config;
     if (config.m_totalEpochSizeInSamples == requestDataSize)
     {
@@ -134,6 +136,7 @@ Sequences BlockRandomizer::GetNextSequences(size_t sampleCount)
         }
     }
 
+    m_sequenceRandomizer->ReleaseChunks();
     return result;
 }
 
@@ -199,7 +202,7 @@ void BlockRandomizer::Decimate(const std::vector<RandomizedSequenceDescription>&
     }
 }
 
-// Retrives chunk data based on the window information provided by SequenceRandomizer
+// Retrieves chunk data based on the window information provided by SequenceRandomizer
 void BlockRandomizer::RetrieveDataChunks()
 {
     const auto& window = m_sequenceRandomizer->GetChunkWindow();

@@ -3,6 +3,7 @@
 // Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
 //
 #include "stdafx.h"
+#include "Common/ReaderTestHelper.h"
 
 using namespace Microsoft::MSR::CNTK;
 
@@ -130,6 +131,23 @@ BOOST_AUTO_TEST_CASE(ImageReaderZipMissingFile)
             1),
             std::runtime_error,
             [](std::runtime_error const& ex) { return string("Failed to get file info of missing.jpg, zip library error: Unknown error -1") == ex.what(); });
+}
+
+BOOST_AUTO_TEST_CASE(ImageReaderMultiView)
+{
+    HelperRunReaderTest<float>(
+        testDataPath() + "/Config/ImageReaderMultiView_Config.cntk",
+        testDataPath() + "/Control/ImageReaderMultiView_Control.txt",
+        testDataPath() + "/Control/ImageReaderMultiView_Output.txt",
+        "MultiView_Test",
+        "reader",
+        10,
+        10,
+        1,
+        1,
+        0,
+        0,
+        1);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

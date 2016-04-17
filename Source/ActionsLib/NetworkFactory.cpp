@@ -13,13 +13,6 @@
 #include "BrainScriptEvaluator.h"
 #include "BrainScriptParser.h"
 
-template <> /*static*/ const wchar_t* ElemTypeName<float>()  {
-    return L"float";
-}
-template <> /*static*/ const wchar_t* ElemTypeName<double>() {
-    return L"double";
-}
-
 function<ComputationNetworkPtr(DEVICEID_TYPE)> GetCreateNetworkFn(const ScriptableObjects::IConfigRecord& config)
 {
     // createNetwork() is a BrainScript lambda that creates the model
@@ -42,32 +35,35 @@ function<ComputationNetworkPtr(DEVICEID_TYPE)> GetCreateNetworkFn(const ConfigPa
 } // old CNTK config does not support lambdas
 
 template <class ConfigRecordType, typename ElemType>
-function<ComputationNetworkPtr(DEVICEID_TYPE)> GetNetworkFactory(const ConfigRecordType& config)
+bool TryGetNetworkFactory(const ConfigRecordType& config, function<ComputationNetworkPtr(DEVICEID_TYPE)>& createNetworkFn)
 {
     DEVICEID_TYPE deviceId = DeviceFromConfig(config);
 
     if (config.Exists(L"createNetwork"))
     {
-        return GetCreateNetworkFn(config); // (we need a separate function needed due to template code)
+        createNetworkFn = GetCreateNetworkFn(config); // (we need a separate function needed due to template code)
+        return true;
     }
     else if (config.Exists(L"SimpleNetworkBuilder"))
     {
         const ConfigRecordType& simpleNetworkBuilderConfig(config(L"SimpleNetworkBuilder"));
         auto netBuilder = make_shared<SimpleNetworkBuilder<ElemType>>(simpleNetworkBuilderConfig); // parses the configuration and stores it in the SimpleNetworkBuilder object
-        return [netBuilder](DEVICEID_TYPE deviceId)
+        createNetworkFn = [netBuilder](DEVICEID_TYPE deviceId)
         {
             return shared_ptr<ComputationNetwork>(netBuilder->BuildNetworkFromDescription()); // this operates based on the configuration saved above
         };
+        return true;
     }
     // legacy NDL
     else if (config.Exists(L"NDLNetworkBuilder"))
     {
         const ConfigRecordType& ndlNetworkBuilderConfig(config(L"NDLNetworkBuilder"));
         shared_ptr<NDLBuilder<ElemType>> netBuilder = make_shared<NDLBuilder<ElemType>>(ndlNetworkBuilderConfig);
-        return [netBuilder](DEVICEID_TYPE deviceId)
+        createNetworkFn = [netBuilder](DEVICEID_TYPE deviceId)
         {
             return shared_ptr<ComputationNetwork>(netBuilder->BuildNetworkFromDescription());
         };
+        return true;
     }
     // legacy test mode for BrainScript. Will go away once we fully integrate with BS.
     else if (config.Exists(L"BrainScriptNetworkBuilder") || config.Exists(L"ExperimentalNetworkBuilder" /*legacy name*/))
@@ -89,15 +85,15 @@ function<ComputationNetworkPtr(DEVICEID_TYPE)> GetNetworkFactory(const ConfigRec
         if (sourceOfNetwork[0] == '[') // if [ ] form then we turn it into ComputationNetwork by constructing a ComputationNetwork from it
             sourceOfNetwork = L"new ComputationNetwork " + sourceOfNetwork;
         let sourceOfBS = msra::strfun::wstrprintf(L"include \'cntk.core.bs\'\n" // include our core lib. Note: Using lowercase here to match the Linux name of the CNTK exe.
-                                                  L"deviceId = %d\n"            // deviceId as passed in
-                                                  L"precision = '%ls'\n"        // 'float' or 'double'
-                                                  L"network = %ls",             // source code of expression that evaluates to a ComputationNetwork
-                                                  (int)deviceId, ElemTypeName<ElemType>(), sourceOfNetwork.c_str());
+            L"deviceId = %d\n"            // deviceId as passed in
+            L"precision = '%ls'\n"        // 'float' or 'double'
+            L"network = %ls",             // source code of expression that evaluates to a ComputationNetwork
+            (int)deviceId, ElemTypeName<ElemType>(), sourceOfNetwork.c_str());
         let expr = BS::ParseConfigDictFromString(sourceOfBS, move(includePaths));
 
         // the rest is done in a lambda that is only evaluated when a virgin network is needed
         // Note that evaluating the BrainScript *is* instantiating the network, so the evaluate call must be inside the lambda.
-        return [expr](DEVICEID_TYPE /*deviceId*/)
+        createNetworkFn = [expr](DEVICEID_TYPE /*deviceId*/)
         {
             // evaluate the parse tree, particularly the top-level field 'network'
             // Evaluating it will create the network.
@@ -108,10 +104,40 @@ function<ComputationNetworkPtr(DEVICEID_TYPE)> GetNetworkFactory(const ConfigRec
             // success
             return network;
         };
+        return true;
     }
     else
+        return false;
+}
+
+template <class ConfigRecordType, typename ElemType>
+function<ComputationNetworkPtr(DEVICEID_TYPE)> GetNetworkFactory(const ConfigRecordType& config)
+{
+    function<ComputationNetworkPtr(DEVICEID_TYPE)> createNetworkFn;
+    bool gotIt = TryGetNetworkFactory<ConfigRecordType, ElemType>(config, createNetworkFn);
+    if (!gotIt)
+        RuntimeError("No network builder found in the config file. NDLNetworkBuilder, SimpleNetworkBuilder, or BrainScriptNetworkBuilder must be specified");
+    else
+        return createNetworkFn;
+}
+
+// helper to remove all existing Output nodes and replace them by a new given set
+static void PatchOutputNodes(const ComputationNetworkPtr& net, const ConfigArray& outputNodeNames, vector<wstring>& outputNodeNamesVector)
+{
+    // clear out current list of outputNodes
+    while (!net->OutputNodes().empty())
+        net->RemoveFromNodeGroup(L"output", net->OutputNodes().back());
+    // and insert the desired nodes instead
+    for (wstring name : outputNodeNames)
     {
-        RuntimeError("No network builder found in the config file. NDLNetworkBuilder or SimpleNetworkBuilder must be specified");
+        if (!net->NodeNameExists(name))
+        {
+            fprintf(stderr, "PatchOutputNodes: No node named '%ls'; skipping\n", name.c_str());
+            continue;
+        }
+        outputNodeNamesVector.push_back (name);
+        let& node = net->GetNodeFromName(name);
+        net->AddToNodeGroup(L"output", node);
     }
 }
 
@@ -119,38 +145,37 @@ template <class ConfigRecordType, typename ElemType>
 ComputationNetworkPtr GetModelFromConfig(const ConfigRecordType& config, vector<wstring>& outputNodeNamesVector)
 {
     DEVICEID_TYPE deviceId = DeviceFromConfig(config);
-    wstring modelPath = config(L"modelPath", L"");
-    ComputationNetworkPtr net(nullptr);
 
-    if (!modelPath.empty())
+    ConfigArray outputNodeNames = config(L"outputNodeNames", ConfigArray(""));
+
+    ComputationNetworkPtr net;
+
+    // first try if a NetworkBuilder is present
+    function<ComputationNetworkPtr(DEVICEID_TYPE)> createNetworkFn;
+    bool gotIt = TryGetNetworkFactory<ConfigRecordType, ElemType>(config, createNetworkFn);
+    if (gotIt)
     {
-        // Note this is required since the user might specify OutputNodeNames in the config, so don't use CreateFromFile,
-        // instead we build the network ourselves.
-        net = make_shared<ComputationNetwork>(deviceId);
-        net->Read<ElemType>(modelPath);
-
-        ConfigArray outputNodeNames = config(L"outputNodeNames", ConfigArray(""));
-
+        // We have several ways to create a network.
+        net = createNetworkFn(deviceId);
         if (outputNodeNames.size() > 0)
         {
-            net->OutputNodes().clear();
-            for (int i = 0; i < outputNodeNames.size(); ++i)
-            {
-                outputNodeNamesVector.push_back(outputNodeNames[i]);
-                net->OutputNodes().emplace_back(net->GetNodeFromName(outputNodeNames[i]));
-            }
+            net->InvalidateCompiledNetwork();
+            PatchOutputNodes(net, outputNodeNames, outputNodeNamesVector);
+            net->CompileNetwork();
+            // BUGBUG: This will generate double Validation output in the log
         }
-        net->CompileNetwork();
     }
-    else
+    else // no NetworkBuilder given: load from 'modelPath'
     {
-        // The modelPath is empty, attempt to build the network
-        // determine the network-creation function
-        // We have several ways to create that network.
-        function<ComputationNetworkPtr(DEVICEID_TYPE)> createNetworkFn;
+        wstring modelPath = config(L"modelPath");
 
-        createNetworkFn = GetNetworkFactory<ConfigRecordType, ElemType>(config);
-        net = createNetworkFn(deviceId);
+        // We don't use CreateFromFile() here since the user might specify OutputNodeNames in the config.
+        // By not compiling the network before patching, we avoid double log output for validation.
+        net = make_shared<ComputationNetwork>(deviceId);
+        net->Read<ElemType>(modelPath);
+        if (outputNodeNames.size() > 0)
+            PatchOutputNodes(net, outputNodeNames, outputNodeNamesVector);
+        net->CompileNetwork();
     }
 
     return net;

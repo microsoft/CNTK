@@ -33,6 +33,21 @@ public:
         return m_indexedValues.size() - 1;
     }
 
+    // Tries to get a value by id.
+    bool TryGet(const TString& value, size_t& id)
+    {
+        const auto& it = m_values.find(value);
+        if (it == m_values.end())
+        {
+            return false;
+        }
+        else
+        {
+            id = it->second;
+            return true;
+        }
+    }
+
     // Get integer id for the string value.
     size_t operator[](const TString& value) const
     {

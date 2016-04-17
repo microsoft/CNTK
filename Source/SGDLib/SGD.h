@@ -9,6 +9,7 @@
 #include "SimpleEvaluator.h"
 #include "DataReader.h"
 #include "ScriptableObjects.h"
+#include "Criterion.h"
 #include <vector>
 #include <string>
 #include <stdexcept>
@@ -213,7 +214,7 @@ protected:
 
     doubleargvector m_dropoutRates;
     doubleargvector m_batchNormalizationTimeConstant;
-    int m_setBNToEvalModeAfterEpochNumber;
+    doubleargvector m_batchNormalizationBlendTimeConstant;
     size_t m_maxTempMemSizeInSamplesForCNN;
 
     int m_traceLevel;
@@ -225,7 +226,8 @@ protected:
     GradientUpdateInfo m_gradType;
     RMSPropInfo m_rpi;
 
-    int m_numMBsToShowResult;
+    size_t m_numMBsToShowResult = 0;
+    size_t m_firstMBsToShowResult = 0;
     int m_numMBsToCUDAProfile;
 
     bool m_doGradientCheck;
@@ -297,9 +299,10 @@ public:
           m_keepCheckPointFiles(configSGD(L"keepCheckPointFiles", false)),
           // m_validateAfterModelReloading(configSGD(L"validateAfterModelReloading", true)),
           m_trainCriterionNodeName((const wstring&) configSGD(L"trainCriterionNodeName", L"")),
-          m_evalCriterionNodeName((const wstring&) configSGD(L"evalCriterionNodeName", L"")),
-          m_traceNodeNamesReal(configSGD(L"traceNodeNamesReal", ConfigRecordType::Array(stringargvector()))),
+          m_evalCriterionNodeName ((const wstring&) configSGD(L"evalCriterionNodeName", L"")),
+          m_traceNodeNamesReal    (configSGD(L"traceNodeNamesReal",     ConfigRecordType::Array(stringargvector()))),
           m_traceNodeNamesCategory(configSGD(L"traceNodeNamesCategory", ConfigRecordType::Array(stringargvector()))),
+          m_traceNodeNamesSparse  (configSGD(L"traceNodeNamesSparse",   ConfigRecordType::Array(stringargvector()))),
           m_prevChosenMinibatchSize(0),
           m_lastFinishedEpochTrainLoss(0.0),
           m_distGradAgg(nullptr),
@@ -334,8 +337,8 @@ public:
 
 protected:
 
-    std::vector<ComputationNodeBasePtr>& GetTrainCriterionNodes(ComputationNetworkPtr net);
-    std::vector<ComputationNodeBasePtr>& GetEvalCriterionNodes(ComputationNetworkPtr net);
+    const std::vector<ComputationNodeBasePtr>& GetTrainCriterionNodes(ComputationNetworkPtr net);
+    const std::vector<ComputationNodeBasePtr>& GetEvalCriterionNodes(ComputationNetworkPtr net);
 
     void TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
                            bool networkLoadedFromCheckpoint,
@@ -349,8 +352,8 @@ protected:
     // return true if precomputation is executed.
     bool PreCompute(ComputationNetworkPtr net,
                     IDataReader* trainSetDataReader,
-                    std::vector<ComputationNodeBasePtr>& featureNodes,
-                    std::vector<ComputationNodeBasePtr>& labelNodes,
+                    const std::vector<ComputationNodeBasePtr>& featureNodes,
+                    const std::vector<ComputationNodeBasePtr>& labelNodes,
                     StreamMinibatchInputs* inputMatrices);
 
     // return a reasonable initial learning rate based on the initial mbsize
@@ -382,9 +385,8 @@ protected:
                                          StreamMinibatchInputs* inputMatrices,
                                          const std::list<ComputationNodeBasePtr>& learnableNodes,
                                          std::list<Matrix<ElemType>>& smoothedGradients,
-                                         /*out*/ double& epochCriterion,
-                                         /*out*/ std::vector<double>& epochEvalErrors,
-                                         /*out*/ size_t& totalSamplesSeen,
+                                         /*out*/ EpochCriterion& epochCriterion,
+                                         /*out*/ std::vector<EpochCriterion>& epochEvalErrors,
                                          std::string prefixMsg = "");
 
     size_t AdaptiveMinibatchSizing(ComputationNetworkPtr net,
@@ -447,10 +449,9 @@ protected:
                          StreamMinibatchInputs* inputMatrices,
                          const std::list<ComputationNodeBasePtr>& learnableNodes,
                          std::list<Matrix<ElemType>>& smoothedGradients,
-                         /*out*/ double& epochCriterion,
-                         /*out*/ std::vector<double>& epochEvalErrors,
-                         /*out*/ size_t& totalSamplesSeen,
-                         std::string prefixMsg = "");
+                         /*out*/ EpochCriterion& epochCriterion,
+                         /*out*/ std::vector<EpochCriterion>& epochEvalErrors,
+                         const std::string& prefixMsg = "");
 
     void InitDistGradAgg(int numEvalNodes, int traceLevel);
     void InitModelAggregationHandler(int traceLevel);
@@ -480,13 +481,19 @@ protected:
 
     void ClipGradient(Matrix<ElemType>& gradient, const size_t actualMBSize) const;
 
-    void SaveCheckPointInfo(const size_t epoch, const size_t totalSamplesSeen,
+    void SaveCheckPointInfo(const size_t epoch, const size_t totalSamplesSeen, // TODO: combine totalSamplesSeen and prevCriterion into a EpochCriterion type
                             const double learnRatePerSample,
                             const std::list<Matrix<ElemType>>& smoothedGradients,
                             const double prevCriterion,
                             const size_t minibatchSize);
 
-    bool LoadCheckPointInfo(const size_t epochNumber,
+    bool TryLoadCheckPointInfo(const size_t epochNumber,
+                               /*out*/ size_t& totalSamplesSeen,
+                               /*out*/ double& learnRatePerSample,
+                               std::list<Matrix<ElemType>>& smoothedGradients,
+                               /*out*/ double& prevCriterion,
+                               /*out*/ size_t& minibatchSize);
+    void LoadCheckPointInfo(const size_t epochNumber,
                             /*out*/ size_t& totalSamplesSeen,
                             /*out*/ double& learnRatePerSample,
                             std::list<Matrix<ElemType>>& smoothedGradients,
@@ -517,16 +524,17 @@ public:
                        int npos);
 
 protected:
-    wstring m_modelPath;
+    std::wstring m_modelPath;
     bool m_keepCheckPointFiles;
     // bool m_validateAfterModelReloading; // TODO: remove this. Why would one not validate a model?
 
-    wstring m_trainCriterionNodeName;
-    wstring m_evalCriterionNodeName;
+    std::wstring m_trainCriterionNodeName;
+    std::wstring m_evalCriterionNodeName;
 
-    // enable tracing. Nodes listed here get their m_traceNodeValue and m_traceNodeValueAsCategoryLabel flags set
-    vector<wstring> m_traceNodeNamesReal;
-    vector<wstring> m_traceNodeNamesCategory;
+    // enable tracing. Nodes listed here get their m_traceNodeValueXXX flags set
+    std::vector<std::wstring> m_traceNodeNamesReal;
+    std::vector<std::wstring> m_traceNodeNamesCategory;
+    std::vector<std::wstring> m_traceNodeNamesSparse;
 
     size_t m_prevChosenMinibatchSize;
     double m_lastFinishedEpochTrainLoss;

@@ -58,20 +58,14 @@ void LUSequenceWriter<ElemType>::ReadLabelInfo(const wstring& vocfile,
                                                map<string, int>& word4idx,
                                                map<int, string>& idx4word)
 {
-    char strFileName[MAX_STRING];
     char stmp[MAX_STRING];
-    string strtmp;
-    size_t sz;
     int b;
 
-    wcstombs_s(&sz, strFileName, 2048, vocfile.c_str(), vocfile.length());
-
-    FILE* vin;
-    vin = fopen(strFileName, "rt");
+    FILE* vin = fopenOrDie(vocfile, L"rt");
 
     if (vin == nullptr)
     {
-        RuntimeError("cannot open word class file");
+        RuntimeError("cannot open word class file: %ls", vocfile.c_str());
     }
     b = 0;
     while (!feof(vin))

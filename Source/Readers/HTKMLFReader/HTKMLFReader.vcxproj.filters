@@ -15,6 +15,9 @@
     <ClCompile Include="..\..\Common\ExceptionWithCallStack.cpp" />
     <ClCompile Include="Exports.cpp" />
     <ClCompile Include="DataWriterLocal.cpp" />
+    <ClCompile Include="..\..\Common\DataReader.cpp">
+      <Filter>Common\Include</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="biggrowablevectors.h" />

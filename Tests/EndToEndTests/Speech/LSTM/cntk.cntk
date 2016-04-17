@@ -90,7 +90,7 @@ speechTrain = [
 
         // training
         cr = CrossEntropyWithSoftmax(labels, z, tag='criterion')  // this is the objective
-        Err = ErrorPrediction(labels, z, tag='eval')              // this also gets tracked
+        Err = ErrorPrediction(labels, z, tag='evaluation')        // this also gets tracked
 
         // decoding
         logPrior = LogPrior(labels)	 

@@ -40,13 +40,13 @@ L3 = SBFF(L2, HiddenDim, HiddenDim2)
 
 # objective function 1
 BFF1=BFF(L3,LabelDim1,HiddenDim)
-CE1=CrossEntropyWithSoftmax(labels,BFF1.FF.P,tag="eval")
-FER1 = ErrorPrediction(labels,BFF1.FF.P,tag="eval")
+CE1=CrossEntropyWithSoftmax(labels,BFF1.FF.P,tag="evaluation")
+FER1 = ErrorPrediction(labels,BFF1.FF.P,tag="evaluation")
 
 # objective function 2
 BFF2=BFF(L3,LabelDim2,HiddenDim)
-CE2=CrossEntropyWithSoftmax(regions,BFF2.FF.P,tag="eval")
-FER2 = ErrorPrediction(regions,BFF2.FF.P,tag="eval")
+CE2=CrossEntropyWithSoftmax(regions,BFF2.FF.P,tag="evaluation")
+FER2 = ErrorPrediction(regions,BFF2.FF.P,tag="evaluation")
 
 # weighted final objective function
 Alpha1=0.8

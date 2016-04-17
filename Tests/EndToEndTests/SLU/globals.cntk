@@ -1,7 +1,3 @@
-WorkDir=.
-DataDir=$WorkDir$
-ConfigDir=$WorkDir$
 NdlDir=$ConfigDir$
-ExpDir=c:\temp\exp\atis
-OutDir=$ExpDir$
-DeviceNumber=-1
+ExpDir=$RunDir$
+OutDir=$OutputDir$

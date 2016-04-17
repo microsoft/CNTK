@@ -51,7 +51,7 @@ public:
         size_t rank = DetermineElementwiseTensorRank();
         auto result = ValueTensorFor(rank, fr);
         auto input = Input(0)->ValueTensorFor(rank, fr);
-        result.DoUnaryOpOf(0, input, 1, opForward);
+        result.DoUnaryOpOf(0, input, 1, opForward, opSum);
     }
 
     virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
@@ -61,8 +61,8 @@ public:
 
         // get the args
         size_t rank = DetermineElementwiseTensorRank();
-        auto sliceOutputGrad = GradientTensorFor(rank, fr);               // propagate from this one...
-        auto sliceInputGrad = Input(0)->GradientTensorFor(rank, fr);      // ...to this one
+        auto sliceOutputGrad =           GradientTensorFor(rank, fr); // propagate from this one...
+        auto sliceInputGrad  = Input(0)->GradientTensorFor(rank, fr); // ...to this one
 
         // we expect a constant conditional expression here -- suppress the warning that leads to an error
         // TODO: alternative: assign to a non-const variable and test that.
@@ -70,7 +70,7 @@ public:
 #pragma warning( disable : 4127 )
         if (opType == UnaryGradient) 
         {
-            sliceInputGrad.DoUnaryOpOf(1, sliceOutputGrad, 1, opBackward);
+            sliceInputGrad.DoUnaryOpOf(1, sliceOutputGrad, 1, opBackward, opSum);
         }
         else 
         {
@@ -78,7 +78,7 @@ public:
             // Not possible for Cos().
             auto sliceValue = (opType == BinaryWithOutputGradient) ? ValueTensorFor(rank, fr) : // using input or output value
                 Input(0)->ValueTensorFor(rank, fr);
-            sliceInputGrad.DoBinaryOpOf(1, sliceOutputGrad, sliceValue, 1, opBackward);
+            sliceInputGrad.DoBinaryOpOf(1, sliceOutputGrad, sliceValue, 1, opBackward, opSum);
         }
 #pragma warning( pop )
     }
@@ -101,12 +101,18 @@ public:
 #define UnaryElementWiseWithOpCodeNodeBaseMembers UsingComputationNodeMembersBoilerplate;
 
 // -----------------------------------------------------------------------
+// Pass (Input)
 // SigmoidNode (input)
 // TanhNode (input)
 // RectifiedLinearNode (input)
 // LogNode (input)
 // ExpNode (input)
 // CosineNode (input)
+// SinNode (input)
+// Abs(input)
+// Negate (input)
+// Sqrt (input)
+// Reciprocal (input)
 // These are all implemented by single-opcode functions and can thus be declared by a macro.
 // -----------------------------------------------------------------------
 
@@ -124,24 +130,25 @@ public:
                                                                                                                                              \
     public:                                                                                                                                  \
         DeclareConstructorFromConfigWithNumInputs(Name##Node);                                                                               \
-        Name##Node(DEVICEID_TYPE deviceId, const wstring& Name)                                                                              \
-            : Base(deviceId, Name)                                                                                                           \
+        Name##Node(DEVICEID_TYPE deviceId, const wstring& Name) :                                                                            \
+            Base(deviceId, Name)                                                                                                             \
         {                                                                                                                                    \
         }                                                                                                                                    \
     }
 
 //                                    Name             Forward and      Backward opcodes                                           Gradient optype
+DeclareUnaryElementWiseWithOpCodeNode(Pass,            Copy,            Copy,                                                      UnaryGradient);
 DeclareUnaryElementWiseWithOpCodeNode(Sigmoid,         Sigmoid,         ElementwiseProductWithSigmoidDerivativeFromOutput,         BinaryWithOutputGradient);
 DeclareUnaryElementWiseWithOpCodeNode(Tanh,            Tanh,            ElementwiseProductWithTanhDerivativeFromOutput,            BinaryWithOutputGradient);
 DeclareUnaryElementWiseWithOpCodeNode(RectifiedLinear, LinearRectifier, ElementwiseProductWithLinearRectifierDerivativeFromOutput, BinaryWithOutputGradient);
 DeclareUnaryElementWiseWithOpCodeNode(Log,             Log,             ElementwiseProductWithLogDerivativeFromOutput,             BinaryWithOutputGradient);
 DeclareUnaryElementWiseWithOpCodeNode(Exp,             Exp,             ElementwiseProduct,                                        BinaryWithOutputGradient);
 DeclareUnaryElementWiseWithOpCodeNode(Cosine,          Cosine,          ElementwiseProductWithCosDerivative,                       BinaryWithInputGradient);
+DeclareUnaryElementWiseWithOpCodeNode(Sin,             Sin,             ElementwiseProductWithSinDerivative,                       BinaryWithInputGradient);
 DeclareUnaryElementWiseWithOpCodeNode(Abs,             Abs,             ElementwiseProductWithAbsDerivative,                       BinaryWithInputGradient);
 DeclareUnaryElementWiseWithOpCodeNode(Negate,          Negate,          Negate,                                                    UnaryGradient);
 DeclareUnaryElementWiseWithOpCodeNode(Sqrt,            Sqrt,            ElementwiseProductWithSqrtDerivative,                      BinaryWithOutputGradient);
 DeclareUnaryElementWiseWithOpCodeNode(Reciprocal,      Reciprocal,      ElementwiseProductWithReciprocalDerivative,                BinaryWithOutputGradient);
-DeclareUnaryElementWiseWithOpCodeNode(Pass,            Copy,            Copy,                                                      UnaryGradient);
 
 #pragma pop_macro("DeclareUnaryElementWiseWithOpCodeNode")
 
@@ -187,6 +194,10 @@ public:
 
     virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
     {
+        // move the target matrix to the target device, since below it is accessed as slices which cannot move
+        // TODO: once this gets reimplemented using TensorView, then this is no longer needed.
+        Input(0)->Value().TransferToDeviceIfNotThere(Value().GetDeviceId(), /*isBeingMoved=*/ false);
+
         auto values = ValueFor(fr);
         ForwardPropV(values, Input(0)->ValueFor(fr));
     }

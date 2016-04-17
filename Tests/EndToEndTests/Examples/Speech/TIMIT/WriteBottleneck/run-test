@@ -1,0 +1,33 @@
+#!/bin/bash
+
+. $TEST_ROOT_DIR/run-test-common
+
+# specific TIMIT variables
+. $TEST_DIR/../run-timit-test-common
+
+# Train:
+cntkrun TIMIT_TrainAutoEncoder.cntk "$CntkArguments" || exit $?
+
+# Copy the test data to the test run directory, so that we do not damage anything
+DataDir=$TEST_RUN_DIR/TestData
+mkdir $DataDir
+cp -R $DataSourceDir/* $DataDir || exit $?
+
+# Write:
+cntkrun TIMIT_WriteBottleneck.cntk "$CntkArguments"
+ExitCode=$?
+
+# Compare the output files
+OutputDir=$DataDir/bottleneck
+
+cd $OutputDir && md5sum --quiet -c $TEST_DIR/expected_output.txt
+if [ $? != 0 ]; then
+  echo Error: Output files are different.
+  $ExitCode = 1
+fi
+echo MD5 check succeeded.
+
+# Delete the test data
+rm -rf $DataDir
+
+exit $ExitCode

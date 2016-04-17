@@ -1,0 +1,34 @@
+dataDir: ../../../../Speech/Data
+
+# running in 'E' (Examples) leg
+tags:
+    # due to time, only in 1BitSGD, GPU and release
+    - nightly-e (build_sku == '1bitsgd') and (flavor=='release') and (device=='gpu') and (os=='linux')
+
+testCases:
+  CNTK Run must be completed:
+    patterns:
+      - __COMPLETED__
+      
+  Must train epochs in exactly same order and parameters:
+    patterns:
+      - Starting Epoch {{integer}}
+      - learning rate per sample = {{float}}
+      - momentum = {{float}}
+
+  Epochs must be finished with expected results:
+    patterns:
+      - Finished Epoch[{{integer}} of {{integer}}]
+      - TrainLossPerSample = {{float,tolerance=.1%}}
+      - AvgLearningRatePerSample = {{float,tolerance=0.001%}}
+
+  Per-minibatch training results must match:
+    patterns:
+      - Epoch[{{integer}} of {{integer}}]-Minibatch[{{integer}}-{{integer}}
+      - SamplesSeen = {{integer}}
+      - TrainLossPerSample = {{float,tolerance=.1%}}
+
+  Writing must be completed:
+    patterns:
+      - Action "write" complete.
+

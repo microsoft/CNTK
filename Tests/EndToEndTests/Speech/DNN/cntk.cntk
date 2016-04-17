@@ -42,7 +42,7 @@ speechTrain = [
              then CrossEntropyWithSoftmax(labels, outZ, tag='criterion')
              else Fail('unknown trainingCriterion ' + trainingCriterion)
         Err = if evalCriterion == 'Err' then
-              ErrorPrediction(labels, outZ, tag='eval')
+              ErrorPrediction(labels, outZ, tag='evaluation')
               else Fail('unknown evalCriterion ' + evalCriterion)
         logPrior = LogPrior(labels)
         // TODO: how to add a tag to an infix operation?

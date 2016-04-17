@@ -1,5 +1,18 @@
+Dockerfile-CPU text
+Dockerfile-GPU text
+
+*.ini text
+*.simple text
+*.counts text
+*.labels text
+*.feats text
+*.post text
+*.cpu text
+*.gpu text
+
 .gitattributes text
 .gitignore text
+.gitmodules text
 
 .clang-format text
 
@@ -15,12 +28,15 @@ Readme text
 *.py text
 *.pl text
 *.ps1 text
+*.ps text
+
 *.sh text eol=lf
 build-and-test text eol=lf
 configure text eol=lf
 generate_build_info text eol=lf
 run-test text eol=lf
 run-test-common text eol=lf
+run-timit-test-common text eol=lf
 make_binary_drop_linux text eol=lf
 
 Makefile text

@@ -44,9 +44,6 @@
     <ClCompile Include="BrainScript\BrainScriptTest.cpp">
       <Filter>BrainScript</Filter>
     </ClCompile>
-    <ClCompile Include="BrainScript\ExperimentalNetworkBuilder.cpp">
-      <Filter>BrainScript</Filter>
-    </ClCompile>
     <ClCompile Include="..\Common\ExceptionWithCallStack.cpp">
       <Filter>Common</Filter>
     </ClCompile>

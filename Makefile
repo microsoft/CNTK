@@ -233,7 +233,9 @@ READER_SRC =\
 	$(SOURCEDIR)/Readers/ReaderLib/ChunkRandomizer.cpp \
 	$(SOURCEDIR)/Readers/ReaderLib/SequenceRandomizer.cpp \
 	$(SOURCEDIR)/Readers/ReaderLib/SequencePacker.cpp \
-	$(SOURCEDIR)/Readers/ReaderLib/SampleModePacker.cpp \
+	$(SOURCEDIR)/Readers/ReaderLib/BpttPacker.cpp \
+	$(SOURCEDIR)/Readers/ReaderLib/PackerBase.cpp \
+	$(SOURCEDIR)/Readers/ReaderLib/FramePacker.cpp \
 
 COMMON_SRC =\
 	$(SOURCEDIR)/Common/Config.cpp \
@@ -255,6 +257,7 @@ MATH_SRC =\
 	$(SOURCEDIR)/Math/TensorView.cpp \
 	$(SOURCEDIR)/Math/CUDAPageLockedMemAllocator.cpp \
 	$(SOURCEDIR)/Math/ConvolutionEngine.cpp \
+	$(SOURCEDIR)/Math/BatchNormalizationEngine.cpp \
 
 ifdef CUDA_PATH
 MATH_SRC +=\
@@ -263,7 +266,9 @@ MATH_SRC +=\
 	$(SOURCEDIR)/Math/GPUSparseMatrix.cu \
 	$(SOURCEDIR)/Math/GPUWatcher.cu \
 	$(SOURCEDIR)/Math/MatrixQuantizerGPU.cu \
+	$(SOURCEDIR)/Math/CuDnnCommon.cu \
 	$(SOURCEDIR)/Math/CuDnnConvolutionEngine.cu \
+	$(SOURCEDIR)/Math/CuDnnBatchNormalization.cu \
 	$(SOURCEDIR)/Math/GPUDataTransferer.cpp \
 
 else
@@ -556,7 +561,10 @@ CNTK_SRC =\
 	$(SOURCEDIR)/CNTK/ModelEditLanguage.cpp \
 	$(SOURCEDIR)/CNTK/tests.cpp \
 	$(SOURCEDIR)/ComputationNetworkLib/ComputationNode.cpp \
+	$(SOURCEDIR)/ComputationNetworkLib/ComputationNodeScripting.cpp \
+	$(SOURCEDIR)/ComputationNetworkLib/InputAndParamNodes.cpp \
 	$(SOURCEDIR)/ComputationNetworkLib/ReshapingNodes.cpp \
+	$(SOURCEDIR)/ComputationNetworkLib/SpecialPurposeNodes.cpp \
 	$(SOURCEDIR)/ComputationNetworkLib/ComputationNetwork.cpp \
 	$(SOURCEDIR)/ComputationNetworkLib/ComputationNetworkEvaluation.cpp \
 	$(SOURCEDIR)/ComputationNetworkLib/ComputationNetworkAnalysis.cpp \
@@ -569,7 +577,7 @@ CNTK_SRC =\
 	$(SOURCEDIR)/ActionsLib/EvalActions.cpp \
 	$(SOURCEDIR)/ActionsLib/OtherActions.cpp \
 	$(SOURCEDIR)/ActionsLib/SpecialPurposeActions.cpp \
-    $(SOURCEDIR)/ActionsLib/NetworkFactory.cpp \
+	$(SOURCEDIR)/ActionsLib/NetworkFactory.cpp \
 	$(SOURCEDIR)/ActionsLib/NetworkDescriptionLanguage.cpp \
 	$(SOURCEDIR)/ActionsLib/SimpleNetworkBuilder.cpp \
 	$(SOURCEDIR)/ActionsLib/NDLNetworkBuilder.cpp \
@@ -578,7 +586,6 @@ CNTK_SRC =\
 	$(SOURCEDIR)/CNTK/BrainScript/BrainScriptEvaluator.cpp \
 	$(SOURCEDIR)/CNTK/BrainScript/BrainScriptParser.cpp \
 	$(SOURCEDIR)/CNTK/BrainScript/BrainScriptTest.cpp \
-	$(SOURCEDIR)/CNTK/BrainScript/ExperimentalNetworkBuilder.cpp \
 	$(SOURCEDIR)/Common/BestGpu.cpp \
 	$(SOURCEDIR)/Common/MPIWrapper.cpp \
 
@@ -631,13 +638,15 @@ DEP := $(patsubst %.o, %.d, $(OBJ))
 # will result in the rebuild.
 -include ${DEP}
 
-$(OBJDIR)/%.o : %.cu Makefile
+MAKEFILES :=  Makefile $(BUILD_TOP)/Config.make
+$(OBJDIR)/%.o : %.cu $(MAKEFILES)
+
 	@echo $(SEPARATOR)
 	@echo creating $@ for $(ARCH) with build type $(BUILDTYPE)
 	@mkdir -p $(dir $@)
 	$(NVCC) -c $< -o $@ $(COMMON_FLAGS) $(CUFLAGS) $(INCLUDEPATH:%=-I%) -Xcompiler "-fPIC -Werror"
 
-$(OBJDIR)/%.o : %.cpp Makefile
+$(OBJDIR)/%.o : %.cpp $(MAKEFILES)
 	@echo $(SEPARATOR)
 	@echo creating $@ for $(ARCH) with build type $(BUILDTYPE)
 	@mkdir -p $(dir $@)
