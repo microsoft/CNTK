@@ -119,7 +119,8 @@ ImageDataDeserializer::ImageDataDeserializer(const ConfigParameters& config)
     ImageConfigHelper configHelper(config);
     m_streams = configHelper.GetStreams();
     assert(m_streams.size() == 2);
-    const auto& label = m_streams[configHelper.GetLabelStreamId()];
+	m_grayscale = configHelper.UseGrayscale();
+	const auto& label = m_streams[configHelper.GetLabelStreamId()];
     const auto& feature = m_streams[configHelper.GetFeatureStreamId()];
 
     // Expect data in HWC.
