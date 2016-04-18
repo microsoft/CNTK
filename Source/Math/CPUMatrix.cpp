@@ -643,41 +643,41 @@ static void ScaleAndAddColumn(ElemType beta, ElemType* dst, const ElemType* src,
             dst[i] = beta * dst[i] + src[i];
 }
 
-// *this[:,j] = a[:,m[j]] * alpha + *this[:,j] * beta
+// *this[:,j] = a[:,idx[j]] * alpha + *this[:,j] * beta
 template <class ElemType>
-CPUMatrix<ElemType>& CPUMatrix<ElemType>::DoGatherColumnsOf(ElemType beta, const CPUMatrix<ElemType>& m, const CPUMatrix<ElemType>& a, ElemType alpha)
+CPUMatrix<ElemType>& CPUMatrix<ElemType>::DoGatherColumnsOf(ElemType beta, const CPUMatrix<ElemType>& idx, const CPUMatrix<ElemType>& a, ElemType alpha)
 {
-    if (m.GetNumRows() != 1) // index is 1-dimensional only
+    if (idx.GetNumRows() != 1) // index is 1-dimensional only
         InvalidArgument("DoGatherColumnsOf: Map must be a row vector.");
 
     if (beta)
-        VerifySize(a.GetNumRows(), m.GetNumCols());
+        VerifySize(a.GetNumRows(), idx.GetNumCols());
     else
-        Resize(a.GetNumRows(), m.GetNumCols());
+        Resize(a.GetNumRows(), idx.GetNumCols());
 
     auto& us = *this;
 #pragma omp parallel for // TODO: Depending in circumstance, it may be more efficient to parallelize over rows.
     foreach_column(jOut, us)
     {
-        auto jInF = m(0, jOut); // this is the column we need to get
+        auto jInF = idx(0, jOut); // this is the column we need to get
         if (jInF < 0)           // negative index means gap
             continue;
         size_t jIn = (size_t)jInF;
         if (jIn >= a.GetNumCols())
-            InvalidArgument("DoGatherColumnsOf: Map out of bounds.");
+            InvalidArgument("DoGatherColumnsOf: Map out of bounds. %ld >= %ld", (long int)jIn, (long int)a.GetNumCols());
         ScaleAndAddColumn(beta, &us(0,jOut), &a(0,jIn), us.GetNumRows(), alpha);
     }
 
     return *this;
 }
 
-// *this[:,m[j]] = a[:,j] * alpha + *this[:,m[j]] * beta
+// *this[:,idx[j]] = a[:,j] * alpha + *this[:,idx[j]] * beta
 template <class ElemType>
-CPUMatrix<ElemType>& CPUMatrix<ElemType>::DoScatterColumnsOf(ElemType beta, const CPUMatrix<ElemType>& m, const CPUMatrix<ElemType>& a, ElemType alpha)
+CPUMatrix<ElemType>& CPUMatrix<ElemType>::DoScatterColumnsOf(ElemType beta, const CPUMatrix<ElemType>& idx, const CPUMatrix<ElemType>& a, ElemType alpha)
 {
-    if (m.GetNumRows() != 1) // index is 1-dimensional only
+    if (idx.GetNumRows() != 1) // index is 1-dimensional only
         InvalidArgument("DoScatterColumnsOf: Map must be a row vector.");
-    if (m.GetNumCols() != a.GetNumCols())
+    if (idx.GetNumCols() != a.GetNumCols())
         InvalidArgument("DoScatterColumnsOf: Map must have width of input vector.");
     if (a.GetNumRows() != GetNumRows())
         InvalidArgument("DoScatterColumnsOf: Output must have same height as input vector.");
@@ -691,8 +691,8 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::DoScatterColumnsOf(ElemType beta, cons
 #pragma omp parallel for // TODO: Depending in circumstance, it may be more efficient to parallelize over rows.
     foreach_column(jIn, a)
     {
-        auto jOutF = m(0, jIn); // this is the column we copy/add into
-        if (jOutF < 0)          // negative index means gap
+        auto jOutF = idx(0, jIn); // this is the column we copy/add into
+        if (jOutF < 0)            // negative index means gap
             continue;
         size_t jOut = (size_t)jOutF;
         if (jOut >= GetNumCols())
@@ -4856,15 +4856,17 @@ void CPUMatrix<ElemType>::AssignScaledDifference(const ElemType alpha, const CPU
     }
 }
 
-//c[ci,cj] += a[ai,aj]
+// c[ci,cj] += a[ai,aj]
 template <class ElemType>
-void CPUMatrix<ElemType>::AddElementToElement(const CPUMatrix<ElemType>& a, const size_t ai, const size_t aj, CPUMatrix<ElemType>& c, const size_t ci, const size_t cj)
+void CPUMatrix<ElemType>::AddElementToElement(ElemType beta, const CPUMatrix<ElemType>& a, const size_t ai, const size_t aj, CPUMatrix<ElemType>& c, const size_t ci, const size_t cj)
 {
     if (ai >= a.GetNumRows() || aj >= a.GetNumCols() ||
         ci >= c.GetNumRows() || cj >= c.GetNumCols())
         InvalidArgument("AddElementToElement:  index out of range.");
 
-    c(ci, cj) += a(ai, aj);
+    ElemType us = beta ? beta * c(ci, cj) : 0; // do not multiply if beta is 0, could be a NaN
+    us += a(ai, aj);
+    c(ci, cj) = us;
 }
 
 ////c[ci,cj] += a[ai,aj]
@@ -4879,7 +4881,8 @@ void CPUMatrix<ElemType>::AddElementToElement(const CPUMatrix<ElemType>& a, cons
 //    c(ci, cj) += ((v < EPS_IN_LOG) ? LOG_OF_EPS_IN_LOG : log(v));
 //}
 
-//c[ci,cj] = a[ai,aj]
+#if 0 // now done as AddElementToElement (beta=0)
+// c[ci,cj] = a[ai,aj]
 template <class ElemType>
 void CPUMatrix<ElemType>::AssignElementToElement(const CPUMatrix<ElemType>& a, const size_t ai, const size_t aj, CPUMatrix<ElemType>& c, const size_t ci, const size_t cj)
 {
@@ -4889,6 +4892,7 @@ void CPUMatrix<ElemType>::AssignElementToElement(const CPUMatrix<ElemType>& a, c
 
     c(ci, cj) = a(ai, aj);
 }
+#endif
 
 /// <summary>c += alpha * (a-b)</summary>
 /// if a, b, c  must have same dim
@@ -6079,11 +6083,14 @@ static void TensorOpWithFn(ElemType beta, array<ElemType*, N> pointers, ElemType
 // perform unary operation 'op' on a giving 'this', reinterpreting the matrices as tensors as specified by the dims and strides
 // This maps 'op' to a lambda.
 template <class ElemType>
-void CPUMatrix<ElemType>::TensorOp(ElemType beta, const CPUMatrix<ElemType>& a, ElemType alpha, ElementWiseOperator op,
+void CPUMatrix<ElemType>::TensorOp(ElemType beta, const CPUMatrix<ElemType>& a, ElemType alpha, ElementWiseOperator op, ElementWiseOperator reductionOp,
                                    const array<size_t, 2>& offsets,
                                    const SmallVector<size_t>& regularOpDims, const array<SmallVector<ptrdiff_t>, 2>& regularStrides,
                                    const SmallVector<size_t>& reducingOpDims, const array<SmallVector<ptrdiff_t>, 2>& reducingStrides)
 {
+    if (reductionOp != ElementWiseOperator::opSum) // TODO: enable the reduction ops
+        InvalidArgument("TensorOp: Unary reduction operations other than opSum not yet implemented.");
+
 // TODO: Change the lambda to take a pointer and a number of elements, so that we can pass it 1 or 4 elements, in order for it to SSE-vectorize.
 #define CaseUnaryTensorOp(oper)                                                        \
     case ElementWiseOperator::op##oper:                                                \
@@ -6098,18 +6105,21 @@ void CPUMatrix<ElemType>::TensorOp(ElemType beta, const CPUMatrix<ElemType>& a, 
     {
         ForAllUnaryOps(CaseUnaryTensorOp);
     default:
-        LogicError("TensorUnaryOp: Unknown op code %d.", (int) op);
+        LogicError("TensorOp: Unknown unary op code %d.", (int) op);
     }
 }
 
 // perform binary operation 'op' on a and b giving 'this', reinterpreting the matrices as tensors as specified by the dims and strides
 // This maps 'op' to a lambda.
 template <class ElemType>
-void CPUMatrix<ElemType>::TensorOp(ElemType beta, const CPUMatrix<ElemType>& a, const CPUMatrix<ElemType>& b, ElemType alpha, ElementWiseOperator op,
+void CPUMatrix<ElemType>::TensorOp(ElemType beta, const CPUMatrix<ElemType>& a, const CPUMatrix<ElemType>& b, ElemType alpha, ElementWiseOperator op, ElementWiseOperator reductionOp,
                                    const array<size_t, 3>& offsets,
                                    const SmallVector<size_t>& regularOpDims, const array<SmallVector<ptrdiff_t>, 3>& regularStrides,
                                    const SmallVector<size_t>& reducingOpDims, const array<SmallVector<ptrdiff_t>, 3>& reducingStrides)
 {
+    if (reductionOp != ElementWiseOperator::opSum)
+        InvalidArgument("TensorOp (binary): The only permitted binary reduction operation is opSum.");
+
 #define CaseBinaryTensorOp(oper)                                                       \
     case ElementWiseOperator::op##oper:                                                \
         return TensorOpWithFn(beta, pointers, alpha, [](const array<ElemType*, 3>& pp) \
@@ -6123,18 +6133,21 @@ void CPUMatrix<ElemType>::TensorOp(ElemType beta, const CPUMatrix<ElemType>& a, 
     {
         ForAllBinaryOps(CaseBinaryTensorOp);
     default:
-        LogicError("TensorBinaryOp: Unknown op code %d.", (int) op);
+        LogicError("TensorOp: Unknown op binary code %d.", (int) op);
     }
 }
 
 // perform ternary operation 'op' on a, and c giving 'this', reinterpreting the matrices as tensors as specified by the dims and strides
 // This maps 'op' to a lambda.
 template <class ElemType>
-void CPUMatrix<ElemType>::TensorOp(ElemType beta, const CPUMatrix<ElemType>& a, const CPUMatrix<ElemType>& b, const CPUMatrix<ElemType>& c, ElemType alpha, ElementWiseOperator op,
+void CPUMatrix<ElemType>::TensorOp(ElemType beta, const CPUMatrix<ElemType>& a, const CPUMatrix<ElemType>& b, const CPUMatrix<ElemType>& c, ElemType alpha, ElementWiseOperator op, ElementWiseOperator reductionOp,
                                    const array<size_t, 4>& offsets,
                                    const SmallVector<size_t>& regularOpDims, const array<SmallVector<ptrdiff_t>, 4>& regularStrides,
                                    const SmallVector<size_t>& reducingOpDims, const array<SmallVector<ptrdiff_t>, 4>& reducingStrides)
 {
+    if (reductionOp != ElementWiseOperator::opSum)
+        InvalidArgument("TensorOp: The only permitted ternary reduction operation is opSum.");
+
 #define CaseTernaryTensorOp(oper)                                                      \
     case ElementWiseOperator::op##oper:                                                \
         return TensorOpWithFn(beta, pointers, alpha, [](const array<ElemType*, 4>& pp) \
@@ -6148,7 +6161,7 @@ void CPUMatrix<ElemType>::TensorOp(ElemType beta, const CPUMatrix<ElemType>& a, 
     {
         ForAllTernaryOps(CaseTernaryTensorOp);
     default:
-        LogicError("TensorTernaryOp: Unknown op code %d.", (int) op);
+        LogicError("TensorOp: Unknown ternary op code %d.", (int) op);
     }
 }
 

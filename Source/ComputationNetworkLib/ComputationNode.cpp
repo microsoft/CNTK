@@ -31,8 +31,15 @@ void ComputationNode<ElemType>::Backprop(const FrameRange& fr, bool childrenInTh
     // after nodes that propagate outside of the loop, and thus, in the last
     // time step of the sequence, have not yet received a gradient from a parent
     // and thus may not have had their gradient matrices allocated.
-    //if (m_needsGradient)
-    //    LazyZeroGradient(); // set gradient to 0 if this is the first time
+#if 1 // keep enabled once this works
+#if 1 // log the cases where this is needed
+    if (m_needsGradient && !m_gradientInitialized)
+        //LogicError("%ls %ls operation: Backprop called with uninitialized gradient.", NodeName().c_str(), OperationName().c_str());
+        fprintf(stderr, "%ls %ls operation: Initializing gradient out of line.\n", NodeName().c_str(), OperationName().c_str());
+#endif
+    if (m_needsGradient)
+        LazyZeroGradient(); // set gradient to 0 if this is the first time
+#endif
 
     if (fr.IsAllFrames() && IsPartOfLoop() && childrenInThisLoop)
         LogicError("%ls %ls operation: Backprop called with whole-batch FrameRange on node that participates in a loop", NodeName().c_str(), OperationName().c_str());
@@ -93,7 +100,7 @@ void ComputationNodeBase::InferMBLayoutFromInputsForStandardCase(bool isFinalVal
         else if (!pMBLayout) // first non-NULL layout: just copy it
             pMBLayout = child->m_pMBLayout;
         else if (pMBLayout != child->m_pMBLayout && isFinalValidationPass) // got a layout--compare whether it is the same
-            RuntimeError("%ls: InferMBLayoutFromInputsForStandardCase: Expected minibatch layouts to be the same between all children. Child '%ls' (%ls) uses a different layout than previously checked children and might get out of sync during runtime. If this is by design, use ReconcileMBLayout() to forward layouts between nodes.",
+            RuntimeError("%ls: InferMBLayoutFromInputsForStandardCase: Expected minibatch layouts to be the same between all children. Child '%ls' (%ls) uses a different layout than previously checked children and might get out of sync during runtime. If this is by design, use ReconcileDynamicAxis() to forward layouts between nodes.",
                          NodeDescription().c_str(), child->NodeName().c_str(), child->OperationName().c_str());
     }
     // all are consistent: install it
@@ -123,7 +130,7 @@ void ComputationNodeBase::ValidateBinaryZip(bool isFinalValidationPass, bool all
     if (isFinalValidationPass &&
         Input(0)->GetMBLayout() != Input(1)->GetMBLayout() && Input(0)->HasMBLayout() && Input(1)->HasMBLayout())
     {
-        LogicError("%ls: Minibatch layouts are not the same between arguments and might get out of sync during runtime. If this is by design, use ReconcileMBLayout() to forward layouts between nodes.", NodeDescription().c_str());
+        LogicError("%ls: Minibatch layouts are not the same between arguments and might get out of sync during runtime. If this is by design, use ReconcileDynamicAxis() to forward layouts between nodes.", NodeDescription().c_str());
     }
 
     // result has tensor shape with dimensions being the max over both
@@ -139,11 +146,11 @@ void ComputationNodeBase::ValidateBinaryZip(bool isFinalValidationPass, bool all
     {
         size_t dim1 = shape1[k];
         // BUGBUG: We must consider the allowBroadcast flag here.
-        if (dims[k] == 1)                                  // is [0] broadcasting?
+        if (dims[k] <= 1 && dim1 != 0)                     // is [0] broadcasting (1) or unspecified (0)?
             dims[k] = dim1;                                // then use dimension we broadcast to
-        else if (dim1 == 1)                                // if [1] is broadcasting
-            ;                                              // dims is already correct
-        else if (isFinalValidationPass && dim1 != dims[k]) // no broadcasting: they must match
+        else if (dim1 <= 1 && dims[k] != 0)                // if [1] is broadcasting or unspecified
+            ;                                              // then dims is already correct
+        else if (isFinalValidationPass && dim1 != dims[k]) // no broadcasting or unspecified: they must match
             InvalidArgument("%ls: Input dimensions [%s] and [%s] are not compatible.",
                             NodeDescription().c_str(), string(shape0).c_str(), string(shape1).c_str());
     }
@@ -169,6 +176,7 @@ void ComputationNodeBase::ValidateBinaryReduce(bool isFinalValidationPass)
     ComputationNodeBase::Validate(isFinalValidationPass);
     m_pMBLayout = nullptr; // this node does not hold mini-batch data
     ValidateInferBinaryInputDims();
+
     if (isFinalValidationPass)
     {
         if (!(Input(0)->GetSampleLayout().IsElementwiseCompatibleWith(Input(1)->GetSampleLayout())))
@@ -331,24 +339,23 @@ TensorShape ComputationNodeBase::GetOneSampleTensorSliceFor(size_t rank, const F
                 prototype += "NULL";
                 continue;
             }
-
-            const char* mbSizeMark = child->m_pMBLayout ? " x *" : "";
-#if 0
-            if (child->m_sampleLayout.GetRank() == 3 && (child->m_sampleLayout[1] != 1 || child->m_sampleLayout[0] != 1)) // looks like an image: use WHC notation
-                prototype += msra::strfun::strprintf("%ls[%s%s {W=%lu, H=%lu, C=%lu}]", child->NodeName().c_str(), string(child->m_sampleLayout).c_str(), mbSizeMark,
-                child->m_sampleLayout[1], child->m_sampleLayout[2], child->m_sampleLayout[0]);
-            // BUGBUG: This ^^ will print based on the old legacy layout, and we have no way of knowing here whether that is correct.
-            else
-#endif
-                prototype += msra::strfun::strprintf("[%s%s]", string(child->m_sampleLayout).c_str(), mbSizeMark);
+            prototype += child->ShapeDescription().c_str();
         }
         prototype += extraArgs;
         //prototype += ")";
     }
 
-    prototype += msra::strfun::strprintf(" -> [%s%s]", string(GetSampleLayout()).c_str(), HasMBLayout() ? " x *" : "");
+    prototype += msra::strfun::strprintf(" -> %s", ShapeDescription().c_str());
 
     return prototype;
+}
+
+const std::string ComputationNodeBase::ShapeDescription() const
+{
+    return msra::strfun::strprintf("[%s%s%ls]",
+        string(m_sampleLayout).c_str(),
+        HasMBLayout() ? " x " : "",
+        HasMBLayout() ? GetMBLayout()->GetAxisName() : L"");
 }
 
 template <class ElemType>
@@ -507,6 +514,7 @@ void ComputationNode<ElemType>::WriteMinibatchWithFormatting(FILE* f, const Fram
         {
             if (formatChar == 'f') // print as real number
             {
+                if (dval == 0) dval = fabs(dval);    // clear the sign of a negative 0, which are produced inconsistently between CPU and GPU
                 fprintfOrDie(f, valueFormatString.c_str(), dval);
             }
             else if (formatChar == 'u') // print category as integer index
@@ -707,7 +715,11 @@ using namespace Microsoft::MSR::CNTK;
 template <>
 shared_ptr<Object> MakeRuntimeObject<ComputationNodeBase>(const IConfigRecordPtr configp)
 {
-    return NewComputationNodeFromConfig(configp);
+    let node = NewComputationNodeFromConfig(configp);
+    // temporarily disabling this, as it caused a test to fail:
+    //if (!node->Is<IRecurrentNode>())
+    //    node->Validate(/*isFinalValidationPass*/false); // do an initial validation, so that we have access to dimensions
+    return node;
 }
 
 ScriptableObjects::ConfigurableRuntimeTypeRegister::Add<ComputationNodeBase> registerComputationNode(L"ComputationNode");

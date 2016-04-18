@@ -17,6 +17,7 @@
 #include "Config.h"
 #include "SimpleEvaluator.h"
 #include "SimpleOutputWriter.h"
+#include "Criterion.h"
 #include "BestGpu.h"
 #include "ScriptableObjects.h"
 #include "BrainScriptEvaluator.h"
@@ -121,8 +122,8 @@ void DoCrossValidate(const ConfigParameters& config)
 
     int traceLevel = config(L"traceLevel", "0");
     size_t numMBsToShowResult = config(L"numMBsToShowResult", "100");
-    size_t maxSamplesInRAM = config(L"maxSamplesInRAM", (size_t)SIZE_MAX);
-    size_t numSubminiBatches = config(L"numSubminibatches", (size_t)1);
+    size_t maxSamplesInRAM    = config(L"maxSamplesInRAM", (size_t)SIZE_MAX);
+    size_t numSubminiBatches  = config(L"numSubminibatches", (size_t)1);
 
     ConfigArray evalNodeNames = config(L"evalNodeNames", "");
     vector<wstring> evalNodeNamesVector;
@@ -131,7 +132,7 @@ void DoCrossValidate(const ConfigParameters& config)
         evalNodeNamesVector.push_back(evalNodeNames[i]);
     }
 
-    std::vector<std::vector<double>> cvErrorResults;
+    std::vector<std::vector<EpochCriterion>> cvErrorResults;
     std::vector<std::wstring> cvModels;
 
     DataReader cvDataReader(readerConfig);
@@ -143,7 +144,7 @@ void DoCrossValidate(const ConfigParameters& config)
 
         if (!fexists(cvModelPath))
         {
-            fprintf(stderr, "model %ls does not exist.\n", cvModelPath.c_str());
+            fprintf(stderr, "Model %ls does not exist.\n", cvModelPath.c_str());
             if (finalModelEvaluated || !fexists(modelPath))
                 continue; // file missing
             else
@@ -158,7 +159,7 @@ void DoCrossValidate(const ConfigParameters& config)
         
         SimpleEvaluator<ElemType> eval(net, MPIWrapper::GetInstance(), numMBsToShowResult, traceLevel, maxSamplesInRAM, numSubminiBatches);
 
-        fprintf(stderr, "model %ls --> \n", cvModelPath.c_str());
+        fprintf(stderr, "Model %ls --> \n", cvModelPath.c_str());
         auto evalErrors = eval.Evaluate(&cvDataReader, evalNodeNamesVector, mbSize[0], epochSize);
         cvErrorResults.push_back(evalErrors);
 
@@ -167,16 +168,14 @@ void DoCrossValidate(const ConfigParameters& config)
 
     // find best model
     if (cvErrorResults.size() == 0)
-    {
         LogicError("No model is evaluated.");
-    }
 
-    std::vector<double> minErrors;
-    std::vector<int> minErrIds;
-    std::vector<double> evalErrors = cvErrorResults[0];
+    vector<double> minErrors;
+    vector<int>    minErrIds;
+    vector<EpochCriterion> evalErrors = cvErrorResults[0];
     for (int i = 0; i < evalErrors.size(); ++i)
     {
-        minErrors.push_back(evalErrors[i]);
+        minErrors.push_back(evalErrors[i].Average());
         minErrIds.push_back(0);
     }
 
@@ -185,9 +184,9 @@ void DoCrossValidate(const ConfigParameters& config)
         evalErrors = cvErrorResults[i];
         for (int j = 0; j < evalErrors.size(); j++)
         {
-            if (evalErrors[j] < minErrors[j])
+            if (evalErrors[j].Average() < minErrors[j])
             {
-                minErrors[j] = evalErrors[j];
+                minErrors[j] = evalErrors[j].Average();
                 minErrIds[j] = i;
             }
         }
@@ -196,9 +195,7 @@ void DoCrossValidate(const ConfigParameters& config)
     fprintf(stderr, "Best models:\n");
     fprintf(stderr, "------------\n");
     for (int i = 0; i < minErrors.size(); ++i)
-    {
         fprintf(stderr, "Based on Err[%d]: Best model = %ls with min err %.8g\n", i, cvModels[minErrIds[i]].c_str(), minErrors[i]);
-    }
 }
 
 template void DoCrossValidate<float>(const ConfigParameters& config);
@@ -212,7 +209,8 @@ template <typename ElemType>
 void DoWriteOutput(const ConfigParameters& config)
 {
     ConfigParameters readerConfig(config(L"reader"));
-    readerConfig.Insert("traceLevel", config(L"traceLevel", "0"));
+    // Why?
+    //readerConfig.Insert("traceLevel", config(L"traceLevel", "0"));
     readerConfig.Insert("randomize", "None"); // we don't want randomization when output results
 
     DataReader testDataReader(readerConfig);

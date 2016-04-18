@@ -71,7 +71,7 @@ private:
     // EOF is reached without hitting the pipe character.
     // Returns false if no numerical characters are found preceding the pipe.
     // Otherwise, writes sequence id value to the provided reference, returns true.
-    bool GetNextSequenceId(size_t& id);
+    bool TryGetSequenceId(size_t& id);
 
     // Build a chunk/sequence index, treating each line as an individual sequence.
     // Does not do any sequence parsing, instead uses line number as 

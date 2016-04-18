@@ -1,0 +1,129 @@
+# Copyright (c) Microsoft. All rights reserved.
+# Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+RootDir = ".."
+
+ConfigDir = "$RootDir$/Config"
+DataDir   = "$RootDir$/Data"
+OutputDir = "$RootDir$/Output"
+ModelDir  = "$OutputDir$/Models"
+
+command=Train #:Write
+deviceId = $DeviceId$
+modelPath="$ModelDir$/seqcla.dnn"
+
+Train=[
+    action="train"
+    run=BrainScriptNetworkBuilder
+    
+    BrainScriptNetworkBuilder=[
+        Macros = [
+            // define "last hidden state of sequence" in the LSTM (really for any sequence though)
+            TakeRight (N, x) = BS.Sequences._Take(FutureValue, N, x)
+            Last(x) = TakeRight(1, x)
+        ]
+        Layers = [
+            EmbeddingLayer(input, vocabSize, embeddingDim, embeddingPath) = [
+                embedding = Transpose(LearnableParameter(vocabSize, embeddingDim, learningRateMultiplier = 0.0, init = 'fromFile', initFromFilePath = embeddingPath))          
+                lookup = GatherPacked(features, embedding)
+            ].lookup
+            DenseLayer(input, inputSize, outputSize, activation) = [
+               z = BFF(input, outputSize, inputSize).z
+               act = activation(z)
+            ].act
+            LSTMLayer(input, inputSize, outputSize, cellSize, selector) = [ 
+               lstm = BS.RNNs.RecurrentLSTMP(inputSize, outputSize, cellSize, input)
+               result = selector(lstm)
+            ].result
+        ]        
+        
+        // LSTM params
+        lstmDim = 25
+        cellDim = 25
+        
+        // model
+        numLabels = 5        
+        vocab = 2000
+        embedDim = 50        
+                
+        // set up features and labels
+        t = DynamicAxis()
+        features = Input(1, dynamicAxis=t)   # Input has shape (1,t)
+        labels   = Input(numLabels)          # Input has shape (numLabels,*) where all sequences in *=1
+        
+        // load the pre-learned word embedding matrix
+        l1 = Layers.EmbeddingLayer(features, vocab, embedDim, 'embeddingmatrix.txt')
+        l2 = Layers.LSTMLayer(l1, embedDim, lstmDim, cellDim, Macros.Last)
+        l3 = Layers.DenseLayer(l2, lstmDim, numLabels, Pass)
+        out = Pass(l3, tag='output')   
+        
+        // Make sure the trainer understands that the time dimension of l3 is actually the same as that of labels.
+        l3p = ReconcileDynamicAxis(l3, labels)
+        
+        // training criteria
+        ce  = CrossEntropyWithSoftmax(labels, l3p, tag='criterion')   // this is the training objective
+        wer = ErrorPrediction        (labels, l3p, tag='evaluation')  // this also gets tracked
+    ]
+    
+    SGD = [	
+      epochSize = 0
+      minibatchSize = 200
+      maxEpochs = 5
+      momentumPerMB = 0.9
+      learningRatesPerMB = 0.1
+    ]
+    
+    reader = [
+        readerType = "CNTKTextFormatReader"
+        file = "$DataDir$/Train.txt"            
+        
+        input = [            
+            features=[
+                alias = "x"                
+                dim = 1               
+                format = "dense"
+            ]
+            labels=[
+                alias = "y"                
+                dim = 5           
+                format = "dense"
+            ]
+        ]
+   ]    
+   outputPath = "$OutputDir$/output.txt"        # dump the output as text?
+]
+
+Write=[
+    action="test"
+    run=BrainScriptNetworkBuilder
+    
+    format = [
+      # %n = minibatch, %x = shape, %d = sequenceId
+      sequencePrologue=%d\t|w.shape %x\n%d\t|w\s
+      sampleSeparator=\n%d\t|w\s
+      elementSeparator=\s
+    ]
+    
+    modelFile = "$ModelDir$/seqcla.dnn"    
+    
+    reader = [
+        
+            readerType = "CNTKTextFormatReader"
+            file = "$DataDir$/Train.txt"            
+            
+            input = [            
+                features=[
+                    alias = "x"                
+                    dim = 1               
+                    format = "dense"
+                ]
+                labels=[
+                    alias = "y"                
+                    dim = 5           
+                    format = "dense"
+                ]
+            ]
+            
+   ]    
+   outputPath = "$OutputDir$/output.txt"        # dump the output as text?
+]

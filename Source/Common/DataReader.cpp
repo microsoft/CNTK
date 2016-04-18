@@ -31,6 +31,34 @@ static const char* GetReaderName(const string& precision)
         InvalidArgument("DataReader: The 'precision' parameter must be 'float' or 'double'.");
 }
 
+void DataReaderBase::SetMinibatchLayout(StreamMinibatchInputs& minibatch)
+{
+    assert(minibatch.begin() != minibatch.end());
+
+    auto& pMBLayout = minibatch.begin()->second.pMBLayout;
+    // This is only allowed for old readers, which support a single layout for all inputs.
+    for (const auto& iter : minibatch)
+    {
+        assert(iter.second.pMBLayout == pMBLayout);
+        // TODO: This should be a runtime check, not an assert() that only runs in Debug.
+        UNUSED(iter);
+    }
+
+    CopyMBLayoutTo(pMBLayout);
+}
+
+bool DataReaderBase::GetMinibatch(StreamMinibatchInputs& minibatch)
+{
+    if (TryGetMinibatch(minibatch))
+    {
+        SetMinibatchLayout(minibatch);
+        return true;
+    }
+
+    return false;
+}
+
+
 template <class ConfigRecordType>
 void DataReader::InitFromConfig(const ConfigRecordType& /*config*/)
 {

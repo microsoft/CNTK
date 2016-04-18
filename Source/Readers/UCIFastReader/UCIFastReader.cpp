@@ -95,7 +95,7 @@ bool UCIFastReader<ElemType>::EnsureDataAvailable(size_t mbStartSample, bool end
         m_featureData.resize(epochSample * m_featureCount);
     if (m_labelType == labelCategory && m_labelData.size() > epochSample)
     {
-            m_labelIdData.resize(epochSample);
+        m_labelIdData.resize(epochSample);
         m_labelData.resize(epochSample);
     }
     else if (m_labelType != labelNone && m_labelData.size() > epochSample * m_labelDim)
@@ -302,7 +302,7 @@ void UCIFastReader<ElemType>::InitFromConfig(const ConfigRecordType& readerConfi
     if (features.size() > 0)
     {
         m_featuresName = features[0];
-        if (!readerConfig.Exists(m_featuresName))
+        if (!readerConfig.Exists(m_featuresName)) // BUGBUG: How can this ever fire? We wouldn't be able to get this name in the first place if it wasn't there.
             RuntimeError("features file not found, required in configuration: i.e. 'features=[file=c:\\myfile.txt;start=1;dim=123]'");
     }
     if (labels.size() > 0)
@@ -765,7 +765,7 @@ void UCIFastReader<ElemType>::StoreLabel(ElemType& labelStore, const LabelType& 
 //             [out] each matrix resized if necessary containing data.
 // returns - true if there are more minibatches, false if no more minibatchs remain
 template <class ElemType>
-bool UCIFastReader<ElemType>::GetMinibatch(StreamMinibatchInputs& matrices)
+bool UCIFastReader<ElemType>::TryGetMinibatch(StreamMinibatchInputs& matrices)
 {
     bool minibatchesRemaining = true;
     if (m_pendingAsyncGetMinibatch.valid())
@@ -792,11 +792,11 @@ bool UCIFastReader<ElemType>::GetMinibatch(StreamMinibatchInputs& matrices)
         // Allocate prefetch matrices if were firing an async minibatch prefetch
         if (minibatchesRemaining && m_prefetchEnabled)
         {
-            // Deallocate the existing m_prefetchMatrices
+            // create a matrix for every output
             m_prefetchMatrices.clear();
 
             for (auto& iter : matrices)
-                m_prefetchMatrices.AddInputMatrix(iter.first, make_shared<Matrix<ElemType>>(iter.second->GetDeviceId()));
+                m_prefetchMatrices.AddInput(iter.first, make_shared<Matrix<ElemType>>(iter.second.matrix->GetDeviceId()), iter.second.pMBLayout, iter.second.sampleLayout);
         }
     }
 
@@ -809,12 +809,12 @@ bool UCIFastReader<ElemType>::GetMinibatch(StreamMinibatchInputs& matrices)
         {
             // Set the device since this will execute on a new thread
             Matrix<ElemType>::SetDevice(deviceId);
- 
+
             StreamMinibatchInputs prefetchMatrices;
             for (auto& iter : m_prefetchMatrices)
                 prefetchMatrices.AddInput(iter.first, iter.second);
-            // TODO: We may now be able to just use an assignment here.
- 
+            // TODO: Why can we not just pass m_prefetchMatrices?
+
             return GetMinibatchImpl(prefetchMatrices);
         });
     }
@@ -835,7 +835,7 @@ bool UCIFastReader<ElemType>::GetMinibatchImpl(StreamMinibatchInputs& matrices)
     }
     // get the features array
     if (matrices.find(m_featuresName) == matrices.end())
-        RuntimeError("Features matrix not found in config file, there should be a section '%ls=[...]' in the configuration file.", m_featuresName.c_str());
+        RuntimeError("Features matrix not found in config file, there should be a node '%ls' in the network.", m_featuresName.c_str());
 
     Matrix<ElemType>& features = matrices.GetInputMatrix<ElemType>(m_featuresName);
 
@@ -922,7 +922,7 @@ bool UCIFastReader<ElemType>::GetMinibatchImpl(StreamMinibatchInputs& matrices)
         {
             // pick the right sample with randomization if desired
             size_t jRand = randomize ? (randBase + tmap[jSample % m_randomizeRange]) : jSample;
-            jRand %= m_epochSize; //BUGBUG: this will make it randomize only inside m_epochSize which is not enough 
+            jRand %= m_epochSize; // BUGBUG: this will make it randomize only inside m_epochSize which is not enough 
 
             // vector of feature data goes into matrix column
             memcpy(&m_featuresBuffer.get()[j * m_featureCount], &m_featureData[jRand * m_featureCount], sizeof(ElemType) * m_featureCount);

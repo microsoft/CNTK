@@ -36,7 +36,8 @@
 #define CNTK_MODEL_VERSION_5 5 // ND convolution and pooling
 #define CNTK_MODEL_VERSION_6 6 // Batch norm blending
 #define CNTK_MODEL_VERSION_7 7 // ElemType tag in model file
-#define CURRENT_CNTK_MODEL_VERSION CNTK_MODEL_VERSION_7
+#define CNTK_MODEL_VERSION_8 8 // DynamicAxis for inputs
+#define CURRENT_CNTK_MODEL_VERSION CNTK_MODEL_VERSION_8
 
 extern bool g_shareNodeValueMatrices;
 
@@ -481,6 +482,18 @@ public:
     const MBLayoutPtr& GetMBLayout() const { return m_pMBLayout; }
     bool HasMBLayout() const { return !!m_pMBLayout; }
 
+    // for logging: get the string fragment for displaying the dimension
+    std::wstring GetMBLayoutAxisString() const
+    {
+        if (!HasMBLayout())
+            return L"";
+        const wstring& axisName = GetMBLayout()->GetAxisName();
+        if (axisName.empty())
+            return L" x *";
+        else
+            return L" x " + axisName;
+    }
+
 protected: public: // ...the following should be protected, but nodes inquire about their children, requiring public access
 
     size_t GetNumParallelSequences() const
@@ -542,8 +555,13 @@ public:
     // helper for the factory function for ComputationNodes
     static vector<ComputationNodeBasePtr> GetInputsFromConfig(const ScriptableObjects::IConfigRecordPtr configp)
     {
+        return GetInputsFromConfig(configp, L"inputs");
+    }
+
+    static vector<ComputationNodeBasePtr> GetInputsFromConfig(const ScriptableObjects::IConfigRecordPtr configp, const std::wstring& property)
+    {
         vector<ComputationNodeBasePtr> inputs;
-        const auto* inputsArg = configp->Find(L"inputs");
+        const auto* inputsArg = configp->Find(property);
         if (inputsArg)
         {
             if (inputsArg->Is<ComputationNodeBase>()) // single arg
@@ -679,6 +697,14 @@ public:
         return false;
     }
 
+    // reset gradients of a node's inputs
+    // This really only clears the lazy-init flags (LazyZeroGradient() actually clears the values lazily).
+    void /*ComputationNodeBase::*/ ZeroGradientsOfInputs()
+    {
+        for (size_t i = 0; i < m_inputs.size(); i++)
+            Input(i)->m_gradientInitialized = false;
+    }
+
     // -----------------------------------------------------------------------
     // masking
     // -----------------------------------------------------------------------
@@ -688,8 +714,6 @@ public:
     virtual void MaskMissingGradientColumnsToZero(const FrameRange&) = 0;
     virtual void InvalidateMissingValueColumns(const FrameRange&) = 0;
     virtual void InvalidateMissingGradientColumns(const FrameRange&) = 0;
-
-    virtual void ZeroGradientsOfInputs() = 0;
 
     // -----------------------------------------------------------------------
     // memory sharing
@@ -799,6 +823,9 @@ public:
         return std::wstring(L"Node '") + NodeName().c_str() + L"' (" + OperationName().c_str() + L" operation)"; 
     };
 
+    // Helper that returns [a x b x c], including dynamic axes.
+    const std::string ShapeDescription() const;
+
 protected:
 
     // -----------------------------------------------------------------------
@@ -833,7 +860,8 @@ protected:
 typedef ComputationNodeBase::ComputationNodeBasePtr ComputationNodeBasePtr;
 
 // =======================================================================
-// NumInputs -- little helper interface to allow derived Node classes to specify how many inputs they expect
+// NumInputs -- little helper interface to allow derived Node classes to 
+// specify how many inputs they expect
 // =======================================================================
 
 struct INumInputs { virtual size_t GetExpectedNumInputs() const = 0; };
@@ -844,6 +872,14 @@ struct NumInputs : public INumInputs // e.g. derive from NumInputs<2>
     {
         return m_numInputs;
     }
+};
+
+// =======================================================================
+// Nodes that can take a dynamic axis need to implement this.
+// =======================================================================
+struct ITakesDynamicAxis
+{
+    virtual const std::wstring GetRequestedDynamicAxis() const = 0;
 };
 
 // =======================================================================
@@ -986,7 +1022,7 @@ public:
             if (inputs[i])
                 m_inputs[i] = DownCast(inputs[i]); // (DownCast() checks the type; the assignment then downcasts it again)
             else
-                m_inputs[i] = nullptr; // during network creation, nullpts are possible
+                m_inputs[i] = nullptr; // during network creation, nullptrs are possible
     }
 
 protected:
@@ -1200,7 +1236,7 @@ public:
         return GradientFor(fr);
     }
     // tensor version of the above functions
-    TensorView<ElemType> DataTensorFor(Matrix<ElemType>& data, size_t rank, const FrameRange& fr)
+    TensorView<ElemType> DataTensorFor(const MatrixBasePtr& data, size_t rank, const FrameRange& fr)
     {
         try
         {
@@ -1213,11 +1249,11 @@ public:
     }
     TensorView<ElemType> ValueTensorFor(size_t rank, const FrameRange& fr)
     {
-        return DataTensorFor(Value(), rank, fr);
+        return DataTensorFor(ValuePtr(), rank, fr);
     }
     TensorView<ElemType> GradientTensorFor(size_t rank, const FrameRange& fr)
     {
-        return DataTensorFor(Gradient(), rank, fr);
+        return DataTensorFor(GradientPtr(), rank, fr);
     }
 
     // TODO: Are all these meant to read out a scalar? Then rename and verify dimensions.
@@ -1282,6 +1318,7 @@ public:
     void UpdateFunctionValuesSize()
     {
         UpdateDataSize(Value());
+        Value().CollapseDataLocationAfterWriting(); // actually before writing, should change the name
     }
 
     // -----------------------------------------------------------------------
@@ -1357,14 +1394,8 @@ public:
     // TODO: move to -Base (or -Network?)
     void Backprop(const FrameRange& fr, bool childrenInThisLoop, bool childrenInOuterLoop) override;
 
-    // TODO: why of the inputs, and not the node itself?
-    void /*ComputationNodeBase::*/ ZeroGradientsOfInputs() override // clears the lazy-init flags (LazyZeroGradient() actually clears the values lazily)
-    {
-        for (size_t i = 0; i < m_inputs.size(); i++)
-            Input(i)->m_gradientInitialized = false;
-    }
-
     // lazy resetting of gradient
+    // This performs the actual zeroing out.
     void LazyZeroGradient()
     {
         if (!m_needsGradient)
@@ -1373,8 +1404,14 @@ public:
         if (m_gradientInitialized)
             return;
 
+        ResetGradient(0);
+    }
+
+    // resize and reset this node's gradient to a given value (normally 0, 1 for root)
+    void ResetGradient(ElemType val)
+    {
         UpdateDataSize(Gradient());
-        Gradient().SetValue(0);
+        Gradient().SetValue(val);
 
         m_gradientInitialized = true;
     }
@@ -1387,7 +1424,7 @@ public:
     virtual void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool) override
     {
         if (IsValueSharable())
-			RequestMatrixFromPool(m_value, matrixPool);
+            RequestMatrixFromPool(m_value, matrixPool);
         else
             CreateMatrixIfNull(m_value);
     }
@@ -1485,8 +1522,45 @@ public:
                                       const std::string& sampleSeparator, std::string valueFormatString,
                                       bool outputGradient = false) const;
 
+    // simple helper to log the content of a minibatch
+    void DebugLogMinibatch(bool outputGradient = false) const
+    {
+        fprintf(stderr, "<<<<<<\n"); // some prologue and epilogue so that we can use diff -c1 to see the node name
+        fprintf(stderr, "<<<<<<\n");
+        fprintf(stderr, "DebugLogMinibatch: <<<<< %ls%s >>>>>\n", NodeName().c_str(), outputGradient ? " (gradient)" : "");
+        WriteMinibatchWithFormatting(stderr, FrameRange(), 8, 10, false/*transpose*/, /*isCategoryLabel=*/false, /*isSparse=*/false, std::vector<std::string>(),
+            ""/*sequenceSeparator*/, "  "/*sequencePrologue*/, "\n"/*sequenceEpilogue*/, " "/*elementSeparator*/, "\n  "/*sampleSeparator*/,
+            "%.8f"/*valueFormatString*/, outputGradient);
+        fprintf(stderr, ">>>>>>\n");
+        fprintf(stderr, ">>>>>>\n");
+    }
+
     void Trace()
     {
+#if 0
+        static const std::set<std::wstring> toLog{
+            L"labelSentenceStartEmbedded",
+            L"delayedDecoderFeedback.h.x",
+            L"delayedDecoderFeedback.h.flags",
+            L"delayedDecoderFeedback.h.out.thenVal.h.indexSequence.h.indexSequence.h",
+            L"delayedDecoderFeedback.h.out.thenVal.h.indexSequence.h",
+            L"delayedDecoderFeedback.h.out.thenVal.h",
+            L"delayedDecoderFeedback.h.out.PlusArgs[0]",
+            L"delayedDecoderFeedback.h.out.PlusArgs[1].ElementTimesArgs[0]",
+            L"delayedDecoderFeedback.h.out.elseVal",
+            L"delayedDecoderFeedback.h.out.PlusArgs[1]",
+            L"delayedDecoderFeedback.h.out",
+            L"delayedDecoderFeedback"
+        };
+        if (toLog.find(NodeName()) != toLog.end())
+            DebugLogMinibatch();
+        if (NodeName() == L"delayedDecoderFeedback.h.out")
+        {
+            static int i = 0;
+            if (++i == 2)
+                exit(1);
+        }
+#endif
         if (m_traceNodeValueReal || m_traceNodeValueAsCategoryLabel || m_traceNodeValueSparse)
         {
             fprintf(stderr, "Trace --> %s\n", FormatOperationPrototype("").c_str());
@@ -1538,8 +1612,8 @@ public:
     /*HasToString::*/ wstring ToString() const override
     {
         // we format it like "name : type rows x cols ( args )"
-        wstring result = /*TidyName*/ (NodeName()) + L" : " + OperationName();
-        result.append(msra::strfun::wstrprintf(L" [%s%s]", string(GetSampleLayout()).c_str(), HasMBLayout() ? " x *" : ""));
+        wstring result = NodeName() + L" : " + OperationName();
+        result.append(msra::strfun::wstrprintf(L" [%s%ls]", string(GetSampleLayout()).c_str(), GetMBLayoutAxisString().c_str()));
         if (m_inputs.empty())
             result.append(L" ()");
         else
@@ -1562,7 +1636,7 @@ public:
     // for debugging purposes
     void /*ComputationNodeBase::*/ PrintSelf(bool printMatrices = false) const
     {
-        fprintf(stderr, "\n%ls[%s%s] = %ls", NodeName().c_str(), string(GetSampleLayout()).c_str(), HasMBLayout() ? " x *" : "", OperationName().c_str());
+        fprintf(stderr, "\n%ls[%s%ls] = %ls", NodeName().c_str(), string(GetSampleLayout()).c_str(), GetMBLayoutAxisString().c_str(), OperationName().c_str());
 
         if (!IsLeaf())
         {
@@ -1571,7 +1645,7 @@ public:
             {
                 if (i > 0)
                     fprintf(stderr, ", ");
-                fprintf(stderr, "%ls[%s%s] = %ls", m_inputs[i] ? m_inputs[i]->NodeName().c_str() : L"NULL", string(m_inputs[i]->GetSampleLayout()).c_str(), m_inputs[i]->HasMBLayout() ? " x *" : "", OperationName().c_str());
+                fprintf(stderr, "%ls[%s%ls] = %ls", m_inputs[i] ? m_inputs[i]->NodeName().c_str() : L"NULL", string(m_inputs[i]->GetSampleLayout()).c_str(), m_inputs[i]->GetMBLayoutAxisString().c_str(), OperationName().c_str());
             }
             fprintf(stderr, ")");
         }
@@ -1731,7 +1805,6 @@ public:
     virtual void PrintSelf(bool) const override { NOT_IMPLEMENTED; }
     virtual void ValidateInferInputDimsFrom(const TensorShape&) override { NOT_IMPLEMENTED; }
     virtual void SetInput(const size_t, const Microsoft::MSR::CNTK::ComputationNodeBase::ComputationNodeBasePtr&) override { NOT_IMPLEMENTED; }
-    virtual void ZeroGradientsOfInputs(void) override { NOT_IMPLEMENTED; }
     virtual void MaskMissingValueColumnsToZero(const Microsoft::MSR::CNTK::FrameRange&) override { NOT_IMPLEMENTED; }
     virtual void MaskMissingGradientColumnsToZero(const Microsoft::MSR::CNTK::FrameRange&) override { NOT_IMPLEMENTED; }
     virtual void InvalidateMissingValueColumns(const Microsoft::MSR::CNTK::FrameRange&) override { NOT_IMPLEMENTED; }
@@ -1836,6 +1909,7 @@ protected:                                                                      
     using Base::GetInputSampleLayout;                                                                                                                    \
     using Base::GetInputsFromConfig;                                                                                                                     \
     using Base::GetMBLayout;                                                                                                                             \
+    using Base::GetMBLayoutAxisString;                                                                                                                   \
     using Base::GetNumInputs;                                                                                                                            \
     using Base::GetNumParallelSequences;                                                                                                                 \
     using Base::GetNumTimeSteps;                                                                                                                         \
@@ -1847,6 +1921,7 @@ protected:                                                                      
     using Base::Gradient;                                                                                                                                \
     using Base::GradientAsMatrix;                                                                                                                        \
     using Base::GradientFor;                                                                                                                             \
+    using Base::GradientPtr;                                                                                                                             \
     using Base::GradientTensorFor;                                                                                                                       \
     using Base::HasMBLayout;                                                                                                                             \
     using Base::InferMBLayoutFromInputsForStandardCase;                                                                                                  \
@@ -1891,6 +1966,7 @@ protected:                                                                      
     using Base::ValidateUnaryMap;                                                                                                                        \
     using Base::ValidateUnaryReduce;                                                                                                                     \
     using Base::ValueFor;                                                                                                                                \
+    using Base::ValuePtr;                                                                                                                                \
     using Base::ValueTensorFor;                                                                                                                          \
     using Base::VerifyDataSize;                                                                                                                          \
     using Base::VerifyDims;                                                                                                                              \

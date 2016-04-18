@@ -260,7 +260,7 @@ private:
     TensorView<ElemType> OneSampleTensorFor(int inputIndex/*-1 for output*/, bool gradient/*instead of value*/, const FrameRange& fr)
     {
         auto input = inputIndex < 0 ? this : Input(inputIndex).get();
-        auto& data = gradient ? input->Gradient() : input->Value();
+        auto data = gradient ? input->GradientPtr() : input->ValuePtr();
         size_t rank = input->GetSampleLayout().GetRank();
         if (!Input(0)->HasMBLayout()) // left input is no MB data: run normally
             return input->DataTensorFor(data, rank, fr);
@@ -287,9 +287,9 @@ public:
         // TensorView::DoMatrixProductOf() will reduce each tensor object into a 2D tensor (or fail if it cannot)
         // and recreate actual Matrix objects (in case of sparse, they must be identical to the original tensor storage object).
         // Transposition is applied after flattening into 2D, but only allowed if the input sample is 2D anyway.
-        auto input0 =       OneSampleTensorFor(0,  /*gradient=*/false,                fr.AllowBroadcast());
-        auto input1 =       OneSampleTensorFor(1,  /*gradient=*/false,                fr.AllowBroadcast());
-        auto output =       OneSampleTensorFor(-1, /*gradient=*/false,                fr);
+        auto input0 = OneSampleTensorFor(0,  /*gradient=*/false, fr.AllowBroadcast());
+        auto input1 = OneSampleTensorFor(1,  /*gradient=*/false, fr.AllowBroadcast());
+        auto output = OneSampleTensorFor(-1, /*gradient=*/false, fr);
         output.AssignMatrixProductOf(false/*transC*/, input0, m_transpose/*transA*/, input1, false/*transB*/);
     }
 
@@ -318,16 +318,16 @@ public:
             // If input data is sparse, then gradient is block sparse.
             if (Input(1)->Value().GetMatrixType() == SPARSE && Input(0)->Gradient().GetMatrixType() == DENSE && Gradient().GetMatrixType() == DENSE)
                 Input(0)->Gradient().SwitchToMatrixType(SPARSE, MatrixFormat::matrixFormatSparseBlockCol, false);
-            auto input0Gradient =       OneSampleTensorFor(0, /*gradient=*/true,                  fr.AllowBroadcast());
-            auto input1         =       OneSampleTensorFor(1,  /*gradient=*/false,                fr.AllowBroadcast());
-            auto outputGradient =       OneSampleTensorFor(-1, /*gradient=*/true,                 fr);
+            auto input0Gradient = OneSampleTensorFor(0, /*gradient=*/true,   fr.AllowBroadcast());
+            auto input1         = OneSampleTensorFor(1,  /*gradient=*/false, fr.AllowBroadcast());
+            auto outputGradient = OneSampleTensorFor(-1, /*gradient=*/true,  fr);
             input0Gradient.AddMatrixProductOf(m_transpose/*transC*/, outputGradient, false/*transA*/, input1, true/*transB*/);
         }
         else if (inputIndex == 1) // right derivative
         {
-            auto input0         =          OneSampleTensorFor(0, /*gradient=*/false,                 fr.AllowBroadcast());
-            auto input1Gradient =          OneSampleTensorFor(1, /*gradient=*/true,                  fr.AllowBroadcast());
-            auto outputGradient =          OneSampleTensorFor(-1, /*gradient=*/true,                 fr);
+            auto input0         = OneSampleTensorFor(0, /*gradient=*/false, fr.AllowBroadcast());
+            auto input1Gradient = OneSampleTensorFor(1, /*gradient=*/true,  fr.AllowBroadcast());
+            auto outputGradient = OneSampleTensorFor(-1, /*gradient=*/true, fr);
             input1Gradient.AddMatrixProductOf(false/*transC*/, input0, !m_transpose/*transA*/, outputGradient, false/*transB*/);
         }
     }
@@ -819,16 +819,16 @@ public:
     virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
     {
         size_t rank = DetermineElementwiseTensorRank();
-        auto output = ValueTensorFor(rank, fr);
-        auto input  = TensorView<ElemType>(Input(0)->Value(), GetTransposedTensorSliceFor(rank, fr));
+        auto output =                                ValueTensorFor(                         rank, fr);
+        auto input  = TensorView<ElemType>(Input(0)->ValuePtr(), GetTransposedTensorSliceFor(rank, fr));
         output.AssignCopyOf(input);
     }
 
     virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
     {
         size_t rank = DetermineElementwiseTensorRank();
-        auto outputGradient = GradientTensorFor(rank, fr);
-        auto inputGradient  = TensorView<ElemType>(Input(0)->Gradient(), GetTransposedTensorSliceFor(rank, fr));
+        auto outputGradient =                                GradientTensorFor(                         rank, fr);
+        auto inputGradient  = TensorView<ElemType>(Input(0)->GradientPtr(), GetTransposedTensorSliceFor(rank, fr));
         inputGradient.AddCopyOf(outputGradient);
     }
 

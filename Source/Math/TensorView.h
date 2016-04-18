@@ -26,20 +26,22 @@ public:
     // -------------------------------------------------------------------
 
     // reinterpret a matrix storage object (SOB) as a TensorView with a given TensorShape  --this is the main constructor
-    TensorView(const Matrix<ElemType>& sob, const TensorShape& shape);
+    TensorView(const MatrixBasePtr& sob, const TensorShape& shape);
+#if 0
     // cast a Matrix as a 2D TensorView (without shape change)
-    TensorView(const Matrix<ElemType>& sob)
-        : m_sob(sob.AsReference()), m_shape(TensorShape(array<size_t, 2>{sob.GetNumRows(), sob.GetNumCols()}))
+    TensorView(const MatrixBasePtr& sob)
+        : m_sob(sob), m_shape(TensorShape(array<size_t, 2>{sob->GetNumRows(), sob->GetNumCols()}))
     {
     }
+#endif
     // reshape a TensorView
     TensorView(const TensorView<ElemType>& other, const TensorShape& shape)
-        : m_sob(other.m_sob.AsReference()), m_shape(shape)
+        : m_sob(other.m_sob), m_shape(shape)
     {
     }
     // copy constructor
     TensorView(const TensorView<ElemType>& other)
-        : m_sob(other.m_sob.AsReference()), m_shape(other.m_shape)
+        : m_sob(other.m_sob), m_shape(other.m_shape)
     {
     }
 
@@ -66,36 +68,36 @@ public:
     // -------------------------------------------------------------------
 
 #pragma push_macro("DeclareUnaryTensorOp")
-#define DeclareUnaryTensorOp(oper)                                        \
-    void Do##oper##Of(ElemType beta, const TensorView& a, ElemType alpha) \
-    {                                                                     \
-        DoUnaryOpOf(beta, a, alpha, ElementWiseOperator::op##oper);       \
-    }                                                                     \
-    void Assign##oper##Of(const TensorView& a, ElemType alpha = 1.0f)     \
-    {                                                                     \
-        DoUnaryOpOf(0, a, alpha, ElementWiseOperator::op##oper);          \
-    }                                                                     \
-    void Add##oper##Of(const TensorView& a, ElemType alpha = 1.0f)        \
-    {                                                                     \
-        DoUnaryOpOf(1.0f, a, alpha, ElementWiseOperator::op##oper);       \
+#define DeclareUnaryTensorOp(oper)                                                              \
+    void Do##oper##Of(ElemType beta, const TensorView& a, ElemType alpha)                       \
+    {                                                                                           \
+        DoUnaryOpOf(beta, a, alpha, ElementWiseOperator::op##oper, ElementWiseOperator::opSum); \
+    }                                                                                           \
+    void Assign##oper##Of(const TensorView& a, ElemType alpha = 1.0f)                           \
+    {                                                                                           \
+        DoUnaryOpOf(0, a, alpha, ElementWiseOperator::op##oper, ElementWiseOperator::opSum);    \
+    }                                                                                           \
+    void Add##oper##Of(const TensorView& a, ElemType alpha = 1.0f)                              \
+    {                                                                                           \
+        DoUnaryOpOf(1.0f, a, alpha, ElementWiseOperator::op##oper, ElementWiseOperator::opSum); \
     }
 
     ForAllUnaryOps(DeclareUnaryTensorOp);
 #pragma pop_macro("DeclareUnaryTensorOp")
 
 #pragma push_macro("DeclareBinaryTensorOp")
-#define DeclareBinaryTensorOp(oper)                                                            \
-    void Do##oper##Of(ElemType beta, const TensorView& a, const TensorView& b, ElemType alpha) \
-    {                                                                                          \
-        DoBinaryOpOf(beta, a, b, alpha, ElementWiseOperator::op##oper);                        \
-    }                                                                                          \
-    void Assign##oper##Of(const TensorView& a, const TensorView& b, ElemType alpha = 1.0f)     \
-    {                                                                                          \
-        DoBinaryOpOf(0, a, b, alpha, ElementWiseOperator::op##oper);                           \
-    }                                                                                          \
-    void Add##oper##Of(const TensorView& a, const TensorView& b, ElemType alpha = 1.0f)        \
-    {                                                                                          \
-        DoBinaryOpOf(1.0f, a, b, alpha, ElementWiseOperator::op##oper);                        \
+#define DeclareBinaryTensorOp(oper)                                                                 \
+    void Do##oper##Of(ElemType beta, const TensorView& a, const TensorView& b, ElemType alpha)      \
+    {                                                                                               \
+        DoBinaryOpOf(beta, a, b, alpha, ElementWiseOperator::op##oper, ElementWiseOperator::opSum); \
+    }                                                                                               \
+    void Assign##oper##Of(const TensorView& a, const TensorView& b, ElemType alpha = 1.0f)          \
+    {                                                                                               \
+        DoBinaryOpOf(0, a, b, alpha, ElementWiseOperator::op##oper, ElementWiseOperator::opSum);    \
+    }                                                                                               \
+    void Add##oper##Of(const TensorView& a, const TensorView& b, ElemType alpha = 1.0f)             \
+    {                                                                                               \
+        DoBinaryOpOf(1.0f, a, b, alpha, ElementWiseOperator::op##oper, ElementWiseOperator::opSum); \
     }
 
     ForAllBinaryOps(DeclareBinaryTensorOp);
@@ -105,25 +107,23 @@ public:
 #define DeclareTernaryTensorOp(oper)                                                                                \
     void Do##oper##Of(ElemType beta, const TensorView& a, const TensorView& b, const TensorView& c, ElemType alpha) \
     {                                                                                                               \
-        DoTernaryOpOf(beta, a, b, c, alpha, ElementWiseOperator::op##oper);                                         \
+        DoTernaryOpOf(beta, a, b, c, alpha, ElementWiseOperator::op##oper, ElementWiseOperator::opSum);             \
     }                                                                                                               \
     void Assign##oper##Of(const TensorView& a, const TensorView& b, const TensorView& c, ElemType alpha = 1.0f)     \
     {                                                                                                               \
-        DoTernaryOpOf(0, a, b, c, alpha, ElementWiseOperator::op##oper);                                            \
+        DoTernaryOpOf(0, a, b, c, alpha, ElementWiseOperator::op##oper, ElementWiseOperator::opSum);                \
     }                                                                                                               \
     void Add##oper##Of(const TensorView& a, const TensorView& b, const TensorView& c, ElemType alpha = 1.0f)        \
     {                                                                                                               \
-        DoTernaryOpOf(1.0f, a, b, c, alpha, ElementWiseOperator::op##oper);                                         \
+        DoTernaryOpOf(1.0f, a, b, c, alpha, ElementWiseOperator::op##oper, ElementWiseOperator::opSum);             \
     }
 
     ForAllTernaryOps(DeclareTernaryTensorOp);
 #pragma pop_macro("DeclareTernaryTensorOp")
 
-    static void Test();
-
-    void DoUnaryOpOf  (ElemType beta, const TensorView& a,                                           ElemType alpha, ElementWiseOperator op);
-    void DoBinaryOpOf (ElemType beta, const TensorView& a, const TensorView& b,                      ElemType alpha, ElementWiseOperator op);
-    void DoTernaryOpOf(ElemType beta, const TensorView& a, const TensorView& b, const TensorView& c, ElemType alpha, ElementWiseOperator op);
+    void DoUnaryOpOf  (ElemType beta, const TensorView& a,                                           ElemType alpha, ElementWiseOperator op, ElementWiseOperator reductionOp);
+    void DoBinaryOpOf (ElemType beta, const TensorView& a, const TensorView& b,                      ElemType alpha, ElementWiseOperator op, ElementWiseOperator reductionOp);
+    void DoTernaryOpOf(ElemType beta, const TensorView& a, const TensorView& b, const TensorView& c, ElemType alpha, ElementWiseOperator op, ElementWiseOperator reductionOp);
 
     // -------------------------------------------------------------------
     // matrix product -- GEMM for flattened tensors
@@ -139,23 +139,23 @@ public:
     void AssignMatrixProductOf(               bool transC, const TensorView& a, bool transA, const TensorView& b, bool transB, ElemType alpha = 1.0f) { DoMatrixProductOf(0,    transC, a, transA, b, transB, alpha); }
     void AddMatrixProductOf   (               bool transC, const TensorView& a, bool transA, const TensorView& b, bool transB, ElemType alpha = 1.0f) { DoMatrixProductOf(1.0f, transC, a, transA, b, transB, alpha); }
 
-    Matrix/*ref*/<ElemType> AsMatrix() const;
+    shared_ptr<Matrix<ElemType>> AsMatrix() const;
 
 private:
     // -------------------------------------------------------------------
     // accessors
     // -------------------------------------------------------------------
 
-    const Matrix<ElemType>& GetSOB() const { return m_sob; }
-    Matrix<ElemType>&       GetSOB()       { return m_sob; }
+    const Matrix<ElemType>& GetSOB() const { return *m_sob; }
+    Matrix<ElemType>&       GetSOB()       { return *m_sob; }
     const TensorShape& GetShape() const { return m_shape; }
 
     // -------------------------------------------------------------------
     // sob members
     // -------------------------------------------------------------------
 
-    Matrix<ElemType> m_sob; // Storage OBject that holds the data that is being viewed with this TensorView. This is really a reference (not owing the buffer).
-    TensorShape m_shape;    // the meta-data that describes the data's shape and/or access pattern
+    shared_ptr<Matrix<ElemType>> m_sob; // Storage OBject that holds the data that is being viewed with this TensorView. This is really a reference (not owing the buffer).
+    TensorShape m_shape;                // the meta-data that describes the data's shape and/or access pattern
 };
 
 }}}

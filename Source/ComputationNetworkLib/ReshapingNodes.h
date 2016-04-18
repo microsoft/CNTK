@@ -171,7 +171,7 @@ template class ReshapeNode<float>;
 template class ReshapeNode<double>;
 
 // -----------------------------------------------------------------------
-// ReconcileMBLayout (dataInput, layoutInput)
+// ReconcileDynamicAxis (dataInput, layoutInput)
 // This node copies data from 'dataInput' while it propagates the minibatch-layout information from 'layoutInput'.
 // It does perform a runtime check to enforce that the layout of 'dataInput' is compatible (identical content) to that of 'layoutInput'.
 // This node is meant to be used from BrainScript macros that bracket expand/reduce pairs of nodes. It is not meant to really be used directly.
@@ -179,14 +179,14 @@ template class ReshapeNode<double>;
 // -----------------------------------------------------------------------
 
 template <class ElemType>
-class ReconcileMBLayoutNode : public ComputationNode<ElemType>, public NumInputs<2>
+class ReconcileDynamicAxisNode : public ComputationNode<ElemType>, public NumInputs<2>
 {
     typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
-    static const std::wstring TypeName() { return L"ReconcileMBLayout"; }
+    static const std::wstring TypeName() { return L"ReconcileDynamicAxis"; }
 
 public:
-    DeclareConstructorFromConfigWithNumInputs(ReconcileMBLayoutNode);
-    ReconcileMBLayoutNode(DEVICEID_TYPE deviceId, const wstring& name)
+    DeclareConstructorFromConfigWithNumInputs(ReconcileDynamicAxisNode);
+    ReconcileDynamicAxisNode(DEVICEID_TYPE deviceId, const wstring& name)
         : Base(deviceId, name)
     {
     }
@@ -228,8 +228,8 @@ public:
     }
 };
 
-template class ReconcileMBLayoutNode<float>;
-template class ReconcileMBLayoutNode<double>;
+template class ReconcileDynamicAxisNode<float>;
+template class ReconcileDynamicAxisNode<double>;
 
 // -----------------------------------------------------------------------
 // SliceNode (input)
@@ -303,16 +303,16 @@ public:
     virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
     {
         size_t rank = DetermineElementwiseTensorRank();
-        auto output =                                ValueTensorFor(rank,         fr);
-        let   input = TensorView<ElemType>(Input(0)->Value(), GetInputSlice(rank, fr.AllowBroadcast()));
+        auto output =                                ValueTensorFor(           rank, fr);
+        let   input = TensorView<ElemType>(Input(0)->ValuePtr(), GetInputSlice(rank, fr.AllowBroadcast()));
         output.AssignCopyOf(input);
     }
 
     virtual void /*ComputationNode::*/ BackpropTo(const size_t /*inputIndex*/, const FrameRange& fr) override
     {
         size_t rank = DetermineElementwiseTensorRank();
-        let outputGrad =                                GradientTensorFor(rank,         fr);
-        auto inputGrad = TensorView<ElemType>(Input(0)->Gradient(), GetInputSlice(rank, fr));
+        let outputGrad =                                GradientTensorFor(           rank, fr);
+        auto inputGrad = TensorView<ElemType>(Input(0)->GradientPtr(), GetInputSlice(rank, fr.AllowBroadcast()));
         inputGrad.AddCopyOf(outputGrad);
     }
 
@@ -413,7 +413,7 @@ public:
         {
             let input = Input(inputIndex)->ValueTensorFor(rank, fr.AllowBroadcast());
             let outputSubSlice = NarrowToStripe(outputSlice, inputIndex);
-            auto output = TensorView<ElemType>(Value(), outputSubSlice);
+            auto output = TensorView<ElemType>(ValuePtr(), outputSubSlice);
             output.AssignCopyOf(input);
         }
     }
@@ -425,7 +425,7 @@ public:
 
         auto inputGrad = Input(inputIndex)->GradientTensorFor(rank, fr.AllowBroadcast());
         let outputSubSlice = NarrowToStripe(outputSlice, inputIndex);
-        let outputGrad = TensorView<ElemType>(Gradient(), outputSubSlice);
+        let outputGrad = TensorView<ElemType>(GradientPtr(), outputSubSlice);
         inputGrad.AddCopyOf(outputGrad);
     }
 
@@ -1074,7 +1074,10 @@ public:
         else if (Input(0)->HasMBLayout())
         {
             if (!m_pMBLayout)
+            {
                 m_pMBLayout = make_shared<MBLayout>(); // mini-batch data: this generates a new layout
+                m_pMBLayout->SetUniqueAxisName(NodeName());
+            }
         }
         else
             assert(!m_pMBLayout); // reshaping non-mini-batch data

@@ -43,18 +43,17 @@ void ComputationNetwork::ForwardProp(const ComputationNodeBasePtr rootNode)
     GetNestedNetwork(rootNode)->ForwardProp(FrameRange(nullptr));
 }
 
-// set the gradient matrix of a node to an 1x1 matrix containing 1.0
-// Returns false if the node is not a ComputationNode<ElemType>.
+// set the gradient matrix of a (root) node 1.0
+// Returns false if the node is not a ComputationNode<ElemType>; see Backprop() below for intended use.
 template <class ElemType>
-static bool SetGradientToScalarOne(ComputationNodeBasePtr nodep)
+static bool SetRootGradientToScalarOne(ComputationNodeBasePtr nodep)
 {
     auto node = dynamic_pointer_cast<ComputationNode<ElemType>>(nodep);
     bool hasMatchingType = (node != nullptr);
     if (hasMatchingType)
     {
-        Matrix<ElemType>& grad = node->Gradient();
-        grad.Resize(node->Value());
-        grad.SetValue((ElemType) 1.0);
+        // reset the root gradient to 1
+        node->ResetGradient(1);
     }
     return hasMatchingType;
 }
@@ -69,12 +68,12 @@ void ComputationNetwork::Backprop(const ComputationNodeBasePtr rootNode) // trai
     if (!Environment().IsTraining())
         LogicError("Backprop: Requires network is to be in training mode.");
 
-    // reset all gradients to zero (actually, internally, this is lazy, but we don't care here)
-    ZeroGradients(rootNode);
-
     // initialize root gradient with a scalar value of 1.0
-    if (!SetGradientToScalarOne<float>(rootNode) && !SetGradientToScalarOne<double>(rootNode))
+    if (!SetRootGradientToScalarOne<float>(rootNode) && !SetRootGradientToScalarOne<double>(rootNode))
         LogicError("Backprop: Training criterion is neither ComputationNode<float> nor ComputationNode<double>.");
+
+    // reset all gradients below rootNode to zero (actually, internally, this is lazy, but we don't care here)
+    ZeroInputGradients(rootNode);
 
     // backpropagate through the network
     GetNestedNetwork(rootNode)->Backprop(FrameRange(nullptr), true, true);
@@ -134,6 +133,10 @@ ComputationNetwork::PARTraversalFlowControlNode::PARTraversalFlowControlNode(con
 {
     for (auto& node : m_nestedNodes)
     {
+#if 0
+        if (dynamic_pointer_cast<LearnableParameter<float>>(node))
+            dynamic_pointer_cast<ComputationNode<float>>(node)->DebugLogMinibatch();
+#endif
         if (node->IsOutOfDateWrtInputs())
         {
             node->BeginForwardProp();
@@ -189,8 +192,9 @@ ComputationNetwork::PARTraversalFlowControlNode::PARTraversalFlowControlNode(con
     for (auto& node : m_nestedNodes)
     {
         if (node->GetMBLayout() != GetMBLayout())
-            LogicError("Evaluate: all nodes inside a recurrent loop must have a layout that is identical; mismatch found for nodes '%ls' vs. '%ls'",
-                       node->NodeName().c_str(), m_nestedNodes[0]->NodeName().c_str());
+            LogicError("Evaluate: All nodes inside a recurrent loop must have a layout that is identical; mismatch found for nodes '%ls' (%ls) vs. '%ls' (%ls)",
+                       node            ->NodeName().c_str(), node            ->GetMBLayoutAxisString().c_str(),
+                       m_nestedNodes[0]->NodeName().c_str(), m_nestedNodes[0]->GetMBLayoutAxisString().c_str());
     }
 
     // tell all that loop is about to commence
@@ -513,9 +517,8 @@ void ComputationNetwork::DetermineSetOfAllRoots()
 }
 
 // initial setup of MBLayout pointers
-//  - link all input nodes to one or more MBLayouts    --TODO: Currently only one
+//  - link all input nodes to one or more MBLayouts
 //  - reset all others to nullptr, in expectation of a ValidateNetwork() pass
-// BUGBUG (Issue #95): Change this to use different MBLayouts for different inputs if so configured.
 void ComputationNetwork::ResetMBLayouts()
 {
     // reset to a well-defined MBLayout (any meaningful layout should do here)
@@ -526,10 +529,42 @@ void ComputationNetwork::ResetMBLayouts()
     for (const auto& node : GetAllNodesForRoot(nullptr))
         node->LinkToMBLayout(nullptr);
 
-    // then fix up inputs (all others get propagated upwards through Validate())
-    // BUGBUG (Issue #95): Once we support mismatching layouts, this will be more involved. For now, everything shares the one layout that the Network knows about.
+    // DynamicAxis nodes are (apart from the soon-to-be-deprecated network-wide MBLayout) the main holders of MBLayouts. Initialize them.
+    // The only other instances are nodes that change the MBLayout, like WhereNode. 
+    for (auto node : GetNodesWithType(L"DynamicAxis"))
+        node->LinkToMBLayout(make_shared<MBLayout>(1, 0, node->GetName()));
+
+    // This is now initialized inside of the Input nodes, with the proper connections.
     for (auto node : InputNodes(nullptr))
-        node->LinkToMBLayout(m_pMBLayoutOfNetwork);
+    {
+        // TODO: use if (!Is<ITakesDynamicAxis>(node))...
+        auto n = dynamic_pointer_cast<ITakesDynamicAxis>(node);
+        if (!n)
+            LogicError("Expected %ls to implement ITakesDynamicAxis, but it doesn't.", node->NodeDescription().c_str());
+        std::wstring axisName = n->GetRequestedDynamicAxis();
+
+        if (axisName == L"")
+        {
+            // Legacy behavior: One shared MBLayout
+            // TODO Remove m_pMBLayoutOfNetwork altogether. See issue 358.
+            node->LinkToMBLayout(m_pMBLayoutOfNetwork);
+        }
+        else
+        {
+            auto axisNode = GetNodeFromName(axisName);
+
+            if (!axisNode)
+                RuntimeError("%ls: Can't find node '%ls' for retrieving dynamic axis.", axisNode->NodeDescription().c_str(), axisName.c_str());
+
+            // For now we require the node to be a DynamicAxisNode, though we could derive the same from other nodes. This would involve
+            // more dependencies on the order in which things are evaluated, though.
+            if (axisNode->OperationName() != L"DynamicAxis")
+                RuntimeError("%ls: dynamicAxis argument must be of type DynamicAxis(), but got %ls.", node->NodeDescription().c_str(), axisNode->NodeDescription().c_str());
+            if (!axisNode->HasMBLayout())
+                LogicError("%ls: Expected %ls to have MBLayout, but it doesn't.", node->NodeDescription().c_str(), axisNode->NodeDescription().c_str());
+            node->LinkToMBLayout(axisNode->GetMBLayout());
+        }
+    }
 }
 
 // -----------------------------------------------------------------------
@@ -657,6 +692,11 @@ size_t ComputationNetwork::ValidateNodes(list<ComputationNodeBasePtr> nodes, boo
         {
             hasVisitedChild |= child->m_visited; // if not a single visited child then no point in validating
             allChildrenVisited &= child->m_visited;
+
+            // Make sure we don't use DynamicAxis in places where it was not designed for.
+            // This is a stop-gap. We need a more coherent concept for passing of shapes.
+            if (child->OperationName() == L"DynamicAxis")
+                RuntimeError("%ls: Cannot be used as input to another node. It can only be used on the 'dynamicAxis' property of an Input node.", child->NodeDescription().c_str());
         }
 
         // if there is not at least one visited child
@@ -669,7 +709,7 @@ size_t ComputationNetwork::ValidateNodes(list<ComputationNodeBasePtr> nodes, boo
             {
                 unchanged = !ValidateNode(node, isFinalValidationPass);
                 string updatedPrototype = node->FormatOperationPrototype("");
-#if 1           // print prototype in final validation pass
+#if 0           // print prototype in final validation pass. Problematic for tracking down validation errors in loops.
                 unchanged;
                 if (isFinalValidationPass)
 #else           // print prototype upon every change (useful for debugging)

@@ -58,7 +58,7 @@ private:
     ReaderFactory m_factory;
     bool m_endOfEpoch;
 
-    MBLayoutPtr m_layout;
+    size_t m_numParallelSequences;
 
     std::map<std::wstring, size_t> m_nameToStreamId;
     std::vector<StreamDescriptionPtr> m_streams;

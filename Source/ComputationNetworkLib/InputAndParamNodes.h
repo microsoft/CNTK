@@ -109,6 +109,47 @@ public:
 };
 
 // -----------------------------------------------------------------------
+// DynamicAxisNode (/*no input*/)
+// This is a holder for MBLayout objects shared across inputs.
+// -----------------------------------------------------------------------
+template <class ElemType>
+class DynamicAxisNode : public ComputationNode<ElemType>, public NumInputs<0>
+{
+    typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+    static const std::wstring TypeName() { return L"DynamicAxis"; }
+public:
+    DynamicAxisNode(DEVICEID_TYPE deviceId, const wstring& name)
+        : Base(deviceId, name)
+    {
+        // BUGBUG: In BS, the node name is not known during node instantiation.
+        // This may require to pass the display name as a separate parameter.
+
+        // This is the whole point of this class: Introduce a new MBLayout that others can use.
+        LinkToMBLayout(make_shared<MBLayout>(1, 0, name));
+        // We need some shape, or validation fails.
+        SetDims(TensorShape(1,1), true);
+    }
+    DynamicAxisNode(const ScriptableObjects::IConfigRecordPtr configp)
+        : DynamicAxisNode(configp->Get(L"deviceId"), L"<placeholder>")
+    {
+    }
+
+    virtual void /*ComputationNode::*/ ForwardProp(const FrameRange&) override
+    {
+        RuntimeError("%ls is a special node only to be used as input to the Input() node.", NodeDescription().c_str());
+    }
+
+    virtual void /*ComputationNode::*/ BackpropTo(const size_t /*inputIndex*/, const FrameRange&)
+    {
+        LogicError("%ls is a leaf node. BackpropTo() should never be called.", NodeDescription().c_str());
+    }
+};
+
+template class DynamicAxisNode<float>;
+template class DynamicAxisNode<double>;
+
+
+// -----------------------------------------------------------------------
 // InputValueBase (/*no input*/)
 // Base class for InputValue and SparseInputValue (typically fed by a DataReader)
 // this covers four types: (regular vs. image) x (non-sparse vs. sparse)
@@ -116,12 +157,12 @@ public:
 // -----------------------------------------------------------------------
 
 template <class ElemType>
-class InputValueBase : public ComputationNode<ElemType>, public NumInputs<0>
+class InputValueBase : public ComputationNode<ElemType>, public NumInputs<0>, public ITakesDynamicAxis
 {
     typedef ComputationNode<ElemType> Base;
     UsingComputationNodeMembers;
 
-    void Init(const TensorShape& sampleLayout, bool isSparse)
+    void Init(const TensorShape& sampleLayout, bool isSparse, const std::wstring axisName)
     {
         m_isSparse = isSparse;
         MarkValueNonSharable();
@@ -131,32 +172,60 @@ class InputValueBase : public ComputationNode<ElemType>, public NumInputs<0>
         SetDims(sampleLayout, HasMBLayout()); // also called when reloading a file. Then we have an MBLayout, otherwise not yet
         UpdateFunctionValuesSize();           // we must allocate the matrix so that the readers get objects with valid row dimensions (some readers expect that)
         SetLearningRateMultiplier(0);
+        m_dynamicAxisNodeName = axisName;
     }
 
 protected:
-    InputValueBase(DEVICEID_TYPE deviceId, const wstring& name, const TensorShape& sampleLayout, bool isSparse)
+    InputValueBase(DEVICEID_TYPE deviceId, const wstring& name, const TensorShape& sampleLayout, bool isSparse, const std::wstring axisName)
         : Base(deviceId, name)
     {
-        Init(sampleLayout, isSparse);
+        Init(sampleLayout, isSparse, axisName);
     }
-    InputValueBase(DEVICEID_TYPE deviceId, const wstring& name, size_t rows, bool isSparse)
-        : InputValueBase(deviceId, name, TensorShape(rows), isSparse)
+    InputValueBase(DEVICEID_TYPE deviceId, const wstring& name, size_t rows, bool isSparse, const std::wstring axisName)
+        : InputValueBase(deviceId, name, TensorShape(rows), isSparse, axisName)
     {
     }
-    InputValueBase(DEVICEID_TYPE deviceId, const wstring& name, bool isSparse)
-        : InputValueBase(deviceId, name, TensorShape(), isSparse)
+    InputValueBase(DEVICEID_TYPE deviceId, const wstring& name, bool isSparse, const std::wstring axisName)
+        : InputValueBase(deviceId, name, TensorShape(), isSparse, axisName)
     {
     }
     InputValueBase(const ScriptableObjects::IConfigRecordPtr configp, bool isSparse)
         : Base(configp->Get(L"deviceId"), L"<placeholder>")
     {
         AttachInputsFromConfig(configp, this->GetExpectedNumInputs());
+        wstring axisName = L"";
+        // TODO This currently reads a ComputationNode object from a property, thereby bypassing "normal" input handling.
+        // The passing of shapes represents a second graph that is "overlaid" (and previously identical) to the data
+        // flow network. This needs to be solved on a more fundamental level.
+        // The proposed future change from fseide is as follows:
+        // (2) On BS level, dynamicAxis is an optional parameter that takes a DynamicAxis object--the alternative,
+        // passing a string, will be removed.
+        // (3) The dynamicAxis argument will become an actual m_inputs[] to the InputValue. I.e.InputValues are no
+        // longer leaves from the ComputationNetwork viewpoint. But they ARE leaves from the user / BS / NDL view, as
+        // the axis is not passed as a regular input.This way, the current special - casing can and will be removed;
+        // instead, the MBLayout propagation will happen automagically as part of regular ValidateNetwork().
+        if (configp->Exists(L"dynamicAxis"))
+        {
+            auto axisConfig = configp->Find(L"dynamicAxis");
+            if (axisConfig->Is<ComputationNodeBase>())
+            {
+                ComputationNodeBasePtr axis = configp->Get(L"dynamicAxis");
+                axisName = axis->GetName();
+            }
+            else
+            {
+                axisName = (const std::wstring&)*axisConfig;
+            }
+        }
+
         bool isImage = configp->Get(L"isImage");
         if (!isImage)
-            Init(configp->Get(L"shape"), isSparse);
+            Init(configp->Get(L"shape"), isSparse, axisName);
         else
-            Init(ImageDimensions::AsTensorShape(configp->Get(L"imageWidth"), configp->Get(L"imageHeight"), configp->Get(L"imageChannels"), ImageLayoutKindFrom(configp->Get(L"imageLayout"))), isSparse);
+            Init(ImageDimensions::AsTensorShape(configp->Get(L"imageWidth"), configp->Get(L"imageHeight"), configp->Get(L"imageChannels"), ImageLayoutKindFrom(configp->Get(L"imageLayout"))), isSparse, axisName);
     }
+
+    virtual const std::wstring GetRequestedDynamicAxis() const { return m_dynamicAxisNodeName; }
 
 public:
     virtual void Save(File& fstream) const override
@@ -166,6 +235,10 @@ public:
         size_t colsDummy = 0;
         fstream << rowsDummy << colsDummy;
         m_sampleLayout.Save(fstream);
+
+        unsigned int nrAxes = 1;
+        fstream << nrAxes;
+        fstream << m_dynamicAxisNodeName;
     }
 
     virtual void Load(File& fstream, size_t modelVersion) override
@@ -180,10 +253,22 @@ public:
         if (rows != 0 /*old file*/ && rows != sampleLayout.GetNumElements() /*even older file*/)
         {
             fprintf(stderr, "WARNING: %ls InputValue has inconsistent serialized sample layout %s vs. number of rows %d. Resetting sample layout to vector.\n",
-                    NodeName().c_str(), string(sampleLayout).c_str(), (int) rows);
+                NodeName().c_str(), string(sampleLayout).c_str(), (int)rows);
             sampleLayout = TensorShape(rows);
         }
-        Init(sampleLayout, m_isSparse);
+
+        if (modelVersion >= CNTK_MODEL_VERSION_8)
+        { 
+            unsigned int nrAxes;
+            fstream >> nrAxes;
+            if (nrAxes == 1)
+                fstream >> m_dynamicAxisNodeName;
+            else if (nrAxes > 1)
+                RuntimeError("Input node: This version only supports a single dynamic axis. Please update your bits.");
+        }
+        else
+            m_dynamicAxisNodeName = L""; // Use default
+        Init(sampleLayout, m_isSparse, m_dynamicAxisNodeName);
     }
 
     // InputValue must not resize its inputs because that might destroy it. It should already have the correct size.
@@ -216,6 +301,9 @@ public:
 
 private:
     bool m_isSparse = false;
+    std::wstring m_dynamicAxisNodeName;
+    ComputationNodeBase* m_dynamicAxisNode;
+
     void ConvertToSparseMatrix()
     {
         m_value->SwitchToMatrixType(MatrixType::SPARSE, matrixFormatSparseCSC, false);
@@ -237,15 +325,19 @@ class InputValue : public InputValueBase<ElemType>
 
 public:
     InputValue(DEVICEID_TYPE deviceId, const wstring& name)
-        : Base(deviceId, name, false)
+        : Base(deviceId, name, false, L"")
     {
     }
-    InputValue(DEVICEID_TYPE deviceId, const wstring& name, size_t rows)
-        : Base(deviceId, name, rows, false)
+    InputValue(DEVICEID_TYPE deviceId, const wstring& name, const wstring& dynamicAxisName)
+        : Base(deviceId, name, false, dynamicAxisName)
     {
     }
-    InputValue(DEVICEID_TYPE deviceId, const wstring& name, const TensorShape& sampleLayout)
-        : Base(deviceId, name, sampleLayout, false)
+    InputValue(DEVICEID_TYPE deviceId, const wstring& name, size_t rows, const wstring& dynamicAxisName)
+        : Base(deviceId, name, rows, false, dynamicAxisName)
+    {
+    }
+    InputValue(DEVICEID_TYPE deviceId, const wstring& name, const TensorShape& sampleLayout, const wstring& dynamicAxisName)
+        : Base(deviceId, name, sampleLayout, false, dynamicAxisName)
     {
     }
     InputValue(const ScriptableObjects::IConfigRecordPtr configp)
@@ -275,15 +367,19 @@ class SparseInputValue : public InputValueBase<ElemType>
 
 public:
     SparseInputValue(DEVICEID_TYPE deviceId, const wstring& name)
-        : Base(deviceId, name, true)
+        : Base(deviceId, name, true, L"")
     {
     }
-    SparseInputValue(DEVICEID_TYPE deviceId, const wstring& name, size_t rows)
-        : Base(deviceId, name, rows, true)
+    SparseInputValue(DEVICEID_TYPE deviceId, const wstring& name, const wstring& dynamicAxisName)
+        : Base(deviceId, name, true, dynamicAxisName)
     {
     }
-    SparseInputValue(DEVICEID_TYPE deviceId, const wstring& name, const TensorShape& imageLayout)
-        : Base(deviceId, name, imageLayout, true)
+    SparseInputValue(DEVICEID_TYPE deviceId, const wstring& name, size_t rows, const wstring& dynamicAxisName)
+        : Base(deviceId, name, rows, true, dynamicAxisName)
+    {
+    }
+    SparseInputValue(DEVICEID_TYPE deviceId, const wstring& name, const TensorShape& imageLayout, const wstring& dynamicAxisName)
+        : Base(deviceId, name, imageLayout, true, dynamicAxisName)
     {
     }
     SparseInputValue(const ScriptableObjects::IConfigRecordPtr configp)
