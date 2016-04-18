@@ -9,16 +9,18 @@
 
 #include "NetworkDescriptionLanguage.h"
 #include "NDLNetworkBuilder.h"
+
+#include "ConvolutionalNodes.h"
+#include "DeprecatedNodes.h"
+#include "EvaluationNodes.h"
 #include "InputAndParamNodes.h"
 #include "LinearAlgebraNodes.h"
 #include "NonlinearityNodes.h"
-#include "ConvolutionalNodes.h"
-#include "RecurrentNodes.h"
+#include "PreComputeNodes.h"
 #include "ReshapingNodes.h"
+#include "RecurrentNodes.h"
 #include "SpecialPurposeNodes.h"
 #include "TrainingNodes.h"
-#include "PreComputeNodes.h"
-#include "EvaluationNodes.h"
 
 using namespace std;
 

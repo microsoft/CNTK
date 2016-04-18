@@ -9,18 +9,19 @@
 
 #include "Basics.h"
 #include "ComputationNetworkBuilder.h"
-
 #include "ComputationNode.h"
+
+#include "ConvolutionalNodes.h"
+#include "DeprecatedNodes.h"
+#include "EvaluationNodes.h"
 #include "InputAndParamNodes.h"
 #include "LinearAlgebraNodes.h"
 #include "NonlinearityNodes.h"
-#include "ConvolutionalNodes.h"
-#include "RecurrentNodes.h"
-#include "ReshapingNodes.h"
 #include "PreComputeNodes.h"
-#include "TrainingNodes.h"
-#include "EvaluationNodes.h"
+#include "ReshapingNodes.h"
+#include "RecurrentNodes.h"
 #include "SpecialPurposeNodes.h"
+#include "TrainingNodes.h"
 
 #include <string>
 

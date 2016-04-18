@@ -653,6 +653,9 @@ template class DiagTimesNode<double>;
 // When applied to minibatch data, this will sum across all sequences in the
 // minibatch, like a training-criterion node. This is one of the few operations
 // that cross the boundary between input sequences.
+// Note that SGD itself aggregates over samples in a criterion node.
+// So the only proper use of this node is for multi-task learning, where
+// different nodes have different numbers of samples (sequence lenth).
 // -----------------------------------------------------------------------
 
 template <class ElemType>
@@ -696,63 +699,6 @@ public:
 
 template class SumElementsNode<float>;
 template class SumElementsNode<double>;
-
-// -----------------------------------------------------------------------
-// SumColumnElementsNode (input)
-// Sums up all elements in each sample (column) of the input. Every sample
-// will be reduced to a scalar. This is equivalent to multiplying with a row of ones.
-// TODO: This should be deprecated, in favor of a reduce node.
-// TODO: Implement this with the tensor library.
-//       axis=0: all elements; axis>0: only that axis; axis<0: time (implemented in BS)
-// -----------------------------------------------------------------------
-
-template <class ElemType>
-class SumColumnElementsNode : public ComputationNode<ElemType>, public NumInputs<1>
-{
-    typedef ComputationNode<ElemType> Base;
-    UsingComputationNodeMembersBoilerplate;
-    static const std::wstring TypeName()
-    {
-        return L"SumColumnElements";
-    }
-
-public:
-    DeclareConstructorFromConfigWithNumInputs(SumColumnElementsNode);
-    SumColumnElementsNode(DEVICEID_TYPE deviceId, const wstring& name)
-        : Base(deviceId, name)
-    {
-    }
-
-    virtual void /*ComputationNode::*/ BackpropTo(const size_t /*inputIndex*/, const FrameRange& fr) override
-    {
-        auto sliceInputGrad = Input(0)->GradientFor(fr);
-        auto sliceOutputGrad = GradientFor(fr);
-
-        sliceInputGrad += sliceOutputGrad; // here the assumption is that sliceOutputGrad is a row vector
-    }
-
-    virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }
-    virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override { return false; }
-
-    virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
-    {
-        auto sliceInputValue = Input(0)->ValueFor(fr);
-        auto sliceOutputValue = ValueFor(fr); // row vector
-
-        Matrix<ElemType>::VectorSum(sliceInputValue, sliceOutputValue, true);
-    }
-
-    virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
-    {
-        Base::Validate(isFinalValidationPass);
-        InferMBLayoutFromInputsForStandardCase(isFinalValidationPass);
-
-        SetDims(TensorShape(1), Input(0)->HasMBLayout()); // each column is reduced to a scalar
-    }
-};
-
-template class SumColumnElementsNode<float>;
-template class SumColumnElementsNode<double>;
 
 // -----------------------------------------------------------------------
 // TransposeDimensions (input, axis1, axis2)
