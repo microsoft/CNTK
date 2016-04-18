@@ -54,7 +54,7 @@ def test_op_clip(x, min_value, max_value, device_id, precision):
     
     result = clip_by_value(a, b, c)
     unittest_helper(result, None, expected, device_id=device_id, 
-                    precision=precision, clean_up=True, backward_pass=False)
+                    precision=precision, clean_up=False, backward_pass=False)
     
     #Backward pass test
     #==================
