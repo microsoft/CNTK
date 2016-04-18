@@ -81,7 +81,7 @@ private:
         // do masking and an implicit reduction.
 
         // get a TensorView of the criterion values to aggregate
-        FrameRange fr;
+        FrameRange fr(node->GetMBLayout());
         node->MaskMissingValueColumnsToZero(fr); // set gaps to zero, so that we can aggregate
         auto criterionValue = node->As<ComputationNode<ElemType>>()->ValueTensorFor(SIZE_MAX, fr);
 
