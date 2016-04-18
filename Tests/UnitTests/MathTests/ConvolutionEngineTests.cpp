@@ -52,8 +52,8 @@ std::vector<std::tuple<ConvolutionEngineKind, DEVICEID_TYPE, size_t>> GetTestEng
 {
     std::vector<std::tuple<ConvolutionEngineKind, DEVICEID_TYPE, size_t>> res;
     // Reference engine. The engine does not use temp memory so safe to set it to 0.
-    res.push_back(std::make_tuple(ConvolutionEngineKind::Reference, -1, 0));
-    res.push_back(std::make_tuple(ConvolutionEngineKind::Reference, 0, 0));
+    //res.push_back(std::make_tuple(ConvolutionEngineKind::Reference, -1, 0));
+    //res.push_back(std::make_tuple(ConvolutionEngineKind::Reference, 0, 0));
 
     // Gemm engine. Implemented only for CPU for now. Uses temp memory.
     res.push_back(std::make_tuple(ConvolutionEngineKind::Gemm, -1, 0));
@@ -91,14 +91,21 @@ std::vector<ConvolveGeometryPtr> GenerateConvTestConfigs()
         }
     }
     // For debugging.
-    res.push_back(std::make_shared<ConvolveGeometry>(TensorShape(3, 3, 2),
-        TensorShape(3, 3, 2), TensorShape(2), TensorShape(1, 1, 1),
-        ConvolveGeometry::BoolVec{true}, ConvolveGeometry::BoolVec{false, false, false},
-        TensorShape(0), TensorShape(0)));
-    // Simple 3D convolution - works only in reference engine.
-    res.push_back(std::make_shared<ConvolveGeometry>(TensorShape(3, 3, 2),
+    res.push_back(std::make_shared<ConvolveGeometry>(TensorShape(3, 3, 1),
         TensorShape(3, 3, 1), TensorShape(2), TensorShape(1, 1, 1),
         ConvolveGeometry::BoolVec{true}, ConvolveGeometry::BoolVec{false, false, false},
+        TensorShape(0), TensorShape(0)));
+
+    // Simple 3D convolution.
+    res.push_back(std::make_shared<ConvolveGeometry>(TensorShape(5, 5, 5, 2),
+        TensorShape(3, 3, 3, 2), TensorShape(2), TensorShape(1),
+        ConvolveGeometry::BoolVec{true}, ConvolveGeometry::BoolVec{false},
+        TensorShape(0), TensorShape(0)));
+    // Example of 3D convolution that can be represented with 3D tensors in reference engine
+    // but requires 4D tensors in other engines.
+    res.push_back(std::make_shared<ConvolveGeometry>(TensorShape(5, 5, 2, 1),
+        TensorShape(3, 3, 1, 1), TensorShape(2), TensorShape(1),
+        ConvolveGeometry::BoolVec{true}, ConvolveGeometry::BoolVec{false},
         TensorShape(0), TensorShape(0)));
 
     res.push_back(std::make_shared<ConvolveGeometry>(TensorShape(16, 16, 1),

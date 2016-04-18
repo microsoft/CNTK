@@ -4175,7 +4175,7 @@ void CPUMatrix<ElemType>::UnrollConvolutionOutput(size_t unrollCols, size_t mapI
     assert((kernelSize % mapInCount) == 0);
     size_t kernelMapSize = kernelSize / mapInCount;
 
-//#pragma omp parallel for
+#pragma omp parallel for
     for (int64_t sample = 0; sample < (int64_t)GetNumCols(); sample++)
     {
         for (size_t row = 0; row < mapOutSize; row++)
