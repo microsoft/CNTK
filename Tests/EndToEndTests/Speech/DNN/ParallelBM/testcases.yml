@@ -17,35 +17,30 @@ testCases:
     patterns:
       - ^MPI Rank {{integer}}
       - Finished Epoch[{{integer}} of {{integer}}]
-      - TrainLossPerSample = {{float,tolerance=0%}}
-      - EvalErrPerSample = {{float,tolerance=0%}}
+      - TrainLossPerSample = {{float,tolerance=2%}}
+      - EvalErrPerSample = {{float,tolerance=2%}}
       - AvgLearningRatePerSample = {{float,tolerance=0.001%}}
 
   BlockMomentumSGD training should have distributed reading enabled:
     patterns:
       - distributed reading is ENABLED
 
-  BlockMomentumSGD training should have the expected block momentum:
+  BlockMomentumSGD training should have the expected parameters:
     patterns:
       - ^MPI Rank {{integer}}
-      - blockMomentum = {{float,tolerance=0.1%}}
- 
-  BlockMomentumSGD training should have the expected block learning rate:
-    patterns:
-      - ^MPI Rank {{integer}}
-      - blockLearningRate = {{float,tolerance=0.1%}}
-
-  BlockMomentumSGD training should have the expected block momentum as time constant: 
-    patterns:
-      - ^MPI Rank {{integer}}
-      - blockMomentumAsTimeConstant = {{float,tolerance=0.1%}}
+      - block momentum = {{float,tolerance=0.1%}}
+      - block momentum time constant = {{float,tolerance=1%}}
+      - block learning rate = {{float,tolerance=0.1%}}
+      - sync period = {{integer}} samples
+      - resetting SGD momentum after sync
+      - using Nesterov style block momentum
 
   Per-minibatch training results must match for each MPI Rank:
     patterns:
       - ^MPI Rank {{integer}}
       - Epoch[{{integer}} of {{integer}}]-Minibatch[{{integer}}-{{integer}}
       - SamplesSeen = {{integer}}
-      - TrainLossPerSample = {{float,tolerance=0%}}
-      - EvalErr[0]PerSample = {{float,tolerance=0%}}
+      - TrainLossPerSample = {{float,tolerance=2%}}
+      - EvalErr[0]PerSample = {{float,tolerance=2%}}
 
 

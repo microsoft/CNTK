@@ -171,10 +171,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
              size_t&                                   totalSamplesProcessed,   /* out */
              float&                                    secondsOnCommunication   /* out */) = 0; 
          
-         virtual bool RequiresToSaveToCheckPoint()
-         {
-             return false;
-         }
          virtual void SaveToCheckPoint(File& fstream){}
          virtual void LoadFromCheckPoint(File& fstream){}
          
@@ -310,7 +306,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         BasicModelAveragingSGD(const MPIWrapperPtr& pMPI, size_t reportFreq, DEVICEID_TYPE devID)
             : Base(pMPI, reportFreq, devID)
         {
-            fprintf(stderr, "Parallel training (%d workers) using BasicModelAveraging\n",(int)m_pMPI->NumNodesInUse());
+            fprintf(stderr, "Parallel training (%d workers) using ModelAveraging\n",(int)m_pMPI->NumNodesInUse());
         }
 
         void ModelAggregationProcessing(

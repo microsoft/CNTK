@@ -50,16 +50,17 @@ enum class GradientsUpdateType : int
     FSAdaGrad
 };
 
-// TODO: While currently combining these methods is not supported,
-// these are not mutually exclusive and we can/should support combinations of these
-// in the future
+// modelParallelSGD can be combined with dataParallelSGD/modelAveragingSGD/blockMomentumSGD 
+// but dataParallelSGD/modelAveragingSGD/blockMomentumSGD are mutually exclusive (at least at the moment)
+// we assign the lower 8 bits to the enumerate data parallelization methods 
+// and next 8 bits to model parallelization methods
 enum class ParallelizationMethod : int
 {
-    None = 0,
-    DataParallelSGD = 1,
-    ModelAveragingSGD = (1 << 1),
-    ModelParallelSGD = (1 << 2), // Currently unsupported
-    BlockMomentumSGD = (1 << 3), 
+    none = 0,
+    dataParallelSGD = 1,
+    modelAveragingSGD = 2,
+    blockMomentumSGD = 3,
+    modelParallelSGD = (1 << 8) // Currently unsupported
 };
 
 // configuration parameters associated with RMSProp learning algorithm
@@ -155,7 +156,7 @@ protected:
     ParallelizationMethod GetParallelizationMethod() const
     {
         if (m_mpi == nullptr)
-            return ParallelizationMethod::None;
+            return ParallelizationMethod::none;
 
         return m_parallelizationMethod;
     }
@@ -268,7 +269,6 @@ protected:
     bool   m_resetSGDMomentum; 
     bool   m_useNesterovBlockMomentum;
     double m_blockLearningRate; 
-    double m_blockMomentum; 
     double m_blockMomentumAsTimeConstant;
 
     bool m_needAveMultiplier;
@@ -336,27 +336,14 @@ public:
         m_mpi = mpi;
 
         if (m_mpi == nullptr)
-            m_parallelizationMethod = ParallelizationMethod::None;
+            m_parallelizationMethod = ParallelizationMethod::none;
 
-        if (m_parallelizationMethod == ParallelizationMethod::BlockMomentumSGD)
+        if (m_parallelizationMethod == ParallelizationMethod::blockMomentumSGD)
         {
-            if (m_blockMomentumAsTimeConstant < 0 && m_blockMomentum < 0)
-            {
-                // user has not specifies it 
-                m_blockMomentum = 1 - 1.0/ m_mpi->NumNodesInUse(); 
-                m_blockMomentumAsTimeConstant = -(double)m_nFramesBetweenMASync / log(m_blockMomentum);
-                // final argument checking in case of user specifying a bad parameter 
-                if (m_blockMomentum <= 0.0 || m_blockMomentum >= 1.0)
-                {
-                    InvalidArgument("BlockMomentumPerSync=%.2f, but it should be in the (0,1) range\n", m_blockMomentum);
-                }
-                if ((1 - m_blockMomentum)*m_blockLearningRate*m_mpi->NumNodesInUse() >= 2.0)
-                {
-                    fprintf(stderr, "WARNING: (1-blockMomentumPerSync)*blockLearningRate is larger than 2*numWorkers, there coudl be overshooting!");
-                }
-            }
+            // This is used to finish initializing BlockMomentumSGD parameter 
+            // since some of the parameter may not be specified by the users 
+            InitializeAndCheckBlockMomentumSGDParameters(); 
         }
-        
     }
 
     void Train(function<ComputationNetworkPtr(DEVICEID_TYPE)> createNetworkFn, DEVICEID_TYPE deviceId,
@@ -579,6 +566,7 @@ protected:
 
 private:
     int SGDTrace(FILE* __restrict __stream, bool isPrependTimestamp, const char* __restrict __format, ...);
+    void InitializeAndCheckBlockMomentumSGDParameters();
 };
 
 }}}

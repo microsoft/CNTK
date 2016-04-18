@@ -567,7 +567,7 @@ endif
 
   INCLUDEPATH += $(SOURCEDIR)/1BitSGD 
 
-  COMMON_FLAGS += -DQUANTIZED_GRADIENT_AGGREGATION -DBLOCK_MOMENTUM
+  COMMON_FLAGS += -DCNTK_PARALLEL_TRAINING_SUPPORT
   # temporarily adding to 1bit, need to work with others to fix it
 endif
 
