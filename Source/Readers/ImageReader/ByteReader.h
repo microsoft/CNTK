@@ -41,7 +41,7 @@ public:
     ZipByteReader(const std::string& zipPath);
 
     void Register(size_t seqId, const std::string& path) override;
-    cv::Mat Read(size_t seqId, const std::string& path) override;
+    cv::Mat Read(size_t seqId, const std::string& path, bool grayscale) override;
 
 private:
     using ZipPtr = std::unique_ptr<zip_t, void(*)(zip_t*)>;
